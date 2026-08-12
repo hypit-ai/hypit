@@ -5,7 +5,7 @@
 <p align="center"><em>“First, there was narration. Then, there were montages.”</em></p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/quickstart">Quickstart</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/guide/develop">Develop</a>&nbsp;&nbsp;<a href="./README.zh-CN.md">简体中文</a>
+  <a href="https://narratage.hypit.ai/">Demos</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/quickstart">Quickstart</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/guide/develop">Develop</a>&nbsp;&nbsp;<a href="./README.zh-CN.md">简体中文</a>
 </p>
 
 <p align="center">
@@ -143,6 +143,8 @@ installable packages — Core hard-codes no model, Track or Provider.
 
 ## Where to go next
 
+- [Demos](https://narratage.hypit.ai/) — see it running: hover a marked range in a Script and the
+  frame it produces appears beside it.
 - [Quickstart](https://narratage.hypit.ai/quickstart) — the files you control, the commands, and
   your first real Build.
 - [Develop](https://narratage.hypit.ai/guide/develop) — package architecture, adding an author
