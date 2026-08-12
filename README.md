@@ -94,7 +94,7 @@ instead of nesting. `tagline` shows that a Segment may be roleless. Repeating th
 creates multiple non-contiguous occurrences.
 Marker names carry no built-in behavior: `@silence` does not mute audio; an Audio, Caption or Track
 component must explicitly consume that Selection. The complete escape set and Slot parser contract
-are documented in [Script](./docs/quickstart/script.md); Slot binding is not yet exposed by the
+are documented in [Script](https://narratage.hypit.ai/quickstart/script); Slot binding is not yet exposed by the
 author-facing `<script>` Surface, so the README does not pretend it is usable source syntax today.
 
 The outer component lines are deliberately an excerpt: they show how generated media, alignment and
@@ -126,7 +126,7 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
 `check` verifies the Author Source and prints its typed outputs. `plan` shows the exact demanded
 subgraph and every external capability a real Build would need. Planning never starts external work.
 
-See the [Quickstart](./docs/quickstart.md) if Corepack is unavailable or you want to run local media,
+See the [Quickstart](https://narratage.hypit.ai/quickstart) if Corepack is unavailable or you want to run local media,
 WhisperX, OpenCV or HyperFrames.
 
 ## The files you control
@@ -202,7 +202,7 @@ cd /path/to/my-video
 that Build; closing the observer does not cancel it. Use `status`, `queue`, `operations` and
 `inspect` to see what is happening.
 
-Read [Run Source & Builds](./docs/quickstart/run.md) before the first paid Build. It covers Runtime
+Read [Run Source & Builds](https://narratage.hypit.ai/quickstart/run) before the first paid Build. It covers Runtime
 Profiles, credentials, concurrency, cancellation and explicit reuse of previous outputs.
 
 ## Why a graph language
@@ -221,8 +221,7 @@ Narratage makes those choices visible as two peer graphs: the Author Graph expre
 the Run Graph selects Targets and realizations for one Build. Core only resolves, verifies and
 advances the resulting state machine; video concepts remain in independently installable packages.
 
-For the full model, read [Architecture](./docs/architecture.md). For the small normative laws, read
-the [Core Kernel specification](./spec/core-kernel.md).
+For the small normative laws, read the [Core Kernel specification](./spec/core-kernel.md).
 
 ## Extend it without changing Core
 
@@ -239,12 +238,12 @@ nominal types and explicit graph edges.
 
 Choose the guide that matches your work:
 
-- [Author a video](./docs/quickstart.md)
-- [Understand package boundaries](./docs/guide/packages.md)
-- [Add an author package](./docs/guide/author-packages.md)
-- [Add a Provider](./docs/guide/providers.md)
-- [Configure a Runtime Profile](./docs/guide/runtime-profile.md)
-- [Develop Narratage itself](./docs/guide/develop.md)
+- [Author a video](https://narratage.hypit.ai/quickstart)
+- [Understand package boundaries](https://narratage.hypit.ai/guide/packages)
+- [Add an author package](https://narratage.hypit.ai/guide/author-packages)
+- [Add a Provider](https://narratage.hypit.ai/guide/providers)
+- [Configure a Runtime Profile](https://narratage.hypit.ai/guide/runtime-profile)
+- [Develop Narratage itself](https://narratage.hypit.ai/guide/develop)
 
 ## Repository map
 
@@ -252,7 +251,7 @@ Choose the guide that matches your work:
 packages/   Core, compiler, Runtime, video packages and Provider adapters
 services/   Local external programs such as WhisperX and OpenCV
 examples/   Checkable sources and complete Runtime examples
-docs/       User guides, architecture and implementation records
+docs/       Source of the narratage.hypit.ai documentation site
 spec/       Normative protocol and video-package contracts
 tools/      Repository checks and focused development tools
 ```
@@ -266,9 +265,6 @@ pnpm check
 pnpm test
 pnpm docs:build
 ```
-
-Current implementation facts and remaining work live in
-[Implementation Status](./docs/implementation-status.md) and the [Roadmap](./docs/roadmap.md).
 
 ## License
 

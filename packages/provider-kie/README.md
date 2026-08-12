@@ -11,8 +11,7 @@ choose another model.
 It imports no exact-model package. Every supported Capability contributes one `KieRoute`: exact
 Capability, return Type, request compiler, media/count limits and result packer. All Routes share one
 upload, admission, paid submission, checkpoint, polling and download state machine. Model mappings
-generate twelve Routes; Background Removal contributes the thirteenth. See
-[`model-input-ports.md`](../../docs/model-input-ports.md).
+generate twelve Routes; Background Removal contributes the thirteenth.
 
 ## Supported catalog
 
