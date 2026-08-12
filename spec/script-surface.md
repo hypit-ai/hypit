@@ -460,6 +460,10 @@ at="phrase.end"        <!-- SelectionSet 的各 range 终点投影 -->
 
 ## 6. Slot
 
+当前实现状态：`parseScript` 已实现下述 parse-first、literal-only 绑定合同，但官方
+`<script>` Author Surface 尚未暴露 bindings 输入。未绑定 Slot 在当前 `main.svml` 中会按
+`SCRIPT_SLOT_UNBOUND` 失败；公开使用示例在 Surface 补齐绑定边之前不得宣称 Slot 可直接使用。
+
 Slot 是解析器识别的一等 AST atom：
 
 ```svml

@@ -190,6 +190,9 @@ Other components reference Moments via `{story.moment.ranking}`.
 
 ## Slots
 
+> The Script parser defines Slot syntax, but the current author-facing `<script>` Surface does not
+> yet expose a binding input. Do not put an unbound Slot in `main.svml`; it will fail `check`.
+
 Variable interpolation for templated Scripts:
 
 ```svml

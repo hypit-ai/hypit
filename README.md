@@ -19,18 +19,41 @@ yet.
 
 ## What it feels like
 
-The Script remains readable prose. Semantic anchors live beside the words they describe; generation,
-timing, captions and composition refer back to that meaning.
+The Script remains readable prose. Segments organize the story; Role Cues say who speaks; Dual Text
+separates what viewers read from what the speaker says; Selections and Moments name semantic ranges
+and points without introducing timecodes.
 
 ```svml
 <script id="story">
-  <opening>
-    <HOST>Meaning @demo becomes the source @/demo.</opening>
+  @whole
+
+  <hook>
+    <ALICE> @problem @beat Never let anyone take credit for your work. @/beat @/problem
+  </hook>
+
+  <answer>
+    <!-- Selections may cross; the markers do not have to nest like XML. -->
+    @claim
+    <BOB> Before ~@proof the report appears @reveal! on screen @/claim,
+          I call it <SVML | semantic video markup language> @/proof~.
+    <ALICE> @beat I < | honestly> wish I'd had it sooner @/beat ~@cut!
+             — and yes, I said \@proof aloud.
+  </answer>
+
+  @silence
+  <pause/>
+  @/silence
+
+  <tagline>
+    Meaning becomes the source.
+  </tagline>
+
+  @/whole~
 </script>
 
 <seedance:TextVideo id="take"
   model="mini"
-  prompt={direction}
+  prompt={story.segment.hook.dialogue}
   duration="5"
   generate-audio="true"/>
 
@@ -40,20 +63,38 @@ timing, captions and composition refer back to that meaning.
 
 <media-track:Item
   video={motion.video}
-  during={story.selection.demo}
+  during={story.selection.proof}
   frame={card-frame}/>
-
-<film:Film id="main" canvas={vertical} space={speech.space}>
-  <film:Track source={speech.visual}/>
-  <film:Track source={cards.visual}/>
-  <film:Track source={captions.track}/>
-</film:Film>
 ```
 
-This is an excerpt from the complete, checkable
-[`talking-film-graph-check`](./examples/talking-film-graph-check/main.svml) example. Namespaced
-elements are supplied by imported packages; the language does not hard-code Seedance, WhisperX,
-Caption or Film into its Core.
+The Script excerpt shows the complete marker vocabulary:
+
+| Form | Meaning |
+|---|---|
+| `<hook>...</hook>` / `<pause/>` | spoken and empty Segments |
+| `<ALICE>` | a Role Cue; it continues until the next cue or Segment end |
+| `<SVML \| semantic video markup language>` | display text on the left, spoken text on the right |
+| `< \| honestly>` | spoken filler deliberately absent from captions |
+| `@problem ... @/problem` | Selection whose boundaries absorb inward |
+| `~@proof ... @/proof~` | Selection whose boundaries absorb outward |
+| repeated `@beat ... @/beat` | one non-contiguous Selection with multiple occurrences |
+| `@reveal!` / `~@cut!` | Moments attached to the next word start / previous word end |
+| `\@proof` | a literal `@proof`, not a marker |
+| `<!-- ... -->` | a source comment; it enters no text projection |
+
+`@whole` crosses Segment boundaries; `@claim` and `proof` demonstrate that Selections may cross
+instead of nesting. `tagline` shows that a Segment may be roleless. Repeating the same Selection id
+creates multiple non-contiguous occurrences.
+Marker names carry no built-in behavior: `@silence` does not mute audio; an Audio, Caption or Track
+component must explicitly consume that Selection. The complete escape set and Slot parser contract
+are documented in [Script](./docs/quickstart/script.md); Slot binding is not yet exposed by the
+author-facing `<script>` Surface, so the README does not pretend it is usable source syntax today.
+
+The outer component lines are deliberately an excerpt: they show how generated media, alignment and
+Tracks consume Script projections. See the complete, checkable
+[`talking-film-graph-check`](./examples/talking-film-graph-check/main.svml) source for imports,
+layout, captions, Film and rendering. Namespaced components come from packages; Core does not
+hard-code Seedance, WhisperX, Caption or Film.
 
 ## Try it without API keys
 
