@@ -5,10 +5,11 @@
 <p align="center"><em>“First, there was narration. Then, there were montages.”</em></p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/">Documentation</a> ·
-  <a href="https://narratage.hypit.ai/zh/">中文文档</a> ·
-  <a href="https://narratage.hypit.ai/quickstart">Quickstart</a> ·
-  <a href="./examples/README.md">Examples</a>
+  <a href="https://narratage.hypit.ai/quickstart">Quickstart</a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://narratage.hypit.ai/guide/develop">Develop</a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="./README.zh-CN.md">简体中文</a>
 </p>
 
 Narratage is a semantic, graph-native system for making AI video. You write the story, choose the
@@ -17,9 +18,6 @@ finite execution plan, runs only the work the result depends on, and keeps every
 available for later Runs.
 
 SVML is the authoring language. Narratage is the compiler, runtime and package ecosystem around it.
-
-Narratage currently runs from a source checkout. The npm packages and CLI have not been published
-yet.
 
 ## What it feels like
 
@@ -94,8 +92,8 @@ instead of nesting. `tagline` shows that a Segment may be roleless. Repeating th
 creates multiple non-contiguous occurrences.
 Marker names carry no built-in behavior: `@silence` does not mute audio; an Audio, Caption or Track
 component must explicitly consume that Selection. The complete escape set and Slot parser contract
-are documented in [Script](https://narratage.hypit.ai/quickstart/script); Slot binding is not yet exposed by the
-author-facing `<script>` Surface, so the README does not pretend it is usable source syntax today.
+are documented in [Script](https://narratage.hypit.ai/quickstart/script). Slot binding is not yet
+exposed by the author-facing `<script>` Surface.
 
 The outer component lines are deliberately an excerpt: they show how generated media, alignment and
 Tracks consume Script projections. See the complete, checkable
@@ -137,8 +135,6 @@ WhisperX, OpenCV or HyperFrames.
 | `svml.runtime.json` | The machine environment: stores, endpoints, credentials and concurrency |
 | `svml.packages.lock` | Generated lock for author and compute packages |
 | `svml.runtime-packages.lock` | Generated lock for Runtime and Provider packages |
-
-The boundaries are deliberate:
 
 - SVML says what the author means and explicitly chooses model families where that choice matters.
 - SVRUN says what this Run should produce and which compatible results should satisfy its outputs.
@@ -220,39 +216,6 @@ the Run Graph selects Targets and realizations for one Build. Core only resolves
 advances the resulting state machine; video concepts remain in independently installable packages.
 
 For the small normative laws, read the [Core Kernel specification](./spec/core-kernel.md).
-
-## Extend it without changing Core
-
-Packages may independently contribute:
-
-- an author-facing Surface and its graph lowering;
-- a typed contract shared with other packages;
-- a deterministic compute operation;
-- a local or remote Provider endpoint;
-- a Scheduler, credential store or Artifact store implementation.
-
-Core has no central list of video models, Tracks or Providers. Installed packages communicate through
-nominal types and explicit graph edges.
-
-Choose the guide that matches your work:
-
-- [Author a video](https://narratage.hypit.ai/quickstart)
-- [Understand package boundaries](https://narratage.hypit.ai/guide/packages)
-- [Add an author package](https://narratage.hypit.ai/guide/author-packages)
-- [Add a Provider](https://narratage.hypit.ai/guide/providers)
-- [Configure a Runtime Profile](https://narratage.hypit.ai/guide/runtime-profile)
-- [Develop Narratage itself](https://narratage.hypit.ai/guide/develop)
-
-## Repository map
-
-```text
-packages/   Core, compiler, Runtime, video packages and Provider adapters
-services/   Local external programs such as WhisperX and OpenCV
-examples/   Checkable sources and complete Runtime examples
-docs/       Source of the narratage.hypit.ai documentation site
-spec/       Normative protocol and video-package contracts
-tools/      Repository checks and focused development tools
-```
 
 ## Development
 
