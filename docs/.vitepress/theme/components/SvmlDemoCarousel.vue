@@ -160,6 +160,10 @@ onBeforeUnmount(() => cardObserver?.disconnect());
 .demo-card:nth-child(1) { animation-delay: 1.59s; }
 .demo-card:nth-child(2) { animation-delay: 1.75s; }
 .demo-card:nth-child(3) { animation-delay: 1.91s; }
+/* These delays continue the intro sequence in style.css, which ends at the carousel
+   heading. That file cancels the sequence under `.hero-intro-seen`; the cards are the
+   only part of it living outside it, so they need the matching cancellation here. */
+.hero-intro-seen .demo-card { opacity: 1; transform: none; animation: none; }
 .demo-card-content { min-width: 0; overflow: hidden; border-radius: 2px; background: #272022; }
 .demo-card-content :deep(.svml-demo) { margin-top: 0; }
 .demo-card-content :deep(.demo-shell) { box-shadow: none; }

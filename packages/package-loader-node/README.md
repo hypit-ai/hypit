@@ -34,6 +34,3 @@ narratage check ./main.svml --package-lock ./svml.packages.lock --root .
 If `@example/cards` requires a Module exported by an installed dependency, that dependency does not
 need another `--package`. Missing, digest-mismatched or ambiguous providers fail while creating the
 lock, before compilation.
-
-See [`../../docs/node-package-activation.md`](../../docs/node-package-activation.md)
-for the lock, trust and restart laws.
