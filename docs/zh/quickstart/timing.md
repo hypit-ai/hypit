@@ -53,14 +53,10 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 | `z` | 仅视觉 | 覆盖本 Take 的基础 `visual-z` |
 
 `video`、`audio` 与 `media` 必须且只能选一个。AIGC 的正常路径就是 `video={take.video}`。Speech
-Surface 会把这句易读声明展开为普通 Media Pipeline Operation：检查容器、选择主动态视频流
-和默认音轨，再按 Spine 声明的帧率规范化。把 30 fps 素材接入 60 fps Spine 时，时长不变，
-帧序列会被确定性重采样为 60 fps，而不是把视频播放加速一倍。只有上游图已经明确产出所需
+Surface 会把这句易读声明展开为普通 Media Pipeline Operation：检查容器、选择主动态视频流和默认音轨，再按 Spine 声明的帧率规范化。把 30 fps 素材接入 60 fps Spine 时，时长不变，帧序列会被确定性重采样为 60 fps，而不是把视频播放加速一倍。只有上游图已经明确产出所需
 `SynchronizedMedia` 时才使用 `media=`。
 
-视觉 Take 默认继承 Spine 上显式写出的三个视觉值，也可以逐段覆盖。纯音频 Take 禁止写
-视觉覆盖；它播放时 `speech.visual` 就没有 Present，Film 背景或平级 Track 会自然露出，
-系统不会伪造黑场。
+视觉 Take 默认继承 Spine 上显式写出的三个视觉值，也可以逐段覆盖。纯音频 Take 禁止写视觉覆盖；它播放时 `speech.visual` 就没有 Present，Film 背景或平级 Track 会自然露出，系统不会伪造黑场。
 
 旁白时序使用 audio Take，画面则由对等 Media Track 提供：
 
@@ -154,8 +150,7 @@ SemanticMap 是连接 Script 文本与物理时间的类型化桥梁。当你在
 ```
 
 Map 只包含最终词窗口和语义锚点，不传播“测量、推导、估算”标签。WhisperX Evidence
-与确定性的 M:N 对齐器负责充分使用录音证据；下游 Track 只接收一份完整 Map，不再解释
-每个点是如何获得的。
+与确定性的 M:N 对齐器负责充分使用录音证据；下游 Track 只接收一份完整 Map，不再解释每个点是如何获得的。
 
 ## 组合示例
 

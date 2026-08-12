@@ -23,8 +23,7 @@ narratage get my-video-001 --runtime svml.runtime.json --name final.video --to o
 
 仓库内的源码启动器是 `/path/to/narratage/narratage`；本页写作 `narratage` 的命令，指的是这个启动器，或将来安装好的 CLI。
 
-只有 `build` 会真正提交工作。`plan` 是普通预览；`check` 用于编辑源码，`doctor` 用于配置和
-排查部署。它们都安全，但不是每次 Build 前必须重复的仪式。
+只有 `build` 会真正提交工作。`plan` 是普通预览；`check` 用于编辑源码，`doctor` 用于配置和排查部署。它们都安全，但不是每次 Build 前必须重复的仪式。
 
 ```text
 main.svml          作者意图
@@ -72,15 +71,13 @@ Target 就是你希望这次 Build 产出的东西。它可以是一张生成的
 <target output="captions.track"/>
 ```
 
-不同的运行意图写成不同的 `.svrun` 文件即可，它们可以共同指向同一个 Author Source。
-例如 `images.svrun` 只请求图片，`film.svrun` 请求最终视频，无需在文件内部再造一层集合。
+不同的运行意图写成不同的 `.svrun` 文件即可，它们可以共同指向同一个 Author Source。例如 `images.svrun` 只请求图片，`film.svrun` 请求最终视频，无需在文件内部再造一层集合。
 
 ## 复用结果
 
 Narratage 没有隐式缓存。复用结果是显式的运行图编写——你将历史 Record 声明为零输入 Candidate，并通过 Satisfaction 边将它们连接起来。
 
-生成图片或 Take 一经验收，就在下一份 `.svrun` 中用 `build-record` 与 `satisfy` 显式复用，
-并在启动付费下游工作前检查冻结 plan。Core 没有 Pin 状态或 fidelity 标签。
+生成图片或 Take 一经验收，就在下一份 `.svrun` 中用 `build-record` 与 `satisfy` 显式复用，并在启动付费下游工作前检查冻结 plan。Core 没有 Pin 状态或 fidelity 标签。
 
 ```svml
 <?svml using="@narratage/run-markup@1"?>
@@ -114,9 +111,7 @@ node --run narratage -- history hook-take.video \
   --runtime ./svml.runtime.json
 ```
 
-`history` 只列出该 Build 确实产出过的公开 Logical Output。仅仅在源码中声明但没有
-运行出来的别名，以及不能作为 `build-record` Candidate 的 authored Record 别名，都不会混入
-结果。如果忘了旧名字，可以按 Catalog 当时记录的精确源码路径列出真正验收过的输出名：
+`history` 只列出该 Build 确实产出过的公开 Logical Output。仅仅在源码中声明但没有运行出来的别名，以及不能作为 `build-record` Candidate 的 authored Record 别名，都不会混入结果。如果忘了旧名字，可以按 Catalog 当时记录的精确源码路径列出真正验收过的输出名：
 
 ```bash
 node --run narratage -- history --source ./main.svml \
@@ -169,8 +164,7 @@ Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本�
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
-文件相对于 `.svrun` 读取，按内容寻址，并随 Build 归档。系统没有额外的 Pin 状态、文件名缓存
-或隐式历史查找；黑场、预览图与人工交付的产物也使用同一个机制。
+文件相对于 `.svrun` 读取，按内容寻址，并随 Build 归档。系统没有额外的 Pin 状态、文件名缓存或隐式历史查找；黑场、预览图与人工交付的产物也使用同一个机制。
 
 ## Runtime Profile
 
@@ -299,8 +293,7 @@ $env:GOOGLE_CLOUD_PROJECT = "your-project-id"
 $env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\narratage\google-service-account.json"
 ```
 
-不要把凭据写进 Author Source、Run Source、Runtime Profile 源文件或提交内容。`doctor` 会验证
-所需凭据是否存在，但不会打印秘密值。
+不要把凭据写进 Author Source、Run Source、Runtime Profile 源文件或提交内容。`doctor` 会验证所需凭据是否存在，但不会打印秘密值。
 
 ## Build 工作流
 
@@ -313,8 +306,7 @@ pnpm install
 ```
 
 这条命令只安装 JavaScript 工作区，不会下载 Python 模型，也不会准备仓库内的所有 Provider。
-`runtime up` / `services up` 会读取所选 Runtime Profile，只准备其中 Endpoint 声明的外部程序。
-只有 Profile 选择 WhisperX、OpenCV 等本地 Python 服务时，才需要先安装
+`runtime up` / `services up` 会读取所选 Runtime Profile，只准备其中 Endpoint 声明的外部程序。只有 Profile 选择 WhisperX、OpenCV 等本地 Python 服务时，才需要先安装
 [`uv`](https://docs.astral.sh/uv/)；具体锁定环境命令见 Quickstart 首页的[安装](../quickstart.md#安装)。
 
 `narratage runtime up` 管理后台 Worker 和外部程序；`build` 会确保 Runtime 已运行，但不拥有
@@ -335,11 +327,8 @@ node --run narratage -- plan /work/my-film/build.svrun \
   --runtime /work/my-film/svml.runtime.json
 ```
 
-Source Workspace 默认是 `build.svrun` 所在目录；相对引用的 Author Source 与素材都必须留在
-这个边界内。`--package-root` 是另一项无关的 Host 覆盖项：它只负责指定已安装的
-`node_modules`，然后按照 lock 校验包字节。官方 CLI 通常会自动提供自身的安装位置，所以
-上面的命令无需填写包路径。只有需要主动扩大源码边界时才传 `--root`。不要把外部项目软
-链接进仓库；canonical path 的边界检查会有意拒绝这种逃逸。
+Source Workspace 默认是 `build.svrun` 所在目录；相对引用的 Author Source 与素材都必须留在这个边界内。`--package-root` 是另一项无关的 Host 覆盖项：它只负责指定已安装的
+`node_modules`，然后按照 lock 校验包字节。官方 CLI 通常会自动提供自身的安装位置，所以上面的命令无需填写包路径。只有需要主动扩大源码边界时才传 `--root`。不要把外部项目软链接进仓库；canonical path 的边界检查会有意拒绝这种逃逸。
 
 共享只读素材库不必复制进项目，也不必放宽 Source 边界：
 
@@ -394,8 +383,7 @@ node --run narratage -- packages sync examples/talking-head-aroll/build.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json
 ```
 
-Author/Run Source 选择作者包，Runtime Profile 选择环境包；该命令只闭包并锁定这两组声明，
-不扫描目录、不启动 Provider，也不生成媒体。
+Author/Run Source 选择作者包，Runtime Profile 选择环境包；该命令只闭包并锁定这两组声明，不扫描目录、不启动 Provider，也不生成媒体。
 
 ### 2. 诊断环境
 
@@ -403,8 +391,7 @@ Author/Run Source 选择作者包，Runtime Profile 选择环境包；该命令�
 node --run narratage -- doctor examples/talking-head-aroll/svml.runtime.json
 ```
 
-Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；
-它不启动 Worker，也不发付费请求。
+Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；它不启动 Worker，也不发付费请求。
 
 `doctor` 有意检查完整 Runtime Profile。若只想检查某次 Run 真正需要的环境，请使用带
 `--runtime` 的 `plan`。
@@ -436,8 +423,7 @@ node --run narratage -- build examples/talking-head-aroll/build.svrun \
   --follow
 ```
 
-不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是
-观察者，并会报告 phase / Operation 数量变化；Ctrl-C 不会取消任务。
+不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是观察者，并会报告 phase / Operation 数量变化；Ctrl-C 不会取消任务。
 
 | 标志 | 说明 |
 |---|---|
@@ -448,10 +434,8 @@ node --run narratage -- build examples/talking-head-aroll/build.svrun \
 | `--build-id` | 用户为此 Build 选择的标识符（用于检索和复用） |
 | `--follow` | 将 Build 进度流式输出到终端 |
 
-不传 `--build-id` 时，身份由编译后的作者意图和运行意图派生；重复同一条命令只会寻址同一个
-耐久 Build，不会偷偷再买一次生成。未完成的 Build 从已验收 Record 和可恢复 Endpoint checkpoint
-继续；已完成、失败或取消的 Build 保持终态，只返回状态。相同 prompt 明确需要另一份随机结果时，
-使用新的显式 id。把已有显式 id 用到另一份编译意图上会被拒绝，并同时提示“换 id”或“恢复原 Source”。
+不传 `--build-id` 时，身份由编译后的作者意图和运行意图派生；重复同一条命令只会寻址同一个耐久 Build，不会偷偷再买一次生成。未完成的 Build 从已验收 Record 和可恢复 Endpoint checkpoint
+继续；已完成、失败或取消的 Build 保持终态，只返回状态。相同 prompt 明确需要另一份随机结果时，使用新的显式 id。把已有显式 id 用到另一份编译意图上会被拒绝，并同时提示“换 id”或“恢复原 Source”。
 
 ### 5. 检查并获取结果
 
@@ -460,8 +444,7 @@ node --run narratage -- inspect my-film-001 \
   --runtime examples/talking-head-aroll/svml.runtime.json
 ```
 
-`inspect` 会显示耐久 Build 状态、所需输出与已接受的 Record。确认这些事实正确后，再获取所选
-归档 Artifact：
+`inspect` 会显示耐久 Build 状态、所需输出与已接受的 Record。确认这些事实正确后，再获取所选归档 Artifact：
 
 ```bash
 node --run narratage -- get my-film-001 \
@@ -471,8 +454,7 @@ node --run narratage -- get my-film-001 \
 ```
 
 每个被接受的中间 Record 和 Artifact 在 Build 完成前都会被归档。`get` 会复制一份已持久化的
-Record。Blob Artifact 会从所选 Store 流式读取，逐步校验长度与 SHA-256，完整通过后才原子替换
-目标路径；导出大 MP4 不会把整段视频塞进 CLI 内存。
+Record。Blob Artifact 会从所选 Store 流式读取，逐步校验长度与 SHA-256，完整通过后才原子替换目标路径；导出大 MP4 不会把整段视频塞进 CLI 内存。
 Build 的最终输出会为每个目标别名打印精确的 `get --name …` 命令，不必为了导出
 `final.video` 去查不透明的 Record id。
 
