@@ -10,8 +10,8 @@ Glory*》的一篇影评。那位影评人造出这个词，用来描述当时�
 **Narration + Montage** —— 旁白的声音推动故事前进，同时画面组接出与之呼应的蒙太奇。
 
 这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、
-文字与音频组装成一部完成的影片。文字是语义主轴，所有视觉内容以彼此平级的 Track 参与作品。
-Author Source 使用 SVML（Semantic Video Markup Language）编写，扩展名为 `.svml`。
+文字与音频组装成一部完成的影片。Author Source 使用 SVML（Semantic Video Markup Language）编写，
+扩展名为 `.svml`。
 
 Narratage 把这份源码编译成一张可见的执行图。在任何模型或外部服务开始工作之前，你可以先检查源码、
 选择一次 Run，并看清这次 Build 究竟需要执行什么。本页先带你得到第一份安全的 Plan：不需要 API Key，
@@ -19,8 +19,7 @@ Narratage 把这份源码编译成一张可见的执行图。在任何模型或�
 
 ## 使用 Narratage skill
 
-如果使用编程 Agent，可以要求它使用仓库中的 `narratage` skill。Skill 遵循的仍然是同一套文件和命令，
-不会创造另一套工作流。把下面这段发给它：
+如果使用编程 Agent，把下面这段发给它：
 
 ```text
 安装并使用这个仓库里的 narratage skill。配置我的环境，只向我索取当前 Runtime Profile
