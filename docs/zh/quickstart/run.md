@@ -5,9 +5,30 @@ description: 声明 Build 目标、复用结果以及配置运行时环境。
 
 # Run Source 与 Build
 
-Run Source（`.svrun`）声明**要构建什么**——需要哪些输出，以及是否明确选用某个 Candidate 替换作者图里的实现。Runtime Profile（`svml.runtime.json`）声明**在哪里运行**——endpoint、凭证和并发数。
+Author Source 定义视频本身。Run Source 从中挑选要产出哪些公开输出，以及是否用明确的 Candidate 来满足它们。Runtime Profile 则选择执行这份计划的机器、Store 与 Provider endpoint。
 
-这两者都不会改变视频**是什么**。那是 Author Source 的职责。
+大部分工作都遵循同一个循环：
+
+```bash
+narratage packages sync build.svrun --runtime svml.runtime.json --root .
+narratage doctor svml.runtime.json
+narratage check main.svml --runtime svml.runtime.json --root .
+narratage plan build.svrun --runtime svml.runtime.json --root .
+narratage build build.svrun --runtime svml.runtime.json --build-id my-video-001 --follow
+narratage get my-video-001 --runtime svml.runtime.json --name final.video --to output/final.mp4
+```
+
+仓库内的源码启动器是 `/path/to/narratage/narratage`；本页写作 `narratage` 的命令，指的是这个启动器，或将来安装好的 CLI。
+
+只有 `build` 会真正提交工作。`packages sync`、`doctor`、`check` 与 `plan` 都是安全的准备步骤。
+
+```text
+main.svml          作者意图
+build.svrun        本次 Run 的 Target 与 Candidate 选择
+svml.runtime.json  执行环境
+```
+
+Run Source 与 Runtime Profile 不会悄悄改写视频。创作性的模型选择仍然留在 Author Source，或它显式导入的包里。
 
 ## Run Source 语法
 
@@ -36,7 +57,7 @@ Run Source（`.svrun`）声明**要构建什么**——需要哪些输出，以�
 
 ### Target
 
-不存在特权化的"最终视频"根节点。任何组件的任何公开逻辑输出都可以作为 Target。编译器仅执行满足所需 Target 所必要的 Operation——其余一切均被裁剪。
+Target 就是你希望这次 Build 产出的东西。它可以是一张生成的图片、一个视频镜头、一份时序映射、一条 Track，或者最终成片。编译器只执行选定 Target 所需的 Operation；无关的分支不会被触碰。
 
 ### 多个 Target
 
