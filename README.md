@@ -30,17 +30,6 @@ scenes to match.
 That is what this system does. The author writes a narrated Script with semantic anchors, and the
 compiler assembles generated video, captions, B-roll, text and audio into a finished film.
 
-## Why a graph
-
-AI generation is slow, costly and non-deterministic, and each output tends to become the next
-step's input. Narratage keeps the resulting choices visible as two peer graphs: the Author Graph
-expresses the work, the Run Graph selects Targets and Candidates for one Build. Core only resolves,
-verifies and advances the resulting state machine, so video concepts stay in independently
-installable packages — Core hard-codes no model, Track or Provider.
-
-The normative laws are in the
-[Core Kernel specification](https://narratage.hypit.ai/guide/spec/core-kernel).
-
 ## What it feels like
 
 The Script stays readable prose. Segments organize the story, Role Cues say who speaks, Dual Text
@@ -133,6 +122,17 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
 
 `check` verifies the Author Source and prints its typed outputs. `plan` shows the exact demanded
 subgraph and every external capability a real Build would need, without starting any of it.
+
+## Why a graph
+
+AI generation is slow, costly and non-deterministic, and each output tends to become the next
+step's input. Narratage keeps the resulting choices visible as two peer graphs: the Author Graph
+expresses the work, the Run Graph selects Targets and Candidates for one Build. Core only resolves,
+verifies and advances the resulting state machine, so video concepts stay in independently
+installable packages — Core hard-codes no model, Track or Provider.
+
+The normative laws are in the
+[Core Kernel specification](https://narratage.hypit.ai/guide/spec/core-kernel).
 
 ## Where to go next
 
