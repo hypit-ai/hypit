@@ -1,7 +1,5 @@
 # Caption Program
 
-Status: pre-release executable contract.
-
 ## 1. Scope
 
 Caption is an ordinary video component family. It turns immutable authored display text into one

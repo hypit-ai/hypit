@@ -1,9 +1,5 @@
 # SVML Depth-Stack Deck Track
 
-Status: implemented executable authority for the official depth-stack Deck migration. It records
-the behavior used by the old Deck implementation, but it is not a frozen public ABI and does not
-define a universal Deck protocol.
-
 ## 1. Conclusion
 
 A Deck is not a Media Item mode and is not the third primitive of Media Track. It is a higher-order
@@ -103,7 +99,7 @@ Every Card source, label, trigger and sound dependency is an explicit graph refe
 
 ## 5. Illustrative author Surface
 
-The syntax is not frozen, but package ownership should be visible:
+Package ownership is explicit:
 
 ```xml
 <deck:DepthStack
@@ -228,59 +224,3 @@ between them.
 
 Relative depth determines only ordering among owned Cards. Temporary ordering during reflow exists
 only inside that explicit relationship. It does not allocate a global z band.
-
-## 10. Migration from the legacy implementation
-
-Retain from the old Deck implementation:
-
-- explicit authored Card order;
-- semantic trigger-driven current state;
-- configurable previous/future visibility;
-- finite or explicit wrapping behavior;
-- depth offset, scale, alternating rotation, opacity and tone;
-- whole-group entry, sustain and exit motion;
-- full-group interpolated reflow;
-- frame Paint, padding, radius, border and shadow;
-- deterministic frame-local evaluation.
-
-Retire:
-
-- treating Deck as a B-roll or Media mode;
-- implicit `linkNext` topology;
-- placement semantics hidden behind “usually below the face”;
-- automatic labels from source metadata;
-- lower-composite transitions;
-- lane-global sound defaults;
-- any registry entry in Core, Film, Composition or HyperFrames.
-
-## 11. Implementation and acceptance order
-
-1. implement the shared Temporal and Spatial slices;
-2. expose `DepthStack` and explicit ordered Cards;
-3. resolve exact trigger state and finite visibility;
-4. reuse focused media-layer lowering for Card contents;
-5. add pure relative-depth pose resolution;
-6. add collection reflow and whole-group lifecycle motion;
-7. prove still and timed inactive-playback behavior;
-8. migrate one real old-system Deck and freeze only after the acceptance matrix passes.
-
-Steps 1–8 execute in `@narratage/deck-track`. Package tests cover every state, validation,
-playback, label and extension case below. The real HyperFrames witness renders a legacy-style
-three-Card depth stack twice—one worker and three partitioned workers—and compares every decoded
-frame byte-for-byte while also proving each authored current state paints. This completes the Deck
-package acceptance matrix, and the independent generic E1–E8 terminal VisualTrack/Visual IR gates
-now pass as well.
-
-Required evidence includes:
-
-- previous-only, next-only and mixed neighborhoods;
-- zero, one and many visible neighbors;
-- finite boundaries and explicit wrapping;
-- missing, equal and reversed trigger rejection;
-- depth pose, alternating rotation, opacity and tone;
-- cut and interpolated whole-collection reflow;
-- still and timed Card sampling laws;
-- optional exact-font labels;
-- whole-group entry/sustain/exit without overwriting Card poses;
-- byte-identical frames under sequential, partitioned and out-of-order rendering;
-- installation of another Deck package without changing Core or the first DepthStack package.

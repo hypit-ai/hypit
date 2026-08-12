@@ -1,7 +1,5 @@
 # Fine Caption Style Family
 
-Status: implemented pre-release Style family with complete browser evidence for the declared surface.
-
 ## Purpose and boundary
 
 `@narratage/caption-fine` is the official field-free, fine-grained Caption Style family. "Fine"
@@ -139,7 +137,7 @@ Activation state and decoration geometry are deliberately separate. `current` ac
 Atom whose measured window contains the frame. `trail` retains every activated Atom through the end
 of the Cue. `step` swaps the whole active glyph layer; `wipe` reveals it across the Atom's measured
 window. RTL reverses the wipe direction. Glyphs, boxes and underlines may choose different state
-policies, so the retained legacy behavior—trail text with a current-only pill—is directly expressible.
+policies, so trail text with a current-only pill is directly expressible.
 
 An isolated box paints one box per activated Atom. A joined trail paints the one ordered activated
 prefix as continuous inline fragments: atoms on the same rendered line share one background, while
@@ -195,7 +193,7 @@ browser line fragments. It does not create another text truth. Active overlays r
 geometry. Every animation lowers to finite frame-addressed `VisualTrack` keyframes before
 HyperFrames sees it.
 
-## Defaults and compatibility
+## Defaults
 
 The original fifteen baseline properties remain required, so a minimal Recipe is explicit about
 planning, geometry, typography and its visible box. New dimensions are optional and resolve to a
@@ -212,23 +210,3 @@ complete immutable parameter object:
 
 Unknown properties are rejected. Defaults are package implementation policy and therefore covered
 by its implementation digest; they are not hidden Runtime behavior.
-
-## Completed evidence gates
-
-The complete design was delivered progressively rather than as incompatible versions:
-
-1. **Resolved model and static lowering** — complete parameters, anchors, layout, base/active Paint,
-   Cue box and strict validation.
-2. **Timed lowering** — current/trail, step/wipe, Cue fades, Atom reveal and active scale using only
-   proven whole-Atom time.
-3. **Reproducibility evidence** — an ordered exact Font Artifact stack, CJK, emoji/symbol fallback,
-   multiline wrapping, outline, shadow, glow and all four glyph karaoke modes have real browser/pixel
-   witnesses. `max-lines` was deliberately rejected rather than deferred.
-4. **Expressive Paint and motion evidence** — current-only and trail boxes, isolated and joined
-   geometry, gradient, underline, long shadow, text transform, layered one-shot motion, typewriter
-   reveal and deterministic loops each have a terminal-IR witness; joined geometry additionally has
-   a real wrapped browser/pixel witness.
-
-No gate changes Core or common Caption. Exact font selection is an explicit author-graph reference
-between the Media Font Surface and the Fine Style Surface, not metadata propagated through the
-Caption pipeline.

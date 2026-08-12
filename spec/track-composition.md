@@ -1,8 +1,5 @@
 # SVML Track and Composition
 
-Status: executable repository-internal `@1` compatibility waist; all gates in
-[`track-expressiveness.md`](./track-expressiveness.md) pass, publication remains separate.
-
 ## Law
 
 Except for the shared ProgramSpace and canvas geometry, every audiovisual contribution entering a

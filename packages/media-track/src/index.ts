@@ -88,7 +88,6 @@ export {
   mediaTrackValidatorDigests,
   projectMediaAudioTrack,
   projectMediaVisualTrack,
-  renderMediaTrack,
   sealMediaItemSpec,
   sealMediaTrackHeader,
   sealMediaTrackProgram,
