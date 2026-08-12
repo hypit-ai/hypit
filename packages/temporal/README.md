@@ -6,5 +6,3 @@ expressions, intersects them with ProgramSpace and returns validated half-open f
 
 The package also provides pure sibling-window validation and triggered-stage scheduling. It defines
 no Core branch, renderer behavior, media playback policy, Provider or authoring super-program.
-
-The normative design is [Track Authoring Model](https://narratage.hypit.ai/guide/spec/track-authoring).

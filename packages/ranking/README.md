@@ -34,5 +34,3 @@ they define the board vocabulary rather than dynamic item copy.
   <ranking:ColumnItem label={winner}/>
 </ranking:Column>
 ```
-
-See [Ranking Track](https://narratage.hypit.ai/guide/spec/ranking-track) for the normative pre-release model.
