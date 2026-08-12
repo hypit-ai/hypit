@@ -113,7 +113,7 @@ export default svmlPackage;
 ```
 
 `activate` 是唯一的纯部署声明。它返回的 Endpoint 同时拥有供 `doctor` 与执行使用的凭据引用、
-权限、capability 和调度事实。Activation 不得解析密钥或环境来源的部署值、访问网络或启动任务；
+capability 和调度事实。Activation 不得解析密钥或环境来源的部署值、访问网络或启动任务；
 环境变量名会作为引用保留到真正处理匹配 Need 时。凭据是否存在由通用 CredentialStore 路径诊断，
 Provider 不得把环境变量硬编码成特殊的密钥 Store。
 
@@ -188,9 +188,6 @@ node --run narratage -- lock-packages <runtime-lock> \
         "defaultConcurrency": 2
       }
     }
-  ],
-  "permissions": [
-    "network:api.my-service.com"
   ]
 }
 ```

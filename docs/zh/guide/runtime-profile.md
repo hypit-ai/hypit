@@ -6,7 +6,7 @@ description: 显式配置 Build 的执行环境、状态存储、凭据与并发
 # Runtime Profile
 
 Runtime Profile 声明冻结后的 Build *在哪里*执行：Scheduler、Worker、全部 Store、Endpoint、
-凭据、并发和权限。它属于部署配置，绝不进入 Author Graph 或 Run Graph 身份。
+凭据和并发。它属于部署配置，绝不进入 Author Graph 或 Run Graph 身份。
 
 ## 声明式 Profile
 
@@ -37,19 +37,11 @@ Runtime Profile 声明冻结后的 Build *在哪里*执行：Scheduler、Worker�
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.production",
-      "authority": "kie.production",
       "config": {
         "apiKey": { "store": "keychain", "key": "kie.api-key" },
         "defaultConcurrency": 2
       }
     }
-  ],
-  "permissions": [
-    "filesystem:artifacts",
-    "filesystem:state",
-    "process:keychain",
-    "network:api.kie.ai",
-    "network:kieai.redpandaai.co"
   ],
   "scheduling": { "maxConcurrency": 4 }
 }
@@ -70,18 +62,19 @@ CredentialStore。不存在“因为只装了一个所以自动选中”，`@nar
 | `root` | Runtime 数据与相对 lock 的根目录；默认是 Profile 所在目录 |
 | `packageRoot` | 提供已安装 `node_modules` 的 Host 位置；与项目数据目录无关 |
 | `packageLock` | 确定性 Producer/Validator 包闭包 |
-| `runtimePackageLock` | 有权限的 Runtime Adapter 包闭包 |
+| `runtimePackageLock` | 可信 Runtime Adapter 包闭包 |
 
 外部项目可以把源文件、锁、SQLite 和 Artifact 全部留在自己的目录，同时从另一个
 Narratage 安装目录加载校验后的包。
 
-## 并发与权限
+## 并发与信任边界
 
 `maxConcurrency`、Provider Authority 与精确 Capability Route 的上限由 DispatchStore 在所有
 共享 Worker 之间执行，不是某个 CLI 进程里的计数器。容量租约跟随 Build 的 fenced lease；
 过期 Worker 不能继续准入结果。
 
-权限仍是显式 allowlist，例如 `network:<host>`、`filesystem:<scope>`、`process:<name>`。
+Runtime Adapter 当前是可信本地代码。开放任意第三方 Adapter 之前，需要真正的进程或 Wasm
+隔离；字符串 allowlist 不能限制同一 Node 进程里的代码。
 
 ## 凭据控制不是 Runtime 执行
 
@@ -105,7 +98,7 @@ node --run narratage -- runtime down svml.runtime.json
 `stale`，下一次启动或提交会按新执行闭包替换进程，而不是继续复用旧装配。
 
 `doctor` 会求值 Endpoint Adapter 唯一的纯 `activate()` 声明，并直接从产生的 Endpoint package
-读取凭据、权限和前置条件；不存在另一份仅供诊断使用的凭据镜像。Activation 可以构造 handler，
+读取凭据和前置条件；不存在另一份仅供诊断使用的凭据镜像。Activation 可以构造 handler，
 但不得解析密钥、访问网络、启动进程或修改持久状态。`doctor` 不构造 Scheduler、Worker、Build
 Store 或作者包，不会启动服务、写入 Runtime 状态或提交任务；它只打开 Profile 明确选择的
 CredentialStore 来解析引用，完成后立即关闭，并可执行显式声明的有界只读探测。

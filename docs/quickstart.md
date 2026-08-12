@@ -76,7 +76,7 @@ Every Build takes three separate inputs:
 |---|---|---|
 | **Author Source** | script, model choices, track composition, output graph | `.svml` |
 | **Run Source** | which outputs to target, alternate candidates, satisfaction edges | `.svrun` |
-| **Runtime Profile** | endpoints, credentials, concurrency, permissions | `svml.runtime.json` |
+| **Runtime Profile** | endpoints, credentials and concurrency | `svml.runtime.json` |
 
 Author Source says *what*. Run Source says *which*. Runtime Profile says *where*.
 

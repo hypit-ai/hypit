@@ -21,8 +21,8 @@ The acceptance used two explicit Build identities. The first submitted four KIE 
 requests. The second used `reuse-generated.svrun` to expose the resulting Records as four zero-input
 Build-Record Candidates and selected them through explicit Satisfaction edges. Its compiled plan
 contained no Seedance Operation or KIE Need, while the reachable
-media/WhisperX/Vertex/Film/HyperFrames path executed normally and preserved `substitute` through the
-final Record. This is the intended realization model—not an implicit cache, mutable resume or
+media/WhisperX/Vertex/Film/HyperFrames path executed normally on those selected values.
+This is the intended realization model—not an implicit cache, mutable resume or
 Runtime-selected fallback.
 
 The resulting artifact is a 57.13-second 720×1280, 30 fps H.264/AAC MP4. Frame inspection confirmed
@@ -30,7 +30,7 @@ the four ordered speech visuals and measured Caption Track in the final Composit
 brand-neutral [`examples/talking-head-aroll`](../examples/talking-head-aroll/README.md) fixture
 preserves the graph topology and explicit fresh/reuse Run shapes. Credentials, presenter assets,
 Build databases and generated outputs are intentionally ignored. Its `build.svrun` is the complete
-fresh `exact` execution choice, while
+fresh execution choice, while
 `reuse-generated.svrun` is the separate explicit reuse choice. Running either is an ordinary CLI
 Build; no example-specific harness or hidden third workflow graph is required.
 
@@ -49,15 +49,14 @@ Implemented:
   reverse reachability, finite `svml.plan@1` derivation and verified `svml.build@1` state machine;
 - one Operation instance fans out once; distinct instances never content-deduplicate;
 - Provided Values, multi-export Run Fragments, partial substitution and fully pruned defaults;
-- digest-bound Derivation and Receipt integrity, monotonic conformance and regenerated resume
-  Commands;
+- digest-bound Derivation and Receipt integrity plus regenerated resume Commands;
 - `@narratage/elaborator`: two-phase forward-reference linking and hygienic static Fragment expansion;
 - `@narratage/source`: mandatory bounded Source Header selecting an exact Frontend without suffix or
   Distribution defaults;
 - digest-separated Author Source Closure identity for original bytes, Frontend implementation and
   decoded semantics; every recursively imported source selects its own Frontend;
 - `@narratage/run`: syntax-neutral Run Source Closure, complete mandatory Run Graph, typed Candidate
-  fragments, inert Build-Record Candidates, named Target sets,
+  fragments, inert Build-Record Candidates, direct Targets,
   Provided/Build-Record/Fragment Candidates and explicit Satisfaction edges;
 - `@narratage/run-markup`: optional official `.svrun` Markup Frontend;
 - official compilation binds both Author Graph and Run Graph identities before deriving a finite
@@ -112,11 +111,18 @@ Implemented:
   Artifact transfer from author source through Provider execution, generic persisted Operation
   progress, atomic managed-process lifecycle, and explicit dry-run/apply reachability GC over every
   retained BuildState and Operation;
+- static Run checking that validates future Build-Record Candidate references without requiring the
+  referenced Build to exist yet; archive resolution remains a `plan`/`build` responsibility;
+- demand-scoped Runtime preflight after deterministic planning and before Build submission: unrelated
+  Endpoints cannot block or start work, while every demanded capability must have one selected ready
+  Endpoint;
+- one explicit `packages sync <run-source> --runtime <profile>` trust action that derives the
+  Author/Run imports and Runtime `use` entries into two exact package locks;
 - `@narratage/transport`, `@narratage/transport-aws-lambda`: capability-neutral
   invocation seams.
 
-The removed CLI `--pin`, `--target` and `--accept-substitute` path cannot synthesize hidden execution
-intent. Reusable run choices live in a self-described Run Source; Core still has no Pin primitive.
+CLI flags cannot synthesize hidden execution intent. Reusable run choices live in a self-described
+Run Source; Core has no separate reuse primitive.
 
 Repository-level dependency tests now enforce an acyclic production graph and prove that the
 declared domain-neutral distribution—including `@narratage/local` and `@narratage/package-loader-node`—closes
@@ -317,15 +323,15 @@ There is intentionally no cross-Track sampling/effect model and no Base FX place
 
 Installing a trusted package can add a nominal Type, Surface, Fragment, deterministic Producer,
 validator or Endpoint without a Core release. Source imports activate author facets only; Provider,
-credential, process and Runtime authority require an explicit Host profile and allowlist.
+credential, process and Runtime authority require an explicit Host profile selecting trusted code.
 
 Arbitrary untrusted community Parser, Producer and Validator execution is not implemented. The
-current in-process registry is suitable only for trusted locked code. Isolation, resource limits,
-permission enforcement and loaded-code attestation remain release work.
+current in-process registry is suitable only for trusted locked code. Isolation, resource limits
+and loaded-code attestation remain release work.
 
 ## Current verification
 
-- `pnpm check`, the complete 640-test repository run and the documentation build pass; 16 browser,
+- `pnpm check`, the complete 625-test repository run and the documentation build pass; 16 browser,
   paid-Provider or heavyweight local-service acceptances remain explicitly environment-gated and
   are skipped when their prerequisites are absent;
 - one process-level non-video Build lives in a repository-external Workspace with independent
@@ -334,7 +340,7 @@ permission enforcement and loaded-code attestation remain release work.
 - two independently assembled Workers sharing one SQLite authority obey one global capacity limit
   even when an Operation outlives its initial capacity lease; expired leases are fenced, a
   cancellation racing with Worker release cannot lose its durable wake, recovered Endpoint
-  submission keys are reused and Core Event replay is idempotent;
+  Operation ids are reused and Core Event replay is idempotent;
 - Build and Operation cancellation tests cover pre-admission closure, concurrent submission,
   accepted/confirmed/unsupported/too-late outcomes, completion racing with control, late-result
   retention, exact-Command suppression and progress of an unrelated branch;

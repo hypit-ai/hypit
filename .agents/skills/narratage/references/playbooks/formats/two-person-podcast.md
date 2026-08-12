@@ -28,8 +28,8 @@ Draw the room and name camera positions A and B before generating either view.
    both voice references in the Kit's declared order.
 6. Assemble accepted takes through `speech:Spine`, run `whisperx:Alignment`, then add exact-font
    Captions, evidence Media, Typography, and optional Audio Tracks.
-7. Assemble with `film:Film`, render with `render:Video`, and use `.svrun` target-sets for staged
-   review and delivery.
+7. Assemble with `film:Film`, render with `render:Video`, and use separate `.svrun` Sources with
+   explicit Targets for staged review and delivery.
 
 ## Direct turns and cuts
 

@@ -58,11 +58,8 @@ generic Need Receipt binds this configured Endpoint digest/configuration/Runtime
 HyperFrames attestation inside receipt-covered metadata repeats this renderer deployment digest and
 the exact document digest.
 
-Allow only the permissions declared by the Endpoint:
-
-```json
-["network:aws:s3", "network:aws:states"]
-```
+The Endpoint package is trusted local code that accesses AWS S3 and Step Functions. It must not be
+treated as sandboxed merely because its configuration is declarative.
 
 The distributed renderer accepts only integer 24, 30 and 60 fps. The request contract is closed:
 an added hardware-GPU or unknown render requirement is declined so another Endpoint can satisfy the

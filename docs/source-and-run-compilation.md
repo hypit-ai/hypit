@@ -13,8 +13,8 @@ one rule unambiguous:
 | Input | Authority | Typical suffix |
 |---|---|---|
 | Author Source | what the author declares and how declarations connect | `.svml`, `.svs`, or another package convention |
-| Run Source | which Author Source, Target set and explicit Candidate satisfactions this Build uses | `.svrun` |
-| Runtime Profile | where the already frozen work executes, with which Stores, Endpoints and permissions | `.json` / trusted embedding code |
+| Run Source | which Author Source, Targets and explicit Candidate satisfactions this Build uses | `.svrun` |
+| Runtime Profile | where the already frozen work executes, with which Stores and Endpoints | `.json` / trusted embedding code |
 
 Only the first two compile into graphs. Runtime Profile is deployment configuration and cannot add a
 Target, Candidate, Satisfaction or author component.
@@ -67,12 +67,9 @@ The official Markup Run Source is likewise self-described:
 
 ```xml
 <?svml using="@narratage/run-markup@1"?>
-<svrun version="1" targets="delivery">
+<svrun version="1">
   <author source="./main.svml"/>
-
-  <target-set id="delivery">
-    <target output="final.video" accepts="exact"/>
-  </target-set>
+  <target output="final.video"/>
 </svrun>
 ```
 
@@ -87,7 +84,7 @@ names, instantiates imported Run Fragments, and seals one complete `RunGraph` co
 - the Run Source Closure digest;
 - Run Candidates and Operations;
 - explicit Satisfaction edges;
-- all named Target sets and the selected set.
+- the demanded Targets.
 
 Run-only Fragments may use Producers whose Modules the Author Source never imported. The reference
 compiler derives those Module references from the declared Fragment types and Operations, closes
@@ -100,7 +97,8 @@ not.
 
 ## 4. Deterministic composition before execution
 
-The compiler first closes both sources, then resolves realization and freezes planning input:
+The compiler first closes both sources, then applies explicit Candidate selections and freezes the
+single realized graph used for planning:
 
 ```text
 Author Source ──Header→ Author Frontend ──Elaborator→ Author Graph ──┐
@@ -111,14 +109,13 @@ Run Source    ──Header→ Run Frontend    ──Run compiler→ Run Graph �
 ```
 
 There is no graph mutation during scheduling. Run Candidates and Operations are composed into a
-new immutable graph; reverse demand from the selected Target set prunes unreachable defaults. One
+new immutable graph; reverse demand from the Targets prunes unreachable defaults. One
 declared multi-export Fragment instance shares its Operations. Two declarations are two instances,
 even if their content is identical.
 
-The final compiled graph identity binds both `AuthorGraph.id` and `RunGraph.id`. The BuildRequest
-then binds that graph, the selected Target set, Satisfaction edges and implementation closure, while
-Build identity binds the execution Program Closure. Only after all of those facts verify may the
-Scheduler issue a Command.
+The final compiled graph identity binds the realized graph and Run source. The BuildRequest binds
+only that graph and its Targets, while Build identity binds the execution Program Closure. Only
+after all of those facts verify may the Scheduler issue a Command.
 
 ## 5. Data gates
 
@@ -128,9 +125,9 @@ Scheduler issue a Command.
 | Workspace | source/asset locator within one session | ambient package filesystem access, source drift |
 | Source Closure | byte, Frontend and semantic identities | undiscovered imports, recursive cycles, digest drift |
 | Author linker | typed records, components and fragments | unknown exports, invalid schema/type ownership |
-| Run compiler | Author exports, execution Module Closure and explicit Run declarations | hidden CLI Target/Pin intent, unknown Candidate/export or Producer Module |
+| Run compiler | Author exports, execution Module Closure and explicit Run declarations | hidden CLI Target/Candidate intent, unknown Candidate/export or Producer Module |
 | Graph/plan | complete immutable dual-graph input | runtime topology choice, content cache guessing |
-| Runtime coverage | exact Producers, Endpoints and services | unbound Need, undeclared permission or credential slot |
+| Runtime coverage | exact Producers, Endpoints and services | unbound Need or undeclared credential slot |
 | Core transition | verified Event/Receipt/Derivation | stale or tampered command/result identity |
 
 These gates deliberately do not pass a universal metadata object down the pipeline. Dependencies

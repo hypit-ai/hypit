@@ -5,7 +5,7 @@ description: 声明 Build 目标、复用结果以及配置运行时环境。
 
 # Run Source 与 Build
 
-Run Source（`.svrun`）声明**要构建什么**——需要哪些输出、接受什么保真度，以及可选地如何复用先前 Build 的结果。Runtime Profile（`svml.runtime.json`）声明**在哪里运行**——endpoint、凭证、并发数和权限。
+Run Source（`.svrun`）声明**要构建什么**——需要哪些输出，以及是否明确选用某个 Candidate 替换作者图里的实现。Runtime Profile（`svml.runtime.json`）声明**在哪里运行**——endpoint、凭证和并发数。
 
 这两者都不会改变视频**是什么**。那是 Author Source 的职责。
 
@@ -22,27 +22,19 @@ Run Source（`.svrun`）声明**要构建什么**——需要哪些输出、接�
 ```svml
 <?svml using="@narratage/run-markup@1"?>
 
-<svrun version="1" targets="delivery">
+<svrun version="1">
   <author source="./main.svml"/>
-  <target-set id="delivery">
-    <target output="final.video" accepts="exact"/>
-  </target-set>
+  <target output="final.video"/>
 </svrun>
 ```
 
 | 元素 | 说明 |
 |---|---|
-| `<svrun>` | 根元素。`version="1"`，`targets` 指定活跃的 target-set |
+| `<svrun>` | 根元素，唯一属性是 `version="1"` |
 | `<author>` | 必需。`source` 指向 `.svml` Author Source |
-| `<target-set>` | 一组命名的需求输出集合 |
-| `<target>` | 单个需求输出：`output` 指定逻辑输出名，`accepts` 设置保真度 |
+| `<target>` | 一个需要得到的公开 Logical Output |
 
 ### Target
-
-**Target** 指定 Build 所需的输出及其可接受的最低保真度：
-
-- `accepts="exact"` ——输出必须与作者声明的完全一致
-- `accepts="substitute"` ——允许使用可接受的替代品（例如先前生成的结果）
 
 不存在特权化的"最终视频"根节点。任何组件的任何公开逻辑输出都可以作为 Target。编译器仅执行满足所需 Target 所必要的 Operation——其余一切均被裁剪。
 
@@ -51,45 +43,26 @@ Run Source（`.svrun`）声明**要构建什么**——需要哪些输出、接�
 可以在一次 Build 中请求多个输出：
 
 ```svml
-<target-set id="delivery">
-  <target output="final.video" accepts="exact"/>
-  <target output="captions.track" accepts="exact"/>
-</target-set>
+<target output="final.video"/>
+<target output="captions.track"/>
 ```
 
-也可以定义多个 target-set 并在它们之间切换：
-
-```svml
-<svrun version="1" targets="preview">
-  <author source="./main.svml"/>
-
-  <target-set id="preview">
-    <target output="captions.track" accepts="substitute"/>
-  </target-set>
-
-  <target-set id="delivery">
-    <target output="final.video" accepts="exact"/>
-  </target-set>
-</svrun>
-```
-
-`<svrun>` 上的 `targets` 属性选择当前活跃的集合。
+不同的运行意图写成不同的 `.svrun` 文件即可，它们可以共同指向同一个 Author Source。
+例如 `images.svrun` 只请求图片，`film.svrun` 请求最终视频，无需在文件内部再造一层集合。
 
 ## 复用结果
 
 Narratage 没有隐式缓存。复用结果是显式的运行图编写——你将历史 Record 声明为零输入 Candidate，并通过 Satisfaction 边将它们连接起来。
 
-生成图片或 Take 一经验收，就在下一份 `.svrun` 中用 `build-record` 与 `satisfy` 固定它；
-消费它的 Target 要接受所声明的 fidelity，并在启动付费下游工作前检查冻结 plan。
+生成图片或 Take 一经验收，就在下一份 `.svrun` 中用 `build-record` 与 `satisfy` 显式复用，
+并在启动付费下游工作前检查冻结 plan。Core 没有 Pin 状态或 fidelity 标签。
 
 ```svml
 <?svml using="@narratage/run-markup@1"?>
 
-<svrun version="1" targets="delivery">
+<svrun version="1">
   <author source="./main.svml"/>
-  <target-set id="delivery">
-    <target output="final.video" accepts="substitute"/>
-  </target-set>
+  <target output="final.video"/>
 
   <build-record id="hook-video"
     build="my-film-001" output="hook-take.video"/>
@@ -100,14 +73,10 @@ Narratage 没有隐式缓存。复用结果是显式的运行图编写——你�
   <build-record id="payoff-video"
     build="my-film-001" output="payoff-take.video"/>
 
-  <satisfy output="hook-take.video"
-    candidate="hook-video" fidelity="substitute"/>
-  <satisfy output="meeting-take.video"
-    candidate="meeting-video" fidelity="substitute"/>
-  <satisfy output="evidence-take.video"
-    candidate="evidence-video" fidelity="substitute"/>
-  <satisfy output="payoff-take.video"
-    candidate="payoff-video" fidelity="substitute"/>
+  <satisfy output="hook-take.video" candidate="hook-video"/>
+  <satisfy output="meeting-take.video" candidate="meeting-video"/>
+  <satisfy output="evidence-take.video" candidate="evidence-video"/>
+  <satisfy output="payoff-take.video" candidate="payoff-video"/>
 </svrun>
 ```
 
@@ -120,7 +89,7 @@ node --run narratage -- history hook-take.video \
   --runtime ./svml.runtime.json
 ```
 
-`history` 只列出该 Build 确实选择并验收过的公开 Logical Output。仅仅在源码中声明但没有
+`history` 只列出该 Build 确实产出过的公开 Logical Output。仅仅在源码中声明但没有
 运行出来的别名，以及不能作为 `build-record` Candidate 的 authored Record 别名，都不会混入
 结果。如果忘了旧名字，可以按 Catalog 当时记录的精确源码路径列出真正验收过的输出名：
 
@@ -136,8 +105,7 @@ Build、Logical Output 和 Record 摘要共同确定。假如当前源码把 `ho
 ```svml
 <build-record id="approved-opening"
   build="my-film-001" output="hook-take.video"/>
-<satisfy output="opening-shot.video"
-  candidate="approved-opening" fidelity="substitute"/>
+<satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
 Narratage 永远不会猜测两个名字代表同一份作者意图。`my-film-001` 这样的可读 build-id 由
@@ -162,16 +130,22 @@ Narratage 永远不会猜测两个名字代表同一份作者意图。`my-film-0
 |---|---|
 | `output` | 要满足的逻辑输出 |
 | `candidate` | Candidate 标识符（来自 `build-record`） |
-| `fidelity` | `exact` 或 `substitute` |
 
-编译后的计划会裁剪所有被替代 Candidate 取代的上游 Operation。这是一次新的 Build，而非旧 Build 的延续。下游处理（归一化、WhisperX、字幕生成、渲染）仍然会对复用的媒体执行。
+编译后的计划会裁剪所选 Candidate 取代的上游 Operation。这是一次新的 Build，而非旧 Build 的延续。下游处理（归一化、WhisperX、字幕生成、渲染）仍然会对复用的媒体执行。
 
-### 保真度模型
+Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本身就是这次运行的明确实现决定。系统校验类型兼容性，但不猜测创作等价性，也不把这种判断作为冗余元信息沿整条图传播。
 
-- **`exact`** ——Candidate 与作者声明的内容精确匹配
-- **`substitute`** ——Candidate 是一个可接受的替代品
+### 使用已有文件
 
-替代保真度是**单调的**：一旦替代品进入图中，它会向下游传播。你无法将其恢复为 exact。如果最终 Target 接受 `substitute`，那么消费替代输入的下游 Operation 也会产生替代结果。
+本地文件就是最简单的零输入 Candidate：
+
+```svml
+<file id="approved-opening" from="./approved-opening.mp4" media-type="video/mp4"/>
+<satisfy output="opening-shot.video" candidate="approved-opening"/>
+```
+
+文件相对于 `.svrun` 读取，按内容寻址，并随 Build 归档。系统没有额外的 Pin 状态、文件名缓存
+或隐式历史查找；黑场、预览图与人工交付的产物也使用同一个机制。
 
 ## Runtime Profile
 
@@ -208,7 +182,6 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.main",
-      "authority": "kie.main",
       "config": {
         "apiKey": { "store": "env", "key": "KIE_API_KEY" },
         "defaultConcurrency": 2
@@ -217,19 +190,16 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
     {
       "use": "@narratage/provider-media-local",
       "instance": "media.main",
-      "authority": "media.main",
       "config": { "defaultConcurrency": 2 }
     },
     {
       "use": "@narratage/provider-whisperx-local",
       "instance": "whisperx.main",
-      "authority": "whisperx.main",
       "config": { "defaultConcurrency": 1 }
     },
     {
       "use": "@narratage/provider-google-vertex",
       "instance": "vertex.main",
-      "authority": "vertex.main",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
         "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
@@ -240,25 +210,12 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
     {
       "use": "@narratage/provider-hyperframes-local",
       "instance": "hyperframes.main",
-      "authority": "hyperframes.main",
       "config": {
         "workers": 2,
         "quality": "standard",
         "defaultConcurrency": 1
       }
     }
-  ],
-  "permissions": [
-    "environment:credentials",
-    "filesystem:artifacts",
-    "filesystem:state",
-    "filesystem:whisperx-staging",
-    "network:aiplatform.googleapis.com",
-    "network:api.kie.ai",
-    "network:kieai.redpandaai.co",
-    "network:whisperx-loopback",
-    "process:hyperframes",
-    "process:media"
   ],
   "scheduling": { "maxConcurrency": 4 }
 }
@@ -272,12 +229,13 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
 |---|---|
 | `use` | Provider 包名（例如 `@narratage/provider-kie`） |
 | `instance` | 唯一的实例标识符 |
-| `authority` | 共享外部容量的账号、部署或计算池的稳定非秘密标识 |
+| `authority` | 可选的共享账号或计算池标识；实例独享容量时省略即可 |
 | `config` | Provider 专属非秘密配置、CredentialRef 与并发数 |
 
-### 权限
+### 信任边界
 
-对文件系统、网络和进程访问的显式授权。调度器会拒绝需要未在此列出的权限的 Operation。
+Runtime 包目前作为可信本地代码执行。开放任意第三方 Runtime 包之前，需要真正的进程或
+Wasm 隔离；字符串 allowlist 不能限制同一 Node 进程里的代码。
 
 ### 调度
 
@@ -345,12 +303,11 @@ Worker。
 ```bash
 cd /opt/narratage
 
-node --run narratage -- lock-packages /work/my-film/svml.packages.lock \
-  --package @narratage/script \
-  --package @narratage/estimate
+node --run narratage -- packages sync /work/my-film/build.svrun \
+  --runtime /work/my-film/svml.runtime.json
 
 node --run narratage -- plan /work/my-film/build.svrun \
-  --package-lock /work/my-film/svml.packages.lock
+  --runtime /work/my-film/svml.runtime.json
 ```
 
 Source Workspace 默认是 `build.svrun` 所在目录；相对引用的 Author Source 与素材都必须留在
@@ -358,6 +315,17 @@ Source Workspace 默认是 `build.svrun` 所在目录；相对引用的 Author S
 `node_modules`，然后按照 lock 校验包字节。官方 CLI 通常会自动提供自身的安装位置，所以
 上面的命令无需填写包路径。只有需要主动扩大源码边界时才传 `--root`。不要把外部项目软
 链接进仓库；canonical path 的边界检查会有意拒绝这种逃逸。
+
+共享只读素材库不必复制进项目，也不必放宽 Source 边界：
+
+```bash
+node --run narratage -- plan /work/my-film/build.svrun \
+  --runtime /work/my-film/svml.runtime.json \
+  --asset-root /work/shared-media
+```
+
+`--asset-root` 可重复使用，只授权读取素材字节，不允许从那里导入 `.svml/.svs` 源码。该 Host
+选项不进入作者或 Build 身份；真正进入图的仍是素材内容摘要。
 
 官方 CLI 读取外部项目的 Runtime Profile 时也会提供同一个安装位置，因此 Profile 仍可移植：
 
@@ -385,7 +353,6 @@ Source Workspace 默认是 `build.svrun` 所在目录；相对引用的 Author S
     }
   },
   "endpoints": [],
-  "permissions": ["environment:credentials", "filesystem:artifacts", "filesystem:state"],
   "scheduling": { "maxConcurrency": 4 }
 }
 ```
@@ -393,7 +360,19 @@ Source Workspace 默认是 `build.svrun` 所在目录；相对引用的 Author S
 Runtime 状态、归档 Artifact 和 lock 仍全部留在 `/work/my-film`。只有包被有意安装在 CLI
 之外时，才使用 `--package-root` 或 Profile 的 `packageRoot` 覆盖位置。
 
-### 1. 诊断环境
+### 1. 同步已安装包
+
+安装或更新包后，用一条显式命令接受两份声明闭包：
+
+```bash
+node --run narratage -- packages sync examples/talking-head-aroll/build.svrun \
+  --runtime examples/talking-head-aroll/svml.runtime.json --root .
+```
+
+Author/Run Source 选择作者包，Runtime Profile 选择环境包；该命令只闭包并锁定这两组声明，
+不扫描目录、不启动 Provider，也不生成媒体。
+
+### 2. 诊断环境
 
 ```bash
 node --run narratage -- doctor examples/talking-head-aroll/svml.runtime.json
@@ -402,15 +381,8 @@ node --run narratage -- doctor examples/talking-head-aroll/svml.runtime.json
 Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；
 它不启动 Worker，也不发付费请求。
 
-### 2. 启动或复用 Runtime
-
-```bash
-node --run narratage -- runtime up examples/talking-head-aroll/svml.runtime.json
-node --run narratage -- runtime status examples/talking-head-aroll/svml.runtime.json
-```
-
-`runtime up` 负责后台耐久 Worker，以及 Profile 声明的全部外部程序。范围更窄的
-`services up|status|down` 只管理这些外部程序，不负责 Worker 生命周期。
+`doctor` 有意检查完整 Runtime Profile。若只想检查某次 Run 真正需要的环境，请使用带
+`--runtime` 的 `plan`。
 
 ### 3. 检查 Source 与计划
 
@@ -424,7 +396,11 @@ node --run narratage -- plan examples/talking-head-aroll/build.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json
 ```
 
-在花费资金之前审查冻结的 BuildPlan。该计划展示调度器将发出的每个 Operation 和 Needs。
+在花费资金之前审查冻结的 BuildPlan。该计划展示调度器将发出的每个 Operation 和 Needs；带
+`--runtime` 时只预检这次计划真正需要的 Endpoint、凭据和外部程序，不启动任何外部工作。
+
+`build` 会自动启动或复用后台 Runtime。只有希望提交前预热时才需要显式执行 `runtime up`；
+`runtime status` 用于观察。范围更窄的 `services up|status|down` 只管理外部程序，不负责 Worker。
 
 ### 4. 提交 Build
 

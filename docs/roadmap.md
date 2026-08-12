@@ -1,6 +1,6 @@
 # Narratage roadmap
 
-Status: active priorities after the `svml.graph@1` / Satisfaction redesign, 2026-08-11.
+Status: active priorities after the `svml.graph@1` / Satisfaction simplification, 2026-08-12.
 
 Narratage can already execute one real paid talking-video build. The active roadmap is no longer
 “make a video possible.” It is to finish the few remaining domain-neutral operational gaps, keep
@@ -14,17 +14,17 @@ prematurely freezing their public ABI.
 Every Author and Run source now carries a mandatory exact Frontend Header. The official
 `@narratage/run-markup` `.svrun` Frontend implements:
 
-- named Targets and reusable Target sets;
+- one explicit list of Targets per Run Source;
 - Provided-Value and Fragment Candidates;
-- explicit Satisfaction edges and fidelity;
+- explicit Satisfaction edges;
 - one multi-export instance shared by several outputs;
 - separately instantiated identical implementations;
 - imports of trusted Run packages.
 
 The Author Graph and complete Run Graph compile and bind into one final graph before execution. The
 Frontend cannot contain credentials, Endpoint bindings or an inline unversioned execution callback.
-The CLI no longer accepts `--pin`, `--target` or `--accept-substitute`; they would be invisible Run
-Graph mutations.
+The CLI accepts no flags that invisibly change Targets or Candidate selection; those choices belong
+in the Run Graph.
 
 Run-only Fragment Modules now extend a separately identity-bound execution Program Closure without
 polluting Author imports. Trusted Fragment libraries use the generic Host Facet envelope rather than
@@ -34,7 +34,7 @@ graph model.
 ### A2. Runtime Profile usability — first public slice implemented
 
 The typed Runtime Profile/Closure API now has a declarative `svml.runtime.json` Host frontend for
-exact Scheduler/Worker and Store selection, credential references, Endpoints, Authorities, resources and permissions.
+exact Scheduler/Worker and Store selection, credential references, Endpoints, Authorities and resources.
 Adapter names resolve from a separately verified physical package closure; the generic and video
 CLIs import no Provider implementation. Effective Runtime implementation identity binds actual
 package bytes, not a self-asserted development label. `doctor` checks locks, configuration,
@@ -43,6 +43,11 @@ Store. It evaluates the same pure Endpoint activation used by execution, then op
 selected CredentialStores for exact reference resolution. Credentials and prerequisites therefore
 have one declaration rather than a diagnostic mirror. Executable TypeScript remains the advanced
 trusted embedding API.
+
+The full `doctor` remains an audit of the whole selected deployment. `plan --runtime` and `build`
+instead derive the finite demand slice first and preflight only its capabilities before submitting
+work. `packages sync <run-source> --runtime <profile>` derives both explicit package locks; it does
+not install packages or choose implementations.
 
 Runtime Profile is deployment configuration. It must not enter author semantic identity or
 `.svrun` creative choices.
@@ -142,7 +147,8 @@ package-distribution decision, not another Runtime mechanism.
 One paid four-take generation Build plus one explicit Candidate-reuse Build covered the combined
 path on 2026-08-07. The two reusable execution choices are already the checked-in Run sources:
 
-- `build.svrun` targets the final video with `exact` fidelity and therefore demands fresh generation;
+- `build.svrun` targets the final video without selecting replacement Candidates and therefore
+  demands fresh generation;
 - `reuse-generated.svrun` explicitly selects four historical Build-Record Candidates and prunes
   their generation branches;
 - `doctor`, `plan`, `build --follow` and `get` are the ordinary user path around either Run;
