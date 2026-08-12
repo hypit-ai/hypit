@@ -94,8 +94,8 @@ test("a Record's identity includes its Type, and a set of Records is order-free"
   assert.notEqual(recordDigest(type, value), recordDigest(other, value));
 
   const records = [
-    { id: "r1", type, value, conformance: "exact" },
-    { id: "r2", type: other, value, conformance: "exact" },
+    { id: "r1", type, value },
+    { id: "r2", type: other, value },
   ] as never;
   const reversed = [records[1], records[0]] as never;
   assert.equal(semanticRecordsDigest(records), semanticRecordsDigest(reversed));

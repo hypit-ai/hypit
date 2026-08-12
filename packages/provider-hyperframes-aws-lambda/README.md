@@ -6,7 +6,7 @@ Recoverable AWS Step Functions/Lambda implementation of the exact
 The Endpoint stages the immutable `HyperframesDocument` with the shared
 `stageHyperframesProject()` layout, uploads that content-addressed site, starts one distributed
 render and journals its execution ARN. Its Step Functions execution name is derived from the
-Runtime submission key, so recovery cannot accidentally submit the same attempt twice.
+Runtime Operation id, so recovery cannot accidentally submit the same attempt twice.
 Cancellation uses that same identity to stop the remote Step Functions execution, including the
 crash window before the first checkpoint was saved.
 

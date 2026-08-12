@@ -24,20 +24,27 @@ function isWithin(root: string, path: string): boolean {
 class NodeFilesystemWorkspaceSession implements WorkspaceSession {
   readonly root: string;
   readonly entry: AuthorSourceUnit;
+  readonly #assetRoots: readonly string[];
   readonly #sourceCache = new Map<string, AuthorSourceUnit>();
   readonly #sourceEdges = new Map<string, AuthorSourceUnit>();
   readonly #assetIdentity = new Map<string, { readonly digest: BlobRef["digest"]; readonly size: number }>();
   readonly #assetEdges = new Map<string, string>();
   readonly #attachments = new Map<string, ArtifactAttachment>();
 
-  private constructor(root: string, entry: AuthorSourceUnit) {
+  private constructor(root: string, entry: AuthorSourceUnit, assetRoots: readonly string[]) {
     this.root = root;
     this.entry = entry;
+    this.#assetRoots = assetRoots;
     this.#sourceCache.set(entry.id, entry);
   }
 
-  static async open(rootLocator: string, entryLocator: string): Promise<NodeFilesystemWorkspaceSession> {
+  static async open(
+    rootLocator: string,
+    entryLocator: string,
+    assetRootLocators: readonly string[],
+  ): Promise<NodeFilesystemWorkspaceSession> {
     const root = await realpath(resolve(rootLocator));
+    const assetRoots = await Promise.all(assetRootLocators.map(async (path) => await realpath(resolve(path))));
     const canonicalEntry = await realpath(resolve(entryLocator));
     if (!isWithin(root, canonicalEntry)) {
       throw new WorkspaceError(
@@ -51,7 +58,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
       name: relative(root, canonicalEntry) || canonicalEntry.split("/").at(-1) || canonicalEntry,
       text: await readFile(canonicalEntry, "utf8"),
     };
-    return new NodeFilesystemWorkspaceSession(root, entry);
+    return new NodeFilesystemWorkspaceSession(root, entry, [root, ...assetRoots]);
   }
 
   async #loadSource(path: string): Promise<AuthorSourceUnit> {
@@ -114,10 +121,10 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     let canonical = this.#assetEdges.get(edge);
     if (canonical === undefined) {
       canonical = await realpath(resolve(dirname(importer.id), request.from));
-      if (!isWithin(this.root, canonical)) {
+      if (!this.#assetRoots.some((root) => isWithin(root, canonical!))) {
         throw new WorkspaceError(
           "SOURCE_ASSET_OUTSIDE_ROOT",
-          `Source asset ${canonical} is outside workspace root ${this.root}`,
+          `Source asset ${canonical} is outside the workspace and every allowed asset root`,
           canonical,
         );
       }
@@ -163,18 +170,22 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
 export type NodeFilesystemWorkspaceOptions = {
   /** Fixed containment root. Defaults to the entry SourceUnit directory for each session. */
   readonly root?: string;
+  /** Additional read-only roots for asset bytes. They never permit Source imports. */
+  readonly assetRoots?: readonly string[];
 };
 
 /** Node filesystem implementation of the host-neutral, one-compilation Workspace contract. */
 export class NodeFilesystemWorkspace implements Workspace {
   readonly #root: string | undefined;
+  readonly #assetRoots: readonly string[];
 
   constructor(options: NodeFilesystemWorkspaceOptions = {}) {
     this.#root = options.root;
+    this.#assetRoots = options.assetRoots ?? [];
   }
 
   async open(entryLocator: string): Promise<WorkspaceSession> {
     const entry = resolve(entryLocator);
-    return await NodeFilesystemWorkspaceSession.open(this.#root ?? dirname(entry), entry);
+    return await NodeFilesystemWorkspaceSession.open(this.#root ?? dirname(entry), entry, this.#assetRoots);
   }
 }

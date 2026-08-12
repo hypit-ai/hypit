@@ -5,6 +5,9 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
+  defineEndpointPackage,
+} from "@narratage/endpoint-kit";
+import {
   createRuntimeEndpointAdapterFacet,
   createRuntimeServiceAdapterFacet,
 } from "@narratage/runtime-adapter";
@@ -48,7 +51,6 @@ test("declarative Runtime config has no implicit local services", () => {
   assert.throws(() => parseRuntimeConfig({
     format: "svml.runtime-config@1",
     endpoints: [],
-    permissions: [],
   }), /runtimeServices/u);
 });
 
@@ -60,7 +62,6 @@ test("an explicit empty Runtime service set fails instead of manufacturing local
       format: "svml.runtime-config@1",
       ...required,
       endpoints: [],
-      permissions: [],
     }));
     await assert.rejects(
       async () => await createRuntimeFromConfig(path, { registry: new RuntimeAdapterRegistry() }),
@@ -77,16 +78,29 @@ test("Runtime config is closed data and rejects unknown environment authority", 
     ...required,
     packageRoot: "/opt/narratage",
     endpoints: [],
-    permissions: [],
   });
   assert.equal(parsed.packageRoot, "/opt/narratage");
   assert.throws(() => parseRuntimeConfig({
     format: "svml.runtime-config@1",
     ...required,
     endpoints: [],
-    permissions: [],
     apiKey: "must-not-live-here",
   }), /does not accept apiKey/u);
+});
+
+test("Endpoint authority is optional and remains explicit only when shared", () => {
+  const local = parseRuntimeConfig({
+    format: "svml.runtime-config@1",
+    ...required,
+    endpoints: [{ use: "example.local", instance: "local", config: {} }],
+  });
+  assert.equal(local.endpoints[0]?.authority, undefined);
+  const shared = parseRuntimeConfig({
+    format: "svml.runtime-config@1",
+    ...required,
+    endpoints: [{ use: "example.remote", instance: "one", authority: "shared-account", config: {} }],
+  });
+  assert.equal(shared.endpoints[0]?.authority, "shared-account");
 });
 
 test("declarative adapters are explicit and never guessed", async () => {
@@ -96,7 +110,6 @@ test("declarative adapters are explicit and never guessed", async () => {
     format: "svml.runtime-config@1",
     ...required,
     endpoints: [{ use: "example.missing", instance: "missing", authority: "example.missing", config: {} }],
-    permissions: [],
   }));
   await assert.rejects(
     async () => await createRuntimeFromConfig(path, { registry: new RuntimeAdapterRegistry() }),
@@ -112,7 +125,6 @@ test("runtimeServices names the Runtime's own replaceable parts, apart from exte
     ...required,
     runtimeServices: [{ use: "@example/store", instance: "artifacts.example" }],
     endpoints: [],
-    permissions: [],
   }));
   const document = parseRuntimeConfig(JSON.parse(await readFile(path, "utf8")));
   assert.deepEqual(document.runtimeServices, [{ use: "@example/store", instance: "artifacts.example" }]);
@@ -132,7 +144,6 @@ test("doctor names the external program a Provider needs, and the command that s
       { use: "example.wrong", instance: "wrong", authority: "example.account", config: {} },
       { use: "example.exploding", instance: "exploding", authority: "example.account", config: {} },
     ],
-    permissions: [],
   }));
 
   const registry = new RuntimeAdapterRegistry();
@@ -181,7 +192,6 @@ test("doctor activates one pure Endpoint declaration without constructing Runtim
       { use: "example.invalid", instance: "invalid", authority: "example.account", config: { mode: "bad" } },
       { use: "example.missing-credential", instance: "missing-credential", authority: "example.account", config: {} },
     ],
-    permissions: [],
   }));
 
   let constructed = 0;
@@ -246,7 +256,6 @@ test("doctor resolves credentials from the same Endpoint declaration used by exe
     ...required,
     runtimeServices: [{ use: "example.credentials", instance: "credentials", config: {} }],
     endpoints: [{ use: "example.provider", instance: "provider", authority: "example.account", config: {} }],
-    permissions: [],
   }));
 
   let endpointActivations = 0;
@@ -289,11 +298,75 @@ test("doctor resolves credentials from the same Endpoint declaration used by exe
   const { diagnostics } = await doctorRuntimeConfig(path, { registry });
   assert.deepEqual(diagnostics.map(({ code, message, subject }) => ({ code, message, subject })), [{
     code: "RUNTIME_CREDENTIAL_MISSING",
-    message: "Example token for Endpoint provider is not configured in CredentialStore env",
+    message: "Example token for Endpoint provider is not configured in CredentialStore env. "
+      + "Set EXAMPLE_TOKEN_THAT_IS_NOT_SET in this process environment, or select a writable CredentialStore in the Runtime Profile.",
     subject: "provider.token",
   }]);
   assert.equal(endpointActivations, 1);
   assert.equal(credentialStoreConstructions, 1);
   assert.equal(credentialStoreCloses, 1);
+  await rm(root, { recursive: true, force: true });
+});
+
+test("plan-scoped doctor ignores unrelated Endpoints and diagnoses only demanded capabilities", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-scoped-doctor-"));
+  const path = join(root, "svml.runtime.json");
+  await writeFile(path, JSON.stringify({
+    format: "svml.runtime-config@1",
+    ...required,
+    runtimeServices: [{ use: "example.credentials", instance: "credentials", config: {} }],
+    endpoints: [
+      { use: "example.image", instance: "image", authority: "image.account", config: {} },
+      { use: "example.speech", instance: "speech", authority: "speech.account", config: {} },
+    ],
+  }));
+  const imageCapability = { module: { name: "example.image", version: "1" }, name: "generate" } as const;
+  const speechCapability = { module: { name: "example.speech", version: "1" }, name: "align" } as const;
+  const resultType = { module: { name: "example.result", version: "1" }, name: "Value" } as const;
+  const registry = new RuntimeAdapterRegistry();
+  const endpoint = (instance: string, capability: typeof imageCapability | typeof speechCapability, credential?: string) =>
+    defineEndpointPackage({
+      module: { name: `example.${instance}-endpoint`, version: "1" },
+      facet: "endpoint",
+      instance,
+      authority: `${instance}.account`,
+      implementation: { locator: `example.${instance}`, digest: digestOf(`example.${instance}@1`) },
+      capabilities: [{ lifecycle: "immediate" as const, capability, returns: resultType, handler: async () => ({}) as never }],
+      ...(credential === undefined ? {} : {
+        credentials: { token: credentialRef("env", credential) },
+        credentialInputs: { token: { label: `${instance} token` } },
+      }),
+    });
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.image",
+    activate: () => ({ endpoint: endpoint("image", imageCapability) }),
+  }));
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.speech",
+    activate: () => ({
+      endpoint: endpoint("speech", speechCapability, "EXAMPLE_UNUSED_SPEECH_TOKEN"),
+      externalService: { id: "speech-service", probe: async () => ({ state: "down" as const, detail: "not running" }) },
+    }),
+  }));
+  registry.registerFacet(createRuntimeServiceAdapterFacet({
+    use: "example.credentials",
+    validate() {},
+    create(context) {
+      return defineRuntimeServicePackage({
+        name: context.instance,
+        module: { name: "example.credentials", version: "1" },
+        services: [{
+          role: "credential-store",
+          facet: "credentials",
+          instance: context.instance,
+          implementation: { locator: "example.credentials", digest: digestOf("example.credentials@1") },
+          service: { async resolve() { return undefined; } },
+        }],
+      });
+    },
+  }));
+
+  const { diagnostics } = await doctorRuntimeConfig(path, { registry, capabilities: [imageCapability] });
+  assert.deepEqual(diagnostics, []);
   await rm(root, { recursive: true, force: true });
 });

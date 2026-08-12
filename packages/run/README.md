@@ -11,7 +11,7 @@ RunSourceClosure + RunDocument -> complete RunGraph
 ```
 
 The Run Graph always exists and binds the exact Author Graph. It contains Run Candidates,
-Operations, explicit Satisfaction edges, all named Target sets and the selected Target set. A run
+Operations, explicit Satisfaction edges and Targets. A run
 that selects only primary Candidates therefore still has identity and cannot be replaced by hidden
 CLI flags.
 

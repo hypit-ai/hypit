@@ -34,8 +34,6 @@ function need(source: BlobRef, program: ImageTransformProgram = gptImageDenoiseV
     constraints,
     requestedBy: "derivation:image-transform",
     result: "record:image-transform",
-    accepts: "exact",
-    conformanceFloor: "exact",
     requestDigest: digestOf({
       capability: rasterCapabilities.execute,
       returns: artifactTypes.blob,
@@ -61,8 +59,8 @@ function composeNeed(source: BlobRef): Need {
   });
   return {
     id: "need:image-compose", capability: rasterCapabilities.execute, returns: artifactTypes.blob,
-    constraints, requestedBy: "derivation:image-compose", result: "record:image-compose", accepts: "exact",
-    conformanceFloor: "exact", requestDigest: digestOf({ capability: rasterCapabilities.execute, constraints }),
+    constraints, requestedBy: "derivation:image-compose", result: "record:image-compose",
+    requestDigest: digestOf({ capability: rasterCapabilities.execute, constraints }),
   };
 }
 
@@ -71,7 +69,6 @@ test("the OpenCV package is one replaceable Endpoint with no second queue", asyn
   assert.equal(provider.name, "image.opencv.local");
   const facet = provider.manifest.facets[0];
   assert(facet?.role === "capability-endpoint");
-  assert.deepEqual(facet.permissions, ["process:image"]);
   assert.equal(facet.defaultConcurrency, 3);
   assert.deepEqual(provider.bindings, [{
     capability: rasterCapabilities.execute,

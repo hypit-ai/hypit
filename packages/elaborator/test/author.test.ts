@@ -86,8 +86,6 @@ const closure = createResolvedClosure([manifest]);
 function program(): LinkedProgram {
   const origin = {
     kind: "authored" as const,
-    sourceDigest: digestOf("source:laboratory"),
-    frontendClosureDigest: digestOf("frontend:none"),
   };
   return link(closure, [sealTypedModule({
     id: "laboratory-inputs",
@@ -96,7 +94,6 @@ function program(): LinkedProgram {
       id: "sample:soil",
       type: sampleType,
       value: { kind: "inline", value: "soil" },
-      conformance: "exact",
       origin,
     })],
   })]);
@@ -123,8 +120,6 @@ function singleOperationFragment(
       name: "result",
       type: resultType,
       root: { kind: "fragment-operation", operation: "produce" },
-      semanticInputs: [inputName],
-      fidelity: "exact",
     }],
   });
 }
@@ -200,8 +195,7 @@ test("Author linking resolves forward component references without Text or video
 
   const request = sealBuildRequest({
     graph: elaborated.graph.id,
-    targets: [{ output: "report:final", accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: "report:final" }],
   });
   const state = start(linked, elaborated.graph, request);
   assert.deepEqual(

@@ -78,8 +78,6 @@ function requestNeed(document = documentFixture()): Need {
     constraints,
     requestedBy: "derivation:local-hyperframes-proof",
     result: "record:local-hyperframes-proof",
-    accepts: "exact",
-    conformanceFloor: "exact",
     requestDigest: digestOf({
       capability: renderHyperframesCapabilities.renderVisual,
       returns: mediaTypes.renderedVisual,
@@ -110,7 +108,6 @@ test("local HyperFrames Provider exposes one exact visual capability and two sep
   const facet = provider.manifest.facets[0];
   assert.equal(facet?.role, "capability-endpoint");
   assert(facet?.role === "capability-endpoint");
-  assert.deepEqual(facet.permissions, ["process:hyperframes"]);
   assert.equal(facet.defaultConcurrency, 2);
   assert.deepEqual(provider.bindings, [{
     capability: renderHyperframesCapabilities.renderVisual,
@@ -156,8 +153,6 @@ test("local HyperFrames Provider really renders a silent frame-exact MP4 with pa
     artifacts,
     credentials: {},
   });
-  assert.equal(output.conformance, "exact");
-  assert.equal(output.delivery, "executed");
   assert.equal(output.value.kind, "inline");
   const value: CanonicalValue = output.value.kind === "inline" ? output.value.value : canonicalize(null);
   verifyRenderedVisual(value);

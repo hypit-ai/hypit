@@ -737,11 +737,9 @@ function createTrackFragment(id: string, items: readonly FragmentItem[]): GraphF
     exports: [
       {
         name: "program", type: typographyTrackTypes.program, root: operation("text:finalize"),
-        semanticInputs: inputs.map((value) => value.name), fidelity: "exact",
       },
       {
         name: "track", type: compositionTypes.visualTrack, root: operation("text:render"),
-        semanticInputs: inputs.map((value) => value.name), fidelity: "exact",
       },
     ],
   });
@@ -871,7 +869,6 @@ function createMaskFragment(id: string): GraphFragment {
     }],
     exports: [{
       name: "track", type: compositionTypes.visualTrack, root: operation("text-mask:render"),
-      semanticInputs: inputs.map((value) => value.name), fidelity: "exact",
     }],
   });
 }

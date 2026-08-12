@@ -54,11 +54,8 @@ function createParallelGreetingBuild(generationCount = 2) {
     id: "intent:root",
     type: types.intent,
     value: { kind: "inline", value: { name: "Ada" } },
-    conformance: "exact",
     origin: {
       kind: "authored" as const,
-      sourceDigest: digestOf("source:parallel-greeting"),
-      frontendClosureDigest: digestOf("frontend:parallel-greeting"),
     },
   });
   const program = link(closure, [sealTypedModule({
@@ -73,13 +70,11 @@ function createParallelGreetingBuild(generationCount = 2) {
         id: "prompt",
         type: types.prompt,
         primary: "make-prompt",
-        semanticInputs: [{ kind: "record", id: "intent:root" }],
       },
       ...generations.map((suffix) => ({
         id: `generated-${suffix}`,
         type: types.generated,
         primary: `generate-${suffix}`,
-        semanticInputs: [{ kind: "logical-output" as const, id: "prompt" }],
       })),
     ],
     candidates: [
@@ -113,15 +108,13 @@ function createParallelGreetingBuild(generationCount = 2) {
           name: "generation",
           id: `need:generation-${suffix}`,
           record: `generated:${suffix}`,
-          accepts: "exact" as const,
         },
       })),
     ],
   });
   return start(program, graph, sealBuildRequest({
     graph: graph.id,
-    targets: generations.map((suffix) => ({ output: `generated-${suffix}`, accepts: "exact" as const })),
-    satisfactions: [],
+    targets: generations.map((suffix) => ({ output: `generated-${suffix}` })),
   }));
 }
 
@@ -149,9 +142,6 @@ function configuredExecutor(options: {
       active -= 1;
       return {
         value: { kind: "inline", value: `Generated ${calls}` },
-        conformance: "exact",
-        delivery: "executed",
-        metadata: {},
       };
     },
     {
@@ -209,7 +199,6 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
           locator: "example.scheduler-runtime/scheduler",
           digest: digestOf("example.scheduler-runtime/scheduler@1"),
         },
-        permissions: [],
       },
       {
         name: "operations",
@@ -218,7 +207,6 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
           locator: "example.scheduler-runtime/operations",
           digest: digestOf("example.scheduler-runtime/operations@1"),
         },
-        permissions: [],
       },
       ...([
         ["worker", "worker"],
@@ -234,7 +222,6 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
           locator: `example.scheduler-runtime/${name}`,
           digest: digestOf(`example.scheduler-runtime/${name}@1`),
         },
-        permissions: [],
       })),
       {
         name: providerFacet.name,
@@ -243,7 +230,6 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
           locator: "example.scheduler-runtime/generation-endpoint",
           digest: providerImplementationDigest,
         },
-        permissions: [],
         fulfills: [{ capability: capabilities.generation, returns: types.generated }],
         lifecycle,
         defaultConcurrency: 1,
@@ -552,23 +538,21 @@ test("a recoverable Endpoint resumes its journaled Operation after restart witho
   const runtime = resolvedRuntime(1, "recoverable");
   let starts = 0;
   let resumes = 0;
-  let submissionKey: string | undefined;
+  let operationId: string | undefined;
   const endpoint: RecoverableEndpoint = {
     start({ operation }) {
       starts += 1;
-      submissionKey = operation.submissionKey;
+      operationId = operation.id;
       return { status: "pending", checkpoint: { remoteJob: "job-1" } };
     },
     resume({ operation, checkpoint }) {
       resumes += 1;
-      assert.equal(operation.submissionKey, submissionKey);
+      assert.equal(operation.id, operationId);
       assert.deepEqual(checkpoint, { remoteJob: "job-1" });
       return {
         status: "completed",
         result: {
           value: { kind: "inline", value: "Hello after restart" },
-          conformance: "exact",
-          delivery: "executed",
           metadata: { remoteJob: "job-1" },
         },
       };
@@ -599,46 +583,30 @@ test("a recoverable Endpoint resumes its journaled Operation after restart witho
   assert.equal(starts, 1, "the already journaled Operation must not call start again");
   assert.equal(resumes, 1);
   assert.equal((await operations.read(pending.operation))?.status, "completed");
-  const metadata = second?.state.receipts[0]?.metadata as {
-    readonly endpoint: { readonly remoteJob: string };
-    readonly runtime: {
-      readonly operation: string;
-      readonly submissionKey: string;
-      readonly closure: string;
-      readonly implementation: string;
-    };
-  };
-  assert.equal(metadata.endpoint.remoteJob, "job-1");
-  assert.equal(metadata.runtime.operation, pending.operation);
-  assert.equal(metadata.runtime.submissionKey, submissionKey);
-  assert.equal(metadata.runtime.closure, runtime.closure.digest);
-  assert.equal(metadata.runtime.implementation, providerImplementationDigest);
+  const completion = (await operations.read(pending.operation))?.completion;
+  assert.deepEqual(completion?.metadata, { remoteJob: "job-1" });
 });
 
-test("a crash after Operation intent but before checkpoint resumes with the same submission key", async () => {
+test("a crash after Operation intent but before checkpoint resumes with the same Operation id", async () => {
   const operations = new MemoryOperationStore();
   const runtime = resolvedRuntime(1, "recoverable");
   let starts = 0;
   let resumes = 0;
-  let submissionKey: string | undefined;
   let operationId: Digest | undefined;
   const endpoint: RecoverableEndpoint = {
     start({ operation }) {
       starts += 1;
-      submissionKey = operation.submissionKey;
       operationId = operation.id;
       throw new Error("process stopped after the remote submit");
     },
     resume({ operation, checkpoint }) {
       resumes += 1;
       assert.equal(checkpoint, undefined);
-      assert.equal(operation.submissionKey, submissionKey);
+      assert.equal(operation.id, operationId);
       return {
         status: "completed",
         result: {
           value: { kind: "inline", value: "Recovered by idempotency key" },
-          conformance: "exact",
-          delivery: "executed",
           metadata: { recovered: true },
         },
       };
@@ -696,8 +664,6 @@ test("a completion journaled before a crash is replayed into Core without callin
         status: "completed",
         result: {
           value: { kind: "inline", value: "Journaled completion" },
-          conformance: "exact",
-          delivery: "executed",
           metadata: { remoteJob: "job-complete" },
         },
       };
@@ -725,12 +691,12 @@ test("a completion journaled before a crash is replayed into Core without callin
     state: parseBuildState(serializeBuildState(first!.state)),
   }]);
   assert.equal(second?.status, "complete");
-  assert.equal(second?.state.receipts[0]?.metadata !== undefined, true);
+  assert.equal(second?.state.receipts.length, 1);
   assert.equal(starts, 1);
   assert.equal(resumes, 0);
 });
 
-test("a retryable terminal failure creates a new attempt and submission key", async () => {
+test("a retryable terminal failure creates a new Operation attempt identity", async () => {
   const operations = new MemoryOperationStore();
   const runtime = resolvedRuntime(1, "recoverable");
   const attempts: number[] = [];
@@ -738,7 +704,7 @@ test("a retryable terminal failure creates a new attempt and submission key", as
   const endpoint: RecoverableEndpoint = {
     start({ operation }) {
       attempts.push(operation.attempt);
-      keys.push(operation.submissionKey);
+      keys.push(operation.id);
       if (operation.attempt === 1) {
         return {
           status: "failed",
@@ -749,9 +715,6 @@ test("a retryable terminal failure creates a new attempt and submission key", as
         status: "completed",
         result: {
           value: { kind: "inline", value: "Succeeded on attempt two" },
-          conformance: "exact",
-          delivery: "executed",
-          metadata: {},
         },
       };
     },
@@ -863,9 +826,6 @@ test("a completion racing with cancellation is recorded as too late instead of o
           status: "completed",
           completion: {
             value: { kind: "inline", value: "remote fact won the race" },
-            conformance: "exact",
-            delivery: "executed",
-            metadata: {},
           },
         });
         assert.equal(completed.status, "stored");
@@ -914,9 +874,6 @@ test("an Endpoint without cancellation stays observable instead of changing Cand
         status: "completed",
         result: {
           value: { kind: "inline", value: "late but real" },
-          conformance: "exact",
-          delivery: "executed",
-          metadata: {},
         },
       };
     },

@@ -35,7 +35,6 @@ export type { RuntimeServicePackage } from "@narratage/runtime";
 export type LocalRuntimeClosureOptions = {
   readonly modules: RuntimeModuleRegistry;
   readonly value: import("@narratage/runtime").RuntimeClosure;
-  readonly allowedPermissions?: readonly string[];
 };
 
 export type CreateLocalRuntimeOptions = {
@@ -99,7 +98,6 @@ export type ProjectLocalRuntimeOptions = {
   readonly runtimeSelection: RuntimeServiceSelection;
   readonly components?: readonly ComponentPackage[];
   readonly endpoints?: readonly EndpointPackage[];
-  readonly allowedPermissions: readonly string[];
   readonly scheduling: {
     readonly maxConcurrency: number;
     readonly resources?: Readonly<Record<string, number>>;
@@ -113,7 +111,6 @@ export type ProjectLocalRuntimeControlOptions = Pick<ProjectLocalRuntimeOptions,
   | "buildCatalog"
   | "runtimeServices"
   | "runtimeSelection"
-  | "allowedPermissions"
 >;
 
 export type LocalBuildRequest = {

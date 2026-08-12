@@ -192,13 +192,7 @@ test("caption:Program lowers explicit Mute word subsets without a temporal mask"
         type,
         value: stored,
         digest: recordDigest(type, stored),
-        conformance: "exact",
-        origin: {
-          kind: "authored",
-          sourceDigest: digestOf("caption:mute-surface-source"),
-          frontendClosureDigest: digestOf("caption:mute-surface-frontend"),
-          sourceName: "main.svml",
-        },
+        origin: { kind: "authored" },
       },
     };
   };

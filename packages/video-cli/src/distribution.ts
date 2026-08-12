@@ -15,13 +15,19 @@ export const videoCliDistribution: CliDistribution = {
   builtInPackageContributions: videoBuiltInPackageContributions,
   runFrontends: [],
   createCompiler: createVideoCompiler,
+  discoverSourcePackages: async (path, options) => {
+    const { discoverVideoSourcePackages } = await import("./package-selection.js");
+    return await discoverVideoSourcePackages(path, options);
+  },
   resolveCompilationPackages: async (path) => {
     if (extname(path) !== ".json") return {};
     const { runtimeConfigPackageSelection } = await import("@narratage/local/config");
     const selection = await runtimeConfigPackageSelection(path, { packageRoot });
     return {
       ...(selection.packageLock === undefined ? {} : { packageLock: selection.packageLock }),
+      ...(selection.runtimePackageLock === undefined ? {} : { runtimePackageLock: selection.runtimePackageLock }),
       packageRoot: selection.packageRoot,
+      runtimePackages: selection.runtimePackages,
     };
   },
   runtimeWorkerLaunch: () => ({
@@ -40,9 +46,9 @@ export const videoCliDistribution: CliDistribution = {
     const { createRuntimeCredentialsFromConfig } = await import("@narratage/local/config");
     return await createRuntimeCredentialsFromConfig(path, endpoint, { packageRoot });
   },
-  doctorRuntimeConfig: async (path) => {
+  doctorRuntimeConfig: async (path, options) => {
     const { doctorRuntimeConfig } = await import("@narratage/local/config");
-    return await doctorRuntimeConfig(path, { packageRoot });
+    return await doctorRuntimeConfig(path, { packageRoot, ...options });
   },
   externalServices: {
     up: async (path, options) => {

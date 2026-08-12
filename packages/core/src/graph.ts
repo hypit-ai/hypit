@@ -3,14 +3,12 @@ import type {
   Candidate,
   CandidateRoot,
   CompiledGraph,
-  Conformance,
   GraphValueRef,
   LinkedProgram,
   LogicalOutput,
   OperationNode,
   OperationResult,
   ProducerRef,
-  Satisfaction,
   StoredValue,
   TypeRef,
 } from "@narratage/protocol";
@@ -19,11 +17,6 @@ import { canonicalize, digestOf, isDigest } from "./canonical.js";
 import { invariant } from "./error.js";
 import { resolveProducer, sealRecord, verifyRecord } from "./link.js";
 import { producerKey, sameType, typeKey } from "./reference.js";
-
-export const EMPTY_REALIZATION_DIGEST = digestOf({
-  format: "svml.realization-closure@1",
-  overlays: [],
-});
 
 export function valueRefKey(ref: GraphValueRef): string {
   if (ref.kind === "record") return `record\u0000${ref.id}`;
@@ -50,7 +43,6 @@ function normalizeRoot(root: CandidateRoot): CandidateRoot {
     id: root.value.id,
     value: normalizedStoredValue(root.value.value),
     ...(root.value.validation === undefined ? {} : { validation: root.value.validation }),
-    ...(root.value.provenance === undefined ? {} : { provenance: canonicalize(root.value.provenance) }),
   };
   return { kind: "value", value };
 }
@@ -60,8 +52,6 @@ function normalizeOutput(output: LogicalOutput): LogicalOutput {
     id: output.id,
     type: output.type,
     primary: output.primary,
-    semanticInputs: [...output.semanticInputs].map(normalizeRef).sort((a, b) =>
-      valueRefKey(a).localeCompare(valueRefKey(b))),
   };
 }
 
@@ -82,7 +72,6 @@ function normalizeResult(result: OperationResult): OperationResult {
     name: result.name,
     id: result.id,
     record: result.record,
-    accepts: result.accepts,
   };
 }
 
@@ -100,8 +89,7 @@ function normalizeOperation(operation: OperationNode): OperationNode {
 }
 
 export function sealCompiledGraph(
-  graph: Omit<CompiledGraph, "format" | "id" | "source" | "realization">
-    & Partial<Pick<CompiledGraph, "source" | "realization">>,
+  graph: Omit<CompiledGraph, "format" | "id">,
 ): CompiledGraph {
   const normalized = {
     program: graph.program,
@@ -109,13 +97,9 @@ export function sealCompiledGraph(
     candidates: [...graph.candidates].map(normalizeCandidate).sort((a, b) => a.id.localeCompare(b.id)),
     operations: [...graph.operations].map(normalizeOperation).sort((a, b) => a.id.localeCompare(b.id)),
   };
-  const source = graph.source ?? digestOf({ format: "svml.graph-source@1", ...normalized });
-  const realization = graph.realization ?? EMPTY_REALIZATION_DIGEST;
   const content = {
     format: "svml.graph@1" as const,
     ...normalized,
-    source,
-    realization,
   };
   return { ...content, id: digestOf(content) };
 }
@@ -124,14 +108,7 @@ export function sealBuildRequest(
   request: Omit<BuildRequest, "format" | "digest">,
 ): BuildRequest {
   const targets = [...request.targets]
-    .map((target) => ({ output: target.output, accepts: target.accepts }))
-    .sort((a, b) => a.output.localeCompare(b.output));
-  const satisfactions = [...request.satisfactions]
-    .map((satisfaction) => ({
-      output: satisfaction.output,
-      candidate: satisfaction.candidate,
-      fidelity: satisfaction.fidelity,
-    }))
+    .map((target) => ({ output: target.output }))
     .sort((a, b) => a.output.localeCompare(b.output));
   const content = {
     format: "svml.build-request@1" as const,
@@ -140,7 +117,6 @@ export function sealBuildRequest(
       ? {}
       : { implementationClosure: request.implementationClosure }),
     targets,
-    satisfactions,
   };
   return { ...content, digest: digestOf(content) };
 }
@@ -163,31 +139,12 @@ export function resolveOperation(graph: CompiledGraph, id: string): OperationNod
   return operation;
 }
 
-export function satisfactionForOutput(
-  request: BuildRequest,
-  output: string,
-): Satisfaction | undefined {
-  return request.satisfactions.find((satisfaction) => satisfaction.output === output);
-}
-
-/**
- * The Candidate that satisfies one Logical Output, and how faithfully.
- *
- * A Satisfaction is the request's choice — an edge from an output to one of its
- * Candidates. This resolves that edge: it returns the Candidate the edge names,
- * falling back to the output's primary when the request made no choice. The
- * distinction is worth keeping in the names, because a Satisfaction is what a
- * BuildRequest records and a Candidate is what the graph supplies.
- */
 export function satisfiedCandidate(
   graph: CompiledGraph,
-  request: BuildRequest,
   outputId: string,
-): { readonly candidate: Candidate; readonly fidelity: Conformance } {
+): Candidate {
   const output = resolveLogicalOutput(graph, outputId);
-  const satisfaction = satisfactionForOutput(request, outputId);
-  const candidate = resolveCandidate(graph, satisfaction?.candidate ?? output.primary);
-  return { candidate, fidelity: satisfaction?.fidelity ?? "exact" };
+  return resolveCandidate(graph, output.primary);
 }
 
 export function operationResultRecord(operation: OperationNode): string {
@@ -254,11 +211,6 @@ function verifyOperation(program: LinkedProgram, graph: CompiledGraph, operation
   operationResultType(program, operation);
   if (operation.result.kind === "need") {
     invariant(operation.result.id.length > 0, "EMPTY_NEED_ID", `${operation.id} Need id is empty`);
-    invariant(
-      operation.result.accepts === "exact" || operation.result.accepts === "substitute",
-      "INVALID_NEED_ACCEPTANCE",
-      `${operation.id} Need acceptance is invalid`,
-    );
   }
   for (const declaration of producer.inputs) {
     const supplied = graphValueType(program, graph, operation.inputs[declaration.name] as GraphValueRef);
@@ -269,34 +221,6 @@ function verifyOperation(program: LinkedProgram, graph: CompiledGraph, operation
       operation.id,
     );
   }
-}
-
-function semanticLeaves(graph: CompiledGraph, root: CandidateRoot): Set<string> {
-  const leaves = new Set<string>();
-  const visited = new Set<string>();
-  const visiting = new Set<string>();
-
-  const visitRef = (ref: GraphValueRef): void => {
-    if (ref.kind !== "operation-result") {
-      leaves.add(valueRefKey(ref));
-      return;
-    }
-    if (visited.has(ref.operation)) return;
-    invariant(
-      !visiting.has(ref.operation),
-      "OPERATION_CYCLE",
-      `Operation cycle reaches ${ref.operation}`,
-      ref.operation,
-    );
-    visiting.add(ref.operation);
-    const operation = resolveOperation(graph, ref.operation);
-    Object.values(operation.inputs).forEach(visitRef);
-    visiting.delete(ref.operation);
-    visited.add(ref.operation);
-  };
-
-  if (root.kind === "operation") visitRef(root.result);
-  return leaves;
 }
 
 function verifyCandidateValue(program: LinkedProgram, graph: CompiledGraph, candidate: Candidate): void {
@@ -314,14 +238,8 @@ function verifyCandidateValue(program: LinkedProgram, graph: CompiledGraph, cand
     id: candidate.root.value.id,
     type: candidate.type,
     value: candidate.root.value.value,
-    conformance: "substitute",
     origin: {
       kind: "provided",
-      candidate: candidate.id,
-      requestDigest: digestOf(`candidate:${candidate.id}`),
-      ...(candidate.root.value.provenance === undefined
-        ? {}
-        : { provenance: candidate.root.value.provenance }),
     },
     ...(candidate.root.value.validation === undefined
       ? {}
@@ -331,40 +249,20 @@ function verifyCandidateValue(program: LinkedProgram, graph: CompiledGraph, cand
 }
 
 function verifySatisfaction(
-  program: LinkedProgram,
-  graph: CompiledGraph,
   output: LogicalOutput,
   candidate: Candidate,
-  fidelity: Conformance,
 ): void {
-  invariant(
-    fidelity === "exact" || fidelity === "substitute",
-    "INVALID_CONFORMANCE",
-    `${candidate.id} satisfaction fidelity is invalid`,
-    candidate.id,
-  );
   invariant(
     sameType(candidate.type, output.type),
     "CANDIDATE_RESULT_TYPE_MISMATCH",
     `${candidate.id} supplies ${typeKey(candidate.type)}, not ${typeKey(output.type)}`,
     candidate.id,
   );
-  const allowed = new Set(output.semanticInputs.map(valueRefKey));
-  for (const leaf of semanticLeaves(graph, candidate.root)) {
-    invariant(
-      allowed.has(leaf),
-      "CANDIDATE_EXCEEDS_SEMANTIC_ENVELOPE",
-      `${candidate.id} depends on ${leaf} outside ${output.id}'s Semantic Input Envelope`,
-      candidate.id,
-    );
-  }
 }
 
 export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph): void {
   invariant(graph.format === "svml.graph@1", "UNSUPPORTED_GRAPH", "unsupported compiled graph format");
   invariant(isDigest(graph.id), "INVALID_DIGEST", "compiled graph id is invalid");
-  invariant(isDigest(graph.source), "INVALID_DIGEST", "compiled graph source digest is invalid");
-  invariant(isDigest(graph.realization), "INVALID_DIGEST", "compiled graph realization digest is invalid");
   invariant(
     graph.program === program.semanticDigest,
     "GRAPH_PROGRAM_MISMATCH",
@@ -372,20 +270,6 @@ export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph
   );
   const { id: _id, ...content } = graph;
   invariant(graph.id === digestOf(content), "GRAPH_DIGEST_MISMATCH", "compiled graph digest differs");
-  if (graph.realization === EMPTY_REALIZATION_DIGEST) {
-    invariant(
-      graph.source === digestOf({
-        format: "svml.graph-source@1",
-        program: graph.program,
-        outputs: graph.outputs,
-        candidates: graph.candidates,
-        operations: graph.operations,
-      }),
-      "GRAPH_SOURCE_DIGEST_MISMATCH",
-      "author graph source digest differs",
-    );
-  }
-
   const outputIds = new Set<string>();
   const candidateIds = new Set<string>();
   const operationIds = new Set<string>();
@@ -396,13 +280,6 @@ export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph
     invariant(output.id.length > 0, "EMPTY_LOGICAL_OUTPUT_ID", "Logical Output id is empty");
     invariant(!outputIds.has(output.id), "DUPLICATE_LOGICAL_OUTPUT", `duplicate ${output.id}`, output.id);
     outputIds.add(output.id);
-    const semanticInputs = output.semanticInputs.map(valueRefKey);
-    invariant(
-      new Set(semanticInputs).size === semanticInputs.length,
-      "DUPLICATE_SEMANTIC_INPUT",
-      `${output.id} repeats a Semantic Input`,
-      output.id,
-    );
   }
 
   for (const operation of graph.operations) {
@@ -431,7 +308,7 @@ export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph
 
   for (const output of graph.outputs) {
     const primary = resolveCandidate(graph, output.primary);
-    verifySatisfaction(program, graph, output, primary, "exact");
+    verifySatisfaction(output, primary);
   }
 }
 
@@ -461,21 +338,7 @@ export function verifyBuildRequest(
   for (const target of request.targets) {
     resolveLogicalOutput(graph, target.output);
     invariant(!targets.has(target.output), "DUPLICATE_BUILD_TARGET", `${target.output} is targeted twice`);
-    invariant(
-      target.accepts === "exact" || target.accepts === "substitute",
-      "INVALID_TARGET_ACCEPTANCE",
-      target.output,
-    );
     targets.add(target.output);
   }
 
-  const satisfactions = new Set<string>();
-  for (const satisfaction of request.satisfactions) {
-    const output = resolveLogicalOutput(graph, satisfaction.output);
-    invariant(!satisfactions.has(output.id), "DUPLICATE_SATISFACTION", `${output.id} is satisfied twice`);
-    const candidate = resolveCandidate(graph, satisfaction.candidate);
-    verifySatisfaction(program, graph, output, candidate, satisfaction.fidelity);
-    satisfactions.add(output.id);
-  }
 }
-

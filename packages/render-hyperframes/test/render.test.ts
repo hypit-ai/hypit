@@ -105,21 +105,17 @@ const closure = createResolvedClosure([
 ]);
 const origin = {
   kind: "authored" as const,
-  sourceDigest: digestOf("source:render-hyperframes-test"),
-  frontendClosureDigest: digestOf("frontend:render-hyperframes-test"),
 };
 const compositionRecord = await admitRecord(closure, sealRecord({
   id: "composition",
   type: compositionTypes.composition,
   value: stored(composition),
-  conformance: "exact",
   origin,
 }), validatorRegistry());
 const spaceRecord = await admitRecord(closure, sealRecord({
   id: "space",
   type: programSpaceTypes.programSpace,
   value: stored(space),
-  conformance: "exact",
   origin,
 }), validatorRegistry());
 const linked = link(closure, [sealTypedModule({
@@ -141,8 +137,7 @@ const graph = sealCompiledGraph({ program: linked.semanticDigest, ...contributio
 function build() {
   return start(linked, graph, sealBuildRequest({
     graph: graph.id,
-    targets: [{ output: "final.video", accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: "final.video" }],
   }));
 }
 
@@ -178,7 +173,6 @@ test("HyperFrames rendering is an explicit exact Need after ordinary document co
   assert.equal(result.state.needs.length, 2);
   const visual = result.state.needs.find((need) => need.capability.name === renderHyperframesCapabilities.renderVisual.name)!;
   assert.equal(visual.returns.name, mediaTypes.renderedVisual.name);
-  assert.equal(visual.accepts, "exact");
   assert.deepEqual(visual.constraints, hyperframesVisualRequest(compileHyperframesDocument(composition, space)));
   const audio = result.state.needs.find((need) => need.capability.name === "render-timeline-audio")!;
   assert.equal(audio.returns.name, mediaTypes.timelineAudio.name);
@@ -224,8 +218,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
           artifact: visualArtifact,
           muted: true,
         })),
-        conformance: "exact",
-        delivery: "executed",
         metadata: { runtime: "fixture-local" },
       };
     },
@@ -246,9 +238,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
           sampleFrames: request.plan.sampleFrames,
           loudness: "planned",
         })),
-        conformance: "exact",
-        delivery: "executed",
-        metadata: {},
       };
     },
   );
@@ -267,9 +256,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
           presentationSampleFrames: request.audio.sampleFrames,
           artifact: finalArtifact,
         })),
-        conformance: "exact",
-        delivery: "executed",
-        metadata: {},
       };
     },
   );
@@ -313,9 +299,6 @@ test("a render Product with another frame domain is rejected by the explicit dow
         },
         muted: true,
       })),
-      conformance: "exact",
-      delivery: "executed",
-      metadata: {},
     }),
   );
   endpoints.registerImmediateEndpoint(
@@ -339,9 +322,6 @@ test("a render Product with another frame domain is rejected by the explicit dow
           sampleFrames: request.plan.sampleFrames,
           loudness: "planned",
         })),
-        conformance: "exact",
-        delivery: "executed",
-        metadata: {},
       };
     },
   );
@@ -447,8 +427,7 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
   assert.equal(target.ref.kind, "logical-output");
   const state = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
     graph: compiled.elaboration.graph.id,
-    targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "", accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
   }));
   assert.deepEqual(state.plan.steps.map((step) => step.producer.name).sort(), [
     hyperframesProducers.compile.name,

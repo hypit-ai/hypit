@@ -103,8 +103,6 @@ const cardFragment = sealGraphFragment({
     name: "result",
     type: cardType,
     root: { kind: "fragment-operation", operation: "render" },
-    semanticInputs: ["appearance"],
-    fidelity: "exact",
   }],
 });
 
@@ -250,8 +248,7 @@ test("Text and SVS recursively compile one aliased Recipe into a Core BuildPlan"
   assert.equal(target.ref.kind, "logical-output");
   const state = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
     graph: compiled.elaboration.graph.id,
-    targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "", accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
   }));
   assert.equal(state.plan.steps.length, 1);
   assert.equal(state.plan.steps[0]?.producer.name, renderProducer.name);

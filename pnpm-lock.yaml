@@ -2625,9 +2625,18 @@ importers:
       '@narratage/local':
         specifier: workspace:*
         version: link:../local
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
+      '@narratage/run-markup':
+        specifier: workspace:*
+        version: link:../run-markup
+      '@narratage/source':
+        specifier: workspace:*
+        version: link:../source
 
   packages/visual-ir:
     dependencies:

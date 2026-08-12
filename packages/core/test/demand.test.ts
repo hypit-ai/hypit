@@ -215,9 +215,8 @@ function output(
   id: string,
   type: TypeRef,
   primary: string,
-  semanticInputs: readonly GraphValueRef[],
 ): LogicalOutput {
-  return { id, type, primary, semanticInputs };
+  return { id, type, primary };
 }
 
 function candidate(
@@ -237,7 +236,7 @@ function providedCandidate(
   return {
     id,
     type,
-    root: { kind: "value", value: { id: record, value: { kind: "inline", value }, provenance: { test: id } } },
+    root: { kind: "value", value: { id: record, value: { kind: "inline", value } } },
   };
 }
 
@@ -257,22 +256,19 @@ function createProgram(): LinkedProgram {
       id: "head:root",
       type: types.head,
       value: { kind: "inline", value: "reference" },
-      conformance: "exact",
-      origin: { kind: "authored", sourceDigest: digestOf("source:demand"), frontendClosureDigest: digestOf("frontend:demand") },
+      origin: { kind: "authored" },
     }),
     sealRecord({
       id: "duration:root",
       type: types.duration,
       value: { kind: "inline", value: 3 },
-      conformance: "exact",
-      origin: { kind: "authored", sourceDigest: digestOf("source:demand"), frontendClosureDigest: digestOf("frontend:demand") },
+      origin: { kind: "authored" },
     }),
     sealRecord({
       id: "duration:other",
       type: types.duration,
       value: { kind: "inline", value: 9 },
-      conformance: "exact",
-      origin: { kind: "authored", sourceDigest: digestOf("source:demand"), frontendClosureDigest: digestOf("frontend:demand") },
+      origin: { kind: "authored" },
     }),
   ];
   return link(closure, [sealTypedModule({ id: "author:demand", closureDigest: closure.digest, records: authored })]);
@@ -282,16 +278,11 @@ function createImageGraph(program: LinkedProgram): CompiledGraph {
   return sealCompiledGraph({
     program: program.semanticDigest,
     outputs: [
-      output("image1", types.image, "p1", [recordRef("head:root")]),
-      output("image2", types.image, "p2", [recordRef("head:root"), outputRef("image1")]),
-      output("image3", types.image, "p3", [recordRef("head:root"), outputRef("image1"), outputRef("image2")]),
-      output("images", types.imageSet, "collect", [outputRef("image1"), outputRef("image2"), outputRef("image3")]),
-      output("media", types.image, "seedance", [
-        recordRef("head:root"),
-        recordRef("duration:root"),
-        outputRef("image1"),
-        outputRef("image2"),
-      ]),
+      output("image1", types.image, "p1"),
+      output("image2", types.image, "p2"),
+      output("image3", types.image, "p3"),
+      output("images", types.imageSet, "collect"),
+      output("media", types.image, "seedance"),
     ],
     candidates: [
       candidate("p1", types.image, "p1"),
@@ -315,7 +306,7 @@ function createImageGraph(program: LinkedProgram): CompiledGraph {
         duration: recordRef("duration:root"),
         reference1: outputRef("image1"),
         reference2: outputRef("image2"),
-      }, { kind: "need", name: "media", id: "need:seedance", record: "media:seedance", accepts: "exact" }),
+      }, { kind: "need", name: "media", id: "need:seedance", record: "media:seedance" }),
       operation("black", producers.black, { duration: recordRef("duration:root") }, { kind: "output", name: "media", record: "media:black" }),
     ],
   });
@@ -324,24 +315,41 @@ function createImageGraph(program: LinkedProgram): CompiledGraph {
 function request(
   graph: CompiledGraph,
   targets: readonly string[],
-  satisfactions: readonly Satisfaction[] = [],
-  accepts: "exact" | "substitute" = "substitute",
 ): BuildRequest {
   return sealBuildRequest({
     graph: graph.id,
-    targets: targets.map((outputId) => ({ output: outputId, accepts })),
-    satisfactions,
+    targets: targets.map((outputId) => ({ output: outputId })),
   });
+}
+
+function selectCandidates(graph: CompiledGraph, satisfactions: readonly Satisfaction[]): CompiledGraph {
+  const selected = new Map(satisfactions.map((item) => [item.output, item.candidate]));
+  return sealCompiledGraph({
+    program: graph.program,
+    outputs: graph.outputs.map((item) => ({ ...item, primary: selected.get(item.id) ?? item.primary })),
+    candidates: graph.candidates,
+    operations: graph.operations,
+  });
+}
+
+function startSelected(
+  program: LinkedProgram,
+  graph: CompiledGraph,
+  targets: readonly string[],
+  satisfactions: readonly Satisfaction[] = [],
+): BuildState {
+  const selected = selectCandidates(graph, satisfactions);
+  return start(program, selected, request(selected, targets));
 }
 
 function fixture(targets: readonly string[], satisfactions: readonly Satisfaction[] = []): BuildState {
   const program = createProgram();
   const graph = createImageGraph(program);
-  return start(program, graph, request(graph, targets, satisfactions));
+  return startSelected(program, graph, targets, satisfactions);
 }
 
 function choose(outputId: string, candidateId: string): Satisfaction {
-  return { output: outputId, candidate: candidateId, fidelity: "substitute" };
+  return { output: outputId, candidate: candidateId };
 }
 
 function stepIds(state: BuildState): string[] {
@@ -379,7 +387,7 @@ test("multiple Targets share Operations once and target order is not semantic", 
   assert.equal(first.plan.id, second.plan.id);
 });
 
-test("the selected Candidate alone determines the demanded semantic inputs", () => {
+test("the selected Candidate alone determines demanded upstream inputs", () => {
   assert.deepEqual(stepIds(fixture(["media"])), ["p1", "p2", "seedance"]);
   assert.deepEqual(stepIds(fixture(["media"], [choose("media", "black")])), ["black"]);
 });
@@ -395,23 +403,6 @@ test("an Existing Value is a normal Candidate root and prevents the paid Need fr
   assert.equal(transition.commands[0]?.kind, "complete");
 });
 
-test("a Candidate cannot escape its Logical Output Semantic Input Envelope", () => {
-  const program = createProgram();
-  const graph = createImageGraph(program);
-  const tampered = sealCompiledGraph({
-    program: graph.program,
-    outputs: graph.outputs,
-    candidates: graph.candidates,
-    operations: graph.operations.map((item) => item.id === "black"
-      ? { ...item, inputs: { duration: recordRef("duration:other") } }
-      : item),
-  });
-  assert.throws(
-    () => start(program, tampered, request(tampered, ["media"], [choose("media", "black")])),
-    /outside media's Semantic Input Envelope/u,
-  );
-});
-
 test("Provided Values are checked against the Logical Output Contract", () => {
   const program = createProgram();
   const graph = createImageGraph(program);
@@ -423,9 +414,8 @@ test("Provided Values are checked against the Logical Output Contract", () => {
       ? providedCandidate("existing-image1", types.image, "provided:image1", 42)
       : item),
   });
-  assert.throws(() => start(program, invalid, request(invalid, ["image1"], [
-    choose("image1", "existing-image1"),
-  ], "exact")), /must be a string/u);
+  const selected = selectCandidates(invalid, [choose("image1", "existing-image1")]);
+  assert.throws(() => start(program, selected, request(selected, ["image1"])), /must be a string/u);
 });
 
 test("Provided state survives JSON round-trip and regenerates identical ready Commands", () => {
@@ -445,11 +435,11 @@ function createCaseGGraph(program: LinkedProgram, roots: "value" | "operation"):
   return sealCompiledGraph({
     program: program.semanticDigest,
     outputs: [
-      output("a.A", types.a, a1Id, []),
-      output("a.B", types.b, a2Id, []),
-      output("b.C", types.c, "b1", [outputRef("a.A"), outputRef("a.B")]),
-      output("b.D", types.d, "b2", [outputRef("a.A"), outputRef("a.B")]),
-      output("c.result", types.combined, "c", [outputRef("b.C"), outputRef("b.D")]),
+      output("a.A", types.a, a1Id),
+      output("a.B", types.b, a2Id),
+      output("b.C", types.c, "b1"),
+      output("b.D", types.d, "b2"),
+      output("c.result", types.combined, "c"),
     ],
     candidates: [
       roots === "value"
@@ -506,8 +496,8 @@ function createOperationIdentityGraph(
   return sealCompiledGraph({
     program: program.semanticDigest,
     outputs: [
-      output("left", types.image, "left-candidate", [recordRef("head:root")]),
-      output("right", types.image, "right-candidate", [recordRef("head:root")]),
+      output("left", types.image, "left-candidate"),
+      output("right", types.image, "right-candidate"),
     ],
     candidates: [
       candidate("left-candidate", types.image, "left-operation"),
@@ -551,10 +541,10 @@ test("two Candidates that name one OperationId demand exactly one execution", ()
 test("one independent Candidate may explicitly satisfy multiple compatible Logical Outputs", () => {
   const program = createProgram();
   const graph = createOperationIdentityGraph(program, "shared");
-  const state = start(program, graph, request(graph, ["left", "right"], [
-    { output: "left", candidate: "shared-candidate", fidelity: "exact" },
-    { output: "right", candidate: "shared-candidate", fidelity: "exact" },
-  ]));
+  const state = startSelected(program, graph, ["left", "right"], [
+    { output: "left", candidate: "shared-candidate" },
+    { output: "right", candidate: "shared-candidate" },
+  ]);
   assert.deepEqual(stepIds(state), ["left-operation"]);
   assert.deepEqual(
     state.plan.selections.map((selection) => [selection.output, selection.candidate]),
@@ -604,11 +594,11 @@ function createProductReplacementGraph(
   return sealCompiledGraph({
     program: program.semanticDigest,
     outputs: [
-      output("a.A", types.a, "a.A.primary", []),
-      output("a.B", types.b, "a.B.primary", []),
-      output("b.C", types.c, "b.C.primary", [outputRef("a.A"), outputRef("a.B")]),
-      output("b.D", types.d, "b.D.primary", [outputRef("a.A"), outputRef("a.B")]),
-      output("c.result", types.combined, "c.primary", [outputRef("b.C"), outputRef("b.D")]),
+      output("a.A", types.a, "a.A.primary"),
+      output("a.B", types.b, "a.B.primary"),
+      output("b.C", types.c, "b.C.primary"),
+      output("b.D", types.d, "b.D.primary"),
+      output("c.result", types.combined, "c.primary"),
     ],
     candidates: [
       candidate("a.A.primary", types.a, "a1"),
@@ -638,19 +628,18 @@ function createProductReplacementGraph(
   });
 }
 
-const substitute = (outputId: string, candidateId: string): Satisfaction => ({
+const select = (outputId: string, candidateId: string): Satisfaction => ({
   output: outputId,
   candidate: candidateId,
-  fidelity: "substitute",
 });
 
 test("one Run-Graph instance satisfies two Logical Outputs through one shared Product", () => {
   const program = createProgram();
   const graph = createProductReplacementGraph(program, "shared");
-  const state = start(program, graph, request(graph, ["c.result"], [
-    substitute("b.C", "b.C.alternate"),
-    substitute("b.D", "b.D.alternate"),
-  ]));
+  const state = startSelected(program, graph, ["c.result"], [
+    select("b.C", "b.C.alternate"),
+    select("b.D", "b.D.alternate"),
+  ]);
   assert.deepEqual(stepIds(state), ["a1", "a2", "b.alt.C", "b.alt.D", "b.alt.product.c", "c"]);
   assert.equal(state.plan.steps.filter((step) => step.producer.name === producers.makeProduct.name).length, 1);
   assert.equal(state.plan.steps.some((step) => step.id.startsWith("b.default")), false);
@@ -659,10 +648,10 @@ test("one Run-Graph instance satisfies two Logical Outputs through one shared Pr
 test("two explicit Run-Graph instances may separately satisfy the two outputs", () => {
   const program = createProgram();
   const graph = createProductReplacementGraph(program, "distinct");
-  const state = start(program, graph, request(graph, ["c.result"], [
-    substitute("b.C", "b.C.alternate"),
-    substitute("b.D", "b.D.alternate"),
-  ]));
+  const state = startSelected(program, graph, ["c.result"], [
+    select("b.C", "b.C.alternate"),
+    select("b.D", "b.D.alternate"),
+  ]);
   assert.deepEqual(stepIds(state), [
     "a1", "a2", "b.alt.C", "b.alt.D", "b.alt.product.c", "b.alt.product.d", "c",
   ]);
@@ -673,9 +662,9 @@ test("two explicit Run-Graph instances may separately satisfy the two outputs", 
 test("partial satisfaction keeps only the demanded projection of the default Product", () => {
   const program = createProgram();
   const graph = createProductReplacementGraph(program, "shared");
-  const state = start(program, graph, request(graph, ["c.result"], [
-    substitute("b.C", "b.C.alternate"),
-  ]));
+  const state = startSelected(program, graph, ["c.result"], [
+    select("b.C", "b.C.alternate"),
+  ]);
   assert.deepEqual(stepIds(state), [
     "a1", "a2", "b.alt.C", "b.alt.product.c", "b.default.D", "b.default.product", "c",
   ]);
@@ -685,18 +674,9 @@ test("partial satisfaction keeps only the demanded projection of the default Pro
 test("an unbound sibling output cannot keep an unreachable default Product alive", () => {
   const program = createProgram();
   const graph = createProductReplacementGraph(program, "shared");
-  const state = start(program, graph, request(graph, ["b.C"], [
-    substitute("b.C", "b.C.alternate"),
-  ]));
+  const state = startSelected(program, graph, ["b.C"], [
+    select("b.C", "b.C.alternate"),
+  ]);
   assert.deepEqual(stepIds(state), ["a1", "a2", "b.alt.C", "b.alt.product.c"]);
   assert.equal(state.plan.steps.some((step) => step.id.startsWith("b.default")), false);
-});
-
-test("an exact Target rejects a selected substitute Candidate before execution", () => {
-  const program = createProgram();
-  const graph = createImageGraph(program);
-  assert.throws(
-    () => start(program, graph, request(graph, ["media"], [choose("media", "black")], "exact")),
-    /selects a substitute path/u,
-  );
 });

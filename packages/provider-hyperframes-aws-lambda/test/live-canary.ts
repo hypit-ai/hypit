@@ -119,8 +119,6 @@ function requestNeed(document: HyperframesDocument, canaryId: string): Need {
     constraints,
     requestedBy: `derivation:hyperframes-aws-canary:${canaryId}`,
     result: `record:hyperframes-aws-canary:${canaryId}`,
-    accepts: "exact",
-    conformanceFloor: "exact",
     requestDigest: digestOf({
       capability: renderHyperframesCapabilities.renderVisual,
       returns: mediaTypes.renderedVisual,

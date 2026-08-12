@@ -50,7 +50,6 @@ export type RuntimeConfigDocument = {
   readonly runtimeServices: readonly RuntimeConfigEntry[];
   readonly services: RuntimeServiceSelection;
   readonly endpoints: readonly RuntimeConfigEntry[];
-  readonly permissions: readonly string[];
   readonly scheduling: {
     readonly maxConcurrency: number;
     readonly resources?: Readonly<Record<string, number>>;
@@ -97,9 +96,7 @@ function stringList(value: unknown, subject: string): readonly string[] {
 function entry(value: unknown, subject: string, authorityRequired: boolean): RuntimeConfigEntry {
   const item = object(value, subject);
   exactKeys(item, authorityRequired ? ["use", "instance", "authority", "config"] : ["use", "instance", "config"], subject);
-  const authority = authorityRequired
-    ? requiredString(item.authority, `${subject}.authority`)
-    : undefined;
+  const authority = authorityRequired ? optionalString(item.authority, `${subject}.authority`) : undefined;
   return {
     use: requiredString(item.use, `${subject}.use`),
     instance: requiredString(item.instance, `${subject}.instance`),
@@ -136,7 +133,6 @@ function serviceSelection(value: unknown): RuntimeServiceSelection {
   exactKeys(stores, ["build", "operations", "dispatch", "journal", "artifacts", "credentials"],
     "$runtime.services.stores");
   const credentials = stringList(stores.credentials, "$runtime.services.stores.credentials");
-  if (credentials.length === 0) throw new Error("$runtime.services.stores.credentials must select at least one store");
   return {
     scheduler: requiredString(item.scheduler, "$runtime.services.scheduler"),
     worker: requiredString(item.worker, "$runtime.services.worker"),
@@ -155,8 +151,7 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   const item = object(value, "$runtime");
   exactKeys(item, [
     "format", "root", "packageRoot", "packageLock", "runtimePackageLock",
-    "runtimeServices", "services", "endpoints",
-    "permissions", "scheduling",
+    "runtimeServices", "services", "endpoints", "scheduling",
   ], "$runtime");
   if (item.format !== "svml.runtime-config@1") throw new Error("$runtime.format must be svml.runtime-config@1");
   if (!Array.isArray(item.runtimeServices)) throw new Error("$runtime.runtimeServices must be an array");
@@ -182,7 +177,6 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
     runtimeServices,
     services: serviceSelection(item.services),
     endpoints,
-    permissions: stringList(item.permissions, "$runtime.permissions"),
     scheduling: scheduled,
   };
 }
@@ -206,6 +200,8 @@ export type RuntimeConfigPackageSelection = {
   readonly root: string;
   readonly packageRoot: string;
   readonly packageLock?: string;
+  readonly runtimePackageLock?: string;
+  readonly runtimePackages: readonly string[];
 };
 
 /**
@@ -226,9 +222,16 @@ export async function runtimeConfigPackageSelection(
   return {
     root,
     packageRoot,
+    runtimePackages: [...new Set([
+      ...document.runtimeServices.map((item) => item.use),
+      ...document.endpoints.map((item) => item.use),
+    ])].sort(),
     ...(document.packageLock === undefined
       ? {}
       : { packageLock: resolve(root, document.packageLock) }),
+    ...(document.runtimePackageLock === undefined
+      ? {}
+      : { runtimePackageLock: resolve(root, document.runtimePackageLock) }),
   };
 }
 
@@ -301,7 +304,7 @@ export async function declaredExternalServices(
     const activation = await registry.activateEndpoint(item.use, {
       root,
       instance: item.instance,
-      authority: item.authority!,
+      authority: item.authority ?? item.instance,
       config: item.config ?? {},
     });
     if (options.capabilities !== undefined && !activation.endpoint.bindings.some((binding) =>
@@ -326,7 +329,7 @@ function diagnostic(error: unknown, code: string, subject?: string): RuntimeDoct
 /** Read-only validation of package bytes, adapter config, credentials and local executable prerequisites. */
 export async function doctorRuntimeConfig(
   path: string,
-  options: LoadRuntimeConfigOptions = {},
+  options: LoadRuntimeConfigOptions & { readonly capabilities?: readonly CapabilityRef[] } = {},
 ): Promise<RuntimeConfigDoctorResult> {
   const absolute = resolve(path);
   const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
@@ -337,6 +340,9 @@ export async function doctorRuntimeConfig(
     readonly entry: RuntimeConfigEntry;
     readonly activation: RuntimeEndpointActivation;
   }> = [];
+  const coveredCapabilities = new Set<string>();
+  const capabilityKey = (capability: CapabilityRef) =>
+    `${capability.module.name}@${capability.module.version}#${capability.name}`;
   try {
     if (!(await stat(root)).isDirectory()) throw new Error(`Runtime root ${root} is not a directory`);
   } catch (error) {
@@ -345,7 +351,16 @@ export async function doctorRuntimeConfig(
   }
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   const runtimeLock = installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot);
-  const implementationLock = document.packageLock === undefined
+  const implementationLock = options.implementationPackages !== undefined
+    ? (async () => {
+        if (document.packageLock === undefined) throw new Error("Runtime Profile has no packageLock for verified implementation packages");
+        const declared = await readNodePackageLock(resolve(root, document.packageLock));
+        if (declared.digest !== options.implementationPackages!.lock.digest) {
+          throw new Error("Runtime Profile packageLock differs from the implementation packages already verified by this Host");
+        }
+        return options.implementationPackages;
+      })()
+    : document.packageLock === undefined
     ? Promise.resolve(undefined)
     : loadNodePackageSet(resolve(root, document.packageLock), packageRoot);
   const [runtimeResult, implementationResult] = await Promise.allSettled([runtimeLock, implementationLock]);
@@ -376,7 +391,7 @@ export async function doctorRuntimeConfig(
     const context = {
       root,
       instance: item.instance,
-      authority: item.authority!,
+      authority: item.authority ?? item.instance,
       config: item.config ?? {},
     };
     let activation: RuntimeEndpointActivation;
@@ -385,6 +400,15 @@ export async function doctorRuntimeConfig(
     } catch (error) {
       diagnostics.push(diagnostic(error, "RUNTIME_ENDPOINT_CONFIG_INVALID", item.instance));
       continue;
+    }
+    if (options.capabilities !== undefined && !activation.endpoint.bindings.some((binding) =>
+      options.capabilities!.some((capability) => sameCapability(binding.capability, capability)))) {
+      continue;
+    }
+    for (const binding of activation.endpoint.bindings) {
+      if (options.capabilities?.some((capability) => sameCapability(binding.capability, capability))) {
+        coveredCapabilities.add(capabilityKey(binding.capability));
+      }
     }
     let adapterHasError = false;
     try {
@@ -434,6 +458,15 @@ export async function doctorRuntimeConfig(
       });
     }
   }
+  for (const capability of options.capabilities ?? []) {
+    if (coveredCapabilities.has(capabilityKey(capability))) continue;
+    diagnostics.push({
+      severity: "error",
+      code: "RUNTIME_CAPABILITY_UNBOUND",
+      message: `No usable Endpoint in this Runtime Profile fulfills ${capabilityKey(capability)}`,
+      subject: capabilityKey(capability),
+    });
+  }
   if (credentialEndpoints.length > 0) {
     let packages: readonly RuntimeServicePackage[] = [];
     try {
@@ -469,7 +502,10 @@ export async function doctorRuntimeConfig(
           diagnostics.push({
             severity: "error",
             code: "RUNTIME_CREDENTIAL_MISSING",
-            message: `${slot.label} for Endpoint ${entry.instance} is not configured in CredentialStore ${slot.ref.store}`,
+            message: `${slot.label} for Endpoint ${entry.instance} is not configured in CredentialStore ${slot.ref.store}. `
+              + (slot.ref.store === "env"
+                ? `Set ${slot.ref.key} in this process environment, or select a writable CredentialStore in the Runtime Profile.`
+                : `Configure it with: narratage auth login ${entry.instance} --runtime ${absolute}`),
             subject: `${entry.instance}.${slot.slot}`,
           });
         }
@@ -524,7 +560,7 @@ export async function createRuntimeFromConfig(
     return await registry.createEndpoint(item.use, {
       root,
       instance: item.instance,
-      authority: item.authority!,
+      authority: item.authority ?? item.instance,
       config: item.config ?? {},
     });
   }));
@@ -542,7 +578,6 @@ export async function createRuntimeFromConfig(
       ...(options.components ?? []),
     ],
     endpoints,
-    allowedPermissions: document.permissions,
     scheduling: document.scheduling,
   });
 }
@@ -574,7 +609,6 @@ export async function createRuntimeControlFromConfig(
     root,
     runtimeServices,
     runtimeSelection: document.services,
-    allowedPermissions: document.permissions,
   });
 }
 
@@ -645,7 +679,7 @@ export async function createRuntimeCredentialsFromConfig(
     const endpoint = await registry.createEndpoint(endpointEntry.use, {
       root,
       instance: endpointEntry.instance,
-      authority: endpointEntry.authority!,
+      authority: endpointEntry.authority ?? endpointEntry.instance,
       config: endpointEntry.config ?? {},
     });
     return createLocalCredentialControl({

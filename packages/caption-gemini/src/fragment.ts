@@ -25,14 +25,12 @@ export const captionGeminiPlanningFragment = sealGraphFragment({
       id: "caption-gemini:plan",
       producer: captionGeminiProducers.request,
       inputs: { request: operation("caption-gemini:compile") },
-      result: { kind: "need", name: "plan", accepts: "exact" },
+      result: { kind: "need", name: "plan" },
     },
   ],
   exports: [{
     name: "plan",
     type: captionTypes.plan,
     root: operation("caption-gemini:plan"),
-    semanticInputs: ["display", "captionProgram", "program"],
-    fidelity: "exact",
   }],
 });

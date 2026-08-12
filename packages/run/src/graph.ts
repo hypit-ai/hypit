@@ -27,13 +27,7 @@ function content(graph: RunGraph): Omit<RunGraph, "id"> {
     candidates: [...graph.candidates].sort((left, right) => left.id.localeCompare(right.id)),
     operations: [...graph.operations].sort((left, right) => left.id.localeCompare(right.id)),
     satisfactions: [...graph.satisfactions].sort((left, right) => left.output.localeCompare(right.output)),
-    targetSets: [...graph.targetSets]
-      .map((set) => ({
-        id: set.id,
-        targets: [...set.targets].sort((left, right) => left.output.localeCompare(right.output)),
-      }))
-      .sort((left, right) => left.id.localeCompare(right.id)),
-    selectedTargets: graph.selectedTargets,
+    targets: [...graph.targets].sort((left, right) => left.output.localeCompare(right.output)),
   };
 }
 
@@ -65,17 +59,11 @@ export function verifyRunGraph(graph: RunGraph): void {
     assert(candidateIds.has(satisfaction.candidate), "UNKNOWN_RUN_CANDIDATE", `Run Graph Satisfaction names absent Candidate ${satisfaction.candidate}`);
     satisfiedOutputs.add(satisfaction.output);
   }
-  const targetIds = new Set<string>();
-  for (const set of graph.targetSets) {
-    assert(set.id.length > 0 && !targetIds.has(set.id), "DUPLICATE_RUN_TARGET_SET", `Run Graph repeats Target Set ${set.id}`);
-    assert(set.targets.length > 0, "EMPTY_RUN_TARGET_SET", `Run Target Set ${set.id} is empty`);
-    const outputs = new Set<string>();
-    for (const target of set.targets) {
-      assert(!outputs.has(target.output), "DUPLICATE_RUN_TARGET", `Run Target Set ${set.id} repeats ${target.output}`);
-      outputs.add(target.output);
-    }
-    targetIds.add(set.id);
+  assert(graph.targets.length > 0, "EMPTY_RUN_TARGETS", "Run Graph has no Targets");
+  const targets = new Set<string>();
+  for (const target of graph.targets) {
+    assert(!targets.has(target.output), "DUPLICATE_RUN_TARGET", `Run Graph repeats Target ${target.output}`);
+    targets.add(target.output);
   }
-  assert(targetIds.has(graph.selectedTargets), "UNKNOWN_SELECTED_TARGET_SET", `Run Graph selects absent Target Set ${graph.selectedTargets}`);
   assert(graph.id === digestOf(content(graph)), "RUN_GRAPH_DIGEST_MISMATCH", "Run Graph digest differs");
 }

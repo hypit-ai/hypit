@@ -7,6 +7,7 @@ import {
   digestOf,
   link,
   sealBuildRequest,
+  sealCompiledGraph,
   sealRecord,
   sealTypeValidationReceipt,
   sealTypedModule,
@@ -38,7 +39,7 @@ import { narrativeManifest } from "@narratage/narrative";
 import { programSpaceManifest } from "@narratage/program-space";
 import type { CanonicalValue, Digest, ModuleManifest, StoredValue, TypeRef } from "@narratage/protocol";
 import { rasterManifest } from "@narratage/raster";
-import { createProvidedCandidate, resolveRealization, sealRealizationOverlay } from "@narratage/run";
+import { createProvidedCandidate } from "@narratage/run";
 import {
   createSeedanceAssembledGenerationFragment,
   seedanceEndpoints,
@@ -51,8 +52,6 @@ import { textManifest } from "@narratage/text";
 
 const origin = {
   kind: "authored" as const,
-  sourceDigest: digestOf("source:broll-topology"),
-  frontendClosureDigest: digestOf("frontend:broll-topology"),
 };
 
 const image = (name: string) => ({
@@ -191,7 +190,7 @@ function fixture() {
     id: "broll-records",
     closureDigest: closure.digest,
     records: records.map(({ validatorDigest, ...record }) => {
-      const sealed = sealRecord({ ...record, conformance: "exact", origin });
+      const sealed = sealRecord({ ...record, origin });
       return validatorDigest === undefined ? sealed : {
         ...sealed,
         validation: sealTypeValidationReceipt({
@@ -216,8 +215,7 @@ test("the common B-roll topology is one graph with one shared holding image", ()
   const { program, graph } = fixture();
   const state = start(program, graph, sealBuildRequest({
     graph: graph.id,
-    targets: [{ output: "montage.video", accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: "montage.video" }],
   }));
   const producers = state.plan.steps.map((step) => step.producer.name);
   assert.equal(producers.filter((name) => name === "request-gpt-image-2").length, 3);
@@ -232,12 +230,17 @@ test("the common B-roll topology is one graph with one shared holding image", ()
 test("an explicitly selected holding-image Candidate prunes only that branch", () => {
   const { program, graph } = fixture();
   const candidate = createProvidedCandidate({ type: artifactTypes.blob, value: image("approved-holding") });
-  const overlay = sealRealizationOverlay({ sourceGraph: graph.id, candidates: [candidate], operations: [] });
-  const realized = resolveRealization(program, graph, [overlay]);
-  const state = start(program, realized.graph, sealBuildRequest({
-    graph: realized.graph.id,
-    targets: [{ output: "montage.video", accepts: "exact" }],
-    satisfactions: [{ output: "holding.image", candidate: candidate.id, fidelity: "exact" }],
+  const realized = sealCompiledGraph({
+    program: graph.program,
+    outputs: graph.outputs.map((item) => item.id === "holding.image"
+      ? { ...item, primary: candidate.id }
+      : item),
+    candidates: [...graph.candidates, candidate],
+    operations: graph.operations,
+  });
+  const state = start(program, realized, sealBuildRequest({
+    graph: realized.id,
+    targets: [{ output: "montage.video" }],
   }));
   const producers = state.plan.steps.map((step) => step.producer.name);
   assert.equal(producers.filter((name) => name === "request-gpt-image-2").length, 2);

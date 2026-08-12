@@ -45,7 +45,5 @@ export const fineCaptionTrackFragment = sealGraphFragment({
     name: "track",
     type: compositionTypes.visualTrack,
     root: operation("caption-fine:render"),
-    semanticInputs: ["display", "correspondence", "map", "plan", "program", "space"],
-    fidelity: "exact",
   }],
 });

@@ -70,7 +70,7 @@ export function createGptImageCleanFragment(
       id: "generate",
       producer: endpoint.producer,
       inputs: { request: operation("finalize-request") },
-      result: { kind: "need", name: "generation", accepts: "exact" },
+      result: { kind: "need", name: "generation" },
     },
     {
       id: "select-primary-image",
@@ -82,7 +82,7 @@ export function createGptImageCleanFragment(
       id: "clean-image",
       producer: imageTransformProducers.request,
       inputs: { source: operation("select-primary-image"), program: input("cleanup") },
-      result: { kind: "need", name: "image", accepts: "exact" },
+      result: { kind: "need", name: "image" },
     },
   );
   const shape = [
@@ -97,8 +97,6 @@ export function createGptImageCleanFragment(
       name: "image",
       type: artifactTypes.blob,
       root: operation("clean-image"),
-      semanticInputs: inputs.map((entry) => entry.name),
-      fidelity: "exact",
     }],
   });
 }

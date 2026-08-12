@@ -1,8 +1,6 @@
 import { digestOf, isDigest } from "@narratage/protocol";
 import type {
   CanonicalValue,
-  Conformance,
-  Delivery,
   Digest,
   StoredValue,
 } from "@narratage/protocol";
@@ -19,14 +17,11 @@ export type OperationIdentity = {
   readonly runtimeClosure: Digest;
   readonly requestDigest: Digest;
   readonly attempt: number;
-  readonly submissionKey: Digest;
 };
 
 export type OperationCompletion = {
   readonly value: StoredValue;
-  readonly conformance: Conformance;
-  readonly delivery: Delivery;
-  readonly metadata: CanonicalValue;
+  readonly metadata?: CanonicalValue;
   readonly digest: Digest;
 };
 
@@ -126,31 +121,6 @@ function epochMillisecond(value: number, subject: string): number {
   return value;
 }
 
-function submissionContent(value: {
-  readonly build: string;
-  readonly command: string;
-  readonly endpoint: string;
-  readonly authority: string;
-  readonly route: string;
-  readonly implementationDigest: Digest;
-  readonly runtimeClosure: Digest;
-  readonly requestDigest: Digest;
-  readonly attempt: number;
-}) {
-  return {
-    format: "svml.operation-submission@1",
-    build: value.build,
-    command: value.command,
-    endpoint: value.endpoint,
-    authority: value.authority,
-    route: value.route,
-    implementationDigest: value.implementationDigest,
-    runtimeClosure: value.runtimeClosure,
-    requestDigest: value.requestDigest,
-    attempt: value.attempt,
-  } as const;
-}
-
 function identityContent(value: Omit<OperationIdentity, "id">): Omit<OperationIdentity, "id"> {
   return {
     format: "svml.operation-identity@1",
@@ -163,12 +133,11 @@ function identityContent(value: Omit<OperationIdentity, "id">): Omit<OperationId
     runtimeClosure: value.runtimeClosure,
     requestDigest: value.requestDigest,
     attempt: value.attempt,
-    submissionKey: value.submissionKey,
   };
 }
 
 export function sealOperationIdentity(
-  value: Omit<OperationIdentity, "format" | "id" | "submissionKey">,
+  value: Omit<OperationIdentity, "format" | "id">,
 ): OperationIdentity {
   assert(value.build.trim().length > 0, "Operation build id is empty");
   assert(value.command.trim().length > 0, "Operation command id is empty");
@@ -179,11 +148,9 @@ export function sealOperationIdentity(
   assert(isDigest(value.runtimeClosure), "Operation Runtime Closure digest is invalid");
   assert(isDigest(value.requestDigest), "Operation request digest is invalid");
   positiveInteger(value.attempt, "Operation attempt");
-  const submissionKey = digestOf(submissionContent(value));
   const content = identityContent({
     format: "svml.operation-identity@1",
     ...value,
-    submissionKey,
   });
   return { ...content, id: digestOf(content) };
 }
@@ -191,16 +158,13 @@ export function sealOperationIdentity(
 export function verifyOperationIdentity(identity: OperationIdentity): void {
   const expected = sealOperationIdentity(identity);
   assert(identity.format === expected.format
-    && identity.id === expected.id
-    && identity.submissionKey === expected.submissionKey, "Operation identity differs");
+    && identity.id === expected.id, "Operation identity differs");
 }
 
 function completionContent(value: Omit<OperationCompletion, "digest">) {
   return {
     value: structuredClone(value.value),
-    conformance: value.conformance,
-    delivery: value.delivery,
-    metadata: structuredClone(value.metadata),
+    ...(value.metadata === undefined ? {} : { metadata: structuredClone(value.metadata) }),
   };
 }
 
@@ -372,7 +336,6 @@ export class MemoryOperationStore implements OperationStore {
       runtimeClosure: current.runtimeClosure,
       requestDigest: current.requestDigest,
       attempt: current.attempt,
-      submissionKey: current.submissionKey,
       revision: current.revision + 1,
       ...mutable,
       ...(update.status === "control" || update.status === "cancelled" || current.cancellation === undefined

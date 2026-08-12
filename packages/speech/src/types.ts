@@ -1,7 +1,8 @@
 import type { ProgramSpace } from "@narratage/program-space";
 import type { BlobRef } from "@narratage/protocol";
 import type { ContentFit, IntrinsicExtent, SpatialFrame } from "@narratage/spatial";
-export type SpeechDuration = { readonly contract: "svml.speech-duration@1"; readonly durationSec: number };
+/** Positive seconds. The graph port's TypeRef already carries the SpeechDuration identity. */
+export type SpeechDuration = number;
 export type SpeechBasisSegment = { readonly segmentId: string; readonly startSec: number; readonly endSec: number };
 export type SpeechBasis = {
   readonly contract: "svml.speech-basis@1"; readonly programSpace: ProgramSpace; readonly audio: BlobRef;

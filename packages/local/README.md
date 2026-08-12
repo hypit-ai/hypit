@@ -34,7 +34,6 @@ A Runtime Profile must separately select every service:
     }
   },
   "endpoints": [],
-  "permissions": ["filesystem:state", "filesystem:artifacts", "process:keychain"],
   "scheduling": { "maxConcurrency": 4 }
 }
 ```

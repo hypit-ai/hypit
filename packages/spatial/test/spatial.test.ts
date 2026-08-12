@@ -237,8 +237,7 @@ test("self-described Spatial Surfaces produce an explicit Canvas edge and finite
   assert.equal(sticker.ref.kind, "logical-output");
   const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
     graph: compiled.elaboration.graph.id,
-    targets: [{ output: sticker.ref.kind === "logical-output" ? sticker.ref.id : "", accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: sticker.ref.kind === "logical-output" ? sticker.ref.id : "" }],
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [
     spatialProducers.canvasFrame.name,

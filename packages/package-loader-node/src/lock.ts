@@ -198,10 +198,20 @@ async function packageClosureFromRoots(
   );
 }
 
+const ALWAYS_IGNORED_DIRECTORIES = new Set([".git", "node_modules"]);
+const DEVELOPMENT_ROOT_DIRECTORIES = new Set([".cache", "coverage", "test", "tests", "__tests__"]);
+
+function developmentRootFile(name: string): boolean {
+  return /^(?:readme|changelog|license)(?:\..*)?$/iu.test(name)
+    || /^(?:tsconfig|vitest)(?:\..*)?\.json$/u.test(name);
+}
+
 async function filesUnder(root: string, cursor = root): Promise<readonly string[]> {
   const values: string[] = [];
   for (const entry of await readdir(cursor, { withFileTypes: true })) {
-    if (entry.name === "node_modules" || entry.name === ".git") continue;
+    if (entry.isDirectory() && ALWAYS_IGNORED_DIRECTORIES.has(entry.name)) continue;
+    if (cursor === root && entry.isDirectory() && DEVELOPMENT_ROOT_DIRECTORIES.has(entry.name)) continue;
+    if (cursor === root && entry.isFile() && developmentRootFile(entry.name)) continue;
     const path = join(cursor, entry.name);
     if (entry.isDirectory()) values.push(...await filesUnder(root, path));
     else if (entry.isFile()) values.push(path);
@@ -394,6 +404,59 @@ function sameArtifacts(left: readonly LockedPackageArtifact[], right: readonly L
     === JSON.stringify([...right].sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`)));
 }
 
+export type NodePackageArtifactDifference = {
+  readonly added: readonly string[];
+  readonly removed: readonly string[];
+  readonly changed: readonly string[];
+};
+
+export class NodePackageLockStaleError extends Error {
+  readonly code = "PACKAGE_LOCK_STALE";
+  readonly lock: string;
+  readonly packageRoot: string;
+  readonly difference: NodePackageArtifactDifference;
+
+  constructor(options: {
+    readonly lock: string;
+    readonly packageRoot: string;
+    readonly difference: NodePackageArtifactDifference;
+  }) {
+    const lines = [
+      `installed Node package bytes do not match the lock: ${options.lock}`,
+      ...(options.difference.added.length === 0
+        ? [] : [`Added: ${options.difference.added.join(", ")}`]),
+      ...(options.difference.removed.length === 0
+        ? [] : [`Removed: ${options.difference.removed.join(", ")}`]),
+      ...(options.difference.changed.length === 0
+        ? [] : [`Changed: ${options.difference.changed.join(", ")}`]),
+      "Review and accept these installed bytes explicitly with:",
+      `  narratage lock-packages ${options.lock} --refresh --package-root ${options.packageRoot}`,
+      "For a project, prefer `narratage packages sync <run-source> --runtime <profile>` to derive both locks.",
+    ];
+    super(lines.join("\n"));
+    this.name = "NodePackageLockStaleError";
+    this.lock = options.lock;
+    this.packageRoot = options.packageRoot;
+    this.difference = options.difference;
+  }
+}
+
+function artifactDifference(
+  installed: readonly LockedPackageArtifact[],
+  locked: readonly LockedPackageArtifact[],
+): NodePackageArtifactDifference {
+  const current = new Map(installed.map((item) => [artifactKey(item), item.digest]));
+  const expected = new Map(locked.map((item) => [artifactKey(item), item.digest]));
+  return {
+    added: [...current.keys()].filter((key) => !expected.has(key)).sort(),
+    removed: [...expected.keys()].filter((key) => !current.has(key)).sort(),
+    changed: [...current.entries()]
+      .filter(([key, digest]) => expected.has(key) && expected.get(key) !== digest)
+      .map(([key]) => key)
+      .sort(),
+  };
+}
+
 /** The explicit trust action may inspect activation metadata inside the selected physical closure. */
 export async function createNodePackageLock(
   specifiers: readonly string[],
@@ -555,10 +618,18 @@ export async function loadNodePackageSet(
   path: string,
   root = dirname(resolve(path)),
 ): Promise<LoadedNodePackageSet> {
-  const lock = await readNodePackageLock(path);
-  const closure = await packageClosure(lock.selected, root);
+  const lockPath = resolve(path);
+  const packageRoot = resolve(root);
+  const lock = await readNodePackageLock(lockPath);
+  const closure = await packageClosure(lock.selected, packageRoot);
   const artifacts = await resolvedArtifacts(closure);
-  assert(sameArtifacts(artifacts, lock.artifacts), "installed Node package bytes do not match the lock");
+  if (!sameArtifacts(artifacts, lock.artifacts)) {
+    throw new NodePackageLockStaleError({
+      lock: lockPath,
+      packageRoot,
+      difference: artifactDifference(artifacts, lock.artifacts),
+    });
+  }
   const artifactsByPackage = new Map(artifacts.map((item) => [artifactKey(item), item]));
   const byName = new Map(closure.map((item) => [`${item.json.name}@${item.json.version}`, item]));
   const values: NodePackageContribution[] = [];

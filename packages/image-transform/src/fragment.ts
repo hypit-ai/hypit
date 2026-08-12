@@ -16,13 +16,11 @@ export const imageTransformFragment = sealGraphFragment({
     id: "image:transform",
     producer: imageTransformProducers.request,
     inputs: { source: input("source"), program: input("program") },
-    result: { kind: "need", name: "image", accepts: "exact" },
+    result: { kind: "need", name: "image" },
   }],
   exports: [{
     name: "image",
     type: artifactTypes.blob,
     root: operation("image:transform"),
-    semanticInputs: ["source", "program"],
-    fidelity: "exact",
   }],
 });

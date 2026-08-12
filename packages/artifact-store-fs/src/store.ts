@@ -201,7 +201,6 @@ export function createFileArtifactStorePackage(
         locator: "@narratage/artifact-store-fs/artifact-store",
         digest: fileArtifactStoreImplementationDigest,
       },
-      permissions: ["filesystem:artifacts"],
       configuration: { root: resolve(options.root) },
       service: new FileArtifactStore(options.root),
     }],

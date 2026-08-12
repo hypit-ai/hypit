@@ -65,6 +65,12 @@ test("command options fail closed instead of being silently ignored", async () =
     ], io, distribution),
     /--runtime cannot be repeated/u,
   );
+  await assert.rejects(
+    async () => await runCli([
+      "doctor", "/tmp/runtime.json", "--root", "/tmp",
+    ], io, distribution),
+    /doctor already uses the Runtime Profile directory and its declared root; remove --root/u,
+  );
 });
 
 test("auth opens only one Endpoint credential control, never the execution Runtime", async () => {
@@ -106,4 +112,41 @@ test("auth opens only one Endpoint credential control, never the execution Runti
     "credentials.close",
   ]);
   assert.equal((JSON.parse(output) as { readonly endpoint?: string }).endpoint, "kie.project");
+});
+
+test("auth login rejects a read-only CredentialStore before asking for a secret", async () => {
+  let prompted = false;
+  let closed = false;
+  const credentials = {
+    async credentials() {
+      return [{
+        endpoint: "kie.project",
+        slot: "apiKey",
+        label: "KIE API key",
+        kind: "secret",
+        ref: { format: "svml.credential-ref@1", store: "env", key: "KIE_API_KEY" },
+        configured: false,
+        writable: false,
+      }];
+    },
+    async close() { closed = true; },
+  } as unknown as LocalCredentialControl;
+  const distribution = {
+    createRuntimeCredentialsFromConfig: async () => credentials,
+  } as unknown as CliDistribution;
+
+  await assert.rejects(
+    async () => await runCli([
+      "auth", "login", "kie.project", "--runtime", "/tmp/runtime.json",
+    ], {
+      write() {},
+      readSecret: async () => {
+        prompted = true;
+        return "must-not-be-read";
+      },
+    }, distribution),
+    /CredentialStore env is read-only.*set KIE_API_KEY/u,
+  );
+  assert.equal(prompted, false);
+  assert.equal(closed, true);
 });

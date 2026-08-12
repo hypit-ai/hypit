@@ -9,7 +9,6 @@ import type {
   Satisfaction,
   CandidateRoot,
   CompiledGraph,
-  Conformance,
   Digest,
   GraphValueRef,
   LinkedProgram,
@@ -33,11 +32,7 @@ export type FragmentValueRef = FragmentInputRef | FragmentOperationRef;
 
 export type FragmentOperationResult =
   | { readonly kind: "output"; readonly name: string }
-  | {
-      readonly kind: "need";
-      readonly name: string;
-      readonly accepts: "exact" | "substitute";
-    };
+  | { readonly kind: "need"; readonly name: string };
 
 export type FragmentOperation = {
   readonly id: string;
@@ -50,8 +45,6 @@ export type FragmentExport = {
   readonly name: string;
   readonly type: TypeRef;
   readonly root: FragmentOperationRef;
-  readonly semanticInputs: readonly string[];
-  readonly fidelity: Conformance;
 };
 
 export type GraphFragment = {
@@ -74,8 +67,6 @@ export type ElaboratedFragmentExport = {
   readonly name: string;
   readonly type: TypeRef;
   readonly root: CandidateRoot;
-  readonly semanticInputs: readonly GraphValueRef[];
-  readonly fidelity: Conformance;
 };
 
 export type ElaboratedFragment = {
@@ -100,8 +91,6 @@ export type RunFragmentExport = {
   readonly name: string;
   readonly candidate: string;
   readonly type: TypeRef;
-  /** Package default for authoring a Satisfaction; not intrinsic Candidate identity. */
-  readonly suggestedFidelity: Conformance;
 };
 
 export type RunFragmentContribution = FragmentContribution & {
@@ -159,10 +148,6 @@ function normalizeFragmentRef(ref: FragmentValueRef): FragmentValueRef {
   return { kind: "fragment-operation", operation: ref.operation };
 }
 
-function fragmentRefKey(ref: FragmentValueRef): string {
-  return ref.kind === "fragment-input" ? `input\u0000${ref.name}` : `operation\u0000${ref.operation}`;
-}
-
 function normalizeOperation(operation: FragmentOperation): FragmentOperation {
   return {
     id: operation.id,
@@ -177,7 +162,6 @@ function normalizeOperation(operation: FragmentOperation): FragmentOperation {
       : {
           kind: "need",
           name: operation.result.name,
-          accepts: operation.result.accepts,
         },
   };
 }
@@ -187,8 +171,6 @@ function normalizeExport(item: FragmentExport): FragmentExport {
     name: item.name,
     type: item.type,
     root: normalizeFragmentRef(item.root) as FragmentOperationRef,
-    semanticInputs: [...item.semanticInputs].sort(),
-    fidelity: item.fidelity,
   };
 }
 
@@ -255,13 +237,6 @@ export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragm
     operations.set(operation.id, operation);
     const producer = resolveProducer(program.closure, operation.producer);
     exactKeys(operation.inputs, producer.inputs.map((port) => port.name), `${fragment.name}.${operation.id}`);
-    if (operation.result.kind === "need") {
-      assert(
-        operation.result.accepts === "exact" || operation.result.accepts === "substitute",
-        "INVALID_FRAGMENT_NEED_ACCEPTANCE",
-        `${operation.id} has invalid Need acceptance`,
-      );
-    }
   }
 
   const visiting = new Set<string>();
@@ -294,14 +269,13 @@ export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragm
 
   const exports = new Set<string>();
   const reachableOperations = new Set<string>();
-  const collectDependencies = (ref: FragmentValueRef, keys: Set<string>, seen: Set<string>): void => {
-    keys.add(fragmentRefKey(ref));
+  const collectDependencies = (ref: FragmentValueRef, seen: Set<string>): void => {
     if (ref.kind === "fragment-input" || seen.has(ref.operation)) return;
     seen.add(ref.operation);
     reachableOperations.add(ref.operation);
     const operation = operations.get(ref.operation);
     assert(operation !== undefined, "UNKNOWN_FRAGMENT_OPERATION", `${fragment.name} references ${ref.operation}`);
-    Object.values(operation.inputs).forEach((input) => collectDependencies(input, keys, seen));
+    Object.values(operation.inputs).forEach((input) => collectDependencies(input, seen));
   };
 
   for (const item of fragment.exports) {
@@ -319,29 +293,7 @@ export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragm
       "FRAGMENT_EXPORT_TYPE_MISMATCH",
       `${fragment.name}.${item.name} declares ${typeName(item.type)} but returns ${typeName(supplied)}`,
     );
-    assert(
-      item.fidelity === "exact" || item.fidelity === "substitute",
-      "INVALID_FRAGMENT_FIDELITY",
-      `${fragment.name}.${item.name} has invalid fidelity`,
-    );
-    const envelope = new Set<string>();
-    for (const input of item.semanticInputs) {
-      assert(inputs.has(input), "UNKNOWN_FRAGMENT_INPUT", `${fragment.name}.${item.name} exposes unknown input ${input}`);
-      assert(!envelope.has(input), "DUPLICATE_FRAGMENT_SEMANTIC_INPUT", `${fragment.name}.${item.name} repeats ${input}`);
-      envelope.add(input);
-    }
-    const dependencies = new Set<string>();
-    collectDependencies(item.root, dependencies, new Set());
-    for (const key of dependencies) {
-      if (!key.startsWith("input\u0000")) continue;
-      const input = key.slice("input\u0000".length);
-      assert(
-        envelope.has(input),
-        "FRAGMENT_EXCEEDS_SEMANTIC_ENVELOPE",
-        `${fragment.name}.${item.name} captures undeclared input ${input}`,
-        item.name,
-      );
-    }
+    collectDependencies(item.root, new Set());
   }
   for (const id of operations.keys()) {
     assert(
@@ -410,7 +362,6 @@ export function elaborateGraphFragment(
             name: operation.result.name,
             id: hygienicId("need", fragment.id, request.id, operation.id),
             record,
-            accepts: operation.result.accepts,
           },
     };
   });
@@ -421,8 +372,6 @@ export function elaborateGraphFragment(
       name: item.name,
       type: item.type,
       root: { kind: "operation" as const, result: root },
-      semanticInputs: item.semanticInputs.map((name) => inputs[name] as GraphValueRef),
-      fidelity: item.fidelity,
     };
   });
   const content = {
@@ -489,7 +438,6 @@ function bindExports(
         id: bindings[item.name] as string,
         type: item.type,
         primary: candidates[index]!.id,
-        semanticInputs: item.semanticInputs,
       }))
     : [];
   const reachable = reachableOperationIds(instance, selected);
@@ -503,7 +451,6 @@ function bindExports(
           satisfactions: selected.map((item, index) => ({
             output: bindings[item.name] as string,
             candidate: candidates[index]!.id,
-            fidelity: item.fidelity,
           })),
         }),
   };
@@ -540,7 +487,6 @@ export function exportRunFragment(
       name: item.name,
       candidate: candidates[index]!.id,
       type: item.type,
-      suggestedFidelity: item.fidelity,
     })),
   };
 }
@@ -569,7 +515,6 @@ export function bindCandidateFragment(
     satisfactions: contribution.exports.map((item) => ({
       output: outputs[item.name] as string,
       candidate: item.candidate,
-      fidelity: item.suggestedFidelity,
     })),
   };
 }

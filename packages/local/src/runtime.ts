@@ -150,11 +150,7 @@ export async function createLocalRuntime(
     registerProducerFacets(producers, component.producers ?? []);
   }
   for (const endpoint of options.endpoints ?? []) await endpoint.install(endpoints);
-  endpoints.applyRuntimeClosure(
-    options.closure.value,
-    options.closure.modules,
-    { allowedPermissions: options.closure.allowedPermissions ?? [] },
-  );
+  endpoints.applyRuntimeClosure(options.closure.value, options.closure.modules);
   const driver = new NodeDriver({
     producers,
     endpoints,
@@ -364,9 +360,7 @@ export async function createProjectLocalRuntime(
         })),
       },
     });
-    const closure = resolveRuntimeProfile(modules, profile, {
-      allowedPermissions: projectServices.allowedPermissions,
-    });
+    const closure = resolveRuntimeProfile(modules, profile);
     const runtime = await createLocalRuntime({
       buildStore: services.buildStore,
       ...(projectServices.catalog === undefined ? {} : { buildCatalog: projectServices.catalog }),
@@ -381,7 +375,7 @@ export async function createProjectLocalRuntime(
         ? {}
         : { components: configuredComponents }),
       endpoints: endpointPackages,
-      closure: { modules, value: closure, allowedPermissions: projectServices.allowedPermissions },
+      closure: { modules, value: closure },
       scheduling: {
         ...(options.scheduling.maxEventsPerBuild === undefined
           ? {}

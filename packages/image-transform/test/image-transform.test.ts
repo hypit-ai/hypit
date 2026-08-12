@@ -81,11 +81,8 @@ test("the graph contract is exactly source plus Program to one image Need", asyn
     type,
     value,
     digest: digestOf({ id, value }),
-    conformance: "exact",
     origin: {
       kind: "authored",
-      sourceDigest: digestOf("source"),
-      frontendClosureDigest: digestOf("frontend"),
     },
   });
   const result = await producer.handler({

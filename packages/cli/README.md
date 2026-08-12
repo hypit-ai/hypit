@@ -23,7 +23,7 @@ adapters, but no author-package aggregate. A package lock selects the exact Auth
 Another domain can reuse this command engine without installing any video package.
 
 `check` accepts any self-described Author or Run Source whose Header names a trusted Frontend.
-`plan` and `build` require a Run Source. Targets, Candidate selections and substitute fidelity may
+`plan` and `build` require a Run Source. Targets and Candidate selections may
 not be synthesized by CLI flags; they are visible Run Graph meaning.
 
 The command engine has one structured presentation seam. `check`, `plan` and `doctor` currently

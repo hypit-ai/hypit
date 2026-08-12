@@ -160,7 +160,7 @@ export function compileSeedanceDurationRequestDraft(
   assertSpeechDurationIdentity(duration);
   return sealGenerationRequestDraft(seedancePorts[program.model], {
     ...program.ports,
-    duration: [duration.durationSec],
+    duration: [duration],
   });
 }
 
