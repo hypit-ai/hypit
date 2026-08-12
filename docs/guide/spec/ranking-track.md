@@ -172,7 +172,7 @@ settled life       [stage.end, O)
 `[B, p1)` may show an explicitly authored empty board, but has no implicit active item. `[T, O)` is
 the optional fully-settled suffix with no active item. These facts are package-owned sibling
 sequencing built on the shared temporal projection algebra in
-[`track-authoring.md`](./track-authoring.md); they are not a new `Stage` contract.
+[`track-authoring.md`](./track-authoring.md); they are not a new staging contract.
 
 ### TierBoard
 

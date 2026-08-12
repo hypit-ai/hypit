@@ -53,7 +53,7 @@ The Audio Track lowerer may derive the terminal Artifact duration from the norma
 count. It must not copy source identities, Narrative digests, provider names or other lineage into
 the clip. Those relations remain graph edges and Derivations.
 
-Do not introduce a new public `AudioMaterial` Type merely to shorten one edge. If several unrelated
+Do not introduce a new public canonical-audio Type merely to shorten one edge. If several unrelated
 packages later need a first-class canonical-audio value, that focused intrinsic Type belongs in
 `@narratage/media`; it still does not belong in Core or an umbrella contracts package.
 

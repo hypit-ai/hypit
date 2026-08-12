@@ -93,7 +93,7 @@ The intended relationship is:
 
 `@narratage/deck-track` may reuse focused implementation functions from Media Track or a later
 implementation-only media-lowering library. That code reuse does not make Deck a Media Track
-component and does not expose a universal `MediaProgram` or `DeckProgram` through Core.
+component, and Core exposes no universal media or deck program.
 
 The package does not:
 
