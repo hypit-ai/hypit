@@ -219,30 +219,6 @@ export default defineConfig({
   description: "Write the story. Compile the video.",
   appearance: true,
   cleanUrls: true,
-  // Engineering documents live in docs/ for the repository reader; only the
-  // site pages (index, quickstart, guide, zh) are built into the public site.
-  srcExclude: [
-    "README.md",
-    "architecture.md",
-    "implementation-status.md",
-    "roadmap.md",
-    "open-source-distribution.md",
-    "build-archive-and-egress.md",
-    "caption-gemini-provider-contract.md",
-    "demo-assets.md",
-    "graph-first-value-boundary.md",
-    "hyperframes-aws-runtime.md",
-    "image-transform.md",
-    "kie-generation-modules.md",
-    "local-developer-runtime.md",
-    "media-execution-boundary.md",
-    "media-inspection-and-normalization.md",
-    "model-input-ports.md",
-    "node-package-activation.md",
-    "runtime-adapter-loading.md",
-    "source-and-run-compilation.md",
-    "speech-alignment.md",
-  ],
   markdown: {
     theme: {
       light: "github-light",
