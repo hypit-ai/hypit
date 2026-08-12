@@ -254,7 +254,7 @@ hidden global auto-stitch behavior.
 
 Ranking, Tier, slides and other progressive components often have only an ordered set of trigger
 Moments. Reaching trigger `i` enters state `i`; reaching trigger `i + 1` hands off to the next state.
-This case uses the same point location and window projection. It does not justify a `Stage` Type in
+This case uses the same point location and window projection. It does not justify a staging Type in
 Core or another Script marker.
 
 `N` trigger points alone cannot bound `N` finite stages: the last stage still needs one terminal
@@ -451,7 +451,7 @@ The executable acceptance coverage includes:
 The complete Ranking audit, component split, group schedule and executable migration are specified in
 [`ranking-track.md`](./ranking-track.md). Ranking now validates that the common temporal algebra can
 support cumulative state, exclusive current stages and a final settled suffix without adding
-Ranking or `Stage` meaning to Core or the public Track contract.
+Ranking or staging meaning to Core or the public Track contract.
 
 ## 10. Migration state
 

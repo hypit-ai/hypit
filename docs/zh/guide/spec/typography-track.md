@@ -36,81 +36,7 @@ Film 或 Composition 里开分支。
 官方 Text 包拥有这套作者语义。SVS 只提供具名的不可变 Recipe 参数。Visual IR 仍是共享的终端视频语言。
 HyperFrames 只是这门语言的一个渲染器，而不是 Text 的定义。
 
-## 2. Audit evidence
-
-### 2.1 Current Narratage slice
-
-当前 `packages/typography-track` 的实现只有一个固定矩形框、一个纯字符串，以及一个包含颜色、字号、字族、字重、行高、水平/垂直对齐、单一背景、圆角、内边距和字距的 `TextAppearance`。它的 Surface 恰好只接受
-`text`、`during` 和 `appearance`；它的 Recipe 恰好要求十一个标量属性。
-
-它目前无法表达：
-
-- 段落、显式换行或样式不同的内联 run；
-- 作者 Surface 上的精确字体 Artifact 输入；
-- point text、固有尺寸或路径文字；
-- 相互独立的 frame/content/paragraph/line/run/word/grapheme Paint 目标；
-- 渐变、可重复的描边、可重复的阴影、辉光或下划线 Layer；
-- 具备 Unicode 意识的词/字素簇行为、双向 run 或竖排文字策略；
-- item、行、词或字素簇级别的动画；
-- 文字遮罩或物化的高级文字效果。
-
-这只是一个有用的端到端见证。一个字段一个字段地扩展 `TextAppearance`，只会把错误的模型固化下来。
-
-### 2.2 Legacy evidence
-
-遗留的 `TextLayoutV2` 发现了几组正确的分离：
-
-- 内联/块级 `hug | fixed` 尺寸；
-- 相互独立的内边距与内联/块级对齐；
-- 不换行、按词换行和按字符换行；
-- visible、clip、ellipsis 和 shrink 四种溢出处理；
-- LTR/RTL 与横排/竖排；
-- frame/content/line/word 背景目标；
-- line box、cap height 和 ink bound 三种度量。
-
-它的渲染器还实现了纯色/渐变字形填充、外描边、阴影、辉光、气泡尾巴、整个 item 的入场/循环运动、打字机显现以及行/词背景。这些都是有价值的行为见证。
-
-这份实现同样暴露了它为什么不能被照搬成新合同：
-
-- 一个 `TextFields` 参数袋把内容、布局、Paint、运动和装饰混在一起；
-- 渐变填充与背景都在抢 CSS 的 `background` 属性；
-- 词背景按空白字符正则切分，因此根本没有定义 Unicode 的词行为；
-- 打字机切的是 JavaScript code unit，而不是字素簇；
-- 外描边是靠复制字形实现的隐式渲染器把戏；
-- 行片段、缩放适配以及 cap/ink 裁切依赖浏览器行为，而这些行为并未体现在被声明的值里；
-- 一个指针会悄悄创建出背景，而且好几个默认值是渲染器自己发明的；
-- 完全没有富 run、路径文字或可重复 Paint Layer 的模型。
-
-一份经过审计的历史导出包含 32 个 Text Track 和 53 个 Text item。使用频率最高的属性是对齐、字族/字号、颜色、字重、背景、圆角和内边距。描边、大写、不换行、全宽背景、字距和阴影也有使用。该样本中没有任何
-Text 动画使用记录。这证明了常规交付的基线；但它不足以成为排除下文那些成熟编辑器能力的理由。
-
-### 2.3 External editor attack matrix
-
-本设计是对照官方产品文档核对的，而不是从 UI 标签反推的：
-
-| 能力族 | 成熟产品的例子 | Narratage 中要求的表达 |
-|---|---|---|
-| advanced typography | 字距、字偶距、行距、基线偏移、制表位、大写、上/下标、下划线与 Tsume | 带类型的 typography 与逐 run 覆盖 |
-| layered appearance | 纯色/渐变填充、内/中/外描边与可重复描边、可重复阴影、辉光 | 有序、可重复的 Paint Layer |
-| geometric text boxes | point 标题、area 段落、响应式对齐、滚动字幕/横向滚动 | 分离的 Point 与 Area 形态，外加运动 |
-| fragment styling | 字符/词/行级样式与动画 | 确定性单元与选择器 |
-| sequential animation | 逐字符延迟、range/follower 选择器、方向、扩散与循环 | 选择器加属性动画栈 |
-| path text | 文字沿开放/闭合路径排布并动画 | 显式的 Path Text 形态 |
-| text masks | 用文字显现显式自有的媒体或图形 | 带显式媒体输入的兄弟组件 |
-| real 3D text | 挤出、倒角、材质、灯光与逐字符 3D | 物化的 3D 组件，而不是伪造的 2D 字段 |
-
-参考文档：
-
-- Adobe Premiere：[Text Styles](https://helpx.adobe.com/uk/premiere/desktop/add-text-images/stylize-text/create-text-styles.html)
-  与 [Text Style Parameters](https://helpx.adobe.com/ca/premiere/desktop/add-text-images/stylize-text/style-parameters-when-applying-from-style-browser.html)
-- Adobe After Effects：[Animating Text](https://helpx.adobe.com/uk/after-effects/desktop/animating-text/text-animation/animating-text.html)
-- Apple Final Cut Pro：[Adjust Titles](https://support.apple.com/en-qa/guide/final-cut-pro/ver4e32ca5/mac)
-- Apple Motion：[Sequence Text Behavior](https://support.apple.com/en-lamr/guide/motion/motn1607c46e/mac)
-- Blackmagic Design：[DaVinci Resolve 20 Visual Effects Guide](https://documents.blackmagicdesign.com/UserManuals/DaVinci-Resolve-20-Fusion-Visual-Effects.pdf?_v=1757574011000)
-
-这是一组表达力攻击集，而不是要求复刻每个产品的 UI 或预设列表。
-
-## 3. Ownership and package boundary
+## 2. Ownership and package boundary
 
 常规二维能力仍然只用一个包：
 
@@ -137,7 +63,7 @@ Text Track 中。
 
 官方的本地 Text Mask 见证刻意只接受一个精确的单行 Area Text 形状和一个显式的静态 `CompositableSurface`。富 run、多行/Path 排布、序列动画和定时素材都会 fail closed，并走与 3D Text 相同的“物化 Surface”逃生路线。这条边界避免了假装浏览器 `foreignObject` 遮罩是可移植且精确的。
 
-## 4. Authored Text Document
+## 3. Authored Text Document
 
 Text item 消费的是一份有界的富文档，而不是 HTML 片段或任意树：
 
@@ -176,7 +102,7 @@ document > paragraph > explicit run > rendered line > Unicode word > grapheme cl
 
 `rendered line` 只有在确定了精确字体和最终几何之后才存在。字素簇是常规情况下作者可见的最小动画/装饰单元。一个 shaped glyph 未必与某个 Unicode 字符或字素簇一一对应，因此公开的作者模型不得假装它们一一对应。
 
-## 5. Three spatial forms
+## 4. Three spatial forms
 
 时间源与窗口投影仍由 [`track-authoring.md`](./track-authoring.md) 规定。Text 不会发明 `full`、`from`、
 `until` 或另一套时序系统。
@@ -184,11 +110,11 @@ document > paragraph > explicit run > rendered line > Unicode word > grapheme cl
 空间摆放与 Text 排布相互独立。[`spatial-layout.md`](./spatial-layout.md) 中的共享模型提供解析后的
 point/frame/path 几何；Text 随后用三种形态之一去解释这份几何。
 
-### 5.1 Point Text
+### 4.1 Point Text
 
 Point Text 是锚定在某个解析点上的固有尺寸文字。它通常紧贴内容、不做软换行，并使用显式的内联/块级锚点。手动分段仍然有效。常规的标题、标签和贴纸都是 Point Text。
 
-### 5.2 Area Text
+### 4.2 Area Text
 
 Area Text 在解析出的 frame 内排布。它显式选择：
 
@@ -206,7 +132,7 @@ Area Text 在解析出的 frame 内排布。它显式选择：
 
 溢出是诚实的作者意图。`ellipsis` 可能省略掉可见的被声明文字，因此必须显式写出。`shrink` 必须声明最小缩放比例，并在完整文字仍放不下时失败；它不得悄悄越过那个下限。这一点与 Caption 不同——Caption 绝不能裁剪或丢弃作者的显示 Atom。
 
-### 5.3 Path Text
+### 4.3 Path Text
 
 Path Text 消费一条显式自有的矢量路径，外加 Text Document 和 Style。它拥有路径侧、朝向、起止边距、对齐、反向和溢出。给边距做动画会让文字沿路径移动；给路径做动画则改变路径本身。它绝不会去发现或采样另一个
 Track 中的形状。
@@ -214,7 +140,7 @@ Track 中的形状。
 Path Text 需要一个通用的矢量/路径终端原语，或者一个自有的物化 Surface。它不能靠序列化一段无类型的
 SVG/HTML 字符串来声称已实现。
 
-## 6. Typography
+## 5. Typography
 
 Typography 与 Paint、布局相互分离，但参与布局度量。它包括：
 
@@ -231,7 +157,7 @@ Typography 与 Paint、布局相互分离，但参与布局度量。它包括：
 
 精确的字体字节仍是显式的作者图输入。它们不是藏在 Recipe 里的名字，也不由 Runtime 挑选。字体 shaping/布局实现的身份由被接受的推导/渲染 receipt 绑定；Core 仍然对字体一无所知。
 
-## 7. Ordered Paint model
+## 6. Ordered Paint model
 
 Paint 是一个有序列表，而不是一组互斥的 CSS 简写。Text Program 拥有这些带类型的 Layer：
 
@@ -274,7 +200,7 @@ frame | content | paragraph | line | run | word | grapheme
 
 气泡尾巴是显式声明、附着在某个 Box Paint Layer 上的部件，带有方位、偏移、尺寸和自己的 Paint。它不会悄悄强制生成一个背景。毛玻璃不属于普通 Box Paint，因为它要采样 Track 背后的像素；它需要一个显式自有的媒体输入，或者一个物化的自包含组件。
 
-## 8. Motion and sequence selectors
+## 7. Motion and sequence selectors
 
 运动与 Style 相互独立，因此同一套外观可以有不同的入场、循环和退场。一个 item 可以拥有：
 
@@ -295,7 +221,7 @@ unit selector × selected property channels × keyframes × stagger/order
 动画的生命期与 Item 的可见性相互独立。一段运动可以在 Item 窗口结束前就完成，此时它最终被声明的状态一直保持到 Item 消失。一段运动也可以超出窗口，此时 Item 窗口只是裁剪它，而不改写它的时序。序列运动和 Path
 Text 运动遵循同样的规则。这既避免了仅仅因为标题一直可见就拒绝一段完全合理的快速标题动画，也避免了为了塞进短窗口而悄悄给慢速动画重新计时。
 
-## 9. Style declaration, SVS and readable authoring
+## 8. Style declaration, SVS and readable authoring
 
 声明与使用保持分离。SVS 仍是通用的标量 Recipe 语言；它不得学会 Text 的 Paint 数组，也不得变成第二个渲染器。Text Style Surface 读取具名 Recipe、精确的 Font 引用和重复的结构化 Layer 声明，校验它们，然后产出一份完整的、由包自有的 `TextStyle` Record。
 
@@ -348,7 +274,7 @@ item 也可以改为消费一个普通的图 `Text` 值：
 - 精确字体以及时序/摆放事实都走显式的图边；
 - 最终得到的 Text Program 里没有未解析的 Recipe，也没有 Runtime/provider 选择。
 
-## 10. Compiled pipeline and data gates
+## 9. Compiled pipeline and data gates
 
 ```text
 Markup Surface
@@ -377,7 +303,7 @@ Composition -> selected final renderer
 
 布局实现可以使用被锁定的浏览器、HarfBuzz/Skia/Pango 或其他精确引擎。它必须绑定实际的实现和字体字节。浏览器的 line box 不会作为通用图元数据向外传播；它要么是渲染器 receipt 所拥有的确定性终端布局，要么是包自有的、用于物化 Surface 的已解析几何。
 
-## 11. Terminal Visual IR findings
+## 10. Terminal Visual IR findings
 
 冻结的仓库内部 `svml.visual-ir@1` 只承载本次迁移所证明的最小增量：
 
@@ -391,7 +317,7 @@ HyperFrames 参考编译器实现了这些原语，同时不向作者包暴露 H
 
 这些始终是视频终端的事实，绝不是 Core 的事实。渲染器 receipt、Surface 字节校验、Deck/Ranking 见证以及最终的兼容性审计，如今都在不向共享窄腰添加 Text 语义的前提下通过。
 
-## 12. Feedback into Fine Caption
+## 11. Feedback into Fine Caption
 
 Text 与 Caption 共享的是排版实现难题，而不是作者语义。
 
@@ -416,7 +342,7 @@ Text 与 Caption 共享的是排版实现难题，而不是作者语义。
 
 Caption **不得**继承 Text 的 ellipsis、裁剪、缩放适配、路径排布、任意富 run 时序或选择器生成的语音时序。它始终展示作者完整的不可变 Atom，并且只从已证明的 Atom 窗口激活。
 
-## 13. Migration order and acceptance gates
+## 12. Migration order and acceptance gates
 
 实现是替换掉早期切片，而不是不断堆砌兼容字段：
 
