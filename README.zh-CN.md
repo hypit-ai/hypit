@@ -5,7 +5,7 @@
 <p align="center"><em>“First, there was narration. Then, there were montages.”</em></p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/zh/quickstart">快速开始</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/zh/guide/develop">开发</a>&nbsp;&nbsp;<a href="./README.md">English</a>
+  <a href="https://narratage.hypit.ai/zh/">演示</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/zh/quickstart">快速开始</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/zh/guide/develop">开发</a>&nbsp;&nbsp;<a href="./README.md">English</a>
 </p>
 
 <p align="center">
@@ -126,6 +126,7 @@ AI 生成慢、贵、不确定，而且每一步的输出往往就是下一步�
 
 ## 接下来去哪
 
+- [演示](https://narratage.hypit.ai/zh/) —— 直观演示：悬停 Script 中的标记区间，旁边即刻显示它对应的画面。
 - [快速开始](https://narratage.hypit.ai/zh/quickstart) —— 你掌控的文件、命令，以及第一次真实 Build。
 - [开发](https://narratage.hypit.ai/zh/guide/develop) —— 包架构、添加 Author 包或 Provider。
 
