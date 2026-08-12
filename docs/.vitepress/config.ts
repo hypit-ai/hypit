@@ -120,7 +120,7 @@ const svsLanguage: Record<string, unknown> = {
 
 const sharedTheme = {
   siteTitle: "NARRATAGE",
-  socialLinks: [{ icon: "github" as const, link: "https://github.com/cashdiffusion/narratage" }],
+  socialLinks: [{ icon: "github" as const, link: "https://github.com/hypit-ai/narratage" }],
   search: { provider: "local" as const },
 };
 
