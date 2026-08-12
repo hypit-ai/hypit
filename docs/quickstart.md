@@ -41,8 +41,7 @@ alignment, captions, a media Track, text, Film and final rendering.
 
 ```bash
 node --run narratage -- check examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock \
-  --root .
+  --package-lock examples/talking-film-graph-check/svml.packages.lock
 ```
 
 `check` reads the self-described source, loads only its locked packages and prints the public typed
@@ -52,8 +51,7 @@ Now compile the Run Source:
 
 ```bash
 node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock \
-  --root .
+  --package-lock examples/talking-film-graph-check/svml.packages.lock
 ```
 
 `plan` binds the Author Graph and Run Graph, walks backward from `final.video`, and freezes the
@@ -98,13 +96,10 @@ lightweight `narratage` launcher from your project directory:
 cd /path/to/my-video
 
 /path/to/narratage/narratage packages sync build.svrun \
-  --runtime svml.runtime.json --root .
+  --runtime svml.runtime.json
 
-/path/to/narratage/narratage doctor svml.runtime.json
-/path/to/narratage/narratage check main.svml \
-  --runtime svml.runtime.json --root .
 /path/to/narratage/narratage plan build.svrun \
-  --runtime svml.runtime.json --root .
+  --runtime svml.runtime.json
 ```
 
 The launcher uses dependencies installed in the Narratage checkout, but Source, SQLite state,
@@ -117,7 +112,7 @@ and credentials with your own.
 
 ## 5. Build and retrieve an output
 
-After `doctor`, `check` and `plan` pass:
+After reviewing the plan:
 
 ```bash
 /path/to/narratage/narratage build build.svrun \
@@ -128,6 +123,9 @@ After `doctor`, `check` and `plan` pass:
 
 `build` stores the Build, ensures its Worker is available, and starts only the external programs
 declared by the selected endpoints. `--follow` is an observer; closing it does not stop the Build.
+
+Use `check` while editing a source. Use `doctor` to diagnose a new or broken deployment. They are
+safe, but neither is required as a repetitive pre-Build ceremony.
 
 ```bash
 /path/to/narratage/narratage status my-video-001 \

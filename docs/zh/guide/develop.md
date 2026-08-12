@@ -56,7 +56,7 @@ narratage/
 | [包架构](./packages.md) | 五个层次、依赖规则、包的构成、facets |
 | [添加 Author 包](./author-packages.md) | 分步说明：新增组件、Surface、activation |
 | [添加 Provider](./providers.md) | 分步说明：新增 Endpoint 适配器 |
-| [Runtime Profile](./runtime-profile.md) | JSON 与 TypeScript 配置、诊断、Build 归档 |
+| [Runtime Profile](./runtime-profile.md) | 声明式 CLI 配置、嵌入边界、诊断、Build 归档 |
 | [字幕 Playground](./caption-playground.md) | 直接编辑真实字幕 SVML/SVS 并实时预览 |
 | [本地服务](./services.md) | WhisperX 与 OpenCV 的搭建 |
 | [测试](./testing.md) | 测试运行器、写法、示例、boundary tests |

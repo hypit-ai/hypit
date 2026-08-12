@@ -6,26 +6,22 @@ Build, retrieval, and reuse syntax. Use this file as the operational checklist.
 ## Execute the lifecycle
 
 ```bash
-node --run narratage -- packages sync path/to/build.svrun \
-  --runtime path/to/svml.runtime.json --root .
-node --run narratage -- doctor path/to/svml.runtime.json
-node --run narratage -- runtime up path/to/svml.runtime.json
-node --run narratage -- runtime status path/to/svml.runtime.json
-
-node --run narratage -- check path/to/main.svml \
-  --runtime path/to/svml.runtime.json --root .
 node --run narratage -- plan path/to/build.svrun \
-  --runtime path/to/svml.runtime.json --root .
+  --runtime path/to/svml.runtime.json
 
 node --run narratage -- build path/to/build.svrun \
   --runtime path/to/svml.runtime.json \
-  --root . --build-id my-build-001 --follow
+  --build-id my-build-001 --follow
 
 node --run narratage -- inspect my-build-001 --runtime path/to/svml.runtime.json
 node --run narratage -- get my-build-001 \
   --runtime path/to/svml.runtime.json \
   --name final.video --to path/to/output/final.mp4
 ```
+
+Use `packages sync` only after package selection changes. Use `check` during authoring and `doctor`
+or `runtime status` when diagnosing the deployment. `build` already ensures the detached Worker
+and demanded managed services are available.
 
 Use `runtime logs` to diagnose the Worker and managed programs. Use `runtime down` for an orderly
 stop. It stops the Worker from claiming more leases and stops Runtime-owned programs, but preserves
