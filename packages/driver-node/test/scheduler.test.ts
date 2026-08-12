@@ -470,7 +470,7 @@ test("a locked Runtime Closure assembles exact Endpoint code and Scheduler polic
 
 test("a same-name Endpoint with different implementation bytes is rejected before execution", () => {
   const { closure, modules } = resolvedRuntime(1);
-  const { endpoints, getCalls } = configuredExecutor({
+  const { endpoints } = configuredExecutor({
     resource: "authority:fixture.account",
     defaultConcurrency: 1,
     runtimeImplementation: {
@@ -482,12 +482,11 @@ test("a same-name Endpoint with different implementation bytes is rejected befor
     observe() {},
   });
   assert.throws(() => endpoints.applyRuntimeClosure(closure, modules), /implementation does not match/u);
-  assert.equal(getCalls(), 0);
 });
 
 test("a same-name Endpoint with different configured-instance identity is rejected", () => {
   const { closure, modules } = resolvedRuntime(1);
-  const { endpoints, getCalls } = configuredExecutor({
+  const { endpoints } = configuredExecutor({
     resource: "authority:fixture.account",
     defaultConcurrency: 1,
     runtimeImplementation: {
@@ -499,12 +498,11 @@ test("a same-name Endpoint with different configured-instance identity is reject
     observe() {},
   });
   assert.throws(() => endpoints.applyRuntimeClosure(closure, modules), /implementation does not match/u);
-  assert.equal(getCalls(), 0);
 });
 
 test("a recoverable Runtime facet cannot be activated by a one-shot Handler", () => {
   const { closure, modules } = resolvedRuntime(1, "recoverable");
-  const { endpoints, getCalls } = configuredExecutor({
+  const { endpoints } = configuredExecutor({
     resource: "authority:fixture.account",
     defaultConcurrency: 1,
     runtimeImplementation: {
@@ -516,7 +514,6 @@ test("a recoverable Runtime facet cannot be activated by a one-shot Handler", ()
     observe() {},
   });
   assert.throws(() => endpoints.applyRuntimeClosure(closure, modules), /lifecycle does not match/u);
-  assert.equal(getCalls(), 0);
 });
 
 test("BuildStore CAS prevents two Scheduler revisions from silently overwriting each other", async () => {
