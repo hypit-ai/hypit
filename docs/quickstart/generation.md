@@ -206,8 +206,8 @@ vendored project copy so the Kit bytes remain inside the Source Closure; do not 
 Narratage repository checkout from project source.
 
 Read the
-[`@narratage/seedance-kits` guide](https://github.com/cashdiffusion/svml/blob/main/packages/seedance-kits/README.md)
-and the [selected Kit source](https://github.com/cashdiffusion/svml/tree/main/packages/seedance-kits/kits)
+[`@narratage/seedance-kits` guide](https://github.com/cashdiffusion/narratage/blob/main/packages/seedance-kits/README.md)
+and the [selected Kit source](https://github.com/cashdiffusion/narratage/tree/main/packages/seedance-kits/kits)
 before authoring. Use an official Kit whenever its format matches. Keep generation instructions and
 dynamic prompt slots in English; preserve the authored language only for dialogue that must be
 spoken verbatim. Write a freeform English prompt only when none of the seven Kits applies.

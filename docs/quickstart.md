@@ -64,7 +64,7 @@ uv run --project services/whisperx --frozen svml-whisperx-prepare
 ```
 
 Inside the source checkout, commands use `node --run narratage -- ...`. A project outside this
-repository uses `/path/to/svml/narratage ...` plus `--package-root /path/to/svml`; the checked-in
+repository uses `/path/to/narratage/narratage ...` plus `--package-root /path/to/narratage`; the checked-in
 launcher starts the same CLI directly without pnpm, and all project state stays under that external
 project's Runtime Profile root.
 
