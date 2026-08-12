@@ -314,12 +314,8 @@ export type VisualTimedSampling = {
 export type VisualMediaElement = VisualElementBase & {
   readonly kind: "image" | "video";
   readonly artifact: BlobRef;
-  /** Exact frame-domain mapping superseding the candidate-era scalar playback fields. */
+  /** Exact frame-domain mapping for timed media. */
   readonly sampling?: VisualTimedSampling;
-  /** Candidate-era compatibility path; new timed lowerers use sampling. */
-  readonly mediaStartSec?: number;
-  readonly playbackRate?: number;
-  readonly loop?: boolean;
   readonly muted?: boolean;
 };
 
@@ -935,19 +931,10 @@ function assertPresent(present: VisualPresent, programSpace: ProgramSpace | unde
       if (!element.artifact.mediaType.startsWith(`${element.kind}/`)) {
         throw new Error(`${trackId}.${present.id}.${element.id} media kind does not match its Artifact.`);
       }
-      if (element.mediaStartSec !== undefined && (!Number.isFinite(element.mediaStartSec) || element.mediaStartSec < 0)) {
-        throw new Error(`${trackId}.${present.id}.${element.id} has invalid mediaStartSec.`);
-      }
-      if (element.playbackRate !== undefined && (!Number.isFinite(element.playbackRate) || element.playbackRate <= 0)) {
-        throw new Error(`${trackId}.${present.id}.${element.id} has invalid playbackRate.`);
-      }
       if (element.kind === "image" && element.sampling !== undefined) {
         throw new Error(`${trackId}.${present.id}.${element.id} cannot sample a durationless image.`);
       }
       if (element.sampling !== undefined) {
-        if (element.mediaStartSec !== undefined || element.playbackRate !== undefined || element.loop !== undefined) {
-          throw new Error(`${trackId}.${present.id}.${element.id} mixes exact sampling with scalar playback fields.`);
-        }
         if (element.animation !== undefined) {
           throw new Error(`${trackId}.${present.id}.${element.id} sampling motion must live on an owned wrapper.`);
         }
@@ -1176,9 +1163,6 @@ function normalizeElement(element: VisualElement): VisualElement {
         ...(segment.loop === undefined ? {} : { loop: { ...segment.loop } }),
       })),
     } }),
-    ...(element.mediaStartSec === undefined ? {} : { mediaStartSec: element.mediaStartSec }),
-    ...(element.playbackRate === undefined ? {} : { playbackRate: element.playbackRate }),
-    ...(element.loop === undefined ? {} : { loop: element.loop }),
     ...(element.muted === undefined ? {} : { muted: element.muted }),
   };
 }

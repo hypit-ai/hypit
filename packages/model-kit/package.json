@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@narratage/artifact": "workspace:*",
     "@narratage/component-kit": "workspace:*",
     "@narratage/elaborator": "workspace:*",
     "@narratage/generation": "workspace:*",

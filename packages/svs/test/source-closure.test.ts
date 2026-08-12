@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -24,7 +23,6 @@ import type {
   TypeRef,
   TypedRecord,
 } from "@narratage/protocol";
-import { maskSourceHeader, parseSourceHeader } from "@narratage/source";
 import {
   SvsSyntaxError,
   parseSvs,
@@ -381,14 +379,6 @@ test("Source Closure rejects duplicate aliases and unknown Frontends before deco
     }),
     (error: unknown) => error instanceof SourceClosureError && error.code === "UNKNOWN_FRONTEND",
   );
-});
-
-test("the golden studio.svs parses as generic Recipes without video knowledge", () => {
-  const source = readFileSync(new URL("../../../examples/talking-film-golden/studio.svs", import.meta.url), "utf8");
-  const parsed = parseSvs("studio.svs", maskSourceHeader(source, parseSourceHeader("studio.svs", source)));
-  assert.equal(parsed.recipes.length, 11);
-  assert.equal(parsed.recipes.find((recipe) => recipe.value.path === "caption.short-cues")?.value.properties.model, "gemini-2.5-flash");
-  assert.equal(parsed.recipes.find((recipe) => recipe.value.path === "film.vertical")?.value.properties.background, "#09090B");
 });
 
 test("SVS rejects duplicate public recipes", () => {

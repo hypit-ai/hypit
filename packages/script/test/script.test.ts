@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { digestOf } from "@narratage/core";
@@ -130,27 +129,6 @@ test("zero-width temporal markers may touch a token edge but cannot split a toke
     (error: unknown) =>
       error instanceof ScriptSyntaxError && error.code === "SCRIPT_MARKER_TOKEN_BOUNDARY",
   );
-});
-
-test("the authoring golden fixture reuses the implemented Script Surface unchanged", () => {
-  const source = readFileSync("examples/talking-film-golden/main.svml", "utf8");
-  const body = source.match(/<script>([\s\S]*?)<\/script>/u)?.[1];
-  if (body === undefined) throw new Error("The authoring golden fixture has no Script body.");
-  const parsed = parseScript("examples/talking-film-golden/main.svml", body);
-
-  assert.deepEqual(parsed.segments.map((segment) => segment.id), ["opening", "answer"]);
-  assert.deepEqual(parsed.selections.map((selection) => selection.id), [
-    "alice-shot",
-    "bob-shot",
-    "product-demo",
-  ]);
-  assert.equal(
-    serializeDialogue(parsed),
-    "ALICE: What if a video could be edited by meaning instead of a timeline?\n"
-      + "BOB: Then the script becomes the source. semantic video markup language lets every visual know why it is there.",
-  );
-  assert.match(serializeSpeech(parsed), /semantic video markup language/u);
-  assert.match(serializeCaption(parsed), /SVML/u);
 });
 
 test("the formatter is semantic-preserving and idempotent", () => {

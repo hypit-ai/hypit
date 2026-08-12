@@ -455,7 +455,7 @@ test("a third-party Runtime Adapter stays outside the Host and is identified by 
   assert.notEqual(first, second);
 });
 
-test("a package digest ignores editor and operating-system dotfiles", async () => {
+test("a package digest ignores Finder metadata but still binds authored hidden files", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-package-dotfile-"));
   const packageRoot = join(root, "node_modules", "example-dotfile");
   await mkdir(packageRoot, { recursive: true });
@@ -481,5 +481,13 @@ test("a package digest ignores editor and operating-system dotfiles", async () =
   assert.deepEqual(
     after.artifacts.map((artifact) => artifact.digest),
     before.artifacts.map((artifact) => artifact.digest),
+  );
+
+  await writeFile(join(packageRoot, ".runtime-config"), "behavior", "utf8");
+  const withAuthoredHiddenFile = await createNodePackageLock(["example-dotfile"], root);
+  assert.notEqual(withAuthoredHiddenFile.digest, after.digest);
+  assert.notDeepEqual(
+    withAuthoredHiddenFile.artifacts.map((artifact) => artifact.digest),
+    after.artifacts.map((artifact) => artifact.digest),
   );
 });

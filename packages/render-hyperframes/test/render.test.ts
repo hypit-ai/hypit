@@ -1,4 +1,4 @@
-import { compositionComponent, videoContractManifests } from "../../test-support/video-domain.js";
+import { compositionComponent, videoContractManifests } from "../../../test/support/video-domain.js";
 import { artifactTypes } from "@narratage/artifact";
 import {
   registerProducerFacets,

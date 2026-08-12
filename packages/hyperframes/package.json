@@ -19,5 +19,18 @@
     "@narratage/program-space": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/visual-ir": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/caption": "workspace:*",
+    "@narratage/caption-fine": "workspace:*",
+    "@narratage/deck-track": "workspace:*",
+    "@narratage/fonts-open": "workspace:*",
+    "@narratage/media-track": "workspace:*",
+    "@narratage/ranking": "workspace:*",
+    "@narratage/screen-overlay": "workspace:*",
+    "@narratage/script": "workspace:*",
+    "@narratage/spatial": "workspace:*",
+    "@narratage/svs": "workspace:*",
+    "@narratage/typography-track": "workspace:*"
   }
 }

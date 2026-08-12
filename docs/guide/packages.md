@@ -5,8 +5,10 @@ description: The five layers, dependency boundaries, package anatomy and facets.
 
 # Package Architecture
 
-Workspace packages under `packages/` are organized into five architectural layers. Each layer has
-strict dependency rules enforced by tests on every commit.
+Workspace packages under `packages/` are organized into five architectural layers. Dependencies are
+declared by each package itself. The root installs the complete source checkout so the Package
+Loader can resolve any explicitly locked package, but TypeScript has no central path alias that can
+hide a package's undeclared import.
 
 ## The five layers
 
@@ -189,8 +191,8 @@ packages/example/
 }
 ```
 
-- `"exports"` points to TypeScript source directly. The workspace `tsconfig.json` maps
-  `@narratage/*` imports to source entry points via `paths`.
+- `"exports"` points to TypeScript source directly during development. pnpm's workspace links resolve
+  `@narratage/*` imports through the dependency declared by the importing package.
 - `"svml.activation"` is the entry point that the Package Loader reads when this package is
   byte-locked. It must default-export a `NodePackageContribution`.
 - The physical package version remains `0.0.0-dev` until publication. Module and Frontend manifests

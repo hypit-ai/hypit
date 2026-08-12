@@ -1,4 +1,4 @@
-import { compositionComponent, spatialComponent, videoContractManifests } from "../../test-support/video-domain.js";
+import { compositionComponent, spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import { programSpaceDependency, programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
 import { compositionDependency, compositionTypes, sealAudioTrack, sealVisualTrack } from "@narratage/composition";

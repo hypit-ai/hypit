@@ -25,9 +25,7 @@ export {
 } from "./program.js";
 export {
   assertFilmRecipe,
-  defaultFilmRecipe,
   filmAppearanceFromRecipe,
-  filmRecipeKeys,
 } from "./recipe.js";
 export type { FilmAppearance } from "./recipe.js";
 export { decodeFilmSurface } from "./surface.js";

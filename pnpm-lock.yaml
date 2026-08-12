@@ -290,6 +290,31 @@ importers:
       '@narratage/temporal':
         specifier: workspace:*
         version: link:../temporal
+    devDependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
+      '@narratage/validation':
+        specifier: workspace:*
+        version: link:../validation
+      '@narratage/visual-ir':
+        specifier: workspace:*
+        version: link:../visual-ir
 
   packages/background-removal:
     dependencies:
@@ -330,6 +355,9 @@ importers:
         specifier: workspace:*
         version: link:../semantic-map
     devDependencies:
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
       '@narratage/script':
         specifier: workspace:*
         version: link:../script
@@ -479,6 +507,10 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+    devDependencies:
+      '@narratage/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
 
   packages/compiler-markup-node:
     dependencies:
@@ -581,6 +613,9 @@ importers:
       '@narratage/semantic-map':
         specifier: workspace:*
         version: link:../semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
@@ -627,6 +662,9 @@ importers:
 
   packages/deck-track:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
@@ -669,6 +707,13 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+    devDependencies:
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
 
   packages/driver-node:
     dependencies:
@@ -716,6 +761,9 @@ importers:
       '@narratage/composition':
         specifier: workspace:*
         version: link:../composition
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
@@ -795,6 +843,12 @@ importers:
       '@narratage/hyperframes':
         specifier: workspace:*
         version: link:../hyperframes
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
       '@narratage/typography-track':
         specifier: workspace:*
         version: link:../typography-track
@@ -1210,6 +1264,34 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+    devDependencies:
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/raster':
+        specifier: workspace:*
+        version: link:../raster
+      '@narratage/run':
+        specifier: workspace:*
+        version: link:../run
+      '@narratage/seedance':
+        specifier: workspace:*
+        version: link:../seedance
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
 
   packages/grok-imagine:
     dependencies:
@@ -1264,6 +1346,40 @@ importers:
       '@narratage/visual-ir':
         specifier: workspace:*
         version: link:../visual-ir
+    devDependencies:
+      '@narratage/caption':
+        specifier: workspace:*
+        version: link:../caption
+      '@narratage/caption-fine':
+        specifier: workspace:*
+        version: link:../caption-fine
+      '@narratage/deck-track':
+        specifier: workspace:*
+        version: link:../deck-track
+      '@narratage/fonts-open':
+        specifier: workspace:*
+        version: link:../fonts-open
+      '@narratage/media-track':
+        specifier: workspace:*
+        version: link:../media-track
+      '@narratage/ranking':
+        specifier: workspace:*
+        version: link:../ranking
+      '@narratage/screen-overlay':
+        specifier: workspace:*
+        version: link:../screen-overlay
+      '@narratage/script':
+        specifier: workspace:*
+        version: link:../script
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@narratage/typography-track':
+        specifier: workspace:*
+        version: link:../typography-track
 
   packages/image-compose:
     dependencies:
@@ -1374,6 +1490,9 @@ importers:
       '@narratage/script':
         specifier: workspace:*
         version: link:../script
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/media:
     dependencies:
@@ -1398,6 +1517,9 @@ importers:
       '@narratage/media-pipeline':
         specifier: workspace:*
         version: link:../media-pipeline
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1489,6 +1611,10 @@ importers:
       '@narratage/temporal':
         specifier: workspace:*
         version: link:../temporal
+    devDependencies:
+      '@narratage/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
 
   packages/mimo-tts:
     dependencies:
@@ -1537,6 +1663,9 @@ importers:
 
   packages/model-kit:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
@@ -1785,6 +1914,9 @@ importers:
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@narratage/image-transform':
+        specifier: workspace:*
+        version: link:../image-transform
 
   packages/provider-kie:
     dependencies:
@@ -1864,6 +1996,9 @@ importers:
       '@narratage/store-sqlite':
         specifier: workspace:*
         version: link:../store-sqlite
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
@@ -2002,6 +2137,13 @@ importers:
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
+    devDependencies:
+      '@narratage/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@narratage/mimo-tts':
+        specifier: workspace:*
+        version: link:../mimo-tts
 
   packages/ranking:
     dependencies:
@@ -2047,6 +2189,10 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+    devDependencies:
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/raster:
     dependencies:
@@ -2202,6 +2348,31 @@ importers:
       '@narratage/temporal':
         specifier: workspace:*
         version: link:../temporal
+    devDependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
+      '@narratage/validation':
+        specifier: workspace:*
+        version: link:../validation
+      '@narratage/visual-ir':
+        specifier: workspace:*
+        version: link:../visual-ir
 
   packages/script:
     dependencies:
@@ -2251,7 +2422,14 @@ importers:
         specifier: workspace:*
         version: link:../text
 
-  packages/seedance-kits: {}
+  packages/seedance-kits:
+    devDependencies:
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/seedream:
     dependencies:
@@ -2308,6 +2486,10 @@ importers:
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
+    devDependencies:
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/speech:
     dependencies:
@@ -2385,6 +2567,9 @@ importers:
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@narratage/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
@@ -2452,6 +2637,9 @@ importers:
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@narratage/media-track':
+        specifier: workspace:*
+        version: link:../media-track
       '@narratage/run':
         specifier: workspace:*
         version: link:../run
@@ -2464,6 +2652,9 @@ importers:
       '@narratage/speech-evidence':
         specifier: workspace:*
         version: link:../speech-evidence
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
@@ -2600,10 +2791,19 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/visual-ir':
+        specifier: workspace:*
+        version: link:../visual-ir
     devDependencies:
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
       '@narratage/hyperframes':
         specifier: workspace:*
         version: link:../hyperframes
+      '@narratage/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/validation:
     dependencies:
@@ -2723,6 +2923,48 @@ importers:
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12
+
+  tools/caption-playground:
+    dependencies:
+      '@narratage/caption':
+        specifier: workspace:*
+        version: link:../../packages/caption
+      '@narratage/caption-fine':
+        specifier: workspace:*
+        version: link:../../packages/caption-fine
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
+      '@narratage/fonts-open':
+        specifier: workspace:*
+        version: link:../../packages/fonts-open
+      '@narratage/host':
+        specifier: workspace:*
+        version: link:../../packages/host
+      '@narratage/hyperframes':
+        specifier: workspace:*
+        version: link:../../packages/hyperframes
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../../packages/narrative
+      '@narratage/package-loader-node':
+        specifier: workspace:*
+        version: link:../../packages/package-loader-node
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../../packages/program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../../packages/svs
+      '@narratage/video-cli':
+        specifier: workspace:*
+        version: link:../../packages/video-cli
+      vite:
+        specifier: 5.4.21
+        version: 5.4.21(@types/node@24.10.1)
 
 packages:
 

@@ -1,4 +1,4 @@
-import { videoContractManifests } from "../../test-support/video-domain.js";
+import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { speechDependency, speechTypes } from "@narratage/speech";
 import { compositionTypes } from "@narratage/composition";
 import { spatialTypes, spatialValidatorDigests } from "@narratage/spatial";
