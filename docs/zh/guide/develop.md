@@ -32,7 +32,7 @@ pnpm test             # 完整测试套件
 | `pnpm check` | `tsc -p tsconfig.json --noEmit` |
 | `pnpm test` | 通过 Node test runner 运行 package、service-adapter 与仓库边界测试 |
 
-关于受环境开关控制的测试与测试写法，参见[测试](./testing.md)。
+关于受环境开关控制的测试与测试写法，参见 [测试](./testing.md)。
 
 ## 仓库结构
 

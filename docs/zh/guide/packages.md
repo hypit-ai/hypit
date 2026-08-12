@@ -183,7 +183,7 @@ packages/example/
 
 ### activation.ts
 
-每个可安装的包都会导出一个被动的 contribution 描述符 —— 它是对自身所提供内容的清单，而不是一份权限授予。具体示例参见[添加作者包](./author-packages.md)和[添加 Provider](./providers.md)。
+每个可安装的包都会导出一个被动的 contribution 描述符 —— 它是对自身所提供内容的清单，而不是一份权限授予。具体示例参见 [添加作者包](./author-packages.md) 和 [添加 Provider](./providers.md)。
 
 ## 五种包 facet
 

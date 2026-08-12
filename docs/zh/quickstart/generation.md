@@ -187,7 +187,7 @@ Endpoint，不会改变作者图。
 
 创作前阅读
 [`@narratage/seedance-kits` 指南](https://github.com/hypit-ai/narratage/blob/main/packages/seedance-kits/README.md)
-和[所选 Kit 源文件](https://github.com/hypit-ai/narratage/tree/main/packages/seedance-kits/kits)。格式匹配时优先使用官方 Kit。生成指令与动态 prompt slot 必须使用英语；只有需要逐字说出的对白保留作者原语言。七个 Kit 都不适用时，才编写自由格式的英语 prompt。
+和 [所选 Kit 源文件](https://github.com/hypit-ai/narratage/tree/main/packages/seedance-kits/kits)。格式匹配时优先使用官方 Kit。生成指令与动态 prompt slot 必须使用英语；只有需要逐字说出的对白保留作者原语言。七个 Kit 都不适用时，才编写自由格式的英语 prompt。
 
 ```svml
 <import as="text" from="@narratage/text@1"/>

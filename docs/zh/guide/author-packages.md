@@ -35,7 +35,7 @@ mkdir -p packages/my-component/src packages/my-component/test
 }
 ```
 
-只添加你的包实际导入的依赖。分层规则参见[包架构](./packages.md)。
+只添加你的包实际导入的依赖。分层规则参见 [包架构](./packages.md)。
 
 ## 3. 定义 Module Manifest
 
