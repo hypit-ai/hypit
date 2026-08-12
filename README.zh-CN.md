@@ -21,7 +21,7 @@
   <a href="https://narratage.hypit.ai/zh/"><img alt="Website" src="https://img.shields.io/badge/Website-narratage.hypit.ai-000000?style=flat-square&logo=googlechrome&logoColor=white"></a>
   <a href="https://discord.gg/85hnyQnxpn"><img alt="Discord" src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat-square&logo=discord&logoColor=white"></a>
   <a href="https://x.com/hypitai"><img alt="X" src="https://img.shields.io/badge/Follow-%40hypitai-000000?style=flat-square&logo=x&logoColor=white"></a>
-  <a href="https://t.me/narratage"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-Join-26A5E4?style=flat-square&logo=telegram&logoColor=white"></a>
+  <a href="https://t.me/narratage"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-Join%20Group-26A5E4?style=flat-square&logo=telegram&logoColor=white"></a>
 </p>
 
 Narratage 是一套面向 AI 视频创作的语义化、图原生系统。你写下故事，选择模型与视觉组件，声明想要哪些输出；Narratage 把这份意图变成一张有限的执行计划，只运行结果真正依赖的工作，并把每一个已接受的输出保留下来，供后续 Run 使用。
