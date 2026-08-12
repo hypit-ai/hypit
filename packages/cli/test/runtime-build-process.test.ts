@@ -175,12 +175,14 @@ test("CLI exits after durable submission and a restarted detached Worker complet
       "--follow",
       "--json",
     ], { cwd: project, stdio: "ignore" });
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    assert.equal(follower.exitCode, null, "--follow is observing the still-queued Build");
+    let followerEnded = false;
     const followerExit = new Promise<void>((resolve, reject) => {
-      follower.once("exit", () => resolve());
-      follower.once("error", reject);
+      follower.once("exit", () => { followerEnded = true; resolve(); });
+      follower.once("error", (error) => { followerEnded = true; reject(error); });
     });
+    void followerExit.catch(() => {});
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    assert.equal(followerEnded, false, "--follow is observing the still-queued Build");
     follower.kill("SIGINT");
     await followerExit;
     const afterInterrupt = await cli(project, ["status", build, "--runtime", profile]);

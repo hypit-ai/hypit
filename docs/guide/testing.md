@@ -91,6 +91,7 @@ explicitly opt-in, use no committed secret and fail before spending money unless
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX service | Python 3.13, uv, frozen sync |
 | `pnpm test:image-opencv` | the shared OpenCV Raster interpreter across both request variants | `SVML_OPENCV_TESTS=1`, `SVML_OPENCV_PYTHON` |
+| `pnpm test:browser-visual` | rendered geometry, stacking and clipping in a real browser | a Chrome the HyperFrames CLI can start, `ffmpeg`, and `SVML_TEST_FONT_PATH` off macOS |
 | `pnpm smoke:kie` | Live paid KIE generation | `KIE_API_KEY` |
 
 ## Test fixtures

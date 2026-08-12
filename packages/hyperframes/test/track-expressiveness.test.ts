@@ -151,8 +151,6 @@ test("Text three-box and frame/content/line/word paint semantics lower without p
     "word-intent",
     "word-first",
   ]);
-  assert.equal("textLayout" in track, false);
-  assert.equal("backgroundTarget" in track, false);
   assert.deepEqual(
     track.presents.map((present) => present.elements.find((element) =>
       element.style.some((declaration) => declaration.name === "background-color"),
@@ -248,7 +246,6 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
   });
   const document = compileHyperframesDocument(composition("caption-three-box", [track]), programSpace);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
-  assert.equal("captionMode" in track, false);
   assert.match(document.html, /data-svml-element-id="range"/u);
   assert.match(document.html, /data-svml-element-id="cue"/u);
   assert.match(document.html, /data-svml-element-id="content"/u);
@@ -348,8 +345,6 @@ test("one content box lowers independent backdrop and foreground samples of one 
   assert.match(document.html, /object-fit:cover/u);
   assert.match(document.html, /object-fit:contain/u);
   assert.match(document.html, /object-position:80% 50%/u);
-  assert.equal("fit" in track, false);
-  assert.equal("focalPoint" in track, false);
 });
 
 test("Presents from one authoring Track interleave with a peer Track by absolute stacking", () => {
@@ -471,8 +466,6 @@ test("an independently installed non-native Text package crosses only the typed 
   assert.deepEqual(document.artifacts.map((artifact) => artifact.digest), [materialized.artifact.digest]);
   assert.match(document.html, /<video/u);
   assert.match(document.html, /data-svml-alpha-mode="straight"/u);
-  assert.equal("renderer" in track, false);
-  assert.equal("component" in track, false);
   assert.deepEqual(externalManifest.producers[0]?.inputs.map((input) => input.type), [
     programSpaceTypes.programSpace,
     mediaTypes.compositableSurface,

@@ -80,6 +80,7 @@ test("generates a video", async (t) => {
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX 服务 | Python 3.13、uv、frozen sync |
 | `pnpm test:image-opencv` | OpenCV 图像变换 | `SVML_OPENCV_TESTS=1`、`SVML_OPENCV_PYTHON` |
+| `pnpm test:browser-visual` | 真实浏览器中的渲染几何、层叠与裁剪 | HyperFrames CLI 能启动的 Chrome、`ffmpeg`；非 macOS 还需 `SVML_TEST_FONT_PATH` |
 | `pnpm smoke:kie` | 实时付费的 KIE 生成 | `KIE_API_KEY` |
 
 ## 测试 fixtures
