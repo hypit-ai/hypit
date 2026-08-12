@@ -119,10 +119,10 @@ in a completely separate directory, invoke the checkout's lightweight launcher f
 
 ```bash
 cd /path/to/my-video
-/path/to/svml/narratage packages sync build.svrun \
+/path/to/narratage/narratage packages sync build.svrun \
   --runtime svml.runtime.json --root .
-/path/to/svml/narratage check main.svml --runtime svml.runtime.json --root .
-/path/to/svml/narratage plan build.svrun --runtime svml.runtime.json --root .
+/path/to/narratage/narratage check main.svml --runtime svml.runtime.json --root .
+/path/to/narratage/narratage plan build.svrun --runtime svml.runtime.json --root .
 ```
 
 The Runtime Profile may point `packageRoot` at this checkout during source development. The launcher

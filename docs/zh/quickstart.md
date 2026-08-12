@@ -60,7 +60,7 @@ uv run --project services/whisperx --frozen svml-whisperx-prepare
 ```
 
 在源码仓库内可使用 `node --run narratage -- ...`。仓库外的视频项目直接执行
-`/path/to/svml/narratage ... --package-root /path/to/svml`；这个轻量入口不再启动 pnpm，源码、
+`/path/to/narratage/narratage ... --package-root /path/to/narratage`；这个轻量入口不再启动 pnpm，源码、
 SQLite、Artifact 和输出仍全部留在外部项目的 Runtime Profile root 下。
 
 ## 三份输入

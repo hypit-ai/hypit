@@ -193,8 +193,8 @@ Endpoint，不会改变作者图。
 副本，使 Kit 字节保持在 Source Closure 内；项目源码不要反向引用 Narratage 仓库 checkout。
 
 创作前阅读
-[`@narratage/seedance-kits` 指南](https://github.com/cashdiffusion/svml/blob/main/packages/seedance-kits/README.md)
-和[所选 Kit 源文件](https://github.com/cashdiffusion/svml/tree/main/packages/seedance-kits/kits)。格式匹配时
+[`@narratage/seedance-kits` 指南](https://github.com/cashdiffusion/narratage/blob/main/packages/seedance-kits/README.md)
+和[所选 Kit 源文件](https://github.com/cashdiffusion/narratage/tree/main/packages/seedance-kits/kits)。格式匹配时
 优先使用官方 Kit。生成指令与动态 prompt slot 必须使用英语；只有需要逐字说出的对白保留作者
 原语言。七个 Kit 都不适用时，才编写自由格式的英语 prompt。
 
