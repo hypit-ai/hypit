@@ -49,7 +49,6 @@ import type {
 } from "./client.js";
 
 const HYPERFRAMES_VERSION = "0.7.101";
-const REQUEST_CONTRACT = "svml.hyperframes-visual-render-request@1";
 const CHECKPOINT_CONTRACT = "svml.hyperframes-aws-lambda-operation@1";
 const SUPPORTED_FPS = new Set([24, 30, 60]);
 
@@ -135,9 +134,8 @@ function executionArn(machine: ReturnType<typeof stateMachine>, executionName: s
 function requestDocument(value: CanonicalValue): HyperframesDocument {
   assert(value !== null && typeof value === "object" && !Array.isArray(value),
     "HyperFrames visual request must be an object");
-  const request = value as { readonly contract?: unknown; readonly document?: unknown };
-  assert(request.contract === REQUEST_CONTRACT, "HyperFrames visual request contract is invalid");
-  assert(Object.keys(request).sort().join(",") === "contract,document",
+  const request = value as { readonly document?: unknown };
+  assert(Object.keys(request).sort().join(",") === "document",
     "HyperFrames visual request contains unsupported requirements");
   assertHyperframesDocument(request.document as HyperframesDocument);
   return request.document as HyperframesDocument;

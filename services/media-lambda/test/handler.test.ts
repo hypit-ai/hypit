@@ -62,7 +62,6 @@ test("the function answers a real Need with real media, over a bucket it address
         operation: "inspect",
         artifacts: { bucket: "fixture", prefix: "svml" },
         constraints: {
-          contract: "svml.inspect-media-request@1",
           source: { kind: "blob", digest, size: bytes.byteLength, mediaType: "audio/wav" },
         },
       }) as Record<string, unknown>;
@@ -88,7 +87,6 @@ test("a source the bucket does not hold is a typed failure, never a throw", asyn
     operation: "inspect",
     artifacts: { bucket: "fixture" },
     constraints: {
-      contract: "svml.inspect-media-request@1",
       source: { kind: "blob", digest: `sha256:${"0".repeat(64)}`, size: 1, mediaType: "audio/wav" },
     },
   }) as Record<string, unknown>;
@@ -118,7 +116,6 @@ test("a Layer that lies about its FFmpeg version fails before reading an Artifac
       operation: "inspect",
       artifacts: { bucket: "fixture" },
       constraints: {
-        contract: "svml.inspect-media-request@1",
         source: {
           kind: "blob",
           digest: `sha256:${"0".repeat(64)}`,

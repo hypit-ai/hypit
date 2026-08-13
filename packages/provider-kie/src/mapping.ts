@@ -28,7 +28,6 @@ const referenceFields = {
 
 function seedanceMapping(model: string, kieModel: string): GenerationWireMapping {
   return {
-    contract: "svml.generation-wire-mapping@1",
     capability: { module: SEEDANCE, name: model },
     result: "video",
     routes: [{ model: kieModel }],
@@ -47,7 +46,6 @@ function seedanceMapping(model: string, kieModel: string): GenerationWireMapping
 }
 
 const minimaxMapping: GenerationWireMapping = {
-  contract: "svml.generation-wire-mapping@1",
   capability: { module: MINIMAX, name: "minimax-h3" },
   result: "video",
   routes: [
@@ -68,7 +66,6 @@ const minimaxMapping: GenerationWireMapping = {
 };
 
 const geminiMapping: GenerationWireMapping = {
-  contract: "svml.generation-wire-mapping@1",
   capability: { module: GEMINI, name: "gemini-omni-video" },
   result: "video",
   routes: [{ model: "gemini-omni-video" }],
@@ -91,7 +88,6 @@ const geminiMapping: GenerationWireMapping = {
 };
 
 const grokVideoMapping: GenerationWireMapping = {
-  contract: "svml.generation-wire-mapping@1",
   capability: { module: GROK, name: "grok-imagine-video" },
   result: "video",
   routes: [
@@ -110,7 +106,6 @@ const grokVideoMapping: GenerationWireMapping = {
 };
 
 const grokPreviewMapping: GenerationWireMapping = {
-  contract: "svml.generation-wire-mapping@1",
   capability: { module: GROK, name: "grok-imagine-video-1.5-preview" },
   result: "video",
   routes: [{ model: "grok-imagine-video-1-5-preview" }],
@@ -124,7 +119,6 @@ const grokPreviewMapping: GenerationWireMapping = {
 };
 
 const gptImageMapping: GenerationWireMapping = {
-  contract: "svml.generation-wire-mapping@1",
   capability: { module: GPT_IMAGE, name: "gpt-image-2" },
   result: "image",
   routes: [
@@ -141,7 +135,6 @@ const gptImageMapping: GenerationWireMapping = {
 
 function nanoBananaMapping(model: string): GenerationWireMapping {
   return {
-    contract: "svml.generation-wire-mapping@1",
     capability: { module: NANO_BANANA, name: model },
     result: "image",
     routes: [{ model }],
@@ -157,7 +150,6 @@ function nanoBananaMapping(model: string): GenerationWireMapping {
 }
 
 const seedreamMapping: GenerationWireMapping = {
-  contract: "svml.generation-wire-mapping@1",
   capability: { module: SEEDREAM, name: "seedream-5-lite" },
   result: "image",
   routes: [

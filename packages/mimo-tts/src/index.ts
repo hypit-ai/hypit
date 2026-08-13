@@ -25,7 +25,7 @@ function table(model: MimoTtsModel): GenerationPortTable {
   ] as const;
   if (model === "mimo-v2.5-tts") {
     return sealGenerationPortTable({
-      contract: "svml.generation-ports@1", model, result: "audio",
+      model, result: "audio",
       ports: [
         ...common,
         { name: "instruction", value: instruction, minItems: 0, maxItems: 1 },
@@ -36,7 +36,7 @@ function table(model: MimoTtsModel): GenerationPortTable {
   }
   if (model === "mimo-v2.5-tts-voicedesign") {
     return sealGenerationPortTable({
-      contract: "svml.generation-ports@1", model, result: "audio",
+      model, result: "audio",
       ports: [
         ...common,
         { name: "voiceDescription", value: instruction, minItems: 1, maxItems: 1 },
@@ -45,7 +45,7 @@ function table(model: MimoTtsModel): GenerationPortTable {
     });
   }
   return sealGenerationPortTable({
-    contract: "svml.generation-ports@1", model, result: "audio",
+    model, result: "audio",
     ports: [
       ...common,
       { name: "instruction", value: instruction, minItems: 0, maxItems: 1 },

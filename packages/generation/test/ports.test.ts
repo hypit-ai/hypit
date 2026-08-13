@@ -18,7 +18,6 @@ import {
 import type { GenerationPortTable, GenerationWireMapping } from "@narratage/generation";
 
 const table: GenerationPortTable = sealGenerationPortTable({
-  contract: "svml.generation-ports@1",
   model: "demo-video",
   result: "video",
   ports: [
@@ -53,7 +52,6 @@ const table: GenerationPortTable = sealGenerationPortTable({
 });
 
 const mapping: GenerationWireMapping = {
-  contract: "svml.generation-wire-mapping@1",
   capability: { module: { name: "@narratage/demo", version: "0.0.0-dev" }, name: "demo-video" },
   result: "video",
   routes: [
@@ -95,14 +93,13 @@ test("a port table derives the request Schema and rejects undeclared ports", () 
   const schema = requestSchemaFromPorts(table);
   assert.equal(schema.kind, "object");
   const fields = (schema as { fields: Record<string, { schema: { kind: string } }> }).fields;
-  assert.deepEqual(Object.keys(fields).sort(), ["contract", "ports"]);
+  assert.deepEqual(Object.keys(fields), ["ports"]);
   const ports = fields.ports!.schema as { kind: string; fields: Record<string, { optional?: boolean }> };
   assert.equal(ports.kind, "object");
   assert.equal(ports.fields.prompt!.optional, undefined);
   assert.equal(ports.fields.referenceImage!.optional, true);
   assert.throws(
     () => verifyRequestAgainstPorts(table, {
-      contract: "svml.generation-request@1",
       ports: { prompt: ["hi"], duration: [8], resolution: ["720p"], unknownPort: ["x"] },
     }),
     /undeclared port unknownPort/u,
@@ -230,7 +227,6 @@ test("runtime media stays on graph edges until a model-owned draft is finalized"
       role: "video", fields: { startSec: 1, endSec: 3 },
     }), video);
   const exact = finalizeGenerationRequestDraft(table, withExcerpt);
-  assert.equal(exact.contract, "svml.generation-request@1");
   assert.deepEqual(exact.ports.referenceAudio?.[0], { role: "audio", artifact: audio });
   assert.deepEqual(exact.ports.excerpt?.[0], {
     role: "video", artifact: video, fields: { startSec: 1, endSec: 3 },

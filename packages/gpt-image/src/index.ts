@@ -15,7 +15,6 @@ import {
 export const gptImageModuleRef = { name: "@narratage/gpt-image", version: "1" } as const;
 
 export const gptImage2Ports: GenerationPortTable = sealGenerationPortTable({
-  contract: "svml.generation-ports@1",
   model: "gpt-image-2",
   result: "image",
   ports: [

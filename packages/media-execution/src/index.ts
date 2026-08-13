@@ -7,8 +7,6 @@ export {
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
   executeTransformMedia,
-  mediaNeedHasContract,
-  mediaOperationContracts,
 } from "./execute.js";
 export { parseMediaInspection } from "./probe.js";
 export { verifyCompositableSurfaceBytes } from "./surface.js";

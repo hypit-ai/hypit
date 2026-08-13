@@ -28,7 +28,8 @@ test("one exact Raster capability carries both closed deterministic request vari
     }],
   });
   assert.deepEqual(rasterCapabilities.execute.name, "execute-raster");
-  assert.equal(transform.contract, compose.contract);
+  assert.equal(transform.kind, "transform");
+  assert.equal(compose.kind, "compose");
   assert.equal(rasterOutputMediaType(transform), "image/webp");
   assert.equal(rasterOutputMediaType(compose), "image/png");
   assert.deepEqual(rasterSources(transform), [image]);
@@ -37,6 +38,6 @@ test("one exact Raster capability carries both closed deterministic request vari
 
 test("Raster refuses unknown execution meaning rather than letting a Provider guess", () => {
   assert.throws(() => assertRasterRequest({
-    contract: "svml.raster-request@1", kind: "magic", source: image,
+    kind: "magic", source: image,
   } as never), /kind is invalid/u);
 });

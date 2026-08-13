@@ -14,7 +14,6 @@ import { digestOf } from "@narratage/protocol";
 import { sealText } from "@narratage/text";
 
 const ports = sealGenerationPortTable({
-  contract: "svml.generation-ports@1",
   model: "graph-native-image",
   result: "image",
   ports: [
@@ -64,7 +63,6 @@ test("one exact model definition owns draft, media binding, finalization and gen
   assert.equal(finalized.outputs.request?.kind, "inline");
   if (finalized.outputs.request?.kind !== "inline") return;
   const request = finalized.outputs.request.value as Record<string, unknown>;
-  assert.equal(request.contract, "svml.generation-request@1");
 });
 
 test("one graph Text edge fills the exact model prompt before finalization", async () => {

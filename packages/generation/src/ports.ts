@@ -8,10 +8,8 @@ import type { BlobRef } from "@narratage/protocol";
  * of the service reselling it. A Provider therefore never redeclares this
  * shape; it only maps each declared port onto its own wire fields.
  *
- * Adding a port kind is a `svml.generation-ports@1` decision, not a field patch.
+ * Adding a port kind changes this package's public vocabulary, not one model's table.
  */
-export const GENERATION_PORTS_V1 = "svml.generation-ports@1" as const;
-
 export type GenerationMediaRole = "image" | "video" | "audio";
 
 export const GENERATION_MEDIA_ROLES: readonly GenerationMediaRole[] = ["image", "video", "audio"];
@@ -78,7 +76,6 @@ export type GenerationPortRequirement =
     };
 
 export type GenerationPortTable = {
-  readonly contract: "svml.generation-ports@1";
   /** Exact model identity; this is also the Capability name. */
   readonly model: string;
   readonly result: "audio" | "image" | "video";
@@ -133,11 +130,10 @@ function assertScalarKind(value: GenerationPortScalarKind, subject: string): voi
     }
     return;
   }
-  assert(value.kind === "boolean", `${subject} port kind is outside ${GENERATION_PORTS_V1}`);
+  assert(value.kind === "boolean", `${subject} has an unsupported port kind`);
 }
 
 export function assertGenerationPortTable(value: GenerationPortTable): void {
-  assert(value.contract === GENERATION_PORTS_V1, "Generation port table contract is invalid");
   assert(typeof value.model === "string" && value.model.trim().length > 0, "Generation port table model is empty");
   assert(value.result === "audio" || value.result === "image" || value.result === "video",
     `${value.model} port table result is invalid`);

@@ -63,7 +63,7 @@ test("component data flow preserves explicit Canvas, Frame and paint order", asy
   } } as never);
   assert("image" in result.needs);
   assert.deepEqual(result.needs.image, { constraints: {
-    contract: "svml.raster-request@1", kind: "compose", canvas, background: options.background,
+    kind: "compose", canvas, background: options.background,
     layers: [{ source, frame, fit: spec.fit, interpolation: spec.interpolation, opacity: spec.opacity }],
   } });
 });

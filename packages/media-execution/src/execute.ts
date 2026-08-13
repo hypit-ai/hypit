@@ -70,22 +70,6 @@ export type MediaOperationResult = {
   readonly value: StoredValue;
 };
 
-/** The request contract each capability answers. Both Providers admit Needs by this table. */
-export const mediaOperationContracts = {
-  inspect: "svml.inspect-media-request@1",
-  normalize: "svml.normalize-media-request@1",
-  transform: "svml.transform-media-request@1",
-  extractAudio: "svml.extract-audio-request@1",
-  extractFrame: "svml.extract-frame-request@1",
-  projectSpeechEvidenceAudio: "svml.project-speech-evidence-audio-request@1",
-  renderAudio: "svml.render-audio-request@1",
-  mux: "svml.mux-media-request@1",
-} as const;
-
-export function mediaNeedHasContract(value: unknown, contract: string): boolean {
-  return hasContract(value, contract);
-}
-
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
@@ -98,11 +82,6 @@ function positiveInteger(value: number, subject: string): number {
 function object(value: unknown, subject: string): Record<string, unknown> {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), `${subject} must be an object`);
   return value as Record<string, unknown>;
-}
-
-function hasContract(value: unknown, contract: string): boolean {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    && (value as Record<string, unknown>).contract === contract;
 }
 
 async function runProcess(args: {
@@ -455,15 +434,13 @@ function artifactResult(value: BlobRef): MediaOperationResult {
 
 function inspectNeed(value: CanonicalValue): InspectMediaNeed {
   const item = object(value, "InspectMediaNeed") as unknown as InspectMediaNeed;
-  assert(item.contract === "svml.inspect-media-request@1" && item.source?.kind === "blob",
-    "InspectMediaNeed is invalid");
+  assert(item.source?.kind === "blob", "InspectMediaNeed is invalid");
   return item;
 }
 
 function normalizeNeed(value: CanonicalValue): NormalizeMediaNeed {
   const item = object(value, "NormalizeMediaNeed") as unknown as NormalizeMediaNeed;
-  assert(item.contract === "svml.normalize-media-request@1" && item.source?.kind === "blob",
-    "NormalizeMediaNeed is invalid");
+  assert(item.source?.kind === "blob", "NormalizeMediaNeed is invalid");
   verifyMediaInspection(item.inspection);
   verifyMediaStreamSelection(item.selection);
   assert(item.audio.sampleRate === 48_000 && item.audio.channels === 2
@@ -474,7 +451,6 @@ function normalizeNeed(value: CanonicalValue): NormalizeMediaNeed {
 
 function transformNeed(value: CanonicalValue): TransformMediaNeed {
   const item = object(value, "TransformMediaNeed") as unknown as TransformMediaNeed;
-  assert(item.contract === "svml.transform-media-request@1", "TransformMediaNeed is invalid");
   verifySynchronizedMedia(item.media);
   verifyMediaTransformProgram(item.program);
   assert(item.media.visual !== undefined, "TransformMediaNeed requires synchronized visual media");
@@ -483,8 +459,7 @@ function transformNeed(value: CanonicalValue): TransformMediaNeed {
 
 function extractAudioNeed(value: CanonicalValue): ExtractAudioNeed {
   const item = object(value, "ExtractAudioNeed") as unknown as ExtractAudioNeed;
-  assert(item.contract === "svml.extract-audio-request@1" && item.source?.kind === "blob",
-    "ExtractAudioNeed is invalid");
+  assert(item.source?.kind === "blob", "ExtractAudioNeed is invalid");
   assert(Number.isSafeInteger(item.streamIndex) && item.streamIndex >= 0,
     "ExtractAudioNeed streamIndex is invalid");
   verifyAudioExtractionRequest({
@@ -496,8 +471,7 @@ function extractAudioNeed(value: CanonicalValue): ExtractAudioNeed {
 
 function extractFrameNeed(value: CanonicalValue): ExtractFrameNeed {
   const item = object(value, "ExtractFrameNeed") as unknown as ExtractFrameNeed;
-  assert(item.contract === "svml.extract-frame-request@1" && item.source?.kind === "blob",
-    "ExtractFrameNeed is invalid");
+  assert(item.source?.kind === "blob", "ExtractFrameNeed is invalid");
   assert(Number.isSafeInteger(item.streamIndex) && item.streamIndex >= 0
     && Number.isSafeInteger(item.sourceFrameCount) && item.sourceFrameCount > 0,
   "ExtractFrameNeed stream domain is invalid");
@@ -514,8 +488,7 @@ function extractFrameNeed(value: CanonicalValue): ExtractFrameNeed {
 
 function evidenceAudioNeed(value: CanonicalValue): ProjectSpeechEvidenceAudioNeed {
   const item = object(value, "ProjectSpeechEvidenceAudioNeed") as unknown as ProjectSpeechEvidenceAudioNeed;
-  assert(item.contract === "svml.project-speech-evidence-audio-request@1" && item.source?.kind === "blob",
-    "ProjectSpeechEvidenceAudioNeed is invalid");
+  assert(item.source?.kind === "blob", "ProjectSpeechEvidenceAudioNeed is invalid");
   assert(Number.isSafeInteger(item.sourceSampleFrames) && item.sourceSampleFrames > 0
     && Number.isSafeInteger(item.evidenceSampleFrames) && item.evidenceSampleFrames > 0
     && item.evidenceSampleFrames === speechEvidenceSampleBoundary(item.sourceSampleFrames),
@@ -525,14 +498,12 @@ function evidenceAudioNeed(value: CanonicalValue): ProjectSpeechEvidenceAudioNee
 
 function renderAudioNeed(value: CanonicalValue): RenderAudioNeed {
   const item = object(value, "RenderAudioNeed") as unknown as RenderAudioNeed;
-  assert(item.contract === "svml.render-audio-request@1", "RenderAudioNeed is invalid");
   verifyAudioProgramPlan(item.plan);
   return item;
 }
 
 function muxMediaNeed(value: CanonicalValue): MuxMediaNeed {
   const item = object(value, "MuxMediaNeed") as unknown as MuxMediaNeed;
-  assert(item.contract === "svml.mux-media-request@1", "MuxMediaNeed is invalid");
   verifyRenderedVisual(item.visual);
   verifyTimelineAudio(item.audio);
   const expectedSamples = roundPositive(

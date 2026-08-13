@@ -42,7 +42,6 @@ export type CaptionPlanningRun = {
 };
 
 export type CaptionGeminiRequest = {
-  readonly contract: "svml.caption-gemini-request@1";
   readonly model: CaptionGeminiModel;
   readonly runs: readonly CaptionPlanningRun[];
   readonly systemInstruction: string;

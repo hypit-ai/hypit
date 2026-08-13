@@ -15,7 +15,6 @@ export const minimaxH3ModuleRef = { name: "@narratage/minimax-h3", version: "1" 
  * spelling is MiniMax's, not any gateway's.
  */
 export const minimaxH3Ports: GenerationPortTable = sealGenerationPortTable({
-  contract: "svml.generation-ports@1",
   model: "minimax-h3",
   result: "video",
   ports: [
