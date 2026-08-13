@@ -407,7 +407,7 @@ export const decodeTypographyStyleSurface: StructuredSurfaceHandler = ({ element
     throw new Error(`${element.name} requires at least one visible glyph Fill or Stroke.`);
   }
   const style = sealTextStyle({
-    contract: "svml.text-style@1", id,
+    id,
     stackingOrder: propNumber(value, "stack-order"),
     typography: {
       fonts,
@@ -529,7 +529,7 @@ export const decodeTypographyMotionSurface: StructuredSurfaceHandler = ({ elemen
     });
   }
   const motion = sealTextMotion({
-    contract: "svml.text-motion@1", id,
+    id,
     ...(itemKeyframes.length === 0 ? {} : { item: { keyframes: itemKeyframes } }),
     sequences,
     ...(pathKeyframes.length === 0 ? {} : { pathMargin: { keyframes: pathKeyframes } }),
@@ -753,7 +753,7 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
   const headerId = `${id}.__header`;
   const records: SurfaceRecordDraft[] = [{
     id: headerId, type: typographyTrackTypes.header,
-    value: { kind: "inline", value: sealTypographyTrackHeader({ contract: "svml.typography-track-header@1", id }) }, range: element.range,
+    value: { kind: "inline", value: sealTypographyTrackHeader({ id }) }, range: element.range,
   }];
   const defaultMotionId = `${id}.__still-motion`;
   records.push({ id: defaultMotionId, type: typographyTrackTypes.motion, value: { kind: "inline", value: stillTextMotion(defaultMotionId) }, range: element.range });
@@ -804,11 +804,11 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
     if (content !== undefined) empty(child);
     const spec = content === undefined
       ? sealTextItemSpec({
-          contract: "svml.text-item-spec@1", id: itemId,
+          id: itemId,
           document: document(child, resolveReference), projection: binding.projection, expansion,
         })
       : sealPlainTextItemSpec({
-          contract: "svml.plain-text-item-spec@1", id: itemId,
+          id: itemId,
           projection: binding.projection, expansion,
         });
     records.push({
@@ -882,7 +882,7 @@ export const decodeTypographyMaskSurface: StructuredSurfaceHandler = ({ element,
   const material = reference(element.attributes.material, `${element.name}.material`, mediaTypes.compositableSurface, resolveReference);
   const specId = `${id}.__spec`;
   const spec = sealTextMaskSpec({
-    contract: "svml.text-mask-spec@1", id,
+    id,
     mode: enumText(element, "mode", ["alpha", "luminance"] as const, "alpha"),
     materialFit: enumText(element, "fit", ["contain", "cover", "fill"] as const, "cover"),
   });

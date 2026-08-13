@@ -43,7 +43,7 @@ const canvas = sealCanvasSpace({
 const space = sealProgramSpace({
   durationSec: 2, frameRate: { numerator: 30, denominator: 1 },
 });
-const header = sealScreenOverlayHeader({ contract: "svml.screen-overlay-header@1", id: "screen" });
+const header = sealScreenOverlayHeader({ id: "screen" });
 const components: readonly ScreenOverlayComponent[] = [
   { kind: "flash", color: "#ffffff", intensity: 0.9, attackFrames: 2, holdFrames: 3, decayFrames: 5 },
   { kind: "color-wash", color: "#2244ff", opacity: 0.2 },
@@ -60,7 +60,7 @@ const components: readonly ScreenOverlayComponent[] = [
 
 function trackFor(content: ScreenOverlayComponent, stackingOrder = 50) {
   const spec = sealScreenOverlayItemSpec({
-    contract: "svml.screen-overlay-item-spec@1", id: content.kind,
+    id: content.kind,
     content, projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
     expansion: { kind: "one" }, stackingOrder,
   });
@@ -120,7 +120,7 @@ test("the package has no lower-composite, sibling Track, backdrop-filter or hidd
   assert.deepEqual(fragment.inputs.map((input) => input.name), ["canvas", "header", "space", "spec"]);
   assert.equal(fragment.exports.some((output) => output.type.name === "AudioTrack"), false);
   assert.throws(() => sealScreenOverlayItemSpec({
-    contract: "svml.screen-overlay-item-spec@1", id: "blur",
+    id: "blur",
     content: { kind: "gaussian-blur" } as unknown as ScreenOverlayComponent,
     projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
     expansion: { kind: "one" }, stackingOrder: 1,

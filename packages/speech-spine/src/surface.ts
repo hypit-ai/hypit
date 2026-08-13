@@ -199,7 +199,7 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
   const videoRequestId = `${id}.selection.video`;
   const audioRequestId = `${id}.selection.audio`;
   const program = sealSpeechSpineProgram({
-    contract: "svml.speech-spine-program@1",
+
     id,
     frameRate: rate,
   });
@@ -263,7 +263,7 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
         id: `${id}.${take.visual.visualSpecName}`,
         type: speechSpineTypes.visualSpec,
         value: { kind: "inline" as const, value: sealSpeechSpineVisualSpec({
-          contract: "svml.speech-spine-visual-spec@1",
+
           stackingOrder: take.visual.stackingOrder,
         }) },
         range: take.range,

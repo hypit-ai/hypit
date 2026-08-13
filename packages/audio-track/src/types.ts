@@ -23,7 +23,6 @@ export type AudioItemMix = {
 };
 
 export type AudioClipSpec = {
-  readonly contract: "svml.audio-clip-spec@1";
   readonly id: string;
   readonly projection: TemporalWindowProjection;
   readonly expansion: OccurrenceExpansion;
@@ -33,7 +32,6 @@ export type AudioClipSpec = {
 };
 
 export type AudioTrackHeader = {
-  readonly contract: "svml.audio-track-header@1";
   readonly id: string;
 };
 
@@ -57,12 +55,10 @@ export type AudioItemProgram = {
 };
 
 export type AudioTrackProgram = {
-  readonly contract: "svml.audio-track-program@1";
   readonly id: string;
   readonly items: readonly AudioItemProgram[];
 };
 
 export type AudioTrackSet = {
-  readonly contract: "svml.audio-track-set@1";
   readonly items: readonly AudioItemProgram[];
 };

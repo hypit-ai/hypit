@@ -45,7 +45,7 @@ function synchronized(id: string, visual: boolean): SynchronizedMedia {
 
 test("audio Takes lengthen the speech program without inventing a visual clip", () => {
   const program = sealSpeechSpineProgram({
-    contract: "svml.speech-spine-program@1",
+
     id: "speech",
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -58,7 +58,7 @@ test("audio Takes lengthen the speech program without inventing a visual clip", 
     segment("answer", 1),
     frame,
     fit,
-    sealSpeechSpineVisualSpec({ contract: "svml.speech-spine-visual-spec@1", stackingOrder: 30 }),
+    sealSpeechSpineVisualSpec({ stackingOrder: 30 }),
   );
   const audio: TimelineAudio = {
     artifact: { kind: "blob", digest: digestOf("speech:mix"), size: 1, mediaType: "audio/wav" },

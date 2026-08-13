@@ -71,7 +71,7 @@ const textStyle = object({
   sizePx: { schema: positive }, weight: { schema: positiveInteger }, lineHeight: { schema: positive }, color: { schema: string },
 });
 const style = object({
-  contract: { schema: { kind: "literal", value: "svml.comment-sticker-style@1" } },
+
   id: { schema: string }, stackingOrder: { schema: integer },
   card: { schema: object({
     background: { schema: string }, borderColor: { schema: string }, borderWidthPx: { schema: nonNegative },
@@ -108,12 +108,12 @@ const style = object({
   }) },
 });
 const content = object({
-  contract: { schema: { kind: "literal", value: "svml.comment-sticker-content@1" } },
+
   comment: { schema: string }, author: { schema: string, optional: true },
   header: { schema: string, optional: true }, meta: { schema: string, optional: true },
 });
 const itemSpec = object({
-  contract: { schema: { kind: "literal", value: "svml.comment-sticker-item-spec@1" } },
+
   id: { schema: string }, projection: { schema: projection },
   expansion: { schema: object({ kind: { schema: enumString(["one", "each"]) } }) },
 });
@@ -125,15 +125,15 @@ const item = object({
 });
 
 export const commentStickerHeaderSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.comment-sticker-header@1" } }, id: { schema: string },
+  id: { schema: string },
 });
 export const commentStickerStyleSchema: ValueSchema = style;
 export const commentStickerItemSpecSchema: ValueSchema = itemSpec;
 export const commentStickerSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.comment-sticker-set@1" } }, items: { schema: { kind: "array", items: item } },
+  items: { schema: { kind: "array", items: item } },
 });
 export const commentStickerProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.comment-sticker-program@1" } }, id: { schema: string },
+  id: { schema: string },
   items: { schema: { kind: "array", minItems: 1, items: item } },
 });
 

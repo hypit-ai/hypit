@@ -10,7 +10,6 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 export function assertMediaSoundSpec(value: MediaSoundSpec): void {
-  assert(value.contract === "svml.media-sound-spec@1", "Unsupported MediaSoundSpec contract.");
   assertMediaIdentity(value.id, "MediaSoundSpec.id");
   assert(value.trigger.kind === "enter" || value.trigger.kind === "exit" || value.trigger.kind === "handoff",
     "MediaSoundSpec.trigger is invalid.");
@@ -27,15 +26,15 @@ export function sealMediaSoundSpec(value: MediaSoundSpec): MediaSoundSpec {
 }
 
 export function createMediaSoundSet(): MediaSoundSet {
-  return { contract: "svml.media-sound-set@1", sounds: [] };
+  return { sounds: [] };
 }
 
 export function assertMediaSoundSet(value: MediaSoundSet): void {
-  assert(value.contract === "svml.media-sound-set@1" && Array.isArray(value.sounds),
+  assert(Array.isArray(value.sounds),
     "MediaSoundSet is invalid.");
   const ids = new Set<string>();
   for (const sound of value.sounds) {
-    assertMediaSoundSpec({ contract: "svml.media-sound-spec@1", id: sound.id, trigger: sound.trigger, gain: sound.gain });
+    assertMediaSoundSpec({ id: sound.id, trigger: sound.trigger, gain: sound.gain });
     assert(!ids.has(sound.id), `MediaSoundSet repeats ${sound.id}.`);
     ids.add(sound.id);
     assert(sound.source.artifact.kind === "blob" && sound.source.artifact.mediaType.startsWith("audio/")
@@ -56,7 +55,7 @@ export function appendMediaSound(
   assert(media.audio !== undefined, `Media sound ${spec.id} requires normalized audio.`);
   assert(!set.sounds.some((sound) => sound.id === spec.id), `MediaSoundSet already contains ${spec.id}.`);
   const result = {
-    contract: "svml.media-sound-set@1" as const,
+
     sounds: [...set.sounds, {
       id: spec.id,
       trigger: structuredClone(spec.trigger),

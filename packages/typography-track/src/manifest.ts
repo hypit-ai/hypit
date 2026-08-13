@@ -109,7 +109,7 @@ const areaFlow = (() => {
 })();
 
 export const textStyleSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.text-style@1" } },
+
   id: { schema: string }, stackingOrder: { schema: signedInteger },
   typography: { schema: visualTextTypographySchema },
   paints: { schema: { kind: "array", items: visualTextPaintSchema } },
@@ -124,7 +124,7 @@ export const textStyleSchema: ValueSchema = object({
 });
 
 export const textMotionSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.text-motion@1" } }, id: { schema: string },
+  id: { schema: string },
   item: { schema: visualAnimation, optional: true },
   sequences: { schema: { kind: "array", items: visualTextSequenceSchema } },
   pathMargin: { schema: object({ keyframes: { schema: { kind: "array", minItems: 2, items: object({
@@ -139,15 +139,15 @@ const geometry: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "path" } }, path: { schema: spatialPathSchema } }),
 ] };
 export const textPlacementSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.text-placement@1" } }, geometry: { schema: geometry },
+  geometry: { schema: geometry },
 });
 export const textItemSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.text-item-spec@1" } }, id: { schema: string },
+  id: { schema: string },
   document: { schema: visualTextDocumentSchema },
   projection: { schema: projection }, expansion: { schema: expansion },
 });
 export const plainTextItemSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.plain-text-item-spec@1" } }, id: { schema: string },
+  id: { schema: string },
   projection: { schema: projection }, expansion: { schema: expansion },
 });
 const span = object({ startFrame: { schema: integer }, endFrameExclusive: { schema: positiveInteger } });
@@ -157,13 +157,13 @@ const item = object({
   tieBreak: { schema: string },
 });
 export const typographyTrackProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.typography-track-program@1" } }, id: { schema: string },
+  id: { schema: string },
   items: { schema: { kind: "array", minItems: 1, items: item } },
 });
-const typographyTrackHeaderSchema = object({ contract: { schema: { kind: "literal", value: "svml.typography-track-header@1" } }, id: { schema: string } });
-const typographyTrackSetSchema = object({ contract: { schema: { kind: "literal", value: "svml.typography-track-set@1" } }, items: { schema: { kind: "array", items: item } } });
+const typographyTrackHeaderSchema = object({ id: { schema: string } });
+const typographyTrackSetSchema = object({ items: { schema: { kind: "array", items: item } } });
 const textMaskSpecSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.text-mask-spec@1" } },
+
   id: { schema: string }, mode: { schema: enumString(["alpha", "luminance"]) },
   materialFit: { schema: enumString(["contain", "cover", "fill"]) },
 });

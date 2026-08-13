@@ -111,11 +111,11 @@ const samplingKeyframe = object({
 });
 const samplingMotion = object({ keyframes: { schema: { kind: "array", minItems: 2, items: samplingKeyframe } } });
 export const mediaPaintLayerSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-paint-layer-spec@1" } },
+
   id: { schema: string }, paint: { schema: paint }, opacity: { schema: unsigned },
 });
 export const mediaSampleLayerSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-sample-layer-spec@1" } },
+
   id: { schema: string }, trim: { schema: trim, optional: true }, occupancy: { schema: occupancy, optional: true },
   appearance: { schema: appearance }, samplingMotion: { schema: samplingMotion, optional: true },
 });
@@ -136,7 +136,7 @@ const sampleLayer = object({
 });
 const layer = { kind: "oneOf", variants: [paintLayer, sampleLayer] } as const;
 export const mediaLayerSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-layer-set@1" } },
+
   layers: { schema: { kind: "array", items: layer } },
 });
 
@@ -191,23 +191,23 @@ const soundTrigger: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "handoff" } }, handoffId: { schema: string } }),
 ] };
 export const mediaSoundSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-sound-spec@1" } },
+
   id: { schema: string }, trigger: { schema: soundTrigger }, gain: { schema: unsigned },
 });
 const soundEvent = object({ id: { schema: string }, trigger: { schema: soundTrigger }, source: { schema: audioSource }, gain: { schema: unsigned } });
 export const mediaSoundSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-sound-set@1" } },
+
   sounds: { schema: { kind: "array", items: soundEvent } },
 });
 export const mediaItemSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-item-spec@1" } }, id: { schema: string },
+  id: { schema: string },
   projection: { schema: projection }, expansion: { schema: object({ kind: { schema: { kind: "string", enum: ["one", "each"] } } }) },
   presentation: { schema: mediaFramePresentationSchema }, motion: { schema: mediaLifecycleMotionSchema }, stackingOrder: { schema: integer },
   sourceAudio: { schema: object({ fromLayer: { schema: string }, gain: { schema: unsigned } }), optional: true },
 });
 const sourceAudio = object({ fromLayer: { schema: string }, gain: { schema: unsigned } });
 export const mediaSequenceMemberSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-sequence-member-spec@1" } },
+
   id: { schema: string },
   sourceAudio: { schema: sourceAudio, optional: true },
 });
@@ -217,7 +217,7 @@ const unresolvedMember = object({
   sourceAudio: { schema: sourceAudio, optional: true },
 });
 export const mediaSequenceMemberSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-sequence-member-set@1" } },
+
   members: { schema: { kind: "array", items: unresolvedMember } },
 });
 const direction = { kind: "string", enum: ["left", "right", "up", "down"] } as const;
@@ -228,10 +228,10 @@ const handoffFields = {
   direction: { schema: direction, optional: true }, audio: { schema: { kind: "string", enum: ["cut", "crossfade"] } },
 } as const;
 export const mediaHandoffSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-handoff-spec@1" } }, ...handoffFields,
+  ...handoffFields,
 });
 export const mediaSequenceSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-sequence-spec@1" } },
+
   id: { schema: string }, presentation: { schema: mediaFramePresentationSchema },
   motion: { schema: mediaLifecycleMotionSchema }, stackingOrder: { schema: integer },
   handoffs: { schema: { kind: "array", minItems: 1, items: mediaHandoffSpecSchema } },
@@ -259,15 +259,15 @@ const resolvedSequence = object({
   sounds: { schema: { kind: "array", items: soundEvent } },
 });
 export const mediaTrackSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-track-set@1" } }, items: { schema: { kind: "array", items: resolvedItem } },
+  items: { schema: { kind: "array", items: resolvedItem } },
   sequences: { schema: { kind: "array", items: resolvedSequence } },
 });
 export const mediaTrackProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-track-program@1" } }, id: { schema: string },
+  id: { schema: string },
   items: { schema: { kind: "array", items: resolvedItem } }, sequences: { schema: { kind: "array", items: resolvedSequence } },
 });
 export const mediaTrackHeaderSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-track-header@1" } }, id: { schema: string },
+  id: { schema: string },
 });
 
 const validator = (digest: ReturnType<typeof digestOf>) => ({

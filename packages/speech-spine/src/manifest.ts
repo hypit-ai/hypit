@@ -52,13 +52,13 @@ const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; 
 const frameRate = object({ numerator: { schema: integer }, denominator: { schema: integer } });
 
 export const speechSpineProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.speech-spine-program@1" } },
+
   id: { schema: string },
   frameRate: { schema: frameRate },
 });
 
 export const speechSpineSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.speech-spine-set@1" } },
+
   takes: { schema: { kind: "array", items: object({
     segment: { schema: narrativeExcerptSchema },
     media: { schema: synchronizedMediaSchema },
@@ -71,7 +71,7 @@ export const speechSpineSetSchema: ValueSchema = object({
 });
 
 export const speechSpineVisualSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.speech-spine-visual-spec@1" } },
+
   stackingOrder: { schema: { kind: "number", integer: true } },
 });
 

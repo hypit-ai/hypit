@@ -23,7 +23,7 @@ function trackKey(track: Track): string {
 
 function filmProgramContent(value: FilmProgram): FilmProgram {
   return {
-    contract: "svml.film-program@1",
+
     id: value.id,
     clearColor: value.clearColor,
   };
@@ -31,7 +31,7 @@ function filmProgramContent(value: FilmProgram): FilmProgram {
 
 function filmTrackSetContent(value: FilmTrackSet): FilmTrackSet {
   return {
-    contract: "svml.film-track-set@1",
+
     tracks: [...value.tracks]
       .map((track) => structuredClone(track))
       .sort((left, right) => trackKey(left).localeCompare(trackKey(right))),
@@ -43,7 +43,6 @@ export function sealFilmProgram(value: FilmProgram): FilmProgram {
 }
 
 export function assertFilmProgramIdentity(program: FilmProgram): void {
-  if (program.contract !== "svml.film-program@1") throw new Error("Unsupported FilmProgram contract.");
   assertNonEmpty(program.id, "FilmProgram id");
   if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(program.clearColor)) {
     throw new Error("FilmProgram clear color is invalid.");
@@ -55,7 +54,6 @@ function sealFilmTrackSet(value: FilmTrackSet): FilmTrackSet {
 }
 
 export function assertFilmTrackSetIdentity(set: FilmTrackSet): void {
-  if (set.contract !== "svml.film-track-set@1") throw new Error("Unsupported FilmTrackSet contract.");
   const ids = new Set<string>();
   for (const track of set.tracks) {
     if (ids.has(track.id)) throw new Error(`FilmTrackSet contains duplicate Track id ${track.id}.`);
@@ -67,7 +65,7 @@ export function assertFilmTrackSetIdentity(set: FilmTrackSet): void {
 
 export function createFilmTrackSet(): FilmTrackSet {
   return sealFilmTrackSet({
-    contract: "svml.film-track-set@1",
+
     tracks: [],
   });
 }
@@ -81,7 +79,7 @@ function appendTrack(set: FilmTrackSet, programSpace: ProgramSpace, track: Track
     throw new Error(`FilmTrackSet already contains Track id ${track.id}.`);
   }
   return sealFilmTrackSet({
-    contract: "svml.film-track-set@1",
+
     tracks: [...set.tracks, track],
   });
 }
