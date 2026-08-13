@@ -1,12 +1,10 @@
 export {
-  AuthorModuleError,
-  elaborateAuthorModule,
-  sealAuthorModule,
+  AuthorGraphError,
+  elaborateAuthorGraph,
 } from "./author.js";
 export type {
   AuthorComponent,
   AuthorComponentOutputRef,
-  AuthorModule,
   AuthorOutputBinding,
   AuthorRecordRef,
   AuthorValueRef,

@@ -4,7 +4,6 @@ import {
   digestOf,
   isDigest,
   link,
-  sealTypedModule,
   verifyRecord,
 } from "@narratage/core";
 import type {
@@ -14,14 +13,16 @@ import type {
   LinkedProgram,
   ResolvedModuleClosure,
   TypeRef,
-  TypedModule,
   TypedRecord,
 } from "@narratage/protocol";
 import {
+  compiledSourceIdentity,
   maskSourceHeader,
   parseSourceHeader,
+  verifyCompiledSourceIdentity,
 } from "@narratage/source";
 import type {
+  CompiledSourceIdentity,
   ResolvedSourceAsset,
   SourceAssetRequest,
   SourceAssetResolver,
@@ -32,12 +33,10 @@ import type {
 } from "@narratage/source";
 
 import {
-  elaborateAuthorModule,
-  sealAuthorModule,
+  elaborateAuthorGraph,
 } from "./author.js";
 import type {
   AuthorComponent,
-  AuthorModule,
   AuthorValueRef,
 } from "./author.js";
 import type { GraphFragment } from "./fragment.js";
@@ -84,8 +83,8 @@ export type AuthorSourceDecodeContext = {
 };
 
 export type DecodedAuthorSource = {
-  readonly module: TypedModule;
-  readonly author: AuthorModule;
+  readonly records: readonly TypedRecord[];
+  readonly components: readonly AuthorComponent[];
   readonly fragments: readonly GraphFragment[];
   readonly exports: readonly AuthorSourceExport[];
 };
@@ -132,13 +131,9 @@ export type AuthorRecordAdmitter = (
   record: TypedRecord,
 ) => Awaitable<TypedRecord>;
 
-export type SourceClosureUnit = {
+export type SourceClosureUnit = CompiledSourceIdentity & {
   readonly format: "svml.source-unit@1";
   readonly id: Digest;
-  readonly frontend: string;
-  readonly frontendDigest: Digest;
-  readonly sourceDigest: Digest;
-  readonly semanticDigest: Digest;
   readonly imports: readonly {
     readonly alias: string;
     readonly source: Digest;
@@ -197,10 +192,7 @@ export class SourceClosureError extends Error {
 function sourceUnitContent(unit: SourceClosureUnit): Omit<SourceClosureUnit, "id"> {
   return {
     format: "svml.source-unit@1",
-    frontend: unit.frontend,
-    frontendDigest: unit.frontendDigest,
-    sourceDigest: unit.sourceDigest,
-    semanticDigest: unit.semanticDigest,
+    ...compiledSourceIdentity(unit),
     imports: [...unit.imports]
       .map((item) => ({
         alias: item.alias,
@@ -281,7 +273,7 @@ function hygienizeSource(
     exportNames.add(item.name);
     const ref = item.ref;
     if (ref.kind === "record") {
-      const record = decoded.module.records.find((candidate) => candidate.id === ref.id);
+      const record = decoded.records.find((candidate) => candidate.id === ref.id);
       assert(record !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unknown Record ${ref.id}`);
       assert(
         sameType(record.type, item.type),
@@ -289,7 +281,7 @@ function hygienizeSource(
         `${source.name}.${item.name} declares ${typeName(item.type)} but exports ${typeName(record.type)}`,
       );
     } else {
-      const component = decoded.author.components.find((candidate) => candidate.id === ref.component);
+      const component = decoded.components.find((candidate) => candidate.id === ref.component);
       assert(component !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unknown component ${ref.component}`);
       const fragment = decoded.fragments.find((candidate) => candidate.id === component.fragment);
       assert(fragment !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unavailable Fragment ${component.fragment}`);
@@ -304,27 +296,27 @@ function hygienizeSource(
   }
 
   const semanticDigest = digestOf({
-    records: [...decoded.module.records]
+    records: [...decoded.records]
       .sort((left, right) => left.id.localeCompare(right.id))
       .map((record) => ({
         id: record.id,
         type: record.type,
         value: record.value,
       })),
-    components: decoded.author.components,
+    components: decoded.components,
     fragments: [...decoded.fragments].map((fragment) => fragment.id).sort(),
     exports: [...decoded.exports].sort((left, right) => left.name.localeCompare(right.name)),
   });
-  const recordIds = new Map(decoded.module.records.map((record) => [
+  const recordIds = new Map(decoded.records.map((record) => [
     record.id,
     hygienicId("source-record", semanticDigest, record.id),
   ]));
-  const componentIds = new Map(decoded.author.components.map((component) => [
+  const componentIds = new Map(decoded.components.map((component) => [
     component.id,
     hygienicId("source-component", semanticDigest, component.id),
   ]));
   const outputIds = new Map<string, string>();
-  for (const component of decoded.author.components) {
+  for (const component of decoded.components) {
     for (const output of Object.values(component.outputs)) {
       outputIds.set(output, hygienicId("source-output", semanticDigest, output));
     }
@@ -339,11 +331,11 @@ function hygienizeSource(
       output: ref.output,
     };
   };
-  const records = decoded.module.records.map((record) => ({
+  const records = decoded.records.map((record) => ({
     ...record,
     id: recordIds.get(record.id) as string,
   }));
-  const components = decoded.author.components.map((component) => ({
+  const components = decoded.components.map((component) => ({
     id: componentIds.get(component.id) as string,
     fragment: component.fragment,
     inputs: Object.fromEntries(Object.entries(component.inputs).map(([name, ref]) => [name, mapRef(ref)])),
@@ -497,7 +489,7 @@ export async function compileSourceClosure(
       },
     });
     const admittedRecords: TypedRecord[] = [];
-    for (const record of rawDecoded.module.records) {
+    for (const record of rawDecoded.records) {
       const admitted = request.admitRecord === undefined
         ? record
         : await request.admitRecord(request.closure, record);
@@ -524,11 +516,9 @@ export async function compileSourceClosure(
     }
     const decoded: DecodedAuthorSource = {
       ...rawDecoded,
-      module: sealTypedModule({
-        records: admittedRecords,
-      }),
+      records: admittedRecords,
     };
-    link(request.closure, [decoded.module]);
+    link(request.closure, decoded.records);
     const result = hygienizeSource(source, digestOf(rawSource.text), frontend, decoded, imports);
     visiting.pop();
     cache.set(key, result);
@@ -554,21 +544,16 @@ export async function compileSourceClosure(
     );
     fragments.set(fragment.id, fragment);
   }
-  const author = sealAuthorModule({
-    components: ordered.flatMap((unit) => unit.components),
-  });
-  const module = sealTypedModule({
-    records,
-  });
-  const program = link(request.closure, [module]);
-  const graph = elaborateAuthorModule(program, author, (id) => fragments.get(id));
+  const components = ordered.flatMap((unit) => unit.components);
+  const program = link(request.closure, records);
+  const graph = elaborateAuthorGraph(program, components, (id) => fragments.get(id));
   const units = ordered.map((unit) => unit.unit).sort((left, right) => left.id.localeCompare(right.id));
   const closureContent = {
     format: "svml.source-closure@1" as const,
     entry: entry.unit.id,
     units,
   };
-  const components = new Map(author.components.map((component) => [component.id, component]));
+  const componentsById = new Map(components.map((component) => [component.id, component]));
   const sourceClosure: SourceClosure = { ...closureContent, id: digestOf(closureContent) };
   verifySourceClosure(sourceClosure);
   return {
@@ -579,7 +564,7 @@ export async function compileSourceClosure(
       .map((item) => ({
         name: item.name,
         type: item.type,
-        ref: graphRefForExport(item, components),
+        ref: graphRefForExport(item, componentsById),
       }))
       .sort((left, right) => left.name.localeCompare(right.name)),
   };
@@ -594,9 +579,7 @@ export function verifySourceClosure(closure: SourceClosure): void {
     assert(isDigest(unit.id), "INVALID_SOURCE_UNIT_DIGEST", "SourceUnit digest is invalid");
     assert(unit.id === digestOf(sourceUnitContent(unit)), "SOURCE_UNIT_DIGEST_MISMATCH", `SourceUnit ${unit.id} digest differs`);
     assert(!units.has(unit.id), "DUPLICATE_SOURCE_UNIT", `Source Closure repeats ${unit.id}`, unit.id);
-    assert(isDigest(unit.frontendDigest), "INVALID_FRONTEND_DIGEST", `${unit.id} Frontend digest is invalid`);
-    assert(isDigest(unit.sourceDigest), "INVALID_SOURCE_DIGEST", `${unit.id} source digest is invalid`);
-    assert(isDigest(unit.semanticDigest), "INVALID_SOURCE_SEMANTIC_DIGEST", `${unit.id} semantic digest is invalid`);
+    verifyCompiledSourceIdentity(unit);
     units.set(unit.id, unit);
   }
   assert(units.has(closure.entry), "UNKNOWN_SOURCE_ENTRY", `Source Closure entry ${closure.entry} is absent`);

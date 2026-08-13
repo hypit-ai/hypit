@@ -11,7 +11,7 @@ import type {
   StoredValue,
   TypeRef,
 } from "@narratage/protocol";
-import type { SourceHeader, SourceUnit } from "@narratage/source";
+import type { CompiledSourceIdentity, SourceHeader, SourceUnit } from "@narratage/source";
 
 export type RunSourceUnit = SourceUnit;
 
@@ -113,13 +113,9 @@ export interface RunFrontendRegistryLike {
 }
 
 /** One self-contained Run Source identity. Run Sources do not recursively import other Run Sources. */
-export type RunSourceClosure = {
+export type RunSourceClosure = CompiledSourceIdentity & {
   readonly format: "svml.run-source-closure@1";
   readonly id: Digest;
-  readonly frontend: string;
-  readonly frontendDigest: Digest;
-  readonly sourceDigest: Digest;
-  readonly semanticDigest: Digest;
 };
 
 export type RunFragmentPackage = {

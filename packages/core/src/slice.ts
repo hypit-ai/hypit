@@ -7,7 +7,7 @@ import type {
 } from "@narratage/protocol";
 
 import { sealCompiledGraph } from "./graph.js";
-import { createResolvedClosure, link, sealTypedModule } from "./link.js";
+import { createResolvedClosure, link } from "./link.js";
 import { compileBuild } from "./plan.js";
 
 function moduleKey(ref: ModuleRef): string {
@@ -86,9 +86,7 @@ export function sliceExecution(
   const closure = createResolvedClosure(program.closure.modules
     .filter((item) => requiredModules.has(moduleKey(item.ref)))
     .map((item) => item.manifest));
-  const slicedProgram = link(closure, authoredRecords.length === 0 ? [] : [sealTypedModule({
-    records: authoredRecords,
-  })]);
+  const slicedProgram = link(closure, authoredRecords);
   return {
     program: slicedProgram,
     graph: sealCompiledGraph({

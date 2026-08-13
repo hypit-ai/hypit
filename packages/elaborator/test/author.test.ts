@@ -7,16 +7,14 @@ import {
   link,
   sealBuildRequest,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 import {
-  AuthorModuleError,
-  elaborateAuthorModule,
-  sealAuthorModule,
+  AuthorGraphError,
+  elaborateAuthorGraph,
   sealGraphFragment,
 } from "@narratage/elaborator";
-import type { GraphFragment } from "@narratage/elaborator";
+import type { AuthorComponent, GraphFragment } from "@narratage/elaborator";
 import type {
   LinkedProgram,
   ModuleManifest,
@@ -80,13 +78,11 @@ function program(): LinkedProgram {
   const origin = {
     kind: "authored" as const,
   };
-  return link(closure, [sealTypedModule({
-    records: [sealRecord({
+  return link(closure, [sealRecord({
       id: "sample:soil",
       type: sampleType,
       value: { kind: "inline", value: "soil" },
       origin,
-    })],
   })]);
 }
 
@@ -142,8 +138,7 @@ const fragments = new Map([
 
 test("Author linking resolves forward component references without Text or video contracts", () => {
   const linked = program();
-  const author = sealAuthorModule({
-    components: [
+  const components = [
       {
         id: "final-report",
         fragment: reportFragment.id,
@@ -162,10 +157,9 @@ test("Author linking resolves forward component references without Text or video
         inputs: { sample: { kind: "record", id: "sample:soil" } },
         outputs: { result: "measurement:soil" },
       },
-    ],
-  });
+  ] satisfies readonly AuthorComponent[];
 
-  const elaborated = elaborateAuthorModule(linked, author, (id) => fragments.get(id));
+  const elaborated = elaborateAuthorGraph(linked, components, (id) => fragments.get(id));
   assert.equal(elaborated.outputs.length, 2);
   assert.deepEqual(
     elaborated.outputs.map((output) => output.id),
@@ -193,8 +187,7 @@ test("Author linking resolves forward component references without Text or video
 });
 
 test("Author linking rejects cycles before producing a Core graph", () => {
-  const author = sealAuthorModule({
-    components: [
+  const components = [
       {
         id: "left",
         fragment: echoFragment.id,
@@ -211,25 +204,22 @@ test("Author linking rejects cycles before producing a Core graph", () => {
         },
         outputs: { result: "sample:right" },
       },
-    ],
-  });
+  ] satisfies readonly AuthorComponent[];
   assert.throws(
-    () => elaborateAuthorModule(program(), author, (id) => fragments.get(id)),
-    (error: unknown) => error instanceof AuthorModuleError && error.code === "AUTHOR_COMPONENT_CYCLE",
+    () => elaborateAuthorGraph(program(), components, (id) => fragments.get(id)),
+    (error: unknown) => error instanceof AuthorGraphError && error.code === "AUTHOR_COMPONENT_CYCLE",
   );
 });
 
 test("Author linking checks symbolic input types before Graph verification", () => {
-  const author = sealAuthorModule({
-    components: [{
+  const components = [{
       id: "final-report",
       fragment: reportFragment.id,
       inputs: { measurement: { kind: "record", id: "sample:soil" } },
       outputs: { result: "report:invalid" },
-    }],
-  });
+  }] satisfies readonly AuthorComponent[];
   assert.throws(
-    () => elaborateAuthorModule(program(), author, (id) => fragments.get(id)),
-    (error: unknown) => error instanceof AuthorModuleError && error.code === "AUTHOR_INPUT_TYPE_MISMATCH",
+    () => elaborateAuthorGraph(program(), components, (id) => fragments.get(id)),
+    (error: unknown) => error instanceof AuthorGraphError && error.code === "AUTHOR_INPUT_TYPE_MISMATCH",
   );
 });

@@ -52,18 +52,18 @@ test("Markup learns <script> only from an imported Script Manifest", async () =>
     scriptContext(),
   );
 
-  assert.equal(result.module.records.length, 6);
-  assert.equal(result.module.records[0]?.id, "story");
-  assert.equal(result.module.records[0]?.type.name, "Narrative");
-  assert.equal(result.module.records.some((record) =>
+  assert.equal(result.records.length, 6);
+  assert.equal(result.records[0]?.id, "story");
+  assert.equal(result.records[0]?.type.name, "Narrative");
+  assert.equal(result.records.some((record) =>
     record.id === "story.segment.opening" && record.type.name === "NarrativeExcerpt"), true);
-  assert.equal(result.module.records.some((record) =>
+  assert.equal(result.records.some((record) =>
     record.id === "story.segment.opening.dialogue" && record.type.name === "Text"), true);
-  assert.equal(result.module.records.some((record) =>
+  assert.equal(result.records.some((record) =>
     record.id === "story.segment.opening.speech" && record.type.name === "Text"), true);
-  assert.equal(result.module.records.some((record) =>
+  assert.equal(result.records.some((record) =>
     record.id === "story.caption" && record.type.name === "CaptionDisplaySequence"), true);
-  assert.equal(result.module.records.some((record) =>
+  assert.equal(result.records.some((record) =>
     record.id === "story.caption.correspondence" && record.type.name === "CaptionCorrespondence"), true);
 });
 
@@ -91,8 +91,8 @@ test("the same Script meaning has the same authored Record digest across reflow"
     scriptContext(),
   );
 
-  assert.equal(compact.module.records[0]?.digest, multiline.module.records[0]?.digest);
-  assert.equal(compact.module.records[1]?.digest, multiline.module.records[1]?.digest);
+  assert.equal(compact.records[0]?.digest, multiline.records[0]?.digest);
+  assert.equal(compact.records[1]?.digest, multiline.records[1]?.digest);
 });
 
 test("without the import, Markup has no hard-coded knowledge of Script", async () => {
@@ -219,8 +219,8 @@ test("a module can use Markup's generic structured parser without adding another
     { closure, registry, resolveModule: () => module },
   );
 
-  assert.equal(result.module.records[0]?.id, "card");
-  assert.equal(isDigest(result.module.records[0]?.digest ?? ""), true);
+  assert.equal(result.records[0]?.id, "card");
+  assert.equal(isDigest(result.records[0]?.digest ?? ""), true);
 
   const overreachingRegistry = new MarkupSurfaceRegistry();
   overreachingRegistry.registerStructured({ module, declaration: cardSurface, handler: ({ element }) => ({

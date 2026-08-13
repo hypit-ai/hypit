@@ -18,7 +18,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 import { ProducerRegistry, NodeDriver } from "@narratage/driver-node";
@@ -134,9 +133,7 @@ function createProgram(): LinkedProgram {
       kind: "authored",
     },
   });
-  return link(closure, [sealTypedModule({
-    records: [request],
-  })]);
+  return link(closure, [request]);
 }
 
 function createGraph(program: LinkedProgram): CompiledGraph {

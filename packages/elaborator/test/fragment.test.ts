@@ -12,7 +12,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 import {
@@ -80,8 +79,7 @@ function program(): LinkedProgram {
     origin,
   });
   const canvas = rawCanvas;
-  return link(closure, [sealTypedModule({
-    records: [
+  return link(closure, [
       sealRecord({
         id: "request:root",
         type: requestType,
@@ -95,8 +93,7 @@ function program(): LinkedProgram {
         origin,
       }),
       canvas,
-    ],
-  })]);
+  ]);
 }
 
 function speechFragment(): GraphFragment {

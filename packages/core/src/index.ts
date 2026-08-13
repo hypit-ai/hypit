@@ -8,7 +8,6 @@ export {
   resolveProducer,
   resolveType,
   sealRecord,
-  sealTypedModule,
   verifyClosure,
   verifyRecord,
   verifyRecordStructure,
