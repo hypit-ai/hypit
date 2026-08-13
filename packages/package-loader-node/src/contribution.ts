@@ -1,12 +1,4 @@
-import {
-  registerProducerFacets,
-  registerTypeValidatorFacets,
-} from "@narratage/component-kit";
-import type {
-  ComponentPackage,
-  ProducerRegistrar,
-  TypeValidatorRegistrar,
-} from "@narratage/component-kit";
+import type { ComponentPackage } from "@narratage/component-kit";
 import { canonicalize } from "@narratage/protocol";
 
 import type { NodeModuleContribution, NodePackageContribution } from "./types.js";
@@ -31,8 +23,6 @@ function assertPackage(value: NodePackageContribution): void {
     hostFacets.add(key);
   }
 }
-
-export { assertPackage as assertNodePackageContribution };
 
 function facetKey(
   ref: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
@@ -95,15 +85,4 @@ export function collectNodePackageComponents(
     }
   }
   return components;
-}
-
-export function installNodePackageComponents(
-  packages: readonly NodePackageContribution[],
-  producers: ProducerRegistrar,
-  validators: TypeValidatorRegistrar,
-): void {
-  for (const component of collectNodePackageComponents(packages)) {
-    registerTypeValidatorFacets(validators, component.validators ?? []);
-    registerProducerFacets(producers, component.producers ?? []);
-  }
 }

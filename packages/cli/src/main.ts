@@ -400,6 +400,7 @@ function assertCommandOptions(args: ParsedArgs): void {
       add("--max-wait-ms", "--runtime", "--package-lock", "--package-root", "--package", "--apply");
       break;
     case "runtime":
+      add("--runtime");
       if (args.action === "up" || args.action === "down") add("--max-wait-ms");
       break;
     case "gc":
@@ -870,7 +871,8 @@ export async function runCli(
     || args.command === "runtime" || args.command === "queue" || args.command === "operations"
     || args.command === "operation";
   const operational = known || args.command === "auth";
-  const fileOptional = args.command === "builds" || args.command === "history" || args.command === "queue";
+  const fileOptional = args.command === "builds" || args.command === "history" || args.command === "queue"
+    || ((args.command === "services" || args.command === "runtime") && args.runtime !== undefined);
   if (!operational || (!fileOptional && args.file === undefined)) {
     throw new Error(usage());
   }
@@ -1148,7 +1150,10 @@ export async function runCli(
     return;
   }
   if (args.command === "services") {
-    if (args.runtime !== undefined || args.packageLock !== undefined || args.packageRoot !== undefined
+    if (args.file !== undefined && args.runtime !== undefined) {
+      throw new Error("services reads all deployment selection from the Runtime Profile itself; provide that Profile only once");
+    }
+    if (args.packageLock !== undefined || args.packageRoot !== undefined
       || args.packages.length > 0 || args.apply) {
       throw new Error("services reads all deployment selection from the Runtime Profile itself");
     }
@@ -1158,7 +1163,9 @@ export async function runCli(
     if (args.action !== "up" && args.maxWaitMs !== undefined) {
       throw new Error("--max-wait-ms applies to services up");
     }
-    const profile = resolve(args.file!);
+    const profileInput = args.runtime ?? args.file;
+    if (profileInput === undefined) throw new Error("services requires a Runtime Profile");
+    const profile = resolve(profileInput);
       const result = args.action === "up"
       ? await distribution.externalServices.up(profile, {
         ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
@@ -1193,7 +1200,12 @@ export async function runCli(
     if (args.action !== "up" && args.action !== "down" && args.action !== "status" && args.action !== "logs") {
       throw new Error("runtime takes up, down, status or logs");
     }
-    const profile = resolve(args.file!);
+    if (args.file !== undefined && args.runtime !== undefined) {
+      throw new Error("runtime accepts the Runtime Profile either positionally or with --runtime, not both");
+    }
+    const profileInput = args.runtime ?? args.file;
+    if (profileInput === undefined) throw new Error("runtime requires a Runtime Profile");
+    const profile = resolve(profileInput);
     if (args.action === "up") {
       // Validate the exact Runtime Closure against unfinished work before replacing a stale Worker
       // or starting external programs. A refusal must leave the old execution environment intact.
@@ -1500,7 +1512,10 @@ export async function runCli(
             core: entry.core,
             createdAt: entry.createdAt,
             updatedAt: entry.updatedAt,
-            status: status.build?.state.status,
+            status: status.dispatch === undefined
+              ? status.build?.state.status
+              : submissionStatus(status.dispatch),
+            ...(status.build === undefined ? {} : { coreStatus: status.build.state.status }),
             ...summarizeBuildCatalog(entry, status.build?.state),
           };
         }));
@@ -1591,9 +1606,15 @@ export async function runCli(
         const status = await runtime.status(args.file!);
         if (status.build === undefined) throw new Error(`Build ${args.file} does not exist`);
         const archive = inspectBuild(status.build.state, status.catalog);
+        const effectiveStatus = status.dispatch === undefined
+          ? status.build.state.status
+          : submissionStatus(status.dispatch);
         const machine = {
           build: status.build.build,
           revision: status.build.revision,
+          status: effectiveStatus,
+          coreStatus: status.build.state.status,
+          dispatch: status.dispatch,
           archive,
           operations: status.operations.map((operation) => ({
             id: operation.id,
@@ -1634,7 +1655,8 @@ export async function runCli(
             ? []
             : [`Other accepted outputs  ${otherAccepted.length} · use --verbose to list them`];
         writeOperational(machine, "Build archive detail", "info", [
-          ["Build", status.build.build], ["Status", archive.status],
+          ["Build", status.build.build], ["Status", effectiveStatus],
+          ...(effectiveStatus === archive.status ? [] : [["Core", archive.status] as const]),
           ["Targets", String(archive.targets.length)], ["Accepted records", String(archive.records.length)],
           ["Operations", String(status.operations.length)],
           ...(args.verbose ? [["Revision", String(status.build.revision)] as const] : []),
@@ -2031,9 +2053,7 @@ export async function runCli(
       run: loaded.path,
       outputNames: Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
         item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : [])),
-      candidateNames: Object.fromEntries(Object.entries(loaded.run.candidates)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([name, id]) => [id, name])),
+      satisfactionNames: loaded.run.satisfactionNames,
     });
   } finally {
     await runtime?.close();

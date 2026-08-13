@@ -5,6 +5,5 @@ export {
 } from "./frontend.js";
 export {
   parseRunDocument,
-  parseTypeRef,
   RunSyntaxError,
 } from "./syntax.js";

@@ -118,7 +118,7 @@
   />
 
   <space:Frame id="callout-frame" within={vertical}
-    left="8%" top="10%" right="8%" bottom="80%"/>
+    left="8%" top="10%" right="92%" bottom="20%"/>
 
   <text:Style id="callout-style" recipe={studio.text.callout} font={caption-font}/>
   <text:Track id="callout" space={speech.space} map={timing.map}>

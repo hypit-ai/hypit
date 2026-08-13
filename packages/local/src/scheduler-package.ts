@@ -7,35 +7,13 @@ import type { RuntimeServicePackage } from "@narratage/runtime";
 
 import { durableLocalWorkerFactory } from "./worker.js";
 
-export const localRuntimeModuleRef = {
+const localRuntimeModuleRef = {
   name: "@narratage/local",
   version: "1",
 } as const;
 
-export const localSchedulerImplementationDigest = digestOf("@narratage/local/scheduler@1");
-export const localWorkerImplementationDigest = digestOf("@narratage/local/worker@1");
-
-export function createLocalSchedulerPackage(
-  instance = "scheduler.local",
-): RuntimeServicePackage {
-  return defineRuntimeServicePackage({
-    module: localRuntimeModuleRef,
-    services: [{
-      role: "scheduler",
-      facet: "scheduler",
-      instance,
-      implementation: {
-        digest: localSchedulerImplementationDigest,
-      },
-      configuration: { algorithm: "queue-free-atomic-resources", version: 1 },
-      service: {
-        create(executor, options) {
-          return new LocalBuildScheduler(executor, options);
-        },
-      },
-    }],
-  });
-}
+const localSchedulerImplementationDigest = digestOf("@narratage/local/scheduler@1");
+const localWorkerImplementationDigest = digestOf("@narratage/local/worker@1");
 
 export function createLocalExecutionPackage(
   instance: string,

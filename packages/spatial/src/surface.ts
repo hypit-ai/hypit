@@ -224,6 +224,7 @@ function frameSurface(
       { id, fragment: fragment.id, inputs: { parent: parent.ref, program: { kind: "record" as const, id: programId } }, outputs: { frame: id }, range: element.range },
     ],
     fragments: [...parent.fragments, fragment],
+    exports: [id],
   };
 }
 
@@ -287,5 +288,6 @@ export const decodeAspectFrameSurface: StructuredSurfaceHandler = ({ element, re
       { id, fragment: aspectFrameFragment.id, inputs: { parent: parent.ref, extent: extent.ref, program: { kind: "record" as const, id: programId } }, outputs: { frame: id }, range: element.range },
     ],
     fragments: [...parent.fragments, aspectFrameFragment],
+    exports: [id],
   };
 };

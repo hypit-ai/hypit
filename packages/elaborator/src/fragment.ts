@@ -1,5 +1,4 @@
 import {
-  canonicalStringify,
   digestOf,
   isDigest,
   resolveProducer,
@@ -495,26 +494,6 @@ export function bindAuthorFragment(
   return bindExports(instance, outputs, true);
 }
 
-/**
- * Export selected Run-Graph values and their explicit Satisfaction edges.
- * The Candidate identity is independent of the Logical Output named by `outputs`.
- */
-export function bindCandidateFragment(
-  instance: ElaboratedFragment,
-  outputs: Readonly<Record<string, string>>,
-): FragmentContribution {
-  const contribution = exportRunFragment(instance, Object.keys(outputs));
-  return {
-    outputs: [],
-    candidates: contribution.candidates,
-    operations: contribution.operations,
-    satisfactions: contribution.exports.map((item) => ({
-      output: outputs[item.name] as string,
-      candidate: item.candidate,
-    })),
-  };
-}
-
 /** Merge already elaborated contributions; final Graph validation remains Core's authority. */
 export function mergeFragmentContributions(
   graph: Pick<CompiledGraph, "outputs" | "candidates" | "operations">,
@@ -525,11 +504,4 @@ export function mergeFragmentContributions(
     candidates: [...graph.candidates, ...contributions.flatMap((item) => item.candidates)],
     operations: [...graph.operations, ...contributions.flatMap((item) => item.operations)],
   };
-}
-
-export function sameFragmentInstance(
-  left: ElaboratedFragment,
-  right: ElaboratedFragment,
-): boolean {
-  return canonicalStringify(left) === canonicalStringify(right);
 }

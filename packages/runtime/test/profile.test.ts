@@ -170,7 +170,7 @@ test("recoverable Endpoints require an OperationStore before any paid execution"
   );
 });
 
-test("a selected CredentialStore is part of every explicit Runtime Profile", () => {
+test("credentialed Endpoints require a selected CredentialStore", () => {
   const registry = new RuntimeModuleRegistry();
   const configured = manifest();
   registry.register({
@@ -179,7 +179,14 @@ test("a selected CredentialStore is part of every explicit Runtime Profile", () 
       ? { ...facet, credentialSlots: ["apiKey"] }
       : facet),
   });
-  assert.doesNotThrow(() => resolveRuntimeProfile(registry, profile()));
+  const withoutCredentials = profile();
+  assert.throws(
+    () => resolveRuntimeProfile(registry, sealRuntimeProfile({
+      ...withoutCredentials,
+      stores: { ...withoutCredentials.stores, credentials: [] },
+    })),
+    /credentialed Endpoints require a CredentialStore/u,
+  );
 });
 
 test("Coverage rejects an unbound demanded Need before the Scheduler starts", () => {

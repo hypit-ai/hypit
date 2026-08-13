@@ -128,7 +128,7 @@ async function compileDocument(body: string) {
   }, frontends);
 }
 
-test("Run compilation consumes decode output without repeating package discovery", async () => {
+test("Run Markup compilation consumes decode output without repeating package discovery", async () => {
   const frontends = new RunFrontendRegistry();
   frontends.register({
     ...runMarkupFrontend,
@@ -267,6 +267,16 @@ test("Run imports are a prologue and Runtime settings are not language elements"
   assert.throws(() => parseRunDocument("bad.svrun", `<svrun version="1">
     <author source="./main.svml"/><target output="film"/><provider name="kie"/>
   </svrun>`), /does not accept <provider>/u);
+});
+
+test("duplicate satisfactions fail at the author-written Run edge", () => {
+  assert.throws(() => parseRunDocument("bad.svrun", `<svrun version="1">
+    <author source="./main.svml"/><target output="left"/>
+    <value id="one" type="example.run@1#Media" from="./one.json"/>
+    <value id="two" type="example.run@1#Media" from="./two.json"/>
+    <satisfy output="left" candidate="one"/>
+    <satisfy output="left" candidate="two"/>
+  </svrun>`), /bad\.svrun:6:\d+:.*repeats output left/u);
 });
 
 test("a Target-only source still compiles one mandatory Run Graph", async () => {

@@ -163,6 +163,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
   const fragments = new Map<string, GraphFragment>();
   const recordIds = new Set<string>();
   const componentIds = new Set<string>();
+  const privateBindings = new Set<string>();
   let cursor = discovery.bodyStart;
   let closed = false;
   while (cursor < source.text.length) {
@@ -247,6 +248,34 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         },
       });
       cursor = parsed.nextOffset;
+    }
+    if (output.exports !== undefined) {
+      const generated = [
+        ...output.records.map((draft) => draft.id),
+        ...output.components.flatMap((draft) => Object.values(draft.outputs)),
+      ];
+      const available = new Set(generated);
+      const published = new Set<string>();
+      for (const name of output.exports) {
+        if (!available.has(name)) {
+          fail(
+            source,
+            "MARKUP_SURFACE_EXPORT_UNKNOWN",
+            `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} publishes unknown binding ${name}.`,
+            opening.start,
+          );
+        }
+        if (published.has(name)) {
+          fail(
+            source,
+            "MARKUP_SURFACE_EXPORT_DUPLICATE",
+            `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} publishes ${name} more than once.`,
+            opening.start,
+          );
+        }
+        published.add(name);
+      }
+      for (const name of generated) if (!published.has(name)) privateBindings.add(name);
     }
     for (const draft of output.records) {
       if (
@@ -355,7 +384,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
       resolveImportedRef(ref),
     ])),
   }));
-  const exports: AuthorSourceExport[] = records.map((record) => ({
+  const exports: AuthorSourceExport[] = records.filter((record) => !privateBindings.has(record.id)).map((record) => ({
     name: record.id,
     ref: { kind: "record", id: record.id },
     type: record.type,
@@ -364,6 +393,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
   for (const component of resolvedComponents) {
     const fragment = fragments.get(component.fragment) as GraphFragment;
     for (const [output, name] of Object.entries(component.outputs)) {
+      if (privateBindings.has(name)) continue;
       if (exportNames.has(name)) fail(source, "MARKUP_EXPORT_DUPLICATE", `Duplicate public export ${name}.`);
       const declaration = fragment.exports.find((item) => item.name === output);
       if (declaration === undefined) {
