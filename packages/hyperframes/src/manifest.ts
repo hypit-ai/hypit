@@ -21,7 +21,6 @@ const nonNegativeInteger = { kind: "number", integer: true, minimum: 0 } as cons
 export const hyperframesDocumentSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.hyperframes-document@1" } },
     visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } },
     frameRate: { schema: {
       kind: "object",

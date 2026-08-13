@@ -41,7 +41,6 @@ const RENDERER_IMPLEMENTATION = digestOf("hyperframes-lambda:test-renderer-deplo
 
 function documentFixture(fps = 30, denominator = 1): HyperframesDocument {
   return {
-    contract: "svml.hyperframes-document@1",
     visualIr: "svml.visual-ir@1",
     frameRate: { numerator: fps, denominator },
     frameCount: 60,

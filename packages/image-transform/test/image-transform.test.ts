@@ -26,7 +26,6 @@ test("the GPT Image cleanup is one explicit reusable Program", () => {
     saturationRecovery: 1.02,
   }, { kind: "encode", format: "png" }]);
   assert.throws(() => sealImageTransformProgram({
-    contract: "svml.image-transform-program@1",
     operations: [{ kind: "encode", format: "png" }, { kind: "blur", sigma: 1 }],
   }), /encode must be final/u);
 });

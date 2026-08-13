@@ -2,7 +2,6 @@ import type { BlobRef } from "@narratage/protocol";
 import type { MediaInspection, MediaRational, MediaStreamSelection, RenderedVisual, TimelineAudio } from "@narratage/media";
 
 export type MediaSelectionRequest = {
-  readonly contract: "svml.media-selection-request@1";
   readonly video:
     | { readonly mode: "primary-moving" }
     | { readonly mode: "stream-index"; readonly streamIndex: number }
@@ -46,12 +45,10 @@ export type MediaTransformOperation =
 
 /** Ordered, deterministic A/V operations over already synchronized media. */
 export type MediaTransformProgram = {
-  readonly contract: "svml.media-transform-program@1";
   readonly operations: readonly MediaTransformOperation[];
 };
 
 export type AudioExtractionRequest = {
-  readonly contract: "svml.audio-extraction-request@1";
   readonly audio: Exclude<MediaAudioSelector, { readonly mode: "none" }>;
   readonly output: {
     readonly container: "wav";
@@ -62,7 +59,6 @@ export type AudioExtractionRequest = {
 };
 
 export type FrameExtractionRequest = {
-  readonly contract: "svml.frame-extraction-request@1";
   readonly video: MediaVideoSelector;
   readonly at:
     | { readonly kind: "first" }
@@ -134,7 +130,6 @@ export type AudioProgramClip = {
 
 /** Pure, content-addressed plan. Executing it is always a Provider Need. */
 export type AudioProgramPlan = {
-  readonly contract: "svml.audio-program-plan@1";
   readonly frameRate: MediaRational;
   readonly frameCount: number;
   readonly sampleRate: 48_000;

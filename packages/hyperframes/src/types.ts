@@ -18,7 +18,6 @@ export type HyperframesCanvas = {
 
 /** Deterministic, portable input to a local or remote HyperFrames renderer. */
 export type HyperframesDocument = HyperframesFrameDomain & {
-  readonly contract: "svml.hyperframes-document@1";
   readonly visualIr: typeof VISUAL_IR_V1;
   readonly canvas: HyperframesCanvas;
   /** Every content-addressed byte dependency referenced by the HTML template. */

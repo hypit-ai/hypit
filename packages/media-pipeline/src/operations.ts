@@ -32,7 +32,6 @@ function object(value: unknown, subject: string): Record<string, unknown> {
 
 export function verifyMediaTransformProgram(value: unknown): asserts value is MediaTransformProgram {
   const program = object(value, "MediaTransformProgram");
-  assert(program.contract === "svml.media-transform-program@1", "MediaTransformProgram contract is invalid");
   assert(Array.isArray(program.operations) && program.operations.length > 0,
     "MediaTransformProgram requires at least one operation");
   for (const [index, raw] of program.operations.entries()) {
@@ -83,7 +82,6 @@ function verifyAudioSelector(value: unknown, subject: string, allowNone: boolean
 
 export function verifyAudioExtractionRequest(value: unknown): asserts value is AudioExtractionRequest {
   const request = object(value, "AudioExtractionRequest");
-  assert(request.contract === "svml.audio-extraction-request@1", "AudioExtractionRequest contract is invalid");
   verifyAudioSelector(request.audio, "AudioExtractionRequest.audio", false);
   const output = object(request.output, "AudioExtractionRequest.output");
   assert(output.container === "wav" && output.codec === "pcm_s16le"
@@ -99,7 +97,6 @@ export function sealAudioExtractionRequest(value: AudioExtractionRequest): Audio
 
 export function verifyFrameExtractionRequest(value: unknown): asserts value is FrameExtractionRequest {
   const request = object(value, "FrameExtractionRequest");
-  assert(request.contract === "svml.frame-extraction-request@1", "FrameExtractionRequest contract is invalid");
   verifyVideoSelector(request.video, "FrameExtractionRequest.video");
   const at = object(request.at, "FrameExtractionRequest.at");
   assert(at.kind === "first" || at.kind === "last" || at.kind === "frame" || at.kind === "time",

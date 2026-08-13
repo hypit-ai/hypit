@@ -17,7 +17,6 @@ export function sealAudioProgramPlan(value: AudioProgramPlan): AudioProgramPlan 
 export function verifyAudioProgramPlan(value: unknown): asserts value is AudioProgramPlan {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "AudioProgramPlan must be an object");
   const item = value as AudioProgramPlan;
-  assert(item.contract === "svml.audio-program-plan@1", "AudioProgramPlan contract is invalid");
   assert(Number.isSafeInteger(item.frameRate?.numerator) && item.frameRate.numerator > 0
     && Number.isSafeInteger(item.frameRate?.denominator) && item.frameRate.denominator > 0,
   "AudioProgramPlan frame rate is invalid");
@@ -103,7 +102,6 @@ export function compileAudioProgramPlan(composition: Composition, programSpace: 
       };
     }));
   return sealAudioProgramPlan({
-    contract: "svml.audio-program-plan@1",
     frameRate: { ...programSpace.frameRate },
     frameCount,
     sampleRate: 48_000,

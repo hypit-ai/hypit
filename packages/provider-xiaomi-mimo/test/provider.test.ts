@@ -105,7 +105,6 @@ test("the official Provider maps all three model contracts without owning them",
     assert.equal(calls, 1);
     assert.equal(result.value.kind, "inline");
     const set = result.value.kind === "inline" ? result.value.value as Record<string, unknown> : {};
-    assert.equal(set.contract, "svml.generated-audio-set@1");
     const audios = set.audios as Array<{ mediaType: string; digest: string }>;
     assert.equal(audios[0]?.mediaType, "audio/wav");
     assert.equal(await artifacts.has(audios[0]!.digest as `sha256:${string}`), true);
