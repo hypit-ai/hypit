@@ -219,6 +219,19 @@ test("CLI exits after durable submission and a restarted detached Worker complet
     ]);
     assert.equal((materialized.materialized as { readonly kind?: string }).kind, "json");
     assert.notEqual(JSON.parse(await readFile(exported, "utf8")), undefined);
+
+    await stopRuntimeProcess(profile, 10_000);
+    const replayed = await cli(project, [
+      "build", run,
+      "--build-id", build,
+      "--runtime", profile,
+      "--root", project,
+      "--no-services",
+      "--follow",
+    ]);
+    assert.equal(replayed.status, "complete");
+    assert.equal((replayed.worker as { readonly state?: string }).state, "stopped",
+      "replaying a terminal Build reads its durable result without starting a Worker");
   } finally {
     await stopRuntimeProcess(profile, 10_000).catch(() => undefined);
     await rm(project, { recursive: true, force: true });

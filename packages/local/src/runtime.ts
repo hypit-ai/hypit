@@ -20,6 +20,7 @@ import {
   isStreamingArtifactStore,
   nonTerminalDispatchPhases,
   resolveRuntimeProfile,
+  sameBuildCatalogDescriptor,
   sealRuntimeProfile,
 } from "@narratage/runtime";
 import { TypeValidatorRegistry } from "@narratage/validation";
@@ -172,6 +173,7 @@ export async function createLocalRuntime(
   });
   const stageAttachments = async (request: LocalBuildRequest): Promise<void> => {
     for (const item of request.attachments ?? []) {
+      if (await options.artifactStore.has(item.artifact.digest)) continue;
       const stream = await item.open();
       const stored = isStreamingArtifactStore(options.artifactStore)
         ? await options.artifactStore.putStream(stream, item.artifact.mediaType)
@@ -212,6 +214,14 @@ export async function createLocalRuntime(
 
   const submit = async (request: LocalBuildRequest): Promise<LocalBuildSubmission> => {
     assert(request.id.trim().length > 0, "Build id must not be empty");
+    if (request.catalog !== undefined) {
+      assert(buildCatalog !== undefined, "Build supplied Host catalog metadata but no BuildCatalog was selected");
+      assert(request.catalog.core === request.state.id,
+        `Build Catalog Core ${request.catalog.core} differs from Build ${request.state.id}`);
+      const existingCatalog = await buildCatalog.read(request.id);
+      assert(existingCatalog === undefined || sameBuildCatalogDescriptor(existingCatalog, request.catalog),
+        `Build Catalog ${request.id} already has another source, Run Source or output naming`);
+    }
     await stageAttachments(request);
     let stored = await options.buildStore.read(request.id);
     if (stored === undefined) {
@@ -231,10 +241,7 @@ export async function createLocalRuntime(
       runtimeClosure,
     }));
     if (request.catalog !== undefined) {
-      assert(buildCatalog !== undefined, "Build supplied Host catalog metadata but no BuildCatalog was selected");
-      assert(request.catalog.core === request.state.id,
-        `Build Catalog Core ${request.catalog.core} differs from Build ${request.state.id}`);
-      await buildCatalog.record(request.id, request.catalog);
+      await buildCatalog!.record(request.id, request.catalog);
     }
     return await presentation(request.id);
   };

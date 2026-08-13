@@ -371,7 +371,7 @@ function renderPlan(
       }
     }
     const capabilityCount = view.machine.preflight.capabilities.length;
-    lines.push(`  ${colors.dim(`Only the ${capabilityCount} demanded ${capabilityCount === 1 ? "capability was" : "capabilities were"} checked.`)}`);
+    lines.push(`  ${colors.dim(`Runtime base checked; ${capabilityCount} demanded Endpoint ${capabilityCount === 1 ? "capability" : "capabilities"} checked.`)}`);
   }
   const visibleSelections = verbose
     ? plan.selections

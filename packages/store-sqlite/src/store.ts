@@ -13,6 +13,7 @@ import type {
 } from "@narratage/protocol";
 import {
   assertRuntimeClosureAdmission,
+  sameBuildCatalogDescriptor,
   verifyBuildCatalogDescriptor,
   verifyBuildCatalogEntry,
   defineRuntimeServicePackage,
@@ -275,22 +276,22 @@ class SqliteBuildCatalog implements BuildCatalog {
   async record(build: string, descriptor: BuildCatalogDescriptor): Promise<BuildCatalogEntry> {
     assert(build.trim().length > 0, "Build Catalog build id must not be empty");
     verifyBuildCatalogDescriptor(descriptor);
+    const existing = await this.read(build);
+    if (existing !== undefined) {
+      assert(sameBuildCatalogDescriptor(existing, descriptor),
+        `Build Catalog ${build} already has another source, Run Source or output naming`);
+      return existing;
+    }
     const now = Date.now();
-    const inserted = this.#database.prepare(`
+    this.#database.prepare(`
       INSERT OR IGNORE INTO svml_build_catalog (
         build_id, core_id, created_at, updated_at, descriptor_json
       ) VALUES (?, ?, ?, ?, ?)
     `).run(build, descriptor.core, now, now, canonicalStringify(descriptor));
-    if (inserted.changes !== 1) {
-      const updated = this.#database.prepare(`
-        UPDATE svml_build_catalog
-        SET updated_at = MAX(updated_at, ?), descriptor_json = ?
-        WHERE build_id = ? AND core_id = ?
-      `).run(now, canonicalStringify(descriptor), build, descriptor.core);
-      assert(updated.changes === 1, `Build Catalog ${build} already names another Core Build`);
-    }
     const stored = await this.read(build);
     if (stored === undefined) throw new Error(`Build Catalog ${build} disappeared after record`);
+    assert(sameBuildCatalogDescriptor(stored, descriptor),
+      `Build Catalog ${build} already has another source, Run Source or output naming`);
     return stored;
   }
 

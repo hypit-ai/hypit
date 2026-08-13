@@ -2,7 +2,7 @@ import { dirname, resolve } from "node:path";
 import { readFile } from "node:fs/promises";
 
 import type { NodeCompiledSourceClosure } from "@narratage/compiler-node";
-import { plannedNeeds } from "@narratage/runtime";
+import { plannedNeeds, sameBuildCatalogDescriptor } from "@narratage/runtime";
 import type { BuildCatalogDescriptor, CapacityReservation, OperationProgress } from "@narratage/runtime";
 import { isDigest } from "@narratage/protocol";
 import type { BuildState, CapabilityRef, TypeRef } from "@narratage/protocol";
@@ -34,7 +34,9 @@ import type {
   CliExternalServiceProgress,
   CliExternalServiceReport,
   CliRuntime,
-  CliRuntimeControl,
+  CliRuntimeArchiveControl,
+  CliRuntimeArtifactAccess,
+  CliRuntimeMaintenance,
 } from "./runtime-port.js";
 import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliColorMode, CliIo } from "./output.js";
@@ -596,12 +598,28 @@ async function loadRuntime(
   });
 }
 
-async function loadRuntimeControl(
+async function loadRuntimeArchive(
   path: string,
   distribution: CliDistribution,
   readOnly = true,
-): Promise<CliRuntimeControl> {
-  return await distribution.createRuntimeControlFromConfig(path, { readOnly });
+): Promise<CliRuntimeArchiveControl> {
+  return await distribution.createRuntimeArchiveFromConfig(path, { readOnly });
+}
+
+async function loadRuntimeArtifactAccess(
+  path: string,
+  distribution: CliDistribution,
+  readOnly = true,
+): Promise<CliRuntimeArtifactAccess> {
+  return await distribution.createRuntimeArtifactAccessFromConfig(path, { readOnly });
+}
+
+async function loadRuntimeMaintenance(
+  path: string,
+  distribution: CliDistribution,
+  readOnly = true,
+): Promise<CliRuntimeMaintenance> {
+  return await distribution.createRuntimeMaintenanceFromConfig(path, { readOnly });
 }
 
 function displayType(type: TypeRef): string {
@@ -780,7 +798,7 @@ async function observeBuild(
   return current;
 }
 
-type RuntimeArchiveView = Pick<CliRuntimeControl, "status" | "close">;
+type RuntimeArchiveView = Pick<CliRuntimeArchiveControl, "status" | "close">;
 
 /**
  * A Run Source needs the archive only when it names a historical Build Candidate.
@@ -791,9 +809,9 @@ function lazyRuntimeArchive(
   path: string,
   distribution: CliDistribution,
 ): RuntimeArchiveView {
-  let loading: Promise<CliRuntimeControl> | undefined;
-  const open = (): Promise<CliRuntimeControl> => {
-    loading ??= loadRuntimeControl(path, distribution);
+  let loading: Promise<CliRuntimeArchiveControl> | undefined;
+  const open = (): Promise<CliRuntimeArchiveControl> => {
+    loading ??= loadRuntimeArchive(path, distribution);
     return loading;
   };
   return {
@@ -1256,8 +1274,8 @@ export async function runCli(
     }
     // These are independent views over one Profile. Load them concurrently without inventing a
     // second registry; each selected package remains the authority for its own report.
-    const runtimeLoading = loadRuntimeControl(profile, distribution);
-    let runtime: CliRuntimeControl | undefined;
+    const runtimeLoading = loadRuntimeArchive(profile, distribution);
+    let runtime: CliRuntimeArchiveControl | undefined;
     try {
       const loaded = await Promise.all([
         distribution.runtimeProfileRevision(profile)
@@ -1308,7 +1326,7 @@ export async function runCli(
       || args.packages.length > 0) {
       throw new Error("gc reads all deployment selection from the Runtime Profile itself");
     }
-    const runtime = await loadRuntimeControl(resolve(args.file!), distribution, !args.apply);
+    const runtime = await loadRuntimeMaintenance(resolve(args.file!), distribution, !args.apply);
     try {
       const report = await runtime.garbageCollectArtifacts({ apply: args.apply });
       const machine = {
@@ -1403,7 +1421,7 @@ export async function runCli(
     || args.command === "history" || args.command === "get" || args.command === "cancel" || args.command === "queue"
     || args.command === "operations" || args.command === "operation") {
     if (args.runtime === undefined) throw new Error(`${args.command} requires --runtime`);
-    const runtime = await loadRuntimeControl(args.runtime, distribution, args.command !== "cancel");
+    const runtime = await loadRuntimeArchive(args.runtime, distribution, args.command !== "cancel");
     try {
       if (args.command === "queue") {
         let previous: string | undefined;
@@ -1466,7 +1484,6 @@ export async function runCli(
             ["Active Builds", String(active.length)],
             ["Active Operations", String(activeOperations.length)],
             ["Worker", worker.pid === undefined ? worker.state : `${worker.state} · ${worker.pid}`],
-            ["Queued Builds", String(queue.dispatches.length)],
             ["Operation tickets", String(queue.capacity.length)],
           ], [
             ...buildLines,
@@ -1600,7 +1617,8 @@ export async function runCli(
             ["Operations", String(status.operations.length)],
           ], notableOperations.map((operation) => operation.failure === undefined
             ? `${operation.endpoint}: ${operation.status}`
-            : `${operation.endpoint}: ${operation.failure.code} — ${operation.failure.message}`));
+            : `${operation.endpoint}: ${operation.failure.code} — ${operation.failure.message}`)
+            .concat(status.dispatch?.reason === undefined ? [] : [`Reason    ${status.dispatch.reason}`]));
         if (status.build === undefined || status.dispatch?.terminal === "failed") io.setExitCode?.(1);
       } else if (args.command === "inspect") {
         const status = await runtime.status(args.file!);
@@ -1660,7 +1678,11 @@ export async function runCli(
           ["Targets", String(archive.targets.length)], ["Accepted records", String(archive.records.length)],
           ["Operations", String(status.operations.length)],
           ...(args.verbose ? [["Revision", String(status.build.revision)] as const] : []),
-        ], [...targetLines, ...otherLines]);
+        ], [
+          ...(status.dispatch?.reason === undefined ? [] : [`Reason    ${status.dispatch.reason}`]),
+          ...targetLines,
+          ...otherLines,
+        ]);
       } else if (args.command === "get") {
         const status = await runtime.status(args.file!);
         if (status.build === undefined) throw new Error(`Build ${args.file} does not exist`);
@@ -1676,7 +1698,13 @@ export async function runCli(
           } else {
             const [first] = references;
             if (first === undefined) throw new Error(`Build ${args.file} does not reference Artifact ${args.artifact}`);
-            const materialized = await materializeArtifact(runtime, first, args.to, `Build ${args.file}`);
+            const artifacts = await loadRuntimeArtifactAccess(args.runtime!, distribution);
+            let materialized;
+            try {
+              materialized = await materializeArtifact(artifacts, first, args.to, `Build ${args.file}`);
+            } finally {
+              await artifacts.close();
+            }
             const machine = {
               build: status.build.build,
               artifact: args.artifact,
@@ -1710,7 +1738,13 @@ export async function runCli(
             ["Artifacts", String(machine.artifacts.length)],
           ]);
         } else {
-          const materialized = await materializeRecord(runtime, record, args.to);
+          const artifacts = await loadRuntimeArtifactAccess(args.runtime!, distribution);
+          let materialized;
+          try {
+            materialized = await materializeRecord(artifacts, record, args.to);
+          } finally {
+            await artifacts.close();
+          }
           const machine = {
             build: status.build.build,
             record: record.id,
@@ -1897,14 +1931,14 @@ export async function runCli(
       await archive.close();
     }
     const result = loadedRun.compiler.planCompilation(loadedRun, loadedPackageSet?.lock.digest);
-    const preflight = await preflightPlan(args.runtime, distribution, result.state, loadedPackageSet);
-    // A managed program being down is repairable after Runtime validation;
-    // every other deployment error fails before we construct execution or
-    // start anything. With --no-services, readiness errors remain fatal.
-    assertPreflight(preflight, args.noServices
-      ? new Set()
-      : new Set(["EXTERNAL_SERVICE_DOWN", "EXTERNAL_SERVICE_MISMATCH"]));
-    const runtime = await loadRuntime(args.runtime, distribution, loadedPackageSet);
+    const runtimeArchive = await loadRuntimeArchive(args.runtime, distribution);
+    let archived;
+    try {
+      archived = await runtimeArchive.status(args.buildId ?? result.state.id);
+    } finally {
+      await runtimeArchive.close();
+    }
+    let runtime: CliRuntime | undefined;
     try {
       const catalog = createCatalogDescriptor({
         core: result.state.id,
@@ -1920,23 +1954,57 @@ export async function runCli(
         catalog,
         attachments: result.compilation.attachments,
       } as const;
-      const services = args.noServices
-        ? undefined
-        : await startDeclaredServices(
-            args.runtime,
-            distribution,
-            demandedCapabilities(result.state),
-            reportServiceProgress,
-          );
       const workerProfileDigest = await distribution.runtimeProfileRevision(args.runtime);
-      const worker = await ensureRuntimeProcess(
-        args.runtime,
-        distribution.runtimeWorkerLaunch(),
-        workerProfileDigest,
-        args.maxWaitMs ?? 10_000,
-      );
-      let built = await runtime.build(request);
-      if (args.follow) {
+      const terminalArchive = archived.build !== undefined
+        && archived.dispatch?.phase === "terminal";
+      if (archived.build !== undefined && archived.build.state.id !== request.state.id) {
+        throw new Error(
+          `Build ${request.id} already names another Core Build. Choose a new --build-id for a new Run, `
+          + "or restore the original Author/Run Sources to resume this Build",
+        );
+      }
+      if (archived.catalog !== undefined && !sameBuildCatalogDescriptor(archived.catalog, request.catalog)) {
+        throw new Error(
+          `Build ${request.id} already has another source, Run Source or output naming. `
+          + "Choose a new --build-id instead of changing the presentation of an existing Build",
+        );
+      }
+      let services: Awaited<ReturnType<typeof startDeclaredServices>> | undefined;
+      let worker = await runtimeProcessStatus(args.runtime, workerProfileDigest);
+      let built: CliBuildSubmission;
+      if (terminalArchive) {
+        built = {
+          id: request.id,
+          state: archived.build!.state,
+          status: submissionStatus(archived.dispatch!),
+          dispatch: archived.dispatch!,
+        };
+      } else {
+        const preflight = await preflightPlan(args.runtime, distribution, result.state, loadedPackageSet);
+        // A managed program being down is repairable after Runtime validation;
+        // every other deployment error fails before we construct execution or
+        // start anything. With --no-services, readiness errors remain fatal.
+        assertPreflight(preflight, args.noServices
+          ? new Set()
+          : new Set(["EXTERNAL_SERVICE_DOWN", "EXTERNAL_SERVICE_MISMATCH"]));
+        services = args.noServices
+          ? undefined
+          : await startDeclaredServices(
+              args.runtime,
+              distribution,
+              demandedCapabilities(result.state),
+              reportServiceProgress,
+            );
+        runtime = await loadRuntime(args.runtime, distribution, loadedPackageSet);
+        worker = await ensureRuntimeProcess(
+          args.runtime,
+          distribution.runtimeWorkerLaunch(),
+          workerProfileDigest,
+          args.maxWaitMs ?? 10_000,
+        );
+        built = await runtime.build(request);
+      }
+      if (args.follow && runtime !== undefined) {
         built = await observeBuild(runtime, built, {
           ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
           workerProfile: args.runtime,
@@ -1954,20 +2022,22 @@ export async function runCli(
         });
       }
       const targetOutputs = new Set(built.state.request.targets.map((target) => target.output));
-      const targetAliases = catalog.aliases.filter((alias) =>
+      const presentation = archived.catalog ?? catalog;
+      const targetAliases = presentation.aliases.filter((alias) =>
         alias.ref.kind === "logical-output" && targetOutputs.has(alias.ref.id));
-      const targetPresentations = targetAliases.map((alias) => {
+      const targetPresentations = targetAliases.flatMap((alias) => {
         const selection = built.state.plan.selections.find((item) => item.output === alias.ref.id);
         const record = selection === undefined
           ? undefined
           : built.state.records.find((item) => item.id === selection.record);
-        return {
+        if (record === undefined) return [];
+        return [{
           alias,
           record,
           ...(record?.value.kind === "inline"
             ? { inline: inlineValuePreview(record.value.value) }
             : {}),
-        };
+        }];
       });
       const machine = {
         build: built.id,
@@ -1992,8 +2062,12 @@ export async function runCli(
         },
       };
       const terminalLines = targetPresentations.length === 0
-        ? [`Inspect  narratage inspect ${built.id} --runtime ${args.runtime}`]
+        ? [
+            ...(built.dispatch.reason === undefined ? [] : [`Reason   ${built.dispatch.reason}`]),
+            `Inspect  narratage inspect ${built.id} --runtime ${args.runtime}`,
+          ]
         : [
+            ...(built.dispatch.reason === undefined ? [] : [`Reason   ${built.dispatch.reason}`]),
             `Inspect  narratage inspect ${built.id} --runtime ${args.runtime}`,
             ...targetPresentations
               .filter((item) => item.inline !== undefined)
@@ -2013,7 +2087,7 @@ export async function runCli(
         : built.status === "cancelled" || (args.follow && !terminal) ? "warning" : "success", [
           ["Build", built.id],
           ["Status", built.status],
-          ["Worker", String(worker.pid)],
+          ["Worker", worker.state === "running" ? String(worker.pid) : worker.state],
           ["Goals", String(machine.goals.length)],
         ], terminal ? terminalLines : [
           `Status   narratage status ${built.id} --runtime ${args.runtime}`,
@@ -2022,7 +2096,7 @@ export async function runCli(
         ]);
       if (built.status === "failed") io.setExitCode?.(1);
     } finally {
-      await runtime.close();
+      await runtime?.close();
     }
     return;
   }

@@ -41,7 +41,7 @@ export type CliArtifactGarbageCollection = {
   readonly deleted: readonly Digest[];
 };
 
-export type CliRuntimeControl = {
+export type CliRuntimeArchiveControl = {
   status(build: string): Promise<CliRuntimeStatus>;
   activity(build: string): Promise<{
     readonly operations: readonly OperationSnapshot[];
@@ -56,10 +56,17 @@ export type CliRuntimeControl = {
   builds(): Promise<readonly BuildCatalogEntry[]>;
   cancel(build: string, reason?: string): Promise<BuildDispatchSnapshot | undefined>;
   cancelOperation(id: Digest, reason?: string): Promise<OperationSnapshot | undefined>;
+  close(): void | Promise<void>;
+};
+
+export type CliRuntimeArtifactAccess = {
   readArtifact(digest: Digest): Promise<Uint8Array | undefined>;
   openArtifact(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
-  garbageCollectArtifacts(options?: { readonly apply?: boolean }): Promise<CliArtifactGarbageCollection>;
   close(): void | Promise<void>;
+};
+
+export type CliRuntimeMaintenance = CliRuntimeArchiveControl & CliRuntimeArtifactAccess & {
+  garbageCollectArtifacts(options?: { readonly apply?: boolean }): Promise<CliArtifactGarbageCollection>;
 };
 
 export type CliCredentialControl = {
@@ -72,7 +79,7 @@ export type CliCredentialControl = {
   close(): void | Promise<void>;
 };
 
-export type CliRuntime = CliRuntimeControl & CliCredentialControl & {
+export type CliRuntime = CliRuntimeMaintenance & CliCredentialControl & {
   build(request: {
     readonly id: string;
     readonly state: BuildState;

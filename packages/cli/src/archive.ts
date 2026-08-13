@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import type { CliRuntime } from "./runtime-port.js";
+import type { CliRuntimeArtifactAccess } from "./runtime-port.js";
 import { isDigest } from "@narratage/protocol";
 import type { BuildState, Digest, TypedRecord, TypeRef } from "@narratage/protocol";
 import type { BuildCatalogEntry } from "@narratage/runtime";
@@ -41,7 +41,7 @@ function recordArtifact(record: TypedRecord): ArtifactIdentity | undefined {
 }
 
 export async function materializeRecord(
-  runtime: Pick<CliRuntime, "openArtifact">,
+  runtime: Pick<CliRuntimeArtifactAccess, "openArtifact">,
   record: TypedRecord,
   destination: string,
 ): Promise<
@@ -60,7 +60,7 @@ export async function materializeRecord(
 }
 
 export async function materializeArtifact(
-  runtime: Pick<CliRuntime, "openArtifact">,
+  runtime: Pick<CliRuntimeArtifactAccess, "openArtifact">,
   artifact: ArtifactIdentity,
   destination: string,
   subject = "Build archive",
