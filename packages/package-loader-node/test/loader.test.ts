@@ -10,18 +10,15 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
+  collectNodePackageComponents,
   createNodePackageLock,
-  installNodePackageComponents,
   loadNodePackageSelection,
   loadNodePackageSet,
-  loadNodePackageContributions,
   writeNodePackageLock,
 } from "@narratage/package-loader-node";
 import { modulePackageAbi } from "@narratage/protocol";
 import { runtimeEndpointAdapterHostAbi, RuntimeAdapterRegistry } from "@narratage/runtime-adapter";
-import { TypeValidatorRegistry } from "@narratage/validation";
 import { digestOf } from "@narratage/protocol";
-import type { ProducerRef } from "@narratage/protocol";
 
 const implementationDigest = `sha256:${"1".repeat(64)}`;
 const producerDigest = `sha256:${"3".repeat(64)}`;
@@ -206,22 +203,17 @@ test("an installed locked package carries inert Host facets and activatable comp
   assert.deepEqual(lock.selected, ["example-card"]);
   assert.deepEqual(lock.packages.map((value) => value.package.name), ["example-card", "example-helper"]);
   await writeNodePackageLock(item.lock, lock);
-  const packages = await loadNodePackageContributions(item.lock, item.root);
+  const packages = (await loadNodePackageSet(item.lock, item.root)).packages.map((value) => value.contribution);
 
   assert.equal(packages[0]?.modules?.[0]?.manifest.name, "example.card");
   assert.equal(packages[1]?.modules?.[0]?.manifest.name, "example.helper");
   assert.equal(packages[0]?.hostFacets?.[0]?.abi, "svml.markup-surface-host@1");
 
-  const registered: Array<{ readonly producer: ProducerRef; readonly digest: string }> = [];
-  installNodePackageComponents(packages, {
-    registerProducer(producer, digest) {
-      registered.push({ producer, digest });
-    },
-  }, new TypeValidatorRegistry());
-  assert.deepEqual(registered, [{
-    producer: { module: { name: "example.card", version: "1" }, name: "make-card" },
-    digest: producerDigest,
-  }]);
+  assert.deepEqual(collectNodePackageComponents(packages).flatMap((component) => component.producers ?? [])
+    .map((facet) => ({ producer: facet.producer, digest: facet.implementationDigest })), [{
+      producer: { module: { name: "example.card", version: "1" }, name: "make-card" },
+      digest: producerDigest,
+    }]);
 });
 
 test("an empty local trust selection is a valid authenticated package lock", async () => {
@@ -232,7 +224,7 @@ test("an empty local trust selection is a valid authenticated package lock", asy
   assert.deepEqual(lock.artifacts, []);
   assert.deepEqual(lock.packages, []);
   await writeNodePackageLock(path, lock);
-  assert.deepEqual(await loadNodePackageContributions(path, root), []);
+  assert.deepEqual((await loadNodePackageSet(path, root)).packages, []);
 });
 
 test("dependency bytes are rejected before a locked contribution entry is reused", async () => {
@@ -242,7 +234,7 @@ test("dependency bytes are rejected before a locked contribution entry is reused
   await writeFile(item.dependency, `${await readFile(item.dependency, "utf8")}\n// changed bytes\n`, "utf8");
 
   await assert.rejects(
-    async () => await loadNodePackageContributions(item.lock, item.root),
+    async () => await loadNodePackageSet(item.lock, item.root),
     /installed Node package bytes do not match the lock/,
   );
 });

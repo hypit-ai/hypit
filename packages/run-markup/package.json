@@ -14,5 +14,9 @@
     "@narratage/protocol": "workspace:*",
     "@narratage/run": "workspace:*",
     "@narratage/markup": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/core": "workspace:*",
+    "@narratage/elaborator": "workspace:*"
   }
 }

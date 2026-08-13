@@ -156,4 +156,6 @@ export type RunCompilation = {
   readonly document: RunDocument;
   readonly graph: RunGraph;
   readonly candidates: Readonly<Record<string, string>>;
+  /** Author-written Candidate name selected for each resolved Logical Output. Presentation only. */
+  readonly satisfactionNames: Readonly<Record<string, string>>;
 };

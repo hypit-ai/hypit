@@ -310,5 +310,6 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
       },
     ],
     fragments: [...(normalizationComponents.length === 0 ? [] : [synchronizedMediaFragment]), assembly],
+    exports: [`${id}.basis`, `${id}.space`, `${id}.audio`, `${id}.visual`, `${id}.audioTrack`],
   };
 };

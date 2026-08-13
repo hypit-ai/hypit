@@ -21,10 +21,3 @@ export function createRunFrontendHostFacet(frontend: RunFrontend): RunFrontendHo
 export function runFrontendsFromHostFacets(facets: readonly HostFacet[]): readonly RunFrontend[] {
   return frontendsFromHostFacets<"run", RunFrontend>(sourceFrontendPackageAbi, "run", facets);
 }
-
-export function installRunFrontendHostFacets(
-  facets: readonly HostFacet[],
-  registry: { register(frontend: RunFrontend): void },
-): void {
-  for (const frontend of runFrontendsFromHostFacets(facets)) registry.register(frontend);
-}

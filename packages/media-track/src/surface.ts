@@ -891,5 +891,6 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
     components: [{ id: trackId, fragment: fragment.id, inputs: state.inputs,
       outputs: { visual: `${trackId}.visual`, ...(hasAudio ? { audio: `${trackId}.audio` } : {}) }, range: element.range }],
     fragments: [fragment],
+    exports: [`${trackId}.visual`, ...(hasAudio ? [`${trackId}.audio`] : [])],
   };
 };

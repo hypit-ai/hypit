@@ -131,11 +131,6 @@ export class KeychainCredentialStore implements WritableCredentialStore {
   }
 }
 
-/** The command that puts a secret where this store will find it. */
-export function keychainAddCommand(key: string, service = DEFAULT_SERVICE): string {
-  return `security add-generic-password -s ${service} -a ${key} -w`;
-}
-
 export function createKeychainCredentialStorePackage(
   options: CreateKeychainCredentialStorePackageOptions = {},
 ): RuntimeServicePackage {

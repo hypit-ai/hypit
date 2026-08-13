@@ -174,7 +174,7 @@ Placement is an explicit Spatial Frame edge; appearance and motion remain reusab
 </seedance:ReferenceVideo>
 
 <space:Frame id="product-frame" within={vertical}
-  left="8%" top="20%" right="8%" bottom="32%"/>
+  left="8%" top="20%" right="92%" bottom="68%"/>
 
 <media-track:Track id="product-broll" map={timing.map}
   space={speech.space} canvas={vertical}>
@@ -185,7 +185,8 @@ Placement is an explicit Spatial Frame edge; appearance and motion remain reusab
 </media-track:Track>
 ```
 
-The Selection contributes semantic points; Media performs the package-owned window projection.
+`left`, `top`, `right` and `bottom` are edge coordinates inside the parent Frame; `right` and
+`bottom` are not CSS-style margins. The Selection contributes semantic points; Media performs the package-owned window projection.
 The same Item model also covers full-canvas cutaways, split screens and corner overlays. Ordered
 child layers, source occupancy and explicit Sequences are available when one source is not enough.
 
@@ -260,7 +261,7 @@ Container for text items.
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="title-frame" within={vertical}
-  left="6%" top="6%" right="6%" bottom="84%"/>
+  left="6%" top="6%" right="94%" bottom="16%"/>
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
 <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
 <text:Track id="titles" space={speech.space}>
@@ -352,9 +353,9 @@ All four track families together in one source file:
 <!-- Shared placement is an explicit edge, separate from Text appearance. -->
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="title-frame" within={vertical}
-  left="6%" top="6%" right="6%" bottom="84%"/>
+  left="6%" top="6%" right="94%" bottom="16%"/>
 <space:Frame id="card-frame" within={vertical}
-  left="10%" top="20%" right="10%" bottom="30%"/>
+  left="10%" top="20%" right="90%" bottom="70%"/>
 
 <!-- Media: one ordinary Item used editorially as B-roll -->
 <media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>

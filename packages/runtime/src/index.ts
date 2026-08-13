@@ -31,7 +31,6 @@ export {
   operationCancellationRequestId,
   sealOperationIdentity,
   verifyOperationIdentity,
-  verifyOperationCancellationControl,
   verifyOperationSnapshot,
 } from "./operations.js";
 export type * from "./operations.js";

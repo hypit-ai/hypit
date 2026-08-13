@@ -148,9 +148,9 @@ The complete data flow from Script to rendered video. This example is based on
   <space:Frame id="speech-frame" within={vertical}
     left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="title-frame" within={vertical}
-    left="6%" top="6%" right="6%" bottom="84%"/>
+    left="6%" top="6%" right="94%" bottom="16%"/>
   <space:Frame id="card-frame" within={vertical}
-    left="10%" top="20%" right="10%" bottom="30%"/>
+    left="10%" top="20%" right="90%" bottom="70%"/>
 
   <!-- 3. Timing: assemble spine and align words -->
   <speech:Spine id="speech" frame-rate="30"

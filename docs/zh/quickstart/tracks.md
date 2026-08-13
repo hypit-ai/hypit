@@ -131,7 +131,7 @@ B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族�
 </seedance:ReferenceVideo>
 
 <space:Frame id="product-frame" within={vertical}
-  left="8%" top="20%" right="8%" bottom="32%"/>
+  left="8%" top="20%" right="92%" bottom="68%"/>
 
 <media-track:Track id="product-broll" map={timing.map}
   space={speech.space} canvas={vertical}>
@@ -142,7 +142,7 @@ B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族�
 </media-track:Track>
 ```
 
-Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同一个 Item 模型也能表达全屏切换、分屏和角落小窗。需要多个素材时，可以使用有序局部 Layer 或显式 Sequence。
+`left`、`top`、`right`、`bottom` 是父 Frame 内的边坐标；`right` 和 `bottom` 不是 CSS 式外边距。Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同一个 Item 模型也能表达全屏切换、分屏和角落小窗。需要多个素材时，可以使用有序局部 Layer 或显式 Sequence。
 
 每个 Item、Member 或采样 Layer 都必须且只能声明一种视觉输入形式：
 
@@ -211,7 +211,7 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.track}` 是普通
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="title-frame" within={vertical}
-  left="6%" top="6%" right="6%" bottom="84%"/>
+  left="6%" top="6%" right="94%" bottom="16%"/>
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
 <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
 <text:Track id="titles" space={speech.space}>
@@ -302,9 +302,9 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 <!-- 共享位置是显式边，与 Media/Text 外观分开。 -->
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="title-frame" within={vertical}
-  left="6%" top="6%" right="6%" bottom="84%"/>
+  left="6%" top="6%" right="94%" bottom="16%"/>
 <space:Frame id="card-frame" within={vertical}
-  left="10%" top="20%" right="10%" bottom="30%"/>
+  left="10%" top="20%" right="90%" bottom="70%"/>
 
 <!-- Media：Selection 期间显示一个普通 Item -->
 <media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>

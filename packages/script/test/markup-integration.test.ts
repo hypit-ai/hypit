@@ -34,7 +34,7 @@ function scriptContext() {
   } as const;
 }
 
-test("Markup learns <script> only from an imported Script Manifest", async () => {
+test("Script teaches Markup <script> only through its imported Manifest", async () => {
   const result = await decodeMarkup(
     {
       name: "talk.svml",

@@ -15,7 +15,7 @@ export const runtimeServiceAdapterHostAbi = "svml.runtime-service-adapter-host@1
 
 export type RuntimeAdapterKind = "endpoint" | "runtime-service";
 
-export function runtimeAdapterHostAbi(kind: RuntimeAdapterKind):
+function runtimeAdapterHostAbi(kind: RuntimeAdapterKind):
   | typeof runtimeEndpointAdapterHostAbi
   | typeof runtimeServiceAdapterHostAbi {
   return kind === "endpoint" ? runtimeEndpointAdapterHostAbi : runtimeServiceAdapterHostAbi;
