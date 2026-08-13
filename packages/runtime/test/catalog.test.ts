@@ -17,7 +17,7 @@ function descriptor(core = digestOf("core:one")) {
   };
 }
 
-test("Build Catalog indexes Host aliases without becoming Build truth", async () => {
+test("Build Catalog freezes the first Host presentation for a Build id", async () => {
   let now = 100;
   const catalog = new MemoryBuildCatalog(() => now);
   const first = await catalog.record("delivery-01", descriptor());
@@ -25,19 +25,15 @@ test("Build Catalog indexes Host aliases without becoming Build truth", async ()
   assert.equal(first.aliases[0]?.name, "final.video");
 
   now = 200;
-  const updated = await catalog.record("delivery-01", {
-    ...descriptor(),
-    aliases: [...descriptor().aliases, {
-      name: "timing.map",
-      ref: { kind: "logical-output" as const, id: "logical:timing" },
-    }],
-  });
-  assert.equal(updated.createdAt, 100);
-  assert.equal(updated.updatedAt, 200);
-  assert.deepEqual(updated.aliases.map((item) => item.name), ["final.video", "timing.map"]);
+  const repeated = await catalog.record("delivery-01", descriptor());
+  assert.equal(repeated.createdAt, 100);
+  assert.equal(repeated.updatedAt, 100);
+  await assert.rejects(catalog.record("delivery-01", {
+    ...descriptor(), aliases: [{ ...descriptor().aliases[0]!, name: "renamed.video" }],
+  }), /another source, Run Source or output naming/u);
   assert.deepEqual((await catalog.list()).map((item) => item.build), ["delivery-01"]);
 
-  (updated as unknown as { aliases: { name: string }[] }).aliases[0]!.name = "tampered";
+  (repeated as unknown as { aliases: { name: string }[] }).aliases[0]!.name = "tampered";
   assert.equal((await catalog.read("delivery-01"))?.aliases[0]?.name, "final.video");
 });
 
@@ -46,6 +42,6 @@ test("Build Catalog cannot retarget one Build id to another Core Build", async (
   await catalog.record("delivery-01", descriptor());
   await assert.rejects(
     catalog.record("delivery-01", descriptor(digestOf("core:two"))),
-    /another Core Build/u,
+    /another source, Run Source or output naming/u,
   );
 });

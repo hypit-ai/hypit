@@ -104,7 +104,7 @@ test("an idle stopped Runtime is status data, not a command failure", async () =
   let exitCode: number | undefined;
   const selected = {
     ...distribution([]),
-    createRuntimeControlFromConfig: async () => ({
+    createRuntimeArchiveFromConfig: async () => ({
       async queue() { return { dispatches: [], capacity: [], operations: [] }; },
       async close() {},
     }),

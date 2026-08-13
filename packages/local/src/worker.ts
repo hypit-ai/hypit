@@ -360,7 +360,9 @@ class DurableLocalWorker implements RuntimeWorker {
           ? "waiting"
           : result.blocked.length > 0 ? "blocked" : "queued",
         availableAt: wakeAt,
-        ...(result.blocked.length === 0 ? {} : { reason: result.blocked.map((item) => item.reason).join(", ") }),
+        ...(result.blocked.length === 0 ? {} : {
+          reason: result.blocked.map((item) => `${item.reason}: ${item.subject}`).join(", "),
+        }),
       });
     } catch (error) {
       clearInterval(timer);

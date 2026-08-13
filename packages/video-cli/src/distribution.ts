@@ -38,9 +38,23 @@ export const videoCliDistribution: CliDistribution = {
     const { createVideoRuntimeFromConfig } = await import("./runtime-config.js");
     return await createVideoRuntimeFromConfig(path, packageRoot, options?.implementationPackages);
   },
-  createRuntimeControlFromConfig: async (path, options) => {
-    const { createRuntimeControlFromConfig } = await import("@narratage/local/config");
-    return await createRuntimeControlFromConfig(path, {
+  createRuntimeArchiveFromConfig: async (path, options) => {
+    const { createRuntimeArchiveFromConfig } = await import("@narratage/local/config");
+    return await createRuntimeArchiveFromConfig(path, {
+      packageRoot,
+      ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
+    });
+  },
+  createRuntimeArtifactAccessFromConfig: async (path, options) => {
+    const { createRuntimeArtifactAccessFromConfig } = await import("@narratage/local/config");
+    return await createRuntimeArtifactAccessFromConfig(path, {
+      packageRoot,
+      ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
+    });
+  },
+  createRuntimeMaintenanceFromConfig: async (path, options) => {
+    const { createRuntimeMaintenanceFromConfig } = await import("@narratage/local/config");
+    return await createRuntimeMaintenanceFromConfig(path, {
       packageRoot,
       ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
     });

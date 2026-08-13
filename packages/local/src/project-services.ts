@@ -25,7 +25,7 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function selectedBuildCatalog(
+export function selectedBuildCatalog(
   packages: readonly RuntimeServicePackage[],
   buildStore: string,
 ): BuildCatalog | undefined {

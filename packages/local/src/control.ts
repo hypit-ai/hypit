@@ -4,14 +4,22 @@ import {
   isManagedArtifactStore,
   isStreamingArtifactStore,
   operationCancellationRequestId,
+  verifyRuntimeServicePackage,
 } from "@narratage/runtime";
+import type { RuntimeService, RuntimeServicePackage } from "@narratage/runtime";
 
 import type {
+  CreateLocalRuntimeArchiveControlOptions,
+  CreateLocalRuntimeArtifactAccessOptions,
   CreateLocalRuntimeControlOptions,
+  LocalRuntimeArchiveControl,
+  LocalRuntimeArtifactAccess,
   LocalRuntimeControl,
+  ProjectLocalRuntimeArchiveControlOptions,
+  ProjectLocalRuntimeArtifactAccessOptions,
   ProjectLocalRuntimeControlOptions,
 } from "./types.js";
-import { createProjectRuntimeServices } from "./project-services.js";
+import { selectedBuildCatalog } from "./project-services.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -36,10 +44,10 @@ function collectArtifactDigests(
   }
 }
 
-/** Store-only control surface shared by a full executor and read-only CLI commands. */
-export function createLocalRuntimeControl(
-  options: CreateLocalRuntimeControlOptions,
-): LocalRuntimeControl {
+/** Durable execution-state control that never opens or depends on an ArtifactStore. */
+export function createLocalRuntimeArchiveControl(
+  options: CreateLocalRuntimeArchiveControlOptions,
+): LocalRuntimeArchiveControl {
   const buildCatalog = options.buildCatalog;
   return {
     async activity(build) {
@@ -112,6 +120,17 @@ export function createLocalRuntimeControl(
       await options.dispatchStore.wake(current.build);
       return current;
     },
+    close() {
+      return options.close?.();
+    },
+  };
+}
+
+/** Explicit Artifact byte access with no dependency on execution-state Stores. */
+export function createLocalRuntimeArtifactAccess(
+  options: CreateLocalRuntimeArtifactAccessOptions,
+): LocalRuntimeArtifactAccess {
+  return {
     async readArtifact(digest) {
       return await options.artifactStore.get(digest);
     },
@@ -120,6 +139,21 @@ export function createLocalRuntimeControl(
       const bytes = await options.artifactStore.get(digest);
       return bytes === undefined ? undefined : (async function* () { yield bytes; })();
     },
+    close() {
+      return options.close?.();
+    },
+  };
+}
+
+/** Full maintenance control used only by execution and explicit Artifact GC. */
+export function createLocalRuntimeControl(
+  options: CreateLocalRuntimeControlOptions,
+): LocalRuntimeControl {
+  const archive = createLocalRuntimeArchiveControl(options);
+  const artifacts = createLocalRuntimeArtifactAccess(options);
+  return {
+    ...archive,
+    ...artifacts,
     async garbageCollectArtifacts(gc = {}) {
       assert(isManagedArtifactStore(options.artifactStore),
         "selected ArtifactStore does not expose explicit retention management");
@@ -148,19 +182,110 @@ export function createLocalRuntimeControl(
   };
 }
 
-/** Assemble selected service packages, then expose only their exact durable Store facets. */
+type OpenedProjectServices = {
+  readonly packages: readonly RuntimeServicePackage[];
+  readonly services: ReadonlyMap<string, { readonly package: RuntimeServicePackage; readonly service: RuntimeService }>;
+  close(): Promise<void>;
+};
+
+async function openProjectServices(
+  options: ProjectLocalRuntimeControlOptions,
+): Promise<OpenedProjectServices> {
+  const packages = [...options.runtimeServices];
+  const services = new Map<string, { readonly package: RuntimeServicePackage; readonly service: RuntimeService }>();
+  try {
+    for (const item of packages) {
+      verifyRuntimeServicePackage(item);
+      for (const service of item.services) {
+        assert(!services.has(service.instance.id), `Runtime service instance ${service.instance.id} is configured twice`);
+        services.set(service.instance.id, { package: item, service });
+      }
+    }
+    let closed = false;
+    return {
+      packages,
+      services,
+      close: async () => {
+        if (closed) return;
+        closed = true;
+        for (const item of [...packages].reverse()) await item.close?.();
+      },
+    };
+  } catch (error) {
+    for (const item of [...packages].reverse()) await item.close?.();
+    throw error;
+  }
+}
+
+function selectedService<Role extends RuntimeService["role"]>(
+  opened: OpenedProjectServices,
+  id: string,
+  role: Role,
+): Extract<RuntimeService, { readonly role: Role }> {
+  const item = opened.services.get(id);
+  assert(item !== undefined, `Runtime service selection refers to unknown instance ${id}`);
+  assert(item.service.role === role, `Runtime service ${id} is ${item.service.role}, not ${role}`);
+  return item.service as Extract<RuntimeService, { readonly role: Role }>;
+}
+
+/** Assemble only Build, Operation and Dispatch state selected by the Profile. */
+export async function createProjectLocalRuntimeArchiveControl(
+  options: ProjectLocalRuntimeArchiveControlOptions,
+): Promise<LocalRuntimeArchiveControl> {
+  const opened = await openProjectServices(options);
+  try {
+    const build = selectedService(opened, options.runtimeSelection.stores.build, "build-store");
+    const operations = selectedService(opened, options.runtimeSelection.stores.operations, "operation-store");
+    const dispatch = selectedService(opened, options.runtimeSelection.stores.dispatch, "dispatch-store");
+    const catalog = selectedBuildCatalog(opened.packages, options.runtimeSelection.stores.build);
+    return createLocalRuntimeArchiveControl({
+      buildStore: build.service,
+      ...(catalog === undefined ? {} : { buildCatalog: catalog }),
+      operationStore: operations.service,
+      dispatchStore: dispatch.service,
+      close: opened.close,
+    });
+  } catch (error) {
+    await opened.close();
+    throw error;
+  }
+}
+
+/** Assemble only the ArtifactStore selected by the Profile. */
+export async function createProjectLocalRuntimeArtifactAccess(
+  options: ProjectLocalRuntimeArtifactAccessOptions,
+): Promise<LocalRuntimeArtifactAccess> {
+  const opened = await openProjectServices(options);
+  try {
+    const artifacts = selectedService(opened, options.runtimeSelection.stores.artifacts, "artifact-store");
+    return createLocalRuntimeArtifactAccess({ artifactStore: artifacts.service, close: opened.close });
+  } catch (error) {
+    await opened.close();
+    throw error;
+  }
+}
+
+/** Assemble all durable Stores only for execution or explicit cross-store maintenance. */
 export async function createProjectLocalRuntimeControl(
   options: ProjectLocalRuntimeControlOptions,
 ): Promise<LocalRuntimeControl> {
-  const root = options.root ?? process.cwd();
-  const projectServices = await createProjectRuntimeServices(root, options);
-  const services = projectServices.assembly;
-  return createLocalRuntimeControl({
-    buildStore: services.buildStore,
-    ...(projectServices.catalog === undefined ? {} : { buildCatalog: projectServices.catalog }),
-    operationStore: services.operationStore,
-    dispatchStore: services.dispatchStore,
-    artifactStore: services.artifactStore,
-    close: projectServices.close,
-  });
+  const opened = await openProjectServices(options);
+  try {
+    const build = selectedService(opened, options.runtimeSelection.stores.build, "build-store");
+    const operations = selectedService(opened, options.runtimeSelection.stores.operations, "operation-store");
+    const dispatch = selectedService(opened, options.runtimeSelection.stores.dispatch, "dispatch-store");
+    const artifacts = selectedService(opened, options.runtimeSelection.stores.artifacts, "artifact-store");
+    const catalog = selectedBuildCatalog(opened.packages, options.runtimeSelection.stores.build);
+    return createLocalRuntimeControl({
+      buildStore: build.service,
+      ...(catalog === undefined ? {} : { buildCatalog: catalog }),
+      operationStore: operations.service,
+      dispatchStore: dispatch.service,
+      artifactStore: artifacts.service,
+      close: opened.close,
+    });
+  } catch (error) {
+    await opened.close();
+    throw error;
+  }
 }

@@ -773,7 +773,8 @@ test("CLI inspect and get read the durable Build archive independently of build 
   };
   const selected = {
     runtimeProfileRevision: async () => "test-revision",
-    createRuntimeControlFromConfig: async () => control,
+    createRuntimeArchiveFromConfig: async () => control,
+    createRuntimeArtifactAccessFromConfig: async () => control,
   } as unknown as CliDistribution;
   const runArchiveCli = (
     argv: readonly string[],

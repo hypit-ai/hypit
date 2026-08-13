@@ -2,6 +2,7 @@ export { plannedNeeds } from "@narratage/core";
 export { MemoryBuildStore } from "./memory.js";
 export {
   MemoryBuildCatalog,
+  sameBuildCatalogDescriptor,
   verifyBuildCatalogDescriptor,
   verifyBuildCatalogEntry,
 } from "./catalog.js";
