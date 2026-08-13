@@ -53,7 +53,6 @@ export type DriverRunResult = {
 export type SchedulingHint = EndpointScheduling;
 
 export type ProducerRegistration = {
-  readonly producer: ProducerRef;
   readonly implementationDigest: Digest;
   readonly handler: ProducerHandler;
   readonly scheduling?: SchedulingHint;

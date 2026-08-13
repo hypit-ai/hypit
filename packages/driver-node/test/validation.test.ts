@@ -10,7 +10,7 @@ import {
   sealCompiledGraph,
   sealRecord,
   start,
-  verifyRecord,
+  verifyRecordStructure,
 } from "@narratage/core";
 import {
   ProducerRegistry,
@@ -346,9 +346,9 @@ test("authored values cross the Type owner's validation gate without carrying va
       kind: "authored",
     },
   });
-  verifyRecord(linked.closure, raw);
+  verifyRecordStructure(linked.closure, raw);
   const admitted = await admitRecord(linked.closure, raw, registry());
-  verifyRecord(linked.closure, admitted);
+  verifyRecordStructure(linked.closure, admitted);
   assert.deepEqual(admitted, raw);
 });
 

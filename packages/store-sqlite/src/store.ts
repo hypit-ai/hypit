@@ -114,7 +114,6 @@ function transaction<T>(database: DatabaseSync, body: () => T): T {
 }
 
 function durableBuildState(state: BuildState): BuildState {
-  verifyBuildState(state);
   const normalized = { ...structuredClone(state), outstanding: [] };
   verifyBuildState(normalized);
   return normalized;

@@ -12,7 +12,6 @@ function copy(snapshot: BuildSnapshot): BuildSnapshot {
 }
 
 function durableState(state: BuildState): BuildState {
-  verifyBuildState(state);
   const normalized = { ...structuredClone(state), outstanding: [] };
   verifyBuildState(normalized);
   return normalized;
