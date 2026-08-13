@@ -93,7 +93,6 @@ test("the graph contract is exactly source plus Program to one image Need", asyn
   } as never);
   assert.deepEqual(result.outputs, {});
   assert.deepEqual(result.needs.image, {
-    contract: "svml.raster-request@1",
     kind: "transform",
     source,
     operations: gptImageDenoiseV1.operations,

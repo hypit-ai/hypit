@@ -185,7 +185,7 @@ async function handlerFor(request: Need): Promise<{ handler: ImmediateEndpointHa
 }
 
 async function inspectArtifact(artifacts: MemoryArtifactStore, source: Awaited<ReturnType<MemoryArtifactStore["put"]>>) {
-  const constraints = canonicalize({ contract: "svml.inspect-media-request@1", source });
+  const constraints = canonicalize({ source });
   const request = need("need:media-inspect", mediaPipelineCapabilities.inspect,
     mediaTypes.inspection, constraints);
   const provider = await handlerFor(request);
@@ -209,7 +209,6 @@ async function normalizeArtifact(args: {
   frameRate: { readonly numerator: number; readonly denominator: number };
 }): Promise<SynchronizedMedia> {
   const constraints = canonicalize({
-    contract: "svml.normalize-media-request@1",
     source: args.source,
     inspection: args.inspection,
     selection: args.selection,
@@ -419,7 +418,6 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
     const artifacts = new MemoryArtifactStore();
     const source = await artifacts.put(await readFile(sourcePath), "audio/wav");
     const constraints = canonicalize({
-      contract: "svml.project-speech-evidence-audio-request@1",
       source,
       sourceSampleFrames: 48_001,
       evidenceSampleFrames: 16_000,
@@ -568,7 +566,6 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
       mediaPipelineCapabilities.transform,
       artifactTypes.blob,
       canonicalize({
-        contract: "svml.transform-media-request@1",
         media: normalized,
         program: {
           operations: [
@@ -587,7 +584,6 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
       mediaPipelineCapabilities.extractAudio,
       artifactTypes.blob,
       canonicalize({
-        contract: "svml.extract-audio-request@1",
         source,
         streamIndex: audioIndex,
         output: { container: "wav", codec: "pcm_s16le", sampleRate: 48_000, channels: 2 },
@@ -604,7 +600,6 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
       mediaPipelineCapabilities.extractFrame,
       artifactTypes.blob,
       canonicalize({
-        contract: "svml.extract-frame-request@1",
         source,
         streamIndex: video.index,
         sourceFrameCount: video.decodedUnitCount,
@@ -696,7 +691,7 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
       "need:render-program-audio",
       mediaPipelineCapabilities.renderAudio,
       mediaTypes.timelineAudio,
-      canonicalize({ contract: "svml.render-audio-request@1", plan }),
+      canonicalize({ plan }),
     );
     const audioValue = await fulfillInline(artifacts, audioRequest);
     verifyTimelineAudio(audioValue);
@@ -714,7 +709,7 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
       "need:mux-program-media",
       mediaPipelineCapabilities.mux,
       mediaTypes.muxed,
-      canonicalize({ contract: "svml.mux-media-request@1", visual, audio }),
+      canonicalize({ visual, audio }),
     );
     const muxValue = await fulfillInline(artifacts, muxRequest);
     verifyMuxedMedia(muxValue);
@@ -774,7 +769,7 @@ test("local media Provider executes an end-aligned loop from the exact authored 
       "need:render-loop-audio",
       mediaPipelineCapabilities.renderAudio,
       mediaTypes.timelineAudio,
-      canonicalize({ contract: "svml.render-audio-request@1", plan }),
+      canonicalize({ plan }),
     ));
     verifyTimelineAudio(value);
     const audio = value as unknown as TimelineAudio;

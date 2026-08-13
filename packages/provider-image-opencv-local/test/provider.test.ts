@@ -22,7 +22,6 @@ import { localOpenCvService } from "../src/service.js";
 
 function need(source: BlobRef, program: ImageTransformProgram = gptImageDenoiseV1): Need {
   const constraints = canonicalize({
-    contract: "svml.raster-request@1",
     kind: "transform",
     source,
     operations: program.operations,
@@ -44,7 +43,6 @@ function need(source: BlobRef, program: ImageTransformProgram = gptImageDenoiseV
 
 function composeNeed(source: BlobRef): Need {
   const constraints = canonicalize({
-    contract: "svml.raster-request@1",
     kind: "compose",
     canvas: {
       widthPx: 3, heightPx: 2,

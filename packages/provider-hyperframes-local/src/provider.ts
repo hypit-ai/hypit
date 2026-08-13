@@ -213,9 +213,7 @@ async function verifyOutput(args: {
 function visualRequest(value: CanonicalValue): HyperframesDocument {
   assert(value !== null && typeof value === "object" && !Array.isArray(value),
     "HyperFrames visual request must be an object");
-  const item = value as { readonly contract?: unknown; readonly document?: unknown };
-  assert(item.contract === "svml.hyperframes-visual-render-request@1",
-    "HyperFrames visual request contract is invalid");
+  const item = value as { readonly document?: unknown };
   assertHyperframesDocument(item.document as HyperframesDocument);
   return item.document as HyperframesDocument;
 }
@@ -266,10 +264,6 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
       lifecycle: "immediate" as const,
       capability: renderHyperframesCapabilities.renderVisual,
       returns: mediaTypes.renderedVisual,
-      supports: (need) => need.constraints !== null && typeof need.constraints === "object"
-        && !Array.isArray(need.constraints)
-        && (need.constraints as { readonly contract?: unknown }).contract
-          === "svml.hyperframes-visual-render-request@1",
       handler: async (context) => {
         const document = visualRequest(context.need.constraints);
         const work = await mkdtemp(join(tmpdir(), "svml-hyperframes-local-"));

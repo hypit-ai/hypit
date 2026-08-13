@@ -8,7 +8,6 @@ export const requestHyperframesVisualImplementationDigest = digestOf("@narratage
 export function hyperframesVisualRequest(document: HyperframesDocument): CanonicalValue {
   assertHyperframesDocument(document);
   return {
-    contract: "svml.hyperframes-visual-render-request@1",
     document,
   };
 }

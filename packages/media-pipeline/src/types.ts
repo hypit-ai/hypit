@@ -15,7 +15,6 @@ export type MediaSelectionRequest = {
 };
 
 export type InspectMediaNeed = {
-  readonly contract: "svml.inspect-media-request@1";
   readonly source: BlobRef;
 };
 
@@ -69,20 +68,17 @@ export type FrameExtractionRequest = {
 };
 
 export type TransformMediaNeed = {
-  readonly contract: "svml.transform-media-request@1";
   readonly media: import("@narratage/media").SynchronizedMedia;
   readonly program: MediaTransformProgram;
 };
 
 export type ExtractAudioNeed = {
-  readonly contract: "svml.extract-audio-request@1";
   readonly source: BlobRef;
   readonly streamIndex: number;
   readonly output: AudioExtractionRequest["output"];
 };
 
 export type ExtractFrameNeed = {
-  readonly contract: "svml.extract-frame-request@1";
   readonly source: BlobRef;
   readonly streamIndex: number;
   readonly sourceFrameCount: number;
@@ -91,7 +87,6 @@ export type ExtractFrameNeed = {
 };
 
 export type NormalizeMediaNeed = {
-  readonly contract: "svml.normalize-media-request@1";
   readonly source: BlobRef;
   readonly inspection: MediaInspection;
   readonly selection: MediaStreamSelection;
@@ -105,7 +100,6 @@ export type NormalizeMediaNeed = {
 };
 
 export type ProjectSpeechEvidenceAudioNeed = {
-  readonly contract: "svml.project-speech-evidence-audio-request@1";
   readonly source: BlobRef;
   readonly sourceSampleFrames: number;
   readonly evidenceSampleFrames: number;
@@ -142,12 +136,10 @@ export type AudioProgramPlan = {
 };
 
 export type RenderAudioNeed = {
-  readonly contract: "svml.render-audio-request@1";
   readonly plan: AudioProgramPlan;
 };
 
 export type MuxMediaNeed = {
-  readonly contract: "svml.mux-media-request@1";
   readonly visual: RenderedVisual;
   readonly audio: TimelineAudio;
 };

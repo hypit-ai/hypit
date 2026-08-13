@@ -48,13 +48,11 @@ export type RasterLayer = {
 };
 
 export type RasterTransformRequest = {
-  readonly contract: "svml.raster-request@1";
   readonly kind: "transform";
   readonly source: BlobRef;
   readonly operations: readonly RasterTransformOperation[];
 };
 export type RasterComposeRequest = {
-  readonly contract: "svml.raster-request@1";
   readonly kind: "compose";
   readonly canvas: CanvasSpace;
   readonly background: string;

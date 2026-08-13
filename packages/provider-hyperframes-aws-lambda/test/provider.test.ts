@@ -240,7 +240,6 @@ test("the Lambda Endpoint declines frame domains and requirements it cannot pres
   assert.equal(supportsAwsLambdaHyperframes(hyperframesVisualRequest(documentFixture(12))), false);
   assert.equal(supportsAwsLambdaHyperframes(hyperframesVisualRequest(documentFixture(30_000, 1_001))), false);
   assert.equal(supportsAwsLambdaHyperframes(canonicalize({
-    contract: "svml.hyperframes-visual-render-request@1",
     document: documentFixture(),
     browserGpu: "hardware",
   })), false, "an unsupported hardware requirement must fall through to another Endpoint");

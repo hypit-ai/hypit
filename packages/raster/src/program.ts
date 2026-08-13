@@ -92,7 +92,6 @@ export function assertRasterTransformOperations(operations: readonly RasterTrans
 }
 
 export function assertRasterRequest(value: RasterRequest): void {
-  assert(value.contract === "svml.raster-request@1", "Unsupported RasterRequest contract");
   if (value.kind === "transform") {
     image(value.source, "Raster transform source");
     assertRasterTransformOperations(value.operations);
@@ -111,11 +110,11 @@ export function assertRasterRequest(value: RasterRequest): void {
 }
 
 export function rasterTransformRequest(source: RasterTransformRequest["source"], operations: readonly RasterTransformOperation[]): RasterTransformRequest {
-  const request = canonicalize({ contract: "svml.raster-request@1", kind: "transform", source, operations }) as unknown as RasterTransformRequest;
+  const request = canonicalize({ kind: "transform", source, operations }) as unknown as RasterTransformRequest;
   assertRasterRequest(request); return request;
 }
-export function rasterComposeRequest(value: Omit<RasterComposeRequest, "contract" | "kind">): RasterComposeRequest {
-  const request = canonicalize({ contract: "svml.raster-request@1", kind: "compose", ...value }) as unknown as RasterComposeRequest;
+export function rasterComposeRequest(value: Omit<RasterComposeRequest, "kind">): RasterComposeRequest {
+  const request = canonicalize({ kind: "compose", ...value }) as unknown as RasterComposeRequest;
   assertRasterRequest(request); return request;
 }
 export function rasterSources(request: RasterRequest): readonly RasterLayer["source"][] {

@@ -6,7 +6,6 @@ import { digestOf } from "@narratage/protocol";
 export const geminiOmniModuleRef = { name: "@narratage/gemini-omni", version: "1" } as const;
 
 export const geminiOmniVideoPorts: GenerationPortTable = sealGenerationPortTable({
-  contract: "svml.generation-ports@1",
   model: "gemini-omni-video",
   result: "video",
   ports: [

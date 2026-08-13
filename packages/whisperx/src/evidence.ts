@@ -11,7 +11,6 @@ export function whisperXRequestForEvidenceAudio(
   assertSpeechEvidenceAudioIdentity(evidence);
   assertSpeechAudioBasisIdentity(basis);
   return {
-    contract: "svml.whisperx-alignment-request@1",
     audio: evidence.artifact,
     sampleFrames: evidence.sampleFrames,
     segments: basis.segments,

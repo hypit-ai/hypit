@@ -63,7 +63,6 @@ export const captionGeminiProgramSchema: ValueSchema = object({
   model: { schema: model },
 });
 export const captionGeminiRequestSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-gemini-request@1" } },
   model: { schema: model },
   runs: { schema: { kind: "array", minItems: 1, items: planningRun } },
   systemInstruction: { schema: string }, prompt: { schema: string },
