@@ -13,7 +13,7 @@ const localRuntimeModuleRef = {
 } as const;
 
 const localSchedulerImplementationDigest = digestOf("@narratage/local/scheduler@1");
-const localWorkerImplementationDigest = digestOf("@narratage/local/worker@1");
+const localWorkerImplementationDigest = digestOf("@narratage/local/worker@1/blocked-subject");
 
 export function createLocalExecutionPackage(
   instance: string,

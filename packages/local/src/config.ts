@@ -31,7 +31,11 @@ import type { RuntimeServicePackage, RuntimeServiceSelection } from "@narratage/
 
 import type { LocalRuntime } from "./types.js";
 import type { LocalCredentialControl } from "./types.js";
-import type { LocalRuntimeControl } from "./types.js";
+import type {
+  LocalRuntimeArchiveControl,
+  LocalRuntimeArtifactAccess,
+  LocalRuntimeControl,
+} from "./types.js";
 
 export type RuntimeConfigEntry = {
   readonly use: string;
@@ -623,27 +627,88 @@ export async function createRuntimeFromConfig(
   });
 }
 
-/**
- * Open only the durable control Stores selected by a Runtime Profile. Endpoint
- * construction, credential resolution, author components and Worker instances
- * are unnecessary for archive inspection, queue visibility, egress and cancellation.
- */
-export async function createRuntimeControlFromConfig(
+async function createSelectedRuntimeServices(
+  document: RuntimeConfigDocument,
+  root: string,
+  packageRoot: string,
+  registry: RuntimeAdapterRegistry,
+  serviceIds: readonly string[],
+  readOnly: boolean,
+): Promise<readonly RuntimeServicePackage[]> {
+  const serviceEntries = runtimeEntriesForServices(document.runtimeServices, serviceIds);
+  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot, {
+    selected: [],
+    logical: serviceEntries.map((item) => ({ abi: runtimeServiceAdapterHostAbi, name: item.use })),
+  });
+  const packages: RuntimeServicePackage[] = [];
+  try {
+    for (const item of serviceEntries) {
+      packages.push(await registry.createService(item.use, {
+        root,
+        instance: item.instance,
+        config: item.config ?? {},
+        access: readOnly ? "read-only" : "read-write",
+      }));
+    }
+    return packages;
+  } catch (error) {
+    await closeRuntimeServicePackages(packages);
+    throw error;
+  }
+}
+
+/** Open Build, Operation and Dispatch state without constructing an ArtifactStore. */
+export async function createRuntimeArchiveFromConfig(
+  path: string,
+  options: LoadRuntimeConfigOptions = {},
+): Promise<LocalRuntimeArchiveControl> {
+  const { createProjectLocalRuntimeArchiveControl } = await import("./control.js");
+  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const registry = options.registry ?? new RuntimeAdapterRegistry();
+  const runtimeServices = await createSelectedRuntimeServices(document, root, packageRoot, registry, [
+    document.services.stores.build,
+    document.services.stores.operations,
+    document.services.stores.dispatch,
+  ], options.readOnly === true);
+  return await createProjectLocalRuntimeArchiveControl({
+    root,
+    runtimeServices,
+    runtimeSelection: document.services,
+  });
+}
+
+/** Open only the ArtifactStore selected by a Runtime Profile. */
+export async function createRuntimeArtifactAccessFromConfig(
+  path: string,
+  options: LoadRuntimeConfigOptions = {},
+): Promise<LocalRuntimeArtifactAccess> {
+  const { createProjectLocalRuntimeArtifactAccess } = await import("./control.js");
+  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const registry = options.registry ?? new RuntimeAdapterRegistry();
+  const runtimeServices = await createSelectedRuntimeServices(document, root, packageRoot, registry, [
+    document.services.stores.artifacts,
+  ], options.readOnly === true);
+  return await createProjectLocalRuntimeArtifactAccess({
+    root,
+    runtimeServices,
+    runtimeSelection: document.services,
+  });
+}
+
+/** Open state plus Artifacts only for explicit cross-store maintenance such as GC. */
+export async function createRuntimeMaintenanceFromConfig(
   path: string,
   options: LoadRuntimeConfigOptions = {},
 ): Promise<LocalRuntimeControl> {
   const { createProjectLocalRuntimeControl } = await import("./control.js");
   const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot, runtimePackageSelection(document));
-  const runtimeServices = await Promise.all(document.runtimeServices.map(async (item) => {
-    return await registry.createService(item.use, {
-      root,
-      instance: item.instance,
-      config: item.config ?? {},
-      access: options.readOnly ? "read-only" : "read-write",
-    });
-  }));
+  const runtimeServices = await createSelectedRuntimeServices(document, root, packageRoot, registry, [
+    document.services.stores.build,
+    document.services.stores.operations,
+    document.services.stores.dispatch,
+    document.services.stores.artifacts,
+  ], options.readOnly === true);
   return await createProjectLocalRuntimeControl({
     root,
     runtimeServices,
@@ -691,11 +756,17 @@ export async function createRuntimeCredentialsFromConfig(
   const endpointEntry = document.endpoints.find((item) => item.instance === endpointInstance);
   if (endpointEntry === undefined) throw new Error(`Runtime Profile has no Endpoint instance ${endpointInstance}`);
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot, runtimePackageSelection(document));
   const serviceEntries = runtimeEntriesForServices(
     document.runtimeServices,
     document.services.stores.credentials,
   );
+  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot, {
+    selected: [],
+    logical: [
+      { abi: runtimeEndpointAdapterHostAbi, name: endpointEntry.use },
+      ...serviceEntries.map((item) => ({ abi: runtimeServiceAdapterHostAbi, name: item.use })),
+    ],
+  });
   const packages = await Promise.all(serviceEntries.map(async (item) => await registry.createService(item.use, {
     root,
     instance: item.instance,

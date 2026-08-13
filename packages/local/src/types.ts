@@ -53,15 +53,23 @@ export type CreateLocalRuntimeOptions = {
   readonly validators?: LocalTypeValidatorRegistry;
 };
 
-export type CreateLocalRuntimeControlOptions = {
+export type CreateLocalRuntimeArchiveControlOptions = {
   readonly buildStore: BuildStore;
   readonly buildCatalog?: BuildCatalog;
   readonly operationStore: OperationStore;
   readonly dispatchStore: BuildDispatchStore;
+  /** Optional owner supplied by the project service assembly. */
+  readonly close?: () => Awaitable<void>;
+};
+
+export type CreateLocalRuntimeArtifactAccessOptions = {
   readonly artifactStore: ArtifactStore;
   /** Optional owner supplied by the project service assembly. */
   readonly close?: () => Awaitable<void>;
 };
+
+export type CreateLocalRuntimeControlOptions = CreateLocalRuntimeArchiveControlOptions
+  & CreateLocalRuntimeArtifactAccessOptions;
 
 export type CreateLocalCredentialControlOptions = {
   readonly credentialStore: CredentialStore;
@@ -93,11 +101,14 @@ export type ProjectLocalRuntimeOptions = {
   readonly validators?: LocalTypeValidatorRegistry;
 };
 
-export type ProjectLocalRuntimeControlOptions = Pick<ProjectLocalRuntimeOptions,
+export type ProjectLocalRuntimeArchiveControlOptions = Pick<ProjectLocalRuntimeOptions,
   | "root"
   | "runtimeServices"
   | "runtimeSelection"
 >;
+
+export type ProjectLocalRuntimeArtifactAccessOptions = ProjectLocalRuntimeArchiveControlOptions;
+export type ProjectLocalRuntimeControlOptions = ProjectLocalRuntimeArchiveControlOptions;
 
 export type LocalBuildRequest = {
   /** Stable user/run identity. Reusing it resumes only the same Core Build identity. */
@@ -178,7 +189,26 @@ export type LocalRuntime = {
   close(): Awaitable<void>;
 };
 
-/** Durable project control that needs Stores but no Producer, Endpoint, Driver or Worker. */
+/** Durable execution-state archive that never opens the selected ArtifactStore. */
+export type LocalRuntimeArchiveControl = Pick<LocalRuntime,
+  | "status"
+  | "activity"
+  | "queue"
+  | "operation"
+  | "builds"
+  | "cancel"
+  | "cancelOperation"
+  | "close"
+>;
+
+/** Explicit Artifact byte access that never opens Build, Operation or Dispatch state. */
+export type LocalRuntimeArtifactAccess = Pick<LocalRuntime,
+  | "readArtifact"
+  | "openArtifact"
+  | "close"
+>;
+
+/** Durable project control used only when one operation truly spans state and Artifacts. */
 export type LocalRuntimeControl = Pick<LocalRuntime,
   | "status"
   | "activity"

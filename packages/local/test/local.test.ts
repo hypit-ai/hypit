@@ -743,17 +743,34 @@ test("project local runtime accepts an explicitly selected replacement ArtifactS
     assert.equal(blocked?.terminal, "failed");
     assert.match(blocked?.reason ?? "", /does not bind demanded capability/u);
     assert.deepEqual(await artifactStore.get(sourceArtifact.digest), bytes);
-    await assert.rejects(
-      runtime.build({
-        id: "tampered-source-artifact",
-        state: createGreetingBuild(),
-        attachments: [{
-          artifact: sourceArtifact,
-          open: async () => (async function* () { yield new Uint8Array([0]); })(),
-        }],
-      }),
-      /does not match its staged bytes/u,
-    );
+    let reopened = false;
+    await runtime.build({
+      id: "existing-source-artifact",
+      state: createGreetingBuild(),
+      attachments: [{
+        artifact: sourceArtifact,
+        open: async () => {
+          reopened = true;
+          throw new Error("existing content-addressed bytes must not be reopened");
+        },
+      }],
+    });
+    assert.equal(reopened, false);
+    const absentBytes = new Uint8Array([10, 11, 12]);
+    const absentArtifact = {
+      kind: "blob" as const,
+      digest: `sha256:${createHash("sha256").update(absentBytes).digest("hex")}` as const,
+      size: absentBytes.byteLength,
+      mediaType: "application/octet-stream",
+    };
+    await assert.rejects(runtime.build({
+      id: "tampered-source-artifact",
+      state: createGreetingBuild(),
+      attachments: [{
+        artifact: absentArtifact,
+        open: async () => (async function* () { yield new Uint8Array([0]); })(),
+      }],
+    }), /does not match its staged bytes/u);
     await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });
