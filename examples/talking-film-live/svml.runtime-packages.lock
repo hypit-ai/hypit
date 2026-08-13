@@ -85,7 +85,7 @@
     {
       "name": "@narratage/driver-node",
       "version": "0.0.0-dev",
-      "digest": "sha256:68d4e6adf7bf037b5c859c4b68a2133499168102238acf87ec14786d44b02580"
+      "digest": "sha256:bae40e10e18ca5a183c9962d7d7909a2fdfdd7039a6affad76e289d4f00b9b3e"
     },
     {
       "name": "@narratage/elaborator",
@@ -949,7 +949,7 @@
         }
       ],
       "facetsDigest": "sha256:bacc2fe27612f029aeef34236fd5fa687259e08c980c310adc8118be2cceeaba",
-      "closureDigest": "sha256:96765d9c76a58a69fbf7244dd32c0fe3dc0ec92b967b45ed032081ff272dc96c"
+      "closureDigest": "sha256:131f9fe0a292ebe7f30f7422efd316a312919b42a5d1226c0f142246663b633d"
     },
     {
       "package": {
@@ -1036,5 +1036,5 @@
       "closureDigest": "sha256:c866f01c2c6515940483a42be5808d45741e5622118e215e289460bb1203cf6d"
     }
   ],
-  "digest": "sha256:fc79e42c505483ddea7e4726d792ebada95ae9fa4d8066641049dc024d3d893c"
+  "digest": "sha256:7f15b4a4629ef04902185e341fc99a6dcf61ff350b27ffad6ba9e85bc4b28a86"
 }

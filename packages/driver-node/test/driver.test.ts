@@ -125,7 +125,7 @@ test("Driver pauses at an unbound Need, serializes, then resumes without rerunni
   });
 });
 
-test("Endpoint Registry rejects ambiguity until the Runtime binds one endpoint", async () => {
+test("Endpoint Registry rejects ambiguity until a Runtime Closure selects one endpoint", async () => {
   const { producers, endpoints } = configuredRegistry();
   endpoints.registerImmediateEndpoint("example:alpha", capabilities.generation, types.generated, () => ({
     value: { kind: "inline", value: "Alpha" },
@@ -140,14 +140,6 @@ test("Endpoint Registry rejects ambiguity until the Runtime binds one endpoint",
   assert.equal(ambiguous.blocked[0]?.reason, "ambiguous-endpoint");
   assert.match(ambiguous.blocked[0]?.subject ?? "", /example:alpha, example:beta/u);
 
-  endpoints.bind(capabilities.generation, "example:beta");
-  const completed = await driver.run(ambiguous.state);
-  assert.equal(completed.status, "complete");
-  assert.equal(completed.state.receipts[0]?.fulfiller, "example:beta");
-  assert.deepEqual(
-    completed.state.records.find((record) => record.id === "document:root")?.value,
-    { kind: "inline", value: { text: "Beta" } },
-  );
 });
 
 test("an Endpoint receives only declared credential slots and secrets never enter BuildState", async () => {

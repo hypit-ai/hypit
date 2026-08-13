@@ -170,15 +170,6 @@ export class EndpointRegistry implements EndpointRegistrar {
     return this.#runtimeClosure;
   }
 
-  bind(capability: CapabilityRef, endpointId: string): void {
-    const key = endpointCapabilityKey(capability);
-    if (!this.#registrations.some((registration) =>
-      registration.id === endpointId && sameRef(registration.capability, capability))) {
-      throw new Error(`endpoint ${endpointId} does not register capability ${key}`);
-    }
-    this.#bindings.set(key, endpointId);
-  }
-
   /** Bind only implementation-verified Endpoint instances from one locked Runtime Closure. */
   applyRuntimeClosure(
     closure: RuntimeClosure,
