@@ -7,7 +7,9 @@ import type {
   CliExternalServiceProgress,
   CliExternalServiceReport,
   CliRuntime,
-  CliRuntimeControl,
+  CliRuntimeArchiveControl,
+  CliRuntimeArtifactAccess,
+  CliRuntimeMaintenance,
   CliRuntimeDoctorResult,
 } from "./runtime-port.js";
 
@@ -66,8 +68,12 @@ export type CliDistribution = {
     /** Same-process package set already verified for compilation. */
     readonly implementationPackages?: LoadedNodePackageSet;
   }): Promise<CliRuntime>;
-  /** Open only durable Stores for observation, cancellation, egress and maintenance. */
-  createRuntimeControlFromConfig(path: string, options?: { readonly readOnly?: boolean }): Promise<CliRuntimeControl>;
+  /** Open only durable execution-state Stores for observation and cancellation. */
+  createRuntimeArchiveFromConfig(path: string, options?: { readonly readOnly?: boolean }): Promise<CliRuntimeArchiveControl>;
+  /** Open only the selected ArtifactStore for explicit byte ingress or egress. */
+  createRuntimeArtifactAccessFromConfig(path: string, options?: { readonly readOnly?: boolean }): Promise<CliRuntimeArtifactAccess>;
+  /** Open execution-state Stores plus the ArtifactStore for explicit retention maintenance. */
+  createRuntimeMaintenanceFromConfig(path: string, options?: { readonly readOnly?: boolean }): Promise<CliRuntimeMaintenance>;
   /** Open only the selected Endpoint declaration and configured CredentialStores. */
   createRuntimeCredentialsFromConfig(path: string, endpoint: string): Promise<CliCredentialControl>;
   /** Re-enter this exact Distribution as the hidden durable Worker process. */

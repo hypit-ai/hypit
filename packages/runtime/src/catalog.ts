@@ -1,4 +1,4 @@
-import { isDigest } from "@narratage/protocol";
+import { canonicalStringify, isDigest } from "@narratage/protocol";
 import type {
   Digest,
   LogicalOutputRef,
@@ -71,6 +71,24 @@ function copy<T>(value: T): T {
   return structuredClone(value);
 }
 
+function descriptorValue(descriptor: BuildCatalogDescriptor): BuildCatalogDescriptor {
+  return {
+    format: descriptor.format,
+    core: descriptor.core,
+    source: descriptor.source,
+    ...(descriptor.run === undefined ? {} : { run: descriptor.run }),
+    aliases: descriptor.aliases,
+  };
+}
+
+/** One Build id keeps the exact Host presentation under which it was first submitted. */
+export function sameBuildCatalogDescriptor(
+  left: BuildCatalogDescriptor,
+  right: BuildCatalogDescriptor,
+): boolean {
+  return canonicalStringify(descriptorValue(left)) === canonicalStringify(descriptorValue(right));
+}
+
 export class MemoryBuildCatalog implements BuildCatalog {
   readonly #entries = new Map<string, BuildCatalogEntry>();
   readonly #now: () => number;
@@ -84,15 +102,17 @@ export class MemoryBuildCatalog implements BuildCatalog {
     verifyBuildCatalogDescriptor(descriptor);
     const existing = this.#entries.get(build);
     if (existing !== undefined) {
-      assert(existing.core === descriptor.core, `Build Catalog ${build} already names another Core Build`);
+      assert(sameBuildCatalogDescriptor(existing, descriptor),
+        `Build Catalog ${build} already has another source, Run Source or output naming`);
+      return copy(existing);
     }
     const now = this.#now();
     assert(Number.isSafeInteger(now) && now >= 0, "Build Catalog clock returned an invalid time");
     const entry: BuildCatalogEntry = {
       ...copy(descriptor),
       build,
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: Math.max(now, existing?.updatedAt ?? now),
+      createdAt: now,
+      updatedAt: now,
     };
     verifyBuildCatalogEntry(entry);
     this.#entries.set(build, entry);

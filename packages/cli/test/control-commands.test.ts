@@ -3,7 +3,7 @@ import test from "node:test";
 
 import type { CliDistribution } from "../src/distribution.js";
 import { runCli } from "../src/main.js";
-import type { CliCredentialControl, CliRuntimeControl } from "../src/runtime-port.js";
+import type { CliCredentialControl, CliRuntimeArchiveControl } from "../src/runtime-port.js";
 
 test("queue opens durable control without constructing execution Providers", async () => {
   const calls: string[] = [];
@@ -15,10 +15,10 @@ test("queue opens durable control without constructing execution Providers", asy
     async close() {
       calls.push("control.close");
     },
-  } as unknown as CliRuntimeControl;
+  } as unknown as CliRuntimeArchiveControl;
   const distribution = {
     runtimeProfileRevision: async () => "test-revision",
-    createRuntimeControlFromConfig: async () => {
+    createRuntimeArchiveFromConfig: async () => {
       calls.push("control.create");
       return control;
     },
@@ -52,7 +52,7 @@ test("queue opens durable control without constructing execution Providers", asy
 
 test("command options fail closed instead of being silently ignored", async () => {
   const distribution = {
-    createRuntimeControlFromConfig: async (path: string) => {
+    createRuntimeArchiveFromConfig: async (path: string) => {
       throw new Error(`profile delegated: ${path}`);
     },
   } as unknown as CliDistribution;

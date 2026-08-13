@@ -13,9 +13,12 @@ import {
 } from "@narratage/runtime-adapter";
 import { digestOf } from "@narratage/protocol";
 import { credentialRef, defineRuntimeServicePackage } from "@narratage/runtime";
+import { createSqliteRuntimeServicePackage } from "@narratage/store-sqlite";
 
 import {
   createRuntimeFromConfig,
+  createRuntimeArchiveFromConfig,
+  createRuntimeArtifactAccessFromConfig,
   doctorRuntimeConfig,
   parseRuntimeConfig,
   runtimeConfigRevision,
@@ -35,6 +38,65 @@ const services = {
 };
 
 const required = { runtimeServices: [], services, scheduling: { maxConcurrency: 3 } } as const;
+
+test("archive observation does not construct the selected ArtifactStore adapter", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-runtime-archive-slice-"));
+  const path = join(root, "svml.runtime.json");
+  await writeFile(path, JSON.stringify({
+    format: "svml.runtime-config@1",
+    runtimeServices: [
+      { use: "example.state", instance: "state", config: {} },
+      { use: "example.artifacts", instance: "artifacts", config: {} },
+    ],
+    services: {
+      scheduler: "execution.scheduler",
+      worker: "execution.worker",
+      stores: {
+        build: "state.builds",
+        operations: "state.operations",
+        dispatch: "state.dispatch",
+        artifacts: "artifacts.store",
+        credentials: [],
+      },
+    },
+    scheduling: { maxConcurrency: 1 },
+    endpoints: [],
+  }));
+  let artifactConstructions = 0;
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeServiceAdapterFacet({
+    use: "example.state",
+    validate() {},
+    create(context) {
+      return createSqliteRuntimeServicePackage({
+        path: join(context.root, "runtime.sqlite"),
+        buildInstance: `${context.instance}.builds`,
+        operationInstance: `${context.instance}.operations`,
+        dispatchInstance: `${context.instance}.dispatch`,
+        readOnly: context.access === "read-only",
+      });
+    },
+  }));
+  registry.registerFacet(createRuntimeServiceAdapterFacet({
+    use: "example.artifacts",
+    validate() {},
+    create() {
+      artifactConstructions += 1;
+      throw new Error("artifact adapter constructed");
+    },
+  }));
+  try {
+    const archive = await createRuntimeArchiveFromConfig(path, { registry, readOnly: true });
+    assert.equal((await archive.status("missing")).build, undefined);
+    await archive.close();
+    assert.equal(artifactConstructions, 0);
+    await assert.rejects(createRuntimeArtifactAccessFromConfig(path, { registry, readOnly: true }),
+      /artifact adapter constructed/u);
+    assert.equal(artifactConstructions, 1);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("Runtime revision follows content and referenced locks, not a filename suffix", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-runtime-revision-"));

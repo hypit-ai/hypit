@@ -40,7 +40,7 @@ test("SQLite stores verified Build facts and Operation checkpoints across reopen
     const initial = createGreetingBuild();
     const created = await first.builds.create("video", initial);
     assert.equal(created.revision, 0);
-    await first.catalog.record("video", {
+    const catalog = {
       format: "svml.build-catalog-descriptor@1",
       core: initial.id,
       source: { path: "/project/main.svml", closure: digestOf("source-closure") },
@@ -48,7 +48,13 @@ test("SQLite stores verified Build facts and Operation checkpoints across reopen
         name: "final.video",
         ref: { kind: "logical-output", id: initial.request.targets[0]!.output },
       }],
-    });
+    } as const;
+    await first.catalog.record("video", catalog);
+    assert.equal((await first.catalog.record("video", catalog)).aliases[0]?.name, "final.video");
+    await assert.rejects(first.catalog.record("video", {
+      ...catalog,
+      aliases: [{ ...catalog.aliases[0], name: "renamed.video" }],
+    }), /another source, Run Source or output naming/u);
     const operation = sealOperationIdentity({
       build: "video",
       command: "command:generation",
