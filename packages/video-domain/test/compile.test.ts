@@ -48,6 +48,11 @@ async function compile(entryPath: string): Promise<unknown> {
 /**
  * Compile every committed example the way a build does.
  *
+ * A Surface may only emit Types its manifest declares, and the frontend is the
+ * only thing that checks. Two packages shipped Surfaces that emitted more than
+ * they admitted, and nothing noticed because no Source here wrote those tags.
+ * `all-components-preview` writes every kind of Track for exactly that reason.
+ *
  * A Surface is only exercised when a real Source names it, so a package can
  * declare a tag whose Types or graph do not agree with what its handler emits
  * and nothing notices. This is the test that notices: it needs no Provider, no
