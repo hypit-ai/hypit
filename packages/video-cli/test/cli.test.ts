@@ -394,6 +394,67 @@ test("one checked-in fixture closes the complete provider-free video plan", asyn
   assert.equal(plan.goals.length, 1);
 });
 
+test("one locked provider-free Build executes the checked-in Frame graph", async () => {
+  const fixture = join(process.cwd(), "examples", "talking-film-graph-check");
+  const runtimeRoot = await mkdtemp(join(tmpdir(), "narratage-frame-smoke-"));
+  const profile = join(runtimeRoot, "svml.runtime.json");
+  const runtimePackageLock = join(runtimeRoot, "svml.runtime-packages.lock");
+  await writeNodePackageLock(runtimePackageLock, await createNodePackageLock([
+    "@narratage/local",
+    "@narratage/store-sqlite",
+    "@narratage/artifact-store-fs",
+  ], process.cwd()));
+  await writeFile(profile, JSON.stringify({
+    format: "svml.runtime-config@1",
+    root: process.cwd(),
+    packageLock: join(fixture, "svml.packages.lock"),
+    runtimePackageLock,
+    runtimeServices: [
+      { use: "@narratage/local", instance: "execution" },
+      { use: "@narratage/store-sqlite", instance: "state", config: { path: join(runtimeRoot, "state.sqlite") } },
+      { use: "@narratage/artifact-store-fs", instance: "artifacts", config: { path: join(runtimeRoot, "artifacts") } },
+    ],
+    services: {
+      scheduler: "execution.scheduler",
+      worker: "execution.worker",
+      stores: {
+        build: "state.builds",
+        operations: "state.operations",
+        dispatch: "state.dispatch",
+        artifacts: "artifacts",
+        credentials: [],
+      },
+    },
+    endpoints: [],
+    scheduling: { maxConcurrency: 2, resources: {} },
+  }), "utf8");
+
+  let output = "";
+  try {
+    await runVideoCli([
+      "build", join(fixture, "frame-smoke.svrun"),
+      "--runtime", profile,
+      "--build-id", "frame-smoke",
+      "--follow",
+      "--max-wait-ms", "15000",
+      "--json",
+    ], { write: (text) => { output += text; } });
+    const result = JSON.parse(output) as {
+      readonly status: string;
+      readonly goals: readonly { readonly value?: {
+        readonly kind: string;
+        readonly value?: { readonly widthPx?: number; readonly heightPx?: number };
+      } }[];
+    };
+    assert.equal(result.status, "complete");
+    assert.ok((result.goals[0]?.value?.value?.widthPx ?? 0) > 0);
+    assert.ok((result.goals[0]?.value?.value?.heightPx ?? 0) > 0);
+  } finally {
+    await runVideoCli(["runtime", "down", "--runtime", profile, "--json"], { write() {} });
+    await rm(runtimeRoot, { recursive: true, force: true });
+  }
+});
+
 test("CLI package lock activates an installed package without changing the official host", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-cli-package-lock-"));
   const projectRoot = join(directory, "external-video-project");
