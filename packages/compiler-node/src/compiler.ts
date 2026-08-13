@@ -203,7 +203,7 @@ export class NodeCompiler {
    * identity. Authored Records are rebound to the larger verified closure before Core sees Run code.
    */
   extendExecutionProgram(program: LinkedProgram, requests: readonly string[]): LinkedProgram {
-    const existing = program.closure.modules.map((item) => `${item.ref.name}@${item.ref.version}`);
+    const existing = program.closure.modules.map((item) => `${item.manifest.name}@${item.manifest.version}`);
     const closure = this.#options.modules.createClosure([...existing, ...requests]);
     if (closure.digest === program.closure.digest) return program;
     const extended = link(closure, program.records);
