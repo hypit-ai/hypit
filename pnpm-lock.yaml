@@ -1473,6 +1473,7 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+
   packages/media:
     dependencies:
       '@narratage/artifact':
@@ -2033,6 +2034,9 @@ importers:
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
 
   packages/provider-xiaomi-mimo:
     dependencies:
@@ -2180,6 +2184,7 @@ importers:
       '@narratage/source':
         specifier: workspace:*
         version: link:../source
+
   packages/run-markup:
     dependencies:
       '@narratage/markup':
