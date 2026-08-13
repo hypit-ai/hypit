@@ -279,7 +279,7 @@ test("Selection Text consumes explicit Selection, SemanticMap, Style, Motion and
     ],
   };
   const selection: NarrativeSelectionRef = {
-    contract: "svml.narrative-selection@1",
+
     id: "callout",
     occurrences: [{ occurrence: 1, startAnchorId: "selection:start", endAnchorId: "selection:end" }],
   };

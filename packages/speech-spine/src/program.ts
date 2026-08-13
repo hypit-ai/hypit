@@ -51,7 +51,7 @@ export function assertSpeechSpineProgram(value: SpeechSpineProgram): void {
 }
 
 function verifyExcerpt(value: NarrativeExcerpt): void {
-  assert(value.contract === "svml.narrative-excerpt@1" && value.kind === "segment",
+  assert(value.kind === "segment",
     "Speech Spine Take must reference a Segment NarrativeExcerpt");
   assert(value.id.length > 0 && Number.isSafeInteger(value.tokenStart)
     && Number.isSafeInteger(value.tokenEndExclusive) && value.tokenEndExclusive > value.tokenStart,

@@ -97,7 +97,7 @@ test("Selection and Role project to ordered whole-Atom display-word subsets", ()
   const program = resolveCaptionProgram(display, "captions", style("normal"), [{
     id: "alice-use",
     words: {
-      contract: "svml.caption-display-word-subset@1",
+
       id: "role:ALICE",
       sequenceId: display.id,
       wordIds: aliceIds,
@@ -114,7 +114,7 @@ test("Caption Mute is an ordered whole-Atom visibility mask and does not change 
   const program = resolveCaptionProgram(display, "captions", style("normal"), [], [{
     id: "hide-middle",
     words: {
-      contract: "svml.caption-display-word-subset@1",
+
       id: "selection:hide-middle",
       sequenceId: display.id,
       wordIds: mutedWords.map((word) => word.id),
@@ -133,7 +133,7 @@ test("Caption timing applies Mute after planning and preserves the original Cue 
   const program = resolveCaptionProgram(display, "captions", style("normal"), [], [{
     id: "hide-disconnected",
     words: {
-      contract: "svml.caption-display-word-subset@1",
+
       id: "selection:hide-disconnected",
       sequenceId: display.id,
       wordIds: mutedWordIds,
@@ -170,7 +170,7 @@ test("caption:Program lowers explicit Mute word subsets without a temporal mask"
   const parsed = parseScript("mute-surface.svml", "<line>Keep this private phrase hidden.</line>");
   const display = captionDisplaySequence(parsed, "story.caption");
   const hidden: CaptionDisplayWordSubset = {
-    contract: "svml.caption-display-word-subset@1",
+
     id: "private",
     sequenceId: display.id,
     wordIds: display.words.slice(2, 4).map((word) => word.id),

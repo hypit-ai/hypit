@@ -151,7 +151,7 @@ function motion(recipe: SvsRecipe): RankingMotionStyle {
 
 function sound(recipe: SvsRecipe): RankingSoundStyle {
   const value: RankingSoundStyle = {
-    contract: "svml.ranking-sound-style@1",
+
     appearGain: number(recipe, "appear-gain", 1),
     moveGain: number(recipe, "move-gain", 1),
     fadeFrames: integer(recipe, "sound-fade-frames", 0),
@@ -182,7 +182,7 @@ export function decodeTierBoardStyle(
   known(recipe, TIER_KEYS);
   const fonts = exactFonts(font);
   const style: TierBoardStyle = {
-    contract: "svml.tier-board-style@1",
+
     rows: rowList(recipe),
     board: board(recipe),
     text: typography(recipe, fonts),
@@ -212,7 +212,7 @@ export function decodeColumnStyle(
   known(recipe, COLUMN_KEYS);
   const fonts = exactFonts(font);
   const style: ColumnStyle = {
-    contract: "svml.column-style@1",
+
     board: board(recipe),
     text: typography(recipe, fonts),
     rankColors: colorList(recipe, "rank-colors", "#facc15|#d1d5db|#fb923c|#60a5fa|#a78bfa"),
@@ -240,7 +240,7 @@ export function decodeTopThreeStyle(
   known(recipe, TOP_KEYS);
   const fonts = exactFonts(font);
   const style: TopThreeStyle = {
-    contract: "svml.top-three-style@1",
+
     text: typography(recipe, fonts),
     slotColors: colorList(recipe, "slot-colors", "#facc15|#d1d5db|#fb923c"),
     centerX: number(recipe, "center-x", 0.5),
@@ -266,7 +266,7 @@ export function decodeTypewriterListStyle(
   known(recipe, TYPEWRITER_KEYS);
   const fonts = exactFonts(font);
   const style: TypewriterListStyle = {
-    contract: "svml.typewriter-list-style@1",
+
     paper: board(recipe),
     title: typography(recipe, fonts, "title-", { size: 34, weight: 800, color: "#111827", lineHeight: 1.1 }),
     item: typography(recipe, fonts, "item-", { size: 26, weight: 600, color: "#1f2937", lineHeight: 1.2 }),

@@ -56,7 +56,7 @@ test("Gemini sees only immutable display atoms and resolved Style runs", () => {
   const program = resolveCaptionProgram(display, "captions", style("normal"), [{
     id: "alice-use",
     words: {
-      contract: "svml.caption-display-word-subset@1", id: "role:ALICE", sequenceId: display.id,
+      id: "role:ALICE", sequenceId: display.id,
       wordIds: display.words.filter((word) => word.role === "ALICE").map((word) => word.id),
     },
     style: alice,
@@ -129,7 +129,7 @@ test("Caption Mute stays out of Gemini while muted Atoms remain in the immutable
   const program = resolveCaptionProgram(display, "captions", style("fine"), [], [{
     id: "private",
     words: {
-      contract: "svml.caption-display-word-subset@1",
+
       id: "selection:private",
       sequenceId: display.id,
       wordIds: muted.map((word) => word.id),
