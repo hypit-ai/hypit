@@ -59,7 +59,8 @@ showing a measured timeline it cannot vouch for.
 
 **Material degrades one element at a time.** A Take or an Item shows real frames
 when its source already exists and already lives in the program's frame domain,
-and a painted rectangle when it does not. Normalizing footage of another frame
+and a painted rectangle when it does not. Reading a file's frame rate needs
+`ffprobe` on the path; without it every Item keeps its placeholder and says so. Normalizing footage of another frame
 rate is the media pipeline's job and takes a real transcode, so the preview
 refuses and says which file and why rather than quietly resampling.
 

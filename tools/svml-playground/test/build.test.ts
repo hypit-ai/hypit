@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,6 +12,22 @@ import { interpretSource } from "../src/interpret/document.js";
 import { estimateTiming } from "../src/interpret/timing.js";
 import { readRunSource } from "../src/interpret/run.js";
 import { parseScript } from "@narratage/script";
+
+/**
+ * Reading a frame rate off a file needs ffprobe, which not every machine has
+ * and CI does not. The preview degrades to a placeholder without it, which is
+ * asserted below unconditionally; only the cases that need a real probe are
+ * skipped.
+ */
+const probing = (() => {
+  try {
+    execFileSync("ffprobe", ["-version"], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+const needsProbe = probing ? {} : { skip: "ffprobe is not installed" };
 
 const SOURCE = `<?svml using="@narratage/markup@1"?>
 
@@ -256,7 +273,7 @@ test("an unsatisfied or absent Run Source changes nothing", async () => {
   assert.equal(result.video, undefined);
 });
 
-test("material in the wrong frame domain is refused, not resampled", async () => {
+test("material in the wrong frame domain is refused, not resampled", needsProbe, async () => {
   const directory = workspace();
   // The fixture Source declares 30 fps; this footage is 24.
   const footage = join(process.cwd(), "docs/public/street-interview/scene-1.mp4");
@@ -283,7 +300,7 @@ test("material in the wrong frame domain is refused, not resampled", async () =>
   assert.ok(snapshot.tracks.flatMap((track) => track.clips).every((clip) => clip.placeholder));
 });
 
-test("material in the program's frame domain becomes real frames", async () => {
+test("material in the program's frame domain becomes real frames", needsProbe, async () => {
   const directory = workspace();
   const footage = join(process.cwd(), "docs/public/street-interview/scene-1.mp4");
   writeFileSync(join(directory, "main.svml"), SOURCE.replace('frame-rate="30"', 'frame-rate="24"'), "utf8");
@@ -410,4 +427,37 @@ test("a build-record naming a build that is not there falls back", async () => {
   // The latest build still supplies both, so this stays measured — the point is
   // that naming a missing build does not throw.
   assert.ok(snapshot.tracks.flatMap((track) => track.clips).length > 0);
+});
+
+test("material an author supplied is never silently absent", async () => {
+  // Whether or not this machine can probe a file, a Take backed by footage must
+  // either show it or say why it does not. Falling back to a placeholder with no
+  // explanation reads as a bug in the preview rather than a missing tool.
+  const directory = workspace();
+  const footage = join(process.cwd(), "docs/public/street-interview/scene-1.mp4");
+  writeFileSync(join(directory, "build.svrun"), `<?svml using="@narratage/run-markup@1"?>
+
+<svrun version="1">
+  <author source="./main.svml"/>
+  <target output="final.video"/>
+  <file id="footage" from="${footage}" media-type="video/mp4"/>
+  <satisfy output="take.video" candidate="footage"/>
+</svrun>
+`, "utf8");
+  const snapshot = (await interpretSource({
+    source: join(directory, "main.svml"),
+    run: join(directory, "build.svrun"),
+    root: directory,
+    revision: 1,
+  })).snapshot;
+
+  const clips = snapshot.tracks.flatMap((track) => track.clips);
+  const shown = clips.filter((clip) => !clip.placeholder).length;
+  if (shown === 0) {
+    assert.equal(snapshot.refused.length, 1, "a placeholder here needs a reason");
+    assert.equal(snapshot.refused[0]!.output, "take.video");
+    assert.match(snapshot.refused[0]!.reason, /fps|probed/u);
+  } else {
+    assert.deepEqual(snapshot.refused, [], "nothing was refused, so nothing to explain");
+  }
 });

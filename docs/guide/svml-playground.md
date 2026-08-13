@@ -104,7 +104,8 @@ The Playground prefers real things, in this order:
 
    Material degrades one element at a time: a Take or an Item shows real frames
    when its source exists and already lives in the program's frame domain, and a
-   placeholder when it does not. Footage of another frame rate is refused with a
+   placeholder when it does not. Reading a file's frame rate needs `ffprobe` on
+   the path; without it every Item keeps its placeholder and says so. Footage of another frame rate is refused with a
    reason rather than resampled, because normalizing is a real transcode and
    belongs to the media pipeline.
 3. **The Script text.** Token durations come from `@narratage/estimate`, the same
