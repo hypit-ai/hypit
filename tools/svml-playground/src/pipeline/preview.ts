@@ -19,6 +19,7 @@ import type { Placement } from "./observe.js";
 import { evenCaptionPlan, hasAtoms } from "./caption-plan.js";
 import { estimateTiming } from "./estimate.js";
 import { blackFrames, heldPicture } from "./placeholder.js";
+import type { Placeholder } from "./placeholder.js";
 import { execute, MemoryArtifactStore } from "./execute.js";
 import type { Archive } from "./archive.js";
 import { applyRunSource, emptyRun } from "./run-source.js";
@@ -180,7 +181,9 @@ export async function preview(
       // report what they were waiting for rather than being invented.
       timing = "measured";
     } else {
-      const estimated = estimateTiming(value as never, authoredFrameRate(source.compiled));
+      const estimated = estimateTiming(
+        value as never, authoredFrameRate(source.compiled), declaredSpans(source),
+      );
       anchors = new Map((estimated.map as { anchors: readonly { identity: string; frame: number }[] })
         .anchors.map((anchor) => [anchor.identity, anchor.frame]));
       const closure = await videoDomainClosure();
@@ -257,7 +260,9 @@ export async function preview(
 
   const canvas = authoredCanvas(source.compiled);
     const rate = authoredFrameRate(source.compiled);
-    const black = blackFrames(rate, canvas);
+    // Every stand-in is as long as the shot it stands in for, so the timeline
+    // and the picture cannot disagree about how long the programme runs.
+    const black = blackFrames(rate, canvas, 1);
     if (black !== undefined) {
       const digest = `sha256:${createHash("sha256").update(black.bytes).digest("hex")}`;
       (source.served as Map<string, ServedFile>).set(digest, {
@@ -271,7 +276,22 @@ export async function preview(
         // picture. It is not the take, but it is the right subject held for the
         // right length, which is what makes a preview worth looking at.
         const held = await standIn(source, output.name, rate, canvas, archive, supplied);
-        const shown = held ?? { bytes: black.bytes, mediaType: black.mediaType, digest };
+        const owner = output.name.includes(".")
+          ? output.name.slice(0, output.name.indexOf("."))
+          : output.name;
+        const placement = source.observations.placements.find((item) => item.id === owner);
+        const seconds = placement === undefined ? undefined : declaredSeconds(source, placement);
+        const own = seconds === undefined ? undefined : blackFrames(rate, canvas, seconds);
+        const dark: Placeholder = own ?? black;
+        const darkDigest = dark === black
+          ? digest
+          : `sha256:${createHash("sha256").update(dark.bytes).digest("hex")}`;
+        if (dark !== black) {
+          (source.served as Map<string, ServedFile>).set(darkDigest, {
+            mediaType: dark.mediaType, bytes: dark.bytes,
+          });
+        }
+        const shown = held ?? { bytes: dark.bytes, mediaType: dark.mediaType, digest: darkDigest };
         if (held !== undefined) {
           (source.served as Map<string, ServedFile>).set(held.digest, {
             mediaType: held.mediaType, bytes: held.bytes,
@@ -504,6 +524,33 @@ function blobDigest(compiled: unknown, id: string): string | undefined {
     .module.records;
   const found = records.find((record) => record.id === id);
   return found?.value.kind === "blob" ? found.value.digest : undefined;
+}
+
+/**
+ * How long each Segment's own material says it is.
+ *
+ * A guess at reading pace is a proportion, not a prediction, and a Source that
+ * already declares a length knows better. An element that names both a Segment
+ * and something with a declared duration is that Segment's material, whichever
+ * package wrote it.
+ */
+function declaredSpans(source: CompiledSource): ReadonlyMap<string, number> {
+  const spans = new Map<string, number>();
+  const byId = new Map(source.observations.placements.map((item) => [item.id ?? "", item]));
+  const declaredBy = (path: string): number | undefined => {
+    const seconds = Number(byId.get(path.split(".")[0] ?? "")?.attributes.duration);
+    return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
+  };
+  for (const placement of source.observations.placements) {
+    const groups = [placement.references, ...placement.children.map((child) => child.references)];
+    for (const references of groups) {
+      const segment = references.find((path) => path.includes(".segment."));
+      const seconds = references.map(declaredBy).find((held) => held !== undefined);
+      if (segment === undefined || seconds === undefined) continue;
+      spans.set(segment.slice(segment.lastIndexOf(".") + 1), seconds);
+    }
+  }
+  return spans;
 }
 
 /** Whether an export is something the graph produces rather than a Record read from the Source. */

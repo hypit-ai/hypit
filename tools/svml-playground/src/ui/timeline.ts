@@ -1,6 +1,7 @@
 import type { PlaygroundSnapshot } from "../shared.js";
 import { markerTones } from "./markers.js";
 import type { State, Store } from "./selection.js";
+import { createZoom } from "./zoom.js";
 
 export type Timeline = { readonly element: HTMLElement };
 
@@ -22,6 +23,19 @@ function timecode(seconds: number): string {
  * bottom track, every Media Item above it on one shared track, exactly as an
  * editor would lay them out.
  */
+/** One row of one Track. A Track with overlapping clips is several rows tall. */
+const LANE_HEIGHT = 52;
+
+/**
+ * Where a frame sits across the strip, once the zoom window is taken into
+ * account. Everything the timeline draws goes through here, so the ruler, the
+ * clips and the playhead cannot disagree about where a moment is.
+ */
+function place(frame: number, frameCount: number, shown: { start: number; end: number }): number {
+  const span = Math.max(1e-6, shown.end - shown.start);
+  return (frame / Math.max(1, frameCount) - shown.start) / span;
+}
+
 export function createTimeline(store: Store): Timeline {
   const element = document.createElement("section");
   element.className = "timeline";
@@ -37,11 +51,17 @@ export function createTimeline(store: Store): Timeline {
         <div class="lanes" data-rows></div>
         <div class="playhead" data-playhead><div class="playhead-grip"></div></div>
       </div>
-    </div>`;
+    </div>
+    <div class="timeline-zoom" data-zoom></div>`;
 
   const readout = element.querySelector<HTMLElement>("[data-readout]")!;
   const labels = element.querySelector<HTMLElement>("[data-labels]")!;
   const lanes = element.querySelector<HTMLElement>("[data-lanes]")!;
+  // The whole programme as a bar, with the shown part as a window inside it.
+  const zoom = createZoom();
+  element.querySelector<HTMLElement>("[data-zoom]")!.append(zoom.element);
+  // Positions are computed against the window rather than scaled, so a clip's
+  // label stays the size it was however far in the reader has zoomed.
   const ruler = element.querySelector<HTMLElement>("[data-ruler]")!;
   const rows = element.querySelector<HTMLElement>("[data-rows]")!;
   const playhead = element.querySelector<HTMLElement>("[data-playhead]")!;
@@ -87,7 +107,12 @@ export function createTimeline(store: Store): Timeline {
     for (let seconds = 0; seconds <= snapshot.space.durationSec; seconds += step) {
       const tick = document.createElement("span");
       tick.className = "tick";
-      tick.style.left = `${seconds / snapshot.space.durationSec * 100}%`;
+      const frame = seconds * snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
+      const at = place(frame, snapshot.space.frameCount, zoom.window());
+      tick.style.left = `${at * 100}%`;
+      // A label near the end would hang past the strip and give the panel a
+      // width nothing occupies, so the last one reads back from its own mark.
+      if (at > 0.94) tick.classList.add("tick-last");
       tick.textContent = timecode(seconds);
       ruler.append(tick);
     }
@@ -108,20 +133,70 @@ export function createTimeline(store: Store): Timeline {
       label.className = track.waiting === undefined ? "track-label" : "track-label track-waiting";
       label.innerHTML = "<strong></strong><small></small>";
       label.querySelector("strong")!.textContent = track.label;
-      label.querySelector("small")!.textContent = track.waiting === undefined
-        ? `${track.clips.length} clip${track.clips.length === 1 ? "" : "s"}`
-        : `waiting on ${track.waiting.join(", ")}`;
+      // What this Track is showing. Real material at measured times needs no
+      // remark; anything else is a footnote the reader can open, because the
+      // full sentence would not fit beside the strip.
+      const said = {
+        made: "Material this Source names.",
+        "stand-in": "This shot has not been made. It shows a picture the Source names for it.",
+        black: "This shot has no material and names no picture, so it shows a black frame.",
+        waiting: `Not built here: waiting on ${(track.waiting ?? []).join(", ")}.`,
+      }[track.source];
+      const timing = track.timing === "measured"
+        ? "Times were supplied."
+        : "No times were supplied, so words are placed at an ordinary delivery pace.";
+      const plain = track.source === "made" && track.timing === "measured";
+      label.querySelector("small")!.textContent =
+        `${track.clips.length} clip${track.clips.length === 1 ? "" : "s"}`;
+      if (!plain) {
+        const note = document.createElement("button");
+        note.type = "button";
+        note.className = `track-note note-${track.source}`;
+        note.append("i");
+        note.title = `${said} ${timing}`;
+        note.setAttribute("aria-label", note.title);
+        const bubble = document.createElement("span");
+        bubble.className = "note-bubble";
+        bubble.textContent = `${said} ${timing}`;
+        note.append(bubble);
+        // Fixed to the viewport so the panel it hangs out of cannot clip it,
+        // which means it has to be told where the note is each time.
+        note.addEventListener("pointerenter", () => {
+          const box = note.getBoundingClientRect();
+          bubble.style.left = `${box.right + 8}px`;
+          bubble.style.top = `${Math.max(8, box.top + box.height / 2 - 30)}px`;
+        });
+        label.querySelector("small")!.append(note);
+      }
       labels.append(label);
+
+      // Clips that overlap in time cannot share a row without hiding each
+      // other, so a Track is as many rows tall as it needs. A board's panel
+      // runs the whole programme and its rows settle underneath it.
+      const freeFrom: number[] = [];
+      const rowOf = new Map<string, number>();
+      for (const clip of [...track.clips].sort((a, b) => a.startFrame - b.startFrame)) {
+        let row = freeFrom.findIndex((free) => free <= clip.startFrame);
+        if (row < 0) { row = freeFrom.length; freeFrom.push(0); }
+        freeFrom[row] = clip.endFrameExclusive;
+        rowOf.set(clip.id, row);
+      }
+      const depth = Math.max(1, freeFrom.length);
+      label.style.height = `${depth * LANE_HEIGHT}px`;
 
       const lane = document.createElement("div");
       lane.className = "lane";
+      lane.style.height = `${depth * LANE_HEIGHT}px`;
       for (const clip of track.clips) {
         const node = document.createElement("button");
         node.type = "button";
         node.className = "clip";
         node.dataset.clip = clip.id;
-        node.style.left = `${clip.startFrame / snapshot.space.frameCount * 100}%`;
-        node.style.width = `${(clip.endFrameExclusive - clip.startFrame) / snapshot.space.frameCount * 100}%`;
+        const from = place(clip.startFrame, snapshot.space.frameCount, zoom.window());
+        const to = place(clip.endFrameExclusive, snapshot.space.frameCount, zoom.window());
+        node.style.left = `${from * 100}%`;
+        node.style.top = `${(rowOf.get(clip.id) ?? 0) * LANE_HEIGHT}px`;
+        node.style.width = `${(to - from) * 100}%`;
         node.title = `${clip.label} (${clip.startFrame}-${clip.endFrameExclusive}f)`;
         node.innerHTML = `<span class="clip-name"></span><span class="clip-meta"></span>`;
         node.querySelector(".clip-name")!.textContent = clip.label;
@@ -142,7 +217,7 @@ export function createTimeline(store: Store): Timeline {
   const paint = (): void => {
     if (state === undefined) return;
     const { snapshot, selection, playhead: head } = state;
-    const percent = head.frame / snapshot.space.frameCount * 100;
+    const percent = place(head.frame, snapshot.space.frameCount, zoom.window()) * 100;
     playhead.style.left = `${percent}%`;
     readout.textContent =
       `${head.frame} / ${snapshot.space.frameCount - 1}f (${(head.frame / fps(snapshot)).toFixed(2)}s)`;
@@ -156,6 +231,29 @@ export function createTimeline(store: Store): Timeline {
       );
     }
   };
+
+  // A trackpad pinch is a wheel event with ctrlKey set; two fingers sideways is
+  // a wheel with deltaX. Both are how a reader expects to move around a strip.
+  lanes.addEventListener("wheel", (event) => {
+    if (event.ctrlKey) {
+      event.preventDefault();
+      const box = lanes.getBoundingClientRect();
+      const at = box.width === 0 ? 0.5 : (event.clientX - box.left) / box.width;
+      zoom.pinch(at, Math.exp(event.deltaY * 0.01));
+      return;
+    }
+    if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+    event.preventDefault();
+    zoom.slide(event.deltaX / Math.max(1, lanes.clientWidth));
+  }, { passive: false });
+
+  // Subscribed here rather than where the zoom is made: it reports its window
+  // at once, and there is nothing to redraw until a Source has been read.
+  zoom.subscribe(() => {
+    if (state === undefined) return;
+    build(state.snapshot);
+    paint();
+  });
 
   store.subscribe((value) => {
     state = value;

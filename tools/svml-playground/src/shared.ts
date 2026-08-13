@@ -17,6 +17,8 @@ export type Clip = {
   readonly id: string;
   /** The authored id this Present is named after, when it names one. */
   readonly authoredId: string;
+  /** The Script marker that placed it, when something said put it there. */
+  readonly markerId?: string;
   readonly label: string;
   readonly startFrame: number;
   readonly endFrameExclusive: number;
@@ -39,6 +41,14 @@ export type Track = {
   readonly clips: readonly Clip[];
   /** Capabilities this machine could not answer, when the Track has no picture. */
   readonly waiting?: readonly string[];
+  /**
+   * Where this Track's own picture came from. `made` is the material the Source
+   * names; `stand-in` is a picture it named for a shot nobody has made; `black`
+   * is neither. A Track drawn from more than one is reported by its weakest.
+   */
+  readonly source: "made" | "stand-in" | "black" | "waiting";
+  /** Whether this Track's times were supplied or estimated. */
+  readonly timing: "measured" | "estimated";
 };
 
 export type ScriptMap = {

@@ -45,6 +45,13 @@ export type EstimatedTiming = {
 export function estimateTiming(
   narrative: Narrative,
   frameRate: { readonly numerator: number; readonly denominator: number },
+  /**
+   * Seconds a Segment's own material declares, when it declares any. A take
+   * that says it is eight seconds long will be eight seconds long, so its words
+   * belong across those eight seconds rather than across a guess at how fast
+   * they might be read.
+   */
+  declared: ReadonlyMap<string, number> = new Map(),
 ): EstimatedTiming {
   const perSecond = frameRate.numerator / frameRate.denominator;
   // Ordinary delivery, with the clamps a whole-utterance estimate would apply
@@ -98,9 +105,113 @@ export function estimateTiming(
     if (!at.has(segment.startAnchorId)) place(segment.startAnchorId, held.first);
     if (!at.has(segment.endAnchorId)) place(segment.endAnchorId, held.last);
   }
+  if (declared.size > 0) {
+    return stretched(narrative, frameRate, anchors, timed, declared);
+  }
   const frameCount = Math.max(1, frame);
   return {
     map: { contract: "svml.complete-semantic-map@1", tokens: timed, anchors },
+    space: {
+      contract: "svml.program-space@1",
+      durationSec: frameCount * frameRate.denominator / frameRate.numerator,
+      frameRate: { ...frameRate },
+    },
+    frameCount,
+  };
+}
+
+/**
+ * Fit the guess to what the Source already knows.
+ *
+ * Word durations are a proportion, not a prediction: a syllable model says
+ * which word takes longer than which, and nothing about how fast this speaker
+ * talks. Where the material declares a length, that length is the truth, so
+ * each Segment's words are stretched across it and the Segments laid end to
+ * end. What is preserved is the shape of the speech; what is replaced is a
+ * pace nobody claimed.
+ */
+function stretched(
+  narrative: Narrative,
+  frameRate: { readonly numerator: number; readonly denominator: number },
+  anchors: readonly { identity: string; timeSec: number; frame: number }[],
+  timed: readonly {
+    tokenId: string; segmentId: string;
+    startSec: number; endSec: number; startFrame: number; endFrame: number;
+  }[],
+  declared: ReadonlyMap<string, number>,
+): EstimatedTiming {
+  const perSecond = frameRate.numerator / frameRate.denominator;
+  const guessed = new Map<string, { first: number; last: number }>();
+  for (const token of timed) {
+    const held = guessed.get(token.segmentId);
+    guessed.set(token.segmentId, {
+      first: Math.min(held?.first ?? token.startFrame, token.startFrame),
+      last: Math.max(held?.last ?? token.endFrame, token.endFrame),
+    });
+  }
+
+  // Each Segment takes the length its material declares, or the length it was
+  // guessed at when nothing declares one.
+  const span = new Map<string, { from: number; scale: number }>();
+  let cursor = 0;
+  for (const segment of narrative.segments) {
+    const held = guessed.get(segment.id);
+    const natural = held === undefined ? 0 : held.last - held.first;
+    const wanted = declared.has(segment.id)
+      ? Math.max(1, Math.round(declared.get(segment.id)! * perSecond))
+      : natural;
+    span.set(segment.id, {
+      from: cursor,
+      scale: natural === 0 ? 0 : wanted / natural,
+    });
+    cursor += wanted;
+  }
+
+  const moved = new Map<string, number>();
+  const at = (segmentId: string, frame: number): number => {
+    const held = span.get(segmentId);
+    const start = guessed.get(segmentId)?.first ?? 0;
+    if (held === undefined) return frame;
+    return Math.round(held.from + (frame - start) * held.scale);
+  };
+
+  const placedTokens = timed.map((token) => {
+    const startFrame = at(token.segmentId, token.startFrame);
+    const endFrame = Math.max(startFrame + 1, at(token.segmentId, token.endFrame));
+    moved.set(`${token.tokenId}:start`, startFrame);
+    moved.set(`${token.tokenId}:end`, endFrame);
+    return {
+      tokenId: token.tokenId, segmentId: token.segmentId,
+      startSec: startFrame / perSecond, endSec: endFrame / perSecond,
+      startFrame, endFrame,
+    };
+  });
+
+  const byToken = new Map(narrative.tokens.map((token) => [token.id, token]));
+  const placedAnchors = anchors.map((anchor) => {
+    const token = narrative.tokens.find((item) =>
+      item.startAnchorId === anchor.identity || item.endAnchorId === anchor.identity);
+    if (token !== undefined) {
+      const edge = token.startAnchorId === anchor.identity ? "start" : "end";
+      const frame = moved.get(`${token.id}:${edge}`) ?? anchor.frame;
+      return { identity: anchor.identity, timeSec: frame / perSecond, frame };
+    }
+    // A Segment's own edges close around the words it holds.
+    const segment = narrative.segments.find((item) =>
+      item.startAnchorId === anchor.identity || item.endAnchorId === anchor.identity);
+    if (segment === undefined) return anchor;
+    const held = span.get(segment.id);
+    const own = placedTokens.filter((item) => item.segmentId === segment.id);
+    const frame = segment.startAnchorId === anchor.identity
+      ? own[0]?.startFrame ?? held?.from ?? anchor.frame
+      : own.at(-1)?.endFrame ?? held?.from ?? anchor.frame;
+    return { identity: anchor.identity, timeSec: frame / perSecond, frame };
+  });
+  void byToken;
+
+  const frameCount = Math.max(1, cursor);
+  return {
+    map: { contract: "svml.complete-semantic-map@1", tokens: placedTokens, anchors: placedAnchors },
     space: {
       contract: "svml.program-space@1",
       durationSec: frameCount * frameRate.denominator / frameRate.numerator,

@@ -39,7 +39,10 @@
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
   <space:Frame id="full" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
-  <space:Frame id="board-frame" within={vertical} left="4%" top="14%" right="38%" bottom="56%"/>
+  <!-- A board fills from its bottom edge upward, so the Frame is sized to the
+       rows it holds: four rows, three gaps and the Recipe's padding. A taller
+       Frame would leave the rows floating at the bottom of an empty box. -->
+  <space:Frame id="board-frame" within={vertical} left="4%" top="14%" right="38%" bottom="32.85%"/>
   <space:Frame id="card-frame" within={vertical} left="10%" top="60%" right="90%" bottom="86%"/>
   <space:Frame id="title-frame" within={vertical} left="0%" top="6%" right="100%" bottom="13%"/>
 

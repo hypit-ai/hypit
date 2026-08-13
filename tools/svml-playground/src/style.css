@@ -19,7 +19,7 @@ html, body, #app { margin:0; height:100%; overflow:hidden; background:var(--bg);
 .status { color:var(--muted); font-size:12px; min-width:220px; text-align:right; }
 .status.ok { color:var(--ok); } .status.error { color:var(--danger); }
 
-main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 520px; }
+main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) auto 520px; }
 .left { min-width:0; min-height:0; display:flex; flex-direction:column; }
 .right { min-width:0; min-height:0; border-left:1px solid var(--line); background:var(--panel); display:flex; }
 
@@ -36,11 +36,11 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 5
    reads as two bars side by side rather than as the inner one alone. */
 .code-line.bound { cursor:pointer; }
 .code-line .gutter-bar {
-  position:absolute; top:0; bottom:0; width:2px; border-radius:1px;
-  background:var(--tone, var(--accent)); opacity:.55; pointer-events:none;
+  position:absolute; top:0; bottom:0; width:3px;
+  background:var(--tone, #ffffff); opacity:.55; pointer-events:none;
 }
 .code-line.bound:hover .gutter-bar { opacity:1; }
-.code-line.bound:hover .line-number { color:var(--tone, var(--accent)); }
+.code-line.bound:hover .line-number { color:var(--tone, #ffffff); }
 .tok-marker { cursor:pointer; }
 /* Wrap rather than scroll sideways: a wrapped attribute list still reads, and a
    horizontal scrollbar would hide the right-hand end of every long line. */
@@ -70,21 +70,18 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 5
    wrapped around it so every measured offset stays where it was. */
 .spoken { position:absolute; z-index:0; pointer-events:none; border-radius:3px; background:#ffd34d26; box-shadow:inset 0 0 0 1px #ffd34d66; transition:left .08s linear, width .08s linear; }
 .range { transition:opacity .08s linear; }
-.range-element { fill:#ee7b6224; stroke:var(--accent); stroke-width:1; }
+.range-element { fill:#ffffff14; stroke:#ffffff; stroke-width:1.5; }
+/* Drawn at this frame, but not the thing chosen. Present without competing. */
 .range-binding { fill:color-mix(in srgb, var(--tone, var(--marker)) 12%, transparent);
   stroke:var(--tone, var(--marker)); stroke-width:1.5; }
-/* An enclosing pair stays outlined while an inner one is, so nesting reads as
-   nesting. The inner outline is drawn last and sits inside the outer one. */
-.range-binding.tone-1 { stroke-dasharray:none; }
-.range-binding.tone-2, .range-binding.tone-3 { stroke-dasharray:5 3; }
 
 /* The picture takes the room that is left; the strip and the timeline are rows
    of the layout, so neither can ever cover the frame or the transport. */
-.left { display:grid; grid-template-rows:minmax(0,1fr) auto 224px; }
+.left { display:grid; grid-template-rows:minmax(0,1fr) auto auto 288px; }
 .left > div { min-height:0; }
 
 /* Stage --------------------------------------------------------------- */
-.stage { height:100%; display:flex; flex-direction:column; background:radial-gradient(circle at 50% 42%, #202027 0, #0b0b0e 62%); }
+.stage { height:100%; display:flex; flex-direction:column; background:#0d0d11; }
 .stage-viewport { flex:1; min-height:0; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:14px; }
 .stage-scaler { position:relative; transform-origin:top left; }
 /* The picture is a rendered composition, not a document to interact with. An
@@ -134,32 +131,25 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 5
 .timeline { height:100%; min-height:0; display:flex; flex-direction:column; border-top:1px solid var(--line); background:#0d0d10; }
 .timeline .pane-heading { justify-content:space-between; }
 .timeline [data-readout] { font-variant-numeric:tabular-nums; }
-.timeline-body { flex:1; min-height:0; display:grid; grid-template-columns:104px minmax(0,1fr); overflow:auto; }
-.timeline-labels { border-right:1px solid var(--line); background:var(--panel2); }
-.label-corner { height:24px; display:flex; align-items:center; justify-content:flex-end; padding-right:10px; border-bottom:1px solid var(--line); color:#55555f; font-size:10px; font-variant-numeric:tabular-nums; }
-.track-label { height:52px; display:flex; flex-direction:column; justify-content:center; gap:2px; padding:0 12px; border-bottom:1px solid var(--line); }
-.track-label strong { font-size:11px; }
-.track-label small { color:#63636e; font-size:10px; }
-.track-label.track-media strong { color:#7fb4ff; }
-.track-label.track-speech strong { color:#8bd6a4; }
+.timeline-body { flex:1; min-height:0; display:grid; grid-template-columns:104px minmax(0,1fr); overflow-x:hidden; overflow-y:auto; }
+.timeline-labels { position:sticky; left:0; z-index:3; border-right:1px solid var(--line); background:var(--panel2); }
+.label-corner { position:sticky; top:0; z-index:4; background:var(--panel2); height:24px; display:flex; align-items:center; justify-content:flex-end; padding-right:10px; border-bottom:1px solid var(--line); color:#55555f; font-size:10px; font-variant-numeric:tabular-nums; }
+.track-label { min-height:52px; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:2px; padding:0 10px; border-bottom:1px solid var(--line); }
+.track-label strong { font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.track-label small { color:#63636e; font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.track-label.track-waiting strong { color:var(--muted); }
 
 .timeline-lanes { position:relative; min-width:0; cursor:crosshair; user-select:none; }
-.ruler { position:relative; height:24px; border-bottom:1px solid var(--line); }
+.ruler { position:sticky; top:0; z-index:2; background:var(--panel); height:24px; border-bottom:1px solid var(--line); }
 .tick { position:absolute; top:0; padding-left:4px; border-left:1px solid #2f2f36; height:24px; line-height:24px; color:#55555f; font-size:10px; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.lane { position:relative; height:52px; border-bottom:1px solid var(--line); background:repeating-linear-gradient(90deg,#0f0f13 0 1px,transparent 1px 100%); }
-.lane-media { background-color:#101018; }
-.lane-speech { background-color:#0f1411; }
+.lane { position:relative; min-height:52px; border-bottom:1px solid var(--line); background:#0f0f13; }
 
-.clip { position:absolute; top:6px; height:40px; min-width:3px; display:flex; flex-direction:column; justify-content:center; gap:2px; padding:0 8px; overflow:hidden; text-align:left; border:1px solid transparent; border-radius:6px; color:var(--text); cursor:pointer; }
-.clip-media { background:linear-gradient(#2b3a57,#222c42); border-color:#3d5175; }
-.clip-speech { background:linear-gradient(#26402f,#1d3225); border-color:#3a5c45; }
+.clip { position:absolute; margin-top:6px; height:40px; min-width:3px; display:flex; flex-direction:column; justify-content:center; gap:2px; padding:0 8px; overflow:hidden; text-align:left; border:1px solid transparent; border-radius:6px; color:var(--text); cursor:pointer; }
 .clip[class*="tone-"] {
-  background:linear-gradient(color-mix(in srgb, var(--tone) 26%, #1a1a22),
-                             color-mix(in srgb, var(--tone) 14%, #14141b));
+  background:color-mix(in srgb, var(--tone) 20%, #14141b);
   border-color:color-mix(in srgb, var(--tone) 52%, transparent);
 }
 .clip[class*="tone-"] .clip-name { color:var(--tone); }
-.clip-placeholder { background-image:repeating-linear-gradient(135deg,#ffffff0a 0 6px,transparent 6px 12px); }
 .clip:hover { border-color:#7b7b8a; }
 /* Live means the playhead is inside it, which is a different claim from being
    selected, so it reads differently: lit rather than ringed. */
@@ -168,8 +158,8 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 5
 .clip-name { font-size:11px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .clip-meta { font-size:10px; color:#b6b6c2; font-variant-numeric:tabular-nums; }
 
-.playhead { position:absolute; top:0; bottom:0; width:1px; background:var(--accent); pointer-events:none; z-index:2; }
-.playhead-grip { position:absolute; top:0; left:-5px; width:11px; height:9px; background:var(--accent); clip-path:polygon(0 0,100% 0,50% 100%); }
+.playhead { position:absolute; top:0; bottom:0; width:1px; background:#ffffff; pointer-events:none; z-index:2; }
+.playhead-grip { position:sticky; top:0; display:block; margin-left:-5px; width:11px; height:9px; background:#ffffff; clip-path:polygon(0 0,100% 0,50% 100%); z-index:3; }
 
 .failure { position:absolute; left:18px; right:538px; bottom:18px; z-index:5; max-height:180px; overflow:auto; margin:0; padding:12px; color:#ffb0b0; background:#310f13e8; border:1px solid #8d3039; border-radius:8px; white-space:pre-wrap; }
 .failure:empty { display:none; }
@@ -187,9 +177,56 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 5
 /* A clip that is not the shot says so standing still: hatched for a stand-in
    picture, dimmed for a black frame. Reading the note is not the same as being
    able to see which of the two a clip is. */
-.clip-stand-in-picture {
-  background-image: repeating-linear-gradient(135deg,
-    transparent 0 6px, color-mix(in srgb, var(--tone, var(--muted)) 22%, transparent) 6px 12px);
-}
+/* A stand-in is marked by a line down its leading edge rather than a texture. */
+.clip-stand-in-picture { box-shadow:inset 3px 0 0 var(--tone, var(--muted)); }
 .clip-stand-in-black { opacity:.5; }
 .clip-stand-in-black .clip-name::after { content:" (black)"; color:var(--muted); }
+
+/* The edge between two panels, wide enough to grab and quiet until pointed at. */
+.handle { background:transparent; }
+.handle-column { width:6px; cursor:col-resize; margin-left:-3px; }
+.handle-row { height:6px; cursor:row-resize; margin-bottom:-3px; }
+.handle:hover, .handle:focus-visible { background:#ffffff2e; outline:none; }
+
+/* A Track says what it is showing. Real material is unremarkable; anything
+   standing in for a shot that has not been made says so without shouting. */
+.track-label small { display:block; }
+.track-label.source-made small { color:#63636e; }
+.track-label.source-stand-in small { color:var(--marker); }
+.track-label.source-black small { color:var(--muted); }
+.track-label.source-waiting small { color:var(--danger); }
+
+/* The whole programme, with the part on the timeline as a window inside it. */
+.timeline-zoom { flex:none; height:28px; padding:5px 10px 5px 114px; background:var(--panel2); border-top:1px solid var(--line); }
+.zoom { position:relative; height:18px; border-radius:8px; background:#0d0d10; box-shadow:inset 0 0 0 1px var(--line); cursor:pointer; }
+.zoom-window { position:absolute; top:0; bottom:0; border-radius:8px; background:#ffffff1f; box-shadow:inset 0 0 0 1px #ffffff5c; cursor:grab; }
+.zoom-window:active { cursor:grabbing; }
+.zoom-grip { position:absolute; top:50%; width:12px; height:12px; margin-top:-6px; border-radius:50%; background:#ffffffe6; box-shadow:0 1px 4px #0009; cursor:col-resize; }
+.zoom-grip-start { left:3px; }
+.zoom-grip-end { right:3px; }
+
+/* What a Track is showing is a footnote, not a sentence: an icon that opens the
+   detail, so a long explanation cannot push the strip out of the panel. */
+.track-note { display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; margin-left:4px; padding:0; border:0; border-radius:50%; background:#ffffff1a; color:var(--muted); font-size:10px; line-height:1; cursor:pointer; vertical-align:middle; }
+.track-note:hover { background:#ffffff2e; color:var(--text); }
+.track-note.note-stand-in { color:var(--marker); }
+.track-note.note-black { color:var(--muted); }
+.track-note.note-waiting { color:var(--danger); }
+
+/* The final mark reads back from its own line, so no label hangs past the strip. */
+.tick-last { padding-left:0; padding-right:4px; transform:translateX(-100%); border-left:0; border-right:1px solid #2f2f36; }
+
+/* A footnote that appears where it is pointed at and leaves when the pointer
+   does. A dialog for a sentence would stop the reader to say very little. */
+.track-note { position:relative; }
+.track-note .note-bubble {
+  position:fixed; z-index:60; width:280px; padding:9px 11px; border-radius:8px;
+  background:#1b1b21; box-shadow:0 10px 30px #000a, 0 0 0 1px var(--line);
+  color:var(--text); font-size:11px; line-height:1.45; text-align:left;
+  opacity:0; pointer-events:none; transition:opacity .1s linear;
+}
+.track-note:hover .note-bubble, .track-note:focus-visible .note-bubble { opacity:1; }
+
+.clip.selected, .clip[aria-pressed="true"] { border-color:#ffffff; box-shadow:0 0 0 1px #ffffff; }
+/* A footnote wraps rather than running off the side of the window. */
+.track-note .note-bubble { white-space:normal; word-break:break-word; max-width:min(320px, 42vw); }

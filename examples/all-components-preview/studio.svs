@@ -14,7 +14,7 @@
     rank-colors: #ff3f56|#ffa72d|#eadc2a|#84c654|#31add0;
     padding: 18; row-height: 74; row-gap: 10;
     icon-size: 58; icon-radius: 13; icon-fit: contain;
-    stage-x: 0.66; stage-y: 0.73; stage-size: 356;
+    stage-x: 0.5; stage-y: 0.5; stage-size: 96;
     font-size: 34; font-weight: 900; text-color: #FFFFFF; line-height: 1.1;
     appear-frames: 11; move-frames: 13; motion-easing: ease-out;
     board-stack: 20; item-stack: 30; stage-stack: 25;
@@ -23,7 +23,7 @@
   /* A cutaway replaces the shot, so it carries no box treatment. */
   /* A card sits inside the picture, so it keeps a box treatment. */
   media.card {
-    stack-order: 60; fit: cover; radius: 18; padding: 10 10;
+    stack-order: 60; fit: cover; clip: rounded; radius: 18; padding: 10 10;
     frame-paint: #14141c;
   }
   motion.card {

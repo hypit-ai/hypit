@@ -212,9 +212,14 @@ export function snapshot(built: Preview, input: {
       const shown = standInFor(span.id, where?.id, standIns) ?? standIns.get(owner);
       const named = [...new Set(span.id.split(/[:#+]/u))].find((part) => markers.has(part));
       const marker = named ?? (where === undefined ? undefined : markerFor(where.id));
+      // A clip is itself before it is what placed it: four rows of one board
+      // are four things, and collapsing them onto the marker they share would
+      // make them one.
+      const identity = where?.id ?? marker ?? item.name;
       return {
         id: span.id,
-        authoredId: marker ?? where?.id ?? item.name,
+        authoredId: identity,
+        ...(marker === undefined ? {} : { markerId: marker }),
         label: where?.id ?? span.id,
         startFrame: span.startFrame,
         endFrameExclusive: span.endFrameExclusive,
@@ -223,11 +228,21 @@ export function snapshot(built: Preview, input: {
         stackOrder: span.stackOrder,
       };
     });
+    // A Track says for itself where its picture came from. One badge for the
+    // whole programme hid that a Track was real while the one beside it was not.
+    const stands = new Set(clips.map((clip) => clip.standIn).filter(Boolean));
+    const source = item.track === undefined
+      ? "waiting" as const
+      : stands.has("black") ? "black" as const
+        : stands.has("picture") ? "stand-in" as const
+          : "made" as const;
     tracks.push({
       id: item.name,
       label: item.name,
       row: 0,
       clips,
+      source,
+      timing: built.timing,
       ...(item.track === undefined
         ? { waiting: item.unserved.length > 0 ? item.unserved : ["something this preview could not build"] }
         : {}),

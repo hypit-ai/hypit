@@ -11,7 +11,8 @@ pnpm svml:playground -- --source examples/talking-film-broll-preview/main.svml
 | Argument | Meaning |
 | --- | --- |
 | `--source <main.svml>` | The Author Source to read. Required. |
-| `--run <build.svrun>` | A Run Source, read for material it already names. |
+| `--run <build.svrun>` | A Run Source, read for material and timings it already names. |
+| `--runtime <svml.runtime.json>` | Where material earlier Builds produced is kept. Only a Source that reuses an accepted shot needs one. |
 | `--port <number>` | Defaults to `5179`. |
 
 The Playground never writes. There is no route that can change what you wrote,
@@ -81,7 +82,7 @@ Timings are another matter, and the header says which you are looking at:
 | `timing: measured` | Read from a completed build's aligned transcript. |
 | `timing: estimated` | Derived from the Script text at normal delivery pace. |
 | `picture: measured` | Every element shows real material. |
-| `picture: partial` | Some elements have their footage; the rest are placeholders. |
+| `picture: estimated` | Some shots have not been made, and stand in. |
 | `picture: estimated` | Nothing has been shot or generated yet. |
 
 The two are separate claims. A Source can have all its footage and still have an
@@ -90,64 +91,65 @@ about files.
 
 The Playground prefers real things, in this order:
 
-1. **A completed build.** If `.svml/state.sqlite` holds a build that finished, its
-   `timing.map` and `speech.space` replace the estimate outright, and its
-   `final.video` becomes the picture.
-2. **A Run Source.** Which timings a Source is read with is an authoring
-   decision, so `<satisfy>` is where it is made:
+1. **A Run Source.** Which material and which timings a Source is read with is
+   an authoring decision, so `<satisfy>` is where it is made:
 
    | Candidate | Supplies |
    | --- | --- |
    | `<file from="./shot.mp4" media-type="video/mp4"/>` | Material you already have. |
    | `<value type="…" from="./timing.json"/>` | A value on disk, such as an alignment produced elsewhere. |
-   | `<build-record build="…" output="timing.map"/>` | A value an earlier build accepted. |
+   | `<build-record build="…" output="take.video"/>` | Something an earlier Build made. Needs `--runtime`. |
 
-   Material degrades one element at a time: a Take or an Item shows real frames
-   when its source exists and already lives in the program's frame domain, and a
-   placeholder when it does not. Reading a file's frame rate needs `ffprobe` on
-   the path; without it every Item keeps its placeholder and says so. Footage of another frame rate is refused with a
-   reason rather than resampled, because normalizing is a real transcode and
-   belongs to the media pipeline.
-3. **The Script text.** Token durations come from `@narratage/estimate`, the same
+   Timings are called measured only when both `timing.map` and the Program Space
+   were supplied. One without the other is still an estimate, and says so.
+
+2. **An earlier Build.** A shot that has been generated and accepted is named by
+   the Build it came from, not by a path — a produced Artifact has an identity
+   rather than a location. Given `--runtime`, the Playground reads that Build's
+   Record and the Artifact bytes behind it, so a take generated yesterday is the
+   take on screen today. Without it, the Run Source is still read and only the
+   Build Record is refused, with the Build named.
+
+3. **The Script text.** Word durations come from `@narratage/estimate`, the same
    syllable model the pipeline uses before generation.
 
 An estimated timeline is a proportion, not a prediction: real cut points move
-once WhisperX has aligned real audio. If a store is from a newer schema, or its
-build never completed, the Playground falls back to estimates rather than
-showing you a measured timeline it cannot vouch for.
+once WhisperX has aligned real audio.
 
-## Placeholders
+## What stands in for what has not been made
 
-A Take's video and a Media Item's video are produced by Providers, so until one
-has run each Item contributes a painted rectangle instead. That keeps the
-preview free of Artifacts entirely, which is both honest and scrubbable: a
-`<video>` with an unresolvable source would render nothing and seek nowhere.
+A Track cannot be built without the material it places, and refusing to draw
+anything until every shot exists would make the preview useless for the part of
+the work it is meant for. So three things stand in, each announced rather than
+presented as fact:
 
-The placeholder fills the whole Placement Frame, because that is what a frame
-paint does. Where a Recipe declares padding, a dashed guide shows where real
-material will land.
+| Missing | Shown instead |
+| --- | --- |
+| A generated shot that names a picture | That picture, held for the length the shot declares |
+| A generated shot that names nothing | A black frame of the programme's shape |
+| Caption phrasing nobody has planned | The words cut every few Atoms, in the Program's own runs |
 
-## What it interprets
+The first is why a preview is worth looking at before anything is generated: a
+reference frame is not the take, but it is the right subject in the right shape.
+Both stand-ins are marked on the clip itself — hatched for a picture, dimmed for
+a black frame — and named in full when the clip is selected. Drawing them needs
+`ffmpeg`; without it the shots stay unmade and the Tracks say so.
 
-`<script>`, `<space:Canvas>`, `<space:Frame>`, `<space:AnchoredFrame>`,
-`<space:AspectFrame>`, `<speech:Spine>` and its Takes, `<media-track:Track>` and
-its Items, `<fonts:Stack>`, `<caption-fine:Style>` and `<caption-fine:Track>`,
-`<film:Film>` for the clear colour, and `.svs` source imports.
+## What it draws
 
-Captions are drawn with the exact face the Source names. Cue times come from the
-same map the Tracks read, placed by the Script tokens each Atom corresponds to —
-so captions land on the same timeline as the B-roll rather than on a second,
-unrelated guess. An Atom with no spoken token divides its Cue evenly, and the
-header says how many did.
+Every Track the Source produces, whichever package made it. The Playground asks
+the compiled Source for its exports and builds the ones typed `VisualTrack` or
+`AudioTrack` — so a package that grows a new kind of Track appears here without
+the Playground being taught about it.
 
-Everything else — every generation Surface, `<whisperx:Alignment>`, the
-Typography Tracks, `<render:Video>` — is read, counted under "not projected"
-in the strip, and skipped. A Source is worth previewing even when most of it is
-produced by Providers, and clicking an entry there points the code pane at it.
+Each Track is built on its own. A Track waiting on a Provider this machine has
+no key for costs only itself; the rest of the programme still plays, and the
+Track says what it was waiting for rather than disappearing.
 
-This is a shallow interpreter, not the compiler. It walks the authored markup
-with `@narratage/markup`'s own parser and calls each package's own pure
-projection functions. It never elaborates the graph and never constructs a Host.
+This is the compiler, not a reading of it. The Source is compiled by
+`compileSourceClosure` and executed by the same Producers a build runs, so a
+Source that will not build does not silently preview. Two thin decorators keep
+the source positions the compiler discards — nothing else is re-implemented.
 
 ## A note on `<space:Frame>`
 

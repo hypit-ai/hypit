@@ -1,5 +1,6 @@
 import type { PlaygroundFailure, PlaygroundSnapshot, Range as SourceRange } from "../shared.js";
 import { createCodePane } from "./code.js";
+import { createHandle } from "./resize.js";
 import type { Highlight } from "./code.js";
 import { liveRanges, markerTones, spanAtOffset } from "./markers.js";
 import { clipAtOffset, createStore } from "./selection.js";
@@ -32,24 +33,46 @@ const stage = createStage(store);
 app.querySelector<HTMLElement>("[data-code]")!.append(code.element);
 app.querySelector<HTMLElement>("[data-timeline]")!.append(timeline.element);
 app.querySelector<HTMLElement>("[data-stage]")!.append(stage.element);
+
+// How much room the Source needs against how much the picture needs depends on
+// the Source and on what is being worked on, so both edges are the reader's.
+const shell = app.querySelector<HTMLElement>("main")!;
+const left = app.querySelector<HTMLElement>(".left")!;
+shell.insertBefore(createHandle({
+  axis: "column", initial: 520, minimum: 320, invert: true,
+  maximum: () => Math.max(360, shell.clientWidth - 420),
+  apply: (size) => { shell.style.gridTemplateColumns = `minmax(0,1fr) auto ${size}px`; },
+  remember: "svml-playground.code-width",
+}), app.querySelector<HTMLElement>(".right")!);
+left.insertBefore(createHandle({
+  axis: "row", initial: 288, minimum: 140, invert: true,
+  maximum: () => Math.max(160, left.clientHeight - 260),
+  apply: (size) => { left.style.gridTemplateRows = `minmax(0,1fr) auto auto ${size}px`; },
+  remember: "svml-playground.timeline-height",
+}), app.querySelector<HTMLElement>("[data-timeline]")!);
 const inspector = app.querySelector<HTMLElement>("[data-inspector]")!;
 const meta = app.querySelector<HTMLElement>("[data-meta]")!;
 const badges = app.querySelector<HTMLElement>("[data-badges]")!;
 const status = app.querySelector<HTMLElement>("[data-status]")!;
 const failureView = app.querySelector<HTMLElement>("[data-failure]")!;
 
+/**
+ * How much of what is shown was invented.
+ *
+ * One badge over the whole programme said "picture: measured" while two Tracks
+ * were showing a stand-in, because a single word cannot describe seven Tracks
+ * that differ. Each Track now says its own; this counts them, and clicking it
+ * is the same as reading them.
+ */
 function renderBadges(snapshot: PlaygroundSnapshot): void {
   badges.replaceChildren();
-  for (const [label, value] of [
-    ["timing", snapshot.provenance.timing],
-    ["picture", snapshot.provenance.picture],
-  ] as const) {
-    const badge = document.createElement("span");
-    badge.className = `badge badge-${value}`;
-    badge.textContent = `${label}: ${value}`;
-    badge.title = snapshot.provenance.note;
-    badges.append(badge);
-  }
+  const standing = snapshot.tracks.filter((track) => track.source !== "made");
+  if (standing.length === 0) return;
+  const badge = document.createElement("span");
+  badge.className = "badge badge-estimated";
+  badge.textContent = `${standing.length} of ${snapshot.tracks.length} tracks are standing in`;
+  badge.title = snapshot.provenance.note;
+  badges.append(badge);
 }
 
 // Program-level facts never change while a Source is being read, so they live in
@@ -154,11 +177,12 @@ store.subscribe(({ snapshot, selection, playhead }) => {
   }));
   // The element that placed what is on screen is outlined too. Knowing a cutaway
   // is running is half the answer; the other half is which line put it there.
-  const elements = new Map<number, SourceRange>();
-  for (const clip of [...live, ...(chosen === undefined ? [] : [chosen])]) {
-    if (clip.elementRange !== undefined) elements.set(clip.elementRange.start, clip.elementRange);
+  // Only what was chosen is outlined. What is merely drawn at this frame is
+  // already said by the gutter bars, and a second outline for it made a board
+  // look picked when one of its rows was.
+  if (chosen?.elementRange !== undefined) {
+    highlights.push({ range: chosen.elementRange, tone: "element" });
   }
-  for (const range of elements.values()) highlights.push({ range, tone: "element" });
 
   // Scroll only when the selection actually moved, and never toward the pane
   // the author is pointing at: following the playhead every frame would drag
@@ -187,16 +211,22 @@ code.element.addEventListener("click", (event) => {
   // not at the start of whatever encloses it. `@amount` places nothing, so
   // resolving through clips alone would throw the playhead out to `@fee`.
   const span = spanAtOffset(state.snapshot, offset);
+  // Prose is anywhere a marker was written; whether a clip also covers that
+  // offset only decides which clip to select, not whether the click counts.
   const inProse = span !== undefined
-    && clip?.elementRange !== undefined
-    && !(offset >= clip.elementRange.start && offset <= clip.elementRange.end);
+    && (clip?.elementRange === undefined
+      || !(offset >= clip.elementRange.start && offset <= clip.elementRange.end));
   if (inProse) {
+    // A clip is named after itself and remembers what placed it, so a marker
+    // finds the clips it put there through the second, not the first.
     const bound = state.snapshot.tracks
       .flatMap((track) => track.clips)
-      .find((item) => item.authoredId === span.id);
+      .find((item) => item.markerId === span.id || item.authoredId === span.id);
     // A marker that places nothing still sits inside one that does, so the
     // enclosing clip stays selected rather than leaving the inspector blank.
-    store.focus(span.startFrame, bound?.id ?? clip.id, "code");
+    const target = bound?.id ?? clip?.id;
+    if (target === undefined) store.seek(span.startFrame, "code");
+    else store.focus(span.startFrame, target, "code");
     return;
   }
   if (clip === undefined) store.clearSelection();

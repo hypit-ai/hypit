@@ -7,8 +7,11 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 
 export type Highlight = {
   readonly range: Range;
-  /** `element` outlines the authored tag; `binding` outlines the Script marker. */
-  readonly tone: "element" | "binding";
+  /**
+   * `element` outlines the authored tag, `binding` the Script marker, and
+   * `onscreen` a tag that is merely drawn at this frame rather than chosen.
+   */
+  readonly tone: "element" | "binding" | "onscreen";
   /** Nesting depth, so an inner pair is drawn distinctly from the one enclosing it. */
   readonly depth?: number;
 };
@@ -64,7 +67,7 @@ function roundedRangePath(points: readonly { x: number; y: number }[], radius = 
  * The gutter holds one bar per nesting level. `GUTTER_LEFT` is where the
  * outermost bar starts, past the right edge of a three-digit line number.
  */
-const GUTTER_LEFT = 25;
+const GUTTER_LEFT = 27;
 const GUTTER_STEP = 3;
 const GUTTER_LEVELS = 4;
 /** Where a range outline may begin: clear of every bar the gutter can hold. */
@@ -265,8 +268,16 @@ export function createCodePane(): CodePane {
         // Widest first: a bar per level the line sits inside, laid left to
         // right so the enclosing pair stays visible beside the nested one
         // instead of being covered by it.
-        const covering = clickable
-          .filter((item) => line.end >= item.range.start && line.start <= item.range.end)
+        // Several clips can be drawn from one tag - a Caption Track is one tag
+        // and a dozen cues - and a bar per clip would say the line is nested a
+        // dozen deep. One bar per distinct range is what nesting means.
+        const distinct = new Map<string, { range: Range; tone: number | undefined }>();
+        for (const item of clickable) {
+          if (line.end < item.range.start || line.start > item.range.end) continue;
+          const key = `${item.range.start}:${item.range.end}`;
+          if (!distinct.has(key)) distinct.set(key, item);
+        }
+        const covering = [...distinct.values()]
           .sort((left, right) =>
             (right.range.end - right.range.start) - (left.range.end - left.range.start))
           .slice(0, GUTTER_LEVELS);

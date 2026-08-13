@@ -27,6 +27,27 @@ export function markerTones(snapshot: PlaygroundSnapshot): ReadonlyMap<string, n
   // A Moment marks an instant, so it sits at whatever level it was written in
   // rather than enclosing anything. One level in from its Segment is honest.
   for (const moment of snapshot.script?.moments ?? []) tones.set(moment.id, 1 % MARKER_TONES);
+  // A clip is coloured by what placed it, so a cutaway and the words that call
+  // for it read as one thing. But several clips can share one marker - the rows
+  // of a board do - and colouring them alike would say they are the same clip.
+  // Siblings therefore step through the tones from their marker's own.
+  const seen = new Map<string, number>();
+  let spare = 0;
+  for (const track of snapshot.tracks) {
+    for (const clip of track.clips) {
+      if (tones.has(clip.authoredId)) continue;
+      const marker = clip.markerId === undefined ? undefined : tones.get(clip.markerId);
+      if (marker === undefined) {
+        // Nothing said to put this here, so it takes the next tone along.
+        tones.set(clip.authoredId, spare % MARKER_TONES);
+        spare += 1;
+        continue;
+      }
+      const index = seen.get(clip.markerId!) ?? 0;
+      seen.set(clip.markerId!, index + 1);
+      tones.set(clip.authoredId, (marker + index) % MARKER_TONES);
+    }
+  }
   return tones;
 }
 
