@@ -8,7 +8,7 @@
     "@narratage/caption-fine": "workspace:*",
     "@narratage/composition": "workspace:*",
     "@narratage/fonts-open": "workspace:*",
-    "@narratage/host": "workspace:*",
+    "@narratage/workspace": "workspace:*",
     "@narratage/hyperframes": "workspace:*",
     "@narratage/narrative": "workspace:*",
     "@narratage/package-loader-node": "workspace:*",

@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@narratage/component-kit": "workspace:*",
     "@narratage/core": "workspace:*",
     "@narratage/protocol": "workspace:*"
   }

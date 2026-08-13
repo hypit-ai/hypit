@@ -9,12 +9,15 @@
   },
   "dependencies": {
     "@narratage/compiler-node": "workspace:*",
-    "@narratage/host": "workspace:*",
-    "@narratage/local": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/workspace": "workspace:*",
     "@narratage/package-loader-node": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/run": "workspace:*",
     "@narratage/runtime": "workspace:*",
     "@narratage/source": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/local": "workspace:*"
   }
 }

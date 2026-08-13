@@ -52,7 +52,6 @@ export type MediaLambdaResponse =
     readonly operation: MediaLambdaOperation;
     readonly ok: true;
     readonly value: StoredValue;
-    readonly metadata: CanonicalValue;
   }
   | {
     readonly contract: typeof MEDIA_LAMBDA_RESPONSE;
@@ -145,13 +144,10 @@ export function parseMediaLambdaResponse(value: unknown): MediaLambdaResponse {
     };
   }
   assert(item.ok === true, "MediaLambdaResponse.ok must be a boolean");
-  assert(item.metadata !== null && typeof item.metadata === "object",
-    "MediaLambdaResponse.metadata must be an object");
   return {
     contract: MEDIA_LAMBDA_RESPONSE,
     operation: named,
     ok: true,
     value: storedValue(item.value, "MediaLambdaResponse.value"),
-    metadata: item.metadata as CanonicalValue,
   };
 }

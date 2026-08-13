@@ -86,7 +86,6 @@ export type PlainTextItemSpec = {
 
 export type TextItem = {
   readonly id: string;
-  readonly sourceOccurrenceId: string;
   readonly span: FrameSpan;
   readonly geometry: TextGeometry;
   readonly document: TextDocument;

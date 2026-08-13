@@ -14,6 +14,7 @@ import {
   decodeMimoVoiceCloneSurface,
   decodeMimoVoiceDesignSurface,
   mimoTtsEndpoints,
+  mimoTtsMarkupSurfaces,
   mimoTtsPorts,
   sealMimoTtsRequest,
 } from "../src/index.js";
@@ -68,9 +69,9 @@ test("MiMo declares three audio models without Provider facts", () => {
 });
 
 test("one installed author package contributes all three Surfaces without a Runtime Provider", () => {
-  assert.equal(mimoNodePackage.name, "@narratage/mimo-tts");
+  assert.equal(mimoNodePackage.format, "svml.node-package@1");
   assert.equal(mimoNodePackage.modules[0]?.manifest.version, "1");
-  assert.deepEqual(mimoNodePackage.modules[0]?.manifest.surfaces.map((surface) => surface.name),
+  assert.deepEqual(mimoTtsMarkupSurfaces.map((surface) => surface.name),
     ["preset", "voiceDesign", "voiceClone"]);
   assert.equal(JSON.stringify(mimoNodePackage).includes("MIMO_API_KEY"), false);
 });

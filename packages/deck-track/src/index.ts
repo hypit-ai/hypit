@@ -18,7 +18,7 @@ export {
   depthStackCardSpecSchema,
   depthStackDependency,
   depthStackHeaderSchema,
-  depthStackManifest,
+  depthStackManifest, depthStackMarkupSurfaces,
   depthStackManifestDigest,
   depthStackModuleRef,
   depthStackProducers,

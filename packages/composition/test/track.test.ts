@@ -7,7 +7,7 @@ import { canonicalize, digestOf } from "@narratage/protocol";
 import type { BlobRef } from "@narratage/protocol";
 import { TypeValidatorRegistry, validateValue } from "@narratage/validation";
 import { artifactManifest } from "@narratage/artifact";
-import type { FontArtifactRef, MediaArtifactRef } from "@narratage/media";
+import type { FontArtifactRef } from "@narratage/media";
 import { mediaManifest } from "@narratage/media";
 import { narrativeManifest } from "@narratage/narrative";
 import { programSpaceManifest, sealProgramSpace } from "@narratage/program-space";
@@ -32,12 +32,6 @@ import type { VisualTrack } from "../src/index.js";
 const videoContractManifests = [artifactManifest, narrativeManifest, mediaManifest, programSpaceManifest,
   speechManifest, speechEvidenceManifest, semanticMapManifest, spatialManifest, visualIrManifest, compositionManifest] as const;
 
-const image: MediaArtifactRef = {
-  digest: digestOf("image"),
-  size: 12,
-  mediaType: "image/png",
-  durationSec: 0,
-};
 const font: FontArtifactRef = {
   contract: "svml.font-artifact@1",
   sources: [{ artifact: { kind: "blob", digest: digestOf("track:test-font"), size: 1_024, mediaType: "font/woff2" } }],

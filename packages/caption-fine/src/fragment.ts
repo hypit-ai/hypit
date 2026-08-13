@@ -12,7 +12,6 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 /** One timing join plus one Style-family render operation, regardless of how many Styles are used. */
 export const fineCaptionTrackFragment = sealGraphFragment({
-  name: "@narratage/caption-fine/track@1",
   inputs: [
     { name: "display", type: narrativeTypes.captionDisplay },
     { name: "correspondence", type: narrativeTypes.captionCorrespondence },

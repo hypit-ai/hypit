@@ -7,30 +7,29 @@ import {
   typographyTrackComponent,
   typographyTrackManifest,
   typographyTrackModuleRef,
-  typographyTrackSurfaceImplementationDigests,
+  typographyTrackMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/typography-track",
-  modules: [{ manifest: typographyTrackManifest, specifiers: ["@narratage/typography-track", "@narratage/typography-track@1"] }],
+  modules: [{ manifest: typographyTrackManifest }],
   components: [typographyTrackComponent],
   hostFacets: [
     createMarkupSurfaceHostFacet({
-      module: typographyTrackModuleRef, surface: "style", mode: "structured",
-      implementationDigest: typographyTrackSurfaceImplementationDigests.style, handler: decodeTypographyStyleSurface,
+      module: typographyTrackModuleRef,
+    declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "style")!, handler: decodeTypographyStyleSurface,
     }),
     createMarkupSurfaceHostFacet({
-      module: typographyTrackModuleRef, surface: "motion", mode: "structured",
-      implementationDigest: typographyTrackSurfaceImplementationDigests.motion, handler: decodeTypographyMotionSurface,
+      module: typographyTrackModuleRef,
+    declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "motion")!, handler: decodeTypographyMotionSurface,
     }),
     createMarkupSurfaceHostFacet({
-      module: typographyTrackModuleRef, surface: "track", mode: "structured",
-      implementationDigest: typographyTrackSurfaceImplementationDigests.track, handler: decodeTypographyTrackSurface,
+      module: typographyTrackModuleRef,
+    declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "track")!, handler: decodeTypographyTrackSurface,
     }),
     createMarkupSurfaceHostFacet({
-      module: typographyTrackModuleRef, surface: "mask", mode: "structured",
-      implementationDigest: typographyTrackSurfaceImplementationDigests.mask, handler: decodeTypographyMaskSurface,
+      module: typographyTrackModuleRef,
+    declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "mask")!, handler: decodeTypographyMaskSurface,
     }),
   ],
 };

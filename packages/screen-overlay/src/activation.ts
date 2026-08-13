@@ -1,15 +1,15 @@
 import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   decodeScreenOverlaySurface, screenOverlayComponent, screenOverlayManifest, screenOverlayModuleRef,
-  screenOverlaySurfaceImplementationDigest,
+  screenOverlayMarkupSurfaces,
 } from "./index.js";
 export const svmlPackage = {
-  format: "svml.node-package@1" as const, name: "@narratage/screen-overlay",
-  modules: [{ manifest: screenOverlayManifest, specifiers: [screenOverlayModuleRef.name, `${screenOverlayModuleRef.name}@1`] }],
+  format: "svml.node-package@1" as const,
+  modules: [{ manifest: screenOverlayManifest }],
   components: [screenOverlayComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
-    module: screenOverlayModuleRef, surface: "track", mode: "structured",
-    implementationDigest: screenOverlaySurfaceImplementationDigest, handler: decodeScreenOverlaySurface,
+    module: screenOverlayModuleRef,
+    declaration: screenOverlayMarkupSurfaces.find((item) => item.name === "track")!, handler: decodeScreenOverlaySurface,
   })],
 };
 export default svmlPackage;

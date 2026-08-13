@@ -13,7 +13,7 @@ export {
   captionPlanImplementationDigest,
   captionPlanSchema,
   captionStyleSchema,
-  captionManifest,
+  captionManifest, captionMarkupSurfaces,
   captionModuleRef,
   captionProducers,
   captionTypes,

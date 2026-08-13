@@ -4,16 +4,16 @@ import { readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 import type {
-  AuthorSourceAssetRequest,
-  AuthorSourceImport,
-  AuthorSourceUnit,
-} from "@narratage/elaborator";
+  SourceAssetRequest,
+  SourceImportRequest,
+  SourceUnit,
+} from "@narratage/source";
 import type {
   ArtifactAttachment,
   Workspace,
   WorkspaceSession,
-} from "@narratage/host";
-import { WorkspaceError } from "@narratage/host";
+} from "@narratage/workspace";
+import { WorkspaceError } from "@narratage/workspace";
 import type { BlobRef } from "@narratage/protocol";
 
 function isWithin(root: string, path: string): boolean {
@@ -23,15 +23,15 @@ function isWithin(root: string, path: string): boolean {
 
 class NodeFilesystemWorkspaceSession implements WorkspaceSession {
   readonly root: string;
-  readonly entry: AuthorSourceUnit;
+  readonly entry: SourceUnit;
   readonly #assetRoots: readonly string[];
-  readonly #sourceCache = new Map<string, AuthorSourceUnit>();
-  readonly #sourceEdges = new Map<string, AuthorSourceUnit>();
+  readonly #sourceCache = new Map<string, SourceUnit>();
+  readonly #sourceEdges = new Map<string, SourceUnit>();
   readonly #assetIdentity = new Map<string, { readonly digest: BlobRef["digest"]; readonly size: number }>();
   readonly #assetEdges = new Map<string, string>();
   readonly #attachments = new Map<string, ArtifactAttachment>();
 
-  private constructor(root: string, entry: AuthorSourceUnit, assetRoots: readonly string[]) {
+  private constructor(root: string, entry: SourceUnit, assetRoots: readonly string[]) {
     this.root = root;
     this.entry = entry;
     this.#assetRoots = assetRoots;
@@ -53,7 +53,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
         canonicalEntry,
       );
     }
-    const entry: AuthorSourceUnit = {
+    const entry: SourceUnit = {
       id: canonicalEntry,
       name: relative(root, canonicalEntry) || canonicalEntry.split("/").at(-1) || canonicalEntry,
       text: await readFile(canonicalEntry, "utf8"),
@@ -61,7 +61,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     return new NodeFilesystemWorkspaceSession(root, entry, [root, ...assetRoots]);
   }
 
-  async #loadSource(path: string): Promise<AuthorSourceUnit> {
+  async #loadSource(path: string): Promise<SourceUnit> {
     const canonical = await realpath(resolve(path));
     if (!isWithin(this.root, canonical)) {
       throw new WorkspaceError(
@@ -72,7 +72,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     }
     const cached = this.#sourceCache.get(canonical);
     if (cached !== undefined) return cached;
-    const unit: AuthorSourceUnit = {
+    const unit: SourceUnit = {
       id: canonical,
       name: relative(this.root, canonical) || canonical.split("/").at(-1) || canonical,
       text: await readFile(canonical, "utf8"),
@@ -82,9 +82,9 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
   }
 
   readonly resolveSource = async (
-    importer: AuthorSourceUnit,
-    request: AuthorSourceImport,
-  ): Promise<AuthorSourceUnit> => {
+    importer: SourceUnit,
+    request: SourceImportRequest,
+  ): Promise<SourceUnit> => {
     if (!request.from.startsWith("./") && !request.from.startsWith("../")) {
       throw new WorkspaceError(
         "UNSUPPORTED_SOURCE_IMPORT",
@@ -104,8 +104,8 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
   };
 
   readonly resolveAsset = async (
-    importer: AuthorSourceUnit,
-    request: AuthorSourceAssetRequest,
+    importer: SourceUnit,
+    request: SourceAssetRequest,
   ) => {
     if (!request.from.startsWith("./") && !request.from.startsWith("../")) {
       throw new WorkspaceError(

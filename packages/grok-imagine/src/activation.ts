@@ -3,28 +3,23 @@ import {
   grokImagineComponent,
   grokImagineManifest,
   grokImagineModuleRef,
-  grokImagineSurfaceImplementationDigests,
+  grokImagineMarkupSurfaces,
 } from "./index.js";
 import { decodeGrokImaginePreviewVideoSurface, decodeGrokImagineVideoSurface } from "./surface.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/grok-imagine",
-  modules: [{ manifest: grokImagineManifest, specifiers: ["@narratage/grok-imagine", "@narratage/grok-imagine@1"] }],
+  modules: [{ manifest: grokImagineManifest }],
   components: [grokImagineComponent],
   hostFacets: [
     createMarkupSurfaceHostFacet({
       module: grokImagineModuleRef,
-      surface: "video",
-      mode: "structured",
-      implementationDigest: grokImagineSurfaceImplementationDigests.video,
+    declaration: grokImagineMarkupSurfaces.find((item) => item.name === "video")!,
       handler: decodeGrokImagineVideoSurface,
     }),
     createMarkupSurfaceHostFacet({
       module: grokImagineModuleRef,
-      surface: "preview-video",
-      mode: "structured",
-      implementationDigest: grokImagineSurfaceImplementationDigests.previewVideo,
+    declaration: grokImagineMarkupSurfaces.find((item) => item.name === "preview-video")!,
       handler: decodeGrokImaginePreviewVideoSurface,
     }),
   ],

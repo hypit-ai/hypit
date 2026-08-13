@@ -43,7 +43,6 @@ const manifest: ModuleManifest = {
     { name: reportType.name, schema: { kind: "string", minLength: 1 } },
   ],
   capabilities: [],
-  surfaces: [],
   producers: [
     {
       name: measureProducer.name,
@@ -51,8 +50,6 @@ const manifest: ModuleManifest = {
       outputs: [{ name: "measurement", type: measurementType }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "example.laboratory/measure",
         digest: digestOf("example.laboratory/measure@1"),
       },
     },
@@ -62,8 +59,6 @@ const manifest: ModuleManifest = {
       outputs: [{ name: "report", type: reportType }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "example.laboratory/write-report",
         digest: digestOf("example.laboratory/write-report@1"),
       },
     },
@@ -73,8 +68,6 @@ const manifest: ModuleManifest = {
       outputs: [{ name: "sample", type: sampleType }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "example.laboratory/echo-sample",
         digest: digestOf("example.laboratory/echo-sample@1"),
       },
     },
@@ -88,8 +81,6 @@ function program(): LinkedProgram {
     kind: "authored" as const,
   };
   return link(closure, [sealTypedModule({
-    id: "laboratory-inputs",
-    closureDigest: closure.digest,
     records: [sealRecord({
       id: "sample:soil",
       type: sampleType,
@@ -100,7 +91,6 @@ function program(): LinkedProgram {
 }
 
 function singleOperationFragment(
-  name: string,
   inputName: string,
   inputType: TypeRef,
   producer: ProducerRef,
@@ -108,7 +98,6 @@ function singleOperationFragment(
   resultType: TypeRef,
 ): GraphFragment {
   return sealGraphFragment({
-    name,
     inputs: [{ name: inputName, type: inputType }],
     operations: [{
       id: "produce",
@@ -125,7 +114,6 @@ function singleOperationFragment(
 }
 
 const measureFragment = singleOperationFragment(
-  "measure-sample",
   "sample",
   sampleType,
   measureProducer,
@@ -133,7 +121,6 @@ const measureFragment = singleOperationFragment(
   measurementType,
 );
 const reportFragment = singleOperationFragment(
-  "write-report",
   "measurement",
   measurementType,
   reportProducer,
@@ -141,7 +128,6 @@ const reportFragment = singleOperationFragment(
   reportType,
 );
 const echoFragment = singleOperationFragment(
-  "echo-sample",
   "sample",
   sampleType,
   echoProducer,
@@ -157,7 +143,6 @@ const fragments = new Map([
 test("Author linking resolves forward component references without Text or video contracts", () => {
   const linked = program();
   const author = sealAuthorModule({
-    name: "soil-analysis",
     components: [
       {
         id: "final-report",
@@ -181,12 +166,12 @@ test("Author linking resolves forward component references without Text or video
   });
 
   const elaborated = elaborateAuthorModule(linked, author, (id) => fragments.get(id));
-  assert.equal(elaborated.graph.outputs.length, 2);
+  assert.equal(elaborated.outputs.length, 2);
   assert.deepEqual(
-    elaborated.graph.outputs.map((output) => output.id),
+    elaborated.outputs.map((output) => output.id),
     ["measurement:soil", "report:final"],
   );
-  const reportOperation = elaborated.graph.operations.find((operation) =>
+  const reportOperation = elaborated.operations.find((operation) =>
     operation.producer.name === reportProducer.name);
   assert.deepEqual(reportOperation?.inputs.measurement, {
     kind: "logical-output",
@@ -194,10 +179,10 @@ test("Author linking resolves forward component references without Text or video
   });
 
   const request = sealBuildRequest({
-    graph: elaborated.graph.id,
+    graph: elaborated.id,
     targets: [{ output: "report:final" }],
   });
-  const state = start(linked, elaborated.graph, request);
+  const state = start(linked, elaborated, request);
   assert.deepEqual(
     state.plan.steps.map((step) => step.producer.name).sort(),
     [measureProducer.name, reportProducer.name].sort(),
@@ -209,7 +194,6 @@ test("Author linking resolves forward component references without Text or video
 
 test("Author linking rejects cycles before producing a Core graph", () => {
   const author = sealAuthorModule({
-    name: "cyclic-laboratory",
     components: [
       {
         id: "left",
@@ -237,7 +221,6 @@ test("Author linking rejects cycles before producing a Core graph", () => {
 
 test("Author linking checks symbolic input types before Graph verification", () => {
   const author = sealAuthorModule({
-    name: "invalid-laboratory",
     components: [{
       id: "final-report",
       fragment: reportFragment.id,

@@ -15,7 +15,7 @@ import {
   skipTextTrivia,
 } from "@narratage/markup";
 import type {
-  SourceUnit,
+  MarkupSource,
   StructuredElement,
 } from "@narratage/markup";
 
@@ -125,8 +125,14 @@ function provided(element: StructuredElement): RunProvidedValue {
 }
 
 function file(element: StructuredElement): RunProvidedFile {
-  exactAttributes(element, ["id", "from", "media-type"]);
+  exactAttributes(element, ["id", "type", "from", "media-type"]);
   empty(element);
+  let type: TypeRef;
+  try {
+    type = parseTypeRef(stringAttribute(element, "type")!);
+  } catch (error) {
+    fail(element, "RUN_TYPE", error instanceof Error ? error.message : String(error));
+  }
   const mediaType = stringAttribute(element, "media-type")!;
   if (!/^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/iu.test(mediaType)) {
     fail(element, "RUN_MEDIA_TYPE", "<file> media-type must be a concrete MIME media type");
@@ -134,6 +140,7 @@ function file(element: StructuredElement): RunProvidedFile {
   return {
     kind: "file",
     id: stringAttribute(element, "id")!,
+    type,
     from: stringAttribute(element, "from")!,
     mediaType,
   };
@@ -204,7 +211,7 @@ function unique(values: readonly string[], subject: string, element: StructuredE
 
 /** Parse only the public Run language. No package code, Runtime or Provider executes here. */
 function parseRunDocumentBody(name: string, text: string): RunDocument {
-  const source: SourceUnit = { name, text };
+  const source: MarkupSource = { name, text };
   const start = skipTextTrivia(source, 0);
   const parsed = parseStructuredElement(source, start);
   const end = skipTextTrivia(source, parsed.nextOffset);

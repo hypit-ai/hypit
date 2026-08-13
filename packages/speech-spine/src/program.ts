@@ -253,20 +253,16 @@ export function assembleSpeechBasis(
   });
   frame = 0;
   const visualClips = set.takes.flatMap((take) => {
-    const startFrame = frame;
     frame += take.media.timeline.frameCount;
     if (take.media.visual === undefined || take.visual === undefined) return [];
     return [{
       segmentId: take.segment.id,
-      span: { startFrame, endFrameExclusive: frame },
       artifact: structuredClone(take.media.visual.artifact),
       extent: {
         contract: "svml.intrinsic-extent@1" as const,
         widthPx: take.media.visual.width,
         heightPx: take.media.visual.height,
       },
-      frameRate: { ...take.media.timeline.frameRate },
-      frameCount: take.media.timeline.frameCount,
       frame: structuredClone(take.visual.frame),
       fit: structuredClone(take.visual.fit),
       stackingOrder: take.visual.stackingOrder,

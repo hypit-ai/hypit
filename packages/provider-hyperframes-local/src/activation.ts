@@ -85,7 +85,6 @@ const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/provider-hyperframes-local",
   hostFacets: [localHyperframesRuntimeAdapter],
 };
 

@@ -15,7 +15,6 @@ export const temporalManifest: ModuleManifest = {
   dependencies: [],
   types: [],
   capabilities: [],
-  surfaces: [],
   producers: [],
 };
 export const temporalManifestDigest = digestOf(temporalManifest);

@@ -38,8 +38,8 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
   const audio = { kind: "blob" as const, digest: digestOf("caption:test-audio"), size: 1, mediaType: "audio/wav" };
   const basisSegments = narrative.segments.map((segment, index) => ({
     segmentId: segment.id,
-    startSec: segments[index]!.startSec,
-    endSec: segments[index]!.endSec,
+    startSec: durationSec * index / narrative.segments.length,
+    endSec: durationSec * (index + 1) / narrative.segments.length,
   }));
   const basis = sealSpeechBasis({
     contract: "svml.speech-basis@1",
@@ -48,7 +48,7 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
     visualTrack: { clips: [] },
     segments: basisSegments,
   });
-  const evidence = sealAlignedTranscriptEvidence({ contract: "svml.aligned-transcript-evidence@1", durationSec, segments });
+  const evidence = sealAlignedTranscriptEvidence({ contract: "svml.aligned-transcript-evidence@1", segments });
   const audioBasis: SpeechAudioBasis = {
     contract: "svml.speech-audio-basis@1",
     programSpace: basis.programSpace,
@@ -152,8 +152,6 @@ test("Caption timing applies Mute after planning and preserves the original Cue 
   });
   const map = locate(parsed, 2, [{
     sourceSegmentId: "line",
-    startSec: 0,
-    endSec: 2,
     words: ["Keep", "this", "hidden", "phrase", "visible"].map((text, index) => ({
       text,
       startSec: index * 0.3,
@@ -167,8 +165,8 @@ test("Caption timing applies Mute after planning and preserves the original Cue 
   assert.deepEqual(projection.cues[0]!.atoms.map((atom) => atom.atomId),
     display.atoms.filter((atom) => !atom.wordIds.some((wordId) => mutedWordIds.includes(wordId)))
       .map((atom) => atom.id));
-  assert.equal(projection.cues[0]!.startSec, 0);
-  assert.equal(projection.cues[0]!.endSec, 1.4);
+  assert.equal(projection.cues[0]!.startFrame, 0);
+  assert.equal(projection.cues[0]!.endFrameExclusive, 42);
 });
 
 test("caption:Program lowers explicit Mute word subsets without a temporal mask", async () => {
@@ -298,7 +296,7 @@ test("Dual Text exposes one whole timed display Atom and never invents internal 
     }] }],
   });
   const map = locate(parsed, 1, [{
-    sourceSegmentId: "line", startSec: 0, endSec: 1,
+    sourceSegmentId: "line",
     words: [
       { text: "what", startSec: 0.1, endSec: 0.25 },
       { text: "the", startSec: 0.3, endSec: 0.42 },
@@ -309,12 +307,10 @@ test("Dual Text exposes one whole timed display Atom and never invents internal 
   const projection = temporalizeCaptionPlan(display, correspondence, map, program, plan);
   assert.deepEqual(projection.cues, [{
     id: "cue:1",
-    runId: run.id,
     styleId: run.styleId,
-    segmentId: "line",
-    startSec: 0.1,
-    endSec: 22 / 30,
-    atoms: [{ atomId: display.atoms[0]!.id, startSec: 0.1, endSec: 22 / 30 }],
+    startFrame: 3,
+    endFrameExclusive: 22,
+    atoms: [{ atomId: display.atoms[0]!.id, startFrame: 3, endFrameExclusive: 22 }],
     fields: [],
   }]);
   assert.equal("words" in projection.cues[0]!, false);

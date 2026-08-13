@@ -23,8 +23,7 @@ type ProcessRecord = {
   readonly profile: string;
   readonly pid: number;
   readonly startedAt: number;
-  /** Optional only so a pre-digest development record can still be stopped safely. */
-  readonly profileDigest?: string;
+  readonly profileDigest: string;
 };
 
 const LOG_TAIL_BYTES = 1024 * 1024;
@@ -103,37 +102,13 @@ async function rotateLog(path: string): Promise<void> {
   await rename(path, previous);
 }
 
-async function digestProfile(profile: string): Promise<string> {
-  const absolute = resolve(profile);
-  const bytes = await readFile(absolute);
-  const hash = createHash("sha256");
-  hash.update("profile\0");
-  hash.update(bytes);
-  if (absolute.endsWith(".json")) {
-    const document = JSON.parse(bytes.toString("utf8")) as {
-      readonly root?: unknown;
-      readonly packageLock?: unknown;
-      readonly runtimePackageLock?: unknown;
-    };
-    const root = resolve(dirname(absolute), typeof document.root === "string" ? document.root : ".");
-    for (const [name, value] of [
-      ["packageLock", document.packageLock],
-      ["runtimePackageLock", document.runtimePackageLock],
-    ] as const) {
-      if (typeof value !== "string") continue;
-      hash.update(`\0${name}\0${resolve(root, value)}\0`);
-      hash.update(await readFile(resolve(root, value)));
-    }
-  }
-  return `sha256:${hash.digest("hex")}`;
-}
-
 async function record(profile: string): Promise<ProcessRecord | undefined> {
   const path = paths(profile).pid;
   try {
     const value = JSON.parse(await readFile(path, "utf8")) as ProcessRecord;
     if (value.format !== "narratage.runtime-process@1" || value.profile !== resolve(profile)
-      || !Number.isSafeInteger(value.pid) || value.pid < 1) return undefined;
+      || !Number.isSafeInteger(value.pid) || value.pid < 1
+      || typeof value.profileDigest !== "string" || value.profileDigest.length === 0) return undefined;
     return value;
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
@@ -141,21 +116,23 @@ async function record(profile: string): Promise<ProcessRecord | undefined> {
   }
 }
 
-export async function runtimeProcessStatus(profile: string): Promise<RuntimeProcessState> {
+export async function runtimeProcessStatus(
+  profile: string,
+  currentProfileDigest: string,
+): Promise<RuntimeProcessState> {
   const location = paths(profile);
   const current = await record(profile);
   if (current === undefined || !alive(current.pid)) {
     return { state: "stopped", profile: resolve(profile), logPath: location.log };
   }
-  const currentProfileDigest = await digestProfile(profile).catch(() => undefined);
-  if (current.profileDigest === undefined || current.profileDigest !== currentProfileDigest) {
+  if (current.profileDigest !== currentProfileDigest) {
     return {
       state: "stale",
       profile: current.profile,
       pid: current.pid,
       startedAt: current.startedAt,
-      ...(current.profileDigest === undefined ? {} : { profileDigest: current.profileDigest }),
-      ...(currentProfileDigest === undefined ? {} : { currentProfileDigest }),
+      profileDigest: current.profileDigest,
+      currentProfileDigest,
       logPath: location.log,
     };
   }
@@ -170,11 +147,15 @@ export async function runtimeProcessStatus(profile: string): Promise<RuntimeProc
   };
 }
 
-async function waitForReady(profile: string, timeoutMs: number): Promise<RuntimeProcessState> {
+async function waitForReady(
+  profile: string,
+  profileDigest: string,
+  timeoutMs: number,
+): Promise<RuntimeProcessState> {
   const location = paths(profile);
   const deadline = Date.now() + timeoutMs;
   while (Date.now() <= deadline) {
-    const state = await runtimeProcessStatus(profile);
+    const state = await runtimeProcessStatus(profile, profileDigest);
     if (state.state === "stopped") {
       const log = await readFile(location.log, "utf8").catch(() => "");
       throw new Error(`Runtime Worker exited before becoming ready${log.length === 0 ? "" : `: ${log.trim().split("\n").at(-1)}`}`);
@@ -188,15 +169,15 @@ async function waitForReady(profile: string, timeoutMs: number): Promise<Runtime
 export async function ensureRuntimeProcess(
   profile: string,
   launch: RuntimeWorkerLaunch,
+  profileDigest: string,
   timeoutMs = 10_000,
 ): Promise<RuntimeProcessState> {
   return await withLifecycleLock(profile, timeoutMs, async () => {
-    const current = await runtimeProcessStatus(profile);
+    const current = await runtimeProcessStatus(profile, profileDigest);
     if (current.state === "running") return current;
     if (current.state === "stale") await stopRuntimeProcessUnlocked(profile, timeoutMs);
     const absolute = resolve(profile);
     const location = paths(absolute);
-    const profileDigest = await digestProfile(absolute);
     await mkdir(location.root, { recursive: true });
     await unlink(location.ready).catch(() => undefined);
     await rotateLog(location.log);
@@ -224,7 +205,7 @@ export async function ensureRuntimeProcess(
     } satisfies ProcessRecord), "utf8");
     child.unref();
     await log.close();
-    return await waitForReady(absolute, timeoutMs);
+    return await waitForReady(absolute, profileDigest, timeoutMs);
   });
 }
 

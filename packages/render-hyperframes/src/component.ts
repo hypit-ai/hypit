@@ -9,7 +9,6 @@ import { renderHyperframesProducers } from "./manifest.js";
 
 /** Declares the visual Need. It contains no renderer, queue, credentials or deployment choice. */
 export const renderHyperframesComponent = {
-  name: "@narratage/render-hyperframes",
   producers: [{
     producer: renderHyperframesProducers.requestVisual,
     implementationDigest: requestHyperframesVisualImplementationDigest,

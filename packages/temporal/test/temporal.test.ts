@@ -27,13 +27,13 @@ const map: CompleteSemanticMap = {
   contract: "svml.complete-semantic-map@1",
   tokens: [],
   anchors: [
-    { identity: "a", timeSec: 1, frame: 30 },
-    { identity: "b", timeSec: 2, frame: 60 },
-    { identity: "c", timeSec: 3, frame: 90 },
-    { identity: "d", timeSec: 4, frame: 120 },
-    { identity: "late", timeSec: 8, frame: 240 },
-    { identity: "segment:answer:start", timeSec: 2, frame: 60 },
-    { identity: "segment:answer:end", timeSec: 4, frame: 120 },
+    { identity: "a", frame: 30 },
+    { identity: "b", frame: 60 },
+    { identity: "c", frame: 90 },
+    { identity: "d", frame: 120 },
+    { identity: "late", frame: 240 },
+    { identity: "segment:answer:start", frame: 60 },
+    { identity: "segment:answer:end", frame: 120 },
   ],
 };
 
@@ -57,7 +57,6 @@ test("one Selection projects exact local points and stable occurrence identity",
   });
   assert.deepEqual(result, [{
     id: "card::proof#7",
-    sourceOccurrenceId: "proof#7",
     span: { startFrame: 30, endFrameExclusive: 60 },
   }]);
 });
@@ -72,7 +71,6 @@ test("one Segment projects from its own structural start and end anchors", () =>
   });
   assert.deepEqual(result, {
     id: "answer-card::answer",
-    sourceOccurrenceId: "answer",
     span: { startFrame: 60, endFrameExclusive: 120 },
   });
 });
@@ -89,7 +87,7 @@ test("each preserves source order, even when physical time is reversed between o
     expansion: { kind: "each" },
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
   });
-  assert.deepEqual(result.map((item) => item.sourceOccurrenceId), ["mentions#4", "mentions#9"]);
+  assert.deepEqual(result.map((item) => item.id), ["repeat::mentions#4", "repeat::mentions#9"]);
   assert.deepEqual(result.map((item) => item.span.startFrame), [90, 30]);
 });
 
@@ -210,17 +208,16 @@ test("triggered schedule derives cumulative, exclusive and settled windows from 
     terminalFrame: 240,
     triggers: [{ id: "one", frame: 30 }, { id: "two", frame: 90 }, { id: "three", frame: 150 }],
   });
-  assert.deepEqual(result.cumulative.map((item) => item.span), [
+  assert.deepEqual(result.cumulative, [
     { startFrame: 30, endFrameExclusive: 300 },
     { startFrame: 90, endFrameExclusive: 300 },
     { startFrame: 150, endFrameExclusive: 300 },
   ]);
-  assert.deepEqual(result.exclusive.map((item) => item.span), [
+  assert.deepEqual(result.exclusive, [
     { startFrame: 30, endFrameExclusive: 90 },
     { startFrame: 90, endFrameExclusive: 150 },
     { startFrame: 150, endFrameExclusive: 240 },
   ]);
-  assert.deepEqual(result.settledSuffix, { startFrame: 240, endFrameExclusive: 300 });
 });
 
 test("triggered schedule rejects equal, reversed and out-of-bound points", () => {

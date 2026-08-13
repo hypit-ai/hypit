@@ -31,6 +31,17 @@ export const renderHyperframesProducers = {
   requestVisual: { module: renderHyperframesModuleRef, name: "request-visual-render" },
 } satisfies Record<string, ProducerRef>;
 
+export const renderHyperframesMarkupSurfaces = [{
+    name: "video",
+    tag: "Video",
+    mode: "structured",
+    outputs: [],
+    implementation: {
+      digest: renderHyperframesSurfaceImplementationDigest,
+    },
+  }] as const;
+
+
 export const renderHyperframesManifest: ModuleManifest = {
   format: "svml.module@1",
   name: renderHyperframesModuleRef.name,
@@ -47,17 +58,6 @@ export const renderHyperframesManifest: ModuleManifest = {
     name: renderHyperframesCapabilities.renderVisual.name,
     returns: mediaTypes.renderedVisual,
   }],
-  surfaces: [{
-    name: "video",
-    tag: "Video",
-    mode: "structured",
-    outputs: [],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@narratage/render-hyperframes/surface",
-      digest: renderHyperframesSurfaceImplementationDigest,
-    },
-  }],
   producers: [
     {
       name: renderHyperframesProducers.requestVisual.name,
@@ -69,8 +69,6 @@ export const renderHyperframesManifest: ModuleManifest = {
         returns: mediaTypes.renderedVisual,
       }],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/render-hyperframes/request-visual",
         digest: requestHyperframesVisualImplementationDigest,
       },
     },

@@ -42,6 +42,10 @@ const cardType = { module: laboratory, name: "Card" } satisfies TypeRef;
 const cardAppearanceType = { module: laboratory, name: "CardAppearance" } satisfies TypeRef;
 const renderProducer = { module: laboratory, name: "render-card" } satisfies ProducerRef;
 const cardSurfaceDigest = digestOf("example.recipe-card/card-surface@1");
+const cardSurface = {
+  name: "card", tag: "Card", mode: "structured", outputs: [cardAppearanceType],
+  implementation: { digest: cardSurfaceDigest },
+} as const;
 
 const manifest: ModuleManifest = {
   format: "svml.module@1",
@@ -64,32 +68,18 @@ const manifest: ModuleManifest = {
     },
   ],
   capabilities: [],
-  surfaces: [{
-    name: "card",
-    tag: "Card",
-    mode: "structured",
-    outputs: [cardAppearanceType],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "example.recipe-card/card-surface",
-      digest: cardSurfaceDigest,
-    },
-  }],
   producers: [{
     name: renderProducer.name,
     inputs: [{ name: "appearance", type: cardAppearanceType }],
     outputs: [{ name: "card", type: cardType }],
     needs: [],
     implementation: {
-      kind: "registered",
-      locator: "example.recipe-card/render-card",
       digest: digestOf("example.recipe-card/render-card@1"),
     },
   }],
 };
 
 const cardFragment = sealGraphFragment({
-  name: "example.recipe-card/card@1",
   inputs: [{ name: "appearance", type: cardAppearanceType }],
   operations: [{
     id: "render",
@@ -131,7 +121,7 @@ function recipeValue(record: TypedRecord | undefined): SvsRecipe {
 
 function sourceRegistry(): MarkupSurfaceRegistry {
   const registry = new MarkupSurfaceRegistry();
-  registry.registerStructured(laboratory, "card", cardSurfaceDigest, ({ element, resolveReference }) => {
+  registry.registerStructured({ module: laboratory, declaration: cardSurface, handler: ({ element, resolveReference }) => {
     const id = stringAttribute(element, "id");
     const appearancePath = referenceAttribute(element, "appearance");
     const resolved = resolveReference(appearancePath);
@@ -174,7 +164,7 @@ function sourceRegistry(): MarkupSurfaceRegistry {
       }],
       fragments: [cardFragment],
     };
-  });
+  } });
   return registry;
 }
 
@@ -222,9 +212,9 @@ async function compileMain(alias: string, root = "/project", styles = styleText)
 test("Text and SVS recursively compile one aliased Recipe into a Core BuildPlan", async () => {
   const compiled = await compileMain("studio");
   assert.equal(compiled.closure.units.length, 2);
-  assert.equal(compiled.module.records.length, 2);
-  const recipe = compiled.module.records.find((record) => record.type.name === svsRecipeType.name);
-  const appearance = compiled.module.records.find((record) => record.type.name === cardAppearanceType.name);
+  assert.equal(compiled.program.records.length, 2);
+  const recipe = compiled.program.records.find((record) => record.type.name === svsRecipeType.name);
+  const appearance = compiled.program.records.find((record) => record.type.name === cardAppearanceType.name);
   assert.deepEqual(recipe?.value, {
     kind: "inline",
     value: {
@@ -244,8 +234,8 @@ test("Text and SVS recursively compile one aliased Recipe into a Core BuildPlan"
   });
   const target = resolveCompiledSourceExport(compiled, "answer.result", cardType);
   assert.equal(target.ref.kind, "logical-output");
-  const state = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
-    graph: compiled.elaboration.graph.id,
+  const state = start(compiled.program, compiled.graph, sealBuildRequest({
+    graph: compiled.graph.id,
     targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
   }));
   assert.equal(state.plan.steps.length, 1);
@@ -269,19 +259,19 @@ test("source import alias changes source identity but not Recipe or Graph semant
   const studio = await compileMain("studio");
   const brand = await compileMain("brand");
   assert.notEqual(studio.closure.id, brand.closure.id);
-  const studioAppearance = studio.module.records.find((record) => record.type.name === cardAppearanceType.name);
-  const brandAppearance = brand.module.records.find((record) => record.type.name === cardAppearanceType.name);
+  const studioAppearance = studio.program.records.find((record) => record.type.name === cardAppearanceType.name);
+  const brandAppearance = brand.program.records.find((record) => record.type.name === cardAppearanceType.name);
   assert.equal(studioAppearance?.id, brandAppearance?.id);
   assert.equal(studioAppearance?.digest, brandAppearance?.digest);
-  assert.equal(studio.elaboration.graph.id, brand.elaboration.graph.id);
+  assert.equal(studio.graph.id, brand.graph.id);
 });
 
 test("relocating the same source tree preserves Source Closure and Graph identity", async () => {
   const original = await compileMain("studio", "/project");
   const relocated = await compileMain("studio", "/copy/project");
   assert.equal(original.closure.id, relocated.closure.id);
-  assert.equal(original.module.semanticDigest, relocated.module.semanticDigest);
-  assert.equal(original.elaboration.graph.id, relocated.elaboration.graph.id);
+  assert.equal(original.program.semanticDigest, relocated.program.semanticDigest);
+  assert.equal(original.graph.id, relocated.graph.id);
 });
 
 test("Frontend identity changes Source Closure identity but not equal decoded author meaning", async () => {
@@ -305,8 +295,8 @@ test("Frontend identity changes Source Closure identity but not equal decoded au
   assert.notEqual(official.closure.id, compatible.closure.id);
   assert.notEqual(official.closure.units[0]?.frontendDigest, compatible.closure.units[0]?.frontendDigest);
   assert.equal(official.closure.units[0]?.semanticDigest, compatible.closure.units[0]?.semanticDigest);
-  assert.equal(official.module.semanticDigest, compatible.module.semanticDigest);
-  assert.equal(official.elaboration.graph.id, compatible.elaboration.graph.id);
+  assert.equal(official.program.semanticDigest, compatible.program.semanticDigest);
+  assert.equal(official.graph.id, compatible.graph.id);
 });
 
 test("Source Closure binds every recursive SourceUnit digest", async () => {

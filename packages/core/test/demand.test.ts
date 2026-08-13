@@ -64,8 +64,6 @@ const producers = {
 const seedanceCapability = { module: moduleRef, name: "seedance-media" } as const;
 
 const implementation = (name: string) => ({
-  kind: "test",
-  locator: name,
   digest: digestOf(`${name}@1`),
 });
 
@@ -95,7 +93,6 @@ const manifest: ModuleManifest = {
     })),
   ],
   capabilities: [{ name: seedanceCapability.name, returns: types.image }],
-  surfaces: [],
   producers: [
     {
       name: producers.p1.name,
@@ -271,7 +268,7 @@ function createProgram(): LinkedProgram {
       origin: { kind: "authored" },
     }),
   ];
-  return link(closure, [sealTypedModule({ id: "author:demand", closureDigest: closure.digest, records: authored })]);
+  return link(closure, [sealTypedModule({ records: authored })]);
 }
 
 function createImageGraph(program: LinkedProgram): CompiledGraph {
@@ -396,11 +393,10 @@ test("an Existing Value is a normal Candidate root and prevents the paid Need fr
   const state = fixture(["media"], [choose("media", "existing-media")]);
   const transition = reduce(state);
   assert.deepEqual(stepIds(state), []);
-  assert.equal(state.plan.initialValues.length, 1);
-  assert.equal(state.plan.initialValues[0]?.origin.kind, "provided");
-  assert.equal(transition.state.status, "complete");
-  assert.equal(transition.state.needs.length, 0);
-  assert.equal(transition.commands[0]?.kind, "complete");
+  assert.deepEqual(state.records.filter((record) => record.origin.kind === "provided").map((record) => record.id), ["provided:media"]);
+  assert.equal(transition.status, "complete");
+  assert.equal(transition.needs.length, 0);
+  assert.deepEqual(transition.outstanding, []);
 });
 
 test("Provided Values are checked against the Logical Output Contract", () => {
@@ -424,9 +420,9 @@ test("Provided state survives JSON round-trip and regenerates identical ready Co
     choose("image2", "existing-image2"),
   ]);
   const scheduled = reduce(state);
-  const restored = JSON.parse(JSON.stringify({ ...scheduled.state, outstanding: [] })) as BuildState;
+  const restored = JSON.parse(JSON.stringify({ ...scheduled, outstanding: [] })) as BuildState;
   verifyBuildState(restored);
-  assert.deepEqual(reduce(restored).commands, scheduled.commands);
+  assert.deepEqual(reduce(restored).outstanding, scheduled.outstanding);
 });
 
 function createCaseGGraph(program: LinkedProgram, roots: "value" | "operation"): CompiledGraph {
@@ -467,7 +463,7 @@ test("Case G: two single-output full-input Candidates share both upstream Values
   const graph = createCaseGGraph(program, "value");
   const state = start(program, graph, request(graph, ["c.result"]));
   assert.deepEqual(stepIds(state), ["b1", "b2", "c"]);
-  assert.deepEqual(state.plan.initialValues.map((record) => record.id), ["provided:A", "provided:B"]);
+  assert.deepEqual(state.records.filter((record) => record.origin.kind === "provided").map((record) => record.id), ["provided:A", "provided:B"]);
   const b1 = state.plan.steps.find((step) => step.id === "b1");
   const b2 = state.plan.steps.find((step) => step.id === "b2");
   assert.deepEqual(b1?.inputs, { A: "provided:A", B: "provided:B" });

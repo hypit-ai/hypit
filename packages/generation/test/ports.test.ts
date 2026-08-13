@@ -95,7 +95,7 @@ test("a port table derives the request Schema and rejects undeclared ports", () 
   const schema = requestSchemaFromPorts(table);
   assert.equal(schema.kind, "object");
   const fields = (schema as { fields: Record<string, { schema: { kind: string } }> }).fields;
-  assert.equal(fields.model!.schema.kind, "literal");
+  assert.deepEqual(Object.keys(fields).sort(), ["contract", "ports"]);
   const ports = fields.ports!.schema as { kind: string; fields: Record<string, { optional?: boolean }> };
   assert.equal(ports.kind, "object");
   assert.equal(ports.fields.prompt!.optional, undefined);
@@ -103,7 +103,6 @@ test("a port table derives the request Schema and rejects undeclared ports", () 
   assert.throws(
     () => verifyRequestAgainstPorts(table, {
       contract: "svml.generation-request@1",
-      model: "demo-video",
       ports: { prompt: ["hi"], duration: [8], resolution: ["720p"], unknownPort: ["x"] },
     }),
     /undeclared port unknownPort/u,
@@ -127,7 +126,7 @@ test("a media port enforces the media type its role demands", async () => {
     resolution: ["720p"],
     firstFrame: [{ role: "image", artifact: image }],
   });
-  assert.equal(ok.model, "demo-video");
+  assert.equal("model" in ok, false);
 });
 
 test("port combination rules enforce mutually exclusive input modes", async () => {

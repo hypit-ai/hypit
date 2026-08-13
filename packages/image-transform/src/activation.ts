@@ -4,33 +4,27 @@ import {
   decodeImageTransformProgramSurface,
   decodeImageTransformSurface,
   imageTransformComponent,
-  imageTransformImplementationDigests,
   imageTransformManifest,
   imageTransformModuleRef,
+  imageTransformMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/image-transform",
   modules: [{
     manifest: imageTransformManifest,
-    specifiers: ["@narratage/image-transform", "@narratage/image-transform@1"],
   }],
   components: [imageTransformComponent],
   hostFacets: [{
     ...createMarkupSurfaceHostFacet({
       module: imageTransformModuleRef,
-      surface: "program",
-      mode: "structured",
-      implementationDigest: imageTransformImplementationDigests.programSurface,
+    declaration: imageTransformMarkupSurfaces.find((item) => item.name === "program")!,
       handler: decodeImageTransformProgramSurface,
     }),
   }, {
     ...createMarkupSurfaceHostFacet({
       module: imageTransformModuleRef,
-      surface: "transform",
-      mode: "structured",
-      implementationDigest: imageTransformImplementationDigests.transformSurface,
+    declaration: imageTransformMarkupSurfaces.find((item) => item.name === "transform")!,
       handler: decodeImageTransformSurface,
     }),
   }],

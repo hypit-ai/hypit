@@ -41,7 +41,7 @@ export function collectRunModuleRequests(
       continue;
     }
     if (declaration.kind === "file") {
-      requests.add("@narratage/artifact@1");
+      requests.add(moduleRequest(declaration.type.module));
       continue;
     }
     if (declaration.kind !== "fragment") continue;
@@ -123,7 +123,7 @@ export async function resolveRunDocument(
       const value = await context.readFile(declaration.from, declaration.mediaType);
       assertStoredValue(value, declaration.from);
       const candidate = createProvidedCandidate({
-        type: { module: { name: "@narratage/artifact", version: "1" }, name: "BlobArtifact" },
+        type: declaration.type,
         value,
       });
       addCandidate(candidate);
@@ -176,8 +176,6 @@ export async function resolveRunDocument(
   const resolvedCandidates = [...candidates.values()];
   const resolvedOperations = [...operations.values()];
   const graph = sealRunGraph({
-    authorGraph: context.compilation.elaboration.graph.id,
-    sourceClosure: context.sourceClosure.id,
     candidates: resolvedCandidates,
     operations: resolvedOperations,
     satisfactions,

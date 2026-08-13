@@ -59,7 +59,6 @@ export const hyperframesManifest: ModuleManifest = {
   dependencies: [compositionDependency, mediaDependency, programSpaceDependency],
   types: [{ name: hyperframesTypes.document.name, schema: hyperframesDocumentSchema }],
   capabilities: [],
-  surfaces: [],
   producers: [{
     name: hyperframesProducers.compile.name,
     inputs: [
@@ -69,8 +68,6 @@ export const hyperframesManifest: ModuleManifest = {
     outputs: [{ name: "document", type: hyperframesTypes.document }],
     needs: [],
     implementation: {
-      kind: "registered",
-      locator: "@narratage/hyperframes/compile",
       digest: compileHyperframesImplementationDigest,
     },
   }],

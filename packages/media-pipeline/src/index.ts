@@ -16,7 +16,7 @@ export {
 export {
   mediaPipelineCapabilities,
   mediaPipelineImplementationDigests,
-  mediaPipelineManifest,
+  mediaPipelineManifest, mediaPipelineMarkupSurfaces,
   mediaPipelineManifestDigest,
   mediaPipelineModuleRef,
   mediaPipelineProducers,

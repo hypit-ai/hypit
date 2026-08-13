@@ -118,7 +118,7 @@ export function textTemplateFromSvsRecipes(
 ): TextTemplate {
   const prefix = `text-template.${templateId}`;
   const meta = recipes.find((recipe) => recipe.path === prefix);
-  if (meta === undefined) throw new Error(`Missing ${prefix} metadata Recipe`);
+  if (meta === undefined) throw new Error(`Missing root Recipe ${prefix}`);
   exactProperties(meta, new Set(["separator"]), ["default-"]);
   if (text(meta, "separator", "paragraph") !== "paragraph") throw new Error(`${prefix}.separator must be paragraph`);
   const defaults: Record<string, TextScalar> = {};

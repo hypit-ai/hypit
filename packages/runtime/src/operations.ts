@@ -13,16 +13,12 @@ export type OperationIdentity = {
   readonly endpoint: string;
   readonly authority: string;
   readonly route: string;
-  readonly implementationDigest: Digest;
   readonly runtimeClosure: Digest;
-  readonly requestDigest: Digest;
   readonly attempt: number;
 };
 
 export type OperationCompletion = {
   readonly value: StoredValue;
-  readonly metadata?: CanonicalValue;
-  readonly digest: Digest;
 };
 
 export type OperationFailure = {
@@ -76,7 +72,7 @@ export type OperationUpdate =
     }
   | {
       readonly status: "completed";
-      readonly completion: Omit<OperationCompletion, "digest">;
+      readonly completion: OperationCompletion;
     }
   | { readonly status: "failed"; readonly failure: OperationFailure }
   | { readonly status: "cancelled"; readonly cancellation: OperationCancellationControl }
@@ -97,7 +93,6 @@ export type OperationQuery = {
   readonly authority?: string;
   readonly route?: string;
   readonly runtimeClosure?: Digest;
-  readonly requestDigest?: Digest;
 };
 
 export type OperationStore = {
@@ -129,9 +124,7 @@ function identityContent(value: Omit<OperationIdentity, "id">): Omit<OperationId
     endpoint: value.endpoint,
     authority: value.authority,
     route: value.route,
-    implementationDigest: value.implementationDigest,
     runtimeClosure: value.runtimeClosure,
-    requestDigest: value.requestDigest,
     attempt: value.attempt,
   };
 }
@@ -144,9 +137,7 @@ export function sealOperationIdentity(
   assert(value.endpoint.trim().length > 0, "Operation Endpoint id is empty");
   assert(value.authority.trim().length > 0, "Operation Provider Authority is empty");
   assert(value.route.trim().length > 0, "Operation Capability Route is empty");
-  assert(isDigest(value.implementationDigest), "Operation implementation digest is invalid");
   assert(isDigest(value.runtimeClosure), "Operation Runtime Closure digest is invalid");
-  assert(isDigest(value.requestDigest), "Operation request digest is invalid");
   positiveInteger(value.attempt, "Operation attempt");
   const content = identityContent({
     format: "svml.operation-identity@1",
@@ -159,20 +150,6 @@ export function verifyOperationIdentity(identity: OperationIdentity): void {
   const expected = sealOperationIdentity(identity);
   assert(identity.format === expected.format
     && identity.id === expected.id, "Operation identity differs");
-}
-
-function completionContent(value: Omit<OperationCompletion, "digest">) {
-  return {
-    value: structuredClone(value.value),
-    ...(value.metadata === undefined ? {} : { metadata: structuredClone(value.metadata) }),
-  };
-}
-
-export function sealOperationCompletion(
-  value: Omit<OperationCompletion, "digest">,
-): OperationCompletion {
-  const content = completionContent(value);
-  return { ...content, digest: digestOf(content) };
 }
 
 export function verifyOperationSnapshot(snapshot: OperationSnapshot): void {
@@ -208,8 +185,6 @@ export function verifyOperationSnapshot(snapshot: OperationSnapshot): void {
   }
   if (snapshot.status === "completed") {
     assert(snapshot.completion !== undefined && presence === 1, "completed Operation requires only completion");
-    const expected = sealOperationCompletion(snapshot.completion);
-    assert(snapshot.completion.digest === expected.digest, "Operation completion digest differs");
   }
   if (snapshot.status === "failed") {
     assert(snapshot.failure !== undefined && presence === 1, "failed Operation requires only failure");
@@ -253,7 +228,7 @@ function copy(snapshot: OperationSnapshot): OperationSnapshot {
   return structuredClone(snapshot);
 }
 
-/** In-process reference journal. Durable/distributed adapters must add leases around the same CAS law. */
+/** In-process reference Store. Durable/distributed adapters must preserve the same CAS law. */
 export class MemoryOperationStore implements OperationStore {
   readonly #operations = new Map<Digest, OperationSnapshot>();
 
@@ -284,7 +259,6 @@ export class MemoryOperationStore implements OperationStore {
       .filter((snapshot) => query.authority === undefined || snapshot.authority === query.authority)
       .filter((snapshot) => query.route === undefined || snapshot.route === query.route)
       .filter((snapshot) => query.runtimeClosure === undefined || snapshot.runtimeClosure === query.runtimeClosure)
-      .filter((snapshot) => query.requestDigest === undefined || snapshot.requestDigest === query.requestDigest)
       .sort((left, right) => left.attempt - right.attempt || left.id.localeCompare(right.id))
       .map(copy);
   }
@@ -320,7 +294,7 @@ export class MemoryOperationStore implements OperationStore {
           ...(update.progress === undefined ? {} : { progress: structuredClone(update.progress) }),
         }
         : update.status === "completed"
-        ? { status: "completed" as const, completion: sealOperationCompletion(update.completion) }
+        ? { status: "completed" as const, completion: structuredClone(update.completion) }
         : update.status === "failed"
           ? { status: "failed" as const, failure: structuredClone(update.failure) }
           : { status: "cancelled" as const, cancellation: structuredClone(update.cancellation) };
@@ -332,9 +306,7 @@ export class MemoryOperationStore implements OperationStore {
       endpoint: current.endpoint,
       authority: current.authority,
       route: current.route,
-      implementationDigest: current.implementationDigest,
       runtimeClosure: current.runtimeClosure,
-      requestDigest: current.requestDigest,
       attempt: current.attempt,
       revision: current.revision + 1,
       ...mutable,

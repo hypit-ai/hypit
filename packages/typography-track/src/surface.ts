@@ -733,7 +733,8 @@ function createTrackFragment(id: string, items: readonly FragmentItem[]): GraphF
   ];
   const inputs = [...new Map(inputEntries.map((value) => [value.name, value])).values()];
   return sealGraphFragment({
-    name: `@narratage/typography-track/surface/${id}@1`, inputs, operations,
+    inputs,
+    operations,
     exports: [
       {
         name: "program", type: typographyTrackTypes.program, root: operation("text:finalize"),
@@ -860,7 +861,6 @@ function createMaskFragment(id: string): GraphFragment {
     { name: "spec", type: typographyTrackTypes.maskSpec },
   ];
   return sealGraphFragment({
-    name: `@narratage/typography-track/mask-surface/${id}@1`,
     inputs,
     operations: [{
       id: "text-mask:render", producer: typographyTrackProducers.renderMask,

@@ -425,20 +425,8 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
     const constraints = canonicalize({
       contract: "svml.project-speech-evidence-audio-request@1",
       source,
-      sourceSampleRate: 48_000,
-      sourceChannels: 2,
-      sourceCodec: "pcm_s16le",
       sourceSampleFrames: 48_001,
-      evidenceSampleRate: 16_000,
-      evidenceChannels: 1,
-      evidenceCodec: "pcm_s16le",
       evidenceSampleFrames: 16_000,
-      durationSec: 48_001 / 48_000,
-      segments: [{
-        segmentId: "line",
-        startSec: 0,
-        endSec: 48_001 / 48_000,
-      }],
     });
     const request = need(
       "need:speech-evidence-audio",
@@ -449,10 +437,6 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
     const value = await fulfillInline(artifacts, request);
     assertSpeechEvidenceAudioIdentity(value as unknown as SpeechEvidenceAudio);
     const evidence = value as unknown as SpeechEvidenceAudio;
-    assert.equal(evidence.sampleMap.sourceSampleFrames, 48_001);
-    assert.equal(evidence.sampleMap.evidenceSampleFrames, 16_000);
-    assert.equal(evidence.sampleMap.sourceOriginSample, 0);
-    assert.equal(evidence.sampleMap.evidenceOriginSample, 0);
     assert.equal(evidence.sampleFrames, 16_000);
     const inspected = await inspectArtifact(artifacts, evidence.artifact);
     const audio = inspected.streams.find((stream) => stream.kind === "audio");
@@ -736,7 +720,6 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
       frameCount: 30,
       canvas: { width: 160, height: 96 },
       artifact: visualArtifact,
-      muted: true,
     });
     const muxRequest = need(
       "need:mux-program-media",

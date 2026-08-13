@@ -81,8 +81,6 @@ test("Vertex transports the exact model request while the model package validate
       captured = input;
       return {
         text: JSON.stringify(response(requestValue)),
-        totalTokenCount: 123,
-        modelVersion: "gemini-2.5-flash-001",
       };
     },
   });
@@ -106,12 +104,11 @@ test("Vertex transports the exact model request while the model package validate
   assert.equal(result.value.kind, "inline");
   const plan = result.value.kind === "inline" ? result.value.value as Record<string, unknown> : {};
   assert.equal(plan.contract, "svml.caption-plan@1");
-  assert.equal((result.metadata as Record<string, unknown>).provider, "google-vertex");
 });
 
 test("Vertex configuration exposes credential/queue policy without changing the model request", () => {
   const provider = createGoogleVertexCaptionProvider({ project: "svml-test-project", defaultConcurrency: 3 });
-  assert.equal(provider.name, "google-vertex.caption");
+  assert.equal(provider.instance.id, "google-vertex.caption");
   const facet = provider.manifest.facets[0];
   assert.equal(facet?.role, "capability-endpoint");
   assert(facet?.role === "capability-endpoint");

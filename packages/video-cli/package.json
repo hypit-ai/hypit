@@ -13,7 +13,6 @@
     "@narratage/local": "workspace:*",
     "@narratage/markup": "workspace:*",
     "@narratage/package-loader-node": "workspace:*",
-    "@narratage/run-markup": "workspace:*",
-    "@narratage/source": "workspace:*"
+    "@narratage/workspace-fs-node": "workspace:*"
   }
 }

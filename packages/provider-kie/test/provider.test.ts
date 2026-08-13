@@ -67,9 +67,7 @@ function operation(request: Need) {
     endpoint: "kie.default",
     authority: "kie.default",
     route: "fixture.video",
-    implementationDigest: kieProviderImplementationDigest,
     runtimeClosure: digestOf("runtime:kie-test"),
-    requestDigest: request.requestDigest,
     attempt: 1,
   });
 }

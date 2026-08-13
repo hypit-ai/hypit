@@ -59,7 +59,6 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/provider-media-local",
   hostFacets: [localMediaRuntimeAdapter],
 };
 

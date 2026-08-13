@@ -73,7 +73,7 @@ Manifests actually imported by the author document; installing KIE does not add 
 
 1. Reference `BlobRef`s are read from the configured ArtifactStore and uploaded through KIE's file
    stream API. KIE temporary URLs never enter author source or generated Product identity.
-2. `createTask` is journaled as one recoverable Operation. Because KIE does not document an
+2. `createTask` is persisted as one recoverable Operation. Because KIE does not document an
    idempotency key, an ambiguous network/5xx submission is not automatically retried.
 3. Once a `taskId` exists, restart resumes only that task. Poll/download errors cannot create a new
    paid generation.

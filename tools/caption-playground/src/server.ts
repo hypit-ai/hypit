@@ -8,7 +8,7 @@ import { fineCaptionRecipeSchema, FINE_CAPTION_FAMILY } from "@narratage/caption
 import { openFontFamilies } from "@narratage/fonts-open";
 import type { OpenFontFamily, OpenFontStyle } from "@narratage/fonts-open";
 import { loadNodePackageSet } from "@narratage/package-loader-node";
-import type { ArtifactAttachment } from "@narratage/host";
+import type { ArtifactAttachment } from "@narratage/workspace";
 import type { CanonicalValue, TypedRecord } from "@narratage/protocol";
 import { parseSvs } from "@narratage/svs";
 import { createVideoCompiler } from "@narratage/video-cli";
@@ -202,7 +202,7 @@ export function captionPlaygroundPlugin(options: CaptionPlaygroundOptions): Plug
   const compile = async (): Promise<CurrentState> => {
     const packageSet = await loaded;
     const compiler = createVideoCompiler({
-      packageContributions: packageSet.contributions,
+      packageContributions: packageSet.packages.map((item) => item.contribution),
       workspaceRoot: dirname(options.source),
     });
     const [result, fontText, recipeText] = await Promise.all([

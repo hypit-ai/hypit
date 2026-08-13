@@ -1,19 +1,21 @@
 import {
   isDigest,
-  recordDigest,
   resolveType,
   sealRecord,
-  sealTypeValidationReceipt,
   validateStoredValue,
   verifyRecord,
   verifyRecordStructure,
 } from "@narratage/core";
 import type {
+  TypeValidatorContext,
+  TypeValidatorHandler,
+  TypeValidatorRegistrar,
+} from "@narratage/component-kit";
+import type {
   Digest,
   ResolvedModuleClosure,
   StoredValue,
   TypeRef,
-  TypeValidationReceipt,
   TypedRecord,
 } from "@narratage/protocol";
 
@@ -27,14 +29,7 @@ function sameType(left: TypeRef, right: TypeRef): boolean {
     && left.name === right.name;
 }
 
-export type TypeValidatorContext = {
-  readonly type: TypeRef;
-  readonly value: StoredValue;
-};
-
-export type TypeValidatorHandler = (
-  context: TypeValidatorContext,
-) => void | Promise<void>;
+export type { TypeValidatorContext, TypeValidatorHandler, TypeValidatorRegistrar } from "@narratage/component-kit";
 
 export type TypeValidatorRegistration = {
   readonly type: TypeRef;
@@ -44,15 +39,6 @@ export type TypeValidatorRegistration = {
 
 export interface TypeValidatorRegistryLike {
   resolve(type: TypeRef): TypeValidatorRegistration | undefined;
-}
-
-/** Mutable package-install seam. Type owners register refinements; Core stays type-agnostic. */
-export interface TypeValidatorRegistrar {
-  register(
-    type: TypeRef,
-    implementationDigest: Digest,
-    handler: TypeValidatorHandler,
-  ): void;
 }
 
 export class TypeValidationError extends Error {
@@ -95,10 +81,10 @@ export async function validateValue(
   type: TypeRef,
   value: StoredValue,
   registry: TypeValidatorRegistryLike,
-): Promise<TypeValidationReceipt | undefined> {
+): Promise<void> {
   const declaration = resolveType(closure, type);
   validateStoredValue(value, declaration.schema, `$validation.${typeKey(type)}`);
-  if (declaration.validator === undefined) return undefined;
+  if (declaration.validator === undefined) return;
   const registration = registry.resolve(type);
   if (registration === undefined) {
     throw new TypeValidationError("MISSING_TYPE_VALIDATOR", `${typeKey(type)} validator is not registered`, typeKey(type));
@@ -126,11 +112,6 @@ export async function validateValue(
       typeKey(type),
     );
   }
-  return sealTypeValidationReceipt({
-    type,
-    recordDigest: recordDigest(type, value),
-    validatorDigest: registration.implementationDigest,
-  });
 }
 
 export async function admitRecord(
@@ -140,16 +121,12 @@ export async function admitRecord(
 ): Promise<TypedRecord> {
   const {
     digest: _digest,
-    validation: _validation,
     ...draft
   } = record;
   const unvalidated = sealRecord(draft);
   verifyRecordStructure(closure, unvalidated);
-  const validation = await validateValue(closure, record.type, record.value, registry);
-  const admitted = sealRecord({
-    ...draft,
-    ...(validation === undefined ? {} : { validation }),
-  });
+  await validateValue(closure, record.type, record.value, registry);
+  const admitted = sealRecord(draft);
   verifyRecord(closure, admitted);
   return admitted;
 }

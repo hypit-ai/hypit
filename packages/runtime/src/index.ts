@@ -1,3 +1,4 @@
+export { plannedNeeds } from "@narratage/core";
 export { MemoryBuildStore } from "./memory.js";
 export {
   MemoryBuildCatalog,
@@ -14,23 +15,20 @@ export {
 } from "./credentials.js";
 export type * from "./credentials.js";
 export {
-  assertRuntimeRevisionAdmission,
+  assertRuntimeClosureAdmission,
   capacityReservationId,
   createBuildDispatchIdentity,
-  createRuntimeRevision,
   nonTerminalDispatchPhases,
   verifyBuildDispatchIdentity,
   verifyBuildDispatchSnapshot,
   verifyCapacityLimits,
   verifyCapacityReservation,
   verifyDispatchLease,
-  verifyRuntimeJournalEntry,
 } from "./dispatch.js";
 export type * from "./dispatch.js";
 export {
   MemoryOperationStore,
   operationCancellationRequestId,
-  sealOperationCompletion,
   sealOperationIdentity,
   verifyOperationIdentity,
   verifyOperationCancellationControl,

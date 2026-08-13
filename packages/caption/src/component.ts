@@ -28,7 +28,6 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 
 /** Deterministic timing joins only; cue generation, Style meaning and visual lowering stay outside. */
 export const captionComponent = {
-  name: "@narratage/caption",
   producers: [
     {
       producer: captionProducers.temporalizePlan,

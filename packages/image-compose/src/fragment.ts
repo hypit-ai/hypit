@@ -14,7 +14,7 @@ export type ImageComposeFragmentLayer = {
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
-export function createImageComposeFragment(layers: readonly ImageComposeFragmentLayer[], name: string) {
+export function createImageComposeFragment(layers: readonly ImageComposeFragmentLayer[]) {
   if (layers.length === 0) throw new Error("Image Compose Fragment requires at least one Layer.");
   const operations: FragmentOperation[] = [{
     id: "image:layers:empty", producer: imageComposeProducers.createLayers, inputs: {},
@@ -39,7 +39,6 @@ export function createImageComposeFragment(layers: readonly ImageComposeFragment
     result: { kind: "need", name: "image" },
   });
   return sealGraphFragment({
-    name,
     inputs: [
       { name: "canvas", type: spatialTypes.canvas },
       { name: "options", type: imageComposeTypes.options },

@@ -8,7 +8,6 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 export const captionGeminiPlanningFragment = sealGraphFragment({
-  name: "@narratage/caption-gemini/planning@1",
   inputs: [
     { name: "display", type: narrativeTypes.captionDisplay },
     { name: "captionProgram", type: captionTypes.program },

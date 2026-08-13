@@ -6,6 +6,7 @@ export {
   audioTrackDependency,
   audioTrackHeaderSchema,
   audioTrackManifest,
+  audioTrackMarkupSurfaces,
   audioTrackManifestDigest,
   audioTrackModuleRef,
   audioTrackProducers,

@@ -5,7 +5,7 @@ export type { TextFragmentBinding } from "./fragment.js";
 export {
   textDependency,
   textImplementationDigests,
-  textManifest,
+  textManifest, textMarkupSurfaces,
   textManifestDigest,
   textModuleRef,
   textProducers,

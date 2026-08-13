@@ -413,11 +413,10 @@ export function buildRankingSchedule(input: {
     const cumulative = resolved.cumulative[index]!;
     return {
       itemId: item.id,
-      triggerOccurrenceId: exclusive.triggerId,
-      triggerFrame: exclusive.span.startFrame,
-      stage: { ...exclusive.span },
-      cumulative: { ...cumulative.span },
-      settled: { startFrame: exclusive.span.endFrameExclusive, endFrameExclusive: resolved.outer.endFrameExclusive },
+      triggerFrame: exclusive.startFrame,
+      stage: { ...exclusive },
+      cumulative: { ...cumulative },
+      settled: { startFrame: exclusive.endFrameExclusive, endFrameExclusive: resolved.outer.endFrameExclusive },
     };
   });
   const result: RankingSchedule = {
@@ -449,7 +448,6 @@ export function assertRankingSchedule(value: RankingSchedule, space?: ProgramSpa
     identity(entry.itemId, `RankingSchedule.entries.${index}.itemId`);
     assert(!ids.has(entry.itemId), `RankingSchedule repeats ${entry.itemId}.`);
     ids.add(entry.itemId);
-    assert(entry.triggerOccurrenceId.length > 0, `RankingSchedule.entries.${index} has no occurrence identity.`);
     frame(entry.triggerFrame, `RankingSchedule.entries.${index}.triggerFrame`);
     assert(entry.triggerFrame > previous, "RankingSchedule trigger frames are not strictly increasing.");
     previous = entry.triggerFrame;

@@ -8,15 +8,12 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@narratage/compiler-node": "workspace:*",
     "@narratage/component-kit": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
     "@narratage/host": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/run": "workspace:*",
-    "@narratage/validation": "workspace:*"
+    "@narratage/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/runtime-adapter": "workspace:*"
+    "@narratage/runtime-adapter": "workspace:*",
+    "@narratage/validation": "workspace:*"
   }
 }

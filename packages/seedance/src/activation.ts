@@ -7,34 +7,27 @@ import {
   seedanceComponent,
   seedanceManifest,
   seedanceModuleRef,
-  seedanceSurfaceImplementationDigests,
+  seedanceMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/seedance",
-  modules: [{ manifest: seedanceManifest, specifiers: ["@narratage/seedance", "@narratage/seedance@1"] }],
+  modules: [{ manifest: seedanceManifest }],
   components: [seedanceComponent],
   hostFacets: [
     createMarkupSurfaceHostFacet({
       module: seedanceModuleRef,
-      surface: "text-video",
-      mode: "structured",
-      implementationDigest: seedanceSurfaceImplementationDigests.textVideo,
+    declaration: seedanceMarkupSurfaces.find((item) => item.name === "text-video")!,
       handler: decodeSeedanceTextVideoSurface,
     }),
     createMarkupSurfaceHostFacet({
       module: seedanceModuleRef,
-      surface: "frame-video",
-      mode: "structured",
-      implementationDigest: seedanceSurfaceImplementationDigests.frameVideo,
+    declaration: seedanceMarkupSurfaces.find((item) => item.name === "frame-video")!,
       handler: decodeSeedanceFrameVideoSurface,
     }),
     createMarkupSurfaceHostFacet({
       module: seedanceModuleRef,
-      surface: "reference-video",
-      mode: "structured",
-      implementationDigest: seedanceSurfaceImplementationDigests.referenceVideo,
+    declaration: seedanceMarkupSurfaces.find((item) => item.name === "reference-video")!,
       handler: decodeSeedanceReferenceVideoSurface,
     }),
   ],

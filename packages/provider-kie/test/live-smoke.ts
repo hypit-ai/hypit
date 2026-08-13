@@ -332,8 +332,6 @@ async function createBuild(item: SmokeCase): Promise<ReturnType<typeof start>> {
   });
   const authored = await admitRecord(closure, draft, validators);
   const program = link(closure, [sealTypedModule({
-    id: "author:kie-live-smoke",
-    closureDigest: closure.digest,
     records: [authored],
   })]);
   const graph = sealCompiledGraph({
@@ -416,11 +414,9 @@ async function main(): Promise<void> {
   const execution = createLocalExecutionPackage("execution.local");
   const state = createSqliteRuntimeServicePackage({
     path: join(root, ".svml", "runtime.sqlite"),
-    name: "state.sqlite",
     buildInstance: "state.builds",
     operationInstance: "state.operations",
     dispatchInstance: "state.dispatch",
-    journalInstance: "state.journal",
   });
   const artifacts = createFileArtifactStorePackage({ root: join(root, ".svml", "artifacts"), instance: "artifacts.fs" });
   const credentials = createEnvironmentCredentialStorePackage({ instance: "credentials.env" });
@@ -434,14 +430,13 @@ async function main(): Promise<void> {
         build: "state.builds",
         operations: "state.operations",
         dispatch: "state.dispatch",
-        journal: "state.journal",
         artifacts: "artifacts.fs",
         credentials: ["credentials.env"],
       },
     },
     components: [
       generationComponent,
-      ...[...new Map(selected.map((item) => [item.component.name, item.component])).values()],
+      ...[...new Map(selected.map((item) => [item.manifest.name, item.component])).values()],
     ],
     endpoints: [provider],
     scheduling: { maxConcurrency: 1 },

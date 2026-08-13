@@ -11,21 +11,12 @@ export const fontsOpenStackSurfaceImplementationDigest = digestOf(
   "@narratage/fonts-open/pinned-open-exact-stack-surface@1",
 );
 
-export const fontsOpenManifest: ModuleManifest = {
-  format: "svml.module@1",
-  name: fontsOpenModuleRef.name,
-  version: fontsOpenModuleRef.version,
-  dependencies: [mediaDependency],
-  types: [],
-  capabilities: [],
-  surfaces: [{
+export const fontsOpenMarkupSurfaces = [{
     name: "face",
     tag: "Face",
     mode: "structured",
     outputs: [mediaTypes.fontArtifact],
     implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@narratage/fonts-open/face-surface",
       digest: fontsOpenFaceSurfaceImplementationDigest,
     },
   }, {
@@ -34,11 +25,18 @@ export const fontsOpenManifest: ModuleManifest = {
     mode: "structured",
     outputs: [mediaTypes.fontStack],
     implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@narratage/fonts-open/stack-surface",
       digest: fontsOpenStackSurfaceImplementationDigest,
     },
-  }],
+  }] as const;
+
+
+export const fontsOpenManifest: ModuleManifest = {
+  format: "svml.module@1",
+  name: fontsOpenModuleRef.name,
+  version: fontsOpenModuleRef.version,
+  dependencies: [mediaDependency],
+  types: [],
+  capabilities: [],
   producers: [],
 };
 

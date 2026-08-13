@@ -9,8 +9,8 @@ import type { ModuleManifest } from "@narratage/protocol";
 import {
   decodeScriptSurface,
   scriptManifest,
+  scriptMarkupSurfaces,
   scriptModuleRef,
-  scriptSurfaceImplementationDigest,
 } from "@narratage/script";
 import {
   MarkupFrontendError,
@@ -22,12 +22,11 @@ import {
 function scriptContext() {
   const closure = createResolvedClosure([narrativeManifest, textManifest, scriptManifest]);
   const registry = new MarkupSurfaceRegistry();
-  registry.registerRaw(
-    scriptModuleRef,
-    "script",
-    scriptSurfaceImplementationDigest,
-    decodeScriptSurface,
-  );
+  registry.registerRaw({
+    module: scriptModuleRef,
+    declaration: scriptMarkupSurfaces[0]!,
+    handler: decodeScriptSurface,
+  });
   return {
     closure,
     registry,
@@ -66,14 +65,13 @@ test("Markup learns <script> only from an imported Script Manifest", async () =>
     record.id === "story.caption" && record.type.name === "CaptionDisplaySequence"), true);
   assert.equal(result.module.records.some((record) =>
     record.id === "story.caption.correspondence" && record.type.name === "CaptionCorrespondence"), true);
-  assert.equal(result.sourceMaps.length, 1);
 });
 
 test("the same Script meaning has the same authored Record digest across reflow", async () => {
   const compact = await decodeMarkup(
     {
       name: "compact.svml",
-      text: `<svml><import from="@narratage/script"/><script id="story"><opening><ALICE>Hello.<BOB>Hi.</opening></script></svml>`,
+      text: `<svml><import from="@narratage/script@1"/><script id="story"><opening><ALICE>Hello.<BOB>Hi.</opening></script></svml>`,
     },
     scriptContext(),
   );
@@ -81,7 +79,7 @@ test("the same Script meaning has the same authored Record digest across reflow"
     {
       name: "multiline.svml",
       text: `<svml>
-        <import from="@narratage/script"/>
+        <import from="@narratage/script@1"/>
         <script id="story">
           <opening>
             <ALICE>Hello.
@@ -110,22 +108,21 @@ test("without the import, Markup has no hard-coded knowledge of Script", async (
 test("a raw Surface cannot consume the Markup document close", async () => {
   const closure = createResolvedClosure([narrativeManifest, textManifest, scriptManifest]);
   const registry = new MarkupSurfaceRegistry();
-  registry.registerRaw(
-    scriptModuleRef,
-    "script",
-    scriptSurfaceImplementationDigest,
-    (input) => ({
+  registry.registerRaw({
+    module: scriptModuleRef,
+    declaration: scriptMarkupSurfaces[0]!,
+    handler: (input) => ({
       nextOffset: input.source.length,
       records: [],
       components: [],
       fragments: [],
     }),
-  );
+  });
   await assert.rejects(
     decodeMarkup(
       {
         name: "swallowed.svml",
-        text: `<svml><import from="@narratage/script"/><script><opening>Hello.</opening></script></svml>`,
+        text: `<svml><import from="@narratage/script@1"/><script><opening>Hello.</opening></script></svml>`,
       },
       { closure, registry, resolveModule: () => scriptModuleRef },
     ),
@@ -139,9 +136,9 @@ test("imports are frozen before body decoding", async () => {
       {
         name: "late.svml",
         text: `<svml>
-          <import from="@narratage/script"/>
+          <import from="@narratage/script@1"/>
           <script><opening>Hello.</opening></script>
-          <import from="@narratage/script"/>
+          <import from="@narratage/script@1"/>
         </svml>`,
       },
       scriptContext(),
@@ -176,6 +173,13 @@ test("a module can use Markup's generic structured parser without adding another
   const module = { name: "example.card", version: "1" } as const;
   const type = { module, name: "Card" } as const;
   const implementationDigest = digestOf("example.card/surface@1");
+  const cardSurface = {
+    name: "card",
+    tag: "card",
+    mode: "structured",
+    outputs: [type],
+    implementation: { digest: implementationDigest },
+  } as const;
   const manifest: ModuleManifest = {
     format: "svml.module@1",
     name: module.name,
@@ -191,24 +195,11 @@ test("a module can use Markup's generic structured parser without adding another
       },
     ],
     capabilities: [],
-    surfaces: [
-      {
-        name: "card",
-        tag: "card",
-        mode: "structured",
-        outputs: [type],
-        implementation: {
-          kind: "trusted-frontend-surface",
-          locator: "example.card/surface",
-          digest: implementationDigest,
-        },
-      },
-    ],
     producers: [],
   };
   const closure = createResolvedClosure([manifest]);
   const registry = new MarkupSurfaceRegistry();
-  registry.registerStructured(module, "card", implementationDigest, ({ element }) => ({
+  registry.registerStructured({ module, declaration: cardSurface, handler: ({ element }) => ({
     records: [
       {
         id: "card",
@@ -219,7 +210,7 @@ test("a module can use Markup's generic structured parser without adding another
     ],
     components: [],
     fragments: [],
-  }));
+  }) });
   const result = await decodeMarkup(
     {
       name: "card.svml",
@@ -232,7 +223,7 @@ test("a module can use Markup's generic structured parser without adding another
   assert.equal(isDigest(result.module.records[0]?.digest ?? ""), true);
 
   const overreachingRegistry = new MarkupSurfaceRegistry();
-  overreachingRegistry.registerStructured(module, "card", implementationDigest, ({ element }) => ({
+  overreachingRegistry.registerStructured({ module, declaration: cardSurface, handler: ({ element }) => ({
     records: [
       {
         id: "other",
@@ -243,7 +234,7 @@ test("a module can use Markup's generic structured parser without adding another
     ],
     components: [],
     fragments: [],
-  }));
+  }) });
   await assert.rejects(
     decodeMarkup(
       { name: "overreach.svml", text: `<svml><import from="example.card@1"/><card/></svml>` },

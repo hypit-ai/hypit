@@ -1,5 +1,4 @@
 import {
-  digestOf,
   isDigest,
   sealCompiledGraph,
   verifyCompiledGraph,
@@ -55,8 +54,6 @@ export type AuthorComponent = {
  */
 export type AuthorModule = {
   readonly format: "svml.author-module@1";
-  readonly id: Digest;
-  readonly name: string;
   readonly components: readonly AuthorComponent[];
 };
 
@@ -65,13 +62,6 @@ export type AuthorOutputBinding = {
   readonly output: string;
   readonly id: string;
   readonly type: TypeRef;
-};
-
-export type AuthorElaboration = {
-  readonly format: "svml.author-elaboration@1";
-  readonly author: Digest;
-  readonly graph: CompiledGraph;
-  readonly outputs: readonly AuthorOutputBinding[];
 };
 
 /** Resolve a locked Graph Fragment without executing package code. */
@@ -152,10 +142,9 @@ function normalizeComponent(component: AuthorComponent): AuthorComponent {
   };
 }
 
-function authorModuleContent(module: AuthorModule): Omit<AuthorModule, "id"> {
+function authorModuleContent(module: AuthorModule): AuthorModule {
   return {
     format: "svml.author-module@1",
-    name: module.name,
     components: [...module.components]
       .map(normalizeComponent)
       .sort((left, right) => left.id.localeCompare(right.id)),
@@ -163,15 +152,13 @@ function authorModuleContent(module: AuthorModule): Omit<AuthorModule, "id"> {
 }
 
 export function sealAuthorModule(
-  module: Omit<AuthorModule, "format" | "id">,
+  module: Omit<AuthorModule, "format">,
 ): AuthorModule {
-  const draft = {
+  const draft: AuthorModule = {
     format: "svml.author-module@1" as const,
-    id: digestOf("unsealed-author-module"),
     ...module,
   };
-  const content = authorModuleContent(draft);
-  return { ...content, id: digestOf(content) };
+  return authorModuleContent(draft);
 }
 
 type CollectedComponent = {
@@ -196,14 +183,6 @@ function collectAuthorModule(
   resolveFragment: GraphFragmentResolver,
 ): CollectedAuthorModule {
   assert(module.format === "svml.author-module@1", "UNSUPPORTED_AUTHOR_MODULE", "unsupported Author Module format");
-  assert(isDigest(module.id), "INVALID_AUTHOR_MODULE_DIGEST", "Author Module id is not a digest");
-  assert(
-    module.id === digestOf(authorModuleContent(module)),
-    "AUTHOR_MODULE_DIGEST_MISMATCH",
-    "Author Module digest differs",
-  );
-  assert(module.name.length > 0, "EMPTY_AUTHOR_MODULE_NAME", "Author Module name is empty");
-
   const components = new Map<string, CollectedComponent>();
   const outputs = new Map<string, AuthorOutputBinding>();
   const outputIds = new Set<string>();
@@ -213,7 +192,7 @@ function collectAuthorModule(
     assert(
       !components.has(declaration.id),
       "DUPLICATE_AUTHOR_COMPONENT",
-      `${module.name} repeats component ${declaration.id}`,
+      `Author Module repeats component ${declaration.id}`,
       declaration.id,
     );
     assert(isDigest(declaration.fragment), "INVALID_FRAGMENT_DIGEST", `${declaration.id} Fragment digest is invalid`);
@@ -242,7 +221,7 @@ function collectAuthorModule(
       assert(
         !outputIds.has(id),
         "DUPLICATE_LOGICAL_OUTPUT_ID",
-        `${module.name} binds Logical Output ${id} more than once`,
+        `Author Module binds Logical Output ${id} more than once`,
         id,
       );
       outputIds.add(id);
@@ -267,7 +246,7 @@ export function elaborateAuthorModule(
   program: LinkedProgram,
   module: AuthorModule,
   resolveFragment: GraphFragmentResolver,
-): AuthorElaboration {
+): CompiledGraph {
   const collected = collectAuthorModule(program, module, resolveFragment);
   const records = new Map(program.records.map((record) => [record.id, record]));
   const visiting: string[] = [];
@@ -353,10 +332,5 @@ export function elaborateAuthorModule(
   );
   const graph = sealCompiledGraph({ program: program.semanticDigest, ...merged });
   verifyCompiledGraph(program, graph);
-  return {
-    format: "svml.author-elaboration@1",
-    author: module.id,
-    graph,
-    outputs: [...collected.outputs.values()].sort((left, right) => left.id.localeCompare(right.id)),
-  };
+  return graph;
 }

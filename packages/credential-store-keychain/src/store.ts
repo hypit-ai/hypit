@@ -142,14 +142,12 @@ export function createKeychainCredentialStorePackage(
   const instance = options.instance ?? "credentials.keychain";
   const service = options.service ?? DEFAULT_SERVICE;
   return defineRuntimeServicePackage({
-    name: instance,
     module: keychainCredentialStoreModuleRef,
     services: [{
       role: "credential-store",
       facet: "credential-store",
       instance,
       implementation: {
-        locator: "@narratage/credential-store-keychain",
         digest: keychainCredentialStoreImplementationDigest,
       },
       configuration: { source: "os-keychain", service, explicitKeysOnly: true },

@@ -582,573 +582,647 @@
     {
       "name": "@narratage/artifact",
       "version": "0.0.0-dev",
-      "digest": "sha256:e1839b39b3ec1bc560ad7d0876e72cef09903f40ba3e0669b355f54a39d2fc82"
+      "digest": "sha256:d2973201574fc3aa340357223bbda6328122b24e4597d0869166f91597186e95"
     },
     {
       "name": "@narratage/caption-fine",
       "version": "0.0.0-dev",
-      "digest": "sha256:cb8fdd4207865c201e83e6a843a85322b73b96cc7a2c40130d439bbc960daed6"
+      "digest": "sha256:31027d41a18bf640ae801c387c2c03139482c8ab47f4dfd54cae5b413461989c"
     },
     {
       "name": "@narratage/caption-gemini",
       "version": "0.0.0-dev",
-      "digest": "sha256:2411d92a3eec5dac75ef53d9a9715f88d6cec8241e6b752c802537c18e91bf3a"
+      "digest": "sha256:dc76638426d8e3b1ee64dac6d5c9345b43174e19a91873bbac8c6e6a97c961c9"
     },
     {
       "name": "@narratage/caption",
       "version": "0.0.0-dev",
-      "digest": "sha256:c43dcd0defd89f3079c81075859a7c63179a58911f9fb43c78e499bf8c9073e8"
+      "digest": "sha256:3f7899629c23005ca059ff2ada2b9b0d69916d2d04eb0549d045b536eac6387c"
     },
     {
       "name": "@narratage/component-kit",
       "version": "0.0.0-dev",
-      "digest": "sha256:0a42292eed0b924b9f2bc4d22187818bb7136ea8f5f122f97962a27f10a30dd1"
+      "digest": "sha256:f67949d59b628490e2a371bc4fb42f546ee33648d2a82d439875757b0909f6ab"
     },
     {
       "name": "@narratage/composition",
       "version": "0.0.0-dev",
-      "digest": "sha256:af8c81e17a6c90b292c37ac3577a43263dab7cfbe30d0a84a4d507d68ffc4d9e"
+      "digest": "sha256:b452b85d6afc21402bcc1e3c888d17dab83b7069980b36f541c50ad2ba19a1eb"
     },
     {
       "name": "@narratage/core",
       "version": "0.0.0-dev",
-      "digest": "sha256:9ade54b00fd6728287f036aaa1ae38f3f7c756be9e2e1015b74c29ee3339c95b"
+      "digest": "sha256:9150672b3de23a42d4af156798b30b711a5b40154e9136c0ce2a09835025b304"
     },
     {
       "name": "@narratage/elaborator",
       "version": "0.0.0-dev",
-      "digest": "sha256:7f2d21ae5e0c8c113e82dcc7169aa7f20b2062ffb79a0db86861c8ab069cb219"
+      "digest": "sha256:b5211ec5b360ad562b82dec2545a579b5aa72dd307b6669f9734ed6a6d556ae1"
     },
     {
       "name": "@narratage/film",
       "version": "0.0.0-dev",
-      "digest": "sha256:40d71029ce8d1fceeb5f6cc03dddebb1e0179f692a855647750150cf1efd8aa3"
+      "digest": "sha256:1a3eee83d2568c34aa5cd8979068ccbc8084de99a2a7b3259d7f977e1c7201f7"
     },
     {
       "name": "@narratage/fonts-open",
       "version": "0.0.0-dev",
-      "digest": "sha256:e145b8fe1ab5dca02f91b60d4ec3301c9a8022f5bf46ffe47a2284cdb3dcc0d0"
+      "digest": "sha256:230cef42eb5f36c4adf9b36460e3d524b88ff2463e8428923bc17110b573a10b"
     },
     {
       "name": "@narratage/generation",
       "version": "0.0.0-dev",
-      "digest": "sha256:fa629ce58731fb544aec83f10348352af019a5c8f441699e1b0035ec489dac6e"
+      "digest": "sha256:bf7f8997580cf8b1352ea337fada4e2f72608c0f1f9083cffed6b35d79592604"
     },
     {
       "name": "@narratage/host",
       "version": "0.0.0-dev",
-      "digest": "sha256:4fb020ec30c6024e74994eae5492fb98c75eb2e055a4a289a16afa26d84fcb4e"
+      "digest": "sha256:ba250954090c44a88ada96680e61c89d1c376227923a7cd2eba81ad95bb81650"
     },
     {
       "name": "@narratage/hyperframes",
       "version": "0.0.0-dev",
-      "digest": "sha256:9a736f281f46eeb4a1998ae9438b0869722f00cdef9b53e219d94ac04497231d"
+      "digest": "sha256:f695df17048daef3b86888824543a5910d75e0a8f717db14d86add13151c0825"
     },
     {
       "name": "@narratage/markup",
       "version": "0.0.0-dev",
-      "digest": "sha256:3d54f0d3a0947f628d406628ec78f441b8cb5da633ebc4a7fbb5ef176d68924b"
+      "digest": "sha256:da12c183459098dbfab7db1878311e5bac886a60f472f858f91f0fb1e23ea0a0"
     },
     {
       "name": "@narratage/media-pipeline",
       "version": "0.0.0-dev",
-      "digest": "sha256:d30dfe6cf81b969e77678d870a34eb13ae48d8e486bfa5b300b452e79cc3d83e"
+      "digest": "sha256:caa37152c7f21a66287fef701d73ab179430c76bcb728726836812daed2e261a"
     },
     {
       "name": "@narratage/media-track",
       "version": "0.0.0-dev",
-      "digest": "sha256:49af374a0b3d235c6e0f675d16c80ae5bf4bcdb8b9fc125f910391b4362dbede"
+      "digest": "sha256:2c5ee5df2467eb64986e692db669bdca1c19ba0888ff4a489ecb8dc06c608094"
     },
     {
       "name": "@narratage/media",
       "version": "0.0.0-dev",
-      "digest": "sha256:3517862f3a4d8fcb5225b00a2295264feff9baed0f08b49e5894bb9f8a6100a1"
+      "digest": "sha256:ff7379074c1a07898bad6b467daaa884852a9778860d3d35ebf75bb68d61fdf6"
     },
     {
       "name": "@narratage/model-kit",
       "version": "0.0.0-dev",
-      "digest": "sha256:ccc8c4bee06bea96d57400fc348a16b0c149e9acd5152ca331d2b0cfe85d1f15"
+      "digest": "sha256:7ee53615cec344fc8866832be4ccf2fee88077871557cc98e7d539b78ba7d565"
     },
     {
       "name": "@narratage/narrative",
       "version": "0.0.0-dev",
-      "digest": "sha256:5823b08047e4d1b099675112b6a58243a563d4ea1bcdb592fdcb10e6e3ef73ab"
+      "digest": "sha256:48c1af0278fa9d69709bad7c9363486c8214933429c4b5ab2ac214175e53bd06"
     },
     {
       "name": "@narratage/program-space",
       "version": "0.0.0-dev",
-      "digest": "sha256:b0b6413c2dd0fbd2894250b5d79d927a92bae8a3fbe755a5f3f7b18424504e03"
+      "digest": "sha256:a190a71dbff8e3a1a70fcc01af88bf4f4e0e21f34cc8678df75c1ae8fef20a7a"
     },
     {
       "name": "@narratage/protocol",
       "version": "0.0.0-dev",
-      "digest": "sha256:8bec54ebf8fc9c8ac8ae8e24a3fce912267039d666183d16e7485c072923e462"
+      "digest": "sha256:3167ce3b4534ee4df885e1ae9a24dc1cf067fdb9bb851ab1983f195b020933b1"
     },
     {
       "name": "@narratage/render-hyperframes",
       "version": "0.0.0-dev",
-      "digest": "sha256:6a436385accd1290988cf6e424e0b9b67b8c758045092281a41844284d135643"
+      "digest": "sha256:7b072e7bc231f940016a18277a936afc4568511141a85916b16b1e01431fd734"
     },
     {
       "name": "@narratage/run-markup",
       "version": "0.0.0-dev",
-      "digest": "sha256:3ec93949ccc358327c63229f0bfd9ee3ebca487943dba544e70eb87a8a1d33ab"
+      "digest": "sha256:33de32d54d225d381b7804c59644b6a19f87b11208c6301411f376ce8dc09430"
     },
     {
       "name": "@narratage/run",
       "version": "0.0.0-dev",
-      "digest": "sha256:eed752e2b89f5611a75e7c90e13c142059faf6e5155bce8140ae45dfb1e04e91"
+      "digest": "sha256:8d7a3b0b98c8dbda0d182a154eb99f90f2f9b9a2055c1ec18909e80a21417721"
     },
     {
       "name": "@narratage/script",
       "version": "0.0.0-dev",
-      "digest": "sha256:77ebf0d0b25d6e71a5abc40eb0b05517e713901231caf56fbd6d4064c84a5942"
+      "digest": "sha256:e87cb6d28660f956e808d97c012a5a765726591d12975a2680472ce681638594"
     },
     {
       "name": "@narratage/seedance",
       "version": "0.0.0-dev",
-      "digest": "sha256:5d44f162719a383284cbb62c860d9bbee7aa7af5c693f57c22f31a63f5d3e309"
+      "digest": "sha256:509b2aef3b2dd340561a6906bccfa202683b4f81ac1217a2d3b7779f4519994f"
     },
     {
       "name": "@narratage/semantic-map",
       "version": "0.0.0-dev",
-      "digest": "sha256:cc3b158e95dae35f5c67dbc926f0c69389f0ccc0260425cd6491f5c927510657"
+      "digest": "sha256:1df8ad135529bb16e2a5fd3ebfba92e305c67bfe0391c45410cb0e1cf909ca6c"
     },
     {
       "name": "@narratage/source",
       "version": "0.0.0-dev",
-      "digest": "sha256:f35e680ec01059de899247b7ec5d550e0641a7b880d0bfd75d34b2c930947a7e"
+      "digest": "sha256:92aa671a7253f5ae34d16584b950b45e0035df0cf454f8112bf48e3b2c8a5268"
     },
     {
       "name": "@narratage/spatial",
       "version": "0.0.0-dev",
-      "digest": "sha256:13305323045486cf9526bf51951467427c93f63e53be0ed4504c542349fc4a21"
+      "digest": "sha256:d615ab7dbb3a42b21279cc765d34041339e0bb1a6e43292271fa8073e3b3916f"
     },
     {
       "name": "@narratage/speech-alignment",
       "version": "0.0.0-dev",
-      "digest": "sha256:70dabc2dfc7603791cd0291e7e507d29837ed4ab1cdf386a46bd1fc3661aadb3"
+      "digest": "sha256:51edbdf62b45a3f6212b931d57be1d24fb97a8e0299f1da23275a2009452d41c"
     },
     {
       "name": "@narratage/speech-basis",
       "version": "0.0.0-dev",
-      "digest": "sha256:1b76c55aedf45de5cd9ec3fe4f523b97f08d600cf375ce0b7d65de41d857d934"
+      "digest": "sha256:27c7ce76b7fea0e02c7d8ec667d0832afb26663729c63ccbd11eecd5b54196b8"
     },
     {
       "name": "@narratage/speech-evidence",
       "version": "0.0.0-dev",
-      "digest": "sha256:8112726350bf8ccb13883f8268490b4119f4821097222517d5101c14ed46d6d5"
+      "digest": "sha256:60fefc5dfca2e227efe04d94220c06e4baa3482fb83f7e558436b070052b6431"
     },
     {
       "name": "@narratage/speech-spine",
       "version": "0.0.0-dev",
-      "digest": "sha256:a3dc6eac1d4415bd169180dcfea631619c97c1d6e75eb4ba71bb5959cabfbe20"
+      "digest": "sha256:b99b8d10a7aeaf3bb07d47a2fc280fba85d7fddcd59d2b0e214ddd2b50a49d18"
     },
     {
       "name": "@narratage/speech",
       "version": "0.0.0-dev",
-      "digest": "sha256:76b8c81a6a78ae392991a21eed847f5f0d1f6ba1f0a6fa41538c78ff96a2a2d2"
+      "digest": "sha256:263a86f1542c58f5e4b04299b1660fc9cdf4d3dbc6d693739f900e6190bdcd5e"
     },
     {
       "name": "@narratage/svs",
       "version": "0.0.0-dev",
-      "digest": "sha256:7dce3e185ebf3d1f56b3e934fe79c804c6a67640468be65991cceeab25fd04a9"
+      "digest": "sha256:d18cdad6feb5a08bef01f54d80fd90f3447ade8504f32265ed85af00786273d4"
     },
     {
       "name": "@narratage/temporal",
       "version": "0.0.0-dev",
-      "digest": "sha256:5566cc222d97435a2072b626183b90f592fb20a09d72f207cd9222a413b4e172"
+      "digest": "sha256:ef34acb71edb8faf59483012480516b1b82eb6ce13dceb70bafa9747ecf5f8ee"
     },
     {
       "name": "@narratage/text",
       "version": "0.0.0-dev",
-      "digest": "sha256:bb58dc8de88a8a70f7597e6f578a6b4d90d43e99638110d2b367a68992f234ae"
+      "digest": "sha256:60168cbfa687559288f014dbe159b6fab94f2b75de8b31c7a30c28860f2fe2ac"
     },
     {
       "name": "@narratage/typography-track",
       "version": "0.0.0-dev",
-      "digest": "sha256:09c00d85038e22b00ffa68f4393c9f6869471deb8524a210ce7cde424c40361f"
-    },
-    {
-      "name": "@narratage/validation",
-      "version": "0.0.0-dev",
-      "digest": "sha256:0808de7090f09bab5e762833b8fa19b357908e72778394bd994d4db9b377fd32"
+      "digest": "sha256:bac4d75a8496be748f933366e6c46a51a674ad075a18f5bed4f3c2c9e712bbdc"
     },
     {
       "name": "@narratage/visual-ir",
       "version": "0.0.0-dev",
-      "digest": "sha256:cd133df7e104188444ad34ad76f33d3674f5d12ba8aa5d942a8db145aba7415a"
+      "digest": "sha256:2c5b5f746333e3fb1e2585d1fa96fcd532eb307ca92fd6f5a51c061cc078295a"
     },
     {
       "name": "@narratage/whisperx",
       "version": "0.0.0-dev",
-      "digest": "sha256:ed7b57ad0a47e7f788fd087918e06c20b8cb58a68e149b34fcfa9687fcf3f03a"
+      "digest": "sha256:e05affb90cf46bf572b21f162653f6943692c3e31c636e97be86397e650adec6"
     }
   ],
   "packages": [
     {
-      "specifier": "@narratage/artifact",
       "package": {
         "name": "@narratage/artifact",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:72524ad8d5599450b4ab199680a6382c72c40cbf760f9c0265687f340aa60650",
-      "closureDigest": "sha256:62a2d8a5788671adf06df7347da70df41d5cbfc9651f330bbb05f4f163f77846"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/artifact@1"
+        }
+      ],
+      "facetsDigest": "sha256:a56f39df98f2bff5caf339a427586e73be079eb26697c2313612bf7c07d78e2c",
+      "closureDigest": "sha256:964875842b2aab623bd64759c3b549eb6536cf046f825344939a01e890c8d586"
     },
     {
-      "specifier": "@narratage/caption",
       "package": {
         "name": "@narratage/caption",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/caption",
-        "@narratage/caption@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/caption@1"
+        }
       ],
-      "facetsDigest": "sha256:1b7b07dfb828c3f95e321841a956e371c044dad8f39c117d92096e9be19b0032",
-      "closureDigest": "sha256:563563ad6da139632b43318d170ce714e055014786a344d656f81c94f51d9ca9"
+      "facetsDigest": "sha256:ca39ffa5e3fe8377e0ce892ae06dd1c5a5071ce8b09f976a6688fcb4d4f4ba25",
+      "closureDigest": "sha256:0b4306b0e025d760b6d7a2fde7211a4b9c09e5edad7a96a96f8008b17de77ad0"
     },
     {
-      "specifier": "@narratage/caption-fine",
       "package": {
         "name": "@narratage/caption-fine",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/caption-fine",
-        "@narratage/caption-fine@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/caption-fine@1"
+        }
       ],
-      "facetsDigest": "sha256:cb9fb74a5edc730f01772e4819f7d7a55ecf914984d48116f72f64a1837cf128",
-      "closureDigest": "sha256:adeba9eee745b343d1e058fe48a8e8d346d72a6c0ec4c7ca3878643a29aee75d"
+      "facetsDigest": "sha256:a088cf31f0d34fb602ca35bec2cc6b79552f51c31c7c4b51fa130c02545caa84",
+      "closureDigest": "sha256:bc44cd61dfe0fa2f306e5c2677baa4b6d66717a73f238c2c09c047fb7cddd7ad"
     },
     {
-      "specifier": "@narratage/caption-gemini",
       "package": {
         "name": "@narratage/caption-gemini",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/caption-gemini",
-        "@narratage/caption-gemini@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/caption-gemini@1"
+        }
       ],
-      "facetsDigest": "sha256:733cd8ac6415d69fffe460f77870787e7d3146fe11c937461bc9d849edc94106",
-      "closureDigest": "sha256:41b6986b13c5c99906127e05e4f6e3cbc232a2133f5aa811472ee2450512a1c9"
+      "facetsDigest": "sha256:bd0bf15f5502346bdf912611ed7d1e12adb199aedececacb105ec084b1a886c3",
+      "closureDigest": "sha256:3a754106255922e51341336ede1fdb159c10717336e646baa6534b0d9e8d1c4a"
     },
     {
-      "specifier": "@narratage/composition",
       "package": {
         "name": "@narratage/composition",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:b86fe5e147a331d36843aecbe7c64a4e83ad98b755242d8d1a1ba6c62551f509",
-      "closureDigest": "sha256:ddfbaf79774806fa3cf79b85a7f8765ec77fa888a7c1b9e9d91b7424f7e5201b"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/composition@1"
+        }
+      ],
+      "facetsDigest": "sha256:359770b8802b23de618eb0de967b755976b780cd486f947cd05eb43a3b1d6525",
+      "closureDigest": "sha256:de69234604891117bfe4d93c25a96102d2d0ce0c8cbdf30be1c447c319211cc9"
     },
     {
-      "specifier": "@narratage/film",
       "package": {
         "name": "@narratage/film",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/film",
-        "@narratage/film@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/film@1"
+        }
       ],
-      "facetsDigest": "sha256:8e6a1a585e853ef9b621feb918c15a2925da4ea1f05467e652d41f9202f10025",
-      "closureDigest": "sha256:7870bcb9f57c04a05a75f1c99bc3e868051057a8eda6799ac63f2daf2af721d0"
+      "facetsDigest": "sha256:7bf1195a32b4985c89debb5c07923162c25f39532f985c0726c4640f41c9879f",
+      "closureDigest": "sha256:8f4d19981e64d7bb8f2fe333360ff95d57935d3b5430f69cb24b68631bc18018"
     },
     {
-      "specifier": "@narratage/fonts-open",
       "package": {
         "name": "@narratage/fonts-open",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/fonts-open",
-        "@narratage/fonts-open@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/fonts-open@1"
+        }
       ],
-      "facetsDigest": "sha256:2117122b06d7c1cd6bee519e72aff22bc3b50f179b50da21dcc84ddf7014457f",
-      "closureDigest": "sha256:4f4efe9e75e162bf26ac50cdade55ccac665cd3a208eeb8b011e482a3f20a617"
+      "facetsDigest": "sha256:7528bc7200ecfeeb87526cc82941f698f0f3fe2e1cb7dfa7da3931212e446681",
+      "closureDigest": "sha256:b43e8b97463ec07d98bb8aec8307682b4bd712d4d5f87d704a3947bcac973ff8"
     },
     {
-      "specifier": "@narratage/generation",
       "package": {
         "name": "@narratage/generation",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:d74a57a3210267e665366513324db5c313b3ca0f770da66e74cc38aee5048efb",
-      "closureDigest": "sha256:3638f93e6a983a5a44768eef160a6dbf49e80d065f890bc5bd14555ad023b7ec"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/generation@1"
+        }
+      ],
+      "facetsDigest": "sha256:65e792d683c414afbacac57887c99fa4647c7c9819eb85f7262833f0cb1e0c15",
+      "closureDigest": "sha256:a1b141eccf9d17a5b02143d6af99b870c544246eb052fa60c826a4949792c247"
     },
     {
-      "specifier": "@narratage/hyperframes",
       "package": {
         "name": "@narratage/hyperframes",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:4b2a86382c5d544fac8c194047f6e18ff554361d97d62e165533061b03b94ae9",
-      "closureDigest": "sha256:3d288affb92c4b81527cb167947dd96a448b5091bf9c4c057e417be50a4b2623"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/hyperframes@1"
+        }
+      ],
+      "facetsDigest": "sha256:5bbb886657ff3922bdb86e0e66fd95ab402681924e295aa8e6d0966bd013b8c1",
+      "closureDigest": "sha256:3ce37a75ff0e5ee0778de66430cb82c2573e4cd5770eab49d628240f268c22cd"
     },
     {
-      "specifier": "@narratage/media",
       "package": {
         "name": "@narratage/media",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/media",
-        "@narratage/media@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/media@1"
+        }
       ],
-      "facetsDigest": "sha256:f0974c7d88918ca4796dbb86dea24b6d29f8f5f44430c4845f9928f1df5b22e5",
-      "closureDigest": "sha256:8ceaff731f4c0d5c4b88f708bdd75c5d6a4a00abe71607c6ddf0b8fe0da400c3"
+      "facetsDigest": "sha256:5fdb06f92ddd600dca998f5ef196980398c7c35d52727bf358c963ab71b39c37",
+      "closureDigest": "sha256:0feb2ded6c2cc21fc22d9614f195d14e86ca81cbbc2dd9ed5aae919a7369b63b"
     },
     {
-      "specifier": "@narratage/media-pipeline",
       "package": {
         "name": "@narratage/media-pipeline",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/media-pipeline",
-        "@narratage/media-pipeline@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/media-pipeline@1"
+        }
       ],
-      "facetsDigest": "sha256:6df6afa9661002801d95b5075309a7cf31484d7ad300a5ab3f90119d34042224",
-      "closureDigest": "sha256:020673ebf48c557a7c318b5cd1e97e096bf8e4681a459fa4fbd2b352fb6ff402"
+      "facetsDigest": "sha256:bc81746c11271eb7c77d842df99127448c618d7afab0e9f4e4a3e8d52d527e89",
+      "closureDigest": "sha256:2591dd13b3d354190a2849bf2456985ce51171b36f0c1bf4f7b4c0ad4df9d0b7"
     },
     {
-      "specifier": "@narratage/media-track",
       "package": {
         "name": "@narratage/media-track",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/media-track",
-        "@narratage/media-track@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/media-track@1"
+        }
       ],
-      "facetsDigest": "sha256:c7cea22dcf6e37c4359284d4c2bd2a146d752aa6bf65b944a9eaa13c895675be",
-      "closureDigest": "sha256:49a71bacc460de88b692194fad37c63d39734c3423e3f624dd0178a8d836d5ca"
+      "facetsDigest": "sha256:99aca70e00d269e26d727501871e530247dd91a00aa93a329d75610337acde8e",
+      "closureDigest": "sha256:e7754e2e8e5fd2c6337d69d816c494191e9cbb23867c754ae4998f5e2bab555d"
     },
     {
-      "specifier": "@narratage/narrative",
       "package": {
         "name": "@narratage/narrative",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:703db7ad343b00701dc39e3b316992dc371307f0c6c2ad15d1e0269257ffb326",
-      "closureDigest": "sha256:c197675dfd711b5ac42fc0f084b1b7574de4f4061fda2fbabe69352faff1cd01"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/narrative@1"
+        }
+      ],
+      "facetsDigest": "sha256:53b0ff4baa9d85ab8c53bdd6585afdcba26262be2e149b7ae8f4c7cbc1dcfae8",
+      "closureDigest": "sha256:7e7227e29b215d3d1f17409b2b69a69f0a372ef6ab41c138c827535d1cf4f2dc"
     },
     {
-      "specifier": "@narratage/program-space",
       "package": {
         "name": "@narratage/program-space",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:b1e4eab41a135914556872f0f47a0c02b8ce76920366cbf86121b720af069052",
-      "closureDigest": "sha256:d732dd805f1577ff3b7aaea5d05722d43bb03958095861a3eae7bf47d5f2504c"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/program-space@1"
+        }
+      ],
+      "facetsDigest": "sha256:83b9191a4c78858c669b64675d333aaf44b8930209724793bf6c64a874203d6c",
+      "closureDigest": "sha256:c6dd1d4310d07543a7a61f56803d93e1e621a1743dcfd3f42b35382cccca7e07"
     },
     {
-      "specifier": "@narratage/render-hyperframes",
       "package": {
         "name": "@narratage/render-hyperframes",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/render-hyperframes",
-        "@narratage/render-hyperframes@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/render-hyperframes@1"
+        }
       ],
-      "facetsDigest": "sha256:2b5edae659a7d3e92e19ed591ca7d5f784f4a3b6164d33c0e201c9b180ef0323",
-      "closureDigest": "sha256:53134fcfc4451213e40f207ed42f8b465b7090f617b835398cb06ec0b23db32d"
+      "facetsDigest": "sha256:a884236bb8d08577ad66a3b9dd144108b8161106a71633f07ae851b984bb9d57",
+      "closureDigest": "sha256:2b738d2d5917cc4ab2ed46cf549f71270cb00049b5bd0077c8159674a57cfba3"
     },
     {
-      "specifier": "@narratage/run-markup",
       "package": {
         "name": "@narratage/run-markup",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/run-markup@1"
+      "offers": [
+        {
+          "abi": "svml.source-frontend@1",
+          "name": "@narratage/run-markup@1"
+        }
       ],
-      "facetsDigest": "sha256:fb3a8a5be9a0ef0aa914026a199be641f4e20df27f9b284be196f52fd260be55",
-      "closureDigest": "sha256:fbe76b58961bf0dba04cb91194c7756e0940e61b18a219510b90f97438f3dae2"
+      "facetsDigest": "sha256:c38a4e2e76a2f87b6a401bf0cad4b18f04274689ffae22c09f8f520046a7123e",
+      "closureDigest": "sha256:f4f247f39f53bb79b46ba41aee3f027b5c0a58dd34a4207d0e72a37fa2c92b69"
     },
     {
-      "specifier": "@narratage/script",
       "package": {
         "name": "@narratage/script",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/script",
-        "@narratage/script@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/script@1"
+        }
       ],
-      "facetsDigest": "sha256:69e1c08a5f07c73a506ca8286426a0386485738649e86463cca0b291f319ee4e",
-      "closureDigest": "sha256:ee9962537eafe56bb339574fbb9bdba9c00dab39ce8c5b9da89aabdc41c64d22"
+      "facetsDigest": "sha256:1ecc0ce99508f9b36b6745f2031187c4f7a055644213d9d2618563f2c141287a",
+      "closureDigest": "sha256:304d3e61367190ef1291675804e09230e7ffe71de79a936610c38c8b7e0ad95c"
     },
     {
-      "specifier": "@narratage/seedance",
       "package": {
         "name": "@narratage/seedance",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/seedance",
-        "@narratage/seedance@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/seedance@1"
+        }
       ],
-      "facetsDigest": "sha256:df015abfb273de3629eec0da456a6fa90e7a55a5ed092d76a74c3d1dc4a5f705",
-      "closureDigest": "sha256:51da9127b77edc1c46c7a9c88786c49df3c8d91eeec0bca236b8554ef16709b1"
+      "facetsDigest": "sha256:695ac38d561581bea511f85838dc2a71eefb2f6eedbfb63d95774ac08ce33e0c",
+      "closureDigest": "sha256:e3a921e2b316c056d23dbd7475d14d72a7c9df940107cbefc58e649201dc8902"
     },
     {
-      "specifier": "@narratage/semantic-map",
       "package": {
         "name": "@narratage/semantic-map",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:510a57287945426449c8b2580d22a2d7f90ccaf1cb5bdd4fa5071b5b05ee91c0",
-      "closureDigest": "sha256:8b6838a4057fcec08cbb74c66d405f8be9a93234ce20df5cdd94fd8d9a5ae914"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/semantic-map@1"
+        }
+      ],
+      "facetsDigest": "sha256:de253bd0e4968c2a6a9dca67d6d9c815973a7274b2e61aec643d51ce8c3225e0",
+      "closureDigest": "sha256:098e0924229f284f2bc60dae2e6d1cd0a76282e7e154027e15661c56d5d2163f"
     },
     {
-      "specifier": "@narratage/spatial",
       "package": {
         "name": "@narratage/spatial",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/spatial",
-        "@narratage/spatial@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/spatial@1"
+        }
       ],
-      "facetsDigest": "sha256:5062281ffadb46495ec12e1a67185b57fe13879e90f03bcf544e93fd1d273716",
-      "closureDigest": "sha256:73d113e95dd6cbd1feb6f45070e244850e6737fa5c09c23f68c5ecfb8a377d36"
+      "facetsDigest": "sha256:235c4e6f0a070869d6ae321b1033b9cf8cff91fafda43f5fee683a988d5ace78",
+      "closureDigest": "sha256:7bcd21198dd38738a2cabb12055a2fdc21cea0cd69b33c767e288bac19ae9d13"
     },
     {
-      "specifier": "@narratage/speech",
       "package": {
         "name": "@narratage/speech",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:6d1be76a2ee9486146436fde148c99eccdc055948a39c5098de2ff4122d80c7a",
-      "closureDigest": "sha256:8d6d71bf808b4aeceed1f500f68ff648e19131940d3da0e0e0426e48c179e100"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/speech@1"
+        }
+      ],
+      "facetsDigest": "sha256:96c70b41141d0d46b6731810629d195a5b7349ecba9d10269b046cceecdabb56",
+      "closureDigest": "sha256:e1dd70278beca5619bd75032bee14a56f73cd5557e596f7d013c2735bc8ec428"
     },
     {
-      "specifier": "@narratage/speech-alignment",
       "package": {
         "name": "@narratage/speech-alignment",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:78162875012523865df9c69770127a1db6ef9a8f5fc5af72255360af2a9c4370",
-      "closureDigest": "sha256:c3dece181c80c8cfbf3186dd55a2654d6114765384188df4e6b6e21b1bf45c77"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/speech-alignment@1"
+        }
+      ],
+      "facetsDigest": "sha256:0be3cdf2b26373c950d0421554ffe8beda3a9b19c4c8e5b2880a3f0788ef60e1",
+      "closureDigest": "sha256:229f94603df7799aa5eaaccde7e52ccf4244f556402124cb2d509d4b8d3977a8"
     },
     {
-      "specifier": "@narratage/speech-basis",
       "package": {
         "name": "@narratage/speech-basis",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:97aaeabe85b3e4d6a8715ea9a41ac27ef71804ae99359b631546a4382bbac9df",
-      "closureDigest": "sha256:0fea160882535c9746d56d1f668607aa9d1a46a40c60bbb2859f8b307145a0e4"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/speech-basis@1"
+        }
+      ],
+      "facetsDigest": "sha256:cc2f44ed596c9f02085920100f37a691d9a8496710c5a949b8111b398597d8f8",
+      "closureDigest": "sha256:7d15c3c45943c070cf66f6b8927b801e414641a0860cbf9364ebde3b3eb2dcc4"
     },
     {
-      "specifier": "@narratage/speech-evidence",
       "package": {
         "name": "@narratage/speech-evidence",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:989d191644ea472a3cbd386bd4a6992f1f7f5ef82f1f8da53c9a4efa99d3d2d1",
-      "closureDigest": "sha256:fed18a41121b44960b5a9cd2a6cd6f6954bc3016d7abbc7bf4b0a26798f28742"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/speech-evidence@1"
+        }
+      ],
+      "facetsDigest": "sha256:8028258f3c87642711029d5ec77b085297cb271e9c93b42dae2c939c3ee8f92f",
+      "closureDigest": "sha256:f4b37c669298e291c4393ea3a16adf7bfe7909c6217043954cfa0c9bb9f84d5b"
     },
     {
-      "specifier": "@narratage/speech-spine",
       "package": {
         "name": "@narratage/speech-spine",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/speech-spine",
-        "@narratage/speech-spine@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/speech-spine@1"
+        }
       ],
-      "facetsDigest": "sha256:81a038765324b7a48ceb44c638faf128df31573a122989116d649dca3b3cb6d3",
-      "closureDigest": "sha256:f6e6f346541422f115905fe77b967ae113dcff0e77905d1876f9353810e61234"
+      "facetsDigest": "sha256:72bf8ff092a815c9ee2b87588c9330c8bf916460c55ca963c6a42f804317dc8c",
+      "closureDigest": "sha256:33a07e226471a359e5461f8fedbaca493373a9fa2dfdc8efe533b42907d68c20"
     },
     {
-      "specifier": "@narratage/svs",
       "package": {
         "name": "@narratage/svs",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/svs@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/svs@1"
+        },
+        {
+          "abi": "svml.source-frontend@1",
+          "name": "@narratage/svs@1"
+        }
       ],
-      "facetsDigest": "sha256:9cc7c397d2cd97b5a3e814886b6553b6d236fd8825df0d056e328b7f0cf20163",
-      "closureDigest": "sha256:43a43083ff729f30cc31edf9ddf2b44722430bde9a9ad6e73cc0ae1114d5d522"
+      "facetsDigest": "sha256:72fe7996774d83a734e48f600412c15f08fa3671ac3e4e27586a7e99deaec050",
+      "closureDigest": "sha256:a63f616a28f3e4d0f4e9276f7e2ff9678f1b785b18a96a92c61b83767c4babbe"
     },
     {
-      "specifier": "@narratage/temporal",
       "package": {
         "name": "@narratage/temporal",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:2e9c4804f142e08e87b2e11af79aa17770109fb573e865397bed14ed7a4f1d0e",
-      "closureDigest": "sha256:23665c9c41bf398eeb83164f0541b48e6bb10c1e2c886c351ee72c9d42d2cddd"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/temporal@1"
+        }
+      ],
+      "facetsDigest": "sha256:f3cf535add0b1746dc5beb7920935bc36cca953ee044961d35c5c89fe6b7a746",
+      "closureDigest": "sha256:efa8c338a54680b44914e4abe5d0dfff8f7e2e0b942e5d79dcfa346e683c2155"
     },
     {
-      "specifier": "@narratage/text",
       "package": {
         "name": "@narratage/text",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/text",
-        "@narratage/text/svs@1",
-        "@narratage/text@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/text@1"
+        },
+        {
+          "abi": "svml.source-frontend@1",
+          "name": "@narratage/text/svs@1"
+        }
       ],
-      "facetsDigest": "sha256:4435dd4bd38e5e017013f775e28e379e3e235211649ee8f3913378f7f9e60b58",
-      "closureDigest": "sha256:4e1ae6017ad16c4d27128f858b83ff04fabd33a03e6d015f010b543f154e7e1a"
+      "facetsDigest": "sha256:a9ae364f8549243764ceb4c5d881c89c116b088187dd6b688bffaae1f0eb420f",
+      "closureDigest": "sha256:0cc4669f4cdd749a01ced4d1425f38abcf96102cbda38e767ad6822e3bb62ba5"
     },
     {
-      "specifier": "@narratage/typography-track",
       "package": {
         "name": "@narratage/typography-track",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/typography-track",
-        "@narratage/typography-track@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/typography-track@1"
+        }
       ],
-      "facetsDigest": "sha256:feacd6f8891a8792935a81fd0251f6c42c470067cf68bd4532e202c0a387e72d",
-      "closureDigest": "sha256:360436ecefd6f299a0c22675db347a60bc48035fd8e3dec930b769959ecb8e5b"
+      "facetsDigest": "sha256:e04bcfde4a80fe0226ee211d7ca1074570e29bfeee30835ec16c81cd8ee54c15",
+      "closureDigest": "sha256:62058b0ae656f385c02e78dae2bf9714b26e2e3b8b2347489ed0167f4c5eb96b"
     },
     {
-      "specifier": "@narratage/visual-ir",
       "package": {
         "name": "@narratage/visual-ir",
         "version": "0.0.0-dev"
       },
-      "provides": [],
-      "facetsDigest": "sha256:8c577a635a48ee04441068df1f3dc2c18a602bff091fddca8883a3843ce4ce37",
-      "closureDigest": "sha256:4606d4ea45276ed1a5a34ed109e545961ca3d72787a13bf85e976e20082528f0"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/visual-ir@1"
+        }
+      ],
+      "facetsDigest": "sha256:039735354a109969a18b2c26ab8b02bb6d09a7a35f993336e8e8711e6d429f14",
+      "closureDigest": "sha256:dc9323f4881edd20e0ad93ec18e72321871a271b924fc8fbca8ad9c15c2c60a6"
     },
     {
-      "specifier": "@narratage/whisperx",
       "package": {
         "name": "@narratage/whisperx",
         "version": "0.0.0-dev"
       },
-      "provides": [
-        "@narratage/whisperx",
-        "@narratage/whisperx@1"
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/whisperx@1"
+        }
       ],
-      "facetsDigest": "sha256:ed9ebd9eea0b92c20357ec67dc14c4aa211836dc815c3edcb48e4946972f94c5",
-      "closureDigest": "sha256:74176a63a7a62d4de6896a66f0e2883466defce32fed33dbe9d9688beccdff13"
+      "facetsDigest": "sha256:a9f5fa2a709d91b006ee59cfd88c4392cc77df31c0f76d58f2d5dee8e7ae8f49",
+      "closureDigest": "sha256:b6848c21bb13a66408cfe6ddf43d4ceca91aa24b9df7237383d517ee4b56c620"
     }
   ],
-  "digest": "sha256:59cea527279ac5da6153cf0d99b241f89fac8d61f2391568f879da2936ba68e6"
+  "digest": "sha256:de5bcdaf199b578c23f6a8cbf96e9420d827dfd9cb37c6fd12aa77db4b157ee7"
 }

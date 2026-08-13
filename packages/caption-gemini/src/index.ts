@@ -3,7 +3,7 @@ export { captionGeminiPlanningFragment } from "./fragment.js";
 export {
   captionGeminiCapabilities,
   captionGeminiImplementationDigests,
-  captionGeminiManifest,
+  captionGeminiManifest, captionGeminiMarkupSurfaces,
   captionGeminiManifestDigest,
   captionGeminiModuleRef,
   captionGeminiProducers,

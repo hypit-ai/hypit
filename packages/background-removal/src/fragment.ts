@@ -7,7 +7,6 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 export const backgroundRemovalFragment = sealGraphFragment({
-  name: "@narratage/background-removal/remove@1",
   inputs: [{ name: "source", type: artifactTypes.blob }],
   operations: [{
     id: "image:remove-background", producer: backgroundRemovalProducers.request,

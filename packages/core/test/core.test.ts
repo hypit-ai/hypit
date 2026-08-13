@@ -21,11 +21,11 @@ import type {
 import { createGreetingBuild, producers } from "./greeting-fixture.js";
 
 function onlyProducer(state: BuildState): { state: BuildState; command: InvokeProducerCommand } {
-  const transition = reduce(state);
-  assert.equal(transition.commands.length, 1);
-  const command = transition.commands[0];
+  const next = reduce(state);
+  assert.equal(next.outstanding.length, 1);
+  const command = next.outstanding[0];
   assert.equal(command?.kind, "invoke-producer");
-  return { state: transition.state, command: command as InvokeProducerCommand };
+  return { state: next, command: command as InvokeProducerCommand };
 }
 
 function producerEvent(
@@ -48,30 +48,30 @@ function reachNeed(initial = createGreetingBuild()): {
   command: FulfillNeedCommand;
 } {
   let current = onlyProducer(initial);
-  let transition = reduce(
+  let state = reduce(
     current.state,
     producerEvent(current.command, "event:prompt", {
       prompt: { kind: "inline", value: "Greet Ada" },
     }),
   );
-  const request = transition.commands.find(
+  const request = state.outstanding.find(
     (command): command is InvokeProducerCommand => command.kind === "invoke-producer",
   );
   assert.ok(request);
-  transition = reduce(
-    transition.state,
+  state = reduce(
+    state,
     producerEvent(request, "event:request", {}, { generation: { prompt: "Greet Ada" } }),
   );
-  const command = transition.commands.find(
+  const command = state.outstanding.find(
     (item): item is FulfillNeedCommand => item.kind === "fulfill-need",
   );
   assert.ok(command);
-  return { state: transition.state, command };
+  return { state, command };
 }
 
 test("Core executes its derived finite plan through Need, Receipt and completion", () => {
   let current = reachNeed();
-  let transition = reduce(current.state, {
+  let state = reduce(current.state, {
     kind: "need-fulfilled",
     id: "event:fulfill",
     command: current.command.id,
@@ -79,23 +79,23 @@ test("Core executes its derived finite plan through Need, Receipt and completion
     requestDigest: current.command.need.requestDigest,
     fulfiller: "test:greeting",
   });
-  const assemble = transition.commands.find(
+  const assemble = state.outstanding.find(
     (command): command is InvokeProducerCommand => command.kind === "invoke-producer",
   );
   assert.ok(assemble);
-  transition = reduce(
-    transition.state,
+  state = reduce(
+    state,
     producerEvent(assemble, "event:assemble", {
       document: { kind: "inline", value: { text: "Hello, Ada!" } },
     }),
   );
 
-  assert.equal(transition.state.status, "complete");
-  assert.equal(transition.commands[0]?.kind, "complete");
-  assert.equal(transition.state.derivations.length, 3);
-  assert.equal(transition.state.receipts.length, 1);
-  assert.equal(transition.state.records.at(-1)?.origin.kind, "derived");
-  verifyBuildState(transition.state);
+  assert.equal(state.status, "complete");
+  assert.deepEqual(state.outstanding, []);
+  assert.equal(state.derivations.length, 3);
+  assert.equal(state.receipts.length, 1);
+  assert.equal(state.records.at(-1)?.origin.kind, "derived");
+  verifyBuildState(state);
 });
 
 test("accepted events are idempotent and conflicting reuse is rejected", () => {
@@ -104,14 +104,13 @@ test("accepted events are idempotent and conflicting reuse is rejected", () => {
     prompt: { kind: "inline", value: "Greet Ada" },
   });
   const accepted = reduce(initial.state, event);
-  const replayed = reduce(accepted.state, event);
-  assert.deepEqual(replayed.state, accepted.state);
-  assert.deepEqual(replayed.commands, accepted.commands);
+  const replayed = reduce(accepted, event);
+  assert.deepEqual(replayed, accepted);
 
   assert.throws(
     () =>
       reduce(
-        accepted.state,
+        accepted,
         producerEvent(initial.command, "event:stable", {
           prompt: { kind: "inline", value: "Different" },
         }),
@@ -168,7 +167,7 @@ test("serialized BuildState survives a JSON round trip", () => {
   const current = reachNeed();
   const restored = JSON.parse(JSON.stringify(current.state)) as BuildState;
   verifyBuildState(restored);
-  assert.deepEqual(reduce(restored).commands, reduce(current.state).commands);
+  assert.deepEqual(reduce(restored).outstanding, reduce(current.state).outstanding);
 });
 
 test("a recomputed Need cannot change the capability locked by its Producer port", () => {

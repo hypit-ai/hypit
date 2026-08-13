@@ -76,9 +76,7 @@ function operation(request: Need) {
     endpoint: "hyperframes.aws-lambda.test",
     authority: "hyperframes.aws-lambda.test",
     route: "fixture.render",
-    implementationDigest: digestOf("hyperframes-lambda:test-implementation"),
     runtimeClosure: digestOf("hyperframes-lambda:test-runtime"),
-    requestDigest: request.requestDigest,
     attempt: 1,
   });
 }
@@ -338,13 +336,8 @@ test("one deterministic submission resumes and streams the exact output into the
   verifyRenderedVisual(completed.result.value.value);
   const visual = completed.result.value.value as unknown as RenderedVisual;
   assert.equal(visual.frameCount, 60);
-  assert.equal(visual.muted, true);
   assert.equal(await artifacts.has(visual.artifact.digest), true);
   assert.deepEqual(await artifacts.get(visual.artifact.digest), new Uint8Array([1, 2, 3, 4, 5]));
-  const metadata = completed.result.metadata as Record<string, CanonicalValue>;
-  assert.equal(metadata.contract, "svml.hyperframes-renderer-attestation@1");
-  assert.equal(metadata.rendererImplementationDigest, RENDERER_IMPLEMENTATION);
-  assert.equal(metadata.documentDigest, digestOf(documentFixture()));
 });
 
 test("an ambiguous StartExecution is recovered by the same name without redeploying the site", async () => {

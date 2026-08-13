@@ -8,7 +8,6 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 export const speechEstimateFragment = sealGraphFragment({
-  name: "@narratage/estimate/speech@1",
   inputs: [
     { name: "speech", type: textTypes.text },
     { name: "policy", type: estimateTypes.speechPolicy },

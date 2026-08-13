@@ -53,7 +53,6 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
 
 export const typographyTrackComponent = {
-  name: "@narratage/typography-track",
   producers: [
     {
       producer: typographyTrackProducers.materializePlainItem,
