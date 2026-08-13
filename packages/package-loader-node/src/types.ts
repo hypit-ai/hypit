@@ -34,6 +34,8 @@ export type LockedNodePackage = {
     readonly name: string;
     readonly version: string;
   };
+  /** Logical Frontend and Module requests this physical package can satisfy. */
+  readonly provides: readonly string[];
   /** Digest of declared Module, author and compute facet identities, excluding function objects. */
   readonly facetsDigest: Digest;
   /** Digest of this package's own transitive physical Artifact closure, excluding unrelated selections. */
@@ -58,7 +60,17 @@ export type NodePackageLockCreateOptions = {
   };
 };
 
+export type NodePackageSelectionRequest = {
+  /** Physical roots that the Source syntax could name directly. */
+  readonly selected: readonly string[];
+  /** Logical Frontend and Module requests that may be supplied by any trusted inventory package. */
+  readonly logical?: readonly string[];
+};
+
 export type LoadedNodePackageSet = {
+  /** Exact package closure activated for this compilation. */
   readonly lock: NodePackageLock;
+  /** Trusted inventory from which the exact closure was selected. */
+  readonly inventoryDigest: Digest;
   readonly contributions: readonly NodePackageContribution[];
 };

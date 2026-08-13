@@ -12,6 +12,7 @@ import test from "node:test";
 import {
   createNodePackageLock,
   installNodePackageComponents,
+  loadNodePackageSelection,
   loadNodePackageSet,
   loadNodePackageContributions,
   writeNodePackageLock,
@@ -490,4 +491,32 @@ test("a package digest ignores Finder metadata but still binds authored hidden f
     withAuthoredHiddenFile.artifacts.map((artifact) => artifact.digest),
     after.artifacts.map((artifact) => artifact.digest),
   );
+});
+
+test("one inventory activates only the exact package subset selected by a Source", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-package-inventory-"));
+  for (const [name, specifier] of [["example-first", "example.first@1"], ["example-second", "example.second@1"]]) {
+    const packageRoot = join(root, "node_modules", name!);
+    await mkdir(packageRoot, { recursive: true });
+    await writeFile(join(packageRoot, "package.json"), JSON.stringify({
+      name,
+      version: "1.0.0",
+      type: "module",
+      exports: "./index.mjs",
+      svml: { activation: "./index.mjs" },
+    }), "utf8");
+    await writeFile(join(packageRoot, "index.mjs"), `export default {
+      format: "svml.node-package@1",
+      name: ${JSON.stringify(name)},
+      modules: [{ manifest: { format: "svml.module@1", name: ${JSON.stringify(specifier!.slice(0, -2))},
+        version: "1", dependencies: [], types: [], capabilities: [], producers: [], surfaces: [] },
+        specifiers: [${JSON.stringify(specifier)}] }],
+    };\n`, "utf8");
+  }
+  const path = join(root, "svml.packages.lock");
+  await writeNodePackageLock(path, await createNodePackageLock(["example-first", "example-second"], root));
+  const loaded = await loadNodePackageSelection(path, { selected: [], logical: ["example.first@1"] }, root);
+  assert.deepEqual(loaded.lock.selected, ["example-first"]);
+  assert.deepEqual(loaded.contributions.map((item) => item.name), ["example-first"]);
+  assert.notEqual(loaded.lock.digest, loaded.inventoryDigest);
 });

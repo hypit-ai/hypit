@@ -217,11 +217,13 @@ SVML 使用按字节锁定的受信任代码执行。加载器会记录每个包
 }
 ```
 
-两个相互独立的 lock 闭包服务于不同的信任范围：
+两个相互独立的包库存服务于不同的信任范围：
 
 | Lock 文件 | 包含内容 | 身份范围 |
 |---|---|---|
 | `svml.packages.lock` | Frontend、Surface、Producer、Validator | Author Graph + Run Graph + 执行 Program Closure |
 | `svml.runtime-packages.lock` | Provider、Store、transport | Runtime Closure |
 
-修改一个包就需要重新生成 lock。Build 状态机在下发 Command 之前会校验每一个摘要。
+`packages sync` 只增长或刷新库存，不会删除其他 Run 的根包。每次编译只激活当前 Source
+请求的精确子集，并把该子集摘要绑定进 Build；Runtime adapter 同样只激活 Profile 声明的
+精确子集。包字节改变后必须显式刷新库存。

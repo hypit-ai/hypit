@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
@@ -83,6 +83,8 @@ export const sqliteRuntimeJournalImplementationDigest = digestOf(
 
 export type SqliteRuntimeStateOptions = {
   readonly busyTimeoutMs?: number;
+  /** Open an existing archive without creating files or schema. */
+  readonly readOnly?: boolean;
 };
 
 export type CreateSqliteRuntimeServicePackageOptions = SqliteRuntimeStateOptions & {
@@ -953,13 +955,20 @@ export class SqliteRuntimeState {
   constructor(path: string, options: SqliteRuntimeStateOptions = {}) {
     assert(path.trim().length > 0, "SQLite path must not be empty");
     const absolute = resolve(path);
-    mkdirSync(dirname(absolute), { recursive: true });
-    const database = new DatabaseSync(absolute);
+    const emptyReadOnly = options.readOnly === true && !existsSync(absolute);
+    if (!options.readOnly) mkdirSync(dirname(absolute), { recursive: true });
+    const database = emptyReadOnly
+      ? new DatabaseSync(":memory:")
+      : options.readOnly
+        ? new DatabaseSync(absolute, { readOnly: true })
+        : new DatabaseSync(absolute);
     this.path = absolute;
     this.#database = database;
     this.#database.exec(`PRAGMA busy_timeout = ${positiveInteger(options.busyTimeoutMs ?? 5_000, "busyTimeoutMs")}`);
-    this.#database.exec("PRAGMA journal_mode = WAL");
-    this.#database.exec("PRAGMA synchronous = FULL");
+    if (!options.readOnly || emptyReadOnly) {
+      this.#database.exec("PRAGMA journal_mode = WAL");
+      this.#database.exec("PRAGMA synchronous = FULL");
+    }
     const alreadyInitialized = this.#database.prepare(`
       SELECT 1 AS present FROM sqlite_master
       WHERE type = 'table' AND name = 'svml_store_meta'
@@ -978,7 +987,7 @@ export class SqliteRuntimeState {
         );
       }
     }
-    this.#database.exec(`
+    if (!options.readOnly || emptyReadOnly) this.#database.exec(`
       CREATE TABLE IF NOT EXISTS svml_store_meta (
         singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
         schema_version INTEGER NOT NULL
@@ -1076,6 +1085,7 @@ export function createSqliteRuntimeServicePackage(
 ): RuntimeServicePackage & { readonly catalog: BuildCatalog } {
   const state = new SqliteRuntimeState(options.path, {
     ...(options.busyTimeoutMs === undefined ? {} : { busyTimeoutMs: options.busyTimeoutMs }),
+    ...(options.readOnly === undefined ? {} : { readOnly: options.readOnly }),
   });
   const buildInstance = options.buildInstance ?? "builds.sqlite";
   const operationInstance = options.operationInstance ?? "operations.sqlite";

@@ -89,39 +89,26 @@ function projectRuntimeFixture(directory: string) {
   } as const;
 }
 
-test("one local execution domain refuses a new Runtime Revision while an old Build is unfinished", async () => {
+test("one local execution domain fences Runtime package revisions, not author package subsets", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-revision-gate-"));
   try {
-    const firstImplementation = digestOf("implementation:first");
     const firstRuntimePackages = digestOf("runtime-packages:first");
     const first = await createProjectLocalRuntime({
       root: directory,
       ...projectRuntimeFixture(directory),
-      implementationClosure: firstImplementation,
       runtimePackageClosure: firstRuntimePackages,
     });
     await first.build({
       id: "unfinished-build",
-      state: createGreetingBuild({ implementationClosure: firstImplementation }),
+      state: createGreetingBuild({ implementationClosure: digestOf("implementation:first") }),
     });
     await first.close();
 
-    const changed = projectRuntimeFixture(directory);
-    await assert.rejects(
-      createProjectLocalRuntime({
-        root: directory,
-        ...changed,
-        implementationClosure: digestOf("implementation:second"),
-        runtimePackageClosure: firstRuntimePackages,
-      }),
-      /cannot enter this execution domain[\s\S]*unfinished-build[\s\S]*original Runtime Profile/u,
-    );
     const changedRuntimePackages = projectRuntimeFixture(directory);
     await assert.rejects(
       createProjectLocalRuntime({
         root: directory,
         ...changedRuntimePackages,
-        implementationClosure: firstImplementation,
         runtimePackageClosure: digestOf("runtime-packages:second"),
       }),
       /cannot enter this execution domain[\s\S]*unfinished-build[\s\S]*original Runtime Profile/u,
@@ -613,18 +600,11 @@ test("project local runtime activates locked compute facets without deployment s
       packageRoot: installedRoot,
       packageLock: "../svml.packages.lock",
     });
-    await runtime.build({
-      id: "unlocked-preview",
-      state: createGreetingBuild({ generationRealization: "placeholder" }),
-    });
-    const refused = await runtime.workOnce({ owner: "locked-test", leaseMs: 5_000 });
-    assert.equal(refused?.terminal, "failed");
-    assert.match(refused?.reason ?? "", /does not bind this Host's implementation package closure/u);
     const result = await runtime.build({
       id: "locked-preview",
       state: createGreetingBuild({
         generationRealization: "placeholder",
-                implementationClosure: lock.digest,
+        implementationClosure: lock.digest,
       }),
     });
     assert.equal(result.status, "queued");

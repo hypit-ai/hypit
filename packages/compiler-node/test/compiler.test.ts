@@ -457,6 +457,35 @@ test("static Run checking accepts a future BuildRecord without opening a BuildAr
   );
 });
 
+test("static Run checking suggests the nearest Author export", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-run-target-suggestion-"));
+  const authorFile = join(root, "main.svml");
+  const runFile = join(root, "build.svrun");
+  await writeFile(authorFile, `<?svml using="@narratage/markup@1"?>
+  <svml>
+    <import as="lab" from="example.compiler-lab@1"/>
+    <lab:Result id="hello"/>
+  </svml>`, "utf8");
+  await writeFile(runFile, `<?svml using="@narratage/run-markup@1"?>
+  <svrun version="1">
+    <author source="./main.svml"/>
+    <target output="hello.reslt"/>
+  </svrun>`, "utf8");
+  const frontends = new RunFrontendRegistry();
+  frontends.register(runMarkupFrontend);
+  const runCompiler = new NodeRunCompiler({
+    authorCompiler: compiler(root),
+    frontends,
+    fragments: new RunFragmentRegistry(),
+    root,
+  });
+  const workspace = await new NodeFilesystemWorkspace({ root }).open(runFile);
+  await assert.rejects(
+    runCompiler.checkSource(workspace.entry, workspace),
+    /unknown source export hello\.reslt; did you mean hello\.result\?/u,
+  );
+});
+
 test("source assets are content addressed, closure-bound and returned as a Host transfer bundle", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-source-assets-"));
   const file = join(root, "main.svml");

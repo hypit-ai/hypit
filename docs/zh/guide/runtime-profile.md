@@ -56,10 +56,10 @@ CredentialStore。不存在“因为只装了一个所以自动选中”，`@nar
 
 | 字段 | 含义 |
 |---|---|
-| `root` | Runtime 数据与相对 lock 的根目录；默认是 Profile 所在目录 |
+| `root` | 项目根；既约束 Source，也承载 Runtime 数据、Artifact 与相对 lock；默认是 Profile 所在目录 |
 | `packageRoot` | 提供已安装 `node_modules` 的 Host 位置；与项目数据目录无关 |
-| `packageLock` | 确定性 Producer/Validator 包闭包 |
-| `runtimePackageLock` | 可信 Runtime Adapter 包闭包 |
+| `packageLock` | 可信 Author/Run 实现包库存；每次编译只激活当前 Source 的精确子集 |
+| `runtimePackageLock` | 可信 Runtime Adapter 包库存；每份 Profile 只激活自己显式选择的 Adapter |
 
 外部项目可以把源文件、锁、SQLite 和 Artifact 全部留在自己的目录，同时从另一个
 Narratage 安装目录加载校验后的包。
