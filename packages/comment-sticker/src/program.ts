@@ -640,7 +640,6 @@ export function renderCommentSticker(canvas: CanvasSpace, space: ProgramSpace, p
   assertProgramSpaceIdentity(space);
   assertCommentStickerProgram(program);
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: program.id,
     presents: program.items.map((item) => ({

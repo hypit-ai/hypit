@@ -127,7 +127,6 @@ export const decodeMediaFontSurface: StructuredSurfaceHandler = async ({ element
   const mediaType = mediaTypeFor(element, source, "font", FONT_MEDIA_TYPES);
   const resolved = await resolveAsset({ from: source, mediaType, range: element.range });
   const font = {
-    contract: "svml.font-artifact@1" as const,
     sources: [{ artifact: resolved.artifact }],
     weight,
     style: fontStyle,

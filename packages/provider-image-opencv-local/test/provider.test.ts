@@ -47,13 +47,13 @@ function composeNeed(source: BlobRef): Need {
     contract: "svml.raster-request@1",
     kind: "compose",
     canvas: {
-      contract: "svml.canvas-space@1", widthPx: 3, heightPx: 2,
+      widthPx: 3, heightPx: 2,
       origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
     },
     background: "#00000000",
     layers: [{
       source,
-      frame: { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 3, heightPx: 2 },
+      frame: { xPx: 0, yPx: 0, widthPx: 3, heightPx: 2 },
       fit: "stretch", interpolation: "nearest", opacity: 1,
     }],
   });

@@ -42,7 +42,6 @@ import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validati
 import { visualIrManifest } from "@narratage/visual-ir";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 10,
   frameRate: { numerator: 30, denominator: 1 },
 });
@@ -51,7 +50,6 @@ const zero = { unit: "frames" as const, value: 0 };
 
 function media(id: string, sampleFrames: number): SynchronizedMedia {
   return {
-    contract: "svml.synchronized-media@1",
     timeline: {
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: Math.max(1, Math.round(sampleFrames / 1_600)),
@@ -150,7 +148,6 @@ test("trim and fades quantize once into the same sample domain", () => {
 });
 
 const map: CompleteSemanticMap = {
-  contract: "svml.complete-semantic-map@1",
   tokens: [],
   anchors: [
     { identity: "a", frame: 30 },
@@ -196,7 +193,7 @@ test("one Track with overlaps and two peer Tracks compile to the same determinis
   const first = { ...programTrack(sourceA, spec({ id: "a" })), id: "first" };
   const second = { ...programTrack(sourceB, spec({ id: "b" })), id: "second" };
   const combined = {
-    contract: "svml.audio-track@1" as const,
+    kind: "audio" as const,
     id: "combined",
     clips: [
       { ...first.clips[0]!, id: "a" },
@@ -204,11 +201,11 @@ test("one Track with overlaps and two peer Tracks compile to the same determinis
     ],
   };
   const peerPlan = compileAudioProgramPlan(sealComposition({
-    contract: "svml.composition@1", id: "peer", canvas: { width: 1, height: 1, clearColor: "#000000" },
+    id: "peer", canvas: { width: 1, height: 1, clearColor: "#000000" },
     tracks: [first, second],
   }), space);
   const combinedPlan = compileAudioProgramPlan(sealComposition({
-    contract: "svml.composition@1", id: "combined", canvas: { width: 1, height: 1, clearColor: "#000000" },
+    id: "combined", canvas: { width: 1, height: 1, clearColor: "#000000" },
     tracks: [combined],
   }), space);
   assert.deepEqual(

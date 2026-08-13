@@ -12,14 +12,5 @@
   },
   "dependencies": {
     "@narratage/protocol": "workspace:*"
-  },
-  "devDependencies": {
-    "@narratage/composition": "workspace:*",
-    "@narratage/media": "workspace:*",
-    "@narratage/program-space": "workspace:*",
-    "@narratage/semantic-map": "workspace:*",
-    "@narratage/speech": "workspace:*",
-    "@narratage/speech-evidence": "workspace:*",
-    "@narratage/visual-ir": "workspace:*"
   }
 }

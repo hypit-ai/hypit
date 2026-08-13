@@ -30,18 +30,15 @@ const audioStream = object({ ...streamBase, kind: { schema: { kind: "literal", v
   channelLayout: { schema: string, optional: true }, decodedSampleFrames: { schema: integer } });
 const otherStream = object({ ...streamBase, kind: { schema: { kind: "literal", value: "other" } } });
 export const mediaInspectionSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-inspection@1" } },
   container: { schema: object({ formatNames: { schema: { kind: "array", minItems: 1, items: string } } }) },
   streams: { schema: { kind: "array", items: { kind: "oneOf", variants: [videoStream, audioStream, otherStream] } } },
 });
 export const mediaStreamSelectionSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-stream-selection@1" } },
   videoStreamIndex: { schema: integer, optional: true }, audioStreamIndex: { schema: integer, optional: true },
   spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
   policy: { schema: { kind: "string", enum: ["primary-moving@1", "default-audio@1", "primary-moving-default-audio@1", "explicit-streams@1"] } },
 });
 export const synchronizedMediaSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.synchronized-media@1" } },
   timeline: { schema: object({ frameRate: { schema: rational },
     frameCount: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
   visual: { schema: object({ artifact: { schema: blobArtifactSchema() },
@@ -49,31 +46,25 @@ export const synchronizedMediaSchema: ValueSchema = object({
   }), optional: true },
   audio: { schema: object({ artifact: { schema: blobArtifactSchema(["audio/wav"]) } }), optional: true },
 });
-export const renderedVisualSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.rendered-visual@1" } },
-  frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
+export const renderedVisualSchema: ValueSchema = object({ frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
   canvas: { schema: object({ width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
   artifact: { schema: blobArtifactSchema() } });
-export const timelineAudioSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.timeline-audio@1" } },
-  artifact: { schema: blobArtifactSchema(["audio/wav"]) },
+export const timelineAudioSchema: ValueSchema = object({ artifact: { schema: blobArtifactSchema(["audio/wav"]) },
   sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } } });
-export const muxedMediaSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.muxed-media@1" } },
-  frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
+export const muxedMediaSchema: ValueSchema = object({ frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
   canvas: { schema: object({ width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
   presentationSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } }, artifact: { schema: blobArtifactSchema(["video/mp4"]) } });
 const fontSourceSchema: ValueSchema = object({
   artifact: { schema: blobArtifactSchema(["font/otf", "font/ttf", "font/woff", "font/woff2"]) },
   unicodeRange: { schema: { kind: "string", minLength: 3 }, optional: true },
 });
-export const fontArtifactSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.font-artifact@1" } },
-  sources: { schema: { kind: "array", minItems: 1, items: fontSourceSchema } },
+export const fontArtifactSchema: ValueSchema = object({ sources: { schema: { kind: "array", minItems: 1, items: fontSourceSchema } },
   weight: { schema: { kind: "number", integer: true, minimum: 1, maximum: 1_000 } }, style: { schema: { kind: "string", enum: ["normal", "italic", "oblique"] } } });
-export const fontStackSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.font-stack@1" } },
-  faces: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } } });
+export const fontStackSchema: ValueSchema = object({ faces: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } } });
 const surfaceTiming: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "still" } } }),
   object({ kind: { schema: { kind: "literal", value: "frames" } }, frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } } }),
 ] };
-export const compositableSurfaceSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.compositable-surface@1" } },
-  artifact: { schema: blobArtifactSchema() }, width: { schema: { kind: "number", integer: true, minimum: 1 } },
+export const compositableSurfaceSchema: ValueSchema = object({ artifact: { schema: blobArtifactSchema() }, width: { schema: { kind: "number", integer: true, minimum: 1 } },
   height: { schema: { kind: "number", integer: true, minimum: 1 } }, colorSpace: { schema: { kind: "literal", value: "srgb" } },
   alphaMode: { schema: { kind: "string", enum: ["opaque", "straight"] } }, timing: { schema: surfaceTiming } });

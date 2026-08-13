@@ -32,22 +32,21 @@ import {
 } from "../src/index.js";
 
 const font: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: { kind: "blob", digest: digestOf("comment-sticker-font"), size: 1_024, mediaType: "font/woff2" } }],
   weight: 800,
   style: "normal",
 };
-const fonts: FontStackRef = { contract: "svml.font-stack@1", faces: [font] };
+const fonts: FontStackRef = { faces: [font] };
 const recipe: SvsRecipe = {
   contract: "svml.svs-recipe@1",
   path: "comment.social",
   properties: { "avatar-fallback": "initial", "body-max-lines": 4 },
 };
 const style = decodeCommentStickerStyle(recipe, fonts, "social-comment");
-const frame = { contract: "svml.spatial-frame@1" as const, xPx: 80, yPx: 140, widthPx: 920, heightPx: 360 };
-const canvas = { contract: "svml.canvas-space@1" as const, widthPx: 1080, heightPx: 1920,
+const frame = { xPx: 80, yPx: 140, widthPx: 920, heightPx: 360 };
+const canvas = { widthPx: 1080, heightPx: 1920,
   origin: "top-left" as const, xDirection: "right" as const, yDirection: "down" as const, pixelAspect: "square" as const };
-const space = sealProgramSpace({ contract: "svml.program-space@1", durationSec: 3, frameRate: { numerator: 30, denominator: 1 } });
+const space = sealProgramSpace({ durationSec: 3, frameRate: { numerator: 30, denominator: 1 } });
 const header = sealCommentStickerHeader({ contract: "svml.comment-sticker-header@1", id: "comments" });
 
 function item(id: string) {
@@ -88,7 +87,6 @@ test("explicit metadata is rendered and the terminal compiler accepts the Track 
   assert.equal(meta?.kind === "text-flow" ? meta.document.paragraphs[0]?.inlines[0]?.kind === "text"
     ? meta.document.paragraphs[0].inlines[0].text : undefined : undefined, "Featured comment");
   const document = compileHyperframesDocument({
-    contract: "svml.composition@1",
     id: "comment-film",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [rendered],

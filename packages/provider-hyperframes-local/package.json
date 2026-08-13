@@ -24,7 +24,6 @@
   },
   "devDependencies": {
     "@narratage/composition": "workspace:*",
-    "@narratage/core": "workspace:*",
     "@narratage/driver-node": "workspace:*",
     "@narratage/program-space": "workspace:*"
   }

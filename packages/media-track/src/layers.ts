@@ -273,7 +273,6 @@ export function appendTimedMediaLayer(
     kind: "timed",
     artifact: structuredClone(media.visual.artifact),
     extent: {
-      contract: "svml.intrinsic-extent@1",
       widthPx: media.visual.width,
       heightPx: media.visual.height,
     },
@@ -306,6 +305,6 @@ export function appendSurfaceMediaLayer(
   return append(set, sampleLayer({
     kind: "surface",
     surface: structuredClone(surface),
-    extent: { contract: "svml.intrinsic-extent@1", widthPx: surface.width, heightPx: surface.height },
+    extent: { widthPx: surface.width, heightPx: surface.height },
   }, fit, effectiveSpec));
 }

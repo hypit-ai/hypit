@@ -1,4 +1,3 @@
-import type { VisualTrack } from "@narratage/composition";
 import {
   assertFontArtifactRef,
 } from "@narratage/media";
@@ -436,6 +435,3 @@ export function resolveDepthStackPose(spec: DepthStackSpec, relativeDepth: numbe
     },
   };
 }
-
-/** Type-only declaration used by the Component package without importing its lowering body here. */
-export type DepthStackRenderer = (space: ProgramSpace, program: DepthStackProgram) => VisualTrack;

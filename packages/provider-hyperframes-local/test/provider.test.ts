@@ -21,12 +21,10 @@ const hasFfprobe = spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).statu
 
 function documentFixture(surface?: CompositableSurfaceRef) {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 12, denominator: 1 },
   });
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: "provider-proof",
     presents: [{
@@ -62,7 +60,6 @@ function documentFixture(surface?: CompositableSurfaceRef) {
     }],
   });
   return compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1",
     id: "local-hyperframes-provider-proof",
     canvas: { width: 160, height: 96, clearColor: "#000000" },
     tracks: [track],
@@ -137,7 +134,6 @@ test("local HyperFrames Provider really renders a silent frame-exact MP4 with pa
   );
   const surfaceArtifact = await artifacts.put(png, "image/png");
   const surface: CompositableSurfaceRef = {
-    contract: "svml.compositable-surface@1",
     artifact: surfaceArtifact,
     width: 1,
     height: 1,

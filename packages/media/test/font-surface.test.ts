@@ -41,7 +41,6 @@ test("Font Surface turns explicit author bytes and face metadata into one exact 
   assert.deepEqual(result.records[0]!.value, {
     kind: "inline",
     value: {
-      contract: "svml.font-artifact@1",
       sources: [{ artifact: {
         kind: "blob",
         digest: digestOf("font:inter-bold"),

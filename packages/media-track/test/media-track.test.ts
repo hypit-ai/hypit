@@ -65,12 +65,10 @@ import type { SvsRecipe } from "@narratage/svs";
 import type { StructuredElement, StructuredNode, SurfaceResolvedReference, MarkupAttributeValue } from "@narratage/markup";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 4,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const canvas = {
-  contract: "svml.canvas-space@1" as const,
   widthPx: 1080,
   heightPx: 1920,
   origin: "top-left" as const,
@@ -85,10 +83,9 @@ const source: BlobRef = {
   size: 4_096,
   mediaType: "image/png",
 };
-const extent = { contract: "svml.intrinsic-extent@1" as const, widthPx: 800, heightPx: 800 };
-const frame = { contract: "svml.spatial-frame@1" as const, xPx: 100, yPx: 200, widthPx: 400, heightPx: 300 };
+const extent = { widthPx: 800, heightPx: 800 };
+const frame = { xPx: 100, yPx: 200, widthPx: 400, heightPx: 300 };
 const fit = {
-  contract: "svml.content-fit@1" as const,
   sizing: "contain" as const,
   framePoint: { x: 0.5, y: 0.5 },
   contentPoint: { x: 0.5, y: 0.5 },
@@ -139,7 +136,6 @@ function stillLayers(): MediaLayerSet {
 function timed(id = "timed", withAudio = true): SynchronizedMedia {
   const sampleFrames = 96_000;
   return {
-    contract: "svml.synchronized-media@1",
     timeline: {
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 60,
@@ -246,7 +242,6 @@ test("an Item keeps ordered Paint/sample layers, two-frame fit and frame present
 
 test("an owned clip path is an explicit Media input and lowers only over the Item's pixels", () => {
   const clipped = bindMediaItemClipPath(itemSpec(), {
-    contract: "svml.spatial-path@1",
     commands: [
       { kind: "move", xPx: 0, yPx: 0 },
       { kind: "line", xPx: 400, yPx: 0 },
@@ -277,7 +272,6 @@ test("self-blur is two explicit samples of one Artifact and Artifact collection 
     createMediaTrackSet(), header, space, canvas, layers, frame, itemSpec(), createMediaSoundSet(),
   ), header, space));
   const document = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1",
     id: "media",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [track],
@@ -374,7 +368,7 @@ test("source audio and edge SFX project separately from the visual Track", () =>
   ), header, space)), /no explicitly authored audio/u);
 
   const bgm: AudioTrack = {
-    contract: "svml.audio-track@1",
+    kind: "audio",
     id: "independent-bgm",
     clips: [{
       id: "bed",
@@ -395,7 +389,6 @@ test("source audio and edge SFX project separately from the visual Track", () =>
     }],
   };
   const composition = sealComposition({
-    contract: "svml.composition@1",
     id: "media-with-peer-bgm",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [visual, audio, bgm],
@@ -406,7 +399,6 @@ test("source audio and edge SFX project separately from the visual Track", () =>
 
 test("still and animated typed Surfaces use the same layer law without browser format guesses", () => {
   const still: CompositableSurfaceRef = {
-    contract: "svml.compositable-surface@1",
     artifact: { kind: "blob", digest: digestOf("surface:still"), size: 500, mediaType: "image/png" },
     width: 100,
     height: 100,
@@ -441,7 +433,6 @@ test("still and animated typed Surfaces use the same layer law without browser f
 
 test("Media Items consume the shared one/each temporal algebra without becoming an exclusive lane", () => {
   const semanticMap: CompleteSemanticMap = {
-    contract: "svml.complete-semantic-map@1",
     tokens: [],
     anchors: [
       { identity: "a", frame: 15 },
@@ -541,7 +532,6 @@ test("Media Items consume the shared one/each temporal algebra without becoming 
 
 test("a Media Item can consume one whole Narrative Segment without a synthetic Selection", () => {
   const semanticMap: CompleteSemanticMap = {
-    contract: "svml.complete-semantic-map@1",
     tokens: [],
     anchors: [
       { identity: "segment:answer:start", frame: 30 },
@@ -580,11 +570,11 @@ test("every declared lifecycle and sustain operator lowers, and outside-canvas m
 
 test("every documented Media frame and fit remains one ordinary Item instead of a mode", () => {
   const frames = [
-    { contract: "svml.spatial-frame@1" as const, xPx: 0, yPx: 0, widthPx: 1080, heightPx: 1920 },
-    { contract: "svml.spatial-frame@1" as const, xPx: 0, yPx: 0, widthPx: 540, heightPx: 1920 },
-    { contract: "svml.spatial-frame@1" as const, xPx: 80, yPx: 1280, widthPx: 920, heightPx: 500 },
-    { contract: "svml.spatial-frame@1" as const, xPx: 760, yPx: 80, widthPx: 260, heightPx: 360 },
-    { contract: "svml.spatial-frame@1" as const, xPx: -120, yPx: 1400, widthPx: 500, heightPx: 600 },
+    { xPx: 0, yPx: 0, widthPx: 1080, heightPx: 1920 },
+    { xPx: 0, yPx: 0, widthPx: 540, heightPx: 1920 },
+    { xPx: 80, yPx: 1280, widthPx: 920, heightPx: 500 },
+    { xPx: 760, yPx: 80, widthPx: 260, heightPx: 360 },
+    { xPx: -120, yPx: 1400, widthPx: 500, heightPx: 600 },
   ];
   const sizings = ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"] as const;
   let set = createMediaTrackSet();
@@ -595,7 +585,7 @@ test("every documented Media frame and fit remains one ordinary Item instead of 
       constraint: index % 2 === 0 ? "bounded" as const : "free" as const,
     };
     const layers = appendStillMediaLayer(createMediaLayerSet(), source,
-      { contract: "svml.intrinsic-extent@1", widthPx: index % 3 === 0 ? 400 : index % 3 === 1 ? 1200 : 800,
+      { widthPx: index % 3 === 0 ? 400 : index % 3 === 1 ? 1200 : 800,
         heightPx: index % 3 === 0 ? 1200 : index % 3 === 1 ? 400 : 800 },
       localFit, sealMediaSampleLayerSpec({ contract: "svml.media-sample-layer-spec@1", id: `sample-${index}`, appearance }));
     set = appendProgramMediaItem(set, header, space, canvas, layers, frames[index % frames.length]!, itemSpec({
@@ -632,7 +622,7 @@ test("transparent, Paint, self-blur and alternate-source backing are only ordere
     createMediaTrackSet(), header, space, canvas, layers, frame, itemSpec(), createMediaSoundSet(),
   ), header, space));
   const document = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1", id: "layer-matrix", canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [track],
+    id: "layer-matrix", canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [track],
   }), space);
   assert.deepEqual(track.presents[0]!.elements.filter((element) => element.kind === "image").map((element) => element.id),
     ["self-blur", "alternate", "foreground"]);
@@ -816,7 +806,6 @@ test("Sequence resolves strict logical phases, expanded handoffs and one uninter
 
 test("Sequence handoffs accept still, timed and alpha Surface members through one lowering path", () => {
   const alphaSurface: CompositableSurfaceRef = {
-    contract: "svml.compositable-surface@1",
     artifact: { kind: "blob", digest: digestOf("surface:alpha-member"), size: 800, mediaType: "image/png" },
     width: 200, height: 300, colorSpace: "srgb", alphaMode: "straight", timing: { kind: "still" },
   };

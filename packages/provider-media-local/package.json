@@ -23,11 +23,6 @@
     "@narratage/speech": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/artifact-store-fs": "workspace:*",
-    "@narratage/core": "workspace:*",
-    "@narratage/driver-node": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/local": "workspace:*",
-    "@narratage/validation": "workspace:*"
+    "@narratage/driver-node": "workspace:*"
   }
 }

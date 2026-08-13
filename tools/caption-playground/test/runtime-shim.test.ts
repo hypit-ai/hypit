@@ -8,18 +8,15 @@ import { sealProgramSpace } from "@narratage/program-space";
 import { injectRuntimeShim } from "../src/preview/runtime-shim.js";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
 
 function document_() {
   return compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1",
     id: "caption-preview",
     canvas: { width: 1080, height: 1920, clearColor: "#09090b" },
     tracks: [sealVisualTrack({
-      contract: "svml.visual-track@1",
       visualIr: "svml.visual-ir@1",
       id: "caption",
       presents: [{

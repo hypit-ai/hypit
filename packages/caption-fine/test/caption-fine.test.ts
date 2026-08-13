@@ -31,7 +31,6 @@ const recipe: SvsRecipe = {
 };
 
 const exactFont: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: { kind: "blob", digest: digestOf("caption-fine:test-font"), size: 1_024, mediaType: "font/woff2" } }],
   weight: 800,
   style: "normal",
@@ -55,12 +54,11 @@ test("one Fine renderer handles uniform Cue appearance as one peer VisualTrack",
     }],
   };
   const space = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 2,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const track = renderFineCaption(projection, program, display, space);
-  assert.equal(track.contract, "svml.visual-track@1");
+  assert.equal(track.kind, "visual");
   assert.equal(track.presents.length, 1);
   const wordElements = track.presents[0]!.elements.filter((element) => element.kind === "text");
   assert.equal(wordElements.length, 3);
@@ -104,7 +102,6 @@ test("Fine applies Caption Mute after planning without regrouping Cues", () => {
     }],
   };
   const space = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 2,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -144,7 +141,6 @@ test("Fine emits no Present for a fully muted Cue", () => {
     }],
   };
   const track = renderFineCaption(projection, program, display, sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   }));
@@ -300,7 +296,6 @@ test("karaoke uses one active overlay per whole Atom and never invents Dual Text
     }],
   };
   const space = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 3,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -351,7 +346,7 @@ test("an exact Font is explicit Style input and reaches every base and active gl
     }],
   };
   const space = sealProgramSpace({
-    contract: "svml.program-space@1", durationSec: 1, frameRate: { numerator: 30, denominator: 1 },
+    durationSec: 1, frameRate: { numerator: 30, denominator: 1 },
   });
   const track = renderFineCaption(projection, program, display, space);
   const glyphs = track.presents[0]!.elements.filter((element) => element.kind === "text");
@@ -379,7 +374,6 @@ test("current/trail by step/wipe have four distinct frame-exact Atom histories",
   const narrative = parseScript("modes.svml", "<line>First second.</line>");
   const display = captionDisplaySequence(narrative, "story.caption");
   const space = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 2,
     frameRate: { numerator: 10, denominator: 1 },
   });
@@ -459,7 +453,7 @@ test("full Fine Paint and layered motion lower to terminal Visual IR without cha
     }],
   };
   const space = sealProgramSpace({
-    contract: "svml.program-space@1", durationSec: 4, frameRate: { numerator: 10, denominator: 1 },
+    durationSec: 4, frameRate: { numerator: 10, denominator: 1 },
   });
   const elements = renderFineCaption(projection, program, display, space).presents[0]!.elements;
   const base = elements.find((element) => element.id === "atom-1-base-1");
@@ -512,7 +506,7 @@ test("glyph, underline and Pill activation are independent channels", () => {
     }],
   };
   const space = sealProgramSpace({
-    contract: "svml.program-space@1", durationSec: 3, frameRate: { numerator: 10, denominator: 1 },
+    durationSec: 3, frameRate: { numerator: 10, denominator: 1 },
   });
   const elements = renderFineCaption(projection, program, display, space).presents[0]!.elements;
   assert.equal(elements.filter((element) => element.attributes?.some((attribute) =>
@@ -529,7 +523,7 @@ test("every declared one-shot and loop motion lowers through the same wrapper vo
   const narrative = parseScript("motions.svml", "<line>Motion stays local.</line>");
   const display = captionDisplaySequence(narrative, "motions.caption");
   const space = sealProgramSpace({
-    contract: "svml.program-space@1", durationSec: 3, frameRate: { numerator: 10, denominator: 1 },
+    durationSec: 3, frameRate: { numerator: 10, denominator: 1 },
   });
   const render = (id: string, properties: Readonly<Record<string, string | number>>) => {
     const style = fineCaptionStyle(id, { ...recipe, properties: { ...recipe.properties, ...properties } }, [exactFont]);
