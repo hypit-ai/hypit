@@ -12,7 +12,11 @@ const audioBlobRef = object({
   size: { schema: integer },
   mediaType: { schema: { kind: "literal", value: "audio/wav" } },
 });
-const segment = object({ segmentId: { schema: string }, startSec: { schema: number }, endSec: { schema: number } });
+const segment = object({
+  segmentId: { schema: string },
+  startFrame: { schema: integer },
+  endFrameExclusive: { schema: integer },
+});
 export const speechDurationSchema: ValueSchema = number;
 export const speechBasisSchema: ValueSchema = object({
   programSpace: { schema: programSpaceSchema }, audio: { schema: audioBlobRef },

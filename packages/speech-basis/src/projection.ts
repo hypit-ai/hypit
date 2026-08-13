@@ -40,12 +40,9 @@ export function projectSpeechAudio(basis: SpeechBasis): SpeechAudioBasis {
 export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
   assertSpeechBasisIdentity(basis);
   const trackId = `speech-visual:${basis.segments.map((segment) => segment.segmentId).join("+")}`;
-  const frameAt = (seconds: number): number => Math.round(
-    seconds * basis.programSpace.frameRate.numerator / basis.programSpace.frameRate.denominator,
-  );
   const spans = new Map(basis.segments.map((segment) => [segment.segmentId, {
-    startFrame: frameAt(segment.startSec),
-    endFrameExclusive: frameAt(segment.endSec),
+    startFrame: segment.startFrame,
+    endFrameExclusive: segment.endFrameExclusive,
   }]));
   return sealVisualTrack({
     visualIr: "svml.visual-ir@1",
