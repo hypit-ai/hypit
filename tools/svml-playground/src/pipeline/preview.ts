@@ -406,8 +406,9 @@ export async function preview(
 
   const canvas = authoredCanvas(source.compiled);
   const frameRate = authoredFrameRate(source.compiled);
-  const spaceExport = source.exports.find((item) => item.type === SPACE);
-  const space = spaceExport === undefined ? undefined : builtSpace(tracks, spaceExport, frameRate);
+  // Whatever placed the words also says how long the programme is.
+  const declaredFrames = Math.max(0, ...[...anchors.values()]);
+  const space = builtSpace(tracks, declaredFrames, frameRate);
   return {
     source, tracks, timing, refused: [...base.refused, ...unread], served: source.served, placeholders, phrasing, stoodIn,
     canvas: { ...canvas, clearColor: authoredClearColor(source.compiled) },
@@ -431,16 +432,23 @@ function authoredClearColor(compiled: unknown): string {
   return "#000000";
 }
 
-/** The Program Space every Track was placed in, derived from what was built. */
+/**
+ * The Program Space every Track was placed in.
+ *
+ * How long a programme runs is what the Source says, not what this machine
+ * managed to draw. A Track that could not be built because there is no tool to
+ * draw a stand-in does not make the programme shorter, and saying it did put
+ * the timeline and the words at odds on any machine without ffmpeg.
+ */
 function builtSpace(
   tracks: readonly BuiltTrack[],
-  _space: { readonly ref: string },
+  declaredFrames: number,
   frameRate: { readonly numerator: number; readonly denominator: number },
 ): unknown {
-  const frames = tracks.flatMap((track) =>
+  const drawn = tracks.flatMap((track) =>
     ((track.track as { presents?: readonly { span: { endFrameExclusive: number } }[] } | undefined)?.presents ?? [])
       .map((present) => present.span.endFrameExclusive));
-  const frameCount = Math.max(1, ...frames);
+  const frameCount = Math.max(1, declaredFrames, ...drawn);
   return {
     contract: "svml.program-space@1",
     durationSec: frameCount * frameRate.denominator / frameRate.numerator,

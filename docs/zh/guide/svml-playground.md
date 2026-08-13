@@ -10,7 +10,8 @@ pnpm svml:playground -- --source examples/talking-film-broll-preview/main.svml
 | 参数 | 含义 |
 | --- | --- |
 | `--source <main.svml>` | 要读取的 Author Source，必填。 |
-| `--run <build.svrun>` | Run Source，用来读取其中已经指名的素材。 |
+| `--run <build.svrun>` | Run Source，用来读取其中已经指名的素材与时间戳。 |
+| `--runtime <svml.runtime.json>` | 早先构建产出的素材存放在哪里。只有复用已验收镜头的 Source 才需要。 |
 | `--port <number>` | 默认 `5179`。 |
 
 Playground 从不写入。它没有任何可以改动你所写内容的路由，也没有编辑 Recipe 的表单
@@ -68,7 +69,7 @@ Speech Spine 自己的素材允许发声。Cutaway 保持静音，这和真实�
 | `timing: measured` | 读自已完成构建的对齐转写。 |
 | `timing: estimated` | 按常速语速从 Script 文本推导。 |
 | `picture: measured` | 每个元素都显示真实素材。 |
-| `picture: partial` | 部分元素已有素材，其余仍是占位方块。 |
+| `picture: estimated` | 有些镜头还没做出来，用替身顶着。 |
 | `picture: estimated` | 尚无任何拍摄或生成产物。 |
 
 两者是**独立的判断**。一份 Source 可以素材齐备而时间轴仍是估算的 —— 剪切点落在哪里
@@ -76,53 +77,55 @@ Speech Spine 自己的素材允许发声。Cutaway 保持静音，这和真实�
 
 Playground 按以下顺序优先采用真实来源：
 
-1. **已完成的构建。** 若 `.svml/state.sqlite` 中有构建完成的记录，它的 `timing.map`
-   与 `speech.space` 会直接顶掉估算，`final.video` 成为画面。
-2. **Run Source。** 用哪份时间戳是**作者的决定**，所以由 `<satisfy>` 指定：
+1. **Run Source。** 用哪些素材、哪份时间戳是**作者的决定**，所以由 `<satisfy>` 指定：
 
    | 候选 | 提供什么 |
    | --- | --- |
    | `<file from="./shot.mp4" media-type="video/mp4"/>` | 你手上已有的素材。 |
    | `<value type="…" from="./timing.json"/>` | 磁盘上的一个值，例如别处产出的对齐结果。 |
-   | `<build-record build="…" output="timing.map"/>` | 上一次构建已接受的值。 |
+   | `<build-record build="…" output="take.video"/>` | 上一次构建做出来的东西。需要 `--runtime`。 |
 
-   素材是**逐元素降级**的：Take 或 Item 的来源已存在、且已在本程序的帧域内，就显示
-   真实画面，否则显示占位方块。读取文件帧率需要 PATH 上有 `ffprobe`；没有它时每个
-   Item 都保持占位并说明原因。其他帧率的素材会被拒绝并说明原因，而不是重采样 ——
-   归一化是真正的转码，属于 media pipeline。
-3. **Script 文本。** Token 时长来自 `@narratage/estimate`，也就是流水线在生成之前
-   使用的同一套音节模型。
+   只有 `timing.map` 和 Program Space **两者都被提供**时才算实测；只给其中一个仍然
+   是估算，并且会照实说。
+
+2. **上一次构建。** 已经生成并验收的镜头，是按**它出自哪次构建**来指名的，不是按路径
+   —— 产出物有身份，没有位置。给了 `--runtime`，Playground 就去读那次构建的记录和它
+   背后的 Artifact 字节，于是昨天生成的镜头就是今天屏幕上的镜头。不给的话，Run Source
+   照读，只有那条 build record 被拒绝，并说明是哪一次构建。
+
+3. **Script 文本。** 词的时长来自 `@narratage/estimate`，也就是流水线在生成之前使用的
+   同一套音节模型。**凡是 Source 已经声明了时长的地方，以声明为准** —— 一段 take 说自己
+   是 8 秒，它的词就铺满这 8 秒，音节模型只提供词与词之间的比例。
 
 估算出的时间轴是**比例，不是预测**：真实的剪切点会在 WhisperX 对齐真实音频之后移动。
-若 store 来自更新的 schema，或其构建从未完成，Playground 会退回估算，而不是给你一条
-它无法担保的「已测量」时间轴。
 
-## 占位素材
+## 没做出来的东西用什么顶上
 
-素材是**逐元素降级**的。Take 或 Item 的来源若已经存在、且已经处于本程序的帧域内，
-就显示真实画面；否则显示一个绘制出的矩形。把其他帧率的素材归一化是 media pipeline
-的职责、需要真正转码，所以预览会拒绝并说明是哪个文件、为什么，而不是悄悄重采样。
+一条 Track 没有素材就建不出来，而"所有镜头都拍完之前什么都不画"会让预览在它最该派上
+用场的阶段毫无用处。所以有三种顶替，每一种都写明，不会被说成是成品：
 
-占位色铺满的是整个 Placement Frame，因为 frame paint 本来就是这样工作的。凡是
-Recipe 声明了 padding 的地方，会有一条虚线辅助框标出真实素材将会落在哪里。
+| 缺什么 | 顶上的东西 |
+| --- | --- |
+| 一个引用了图片的生成镜头 | 那张图，按镜头声明的时长撑开 |
+| 一个什么都没引用的生成镜头 | 与节目同尺寸的黑场 |
+| 没人规划过的字幕分句 | 按 Program 自己的 run，每几个 Atom 切一屏 |
 
-## 它解释哪些元素
+第一种正是"还没生成就值得预览"的原因：参考图不是成片，但主体对、画幅对。两种顶替都
+标在片段本身上，选中时会写明是哪一种。画它们需要 `ffmpeg`；没有的话镜头就保持未做，
+轨道会照实说。
 
-`<script>`、`<space:Canvas>`、`<space:Frame>`、`<space:AnchoredFrame>`、
-`<space:AspectFrame>`、`<speech:Spine>` 及其 Take、`<media-track:Track>` 及其 Item、
-`<fonts:Stack>`、`<caption-fine:Style>` 与 `<caption-fine:Track>`、用于取背景色的
-`<film:Film>`，以及 `.svs` source import。
+## 它画哪些东西
 
-字幕会用 Source 指名的那一款字体真实绘制。Cue 的时间取自各轨读的同一份 map，按每个
-Atom 对应的 Script token 定位 —— 所以字幕和 B-roll 落在同一条时间轴上，而不是另起一
-套猜测。没有对应口语 token 的 Atom 才在自己的 Cue 内平分时间，顶栏会说明有多少个。
+这份 Source 产出的每一条 Track，无论出自哪个包。Playground 向编译结果要它的导出，
+把类型是 `VisualTrack` 或 `AudioTrack` 的那些建出来 —— 所以某个包新长出一种 Track，
+不需要教 Playground 就会出现在这里。
 
-其余的一切 —— 所有生成类 Surface、`<whisperx:Alignment>`、排版轨、`<render:Video>`
-—— 会被读取、计入信息条上的「not projected」，然后跳过。即使一份
-Source 的大部分内容由 Provider 产出，它依然值得预览；点击那里的条目会把代码面板定位过去。
+每条 Track 各自构建。某条轨道在等一个这台机器没有密钥的 Provider，代价只有它自己：
+其余部分照常播放，而那条轨道会说明它在等什么，而不是凭空消失。
 
-这是一个浅层解释器，不是编译器。它用 `@narratage/markup` 自己的解析器遍历所写的标记，
-再调用各个包自己的纯投影函数。它从不细化图，也从不构造 Host。
+这是编译器本身，不是对它的一种解读。Source 由 `compileSourceClosure` 编译，由构建时
+同一批 Producer 执行，所以**构建不出来的 Source 不会悄悄预览成功**。两个很薄的装饰器
+留住了编译器丢弃的源码位置，除此之外没有任何东西被重新实现。
 
 ## 关于 `<space:Frame>` 的一点说明
 

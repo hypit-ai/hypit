@@ -37,7 +37,7 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) a
 .code-line.bound { cursor:pointer; }
 .code-line .gutter-bar {
   position:absolute; top:0; bottom:0; width:3px;
-  background:var(--tone, #ffffff); opacity:.55; pointer-events:none;
+  background:var(--tone, #ffffff); opacity:.9; pointer-events:none;
 }
 .code-line.bound:hover .gutter-bar { opacity:1; }
 .code-line.bound:hover .line-number { color:var(--tone, #ffffff); }
@@ -96,7 +96,7 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) a
 /* The overlay covers the letterboxed picture exactly, and its viewBox is the
    canvas, so a box is written in the composition's own pixels. */
 .stage-overlay { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
-.box { --tone:var(--accent); }
+.box { --tone:#ffffff; }
 .box-content { fill:color-mix(in srgb, var(--tone) 10%, transparent); stroke:var(--tone); stroke-width:2; }
 /* Where padded material will land; the placeholder paint fills the whole Frame. */
 .box-content-guide { fill:none; stroke:color-mix(in srgb, var(--tone) 45%, transparent); stroke-width:1; stroke-dasharray:3 4; }
@@ -109,7 +109,7 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) a
 .stage-bar button { display:flex; align-items:center; justify-content:center; width:34px; height:34px; padding:0; color:var(--muted); border:0; background:none; border-radius:50%; cursor:pointer; }
 .stage-bar button:hover { color:var(--text); background:#ffffff12; }
 .stage-bar button:active { background:#ffffff1f; }
-.stage-bar button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.stage-bar button:focus-visible { outline:2px solid #ffffff; outline-offset:2px; }
 .material-symbols-rounded { font-family:"Material Symbols Rounded"; font-size:26px; line-height:1; font-weight:400; font-style:normal; letter-spacing:normal; text-transform:none; white-space:nowrap; direction:ltr; -webkit-font-feature-settings:"liga"; font-variation-settings:"FILL" 1; }
 
 /* Inspector strip ----------------------------------------------------- */
@@ -121,7 +121,7 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) a
 /* Written as they read. Letter-spacing only ever served the capitals. */
 .inspector dt { color:#63636e; font-size:11px; }
 .inspector dd { margin:0; font-size:12px; white-space:nowrap; font-variant-numeric:tabular-nums; }
-.inspector .cell.wide dd { color:var(--accent); font-weight:600; }
+.inspector .cell.wide dd { color:var(--text); font-weight:600; }
 .skipped { margin-left:auto; position:relative; }
 .skipped summary { cursor:pointer; color:var(--muted); font-size:11px; white-space:nowrap; }
 .skipped-list { position:absolute; right:0; bottom:22px; z-index:6; display:flex; flex-direction:column; min-width:190px; max-height:40vh; overflow-y:auto; padding:6px; background:#131318; border:1px solid var(--line); border-radius:8px; box-shadow:0 12px 30px #000a; }
@@ -154,7 +154,6 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) a
 /* Live means the playhead is inside it, which is a different claim from being
    selected, so it reads differently: lit rather than ringed. */
 .clip.live { box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--tone, #fff) 60%, transparent); filter:brightness(1.25); }
-.clip.selected { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), 0 4px 14px #0008; }
 .clip-name { font-size:11px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .clip-meta { font-size:10px; color:#b6b6c2; font-variant-numeric:tabular-nums; }
 
@@ -227,6 +226,10 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) a
 }
 .track-note:hover .note-bubble, .track-note:focus-visible .note-bubble { opacity:1; }
 
-.clip.selected, .clip[aria-pressed="true"] { border-color:#ffffff; box-shadow:0 0 0 1px #ffffff; }
+.clip.selected { border-color:#ffffff; }
 /* A footnote wraps rather than running off the side of the window. */
 .track-note .note-bubble { white-space:normal; word-break:break-word; max-width:min(320px, 42vw); }
+
+/* Opening a Track shows the rows behind its front one. */
+.track-fold { margin-left:6px; padding:0 5px; height:15px; border:0; border-radius:7px; background:#ffffff1a; color:var(--muted); font-size:10px; line-height:15px; cursor:pointer; vertical-align:middle; }
+.track-fold:hover { background:#ffffff2e; color:var(--text); }

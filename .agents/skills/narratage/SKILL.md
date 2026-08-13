@@ -34,21 +34,32 @@ Reading a diff is not the same as seeing where a cutaway lands.
 
 ```bash
 pkill -f svml-playground || true          # never leave the old one holding the port
-pnpm svml:playground -- --source path/to/main.svml --run path/to/build.svrun &
+pnpm svml:playground -- --source path/to/main.svml \
+  --run path/to/build.svrun \
+  --runtime path/to/svml.runtime.json &
 # then send the author: http://localhost:5179/
 ```
 
 Kill the previous server first. A second one silently picks another port, and the
 author ends up looking at a stale preview while you describe a new one.
 
-`--run` is optional and worth passing whenever a Run Source exists: it is where
-footage already on disk and previously measured timings are named.
+Both extra arguments are optional and each answers one question. `--run` says
+which material and which timings to read the Source with. `--runtime` says where
+material earlier Builds produced is kept, and is needed only by a Source that
+reuses an accepted shot through `<build-record>`; without it that one shot is
+refused by name and everything else still draws.
 
-The preview is read-only and runs no Provider. It never needs a build, a package
-lock or a Runtime Profile — a directory holding `main.svml` and its `.svs` is
-enough. Timings come from a completed build if there is one, from what the Run
-Source names if not, and from the syllable estimator otherwise; the header badges
-say which, so state that rather than implying a preview is a render.
+The preview compiles the Source with the real compiler and runs the same
+Producers a build runs, so a Source that will not build does not preview. It
+needs no build of its own: a directory holding `main.svml` and its `.svs` is
+enough.
+
+What it cannot know, it stands in for and says so. Words are placed at an
+ordinary delivery pace, except where the Source declares a length — a take that
+says it is eight seconds long gets eight seconds of words. A shot nobody has
+made shows the picture it names, or a black frame if it names none. Captions
+nobody has phrased are cut every few words. Each Track says which of these it is
+showing, so say that rather than implying a preview is a render.
 
 Read `docs/guide/svml-playground.md` before explaining what an author is seeing.
 

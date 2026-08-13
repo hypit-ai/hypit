@@ -26,6 +26,9 @@ function timecode(seconds: number): string {
 /** One row of one Track. A Track with overlapping clips is several rows tall. */
 const LANE_HEIGHT = 52;
 
+/** Tracks the reader has opened. A Track shows only its front row until then. */
+const opened = new Set<string>();
+
 /**
  * Where a frame sits across the strip, once the zoom window is taken into
  * account. Everything the timeline draws goes through here, so the ruler, the
@@ -75,7 +78,11 @@ export function createTimeline(store: Store): Timeline {
   const frameAt = (clientX: number): number => {
     const box = lanes.getBoundingClientRect();
     if (box.width === 0 || state === undefined) return 0;
-    const ratio = (clientX - box.left) / box.width;
+    // Where the pointer is inside the window that is shown, not inside the
+    // whole programme; zoomed in, the two are different places.
+    const across = (clientX - box.left) / box.width;
+    const shown = zoom.window();
+    const ratio = shown.start + across * (shown.end - shown.start);
     return Math.floor(ratio * state.snapshot.space.frameCount);
   };
 
@@ -153,8 +160,7 @@ export function createTimeline(store: Store): Timeline {
         note.type = "button";
         note.className = `track-note note-${track.source}`;
         note.append("i");
-        note.title = `${said} ${timing}`;
-        note.setAttribute("aria-label", note.title);
+        note.setAttribute("aria-label", `${said} ${timing}`);
         const bubble = document.createElement("span");
         bubble.className = "note-bubble";
         bubble.textContent = `${said} ${timing}`;
@@ -173,20 +179,42 @@ export function createTimeline(store: Store): Timeline {
       // Clips that overlap in time cannot share a row without hiding each
       // other, so a Track is as many rows tall as it needs. A board's panel
       // runs the whole programme and its rows settle underneath it.
+      // Packed by what is in front: the topmost row holds whatever is drawn over
+      // everything else, so a folded Track shows the picture the viewer sees.
       const freeFrom: number[] = [];
       const rowOf = new Map<string, number>();
-      for (const clip of [...track.clips].sort((a, b) => a.startFrame - b.startFrame)) {
+      const ordered = [...track.clips].sort((a, b) =>
+        b.stackOrder - a.stackOrder || a.startFrame - b.startFrame);
+      for (const clip of ordered) {
         let row = freeFrom.findIndex((free) => free <= clip.startFrame);
         if (row < 0) { row = freeFrom.length; freeFrom.push(0); }
         freeFrom[row] = clip.endFrameExclusive;
         rowOf.set(clip.id, row);
       }
       const depth = Math.max(1, freeFrom.length);
-      label.style.height = `${depth * LANE_HEIGHT}px`;
+      const folded = depth > 1 && !opened.has(track.id);
+      const shownRows = folded ? 1 : depth;
+      label.style.height = `${shownRows * LANE_HEIGHT}px`;
+      if (depth > 1) {
+        const fold = document.createElement("button");
+        fold.type = "button";
+        fold.className = "track-fold";
+        fold.textContent = folded ? `+${depth - 1}` : "\u2212";
+        fold.title = folded ? `Show all ${depth} rows` : "Show only what is in front";
+        fold.setAttribute("aria-expanded", String(!folded));
+        fold.addEventListener("click", (event) => {
+          event.stopPropagation();
+          if (opened.has(track.id)) opened.delete(track.id);
+          else opened.add(track.id);
+          build(snapshot);
+          paint();
+        });
+        label.querySelector("small")!.append(fold);
+      }
 
       const lane = document.createElement("div");
       lane.className = "lane";
-      lane.style.height = `${depth * LANE_HEIGHT}px`;
+      lane.style.height = `${shownRows * LANE_HEIGHT}px`;
       for (const clip of track.clips) {
         const node = document.createElement("button");
         node.type = "button";
@@ -195,7 +223,9 @@ export function createTimeline(store: Store): Timeline {
         const from = place(clip.startFrame, snapshot.space.frameCount, zoom.window());
         const to = place(clip.endFrameExclusive, snapshot.space.frameCount, zoom.window());
         node.style.left = `${from * 100}%`;
-        node.style.top = `${(rowOf.get(clip.id) ?? 0) * LANE_HEIGHT}px`;
+        const row = rowOf.get(clip.id) ?? 0;
+        if (folded && row > 0) continue;
+        node.style.top = `${row * LANE_HEIGHT}px`;
         node.style.width = `${(to - from) * 100}%`;
         node.title = `${clip.label} (${clip.startFrame}-${clip.endFrameExclusive}f)`;
         node.innerHTML = `<span class="clip-name"></span><span class="clip-meta"></span>`;

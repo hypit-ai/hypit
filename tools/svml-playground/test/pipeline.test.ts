@@ -235,3 +235,30 @@ test("an asset outside the Source's directory is refused, as a build refuses it"
     },
   );
 });
+
+/**
+ * How long a programme runs is what the Source says, not what this machine
+ * managed to draw. Stand-ins need a tool to draw with, and a machine without
+ * one drew nothing; the timeline shrank to a single frame while the words still
+ * ran to the end, so a marker past the end read as live. Every machine has to
+ * agree about the length, whatever it can picture.
+ */
+test("the programme is as long as the Source says, drawn or not", async () => {
+  const directory = project();
+  const built = await preview(join(directory, "main.svml"));
+  const { snapshot } = await readSource({
+    source: join(directory, "main.svml"), packageRoot: directory, revision: 1,
+  });
+
+  const spoken = Math.max(0, ...(snapshot.script?.tokens ?? []).map((token) => token.endFrame));
+  assert.ok(spoken > 0, "the Script was placed");
+  assert.ok(
+    snapshot.space.frameCount >= spoken,
+    `the timeline (${snapshot.space.frameCount}f) covers every word (${spoken}f)`,
+  );
+  // Which is the same claim the Tracks were built against.
+  const drawn = Math.max(0, ...built.tracks.flatMap((track) =>
+    ((track.track as { presents?: readonly { span: { endFrameExclusive: number } }[] } | undefined)?.presents ?? [])
+      .map((present) => present.span.endFrameExclusive)));
+  assert.ok(snapshot.space.frameCount >= drawn, "and covers every clip");
+});

@@ -11,6 +11,7 @@
   <import as="media-track" from="@narratage/media-track@1"/>
   <import as="ranking" from="@narratage/ranking@1"/>
   <import as="screen" from="@narratage/screen-overlay@1"/>
+  <import as="deck" from="@narratage/deck-track@1"/>
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
@@ -29,10 +30,10 @@
       <HOST>@board This is every component at once. @title A card cuts in
         here@/title, @overlay the picture flashes@/overlay, and the board fills
         as each one is named.
-      <HOST>Spatial. @place! Typography. @place!
+      <HOST>Spatial. @place!@deal-one! Typography. @place!@deal-two!
     </opening>
     <closing>
-      <HOST>Ranking. @place! Captions. @place!
+      <HOST>Ranking. @place!@deal-three! Captions. @place!@deal-four!
       <HOST>That is the whole of it@/board. @done!
     </closing>
   </script>
@@ -68,6 +69,7 @@
   <media:Image id="icon-ranking" src="./assets/icon-3.webp"/>
   <media:Image id="icon-caption" src="./assets/icon-4.webp"/>
   <space:Extent id="portrait" width="540" height="960"/>
+  <space:Extent id="square" width="192" height="192"/>
 
   <speech:Spine id="speech" frame-rate="30"
     visual-frame={full} visual-appearance={studio.speech.visual} visual-z="0">
@@ -102,6 +104,18 @@
       color="#ffffff" intensity="0.6" attack="2" hold="2" decay="6"/>
   </screen:Track>
 
+  <!-- A deck, one card per board row, stepping forward as each is named. The
+       preview was never taught about this Track; it appears because the package
+       produces one. -->
+  <space:Frame id="deck-frame" within={vertical} left="44%" top="60%" right="98%" bottom="88%"/>
+  <deck:DepthStack id="deck" map={timing.map} space={speech.space} canvas={vertical}
+    frame={deck-frame} appearance={studio.deck.stack} until={story.moment.done}>
+    <deck:Card id="card-spatial" source={icon-spatial} extent={square} at={story.moment.deal-one}/>
+    <deck:Card id="card-type" source={icon-type} extent={square} at={story.moment.deal-two}/>
+    <deck:Card id="card-ranking" source={icon-ranking} extent={square} at={story.moment.deal-three}/>
+    <deck:Card id="card-caption" source={icon-caption} extent={square} at={story.moment.deal-four}/>
+  </deck:DepthStack>
+
   <text:Style id="title-style" recipe={studio.text.title} font={ui-font}/>
   <text:Track id="titles" space={speech.space}>
     <text:Area id="headline" placement={title-frame} style={title-style} during="program">
@@ -124,6 +138,7 @@
     <film:Track source={board.visual}/>
     <film:Track source={cards.visual}/>
     <film:Track source={effects.track}/>
+    <film:Track source={deck.track}/>
     <film:Track source={titles.track}/>
     <film:Track source={captions.track}/>
   </film:Film>

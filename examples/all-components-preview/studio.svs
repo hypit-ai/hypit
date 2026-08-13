@@ -22,6 +22,18 @@
 
   /* A cutaway replaces the shot, so it carries no box treatment. */
   /* A card sits inside the picture, so it keeps a box treatment. */
+  /* A deck: the card being spoken about sits front, the ones before and after
+     it stepping back behind it. */
+  deck.stack {
+    visible-previous: 2; visible-next: 2;
+    current-x: 0.5; current-y: 0.5; current-scale: 1; current-opacity: 1; current-stacking: 50;
+    previous-x-step: -0.16; previous-scale-step: 0.86; previous-opacity-step: 0.7;
+    previous-rotation-step: -5; previous-stacking-step: -6;
+    next-x-step: 0.16; next-scale-step: 0.86; next-opacity-step: 0.7;
+    next-rotation-step: 5; next-stacking-step: -6;
+    reflow-frames: 9; reflow-easing: ease-out;
+  }
+
   media.card {
     stack-order: 60; fit: cover; clip: rounded; radius: 18; padding: 10 10;
     frame-paint: #14141c;

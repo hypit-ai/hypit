@@ -255,7 +255,15 @@ export function snapshot(built: Preview, input: {
   const ordered = [...tracks].sort((left, right) => depth(right) - depth(left));
   const rows = ordered.map((track, row) => ({ ...track, row }));
 
-  const frameCount = Math.max(1, ...rows.flatMap((track) => track.clips.map((clip) => clip.endFrameExclusive)));
+  const declared = (built.space as { durationSec?: number; frameRate?: { numerator: number; denominator: number } })
+    ?.durationSec;
+  const frameCount = Math.max(
+    1,
+    declared === undefined
+      ? 0
+      : Math.round(declared * input.frameRate.numerator / input.frameRate.denominator),
+    ...rows.flatMap((track) => track.clips.map((clip) => clip.endFrameExclusive)),
+  );
   return {
     revision: input.revision,
     source: { path: input.path, text: input.text, digest: input.digest },
