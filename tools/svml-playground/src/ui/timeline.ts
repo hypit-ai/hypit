@@ -67,8 +67,12 @@ export function createTimeline(store: Store): Timeline {
   };
 
   lanes.addEventListener("pointerdown", (event) => {
-    // A click on a clip selects it; a click on open track or the ruler scrubs.
-    if ((event.target as HTMLElement).closest(".clip") === null) scrub(event);
+    // A click on a clip selects it; a click on open track or the ruler moves the
+    // playhead and lets go of whatever was selected, because open track is the
+    // one place that plainly means "not that one".
+    if ((event.target as HTMLElement).closest(".clip") !== null) return;
+    store.clearSelection();
+    scrub(event);
   });
   lanes.addEventListener("pointermove", (event) => {
     if (event.buttons === 1 && lanes.hasPointerCapture(event.pointerId)) {

@@ -75,6 +75,11 @@ export function createStage(store: Store): Stage {
   scaler.addEventListener("click", (event) => {
     const clip = overlay.hitTest(event.clientX, event.clientY);
     if (clip !== undefined) store.selectClip(clip.id, "video");
+    else store.clearSelection();
+  });
+  // The room around the picture is empty in the plainest sense.
+  viewport.addEventListener("click", (event) => {
+    if (event.target === viewport) store.clearSelection();
   });
   const play = element.querySelector<HTMLButtonElement>("[data-play]")!;
   const icon = element.querySelector<HTMLElement>("[data-icon]")!;

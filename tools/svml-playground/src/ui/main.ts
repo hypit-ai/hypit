@@ -198,8 +198,13 @@ store.subscribe(({ snapshot, selection, playhead }) => {
 // so what is clickable is visible standing still.
 code.element.addEventListener("click", (event) => {
   const state = store.current();
-  const offset = state === undefined ? undefined : code.offsetAt(event);
-  if (state === undefined || offset === undefined) return;
+  if (state === undefined) return;
+  const offset = code.offsetAt(event);
+  // Below the last line, or in the heading: nothing is being pointed at.
+  if (offset === undefined) {
+    store.clearSelection();
+    return;
+  }
   const clip = clipAtOffset(state.snapshot, offset);
 
   // A click inside marked prose lands inside the innermost marker written there,
