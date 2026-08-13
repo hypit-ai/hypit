@@ -112,7 +112,7 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
 
   const programId = `${id}.program`;
   const program = sealFilmProgram({
-    contract: "svml.film-program@1",
+
     id,
     clearColor: appearance.clearColor,
   });

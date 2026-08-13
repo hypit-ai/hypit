@@ -156,7 +156,7 @@ test("the official Film Surface validates SVS and lowers dynamic peer Tracks", a
   const compiled = await compileFilm();
   const program = compiled.program.records.find((record) => record.type.name === filmTypes.program.name);
   assert.deepEqual(program?.value.kind === "inline" ? program.value.value : undefined, {
-    contract: "svml.film-program@1",
+
     id: "main",
     clearColor: "#09090B",
   });

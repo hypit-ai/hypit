@@ -190,7 +190,7 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
   const records: SurfaceRecordDraft[] = [{
     id: headerId,
     type: audioTrackTypes.header,
-    value: { kind: "inline", value: sealAudioTrackHeader({ contract: "svml.audio-track-header@1", id }) },
+    value: { kind: "inline", value: sealAudioTrackHeader({ id }) },
     range: element.range,
   }];
   const fragmentItems: Parameters<typeof createAudioTrackFragment>[0][number][] = [];
@@ -222,7 +222,7 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     const expansion = text(child, "occurrences", "one");
     if (expansion !== "one" && expansion !== "each") throw new Error(`${child.name}.occurrences must be one or each.`);
     const clipSpec = sealAudioClipSpec({
-      contract: "svml.audio-clip-spec@1",
+
       id: clipId,
       projection: binding.projection,
       expansion: { kind: expansion },

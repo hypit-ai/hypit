@@ -47,11 +47,11 @@ const frame = { xPx: 80, yPx: 140, widthPx: 920, heightPx: 360 };
 const canvas = { widthPx: 1080, heightPx: 1920,
   origin: "top-left" as const, xDirection: "right" as const, yDirection: "down" as const, pixelAspect: "square" as const };
 const space = sealProgramSpace({ durationSec: 3, frameRate: { numerator: 30, denominator: 1 } });
-const header = sealCommentStickerHeader({ contract: "svml.comment-sticker-header@1", id: "comments" });
+const header = sealCommentStickerHeader({ id: "comments" });
 
 function item(id: string) {
   return sealCommentStickerItemSpec({
-    contract: "svml.comment-sticker-item-spec@1",
+
     id,
     projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
     expansion: { kind: "one" },

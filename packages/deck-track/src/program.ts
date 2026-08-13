@@ -102,7 +102,6 @@ function assertPoseStep(value: DepthStackPoseStep, label: string): void {
 }
 
 export function assertDepthStackSpec(value: DepthStackSpec): void {
-  assert(value.contract === "svml.depth-stack-spec@1", "Unsupported DepthStackSpec contract.");
   for (const [name, count] of Object.entries(value.visibility)) {
     if (name === "wrap") continue;
     assert(Number.isSafeInteger(count) && typeof count === "number" && count >= 0 && count <= 1_000,
@@ -126,7 +125,6 @@ export function sealDepthStackSpec(value: DepthStackSpec): DepthStackSpec {
 }
 
 export function assertDepthStackCardLabel(value: DepthStackCardLabel): void {
-  assert(value.contract === "svml.depth-stack-card-label@1", "Unsupported DepthStackCardLabel contract.");
   if (value.kind === "none") return;
   assert(value.kind === "text", "DepthStackCardLabel kind is invalid.");
   assert(value.document.paragraphs.length > 0, "DepthStackCardLabel document is empty.");
@@ -144,7 +142,6 @@ export function sealDepthStackCardLabel(value: DepthStackCardLabel): DepthStackC
 }
 
 export function assertDepthStackCardLabelStyle(value: DepthStackCardLabelStyle): void {
-  assert(value.contract === "svml.depth-stack-card-label-style@1", "Unsupported DepthStackCardLabelStyle contract.");
   assert(value.typography.fonts.length > 0, "DepthStackCardLabelStyle requires exact fonts.");
   value.typography.fonts.forEach((font, index) => assertFontArtifactRef(font, `DepthStackCardLabelStyle.fonts.${index}`));
   assert(value.typography.synthesis === "none", "DepthStackCardLabelStyle cannot synthesize an exact font.");
@@ -161,7 +158,7 @@ export function bindDepthStackCardLabelText(style: DepthStackCardLabelStyle, con
   verifyText(content);
   assert(content.value.trim().length > 0, "DepthStack Card label Text is empty.");
   return sealDepthStackCardLabel({
-    contract: "svml.depth-stack-card-label@1",
+
     kind: "text",
     document: { paragraphs: [{ id: "label:paragraph", inlines: [{ kind: "text", id: "label:text", text: content.value }] }] },
     typography: structuredClone(style.typography),
@@ -171,12 +168,11 @@ export function bindDepthStackCardLabelText(style: DepthStackCardLabelStyle, con
 }
 
 export const noDepthStackCardLabel = (): DepthStackCardLabel => ({
-  contract: "svml.depth-stack-card-label@1",
+
   kind: "none",
 });
 
 export function assertDepthStackCardSpec(value: DepthStackCardSpec): void {
-  assert(value.contract === "svml.depth-stack-card-spec@1", "Unsupported DepthStackCardSpec contract.");
   identity(value.id, "DepthStackCardSpec.id");
   assert(value.playback.future === "hold-head" || value.playback.future === "continue",
     "DepthStackCardSpec.playback.future is invalid.");
@@ -190,7 +186,6 @@ export function sealDepthStackCardSpec(value: DepthStackCardSpec): DepthStackCar
 }
 
 export function assertDepthStackHeader(value: DepthStackHeader): void {
-  assert(value.contract === "svml.depth-stack-header@1", "Unsupported DepthStackHeader contract.");
   identity(value.id, "DepthStackHeader.id");
 }
 
@@ -200,11 +195,11 @@ export function sealDepthStackHeader(value: DepthStackHeader): DepthStackHeader 
 }
 
 export function createDepthStackCardSet(): DepthStackCardSet {
-  return { contract: "svml.depth-stack-card-set@1", cards: [] };
+  return { cards: [] };
 }
 
 export function assertDepthStackCardSet(value: DepthStackCardSet): void {
-  assert(value.contract === "svml.depth-stack-card-set@1" && Array.isArray(value.cards),
+  assert(Array.isArray(value.cards),
     "DepthStackCardSet is invalid.");
   const ids = new Set<string>();
   let previous = -1;
@@ -219,7 +214,7 @@ export function assertDepthStackCardSet(value: DepthStackCardSet): void {
     assertMediaLayerSet(card.material);
     assert(card.material.layers.length > 0, `DepthStack Card ${card.id} material is empty.`);
     assertDepthStackCardLabel(card.label);
-    assertDepthStackCardSpec({ contract: "svml.depth-stack-card-spec@1", id: card.id, playback: card.playback });
+    assertDepthStackCardSpec({ id: card.id, playback: card.playback });
   }
 }
 
@@ -238,7 +233,7 @@ export function appendDepthStackCard(
   assert(Number.isSafeInteger(activationFrame) && activationFrame >= 0,
     `DepthStack Card ${spec.id} activation is invalid.`);
   const result: DepthStackCardSet = {
-    contract: "svml.depth-stack-card-set@1",
+
     cards: [...set.cards, {
       id: spec.id,
       activationFrame,
@@ -301,7 +296,7 @@ export function finalizeDepthStack(
   assert(set.cards.length > 0, "DepthStack requires at least one Card.");
   const first = set.cards[0]!;
   const program: DepthStackProgram = {
-    contract: "svml.depth-stack-program@1",
+
     id: header.id,
     span: { startFrame: first.activationFrame, endFrameExclusive: terminalFrame },
     terminalFrame,
@@ -349,11 +344,10 @@ export function finalizeDepthStackUntilSelection(
 }
 
 export function assertDepthStackProgram(program: DepthStackProgram): void {
-  assert(program.contract === "svml.depth-stack-program@1", "Unsupported DepthStackProgram contract.");
   identity(program.id, "DepthStackProgram.id");
   assertSpatialFrame(program.frame);
   assertDepthStackSpec(program.spec);
-  const set = { contract: "svml.depth-stack-card-set@1", cards: program.cards } as const;
+  const set = { cards: program.cards } as const;
   assertDepthStackCardSet(set);
   assert(program.cards.length > 0, "DepthStackProgram has no Cards.");
   assert(Number.isSafeInteger(program.terminalFrame) && program.terminalFrame > 0,

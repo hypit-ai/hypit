@@ -4,7 +4,6 @@ import type { ContentFit, SpatialFrame } from "@narratage/spatial";
 
 /** Author-owned policy for one ordered Speech Spine. */
 export type SpeechSpineProgram = {
-  readonly contract: "svml.speech-spine-program@1";
   readonly id: string;
   readonly frameRate: {
     readonly numerator: number;
@@ -23,7 +22,6 @@ export type SpeechSpineTake = {
 };
 
 export type SpeechSpineVisualSpec = {
-  readonly contract: "svml.speech-spine-visual-spec@1";
   readonly stackingOrder: number;
 };
 
@@ -32,7 +30,6 @@ export type SpeechSpineVisualSpec = {
  * only fixed-port append Operations for the concrete Spine declaration.
  */
 export type SpeechSpineSet = {
-  readonly contract: "svml.speech-spine-set@1";
   readonly takes: readonly SpeechSpineTake[];
 };
 

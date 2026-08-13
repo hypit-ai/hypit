@@ -154,7 +154,7 @@ export function decodeDepthStackSpec(recipe: SvsRecipe): DepthStackSpec {
     tonePerDepth: { brightness: 0.88, contrast: 1, saturation: 0.78 },
   };
   return sealDepthStackSpec({
-    contract: "svml.depth-stack-spec@1",
+
     visibility: {
       previous: integer(recipe, "visible-previous", 2),
       next: integer(recipe, "visible-next", 1),
@@ -186,7 +186,7 @@ export function decodeDepthStackSpec(recipe: SvsRecipe): DepthStackSpec {
 export function decodeDepthStackCardSpec(recipe: SvsRecipe, id: string): DepthStackCardSpec {
   assertKnownKeys(recipe);
   return sealDepthStackCardSpec({
-    contract: "svml.depth-stack-card-spec@1",
+
     id,
     playback: {
       future: oneOf(recipe, "playback-future", ["hold-head", "continue"] as const, "hold-head"),

@@ -172,7 +172,7 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
   const records: SurfaceRecordDraft[] = [{
     id: headerId,
     type: commentStickerTypes.header,
-    value: { kind: "inline", value: sealCommentStickerHeader({ contract: "svml.comment-sticker-header@1", id }) },
+    value: { kind: "inline", value: sealCommentStickerHeader({ id }) },
     range: element.range,
   }];
   const inputs: Record<string, typeof canvas.ref> = { canvas: canvas.ref, header: { kind: "record", id: headerId }, space: space.ref };
@@ -208,7 +208,7 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
       id: specId,
       type: commentStickerTypes.itemSpec,
       value: { kind: "inline", value: sealCommentStickerItemSpec({
-        contract: "svml.comment-sticker-item-spec@1",
+
         id: text(child, "id"),
         projection: temporal.projection,
         expansion: { kind: occurrences },

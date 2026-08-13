@@ -85,7 +85,7 @@ const video = (name: string) => ({
 
 function stillMaterial(name: string): MediaLayerSet {
   return {
-    contract: "svml.media-layer-set@1",
+
     layers: [{
       id: `${name}:sample`,
       kind: "sample",
@@ -108,7 +108,7 @@ function stillMaterial(name: string): MediaLayerSet {
 
 function timedMaterial(name: string, occupancy: "loop" | "hold" = "loop"): MediaLayerSet {
   return {
-    contract: "svml.media-layer-set@1",
+
     layers: [{
       id: `${name}:sample`,
       kind: "sample",
@@ -134,7 +134,7 @@ function timedMaterial(name: string, occupancy: "loop" | "hold" = "loop"): Media
 
 function baseSpec(input: Partial<DepthStackSpec> = {}): DepthStackSpec {
   return sealDepthStackSpec({
-    contract: "svml.depth-stack-spec@1",
+
     visibility: { previous: 2, next: 1, wrap: false },
     poses: {
       current: {
@@ -171,7 +171,7 @@ function baseSpec(input: Partial<DepthStackSpec> = {}): DepthStackSpec {
 
 function cardSpec(id: string, past: "hold-tail" | "continue" | "hide" = "hold-tail", future: "hold-head" | "continue" = "hold-head") {
   return sealDepthStackCardSpec({
-    contract: "svml.depth-stack-card-spec@1",
+
     id,
     playback: { future, past },
   });
@@ -199,7 +199,7 @@ function program(input: {
   }
   return finalizeDepthStack(
     set,
-    sealDepthStackHeader({ contract: "svml.depth-stack-header@1", id: "proof-stack" }),
+    sealDepthStackHeader({ id: "proof-stack" }),
     frame,
     input.spec ?? baseSpec(),
     input.terminal ?? 60,
@@ -236,7 +236,7 @@ test("explicit wrapping never aliases one Card into several relative depths", ()
 
 test("missing, equal, reversed and terminal-crossing triggers fail in authored order", () => {
   assert.throws(() => finalizeDepthStack(
-    createDepthStackCardSet(), sealDepthStackHeader({ contract: "svml.depth-stack-header@1", id: "empty" }),
+    createDepthStackCardSet(), sealDepthStackHeader({ id: "empty" }),
     frame, baseSpec(), 60, space,
   ), /at least one Card/u);
   assert.throws(() => program({ triggers: [0, 20, 20] }), /strictly increasing/u);
@@ -322,7 +322,7 @@ const font: FontArtifactRef = {
 
 function exactLabel(): DepthStackCardLabel {
   return sealDepthStackCardLabel({
-    contract: "svml.depth-stack-card-label@1",
+
     kind: "text",
     document: { paragraphs: [{ id: "p", inlines: [{ id: "t", kind: "text", text: "Proof" }] }] },
     typography: {

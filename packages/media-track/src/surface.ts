@@ -711,7 +711,7 @@ function sound(
   const sourceName = `${soundSuffix}-source`;
   const id = optionalText(element, "id") ?? `${trackId}.${soundSuffix}`;
   state.addRecord(specName, `${trackId}.${soundSuffix}.spec`, mediaTrackTypes.soundSpec,
-    sealMediaSoundSpec({ contract: "svml.media-sound-spec@1", id, trigger, gain: numberValue(element, "gain", 1) }), element.range);
+    sealMediaSoundSpec({ id, trigger, gain: numberValue(element, "gain", 1) }), element.range);
   state.addReference(sourceName, reference(element.attributes.source, `${element.name}.source`, mediaTypes.synchronized, resolve));
   return { sourceName, specName };
 }
@@ -724,7 +724,7 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
   state.addReference("canvas", reference(element.attributes.canvas, `${element.name}.canvas`, spatialTypes.canvas, resolveReference));
   const headerId = `${trackId}.header`;
   state.addRecord("header", headerId, mediaTrackTypes.header,
-    sealMediaTrackHeader({ contract: "svml.media-track-header@1", id: trackId }), element.range);
+    sealMediaTrackHeader({ id: trackId }), element.range);
   const items: FragmentItem[] = [];
   const sequences: FragmentSequence[] = [];
   let itemIndex = 0;
@@ -834,7 +834,7 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
       if (selectedAudio !== undefined) hasAudio = true;
       const specName = `${unitSuffix}-spec`;
       state.addRecord(specName, `${trackId}.${unitSuffix}.spec`, mediaTrackTypes.memberSpec,
-        sealMediaSequenceMemberSpec({ contract: "svml.media-sequence-member-spec@1", id: memberIds[index]!,
+        sealMediaSequenceMemberSpec({ id: memberIds[index]!,
           ...(selectedAudio === undefined ? {} : { sourceAudio: selectedAudio }) }), member.range);
       const sourceName = `${unitSuffix}-${binding === "moment" ? "moment" : "selection"}`;
       state.addReference(sourceName, at);

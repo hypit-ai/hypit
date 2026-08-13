@@ -32,13 +32,13 @@ const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; 
 });
 
 export const filmProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.film-program@1" } },
+
   id: { schema: string },
   clearColor: { schema: string },
 });
 
 export const filmTrackSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.film-track-set@1" } },
+
   tracks: {
     schema: {
       kind: "array",

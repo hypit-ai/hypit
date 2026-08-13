@@ -76,7 +76,7 @@ const canvas = {
   yDirection: "down" as const,
   pixelAspect: "square" as const,
 };
-const header = sealMediaTrackHeader({ contract: "svml.media-track-header@1", id: "proof" });
+const header = sealMediaTrackHeader({ id: "proof" });
 const source: BlobRef = {
   kind: "blob",
   digest: digestOf("media-track:still"),
@@ -99,7 +99,7 @@ const appearance = {
 
 function itemSpec(overrides: Partial<MediaItemSpec> = {}): MediaItemSpec {
   return sealMediaItemSpec({
-    contract: "svml.media-item-spec@1",
+
     id: "product",
     projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
     expansion: { kind: "one" },
@@ -118,7 +118,7 @@ function itemSpec(overrides: Partial<MediaItemSpec> = {}): MediaItemSpec {
 function stillLayers(): MediaLayerSet {
   let layers = createMediaLayerSet();
   layers = appendMediaPaintLayer(layers, sealMediaPaintLayerSpec({
-    contract: "svml.media-paint-layer-spec@1",
+
     id: "backing",
     paint: { kind: "linear-gradient", angleDeg: 90, stops: [
       { offset: 0, color: "#101010" }, { offset: 1, color: "#303030" },
@@ -126,7 +126,7 @@ function stillLayers(): MediaLayerSet {
     opacity: 1,
   }));
   layers = appendStillMediaLayer(layers, source, extent, fit, sealMediaSampleLayerSpec({
-    contract: "svml.media-sample-layer-spec@1",
+
     id: "content",
     appearance,
   }));
@@ -153,7 +153,7 @@ function timed(id = "timed", withAudio = true): SynchronizedMedia {
 
 function timedLayers(id: string, withAudio = true): MediaLayerSet {
   return appendTimedMediaLayer(createMediaLayerSet(), timed(id, withAudio), fit, sealMediaSampleLayerSpec({
-    contract: "svml.media-sample-layer-spec@1",
+
     id: "video",
     occupancy: { mode: "loop", align: "start" },
     appearance,
@@ -167,7 +167,7 @@ function sequenceMembers(
   let members = createMediaSequenceMemberSet();
   for (const [index, activationFrame] of activations.entries()) {
     members = appendMediaSequenceMember(members, layerFactory(index), sealMediaSequenceMemberSpec({
-      contract: "svml.media-sequence-member-spec@1",
+
       id: `member-${index + 1}`,
       sourceAudio: { fromLayer: "video", gain: 1 - (index * 0.1) },
     }), activationFrame);
@@ -177,7 +177,7 @@ function sequenceMembers(
 
 function sequenceSpec(overrides: Partial<MediaSequenceSpec> = {}): MediaSequenceSpec {
   return sealMediaSequenceSpec({
-    contract: "svml.media-sequence-spec@1",
+
     id: "steps",
     presentation: itemSpec().presentation,
     motion: {
@@ -188,11 +188,11 @@ function sequenceSpec(overrides: Partial<MediaSequenceSpec> = {}): MediaSequence
     stackingOrder: 50,
     handoffs: [
       sealMediaHandoffSpec({
-        contract: "svml.media-handoff-spec@1", id: "one-two", fromMemberId: "member-1", toMemberId: "member-2",
+        id: "one-two", fromMemberId: "member-1", toMemberId: "member-2",
         operator: "crossfade", durationFrames: 20, boundaryRatio: 0.5, audio: "crossfade",
       }),
       sealMediaHandoffSpec({
-        contract: "svml.media-handoff-spec@1", id: "two-three", fromMemberId: "member-2", toMemberId: "member-3",
+        id: "two-three", fromMemberId: "member-2", toMemberId: "member-3",
         operator: "push", durationFrames: 20, boundaryRatio: 0.5, direction: "left", audio: "cut",
       }),
     ],
@@ -209,7 +209,7 @@ function sequenceSounds() {
     ["exit-sound", { kind: "exit" as const }],
   ] as const) {
     sounds = appendMediaSound(sounds, timed(`sfx-${id}`), sealMediaSoundSpec({
-      contract: "svml.media-sound-spec@1", id, trigger, gain: 0.5,
+      id, trigger, gain: 0.5,
     }));
   }
   return sounds;
@@ -261,12 +261,12 @@ test("an owned clip path is an explicit Media input and lowers only over the Ite
 test("self-blur is two explicit samples of one Artifact and Artifact collection deduplicates bytes", () => {
   let layers = createMediaLayerSet();
   layers = appendStillMediaLayer(layers, source, extent, { ...fit, sizing: "cover" }, sealMediaSampleLayerSpec({
-    contract: "svml.media-sample-layer-spec@1", id: "blurred", appearance: {
+    id: "blurred", appearance: {
       opacity: 1, filter: { blurPx: 24, brightness: 0.7, contrast: 1, saturation: 0.8 },
     },
   }));
   layers = appendStillMediaLayer(layers, source, extent, fit, sealMediaSampleLayerSpec({
-    contract: "svml.media-sample-layer-spec@1", id: "foreground", appearance,
+    id: "foreground", appearance,
   }));
   const track = projectMediaVisualTrack(space, finalizeMediaTrack(appendProgramMediaItem(
     createMediaTrackSet(), header, space, canvas, layers, frame, itemSpec(), createMediaSoundSet(),
@@ -288,7 +288,7 @@ test("self-blur is two explicit samples of one Artifact and Artifact collection 
 test("timed layer trim/hold, lifecycle and sampling motion remain separate wrapper channels", () => {
   let layers = createMediaLayerSet();
   layers = appendTimedMediaLayer(layers, timed(), fit, sealMediaSampleLayerSpec({
-    contract: "svml.media-sample-layer-spec@1",
+
     id: "video",
     trim: { startFrame: 10, endFrameExclusive: 40 },
     occupancy: { mode: "hold", align: "start" },
@@ -332,7 +332,7 @@ test("timed layer trim/hold, lifecycle and sampling motion remain separate wrapp
 test("source audio and edge SFX project separately from the visual Track", () => {
   let layers = createMediaLayerSet();
   layers = appendTimedMediaLayer(layers, timed("audio"), fit, sealMediaSampleLayerSpec({
-    contract: "svml.media-sample-layer-spec@1",
+
     id: "video",
     trim: { startFrame: 10, endFrameExclusive: 40 },
     occupancy: { mode: "hold", align: "end" },
@@ -340,10 +340,10 @@ test("source audio and edge SFX project separately from the visual Track", () =>
   }));
   let sounds = createMediaSoundSet();
   sounds = appendMediaSound(sounds, timed("sfx-enter"), sealMediaSoundSpec({
-    contract: "svml.media-sound-spec@1", id: "enter-sound", trigger: { kind: "enter" }, gain: 0.5,
+    id: "enter-sound", trigger: { kind: "enter" }, gain: 0.5,
   }));
   sounds = appendMediaSound(sounds, timed("sfx-exit"), sealMediaSoundSpec({
-    contract: "svml.media-sound-spec@1", id: "exit-sound", trigger: { kind: "exit" }, gain: 0.25,
+    id: "exit-sound", trigger: { kind: "exit" }, gain: 0.25,
   }));
   const program = finalizeMediaTrack(appendProgramMediaItem(createMediaTrackSet(), header, space, canvas, layers, frame, itemSpec({
     sourceAudio: { fromLayer: "video", gain: 0.75 },
@@ -412,10 +412,10 @@ test("still and animated typed Surfaces use the same layer law without browser f
     timing: { kind: "frames", frameRate: { numerator: 30, denominator: 1 }, frameCount: 30 },
   };
   let layers = appendSurfaceMediaLayer(createMediaLayerSet(), still, fit, sealMediaSampleLayerSpec({
-    contract: "svml.media-sample-layer-spec@1", id: "still", appearance,
+    id: "still", appearance,
   }));
   layers = appendSurfaceMediaLayer(layers, animated, fit, sealMediaSampleLayerSpec({
-    contract: "svml.media-sample-layer-spec@1", id: "animated", occupancy: { mode: "loop", align: "start" }, appearance,
+    id: "animated", occupancy: { mode: "loop", align: "start" }, appearance,
   }));
   const elements = projectMediaVisualTrack(space, finalizeMediaTrack(appendProgramMediaItem(
     createMediaTrackSet(), header, space, canvas, layers, frame, itemSpec(), createMediaSoundSet(),
@@ -425,7 +425,7 @@ test("still and animated typed Surfaces use the same layer law without browser f
   assert.equal(moving?.kind, "surface");
   assert.ok(moving?.kind === "surface" && moving.sampling !== undefined);
   const defaulted = appendSurfaceMediaLayer(createMediaLayerSet(), animated, fit, sealMediaSampleLayerSpec({
-    contract: "svml.media-sample-layer-spec@1", id: "defaulted", appearance,
+    id: "defaulted", appearance,
   }));
   assert.deepEqual(defaulted.layers[0]?.kind === "sample" ? defaulted.layers[0].occupancy : undefined,
     { mode: "once", align: "start" });
@@ -587,7 +587,7 @@ test("every documented Media frame and fit remains one ordinary Item instead of 
     const layers = appendStillMediaLayer(createMediaLayerSet(), source,
       { widthPx: index % 3 === 0 ? 400 : index % 3 === 1 ? 1200 : 800,
         heightPx: index % 3 === 0 ? 1200 : index % 3 === 1 ? 400 : 800 },
-      localFit, sealMediaSampleLayerSpec({ contract: "svml.media-sample-layer-spec@1", id: `sample-${index}`, appearance }));
+      localFit, sealMediaSampleLayerSpec({ id: `sample-${index}`, appearance }));
     set = appendProgramMediaItem(set, header, space, canvas, layers, frames[index % frames.length]!, itemSpec({
       id: `fit-${sizing}`, stackingOrder: 100 + index,
       presentation: { clip: { kind: "none" }, padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 }, shadows: [] },
@@ -607,17 +607,17 @@ test("transparent, Paint, self-blur and alternate-source backing are only ordere
   const alternate: BlobRef = { kind: "blob", digest: digestOf("media-track:alternate"), size: 2_048, mediaType: "image/webp" };
   let layers = createMediaLayerSet();
   layers = appendMediaPaintLayer(layers, sealMediaPaintLayerSpec({
-    contract: "svml.media-paint-layer-spec@1", id: "solid", paint: { kind: "solid", color: "#101018" }, opacity: 1,
+    id: "solid", paint: { kind: "solid", color: "#101018" }, opacity: 1,
   }));
   layers = appendStillMediaLayer(layers, source, extent, { ...fit, sizing: "cover" }, sealMediaSampleLayerSpec({
-    contract: "svml.media-sample-layer-spec@1", id: "self-blur", appearance: {
+    id: "self-blur", appearance: {
       opacity: 1, filter: { blurPx: 32, brightness: 0.7, contrast: 1.1, saturation: 0.8 },
     },
   }));
   layers = appendStillMediaLayer(layers, alternate, { ...extent, widthPx: 1200, heightPx: 600 }, { ...fit, sizing: "cover" },
-    sealMediaSampleLayerSpec({ contract: "svml.media-sample-layer-spec@1", id: "alternate", appearance }));
+    sealMediaSampleLayerSpec({ id: "alternate", appearance }));
   layers = appendStillMediaLayer(layers, source, extent, fit,
-    sealMediaSampleLayerSpec({ contract: "svml.media-sample-layer-spec@1", id: "foreground", appearance }));
+    sealMediaSampleLayerSpec({ id: "foreground", appearance }));
   const track = projectMediaVisualTrack(space, finalizeMediaTrack(appendProgramMediaItem(
     createMediaTrackSet(), header, space, canvas, layers, frame, itemSpec(), createMediaSoundSet(),
   ), header, space));
@@ -631,7 +631,7 @@ test("transparent, Paint, self-blur and alternate-source backing are only ordere
   const transparent = projectMediaVisualTrack(space, finalizeMediaTrack(appendProgramMediaItem(
     createMediaTrackSet(), header, space, canvas,
     appendStillMediaLayer(createMediaLayerSet(), source, extent, fit,
-      sealMediaSampleLayerSpec({ contract: "svml.media-sample-layer-spec@1", id: "only", appearance })),
+      sealMediaSampleLayerSpec({ id: "only", appearance })),
     frame, itemSpec(), createMediaSoundSet(),
   ), header, space));
   assert.equal(transparent.presents[0]!.elements.some((element) =>
@@ -810,7 +810,7 @@ test("Sequence handoffs accept still, timed and alpha Surface members through on
     width: 200, height: 300, colorSpace: "srgb", alphaMode: "straight", timing: { kind: "still" },
   };
   const surfaceLayers = () => appendSurfaceMediaLayer(createMediaLayerSet(), alphaSurface, fit, sealMediaSampleLayerSpec({
-    contract: "svml.media-sample-layer-spec@1", id: "surface", appearance,
+    id: "surface", appearance,
   }));
   for (const pair of [
     [stillLayers(), stillLayers()],
@@ -819,10 +819,10 @@ test("Sequence handoffs accept still, timed and alpha Surface members through on
     [surfaceLayers(), stillLayers()],
   ] as const) {
     let members = createMediaSequenceMemberSet();
-    members = appendMediaSequenceMember(members, pair[0], sealMediaSequenceMemberSpec({ contract: "svml.media-sequence-member-spec@1", id: "a" }), 0);
-    members = appendMediaSequenceMember(members, pair[1], sealMediaSequenceMemberSpec({ contract: "svml.media-sequence-member-spec@1", id: "b" }), 60);
+    members = appendMediaSequenceMember(members, pair[0], sealMediaSequenceMemberSpec({ id: "a" }), 0);
+    members = appendMediaSequenceMember(members, pair[1], sealMediaSequenceMemberSpec({ id: "b" }), 60);
     const spec = sequenceSpec({ motion: { sustain: [] }, handoffs: [sealMediaHandoffSpec({
-      contract: "svml.media-handoff-spec@1", id: "a-b", fromMemberId: "a", toMemberId: "b",
+      id: "a-b", fromMemberId: "a", toMemberId: "b",
       operator: "crossfade", durationFrames: 10, boundaryRatio: 0.5, audio: "cut",
     })] });
     const program = finalizeMediaTrack(appendMediaSequence(createMediaTrackSet(), header, space, canvas,
@@ -861,7 +861,7 @@ test("every Sequence handoff operator and boundary ratio lowers without changing
     for (const boundaryRatio of [0, 0.5, 1]) {
       const durationFrames = operator === "cut" ? 0 : 20;
       const handoff = sealMediaHandoffSpec({
-        contract: "svml.media-handoff-spec@1",
+
         id: `${operator}-${boundaryRatio}`,
         fromMemberId: "member-1",
         toMemberId: "member-2",
@@ -889,7 +889,7 @@ test("every Sequence handoff operator and boundary ratio lowers without changing
     const spec = sequenceSpec({
       motion: { sustain: [] },
       handoffs: [sealMediaHandoffSpec({
-        contract: "svml.media-handoff-spec@1",
+
         id: `duration-${durationFrames}`,
         fromMemberId: "member-1",
         toMemberId: "member-2",
@@ -922,14 +922,14 @@ test("Sequence fails atomically on malformed order, topology, envelope and three
   assert.throws(() => appendMediaSequence(
     createMediaTrackSet(), header, space, canvas, sequenceMembers([0, 40, 70]), frame,
     sequenceSpec({ handoffs: [
-      sealMediaHandoffSpec({ contract: "svml.media-handoff-spec@1", id: "wide-one", fromMemberId: "member-1", toMemberId: "member-2", operator: "crossfade", durationFrames: 40, boundaryRatio: 0.5, audio: "cut" }),
-      sealMediaHandoffSpec({ contract: "svml.media-handoff-spec@1", id: "wide-two", fromMemberId: "member-2", toMemberId: "member-3", operator: "crossfade", durationFrames: 40, boundaryRatio: 0.5, audio: "cut" }),
+      sealMediaHandoffSpec({ id: "wide-one", fromMemberId: "member-1", toMemberId: "member-2", operator: "crossfade", durationFrames: 40, boundaryRatio: 0.5, audio: "cut" }),
+      sealMediaHandoffSpec({ id: "wide-two", fromMemberId: "member-2", toMemberId: "member-3", operator: "crossfade", durationFrames: 40, boundaryRatio: 0.5, audio: "cut" }),
     ] }), createMediaSoundSet(), 120,
   ), /overlapping Handoffs/u);
   assert.throws(() => appendMediaSequence(
     createMediaTrackSet(), header, space, canvas, sequenceMembers([0, 20]), frame,
     sequenceSpec({ handoffs: [
-      sealMediaHandoffSpec({ contract: "svml.media-handoff-spec@1", id: "outside", fromMemberId: "member-1", toMemberId: "member-2", operator: "wipe", durationFrames: 60, boundaryRatio: 1, direction: "left", audio: "cut" }),
+      sealMediaHandoffSpec({ id: "outside", fromMemberId: "member-1", toMemberId: "member-2", operator: "wipe", durationFrames: 60, boundaryRatio: 1, direction: "left", audio: "cut" }),
     ] }), createMediaSoundSet(), 120,
   ), /envelope/u);
 });

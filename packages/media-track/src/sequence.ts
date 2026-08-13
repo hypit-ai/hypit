@@ -51,7 +51,6 @@ function finite(value: number, label: string): void {
 }
 
 export function assertMediaSequenceMemberSpec(value: MediaSequenceMemberSpec): void {
-  assert(value.contract === "svml.media-sequence-member-spec@1", "Unsupported MediaSequenceMemberSpec contract.");
   assertMediaIdentity(value.id, "MediaSequenceMemberSpec.id");
   if (value.sourceAudio !== undefined) {
     assertMediaIdentity(value.sourceAudio.fromLayer, "MediaSequenceMemberSpec.sourceAudio.fromLayer");
@@ -67,11 +66,11 @@ export function sealMediaSequenceMemberSpec(value: MediaSequenceMemberSpec): Med
 }
 
 export function createMediaSequenceMemberSet(): MediaSequenceMemberSet {
-  return { contract: "svml.media-sequence-member-set@1", members: [] };
+  return { members: [] };
 }
 
 export function assertMediaSequenceMemberSet(value: MediaSequenceMemberSet): void {
-  assert(value.contract === "svml.media-sequence-member-set@1" && Array.isArray(value.members),
+  assert(Array.isArray(value.members),
     "MediaSequenceMemberSet is invalid.");
   const ids = new Set<string>();
   for (const member of value.members) {
@@ -80,7 +79,7 @@ export function assertMediaSequenceMemberSet(value: MediaSequenceMemberSet): voi
     ids.add(member.id);
     assert(Number.isSafeInteger(member.activationFrame) && member.activationFrame >= 0,
       `Media Sequence member ${member.id} activation is invalid.`);
-    assertMediaLayerSet({ contract: "svml.media-layer-set@1", layers: member.layers });
+    assertMediaLayerSet({ layers: member.layers });
   }
 }
 
@@ -103,7 +102,7 @@ export function appendMediaSequenceMember(
       `Media Sequence member ${spec.id} source-audio layer is absent or silent.`);
   }
   return canonicalize({
-    contract: "svml.media-sequence-member-set@1",
+
     members: [...set.members, {
       id: spec.id,
       activationFrame,
@@ -151,7 +150,6 @@ export function appendMediaSequenceSelectionMember(
 }
 
 export function assertMediaHandoffSpec(value: MediaHandoffSpec): void {
-  assert(value.contract === "svml.media-handoff-spec@1", "Unsupported MediaHandoffSpec contract.");
   assertMediaIdentity(value.id, "MediaHandoffSpec.id");
   assertMediaIdentity(value.fromMemberId, "MediaHandoffSpec.fromMemberId");
   assertMediaIdentity(value.toMemberId, "MediaHandoffSpec.toMemberId");
@@ -178,7 +176,6 @@ export function sealMediaHandoffSpec(value: MediaHandoffSpec): MediaHandoffSpec 
 }
 
 export function assertMediaSequenceSpec(value: MediaSequenceSpec): void {
-  assert(value.contract === "svml.media-sequence-spec@1", "Unsupported MediaSequenceSpec contract.");
   assertMediaIdentity(value.id, "MediaSequenceSpec.id");
   assertMediaFramePresentation(value.presentation, "MediaSequenceSpec.presentation");
   assert(Number.isSafeInteger(value.stackingOrder), "MediaSequenceSpec.stackingOrder must be an integer.");

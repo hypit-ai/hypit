@@ -44,7 +44,7 @@ export const decodeImageComposeSurface: StructuredSurfaceHandler = ({ element, r
   const records = [{
     id: optionsId, type: imageComposeTypes.options,
     value: { kind: "inline" as const, value: sealImageComposeOptions({
-      contract: "svml.image-compose-options@1", background: text(element, "background", "#00000000"),
+      background: text(element, "background", "#00000000"),
     }) as unknown as CanonicalValue }, range: element.range,
   }];
   const inputs: Record<string, typeof canvas.ref> = { canvas: canvas.ref, options: { kind: "record", id: optionsId } };
@@ -64,7 +64,7 @@ export const decodeImageComposeSurface: StructuredSurfaceHandler = ({ element, r
     records.push({
       id: specId, type: imageComposeTypes.layerSpec,
       value: { kind: "inline", value: sealImageComposeLayerSpec({
-        contract: "svml.image-compose-layer-spec@1",
+
         fit: text(child, "fit", "contain") as "contain",
         interpolation: text(child, "interpolation", "lanczos") as "lanczos",
         opacity: number(child, "opacity", 1),
