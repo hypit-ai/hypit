@@ -29,7 +29,7 @@ export function computeModuleDigest(manifest: ModuleManifest): Digest {
   return digestOf(manifest);
 }
 
-export function computeClosureDigest(modules: readonly ResolvedModule[]): Digest {
+function computeClosureDigest(modules: readonly ResolvedModule[]): Digest {
   return digestOf({
     format: "svml.closure@1",
     modules: [...modules]

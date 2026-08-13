@@ -206,7 +206,7 @@ export function operationCancellationRequestId(operation: Digest, requestedAt: n
   return digestOf({ format: "svml.operation-cancellation-request@1", operation, requestedAt });
 }
 
-export function verifyOperationCancellationControl(
+function verifyOperationCancellationControl(
   operation: Digest,
   control: OperationCancellationControl,
 ): void {

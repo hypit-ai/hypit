@@ -1,7 +1,4 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import test from "node:test";
 
 import { digestOf, recordDigest, reduce } from "@narratage/core";
@@ -10,7 +7,6 @@ import {
   MemoryArtifactStore,
   NodeDriver,
   EndpointRegistry,
-  loadResolvedClosure,
   parseBuildState,
   serializeBuildState,
 } from "@narratage/driver-node";
@@ -20,7 +16,6 @@ import {
   capabilities,
   createGreetingBuild,
   implementationDigests,
-  manifest,
   producers as greetingProducers,
   types,
 } from "../../core/test/greeting-fixture.js";
@@ -256,20 +251,6 @@ test("MemoryArtifactStore is content addressed and returns defensive copies", as
   assert.deepEqual(loaded, new Uint8Array([1, 2, 3]));
   if (loaded !== undefined) loaded[0] = 8;
   assert.deepEqual(await store.get(first.digest), new Uint8Array([1, 2, 3]));
-});
-
-test("Driver reads static manifests without executing package code", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-driver-"));
-  const path = join(directory, "svml.module.json");
-  try {
-    await writeFile(path, JSON.stringify(manifest), "utf8");
-    const closure = await loadResolvedClosure([path]);
-    assert.equal(closure.modules.length, 1);
-    assert.equal(closure.modules[0]?.manifest.name, "example.greeting");
-    assert.equal(closure.modules[0]?.manifest.producers[0]?.name, greetingProducers.makePrompt.name);
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
 });
 
 test("Core still owns scheduling when Driver has every implementation", async () => {

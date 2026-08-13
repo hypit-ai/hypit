@@ -50,7 +50,7 @@ function decode(bytes: Uint8Array): string {
   return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
 }
 
-export class AwsSdkLambdaInvocationClient implements LambdaInvocationClient {
+class AwsSdkLambdaInvocationClient implements LambdaInvocationClient {
   readonly #client: LambdaClient;
 
   constructor(config: LambdaClientConfig = {}) {

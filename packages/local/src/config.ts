@@ -205,6 +205,27 @@ export type RuntimeConfigPackageSelection = {
   readonly runtimeSelection: NodePackageSelectionRequest;
 };
 
+type OpenedRuntimeConfig = {
+  readonly absolute: string;
+  readonly document: RuntimeConfigDocument;
+  readonly root: string;
+  readonly packageRoot: string;
+};
+
+async function openRuntimeConfig(
+  path: string,
+  packageRootHint?: string,
+): Promise<OpenedRuntimeConfig> {
+  const absolute = resolve(path);
+  const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
+  return {
+    absolute,
+    document,
+    root: resolve(dirname(absolute), document.root ?? "."),
+    packageRoot: resolve(dirname(absolute), document.packageRoot ?? packageRootHint ?? document.root ?? "."),
+  };
+}
+
 function runtimePackageSelection(document: RuntimeConfigDocument): NodePackageSelectionRequest {
   return {
     selected: [],
@@ -226,10 +247,7 @@ export async function runtimeConfigPackageSelection(
   path: string,
   options: LoadRuntimeConfigOptions = {},
 ): Promise<RuntimeConfigPackageSelection> {
-  const absolute = resolve(path);
-  const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
-  const root = resolve(dirname(absolute), document.root ?? ".");
-  const packageRoot = resolve(dirname(absolute), document.packageRoot ?? options.packageRoot ?? document.root ?? ".");
+  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   return {
     root,
     packageRoot,
@@ -245,9 +263,7 @@ export async function runtimeConfigPackageSelection(
 
 /** Deployment revision understood only by this Runtime Profile implementation. */
 export async function runtimeConfigRevision(path: string): Promise<string> {
-  const absolute = resolve(path);
-  const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
-  const root = resolve(dirname(absolute), document.root ?? ".");
+  const { document, root } = await openRuntimeConfig(path);
   const locks: Record<string, string> = {};
   for (const [name, value] of [
     ["packageLock", document.packageLock],
@@ -289,7 +305,7 @@ async function installLockedRuntimeAdapters(
 }
 
 /** One Endpoint's declaration of an external program its Provider drives. */
-export type DeclaredExternalService = {
+type DeclaredExternalService = {
   readonly instance: string;
   readonly service: RuntimeExternalService;
 };
@@ -310,16 +326,13 @@ export async function declaredExternalServices(
   path: string,
   options: LoadRuntimeConfigOptions & { readonly capabilities?: readonly CapabilityRef[] } = {},
 ): Promise<{ readonly root: string; readonly services: readonly DeclaredExternalService[] }> {
-  const absolute = resolve(path);
-  const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
-  const root = resolve(dirname(absolute), document.root ?? ".");
+  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   // A Build with no demanded external capability has no program to discover.
   // Keep validating the Profile document and its root, but do not load the
   // privileged Runtime package closure merely to prove that the empty set is
   // empty. `services up/status/down` omit this filter and still inspect every
   // declared service.
   if (options.capabilities?.length === 0) return { root, services: [] };
-  const packageRoot = resolve(dirname(absolute), document.packageRoot ?? options.packageRoot ?? document.root ?? ".");
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot, runtimePackageSelection(document));
   const services: DeclaredExternalService[] = [];
@@ -357,10 +370,7 @@ export async function doctorRuntimeConfig(
   path: string,
   options: LoadRuntimeConfigOptions & { readonly capabilities?: readonly CapabilityRef[] } = {},
 ): Promise<RuntimeConfigDoctorResult> {
-  const absolute = resolve(path);
-  const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
-  const root = resolve(dirname(absolute), document.root ?? ".");
-  const packageRoot = resolve(dirname(absolute), document.packageRoot ?? options.packageRoot ?? document.root ?? ".");
+  const { absolute, document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   const diagnostics: RuntimeDoctorDiagnostic[] = [];
   const credentialEndpoints: Array<{
     readonly entry: RuntimeConfigEntry;
@@ -558,10 +568,7 @@ export async function createRuntimeFromConfig(
   // Diagnostics and lifecycle discovery must not initialize SQLite, Drivers or Endpoints.
   // Load the executable Runtime assembly only on the command that actually constructs it.
   const { createProjectLocalRuntime } = await import("./runtime.js");
-  const absolute = resolve(path);
-  const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
-  const root = resolve(dirname(absolute), document.root ?? ".");
-  const packageRoot = resolve(dirname(absolute), document.packageRoot ?? options.packageRoot ?? document.root ?? ".");
+  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   if (options.implementationPackages !== undefined) {
     if (document.packageLock === undefined) {
       throw new Error("Runtime Profile has no packageLock for the supplied implementation packages");
@@ -626,10 +633,7 @@ export async function createRuntimeControlFromConfig(
   options: LoadRuntimeConfigOptions = {},
 ): Promise<LocalRuntimeControl> {
   const { createProjectLocalRuntimeControl } = await import("./control.js");
-  const absolute = resolve(path);
-  const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
-  const root = resolve(dirname(absolute), document.root ?? ".");
-  const packageRoot = resolve(dirname(absolute), document.packageRoot ?? options.packageRoot ?? document.root ?? ".");
+  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot, runtimePackageSelection(document));
   const runtimeServices = await Promise.all(document.runtimeServices.map(async (item) => {
@@ -683,10 +687,7 @@ export async function createRuntimeCredentialsFromConfig(
   options: LoadRuntimeConfigOptions = {},
 ): Promise<LocalCredentialControl> {
   const { createLocalCredentialControl } = await import("./credentials.js");
-  const absolute = resolve(path);
-  const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
-  const root = resolve(dirname(absolute), document.root ?? ".");
-  const packageRoot = resolve(dirname(absolute), document.packageRoot ?? options.packageRoot ?? document.root ?? ".");
+  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   const endpointEntry = document.endpoints.find((item) => item.instance === endpointInstance);
   if (endpointEntry === undefined) throw new Error(`Runtime Profile has no Endpoint instance ${endpointInstance}`);
   const registry = options.registry ?? new RuntimeAdapterRegistry();

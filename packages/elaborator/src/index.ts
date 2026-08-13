@@ -49,12 +49,10 @@ export type {
 } from "./source.js";
 export {
   bindAuthorFragment,
-  bindCandidateFragment,
   elaborateGraphFragment,
   exportRunFragment,
   FragmentError,
   mergeFragmentContributions,
-  sameFragmentInstance,
   sealGraphFragment,
   verifyGraphFragment,
 } from "./fragment.js";

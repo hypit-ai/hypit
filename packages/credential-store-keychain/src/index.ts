@@ -1,7 +1,6 @@
 export {
   KeychainCredentialStore,
   createKeychainCredentialStorePackage,
-  keychainAddCommand,
   keychainCredentialStoreImplementationDigest,
   keychainCredentialStoreModuleRef,
 } from "./store.js";

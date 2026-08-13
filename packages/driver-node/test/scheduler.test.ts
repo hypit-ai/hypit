@@ -6,7 +6,6 @@ import {
   NodeDriver,
   parseBuildState,
   EndpointRegistry,
-  endpointCapabilityKey,
   serializeBuildState,
 } from "@narratage/driver-node";
 import type {
@@ -258,7 +257,7 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
       resources: [
         { id: "authority:fixture.account", maxConcurrency: laneLimit },
         {
-          id: `route:fixture.account/${endpointCapabilityKey(capabilities.generation)}`,
+          id: `route:fixture.account/${capabilities.generation.module.name}@${capabilities.generation.module.version}#${capabilities.generation.name}`,
           maxConcurrency: laneLimit,
         },
       ],

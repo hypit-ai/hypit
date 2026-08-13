@@ -164,11 +164,17 @@ export async function resolveRunDocument(
     for (const item of contribution.exports) bindCandidateName(`${declaration.id}.${item.name}`, item.candidate);
   }
 
+  const satisfactionNames = new Map<string, string>();
   const satisfactions = document.satisfactions.map((item) => {
     const candidate = candidateNames.get(item.candidate);
     if (candidate === undefined) throw new Error(`Unknown Run Candidate ${item.candidate}`);
+    const output = logicalOutput(context, item.output);
+    if (satisfactionNames.has(output)) {
+      throw new Error(`Logical Output ${item.output} is satisfied more than once`);
+    }
+    satisfactionNames.set(output, item.candidate);
     return {
-      output: logicalOutput(context, item.output),
+      output,
       candidate,
     } as const;
   });
@@ -186,5 +192,6 @@ export async function resolveRunDocument(
     document,
     graph,
     candidates: Object.fromEntries([...candidateNames.entries()].sort(([left], [right]) => left.localeCompare(right))),
+    satisfactionNames: Object.fromEntries([...satisfactionNames.entries()].sort(([left], [right]) => left.localeCompare(right))),
   };
 }

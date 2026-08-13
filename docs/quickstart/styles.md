@@ -199,7 +199,7 @@ Position remains an explicit graph edge:
 
 ```svml
 <space:Frame id="product-frame" within={vertical}
-  left="8%" top="20%" right="8%" bottom="32%"/>
+  left="8%" top="20%" right="92%" bottom="68%"/>
 <media-track:Item video={product-motion.video}
   during={story.selection.demo} frame={product-frame}
   appearance={studio.media.product} motion={studio.motion.product}/>

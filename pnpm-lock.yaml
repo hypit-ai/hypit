@@ -659,10 +659,6 @@ importers:
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-    devDependencies:
-      '@narratage/credential-store-env':
-        specifier: workspace:*
-        version: link:../credential-store-env
 
   packages/deck-track:
     dependencies:
@@ -1477,17 +1473,6 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-    devDependencies:
-      '@narratage/narrative':
-        specifier: workspace:*
-        version: link:../narrative
-      '@narratage/script':
-        specifier: workspace:*
-        version: link:../script
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
-
   packages/media:
     dependencies:
       '@narratage/artifact':
@@ -2195,11 +2180,6 @@ importers:
       '@narratage/source':
         specifier: workspace:*
         version: link:../source
-    devDependencies:
-      '@narratage/run-markup':
-        specifier: workspace:*
-        version: link:../run-markup
-
   packages/run-markup:
     dependencies:
       '@narratage/markup':
@@ -2211,6 +2191,13 @@ importers:
       '@narratage/run':
         specifier: workspace:*
         version: link:../run
+    devDependencies:
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
 
   packages/runtime:
     dependencies:

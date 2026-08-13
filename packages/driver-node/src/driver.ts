@@ -71,6 +71,24 @@ type Executable =
       readonly registration: EndpointRegistration;
     };
 
+function failureMessage(error: unknown): string {
+  const parts: string[] = [];
+  let cursor: unknown = error;
+  const seen = new Set<unknown>();
+  while (cursor !== undefined && cursor !== null && !seen.has(cursor)) {
+    seen.add(cursor);
+    if (cursor instanceof Error) {
+      const code = "code" in cursor && typeof cursor.code === "string" ? ` [${cursor.code}]` : "";
+      parts.push(`${cursor.message}${code}`);
+      cursor = cursor.cause;
+      continue;
+    }
+    parts.push(String(cursor));
+    break;
+  }
+  return [...new Set(parts)].join("; caused by: ");
+}
+
 export class NodeDriver {
   readonly producers: ProducerRegistry;
   readonly endpoints: EndpointRegistry;
@@ -442,35 +460,57 @@ export class NodeDriver {
     context?: RuntimeExecutionContext,
   ): Promise<RuntimeExecutionResult> {
     if (!("endpointId" in executable)) {
-      const result = (await executable.run()) as ProducerHandlerResult;
-      const producer = resolveProducer(state.program.closure, executable.command.producer);
-      for (const port of producer.outputs) {
-        const value = result.outputs[port.name];
-        if (value === undefined) continue;
-        await validateValue(state.program.closure, port.type, value, this.validators);
+      try {
+        const result = (await executable.run()) as ProducerHandlerResult;
+        const producer = resolveProducer(state.program.closure, executable.command.producer);
+        for (const port of producer.outputs) {
+          const value = result.outputs[port.name];
+          if (value === undefined) continue;
+          await validateValue(state.program.closure, port.type, value, this.validators);
+        }
+        const content = {
+          kind: "producer-completed",
+          command: executable.command.id,
+          outputs: result.outputs,
+          needs: result.needs,
+        } as const;
+        return {
+          status: "completed",
+          event: { ...content, id: `event:${digestOf(content)}` },
+        };
+      } catch (error) {
+        const producer = executable.command.producer;
+        throw new Error(
+          `Producer ${producer.module.name}@${producer.module.version}#${producer.name} failed: ${failureMessage(error)}`,
+          { cause: error },
+        );
       }
-      const content = {
-        kind: "producer-completed",
-        command: executable.command.id,
-        outputs: result.outputs,
-        needs: result.needs,
-      } as const;
-      return {
-        status: "completed",
-        event: { ...content, id: `event:${digestOf(content)}` },
-      };
     }
     if (executable.registration.kind === "recoverable") {
       if (context === undefined) throw new Error("recoverable Endpoint execution requires a stable Build id");
-      return await this.#executeEndpoint(state, executable, context);
+      try {
+        return await this.#executeEndpoint(state, executable, context);
+      } catch (error) {
+        throw new Error(
+          `Endpoint ${executable.endpointId} failed ${executable.command.need.capability.name}: ${failureMessage(error)}`,
+          { cause: error },
+        );
+      }
     }
-    const result = await executable.registration.handler({
-      command: structuredClone(executable.command),
-      need: structuredClone(executable.command.need),
-      artifacts: this.artifacts,
-      credentials: await this.#endpointCredentials(executable.registration),
-    });
-    return { status: "completed", event: await this.#endpointEvent(state, executable, result) };
+    try {
+      const result = await executable.registration.handler({
+        command: structuredClone(executable.command),
+        need: structuredClone(executable.command.need),
+        artifacts: this.artifacts,
+        credentials: await this.#endpointCredentials(executable.registration),
+      });
+      return { status: "completed", event: await this.#endpointEvent(state, executable, result) };
+    } catch (error) {
+      throw new Error(
+        `Endpoint ${executable.endpointId} failed ${executable.command.need.capability.name}: ${failureMessage(error)}`,
+        { cause: error },
+      );
+    }
   }
 
   /** Regenerate Core commands, then classify only what this Host can execute. */

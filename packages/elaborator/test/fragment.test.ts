@@ -18,7 +18,6 @@ import {
   bindAuthorFragment,
   elaborateGraphFragment,
   mergeFragmentContributions,
-  sameFragmentInstance,
   sealGraphFragment,
   verifyGraphFragment,
 } from "@narratage/elaborator";
@@ -204,7 +203,7 @@ test("the same Fragment instance is deterministic while distinct instances never
   const opening = instance(linked, "opening");
   const openingAgain = instance(linked, "opening");
   const closing = instance(linked, "closing");
-  assert.equal(sameFragmentInstance(opening, openingAgain), true);
+  assert.deepEqual(opening, openingAgain);
   assert.notEqual(opening.id, closing.id);
   assert.equal(
     new Set([...opening.operations, ...closing.operations].map((operation) => operation.id)).size,

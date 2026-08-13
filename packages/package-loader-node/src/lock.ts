@@ -465,6 +465,24 @@ export class NodePackageLockStaleError extends Error {
   }
 }
 
+export class NodePackageSelectionMissingError extends Error {
+  readonly code = "PACKAGE_SELECTION_MISSING";
+  readonly subject: string;
+  readonly address: LogicalPackageAddress;
+
+  constructor(subject: string, address: LogicalPackageAddress) {
+    super([
+      `${subject} does not contain a package for the Source language selection:`,
+      `  ${address.abi} ${address.name}`,
+      "Synchronize the project package inventory after changing Source imports:",
+      "  narratage packages sync <run-source> --runtime <profile>",
+    ].join("\n"));
+    this.name = "NodePackageSelectionMissingError";
+    this.subject = subject;
+    this.address = address;
+  }
+}
+
 function artifactDifference(
   installed: readonly LockedPackageArtifact[],
   locked: readonly LockedPackageArtifact[],
@@ -740,10 +758,7 @@ function selectedNodePackageSpecifiers(
   for (const address of logical.values()) {
     const providers = inventory.packages.filter((item) =>
       item.offers.some((offer) => addressKey(offer) === addressKey(address)));
-    assert(providers.length > 0, [
-      `${subject} does not provide this Source language selection:`,
-      `  ${address.abi} ${address.name}`,
-    ].join("\n"));
+    if (providers.length === 0) throw new NodePackageSelectionMissingError(subject, address);
     assert(providers.length === 1, [
       `${subject} ambiguously provides this Source language selection:`,
       `  ${address.abi} ${address.name}`,
@@ -781,11 +796,4 @@ export async function loadNodePackageSelection(
   const inventory = await readNodePackageLock(lockPath);
   const selected = selectedNodePackageSpecifiers(inventory, request, `package inventory ${lockPath}`);
   return await createNodePackageSet(selected, resolve(root), {}, { path: lockPath, lock: inventory });
-}
-
-export async function loadNodePackageContributions(
-  path: string,
-  root = dirname(resolve(path)),
-): Promise<readonly NodePackageContribution[]> {
-  return (await loadNodePackageSet(path, root)).packages.map((item) => item.contribution);
 }

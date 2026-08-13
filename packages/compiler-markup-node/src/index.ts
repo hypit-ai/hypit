@@ -6,7 +6,6 @@ import {
 import { AuthorFrontendRegistry, installAuthorFrontendHostFacets } from "@narratage/elaborator";
 import type { Workspace } from "@narratage/workspace";
 import {
-  assertNodePackageContribution,
   collectNodePackageComponents,
 } from "@narratage/package-loader-node";
 import type { NodePackageContribution } from "@narratage/package-loader-node";
@@ -31,15 +30,15 @@ export function createMarkupNodeCompiler(
   const surfaces = new MarkupSurfaceRegistry();
   const frontends = new AuthorFrontendRegistry();
   const validators = new TypeValidatorRegistry();
+  const components = collectNodePackageComponents(packages);
 
   for (const item of packages) {
-    assertNodePackageContribution(item);
     for (const module of item.modules ?? []) modules.register(module);
     installMarkupSurfaceHostFacets(item.hostFacets ?? [], surfaces);
     installAuthorFrontendHostFacets(item.hostFacets ?? [], frontends);
   }
 
-  for (const component of collectNodePackageComponents(packages)) {
+  for (const component of components) {
     registerTypeValidatorFacets(validators, component.validators ?? []);
   }
 
