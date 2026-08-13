@@ -52,7 +52,9 @@ import {
   renderTierBoard,
   renderTopThree,
   renderTypewriterList,
+  rankingComponent,
   rankingManifest,
+  rankingMarkupSurfaces,
   rankingProducers,
   rankingTypes,
   sealRankingHeader,
@@ -419,6 +421,29 @@ test("all four author Surfaces preserve explicit semantic, spatial, font, image 
   assert.ok(column.fragments[0]!.operations.some((operation) => operation.producer.name === rankingProducers.materializeTextItem.name));
   assert(audio !== undefined);
   assert.deepEqual(Object.keys(column.components[0]!.outputs).sort(), ["audio", "program", "schedule", "visual"]);
+});
+
+test("Ranking Surfaces declare their sealed Records and icon Producers consume Blob values", async () => {
+  for (const name of ["tier", "column", "top-three", "typewriter"]) {
+    const surface = rankingMarkupSurfaces.find((item) => item.name === name);
+    assert.ok(surface?.outputs.some((type) => type.name === rankingTypes.header.name), `${name} header output`);
+    assert.ok(surface?.outputs.some((type) => type.name === rankingTypes.itemSpec.name), `${name} item output`);
+  }
+
+  const producer = rankingComponent.producers.find((item) =>
+    item.producer.name === rankingProducers.appendTierItem.name);
+  assert.ok(producer !== undefined);
+  const icon = image("producer");
+  const result = await producer.handler({
+    inputs: {
+      set: { value: { kind: "inline", value: createTierBoardItemSet() } },
+      spec: { value: { kind: "inline", value: tierSpec("one", "s") } },
+      icon: { value: icon },
+    },
+  } as never);
+  const set = (result.outputs as { readonly set: { readonly kind: "inline"; readonly value: unknown } }).set;
+  assert.equal(set.kind, "inline");
+  assert.deepEqual((set.value as { readonly items: readonly { readonly icon: unknown }[] }).items[0]?.icon, icon);
 });
 
 test("Ranking author Surfaces fail closed on impossible image and sound combinations", async () => {
