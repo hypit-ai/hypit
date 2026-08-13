@@ -116,8 +116,8 @@ function sampleTake(label = "generated"): SpeechBasis {
     },
     segments: [{
       segmentId: "opening",
-      startSec: 0,
-      endSec: durationSec,
+      startFrame: 0,
+      endFrameExclusive: durationSec * 30,
     }],
   });
 }

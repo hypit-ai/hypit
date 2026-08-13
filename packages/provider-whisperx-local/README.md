@@ -7,6 +7,10 @@ The Provider accepts only canonical 16 kHz mono PCM s16 WAV bytes produced by th
 projection Need. It validates those bytes and stages them unchanged. WhisperX is therefore never
 allowed to hide a second ffmpeg conversion or change the speech-master clock.
 
+WhisperX's wire response uses floating-point seconds. This adapter converts those boundaries once
+to integer positions in the 16 kHz evidence-audio sample domain. It preserves WhisperX acoustic
+passages but never receives or assigns authored Script Segment identities.
+
 ```ts
 createLocalWhisperXProvider({
   baseUrl: "http://127.0.0.1:8765",

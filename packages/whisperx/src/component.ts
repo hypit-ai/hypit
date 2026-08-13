@@ -1,5 +1,5 @@
 import type { ComponentPackage } from "@narratage/component-kit";
-import type { SpeechAudioBasis, SpeechEvidenceAudio } from "@narratage/speech";
+import type { SpeechEvidenceAudio } from "@narratage/speech";
 import type { CanonicalValue, StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 
@@ -21,10 +21,9 @@ export const whisperXComponent = {
       implementationDigest: whisperXImplementationDigests.request,
       handler: ({ inputs }) => {
         const evidence = inline(inputs.evidence!.value, "SpeechEvidenceAudio") as unknown as SpeechEvidenceAudio;
-        const audio = inline(inputs.audio!.value, "SpeechAudioBasis") as unknown as SpeechAudioBasis;
         return {
           outputs: {},
-          needs: { alignment: canonicalize(whisperXRequestForEvidenceAudio(evidence, audio)) },
+          needs: { alignment: canonicalize(whisperXRequestForEvidenceAudio(evidence)) },
         };
       },
     },

@@ -27,7 +27,7 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
     {
       id: "request-whisperx",
       producer: whisperXProducers.request,
-      inputs: { evidence: operation("prepare-evidence-audio"), audio: input("audio") },
+      inputs: { evidence: operation("prepare-evidence-audio") },
       result: { kind: "need", name: "alignment" },
     },
     {

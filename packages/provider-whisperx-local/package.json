@@ -15,7 +15,6 @@
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime-adapter": "workspace:*",
-    "@narratage/speech": "workspace:*",
     "@narratage/speech-evidence": "workspace:*",
     "@narratage/whisperx": "workspace:*"
   },
