@@ -27,7 +27,3 @@ export function sameType(left: TypeRef, right: TypeRef): boolean {
 export function sameCapability(left: CapabilityRef, right: CapabilityRef): boolean {
   return sameModule(left.module, right.module) && left.name === right.name;
 }
-
-export function sameProducer(left: ProducerRef, right: ProducerRef): boolean {
-  return sameModule(left.module, right.module) && left.name === right.name;
-}

@@ -36,7 +36,6 @@ function primary(
 
 /** Host-side semantic refinements for the shared generated-media contracts. */
 export const generationComponent = {
-  name: "@narratage/generation",
   producers: [
     {
       producer: generationProducers.primaryAudio,

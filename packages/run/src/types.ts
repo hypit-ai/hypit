@@ -11,17 +11,12 @@ import type {
   StoredValue,
   TypeRef,
 } from "@narratage/protocol";
-import type { SourceHeader } from "@narratage/source";
+import type { SourceHeader, SourceUnit } from "@narratage/source";
 
-export type RunSourceUnit = {
-  readonly id: string;
-  readonly name: string;
-  readonly text: string;
-};
+export type RunSourceUnit = SourceUnit;
 
 export type RunFrontendSourceUnit = RunSourceUnit & {
   readonly header: SourceHeader;
-  readonly sourceDigest: Digest;
 };
 
 export type RunAuthorSourceRequest = {
@@ -45,10 +40,11 @@ export type RunProvidedValue = {
   readonly from: string;
 };
 
-/** Ordinary source file admitted as one content-addressed BlobArtifact Candidate. */
+/** Ordinary source file admitted as one content-addressed Candidate of an explicitly named blob Type. */
 export type RunProvidedFile = {
   readonly kind: "file";
   readonly id: string;
+  readonly type: TypeRef;
   readonly from: string;
   readonly mediaType: string;
 };
@@ -116,23 +112,14 @@ export interface RunFrontendRegistryLike {
   resolve(id: string): RunFrontend | undefined;
 }
 
-export type RunSourceUnitIdentity = {
-  readonly format: "svml.run-source-unit@1";
+/** One self-contained Run Source identity. Run Sources do not recursively import other Run Sources. */
+export type RunSourceClosure = {
+  readonly format: "svml.run-source-closure@1";
   readonly id: Digest;
-  readonly frontendRequest: string;
   readonly frontend: string;
   readonly frontendDigest: Digest;
   readonly sourceDigest: Digest;
   readonly semanticDigest: Digest;
-  readonly authorSource: string;
-  readonly imports: readonly RunImport[];
-};
-
-export type RunSourceClosure = {
-  readonly format: "svml.run-source-closure@1";
-  readonly id: Digest;
-  readonly entry: Digest;
-  readonly units: readonly RunSourceUnitIdentity[];
 };
 
 export type RunFragmentPackage = {
@@ -148,8 +135,6 @@ export interface RunFragmentRegistryLike {
 export type RunGraph = {
   readonly format: "svml.run-graph@1";
   readonly id: Digest;
-  readonly authorGraph: Digest;
-  readonly sourceClosure: Digest;
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
   readonly satisfactions: readonly Satisfaction[];

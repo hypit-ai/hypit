@@ -59,7 +59,6 @@ export type FrameSpan = {
 
 export type ProjectedOccurrence = {
   readonly id: string;
-  readonly sourceOccurrenceId: string;
   readonly span: FrameSpan;
 };
 
@@ -70,16 +69,9 @@ export type TriggerPoint = {
   readonly frame: number;
 };
 
-export type TriggeredStage = {
-  readonly id: string;
-  readonly triggerId: string;
-  readonly span: FrameSpan;
-};
-
 export type TriggeredSchedule = {
   readonly outer: FrameSpan;
   readonly terminalFrame: number;
-  readonly cumulative: readonly TriggeredStage[];
-  readonly exclusive: readonly TriggeredStage[];
-  readonly settledSuffix?: FrameSpan;
+  readonly cumulative: readonly FrameSpan[];
+  readonly exclusive: readonly FrameSpan[];
 };

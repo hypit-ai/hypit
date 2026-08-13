@@ -59,7 +59,7 @@ export type ScreenOverlayItemSpec = {
 };
 export type ScreenOverlayHeader = { readonly contract: "svml.screen-overlay-header@1"; readonly id: string };
 export type ScreenOverlayItemProgram = {
-  readonly id: string; readonly sourceOccurrenceId: string; readonly span: FrameSpan;
+  readonly id: string; readonly span: FrameSpan;
   readonly content: ScreenOverlayComponent;
   readonly stacking: { readonly order: number; readonly tieBreak: string };
 };

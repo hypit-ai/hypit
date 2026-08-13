@@ -20,10 +20,10 @@ export type {
   ProducerRegistrar,
 } from "@narratage/component-kit";
 
-export type DriverJournalEntry = {
+export type DriverExecutionOutcome = {
   readonly command: string;
   readonly kind: CoreCommand["kind"];
-  readonly status: "completed" | "pending" | "blocked" | "error";
+  readonly status: "completed" | "pending" | "error";
   readonly event?: string;
   readonly operation?: Digest;
   readonly wakeAt?: number;
@@ -45,7 +45,7 @@ export type BlockedCommand = {
 export type DriverRunResult = {
   readonly status: "complete" | "paused" | "failed";
   readonly state: BuildState;
-  readonly journal: readonly DriverJournalEntry[];
+  readonly outcomes: readonly DriverExecutionOutcome[];
   readonly blocked: readonly BlockedCommand[];
 };
 

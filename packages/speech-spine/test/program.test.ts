@@ -65,11 +65,7 @@ test("audio Takes lengthen the speech program without inventing a visual clip", 
   const audio: TimelineAudio = {
     contract: "svml.timeline-audio@1",
     artifact: { kind: "blob", digest: digestOf("speech:mix"), size: 1, mediaType: "audio/wav" },
-    codec: "pcm_s16le",
-    sampleRate: 48_000,
-    channels: 2,
     sampleFrames: 96_000,
-    loudness: "planned",
   };
   const basis = assembleSpeechBasis(program, set, audio);
   assert.deepEqual(basis.segments.map((item) => item.segmentId), ["voiceover", "answer"]);
@@ -77,11 +73,8 @@ test("audio Takes lengthen the speech program without inventing a visual clip", 
   assert.equal(basis.visualTrack.clips.length, 1);
   assert.deepEqual(basis.visualTrack.clips[0], {
     segmentId: "answer",
-    span: { startFrame: 30, endFrameExclusive: 60 },
     artifact: synchronized("presenter", true).visual!.artifact,
     extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
-    frameRate: { numerator: 30, denominator: 1 },
-    frameCount: 30,
     frame,
     fit,
     stackingOrder: 30,

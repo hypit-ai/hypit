@@ -15,14 +15,12 @@ function identity(overrides: { readonly endpoint?: string; readonly runtimeClosu
     endpoint: overrides.endpoint ?? "hyperframes.local",
     authority: "hyperframes.local",
     route: "fixture.render",
-    implementationDigest: digestOf("hyperframes.local/implementation@1"),
     runtimeClosure: (overrides.runtimeClosure ?? digestOf("runtime-closure:local")) as never,
-    requestDigest: digestOf("render-request"),
     attempt: 1,
   });
 }
 
-test("Operation identity locks Build, Command, Endpoint, implementation and Runtime Closure", () => {
+test("Operation identity locks Build, Command, Endpoint and Runtime Closure", () => {
   const first = identity();
   assert.equal(first.id, identity().id);
   assert.notEqual(first.id, identity({ endpoint: "hyperframes.hosted" }).id);
@@ -70,7 +68,6 @@ test("pending checkpoints and completion advance by CAS without entering BuildSt
     status: "completed",
     completion: {
       value: { kind: "inline", value: { artifact: "video.mp4" } },
-      metadata: { remoteJob: "job-123" },
     },
   });
   assert.equal(completed.status, "stored");

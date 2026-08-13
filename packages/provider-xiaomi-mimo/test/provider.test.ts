@@ -94,7 +94,7 @@ test("the official Provider maps all three model contracts without owning them",
         assert.equal(String(input), "https://api.xiaomimimo.com/v1/chat/completions");
         assert.equal(new Headers(init?.headers).get("api-key"), "test-key");
         const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-        assert.equal(body.model, item.request.model);
+        assert.equal(body.model, item.endpoint.capability.name);
         assert.equal((body.messages as Array<Record<string, unknown>>).at(-1)?.role, "assistant");
         assert.equal((body.messages as Array<Record<string, unknown>>).at(-1)?.content, "Keep every authored word.");
         assert.equal("optimize_text_preview" in (body.audio as Record<string, unknown>), false);

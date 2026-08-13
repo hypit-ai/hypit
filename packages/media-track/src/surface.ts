@@ -351,7 +351,7 @@ function appendSounds(operations: FragmentOperation[], prefix: string, sounds: r
   return current;
 }
 
-function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: string; readonly type: TypeRef }[], items: readonly FragmentItem[], sequences: readonly FragmentSequence[], name: string, audio: boolean) {
+function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: string; readonly type: TypeRef }[], items: readonly FragmentItem[], sequences: readonly FragmentSequence[], audio: boolean) {
   const operations: FragmentOperation[] = [{ id: "track:set:empty", producer: mediaTrackProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } }];
   let set = "track:set:empty";
   for (const item of items) {
@@ -430,7 +430,6 @@ function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: s
   );
   if (audio) operations.push({ id: "track:audio", producer: mediaTrackProducers.projectAudio, inputs: { space: input("space"), program: operation("track:finalize") }, result: { kind: "output", name: "track" } });
   return sealGraphFragment({
-    name,
     inputs: inputTypes,
     operations,
     exports: [
@@ -886,7 +885,7 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
   } else if (element.attributes.map !== undefined) {
     throw new Error(`${element.name}.map is unused because no child consumes semantic timing.`);
   }
-  const fragment = createMediaTrackSurfaceFragment(state.inputTypes, items, sequences, `@narratage/media-track/surface/${trackId}@1`, hasAudio);
+  const fragment = createMediaTrackSurfaceFragment(state.inputTypes, items, sequences, hasAudio);
   return {
     records: state.records,
     components: [{ id: trackId, fragment: fragment.id, inputs: state.inputs,

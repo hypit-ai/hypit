@@ -1,7 +1,7 @@
 export { captionFineComponent } from "./component.js";
 export { fineCaptionTrackFragment } from "./fragment.js";
 export {
-  captionFineManifest,
+  captionFineManifest, captionFineMarkupSurfaces,
   captionFineModuleRef,
   captionFineProducers,
   captionFineStyleSurfaceImplementationDigest,

@@ -20,7 +20,6 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
  */
 export function createSeedanceGenerationFragment(endpoint: ExactModelEndpoint) {
   return sealGraphFragment({
-    name: `@narratage/seedance/${endpoint.key}-primary-video@1`,
     inputs: [{ name: "request", type: endpoint.requestType }],
     operations: [
       {
@@ -123,7 +122,6 @@ export function createSeedanceDurationGenerationFragment(
     ...mediaInputs.map((item) => `${item.name}=${item.port}:media`),
   ].join(",") || "no-dynamic-inputs";
   return sealGraphFragment({
-    name: `@narratage/seedance/${endpoint.key}-duration-assembled-primary-video[${shape}]@1`,
     inputs,
     operations,
     exports: [{

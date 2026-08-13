@@ -3,8 +3,8 @@ import {
   ModulePackageRegistry,
   NodeCompiler,
 } from "@narratage/compiler-node";
-import { AuthorFrontendRegistry } from "@narratage/elaborator";
-import type { Workspace } from "@narratage/host";
+import { AuthorFrontendRegistry, installAuthorFrontendHostFacets } from "@narratage/elaborator";
+import type { Workspace } from "@narratage/workspace";
 import {
   assertNodePackageContribution,
   collectNodePackageComponents,
@@ -19,17 +19,14 @@ import {
 import { TypeValidatorRegistry } from "@narratage/validation";
 
 export type CreateMarkupNodeCompilerOptions = {
-  readonly root?: string;
-  readonly assetRoots?: readonly string[];
-  readonly workspace?: Workspace;
+  readonly workspace: Workspace;
 };
 
 /** Assemble the official Markup authoring environment from already trusted package facets. */
 export function createMarkupNodeCompiler(
   packages: readonly NodePackageContribution[],
-  options: CreateMarkupNodeCompilerOptions = {},
+  options: CreateMarkupNodeCompilerOptions,
 ): NodeCompiler {
-  const names = new Set<string>();
   const modules = new ModulePackageRegistry();
   const surfaces = new MarkupSurfaceRegistry();
   const frontends = new AuthorFrontendRegistry();
@@ -37,11 +34,9 @@ export function createMarkupNodeCompiler(
 
   for (const item of packages) {
     assertNodePackageContribution(item);
-    if (names.has(item.name)) throw new Error(`Node package contribution ${item.name} is listed twice`);
-    names.add(item.name);
     for (const module of item.modules ?? []) modules.register(module);
     installMarkupSurfaceHostFacets(item.hostFacets ?? [], surfaces);
-    for (const frontend of item.authorFrontends ?? []) frontends.register(frontend);
+    installAuthorFrontendHostFacets(item.hostFacets ?? [], frontends);
   }
 
   for (const component of collectNodePackageComponents(packages)) {
@@ -61,8 +56,6 @@ export function createMarkupNodeCompiler(
     modules,
     frontends,
     validators,
-    ...(options.root === undefined ? {} : { root: options.root }),
-    ...(options.assetRoots === undefined ? {} : { assetRoots: options.assetRoots }),
-    ...(options.workspace === undefined ? {} : { workspace: options.workspace }),
+    workspace: options.workspace,
   });
 }

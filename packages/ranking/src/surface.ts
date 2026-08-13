@@ -337,7 +337,7 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       }
       inputs["sound-style"] = soundStyle.ref;
     }
-    const fragment = createRankingFragment(variant, items, sound, `@narratage/ranking/surface/${id}@1`);
+    const fragment = createRankingFragment(variant, items, sound);
     return {
       records,
       components: [{

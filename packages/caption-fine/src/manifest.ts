@@ -16,6 +16,18 @@ export const captionFineProducers = {
 export const captionFineStyleSurfaceImplementationDigest = digestOf("@narratage/caption-fine/full-orthogonal-style-surface@1");
 export const captionFineTrackSurfaceImplementationDigest = digestOf("@narratage/caption-fine/full-orthogonal-track-surface@1");
 
+export const captionFineMarkupSurfaces = [
+    {
+      name: "style", tag: "Style", mode: "structured", outputs: [captionTypes.style],
+      implementation: { digest: captionFineStyleSurfaceImplementationDigest },
+    },
+    {
+      name: "track", tag: "Track", mode: "structured", outputs: [compositionTypes.visualTrack],
+      implementation: { digest: captionFineTrackSurfaceImplementationDigest },
+    },
+  ] as const;
+
+
 export const captionFineManifest: ModuleManifest = {
   format: "svml.module@1",
   name: captionFineModuleRef.name,
@@ -30,18 +42,6 @@ export const captionFineManifest: ModuleManifest = {
   ],
   types: [],
   capabilities: [],
-  surfaces: [
-    {
-      name: "style", tag: "Style", mode: "structured", outputs: [captionTypes.style],
-      implementation: { kind: "trusted-frontend-surface", locator: "@narratage/caption-fine/style-surface",
-        digest: captionFineStyleSurfaceImplementationDigest },
-    },
-    {
-      name: "track", tag: "Track", mode: "structured", outputs: [compositionTypes.visualTrack],
-      implementation: { kind: "trusted-frontend-surface", locator: "@narratage/caption-fine/track-surface",
-        digest: captionFineTrackSurfaceImplementationDigest },
-    },
-  ],
   producers: [{
     name: captionFineProducers.render.name,
     inputs: [
@@ -52,7 +52,6 @@ export const captionFineManifest: ModuleManifest = {
     ],
     outputs: [{ name: "track", type: compositionTypes.visualTrack }],
     needs: [],
-    implementation: { kind: "registered", locator: "@narratage/caption-fine/render",
-      digest: renderFineCaptionImplementationDigest },
+    implementation: { digest: renderFineCaptionImplementationDigest },
   }],
 };

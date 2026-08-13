@@ -48,7 +48,6 @@ function finalizeInputs(inputs: ProducerHandlerContext["inputs"]) {
 }
 
 export const depthStackComponent = {
-  name: "@narratage/deck-track",
   producers: [
     {
       producer: depthStackProducers.bindLabelText,

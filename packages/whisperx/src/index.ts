@@ -2,19 +2,13 @@ export {
   whisperXComponent,
 } from "./component.js";
 export { whisperXSpeechAlignmentFragment } from "./fragment.js";
+export { whisperXRequestForEvidenceAudio } from "./evidence.js";
 export {
-  normalizeWhisperXAlignment,
-  sealWhisperXAlignmentEvidence,
-  whisperXRequestForEvidenceAudio,
-} from "./evidence.js";
-export {
-  whisperXAlignmentEvidenceSchema,
   whisperXCapabilities,
   whisperXImplementationDigests,
-  whisperXManifest,
+  whisperXManifest, whisperXMarkupSurfaces,
   whisperXModuleRef,
   whisperXProducers,
-  whisperXTypes,
 } from "./manifest.js";
 export { decodeWhisperXAlignmentSurface } from "./surface.js";
 export type * from "./types.js";

@@ -33,7 +33,6 @@ function manifest(): RuntimeModuleManifest {
         name: "local-scheduler",
         role: "scheduler",
         implementation: {
-          locator: "example.runtime-fixture/local-scheduler",
           digest: digestOf("example.runtime-fixture/local-scheduler@1"),
         },
       },
@@ -42,14 +41,12 @@ function manifest(): RuntimeModuleManifest {
         ["memory-build-store", "build-store"],
         ["memory-operation-store", "operation-store"],
         ["memory-dispatch-store", "dispatch-store"],
-        ["memory-runtime-journal", "runtime-journal"],
         ["memory-artifact-store", "artifact-store"],
         ["memory-credential-store", "credential-store"],
       ] as const).map(([name, role]) => ({
         name,
         role,
         implementation: {
-          locator: `example.runtime-fixture/${name}`,
           digest: digestOf(`example.runtime-fixture/${name}@1`),
         },
       })),
@@ -57,7 +54,6 @@ function manifest(): RuntimeModuleManifest {
         name: endpointFacet.name,
         role: "capability-endpoint",
         implementation: {
-          locator: "example.runtime-fixture/greeting-endpoint",
           digest: endpointImplementationDigest,
         },
         fulfills: [{ capability: capabilities.generation, returns: types.generated }],
@@ -70,7 +66,6 @@ function manifest(): RuntimeModuleManifest {
 
 function profile(options: { readonly operations?: boolean; readonly resource?: number } = {}) {
   return sealRuntimeProfile({
-    name: "fixture.local",
     instances: [
       { id: "scheduler.local", facet: { module: runtimeModule, name: "local-scheduler" } },
       { id: "worker.local", facet: { module: runtimeModule, name: "local-worker" } },
@@ -80,7 +75,6 @@ function profile(options: { readonly operations?: boolean; readonly resource?: n
         facet: { module: runtimeModule, name: "memory-operation-store" },
       }]),
       { id: "dispatch.memory", facet: { module: runtimeModule, name: "memory-dispatch-store" } },
-      { id: "journal.memory", facet: { module: runtimeModule, name: "memory-runtime-journal" } },
       { id: "artifacts.memory", facet: { module: runtimeModule, name: "memory-artifact-store" } },
       { id: "credentials.memory", facet: { module: runtimeModule, name: "memory-credential-store" } },
       {
@@ -88,14 +82,13 @@ function profile(options: { readonly operations?: boolean; readonly resource?: n
         facet: endpointFacet,
         authority: "greeting.local",
       },
-    ],
+    ].map((instance) => ({ ...instance, configurationDigest: digestOf({}) })),
     scheduler: "scheduler.local",
     worker: "worker.local",
     stores: {
       build: "build.memory",
       operations: "operations.memory",
       dispatch: "dispatch.memory",
-      journal: "journal.memory",
       artifacts: "artifacts.memory",
       credentials: ["credentials.memory"],
     },
@@ -142,7 +135,10 @@ test("Profile order is not identity but an execution-policy change is", () => {
     endpoints: [...normal.endpoints].reverse(),
     scheduling: { ...normal.scheduling, resources: [...normal.scheduling.resources].reverse() },
   });
-  assert.equal(normal.digest, reordered.digest);
+  assert.equal(
+    resolveRuntimeProfile(registry, normal).digest,
+    resolveRuntimeProfile(registry, reordered).digest,
+  );
   assert.notEqual(
     resolveRuntimeProfile(registry, normal).digest,
     resolveRuntimeProfile(registry, profile({ resource: 1 })).digest,
@@ -159,7 +155,6 @@ test("non-secret instance configuration is locked independently from implementat
       ? { ...instance, configurationDigest: digestOf({ baseUrl: "https://provider.example" }) }
       : instance),
   });
-  assert.notEqual(original.digest, configured.digest);
   assert.notEqual(
     resolveRuntimeProfile(registry, original).digest,
     resolveRuntimeProfile(registry, configured).digest,

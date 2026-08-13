@@ -4,7 +4,6 @@ import type {
   BuildRequest,
   BuildState,
   CoreCommand,
-  CoreTransition,
   CompiledGraph,
   Derivation,
   FulfillNeedCommand,
@@ -21,7 +20,7 @@ import type {
 import { canonicalize, digestOf, recordDigest } from "./canonical.js";
 import { CoreError, invariant } from "./error.js";
 import { resolveProducer, resolveType, sealRecord, verifyRecord } from "./link.js";
-import { compileBuild, producerStep } from "./plan.js";
+import { compileBuild, producerStep, selectedProvidedRecords } from "./plan.js";
 import {
   commandId,
   derivationId,
@@ -29,7 +28,6 @@ import {
   needRequestDigest,
   receiptId,
 } from "./provenance.js";
-import { producerKey } from "./reference.js";
 import { validateStoredValue } from "./schema.js";
 import { verifyBuildState } from "./verify.js";
 
@@ -83,13 +81,6 @@ function acceptProducerEvent(
   const producer = resolveProducer(state.program.closure, step.producer);
   exactPortKeys(event.outputs, producer.outputs.map((port) => port.name), `${step.id}.outputs`);
   exactPortKeys(event.needs, producer.needs.map((port) => port.name), `${step.id}.needs`);
-  exactPortKeys(
-    event.validations ?? {},
-    producer.outputs
-      .filter((port) => resolveType(state.program.closure, port.type).validator !== undefined)
-      .map((port) => port.name),
-    `${step.id}.validations`,
-  );
 
   const inputs = inputRecords(state, command);
   const outputDrafts = producer.outputs
@@ -106,9 +97,6 @@ function acceptProducerEvent(
       type: port.type,
       value,
       digest: recordDigest(port.type, value),
-      ...(event.validations?.[port.name] === undefined
-        ? {}
-        : { validation: event.validations[port.name] }),
     };
   });
 
@@ -149,7 +137,6 @@ function acceptProducerEvent(
     type: output.type,
     value: output.value,
     origin: { kind: "derived", derivation: id },
-    ...(output.validation === undefined ? {} : { validation: output.validation }),
   }));
   outputs.forEach((record) => verifyRecord(state.program.closure, record));
   const needs: Need[] = needDrafts.map((need) => ({ ...need, requestedBy: id }));
@@ -205,7 +192,6 @@ function acceptNeedEvent(
     value,
     digest: outputDigest,
     origin: { kind: "observed", receipt: receipt.id },
-    ...(event.validation === undefined ? {} : { validation: event.validation }),
   };
   verifyRecord(state.program.closure, record);
 
@@ -265,25 +251,15 @@ function goalsComplete(state: BuildState): boolean {
   return state.plan.goals.every((goal) => state.records.some((record) => record.id === goal.record));
 }
 
-function schedule(state: BuildState): CoreTransition {
-  if (state.status !== "active") return { state, commands: [] };
-  if (state.outstanding.length > 0) return { state, commands: state.outstanding };
+function schedule(state: BuildState): BuildState {
+  if (state.status !== "active" || state.outstanding.length > 0) return state;
 
   if (goalsComplete(state)) {
     const complete = {
       ...state,
       status: "complete" as const,
     };
-    return {
-      state: complete,
-      commands: [
-        {
-          kind: "complete",
-          id: commandId(state.id, "complete", state.plan.id),
-          goals: state.plan.goals.map((goal) => goal.record),
-        },
-      ],
-    };
+    return complete;
   }
 
   const commands: CoreCommand[] = [];
@@ -324,11 +300,11 @@ function schedule(state: BuildState): CoreTransition {
         },
       ],
     };
-    return { state: failed, commands: [] };
+    return failed;
   }
 
   const scheduled: BuildState = { ...state, outstanding: commands };
-  return { state: scheduled, commands };
+  return scheduled;
 }
 
 export function start(
@@ -351,7 +327,7 @@ export function start(
     request,
     plan,
     status: "active",
-    records: [...program.records, ...plan.initialValues],
+    records: [...program.records, ...selectedProvidedRecords(program, graph, plan)],
     steps: plan.steps.map((step) => ({ id: step.id, status: "pending" })),
     needs: [],
     receipts: [],
@@ -364,16 +340,10 @@ export function start(
   return state;
 }
 
-export function reduce(state: BuildState, event?: BuildEvent): CoreTransition {
+export function reduce(state: BuildState, event?: BuildEvent): BuildState {
   verifyBuildState(state);
   const next = event === undefined ? state : applyEvent(state, event);
-  const transition = schedule(next);
-  verifyBuildState(transition.state);
-  return transition;
-}
-
-export function buildCommandKey(command: CoreCommand): string {
-  if (command.kind === "invoke-producer") return producerKey(command.producer);
-  if (command.kind === "fulfill-need") return command.need.id;
-  return command.id;
+  const scheduled = schedule(next);
+  verifyBuildState(scheduled);
+  return scheduled;
 }

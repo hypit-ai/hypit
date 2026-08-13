@@ -1,6 +1,6 @@
 import { narrativeDependency, narrativeSchema, narrativeTypes } from "@narratage/narrative";
 import { textDependency, textTypes } from "@narratage/text";
-import { digestOf } from "@narratage/core";
+import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, TypeRef } from "@narratage/protocol";
 
 export const scriptModuleRef = { name: "@narratage/script", version: "1" } as const;
@@ -13,7 +13,28 @@ export const captionCorrespondenceType: TypeRef = narrativeTypes.captionCorrespo
 export const captionDisplayWordSubsetType: TypeRef = narrativeTypes.captionDisplayWordSubset;
 export { narrativeSchema };
 
-export const scriptSurfaceImplementationDigest = digestOf("@narratage/script/display-atoms-surface@1");
+export const scriptSurfaceImplementationDigest = digestOf("@narratage/script/display-atoms-with-structural-order-surface@1");
+
+export const scriptMarkupSurfaces = [
+  {
+    name: "script",
+    tag: "script",
+    mode: "raw",
+    outputs: [
+      narrativeType,
+      narrativeExcerptType,
+      textTypes.text,
+      narrativeSelectionType,
+      narrativeMomentType,
+      captionDisplayType,
+      captionCorrespondenceType,
+      captionDisplayWordSubsetType,
+    ],
+    implementation: {
+      digest: scriptSurfaceImplementationDigest,
+    },
+  },
+] as const;
 
 export const scriptManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -22,27 +43,5 @@ export const scriptManifest: ModuleManifest = {
   dependencies: [narrativeDependency, textDependency],
   types: [],
   capabilities: [],
-  surfaces: [
-    {
-      name: "script",
-      tag: "script",
-      mode: "raw",
-      outputs: [
-        narrativeType,
-        narrativeExcerptType,
-        textTypes.text,
-        narrativeSelectionType,
-        narrativeMomentType,
-        captionDisplayType,
-        captionCorrespondenceType,
-        captionDisplayWordSubsetType,
-      ],
-      implementation: {
-        kind: "trusted-frontend-surface",
-        locator: "@narratage/script/surface",
-        digest: scriptSurfaceImplementationDigest,
-      },
-    },
-  ],
   producers: [],
 };

@@ -38,6 +38,11 @@ const reportProducer = { module: laboratory, name: "write-report" } satisfies Pr
 const sampleSurfaceDigest = digestOf("example.text-laboratory/sample-surface@1");
 const measureSurfaceDigest = digestOf("example.text-laboratory/measure-surface@1");
 const reportSurfaceDigest = digestOf("example.text-laboratory/report-surface@1");
+const laboratorySurfaces = [
+  { name: "sample", tag: "Sample", mode: "structured", outputs: [sampleType], implementation: { digest: sampleSurfaceDigest } },
+  { name: "measure", tag: "Measure", mode: "structured", outputs: [], implementation: { digest: measureSurfaceDigest } },
+  { name: "report", tag: "Report", mode: "structured", outputs: [], implementation: { digest: reportSurfaceDigest } },
+] as const;
 
 const manifest: ModuleManifest = {
   format: "svml.module@1",
@@ -50,41 +55,6 @@ const manifest: ModuleManifest = {
     { name: reportType.name, schema: { kind: "string", minLength: 1 } },
   ],
   capabilities: [],
-  surfaces: [
-    {
-      name: "sample",
-      tag: "Sample",
-      mode: "structured",
-      outputs: [sampleType],
-      implementation: {
-        kind: "trusted-frontend-surface",
-        locator: "example.text-laboratory/sample-surface",
-        digest: sampleSurfaceDigest,
-      },
-    },
-    {
-      name: "measure",
-      tag: "Measure",
-      mode: "structured",
-      outputs: [],
-      implementation: {
-        kind: "trusted-frontend-surface",
-        locator: "example.text-laboratory/measure-surface",
-        digest: measureSurfaceDigest,
-      },
-    },
-    {
-      name: "report",
-      tag: "Report",
-      mode: "structured",
-      outputs: [],
-      implementation: {
-        kind: "trusted-frontend-surface",
-        locator: "example.text-laboratory/report-surface",
-        digest: reportSurfaceDigest,
-      },
-    },
-  ],
   producers: [
     {
       name: measureProducer.name,
@@ -92,8 +62,6 @@ const manifest: ModuleManifest = {
       outputs: [{ name: "measurement", type: measurementType }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "example.text-laboratory/measure",
         digest: digestOf("example.text-laboratory/measure@1"),
       },
     },
@@ -103,8 +71,6 @@ const manifest: ModuleManifest = {
       outputs: [{ name: "report", type: reportType }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "example.text-laboratory/write-report",
         digest: digestOf("example.text-laboratory/write-report@1"),
       },
     },
@@ -112,7 +78,6 @@ const manifest: ModuleManifest = {
 };
 
 function singleOperationFragment(
-  name: string,
   inputName: string,
   inputType: TypeRef,
   producer: ProducerRef,
@@ -120,7 +85,6 @@ function singleOperationFragment(
   resultType: TypeRef,
 ): GraphFragment {
   return sealGraphFragment({
-    name,
     inputs: [{ name: inputName, type: inputType }],
     operations: [{
       id: "produce",
@@ -137,7 +101,6 @@ function singleOperationFragment(
 }
 
 const measureFragment = singleOperationFragment(
-  "measure-sample",
   "sample",
   sampleType,
   measureProducer,
@@ -145,7 +108,6 @@ const measureFragment = singleOperationFragment(
   measurementType,
 );
 const reportFragment = singleOperationFragment(
-  "write-report",
   "measurement",
   measurementType,
   reportProducer,
@@ -175,7 +137,10 @@ function componentOutput(path: string): { readonly component: string; readonly o
 
 function registry(options: { readonly omitMeasureFragment?: boolean } = {}): MarkupSurfaceRegistry {
   const values = new MarkupSurfaceRegistry();
-  values.registerStructured(laboratory, "sample", sampleSurfaceDigest, ({ element }) => ({
+  values.registerStructured({
+    module: laboratory,
+    declaration: laboratorySurfaces[0],
+    handler: ({ element }) => ({
     records: [{
       id: stringAttribute(element, "id"),
       type: sampleType,
@@ -184,8 +149,12 @@ function registry(options: { readonly omitMeasureFragment?: boolean } = {}): Mar
     }],
     components: [],
     fragments: [],
-  }));
-  values.registerStructured(laboratory, "measure", measureSurfaceDigest, ({ element }) => {
+    }),
+  });
+  values.registerStructured({
+    module: laboratory,
+    declaration: laboratorySurfaces[1],
+    handler: ({ element }) => {
     const id = stringAttribute(element, "id");
     return {
       records: [],
@@ -198,8 +167,12 @@ function registry(options: { readonly omitMeasureFragment?: boolean } = {}): Mar
       }],
       fragments: options.omitMeasureFragment === true ? [] : [measureFragment],
     };
+    },
   });
-  values.registerStructured(laboratory, "report", reportSurfaceDigest, ({ element }) => {
+  values.registerStructured({
+    module: laboratory,
+    declaration: laboratorySurfaces[2],
+    handler: ({ element }) => {
     const id = stringAttribute(element, "id");
     const measurement = componentOutput(referenceAttribute(element, "measurement"));
     return {
@@ -219,6 +192,7 @@ function registry(options: { readonly omitMeasureFragment?: boolean } = {}): Mar
       }],
       fragments: [reportFragment],
     };
+    },
   });
   return values;
 }
@@ -253,8 +227,8 @@ test("Markup Surfaces compile forward author references into a Core BuildPlan", 
   const program = link(closure, [decoded.module]);
   const catalog = new Map(decoded.fragments.map((fragment) => [fragment.id, fragment]));
   const elaborated = elaborateAuthorModule(program, decoded.author, (id) => catalog.get(id));
-  const state = start(program, elaborated.graph, sealBuildRequest({
-    graph: elaborated.graph.id,
+  const state = start(program, elaborated, sealBuildRequest({
+    graph: elaborated.id,
     targets: [{ output: "final.result" }],
   }));
 
@@ -280,7 +254,7 @@ test("component source reflow does not change AuthorModule semantic identity", a
       sample={soil}
     />
   </svml>`);
-  assert.equal(compact.author.id, multiline.author.id);
+  assert.deepEqual(compact.author, multiline.author);
 });
 
 test("Markup rejects a component whose Surface omits its Fragment definition", async () => {

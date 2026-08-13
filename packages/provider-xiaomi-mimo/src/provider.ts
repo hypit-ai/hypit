@@ -1,5 +1,5 @@
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
-import type { EndpointFulfillment, EndpointInvocationContext } from "@narratage/endpoint-kit";
+import type { EndpointInvocationContext } from "@narratage/endpoint-kit";
 import {
   generationTypes,
   sealGeneratedAudioSet,
@@ -59,21 +59,20 @@ function normalizeBaseUrl(value: string): string {
   return url.href.replace(/\/$/u, "");
 }
 
-function request(value: CanonicalValue, model: Model): GenerationRequest {
+function request(value: CanonicalValue): GenerationRequest {
   const result = value as unknown as GenerationRequest;
   assert(result.contract === "svml.generation-request@1", "Xiaomi MiMo received a non-generation request");
-  assert(result.model === model, `Xiaomi MiMo ${model} received ${result.model}`);
   assert(result.ports !== null && typeof result.ports === "object", "Xiaomi MiMo request has no ports");
   return result;
 }
 
-function scalar(req: GenerationRequest, name: string, required = true): string | undefined {
+function scalar(req: GenerationRequest, model: Model, name: string, required = true): string | undefined {
   const values = req.ports[name];
   if (values === undefined) {
-    if (required) throw new Error(`${req.model} requires ${name}`);
+    if (required) throw new Error(`${model} requires ${name}`);
     return undefined;
   }
-  assert(values.length === 1 && typeof values[0] === "string", `${req.model} ${name} must contain one string`);
+  assert(values.length === 1 && typeof values[0] === "string", `${model} ${name} must contain one string`);
   return values[0];
 }
 
@@ -111,7 +110,7 @@ async function readVoiceSample(
 
 function supports(model: Model, value: CanonicalValue): boolean {
   const req = value as unknown as GenerationRequest;
-  if (req?.contract !== "svml.generation-request@1" || req.model !== model
+  if (req?.contract !== "svml.generation-request@1"
     || req.ports === null || typeof req.ports !== "object") return false;
   const allowed = model === "mimo-v2.5-tts"
     ? new Set(["text", "instruction", "voice"])
@@ -170,10 +169,6 @@ async function limitedResponseText(response: Response, maxBytes: number): Promis
   return Buffer.from(bytes).toString("utf8");
 }
 
-function fulfillment(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfillment {
-  return { value: { kind: "inline", value }, metadata };
-}
-
 export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOptions) {
   const apiBaseUrl = normalizeBaseUrl(options.apiBaseUrl ?? "https://api.xiaomimimo.com/v1");
   const requestTimeoutMs = positiveInteger(options.requestTimeoutMs ?? 180_000, "requestTimeoutMs");
@@ -196,18 +191,18 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
     lifecycle: "immediate" as const,
     supports: (need: { readonly constraints: CanonicalValue }) => supports(model, need.constraints),
     handler: async (context: EndpointInvocationContext) => {
-      const req = request(context.need.constraints, model);
-      const text = scalar(req, "text")!;
+      const req = request(context.need.constraints);
+      const text = scalar(req, model, "text")!;
       const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
       const audio: Record<string, CanonicalValue> = { format: "wav" };
       if (model === "mimo-v2.5-tts") {
-        const instruction = scalar(req, "instruction", false);
+        const instruction = scalar(req, model, "instruction", false);
         if (instruction !== undefined) messages.push({ role: "user", content: instruction });
-        audio.voice = scalar(req, "voice")!;
+        audio.voice = scalar(req, model, "voice")!;
       } else if (model === "mimo-v2.5-tts-voicedesign") {
-        messages.push({ role: "user", content: scalar(req, "voiceDescription")! });
+        messages.push({ role: "user", content: scalar(req, model, "voiceDescription")! });
       } else {
-        const instruction = scalar(req, "instruction", false);
+        const instruction = scalar(req, model, "instruction", false);
         if (instruction !== undefined) messages.push({ role: "user", content: instruction });
         audio.voice = await readVoiceSample(context, req, maxVoiceSampleBase64Bytes);
       }
@@ -231,11 +226,7 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
       const bytes = parseAudio(responseText, maxResponseBytes);
       const artifact = await context.artifacts.put(bytes, "audio/wav");
       const result = sealGeneratedAudioSet({ contract: "svml.generated-audio-set@1", audios: [artifact] });
-      return fulfillment(result as unknown as CanonicalValue, canonicalize({
-        provider: "xiaomi-mimo",
-        requestedModel: model,
-        outputBytes: bytes.byteLength,
-      }));
+      return { value: { kind: "inline" as const, value: result as unknown as CanonicalValue } };
     },
   }));
 
@@ -245,7 +236,6 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
     instance: options.instance ?? "xiaomi-mimo.default",
     authority: options.authority ?? options.instance ?? "xiaomi-mimo.default",
     implementation: {
-      locator: "@narratage/provider-xiaomi-mimo/tts",
       digest: xiaomiMimoProviderImplementationDigest,
     },
     configuration: canonicalize({

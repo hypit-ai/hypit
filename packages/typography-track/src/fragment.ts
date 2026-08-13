@@ -10,7 +10,6 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 /** Provider-free official lowering from TypographyTrackProgram to one peer VisualTrack. */
 export const typographyTrackFragment = sealGraphFragment({
-  name: "@narratage/typography-track/render@1",
   inputs: [
     { name: "space", type: programSpaceTypes.programSpace },
     { name: "program", type: typographyTrackTypes.program },

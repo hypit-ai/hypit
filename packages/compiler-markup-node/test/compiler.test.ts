@@ -12,14 +12,21 @@ import { createMarkupNodeCompiler } from "@narratage/compiler-markup-node";
 import type { NodePackageContribution } from "@narratage/package-loader-node";
 import { digestOf } from "@narratage/protocol";
 import { createMarkupSurfaceHostFacet } from "@narratage/markup";
+import { NodeFilesystemWorkspace } from "@narratage/workspace-fs-node";
 
 const module = { name: "example.card", version: "1" } as const;
 const resultType = { module, name: "CardResult" } as const;
 const implementationDigest = digestOf("example.card/card-surface@1");
+const cardSurface = {
+  name: "card",
+  tag: "Card",
+  mode: "structured",
+  outputs: [resultType],
+  implementation: { digest: implementationDigest },
+} as const;
 
 const installedPackage: NodePackageContribution = {
   format: "svml.node-package@1",
-  name: "example-card",
   modules: [{
     manifest: {
       format: "svml.module@1",
@@ -28,17 +35,6 @@ const installedPackage: NodePackageContribution = {
       dependencies: [],
       types: [{ name: resultType.name, schema: { kind: "string", minLength: 1 } }],
       capabilities: [],
-      surfaces: [{
-        name: "card",
-        tag: "Card",
-        mode: "structured",
-        outputs: [resultType],
-        implementation: {
-          kind: "trusted-frontend-surface",
-          locator: "example.card/card",
-          digest: implementationDigest,
-        },
-      }],
       producers: [],
     },
     specifiers: ["example.card@1"],
@@ -46,9 +42,7 @@ const installedPackage: NodePackageContribution = {
   hostFacets: [
     createMarkupSurfaceHostFacet({
       module,
-      surface: "card",
-      mode: "structured",
-      implementationDigest,
+      declaration: cardSurface,
       handler({ element }) {
         return {
           records: [{
@@ -81,12 +75,14 @@ test("Markup compiler alone selects Markup Surface Host facets from a generic pa
       <import as="example" from="example.card@1"/>
       <example:Card/>
     </svml>`, "utf8");
-    const compiler = createMarkupNodeCompiler([installedPackage], { root });
+    const compiler = createMarkupNodeCompiler([installedPackage], {
+      workspace: new NodeFilesystemWorkspace({ root }),
+    });
     const result = await compiler.compileFile(source);
 
     assert.deepEqual(result.program.closure.modules.map((item) => item.ref), [module]);
-    assert.equal(result.module.records[0]?.value.kind, "inline");
-    assert.equal(result.elaboration.graph.operations.length, 0);
+    assert.equal(result.program.records[0]?.value.kind, "inline");
+    assert.equal(result.graph.operations.length, 0);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

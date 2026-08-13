@@ -1,6 +1,4 @@
 import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import { assertProgramSpaceIdentity } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
 import type { CompleteSemanticMap } from "./types.js";
 
 export type LocatedFrameSpan = { readonly startFrame: number; readonly endFrameExclusive: number };
@@ -64,11 +62,9 @@ function frameFor(frames: ReadonlyMap<string, number>, anchorId: string, owner: 
 export function selectionFrameSpans(
   map: CompleteSemanticMap,
   selection: NarrativeSelectionRef,
-  programSpace: ProgramSpace,
 ): readonly LocatedFrameSpan[] {
   assertCompleteSemanticMapIdentity(map);
   assertNarrativeSelectionIdentity(selection);
-  assertProgramSpaceIdentity(programSpace);
   const frames = anchorFrames(map);
   return selection.occurrences.map((occurrence) => {
     const startFrame = frameFor(frames, occurrence.startAnchorId, `NarrativeSelection ${selection.id}`);
@@ -81,10 +77,8 @@ export function selectionFrameSpans(
 export function segmentFrameSpan(
   map: CompleteSemanticMap,
   segment: NarrativeExcerpt,
-  programSpace: ProgramSpace,
 ): LocatedFrameSpan {
   assertCompleteSemanticMapIdentity(map);
-  assertProgramSpaceIdentity(programSpace);
   if (segment.contract !== "svml.narrative-excerpt@1" || segment.kind !== "segment" || segment.id.length === 0) {
     throw new Error("Narrative Segment excerpt is invalid");
   }
@@ -104,27 +98,28 @@ export function segmentFrameSpan(
  * anchor; a component that renders the Script text itself addresses them by
  * token, because its runs are computed rather than authored.
  */
-export function tokenSpanSeconds(
+export function tokenFrameSpan(
   map: CompleteSemanticMap,
   tokenIds: readonly string[],
-): { readonly startSec: number; readonly endSec: number } | undefined {
+): LocatedFrameSpan | undefined {
   assertCompleteSemanticMapIdentity(map);
   if (tokenIds.length === 0) return undefined;
   const timing = new Map(map.tokens.map((token) => [token.tokenId, token]));
   const located = tokenIds.map((id) => timing.get(id));
   if (located.some((token) => token === undefined)) return undefined;
-  return { startSec: located[0]!.startSec, endSec: located.at(-1)!.endSec };
+  return {
+    startFrame: located[0]!.startFrame,
+    endFrameExclusive: located.at(-1)!.endFrameExclusive,
+  };
 }
 
 /** Project every occurrence of one Script Moment onto one measured SemanticMap. */
 export function momentFrames(
   map: CompleteSemanticMap,
   moment: NarrativeMomentRef,
-  programSpace: ProgramSpace,
 ): readonly number[] {
   assertCompleteSemanticMapIdentity(map);
   assertNarrativeMomentIdentity(moment);
-  assertProgramSpaceIdentity(programSpace);
   const frames = anchorFrames(map);
   return moment.occurrences.map((occurrence) =>
     frameFor(frames, occurrence.anchorId, `NarrativeMoment ${moment.id}`));

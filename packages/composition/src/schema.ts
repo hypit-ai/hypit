@@ -1,4 +1,4 @@
-import { compositableSurfaceSchema, fontArtifactSchema, mediaArtifactSchema, mediaDependency } from "@narratage/media";
+import { compositableSurfaceSchema, fontArtifactSchema, mediaDependency } from "@narratage/media";
 import { programSpaceDependency } from "@narratage/program-space";
 import type { ValueSchema } from "@narratage/protocol";
 import { VISUAL_IR_V1, VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@narratage/visual-ir";

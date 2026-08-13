@@ -17,7 +17,6 @@ function inline(value: StoredValue, subject: string): CanonicalValue {
 
 /** Trusted deterministic lowering only; this component never renders frames or reads Artifacts. */
 export const hyperframesComponent = {
-  name: "@narratage/hyperframes",
   producers: [{
     producer: hyperframesProducers.compile,
     implementationDigest: compileHyperframesImplementationDigest,

@@ -35,9 +35,9 @@ import {
   decodeTypographyStyleSurface,
   decodeTypographyTrackSurface,
   typographyTrackManifest,
+  typographyTrackMarkupSurfaces,
   typographyTrackModuleRef,
   typographyTrackProducers,
-  typographyTrackSurfaceImplementationDigests,
   typographyTrackTypes,
 } from "@narratage/typography-track";
 import type { TextStyle } from "@narratage/typography-track";
@@ -162,7 +162,6 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
     items: [
       {
         id: "watermark",
-        sourceOccurrenceId: "program",
         span: { startFrame: 0, endFrameExclusive: 150 },
         tieBreak: "watermark",
         geometry: { kind: "point", point: { contract: "svml.spatial-point@1", xPx: 900, yPx: 80 } },
@@ -172,7 +171,6 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
       },
       {
         id: "callout",
-        sourceOccurrenceId: "program",
         span: { startFrame: 30, endFrameExclusive: 90 },
         tieBreak: "callout",
         geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 108, yPx: 1248, widthPx: 864, heightPx: 230.4 } },
@@ -214,7 +212,7 @@ test("Text Mask explicitly consumes one authored Text Program and one owned stil
   const program = sealTypographyTrackProgram({
     contract: "svml.typography-track-program@1", id: "mask-shape",
     items: [{
-      id: "mask-title", sourceOccurrenceId: "program",
+      id: "mask-title",
       span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "mask-title",
       geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 100, yPx: 200, widthPx: 800, heightPx: 240 } },
       document: document("OWNED MASK"),
@@ -267,7 +265,6 @@ test("TypographyTrackProgram rejects a frame span outside ProgramSpace", () => {
     id: "invalid-text",
     items: [{
       id: "late",
-      sourceOccurrenceId: "program",
       span: { startFrame: 149, endFrameExclusive: 151 },
       tieBreak: "late",
       geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 1080, heightPx: 192 } },
@@ -284,8 +281,8 @@ test("Selection Text consumes explicit Selection, SemanticMap, Style, Motion and
     contract: "svml.complete-semantic-map@1",
     tokens: [],
     anchors: [
-      { identity: "selection:start", timeSec: 1, frame: 30 },
-      { identity: "selection:end", timeSec: 2, frame: 60 },
+      { identity: "selection:start", frame: 30 },
+      { identity: "selection:end", frame: 60 },
     ],
   };
   const selection: NarrativeSelectionRef = {
@@ -318,6 +315,20 @@ test("Selection Text consumes explicit Selection, SemanticMap, Style, Motion and
 test("the self-described Markup Surfaces compile Style, Motion and all three spatial forms", async () => {
   const fixtureModule = { name: "example.text-inputs", version: "1" } as const;
   const fixtureDigest = digestOf("example.text-inputs/surface@1");
+  const fixtureSurface = {
+    name: "inputs", tag: "Inputs", mode: "structured",
+    outputs: [
+      svsRecipeType,
+      programSpaceTypes.programSpace,
+      spatialTypes.point,
+      spatialTypes.frame,
+      spatialTypes.path,
+      mediaTypes.fontArtifact,
+      mediaTypes.compositableSurface,
+      textTypes.text,
+    ],
+    implementation: { digest: fixtureDigest },
+  } as const;
   const fixtureManifest: ModuleManifest = {
     format: "svml.module@1",
     name: fixtureModule.name,
@@ -334,22 +345,6 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
     ],
     types: [],
     capabilities: [],
-    surfaces: [{
-      name: "inputs",
-      tag: "Inputs",
-      mode: "structured",
-      outputs: [
-        svsRecipeType,
-        programSpaceTypes.programSpace,
-        spatialTypes.point,
-        spatialTypes.frame,
-        spatialTypes.path,
-        mediaTypes.fontArtifact,
-        mediaTypes.compositableSurface,
-        textTypes.text,
-      ],
-      implementation: { kind: "trusted-frontend-surface", locator: "example.text-inputs/surface", digest: fixtureDigest },
-    }],
     producers: [],
   };
   const closure = createResolvedClosure([
@@ -360,7 +355,7 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
     fixtureManifest,
   ]);
   const surfaces = new MarkupSurfaceRegistry();
-  surfaces.registerStructured(fixtureModule, "inputs", fixtureDigest, ({ element }) => ({
+  surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
       {
         id: "editorial",
@@ -412,11 +407,11 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
     ],
     components: [],
     fragments: [],
-  }));
-  surfaces.registerStructured(typographyTrackModuleRef, "style", typographyTrackSurfaceImplementationDigests.style, decodeTypographyStyleSurface);
-  surfaces.registerStructured(typographyTrackModuleRef, "motion", typographyTrackSurfaceImplementationDigests.motion, decodeTypographyMotionSurface);
-  surfaces.registerStructured(typographyTrackModuleRef, "track", typographyTrackSurfaceImplementationDigests.track, decodeTypographyTrackSurface);
-  surfaces.registerStructured(typographyTrackModuleRef, "mask", typographyTrackSurfaceImplementationDigests.mask, decodeTypographyMaskSurface);
+  }) });
+  surfaces.registerStructured({ module: typographyTrackModuleRef, declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "style")!, handler: decodeTypographyStyleSurface });
+  surfaces.registerStructured({ module: typographyTrackModuleRef, declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "motion")!, handler: decodeTypographyMotionSurface });
+  surfaces.registerStructured({ module: typographyTrackModuleRef, declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "track")!, handler: decodeTypographyTrackSurface });
+  surfaces.registerStructured({ module: typographyTrackModuleRef, declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "mask")!, handler: decodeTypographyMaskSurface });
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
@@ -474,8 +469,8 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
   assert.equal(program.ref.kind, "logical-output");
   assert.equal(ordinaryTrack.ref.kind, "logical-output");
   assert.equal(track.ref.kind, "logical-output");
-  const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
-    graph: compiled.elaboration.graph.id,
+  const build = start(compiled.program, compiled.graph, sealBuildRequest({
+    graph: compiled.graph.id,
     targets: [
       { output: ordinaryTrack.ref.kind === "logical-output" ? ordinaryTrack.ref.id : "" },
       { output: track.ref.kind === "logical-output" ? track.ref.id : "" },
@@ -578,7 +573,7 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     id: "rich-text",
     items: [
       {
-        id: "area", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "area",
+        id: "area", span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "area",
         geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 80, yPx: 200, widthPx: 720, heightPx: 320 } },
         document: { paragraphs: [{
           id: "p1",
@@ -593,7 +588,7 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
         motion,
       },
       {
-        id: "path", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "path",
+        id: "path", span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "path",
         geometry: { kind: "path", path: { contract: "svml.spatial-path@1", commands: [
           { kind: "move", xPx: 100, yPx: 700 },
           { kind: "quadratic", controlX: 540, controlY: 520, xPx: 980, yPx: 700 },

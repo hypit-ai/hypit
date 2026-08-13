@@ -50,7 +50,6 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/provider-image-opencv-local",
   hostFacets: [localOpenCvRuntimeAdapter],
 };
 

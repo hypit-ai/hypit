@@ -6,7 +6,7 @@ import {
 import { sealProgramSpace } from "@narratage/program-space";
 import { sealSpeechBasis, speechDependency, speechTypes } from "@narratage/speech";
 import type { SpeechBasis } from "@narratage/speech";
-import { compositionTypes, compositionValidatorDigests } from "@narratage/composition";
+import { compositionTypes } from "@narratage/composition";
 import { mediaPipelineManifest } from "@narratage/media-pipeline";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -15,11 +15,9 @@ import {
   createResolvedClosure,
   digestOf,
   link,
-  recordDigest,
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypeValidationReceipt,
   sealTypedModule,
   start,
 } from "@narratage/core";
@@ -56,15 +54,12 @@ const testManifest: ModuleManifest = {
   dependencies: [speechDependency],
   types: [{ name: requestType.name, schema: { kind: "string", minLength: 1 } }],
   capabilities: [],
-  surfaces: [],
   producers: [{
     name: generateProducer.name,
     inputs: [{ name: "request", type: requestType }],
     outputs: [{ name: "take", type: speechTypes.basis }],
     needs: [],
     implementation: {
-      kind: "registered",
-      locator: "example.speech-basis-product/generate",
       digest: generateImplementationDigest,
     },
   }],
@@ -111,11 +106,8 @@ function sampleTake(label = "generated"): SpeechBasis {
     visualTrack: {
       clips: [{
         segmentId: "opening",
-        span: { startFrame: 0, endFrameExclusive: 60 },
         artifact: visual,
         extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
-        frameRate: { ...programSpace.frameRate },
-        frameCount: 60,
         frame: { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 720, heightPx: 1280 },
         fit: {
           contract: "svml.content-fit@1", sizing: "cover",
@@ -143,8 +135,6 @@ function createProgram(): LinkedProgram {
     },
   });
   return link(closure, [sealTypedModule({
-    id: "author:speech-basis-product",
-    closureDigest: closure.digest,
     records: [request],
   })]);
 }
@@ -156,11 +146,6 @@ function createGraph(program: LinkedProgram): CompiledGraph {
   const existingTake = sampleTake("approved");
   const existingVisual = projectSpeechVisual(existingTake);
   const existingVisualValue = { kind: "inline" as const, value: existingVisual };
-  const existingVisualValidation = sealTypeValidationReceipt({
-    type: compositionTypes.visualTrack,
-    recordDigest: recordDigest(compositionTypes.visualTrack, existingVisualValue),
-    validatorDigest: compositionValidatorDigests.visualTrack,
-  });
   return sealCompiledGraph({
     program: program.semanticDigest,
     outputs: [
@@ -215,7 +200,6 @@ function createGraph(program: LinkedProgram): CompiledGraph {
           value: {
             id: "provided:opening-visual",
             value: existingVisualValue,
-            validation: existingVisualValidation,
           },
         },
       },
@@ -324,7 +308,7 @@ test("selecting an Existing SpeechBasis stops generation but keeps both projecti
     { "opening.take": "opening.take.existing" },
   );
   assert.deepEqual(stepIds(state), ["project-opening-audio", "project-opening-visual"]);
-  assert.deepEqual(state.plan.initialValues.map((record) => record.id), ["provided:opening-take"]);
+  assert.deepEqual(state.records.filter((record) => record.origin.kind === "provided").map((record) => record.id), ["provided:opening-take"]);
   assert.equal(
     state.plan.steps.find((step) => step.id === "project-opening-audio")?.inputs.basis,
     "provided:opening-take",

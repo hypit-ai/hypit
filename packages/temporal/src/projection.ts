@@ -131,9 +131,9 @@ export function projectTemporalWindow(
   return { startFrame, endFrameExclusive };
 }
 
-function projectedId(itemId: string, sourceOccurrenceId: string): string {
+function projectedId(itemId: string, occurrenceId: string): string {
   if (itemId.length === 0) throw new Error("Projected item id must not be empty.");
-  return `${itemId}::${sourceOccurrenceId}`;
+  return `${itemId}::${occurrenceId}`;
 }
 
 export function projectSelectionWindows(input: {
@@ -154,7 +154,6 @@ export function projectSelectionWindows(input: {
   );
   return occurrences.map((occurrence) => ({
     id: projectedId(input.itemId, occurrence.id),
-    sourceOccurrenceId: occurrence.id,
     span: projectTemporalWindow(input.projection, { program, selection: occurrence }, input.space),
   }));
 }
@@ -177,7 +176,6 @@ export function projectMomentWindows(input: {
   );
   return occurrences.map((occurrence) => ({
     id: projectedId(input.itemId, occurrence.id),
-    sourceOccurrenceId: occurrence.id,
     span: projectTemporalWindow(input.projection, { program, moment: occurrence }, input.space),
   }));
 }
@@ -190,7 +188,6 @@ export function projectProgramWindow(input: {
   const program = locateProgramOccurrence(input.space);
   return {
     id: projectedId(input.itemId, program.id),
-    sourceOccurrenceId: program.id,
     span: projectTemporalWindow(input.projection, { program }, input.space),
   };
 }
@@ -206,7 +203,6 @@ export function projectSegmentWindow(input: {
   const segment = locateSegmentOccurrence(input.map, input.segment, input.space);
   return {
     id: projectedId(input.itemId, segment.id),
-    sourceOccurrenceId: segment.id,
     span: projectTemporalWindow(input.projection, { program, segment }, input.space),
   };
 }

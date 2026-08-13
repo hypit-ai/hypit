@@ -104,7 +104,6 @@ function sequenceInputs(inputs: ProducerHandlerContext["inputs"]) {
 }
 
 export const mediaTrackComponent = {
-  name: "@narratage/media-track",
   producers: [
     { producer: mediaTrackProducers.createLayers, implementationDigest: mediaTrackImplementationDigests.createLayers, handler: () => ({ outputs: { layers: output(createMediaLayerSet()) }, needs: {} }) },
     { producer: mediaTrackProducers.appendPaintLayer, implementationDigest: mediaTrackImplementationDigests.appendPaintLayer, handler: ({ inputs }) => ({ outputs: { layers: output(appendMediaPaintLayer(

@@ -11,17 +11,16 @@ import type {
   RuntimeRunnableCommand,
   ScheduledBuild,
   ScheduledBuildResult,
-  SchedulerJournalEntry,
+  SchedulerExecutionOutcome,
 } from "./types.js";
 
 type MutableBuild = {
   readonly id: string;
   state: BuildState;
   revision: number | undefined;
-  readonly journal: SchedulerJournalEntry[];
+  readonly outcomes: SchedulerExecutionOutcome[];
   blocked: ScheduledBuildResult["blocked"];
   stopped: boolean;
-  completedEvents: number;
 };
 
 type ActiveResult = {
@@ -56,14 +55,12 @@ export class LocalBuildScheduler implements BuildScheduler {
   readonly #executor: RuntimeCommandExecutor;
   readonly #maxConcurrency: number;
   readonly #resourceLimits: Readonly<Record<string, number>>;
-  readonly #maxEventsPerBuild: number;
   readonly #runtimeClosure: RuntimeClosure | undefined;
   readonly #buildStore: BuildSchedulerOptions["buildStore"];
 
   constructor(executor: RuntimeCommandExecutor, options: BuildSchedulerOptions = {}) {
     this.#executor = executor;
     this.#maxConcurrency = positiveInteger(options.maxConcurrency ?? 4, "maxConcurrency");
-    this.#maxEventsPerBuild = positiveInteger(options.maxEventsPerBuild ?? 1_000, "maxEventsPerBuild");
     this.#runtimeClosure = options.runtimeClosure === undefined
       ? undefined
       : structuredClone(options.runtimeClosure);
@@ -106,10 +103,9 @@ export class LocalBuildScheduler implements BuildScheduler {
         id: request.id,
         state,
         revision,
-        journal: [],
+        outcomes: [],
         blocked: [],
         stopped: false,
-        completedEvents: 0,
       });
     }
     const active = new Map<string, ActiveCommand>();
@@ -220,7 +216,7 @@ export class LocalBuildScheduler implements BuildScheduler {
       const build = settled.build;
       if (settled.execution === undefined) {
         build.stopped = true;
-        build.journal.push({
+        build.outcomes.push({
           command: settled.command.command.id,
           kind: settled.command.command.kind,
           resources: settled.command.resources.map((resource) => resource.id),
@@ -231,7 +227,7 @@ export class LocalBuildScheduler implements BuildScheduler {
       }
       if (settled.execution.status === "pending") {
         build.stopped = true;
-        build.journal.push({
+        build.outcomes.push({
           command: settled.command.command.id,
           kind: settled.command.command.kind,
           resources: settled.command.resources.map((resource) => resource.id),
@@ -243,7 +239,7 @@ export class LocalBuildScheduler implements BuildScheduler {
       }
       if (settled.execution.status === "deferred") {
         build.stopped = true;
-        build.journal.push({
+        build.outcomes.push({
           command: settled.command.command.id,
           kind: settled.command.command.kind,
           resources: settled.command.resources.map((resource) => resource.id),
@@ -255,31 +251,18 @@ export class LocalBuildScheduler implements BuildScheduler {
       }
       const event = settled.execution.event;
       try {
-        const next = reduce(build.state, event).state;
+        const next = reduce(build.state, event);
         await persist(build, next);
-        build.completedEvents += 1;
-        build.journal.push({
+        build.outcomes.push({
           command: settled.command.command.id,
           kind: settled.command.command.kind,
           resources: settled.command.resources.map((resource) => resource.id),
           status: "completed",
           event: event.id,
         });
-        if (build.completedEvents >= this.#maxEventsPerBuild
-          && build.state.status !== "complete"
-          && build.state.status !== "failed") {
-          build.stopped = true;
-          build.journal.push({
-            command: settled.command.command.id,
-            kind: settled.command.command.kind,
-            resources: settled.command.resources.map((resource) => resource.id),
-            status: "error",
-            message: `Build exceeded ${this.#maxEventsPerBuild} accepted events`,
-          });
-        }
       } catch (error) {
         build.stopped = true;
-        build.journal.push({
+        build.outcomes.push({
           command: settled.command.command.id,
           kind: settled.command.command.kind,
           resources: settled.command.resources.map((resource) => resource.id),
@@ -295,7 +278,7 @@ export class LocalBuildScheduler implements BuildScheduler {
         ? "complete"
         : build.state.status === "failed" ? "failed" : "paused",
       state: build.state,
-      journal: [...build.journal],
+      outcomes: [...build.outcomes],
       blocked: [...build.blocked],
     }));
   }

@@ -1,4 +1,4 @@
-import type { AudioTrack, FrameSpan, VisualTrack } from "@narratage/composition";
+import type { FrameSpan } from "@narratage/composition";
 import type { CompositableSurfaceRef, MediaRational } from "@narratage/media";
 import type { BlobRef } from "@narratage/protocol";
 import type {
@@ -233,7 +233,6 @@ export type MediaItemSpec = {
 
 export type MediaItemProgram = {
   readonly id: string;
-  readonly sourceOccurrenceId: string;
   readonly span: FrameSpan;
   readonly frame: SpatialFrame;
   readonly presentation: MediaFramePresentation;
@@ -325,14 +324,4 @@ export type MediaTrackSet = {
   readonly contract: "svml.media-track-set@1";
   readonly items: readonly MediaItemProgram[];
   readonly sequences: readonly MediaSequenceProgram[];
-};
-
-export type MediaVisualProjection = {
-  readonly contract: "svml.media-visual-projection@1";
-  readonly track: VisualTrack;
-};
-
-export type MediaAudioProjection = {
-  readonly contract: "svml.media-audio-projection@1";
-  readonly track: AudioTrack;
 };

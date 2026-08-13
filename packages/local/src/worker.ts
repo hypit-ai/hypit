@@ -201,15 +201,6 @@ class DurableLocalWorker implements RuntimeWorker {
     this.#options = options;
   }
 
-  async #journal(
-    kind: import("@narratage/runtime").RuntimeJournalKind,
-    build: string | undefined,
-    worker: string,
-    detail: import("@narratage/protocol").CanonicalValue,
-  ): Promise<void> {
-    await this.#options.stores.journal.append({ at: Date.now(), kind, worker, ...(build === undefined ? {} : { build }), detail });
-  }
-
   async #cancel(dispatch: BuildDispatchSnapshot, lease: DispatchLease): Promise<BuildDispatchSnapshot> {
     const snapshot = await this.#options.stores.builds.read(dispatch.build);
     assert(snapshot !== undefined, `Build ${dispatch.build} has no durable state`);
@@ -225,12 +216,7 @@ class DurableLocalWorker implements RuntimeWorker {
     const requestedAt = dispatch.cancellation?.requestedAt;
     assert(requestedAt !== undefined, `closing Build ${dispatch.build} has no cancellation request`);
     for (const operation of active) {
-      const observed = await this.#executor.cancelOperation!(snapshot.state, operation, requestedAt);
-      await this.#journal("operation-control", dispatch.build, lease.owner, {
-        operation: observed.id,
-        execution: observed.status,
-        control: observed.cancellation?.status ?? "none",
-      });
+      await this.#executor.cancelOperation!(snapshot.state, operation, requestedAt);
     }
     const operations = await this.#options.stores.operations.list({ build: dispatch.build });
     const terminal = operations.filter((item) => item.status === "completed"
@@ -282,11 +268,6 @@ class DurableLocalWorker implements RuntimeWorker {
       }
       if (control.retryAt !== undefined && control.retryAt > Date.now()) continue;
       const observed = await executor.cancelOperation(state, operation, control.requestedAt);
-      await this.#journal("operation-control", dispatch.build, lease.owner, {
-        operation: observed.id,
-        execution: observed.status,
-        control: observed.cancellation?.status ?? "none",
-      });
       if (observed.status === "completed" || observed.status === "failed" || observed.status === "cancelled") {
         await this.#options.stores.dispatch.clearCapacity(
           capacityReservationId(dispatch.build, observed.command),
@@ -301,10 +282,9 @@ class DurableLocalWorker implements RuntimeWorker {
     assert(options.owner.trim().length > 0, "Worker owner is empty");
     const leaseMs = positive(options.leaseMs, "Worker leaseMs");
     const runtimeClosure = this.#options.runtimeClosure;
-    assert(runtimeClosure !== undefined, "durable Worker requires one exact Runtime Closure");
     const token = randomUUID();
     const dispatch = await this.#options.stores.dispatch.claim({
-      runtimeRevision: this.#options.runtimeRevision,
+      runtimeClosure: runtimeClosure.digest,
       owner: options.owner,
       token,
       now: Date.now(),
@@ -313,13 +293,12 @@ class DurableLocalWorker implements RuntimeWorker {
     if (dispatch === undefined) return undefined;
     const lease = dispatch.lease;
     assert(lease !== undefined, `claimed Dispatch ${dispatch.build} has no lease`);
-    await this.#journal("dispatch-claimed", dispatch.build, options.owner, { fence: lease.fence });
     if (dispatch.admission !== "open") return await this.#cancel(dispatch, lease);
     const stored = await this.#options.stores.builds.read(dispatch.build);
     assert(stored !== undefined, `Dispatch ${dispatch.build} has no BuildState`);
     assert(stored.state.id === dispatch.core, `Dispatch ${dispatch.build} Core identity differs`);
-    assert(this.#options.runtimeRevision === dispatch.runtimeRevision,
-      `Dispatch ${dispatch.build} Runtime Revision differs`);
+    assert(runtimeClosure.digest === dispatch.runtimeClosure,
+      `Dispatch ${dispatch.build} Runtime Closure differs`);
     const suppressedCommands = new Set<string>();
     const controlled = new CapacityExecutor(
       this.#executor,
@@ -333,7 +312,7 @@ class DurableLocalWorker implements RuntimeWorker {
     const scheduler = this.#options.scheduler.create(controlled, {
       ...this.#options.scheduling,
       buildStore: this.#options.stores.builds,
-      ...(this.#options.runtimeClosure === undefined ? {} : { runtimeClosure: this.#options.runtimeClosure }),
+      runtimeClosure,
     });
     let heartbeatError: unknown;
     let heartbeat = Promise.resolve();
@@ -353,18 +332,14 @@ class DurableLocalWorker implements RuntimeWorker {
         `Dispatch ${dispatch.build} lease was fenced before settlement`);
       if (current.admission !== "open") return await this.#cancel(current, lease);
       if (result.status === "complete") {
-        const terminal = await this.#options.stores.dispatch.finish(dispatch.build, lease, "complete");
-        await this.#journal("dispatch-terminal", dispatch.build, options.owner, { terminal: "complete" });
-        return terminal;
+        return await this.#options.stores.dispatch.finish(dispatch.build, lease, "complete");
       }
-      if (result.status === "failed" || result.journal.some((item) => item.status === "error")) {
-        const reason = result.journal.find((item) => item.status === "error")?.message ?? "Core Build failed";
-        const terminal = await this.#options.stores.dispatch.finish(dispatch.build, lease, "failed", reason);
-        await this.#journal("dispatch-terminal", dispatch.build, options.owner, { terminal: "failed", reason });
-        return terminal;
+      if (result.status === "failed" || result.outcomes.some((item) => item.status === "error")) {
+        const reason = result.outcomes.find((item) => item.status === "error")?.message ?? "Core Build failed";
+        return await this.#options.stores.dispatch.finish(dispatch.build, lease, "failed", reason);
       }
-      const pending = result.journal.filter((item) => item.status === "pending");
-      const deferred = result.journal.filter((item) => item.status === "deferred");
+      const pending = result.outcomes.filter((item) => item.status === "pending");
+      const deferred = result.outcomes.filter((item) => item.status === "deferred");
       const controlledOperations = (await this.#options.stores.operations.list({ build: dispatch.build }))
         .filter((item) => item.cancellation !== undefined)
         .filter((item) => item.status === "created" || item.status === "pending");
@@ -380,18 +355,13 @@ class DurableLocalWorker implements RuntimeWorker {
       const wakeAt = wakeTimes.length === 0
         ? result.blocked.length > 0 ? Number.MAX_SAFE_INTEGER : Date.now()
         : Math.min(...wakeTimes);
-      const released = await this.#options.stores.dispatch.release(dispatch.build, lease, {
+      return await this.#options.stores.dispatch.release(dispatch.build, lease, {
         phase: pending.length > 0 || controlledOperations.length > 0
           ? "waiting"
           : result.blocked.length > 0 ? "blocked" : "queued",
         availableAt: wakeAt,
         ...(result.blocked.length === 0 ? {} : { reason: result.blocked.map((item) => item.reason).join(", ") }),
       });
-      await this.#journal("dispatch-released", dispatch.build, options.owner, {
-        phase: released.phase,
-        availableAt: released.availableAt,
-      });
-      return released;
     } catch (error) {
       clearInterval(timer);
       await heartbeat;
@@ -399,9 +369,7 @@ class DurableLocalWorker implements RuntimeWorker {
       if (current?.phase !== "leased" || !sameLease(current.lease, lease)) throw error;
       if (current.admission !== "open") return await this.#cancel(current, lease);
       const reason = error instanceof Error ? error.message : String(error);
-      const terminal = await this.#options.stores.dispatch.finish(dispatch.build, lease, "failed", reason);
-      await this.#journal("dispatch-terminal", dispatch.build, options.owner, { terminal: "failed", reason });
-      return terminal;
+      return await this.#options.stores.dispatch.finish(dispatch.build, lease, "failed", reason);
     } finally {
       clearInterval(timer);
     }
@@ -409,16 +377,11 @@ class DurableLocalWorker implements RuntimeWorker {
 
   async run(options: RuntimeWorkerRunOptions): Promise<void> {
     positive(options.idlePollMs, "Worker idlePollMs");
-    await this.#journal("worker-started", undefined, options.owner, {});
-    try {
-      while (options.signal?.aborted !== true) {
-        const dispatch = await this.runOnce(options);
-        if (dispatch === undefined) await pause(options.idlePollMs, options.signal).catch((error: unknown) => {
-          if (options.signal?.aborted !== true) throw error;
-        });
-      }
-    } finally {
-      await this.#journal("worker-stopped", undefined, options.owner, {});
+    while (options.signal?.aborted !== true) {
+      const dispatch = await this.runOnce(options);
+      if (dispatch === undefined) await pause(options.idlePollMs, options.signal).catch((error: unknown) => {
+        if (options.signal?.aborted !== true) throw error;
+      });
     }
   }
 }

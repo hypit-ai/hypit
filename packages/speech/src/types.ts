@@ -8,11 +8,8 @@ export type SpeechBasis = {
   readonly contract: "svml.speech-basis@1"; readonly programSpace: ProgramSpace; readonly audio: BlobRef;
   readonly visualTrack: { readonly clips: readonly {
     readonly segmentId: string;
-    readonly span: { readonly startFrame: number; readonly endFrameExclusive: number };
     readonly artifact: BlobRef;
     readonly extent: IntrinsicExtent;
-    readonly frameRate: { readonly numerator: number; readonly denominator: number };
-    readonly frameCount: number;
     readonly frame: SpatialFrame;
     readonly fit: ContentFit;
     readonly stackingOrder: number;
@@ -24,9 +21,8 @@ export type SpeechAudioBasis = {
   readonly segments: readonly SpeechBasisSegment[];
 };
 export type SpeechEvidenceAudio = {
-  readonly contract: "svml.speech-evidence-audio@1"; readonly artifact: BlobRef; readonly codec: "pcm_s16le";
-  readonly sampleRate: 16_000; readonly channels: 1; readonly sampleFrames: number; readonly durationSec: number;
-  readonly segments: readonly SpeechBasisSegment[];
-  readonly sampleMap: { readonly algorithm: "rational-boundary-round@1"; readonly sourceSampleRate: 48_000; readonly evidenceSampleRate: 16_000;
-    readonly sourceSampleFrames: number; readonly evidenceSampleFrames: number; readonly sourceOriginSample: 0; readonly evidenceOriginSample: 0 };
+  readonly contract: "svml.speech-evidence-audio@1";
+  readonly artifact: BlobRef;
+  /** Exact 16 kHz mono PCM sample count. Format constants belong to this Type, not every value. */
+  readonly sampleFrames: number;
 };

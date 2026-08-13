@@ -76,7 +76,7 @@ test("the function answers a real Need with real media, over a bucket it address
       assert.equal(value.streams.length, 1);
       assert.equal(value.streams[0]!.kind, "audio");
       assert.equal(value.streams[0]!.sampleRate, 48_000);
-      assert.deepEqual(reply.metadata, { operation: "inspect", provider: "media.aws-lambda" });
+      assert.equal("metadata" in reply, false);
     } finally {
       await rm(work, { recursive: true, force: true });
     }

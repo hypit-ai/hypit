@@ -73,7 +73,6 @@ export const manifest: ModuleManifest = {
     },
   ],
   capabilities: [{ name: capabilities.generation.name, returns: types.generated }],
-  surfaces: [],
   producers: [
     {
       name: producers.makePrompt.name,
@@ -81,8 +80,6 @@ export const manifest: ModuleManifest = {
       outputs: [{ name: "prompt", type: types.prompt }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "example.greeting/make-prompt",
         digest: implementationDigests.makePrompt,
       },
     },
@@ -96,8 +93,6 @@ export const manifest: ModuleManifest = {
         returns: types.generated,
       }],
       implementation: {
-        kind: "registered",
-        locator: "example.greeting/request-text",
         digest: implementationDigests.requestText,
       },
     },
@@ -107,8 +102,6 @@ export const manifest: ModuleManifest = {
       outputs: [{ name: "generated", type: types.generated }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "example.greeting/placeholder-text",
         digest: implementationDigests.placeholderText,
       },
     },
@@ -118,8 +111,6 @@ export const manifest: ModuleManifest = {
       outputs: [{ name: "document", type: types.document }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "example.greeting/assemble",
         digest: implementationDigests.assemble,
       },
     },
@@ -218,8 +209,6 @@ export function createGreetingBuild(options?: {
     origin: { kind: "authored" },
   });
   const typedModule = sealTypedModule({
-    id: "author:greeting",
-    closureDigest: closure.digest,
     records: [authored],
   });
   const program = link(closure, [typedModule]);

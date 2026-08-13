@@ -5,6 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { digestOf } from "@narratage/protocol";
+import { createRunFrontendHostFacet } from "@narratage/run";
 
 import { runCli } from "../src/main.js";
 import type { CliDistribution, ExternalServiceResult } from "../src/distribution.js";
@@ -22,12 +23,17 @@ function distribution(
 ): CliDistribution {
   return {
     name: "test",
-    builtInPackageContributions: [],
-    runFrontends: [{
-      id: "@narratage/run-markup@1",
-      implementationDigest: digestOf("test-run-frontend"),
-      discover() { throw new Error("createRuntimeFromConfig is unavailable"); },
-      decode() { throw new Error("createRuntimeFromConfig is unavailable"); },
+    bootstrapPackages: [{
+      specifier: "@example/run-frontend",
+      contribution: {
+        format: "svml.node-package@1",
+        hostFacets: [createRunFrontendHostFacet({
+        id: "@narratage/run-markup@1",
+        implementationDigest: digestOf("test-run-frontend"),
+        discover() { throw new Error("createRuntimeFromConfig is unavailable"); },
+        decode() { throw new Error("createRuntimeFromConfig is unavailable"); },
+        })],
+      },
     }],
     createCompiler: () => ({
       openFile: async (path: string) => ({

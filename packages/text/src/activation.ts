@@ -1,34 +1,30 @@
+import { createAuthorFrontendHostFacet } from "@narratage/elaborator";
 import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
   decodeTextRenderSurface,
   decodeTextValueSurface,
   textComponent,
-  textImplementationDigests,
   textManifest,
   textModuleRef,
   textSvsFrontend,
+  textMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/text",
-  modules: [{ manifest: textManifest, specifiers: ["@narratage/text", "@narratage/text@1"] }],
-  authorFrontends: [textSvsFrontend],
+  modules: [{ manifest: textManifest }],
   components: [textComponent],
   hostFacets: [
+    createAuthorFrontendHostFacet(textSvsFrontend),
     createMarkupSurfaceHostFacet({
       module: textModuleRef,
-      surface: "value",
-      mode: "structured",
-      implementationDigest: textImplementationDigests.valueSurface,
+    declaration: textMarkupSurfaces.find((item) => item.name === "value")!,
       handler: decodeTextValueSurface,
     }),
     createMarkupSurfaceHostFacet({
       module: textModuleRef,
-      surface: "render",
-      mode: "structured",
-      implementationDigest: textImplementationDigests.renderSurface,
+    declaration: textMarkupSurfaces.find((item) => item.name === "render")!,
       handler: decodeTextRenderSurface,
     }),
   ],

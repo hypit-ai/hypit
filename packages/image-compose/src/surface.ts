@@ -74,7 +74,7 @@ export const decodeImageComposeSurface: StructuredSurfaceHandler = ({ element, r
     inputs[sourceName] = source.ref; inputs[frameName] = frame.ref; inputs[specName] = { kind: "record", id: specId };
     layers.push({ sourceName, frameName, specName });
   }
-  const fragment = createImageComposeFragment(layers, `${id}.__image-compose@1`);
+  const fragment = createImageComposeFragment(layers);
   return {
     records,
     components: [{ id, fragment: fragment.id, inputs, outputs: { image: `${id}.image` }, range: element.range }],

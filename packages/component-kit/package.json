@@ -8,7 +8,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@narratage/protocol": "workspace:*",
-    "@narratage/validation": "workspace:*"
+    "@narratage/protocol": "workspace:*"
   }
 }

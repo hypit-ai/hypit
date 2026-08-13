@@ -1,8 +1,4 @@
-import type {
-  AudioTrack,
-  FrameSpan,
-  VisualTrack,
-} from "@narratage/composition";
+import type { FrameSpan } from "@narratage/composition";
 import type {
   FontArtifactRef,
   SynchronizedMedia,
@@ -20,7 +16,6 @@ export type RankingHeader = {
 
 export type RankingScheduleEntry = {
   readonly itemId: string;
-  readonly triggerOccurrenceId: string;
   readonly triggerFrame: number;
   readonly stage: FrameSpan;
   readonly cumulative: FrameSpan;
@@ -276,12 +271,4 @@ export type RankingSoundSet = {
   readonly contract: "svml.ranking-sound-set@1";
   readonly appear?: SynchronizedMedia;
   readonly move?: SynchronizedMedia;
-};
-
-export type RankingVisualProduct = {
-  readonly track: VisualTrack;
-};
-
-export type RankingAudioProduct = {
-  readonly track: AudioTrack;
 };

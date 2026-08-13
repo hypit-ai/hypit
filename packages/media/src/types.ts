@@ -1,11 +1,4 @@
-import type { BlobRef, Digest } from "@narratage/protocol";
-
-export type MediaArtifactRef = {
-  readonly digest: Digest;
-  readonly size: number;
-  readonly mediaType: string;
-  readonly durationSec: number;
-};
+import type { BlobRef } from "@narratage/protocol";
 
 export type MediaRational = {
   readonly numerator: number;
@@ -111,18 +104,13 @@ export type RenderedVisual = {
     readonly height: number;
   };
   readonly artifact: BlobRef;
-  readonly muted: true;
 };
 
 /** Exact 48 kHz stereo PCM result of one explicit timeline-audio plan. */
 export type TimelineAudio = {
   readonly contract: "svml.timeline-audio@1";
   readonly artifact: BlobRef;
-  readonly codec: "pcm_s16le";
-  readonly sampleRate: 48_000;
-  readonly channels: 2;
   readonly sampleFrames: number;
-  readonly loudness: "planned";
 };
 
 /** Final mux result; visual rendering and program-audio preparation remain separate facts. */

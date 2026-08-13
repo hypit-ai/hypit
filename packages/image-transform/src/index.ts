@@ -2,7 +2,7 @@ export { imageTransformComponent } from "./component.js";
 export { imageTransformFragment } from "./fragment.js";
 export {
   imageTransformImplementationDigests,
-  imageTransformManifest,
+  imageTransformManifest, imageTransformMarkupSurfaces,
   imageTransformManifestDigest,
   imageTransformModuleRef,
   imageTransformProducers,

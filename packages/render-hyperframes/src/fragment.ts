@@ -13,7 +13,6 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 export const renderHyperframesFragment = sealGraphFragment({
-  name: "@narratage/render-hyperframes/video@1",
   inputs: [
     { name: "composition", type: compositionTypes.composition },
     { name: "space", type: programSpaceTypes.programSpace },

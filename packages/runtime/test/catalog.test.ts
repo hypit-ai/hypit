@@ -12,7 +12,6 @@ function descriptor(core = digestOf("core:one")) {
     run: { path: "/project/delivery.svrun" },
     aliases: [{
       name: "final.video",
-      type: { module: { name: "example.media", version: "1" }, name: "Video" },
       ref: { kind: "logical-output" as const, id: "logical:final" },
     }],
   };
@@ -30,7 +29,6 @@ test("Build Catalog indexes Host aliases without becoming Build truth", async ()
     ...descriptor(),
     aliases: [...descriptor().aliases, {
       name: "timing.map",
-      type: { module: { name: "example.timing", version: "1" }, name: "Map" },
       ref: { kind: "logical-output" as const, id: "logical:timing" },
     }],
   });

@@ -92,8 +92,6 @@ export async function compileWireRequest(
   resolve: GenerationArtifactUrlResolver,
 ): Promise<GenerationWireRequest> {
   assert(mapping.contract === GENERATION_WIRE_MAPPING_V1, "Generation wire mapping contract is invalid");
-  assert(request.model === mapping.capability.name,
-    `${mapping.capability.name} mapping received a ${request.model} request`);
   const present = presentPorts(request);
   const input: Record<string, CanonicalValue> = { ...(mapping.constants ?? {}) };
 
@@ -131,7 +129,6 @@ export async function compileWireRequest(
 export function mappingSupportsRequest(mapping: GenerationWireMapping, value: unknown): boolean {
   const request = value as GenerationRequest | undefined;
   if (request?.contract !== "svml.generation-request@1") return false;
-  if (request.model !== mapping.capability.name) return false;
   if (request.ports === null || typeof request.ports !== "object") return false;
   return Object.keys(request.ports).every((port) => mapping.fields[port] !== undefined);
 }

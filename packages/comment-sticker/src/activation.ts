@@ -4,33 +4,26 @@ import {
   commentStickerComponent,
   commentStickerManifest,
   commentStickerModuleRef,
-  commentStickerStyleSurfaceImplementationDigest,
-  commentStickerTrackSurfaceImplementationDigest,
   decodeCommentStickerStyleSurface,
   decodeCommentStickerTrackSurface,
+  commentStickerMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/comment-sticker",
   modules: [{
     manifest: commentStickerManifest,
-    specifiers: [commentStickerModuleRef.name, `${commentStickerModuleRef.name}@1`],
   }],
   components: [commentStickerComponent],
   hostFacets: [
     createMarkupSurfaceHostFacet({
       module: commentStickerModuleRef,
-      surface: "style",
-      mode: "structured",
-      implementationDigest: commentStickerStyleSurfaceImplementationDigest,
+    declaration: commentStickerMarkupSurfaces.find((item) => item.name === "style")!,
       handler: decodeCommentStickerStyleSurface,
     }),
     createMarkupSurfaceHostFacet({
       module: commentStickerModuleRef,
-      surface: "track",
-      mode: "structured",
-      implementationDigest: commentStickerTrackSurfaceImplementationDigest,
+    declaration: commentStickerMarkupSurfaces.find((item) => item.name === "track")!,
       handler: decodeCommentStickerTrackSurface,
     }),
   ],

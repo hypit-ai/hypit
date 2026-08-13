@@ -19,7 +19,7 @@ test("speech evidence uses integer rational boundary projection rather than floa
   assert.equal(programSpaceSampleFrames(ntsc, 48_000), 48_048);
 });
 
-test("SpeechEvidenceAudio records evidence bytes and the complete source-to-evidence sample map", () => {
+test("SpeechEvidenceAudio carries only normalized evidence bytes and their exact sample count", () => {
   const value = sealSpeechEvidenceAudio({
     contract: "svml.speech-evidence-audio@1",
     artifact: {
@@ -28,25 +28,11 @@ test("SpeechEvidenceAudio records evidence bytes and the complete source-to-evid
       size: 32_044,
       mediaType: "audio/wav",
     },
-    codec: "pcm_s16le",
-    sampleRate: 16_000,
-    channels: 1,
     sampleFrames: 16_000,
-    durationSec: 1,
-    segments: [{ segmentId: "line", startSec: 0, endSec: 1 }],
-    sampleMap: {
-      algorithm: "rational-boundary-round@1",
-      sourceSampleRate: 48_000,
-      evidenceSampleRate: 16_000,
-      sourceSampleFrames: 48_000,
-      evidenceSampleFrames: 16_000,
-      sourceOriginSample: 0,
-      evidenceOriginSample: 0,
-    },
   });
   assert.doesNotThrow(() => assertSpeechEvidenceAudioIdentity(value));
   assert.throws(
-    () => assertSpeechEvidenceAudioIdentity({ ...value, sampleFrames: 16_001 }),
-    /sample map|digest/u,
+    () => assertSpeechEvidenceAudioIdentity({ ...value, sampleFrames: 0 }),
+    /media identity/u,
   );
 });

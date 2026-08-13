@@ -1,8 +1,8 @@
 import type { NarrativeToken } from "@narratage/narrative";
 import type { SpeechWordEvidence } from "@narratage/speech-evidence";
-import type { AlignmentGroup, AlignmentRelation } from "@narratage/semantic-map";
 
 import { editDistance, normalizeForAlignment } from "./normalize.js";
+import type { AlignmentGroup, AlignmentRelation } from "./types.js";
 
 const EPSILON = 1e-9;
 const DEFAULT_MAX_GROUP = 4;

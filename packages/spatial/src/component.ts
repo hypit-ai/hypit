@@ -39,7 +39,6 @@ function inline<T>(value: StoredValue | undefined, label: string): T {
 const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
 
 export const spatialComponent = {
-  name: "@narratage/spatial",
   producers: [
     { producer: spatialProducers.canvasFrame, implementationDigest: spatialImplementationDigests.canvasFrame, handler: ({ inputs }) => ({ outputs: { frame: output(canvasFrame(inline<CanvasSpace>(inputs.canvas?.value, "CanvasSpace"))) }, needs: {} }) },
     { producer: spatialProducers.frameEdges, implementationDigest: spatialImplementationDigests.frameEdges, handler: ({ inputs }) => ({ outputs: { frame: output(frameFromEdges(inline<SpatialFrame>(inputs.parent?.value, "SpatialFrame"), inline<FrameEdgesProgram>(inputs.program?.value, "FrameEdgesProgram"))) }, needs: {} }) },

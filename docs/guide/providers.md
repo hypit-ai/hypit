@@ -109,7 +109,6 @@ const adapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/provider-my-service",
   hostFacets: [adapter],
 };
 

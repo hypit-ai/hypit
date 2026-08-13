@@ -1,18 +1,18 @@
 import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
-  backgroundRemovalComponent, backgroundRemovalImplementationDigests, backgroundRemovalManifest,
+  backgroundRemovalComponent, backgroundRemovalManifest,
   backgroundRemovalModuleRef, decodeBackgroundRemovalSurface,
+  backgroundRemovalMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/background-removal",
-  modules: [{ manifest: backgroundRemovalManifest, specifiers: ["@narratage/background-removal", "@narratage/background-removal@1"] }],
+  modules: [{ manifest: backgroundRemovalManifest }],
   components: [backgroundRemovalComponent],
   hostFacets: [{ ...createMarkupSurfaceHostFacet({
-    module: backgroundRemovalModuleRef, surface: "background", mode: "structured",
-    implementationDigest: backgroundRemovalImplementationDigests.surface, handler: decodeBackgroundRemovalSurface,
+    module: backgroundRemovalModuleRef,
+    declaration: backgroundRemovalMarkupSurfaces.find((item) => item.name === "background")!, handler: decodeBackgroundRemovalSurface,
   }) }],
 };
 export default svmlPackage;

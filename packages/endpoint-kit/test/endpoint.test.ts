@@ -18,7 +18,6 @@ import { credentialRef } from "@narratage/runtime";
 import { capabilities, types } from "../../core/test/greeting-fixture.js";
 
 const implementation = {
-  locator: "example.provider/http-json",
   digest: digestOf("example.provider/http-json@1"),
 } as const;
 

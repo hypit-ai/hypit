@@ -141,7 +141,6 @@ function realizedItems(
   const fadeOutSamples = temporalDurationInSamples(spec.mix.fadeOut, space);
   const additions = occurrences.map((occurrence) => ({
     id: occurrence.id,
-    sourceOccurrenceId: occurrence.sourceOccurrenceId,
     window: { ...occurrence.span },
     source: structuredClone(source),
     trim: { startSample: trimStart, endSampleExclusive: trimEnd },
@@ -229,7 +228,6 @@ export function assertAudioTrackProgram(value: AudioTrackProgram): void {
     assertIdentity(item.id, "AudioItemProgram.id");
     assert(!ids.has(item.id), `AudioTrackProgram contains duplicate Item ${item.id}.`);
     ids.add(item.id);
-    assert(item.sourceOccurrenceId.length > 0, `Audio Item ${item.id} has no occurrence identity.`);
     assert(Number.isSafeInteger(item.window.startFrame) && item.window.startFrame >= 0
       && Number.isSafeInteger(item.window.endFrameExclusive)
       && item.window.endFrameExclusive > item.window.startFrame, `Audio Item ${item.id} window is invalid.`);

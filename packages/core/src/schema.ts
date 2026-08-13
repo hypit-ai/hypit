@@ -10,10 +10,9 @@ function fail(path: string, message: string): never {
 /**
  * Prove that an object-shaped union branch cannot match by looking only at its
  * literal fields. This is a semantic no-op: a branch skipped here would fail
- * the normal object validation at the same field. It matters for large IRs,
- * where validating every word/style node against every named union variant
- * otherwise constructs thousands of exceptions just to discover that their
- * discriminator literals differ.
+ * the normal object validation at the same field. It matters for large
+ * discriminated IRs, where trying every named union variant would otherwise
+ * construct thousands of exceptions before finding a literal mismatch.
  */
 function objectLiteralMismatch(value: CanonicalValue, schema: ValueSchema): boolean {
   if (schema.kind !== "object" || value === null || Array.isArray(value) || typeof value !== "object") {

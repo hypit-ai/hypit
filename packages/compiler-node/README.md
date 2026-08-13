@@ -21,10 +21,10 @@ their digest-bound dependencies. It does not install npm packages or execute mod
 embedding application must register the manifests and matching Frontend/Surface implementations it
 has chosen to trust.
 
-`NodeCompiler` accepts the host-neutral `Workspace` contract. With no explicit Workspace it creates
-the convenient `@narratage/workspace-fs-node` default: relative recursive Source imports are confined to
-one canonical root, symlink escapes are rejected and each edge is locked to the first bytes read for
-that compilation. A browser, Git, memory or remote Host can inject another Workspace without
+`NodeCompiler` requires the host-neutral `Workspace` contract. The reference CLI explicitly selects
+`@narratage/workspace-fs-node`, where relative recursive Source imports are confined to one canonical
+root, symlink escapes are rejected and each edge is locked to the first bytes read for that
+compilation. A browser, Git, memory or remote Host can supply another Workspace without
 changing Frontends, Surfaces, Source Closure identity or Core.
 
 The Workspace session owns a separate Source Asset capability. A Frontend/Surface may request an

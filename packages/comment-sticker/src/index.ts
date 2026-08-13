@@ -6,7 +6,7 @@ export {
   commentStickerDependency,
   commentStickerHeaderSchema,
   commentStickerItemSpecSchema,
-  commentStickerManifest,
+  commentStickerManifest, commentStickerMarkupSurfaces,
   commentStickerManifestDigest,
   commentStickerModuleRef,
   commentStickerProducers,

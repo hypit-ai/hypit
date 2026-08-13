@@ -13,7 +13,6 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const estimateComponent = {
-  name: "@narratage/estimate",
   producers: [{
     producer: estimateProducers.speech,
     implementationDigest: estimateSpeechImplementationDigest,

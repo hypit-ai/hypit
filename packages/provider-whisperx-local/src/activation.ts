@@ -72,7 +72,6 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/provider-whisperx-local",
   hostFacets: [localWhisperXRuntimeAdapter],
 };
 

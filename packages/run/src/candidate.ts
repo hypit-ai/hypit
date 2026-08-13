@@ -8,14 +8,12 @@ import type {
   Candidate,
   StoredValue,
   TypeRef,
-  TypeValidationReceipt,
 } from "@narratage/protocol";
 
 export type ProvidedCandidateInput = {
   readonly type: TypeRef;
   readonly value: StoredValue;
   readonly record?: string;
-  readonly validation?: TypeValidationReceipt;
 };
 
 export type BuildRecordCandidateInput = {
@@ -47,7 +45,6 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
     kind: "provided-candidate@1",
     type: input.type,
     value,
-    ...(input.validation === undefined ? {} : { validation: input.validation }),
   };
   const suffix = digestOf(identity).slice("sha256:".length);
   return {
@@ -58,7 +55,6 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
       value: {
         id: input.record ?? `provided:${suffix}`,
         value,
-        ...(input.validation === undefined ? {} : { validation: input.validation }),
       },
     },
   };
@@ -82,6 +78,5 @@ export function createBuildRecordCandidate(input: BuildRecordCandidateInput): Ca
   return createProvidedCandidate({
     type: record.type,
     value: record.value,
-    ...(record.validation === undefined ? {} : { validation: record.validation }),
   });
 }

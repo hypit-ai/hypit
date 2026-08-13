@@ -9,8 +9,8 @@ const empty: ExternalServiceResult = { root: "/tmp", services: [] };
 function distribution(calls: string[]): CliDistribution {
   return {
     name: "test",
-    builtInPackageContributions: [],
-    runFrontends: [],
+    bootstrapPackages: [],
+    runtimeProfileRevision: async () => "test-revision",
     externalServices: {
       up: async (path: string, options: { maxWaitMs?: number }) => {
         calls.push(`up ${path} ${JSON.stringify(options)}`);
@@ -68,12 +68,12 @@ test("runtime up validates its Revision before starting any external program", a
     ...selected,
     createRuntimeFromConfig: async () => {
       calls.push("runtime.validate");
-      throw new Error("Runtime Revision conflict");
+      throw new Error("Runtime Closure conflict");
     },
   } as CliDistribution;
   await assert.rejects(
     async () => await runCli(["runtime", "up", "/p/svml.runtime.json"], io, failing),
-    /Runtime Revision conflict/u,
+    /Runtime Closure conflict/u,
   );
   assert.deepEqual(calls, ["runtime.validate"]);
 });

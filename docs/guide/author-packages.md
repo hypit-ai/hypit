@@ -49,14 +49,26 @@ import type { ModuleManifest, ModuleRef } from "@narratage/protocol";
 
 export const myComponentModuleRef: ModuleRef = {
   name: "@narratage/my-component",
-  version: 1,
+  version: "1",
 };
 
 export const myComponentManifest: ModuleManifest = {
-  module: myComponentModuleRef,
+  format: "svml.module@1",
+  name: myComponentModuleRef.name,
+  version: myComponentModuleRef.version,
+  dependencies: [],
   types: [ /* your nominal Types */ ],
+  capabilities: [],
   producers: [ /* your deterministic Producers */ ],
 };
+
+export const myComponentMarkupSurfaces = [{
+  name: "widget",
+  tag: "Widget",
+  mode: "structured",
+  outputs: [ /* Types this syntax may author */ ],
+  implementation: { digest: "sha256:..." },
+}] as const;
 ```
 
 Types are nominally owned by Modules. Core does not maintain a central union of every domain
@@ -68,9 +80,9 @@ The Surface handler decodes the Markup Frontend's XML elements into typed author
 
 ```typescript
 // src/surface.ts
-import type { MarkupSurfaceDecoder } from "@narratage/markup";
+import type { StructuredSurfaceHandler } from "@narratage/markup";
 
-export const decodeMyComponentSurface: MarkupSurfaceDecoder = (element, context) => {
+export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element }) => {
   // Read attributes and children from the XML element
   // Validate inputs
   // Emit typed Records and Operations into context
@@ -90,23 +102,20 @@ Look at existing Surface implementations for reference:
 import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   myComponentManifest,
+  myComponentMarkupSurfaces,
   myComponentModuleRef,
   decodeMyComponentSurface,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/my-component",
   modules: [{
     manifest: myComponentManifest,
-    specifiers: ["@narratage/my-component", "@narratage/my-component@1"],
   }],
   hostFacets: [
     createMarkupSurfaceHostFacet({
       module: myComponentModuleRef,
-      surface: "my-widget",
-      mode: "structured",
-      implementationDigest: "sha256:...",
+      declaration: myComponentMarkupSurfaces[0],
       handler: decodeMyComponentSurface,
     }),
   ],
@@ -115,8 +124,11 @@ export const svmlPackage = {
 export default svmlPackage;
 ```
 
-The `specifiers` array lists the strings that an `<import from="..."/>` will match against. The
-`surface` string determines the XML element prefix (`<mine:my-widget>` when imported as `mine`).
+The Module automatically offers its exact `manifest.name@manifest.version`, so authors import
+`@narratage/my-component@1` without a duplicate alias declaration. Use optional `specifiers` only
+when the package intentionally owns a genuinely different logical alias. The Surface declaration
+determines the accepted tag (`<mine:Widget>` when imported as `mine`). It is a Markup Host facet,
+not part of the semantic Module Manifest or Core.
 
 ## 6. Declare package dependencies
 

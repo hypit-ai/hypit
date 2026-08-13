@@ -1,6 +1,5 @@
 import type { BlobRef } from "@narratage/protocol";
 import type { MediaInspection, MediaRational, MediaStreamSelection, RenderedVisual, TimelineAudio } from "@narratage/media";
-import type { SpeechBasisSegment } from "@narratage/speech";
 
 export type MediaSelectionRequest = {
   readonly contract: "svml.media-selection-request@1";
@@ -112,16 +111,8 @@ export type NormalizeMediaNeed = {
 export type ProjectSpeechEvidenceAudioNeed = {
   readonly contract: "svml.project-speech-evidence-audio-request@1";
   readonly source: BlobRef;
-  readonly sourceSampleRate: 48_000;
-  readonly sourceChannels: 2;
-  readonly sourceCodec: "pcm_s16le";
   readonly sourceSampleFrames: number;
-  readonly evidenceSampleRate: 16_000;
-  readonly evidenceChannels: 1;
-  readonly evidenceCodec: "pcm_s16le";
   readonly evidenceSampleFrames: number;
-  readonly durationSec: number;
-  readonly segments: readonly SpeechBasisSegment[];
 };
 
 export type AudioProgramClip = {

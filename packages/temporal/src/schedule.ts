@@ -36,25 +36,17 @@ export function resolveTriggeredSchedule(input: {
     previousFrame = trigger.frame;
   }
   const cumulative = input.triggers.map((trigger) => ({
-    id: `cumulative::${trigger.id}`,
-    triggerId: trigger.id,
-    span: { startFrame: trigger.frame, endFrameExclusive: input.outer.endFrameExclusive },
+    startFrame: trigger.frame,
+    endFrameExclusive: input.outer.endFrameExclusive,
   }));
   const exclusive = input.triggers.map((trigger, index) => ({
-    id: `exclusive::${trigger.id}`,
-    triggerId: trigger.id,
-    span: {
-      startFrame: trigger.frame,
-      endFrameExclusive: input.triggers[index + 1]?.frame ?? input.terminalFrame,
-    },
+    startFrame: trigger.frame,
+    endFrameExclusive: input.triggers[index + 1]?.frame ?? input.terminalFrame,
   }));
   return {
     outer: { ...input.outer },
     terminalFrame: input.terminalFrame,
     cumulative,
     exclusive,
-    ...(input.terminalFrame < input.outer.endFrameExclusive
-      ? { settledSuffix: { startFrame: input.terminalFrame, endFrameExclusive: input.outer.endFrameExclusive } }
-      : {}),
   };
 }

@@ -3,9 +3,9 @@ import test from "node:test";
 
 import {
   audioTrackManifest,
+  audioTrackMarkupSurfaces,
   audioTrackModuleRef,
   audioTrackProducers,
-  audioTrackSurfaceImplementationDigest,
   appendMomentAudioItem,
   appendProgramAudioItem,
   appendSelectionAudioItem,
@@ -153,10 +153,10 @@ const map: CompleteSemanticMap = {
   contract: "svml.complete-semantic-map@1",
   tokens: [],
   anchors: [
-    { identity: "a", timeSec: 1, frame: 30 },
-    { identity: "b", timeSec: 2, frame: 60 },
-    { identity: "c", timeSec: 3, frame: 90 },
-    { identity: "d", timeSec: 4, frame: 120 },
+    { identity: "a", frame: 30 },
+    { identity: "b", frame: 60 },
+    { identity: "c", frame: 90 },
+    { identity: "d", frame: 120 },
   ],
 };
 
@@ -225,7 +225,7 @@ test("dynamic Fragment keeps every material and temporal dependency as an explic
     { kind: "program", mediaName: "music", specName: "music-spec" },
     { kind: "selection", mediaName: "voice", specName: "voice-spec", mapName: "map", sourceName: "selection" },
     { kind: "moment", mediaName: "impact", specName: "impact-spec", mapName: "map", sourceName: "moment" },
-  ], "example.audio@1");
+  ]);
   assert.deepEqual(fragment.inputs.map((input) => input.name), [
     "header", "impact", "impact-spec", "map", "moment", "music", "music-spec", "selection", "space", "voice", "voice-spec",
   ]);
@@ -235,6 +235,11 @@ test("dynamic Fragment keeps every material and temporal dependency as an explic
 test("the self-described Audio Surface parses into the same finite Producer graph", async () => {
   const fixtureModule = { name: "example.audio-inputs", version: "1" } as const;
   const fixtureSurfaceDigest = digestOf("example.audio-inputs/surface@1");
+  const fixtureSurface = {
+    name: "inputs", tag: "Inputs", mode: "structured",
+    outputs: [mediaTypes.synchronized, programSpaceTypes.programSpace],
+    implementation: { digest: fixtureSurfaceDigest },
+  } as const;
   const fixtureManifest: ModuleManifest = {
     format: "svml.module@1",
     name: fixtureModule.name,
@@ -242,17 +247,6 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     dependencies: [mediaDependency, programSpaceDependency],
     types: [],
     capabilities: [],
-    surfaces: [{
-      name: "inputs",
-      tag: "Inputs",
-      mode: "structured",
-      outputs: [mediaTypes.synchronized, programSpaceTypes.programSpace],
-      implementation: {
-        kind: "trusted-frontend-surface",
-        locator: "example.audio-inputs/surface",
-        digest: fixtureSurfaceDigest,
-      },
-    }],
     producers: [],
   };
   const closure = createResolvedClosure([
@@ -271,20 +265,19 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     fixtureManifest,
   ]);
   const registry = new MarkupSurfaceRegistry();
-  registry.registerStructured(fixtureModule, "inputs", fixtureSurfaceDigest, ({ element }) => ({
+  registry.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
       { id: "source", type: mediaTypes.synchronized, value: { kind: "inline", value: media("surface", 48_000) }, range: element.range },
       { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
     ],
     components: [],
     fragments: [],
-  }));
-  registry.registerStructured(
-    audioTrackModuleRef,
-    "track",
-    audioTrackSurfaceImplementationDigest,
-    decodeAudioTrackSurface,
-  );
+  }) });
+  registry.registerStructured({
+    module: audioTrackModuleRef,
+    declaration: audioTrackMarkupSurfaces.find((item) => item.name === "track")!,
+    handler: decodeAudioTrackSurface,
+  });
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({
     registry,
@@ -313,8 +306,8 @@ test("the self-described Audio Surface parses into the same finite Producer grap
   });
   const trackExport = resolveCompiledSourceExport(compiled, "sound.track", compositionTypes.audioTrack);
   assert.equal(trackExport.ref.kind, "logical-output");
-  const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
-    graph: compiled.elaboration.graph.id,
+  const build = start(compiled.program, compiled.graph, sealBuildRequest({
+    graph: compiled.graph.id,
     targets: [{ output: trackExport.ref.kind === "logical-output" ? trackExport.ref.id : "" }],
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [

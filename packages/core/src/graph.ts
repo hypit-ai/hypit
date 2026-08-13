@@ -42,7 +42,6 @@ function normalizeRoot(root: CandidateRoot): CandidateRoot {
   const value = {
     id: root.value.id,
     value: normalizedStoredValue(root.value.value),
-    ...(root.value.validation === undefined ? {} : { validation: root.value.validation }),
   };
   return { kind: "value", value };
 }
@@ -241,9 +240,6 @@ function verifyCandidateValue(program: LinkedProgram, graph: CompiledGraph, cand
     origin: {
       kind: "provided",
     },
-    ...(candidate.root.value.validation === undefined
-      ? {}
-      : { validation: candidate.root.value.validation }),
   });
   verifyRecord(program.closure, provisional);
 }

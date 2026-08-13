@@ -29,7 +29,6 @@ const output = (value: unknown) => ({ kind: "inline" as const, value: canonicali
 const base = (inputs: Parameters<typeof appendProgramAudioItem>) => output(appendProgramAudioItem(...inputs));
 
 export const audioTrackComponent = {
-  name: "@narratage/audio-track",
   producers: [
     { producer: audioTrackProducers.createSet, implementationDigest: audioTrackImplementationDigests.createSet, handler: () => ({ outputs: { set: output(createAudioTrackSet()) }, needs: {} }) },
     { producer: audioTrackProducers.appendProgram, implementationDigest: audioTrackImplementationDigests.appendProgram, handler: ({ inputs }) => ({ outputs: { set: base([

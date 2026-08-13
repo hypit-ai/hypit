@@ -96,7 +96,6 @@ export type CommentStickerHeader = {
 
 export type CommentStickerItemProgram = {
   readonly id: string;
-  readonly sourceOccurrenceId: string;
   readonly span: FrameSpan;
   readonly frame: SpatialFrame;
   readonly style: CommentStickerStyle;

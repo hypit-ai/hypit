@@ -3,7 +3,7 @@ import { mkdir, open, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { CompositableSurfaceRef } from "@narratage/media";
-import type { BlobRef, CanonicalValue } from "@narratage/protocol";
+import type { BlobRef } from "@narratage/protocol";
 
 import { assertHyperframesDocument, materializeHyperframesHtml } from "./document.js";
 import type { HyperframesDocument } from "./types.js";
@@ -15,7 +15,7 @@ export type HyperframesArtifactReader = (
 export type HyperframesSurfaceValidator = (
   surface: CompositableSurfaceRef,
   bytes: Uint8Array,
-) => Promise<CanonicalValue>;
+) => Promise<void>;
 
 const EXTENSIONS: Readonly<Record<string, string>> = {
   "image/png": ".png",
@@ -51,7 +51,7 @@ export async function stageHyperframesProject(options: {
   readonly directory: string;
   readonly read: HyperframesArtifactReader;
   readonly validateSurface?: HyperframesSurfaceValidator;
-}): Promise<{ readonly html: string; readonly surfaceValidations: readonly CanonicalValue[] }> {
+}): Promise<void> {
   const { document, directory, read } = options;
   assertHyperframesDocument(document);
   if (document.surfaces.length > 0 && options.validateSurface === undefined) {
@@ -61,7 +61,7 @@ export async function stageHyperframesProject(options: {
   await mkdir(artifactDirectory, { recursive: true });
   const paths = new Map<string, string>();
   const surfaces = new Map(document.surfaces.map((surface) => [surface.artifact.digest, surface]));
-  const validations = await Promise.all(document.artifacts.map(async (artifact) => {
+  await Promise.all(document.artifacts.map(async (artifact) => {
     const name = `${artifact.digest.slice("sha256:".length)}${extension(artifact.mediaType)}`;
     const opened = await read(artifact);
     const chunks = opened instanceof Uint8Array
@@ -98,11 +98,10 @@ export async function stageHyperframesProject(options: {
       }
       return value;
     })();
-    const validation = surface === undefined
-      ? undefined
-      : await options.validateSurface!(structuredClone(surface), bytes!.slice());
+    if (surface !== undefined) {
+      await options.validateSurface!(structuredClone(surface), bytes!.slice());
+    }
     paths.set(artifact.digest, `./artifacts/${name}`);
-    return validation;
   }));
   const html = materializeHyperframesHtml(document, (artifact) => {
     const path = paths.get(artifact.digest);
@@ -110,8 +109,4 @@ export async function stageHyperframesProject(options: {
     return path;
   });
   await writeFile(join(directory, "index.html"), html, "utf8");
-  return {
-    html,
-    surfaceValidations: validations.filter((value): value is CanonicalValue => value !== undefined),
-  };
 }

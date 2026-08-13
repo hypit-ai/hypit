@@ -21,7 +21,7 @@ node --run narratage -- runtime down svml.runtime.json
 彼此独立的外部程序会并行准备。人类可读输出会显示 `Checking`、`Preparing`、`Starting`、
 `Waiting`、`Ready`，首次准备 WhisperX 模型或浏览器时不会像命令卡死；JSON 模式仍只输出一份干净的最终文档。
 
-后台进程同时绑定 Profile 路径，以及覆盖 Profile 与两份 package lock 的有效修订摘要。任一文件变化后，旧进程会显示为 `stale`；下一次 `runtime up` 或 `build` 会先替换旧进程，不会让新 Dispatch 偷偷进入旧执行闭包。
+后台进程同时绑定 Profile 路径与 Distribution 提供的不透明修订值。官方 JSON Profile 的实现让该修订覆盖 Profile 与两份 package lock；通用 CLI 不解析配置文档，也不假定哪些文件属于修订。任一文件变化后，官方 Worker 会显示为 `stale`；下一次 `runtime up` 或 `build` 会先替换旧进程，不会让新 Dispatch 偷偷进入旧执行闭包。
 
 `runtime down` 停止 Worker 和由该 Profile 管理的程序，但不会取消 Build 或远端 Provider
 任务。队列仍在 Store 中，下次启动后继续。

@@ -14,10 +14,9 @@ import {
   collectNodePackageComponents,
 } from "@narratage/package-loader-node";
 import {
-  assertRuntimeRevisionAdmission,
+  assertRuntimeClosureAdmission,
   RuntimeModuleRegistry,
   createBuildDispatchIdentity,
-  createRuntimeRevision,
   isStreamingArtifactStore,
   nonTerminalDispatchPhases,
   resolveRuntimeProfile,
@@ -100,22 +99,18 @@ function registerManifests(
 }
 
 function verifyEndpointPackages(packages: readonly EndpointPackage[]): void {
-  const names = new Set<string>();
   const instances = new Set<string>();
   for (const item of packages) {
-    assert(item.name.trim().length > 0, "Endpoint package name must not be empty");
-    assert(!names.has(item.name), `Endpoint package ${item.name} is configured twice`);
-    names.add(item.name);
-    assert(item.instance.id.trim().length > 0, `${item.name} Endpoint instance id is empty`);
+    assert(item.instance.id.trim().length > 0, "Endpoint instance id is empty");
     assert(!instances.has(item.instance.id), `Endpoint instance ${item.instance.id} is configured twice`);
     instances.add(item.instance.id);
     assert(item.manifest.name === item.instance.facet.module.name
       && item.manifest.version === item.instance.facet.module.version,
-    `${item.name} instance ${facetKey(item.instance)} is outside its Runtime Manifest`);
-    assert(item.bindings.length > 0, `${item.name} binds no exact capability`);
+    `${item.instance.id} instance ${facetKey(item.instance)} is outside its Runtime Manifest`);
+    assert(item.bindings.length > 0, `${item.instance.id} binds no exact capability`);
     for (const binding of item.bindings) {
       assert(binding.endpoint === item.instance.id,
-        `${item.name} binding points to ${binding.endpoint}, not ${item.instance.id}`);
+        `${item.instance.id} binding points to ${binding.endpoint}, not ${item.instance.id}`);
     }
   }
 }
@@ -127,23 +122,15 @@ export async function createLocalRuntime(
   if (options.scheduling?.maxConcurrency !== undefined || options.scheduling?.resourceLimits !== undefined) {
     throw new Error("a locked Runtime Closure owns maxConcurrency and resource limits");
   }
-  const runtimeRevision = createRuntimeRevision({
-    runtimeClosure: options.closure.value.digest,
-    ...(options.runtimePackageClosure === undefined
-      ? {} : { runtimePackageClosure: options.runtimePackageClosure }),
-  });
-  assertRuntimeRevisionAdmission(
-    runtimeRevision,
+  const runtimeClosure = options.closure.value.digest;
+  assertRuntimeClosureAdmission(
+    runtimeClosure,
     await options.dispatchStore.list({ phases: nonTerminalDispatchPhases }),
   );
   const producers = new ProducerRegistry();
   const endpoints = new EndpointRegistry();
   const validators = options.validators ?? new TypeValidatorRegistry();
-  const componentNames = new Set<string>();
   for (const component of options.components ?? []) {
-    assert(component.name.trim().length > 0, "Component package name must not be empty");
-    assert(!componentNames.has(component.name), `Component package ${component.name} is configured twice`);
-    componentNames.add(component.name);
     registerTypeValidatorFacets(validators, component.validators ?? []);
     registerProducerFacets(producers, component.producers ?? []);
   }
@@ -160,8 +147,6 @@ export async function createLocalRuntime(
   const scheduling = {
     maxConcurrency: options.closure.value.scheduling.maxConcurrency,
     resourceLimits: Object.fromEntries(options.closure.value.scheduling.resources.map((resource) => [resource.id, resource.maxConcurrency])),
-    ...(options.scheduling?.maxEventsPerBuild === undefined
-      ? {} : { maxEventsPerBuild: options.scheduling.maxEventsPerBuild }),
   };
   const worker = options.worker.create(driver, {
     scheduler: options.scheduler,
@@ -169,11 +154,9 @@ export async function createLocalRuntime(
       builds: options.buildStore,
       operations: options.operationStore,
       dispatch: options.dispatchStore,
-      journal: options.journal,
       artifacts: options.artifactStore,
     },
     scheduling,
-    runtimeRevision,
     runtimeClosure: options.closure.value,
   });
   const credentialControl = createLocalCredentialControl({
@@ -185,7 +168,6 @@ export async function createLocalRuntime(
     ...(buildCatalog === undefined ? {} : { buildCatalog }),
     operationStore: options.operationStore,
     dispatchStore: options.dispatchStore,
-    journal: options.journal,
     artifactStore: options.artifactStore,
   });
   const stageAttachments = async (request: LocalBuildRequest): Promise<void> => {
@@ -246,16 +228,8 @@ export async function createLocalRuntime(
     const created = await options.dispatchStore.create(createBuildDispatchIdentity({
       build: request.id,
       core: request.state.id,
-      runtimeRevision,
+      runtimeClosure,
     }));
-    if (created.status === "created") {
-      await options.journal.append({
-        at: Date.now(),
-        kind: "dispatch-created",
-        build: request.id,
-        detail: { dispatch: created.snapshot.id },
-      });
-    }
     if (request.catalog !== undefined) {
       assert(buildCatalog !== undefined, "Build supplied Host catalog metadata but no BuildCatalog was selected");
       assert(request.catalog.core === request.state.id,
@@ -314,7 +288,7 @@ export async function createProjectLocalRuntime(
     : await loadNodePackageSet(resolve(root, options.packageLock), packageRoot);
   const lockedComponents = lockedPackageSet === undefined
     ? []
-    : collectNodePackageComponents(lockedPackageSet.contributions);
+    : collectNodePackageComponents(lockedPackageSet.packages.map((item) => item.contribution));
   const configuredComponents = [...lockedComponents, ...(options.components ?? [])];
   const projectServices = await createProjectRuntimeServices(root, options);
   const services = projectServices.assembly;
@@ -329,7 +303,6 @@ export async function createProjectLocalRuntime(
       ...endpointPackages.map((item) => item.manifest),
     ]);
     const profile = sealRuntimeProfile({
-      name: "svml.local.project",
       instances: [
         ...services.instances,
         ...endpointPackages.map((item) => item.instance),
@@ -340,7 +313,6 @@ export async function createProjectLocalRuntime(
         build: selection.stores.build,
         operations: selection.stores.operations,
         dispatch: selection.stores.dispatch,
-        journal: selection.stores.journal,
         artifacts: selection.stores.artifacts,
         credentials: selection.stores.credentials,
       },
@@ -359,7 +331,6 @@ export async function createProjectLocalRuntime(
       ...(projectServices.catalog === undefined ? {} : { buildCatalog: projectServices.catalog }),
       operationStore: services.operationStore,
       dispatchStore: services.dispatchStore,
-      journal: services.journal,
       artifactStore: services.artifactStore,
       credentialStore: services.credentialStore,
       scheduler: services.scheduler,
@@ -369,14 +340,7 @@ export async function createProjectLocalRuntime(
         : { components: configuredComponents }),
       endpoints: endpointPackages,
       closure: { modules, value: closure },
-      scheduling: {
-        ...(options.scheduling.maxEventsPerBuild === undefined
-          ? {}
-          : { maxEventsPerBuild: options.scheduling.maxEventsPerBuild }),
-      },
       ...(options.validators === undefined ? {} : { validators: options.validators }),
-      ...(options.runtimePackageClosure === undefined
-        ? {} : { runtimePackageClosure: options.runtimePackageClosure }),
     });
     return {
       build: runtime.build,
@@ -385,7 +349,6 @@ export async function createProjectLocalRuntime(
       activity: runtime.activity,
       queue: runtime.queue,
       operation: runtime.operation,
-      journal: runtime.journal,
       credentials: runtime.credentials,
       putCredential: runtime.putCredential,
       deleteCredential: runtime.deleteCredential,
