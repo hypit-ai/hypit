@@ -57,7 +57,6 @@ export type DepthStackReflow = {
 };
 
 export type DepthStackSpec = {
-  readonly contract: "svml.depth-stack-spec@1";
   readonly visibility: DepthStackVisibility;
   readonly poses: DepthStackPoseModel;
   readonly reflow: DepthStackReflow;
@@ -72,9 +71,8 @@ export type DepthStackCardPlayback = {
 };
 
 export type DepthStackCardLabel =
-  | { readonly contract: "svml.depth-stack-card-label@1"; readonly kind: "none" }
+  | { readonly kind: "none" }
   | {
-      readonly contract: "svml.depth-stack-card-label@1";
       readonly kind: "text";
       readonly document: VisualTextDocument;
       readonly typography: VisualTextTypography;
@@ -83,14 +81,12 @@ export type DepthStackCardLabel =
     };
 
 export type DepthStackCardLabelStyle = {
-  readonly contract: "svml.depth-stack-card-label-style@1";
   readonly typography: VisualTextTypography;
   readonly paints: readonly VisualTextPaintLayer[];
   readonly flow: VisualTextFlow;
 };
 
 export type DepthStackCardSpec = {
-  readonly contract: "svml.depth-stack-card-spec@1";
   readonly id: string;
   readonly playback: DepthStackCardPlayback;
 };
@@ -104,17 +100,14 @@ export type DepthStackCard = {
 };
 
 export type DepthStackCardSet = {
-  readonly contract: "svml.depth-stack-card-set@1";
   readonly cards: readonly DepthStackCard[];
 };
 
 export type DepthStackHeader = {
-  readonly contract: "svml.depth-stack-header@1";
   readonly id: string;
 };
 
 export type DepthStackProgram = {
-  readonly contract: "svml.depth-stack-program@1";
   readonly id: string;
   readonly span: FrameSpan;
   readonly terminalFrame: number;

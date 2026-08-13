@@ -45,7 +45,7 @@ const space = sealProgramSpace({
   durationSec: 10,
   frameRate: { numerator: 30, denominator: 1 },
 });
-const header = sealAudioTrackHeader({ contract: "svml.audio-track-header@1", id: "sound" });
+const header = sealAudioTrackHeader({ id: "sound" });
 const zero = { unit: "frames" as const, value: 0 };
 
 function media(id: string, sampleFrames: number): SynchronizedMedia {
@@ -62,7 +62,7 @@ function media(id: string, sampleFrames: number): SynchronizedMedia {
 
 function spec(overrides: Partial<AudioClipSpec> = {}): AudioClipSpec {
   return sealAudioClipSpec({
-    contract: "svml.audio-clip-spec@1",
+
     id: "clip",
     projection: {
       start: { ref: "program.start" },

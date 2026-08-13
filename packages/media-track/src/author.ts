@@ -172,7 +172,7 @@ export function decodeMediaSampleSpec(
   const timed = sourceKind === "timed" || (sourceKind === "surface" && hasTimedProperties);
   const sourceTrim = timed ? trim(recipe) : undefined;
   return sealMediaSampleLayerSpec({
-    contract: "svml.media-sample-layer-spec@1",
+
     id,
     ...(timed ? { occupancy: occupancy(recipe), ...(sourceTrim === undefined ? {} : { trim: sourceTrim }) } : {}),
     appearance: {
@@ -253,7 +253,7 @@ export function decodeMediaItemSpec(
 ): MediaItemSpec {
   assertKeys(recipe, [...FIT_KEYS, ...SAMPLE_KEYS, ...FRAME_KEYS]);
   return sealMediaItemSpec({
-    contract: "svml.media-item-spec@1",
+
     id: input.id,
     projection: input.projection,
     expansion: input.expansion,
@@ -268,13 +268,13 @@ export function decodeMediaFramePaint(recipe: SvsRecipe, id: string): MediaPaint
   const source = optionalString(recipe, "frame-paint");
   if (source === undefined || source === "transparent") return undefined;
   const adapted: SvsRecipe = { ...recipe, properties: { paint: source } };
-  return sealMediaPaintLayerSpec({ contract: "svml.media-paint-layer-spec@1", id, paint: paint(adapted), opacity: 1 });
+  return sealMediaPaintLayerSpec({ id, paint: paint(adapted), opacity: 1 });
 }
 
 export function decodeMediaPaintSpec(recipe: SvsRecipe, id: string): MediaPaintLayerSpec {
   assertKeys(recipe, ["paint", "opacity"]);
   return sealMediaPaintLayerSpec({
-    contract: "svml.media-paint-layer-spec@1", id, paint: paint(recipe), opacity: number(recipe, "opacity", 1),
+    id, paint: paint(recipe), opacity: number(recipe, "opacity", 1),
   });
 }
 
@@ -288,7 +288,7 @@ export function decodeMediaHandoffSpec(
   const operator = oneOf(recipe, "operator", ["cut", "crossfade", "push", "wipe", "cover", "page-turn"] as const);
   const direction = optionalString(recipe, "direction");
   return sealMediaHandoffSpec({
-    contract: "svml.media-handoff-spec@1", id, fromMemberId, toMemberId, operator,
+    id, fromMemberId, toMemberId, operator,
     durationFrames: number(recipe, "duration-frames"),
     boundaryRatio: number(recipe, "boundary-ratio", 0.5),
     ...(direction === undefined ? {} : { direction: oneOf(recipe, "direction", ["left", "right", "up", "down"] as const) }),
@@ -304,7 +304,7 @@ export function decodeMediaSequenceSpec(
 ): MediaSequenceSpec {
   assertKeys(recipe, [...FIT_KEYS, ...SAMPLE_KEYS, ...FRAME_KEYS]);
   return sealMediaSequenceSpec({
-    contract: "svml.media-sequence-spec@1", id,
+    id,
     presentation: decodeMediaPresentation(recipe), motion,
     stackingOrder: number(recipe, "stack-order"), handoffs,
   });

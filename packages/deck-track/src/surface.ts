@@ -147,7 +147,7 @@ export const decodeDepthStackLabelSurface: StructuredSurfaceHandler = ({ element
   if (!["start", "center", "end"].includes(block)) throw new Error(`${element.name}.block is invalid.`);
   const padding = numeric(element, "padding", 20);
   const style: DepthStackCardLabelStyle = sealDepthStackCardLabelStyle({
-    contract: "svml.depth-stack-card-label-style@1",
+
     typography: {
       fonts: structuredClone(stack.faces), sizePx: numeric(element, "size", 34), weight: primary.weight, style: primary.style,
       axes: [], features: [], synthesis: "none", kerning: "normal", trackingPx: 0, wordSpacingPx: 0,
@@ -216,7 +216,7 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
   const headerId = `${id}.header`;
   const specId = `${id}.spec`;
   records.push(
-    { id: headerId, type: depthStackTypes.header, value: { kind: "inline", value: sealDepthStackHeader({ contract: "svml.depth-stack-header@1", id }) }, range: element.range },
+    { id: headerId, type: depthStackTypes.header, value: { kind: "inline", value: sealDepthStackHeader({ id }) }, range: element.range },
     { id: specId, type: depthStackTypes.spec, value: { kind: "inline", value: decodeDepthStackSpec(appearance) }, range: element.range },
   );
   const inputs: Record<string, typeof map.ref> = {

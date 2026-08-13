@@ -57,7 +57,7 @@ const component: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "tv-static" } }, amount: { schema: nonNegative }, noiseSizePx: { schema: nonNegative }, scanLineOpacity: { schema: nonNegative }, motionRatePxPerFrame: { schema: number }, seed: { schema: unsignedInteger } }),
 ] };
 const itemSpec = object({
-  contract: { schema: { kind: "literal", value: "svml.screen-overlay-item-spec@1" } }, id: { schema: string },
+  id: { schema: string },
   content: { schema: component }, projection: { schema: projection },
   expansion: { schema: object({ kind: { schema: { kind: "string", enum: ["one", "each"] } } }) },
   stackingOrder: { schema: integer },
@@ -67,10 +67,10 @@ const item = object({
   id: { schema: string }, span: { schema: frameSpan }, content: { schema: component },
   stacking: { schema: object({ order: { schema: integer }, tieBreak: { schema: string } }) },
 });
-export const screenOverlayHeaderSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.screen-overlay-header@1" } }, id: { schema: string } });
+export const screenOverlayHeaderSchema: ValueSchema = object({ id: { schema: string } });
 export const screenOverlayItemSpecSchema: ValueSchema = itemSpec;
-export const screenOverlaySetSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.screen-overlay-set@1" } }, items: { schema: { kind: "array", items: item } } });
-export const screenOverlayProgramSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.screen-overlay-program@1" } }, id: { schema: string }, items: { schema: { kind: "array", minItems: 1, items: item } } });
+export const screenOverlaySetSchema: ValueSchema = object({ items: { schema: { kind: "array", items: item } } });
+export const screenOverlayProgramSchema: ValueSchema = object({ id: { schema: string }, items: { schema: { kind: "array", minItems: 1, items: item } } });
 export const screenOverlaySurfaceImplementationDigest = digestOf("@narratage/screen-overlay/track-surface@1");
 const validator = (digest: ReturnType<typeof digestOf>) => ({ implementation: { digest } });
 const appendInputs = [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }, { name: "space", type: programSpaceTypes.programSpace }, { name: "spec", type: screenOverlayTypes.itemSpec }] as const;

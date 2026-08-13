@@ -21,9 +21,9 @@ const canvas = sealCanvasSpace({
   origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
 });
 const frame = sealSpatialFrame({ xPx: -10, yPx: 20, widthPx: 500, heightPx: 400 });
-const options = sealImageComposeOptions({ contract: "svml.image-compose-options@1", background: "#11223344" });
+const options = sealImageComposeOptions({ background: "#11223344" });
 const spec = sealImageComposeLayerSpec({
-  contract: "svml.image-compose-layer-spec@1", fit: "cover", interpolation: "lanczos", opacity: 0.75,
+  fit: "cover", interpolation: "lanczos", opacity: 0.75,
 });
 const source = { kind: "blob" as const, digest: digestOf("hero-image"), size: 123, mediaType: "image/png" };
 

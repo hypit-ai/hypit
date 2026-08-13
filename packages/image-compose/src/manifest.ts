@@ -35,11 +35,11 @@ const blob = object({
   mediaType: { schema: string },
 });
 export const imageComposeOptionsSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.image-compose-options@1" } },
+
   background: { schema: string },
 });
 export const imageComposeLayerSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.image-compose-layer-spec@1" } },
+
   fit: { schema: { kind: "string", enum: ["contain", "cover", "stretch"] } },
   interpolation: { schema: { kind: "string", enum: ["nearest", "linear", "cubic", "area", "lanczos"] } },
   opacity: { schema: { kind: "number", minimum: 0, maximum: 1 } },
@@ -50,7 +50,7 @@ const layer = object({
   spec: { schema: imageComposeLayerSpecSchema },
 });
 export const imageComposeLayerSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.image-compose-layer-set@1" } },
+
   layers: { schema: { kind: "array", maxItems: 64, items: layer } },
 });
 const registered = (digest: ReturnType<typeof digestOf>) => ({ digest });

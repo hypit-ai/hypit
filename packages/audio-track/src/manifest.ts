@@ -53,7 +53,7 @@ const occupancy: ValueSchema = { kind: "oneOf", variants: [
   object({ mode: { schema: { kind: "literal", value: "stretch" } }, minRate: { schema: { kind: "number", minimum: 0.000001, maximum: 100 } }, maxRate: { schema: { kind: "number", minimum: 0.000001, maximum: 100 } }, pitch: { schema: { kind: "literal", value: "preserve" } } }),
 ] };
 const clipSpec = object({
-  contract: { schema: { kind: "literal", value: "svml.audio-clip-spec@1" } },
+
   id: { schema: string },
   projection: { schema: projection },
   expansion: { schema: object({ kind: { schema: { kind: "string", enum: ["one", "each"] } } }) },
@@ -71,14 +71,14 @@ const item = object({
   mix: { schema: object({ gain: { schema: number }, fadeInSamples: { schema: integer }, fadeOutSamples: { schema: integer } }) },
 });
 export const audioTrackHeaderSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.audio-track-header@1" } }, id: { schema: string },
+  id: { schema: string },
 });
 export const audioClipSpecSchema: ValueSchema = clipSpec;
 export const audioTrackSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.audio-track-set@1" } }, items: { schema: { kind: "array", items: item } },
+  items: { schema: { kind: "array", items: item } },
 });
 export const audioTrackProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.audio-track-program@1" } }, id: { schema: string },
+  id: { schema: string },
   items: { schema: { kind: "array", minItems: 1, items: item } },
 });
 
