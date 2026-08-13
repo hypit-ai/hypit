@@ -115,7 +115,7 @@ export function sealCaptionGeminiPlan(
     return { id: expectedRun.id, styleId: expectedRun.styleId, cues };
   });
   return sealCaptionPlan({
-    contract: "svml.caption-plan@1",
+
     runs,
   });
 }

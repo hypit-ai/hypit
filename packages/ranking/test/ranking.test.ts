@@ -117,7 +117,7 @@ const font: FontArtifactRef = {
   style: "normal",
 };
 const recipe = (path: string, properties: SvsRecipe["properties"] = {}): SvsRecipe => ({
-  contract: "svml.svs-recipe@1", path, properties,
+  path, properties,
 });
 const image = (id: string) => ({ kind: "blob" as const, digest: digestOf(`ranking-image:${id}`), size: 64, mediaType: "image/png" });
 const header = (variant: RankingHeader["variant"], id: string = variant) => sealRankingHeader({

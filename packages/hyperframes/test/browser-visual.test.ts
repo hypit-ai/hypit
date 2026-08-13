@@ -450,7 +450,7 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
     ] as const;
     const tracks = modes.map(({ mode, transition }, index) => {
       const recipe: SvsRecipe = {
-        contract: "svml.svs-recipe@1",
+
         path: `caption.${mode}-${transition}`,
         properties: {
           "cue-min-words": 1, "cue-max-words": 4,
@@ -468,7 +468,7 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
       const style = fineCaptionStyle(`${mode}-${transition}`, recipe, [font]);
       const program = resolveCaptionProgram(display, `${mode}-${transition}-program`, style, []);
       const projection: TimedCaptionProjection = {
-        contract: "svml.timed-caption-projection@1",
+
         displaySequenceId: display.id,
         cues: [{
           id: `${mode}-${transition}-cue`, styleId: style.id,
@@ -537,7 +537,7 @@ test("Fine Caption joined trail Pill follows real wrapped browser line fragments
       style: "normal",
     };
     const recipe: SvsRecipe = {
-      contract: "svml.svs-recipe@1",
+
       path: "caption.joined-pill",
       properties: {
         "cue-min-words": 1, "cue-max-words": 8,
@@ -553,7 +553,7 @@ test("Fine Caption joined trail Pill follows real wrapped browser line fragments
     const style = fineCaptionStyle("joined-pill", recipe, [font]);
     const program = resolveCaptionProgram(display, "joined-pill-program", style, []);
     const projection: TimedCaptionProjection = {
-      contract: "svml.timed-caption-projection@1", displaySequenceId: display.id,
+      displaySequenceId: display.id,
       cues: [{
         id: "joined-pill-cue", styleId: style.id,
         startFrame: 0, endFrameExclusive: 60,
@@ -630,14 +630,14 @@ test("installed open fonts render CJK, emoji and independent stroke, shadow and 
       const narrative = parseScript(`${id}.svml`, `<line>${text}</line>`);
       const display = captionDisplaySequence(narrative, `${id}.caption`);
       const recipe: SvsRecipe = {
-        contract: "svml.svs-recipe@1",
+
         path: `caption.${id}`,
         properties: { ...base, ...properties },
       };
       const style = fineCaptionStyle(id, recipe, fonts);
       const program = resolveCaptionProgram(display, `${id}-program`, style, []);
       const projection: TimedCaptionProjection = {
-        contract: "svml.timed-caption-projection@1",
+
         displaySequenceId: display.id,
         cues: [{
           id: `${id}-cue`, styleId: style.id,
@@ -1646,7 +1646,7 @@ test("all four Ranking components paint frame-pure progressive states under part
       return rankingTrack.buildRankingSchedule({ header, items: set, map, space, outer, triggers, terminal });
     };
     const recipe = (path: string, properties: SvsRecipe["properties"]): SvsRecipe => ({
-      contract: "svml.svs-recipe@1", path, properties,
+      path, properties,
     });
     const tierHeader = rankingTrack.sealRankingHeader({ id: "browser-tier", variant: "tier-board" });
     const tierSpecs = [

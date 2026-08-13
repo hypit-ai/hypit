@@ -100,7 +100,6 @@ export function sealSeedanceRequest(model: SeedanceModel, ports: SeedancePortMap
 
 /** One authored generation minus a duration supplied by an explicit graph edge. */
 export type SeedanceDurationProgram = {
-  readonly contract: "svml.seedance-duration-program@1";
   readonly model: SeedanceModel;
   readonly ports: SeedancePortMap;
 };
@@ -134,8 +133,7 @@ function assertObject(value: unknown): asserts value is Record<string, unknown> 
 
 export function verifySeedanceDurationProgram(value: unknown): asserts value is SeedanceDurationProgram {
   assertObject(value);
-  if (value.contract !== "svml.seedance-duration-program@1"
-    || !seedanceModels.includes(value.model as SeedanceModel)) {
+  if (!seedanceModels.includes(value.model as SeedanceModel)) {
     throw new Error("Seedance DurationProgram identity is invalid");
   }
   const table = seedancePorts[value.model as SeedanceModel];
@@ -165,7 +163,7 @@ export function compileSeedanceDurationRequestDraft(
 }
 
 const durationProgramSchema = (model: SeedanceModel): ValueSchema => generationObjectSchema({
-  contract: { schema: { kind: "literal", value: "svml.seedance-duration-program@1" } },
+
   model: { schema: { kind: "literal", value: model } },
   ports: {
     schema: portsObjectSchema(seedancePorts[model], {

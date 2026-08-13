@@ -1,5 +1,4 @@
 export type Text = {
-  readonly contract: "svml.text@1";
   readonly value: string;
 };
 
@@ -7,13 +6,11 @@ export type TextScalar = string | number | boolean;
 export type TextBindingValue = TextScalar | readonly TextScalar[];
 
 export type TextBindings = {
-  readonly contract: "svml.text-bindings@1";
   readonly values: Readonly<Record<string, TextBindingValue>>;
 };
 
 /** Instructions for attaching one graph Text edge to a named template input. */
 export type TextBinding = {
-  readonly contract: "svml.text-binding@1";
   readonly name: string;
   readonly mode: "set" | "append";
 };
@@ -79,7 +76,6 @@ export type TextExpression =
  * bindings; `call` cannot pass hidden state or execute arbitrary code.
  */
 export type TextTemplate = {
-  readonly contract: "svml.text-template@1";
   readonly root: TextExpression;
   readonly defaults?: Readonly<Record<string, TextBindingValue>>;
   readonly definitions?: Readonly<Record<string, TextExpression>>;

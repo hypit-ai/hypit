@@ -354,7 +354,7 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
         id: "editorial",
         type: svsRecipeType,
         value: { kind: "inline", value: {
-          contract: "svml.svs-recipe@1",
+
           path: "text.editorial",
           properties: {
             "stack-order": 70,
@@ -373,7 +373,7 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
         id: "mask-editorial",
         type: svsRecipeType,
         value: { kind: "inline", value: {
-          contract: "svml.svs-recipe@1",
+
           path: "text.mask-editorial",
           properties: {
             "stack-order": 75,

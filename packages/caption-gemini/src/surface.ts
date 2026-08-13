@@ -47,7 +47,7 @@ export const decodeCaptionGeminiPlannerSurface: StructuredSurfaceHandler = ({ el
   const captionProgram = reference(element, "program", captionTypes.program, resolveReference);
   const optionsId = `${id}.gemini`;
   const options = sealCaptionGeminiProgram({
-    contract: "svml.caption-gemini-program@1",
+
     model: model as CaptionGeminiModel,
   });
   return {

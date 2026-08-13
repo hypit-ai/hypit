@@ -84,7 +84,6 @@ export type FineCaptionOneShotMotion =
   | "wipe-down";
 
 export type FineCaptionParameters = {
-  readonly contract: "svml.caption-fine-parameters@1";
   readonly stackingOrder: number;
   readonly placement: {
     readonly x: number;

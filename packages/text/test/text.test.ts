@@ -20,7 +20,7 @@ import {
 
 test("text programs compose nested templates, choices, lists and transforms", () => {
   const template = sealTextTemplate({
-    contract: "svml.text-template@1",
+
     definitions: {
       dialogue: {
         kind: "sequence",
@@ -85,12 +85,12 @@ test("graph Text bindings are explicit and cannot overwrite by accident", () => 
 
 test("text templates reject recursion and ambiguous choices", () => {
   assert.throws(() => verifyTextTemplate({
-    contract: "svml.text-template@1",
+
     root: { kind: "call", template: "loop" },
     definitions: { loop: { kind: "call", template: "loop" } },
   }), /cycle/u);
   assert.throws(() => renderText(sealTextTemplate({
-    contract: "svml.text-template@1",
+
     root: {
       kind: "choice",
       cases: [
@@ -103,7 +103,7 @@ test("text templates reject recursion and ambiguous choices", () => {
 
 test("one definition keeps lexical each bindings without hiding its global uses", () => {
   const template = sealTextTemplate({
-    contract: "svml.text-template@1",
+
     definitions: { item: { kind: "slot", binding: "item" } },
     root: {
       kind: "join",
@@ -171,7 +171,7 @@ test("Markup Text Surfaces expose literal and assembled Text as ordinary graph v
 
 test("Text Render projects only declared SVS Recipe properties and lets explicit Params override them", async () => {
   const template = sealTextTemplate({
-    contract: "svml.text-template@1",
+
     defaults: { camera: "locked", energy: "natural" },
     root: {
       kind: "join",
@@ -196,7 +196,7 @@ test("Text Render projects only declared SVS Recipe properties and lets explicit
     ["studio.shot", {
       path: "studio.shot", ref: { kind: "record", id: "studio.shot" }, type: svsRecipeType,
       record: { value: { kind: "inline", value: {
-        contract: "svml.svs-recipe@1",
+
         path: "studio.shot",
         properties: { camera: "handheld", energy: "high", model: "mini" },
       } } } as unknown as NonNullable<SurfaceResolvedReference["record"]>,

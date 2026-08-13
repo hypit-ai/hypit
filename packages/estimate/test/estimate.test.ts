@@ -23,7 +23,7 @@ function estimateSurface(source: string) {
 }
 
 const normal = sealSpeechEstimatePolicy({
-  contract: "svml.speech-estimate-policy@1",
+
   language: "en",
   pace: "normal",
   minimumSec: 4,
@@ -52,7 +52,6 @@ test("English pace presets occupy adjacent integer durations", () => {
   const estimate = (pace: "slow" | "normal" | "fast") => estimateSpeechDuration(
     source,
     sealSpeechEstimatePolicy({
-      contract: normal.contract,
       language: normal.language,
       pace,
       minimumSec: normal.minimumSec,
@@ -66,7 +65,6 @@ test("English pace presets occupy adjacent integer durations", () => {
 test("a numeric rate gives SVS a continuous author-controlled pace", () => {
   const source = sealText(Array.from({ length: 49 }, () => "day").join(" "));
   const result = estimateSpeechDuration(source, sealSpeechEstimatePolicy({
-    contract: normal.contract,
     language: normal.language,
     rate: 4.75,
     minimumSec: normal.minimumSec,
@@ -96,7 +94,7 @@ test("the minimum applies before rounding and the maximum applies after rounding
 
 test("an SVS Recipe configures one reusable estimate policy without becoming executable", () => {
   const policy = speechEstimatePolicyFromRecipe({
-    contract: "svml.svs-recipe@1",
+
     path: "speech.normal",
     properties: {
       language: "en",
@@ -110,12 +108,12 @@ test("an SVS Recipe configures one reusable estimate policy without becoming exe
   assert.equal(policy.rate, 4.75);
   assert.equal(policy.maximumSec, 15);
   assert.throws(() => speechEstimatePolicyFromRecipe({
-    contract: "svml.svs-recipe@1",
+
     path: "speech.ambiguous",
     properties: { pace: "normal", rate: 4.6 },
   }), /exactly one/u);
   assert.throws(() => speechEstimatePolicyFromRecipe({
-    contract: "svml.svs-recipe@1",
+
     path: "speech.invalid",
     properties: { provider: "gemini" },
   }), /unknown property provider/u);

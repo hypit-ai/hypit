@@ -191,18 +191,17 @@ function verifyFiniteCalls(template: TextTemplate): void {
 
 export function verifyText(value: unknown): asserts value is Text {
   const item = object(value, "Text");
-  assert(item.contract === "svml.text@1" && typeof item.value === "string", "Text is invalid");
+  assert(typeof item.value === "string", "Text is invalid");
 }
 
 export function sealText(value: string): Text {
-  const result = canonicalize({ contract: "svml.text@1", value }) as unknown as Text;
+  const result = canonicalize({ value }) as unknown as Text;
   verifyText(result);
   return result;
 }
 
 export function verifyTextBindings(value: unknown): asserts value is TextBindings {
   const item = object(value, "TextBindings");
-  assert(item.contract === "svml.text-bindings@1", "TextBindings contract is invalid");
   const values = object(item.values, "TextBindings.values");
   for (const [id, entry] of Object.entries(values)) {
     name(id, `TextBindings.values key ${id}`);
@@ -211,20 +210,19 @@ export function verifyTextBindings(value: unknown): asserts value is TextBinding
 }
 
 export function sealTextBindings(values: Readonly<Record<string, TextBindingValue>> = {}): TextBindings {
-  const result = canonicalize({ contract: "svml.text-bindings@1", values }) as unknown as TextBindings;
+  const result = canonicalize({ values }) as unknown as TextBindings;
   verifyTextBindings(result);
   return result;
 }
 
 export function verifyTextBinding(value: unknown): asserts value is TextBinding {
   const item = object(value, "TextBinding");
-  assert(item.contract === "svml.text-binding@1", "TextBinding contract is invalid");
   name(item.name, "TextBinding.name");
   assert(item.mode === "set" || item.mode === "append", "TextBinding.mode is invalid");
 }
 
-export function sealTextBinding(value: Omit<TextBinding, "contract">): TextBinding {
-  const result = canonicalize({ contract: "svml.text-binding@1", ...value }) as unknown as TextBinding;
+export function sealTextBinding(value: TextBinding): TextBinding {
+  const result = canonicalize({ ...value }) as unknown as TextBinding;
   verifyTextBinding(result);
   return result;
 }
@@ -249,7 +247,6 @@ export function bindText(
 
 export function verifyTextTemplate(value: unknown): asserts value is TextTemplate {
   const template = object(value, "TextTemplate") as unknown as TextTemplate;
-  assert(template.contract === "svml.text-template@1", "TextTemplate contract is invalid");
   if (template.defaults !== undefined) {
     const defaults = object(template.defaults, "TextTemplate.defaults");
     for (const [id, entry] of Object.entries(defaults)) {

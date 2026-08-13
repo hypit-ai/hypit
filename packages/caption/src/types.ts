@@ -43,12 +43,10 @@ export type CaptionPlannedRun = {
 
 /** Planner-neutral result. Model/provider identity remains in the producing Graph and Receipt. */
 export type CaptionPlan = {
-  readonly contract: "svml.caption-plan@1";
   readonly runs: readonly CaptionPlannedRun[];
 };
 
 export type CaptionStyleIntent = {
-  readonly contract: "svml.caption-style@1";
   readonly id: string;
   readonly planning: CaptionPlanningRequirements;
   readonly rendering: {
@@ -67,7 +65,6 @@ export type CaptionProgramRun = {
 
 /** Total, ordered style assignment plus an explicit post-planning visibility mask. */
 export type CaptionProgram = {
-  readonly contract: "svml.caption-program@1";
   readonly id: string;
   readonly displaySequenceId: string;
   readonly styles: readonly CaptionStyleIntent[];
@@ -91,7 +88,6 @@ export type TimedCaptionCue = {
 };
 
 export type TimedCaptionProjection = {
-  readonly contract: "svml.timed-caption-projection@1";
   readonly displaySequenceId: string;
   readonly cues: readonly TimedCaptionCue[];
 };

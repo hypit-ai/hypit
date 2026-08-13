@@ -70,7 +70,7 @@ export const textManifest: ModuleManifest = {
     type(textTypes.text.name, {
       kind: "object",
       fields: {
-        contract: { schema: { kind: "literal", value: "svml.text@1" } },
+
         value: { schema: { kind: "string" } },
       },
     }, textImplementationDigests.validateText),
@@ -79,7 +79,7 @@ export const textManifest: ModuleManifest = {
     type(textTypes.binding.name, {
       kind: "object",
       fields: {
-        contract: { schema: { kind: "literal", value: "svml.text-binding@1" } },
+
         name: { schema: { kind: "string", minLength: 1 } },
         mode: { schema: { kind: "string", enum: ["set", "append"] } },
       },
