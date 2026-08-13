@@ -26,6 +26,10 @@ export type Placement = {
   readonly outputs: readonly string[];
   /** Children the author wrote inside it, so a Clip can point at its own tag. */
   readonly children: readonly { readonly tag: string; readonly id?: string; readonly range: Range }[];
+  /** What the author wrote on it: plain text as written, references by path. */
+  readonly attributes: Readonly<Record<string, string>>;
+  /** Paths this element and its children reference, in the order written. */
+  readonly references: readonly string[];
 };
 
 export type Observations = {
@@ -47,6 +51,24 @@ export type Observer = {
  * the Frontend still decodes the Source. Only the positions they discard are
  * kept, which is why this stays correct as packages change.
  */
+/** Attributes the author wrote as plain text, by name. */
+function written(element: StructuredElement): Record<string, string> {
+  const held: Record<string, string> = {};
+  for (const [name, value] of Object.entries(element.attributes)) {
+    if (typeof value === "string") held[name] = value;
+  }
+  return held;
+}
+
+/** Every whole-value reference an element points at, in written order. */
+function referenced(element: StructuredElement): string[] {
+  return Object.values(element.attributes)
+    .filter((value): value is { kind: "reference"; path: string } =>
+      typeof value === "object" && value !== null
+      && (value as { kind?: string }).kind === "reference")
+    .map((value) => value.path);
+}
+
 export function createObserver(
   surfaces: MarkupSurfaceRegistryLike,
   resolveModule: (request: { readonly from: string }) => ModuleRef,
@@ -72,6 +94,13 @@ export function createObserver(
             range: { start: input.element.range.start, end: input.element.range.end },
             records: output.records.map((record) => record.id),
             outputs: output.components.flatMap((component) => Object.values(component.outputs)),
+            attributes: written(input.element),
+            references: [
+              ...referenced(input.element),
+              ...input.element.children
+                .filter((child): child is StructuredElement => child.kind === "element")
+                .flatMap(referenced),
+            ],
             children: input.element.children
               .filter((child): child is StructuredElement => child.kind === "element")
               .map((child) => {

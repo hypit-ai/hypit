@@ -15,9 +15,10 @@ import { validateValue } from "@narratage/validation";
 
 import { compileSource } from "./compile.js";
 import type { CompiledSource, ServedFile } from "./compile.js";
+import type { Placement } from "./observe.js";
 import { evenCaptionPlan, hasAtoms } from "./caption-plan.js";
 import { estimateTiming } from "./estimate.js";
-import { blackFrames } from "./placeholder.js";
+import { blackFrames, heldPicture } from "./placeholder.js";
 import { execute, MemoryArtifactStore } from "./execute.js";
 import type { Archive } from "./archive.js";
 import { applyRunSource, emptyRun } from "./run-source.js";
@@ -53,6 +54,8 @@ export type Preview = {
   readonly placeholders: readonly string[];
   /** Captions whose phrasing was cut mechanically because nobody planned it. */
   readonly phrasing: readonly string[];
+  /** Shots shown as a picture the Source already points at, for want of the take. */
+  readonly stoodIn: readonly string[];
   /** The Canvas and frame rate every Track was placed in. */
   readonly canvas: { readonly width: number; readonly height: number; readonly clearColor: string };
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
@@ -211,8 +214,15 @@ export async function preview(
   // Material nobody supplied is stood in for, so the shape of the programme can
   // be seen before it has been shot.
   const placeholders: string[] = [];
+  const stoodIn: string[] = [];
+  // Only something the graph produces can be missing. A Record the Source read
+  // at compile time already is its value, and standing in for it would replace
+  // a picture the author supplied.
+  const satisfiedNow = new Set(run.graph.satisfactions.map((item) => item.output));
+  const consumed = new Set(source.observations.placements.flatMap((item) => item.references));
   const unsupplied = source.exports.filter((item) =>
-    item.type === MATERIAL && !new Set(run.graph.satisfactions.map((s) => s.output)).has(item.ref));
+    item.type === MATERIAL && isOutput(source, item.ref)
+    && !satisfiedNow.has(item.ref) && consumed.has(item.name));
   if (unsupplied.length > 0) {
     // Measured timings arrive as a Candidate the Run Source supplied; either way
   // the anchors are what places every word.
@@ -234,7 +244,8 @@ export async function preview(
       { tokens?: readonly { id: string; startAnchorId: string; endAnchorId: string }[] } | undefined;
 
   const canvas = authoredCanvas(source.compiled);
-    const black = blackFrames(authoredFrameRate(source.compiled), canvas);
+    const rate = authoredFrameRate(source.compiled);
+    const black = blackFrames(rate, canvas);
     if (black !== undefined) {
       const digest = `sha256:${createHash("sha256").update(black.bytes).digest("hex")}`;
       (source.served as Map<string, ServedFile>).set(digest, {
@@ -244,15 +255,27 @@ export async function preview(
         run.graph.candidates.map((item) => [(item as { id: string }).id, item]));
       const satisfactions = [...run.graph.satisfactions];
       for (const output of unsupplied) {
-        // One stand-in satisfies every shot that is missing, so the same value
-        // is the same Candidate rather than one per output.
+        // A shot that points at a picture already in hand stands in as that
+        // picture. It is not the take, but it is the right subject held for the
+        // right length, which is what makes a preview worth looking at.
+        const held = standIn(source, output.name, rate, canvas);
+        const shown = held ?? { bytes: black.bytes, mediaType: black.mediaType, digest };
+        if (held !== undefined) {
+          (source.served as Map<string, ServedFile>).set(held.digest, {
+            mediaType: held.mediaType, bytes: held.bytes,
+          });
+        }
+        // The same bytes are the same Candidate, however many shots they cover.
         const candidate = createProvidedCandidate({
           type: outputType(source, output.ref) as never,
-          value: { kind: "blob", digest, size: black.bytes.byteLength, mediaType: black.mediaType } as never,
+          value: {
+            kind: "blob", digest: shown.digest,
+            size: shown.bytes.byteLength, mediaType: shown.mediaType,
+          } as never,
         } as never);
         added.set(candidate.id, candidate);
         satisfactions.push({ output: output.ref, candidate: candidate.id });
-        placeholders.push(output.name);
+        (held === undefined ? placeholders : stoodIn).push(output.name);
       }
       run = { ...run, graph: { ...run.graph, candidates: [...added.values()], satisfactions } };
     }
@@ -354,7 +377,7 @@ export async function preview(
   const spaceExport = source.exports.find((item) => item.type === SPACE);
   const space = spaceExport === undefined ? undefined : builtSpace(tracks, spaceExport, frameRate);
   return {
-    source, tracks, timing, refused: [...base.refused, ...unread], served: source.served, placeholders, phrasing,
+    source, tracks, timing, refused: [...base.refused, ...unread], served: source.served, placeholders, phrasing, stoodIn,
     canvas: { ...canvas, clearColor: authoredClearColor(source.compiled) },
     frameRate,
     space,
@@ -391,6 +414,82 @@ function builtSpace(
     durationSec: frameCount * frameRate.denominator / frameRate.numerator,
     frameRate: { ...frameRate },
   };
+}
+
+/**
+ * A picture this output already points at.
+ *
+ * An element that names another value the Source can already produce - a
+ * reference frame, a first frame - names something worth showing while the
+ * shot itself does not exist. How long to hold it is what the element itself
+ * declared, so the stand-in occupies the span the take would have.
+ */
+function standIn(
+  source: CompiledSource,
+  name: string,
+  frameRate: { readonly numerator: number; readonly denominator: number },
+  canvas: { readonly width: number; readonly height: number },
+): { readonly bytes: Uint8Array; readonly mediaType: string; readonly digest: string } | undefined {
+  const owner = name.includes(".") ? name.slice(0, name.indexOf(".")) : name;
+  const placement = source.observations.placements.find((item) => item.id === owner);
+  if (placement === undefined) return undefined;
+  for (const path of placement.references) {
+    const referenced = source.exports.find((item) => item.name === path);
+    if (referenced?.type !== MATERIAL) continue;
+    const bytes = pictureFor(source, referenced.ref);
+    if (bytes === undefined) continue;
+    const made = heldPicture(bytes, declaredSeconds(source, placement) ?? 2, frameRate, canvas);
+    if (made === undefined) return undefined;
+    return {
+      ...made,
+      digest: `sha256:${createHash("sha256").update(made.bytes).digest("hex")}`,
+    };
+  }
+  return undefined;
+}
+
+/**
+ * How long the shot was declared to run.
+ *
+ * An element may say so itself, or point at something that does - a Source that
+ * estimates its own speech names that estimate rather than repeating a number.
+ */
+function declaredSeconds(source: CompiledSource, placement: Placement): number | undefined {
+  const own = Number(placement.attributes.duration);
+  if (Number.isFinite(own) && own > 0) return own;
+  for (const path of placement.references) {
+    const referenced = source.exports.find((item) => item.name === path);
+    if (referenced === undefined) continue;
+    const value = inlineRecord(source.compiled, referenced.ref) as Record<string, unknown> | undefined;
+    for (const key of ["seconds", "durationSec", "secondsExact"]) {
+      const held = Number(value?.[key]);
+      if (Number.isFinite(held) && held > 0) return held;
+    }
+  }
+  return undefined;
+}
+
+/** Bytes already in hand for an output, if the Source read them at compile time. */
+function pictureFor(source: CompiledSource, ref: string): Uint8Array | undefined {
+  const value = inlineRecord(source.compiled, ref) as { digest?: string } | undefined;
+  const digest = value?.digest ?? blobDigest(source.compiled, ref);
+  return digest === undefined ? undefined : source.served.get(digest)?.bytes;
+}
+
+/** A Record stored as the blob it is, rather than wrapped. */
+function blobDigest(compiled: unknown, id: string): string | undefined {
+  const records = (compiled as { module: { records: readonly { id: string; value: { kind: string; digest?: string } }[] } })
+    .module.records;
+  const found = records.find((record) => record.id === id);
+  return found?.value.kind === "blob" ? found.value.digest : undefined;
+}
+
+/** Whether an export is something the graph produces rather than a Record read from the Source. */
+function isOutput(source: CompiledSource, ref: string): boolean {
+  const compiled = source.compiled as unknown as {
+    exports: readonly { ref: { kind: string; id: string } }[];
+  };
+  return compiled.exports.find((item) => item.ref.id === ref)?.ref.kind === "logical-output";
 }
 
 /** The declared Type of an export, as the compiler recorded it. */
