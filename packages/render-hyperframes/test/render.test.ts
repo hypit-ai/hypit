@@ -241,10 +241,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       };
     },
   );
-  endpoints.bind(renderHyperframesCapabilities.renderVisual, "example.hyperframes.local");
-  endpoints.bind(mediaPipelineCapabilities.renderAudio, "example.media.audio-real");
-  endpoints.bind(mediaPipelineCapabilities.mux, "example.media.mux");
-
   const result = await new NodeDriver({
     producers: producerRegistry(),
     endpoints,
@@ -300,9 +296,6 @@ test("a render Product with another frame domain is rejected by the explicit dow
       };
     },
   );
-  endpoints.bind(renderHyperframesCapabilities.renderVisual, "example.hyperframes.wrong-domain");
-  endpoints.bind(mediaPipelineCapabilities.renderAudio, "example.media.audio-for-domain-check");
-
   const result = await new NodeDriver({
     producers: producerRegistry(),
     endpoints,
