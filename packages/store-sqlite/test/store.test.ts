@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -16,6 +16,21 @@ import {
 } from "@narratage/store-sqlite";
 
 import { createGreetingBuild } from "../../core/test/greeting-fixture.js";
+
+test("read-only SQLite observation of an absent archive creates no file", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-read-only-"));
+  const path = join(directory, ".svml", "runtime.sqlite");
+  try {
+    const state = new SqliteRuntimeState(path, { readOnly: true });
+    assert.equal(await state.builds.read("missing"), undefined);
+    assert.deepEqual(await state.dispatch.list(), []);
+    state.close();
+    await assert.rejects(stat(path), (error: unknown) =>
+      error instanceof Error && "code" in error && error.code === "ENOENT");
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test("SQLite stores verified Build facts and Operation checkpoints across reopen", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-"));

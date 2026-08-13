@@ -238,12 +238,14 @@ SHA-256 digest:
 }
 ```
 
-Two independent lock closures serve different authority scopes:
+Two independent package inventories serve different authority scopes:
 
 | Lock file | Contains | Identity scope |
 |---|---|---|
 | `svml.packages.lock` | Frontends, Surfaces, Producers, Validators | Author Graph + Run Graph + execution Program Closure |
 | `svml.runtime-packages.lock` | Providers, Stores, transports | Runtime Closure |
 
-Changing a package requires regenerating the lock. The Build state machine verifies every digest
-before issuing a Command.
+`packages sync` grows or refreshes an inventory without deleting another Run's roots. One
+compilation activates only the exact subset its Source requests and binds that subset digest into
+the Build; Runtime adapter selection is likewise the exact subset declared by the Profile.
+Changing package bytes requires explicitly refreshing the inventory.

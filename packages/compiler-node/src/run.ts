@@ -1,4 +1,5 @@
 import type { Workspace, WorkspaceSession } from "@narratage/host";
+import { resolveCompiledSourceExport } from "@narratage/elaborator";
 import {
   compileBuild,
   createResolvedClosure,
@@ -272,11 +273,7 @@ export class NodeRunCompiler {
       author.program,
       collectRunModuleRequests(decoded.document, this.#options.fragments),
     );
-    const authorOutput = (name: string) => {
-      const found = author.exports.find((item) => item.name === name);
-      if (found === undefined) throw new Error(`unknown source export ${name}`);
-      return found;
-    };
+    const authorOutput = (name: string) => resolveCompiledSourceExport(author, name);
     const imports = new Map(decoded.document.imports.map((item) => [item.as, item.from]));
     const candidateNames = new Set<string>();
     for (const declaration of decoded.document.candidates) {

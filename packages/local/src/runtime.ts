@@ -129,8 +129,6 @@ export async function createLocalRuntime(
   }
   const runtimeRevision = createRuntimeRevision({
     runtimeClosure: options.closure.value.digest,
-    ...(options.implementationClosure === undefined
-      ? {} : { implementationClosure: options.implementationClosure }),
     ...(options.runtimePackageClosure === undefined
       ? {} : { runtimePackageClosure: options.runtimePackageClosure }),
   });
@@ -158,9 +156,6 @@ export async function createLocalRuntime(
     credentials: options.credentialStore,
     operations: options.operationStore,
     validators,
-    ...(options.implementationClosure === undefined
-      ? {}
-      : { implementationClosure: options.implementationClosure }),
   });
   const scheduling = {
     maxConcurrency: options.closure.value.scheduling.maxConcurrency,
@@ -317,8 +312,6 @@ export async function createProjectLocalRuntime(
   const lockedPackageSet = options.packageLock === undefined
     ? undefined
     : await loadNodePackageSet(resolve(root, options.packageLock), packageRoot);
-  assert(lockedPackageSet === undefined || options.implementationClosure === undefined,
-    "packageLock and implementationClosure are two sources for one implementation identity");
   const lockedComponents = lockedPackageSet === undefined
     ? []
     : collectNodePackageComponents(lockedPackageSet.contributions);
@@ -382,9 +375,6 @@ export async function createProjectLocalRuntime(
           : { maxEventsPerBuild: options.scheduling.maxEventsPerBuild }),
       },
       ...(options.validators === undefined ? {} : { validators: options.validators }),
-      ...(lockedPackageSet === undefined && options.implementationClosure === undefined
-        ? {}
-        : { implementationClosure: lockedPackageSet?.lock.digest ?? options.implementationClosure }),
       ...(options.runtimePackageClosure === undefined
         ? {} : { runtimePackageClosure: options.runtimePackageClosure }),
     });

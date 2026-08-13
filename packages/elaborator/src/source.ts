@@ -708,7 +708,33 @@ export function resolveCompiledSourceExport(
   expected?: TypeRef,
 ): CompiledSourceExport {
   const item = compiled.exports.find((candidate) => candidate.name === name);
-  assert(item !== undefined, "UNKNOWN_SOURCE_EXPORT", `unknown source export ${name}`, name);
+  if (item === undefined) {
+    const distance = (left: string, right: string): number => {
+      const row = Array.from({ length: right.length + 1 }, (_, index) => index);
+      for (let leftIndex = 0; leftIndex < left.length; leftIndex += 1) {
+        let diagonal = leftIndex;
+        row[0] = leftIndex + 1;
+        for (let rightIndex = 0; rightIndex < right.length; rightIndex += 1) {
+          const above = row[rightIndex + 1]!;
+          const next = Math.min(
+            above + 1,
+            row[rightIndex]! + 1,
+            diagonal + (left[leftIndex] === right[rightIndex] ? 0 : 1),
+          );
+          diagonal = above;
+          row[rightIndex + 1] = next;
+        }
+      }
+      return row[right.length] ?? left.length;
+    };
+    const nearest = compiled.exports
+      .map((candidate) => ({ name: candidate.name, distance: distance(name, candidate.name) }))
+      .sort((left, right) => left.distance - right.distance || left.name.localeCompare(right.name))[0];
+    const suggestion = nearest !== undefined && nearest.distance <= Math.max(2, Math.floor(name.length / 3))
+      ? `; did you mean ${nearest.name}?`
+      : "";
+    throw new SourceClosureError("UNKNOWN_SOURCE_EXPORT", `unknown source export ${name}${suggestion}`, name);
+  }
   if (expected !== undefined) {
     assert(
       sameType(item.type, expected),

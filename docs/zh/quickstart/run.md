@@ -327,8 +327,20 @@ node --run narratage -- plan /work/my-film/build.svrun \
   --runtime /work/my-film/svml.runtime.json
 ```
 
-Source Workspace 默认是 `build.svrun` 所在目录；相对引用的 Author Source 与素材都必须留在这个边界内。`--package-root` 是另一项无关的 Host 覆盖项：它只负责指定已安装的
+选择 Runtime Profile 时，Profile 的 `root`（未写则为 Profile 所在目录）是该项目所有
+`.svml`、`.svs`、`.svrun` 的稳定 Source Workspace。没有 Profile 时，若选择了 package lock
+就以 lock 所在目录为边界，否则才以入口 Source 所在目录为边界。`--package-root` 是另一项无关的 Host 覆盖项：它只负责指定已安装的
 `node_modules`，然后按照 lock 校验包字节。官方 CLI 通常会自动提供自身的安装位置，所以上面的命令无需填写包路径。只有需要主动扩大源码边界时才传 `--root`。不要把外部项目软链接进仓库；canonical path 的边界检查会有意拒绝这种逃逸。
+
+外部项目通常应提交如下 `.gitignore`：
+
+```gitignore
+.svml/
+output/
+```
+
+两份 package lock 属于项目源码，应正常提交。`status`、`builds` 等只读归档命令不会在状态
+尚不存在时初始化 Runtime 数据库。
 
 共享只读素材库不必复制进项目，也不必放宽 Source 边界：
 
@@ -376,14 +388,18 @@ Runtime 状态、归档 Artifact 和 lock 仍全部留在 `/work/my-film`。只�
 
 ### 1. 同步已安装包
 
-安装或更新包后，用一条显式命令接受两份声明闭包：
+安装或更新包后，用一条显式命令同步两份项目包库存：
 
 ```bash
 node --run narratage -- packages sync examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root .
 ```
 
-Author/Run Source 选择作者包，Runtime Profile 选择环境包；该命令只闭包并锁定这两组声明，不扫描目录、不启动 Provider，也不生成媒体。
+当前 Author/Run Source 选择作者包，Runtime Profile 选择环境包。`packages sync` 只把本次
+需要的包加入或刷新到库存，不会删除其他 Run 所需的包；明确删除请使用
+`lock-packages --remove`。编译只激活当前 Source 的精确子集。该命令不扫描目录、不启动
+Provider，也不生成媒体。
 
 ### 2. 诊断环境
 
@@ -394,18 +410,21 @@ node --run narratage -- doctor examples/talking-head-aroll/svml.runtime.json
 Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；它不启动 Worker，也不发付费请求。
 
 `doctor` 有意检查完整 Runtime Profile。若只想检查某次 Run 真正需要的环境，请使用带
-`--runtime` 的 `plan`。
+`--runtime` 的 `plan`。只要计划本身有效，命令就成功；凭据或服务未就绪会写在
+`preflight.ok` 中，由 `doctor` 或 `build` 在部署阶段严格处理。
 
 ### 3. 检查 Source 与计划
 
 ```bash
 node --run narratage -- check examples/talking-head-aroll/main.svml \
-  --runtime examples/talking-head-aroll/svml.runtime.json
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root .
 ```
 
 ```bash
 node --run narratage -- plan examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root .
 ```
 
 在花费资金之前审查冻结的 BuildPlan。该计划展示调度器将发出的每个 Operation 和 Needs；带
@@ -419,6 +438,7 @@ node --run narratage -- plan examples/talking-head-aroll/build.svrun \
 ```bash
 node --run narratage -- build examples/talking-head-aroll/build.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root . \
   --build-id my-film-001 \
   --follow
 ```
@@ -430,7 +450,7 @@ node --run narratage -- build examples/talking-head-aroll/build.svrun \
 | `--runtime` | Runtime Profile 的路径 |
 | `--package-lock` | 包锁定文件的路径 |
 | `--package-root` | 存放 lock 所列已安装包的 Host 目录 |
-| `--root` | 可选的 Source Workspace 边界；默认是入口 Source 所在目录 |
+| `--root` | 可选的 Source Workspace 覆盖项；未传时依次使用 Runtime Profile 根、package lock 目录或入口 Source 目录 |
 | `--build-id` | 用户为此 Build 选择的标识符（用于检索和复用） |
 | `--follow` | 将 Build 进度流式输出到终端 |
 

@@ -6,6 +6,7 @@ export {
 export {
   createNodePackageLock,
   loadNodePackageSet,
+  loadNodePackageSelection,
   loadNodePackageContributions,
   NodePackageLockStaleError,
   readNodePackageLock,
