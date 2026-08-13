@@ -189,7 +189,7 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
     machine: { format: "narratage.cli-plan@1", ok: true, plan },
     run: "/project/build.svrun",
     outputNames: { "logical:take": "take.video" },
-    candidateNames: { "candidate:preview": "preview" },
+    satisfactionNames: { "logical:take": "preview" },
   });
   assert.match(output, /Run choices/u);
   assert.match(output, /take\.video\s+← preview/u);
@@ -202,7 +202,7 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
     machine: { format: "narratage.cli-plan@1", ok: true, plan },
     run: "/project/build.svrun",
     outputNames: { "logical:take": "take.video" },
-    candidateNames: { "candidate:preview": "preview" },
+    satisfactionNames: { "logical:take": "preview" },
   }), /2\s+@narratage\/media@1/u);
 });
 

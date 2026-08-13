@@ -18,12 +18,6 @@ import { invariant } from "./error.js";
 import { resolveProducer, sealRecord, verifyRecordStructure } from "./link.js";
 import { producerKey, sameType, typeKey } from "./reference.js";
 
-export function valueRefKey(ref: GraphValueRef): string {
-  if (ref.kind === "record") return `record\u0000${ref.id}`;
-  if (ref.kind === "logical-output") return `output\u0000${ref.id}`;
-  return `operation\u0000${ref.operation}`;
-}
-
 function normalizeRef(ref: GraphValueRef): GraphValueRef {
   if (ref.kind === "record") return { kind: "record", id: ref.id };
   if (ref.kind === "logical-output") return { kind: "logical-output", id: ref.id };
@@ -126,7 +120,7 @@ export function resolveLogicalOutput(graph: CompiledGraph, id: string): LogicalO
   return output;
 }
 
-export function resolveCandidate(graph: CompiledGraph, id: string): Candidate {
+function resolveCandidate(graph: CompiledGraph, id: string): Candidate {
   const candidate = graph.candidates.find((item) => item.id === id);
   invariant(candidate !== undefined, "UNKNOWN_CANDIDATE", `unknown Candidate ${id}`, id);
   return candidate;
@@ -150,7 +144,7 @@ export function operationResultRecord(operation: OperationNode): string {
   return operation.result.record;
 }
 
-export function operationResultType(program: LinkedProgram, operation: OperationNode): TypeRef {
+function operationResultType(program: LinkedProgram, operation: OperationNode): TypeRef {
   const producer = resolveProducer(program.closure, operation.producer);
   if (operation.result.kind === "output") {
     const output = producer.outputs.find((port) => port.name === operation.result.name);

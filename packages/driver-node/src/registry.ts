@@ -272,7 +272,4 @@ export class EndpointRegistry implements EndpointRegistrar {
     };
   }
 
-  endpoints(capability: CapabilityRef): readonly EndpointRegistration[] {
-    return this.#registrations.filter((registration) => sameRef(registration.capability, capability));
-  }
 }

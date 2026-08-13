@@ -138,12 +138,10 @@ function summarizeRecord(record: TypedRecord) {
 function catalogAliasType(
   state: BuildState,
   ref: BuildCatalogEntry["aliases"][number]["ref"],
-): TypeRef {
-  const type = ref.kind === "record"
+): TypeRef | undefined {
+  return ref.kind === "record"
     ? state.program.records.find((record) => record.id === ref.id)?.type
     : state.graph.outputs.find((output) => output.id === ref.id)?.type;
-  if (type === undefined) throw new Error(`Build Catalog alias references unknown ${ref.kind} ${ref.id}`);
-  return type;
 }
 
 /**
@@ -260,9 +258,10 @@ export function inspectBuild(state: BuildState, catalog?: BuildCatalogEntry) {
                 const selection = selections.get(alias.ref.id);
                 return selection === undefined ? undefined : records.get(selection.record);
               })();
+          const type = record?.type ?? catalogAliasType(state, alias.ref);
           return {
             name: alias.name,
-            type: record?.type ?? catalogAliasType(state, alias.ref),
+            ...(type === undefined ? {} : { type }),
             ref: alias.ref,
             ...(record === undefined ? { accepted: false } : { accepted: true, record: record.id }),
           };

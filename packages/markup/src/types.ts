@@ -76,6 +76,12 @@ export type SurfaceDecodeOutput = {
   readonly records: readonly SurfaceRecordDraft[];
   readonly components: readonly SurfaceComponentDraft[];
   readonly fragments: readonly GraphFragment[];
+  /**
+   * Public source bindings contributed by this Surface invocation. Omit to
+   * publish every generated binding; use an explicit list to keep plumbing
+   * addressable inside the source without exposing it from the source.
+   */
+  readonly exports?: readonly string[];
 };
 
 export type RawSurfaceInput = {

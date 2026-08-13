@@ -119,7 +119,7 @@ export type CliPresentation =
       readonly run: string;
       /** Presentation names declared by this Author Source and Run Source. Never used to plan. */
       readonly outputNames?: Readonly<Record<string, string>>;
-      readonly candidateNames?: Readonly<Record<string, string>>;
+      readonly satisfactionNames?: Readonly<Record<string, string>>;
     }
   | {
       readonly kind: "operational";
@@ -375,13 +375,13 @@ function renderPlan(
   }
   const visibleSelections = verbose
     ? plan.selections
-    : plan.selections.filter((selection) => view.candidateNames?.[selection.candidate] !== undefined);
+    : plan.selections.filter((selection) => view.satisfactionNames?.[selection.output] !== undefined);
   if (visibleSelections.length > 0) {
     lines.push("", colors.strong(verbose ? "Selections" : "Run choices"));
     for (const selection of visibleSelections) {
       const status = colors.success(glyph(io, "✓", "+"));
       const output = view.outputNames?.[selection.output] ?? shortOpaque(selection.output);
-      const candidate = view.candidateNames?.[selection.candidate];
+      const candidate = view.satisfactionNames?.[selection.output];
       lines.push(`  ${status} ${colors.accent(output)}`
         + `${candidate === undefined ? "" : ` ← ${candidate}`}`);
       if (verbose && (output !== selection.output || candidate !== undefined)) {

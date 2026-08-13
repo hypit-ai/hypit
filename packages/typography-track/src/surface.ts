@@ -850,6 +850,7 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
       outputs: { program: `${id}.program`, track: `${id}.track` }, range: element.range,
     }],
     fragments: [fragment],
+    exports: [`${id}.program`, `${id}.track`],
   };
 };
 
@@ -895,5 +896,6 @@ export const decodeTypographyMaskSurface: StructuredSurfaceHandler = ({ element,
       outputs: { track: `${id}.track` }, range: element.range,
     }],
     fragments: [fragment],
+    exports: [`${id}.track`],
   };
 };
