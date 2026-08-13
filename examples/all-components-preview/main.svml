@@ -1,0 +1,146 @@
+<?svml using="@narratage/markup@1"?>
+
+<svml>
+  <import from="@narratage/script@1"/>
+  <import as="wording" from="@narratage/text@1"/>
+  <import as="seedance" from="@narratage/seedance@1"/>
+  <import as="media" from="@narratage/media@1"/>
+  <import as="gpt" from="@narratage/gpt-image@1"/>
+  <import as="speech" from="@narratage/speech-spine@1"/>
+  <import as="whisperx" from="@narratage/whisperx@1"/>
+  <import as="media-track" from="@narratage/media-track@1"/>
+  <import as="ranking" from="@narratage/ranking@1"/>
+  <import as="screen" from="@narratage/screen-overlay@1"/>
+  <import as="deck" from="@narratage/deck-track@1"/>
+  <import as="caption" from="@narratage/caption@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
+  <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+  <import as="fonts" from="@narratage/fonts-open@1"/>
+  <import as="text" from="@narratage/typography-track@1"/>
+  <import as="space" from="@narratage/spatial@1"/>
+  <import as="film" from="@narratage/film@1"/>
+  <import as="render" from="@narratage/render-hyperframes@1"/>
+  <import as="studio" source="./studio.svs"/>
+
+  <!-- One Script, written so every Track below is placed by something said
+       rather than by a timecode: a Segment per take, a Selection per cutaway
+       and per board row, and a Moment where the board settles. -->
+  <script id="story">
+    <opening>
+      <HOST>@board This is every component at once. @title A card cuts in
+        here@/title, @overlay the picture flashes@/overlay, and the board fills
+        as each one is named.
+      <HOST>Spatial. @place!@deal-one! Typography. @place!@deal-two!
+    </opening>
+    <closing>
+      <HOST>Ranking. @place!@deal-three! Captions. @place!@deal-four!
+      <HOST>That is the whole of it@/board. @done!
+    </closing>
+  </script>
+
+  <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="full" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
+  <!-- A board fills from its bottom edge upward, so the Frame is sized to the
+       rows it holds: four rows, three gaps and the Recipe's padding. A taller
+       Frame would leave the rows floating at the bottom of an empty box. -->
+  <space:Frame id="board-frame" within={vertical} left="4%" top="14%" right="38%" bottom="32.85%"/>
+  <space:Frame id="card-frame" within={vertical} left="10%" top="60%" right="90%" bottom="86%"/>
+  <space:Frame id="title-frame" within={vertical} left="0%" top="6%" right="100%" bottom="13%"/>
+
+  <!-- A generated take, so the preview has something with no material behind it
+       and a reference picture to stand in with. -->
+  <wording:Value id="direction">A presenter talking straight to camera, plain background.</wording:Value>
+  <wording:Value id="look">A friendly presenter in a plain grey studio, waist up, facing camera,
+    soft even light, neutral expression.</wording:Value>
+  <gpt:Image id="presenter" prompt={look} aspect-ratio="9:16" resolution="2K"/>
+  <seedance:ReferenceVideo id="take-opening" model="mini" prompt={direction} duration="8"
+    generate-audio="true">
+    <seedance:Reference image={presenter.image}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="take-closing" model="mini" prompt={direction} duration="8"
+    generate-audio="true">
+    <seedance:Reference image={presenter.image}/>
+  </seedance:ReferenceVideo>
+
+  <!-- Pictures on disk, so the Media Track and the board have real material. -->
+  <media:Image id="card-shot" src="./assets/card.webp"/>
+  <media:Image id="icon-spatial" src="./assets/icon-1.webp"/>
+  <media:Image id="icon-type" src="./assets/icon-2.webp"/>
+  <media:Image id="icon-ranking" src="./assets/icon-3.webp"/>
+  <media:Image id="icon-caption" src="./assets/icon-4.webp"/>
+  <space:Extent id="portrait" width="540" height="960"/>
+  <space:Extent id="square" width="192" height="192"/>
+
+  <speech:Spine id="speech" frame-rate="30"
+    visual-frame={full} visual-appearance={studio.speech.visual} visual-z="0">
+    <speech:Take video={take-opening.video} segment={story.segment.opening}/>
+    <speech:Take video={take-closing.video} segment={story.segment.closing}/>
+  </speech:Spine>
+  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+
+  <fonts:Stack id="ui-font" family="inter" weight="700" style="normal"/>
+
+  <!-- A board, filled one row per `@place!` and cleared on `@done!`. -->
+  <ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>
+  <ranking:Column id="board" map={timing.map} space={speech.space} frame={board-frame}
+    during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
+    style={board-style}>
+    <ranking:ColumnItem id="row-spatial" label="Spatial" icon={icon-spatial}/>
+    <ranking:ColumnItem id="row-type" label="Typography" icon={icon-type}/>
+    <ranking:ColumnItem id="row-ranking" label="Ranking" icon={icon-ranking}/>
+    <ranking:ColumnItem id="row-caption" label="Captions" icon={icon-caption}/>
+  </ranking:Column>
+
+  <!-- A card, held for exactly as long as its Selection is spoken. -->
+  <media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
+    <media-track:Item id="card" image={card-shot} extent={portrait}
+      during={story.selection.title} frame={card-frame}
+      appearance={studio.media.card} motion={studio.motion.card}/>
+  </media-track:Track>
+
+  <!-- A treatment over the whole picture, placed by a Selection like anything else. -->
+  <screen:Track id="effects" space={speech.space} canvas={vertical}>
+    <screen:Flash during={story.selection.overlay} map={timing.map} z="80"
+      color="#ffffff" intensity="0.6" attack="2" hold="2" decay="6"/>
+  </screen:Track>
+
+  <!-- A deck, one card per board row, stepping forward as each is named. The
+       preview was never taught about this Track; it appears because the package
+       produces one. -->
+  <space:Frame id="deck-frame" within={vertical} left="44%" top="60%" right="98%" bottom="88%"/>
+  <deck:DepthStack id="deck" map={timing.map} space={speech.space} canvas={vertical}
+    frame={deck-frame} appearance={studio.deck.stack} until={story.moment.done}>
+    <deck:Card id="card-spatial" source={icon-spatial} extent={square} at={story.moment.deal-one}/>
+    <deck:Card id="card-type" source={icon-type} extent={square} at={story.moment.deal-two}/>
+    <deck:Card id="card-ranking" source={icon-ranking} extent={square} at={story.moment.deal-three}/>
+    <deck:Card id="card-caption" source={icon-caption} extent={square} at={story.moment.deal-four}/>
+  </deck:DepthStack>
+
+  <text:Style id="title-style" recipe={studio.text.title} font={ui-font}/>
+  <text:Track id="titles" space={speech.space}>
+    <text:Area id="headline" placement={title-frame} style={title-style} during="program">
+      EVERY COMPONENT AT ONCE
+    </text:Area>
+  </text:Track>
+
+  <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={ui-font}/>
+  <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
+  <caption-ai:Planner id="cue-plan" display={story.caption} program={caption-program}
+    model="gemini-2.5-flash"/>
+  <caption-fine:Track id="captions" display={story.caption}
+    correspondence={story.caption.correspondence}
+    map={timing.map} space={speech.space}
+    plan={cue-plan.plan} program={caption-program}/>
+
+  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audioTrack}/>
+    <film:Track source={board.visual}/>
+    <film:Track source={cards.visual}/>
+    <film:Track source={effects.track}/>
+    <film:Track source={deck.track}/>
+    <film:Track source={titles.track}/>
+    <film:Track source={captions.track}/>
+  </film:Film>
+  <render:Video id="final" composition={main.composition} space={speech.space}/>
+</svml>

@@ -136,7 +136,12 @@ export const depthStackManifest: ModuleManifest = {
   ], capabilities: [],
   surfaces: [
     { name: "label", tag: "Label", mode: "structured", outputs: [textTypes.text, depthStackTypes.cardLabelStyle, depthStackTypes.cardLabel], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/deck-track/label-surface", digest: depthStackSurfaceImplementationDigests.label } },
-    { name: "track", tag: "DepthStack", mode: "structured", outputs: [depthStackTypes.header, depthStackTypes.spec, depthStackTypes.cardSpec, depthStackTypes.program, compositionTypes.visualTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/deck-track/depth-stack-surface", digest: depthStackSurfaceImplementationDigests.track } },
+    { name: "track", tag: "DepthStack", mode: "structured", outputs: [
+      depthStackTypes.header, depthStackTypes.spec, depthStackTypes.cardSpec,
+      spatialTypes.fit, mediaTrackTypes.sampleLayerSpec, mediaTrackTypes.paintLayerSpec,
+      depthStackTypes.cardLabel, depthStackTypes.cardLabelStyle, textTypes.text,
+      depthStackTypes.program, compositionTypes.visualTrack,
+    ], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/deck-track/depth-stack-surface", digest: depthStackSurfaceImplementationDigests.track } },
   ],
   producers: [
     { name: depthStackProducers.bindLabelText.name, inputs: [{ name: "style", type: depthStackTypes.cardLabelStyle }, { name: "content", type: textTypes.text }], outputs: [{ name: "label", type: depthStackTypes.cardLabel }], needs: [], implementation: registered("@narratage/deck-track/bind-label-text", depthStackImplementationDigests.bindLabelText) },

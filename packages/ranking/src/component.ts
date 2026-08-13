@@ -80,6 +80,15 @@ function inline<T>(value: StoredValue | undefined, label: string): T {
   return value.value as unknown as T;
 }
 
+/**
+ * An icon arrives as an Artifact Blob, whose Type stores the reference itself
+ * rather than wrapping it, so it is read as a blob rather than as inline.
+ */
+function blob(value: StoredValue | undefined, label: string): BlobRef {
+  if (value?.kind !== "blob") throw new Error(`${label} must be a blob Artifact.`);
+  return value;
+}
+
 const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
 
 function programInputs(inputs: ProducerHandlerContext["inputs"]) {
@@ -138,7 +147,7 @@ export const rankingComponent = {
       handler: ({ inputs }) => ({ outputs: { set: output(appendTierBoardItem(
         inline<TierBoardItemSet>(inputs.set?.value, "TierBoardItemSet"),
         inline<TierBoardItemSpec>(inputs.spec?.value, "TierBoardItemSpec"),
-        inline<BlobRef>(inputs.icon?.value, "TierBoard icon"),
+        blob(inputs.icon?.value, "TierBoard icon"),
       )) }, needs: {} }),
     },
     ...([
@@ -149,7 +158,7 @@ export const rankingComponent = {
       handler: ({ inputs }: ProducerHandlerContext) => ({ outputs: { set: output(appendColumnItem(
         inline<ColumnItemSet>(inputs.set?.value, "ColumnItemSet"),
         inline<ColumnItemSpec>(inputs.spec?.value, "ColumnItemSpec"),
-        ...(hasIcon ? [inline<BlobRef>(inputs.icon?.value, "Column icon")] : []),
+        ...(hasIcon ? [blob(inputs.icon?.value, "Column icon")] : []),
       )) }, needs: {} }),
     })),
     ...([
@@ -160,7 +169,7 @@ export const rankingComponent = {
       handler: ({ inputs }: ProducerHandlerContext) => ({ outputs: { set: output(appendTopThreeItem(
         inline<TopThreeItemSet>(inputs.set?.value, "TopThreeItemSet"),
         inline<TopThreeItemSpec>(inputs.spec?.value, "TopThreeItemSpec"),
-        ...(hasIcon ? [inline<BlobRef>(inputs.icon?.value, "TopThree icon")] : []),
+        ...(hasIcon ? [blob(inputs.icon?.value, "TopThree icon")] : []),
       )) }, needs: {} }),
     })),
     {
