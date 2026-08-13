@@ -108,13 +108,13 @@ function projectCaption(
   if (atoms.length === 0 || words.length === 0) throw new Error("Caption display contains no visible words");
   return {
     display: {
-      contract: "svml.caption-display-sequence@1",
+
       id,
       atoms,
       words,
     },
     correspondence: {
-      contract: "svml.caption-correspondence@1",
+
       displaySequenceId: id,
       atoms: correspondence,
     },
@@ -162,7 +162,7 @@ export function captionSelectionWordSubset(
     }
   }
   return {
-    contract: "svml.caption-display-word-subset@1",
+
     id: selection.id,
     sequenceId: sequence.id,
     wordIds,
@@ -230,7 +230,7 @@ export function narrativeSegmentExcerptValue(
   segment: ParsedNarrative["segments"][number],
 ): CanonicalValue {
   const content = {
-    contract: "svml.narrative-excerpt@1",
+
     kind: "segment",
     id: segment.id,
     tokenStart: segment.tokenStart,
@@ -253,7 +253,7 @@ export function narrativeSpeechTextValue(
 
 export function narrativeSelectionValue(selection: ParsedNarrative["selections"][number]): CanonicalValue {
   const content = {
-    contract: "svml.narrative-selection@1",
+
     id: selection.id,
     occurrences: selection.occurrences.map((occurrence) => ({
       occurrence: occurrence.occurrence,
@@ -266,7 +266,7 @@ export function narrativeSelectionValue(selection: ParsedNarrative["selections"]
 
 export function narrativeMomentValue(moment: ParsedNarrative["moments"][number]): CanonicalValue {
   const content = {
-    contract: "svml.narrative-moment@1",
+
     id: moment.id,
     occurrences: moment.occurrences.map((occurrence) => ({
       occurrence: occurrence.occurrence,
@@ -278,7 +278,7 @@ export function narrativeMomentValue(moment: ParsedNarrative["moments"][number])
 
 export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
   return canonicalize({
-    contract: "svml.narrative@1",
+
     segments: parsed.segments.map((segment) => ({
       id: segment.id,
       startAnchorId: segment.startAnchorId,
@@ -317,7 +317,7 @@ export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
       })),
     })),
     semanticIndex: {
-      contract: "svml.semantic-index@1",
+
       anchors: parsed.semanticIndex.anchors.map((anchor) => ({
         id: anchor.id,
         kind: anchor.kind,

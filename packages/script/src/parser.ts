@@ -615,7 +615,7 @@ export function parseScript(
     fail("SCRIPT_ANCHOR_CARDINALITY", "Semantic anchor cardinality is not 2M + 2N.");
   }
   return {
-    contract: "svml.narrative@1",
+
     segments,
     tokens,
     turns,
@@ -645,7 +645,7 @@ export function parseScript(
       regions: captionRegions,
     },
     semanticIndex: {
-      contract: "svml.semantic-index@1",
+
       anchors,
     },
     serializations: {

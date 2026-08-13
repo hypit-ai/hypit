@@ -36,10 +36,10 @@ const map: CompleteSemanticMap = {
 };
 
 const selection = (id: string, occurrences: NarrativeSelectionRef["occurrences"]): NarrativeSelectionRef => ({
-  contract: "svml.narrative-selection@1", id, occurrences,
+  id, occurrences,
 });
 const moment = (id: string, occurrences: NarrativeMomentRef["occurrences"]): NarrativeMomentRef => ({
-  contract: "svml.narrative-moment@1", id, occurrences,
+  id, occurrences,
 });
 const frames = (value: number) => ({ unit: "frames" as const, value });
 const seconds = (numerator: number, denominator = 1) => ({ unit: "seconds" as const, numerator, denominator });
@@ -63,7 +63,7 @@ test("one Segment projects from its own structural start and end anchors", () =>
   const result = projectSegmentWindow({
     itemId: "answer-card",
     map,
-    segment: { contract: "svml.narrative-excerpt@1", kind: "segment", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
+    segment: { kind: "segment", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
     space,
     projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
   });

@@ -79,7 +79,7 @@ test("Fine applies Caption Mute after planning without regrouping Cues", () => {
   const program = resolveCaptionProgram(display, "captions", style, [], [{
     id: "hide-middle",
     words: {
-      contract: "svml.caption-display-word-subset@1",
+
       id: "selection:hide-middle",
       sequenceId: display.id,
       wordIds: muted.map((word) => word.id),
@@ -122,7 +122,7 @@ test("Fine emits no Present for a fully muted Cue", () => {
   const program = resolveCaptionProgram(display, "captions", style, [], [{
     id: "hide-all",
     words: {
-      contract: "svml.caption-display-word-subset@1",
+
       id: "all",
       sequenceId: display.id,
       wordIds: display.words.map((word) => word.id),

@@ -145,7 +145,6 @@ function assertBlobImage(value: { readonly digest: string; readonly size: number
 }
 
 export function assertRankingHeader(value: RankingHeader): void {
-  assert(value.contract === "svml.ranking-header@1", "Unsupported RankingHeader contract.");
   identity(value.id, "RankingHeader.id");
   assert(["tier-board", "column", "top-three", "typewriter-list"].includes(value.variant),
     "RankingHeader.variant is invalid.");
@@ -185,7 +184,6 @@ export function assertRankingMotionStyle(value: RankingMotionStyle, label: strin
 }
 
 export function assertRankingSoundStyle(value: RankingSoundStyle): void {
-  assert(value.contract === "svml.ranking-sound-style@1", "Unsupported RankingSoundStyle contract.");
   for (const [name, gain] of [["appearGain", value.appearGain], ["moveGain", value.moveGain]] as const) {
     nonNegative(gain, `RankingSoundStyle.${name}`);
     assert(gain <= 64, `RankingSoundStyle.${name} exceeds 64.`);
@@ -212,7 +210,6 @@ function assertCommonStyle(input: {
 }
 
 export function assertTierBoardStyle(value: TierBoardStyle): void {
-  assert(value.contract === "svml.tier-board-style@1", "Unsupported TierBoardStyle contract.");
   assertCommonStyle(value, "TierBoardStyle");
   assertRankingBoardPaint(value.board, "TierBoardStyle.board");
   assert(value.rows.length > 0, "TierBoardStyle.rows is empty.");
@@ -237,7 +234,6 @@ export function assertTierBoardStyle(value: TierBoardStyle): void {
 }
 
 export function assertColumnStyle(value: ColumnStyle): void {
-  assert(value.contract === "svml.column-style@1", "Unsupported ColumnStyle contract.");
   assertCommonStyle(value, "ColumnStyle");
   assertRankingBoardPaint(value.board, "ColumnStyle.board");
   assert(value.rankColors.length > 0, "ColumnStyle.rankColors is empty.");
@@ -253,7 +249,6 @@ export function assertColumnStyle(value: ColumnStyle): void {
 }
 
 export function assertTopThreeStyle(value: TopThreeStyle): void {
-  assert(value.contract === "svml.top-three-style@1", "Unsupported TopThreeStyle contract.");
   assertCommonStyle(value, "TopThreeStyle");
   assert(value.slotColors.length >= 3, "TopThreeStyle requires three slot colors.");
   value.slotColors.forEach((item, index) => color(item, `TopThreeStyle.slotColors.${index}`));
@@ -266,7 +261,6 @@ export function assertTopThreeStyle(value: TopThreeStyle): void {
 }
 
 export function assertTypewriterListStyle(value: TypewriterListStyle): void {
-  assert(value.contract === "svml.typewriter-list-style@1", "Unsupported TypewriterListStyle contract.");
   assertRankingBoardPaint(value.paper, "TypewriterListStyle.paper");
   assertRankingTextStyle(value.title, "TypewriterListStyle.title");
   assertRankingTextStyle(value.item, "TypewriterListStyle.item");
@@ -285,18 +279,14 @@ export function assertTypewriterListStyle(value: TypewriterListStyle): void {
 export function assertRankingItemSpec(value: RankingItemSpec): void {
   identity(value.id, "RankingItemSpec.id");
   if (value.variant === "tier-board") {
-    assert(value.contract === "svml.tier-board-item-spec@1", "TierBoardItemSpec contract is invalid.");
     identity(value.tier, `TierBoardItemSpec.${value.id}.tier`);
     assert(value.entry === "direct" || value.entry === "stage", `TierBoardItemSpec.${value.id}.entry is invalid.`);
   } else if (value.variant === "column") {
-    assert(value.contract === "svml.column-item-spec@1", "ColumnItemSpec contract is invalid.");
     assert(value.label.trim().length > 0, `ColumnItemSpec.${value.id}.label is empty.`);
   } else if (value.variant === "top-three") {
-    assert(value.contract === "svml.top-three-item-spec@1", "TopThreeItemSpec contract is invalid.");
     assert(value.label.trim().length > 0, `TopThreeItemSpec.${value.id}.label is empty.`);
   } else {
-    assert(value.variant === "typewriter-list" && value.contract === "svml.typewriter-item-spec@1",
-      "TypewriterItemSpec contract is invalid.");
+    assert(value.variant === "typewriter-list", "TypewriterItemSpec variant is invalid.");
     assert(value.text.length > 0, `TypewriterItemSpec.${value.id}.text is empty.`);
     assert(typeof value.winner === "boolean", `TypewriterItemSpec.${value.id}.winner is invalid.`);
     if (value.emphasis !== undefined) {
@@ -311,13 +301,9 @@ export function assertRankingItemSpec(value: RankingItemSpec): void {
 
 export function assertRankingTextItemShell(value: RankingTextItemShell): void {
   identity(value.id, "RankingTextItemShell.id");
-  if (value.variant === "column") {
-    assert(value.contract === "svml.column-text-item-shell@1", "Column Text Item Shell contract is invalid.");
-  } else if (value.variant === "top-three") {
-    assert(value.contract === "svml.top-three-text-item-shell@1", "TopThree Text Item Shell contract is invalid.");
-  } else {
-    assert(value.variant === "typewriter-list" && value.contract === "svml.typewriter-text-item-shell@1",
-      "Typewriter Text Item Shell contract is invalid.");
+  assert(value.variant === "column" || value.variant === "top-three" || value.variant === "typewriter-list",
+    "RankingTextItemShell variant is invalid.");
+  if (value.variant === "typewriter-list") {
     assert(typeof value.winner === "boolean", `RankingTextItemShell.${value.id}.winner is invalid.`);
     if (value.emphasis !== undefined) {
       integer(value.emphasis.start, `RankingTextItemShell.${value.id}.emphasis.start`);
@@ -341,14 +327,11 @@ export function materializeRankingTextItem(shell: RankingTextItemShell, content:
   assert(content.value.trim().length > 0, `Ranking Text Item ${shell.id} content is empty.`);
   let result: RankingItemSpec;
   if (shell.variant === "column") {
-    const { contract: _contract, ...common } = shell;
-    result = { ...common, contract: "svml.column-item-spec@1", label: content.value };
+    result = { ...shell, label: content.value };
   } else if (shell.variant === "top-three") {
-    const { contract: _contract, ...common } = shell;
-    result = { ...common, contract: "svml.top-three-item-spec@1", label: content.value };
+    result = { ...shell, label: content.value };
   } else {
-    const { contract: _contract, ...common } = shell;
-    result = { ...common, contract: "svml.typewriter-item-spec@1", text: content.value };
+    result = { ...shell, text: content.value };
   }
   assertRankingItemSpec(result);
   return canonicalize(result) as unknown as RankingItemSpec;
@@ -356,11 +339,10 @@ export function materializeRankingTextItem(shell: RankingTextItemShell, content:
 
 export function createRankingItemSpecSet(header: RankingHeader): RankingItemSpecSet {
   assertRankingHeader(header);
-  return { contract: "svml.ranking-item-spec-set@1", variant: header.variant, items: [] };
+  return { variant: header.variant, items: [] };
 }
 
 export function assertRankingItemSpecSet(value: RankingItemSpecSet): void {
-  assert(value.contract === "svml.ranking-item-spec-set@1", "Unsupported RankingItemSpecSet contract.");
   assert(["tier-board", "column", "top-three", "typewriter-list"].includes(value.variant),
     "RankingItemSpecSet.variant is invalid.");
   const ids = new Set<string>();
@@ -420,7 +402,7 @@ export function buildRankingSchedule(input: {
     };
   });
   const result: RankingSchedule = {
-    contract: "svml.ranking-schedule@1",
+
     id: input.header.id,
     variant: input.header.variant,
     outer: { ...resolved.outer },
@@ -432,7 +414,6 @@ export function buildRankingSchedule(input: {
 }
 
 export function assertRankingSchedule(value: RankingSchedule, space?: ProgramSpace): void {
-  assert(value.contract === "svml.ranking-schedule@1", "Unsupported RankingSchedule contract.");
   identity(value.id, "RankingSchedule.id");
   assert(["tier-board", "column", "top-three", "typewriter-list"].includes(value.variant),
     "RankingSchedule.variant is invalid.");
@@ -470,21 +451,21 @@ export function assertRankingSchedule(value: RankingSchedule, space?: ProgramSpa
   }
 }
 
-function emptySet<T extends { readonly contract: string; readonly items: readonly unknown[] }>(contract: T["contract"]): T {
-  return { contract, items: [] } as unknown as T;
+function emptySet<T extends { readonly items: readonly unknown[] }>(): T {
+  return { items: [] } as unknown as T;
 }
 
-export const createTierBoardItemSet = (): TierBoardItemSet => emptySet("svml.tier-board-item-set@1");
-export const createColumnItemSet = (): ColumnItemSet => emptySet("svml.column-item-set@1");
-export const createTopThreeItemSet = (): TopThreeItemSet => emptySet("svml.top-three-item-set@1");
-export const createTypewriterItemSet = (): TypewriterItemSet => emptySet("svml.typewriter-item-set@1");
+export const createTierBoardItemSet = (): TierBoardItemSet => emptySet();
+export const createColumnItemSet = (): ColumnItemSet => emptySet();
+export const createTopThreeItemSet = (): TopThreeItemSet => emptySet();
+export const createTypewriterItemSet = (): TypewriterItemSet => emptySet();
 
 function ensureNew(items: readonly { readonly id: string }[], id: string): void {
   assert(!items.some((item) => item.id === id), `Ranking Item ${id} is duplicated.`);
 }
 
 export function appendTierBoardItem(set: TierBoardItemSet, spec: TierBoardItemSpec, icon: TierBoardItem["icon"]): TierBoardItemSet {
-  assert(set.contract === "svml.tier-board-item-set@1", "TierBoardItemSet is invalid.");
+  assert(Array.isArray(set.items), "TierBoardItemSet is invalid.");
   assertRankingItemSpec(spec);
   assertBlobImage(icon, `TierBoardItem.${spec.id}.icon`);
   ensureNew(set.items, spec.id);
@@ -492,7 +473,7 @@ export function appendTierBoardItem(set: TierBoardItemSet, spec: TierBoardItemSp
 }
 
 export function appendColumnItem(set: ColumnItemSet, spec: ColumnItemSpec, icon?: ColumnItem["icon"]): ColumnItemSet {
-  assert(set.contract === "svml.column-item-set@1", "ColumnItemSet is invalid.");
+  assert(Array.isArray(set.items), "ColumnItemSet is invalid.");
   assertRankingItemSpec(spec);
   if (icon !== undefined) assertBlobImage(icon, `ColumnItem.${spec.id}.icon`);
   ensureNew(set.items, spec.id);
@@ -500,7 +481,7 @@ export function appendColumnItem(set: ColumnItemSet, spec: ColumnItemSpec, icon?
 }
 
 export function appendTopThreeItem(set: TopThreeItemSet, spec: TopThreeItemSpec, icon?: TopThreeItem["icon"]): TopThreeItemSet {
-  assert(set.contract === "svml.top-three-item-set@1", "TopThreeItemSet is invalid.");
+  assert(Array.isArray(set.items), "TopThreeItemSet is invalid.");
   assertRankingItemSpec(spec);
   if (icon !== undefined) assertBlobImage(icon, `TopThreeItem.${spec.id}.icon`);
   ensureNew(set.items, spec.id);
@@ -508,7 +489,7 @@ export function appendTopThreeItem(set: TopThreeItemSet, spec: TopThreeItemSpec,
 }
 
 export function appendTypewriterItem(set: TypewriterItemSet, spec: TypewriterItemSpec): TypewriterItemSet {
-  assert(set.contract === "svml.typewriter-item-set@1", "TypewriterItemSet is invalid.");
+  assert(Array.isArray(set.items), "TypewriterItemSet is invalid.");
   assertRankingItemSpec(spec);
   ensureNew(set.items, spec.id);
   return canonicalize({ ...set, items: [...set.items, structuredClone(spec)] }) as unknown as TypewriterItemSet;
@@ -554,7 +535,7 @@ export function buildTierBoardProgram(header: RankingHeader, frameValue: import(
   idsEqual(schedule, set.items);
   const rows = new Set(style.rows.map((row) => row.id));
   for (const item of set.items) assert(rows.has(item.tier), `TierBoard Item ${item.id} references unknown tier ${item.tier}.`);
-  const result: TierBoardProgram = { contract: "svml.tier-board-program@1", id: header.id, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
+  const result: TierBoardProgram = { id: header.id, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
   assertTierBoardProgram(result);
   return canonicalize(result) as unknown as TierBoardProgram;
 }
@@ -564,7 +545,7 @@ export function buildColumnProgram(header: RankingHeader, frameValue: import("@n
   assertSpatialFrame(frameValue);
   assertColumnStyle(style);
   idsEqual(schedule, set.items);
-  const result: ColumnProgram = { contract: "svml.column-program@1", id: header.id, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
+  const result: ColumnProgram = { id: header.id, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
   assertColumnProgram(result);
   return canonicalize(result) as unknown as ColumnProgram;
 }
@@ -575,7 +556,7 @@ export function buildTopThreeProgram(header: RankingHeader, frameValue: import("
   assertTopThreeStyle(style);
   idsEqual(schedule, set.items);
   assert(set.items.length <= 3, "TopThree accepts at most three Items.");
-  const result: TopThreeProgram = { contract: "svml.top-three-program@1", id: header.id, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
+  const result: TopThreeProgram = { id: header.id, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
   assertTopThreeProgram(result);
   return canonicalize(result) as unknown as TopThreeProgram;
 }
@@ -595,13 +576,12 @@ export function buildTypewriterListProgram(header: RankingHeader, title: string,
     if (item.emphasis !== undefined) assert(item.emphasis.endExclusive <= count,
       `Typewriter Item ${item.id} emphasis exceeds its grapheme count.`);
   }
-  const result: TypewriterListProgram = { contract: "svml.typewriter-list-program@1", id: header.id, title, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
+  const result: TypewriterListProgram = { id: header.id, title, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
   assertTypewriterListProgram(result);
   return canonicalize(result) as unknown as TypewriterListProgram;
 }
 
 export function assertTierBoardProgram(value: TierBoardProgram): void {
-  assert(value.contract === "svml.tier-board-program@1", "Unsupported TierBoardProgram contract.");
   assertRankingSchedule(value.schedule);
   assert(value.schedule.variant === "tier-board", "TierBoardProgram Schedule variant is invalid.");
   assertSpatialFrame(value.frame);
@@ -611,7 +591,6 @@ export function assertTierBoardProgram(value: TierBoardProgram): void {
 }
 
 export function assertColumnProgram(value: ColumnProgram): void {
-  assert(value.contract === "svml.column-program@1", "Unsupported ColumnProgram contract.");
   assertRankingSchedule(value.schedule);
   assert(value.schedule.variant === "column", "ColumnProgram Schedule variant is invalid.");
   assertSpatialFrame(value.frame);
@@ -621,7 +600,6 @@ export function assertColumnProgram(value: ColumnProgram): void {
 }
 
 export function assertTopThreeProgram(value: TopThreeProgram): void {
-  assert(value.contract === "svml.top-three-program@1", "Unsupported TopThreeProgram contract.");
   assertRankingSchedule(value.schedule);
   assert(value.schedule.variant === "top-three", "TopThreeProgram Schedule variant is invalid.");
   assertSpatialFrame(value.frame);
@@ -632,7 +610,6 @@ export function assertTopThreeProgram(value: TopThreeProgram): void {
 }
 
 export function assertTypewriterListProgram(value: TypewriterListProgram): void {
-  assert(value.contract === "svml.typewriter-list-program@1", "Unsupported TypewriterListProgram contract.");
   assert(value.title.trim().length > 0, "TypewriterListProgram title is empty.");
   assertRankingSchedule(value.schedule);
   assert(value.schedule.variant === "typewriter-list", "TypewriterListProgram Schedule variant is invalid.");
@@ -647,7 +624,7 @@ function event(id: string, itemId: string, kind: "appear" | "move", eventFrame: 
 }
 
 function sealEvents(id: string, variant: RankingVariant, events: readonly RankingSoundEvent[]): RankingSoundEventPlan {
-  const value: RankingSoundEventPlan = { contract: "svml.ranking-sound-event-plan@1", id, variant, events };
+  const value: RankingSoundEventPlan = { id, variant, events };
   assertRankingSoundEventPlan(value);
   return canonicalize(value) as unknown as RankingSoundEventPlan;
 }
@@ -701,7 +678,6 @@ export function buildTypewriterSoundEvents(schedule: RankingSchedule, style: Typ
 }
 
 export function assertRankingSoundEventPlan(value: RankingSoundEventPlan): void {
-  assert(value.contract === "svml.ranking-sound-event-plan@1", "Unsupported RankingSoundEventPlan contract.");
   identity(value.id, "RankingSoundEventPlan.id");
   assert(["tier-board", "column", "top-three", "typewriter-list"].includes(value.variant),
     "RankingSoundEventPlan.variant is invalid.");
@@ -717,11 +693,10 @@ export function assertRankingSoundEventPlan(value: RankingSoundEventPlan): void 
 }
 
 export function createRankingSoundSet(): RankingSoundSet {
-  return { contract: "svml.ranking-sound-set@1" };
+  return {};
 }
 
 export function appendRankingSound(set: RankingSoundSet, kind: "appear" | "move", media: SynchronizedMedia): RankingSoundSet {
-  assert(set.contract === "svml.ranking-sound-set@1", "RankingSoundSet is invalid.");
   verifySynchronizedMedia(media);
   assert(media.audio !== undefined, `Ranking ${kind} sound has no normalized audio.`);
   assert(set[kind] === undefined, `Ranking ${kind} sound is already set.`);

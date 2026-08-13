@@ -9,8 +9,7 @@ export function assertCompleteSemanticMapIdentity(map: CompleteSemanticMap): voi
 
 export function assertNarrativeSelectionIdentity(selection: NarrativeSelectionRef): void {
   if (
-    selection.contract !== "svml.narrative-selection@1"
-    || selection.id.length === 0
+    selection.id.length === 0
     || selection.occurrences.length === 0
   ) {
     throw new Error("NarrativeSelection is invalid");
@@ -19,8 +18,7 @@ export function assertNarrativeSelectionIdentity(selection: NarrativeSelectionRe
 
 export function assertNarrativeMomentIdentity(moment: NarrativeMomentRef): void {
   if (
-    moment.contract !== "svml.narrative-moment@1"
-    || moment.id.length === 0
+    moment.id.length === 0
     || moment.occurrences.length === 0
   ) {
     throw new Error("NarrativeMoment is invalid");
@@ -77,7 +75,7 @@ export function segmentFrameSpan(
   segment: NarrativeExcerpt,
 ): LocatedFrameSpan {
   assertCompleteSemanticMapIdentity(map);
-  if (segment.contract !== "svml.narrative-excerpt@1" || segment.kind !== "segment" || segment.id.length === 0) {
+  if (segment.kind !== "segment" || segment.id.length === 0) {
     throw new Error("Narrative Segment excerpt is invalid");
   }
   const frames = anchorFrames(map);
