@@ -186,9 +186,9 @@ test("estimated timings are strictly increasing and reproducible", () => {
   const narrative = {
     segments: [{ id: "a", startAnchorId: "segment:a:start", endAnchorId: "segment:a:end" }],
     tokens: [
-      { segmentId: "a", startAnchorId: "t1:s", endAnchorId: "t1:e", text: "Extraordinary" },
-      { segmentId: "a", startAnchorId: "t2:s", endAnchorId: "t2:e", text: "," },
-      { segmentId: "a", startAnchorId: "t3:s", endAnchorId: "t3:e", text: "yes" },
+      { id: "t1", segmentId: "a", startAnchorId: "t1:s", endAnchorId: "t1:e", text: "Extraordinary" },
+      { id: "t2", segmentId: "a", startAnchorId: "t2:s", endAnchorId: "t2:e", text: "," },
+      { id: "t3", segmentId: "a", startAnchorId: "t3:s", endAnchorId: "t3:e", text: "yes" },
     ],
   };
   const rate = { numerator: 24, denominator: 1 };

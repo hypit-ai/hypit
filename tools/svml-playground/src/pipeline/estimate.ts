@@ -21,6 +21,7 @@ type Narrative = {
     readonly endAnchorId: string;
   }[];
   readonly tokens: readonly {
+    readonly id: string;
     readonly segmentId: string;
     readonly startAnchorId: string;
     readonly endAnchorId: string;
@@ -57,6 +58,12 @@ export function estimateTiming(
   const rate = resolveSpeechEstimateRate(policy as never, language);
 
   const anchors: { identity: string; timeSec: number; frame: number }[] = [];
+  // Anchors are how a marker addresses time, but a consumer that reads a window
+  // over words - a Caption, say - reads the token ranges, so both are placed.
+  const timed: {
+    tokenId: string; segmentId: string;
+    startSec: number; endSec: number; startFrame: number; endFrame: number;
+  }[] = [];
   const at = new Map<string, number>();
   let seconds = 0;
   let frame = 0;
@@ -74,6 +81,11 @@ export function estimateTiming(
     seconds += Math.max(1 / perSecond, units / rate);
     frame = Math.max(began + 1, Math.round(seconds * perSecond));
     place(token.endAnchorId, frame);
+    timed.push({
+      tokenId: token.id, segmentId: token.segmentId,
+      startSec: began / perSecond, endSec: frame / perSecond,
+      startFrame: began, endFrame: frame,
+    });
     const held = bounds.get(token.segmentId);
     bounds.set(token.segmentId, { first: held?.first ?? began, last: frame });
   }
@@ -88,7 +100,7 @@ export function estimateTiming(
   }
   const frameCount = Math.max(1, frame);
   return {
-    map: { contract: "svml.complete-semantic-map@1", tokens: [], anchors },
+    map: { contract: "svml.complete-semantic-map@1", tokens: timed, anchors },
     space: {
       contract: "svml.program-space@1",
       durationSec: frameCount * frameRate.denominator / frameRate.numerator,
