@@ -6,6 +6,7 @@ import type {
   CoreCommand,
   CompiledGraph,
   Derivation,
+  Digest,
   FulfillNeedCommand,
   InvokeProducerCommand,
   LinkedProgram,
@@ -19,7 +20,7 @@ import type {
 
 import { canonicalize, digestOf, recordDigest } from "./canonical.js";
 import { CoreError, invariant } from "./error.js";
-import { resolveProducer, resolveType, sealRecord, verifyRecordStructure } from "./link.js";
+import { resolveProducer, verifyRecordStructure } from "./link.js";
 import { compileBuild, producerStep, selectedProvidedRecords } from "./plan.js";
 import {
   commandId,
@@ -28,15 +29,18 @@ import {
   needRequestDigest,
   receiptId,
 } from "./provenance.js";
-import { validateStoredValue } from "./schema.js";
 import { verifyBuildState } from "./verify.js";
 
 function withoutCommand(state: BuildState, id: string): readonly CoreCommand[] {
   return state.outstanding.filter((command) => command.id !== id);
 }
 
-function addAcceptedEvent(state: BuildState, event: BuildEvent): BuildState["acceptedEvents"] {
-  return [...state.acceptedEvents, { id: event.id, digest: eventDigest(event) }];
+function addAcceptedEvent(
+  state: BuildState,
+  event: BuildEvent,
+  digest: Digest,
+): BuildState["acceptedEvents"] {
+  return [...state.acceptedEvents, { id: event.id, digest }];
 }
 
 function inputRecords(state: BuildState, command: InvokeProducerCommand): TypedRecord[] {
@@ -74,6 +78,7 @@ function acceptProducerEvent(
   state: BuildState,
   command: InvokeProducerCommand,
   event: ProducerCompletedEvent,
+  acceptedEventDigest: Digest,
 ): BuildState {
   const step = producerStep(state.plan, command.step);
   const stepState = state.steps.find((item) => item.id === step.id);
@@ -91,7 +96,6 @@ function acceptProducerEvent(
     invariant(id !== undefined, "MISSING_OUTPUT_BINDING", `${step.id}.${port.name} is not bound`);
     invariant(rawValue !== undefined, "MISSING_OUTPUT_VALUE", `${step.id}.${port.name} returned no value`);
     const value = normalizeStoredValue(rawValue);
-    validateStoredValue(value, resolveType(state.program.closure, port.type).schema, `$output.${step.id}.${port.name}`);
     return {
       id,
       type: port.type,
@@ -128,14 +132,15 @@ function acceptProducerEvent(
     inputs: inputs.map((record) => ({ id: record.id, digest: record.digest })),
     outputs: outputDrafts.map(({ id, digest }) => ({ id, digest })),
     needs: needDrafts.map((need) => ({ id: need.id, requestDigest: need.requestDigest })),
-    event: { id: event.id, digest: eventDigest(event) },
+    event: { id: event.id, digest: acceptedEventDigest },
   };
   const id = derivationId(derivationDraft);
   const derivation: Derivation = { id, ...derivationDraft };
-  const outputs: TypedRecord[] = outputDrafts.map((output) => sealRecord({
+  const outputs: TypedRecord[] = outputDrafts.map((output) => ({
     id: output.id,
     type: output.type,
     value: output.value,
+    digest: output.digest,
     origin: { kind: "derived", derivation: id },
   }));
   outputs.forEach((record) => verifyRecordStructure(state.program.closure, record));
@@ -150,7 +155,7 @@ function acceptProducerEvent(
       item.id === step.id ? { id: item.id, status: "complete", derivation: id } : item,
     ),
     outstanding: withoutCommand(state, command.id),
-    acceptedEvents: addAcceptedEvent(state, event),
+    acceptedEvents: addAcceptedEvent(state, event, acceptedEventDigest),
   };
 }
 
@@ -158,6 +163,7 @@ function acceptNeedEvent(
   state: BuildState,
   command: FulfillNeedCommand,
   event: NeedFulfilledEvent,
+  acceptedEventDigest: Digest,
 ): BuildState {
   const need = state.needs.find((item) => item.id === command.need.id);
   invariant(need !== undefined, "UNKNOWN_NEED", `unknown need ${command.need.id}`, command.need.id);
@@ -174,7 +180,6 @@ function acceptNeedEvent(
     need.id,
   );
   const value = normalizeStoredValue(event.value);
-  validateStoredValue(value, resolveType(state.program.closure, need.returns).schema, `$need.${need.id}`);
   const outputDigest = recordDigest(need.returns, value);
   const receiptDraft: Omit<Receipt, "id"> = {
     need: need.id,
@@ -183,7 +188,7 @@ function acceptNeedEvent(
     ...(event.implementation === undefined ? {} : { implementation: event.implementation }),
     output: need.result,
     outputDigest,
-    event: { id: event.id, digest: eventDigest(event) },
+    event: { id: event.id, digest: acceptedEventDigest },
   };
   const receipt: Receipt = { id: receiptId(receiptDraft), ...receiptDraft };
   const record: TypedRecord = {
@@ -200,16 +205,20 @@ function acceptNeedEvent(
     records: [...state.records, record],
     receipts: [...state.receipts, receipt],
     outstanding: withoutCommand(state, command.id),
-    acceptedEvents: addAcceptedEvent(state, event),
+    acceptedEvents: addAcceptedEvent(state, event, acceptedEventDigest),
   };
 }
 
-function acceptFailure(state: BuildState, event: BuildEvent & { kind: "command-failed" }): BuildState {
+function acceptFailure(
+  state: BuildState,
+  event: BuildEvent & { kind: "command-failed" },
+  acceptedEventDigest: Digest,
+): BuildState {
   return {
     ...state,
     status: "failed",
     outstanding: [],
-    acceptedEvents: addAcceptedEvent(state, event),
+    acceptedEvents: addAcceptedEvent(state, event, acceptedEventDigest),
     diagnostics: [
       ...state.diagnostics,
       { code: event.code, message: event.message, subject: event.command },
@@ -219,10 +228,11 @@ function acceptFailure(state: BuildState, event: BuildEvent & { kind: "command-f
 
 function applyEvent(state: BuildState, event: BuildEvent): BuildState {
   invariant(event.id.length > 0, "EMPTY_EVENT_ID", "event id is empty");
+  const acceptedEventDigest = eventDigest(event);
   const accepted = state.acceptedEvents.find((item) => item.id === event.id);
   if (accepted !== undefined) {
     invariant(
-      accepted.digest === eventDigest(event),
+      accepted.digest === acceptedEventDigest,
       "EVENT_ID_REUSED",
       `${event.id} was already accepted with different content`,
       event.id,
@@ -233,12 +243,12 @@ function applyEvent(state: BuildState, event: BuildEvent): BuildState {
   const command = state.outstanding.find((item) => item.id === event.command);
   invariant(command !== undefined, "UNKNOWN_COMMAND", `event references ${event.command}`, event.command);
 
-  if (event.kind === "command-failed") return acceptFailure(state, event);
+  if (event.kind === "command-failed") return acceptFailure(state, event, acceptedEventDigest);
   if (command.kind === "invoke-producer" && event.kind === "producer-completed") {
-    return acceptProducerEvent(state, command, event);
+    return acceptProducerEvent(state, command, event, acceptedEventDigest);
   }
   if (command.kind === "fulfill-need" && event.kind === "need-fulfilled") {
-    return acceptNeedEvent(state, command, event);
+    return acceptNeedEvent(state, command, event, acceptedEventDigest);
   }
   throw new CoreError(
     "EVENT_COMMAND_MISMATCH",
