@@ -16,37 +16,58 @@ import {
   locateSpeechTiming,
 } from "@narratage/speech-alignment";
 
+type WordFixture = {
+  readonly text: string;
+  readonly startSec?: number;
+  readonly endSec?: number;
+  readonly score?: number;
+};
+
+function wordEvidence(word: WordFixture): SpeechWordEvidence {
+  return {
+    text: word.text,
+    ...(word.startSec === undefined || word.endSec === undefined ? {} : {
+      startSample: Math.round(word.startSec * 16_000),
+      endSampleExclusive: Math.round(word.endSec * 16_000),
+    }),
+    ...(word.score === undefined ? {} : { score: word.score }),
+  };
+}
+
 /** The alignment classification is a property of alignWordGroups, tested at its own level. */
 function relations(
   narrative: Narrative,
-  words: readonly SpeechWordEvidence[],
+  words: readonly WordFixture[],
   segmentId = "line",
 ): string[] {
   const segment = narrative.segments.find((item) => item.id === segmentId)!;
   return alignWordGroups(
     segmentId,
     narrative.tokens.slice(segment.tokenStart, segment.tokenEndExclusive),
-    words,
+    words.map(wordEvidence),
   ).map((group) => group.relation);
 }
 
 function evidence(args: {
   readonly basis: SpeechAudioBasis;
-  readonly segmentId?: string;
   readonly durationSec?: number;
   readonly startSec?: number;
   readonly endSec?: number;
-  readonly words: readonly SpeechWordEvidence[];
+  readonly words: readonly WordFixture[];
   readonly chars?: readonly SpeechCharacterEvidence[];
   readonly vad?: readonly { readonly startSec: number; readonly endSec: number }[];
 }): AlignedTranscriptEvidence {
   return sealAlignedTranscriptEvidence({
-    segments: [
+    passages: [
       {
-        sourceSegmentId: args.segmentId ?? "line",
-        words: args.words,
+        words: args.words.map(wordEvidence),
         chars: args.chars ?? [],
-        ...(args.vad === undefined ? {} : { speechActivity: args.vad }),
+        ...(args.vad === undefined ? {} : {
+          speechActivity: args.vad.map((span) => ({
+            startSample: Math.round(span.startSec * 16_000),
+            endSampleExclusive: Math.round(span.endSec * 16_000),
+          })),
+        }),
       },
     ],
   });
@@ -64,8 +85,8 @@ function speechBasis(
   const audioDigest = digestOf(`fixture:audio:${narrative.segments.map((segment) => segment.id).join("+")}:${durationSec}`);
   const segments = narrative.segments.map((segment, index) => ({
     segmentId: segment.id,
-    startSec: windows?.[index]?.startSec ?? durationSec * index / narrative.segments.length,
-    endSec: windows?.[index]?.endSec ?? durationSec * (index + 1) / narrative.segments.length,
+    startFrame: Math.round((windows?.[index]?.startSec ?? durationSec * index / narrative.segments.length) * 1_000),
+    endFrameExclusive: Math.round((windows?.[index]?.endSec ?? durationSec * (index + 1) / narrative.segments.length) * 1_000),
   }));
   const take = sealSpeechBasis({
     programSpace,
@@ -105,8 +126,8 @@ function characters(
   return [...text].map((char, index) => ({
     char,
     wordIndex,
-    startSec: starts[index]!,
-    endSec: ends[index]!,
+    startSample: Math.round(starts[index]! * 16_000),
+    endSampleExclusive: Math.round(ends[index]! * 16_000),
     score: 0.95,
   }));
 }
@@ -244,15 +265,13 @@ test("multiple Script Segments stay independent even when evidence records arriv
     { startSec: 1, endSec: 2 },
   ]);
   const map = locateSpeechTiming(narrative, basis, sealAlignedTranscriptEvidence({
-    segments: [
+    passages: [
       {
-        sourceSegmentId: "two",
-        words: [{ text: "Goodbye", startSec: 1.2, endSec: 1.6 }],
+        words: [wordEvidence({ text: "Goodbye", startSec: 1.2, endSec: 1.6 })],
         chars: [],
       },
       {
-        sourceSegmentId: "one",
-        words: [{ text: "Hello", startSec: 0.2, endSec: 0.55 }],
+        words: [wordEvidence({ text: "Hello", startSec: 0.2, endSec: 0.55 })],
         chars: [],
       },
     ],
@@ -262,6 +281,38 @@ test("multiple Script Segments stay independent even when evidence records arriv
     ["one", 200, 550],
     ["two", 1_200, 1_600],
   ]);
+});
+
+test("Segment anchors preserve exact frame cuts without a seconds round trip", () => {
+  const narrative = parseScript("frame-cuts.svml", "<one>Alpha.</one><two>Beta.</two>");
+  const take = sealSpeechBasis({
+    programSpace: sealProgramSpace({
+      durationSec: 1,
+      frameRate: { numerator: 24, denominator: 1 },
+    }),
+    audio: { kind: "blob", digest: digestOf("frame-cuts:audio"), size: 1, mediaType: "audio/wav" },
+    visualTrack: { clips: [] },
+    segments: [
+      { segmentId: "one", startFrame: 0, endFrameExclusive: 7 },
+      { segmentId: "two", startFrame: 7, endFrameExclusive: 24 },
+    ],
+  });
+  const map = locateSpeechTiming(narrative, audioProjection(take), sealAlignedTranscriptEvidence({
+    passages: [{
+      startSample: 0,
+      endSampleExclusive: 16_000,
+      words: [
+        { text: "Alpha", startSample: 1_000, endSampleExclusive: 3_000 },
+        { text: "Beta", startSample: 6_000, endSampleExclusive: 10_000 },
+      ],
+      chars: [],
+    }],
+  }));
+  const frameByAnchor = new Map(map.anchors.map((anchor) => [anchor.identity, anchor.frame]));
+  const structuralFrames = narrative.semanticIndex.anchors
+    .filter((anchor) => anchor.kind === "segment-start" || anchor.kind === "segment-end")
+    .map((anchor) => frameByAnchor.get(anchor.id));
+  assert.deepEqual(structuralFrames, [0, 7, 7, 24]);
 });
 
 test("overlapping evidence word windows reach the map overlapping", () => {
@@ -306,7 +357,11 @@ test("Evidence is interpreted only through the explicitly connected SpeechAudioB
     durationSec: 2,
     frameRate: { numerator: 30, denominator: 1 },
   });
-  const anotherBasis = { ...basis, programSpace: anotherSpace };
+  const anotherBasis = {
+    ...basis,
+    programSpace: anotherSpace,
+    segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 60 }],
+  };
   const map = locateSpeechTiming(narrative, anotherBasis, mismatched);
   assert.equal(map.tokens[0]?.startFrame, 3);
 });
@@ -321,6 +376,7 @@ test("the final map is quantized once into the selected ProgramSpace", () => {
   const basis: SpeechAudioBasis = {
     ...original,
     programSpace,
+    segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 30 }],
   };
   const map = locateSpeechTiming(narrative, basis, evidence({
     basis,

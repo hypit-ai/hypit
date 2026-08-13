@@ -4,7 +4,7 @@ import {
 import type { ProducerRegistrar } from "@narratage/component-kit";
 import { sealProgramSpace } from "@narratage/program-space";
 import { sealSpeechBasis, sealSpeechEvidenceAudio } from "@narratage/speech";
-import type { SpeechAudioBasis, SpeechBasis, SpeechEvidenceAudio } from "@narratage/speech";
+import type { SpeechBasis, SpeechEvidenceAudio } from "@narratage/speech";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -25,7 +25,7 @@ function basis() {
     programSpace,
     audio: { kind: "blob", digest: digestOf("whisperx-test:audio"), size: 1, mediaType: "audio/wav" },
     visualTrack: { clips: [] },
-    segments: [{ segmentId: "line", startSec: 0, endSec: 1 }],
+    segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 30 }],
   });
 }
 
@@ -41,20 +41,12 @@ function evidenceAudio(basis: SpeechBasis): SpeechEvidenceAudio {
   });
 }
 
-function audioBasis(value: SpeechBasis): SpeechAudioBasis {
-  return {
-    programSpace: value.programSpace,
-    audio: value.audio,
-    segments: value.segments,
-  };
-}
-
-test("WhisperX receives normalized bytes and Segment truth through separate graph inputs", () => {
+test("WhisperX receives normalized bytes without authored Segment truth", () => {
   const source = basis();
   const valid = evidenceAudio(source);
-  const request = whisperXRequestForEvidenceAudio(valid, audioBasis(source));
+  const request = whisperXRequestForEvidenceAudio(valid);
   assert.equal(request.audio.digest, valid.artifact.digest);
-  assert.deepEqual(request.segments, source.segments);
+  assert.equal("segments" in request, false);
   assert.equal(request.sampleFrames, 16_000);
 });
 

@@ -240,11 +240,10 @@ export function assembleSpeechBasis(
     program.frameRate,
   ), "TimelineAudio does not cover this Speech Spine");
   let frame = 0;
-  const seconds = (value: number): number => value * space.frameRate.denominator / space.frameRate.numerator;
   const segments = set.takes.map((take) => {
     const startFrame = frame;
     frame += take.media.timeline.frameCount;
-    return { segmentId: take.segment.id, startSec: seconds(startFrame), endSec: seconds(frame) };
+    return { segmentId: take.segment.id, startFrame, endFrameExclusive: frame };
   });
   frame = 0;
   const visualClips = set.takes.flatMap((take) => {

@@ -2,7 +2,6 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { sealSpeechEvidenceAudio, speechTypes } from "@narratage/speech";
-import type { SpeechAudioBasis, SpeechEvidenceAudio } from "@narratage/speech";
 import assert from "node:assert/strict";
 import { MemoryArtifactStore, EndpointRegistry } from "@narratage/driver-node";
 import { digestOf } from "@narratage/protocol";
@@ -18,10 +17,6 @@ import {
   interpretWhisperXResponse,
 } from "../src/index.js";
 
-const sourceSegments = [
-  { segmentId: "opening", startSec: 0, endSec: 1 },
-  { segmentId: "answer", startSec: 1, endSec: 2 },
-];
 function wav(sampleFrames: number): Uint8Array {
   const bytes = new Uint8Array(44 + sampleFrames * 2);
   const view = new DataView(bytes.buffer);
@@ -57,7 +52,7 @@ test("local WhisperX Provider pins the complete service runtime and is independe
   );
 });
 
-test("service pauses are projected onto authored Segments without clipping a crossing word into fake evidence", () => {
+test("wire seconds are lowered once to exact evidence samples without authored Segment knowledge", () => {
   const evidence = interpretWhisperXResponse({
     language: "en",
     segments: [{
@@ -69,11 +64,17 @@ test("service pauses are projected onto authored Segments without clipping a cro
         { text: "world", start: 1.2, end: 1.6 },
       ],
     }],
-  }, sourceSegments, 2);
-  assert.deepEqual(evidence.map((segment) => segment.sourceSegmentId), ["opening", "answer"]);
-  assert.deepEqual(evidence[0]!.words[0], { text: "hello", startSec: 0.1, endSec: 0.4, score: 0.99 });
-  assert.deepEqual(evidence[1]!.words[0], { text: "crossing", score: 0.8 });
-  assert.deepEqual(evidence[1]!.words[1], { text: "world", startSec: 1.2, endSec: 1.6 });
+  }, 32_000);
+  assert.equal(evidence.length, 1);
+  assert.deepEqual(
+    { startSample: evidence[0]!.startSample, endSampleExclusive: evidence[0]!.endSampleExclusive },
+    { startSample: 1_600, endSampleExclusive: 28_800 },
+  );
+  assert.deepEqual(evidence[0]!.words, [
+    { text: "hello", startSample: 1_600, endSampleExclusive: 6_400, score: 0.99 },
+    { text: "crossing", startSample: 14_400, endSampleExclusive: 17_600, score: 0.8 },
+    { text: "world", startSample: 19_200, endSampleExclusive: 25_600 },
+  ]);
 });
 
 test("local Provider stages canonical evidence bytes unchanged and returns sealed alignment evidence", async () => {
@@ -127,15 +128,7 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
       artifact,
       sampleFrames: 32_000,
     });
-    const audioBasis: SpeechAudioBasis = {
-      programSpace: {
-        durationSec: 2,
-        frameRate: { numerator: 30, denominator: 1 },
-      },
-      audio: artifact,
-      segments: sourceSegments,
-    };
-    const constraints = whisperXRequestForEvidenceAudio(evidenceAudio, audioBasis, { language: "en" });
+    const constraints = whisperXRequestForEvidenceAudio(evidenceAudio, { language: "en" });
     const need: Need = {
       id: "need:whisperx-loopback",
       capability: whisperXCapabilities.alignment,
@@ -167,7 +160,7 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
     assert.equal(stagedMatches, true);
     assert.equal(output.value.kind, "inline");
     const value = output.value.kind === "inline" ? output.value.value : null;
-    assert.equal((value as { readonly segments?: readonly unknown[] }).segments?.length, 2);
+    assert.equal((value as { readonly passages?: readonly unknown[] }).passages?.length, 1);
     assert.equal(speechTypes.evidenceAudio.name, "SpeechEvidenceAudio");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));

@@ -20,7 +20,6 @@ import { sealSpeechBasis } from "@narratage/speech";
 import type { SpeechAudioBasis } from "@narratage/speech";
 import { locateSpeechTiming } from "@narratage/speech-alignment";
 import { sealAlignedTranscriptEvidence } from "@narratage/speech-evidence";
-import type { AlignedTranscriptSegment } from "@narratage/speech-evidence";
 import {
   captionCorrespondence,
   captionDisplaySequence,
@@ -29,7 +28,17 @@ import {
 } from "@narratage/script";
 import type { StructuredElement, SurfaceResolvedReference } from "@narratage/markup";
 
-function locate(narrative: Narrative, durationSec: number, segments: readonly AlignedTranscriptSegment[]) {
+type TranscriptFixture = {
+  readonly words: readonly {
+    readonly text: string;
+    readonly startSec?: number;
+    readonly endSec?: number;
+    readonly score?: number;
+  }[];
+  readonly chars: readonly [];
+};
+
+function locate(narrative: Narrative, durationSec: number, segments: readonly TranscriptFixture[]) {
   const space = sealProgramSpace({
     durationSec,
     frameRate: { numerator: 30, denominator: 1 },
@@ -37,8 +46,8 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
   const audio = { kind: "blob" as const, digest: digestOf("caption:test-audio"), size: 1, mediaType: "audio/wav" };
   const basisSegments = narrative.segments.map((segment, index) => ({
     segmentId: segment.id,
-    startSec: durationSec * index / narrative.segments.length,
-    endSec: durationSec * (index + 1) / narrative.segments.length,
+    startFrame: Math.round(durationSec * 30 * index / narrative.segments.length),
+    endFrameExclusive: Math.round(durationSec * 30 * (index + 1) / narrative.segments.length),
   }));
   const basis = sealSpeechBasis({
     programSpace: space,
@@ -46,7 +55,19 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
     visualTrack: { clips: [] },
     segments: basisSegments,
   });
-  const evidence = sealAlignedTranscriptEvidence({ segments });
+  const evidence = sealAlignedTranscriptEvidence({
+    passages: segments.map((segment) => ({
+      words: segment.words.map((word) => ({
+        text: word.text,
+        ...(word.startSec === undefined || word.endSec === undefined ? {} : {
+          startSample: Math.round(word.startSec * 16_000),
+          endSampleExclusive: Math.round(word.endSec * 16_000),
+        }),
+        ...(word.score === undefined ? {} : { score: word.score }),
+      })),
+      chars: [],
+    })),
+  });
   const audioBasis: SpeechAudioBasis = {
     programSpace: basis.programSpace,
     audio: basis.audio,
@@ -148,7 +169,6 @@ test("Caption timing applies Mute after planning and preserves the original Cue 
     }],
   });
   const map = locate(parsed, 2, [{
-    sourceSegmentId: "line",
     words: ["Keep", "this", "hidden", "phrase", "visible"].map((text, index) => ({
       text,
       startSec: index * 0.3,
@@ -293,7 +313,6 @@ test("Dual Text exposes one whole timed display Atom and never invents internal 
     }] }],
   });
   const map = locate(parsed, 1, [{
-    sourceSegmentId: "line",
     words: [
       { text: "what", startSec: 0.1, endSec: 0.25 },
       { text: "the", startSec: 0.3, endSec: 0.42 },

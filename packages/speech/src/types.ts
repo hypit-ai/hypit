@@ -3,7 +3,11 @@ import type { BlobRef } from "@narratage/protocol";
 import type { ContentFit, IntrinsicExtent, SpatialFrame } from "@narratage/spatial";
 /** Positive seconds. The graph port's TypeRef already carries the SpeechDuration identity. */
 export type SpeechDuration = number;
-export type SpeechBasisSegment = { readonly segmentId: string; readonly startSec: number; readonly endSec: number };
+export type SpeechBasisSegment = {
+  readonly segmentId: string;
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+};
 export type SpeechBasis = {
   readonly programSpace: ProgramSpace; readonly audio: BlobRef;
   readonly visualTrack: { readonly clips: readonly {

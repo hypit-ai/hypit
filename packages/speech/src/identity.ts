@@ -30,20 +30,19 @@ export function assertSpeechBasisIdentity(basis: SpeechBasis): void {
   assertAudioBlob(basis.audio, "SpeechBasis audio");
   if (basis.segments.length === 0) throw new Error("SpeechBasis must contain at least one Segment.");
   let previousEnd = 0;
-  const frameAt = (seconds: number): number => Math.round(
-    seconds * basis.programSpace.frameRate.numerator / basis.programSpace.frameRate.denominator,
-  );
   const segmentIds = new Set<string>();
   for (const segment of basis.segments) {
-    if (!segment.segmentId || segment.startSec !== previousEnd || !Number.isFinite(segment.endSec)
-      || segment.endSec <= segment.startSec || segment.endSec > basis.programSpace.durationSec) {
+    if (!segment.segmentId || segment.startFrame !== previousEnd
+      || !Number.isSafeInteger(segment.endFrameExclusive)
+      || segment.endFrameExclusive <= segment.startFrame
+      || segment.endFrameExclusive > programSpaceFrameCount(basis.programSpace)) {
       throw new Error("SpeechBasis Segment is invalid or non-contiguous.");
     }
     if (segmentIds.has(segment.segmentId)) throw new Error(`SpeechBasis repeats Segment ${segment.segmentId}.`);
     segmentIds.add(segment.segmentId);
-    previousEnd = segment.endSec;
+    previousEnd = segment.endFrameExclusive;
   }
-  if (frameAt(previousEnd) !== programSpaceFrameCount(basis.programSpace)) {
+  if (previousEnd !== programSpaceFrameCount(basis.programSpace)) {
     throw new Error("SpeechBasis Segments do not cover ProgramSpace.");
   }
   const seenVisuals = new Set<string>();
@@ -66,9 +65,13 @@ export function assertSpeechAudioBasisIdentity(basis: SpeechAudioBasis): void {
   assertAudioBlob(basis.audio, "SpeechAudioBasis audio");
   if (basis.segments.length === 0) throw new Error("SpeechAudioBasis must contain at least one Segment.");
   let previousEnd = 0;
+  const frameCount = programSpaceFrameCount(basis.programSpace);
   for (const segment of basis.segments) {
-    if (!segment.segmentId || !Number.isFinite(segment.startSec) || !Number.isFinite(segment.endSec) || segment.startSec < previousEnd
-      || segment.endSec < segment.startSec || segment.endSec > basis.programSpace.durationSec) throw new Error("SpeechAudioBasis Segment is invalid or out of order.");
-    previousEnd = segment.endSec;
+    if (!segment.segmentId || !Number.isSafeInteger(segment.startFrame)
+      || !Number.isSafeInteger(segment.endFrameExclusive) || segment.startFrame < previousEnd
+      || segment.endFrameExclusive < segment.startFrame || segment.endFrameExclusive > frameCount) {
+      throw new Error("SpeechAudioBasis Segment is invalid or out of order.");
+    }
+    previousEnd = segment.endFrameExclusive;
   }
 }
