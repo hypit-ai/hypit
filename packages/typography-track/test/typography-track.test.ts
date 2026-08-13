@@ -79,7 +79,7 @@ const exactTestSurface: CompositableSurfaceRef = {
 
 function textStyle(id: string, stackingOrder = 50): TextStyle {
   return sealTextStyle({
-    contract: "svml.text-style@1",
+
     id,
     stackingOrder,
     typography: {
@@ -154,7 +154,7 @@ function document(text: string) {
 test("persistent and timed Text Items lower to ordinary VisualTrack Presents", () => {
   const style = textStyle("editorial", 55);
   const program = sealTypographyTrackProgram({
-    contract: "svml.typography-track-program@1",
+
     id: "editorial-text",
     items: [
       {
@@ -205,7 +205,7 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
 
 test("Text Mask explicitly consumes one authored Text Program and one owned still Surface", () => {
   const program = sealTypographyTrackProgram({
-    contract: "svml.typography-track-program@1", id: "mask-shape",
+    id: "mask-shape",
     items: [{
       id: "mask-title",
       span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "mask-title",
@@ -223,7 +223,7 @@ test("Text Mask explicitly consumes one authored Text Program and one owned stil
     width: 800, height: 240, colorSpace: "srgb", alphaMode: "straight", timing: { kind: "still" },
   };
   const track = renderTextMaskTrack(space, program, material, sealTextMaskSpec({
-    contract: "svml.text-mask-spec@1", id: "masked-title", mode: "alpha", materialFit: "cover",
+    id: "masked-title", mode: "alpha", materialFit: "cover",
   }));
   assert.equal(track.id, "masked-title");
   assert.deepEqual(track.presents[0]?.elements.map((element) => element.kind), ["mask", "text", "surface"]);
@@ -239,7 +239,7 @@ test("Text Mask explicitly consumes one authored Text Program and one owned stil
     ...material, artifact: { ...material.artifact, mediaType: "video/webm" },
     timing: { kind: "frames", frameCount: 150, frameRate: { numerator: 30, denominator: 1 } },
   }, sealTextMaskSpec({
-    contract: "svml.text-mask-spec@1", id: "timed-mask", mode: "alpha", materialFit: "cover",
+    id: "timed-mask", mode: "alpha", materialFit: "cover",
   })), /requires one explicit still material Surface/u);
   assert.throws(() => renderTextMaskTrack(space, sealTypographyTrackProgram({
     ...program,
@@ -249,13 +249,13 @@ test("Text Mask explicitly consumes one authored Text Program and one owned stil
       style: { ...item.style, area: { ...item.style.area, overflow: "shrink", minimumScale: 0.7 } },
     })),
   }), material, sealTextMaskSpec({
-    contract: "svml.text-mask-spec@1", id: "advanced-mask", mode: "alpha", materialFit: "cover",
+    id: "advanced-mask", mode: "alpha", materialFit: "cover",
   })), /must be materialized by an independent package/u);
 });
 
 test("TypographyTrackProgram rejects a frame span outside ProgramSpace", () => {
   const program = sealTypographyTrackProgram({
-    contract: "svml.typography-track-program@1",
+
     id: "invalid-text",
     items: [{
       id: "late",
@@ -283,9 +283,9 @@ test("Selection Text consumes explicit Selection, SemanticMap, Style, Motion and
     id: "callout",
     occurrences: [{ occurrence: 1, startAnchorId: "selection:start", endAnchorId: "selection:end" }],
   };
-  const header = sealTypographyTrackHeader({ contract: "svml.typography-track-header@1", id: "selected-text" });
+  const header = sealTypographyTrackHeader({ id: "selected-text" });
   const spec = sealTextItemSpec({
-    contract: "svml.text-item-spec@1",
+
     id: "meaning",
     document: document("MEANING"),
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
@@ -532,7 +532,7 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     ] } }],
   });
   const motion = sealTextMotion({
-    contract: "svml.text-motion@1",
+
     id: "sequenced",
     item: { keyframes: [
       { atFrame: 0, style: [{ name: "opacity", value: 0 }, { name: "transform", value: "translateY(20px)" }] },
@@ -558,11 +558,11 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     ],
   });
   const pathMotion = sealTextMotion({
-    contract: "svml.text-motion@1", id: "path-motion", sequences: [],
+    id: "path-motion", sequences: [],
     pathMargin: { keyframes: [{ atFrame: 0, startMarginPx: 0 }, { atFrame: 180, startMarginPx: 120, easing: "ease-in-out" }] },
   });
   const track = renderTypographyTrack(space, sealTypographyTrackProgram({
-    contract: "svml.typography-track-program@1",
+
     id: "rich-text",
     items: [
       {

@@ -2,7 +2,6 @@ import type { Track } from "@narratage/composition";
 
 /** Package-owned authoring value. A future Film Surface may produce this record. */
 export type FilmProgram = {
-  readonly contract: "svml.film-program@1";
   readonly id: string;
   readonly clearColor: string;
 };
@@ -12,7 +11,6 @@ export type FilmProgram = {
  * peer Tracks without adding variadic Operation ports to Core.
  */
 export type FilmTrackSet = {
-  readonly contract: "svml.film-track-set@1";
   readonly tracks: readonly Track[];
 };
 

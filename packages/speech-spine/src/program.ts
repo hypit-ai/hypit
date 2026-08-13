@@ -33,7 +33,7 @@ function assert(condition: unknown, message: string): asserts condition {
 
 function programContent(value: SpeechSpineProgram): SpeechSpineProgram {
   return {
-    contract: "svml.speech-spine-program@1",
+
     id: value.id,
     frameRate: { ...value.frameRate },
   };
@@ -44,7 +44,6 @@ export function sealSpeechSpineProgram(value: SpeechSpineProgram): SpeechSpinePr
 }
 
 export function assertSpeechSpineProgram(value: SpeechSpineProgram): void {
-  assert(value.contract === "svml.speech-spine-program@1", "Unsupported SpeechSpineProgram contract");
   assert(value.id.trim().length > 0, "SpeechSpineProgram id must not be empty");
   assert(Number.isSafeInteger(value.frameRate.numerator) && value.frameRate.numerator > 0
     && Number.isSafeInteger(value.frameRate.denominator) && value.frameRate.denominator > 0,
@@ -61,7 +60,7 @@ function verifyExcerpt(value: NarrativeExcerpt): void {
 
 function setContent(value: SpeechSpineSet): SpeechSpineSet {
   return canonicalize({
-    contract: "svml.speech-spine-set@1",
+
     takes: value.takes,
   }) as unknown as SpeechSpineSet;
 }
@@ -94,12 +93,10 @@ export function sealSpeechSpineVisualSpec(value: SpeechSpineVisualSpec): SpeechS
 }
 
 export function assertSpeechSpineVisualSpec(value: SpeechSpineVisualSpec): void {
-  assert(value.contract === "svml.speech-spine-visual-spec@1", "Unsupported SpeechSpineVisualSpec contract");
   assert(Number.isSafeInteger(value.stackingOrder), "SpeechSpineVisualSpec stacking order is invalid");
 }
 
 export function assertSpeechSpineSet(value: SpeechSpineSet): void {
-  assert(value.contract === "svml.speech-spine-set@1", "Unsupported SpeechSpineSet contract");
   const segments = new Set<string>();
   for (const take of value.takes) {
     verifyExcerpt(take.segment);
@@ -111,7 +108,7 @@ export function assertSpeechSpineSet(value: SpeechSpineSet): void {
 
 export function createSpeechSpineSet(): SpeechSpineSet {
   return sealSpeechSpineSet({
-    contract: "svml.speech-spine-set@1",
+
     takes: [],
   });
 }
@@ -126,7 +123,7 @@ function appendTake(
   assertTake(take, program);
   assert(!set.takes.some((item) => item.segment.id === take.segment.id), `Speech Spine repeats Segment ${take.segment.id}`);
   return sealSpeechSpineSet({
-    contract: "svml.speech-spine-set@1",
+
     takes: [...set.takes, take],
   });
 }

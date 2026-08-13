@@ -104,20 +104,19 @@ export function sealScreenOverlayHeader(value: ScreenOverlayHeader): ScreenOverl
   assertScreenOverlayHeader(value); return canonicalize(value) as unknown as ScreenOverlayHeader;
 }
 export function assertScreenOverlayHeader(value: ScreenOverlayHeader): void {
-  assert(value.contract === "svml.screen-overlay-header@1", "Unsupported ScreenOverlayHeader contract."); identity(value.id, "ScreenOverlayHeader.id");
+  identity(value.id, "ScreenOverlayHeader.id");
 }
 export function sealScreenOverlayItemSpec(value: ScreenOverlayItemSpec): ScreenOverlayItemSpec {
   assertScreenOverlayItemSpec(value); return canonicalize(value) as unknown as ScreenOverlayItemSpec;
 }
 export function assertScreenOverlayItemSpec(value: ScreenOverlayItemSpec): void {
-  assert(value.contract === "svml.screen-overlay-item-spec@1", "Unsupported ScreenOverlayItemSpec contract.");
   identity(value.id, "ScreenOverlayItemSpec.id"); assertScreenOverlayComponent(value.content);
   assert(value.expansion.kind === "one" || value.expansion.kind === "each", "ScreenOverlay expansion is invalid.");
   assert(Number.isSafeInteger(value.stackingOrder), "ScreenOverlay stacking order must be an integer.");
 }
-export function createScreenOverlaySet(): ScreenOverlaySet { return { contract: "svml.screen-overlay-set@1", items: [] }; }
+export function createScreenOverlaySet(): ScreenOverlaySet { return { items: [] }; }
 export function assertScreenOverlaySet(value: ScreenOverlaySet): void {
-  assert(value.contract === "svml.screen-overlay-set@1" && Array.isArray(value.items), "ScreenOverlaySet is invalid.");
+  assert(Array.isArray(value.items), "ScreenOverlaySet is invalid.");
 }
 
 function realized(
@@ -133,7 +132,7 @@ function realized(
   } satisfies ScreenOverlayItemProgram));
   const ids = new Set(set.items.map((item) => item.id));
   additions.forEach((item) => { assert(!ids.has(item.id), `Screen Overlay already contains Item ${item.id}.`); ids.add(item.id); });
-  return { contract: "svml.screen-overlay-set@1", items: [...set.items, ...additions] };
+  return { items: [...set.items, ...additions] };
 }
 export function appendProgramScreenOverlay(set: ScreenOverlaySet, header: ScreenOverlayHeader, space: ProgramSpace, spec: ScreenOverlayItemSpec): ScreenOverlaySet {
   assert(spec.expansion.kind === "one", `Program Overlay ${spec.id} must use one occurrence.`);
@@ -146,16 +145,15 @@ export function appendMomentScreenOverlay(set: ScreenOverlaySet, header: ScreenO
   return realized(set, header, spec, projectMomentWindows({ itemId: spec.id, map, moment, space, expansion: spec.expansion, projection: spec.projection }));
 }
 export function sealScreenOverlayProgram(value: ScreenOverlayProgram): ScreenOverlayProgram {
-  const normalized = { contract: "svml.screen-overlay-program@1" as const, id: value.id,
+  const normalized = { id: value.id,
     items: [...value.items].map((item) => structuredClone(item)).sort((a, b) => a.id.localeCompare(b.id)) };
   assertScreenOverlayProgram(normalized); return canonicalize(normalized) as unknown as ScreenOverlayProgram;
 }
 export function finalizeScreenOverlay(set: ScreenOverlaySet, header: ScreenOverlayHeader): ScreenOverlayProgram {
   assertScreenOverlaySet(set); assertScreenOverlayHeader(header); assert(set.items.length > 0, "Screen Overlay requires at least one Item.");
-  return sealScreenOverlayProgram({ contract: "svml.screen-overlay-program@1", id: header.id, items: set.items });
+  return sealScreenOverlayProgram({ id: header.id, items: set.items });
 }
 export function assertScreenOverlayProgram(value: ScreenOverlayProgram): void {
-  assert(value.contract === "svml.screen-overlay-program@1", "Unsupported ScreenOverlayProgram contract.");
   identity(value.id, "ScreenOverlayProgram.id"); assert(value.items.length > 0, "ScreenOverlayProgram requires Items.");
   const ids = new Set<string>();
   for (const item of value.items) {

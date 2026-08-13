@@ -75,7 +75,6 @@ export function sealAudioTrackHeader(value: AudioTrackHeader): AudioTrackHeader 
 }
 
 export function assertAudioTrackHeader(value: AudioTrackHeader): void {
-  assert(value.contract === "svml.audio-track-header@1", "Unsupported AudioTrackHeader contract.");
   assertIdentity(value.id, "AudioTrackHeader.id");
 }
 
@@ -85,7 +84,6 @@ export function sealAudioClipSpec(value: AudioClipSpec): AudioClipSpec {
 }
 
 export function assertAudioClipSpec(value: AudioClipSpec): void {
-  assert(value.contract === "svml.audio-clip-spec@1", "Unsupported AudioClipSpec contract.");
   assertIdentity(value.id, "AudioClipSpec.id");
   assert(value.expansion.kind === "one" || value.expansion.kind === "each", "AudioClipSpec expansion is invalid.");
   for (const point of [value.projection.start, value.projection.end]) {
@@ -104,11 +102,11 @@ export function assertAudioClipSpec(value: AudioClipSpec): void {
 }
 
 export function createAudioTrackSet(): AudioTrackSet {
-  return { contract: "svml.audio-track-set@1", items: [] };
+  return { items: [] };
 }
 
 export function assertAudioTrackSet(value: AudioTrackSet): void {
-  assert(value.contract === "svml.audio-track-set@1" && Array.isArray(value.items), "AudioTrackSet is invalid.");
+  assert(Array.isArray(value.items), "AudioTrackSet is invalid.");
 }
 
 function sourceFacts(media: SynchronizedMedia): AudioItemProgram["source"] {
@@ -152,7 +150,7 @@ function realizedItems(
     assert(!ids.has(item.id), `Audio Track ${header.id} already contains Item ${item.id}.`);
     ids.add(item.id);
   }
-  return { contract: "svml.audio-track-set@1", items: [...set.items, ...additions] };
+  return { items: [...set.items, ...additions] };
 }
 
 export function appendProgramAudioItem(
@@ -200,7 +198,7 @@ export function appendMomentAudioItem(
 
 function normalizeProgram(value: AudioTrackProgram): AudioTrackProgram {
   return {
-    contract: "svml.audio-track-program@1",
+
     id: value.id,
     items: [...value.items].map((item) => structuredClone(item)).sort((left, right) => left.id.localeCompare(right.id)),
   };
@@ -216,11 +214,10 @@ export function finalizeAudioTrack(set: AudioTrackSet, header: AudioTrackHeader)
   assertAudioTrackSet(set);
   assertAudioTrackHeader(header);
   assert(set.items.length > 0, "Audio Track requires at least one Item.");
-  return sealAudioTrackProgram({ contract: "svml.audio-track-program@1", id: header.id, items: set.items });
+  return sealAudioTrackProgram({ id: header.id, items: set.items });
 }
 
 export function assertAudioTrackProgram(value: AudioTrackProgram): void {
-  assert(value.contract === "svml.audio-track-program@1", "Unsupported AudioTrackProgram contract.");
   assertIdentity(value.id, "AudioTrackProgram.id");
   assert(value.items.length > 0, "AudioTrackProgram requires at least one Item.");
   const ids = new Set<string>();

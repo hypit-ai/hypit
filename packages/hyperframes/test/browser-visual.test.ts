@@ -741,7 +741,7 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
       metricEdge: "line-box" as const,
     };
     const baseStyle = (id: string, stackingOrder: number, paints: TextStyle["paints"]): TextStyle => sealTextStyle({
-      contract: "svml.text-style@1", id, stackingOrder,
+      id, stackingOrder,
       typography: {
         fonts, sizePx: 42, weight: 700, style: "normal", axes: [], features: [],
         synthesis: "none", kerning: "normal", trackingPx: 0, wordSpacingPx: 0,
@@ -800,7 +800,7 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
       path: { ...plain.path, orientation: "upright", align: "center" },
     });
     const animated = sealTextMotion({
-      contract: "svml.text-motion@1", id: "animated",
+      id: "animated",
       item: { keyframes: [
         { atFrame: 0, style: [{ name: "opacity", value: 0 }, { name: "transform", value: "translateY(25px)" }] },
         { atFrame: 4, easing: "ease-out", style: [{ name: "opacity", value: 1 }, { name: "transform", value: "translateY(0px)" }] },
@@ -817,11 +817,11 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
       }],
     });
     const pathMotion = sealTextMotion({
-      contract: "svml.text-motion@1", id: "path-motion", sequences: [],
+      id: "path-motion", sequences: [],
       pathMargin: { keyframes: [{ atFrame: 0, startMarginPx: 20 }, { atFrame: frames, startMarginPx: 150, easing: "ease-in-out" }] },
     });
     const textProgram = sealTypographyTrackProgram({
-      contract: "svml.typography-track-program@1", id: "complete-text",
+      id: "complete-text",
       items: [
         {
           id: "point", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "point",
@@ -884,7 +884,7 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
       area: { ...plain.area, wrap: "none" },
     });
     const maskTrack = renderTextMaskTrack(space, sealTypographyTrackProgram({
-      contract: "svml.typography-track-program@1", id: "mask-shape",
+      id: "mask-shape",
       items: [{
         id: "mask", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "mask",
         geometry: { kind: "area", frame: { xPx: 520, yPx: 500, widthPx: 380, heightPx: 120 } },
@@ -892,7 +892,7 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
         style: maskStyle, motion: stillTextMotion(),
       }],
     }), maskMaterial, sealTextMaskSpec({
-      contract: "svml.text-mask-spec@1", id: "text-mask", mode: "alpha", materialFit: "cover",
+      id: "text-mask", mode: "alpha", materialFit: "cover",
     }));
     const document = compileHyperframesDocument(sealComposition({
       id: "complete-text-browser",
@@ -1013,7 +1013,7 @@ test("Text box targets, rich runs and every sequence direction remain stable acr
       continuity: "isolated" | "joined",
       color: string,
     ): TextStyle => sealTextStyle({
-      contract: "svml.text-style@1", id, stackingOrder,
+      id, stackingOrder,
       typography: {
         fonts, sizePx: 34, weight: 700, style: "normal", axes: [], features: [],
         synthesis: "none", kerning: "normal", trackingPx: 0, wordSpacingPx: 0,
@@ -1043,7 +1043,7 @@ test("Text box targets, rich runs and every sequence direction remain stable acr
       { id: "reverse-line", unit: "line", order: "reverse", target: "grapheme", continuity: "isolated", color: "#a16207" },
     ] as const;
     const track = renderTypographyTrack(space, sealTypographyTrackProgram({
-      contract: "svml.typography-track-program@1", id: "text-box-sequence",
+      id: "text-box-sequence",
       items: cases.map((entry, index) => {
         const lineUnit = entry.unit === "line";
         const document = index === 1
@@ -1083,7 +1083,7 @@ test("Text box targets, rich runs and every sequence direction remain stable acr
           document,
           style: style(entry.id, 10 + index, entry.target, entry.continuity, entry.color),
           motion: sealTextMotion({
-            contract: "svml.text-motion@1", id: `${entry.id}-motion`,
+            id: `${entry.id}-motion`,
             sequences: [{
               id: `${entry.id}-sequence`, unit: entry.unit,
               range: { start: 0, endExclusive: lineUnit ? 2 : entry.unit === "word" ? 2 : 5 },
@@ -1186,7 +1186,7 @@ test("vertical Text paints in its authored direction and bounded shrink fails cl
       paths.set(artifactDigest, `./${name}`);
     }
     const style = (id: string, writingMode: "horizontal-tb" | "vertical-rl", overflow: "visible" | "shrink", minimumScale?: number): TextStyle => sealTextStyle({
-      contract: "svml.text-style@1", id, stackingOrder: 10,
+      id, stackingOrder: 10,
       typography: {
         fonts: [font], sizePx: 56, weight: 700, style: "normal", axes: [], features: [],
         synthesis: "none", kerning: "normal", trackingPx: 0, wordSpacingPx: 0,
@@ -1210,7 +1210,7 @@ test("vertical Text paints in its authored direction and bounded shrink fails cl
       id,
       canvas: { width, height, clearColor: "#000000" },
       tracks: [renderTypographyTrack(space, sealTypographyTrackProgram({
-        contract: "svml.typography-track-program@1", id,
+        id,
         items: [{
           id, span: { startFrame: 0, endFrameExclusive: 1 }, tieBreak: id,
           geometry: { kind: "area", frame: { ...frame } },
@@ -1300,7 +1300,7 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
     const space = sealProgramSpace({
       durationSec: 1, frameRate: { numerator: 12, denominator: 1 },
     });
-    const header = mediaTrack.sealMediaTrackHeader({ contract: "svml.media-track-header@1", id: "browser-media" });
+    const header = mediaTrack.sealMediaTrackHeader({ id: "browser-media" });
     const sampleAppearance = { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } };
     const contentFit = (sizing: "contain" | "cover") => ({
       sizing,
@@ -1310,11 +1310,11 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
     const extent = { widthPx: 80, heightPx: 120 };
     let itemLayers = mediaTrack.createMediaLayerSet();
     itemLayers = mediaTrack.appendStillMediaLayer(itemLayers, red, extent, contentFit("cover"), mediaTrack.sealMediaSampleLayerSpec({
-      contract: "svml.media-sample-layer-spec@1", id: "blurred-backdrop",
+      id: "blurred-backdrop",
       appearance: { opacity: 1, filter: { blurPx: 6, brightness: 0.8, contrast: 1, saturation: 1 } },
     }));
     itemLayers = mediaTrack.appendSurfaceMediaLayer(itemLayers, alpha, contentFit("contain"), mediaTrack.sealMediaSampleLayerSpec({
-      contract: "svml.media-sample-layer-spec@1", id: "alpha-foreground", appearance: sampleAppearance,
+      id: "alpha-foreground", appearance: sampleAppearance,
       samplingMotion: { keyframes: [
         { atProgress: 0, zoom: 0.9, offsetX: 0, offsetY: 5, rotationDeg: -2 },
         { atProgress: 1, zoom: 1.05, offsetX: 0, offsetY: -3, rotationDeg: 2, easing: "ease-in-out" },
@@ -1324,7 +1324,7 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
       mediaTrack.createMediaTrackSet(), header, space, canvas, itemLayers,
       { xPx: 0, yPx: 0, widthPx: 80, heightPx: 120 },
       mediaTrack.sealMediaItemSpec({
-        contract: "svml.media-item-spec@1", id: "two-frame",
+        id: "two-frame",
         projection: { start: { ref: "program.start" }, end: { ref: "program.end" } }, expansion: { kind: "one" },
         presentation: { clip: { kind: "frame" }, padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 }, shadows: [] },
         motion: {
@@ -1338,23 +1338,23 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
     );
     const stillLayers = (id: string, artifact: BlobRef) => mediaTrack.appendStillMediaLayer(
       mediaTrack.createMediaLayerSet(), artifact, extent, contentFit("cover"), mediaTrack.sealMediaSampleLayerSpec({
-        contract: "svml.media-sample-layer-spec@1", id, appearance: sampleAppearance,
+        id, appearance: sampleAppearance,
       }),
     );
     let members = mediaTrack.createMediaSequenceMemberSet();
     members = mediaTrack.appendMediaSequenceMember(members, stillLayers("red-member", red),
-      mediaTrack.sealMediaSequenceMemberSpec({ contract: "svml.media-sequence-member-spec@1", id: "red" }), 0);
+      mediaTrack.sealMediaSequenceMemberSpec({ id: "red" }), 0);
     members = mediaTrack.appendMediaSequenceMember(members, stillLayers("green-member", green),
-      mediaTrack.sealMediaSequenceMemberSpec({ contract: "svml.media-sequence-member-spec@1", id: "green" }), 6);
+      mediaTrack.sealMediaSequenceMemberSpec({ id: "green" }), 6);
     set = mediaTrack.appendMediaSequence(
       set, header, space, canvas, members,
       { xPx: 80, yPx: 0, widthPx: 80, heightPx: 120 },
       mediaTrack.sealMediaSequenceSpec({
-        contract: "svml.media-sequence-spec@1", id: "handoff",
+        id: "handoff",
         presentation: { clip: { kind: "frame" }, padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 }, shadows: [] },
         motion: { sustain: [] }, stackingOrder: 20,
         handoffs: [mediaTrack.sealMediaHandoffSpec({
-          contract: "svml.media-handoff-spec@1", id: "red-green", fromMemberId: "red", toMemberId: "green",
+          id: "red-green", fromMemberId: "red", toMemberId: "green",
           operator: "crossfade", durationFrames: 4, boundaryRatio: 0.5, audio: "cut",
         })],
       }),
@@ -1447,7 +1447,7 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
       offsetPx: { x: 0, y: 0 }, constraint: "bounded" as const,
     };
     const label = (id: string): DepthStackCardLabel => deckTrack.sealDepthStackCardLabel({
-      contract: "svml.depth-stack-card-label@1", kind: "text",
+      kind: "text",
       document: { paragraphs: [{ id: `${id}-p`, inlines: [{ id: `${id}-text`, kind: "text", text: id.toUpperCase() }] }] },
       typography: {
         fonts: [font], sizePx: 16, weight: 700, style: "normal", axes: [], features: [], synthesis: "none",
@@ -1479,7 +1479,7 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
         { widthPx: 120, heightPx: 90 },
         fit,
         mediaTrack.sealMediaSampleLayerSpec({
-          contract: "svml.media-sample-layer-spec@1", id: `${value.id}-material`,
+          id: `${value.id}-material`,
           appearance: { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } },
         }),
       );
@@ -1488,14 +1488,14 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
         material,
         label(value.id),
         deckTrack.sealDepthStackCardSpec({
-          contract: "svml.depth-stack-card-spec@1", id: value.id,
+          id: value.id,
           playback: { future: "hold-head", past: "hold-tail" },
         }),
         index * 6,
       );
     }
     const spec = deckTrack.sealDepthStackSpec({
-      contract: "svml.depth-stack-spec@1",
+
       visibility: { previous: 1, next: 1, wrap: false },
       poses: {
         current: {
@@ -1529,7 +1529,7 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
     });
     const program = deckTrack.finalizeDepthStack(
       cards,
-      deckTrack.sealDepthStackHeader({ contract: "svml.depth-stack-header@1", id: "proof-stack" }),
+      deckTrack.sealDepthStackHeader({ id: "proof-stack" }),
       { xPx: 60, yPx: 45, widthPx: 120, heightPx: 90 },
       spec,
       frames,
@@ -1803,7 +1803,7 @@ test("all Spatial fit modes and equal-point alignments reach exact browser pixel
     const space = sealProgramSpace({
       durationSec: 1, frameRate: { numerator: 1, denominator: 1 },
     });
-    const header = mediaTrack.sealMediaTrackHeader({ contract: "svml.media-track-header@1", id: "spatial-browser" });
+    const header = mediaTrack.sealMediaTrackHeader({ id: "spatial-browser" });
     const extent = { widthPx: 40, heightPx: 20 };
     const appearance = { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } };
     let set = mediaTrack.createMediaTrackSet();
@@ -1823,13 +1823,13 @@ test("all Spatial fit modes and equal-point alignments reach exact browser pixel
       const layers = mediaTrack.appendStillMediaLayer(
         mediaTrack.createMediaLayerSet(), source, extent, fit,
         mediaTrack.sealMediaSampleLayerSpec({
-          contract: "svml.media-sample-layer-spec@1", id: `${id}:source`, appearance,
+          id: `${id}:source`, appearance,
         }),
       );
       set = mediaTrack.appendProgramMediaItem(
         set, header, space, canvas, layers, frame,
         mediaTrack.sealMediaItemSpec({
-          contract: "svml.media-item-spec@1", id,
+          id,
           projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
           expansion: { kind: "one" },
           presentation: {
@@ -1984,7 +1984,7 @@ test("every official Screen Overlay survives real sequential and parallel browse
       durationSec: 1,
       frameRate: { numerator: 12, denominator: 1 },
     });
-    const header = sealScreenOverlayHeader({ contract: "svml.screen-overlay-header@1", id: "browser-overlays" });
+    const header = sealScreenOverlayHeader({ id: "browser-overlays" });
     const components: readonly ScreenOverlayComponent[] = [
       { kind: "flash", color: "#ffffff", intensity: 0.2, attackFrames: 2, holdFrames: 2, decayFrames: 4 },
       { kind: "color-wash", color: "#2030ff", opacity: 0.08 },
@@ -2001,7 +2001,7 @@ test("every official Screen Overlay survives real sequential and parallel browse
     let set: ScreenOverlaySet = createScreenOverlaySet();
     components.forEach((content, index) => {
       set = appendProgramScreenOverlay(set, header, space, sealScreenOverlayItemSpec({
-        contract: "svml.screen-overlay-item-spec@1",
+
         id: `${content.kind}-${index + 1}`,
         content,
         projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },

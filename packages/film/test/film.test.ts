@@ -82,7 +82,7 @@ const canvas = sealCanvasSpace({
   pixelAspect: "square",
 });
 const filmProgram = sealFilmProgram({
-  contract: "svml.film-program@1",
+
   id: "main-film",
   clearColor: "#000000",
 });
@@ -94,7 +94,7 @@ const titleFont: FontArtifactRef = {
   style: "normal",
 };
 const titleStyle: TextStyle = {
-  contract: "svml.text-style@1",
+
   id: "title-style",
   stackingOrder: 60,
   typography: {
@@ -116,7 +116,7 @@ const titleStyle: TextStyle = {
   path: { side: "left", orientation: "follow", startMarginPx: 0, endMarginPx: 0, align: "start", reverse: false, overflow: "visible" },
 };
 const textProgram = sealTypographyTrackProgram({
-  contract: "svml.typography-track-program@1",
+
   id: "title-track",
   items: [{
     id: "title",

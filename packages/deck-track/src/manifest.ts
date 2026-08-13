@@ -71,25 +71,25 @@ const playback = object({
 });
 
 export const depthStackSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.depth-stack-spec@1" } },
+
   visibility: { schema: object({ previous: { schema: unsignedInteger }, next: { schema: unsignedInteger }, wrap: { schema: { kind: "boolean" } } }) },
   poses: { schema: object({ current: { schema: pose }, previous: { schema: poseStep }, next: { schema: poseStep } }) },
   reflow: { schema: object({ durationFrames: { schema: unsignedInteger }, easing: { schema: enumString(["linear", "ease-in", "ease-out", "ease-in-out"]) } }) },
   presentation: { schema: mediaFramePresentationSchema }, motion: { schema: mediaLifecycleMotionSchema }, stackingOrder: { schema: integer },
 });
 export const depthStackCardSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.depth-stack-card-spec@1" } }, id: { schema: string }, playback: { schema: playback },
+  id: { schema: string }, playback: { schema: playback },
 });
 export const depthStackCardLabelSchema: ValueSchema = { kind: "oneOf", variants: [
-  object({ contract: { schema: { kind: "literal", value: "svml.depth-stack-card-label@1" } }, kind: { schema: { kind: "literal", value: "none" } } }),
+  object({ kind: { schema: { kind: "literal", value: "none" } } }),
   object({
-    contract: { schema: { kind: "literal", value: "svml.depth-stack-card-label@1" } }, kind: { schema: { kind: "literal", value: "text" } },
+    kind: { schema: { kind: "literal", value: "text" } },
     document: { schema: visualTextDocumentSchema }, typography: { schema: visualTextTypographySchema },
     paints: { schema: { kind: "array", items: visualTextPaintSchema } }, flow: { schema: visualTextFlowSchema },
   }),
 ] };
 export const depthStackCardLabelStyleSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.depth-stack-card-label-style@1" } },
+
   typography: { schema: visualTextTypographySchema }, paints: { schema: { kind: "array", items: visualTextPaintSchema } },
   flow: { schema: visualTextFlowSchema },
 });
@@ -99,13 +99,13 @@ const card = object({
   label: { schema: depthStackCardLabelSchema }, playback: { schema: playback },
 });
 export const depthStackHeaderSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.depth-stack-header@1" } }, id: { schema: string },
+  id: { schema: string },
 });
 export const depthStackCardSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.depth-stack-card-set@1" } }, cards: { schema: { kind: "array", items: card } },
+  cards: { schema: { kind: "array", items: card } },
 });
 export const depthStackProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.depth-stack-program@1" } }, id: { schema: string }, span: { schema: frameSpan },
+  id: { schema: string }, span: { schema: frameSpan },
   terminalFrame: { schema: positiveInteger }, frame: { schema: spatialFrameSchema }, spec: { schema: depthStackSpecSchema },
   cards: { schema: { kind: "array", minItems: 1, items: card } },
 });

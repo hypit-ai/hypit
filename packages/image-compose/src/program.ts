@@ -17,7 +17,6 @@ function color(value: string, label: string): void {
 }
 
 export function assertImageComposeOptions(value: ImageComposeOptions): void {
-  assert(value.contract === "svml.image-compose-options@1", "Unsupported ImageComposeOptions contract.");
   color(value.background, "ImageComposeOptions.background");
 }
 
@@ -27,7 +26,6 @@ export function sealImageComposeOptions(value: ImageComposeOptions): ImageCompos
 }
 
 export function assertImageComposeLayerSpec(value: ImageComposeLayerSpec): void {
-  assert(value.contract === "svml.image-compose-layer-spec@1", "Unsupported ImageComposeLayerSpec contract.");
   assert(["contain", "cover", "stretch"].includes(value.fit), "ImageComposeLayerSpec.fit is invalid.");
   assert(["nearest", "linear", "cubic", "area", "lanczos"].includes(value.interpolation),
     "ImageComposeLayerSpec.interpolation is invalid.");
@@ -49,11 +47,11 @@ function assertLayer(value: ImageComposeLayer, label: string): void {
 }
 
 export function createImageComposeLayerSet(): ImageComposeLayerSet {
-  return { contract: "svml.image-compose-layer-set@1", layers: [] };
+  return { layers: [] };
 }
 
 export function assertImageComposeLayerSet(value: ImageComposeLayerSet): void {
-  assert(value.contract === "svml.image-compose-layer-set@1" && Array.isArray(value.layers),
+  assert(Array.isArray(value.layers),
     "ImageComposeLayerSet is invalid.");
   assert(value.layers.length <= 64, "ImageComposeLayerSet exceeds 64 Layers.");
   value.layers.forEach((layer, index) => {
@@ -69,7 +67,7 @@ export function appendImageComposeLayer(
 ): ImageComposeLayerSet {
   assertImageComposeLayerSet(set);
   const next: ImageComposeLayerSet = {
-    contract: "svml.image-compose-layer-set@1",
+
     layers: [...set.layers, { source: structuredClone(source), frame: structuredClone(frame), spec: structuredClone(spec) }],
   };
   assertImageComposeLayerSet(next);

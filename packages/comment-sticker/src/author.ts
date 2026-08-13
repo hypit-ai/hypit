@@ -85,7 +85,7 @@ export function decodeCommentStickerStyle(recipe: SvsRecipe, fonts: FontStackRef
   if (unknown.length > 0) fail(recipe, `does not accept ${unknown.join(", ")}.`);
   const body = typography(recipe, fonts, "body", { sizePx: 42, weight: 850, lineHeight: 1.16, color: "#111111" });
   return sealCommentStickerStyle({
-    contract: "svml.comment-sticker-style@1",
+
     id,
     stackingOrder: integer(recipe, "stack-order", 62),
     card: {
