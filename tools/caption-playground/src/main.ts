@@ -80,7 +80,7 @@ function cueProjection(display: CaptionDisplaySequence, program: CaptionProgram,
       cursor = end;
     }
   }
-  return { contract: "svml.timed-caption-projection@1", displaySequenceId: display.id, cues };
+  return { displaySequenceId: display.id, cues };
 }
 
 function showPreview(value: CaptionPlaygroundSnapshot): void {

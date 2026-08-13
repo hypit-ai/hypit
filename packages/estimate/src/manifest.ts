@@ -21,7 +21,7 @@ const number = { kind: "number" } as const satisfies ValueSchema;
 const speechEstimatePolicySchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.speech-estimate-policy@1" } },
+
     language: { schema: { kind: "string", enum: ["auto", "en", "zh", "ja", "es"] } },
     pace: { schema: { kind: "string", enum: ["slow", "normal", "fast"] }, optional: true },
     rate: { schema: { kind: "number", minimum: 0.000001 }, optional: true },

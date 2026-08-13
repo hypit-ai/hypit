@@ -27,7 +27,7 @@ export function applyCaptionMute(
     .filter((atom) => atom.wordIds.every((wordId) => mutedWords.has(wordId)))
     .map((atom) => atom.id));
   const result: TimedCaptionProjection = {
-    contract: "svml.timed-caption-projection@1",
+
     displaySequenceId: projection.displaySequenceId,
     cues: projection.cues.flatMap((cue) => {
       const atoms = cue.atoms.filter((atom) => !mutedAtoms.has(atom.atomId));
@@ -93,7 +93,7 @@ export function temporalizeCaptionPlan(
     };
   }));
   const result = applyCaptionMute({
-    contract: "svml.timed-caption-projection@1",
+
     displaySequenceId: display.id,
     cues,
   }, program, display);
@@ -101,8 +101,8 @@ export function temporalizeCaptionPlan(
 }
 
 export function assertTimedCaptionProjection(projection: TimedCaptionProjection): void {
-  if (projection.contract !== "svml.timed-caption-projection@1" || projection.displaySequenceId.length === 0) {
-    throw new Error("Unsupported TimedCaptionProjection contract.");
+  if (projection.displaySequenceId.length === 0) {
+    throw new Error("TimedCaptionProjection display sequence is invalid.");
   }
   const cueIds = new Set<string>();
   const atomIds = new Set<string>();

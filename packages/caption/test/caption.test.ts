@@ -57,7 +57,7 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
 
 function style(id: string, fields: readonly CaptionFieldDeclaration[] = []): CaptionStyleIntent {
   return sealCaptionStyle({
-    contract: "svml.caption-style@1",
+
     id,
     planning: {
       cue: { minimumWords: 1, maximumWords: 5, instruction: "Use short complete semantic phrases." },
@@ -140,7 +140,7 @@ test("Caption timing applies Mute after planning and preserves the original Cue 
     },
   }]);
   const plan = sealCaptionPlan({
-    contract: "svml.caption-plan@1",
+
     runs: [{
       id: program.runs[0]!.id,
       styleId: program.runs[0]!.styleId,
@@ -243,7 +243,7 @@ test("Caption Plan partitions Atoms and assigns independent fields to display Wo
   const program = resolveCaptionProgram(display, "captions", style("fine", [important]), []);
   const run = program.runs[0]!;
   const plan = sealCaptionPlan({
-    contract: "svml.caption-plan@1",
+
     runs: [{ id: run.id, styleId: run.styleId, cues: [{
       id: "cue:1",
       atomIds: display.atoms.map((atom) => atom.id),
@@ -260,7 +260,7 @@ test("Cue word bounds are planner preferences and cannot split an oversized auth
   const parsed = parseScript("impossible.svml", "<line><one two three four | something></line>");
   const display = captionDisplaySequence(parsed, "story.caption");
   const compact = sealCaptionStyle({
-    contract: "svml.caption-style@1",
+
     id: "compact",
     planning: { cue: { minimumWords: 1, maximumWords: 3, instruction: "Prefer at most three words." }, fields: [] },
     rendering: { family: "test-caption@1", parameters: {} },
@@ -269,7 +269,7 @@ test("Cue word bounds are planner preferences and cannot split an oversized auth
   assert.equal(display.atoms.length, 1);
   assert.equal(display.atoms[0]!.wordIds.length, 4);
   assert.doesNotThrow(() => assertCaptionPlanForProgram(sealCaptionPlan({
-    contract: "svml.caption-plan@1",
+
     runs: [{ id: program.runs[0]!.id, styleId: compact.id, cues: [{
       id: "cue:1", atomIds: [display.atoms[0]!.id], fields: [],
     }] }],
@@ -287,7 +287,7 @@ test("Dual Text exposes one whole timed display Atom and never invents internal 
   const program = resolveCaptionProgram(display, "captions", style("fine"), []);
   const run = program.runs[0]!;
   const plan = sealCaptionPlan({
-    contract: "svml.caption-plan@1",
+
     runs: [{ id: run.id, styleId: run.styleId, cues: [{
       id: "cue:1", atomIds: [display.atoms[0]!.id], fields: [],
     }] }],

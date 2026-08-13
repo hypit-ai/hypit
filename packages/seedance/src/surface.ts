@@ -315,7 +315,7 @@ function generationOutput(args: {
   if (duration !== undefined) {
     const { duration: _later, ...ports } = generationSettings(element, model, 4);
     const program = sealSeedanceDurationProgram({
-      contract: "svml.seedance-duration-program@1",
+
       model,
       ports,
     });

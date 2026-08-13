@@ -77,7 +77,6 @@ function recipePolicy(
     throw new Error(`${element.name}.policy must reference an SVS Recipe`);
   }
   const recipe = inline<SvsRecipe>(reference, `${element.name}.policy`);
-  if (recipe.contract !== "svml.svs-recipe@1") throw new Error(`${element.name}.policy Recipe is invalid`);
   return speechEstimatePolicyFromRecipe(recipe, `${element.name}.policy`);
 }
 
@@ -85,7 +84,6 @@ export function speechEstimatePolicyFromRecipe(
   recipe: SvsRecipe,
   subject = `SVS Recipe ${recipe.path}`,
 ) {
-  if (recipe.contract !== "svml.svs-recipe@1") throw new Error(`${subject} is invalid`);
   const allowed = new Set(["language", "pace", "rate", "min", "max", "rounding"]);
   const unknown = Object.keys(recipe.properties).filter((name) => !allowed.has(name));
   if (unknown.length > 0) throw new Error(`${subject} contains unknown property ${unknown[0]}`);
@@ -112,7 +110,7 @@ export function speechEstimatePolicyFromRecipe(
     throw new Error(`${subject}.rate must be a finite number`);
   }
   const common = {
-    contract: "svml.speech-estimate-policy@1",
+
     language: string("language") as SpeechEstimateLanguage,
     minimumSec: finite("min"),
     maximumSec: finite("max"),
@@ -158,7 +156,7 @@ export const decodeSpeechEstimateSurface: StructuredSurfaceHandler = ({ element,
   const source = reference(element, resolveReference);
   const policy = element.attributes.policy === undefined
     ? sealSpeechEstimatePolicy({
-        contract: "svml.speech-estimate-policy@1",
+
         language: text(element, "language") as SpeechEstimateLanguage,
         ...(element.attributes.rate === undefined
           ? { pace: text(element, "pace") as SpeechEstimatePace }

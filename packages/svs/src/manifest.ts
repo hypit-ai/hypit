@@ -16,7 +16,7 @@ export const svsManifest: ModuleManifest = {
     schema: {
       kind: "object",
       fields: {
-        contract: { schema: { kind: "literal", value: "svml.svs-recipe@1" } },
+
         path: { schema: { kind: "string", minLength: 3 } },
         properties: {
           schema: {

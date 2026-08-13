@@ -38,7 +38,7 @@ const font: FontArtifactRef = {
 };
 const fonts: FontStackRef = { faces: [font] };
 const recipe: SvsRecipe = {
-  contract: "svml.svs-recipe@1",
+
   path: "comment.social",
   properties: { "avatar-fallback": "initial", "body-max-lines": 4 },
 };

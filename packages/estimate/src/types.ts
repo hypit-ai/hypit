@@ -4,7 +4,6 @@ export type SpeechEstimatePace = "slow" | "normal" | "fast";
 export type SpeechEstimateRounding = "none" | "round" | "ceil";
 
 type SpeechEstimatePolicyBase = {
-  readonly contract: "svml.speech-estimate-policy@1";
   readonly language: SpeechEstimateLanguage;
   readonly minimumSec: number;
   readonly maximumSec: number;

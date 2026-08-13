@@ -178,7 +178,7 @@ export function fineCaptionParameters(
   const fontSizePx = number(recipe, "size");
   const basePaint = glyphPaint(recipe, "");
   const parameters: FineCaptionParameters = {
-    contract: "svml.caption-fine-parameters@1",
+
     stackingOrder: integer(recipe, "stack-order"),
     placement: {
       x: number(recipe, "x"),
@@ -263,7 +263,6 @@ export function fineCaptionParameters(
 }
 
 export function assertFineCaptionParameters(value: FineCaptionParameters): void {
-  if (value.contract !== "svml.caption-fine-parameters@1") throw new Error("Unsupported Fine Caption parameters");
   if (!Number.isSafeInteger(value.stackingOrder) || value.stackingOrder < 0) {
     throw new Error("Fine Caption stacking order is invalid");
   }
@@ -319,7 +318,7 @@ export function fineCaptionStyle(
     throw new Error("Fine Caption Recipe Cue word bounds are invalid");
   }
   return sealCaptionStyle({
-    contract: "svml.caption-style@1",
+
     id,
     planning: {
       cue: {

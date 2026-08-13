@@ -22,7 +22,6 @@ export type CaptionGeminiModel = "gemini-2.5-flash" | "gemini-3.1-pro-preview";
 
 /** Explicit model choice. Cue and field meaning comes from the Caption Program, not the Provider. */
 export type CaptionGeminiProgram = {
-  readonly contract: "svml.caption-gemini-program@1";
   readonly model: CaptionGeminiModel;
 };
 

@@ -177,7 +177,7 @@ export function textTemplateFromSvsRecipes(
   const stray = recipes.find((recipe) => recipe.path.startsWith(`${prefix}.`) && !consumed.has(recipe.path));
   if (stray !== undefined) throw new Error(`Unrecognized Text Template Recipe ${stray.path}`);
   return sealTextTemplate({
-    contract: "svml.text-template@1",
+
     defaults,
     root: {
       kind: "join",

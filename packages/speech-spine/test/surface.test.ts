@@ -100,7 +100,7 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
       {
         id: "speech-style", type: svsRecipeType,
         value: { kind: "inline" as const, value: {
-          contract: "svml.svs-recipe@1", path: "speech.base", properties: { fit: "cover" },
+          path: "speech.base", properties: { fit: "cover" },
         } },
         range: element.range,
       },
