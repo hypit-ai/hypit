@@ -55,12 +55,12 @@
     {
       "name": "@narratage/caption-gemini",
       "version": "0.0.0-dev",
-      "digest": "sha256:bbe2f75eb370a51f0695870f7513d518d8066e4bd752b80456eeefde32578685"
+      "digest": "sha256:58453119e32055c31fe646c9d03f0e930d3cbb95827e14a88ba4935d4f8a6fba"
     },
     {
       "name": "@narratage/caption",
       "version": "0.0.0-dev",
-      "digest": "sha256:df270174d0c66977e9d53cb86c9ff013c5d3de07a40504e4b43cff25edcf7345"
+      "digest": "sha256:46f2273af9f932e4c208a3e7dd692456691f7827967af0efb54b1a4e1a1388b5"
     },
     {
       "name": "@narratage/component-kit",
@@ -240,12 +240,12 @@
     {
       "name": "@narratage/svs",
       "version": "0.0.0-dev",
-      "digest": "sha256:13a032ec9b8ac847ca56c35945b38597ae9c6baf8d5d0e848a4eb0d7e99af3ba"
+      "digest": "sha256:22bce93d56291e627e4dbeeafcfc8dc1e2217f95d6a88ec5dd0e3221f20babe2"
     },
     {
       "name": "@narratage/text",
       "version": "0.0.0-dev",
-      "digest": "sha256:0010a68781553b52591065d9280ef927e8b178774ddfb8a90b92d3507c1eb684"
+      "digest": "sha256:bc799fdd99df3b7a224f2b1c7581db94649e833c760fe22216935ae3548c150c"
     },
     {
       "name": "@narratage/validation",
@@ -963,7 +963,7 @@
         }
       ],
       "facetsDigest": "sha256:485fc29d1efcdaeb4e395980975b35090ea6aef0f78d02108d3bd9b3f11aeb91",
-      "closureDigest": "sha256:9936084a321bebd958e6c0fd7052775e063ae88db6f2c52a9ea0501d62344985"
+      "closureDigest": "sha256:f549a0b43873399184b528a6dd19ab6ec91958af9c9e8aa835279eff0ab0217f"
     },
     {
       "package": {
@@ -991,7 +991,7 @@
         }
       ],
       "facetsDigest": "sha256:110648301d69b5b49ea553d285a27626f6fb74ebc74ee67175f688f914d7d74b",
-      "closureDigest": "sha256:9df4bfc4d42e3b43b40e31b37fb3d9210df58dd6b1bafbe2ee23772b3e1e77de"
+      "closureDigest": "sha256:4418586fd375e76d8b499bb572bea2c1f2c6021c4c32febd67d618ac3ebf593e"
     },
     {
       "package": {
@@ -1036,5 +1036,5 @@
       "closureDigest": "sha256:b4418acf6ded1afcfb82c50699738b6dd3ce98ec3380f77cb5887a9d12e36e9b"
     }
   ],
-  "digest": "sha256:928151a71b253021fa1b499a13614ee6d2b44c190c090d0a561118c6ce90035a"
+  "digest": "sha256:d55bed14e3e8e6386b0ccde9fa1dc4814008f4fd12c93b82a50898f56492d49b"
 }

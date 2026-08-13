@@ -218,7 +218,7 @@ test("Text and SVS recursively compile one aliased Recipe into a Core BuildPlan"
   assert.deepEqual(recipe?.value, {
     kind: "inline",
     value: {
-      contract: "svml.svs-recipe@1",
+
       path: "card.answer",
       properties: { fill: "#73FBD3", padding: "16 24" },
     },

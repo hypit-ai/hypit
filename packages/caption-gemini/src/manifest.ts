@@ -59,7 +59,7 @@ const planningRun = object({
   cueInstruction: { schema: string }, fields: { schema: { kind: "array", items: fieldDeclaration } },
 });
 export const captionGeminiProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-gemini-program@1" } },
+
   model: { schema: model },
 });
 export const captionGeminiRequestSchema: ValueSchema = object({

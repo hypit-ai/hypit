@@ -11,7 +11,7 @@ import { captionDisplaySequence, parseScript } from "@narratage/script";
 import type { SvsRecipe } from "@narratage/svs";
 
 const recipe: SvsRecipe = {
-  contract: "svml.svs-recipe@1",
+
   path: "caption.primary",
   properties: {
     "cue-min-words": 1,
@@ -42,7 +42,7 @@ test("one Fine renderer handles uniform Cue appearance as one peer VisualTrack",
   const style = fineCaptionStyle("primary", recipe, [exactFont]);
   const program = resolveCaptionProgram(display, "captions", style, []);
   const projection: TimedCaptionProjection = {
-    contract: "svml.timed-caption-projection@1",
+
     displaySequenceId: display.id,
     cues: [{
       id: "cue:1",
@@ -86,7 +86,7 @@ test("Fine applies Caption Mute after planning without regrouping Cues", () => {
     },
   }]);
   const projection: TimedCaptionProjection = {
-    contract: "svml.timed-caption-projection@1",
+
     displaySequenceId: display.id,
     cues: [{
       id: "cue:1",
@@ -129,7 +129,7 @@ test("Fine emits no Present for a fully muted Cue", () => {
     },
   }]);
   const projection: TimedCaptionProjection = {
-    contract: "svml.timed-caption-projection@1",
+
     displaySequenceId: display.id,
     cues: [{
       id: "cue:1",
@@ -284,7 +284,7 @@ test("karaoke uses one active overlay per whole Atom and never invents Dual Text
   }, [exactFont]);
   const program = resolveCaptionProgram(display, "karaoke-captions", style, []);
   const projection: TimedCaptionProjection = {
-    contract: "svml.timed-caption-projection@1",
+
     displaySequenceId: display.id,
     cues: [{
       id: "cue:karaoke",
@@ -336,7 +336,7 @@ test("an exact Font is explicit Style input and reaches every base and active gl
   }, [exactFont]);
   const program = resolveCaptionProgram(display, "font-program", style, []);
   const projection: TimedCaptionProjection = {
-    contract: "svml.timed-caption-projection@1",
+
     displaySequenceId: display.id,
     cues: [{
       id: "cue:font", styleId: style.id,
@@ -384,7 +384,7 @@ test("current/trail by step/wipe have four distinct frame-exact Atom histories",
     }, [exactFont]);
     const program = resolveCaptionProgram(display, `program-${mode}-${transition}`, style, []);
     const projection: TimedCaptionProjection = {
-      contract: "svml.timed-caption-projection@1",
+
       displaySequenceId: display.id,
       cues: [{
         id: "cue:modes",
@@ -443,7 +443,7 @@ test("full Fine Paint and layered motion lower to terminal Visual IR without cha
   }, [exactFont]);
   const program = resolveCaptionProgram(display, "full-program", style, []);
   const projection: TimedCaptionProjection = {
-    contract: "svml.timed-caption-projection@1",
+
     displaySequenceId: display.id,
     cues: [{
       id: "cue:full", styleId: style.id,
@@ -497,7 +497,7 @@ test("glyph, underline and Pill activation are independent channels", () => {
   }, [exactFont]);
   const program = resolveCaptionProgram(display, "channels-program", style, []);
   const projection: TimedCaptionProjection = {
-    contract: "svml.timed-caption-projection@1", displaySequenceId: display.id,
+    displaySequenceId: display.id,
     cues: [{
       id: "cue:channels", styleId: style.id,
       startFrame: 0, endFrameExclusive: 30,
@@ -529,7 +529,7 @@ test("every declared one-shot and loop motion lowers through the same wrapper vo
     const style = fineCaptionStyle(id, { ...recipe, properties: { ...recipe.properties, ...properties } }, [exactFont]);
     const program = resolveCaptionProgram(display, `${id}-program`, style, []);
     const projection: TimedCaptionProjection = {
-      contract: "svml.timed-caption-projection@1", displaySequenceId: display.id,
+      displaySequenceId: display.id,
       cues: [{
         id: `cue:${id}`, styleId: style.id,
         startFrame: 0, endFrameExclusive: 30,
