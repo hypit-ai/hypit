@@ -7,7 +7,7 @@
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 import { compileSourceClosure, resolveCompiledSourceExport } from "@narratage/elaborator";
 import type { Digest } from "@narratage/protocol";
@@ -55,12 +55,20 @@ export class CompileFailure extends Error {
   }
 }
 
+/** Whether a path sits inside a directory, rather than merely starting with it. */
+function within(root: string, path: string): boolean {
+  const inside = relative(root, path);
+  return inside === "" || (!inside.startsWith("..") && !isAbsolute(inside));
+}
+
 function digestOfBytes(bytes: Uint8Array): Digest {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
 }
 
 export async function compileSource(entryPath: string): Promise<CompiledSource> {
   const served = new Map<string, ServedFile>();
+  // Everything a Source reads has to sit beside it, as it must in a build.
+  const root = dirname(entryPath);
   const resolveModule = (request: { readonly from: string }) => {
     const found = videoDomainModule(request.from);
     if (found === undefined) {
@@ -89,7 +97,17 @@ export async function compileSource(entryPath: string): Promise<CompiledSource> 
         readonly bytes?: Uint8Array;
       }) {
         // A package Surface hands over its own bytes; an authored asset is a
-        // path beside the Source.
+        // path beside the Source, and a build will only read one that sits
+        // inside the Source's own directory. Reading further would let the
+        // preview show a Source no build would accept.
+        if (request.bytes === undefined) {
+          const asset = resolve(dirname(importer.id), request.from);
+          if (!within(root, asset)) {
+            throw new CompileFailure(
+              `Source asset ${asset} is outside ${root}, so a build would refuse to read it.`,
+            );
+          }
+        }
         const bytes = request.bytes ?? readFileSync(resolve(dirname(importer.id), request.from));
         const digest = digestOfBytes(bytes);
         served.set(digest, { mediaType: request.mediaType, bytes });

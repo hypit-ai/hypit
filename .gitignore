@@ -55,3 +55,4 @@ services/media-lambda/build/
 
 # macOS Finder metadata
 .DS_Store
+examples/**/.svml/

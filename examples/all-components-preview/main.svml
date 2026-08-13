@@ -5,6 +5,7 @@
   <import as="wording" from="@narratage/text@1"/>
   <import as="seedance" from="@narratage/seedance@1"/>
   <import as="media" from="@narratage/media@1"/>
+  <import as="gpt" from="@narratage/gpt-image@1"/>
   <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="whisperx" from="@narratage/whisperx@1"/>
   <import as="media-track" from="@narratage/media-track@1"/>
@@ -45,22 +46,24 @@
   <!-- A generated take, so the preview has something with no material behind it
        and a reference picture to stand in with. -->
   <wording:Value id="direction">A presenter talking straight to camera, plain background.</wording:Value>
-  <media:Image id="presenter" src="../../docs/public/regen-ranking/broll-1.webp"/>
+  <wording:Value id="look">A friendly presenter in a plain grey studio, waist up, facing camera,
+    soft even light, neutral expression.</wording:Value>
+  <gpt:Image id="presenter" prompt={look} aspect-ratio="9:16" resolution="2K"/>
   <seedance:ReferenceVideo id="take-opening" model="mini" prompt={direction} duration="8"
     generate-audio="true">
-    <seedance:Reference image={presenter}/>
+    <seedance:Reference image={presenter.image}/>
   </seedance:ReferenceVideo>
   <seedance:ReferenceVideo id="take-closing" model="mini" prompt={direction} duration="8"
     generate-audio="true">
-    <seedance:Reference image={presenter}/>
+    <seedance:Reference image={presenter.image}/>
   </seedance:ReferenceVideo>
 
   <!-- Pictures on disk, so the Media Track and the board have real material. -->
-  <media:Image id="card-shot" src="../../docs/public/regen-ranking/broll-3.webp"/>
-  <media:Image id="icon-spatial" src="../../docs/public/regen-ranking/ranking-icon-1.webp"/>
-  <media:Image id="icon-type" src="../../docs/public/regen-ranking/ranking-icon-2.webp"/>
-  <media:Image id="icon-ranking" src="../../docs/public/regen-ranking/ranking-icon-3.webp"/>
-  <media:Image id="icon-caption" src="../../docs/public/regen-ranking/ranking-icon-4.webp"/>
+  <media:Image id="card-shot" src="./assets/card.webp"/>
+  <media:Image id="icon-spatial" src="./assets/icon-1.webp"/>
+  <media:Image id="icon-type" src="./assets/icon-2.webp"/>
+  <media:Image id="icon-ranking" src="./assets/icon-3.webp"/>
+  <media:Image id="icon-caption" src="./assets/icon-4.webp"/>
   <space:Extent id="portrait" width="540" height="960"/>
 
   <speech:Spine id="speech" frame-rate="30"

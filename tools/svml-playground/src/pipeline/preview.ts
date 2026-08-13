@@ -219,6 +219,18 @@ export async function preview(
   // at compile time already is its value, and standing in for it would replace
   // a picture the author supplied.
   const satisfiedNow = new Set(run.graph.satisfactions.map((item) => item.output));
+  // What a Candidate already supplies, by the output it satisfies. A picture an
+  // earlier Build made arrives this way rather than as a compile-time Record.
+  const byCandidate = new Map(run.graph.candidates.map((item) => [(item as { id: string }).id, item]));
+  const supplied = new Map<string, string>();
+  for (const item of run.graph.satisfactions) {
+    const root = (byCandidate.get(item.candidate) as {
+      root?: { value?: { digest?: string; value?: { digest?: string } } };
+    } | undefined)?.root;
+    const digest = root?.value?.digest ?? root?.value?.value?.digest;
+    const named = source.exports.find((held) => held.ref === item.output)?.name;
+    if (digest !== undefined && named !== undefined) supplied.set(named, digest);
+  }
   const consumed = new Set(source.observations.placements.flatMap((item) => item.references));
   const unsupplied = source.exports.filter((item) =>
     item.type === MATERIAL && isOutput(source, item.ref)
@@ -258,7 +270,7 @@ export async function preview(
         // A shot that points at a picture already in hand stands in as that
         // picture. It is not the take, but it is the right subject held for the
         // right length, which is what makes a preview worth looking at.
-        const held = standIn(source, output.name, rate, canvas);
+        const held = await standIn(source, output.name, rate, canvas, archive, supplied);
         const shown = held ?? { bytes: black.bytes, mediaType: black.mediaType, digest };
         if (held !== undefined) {
           (source.served as Map<string, ServedFile>).set(held.digest, {
@@ -424,19 +436,21 @@ function builtSpace(
  * shot itself does not exist. How long to hold it is what the element itself
  * declared, so the stand-in occupies the span the take would have.
  */
-function standIn(
+async function standIn(
   source: CompiledSource,
   name: string,
   frameRate: { readonly numerator: number; readonly denominator: number },
   canvas: { readonly width: number; readonly height: number },
-): { readonly bytes: Uint8Array; readonly mediaType: string; readonly digest: string } | undefined {
+  archive: Archive | undefined,
+  supplied: ReadonlyMap<string, string>,
+): Promise<{ readonly bytes: Uint8Array; readonly mediaType: string; readonly digest: string } | undefined> {
   const owner = name.includes(".") ? name.slice(0, name.indexOf(".")) : name;
   const placement = source.observations.placements.find((item) => item.id === owner);
   if (placement === undefined) return undefined;
   for (const path of placement.references) {
     const referenced = source.exports.find((item) => item.name === path);
     if (referenced?.type !== MATERIAL) continue;
-    const bytes = pictureFor(source, referenced.ref);
+    const bytes = await pictureFor(source, referenced.ref, archive, supplied.get(path));
     if (bytes === undefined) continue;
     const made = heldPicture(bytes, declaredSeconds(source, placement) ?? 2, frameRate, canvas);
     if (made === undefined) return undefined;
@@ -470,10 +484,18 @@ function declaredSeconds(source: CompiledSource, placement: Placement): number |
 }
 
 /** Bytes already in hand for an output, if the Source read them at compile time. */
-function pictureFor(source: CompiledSource, ref: string): Uint8Array | undefined {
+async function pictureFor(
+  source: CompiledSource,
+  ref: string,
+  archive: Archive | undefined,
+  fromCandidate: string | undefined,
+): Promise<Uint8Array | undefined> {
   const value = inlineRecord(source.compiled, ref) as { digest?: string } | undefined;
-  const digest = value?.digest ?? blobDigest(source.compiled, ref);
-  return digest === undefined ? undefined : source.served.get(digest)?.bytes;
+  const digest = fromCandidate ?? value?.digest ?? blobDigest(source.compiled, ref);
+  if (digest === undefined) return undefined;
+  // A picture the Source read at compile time is in hand; one an earlier Build
+  // produced is in the archive, and both are addressed the same way.
+  return source.served.get(digest)?.bytes ?? await archive?.read(digest);
 }
 
 /** A Record stored as the blob it is, rather than wrapped. */

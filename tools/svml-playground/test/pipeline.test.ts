@@ -205,3 +205,33 @@ test("estimated timings are strictly increasing and reproducible", () => {
   assert.equal(frames.get("segment:a:start"), 0, "a Segment opens where its first word does");
   assert.equal(frames.get("segment:a:end"), frames.get("t3:e"), "and closes where its last one ends");
 });
+
+/**
+ * A build reads assets only from the Source's own directory. A preview that
+ * read further would show a Source that cannot be built, which is the one thing
+ * it must never do.
+ */
+test("an asset outside the Source's directory is refused, as a build refuses it", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "svml-playground-boundary-"));
+  const outside = mkdtempSync(join(tmpdir(), "svml-playground-outside-"));
+  writeFileSync(join(outside, "stray.png"), "not really a picture", "utf8");
+  writeFileSync(join(directory, "main.svml"), `<?svml using="@narratage/markup@1"?>
+
+<svml>
+  <import from="@narratage/script@1"/>
+  <import as="media" from="@narratage/media@1"/>
+  <script id="story"><opening><HOST>One two.</opening></script>
+  <media:Image id="stray" src="${join(outside, "stray.png")}"/>
+</svml>
+`, "utf8");
+
+  await assert.rejects(
+    async () => await preview(join(directory, "main.svml")),
+    (error: unknown) => {
+      const message = (error as Error).message;
+      assert.match(message, /outside/u, "the reason names the boundary");
+      assert.match(message, /stray\.png/u, "and the file that crossed it");
+      return true;
+    },
+  );
+});
