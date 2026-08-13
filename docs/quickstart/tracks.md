@@ -174,7 +174,7 @@ Placement is an explicit Spatial Frame edge; appearance and motion remain reusab
 </seedance:ReferenceVideo>
 
 <space:Frame id="product-frame" within={vertical}
-  left="8%" top="20%" right="8%" bottom="32%"/>
+  left="8%" top="20%" right="92%" bottom="68%"/>
 
 <media-track:Track id="product-broll" map={timing.map}
   space={speech.space} canvas={vertical}>
@@ -184,6 +184,11 @@ Placement is an explicit Spatial Frame edge; appearance and motion remain reusab
     motion={studio.motion.product}/>
 </media-track:Track>
 ```
+
+`<space:Frame>` takes `left`, `top`, `right` and `bottom` as **edge positions
+within the parent**, not as insets from each side. A Frame covering the middle
+84% of the canvas horizontally is `left="8%" right="92%"`, and `right="8%"` would
+place its right edge to the left of its left edge, which is rejected.
 
 The Selection contributes semantic points; Media performs the package-owned window projection.
 The same Item model also covers full-canvas cutaways, split screens and corner overlays. Ordered
@@ -260,7 +265,7 @@ Container for text items.
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="title-frame" within={vertical}
-  left="6%" top="6%" right="6%" bottom="84%"/>
+  left="6%" top="6%" right="94%" bottom="16%"/>
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
 <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
 <text:Track id="titles" space={speech.space}>
@@ -352,9 +357,9 @@ All four track families together in one source file:
 <!-- Shared placement is an explicit edge, separate from Text appearance. -->
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="title-frame" within={vertical}
-  left="6%" top="6%" right="6%" bottom="84%"/>
+  left="6%" top="6%" right="94%" bottom="16%"/>
 <space:Frame id="card-frame" within={vertical}
-  left="10%" top="20%" right="10%" bottom="30%"/>
+  left="10%" top="20%" right="90%" bottom="70%"/>
 
 <!-- Media: one ordinary Item used editorially as B-roll -->
 <media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
