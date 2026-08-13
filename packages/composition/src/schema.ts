@@ -169,7 +169,7 @@ const surface = object({ ...base, kind: { schema: { kind: "literal", value: "sur
 const element: ValueSchema = { kind: "oneOf", variants: [box, mask, text, textFlowElement, pathTextElement, media("image"), media("video"), surface] };
 const span = object({ startFrame: { schema: integer }, endFrameExclusive: { schema: integer } });
 const present = object({ id: { schema: string }, span: { schema: span }, stacking: { schema: object({ order: { schema: signedInteger }, tieBreak: { schema: string } }) }, elements: { schema: { kind: "array", minItems: 1, items: element } } });
-export const visualTrackSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.visual-track@1" } }, visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } }, id: { schema: string }, presents: { schema: { kind: "array", items: present } } });
+export const visualTrackSchema: ValueSchema = object({ kind: { schema: { kind: "literal", value: "visual" } }, visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } }, id: { schema: string }, presents: { schema: { kind: "array", items: present } } });
 const audioSampleSpan = object({ startSample: { schema: integer }, endSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } } });
 const audioClip = object({
   id: { schema: string },
@@ -188,5 +188,5 @@ const audioClip = object({
   fadeInSamples: { schema: integer },
   fadeOutSamples: { schema: integer },
 });
-export const audioTrackSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.audio-track@1" } }, id: { schema: string }, clips: { schema: { kind: "array", items: audioClip } } });
-export const compositionSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.composition@1" } }, id: { schema: string }, canvas: { schema: object({ width: { schema: integer }, height: { schema: integer }, clearColor: { schema: string } }) }, tracks: { schema: { kind: "array", items: { kind: "oneOf", variants: [visualTrackSchema, audioTrackSchema] } } } });
+export const audioTrackSchema: ValueSchema = object({ kind: { schema: { kind: "literal", value: "audio" } }, id: { schema: string }, clips: { schema: { kind: "array", items: audioClip } } });
+export const compositionSchema: ValueSchema = object({ id: { schema: string }, canvas: { schema: object({ width: { schema: integer }, height: { schema: integer }, clearColor: { schema: string } }) }, tracks: { schema: { kind: "array", items: { kind: "oneOf", variants: [visualTrackSchema, audioTrackSchema] } } } });

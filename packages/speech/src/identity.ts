@@ -19,14 +19,13 @@ export function speechEvidenceSampleBoundary(masterSampleBoundary: number): numb
 export function sealSpeechBasis(value: SpeechBasis): SpeechBasis { return structuredClone(value); }
 export function sealSpeechEvidenceAudio(value: SpeechEvidenceAudio): SpeechEvidenceAudio { return structuredClone(value); }
 export function assertSpeechEvidenceAudioIdentity(value: SpeechEvidenceAudio): void {
-  if (value.contract !== "svml.speech-evidence-audio@1" || value.artifact.kind !== "blob" || !isDigest(value.artifact.digest)
+  if (value.artifact.kind !== "blob" || !isDigest(value.artifact.digest)
     || !Number.isSafeInteger(value.artifact.size) || value.artifact.size < 0 || value.artifact.mediaType !== "audio/wav"
     || !Number.isSafeInteger(value.sampleFrames) || value.sampleFrames < 1) {
     throw new Error("SpeechEvidenceAudio media identity is invalid.");
   }
 }
 export function assertSpeechBasisIdentity(basis: SpeechBasis): void {
-  if (basis.contract !== "svml.speech-basis@1") throw new Error("Unsupported SpeechBasis contract.");
   assertProgramSpaceIdentity(basis.programSpace);
   assertAudioBlob(basis.audio, "SpeechBasis audio");
   if (basis.segments.length === 0) throw new Error("SpeechBasis must contain at least one Segment.");
@@ -63,7 +62,6 @@ export function assertSpeechBasisIdentity(basis: SpeechBasis): void {
   }
 }
 export function assertSpeechAudioBasisIdentity(basis: SpeechAudioBasis): void {
-  if (basis.contract !== "svml.speech-audio-basis@1") throw new Error("Unsupported SpeechAudioBasis contract.");
   assertProgramSpaceIdentity(basis.programSpace);
   assertAudioBlob(basis.audio, "SpeechAudioBasis audio");
   if (basis.segments.length === 0) throw new Error("SpeechAudioBasis must contain at least one Segment.");

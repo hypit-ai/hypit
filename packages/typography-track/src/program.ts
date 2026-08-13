@@ -125,7 +125,7 @@ export function assertTextStyle(style: TextStyle): void {
     if (value < 0) throw new Error("TextStyle path margins must not be negative.");
   }
   assertVisualTrackIdentity({
-    contract: "svml.visual-track@1",
+    kind: "visual",
     visualIr: "svml.visual-ir@1",
     id: "text-style-validation",
     presents: [{
@@ -634,7 +634,6 @@ function elements(item: TextItem): VisualElement[] {
 export function renderTypographyTrack(space: ProgramSpace, program: TypographyTrackProgram): VisualTrack {
   assertTypographyTrackProgramIdentity(program, space);
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: program.id,
     presents: program.items.map((item) => ({
@@ -661,7 +660,6 @@ export function renderTextMaskTrack(
     throw new Error("Official Text Mask requires one explicit still material Surface; timed materials use an independent package.");
   }
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: spec.id,
     presents: program.items.map((item) => {

@@ -41,7 +41,6 @@ function evidence(args: {
   readonly vad?: readonly { readonly startSec: number; readonly endSec: number }[];
 }): AlignedTranscriptEvidence {
   return sealAlignedTranscriptEvidence({
-    contract: "svml.aligned-transcript-evidence@1",
     segments: [
       {
         sourceSegmentId: args.segmentId ?? "line",
@@ -59,7 +58,6 @@ function speechBasis(
   windows?: readonly { readonly startSec: number; readonly endSec: number }[],
 ): SpeechAudioBasis {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec,
     frameRate: { numerator: 1_000, denominator: 1 },
   });
@@ -70,7 +68,6 @@ function speechBasis(
     endSec: windows?.[index]?.endSec ?? durationSec * (index + 1) / narrative.segments.length,
   }));
   const take = sealSpeechBasis({
-    contract: "svml.speech-basis@1",
     programSpace,
     audio: { kind: "blob", digest: audioDigest, size: 1, mediaType: "audio/wav" },
     visualTrack: { clips: [] },
@@ -81,7 +78,6 @@ function speechBasis(
 
 function audioProjection(basis: SpeechBasis): SpeechAudioBasis {
   return {
-    contract: "svml.speech-audio-basis@1",
     programSpace: basis.programSpace,
     audio: basis.audio,
     segments: basis.segments,
@@ -134,7 +130,6 @@ test("exact transcript words cover every Script and Segment anchor", () => {
     ],
   );
   assert.equal(new Set(map.anchors.map((anchor) => anchor.identity)).size, map.anchors.length);
-  assert.equal(map.contract, "svml.complete-semantic-map@1");
 });
 
 test("M:1 uses evidence character times instead of dividing a merged word by length", () => {
@@ -249,7 +244,6 @@ test("multiple Script Segments stay independent even when evidence records arriv
     { startSec: 1, endSec: 2 },
   ]);
   const map = locateSpeechTiming(narrative, basis, sealAlignedTranscriptEvidence({
-    contract: "svml.aligned-transcript-evidence@1",
     segments: [
       {
         sourceSegmentId: "two",
@@ -309,7 +303,6 @@ test("Evidence is interpreted only through the explicitly connected SpeechAudioB
     words: [{ text: "Hello", startSec: 0.1, endSec: 0.4 }, { text: "world", startSec: 0.5, endSec: 0.9 }],
   });
   const anotherSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 2,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -322,7 +315,6 @@ test("the final map is quantized once into the selected ProgramSpace", () => {
   const narrative = parseScript("frames.svml", "<line>Hello.</line>");
   const original = speechBasis(narrative, 1);
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });

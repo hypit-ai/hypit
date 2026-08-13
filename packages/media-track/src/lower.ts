@@ -94,7 +94,6 @@ function frameStyles(value: MediaFramePresentation): VisualStyleDeclaration[] {
 function innerFrame(item: MediaItemProgram): SpatialFrame {
   const { padding } = item.presentation;
   return {
-    contract: "svml.spatial-frame@1",
     xPx: item.frame.xPx + padding.leftPx,
     yPx: item.frame.yPx + padding.topPx,
     widthPx: item.frame.widthPx - padding.leftPx - padding.rightPx,

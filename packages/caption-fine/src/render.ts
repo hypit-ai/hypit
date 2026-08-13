@@ -761,7 +761,6 @@ export function renderFineCaption(
     }];
   });
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: program.id,
     presents,

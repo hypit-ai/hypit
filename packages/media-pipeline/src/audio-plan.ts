@@ -24,7 +24,6 @@ export function verifyAudioProgramPlan(value: unknown): asserts value is AudioPr
   assert(Number.isSafeInteger(item.frameCount) && item.frameCount > 0, "AudioProgramPlan frame count is invalid");
   assert(item.sampleRate === 48_000, "AudioProgramPlan sample rate must be 48000");
   const planSpace = {
-    contract: "svml.program-space@1" as const,
     durationSec: item.frameCount * item.frameRate.denominator / item.frameRate.numerator,
     frameRate: item.frameRate,
   };
@@ -76,7 +75,7 @@ export function compileAudioProgramPlan(composition: Composition, programSpace: 
   assertCompositionIdentity(composition, programSpace);
   const frameCount = programSpaceFrameCount(programSpace);
   const clips = composition.tracks
-    .filter((track) => track.contract === "svml.audio-track@1")
+    .filter((track) => track.kind === "audio")
     .flatMap((track) => track.clips.map((clip) => {
       if (clip.artifact.mediaType !== "audio/wav") {
         throw new Error(`Audio clip ${track.id}.${clip.id} must be normalized to canonical WAV before mixing`);

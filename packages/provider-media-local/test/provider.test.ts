@@ -715,7 +715,6 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
     assert.equal(await artifacts.has(audio.artifact.digest), true);
 
     const visual = sealRenderedVisual({
-      contract: "svml.rendered-visual@1",
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 30,
       canvas: { width: 160, height: 96 },

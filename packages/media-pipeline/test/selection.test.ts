@@ -21,7 +21,6 @@ const timestamp = (ticks: string) => ({ ticks, timeBase });
 
 function grokInspection(): MediaInspection {
   return sealMediaInspection({
-    contract: "svml.media-inspection@1",
     container: { formatNames: ["mov", "mp4"] },
     streams: [
       {

@@ -100,7 +100,7 @@ function oneOf<T extends string>(recipe: SvsRecipe, name: string, values: readon
 }
 
 function exactFonts(value: FontStackRef | FontArtifactRef): FontArtifactRef[] {
-  if (value.contract === "svml.font-stack@1") {
+  if ("faces" in value) {
     assertFontStackRef(value, "Ranking font");
     return [...structuredClone(value.faces)];
   }

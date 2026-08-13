@@ -183,7 +183,6 @@ function programSpace(program: SpeechSpineProgram, set: SpeechSpineSet): Program
   for (const take of set.takes) assertTake(take, program);
   const frameCount = set.takes.reduce((sum, take) => sum + take.media.timeline.frameCount, 0);
   const space = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: frameCount * program.frameRate.denominator / program.frameRate.numerator,
     frameRate: { ...program.frameRate },
   });
@@ -259,7 +258,6 @@ export function assembleSpeechBasis(
       segmentId: take.segment.id,
       artifact: structuredClone(take.media.visual.artifact),
       extent: {
-        contract: "svml.intrinsic-extent@1" as const,
         widthPx: take.media.visual.width,
         heightPx: take.media.visual.height,
       },
@@ -269,7 +267,6 @@ export function assembleSpeechBasis(
     }];
   });
   return sealSpeechBasis({
-    contract: "svml.speech-basis@1",
     programSpace: space,
     audio: structuredClone(audio.artifact),
     visualTrack: { clips: visualClips },

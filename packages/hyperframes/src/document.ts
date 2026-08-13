@@ -451,7 +451,7 @@ function renderAnimationRules(track: VisualTrack, present: VisualPresent): strin
 
 function orderedVisualPresents(tracks: readonly Track[]): Array<{ readonly track: VisualTrack; readonly present: VisualPresent }> {
   return tracks
-    .filter((track): track is VisualTrack => track.contract === "svml.visual-track@1")
+    .filter((track): track is VisualTrack => track.kind === "visual")
     .flatMap((track) => track.presents.map((present) => ({ track, present })))
     .sort((left, right) => left.present.stacking.order - right.present.stacking.order
       || left.present.stacking.tieBreak.localeCompare(right.present.stacking.tieBreak)
@@ -476,7 +476,7 @@ function collectArtifacts(composition: Composition): BlobRef[] {
     artifacts.set(artifact.digest, next);
   };
   for (const track of composition.tracks) {
-    if (track.contract === "svml.audio-track@1") continue;
+    if (track.kind === "audio") continue;
     for (const present of track.presents) {
       for (const element of present.elements) {
         if (element.kind === "image" || element.kind === "video") add(element.artifact);
@@ -500,7 +500,7 @@ function collectArtifacts(composition: Composition): BlobRef[] {
 function collectSurfaces(composition: Composition): CompositableSurfaceRef[] {
   const surfaces = new Map<Digest, CompositableSurfaceRef>();
   for (const track of composition.tracks) {
-    if (track.contract !== "svml.visual-track@1") continue;
+    if (track.kind !== "visual") continue;
     for (const present of track.presents) {
       for (const element of present.elements) {
         if (element.kind !== "surface") continue;
@@ -520,7 +520,7 @@ function collectSurfaces(composition: Composition): CompositableSurfaceRef[] {
 function collectFonts(composition: Composition): FontArtifactRef[] {
   const fonts = new Map<string, FontArtifactRef>();
   for (const track of composition.tracks) {
-    if (track.contract !== "svml.visual-track@1") continue;
+    if (track.kind !== "visual") continue;
     for (const present of track.presents) {
       for (const element of present.elements) {
         if (element.kind !== "text") continue;
@@ -529,7 +529,7 @@ function collectFonts(composition: Composition): FontArtifactRef[] {
     }
   }
   for (const track of composition.tracks) {
-    if (track.contract !== "svml.visual-track@1") continue;
+    if (track.kind !== "visual") continue;
     for (const present of track.presents) {
       for (const element of present.elements) {
         if (element.kind !== "text-flow" && element.kind !== "path-text") continue;
@@ -561,13 +561,13 @@ function renderFontFaces(composition: Composition): string {
 }
 
 function hasTerminalText(composition: Composition): boolean {
-  return composition.tracks.some((track) => track.contract === "svml.visual-track@1"
+  return composition.tracks.some((track) => track.kind === "visual"
     && track.presents.some((present) => present.elements.some((element) =>
       element.kind === "text-flow" || element.kind === "path-text")));
 }
 
 function hasFrameAnimations(composition: Composition): boolean {
-  return composition.tracks.some((track) => track.contract === "svml.visual-track@1"
+  return composition.tracks.some((track) => track.kind === "visual"
     && track.presents.some((present) => present.elements.some((element) => element.animation !== undefined)));
 }
 

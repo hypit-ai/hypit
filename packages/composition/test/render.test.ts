@@ -16,13 +16,11 @@ import type { VisualTrack } from "../src/index.js";
 import { digestOf } from "@narratage/protocol";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
 
 const font: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: {
     kind: "blob",
     digest: digestOf("font:inter-bold"),
@@ -34,7 +32,6 @@ const font: FontArtifactRef = {
 };
 
 const animatedSurface: CompositableSurfaceRef = {
-  contract: "svml.compositable-surface@1",
   artifact: {
     kind: "blob",
     digest: digestOf("surface:alpha-webm"),
@@ -84,7 +81,6 @@ test("CompositableSurfaceRef distinguishes a typed alpha surface from an ordinar
 
 test("exact fonts own font selection and cannot conflict with raw CSS font facts", () => {
   const invalid = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: "invalid-font-track",
     presents: [{
@@ -103,7 +99,6 @@ test("exact fonts own font selection and cannot conflict with raw CSS font facts
   });
   assert.throws(
     () => assertCompositionIdentity(sealComposition({
-      contract: "svml.composition@1",
       id: "invalid-font-composition",
       canvas: { width: 1080, height: 1920, clearColor: "#000000" },
       tracks: [invalid],
@@ -114,7 +109,6 @@ test("exact fonts own font selection and cannot conflict with raw CSS font facts
 
 test("animated materialized Surfaces must exactly share the Present frame domain", () => {
   const valid = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: "surface-track",
     presents: [{
@@ -125,7 +119,6 @@ test("animated materialized Surfaces must exactly share the Present frame domain
     }],
   });
   assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
-    contract: "svml.composition@1",
     id: "surface-composition",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [valid],
@@ -149,7 +142,6 @@ test("animated materialized Surfaces must exactly share the Present frame domain
     }],
   });
   assert.throws(() => assertCompositionIdentity(sealComposition({
-    contract: "svml.composition@1",
     id: "invalid-surface-composition",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [invalid],
@@ -158,7 +150,6 @@ test("animated materialized Surfaces must exactly share the Present frame domain
 
 test("a local mask owns exactly one mask root and one content root inside its Present", () => {
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: "masked-text",
     presents: [{
@@ -183,7 +174,6 @@ test("a local mask owns exactly one mask root and one content root inside its Pr
     }],
   });
   assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
-    contract: "svml.composition@1",
     id: "mask-composition",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [track],
@@ -200,7 +190,7 @@ test("a local mask owns exactly one mask root and one content root inside its Pr
     }],
   });
   assert.throws(() => assertCompositionIdentity(sealComposition({
-    contract: "svml.composition@1", id: "broken-mask",
+    id: "broken-mask",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [broken],
   }), space), /declared mask and content roots/u);
 
@@ -215,7 +205,7 @@ test("a local mask owns exactly one mask root and one content root inside its Pr
     }],
   });
   assert.throws(() => assertCompositionIdentity(sealComposition({
-    contract: "svml.composition@1", id: "nested-mask-source",
+    id: "nested-mask-source",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [nested],
   }), space), /must have a box or mask parent/u);
 });

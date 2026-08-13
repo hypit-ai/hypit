@@ -34,7 +34,6 @@ function surface(bytes: Uint8Array, options: {
 }): CompositableSurfaceRef {
   const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}` as const;
   return {
-    contract: "svml.compositable-surface@1",
     artifact: { kind: "blob", digest, size: bytes.byteLength, mediaType: options.mediaType },
     width: options.width,
     height: options.height,

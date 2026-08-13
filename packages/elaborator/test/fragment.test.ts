@@ -73,7 +73,7 @@ function program(): LinkedProgram {
     id: "canvas:root",
     type: spatialTypes.canvas,
     value: { kind: "inline", value: {
-      contract: "svml.canvas-space@1", widthPx: 1080, heightPx: 1920,
+      widthPx: 1080, heightPx: 1920,
       origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
     } },
     origin,

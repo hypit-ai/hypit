@@ -302,7 +302,6 @@ export function renderAudioTrack(space: ProgramSpace, program: AudioTrackProgram
   assertAudioTrackProgram(program);
   const totalSamples = programSpaceSampleFrames(space, 48_000);
   const track = sealAudioTrack({
-    contract: "svml.audio-track@1",
     id: program.id,
     clips: program.items.map((item) => terminalClip(item, space)),
   });

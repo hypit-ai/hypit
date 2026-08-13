@@ -255,7 +255,6 @@ test("the Lambda Endpoint declines frame domains and requirements it cannot pres
     ...documentFixture(30),
     artifacts: [artifact],
     surfaces: [{
-      contract: "svml.compositable-surface@1",
       artifact,
       width: 1,
       height: 1,

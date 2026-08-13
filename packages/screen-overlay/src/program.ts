@@ -321,7 +321,7 @@ function overlayElements(content: ScreenOverlayComponent, canvas: CanvasSpace, d
 export function renderScreenOverlay(canvas: CanvasSpace, space: ProgramSpace, program: ScreenOverlayProgram): VisualTrack {
   assertCanvasSpace(canvas); assertProgramSpaceIdentity(space); assertScreenOverlayProgram(program);
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1", visualIr: "svml.visual-ir@1", id: program.id,
+    visualIr: "svml.visual-ir@1", id: program.id,
     presents: program.items.map((item) => ({
       id: item.id, span: { ...item.span }, stacking: { ...item.stacking },
       elements: overlayElements(item.content, canvas, item.span.endFrameExclusive - item.span.startFrame),

@@ -4,9 +4,7 @@ import type { CompleteSemanticMap } from "./types.js";
 export type LocatedFrameSpan = { readonly startFrame: number; readonly endFrameExclusive: number };
 
 export function assertCompleteSemanticMapIdentity(map: CompleteSemanticMap): void {
-  if (map.contract !== "svml.complete-semantic-map@1") {
-    throw new Error("Unsupported CompleteSemanticMap contract");
-  }
+  if (!Array.isArray(map.tokens) || !Array.isArray(map.anchors)) throw new Error("CompleteSemanticMap is invalid");
 }
 
 export function assertNarrativeSelectionIdentity(selection: NarrativeSelectionRef): void {

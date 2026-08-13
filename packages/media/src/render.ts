@@ -15,7 +15,6 @@ const ALPHA_SURFACE_MEDIA_TYPES = new Set([
 ]);
 
 export type FontArtifactRef = {
-  readonly contract: "svml.font-artifact@1";
   /** One logical face may be split into independently addressed Unicode-range sources. */
   readonly sources: readonly {
     readonly artifact: BlobRef;
@@ -27,12 +26,10 @@ export type FontArtifactRef = {
 
 /** Ordered exact font faces. The first face is primary; the remainder are glyph fallbacks. */
 export type FontStackRef = {
-  readonly contract: "svml.font-stack@1";
   readonly faces: readonly FontArtifactRef[];
 };
 
 export type CompositableSurfaceRef = {
-  readonly contract: "svml.compositable-surface@1";
   readonly artifact: BlobRef;
   readonly width: number;
   readonly height: number;
@@ -63,7 +60,6 @@ function assertBlobRef(value: BlobRef, label: string): void {
 }
 
 export function assertFontArtifactRef(value: FontArtifactRef, label = "FontArtifactRef"): void {
-  if (value.contract !== "svml.font-artifact@1") throw new Error(`${label} contract is unsupported.`);
   if (!Array.isArray(value.sources) || value.sources.length === 0) throw new Error(`${label} sources are empty.`);
   const artifacts = new Set<string>();
   for (const [index, source] of value.sources.entries()) {
@@ -87,7 +83,6 @@ export function assertFontArtifactRef(value: FontArtifactRef, label = "FontArtif
 }
 
 export function assertFontStackRef(value: FontStackRef, label = "FontStackRef"): void {
-  if (value.contract !== "svml.font-stack@1") throw new Error(`${label} contract is unsupported.`);
   if (value.faces.length === 0) throw new Error(`${label} faces are empty.`);
   const identities = new Set<string>();
   for (const [index, face] of value.faces.entries()) {
@@ -106,7 +101,6 @@ export function assertCompositableSurfaceRef(
   value: CompositableSurfaceRef,
   label = "CompositableSurfaceRef",
 ): void {
-  if (value.contract !== "svml.compositable-surface@1") throw new Error(`${label} contract is unsupported.`);
   assertBlobRef(value.artifact, label);
   if (
     !Number.isSafeInteger(value.width)
