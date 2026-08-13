@@ -119,8 +119,13 @@ function packageImports(source) {
   return [...matches].map((match) => match[1]);
 }
 
-test("each package declares every cross-package import it owns", async () => {
+test("production imports belong to each package while the root owns repository tests", async () => {
   const entries = await repositoryEntries();
+  const rootManifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  const rootTestDependencies = new Set([
+    ...Object.keys(rootManifest.dependencies ?? {}),
+    ...Object.keys(rootManifest.devDependencies ?? {}),
+  ]);
   const manifests = new Map();
   for (const entry of entries) {
     const match = /^packages\/([^/]+)\/package\.json$/u.exec(entry.path);
@@ -139,7 +144,10 @@ test("each package declares every cross-package import it owns", async () => {
     }
     const allowed = new Set([
       ...Object.keys(manifest.dependencies ?? {}),
-      ...(area === "test" ? Object.keys(manifest.devDependencies ?? {}) : []),
+      ...(area === "test" ? [
+        ...Object.keys(manifest.devDependencies ?? {}),
+        ...rootTestDependencies,
+      ] : []),
     ]);
     const source = await readFile(entry.child, "utf8");
     for (const dependency of new Set(packageImports(source))) {
