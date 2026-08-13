@@ -9,7 +9,7 @@ import type {
 
 import { digestOf, isDigest } from "./canonical.js";
 import { invariant } from "./error.js";
-import { resolveProducer, verifyLinkedProgram, verifyRecord } from "./link.js";
+import { resolveProducer, verifyLinkedProgram, verifyRecordStructure } from "./link.js";
 import { producerStep, selectedProvidedRecords, validatePlan } from "./plan.js";
 import { commandId, derivationId, needRequestDigest, receiptId } from "./provenance.js";
 import { sameCapability, sameType } from "./reference.js";
@@ -201,7 +201,7 @@ export function verifyBuildState(state: BuildState): void {
     "build step state does not match the plan",
   );
 
-  for (const record of state.records) verifyRecord(state.program.closure, record);
+  for (const record of state.records) verifyRecordStructure(state.program.closure, record);
   for (const authored of state.program.records) {
     const record = findRecord(state, authored.id);
     invariant(record?.digest === authored.digest, "AUTHORED_RECORD_CHANGED", `${authored.id} changed`);

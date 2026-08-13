@@ -15,7 +15,7 @@ import type {
 
 import { canonicalize, digestOf, isDigest } from "./canonical.js";
 import { invariant } from "./error.js";
-import { resolveProducer, sealRecord, verifyRecord } from "./link.js";
+import { resolveProducer, sealRecord, verifyRecordStructure } from "./link.js";
 import { producerKey, sameType, typeKey } from "./reference.js";
 
 export function valueRefKey(ref: GraphValueRef): string {
@@ -241,7 +241,7 @@ function verifyCandidateValue(program: LinkedProgram, graph: CompiledGraph, cand
       kind: "provided",
     },
   });
-  verifyRecord(program.closure, provisional);
+  verifyRecordStructure(program.closure, provisional);
 }
 
 function verifySatisfaction(

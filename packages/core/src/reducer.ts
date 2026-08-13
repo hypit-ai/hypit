@@ -19,7 +19,7 @@ import type {
 
 import { canonicalize, digestOf, recordDigest } from "./canonical.js";
 import { CoreError, invariant } from "./error.js";
-import { resolveProducer, resolveType, sealRecord, verifyRecord } from "./link.js";
+import { resolveProducer, resolveType, sealRecord, verifyRecordStructure } from "./link.js";
 import { compileBuild, producerStep, selectedProvidedRecords } from "./plan.js";
 import {
   commandId,
@@ -138,7 +138,7 @@ function acceptProducerEvent(
     value: output.value,
     origin: { kind: "derived", derivation: id },
   }));
-  outputs.forEach((record) => verifyRecord(state.program.closure, record));
+  outputs.forEach((record) => verifyRecordStructure(state.program.closure, record));
   const needs: Need[] = needDrafts.map((need) => ({ ...need, requestedBy: id }));
 
   return {
@@ -193,7 +193,7 @@ function acceptNeedEvent(
     digest: outputDigest,
     origin: { kind: "observed", receipt: receipt.id },
   };
-  verifyRecord(state.program.closure, record);
+  verifyRecordStructure(state.program.closure, record);
 
   return {
     ...state,

@@ -22,7 +22,7 @@ import {
   satisfiedCandidate,
   verifyBuildRequest,
 } from "./graph.js";
-import { resolveProducer, sealRecord, verifyRecord } from "./link.js";
+import { resolveProducer, sealRecord, verifyRecordStructure } from "./link.js";
 import { sameType, typeKey } from "./reference.js";
 
 function exactKeys(
@@ -177,7 +177,7 @@ export function compileBuild(
           kind: "provided",
         },
       });
-      verifyRecord(program.closure, record);
+      verifyRecordStructure(program.closure, record);
       invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`);
       resolved = { record: record.id, type: record.type };
     } else {
@@ -339,7 +339,7 @@ export function selectedProvidedRecords(
       value: candidate.root.value.value,
       origin: { kind: "provided" },
     });
-    verifyRecord(program.closure, record);
+    verifyRecordStructure(program.closure, record);
     invariant(selection.record === record.id, "SELECTION_RECORD_MISMATCH", `${selection.output} does not select ${record.id}`);
     invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`, record.id);
     const previous = records.get(record.id);

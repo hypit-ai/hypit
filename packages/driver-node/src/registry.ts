@@ -19,7 +19,6 @@ import {
   RuntimeModuleRegistry,
   runtimeEndpoint,
   verifyCredentialRef,
-  verifyRuntimeClosure,
 } from "@narratage/runtime";
 import type { RuntimeClosure } from "@narratage/runtime";
 
@@ -87,7 +86,7 @@ export class ProducerRegistry implements ProducerRegistrar {
     const key = producerRegistryKey(producer);
     if (this.#producers.has(key)) throw new Error(`producer ${key} is already registered`);
     verifyScheduling(options.scheduling);
-    this.#producers.set(key, { producer, implementationDigest, handler, ...options });
+    this.#producers.set(key, { implementationDigest, handler, ...options });
   }
 
   producer(ref: ProducerRef): ProducerRegistration | undefined {
@@ -185,7 +184,6 @@ export class EndpointRegistry implements EndpointRegistrar {
     closure: RuntimeClosure,
     modules: RuntimeModuleRegistry,
   ): void {
-    verifyRuntimeClosure(closure);
     modules.verifyClosure(closure);
     if (this.#runtimeClosure !== undefined && this.#runtimeClosure !== closure.digest) {
       throw new Error("Endpoint Registry is already bound to another Runtime Closure");
