@@ -13,4 +13,3 @@ export {
   requestHyperframesVisualImplementationDigest,
 } from "./product.js";
 export { decodeHyperframesRenderSurface } from "./surface.js";
-export type * from "./types.js";

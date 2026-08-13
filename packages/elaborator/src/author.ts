@@ -48,15 +48,6 @@ export type AuthorComponent = {
   readonly outputs: Readonly<Record<string, string>>;
 };
 
-/**
- * Parser-independent author intent collected before references are resolved.
- * Component declaration order has no semantic meaning, so forward references are valid.
- */
-export type AuthorModule = {
-  readonly format: "svml.author-module@1";
-  readonly components: readonly AuthorComponent[];
-};
-
 export type AuthorOutputBinding = {
   readonly component: string;
   readonly output: string;
@@ -67,13 +58,13 @@ export type AuthorOutputBinding = {
 /** Resolve a locked Graph Fragment without executing package code. */
 export type GraphFragmentResolver = (id: Digest) => GraphFragment | undefined;
 
-export class AuthorModuleError extends Error {
+export class AuthorGraphError extends Error {
   readonly code: string;
   readonly subject: string | undefined;
 
   constructor(code: string, message: string, subject?: string) {
     super(message);
-    this.name = "AuthorModuleError";
+    this.name = "AuthorGraphError";
     this.code = code;
     this.subject = subject;
   }
@@ -85,7 +76,7 @@ function assert(
   message: string,
   subject?: string,
 ): asserts condition {
-  if (!condition) throw new AuthorModuleError(code, message, subject);
+  if (!condition) throw new AuthorGraphError(code, message, subject);
 }
 
 function sameType(left: TypeRef, right: TypeRef): boolean {
@@ -142,31 +133,12 @@ function normalizeComponent(component: AuthorComponent): AuthorComponent {
   };
 }
 
-function authorModuleContent(module: AuthorModule): AuthorModule {
-  return {
-    format: "svml.author-module@1",
-    components: [...module.components]
-      .map(normalizeComponent)
-      .sort((left, right) => left.id.localeCompare(right.id)),
-  };
-}
-
-export function sealAuthorModule(
-  module: Omit<AuthorModule, "format">,
-): AuthorModule {
-  const draft: AuthorModule = {
-    format: "svml.author-module@1" as const,
-    ...module,
-  };
-  return authorModuleContent(draft);
-}
-
 type CollectedComponent = {
   readonly declaration: AuthorComponent;
   readonly fragment: GraphFragment;
 };
 
-type CollectedAuthorModule = {
+type CollectedAuthorGraph = {
   readonly components: ReadonlyMap<string, CollectedComponent>;
   readonly outputs: ReadonlyMap<string, AuthorOutputBinding>;
   readonly ordered: readonly CollectedComponent[];
@@ -177,22 +149,22 @@ function outputKey(component: string, output: string): string {
 }
 
 /** Phase one: lock every component and predeclare every public output before resolving any input. */
-function collectAuthorModule(
+function collectAuthorGraph(
   program: LinkedProgram,
-  module: AuthorModule,
+  declarations: readonly AuthorComponent[],
   resolveFragment: GraphFragmentResolver,
-): CollectedAuthorModule {
-  assert(module.format === "svml.author-module@1", "UNSUPPORTED_AUTHOR_MODULE", "unsupported Author Module format");
+): CollectedAuthorGraph {
   const components = new Map<string, CollectedComponent>();
   const outputs = new Map<string, AuthorOutputBinding>();
   const outputIds = new Set<string>();
 
-  for (const declaration of module.components) {
+  for (const rawDeclaration of declarations) {
+    const declaration = normalizeComponent(rawDeclaration);
     assert(declaration.id.length > 0, "EMPTY_AUTHOR_COMPONENT_ID", "Author component id is empty");
     assert(
       !components.has(declaration.id),
       "DUPLICATE_AUTHOR_COMPONENT",
-      `Author Module repeats component ${declaration.id}`,
+      `Author Graph repeats component ${declaration.id}`,
       declaration.id,
     );
     assert(isDigest(declaration.fragment), "INVALID_FRAGMENT_DIGEST", `${declaration.id} Fragment digest is invalid`);
@@ -221,7 +193,7 @@ function collectAuthorModule(
       assert(
         !outputIds.has(id),
         "DUPLICATE_LOGICAL_OUTPUT_ID",
-        `Author Module binds Logical Output ${id} more than once`,
+        `Author Graph binds Logical Output ${id} more than once`,
         id,
       );
       outputIds.add(id);
@@ -242,12 +214,12 @@ function collectAuthorModule(
 }
 
 /** Phase two: resolve symbolic references, reject cycles/types errors, then elaborate ordinary Core data. */
-export function elaborateAuthorModule(
+export function elaborateAuthorGraph(
   program: LinkedProgram,
-  module: AuthorModule,
+  components: readonly AuthorComponent[],
   resolveFragment: GraphFragmentResolver,
 ): CompiledGraph {
-  const collected = collectAuthorModule(program, module, resolveFragment);
+  const collected = collectAuthorGraph(program, components, resolveFragment);
   const records = new Map(program.records.map((record) => [record.id, record]));
   const visiting: string[] = [];
   const visited = new Set<string>();

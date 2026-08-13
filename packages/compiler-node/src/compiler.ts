@@ -4,10 +4,7 @@ import {
   compileSourceClosure,
   prepareAuthorSource,
 } from "@narratage/elaborator";
-import {
-  link,
-  sealTypedModule,
-} from "@narratage/core";
+import { link } from "@narratage/core";
 import type {
   AuthorFrontendRegistryLike,
   AuthorSourceDiscovery,
@@ -203,16 +200,13 @@ export class NodeCompiler {
 
   /**
    * Add modules used only by Run implementations without changing Author records or Author Graph
-   * identity. Typed Modules are rebound to the larger verified closure before Core sees Run code.
+   * identity. Authored Records are rebound to the larger verified closure before Core sees Run code.
    */
   extendExecutionProgram(program: LinkedProgram, requests: readonly string[]): LinkedProgram {
     const existing = program.closure.modules.map((item) => `${item.ref.name}@${item.ref.version}`);
     const closure = this.#options.modules.createClosure([...existing, ...requests]);
     if (closure.digest === program.closure.digest) return program;
-    const rebound = program.records.length === 0 ? [] : [sealTypedModule({
-      records: program.records,
-    })];
-    const extended = link(closure, rebound);
+    const extended = link(closure, program.records);
     if (extended.semanticDigest !== program.semanticDigest) {
       throw new NodeCompilerError(
         "EXECUTION_PROGRAM_SEMANTIC_DRIFT",

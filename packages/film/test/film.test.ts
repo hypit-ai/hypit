@@ -15,7 +15,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 import { ProducerRegistry, NodeDriver } from "@narratage/driver-node";
@@ -178,7 +177,7 @@ const records = await Promise.all([
   sealRecord({ id: "background", type: compositionTypes.visualTrack, value: stored(background), origin }),
   sealRecord({ id: "audio", type: compositionTypes.audioTrack, value: stored(audio), origin }),
 ].map(async (record) => await admitRecord(closure, record, validatorRegistry())));
-const linked = link(closure, [sealTypedModule({ records })]);
+const linked = link(closure, records);
 
 const textInstance = elaborateGraphFragment(linked, typographyTrackFragment, {
   id: "title",
