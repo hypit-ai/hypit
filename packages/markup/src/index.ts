@@ -3,9 +3,7 @@ export {
   decodeMarkup,
   createMarkupAuthorFrontend,
   markupAuthorFrontendId,
-  markupFrontend,
   markupFrontendImplementationDigest,
-  markupFrontendRef,
 } from "./frontend.js";
 export { MarkupSurfaceRegistry } from "./registry.js";
 export {

@@ -46,14 +46,26 @@ import type { ModuleManifest, ModuleRef } from "@narratage/protocol";
 
 export const myComponentModuleRef: ModuleRef = {
   name: "@narratage/my-component",
-  version: 1,
+  version: "1",
 };
 
 export const myComponentManifest: ModuleManifest = {
-  module: myComponentModuleRef,
+  format: "svml.module@1",
+  name: myComponentModuleRef.name,
+  version: myComponentModuleRef.version,
+  dependencies: [],
   types: [ /* your nominal Types */ ],
+  capabilities: [],
   producers: [ /* your deterministic Producers */ ],
 };
+
+export const myComponentMarkupSurfaces = [{
+  name: "widget",
+  tag: "Widget",
+  mode: "structured",
+  outputs: [ /* 这段语法可以创作的 Type */ ],
+  implementation: { digest: "sha256:..." },
+}] as const;
 ```
 
 Type 在名义上归属于 Module。Core 并不维护一个包含所有领域类型的中央联合类型 —— 安装一个新包就能添加新的 Type，无需发布新的 Core 版本。
@@ -64,9 +76,9 @@ Surface handler 把 Markup Frontend 的 XML 元素解码成带类型的作者声
 
 ```typescript
 // src/surface.ts
-import type { MarkupSurfaceDecoder } from "@narratage/markup";
+import type { StructuredSurfaceHandler } from "@narratage/markup";
 
-export const decodeMyComponentSurface: MarkupSurfaceDecoder = (element, context) => {
+export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element }) => {
   // Read attributes and children from the XML element
   // Validate inputs
   // Emit typed Records and Operations into context
@@ -86,23 +98,20 @@ export const decodeMyComponentSurface: MarkupSurfaceDecoder = (element, context)
 import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   myComponentManifest,
+  myComponentMarkupSurfaces,
   myComponentModuleRef,
   decodeMyComponentSurface,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/my-component",
   modules: [{
     manifest: myComponentManifest,
-    specifiers: ["@narratage/my-component", "@narratage/my-component@1"],
   }],
   hostFacets: [
     createMarkupSurfaceHostFacet({
       module: myComponentModuleRef,
-      surface: "my-widget",
-      mode: "structured",
-      implementationDigest: "sha256:...",
+      declaration: myComponentMarkupSurfaces[0],
       handler: decodeMyComponentSurface,
     }),
   ],
@@ -111,7 +120,10 @@ export const svmlPackage = {
 export default svmlPackage;
 ```
 
-`specifiers` 数组列出了 `<import from="..."/>` 会去匹配的字符串。`surface` 字符串决定 XML 元素前缀（以 `mine` 导入时即为 `<mine:my-widget>`）。
+Module 会自动提供精确的 `manifest.name@manifest.version`，所以作者直接导入
+`@narratage/my-component@1`，无需再声明一份重复别名。只有包确实拥有另一个逻辑名称时
+才使用可选的 `specifiers`。Surface declaration 决定可接受的标签（以 `mine` 导入时即为
+`<mine:Widget>`）。它属于 Markup Host facet，不属于语义 Module Manifest，更不属于 Core。
 
 ## 6. 声明包依赖
 

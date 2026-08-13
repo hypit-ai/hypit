@@ -31,8 +31,6 @@ export type Awaitable<T> = T | Promise<T>;
 
 export type EndpointFulfillment = {
   readonly value: StoredValue;
-  /** Provider-specific operational detail retained by OperationStore, never forwarded into Core data. */
-  readonly metadata?: CanonicalValue;
 };
 
 export type EndpointInvocationContext = {
@@ -62,7 +60,7 @@ export type EndpointStartContext = EndpointInvocationContext & {
 };
 
 export type EndpointResumeContext = EndpointStartContext & {
-  /** Undefined means the process stopped after intent was journaled but before a checkpoint existed. */
+  /** Undefined means the process stopped after intent was persisted but before a checkpoint existed. */
   readonly checkpoint: CanonicalValue | undefined;
 };
 
@@ -135,7 +133,6 @@ export interface EndpointRegistrar {
 }
 
 export type EndpointPackage = {
-  readonly name: string;
   readonly manifest: RuntimeModuleManifest;
   readonly instance: RuntimeProfileInstance;
   readonly bindings: readonly RuntimeEndpointBinding[];
@@ -178,7 +175,6 @@ export type DefineEndpointPackageOptions = {
   /** Explicit non-secret account, deployment or compute-pool identity. */
   readonly authority: string;
   readonly implementation: {
-    readonly locator: string;
     readonly digest: Digest;
   };
   /** Non-secret deployment facts such as base URL, region and credential references. */
@@ -212,7 +208,6 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
   assert(options.facet.trim().length > 0, "Endpoint facet is empty");
   assert(options.instance.trim().length > 0, "Endpoint instance is empty");
   assert(options.authority.trim().length > 0, "Endpoint Provider Authority is empty");
-  assert(options.implementation.locator.trim().length > 0, "Endpoint implementation locator is empty");
   assert(isDigest(options.implementation.digest), "Endpoint implementation digest is invalid");
   assert(options.capabilities.length > 0, "Endpoint package declares no capability");
   const lifecycle = options.capabilities[0]!.lifecycle;
@@ -285,7 +280,6 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     endpoint: options.instance,
   }));
   return {
-    name: options.instance,
     manifest,
     instance,
     bindings,

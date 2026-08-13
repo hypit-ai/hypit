@@ -304,7 +304,6 @@ function occurrenceItem(
 ): TextItem {
   return {
     id: count === 1 ? spec.id : occurrence.id,
-    sourceOccurrenceId: occurrence.sourceOccurrenceId,
     span: { ...occurrence.span },
     geometry: structuredClone(geometry),
     document: structuredClone(spec.document),

@@ -22,6 +22,7 @@ export {
   doctorRuntimeConfig,
   parseRuntimeConfig,
   runtimeConfigPackageSelection,
+  runtimeConfigRevision,
 } from "./config.js";
 export {
   bringExternalServicesUp,

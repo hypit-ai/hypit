@@ -29,7 +29,7 @@ export const programSpaceManifest: ModuleManifest = {
     name: programSpaceTypes.programSpace.name,
     schema: programSpaceSchema,
   }],
-  capabilities: [], surfaces: [], producers: [],
+  capabilities: [], producers: [],
 };
 export const programSpaceManifestDigest = digestOf(programSpaceManifest);
 export const programSpaceDependency = { module: programSpaceModuleRef, digest: programSpaceManifestDigest } as const;

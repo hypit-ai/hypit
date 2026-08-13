@@ -1,5 +1,6 @@
 export { materializeArtifact, materializeRecord } from "./archive.js";
 export { runCli } from "./main.js";
+export { discoverSourcePackages } from "./source-discovery.js";
 export { renderCliError, writeCliHelp, writeCliOutput } from "./output.js";
 export type {
   CliColorMode,
@@ -12,3 +13,4 @@ export type {
   CliCompilerOptions,
   CliDistribution,
 } from "./distribution.js";
+export type * from "./runtime-port.js";

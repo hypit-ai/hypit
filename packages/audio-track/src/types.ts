@@ -1,4 +1,4 @@
-import type { AudioTrack, FrameSpan } from "@narratage/composition";
+import type { FrameSpan } from "@narratage/composition";
 import type { BlobRef } from "@narratage/protocol";
 import type {
   OccurrenceExpansion,
@@ -39,7 +39,6 @@ export type AudioTrackHeader = {
 
 export type AudioItemProgram = {
   readonly id: string;
-  readonly sourceOccurrenceId: string;
   readonly window: FrameSpan;
   readonly source: {
     readonly artifact: BlobRef;
@@ -66,9 +65,4 @@ export type AudioTrackProgram = {
 export type AudioTrackSet = {
   readonly contract: "svml.audio-track-set@1";
   readonly items: readonly AudioItemProgram[];
-};
-
-export type AudioTrackProduct = {
-  readonly contract: "svml.audio-track-product@1";
-  readonly track: AudioTrack;
 };

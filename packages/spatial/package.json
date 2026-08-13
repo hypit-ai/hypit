@@ -14,8 +14,7 @@
     "@narratage/component-kit": "workspace:*",
     "@narratage/elaborator": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/markup": "workspace:*",
-    "@narratage/validation": "workspace:*"
+    "@narratage/markup": "workspace:*"
   },
   "devDependencies": {
     "@narratage/core": "workspace:*"

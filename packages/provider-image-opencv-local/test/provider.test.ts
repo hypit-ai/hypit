@@ -66,7 +66,7 @@ function composeNeed(source: BlobRef): Need {
 
 test("the OpenCV package is one replaceable Endpoint with no second queue", async () => {
   const provider = createLocalOpenCvImageProvider({ defaultConcurrency: 3 });
-  assert.equal(provider.name, "image.opencv.local");
+  assert.equal(provider.instance.id, "image.opencv.local");
   const facet = provider.manifest.facets[0];
   assert(facet?.role === "capability-endpoint");
   assert.equal(facet.defaultConcurrency, 3);

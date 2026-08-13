@@ -41,6 +41,13 @@ export function projectSpeechAudio(basis: SpeechBasis): SpeechAudioBasis {
 export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
   assertSpeechBasisIdentity(basis);
   const trackId = `speech-visual:${basis.segments.map((segment) => segment.segmentId).join("+")}`;
+  const frameAt = (seconds: number): number => Math.round(
+    seconds * basis.programSpace.frameRate.numerator / basis.programSpace.frameRate.denominator,
+  );
+  const spans = new Map(basis.segments.map((segment) => [segment.segmentId, {
+    startFrame: frameAt(segment.startSec),
+    endFrameExclusive: frameAt(segment.endSec),
+  }]));
   return sealVisualTrack({
     contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
@@ -48,17 +55,20 @@ export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
     presents: lowerRestrictedSpeechVisualPresents(
       trackId,
       basis.programSpace,
-      basis.visualTrack.clips.map((clip) => ({
-        id: clip.segmentId,
-        span: structuredClone(clip.span),
-        artifact: clip.artifact,
-        extent: clip.extent,
-        frameRate: clip.frameRate,
-        frameCount: clip.frameCount,
-        frame: clip.frame,
-        fit: clip.fit,
-        stackingOrder: clip.stackingOrder,
-      })),
+      basis.visualTrack.clips.map((clip) => {
+        const span = spans.get(clip.segmentId)!;
+        return {
+          id: clip.segmentId,
+          span,
+          artifact: clip.artifact,
+          extent: clip.extent,
+          frameRate: basis.programSpace.frameRate,
+          frameCount: span.endFrameExclusive - span.startFrame,
+          frame: clip.frame,
+          fit: clip.fit,
+          stackingOrder: clip.stackingOrder,
+        };
+      }),
     ),
   });
 }

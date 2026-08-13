@@ -8,12 +8,12 @@ const object = (
 export const narrativeSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.narrative@1" } },
   segments: { schema: { kind: "array", minItems: 1, items: object({
-    id: { schema: string }, index: { schema: integer }, startAnchorId: { schema: string },
+    id: { schema: string }, startAnchorId: { schema: string },
     endAnchorId: { schema: string }, tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer },
   }) } },
   tokens: { schema: { kind: "array", items: object({
-    id: { schema: string }, index: { schema: integer }, segmentId: { schema: string },
-    segmentTokenIndex: { schema: integer }, startAnchorId: { schema: string }, endAnchorId: { schema: string },
+    id: { schema: string }, segmentId: { schema: string },
+    startAnchorId: { schema: string }, endAnchorId: { schema: string },
     text: { schema: string }, normalized: { schema: string },
   }) } },
   turns: { schema: { kind: "array", items: object({
@@ -36,7 +36,6 @@ export const narrativeSchema: ValueSchema = object({
       id: { schema: string },
       kind: { schema: { kind: "string", enum: ["segment-start", "token-start", "token-end", "segment-end"] } },
       segmentId: { schema: string }, tokenId: { schema: string, optional: true },
-      segmentTokenIndex: { schema: integer, optional: true },
     }) } },
   }) },
 });
@@ -47,11 +46,11 @@ export const narrativeExcerptSchema: ValueSchema = object({
   tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer },
 });
 const captionDisplayWord = object({
-  id: { schema: string }, index: { schema: integer }, atomId: { schema: string }, segmentId: { schema: string },
+  id: { schema: string }, atomId: { schema: string }, segmentId: { schema: string },
   turnId: { schema: string }, role: { schema: string, optional: true }, text: { schema: string },
 });
 const captionDisplayAtom = object({
-  id: { schema: string }, index: { schema: integer }, segmentId: { schema: string },
+  id: { schema: string }, segmentId: { schema: string },
   turnId: { schema: string }, role: { schema: string, optional: true },
   wordIds: { schema: { kind: "array", minItems: 1, items: string } },
 });

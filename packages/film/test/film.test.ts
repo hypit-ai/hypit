@@ -124,7 +124,6 @@ const textProgram = sealTypographyTrackProgram({
   id: "title-track",
   items: [{
     id: "title",
-    sourceOccurrenceId: "program",
     span: { startFrame: 10, endFrameExclusive: 100 },
     tieBreak: "title",
     geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 86.4, yPx: 192, widthPx: 907.2, heightPx: 384 } },
@@ -179,7 +178,7 @@ const records = await Promise.all([
   sealRecord({ id: "background", type: compositionTypes.visualTrack, value: stored(background), origin }),
   sealRecord({ id: "audio", type: compositionTypes.audioTrack, value: stored(audio), origin }),
 ].map(async (record) => await admitRecord(closure, record, validatorRegistry())));
-const linked = link(closure, [sealTypedModule({ id: "author:film-test", closureDigest: closure.digest, records })]);
+const linked = link(closure, [sealTypedModule({ records })]);
 
 const textInstance = elaborateGraphFragment(linked, typographyTrackFragment, {
   id: "title",

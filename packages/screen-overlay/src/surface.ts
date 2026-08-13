@@ -137,6 +137,6 @@ export const decodeScreenOverlaySurface: StructuredSurfaceHandler = ({ element, 
     }
   }
   if (fragmentItems.length === 0) throw new Error(`${element.name} requires at least one component.`);
-  const fragment = createScreenOverlayFragment(fragmentItems, `@narratage/screen-overlay/surface/${id}@1`);
+  const fragment = createScreenOverlayFragment(fragmentItems);
   return { records, components: [{ id, fragment: fragment.id, inputs, outputs: { program: `${id}.program`, track: `${id}.track` }, range: element.range }], fragments: [fragment] };
 };

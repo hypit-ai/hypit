@@ -6,7 +6,6 @@ export {
 export type {
   AuthorComponent,
   AuthorComponentOutputRef,
-  AuthorElaboration,
   AuthorModule,
   AuthorOutputBinding,
   AuthorRecordRef,
@@ -21,6 +20,12 @@ export {
   resolveCompiledSourceExport,
   verifySourceClosure,
 } from "./source.js";
+export {
+  authorFrontendsFromHostFacets,
+  createAuthorFrontendHostFacet,
+  installAuthorFrontendHostFacets,
+} from "./frontend-facet.js";
+export type { AuthorFrontendHostFacet } from "./frontend-facet.js";
 export type {
   AuthorFrontend,
   AuthorFrontendSourceUnit,
@@ -42,7 +47,6 @@ export type {
   ResolvedAuthorSourceAsset,
   ResolvedAuthorSourceImport,
   SourceClosure,
-  SourceClosureAsset,
   SourceClosureUnit,
 } from "./source.js";
 export {

@@ -32,7 +32,7 @@ export const narrativeManifest: ModuleManifest = {
     { name: narrativeTypes.captionCorrespondence.name, schema: captionCorrespondenceSchema },
     { name: narrativeTypes.captionDisplayWordSubset.name, schema: captionDisplayWordSubsetSchema },
   ],
-  capabilities: [], surfaces: [], producers: [],
+  capabilities: [], producers: [],
 };
 export const narrativeManifestDigest = digestOf(narrativeManifest);
 export const narrativeDependency = { module: narrativeModuleRef, digest: narrativeManifestDigest } as const;

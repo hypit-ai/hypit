@@ -112,7 +112,6 @@ test("Driver pauses at an unbound Need, serializes, then resumes without rerunni
     assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
     return {
       value: { kind: "inline", value: "Hello, Ada!" },
-      metadata: { endpoint: "fixture" },
     };
   }, { runtimeImplementation: endpointImplementation });
 
@@ -162,7 +161,6 @@ test("an Endpoint receives only declared credential slots and secrets never ente
       assert.equal(credentials.apiKey?.secret, "top-secret-value");
       return {
         value: { kind: "inline", value: "Credentialed result" },
-        metadata: { authenticated: true },
       };
     },
     { credentials: { apiKey: credentialRef("test", "endpoint-key") } },
@@ -272,27 +270,11 @@ test("Driver reads static manifests without executing package code", async () =>
   const directory = await mkdtemp(join(tmpdir(), "svml-driver-"));
   const path = join(directory, "svml.module.json");
   try {
-    const withSurface = {
-      ...manifest,
-      surfaces: [
-        {
-          name: "greeting",
-          tag: "greeting",
-          mode: "structured" as const,
-          outputs: [types.intent],
-          implementation: {
-            kind: "trusted-frontend-surface",
-            locator: "example.greeting/surface",
-            digest: digestOf("example.greeting/surface@0"),
-          },
-        },
-      ],
-    };
-    await writeFile(path, JSON.stringify(withSurface), "utf8");
+    await writeFile(path, JSON.stringify(manifest), "utf8");
     const closure = await loadResolvedClosure([path]);
     assert.equal(closure.modules.length, 1);
     assert.equal(closure.modules[0]?.manifest.name, "example.greeting");
-    assert.equal(closure.modules[0]?.manifest.surfaces[0]?.mode, "structured");
+    assert.equal(closure.modules[0]?.manifest.producers[0]?.name, greetingProducers.makePrompt.name);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -304,7 +286,7 @@ test("Core still owns scheduling when Driver has every implementation", async ()
     value: { kind: "inline", value: "Hello, Ada!" },
   }));
   const start = createGreetingBuild();
-  assert.equal(reduce(start).commands[0]?.kind, "invoke-producer");
+  assert.equal(reduce(start).outstanding[0]?.kind, "invoke-producer");
   const result = await new NodeDriver({ producers, endpoints }).run(start);
   assert.equal(result.status, "complete");
 });
@@ -361,14 +343,13 @@ test("a transient Handler failure pauses and can resume without replaying comple
     if (attempts === 1) throw new Error("temporary outage");
     return {
       value: { kind: "inline", value: "Hello after retry" },
-      metadata: { attempt: attempts },
     };
   });
 
   const driver = new NodeDriver({ producers, endpoints });
   const paused = await driver.run(createGreetingBuild());
   assert.equal(paused.status, "paused");
-  assert.match(paused.journal.at(-1)?.message ?? "", /temporary outage/u);
+  assert.match(paused.outcomes.at(-1)?.message ?? "", /temporary outage/u);
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 0, fulfill: 1 });
 
   const completed = await driver.run(paused.state);

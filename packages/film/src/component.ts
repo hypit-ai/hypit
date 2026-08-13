@@ -24,7 +24,6 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const filmComponent = {
-  name: "@narratage/film",
   producers: [
     {
       producer: filmProducers.createTrackSet,

@@ -20,9 +20,9 @@ import {
   finalizeScreenOverlay,
   renderScreenOverlay,
   screenOverlayManifest,
+  screenOverlayMarkupSurfaces,
   screenOverlayModuleRef,
   screenOverlayProducers,
-  screenOverlaySurfaceImplementationDigest,
   sealScreenOverlayHeader,
   sealScreenOverlayItemSpec,
 } from "@narratage/screen-overlay";
@@ -116,7 +116,7 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
 });
 
 test("the package has no lower-composite, sibling Track, backdrop-filter or hidden audio port", () => {
-  const fragment = createScreenOverlayFragment([{ kind: "program", specName: "spec" }], "example.overlay@1");
+  const fragment = createScreenOverlayFragment([{ kind: "program", specName: "spec" }]);
   assert.deepEqual(fragment.inputs.map((input) => input.name), ["canvas", "header", "space", "spec"]);
   assert.equal(fragment.exports.some((output) => output.type.name === "AudioTrack"), false);
   assert.throws(() => sealScreenOverlayItemSpec({
@@ -130,6 +130,11 @@ test("the package has no lower-composite, sibling Track, backdrop-filter or hidd
 test("the self-described Screen Surface parses into a finite peer-Track graph", async () => {
   const fixtureModule = { name: "example.screen-inputs", version: "1" } as const;
   const fixtureSurfaceDigest = digestOf("example.screen-inputs/surface@1");
+  const fixtureSurface = {
+    name: "inputs", tag: "Inputs", mode: "structured",
+    outputs: [spatialTypes.canvas, programSpaceTypes.programSpace],
+    implementation: { digest: fixtureSurfaceDigest },
+  } as const;
   const fixtureManifest: ModuleManifest = {
     format: "svml.module@1",
     name: fixtureModule.name,
@@ -137,17 +142,6 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
     dependencies: [spatialDependency, programSpaceDependency],
     types: [],
     capabilities: [],
-    surfaces: [{
-      name: "inputs",
-      tag: "Inputs",
-      mode: "structured",
-      outputs: [spatialTypes.canvas, programSpaceTypes.programSpace],
-      implementation: {
-        kind: "trusted-frontend-surface",
-        locator: "example.screen-inputs/surface",
-        digest: fixtureSurfaceDigest,
-      },
-    }],
     producers: [],
   };
   const closure = createResolvedClosure([
@@ -166,20 +160,19 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
     fixtureManifest,
   ]);
   const registry = new MarkupSurfaceRegistry();
-  registry.registerStructured(fixtureModule, "inputs", fixtureSurfaceDigest, ({ element }) => ({
+  registry.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
       { id: "canvas", type: spatialTypes.canvas, value: { kind: "inline", value: canvas }, range: element.range },
       { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
     ],
     components: [],
     fragments: [],
-  }));
-  registry.registerStructured(
-    screenOverlayModuleRef,
-    "track",
-    screenOverlaySurfaceImplementationDigest,
-    decodeScreenOverlaySurface,
-  );
+  }) });
+  registry.registerStructured({
+    module: screenOverlayModuleRef,
+    declaration: screenOverlayMarkupSurfaces.find((item) => item.name === "track")!,
+    handler: decodeScreenOverlaySurface,
+  });
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({
     registry,
@@ -208,8 +201,8 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
   });
   const trackExport = resolveCompiledSourceExport(compiled, "screen-fx.track", compositionTypes.visualTrack);
   assert.equal(trackExport.ref.kind, "logical-output");
-  const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
-    graph: compiled.elaboration.graph.id,
+  const build = start(compiled.program, compiled.graph, sealBuildRequest({
+    graph: compiled.graph.id,
     targets: [{ output: trackExport.ref.kind === "logical-output" ? trackExport.ref.id : "" }],
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [

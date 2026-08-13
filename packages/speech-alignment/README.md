@@ -14,7 +14,7 @@ into the selected ProgramSpace and contains one timing for every Script token an
 semantic anchors.
 
 The locator accepts Narrative, SpeechAudioBasis and AlignedTranscriptEvidence through three explicit
-graph edges. It checks duration, Segment identity, order and windows against the supplied Basis.
+graph edges. It checks Segment identity, order and measured windows against the supplied Basis.
 Artifact/Basis lineage stays in the upstream request edges and Derivations instead of being copied
 through every evidence value.
 

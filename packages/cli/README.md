@@ -8,12 +8,11 @@ must pass one explicit `CliDistribution`:
 
 ```ts
 type CliDistribution = {
-  name: string;
   packageRoot?: string;
-  builtInPackageContributions: readonly NodePackageContribution[];
-  runFrontends: readonly RunFrontend[];
+  bootstrapPackages: readonly NodePackageBinding[];
   createCompiler(options): NodeCompiler;
-  createRuntimeFromConfig(path): Promise<LocalRuntime>;
+  runtimeProfileRevision(path): Promise<string>;
+  createRuntimeFromConfig(path): Promise<CliRuntime>;
 };
 ```
 
@@ -21,6 +20,8 @@ A Distribution is trusted application assembly, not Core data or source-import a
 official `@narratage/video-cli` selects `@narratage/compiler-markup-node` and the current video Runtime
 adapters, but no author-package aggregate. A package lock selects the exact Author/Run packages.
 Another domain can reuse this command engine without installing any video package.
+The Worker lifecycle compares only the opaque revision supplied by the Distribution; the command
+engine does not parse a Runtime Profile or know which files that Profile considers deployment input.
 
 `check` accepts any self-described Author or Run Source whose Header names a trusted Frontend.
 `plan` and `build` require a Run Source. Targets and Candidate selections may

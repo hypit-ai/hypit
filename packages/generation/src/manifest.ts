@@ -42,10 +42,7 @@ export const generationManifest: ModuleManifest = {
       name: generationTypes.audioSet.name,
       schema: generatedAudioSetSchema,
       validator: {
-        abi: "svml.type-validator@1",
         implementation: {
-          kind: "registered",
-          locator: "@narratage/generation/validate-generated-audio-set",
           digest: generationValidatorDigests.audioSet,
         },
       },
@@ -54,10 +51,7 @@ export const generationManifest: ModuleManifest = {
       name: generationTypes.imageSet.name,
       schema: generatedImageSetSchema,
       validator: {
-        abi: "svml.type-validator@1",
         implementation: {
-          kind: "registered",
-          locator: "@narratage/generation/validate-generated-image-set",
           digest: generationValidatorDigests.imageSet,
         },
       },
@@ -66,17 +60,13 @@ export const generationManifest: ModuleManifest = {
       name: generationTypes.videoSet.name,
       schema: generatedVideoSetSchema,
       validator: {
-        abi: "svml.type-validator@1",
         implementation: {
-          kind: "registered",
-          locator: "@narratage/generation/validate-generated-video-set",
           digest: generationValidatorDigests.videoSet,
         },
       },
     },
   ],
   capabilities: [],
-  surfaces: [],
   producers: [
     {
       name: generationProducers.primaryAudio.name,
@@ -84,8 +74,6 @@ export const generationManifest: ModuleManifest = {
       outputs: [{ name: "audio", type: artifactTypes.blob }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/generation/select-primary-audio",
         digest: generationProducerDigests.primaryAudio,
       },
     },
@@ -98,8 +86,6 @@ export const generationManifest: ModuleManifest = {
       }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/generation/select-primary-image",
         digest: generationProducerDigests.primaryImage,
       },
     },
@@ -112,8 +98,6 @@ export const generationManifest: ModuleManifest = {
       }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/generation/select-primary-video",
         digest: generationProducerDigests.primaryVideo,
       },
     },

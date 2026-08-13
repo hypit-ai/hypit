@@ -10,7 +10,7 @@ export const rasterManifest: ModuleManifest = {
   format: "svml.module@1", name: rasterModuleRef.name, version: rasterModuleRef.version,
   dependencies: [artifactDependency], types: [],
   capabilities: [{ name: rasterCapabilities.execute.name, returns: artifactTypes.blob }],
-  producers: [], surfaces: [],
+  producers: [],
 };
 export const rasterManifestDigest = digestOf(rasterManifest);
 export const rasterDependency = { module: rasterModuleRef, digest: rasterManifestDigest } as const;

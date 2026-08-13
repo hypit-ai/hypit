@@ -25,9 +25,9 @@ import {
   sealSpatialPath,
   spatialComponent,
   spatialManifest,
+  spatialMarkupSurfaces,
   spatialModuleRef,
   spatialProducers,
-  spatialSurfaceDigests,
   spatialTypes,
 } from "../src/index.js";
 import type { ContentFit, IntrinsicExtent, SpatialAnchor, SpatialFrame } from "../src/index.js";
@@ -202,12 +202,17 @@ function source(text: string): AuthorSourceUnit {
 test("self-described Spatial Surfaces produce an explicit Canvas edge and finite Frame graph", async () => {
   const closure = createResolvedClosure([spatialManifest]);
   const surfaces = new MarkupSurfaceRegistry();
-  surfaces.registerStructured(spatialModuleRef, "canvas", spatialSurfaceDigests.canvas, decodeCanvasSurface);
-  surfaces.registerStructured(spatialModuleRef, "point", spatialSurfaceDigests.point, decodePointSurface);
-  surfaces.registerStructured(spatialModuleRef, "path", spatialSurfaceDigests.path, decodePathSurface);
-  surfaces.registerStructured(spatialModuleRef, "frame", spatialSurfaceDigests.frame, decodeFrameSurface);
-  surfaces.registerStructured(spatialModuleRef, "anchored-frame", spatialSurfaceDigests.anchoredFrame, decodeAnchoredFrameSurface);
-  surfaces.registerStructured(spatialModuleRef, "aspect-frame", spatialSurfaceDigests.aspectFrame, decodeAspectFrameSurface);
+  const register = (name: string, handler: Parameters<MarkupSurfaceRegistry["registerStructured"]>[0]["handler"]) => {
+    const declaration = spatialMarkupSurfaces.find((item) => item.name === name);
+    if (declaration === undefined) throw new Error(`missing Spatial Surface ${name}`);
+    surfaces.registerStructured({ module: spatialModuleRef, declaration, handler });
+  };
+  register("canvas", decodeCanvasSurface);
+  register("point", decodePointSurface);
+  register("path", decodePathSurface);
+  register("frame", decodeFrameSurface);
+  register("anchored-frame", decodeAnchoredFrameSurface);
+  register("aspect-frame", decodeAspectFrameSurface);
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({ registry: surfaces, resolveModule: () => spatialModuleRef }));
   const validators = new TypeValidatorRegistry();
@@ -235,8 +240,8 @@ test("self-described Spatial Surfaces produce an explicit Canvas edge and finite
   assert.equal(resolveCompiledSourceExport(compiled, "headline-path", spatialTypes.path).ref.kind, "record");
   const sticker = resolveCompiledSourceExport(compiled, "sticker", spatialTypes.frame);
   assert.equal(sticker.ref.kind, "logical-output");
-  const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
-    graph: compiled.elaboration.graph.id,
+  const build = start(compiled.program, compiled.graph, sealBuildRequest({
+    graph: compiled.graph.id,
     targets: [{ output: sticker.ref.kind === "logical-output" ? sticker.ref.id : "" }],
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [

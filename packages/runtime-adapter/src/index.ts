@@ -10,12 +10,18 @@ import type { RuntimeServicePackage } from "@narratage/runtime";
 import { credentialRef } from "@narratage/runtime";
 import type { CredentialRef } from "@narratage/runtime";
 
-export const runtimeAdapterHostAbi = "svml.runtime-adapter-host@1";
+export const runtimeEndpointAdapterHostAbi = "svml.runtime-endpoint-adapter-host@1";
+export const runtimeServiceAdapterHostAbi = "svml.runtime-service-adapter-host@1";
 
 export type RuntimeAdapterKind = "endpoint" | "runtime-service";
 
-export type RuntimeAdapterIdentity = {
-  readonly contract: "svml.runtime-adapter-facet@1";
+export function runtimeAdapterHostAbi(kind: RuntimeAdapterKind):
+  | typeof runtimeEndpointAdapterHostAbi
+  | typeof runtimeServiceAdapterHostAbi {
+  return kind === "endpoint" ? runtimeEndpointAdapterHostAbi : runtimeServiceAdapterHostAbi;
+}
+
+type RuntimeAdapterAddress = {
   readonly use: string;
   readonly kind: RuntimeAdapterKind;
 };
@@ -92,17 +98,14 @@ export type RuntimeServiceAdapterImplementation = {
 };
 
 export type RuntimeAdapterHostFacet = HostFacet & {
-  readonly abi: typeof runtimeAdapterHostAbi;
-  readonly identity: RuntimeAdapterIdentity;
+  readonly abi: ReturnType<typeof runtimeAdapterHostAbi>;
+  readonly identity?: never;
   readonly implementation: RuntimeEndpointAdapterImplementation | RuntimeServiceAdapterImplementation;
 };
 
 export type RuntimeAdapterPackageBinding = {
-  readonly packageName: string;
-  /** Actual digest of the selected physical package bytes. */
-  readonly packageArtifactDigest: Digest;
-  /** Actual digest of this physical package's transitive dependency closure. */
-  readonly packageClosureDigest: Digest;
+  /** Verified digest of the physical package and its complete dependency closure. */
+  readonly closureDigest: Digest;
 };
 
 type RuntimeAdapterRegistration = {
@@ -114,14 +117,14 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function identity(value: CanonicalValue): RuntimeAdapterIdentity {
-  assert(value !== null && typeof value === "object" && !Array.isArray(value),
-    "Runtime Adapter identity must be an object");
-  const item = value as unknown as RuntimeAdapterIdentity;
-  assert(item.contract === "svml.runtime-adapter-facet@1", "Runtime Adapter identity contract is unsupported");
-  assert(item.use.trim().length > 0, "Runtime Adapter use name is empty");
-  assert(item.kind === "endpoint" || item.kind === "runtime-service", "Runtime Adapter kind is invalid");
-  return canonicalize(item) as unknown as RuntimeAdapterIdentity;
+function address(facet: RuntimeAdapterHostFacet): RuntimeAdapterAddress {
+  const kind = facet.abi === runtimeEndpointAdapterHostAbi
+    ? "endpoint"
+    : facet.abi === runtimeServiceAdapterHostAbi ? "runtime-service" : undefined;
+  assert(kind !== undefined, `Runtime Adapter ${facet.abi} ABI is unsupported`);
+  assert(facet.offers?.length === 1 && facet.offers[0]!.trim().length > 0,
+    "Runtime Adapter must offer exactly one non-empty use name");
+  return { use: facet.offers[0]!, kind };
 }
 
 function implementation(
@@ -146,13 +149,10 @@ export function createRuntimeEndpointAdapterFacet(options: {
   readonly use: string;
   readonly activate: RuntimeEndpointAdapterImplementation["activate"];
 }): RuntimeAdapterHostFacet {
+  assert(options.use.trim().length > 0, "Runtime Adapter use name is empty");
   const facet: RuntimeAdapterHostFacet = {
-    abi: runtimeAdapterHostAbi,
-    identity: identity(canonicalize({
-      contract: "svml.runtime-adapter-facet@1",
-      use: options.use,
-      kind: "endpoint",
-    })),
+    abi: runtimeEndpointAdapterHostAbi,
+    offers: [options.use],
     implementation: implementation({ activate: options.activate }, `Runtime Adapter ${options.use}`, "endpoint"),
   };
   return facet;
@@ -164,13 +164,10 @@ export function createRuntimeServiceAdapterFacet(options: {
   readonly create: RuntimeServiceAdapterImplementation["create"];
   readonly doctor?: RuntimeServiceAdapterImplementation["doctor"];
 }): RuntimeAdapterHostFacet {
+  assert(options.use.trim().length > 0, "Runtime Adapter use name is empty");
   return {
-    abi: runtimeAdapterHostAbi,
-    identity: identity(canonicalize({
-      contract: "svml.runtime-adapter-facet@1",
-      use: options.use,
-      kind: "runtime-service",
-    })),
+    abi: runtimeServiceAdapterHostAbi,
+    offers: [options.use],
     implementation: implementation({
       validate: options.validate,
       create: options.create,
@@ -180,10 +177,10 @@ export function createRuntimeServiceAdapterFacet(options: {
 }
 
 export function isRuntimeAdapterHostFacet(value: HostFacet): value is RuntimeAdapterHostFacet {
-  if (value.abi !== runtimeAdapterHostAbi) return false;
   try {
-    identity(value.identity);
-    implementation(value.implementation, "Runtime Adapter", identity(value.identity).kind);
+    assert(value.identity === undefined, "Runtime Adapter facet must not carry a second identity");
+    const resolved = address(value as RuntimeAdapterHostFacet);
+    implementation(value.implementation, "Runtime Adapter", resolved.kind);
     return true;
   } catch {
     return false;
@@ -192,17 +189,14 @@ export function isRuntimeAdapterHostFacet(value: HostFacet): value is RuntimeAda
 
 function boundImplementationDigest(
   binding: RuntimeAdapterPackageBinding,
-  adapter: RuntimeAdapterIdentity,
+  adapter: RuntimeAdapterAddress,
   facet: string,
   declared: Digest,
 ): Digest {
-  assert(isDigest(binding.packageArtifactDigest), `${binding.packageName} package Artifact digest is invalid`);
-  assert(isDigest(binding.packageClosureDigest), `${binding.packageName} package Closure digest is invalid`);
+  assert(isDigest(binding.closureDigest), "Runtime Adapter package Closure digest is invalid");
   return digestOf({
     contract: "svml.loaded-runtime-implementation@1",
-    package: binding.packageName,
-    packageArtifact: binding.packageArtifactDigest,
-    packageClosure: binding.packageClosureDigest,
+    closure: binding.closureDigest,
     adapter,
     facet,
     declared,
@@ -232,7 +226,7 @@ function proxyRegistrar(
 
 function bindEndpointPackage(
   value: EndpointPackage,
-  adapter: RuntimeAdapterIdentity,
+  adapter: RuntimeAdapterAddress,
   binding: RuntimeAdapterPackageBinding | undefined,
 ): EndpointPackage {
   if (binding === undefined) return value;
@@ -257,7 +251,7 @@ function bindEndpointPackage(
 
 function bindServicePackage(
   value: RuntimeServicePackage,
-  adapter: RuntimeAdapterIdentity,
+  adapter: RuntimeAdapterAddress,
   binding: RuntimeAdapterPackageBinding | undefined,
 ): RuntimeServicePackage {
   if (binding === undefined) return value;
@@ -279,18 +273,20 @@ function bindServicePackage(
 export class RuntimeAdapterRegistry {
   readonly #registrations = new Map<string, RuntimeAdapterRegistration>();
 
+  #key(use: string, kind: RuntimeAdapterKind): string {
+    return `${kind}\u0000${use}`;
+  }
+
   #register(facet: RuntimeAdapterHostFacet, binding?: RuntimeAdapterPackageBinding): void {
-    assert(facet.abi === runtimeAdapterHostAbi, `Runtime Adapter ${facet.abi} ABI is unsupported`);
-    const normalized = identity(facet.identity);
-    implementation(facet.implementation, `Runtime Adapter ${normalized.use}`, normalized.kind);
-    assert(!this.#registrations.has(normalized.use), `Runtime Adapter ${normalized.use} is already registered`);
+    const resolved = address(facet);
+    implementation(facet.implementation, `Runtime Adapter ${resolved.use}`, resolved.kind);
+    const key = this.#key(resolved.use, resolved.kind);
+    assert(!this.#registrations.has(key), `Runtime ${resolved.kind} Adapter ${resolved.use} is already registered`);
     if (binding !== undefined) {
-      assert(binding.packageName.trim().length > 0, "Runtime Adapter physical package name is empty");
-      assert(isDigest(binding.packageArtifactDigest), `${binding.packageName} package Artifact digest is invalid`);
-      assert(isDigest(binding.packageClosureDigest), `${binding.packageName} package Closure digest is invalid`);
+      assert(isDigest(binding.closureDigest), "Runtime Adapter package Closure digest is invalid");
     }
-    this.#registrations.set(normalized.use, {
-      facet: { ...facet, identity: normalized },
+    this.#registrations.set(key, {
+      facet,
       ...(binding === undefined ? {} : { binding }),
     });
   }
@@ -301,8 +297,9 @@ export class RuntimeAdapterRegistry {
   }
 
   has(use: string, kind?: RuntimeAdapterKind): boolean {
-    const value = this.#registrations.get(use);
-    return value !== undefined && (kind === undefined || value.facet.identity.kind === kind);
+    return kind === undefined
+      ? this.#registrations.has(this.#key(use, "endpoint")) || this.#registrations.has(this.#key(use, "runtime-service"))
+      : this.#registrations.has(this.#key(use, kind));
   }
 
   /**
@@ -315,17 +312,11 @@ export class RuntimeAdapterRegistry {
     kind: RuntimeAdapterKind,
     context: RuntimeAdapterFactoryContext,
   ): readonly RuntimeDoctorDiagnostic[] {
-    const value = this.#registrations.get(use);
+    const value = this.#registrations.get(this.#key(use, kind));
     if (value === undefined) return [{
       severity: "error",
       code: "RUNTIME_ADAPTER_MISSING",
       message: `Runtime Adapter ${use} is not registered`,
-      subject: use,
-    }];
-    if (value.facet.identity.kind !== kind) return [{
-      severity: "error",
-      code: "RUNTIME_ADAPTER_KIND",
-      message: `Runtime Adapter ${use} is ${value.facet.identity.kind}, not ${kind}`,
       subject: use,
     }];
     assert(kind === "runtime-service", "Endpoint configuration is validated by its activation");
@@ -337,9 +328,8 @@ export class RuntimeAdapterRegistry {
     use: string,
     context: RuntimeAdapterFactoryContext,
   ): Promise<RuntimeEndpointActivation> {
-    const value = this.#registrations.get(use);
+    const value = this.#registrations.get(this.#key(use, "endpoint"));
     assert(value !== undefined, `Runtime Endpoint adapter ${use} is not registered`);
-    assert(value.facet.identity.kind === "endpoint", `Runtime Adapter ${use} is not an Endpoint adapter`);
     const implementation = value.facet.implementation as RuntimeEndpointAdapterImplementation;
     const activation = await implementation.activate(context);
     assert(activation !== null && typeof activation === "object", `Runtime Endpoint adapter ${use} returned no activation`);
@@ -353,7 +343,7 @@ export class RuntimeAdapterRegistry {
       `Runtime Endpoint adapter ${use} activation diagnose must be a function`);
     return {
       ...activation,
-      endpoint: bindEndpointPackage(activation.endpoint, value.facet.identity, value.binding),
+      endpoint: bindEndpointPackage(activation.endpoint, { use, kind: "endpoint" }, value.binding),
     };
   }
 
@@ -362,9 +352,8 @@ export class RuntimeAdapterRegistry {
   }
 
   async createService(use: string, context: RuntimeAdapterFactoryContext): Promise<RuntimeServicePackage> {
-    const value = this.#registrations.get(use);
+    const value = this.#registrations.get(this.#key(use, "runtime-service"));
     assert(value !== undefined, `Runtime service adapter ${use} is not registered`);
-    assert(value.facet.identity.kind === "runtime-service", `Runtime Adapter ${use} is not a Runtime service adapter`);
     const implementation = value.facet.implementation as RuntimeServiceAdapterImplementation;
     implementation.validate(context);
     const created = await implementation.create(context);
@@ -372,13 +361,12 @@ export class RuntimeAdapterRegistry {
       assert(service.instance.id === context.instance || service.instance.id.startsWith(`${context.instance}.`),
         `Runtime Adapter ${use} created service ${service.instance.id} outside configured namespace ${context.instance}`);
     }
-    return bindServicePackage(created, value.facet.identity, value.binding);
+    return bindServicePackage(created, { use, kind: "runtime-service" }, value.binding);
   }
 
   async doctor(use: string, kind: RuntimeAdapterKind, context: RuntimeAdapterFactoryContext): Promise<readonly RuntimeDoctorDiagnostic[]> {
-    const value = this.#registrations.get(use);
+    const value = this.#registrations.get(this.#key(use, kind));
     if (value === undefined) return [{ severity: "error", code: "RUNTIME_ADAPTER_MISSING", message: `Runtime Adapter ${use} is not registered`, subject: use }];
-    if (value.facet.identity.kind !== kind) return [{ severity: "error", code: "RUNTIME_ADAPTER_KIND", message: `Runtime Adapter ${use} is ${value.facet.identity.kind}, not ${kind}`, subject: use }];
     assert(kind === "runtime-service", "Endpoint diagnostics belong to its activation");
     const diagnose = (value.facet.implementation as RuntimeServiceAdapterImplementation).doctor;
     return diagnose === undefined ? [] : await diagnose(context);

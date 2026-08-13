@@ -160,7 +160,7 @@ Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本�
 本地文件就是最简单的零输入 Candidate：
 
 ```svml
-<file id="approved-opening" from="./approved-opening.mp4" media-type="video/mp4"/>
+<file id="approved-opening" type="@narratage/artifact@1#BlobArtifact" from="./approved-opening.mp4" media-type="video/mp4"/>
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
@@ -170,8 +170,9 @@ Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本�
 
 Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类型的工作：
 
-CLI 只接受声明式 `svml.runtime.json`。嵌入 Narratage 的应用可以通过 `@narratage/local`
-直接组装相同的 Runtime 角色；应用代码不是另一种 CLI Profile。完整说明见
+官方 video Distribution 目前按 JSON 解析这份文档；CLI 根据命令把它交给 Distribution，
+不会根据文件后缀赋予语义。嵌入 Narratage 的应用可以通过 `@narratage/local` 直接组装
+相同的 Runtime 角色。完整说明见
 [Runtime Profile 指南](../guide/runtime-profile.md)。
 
 ```json
@@ -192,7 +193,6 @@ CLI 只接受声明式 `svml.runtime.json`。嵌入 Narratage 的应用可以通
       "build": "state.builds",
       "operations": "state.operations",
       "dispatch": "state.dispatch",
-      "journal": "state.journal",
       "artifacts": "artifacts",
       "credentials": ["credentials.env"]
     }
@@ -373,7 +373,6 @@ node --run narratage -- plan /work/my-film/build.svrun \
       "build": "state.builds",
       "operations": "state.operations",
       "dispatch": "state.dispatch",
-      "journal": "state.journal",
       "artifacts": "artifacts",
       "credentials": ["credentials.env"]
     }

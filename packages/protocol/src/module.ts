@@ -1,6 +1,9 @@
 import type { CapabilityRef, Digest, ModuleRef, ProducerRef, TypeRef } from "./identity.js";
 import type { ValueSchema } from "./value.js";
 
+/** Logical package address for immutable semantic Modules. */
+export const modulePackageAbi = "svml.module@1";
+
 export type ModuleDependency = {
   readonly module: ModuleRef;
   readonly digest: Digest;
@@ -9,13 +12,11 @@ export type ModuleDependency = {
 export type TypeDeclaration = {
   readonly name: string;
   readonly schema: ValueSchema;
-  readonly description?: string;
   /** Optional package-owned semantic refinement beyond the structural Schema. */
   readonly validator?: TypeValidatorDeclaration;
 };
 
 export type TypeValidatorDeclaration = {
-  readonly abi: "svml.type-validator@1";
   readonly implementation: ImplementationRef;
 };
 
@@ -33,28 +34,10 @@ export type NeedPortDeclaration = {
 export type CapabilityDeclaration = {
   readonly name: string;
   readonly returns: TypeRef;
-  readonly description?: string;
 };
 
 export type ImplementationRef = {
-  readonly kind: string;
-  readonly locator: string;
   readonly digest: Digest;
-};
-
-/**
- * A source Surface is an author-facing declaration exported by a module.
- * `raw` delegates the complete region after its opening tag to the registered
- * Surface implementation. `structured` first uses the selected Frontend's
- * generic element parser and delegates only the resulting tree. `outputs`
- * bounds which authored record types that parser is allowed to introduce.
- */
-export type SurfaceDeclaration = {
-  readonly name: string;
-  readonly tag: string;
-  readonly mode: "raw" | "structured";
-  readonly outputs: readonly TypeRef[];
-  readonly implementation: ImplementationRef;
 };
 
 export type ProducerDeclaration = {
@@ -72,7 +55,6 @@ export type ModuleManifest = {
   readonly dependencies: readonly ModuleDependency[];
   readonly types: readonly TypeDeclaration[];
   readonly capabilities: readonly CapabilityDeclaration[];
-  readonly surfaces: readonly SurfaceDeclaration[];
   readonly producers: readonly ProducerDeclaration[];
 };
 

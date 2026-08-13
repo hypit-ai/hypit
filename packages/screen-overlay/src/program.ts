@@ -127,7 +127,6 @@ function realized(
   assertScreenOverlaySet(set); assertScreenOverlayHeader(header); assertScreenOverlayItemSpec(spec);
   const additions = occurrences.map((occurrence, index) => ({
     id: occurrence.id,
-    sourceOccurrenceId: occurrence.sourceOccurrenceId,
     span: { ...occurrence.span },
     content: structuredClone(spec.content),
     stacking: { order: spec.stackingOrder, tieBreak: `${header.id}:${spec.id}:${index + 1}` },
@@ -161,7 +160,7 @@ export function assertScreenOverlayProgram(value: ScreenOverlayProgram): void {
   const ids = new Set<string>();
   for (const item of value.items) {
     identity(item.id, "ScreenOverlayItemProgram.id"); assert(!ids.has(item.id), `Duplicate Screen Overlay Item ${item.id}.`); ids.add(item.id);
-    assert(item.sourceOccurrenceId.length > 0 && item.span.startFrame >= 0 && item.span.endFrameExclusive > item.span.startFrame,
+    assert(item.span.startFrame >= 0 && item.span.endFrameExclusive > item.span.startFrame,
       `Screen Overlay Item ${item.id} timing is invalid.`);
     assertScreenOverlayComponent(item.content); assert(Number.isSafeInteger(item.stacking.order) && item.stacking.tieBreak.length > 0,
       `Screen Overlay Item ${item.id} stacking is invalid.`);

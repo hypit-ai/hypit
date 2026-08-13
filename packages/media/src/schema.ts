@@ -7,7 +7,6 @@ const integer = { kind: "number", integer: true, minimum: 0 } as const;
 // content-addressed identity wherever the value carries semantic media truth.
 const digest = { kind: "string", minLength: 71, maxLength: 71 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
-export const mediaArtifactSchema = object({ digest: { schema: digest }, size: { schema: integer }, mediaType: { schema: string }, durationSec: { schema: seconds } });
 const blobArtifactSchema = (mediaTypes?: readonly string[]): ValueSchema => object({
   kind: { schema: { kind: "literal", value: "blob" } }, digest: { schema: digest }, size: { schema: integer },
   mediaType: { schema: mediaTypes === undefined ? string : { kind: "string", enum: mediaTypes } },
@@ -53,11 +52,10 @@ export const synchronizedMediaSchema: ValueSchema = object({
 export const renderedVisualSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.rendered-visual@1" } },
   frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
   canvas: { schema: object({ width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
-  artifact: { schema: blobArtifactSchema() }, muted: { schema: { kind: "literal", value: true } } });
+  artifact: { schema: blobArtifactSchema() } });
 export const timelineAudioSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.timeline-audio@1" } },
-  artifact: { schema: blobArtifactSchema(["audio/wav"]) }, codec: { schema: { kind: "literal", value: "pcm_s16le" } },
-  sampleRate: { schema: { kind: "literal", value: 48_000 } }, channels: { schema: { kind: "literal", value: 2 } },
-  sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } }, loudness: { schema: { kind: "literal", value: "planned" } } });
+  artifact: { schema: blobArtifactSchema(["audio/wav"]) },
+  sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } } });
 export const muxedMediaSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.muxed-media@1" } },
   frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
   canvas: { schema: object({ width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } } }) },

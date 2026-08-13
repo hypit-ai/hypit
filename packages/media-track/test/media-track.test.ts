@@ -44,6 +44,7 @@ import {
   sealMediaTrackHeader,
   stillMediaTrackFragment,
   mediaTrackManifest,
+  mediaTrackMarkupSurfaces,
 } from "@narratage/media-track";
 import type {
   MediaHandoffOperator,
@@ -443,10 +444,10 @@ test("Media Items consume the shared one/each temporal algebra without becoming 
     contract: "svml.complete-semantic-map@1",
     tokens: [],
     anchors: [
-      { identity: "a", timeSec: 0.5, frame: 15 },
-      { identity: "b", timeSec: 1.5, frame: 45 },
-      { identity: "c", timeSec: 2, frame: 60 },
-      { identity: "d", timeSec: 3.5, frame: 105 },
+      { identity: "a", frame: 15 },
+      { identity: "b", frame: 45 },
+      { identity: "c", frame: 60 },
+      { identity: "d", frame: 105 },
     ],
   };
   const selection: NarrativeSelectionRef = {
@@ -543,8 +544,8 @@ test("a Media Item can consume one whole Narrative Segment without a synthetic S
     contract: "svml.complete-semantic-map@1",
     tokens: [],
     anchors: [
-      { identity: "segment:answer:start", timeSec: 1, frame: 30 },
-      { identity: "segment:answer:end", timeSec: 3, frame: 90 },
+      { identity: "segment:answer:start", frame: 30 },
+      { identity: "segment:answer:end", frame: 90 },
     ],
   };
   const result = appendSegmentMediaItem(
@@ -771,7 +772,7 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
     ? itemSpecs[2]!.value.value as unknown as MediaItemSpec
     : undefined;
   assert.equal(selected?.sourceAudio?.fromLayer, "video");
-  assert.ok(mediaTrackManifest.surfaces.some((surface) => surface.name === "track"));
+  assert.ok(mediaTrackMarkupSurfaces.some((surface) => surface.name === "track"));
 });
 
 test("Sequence resolves strict logical phases, expanded handoffs and one uninterrupted outer lifecycle", () => {

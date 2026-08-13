@@ -1,4 +1,4 @@
-import { resolveProducer } from "@narratage/core";
+import { plannedNeeds } from "@narratage/core";
 import { digestOf, isDigest } from "@narratage/protocol";
 import type {
   BuildState,
@@ -14,7 +14,6 @@ export type RuntimeFacetRole =
   | "build-store"
   | "operation-store"
   | "dispatch-store"
-  | "runtime-journal"
   | "artifact-store"
   | "credential-store"
   | "capability-endpoint";
@@ -27,7 +26,6 @@ export type RuntimeFacetRef = {
 };
 
 export type RuntimeImplementation = {
-  readonly locator: string;
   readonly digest: Digest;
 };
 
@@ -69,7 +67,7 @@ export type RuntimeProfileInstance = {
   /** Required for capability Endpoints; absent for Scheduler and Store instances. */
   readonly authority?: string;
   /** Digest of non-secret endpoint/store configuration. Secret bytes must never enter it. */
-  readonly configurationDigest?: Digest;
+  readonly configurationDigest: Digest;
 };
 
 export type RuntimeEndpointBinding = RuntimeCapability & {
@@ -78,8 +76,6 @@ export type RuntimeEndpointBinding = RuntimeCapability & {
 
 export type RuntimeProfile = {
   readonly format: "svml.runtime-profile@1";
-  readonly digest: Digest;
-  readonly name: string;
   readonly instances: readonly RuntimeProfileInstance[];
   readonly scheduler: string;
   readonly worker: string;
@@ -87,7 +83,6 @@ export type RuntimeProfile = {
     readonly build: string;
     readonly operations: string;
     readonly dispatch: string;
-    readonly journal: string;
     readonly artifacts: string;
     readonly credentials: readonly string[];
   };
@@ -124,7 +119,6 @@ export type ResolvedRuntimeInstance = ResolvedRuntimeService | ResolvedRuntimeEn
 export type RuntimeClosure = {
   readonly format: "svml.runtime-closure@1";
   readonly digest: Digest;
-  readonly profile: Digest;
   readonly modules: readonly { readonly module: ModuleRef; readonly digest: Digest }[];
   readonly instances: readonly ResolvedRuntimeInstance[];
   readonly scheduler: string;
@@ -187,9 +181,8 @@ function sortedUniqueStrings(values: readonly string[], subject: string): readon
 }
 
 function normalizeImplementation(value: RuntimeImplementation, subject: string): RuntimeImplementation {
-  assert(value.locator.trim().length > 0, `${subject} implementation locator is empty`);
   assert(isDigest(value.digest), `${subject} implementation digest is invalid`);
-  return { locator: value.locator, digest: value.digest };
+  return { digest: value.digest };
 }
 
 function normalizeCapability(value: RuntimeCapability): RuntimeCapability {
@@ -271,8 +264,7 @@ export class RuntimeModuleRegistry {
       assert(modules.get(moduleKey(instance.facet.module))?.digest === resolved.module.digest,
         `${moduleKey(instance.facet.module)} Manifest digest does not match the Runtime Closure`);
       assert(instance.role === resolved.facet.role, `${instance.id} Runtime facet role differs`);
-      assert(instance.implementation.locator === resolved.facet.implementation.locator
-        && instance.implementation.digest === resolved.facet.implementation.digest,
+      assert(instance.implementation.digest === resolved.facet.implementation.digest,
       `${instance.id} Runtime implementation differs`);
       if (instance.role === "capability-endpoint" && resolved.facet.role === "capability-endpoint") {
         assert(instance.lifecycle === resolved.facet.lifecycle, `${instance.id} Endpoint lifecycle differs`);
@@ -287,18 +279,15 @@ export class RuntimeModuleRegistry {
   }
 }
 
-function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest"> {
+function profileContent(profile: RuntimeProfile): RuntimeProfile {
   return {
     format: "svml.runtime-profile@1",
-    name: profile.name,
     instances: [...profile.instances]
       .map((instance) => ({
         id: instance.id,
         facet: { module: { ...instance.facet.module }, name: instance.facet.name },
         ...(instance.authority === undefined ? {} : { authority: instance.authority }),
-        ...(instance.configurationDigest === undefined
-          ? {}
-          : { configurationDigest: instance.configurationDigest }),
+        configurationDigest: instance.configurationDigest,
       }))
       .sort((left, right) => left.id.localeCompare(right.id)),
     scheduler: profile.scheduler,
@@ -307,7 +296,6 @@ function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest">
       build: profile.stores.build,
       operations: profile.stores.operations,
       dispatch: profile.stores.dispatch,
-      journal: profile.stores.journal,
       artifacts: profile.stores.artifacts,
       credentials: [...profile.stores.credentials].sort(),
     },
@@ -325,14 +313,12 @@ function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest">
 
 function verifyProfileShape(profile: RuntimeProfile): void {
   assert(profile.format === "svml.runtime-profile@1", "unsupported Runtime Profile format");
-  assert(profile.name.trim().length > 0, "Runtime Profile name is empty");
   assert(profile.scheduler.trim().length > 0, "Runtime Profile scheduler is empty");
   assert(profile.worker.trim().length > 0, "Runtime Profile worker is empty");
   for (const [name, id] of Object.entries({
     build: profile.stores.build,
     operations: profile.stores.operations,
     dispatch: profile.stores.dispatch,
-    journal: profile.stores.journal,
     artifacts: profile.stores.artifacts,
   })) assert(id.trim().length > 0, `Runtime Profile ${name} store is empty`);
   for (const id of profile.stores.credentials) assert(id.trim().length > 0, "Runtime Profile CredentialStore id is empty");
@@ -344,9 +330,7 @@ function verifyProfileShape(profile: RuntimeProfile): void {
     assert(instance.facet.name.trim().length > 0, `${instance.id} facet name is empty`);
     assert(instance.facet.module.name.length > 0 && instance.facet.module.version.length > 0, `${instance.id} facet module is invalid`);
     if (instance.authority !== undefined) assert(instance.authority.trim().length > 0, `${instance.id} authority is empty`);
-    if (instance.configurationDigest !== undefined) {
-      assert(isDigest(instance.configurationDigest), `${instance.id} configuration digest is invalid`);
-    }
+    assert(isDigest(instance.configurationDigest), `${instance.id} configuration digest is invalid`);
     return instance.id;
   });
   assert(new Set(ids).size === ids.length, "Runtime Profile repeats an instance id");
@@ -364,27 +348,23 @@ function verifyProfileShape(profile: RuntimeProfile): void {
 }
 
 export function sealRuntimeProfile(
-  value: Omit<RuntimeProfile, "format" | "digest">,
+  value: Omit<RuntimeProfile, "format">,
 ): RuntimeProfile {
   const draft: RuntimeProfile = {
     format: "svml.runtime-profile@1",
-    digest: digestOf("unsealed-runtime-profile"),
     ...value,
   };
   verifyProfileShape(draft);
-  const content = profileContent(draft);
-  return { ...content, digest: digestOf(content) };
+  return profileContent(draft);
 }
 
 export function verifyRuntimeProfile(profile: RuntimeProfile): void {
   verifyProfileShape(profile);
-  assert(isDigest(profile.digest) && profile.digest === digestOf(profileContent(profile)), "Runtime Profile digest differs");
 }
 
-function closureContent(closure: RuntimeClosure): Omit<RuntimeClosure, "digest"> {
+function closureContent(closure: Omit<RuntimeClosure, "digest">): Omit<RuntimeClosure, "digest"> {
   return {
     format: "svml.runtime-closure@1",
-    profile: closure.profile,
     modules: [...closure.modules].map((item) => ({ module: { ...item.module }, digest: item.digest }))
       .sort((left, right) => moduleKey(left.module).localeCompare(moduleKey(right.module))),
     instances: [...closure.instances].map((instance) => structuredClone(instance))
@@ -404,7 +384,6 @@ function closureContent(closure: RuntimeClosure): Omit<RuntimeClosure, "digest">
 
 export function verifyRuntimeClosure(closure: RuntimeClosure): void {
   assert(closure.format === "svml.runtime-closure@1", "unsupported Runtime Closure format");
-  assert(isDigest(closure.profile), "Runtime Closure profile digest is invalid");
   assert(isDigest(closure.digest) && closure.digest === digestOf(closureContent(closure)), "Runtime Closure digest differs");
   positiveInteger(closure.scheduling.maxConcurrency, "Runtime Closure maxConcurrency");
   const moduleKeys = closure.modules.map((item) => {
@@ -443,7 +422,6 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
     build: "build-store",
     operations: "operation-store",
     dispatch: "dispatch-store",
-    journal: "runtime-journal",
     artifacts: "artifact-store",
   } as const;
   for (const [name, role] of Object.entries(roles) as [keyof typeof roles, typeof roles[keyof typeof roles]][]) {
@@ -482,7 +460,7 @@ export function resolveRuntimeProfile(
       id: instance.id,
       facet: { module: { ...instance.facet.module }, name: instance.facet.name },
       implementation: { ...resolved.facet.implementation },
-      configurationDigest: instance.configurationDigest ?? digestOf({}),
+      configurationDigest: instance.configurationDigest,
     };
     if (resolved.facet.role !== "capability-endpoint") return { ...common, role: resolved.facet.role };
     assert(instance.authority !== undefined, `${instance.id} Endpoint Provider Authority is required`);
@@ -507,7 +485,6 @@ export function resolveRuntimeProfile(
     build: "build-store",
     operations: "operation-store",
     dispatch: "dispatch-store",
-    journal: "runtime-journal",
     artifacts: "artifact-store",
   } as const;
   for (const [name, role] of Object.entries(storeRoles) as [keyof typeof storeRoles, typeof storeRoles[keyof typeof storeRoles]][]) {
@@ -528,10 +505,8 @@ export function resolveRuntimeProfile(
   if (instances.some((instance) => instance.role === "capability-endpoint" && instance.credentialSlots.length > 0)) {
     assert(profile.stores.credentials.length > 0, "credentialed Endpoints require a CredentialStore");
   }
-  const draft: RuntimeClosure = {
+  const draft: Omit<RuntimeClosure, "digest"> = {
     format: "svml.runtime-closure@1",
-    digest: digestOf("unsealed-runtime-closure"),
-    profile: profile.digest,
     modules: [...modules.values()],
     instances,
     scheduler: profile.scheduler,
@@ -558,15 +533,7 @@ export function runtimeEndpoint(
 /** Fail before execution if the selected finite BuildPlan has an unbound external requirement. */
 export function verifyRuntimeCoverage(closure: RuntimeClosure, state: BuildState): void {
   verifyRuntimeClosure(closure);
-  const required = new Map<string, RuntimeCapability>();
-  for (const step of state.plan.steps) {
-    const producer = resolveProducer(state.program.closure, step.producer);
-    for (const need of producer.needs) {
-      const requirement = { capability: need.capability, returns: need.returns };
-      required.set(bindingKey(requirement), requirement);
-    }
-  }
-  for (const requirement of required.values()) {
+  for (const requirement of plannedNeeds(state)) {
     assert(
       closure.endpoints.some((binding) => sameCapability(binding, requirement)),
       `Runtime Closure does not bind demanded capability ${bindingKey(requirement)}`,

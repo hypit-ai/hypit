@@ -15,7 +15,6 @@ import type {
   RunFrontendSourceUnit,
   RunSourceClosure,
   RunSourceUnit,
-  RunSourceUnitIdentity,
 } from "./types.js";
 
 export class RunSourceError extends Error {
@@ -55,28 +54,16 @@ export function prepareRunSource(source: RunSourceUnit): RunFrontendSourceUnit {
     ...source,
     text: maskSourceHeader(source.text, header),
     header,
-    sourceDigest: digestOf(source.text),
-  };
-}
-
-function unitContent(unit: RunSourceUnitIdentity): Omit<RunSourceUnitIdentity, "id"> {
-  return {
-    format: "svml.run-source-unit@1",
-    frontendRequest: unit.frontendRequest,
-    frontend: unit.frontend,
-    frontendDigest: unit.frontendDigest,
-    sourceDigest: unit.sourceDigest,
-    semanticDigest: unit.semanticDigest,
-    authorSource: unit.authorSource,
-    imports: [...unit.imports].sort((left, right) => left.as.localeCompare(right.as)),
   };
 }
 
 function closureContent(closure: RunSourceClosure): Omit<RunSourceClosure, "id"> {
   return {
     format: "svml.run-source-closure@1",
-    entry: closure.entry,
-    units: [...closure.units].sort((left, right) => left.id.localeCompare(right.id)),
+    frontend: closure.frontend,
+    frontendDigest: closure.frontendDigest,
+    sourceDigest: closure.sourceDigest,
+    semanticDigest: closure.semanticDigest,
   };
 }
 
@@ -100,21 +87,12 @@ export async function compileRunSource(
     "RUN_FRONTEND_DISCOVERY_DRIFT",
     `${frontend.id} changed imports between discover and decode`,
   );
-  const unitWithoutId = {
-    format: "svml.run-source-unit@1" as const,
-    frontendRequest: prepared.header.using,
-    frontend: frontend.id,
-    frontendDigest: frontend.implementationDigest,
-    sourceDigest: prepared.sourceDigest,
-    semanticDigest: digestOf(decoded.document),
-    authorSource: discovery.author.source,
-    imports: [...discovery.imports].sort((left, right) => left.as.localeCompare(right.as)),
-  };
-  const unit: RunSourceUnitIdentity = { ...unitWithoutId, id: digestOf(unitWithoutId) };
   const closureWithoutId = {
     format: "svml.run-source-closure@1" as const,
-    entry: unit.id,
-    units: [unit],
+    frontend: frontend.id,
+    frontendDigest: frontend.implementationDigest,
+    sourceDigest: digestOf(source.text),
+    semanticDigest: digestOf(decoded.document),
   };
   const closure: RunSourceClosure = { ...closureWithoutId, id: digestOf(closureWithoutId) };
   verifyRunSourceClosure(closure);
@@ -123,17 +101,9 @@ export async function compileRunSource(
 
 export function verifyRunSourceClosure(closure: RunSourceClosure): void {
   assert(closure.format === "svml.run-source-closure@1", "UNSUPPORTED_RUN_SOURCE_CLOSURE", "unsupported Run Source Closure");
-  assert(isDigest(closure.id), "INVALID_RUN_SOURCE_CLOSURE_DIGEST", "Run Source Closure digest is invalid");
-  const ids = new Set<string>();
-  for (const unit of closure.units) {
-    assert(unit.format === "svml.run-source-unit@1", "UNSUPPORTED_RUN_SOURCE_UNIT", "unsupported Run SourceUnit");
-    assert(isDigest(unit.id) && unit.id === digestOf(unitContent(unit)), "RUN_SOURCE_UNIT_DIGEST_MISMATCH", `${unit.id} digest differs`);
-    assert(!ids.has(unit.id), "DUPLICATE_RUN_SOURCE_UNIT", `Run Source Closure repeats ${unit.id}`);
-    assert(isDigest(unit.frontendDigest), "INVALID_RUN_FRONTEND_DIGEST", `${unit.id} Frontend digest is invalid`);
-    assert(isDigest(unit.sourceDigest), "INVALID_RUN_SOURCE_DIGEST", `${unit.id} source digest is invalid`);
-    assert(isDigest(unit.semanticDigest), "INVALID_RUN_SEMANTIC_DIGEST", `${unit.id} semantic digest is invalid`);
-    ids.add(unit.id);
-  }
-  assert(ids.has(closure.entry), "UNKNOWN_RUN_SOURCE_ENTRY", `Run Source entry ${closure.entry} is absent`);
+  assert(closure.frontend.trim().length > 0, "EMPTY_RUN_FRONTEND", "Run Source Frontend is empty");
+  assert(isDigest(closure.frontendDigest), "INVALID_RUN_FRONTEND_DIGEST", "Run Source Frontend digest is invalid");
+  assert(isDigest(closure.sourceDigest), "INVALID_RUN_SOURCE_DIGEST", "Run Source digest is invalid");
+  assert(isDigest(closure.semanticDigest), "INVALID_RUN_SEMANTIC_DIGEST", "Run Source semantic digest is invalid");
   assert(closure.id === digestOf(closureContent(closure)), "RUN_SOURCE_CLOSURE_DIGEST_MISMATCH", "Run Source Closure digest differs");
 }

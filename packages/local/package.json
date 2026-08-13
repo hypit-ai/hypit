@@ -16,7 +16,7 @@
     "@narratage/component-kit": "workspace:*",
     "@narratage/driver-node": "workspace:*",
     "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/host": "workspace:*",
+    "@narratage/workspace": "workspace:*",
     "@narratage/package-loader-node": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime": "workspace:*",

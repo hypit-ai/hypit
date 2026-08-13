@@ -1,7 +1,7 @@
 export { estimateComponent } from "./component.js";
 export { speechEstimateFragment } from "./fragment.js";
 export {
-  estimateManifest,
+  estimateManifest, estimateMarkupSurfaces,
   estimateManifestDigest,
   estimateModuleRef,
   estimateProducers,

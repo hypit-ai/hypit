@@ -55,7 +55,6 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/provider-kie",
   hostFacets: [kieRuntimeAdapter],
 };
 

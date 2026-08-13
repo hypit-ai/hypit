@@ -19,11 +19,9 @@ function assert(condition: unknown, code: string, message: string): asserts cond
   if (!condition) throw new RunGraphError(code, message);
 }
 
-function content(graph: RunGraph): Omit<RunGraph, "id"> {
+function content(graph: Omit<RunGraph, "id">): Omit<RunGraph, "id"> {
   return {
     format: "svml.run-graph@1",
-    authorGraph: graph.authorGraph,
-    sourceClosure: graph.sourceClosure,
     candidates: [...graph.candidates].sort((left, right) => left.id.localeCompare(right.id)),
     operations: [...graph.operations].sort((left, right) => left.id.localeCompare(right.id)),
     satisfactions: [...graph.satisfactions].sort((left, right) => left.output.localeCompare(right.output)),
@@ -32,7 +30,7 @@ function content(graph: RunGraph): Omit<RunGraph, "id"> {
 }
 
 export function sealRunGraph(input: Omit<RunGraph, "format" | "id">): RunGraph {
-  const normalized = content({ format: "svml.run-graph@1", id: digestOf(null), ...input });
+  const normalized = content({ format: "svml.run-graph@1", ...input });
   const graph: RunGraph = { ...normalized, id: digestOf(normalized) };
   verifyRunGraph(graph);
   return graph;
@@ -41,8 +39,6 @@ export function sealRunGraph(input: Omit<RunGraph, "format" | "id">): RunGraph {
 export function verifyRunGraph(graph: RunGraph): void {
   assert(graph.format === "svml.run-graph@1", "UNSUPPORTED_RUN_GRAPH", "unsupported Run Graph");
   assert(isDigest(graph.id), "INVALID_RUN_GRAPH_DIGEST", "Run Graph digest is invalid");
-  assert(isDigest(graph.authorGraph), "INVALID_RUN_AUTHOR_GRAPH", "Run Graph Author Graph digest is invalid");
-  assert(isDigest(graph.sourceClosure), "INVALID_RUN_SOURCE_CLOSURE", "Run Graph Source Closure digest is invalid");
   const candidateIds = new Set<string>();
   for (const candidate of graph.candidates) {
     assert(!candidateIds.has(candidate.id), "DUPLICATE_RUN_CANDIDATE", `Run Graph repeats Candidate ${candidate.id}`);

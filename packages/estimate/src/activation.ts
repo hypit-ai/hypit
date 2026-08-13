@@ -5,19 +5,16 @@ import {
   estimateComponent,
   estimateManifest,
   estimateModuleRef,
-  estimateSurfaceImplementationDigest,
+  estimateMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/estimate",
-  modules: [{ manifest: estimateManifest, specifiers: ["@narratage/estimate", "@narratage/estimate@1"] }],
+  modules: [{ manifest: estimateManifest }],
   components: [estimateComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
     module: estimateModuleRef,
-    surface: "speech",
-    mode: "structured",
-    implementationDigest: estimateSurfaceImplementationDigest,
+    declaration: estimateMarkupSurfaces.find((item) => item.name === "speech")!,
     handler: decodeSpeechEstimateSurface,
   })],
 };

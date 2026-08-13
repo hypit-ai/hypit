@@ -26,7 +26,6 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const speechSpineComponent = {
-  name: "@narratage/speech-spine",
   producers: [
     {
       producer: speechSpineProducers.createSet,

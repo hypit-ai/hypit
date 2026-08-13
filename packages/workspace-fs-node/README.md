@@ -1,6 +1,6 @@
 # `@narratage/workspace-fs-node`
 
-Default Node filesystem implementation of the host-neutral `Workspace` contract.
+Reference Node filesystem implementation of the host-neutral `Workspace` contract.
 
 Every `open()` call creates one isolated compilation session. It canonicalizes real paths, confines
 SourceUnit and Source Asset reads to the configured root, rejects symlink escapes, locks each edge

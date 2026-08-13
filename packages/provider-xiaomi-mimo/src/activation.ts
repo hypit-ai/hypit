@@ -51,7 +51,6 @@ const adapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/provider-xiaomi-mimo",
   hostFacets: [adapter],
 };
 

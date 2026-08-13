@@ -254,7 +254,7 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     }
   }
   if (fragmentItems.length === 0) throw new Error(`${element.name} requires at least one Clip.`);
-  const fragment = createAudioTrackFragment(fragmentItems, `@narratage/audio-track/surface/${id}@1`);
+  const fragment = createAudioTrackFragment(fragmentItems);
   return {
     records,
     components: [{

@@ -25,20 +25,20 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function packageCatalog(
+function selectedBuildCatalog(
   packages: readonly RuntimeServicePackage[],
   buildStore: string,
 ): BuildCatalog | undefined {
   const owner = packages.find((item) => item.services.some((service) =>
     service.role === "build-store" && service.instance.id === buildStore));
-  if (owner === undefined || !("catalog" in owner)) return undefined;
-  const catalog = (owner as { readonly catalog?: unknown }).catalog;
+  if (owner === undefined) return undefined;
+  const catalog = owner.buildCatalog;
   if (catalog === undefined) return undefined;
   assert(catalog !== null && typeof catalog === "object"
     && "record" in catalog && typeof catalog.record === "function"
     && "read" in catalog && typeof catalog.read === "function"
     && "list" in catalog && typeof catalog.list === "function",
-  `Runtime package ${owner.name} exposes an invalid Build Catalog`);
+  `Runtime service ${buildStore} exposes an invalid Build Catalog`);
   return catalog as BuildCatalog;
 }
 
@@ -54,7 +54,7 @@ export async function createProjectRuntimeServices(
   try {
     for (const item of packages) verifyRuntimeServicePackage(item);
     const assembly = assembleRuntimeServices(packages, options.runtimeSelection);
-    const catalog = options.buildCatalog ?? packageCatalog(packages, options.runtimeSelection.stores.build);
+    const catalog = selectedBuildCatalog(packages, options.runtimeSelection.stores.build);
     return {
       assembly,
       catalog,

@@ -29,7 +29,10 @@ test("source package selection is derived from Run and Author imports", async ()
   <script id="story"><line><HOST>Hello.</line></script>
 </svml>`, "utf8");
     const run = await writeRun(root, "build.svrun", [{ output: "story" }]);
-    const discovered = await videoCliDistribution.discoverSourcePackages!(run, { workspaceRoot: root });
+    const discovered = await videoCliDistribution.discoverSourcePackages!(run, {
+      workspaceRoot: root,
+      packages: videoTestPackages,
+    });
     assert.deepEqual(discovered.selected, ["@narratage/run-markup", "@narratage/script", "@narratage/svs"]);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -280,10 +283,10 @@ test("Text Template and exact Seedance keep speaker prompt assembly visible in t
   ].sort());
 });
 
-test("CLI accepts a declarative Runtime Profile without an executable config module", async () => {
+test("CLI delegates a declarative Runtime Profile by content, not filename suffix", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-runtime-profile-"));
-  const profile = join(root, "svml.runtime.json");
-  const runtimePackageLock = join(root, "runtime.packages.lock.json");
+  const profile = join(root, "deployment.profile");
+  const runtimePackageLock = join(root, "runtime.packages.lock");
   await writeNodePackageLock(
     runtimePackageLock,
     await createNodePackageLock([
@@ -311,7 +314,6 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
         build: "state.builds",
         operations: "state.operations",
         dispatch: "state.dispatch",
-        journal: "state.journal",
         artifacts: "artifacts",
         credentials: ["credentials"],
       },
@@ -414,17 +416,14 @@ test("CLI package lock activates an installed package without changing the offic
     const digest = ${JSON.stringify(implementationDigest)};
     export default {
       format: "svml.node-package@1",
-      name: "example-empty",
       modules: [{ manifest: {
         format: "svml.module@1", name: module.name, version: module.version,
         dependencies: [], types: [], capabilities: [], producers: [],
-        surfaces: [{ name: "empty", tag: "Empty", mode: "structured", outputs: [],
-          implementation: { kind: "trusted-frontend-surface", locator: "example/empty", digest } }],
       }, specifiers: ["example.empty@1"] }],
       hostFacets: [{
         abi: "svml.markup-surface-host@1",
-        identity: { contract: "svml.markup-surface-host-facet@1", module, surface: "empty",
-          mode: "structured", implementationDigest: digest },
+        identity: { module, surface: "empty",
+          tag: "Empty", outputs: [], mode: "structured", implementationDigest: digest },
         implementation() { return { records: [], components: [], fragments: [] }; },
       }],
     };
@@ -437,7 +436,7 @@ test("CLI package lock activates an installed package without changing the offic
     svml: { activation: "./activation.mjs" },
   }), "utf8");
   await writeFile(join(installedExtra, "activation.mjs"), `
-    export default { format: "svml.node-package@1", name: "example-extra" };
+    export default { format: "svml.node-package@1" };
   `, "utf8");
   const file = join(projectRoot, "main.svml");
   const lockPath = join(projectRoot, "svml.packages.lock");
@@ -539,7 +538,7 @@ test("CLI package lock activates an installed package without changing the offic
 
   mutationOutput = "";
   await writeFile(join(installedExtra, "activation.mjs"), `
-    export default { format: "svml.node-package@1", name: "example-extra" };
+    export default { format: "svml.node-package@1" };
     // Changed bytes do not prevent revoking this now-unreachable root.
   `, "utf8");
   await runCli(["lock-packages", lockPath, "--remove", "example-extra", "--package-root", packageRoot], {
@@ -674,7 +673,13 @@ test("CLI inspect and get read the durable Build archive independently of build 
   const state = {
     id: buildDigest,
     status: "active",
-    graph: { id: `sha256:${"4".repeat(64)}` },
+    graph: {
+      id: `sha256:${"4".repeat(64)}`,
+      outputs: [{
+        id: "logical:unused",
+        type: { module: { name: "example", version: "1" }, name: "Image" },
+      }],
+    },
     request: {
       digest: requestDigest,
       targets: [{ output: "logical:final" }],
@@ -698,7 +703,7 @@ test("CLI inspect and get read the durable Build archive independently of build 
       type: { module: { name: "example", version: "1" }, name: "Evidence" },
       value: { kind: "inline", value: {
         words: [],
-        rawEvidenceArtifact: { kind: "blob", digest: rawDigest, size: rawBytes.byteLength, mediaType: "application/json" },
+        explicitReferenceArtifact: { kind: "blob", digest: rawDigest, size: rawBytes.byteLength, mediaType: "application/json" },
       } },
       digest: `sha256:${"5".repeat(64)}`,
       origin: { kind: "authored", module: "example" },
@@ -715,15 +720,12 @@ test("CLI inspect and get read the durable Build archive independently of build 
     run: { path: join(root, "delivery.svrun") },
     aliases: [{
       name: "final.video",
-      type: state.records[0]!.type,
       ref: { kind: "logical-output", id: "logical:final" },
     }, {
       name: "timing.rawEvidence",
-      type: state.records[1]!.type,
       ref: { kind: "record", id: "record:whisperx" },
     }, {
       name: "unused.image",
-      type: state.records[0]!.type,
       ref: { kind: "logical-output", id: "logical:unused" },
     }],
     createdAt: 100,
@@ -770,6 +772,7 @@ test("CLI inspect and get read the durable Build archive independently of build 
     async close() {},
   };
   const selected = {
+    runtimeProfileRevision: async () => "test-revision",
     createRuntimeControlFromConfig: async () => control,
   } as unknown as CliDistribution;
   const runArchiveCli = (

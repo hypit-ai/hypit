@@ -126,7 +126,6 @@ function labelFragment(id: string) {
   const input = (name: string) => ({ kind: "fragment-input" as const, name });
   const operation = { kind: "fragment-operation" as const, operation: "bind" };
   return sealGraphFragment({
-    name: `@narratage/deck-track/label-surface/${id}@1`,
     inputs: [{ name: "style", type: depthStackTypes.cardLabelStyle }, { name: "content", type: textTypes.text }],
     operations: [{
       id: "bind", producer: depthStackProducers.bindLabelText,
@@ -295,7 +294,7 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
     });
   }
   if (cards.length === 0) throw new Error(`${element.name} requires at least one Card.`);
-  const fragment = createDepthStackFragment(cards, terminalValue.terminal, `@narratage/deck-track/surface/${id}@1`);
+  const fragment = createDepthStackFragment(cards, terminalValue.terminal);
   return {
     records,
     components: [{ id, fragment: fragment.id, inputs, outputs: { program: `${id}.program`, track: `${id}.track` }, range: element.range }],

@@ -33,7 +33,7 @@ export function locateSelectionOccurrences(
 ): readonly LocatedSelectionOccurrence[] {
   assertProgramSpaceIdentity(space);
   const totalFrames = programSpaceFrameCount(space);
-  const spans = selectionFrameSpans(map, selection, space);
+  const spans = selectionFrameSpans(map, selection);
   if (spans.length !== selection.occurrences.length) {
     throw new Error(`NarrativeSelection ${selection.id} location cardinality changed.`);
   }
@@ -59,7 +59,7 @@ export function locateMomentOccurrences(
 ): readonly LocatedMomentOccurrence[] {
   assertProgramSpaceIdentity(space);
   const totalFrames = programSpaceFrameCount(space);
-  const frames = momentFrames(map, moment, space);
+  const frames = momentFrames(map, moment);
   if (frames.length !== moment.occurrences.length) {
     throw new Error(`NarrativeMoment ${moment.id} location cardinality changed.`);
   }
@@ -88,7 +88,7 @@ export function locateSegmentOccurrence(
 ): LocatedSegmentOccurrence {
   assertProgramSpaceIdentity(space);
   const totalFrames = programSpaceFrameCount(space);
-  const span = segmentFrameSpan(map, segment, space);
+  const span = segmentFrameSpan(map, segment);
   assertLocatedFrame(span.startFrame, totalFrames, `Narrative Segment ${segment.id} start`);
   assertLocatedFrame(span.endFrameExclusive, totalFrames, `Narrative Segment ${segment.id} end`);
   if (span.endFrameExclusive <= span.startFrame) throw new Error(`Narrative Segment ${segment.id} has no positive frame span.`);

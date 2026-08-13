@@ -3,13 +3,13 @@ import type { Narrative, NarrativeToken } from "@narratage/narrative";
 import type { ProgramSpace } from "@narratage/program-space";
 import type { SpeechAudioBasis, SpeechBasis } from "@narratage/speech";
 import type { AlignedTranscriptEvidence, AlignedTranscriptSegment, SpeechCharacterEvidence, SpeechWordEvidence } from "@narratage/speech-evidence";
-import type { AlignmentGroup, CompleteSemanticMap, SemanticTimePoint, TimedSpeechSegment, TimedSpeechToken } from "@narratage/semantic-map";
+import type { CompleteSemanticMap, SemanticTimePoint, TimedSpeechToken } from "@narratage/semantic-map";
 
 import { alignWordGroups } from "./align.js";
 import { SpeechAlignmentError } from "./error.js";
 import { alignCharacters, alignmentCharacters } from "./normalize.js";
+import type { AlignmentGroup, TimedSpeechSegment } from "./types.js";
 
-const EPSILON = 1e-6;
 export const speechLocatorDigest = digestOf("@narratage/speech-alignment/locate@1");
 
 type MutableTiming = {
@@ -81,12 +81,7 @@ function validateEvidence(
   if (evidence.contract !== "svml.aligned-transcript-evidence@1") {
     fail("SPEECH_CONTRACT", `Unsupported aligned-transcript contract ${evidence.contract}.`);
   }
-  if (!Number.isFinite(evidence.durationSec) || evidence.durationSec <= 0) {
-    fail("SPEECH_DURATION", "Aligned-transcript duration must be positive and finite.");
-  }
-  if (Math.abs(evidence.durationSec - basis.programSpace.durationSec) > EPSILON) {
-    fail("SPEECH_EVIDENCE_DURATION", "Aligned transcript duration differs from SpeechBasis.");
-  }
+  const durationSec = basis.programSpace.durationSec;
   const expected = new Set(narrative.segments.map((segment) => segment.id));
   const seen = new Set<string>();
   for (const segment of evidence.segments) {
@@ -97,11 +92,10 @@ function validateEvidence(
       fail("SPEECH_SEGMENT_DUPLICATE", `Aligned transcript repeats Segment ${segment.sourceSegmentId}.`);
     }
     seen.add(segment.sourceSegmentId);
-    validateWindow(segment.startSec, segment.endSec, evidence.durationSec, `Segment ${segment.sourceSegmentId}`);
     for (const [index, word] of segment.words.entries()) {
       if (typeof word.text !== "string") fail("SPEECH_WORD_TEXT", `Word ${index + 1} has no text.`);
       if (finite(word.startSec) && finite(word.endSec)) {
-        validateWindow(word.startSec, word.endSec, evidence.durationSec, `Word ${index + 1}`);
+        validateWindow(word.startSec, word.endSec, durationSec, `Word ${index + 1}`);
       }
     }
     for (const [index, char] of segment.chars.entries()) {
@@ -109,27 +103,15 @@ function validateEvidence(
         fail("SPEECH_CHAR_WORD", `Character ${index + 1} has an invalid wordIndex.`);
       }
       if (finite(char.startSec) && finite(char.endSec)) {
-        validateWindow(char.startSec, char.endSec, evidence.durationSec, `Character ${index + 1}`);
+        validateWindow(char.startSec, char.endSec, durationSec, `Character ${index + 1}`);
       }
     }
     for (const [index, span] of (segment.speechActivity ?? []).entries()) {
-      validateWindow(span.startSec, span.endSec, evidence.durationSec, `VAD span ${index + 1}`);
+      validateWindow(span.startSec, span.endSec, durationSec, `VAD span ${index + 1}`);
     }
   }
   for (const id of expected) {
     if (!seen.has(id)) fail("SPEECH_SEGMENT_MISSING", `Aligned transcript is missing Segment ${id}.`);
-  }
-  const segmentsById = new Map(evidence.segments.map((segment) => [segment.sourceSegmentId, segment]));
-  for (const sourceSegment of narrative.segments) {
-    const segment = segmentsById.get(sourceSegment.id)!;
-    const basisSegment = basis.segments.find((item) => item.segmentId === sourceSegment.id)!;
-    // The transcript must answer the segmentation it was asked about.
-    if (
-      Math.abs(segment.startSec - basisSegment.startSec) > EPSILON
-      || Math.abs(segment.endSec - basisSegment.endSec) > EPSILON
-    ) {
-      fail("SPEECH_EVIDENCE_SEGMENT_AFFINITY", `Segment ${segment.sourceSegmentId} differs from SpeechBasis.`);
-    }
   }
 }
 
@@ -264,14 +246,17 @@ function locatePairedGroup(
   }
 }
 
-function speechBounds(segment: AlignedTranscriptSegment): { readonly start: number; readonly end: number } {
+function speechBounds(
+  segment: AlignedTranscriptSegment,
+  basisSegment: { readonly startSec: number; readonly endSec: number },
+): { readonly start: number; readonly end: number } {
   const spans = segment.speechActivity ?? [];
   return spans.length
     ? { start: spans[0]!.startSec, end: spans.at(-1)!.endSec }
-    : { start: segment.startSec, end: segment.endSec };
+    : { start: basisSegment.startSec, end: basisSegment.endSec };
 }
 
-function fillEstimated(
+function fillMissingTiming(
   values: Array<MutableTiming | undefined>,
   source: readonly NarrativeToken[],
   startBound: number,
@@ -315,11 +300,6 @@ function frameFor(basis: SpeechAudioBasis, timeSec: number): number {
   return Math.round(timeSec * numerator / denominator);
 }
 
-function secondsFor(basis: SpeechAudioBasis, frame: number): number {
-  const { numerator, denominator } = basis.programSpace.frameRate;
-  return frame * denominator / numerator;
-}
-
 /**
  * Locate every Script token against one recording.
  *
@@ -332,8 +312,8 @@ function secondsFor(basis: SpeechAudioBasis, frame: number): number {
  *
  * Locating fails only when the Script, the audio and the transcript are not the
  * same three things: a missing or repeated Segment, a Segment the Script never
- * declared, a transcript answering a different segmentation, or a duration that
- * belongs to other audio. It never fails because of a timestamp.
+ * declared, or a transcript answering a different segmentation. It never fails
+ * merely because a provider timestamp is awkward.
  */
 export function locateSpeechTiming(
   narrative: Narrative,
@@ -353,8 +333,9 @@ export function locateSpeechTiming(
     const chars = timedChars(aligned);
     const located: Array<MutableTiming | undefined> = Array(source.length).fill(undefined);
     for (const group of segmentGroups) locatePairedGroup(group, source, aligned.words, chars, located);
-    const bounds = speechBounds(aligned);
-    const complete = fillEstimated(located, source, bounds.start, bounds.end);
+    const basisSegment = basis.segments.find((item) => item.segmentId === segment.id)!;
+    const bounds = speechBounds(aligned, basisSegment);
+    const complete = fillMissingTiming(located, source, bounds.start, bounds.end);
     const segmentTokens = source.map((token, index): TimedSpeechToken => {
       const timing = complete[index]!;
       const startFrame = frameFor(basis, timing.startSec);
@@ -362,21 +343,17 @@ export function locateSpeechTiming(
       return {
         tokenId: token.id,
         segmentId: segment.id,
-        startSec: secondsFor(basis, startFrame),
-        endSec: secondsFor(basis, endFrame),
         startFrame,
-        endFrame,
+        endFrameExclusive: endFrame,
       };
     });
     timedTokens.push(...segmentTokens);
-    const startFrame = frameFor(basis, aligned.startSec);
-    const endFrame = frameFor(basis, aligned.endSec);
+    const startFrame = frameFor(basis, basisSegment.startSec);
+    const endFrame = frameFor(basis, basisSegment.endSec);
     timedSegments.push({
       segmentId: segment.id,
-      startSec: secondsFor(basis, startFrame),
-      endSec: secondsFor(basis, endFrame),
       startFrame,
-      endFrame,
+      endFrameExclusive: endFrame,
     });
   }
 
@@ -386,13 +363,13 @@ export function locateSpeechTiming(
     if (anchor.kind === "segment-start" || anchor.kind === "segment-end") {
       const segment = segmentsById.get(anchor.segmentId)!;
       return anchor.kind === "segment-start"
-        ? { identity: anchor.id, timeSec: segment.startSec, frame: segment.startFrame }
-        : { identity: anchor.id, timeSec: segment.endSec, frame: segment.endFrame };
+        ? { identity: anchor.id, frame: segment.startFrame }
+        : { identity: anchor.id, frame: segment.endFrameExclusive };
     }
     const token = tokensById.get(anchor.tokenId!)!;
     return anchor.kind === "token-start"
-      ? { identity: anchor.id, timeSec: token.startSec, frame: token.startFrame }
-      : { identity: anchor.id, timeSec: token.endSec, frame: token.endFrame };
+      ? { identity: anchor.id, frame: token.startFrame }
+      : { identity: anchor.id, frame: token.endFrameExclusive };
   });
   return {
     contract: "svml.complete-semantic-map@1" as const,

@@ -179,9 +179,7 @@ async function main(): Promise<void> {
     endpoint: "hyperframes.aws-lambda.canary",
     authority: "hyperframes.aws-lambda.canary",
     route: "fixture.render",
-    implementationDigest: digestOf("hyperframes-aws-canary:implementation"),
     runtimeClosure: digestOf("hyperframes-aws-canary:runtime"),
-    requestDigest: need.requestDigest,
     attempt: 1,
   });
   const context = {
@@ -237,7 +235,6 @@ async function main(): Promise<void> {
       frameRate: visual.frameRate,
       frameCount: visual.frameCount,
       canvas: visual.canvas,
-      metadata: outcome.result.metadata,
       probe: probe.streams[0],
     }, null, 2)}\n`);
   } finally {

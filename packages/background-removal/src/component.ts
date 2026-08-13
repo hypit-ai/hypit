@@ -10,7 +10,6 @@ function blob(value: StoredValue | undefined) {
 }
 
 export const backgroundRemovalComponent = {
-  name: "@narratage/background-removal",
   producers: [{
     producer: backgroundRemovalProducers.request,
     implementationDigest: backgroundRemovalImplementationDigests.request,
@@ -18,5 +17,4 @@ export const backgroundRemovalComponent = {
       outputs: {}, needs: { image: { constraints: backgroundRemovalRequest(blob(inputs.source?.value)) as never } },
     }),
   }],
-  validators: [],
 } satisfies ComponentPackage;

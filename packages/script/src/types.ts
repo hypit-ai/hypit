@@ -31,12 +31,19 @@ export type ParsedRoleAtom = {
 export type ParsedAtom = ParsedTextAtom | ParsedRoleAtom;
 
 export type ParsedSegment = NarrativeSegment & {
+  /** Parser-local array position; omitted from the public Narrative value. */
+  readonly index: number;
   readonly atoms: readonly ParsedAtom[];
   readonly range: SourceRange;
   readonly selfClosing: boolean;
 };
 
-export type ParsedToken = NarrativeToken & { readonly range: SourceRange };
+export type ParsedToken = NarrativeToken & {
+  /** Parser-local positions used to create stable source anchor ids; omitted from Narrative. */
+  readonly index: number;
+  readonly segmentTokenIndex: number;
+  readonly range: SourceRange;
+};
 export type ParsedTurn = NarrativeTurn & { readonly range: SourceRange };
 
 export type ParsedSelectionOccurrence = NarrativeSelectionOccurrence & {
@@ -111,5 +118,4 @@ export type ScriptSurfaceOutput = {
   /** Script is a record-only Surface; it cannot smuggle executable graph declarations. */
   readonly components: readonly never[];
   readonly fragments: readonly never[];
-  readonly sourceMaps: readonly CanonicalValue[];
 };

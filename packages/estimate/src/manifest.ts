@@ -31,6 +31,17 @@ const speechEstimatePolicySchema: ValueSchema = {
   },
 };
 
+export const estimateMarkupSurfaces = [{
+    name: "speech",
+    tag: "Speech",
+    mode: "structured",
+    outputs: [estimateTypes.speechPolicy, speechTypes.duration],
+    implementation: {
+      digest: estimateSurfaceImplementationDigest,
+    },
+  }] as const;
+
+
 export const estimateManifest: ModuleManifest = {
   format: "svml.module@1",
   name: estimateModuleRef.name,
@@ -42,17 +53,6 @@ export const estimateManifest: ModuleManifest = {
   ],
   types: [{ name: estimateTypes.speechPolicy.name, schema: speechEstimatePolicySchema }],
   capabilities: [],
-  surfaces: [{
-    name: "speech",
-    tag: "Speech",
-    mode: "structured",
-    outputs: [estimateTypes.speechPolicy, speechTypes.duration],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@narratage/estimate/speech-surface",
-      digest: estimateSurfaceImplementationDigest,
-    },
-  }],
   producers: [{
     name: estimateProducers.speech.name,
     inputs: [
@@ -62,8 +62,6 @@ export const estimateManifest: ModuleManifest = {
     outputs: [{ name: "duration", type: speechTypes.duration }],
     needs: [],
     implementation: {
-      kind: "registered",
-      locator: "@narratage/estimate/estimate-speech",
       digest: estimateSpeechImplementationDigest,
     },
   }],

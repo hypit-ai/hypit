@@ -24,7 +24,6 @@ export const svsFrontend: AuthorFrontend = {
   decode(source, context) {
     verifyClosure(context.closure);
     const parsed = parseSvs(source.name, source.text);
-    const sourceDigest = source.sourceDigest;
     const records = parsed.recipes.map((recipe) => sealRecord({
       id: recipe.value.path,
       type: svsRecipeType,
@@ -39,11 +38,9 @@ export const svsFrontend: AuthorFrontend = {
     }));
     return {
       module: sealTypedModule({
-        id: `source:${source.name}`,
-        closureDigest: context.closure.digest,
         records,
       }),
-      author: sealAuthorModule({ name: `source:${source.name}`, components: [] }),
+      author: sealAuthorModule({ components: [] }),
       fragments: [],
       exports,
     };

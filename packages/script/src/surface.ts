@@ -1,5 +1,3 @@
-import { canonicalize } from "@narratage/core";
-
 import { ScriptSyntaxError } from "./error.js";
 import {
   captionCorrespondence,
@@ -12,7 +10,6 @@ import {
   narrativeMomentValue,
   narrativeSelectionValue,
   narrativeSpeechTextValue,
-  narrativeSourceMap,
   narrativeValue,
 } from "./narrative.js";
 import {
@@ -161,6 +158,5 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
     ],
     components: [],
     fragments: [],
-    sourceMaps: [canonicalize(narrativeSourceMap(rawId, parsed))],
   };
 }

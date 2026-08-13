@@ -216,10 +216,7 @@ export function defineExactModelModule<const Key extends string>(
         name: item.requestType.name,
         schema: requestSchemaFromPorts(item.spec.ports),
         validator: {
-          abi: "svml.type-validator@1" as const,
           implementation: {
-            kind: "registered" as const,
-            locator: `${options.module.name}/validate-${item.spec.key}`,
             digest: item.validatorDigest,
           },
         },
@@ -228,10 +225,7 @@ export function defineExactModelModule<const Key extends string>(
         name: item.draftType.name,
         schema: requestDraftSchemaFromPorts(item.spec.ports),
         validator: {
-          abi: "svml.type-validator@1" as const,
           implementation: {
-            kind: "registered" as const,
-            locator: `${options.module.name}/validate-${item.spec.key}-draft`,
             digest: item.draftValidatorDigest,
           },
         },
@@ -247,7 +241,6 @@ export function defineExactModelModule<const Key extends string>(
       name: item.capability.name,
       returns: item.returns,
     })),
-    surfaces: [],
     producers: endpointData.flatMap((item) => [
       {
         name: item.producer.name,
@@ -259,8 +252,6 @@ export function defineExactModelModule<const Key extends string>(
           returns: item.returns,
         }],
         implementation: {
-          kind: "registered" as const,
-          locator: `${options.module.name}/${item.spec.key}`,
           digest: item.implementationDigest,
         },
       },
@@ -274,8 +265,6 @@ export function defineExactModelModule<const Key extends string>(
         outputs: [{ name: "draft", type: item.draftType }],
         needs: [],
         implementation: {
-          kind: "registered" as const,
-          locator: `${options.module.name}/${item.spec.key}/bind-${binding.port}`,
           digest: binding.implementationDigest,
         },
       })),
@@ -288,8 +277,6 @@ export function defineExactModelModule<const Key extends string>(
         outputs: [{ name: "draft", type: item.draftType }],
         needs: [],
         implementation: {
-          kind: "registered" as const,
-          locator: `${options.module.name}/${item.spec.key}/bind-${binding.port}-text`,
           digest: binding.implementationDigest,
         },
       })),
@@ -299,8 +286,6 @@ export function defineExactModelModule<const Key extends string>(
         outputs: [{ name: "request", type: item.requestType }],
         needs: [],
         implementation: {
-          kind: "registered" as const,
-          locator: `${options.module.name}/${item.spec.key}/finalize`,
           digest: item.finalizeImplementationDigest,
         },
       },
@@ -309,7 +294,6 @@ export function defineExactModelModule<const Key extends string>(
 
   const endpoints = Object.fromEntries(endpointData.map((item): [Key, ExactModelEndpoint] => {
     const fragment = sealGraphFragment({
-      name: `${options.module.name}/${item.spec.key}@1`,
       inputs: [{ name: "request", type: item.requestType }],
       operations: [{
         id: "generate",
@@ -348,7 +332,6 @@ export function defineExactModelModule<const Key extends string>(
     manifestDigest: digestOf(manifest),
     endpoints: endpoints as Readonly<Record<Key, ExactModelEndpoint>>,
     component: {
-      name: options.module.name,
       validators: endpointData.flatMap((item) => [{
         type: item.requestType,
         implementationDigest: item.validatorDigest,
@@ -534,7 +517,6 @@ export function createExactModelPrimaryGenerationFragment(
     ...mediaInputs.map((item) => `${item.name}=${item.port}:media`),
   ].join(",") || "no-dynamic-inputs";
   return sealGraphFragment({
-    name: `${endpoint.producer.module.name}/${endpoint.key}-assembled-primary-${result}[${shape}]@1`,
     inputs,
     operations,
     exports: [{

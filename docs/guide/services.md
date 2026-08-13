@@ -34,8 +34,10 @@ A stopped idle Runtime is a valid observation, not a failed command. `runtime st
 successfully after a successful query and reports `ready: false`; it becomes an attention warning
 when unfinished dispatch exists but the Worker or a required declared program is unavailable.
 
-The Worker record binds an effective Profile revision covering the Profile bytes plus both package
-locks it names. Editing the same Profile path or regenerating either lock makes the old process
+The Worker record binds an opaque Profile revision supplied by the selected Distribution. The
+official JSON Profile implementation covers the Profile bytes plus both package locks it names;
+the generic CLI neither parses that document nor assumes what belongs to a revision. Editing the
+same Profile path or regenerating either lock therefore makes the official Worker process
 `stale`. The next `runtime up` or `build` first checks the DispatchStore: unfinished work from the
 old revision rejects the new revision without stopping the old Worker or starting external
 programs. Once old work is terminal, replacement is allowed.

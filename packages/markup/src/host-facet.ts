@@ -1,44 +1,59 @@
 import type { HostFacet } from "@narratage/host";
 import { isDigest } from "@narratage/protocol";
-import type { Digest, ModuleRef } from "@narratage/protocol";
+import type { Digest, ModuleRef, TypeRef } from "@narratage/protocol";
 
 import type {
   RawSurfaceHandler,
+  RegisteredSurface,
   StructuredSurfaceHandler,
   MarkupSurfaceRegistryLike,
+  MarkupSurfaceDeclaration,
+  RawSurfaceDeclaration,
+  StructuredSurfaceDeclaration,
 } from "./types.js";
 
 export const markupSurfaceHostFacetAbi = "svml.markup-surface-host@1";
 
-export type MarkupSurfaceHostFacetOptions =
+type RawMarkupSurfaceHostFacetOptions =
   | {
       readonly module: ModuleRef;
       readonly surface: string;
+      readonly tag: string;
+      readonly outputs: readonly TypeRef[];
       readonly mode: "raw";
       readonly implementationDigest: Digest;
       readonly handler: RawSurfaceHandler;
     }
   | {
       readonly module: ModuleRef;
+      readonly declaration: RawSurfaceDeclaration;
+      readonly handler: RawSurfaceHandler;
+    };
+
+type StructuredMarkupSurfaceHostFacetOptions =
+  | {
+      readonly module: ModuleRef;
       readonly surface: string;
+      readonly tag: string;
+      readonly outputs: readonly TypeRef[];
       readonly mode: "structured";
       readonly implementationDigest: Digest;
       readonly handler: StructuredSurfaceHandler;
+    }
+  | {
+      readonly module: ModuleRef;
+      readonly declaration: StructuredSurfaceDeclaration;
+      readonly handler: StructuredSurfaceHandler;
     };
 
+export type { MarkupSurfaceDeclaration } from "./types.js";
+
+export type MarkupSurfaceHostFacetOptions =
+  | RawMarkupSurfaceHostFacetOptions
+  | StructuredMarkupSurfaceHostFacetOptions;
+
 type MutableMarkupSurfaceRegistry = MarkupSurfaceRegistryLike & {
-  registerRaw(
-    module: ModuleRef,
-    surface: string,
-    implementationDigest: Digest,
-    handler: RawSurfaceHandler,
-  ): void;
-  registerStructured(
-    module: ModuleRef,
-    surface: string,
-    implementationDigest: Digest,
-    handler: StructuredSurfaceHandler,
-  ): void;
+  register(value: RegisteredSurface): void;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -60,20 +75,47 @@ function nonEmptyString(value: unknown, subject: string): string {
   return value;
 }
 
+function typeRef(value: unknown, subject: string): TypeRef {
+  const item = object(value, subject);
+  exact(item, ["module", "name"], subject);
+  const module = object(item.module, `${subject}.module`);
+  exact(module, ["name", "version"], `${subject}.module`);
+  return {
+    module: {
+      name: nonEmptyString(module.name, `${subject}.module.name`),
+      version: nonEmptyString(module.version, `${subject}.module.version`),
+    },
+    name: nonEmptyString(item.name, `${subject}.name`),
+  };
+}
+
 /** Package-owned Markup Surface declaration carried through the syntax-neutral package loader. */
+export function createMarkupSurfaceHostFacet(options: RawMarkupSurfaceHostFacetOptions): HostFacet;
+export function createMarkupSurfaceHostFacet(options: StructuredMarkupSurfaceHostFacetOptions): HostFacet;
 export function createMarkupSurfaceHostFacet(options: MarkupSurfaceHostFacetOptions): HostFacet {
+  const declaration = "declaration" in options
+    ? {
+        surface: options.declaration.name,
+        tag: options.declaration.tag,
+        outputs: options.declaration.outputs,
+        mode: options.declaration.mode,
+        implementationDigest: options.declaration.implementation.digest,
+      }
+    : options;
   assert(options.module.name.trim().length > 0 && options.module.version.trim().length > 0,
     "Markup Surface module identity is invalid");
-  assert(options.surface.trim().length > 0, "Markup Surface name is empty");
-  assert(isDigest(options.implementationDigest), "Markup Surface implementation digest is invalid");
+  assert(declaration.surface.trim().length > 0, "Markup Surface name is empty");
+  assert(declaration.tag.trim().length > 0, "Markup Surface tag is empty");
+  assert(isDigest(declaration.implementationDigest), "Markup Surface implementation digest is invalid");
   return {
     abi: markupSurfaceHostFacetAbi,
     identity: {
-      contract: "svml.markup-surface-host-facet@1",
       module: options.module,
-      surface: options.surface,
-      mode: options.mode,
-      implementationDigest: options.implementationDigest,
+      surface: declaration.surface,
+      tag: declaration.tag,
+      outputs: declaration.outputs,
+      mode: declaration.mode,
+      implementationDigest: declaration.implementationDigest,
     },
     implementation: options.handler,
   };
@@ -87,9 +129,8 @@ export function installMarkupSurfaceHostFacets(
   for (const facet of facets) {
     if (facet.abi !== markupSurfaceHostFacetAbi) continue;
     const identity = object(facet.identity, "Markup Surface Host facet identity");
-    exact(identity, ["contract", "module", "surface", "mode", "implementationDigest"],
+    exact(identity, ["module", "surface", "tag", "outputs", "mode", "implementationDigest"],
       "Markup Surface Host facet identity");
-    assert(identity.contract === "svml.markup-surface-host-facet@1", "Markup Surface Host facet contract is invalid");
     const module = object(identity.module, "Markup Surface Host facet module");
     exact(module, ["name", "version"], "Markup Surface Host facet module");
     const moduleRef = {
@@ -97,27 +138,36 @@ export function installMarkupSurfaceHostFacets(
       version: nonEmptyString(module.version, "Markup Surface Host facet module version"),
     };
     const surface = nonEmptyString(identity.surface, "Markup Surface Host facet surface");
+    const tag = nonEmptyString(identity.tag, "Markup Surface Host facet tag");
+    assert(Array.isArray(identity.outputs), "Markup Surface Host facet outputs must be an array");
+    const outputs = identity.outputs.map((item, index) => typeRef(item, `Markup Surface Host facet outputs[${index}]`));
     const implementationDigest = nonEmptyString(
       identity.implementationDigest,
       "Markup Surface Host facet implementation digest",
     );
     assert(isDigest(implementationDigest), "Markup Surface Host facet implementation digest is invalid");
     assert(typeof facet.implementation === "function", "Markup Surface Host facet implementation must be a function");
+    assert(identity.mode === "raw" || identity.mode === "structured", "Markup Surface Host facet mode is invalid");
     if (identity.mode === "raw") {
-      registry.registerRaw(
-        moduleRef,
+      registry.register({
+        module: moduleRef,
         surface,
+        tag,
+        outputs,
         implementationDigest,
-        facet.implementation as RawSurfaceHandler,
-      );
+        mode: "raw",
+        handler: facet.implementation as RawSurfaceHandler,
+      });
     } else {
-      assert(identity.mode === "structured", "Markup Surface Host facet mode is invalid");
-      registry.registerStructured(
-        moduleRef,
+      registry.register({
+        module: moduleRef,
         surface,
+        tag,
+        outputs,
         implementationDigest,
-        facet.implementation as StructuredSurfaceHandler,
-      );
+        mode: "structured",
+        handler: facet.implementation as StructuredSurfaceHandler,
+      });
     }
   }
 }

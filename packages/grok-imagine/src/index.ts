@@ -94,17 +94,17 @@ const surface = (
   mode: "structured" as const,
   outputs: [endpoint.draftType, endpoint.mediaBindings.images!.type],
   implementation: {
-    kind: "trusted-frontend-surface" as const,
-    locator: `@narratage/grok-imagine/${name}-surface`,
     digest,
   },
 });
-export const grokImagineManifest = {
-  ...grokImagineBaseDefinition.manifest,
-  surfaces: [
+
+export const grokImagineMarkupSurfaces = [
     surface("video", "Video", grokImagineEndpoints.video!, grokImagineSurfaceImplementationDigests.video),
     surface("preview-video", "PreviewVideo", grokImagineEndpoints["preview-1.5"]!, grokImagineSurfaceImplementationDigests.previewVideo),
-  ],
+  ] as const;
+
+export const grokImagineManifest = {
+  ...grokImagineBaseDefinition.manifest,
 };
 export const grokImagineManifestDigest = digestOf(grokImagineManifest);
 export const grokImagineDefinition = {

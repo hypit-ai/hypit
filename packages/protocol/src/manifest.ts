@@ -7,7 +7,6 @@ import type {
   NeedPortDeclaration,
   PortDeclaration,
   ProducerDeclaration,
-  SurfaceDeclaration,
   TypeDeclaration,
 } from "./module.js";
 import type { CapabilityRef, Digest, ModuleRef, TypeRef } from "./identity.js";
@@ -177,9 +176,6 @@ function typeDeclaration(value: unknown, path: string): TypeDeclaration {
   return {
     name: string(parsed.name, `${path}.name`),
     schema: valueSchema(parsed.schema, `${path}.schema`),
-    ...(parsed.description === undefined
-      ? {}
-      : { description: string(parsed.description, `${path}.description`) }),
     ...(parsed.validator === undefined
       ? {}
       : { validator: typeValidator(parsed.validator, `${path}.validator`) }),
@@ -188,11 +184,7 @@ function typeDeclaration(value: unknown, path: string): TypeDeclaration {
 
 function typeValidator(value: unknown, path: string): NonNullable<TypeDeclaration["validator"]> {
   const parsed = object(value, path);
-  if (parsed.abi !== "svml.type-validator@1") {
-    throw new Error(`${path}.abi must be svml.type-validator@1`);
-  }
   return {
-    abi: "svml.type-validator@1",
     implementation: implementation(parsed.implementation, `${path}.implementation`),
   };
 }
@@ -202,9 +194,6 @@ function capabilityDeclaration(value: unknown, path: string): CapabilityDeclarat
   return {
     name: string(parsed.name, `${path}.name`),
     returns: typeRef(parsed.returns, `${path}.returns`),
-    ...(parsed.description === undefined
-      ? {}
-      : { description: string(parsed.description, `${path}.description`) }),
   };
 }
 
@@ -228,8 +217,6 @@ function needPort(value: unknown, path: string): NeedPortDeclaration {
 function implementation(value: unknown, path: string): ImplementationRef {
   const parsed = object(value, path);
   return {
-    kind: string(parsed.kind, `${path}.kind`),
-    locator: string(parsed.locator, `${path}.locator`),
     digest: digest(parsed.digest, `${path}.digest`),
   };
 }
@@ -251,23 +238,6 @@ function producer(value: unknown, path: string): ProducerDeclaration {
   };
 }
 
-function surface(value: unknown, path: string): SurfaceDeclaration {
-  const parsed = object(value, path);
-  const mode = string(parsed.mode, `${path}.mode`);
-  if (mode !== "raw" && mode !== "structured") {
-    throw new Error(`${path}.mode must be raw or structured`);
-  }
-  return {
-    name: string(parsed.name, `${path}.name`),
-    tag: string(parsed.tag, `${path}.tag`),
-    mode,
-    outputs: array(parsed.outputs, `${path}.outputs`).map((item, index) =>
-      typeRef(item, `${path}.outputs[${index}]`),
-    ),
-    implementation: implementation(parsed.implementation, `${path}.implementation`),
-  };
-}
-
 export function parseModuleManifest(value: unknown): ModuleManifest {
   const parsed = object(canonicalize(value), "$manifest");
   if (parsed.format !== "svml.module@1") throw new Error("$manifest.format must be svml.module@1");
@@ -283,9 +253,6 @@ export function parseModuleManifest(value: unknown): ModuleManifest {
     ),
     capabilities: array(parsed.capabilities, "$manifest.capabilities").map((item, index) =>
       capabilityDeclaration(item, `$manifest.capabilities[${index}]`),
-    ),
-    surfaces: array(parsed.surfaces, "$manifest.surfaces").map((item, index) =>
-      surface(item, `$manifest.surfaces[${index}]`),
     ),
     producers: array(parsed.producers, "$manifest.producers").map((item, index) =>
       producer(item, `$manifest.producers[${index}]`),

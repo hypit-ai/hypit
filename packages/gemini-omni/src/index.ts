@@ -66,9 +66,8 @@ export const geminiOmniEndpoints = geminiOmniBaseDefinition.endpoints;
 export const geminiOmniComponent = geminiOmniBaseDefinition.component;
 export const geminiOmniSurfaceImplementationDigest = digestOf("@narratage/gemini-omni/video-surface@1");
 const geminiOmniEndpoint = geminiOmniEndpoints.video!;
-export const geminiOmniManifest = {
-  ...geminiOmniBaseDefinition.manifest,
-  surfaces: [{
+
+export const geminiOmniMarkupSurfaces = [{
     name: "video",
     tag: "Video",
     mode: "structured" as const,
@@ -78,11 +77,12 @@ export const geminiOmniManifest = {
       geminiOmniEndpoint.mediaBindings.excerpts!.type,
     ],
     implementation: {
-      kind: "trusted-frontend-surface" as const,
-      locator: "@narratage/gemini-omni/video-surface",
       digest: geminiOmniSurfaceImplementationDigest,
     },
-  }],
+  }] as const;
+
+export const geminiOmniManifest = {
+  ...geminiOmniBaseDefinition.manifest,
 };
 export const geminiOmniManifestDigest = digestOf(geminiOmniManifest);
 export const geminiOmniDefinition = {

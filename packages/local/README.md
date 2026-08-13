@@ -28,7 +28,6 @@ A Runtime Profile must separately select every service:
       "build": "state.builds",
       "operations": "state.operations",
       "dispatch": "state.dispatch",
-      "journal": "state.journal",
       "artifacts": "artifacts",
       "credentials": ["credentials"]
     }
@@ -51,7 +50,7 @@ becomes its executor; interrupting the observer does not cancel the Build.
 The Worker stores no serialized Core command. After every restart it reopens verified BuildState and
 asks the selected Scheduler to regenerate the current commands. Recoverable Provider checkpoints
 remain in `OperationStore`; dispatch lease, heartbeat, admission and shared resource capacity remain in
-`BuildDispatchStore`; operational history remains in `RuntimeJournal`.
+`BuildDispatchStore`. Queue and cancellation inspection read those authoritative stores directly.
 
 Cancellation first closes admission. Existing Operations keep their own execution fact and a
 separate cancellation-control fact. Provider acceptance is not reported as cancellation; unsupported

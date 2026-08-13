@@ -1,9 +1,19 @@
-import type { RegisteredModulePackage } from "@narratage/compiler-node";
 import type { ComponentPackage } from "@narratage/component-kit";
-import type { AuthorFrontend } from "@narratage/elaborator";
 import type { HostFacet } from "@narratage/host";
-import type { Digest } from "@narratage/protocol";
-import type { RunFrontend } from "@narratage/run";
+import type { Digest, ModuleManifest } from "@narratage/protocol";
+
+/** Semantic Module declaration carried by one physical Node package. */
+export type NodeModuleContribution = {
+  readonly manifest: ModuleManifest;
+  /** Additional author import spellings resolved to this exact Manifest. */
+  readonly specifiers?: readonly string[];
+};
+
+/** Opaque logical address resolved by package inventory without interpreting the owning ABI. */
+export type LogicalPackageAddress = {
+  readonly abi: string;
+  readonly name: string;
+};
 
 /**
  * Trusted executable facets exported by one installed physical package. The Host independently
@@ -12,13 +22,16 @@ import type { RunFrontend } from "@narratage/run";
  */
 export type NodePackageContribution = {
   readonly format: "svml.node-package@1";
-  readonly name: string;
-  readonly modules?: readonly RegisteredModulePackage[];
-  readonly authorFrontends?: readonly AuthorFrontend[];
-  readonly runFrontends?: readonly RunFrontend[];
+  readonly modules?: readonly NodeModuleContribution[];
   /** Syntax- or Host-specific executable facets, inert until their exact Host ABI selects them. */
   readonly hostFacets?: readonly HostFacet[];
   readonly components?: readonly ComponentPackage[];
+};
+
+/** Physical owner established by the Host; executable code never self-asserts this identity. */
+export type NodePackageBinding = {
+  readonly specifier: string;
+  readonly contribution: NodePackageContribution;
 };
 
 export type LockedPackageArtifact = {
@@ -28,14 +41,12 @@ export type LockedPackageArtifact = {
 };
 
 export type LockedNodePackage = {
-  /** Node package name used only for installed-package resolution. */
-  readonly specifier: string;
   readonly package: {
     readonly name: string;
     readonly version: string;
   };
-  /** Logical Frontend and Module requests this physical package can satisfy. */
-  readonly provides: readonly string[];
+  /** ABI-qualified logical requests this physical package can satisfy. */
+  readonly offers: readonly LogicalPackageAddress[];
   /** Digest of declared Module, author and compute facet identities, excluding function objects. */
   readonly facetsDigest: Digest;
   /** Digest of this package's own transitive physical Artifact closure, excluding unrelated selections. */
@@ -61,10 +72,10 @@ export type NodePackageLockCreateOptions = {
 };
 
 export type NodePackageSelectionRequest = {
-  /** Physical roots that the Source syntax could name directly. */
+  /** Physical enrollment hints; logical addresses become the sole exact-selection authority. */
   readonly selected: readonly string[];
-  /** Logical Frontend and Module requests that may be supplied by any trusted inventory package. */
-  readonly logical?: readonly string[];
+  /** Logical requests that may be supplied by any trusted inventory package. */
+  readonly logical?: readonly LogicalPackageAddress[];
 };
 
 export type LoadedNodePackageSet = {
@@ -72,5 +83,5 @@ export type LoadedNodePackageSet = {
   readonly lock: NodePackageLock;
   /** Trusted inventory from which the exact closure was selected. */
   readonly inventoryDigest: Digest;
-  readonly contributions: readonly NodePackageContribution[];
+  readonly packages: readonly NodePackageBinding[];
 };

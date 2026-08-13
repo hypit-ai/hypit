@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { digestOf } from "@narratage/protocol";
-
 import {
   createRuntimeEndpointAdapterFacet,
   createRuntimeServiceAdapterFacet,
@@ -47,6 +45,18 @@ test("a facet declares which kind it is, and the registry keeps the two apart", 
   assert.equal(registry.has("example.absent"), false);
 });
 
+test("Endpoint and Runtime Service may intentionally share one logical spelling", () => {
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(endpoint("example.shared"));
+  registry.registerFacet(createRuntimeServiceAdapterFacet({
+    use: "example.shared",
+    validate() {},
+    create: () => ({ services: [] }) as never,
+  }));
+  assert.ok(registry.has("example.shared", "endpoint"));
+  assert.ok(registry.has("example.shared", "runtime-service"));
+});
+
 test("asking an Endpoint adapter for a Runtime Service is refused, not coerced", async () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.endpoint"));
@@ -67,7 +77,7 @@ test("a Runtime Service adapter cannot escape its configured instance namespace"
   );
 });
 
-test("one name is one adapter, so a second registration is an error rather than a winner", () => {
+test("one kind and logical name has one adapter, so a second registration is an error", () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.endpoint"));
   assert.throws(() => registry.registerFacet(endpoint("example.endpoint")), /already registered/u);
@@ -172,18 +182,11 @@ test("Runtime config readers accept a value or refuse it; they never guess one",
 /**
  * Pin.
  *
- * A package lock records a `facetsDigest` derived from these identities. If the
- * identity of an unchanged adapter shifted, every recorded lock would fail
- * verification for a reason nobody changed on purpose — which has happened once
- * already, when `kind` was renamed. The constant makes that a visible edit.
+ * ABI and offers carry the address. Identity must not repeat it.
  */
-test("an unchanged adapter keeps its identity, because locks are addressed by it", () => {
+test("an adapter stores its address once", () => {
   const facet = endpoint("@narratage/example-provider");
-  assert.deepEqual(facet.identity, {
-    contract: "svml.runtime-adapter-facet@1",
-    use: "@narratage/example-provider",
-    kind: "endpoint",
-  });
-  assert.equal(digestOf(facet.identity),
-    "sha256:c9ce6e18b3d02f65148cfc06b016ae0a7dee00430558bb393472726fb91a756f");
+  assert.equal("identity" in facet, false);
+  assert.deepEqual(facet.offers, ["@narratage/example-provider"]);
+  assert.equal(facet.abi, "svml.runtime-endpoint-adapter-host@1");
 });

@@ -11,7 +11,6 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 /** Minimal complete graph witness; richer Surfaces generate the same primitive operations dynamically. */
 export const stillMediaTrackFragment = sealGraphFragment({
-  name: "@narratage/media-track/one-full-still@1",
   inputs: [
     { name: "header", type: mediaTrackTypes.header },
     { name: "space", type: programSpaceTypes.programSpace },
@@ -48,7 +47,6 @@ export const stillMediaTrackFragment = sealGraphFragment({
 });
 
 export const renderMediaTrackFragment = sealGraphFragment({
-  name: "@narratage/media-track/project-visual@1",
   inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: mediaTrackTypes.program }],
   operations: [{ id: "visual", producer: mediaTrackProducers.projectVisual, inputs: { space: input("space"), program: input("program") }, result: { kind: "output", name: "track" } }],
   exports: [{ name: "track", type: compositionTypes.visualTrack, root: operation("visual") }],

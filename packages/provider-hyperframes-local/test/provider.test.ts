@@ -104,7 +104,7 @@ async function handlerFor(request: Need): Promise<{
 
 test("local HyperFrames Provider exposes one exact visual capability and two separate concurrency levels", async () => {
   const provider = createLocalHyperframesProvider({ workers: 4, defaultConcurrency: 2 });
-  assert.equal(provider.name, "hyperframes.local");
+  assert.equal(provider.instance.id, "hyperframes.local");
   const facet = provider.manifest.facets[0];
   assert.equal(facet?.role, "capability-endpoint");
   assert(facet?.role === "capability-endpoint");
@@ -159,15 +159,5 @@ test("local HyperFrames Provider really renders a silent frame-exact MP4 with pa
   const visual = value as unknown as RenderedVisual;
   assert.equal(visual.frameCount, 12);
   assert.deepEqual(visual.canvas, { width: 160, height: 96 });
-  assert.equal(visual.muted, true);
   assert.equal(await artifacts.has(visual.artifact.digest), true);
-  assert.equal((output.metadata as Record<string, CanonicalValue>).contract,
-    "svml.hyperframes-renderer-attestation@1");
-  const metadata = output.metadata as {
-    readonly browser: { readonly digest: string; readonly version: string };
-    readonly surfaceValidations: readonly { readonly artifactDigest: string }[];
-  };
-  assert.match(metadata.browser.digest, /^sha256:[0-9a-f]{64}$/u);
-  assert.match(metadata.browser.version, /(?:Chrome|Chromium)/u);
-  assert.deepEqual(metadata.surfaceValidations.map((item) => item.artifactDigest), [surfaceArtifact.digest]);
 });

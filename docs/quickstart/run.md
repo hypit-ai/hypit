@@ -181,7 +181,7 @@ A local file is the simplest zero-input Candidate. The Run Source names the byte
 to one current Logical Output:
 
 ```svml
-<file id="approved-opening" from="./approved-opening.mp4" media-type="video/mp4"/>
+<file id="approved-opening" type="@narratage/artifact@1#BlobArtifact" from="./approved-opening.mp4" media-type="video/mp4"/>
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
@@ -192,8 +192,9 @@ human-supplied result uses the same mechanism.
 ## Runtime Profile
 
 The declarative Runtime Profile (`svml.runtime.json`) tells the CLI **where** to run each type of
-work. Applications embedding Narratage may assemble the same Runtime roles through
-`@narratage/local`, but executable modules are not CLI Profiles. See the complete
+work. The official video Distribution parses this document as JSON; the command delegates to that
+Distribution instead of assigning semantics from the filename suffix. Applications embedding
+Narratage may assemble the same Runtime roles through `@narratage/local`. See the complete
 [Runtime Profile guide](../guide/runtime-profile.md).
 
 ```json
@@ -214,7 +215,6 @@ work. Applications embedding Narratage may assemble the same Runtime roles throu
       "build": "state.builds",
       "operations": "state.operations",
       "dispatch": "state.dispatch",
-      "journal": "state.journal",
       "artifacts": "artifacts",
       "credentials": ["credentials.env"]
     }
@@ -408,7 +408,6 @@ Runtime Profile, so the Profile remains portable:
       "build": "state.builds",
       "operations": "state.operations",
       "dispatch": "state.dispatch",
-      "journal": "state.journal",
       "artifacts": "artifacts",
       "credentials": ["credentials.env"]
     }

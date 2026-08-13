@@ -16,7 +16,7 @@ export type AudioTrackFragmentItem =
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
-export function createAudioTrackFragment(items: readonly AudioTrackFragmentItem[], name: string) {
+export function createAudioTrackFragment(items: readonly AudioTrackFragmentItem[]) {
   if (items.length === 0) throw new Error("Audio Track Fragment requires at least one Item.");
   const inputTypes = new Map<string, (typeof audioTrackTypes.clipSpec | typeof mediaTypes.synchronized | typeof semanticMapTypes.complete | typeof narrativeTypes.selection | typeof narrativeTypes.moment)>();
   const operations: FragmentOperation[] = [
@@ -55,7 +55,6 @@ export function createAudioTrackFragment(items: readonly AudioTrackFragmentItem[
     { id: "audio:track", producer: audioTrackProducers.render, inputs: { space: input("space"), program: operation("audio:program") }, result: { kind: "output", name: "track" } },
   );
   return sealGraphFragment({
-    name,
     inputs: [
       { name: "header", type: audioTrackTypes.header },
       { name: "space", type: programSpaceTypes.programSpace },
@@ -71,4 +70,4 @@ export function createAudioTrackFragment(items: readonly AudioTrackFragmentItem[
 
 export const programAudioTrackFragment = createAudioTrackFragment([
   { kind: "program", mediaName: "media", specName: "spec" },
-], "@narratage/audio-track/one-program-item@1");
+]);

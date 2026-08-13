@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { resolve } from "node:path";
 
 import {
   compileSourceClosure,
@@ -12,24 +11,23 @@ import {
 import type {
   AuthorFrontendRegistryLike,
   AuthorSourceDiscovery,
-  AuthorSourceUnit,
   CompiledSourceClosure,
   AuthorRecordAdmitter,
 } from "@narratage/elaborator";
-import type { ArtifactAttachment, Workspace, WorkspaceSession } from "@narratage/host";
+import type { SourceUnit } from "@narratage/source";
+import type { ArtifactAttachment, Workspace, WorkspaceSession } from "@narratage/workspace";
 import type { BlobRef, LinkedProgram } from "@narratage/protocol";
 import {
   TypeValidatorRegistry,
   createRecordAdmitter,
 } from "@narratage/validation";
 import type { TypeValidatorRegistryLike } from "@narratage/validation";
-import { NodeFilesystemWorkspace } from "@narratage/workspace-fs-node";
 
 import { NodeCompilerError } from "./error.js";
 import type { ModulePackageRegistryLike } from "./modules.js";
 
 type DiscoveredUnit = {
-  readonly source: AuthorSourceUnit;
+  readonly source: SourceUnit;
   readonly frontend: string;
   readonly discovery: AuthorSourceDiscovery;
 };
@@ -63,13 +61,13 @@ function mergeAttachments(groups: readonly (readonly ArtifactAttachment[])[]): r
 }
 
 async function discoverClosure(
-  entry: AuthorSourceUnit,
+  entry: SourceUnit,
   frontends: AuthorFrontendRegistryLike,
   workspace: WorkspaceSession,
 ): Promise<readonly DiscoveredUnit[]> {
   const units = new Map<string, DiscoveredUnit>();
   const visiting = new Set<string>();
-  const visit = async (source: AuthorSourceUnit): Promise<void> => {
+  const visit = async (source: SourceUnit): Promise<void> => {
     const prepared = prepareAuthorSource(source);
     const selectedFrontend = prepared.header.using;
     const key = `${source.id}\u0000${selectedFrontend}`;
@@ -96,12 +94,8 @@ async function discoverClosure(
 export type NodeCompilerOptions = {
   readonly modules: ModulePackageRegistryLike;
   readonly frontends: AuthorFrontendRegistryLike;
-  /** Files reachable through source imports must resolve inside this root. Defaults to entry dirname. */
-  readonly root?: string;
-  /** Additional Host-authorized roots for asset bytes, never Source imports. */
-  readonly assetRoots?: readonly string[];
-  /** Replaces the default Node filesystem definition environment. */
-  readonly workspace?: Workspace;
+  /** Explicit definition environment selected by the Host. */
+  readonly workspace: Workspace;
   /** Trusted Type-owner validators used to admit authored Records before linking. */
   readonly validators?: TypeValidatorRegistryLike;
   /** Low-level Host hook for a sandboxed or remote admission implementation. */
@@ -125,12 +119,6 @@ export class NodeCompiler {
         "NodeCompiler accepts validators or a custom Record admitter, not both",
       );
     }
-    if (options.workspace !== undefined && (options.root !== undefined || options.assetRoots !== undefined)) {
-      throw new NodeCompilerError(
-        "AMBIGUOUS_WORKSPACE",
-        "NodeCompiler accepts a Workspace or the root option for its default filesystem Workspace, not both",
-      );
-    }
     this.#options = options;
     this.#admitRecord = options.admitRecord
       ?? createRecordAdmitter(options.validators ?? new TypeValidatorRegistry());
@@ -142,12 +130,7 @@ export class NodeCompiler {
 
   /** Open one read-once Workspace session so a Host can inspect the Source Header and compile it once. */
   async openFile(file: string): Promise<WorkspaceSession> {
-    return this.#options.workspace === undefined
-      ? await new NodeFilesystemWorkspace({
-          ...(this.#options.root === undefined ? {} : { root: this.#options.root }),
-          ...(this.#options.assetRoots === undefined ? {} : { assetRoots: this.#options.assetRoots }),
-        }).open(resolve(file))
-      : await this.#options.workspace.open(file);
+    return await this.#options.workspace.open(file);
   }
 
   async compileFile(file: string): Promise<NodeCompiledSourceClosure> {
@@ -156,7 +139,7 @@ export class NodeCompiler {
   }
 
   /** Compile an explicitly resolved self-describing SourceUnit inside one already isolated Workspace. */
-  async compileSource(entry: AuthorSourceUnit, workspace: WorkspaceSession): Promise<NodeCompiledSourceClosure> {
+  async compileSource(entry: SourceUnit, workspace: WorkspaceSession): Promise<NodeCompiledSourceClosure> {
     const embeddedAttachments = new Map<string, ArtifactAttachment>();
     const discovered = await discoverClosure(
       entry,
@@ -166,10 +149,25 @@ export class NodeCompiler {
     const closure = this.#options.modules.createClosure(
       discovered.flatMap((unit) => unit.discovery.modules),
     );
+    const discoveries = new Map(discovered.map((unit) => [
+      `${unit.source.id}\u0000${unit.frontend}`,
+      unit.discovery,
+    ]));
     const compilation = await compileSourceClosure({
       entry,
       closure,
       frontends: this.#options.frontends,
+      discover(source, frontend) {
+        const discovery = discoveries.get(`${source.id}\u0000${frontend.id}`);
+        if (discovery === undefined) {
+          throw new NodeCompilerError(
+            "SOURCE_DISCOVERY_MISSING",
+            `Source ${source.name} was not present in the frozen discovery closure`,
+            source.id,
+          );
+        }
+        return discovery;
+      },
       resolveSource: workspace.resolveSource,
       async resolveAsset(importer, request) {
         if (request.bytes === undefined) return await workspace.resolveAsset(importer, request);
@@ -211,11 +209,9 @@ export class NodeCompiler {
     const existing = program.closure.modules.map((item) => `${item.ref.name}@${item.ref.version}`);
     const closure = this.#options.modules.createClosure([...existing, ...requests]);
     if (closure.digest === program.closure.digest) return program;
-    const rebound = program.modules.map((module) => sealTypedModule({
-      id: module.id,
-      closureDigest: closure.digest,
-      records: module.records,
-    }));
+    const rebound = program.records.length === 0 ? [] : [sealTypedModule({
+      records: program.records,
+    })];
     const extended = link(closure, rebound);
     if (extended.semanticDigest !== program.semanticDigest) {
       throw new NodeCompilerError(

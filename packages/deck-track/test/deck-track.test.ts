@@ -461,14 +461,12 @@ test("another Deck family can coexist by contributing only the existing VisualTr
     name: "example.carousel",
     version: "1",
     dependencies: [compositionDependency],
-    types: [], capabilities: [], surfaces: [], producers: [{
+    types: [], capabilities: [], producers: [{
       name: "render-carousel",
       inputs: [],
       outputs: [{ name: "track", type: compositionTypes.visualTrack }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "example.carousel/render",
         digest: digestOf("example.carousel/render@1"),
       },
     }],

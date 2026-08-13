@@ -30,14 +30,36 @@ export const textImplementationDigests = {
 } as const;
 
 const openObject: ValueSchema = { kind: "object", fields: {}, allowUnknown: true };
-const type = (name: string, schema: ValueSchema, locator: string, digest: (typeof textImplementationDigests)[keyof typeof textImplementationDigests]) => ({
+const type = (
+  name: string,
+  schema: ValueSchema,
+  digest: (typeof textImplementationDigests)[keyof typeof textImplementationDigests],
+) => ({
   name,
   schema,
   validator: {
-    abi: "svml.type-validator@1" as const,
-    implementation: { kind: "registered" as const, locator, digest },
+    implementation: { digest },
   },
 });
+
+export const textMarkupSurfaces = [{
+    name: "value",
+    tag: "Value",
+    mode: "structured",
+    outputs: [textTypes.text],
+    implementation: {
+      digest: textImplementationDigests.valueSurface,
+    },
+  }, {
+    name: "render",
+    tag: "Render",
+    mode: "structured",
+    outputs: [textTypes.text, textTypes.bindings, textTypes.binding],
+    implementation: {
+      digest: textImplementationDigests.renderSurface,
+    },
+  }] as const;
+
 
 export const textManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -51,9 +73,9 @@ export const textManifest: ModuleManifest = {
         contract: { schema: { kind: "literal", value: "svml.text@1" } },
         value: { schema: { kind: "string" } },
       },
-    }, "@narratage/text/validate-text", textImplementationDigests.validateText),
-    type(textTypes.template.name, openObject, "@narratage/text/validate-template", textImplementationDigests.validateTemplate),
-    type(textTypes.bindings.name, openObject, "@narratage/text/validate-bindings", textImplementationDigests.validateBindings),
+    }, textImplementationDigests.validateText),
+    type(textTypes.template.name, openObject, textImplementationDigests.validateTemplate),
+    type(textTypes.bindings.name, openObject, textImplementationDigests.validateBindings),
     type(textTypes.binding.name, {
       kind: "object",
       fields: {
@@ -61,37 +83,16 @@ export const textManifest: ModuleManifest = {
         name: { schema: { kind: "string", minLength: 1 } },
         mode: { schema: { kind: "string", enum: ["set", "append"] } },
       },
-    }, "@narratage/text/validate-binding", textImplementationDigests.validateBinding),
+    }, textImplementationDigests.validateBinding),
   ],
   capabilities: [],
-  surfaces: [{
-    name: "value",
-    tag: "Value",
-    mode: "structured",
-    outputs: [textTypes.text],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@narratage/text/value-surface",
-      digest: textImplementationDigests.valueSurface,
-    },
-  }, {
-    name: "render",
-    tag: "Render",
-    mode: "structured",
-    outputs: [textTypes.text, textTypes.bindings, textTypes.binding],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@narratage/text/render-surface",
-      digest: textImplementationDigests.renderSurface,
-    },
-  }],
   producers: [
     {
       name: textProducers.emptyBindings.name,
       inputs: [],
       outputs: [{ name: "bindings", type: textTypes.bindings }],
       needs: [],
-      implementation: { kind: "registered", locator: "@narratage/text/empty-bindings", digest: textImplementationDigests.emptyBindings },
+      implementation: { digest: textImplementationDigests.emptyBindings },
     },
     {
       name: textProducers.bindText.name,
@@ -102,7 +103,7 @@ export const textManifest: ModuleManifest = {
       ],
       outputs: [{ name: "bindings", type: textTypes.bindings }],
       needs: [],
-      implementation: { kind: "registered", locator: "@narratage/text/bind-text", digest: textImplementationDigests.bindText },
+      implementation: { digest: textImplementationDigests.bindText },
     },
     {
       name: textProducers.render.name,
@@ -112,7 +113,7 @@ export const textManifest: ModuleManifest = {
       ],
       outputs: [{ name: "text", type: textTypes.text }],
       needs: [],
-      implementation: { kind: "registered", locator: "@narratage/text/render", digest: textImplementationDigests.render },
+      implementation: { digest: textImplementationDigests.render },
     },
   ],
 };

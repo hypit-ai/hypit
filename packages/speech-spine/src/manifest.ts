@@ -75,6 +75,20 @@ export const speechSpineVisualSpecSchema: ValueSchema = object({
   stackingOrder: { schema: { kind: "number", integer: true } },
 });
 
+export const speechSpineMarkupSurfaces = [{
+    name: "spine",
+    tag: "Spine",
+    mode: "structured",
+    outputs: [speechSpineTypes.spineProgram, speechSpineTypes.visualSpec, spatialTypes.fit,
+      mediaPipelineTypes.selectionRequest,
+      speechTypes.basis, programSpaceTypes.programSpace, speechTypes.audioBasis,
+      compositionTypes.visualTrack, compositionTypes.audioTrack],
+    implementation: {
+      digest: speechSpineSurfaceImplementationDigest,
+    },
+  }] as const;
+
+
 export const speechSpineManifest: ModuleManifest = {
   format: "svml.module@1",
   name: speechSpineModuleRef.name,
@@ -97,27 +111,13 @@ export const speechSpineManifest: ModuleManifest = {
     { name: speechSpineTypes.visualSpec.name, schema: speechSpineVisualSpecSchema },
   ],
   capabilities: [],
-  surfaces: [{
-    name: "spine",
-    tag: "Spine",
-    mode: "structured",
-    outputs: [speechSpineTypes.spineProgram, speechSpineTypes.visualSpec, spatialTypes.fit,
-      mediaPipelineTypes.selectionRequest,
-      speechTypes.basis, programSpaceTypes.programSpace, speechTypes.audioBasis,
-      compositionTypes.visualTrack, compositionTypes.audioTrack],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@narratage/speech-spine/spine-surface",
-      digest: speechSpineSurfaceImplementationDigest,
-    },
-  }],
   producers: [
     {
       name: speechSpineProducers.createSet.name,
       inputs: [],
       outputs: [{ name: "set", type: speechSpineTypes.spineSet }],
       needs: [],
-      implementation: { kind: "registered", locator: "@narratage/speech-spine/create-spine-set", digest: createSpeechSpineSetImplementationDigest },
+      implementation: { digest: createSpeechSpineSetImplementationDigest },
     },
     {
       name: speechSpineProducers.appendAudioTake.name,
@@ -129,7 +129,7 @@ export const speechSpineManifest: ModuleManifest = {
       ],
       outputs: [{ name: "set", type: speechSpineTypes.spineSet }],
       needs: [],
-      implementation: { kind: "registered", locator: "@narratage/speech-spine/append-spine-audio-take", digest: appendSpeechSpineAudioTakeImplementationDigest },
+      implementation: { digest: appendSpeechSpineAudioTakeImplementationDigest },
     },
     {
       name: speechSpineProducers.appendVisualTake.name,
@@ -144,7 +144,7 @@ export const speechSpineManifest: ModuleManifest = {
       ],
       outputs: [{ name: "set", type: speechSpineTypes.spineSet }],
       needs: [],
-      implementation: { kind: "registered", locator: "@narratage/speech-spine/append-spine-visual-take", digest: appendSpeechSpineVisualTakeImplementationDigest },
+      implementation: { digest: appendSpeechSpineVisualTakeImplementationDigest },
     },
     {
       name: speechSpineProducers.compileAudio.name,
@@ -154,7 +154,7 @@ export const speechSpineManifest: ModuleManifest = {
       ],
       outputs: [{ name: "plan", type: mediaPipelineTypes.audioProgramPlan }],
       needs: [],
-      implementation: { kind: "registered", locator: "@narratage/speech-spine/compile-spine-audio", digest: compileSpeechSpineAudioImplementationDigest },
+      implementation: { digest: compileSpeechSpineAudioImplementationDigest },
     },
     {
       name: speechSpineProducers.assembleBasis.name,
@@ -165,7 +165,7 @@ export const speechSpineManifest: ModuleManifest = {
       ],
       outputs: [{ name: "basis", type: speechTypes.basis }],
       needs: [],
-      implementation: { kind: "registered", locator: "@narratage/speech-spine/assemble-speech-basis", digest: assembleSpeechBasisImplementationDigest },
+      implementation: { digest: assembleSpeechBasisImplementationDigest },
     },
   ],
 };

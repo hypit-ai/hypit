@@ -24,7 +24,6 @@ import {
 import {
   AuthorFrontendRegistry,
   sealGraphFragment,
-  verifySourceClosure,
 } from "@narratage/elaborator";
 import type {
   AuthorSourceAssetRequest,
@@ -44,8 +43,8 @@ import {
   RunFrontendRegistry,
 } from "@narratage/run";
 import { runMarkupFrontend } from "@narratage/run-markup";
-import type { ArtifactAttachment, Workspace } from "@narratage/host";
-import { WorkspaceError } from "@narratage/host";
+import type { ArtifactAttachment, Workspace } from "@narratage/workspace";
+import { WorkspaceError } from "@narratage/workspace";
 import {
   createMarkupAuthorFrontend,
   MarkupSurfaceRegistry,
@@ -60,7 +59,6 @@ function emptyManifest(name: string, version = "1"): ModuleManifest {
     dependencies: [],
     types: [],
     capabilities: [],
-    surfaces: [],
     producers: [],
   };
 }
@@ -115,6 +113,10 @@ const laboratory = { name: "example.compiler-lab", version: "1" } as const;
 const resultType = { module: laboratory, name: "Result" } satisfies TypeRef;
 const producer = { module: laboratory, name: "produce" } satisfies ProducerRef;
 const surfaceDigest = digestOf("example.compiler-lab/surface@1");
+const resultSurface = {
+  name: "result", tag: "Result", mode: "structured", outputs: [],
+  implementation: { digest: surfaceDigest },
+} as const;
 const laboratoryManifest: ModuleManifest = {
   format: "svml.module@1",
   name: laboratory.name,
@@ -122,31 +124,17 @@ const laboratoryManifest: ModuleManifest = {
   dependencies: [],
   types: [{ name: resultType.name, schema: { kind: "string", minLength: 1 } }],
   capabilities: [],
-  surfaces: [{
-    name: "result",
-    tag: "Result",
-    mode: "structured",
-    outputs: [],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "example.compiler-lab/surface",
-      digest: surfaceDigest,
-    },
-  }],
   producers: [{
     name: producer.name,
     inputs: [],
     outputs: [{ name: "result", type: resultType }],
     needs: [],
     implementation: {
-      kind: "registered",
-      locator: "example.compiler-lab/produce",
       digest: digestOf("example.compiler-lab/produce@1"),
     },
   }],
 };
 const fragment = sealGraphFragment({
-  name: "example.compiler-lab/result@1",
   inputs: [],
   operations: [{
     id: "produce",
@@ -164,28 +152,28 @@ const fragment = sealGraphFragment({
 const assetLaboratory = { name: "example.asset-lab", version: "1" } as const;
 const assetType = { module: assetLaboratory, name: "Asset" } satisfies TypeRef;
 const assetSurfaceDigest = digestOf("example.asset-lab/surface@1");
+const assetSurface = {
+  name: "asset", tag: "Asset", mode: "structured", outputs: [assetType],
+  implementation: { digest: assetSurfaceDigest },
+} as const;
 const assetManifest: ModuleManifest = {
   ...emptyManifest(assetLaboratory.name),
   types: [{ name: assetType.name, schema: { kind: "blob" } }],
-  surfaces: [{
-    name: "asset",
-    tag: "Asset",
-    mode: "structured",
-    outputs: [assetType],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "example.asset-lab/surface",
-      digest: assetSurfaceDigest,
-    },
-  }],
 };
 
-function compiler(root: string, additional: readonly ModuleManifest[] = []): NodeCompiler {
+function compiler(
+  root: string,
+  additional: readonly ModuleManifest[] = [],
+  onDiscover?: () => void,
+): NodeCompiler {
   const modules = new ModulePackageRegistry();
   modules.register({ manifest: laboratoryManifest });
   for (const manifest of additional) modules.register({ manifest });
   const surfaces = new MarkupSurfaceRegistry();
-  surfaces.registerStructured(laboratory, "result", surfaceDigest, ({ element }) => {
+  surfaces.registerStructured({
+    module: laboratory,
+    declaration: resultSurface,
+    handler: ({ element }) => {
     const id = element.attributes.id;
     if (typeof id !== "string") throw new Error("Result id is required");
     return {
@@ -199,17 +187,25 @@ function compiler(root: string, additional: readonly ModuleManifest[] = []): Nod
       }],
       fragments: [fragment],
     };
+    },
   });
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createMarkupAuthorFrontend({
+  const frontend = createMarkupAuthorFrontend({
     registry: surfaces,
     resolveModule(request): ModuleRef {
       const resolved = modules.resolve(request.from);
       if (resolved === undefined) throw new Error(`unknown module ${request.from}`);
       return resolved;
     },
-  }));
-  return new NodeCompiler({ modules, frontends, root });
+  });
+  frontends.register({
+    ...frontend,
+    discover(source) {
+      onDiscover?.();
+      return frontend.discover(source);
+    },
+  });
+  return new NodeCompiler({ modules, frontends, workspace: new NodeFilesystemWorkspace({ root }) });
 }
 
 const previewModule = { name: "example.compiler-preview", version: "1" } as const;
@@ -226,14 +222,11 @@ const previewManifest: ModuleManifest = {
     outputs: [{ name: "result", type: resultType }],
     needs: [],
     implementation: {
-      kind: "registered",
-      locator: "example.compiler-preview/preview",
       digest: digestOf("example.compiler-preview/preview@1"),
     },
   }],
 };
 const previewFragment = sealGraphFragment({
-  name: "example.compiler-preview/preview@1",
   inputs: [],
   operations: [{
     id: "preview",
@@ -252,7 +245,10 @@ function assetCompiler(environment: { readonly root: string } | { readonly works
   const modules = new ModulePackageRegistry();
   modules.register({ manifest: assetManifest });
   const surfaces = new MarkupSurfaceRegistry();
-  surfaces.registerStructured(assetLaboratory, "asset", assetSurfaceDigest, async ({ element, resolveAsset }) => {
+  surfaces.registerStructured({
+    module: assetLaboratory,
+    declaration: assetSurface,
+    handler: async ({ element, resolveAsset }) => {
     const id = element.attributes.id;
     const src = element.attributes.src;
     if (typeof id !== "string" || typeof src !== "string") throw new Error("Asset id and src are required");
@@ -269,6 +265,7 @@ function assetCompiler(environment: { readonly root: string } | { readonly works
       components: [],
       fragments: [],
     };
+    },
   });
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({
@@ -279,7 +276,13 @@ function assetCompiler(environment: { readonly root: string } | { readonly works
       return resolved;
     },
   }));
-  return new NodeCompiler({ modules, frontends, ...environment });
+  return new NodeCompiler({
+    modules,
+    frontends,
+    workspace: "workspace" in environment
+      ? environment.workspace
+      : new NodeFilesystemWorkspace({ root: environment.root }),
+  });
 }
 
 function memoryWorkspace(sourceText: string, assetBytes: Uint8Array): Workspace {
@@ -342,9 +345,11 @@ test("Node Compiler discovers real imports and emits a named public Author Graph
     <lab:Result id="hello"/>
   </svml>`, "utf8");
 
-  const compiled = await compiler(root).compileFile(file);
+  let discoveries = 0;
+  const compiled = await compiler(root, [], () => { discoveries += 1; }).compileFile(file);
   assert.equal(compiled.exports[0]?.name, "hello.result");
-  assert.equal(compiled.elaboration.graph.outputs.length, 1);
+  assert.equal(compiled.graph.outputs.length, 1);
+  assert.equal(discoveries, 1, "the frozen Import Prologue must not execute Frontend discovery twice");
 
 });
 
@@ -362,7 +367,7 @@ test("Author Frontend identity comes only from the mandatory Source Header, neve
   const first = await compiler(root).compileFile(svml);
   const second = await compiler(root).compileFile(arbitrary);
   assert.equal(first.closure.id, second.closure.id);
-  assert.equal(first.elaboration.graph.id, second.elaboration.graph.id);
+  assert.equal(first.graph.id, second.graph.id);
 
   const missing = join(root, "missing.svml");
   await writeFile(missing, "<svml/>", "utf8");
@@ -397,7 +402,7 @@ test("Run-only Fragment modules extend the execution closure without polluting t
   frontends.register(runMarkupFrontend);
   const fragments = new RunFragmentRegistry();
   fragments.register({ name: "@example/preview", fragments: { result: previewFragment } });
-  const runCompiler = new NodeRunCompiler({ authorCompiler, frontends, fragments, root });
+  const runCompiler = new NodeRunCompiler({ authorCompiler, frontends, fragments });
   const compiled = await runCompiler.compileFile(runFile);
   const planned = runCompiler.planCompilation(compiled);
 
@@ -414,7 +419,8 @@ test("Run-only Fragment modules extend the execution closure without polluting t
     [laboratory.name, previewModule.name].sort(),
     "the durable Build keeps only modules needed by its selected execution slice",
   );
-  assert.equal(compiled.run.graph.authorGraph, compiled.author.elaboration.graph.id);
+  assert.equal(planned.plan, planned.state.plan);
+  assert.equal(planned.request, planned.state.request);
   assert.equal(planned.plan.steps.length, 1);
   assert.equal(planned.plan.steps[0]?.producer.name, previewProducer.name);
 });
@@ -442,7 +448,6 @@ test("static Run checking accepts a future BuildRecord without opening a BuildAr
     authorCompiler,
     frontends,
     fragments: new RunFragmentRegistry(),
-    root,
   });
   const workspace = await new NodeFilesystemWorkspace({ root }).open(runFile);
   const checked = await runCompiler.checkSource(workspace.entry, workspace);
@@ -477,7 +482,6 @@ test("static Run checking suggests the nearest Author export", async () => {
     authorCompiler: compiler(root),
     frontends,
     fragments: new RunFragmentRegistry(),
-    root,
   });
   const workspace = await new NodeFilesystemWorkspace({ root }).open(runFile);
   await assert.rejects(
@@ -486,7 +490,7 @@ test("static Run checking suggests the nearest Author export", async () => {
   );
 });
 
-test("source assets are content addressed, closure-bound and returned as a Host transfer bundle", async () => {
+test("source assets become graph values and a Host transfer bundle without closure metadata", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-source-assets-"));
   const file = join(root, "main.svml");
   const asset = join(root, "reference.bin");
@@ -498,27 +502,10 @@ test("source assets are content addressed, closure-bound and returned as a Host 
   await writeFile(asset, new Uint8Array([1, 2, 3, 4]));
 
   const first = await assetCompiler({ root }).compileFile(file);
-  const unit = first.closure.units.find((item) => item.assets.length > 0);
   const attachment = first.attachments[0];
-  assert.equal(unit?.assets[0]?.from, "./reference.bin");
-  assert.equal(unit?.assets[0]?.artifact.digest, attachment?.artifact.digest);
   assert.deepEqual(await readAttachment(attachment), new Uint8Array([1, 2, 3, 4]));
-  assert.equal(first.module.records[0]?.value.kind, "blob");
-  assert.equal(first.module.records[0]?.value.kind === "blob" ? first.module.records[0].value.digest : undefined, attachment?.artifact.digest);
-  const tamperedUnit = first.closure.units.map((item) => item === unit
-    ? {
-        ...item,
-        assets: item.assets.map((sourceAsset) => ({
-          ...sourceAsset,
-          artifact: { ...sourceAsset.artifact, size: sourceAsset.artifact.size + 1 },
-        })),
-      }
-    : item);
-  assert.throws(
-    () => verifySourceClosure({ ...first.closure, units: tamperedUnit }),
-    /digest differs/u,
-  );
-
+  assert.equal(first.program.records[0]?.value.kind, "blob");
+  assert.equal(first.program.records[0]?.value.kind === "blob" ? first.program.records[0].value.digest : undefined, attachment?.artifact.digest);
   await writeFile(asset, new Uint8Array([9, 8, 7]));
   const second = await assetCompiler({ root }).compileFile(file);
   assert.notEqual(second.closure.id, first.closure.id);
@@ -537,11 +524,9 @@ test("an installed package Surface can contribute locked bytes without an author
   const compiled = await assetCompiler({ root }).compileFile(file);
   const attachment = compiled.attachments[0];
   assert.deepEqual(await readAttachment(attachment), new Uint8Array([8, 6, 7, 5, 3, 0, 9]));
-  assert.equal(compiled.closure.units[0]?.assets[0]?.from, "package:example.asset-lab/embedded.bin");
-  assert.equal(compiled.closure.units[0]?.assets[0]?.artifact.digest, attachment?.artifact.digest);
-  assert.equal(compiled.module.records[0]?.value.kind, "blob");
-  assert.equal(compiled.module.records[0]?.value.kind === "blob"
-    ? compiled.module.records[0].value.digest
+  assert.equal(compiled.program.records[0]?.value.kind, "blob");
+  assert.equal(compiled.program.records[0]?.value.kind === "blob"
+    ? compiled.program.records[0].value.digest
     : undefined, attachment?.artifact.digest);
 });
 
@@ -632,8 +617,8 @@ test("filesystem and in-memory Workspaces compile identical source and bytes to 
   const memory = await assetCompiler({ workspace: memoryWorkspace(source, bytes) }).compileFile("memory:main");
 
   assert.equal(memory.closure.id, filesystem.closure.id);
-  assert.equal(memory.module.semanticDigest, filesystem.module.semanticDigest);
-  assert.equal(memory.elaboration.graph.id, filesystem.elaboration.graph.id);
+  assert.equal(memory.program.semanticDigest, filesystem.program.semanticDigest);
+  assert.equal(memory.graph.id, filesystem.graph.id);
   assert.deepEqual(memory.attachments.map((item) => item.artifact),
     filesystem.attachments.map((item) => item.artifact));
   assert.deepEqual(await readAttachment(memory.attachments[0]),

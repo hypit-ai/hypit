@@ -1,6 +1,5 @@
 export type NarrativeSegment = {
   readonly id: string;
-  readonly index: number;
   readonly startAnchorId: string;
   readonly endAnchorId: string;
   readonly tokenStart: number;
@@ -9,9 +8,7 @@ export type NarrativeSegment = {
 
 export type NarrativeToken = {
   readonly id: string;
-  readonly index: number;
   readonly segmentId: string;
-  readonly segmentTokenIndex: number;
   readonly startAnchorId: string;
   readonly endAnchorId: string;
   readonly text: string;
@@ -62,7 +59,6 @@ export type NarrativeMomentRef = NarrativeMoment & {
 /** One author-visible word surface. Punctuation owned by the surface is preserved. */
 export type CaptionDisplayWord = {
   readonly id: string;
-  readonly index: number;
   readonly atomId: string;
   readonly segmentId: string;
   readonly turnId: string;
@@ -73,7 +69,6 @@ export type CaptionDisplayWord = {
 /** One indivisible Cue-planning unit. Fields may still address its ordered words. */
 export type CaptionDisplayAtom = {
   readonly id: string;
-  readonly index: number;
   readonly segmentId: string;
   readonly turnId: string;
   readonly role?: string;
@@ -111,7 +106,6 @@ export type SemanticAnchor = {
   readonly kind: "segment-start" | "token-start" | "token-end" | "segment-end";
   readonly segmentId: string;
   readonly tokenId?: string;
-  readonly segmentTokenIndex?: number;
 };
 
 export type Narrative = {

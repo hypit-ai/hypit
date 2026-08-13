@@ -5,11 +5,12 @@ import type {
   NodeCompiledRun,
   NodeCompiler,
 } from "@narratage/compiler-node";
-import type { LocalRuntime } from "@narratage/local";
+import type { CliRuntime } from "./runtime-port.js";
 import type { NodePackageContribution } from "@narratage/package-loader-node";
-import type { WorkspaceSession } from "@narratage/host";
+import type { WorkspaceSession } from "@narratage/workspace";
 import {
   installRunFragmentHostFacets,
+  runFrontendsFromHostFacets,
   RunFragmentRegistry,
   RunFrontendRegistry,
 } from "@narratage/run";
@@ -34,7 +35,7 @@ function createRunCompiler(options: {
   readonly authorCompiler: NodeCompiler;
   readonly frontends: readonly RunFrontend[];
   readonly packageContributions: readonly NodePackageContribution[];
-  readonly runtime?: Pick<LocalRuntime, "status">;
+  readonly runtime?: Pick<CliRuntime, "status">;
 }): NodeRunCompiler {
   const fragments = new RunFragmentRegistry();
   for (const item of options.packageContributions) {
@@ -42,7 +43,7 @@ function createRunCompiler(options: {
   }
   const frontends = new RunFrontendRegistry();
   for (const frontend of options.frontends) frontends.register(frontend);
-  const archive = new Map<string, Awaited<ReturnType<LocalRuntime["status"]>>>();
+  const archive = new Map<string, Awaited<ReturnType<CliRuntime["status"]>>>();
   const archived = async (id: string) => {
     const existing = archive.get(id);
     if (existing !== undefined) return existing;
@@ -71,13 +72,9 @@ function createRunCompiler(options: {
 }
 
 export function collectRunFrontends(
-  builtIns: readonly RunFrontend[],
   packages: readonly NodePackageContribution[],
 ): readonly RunFrontend[] {
-  return [
-    ...builtIns,
-    ...packages.flatMap((item) => item.runFrontends ?? []),
-  ];
+  return packages.flatMap((item) => runFrontendsFromHostFacets(item.hostFacets ?? []));
 }
 
 export async function loadRunFile(options: {
@@ -85,7 +82,7 @@ export async function loadRunFile(options: {
   readonly authorCompiler: NodeCompiler;
   readonly frontends: readonly RunFrontend[];
   readonly packageContributions: readonly NodePackageContribution[];
-  readonly runtime?: Pick<LocalRuntime, "status">;
+  readonly runtime?: Pick<CliRuntime, "status">;
 }): Promise<LoadedRunFile> {
   const compiler = createRunCompiler(options);
   const compiled = await compiler.compileSource(options.workspace.entry, options.workspace);
