@@ -473,8 +473,8 @@ test("another Deck family can coexist by contributing only the existing VisualTr
     depthStackManifest,
     other,
   ]);
-  assert.ok(closure.modules.some((module) => module.ref.name === "@narratage/deck-track"));
-  assert.ok(closure.modules.some((module) => module.ref.name === "example.carousel"));
+  assert.ok(closure.modules.some((module) => module.manifest.name === "@narratage/deck-track"));
+  assert.ok(closure.modules.some((module) => module.manifest.name === "example.carousel"));
   assert.deepEqual(other.producers[0]?.outputs[0]?.type, compositionTypes.visualTrack);
 });
 

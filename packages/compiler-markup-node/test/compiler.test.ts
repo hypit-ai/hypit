@@ -80,7 +80,10 @@ test("Markup compiler alone selects Markup Surface Host facets from a generic pa
     });
     const result = await compiler.compileFile(source);
 
-    assert.deepEqual(result.program.closure.modules.map((item) => item.ref), [module]);
+    assert.deepEqual(result.program.closure.modules.map((item) => ({
+      name: item.manifest.name,
+      version: item.manifest.version,
+    })), [module]);
     assert.equal(result.program.records[0]?.value.kind, "inline");
     assert.equal(result.graph.operations.length, 0);
   } finally {

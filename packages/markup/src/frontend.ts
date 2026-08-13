@@ -62,6 +62,10 @@ function sameModule(left: ModuleRef, right: ModuleRef): boolean {
   return left.name === right.name && left.version === right.version;
 }
 
+function resolvedModuleRef(module: ResolvedModule): ModuleRef {
+  return { name: module.manifest.name, version: module.manifest.version };
+}
+
 function fail(source: MarkupSource, code: string, message: string, offset?: number): never {
   throw new MarkupFrontendError(code, message, source.name, offset, source.text);
 }
@@ -72,7 +76,7 @@ function moduleForImport(
   context: MarkupDecodeContext,
 ): ResolvedModule {
   const ref = context.resolveModule(request);
-  const module = context.closure.modules.find((item) => sameModule(item.ref, ref));
+  const module = context.closure.modules.find((item) => sameModule(item.manifest, ref));
   if (!module) {
     fail(source, "MARKUP_IMPORT_CLOSURE", `${moduleKey(ref)} is not present in the resolved closure.`, request.range.start);
   }
@@ -93,18 +97,19 @@ function surfaceScope(
     }
     if (request.kind === "source") continue;
     const module = moduleForImport(source, request, context);
+    const moduleRef = resolvedModuleRef(module);
     const allowed = new Set([
-      moduleKey(module.ref),
+      moduleKey(moduleRef),
       ...module.manifest.dependencies.map((dependency) => moduleKey(dependency.module)),
     ]);
-    for (const declaration of context.registry.surfaces(module.ref)) {
+    for (const declaration of context.registry.surfaces(moduleRef)) {
       for (const output of declaration.outputs) {
         if (!allowed.has(moduleKey(output.module))) {
-          fail(source, "MARKUP_SURFACE_DEPENDENCY", `Surface ${moduleKey(module.ref)}#${declaration.surface} outputs ${moduleKey(output.module)}#${output.name} without a Module dependency.`, request.range.start);
+          fail(source, "MARKUP_SURFACE_DEPENDENCY", `Surface ${moduleKey(moduleRef)}#${declaration.surface} outputs ${moduleKey(output.module)}#${output.name} without a Module dependency.`, request.range.start);
         }
-        const target = context.closure.modules.find((item) => sameModule(item.ref, output.module));
+        const target = context.closure.modules.find((item) => sameModule(item.manifest, output.module));
         if (!target?.manifest.types.some((type) => type.name === output.name)) {
-          fail(source, "MARKUP_SURFACE_OUTPUT_TYPE", `Surface ${moduleKey(module.ref)}#${declaration.surface} outputs unknown Type ${moduleKey(output.module)}#${output.name}.`, request.range.start);
+          fail(source, "MARKUP_SURFACE_OUTPUT_TYPE", `Surface ${moduleKey(moduleRef)}#${declaration.surface} outputs unknown Type ${moduleKey(output.module)}#${output.name}.`, request.range.start);
         }
       }
       const tag = request.alias === undefined ? declaration.tag : `${request.alias}:${declaration.tag}`;
@@ -254,7 +259,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         fail(
           source,
           "MARKUP_SURFACE_RANGE",
-          `Surface ${moduleKey(bound.module.ref)}#${registered.surface} returned an invalid source range.`,
+          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} returned an invalid source range.`,
           opening.start,
         );
       }
@@ -263,7 +268,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         fail(
           source,
           "MARKUP_SURFACE_OUTPUT",
-          `Surface ${moduleKey(bound.module.ref)}#${registered.surface} did not declare output type ${moduleKey(draft.type.module)}#${draft.type.name}.`,
+          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} did not declare output type ${moduleKey(draft.type.module)}#${draft.type.name}.`,
           draft.range.start,
         );
       }
@@ -288,7 +293,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         fail(
           source,
           "MARKUP_COMPONENT_RANGE",
-          `Surface ${moduleKey(bound.module.ref)}#${registered.surface} returned an invalid component source range.`,
+          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} returned an invalid component source range.`,
           opening.start,
         );
       }
@@ -315,7 +320,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         fail(
           source,
           "MARKUP_FRAGMENT_IDENTITY",
-          `Surface ${moduleKey(bound.module.ref)}#${registered.surface} returned an invalid Graph Fragment identity.`,
+          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} returned an invalid Graph Fragment identity.`,
           opening.start,
         );
       }

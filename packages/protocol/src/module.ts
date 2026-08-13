@@ -59,7 +59,6 @@ export type ModuleManifest = {
 };
 
 export type ResolvedModule = {
-  readonly ref: ModuleRef;
   readonly digest: Digest;
   readonly manifest: ModuleManifest;
 };
