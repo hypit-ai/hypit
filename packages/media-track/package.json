@@ -25,8 +25,5 @@
     "@narratage/svs": "workspace:*",
     "@narratage/markup": "workspace:*",
     "@narratage/temporal": "workspace:*"
-  },
-  "devDependencies": {
-    "@narratage/hyperframes": "workspace:*"
   }
 }

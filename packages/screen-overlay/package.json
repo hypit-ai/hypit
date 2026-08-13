@@ -21,7 +21,6 @@
   "devDependencies": {
     "@narratage/artifact": "workspace:*",
     "@narratage/core": "workspace:*",
-    "@narratage/hyperframes": "workspace:*",
     "@narratage/media": "workspace:*",
     "@narratage/speech": "workspace:*",
     "@narratage/speech-evidence": "workspace:*",

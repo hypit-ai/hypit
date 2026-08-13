@@ -750,19 +750,6 @@ importers:
       '@narratage/source':
         specifier: workspace:*
         version: link:../source
-    devDependencies:
-      '@narratage/composition':
-        specifier: workspace:*
-        version: link:../composition
-      '@narratage/spatial':
-        specifier: workspace:*
-        version: link:../spatial
-      '@narratage/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@narratage/speech-basis':
-        specifier: workspace:*
-        version: link:../speech-basis
 
   packages/endpoint-kit:
     dependencies:
@@ -1584,10 +1571,6 @@ importers:
       '@narratage/temporal':
         specifier: workspace:*
         version: link:../temporal
-    devDependencies:
-      '@narratage/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
 
   packages/mimo-tts:
     dependencies:
@@ -2273,9 +2256,6 @@ importers:
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@narratage/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
@@ -2691,9 +2671,6 @@ importers:
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@narratage/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
