@@ -1,0 +1,27 @@
+{
+  "name": "@narratage/svml-playground",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@narratage/composition": "workspace:*",
+    "@narratage/estimate": "workspace:*",
+    "@narratage/film": "workspace:*",
+    "@narratage/hyperframes": "workspace:*",
+    "@narratage/caption": "workspace:*",
+    "@narratage/caption-fine": "workspace:*",
+    "@narratage/fonts-open": "workspace:*",
+    "@narratage/markup": "workspace:*",
+    "@narratage/media": "workspace:*",
+    "@narratage/media-track": "workspace:*",
+    "@narratage/narrative": "workspace:*",
+    "@narratage/program-space": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/script": "workspace:*",
+    "@narratage/semantic-map": "workspace:*",
+    "@narratage/spatial": "workspace:*",
+    "@narratage/svs": "workspace:*",
+    "@narratage/temporal": "workspace:*",
+    "vite": "5.4.21"
+  }
+}

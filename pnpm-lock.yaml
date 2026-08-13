@@ -2966,6 +2966,66 @@ importers:
         specifier: 5.4.21
         version: 5.4.21(@types/node@24.10.1)
 
+  tools/svml-playground:
+    dependencies:
+      '@narratage/caption':
+        specifier: workspace:*
+        version: link:../../packages/caption
+      '@narratage/caption-fine':
+        specifier: workspace:*
+        version: link:../../packages/caption-fine
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../../packages/composition
+      '@narratage/estimate':
+        specifier: workspace:*
+        version: link:../../packages/estimate
+      '@narratage/film':
+        specifier: workspace:*
+        version: link:../../packages/film
+      '@narratage/fonts-open':
+        specifier: workspace:*
+        version: link:../../packages/fonts-open
+      '@narratage/hyperframes':
+        specifier: workspace:*
+        version: link:../../packages/hyperframes
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../../packages/markup
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../../packages/media
+      '@narratage/media-track':
+        specifier: workspace:*
+        version: link:../../packages/media-track
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../../packages/narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../../packages/program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+      '@narratage/script':
+        specifier: workspace:*
+        version: link:../../packages/script
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../../packages/semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../../packages/spatial
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../../packages/svs
+      '@narratage/temporal':
+        specifier: workspace:*
+        version: link:../../packages/temporal
+      vite:
+        specifier: 5.4.21
+        version: 5.4.21(@types/node@24.10.1)
+
 packages:
 
   '@algolia/abtesting@1.22.0':

@@ -20,9 +20,37 @@ Source, and the declarative `svml.runtime.json` Runtime Profile separate.
   `references/playbooks/craft/visual-continuity.md`, then the relevant craft/format file.
 - Reference-video reconstruction → read `references/reference-vlm.md`; emit `main.svml`, optional
   `studio.svs`, and `build.svrun` directly.
+- Showing an author what they have so far → start the SVML Playground and send them the link.
+  See "Show the work" below.
 - Execution, Runtime control, Build inspection, or output retrieval → read
   `references/runtime.md`; diagnose and start the durable Runtime, `check` Author Source, `plan`
   before paid work, then submit, inspect, and retrieve the Build.
+
+## Show the work
+
+After each step that changes a Source — a Script edit, a Frame moved, a B-roll
+placed, a Recipe adjusted — start the Playground and give the author the link.
+Reading a diff is not the same as seeing where a cutaway lands.
+
+```bash
+pkill -f svml-playground || true          # never leave the old one holding the port
+pnpm svml:playground -- --source path/to/main.svml --run path/to/build.svrun &
+# then send the author: http://localhost:5179/
+```
+
+Kill the previous server first. A second one silently picks another port, and the
+author ends up looking at a stale preview while you describe a new one.
+
+`--run` is optional and worth passing whenever a Run Source exists: it is where
+footage already on disk and previously measured timings are named.
+
+The preview is read-only and runs no Provider. It never needs a build, a package
+lock or a Runtime Profile — a directory holding `main.svml` and its `.svs` is
+enough. Timings come from a completed build if there is one, from what the Run
+Source names if not, and from the syllable estimator otherwise; the header badges
+say which, so state that rather than implying a preview is a render.
+
+Read `docs/guide/svml-playground.md` before explaining what an author is seeing.
 
 ## Ordinary loop
 
