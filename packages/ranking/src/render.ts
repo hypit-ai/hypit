@@ -671,7 +671,6 @@ export function renderRankingAudio(
   assertProgramSpaceIdentity(space);
   assertRankingSoundEventPlan(plan);
   assertRankingSoundStyle(style);
-  assert(sounds.contract === "svml.ranking-sound-set@1", "RankingSoundSet is invalid.");
   assert(sounds.appear !== undefined || sounds.move !== undefined, "Ranking audio requires at least one authored sound.");
   if (sounds.appear !== undefined) verifySynchronizedMedia(sounds.appear);
   if (sounds.move !== undefined) verifySynchronizedMedia(sounds.move);

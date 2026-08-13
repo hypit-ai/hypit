@@ -81,53 +81,53 @@ const itemBase = {
   stackingOrder: { schema: integer, optional: true },
 } as const;
 export const rankingHeaderSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.ranking-header@1" } }, id: { schema: string }, variant: { schema: variants },
+  id: { schema: string }, variant: { schema: variants },
 });
 export const rankingItemSpecSchema: ValueSchema = { kind: "oneOf", variants: [
-  object({ contract: { schema: { kind: "literal", value: "svml.tier-board-item-spec@1" } }, variant: { schema: { kind: "literal", value: "tier-board" } }, ...itemBase, tier: { schema: string }, entry: { schema: { kind: "string", enum: ["direct", "stage"] } } }),
-  object({ contract: { schema: { kind: "literal", value: "svml.column-item-spec@1" } }, variant: { schema: { kind: "literal", value: "column" } }, ...itemBase, label: { schema: string } }),
-  object({ contract: { schema: { kind: "literal", value: "svml.top-three-item-spec@1" } }, variant: { schema: { kind: "literal", value: "top-three" } }, ...itemBase, label: { schema: string } }),
-  object({ contract: { schema: { kind: "literal", value: "svml.typewriter-item-spec@1" } }, variant: { schema: { kind: "literal", value: "typewriter-list" } }, ...itemBase,
+  object({ variant: { schema: { kind: "literal", value: "tier-board" } }, ...itemBase, tier: { schema: string }, entry: { schema: { kind: "string", enum: ["direct", "stage"] } } }),
+  object({ variant: { schema: { kind: "literal", value: "column" } }, ...itemBase, label: { schema: string } }),
+  object({ variant: { schema: { kind: "literal", value: "top-three" } }, ...itemBase, label: { schema: string } }),
+  object({ variant: { schema: { kind: "literal", value: "typewriter-list" } }, ...itemBase,
     text: { schema: string }, winner: { schema: { kind: "boolean" } },
     emphasis: { optional: true, schema: object({ start: { schema: unsigned }, endExclusive: { schema: unsigned } }) },
   }),
 ] };
 export const rankingTextItemShellSchema: ValueSchema = { kind: "oneOf", variants: [
-  object({ contract: { schema: { kind: "literal", value: "svml.column-text-item-shell@1" } }, variant: { schema: { kind: "literal", value: "column" } }, ...itemBase }),
-  object({ contract: { schema: { kind: "literal", value: "svml.top-three-text-item-shell@1" } }, variant: { schema: { kind: "literal", value: "top-three" } }, ...itemBase }),
-  object({ contract: { schema: { kind: "literal", value: "svml.typewriter-text-item-shell@1" } }, variant: { schema: { kind: "literal", value: "typewriter-list" } }, ...itemBase,
+  object({ variant: { schema: { kind: "literal", value: "column" } }, ...itemBase }),
+  object({ variant: { schema: { kind: "literal", value: "top-three" } }, ...itemBase }),
+  object({ variant: { schema: { kind: "literal", value: "typewriter-list" } }, ...itemBase,
     winner: { schema: { kind: "boolean" } },
     emphasis: { optional: true, schema: object({ start: { schema: unsigned }, endExclusive: { schema: unsigned } }) },
   }),
 ] };
 export const rankingItemSpecSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.ranking-item-spec-set@1" } },
+
   variant: { schema: variants }, items: { schema: { kind: "array", items: rankingItemSpecSchema } },
 });
 const frameSpan = object({ startFrame: { schema: unsigned }, endFrameExclusive: { schema: unsigned } });
 export const rankingScheduleSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.ranking-schedule@1" } }, id: { schema: string },
+  id: { schema: string },
   variant: { schema: variants }, outer: { schema: frameSpan }, terminalFrame: { schema: unsigned },
   entries: { schema: { kind: "array", minItems: 1, items: object({
     itemId: { schema: string }, triggerFrame: { schema: unsigned },
     stage: { schema: frameSpan }, cumulative: { schema: frameSpan }, settled: { schema: frameSpan },
   }) } },
 });
-const styleSchema = (contract: string): ValueSchema => object({ contract: { schema: { kind: "literal", value: contract } } }, true);
-const setSchema = (contract: string): ValueSchema => object({
-  contract: { schema: { kind: "literal", value: contract } }, items: { schema: { kind: "array", items: object({}, true) } },
+const styleSchema = (): ValueSchema => object({}, true);
+const setSchema = (): ValueSchema => object({
+  items: { schema: { kind: "array", items: object({}, true) } },
 });
-const programSchema = (contract: string): ValueSchema => object({
-  contract: { schema: { kind: "literal", value: contract } }, id: { schema: string }, frame: { schema: spatialFrameSchema },
+const programSchema = (): ValueSchema => object({
+  id: { schema: string }, frame: { schema: spatialFrameSchema },
   schedule: { schema: rankingScheduleSchema }, style: { schema: object({}, true) }, items: { schema: { kind: "array", minItems: 1, items: object({}, true) } },
 }, true);
-export const rankingSoundStyleSchema = styleSchema("svml.ranking-sound-style@1");
+export const rankingSoundStyleSchema = styleSchema();
 export const rankingSoundEventsSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.ranking-sound-event-plan@1" } }, id: { schema: string }, variant: { schema: variants },
+  id: { schema: string }, variant: { schema: variants },
   events: { schema: { kind: "array", items: object({ id: { schema: string }, itemId: { schema: string }, kind: { schema: { kind: "string", enum: ["appear", "move"] } }, frame: { schema: unsigned } }) } },
 });
 export const rankingSoundSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.ranking-sound-set@1" } },
+
   appear: { schema: object({}, true), optional: true }, move: { schema: object({}, true), optional: true },
 });
 export const rankingSurfaceImplementationDigests = {
@@ -174,18 +174,18 @@ export const rankingManifest: ModuleManifest = {
     { name: rankingTypes.soundStyle.name, schema: rankingSoundStyleSchema },
     { name: rankingTypes.soundEvents.name, schema: rankingSoundEventsSchema, validator: validator(rankingValidatorDigests.events) },
     { name: rankingTypes.sounds.name, schema: rankingSoundSetSchema },
-    { name: rankingTypes.tierStyle.name, schema: styleSchema("svml.tier-board-style@1") },
-    { name: rankingTypes.columnStyle.name, schema: styleSchema("svml.column-style@1") },
-    { name: rankingTypes.topThreeStyle.name, schema: styleSchema("svml.top-three-style@1") },
-    { name: rankingTypes.typewriterStyle.name, schema: styleSchema("svml.typewriter-list-style@1") },
-    { name: rankingTypes.tierItems.name, schema: setSchema("svml.tier-board-item-set@1") },
-    { name: rankingTypes.columnItems.name, schema: setSchema("svml.column-item-set@1") },
-    { name: rankingTypes.topThreeItems.name, schema: setSchema("svml.top-three-item-set@1") },
-    { name: rankingTypes.typewriterItems.name, schema: setSchema("svml.typewriter-item-set@1") },
-    { name: rankingTypes.tierProgram.name, schema: programSchema("svml.tier-board-program@1"), validator: validator(rankingValidatorDigests.tierProgram) },
-    { name: rankingTypes.columnProgram.name, schema: programSchema("svml.column-program@1"), validator: validator(rankingValidatorDigests.columnProgram) },
-    { name: rankingTypes.topThreeProgram.name, schema: programSchema("svml.top-three-program@1"), validator: validator(rankingValidatorDigests.topThreeProgram) },
-    { name: rankingTypes.typewriterProgram.name, schema: programSchema("svml.typewriter-list-program@1"), validator: validator(rankingValidatorDigests.typewriterProgram) },
+    { name: rankingTypes.tierStyle.name, schema: styleSchema() },
+    { name: rankingTypes.columnStyle.name, schema: styleSchema() },
+    { name: rankingTypes.topThreeStyle.name, schema: styleSchema() },
+    { name: rankingTypes.typewriterStyle.name, schema: styleSchema() },
+    { name: rankingTypes.tierItems.name, schema: setSchema() },
+    { name: rankingTypes.columnItems.name, schema: setSchema() },
+    { name: rankingTypes.topThreeItems.name, schema: setSchema() },
+    { name: rankingTypes.typewriterItems.name, schema: setSchema() },
+    { name: rankingTypes.tierProgram.name, schema: programSchema(), validator: validator(rankingValidatorDigests.tierProgram) },
+    { name: rankingTypes.columnProgram.name, schema: programSchema(), validator: validator(rankingValidatorDigests.columnProgram) },
+    { name: rankingTypes.topThreeProgram.name, schema: programSchema(), validator: validator(rankingValidatorDigests.topThreeProgram) },
+    { name: rankingTypes.typewriterProgram.name, schema: programSchema(), validator: validator(rankingValidatorDigests.typewriterProgram) },
   ],
   capabilities: [],
   producers: [

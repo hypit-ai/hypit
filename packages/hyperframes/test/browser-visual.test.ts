@@ -1629,15 +1629,15 @@ test("all four Ranking components paint frame-pure progressive states under part
       ],
     };
     const outer = {
-      contract: "svml.narrative-selection@1" as const, id: "ranking-window",
+      id: "ranking-window",
       occurrences: [{ occurrence: 0, startAnchorId: "outer-start", endAnchorId: "outer-end" }],
     };
     const triggers = {
-      contract: "svml.narrative-moment@1" as const, id: "ranking-next",
+      id: "ranking-next",
       occurrences: ["rank-1", "rank-2", "rank-3"].map((anchorId, occurrence) => ({ occurrence, anchorId })),
     };
     const terminal = {
-      contract: "svml.narrative-moment@1" as const, id: "ranking-terminal",
+      id: "ranking-terminal",
       occurrences: [{ occurrence: 0, anchorId: "terminal" }],
     };
     const schedule = (header: rankingTrack.RankingHeader, specs: readonly rankingTrack.RankingItemSpec[]) => {
@@ -1648,11 +1648,11 @@ test("all four Ranking components paint frame-pure progressive states under part
     const recipe = (path: string, properties: SvsRecipe["properties"]): SvsRecipe => ({
       contract: "svml.svs-recipe@1", path, properties,
     });
-    const tierHeader = rankingTrack.sealRankingHeader({ contract: "svml.ranking-header@1", id: "browser-tier", variant: "tier-board" });
+    const tierHeader = rankingTrack.sealRankingHeader({ id: "browser-tier", variant: "tier-board" });
     const tierSpecs = [
-      { contract: "svml.tier-board-item-spec@1", variant: "tier-board", id: "tier-one", tier: "s", entry: "stage" },
-      { contract: "svml.tier-board-item-spec@1", variant: "tier-board", id: "tier-two", tier: "a", entry: "direct" },
-      { contract: "svml.tier-board-item-spec@1", variant: "tier-board", id: "tier-three", tier: "s", entry: "direct" },
+      { variant: "tier-board", id: "tier-one", tier: "s", entry: "stage" },
+      { variant: "tier-board", id: "tier-two", tier: "a", entry: "direct" },
+      { variant: "tier-board", id: "tier-three", tier: "s", entry: "direct" },
     ] as const;
     let tierItems = rankingTrack.createTierBoardItemSet();
     tierSpecs.forEach((spec, index) => { tierItems = rankingTrack.appendTierBoardItem(tierItems, spec, icons[index]!.artifact); });
@@ -1666,9 +1666,9 @@ test("all four Ranking components paint frame-pure progressive states under part
       schedule(tierHeader, tierSpecs), tierStyle, tierItems,
     ));
 
-    const columnHeader = rankingTrack.sealRankingHeader({ contract: "svml.ranking-header@1", id: "browser-column", variant: "column" });
+    const columnHeader = rankingTrack.sealRankingHeader({ id: "browser-column", variant: "column" });
     const columnSpecs = ["one", "two", "three"].map((id, index) => ({
-      contract: "svml.column-item-spec@1" as const, variant: "column" as const, id: `column-${id}`, label: `${index + 1}. ${id}`,
+      variant: "column" as const, id: `column-${id}`, label: `${index + 1}. ${id}`,
     }));
     let columnItems = rankingTrack.createColumnItemSet();
     columnSpecs.forEach((spec, index) => { columnItems = rankingTrack.appendColumnItem(columnItems, spec, index === 1 ? icons[index]!.artifact : undefined); });
@@ -1681,9 +1681,9 @@ test("all four Ranking components paint frame-pure progressive states under part
       schedule(columnHeader, columnSpecs), columnStyle, columnItems,
     ));
 
-    const topHeader = rankingTrack.sealRankingHeader({ contract: "svml.ranking-header@1", id: "browser-top", variant: "top-three" });
+    const topHeader = rankingTrack.sealRankingHeader({ id: "browser-top", variant: "top-three" });
     const topSpecs = ["Gold", "Silver", "Bronze"].map((label, index) => ({
-      contract: "svml.top-three-item-spec@1" as const, variant: "top-three" as const, id: `top-${index + 1}`, label,
+      variant: "top-three" as const, id: `top-${index + 1}`, label,
     }));
     let topItems = rankingTrack.createTopThreeItemSet();
     topSpecs.forEach((spec, index) => { topItems = rankingTrack.appendTopThreeItem(topItems, spec, index === 1 ? undefined : icons[index]!.artifact); });
@@ -1696,11 +1696,11 @@ test("all four Ranking components paint frame-pure progressive states under part
       schedule(topHeader, topSpecs), topStyle, topItems,
     ));
 
-    const typeHeader = rankingTrack.sealRankingHeader({ contract: "svml.ranking-header@1", id: "browser-typewriter", variant: "typewriter-list" });
+    const typeHeader = rankingTrack.sealRankingHeader({ id: "browser-typewriter", variant: "typewriter-list" });
     const typeSpecs = [
-      { contract: "svml.typewriter-item-spec@1", variant: "typewriter-list", id: "typed-one", text: "Fast", winner: false },
-      { contract: "svml.typewriter-item-spec@1", variant: "typewriter-list", id: "typed-two", text: "Clear", winner: false, emphasis: { start: 0, endExclusive: 2 } },
-      { contract: "svml.typewriter-item-spec@1", variant: "typewriter-list", id: "typed-three", text: "Best", winner: true },
+      { variant: "typewriter-list", id: "typed-one", text: "Fast", winner: false },
+      { variant: "typewriter-list", id: "typed-two", text: "Clear", winner: false, emphasis: { start: 0, endExclusive: 2 } },
+      { variant: "typewriter-list", id: "typed-three", text: "Best", winner: true },
     ] as const;
     let typeItems = rankingTrack.createTypewriterItemSet();
     typeSpecs.forEach((spec) => { typeItems = rankingTrack.appendTypewriterItem(typeItems, spec); });

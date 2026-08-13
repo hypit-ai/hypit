@@ -35,7 +35,7 @@ const map = {
 
 function selection(openAnchor: string, closeAnchor: string): NarrativeSelectionRef {
   return {
-    contract: "svml.narrative-selection@1",
+
     id: "x",
     occurrences: [{
       occurrence: 0,
@@ -76,13 +76,13 @@ test("a Segment cut is an ordinary anchor, so a Selection may start at one", () 
 
 test("a whole Segment is exactly its two structural anchors", () => {
   assert.deepEqual(segmentFrameSpan(map, {
-    contract: "svml.narrative-excerpt@1", kind: "segment", id: "second", tokenStart: 2, tokenEndExclusive: 4,
+    kind: "segment", id: "second", tokenStart: 2, tokenEndExclusive: 4,
   }), { startFrame: 5, endFrameExclusive: 9 });
 });
 
 test("a Moment locates one instant per occurrence", () => {
   const moment = {
-    contract: "svml.narrative-moment@1",
+
     id: "reveal",
     occurrences: [
       { occurrence: 0, anchorId: "segment:second:start" },
@@ -104,7 +104,7 @@ test("overlapping occurrences pass through untouched, in Script order", () => {
   // time. Locating never sorts, merges or clips occurrences against each other:
   // reconciling them is the caller's decision about its own material.
   const overlapping = {
-    contract: "svml.narrative-selection@1",
+
     id: "beat",
     occurrences: [
       {
@@ -130,7 +130,7 @@ test("Script order is preserved even when it runs backwards in time", () => {
   // Overlapping Segments make the second occurrence start before the first ends.
   // The array still follows the Script; a caller that needs time order sorts.
   const crossing = {
-    contract: "svml.narrative-selection@1",
+
     id: "beat",
     occurrences: [
       {

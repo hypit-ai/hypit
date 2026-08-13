@@ -36,9 +36,7 @@ export type NarrativeSelection = {
 };
 
 /** One explicitly authored semantic window, independently referenceable by graph edges. */
-export type NarrativeSelectionRef = NarrativeSelection & {
-  readonly contract: "svml.narrative-selection@1";
-};
+export type NarrativeSelectionRef = NarrativeSelection;
 
 export type NarrativeMomentOccurrence = {
   readonly occurrence: number;
@@ -52,9 +50,7 @@ export type NarrativeMoment = {
 };
 
 /** One explicitly authored semantic instant, independently referenceable by graph edges. */
-export type NarrativeMomentRef = NarrativeMoment & {
-  readonly contract: "svml.narrative-moment@1";
-};
+export type NarrativeMomentRef = NarrativeMoment;
 
 /** One author-visible word surface. Punctuation owned by the surface is preserved. */
 export type CaptionDisplayWord = {
@@ -77,7 +73,6 @@ export type CaptionDisplayAtom = {
 
 /** Complete visible Caption truth. It contains no pronunciation or timing facts. */
 export type CaptionDisplaySequence = {
-  readonly contract: "svml.caption-display-sequence@1";
   readonly id: string;
   readonly atoms: readonly CaptionDisplayAtom[];
   readonly words: readonly CaptionDisplayWord[];
@@ -85,7 +80,6 @@ export type CaptionDisplaySequence = {
 
 /** Author-declared whole-Atom correspondence to spoken Script tokens; never an inferred refinement. */
 export type CaptionCorrespondence = {
-  readonly contract: "svml.caption-correspondence@1";
   readonly displaySequenceId: string;
   readonly atoms: readonly {
     readonly atomId: string;
@@ -95,7 +89,6 @@ export type CaptionCorrespondence = {
 
 /** One ordered subset of an exact CaptionDisplaySequence, projected by Script structure. */
 export type CaptionDisplayWordSubset = {
-  readonly contract: "svml.caption-display-word-subset@1";
   readonly id: string;
   readonly sequenceId: string;
   readonly wordIds: readonly string[];
@@ -109,14 +102,12 @@ export type SemanticAnchor = {
 };
 
 export type Narrative = {
-  readonly contract: "svml.narrative@1";
   readonly segments: readonly NarrativeSegment[];
   readonly tokens: readonly NarrativeToken[];
   readonly turns: readonly NarrativeTurn[];
   readonly selections: readonly NarrativeSelection[];
   readonly moments: readonly NarrativeMoment[];
   readonly semanticIndex: {
-    readonly contract: "svml.semantic-index@1";
     readonly anchors: readonly SemanticAnchor[];
   };
 };
@@ -127,7 +118,6 @@ export type Narrative = {
  * Script's parser or source representation.
  */
 export type NarrativeExcerpt = {
-  readonly contract: "svml.narrative-excerpt@1";
   readonly kind: "segment";
   readonly id: string;
   readonly tokenStart: number;
