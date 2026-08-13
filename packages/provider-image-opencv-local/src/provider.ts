@@ -110,14 +110,6 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
       lifecycle: "immediate" as const,
       capability: rasterCapabilities.execute,
       returns: artifactTypes.blob,
-      supports: (need) => {
-        try {
-          request(need.constraints);
-          return true;
-        } catch {
-          return false;
-        }
-      },
       handler: async (context): Promise<EndpointFulfillment> => {
         const need = request(context.need.constraints);
         const sources = [...new Map(rasterSources(need).map((source) => [source.digest, source])).values()];

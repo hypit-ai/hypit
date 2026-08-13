@@ -59,9 +59,16 @@ function normalizeBaseUrl(value: string): string {
   return url.href.replace(/\/$/u, "");
 }
 
-function request(value: CanonicalValue): GenerationRequest {
+function request(value: CanonicalValue, model: Model): GenerationRequest {
   const result = value as unknown as GenerationRequest;
   assert(result.ports !== null && typeof result.ports === "object", "Xiaomi MiMo request has no ports");
+  const allowed = model === "mimo-v2.5-tts"
+    ? new Set(["text", "instruction", "voice"])
+    : model === "mimo-v2.5-tts-voicedesign"
+      ? new Set(["text", "voiceDescription"])
+      : new Set(["text", "instruction", "sample"]);
+  assert(Object.keys(result.ports).every((name) => allowed.has(name)),
+    `${model} request contains an unsupported port`);
   return result;
 }
 
@@ -105,17 +112,6 @@ async function readVoiceSample(
   assert(Buffer.byteLength(encoded, "utf8") <= maxBase64Bytes,
     `MiMo voice sample exceeds the configured ${maxBase64Bytes}-byte Base64 limit`);
   return `data:${mediaType};base64,${encoded}`;
-}
-
-function supports(model: Model, value: CanonicalValue): boolean {
-  const req = value as unknown as GenerationRequest;
-  if (req === undefined || req.ports === null || typeof req.ports !== "object") return false;
-  const allowed = model === "mimo-v2.5-tts"
-    ? new Set(["text", "instruction", "voice"])
-    : model === "mimo-v2.5-tts-voicedesign"
-      ? new Set(["text", "voiceDescription"])
-      : new Set(["text", "instruction", "sample"]);
-  return Object.keys(req.ports).every((name) => allowed.has(name));
 }
 
 function parseAudio(text: string, maxAudioBytes: number): Uint8Array {
@@ -187,9 +183,8 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
     capability: capabilities[model],
     returns: generationTypes.audioSet,
     lifecycle: "immediate" as const,
-    supports: (need: { readonly constraints: CanonicalValue }) => supports(model, need.constraints),
     handler: async (context: EndpointInvocationContext) => {
-      const req = request(context.need.constraints);
+      const req = request(context.need.constraints, model);
       const text = scalar(req, model, "text")!;
       const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
       const audio: Record<string, CanonicalValue> = { format: "wav" };

@@ -623,7 +623,7 @@
     {
       "name": "@narratage/generation",
       "version": "0.0.0-dev",
-      "digest": "sha256:42db294253448a665ce2d53be321f4c4d584614d8d8a4dc0e002bf3b173bdf9b"
+      "digest": "sha256:840cbc1a4b0d611761d917e7c3be744ba5aa513e8556b92290470cd917c64ce1"
     },
     {
       "name": "@narratage/host",
@@ -901,7 +901,7 @@
         }
       ],
       "facetsDigest": "sha256:d9ee4c44949ca2d24967e7d81898999db84ab592fdaaafe1bd6d22a28ea5e094",
-      "closureDigest": "sha256:96eb8b61d6f100ce61b44d00ff990a76ba6c32a6da4dd4ba32924fb94d2573b8"
+      "closureDigest": "sha256:a420c50eaef59ccce8a995a05b320ee3b18d0c4a26b54d58ff78a1280800f066"
     },
     {
       "package": {
@@ -1027,7 +1027,7 @@
         }
       ],
       "facetsDigest": "sha256:943d0307a0d1141d326bedea224b7916051fedb79368ebe98304596237269e6d",
-      "closureDigest": "sha256:67ef4de7781d0f81e1a115776d037aefdcc0d73c4814b4852fe30c32e3545b2a"
+      "closureDigest": "sha256:351aad7ca915d9815f0050fee289cfd8174fdd277c60914c3487696dab8c3de8"
     },
     {
       "package": {
@@ -1206,5 +1206,5 @@
       "closureDigest": "sha256:836ad9421ea7c617f3d825d36077071db0a0f7d461296ae099165642ddb1ecc7"
     }
   ],
-  "digest": "sha256:c686f4320ed0cf1955e5acea1cadad6249860d0a703ee946790e6969418a3a04"
+  "digest": "sha256:bad58522ae9c591899e67ec91e2b2b0acc033f29216c347542a46db266b928ff"
 }

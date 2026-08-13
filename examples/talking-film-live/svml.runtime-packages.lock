@@ -100,7 +100,7 @@
     {
       "name": "@narratage/generation",
       "version": "0.0.0-dev",
-      "digest": "sha256:42db294253448a665ce2d53be321f4c4d584614d8d8a4dc0e002bf3b173bdf9b"
+      "digest": "sha256:840cbc1a4b0d611761d917e7c3be744ba5aa513e8556b92290470cd917c64ce1"
     },
     {
       "name": "@narratage/host",
@@ -160,7 +160,7 @@
     {
       "name": "@narratage/provider-google-vertex",
       "version": "0.0.0-dev",
-      "digest": "sha256:ea939a5e51da650265342aae191b659499254f31cf3e9797038d8ef3c63678be"
+      "digest": "sha256:c8861059e5e7b652bfc1f0d4da6fef5b05d149f21c57916c4dabc8bb90c0276b"
     },
     {
       "name": "@narratage/provider-hyperframes-local",
@@ -170,7 +170,7 @@
     {
       "name": "@narratage/provider-kie",
       "version": "0.0.0-dev",
-      "digest": "sha256:bd526ec704763d9e4e9bf6a01dec54feebcef088ddc609b218b763205f7e25eb"
+      "digest": "sha256:fd20bf5ea9611ff5f5b624871953b0cc39c02441d34ae314bcca0bf8950afbe7"
     },
     {
       "name": "@narratage/provider-media-local",
@@ -963,7 +963,7 @@
         }
       ],
       "facetsDigest": "sha256:485fc29d1efcdaeb4e395980975b35090ea6aef0f78d02108d3bd9b3f11aeb91",
-      "closureDigest": "sha256:a8410cf5d4c1d900536d5ffefec6df6c629cbda61ab76663c83a744fe9bf8279"
+      "closureDigest": "sha256:91c6afa0f7eb1a609e62628734743e04f7f3a74cf964a4321a588bf0f70046e2"
     },
     {
       "package": {
@@ -991,7 +991,7 @@
         }
       ],
       "facetsDigest": "sha256:110648301d69b5b49ea553d285a27626f6fb74ebc74ee67175f688f914d7d74b",
-      "closureDigest": "sha256:7f93c613c436c57c72288886b98cb7c9ea8e752c049881120cb00c74b017eecf"
+      "closureDigest": "sha256:d25cc97ccca0c3d74691edcc4747fa46ddbc8c4a823d64f64080cdff0a946d1c"
     },
     {
       "package": {
@@ -1036,5 +1036,5 @@
       "closureDigest": "sha256:b4418acf6ded1afcfb82c50699738b6dd3ce98ec3380f77cb5887a9d12e36e9b"
     }
   ],
-  "digest": "sha256:5da30a93738b96f2ef194ca4a2cc09da4d05d4a7f8fd75c341f43e9c39e7aecf"
+  "digest": "sha256:acc437a593d24a68a7f3bdd89d1a5ae86fa69e7ec748ab95b5ff01e5bbeba03c"
 }
