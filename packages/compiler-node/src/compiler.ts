@@ -33,7 +33,7 @@ function attachmentKey(artifact: BlobRef): string {
   return `${artifact.digest}\u0000${artifact.mediaType}`;
 }
 
-function mergeAttachments(groups: readonly (readonly ArtifactAttachment[])[]): readonly ArtifactAttachment[] {
+export function mergeAttachments(groups: readonly (readonly ArtifactAttachment[])[]): readonly ArtifactAttachment[] {
   const merged = new Map<string, ArtifactAttachment>();
   for (const item of groups.flat()) {
     const key = attachmentKey(item.artifact);

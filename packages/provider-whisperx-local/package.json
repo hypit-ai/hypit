@@ -19,6 +19,7 @@
     "@narratage/whisperx": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/driver-node": "workspace:*"
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/speech": "workspace:*"
   }
 }

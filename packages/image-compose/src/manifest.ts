@@ -18,7 +18,7 @@ export const imageComposeProducers = {
 export const imageComposeImplementationDigests = {
   createLayers: digestOf("@narratage/image-compose/create-layers@1"),
   appendLayer: digestOf("@narratage/image-compose/append-layer@1"),
-  request: digestOf("@narratage/image-compose/request@1"),
+  request: digestOf("@narratage/image-compose/request@1/direct-need"),
   validateOptions: digestOf("@narratage/image-compose/validate-options@1"),
   validateLayerSpec: digestOf("@narratage/image-compose/validate-layer-spec@1"),
   validateLayerSet: digestOf("@narratage/image-compose/validate-layer-set@1"),

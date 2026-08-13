@@ -10,7 +10,7 @@ export const backgroundRemovalProducers = {
   request: { module: backgroundRemovalModuleRef, name: "request-background-removal" },
 } satisfies Record<string, ProducerRef>;
 export const backgroundRemovalImplementationDigests = {
-  request: digestOf("@narratage/background-removal/request@1"),
+  request: digestOf("@narratage/background-removal/request@1/direct-need"),
   surface: digestOf("@narratage/background-removal/background-surface@1"),
 } as const;
 
