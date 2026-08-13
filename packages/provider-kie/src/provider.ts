@@ -13,7 +13,6 @@ import type {
   BlobRef,
   CanonicalValue,
   Digest,
-  Need,
 } from "@narratage/protocol";
 import {
   defineEndpointPackage,
@@ -655,7 +654,6 @@ export function createKieProvider(config: CreateKieProviderOptions) {
       lifecycle: "recoverable" as const,
       endpoint: providerEndpoint,
       retry: { maxAttempts: 3 },
-      supports: (need: Need) => route.supports(need.constraints),
     })),
   });
 }
