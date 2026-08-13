@@ -25,7 +25,13 @@ export type Placement = {
   /** Graph outputs this element declared, named as the author would write them. */
   readonly outputs: readonly string[];
   /** Children the author wrote inside it, so a Clip can point at its own tag. */
-  readonly children: readonly { readonly tag: string; readonly id?: string; readonly range: Range }[];
+  readonly children: readonly {
+    readonly tag: string;
+    readonly id?: string;
+    readonly range: Range;
+    /** What the child itself points at, which is how it is placed. */
+    readonly references: readonly string[];
+  }[];
   /** What the author wrote on it: plain text as written, references by path. */
   readonly attributes: Readonly<Record<string, string>>;
   /** Paths this element and its children reference, in the order written. */
@@ -109,6 +115,7 @@ export function createObserver(
                   tag: child.name,
                   ...(typeof childId === "string" ? { id: childId } : {}),
                   range: { start: child.range.start, end: child.range.end },
+                  references: referenced(child),
                 };
               }),
           });

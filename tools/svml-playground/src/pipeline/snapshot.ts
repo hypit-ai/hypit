@@ -137,15 +137,38 @@ export function snapshot(built: Preview, input: {
   readonly preview: PlaygroundSnapshot["preview"];
 }): PlaygroundSnapshot {
   const located = authored(built.source.observations.placements);
+  const script = scriptMap(built.source.observations.sourceMaps, built);
+  // A clip is coloured by the marker that placed it, not by the tag that drew
+  // it, so a cutaway and the words that call for it read as the same thing.
+  const markers = new Set([
+    ...(script?.selections ?? []).map((item) => item.id),
+    ...(script?.segments ?? []).map((item) => item.id),
+    ...(script?.moments ?? []).map((item) => item.id),
+  ]);
+  const markerFor = (elementId: string): string | undefined => {
+    // The tag may be the element itself or one written inside it; either way
+    // what places it is something it points at.
+    for (const placement of built.source.observations.placements) {
+      const child = placement.children.find((item) => item.id === elementId);
+      const paths = placement.id === elementId ? placement.references : child?.references;
+      for (const path of paths ?? []) {
+        const named = path.slice(path.lastIndexOf(".") + 1);
+        if (markers.has(named)) return named;
+      }
+    }
+    return undefined;
+  };
   const placeholders = new Set(built.placeholders);
 
   const tracks: Track[] = [];
   for (const item of built.tracks) {
     const clips: Clip[] = spans(item.track, input.frameRate).map((span) => {
       const where = locate(span.id, located);
+      const named = [...new Set(span.id.split(/[:#+]/u))].find((part) => markers.has(part));
+      const marker = named ?? (where === undefined ? undefined : markerFor(where.id));
       return {
         id: span.id,
-        authoredId: where?.id ?? item.name,
+        authoredId: marker ?? where?.id ?? item.name,
         label: where?.id ?? span.id,
         startFrame: span.startFrame,
         endFrameExclusive: span.endFrameExclusive,
@@ -170,7 +193,6 @@ export function snapshot(built: Preview, input: {
   const ordered = [...tracks].sort((left, right) => depth(right) - depth(left));
   const rows = ordered.map((track, row) => ({ ...track, row }));
 
-  const script = scriptMap(built.source.observations.sourceMaps, built);
   const frameCount = Math.max(1, ...rows.flatMap((track) => track.clips.map((clip) => clip.endFrameExclusive)));
   return {
     revision: input.revision,
@@ -200,8 +222,14 @@ function note(built: Preview): string {
   parts.push(built.timing === "measured"
     ? "Timings are the ones the Run Source supplied."
     : "No timings were supplied, so words are placed at an ordinary delivery pace.");
+  if (built.stoodIn.length > 0) {
+    parts.push(`${built.stoodIn.length} shots have not been made, and show the picture they name instead.`);
+  }
   if (built.placeholders.length > 0) {
     parts.push(`${built.placeholders.length} shots have no material yet and stand in as black frames.`);
+  }
+  if (built.phrasing.length > 0) {
+    parts.push("Nothing has decided which words share a screen, so captions are cut every few words.");
   }
   const waiting = built.tracks.filter((track) => track.track === undefined);
   if (waiting.length > 0) {
