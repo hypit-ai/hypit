@@ -88,7 +88,6 @@ const streamMode: ValueSchema = {
 export const mediaSelectionRequestSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.media-selection-request@1" } },
     video: { schema: { kind: "oneOf", variants: [mode("primary-moving"), streamMode, mode("none")] } },
     audio: { schema: { kind: "oneOf", variants: [mode("default"), streamMode, mode("none")] } },
     spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
@@ -131,7 +130,6 @@ const retimeOperationSchema: ValueSchema = {
 export const mediaTransformProgramSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.media-transform-program@1" } },
     operations: { schema: { kind: "array", minItems: 1, items: {
       kind: "oneOf", variants: [trimOperationSchema, retimeOperationSchema],
     } } },
@@ -140,7 +138,6 @@ export const mediaTransformProgramSchema: ValueSchema = {
 export const audioExtractionRequestSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.audio-extraction-request@1" } },
     audio: { schema: audioSelectorSchema },
     output: { schema: {
       kind: "object",
@@ -156,7 +153,6 @@ export const audioExtractionRequestSchema: ValueSchema = {
 export const frameExtractionRequestSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.frame-extraction-request@1" } },
     video: { schema: videoSelectorSchema },
     at: { schema: { kind: "oneOf", variants: [
       { kind: "object", fields: { kind: { schema: { kind: "literal", value: "first" } } } },
@@ -190,7 +186,6 @@ const blobRefSchema: ValueSchema = {
 export const audioProgramPlanSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.audio-program-plan@1" } },
     frameRate: { schema: {
       kind: "object",
       fields: {

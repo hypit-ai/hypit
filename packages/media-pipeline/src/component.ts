@@ -63,7 +63,6 @@ function programSpace(value: StoredValue, subject: string): ProgramSpace {
 
 function requestForProgram(space: ProgramSpace, audio: "default" | "none"): MediaSelectionRequest {
   return sealMediaSelectionRequest({
-    contract: "svml.media-selection-request@1",
     video: { mode: "primary-moving" },
     audio: { mode: audio },
     spanAuthority: "video",

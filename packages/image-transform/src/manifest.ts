@@ -23,7 +23,6 @@ export const imageTransformImplementationDigests = {
 } as const;
 
 export const imageTransformProgramSchema: ValueSchema = { kind: "object", fields: {
-  contract: { schema: { kind: "literal", value: "svml.image-transform-program@1" } },
   operations: { schema: { kind: "array", minItems: 1, items: rasterTransformOperationSchema } },
 } };
 

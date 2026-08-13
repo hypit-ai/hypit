@@ -16,6 +16,5 @@ export type {
 
 /** Authored transformation intent. Operation order is author meaning. */
 export type ImageTransformProgram = {
-  readonly contract: "svml.image-transform-program@1";
   readonly operations: readonly RasterTransformOperation[];
 };

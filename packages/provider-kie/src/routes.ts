@@ -62,8 +62,8 @@ const generationRoutes: readonly KieRoute[] = kieGenerationMappings.map((mapping
   packageResult: (artifacts) => ({
     kind: "inline",
     value: canonicalize(mapping.result === "image"
-      ? sealGeneratedImageSet({ contract: "svml.generated-image-set@1", images: artifacts })
-      : sealGeneratedVideoSet({ contract: "svml.generated-video-set@1", videos: artifacts })),
+      ? sealGeneratedImageSet({ images: artifacts })
+      : sealGeneratedVideoSet({ videos: artifacts })),
   }),
 }));
 

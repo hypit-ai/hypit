@@ -19,7 +19,6 @@ export function sealMediaSelectionRequest(value: MediaSelectionRequest): MediaSe
 export function verifyMediaSelectionRequest(value: unknown): asserts value is MediaSelectionRequest {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "MediaSelectionRequest must be an object");
   const item = value as MediaSelectionRequest;
-  assert(item.contract === "svml.media-selection-request@1", "MediaSelectionRequest contract is invalid");
   assert(item.video?.mode === "primary-moving" || item.video?.mode === "stream-index" || item.video?.mode === "none",
     "MediaSelectionRequest video mode is invalid");
   assert(item.audio?.mode === "default" || item.audio?.mode === "stream-index" || item.audio?.mode === "none",

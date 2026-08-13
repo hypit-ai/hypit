@@ -165,7 +165,6 @@ export const decodeSynchronizedMediaSurface: StructuredSurfaceHandler = ({ eleme
   const spanAuthority = text(element, "span-authority");
   if (spanAuthority !== "video" && spanAuthority !== "audio") throw new Error(`${element.name}.span-authority must be video or audio.`);
   const request = sealMediaSelectionRequest({
-    contract: "svml.media-selection-request@1",
     video,
     audio,
     spanAuthority,
@@ -195,14 +194,12 @@ export const decodeTransformMediaSurface: StructuredSurfaceHandler = ({ element,
   const spanAuthority = text(element, "span-authority");
   if (spanAuthority !== "video") throw new Error(`${element.name}.span-authority must be video.`);
   const selection = sealMediaSelectionRequest({
-    contract: "svml.media-selection-request@1",
     video,
     audio,
     spanAuthority,
     frameRate: frameRate(text(element, "frame-rate")),
   });
   const program = sealMediaTransformProgram({
-    contract: "svml.media-transform-program@1",
     operations: transformOperations(element),
   });
   const selectionId = `${id}.selection`;
@@ -233,7 +230,6 @@ export const decodeExtractAudioSurface: StructuredSurfaceHandler = ({ element, r
   const id = text(element, "id");
   const source = ref(element.attributes.source, `${element.name}.source`, resolveReference);
   const request = sealAudioExtractionRequest({
-    contract: "svml.audio-extraction-request@1",
     audio: audioSelector(text(element, "audio")),
     output: { container: "wav", codec: "pcm_s16le", sampleRate: 48_000, channels: 2 },
   });
@@ -268,7 +264,6 @@ export const decodeExtractFrameSurface: StructuredSurfaceHandler = ({ element, r
   const id = text(element, "id");
   const source = ref(element.attributes.source, `${element.name}.source`, resolveReference);
   const request = sealFrameExtractionRequest({
-    contract: "svml.frame-extraction-request@1",
     video: videoSelector(text(element, "video")),
     at: frameSelector(text(element, "at"), `${element.name}.at`),
     output: { format: "png" },

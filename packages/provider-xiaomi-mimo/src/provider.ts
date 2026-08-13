@@ -225,7 +225,7 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
       if (!response.ok) throw new Error(`Xiaomi MiMo returned HTTP ${response.status}: ${responseText.slice(0, 300)}`);
       const bytes = parseAudio(responseText, maxResponseBytes);
       const artifact = await context.artifacts.put(bytes, "audio/wav");
-      const result = sealGeneratedAudioSet({ contract: "svml.generated-audio-set@1", audios: [artifact] });
+      const result = sealGeneratedAudioSet({ audios: [artifact] });
       return { value: { kind: "inline" as const, value: result as unknown as CanonicalValue } };
     },
   }));
