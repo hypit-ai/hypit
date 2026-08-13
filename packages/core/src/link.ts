@@ -33,8 +33,8 @@ export function computeClosureDigest(modules: readonly ResolvedModule[]): Digest
   return digestOf({
     format: "svml.closure@1",
     modules: [...modules]
-      .sort((left, right) => moduleKey(left.ref).localeCompare(moduleKey(right.ref)))
-      .map((module) => ({ ref: module.ref, digest: module.digest })),
+      .sort((left, right) => moduleKey(left.manifest).localeCompare(moduleKey(right.manifest)))
+      .map((module) => ({ ref: manifestRef(module.manifest), digest: module.digest })),
   });
 }
 
@@ -42,7 +42,6 @@ export function createResolvedClosure(
   manifests: readonly ModuleManifest[],
 ): ResolvedModuleClosure {
   const modules = manifests.map((manifest) => ({
-    ref: manifestRef(manifest),
     digest: computeModuleDigest(manifest),
     manifest,
   }));
@@ -70,17 +69,12 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
 
   const modules = new Map<string, ResolvedModule>();
   for (const module of closure.modules) {
-    const key = moduleKey(module.ref);
-    invariant(module.ref.name.length > 0, "EMPTY_MODULE_NAME", "module name is empty");
-    invariant(module.ref.version.length > 0, "EMPTY_MODULE_VERSION", `${module.ref.name} version is empty`);
+    const ref = manifestRef(module.manifest);
+    const key = moduleKey(ref);
+    invariant(ref.name.length > 0, "EMPTY_MODULE_NAME", "module name is empty");
+    invariant(ref.version.length > 0, "EMPTY_MODULE_VERSION", `${ref.name} version is empty`);
     invariant(module.manifest.format === "svml.module@1", "UNSUPPORTED_MODULE", `${key} format is unsupported`);
     invariant(!modules.has(key), "DUPLICATE_MODULE", `duplicate module ${key}`, key);
-    invariant(
-      sameModule(module.ref, manifestRef(module.manifest)),
-      "MODULE_ID_MISMATCH",
-      `${key} does not match its manifest identity`,
-      key,
-    );
     invariant(isDigest(module.digest), "INVALID_DIGEST", `${key} digest is invalid`, key);
     invariant(
       module.digest === computeModuleDigest(module.manifest),
@@ -128,7 +122,7 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
       invariant(
         resolved !== undefined,
         "MISSING_DEPENDENCY",
-        `${moduleKey(module.ref)} requires ${moduleKey(dependency.module)}`,
+        `${moduleKey(module.manifest)} requires ${moduleKey(dependency.module)}`,
       );
       invariant(
         resolved.digest === dependency.digest,
@@ -146,7 +140,7 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
 
   for (const module of closure.modules) {
     const allowed = new Set([
-      moduleKey(module.ref),
+      moduleKey(module.manifest),
       ...module.manifest.dependencies.map((dependency) => moduleKey(dependency.module)),
     ]);
     for (const producer of module.manifest.producers) {
@@ -154,31 +148,31 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
         invariant(
           allowed.has(moduleKey(port.type.module)),
           "UNDECLARED_TYPE_DEPENDENCY",
-          `${moduleKey(module.ref)}#${producer.name} references ${typeKey(port.type)} without a dependency`,
+          `${moduleKey(module.manifest)}#${producer.name} references ${typeKey(port.type)} without a dependency`,
         );
         const target = modules.get(moduleKey(port.type.module));
         invariant(
           target?.manifest.types.some((type) => type.name === port.type.name),
           "UNKNOWN_TYPE",
-          `${moduleKey(module.ref)}#${producer.name} references unknown type ${typeKey(port.type)}`,
+          `${moduleKey(module.manifest)}#${producer.name} references unknown type ${typeKey(port.type)}`,
         );
       }
       for (const port of producer.needs) {
         invariant(
           allowed.has(moduleKey(port.returns.module)),
           "UNDECLARED_TYPE_DEPENDENCY",
-          `${moduleKey(module.ref)}#${producer.name} references ${typeKey(port.returns)} without a dependency`,
+          `${moduleKey(module.manifest)}#${producer.name} references ${typeKey(port.returns)} without a dependency`,
         );
         const target = modules.get(moduleKey(port.returns.module));
         invariant(
           target?.manifest.types.some((type) => type.name === port.returns.name),
           "UNKNOWN_TYPE",
-          `${moduleKey(module.ref)}#${producer.name} references unknown type ${typeKey(port.returns)}`,
+          `${moduleKey(module.manifest)}#${producer.name} references unknown type ${typeKey(port.returns)}`,
         );
         invariant(
           allowed.has(moduleKey(port.capability.module)),
           "UNDECLARED_CAPABILITY_DEPENDENCY",
-          `${moduleKey(module.ref)}#${producer.name} references ${capabilityKey(port.capability)} without a dependency`,
+          `${moduleKey(module.manifest)}#${producer.name} references ${capabilityKey(port.capability)} without a dependency`,
         );
         const capabilityModule = modules.get(moduleKey(port.capability.module));
         const capability = capabilityModule?.manifest.capabilities.find(
@@ -187,7 +181,7 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
         invariant(
           capability !== undefined,
           "UNKNOWN_CAPABILITY",
-          `${moduleKey(module.ref)}#${producer.name} references unknown capability ${capabilityKey(port.capability)}`,
+          `${moduleKey(module.manifest)}#${producer.name} references unknown capability ${capabilityKey(port.capability)}`,
         );
         invariant(
           typeKey(capability.returns) === typeKey(port.returns),
@@ -197,7 +191,7 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
       }
     }
     for (const capability of module.manifest.capabilities) {
-      const ref = { module: module.ref, name: capability.name };
+      const ref = { module: manifestRef(module.manifest), name: capability.name };
       invariant(
         allowed.has(moduleKey(capability.returns.module)),
         "UNDECLARED_TYPE_DEPENDENCY",
@@ -217,7 +211,7 @@ export function resolveType(
   closure: ResolvedModuleClosure,
   ref: TypeRef,
 ): ResolvedTypeDeclaration {
-  const module = closure.modules.find((item) => sameModule(item.ref, ref.module));
+  const module = closure.modules.find((item) => sameModule(item.manifest, ref.module));
   invariant(module !== undefined, "UNKNOWN_MODULE", `unknown module ${moduleKey(ref.module)}`, typeKey(ref));
   const declaration = module.manifest.types.find((item) => item.name === ref.name);
   invariant(declaration !== undefined, "UNKNOWN_TYPE", `unknown type ${typeKey(ref)}`, typeKey(ref));
@@ -228,7 +222,7 @@ export function resolveProducer(
   closure: ResolvedModuleClosure,
   ref: ProducerRef,
 ): ResolvedProducerDeclaration {
-  const module = closure.modules.find((item) => sameModule(item.ref, ref.module));
+  const module = closure.modules.find((item) => sameModule(item.manifest, ref.module));
   invariant(
     module !== undefined,
     "UNKNOWN_MODULE",

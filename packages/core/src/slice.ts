@@ -73,7 +73,7 @@ export function sliceExecution(
   const requireModule = (ref: ModuleRef): void => {
     const key = moduleKey(ref);
     if (requiredModules.has(key)) return;
-    const resolved = program.closure.modules.find((item) => moduleKey(item.ref) === key);
+    const resolved = program.closure.modules.find((item) => moduleKey(item.manifest) === key);
     if (resolved === undefined) throw new Error(`execution slice refers to absent module ${ref.name}@${ref.version}`);
     requiredModules.add(key);
     resolved.manifest.dependencies.forEach((item) => requireModule(item.module));
@@ -84,7 +84,7 @@ export function sliceExecution(
   authoredRecords.forEach((item) => requireModule(item.type.module));
 
   const closure = createResolvedClosure(program.closure.modules
-    .filter((item) => requiredModules.has(moduleKey(item.ref)))
+    .filter((item) => requiredModules.has(moduleKey(item.manifest)))
     .map((item) => item.manifest));
   const slicedProgram = link(closure, authoredRecords);
   return {

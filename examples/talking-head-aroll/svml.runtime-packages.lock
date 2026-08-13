@@ -75,7 +75,7 @@
     {
       "name": "@narratage/core",
       "version": "0.0.0-dev",
-      "digest": "sha256:d38ae14bf8b978cec8b34f5a4ef7bd88c4648db54725378d6d33d4e753dff1fd"
+      "digest": "sha256:543f217ac6164f1b3055f9d581f9d158b3dd28d66de7e1ed34dcb0f5dce47d87"
     },
     {
       "name": "@narratage/credential-store-env",
@@ -120,7 +120,7 @@
     {
       "name": "@narratage/markup",
       "version": "0.0.0-dev",
-      "digest": "sha256:674d88333ad8f1e0441854327e01374808a88a0466d14b9bef149b8923ddeef3"
+      "digest": "sha256:3acf4338ea3487eb895b01d70ff75209104cd3593f0473abb0f25c95db425df6"
     },
     {
       "name": "@narratage/media-execution",
@@ -155,7 +155,7 @@
     {
       "name": "@narratage/protocol",
       "version": "0.0.0-dev",
-      "digest": "sha256:087935565d5fc61d6c4eb82fe4683040b15922af15d0d85f30c6ec3ff4af5d09"
+      "digest": "sha256:9b500750ffce24e7e521dcb6d785fba243222237f10e2b2dbd4887187b657274"
     },
     {
       "name": "@narratage/provider-google-vertex",
@@ -200,7 +200,7 @@
     {
       "name": "@narratage/runtime",
       "version": "0.0.0-dev",
-      "digest": "sha256:1f16f9d6981222ea4519b6265ee006613cfe208abcea6e018412af5bc44a348d"
+      "digest": "sha256:8d8ab7d82883c6b130a8a7b485474c39179fa8b30bd346b71204b8509600d7d2"
     },
     {
       "name": "@narratage/semantic-map",
@@ -921,7 +921,7 @@
         }
       ],
       "facetsDigest": "sha256:89812ac838e22ffcec73619ddb033f6f9150c916e0a52693ec920cb9f41f13ff",
-      "closureDigest": "sha256:c2d66645e140e9bc1cbc6c9f4577a54d4d2b65be0e773d5dbf0e7e84f333a8d7"
+      "closureDigest": "sha256:b453ad01c63a6031befe00669cd2e428c45d43d2f1afcd0d78125946dba1d08e"
     },
     {
       "package": {
@@ -935,7 +935,7 @@
         }
       ],
       "facetsDigest": "sha256:b2a771b23ea9dcdada76501804c717cc4509579244acbb09babc0807cb26401a",
-      "closureDigest": "sha256:4a050425d415eda60c6cee82974adacb307319980a3f94d157b9ed950dd1155d"
+      "closureDigest": "sha256:714ff18027fb3eafd1587f1f08a220f2a6ed1c280bbf20b5cb30b823a1274ffa"
     },
     {
       "package": {
@@ -949,7 +949,7 @@
         }
       ],
       "facetsDigest": "sha256:bacc2fe27612f029aeef34236fd5fa687259e08c980c310adc8118be2cceeaba",
-      "closureDigest": "sha256:afcb7588e73a4640d23aa6cbe1203ccbd8139ce739a39785e0a1cf1d2c9d590f"
+      "closureDigest": "sha256:96765d9c76a58a69fbf7244dd32c0fe3dc0ec92b967b45ed032081ff272dc96c"
     },
     {
       "package": {
@@ -963,7 +963,7 @@
         }
       ],
       "facetsDigest": "sha256:485fc29d1efcdaeb4e395980975b35090ea6aef0f78d02108d3bd9b3f11aeb91",
-      "closureDigest": "sha256:80187b14caab66d6450f1ac27905e151c7fd949048a67a14d1687a7dde9b5a64"
+      "closureDigest": "sha256:3eeadfef22668fd042980c74765b60afee1a2dcb56eb4bc03e4fc34f5c07c5f9"
     },
     {
       "package": {
@@ -977,7 +977,7 @@
         }
       ],
       "facetsDigest": "sha256:e08dde3e4d38b167dca29cdc54eb2bb5e9ebc294e0e42b371099d53d6c44b402",
-      "closureDigest": "sha256:6a673a6ac3f5d43ebbc3d5f4318d1fd80a67cf9fb5861b5154e52310b0a41c68"
+      "closureDigest": "sha256:e7e5c7e0df2caa6cef9519e24f4354174a7f3fbf088b08dd5ebce9474243ba5c"
     },
     {
       "package": {
@@ -991,7 +991,7 @@
         }
       ],
       "facetsDigest": "sha256:110648301d69b5b49ea553d285a27626f6fb74ebc74ee67175f688f914d7d74b",
-      "closureDigest": "sha256:a191ff6742d24ee3870b83f6c7386c540ebcbed3e7b4930489222d8edcdf1acf"
+      "closureDigest": "sha256:b2c3dcc66a712f884568192b89805542a0dd3ef750c510094c3568d0a1730dfb"
     },
     {
       "package": {
@@ -1005,7 +1005,7 @@
         }
       ],
       "facetsDigest": "sha256:998de772acb283828fee16310e77922bf43597bca1efa768e8398166a90af27d",
-      "closureDigest": "sha256:2264080dcf8ab3d0f666e3669730dc9ed4620e7cf704f705e1c4bddf897361a0"
+      "closureDigest": "sha256:fa4f32a69d3939caa21b397fdb6d7648bc15cd2a2d12d04d18c7d75fb2466902"
     },
     {
       "package": {
@@ -1019,7 +1019,7 @@
         }
       ],
       "facetsDigest": "sha256:e7d4f1e2fd56f2bcb5dbc36e1faae48d2680bb839aed4a43eb0cb23207ffbe1d",
-      "closureDigest": "sha256:68e9161520c0fc36a378143010fbaf8a2b1ebfc830c52ff85ed7ee2d85b6becb"
+      "closureDigest": "sha256:23462c0d8308c2c479828edbc1799c74f54859401f708fd56af2af196cc20ecd"
     },
     {
       "package": {
@@ -1033,8 +1033,8 @@
         }
       ],
       "facetsDigest": "sha256:eb9df1ee7597620bc2e80c168971e020f77cd0880608957ca3048cac7c559c28",
-      "closureDigest": "sha256:8613ca09ab4dde901453dfb720cd9d4f43b7f2d4a6340528929b6049d4d98687"
+      "closureDigest": "sha256:c866f01c2c6515940483a42be5808d45741e5622118e215e289460bb1203cf6d"
     }
   ],
-  "digest": "sha256:2ddd0b5776637f087b00a5ad35e64914f3156e7c842abe9063e034fc34b35949"
+  "digest": "sha256:fc79e42c505483ddea7e4726d792ebada95ae9fa4d8066641049dc024d3d893c"
 }
