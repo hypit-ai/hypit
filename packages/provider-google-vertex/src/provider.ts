@@ -235,14 +235,6 @@ export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCap
       capability: captionGeminiCapabilities.plan,
       returns: captionTypes.plan,
       lifecycle: "immediate",
-      supports: (need) => {
-        try {
-          verifyCaptionGeminiRequest(need.constraints);
-          return true;
-        } catch {
-          return false;
-        }
-      },
       handler: async (context) => {
         const request = requestValue(context.need.constraints);
         const project = resolveProject();
