@@ -1,0 +1,265 @@
+/* Figma: 主卡 734×505 · 侧卡 454×470 出血 · 箭头 50 · 圆点 10 */
+
+.section {
+  padding-block: 0 60px;
+}
+
+.wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-inline: var(--pad);
+}
+
+.head {
+  font-size: clamp(15px, 1.7vw, 19px);
+  font-weight: 700;
+  margin: 44px 0 26px;
+  letter-spacing: -0.01em;
+}
+
+.car {
+  position: relative;
+  overflow: hidden;
+}
+
+.track {
+  display: flex;
+  gap: 26px;
+  align-items: center;
+  transition: transform 0.5s cubic-bezier(0.3, 0.8, 0.35, 1);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    transition: none !important;
+  }
+}
+
+.slide {
+  flex: 0 0 66.5%; /* 734 / 1103 */
+  background: var(--paper-2);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 505px;
+  opacity: 0.4;
+  transition: opacity 0.4s ease;
+}
+
+.slide[data-active] {
+  opacity: 1;
+}
+
+.left {
+  padding: 30px 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.right {
+  padding: 22px;
+  display: grid;
+  min-width: 0;
+}
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 20px 22px;
+  overflow-x: auto;
+}
+
+.pre {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre;
+}
+
+.key {
+  color: var(--crimson);
+  font-weight: 700;
+}
+
+.str {
+  color: var(--ink);
+}
+
+.com {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.cap {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.kw {
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--crimson);
+  margin: 0;
+}
+
+/* 场景预览时间条 */
+.prev {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  padding: 14px;
+}
+
+.strip {
+  display: flex;
+  gap: 2px;
+  height: 38px;
+}
+
+.pk {
+  flex: 1;
+  background: var(--rule-soft);
+}
+
+.on {
+  background: var(--crimson);
+}
+
+.dim {
+  opacity: 0.25;
+}
+
+.prevMeta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 9px;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 箭头落在侧卡与主卡的空隙正中 */
+.nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 50px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--ink);
+  font: inherit;
+}
+
+.nav:hover {
+  color: var(--crimson);
+}
+
+.prevB {
+  left: calc(16.75% - 13px - 25px);
+}
+
+.nextB {
+  right: calc(16.75% - 13px - 25px);
+}
+
+.nav svg {
+  display: block;
+}
+
+.dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 26px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: var(--crimson);
+  opacity: 0.32;
+  transition: opacity 0.2s ease;
+}
+
+.dot[aria-current="true"] {
+  opacity: 1;
+}
+
+.dot:hover {
+  opacity: 0.7;
+}
+
+@media (max-width: 900px) {
+  .slide {
+    flex-basis: 86%;
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  .prevB {
+    left: calc(7% - 13px - 25px);
+  }
+  .nextB {
+    right: calc(7% - 13px - 25px);
+  }
+}
+
+/* The live SVML demo brings its own two-column shell, so its slide drops the
+   grid split and the padding the scripted slides use. */
+.demoSlide {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+.demoSlide :global(.svml-demo-showcase) {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.demoSlide :global(.demo-shell),
+.demoSlide :global(.real-demo-shell) {
+  min-height: 660px;
+  background: var(--paper-2);
+}
+
+.demoSlide :global(.source-panel) {
+  background: var(--paper-2);
+  border-right: 1px solid var(--rule-soft);
+}
+
+.demoSlide :global(.real-demo-shell) :global(.code-scroll) {
+  height: 660px;
+}
+
+.demoSlide :global(.demo-loading) {
+  min-height: 660px;
+}
+
+.demoSlide :global(.real-preview-body) {
+  padding: 18px 16px 10px;
+}
+
+.demoSlide :global(.semantic-live-stage) {
+  height: 500px;
+}
+
+.demoSlide :global(.real-semantic-controls) {
+  margin: 0 20px 18px;
+}

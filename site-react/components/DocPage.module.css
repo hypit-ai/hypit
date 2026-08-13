@@ -1,0 +1,132 @@
+/* Typography for rendered markdown docs. Values follow the hand-written
+   quick-start page so both kinds of page read as one system. */
+
+.crumb {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 26px;
+}
+
+.crumb a:hover {
+  color: var(--crimson);
+}
+
+.h1 {
+  font-size: clamp(28px, 3.4vw, 40px);
+  margin: 0 0 22px;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+  /* Monospace side bearings make large text look inset; pull it back onto the
+     same vertical line as the body copy. */
+  text-indent: -0.055em;
+}
+
+.h2 {
+  font-size: clamp(19px, 2.2vw, 24px);
+  margin: 46px 0 10px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  scroll-margin-top: calc(var(--nav-h) + 22px);
+}
+
+.h3 {
+  font-size: clamp(15px, 1.6vw, 17px);
+  margin: 30px 0 8px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  scroll-margin-top: calc(var(--nav-h) + 22px);
+}
+
+.prose p {
+  margin: 0 0 20px;
+  line-height: 1.85;
+}
+
+.prose ul,
+.prose ol {
+  margin: 0 0 20px;
+  padding-left: 22px;
+  line-height: 1.85;
+}
+
+.prose li {
+  margin-bottom: 6px;
+}
+
+.prose li > ul,
+.prose li > ol {
+  margin: 6px 0 0;
+}
+
+.prose strong {
+  font-weight: 700;
+}
+
+.prose hr {
+  height: 1px;
+  background: var(--rule);
+  margin: 38px 0 34px;
+  border: 0;
+}
+
+.prose blockquote {
+  margin: 0 0 20px;
+  padding: 2px 0 2px 18px;
+  border-left: 2px solid var(--rule);
+  color: var(--muted);
+}
+
+/* Inline code: tinted, not boxed, so it does not fight the paper ground. */
+.prose :not(pre) > code {
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: var(--crimson-soft);
+  color: var(--crimson);
+  font-family: var(--mono);
+  font-size: 0.92em;
+}
+
+.link {
+  color: var(--crimson);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.tableWrap {
+  margin: 0 0 24px;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--rule-soft);
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.65;
+}
+
+.table th {
+  font-weight: 700;
+  border-bottom-color: var(--rule);
+  white-space: nowrap;
+}
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+}

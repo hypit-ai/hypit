@@ -1,0 +1,513 @@
+/* Design-system reference. Everything here is built from the same tokens it
+   documents, so the page is itself a specimen of the system. */
+
+.page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px var(--pad) 120px;
+}
+
+/* ------------------------------------------------------------- masthead */
+
+.masthead {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 34px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 46px);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+  text-indent: -0.055em;
+  text-wrap: balance;
+}
+
+.lede {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--rule-soft);
+  margin-bottom: 6px;
+}
+
+.jump a {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: color 0.16s ease;
+}
+
+.jump a:hover {
+  color: var(--crimson);
+}
+
+/* -------------------------------------------------------------- sections */
+
+.section {
+  display: grid;
+  gap: 18px;
+  justify-items: start;
+  padding: 54px 0;
+  border-bottom: 1px solid var(--rule-soft);
+  scroll-margin-top: calc(var(--nav-h) + 20px);
+}
+
+.section > * {
+  max-width: 100%;
+}
+
+.h2 {
+  margin: 0;
+  font-size: clamp(19px, 2.2vw, 24px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.h3 {
+  margin: 16px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.note {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.85;
+}
+
+/* ---------------------------------------------------------------- colour */
+
+.swatches {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  background: var(--rule-soft);
+  border: 1px solid var(--rule-soft);
+}
+
+.swatch {
+  display: grid;
+  grid-template-columns: 46px 130px 148px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: var(--paper);
+  font-size: 12px;
+}
+
+.chip {
+  width: 46px;
+  height: 26px;
+  border: 1px solid var(--rule);
+}
+
+.swatchToken {
+  color: var(--ink);
+}
+
+.swatchValue {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.swatchUse {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.trackHues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hue {
+  padding: 5px 12px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--h) 14%, transparent);
+  box-shadow: inset 0 0 0 1px var(--h);
+  color: var(--h);
+  font-size: 11px;
+}
+
+/* ------------------------------------------------------------------ type */
+
+.typeScale {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  background: var(--rule-soft);
+  border: 1px solid var(--rule-soft);
+}
+
+.typeRow {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 20px;
+  padding: 14px;
+  background: var(--paper);
+}
+
+.typeSpec {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.typeH1 {
+  font-size: clamp(28px, 3.4vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+.typeH2 {
+  font-size: clamp(19px, 2.2vw, 24px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.typeH3 {
+  font-size: clamp(15px, 1.6vw, 17px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.typeBody {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.typeProse {
+  font-size: 13px;
+  line-height: 1.85;
+}
+
+.typeCode {
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.typeLabel {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.typeMeta {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+/* ----------------------------------------------------------- spec tables */
+
+.specTable {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  background: var(--rule-soft);
+  border: 1px solid var(--rule-soft);
+}
+
+.specRow {
+  display: grid;
+  grid-template-columns: 200px 210px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 16px;
+  padding: 11px 14px;
+  background: var(--paper);
+  font-size: 12px;
+}
+
+.specRow code:first-child {
+  color: var(--ink);
+}
+
+.specRow code:nth-child(2) {
+  color: var(--crimson);
+}
+
+.specRow span {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+/* ------------------------------------------------------------------ line */
+
+.ruleDemo {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-width: 460px;
+}
+
+.ruleCode {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.railDemo {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 220px;
+  box-shadow: inset 2px 0 0 var(--rule-soft);
+}
+
+.railDemo li span {
+  display: block;
+  padding: 7px 14px;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.railDemo li[data-current] span {
+  border-left-color: var(--ink);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* -------------------------------------------------------------- controls */
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 26px;
+}
+
+.navLink {
+  position: relative;
+  padding: 4px 0;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.navLink::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: 0;
+  height: 1.5px;
+  background: var(--crimson);
+  transition: right 0.22s ease;
+}
+
+.navLink:hover::after,
+.navLink[aria-current="page"]::after {
+  right: 0;
+}
+
+.proseLink {
+  color: var(--crimson);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  font-size: 13px;
+}
+
+.proseLink:hover {
+  text-decoration-thickness: 2px;
+}
+
+.pending {
+  color: var(--muted);
+  opacity: 0.55;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.btn,
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease;
+}
+
+.btnGhost {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.btn:hover,
+.btnGhost:hover {
+  color: var(--crimson);
+  border-color: var(--crimson);
+}
+
+.btnRound {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease;
+}
+
+.btnRound:hover {
+  color: var(--crimson);
+  border-color: var(--crimson);
+}
+
+.btnRound svg {
+  display: block;
+  margin-left: 1px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.card {
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px;
+  border: 1px solid var(--rule-soft);
+  border-radius: 3px;
+  transition: border-color 0.16s ease;
+}
+
+.card:hover {
+  border-color: var(--crimson);
+}
+
+.cardNext {
+  text-align: right;
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.card:hover .cardTitle {
+  color: var(--crimson);
+}
+
+.cardMeta {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* ------------------------------------------------------------------ code */
+
+.proseSample {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.85;
+}
+
+.inlineCode {
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: var(--crimson-soft);
+  color: var(--crimson);
+  font-size: 0.92em;
+}
+
+.codeBlock,
+.terminal {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--rule-soft);
+}
+
+.codeBlock {
+  background: var(--paper-2);
+}
+
+.codeBlock pre,
+.terminal pre {
+  margin: 0;
+  padding: 18px 20px;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.terminal {
+  border-color: transparent;
+  background: var(--term-bg);
+  color: var(--term-ink);
+}
+
+.marker {
+  border-radius: 2px;
+  background: var(--crimson-soft);
+  color: var(--crimson);
+  font-weight: 700;
+}
+
+.flag {
+  color: var(--term-flag);
+}
+
+/* --------------------------------------------------------- narrow screens */
+
+@media (max-width: 760px) {
+  .swatch {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 8px 12px;
+  }
+
+  .swatchValue,
+  .swatchUse {
+    grid-column: 2;
+  }
+
+  .typeRow,
+  .specRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cardNext {
+    text-align: left;
+  }
+}

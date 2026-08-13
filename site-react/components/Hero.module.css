@@ -1,0 +1,170 @@
+/* 比例取自 Figma Frame 22（1103 宽 · 内容 991.2 · 边距 56） */
+
+.hero {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 25px var(--pad) 46px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.label {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.meta :global(.rule) {
+  flex: 1;
+}
+
+.wrap {
+  position: relative;
+}
+
+/* 747.9 / 991.2 = 75.45% 内容宽；高度随字形比例，不作拉伸 */
+.wordmark {
+  width: 75.45%;
+  height: auto;
+  display: block;
+  margin: 10px 0 0;
+}
+
+.wInk {
+  fill: var(--ink);
+}
+
+.wRed {
+  fill: var(--crimson);
+}
+
+.heroRule {
+  margin-top: 26px;
+}
+
+/* 拼贴素材：坐标取自 Figma */
+.img {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  display: block;
+  height: auto;
+}
+
+.land {
+  width: 6.98%;
+  aspect-ratio: 77 / 50;
+  left: 41.2%;
+  top: 64px;
+  mix-blend-mode: var(--collage-blend);
+  z-index: 2;
+}
+
+.woman {
+  width: 23.5%;
+  aspect-ratio: 206 / 258;
+  left: 66%;
+  top: auto;
+  bottom: 0;
+  z-index: 3;
+}
+
+.tag {
+  font-size: clamp(19px, 2.6vw, 32px);
+  letter-spacing: -0.045em;
+  margin: 10px 0 0;
+  font-weight: 400;
+  text-wrap: balance;
+}
+
+.sub {
+  color: var(--muted);
+  font-size: clamp(13px, 1.5vw, 17px);
+  margin: 0;
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 31px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  padding: 0 27px;
+  border: 1px solid var(--crimson);
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.solid {
+  background: var(--crimson);
+  color: #f7f3ec;
+}
+
+.solid:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--crimson);
+}
+
+.ghost:hover {
+  background: var(--crimson);
+  color: #f7f3ec;
+}
+
+.arw {
+  margin-left: 10px;
+  transition: transform 0.18s ease;
+}
+
+.btn:hover .arw {
+  transform: translateX(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arw,
+  .btn:hover .arw {
+    transition: none;
+    transform: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .wordmark {
+    width: 100%;
+  }
+  .land {
+    display: none;
+  }
+  .woman {
+    width: 26%;
+    left: auto;
+    right: 0;
+    opacity: 0.5;
+  }
+}
+
+@media (max-width: 560px) {
+  .woman {
+    display: none;
+  }
+}

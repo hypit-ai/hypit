@@ -1,0 +1,148 @@
+/* ============================================================
+   Narratage — 设计系统
+   全站的颜色、字体、间距都在这里定义
+   ============================================================ */
+
+:root {
+  --paper: #f3f0e8;
+  --paper-2: #ede9df;
+  --ink: #191816;
+  --crimson: #a01240;
+  --crimson-soft: rgba(160, 18, 64, 0.1);
+  --rule: #c7c0b2;
+  --rule-soft: #dad4c7;
+  --muted: #837d72;
+
+  --term-bg: #141310;
+  --term-ink: #e9e4da;
+  --term-flag: #c9a227;
+
+  --grain-blend: multiply;
+  --grain-op: 0.42;
+  --collage-blend: multiply;
+
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco,
+    "Cascadia Mono", "Roboto Mono", Consolas, monospace;
+
+  --pad: clamp(20px, 4vw, 56px);
+  --nav-h: 74px;
+}
+
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    --paper: #131211;
+    --paper-2: #1a1917;
+    --ink: #e9e4da;
+    --crimson: #dd3a63;
+    --crimson-soft: rgba(221, 58, 99, 0.13);
+    --rule: #3a3630;
+    --rule-soft: #2a2724;
+    --muted: #8e877b;
+    --term-bg: #0c0b0a;
+    --grain-blend: overlay;
+    --grain-op: 0.22;
+    --collage-blend: luminosity;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #131211;
+  --paper-2: #1a1917;
+  --ink: #e9e4da;
+  --crimson: #dd3a63;
+  --crimson-soft: rgba(221, 58, 99, 0.13);
+  --rule: #3a3630;
+  --rule-soft: #2a2724;
+  --muted: #8e877b;
+  --term-bg: #0c0b0a;
+  --grain-blend: overlay;
+  --grain-op: 0.22;
+  --collage-blend: luminosity;
+}
+
+/* ============ base ============ */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  font-variant-ligatures: none;
+}
+
+/* 纸纹 */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  opacity: var(--grain-op);
+  mix-blend-mode: var(--grain-blend);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--crimson);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--crimson);
+  color: var(--paper);
+}
+
+/* 共用：两端带对准刻度的发丝线 */
+.rule {
+  position: relative;
+  height: 1px;
+  background: var(--rule);
+  width: 100%;
+}
+
+.rule::before,
+.rule::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  width: 1px;
+  height: 9px;
+  background: var(--rule);
+}
+
+.rule::before {
+  left: 0;
+}
+
+.rule::after {
+  right: 0;
+}
+
+.rule.tickR::before {
+  display: none;
+}
+
+.rule.tickL::after {
+  display: none;
+}

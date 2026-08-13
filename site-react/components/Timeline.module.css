@@ -1,0 +1,209 @@
+/* Multi-track editing timeline. The chrome follows an NLE (ruler, stacked
+   lanes, playhead, scrubbing), but the palette is the site's own paper theme
+   rather than an editor's dark grey. */
+
+.timeline {
+  border: 1px solid var(--rule-soft);
+  background: var(--paper-2);
+  font-family: var(--mono);
+  user-select: none;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.play {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease;
+}
+
+.play:hover {
+  color: var(--crimson);
+  border-color: var(--crimson);
+}
+
+.play svg {
+  display: block;
+  margin-left: 1px;
+}
+
+.clock {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.clockTotal {
+  color: var(--muted);
+}
+
+.caption {
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+}
+
+.labels {
+  display: grid;
+  /* Ruler row first, then one row per lane — must mirror .lanes. */
+  grid-template-rows: 22px repeat(4, 30px);
+  border-right: 1px solid var(--rule-soft);
+}
+
+.rulerSpacer {
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  color: var(--muted);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+}
+
+.lanes {
+  position: relative;
+  display: grid;
+  grid-template-rows: 22px repeat(4, 30px);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.ruler {
+  position: relative;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.tick {
+  position: absolute;
+  top: 5px;
+  padding-left: 5px;
+  border-left: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.lane {
+  position: relative;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.lane:last-of-type {
+  border-bottom: 0;
+}
+
+.clip {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 6px;
+  border-radius: 2px;
+  font-size: 10px;
+  white-space: nowrap;
+  transition: filter 0.16s ease;
+}
+
+.clip:hover {
+  filter: brightness(0.94);
+}
+
+.clipLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* One hue per track kind, all drawn from the site palette. */
+.kindVideo {
+  background: var(--crimson-soft);
+  box-shadow: inset 0 0 0 1px var(--crimson);
+  color: var(--crimson);
+}
+
+.kindBroll {
+  background: rgba(176, 146, 87, 0.16);
+  box-shadow: inset 0 0 0 1px #8a6d1f;
+  color: #8a6d1f;
+}
+
+.kindCaption {
+  background: rgba(63, 109, 85, 0.14);
+  box-shadow: inset 0 0 0 1px #3f6d55;
+  color: #3f6d55;
+}
+
+.kindAudio {
+  background: rgba(107, 98, 128, 0.16);
+  box-shadow: inset 0 0 0 1px #6b6280;
+  color: #6b6280;
+}
+
+.active {
+  filter: none;
+  box-shadow:
+    inset 0 0 0 1px currentColor,
+    0 0 0 1px currentColor;
+}
+
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--crimson);
+  pointer-events: none;
+}
+
+.playheadHandle {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  background: var(--crimson);
+  transform: translateX(-50%);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 62px minmax(0, 1fr);
+  }
+
+  .label {
+    padding: 0 8px;
+    font-size: 9.5px;
+  }
+
+  .clip {
+    font-size: 9px;
+  }
+}

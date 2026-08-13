@@ -1,0 +1,64 @@
+.pager {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 64px 0 0;
+  padding-top: 34px;
+  border-top: 1px solid var(--rule-soft);
+}
+
+.link {
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px;
+  border: 1px solid var(--rule-soft);
+  border-radius: 3px;
+  transition: border-color 0.16s ease;
+}
+
+.link:hover {
+  border-color: var(--crimson);
+}
+
+/* A lone "next" still sits on the right. */
+.next {
+  grid-column: 2;
+  text-align: right;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.link:hover .title {
+  color: var(--crimson);
+}
+
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.next .meta {
+  justify-self: end;
+}
+
+.link svg {
+  display: block;
+}
+
+@media (max-width: 620px) {
+  .pager {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .next {
+    grid-column: 1;
+  }
+}

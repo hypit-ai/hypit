@@ -1,0 +1,194 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--rule);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  height: var(--nav-h);
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-inline: var(--pad);
+}
+
+/* 文档页：logo 区占满左侧栏宽度，搜索框左沿对齐正文栏起点 */
+.docsBar {
+  max-width: none;
+  gap: 0;
+  padding-inline: 40px var(--pad);
+}
+
+.docsBar .brand {
+  width: calc(21vw - 40px);
+  margin-right: clamp(28px, 5vw, 86px);
+}
+
+.docsBar .search {
+  margin-right: 22px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.logo {
+  display: block;
+  height: 46px;
+  width: auto;
+}
+
+.divider {
+  width: 1px;
+  height: 44px;
+  background: var(--rule);
+  margin-left: 22px;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  height: 38px;
+  padding: 0 10px 0 12px;
+  min-width: 0;
+  flex: 0 1 388px;
+  color: var(--muted);
+  cursor: text;
+  font: inherit;
+}
+
+.search:hover {
+  border-color: var(--crimson);
+  color: var(--ink);
+}
+
+.ph {
+  flex: 1;
+  text-align: left;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.kbd {
+  border: 1px solid var(--rule);
+  padding: 1px 7px;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 34px;
+}
+
+.nav a {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  position: relative;
+  padding: 4px 0;
+}
+
+.nav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: 0;
+  height: 1.5px;
+  background: var(--crimson);
+  transition: right 0.22s ease;
+}
+
+.nav a:hover::after,
+.nav a[aria-current="page"]::after {
+  right: 0;
+}
+
+/* An entry with no destination yet: same metrics as the nav links, dimmed and
+   without the underline animation so it does not invite a click. */
+.nav .pending {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 4px 0;
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+.icons {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  /* 23px + the icon button's 5px transparent inset = the 28px on the left. */
+  padding-left: 23px;
+  border-left: 1px solid var(--rule);
+  margin-left: 28px;
+}
+
+.ibtn {
+  background: none;
+  border: 0;
+  padding: 5px;
+  cursor: pointer;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  font: inherit;
+}
+
+.ibtn:hover {
+  color: var(--crimson);
+}
+
+.ibtn svg {
+  display: block;
+}
+
+@media (max-width: 1080px) {
+  .nav {
+    gap: 22px;
+  }
+  .search {
+    flex-basis: 240px;
+  }
+}
+
+@media (max-width: 900px) {
+  .nav a {
+    display: none;
+  }
+  .icons {
+    border-left: 0;
+  }
+  .docsBar .brand {
+    width: auto;
+    margin-right: 22px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ph {
+    display: none;
+  }
+  .search {
+    flex: 0 0 auto;
+  }
+  .divider {
+    display: none;
+  }
+}

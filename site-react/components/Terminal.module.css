@@ -1,0 +1,61 @@
+.term {
+  background: var(--term-bg);
+  border: 1px solid var(--ink);
+  margin: 22px 0 0;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(233, 228, 218, 0.14);
+}
+
+.tag {
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.copy {
+  background: none;
+  border: 1px solid rgba(233, 228, 218, 0.22);
+  color: var(--term-ink);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.copy:hover {
+  opacity: 1;
+  border-color: var(--term-ink);
+}
+
+.pre {
+  margin: 0;
+  padding: 16px 18px 20px;
+  color: var(--term-ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 2;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.flag {
+  color: var(--term-flag);
+}
+
+.com {
+  color: #7e776b;
+}
