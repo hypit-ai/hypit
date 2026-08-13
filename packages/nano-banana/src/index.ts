@@ -9,7 +9,6 @@ export type NanoBananaModel = typeof nanoBananaModels[number];
 
 function nanoBananaPortTable(model: NanoBananaModel): GenerationPortTable {
   return sealGenerationPortTable({
-    contract: "svml.generation-ports@1",
     model,
     result: "image",
     ports: [

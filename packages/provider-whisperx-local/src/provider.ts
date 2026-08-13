@@ -76,8 +76,7 @@ function alignmentRequest(value: CanonicalValue): WhisperXAlignmentRequest {
   assert(value !== null && typeof value === "object" && !Array.isArray(value),
     "WhisperX alignment request must be an object");
   const item = value as unknown as WhisperXAlignmentRequest;
-  assert(item.contract === "svml.whisperx-alignment-request@1"
-    && item.audio?.kind === "blob"
+  assert(item.audio?.kind === "blob"
     && item.audio.mediaType === "audio/wav"
     && Number.isSafeInteger(item.sampleFrames)
     && item.sampleFrames > 0
@@ -293,9 +292,6 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
       lifecycle: "immediate" as const,
       capability: whisperXCapabilities.alignment,
       returns: speechEvidenceTypes.alignedTranscript,
-      supports: (need) => need.constraints !== null && typeof need.constraints === "object"
-        && !Array.isArray(need.constraints)
-        && (need.constraints as { readonly contract?: unknown }).contract === "svml.whisperx-alignment-request@1",
       handler: async (context: EndpointInvocationContext) => {
         const request = alignmentRequest(context.need.constraints);
         const audio = await context.artifacts.get(request.audio.digest);

@@ -38,7 +38,6 @@ const SEEDANCE_25_DURATIONS = [-1, ...Array.from({ length: 27 }, (_item, index) 
 function seedancePortTable(model: SeedanceModel): GenerationPortTable {
   const is25 = model === "seedance-2.5";
   return sealGenerationPortTable({
-    contract: "svml.generation-ports@1",
     model,
     result: "video",
     ports: [

@@ -13,6 +13,6 @@ test("Background Removal is one image edge to one exact external Need", async ()
   assert.deepEqual(backgroundRemovalManifest.capabilities, [{ name: "remove-background", returns: artifactTypes.blob }]);
   const source = { kind: "blob" as const, digest: digestOf("portrait"), size: 456, mediaType: "image/jpeg" };
   const result = await backgroundRemovalComponent.producers[0]!.handler({ inputs: { source: { value: source } } } as never);
-  assert.deepEqual(result.needs.image, { constraints: { contract: "svml.background-removal-request@1", source } });
+  assert.deepEqual(result.needs.image, { constraints: { source } });
   assert.deepEqual(backgroundRemovalCapabilities.remove.module.version, "1");
 });

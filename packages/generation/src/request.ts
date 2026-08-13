@@ -21,29 +21,22 @@ import type {
  * name and never learns a model-specific field layout, so the same wire mapping
  * mechanism serves every model and every service reselling it.
  */
-export const GENERATION_REQUEST_V1 = "svml.generation-request@1" as const;
-export const GENERATION_REQUEST_DRAFT_V1 = "svml.generation-request-draft@1" as const;
-export const GENERATION_MEDIA_BINDING_V1 = "svml.generation-media-binding@1" as const;
-
 export type GenerationRequest = {
-  readonly contract: "svml.generation-request@1";
   /** An absent port is an omitted key. A present port always carries at least one value. */
   readonly ports: Readonly<Record<string, readonly GenerationPortValue[]>>;
 };
 
 /**
  * A request while graph inputs are still being attached. It is deliberately a
- * different contract from GenerationRequest: Providers can only receive the
- * finalized request after the exact model package has checked every port rule.
+ * Providers can only receive the finalized request after the exact model
+ * package has checked every port rule.
  */
 export type GenerationRequestDraft = {
-  readonly contract: "svml.generation-request-draft@1";
   readonly ports: Readonly<Record<string, readonly GenerationPortValue[]>>;
 };
 
 /** Authored instructions for attaching one graph Blob edge to one media port. */
 export type GenerationMediaBinding = {
-  readonly contract: "svml.generation-media-binding@1";
   readonly role: GenerationMediaRole;
   readonly fields?: Readonly<Record<string, string | number | boolean>>;
 };
@@ -93,7 +86,6 @@ function itemFieldsSchema(fields: readonly GenerationPortItemField[]): ValueSche
 export function mediaBindingSchemaFromPort(port: GenerationMediaPort): ValueSchema {
   const fields = port.value.itemFields ?? [];
   return generationObjectSchema({
-    contract: { schema: { kind: "literal", value: GENERATION_MEDIA_BINDING_V1 } },
     role: { schema: { kind: "string", enum: [...port.value.accepts] } },
     ...(fields.length === 0 ? {} : { fields: { schema: itemFieldsSchema(fields) } }),
   });
@@ -156,7 +148,6 @@ export function portsObjectSchema(
 /** Derive the structural Schema of one model's request from its port table. */
 export function requestSchemaFromPorts(table: GenerationPortTable): ValueSchema {
   return generationObjectSchema({
-    contract: { schema: { kind: "literal", value: GENERATION_REQUEST_V1 } },
     ports: { schema: portsObjectSchema(table) },
   });
 }
@@ -167,7 +158,6 @@ export function requestDraftSchemaFromPorts(table: GenerationPortTable): ValueSc
     .filter((port) => isMediaPort(port) || port.value.kind === "text")
     .map((port) => port.name);
   return generationObjectSchema({
-    contract: { schema: { kind: "literal", value: GENERATION_REQUEST_DRAFT_V1 } },
     ports: { schema: portsObjectSchema(table, { defer: deferred }) },
   });
 }
@@ -321,7 +311,6 @@ export function verifyRequestDraftAgainstPorts(
   value: unknown,
 ): asserts value is GenerationRequestDraft {
   const draft = plainObject(value, `${table.model} request draft`);
-  assert(draft.contract === GENERATION_REQUEST_DRAFT_V1, `${table.model} request draft contract is invalid`);
   verifyPortsAgainstTable(table, draft.ports, { defer: deferredPorts(table) });
 }
 
@@ -330,7 +319,6 @@ export function sealGenerationRequestDraft(
   ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
 ): GenerationRequestDraft {
   const draft = canonicalize({
-    contract: GENERATION_REQUEST_DRAFT_V1,
     ports: Object.fromEntries(Object.entries(ports).filter(([, values]) => values.length > 0)),
   }) as unknown as GenerationRequestDraft;
   verifyRequestDraftAgainstPorts(table, draft);
@@ -342,15 +330,14 @@ export function verifyGenerationMediaBinding(
   value: unknown,
 ): asserts value is GenerationMediaBinding {
   const binding = plainObject(value, `${port.name} media binding`);
-  assert(binding.contract === GENERATION_MEDIA_BINDING_V1, `${port.name} media binding contract is invalid`);
   verifyMediaItemFields(binding, port, `${port.name} media binding`);
 }
 
 export function sealGenerationMediaBinding(
   port: GenerationMediaPort,
-  value: Omit<GenerationMediaBinding, "contract">,
+  value: GenerationMediaBinding,
 ): GenerationMediaBinding {
-  const binding = canonicalize({ contract: GENERATION_MEDIA_BINDING_V1, ...value }) as unknown as GenerationMediaBinding;
+  const binding = canonicalize(value) as unknown as GenerationMediaBinding;
   verifyGenerationMediaBinding(port, binding);
   return binding;
 }
@@ -416,7 +403,6 @@ export function verifyRequestAgainstPorts(
 ): asserts value is GenerationRequest {
   assertGenerationPortTable(table);
   const request = plainObject(value, `${table.model} request`);
-  assert(request.contract === GENERATION_REQUEST_V1, `${table.model} request contract is invalid`);
   verifyPortsAgainstTable(table, request.ports);
 }
 
@@ -426,7 +412,6 @@ export function sealGenerationPortRequest(
   ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
 ): GenerationRequest {
   const content: GenerationRequest = {
-    contract: GENERATION_REQUEST_V1,
     ports: Object.fromEntries(
       Object.entries(ports).filter(([, values]) => values !== undefined && values.length > 0),
     ),
