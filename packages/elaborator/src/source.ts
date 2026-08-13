@@ -4,7 +4,7 @@ import {
   digestOf,
   isDigest,
   link,
-  verifyRecord,
+  verifyRecordStructure,
 } from "@narratage/core";
 import type {
   Digest,
@@ -511,7 +511,7 @@ export async function compileSourceClosure(
         `Record admission rewrote ${source.name}:${record.id}`,
         record.id,
       );
-      verifyRecord(request.closure, admitted);
+      verifyRecordStructure(request.closure, admitted);
       admittedRecords.push(admitted);
     }
     const decoded: DecodedAuthorSource = {

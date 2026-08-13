@@ -9,7 +9,6 @@ export {
   resolveType,
   sealRecord,
   verifyClosure,
-  verifyRecord,
   verifyRecordStructure,
 } from "./link.js";
 export {

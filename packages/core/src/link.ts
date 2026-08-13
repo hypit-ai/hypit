@@ -252,7 +252,7 @@ export function sealRecord(record: TypedRecordDraft): TypedRecord {
 export function verifyRecordStructure(
   closure: ResolvedModuleClosure,
   record: TypedRecord,
-): void {
+): ResolvedTypeDeclaration {
   invariant(record.id.length > 0, "EMPTY_RECORD_ID", "record id is empty");
   invariant(isDigest(record.digest), "INVALID_DIGEST", `${record.id} digest is invalid`, record.id);
   invariant(
@@ -263,40 +263,17 @@ export function verifyRecordStructure(
   );
   const declaration = resolveType(closure, record.type);
   validateStoredValue(record.value, declaration.schema, `$record.${record.id}`);
-}
-
-export function verifyRecord(
-  closure: ResolvedModuleClosure,
-  record: TypedRecord,
-): void {
-  verifyRecordStructure(closure, record);
+  return declaration;
 }
 
 export function link(
   closure: ResolvedModuleClosure,
   authoredRecords: readonly TypedRecord[],
 ): LinkedProgram {
-  verifyClosure(closure);
-  const recordIds = new Set<string>();
-  const records: TypedRecord[] = [];
-
-  for (const record of authoredRecords) {
-    invariant(!recordIds.has(record.id), "DUPLICATE_RECORD", `duplicate record ${record.id}`, record.id);
-    invariant(
-      record.origin.kind === "authored",
-      "NON_AUTHORED_PROGRAM_RECORD",
-      "linked program inputs must be authored records",
-      record.id,
-    );
-    verifyRecord(closure, record);
-    recordIds.add(record.id);
-    records.push(record);
-  }
-
   const program: LinkedProgram = {
     closure,
-    records,
-    semanticDigest: semanticRecordsDigest(records),
+    records: [...authoredRecords],
+    semanticDigest: semanticRecordsDigest(authoredRecords),
   };
   verifyLinkedProgram(program);
   return program;
@@ -310,7 +287,7 @@ export function verifyLinkedProgram(program: LinkedProgram): void {
     ids.add(record.id);
     invariant(record.origin.kind === "authored", "NON_AUTHORED_PROGRAM_RECORD",
       `${record.id} is not an authored input record`, record.id);
-    verifyRecord(program.closure, record);
+    verifyRecordStructure(program.closure, record);
   }
   invariant(program.semanticDigest === semanticRecordsDigest(program.records),
     "PROGRAM_SEMANTIC_DIGEST_MISMATCH", "linked program semantic digest does not match");
