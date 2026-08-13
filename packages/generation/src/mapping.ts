@@ -88,6 +88,8 @@ export async function compileWireRequest(
   request: GenerationRequest,
   resolve: GenerationArtifactUrlResolver,
 ): Promise<GenerationWireRequest> {
+  assert(mappingSupportsRequest(mapping, request),
+    `${mapping.capability.name} request contains a port this Provider cannot map`);
   const present = presentPorts(request);
   const input: Record<string, CanonicalValue> = { ...(mapping.constants ?? {}) };
 
