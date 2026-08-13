@@ -10,7 +10,6 @@ export type SemanticTimePoint = { readonly identity: string; readonly frame: num
  * consumers read windows from. Anchors are the addressing truth.
  */
 export type CompleteSemanticMap = {
-  readonly contract: "svml.complete-semantic-map@1";
   readonly tokens: readonly TimedSpeechToken[];
   readonly anchors: readonly SemanticTimePoint[];
 };

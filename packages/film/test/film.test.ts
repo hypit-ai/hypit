@@ -63,7 +63,6 @@ import type { TextStyle } from "@narratage/typography-track";
 import { admitRecord, TypeValidatorRegistry } from "@narratage/validation";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 4,
   frameRate: { numerator: 30, denominator: 1 },
 });
@@ -75,7 +74,6 @@ function validatorRegistry(): TypeValidatorRegistry {
   return registry;
 }
 const canvas = sealCanvasSpace({
-  contract: "svml.canvas-space@1",
   widthPx: 1080,
   heightPx: 1920,
   origin: "top-left",
@@ -89,7 +87,6 @@ const filmProgram = sealFilmProgram({
   clearColor: "#000000",
 });
 const titleFont: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: {
     kind: "blob", digest: digestOf("film-test-title-font"), size: 1, mediaType: "font/woff2",
   } }],
@@ -125,14 +122,13 @@ const textProgram = sealTypographyTrackProgram({
     id: "title",
     span: { startFrame: 10, endFrameExclusive: 100 },
     tieBreak: "title",
-    geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 86.4, yPx: 192, widthPx: 907.2, heightPx: 384 } },
+    geometry: { kind: "area", frame: { xPx: 86.4, yPx: 192, widthPx: 907.2, heightPx: 384 } },
     document: { paragraphs: [{ id: "title", inlines: [{ kind: "text", id: "title-text", text: "Semantic Video Markup Language" }] }] },
     style: titleStyle,
     motion: stillTextMotion(),
   }],
 });
 const background = sealVisualTrack({
-  contract: "svml.visual-track@1",
   visualIr: "svml.visual-ir@1",
   id: "background-track",
   presents: [{
@@ -143,7 +139,6 @@ const background = sealVisualTrack({
   }],
 });
 const audio = sealAudioTrack({
-  contract: "svml.audio-track@1",
   id: "empty-audio-track",
   clips: [],
 });

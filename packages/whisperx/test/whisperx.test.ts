@@ -18,12 +18,10 @@ import {
 
 function basis() {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
   return sealSpeechBasis({
-    contract: "svml.speech-basis@1",
     programSpace,
     audio: { kind: "blob", digest: digestOf("whisperx-test:audio"), size: 1, mediaType: "audio/wav" },
     visualTrack: { clips: [] },
@@ -33,7 +31,6 @@ function basis() {
 
 function evidenceAudio(basis: SpeechBasis): SpeechEvidenceAudio {
   return sealSpeechEvidenceAudio({
-    contract: "svml.speech-evidence-audio@1",
     artifact: {
       kind: "blob",
       digest: digestOf("whisperx-test:evidence-audio"),
@@ -46,7 +43,6 @@ function evidenceAudio(basis: SpeechBasis): SpeechEvidenceAudio {
 
 function audioBasis(value: SpeechBasis): SpeechAudioBasis {
   return {
-    contract: "svml.speech-audio-basis@1",
     programSpace: value.programSpace,
     audio: value.audio,
     segments: value.segments,

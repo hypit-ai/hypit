@@ -56,18 +56,15 @@ const fixtureManifest: ModuleManifest = {
 };
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const visual = sealVisualTrack({
-  contract: "svml.visual-track@1",
   visualIr: "svml.visual-ir@1",
   id: "visual",
   presents: [],
 });
 const audio = sealAudioTrack({
-  contract: "svml.audio-track@1",
   id: "audio",
   clips: [],
 });

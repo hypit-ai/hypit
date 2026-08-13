@@ -17,13 +17,13 @@ test("one exact Raster capability carries both closed deterministic request vari
   const transform = rasterTransformRequest(image, [{ kind: "encode", format: "webp", quality: 90 }]);
   const compose = rasterComposeRequest({
     canvas: {
-      contract: "svml.canvas-space@1", widthPx: 100, heightPx: 200,
+      widthPx: 100, heightPx: 200,
       origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
     },
     background: "#00000000",
     layers: [{
       source: image,
-      frame: { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 100, heightPx: 200 },
+      frame: { xPx: 0, yPx: 0, widthPx: 100, heightPx: 200 },
       fit: "contain", interpolation: "lanczos", opacity: 1,
     }],
   });

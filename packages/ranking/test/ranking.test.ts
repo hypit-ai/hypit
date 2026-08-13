@@ -80,15 +80,13 @@ import type {
 } from "@narratage/markup";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 8,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const frame = sealSpatialFrame({
-  contract: "svml.spatial-frame@1", xPx: 40, yPx: 80, widthPx: 720, heightPx: 560,
+  xPx: 40, yPx: 80, widthPx: 720, heightPx: 560,
 });
 const map: CompleteSemanticMap = {
-  contract: "svml.complete-semantic-map@1",
   tokens: [],
   anchors: [
     { identity: "outer-start", frame: 10 },
@@ -114,7 +112,6 @@ const triggers = (count: number): NarrativeMomentRef => ({
     .map((anchorId, occurrence) => ({ occurrence, anchorId })),
 });
 const font: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: { kind: "blob", digest: digestOf("ranking-font"), size: 32, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
@@ -285,7 +282,6 @@ test("Typewriter uses Unicode graphemes, explicit emphasis and winner timing wit
 });
 
 const sound = (id: string): SynchronizedMedia => ({
-  contract: "svml.synchronized-media@1",
   timeline: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 3 },
   audio: {
     artifact: { kind: "blob", digest: digestOf(`ranking-sound:${id}`), size: 128, mediaType: "audio/wav" },

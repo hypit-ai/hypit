@@ -16,7 +16,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const fixtureFont: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: { kind: "blob", digest: digestOf("hyperframes:fixture-font"), size: 1_024, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
@@ -24,7 +23,6 @@ const fixtureFont: FontArtifactRef = {
 
 function fixture() {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 1001 / 1000,
     frameRate: { numerator: 30_000, denominator: 1_001 },
   });
@@ -41,7 +39,6 @@ function fixture() {
     mediaType: "audio/wav",
   };
   const lower = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: "lower",
     presents: [{
@@ -58,7 +55,6 @@ function fixture() {
     }],
   });
   const upper = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: "upper",
     presents: [{
@@ -72,7 +68,6 @@ function fixture() {
     }],
   });
   const audio = sealAudioTrack({
-    contract: "svml.audio-track@1",
     id: "sound",
     clips: [{
       id: "main",
@@ -87,7 +82,6 @@ function fixture() {
     }],
   });
   const composition = sealComposition({
-    contract: "svml.composition@1",
     id: "main",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [upper, audio, lower],
@@ -172,7 +166,7 @@ test("any legal frame and Provider-owned chunk can be addressed without traversi
 test("HyperFrames emits frame-bound local animation without creating a Track stacking context", () => {
   const { composition, programSpace } = fixture();
   const lower = composition.tracks.find((track) => track.id === "lower");
-  assert(lower?.contract === "svml.visual-track@1");
+  assert(lower?.kind === "visual");
   const present = lower.presents[0]!;
   const media = present.elements[0]!;
   const animated = sealVisualTrack({
@@ -205,7 +199,7 @@ test("HyperFrames emits frame-bound local animation without creating a Track sta
 test("HyperFrames clips a long animation by Present visibility instead of rejecting it", () => {
   const { composition, programSpace } = fixture();
   const lower = composition.tracks.find((track) => track.id === "lower");
-  assert(lower?.contract === "svml.visual-track@1");
+  assert(lower?.kind === "visual");
   const present = lower.presents[0]!;
   const media = present.elements[0]!;
   const animated = sealVisualTrack({
@@ -226,12 +220,10 @@ test("HyperFrames clips a long animation by Present visibility instead of reject
 
 test("content-bound fonts and typed compositable Surfaces cross the same Artifact boundary", () => {
   const space = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const font: FontArtifactRef = {
-    contract: "svml.font-artifact@1",
     sources: [{ artifact: {
       kind: "blob",
       digest: digestOf("hyperframes:font"),
@@ -243,7 +235,6 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   };
   const surfaceDigest = digestOf("hyperframes:alpha-surface");
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: "bound-render-dependencies",
     presents: [{
@@ -267,7 +258,6 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
           order: 2,
           kind: "surface",
           surface: {
-            contract: "svml.compositable-surface@1",
             artifact: { kind: "blob", digest: surfaceDigest, size: 2_048, mediaType: "video/webm" },
             width: 1080,
             height: 1920,
@@ -285,7 +275,6 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
     }],
   });
   const document = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1",
     id: "render-dependencies",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [track],
@@ -306,7 +295,6 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
 
 test("exact timed sampling lowers loop boundaries and held frames without zero-rate browser media", () => {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 8 / 30,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -317,7 +305,6 @@ test("exact timed sampling lowers loop boundaries and held frames without zero-r
     mediaType: "video/mp4",
   };
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: "sampled",
     presents: [{
@@ -352,7 +339,6 @@ test("exact timed sampling lowers loop boundaries and held frames without zero-r
     }],
   });
   const document = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1",
     id: "sampled",
     canvas: { width: 100, height: 100, clearColor: "#000000" },
     tracks: [track],

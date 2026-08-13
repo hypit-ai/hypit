@@ -529,7 +529,6 @@ export function assertMediaTrackProgramIdentity(value: MediaTrackProgram, space:
 export function projectMediaVisualTrack(space: ProgramSpace, program: MediaTrackProgram): VisualTrack {
   assertMediaTrackProgramIdentity(program, space);
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: program.id,
     presents: [
@@ -718,7 +717,7 @@ export function projectMediaAudioTrack(space: ProgramSpace, program: MediaTrackP
     return [...(source === undefined ? [] : [source]), ...edgeSoundClips(item, space)];
   }).concat(program.sequences.flatMap((sequence) => sequenceAudioClips(sequence, space)));
   assert(clips.length > 0, `Media Program ${program.id} has no explicitly authored audio projection.`);
-  const track = sealAudioTrack({ contract: "svml.audio-track@1", id: `${program.id}:audio`, clips });
+  const track = sealAudioTrack({ id: `${program.id}:audio`, clips });
   assertAudioTrackIdentity(track, space);
   return track;
 }

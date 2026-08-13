@@ -82,7 +82,6 @@ function validatorRegistry(): TypeValidatorRegistry {
 function sampleTake(label = "generated"): SpeechBasis {
   const durationSec = 2;
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -99,17 +98,16 @@ function sampleTake(label = "generated"): SpeechBasis {
     mediaType: "video/mp4",
   };
   return sealSpeechBasis({
-    contract: "svml.speech-basis@1",
     programSpace,
     audio,
     visualTrack: {
       clips: [{
         segmentId: "opening",
         artifact: visual,
-        extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
-        frame: { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 720, heightPx: 1280 },
+        extent: { widthPx: 720, heightPx: 1280 },
+        frame: { xPx: 0, yPx: 0, widthPx: 720, heightPx: 1280 },
         fit: {
-          contract: "svml.content-fit@1", sizing: "cover",
+          sizing: "cover",
           framePoint: { x: 0.5, y: 0.5 }, contentPoint: { x: 0.5, y: 0.5 },
           offsetPx: { x: 0, y: 0 }, constraint: "bounded",
         },
@@ -273,8 +271,8 @@ test("SpeechBasis projects to peer generic visual and audio Tracks", () => {
   const visual = projectSpeechVisual(take);
   const audio = projectSpeechAudioTrack(take);
   const programSpace = projectSpeechProgramSpace(take);
-  assert.equal(visual.contract, "svml.visual-track@1");
-  assert.equal(audio.contract, "svml.audio-track@1");
+  assert.equal(visual.kind, "visual");
+  assert.equal(audio.kind, "audio");
   assert.deepEqual(programSpace, take.programSpace);
   assert.equal(
     audio.clips[0]?.target.endSampleExclusive,

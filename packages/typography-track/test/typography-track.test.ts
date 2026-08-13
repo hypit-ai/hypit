@@ -48,13 +48,11 @@ import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@narratage/ma
 import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 5,
   frameRate: { numerator: 30, denominator: 1 },
 });
 
 const exactTestFont: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: {
     kind: "blob",
     digest: digestOf("typography-track-test-font"),
@@ -66,7 +64,6 @@ const exactTestFont: FontArtifactRef = {
 };
 
 const exactTestSurface: CompositableSurfaceRef = {
-  contract: "svml.compositable-surface@1",
   artifact: {
     kind: "blob",
     digest: digestOf("typography-track-test-surface"),
@@ -164,7 +161,7 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
         id: "watermark",
         span: { startFrame: 0, endFrameExclusive: 150 },
         tieBreak: "watermark",
-        geometry: { kind: "point", point: { contract: "svml.spatial-point@1", xPx: 900, yPx: 80 } },
+        geometry: { kind: "point", point: { xPx: 900, yPx: 80 } },
         document: document("SVML"),
         style: { ...style, id: "watermark", stackingOrder: 90 },
         motion: stillTextMotion(),
@@ -173,7 +170,7 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
         id: "callout",
         span: { startFrame: 30, endFrameExclusive: 90 },
         tieBreak: "callout",
-        geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 108, yPx: 1248, widthPx: 864, heightPx: 230.4 } },
+        geometry: { kind: "area", frame: { xPx: 108, yPx: 1248, widthPx: 864, heightPx: 230.4 } },
         document: document("Intent, not timeline"),
         style,
         motion: stillTextMotion(),
@@ -187,7 +184,6 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
   assert.equal(track.presents[0]?.elements[2]?.kind, "text-flow");
 
   const lower = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: "lower",
     presents: [{
@@ -198,7 +194,6 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
     }],
   });
   const rendered = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1",
     id: "text-film",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [track, lower],
@@ -214,7 +209,7 @@ test("Text Mask explicitly consumes one authored Text Program and one owned stil
     items: [{
       id: "mask-title",
       span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "mask-title",
-      geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 100, yPx: 200, widthPx: 800, heightPx: 240 } },
+      geometry: { kind: "area", frame: { xPx: 100, yPx: 200, widthPx: 800, heightPx: 240 } },
       document: document("OWNED MASK"),
       style: (() => {
         const style = textStyle("mask-style", 75);
@@ -224,7 +219,6 @@ test("Text Mask explicitly consumes one authored Text Program and one owned stil
     }],
   });
   const material: CompositableSurfaceRef = {
-    contract: "svml.compositable-surface@1",
     artifact: { kind: "blob", digest: digestOf("text-mask-material"), size: 1, mediaType: "image/png" },
     width: 800, height: 240, colorSpace: "srgb", alphaMode: "straight", timing: { kind: "still" },
   };
@@ -235,7 +229,7 @@ test("Text Mask explicitly consumes one authored Text Program and one owned stil
   assert.deepEqual(track.presents[0]?.elements.map((element) => element.kind), ["mask", "text", "surface"]);
   assert.equal(track.presents[0]?.elements[2]?.parent, "mask");
   const html = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1", id: "owned-mask-composition",
+    id: "owned-mask-composition",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [track],
   }), space).html;
   assert.match(html, /<foreignObject/u);
@@ -267,7 +261,7 @@ test("TypographyTrackProgram rejects a frame span outside ProgramSpace", () => {
       id: "late",
       span: { startFrame: 149, endFrameExclusive: 151 },
       tieBreak: "late",
-      geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 1080, heightPx: 192 } },
+      geometry: { kind: "area", frame: { xPx: 0, yPx: 0, widthPx: 1080, heightPx: 192 } },
       document: document("Too late"),
       style: textStyle("late"),
       motion: stillTextMotion(),
@@ -278,7 +272,6 @@ test("TypographyTrackProgram rejects a frame span outside ProgramSpace", () => {
 
 test("Selection Text consumes explicit Selection, SemanticMap, Style, Motion and Placement edges", () => {
   const map: CompleteSemanticMap = {
-    contract: "svml.complete-semantic-map@1",
     tokens: [],
     anchors: [
       { identity: "selection:start", frame: 30 },
@@ -304,7 +297,7 @@ test("Selection Text consumes explicit Selection, SemanticMap, Style, Motion and
     map,
     selection,
     space,
-    bindAreaTextPlacement({ contract: "svml.spatial-frame@1", xPx: 108, yPx: 192, widthPx: 864, heightPx: 192 }),
+    bindAreaTextPlacement({ xPx: 108, yPx: 192, widthPx: 864, heightPx: 192 }),
     spec,
     textStyle("meaning", 80),
     stillTextMotion(),
@@ -395,9 +388,9 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
         range: element.range,
       },
       { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
-      { id: "title-point", type: spatialTypes.point, value: { kind: "inline", value: { contract: "svml.spatial-point@1", xPx: 540, yPx: 120 } }, range: element.range },
-      { id: "body-frame", type: spatialTypes.frame, value: { kind: "inline", value: { contract: "svml.spatial-frame@1", xPx: 80, yPx: 220, widthPx: 920, heightPx: 520 } }, range: element.range },
-      { id: "arc", type: spatialTypes.path, value: { kind: "inline", value: { contract: "svml.spatial-path@1", commands: [
+      { id: "title-point", type: spatialTypes.point, value: { kind: "inline", value: { xPx: 540, yPx: 120 } }, range: element.range },
+      { id: "body-frame", type: spatialTypes.frame, value: { kind: "inline", value: { xPx: 80, yPx: 220, widthPx: 920, heightPx: 520 } }, range: element.range },
+      { id: "arc", type: spatialTypes.path, value: { kind: "inline", value: { commands: [
         { kind: "move", xPx: 120, yPx: 900 },
         { kind: "cubic", control1X: 360, control1Y: 760, control2X: 720, control2Y: 1_040, xPx: 960, yPx: 900 },
       ] } }, range: element.range },
@@ -574,7 +567,7 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     items: [
       {
         id: "area", span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "area",
-        geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 80, yPx: 200, widthPx: 720, heightPx: 320 } },
+        geometry: { kind: "area", frame: { xPx: 80, yPx: 200, widthPx: 720, heightPx: 320 } },
         document: { paragraphs: [{
           id: "p1",
           inlines: [
@@ -589,7 +582,7 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
       },
       {
         id: "path", span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "path",
-        geometry: { kind: "path", path: { contract: "svml.spatial-path@1", commands: [
+        geometry: { kind: "path", path: { commands: [
           { kind: "move", xPx: 100, yPx: 700 },
           { kind: "quadratic", controlX: 540, controlY: 520, xPx: 980, yPx: 700 },
         ] } },
@@ -600,7 +593,7 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     ],
   }));
   const rendered = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1", id: "rich-text-film",
+    id: "rich-text-film",
     canvas: { width: 1080, height: 900, clearColor: "#000000" }, tracks: [track],
   }), space);
   assert.match(rendered.html, /data-svml-text-paint-layer="5"/u);

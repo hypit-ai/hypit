@@ -78,12 +78,10 @@ import {
 } from "@narratage/markup";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const composition = sealComposition({
-  contract: "svml.composition@1",
   id: "render-test",
   canvas: { width: 1080, height: 1920, clearColor: "#000000" },
   tracks: [],
@@ -206,7 +204,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       assert.equal(request.contract, "svml.hyperframes-visual-render-request@1");
       return {
         value: stored(sealRenderedVisual({
-          contract: "svml.rendered-visual@1",
           frameRate: request.document.frameRate,
           frameCount: request.document.frameCount,
           canvas: request.document.canvas,
@@ -223,7 +220,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       const request = need.constraints as { contract: string; plan: ReturnType<typeof compileAudioProgramPlan> };
       return {
         value: stored(sealTimelineAudio({
-          contract: "svml.timeline-audio@1",
           artifact: audioArtifact,
           sampleFrames: request.plan.sampleFrames,
         })),
@@ -238,7 +234,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       const request = need.constraints as { visual: ReturnType<typeof sealRenderedVisual>; audio: ReturnType<typeof sealTimelineAudio> };
       return {
         value: stored(sealMuxedMedia({
-          contract: "svml.muxed-media@1",
           frameRate: request.visual.frameRate,
           frameCount: request.visual.frameCount,
           canvas: request.visual.canvas,
@@ -276,7 +271,6 @@ test("a render Product with another frame domain is rejected by the explicit dow
     mediaTypes.renderedVisual,
     () => ({
       value: stored(sealRenderedVisual({
-        contract: "svml.rendered-visual@1",
         frameRate: document.frameRate,
         frameCount: document.frameCount + 1,
         canvas: document.canvas,
@@ -297,7 +291,6 @@ test("a render Product with another frame domain is rejected by the explicit dow
       const request = need.constraints as { readonly plan: ReturnType<typeof compileAudioProgramPlan> };
       return {
         value: stored(sealTimelineAudio({
-          contract: "svml.timeline-audio@1",
           artifact: {
             kind: "blob",
             digest: digestOf("render-hyperframes:domain-check-audio"),

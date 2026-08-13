@@ -32,27 +32,25 @@ import {
 } from "../src/index.js";
 import type { ContentFit, IntrinsicExtent, SpatialAnchor, SpatialFrame } from "../src/index.js";
 
-const parent: SpatialFrame = { contract: "svml.spatial-frame@1", xPx: 100, yPx: 200, widthPx: 800, heightPx: 1200 };
-const portrait: IntrinsicExtent = { contract: "svml.intrinsic-extent@1", widthPx: 600, heightPx: 1000 };
-const landscape: IntrinsicExtent = { contract: "svml.intrinsic-extent@1", widthPx: 1600, heightPx: 900 };
+const parent: SpatialFrame = { xPx: 100, yPx: 200, widthPx: 800, heightPx: 1200 };
+const portrait: IntrinsicExtent = { widthPx: 600, heightPx: 1000 };
+const landscape: IntrinsicExtent = { widthPx: 1600, heightPx: 900 };
 const centered = (sizing: ContentFit["sizing"], constraint: ContentFit["constraint"] = "bounded"): ContentFit => ({
-  contract: "svml.content-fit@1", sizing,
+  sizing,
   framePoint: { x: 0.5, y: 0.5 }, contentPoint: { x: 0.5, y: 0.5 },
   offsetPx: { x: 0, y: 0 }, constraint,
 });
 
 test("Frame edges and anchored Frames resolve percentages against the explicit parent", () => {
   assert.deepEqual(frameFromEdges(parent, {
-    contract: "svml.frame-edges-program@1",
     left: { unit: "percent", value: 10 }, top: { unit: "percent", value: 5 },
     right: { unit: "percent", value: 90 }, bottom: { unit: "percent", value: 95 },
-  }), { contract: "svml.spatial-frame@1", xPx: 180, yPx: 260, widthPx: 640, heightPx: 1080 });
+  }), { xPx: 180, yPx: 260, widthPx: 640, heightPx: 1080 });
   assert.deepEqual(anchoredFrame(parent, {
-    contract: "svml.anchored-frame-program@1",
     x: { unit: "percent", value: 50 }, y: { unit: "percent", value: 75 },
     width: { unit: "percent", value: 50 }, height: { unit: "px", value: 300 },
     anchor: "center", offsetPx: { x: 10, y: -20 },
-  }), { contract: "svml.spatial-frame@1", xPx: 310, yPx: 930, widthPx: 400, heightPx: 300 });
+  }), { xPx: 310, yPx: 930, widthPx: 400, heightPx: 300 });
 });
 
 test("all nine anchors are one point-attachment equation", () => {
@@ -63,7 +61,6 @@ test("all nine anchors are one point-attachment equation", () => {
   };
   for (const [anchor, [xPx, yPx]] of Object.entries(expected) as [SpatialAnchor, readonly [number, number]][]) {
     const frame = anchoredFrame(parent, {
-      contract: "svml.anchored-frame-program@1",
       x: { unit: "percent", value: 50 }, y: { unit: "percent", value: 50 },
       width: { unit: "px", value: 200 }, height: { unit: "px", value: 100 },
       anchor, offsetPx: { x: 0, y: 0 },
@@ -74,38 +71,37 @@ test("all nine anchors are one point-attachment equation", () => {
 
 test("AspectFrame preserves explicit or connected aspect without becoming Media", () => {
   assert.deepEqual(aspectFrame(parent, portrait, {
-    contract: "svml.aspect-frame-program@1",
     x: { unit: "percent", value: 100 }, y: { unit: "percent", value: 100 },
     primary: "width", size: { unit: "percent", value: 30 }, anchor: "bottom-right",
     offsetPx: { x: 0, y: 0 },
-  }), { contract: "svml.spatial-frame@1", xPx: 660, yPx: 1000, widthPx: 240, heightPx: 400 });
+  }), { xPx: 660, yPx: 1000, widthPx: 240, heightPx: 400 });
 });
 
 test("every ContentFit sizing mode resolves the independent Content Frame", () => {
-  const frame: SpatialFrame = { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 400, heightPx: 400 };
+  const frame: SpatialFrame = { xPx: 0, yPx: 0, widthPx: 400, heightPx: 400 };
   assert.deepEqual(fitContent(frame, landscape, centered("contain")).contentFrame,
-    { contract: "svml.spatial-frame@1", xPx: 0, yPx: 87.5, widthPx: 400, heightPx: 225 });
+    { xPx: 0, yPx: 87.5, widthPx: 400, heightPx: 225 });
   assert.deepEqual(fitContent(frame, landscape, centered("cover")).contentFrame,
-    { contract: "svml.spatial-frame@1", xPx: -155.55555555555554, yPx: 0, widthPx: 711.1111111111111, heightPx: 400 });
+    { xPx: -155.55555555555554, yPx: 0, widthPx: 711.1111111111111, heightPx: 400 });
   assert.equal(fitContent(frame, portrait, centered("fit-width")).contentFrame.heightPx, 666.6666666666666);
   assert.equal(fitContent(frame, portrait, centered("fit-height")).contentFrame.widthPx, 240);
   assert.deepEqual(fitContent(frame, portrait, centered("native")).contentFrame,
-    { contract: "svml.spatial-frame@1", xPx: -100, yPx: -300, widthPx: 600, heightPx: 1000 });
+    { xPx: -100, yPx: -300, widthPx: 600, heightPx: 1000 });
   assert.deepEqual(fitContent({ ...frame, widthPx: 800, heightPx: 1200 }, portrait, centered("scale-down")).contentFrame,
-    { contract: "svml.spatial-frame@1", xPx: 100, yPx: 100, widthPx: 600, heightPx: 1000 });
+    { xPx: 100, yPx: 100, widthPx: 600, heightPx: 1000 });
   assert.deepEqual(fitContent(frame, portrait, centered("stretch")).contentFrame, frame);
 });
 
 test("the complete aspect, sizing and equal-point matrix preserves the two-frame equations", () => {
   const frames = [
-    { contract: "svml.spatial-frame@1" as const, xPx: -120, yPx: 40, widthPx: 600, heightPx: 1_000 },
-    { contract: "svml.spatial-frame@1" as const, xPx: 15, yPx: -80, widthPx: 1_000, heightPx: 600 },
-    { contract: "svml.spatial-frame@1" as const, xPx: 200, yPx: 300, widthPx: 800, heightPx: 800 },
+    { xPx: -120, yPx: 40, widthPx: 600, heightPx: 1_000 },
+    { xPx: 15, yPx: -80, widthPx: 1_000, heightPx: 600 },
+    { xPx: 200, yPx: 300, widthPx: 800, heightPx: 800 },
   ];
   const extents = [
-    { contract: "svml.intrinsic-extent@1" as const, widthPx: 600, heightPx: 1_000 },
-    { contract: "svml.intrinsic-extent@1" as const, widthPx: 1_000, heightPx: 600 },
-    { contract: "svml.intrinsic-extent@1" as const, widthPx: 800, heightPx: 800 },
+    { widthPx: 600, heightPx: 1_000 },
+    { widthPx: 1_000, heightPx: 600 },
+    { widthPx: 800, heightPx: 800 },
   ];
   const sizings = ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"] as const;
   const close = (actual: number, expected: number, label: string): void => {
@@ -145,13 +141,13 @@ test("the complete aspect, sizing and equal-point matrix preserves the two-frame
     }
   }
 
-  const frame = { contract: "svml.spatial-frame@1" as const, xPx: -70, yPx: 110, widthPx: 400, heightPx: 400 };
-  const extent = { contract: "svml.intrinsic-extent@1" as const, widthPx: 200, heightPx: 200 };
+  const frame = { xPx: -70, yPx: 110, widthPx: 400, heightPx: 400 };
+  const extent = { widthPx: 200, heightPx: 200 };
   const points = [0, 0.5, 1] as const;
   for (const x of points) {
     for (const y of points) {
       const content = fitContent(frame, extent, {
-        contract: "svml.content-fit@1", sizing: "native",
+        sizing: "native",
         framePoint: { x, y }, contentPoint: { x, y }, offsetPx: { x: 0, y: 0 }, constraint: "bounded",
       }).contentFrame;
       close(content.xPx + content.widthPx * x, frame.xPx + frame.widthPx * x, `equal point ${x},${y} x`);
@@ -161,9 +157,9 @@ test("the complete aspect, sizing and equal-point matrix preserves the two-frame
 });
 
 test("unequal focal points and bounded/free policies remain explicit", () => {
-  const frame: SpatialFrame = { contract: "svml.spatial-frame@1", xPx: 10, yPx: 20, widthPx: 400, heightPx: 300 };
+  const frame: SpatialFrame = { xPx: 10, yPx: 20, widthPx: 400, heightPx: 300 };
   const fit: ContentFit = {
-    contract: "svml.content-fit@1", sizing: "cover",
+    sizing: "cover",
     framePoint: { x: 0.5, y: 0.5 }, contentPoint: { x: 0.8, y: 0.35 },
     offsetPx: { x: 20, y: -10 }, constraint: "free",
   };
@@ -179,7 +175,6 @@ test("unequal focal points and bounded/free policies remain explicit", () => {
 
 test("Frames may deliberately remain partially or fully off Canvas", () => {
   const frame = anchoredFrame(parent, {
-    contract: "svml.anchored-frame-program@1",
     x: { unit: "percent", value: 50 }, y: { unit: "percent", value: 100 },
     width: { unit: "px", value: 300 }, height: { unit: "px", value: 200 },
     anchor: "top-center", offsetPx: { x: 0, y: 500 },
@@ -189,10 +184,9 @@ test("Frames may deliberately remain partially or fully off Canvas", () => {
 
 test("SpatialPath is typed geometry and rejects an empty or stateful command stream", () => {
   assert.deepEqual(sealSpatialPath({
-    contract: "svml.spatial-path@1",
     commands: [{ kind: "move", xPx: 0, yPx: 0 }, { kind: "line", xPx: 100, yPx: 100 }],
   }).commands.length, 2);
-  assert.throws(() => sealSpatialPath({ contract: "svml.spatial-path@1", commands: [{ kind: "move", xPx: 0, yPx: 0 }, { kind: "close" }] }), /no drawable/u);
+  assert.throws(() => sealSpatialPath({ commands: [{ kind: "move", xPx: 0, yPx: 0 }, { kind: "close" }] }), /no drawable/u);
 });
 
 function source(text: string): AuthorSourceUnit {

@@ -31,7 +31,6 @@ export function projectSpeechProgramSpace(basis: SpeechBasis): ProgramSpace {
 export function projectSpeechAudio(basis: SpeechBasis): SpeechAudioBasis {
   assertSpeechBasisIdentity(basis);
   return {
-    contract: "svml.speech-audio-basis@1",
     programSpace: basis.programSpace,
     audio: basis.audio,
     segments: basis.segments,
@@ -49,7 +48,6 @@ export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
     endFrameExclusive: frameAt(segment.endSec),
   }]));
   return sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: trackId,
     presents: lowerRestrictedSpeechVisualPresents(
@@ -77,7 +75,6 @@ export function projectSpeechAudioTrack(basis: SpeechBasis): AudioTrack {
   assertSpeechBasisIdentity(basis);
   const sampleFrames = programSpaceSampleFrames(basis.programSpace, 48_000);
   return sealAudioTrack({
-    contract: "svml.audio-track@1",
     id: `speech-audio:${basis.segments.map((segment) => segment.segmentId).join("+")}`,
     clips: [{
       id: "speech",

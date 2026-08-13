@@ -18,13 +18,11 @@ import {
 } from "../src/index.js";
 
 const space: ProgramSpace = {
-  contract: "svml.program-space@1",
   durationSec: 10,
   frameRate: { numerator: 30, denominator: 1 },
 };
 
 const map: CompleteSemanticMap = {
-  contract: "svml.complete-semantic-map@1",
   tokens: [],
   anchors: [
     { identity: "a", frame: 30 },
@@ -123,7 +121,6 @@ test("negative intermediate points clip before nearest half-later frame quantiza
 
 test("program and absolute projections use exact rational frame-rate arithmetic", () => {
   const ntsc: ProgramSpace = {
-    contract: "svml.program-space@1",
     durationSec: 1.001,
     frameRate: { numerator: 30_000, denominator: 1_001 },
   };
@@ -140,7 +137,6 @@ test("program and absolute projections use exact rational frame-rate arithmetic"
 
 test("frame and authored durations enter one exact sample-boundary rule", () => {
   const ntsc: ProgramSpace = {
-    contract: "svml.program-space@1",
     durationSec: 1.001,
     frameRate: { numerator: 30_000, denominator: 1_001 },
   };
@@ -150,7 +146,6 @@ test("frame and authored durations enter one exact sample-boundary rule", () => 
   assert.equal(temporalDurationInSamples({ unit: "milliseconds", value: 125 }, ntsc), 6_000);
   assert.equal(temporalDurationInSamples(seconds(1, 3), ntsc), 16_000);
   const twentyFour: ProgramSpace = {
-    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 24, denominator: 1 },
   };

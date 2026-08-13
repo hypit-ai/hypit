@@ -309,7 +309,6 @@ export function parseMediaInspection(args: {
     ? [...new Set(format.format_name.split(",").map((item) => item.trim()).filter(Boolean))].sort()
     : ["unknown"];
   return sealMediaInspection({
-    contract: "svml.media-inspection@1",
     container: { formatNames: formatNames.length === 0 ? ["unknown"] : formatNames },
     streams: parsed.sort((left, right) => left.index - right.index),
   });

@@ -27,16 +27,10 @@
     "@narratage/markup": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/caption": "workspace:*",
     "@narratage/core": "workspace:*",
-    "@narratage/driver-node": "workspace:*",
     "@narratage/media-track": "workspace:*",
-    "@narratage/run": "workspace:*",
     "@narratage/script": "workspace:*",
-    "@narratage/speech-alignment": "workspace:*",
-    "@narratage/speech-evidence": "workspace:*",
     "@narratage/text": "workspace:*",
-    "@narratage/validation": "workspace:*",
-    "@narratage/whisperx": "workspace:*"
+    "@narratage/validation": "workspace:*"
   }
 }

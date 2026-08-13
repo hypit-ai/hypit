@@ -17,10 +17,10 @@ import type { CanonicalValue, StoredValue, TypeRef, TypedRecord } from "@narrata
 import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@narratage/spatial";
 
 const canvas = sealCanvasSpace({
-  contract: "svml.canvas-space@1", widthPx: 1080, heightPx: 1920,
+  widthPx: 1080, heightPx: 1920,
   origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
 });
-const frame = sealSpatialFrame({ contract: "svml.spatial-frame@1", xPx: -10, yPx: 20, widthPx: 500, heightPx: 400 });
+const frame = sealSpatialFrame({ xPx: -10, yPx: 20, widthPx: 500, heightPx: 400 });
 const options = sealImageComposeOptions({ contract: "svml.image-compose-options@1", background: "#11223344" });
 const spec = sealImageComposeLayerSpec({
   contract: "svml.image-compose-layer-spec@1", fit: "cover", interpolation: "lanczos", opacity: 0.75,

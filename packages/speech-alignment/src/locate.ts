@@ -44,9 +44,6 @@ function validateWindow(start: number, end: number, _limit: number, label: strin
 }
 
 function validateBasis(narrative: Narrative, basis: SpeechAudioBasis): void {
-  if (basis.contract !== "svml.speech-audio-basis@1") {
-    fail("SPEECH_BASIS_CONTRACT", "Unsupported SpeechAudioBasis contract.");
-  }
   const { numerator, denominator } = basis.programSpace.frameRate;
   if (!Number.isSafeInteger(numerator) || numerator <= 0 || !Number.isSafeInteger(denominator) || denominator <= 0) {
     fail("SPEECH_FRAME_RATE", "ProgramSpace frame rate must be a positive rational number.");
@@ -78,9 +75,6 @@ function validateEvidence(
   basis: SpeechAudioBasis,
   evidence: AlignedTranscriptEvidence,
 ): void {
-  if (evidence.contract !== "svml.aligned-transcript-evidence@1") {
-    fail("SPEECH_CONTRACT", `Unsupported aligned-transcript contract ${evidence.contract}.`);
-  }
   const durationSec = basis.programSpace.durationSec;
   const expected = new Set(narrative.segments.map((segment) => segment.id));
   const seen = new Set<string>();
@@ -372,7 +366,6 @@ export function locateSpeechTiming(
       : { identity: anchor.id, frame: token.endFrameExclusive };
   });
   return {
-    contract: "svml.complete-semantic-map@1" as const,
     tokens: timedTokens,
     anchors,
   };

@@ -31,7 +31,6 @@ import type { StructuredElement, SurfaceResolvedReference } from "@narratage/mar
 
 function locate(narrative: Narrative, durationSec: number, segments: readonly AlignedTranscriptSegment[]) {
   const space = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -42,15 +41,13 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
     endSec: durationSec * (index + 1) / narrative.segments.length,
   }));
   const basis = sealSpeechBasis({
-    contract: "svml.speech-basis@1",
     programSpace: space,
     audio,
     visualTrack: { clips: [] },
     segments: basisSegments,
   });
-  const evidence = sealAlignedTranscriptEvidence({ contract: "svml.aligned-transcript-evidence@1", segments });
+  const evidence = sealAlignedTranscriptEvidence({ segments });
   const audioBasis: SpeechAudioBasis = {
-    contract: "svml.speech-audio-basis@1",
     programSpace: basis.programSpace,
     audio: basis.audio,
     segments: basis.segments,

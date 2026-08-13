@@ -16,7 +16,6 @@ import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narra
 const anchor = (identity: string, frame: number) => ({ identity, frame });
 
 const map = {
-  contract: "svml.complete-semantic-map@1",
   tokens: [],
   anchors: [
     anchor("segment:opening:start", 0),

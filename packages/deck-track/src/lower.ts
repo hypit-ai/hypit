@@ -21,6 +21,7 @@ import type {
   MediaVisualTrim,
 } from "@narratage/media-track";
 import type { ProgramSpace } from "@narratage/program-space";
+import { assertCanvasSpace } from "@narratage/spatial";
 import type { CanvasSpace, SpatialFrame } from "@narratage/spatial";
 
 import {
@@ -256,7 +257,6 @@ function groupElements(input: {
 
 function localFrame(frame: SpatialFrame): SpatialFrame {
   return {
-    contract: "svml.spatial-frame@1",
     xPx: 0,
     yPx: 0,
     widthPx: frame.widthPx,
@@ -286,7 +286,7 @@ export function renderDepthStack(
   program: DepthStackProgram,
 ): VisualTrack {
   assertDepthStackProgramIdentity(program, space);
-  assert(canvas.contract === "svml.canvas-space@1", "DepthStack CanvasSpace is invalid.");
+  assertCanvasSpace(canvas);
   const presents: VisualTrack["presents"][number][] = [];
   for (let stageIndex = 0; stageIndex < program.cards.length; stageIndex += 1) {
     const stageStart = program.cards[stageIndex]!.activationFrame;
@@ -358,7 +358,6 @@ export function renderDepthStack(
     }
   }
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: program.id,
     presents,

@@ -248,7 +248,7 @@ function directItemAnimation(duration: number, appearFrames: number): VisualAnim
 }
 
 function sealTrack(space: ProgramSpace, id: string, presents: readonly VisualPresent[]): VisualTrack {
-  const value = sealVisualTrack({ contract: "svml.visual-track@1", visualIr: "svml.visual-ir@1", id, presents });
+  const value = sealVisualTrack({ visualIr: "svml.visual-ir@1", id, presents });
   assertVisualTrackIdentity(value, space);
   return value;
 }
@@ -702,7 +702,7 @@ export function renderRankingAudio(
     if (sounds[kind] !== undefined) assert(clips.some((clip) => clip.id.endsWith(`:${kind}`)),
       `Ranking ${kind} sound has no matching visual event.`);
   }
-  const track = sealAudioTrack({ contract: "svml.audio-track@1", id: `${plan.id}.audio`, clips });
+  const track = sealAudioTrack({ id: `${plan.id}.audio`, clips });
   assertAudioTrackIdentity(track, space);
   return track;
 }

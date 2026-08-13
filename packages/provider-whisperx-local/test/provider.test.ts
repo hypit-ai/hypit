@@ -124,14 +124,11 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
     const artifacts = new MemoryArtifactStore();
     const artifact = await artifacts.put(expected, "audio/wav");
     const evidenceAudio = sealSpeechEvidenceAudio({
-      contract: "svml.speech-evidence-audio@1",
       artifact,
       sampleFrames: 32_000,
     });
     const audioBasis: SpeechAudioBasis = {
-      contract: "svml.speech-audio-basis@1",
       programSpace: {
-        contract: "svml.program-space@1",
         durationSec: 2,
         frameRate: { numerator: 30, denominator: 1 },
       },
@@ -171,7 +168,6 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
     assert.equal(output.value.kind, "inline");
     const value = output.value.kind === "inline" ? output.value.value : null;
     assert.equal((value as { readonly segments?: readonly unknown[] }).segments?.length, 2);
-    assert.equal((value as { readonly contract?: unknown }).contract, "svml.aligned-transcript-evidence@1");
     assert.equal(speechTypes.evidenceAudio.name, "SpeechEvidenceAudio");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));

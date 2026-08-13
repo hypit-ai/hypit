@@ -126,7 +126,6 @@ export function sealMediaInspection(value: MediaInspection): MediaInspection {
 
 export function verifyMediaInspection(value: unknown): asserts value is MediaInspection {
   const item = object(value, "MediaInspection") as unknown as MediaInspection;
-  assert(item.contract === "svml.media-inspection@1", "MediaInspection contract is invalid");
   assert(Array.isArray(item.container?.formatNames), "MediaInspection container formats are invalid");
   item.container.formatNames.forEach((format) => assert(typeof format === "string" && format.length > 0,
     "MediaInspection container format is invalid"));
@@ -142,7 +141,6 @@ export function sealMediaStreamSelection(value: MediaStreamSelection): MediaStre
 
 export function verifyMediaStreamSelection(value: unknown): asserts value is MediaStreamSelection {
   const item = object(value, "MediaStreamSelection") as unknown as MediaStreamSelection;
-  assert(item.contract === "svml.media-stream-selection@1", "MediaStreamSelection contract is invalid");
   if (item.videoStreamIndex !== undefined) nonNegativeInteger(item.videoStreamIndex, "MediaStreamSelection.videoStreamIndex");
   if (item.audioStreamIndex !== undefined) nonNegativeInteger(item.audioStreamIndex, "MediaStreamSelection.audioStreamIndex");
   assert(item.videoStreamIndex !== undefined || item.audioStreamIndex !== undefined,
@@ -171,7 +169,6 @@ export function synchronizedMediaSampleFrames(value: SynchronizedMedia): number 
 
 export function verifySynchronizedMedia(value: unknown): asserts value is SynchronizedMedia {
   const item = object(value, "SynchronizedMedia") as unknown as SynchronizedMedia;
-  assert(item.contract === "svml.synchronized-media@1", "SynchronizedMedia contract is invalid");
   verifyRational(item.timeline.frameRate, "SynchronizedMedia.timeline.frameRate");
   positiveInteger(item.timeline.frameCount, "SynchronizedMedia.timeline.frameCount");
   synchronizedMediaSampleFrames(item);
@@ -194,7 +191,6 @@ export function sealRenderedVisual(value: RenderedVisual): RenderedVisual {
 
 export function verifyRenderedVisual(value: unknown): asserts value is RenderedVisual {
   const item = object(value, "RenderedVisual") as unknown as RenderedVisual;
-  assert(item.contract === "svml.rendered-visual@1", "RenderedVisual contract is invalid");
   verifyRational(item.frameRate, "RenderedVisual.frameRate");
   positiveInteger(item.frameCount, "RenderedVisual.frameCount");
   positiveInteger(item.canvas?.width, "RenderedVisual.canvas.width");
@@ -209,7 +205,6 @@ export function sealTimelineAudio(value: TimelineAudio): TimelineAudio {
 
 export function verifyTimelineAudio(value: unknown): asserts value is TimelineAudio {
   const item = object(value, "TimelineAudio") as unknown as TimelineAudio;
-  assert(item.contract === "svml.timeline-audio@1", "TimelineAudio contract is invalid");
   verifyBlob(item.artifact, "TimelineAudio.artifact");
   assert(item.artifact.mediaType === "audio/wav", "TimelineAudio Artifact must be WAV");
   positiveInteger(item.sampleFrames, "TimelineAudio.sampleFrames");
@@ -221,7 +216,6 @@ export function sealMuxedMedia(value: MuxedMedia): MuxedMedia {
 
 export function verifyMuxedMedia(value: unknown): asserts value is MuxedMedia {
   const item = object(value, "MuxedMedia") as unknown as MuxedMedia;
-  assert(item.contract === "svml.muxed-media@1", "MuxedMedia contract is invalid");
   verifyRational(item.frameRate, "MuxedMedia.frameRate");
   positiveInteger(item.frameCount, "MuxedMedia.frameCount");
   positiveInteger(item.canvas?.width, "MuxedMedia.canvas.width");

@@ -16,7 +16,6 @@
     "@narratage/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/source": "workspace:*",
     "@narratage/markup": "workspace:*"
   }
 }

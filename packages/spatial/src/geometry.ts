@@ -43,8 +43,7 @@ function positive(value: number, label: string): void {
 }
 
 export function assertCanvasSpace(value: CanvasSpace): void {
-  if (value.contract !== "svml.canvas-space@1"
-    || !Number.isSafeInteger(value.widthPx) || value.widthPx <= 0
+  if (!Number.isSafeInteger(value.widthPx) || value.widthPx <= 0
     || !Number.isSafeInteger(value.heightPx) || value.heightPx <= 0
     || value.origin !== "top-left" || value.xDirection !== "right"
     || value.yDirection !== "down" || value.pixelAspect !== "square") {
@@ -53,13 +52,11 @@ export function assertCanvasSpace(value: CanvasSpace): void {
 }
 
 export function assertSpatialPoint(value: SpatialPoint): void {
-  if (value.contract !== "svml.spatial-point@1") throw new Error("Unsupported SpatialPoint contract.");
   finite(value.xPx, "SpatialPoint.xPx");
   finite(value.yPx, "SpatialPoint.yPx");
 }
 
 export function assertSpatialFrame(value: SpatialFrame): void {
-  if (value.contract !== "svml.spatial-frame@1") throw new Error("Unsupported SpatialFrame contract.");
   finite(value.xPx, "SpatialFrame.xPx");
   finite(value.yPx, "SpatialFrame.yPx");
   positive(value.widthPx, "SpatialFrame.widthPx");
@@ -67,7 +64,6 @@ export function assertSpatialFrame(value: SpatialFrame): void {
 }
 
 export function assertIntrinsicExtent(value: IntrinsicExtent): void {
-  if (value.contract !== "svml.intrinsic-extent@1") throw new Error("Unsupported IntrinsicExtent contract.");
   positive(value.widthPx, "IntrinsicExtent.widthPx");
   positive(value.heightPx, "IntrinsicExtent.heightPx");
 }
@@ -81,7 +77,6 @@ function assertNormalizedPoint(value: { readonly x: number; readonly y: number }
 }
 
 export function assertContentFit(value: ContentFit): void {
-  if (value.contract !== "svml.content-fit@1") throw new Error("Unsupported ContentFit contract.");
   if (!["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"].includes(value.sizing)) {
     throw new Error("ContentFit.sizing is invalid.");
   }
@@ -93,7 +88,6 @@ export function assertContentFit(value: ContentFit): void {
 }
 
 export function assertFittedContent(value: FittedContent): void {
-  if (value.contract !== "svml.fitted-content@1") throw new Error("Unsupported FittedContent contract.");
   assertSpatialFrame(value.contentFrame);
 }
 
@@ -108,7 +102,7 @@ function commandNumbers(command: SpatialPath["commands"][number]): readonly numb
 }
 
 export function assertSpatialPath(value: SpatialPath): void {
-  if (value.contract !== "svml.spatial-path@1" || value.commands.length < 2 || value.commands[0]?.kind !== "move") {
+  if (value.commands.length < 2 || value.commands[0]?.kind !== "move") {
     throw new Error("SpatialPath must begin with move and contain drawable commands.");
   }
   let open = true;
@@ -143,8 +137,8 @@ function anchorPoint(anchor: SpatialAnchor): { readonly x: number; readonly y: n
   return { x, y };
 }
 
-function sealFrame(value: Omit<SpatialFrame, "contract">): SpatialFrame {
-  const frame = { contract: "svml.spatial-frame@1" as const, ...value };
+function sealFrame(value: SpatialFrame): SpatialFrame {
+  const frame = { ...value };
   assertSpatialFrame(frame);
   return frame;
 }
@@ -156,7 +150,6 @@ export function canvasFrame(canvas: CanvasSpace): SpatialFrame {
 
 export function frameFromEdges(parent: SpatialFrame, program: FrameEdgesProgram): SpatialFrame {
   assertSpatialFrame(parent);
-  if (program.contract !== "svml.frame-edges-program@1") throw new Error("Unsupported FrameEdgesProgram contract.");
   const left = parent.xPx + length(program.left, parent.widthPx, "Frame left");
   const right = parent.xPx + length(program.right, parent.widthPx, "Frame right");
   const top = parent.yPx + length(program.top, parent.heightPx, "Frame top");
@@ -166,7 +159,6 @@ export function frameFromEdges(parent: SpatialFrame, program: FrameEdgesProgram)
 
 export function anchoredFrame(parent: SpatialFrame, program: AnchoredFrameProgram): SpatialFrame {
   assertSpatialFrame(parent);
-  if (program.contract !== "svml.anchored-frame-program@1") throw new Error("Unsupported AnchoredFrameProgram contract.");
   const widthPx = length(program.width, parent.widthPx, "AnchoredFrame width");
   const heightPx = length(program.height, parent.heightPx, "AnchoredFrame height");
   positive(widthPx, "AnchoredFrame width");
@@ -187,13 +179,11 @@ export function anchoredFrame(parent: SpatialFrame, program: AnchoredFrameProgra
 export function aspectFrame(parent: SpatialFrame, extent: IntrinsicExtent, program: AspectFrameProgram): SpatialFrame {
   assertSpatialFrame(parent);
   assertIntrinsicExtent(extent);
-  if (program.contract !== "svml.aspect-frame-program@1") throw new Error("Unsupported AspectFrameProgram contract.");
   const primary = length(program.size, program.primary === "width" ? parent.widthPx : parent.heightPx, "AspectFrame size");
   positive(primary, "AspectFrame size");
   const widthPx = program.primary === "width" ? primary : primary * extent.widthPx / extent.heightPx;
   const heightPx = program.primary === "height" ? primary : primary * extent.heightPx / extent.widthPx;
   return anchoredFrame(parent, {
-    contract: "svml.anchored-frame-program@1",
     x: program.x,
     y: program.y,
     width: { unit: "px", value: widthPx },
@@ -232,7 +222,6 @@ export function fitContent(frame: SpatialFrame, extent: IntrinsicExtent, fit: Co
     yPx = boundedCoordinate(yPx, heightPx, frame.yPx, frame.heightPx);
   }
   const result: FittedContent = {
-    contract: "svml.fitted-content@1",
     contentFrame: sealFrame({ xPx, yPx, widthPx, heightPx }),
   };
   assertFittedContent(result);
