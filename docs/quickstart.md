@@ -123,8 +123,9 @@ cd /path/to/my-video
 ```
 
 The launcher uses dependencies installed in the Narratage checkout, but Source, SQLite state,
-Artifacts and outputs remain inside your project. `packages sync` derives both package locks from
-the imports in your Run closure and the adapters selected by the Runtime Profile.
+Artifacts and outputs remain inside your project. `packages sync` adds or refreshes the current
+Run and Runtime selections in the two project package inventories; it does not remove another
+Run's packages.
 
 Start from [`examples/talking-film-live`](https://github.com/hypit-ai/narratage/tree/main/examples/talking-film-live) when you need a
 complete Runtime Profile. Copy the source structure, then replace its assets, Script, model choices
@@ -199,4 +200,3 @@ Follow the authoring path in order, or jump directly to the part you are changin
 | [Tracks](./quickstart/tracks.md) | Caption, Media, Typography and Audio Tracks |
 | [Film & Rendering](./quickstart/composition.md) | Peer Track composition and explicit rendering |
 | [Run Source & Builds](./quickstart/run.md) | Targets, reuse, Runtime Profiles, Builds and retrieval |
-

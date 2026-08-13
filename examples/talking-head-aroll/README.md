@@ -27,21 +27,24 @@ Synchronize both package locks from the Run Source and Runtime Profile:
 
 ```sh
 node --run narratage -- packages sync examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root .
 ```
 
 Inspect the authored graph—including the visible `*.prompt` Text output and `*.program`—without a paid call:
 
 ```sh
 node --run narratage -- check examples/talking-head-aroll/main.svml \
-  --runtime examples/talking-head-aroll/svml.runtime.json
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root .
 ```
 
 Inspect the exact paid plan before submitting it:
 
 ```sh
 node --run narratage -- plan examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root .
 ```
 
 Build the complete film after preparing the managed local WhisperX service and exposing `KIE_API_KEY`,
@@ -52,6 +55,7 @@ node --run narratage -- runtime up examples/talking-head-aroll/svml.runtime.json
 
 node --run narratage -- build examples/talking-head-aroll/build.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root . \
   --build-id talking-head-film-001 \
   --follow
 
@@ -70,6 +74,7 @@ submission:
 ```sh
 node --run narratage -- build examples/talking-head-aroll/reuse-generated.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root . \
   --build-id talking-head-film-reuse-001 \
   --follow
 ```

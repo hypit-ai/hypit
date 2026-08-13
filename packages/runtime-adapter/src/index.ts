@@ -27,6 +27,8 @@ export type RuntimeAdapterFactoryContext = {
   /** Required for Endpoint adapters; absent for Runtime service adapters. */
   readonly authority?: string;
   readonly config: CanonicalValue;
+  /** Observation commands may request adapters to avoid creating durable state. */
+  readonly access?: "read-write" | "read-only";
 };
 
 export type RuntimeDoctorDiagnostic = {

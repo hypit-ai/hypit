@@ -53,8 +53,6 @@ export type CreateLocalRuntimeOptions = {
   readonly closure: LocalRuntimeClosureOptions;
   readonly scheduling?: Omit<BuildSchedulerOptions, "buildStore" | "runtimeClosure">;
   readonly validators?: LocalTypeValidatorRegistry;
-  /** Expected implementation package closure already bound into BuildRequest. */
-  readonly implementationClosure?: import("@narratage/protocol").Digest;
   /** Verified physical Runtime-adapter package lock; absent only for trusted direct embedding. */
   readonly runtimePackageClosure?: import("@narratage/protocol").Digest;
 };
@@ -82,10 +80,8 @@ export type ProjectLocalRuntimeOptions = {
   /** Host directory whose node_modules contains the packages named by packageLock. Defaults to root. */
   readonly packageRoot?: string;
   readonly buildCatalog?: BuildCatalog;
-  /** Exact installed implementation package lock. Source imports cannot change this selection. */
+  /** Trusted implementation package inventory. Each compilation activates its exact Source subset. */
   readonly packageLock?: string;
-  /** Already verified implementation identity when components are supplied by this Host process. */
-  readonly implementationClosure?: import("@narratage/protocol").Digest;
   /** Verified physical Runtime-adapter package lock; absent only for trusted direct embedding. */
   readonly runtimePackageClosure?: import("@narratage/protocol").Digest;
   /**

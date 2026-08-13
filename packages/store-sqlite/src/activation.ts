@@ -29,6 +29,7 @@ const sqliteStateAdapter = createRuntimeServiceAdapterFacet({
       journalInstance: `${context.instance}.journal`,
       ...(runtimeConfigPositiveInteger(config.busyTimeoutMs, "SQLite busyTimeoutMs") === undefined
         ? {} : { busyTimeoutMs: config.busyTimeoutMs as number }),
+      ...(context.access === "read-only" ? { readOnly: true } : {}),
     });
   },
 });

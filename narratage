@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 
-launcher_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+launcher_path=$(node -e 'process.stdout.write(require("node:fs").realpathSync(process.argv[1]))' "$0")
+launcher_dir=$(CDPATH= cd -- "$(dirname -- "$launcher_path")" && pwd)
 loader="$launcher_dir/node_modules/tsx/dist/loader.mjs"
 if [ ! -f "$loader" ]; then
   echo "Narratage dependencies are not installed in $launcher_dir; run: pnpm install --frozen-lockfile" >&2

@@ -96,10 +96,10 @@ presence or filled by `@narratage/local`.
 
 | Field | Meaning |
 |---|---|
-| `root` | Runtime data root. State databases, Artifact storage and relative lock paths are based here. Defaults to the Profile directory. |
+| `root` | Project root. It bounds Source files and bases Runtime state, Artifact storage and relative lock paths. Defaults to the Profile directory. |
 | `packageRoot` | Optional Host override for the `node_modules` supplying both locks. The official CLI defaults to its own installation; the direct local API defaults to `root`. |
-| `packageLock` | Locked deterministic implementation packages, resolved relative to `root`. |
-| `runtimePackageLock` | Locked privileged Runtime adapters, resolved relative to `root`. |
+| `packageLock` | Trusted Author/Run implementation inventory. One compilation activates its exact Source-selected subset. |
+| `runtimePackageLock` | Trusted Runtime-adapter inventory. One Profile activates only its explicitly selected adapters. |
 
 `root` and `packageRoot` are deliberately separate. An external video project can retain all data
 in its own directory while loading verified executable packages from one Narratage installation.

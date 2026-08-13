@@ -18,7 +18,7 @@ export type BuildDispatchIdentity = {
   readonly id: Digest;
   readonly build: string;
   readonly core: Digest;
-  /** Exact execution revision: Runtime Closure plus author/runtime implementation package locks. */
+  /** Exact execution revision for Runtime services and Endpoint deployment. */
   readonly runtimeRevision: Digest;
 };
 
@@ -219,18 +219,14 @@ export function createBuildDispatchIdentity(input: {
 
 export function createRuntimeRevision(input: {
   readonly runtimeClosure: Digest;
-  readonly implementationClosure?: Digest;
   readonly runtimePackageClosure?: Digest;
 }): Digest {
   assert(isDigest(input.runtimeClosure), "Runtime Revision Runtime Closure digest is invalid");
-  assert(input.implementationClosure === undefined || isDigest(input.implementationClosure),
-    "Runtime Revision implementation closure digest is invalid");
   assert(input.runtimePackageClosure === undefined || isDigest(input.runtimePackageClosure),
     "Runtime Revision Runtime package closure digest is invalid");
   return digestOf({
     format: "svml.runtime-revision@1",
     runtimeClosure: input.runtimeClosure,
-    implementationClosure: input.implementationClosure ?? null,
     runtimePackageClosure: input.runtimePackageClosure ?? null,
   });
 }
