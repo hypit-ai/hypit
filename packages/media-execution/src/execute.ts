@@ -488,7 +488,6 @@ function extractAudioNeed(value: CanonicalValue): ExtractAudioNeed {
   assert(Number.isSafeInteger(item.streamIndex) && item.streamIndex >= 0,
     "ExtractAudioNeed streamIndex is invalid");
   verifyAudioExtractionRequest({
-    contract: "svml.audio-extraction-request@1",
     audio: { mode: "stream-index", streamIndex: item.streamIndex },
     output: item.output,
   });
@@ -503,7 +502,6 @@ function extractFrameNeed(value: CanonicalValue): ExtractFrameNeed {
     && Number.isSafeInteger(item.sourceFrameCount) && item.sourceFrameCount > 0,
   "ExtractFrameNeed stream domain is invalid");
   verifyFrameExtractionRequest({
-    contract: "svml.frame-extraction-request@1",
     video: { mode: "stream-index", streamIndex: item.streamIndex },
     at: item.at,
     output: item.output,

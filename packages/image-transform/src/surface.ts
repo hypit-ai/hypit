@@ -183,7 +183,7 @@ export const decodeImageTransformProgramSurface: StructuredSurfaceHandler = ({ e
     }
     return [operation(child)];
   });
-  const program = sealImageTransformProgram({ contract: "svml.image-transform-program@1", operations });
+  const program = sealImageTransformProgram({ operations });
   return {
     records: [{
       id,

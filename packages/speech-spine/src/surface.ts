@@ -204,14 +204,12 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
     frameRate: rate,
   });
   const videoRequest = sealMediaSelectionRequest({
-    contract: "svml.media-selection-request@1",
     video: { mode: "primary-moving" },
     audio: { mode: "default" },
     spanAuthority: "video",
     frameRate: rate,
   });
   const audioRequest = sealMediaSelectionRequest({
-    contract: "svml.media-selection-request@1",
     video: { mode: "none" },
     audio: { mode: "default" },
     spanAuthority: "audio",

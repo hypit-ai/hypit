@@ -217,7 +217,6 @@ export function compileSpeechSpineAudio(program: SpeechSpineProgram, set: Speech
     };
   });
   const plan = sealAudioProgramPlan({
-    contract: "svml.audio-program-plan@1",
     frameRate: { ...space.frameRate },
     frameCount: frame,
     sampleRate: 48_000,
