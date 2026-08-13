@@ -2864,9 +2864,9 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@narratage/host':
+      '@narratage/generation':
         specifier: workspace:*
-        version: link:../host
+        version: link:../generation
       '@narratage/markup':
         specifier: workspace:*
         version: link:../markup
@@ -2891,6 +2891,12 @@ importers:
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
+      '@narratage/speech-alignment':
+        specifier: workspace:*
+        version: link:../speech-alignment
+      '@narratage/speech-basis':
+        specifier: workspace:*
+        version: link:../speech-basis
       '@narratage/speech-evidence':
         specifier: workspace:*
         version: link:../speech-evidence
