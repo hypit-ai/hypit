@@ -6,70 +6,33 @@
 /** UTF-16 offsets into the exact source text carried by the snapshot. */
 export type Range = { readonly start: number; readonly end: number };
 
-export type Rect = {
-  readonly xPx: number;
-  readonly yPx: number;
-  readonly widthPx: number;
-  readonly heightPx: number;
-};
-
-/** Whether a number was measured by the real pipeline or estimated from Script text. */
-export type Provenance = "measured" | "estimated";
-
-export type PreviewMode = "real" | "synthetic";
-
-export type ClipKind = "speech" | "media";
-
-export type ClipBinding =
-  | { readonly kind: "program" }
-  | { readonly kind: "selection"; readonly id: string; readonly occurrence: number }
-  | { readonly kind: "segment"; readonly id: string }
-  | { readonly kind: "moment"; readonly id: string; readonly occurrence: number };
-
+/**
+ * One Visual Present, which is the whole of what a Track says about a picture:
+ * an identity, a span and where it sits in the stack. The box it paints into is
+ * measured from the rendered picture rather than restated here, because motion
+ * moves it and only the picture knows where it ended up.
+ */
 export type Clip = {
-  /** MediaItemProgram.id — identical to the preview's data-svml-present-id. */
+  /** The Present's own id, identical to the preview's data-svml-present-id. */
   readonly id: string;
-  /** The authored element id this clip was realized from. */
+  /** The authored id this Present is named after, when it names one. */
   readonly authoredId: string;
   readonly label: string;
-  readonly kind: ClipKind;
   readonly startFrame: number;
   readonly endFrameExclusive: number;
-  /** The <media-track:Item> or <speech:Take> element span in the source. */
-  readonly elementRange: Range;
-  /** The Script marker span this clip is bound to, when it is bound to one. */
-  readonly bindingRange?: Range;
-  readonly binding: ClipBinding;
-  /** Placement Frame in canvas pixels, before padding and before motion. */
-  readonly frame: Rect;
-  /** frame inset by presentation padding — the box the material paints into. */
-  readonly contentFrame: Rect;
-  /** Motion animates the box across the span, so frame is exact only mid-span. */
-  readonly animated: boolean;
-  /** No real material backed this item, so a paint placeholder was substituted. */
-  readonly placeholder: boolean;
+  /** Where that authored tag was written. */
+  readonly elementRange?: Range;
   readonly stackOrder: number;
 };
 
 export type Track = {
   readonly id: string;
   readonly label: string;
-  readonly kind: ClipKind;
   /** Render order in the timeline; 0 is the top row. */
   readonly row: number;
   readonly clips: readonly Clip[];
-};
-
-export type SourceElement = {
-  /** Authored id attribute, or a synthesized ordinal when the element has none. */
-  readonly id: string;
-  readonly tag: string;
-  readonly range: Range;
-  readonly children: readonly {
-    readonly tag: string;
-    readonly range: Range;
-    readonly id?: string;
-  }[];
+  /** Capabilities this machine could not answer, when the Track has no picture. */
+  readonly waiting?: readonly string[];
 };
 
 export type ScriptMap = {
@@ -109,14 +72,11 @@ export type ScriptMap = {
 
 export type PlaygroundSnapshot = {
   readonly revision: number;
-  readonly mode: PreviewMode;
   readonly source: {
     readonly path: string;
     readonly text: string;
     readonly digest: string;
   };
-  /** Top-level elements in document order, for code-pane hit testing. */
-  readonly elements: readonly SourceElement[];
   readonly script?: ScriptMap;
   readonly space: {
     readonly canvasWidth: number;
@@ -132,24 +92,17 @@ export type PlaygroundSnapshot = {
    * whole picture: the Tracks above it have not been rendered into that file, so
    * they are composited over it exactly as they are in `hyperframes` mode.
    */
-  readonly preview:
-    | { readonly kind: "hyperframes"; readonly srcdoc: string }
-    | {
-      readonly kind: "video";
-      readonly url: string;
-      readonly mediaType: string;
-      /** The overlay Tracks, on a transparent canvas. */
-      readonly overlay: string;
-    };
+  /** The Tracks, compiled into the document the renderer photographs. */
+  readonly preview: { readonly kind: "hyperframes"; readonly srcdoc: string };
   readonly provenance: {
     /** Where the timeline came from. The frame domain always shares its source. */
-    readonly timing: Provenance;
+    readonly timing: "measured" | "estimated";
     /**
      * Whether the picture is real material. `partial` when some elements have
      * their footage and others are still placeholders, which is the normal
      * state part-way through a production.
      */
-    readonly picture: Provenance | "partial";
+    readonly picture: "measured" | "estimated";
     /** What the badges above are standing for, in one sentence. */
     readonly note: string;
   };
@@ -158,11 +111,6 @@ export type PlaygroundSnapshot = {
    * placeholder next to a file they know exists reads as a bug otherwise.
    */
   readonly refused: readonly { readonly output: string; readonly reason: string }[];
-  /** Elements the interpreter read but did not project, in document order. */
-  readonly unsupported: readonly {
-    readonly tag: string;
-    readonly range: Range;
-  }[];
 };
 
 export type PlaygroundFailure = {

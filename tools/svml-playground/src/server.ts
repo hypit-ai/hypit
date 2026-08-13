@@ -2,9 +2,8 @@ import { resolve } from "node:path";
 
 import type { Plugin, ViteDevServer } from "vite";
 
-import { serveFile } from "./build/artifacts.js";
-import { interpretSource } from "./interpret/document.js";
-import type { PreviewSource, ServedFile } from "./interpret/document.js";
+import type { ServedFile } from "./pipeline/compile.js";
+import { readSource } from "./pipeline/session.js";
 import type { PlaygroundFailure, PlaygroundSnapshot, Range } from "./shared.js";
 
 export type SvmlPlaygroundOptions = {
@@ -13,6 +12,10 @@ export type SvmlPlaygroundOptions = {
   readonly root: string;
   /** A Run Source, read for material it already names. */
   readonly run?: string;
+  /** A Runtime profile, so material earlier builds produced can be read. */
+  readonly runtime?: string;
+  /** Where the installed packages live, as the Runtime profile expects. */
+  readonly packageRoot: string;
 };
 
 function json(response: import("node:http").ServerResponse, status: number, value: unknown): void {
@@ -43,7 +46,6 @@ function rangeOf(error: unknown): Range | undefined {
 export function svmlPlaygroundPlugin(options: SvmlPlaygroundOptions): Plugin {
   let snapshot: PlaygroundSnapshot | undefined;
   let failure: PlaygroundFailure | undefined;
-  let video: PreviewSource | undefined;
   let material: ReadonlyMap<string, ServedFile> = new Map();
   let revision = 0;
   let server: ViteDevServer | undefined;
@@ -52,14 +54,14 @@ export function svmlPlaygroundPlugin(options: SvmlPlaygroundOptions): Plugin {
   const publish = async (): Promise<void> => {
     revision += 1;
     try {
-      const result = await interpretSource({
+      const result = await readSource({
         source: options.source,
-        root: options.root,
         ...(options.run === undefined ? {} : { run: options.run }),
+        ...(options.runtime === undefined ? {} : { runtime: options.runtime }),
+        packageRoot: options.packageRoot,
         revision,
       });
       snapshot = result.snapshot;
-      video = result.video;
       material = result.material;
       failure = undefined;
       server?.ws.send({ type: "custom", event: "svml:snapshot", data: snapshot });
@@ -113,24 +115,10 @@ export function svmlPlaygroundPlugin(options: SvmlPlaygroundOptions): Plugin {
             response.end();
             return;
           }
-          if (file.bytes !== undefined) {
-            // Font faces are already in memory; they are small and immutable.
-            response.statusCode = 200;
-            response.setHeader("content-type", file.mediaType);
-            response.setHeader("cache-control", "no-store");
-            response.end(Buffer.from(file.bytes));
-            return;
-          }
-          void serveFile(request, response, file.path, file.mediaType);
-          return;
-        }
-        if (url.pathname === "/__svml/video") {
-          if (video === undefined) {
-            response.statusCode = 404;
-            response.end();
-            return;
-          }
-          void serveFile(request, response, video.path, video.mediaType);
+          response.statusCode = 200;
+          response.setHeader("content-type", file.mediaType);
+          response.setHeader("cache-control", "no-store");
+          response.end(Buffer.from(file.bytes));
           return;
         }
         next();

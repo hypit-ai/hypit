@@ -11,7 +11,8 @@ const repoRoot = resolve(here, "../..");
 function usage(message?: string): never {
   if (message !== undefined) process.stderr.write(`${message}\n\n`);
   process.stderr.write(`Usage:
-  pnpm svml:playground -- --source <main.svml> [--run <build.svrun>] [--port <number>]
+  pnpm svml:playground -- --source <main.svml> [--run <build.svrun>]
+    [--runtime <svml.runtime.json>] [--port <number>]
 
 The Playground reads the Source. It never writes to it, and it never runs a
 Provider: with no build present it estimates timings from the Script text.
@@ -43,6 +44,11 @@ const invokedFrom = process.env.INIT_CWD ?? process.cwd();
 const source = resolve(invokedFrom, sourceArgument);
 const runArgument = values.get("run");
 const run = runArgument === undefined ? undefined : resolve(invokedFrom, runArgument);
+// A Runtime profile says where material earlier builds produced is kept. Only a
+// Source that reuses an accepted take needs one.
+const runtimeArgument = values.get("runtime");
+const runtime = runtimeArgument === undefined ? undefined : resolve(invokedFrom, runtimeArgument);
+const packageRoot = resolve(repoRoot, "packages/video-cli/src");
 const port = Number(values.get("port") ?? "5179");
 if (!Number.isSafeInteger(port) || port <= 0) usage("--port must be a positive integer");
 
@@ -51,9 +57,19 @@ const server = await createServer({
   root: here,
   server: {
     port,
-    fs: { allow: [...new Set([repoRoot, dirname(source), ...(run === undefined ? [] : [dirname(run)])])] },
+    fs: {
+      allow: [...new Set([
+        repoRoot, dirname(source),
+        ...(run === undefined ? [] : [dirname(run)]),
+        ...(runtime === undefined ? [] : [dirname(runtime)]),
+      ])],
+    },
   },
-  plugins: [svmlPlaygroundPlugin({ source, root: invokedFrom, ...(run === undefined ? {} : { run }) })],
+  plugins: [svmlPlaygroundPlugin({
+    source, root: invokedFrom, packageRoot,
+    ...(run === undefined ? {} : { run }),
+    ...(runtime === undefined ? {} : { runtime }),
+  })],
 });
 
 await server.listen();

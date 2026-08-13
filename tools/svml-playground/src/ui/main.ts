@@ -96,41 +96,21 @@ function renderInspector(snapshot: PlaygroundSnapshot, clipId: string | undefine
   } else {
     const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
     const seconds = (clip.endFrameExclusive - clip.startFrame) / fps;
-    const caveats = [
-      ...(clip.animated ? ["animates"] : []),
-      ...(clip.placeholder ? ["placeholder"] : []),
-    ];
     cells.push(
       cell("clip", clip.label, "wide"),
-      cell("binding", clip.binding.kind === "program" ? "whole program" : `${clip.binding.kind} ${clip.binding.id}`),
+      cell("present", clip.id),
       cell("span", `${clip.startFrame}-${clip.endFrameExclusive}f (${seconds.toFixed(2)}s)`),
-      cell("placement", box(clip.frame)),
-      cell("content box", box(clip.contentFrame)),
+      cell("stack", String(clip.stackOrder)),
     );
-    if (caveats.length > 0) cells.push(cell("note", caveats.join(", ")));
   }
 
   for (const item of snapshot.refused) {
     cells.push(cell(`${item.output} not shown`, item.reason, "warn"));
   }
 
-  if (snapshot.unsupported.length > 0) {
-    const skipped = document.createElement("details");
-    skipped.className = "skipped";
-    const summary = document.createElement("summary");
-    summary.textContent = `${snapshot.unsupported.length} not projected`;
-    skipped.append(summary);
-    const list = document.createElement("div");
-    list.className = "skipped-list";
-    for (const item of snapshot.unsupported) {
-      const row = document.createElement("button");
-      row.type = "button";
-      row.textContent = item.tag;
-      row.addEventListener("click", () => code.highlight([{ range: item.range, tone: "element" }], true));
-      list.append(row);
-    }
-    skipped.append(list);
-    cells.push(skipped);
+  for (const track of snapshot.tracks) {
+    if (track.waiting === undefined) continue;
+    cells.push(cell(`${track.label} not shown`, `waiting on ${track.waiting.join(", ")}`, "warn"));
   }
   inspector.replaceChildren(...cells);
 }
@@ -167,21 +147,12 @@ store.subscribe(({ snapshot, selection, playhead }) => {
     tone: "binding" as const,
     depth: tones.get(selection.id) ?? 0,
   }));
-  // A clip selected while the playhead sits elsewhere still shows its binding,
-  // because the question was "where is this", not "what is on screen".
-  if (chosen?.bindingRange !== undefined
-    && !highlights.some((item) => item.range.start === chosen.bindingRange!.start)) {
-    highlights.push({
-      range: chosen.bindingRange,
-      tone: "binding",
-      depth: tones.get(bindingId(chosen)) ?? 0,
-    });
-  }
   // The element that placed what is on screen is outlined too. Knowing a cutaway
   // is running is half the answer; the other half is which line put it there.
   const elements = new Map<number, SourceRange>();
-  for (const clip of live) elements.set(clip.elementRange.start, clip.elementRange);
-  if (chosen !== undefined) elements.set(chosen.elementRange.start, chosen.elementRange);
+  for (const clip of [...live, ...(chosen === undefined ? [] : [chosen])]) {
+    if (clip.elementRange !== undefined) elements.set(clip.elementRange.start, clip.elementRange);
+  }
   for (const range of elements.values()) highlights.push({ range, tone: "element" });
 
   // Scroll only when the selection actually moved, and never toward the pane
@@ -217,7 +188,7 @@ code.element.addEventListener("click", (event) => {
   if (inProse) {
     const bound = state.snapshot.tracks
       .flatMap((track) => track.clips)
-      .find((item) => item.binding.kind !== "program" && item.binding.id === span.id);
+      .find((item) => item.authoredId === span.id);
     // A marker that places nothing still sits inside one that does, so the
     // enclosing clip stays selected rather than leaving the inspector blank.
     store.focus(span.startFrame, bound?.id ?? clip.id, "code");

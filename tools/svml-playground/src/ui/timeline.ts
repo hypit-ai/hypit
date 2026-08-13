@@ -105,18 +105,20 @@ export function createTimeline(store: Store): Timeline {
 
     for (const track of snapshot.tracks) {
       const label = document.createElement("div");
-      label.className = `track-label track-${track.kind}`;
+      label.className = track.waiting === undefined ? "track-label" : "track-label track-waiting";
       label.innerHTML = "<strong></strong><small></small>";
       label.querySelector("strong")!.textContent = track.label;
-      label.querySelector("small")!.textContent = `${track.clips.length} clip${track.clips.length === 1 ? "" : "s"}`;
+      label.querySelector("small")!.textContent = track.waiting === undefined
+        ? `${track.clips.length} clip${track.clips.length === 1 ? "" : "s"}`
+        : `waiting on ${track.waiting.join(", ")}`;
       labels.append(label);
 
       const lane = document.createElement("div");
-      lane.className = `lane lane-${track.kind}`;
+      lane.className = "lane";
       for (const clip of track.clips) {
         const node = document.createElement("button");
         node.type = "button";
-        node.className = `clip clip-${track.kind}`;
+        node.className = "clip";
         node.dataset.clip = clip.id;
         node.style.left = `${clip.startFrame / snapshot.space.frameCount * 100}%`;
         node.style.width = `${(clip.endFrameExclusive - clip.startFrame) / snapshot.space.frameCount * 100}%`;
@@ -125,9 +127,8 @@ export function createTimeline(store: Store): Timeline {
         node.querySelector(".clip-name")!.textContent = clip.label;
         node.querySelector(".clip-meta")!.textContent =
           `${((clip.endFrameExclusive - clip.startFrame) / fps(snapshot)).toFixed(2)}s`;
-        if (clip.placeholder) node.classList.add("clip-placeholder");
-        // Same tone as the Script marker this clip is bound to.
-        const tone = clip.binding.kind === "program" ? undefined : tones.get(clip.binding.id);
+        // Same tone as the Script marker this clip is named after.
+        const tone = tones.get(clip.authoredId);
         if (tone !== undefined) node.classList.add(`tone-${tone}`);
         node.addEventListener("click", () => store.selectClip(clip.id, "timeline"));
         lane.append(node);

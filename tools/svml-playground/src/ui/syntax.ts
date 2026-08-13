@@ -33,8 +33,12 @@ export type Token = {
 
 const NAME = /^[A-Za-z_][A-Za-z0-9_.:-]*/u;
 const ATTRIBUTE = /^[A-Za-z_][A-Za-z0-9_.:-]*/u;
-/** `@id` opens a Selection or Moment; `@/id` closes one. */
-const MARKER = /^@\/?[~^]?[a-z][a-z0-9_-]*/u;
+/**
+ * The Script's own marker grammar: `@id` opens a Selection, `@/id` closes one,
+ * `@id!` marks a Moment, and a leading `~` or trailing `~` chooses which side of
+ * the neighbouring word the marker binds to.
+ */
+const MARKER = /^~?@\/?[a-z][a-z0-9_-]*[!~]?/u;
 
 function localName(tag: string): string {
   const colon = tag.indexOf(":");
@@ -173,12 +177,13 @@ function tokenizeScriptBody(source: string, from: number, tag: string, push: Pus
       cursor = stop;
       continue;
     }
-    if (source[cursor] === "@") {
+    // A leading `~` binds the marker to the word on its left, and is part of it.
+    if (source[cursor] === "@" || (source[cursor] === "~" && source[cursor + 1] === "@")) {
       const marker = MARKER.exec(source.slice(cursor));
       if (marker !== null) {
-        // Strip the `@`, the closing `/` and the affinity sigil to recover the
-        // name, so an opening and its closing marker report the same id.
-        const id = marker[0].replace(/^@\/?[~^]?/u, "");
+        // Strip the affinity sigils, the `@` and the closing `/` so an opening
+        // marker, its closing marker and a Moment all report the same name.
+        const id = marker[0].replace(/^~?@\/?/u, "").replace(/[!~]$/u, "");
         push(cursor, cursor + marker[0].length, "marker", id);
         cursor += marker[0].length;
         continue;

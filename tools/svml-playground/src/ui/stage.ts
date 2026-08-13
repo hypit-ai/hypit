@@ -22,7 +22,6 @@ export function createStage(store: Store): Stage {
   element.innerHTML = `
     <div class="stage-viewport">
       <div class="stage-scaler">
-        <video data-video playsinline preload="auto"></video>
         <iframe title="Preview" sandbox="allow-scripts allow-same-origin"></iframe>
       </div>
     </div>
@@ -38,7 +37,6 @@ export function createStage(store: Store): Stage {
   const viewport = element.querySelector<HTMLElement>(".stage-viewport")!;
   const scaler = element.querySelector<HTMLElement>(".stage-scaler")!;
   const iframe = element.querySelector<HTMLIFrameElement>("iframe")!;
-  const media = element.querySelector<HTMLVideoElement>("[data-video]")!;
   /**
    * Measure a clip in the rendered picture.
    *
@@ -50,9 +48,6 @@ export function createStage(store: Store): Stage {
    * the frame where that displacement is largest.
    */
   const measure = (clipId: string): { xPx: number; yPx: number; widthPx: number; heightPx: number } | undefined => {
-    // A rendered programme has no per-clip elements to measure, and the iframe
-    // still holds whatever document was mounted before it.
-    if (element.classList.contains("stage-real")) return undefined;
     const document_ = iframe.contentDocument;
     if (document_ === null) return undefined;
     const present = document_.querySelector(`[data-svml-present-id="${CSS.escape(clipId)}"]`);
@@ -97,6 +92,11 @@ export function createStage(store: Store): Stage {
   let playing = false;
   let muted = false;
   let raf = 0;
+  // The transport counts frames from where it was last told to be. Jumping to a
+  // clip mid-playback moves that origin rather than stopping, so playback
+  // carries on from the frame the author asked for.
+  let fromFrame = 0;
+  let began = 0;
 
   const fps = (snapshot: PlaygroundSnapshot): number =>
     snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
@@ -128,7 +128,6 @@ export function createStage(store: Store): Stage {
     raf = 0;
     // Settle the picture on the frame the transport stopped at.
     if (wasPlaying && state !== undefined && ready) {
-      media.pause();
       (iframe.contentWindow as SeekWindow | null)?.__svmlSeekFrame?.(state.playhead.frame);
     }
   };
@@ -141,10 +140,10 @@ export function createStage(store: Store): Stage {
     play.setAttribute("aria-label", "Pause");
     const total = state.snapshot.space.frameCount;
     const rate = fps(state.snapshot);
-    const from = state.playhead.frame >= total - 1 ? 0 : state.playhead.frame;
-    const began = performance.now();
+    fromFrame = state.playhead.frame >= total - 1 ? 0 : state.playhead.frame;
+    began = performance.now();
     const step = (now: number): void => {
-      const at = from + Math.round((now - began) / 1000 * rate);
+      const at = fromFrame + Math.round((now - began) / 1000 * rate);
       if (!playing || at >= total) { store.seek(total - 1, "play"); stop(); return; }
       store.seek(at, "play");
       raf = requestAnimationFrame(step);
@@ -156,7 +155,6 @@ export function createStage(store: Store): Stage {
   const applyMuted = (): void => {
     muteIcon.textContent = muted ? "volume_off" : "volume_up";
     mute.setAttribute("aria-label", muted ? "Unmute" : "Mute");
-    media.muted = muted;
     (iframe.contentWindow as SeekWindow | null)?.__svmlSetMuted?.(muted);
   };
   mute.addEventListener("click", () => { muted = !muted; applyMuted(); });
@@ -179,12 +177,7 @@ export function createStage(store: Store): Stage {
       stop();
       ready = false;
       const preview = value.snapshot.preview;
-      element.classList.toggle("stage-real", preview.kind === "video");
-      // Both modes mount the composition; only the base layer differs.
-      iframe.srcdoc = preview.kind === "hyperframes" ? preview.srcdoc : preview.overlay;
-      if (preview.kind === "video" && media.getAttribute("src") !== preview.url) {
-        media.src = preview.url;
-      }
+      iframe.srcdoc = preview.srcdoc;
       fit();
     }
     if (first) fit();
@@ -192,20 +185,16 @@ export function createStage(store: Store): Stage {
     // Playing and scrubbing are different requests: one lets material run on
     // its own clock, the other moves it. Asking a decoder for a fresh seek
     // every frame is what makes a picture fall behind its own transport.
-    const running = value.playhead.origin === "play";
-    if (value.snapshot.preview.kind === "video") {
-      const at = value.playhead.frame / fps(value.snapshot);
-      if (running) {
-        if (Math.abs(media.currentTime - at) > 0.25) media.currentTime = at;
-        if (media.paused) void media.play().catch(() => undefined);
-      } else {
-        media.pause();
-        media.currentTime = at;
-      }
+    // A jump that arrives while the transport runs is both: the picture moves
+    // now, and playback continues from there.
+    const jumped = value.playhead.origin !== "play";
+    if (jumped && playing) {
+      fromFrame = value.playhead.frame;
+      began = performance.now();
     }
     if (!ready) return;
     const frame = (iframe.contentWindow as SeekWindow | null);
-    if (running) frame?.__svmlPlayFrame?.(value.playhead.frame);
+    if (playing) frame?.__svmlPlayFrame?.(value.playhead.frame);
     else frame?.__svmlSeekFrame?.(value.playhead.frame);
     // The overlay subscribed first, so it measured the picture as it was before
     // this seek. Redraw now that the picture has moved.

@@ -56,8 +56,7 @@ export function clipAtOffset(snapshot: PlaygroundSnapshot, offset: number): Clip
   let best: Clip | undefined;
   let bestScore = Number.POSITIVE_INFINITY;
   for (const clip of clips) {
-    const binding = within(clip.bindingRange);
-    const score = binding === Number.POSITIVE_INFINITY ? within(clip.elementRange) : binding;
+    const score = within(clip.elementRange);
     if (score < bestScore) {
       bestScore = score;
       best = clip;

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { interpretSource } from "../src/interpret/document.js";
+import { readSource } from "../src/pipeline/session.js";
 import { liveRanges, markerTones, spanAtOffset } from "../src/ui/markers.js";
 import type { PlaygroundSnapshot } from "../src/shared.js";
 
@@ -13,7 +13,9 @@ const SOURCE = `<?svml using="@narratage/markup@1"?>
 
 <svml>
   <import from="@narratage/script@1"/>
+  <import as="wording" from="@narratage/text@1"/>
   <import as="seedance" from="@narratage/seedance@1"/>
+  <import as="whisperx" from="@narratage/whisperx@1"/>
   <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="media-track" from="@narratage/media-track@1"/>
   <import as="space" from="@narratage/spatial@1"/>
@@ -27,13 +29,15 @@ const SOURCE = `<?svml using="@narratage/markup@1"?>
   <space:Canvas id="vertical" width="1080" height="1920"/>
   <space:Frame id="full" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
 
-  <seedance:TextVideo id="take" model="mini" duration="10"/>
+  <wording:Value id="direction">A person talking to camera.</wording:Value>
+  <seedance:TextVideo id="take" model="mini" prompt={direction} duration="10" generate-audio="true"/>
 
   <speech:Spine id="speech" frame-rate="30"
     visual-frame={full} visual-appearance={studio.speech.visual} visual-z="0">
     <speech:Take video={take.video} segment={story.segment.opening}/>
     <speech:Take video={take.video} segment={story.segment.answer}/>
   </speech:Spine>
+  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
   <media-track:Track id="broll" map={timing.map} space={speech.space} canvas={vertical}>
     <media-track:Item id="on-outer" video={take.video} during={story.selection.outer}
@@ -54,7 +58,9 @@ async function fixture(): Promise<PlaygroundSnapshot> {
   const directory = mkdtempSync(join(tmpdir(), "svml-playground-markers-"));
   writeFileSync(join(directory, "main.svml"), SOURCE, "utf8");
   writeFileSync(join(directory, "studio.svs"), STYLES, "utf8");
-  return (await interpretSource({ source: join(directory, "main.svml"), root: directory, revision: 1 })).snapshot;
+  return (await readSource({
+    source: join(directory, "main.svml"), packageRoot: directory, revision: 1,
+  })).snapshot;
 }
 
 test("a Segment is the outermost level and Selections nest inside it", async () => {
@@ -94,8 +100,8 @@ test("a range that binds nothing is still live", async () => {
   // Only @outer drives a Media Item. @inner places nothing, and still means
   // something, so it must appear.
   const snapshot = await fixture();
-  const bound = snapshot.tracks.flatMap((track) => track.clips).map((clip) => clip.binding);
-  assert.ok(!bound.some((binding) => binding.kind !== "program" && binding.id === "inner"));
+  const bound = snapshot.tracks.flatMap((track) => track.clips).map((clip) => clip.authoredId);
+  assert.ok(!bound.includes("inner"));
   const inner = snapshot.script!.selections.find((item) => item.id === "inner")!;
   const tokens = snapshot.script!.tokens.filter((token) =>
     token.range.start >= inner.occurrences[0]!.open.start

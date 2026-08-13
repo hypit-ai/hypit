@@ -60,6 +60,16 @@ function roundedRangePath(points: readonly { x: number; y: number }[], radius = 
   }).join(" ")} Z`;
 }
 
+/**
+ * The gutter holds one bar per nesting level. `GUTTER_LEFT` is where the
+ * outermost bar starts, past the right edge of a three-digit line number.
+ */
+const GUTTER_LEFT = 25;
+const GUTTER_STEP = 3;
+const GUTTER_LEVELS = 4;
+/** Where a range outline may begin: clear of every bar the gutter can hold. */
+const GUTTER_TEXT = GUTTER_LEFT + GUTTER_STEP * GUTTER_LEVELS + 2;
+
 export function createCodePane(): CodePane {
   const element = document.createElement("section");
   element.className = "code";
@@ -133,9 +143,9 @@ export function createCodePane(): CodePane {
       const end = caret(item.range.end, "end");
       if (start === undefined || end === undefined) continue;
       const lineHeight = start.height || Number.parseFloat(getComputedStyle(scroll).lineHeight) || 20;
-      // The gutter is 34px wide, so the outline's left edge sits just inside it
-      // rather than over the first characters of the code.
-      const left = 26;
+      // The outline's left edge sits clear of the gutter bars rather than over
+      // the first characters of the code.
+      const left = GUTTER_TEXT;
       const right = width - 10;
       const startX = Math.max(left, start.x - 3);
       const endX = Math.max(left, end.x + 3);
@@ -247,22 +257,31 @@ export function createCodePane(): CodePane {
       }
       for (const track of snapshot.tracks) {
         for (const clip of track.clips) {
-          clickable.push({
-            range: clip.elementRange,
-            tone: clip.binding.kind === "program" ? undefined : tones.get(clip.binding.id),
-          });
+          if (clip.elementRange === undefined) continue;
+          clickable.push({ range: clip.elementRange, tone: tones.get(clip.authoredId) });
         }
       }
       for (const line of lines) {
-        // The tightest range wins, so a nested marker's own level shows on the
-        // lines it actually covers rather than its parent's.
+        // Widest first: a bar per level the line sits inside, laid left to
+        // right so the enclosing pair stays visible beside the nested one
+        // instead of being covered by it.
         const covering = clickable
           .filter((item) => line.end >= item.range.start && line.start <= item.range.end)
           .sort((left, right) =>
-            (left.range.end - left.range.start) - (right.range.end - right.range.start))[0];
-        if (covering === undefined) continue;
+            (right.range.end - right.range.start) - (left.range.end - left.range.start))
+          .slice(0, GUTTER_LEVELS);
+        if (covering.length === 0) continue;
         line.element.classList.add("bound");
-        if (covering.tone !== undefined) line.element.classList.add(`tone-${covering.tone}`);
+        // The tightest range is what the line means, so the line-number hover
+        // colour still follows the innermost level.
+        const innermost = covering[covering.length - 1]!;
+        if (innermost.tone !== undefined) line.element.classList.add(`tone-${innermost.tone}`);
+        for (const [level, item] of covering.entries()) {
+          const bar = document.createElement("span");
+          bar.className = item.tone === undefined ? "gutter-bar" : `gutter-bar tone-${item.tone}`;
+          bar.style.left = `${GUTTER_LEFT + level * GUTTER_STEP}px`;
+          line.element.append(bar);
+        }
       }
 
       scroll.replaceChildren(canvas, fragment);

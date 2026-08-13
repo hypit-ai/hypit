@@ -8,7 +8,13 @@ const SVG_NS = "http://www.w3.org/2000/svg";
  * Where a clip is actually drawn, in canvas pixels, or undefined when the
  * picture has not mounted yet.
  */
-export type Measure = (clipId: string) => Clip["frame"] | undefined;
+/** A box on the canvas, in canvas pixels. */
+export type Box = {
+  readonly xPx: number; readonly yPx: number;
+  readonly widthPx: number; readonly heightPx: number;
+};
+
+export type Measure = (clipId: string) => Box | undefined;
 
 export type Overlay = {
   readonly element: SVGSVGElement;
@@ -18,7 +24,7 @@ export type Overlay = {
   refresh(): void;
 };
 
-function rect(box: Clip["frame"], className: string): SVGRectElement {
+function rect(box: Box, className: string): SVGRectElement {
   const node = document.createElementNS(SVG_NS, "rect");
   node.setAttribute("x", String(box.xPx));
   node.setAttribute("y", String(box.yPx));
@@ -31,7 +37,7 @@ function rect(box: Clip["frame"], className: string): SVGRectElement {
   return node;
 }
 
-function inside(box: Clip["frame"], x: number, y: number): boolean {
+function inside(box: Box, x: number, y: number): boolean {
   return x >= box.xPx && x <= box.xPx + box.widthPx
     && y >= box.yPx && y <= box.yPx + box.heightPx;
 }
@@ -58,53 +64,35 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
 
   let live: readonly Clip[] = [];
   let canvas = { width: 1, height: 1 };
-  let real = false;
   let last: { snapshot: PlaygroundSnapshot; selected: Clip | undefined; frame: number } | undefined;
 
   /**
-   * A rendered programme cannot be measured element by element, so its box falls
-   * back to the interpreted geometry. Which rectangle is right depends on what
-   * is on screen: the placeholder paint fills the whole Placement Frame, while
-   * real material lands inside the padding a Recipe declared.
+   * The box is measured off the picture rather than restated from the Source:
+   * motion moves an element across its span, so only what was drawn knows where
+   * it ended up. A Present that has not mounted has no box to draw.
    */
-  const drawnBox = (clip: Clip): Clip["frame"] =>
-    measure(clip.id) ?? (real ? clip.contentFrame : clip.frame);
+  const drawnBox = (clip: Clip): Box | undefined => measure(clip.id);
 
   const draw = (): void => {
     if (last === undefined) return;
     const { snapshot, selected, frame } = last;
-    real = snapshot.preview.kind === "video";
-    canvas = { width: snapshot.space.canvasWidth, height: snapshot.space.canvasHeight };
+        canvas = { width: snapshot.space.canvasWidth, height: snapshot.space.canvasHeight };
     element.setAttribute("viewBox", `0 0 ${canvas.width} ${canvas.height}`);
     element.replaceChildren();
     // Only clips actually on screen can be picked out of the picture.
-    live = store.clipsAt(frame).filter((clip) => clip.kind === "media");
+    live = store.clipsAt(frame);
 
     if (selected === undefined) return;
     const tones = markerTones(snapshot);
-    const tone = selected.binding.kind === "program" ? undefined : tones.get(selected.binding.id);
+    const tone = tones.get(selected.authoredId);
     const onScreen = frame >= selected.startFrame && frame < selected.endFrameExclusive;
     const box = drawnBox(selected);
+    // A Present that is not on screen at this frame was never drawn, so there
+    // is nothing to put a box around.
+    if (box === undefined) return;
     const group = document.createElementNS(SVG_NS, "g");
     group.setAttribute("class", `box${onScreen ? "" : " box-elsewhere"}${tone === undefined ? "" : ` tone-${tone}`}`);
 
-    // Where padded material will land once a Provider has produced any. The
-    // placeholder paint fills the whole Frame, so without this the padding a
-    // Recipe declares would be invisible.
-    const padding = {
-      left: selected.contentFrame.xPx - selected.frame.xPx,
-      top: selected.contentFrame.yPx - selected.frame.yPx,
-      width: selected.contentFrame.widthPx - selected.frame.widthPx,
-      height: selected.contentFrame.heightPx - selected.frame.heightPx,
-    };
-    if (padding.width !== 0 || padding.height !== 0) {
-      group.append(rect({
-        xPx: box.xPx + padding.left,
-        yPx: box.yPx + padding.top,
-        widthPx: box.widthPx + padding.width,
-        heightPx: box.heightPx + padding.height,
-      }, "box-content-guide"));
-    }
     group.append(rect(box, "box-content"));
 
     const label = document.createElementNS(SVG_NS, "text");
@@ -135,7 +123,10 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
       const y = (clientY - box.top) / box.height * canvas.height;
       // clipsAt already returns topmost first, so the first hit is the one an
       // author would say they clicked on.
-      return live.find((clip) => inside(drawnBox(clip), x, y));
+      return live.find((clip) => {
+        const box = drawnBox(clip);
+        return box !== undefined && inside(box, x, y);
+      });
     },
   };
 }
