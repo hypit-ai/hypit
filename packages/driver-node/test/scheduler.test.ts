@@ -34,7 +34,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 
@@ -58,9 +57,7 @@ function createParallelGreetingBuild(generationCount = 2) {
       kind: "authored" as const,
     },
   });
-  const program = link(closure, [sealTypedModule({
-    records: [authored],
-  })]);
+  const program = link(closure, [authored]);
   const graph = sealCompiledGraph({
     program: program.semanticDigest,
     outputs: [

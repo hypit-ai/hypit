@@ -1,10 +1,8 @@
 import {
   sealRecord,
-  sealTypedModule,
   verifyClosure,
   verifyRecordStructure,
 } from "@narratage/core";
-import { sealAuthorModule } from "@narratage/elaborator";
 import type { AuthorFrontend, AuthorSourceExport } from "@narratage/elaborator";
 import { parseSvs } from "@narratage/svs";
 
@@ -38,8 +36,8 @@ export const textSvsFrontend: AuthorFrontend = {
     verifyRecordStructure(context.closure, record);
     const exports: AuthorSourceExport[] = [{ name: id, ref: { kind: "record", id }, type: textTypes.template }];
     return {
-      module: sealTypedModule({ records: [record] }),
-      author: sealAuthorModule({ components: [] }),
+      records: [record],
+      components: [],
       fragments: [],
       exports,
     };

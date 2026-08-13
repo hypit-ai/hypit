@@ -9,8 +9,8 @@ import {
   start,
 } from "@narratage/core";
 import {
-  AuthorModuleError,
-  elaborateAuthorModule,
+  AuthorGraphError,
+  elaborateAuthorGraph,
   sealGraphFragment,
 } from "@narratage/elaborator";
 import type { GraphFragment } from "@narratage/elaborator";
@@ -218,15 +218,15 @@ test("Markup Surfaces compile forward author references into a Core BuildPlan", 
     <lab:Measure id="measurement" sample={soil}/>
   </svml>`);
 
-  assert.deepEqual(decoded.author.components.map((component) => component.id), ["final", "measurement"]);
+  assert.deepEqual(decoded.components.map((component) => component.id), ["final", "measurement"]);
   assert.deepEqual(decoded.fragments.map((fragment) => fragment.id).sort(), [
     measureFragment.id,
     reportFragment.id,
   ].sort());
 
-  const program = link(closure, [decoded.module]);
+  const program = link(closure, decoded.records);
   const catalog = new Map(decoded.fragments.map((fragment) => [fragment.id, fragment]));
-  const elaborated = elaborateAuthorModule(program, decoded.author, (id) => catalog.get(id));
+  const elaborated = elaborateAuthorGraph(program, decoded.components, (id) => catalog.get(id));
   const state = start(program, elaborated, sealBuildRequest({
     graph: elaborated.id,
     targets: [{ output: "final.result" }],
@@ -241,7 +241,7 @@ test("Markup Surfaces compile forward author references into a Core BuildPlan", 
   assert.equal(reportStep?.inputs.measurement, measurementStep?.outputs.measurement);
 });
 
-test("component source reflow does not change AuthorModule semantic identity", async () => {
+test("component source reflow does not change decoded component meaning", async () => {
   const compact = await decode(`<svml><import as="lab" from="example.text-laboratory@1"/><lab:Sample id="soil" value="soil"/><lab:Measure id="measurement" sample={soil}/></svml>`);
   const multiline = await decode(`<svml>
     <import as="lab" from="example.text-laboratory@1"/>
@@ -254,7 +254,7 @@ test("component source reflow does not change AuthorModule semantic identity", a
       sample={soil}
     />
   </svml>`);
-  assert.deepEqual(compact.author, multiline.author);
+  assert.deepEqual(compact.components, multiline.components);
 });
 
 test("Markup rejects a component whose Surface omits its Fragment definition", async () => {
@@ -274,11 +274,11 @@ test("unknown component references remain inert until whole-document Author link
     <import as="lab" from="example.text-laboratory@1"/>
     <lab:Report id="final" measurement={missing.result}/>
   </svml>`);
-  const program = link(closure, [decoded.module]);
+  const program = link(closure, decoded.records);
   const catalog = new Map(decoded.fragments.map((fragment) => [fragment.id, fragment]));
   assert.throws(
-    () => elaborateAuthorModule(program, decoded.author, (id) => catalog.get(id)),
-    (error: unknown) => error instanceof AuthorModuleError
+    () => elaborateAuthorGraph(program, decoded.components, (id) => catalog.get(id)),
+    (error: unknown) => error instanceof AuthorGraphError
       && error.code === "UNKNOWN_AUTHOR_COMPONENT",
   );
 });

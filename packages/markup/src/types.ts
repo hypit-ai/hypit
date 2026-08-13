@@ -6,13 +6,11 @@ import type {
   SourceRange,
   StoredValue,
   TypeRef,
-  TypedModule,
   TypedRecord,
 } from "@narratage/protocol";
 import type {
   AuthorComponent,
   AuthorFrontend,
-  AuthorModule,
   AuthorSourceAssetRequest,
   AuthorSourceExport,
   AuthorValueRef,
@@ -69,7 +67,7 @@ export type SurfaceRecordDraft = {
   readonly range: SourceRange;
 };
 
-/** Source-local diagnostics are removed before the component enters the semantic AuthorModule. */
+/** Source-local diagnostics are removed before the component enters semantic elaboration. */
 export type SurfaceComponentDraft = AuthorComponent & {
   readonly range: SourceRange;
 };
@@ -158,8 +156,8 @@ export type MarkupDecodeContext = {
 };
 
 export type MarkupDecodeResult = {
-  readonly module: TypedModule;
-  readonly author: AuthorModule;
+  readonly records: readonly TypedRecord[];
+  readonly components: readonly AuthorComponent[];
   readonly fragments: readonly GraphFragment[];
   readonly exports: readonly AuthorSourceExport[];
 };

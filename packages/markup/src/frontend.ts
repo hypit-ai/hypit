@@ -4,7 +4,6 @@ import {
   digestOf,
   isDigest,
   sealRecord,
-  sealTypedModule,
   verifyClosure,
   verifyRecordStructure,
 } from "@narratage/core";
@@ -14,7 +13,6 @@ import type {
   ResolvedModule,
   TypedRecord,
 } from "@narratage/protocol";
-import { sealAuthorModule } from "@narratage/elaborator";
 import type {
   AuthorComponent,
   AuthorSourceExport,
@@ -375,12 +373,8 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
     }
   }
   return {
-    module: sealTypedModule({
-      records,
-    }),
-    author: sealAuthorModule({
-      components: resolvedComponents,
-    }),
+    records,
+    components: resolvedComponents,
     fragments: [...fragments.values()].sort((left, right) => left.id.localeCompare(right.id)),
     exports: exports.sort((left, right) => left.name.localeCompare(right.name)),
   };
@@ -417,8 +411,8 @@ export function createMarkupAuthorFrontend(options: MarkupAuthorFrontendOptions)
         },
       );
       return {
-        module: result.module,
-        author: result.author,
+        records: result.records,
+        components: result.components,
         fragments: result.fragments,
         exports: result.exports,
       };

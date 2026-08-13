@@ -51,11 +51,6 @@ export type TypedRecord = {
   readonly origin: RecordOrigin;
 };
 
-export type TypedModule = {
-  readonly format: "svml.typed-module@1";
-  readonly records: readonly TypedRecord[];
-};
-
 export type Need = {
   readonly id: NeedId;
   readonly capability: CapabilityRef;

@@ -11,7 +11,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 import { narrativeManifest } from "@narratage/narrative";
@@ -331,9 +330,7 @@ async function createBuild(item: SmokeCase): Promise<ReturnType<typeof start>> {
     origin: { kind: "authored" },
   });
   const authored = await admitRecord(closure, draft, validators);
-  const program = link(closure, [sealTypedModule({
-    records: [authored],
-  })]);
+  const program = link(closure, [authored]);
   const graph = sealCompiledGraph({
     program: program.semanticDigest,
     outputs: [{
