@@ -23,7 +23,7 @@ const fit = {
 };
 
 function segment(id: string, index: number): NarrativeExcerpt {
-  return { contract: "svml.narrative-excerpt@1", kind: "segment", id, tokenStart: index, tokenEndExclusive: index + 1 };
+  return { kind: "segment", id, tokenStart: index, tokenEndExclusive: index + 1 };
 }
 
 function synchronized(id: string, visual: boolean): SynchronizedMedia {

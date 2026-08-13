@@ -159,7 +159,7 @@ const map: CompleteSemanticMap = {
 
 test("Selection and Moment each expansion creates independent overlapping items", () => {
   const selection: NarrativeSelectionRef = {
-    contract: "svml.narrative-selection@1",
+
     id: "mentions",
     occurrences: [
       { occurrence: 0, startAnchorId: "a", endAnchorId: "b" },
@@ -167,7 +167,7 @@ test("Selection and Moment each expansion creates independent overlapping items"
     ],
   };
   const moment: NarrativeMomentRef = {
-    contract: "svml.narrative-moment@1",
+
     id: "hits",
     occurrences: [{ occurrence: 0, anchorId: "a" }, { occurrence: 1, anchorId: "c" }],
   };

@@ -442,7 +442,7 @@ test("Media Items consume the shared one/each temporal algebra without becoming 
     ],
   };
   const selection: NarrativeSelectionRef = {
-    contract: "svml.narrative-selection@1",
+
     id: "mentions",
     occurrences: [
       { occurrence: 0, startAnchorId: "a", endAnchorId: "b" },
@@ -460,7 +460,7 @@ test("Media Items consume the shared one/each temporal algebra without becoming 
     { startFrame: 60, endFrameExclusive: 105 },
   ]);
   const moment: NarrativeMomentRef = {
-    contract: "svml.narrative-moment@1", id: "cue", occurrences: [{ occurrence: 0, anchorId: "b" }],
+    id: "cue", occurrences: [{ occurrence: 0, anchorId: "b" }],
   };
   const overlapping = appendMomentMediaItem(repeated, header, space, canvas, stillLayers(), frame,
     semanticMap, moment, itemSpec({
@@ -494,7 +494,7 @@ test("Media Items consume the shared one/each temporal algebra without becoming 
   ]);
 
   const repeatedMoment: NarrativeMomentRef = {
-    contract: "svml.narrative-moment@1",
+
     id: "cues",
     occurrences: [
       { occurrence: 0, anchorId: "b" },
@@ -541,7 +541,7 @@ test("a Media Item can consume one whole Narrative Segment without a synthetic S
   const result = appendSegmentMediaItem(
     createMediaTrackSet(), header, space, canvas, stillLayers(), frame,
     semanticMap,
-    { contract: "svml.narrative-excerpt@1", kind: "segment", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
+    { kind: "segment", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
     itemSpec({
       id: "whole-answer",
       projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },

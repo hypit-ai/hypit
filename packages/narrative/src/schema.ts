@@ -6,7 +6,7 @@ const object = (
   fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>,
 ): ValueSchema => ({ kind: "object", fields });
 export const narrativeSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.narrative@1" } },
+
   segments: { schema: { kind: "array", minItems: 1, items: object({
     id: { schema: string }, startAnchorId: { schema: string },
     endAnchorId: { schema: string }, tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer },
@@ -31,7 +31,7 @@ export const narrativeSchema: ValueSchema = object({
     }) } },
   }) } },
   semanticIndex: { schema: object({
-    contract: { schema: { kind: "literal", value: "svml.semantic-index@1" } },
+
     anchors: { schema: { kind: "array", minItems: 2, items: object({
       id: { schema: string },
       kind: { schema: { kind: "string", enum: ["segment-start", "token-start", "token-end", "segment-end"] } },
@@ -41,7 +41,7 @@ export const narrativeSchema: ValueSchema = object({
 });
 
 export const narrativeExcerptSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.narrative-excerpt@1" } },
+
   kind: { schema: { kind: "literal", value: "segment" } }, id: { schema: string },
   tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer },
 });
@@ -55,31 +55,31 @@ const captionDisplayAtom = object({
   wordIds: { schema: { kind: "array", minItems: 1, items: string } },
 });
 export const captionDisplaySequenceSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-display-sequence@1" } },
+
   id: { schema: string },
   atoms: { schema: { kind: "array", minItems: 1, items: captionDisplayAtom } },
   words: { schema: { kind: "array", minItems: 1, items: captionDisplayWord } },
 });
 export const captionCorrespondenceSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-correspondence@1" } },
+
   displaySequenceId: { schema: string },
   atoms: { schema: { kind: "array", minItems: 1, items: object({
     atomId: { schema: string }, sourceTokenIds: { schema: { kind: "array", minItems: 1, items: string } },
   }) } },
 });
 export const captionDisplayWordSubsetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-display-word-subset@1" } },
+
   id: { schema: string }, sequenceId: { schema: string },
   wordIds: { schema: { kind: "array", items: string } },
 });
 export const narrativeMomentSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.narrative-moment@1" } }, id: { schema: string },
+  id: { schema: string },
   occurrences: { schema: { kind: "array", minItems: 1, items: object({
     occurrence: { schema: integer }, anchorId: { schema: string },
   }) } },
 });
 export const narrativeSelectionSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.narrative-selection@1" } }, id: { schema: string },
+  id: { schema: string },
   occurrences: { schema: { kind: "array", minItems: 1, items: object({
     occurrence: { schema: integer }, startAnchorId: { schema: string }, endAnchorId: { schema: string },
   }) } },

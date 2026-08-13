@@ -144,7 +144,7 @@ export function assertCaptionProgramForDisplay(value: CaptionProgram, sequence: 
     && value.runs.flatMap((run) => run.wordIds).join("\0") === sequence.words.map((word) => word.id).join("\0"),
   "Caption Program does not partition its CaptionDisplaySequence exactly once and in order");
   assertCaptionDisplayWordSubset({
-    contract: "svml.caption-display-word-subset@1",
+
     id: `${value.id}:mute`,
     sequenceId: sequence.id,
     wordIds: value.mutedWordIds,

@@ -99,15 +99,15 @@ const map: CompleteSemanticMap = {
   ],
 };
 const outer: NarrativeSelectionRef = {
-  contract: "svml.narrative-selection@1", id: "ranking-window",
+  id: "ranking-window",
   occurrences: [{ occurrence: 0, startAnchorId: "outer-start", endAnchorId: "outer-end" }],
 };
 const terminal: NarrativeMomentRef = {
-  contract: "svml.narrative-moment@1", id: "ranking-complete",
+  id: "ranking-complete",
   occurrences: [{ occurrence: 0, anchorId: "terminal" }],
 };
 const triggers = (count: number): NarrativeMomentRef => ({
-  contract: "svml.narrative-moment@1", id: "next-rank",
+  id: "next-rank",
   occurrences: ["one", "two", "three", "four"].slice(0, count)
     .map((anchorId, occurrence) => ({ occurrence, anchorId })),
 });
@@ -121,7 +121,7 @@ const recipe = (path: string, properties: SvsRecipe["properties"] = {}): SvsReci
 });
 const image = (id: string) => ({ kind: "blob" as const, digest: digestOf(`ranking-image:${id}`), size: 64, mediaType: "image/png" });
 const header = (variant: RankingHeader["variant"], id: string = variant) => sealRankingHeader({
-  contract: "svml.ranking-header@1", id, variant,
+  id, variant,
 });
 
 function specs(headerValue: RankingHeader, values: readonly RankingItemSpec[]) {
@@ -138,16 +138,16 @@ function schedule(headerValue: RankingHeader, values: readonly RankingItemSpec[]
 }
 
 const tierSpec = (id: string, tier: string, entry: "direct" | "stage" = "direct"): TierBoardItemSpec => ({
-  contract: "svml.tier-board-item-spec@1", variant: "tier-board", id, tier, entry,
+  variant: "tier-board", id, tier, entry,
 });
 const columnSpec = (id: string): ColumnItemSpec => ({
-  contract: "svml.column-item-spec@1", variant: "column", id, label: id.toUpperCase(),
+  variant: "column", id, label: id.toUpperCase(),
 });
 const topSpec = (id: string): TopThreeItemSpec => ({
-  contract: "svml.top-three-item-spec@1", variant: "top-three", id, label: id.toUpperCase(),
+  variant: "top-three", id, label: id.toUpperCase(),
 });
 const typeSpec = (id: string, text: string, winner = false): TypewriterItemSpec => ({
-  contract: "svml.typewriter-item-spec@1", variant: "typewriter-list", id, text, winner,
+  variant: "typewriter-list", id, text, winner,
 });
 
 test("RankingSchedule zips authored item and Moment order and preserves a settled suffix", () => {

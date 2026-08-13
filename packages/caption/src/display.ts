@@ -10,7 +10,7 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 export function assertCaptionDisplaySequence(value: CaptionDisplaySequence): void {
-  assert(value.contract === "svml.caption-display-sequence@1" && value.id.length > 0,
+  assert(value.id.length > 0,
     "CaptionDisplaySequence identity is invalid");
   assert(value.atoms.length > 0 && value.words.length > 0,
     "CaptionDisplaySequence is empty");
@@ -48,8 +48,7 @@ export function assertCaptionCorrespondence(
   sequence: CaptionDisplaySequence,
 ): void {
   assertCaptionDisplaySequence(sequence);
-  assert(value.contract === "svml.caption-correspondence@1"
-    && value.displaySequenceId === sequence.id,
+  assert(value.displaySequenceId === sequence.id,
   "CaptionCorrespondence belongs to another display sequence");
   assert(value.atoms.length === sequence.atoms.length,
     "CaptionCorrespondence does not cover the exact Atom sequence");
@@ -70,7 +69,7 @@ export function assertCaptionDisplayWordSubset(
   sequence: CaptionDisplaySequence,
 ): void {
   assertCaptionDisplaySequence(sequence);
-  assert(value.contract === "svml.caption-display-word-subset@1" && value.id.length > 0,
+  assert(value.id.length > 0,
     "CaptionDisplayWordSubset identity is invalid");
   assert(value.sequenceId === sequence.id,
     `CaptionDisplayWordSubset ${value.id} belongs to another display sequence`);
@@ -101,7 +100,7 @@ export function captionWordsForRole(
   const normalized = role.trim();
   assert(normalized.length > 0, "Caption Role is empty");
   return {
-    contract: "svml.caption-display-word-subset@1",
+
     id: `role:${normalized}`,
     sequenceId: sequence.id,
     wordIds: sequence.words.filter((word) => word.role === normalized).map((word) => word.id),
