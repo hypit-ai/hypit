@@ -127,6 +127,7 @@ export function createTimeline(store: Store): Timeline {
         node.querySelector(".clip-name")!.textContent = clip.label;
         node.querySelector(".clip-meta")!.textContent =
           `${((clip.endFrameExclusive - clip.startFrame) / fps(snapshot)).toFixed(2)}s`;
+        if (clip.standIn !== undefined) node.classList.add(`clip-stand-in-${clip.standIn}`);
         // Same tone as the Script marker this clip is named after.
         const tone = tones.get(clip.authoredId);
         if (tone !== undefined) node.classList.add(`tone-${tone}`);

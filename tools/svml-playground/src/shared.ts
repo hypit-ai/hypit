@@ -22,6 +22,12 @@ export type Clip = {
   readonly endFrameExclusive: number;
   /** Where that authored tag was written. */
   readonly elementRange?: Range;
+  /**
+   * What is actually on screen for this clip. Absent means the material the
+   * Source names; otherwise the shot has not been made and this says what was
+   * put there instead.
+   */
+  readonly standIn?: "picture" | "black";
   readonly stackOrder: number;
 };
 

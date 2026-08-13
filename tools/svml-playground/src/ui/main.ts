@@ -102,6 +102,11 @@ function renderInspector(snapshot: PlaygroundSnapshot, clipId: string | undefine
       cell("span", `${clip.startFrame}-${clip.endFrameExclusive}f (${seconds.toFixed(2)}s)`),
       cell("stack", String(clip.stackOrder)),
     );
+    if (clip.standIn !== undefined) {
+      cells.push(cell("showing", clip.standIn === "picture"
+        ? "a picture this shot names - the shot itself has not been made"
+        : "a black frame - this shot has no material and names no picture", "warn"));
+    }
   }
 
   for (const item of snapshot.refused) {

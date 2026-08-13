@@ -111,6 +111,25 @@ function scriptMap(
   };
 }
 
+/** The element an output belongs to: `take-opening.video` is `take-opening`. */
+/**
+ * Whether this clip is showing a stand-in. A Present is named after what made
+ * it, so either the tag that drew it or the identity itself says which shot it
+ * came from.
+ */
+function standInFor(
+  presentId: string,
+  elementId: string | undefined,
+  standIns: ReadonlyMap<string, "picture" | "black">,
+): "picture" | "black" | undefined {
+  if (elementId !== undefined && standIns.has(elementId)) return standIns.get(elementId);
+  for (const part of presentId.split(/[:#+]/u)) {
+    const held = standIns.get(part);
+    if (held !== undefined) return held;
+  }
+  return undefined;
+}
+
 function depthOf(
   selection: ScriptMap["selections"][number],
   all: readonly ScriptMap["selections"][number][],
@@ -137,6 +156,29 @@ export function snapshot(built: Preview, input: {
   readonly preview: PlaygroundSnapshot["preview"];
 }): PlaygroundSnapshot {
   const located = authored(built.source.observations.placements);
+  // Which shots are not the shot. A clip is drawn from an output, so the output
+  // that was stood in for is the clip that has to say so.
+  const stood = new Map<string, "picture" | "black">([
+    ...built.stoodIn.map((name) => [name, "picture"] as const),
+    ...built.placeholders.map((name) => [name, "black"] as const),
+  ]);
+  // A shot reaches a picture through whatever consumed it - a Take, an Item -
+  // so an element is showing a stand-in when anything it points at was one.
+  const standIns = new Map<string, "picture" | "black">();
+  for (const placement of built.source.observations.placements) {
+    const paths = [
+      ...placement.references,
+      ...placement.children.flatMap((child) => child.references),
+    ];
+    for (const path of paths) {
+      const held = stood.get(path);
+      if (held === undefined) continue;
+      if (placement.id !== undefined) standIns.set(placement.id, held);
+      for (const child of placement.children) {
+        if (child.id !== undefined && child.references.includes(path)) standIns.set(child.id, held);
+      }
+    }
+  }
   const script = scriptMap(built.source.observations.sourceMaps, built);
   // A clip is coloured by the marker that placed it, not by the tag that drew
   // it, so a cutaway and the words that call for it read as the same thing.
@@ -164,6 +206,10 @@ export function snapshot(built: Preview, input: {
   for (const item of built.tracks) {
     const clips: Clip[] = spans(item.track, input.frameRate).map((span) => {
       const where = locate(span.id, located);
+      // A Track is named after the element that owns it, which is the last
+      // place to look when the Present itself names no shot.
+      const owner = item.name.includes(".") ? item.name.slice(0, item.name.indexOf(".")) : item.name;
+      const shown = standInFor(span.id, where?.id, standIns) ?? standIns.get(owner);
       const named = [...new Set(span.id.split(/[:#+]/u))].find((part) => markers.has(part));
       const marker = named ?? (where === undefined ? undefined : markerFor(where.id));
       return {
@@ -173,6 +219,7 @@ export function snapshot(built: Preview, input: {
         startFrame: span.startFrame,
         endFrameExclusive: span.endFrameExclusive,
         ...(where === undefined ? {} : { elementRange: where.range }),
+        ...(shown === undefined ? {} : { standIn: shown }),
         stackOrder: span.stackOrder,
       };
     });

@@ -183,3 +183,13 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 5
 .stage-bar { gap:4px; }
 .stage-mute { width:30px; height:30px; }
 .stage-mute .material-symbols-rounded { font-size:20px; }
+
+/* A clip that is not the shot says so standing still: hatched for a stand-in
+   picture, dimmed for a black frame. Reading the note is not the same as being
+   able to see which of the two a clip is. */
+.clip-stand-in-picture {
+  background-image: repeating-linear-gradient(135deg,
+    transparent 0 6px, color-mix(in srgb, var(--tone, var(--muted)) 22%, transparent) 6px 12px);
+}
+.clip-stand-in-black { opacity:.5; }
+.clip-stand-in-black .clip-name::after { content:" (black)"; color:var(--muted); }
