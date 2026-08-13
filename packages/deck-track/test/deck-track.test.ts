@@ -12,6 +12,7 @@ import {
   createDepthStackCardSet,
   decodeDepthStackSpec,
   depthStackManifest,
+  depthStackMarkupSurfaces,
   depthStackProducers,
   depthStackTypes,
   finalizeDepthStack,
@@ -49,7 +50,7 @@ import type {
   MarkupAttributeValue,
 } from "@narratage/markup";
 import { artifactTypes } from "@narratage/artifact";
-import { mediaTrackManifest } from "@narratage/media-track";
+import { mediaTrackManifest, mediaTrackTypes } from "@narratage/media-track";
 
 const space = sealProgramSpace({
   durationSec: 2,
@@ -81,6 +82,27 @@ const video = (name: string) => ({
   digest: digestOf(`deck-video:${name}`),
   size: 32,
   mediaType: "video/mp4",
+});
+
+test("DepthStack Surface declares every sealed Record it may emit", () => {
+  const surface = depthStackMarkupSurfaces.find((item) => item.name === "track");
+  assert.ok(surface !== undefined);
+  const names = new Set(surface.outputs.map((type) => type.name));
+  for (const type of [
+    depthStackTypes.header,
+    depthStackTypes.spec,
+    depthStackTypes.cardSpec,
+    spatialTypes.fit,
+    mediaTrackTypes.sampleLayerSpec,
+    mediaTrackTypes.paintLayerSpec,
+    depthStackTypes.cardLabel,
+    depthStackTypes.cardLabelStyle,
+    textTypes.text,
+    depthStackTypes.program,
+    compositionTypes.visualTrack,
+  ]) {
+    assert.ok(names.has(type.name), `${type.name} output`);
+  }
 });
 
 function stillMaterial(name: string): MediaLayerSet {
