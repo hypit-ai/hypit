@@ -44,14 +44,12 @@ export function createEnvironmentCredentialStorePackage(
 ): RuntimeServicePackage {
   const instance = options.instance ?? "credentials.env";
   return defineRuntimeServicePackage({
-    name: instance,
     module: environmentCredentialStoreModuleRef,
     services: [{
       role: "credential-store",
       facet: "credential-store",
       instance,
       implementation: {
-        locator: "@narratage/credential-store-env",
         digest: environmentCredentialStoreImplementationDigest,
       },
       configuration: { source: "process-environment", explicitKeysOnly: true },

@@ -220,7 +220,6 @@ function realizedItems(
     const motion = resolveMediaLifecycleMotion(spec.motion, frame, canvas);
     return {
       id: occurrence.id,
-      sourceOccurrenceId: occurrence.sourceOccurrenceId,
       span: { ...occurrence.span },
       frame: { ...frame },
       presentation: structuredClone(spec.presentation),
@@ -325,7 +324,6 @@ function assertSampleLayerForSpace(layer: MediaSampleLayerProgram, space: Progra
 
 function assertItem(item: MediaItemProgram, space: ProgramSpace, label: string): void {
   assertMediaIdentity(item.id, `${label}.id`);
-  assert(item.sourceOccurrenceId.length > 0, `${label}.sourceOccurrenceId is empty.`);
   assert(Number.isSafeInteger(item.span.startFrame) && Number.isSafeInteger(item.span.endFrameExclusive)
     && item.span.startFrame >= 0 && item.span.endFrameExclusive > item.span.startFrame
     && item.span.endFrameExclusive <= programSpaceFrameCount(space), `${label}.span is invalid.`);

@@ -47,12 +47,10 @@ test("one Fine renderer handles uniform Cue appearance as one peer VisualTrack",
     displaySequenceId: display.id,
     cues: [{
       id: "cue:1",
-      runId: program.runs[0]!.id,
       styleId: style.id,
-      segmentId: "line",
-      startSec: 0,
-      endSec: 2,
-      atoms: display.atoms.map((atom) => ({ atomId: atom.id, startSec: 0, endSec: 2 })),
+      startFrame: 0,
+      endFrameExclusive: 60,
+      atoms: display.atoms.map((atom) => ({ atomId: atom.id, startFrame: 0, endFrameExclusive: 60 })),
       fields: [],
     }],
   };
@@ -94,15 +92,13 @@ test("Fine applies Caption Mute after planning without regrouping Cues", () => {
     displaySequenceId: display.id,
     cues: [{
       id: "cue:1",
-      runId: program.runs[0]!.id,
       styleId: style.id,
-      segmentId: "line",
-      startSec: 0,
-      endSec: 2,
+      startFrame: 0,
+      endFrameExclusive: 60,
       atoms: display.atoms.map((atom, index) => ({
         atomId: atom.id,
-        startSec: index * 0.4,
-        endSec: index * 0.4 + 0.3,
+        startFrame: index * 12,
+        endFrameExclusive: index * 12 + 9,
       })),
       fields: [],
     }],
@@ -140,12 +136,10 @@ test("Fine emits no Present for a fully muted Cue", () => {
     displaySequenceId: display.id,
     cues: [{
       id: "cue:1",
-      runId: program.runs[0]!.id,
       styleId: style.id,
-      segmentId: "line",
-      startSec: 0,
-      endSec: 1,
-      atoms: display.atoms.map((atom) => ({ atomId: atom.id, startSec: 0, endSec: 1 })),
+      startFrame: 0,
+      endFrameExclusive: 30,
+      atoms: display.atoms.map((atom) => ({ atomId: atom.id, startFrame: 0, endFrameExclusive: 30 })),
       fields: [],
     }],
   };
@@ -298,12 +292,10 @@ test("karaoke uses one active overlay per whole Atom and never invents Dual Text
     displaySequenceId: display.id,
     cues: [{
       id: "cue:karaoke",
-      runId: program.runs[0]!.id,
       styleId: style.id,
-      segmentId: "line",
-      startSec: 0,
-      endSec: 3,
-      atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startSec: index, endSec: index + 1 })),
+      startFrame: 0,
+      endFrameExclusive: 90,
+      atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startFrame: index * 30, endFrameExclusive: (index + 1) * 30 })),
       fields: [],
     }],
   };
@@ -352,9 +344,9 @@ test("an exact Font is explicit Style input and reaches every base and active gl
     contract: "svml.timed-caption-projection@1",
     displaySequenceId: display.id,
     cues: [{
-      id: "cue:font", runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
-      startSec: 0, endSec: 1,
-      atoms: display.atoms.map((atom) => ({ atomId: atom.id, startSec: 0, endSec: 1 })),
+      id: "cue:font", styleId: style.id,
+      startFrame: 0, endFrameExclusive: 30,
+      atoms: display.atoms.map((atom) => ({ atomId: atom.id, startFrame: 0, endFrameExclusive: 30 })),
       fields: [],
     }],
   };
@@ -402,12 +394,10 @@ test("current/trail by step/wipe have four distinct frame-exact Atom histories",
       displaySequenceId: display.id,
       cues: [{
         id: "cue:modes",
-        runId: program.runs[0]!.id,
         styleId: style.id,
-        segmentId: "line",
-        startSec: 0,
-        endSec: 2,
-        atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startSec: index, endSec: index + 1 })),
+        startFrame: 0,
+        endFrameExclusive: 20,
+        atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startFrame: index * 10, endFrameExclusive: (index + 1) * 10 })),
         fields: [],
       }],
     };
@@ -462,9 +452,9 @@ test("full Fine Paint and layered motion lower to terminal Visual IR without cha
     contract: "svml.timed-caption-projection@1",
     displaySequenceId: display.id,
     cues: [{
-      id: "cue:full", runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
-      startSec: 0, endSec: 4,
-      atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startSec: index, endSec: index + 1 })),
+      id: "cue:full", styleId: style.id,
+      startFrame: 0, endFrameExclusive: 40,
+      atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startFrame: index * 10, endFrameExclusive: (index + 1) * 10 })),
       fields: [],
     }],
   };
@@ -515,9 +505,9 @@ test("glyph, underline and Pill activation are independent channels", () => {
   const projection: TimedCaptionProjection = {
     contract: "svml.timed-caption-projection@1", displaySequenceId: display.id,
     cues: [{
-      id: "cue:channels", runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
-      startSec: 0, endSec: 3,
-      atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startSec: index, endSec: index + 1 })),
+      id: "cue:channels", styleId: style.id,
+      startFrame: 0, endFrameExclusive: 30,
+      atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startFrame: index * 10, endFrameExclusive: (index + 1) * 10 })),
       fields: [],
     }],
   };
@@ -547,9 +537,9 @@ test("every declared one-shot and loop motion lowers through the same wrapper vo
     const projection: TimedCaptionProjection = {
       contract: "svml.timed-caption-projection@1", displaySequenceId: display.id,
       cues: [{
-        id: `cue:${id}`, runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
-        startSec: 0, endSec: 3,
-        atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startSec: index, endSec: index + 1 })),
+        id: `cue:${id}`, styleId: style.id,
+        startFrame: 0, endFrameExclusive: 30,
+        atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startFrame: index * 10, endFrameExclusive: (index + 1) * 10 })),
         fields: [],
       }],
     };

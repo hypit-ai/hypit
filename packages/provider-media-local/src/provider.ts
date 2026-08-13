@@ -43,10 +43,7 @@ function positiveInteger(value: number, subject: string): number {
 }
 
 function fulfillment(result: MediaOperationResult): EndpointFulfillment {
-  return {
-    value: result.value,
-    metadata: result.metadata,
-  };
+  return { value: result.value };
 }
 
 /**
@@ -63,7 +60,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
   const common = { ffmpegPath, ffprobePath, processTimeoutMs, maxProbeOutputBytes };
   const environment = (context: EndpointInvocationContext): MediaExecutionEnvironment => ({
     ...common,
-    label: "media.local",
     artifacts: {
       get: async (source) => await context.artifacts.get(source.digest),
       open: async (source) => isStreamingArtifactStore(context.artifacts)
@@ -88,7 +84,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
     instance: config.instance ?? "media.local",
     authority: config.authority ?? config.instance ?? "media.local",
     implementation: {
-      locator: "@narratage/provider-media-local/ffmpeg",
       digest: localMediaProviderImplementationDigest,
     },
     configuration: canonicalize(common),

@@ -164,7 +164,6 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
     id: digest,
     graph: digest,
     request: digest,
-    initialValues: [],
     steps: [{
       id: "step-1",
       producer: { module: { name: "@narratage/media", version: "1" }, name: "inspect" },
@@ -213,7 +212,6 @@ test("a plan with no Needs stays compact without knowing any Provider names", ()
     id: digest,
     graph: digest,
     request: digest,
-    initialValues: [],
     steps: [],
     goals: [],
     selections: [],
@@ -233,7 +231,6 @@ test("plan runtime preflight presents only demanded capabilities", () => {
     id: digest,
     graph: digest,
     request: digest,
-    initialValues: [],
     steps: [],
     goals: [],
     selections: [],

@@ -110,7 +110,6 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
     },
   );
   return sealGraphFragment({
-    name: options.name?.trim() || "@narratage/speech-spine/spine@1",
     inputs: [...declaredInputs.entries()].map(([name, type]) => ({ name, type })),
     operations,
     exports: [

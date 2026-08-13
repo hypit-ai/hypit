@@ -21,7 +21,6 @@ export const artifactManifest: ModuleManifest = {
   dependencies: [],
   types: [{ name: artifactTypes.blob.name, schema: blobArtifactValueSchema }],
   capabilities: [],
-  surfaces: [],
   producers: [],
 };
 

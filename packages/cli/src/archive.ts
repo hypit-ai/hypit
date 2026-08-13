@@ -2,9 +2,9 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import type { LocalRuntime } from "@narratage/local";
+import type { CliRuntime } from "./runtime-port.js";
 import { isDigest } from "@narratage/protocol";
-import type { BuildState, Digest, TypedRecord } from "@narratage/protocol";
+import type { BuildState, Digest, TypedRecord, TypeRef } from "@narratage/protocol";
 import type { BuildCatalogEntry } from "@narratage/runtime";
 
 type ArtifactIdentity = {
@@ -20,7 +20,7 @@ export type ArchivedArtifactReference = ArtifactIdentity & {
 
 export type ArchivedLogicalOutput = {
   readonly name: string;
-  readonly type: BuildCatalogEntry["aliases"][number]["type"];
+  readonly type: TypeRef;
   readonly output: string;
   readonly candidate: BuildState["plan"]["selections"][number]["candidate"];
   readonly record: ReturnType<typeof summarizeRecord>;
@@ -41,7 +41,7 @@ function recordArtifact(record: TypedRecord): ArtifactIdentity | undefined {
 }
 
 export async function materializeRecord(
-  runtime: Pick<LocalRuntime, "openArtifact">,
+  runtime: Pick<CliRuntime, "openArtifact">,
   record: TypedRecord,
   destination: string,
 ): Promise<
@@ -60,7 +60,7 @@ export async function materializeRecord(
 }
 
 export async function materializeArtifact(
-  runtime: Pick<LocalRuntime, "openArtifact">,
+  runtime: Pick<CliRuntime, "openArtifact">,
   artifact: ArtifactIdentity,
   destination: string,
   subject = "Build archive",
@@ -135,6 +135,17 @@ function summarizeRecord(record: TypedRecord) {
   };
 }
 
+function catalogAliasType(
+  state: BuildState,
+  ref: BuildCatalogEntry["aliases"][number]["ref"],
+): TypeRef {
+  const type = ref.kind === "record"
+    ? state.program.records.find((record) => record.id === ref.id)?.type
+    : state.graph.outputs.find((output) => output.id === ref.id)?.type;
+  if (type === undefined) throw new Error(`Build Catalog alias references unknown ${ref.kind} ${ref.id}`);
+  return type;
+}
+
 /**
  * Public Logical Outputs that this exact Build actually selected and accepted.
  *
@@ -157,7 +168,7 @@ export function acceptedArchivedOutputs(
     if (record === undefined) return [];
     return [{
       name: alias.name,
-      type: alias.type,
+      type: record.type,
       output: alias.ref.id,
       candidate: selection.candidate,
       record: summarizeRecord(record),
@@ -251,7 +262,7 @@ export function inspectBuild(state: BuildState, catalog?: BuildCatalogEntry) {
               })();
           return {
             name: alias.name,
-            type: alias.type,
+            type: record?.type ?? catalogAliasType(state, alias.ref),
             ref: alias.ref,
             ...(record === undefined ? { accepted: false } : { accepted: true, record: record.id }),
           };

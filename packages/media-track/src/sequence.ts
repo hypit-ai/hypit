@@ -262,7 +262,7 @@ export function resolveMediaSequence(
       `Media Sequence ${spec.id} has overlapping Handoffs.`);
   }
   const members: MediaSequenceMemberProgram[] = memberSet.members.map((member, index) => {
-    const logicalSpan = schedule.exclusive[index]!.span;
+    const logicalSpan = schedule.exclusive[index]!;
     const incoming = handoffs[index - 1];
     const outgoing = handoffs[index];
     const visualSpan = {
@@ -400,7 +400,6 @@ export function lowerMediaSequencePresents(
     const outgoing = sequence.handoffs[index];
     const item: MediaItemProgram = {
       id: `${sequence.id}:${member.id}`,
-      sourceOccurrenceId: member.id,
       span: { ...member.visualSpan },
       frame: { ...sequence.frame },
       presentation: structuredClone(sequence.presentation),

@@ -22,7 +22,8 @@ Loader 能解析任意被显式锁定的包；但 TypeScript 不维护会掩盖�
 @narratage/elaborator            author declarations and Fragment expansion
 @narratage/run                   syntax-neutral Run Graph
 @narratage/validation            semantic admission
-@narratage/host                  Host-facing interfaces
+@narratage/host                  opaque Host-facet envelope
+@narratage/workspace             replaceable Source/Asset session
 @narratage/compiler-node         reference Node compiler Host
 @narratage/workspace-fs-node     workspace filesystem abstraction
 @narratage/component-kit         Producer/validator registration
@@ -227,3 +228,28 @@ SVML 使用按字节锁定的受信任代码执行。加载器会记录每个包
 `packages sync` 只增长或刷新库存，不会删除其他 Run 的根包。每次编译只激活当前 Source
 请求的精确子集，并把该子集摘要绑定进 Build；Runtime adapter 同样只激活 Profile 声明的
 精确子集。包字节改变后必须显式刷新库存。
+
+### 逻辑包地址与 Source 发现
+
+Source 写的是逻辑语言能力，不是 npm 位置。项目库存通过 `(Host ABI, 逻辑名)` 这对地址，
+把逻辑能力绑定到一个按字节锁定的物理包。因此 Module 与 Run Fragment 可以故意使用同一
+个名字而不会变成同一种能力；一个物理包也可以提供多个逻辑名字。
+
+编译首先只读取强制 Source Header，从可信库存解析对应 Frontend，调用该 Frontend 自己的
+`discover()`，继续解析它报告的 Module、Run Fragment 与子 Source，直到本次需要的精确包
+子集不再增长，然后才开始语义解码。Markup 是 video Distribution 的启动 Frontend；除此
+之外，Script、SVS、Run Markup 和第三方 Frontend 都走同一套发现协议，包选择器不再含有
+针对某种解析器的分支。
+
+Frontend 实现不是物理包格式里的特权字段。它们与 Run Fragment、Markup Surface、Runtime
+Adapter 一样，通过自己的 Host ABI 发布普通 facet；Frontend 使用
+`svml.source-frontend@1`，只有 Source Host 会解释它。
+
+Runtime Profile 也遵循同一规则。每个 `use` 选择的是 Endpoint Adapter ABI 或 Runtime Service
+Adapter ABI 加逻辑名；物理 npm 包只负责声明它提供这个逻辑能力。包名只是首次纳入库存的提示
+和 lockfile 事实，通用 CLI 不维护 Provider 注册表；同名的 Endpoint Adapter 与 Runtime
+Service Adapter 也不会互相冲突。
+
+逻辑名与物理 npm 包根同名时，`packages sync` 可以直接完成首次纳入。若一个物理合集包
+使用不同名字，开发者需先把它显式加入项目库存；此后 Source 仍只依赖逻辑名。系统绝不会
+仅因为 Source Header 写出了某个名字，就下载或执行一份尚未受信任的代码。

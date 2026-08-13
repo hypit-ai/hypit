@@ -480,10 +480,10 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
         contract: "svml.timed-caption-projection@1",
         displaySequenceId: display.id,
         cues: [{
-          id: `${mode}-${transition}-cue`, runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
-          startSec: 0, endSec: 4,
+          id: `${mode}-${transition}-cue`, styleId: style.id,
+          startFrame: 0, endFrameExclusive: 40,
           atoms: display.atoms.map((atom, atomIndex) => ({
-            atomId: atom.id, startSec: atomIndex, endSec: atomIndex + 1,
+            atomId: atom.id, startFrame: atomIndex * 10, endFrameExclusive: (atomIndex + 1) * 10,
           })),
           fields: [],
         }],
@@ -566,9 +566,9 @@ test("Fine Caption joined trail Pill follows real wrapped browser line fragments
     const projection: TimedCaptionProjection = {
       contract: "svml.timed-caption-projection@1", displaySequenceId: display.id,
       cues: [{
-        id: "joined-pill-cue", runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
-        startSec: 0, endSec: 6,
-        atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startSec: index, endSec: index + 1 })),
+        id: "joined-pill-cue", styleId: style.id,
+        startFrame: 0, endFrameExclusive: 60,
+        atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startFrame: index * 10, endFrameExclusive: (index + 1) * 10 })),
         fields: [],
       }],
     };
@@ -653,9 +653,9 @@ test("installed open fonts render CJK, emoji and independent stroke, shadow and 
         contract: "svml.timed-caption-projection@1",
         displaySequenceId: display.id,
         cues: [{
-          id: `${id}-cue`, runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
-          startSec: 0, endSec: durationSec,
-          atoms: display.atoms.map((atom) => ({ atomId: atom.id, startSec: 0, endSec: durationSec })),
+          id: `${id}-cue`, styleId: style.id,
+          startFrame: 0, endFrameExclusive: 1,
+          atoms: display.atoms.map((atom) => ({ atomId: atom.id, startFrame: 0, endFrameExclusive: 1 })),
           fields: [],
         }],
       };
@@ -838,12 +838,12 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
       contract: "svml.typography-track-program@1", id: "complete-text",
       items: [
         {
-          id: "point", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "point",
+          id: "point", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "point",
           geometry: { kind: "point", point: { contract: "svml.spatial-point@1", xPx: 160, yPx: 56 } },
           document: { paragraphs: [{ id: "point-p", inlines: [{ kind: "text", id: "point-r", text: "POINT" }] }] }, style: plain, motion: stillTextMotion(),
         },
         {
-          id: "multilingual", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "multilingual",
+          id: "multilingual", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "multilingual",
           geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 20, yPx: 100, widthPx: 300, heightPx: 180 } },
           document: { paragraphs: [{ id: "multi-p", inlines: [
             { kind: "text", id: "latin", text: "Intent " },
@@ -854,27 +854,27 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
           ] }] }, style: decorated, motion: stillTextMotion(),
         },
         {
-          id: "clip", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "clip",
+          id: "clip", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "clip",
           geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 345, yPx: 100, widthPx: 170, heightPx: 80 } },
           document: { paragraphs: [{ id: "clip-p", inlines: [{ kind: "text", id: "clip-r", text: "CLIPPED CONTENT MUST STAY INSIDE" }] }] }, style: clip, motion: stillTextMotion(),
         },
         {
-          id: "ellipsis", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "ellipsis",
+          id: "ellipsis", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "ellipsis",
           geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 535, yPx: 100, widthPx: 170, heightPx: 80 } },
           document: { paragraphs: [{ id: "ellipsis-p", inlines: [{ kind: "text", id: "ellipsis-r", text: "ELLIPSIS KEEPS A BOUNDED TWO LINE REGION" }] }] }, style: ellipsis, motion: stillTextMotion(),
         },
         {
-          id: "shrink", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "shrink",
+          id: "shrink", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "shrink",
           geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 725, yPx: 100, widthPx: 215, heightPx: 100 } },
           document: { paragraphs: [{ id: "shrink-p", inlines: [{ kind: "text", id: "shrink-r", text: "SHRINK PRESERVES EVERY AUTHORED WORD INSIDE ITS BOUND" }] }] }, style: shrink, motion: stillTextMotion(),
         },
         {
-          id: "sequence", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "sequence",
+          id: "sequence", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "sequence",
           geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 120, yPx: 490, widthPx: 360, heightPx: 100 } },
           document: { paragraphs: [{ id: "sequence-p", inlines: [{ kind: "text", id: "sequence-r", text: "ONE TWO THREE" }] }] }, style: plain, motion: animated,
         },
         {
-          id: "path", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "path",
+          id: "path", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "path",
           geometry: { kind: "path", path: { contract: "svml.spatial-path@1", commands: [
             { kind: "move", xPx: 80, yPx: 390 }, { kind: "cubic", control1X: 300, control1Y: 290, control2X: 650, control2Y: 470, xPx: 900, yPx: 350 },
           ] } },
@@ -901,7 +901,7 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
     const maskTrack = renderTextMaskTrack(space, sealTypographyTrackProgram({
       contract: "svml.typography-track-program@1", id: "mask-shape",
       items: [{
-        id: "mask", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "mask",
+        id: "mask", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "mask",
         geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 520, yPx: 500, widthPx: 380, heightPx: 120 } },
         document: { paragraphs: [{ id: "mask-p", inlines: [{ kind: "text", id: "mask-r", text: "MASK" }] }] },
         style: maskStyle, motion: stillTextMotion(),
@@ -1087,7 +1087,7 @@ test("Text box targets, rich runs and every sequence direction remain stable acr
             ...(lineUnit ? [{ kind: "break" as const, id: `${entry.id}-break` }, { kind: "text" as const, id: `${entry.id}-b`, text: "GAMMA" }] : []),
           ] }] };
         return {
-          id: entry.id, sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: entry.id,
+          id: entry.id, span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: entry.id,
           geometry: {
             kind: "area" as const,
             frame: {
@@ -1228,7 +1228,7 @@ test("vertical Text paints in its authored direction and bounded shrink fails cl
       tracks: [renderTypographyTrack(space, sealTypographyTrackProgram({
         contract: "svml.typography-track-program@1", id,
         items: [{
-          id, sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: 1 }, tieBreak: id,
+          id, span: { startFrame: 0, endFrameExclusive: 1 }, tieBreak: id,
           geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", ...frame } },
           document: { paragraphs: [{ id: `${id}-p`, inlines: [{ kind: "text", id: `${id}-r`, text }] }] },
           style: textStyle, motion: stillTextMotion(),
@@ -1638,12 +1638,12 @@ test("all four Ranking components paint frame-pure progressive states under part
       contract: "svml.complete-semantic-map@1" as const,
       tokens: [],
       anchors: [
-        { identity: "outer-start", timeSec: 0, frame: 0 },
-        { identity: "rank-1", timeSec: 2 / fps, frame: 2 },
-        { identity: "rank-2", timeSec: 8 / fps, frame: 8 },
-        { identity: "rank-3", timeSec: 14 / fps, frame: 14 },
-        { identity: "terminal", timeSec: 20 / fps, frame: 20 },
-        { identity: "outer-end", timeSec: frames / fps, frame: frames },
+        { identity: "outer-start", frame: 0 },
+        { identity: "rank-1", frame: 2 },
+        { identity: "rank-2", frame: 8 },
+        { identity: "rank-3", frame: 14 },
+        { identity: "terminal", frame: 20 },
+        { identity: "outer-end", frame: frames },
       ],
     };
     const outer = {

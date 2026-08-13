@@ -441,12 +441,9 @@ importers:
       '@narratage/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
-      '@narratage/host':
+      '@narratage/elaborator':
         specifier: workspace:*
-        version: link:../host
-      '@narratage/local':
-        specifier: workspace:*
-        version: link:../local
+        version: link:../elaborator
       '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
@@ -462,6 +459,13 @@ importers:
       '@narratage/source':
         specifier: workspace:*
         version: link:../source
+      '@narratage/workspace':
+        specifier: workspace:*
+        version: link:../workspace
+    devDependencies:
+      '@narratage/local':
+        specifier: workspace:*
+        version: link:../local
 
   packages/comment-sticker:
     dependencies:
@@ -523,9 +527,6 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../host
       '@narratage/markup':
         specifier: workspace:*
         version: link:../markup
@@ -535,10 +536,16 @@ importers:
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
+      '@narratage/workspace':
+        specifier: workspace:*
+        version: link:../workspace
     devDependencies:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/workspace-fs-node':
+        specifier: workspace:*
+        version: link:../workspace-fs-node
 
   packages/compiler-node:
     dependencies:
@@ -548,9 +555,6 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../host
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -563,9 +567,9 @@ importers:
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
-      '@narratage/workspace-fs-node':
+      '@narratage/workspace':
         specifier: workspace:*
-        version: link:../workspace-fs-node
+        version: link:../workspace
     devDependencies:
       '@narratage/markup':
         specifier: workspace:*
@@ -573,15 +577,15 @@ importers:
       '@narratage/run-markup':
         specifier: workspace:*
         version: link:../run-markup
+      '@narratage/workspace-fs-node':
+        specifier: workspace:*
+        version: link:../workspace-fs-node
 
   packages/component-kit:
     dependencies:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
 
   packages/composition:
     dependencies:
@@ -1316,9 +1320,6 @@ importers:
 
   packages/host:
     dependencies:
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1437,9 +1438,6 @@ importers:
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../host
       '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
@@ -1455,6 +1453,9 @@ importers:
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
+      '@narratage/workspace':
+        specifier: workspace:*
+        version: link:../workspace
     devDependencies:
       '@narratage/artifact-store-fs':
         specifier: workspace:*
@@ -1733,31 +1734,22 @@ importers:
 
   packages/package-loader-node:
     dependencies:
-      '@narratage/compiler-node':
-        specifier: workspace:*
-        version: link:../compiler-node
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
       '@narratage/host':
         specifier: workspace:*
         version: link:../host
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/run':
-        specifier: workspace:*
-        version: link:../run
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
     devDependencies:
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
+      '@narratage/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/program-space:
     dependencies:
@@ -2467,7 +2459,11 @@ importers:
         specifier: workspace:*
         version: link:../speech-evidence
 
-  packages/source: {}
+  packages/source:
+    dependencies:
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/spatial:
     dependencies:
@@ -2807,6 +2803,9 @@ importers:
 
   packages/validation:
     dependencies:
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
@@ -2831,12 +2830,9 @@ importers:
       '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
-      '@narratage/run-markup':
+      '@narratage/workspace-fs-node':
         specifier: workspace:*
-        version: link:../run-markup
-      '@narratage/source':
-        specifier: workspace:*
-        version: link:../source
+        version: link:../workspace-fs-node
 
   packages/visual-ir:
     dependencies:
@@ -2881,17 +2877,26 @@ importers:
         specifier: workspace:*
         version: link:../program-space
 
-  packages/workspace-fs-node:
+  packages/workspace:
     dependencies:
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../host
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/source':
+        specifier: workspace:*
+        version: link:../source
+
+  packages/workspace-fs-node:
+    dependencies:
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/source':
+        specifier: workspace:*
+        version: link:../source
+      '@narratage/workspace':
+        specifier: workspace:*
+        version: link:../workspace
 
   services/media-lambda:
     dependencies:
@@ -2938,9 +2943,6 @@ importers:
       '@narratage/fonts-open':
         specifier: workspace:*
         version: link:../../packages/fonts-open
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../../packages/host
       '@narratage/hyperframes':
         specifier: workspace:*
         version: link:../../packages/hyperframes
@@ -2962,6 +2964,9 @@ importers:
       '@narratage/video-cli':
         specifier: workspace:*
         version: link:../../packages/video-cli
+      '@narratage/workspace':
+        specifier: workspace:*
+        version: link:../../packages/workspace
       vite:
         specifier: 5.4.21
         version: 5.4.21(@types/node@24.10.1)

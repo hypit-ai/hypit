@@ -402,14 +402,12 @@ export function createS3ArtifactStorePackage(
     ...(options.forcePathStyle === undefined ? {} : { forcePathStyle: options.forcePathStyle }),
   });
   return defineRuntimeServicePackage({
-    name: instance,
     module: s3ArtifactStoreModuleRef,
     services: [{
       role: "artifact-store",
       facet: "artifact-store",
       instance,
       implementation: {
-        locator: "@narratage/artifact-store-s3/artifact-store",
         digest: s3ArtifactStoreImplementationDigest,
       },
       configuration,

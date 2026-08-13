@@ -91,7 +91,6 @@ function programInputs(inputs: ProducerHandlerContext["inputs"]) {
 }
 
 export const rankingComponent = {
-  name: "@narratage/ranking",
   producers: [
     {
       producer: rankingProducers.materializeTextItem,

@@ -40,7 +40,6 @@ async function project(service: (root: string) => RuntimeExternalService) {
         build: "state.builds",
         operations: "state.operations",
         dispatch: "state.dispatch",
-        journal: "state.journal",
         artifacts: "artifacts",
         credentials: ["credentials"],
       },

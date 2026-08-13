@@ -6,7 +6,7 @@ import type {
   Digest,
 } from "@narratage/protocol";
 import type { RuntimeClosure } from "./profile.js";
-import type { BuildDispatchSnapshot, BuildDispatchStore, RuntimeJournal } from "./dispatch.js";
+import type { BuildDispatchSnapshot, BuildDispatchStore } from "./dispatch.js";
 import type { OperationSnapshot } from "./operations.js";
 
 export type RuntimeBlockedCommand = {
@@ -39,7 +39,6 @@ export type RuntimeExecutionStores = {
   readonly builds: BuildStore;
   readonly operations: import("./operations.js").OperationStore;
   readonly dispatch: BuildDispatchStore;
-  readonly journal: RuntimeJournal;
   readonly artifacts: ArtifactStore;
 };
 
@@ -61,17 +60,12 @@ export type RuntimeWorkerFactoryOptions = {
   readonly scheduler: BuildSchedulerFactory;
   readonly stores: RuntimeExecutionStores;
   readonly scheduling: BuildSchedulerOptions;
-  readonly runtimeRevision: Digest;
-  readonly runtimeClosure?: RuntimeClosure;
+  readonly runtimeClosure: RuntimeClosure;
 };
 
 /** Selected execution strategy. Process supervision remains a generic Host concern. */
 export type RuntimeWorkerFactory = {
   create(executor: RuntimeCommandExecutor, options: RuntimeWorkerFactoryOptions): RuntimeWorker;
-};
-
-export type RuntimeQueueStatus = {
-  readonly dispatches: readonly BuildDispatchSnapshot[];
 };
 
 export type RuntimePreparation = {
@@ -172,7 +166,7 @@ export type ScheduledBuild = {
   readonly state: BuildState;
 };
 
-export type SchedulerJournalEntry = {
+export type SchedulerExecutionOutcome = {
   readonly command: string;
   readonly kind: CoreCommand["kind"];
   readonly resources: readonly string[];
@@ -187,14 +181,13 @@ export type ScheduledBuildResult = {
   readonly id: string;
   readonly status: "complete" | "paused" | "failed";
   readonly state: BuildState;
-  readonly journal: readonly SchedulerJournalEntry[];
+  readonly outcomes: readonly SchedulerExecutionOutcome[];
   readonly blocked: readonly RuntimeBlockedCommand[];
 };
 
 export type BuildSchedulerOptions = {
   readonly maxConcurrency?: number;
   readonly resourceLimits?: Readonly<Record<string, number>>;
-  readonly maxEventsPerBuild?: number;
   readonly runtimeClosure?: RuntimeClosure;
   /** Optional durable authority. When present, every accepted Core Event is persisted by CAS. */
   readonly buildStore?: BuildStore;

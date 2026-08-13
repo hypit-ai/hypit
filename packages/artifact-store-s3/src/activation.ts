@@ -98,7 +98,6 @@ const s3ArtifactStoreRuntimeAdapter = createRuntimeServiceAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/artifact-store-s3",
   hostFacets: [s3ArtifactStoreRuntimeAdapter],
 };
 

@@ -1,17 +1,17 @@
 import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   decodeHyperframesRenderSurface, renderHyperframesComponent, renderHyperframesManifest,
-  renderHyperframesModuleRef, renderHyperframesSurfaceImplementationDigest,
+  renderHyperframesModuleRef,
+  renderHyperframesMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/render-hyperframes",
-  modules: [{ manifest: renderHyperframesManifest, specifiers: ["@narratage/render-hyperframes", "@narratage/render-hyperframes@1"] }],
+  modules: [{ manifest: renderHyperframesManifest }],
   components: [renderHyperframesComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
-    module: renderHyperframesModuleRef, surface: "video", mode: "structured",
-    implementationDigest: renderHyperframesSurfaceImplementationDigest,
+    module: renderHyperframesModuleRef,
+    declaration: renderHyperframesMarkupSurfaces.find((item) => item.name === "video")!,
     handler: decodeHyperframesRenderSurface,
   })],
 };

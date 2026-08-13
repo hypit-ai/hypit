@@ -23,8 +23,8 @@ import type { ModuleManifest } from "@narratage/protocol";
 import {
   decodeScriptSurface,
   scriptManifest,
+  scriptMarkupSurfaces,
   scriptModuleRef,
-  scriptSurfaceImplementationDigest,
 } from "@narratage/script";
 import { speechBasisManifest, speechBasisProducers } from "@narratage/speech-basis";
 import { textComponent, textManifest } from "@narratage/text";
@@ -33,16 +33,16 @@ import { svsManifest, svsModuleRef, svsRecipeType } from "@narratage/svs";
 import {
   decodeSpeechSpineSurface,
   speechSpineManifest,
+  speechSpineMarkupSurfaces,
   speechSpineModuleRef,
   speechSpineProducers,
-  speechSpineSurfaceImplementationDigest,
 } from "@narratage/speech-spine";
 import {
   decodeCanvasSurface,
   decodeFrameSurface,
   spatialComponent,
+  spatialMarkupSurfaces,
   spatialModuleRef,
-  spatialSurfaceDigests,
 } from "@narratage/spatial";
 import {
   MarkupSurfaceRegistry,
@@ -52,16 +52,16 @@ import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validati
 
 const fixtureModule = { name: "example.speech-media", version: "1" } as const;
 const fixtureSurfaceDigest = digestOf("example.speech-media/surface@1");
+const fixtureSurface = {
+  name: "media", tag: "Media", mode: "structured", outputs: [artifactTypes.blob, svsRecipeType],
+  implementation: { digest: fixtureSurfaceDigest },
+} as const;
 const fixtureManifest: ModuleManifest = {
   format: "svml.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
   dependencies: [artifactDependency, mediaDependency, { module: svsModuleRef, digest: digestOf(svsManifest) }],
   types: [], capabilities: [], producers: [],
-  surfaces: [{
-    name: "media", tag: "Media", mode: "structured", outputs: [artifactTypes.blob, svsRecipeType],
-    implementation: { kind: "trusted-frontend-surface", locator: "example.speech-media/surface", digest: fixtureSurfaceDigest },
-  }],
 };
 
 function source(text: string): AuthorSourceUnit {
@@ -85,11 +85,11 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
     fixtureManifest,
   ]);
   const surfaces = new MarkupSurfaceRegistry();
-  surfaces.registerRaw(scriptModuleRef, "script", scriptSurfaceImplementationDigest, decodeScriptSurface);
-  surfaces.registerStructured(speechSpineModuleRef, "spine", speechSpineSurfaceImplementationDigest, decodeSpeechSpineSurface);
-  surfaces.registerStructured(spatialModuleRef, "canvas", spatialSurfaceDigests.canvas, decodeCanvasSurface);
-  surfaces.registerStructured(spatialModuleRef, "frame", spatialSurfaceDigests.frame, decodeFrameSurface);
-  surfaces.registerStructured(fixtureModule, "media", fixtureSurfaceDigest, ({ element }) => ({
+  surfaces.registerRaw({ module: scriptModuleRef, declaration: scriptMarkupSurfaces[0]!, handler: decodeScriptSurface });
+  surfaces.registerStructured({ module: speechSpineModuleRef, declaration: speechSpineMarkupSurfaces.find((item) => item.name === "spine")!, handler: decodeSpeechSpineSurface });
+  surfaces.registerStructured({ module: spatialModuleRef, declaration: spatialMarkupSurfaces.find((item) => item.name === "canvas")!, handler: decodeCanvasSurface });
+  surfaces.registerStructured({ module: spatialModuleRef, declaration: spatialMarkupSurfaces.find((item) => item.name === "frame")!, handler: decodeFrameSurface });
+  surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
       ...["take-one", "take-two", "voice-one"].map((id) => ({
         id, type: artifactTypes.blob,
@@ -106,7 +106,7 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
       },
     ],
     components: [], fragments: [],
-  }));
+  }) });
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
@@ -146,8 +146,8 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
     resolveSource() { throw new Error("fixture has no source imports"); },
   });
   const target = resolveCompiledSourceExport(compiled, "speech.visual", compositionTypes.visualTrack);
-  const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
-    graph: compiled.elaboration.graph.id,
+  const build = start(compiled.program, compiled.graph, sealBuildRequest({
+    graph: compiled.graph.id,
     targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
   }));
   const names = build.plan.steps.map((step) => step.producer.name);

@@ -11,7 +11,7 @@ One Run Source is self-described and names one Author Source explicitly:
   <target output="final.video"/>
 
   <build-record id="opening" build="prior-build-id" output="opening-take"/>
-  <file id="approved" from="./approved.mp4" media-type="video/mp4"/>
+  <file id="approved" type="@narratage/artifact@1#BlobArtifact" from="./approved.mp4" media-type="video/mp4"/>
   <satisfy output="opening-take" candidate="opening"/>
 </svrun>
 ```
@@ -19,8 +19,9 @@ One Run Source is self-described and names one Author Source explicitly:
 The Author Source's own Header—not this file and not its suffix—selects its Author Frontend.
 
 `<value>` declares a typed zero-input `StoredValue`. `<file>` content-addresses ordinary source
-bytes as a zero-input BlobArtifact Candidate. `<build-record>` exposes a verified prior
-Build Record as a zero-input Candidate. `<fragment>` instantiates a trusted package Fragment and may
+bytes as the explicitly named blob Type; Run itself does not assume an Artifact module.
+`<build-record>` exposes a verified prior Build Record as a zero-input Candidate. `<fragment>`
+instantiates a trusted package Fragment and may
 export several Candidates backed by shared Operations. Two declarations are two instances; one
 declaration with several exports is one instance.
 

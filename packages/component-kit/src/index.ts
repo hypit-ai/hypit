@@ -7,12 +7,26 @@ import type {
   TypeRef,
   TypedRecord,
 } from "@narratage/protocol";
-import type {
-  TypeValidatorHandler,
-  TypeValidatorRegistrar,
-} from "@narratage/validation";
 
 export type Awaitable<T> = T | Promise<T>;
+
+export type TypeValidatorContext = {
+  readonly type: TypeRef;
+  readonly value: StoredValue;
+};
+
+export type TypeValidatorHandler = (
+  context: TypeValidatorContext,
+) => void | Promise<void>;
+
+/** Minimal structural port implemented by a validation Host. */
+export interface TypeValidatorRegistrar {
+  register(
+    type: TypeRef,
+    implementationDigest: Digest,
+    handler: TypeValidatorHandler,
+  ): void;
+}
 
 export type ProducerHandlerResult = {
   readonly outputs: Readonly<Record<string, StoredValue>>;
@@ -76,7 +90,6 @@ export function registerTypeValidatorFacets(
 
 /** Trusted deterministic implementation package; it selects no Provider or Runtime service. */
 export type ComponentPackage = {
-  readonly name: string;
   readonly producers?: readonly ProducerFacet[];
   readonly validators?: readonly TypeValidatorFacet[];
 };

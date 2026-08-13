@@ -1,4 +1,4 @@
-import { digestOf } from "@narratage/core";
+import { digestOf } from "@narratage/protocol";
 
 import { ScriptSyntaxError } from "./error.js";
 import { narrativeValue } from "./narrative.js";

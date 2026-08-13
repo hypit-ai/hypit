@@ -27,7 +27,6 @@ const keychainCredentialStoreRuntimeAdapter = createRuntimeServiceAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/credential-store-keychain",
   hostFacets: [keychainCredentialStoreRuntimeAdapter],
 };
 

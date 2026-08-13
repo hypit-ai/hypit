@@ -9,7 +9,6 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 /** Cue and field facts meet only proven whole-Atom speech time here. */
 export const plannedCaptionTimingFragment = sealGraphFragment({
-  name: "@narratage/caption/planned-timing@1",
   inputs: [
     { name: "display", type: narrativeTypes.captionDisplay },
     { name: "correspondence", type: narrativeTypes.captionCorrespondence },

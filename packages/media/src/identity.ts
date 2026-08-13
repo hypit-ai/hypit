@@ -201,7 +201,6 @@ export function verifyRenderedVisual(value: unknown): asserts value is RenderedV
   positiveInteger(item.canvas?.height, "RenderedVisual.canvas.height");
   verifyBlob(item.artifact, "RenderedVisual.artifact");
   assert(item.artifact.mediaType.startsWith("video/"), "RenderedVisual Artifact must be video");
-  assert(item.muted === true, "RenderedVisual must be silent");
 }
 
 export function sealTimelineAudio(value: TimelineAudio): TimelineAudio {
@@ -213,10 +212,7 @@ export function verifyTimelineAudio(value: unknown): asserts value is TimelineAu
   assert(item.contract === "svml.timeline-audio@1", "TimelineAudio contract is invalid");
   verifyBlob(item.artifact, "TimelineAudio.artifact");
   assert(item.artifact.mediaType === "audio/wav", "TimelineAudio Artifact must be WAV");
-  assert(item.codec === "pcm_s16le" && item.sampleRate === 48_000 && item.channels === 2,
-    "TimelineAudio PCM shape is invalid");
   positiveInteger(item.sampleFrames, "TimelineAudio.sampleFrames");
-  assert(item.loudness === "planned", "TimelineAudio loudness claim is invalid");
 }
 
 export function sealMuxedMedia(value: MuxedMedia): MuxedMedia {

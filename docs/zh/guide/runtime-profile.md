@@ -27,7 +27,6 @@ Runtime Profile 声明冻结后的 Build *在哪里*执行：Scheduler、Worker�
       "build": "state.builds",
       "operations": "state.operations",
       "dispatch": "state.dispatch",
-      "journal": "state.journal",
       "artifacts": "artifacts",
       "credentials": ["credentials.keychain"]
     }
@@ -47,7 +46,7 @@ Runtime Profile 声明冻结后的 Build *在哪里*执行：Scheduler、Worker�
 ```
 
 `runtimeServices` 激活已安装的实现；`services` 按实例 id 逐项选择 Scheduler、Worker、
-BuildStore、OperationStore、DispatchStore、RuntimeJournal、ArtifactStore 和一个或多个
+BuildStore、OperationStore、DispatchStore、ArtifactStore 和一个或多个
 CredentialStore。不存在“因为只装了一个所以自动选中”，`@narratage/local` 也不补 SQLite、文件系统或凭据默认值。
 
 凭据只写地址：`{ "store": "…", "key": "…" }`，秘密字节不进 Profile。多个 Store 可以并存，每个 Store 只响应属于自己命名空间的引用。
@@ -87,7 +86,7 @@ node --run narratage -- runtime logs svml.runtime.json
 node --run narratage -- runtime down svml.runtime.json
 ```
 
-`runtime up` 管理耐久 Worker 与声明的外部程序。`services up/status/down` 只管理外部程序，不会启动 Worker。`build` 会确保 Runtime 已启动，但 Build 所在终端从不拥有执行权。后台进程绑定覆盖 Profile 与两份 package lock 的有效修订摘要；任一文件变化后状态变为
+`runtime up` 管理耐久 Worker 与声明的外部程序。`services up/status/down` 只管理外部程序，不会启动 Worker。`build` 会确保 Runtime 已启动，但 Build 所在终端从不拥有执行权。Distribution 提供一个不透明 Runtime 修订；官方 JSON Profile 让它覆盖 Profile 与两份 package lock，通用 CLI 不解释其语法。任一文件变化后状态变为
 `stale`，下一次启动或提交会按新执行闭包替换进程，而不是继续复用旧装配。
 
 `doctor` 会求值 Endpoint Adapter 唯一的纯 `activate()` 声明，并直接从产生的 Endpoint package
@@ -124,4 +123,6 @@ Build 取消先关闭准入；Operation 取消只抑制那个精确实现。`acc
 
 ## 嵌入 API
 
-CLI 只接受声明式 JSON Profile。嵌入 Narratage 的应用可以通过 `@narratage/local` 直接组装相同的 Runtime 角色；这属于应用代码，而不是第二种 CLI Profile 文件。
+官方 video Distribution 目前按 JSON 解析声明式 Runtime Profile；通用 CLI 不给 `.json`
+后缀任何语义，只把文档交给 Distribution。嵌入 Narratage 的应用可以通过
+`@narratage/local` 直接组装相同的 Runtime 角色。

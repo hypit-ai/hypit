@@ -328,7 +328,6 @@ export function renderDepthStack(
       }
       const mediaItem: MediaItemProgram = {
         id: "deck-material",
-        sourceOccurrenceId: card.id,
         span: { startFrame: stageStart, endFrameExclusive: stageEnd },
         frame: localFrame(program.frame),
         presentation: structuredClone(program.spec.presentation),

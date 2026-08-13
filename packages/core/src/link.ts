@@ -13,17 +13,14 @@ import type {
   TypeRef,
   TypedModule,
   TypedRecord,
-  TypeValidationReceipt,
 } from "@narratage/protocol";
 
 import { digestOf, isDigest, recordDigest, semanticRecordsDigest } from "./canonical.js";
-import { CoreError, invariant } from "./error.js";
+import { invariant } from "./error.js";
 import { capabilityKey, moduleKey, producerKey, sameModule, sameType, typeKey } from "./reference.js";
 import { validateStoredValue } from "./schema.js";
 
 export type TypedRecordDraft = Omit<TypedRecord, "digest">;
-
-type TypeValidationReceiptDraft = Omit<TypeValidationReceipt, "format" | "id">;
 
 function manifestRef(manifest: ModuleManifest): ModuleRef {
   return { name: manifest.name, version: manifest.version };
@@ -94,8 +91,6 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
     );
     ensureUniqueNames(module.manifest.types.map((item) => item.name), "type", key);
     ensureUniqueNames(module.manifest.capabilities.map((item) => item.name), "capability", key);
-    ensureUniqueNames(module.manifest.surfaces.map((item) => item.name), "surface", key);
-    ensureUniqueNames(module.manifest.surfaces.map((item) => item.tag), "surface tag", key);
     ensureUniqueNames(module.manifest.producers.map((item) => item.name), "producer", key);
     ensureUniqueNames(
       module.manifest.dependencies.map((item) => moduleKey(item.module)),
@@ -104,17 +99,6 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
     );
     for (const type of module.manifest.types) {
       if (type.validator === undefined) continue;
-      invariant(
-        type.validator.abi === "svml.type-validator@1",
-        "UNSUPPORTED_TYPE_VALIDATOR",
-        `${key}#${type.name} validator ABI is unsupported`,
-      );
-      invariant(
-        type.validator.implementation.kind.length > 0
-          && type.validator.implementation.locator.length > 0,
-        "INVALID_TYPE_VALIDATOR",
-        `${key}#${type.name} validator implementation is incomplete`,
-      );
       invariant(
         isDigest(type.validator.implementation.digest),
         "INVALID_DIGEST",
@@ -134,24 +118,6 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
         isDigest(producer.implementation.digest),
         "INVALID_DIGEST",
         `${key}#${producer.name} implementation digest is invalid`,
-      );
-    }
-    for (const surface of module.manifest.surfaces) {
-      invariant(surface.tag.length > 0, "EMPTY_NAME", `${key} surface tag is empty`);
-      ensureUniqueNames(
-        surface.outputs.map((output) => typeKey(output)),
-        "Surface output type",
-        `${key}#${surface.name}`,
-      );
-      invariant(
-        surface.mode === "raw" || surface.mode === "structured",
-        "UNSUPPORTED_SURFACE_MODE",
-        `${key}#${surface.name} has unsupported Surface mode ${surface.mode}`,
-      );
-      invariant(
-        isDigest(surface.implementation.digest),
-        "INVALID_DIGEST",
-        `${key}#${surface.name} Surface implementation digest is invalid`,
       );
     }
     modules.set(key, module);
@@ -184,21 +150,6 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
       moduleKey(module.ref),
       ...module.manifest.dependencies.map((dependency) => moduleKey(dependency.module)),
     ]);
-    for (const surface of module.manifest.surfaces) {
-      for (const output of surface.outputs) {
-        invariant(
-          allowed.has(moduleKey(output.module)),
-          "UNDECLARED_TYPE_DEPENDENCY",
-          `${moduleKey(module.ref)}#${surface.name} Surface outputs ${typeKey(output)} without a dependency`,
-        );
-        const target = modules.get(moduleKey(output.module));
-        invariant(
-          target?.manifest.types.some((type) => type.name === output.name),
-          "UNKNOWN_TYPE",
-          `${moduleKey(module.ref)}#${surface.name} Surface outputs unknown type ${typeKey(output)}`,
-        );
-      }
-    }
     for (const producer of module.manifest.producers) {
       for (const port of [...producer.inputs, ...producer.outputs]) {
         invariant(
@@ -299,37 +250,6 @@ export function sealRecord(record: TypedRecordDraft): TypedRecord {
   return { ...record, digest: recordDigest(record.type, record.value) };
 }
 
-export function sealTypeValidationReceipt(
-  receipt: TypeValidationReceiptDraft,
-): TypeValidationReceipt {
-  const content = {
-    format: "svml.type-validation@1" as const,
-    type: receipt.type,
-    recordDigest: receipt.recordDigest,
-    validatorDigest: receipt.validatorDigest,
-  };
-  return { ...content, id: digestOf(content) };
-}
-
-export function verifyTypeValidationReceipt(
-  receipt: TypeValidationReceipt,
-  type: TypeRef,
-  record: Digest,
-  validator: Digest,
-): void {
-  invariant(receipt.format === "svml.type-validation@1", "UNSUPPORTED_TYPE_VALIDATION", "unsupported validation receipt");
-  invariant(isDigest(receipt.id), "INVALID_DIGEST", "validation receipt id is invalid");
-  invariant(sameType(receipt.type, type), "TYPE_VALIDATION_TYPE_MISMATCH", "validation receipt belongs to another type");
-  invariant(receipt.recordDigest === record, "TYPE_VALIDATION_RECORD_MISMATCH", "validation receipt belongs to another value");
-  invariant(
-    receipt.validatorDigest === validator,
-    "TYPE_VALIDATOR_DIGEST_MISMATCH",
-    "validation receipt was issued by another validator",
-  );
-  const { id: _id, ...content } = receipt;
-  invariant(receipt.id === digestOf(content), "TYPE_VALIDATION_DIGEST_MISMATCH", "validation receipt content differs");
-}
-
 export function verifyRecordStructure(
   closure: ResolvedModuleClosure,
   record: TypedRecord,
@@ -344,20 +264,6 @@ export function verifyRecordStructure(
   );
   const declaration = resolveType(closure, record.type);
   validateStoredValue(record.value, declaration.schema, `$record.${record.id}`);
-  if (record.validation !== undefined) {
-    invariant(
-      declaration.validator !== undefined,
-      "UNEXPECTED_TYPE_VALIDATION",
-      `${record.id} carries validation for a type with no validator`,
-      record.id,
-    );
-    verifyTypeValidationReceipt(
-      record.validation,
-      record.type,
-      record.digest,
-      declaration.validator.implementation.digest,
-    );
-  }
 }
 
 export function verifyRecord(
@@ -365,26 +271,14 @@ export function verifyRecord(
   record: TypedRecord,
 ): void {
   verifyRecordStructure(closure, record);
-  const declaration = resolveType(closure, record.type);
-  invariant(
-    declaration.validator === undefined || record.validation !== undefined,
-    "TYPE_VALIDATION_REQUIRED",
-    `${record.id} requires ${declaration.validator?.implementation.locator ?? "type validation"}`,
-    record.id,
-  );
 }
 
 export function sealTypedModule(input: {
-  readonly id: string;
-  readonly closureDigest: Digest;
   readonly records: readonly TypedRecord[];
 }): TypedModule {
   return {
     format: "svml.typed-module@1",
-    id: input.id,
-    closureDigest: input.closureDigest,
     records: input.records,
-    semanticDigest: semanticRecordsDigest(input.records),
   };
 }
 
@@ -393,7 +287,6 @@ export function link(
   typedModules: readonly TypedModule[],
 ): LinkedProgram {
   verifyClosure(closure);
-  const moduleIds = new Set<string>();
   const recordIds = new Set<string>();
   const records: TypedRecord[] = [];
 
@@ -401,26 +294,14 @@ export function link(
     invariant(
       typedModule.format === "svml.typed-module@1",
       "UNSUPPORTED_TYPED_MODULE",
-      `${typedModule.id} has an unsupported format`,
-    );
-    invariant(!moduleIds.has(typedModule.id), "DUPLICATE_TYPED_MODULE", typedModule.id, typedModule.id);
-    moduleIds.add(typedModule.id);
-    invariant(
-      typedModule.closureDigest === closure.digest,
-      "TYPED_MODULE_CLOSURE_MISMATCH",
-      `${typedModule.id} was decoded against another module closure`,
-    );
-    invariant(
-      typedModule.semanticDigest === semanticRecordsDigest(typedModule.records),
-      "SEMANTIC_DIGEST_MISMATCH",
-      `${typedModule.id} semantic digest does not match`,
+      "typed record set has an unsupported format",
     );
     for (const record of typedModule.records) {
       invariant(!recordIds.has(record.id), "DUPLICATE_RECORD", `duplicate record ${record.id}`, record.id);
       invariant(
         record.origin.kind === "authored",
         "NON_AUTHORED_MODULE_RECORD",
-        `${typedModule.id} contains a non-authored input record`,
+        "typed records contain a non-authored input record",
         record.id,
       );
       verifyRecord(closure, record);
@@ -429,23 +310,25 @@ export function link(
     }
   }
 
-  return {
+  const program: LinkedProgram = {
     closure,
-    modules: typedModules,
     records,
-    semanticDigest: digestOf(
-      [...typedModules]
-        .sort((left, right) => left.id.localeCompare(right.id))
-        .map((module) => ({ id: module.id, semanticDigest: module.semanticDigest })),
-    ),
+    semanticDigest: semanticRecordsDigest(records),
   };
+  verifyLinkedProgram(program);
+  return program;
 }
 
-export function assertKnownType(closure: ResolvedModuleClosure, ref: TypeRef): void {
-  try {
-    resolveType(closure, ref);
-  } catch (error) {
-    if (error instanceof CoreError) throw error;
-    throw error;
+export function verifyLinkedProgram(program: LinkedProgram): void {
+  verifyClosure(program.closure);
+  const ids = new Set<string>();
+  for (const record of program.records) {
+    invariant(!ids.has(record.id), "DUPLICATE_RECORD", `duplicate record ${record.id}`, record.id);
+    ids.add(record.id);
+    invariant(record.origin.kind === "authored", "NON_AUTHORED_PROGRAM_RECORD",
+      `${record.id} is not an authored input record`, record.id);
+    verifyRecord(program.closure, record);
   }
+  invariant(program.semanticDigest === semanticRecordsDigest(program.records),
+    "PROGRAM_SEMANTIC_DIGEST_MISMATCH", "linked program semantic digest does not match");
 }

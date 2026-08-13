@@ -3,7 +3,6 @@ import { verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, ve
 import { mediaTypes, mediaValidatorDigests } from "./manifest.js";
 function inline(value: { readonly kind: string; readonly value?: unknown }, subject: string): unknown { if (value.kind !== "inline") throw new Error(`${subject} must be inline`); return value.value; }
 export const mediaComponent = {
-  name: "@narratage/media",
   validators: [
     { type: mediaTypes.inspection, implementationDigest: mediaValidatorDigests.inspection, handler: ({ value }) => verifyMediaInspection(inline(value, "MediaInspection")) },
     { type: mediaTypes.streamSelection, implementationDigest: mediaValidatorDigests.selection, handler: ({ value }) => verifyMediaStreamSelection(inline(value, "MediaStreamSelection")) },

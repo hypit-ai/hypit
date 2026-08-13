@@ -1,6 +1,8 @@
 import type {
   BuildPlan,
   BuildRequest,
+  BuildState,
+  CapabilityRef,
   CompiledGraph,
   GraphValueRef,
   LinkedProgram,
@@ -64,10 +66,35 @@ type ProducedRecord = {
   readonly step?: string;
 };
 
+export type PlannedNeed = {
+  readonly capability: CapabilityRef;
+  readonly returns: TypeRef;
+};
+
+function plannedNeedKey(need: PlannedNeed): string {
+  const ref = (value: { readonly module: { readonly name: string; readonly version: string }; readonly name: string }) =>
+    `${value.module.name}@${value.module.version}#${value.name}`;
+  return `${ref(need.capability)} -> ${ref(need.returns)}`;
+}
+
+/** External requirements declared by the exact finite BuildPlan. */
+export function plannedNeeds(state: BuildState): readonly PlannedNeed[] {
+  const found = new Map<string, PlannedNeed>();
+  for (const step of state.plan.steps) {
+    const producer = resolveProducer(state.program.closure, step.producer);
+    for (const need of producer.needs) {
+      const item = { capability: need.capability, returns: need.returns };
+      found.set(plannedNeedKey(item), item);
+    }
+  }
+  return [...found.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, value]) => structuredClone(value));
+}
+
 function planContent(
   graph: CompiledGraph,
   request: BuildRequest,
-  initialValues: readonly TypedRecord[],
   steps: readonly ProducerStep[],
   goals: BuildPlan["goals"],
   selections: BuildPlan["selections"],
@@ -76,7 +103,6 @@ function planContent(
     format: "svml.plan@1",
     graph: graph.id,
     request: request.digest,
-    initialValues,
     steps,
     goals,
     selections,
@@ -91,7 +117,6 @@ export function compileBuild(
   verifyBuildRequest(program, graph, request);
 
   const authored = new Map(program.records.map((record) => [record.id, record]));
-  const initialValues = new Map<string, TypedRecord>();
   const demanded = new Map<string, DemandedOperation>();
   const resolvedOutputs = new Map<string, ResolvedSource>();
   const resolvingOutputs = new Set<string>();
@@ -151,23 +176,9 @@ export function compileBuild(
         origin: {
           kind: "provided",
         },
-        ...(candidate.root.value.validation === undefined
-          ? {}
-          : { validation: candidate.root.value.validation }),
       });
       verifyRecord(program.closure, record);
       invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`);
-      const previous = initialValues.get(record.id);
-      if (previous === undefined) {
-        initialValues.set(record.id, record);
-      } else {
-        invariant(
-          canonicalStringify(previous) === canonicalStringify(record),
-          "PROVIDED_RECORD_CONFLICT",
-          `${record.id} has conflicting Provided Values`,
-          record.id,
-        );
-      }
       resolved = { record: record.id, type: record.type };
     } else {
       resolved = demandOperation(candidate.root.result.operation);
@@ -208,9 +219,8 @@ export function compileBuild(
   const goals = targetSources
     .map(({ source }) => ({ record: source.record, type: source.type }))
     .sort((a, b) => a.record.localeCompare(b.record));
-  const sortedInitial = [...initialValues.values()].sort((a, b) => a.id.localeCompare(b.id));
   const sortedSelections = [...selections.values()].sort((a, b) => a.output.localeCompare(b.output));
-  const content = planContent(graph, request, sortedInitial, steps, goals, sortedSelections);
+  const content = planContent(graph, request, steps, goals, sortedSelections);
   const plan: BuildPlan = { ...content, id: digestOf(content) };
   validatePlanStructure(program, graph, request, plan);
   return plan;
@@ -231,8 +241,7 @@ function validatePlanStructure(
 
   const records = new Map<RecordId, ProducedRecord>();
   for (const record of program.records) records.set(record.id, { type: record.type });
-  for (const record of plan.initialValues) {
-    verifyRecord(program.closure, record);
+  for (const record of selectedProvidedRecords(program, graph, plan)) {
     invariant(!records.has(record.id), "DUPLICATE_RECORD", `record ${record.id} has multiple sources`, record.id);
     records.set(record.id, { type: record.type });
   }
@@ -310,6 +319,39 @@ export function validatePlan(
     "PLAN_NOT_DERIVED",
     "build plan is not the plan compiled from its graph and BuildRequest",
   );
+}
+
+/** Materialize selected zero-input values from their sole source of truth: the Run Graph. */
+export function selectedProvidedRecords(
+  program: LinkedProgram,
+  graph: CompiledGraph,
+  plan: BuildPlan,
+): readonly TypedRecord[] {
+  const authored = new Set(program.records.map((record) => record.id));
+  const records = new Map<string, TypedRecord>();
+  for (const selection of plan.selections) {
+    const candidate = graph.candidates.find((item) => item.id === selection.candidate);
+    invariant(candidate !== undefined, "UNKNOWN_CANDIDATE", `unknown Candidate ${selection.candidate}`, selection.candidate);
+    if (candidate.root.kind !== "value") continue;
+    const record = sealRecord({
+      id: candidate.root.value.id,
+      type: candidate.type,
+      value: candidate.root.value.value,
+      origin: { kind: "provided" },
+    });
+    verifyRecord(program.closure, record);
+    invariant(selection.record === record.id, "SELECTION_RECORD_MISMATCH", `${selection.output} does not select ${record.id}`);
+    invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`, record.id);
+    const previous = records.get(record.id);
+    invariant(
+      previous === undefined || canonicalStringify(previous) === canonicalStringify(record),
+      "PROVIDED_RECORD_CONFLICT",
+      `${record.id} has conflicting Provided Values`,
+      record.id,
+    );
+    records.set(record.id, record);
+  }
+  return [...records.values()].sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function assertAcyclic(plan: BuildPlan, records: ReadonlyMap<RecordId, ProducedRecord>): void {

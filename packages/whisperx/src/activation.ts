@@ -1,17 +1,17 @@
 import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
-  decodeWhisperXAlignmentSurface, whisperXComponent, whisperXImplementationDigests,
+  decodeWhisperXAlignmentSurface, whisperXComponent,
   whisperXManifest, whisperXModuleRef,
+  whisperXMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/whisperx",
-  modules: [{ manifest: whisperXManifest, specifiers: ["@narratage/whisperx", "@narratage/whisperx@1"] }],
+  modules: [{ manifest: whisperXManifest }],
   components: [whisperXComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
-    module: whisperXModuleRef, surface: "alignment", mode: "structured",
-    implementationDigest: whisperXImplementationDigests.surface,
+    module: whisperXModuleRef,
+    declaration: whisperXMarkupSurfaces.find((item) => item.name === "alignment")!,
     handler: decodeWhisperXAlignmentSurface,
   })],
 };

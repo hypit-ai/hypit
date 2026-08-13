@@ -3,12 +3,10 @@ import type {
   Digest,
   LogicalOutputRef,
   RecordRef,
-  TypeRef,
 } from "@narratage/protocol";
 
 export type BuildCatalogAlias = {
   readonly name: string;
-  readonly type: TypeRef;
   readonly ref: RecordRef | LogicalOutputRef;
 };
 
@@ -42,12 +40,6 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function verifyType(type: TypeRef, subject: string): void {
-  assert(type.module.name.trim().length > 0, `${subject} module name is empty`);
-  assert(type.module.version.trim().length > 0, `${subject} module version is empty`);
-  assert(type.name.trim().length > 0, `${subject} type name is empty`);
-}
-
 export function verifyBuildCatalogDescriptor(descriptor: BuildCatalogDescriptor): void {
   assert(descriptor.format === "svml.build-catalog-descriptor@1", "Build Catalog descriptor format is invalid");
   assert(isDigest(descriptor.core), "Build Catalog Core identity is invalid");
@@ -61,7 +53,6 @@ export function verifyBuildCatalogDescriptor(descriptor: BuildCatalogDescriptor)
     assert(alias.name.trim().length > 0, "Build Catalog alias name is empty");
     assert(!names.has(alias.name), `Build Catalog repeats alias ${alias.name}`);
     names.add(alias.name);
-    verifyType(alias.type, `Build Catalog alias ${alias.name}`);
     assert(alias.ref.kind === "record" || alias.ref.kind === "logical-output",
       `Build Catalog alias ${alias.name} has an unsupported reference`);
     assert(alias.ref.id.trim().length > 0, `Build Catalog alias ${alias.name} reference is empty`);

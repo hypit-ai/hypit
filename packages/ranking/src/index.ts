@@ -64,7 +64,7 @@ export {
   rankingItemSpecSchema,
   rankingTextItemShellSchema,
   rankingItemSpecSetSchema,
-  rankingManifest,
+  rankingManifest, rankingMarkupSurfaces,
   rankingManifestDigest,
   rankingModuleRef,
   rankingProducers,

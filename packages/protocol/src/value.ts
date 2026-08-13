@@ -66,3 +66,20 @@ export type ObjectFieldSchema = {
   readonly schema: ValueSchema;
   readonly optional?: boolean;
 };
+
+/** Structural schema for a BlobRef nested inside an inline value. */
+export function blobRefObjectSchema(mediaTypes?: readonly string[]): ValueSchema {
+  return {
+    kind: "object",
+    fields: {
+      kind: { schema: { kind: "literal", value: "blob" } },
+      digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
+      size: { schema: { kind: "number", integer: true, minimum: 0 } },
+      mediaType: {
+        schema: mediaTypes === undefined
+          ? { kind: "string", minLength: 1 }
+          : { kind: "string", enum: mediaTypes },
+      },
+    },
+  };
+}

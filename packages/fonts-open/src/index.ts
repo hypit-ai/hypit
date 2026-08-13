@@ -12,7 +12,7 @@ export type {
 export {
   fontsOpenFaceSurfaceImplementationDigest,
   fontsOpenStackSurfaceImplementationDigest,
-  fontsOpenManifest,
+  fontsOpenManifest, fontsOpenMarkupSurfaces,
   fontsOpenManifestDigest,
   fontsOpenModuleRef,
 } from "./manifest.js";

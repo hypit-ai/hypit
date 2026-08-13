@@ -26,6 +26,12 @@ export {
   verifyRunSourceClosure,
 } from "./frontend.js";
 export {
+  createRunFrontendHostFacet,
+  installRunFrontendHostFacets,
+  runFrontendsFromHostFacets,
+} from "./frontend-facet.js";
+export type { RunFrontendHostFacet } from "./frontend-facet.js";
+export {
   RunGraphError,
   sealRunGraph,
   verifyRunGraph,

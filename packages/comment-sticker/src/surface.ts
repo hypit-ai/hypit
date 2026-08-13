@@ -244,7 +244,7 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
   if (items.length === 0) throw new Error(`${element.name} requires at least one Sticker.`);
   if (usesMap) inputs.map = reference(element.attributes.map, `${element.name}.map`, semanticMapTypes.complete, resolveReference).ref;
   else if (element.attributes.map !== undefined) throw new Error(`${element.name}.map is unused.`);
-  const fragment = createCommentStickerFragment(items, `@narratage/comment-sticker/surface/${id}@1`);
+  const fragment = createCommentStickerFragment(items);
   return {
     records,
     components: [{ id, fragment: fragment.id, inputs, outputs: { program: `${id}.program`, track: `${id}.track` }, range: element.range }],

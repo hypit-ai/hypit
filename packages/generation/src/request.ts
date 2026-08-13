@@ -27,7 +27,6 @@ export const GENERATION_MEDIA_BINDING_V1 = "svml.generation-media-binding@1" as 
 
 export type GenerationRequest = {
   readonly contract: "svml.generation-request@1";
-  readonly model: string;
   /** An absent port is an omitted key. A present port always carries at least one value. */
   readonly ports: Readonly<Record<string, readonly GenerationPortValue[]>>;
 };
@@ -39,7 +38,6 @@ export type GenerationRequest = {
  */
 export type GenerationRequestDraft = {
   readonly contract: "svml.generation-request-draft@1";
-  readonly model: string;
   readonly ports: Readonly<Record<string, readonly GenerationPortValue[]>>;
 };
 
@@ -159,7 +157,6 @@ export function portsObjectSchema(
 export function requestSchemaFromPorts(table: GenerationPortTable): ValueSchema {
   return generationObjectSchema({
     contract: { schema: { kind: "literal", value: GENERATION_REQUEST_V1 } },
-    model: { schema: { kind: "literal", value: table.model } },
     ports: { schema: portsObjectSchema(table) },
   });
 }
@@ -171,7 +168,6 @@ export function requestDraftSchemaFromPorts(table: GenerationPortTable): ValueSc
     .map((port) => port.name);
   return generationObjectSchema({
     contract: { schema: { kind: "literal", value: GENERATION_REQUEST_DRAFT_V1 } },
-    model: { schema: { kind: "literal", value: table.model } },
     ports: { schema: portsObjectSchema(table, { defer: deferred }) },
   });
 }
@@ -326,7 +322,6 @@ export function verifyRequestDraftAgainstPorts(
 ): asserts value is GenerationRequestDraft {
   const draft = plainObject(value, `${table.model} request draft`);
   assert(draft.contract === GENERATION_REQUEST_DRAFT_V1, `${table.model} request draft contract is invalid`);
-  assert(draft.model === table.model, `${table.model} request draft model is invalid`);
   verifyPortsAgainstTable(table, draft.ports, { defer: deferredPorts(table) });
 }
 
@@ -336,7 +331,6 @@ export function sealGenerationRequestDraft(
 ): GenerationRequestDraft {
   const draft = canonicalize({
     contract: GENERATION_REQUEST_DRAFT_V1,
-    model: table.model,
     ports: Object.fromEntries(Object.entries(ports).filter(([, values]) => values.length > 0)),
   }) as unknown as GenerationRequestDraft;
   verifyRequestDraftAgainstPorts(table, draft);
@@ -423,7 +417,6 @@ export function verifyRequestAgainstPorts(
   assertGenerationPortTable(table);
   const request = plainObject(value, `${table.model} request`);
   assert(request.contract === GENERATION_REQUEST_V1, `${table.model} request contract is invalid`);
-  assert(request.model === table.model, `${table.model} request model is invalid`);
   verifyPortsAgainstTable(table, request.ports);
 }
 
@@ -434,7 +427,6 @@ export function sealGenerationPortRequest(
 ): GenerationRequest {
   const content: GenerationRequest = {
     contract: GENERATION_REQUEST_V1,
-    model: table.model,
     ports: Object.fromEntries(
       Object.entries(ports).filter(([, values]) => values !== undefined && values.length > 0),
     ),

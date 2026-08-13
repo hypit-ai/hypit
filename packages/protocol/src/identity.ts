@@ -1,7 +1,6 @@
 export type Digest = `sha256:${string}`;
 
 export type RecordId = string;
-export type NodeId = string;
 export type LogicalOutputId = string;
 export type CandidateId = string;
 export type OperationId = string;

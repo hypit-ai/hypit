@@ -2,20 +2,16 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SpeechBasisSegment } from "@narratage/speech";
-import type { AlignedTranscriptSegment } from "@narratage/speech-evidence";
+import { sealAlignedTranscriptEvidence, speechEvidenceTypes } from "@narratage/speech-evidence";
+import type { AlignedTranscriptEvidence, AlignedTranscriptSegment } from "@narratage/speech-evidence";
 import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CanonicalValue } from "@narratage/protocol";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import {
-  sealWhisperXAlignmentEvidence,
   whisperXCapabilities,
-  whisperXTypes,
 } from "@narratage/whisperx";
-import type {
-  WhisperXAlignmentEvidence,
-  WhisperXAlignmentRequest,
-} from "@narratage/whisperx";
+import type { WhisperXAlignmentRequest } from "@narratage/whisperx";
 
 export const localWhisperXProviderModuleRef = {
   name: "@narratage/provider-whisperx-local",
@@ -85,8 +81,7 @@ function alignmentRequest(value: CanonicalValue): WhisperXAlignmentRequest {
     && item.audio.mediaType === "audio/wav"
     && Number.isSafeInteger(item.sampleFrames)
     && item.sampleFrames > 0
-    && item.segments.length > 0
-    && item.wordAlignment === true,
+    && item.segments.length > 0,
   "WhisperX alignment request is invalid");
   return item;
 }
@@ -203,8 +198,6 @@ export function interpretWhisperXResponse(
 
   return sourceSegments.map((segment) => ({
     sourceSegmentId: segment.segmentId,
-    startSec: segment.startSec,
-    endSec: segment.endSec,
     words: buckets.get(segment.segmentId)!,
     chars: [],
   }));
@@ -212,7 +205,6 @@ export function interpretWhisperXResponse(
 
 async function limitedJson(response: Response, maxBytes: number, subject: string): Promise<{
   readonly value: unknown;
-  readonly bytes: Uint8Array;
 }> {
   const reader = response.body?.getReader();
   let bytes: Uint8Array;
@@ -245,17 +237,14 @@ async function limitedJson(response: Response, maxBytes: number, subject: string
   }
   assert(response.ok, `${subject} failed with HTTP ${response.status}: ${Buffer.from(bytes).toString("utf8").slice(0, 500)}`);
   try {
-    return { value: JSON.parse(Buffer.from(bytes).toString("utf8")), bytes };
+    return { value: JSON.parse(Buffer.from(bytes).toString("utf8")) };
   } catch {
     throw new Error(`${subject} returned invalid JSON`);
   }
 }
 
-function result(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfillment {
-  return {
-    value: { kind: "inline", value },
-    metadata,
-  };
+function result(value: CanonicalValue): EndpointFulfillment {
+  return { value: { kind: "inline", value } };
 }
 
 export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderOptions) {
@@ -285,7 +274,6 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
     instance: config.instance ?? "whisperx.local",
     authority: config.authority ?? config.instance ?? "whisperx.local",
     implementation: {
-      locator: "@narratage/provider-whisperx-local/svml-service",
       digest: localWhisperXProviderImplementationDigest,
     },
     configuration: canonicalize({
@@ -304,7 +292,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
     capabilities: [{
       lifecycle: "immediate" as const,
       capability: whisperXCapabilities.alignment,
-      returns: whisperXTypes.alignmentEvidence,
+      returns: speechEvidenceTypes.alignedTranscript,
       supports: (need) => need.constraints !== null && typeof need.constraints === "object"
         && !Array.isArray(need.constraints)
         && (need.constraints as { readonly contract?: unknown }).contract === "svml.whisperx-alignment-request@1",
@@ -357,26 +345,12 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
           assert(raw.value !== null && typeof raw.value === "object" && !Array.isArray(raw.value),
             "WhisperX transcription response is invalid");
           const response = raw.value as WhisperXServiceResponse;
-          const segments = interpretWhisperXResponse(response, request.segments, request.durationSec);
-          const rawArtifact = await context.artifacts.put(raw.bytes, "application/json");
-          const evidence: WhisperXAlignmentEvidence = sealWhisperXAlignmentEvidence({
-            contract: "svml.whisperx-alignment-evidence@1",
-            durationSec: request.durationSec,
+          const segments = interpretWhisperXResponse(response, request.segments, request.sampleFrames / 16_000);
+          const evidence: AlignedTranscriptEvidence = sealAlignedTranscriptEvidence({
+            contract: "svml.aligned-transcript-evidence@1",
             segments,
           });
-          return result(canonicalize(evidence), canonicalize({
-            provider: "whisperx.local",
-            model: expectedModel,
-            device: expectedDevice,
-            compute: expectedCompute,
-            batchSize: expectedBatchSize,
-            serviceVersion: expectedServiceVersion,
-            whisperxVersion: expectedWhisperXVersion,
-            punktTabDigest: expectedPunktTabDigest,
-            rawEvidenceArtifact: rawArtifact,
-            language: typeof response.language === "string" ? response.language : request.language ?? "unknown",
-            inputTranscoded: false,
-          }));
+          return result(canonicalize(evidence));
         } finally {
           await rm(work, { recursive: true, force: true }).catch(() => {});
         }

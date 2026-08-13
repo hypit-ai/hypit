@@ -204,6 +204,46 @@ export const seedanceEndpointsByModel = {
   "seedance-2.5": seedanceEndpoints.v25!,
 } as const;
 
+export const seedanceMarkupSurfaces = [
+  {
+    name: "text-video",
+    tag: "TextVideo",
+    mode: "structured",
+    outputs: [
+      seedanceTypes.durationProgram,
+      ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
+        endpoint.draftType,
+        ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
+      ]),
+    ],
+    implementation: {
+      digest: seedanceSurfaceImplementationDigests.textVideo,
+    },
+  },
+  {
+    name: "frame-video",
+    tag: "FrameVideo",
+    mode: "structured",
+    outputs: [seedanceTypes.durationProgram, ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
+      endpoint.draftType, ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
+    ])],
+    implementation: {
+      digest: seedanceSurfaceImplementationDigests.frameVideo,
+    },
+  },
+  {
+    name: "reference-video",
+    tag: "ReferenceVideo",
+    mode: "structured",
+    outputs: [seedanceTypes.durationProgram, ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
+      endpoint.draftType, ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
+    ])],
+    implementation: {
+      digest: seedanceSurfaceImplementationDigests.referenceVideo,
+    },
+  },
+] as const;
+
 export const seedanceManifest = {
   ...seedanceBaseDefinition.manifest,
   dependencies: [
@@ -217,51 +257,6 @@ export const seedanceManifest = {
       schema: { kind: "oneOf", variants: seedanceModels.map(durationProgramSchema) } satisfies ValueSchema,
     },
   ],
-  surfaces: [
-    {
-      name: "text-video",
-      tag: "TextVideo",
-      mode: "structured",
-      outputs: [
-        seedanceTypes.durationProgram,
-        ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
-          endpoint.draftType,
-          ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
-        ]),
-      ],
-      implementation: {
-        kind: "trusted-frontend-surface",
-        locator: "@narratage/seedance/text-video-surface",
-        digest: seedanceSurfaceImplementationDigests.textVideo,
-      },
-    },
-    {
-      name: "frame-video",
-      tag: "FrameVideo",
-      mode: "structured",
-      outputs: [seedanceTypes.durationProgram, ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
-        endpoint.draftType, ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
-      ])],
-      implementation: {
-        kind: "trusted-frontend-surface",
-        locator: "@narratage/seedance/frame-video-surface",
-        digest: seedanceSurfaceImplementationDigests.frameVideo,
-      },
-    },
-    {
-      name: "reference-video",
-      tag: "ReferenceVideo",
-      mode: "structured",
-      outputs: [seedanceTypes.durationProgram, ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
-        endpoint.draftType, ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
-      ])],
-      implementation: {
-        kind: "trusted-frontend-surface",
-        locator: "@narratage/seedance/reference-video-surface",
-        digest: seedanceSurfaceImplementationDigests.referenceVideo,
-      },
-    },
-  ],
   producers: [
     ...seedanceBaseDefinition.manifest.producers,
     ...seedanceModels.map((model) => ({
@@ -273,8 +268,6 @@ export const seedanceManifest = {
       outputs: [{ name: "draft", type: seedanceEndpointsByModel[model].draftType }],
       needs: [],
       implementation: {
-        kind: "registered" as const,
-        locator: `@narratage/seedance/compile-${model}-duration-request`,
         digest: seedanceDurationCompileImplementationDigests[model],
       },
     })),

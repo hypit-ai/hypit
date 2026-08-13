@@ -11,7 +11,6 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 export const synchronizedMediaFragment = sealGraphFragment({
-  name: "@narratage/media-pipeline/synchronized-media@1",
   inputs: [
     { name: "source", type: artifactTypes.blob },
     { name: "request", type: mediaPipelineTypes.selectionRequest },
@@ -49,7 +48,6 @@ export const synchronizedMediaFragment = sealGraphFragment({
 });
 
 export const transformMediaFragment = sealGraphFragment({
-  name: "@narratage/media-pipeline/transform-media@1",
   inputs: [
     { name: "source", type: artifactTypes.blob },
     { name: "selection", type: mediaPipelineTypes.selectionRequest },
@@ -94,7 +92,6 @@ export const transformMediaFragment = sealGraphFragment({
 });
 
 export const extractAudioFragment = sealGraphFragment({
-  name: "@narratage/media-pipeline/extract-audio@1",
   inputs: [
     { name: "source", type: artifactTypes.blob },
     { name: "request", type: mediaPipelineTypes.audioExtractionRequest },
@@ -121,7 +118,6 @@ export const extractAudioFragment = sealGraphFragment({
 });
 
 export const extractFrameFragment = sealGraphFragment({
-  name: "@narratage/media-pipeline/extract-frame@1",
   inputs: [
     { name: "source", type: artifactTypes.blob },
     { name: "request", type: mediaPipelineTypes.frameExtractionRequest },

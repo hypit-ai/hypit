@@ -191,14 +191,12 @@ export function createFileArtifactStorePackage(
 ): RuntimeServicePackage {
   const instance = options.instance ?? "artifacts.fs";
   return defineRuntimeServicePackage({
-    name: instance,
     module: fileArtifactStoreModuleRef,
     services: [{
       role: "artifact-store",
       facet: "artifact-store",
       instance,
       implementation: {
-        locator: "@narratage/artifact-store-fs/artifact-store",
         digest: fileArtifactStoreImplementationDigest,
       },
       configuration: { root: resolve(options.root) },

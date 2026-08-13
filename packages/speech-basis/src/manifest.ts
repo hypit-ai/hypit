@@ -31,7 +31,6 @@ export const speechBasisManifest: ModuleManifest = {
   ],
   types: [],
   capabilities: [],
-  surfaces: [],
   producers: [
     {
       name: speechBasisProducers.projectProgramSpace.name,
@@ -39,8 +38,6 @@ export const speechBasisManifest: ModuleManifest = {
       outputs: [{ name: "programSpace", type: programSpaceTypes.programSpace }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/speech-basis/project-program-space",
         digest: projectSpeechProgramSpaceImplementationDigest,
       },
     },
@@ -50,8 +47,6 @@ export const speechBasisManifest: ModuleManifest = {
       outputs: [{ name: "audio", type: speechTypes.audioBasis }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/speech-basis/project-audio",
         digest: projectSpeechAudioImplementationDigest,
       },
     },
@@ -61,8 +56,6 @@ export const speechBasisManifest: ModuleManifest = {
       outputs: [{ name: "visual", type: compositionTypes.visualTrack }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/speech-basis/project-visual",
         digest: projectSpeechVisualImplementationDigest,
       },
     },
@@ -72,8 +65,6 @@ export const speechBasisManifest: ModuleManifest = {
       outputs: [{ name: "track", type: compositionTypes.audioTrack }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/speech-basis/project-audio-track",
         digest: projectSpeechAudioTrackImplementationDigest,
       },
     },

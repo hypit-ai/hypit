@@ -23,7 +23,6 @@ function blob(value: StoredValue | undefined, subject: string): BlobRef {
 }
 
 export const imageTransformComponent = {
-  name: "@narratage/image-transform",
   validators: [{
     type: imageTransformTypes.program,
     implementationDigest: imageTransformImplementationDigests.validator,

@@ -25,7 +25,6 @@ function blob(value: StoredValue | undefined, label: string): BlobRef {
 const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
 
 export const imageComposeComponent = {
-  name: "@narratage/image-compose",
   producers: [{
     producer: imageComposeProducers.createLayers,
     implementationDigest: imageComposeImplementationDigests.createLayers,

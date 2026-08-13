@@ -15,7 +15,6 @@ import type { ScreenOverlayHeader, ScreenOverlayItemSpec, ScreenOverlayProgram, 
 function inline<T>(value: StoredValue | undefined, label: string): T { if (value?.kind !== "inline") throw new Error(`${label} must be inline.`); return value.value as unknown as T; }
 const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
 export const screenOverlayComponent = {
-  name: "@narratage/screen-overlay",
   producers: [
     { producer: screenOverlayProducers.createSet, implementationDigest: screenOverlayImplementationDigests.createSet, handler: () => ({ outputs: { set: output(createScreenOverlaySet()) }, needs: {} }) },
     { producer: screenOverlayProducers.appendProgram, implementationDigest: screenOverlayImplementationDigests.appendProgram, handler: ({ inputs }) => ({ outputs: { set: output(appendProgramScreenOverlay(inline<ScreenOverlaySet>(inputs.set?.value, "ScreenOverlaySet"), inline<ScreenOverlayHeader>(inputs.header?.value, "ScreenOverlayHeader"), inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"), inline<ScreenOverlayItemSpec>(inputs.spec?.value, "ScreenOverlayItemSpec"))) }, needs: {} }) },

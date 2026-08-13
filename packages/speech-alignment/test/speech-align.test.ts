@@ -42,12 +42,9 @@ function evidence(args: {
 }): AlignedTranscriptEvidence {
   return sealAlignedTranscriptEvidence({
     contract: "svml.aligned-transcript-evidence@1",
-    durationSec: args.basis.programSpace.durationSec,
     segments: [
       {
         sourceSegmentId: args.segmentId ?? "line",
-        startSec: args.startSec ?? 0,
-        endSec: args.endSec ?? args.basis.programSpace.durationSec,
         words: args.words,
         chars: args.chars ?? [],
         ...(args.vad === undefined ? {} : { speechActivity: args.vad }),
@@ -130,10 +127,10 @@ test("exact transcript words cover every Script and Segment anchor", () => {
   assert.equal(map.tokens.length, 2);
   assert.equal(map.anchors.length, 2 * narrative.tokens.length + 2 * narrative.segments.length);
   assert.deepEqual(
-    map.tokens.map((token) => [token.startSec, token.endSec]),
+    map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]),
     [
-      [0.1, 0.4],
-      [0.5, 0.9],
+      [100, 400],
+      [500, 900],
     ],
   );
   assert.equal(new Set(map.anchors.map((anchor) => anchor.identity)).size, map.anchors.length);
@@ -156,10 +153,10 @@ test("M:1 uses evidence character times instead of dividing a merged word by len
 
   assert.deepEqual(relations(narrative, merged), ["merge"]);
   assert.deepEqual(
-    map.tokens.map((token) => [token.startSec, token.endSec]),
+    map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]),
     [
-      [0.1, 0.36],
-      [0.42, 0.78],
+      [100, 360],
+      [420, 780],
     ],
   );
 });
@@ -174,8 +171,8 @@ test("1:N wraps all evidence words in one Script token", () => {
 
   assert.deepEqual(relations(narrative, split), ["split"]);
   assert.deepEqual(
-    [map.tokens[0]?.startSec, map.tokens[0]?.endSec],
-    [0.2, 0.82],
+    [map.tokens[0]?.startFrame, map.tokens[0]?.endFrameExclusive],
+    [200, 820],
   );
 });
 
@@ -198,12 +195,12 @@ test("a recognized filler stays an insertion and does not absorb neighboring Scr
     "exact",
   ]);
   assert.deepEqual(
-    map.tokens.map((token) => [token.startSec, token.endSec]),
+    map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]),
     [
-      [0.1, 0.2],
-      [0.4, 0.62],
-      [0.67, 0.82],
-      [0.86, 0.96],
+      [100, 200],
+      [400, 620],
+      [670, 820],
+      [860, 960],
     ],
   );
 });
@@ -224,12 +221,12 @@ test("an omitted Script word receives the complete unmeasured interval between n
     "exact",
   ]);
   assert.deepEqual(
-    [map.tokens[2]?.startSec, map.tokens[2]?.endSec],
-    [0.4, 0.6],
+    [map.tokens[2]?.startFrame, map.tokens[2]?.endFrameExclusive],
+    [400, 600],
   );
 });
 
-test("VAD bounds contain estimates when an entire Script Segment has no recognized words", () => {
+test("VAD bounds contain missing tokens when a Script Segment has no recognized words", () => {
   const narrative = parseScript("vad.svml", "<line>One two.</line>");
   const map = locate(narrative, {
     words: [],
@@ -237,10 +234,10 @@ test("VAD bounds contain estimates when an entire Script Segment has no recogniz
   });
 
   assert.deepEqual(
-    map.tokens.map((token) => [token.startSec, token.endSec]),
+    map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]),
     [
-      [0.4, 0.8],
-      [0.8, 1.2],
+      [400, 800],
+      [800, 1_200],
     ],
   );
 });
@@ -253,28 +250,23 @@ test("multiple Script Segments stay independent even when evidence records arriv
   ]);
   const map = locateSpeechTiming(narrative, basis, sealAlignedTranscriptEvidence({
     contract: "svml.aligned-transcript-evidence@1",
-    durationSec: 2,
     segments: [
       {
         sourceSegmentId: "two",
-        startSec: 1,
-        endSec: 2,
         words: [{ text: "Goodbye", startSec: 1.2, endSec: 1.6 }],
         chars: [],
       },
       {
         sourceSegmentId: "one",
-        startSec: 0,
-        endSec: 1,
         words: [{ text: "Hello", startSec: 0.2, endSec: 0.55 }],
         chars: [],
       },
     ],
   }));
 
-  assert.deepEqual(map.tokens.map((token) => [token.segmentId, token.startSec, token.endSec]), [
-    ["one", 0.2, 0.55],
-    ["two", 1.2, 1.6],
+  assert.deepEqual(map.tokens.map((token) => [token.segmentId, token.startFrame, token.endFrameExclusive]), [
+    ["one", 200, 550],
+    ["two", 1_200, 1_600],
   ]);
 });
 
@@ -289,8 +281,8 @@ test("overlapping evidence word windows reach the map overlapping", () => {
       { text: "two", startSec: 0.4, endSec: 0.8 },
     ],
   });
-  assert.deepEqual(map.tokens.map((token) => [token.startSec, token.endSec]), [[0.1, 0.5], [0.4, 0.8]]);
-  assert.equal(map.tokens[1]!.startSec < map.tokens[0]!.endSec, true, "the overlap survived");
+  assert.deepEqual(map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]), [[100, 500], [400, 800]]);
+  assert.equal(map.tokens[1]!.startFrame < map.tokens[0]!.endFrameExclusive, true, "the overlap survived");
 });
 
 test("locating is total: every Script token carries a window", () => {
@@ -300,12 +292,13 @@ test("locating is total: every Script token carries a window", () => {
     words: [{ text: "alpha" }, { text: "beta" }, { text: "gamma" }, { text: "delta" }],
   });
   assert.equal(blind.tokens.length, narrative.tokens.length);
-  assert.equal(blind.tokens.every((token) => Number.isFinite(token.startSec) && Number.isFinite(token.endSec)), true);
+  assert.equal(blind.tokens.every((token) => Number.isSafeInteger(token.startFrame)
+    && Number.isSafeInteger(token.endFrameExclusive)), true);
 
   // The speaker said something else entirely; the Script is still fully located.
   const diverged = locate(narrative, { words: [{ text: "zzz", startSec: 0.2, endSec: 0.8 }] });
   assert.equal(diverged.tokens.length, narrative.tokens.length);
-  assert.equal(diverged.tokens.every((token) => Number.isFinite(token.startSec)), true);
+  assert.equal(diverged.tokens.every((token) => Number.isSafeInteger(token.startFrame)), true);
 });
 
 test("Evidence is interpreted only through the explicitly connected SpeechAudioBasis", () => {
@@ -344,10 +337,10 @@ test("the final map is quantized once into the selected ProgramSpace", () => {
     words: [{ text: "Hello", startSec: 0.111, endSec: 0.289 }],
   }));
   assert.deepEqual(
-    [map.tokens[0]?.startFrame, map.tokens[0]?.endFrame, map.tokens[0]?.startSec, map.tokens[0]?.endSec],
-    [3, 9, 0.1, 0.3],
+    [map.tokens[0]?.startFrame, map.tokens[0]?.endFrameExclusive],
+    [3, 9],
   );
-  assert.equal(map.anchors.every((anchor) => anchor.timeSec === anchor.frame / 30), true);
+  assert.equal(map.anchors.every((anchor) => Number.isSafeInteger(anchor.frame)), true);
 });
 
 test("a backwards character measurement reaches the map backwards, uncorrected", () => {
@@ -369,8 +362,8 @@ test("a backwards character measurement reaches the map backwards, uncorrected",
   });
   const middle = map.tokens[1]!;
   assert.equal(
-    middle.startSec > middle.endSec,
+    middle.startFrame > middle.endFrameExclusive,
     true,
-    `the inverted measurement survived, got ${middle.startSec}..${middle.endSec}`,
+    `the inverted measurement survived, got ${middle.startFrame}..${middle.endFrameExclusive}`,
   );
 });

@@ -4,19 +4,16 @@ import {
   mediaTrackComponent,
   mediaTrackManifest,
   mediaTrackModuleRef,
-  mediaTrackSurfaceImplementationDigest,
+  mediaTrackMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/media-track",
-  modules: [{ manifest: mediaTrackManifest, specifiers: [mediaTrackModuleRef.name, `${mediaTrackModuleRef.name}@1`] }],
+  modules: [{ manifest: mediaTrackManifest }],
   components: [mediaTrackComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
     module: mediaTrackModuleRef,
-    surface: "track",
-    mode: "structured",
-    implementationDigest: mediaTrackSurfaceImplementationDigest,
+    declaration: mediaTrackMarkupSurfaces.find((item) => item.name === "track")!,
     handler: decodeMediaTrackSurface,
   })],
 };

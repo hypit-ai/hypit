@@ -81,22 +81,12 @@ export function createLocalRuntimeControl(
     async operation(id) {
       return await options.operationStore.read(id);
     },
-    async journal(query) {
-      return await options.journal.list(query);
-    },
     async builds() {
       return await buildCatalog?.list() ?? [];
     },
     async cancel(build, reason) {
       if (await options.dispatchStore.read(build) === undefined) return undefined;
-      const dispatch = await options.dispatchStore.requestCancellation(build, reason);
-      await options.journal.append({
-        at: Date.now(),
-        kind: "cancellation-requested",
-        build,
-        detail: { ...(reason === undefined ? {} : { reason }) },
-      });
-      return dispatch;
+      return await options.dispatchStore.requestCancellation(build, reason);
     },
     async cancelOperation(id, reason) {
       let current = await options.operationStore.read(id);
@@ -118,13 +108,6 @@ export function createLocalRuntimeControl(
           });
           current = written.status === "stored" ? written.snapshot : written.current;
         }
-        await options.journal.append({
-          at: requestedAt,
-          kind: "cancellation-requested",
-          build: current.build,
-          operation: current.id,
-          detail: { scope: "operation", ...(reason === undefined ? {} : { reason }) },
-        });
       }
       await options.dispatchStore.wake(current.build);
       return current;
@@ -177,7 +160,6 @@ export async function createProjectLocalRuntimeControl(
     ...(projectServices.catalog === undefined ? {} : { buildCatalog: projectServices.catalog }),
     operationStore: services.operationStore,
     dispatchStore: services.dispatchStore,
-    journal: services.journal,
     artifactStore: services.artifactStore,
     close: projectServices.close,
   });

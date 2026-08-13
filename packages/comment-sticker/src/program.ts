@@ -235,7 +235,6 @@ function realized(
   if (avatar !== undefined) assertAvatar(avatar);
   const additions = occurrences.map((occurrence, index): CommentStickerItemProgram => ({
     id: occurrence.id,
-    sourceOccurrenceId: occurrence.sourceOccurrenceId,
     span: { ...occurrence.span },
     frame: structuredClone(frame),
     style: structuredClone(style),
@@ -306,7 +305,6 @@ export function assertCommentStickerProgram(value: CommentStickerProgram): void 
     identity(item.id, "CommentStickerItemProgram.id");
     assert(!ids.has(item.id), `Duplicate Comment Sticker Item ${item.id}.`);
     ids.add(item.id);
-    assert(item.sourceOccurrenceId.length > 0, `Comment Sticker Item ${item.id} source occurrence is empty.`);
     assert(item.span.startFrame >= 0 && item.span.endFrameExclusive > item.span.startFrame,
       `Comment Sticker Item ${item.id} timing is invalid.`);
     assertSpatialFrame(item.frame);

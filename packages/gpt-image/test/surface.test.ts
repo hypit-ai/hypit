@@ -11,6 +11,7 @@ import {
   decodeCleanGptImageSurface,
   decodeGptImageSurface,
 } from "../src/surface.js";
+import { gptImageCleanMarkupSurfaces, gptImageMarkupSurfaces } from "../src/index.js";
 
 const refs = new Map<string, SurfaceResolvedReference>([
   ["prompt", {
@@ -85,10 +86,10 @@ test("clean GPT Image Surface adds the official denoise as one visible downstrea
 });
 
 test("the physical package carries both independently importable Surface implementations", () => {
-  assert.deepEqual(gptImageNodePackage.modules.map((item) => ({
-    name: item.manifest.name,
-    surfaces: item.manifest.surfaces.map((surface) => surface.tag),
-  })), [
+  assert.deepEqual([
+    { name: "@narratage/gpt-image", surfaces: gptImageMarkupSurfaces.map((surface) => surface.tag) },
+    { name: "@narratage/gpt-image/clean", surfaces: gptImageCleanMarkupSurfaces.map((surface) => surface.tag) },
+  ], [
     { name: "@narratage/gpt-image", surfaces: ["Image"] },
     { name: "@narratage/gpt-image/clean", surfaces: ["Image"] },
   ]);

@@ -91,13 +91,13 @@ const map: CompleteSemanticMap = {
   contract: "svml.complete-semantic-map@1",
   tokens: [],
   anchors: [
-    { identity: "outer-start", timeSec: 10 / 30, frame: 10 },
-    { identity: "one", timeSec: 1, frame: 30 },
-    { identity: "two", timeSec: 70 / 30, frame: 70 },
-    { identity: "three", timeSec: 110 / 30, frame: 110 },
-    { identity: "four", timeSec: 150 / 30, frame: 150 },
-    { identity: "terminal", timeSec: 190 / 30, frame: 190 },
-    { identity: "outer-end", timeSec: 230 / 30, frame: 230 },
+    { identity: "outer-start", frame: 10 },
+    { identity: "one", frame: 30 },
+    { identity: "two", frame: 70 },
+    { identity: "three", frame: 110 },
+    { identity: "four", frame: 150 },
+    { identity: "terminal", frame: 190 },
+    { identity: "outer-end", frame: 230 },
   ],
 };
 const outer: NarrativeSelectionRef = {
@@ -156,10 +156,10 @@ const typeSpec = (id: string, text: string, winner = false): TypewriterItemSpec 
 test("RankingSchedule zips authored item and Moment order and preserves a settled suffix", () => {
   const owner = header("column", "tools");
   const value = schedule(owner, [columnSpec("fourth"), columnSpec("third"), columnSpec("second")]);
-  assert.deepEqual(value.entries.map((entry) => [entry.itemId, entry.triggerOccurrenceId, entry.stage, entry.cumulative]), [
-    ["fourth", "next-rank#0", { startFrame: 30, endFrameExclusive: 70 }, { startFrame: 30, endFrameExclusive: 230 }],
-    ["third", "next-rank#1", { startFrame: 70, endFrameExclusive: 110 }, { startFrame: 70, endFrameExclusive: 230 }],
-    ["second", "next-rank#2", { startFrame: 110, endFrameExclusive: 190 }, { startFrame: 110, endFrameExclusive: 230 }],
+  assert.deepEqual(value.entries.map((entry) => [entry.itemId, entry.stage, entry.cumulative]), [
+    ["fourth", { startFrame: 30, endFrameExclusive: 70 }, { startFrame: 30, endFrameExclusive: 230 }],
+    ["third", { startFrame: 70, endFrameExclusive: 110 }, { startFrame: 70, endFrameExclusive: 230 }],
+    ["second", { startFrame: 110, endFrameExclusive: 190 }, { startFrame: 110, endFrameExclusive: 230 }],
   ]);
   assert.deepEqual(value.entries.at(-1)?.settled, { startFrame: 190, endFrameExclusive: 230 });
 });

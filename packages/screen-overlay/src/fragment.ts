@@ -13,7 +13,7 @@ export type ScreenOverlayFragmentItem =
   | { readonly kind: "moment"; readonly specName: string; readonly mapName: string; readonly sourceName: string };
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
-export function createScreenOverlayFragment(items: readonly ScreenOverlayFragmentItem[], name: string) {
+export function createScreenOverlayFragment(items: readonly ScreenOverlayFragmentItem[]) {
   if (items.length === 0) throw new Error("Screen Overlay Fragment requires at least one Item.");
   const types = new Map<string, typeof screenOverlayTypes.itemSpec | typeof semanticMapTypes.complete | typeof narrativeTypes.selection | typeof narrativeTypes.moment>();
   const operations: FragmentOperation[] = [{ id: "overlay:set:empty", producer: screenOverlayProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } }];
@@ -34,7 +34,7 @@ export function createScreenOverlayFragment(items: readonly ScreenOverlayFragmen
     { id: "overlay:program", producer: screenOverlayProducers.finalize, inputs: { set: operation(current), header: input("header") }, result: { kind: "output", name: "program" } },
     { id: "overlay:track", producer: screenOverlayProducers.render, inputs: { canvas: input("canvas"), space: input("space"), program: operation("overlay:program") }, result: { kind: "output", name: "track" } },
   );
-  return sealGraphFragment({ name, inputs: [
+  return sealGraphFragment({ inputs: [
     { name: "canvas", type: spatialTypes.canvas }, { name: "header", type: screenOverlayTypes.header },
     { name: "space", type: programSpaceTypes.programSpace }, ...[...types].map(([inputName, type]) => ({ name: inputName, type })),
   ], operations, exports: [
@@ -42,4 +42,4 @@ export function createScreenOverlayFragment(items: readonly ScreenOverlayFragmen
     { name: "track", type: compositionTypes.visualTrack, root: operation("overlay:track") },
   ] });
 }
-export const programScreenOverlayFragment = createScreenOverlayFragment([{ kind: "program", specName: "spec" }], "@narratage/screen-overlay/one-program-item@1");
+export const programScreenOverlayFragment = createScreenOverlayFragment([{ kind: "program", specName: "spec" }]);

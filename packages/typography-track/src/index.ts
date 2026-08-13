@@ -1,7 +1,7 @@
 export { typographyTrackFragment } from "./fragment.js";
 export { typographyTrackComponent } from "./component.js";
 export {
-  typographyTrackManifest,
+  typographyTrackManifest, typographyTrackMarkupSurfaces,
   typographyTrackManifestDigest,
   typographyTrackModuleRef,
   typographyTrackProducers,

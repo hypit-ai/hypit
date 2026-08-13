@@ -1,7 +1,7 @@
 import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { speechDependency, speechTypes } from "@narratage/speech";
 import { compositionTypes } from "@narratage/composition";
-import { spatialTypes, spatialValidatorDigests } from "@narratage/spatial";
+import { spatialTypes } from "@narratage/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -12,7 +12,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypeValidationReceipt,
   sealTypedModule,
   start,
 } from "@narratage/core";
@@ -51,7 +50,6 @@ const manifest: ModuleManifest = {
   dependencies: [speechDependency],
   types: [{ name: requestType.name, schema: { kind: "string", minLength: 1 } }],
   capabilities: [],
-  surfaces: [],
   producers: [{
     name: generateProducer.name,
     inputs: [
@@ -61,8 +59,6 @@ const manifest: ModuleManifest = {
     outputs: [{ name: "take", type: speechTypes.basis }],
     needs: [],
     implementation: {
-      kind: "registered",
-      locator: "example.fragment-speech/generate",
       digest: digestOf("example.fragment-speech/generate@1"),
     },
   }],
@@ -83,14 +79,8 @@ function program(): LinkedProgram {
     } },
     origin,
   });
-  const canvas = { ...rawCanvas, validation: sealTypeValidationReceipt({
-    type: rawCanvas.type,
-    recordDigest: rawCanvas.digest,
-    validatorDigest: spatialValidatorDigests.canvas,
-  }) };
+  const canvas = rawCanvas;
   return link(closure, [sealTypedModule({
-    id: "author:fragment",
-    closureDigest: closure.digest,
     records: [
       sealRecord({
         id: "request:root",
@@ -113,7 +103,6 @@ function speechFragment(): GraphFragment {
   const input = (name: string) => ({ kind: "fragment-input" as const, name });
   const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
   return sealGraphFragment({
-    name: "official-speech-basis",
     inputs: [
       { name: "request", type: requestType },
       { name: "style", type: requestType },
@@ -255,7 +244,6 @@ test("Fragment references cannot escape through a raw Graph reference", () => {
   const valid = speechFragment();
   assert.throws(
     () => sealGraphFragment({
-      name: valid.name,
       inputs: valid.inputs,
       operations: valid.operations.map((item) => item.id === "generate"
         ? {

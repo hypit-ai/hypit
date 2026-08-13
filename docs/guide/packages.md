@@ -26,7 +26,8 @@ Script, Seedance, Film or any video concept.
 @narratage/elaborator            author declarations and Fragment expansion
 @narratage/run                   syntax-neutral Run Graph
 @narratage/validation            semantic admission
-@narratage/host                  Host-facing interfaces
+@narratage/host                  opaque Host-facet envelope
+@narratage/workspace             replaceable Source/Asset session
 @narratage/compiler-node         reference Node compiler Host
 @narratage/workspace-fs-node     workspace filesystem abstraction
 @narratage/component-kit         Producer/validator registration
@@ -249,3 +250,32 @@ Two independent package inventories serve different authority scopes:
 compilation activates only the exact subset its Source requests and binds that subset digest into
 the Build; Runtime adapter selection is likewise the exact subset declared by the Profile.
 Changing package bytes requires explicitly refreshing the inventory.
+
+### Logical package addresses and Source discovery
+
+Source code names logical language capabilities, not npm locations. The inventory binds each
+logical address to one byte-locked physical package as the pair `(Host ABI, logical name)`. Thus a
+Module and a Run Fragment may intentionally share a spelling without becoming the same capability,
+and one physical package may offer several logical names.
+
+Compilation reads only the mandatory Source Header first. It resolves that Frontend from the
+trusted inventory, calls the Frontend's own `discover()` method, resolves the reported Modules,
+Run Fragments and child Sources, and repeats until the exact package subset stops growing. Only
+then does semantic decoding begin. Markup is the video Distribution's bootstrap Frontend; Script,
+SVS, Run Markup and third-party Frontends otherwise follow the same discovery protocol. The package
+selector contains no parser-specific branch.
+
+Frontend implementations are not privileged fields in the physical package format. They advertise
+the ordinary `svml.source-frontend@1` Host facet, exactly as Run Fragments, Markup Surfaces and
+Runtime Adapters advertise their own Host ABIs. Only the Source Host interprets that facet.
+
+Runtime Profiles follow the same rule. Each `use` selects either an Endpoint Adapter ABI or a
+Runtime Service Adapter ABI plus a logical name. A physical npm package advertises that logical
+offer; its package name is only an enrollment hint and lockfile fact. The generic CLI therefore
+does not contain a Provider registry, and an Endpoint adapter and Runtime-service adapter may share
+a logical spelling without colliding.
+
+When a logical name and physical npm package have the conventional same root, `packages sync` can
+enrol it directly. A differently named bundle must first be explicitly added to the project
+inventory; afterward Source remains bound only to its logical name. Unknown code is never downloaded
+or executed merely because a Source Header names it.

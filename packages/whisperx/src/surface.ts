@@ -54,7 +54,6 @@ export const decodeWhisperXAlignmentSurface: StructuredSurfaceHandler = ({ eleme
       fragment: whisperXSpeechAlignmentFragment.id,
       inputs: { narrative: narrative.ref, audio: audio.ref },
       outputs: {
-        rawEvidence: `${id}.rawEvidence`,
         evidence: `${id}.evidence`,
         map: `${id}.map`,
       },

@@ -71,14 +71,14 @@ const gptImageSurfaceDeclaration = {
   mode: "structured" as const,
   outputs: [gptImageEndpoints.image!.draftType, gptImageEndpoints.image!.mediaBindings.images!.type],
   implementation: {
-    kind: "trusted-frontend-surface" as const,
-    locator: "@narratage/gpt-image/image-surface",
     digest: gptImageSurfaceImplementationDigests.image,
   },
 };
+
+export const gptImageMarkupSurfaces = [gptImageSurfaceDeclaration] as const;
+
 export const gptImageManifest = {
   ...gptImageBaseDefinition.manifest,
-  surfaces: [gptImageSurfaceDeclaration],
 };
 export const gptImageManifestDigest = digestOf(gptImageManifest);
 export const gptImageDefinition = {
@@ -89,6 +89,21 @@ export const gptImageDefinition = {
 
 /** Optional authoring submodule; the exact GPT model remains independent of post-processing. */
 export const gptImageCleanModuleRef = { name: "@narratage/gpt-image/clean", version: "1" } as const;
+
+export const gptImageCleanMarkupSurfaces = [{
+    name: "image",
+    tag: "Image",
+    mode: "structured" as const,
+    outputs: [
+      gptImageEndpoints.image!.draftType,
+      gptImageEndpoints.image!.mediaBindings.images!.type,
+      imageTransformTypes.program,
+    ],
+    implementation: {
+      digest: gptImageSurfaceImplementationDigests.cleanImage,
+    },
+  }] as const;
+
 export const gptImageCleanManifest = {
   format: "svml.module@1" as const,
   name: gptImageCleanModuleRef.name,
@@ -99,21 +114,6 @@ export const gptImageCleanManifest = {
   ],
   types: [],
   capabilities: [],
-  surfaces: [{
-    name: "image",
-    tag: "Image",
-    mode: "structured" as const,
-    outputs: [
-      gptImageEndpoints.image!.draftType,
-      gptImageEndpoints.image!.mediaBindings.images!.type,
-      imageTransformTypes.program,
-    ],
-    implementation: {
-      kind: "trusted-frontend-surface" as const,
-      locator: "@narratage/gpt-image/clean/image-surface",
-      digest: gptImageSurfaceImplementationDigests.cleanImage,
-    },
-  }],
   producers: [],
 };
 export const gptImageCleanManifestDigest = digestOf(gptImageCleanManifest);

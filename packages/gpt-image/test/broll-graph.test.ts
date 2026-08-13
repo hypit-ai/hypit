@@ -9,7 +9,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypeValidationReceipt,
   sealTypedModule,
   start,
 } from "@narratage/core";
@@ -187,28 +186,16 @@ function fixture() {
     outputs: { video: "montage.video" },
   }];
   const typed = sealTypedModule({
-    id: "broll-records",
-    closureDigest: closure.digest,
-    records: records.map(({ validatorDigest, ...record }) => {
-      const sealed = sealRecord({ ...record, origin });
-      return validatorDigest === undefined ? sealed : {
-        ...sealed,
-        validation: sealTypeValidationReceipt({
-          type: sealed.type,
-          recordDigest: sealed.digest,
-          validatorDigest,
-        }),
-      };
-    }),
+    records: records.map(({ validatorDigest: _validatorDigest, ...record }) => sealRecord({ ...record, origin })),
   });
   const program = link(closure, [typed]);
   const fragments = new Map([
     ...Object.values(gptFragments).map((fragment) => [fragment.id, fragment] as const),
     [seedanceFragment.id, seedanceFragment] as const,
   ]);
-  const elaborated = elaborateAuthorModule(program, sealAuthorModule({ name: "broll", components }),
+  const elaborated = elaborateAuthorModule(program, sealAuthorModule({ components }),
     (id) => fragments.get(id));
-  return { program, graph: elaborated.graph };
+  return { program, graph: elaborated };
 }
 
 test("the common B-roll topology is one graph with one shared holding image", () => {

@@ -60,7 +60,6 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
     result: { kind: "output" as const, name: "composition" },
   });
   return sealGraphFragment({
-    name: options.name?.trim() || "@narratage/film/assembly@1",
     inputs: [
       { name: "program", type: filmTypes.program },
       { name: "canvas", type: spatialTypes.canvas },

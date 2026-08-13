@@ -102,7 +102,6 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
     instance: config.instance ?? "image.opencv.local",
     authority: config.authority ?? config.instance ?? "image.opencv.local",
     implementation: {
-      locator: "@narratage/provider-image-opencv-local/raster-opencv",
       digest: localOpenCvImageProviderImplementationDigest,
     },
     configuration: canonicalize({ pythonExecutable, processTimeoutMs, maxInputBytes, maxOutputBytes }),
@@ -160,7 +159,6 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
           const artifact = await context.artifacts.put(await readFile(output), mediaType);
           return {
             value: artifact,
-            metadata: canonicalize({ provider: "opencv.local", operation: need.kind }),
           };
         } finally {
           await rm(work, { recursive: true, force: true }).catch(() => {});

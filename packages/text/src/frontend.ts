@@ -26,7 +26,7 @@ export const textSvsFrontend: AuthorFrontend = {
     const candidates = recipes
       .map((recipe) => /^text-template\.([a-z][a-z0-9-]{0,95})$/u.exec(recipe.path)?.[1])
       .filter((id): id is string => id !== undefined);
-    if (candidates.length !== 1) throw new Error(`${source.name} must declare exactly one text-template.<id> metadata Recipe`);
+    if (candidates.length !== 1) throw new Error(`${source.name} must declare exactly one root Recipe text-template.<id>`);
     const id = candidates[0]!;
     const template = textTemplateFromSvsRecipes(recipes, id);
     const record = sealRecord({
@@ -38,8 +38,8 @@ export const textSvsFrontend: AuthorFrontend = {
     verifyRecordStructure(context.closure, record);
     const exports: AuthorSourceExport[] = [{ name: id, ref: { kind: "record", id }, type: textTypes.template }];
     return {
-      module: sealTypedModule({ id: `source:${source.name}`, closureDigest: context.closure.digest, records: [record] }),
-      author: sealAuthorModule({ name: `source:${source.name}`, components: [] }),
+      module: sealTypedModule({ records: [record] }),
+      author: sealAuthorModule({ components: [] }),
       fragments: [],
       exports,
     };

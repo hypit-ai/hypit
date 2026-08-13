@@ -72,7 +72,6 @@ function requestForProgram(space: ProgramSpace, audio: "default" | "none"): Medi
 }
 
 export const mediaPipelineComponent = {
-  name: "@narratage/media-pipeline",
   validators: [
     {
       type: mediaPipelineTypes.selectionRequest,
@@ -270,16 +269,8 @@ export const mediaPipelineComponent = {
             size: audio.audio.size,
             mediaType: audio.audio.mediaType,
           },
-          sourceSampleRate: 48_000,
-          sourceChannels: 2,
-          sourceCodec: "pcm_s16le",
           sourceSampleFrames,
-          evidenceSampleRate: 16_000,
-          evidenceChannels: 1,
-          evidenceCodec: "pcm_s16le",
           evidenceSampleFrames,
-          durationSec: audio.programSpace.durationSec,
-          segments: audio.segments,
         };
         return { outputs: {}, needs: { evidenceAudio: canonicalize(need) } };
       },

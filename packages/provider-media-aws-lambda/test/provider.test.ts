@@ -81,7 +81,6 @@ test("the Provider sends the Need verbatim with the bucket the function should u
     operation: "inspect",
     ok: true,
     value: { kind: "inline", value: { contract: "svml.media-inspection@1", artifact } },
-    metadata: { provider: "media.aws-lambda" },
   } as unknown as CanonicalValue));
 
   const capability = await endpointFor(invoker);
@@ -133,10 +132,8 @@ test("the remote Provider receives the exact AudioProgramPlan compiled for local
     operation: "render-audio",
     ok: true,
     value: { kind: "inline", value: {
-      contract: "svml.timeline-audio@1", artifact: output, codec: "pcm_s16le",
-      sampleRate: 48_000, channels: 2, sampleFrames: 48_048, loudness: "planned",
+      contract: "svml.timeline-audio@1", artifact: output, sampleFrames: 48_048,
     } },
-    metadata: { provider: "media.aws-lambda" },
   } as unknown as CanonicalValue));
   const capability = await endpointFor(invoker, { capability: "render-timeline-audio" });
   await capability.handler({ need: { constraints }, artifacts: store, credentials: {} } as never);
@@ -156,7 +153,6 @@ test("a Provider aimed at another bucket fails naming the Artifact, not later wi
       contract: "svml.media-inspection@1",
       artifact: { kind: "blob", digest: stranger, size: 1, mediaType: "video/mp4" },
     } },
-    metadata: {},
   } as unknown as CanonicalValue));
 
   await assert.rejects(

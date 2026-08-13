@@ -2,7 +2,7 @@ export { renderHyperframesFragment } from "./fragment.js";
 export { renderHyperframesComponent } from "./component.js";
 export {
   renderHyperframesCapabilities,
-  renderHyperframesManifest,
+  renderHyperframesManifest, renderHyperframesMarkupSurfaces,
   renderHyperframesManifestDigest,
   renderHyperframesModuleRef,
   renderHyperframesProducers,

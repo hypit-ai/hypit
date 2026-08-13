@@ -35,7 +35,7 @@ test("Image Compose is an ordered Layer graph with no privileged base image", ()
   const fragment = createImageComposeFragment([
     { sourceName: "a-source", frameName: "a-frame", specName: "a-spec" },
     { sourceName: "b-source", frameName: "b-frame", specName: "b-spec" },
-  ], "test:compose");
+  ]);
   assert.deepEqual(fragment.operations.map((operation) => operation.id).sort(), [
     "image:compose",
     "image:layers:append:0001", "image:layers:append:0002", "image:layers:empty",

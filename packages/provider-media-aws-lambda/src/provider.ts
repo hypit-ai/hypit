@@ -108,10 +108,7 @@ export function createAwsLambdaMediaProvider(config: CreateAwsLambdaMediaProvide
           `AWS media ${name} reported Artifact ${artifact.digest}, which this Build's ArtifactStore cannot read`
           + ` — the Provider's bucket and the ArtifactStore's bucket are probably not the same`);
       }
-      return {
-        value: reply.value,
-        metadata: reply.metadata,
-      };
+      return { value: reply.value };
     };
 
   return defineEndpointPackage({
@@ -120,7 +117,6 @@ export function createAwsLambdaMediaProvider(config: CreateAwsLambdaMediaProvide
     instance: config.instance ?? "media.aws-lambda",
     authority: config.authority ?? config.instance ?? "media.aws-lambda",
     implementation: {
-      locator: "@narratage/provider-media-aws-lambda/media",
       digest: awsLambdaMediaProviderImplementationDigest,
     },
     configuration: canonicalize(configuration as unknown as CanonicalValue),

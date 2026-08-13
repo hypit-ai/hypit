@@ -59,8 +59,6 @@ function createParallelGreetingBuild(generationCount = 2) {
     },
   });
   const program = link(closure, [sealTypedModule({
-    id: "author:parallel-greeting",
-    closureDigest: closure.digest,
     records: [authored],
   })]);
   const graph = sealCompiledGraph({
@@ -196,7 +194,6 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
         name: "scheduler",
         role: "scheduler",
         implementation: {
-          locator: "example.scheduler-runtime/scheduler",
           digest: digestOf("example.scheduler-runtime/scheduler@1"),
         },
       },
@@ -204,7 +201,6 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
         name: "operations",
         role: "operation-store",
         implementation: {
-          locator: "example.scheduler-runtime/operations",
           digest: digestOf("example.scheduler-runtime/operations@1"),
         },
       },
@@ -212,14 +208,12 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
         ["worker", "worker"],
         ["builds", "build-store"],
         ["dispatch", "dispatch-store"],
-        ["journal", "runtime-journal"],
         ["artifacts", "artifact-store"],
         ["credentials", "credential-store"],
       ] as const).map(([name, role]) => ({
         name,
         role,
         implementation: {
-          locator: `example.scheduler-runtime/${name}`,
           digest: digestOf(`example.scheduler-runtime/${name}@1`),
         },
       })),
@@ -227,7 +221,6 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
         name: providerFacet.name,
         role: "capability-endpoint",
         implementation: {
-          locator: "example.scheduler-runtime/generation-endpoint",
           digest: providerImplementationDigest,
         },
         fulfills: [{ capability: capabilities.generation, returns: types.generated }],
@@ -239,25 +232,22 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
   const modules = new RuntimeModuleRegistry();
   modules.register(manifest);
   const closure = resolveRuntimeProfile(modules, sealRuntimeProfile({
-    name: "scheduler-test",
     instances: [
       { id: "scheduler.local", facet: { module: runtimeModule, name: "scheduler" } },
       { id: "worker.local", facet: { module: runtimeModule, name: "worker" } },
       { id: "builds.memory", facet: { module: runtimeModule, name: "builds" } },
       { id: "operations.memory", facet: { module: runtimeModule, name: "operations" } },
       { id: "dispatch.memory", facet: { module: runtimeModule, name: "dispatch" } },
-      { id: "journal.memory", facet: { module: runtimeModule, name: "journal" } },
       { id: "artifacts.memory", facet: { module: runtimeModule, name: "artifacts" } },
       { id: "credentials.memory", facet: { module: runtimeModule, name: "credentials" } },
       { id: "generation.local", facet: providerFacet, authority: "fixture.account" },
-    ],
+    ].map((instance) => ({ ...instance, configurationDigest: digestOf({}) })),
     scheduler: "scheduler.local",
     worker: "worker.local",
     stores: {
       build: "builds.memory",
       operations: "operations.memory",
       dispatch: "dispatch.memory",
-      journal: "journal.memory",
       artifacts: "artifacts.memory",
       credentials: ["credentials.memory"],
     },
@@ -329,7 +319,7 @@ test("one local Scheduler shares an Endpoint resource across multiple Builds", a
   assert.equal(getCalls(), 2);
   assert.equal(maximumActive, 1);
   assert.equal(results.every((result) =>
-    result.journal.some((entry) => entry.resources.includes("authority:fixture.account"))), true);
+    result.outcomes.some((entry) => entry.resources.includes("authority:fixture.account"))), true);
 });
 
 test("a Runtime Profile resource override changes parallelism without changing either Build", async () => {
@@ -399,7 +389,7 @@ test("durable scheduling keeps the rest of an in-flight command batch after one 
   assert.equal(result?.status, "complete");
   assert.equal(getCalls(), 2);
   assert.equal(maximumActive, 2);
-  assert.equal(result?.journal.some((entry) =>
+  assert.equal(result?.outcomes.some((entry) =>
     entry.status === "error" && entry.message?.includes("event references command")), false);
   assert.equal((await store.read("durable-two-shots"))?.state.status, "complete");
 });
@@ -430,9 +420,9 @@ test("durable scheduling can drain successful sibling commands after another sib
 
   assert.equal(result?.status, "paused");
   assert.equal(calls, 3);
-  assert.equal(result?.journal.filter((entry) => entry.status === "completed"
+  assert.equal(result?.outcomes.filter((entry) => entry.status === "completed"
     && entry.kind === "invoke-producer").length, 3, "the prompt and both successful requests are accepted");
-  assert.equal(result?.journal.some((entry) =>
+  assert.equal(result?.outcomes.some((entry) =>
     entry.status === "error" && entry.message?.includes("event references command")), false);
   assert.equal(result?.state.derivations.filter((item) =>
     item.producer.name === greetingProducers.requestText.name).length, 2);
@@ -530,7 +520,7 @@ test("BuildStore CAS prevents two Scheduler revisions from silently overwriting 
   assert.equal(read?.revision, 1);
 });
 
-test("a recoverable Endpoint resumes its journaled Operation after restart without submitting twice", async () => {
+test("a recoverable Endpoint resumes its persisted Operation after restart without submitting twice", async () => {
   const operations = new MemoryOperationStore();
   const runtime = resolvedRuntime(1, "recoverable");
   let starts = 0;
@@ -550,7 +540,6 @@ test("a recoverable Endpoint resumes its journaled Operation after restart witho
         status: "completed",
         result: {
           value: { kind: "inline", value: "Hello after restart" },
-          metadata: { remoteJob: "job-1" },
         },
       };
     },
@@ -565,7 +554,7 @@ test("a recoverable Endpoint resumes its journaled Operation after restart witho
   assert.equal(starts, 1);
   assert.equal(resumes, 0);
   assert.equal(first?.state.receipts.length, 0, "pending external work is not a Core event");
-  const pending = first?.journal.find((entry) => entry.status === "pending");
+  const pending = first?.outcomes.find((entry) => entry.status === "pending");
   assert.ok(pending?.operation);
   assert.equal((await operations.read(pending.operation))?.status, "pending");
 
@@ -577,11 +566,9 @@ test("a recoverable Endpoint resumes its journaled Operation after restart witho
   ).run([{ id: "video", state: restored }]);
 
   assert.equal(second?.status, "complete");
-  assert.equal(starts, 1, "the already journaled Operation must not call start again");
+  assert.equal(starts, 1, "the already persisted Operation must not call start again");
   assert.equal(resumes, 1);
   assert.equal((await operations.read(pending.operation))?.status, "completed");
-  const completion = (await operations.read(pending.operation))?.completion;
-  assert.deepEqual(completion?.metadata, { remoteJob: "job-1" });
 });
 
 test("a crash after Operation intent but before checkpoint resumes with the same Operation id", async () => {
@@ -604,7 +591,6 @@ test("a crash after Operation intent but before checkpoint resumes with the same
         status: "completed",
         result: {
           value: { kind: "inline", value: "Recovered by idempotency key" },
-          metadata: { recovered: true },
         },
       };
     },
@@ -616,7 +602,7 @@ test("a crash after Operation intent but before checkpoint resumes with the same
     localSchedulerOptionsFromClosure(runtime.closure),
   ).run([{ id: "video", state: createGreetingBuild() }]);
   assert.equal(first?.status, "paused");
-  assert.match(first?.journal.at(-1)?.message ?? "", /process stopped/u);
+  assert.match(first?.outcomes.at(-1)?.message ?? "", /process stopped/u);
   assert.equal(starts, 1);
   // An exception happens before the Scheduler sees the Operation id, but OperationStore already has it.
   assert.ok(operationId);
@@ -635,7 +621,7 @@ test("a crash after Operation intent but before checkpoint resumes with the same
   assert.equal(resumes, 1);
 });
 
-test("a completion journaled before a crash is replayed into Core without calling the Endpoint again", async () => {
+test("a completion persisted before a crash is replayed into Core without calling the Endpoint again", async () => {
   const operations = new MemoryOperationStore();
   const runtime = resolvedRuntime(1, "recoverable");
   let starts = 0;
@@ -649,7 +635,7 @@ test("a completion journaled before a crash is replayed into Core without callin
       const result = await operations.compareAndSwap(id, revision, update);
       if (update.status === "completed" && crashOnce) {
         crashOnce = false;
-        throw new Error("process stopped after completion was journaled");
+        throw new Error("process stopped after completion was persisted");
       }
       return result;
     },
@@ -660,8 +646,7 @@ test("a completion journaled before a crash is replayed into Core without callin
       return {
         status: "completed",
         result: {
-          value: { kind: "inline", value: "Journaled completion" },
-          metadata: { remoteJob: "job-complete" },
+          value: { kind: "inline", value: "Persisted completion" },
         },
       };
     },
@@ -677,7 +662,7 @@ test("a completion journaled before a crash is replayed into Core without callin
   ).run([{ id: "video", state: createGreetingBuild() }]);
   assert.equal(first?.status, "paused");
   assert.equal(first?.state.receipts.length, 0);
-  assert.match(first?.journal.at(-1)?.message ?? "", /completion was journaled/u);
+  assert.match(first?.outcomes.at(-1)?.message ?? "", /completion was persisted/u);
   assert.equal(starts, 1);
 
   const [second] = await new LocalBuildScheduler(
@@ -761,11 +746,11 @@ test("wakeAt prevents early polling and Runtime cancellation becomes a terminal 
   const executor = recoverableExecutor(endpoint, operations, runtime).executor;
   const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
   const [first] = await scheduler.run([{ id: "cancel-video", state: createGreetingBuild() }]);
-  const operationId = first?.journal.find((item) => item.status === "pending")?.operation;
+  const operationId = first?.outcomes.find((item) => item.status === "pending")?.operation;
   assert.ok(operationId);
 
   const [early] = await scheduler.run([{ id: "cancel-video", state: first!.state }]);
-  assert.equal(early?.journal.at(-1)?.wakeAt, wakeAt);
+  assert.equal(early?.outcomes.at(-1)?.wakeAt, wakeAt);
   assert.equal(resumes, 0);
 
   const operation = await operations.read(operationId);
@@ -796,7 +781,7 @@ test("cancellation acknowledgement never invents a remote terminal fact", async 
   const executor = recoverableExecutor(endpoint, operations, runtime).executor;
   const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
   const [first] = await scheduler.run([{ id: "accepted-cancel", state: createGreetingBuild() }]);
-  const operationId = first?.journal.find((item) => item.status === "pending")?.operation;
+  const operationId = first?.outcomes.find((item) => item.status === "pending")?.operation;
   assert.ok(operationId);
   const operation = await operations.read(operationId);
   assert.ok(operation);
@@ -848,7 +833,7 @@ test("a completion racing with cancellation is recorded as too late instead of o
   const executor = recoverableExecutor(endpoint, operations, runtime).executor;
   const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
   const [first] = await scheduler.run([{ id: "cancel-completion-race", state: createGreetingBuild() }]);
-  const operationId = first?.journal.find((item) => item.status === "pending")?.operation;
+  const operationId = first?.outcomes.find((item) => item.status === "pending")?.operation;
   assert.ok(operationId);
   const operation = await operations.read(operationId);
   assert.ok(operation);
@@ -878,7 +863,7 @@ test("an Endpoint without cancellation stays observable instead of changing Cand
   const executor = recoverableExecutor(endpoint, operations, runtime).executor;
   const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
   const [first] = await scheduler.run([{ id: "unsupported-cancel", state: createGreetingBuild() }]);
-  const operationId = first?.journal.find((item) => item.status === "pending")?.operation;
+  const operationId = first?.outcomes.find((item) => item.status === "pending")?.operation;
   assert.ok(operationId);
   const operation = await operations.read(operationId);
   assert.ok(operation);

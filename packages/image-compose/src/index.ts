@@ -2,7 +2,7 @@ export { imageComposeComponent } from "./component.js";
 export { createImageComposeFragment } from "./fragment.js";
 export {
   imageComposeDependency, imageComposeImplementationDigests,
-  imageComposeManifest, imageComposeManifestDigest, imageComposeModuleRef, imageComposeProducers, imageComposeTypes,
+  imageComposeManifest, imageComposeMarkupSurfaces, imageComposeManifestDigest, imageComposeModuleRef, imageComposeProducers, imageComposeTypes,
 } from "./manifest.js";
 export {
   appendImageComposeLayer, assertImageComposeLayerSet, assertImageComposeLayerSpec, assertImageComposeOptions,

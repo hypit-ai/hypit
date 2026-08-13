@@ -13,12 +13,12 @@ export const captionTypes = {
   plan: { module: captionModuleRef, name: "CaptionPlan" },
   timedProjection: { module: captionModuleRef, name: "TimedCaptionProjection" },
 } satisfies Record<string, TypeRef>;
-export const captionPlanImplementationDigest = digestOf("@narratage/caption/temporalize-whole-atoms-with-mute@1");
+export const captionPlanImplementationDigest = digestOf("@narratage/caption/temporalize-whole-atoms-to-frames-with-mute@1");
 export const captionValidatorDigests = {
   style: digestOf("@narratage/caption/validate-style@1"),
   program: digestOf("@narratage/caption/validate-display-program-with-mute@1"),
   plan: digestOf("@narratage/caption/validate-atom-plan@1"),
-  timedProjection: digestOf("@narratage/caption/validate-timed-atoms@1"),
+  timedProjection: digestOf("@narratage/caption/validate-frame-timed-atoms@1"),
 } as const;
 export const captionProgramSurfaceImplementationDigest = digestOf("@narratage/caption/display-program-surface-with-mute@1");
 
@@ -47,11 +47,11 @@ export const captionPlanSchema: ValueSchema = object({
 });
 
 const timedCaptionAtom = object({
-  atomId: { schema: string }, startSec: { schema: number }, endSec: { schema: number },
+  atomId: { schema: string }, startFrame: { schema: integer }, endFrameExclusive: { schema: integer },
 });
 const timedCaptionCue = object({
-  id: { schema: string }, runId: { schema: string }, styleId: { schema: string }, segmentId: { schema: string },
-  startSec: { schema: number }, endSec: { schema: number },
+  id: { schema: string }, styleId: { schema: string },
+  startFrame: { schema: integer }, endFrameExclusive: { schema: integer },
   atoms: { schema: { kind: "array", minItems: 1, items: timedCaptionAtom } },
   fields: { schema: { kind: "array", items: captionFieldAssignment } },
 });
@@ -96,11 +96,17 @@ const captionProgramRun = object({
 });
 export const captionProgramSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.caption-program@1" } },
-  id: { schema: string }, displaySequenceId: { schema: string }, defaultStyleId: { schema: string },
+  id: { schema: string }, displaySequenceId: { schema: string },
   styles: { schema: { kind: "array", minItems: 1, items: captionStyleSchema } },
   runs: { schema: { kind: "array", minItems: 1, items: captionProgramRun } },
   mutedWordIds: { schema: { kind: "array", items: string } },
 });
+
+export const captionMarkupSurfaces = [{
+    name: "program", tag: "Program", mode: "structured", outputs: [captionTypes.program],
+    implementation: { digest: captionProgramSurfaceImplementationDigest },
+  }] as const;
+
 
 export const captionManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -108,27 +114,21 @@ export const captionManifest: ModuleManifest = {
   version: captionModuleRef.version,
   dependencies: [narrativeDependency, semanticMapDependency],
   types: [
-    { name: captionTypes.style.name, schema: captionStyleSchema, validator: { abi: "svml.type-validator@1", implementation: {
-      kind: "registered", locator: "@narratage/caption/validate-style", digest: captionValidatorDigests.style,
+    { name: captionTypes.style.name, schema: captionStyleSchema, validator: { implementation: {
+      digest: captionValidatorDigests.style,
     } } },
-    { name: captionTypes.program.name, schema: captionProgramSchema, validator: { abi: "svml.type-validator@1", implementation: {
-      kind: "registered", locator: "@narratage/caption/validate-program", digest: captionValidatorDigests.program,
+    { name: captionTypes.program.name, schema: captionProgramSchema, validator: { implementation: {
+      digest: captionValidatorDigests.program,
     } } },
-    { name: captionTypes.plan.name, schema: captionPlanSchema, validator: { abi: "svml.type-validator@1", implementation: {
-      kind: "registered", locator: "@narratage/caption/validate-plan", digest: captionValidatorDigests.plan,
+    { name: captionTypes.plan.name, schema: captionPlanSchema, validator: { implementation: {
+      digest: captionValidatorDigests.plan,
     } } },
     { name: captionTypes.timedProjection.name, schema: timedCaptionProjectionSchema,
-      validator: { abi: "svml.type-validator@1", implementation: {
-        kind: "registered", locator: "@narratage/caption/validate-timed-projection",
+      validator: { implementation: {
         digest: captionValidatorDigests.timedProjection,
       } } },
   ],
   capabilities: [],
-  surfaces: [{
-    name: "program", tag: "Program", mode: "structured", outputs: [captionTypes.program],
-    implementation: { kind: "trusted-frontend-surface", locator: "@narratage/caption/program-surface",
-      digest: captionProgramSurfaceImplementationDigest },
-  }],
   producers: [
     {
       name: captionProducers.temporalizePlan.name,
@@ -140,8 +140,7 @@ export const captionManifest: ModuleManifest = {
         { name: "plan", type: captionTypes.plan },
       ],
       outputs: [{ name: "caption", type: captionTypes.timedProjection }], needs: [],
-      implementation: { kind: "registered", locator: "@narratage/caption/temporalize-plan",
-        digest: captionPlanImplementationDigest },
+      implementation: { digest: captionPlanImplementationDigest },
     },
   ],
 };

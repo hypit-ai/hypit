@@ -9,7 +9,7 @@ export {
   narrativeSelectionType,
   narrativeSchema,
   narrativeType,
-  scriptManifest,
+  scriptManifest, scriptMarkupSurfaces,
   scriptModuleRef,
   scriptSurfaceImplementationDigest,
 } from "./manifest.js";
@@ -25,7 +25,6 @@ export {
   narrativeMomentValue,
   narrativeSelectionValue,
   narrativeSpeechTextValue,
-  narrativeSourceMap,
   narrativeValue,
   serializeCaption,
   serializeDialogue,

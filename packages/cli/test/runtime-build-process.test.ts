@@ -10,6 +10,7 @@ import {
   createNodePackageLock,
   writeNodePackageLock,
 } from "@narratage/package-loader-node";
+import { runtimeConfigRevision } from "@narratage/local/config";
 
 import {
   ensureRuntimeProcess,
@@ -130,7 +131,6 @@ test("CLI exits after durable submission and a restarted detached Worker complet
           build: "state.builds",
           operations: "state.operations",
           dispatch: "state.dispatch",
-          journal: "state.journal",
           artifacts: "artifacts",
           credentials: ["credentials.env"],
         },
@@ -151,7 +151,7 @@ test("CLI exits after durable submission and a restarted detached Worker complet
         process.on("SIGTERM", () => process.exit(0));
         setInterval(() => {}, 1000);
       `],
-    }, 5_000);
+    }, await runtimeConfigRevision(profile), 5_000);
     const submitted = await cli(project, [
       "build", run,
       "--build-id", build,
@@ -161,7 +161,7 @@ test("CLI exits after durable submission and a restarted detached Worker complet
     ]);
     assert.equal(submitted.status, "queued", "the foreground CLI reports durable admission, not execution ownership");
     assert.equal((submitted.dispatch as { readonly phase?: string }).phase, "queued");
-    const originalProcess = await runtimeProcessStatus(profile);
+    const originalProcess = await runtimeProcessStatus(profile, await runtimeConfigRevision(profile));
     assert.equal(originalProcess.state, "running", "the detached Runtime process outlives the submitting CLI process");
     assert.equal(originalProcess.pid, parked.pid, "build reuses one profile-scoped Runtime process");
 

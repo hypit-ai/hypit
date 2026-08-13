@@ -29,7 +29,6 @@ creative content—it never enters Author or Run graph identity.
       "build": "state.builds",
       "operations": "state.operations",
       "dispatch": "state.dispatch",
-      "journal": "state.journal",
       "artifacts": "artifacts",
       "credentials": ["credentials.keychain"]
     }
@@ -89,7 +88,7 @@ store name.
 
 `runtimeServices` activates installed service adapters. `services` selects every required role by
 its exact instance id: Scheduler, Worker, BuildStore, OperationStore, DispatchStore,
-RuntimeJournal, ArtifactStore and one or more CredentialStores. No role is inferred from package
+ArtifactStore and one or more CredentialStores. No role is inferred from package
 presence or filled by `@narratage/local`.
 
 ### Filesystem fields
@@ -121,10 +120,10 @@ and resource controls.
 
 ## Embedding API
 
-The CLI deliberately accepts only declarative JSON Profiles. A server or application embedding
-Narratage may assemble the same Scheduler, Worker, Store and Endpoint roles directly through
-`@narratage/local`. That assembly is application code—not another Profile syntax and not a
-source-language escape hatch.
+The official video Distribution currently parses declarative Runtime Profiles as JSON. The generic
+CLI assigns no meaning to `.json`; it delegates the selected document to the Distribution. A server
+or application embedding Narratage may assemble the same Scheduler, Worker, Store and Endpoint
+roles directly through `@narratage/local`.
 
 ## Diagnostics
 

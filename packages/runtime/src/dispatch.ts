@@ -1,5 +1,5 @@
-import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
-import type { CanonicalValue, Digest } from "@narratage/protocol";
+import { digestOf, isDigest } from "@narratage/protocol";
+import type { Digest } from "@narratage/protocol";
 
 export type DispatchAdmission = "open" | "closing" | "closed";
 export type DispatchPhase = "queued" | "leased" | "waiting" | "blocked" | "settling" | "terminal";
@@ -18,8 +18,8 @@ export type BuildDispatchIdentity = {
   readonly id: Digest;
   readonly build: string;
   readonly core: Digest;
-  /** Exact execution revision for Runtime services and Endpoint deployment. */
-  readonly runtimeRevision: Digest;
+  /** Exact Runtime Closure selected for this execution domain. */
+  readonly runtimeClosure: Digest;
 };
 
 export type BuildDispatchSnapshot = BuildDispatchIdentity & {
@@ -44,8 +44,8 @@ export type BuildDispatchCreate =
   | { readonly status: "existing"; readonly snapshot: BuildDispatchSnapshot };
 
 export type BuildDispatchClaim = {
-  /** Exact Runtime Revision this Worker can execute. Claims are filtered before leasing. */
-  readonly runtimeRevision: Digest;
+  /** Exact Runtime Closure this Worker can execute. Claims are filtered before leasing. */
+  readonly runtimeClosure: Digest;
   readonly owner: string;
   readonly token: string;
   readonly now: number;
@@ -150,42 +150,6 @@ export type BuildDispatchStore = {
   listCapacity(): Promise<readonly CapacityReservation[]>;
 };
 
-export type RuntimeJournalKind =
-  | "dispatch-created"
-  | "dispatch-claimed"
-  | "dispatch-released"
-  | "dispatch-terminal"
-  | "cancellation-requested"
-  | "worker-started"
-  | "worker-stopped"
-  | "capacity-acquired"
-  | "capacity-released"
-  | "operation-control";
-
-export type RuntimeJournalEntry = {
-  readonly format: "svml.runtime-journal-entry@1";
-  readonly sequence: number;
-  readonly at: number;
-  readonly kind: RuntimeJournalKind;
-  readonly build?: string;
-  readonly operation?: Digest;
-  readonly worker?: string;
-  readonly detail: CanonicalValue;
-};
-
-export type RuntimeJournalQuery = {
-  readonly after?: number;
-  readonly build?: string;
-  readonly operation?: Digest;
-  readonly worker?: string;
-  readonly limit?: number;
-};
-
-export type RuntimeJournal = {
-  append(entry: Omit<RuntimeJournalEntry, "format" | "sequence">): Promise<RuntimeJournalEntry>;
-  list(query?: RuntimeJournalQuery): Promise<readonly RuntimeJournalEntry[]>;
-};
-
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
@@ -203,32 +167,18 @@ function positive(value: number, subject: string): number {
 export function createBuildDispatchIdentity(input: {
   readonly build: string;
   readonly core: Digest;
-  readonly runtimeRevision: Digest;
+  readonly runtimeClosure: Digest;
 }): BuildDispatchIdentity {
   assert(input.build.trim().length > 0, "Build Dispatch build id is empty");
   assert(isDigest(input.core), "Build Dispatch Core digest is invalid");
-  assert(isDigest(input.runtimeRevision), "Build Dispatch Runtime Revision digest is invalid");
+  assert(isDigest(input.runtimeClosure), "Build Dispatch Runtime Closure digest is invalid");
   const content = {
     format: "svml.build-dispatch-identity@1" as const,
     build: input.build,
     core: input.core,
-    runtimeRevision: input.runtimeRevision,
+    runtimeClosure: input.runtimeClosure,
   };
   return { ...content, id: digestOf(content) };
-}
-
-export function createRuntimeRevision(input: {
-  readonly runtimeClosure: Digest;
-  readonly runtimePackageClosure?: Digest;
-}): Digest {
-  assert(isDigest(input.runtimeClosure), "Runtime Revision Runtime Closure digest is invalid");
-  assert(input.runtimePackageClosure === undefined || isDigest(input.runtimePackageClosure),
-    "Runtime Revision Runtime package closure digest is invalid");
-  return digestOf({
-    format: "svml.runtime-revision@1",
-    runtimeClosure: input.runtimeClosure,
-    runtimePackageClosure: input.runtimePackageClosure ?? null,
-  });
 }
 
 export function verifyBuildDispatchIdentity(value: BuildDispatchIdentity): void {
@@ -260,23 +210,23 @@ export function verifyBuildDispatchSnapshot(value: BuildDispatchSnapshot): void 
 }
 
 /**
- * One DispatchStore is one execution domain. It may admit only one Runtime Revision while work is
+ * One DispatchStore is one execution domain. It may admit only one Runtime Closure while work is
  * unfinished. This keeps execution honest without retaining old code or inventing a multi-version
  * Worker supervisor. A caller that intentionally wants another execution domain selects another
  * DispatchStore.
  */
-export function assertRuntimeRevisionAdmission(
-  runtimeRevision: Digest,
+export function assertRuntimeClosureAdmission(
+  runtimeClosure: Digest,
   dispatches: readonly BuildDispatchSnapshot[],
 ): void {
-  assert(isDigest(runtimeRevision), "Runtime Revision digest is invalid");
+  assert(isDigest(runtimeClosure), "Runtime Closure digest is invalid");
   const conflicts = dispatches
-    .filter((item) => item.phase !== "terminal" && item.runtimeRevision !== runtimeRevision)
+    .filter((item) => item.phase !== "terminal" && item.runtimeClosure !== runtimeClosure)
     .sort((left, right) => left.build.localeCompare(right.build));
   if (conflicts.length === 0) return;
   throw new Error([
-    `Runtime Revision ${runtimeRevision} cannot enter this execution domain while unfinished Builds belong to another revision:`,
-    ...conflicts.map((item) => `  ${item.build} · ${item.phase} · ${item.runtimeRevision}`),
+    `Runtime Closure ${runtimeClosure} cannot enter this execution domain while unfinished Builds belong to another closure:`,
+    ...conflicts.map((item) => `  ${item.build} · ${item.phase} · ${item.runtimeClosure}`),
     "Finish or cancel those Builds with their original Runtime Profile, restore that Profile and its package locks, or select another DispatchStore.",
   ].join("\n"));
 }
@@ -309,17 +259,4 @@ export function verifyCapacityReservation(value: CapacityReservation): void {
   if (value.active !== undefined) verifyDispatchLease(value.active, "Capacity lease");
   safeNonNegative(value.createdAt, "Capacity reservation createdAt");
   safeNonNegative(value.updatedAt, "Capacity reservation updatedAt");
-}
-
-export function verifyRuntimeJournalEntry(value: RuntimeJournalEntry): void {
-  assert(value.format === "svml.runtime-journal-entry@1", "Runtime Journal entry format is unsupported");
-  positive(value.sequence, "Runtime Journal sequence");
-  safeNonNegative(value.at, "Runtime Journal timestamp");
-  assert([
-    "dispatch-created", "dispatch-claimed", "dispatch-released", "dispatch-terminal",
-    "cancellation-requested", "worker-started", "worker-stopped", "capacity-acquired",
-    "capacity-released", "operation-control",
-  ].includes(value.kind), "Runtime Journal kind is invalid");
-  if (value.operation !== undefined) assert(isDigest(value.operation), "Runtime Journal Operation digest is invalid");
-  canonicalize(value.detail);
 }

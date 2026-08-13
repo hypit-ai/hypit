@@ -57,7 +57,6 @@ export function createRankingFragment(
   variant: RankingVariant,
   items: readonly RankingFragmentItem[],
   sound: RankingFragmentSound,
-  name = `@narratage/ranking/dynamic-${variant}@1`,
 ) {
   if (items.length === 0) throw new Error("Ranking Fragment requires at least one Item.");
   const selected = definition(variant);
@@ -167,7 +166,6 @@ export function createRankingFragment(
     });
   }
   return sealGraphFragment({
-    name,
     inputs,
     operations,
     exports: [

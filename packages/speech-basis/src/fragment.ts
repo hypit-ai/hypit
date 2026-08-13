@@ -11,7 +11,6 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 /** Project the independently demandable facts carried by one SpeechBasis. */
 export const speechBasisProjectionFragment = sealGraphFragment({
-  name: "@narratage/speech-basis/projections@1",
   inputs: [{ name: "basis", type: speechTypes.basis }],
   operations: [
     {

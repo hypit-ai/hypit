@@ -7,26 +7,25 @@ import {
   mimoTtsComponent,
   mimoTtsManifest,
   mimoTtsModuleRef,
-  mimoTtsSurfaceDigests,
+  mimoTtsMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/mimo-tts",
-  modules: [{ manifest: mimoTtsManifest, specifiers: ["@narratage/mimo-tts", "@narratage/mimo-tts@1"] }],
+  modules: [{ manifest: mimoTtsManifest }],
   components: [mimoTtsComponent],
   hostFacets: [
     createMarkupSurfaceHostFacet({
-      module: mimoTtsModuleRef, surface: "preset", mode: "structured",
-      implementationDigest: mimoTtsSurfaceDigests.preset, handler: decodeMimoPresetSurface,
+      module: mimoTtsModuleRef,
+    declaration: mimoTtsMarkupSurfaces.find((item) => item.name === "preset")!, handler: decodeMimoPresetSurface,
     }),
     createMarkupSurfaceHostFacet({
-      module: mimoTtsModuleRef, surface: "voiceDesign", mode: "structured",
-      implementationDigest: mimoTtsSurfaceDigests.voiceDesign, handler: decodeMimoVoiceDesignSurface,
+      module: mimoTtsModuleRef,
+    declaration: mimoTtsMarkupSurfaces.find((item) => item.name === "voiceDesign")!, handler: decodeMimoVoiceDesignSurface,
     }),
     createMarkupSurfaceHostFacet({
-      module: mimoTtsModuleRef, surface: "voiceClone", mode: "structured",
-      implementationDigest: mimoTtsSurfaceDigests.voiceClone, handler: decodeMimoVoiceCloneSurface,
+      module: mimoTtsModuleRef,
+    declaration: mimoTtsMarkupSurfaces.find((item) => item.name === "voiceClone")!, handler: decodeMimoVoiceCloneSurface,
     }),
   ],
 };

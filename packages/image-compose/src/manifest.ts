@@ -53,11 +53,17 @@ export const imageComposeLayerSetSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.image-compose-layer-set@1" } },
   layers: { schema: { kind: "array", maxItems: 64, items: layer } },
 });
-const registered = (locator: string, digest: ReturnType<typeof digestOf>) => ({ kind: "registered" as const, locator, digest });
-const validator = (locator: string, digest: ReturnType<typeof digestOf>) => ({
-  abi: "svml.type-validator@1" as const,
-  implementation: registered(locator, digest),
+const registered = (digest: ReturnType<typeof digestOf>) => ({ digest });
+const validator = (digest: ReturnType<typeof digestOf>) => ({
+  implementation: registered(digest),
 });
+
+export const imageComposeMarkupSurfaces = [{
+    name: "image", tag: "Image", mode: "structured",
+    outputs: [imageComposeTypes.options, imageComposeTypes.layerSpec, artifactTypes.blob],
+    implementation: { digest: imageComposeImplementationDigests.surface },
+  }] as const;
+
 
 export const imageComposeManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -66,31 +72,26 @@ export const imageComposeManifest: ModuleManifest = {
   dependencies: [artifactDependency, spatialDependency, rasterDependency],
   types: [
     { name: imageComposeTypes.options.name, schema: imageComposeOptionsSchema,
-      validator: validator("@narratage/image-compose/validate-options", imageComposeImplementationDigests.validateOptions) },
+      validator: validator(imageComposeImplementationDigests.validateOptions) },
     { name: imageComposeTypes.layerSpec.name, schema: imageComposeLayerSpecSchema,
-      validator: validator("@narratage/image-compose/validate-layer-spec", imageComposeImplementationDigests.validateLayerSpec) },
+      validator: validator(imageComposeImplementationDigests.validateLayerSpec) },
     { name: imageComposeTypes.layerSet.name, schema: imageComposeLayerSetSchema,
-      validator: validator("@narratage/image-compose/validate-layer-set", imageComposeImplementationDigests.validateLayerSet) },
+      validator: validator(imageComposeImplementationDigests.validateLayerSet) },
   ],
   capabilities: [],
-  surfaces: [{
-    name: "image", tag: "Image", mode: "structured",
-    outputs: [imageComposeTypes.options, imageComposeTypes.layerSpec, artifactTypes.blob],
-    implementation: { kind: "trusted-frontend-surface", locator: "@narratage/image-compose/image-surface", digest: imageComposeImplementationDigests.surface },
-  }],
   producers: [
     { name: imageComposeProducers.createLayers.name, inputs: [], outputs: [{ name: "layers", type: imageComposeTypes.layerSet }], needs: [],
-      implementation: registered("@narratage/image-compose/create-layers", imageComposeImplementationDigests.createLayers) },
+      implementation: registered(imageComposeImplementationDigests.createLayers) },
     { name: imageComposeProducers.appendLayer.name, inputs: [
       { name: "layers", type: imageComposeTypes.layerSet }, { name: "source", type: artifactTypes.blob },
       { name: "frame", type: spatialTypes.frame }, { name: "spec", type: imageComposeTypes.layerSpec },
     ], outputs: [{ name: "layers", type: imageComposeTypes.layerSet }], needs: [],
-      implementation: registered("@narratage/image-compose/append-layer", imageComposeImplementationDigests.appendLayer) },
+      implementation: registered(imageComposeImplementationDigests.appendLayer) },
     { name: imageComposeProducers.request.name, inputs: [
       { name: "canvas", type: spatialTypes.canvas }, { name: "options", type: imageComposeTypes.options },
       { name: "layers", type: imageComposeTypes.layerSet },
     ], outputs: [], needs: [{ name: "image", capability: rasterCapabilities.execute, returns: artifactTypes.blob }],
-      implementation: registered("@narratage/image-compose/request", imageComposeImplementationDigests.request) },
+      implementation: registered(imageComposeImplementationDigests.request) },
   ],
 };
 

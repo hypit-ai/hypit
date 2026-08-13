@@ -40,7 +40,7 @@ function appendProducer(item: CommentStickerFragmentItem) {
   return item.avatarName === undefined ? commentStickerProducers.appendMoment : commentStickerProducers.appendMomentAvatar;
 }
 
-export function createCommentStickerFragment(items: readonly CommentStickerFragmentItem[], name: string) {
+export function createCommentStickerFragment(items: readonly CommentStickerFragmentItem[]) {
   if (items.length === 0) throw new Error("Comment Sticker Fragment requires at least one Item.");
   const types = new Map<string, TypeRef>();
   const operations: FragmentOperation[] = [{
@@ -124,7 +124,6 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
     },
   );
   return sealGraphFragment({
-    name,
     inputs: [
       { name: "canvas", type: spatialTypes.canvas },
       { name: "header", type: commentStickerTypes.header },

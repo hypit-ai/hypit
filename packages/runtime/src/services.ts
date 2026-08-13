@@ -3,7 +3,8 @@ import type { CanonicalValue, Digest, ModuleRef } from "@narratage/protocol";
 
 import { CompositeCredentialStore } from "./credentials.js";
 import type { CredentialStore } from "./credentials.js";
-import type { BuildDispatchStore, RuntimeJournal } from "./dispatch.js";
+import type { BuildCatalog } from "./catalog.js";
+import type { BuildDispatchStore } from "./dispatch.js";
 import type { OperationStore } from "./operations.js";
 import {
   RuntimeModuleRegistry,
@@ -31,7 +32,6 @@ export type RuntimeWorkerService = RuntimeServiceBase<"worker", RuntimeWorkerFac
 export type RuntimeBuildStoreService = RuntimeServiceBase<"build-store", BuildStore>;
 export type RuntimeOperationStoreService = RuntimeServiceBase<"operation-store", OperationStore>;
 export type RuntimeDispatchStoreService = RuntimeServiceBase<"dispatch-store", BuildDispatchStore>;
-export type RuntimeJournalService = RuntimeServiceBase<"runtime-journal", RuntimeJournal>;
 export type RuntimeArtifactStoreService = RuntimeServiceBase<"artifact-store", ArtifactStore>;
 export type RuntimeCredentialStoreService = RuntimeServiceBase<"credential-store", CredentialStore>;
 
@@ -41,15 +41,15 @@ export type RuntimeService =
   | RuntimeBuildStoreService
   | RuntimeOperationStoreService
   | RuntimeDispatchStoreService
-  | RuntimeJournalService
   | RuntimeArtifactStoreService
   | RuntimeCredentialStoreService;
 
 /** One configured deployment package may expose several exact Runtime services. */
 export type RuntimeServicePackage = {
-  readonly name: string;
   readonly manifest: RuntimeModuleManifest;
   readonly services: readonly RuntimeService[];
+  /** Optional Host-facing index owned by the same durable Build store; never part of Runtime selection. */
+  readonly buildCatalog?: BuildCatalog;
   close?(): void | Promise<void>;
 };
 
@@ -58,7 +58,6 @@ type RuntimeServiceDefinitionBase<Role extends RuntimeServiceFacetRole, Service>
   readonly facet: string;
   readonly instance: string;
   readonly implementation: {
-    readonly locator: string;
     readonly digest: Digest;
   };
   readonly configuration?: CanonicalValue;
@@ -71,14 +70,14 @@ export type RuntimeServiceDefinition =
   | RuntimeServiceDefinitionBase<"build-store", BuildStore>
   | RuntimeServiceDefinitionBase<"operation-store", OperationStore>
   | RuntimeServiceDefinitionBase<"dispatch-store", BuildDispatchStore>
-  | RuntimeServiceDefinitionBase<"runtime-journal", RuntimeJournal>
   | RuntimeServiceDefinitionBase<"artifact-store", ArtifactStore>
   | RuntimeServiceDefinitionBase<"credential-store", CredentialStore>;
 
 export type DefineRuntimeServicePackageOptions = {
-  readonly name?: string;
   readonly module: ModuleRef;
   readonly services: readonly RuntimeServiceDefinition[];
+  /** Host presentation index co-owned with this package's BuildStore, if any. */
+  readonly buildCatalog?: BuildCatalog;
   readonly close?: () => void | Promise<void>;
 };
 
@@ -89,7 +88,6 @@ export type RuntimeServiceSelection = {
     readonly build: string;
     readonly operations: string;
     readonly dispatch: string;
-    readonly journal: string;
     readonly artifacts: string;
     readonly credentials: readonly string[];
   };
@@ -103,7 +101,6 @@ export type RuntimeServiceAssembly = {
   readonly buildStore: BuildStore;
   readonly operationStore: OperationStore;
   readonly dispatchStore: BuildDispatchStore;
-  readonly journal: RuntimeJournal;
   readonly artifactStore: ArtifactStore;
   readonly credentialStore: CredentialStore;
   close(): Promise<void>;
@@ -150,10 +147,6 @@ function verifyServicePort(service: RuntimeService): void {
         "acquireCapacity", "heartbeatCapacity", "parkCapacity", "releaseCapacity", "clearCapacity", "listCapacity",
       ]) callable(service.service, method, service.instance.id);
       break;
-    case "runtime-journal":
-      callable(service.service, "append", service.instance.id);
-      callable(service.service, "list", service.instance.id);
-      break;
     case "artifact-store":
       callable(service.service, "put", service.instance.id);
       callable(service.service, "get", service.instance.id);
@@ -178,7 +171,6 @@ export function defineRuntimeServicePackage(
     assert(definition.instance.trim().length > 0, "Runtime service instance is empty");
     assert(!instances.has(definition.instance), `Runtime service instance ${definition.instance} is duplicated`);
     assert(!facets.has(definition.facet), `Runtime service facet ${definition.facet} is duplicated`);
-    assert(definition.implementation.locator.trim().length > 0, `${definition.instance} implementation locator is empty`);
     assert(isDigest(definition.implementation.digest), `${definition.instance} implementation digest is invalid`);
     instances.add(definition.instance);
     facets.add(definition.facet);
@@ -203,9 +195,9 @@ export function defineRuntimeServicePackage(
     })),
   };
   const result: RuntimeServicePackage = {
-    name: options.name ?? options.module.name,
     manifest,
     services,
+    ...(options.buildCatalog === undefined ? {} : { buildCatalog: options.buildCatalog }),
     ...(options.close === undefined ? {} : { close: options.close }),
   };
   verifyRuntimeServicePackage(result);
@@ -213,31 +205,29 @@ export function defineRuntimeServicePackage(
 }
 
 export function verifyRuntimeServicePackage(value: RuntimeServicePackage): void {
-  assert(value.name.trim().length > 0, "Runtime service package name is empty");
-  assert(value.services.length > 0, `${value.name} contains no Runtime service`);
+  const packageName = `${value.manifest.name}@${value.manifest.version}`;
+  assert(value.services.length > 0, `${packageName} contains no Runtime service`);
   const modules = new RuntimeModuleRegistry();
   modules.register(value.manifest);
   const ids = new Set<string>();
   const claimedFacets = new Set<string>();
   for (const service of value.services) {
-    assert(service.instance.id.trim().length > 0, `${value.name} Runtime service instance is empty`);
-    assert(!ids.has(service.instance.id), `${value.name} repeats Runtime service ${service.instance.id}`);
+    assert(service.instance.id.trim().length > 0, `${packageName} Runtime service instance is empty`);
+    assert(!ids.has(service.instance.id), `${packageName} repeats Runtime service ${service.instance.id}`);
     ids.add(service.instance.id);
-    if (service.instance.configurationDigest !== undefined) {
-      assert(isDigest(service.instance.configurationDigest),
-        `${value.name} service ${service.instance.id} configuration digest is invalid`);
-    }
+    assert(isDigest(service.instance.configurationDigest),
+      `${packageName} service ${service.instance.id} configuration digest is invalid`);
     verifyServicePort(service);
     const resolved = modules.resolve(service.instance.facet);
-    assert(resolved !== undefined, `${value.name} service ${service.instance.id} has no Manifest facet`);
+    assert(resolved !== undefined, `${packageName} service ${service.instance.id} has no Manifest facet`);
     assert(resolved.facet.role === service.role,
-      `${value.name} service ${service.instance.id} role differs from its Manifest facet`);
+      `${packageName} service ${service.instance.id} role differs from its Manifest facet`);
     claimedFacets.add(serviceFacetKey(service));
   }
   for (const facet of value.manifest.facets) {
-    assert(facet.role !== "capability-endpoint", `${value.name} Runtime service Manifest contains an Endpoint facet`);
+    assert(facet.role !== "capability-endpoint", `${packageName} Runtime service Manifest contains an Endpoint facet`);
     const key = `${value.manifest.name}@${value.manifest.version}#${facet.name}`;
-    assert(claimedFacets.has(key), `${value.name} Manifest facet ${facet.name} has no configured service`);
+    assert(claimedFacets.has(key), `${packageName} Manifest facet ${facet.name} has no configured service`);
   }
 }
 
@@ -264,11 +254,8 @@ export function assembleRuntimeServices(
   selection: RuntimeServiceSelection,
 ): RuntimeServiceAssembly {
   const services = new Map<string, { readonly package: RuntimeServicePackage; readonly service: RuntimeService }>();
-  const packageNames = new Set<string>();
   for (const item of packages) {
     verifyRuntimeServicePackage(item);
-    assert(!packageNames.has(item.name), `Runtime service package ${item.name} is configured twice`);
-    packageNames.add(item.name);
     for (const service of item.services) {
       assert(!services.has(service.instance.id), `Runtime service instance ${service.instance.id} is configured twice`);
       services.set(service.instance.id, { package: item, service });
@@ -279,10 +266,9 @@ export function assembleRuntimeServices(
   const build = selectedService(services, selection.stores.build, "build-store");
   const operations = selectedService(services, selection.stores.operations, "operation-store");
   const dispatch = selectedService(services, selection.stores.dispatch, "dispatch-store");
-  const journal = selectedService(services, selection.stores.journal, "runtime-journal");
   const artifacts = selectedService(services, selection.stores.artifacts, "artifact-store");
   const credentialServices = selection.stores.credentials.map((id) => selectedService(services, id, "credential-store")!);
-  const selected = [scheduler, worker, build, operations, dispatch, journal, artifacts, ...credentialServices]
+  const selected = [scheduler, worker, build, operations, dispatch, artifacts, ...credentialServices]
     .filter((item): item is NonNullable<typeof item> => item !== undefined);
   const selectedPackages = [...new Set(selected.map((item) => item.package))];
   let closed = false;
@@ -294,7 +280,6 @@ export function assembleRuntimeServices(
     buildStore: build!.service.service,
     operationStore: operations!.service.service,
     dispatchStore: dispatch!.service.service,
-    journal: journal!.service.service,
     artifactStore: artifacts!.service.service,
     credentialStore: new CompositeCredentialStore(credentialServices.map((item) => item.service.service)),
     async close() {

@@ -454,7 +454,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("narratage doctor")),
       colors.dim("Diagnose one complete declarative Runtime Profile without submitting work."),
       "",
-      "  narratage doctor <runtime-profile.json>",
+      "  narratage doctor <runtime-profile>",
     ],
     plan: [
       colors.accent(colors.strong("narratage plan")),
@@ -479,7 +479,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("narratage runtime")),
       colors.dim("Operate the Worker selected by one Runtime Profile."),
       "",
-      "  narratage runtime up <profile>       validate the Runtime Revision, start services and Worker",
+      "  narratage runtime up <profile>       validate the Runtime Closure, start services and Worker",
       "  narratage runtime status <profile>   inspect Worker, queue capacity and declared services",
       "  narratage runtime logs <profile>     read Worker logs",
       "  narratage runtime down <profile>     stop the owned Worker and external programs",

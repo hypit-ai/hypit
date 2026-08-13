@@ -42,30 +42,18 @@ export type ProvidedOrigin = {
 
 export type RecordOrigin = AuthoredOrigin | DerivedOrigin | ObservedOrigin | ProvidedOrigin;
 
-/** Content-bound Host assertion that the Type owner's locked validator accepted this exact value. */
-export type TypeValidationReceipt = {
-  readonly format: "svml.type-validation@1";
-  readonly id: Digest;
-  readonly type: TypeRef;
-  readonly recordDigest: Digest;
-  readonly validatorDigest: Digest;
-};
-
+/** One typed value in the graph; semantic validation happens at the Host admission boundary. */
 export type TypedRecord = {
   readonly id: RecordId;
   readonly type: TypeRef;
   readonly value: StoredValue;
   readonly digest: Digest;
   readonly origin: RecordOrigin;
-  readonly validation?: TypeValidationReceipt;
 };
 
 export type TypedModule = {
   readonly format: "svml.typed-module@1";
-  readonly id: string;
-  readonly closureDigest: Digest;
   readonly records: readonly TypedRecord[];
-  readonly semanticDigest: Digest;
 };
 
 export type Need = {
@@ -82,12 +70,12 @@ export type Need = {
  * Host-attested identity of the configured Runtime implementation that fulfilled a Need.
  *
  * The Endpoint never supplies this value itself. A trusted Driver derives it from the locked
- * Endpoint registration and, when present, the applied Runtime Closure.
+ * Endpoint registration. Whole-Runtime identity stays in the execution layer rather than
+ * contaminating one independent Need Receipt with unrelated services and Providers.
  */
 export type FulfillerImplementation = {
   readonly digest: Digest;
   readonly configurationDigest: Digest;
-  readonly runtimeClosure?: Digest;
 };
 
 export type Receipt = {
@@ -179,7 +167,6 @@ export type OperationNode = {
 export type ProvidedValue = {
   readonly id: RecordId;
   readonly value: StoredValue;
-  readonly validation?: TypeValidationReceipt;
 };
 
 export type CandidateRoot =
@@ -244,7 +231,6 @@ export type BuildPlan = {
   readonly id: Digest;
   readonly graph: Digest;
   readonly request: Digest;
-  readonly initialValues: readonly TypedRecord[];
   readonly steps: readonly ProducerStep[];
   readonly goals: readonly BuildGoal[];
   readonly selections: readonly BuildSelection[];
@@ -252,7 +238,6 @@ export type BuildPlan = {
 
 export type LinkedProgram = {
   readonly closure: ResolvedModuleClosure;
-  readonly modules: readonly TypedModule[];
   readonly records: readonly TypedRecord[];
   readonly semanticDigest: Digest;
 };
@@ -277,13 +262,7 @@ export type FulfillNeedCommand = {
   readonly need: Need;
 };
 
-export type CompleteCommand = {
-  readonly kind: "complete";
-  readonly id: CommandId;
-  readonly goals: readonly RecordId[];
-};
-
-export type CoreCommand = InvokeProducerCommand | FulfillNeedCommand | CompleteCommand;
+export type CoreCommand = InvokeProducerCommand | FulfillNeedCommand;
 
 export type ProducerCompletedEvent = {
   readonly kind: "producer-completed";
@@ -291,7 +270,6 @@ export type ProducerCompletedEvent = {
   readonly command: CommandId;
   readonly outputs: Readonly<Record<string, StoredValue>>;
   readonly needs: Readonly<Record<string, CanonicalValue>>;
-  readonly validations?: Readonly<Record<string, TypeValidationReceipt>>;
 };
 
 export type NeedFulfilledEvent = {
@@ -302,7 +280,6 @@ export type NeedFulfilledEvent = {
   readonly requestDigest: Digest;
   readonly fulfiller: string;
   readonly implementation?: FulfillerImplementation;
-  readonly validation?: TypeValidationReceipt;
 };
 
 export type CommandFailedEvent = {
@@ -342,9 +319,4 @@ export type BuildState = {
   readonly outstanding: readonly CoreCommand[];
   readonly acceptedEvents: readonly AcceptedEvent[];
   readonly diagnostics: readonly BuildDiagnostic[];
-};
-
-export type CoreTransition = {
-  readonly state: BuildState;
-  readonly commands: readonly CoreCommand[];
 };

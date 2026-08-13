@@ -183,7 +183,6 @@ export function createMediaLambdaHandler(options: MediaLambdaHandlerOptions = {}
         ...(sharedLibraryPath === undefined ? {} : { sharedLibraryPath }),
         processTimeoutMs: positiveInteger(process.env.SVML_MEDIA_TIMEOUT_MS, 14 * 60_000),
         maxProbeOutputBytes: positiveInteger(process.env.SVML_MEDIA_MAX_PROBE_BYTES, 256 * 1024 * 1024),
-        label: "media.aws-lambda",
       };
       const result = await OPERATIONS[operation](env, request.constraints);
       return {
@@ -191,7 +190,6 @@ export function createMediaLambdaHandler(options: MediaLambdaHandlerOptions = {}
         operation,
         ok: true as const,
         value: result.value,
-        metadata: result.metadata,
       };
     } catch (error) {
       // Never thrown: the transport will not copy a failed function's payload

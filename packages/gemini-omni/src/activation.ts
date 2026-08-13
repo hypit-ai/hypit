@@ -3,20 +3,17 @@ import {
   geminiOmniComponent,
   geminiOmniManifest,
   geminiOmniModuleRef,
-  geminiOmniSurfaceImplementationDigest,
+  geminiOmniMarkupSurfaces,
 } from "./index.js";
 import { decodeGeminiOmniVideoSurface } from "./surface.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/gemini-omni",
-  modules: [{ manifest: geminiOmniManifest, specifiers: ["@narratage/gemini-omni", "@narratage/gemini-omni@1"] }],
+  modules: [{ manifest: geminiOmniManifest }],
   components: [geminiOmniComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
     module: geminiOmniModuleRef,
-    surface: "video",
-    mode: "structured",
-    implementationDigest: geminiOmniSurfaceImplementationDigest,
+    declaration: geminiOmniMarkupSurfaces.find((item) => item.name === "video")!,
     handler: decodeGeminiOmniVideoSurface,
   })],
 };

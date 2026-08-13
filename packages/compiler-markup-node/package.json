@@ -11,12 +11,13 @@
     "@narratage/compiler-node": "workspace:*",
     "@narratage/component-kit": "workspace:*",
     "@narratage/elaborator": "workspace:*",
-    "@narratage/host": "workspace:*",
+    "@narratage/workspace": "workspace:*",
     "@narratage/package-loader-node": "workspace:*",
     "@narratage/markup": "workspace:*",
     "@narratage/validation": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/protocol": "workspace:*"
+    "@narratage/protocol": "workspace:*",
+    "@narratage/workspace-fs-node": "workspace:*"
   }
 }
