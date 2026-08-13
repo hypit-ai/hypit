@@ -119,7 +119,8 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 5
 .inspector { position:relative; z-index:2; display:flex; flex-wrap:wrap; align-items:center; gap:6px 26px; min-height:52px; padding:8px 16px; background:var(--panel); border-top:1px solid var(--line); }
 .inspector .cell { min-width:0; display:flex; flex-direction:column; gap:2px; }
 .inspector .cell.wide { min-width:120px; }
-.inspector dt { color:#63636e; font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+/* Written as they read. Letter-spacing only ever served the capitals. */
+.inspector dt { color:#63636e; font-size:11px; }
 .inspector dd { margin:0; font-size:12px; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .inspector .cell.wide dd { color:var(--accent); font-weight:600; }
 .skipped { margin-left:auto; position:relative; }
