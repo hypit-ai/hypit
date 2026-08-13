@@ -24,6 +24,7 @@ export const videoCliDistribution: CliDistribution = {
     const { runtimeConfigPackageSelection } = await import("@narratage/local/config");
     const selection = await runtimeConfigPackageSelection(path, { packageRoot });
     return {
+      root: selection.root,
       ...(selection.packageLock === undefined ? {} : { packageLock: selection.packageLock }),
       ...(selection.runtimePackageLock === undefined ? {} : { runtimePackageLock: selection.runtimePackageLock }),
       packageRoot: selection.packageRoot,
@@ -38,9 +39,12 @@ export const videoCliDistribution: CliDistribution = {
     const { createVideoRuntimeFromConfig } = await import("./runtime-config.js");
     return await createVideoRuntimeFromConfig(path, packageRoot, options?.implementationPackages);
   },
-  createRuntimeControlFromConfig: async (path) => {
+  createRuntimeControlFromConfig: async (path, options) => {
     const { createRuntimeControlFromConfig } = await import("@narratage/local/config");
-    return await createRuntimeControlFromConfig(path, { packageRoot });
+    return await createRuntimeControlFromConfig(path, {
+      packageRoot,
+      ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
+    });
   },
   createRuntimeCredentialsFromConfig: async (path, endpoint) => {
     const { createRuntimeCredentialsFromConfig } = await import("@narratage/local/config");

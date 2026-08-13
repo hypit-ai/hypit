@@ -16,6 +16,7 @@ import { parseSourceHeader } from "@narratage/source";
 import {
   createNodePackageLock,
   loadNodePackageSet,
+  loadNodePackageSelection,
   readNodePackageLock,
   writeNodePackageLock,
 } from "@narratage/package-loader-node";
@@ -619,9 +620,10 @@ async function loadLocalRuntime(
 async function loadRuntimeControl(
   path: string,
   distribution: CliDistribution,
+  readOnly = true,
 ): Promise<LocalRuntimeControl> {
   requireJsonRuntimeProfile(path);
-  return await distribution.createRuntimeControlFromConfig(path);
+  return await distribution.createRuntimeControlFromConfig(path, { readOnly });
 }
 
 function displayType(type: TypeRef): string {
@@ -1056,8 +1058,9 @@ export async function runCli(
       throw new Error("this Distribution cannot discover Runtime packages from the selected Profile");
     }
     const runtimePackages = selection.runtimePackages;
+    const syncWorkspaceRoot = args.workspaceRoot ?? selection.root;
     const sourceSelection = await distribution.discoverSourcePackages?.(source, {
-      ...(args.workspaceRoot === undefined ? {} : { workspaceRoot: args.workspaceRoot }),
+      ...(syncWorkspaceRoot === undefined ? {} : { workspaceRoot: syncWorkspaceRoot }),
     });
     if (sourceSelection === undefined) {
       throw new Error("this Distribution cannot discover packages from the selected Run Source");
@@ -1088,12 +1091,20 @@ export async function runCli(
     await withPackageLockEdit(locks[0]!, async () => await withPackageLockEdit(locks[1]!, async () => {
       const authorBefore = await readExistingLock(selection.packageLock!);
       const runtimeBefore = await readExistingLock(selection.runtimePackageLock!);
+      const authorSelected = [...new Set([
+        ...(authorBefore?.selected ?? []),
+        ...sourceSelection.selected,
+      ])].sort();
+      const runtimeSelected = [...new Set([
+        ...(runtimeBefore?.selected ?? []),
+        ...runtimePackages,
+      ])].sort();
       const [authorAfter, runtimeAfter] = await Promise.all([
-        createNodePackageLock(sourceSelection.selected, packageRoot),
-        createNodePackageLock(runtimePackages, packageRoot),
+        createNodePackageLock(authorSelected, packageRoot),
+        createNodePackageLock(runtimeSelected, packageRoot),
       ]);
-      await writeNodePackageLock(selection.packageLock!, authorAfter);
-      await writeNodePackageLock(selection.runtimePackageLock!, runtimeAfter);
+      if (authorBefore?.digest !== authorAfter.digest) await writeNodePackageLock(selection.packageLock!, authorAfter);
+      if (runtimeBefore?.digest !== runtimeAfter.digest) await writeNodePackageLock(selection.runtimePackageLock!, runtimeAfter);
       const author = summarizeDifference(authorBefore, authorAfter);
       const runtime = summarizeDifference(runtimeBefore, runtimeAfter);
       const changed = [...author.added, ...author.removed, ...author.changed,
@@ -1106,8 +1117,8 @@ export async function runCli(
         profile,
         packageRoot,
         selected: {
-          author: sourceSelection.selected,
-          runtime: runtimePackages,
+          author: authorSelected,
+          runtime: runtimeSelected,
         },
         author: { path: selection.packageLock, digest: authorAfter.digest, difference: author },
         runtime: { path: selection.runtimePackageLock, digest: runtimeAfter.digest, difference: runtime },
@@ -1299,7 +1310,7 @@ export async function runCli(
       || args.packages.length > 0) {
       throw new Error("gc reads all deployment selection from the Runtime Profile itself");
     }
-    const runtime = await loadRuntimeControl(resolve(args.file!), distribution);
+    const runtime = await loadRuntimeControl(resolve(args.file!), distribution, !args.apply);
     try {
       if (!("garbageCollectArtifacts" in runtime) || typeof runtime.garbageCollectArtifacts !== "function") {
         throw new Error("selected Runtime does not expose Artifact maintenance");
@@ -1400,7 +1411,7 @@ export async function runCli(
     || args.command === "history" || args.command === "get" || args.command === "cancel" || args.command === "queue"
     || args.command === "operations" || args.command === "operation") {
     if (args.runtime === undefined) throw new Error(`${args.command} requires --runtime`);
-    const runtime = await loadRuntimeControl(args.runtime, distribution);
+    const runtime = await loadRuntimeControl(args.runtime, distribution, args.command !== "cancel");
     try {
       if (args.command === "queue") {
         let previous: string | undefined;
@@ -1771,19 +1782,33 @@ export async function runCli(
   }
   const effectivePackageLock = args.packageLock ?? runtimePackageSelection?.packageLock;
   const effectivePackageRoot = args.packageRoot ?? runtimePackageSelection?.packageRoot;
+  const effectiveWorkspaceRoot = args.workspaceRoot
+    ?? runtimePackageSelection?.root
+    ?? (effectivePackageLock === undefined ? undefined : dirname(resolve(effectivePackageLock)));
   if (effectivePackageRoot !== undefined && effectivePackageLock === undefined) {
     throw new Error("--package-root locates the installed packages named by --package-lock; provide both options");
   }
+  const exactSourceSelection = effectivePackageLock === undefined
+    ? undefined
+    : await distribution.discoverSourcePackages?.(args.file!, {
+        ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
+      });
   const loadedPackageSet = effectivePackageLock === undefined
     ? undefined
-    : await loadNodePackageSet(
-        effectivePackageLock,
-        effectivePackageRoot ?? distribution.packageRoot ?? dirname(effectivePackageLock),
-      );
+    : exactSourceSelection === undefined
+      ? await loadNodePackageSet(
+          effectivePackageLock,
+          effectivePackageRoot ?? distribution.packageRoot ?? dirname(effectivePackageLock),
+        )
+      : await loadNodePackageSelection(
+          effectivePackageLock,
+          exactSourceSelection,
+          effectivePackageRoot ?? distribution.packageRoot ?? dirname(effectivePackageLock),
+        );
   const packageContributions = loadedPackageSet?.contributions ?? distribution.builtInPackageContributions;
   const runFrontends = collectRunFrontends(distribution.runFrontends, packageContributions);
   const compiler = distribution.createCompiler({
-    ...(args.workspaceRoot === undefined ? {} : { workspaceRoot: args.workspaceRoot }),
+    ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
     ...(args.assetRoots.length === 0 ? {} : { assetRoots: args.assetRoots }),
     packageContributions,
   });
@@ -1792,9 +1817,12 @@ export async function runCli(
   const runMode = runFrontends.some((frontend) => frontend.id === sourceHeader.using);
   const authorMode = compiler.supportsFrontend(sourceHeader.using);
   if (runMode === authorMode) {
-    throw new Error(runMode
+    const message = runMode
       ? `Frontend ${sourceHeader.using} is ambiguously registered as Author and Run`
-      : `No trusted Author or Run compiler accepts Frontend ${sourceHeader.using}`);
+      : `No trusted Author or Run compiler accepts Frontend ${sourceHeader.using}`;
+    throw new Error(effectivePackageLock === undefined && !runMode
+      ? `${message}; select the project's package inventory with --runtime <profile> or --package-lock <lock>`
+      : message);
   }
   if ((args.command === "plan" || args.command === "build") && !runMode) {
     throw new Error(`${args.command} requires a self-described Run Source; check Author Sources independently`);
@@ -2015,7 +2043,7 @@ export async function runCli(
       kind: "plan",
       machine: {
         format: "narratage.cli-plan@1",
-        ok: preflight?.ok ?? true,
+        ok: true,
         plan: result.plan,
         ...(preflight === undefined ? {} : { preflight }),
       },
@@ -2026,7 +2054,6 @@ export async function runCli(
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([name, id]) => [id, name])),
     });
-    if (preflight !== undefined && !preflight.ok) io.setExitCode?.(1);
   } finally {
     await runtime?.close();
   }

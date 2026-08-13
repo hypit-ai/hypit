@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import type { ComponentPackage } from "@narratage/component-kit";
 import {
   collectNodePackageComponents,
+  loadNodePackageSelection,
   loadNodePackageSet,
   readNodePackageLock,
 } from "@narratage/package-loader-node";
@@ -189,6 +190,8 @@ export type LoadRuntimeConfigOptions = {
   readonly packageRoot?: string;
   /** Package set already verified by this same Host command. */
   readonly implementationPackages?: LoadedNodePackageSet;
+  /** Observation-only assembly must not initialize absent durable state. */
+  readonly readOnly?: boolean;
 };
 
 export type RuntimeConfigDoctorResult = {
@@ -203,6 +206,13 @@ export type RuntimeConfigPackageSelection = {
   readonly runtimePackageLock?: string;
   readonly runtimePackages: readonly string[];
 };
+
+function runtimePackages(document: RuntimeConfigDocument): readonly string[] {
+  return [...new Set([
+    ...document.runtimeServices.map((item) => item.use),
+    ...document.endpoints.map((item) => item.use),
+  ])].sort();
+}
 
 /**
  * Resolve the deterministic implementation lock selected by a JSON Runtime
@@ -222,10 +232,7 @@ export async function runtimeConfigPackageSelection(
   return {
     root,
     packageRoot,
-    runtimePackages: [...new Set([
-      ...document.runtimeServices.map((item) => item.use),
-      ...document.endpoints.map((item) => item.use),
-    ])].sort(),
+    runtimePackages: runtimePackages(document),
     ...(document.packageLock === undefined
       ? {}
       : { packageLock: resolve(root, document.packageLock) }),
@@ -240,9 +247,12 @@ async function installLockedRuntimeAdapters(
   path: string | undefined,
   lockRoot: string,
   packageRoot: string,
+  selected?: readonly string[],
 ): Promise<import("@narratage/protocol").Digest | undefined> {
   if (path === undefined) return undefined;
-  const loaded = await loadNodePackageSet(resolve(lockRoot, path), packageRoot);
+  const loaded = selected === undefined
+    ? await loadNodePackageSet(resolve(lockRoot, path), packageRoot)
+    : await loadNodePackageSelection(resolve(lockRoot, path), selected, packageRoot);
   const lockedPackages = new Map(loaded.lock.packages.map((item) => [item.package.name, item]));
   const artifacts = new Map(loaded.lock.artifacts.map((item) => [`${item.name}@${item.version}`, item]));
   for (const contribution of loaded.contributions) {
@@ -295,7 +305,7 @@ export async function declaredExternalServices(
   if (options.capabilities?.length === 0) return { root, services: [] };
   const packageRoot = resolve(dirname(absolute), document.packageRoot ?? options.packageRoot ?? document.root ?? ".");
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot);
+  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot, runtimePackages(document));
   const services: DeclaredExternalService[] = [];
   for (const item of document.endpoints) {
     if (!registry.has(item.use, "endpoint")) {
@@ -350,12 +360,18 @@ export async function doctorRuntimeConfig(
     return { root, diagnostics };
   }
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  const runtimeLock = installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot);
+  const runtimeLock = installLockedRuntimeAdapters(
+    registry,
+    document.runtimePackageLock,
+    root,
+    packageRoot,
+    runtimePackages(document),
+  );
   const implementationLock = options.implementationPackages !== undefined
     ? (async () => {
         if (document.packageLock === undefined) throw new Error("Runtime Profile has no packageLock for verified implementation packages");
         const declared = await readNodePackageLock(resolve(root, document.packageLock));
-        if (declared.digest !== options.implementationPackages!.lock.digest) {
+        if (declared.digest !== options.implementationPackages!.inventoryDigest) {
           throw new Error("Runtime Profile packageLock differs from the implementation packages already verified by this Host");
         }
         return options.implementationPackages;
@@ -535,7 +551,7 @@ export async function createRuntimeFromConfig(
       throw new Error("Runtime Profile has no packageLock for the supplied implementation packages");
     }
     const declared = await readNodePackageLock(resolve(root, document.packageLock));
-    if (declared.digest !== options.implementationPackages.lock.digest) {
+    if (declared.digest !== options.implementationPackages.inventoryDigest) {
       throw new Error("Runtime Profile packageLock differs from the implementation packages already verified by this Host");
     }
   }
@@ -546,7 +562,13 @@ export async function createRuntimeFromConfig(
       ? Promise.resolve(undefined)
       : loadNodePackageSet(resolve(root, document.packageLock), packageRoot);
   const [runtimePackageClosure, implementationPackages] = await Promise.all([
-    installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot),
+    installLockedRuntimeAdapters(
+      registry,
+      document.runtimePackageLock,
+      root,
+      packageRoot,
+      runtimePackages(document),
+    ),
     implementationPackagesPromise,
   ]);
   const runtimeServices = await Promise.all(document.runtimeServices.map(async (item) => {
@@ -567,9 +589,6 @@ export async function createRuntimeFromConfig(
   return await createProjectLocalRuntime({
     root,
     packageRoot,
-    ...(implementationPackages === undefined
-      ? {}
-      : { implementationClosure: implementationPackages.lock.digest }),
     ...(runtimePackageClosure === undefined ? {} : { runtimePackageClosure }),
     runtimeServices,
     runtimeSelection: document.services,
@@ -597,12 +616,13 @@ export async function createRuntimeControlFromConfig(
   const root = resolve(dirname(absolute), document.root ?? ".");
   const packageRoot = resolve(dirname(absolute), document.packageRoot ?? options.packageRoot ?? document.root ?? ".");
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot);
+  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot, runtimePackages(document));
   const runtimeServices = await Promise.all(document.runtimeServices.map(async (item) => {
     return await registry.createService(item.use, {
       root,
       instance: item.instance,
       config: item.config ?? {},
+      access: options.readOnly ? "read-only" : "read-write",
     });
   }));
   return await createProjectLocalRuntimeControl({
@@ -655,7 +675,7 @@ export async function createRuntimeCredentialsFromConfig(
   const endpointEntry = document.endpoints.find((item) => item.instance === endpointInstance);
   if (endpointEntry === undefined) throw new Error(`Runtime Profile has no Endpoint instance ${endpointInstance}`);
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot);
+  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot, runtimePackages(document));
   const serviceEntries = runtimeEntriesForServices(
     document.runtimeServices,
     document.services.stores.credentials,

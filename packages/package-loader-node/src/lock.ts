@@ -29,6 +29,7 @@ import type {
   LoadedNodePackageSet,
   NodePackageContribution,
   NodePackageLockCreateOptions,
+  NodePackageSelectionRequest,
   NodePackageLock,
 } from "./types.js";
 
@@ -292,6 +293,14 @@ function contributionMetadata(value: NodePackageContribution): unknown {
   };
 }
 
+function contributionProvides(value: NodePackageContribution): readonly string[] {
+  return [...new Set([
+    ...(value.authorFrontends ?? []).map((item) => item.id),
+    ...(value.runFrontends ?? []).map((item) => item.id),
+    ...(value.modules ?? []).flatMap((item) => item.specifiers ?? []),
+  ])].sort();
+}
+
 async function importContribution(item: ResolvedPhysicalPackage): Promise<NodePackageContribution> {
   const target = activationPath(item);
   assert((await stat(target)).isFile(), `${item.json.name} activation is not a file`);
@@ -349,12 +358,18 @@ function parseLock(value: unknown): NodePackageLock {
     assert(isDigest(facetsDigest), `$lock.packages[${index}].facetsDigest is invalid`);
     const closureDigest = string(item.closureDigest, `$lock.packages[${index}].closureDigest`);
     assert(isDigest(closureDigest), `$lock.packages[${index}].closureDigest is invalid`);
+    assert(item.provides === undefined || Array.isArray(item.provides),
+      `$lock.packages[${index}].provides must be an array`);
+    const provides = (item.provides ?? []).map((raw, provideIndex) =>
+      string(raw, `$lock.packages[${index}].provides[${provideIndex}]`));
+    assert(new Set(provides).size === provides.length, `$lock.packages[${index}].provides repeats a request`);
     return {
       specifier: string(item.specifier, `$lock.packages[${index}].specifier`),
       package: {
         name: string(physical.name, `$lock.packages[${index}].package.name`),
         version: string(physical.version, `$lock.packages[${index}].package.version`),
       },
+      provides: [...provides].sort(),
       facetsDigest,
       closureDigest,
     };
@@ -362,8 +377,19 @@ function parseLock(value: unknown): NodePackageLock {
   const digest = string(parsed.digest, "$lock.digest");
   assert(isDigest(digest), "$lock.digest is invalid");
   const lock = sealLock({ format: "svml.node-package-lock@1", selected, artifacts, packages });
-  assert(lock.digest === digest, "Node package lock digest is invalid");
-  return lock;
+  if (lock.digest === digest) return lock;
+  const legacyPackages = packages.map(({ provides: _provides, ...item }) => item);
+  const legacy = sealLock({
+    format: "svml.node-package-lock@1",
+    selected,
+    artifacts,
+    packages: legacyPackages as LockedNodePackage[],
+  });
+  assert(legacy.digest === digest, "Node package lock digest is invalid");
+  // Preserve the authenticated legacy identity so `packages sync` can read its
+  // selected roots and rewrite it. Exact activation still rejects it because
+  // it carries no logical `provides` inventory.
+  return { ...lock, digest };
 }
 
 /** Parse and authenticate a lock without resolving or executing its packages. */
@@ -467,6 +493,15 @@ export async function createNodePackageLock(
   root: string,
   options: NodePackageLockCreateOptions = {},
 ): Promise<NodePackageLock> {
+  return (await createNodePackageSet(specifiers, root, options)).lock;
+}
+
+async function createNodePackageSet(
+  specifiers: readonly string[],
+  root: string,
+  options: NodePackageLockCreateOptions = {},
+  inventory?: { readonly path: string; readonly lock: NodePackageLock },
+): Promise<LoadedNodePackageSet> {
   const unique = [...new Set(specifiers)].sort();
   const selectedPhysical = await Promise.all(unique.map(async (specifier) => ({
     root: specifier,
@@ -480,6 +515,21 @@ export async function createNodePackageLock(
   // byte-identical to the old authenticated lock.
   const artifacts = await resolvedArtifacts(closure);
   const artifactsByPackage = new Map(artifacts.map((item) => [artifactKey(item), item]));
+  if (inventory !== undefined) {
+    const trusted = new Map(inventory.lock.artifacts.map((item) => [artifactKey(item), item.digest]));
+    const untrusted = artifacts.filter((item) => trusted.get(artifactKey(item)) !== item.digest);
+    if (untrusted.length > 0) {
+      throw new NodePackageLockStaleError({
+        lock: inventory.path,
+        packageRoot: resolve(root),
+        difference: {
+          added: untrusted.filter((item) => !trusted.has(artifactKey(item))).map(artifactKey).sort(),
+          removed: [],
+          changed: untrusted.filter((item) => trusted.has(artifactKey(item))).map(artifactKey).sort(),
+        },
+      });
+    }
+  }
   if (options.retain !== undefined) {
     const oldSelected = new Set(options.retain.from.selected);
     const newSelected = new Set(unique);
@@ -587,16 +637,31 @@ export async function createNodePackageLock(
     packages.push({
       specifier: physical.json.name,
       package: { name: physical.json.name, version: physical.json.version },
+      provides: contributionProvides(contribution),
       facetsDigest: digestOf(contributionMetadata(contribution)),
       closureDigest: digestOf({ format: "svml.package-closure@1", artifacts: ownArtifacts }),
     });
   }
-  return sealLock({
+  const lock = sealLock({
     format: "svml.node-package-lock@1",
     selected: unique,
     artifacts,
     packages,
   });
+  if (inventory !== undefined) {
+    const trusted = new Map(inventory.lock.packages.map((item) => [item.specifier, item]));
+    for (const item of lock.packages) {
+      const expected = trusted.get(item.specifier);
+      assert(expected !== undefined, `${item.specifier} is absent from package inventory ${inventory.path}`);
+      assert(JSON.stringify(expected) === JSON.stringify(item),
+        `${item.specifier} activation differs from package inventory ${inventory.path}`);
+    }
+  }
+  return {
+    lock,
+    inventoryDigest: inventory?.lock.digest ?? lock.digest,
+    contributions: [...activated.values()].map((item) => item.contribution),
+  };
 }
 
 export async function writeNodePackageLock(path: string, lock: NodePackageLock): Promise<void> {
@@ -653,7 +718,50 @@ export async function loadNodePackageSet(
     values.push(contribution);
   }
   collectNodePackageComponents(values);
-  return { lock, contributions: values };
+  return { lock, inventoryDigest: lock.digest, contributions: values };
+}
+
+/**
+ * Activate only the exact roots required by one compilation from a trusted package inventory.
+ * Unrelated inventory entries are neither verified nor executed by this invocation.
+ */
+export async function loadNodePackageSelection(
+  path: string,
+  request: readonly string[] | NodePackageSelectionRequest,
+  root = dirname(resolve(path)),
+): Promise<LoadedNodePackageSet> {
+  const lockPath = resolve(path);
+  const inventory = await readNodePackageLock(lockPath);
+  const requested: NodePackageSelectionRequest = Array.isArray(request)
+    ? { selected: request }
+    : request as NodePackageSelectionRequest;
+  const selected = new Set(requested.selected);
+  const logical = new Set(requested.logical ?? []);
+  if (logical.size > 0) {
+    for (const item of inventory.packages) {
+      if (item.provides.some((provided) => logical.has(provided))) selected.add(item.specifier);
+    }
+    const supplied = new Set(inventory.packages.flatMap((item) => item.provides));
+    const missingLogical = [...logical].filter((item) => !supplied.has(item)).sort();
+    assert(missingLogical.length === 0, [
+      `package inventory ${lockPath} does not provide this Source language selection:`,
+      ...missingLogical.map((item) => `  ${item}`),
+      "Synchronize the current Run Source with `narratage packages sync`.",
+    ].join("\n"));
+  }
+  const available = new Set(inventory.selected);
+  // A Source names logical language identity. Its npm-looking spelling is only a convenient
+  // physical hint; a trusted package may explicitly provide that identity under another name.
+  const missing = logical.size === 0
+    ? [...selected].filter((item) => !available.has(item)).sort()
+    : [];
+  for (const item of [...selected]) if (!available.has(item)) selected.delete(item);
+  assert(missing.length === 0, [
+    `package inventory ${lockPath} does not authorize this Source selection:`,
+    ...missing.map((item) => `  ${item}`),
+    "Synchronize the current Run Source with `narratage packages sync`.",
+  ].join("\n"));
+  return await createNodePackageSet([...selected], resolve(root), {}, { path: lockPath, lock: inventory });
 }
 
 export async function loadNodePackageContributions(

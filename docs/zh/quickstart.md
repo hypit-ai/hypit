@@ -118,7 +118,7 @@ cd /path/to/my-video
 ```
 
 启动器使用 Narratage 仓库已经安装好的依赖，但源码、SQLite 状态、Artifact 和输出都会留在你的项目里。
-`packages sync` 根据 Run 闭包里的 imports 和 Runtime Profile 选择的 Adapter 生成两份包锁。
+`packages sync` 把当前 Run 与 Runtime 选择加入或刷新到两份项目包库存中，不会删除其他 Run 的包。
 
 需要完整 Runtime Profile 时，从
 [`examples/talking-film-live`](https://github.com/hypit-ai/narratage/tree/main/examples/talking-film-live) 的结构开始：复制文件结构，
@@ -193,4 +193,3 @@ Endpoint 配置，但不会执行作者图。
 | [Tracks](./quickstart/tracks.md) | Caption、Media、Typography 与 Audio Track |
 | [Film 与渲染](./quickstart/composition.md) | 平级 Track 合成与显式渲染 |
 | [Run Source 与 Builds](./quickstart/run.md) | Targets、复用、Runtime Profile、Build 与取回结果 |
-

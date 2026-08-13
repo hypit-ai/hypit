@@ -355,13 +355,25 @@ node --run narratage -- plan /work/my-film/build.svrun \
   --runtime /work/my-film/svml.runtime.json
 ```
 
-The Source Workspace defaults to the directory containing `build.svrun`; its relative Author
-Sources and assets stay inside that boundary. `--package-root` has one unrelated Host purpose: it
+When a Runtime Profile is selected, its `root` (or its own directory when `root` is omitted) is the
+stable Source Workspace for every `.svml`, `.svs`, and `.svrun` in that project. Without a Profile,
+the package-lock directory is the boundary when a lock is selected; otherwise the entry Source
+directory is used. `--package-root` has one unrelated Host purpose: it
 overrides where the CLI locates the installed `node_modules` whose bytes are verified against the
 lock. The official CLI normally supplies its own installation location, so no package path is
 needed above. Use `--root` only when deliberately widening the Source Workspace above the Run
 Source directory. Do not symlink a project into this repository: canonical-path containment
 intentionally rejects that escape.
+
+Keep deployment state out of source control. A normal external project should include:
+
+```gitignore
+.svml/
+output/
+```
+
+Package locks are project source and should remain committed. Read-only archive commands such as
+`status` and `builds` do not initialize an absent Runtime database.
 
 For a shared read-only media library, keep Source imports inside the project and authorize only its
 asset bytes explicitly:
@@ -412,16 +424,19 @@ other than the CLI installation.
 
 ### 1. Synchronize installed packages
 
-After installing or updating packages, explicitly accept both declared closures:
+After installing or updating packages, synchronize the project inventories:
 
 ```bash
 node --run narratage -- packages sync examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root .
 ```
 
-The Author and Run sources choose author packages. The Runtime Profile chooses environment
-packages. `packages sync` closes and authenticates those two sets; it never scans the project,
-starts a Provider or generates media.
+The current Author and Run sources choose author packages. The Runtime Profile chooses environment
+packages. `packages sync` adds or refreshes those requirements in the two inventories; it never
+removes packages required by another Run. Use `lock-packages --remove` for an intentional removal.
+Compilation activates only the exact subset demanded by the current Source. The command never
+scans the project, starts a Provider or generates media.
 
 ### 2. Diagnose the environment
 
@@ -433,18 +448,22 @@ Doctor validates both locks, every selected Runtime role, Endpoint configuration
 presence and bounded environment probes. It never starts the Worker or performs a paid request.
 
 Doctor is intentionally a **full profile audit**. For the environment required by one Run, use
-`plan --runtime`: it checks only capabilities demanded by that finite plan.
+`plan --runtime`: it checks only capabilities demanded by that finite plan. A valid plan remains a
+successful command even when `preflight.ok` is false; `doctor` or `build` enforces deployment
+readiness.
 
 ### 3. Check source and inspect the plan
 
 ```bash
 node --run narratage -- check examples/talking-head-aroll/main.svml \
-  --runtime examples/talking-head-aroll/svml.runtime.json
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root .
 ```
 
 ```bash
 node --run narratage -- plan examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root .
 ```
 
 Review the frozen BuildPlan before spending money. The plan shows every Operation and Needs the
@@ -460,6 +479,7 @@ commands manage external programs only and do not own the Worker lifecycle.
 ```bash
 node --run narratage -- build examples/talking-head-aroll/build.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
+  --root . \
   --build-id my-film-001 \
   --follow
 ```
@@ -473,7 +493,7 @@ interrupting it leaves the Build running.
 | `--runtime` | Path to the Runtime Profile |
 | `--package-lock` | Standalone compilation lock when no Runtime Profile is supplied; a JSON Profile single-sources it for `check`, `plan` and `build` |
 | `--package-root` | Host directory containing the installed packages named by the lock |
-| `--root` | Optional Source Workspace boundary; defaults to the entry Source directory |
+| `--root` | Optional Source Workspace override; otherwise the Runtime Profile root, package-lock directory, or entry Source directory is used in that order |
 | `--build-id` | User-chosen identifier for this Build (used for retrieval and reuse) |
 | `--follow` | Wait for terminal state as an observer; durable execution remains with the Worker |
 

@@ -37,13 +37,15 @@ export type CliDistribution = {
    */
   discoverSourcePackages?(path: string, options?: {
     readonly workspaceRoot?: string;
-  }): Promise<{ readonly selected: readonly string[] }>;
+  }): Promise<{ readonly selected: readonly string[]; readonly logical?: readonly string[] }>;
   /**
    * Resolve the deterministic implementation lock named by a declarative
    * Runtime Profile without constructing that Runtime. Trusted executable
    * Runtime modules may decline and require an explicit CLI package lock.
    */
   resolveCompilationPackages?(path: string): Promise<{
+    /** Stable project Source boundary selected by this Runtime Profile. */
+    readonly root?: string;
     readonly packageLock?: string;
     readonly runtimePackageLock?: string;
     readonly packageRoot?: string;
@@ -55,7 +57,7 @@ export type CliDistribution = {
     readonly implementationPackages?: LoadedNodePackageSet;
   }): Promise<LocalRuntime>;
   /** Open only durable Stores for observation, cancellation, egress and maintenance. */
-  createRuntimeControlFromConfig(path: string): Promise<LocalRuntimeControl>;
+  createRuntimeControlFromConfig(path: string, options?: { readonly readOnly?: boolean }): Promise<LocalRuntimeControl>;
   /** Open only the selected Endpoint declaration and configured CredentialStores. */
   createRuntimeCredentialsFromConfig(path: string, endpoint: string): Promise<LocalCredentialControl>;
   /** Re-enter this exact Distribution as the hidden durable Worker process. */

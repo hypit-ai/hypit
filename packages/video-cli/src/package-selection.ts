@@ -39,23 +39,15 @@ function relativeSource(importer: string, request: string): string {
  * Runtime adapter or package activation executes while the new lock is chosen.
  */
 export async function discoverVideoSourcePackages(
-  runPath: string,
+  sourcePath: string,
   options: { readonly workspaceRoot?: string } = {},
-): Promise<{ readonly selected: readonly string[] }> {
-  const canonicalRun = await realpath(resolve(runPath));
-  const root = await realpath(resolve(options.workspaceRoot ?? dirname(canonicalRun)));
-  if (!isWithin(root, canonicalRun)) throw new Error(`Run Source ${canonicalRun} is outside workspace root ${root}`);
+): Promise<{ readonly selected: readonly string[]; readonly logical: readonly string[] }> {
+  const canonicalSource = await realpath(resolve(sourcePath));
+  const root = await realpath(resolve(options.workspaceRoot ?? dirname(canonicalSource)));
+  if (!isWithin(root, canonicalSource)) throw new Error(`Source ${canonicalSource} is outside workspace root ${root}`);
 
   const selected = new Set<string>();
-  const runText = await readFile(canonicalRun, "utf8");
-  const runHeader = parseSourceHeader(relative(root, canonicalRun), runText);
-  if (runHeader.using !== runMarkupFrontendId) {
-    throw new Error(`This Distribution cannot discover packages for Run Frontend ${runHeader.using}`);
-  }
-  selected.add(physicalPackage(runHeader.using));
-  const run = parseRunDocument(relative(root, canonicalRun), maskSourceHeader(runText, runHeader));
-  for (const item of run.imports) selected.add(physicalPackage(item.from));
-
+  const logical = new Set<string>();
   const visited = new Set<string>();
   const discoverAuthor = async (path: string): Promise<void> => {
     const canonical = await realpath(path);
@@ -69,15 +61,32 @@ export async function discoverVideoSourcePackages(
       // Markup is the Distribution's bootstrap Frontend. Every other Frontend
       // is ordinary selected package code and therefore belongs in the lock.
       selected.add(physicalPackage(header.using));
+      logical.add(header.using);
       return;
     }
     const discovery = discoverMarkup({ name, text: maskSourceHeader(text, header) });
     for (const item of discovery.imports) {
-      if (item.kind === "module") selected.add(physicalPackage(item.from));
+      if (item.kind === "module") {
+        selected.add(physicalPackage(item.from));
+        logical.add(item.from);
+      }
       else await discoverAuthor(relativeSource(canonical, item.from));
     }
   };
 
-  await discoverAuthor(relativeSource(canonicalRun, run.author.source));
-  return { selected: [...selected].sort() };
+  const text = await readFile(canonicalSource, "utf8");
+  const header = parseSourceHeader(relative(root, canonicalSource), text);
+  if (header.using === runMarkupFrontendId) {
+    selected.add(physicalPackage(header.using));
+    logical.add(header.using);
+    const run = parseRunDocument(relative(root, canonicalSource), maskSourceHeader(text, header));
+    for (const item of run.imports) {
+      selected.add(physicalPackage(item.from));
+      logical.add(item.from);
+    }
+    await discoverAuthor(relativeSource(canonicalSource, run.author.source));
+  } else {
+    await discoverAuthor(canonicalSource);
+  }
+  return { selected: [...selected].sort(), logical: [...logical].sort() };
 }
