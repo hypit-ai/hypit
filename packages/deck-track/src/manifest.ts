@@ -124,7 +124,12 @@ const finalizeInputs = [
 
 export const depthStackMarkupSurfaces = [
     { name: "label", tag: "Label", mode: "structured", outputs: [textTypes.text, depthStackTypes.cardLabelStyle, depthStackTypes.cardLabel], implementation: { digest: depthStackSurfaceImplementationDigests.label } },
-    { name: "track", tag: "DepthStack", mode: "structured", outputs: [depthStackTypes.header, depthStackTypes.spec, depthStackTypes.cardSpec, depthStackTypes.program, compositionTypes.visualTrack], implementation: { digest: depthStackSurfaceImplementationDigests.track } },
+    { name: "track", tag: "DepthStack", mode: "structured", outputs: [
+      depthStackTypes.header, depthStackTypes.spec, depthStackTypes.cardSpec,
+      spatialTypes.fit, mediaTrackTypes.sampleLayerSpec, mediaTrackTypes.paintLayerSpec,
+      depthStackTypes.cardLabel, depthStackTypes.cardLabelStyle, textTypes.text,
+      depthStackTypes.program, compositionTypes.visualTrack,
+    ], implementation: { digest: depthStackSurfaceImplementationDigests.track } },
   ] as const;
 
 
