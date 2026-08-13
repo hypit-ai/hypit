@@ -61,7 +61,6 @@ function normalizeBaseUrl(value: string): string {
 
 function request(value: CanonicalValue): GenerationRequest {
   const result = value as unknown as GenerationRequest;
-  assert(result.contract === "svml.generation-request@1", "Xiaomi MiMo received a non-generation request");
   assert(result.ports !== null && typeof result.ports === "object", "Xiaomi MiMo request has no ports");
   return result;
 }
@@ -110,8 +109,7 @@ async function readVoiceSample(
 
 function supports(model: Model, value: CanonicalValue): boolean {
   const req = value as unknown as GenerationRequest;
-  if (req?.contract !== "svml.generation-request@1"
-    || req.ports === null || typeof req.ports !== "object") return false;
+  if (req === undefined || req.ports === null || typeof req.ports !== "object") return false;
   const allowed = model === "mimo-v2.5-tts"
     ? new Set(["text", "instruction", "voice"])
     : model === "mimo-v2.5-tts-voicedesign"

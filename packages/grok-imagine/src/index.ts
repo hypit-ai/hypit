@@ -8,7 +8,6 @@ export const grokImagineModels = ["grok-imagine-video", "grok-imagine-video-1.5-
 export type GrokImagineModel = typeof grokImagineModels[number];
 
 export const grokImagineVideoPorts: GenerationPortTable = sealGenerationPortTable({
-  contract: "svml.generation-ports@1",
   model: "grok-imagine-video",
   result: "video",
   ports: [
@@ -29,7 +28,6 @@ export const grokImagineVideoPorts: GenerationPortTable = sealGenerationPortTabl
 });
 
 export const grokImagine15PreviewPorts: GenerationPortTable = sealGenerationPortTable({
-  contract: "svml.generation-ports@1",
   model: "grok-imagine-video-1.5-preview",
   result: "video",
   ports: [

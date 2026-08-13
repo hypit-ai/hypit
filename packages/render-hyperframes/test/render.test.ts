@@ -198,10 +198,8 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
     mediaTypes.renderedVisual,
     ({ need }) => {
       const request = need.constraints as {
-        readonly contract: string;
         readonly document: ReturnType<typeof compileHyperframesDocument>;
       };
-      assert.equal(request.contract, "svml.hyperframes-visual-render-request@1");
       return {
         value: stored(sealRenderedVisual({
           frameRate: request.document.frameRate,

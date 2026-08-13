@@ -146,7 +146,7 @@ export const mediaPipelineComponent = {
       implementationDigest: mediaPipelineImplementationDigests.inspect,
       handler: ({ inputs }) => {
         const source = blob(inputs.source!.value, "Media inspection source");
-        const need: InspectMediaNeed = { contract: "svml.inspect-media-request@1", source };
+        const need: InspectMediaNeed = { source };
         return { outputs: {}, needs: { inspection: canonicalize(need) } };
       },
     },
@@ -178,7 +178,6 @@ export const mediaPipelineComponent = {
         verifyMediaStreamSelection(selection);
         verifyMediaSelectionRequest(request);
         const need: NormalizeMediaNeed = {
-          contract: "svml.normalize-media-request@1",
           source,
           inspection,
           selection,
@@ -198,7 +197,6 @@ export const mediaPipelineComponent = {
         verifyMediaTransformProgram(program);
         if (media.visual === undefined) throw new Error("Media transform requires a visual stream");
         const need: TransformMediaNeed = {
-          contract: "svml.transform-media-request@1",
           media,
           program,
         };
@@ -216,7 +214,6 @@ export const mediaPipelineComponent = {
         verifyAudioExtractionRequest(request);
         const selected = selectAudioStream(inspection, request.audio);
         const need: ExtractAudioNeed = {
-          contract: "svml.extract-audio-request@1",
           source,
           streamIndex: selected.index,
           output: request.output,
@@ -238,7 +235,6 @@ export const mediaPipelineComponent = {
           throw new Error(`Frame ${request.at.index} is outside the selected stream (${selected.decodedUnitCount} frames)`);
         }
         const need: ExtractFrameNeed = {
-          contract: "svml.extract-frame-request@1",
           source,
           streamIndex: selected.index,
           sourceFrameCount: selected.decodedUnitCount,
@@ -261,7 +257,6 @@ export const mediaPipelineComponent = {
           throw new Error("Speech evidence audio sample domain is invalid");
         }
         const need: ProjectSpeechEvidenceAudioNeed = {
-          contract: "svml.project-speech-evidence-audio-request@1",
           source: {
             kind: "blob",
             digest: audio.audio.digest,
@@ -292,7 +287,7 @@ export const mediaPipelineComponent = {
       handler: ({ inputs }) => {
         const plan = inline(inputs.plan!.value, "AudioProgramPlan");
         verifyAudioProgramPlan(plan);
-        const need: RenderAudioNeed = { contract: "svml.render-audio-request@1", plan };
+        const need: RenderAudioNeed = { plan };
         return { outputs: {}, needs: { audio: canonicalize(need) } };
       },
     },
@@ -308,7 +303,7 @@ export const mediaPipelineComponent = {
           !== audio.sampleFrames * visual.frameRate.numerator) {
           throw new Error("Rendered visual and TimelineAudio have different presentation durations");
         }
-        const need: MuxMediaNeed = { contract: "svml.mux-media-request@1", visual, audio };
+        const need: MuxMediaNeed = { visual, audio };
         return { outputs: {}, needs: { media: canonicalize(need) } };
       },
     },

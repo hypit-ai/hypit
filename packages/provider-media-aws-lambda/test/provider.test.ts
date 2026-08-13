@@ -27,7 +27,6 @@ function recordingInvoker(reply: (request: CanonicalValue) => CanonicalValue) {
 }
 
 const inspectNeed = {
-  contract: "svml.inspect-media-request@1",
   source: { kind: "blob", digest: digestOf("source"), size: 4, mediaType: "video/mp4" },
 } as unknown as CanonicalValue;
 
@@ -123,7 +122,6 @@ test("the remote Provider receives the exact AudioProgramPlan compiled for local
     mix: { normalize: false, limiter: "none" },
   } as unknown as CanonicalValue);
   const constraints = canonicalize({
-    contract: "svml.render-audio-request@1",
     plan,
   } as unknown as CanonicalValue);
   const { invoker, seen } = recordingInvoker(() => canonicalize({
