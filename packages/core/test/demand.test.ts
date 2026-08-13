@@ -9,7 +9,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
   verifyBuildState,
 } from "@narratage/core";
@@ -268,7 +267,7 @@ function createProgram(): LinkedProgram {
       origin: { kind: "authored" },
     }),
   ];
-  return link(closure, [sealTypedModule({ records: authored })]);
+  return link(closure, authored);
 }
 
 function createImageGraph(program: LinkedProgram): CompiledGraph {

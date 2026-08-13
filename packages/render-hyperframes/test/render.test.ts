@@ -18,7 +18,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 import {
@@ -118,9 +117,7 @@ const spaceRecord = await admitRecord(closure, sealRecord({
   value: stored(space),
   origin,
 }), validatorRegistry());
-const linked = link(closure, [sealTypedModule({
-  records: [compositionRecord, spaceRecord],
-})]);
+const linked = link(closure, [compositionRecord, spaceRecord]);
 const instance = elaborateGraphFragment(linked, renderHyperframesFragment, {
   id: "final",
   fragment: renderHyperframesFragment.id,

@@ -9,7 +9,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 import { sealGraphFragment } from "@narratage/elaborator";
@@ -62,7 +61,7 @@ function fixture(): CompiledSourceClosure {
     value: { kind: "inline", value: "A deliberate preview." },
     origin: { kind: "authored" },
   });
-  const program = link(closure, [sealTypedModule({ records: [prompt] })]);
+  const program = link(closure, [prompt]);
   const graph = sealCompiledGraph({
     program: program.semanticDigest,
     outputs: ["left", "right"].map((id) => ({ id, type: mediaType, primary: "default:candidate" })),
@@ -128,6 +127,22 @@ async function compileDocument(body: string) {
     text: `<?svml using="@narratage/run-markup@1"?>\n${body}`,
   }, frontends);
 }
+
+test("Run compilation consumes decode output without repeating package discovery", async () => {
+  const frontends = new RunFrontendRegistry();
+  frontends.register({
+    ...runMarkupFrontend,
+    discover() {
+      throw new Error("package discovery must not run during compilation");
+    },
+  });
+  const compiled = await compileRunSource({
+    id: "/project/build.svrun",
+    name: "build.svrun",
+    text: `<?svml using="@narratage/run-markup@1"?>\n<svrun version="1"><author source="./main.svml"/><target output="left"/></svrun>`,
+  }, frontends);
+  assert.equal(compiled.document.targets[0]?.output, "left");
+});
 
 test("Run Fragments enter the Host only through the locked Run facet ABI", () => {
   const fragment = previewFragment();

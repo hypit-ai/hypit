@@ -11,7 +11,6 @@ import type {
   ResolvedProducerDeclaration,
   ResolvedTypeDeclaration,
   TypeRef,
-  TypedModule,
   TypedRecord,
 } from "@narratage/protocol";
 
@@ -273,41 +272,25 @@ export function verifyRecord(
   verifyRecordStructure(closure, record);
 }
 
-export function sealTypedModule(input: {
-  readonly records: readonly TypedRecord[];
-}): TypedModule {
-  return {
-    format: "svml.typed-module@1",
-    records: input.records,
-  };
-}
-
 export function link(
   closure: ResolvedModuleClosure,
-  typedModules: readonly TypedModule[],
+  authoredRecords: readonly TypedRecord[],
 ): LinkedProgram {
   verifyClosure(closure);
   const recordIds = new Set<string>();
   const records: TypedRecord[] = [];
 
-  for (const typedModule of typedModules) {
+  for (const record of authoredRecords) {
+    invariant(!recordIds.has(record.id), "DUPLICATE_RECORD", `duplicate record ${record.id}`, record.id);
     invariant(
-      typedModule.format === "svml.typed-module@1",
-      "UNSUPPORTED_TYPED_MODULE",
-      "typed record set has an unsupported format",
+      record.origin.kind === "authored",
+      "NON_AUTHORED_PROGRAM_RECORD",
+      "linked program inputs must be authored records",
+      record.id,
     );
-    for (const record of typedModule.records) {
-      invariant(!recordIds.has(record.id), "DUPLICATE_RECORD", `duplicate record ${record.id}`, record.id);
-      invariant(
-        record.origin.kind === "authored",
-        "NON_AUTHORED_MODULE_RECORD",
-        "typed records contain a non-authored input record",
-        record.id,
-      );
-      verifyRecord(closure, record);
-      recordIds.add(record.id);
-      records.push(record);
-    }
+    verifyRecord(closure, record);
+    recordIds.add(record.id);
+    records.push(record);
   }
 
   const program: LinkedProgram = {

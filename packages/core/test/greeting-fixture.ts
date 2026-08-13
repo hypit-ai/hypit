@@ -5,7 +5,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 import type {
@@ -208,10 +207,7 @@ export function createGreetingBuild(options?: {
     value: { kind: "inline", value: { name: "Ada" } },
     origin: { kind: "authored" },
   });
-  const typedModule = sealTypedModule({
-    records: [authored],
-  });
-  const program = link(closure, [typedModule]);
+  const program = link(closure, [authored]);
   const sourceGraph = greetingGraph(program, options?.includeSideTarget ?? false);
   const graph = options?.generationRealization === "placeholder"
     ? sealCompiledGraph({

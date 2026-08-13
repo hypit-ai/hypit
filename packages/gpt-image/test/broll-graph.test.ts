@@ -9,10 +9,9 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
-import { elaborateAuthorModule, sealAuthorModule } from "@narratage/elaborator";
+import { elaborateAuthorGraph } from "@narratage/elaborator";
 import {
   generationManifest,
   sealGenerationMediaBinding,
@@ -185,15 +184,13 @@ function fixture() {
     ]),
     outputs: { video: "montage.video" },
   }];
-  const typed = sealTypedModule({
-    records: records.map(({ validatorDigest: _validatorDigest, ...record }) => sealRecord({ ...record, origin })),
-  });
-  const program = link(closure, [typed]);
+  const program = link(closure,
+    records.map(({ validatorDigest: _validatorDigest, ...record }) => sealRecord({ ...record, origin })));
   const fragments = new Map([
     ...Object.values(gptFragments).map((fragment) => [fragment.id, fragment] as const),
     [seedanceFragment.id, seedanceFragment] as const,
   ]);
-  const elaborated = elaborateAuthorModule(program, sealAuthorModule({ components }),
+  const elaborated = elaborateAuthorGraph(program, components,
     (id) => fragments.get(id));
   return { program, graph: elaborated };
 }

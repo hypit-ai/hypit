@@ -9,7 +9,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
   verifyRecord,
 } from "@narratage/core";
@@ -154,9 +153,7 @@ function registry(digest = validatorDigest): TypeValidatorRegistry {
 
 function program(): LinkedProgram {
   const closure = createResolvedClosure([contractManifest, sensorManifest, reportManifest]);
-  return link(closure, [sealTypedModule({
-    records: [],
-  })]);
+  return link(closure, []);
 }
 
 function outputGraph(linked: LinkedProgram): CompiledGraph {

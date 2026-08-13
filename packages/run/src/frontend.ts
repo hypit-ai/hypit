@@ -1,11 +1,12 @@
 import {
-  canonicalStringify,
   digestOf,
   isDigest,
 } from "@narratage/protocol";
 import {
+  compiledSourceIdentity,
   maskSourceHeader,
   parseSourceHeader,
+  verifyCompiledSourceIdentity,
 } from "@narratage/source";
 
 import type {
@@ -60,10 +61,7 @@ export function prepareRunSource(source: RunSourceUnit): RunFrontendSourceUnit {
 function closureContent(closure: RunSourceClosure): Omit<RunSourceClosure, "id"> {
   return {
     format: "svml.run-source-closure@1",
-    frontend: closure.frontend,
-    frontendDigest: closure.frontendDigest,
-    sourceDigest: closure.sourceDigest,
-    semanticDigest: closure.semanticDigest,
+    ...compiledSourceIdentity(closure),
   };
 }
 
@@ -75,18 +73,7 @@ export async function compileRunSource(
   const frontend = frontends.resolve(prepared.header.using);
   assert(frontend !== undefined, "UNKNOWN_RUN_FRONTEND", `Run Frontend ${prepared.header.using} is not registered`, prepared.header.using);
   assert(isDigest(frontend.implementationDigest), "INVALID_RUN_FRONTEND_DIGEST", `${frontend.id} digest is invalid`);
-  const discovery = await frontend.discover(prepared);
   const decoded = await frontend.decode(prepared);
-  assert(
-    canonicalStringify(discovery.author) === canonicalStringify(decoded.document.author),
-    "RUN_FRONTEND_DISCOVERY_DRIFT",
-    `${frontend.id} changed the Author Source between discover and decode`,
-  );
-  assert(
-    canonicalStringify(discovery.imports) === canonicalStringify(decoded.document.imports),
-    "RUN_FRONTEND_DISCOVERY_DRIFT",
-    `${frontend.id} changed imports between discover and decode`,
-  );
   const closureWithoutId = {
     format: "svml.run-source-closure@1" as const,
     frontend: frontend.id,
@@ -101,9 +88,6 @@ export async function compileRunSource(
 
 export function verifyRunSourceClosure(closure: RunSourceClosure): void {
   assert(closure.format === "svml.run-source-closure@1", "UNSUPPORTED_RUN_SOURCE_CLOSURE", "unsupported Run Source Closure");
-  assert(closure.frontend.trim().length > 0, "EMPTY_RUN_FRONTEND", "Run Source Frontend is empty");
-  assert(isDigest(closure.frontendDigest), "INVALID_RUN_FRONTEND_DIGEST", "Run Source Frontend digest is invalid");
-  assert(isDigest(closure.sourceDigest), "INVALID_RUN_SOURCE_DIGEST", "Run Source digest is invalid");
-  assert(isDigest(closure.semanticDigest), "INVALID_RUN_SEMANTIC_DIGEST", "Run Source semantic digest is invalid");
+  verifyCompiledSourceIdentity(closure);
   assert(closure.id === digestOf(closureContent(closure)), "RUN_SOURCE_CLOSURE_DIGEST_MISMATCH", "Run Source Closure digest differs");
 }
