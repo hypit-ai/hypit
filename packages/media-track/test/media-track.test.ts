@@ -680,7 +680,7 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
     path,
     ref: { kind: "record", id: path },
     type: svsRecipeType,
-    record: { value: { kind: "inline", value: { contract: "svml.svs-recipe@1", path, properties } } } as never,
+    record: { value: { kind: "inline", value: { path, properties } } } as never,
   });
   const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({
     path, ref: { kind: "record", id: path }, type,

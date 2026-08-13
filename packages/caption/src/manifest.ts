@@ -42,7 +42,7 @@ const captionPlannedRun = object({
   cues: { schema: { kind: "array", minItems: 1, items: captionPlannedCue } },
 });
 export const captionPlanSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-plan@1" } },
+
   runs: { schema: { kind: "array", minItems: 1, items: captionPlannedRun } },
 });
 
@@ -56,7 +56,7 @@ const timedCaptionCue = object({
   fields: { schema: { kind: "array", items: captionFieldAssignment } },
 });
 export const timedCaptionProjectionSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.timed-caption-projection@1" } },
+
   displaySequenceId: { schema: string },
   cues: { schema: { kind: "array", items: timedCaptionCue } },
 });
@@ -77,7 +77,7 @@ const captionFieldDeclaration = object({
   minimumPerCue: { schema: integer }, maximumPerCue: { schema: integer },
 });
 export const captionStyleSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-style@1" } },
+
   id: { schema: string },
   planning: { schema: object({
     cue: { schema: object({
@@ -95,7 +95,7 @@ const captionProgramRun = object({
   wordIds: { schema: { kind: "array", minItems: 1, items: string } },
 });
 export const captionProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-program@1" } },
+
   id: { schema: string }, displaySequenceId: { schema: string },
   styles: { schema: { kind: "array", minItems: 1, items: captionStyleSchema } },
   runs: { schema: { kind: "array", minItems: 1, items: captionProgramRun } },

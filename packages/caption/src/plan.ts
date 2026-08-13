@@ -8,7 +8,7 @@ function assert(condition: unknown, message: string): asserts condition {
 
 function content(value: CaptionPlan): CaptionPlan {
   return {
-    contract: "svml.caption-plan@1",
+
     runs: value.runs.map((run) => ({
       id: run.id,
       styleId: run.styleId,
@@ -30,7 +30,6 @@ export function sealCaptionPlan(value: CaptionPlan): CaptionPlan {
 export function assertCaptionPlan(value: unknown): asserts value is CaptionPlan {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "CaptionPlan must be an object");
   const plan = value as CaptionPlan;
-  assert(plan.contract === "svml.caption-plan@1", "Unsupported CaptionPlan contract");
   assert(Array.isArray(plan.runs) && plan.runs.length > 0, "CaptionPlan runs are empty");
   const runIds = new Set<string>();
   const atomIds = new Set<string>();

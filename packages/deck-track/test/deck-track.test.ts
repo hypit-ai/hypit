@@ -368,7 +368,7 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
   const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
   const appearance = (path: string, properties: SvsRecipe["properties"]): SurfaceResolvedReference => ({
     path, ref: { kind: "record", id: path }, type: svsRecipeType,
-    record: { value: { kind: "inline", value: { contract: "svml.svs-recipe@1", path, properties } } } as never,
+    record: { value: { kind: "inline", value: { path, properties } } } as never,
   });
   const references = new Map<string, SurfaceResolvedReference>([
     ["map", plain("map", semanticMapTypes.complete)], ["space", plain("space", programSpaceTypes.programSpace)],
@@ -480,7 +480,7 @@ test("another Deck family can coexist by contributing only the existing VisualTr
 
 test("SVS decoding exposes all documented depth, frame, motion and playback axes", () => {
   const value = decodeDepthStackSpec({
-    contract: "svml.svs-recipe@1",
+
     path: "studio.deck.proof",
     properties: {
       "visible-previous": 3, "visible-next": 2, wrap: false,

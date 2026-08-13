@@ -249,7 +249,7 @@ export function parseSvs(sourceName: string, source: string): ParsedSvsSheet {
     if (blockEnd < 0 || blockEnd > close) fail(sourceName, "SVS_RULE_UNCLOSED", `Recipe ${path} is not closed.`, start);
     const parsedProperties = parseProperties(sourceName, text.slice(blockStart, blockEnd), blockStart);
     const value: SvsRecipe = {
-      contract: "svml.svs-recipe@1",
+
       path,
       properties: parsedProperties.values,
     };

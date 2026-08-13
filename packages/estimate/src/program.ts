@@ -143,8 +143,7 @@ export function assertSpeechEstimatePolicy(value: SpeechEstimatePolicy): void {
   const hasPace = value.pace !== undefined;
   const hasRate = value.rate !== undefined;
   if (
-    value.contract !== "svml.speech-estimate-policy@1"
-    || !(["auto", "en", "zh", "ja", "es"] as const).includes(value.language)
+    !(["auto", "en", "zh", "ja", "es"] as const).includes(value.language)
     || hasPace === hasRate
     || (hasPace && !(["slow", "normal", "fast"] as const).includes(value.pace))
     || (hasRate && (!Number.isFinite(value.rate) || value.rate <= 0))
@@ -169,8 +168,7 @@ export function resolveSpeechEstimateRate(
 
 function assertSpeechText(value: Text): void {
   if (
-    value.contract !== "svml.text@1"
-    || value.value.trim().length === 0
+    value.value.trim().length === 0
   ) {
     throw new Error("Speech Text is invalid");
   }
