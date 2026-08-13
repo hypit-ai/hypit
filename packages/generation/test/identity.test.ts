@@ -19,7 +19,6 @@ test("generated media validators bind artifacts and result contents", async () =
   const store = new MemoryArtifactStore();
   const image = await store.put(new Uint8Array([4, 5, 6]), "image/png");
   const result = sealGeneratedImageSet({
-    contract: "svml.generated-image-set@1",
     images: [image],
   });
   verifyGeneratedImageSet(result);
@@ -32,7 +31,7 @@ test("generated media validators bind artifacts and result contents", async () =
 test("generated audio is an ordinary content-addressed media result", async () => {
   const store = new MemoryArtifactStore();
   const audio = await store.put(new Uint8Array([7, 8, 9]), "audio/wav");
-  const set = sealGeneratedAudioSet({ contract: "svml.generated-audio-set@1", audios: [audio] });
+  const set = sealGeneratedAudioSet({ audios: [audio] });
   verifyGeneratedAudioSet(set);
   const facet = generationComponent.producers.find((item) =>
     item.producer.name === generationProducers.primaryAudio.name);
@@ -50,7 +49,6 @@ test("the primary-video projection returns the ordered Product member as a Blob 
   const first = await store.put(new Uint8Array([1, 2, 3]), "video/mp4");
   const second = await store.put(new Uint8Array([4, 5, 6]), "video/mp4");
   const set = sealGeneratedVideoSet({
-    contract: "svml.generated-video-set@1",
     videos: [first, second],
   });
   const facet = generationComponent.producers.find((item) =>

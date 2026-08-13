@@ -113,7 +113,6 @@ test("the local Provider returns only a new image BlobArtifact", {
   );
   const source = await artifacts.put(png, "image/png");
   const program = sealImageTransformProgram({
-    contract: "svml.image-transform-program@1",
     operations: [{
       kind: "resize",
       width: 64,

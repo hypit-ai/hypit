@@ -69,10 +69,9 @@ test("the function answers a real Need with real media, over a bucket it address
 
       assert.equal(reply.ok, true, `the function failed: ${JSON.stringify(reply)}`);
       assert.equal(reply.operation, "inspect");
-      const stored = reply.value as { kind: string; value: { contract: string; streams: { kind: string; sampleRate: number }[] } };
+      const stored = reply.value as { kind: string; value: { streams: { kind: string; sampleRate: number }[] } };
       assert.equal(stored.kind, "inline");
       const value = stored.value;
-      assert.equal(value.contract, "svml.media-inspection@1");
       assert.equal(value.streams.length, 1);
       assert.equal(value.streams[0]!.kind, "audio");
       assert.equal(value.streams[0]!.sampleRate, 48_000);

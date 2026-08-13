@@ -100,7 +100,6 @@ test("the remote Provider receives the exact AudioProgramPlan compiled for local
   const store = new MemoryArtifactStore();
   const output = await store.put(new TextEncoder().encode("timeline-audio"), "audio/wav");
   const plan = canonicalize({
-    contract: "svml.audio-program-plan@1",
     frameRate: { numerator: 30_000, denominator: 1_001 },
     frameCount: 30,
     sampleRate: 48_000,
