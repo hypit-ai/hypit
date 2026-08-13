@@ -48,13 +48,13 @@ export const imageComposeComponent = {
       const canvas = inline<CanvasSpace>(inputs.canvas?.value, "CanvasSpace");
       const options = inline<ImageComposeOptions>(inputs.options?.value, "ImageComposeOptions");
       const set = inline<ImageComposeLayerSet>(inputs.layers?.value, "ImageComposeLayerSet");
-      return { outputs: {}, needs: { image: { constraints: rasterComposeRequest({
+      return { outputs: {}, needs: { image: rasterComposeRequest({
         canvas, background: options.background,
         layers: set.layers.map((layer) => ({
           source: layer.source, frame: layer.frame, fit: layer.spec.fit,
           interpolation: layer.spec.interpolation, opacity: layer.spec.opacity,
         })),
-      }) as never } } };
+      }) } };
     },
   }],
   validators: [{

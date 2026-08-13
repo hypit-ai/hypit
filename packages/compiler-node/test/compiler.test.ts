@@ -244,7 +244,21 @@ const previewFragment = sealGraphFragment({
 function assetCompiler(environment: { readonly root: string } | { readonly workspace: Workspace }): NodeCompiler {
   const modules = new ModulePackageRegistry();
   modules.register({ manifest: assetManifest });
+  modules.register({ manifest: laboratoryManifest });
   const surfaces = new MarkupSurfaceRegistry();
+  surfaces.registerStructured({
+    module: laboratory,
+    declaration: resultSurface,
+    handler: ({ element }) => {
+      const id = element.attributes.id;
+      if (typeof id !== "string") throw new Error("Result id is required");
+      return {
+        records: [],
+        components: [{ id, fragment: fragment.id, inputs: {}, outputs: { result: `${id}.result` }, range: element.range }],
+        fragments: [fragment],
+      };
+    },
+  });
   surfaces.registerStructured({
     module: assetLaboratory,
     declaration: assetSurface,
@@ -528,6 +542,36 @@ test("an installed package Surface can contribute locked bytes without an author
   assert.equal(compiled.program.records[0]?.value.kind === "blob"
     ? compiled.program.records[0].value.digest
     : undefined, attachment?.artifact.digest);
+});
+
+test("Run compilation retains embedded Author attachments for later Runtime staging", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-run-author-attachments-"));
+  const authorFile = join(root, "main.svml");
+  const runFile = join(root, "build.svrun");
+  await writeFile(authorFile, `<?svml using="@narratage/markup@1"?>
+  <svml>
+    <import as="asset" from="example.asset-lab@1"/>
+    <import as="lab" from="example.compiler-lab@1"/>
+    <asset:Asset id="embedded" src="package:example.asset-lab/embedded.bin"/>
+    <lab:Result id="hello"/>
+  </svml>`, "utf8");
+  await writeFile(runFile, `<?svml using="@narratage/run-markup@1"?>
+  <svrun version="1">
+    <author source="./main.svml"/>
+    <target output="hello.result"/>
+  </svrun>`, "utf8");
+
+  const authorCompiler = assetCompiler({ root });
+  const frontends = new RunFrontendRegistry();
+  frontends.register(runMarkupFrontend);
+  const runCompiler = new NodeRunCompiler({
+    authorCompiler,
+    frontends,
+    fragments: new RunFragmentRegistry(),
+  });
+  const compiled = await runCompiler.compileFile(runFile);
+  assert.deepEqual(compiled.attachments.map((item) => item.artifact), compiled.author.attachments.map((item) => item.artifact));
+  assert.deepEqual(await readAttachment(compiled.attachments[0]), new Uint8Array([8, 6, 7, 5, 3, 0, 9]));
 });
 
 test("filesystem Workspace contains symlinks and locks source text plus asset identity once", async () => {

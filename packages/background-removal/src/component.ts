@@ -14,7 +14,7 @@ export const backgroundRemovalComponent = {
     producer: backgroundRemovalProducers.request,
     implementationDigest: backgroundRemovalImplementationDigests.request,
     handler: ({ inputs }: ProducerHandlerContext) => ({
-      outputs: {}, needs: { image: { constraints: backgroundRemovalRequest(blob(inputs.source?.value)) as never } },
+      outputs: {}, needs: { image: backgroundRemovalRequest(blob(inputs.source?.value)) },
     }),
   }],
 } satisfies ComponentPackage;

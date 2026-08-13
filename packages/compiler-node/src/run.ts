@@ -31,7 +31,7 @@ import type {
 import type { LinkedProgram } from "@narratage/protocol";
 
 import type { NodeCompiledSourceClosure } from "./compiler.js";
-import { NodeCompiler } from "./compiler.js";
+import { mergeAttachments, NodeCompiler } from "./compiler.js";
 
 export type NodeRunCompilerOptions = {
   readonly authorCompiler: NodeCompiler;
@@ -229,7 +229,7 @@ export class NodeRunCompiler {
       unresolvedBuildRecords: decoded.document.candidates.flatMap((item) => item.kind === "build-record"
         ? [{ id: item.id, build: item.build, output: item.output }]
         : []),
-      attachments: await workspace.attachments(),
+      attachments: mergeAttachments([author.attachments, await workspace.attachments()]),
     };
   }
 
@@ -272,7 +272,7 @@ export class NodeRunCompiler {
       author,
       program,
       run,
-      attachments: await workspace.attachments(),
+      attachments: mergeAttachments([author.attachments, await workspace.attachments()]),
     };
   }
 

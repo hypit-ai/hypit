@@ -62,10 +62,10 @@ test("component data flow preserves explicit Canvas, Frame and paint order", asy
     layers: record("layers", imageComposeTypes.layerSet, appended.outputs.layers!),
   } } as never);
   assert("image" in result.needs);
-  assert.deepEqual(result.needs.image, { constraints: {
+  assert.deepEqual(result.needs.image, {
     kind: "compose", canvas, background: options.background,
     layers: [{ source, frame, fit: spec.fit, interpolation: spec.interpolation, opacity: spec.opacity }],
-  } });
+  });
 });
 
 test("the Surface declares once and paints child Layers in document order", async () => {
