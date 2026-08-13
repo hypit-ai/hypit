@@ -1,8 +1,8 @@
 export type {
   AlignedTranscriptEvidence,
-  AlignedTranscriptSegment,
   SpeechActivitySpan,
   SpeechCharacterEvidence,
+  SpeechTranscriptPassage,
   SpeechWordEvidence,
 } from "@narratage/speech-evidence";
 export type {

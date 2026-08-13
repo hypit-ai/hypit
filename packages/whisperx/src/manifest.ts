@@ -48,10 +48,7 @@ export const whisperXManifest: ModuleManifest = {
   producers: [
     {
       name: whisperXProducers.request.name,
-      inputs: [
-        { name: "evidence", type: speechTypes.evidenceAudio },
-        { name: "audio", type: speechTypes.audioBasis },
-      ],
+      inputs: [{ name: "evidence", type: speechTypes.evidenceAudio }],
       outputs: [],
       needs: [{
         name: "alignment",
