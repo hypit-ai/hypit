@@ -105,7 +105,6 @@ export function selectMediaStreams(
       ? "primary-moving-default-audio@1" as const
       : video !== undefined ? "primary-moving@1" as const : "default-audio@1" as const;
   return sealMediaStreamSelection({
-    contract: "svml.media-stream-selection@1",
     ...(video === undefined ? {} : { videoStreamIndex: video.index }),
     ...(audio === undefined ? {} : { audioStreamIndex: audio.index }),
     spanAuthority: request.spanAuthority,

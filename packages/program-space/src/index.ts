@@ -2,7 +2,6 @@ import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, TypeRef, ValueSchema } from "@narratage/protocol";
 
 export type ProgramSpace = {
-  readonly contract: "svml.program-space@1";
   readonly durationSec: number;
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
 };
@@ -16,7 +15,6 @@ const integer = { kind: "number", integer: true, minimum: 0 } as const;
 export const programSpaceSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.program-space@1" } },
     durationSec: { schema: number },
     frameRate: { schema: { kind: "object", fields: {
       numerator: { schema: integer }, denominator: { schema: integer },
@@ -65,7 +63,6 @@ export function programFrameSampleBoundary(
   return Number(value);
 }
 export function assertProgramSpaceIdentity(programSpace: ProgramSpace): void {
-  if (programSpace.contract !== "svml.program-space@1") throw new Error("Unsupported ProgramSpace contract.");
   const { numerator, denominator } = programSpace.frameRate;
   if (!Number.isSafeInteger(numerator) || numerator <= 0 || !Number.isSafeInteger(denominator)
     || denominator <= 0 || !Number.isFinite(programSpace.durationSec) || programSpace.durationSec <= 0) {

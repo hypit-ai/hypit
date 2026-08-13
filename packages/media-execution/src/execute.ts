@@ -362,7 +362,6 @@ function animatedWebpInspection(source: BlobRef, animation: AnimatedWebp): Media
   const numerator = animation.frames.length * 1_000;
   const factor = divisor(numerator, durationMs);
   return sealMediaInspection({
-    contract: "svml.media-inspection@1",
     container: { formatNames: ["webp", "webp-animation"] },
     streams: [{
       kind: "video",
@@ -735,7 +734,6 @@ export async function executeNormalizeMedia(
       audioArtifact = await env.artifacts.putFile(output, "audio/wav");
     }
     const media = sealSynchronizedMedia({
-      contract: "svml.synchronized-media@1",
       timeline: {
         frameRate: need.frameRate,
         frameCount: plan.frameCount,
@@ -1020,7 +1018,6 @@ export async function executeProjectSpeechEvidenceAudio(
     "Alignment evidence must be exact 16 kHz mono PCM s16");
     const artifact = await env.artifacts.putFile(output, "audio/wav");
     const evidence: SpeechEvidenceAudio = sealSpeechEvidenceAudio({
-      contract: "svml.speech-evidence-audio@1",
       artifact,
       sampleFrames: need.evidenceSampleFrames,
     });
@@ -1109,7 +1106,6 @@ export async function executeRenderTimelineAudio(
     assert(audio.decodedSampleFrames === plan.sampleFrames,
       "Rendered TimelineAudio sample count differs from its plan");
     const value: TimelineAudio = sealTimelineAudio({
-      contract: "svml.timeline-audio@1",
       artifact,
       sampleFrames: plan.sampleFrames,
     });
@@ -1201,7 +1197,6 @@ export async function executeMuxProgramMedia(
     "Final mux audio presentation span differs from TimelineAudio");
     const artifact = await env.artifacts.putFile(output, "video/mp4");
     const value: MuxedMedia = sealMuxedMedia({
-      contract: "svml.muxed-media@1",
       frameRate: need.visual.frameRate,
       frameCount: need.visual.frameCount,
       canvas: need.visual.canvas,

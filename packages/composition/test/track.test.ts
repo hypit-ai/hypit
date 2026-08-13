@@ -33,7 +33,6 @@ const videoContractManifests = [artifactManifest, narrativeManifest, mediaManife
   speechManifest, speechEvidenceManifest, semanticMapManifest, spatialManifest, visualIrManifest, compositionManifest] as const;
 
 const font: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: { kind: "blob", digest: digestOf("track:test-font"), size: 1_024, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
@@ -47,12 +46,10 @@ const audio: BlobRef = {
 
 function fixture() {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 4,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const visual = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: "caption",
     presents: [{
@@ -66,7 +63,6 @@ function fixture() {
     }],
   });
   const sound = sealAudioTrack({
-    contract: "svml.audio-track@1",
     id: "speech",
     clips: [{
       id: "speech",
@@ -87,7 +83,6 @@ test("Composition accepts self-contained peer VisualTrack and AudioTrack values"
   const { programSpace, visual, sound } = fixture();
   assert.equal(visual.visualIr, VISUAL_IR_V1);
   const composition = sealComposition({
-    contract: "svml.composition@1",
     id: "main",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [sound, visual],
@@ -99,7 +94,6 @@ test("Composition accepts self-contained peer VisualTrack and AudioTrack values"
 test("Composition accepts case-insensitive hexadecimal canvas colors", () => {
   const { programSpace, visual } = fixture();
   const composition = sealComposition({
-    contract: "svml.composition@1",
     id: "uppercase-color",
     canvas: { width: 480, height: 854, clearColor: "#09090B" },
     tracks: [visual],
@@ -119,7 +113,6 @@ test("VisualTrack rejects cross-Track pixel sampling styles", () => {
     }],
   });
   const composition = sealComposition({
-    contract: "svml.composition@1",
     id: "invasive",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [sound, invasive],
@@ -140,7 +133,6 @@ test("VisualTrack style values cannot smuggle a second declaration", () => {
   });
   assert.throws(
     () => assertCompositionIdentity(sealComposition({
-      contract: "svml.composition@1",
       id: "smuggled",
       canvas: { width: 1080, height: 1920, clearColor: "#000000" },
       tracks: [smuggled],
@@ -161,7 +153,6 @@ test("VisualTrack cannot silently extend the versioned public Visual IR", () => 
   });
   assert.throws(
     () => assertCompositionIdentity(sealComposition({
-      contract: "svml.composition@1",
       id: "unknown-style",
       canvas: { width: 1080, height: 1920, clearColor: "#000000" },
       tracks: [unknownStyle],
@@ -235,12 +226,10 @@ test("the Type owner rejects an invalid VisualTrack at the shared admission gate
 test("Composition validates Track frame ranges against the explicitly connected ProgramSpace", () => {
   const { programSpace, visual } = fixture();
   const foreign = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 24, denominator: 1 },
   });
   const composition = sealComposition({
-    contract: "svml.composition@1",
     id: "foreign",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [visual],
@@ -252,7 +241,6 @@ test("Composition validates Track frame ranges against the explicitly connected 
 test("Composition is a plain product value; the enclosing Record binds its integrity", () => {
   const { programSpace, visual } = fixture();
   const composition = sealComposition({
-    contract: "svml.composition@1",
     id: "main",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [visual],
@@ -279,7 +267,6 @@ test("one authoring Track may contribute independently stacked Presents", () => 
     ],
   });
   const composition = sealComposition({
-    contract: "svml.composition@1",
     id: "interleaved",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [interleaved],
@@ -308,7 +295,6 @@ test("Visual Present animations may finish before or after their visibility wind
     }],
   });
   assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
-    contract: "svml.composition@1",
     id: "animated",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [animated],
@@ -329,7 +315,6 @@ test("Visual Present animations may finish before or after their visibility wind
     }],
   });
   assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
-    contract: "svml.composition@1",
     id: "clipped-animation",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [clipped],
@@ -350,7 +335,6 @@ test("Visual Present animations may finish before or after their visibility wind
     }],
   });
   assert.throws(() => assertCompositionIdentity(sealComposition({
-    contract: "svml.composition@1",
     id: "animated-invasive",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [invasive],

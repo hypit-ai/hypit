@@ -347,7 +347,6 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
           const response = raw.value as WhisperXServiceResponse;
           const segments = interpretWhisperXResponse(response, request.segments, request.sampleFrames / 16_000);
           const evidence: AlignedTranscriptEvidence = sealAlignedTranscriptEvidence({
-            contract: "svml.aligned-transcript-evidence@1",
             segments,
           });
           return result(canonicalize(evidence));

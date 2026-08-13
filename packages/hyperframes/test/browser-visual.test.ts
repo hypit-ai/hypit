@@ -288,18 +288,15 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
     const fontDigest = digest(fontBytes);
     const surfaceDigest = digest(surfaceBytes);
     const font: FontArtifactRef = {
-      contract: "svml.font-artifact@1",
       sources: [{ artifact: { kind: "blob", digest: fontDigest, size: fontBytes.byteLength, mediaType: "font/ttf" } }],
       weight: 400,
       style: "normal",
     };
     const space = sealProgramSpace({
-      contract: "svml.program-space@1",
       durationSec: 1 / 30,
       frameRate: { numerator: 30, denominator: 1 },
     });
     const lower = sealVisualTrack({
-      contract: "svml.visual-track@1",
       visualIr: "svml.visual-ir@1",
       id: "blue",
       presents: [{
@@ -319,7 +316,6 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       }],
     });
     const surface = sealVisualTrack({
-      contract: "svml.visual-track@1",
       visualIr: "svml.visual-ir@1",
       id: "surface",
       presents: [{
@@ -331,7 +327,6 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
           order: 0,
           kind: "surface",
           surface: {
-            contract: "svml.compositable-surface@1",
             artifact: { kind: "blob", digest: surfaceDigest, size: surfaceBytes.byteLength, mediaType: "image/png" },
             width: 64,
             height: 64,
@@ -344,7 +339,6 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       }],
     });
     const text = sealVisualTrack({
-      contract: "svml.visual-track@1",
       visualIr: "svml.visual-ir@1",
       id: "text",
       presents: [{
@@ -369,7 +363,6 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       }],
     });
     const document = compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1",
       id: "visual-proof",
       canvas: { width: 64, height: 64, clearColor: "#000000" },
       tracks: [text, lower, surface],
@@ -438,7 +431,6 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
     const width = 720;
     const height = 240;
     const space = sealProgramSpace({
-      contract: "svml.program-space@1",
       durationSec: 4,
       frameRate: { numerator: 10, denominator: 1 },
     });
@@ -446,7 +438,6 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
     const display = captionDisplaySequence(narrative, "visual.caption");
     const fontBytes = await import("node:fs/promises").then(({ readFile }) => readFile(localFont));
     const font: FontArtifactRef = {
-      contract: "svml.font-artifact@1",
       sources: [{ artifact: { kind: "blob", digest: digest(fontBytes), size: fontBytes.byteLength, mediaType: "font/ttf" } }],
       weight: 400,
       style: "normal",
@@ -491,7 +482,6 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
       return renderFineCaption(projection, program, display, space);
     });
     const document = compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1",
       id: "caption-fine-visual",
       canvas: { width, height, clearColor: "#000000" },
       tracks,
@@ -536,13 +526,12 @@ test("Fine Caption joined trail Pill follows real wrapped browser line fragments
     const width = 480;
     const height = 280;
     const space = sealProgramSpace({
-      contract: "svml.program-space@1", durationSec: 6, frameRate: { numerator: 10, denominator: 1 },
+      durationSec: 6, frameRate: { numerator: 10, denominator: 1 },
     });
     const narrative = parseScript("pill.svml", "<line>Every caption word joins across lines.</line>");
     const display = captionDisplaySequence(narrative, "pill.caption");
     const fontBytes = await import("node:fs/promises").then(({ readFile }) => readFile(localFont));
     const font: FontArtifactRef = {
-      contract: "svml.font-artifact@1",
       sources: [{ artifact: { kind: "blob", digest: digest(fontBytes), size: fontBytes.byteLength, mediaType: "font/ttf" } }],
       weight: 400,
       style: "normal",
@@ -574,7 +563,6 @@ test("Fine Caption joined trail Pill follows real wrapped browser line fragments
     };
     const track = renderFineCaption(projection, program, display, space);
     const document = compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1",
       id: "caption-fine-joined-pill",
       canvas: { width, height, clearColor: "#000000" },
       tracks: [track],
@@ -615,7 +603,6 @@ test("installed open fonts render CJK, emoji and independent stroke, shadow and 
     const height = 320;
     const durationSec = 1 / 30;
     const space = sealProgramSpace({
-      contract: "svml.program-space@1",
       durationSec,
       frameRate: { numerator: 30, denominator: 1 },
     });
@@ -673,7 +660,6 @@ test("installed open fonts render CJK, emoji and independent stroke, shadow and 
       }),
     ];
     const document = compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1",
       id: "caption-fine-multilingual",
       canvas: { width, height, clearColor: "#000000" },
       tracks,
@@ -735,7 +721,7 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
     const fps = 12;
     const frames = 12;
     const space = sealProgramSpace({
-      contract: "svml.program-space@1", durationSec: 1,
+      durationSec: 1,
       frameRate: { numerator: fps, denominator: 1 },
     });
     const installed = await Promise.all([
@@ -839,12 +825,12 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
       items: [
         {
           id: "point", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "point",
-          geometry: { kind: "point", point: { contract: "svml.spatial-point@1", xPx: 160, yPx: 56 } },
+          geometry: { kind: "point", point: { xPx: 160, yPx: 56 } },
           document: { paragraphs: [{ id: "point-p", inlines: [{ kind: "text", id: "point-r", text: "POINT" }] }] }, style: plain, motion: stillTextMotion(),
         },
         {
           id: "multilingual", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "multilingual",
-          geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 20, yPx: 100, widthPx: 300, heightPx: 180 } },
+          geometry: { kind: "area", frame: { xPx: 20, yPx: 100, widthPx: 300, heightPx: 180 } },
           document: { paragraphs: [{ id: "multi-p", inlines: [
             { kind: "text", id: "latin", text: "Intent " },
             { kind: "text", id: "cjk", text: "可见", language: "zh-Hans" },
@@ -855,27 +841,27 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
         },
         {
           id: "clip", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "clip",
-          geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 345, yPx: 100, widthPx: 170, heightPx: 80 } },
+          geometry: { kind: "area", frame: { xPx: 345, yPx: 100, widthPx: 170, heightPx: 80 } },
           document: { paragraphs: [{ id: "clip-p", inlines: [{ kind: "text", id: "clip-r", text: "CLIPPED CONTENT MUST STAY INSIDE" }] }] }, style: clip, motion: stillTextMotion(),
         },
         {
           id: "ellipsis", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "ellipsis",
-          geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 535, yPx: 100, widthPx: 170, heightPx: 80 } },
+          geometry: { kind: "area", frame: { xPx: 535, yPx: 100, widthPx: 170, heightPx: 80 } },
           document: { paragraphs: [{ id: "ellipsis-p", inlines: [{ kind: "text", id: "ellipsis-r", text: "ELLIPSIS KEEPS A BOUNDED TWO LINE REGION" }] }] }, style: ellipsis, motion: stillTextMotion(),
         },
         {
           id: "shrink", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "shrink",
-          geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 725, yPx: 100, widthPx: 215, heightPx: 100 } },
+          geometry: { kind: "area", frame: { xPx: 725, yPx: 100, widthPx: 215, heightPx: 100 } },
           document: { paragraphs: [{ id: "shrink-p", inlines: [{ kind: "text", id: "shrink-r", text: "SHRINK PRESERVES EVERY AUTHORED WORD INSIDE ITS BOUND" }] }] }, style: shrink, motion: stillTextMotion(),
         },
         {
           id: "sequence", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "sequence",
-          geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 120, yPx: 490, widthPx: 360, heightPx: 100 } },
+          geometry: { kind: "area", frame: { xPx: 120, yPx: 490, widthPx: 360, heightPx: 100 } },
           document: { paragraphs: [{ id: "sequence-p", inlines: [{ kind: "text", id: "sequence-r", text: "ONE TWO THREE" }] }] }, style: plain, motion: animated,
         },
         {
           id: "path", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "path",
-          geometry: { kind: "path", path: { contract: "svml.spatial-path@1", commands: [
+          geometry: { kind: "path", path: { commands: [
             { kind: "move", xPx: 80, yPx: 390 }, { kind: "cubic", control1X: 300, control1Y: 290, control2X: 650, control2Y: 470, xPx: 900, yPx: 350 },
           ] } },
           document: { paragraphs: [{ id: "path-p", inlines: [{ kind: "text", id: "path-r", text: "UPRIGHT PATH TEXT" }] }] }, style: pathStyle, motion: pathMotion,
@@ -886,7 +872,6 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
     const maskMaterialBytes = rgbaPng(380, 120, [255, 0, 180, 255]);
     const maskMaterialDigest = digest(maskMaterialBytes);
     const maskMaterial: CompositableSurfaceRef = {
-      contract: "svml.compositable-surface@1",
       artifact: { kind: "blob", digest: maskMaterialDigest, size: maskMaterialBytes.byteLength, mediaType: "image/png" },
       width: 380, height: 120, colorSpace: "srgb", alphaMode: "straight", timing: { kind: "still" },
     };
@@ -902,7 +887,7 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
       contract: "svml.typography-track-program@1", id: "mask-shape",
       items: [{
         id: "mask", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "mask",
-        geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 520, yPx: 500, widthPx: 380, heightPx: 120 } },
+        geometry: { kind: "area", frame: { xPx: 520, yPx: 500, widthPx: 380, heightPx: 120 } },
         document: { paragraphs: [{ id: "mask-p", inlines: [{ kind: "text", id: "mask-r", text: "MASK" }] }] },
         style: maskStyle, motion: stillTextMotion(),
       }],
@@ -910,7 +895,7 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
       contract: "svml.text-mask-spec@1", id: "text-mask", mode: "alpha", materialFit: "cover",
     }));
     const document = compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1", id: "complete-text-browser",
+      id: "complete-text-browser",
       canvas: { width, height, clearColor: "#000000" }, tracks: [typographyTrack, maskTrack],
     }), space);
     assert.match(document.html, /data-svml-text-shrink-scale/u);
@@ -996,7 +981,7 @@ test("Text box targets, rich runs and every sequence direction remain stable acr
     const fps = 12;
     const frames = 12;
     const space = sealProgramSpace({
-      contract: "svml.program-space@1", durationSec: 1,
+      durationSec: 1,
       frameRate: { numerator: fps, denominator: 1 },
     });
     const installed = await installedOpenFont("inter", 700, "normal");
@@ -1091,7 +1076,6 @@ test("Text box targets, rich runs and every sequence direction remain stable acr
           geometry: {
             kind: "area" as const,
             frame: {
-              contract: "svml.spatial-frame@1" as const,
               xPx: 10 + (index % 3) * 315, yPx: 10 + Math.floor(index / 3) * 215,
               widthPx: 305, heightPx: 205,
             },
@@ -1115,7 +1099,7 @@ test("Text box targets, rich runs and every sequence direction remain stable acr
       }),
     }));
     const compiled = compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1", id: "text-box-sequence-browser",
+      id: "text-box-sequence-browser",
       canvas: { width, height, clearColor: "#000000" }, tracks: [track],
     }), space);
     assert.match(compiled.html, /data-svml-text-line-sequences/u);
@@ -1189,7 +1173,7 @@ test("vertical Text paints in its authored direction and bounded shrink fails cl
     const height = 320;
     const fps = 12;
     const space = sealProgramSpace({
-      contract: "svml.program-space@1", durationSec: 1 / fps,
+      durationSec: 1 / fps,
       frameRate: { numerator: fps, denominator: 1 },
     });
     const installed = await installedOpenFont("noto-sans-sc", 700, "normal");
@@ -1223,13 +1207,13 @@ test("vertical Text paints in its authored direction and bounded shrink fails cl
       path: { side: "left", orientation: "follow", startMarginPx: 0, endMarginPx: 0, align: "start", reverse: false, overflow: "visible" },
     });
     const compile = (id: string, text: string, frame: { xPx: number; yPx: number; widthPx: number; heightPx: number }, textStyle: TextStyle) => compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1", id,
+      id,
       canvas: { width, height, clearColor: "#000000" },
       tracks: [renderTypographyTrack(space, sealTypographyTrackProgram({
         contract: "svml.typography-track-program@1", id,
         items: [{
           id, span: { startFrame: 0, endFrameExclusive: 1 }, tieBreak: id,
-          geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", ...frame } },
+          geometry: { kind: "area", frame: { ...frame } },
           document: { paragraphs: [{ id: `${id}-p`, inlines: [{ kind: "text", id: `${id}-r`, text }] }] },
           style: textStyle, motion: stillTextMotion(),
         }],
@@ -1293,7 +1277,6 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
     const red: BlobRef = { kind: "blob", digest: digest(redBytes), size: redBytes.byteLength, mediaType: "image/png" };
     const green: BlobRef = { kind: "blob", digest: digest(greenBytes), size: greenBytes.byteLength, mediaType: "image/png" };
     const alpha: CompositableSurfaceRef = {
-      contract: "svml.compositable-surface@1",
       artifact: { kind: "blob", digest: digest(alphaBytes), size: alphaBytes.byteLength, mediaType: "image/png" },
       width: 64,
       height: 64,
@@ -1311,20 +1294,20 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
       paths.set(artifactDigest, `./${name}`);
     }
     const canvas = sealCanvasSpace({
-      contract: "svml.canvas-space@1", widthPx: width, heightPx: height,
+      widthPx: width, heightPx: height,
       origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
     });
     const space = sealProgramSpace({
-      contract: "svml.program-space@1", durationSec: 1, frameRate: { numerator: 12, denominator: 1 },
+      durationSec: 1, frameRate: { numerator: 12, denominator: 1 },
     });
     const header = mediaTrack.sealMediaTrackHeader({ contract: "svml.media-track-header@1", id: "browser-media" });
     const sampleAppearance = { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } };
     const contentFit = (sizing: "contain" | "cover") => ({
-      contract: "svml.content-fit@1" as const, sizing,
+      sizing,
       framePoint: { x: 0.5, y: 0.5 }, contentPoint: { x: 0.5, y: 0.5 },
       offsetPx: { x: 0, y: 0 }, constraint: "bounded" as const,
     });
-    const extent = { contract: "svml.intrinsic-extent@1" as const, widthPx: 80, heightPx: 120 };
+    const extent = { widthPx: 80, heightPx: 120 };
     let itemLayers = mediaTrack.createMediaLayerSet();
     itemLayers = mediaTrack.appendStillMediaLayer(itemLayers, red, extent, contentFit("cover"), mediaTrack.sealMediaSampleLayerSpec({
       contract: "svml.media-sample-layer-spec@1", id: "blurred-backdrop",
@@ -1339,7 +1322,7 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
     }));
     let set = mediaTrack.appendProgramMediaItem(
       mediaTrack.createMediaTrackSet(), header, space, canvas, itemLayers,
-      { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 80, heightPx: 120 },
+      { xPx: 0, yPx: 0, widthPx: 80, heightPx: 120 },
       mediaTrack.sealMediaItemSpec({
         contract: "svml.media-item-spec@1", id: "two-frame",
         projection: { start: { ref: "program.start" }, end: { ref: "program.end" } }, expansion: { kind: "one" },
@@ -1365,7 +1348,7 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
       mediaTrack.sealMediaSequenceMemberSpec({ contract: "svml.media-sequence-member-spec@1", id: "green" }), 6);
     set = mediaTrack.appendMediaSequence(
       set, header, space, canvas, members,
-      { contract: "svml.spatial-frame@1", xPx: 80, yPx: 0, widthPx: 80, heightPx: 120 },
+      { xPx: 80, yPx: 0, widthPx: 80, heightPx: 120 },
       mediaTrack.sealMediaSequenceSpec({
         contract: "svml.media-sequence-spec@1", id: "handoff",
         presentation: { clip: { kind: "frame" }, padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 }, shadows: [] },
@@ -1379,7 +1362,7 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
     );
     const track = mediaTrack.projectMediaVisualTrack(space, mediaTrack.finalizeMediaTrack(set, header, space));
     const document = compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1", id: "media-browser-proof",
+      id: "media-browser-proof",
       canvas: { width, height, clearColor: "#000000" }, tracks: [track],
     }), space);
     await writeFile(path.join(temp, "index.html"), materializeHyperframesHtml(document, (artifact) => {
@@ -1451,15 +1434,15 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
       paths.set(artifactDigest, `./${name}`);
     }
     const space = sealProgramSpace({
-      contract: "svml.program-space@1", durationSec: frames / fps,
+      durationSec: frames / fps,
       frameRate: { numerator: fps, denominator: 1 },
     });
     const canvas = sealCanvasSpace({
-      contract: "svml.canvas-space@1", widthPx: width, heightPx: height,
+      widthPx: width, heightPx: height,
       origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
     });
     const fit = {
-      contract: "svml.content-fit@1" as const, sizing: "cover" as const,
+      sizing: "cover" as const,
       framePoint: { x: 0.5, y: 0.5 }, contentPoint: { x: 0.5, y: 0.5 },
       offsetPx: { x: 0, y: 0 }, constraint: "bounded" as const,
     };
@@ -1493,7 +1476,7 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
       material = mediaTrack.appendStillMediaLayer(
         material,
         value.artifact,
-        { contract: "svml.intrinsic-extent@1", widthPx: 120, heightPx: 90 },
+        { widthPx: 120, heightPx: 90 },
         fit,
         mediaTrack.sealMediaSampleLayerSpec({
           contract: "svml.media-sample-layer-spec@1", id: `${value.id}-material`,
@@ -1547,14 +1530,14 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
     const program = deckTrack.finalizeDepthStack(
       cards,
       deckTrack.sealDepthStackHeader({ contract: "svml.depth-stack-header@1", id: "proof-stack" }),
-      { contract: "svml.spatial-frame@1", xPx: 60, yPx: 45, widthPx: 120, heightPx: 90 },
+      { xPx: 60, yPx: 45, widthPx: 120, heightPx: 90 },
       spec,
       frames,
       space,
     );
     const track = deckTrack.renderDepthStack(canvas, space, program);
     const document = compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1", id: "depth-stack-browser-proof",
+      id: "depth-stack-browser-proof",
       canvas: { width, height, clearColor: "#090b12" }, tracks: [track],
     }), space);
     await writeFile(path.join(temp, "index.html"), materializeHyperframesHtml(document, (artifact) => {
@@ -1631,11 +1614,10 @@ test("all four Ranking components paint frame-pure progressive states under part
     });
     for (const icon of icons) await writeFile(path.join(temp, icon.name), icon.bytes);
     const space = sealProgramSpace({
-      contract: "svml.program-space@1", durationSec: frames / fps,
+      durationSec: frames / fps,
       frameRate: { numerator: fps, denominator: 1 },
     });
     const map = {
-      contract: "svml.complete-semantic-map@1" as const,
       tokens: [],
       anchors: [
         { identity: "outer-start", frame: 0 },
@@ -1680,7 +1662,7 @@ test("all four Ranking components paint frame-pure progressive states under part
       "icon-size": 42, "icon-radius": 7, "stage-size": 56,
     }), font).style;
     const tierTrack = rankingTrack.renderTierBoard(space, rankingTrack.buildTierBoardProgram(
-      tierHeader, { contract: "svml.spatial-frame@1", xPx: 20, yPx: 20, widthPx: 440, heightPx: 140 },
+      tierHeader, { xPx: 20, yPx: 20, widthPx: 440, heightPx: 140 },
       schedule(tierHeader, tierSpecs), tierStyle, tierItems,
     ));
 
@@ -1695,7 +1677,7 @@ test("all four Ranking components paint frame-pure progressive states under part
       "row-gap": 4, "icon-size": 26, "icon-radius": 5, "stage-size": 46,
     }), font).style;
     const columnTrack = rankingTrack.renderColumn(space, rankingTrack.buildColumnProgram(
-      columnHeader, { contract: "svml.spatial-frame@1", xPx: 20, yPx: 180, widthPx: 440, heightPx: 140 },
+      columnHeader, { xPx: 20, yPx: 180, widthPx: 440, heightPx: 140 },
       schedule(columnHeader, columnSpecs), columnStyle, columnItems,
     ));
 
@@ -1710,7 +1692,7 @@ test("all four Ranking components paint frame-pure progressive states under part
       "slot-gap": 30, "ring-width": 3, "label-gap": 5, "baseline-y": 0.45,
     }), font).style;
     const topTrack = rankingTrack.renderTopThree(space, rankingTrack.buildTopThreeProgram(
-      topHeader, { contract: "svml.spatial-frame@1", xPx: 20, yPx: 340, widthPx: 440, heightPx: 140 },
+      topHeader, { xPx: 20, yPx: 340, widthPx: 440, heightPx: 140 },
       schedule(topHeader, topSpecs), topStyle, topItems,
     ));
 
@@ -1727,11 +1709,11 @@ test("all four Ranking components paint frame-pure progressive states under part
       padding: 12, "row-gap": 4, "title-gap": 5, "frames-per-grapheme": 1, "winner-frames": 1,
     }), font).style;
     const typeTrack = rankingTrack.renderTypewriterList(space, rankingTrack.buildTypewriterListProgram(
-      typeHeader, "RANKING", { contract: "svml.spatial-frame@1", xPx: 20, yPx: 500, widthPx: 440, heightPx: 195 },
+      typeHeader, "RANKING", { xPx: 20, yPx: 500, widthPx: 440, heightPx: 195 },
       schedule(typeHeader, typeSpecs), typeStyle, typeItems,
     ));
     const document = compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1", id: "ranking-browser-proof",
+      id: "ranking-browser-proof",
       canvas: { width, height, clearColor: "#090b12" },
       tracks: [tierTrack, columnTrack, topTrack, typeTrack],
     }), space);
@@ -1815,22 +1797,21 @@ test("all Spatial fit modes and equal-point alignments reach exact browser pixel
     };
     await writeFile(path.join(temp, "source.png"), sourceBytes);
     const canvas = sealCanvasSpace({
-      contract: "svml.canvas-space@1", widthPx: width, heightPx: height,
+      widthPx: width, heightPx: height,
       origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
     });
     const space = sealProgramSpace({
-      contract: "svml.program-space@1", durationSec: 1, frameRate: { numerator: 1, denominator: 1 },
+      durationSec: 1, frameRate: { numerator: 1, denominator: 1 },
     });
     const header = mediaTrack.sealMediaTrackHeader({ contract: "svml.media-track-header@1", id: "spatial-browser" });
-    const extent = { contract: "svml.intrinsic-extent@1" as const, widthPx: 40, heightPx: 20 };
+    const extent = { widthPx: 40, heightPx: 20 };
     const appearance = { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } };
     let set = mediaTrack.createMediaTrackSet();
     let stackingOrder = 1;
     const append = (
       id: string,
-      frame: { readonly contract: "svml.spatial-frame@1"; readonly xPx: number; readonly yPx: number; readonly widthPx: number; readonly heightPx: number },
+      frame: { readonly xPx: number; readonly yPx: number; readonly widthPx: number; readonly heightPx: number },
       fit: {
-        readonly contract: "svml.content-fit@1";
         readonly sizing: "contain" | "cover" | "fit-width" | "fit-height" | "native" | "scale-down" | "stretch";
         readonly framePoint: { readonly x: number; readonly y: number };
         readonly contentPoint: { readonly x: number; readonly y: number };
@@ -1865,9 +1846,9 @@ test("all Spatial fit modes and equal-point alignments reach exact browser pixel
     const sizings = ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"] as const;
     for (const [index, sizing] of sizings.entries()) {
       append(`fit-${sizing}`, {
-        contract: "svml.spatial-frame@1", xPx: 5 + index * 75, yPx: 5, widthPx: 60, heightPx: 60,
+        xPx: 5 + index * 75, yPx: 5, widthPx: 60, heightPx: 60,
       }, {
-        contract: "svml.content-fit@1", sizing,
+        sizing,
         framePoint: { x: 0.5, y: 0.5 }, contentPoint: { x: 0.5, y: 0.5 },
         offsetPx: { x: 0, y: 0 }, constraint: "bounded",
       });
@@ -1876,39 +1857,39 @@ test("all Spatial fit modes and equal-point alignments reach exact browser pixel
     for (const [row, y] of points.entries()) {
       for (const [column, x] of points.entries()) {
         append(`align-${column}-${row}`, {
-          contract: "svml.spatial-frame@1", xPx: 5 + column * 70, yPx: 85 + row * 50, widthPx: 50, heightPx: 40,
+          xPx: 5 + column * 70, yPx: 85 + row * 50, widthPx: 50, heightPx: 40,
         }, {
-          contract: "svml.content-fit@1", sizing: "native",
+          sizing: "native",
           framePoint: { x, y }, contentPoint: { x, y }, offsetPx: { x: 0, y: 0 }, constraint: "bounded",
         });
       }
     }
     const displacedFit = {
-      contract: "svml.content-fit@1" as const, sizing: "native" as const,
+      sizing: "native" as const,
       framePoint: { x: 1, y: 1 }, contentPoint: { x: 0, y: 0 },
       offsetPx: { x: 20, y: 20 },
     };
     append("bounded-displaced", {
-      contract: "svml.spatial-frame@1", xPx: 230, yPx: 85, widthPx: 50, heightPx: 40,
+      xPx: 230, yPx: 85, widthPx: 50, heightPx: 40,
     }, { ...displacedFit, constraint: "bounded" });
     append("free-displaced", {
-      contract: "svml.spatial-frame@1", xPx: 300, yPx: 85, widthPx: 50, heightPx: 40,
+      xPx: 300, yPx: 85, widthPx: 50, heightPx: 40,
     }, { ...displacedFit, constraint: "free" }, "none");
     const stretch = {
-      contract: "svml.content-fit@1" as const, sizing: "stretch" as const,
+      sizing: "stretch" as const,
       framePoint: { x: 0.5, y: 0.5 }, contentPoint: { x: 0.5, y: 0.5 },
       offsetPx: { x: 0, y: 0 }, constraint: "bounded" as const,
     };
     append("partially-off-canvas", {
-      contract: "svml.spatial-frame@1", xPx: -20, yPx: 235, widthPx: 40, heightPx: 40,
+      xPx: -20, yPx: 235, widthPx: 40, heightPx: 40,
     }, stretch);
     append("fully-off-canvas", {
-      contract: "svml.spatial-frame@1", xPx: -80, yPx: 235, widthPx: 40, heightPx: 40,
+      xPx: -80, yPx: 235, widthPx: 40, heightPx: 40,
     }, stretch);
 
     const track = mediaTrack.projectMediaVisualTrack(space, mediaTrack.finalizeMediaTrack(set, header, space));
     const document = compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1", id: "spatial-browser-proof",
+      id: "spatial-browser-proof",
       canvas: { width, height, clearColor: "#000000" }, tracks: [track],
     }), space);
     await writeFile(path.join(temp, "index.html"), materializeHyperframesHtml(document, (artifact) => {
@@ -1992,7 +1973,6 @@ test("every official Screen Overlay survives real sequential and parallel browse
     const width = 128;
     const height = 96;
     const canvas = sealCanvasSpace({
-      contract: "svml.canvas-space@1",
       widthPx: width,
       heightPx: height,
       origin: "top-left",
@@ -2001,7 +1981,6 @@ test("every official Screen Overlay survives real sequential and parallel browse
       pixelAspect: "square",
     });
     const space = sealProgramSpace({
-      contract: "svml.program-space@1",
       durationSec: 1,
       frameRate: { numerator: 12, denominator: 1 },
     });
@@ -2032,7 +2011,6 @@ test("every official Screen Overlay survives real sequential and parallel browse
     });
     const track = renderScreenOverlay(canvas, space, finalizeScreenOverlay(set, header));
     const document = compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1",
       id: "screen-overlay-browser-proof",
       canvas: { width, height, clearColor: "#000000" },
       tracks: [track],

@@ -88,7 +88,6 @@ function showPreview(value: CaptionPlaygroundSnapshot): void {
   const projection = cueProjection(value.display, program, value.preview.fps);
   const frameCount = projection.cues.at(-1)?.endFrameExclusive ?? 1;
   const space = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: frameCount / value.preview.fps,
     frameRate: { numerator: value.preview.fps, denominator: 1 },
   });

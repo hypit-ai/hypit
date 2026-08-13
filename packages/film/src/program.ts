@@ -18,7 +18,7 @@ function assertNonEmpty(value: string, label: string): void {
 }
 
 function trackKey(track: Track): string {
-  return `${track.contract}\u0000${track.id}`;
+  return `${track.kind}\u0000${track.id}`;
 }
 
 function filmProgramContent(value: FilmProgram): FilmProgram {
@@ -60,7 +60,7 @@ export function assertFilmTrackSetIdentity(set: FilmTrackSet): void {
   for (const track of set.tracks) {
     if (ids.has(track.id)) throw new Error(`FilmTrackSet contains duplicate Track id ${track.id}.`);
     ids.add(track.id);
-    if (track.contract === "svml.visual-track@1") assertVisualTrackIdentity(track);
+    if (track.kind === "visual") assertVisualTrackIdentity(track);
     else assertAudioTrackIdentity(track);
   }
 }
@@ -75,7 +75,7 @@ export function createFilmTrackSet(): FilmTrackSet {
 function appendTrack(set: FilmTrackSet, programSpace: ProgramSpace, track: Track): FilmTrackSet {
   assertFilmTrackSetIdentity(set);
   assertProgramSpaceIdentity(programSpace);
-  if (track.contract === "svml.visual-track@1") assertVisualTrackIdentity(track, programSpace);
+  if (track.kind === "visual") assertVisualTrackIdentity(track, programSpace);
   else assertAudioTrackIdentity(track, programSpace);
   if (set.tracks.some((existing) => existing.id === track.id)) {
     throw new Error(`FilmTrackSet already contains Track id ${track.id}.`);
@@ -105,7 +105,6 @@ export function compileFilmComposition(
   assertProgramSpaceIdentity(programSpace);
   assertFilmTrackSetIdentity(set);
   const composition = sealComposition({
-    contract: "svml.composition@1",
     id: program.id,
     canvas: {
       width: canvas.widthPx,

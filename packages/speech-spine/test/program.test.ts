@@ -13,9 +13,8 @@ import {
   sealSpeechSpineVisualSpec,
 } from "@narratage/speech-spine";
 
-const frame = { contract: "svml.spatial-frame@1" as const, xPx: 40, yPx: 80, widthPx: 640, heightPx: 900 };
+const frame = { xPx: 40, yPx: 80, widthPx: 640, heightPx: 900 };
 const fit = {
-  contract: "svml.content-fit@1" as const,
   sizing: "cover" as const,
   framePoint: { x: 0.5, y: 0.5 },
   contentPoint: { x: 0.5, y: 0.5 },
@@ -29,7 +28,6 @@ function segment(id: string, index: number): NarrativeExcerpt {
 
 function synchronized(id: string, visual: boolean): SynchronizedMedia {
   return {
-    contract: "svml.synchronized-media@1",
     timeline: {
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 30,
@@ -63,7 +61,6 @@ test("audio Takes lengthen the speech program without inventing a visual clip", 
     sealSpeechSpineVisualSpec({ contract: "svml.speech-spine-visual-spec@1", stackingOrder: 30 }),
   );
   const audio: TimelineAudio = {
-    contract: "svml.timeline-audio@1",
     artifact: { kind: "blob", digest: digestOf("speech:mix"), size: 1, mediaType: "audio/wav" },
     sampleFrames: 96_000,
   };
@@ -74,7 +71,7 @@ test("audio Takes lengthen the speech program without inventing a visual clip", 
   assert.deepEqual(basis.visualTrack.clips[0], {
     segmentId: "answer",
     artifact: synchronized("presenter", true).visual!.artifact,
-    extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
+    extent: { widthPx: 720, heightPx: 1280 },
     frame,
     fit,
     stackingOrder: 30,

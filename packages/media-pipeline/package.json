@@ -21,9 +21,5 @@
     "@narratage/protocol": "workspace:*",
     "@narratage/speech": "workspace:*",
     "@narratage/markup": "workspace:*"
-  },
-  "devDependencies": {
-    "@narratage/core": "workspace:*",
-    "@narratage/validation": "workspace:*"
   }
 }

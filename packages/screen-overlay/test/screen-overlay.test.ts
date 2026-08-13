@@ -37,11 +37,11 @@ import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validati
 import { visualIrManifest } from "@narratage/visual-ir";
 
 const canvas = sealCanvasSpace({
-  contract: "svml.canvas-space@1", widthPx: 1080, heightPx: 1920,
+  widthPx: 1080, heightPx: 1920,
   origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
 });
 const space = sealProgramSpace({
-  contract: "svml.program-space@1", durationSec: 2, frameRate: { numerator: 30, denominator: 1 },
+  durationSec: 2, frameRate: { numerator: 30, denominator: 1 },
 });
 const header = sealScreenOverlayHeader({ contract: "svml.screen-overlay-header@1", id: "screen" });
 const components: readonly ScreenOverlayComponent[] = [
@@ -101,12 +101,12 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
   const below = trackFor(components[1]!, 20);
   const above = { ...trackFor(components[0]!, 80), id: "screen-above" };
   const middle = sealVisualTrack({
-    contract: "svml.visual-track@1", visualIr: "svml.visual-ir@1", id: "middle",
+    visualIr: "svml.visual-ir@1", id: "middle",
     presents: [{ id: "middle", span: { startFrame: 0, endFrameExclusive: 60 }, stacking: { order: 50, tieBreak: "middle" },
       elements: [{ id: "root", order: 0, kind: "box", style: [{ name: "background-color", value: "#112233" }] }] }],
   });
   const document = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1", id: "stack", canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+    id: "stack", canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [above, middle, below],
   }), space);
   const belowAt = document.html.indexOf('data-svml-track-id="screen"');

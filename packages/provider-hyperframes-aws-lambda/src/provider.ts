@@ -334,7 +334,6 @@ function fulfillment(
   artifact: BlobRef,
 ): EndpointFulfillment {
   const value: RenderedVisual = sealRenderedVisual({
-    contract: "svml.rendered-visual@1",
     frameRate: document.frameRate,
     frameCount: document.frameCount,
     canvas: document.canvas,

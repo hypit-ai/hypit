@@ -15,7 +15,6 @@
     "@narratage/source": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/run-markup": "workspace:*",
-    "@narratage/validation": "workspace:*"
+    "@narratage/run-markup": "workspace:*"
   }
 }

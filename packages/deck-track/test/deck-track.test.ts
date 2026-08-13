@@ -52,12 +52,10 @@ import { artifactTypes } from "@narratage/artifact";
 import { mediaTrackManifest } from "@narratage/media-track";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const canvas = sealCanvasSpace({
-  contract: "svml.canvas-space@1",
   widthPx: 360,
   heightPx: 640,
   origin: "top-left",
@@ -66,7 +64,6 @@ const canvas = sealCanvasSpace({
   pixelAspect: "square",
 });
 const frame = sealSpatialFrame({
-  contract: "svml.spatial-frame@1",
   xPx: 60,
   yPx: 220,
   widthPx: 240,
@@ -95,10 +92,9 @@ function stillMaterial(name: string): MediaLayerSet {
       source: {
         kind: "still",
         artifact: image(name),
-        extent: { contract: "svml.intrinsic-extent@1", widthPx: 120, heightPx: 90 },
+        extent: { widthPx: 120, heightPx: 90 },
       },
       fit: {
-        contract: "svml.content-fit@1",
         sizing: "cover",
         framePoint: { x: 0.5, y: 0.5 },
         contentPoint: { x: 0.5, y: 0.5 },
@@ -119,12 +115,11 @@ function timedMaterial(name: string, occupancy: "loop" | "hold" = "loop"): Media
       source: {
         kind: "timed",
         artifact: video(name),
-        extent: { contract: "svml.intrinsic-extent@1", widthPx: 120, heightPx: 90 },
+        extent: { widthPx: 120, heightPx: 90 },
         frameRate: { numerator: 30, denominator: 1 },
         frameCount: 12,
       },
       fit: {
-        contract: "svml.content-fit@1",
         sizing: "contain",
         framePoint: { x: 0.5, y: 0.5 },
         contentPoint: { x: 0.5, y: 0.5 },
@@ -320,7 +315,6 @@ test("continue uses one explicit loop-start clock and past hide removes the reta
 });
 
 const font: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: { kind: "blob", digest: digestOf("deck-font"), size: 64, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
@@ -411,7 +405,7 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
 
 test("Label Surface compiles explicit exact-font text rather than media metadata", async () => {
   const range = { source: "deck.svml", start: 0, end: 1 };
-  const stack = { contract: "svml.font-stack@1" as const, faces: [font] };
+  const stack = { faces: [font] };
   const result = await decodeDepthStackLabelSurface({
     sourceName: "deck.svml",
     element: {
@@ -434,7 +428,7 @@ test("Label Surface compiles explicit exact-font text rather than media metadata
 
 test("Label Surface accepts ordinary graph Text without copying it during author compilation", async () => {
   const range = { source: "deck.svml", start: 0, end: 1 };
-  const stack = { contract: "svml.font-stack@1" as const, faces: [font] };
+  const stack = { faces: [font] };
   const result = await decodeDepthStackLabelSurface({
     sourceName: "deck.svml",
     element: {

@@ -15,7 +15,7 @@ const audioBlobRef = object({
 const segment = object({ segmentId: { schema: string }, startSec: { schema: number }, endSec: { schema: number } });
 export const speechDurationSchema: ValueSchema = number;
 export const speechBasisSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.speech-basis@1" } }, programSpace: { schema: programSpaceSchema }, audio: { schema: audioBlobRef },
+  programSpace: { schema: programSpaceSchema }, audio: { schema: audioBlobRef },
   visualTrack: { schema: object({ clips: { schema: { kind: "array", items: object({ segmentId: { schema: string }, artifact: { schema: object({
     kind: { schema: { kind: "literal", value: "blob" } }, digest: { schema: digest }, size: { schema: integer }, mediaType: { schema: string },
   }) }, extent: { schema: intrinsicExtentSchema },
@@ -24,9 +24,9 @@ export const speechBasisSchema: ValueSchema = object({
   }) } } }) },
   segments: { schema: { kind: "array", minItems: 1, items: segment } },
 });
-export const speechAudioBasisSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.speech-audio-basis@1" } },
+export const speechAudioBasisSchema: ValueSchema = object({
   programSpace: { schema: programSpaceSchema }, audio: { schema: audioBlobRef }, segments: { schema: { kind: "array", minItems: 1, items: segment } } });
-export const speechEvidenceAudioSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.speech-evidence-audio@1" } },
+export const speechEvidenceAudioSchema: ValueSchema = object({
   artifact: { schema: audioBlobRef },
   sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
 });

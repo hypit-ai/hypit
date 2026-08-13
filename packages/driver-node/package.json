@@ -14,10 +14,5 @@
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime": "workspace:*",
     "@narratage/validation": "workspace:*"
-  },
-  "devDependencies": {
-    "@narratage/caption": "workspace:*",
-    "@narratage/script": "workspace:*",
-    "@narratage/speech-alignment": "workspace:*"
   }
 }

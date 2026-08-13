@@ -138,7 +138,6 @@ async function materializeFace(
     });
   }
   const font: FontArtifactRef = {
-    contract: "svml.font-artifact@1",
     sources: [...byArtifact.values()],
     weight: request.weight,
     style: request.style,
@@ -210,7 +209,7 @@ export const decodeOpenFontStackSurface: StructuredSurfaceHandler = async ({ ele
     }, element, resolveAsset));
   }
 
-  const stack: FontStackRef = { contract: "svml.font-stack@1", faces };
+  const stack: FontStackRef = { faces };
   assertFontStackRef(stack, `${element.name}.${id}`);
   return {
     records: [{
