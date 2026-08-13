@@ -1847,7 +1847,7 @@ export async function runCli(
         graph: result.graph.id,
         units: result.closure.units.length,
         sourceAssets: result.attachments.map((item) => item.artifact),
-        modules: result.program.closure.modules.map((item) => `${item.ref.name}@${item.ref.version}`),
+        modules: result.program.closure.modules.map((item) => `${item.manifest.name}@${item.manifest.version}`),
         exports: result.exports.map((item) => ({ name: item.name, type: item.type, kind: item.ref.kind })),
       } as const;
       writeCliOutput(io, args, {

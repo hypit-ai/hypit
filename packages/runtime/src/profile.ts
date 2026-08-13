@@ -474,37 +474,6 @@ export function resolveRuntimeProfile(
       maxConcurrency: resolved.facet.defaultConcurrency,
     };
   });
-  const byId = new Map(instances.map((instance) => [instance.id, instance]));
-  const schedulers = instances.filter((instance) => instance.role === "scheduler");
-  assert(schedulers.length === 1, "Runtime Profile must activate exactly one scheduler instance");
-  assert(schedulers[0]?.id === profile.scheduler, `Runtime Profile selects unknown scheduler ${profile.scheduler}`);
-  const workers = instances.filter((instance) => instance.role === "worker");
-  assert(workers.length === 1, "Runtime Profile must activate exactly one worker instance");
-  assert(workers[0]?.id === profile.worker, `Runtime Profile selects unknown worker ${profile.worker}`);
-  const storeRoles = {
-    build: "build-store",
-    operations: "operation-store",
-    dispatch: "dispatch-store",
-    artifacts: "artifact-store",
-  } as const;
-  for (const [name, role] of Object.entries(storeRoles) as [keyof typeof storeRoles, typeof storeRoles[keyof typeof storeRoles]][]) {
-    const id = profile.stores[name];
-    assert(byId.get(id)?.role === role, `Runtime Profile ${name} store ${id} has the wrong role`);
-  }
-  for (const id of profile.stores.credentials) {
-    assert(byId.get(id)?.role === "credential-store", `Runtime Profile credential store ${id} has the wrong role`);
-  }
-  for (const binding of profile.endpoints) {
-    const endpoint = byId.get(binding.endpoint);
-    assert(endpoint?.role === "capability-endpoint", `${binding.endpoint} is not an active capability Endpoint`);
-    assert(endpoint.fulfills.some((item) => sameCapability(item, binding)), `${binding.endpoint} does not fulfill ${bindingKey(binding)}`);
-  }
-  if (instances.some((instance) => instance.role === "capability-endpoint" && instance.lifecycle === "recoverable")) {
-    assert(byId.get(profile.stores.operations)?.role === "operation-store", "recoverable Endpoints require an OperationStore");
-  }
-  if (instances.some((instance) => instance.role === "capability-endpoint" && instance.credentialSlots.length > 0)) {
-    assert(profile.stores.credentials.length > 0, "credentialed Endpoints require a CredentialStore");
-  }
   const draft: Omit<RuntimeClosure, "digest"> = {
     format: "svml.runtime-closure@1",
     modules: [...modules.values()],

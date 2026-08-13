@@ -78,7 +78,7 @@ test("registered module imports close exact transitive manifest dependencies", (
 
   assert.deepEqual(modules.resolve("example.feature@stable"), { name: feature.name, version: feature.version });
   assert.deepEqual(
-    modules.createClosure(["example.feature@stable"]).modules.map((item) => item.ref.name).sort(),
+    modules.createClosure(["example.feature@stable"]).modules.map((item) => item.manifest.name).sort(),
     ["example.base", "example.feature"],
   );
 });
@@ -407,15 +407,15 @@ test("Run-only Fragment modules extend the execution closure without polluting t
   const planned = runCompiler.planCompilation(compiled);
 
   assert.deepEqual(
-    compiled.author.program.closure.modules.map((item) => item.ref.name),
+    compiled.author.program.closure.modules.map((item) => item.manifest.name),
     [laboratory.name, unused.name],
   );
   assert.deepEqual(
-    compiled.program.closure.modules.map((item) => item.ref.name).sort(),
+    compiled.program.closure.modules.map((item) => item.manifest.name).sort(),
     [laboratory.name, previewModule.name, unused.name].sort(),
   );
   assert.deepEqual(
-    planned.state.program.closure.modules.map((item) => item.ref.name).sort(),
+    planned.state.program.closure.modules.map((item) => item.manifest.name).sort(),
     [laboratory.name, previewModule.name].sort(),
     "the durable Build keeps only modules needed by its selected execution slice",
   );
