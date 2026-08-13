@@ -109,7 +109,7 @@ export type RuntimeAdapterPackageBinding = {
 };
 
 type RuntimeAdapterRegistration = {
-  readonly facet: RuntimeAdapterHostFacet;
+  readonly implementation: RuntimeAdapterHostFacet["implementation"];
   readonly binding?: RuntimeAdapterPackageBinding;
 };
 
@@ -286,7 +286,7 @@ export class RuntimeAdapterRegistry {
       assert(isDigest(binding.closureDigest), "Runtime Adapter package Closure digest is invalid");
     }
     this.#registrations.set(key, {
-      facet,
+      implementation: facet.implementation,
       ...(binding === undefined ? {} : { binding }),
     });
   }
@@ -320,7 +320,7 @@ export class RuntimeAdapterRegistry {
       subject: use,
     }];
     assert(kind === "runtime-service", "Endpoint configuration is validated by its activation");
-    (value.facet.implementation as RuntimeServiceAdapterImplementation).validate(context);
+    (value.implementation as RuntimeServiceAdapterImplementation).validate(context);
     return [];
   }
 
@@ -330,7 +330,7 @@ export class RuntimeAdapterRegistry {
   ): Promise<RuntimeEndpointActivation> {
     const value = this.#registrations.get(this.#key(use, "endpoint"));
     assert(value !== undefined, `Runtime Endpoint adapter ${use} is not registered`);
-    const implementation = value.facet.implementation as RuntimeEndpointAdapterImplementation;
+    const implementation = value.implementation as RuntimeEndpointAdapterImplementation;
     const activation = await implementation.activate(context);
     assert(activation !== null && typeof activation === "object", `Runtime Endpoint adapter ${use} returned no activation`);
     assert(activation.endpoint !== null && typeof activation.endpoint === "object",
@@ -354,7 +354,7 @@ export class RuntimeAdapterRegistry {
   async createService(use: string, context: RuntimeAdapterFactoryContext): Promise<RuntimeServicePackage> {
     const value = this.#registrations.get(this.#key(use, "runtime-service"));
     assert(value !== undefined, `Runtime service adapter ${use} is not registered`);
-    const implementation = value.facet.implementation as RuntimeServiceAdapterImplementation;
+    const implementation = value.implementation as RuntimeServiceAdapterImplementation;
     implementation.validate(context);
     const created = await implementation.create(context);
     for (const service of created.services) {
@@ -368,7 +368,7 @@ export class RuntimeAdapterRegistry {
     const value = this.#registrations.get(this.#key(use, kind));
     if (value === undefined) return [{ severity: "error", code: "RUNTIME_ADAPTER_MISSING", message: `Runtime Adapter ${use} is not registered`, subject: use }];
     assert(kind === "runtime-service", "Endpoint diagnostics belong to its activation");
-    const diagnose = (value.facet.implementation as RuntimeServiceAdapterImplementation).doctor;
+    const diagnose = (value.implementation as RuntimeServiceAdapterImplementation).doctor;
     return diagnose === undefined ? [] : await diagnose(context);
   }
 }
