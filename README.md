@@ -19,8 +19,6 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hypit-ai/narratage/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hypit-ai/narratage/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI"></a>
-  <a href="https://github.com/hypit-ai/narratage/actions/workflows/deploy-pages.yml"><img alt="Docs" src="https://img.shields.io/github/actions/workflow/status/hypit-ai/narratage/deploy-pages.yml?branch=main&style=flat-square&logo=githubpages&logoColor=white&label=Docs"></a>
   <a href="./package.json"><img alt="Node 22+" src="https://img.shields.io/badge/Node.js-22+-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white"></a>
   <a href="./package.json"><img alt="pnpm 10.33" src="https://img.shields.io/badge/pnpm-10.33-F69220?style=flat-square&logo=pnpm&logoColor=white"></a>
   <a href="./package.json"><img alt="TypeScript 5.9" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white"></a>
@@ -31,11 +29,6 @@
   <a href="https://github.com/hypit-ai/narratage/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/hypit-ai/narratage?style=flat-square&color=FFD700&logo=github&logoColor=white&label=Stars"></a>
   <a href="https://github.com/hypit-ai/narratage/network/members"><img alt="Forks" src="https://img.shields.io/github/forks/hypit-ai/narratage?style=flat-square&color=6E40C9&logo=github&logoColor=white&label=Forks"></a>
   <a href="https://github.com/hypit-ai/narratage/graphs/contributors"><img alt="Contributors" src="https://img.shields.io/github/contributors/hypit-ai/narratage?style=flat-square&color=2EA043&logo=github&logoColor=white"></a>
-  <a href="https://github.com/hypit-ai/narratage/issues"><img alt="Open issues" src="https://img.shields.io/github/issues/hypit-ai/narratage?style=flat-square&color=D29922&logo=github&logoColor=white"></a>
-  <a href="https://github.com/hypit-ai/narratage/pulls"><img alt="Open pull requests" src="https://img.shields.io/github/issues-pr/hypit-ai/narratage?style=flat-square&color=1F6FEB&logo=github&logoColor=white"></a>
-  <a href="https://github.com/hypit-ai/narratage/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/hypit-ai/narratage?style=flat-square&color=8B949E&logo=git&logoColor=white"></a>
-  <a href="https://github.com/hypit-ai/narratage/commits/main"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/hypit-ai/narratage?style=flat-square&color=BF4B8A&logo=git&logoColor=white"></a>
-  <a href="https://github.com/hypit-ai/narratage"><img alt="Repository size" src="https://img.shields.io/github/repo-size/hypit-ai/narratage?style=flat-square&color=0969DA&logo=github&logoColor=white"></a>
 </p>
 
 <p align="center">
@@ -137,35 +130,64 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
 
 A real Build additionally needs `ffmpeg` and `ffprobe` on your `PATH`, and depending on the Runtime Profile, Python with `uv` or API credentials. Run `narratage doctor` to see what's missing; see [Quickstart](https://narratage.hypit.ai/quickstart) for the full walkthrough.
 
+### Project files
+
+Narratage gives files distinct roles without reserving their names:
+
+| Role | Usual form | How it is selected |
+|---|---|---|
+| **Author Source** | `.svml` | Passed to `check`, or referenced by a Run Source |
+| **Recipe Source** | `.svs` | Imported by another Source |
+| **Run Source** | `.svrun` | Passed to `plan` or `build` |
+| **Runtime Profile** | JSON | Passed explicitly with `--runtime` |
+| **Package inventories** | JSON lock files | Referenced by a Runtime Profile or selected explicitly by the CLI |
+
+Names and suffixes are conventions, not parser dispatch. Every Source selects its own Frontend with a `<?svml using="..."?>` header; Runtime Profiles and package inventories are selected by explicit paths. A project may contain any number of each role, and one Author Source may be referenced by many Run Sources.
+
 ## Where the name comes from
 
-A 1933 *New York Times* review of *The Power and the Glory* coined **narratage**: narration plus montage — a narrator's voice carries the story while the screen assembles scenes to match.
+In a 1933 *New York Times* review of Spencer Tracy's *The Power and the Glory*, producer Jesse L. Lasky's term **narratage** — narration plus montage — described a technique where a narrator's voice carries the story while the screen assembles scenes to match.
 
-That is what this system does. The author writes a narrated Script, and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
+Ninety years later, Narratage gives the same idea a new form: a language and system that compiles the montage around the narration.
 
 ## Architecture
 
-AI generation is slow, costly and non-deterministic, and each output tends to become the next step's input. Narratage keeps the resulting choices visible as two peer graphs: the **Author Graph** expresses the work, the **Run Graph** selects targets for one Build. Core resolves, verifies and advances the state machine — video concepts stay in independently installable packages, so Core hard-codes no model, Track or Provider.
+AI generation changes the shape of compilation. A step may take minutes, cost money, fail, or return an artifact that becomes the next step's input. Build truth therefore cannot live on a process stack: Narratage freezes the demanded work first, then advances it from durable facts.
 
-Three files each own one concern: `.svml` says *what video to make* (script + styles + tracks), `.svrun` says *what to build this time* (which targets, reusing which prior results), and the runtime profile says *where to run* (API keys, concurrency, permissions).
+Core is a domain-neutral semantic kernel with two jobs: compile Targets and explicit Candidate choices into one finite BuildPlan, then accept Events and advance BuildState. At execution time, its irreducible law is `BuildState + Event → BuildState`; ready Commands are regenerated from that state. Core never parses Source, executes component code, accesses files or networks, chooses a Provider, changes a Candidate, or understands video concepts.
+
+| Part | What it owns | Why it stays outside Core |
+|---|---|---|
+| **Compiler Host & Frontends** | Source Headers, import closure, syntax decoding and Author/Run Graph compilation | Syntax and Source environments can evolve independently |
+| **Author facets** | Surfaces, author vocabulary and Graph Fragments | New authoring capabilities should not require a kernel release |
+| **Compute facets** | Deterministic Producers and Validators | Domain computation should remain independently installable |
+| **Runtime facets** | Scheduler, Worker, Stores, credentials and transports | Deployment, persistence and authority vary by environment |
+| **Endpoint facets** | Model APIs, local programs, Lambda functions, devices and human services | External capabilities have their own concurrency, failure and recovery laws |
+| **Applications** | CLI, Playgrounds and product interfaces | User experience must not become a central capability registry |
+
+A physical package may contribute one or more facets. Source imports activate authoring meaning without granting filesystem, network, process or credential authority; privileged Endpoint and Runtime facets are selected explicitly by the Runtime Profile.
+
+Neither Core nor the CLI maintains a central registry of models, Tracks or Providers. Installing and locking a package adds its capability without requiring a Core release.
 
 ## Where to go next
 
-- [Demos](https://narratage.hypit.ai/) — hover a marked range in a Script, see the frame it produces.
-- [Quickstart](https://narratage.hypit.ai/quickstart) — the files you control, the commands, and your first real Build.
-- [Develop](https://narratage.hypit.ai/guide/develop) — package architecture, adding an author package or a Provider.
+- [Demos](https://narratage.hypit.ai/) — see SVML source and its rendered result side by side.
+- [Quickstart](https://narratage.hypit.ai/quickstart) — write, preview, plan and build your first video.
+- [Develop](https://narratage.hypit.ai/guide/develop) — understand the package architecture and add an Author package or Provider.
 
 ## Third-party software
 
-Narratage stands on work it does not ship.
+Narratage integrates with independently licensed software:
 
-- [FFmpeg](https://ffmpeg.org/) — media inspection, normalization and muxing. Invoked as a separate program you install yourself, under its own license.
-- [HyperFrames](https://www.npmjs.com/package/hyperframes) — renders Compositions in a headless Chromium.
-- [WhisperX](https://github.com/m-bain/whisperX) — the word-level speech alignment behind caption timing.
-- [Fontsource](https://fontsource.org/) — the open font catalog, delivered as pinned packages that each carry their own SIL OFL 1.1 or Apache 2.0 license and their own font bytes. Narratage neither vendors font files nor reads system fonts.
+- [FFmpeg](https://ffmpeg.org/) — inspects, normalizes, transforms and muxes media as a separately licensed executable.
+- [HyperFrames](https://www.npmjs.com/package/hyperframes) — turns Compositions into frame-accurate video in Chromium.
+- [WhisperX](https://github.com/m-bain/whisperX) — aligns spoken words to time for semantic placement.
+- [Fontsource](https://fontsource.org/) — supplies versioned, openly licensed font packages, each with its own font files and license.
 
 ## License
 
-Narratage is released under the [Narratage Open Source License](./LICENSE), based on Apache 2.0 with additional conditions. You may run it on your own infrastructure, including for your organization's commercial work, and you may fork, modify and publish the source under the same terms. Operating Narratage as a multi-tenant or hosted service, and supplying it to third parties for commercial gain, each require a commercial license. Content you produce with Narratage belongs to you.
+Narratage is released under the [Narratage Open Source License](./LICENSE), a modified Apache 2.0 license. You may self-host it, use it for your organization's work — including commercial work and work for clients — and operate a single-tenant deployment for one organization. Multi-tenant or hosted offerings for third parties, and commercial redistribution, require a commercial license. You may fork, modify and publish the source under the same license when it is not supplied for commercial gain. Brand and copyright notices presented by Narratage must remain intact.
+
+The content you produce with Narratage belongs to you. Outputs created through third-party models or services may also be subject to those providers' terms.
 
 For commercial licensing, email [official@hypit.ai](mailto:official@hypit.ai?subject=%5BGitHub%5DNarratage%20Commercial%20License%20Inquiry).
