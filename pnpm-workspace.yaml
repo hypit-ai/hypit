@@ -2,3 +2,4 @@ packages:
   - packages/*
   - services/media-lambda
   - tools/caption-playground
+  - tools/svml-playground
