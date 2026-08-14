@@ -82,6 +82,10 @@ out to be cut at the wrong moment.
 A declared duration is honoured wherever one exists. Where none does, words are placed at an
 ordinary delivery pace and the remaining time is divided evenly.
 
+This applies to every Track the Source produces, whichever package made it. The Playground asks the
+compiled Source for its exports and builds the ones typed `VisualTrack` or `AudioTrack`, so a
+package that grows a new kind of Track appears here without the Playground being taught about it.
+
 Drawing stand-ins needs `ffmpeg` on your `PATH`. Without it the shots stay unmade and the Tracks say
 so, rather than the preview pretending they were drawn.
 
@@ -132,5 +136,17 @@ them selects in all three. Click a clip and the playhead moves to its first fram
 outlines it, and the source scrolls to the tag that placed it. Click a marked line in the source, or
 whatever is drawn under the pointer, and the same happens.
 
+A Segment encloses a Selection, which can enclose another Selection. Each level is drawn in its own
+colour — in the source, on the timeline and on the picture — and an enclosing range stays outlined
+while an inner one is, because the nesting is what the markers are for. Everything the playhead is
+inside is outlined as it passes, whether or not a Track was hung on it.
+
 Drag the ruler to scrub. `Space` plays and pauses, `←` and `→` step one frame with `Shift` for ten,
 `Home` and `End` jump to the ends, and `Esc` clears the selection.
+
+## Sound
+
+HyperFrames renders a silent picture on purpose: programme audio is a separate Track the media
+pipeline muxes in at the end. But placing B-roll against speech means hearing the speech, so the
+Speech Spine's own material is allowed to sound while the transport is running. Cutaways stay
+silent, as they are in a build unless they ask otherwise. The speaker button turns it off.
