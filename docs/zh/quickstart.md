@@ -17,16 +17,16 @@ Narratage 把这份源码编译成一张可见的执行图。在任何模型或�
 选择一次 Run，并看清这次 Build 究竟需要执行什么。本页先带你得到第一份安全的 Plan：不需要 API Key，
 也不会产生任何付费请求。
 
-## 使用 Narratage skill
-
-克隆仓库，在这个工作目录下就可以直接使用 `/narratage`：
+下面的一切都从克隆这个仓库开始：
 
 ```bash
 git clone https://github.com/hypit-ai/narratage.git
 cd narratage
 ```
 
-然后发送给你的 Agent：
+## 使用 Narratage skill
+
+在这个工作目录下就可以直接使用 `/narratage`。发送给你的 Agent：
 
 ```text
 /narratage 配置我的环境，只向我索取当前 Runtime Profile 实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
@@ -36,11 +36,9 @@ cd narratage
 
 ## 1. 安装源码工作区
 
-Narratage 目前从源码仓库运行，需要 Node.js 22+，并通过 Corepack 使用 pnpm 10.33.x。
+需要 Node.js 22+，并通过 Corepack 使用 pnpm 10.33.x。
 
 ```bash
-git clone https://github.com/hypit-ai/narratage.git
-cd narratage
 corepack enable
 pnpm install --frozen-lockfile
 ```
