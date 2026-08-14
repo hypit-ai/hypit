@@ -81,8 +81,6 @@ Script 外面的组件（视频生成器、语音模型、字幕渲染器、轨�
 
 ## 快速开始
 
-下面的一切都从克隆这个仓库开始：
-
 ```bash
 git clone https://github.com/hypit-ai/narratage.git
 cd narratage
