@@ -103,16 +103,16 @@ Components outside the Script (video generators, speech models, caption renderer
 
 ## Quickstart
 
-### With a coding agent
-
-Clone the repository. `/narratage` is available from that working directory:
+Everything below starts from a clone of this repository:
 
 ```bash
 git clone https://github.com/hypit-ai/narratage.git
 cd narratage
 ```
 
-Then send to your agent:
+### With a coding agent
+
+`/narratage` is available from that working directory. Send your agent:
 
 ```text
 /narratage Set up my environment, ask for only the API keys required by my Runtime Profile, and guide me through authoring and building my first SVML video.
@@ -123,8 +123,6 @@ Then send to your agent:
 Node.js 22+ and pnpm 10.33.x:
 
 ```bash
-git clone https://github.com/hypit-ai/narratage.git
-cd narratage
 corepack enable
 pnpm install --frozen-lockfile
 
