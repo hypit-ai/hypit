@@ -18,8 +18,8 @@ import {
   compileRunSource, RunFragmentRegistry, RunFrontendRegistry, resolveRunDocument,
 } from "@narratage/run";
 import { runMarkupFrontend } from "@narratage/run-markup";
-import { videoDomainClosure, videoDomainValidators } from "@narratage/video-domain";
 
+import { officialVideoDomain } from "../official-video.js";
 import type { Archive } from "./archive.js";
 import type { ServedFile } from "./compile.js";
 
@@ -55,10 +55,11 @@ async function planner(
   source: string,
   authorSource: string,
 ): Promise<RunPlan["plan"]> {
+  const domain = await officialVideoDomain();
   const frontends = new RunFrontendRegistry();
   frontends.register(runMarkupFrontend);
   const compiler = new NodeRunCompiler({
-    frontends, closure: await videoDomainClosure(), validators: await videoDomainValidators(),
+    frontends, closure: domain.closure, validators: domain.validators,
   } as never);
   return (run, targets) => compiler.planCompilation({
     source,
