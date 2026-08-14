@@ -90,7 +90,7 @@ git clone https://github.com/hypit-ai/narratage.git
 cd narratage
 ```
 
-然后发送：
+然后发送给你的 Agent：
 
 ```text
 /narratage 配置我的环境，只向我索取当前 Runtime Profile 实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
