@@ -56,7 +56,9 @@ Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for hu
 
 ## How it works
 
-1. **Write** — a source file describes who speaks, what they say, and where B-roll and effects go. No timecodes.
+Narratage compiles SVML source files into finished videos.
+
+1. **Write** — SVML describes who speaks, what they say, and where B-roll and effects go. No timecodes.
 2. **Generate** — Seedance, MiniMax H3 and GPT Image 2 produce every shot from prompts and references.
 3. **Align** — WhisperX pins every spoken word to an exact time. B-roll and effects follow words, not seconds.
 4. **Render** — HyperFrames composites all tracks frame by frame into MP4.
