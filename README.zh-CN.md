@@ -134,12 +134,9 @@ Narratage 把创作与执行分开：
 
 <p align="center"><em>narration + montage = <strong>narratage</strong></em></p>
 
-<p align="center">
-  <em>“The new treatment, which the producer calls <strong>‘narratage,’</strong><br>
-  is eminently well suited to this particular dramatic vehicle.”</em>
-  <br>
-  — Mordaunt Hall，<em>The New York Times</em>，1933
-</p>
+> *“The new treatment, which the producer calls ‘narratage,’ is eminently well suited to this particular dramatic vehicle.”*
+>
+> — Mordaunt Hall，*The New York Times*，1933
 
 在这篇对 Spencer Tracy 主演的《*The Power and the Glory*》的评论中，制片人 Jesse L. Lasky 所称的 **narratage** 描述了一种由旁白推动故事、画面随之组接场景的手法。
 
