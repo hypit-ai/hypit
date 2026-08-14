@@ -132,7 +132,13 @@ Narratage 把创作与执行分开：
 
 ## 名字的由来
 
-1933 年，《*New York Times*》在评论 Spencer Tracy 主演的《*The Power and the Glory*》时，介绍了制片人 Jesse L. Lasky 提出的 **narratage** 一词——narration 加 montage——用来描述一种由旁白推动故事、画面随之组接场景的手法。
+<p align="center"><em>narration + montage = <strong>narratage</strong></em></p>
+
+> “The new treatment, which the producer calls ‘narratage,’ is eminently well suited to this particular dramatic vehicle.”
+>
+> Mordaunt Hall，*The New York Times*，1933
+
+在这篇对 Spencer Tracy 主演的《*The Power and the Glory*》的评论中，制片人 Jesse L. Lasky 所称的 **narratage** 描述了一种由旁白推动故事、画面随之组接场景的手法。
 
 九十年后，Narratage 让同一个理念有了新的形态：一门围绕旁白编译蒙太奇的语言与系统。
 
