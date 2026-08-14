@@ -1,0 +1,6 @@
+<?svml using="@narratage/run-markup@1"?>
+
+<svrun version="1">
+  <author source="./main.svml"/>
+  <target output="presenter.image"/>
+</svrun>
