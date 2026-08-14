@@ -56,10 +56,10 @@ Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for hu
 
 ## How it works
 
-1. **Write** — who speaks, what they say, and where B-roll and effects belong — in words, not timecodes.
-2. **Generate** — prompts, reference images and reference audio go into image, video and voice models to create each shot, from speaker footage to B-roll.
-3. **Align** — WhisperX measures the finished speech; Narratage maps it back to the script so B-roll, effects and captions stay pinned to words.
-4. **Render** — every visual and audio track is composited frame by frame into a finished MP4.
+1. **Write** — a source file describes who speaks, what they say, and where B-roll and effects go. No timecodes.
+2. **Generate** — Seedance, MiniMax H3 and GPT Image 2 produce every shot from prompts and references.
+3. **Align** — WhisperX pins every spoken word to an exact time. B-roll, effects and captions follow words, not seconds.
+4. **Render** — HyperFrames composites all tracks frame by frame into MP4.
 
 Change the script, keep the results you approve, and regenerate only what you choose to replace.
 
