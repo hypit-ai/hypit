@@ -17,8 +17,6 @@ Narratage 把这份源码编译成一张可见的执行图。在任何模型或�
 选择一次 Run，并看清这次 Build 究竟需要执行什么。本页先带你得到第一份安全的 Plan：不需要 API Key，
 也不会产生任何付费请求。
 
-下面的一切都从克隆这个仓库开始：
-
 ```bash
 git clone https://github.com/hypit-ai/narratage.git
 cd narratage
