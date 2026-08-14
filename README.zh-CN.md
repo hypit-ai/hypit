@@ -81,16 +81,16 @@ Script 外面的组件（视频生成器、语音模型、字幕渲染器、轨�
 
 ## 快速开始
 
-### 用编程 Agent
-
-克隆仓库，在这个工作目录下就可以直接使用 `/narratage`：
+下面的一切都从克隆这个仓库开始：
 
 ```bash
 git clone https://github.com/hypit-ai/narratage.git
 cd narratage
 ```
 
-然后发送给你的 Agent：
+### 用编程 Agent
+
+在这个工作目录下就可以直接使用 `/narratage`。发送给你的 Agent：
 
 ```text
 /narratage 配置我的环境，只向我索取当前 Runtime Profile 实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
@@ -101,8 +101,6 @@ cd narratage
 需要 Node.js 22+ 与 pnpm 10.33.x：
 
 ```bash
-git clone https://github.com/hypit-ai/narratage.git
-cd narratage
 corepack enable
 pnpm install --frozen-lockfile
 
