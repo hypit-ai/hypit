@@ -1,9 +1,9 @@
 ---
-title: Caption, Media, Typography & Audio Tracks
+title: Tracks
 description: Peer track components — captions, media, typography and authored audio.
 ---
 
-# Caption, Media, Typography & Audio Tracks
+# Tracks
 
 Every audiovisual contribution entering the final composition is a peer **Track**. Tracks are flat
 (no nesting), and visual z-order is determined by the `stack-order` property in SVS. This page
@@ -326,6 +326,190 @@ The generic Text value supplies only characters. Typography still owns the item 
 placement, timing, style and motion. Use inline `P`/`Span`/`Break` when the author needs rich runs.
 
 **Output:** `{titles.track}` — a VisualTrack added to `film:Film`.
+
+## Ranking boards
+
+A board animates an ordered list against the Script: it enters on a Selection, moves on Moments, and
+settles on a Moment that ends it. Four variants share one shape — a container, its own item tag, and
+its own style tag.
+
+| Container | Item | Style |
+|---|---|---|
+| `ranking:TierBoard` | `ranking:TierItem` | `ranking:TierBoardStyle` |
+| `ranking:Column` | `ranking:ColumnItem` | `ranking:ColumnStyle` |
+| `ranking:TopThree` | `ranking:TopThreeItem` | `ranking:TopThreeStyle` |
+| `ranking:TypewriterList` | `ranking:TypewriterItem` | `ranking:TypewriterListStyle` |
+
+```svml
+<import as="ranking" from="@narratage/ranking@1"/>
+```
+
+### The style tag
+
+Empty, and all three attributes required: `id`, `recipe` (an SVS Recipe) and `font` (a Font Stack or
+Font artifact). The recipe carries the board's own keys — rows, colours, motion — and is validated
+against the variant, so a Column recipe on a TierBoard is refused by name.
+
+### The container tag
+
+| Attribute | Takes |
+|---|---|
+| `map` | the Semantic Map that places words |
+| `space` | the Program Space |
+| `frame` | a `space:Frame` |
+| `during` | a Selection — the board is on screen for it |
+| `triggers` | a Moment — rows move on it |
+| `terminal` | a Moment — the board settles on it |
+| `style` | the matching style record, and only that variant's |
+| `title` | `TypewriterList` only, and required there: a string or a Text reference |
+| `appear-sound`, `move-sound` | optional Synchronized Media |
+
+`move-sound` is refused on `TopThree`, which has no move phase. On a `TierBoard` it needs at least
+one item with `entry="stage"`, and on a `TypewriterList` at least one `winner="true"` — a sound with
+nothing to sound on is an authoring mistake, not a silent no-op.
+
+### The item tags
+
+Each variant takes its own, at least one, and ids must be unique within a board.
+
+- **`TierItem`** — `tier` (required, matching a row id in the recipe), `icon` (required), optional
+  `entry="direct" | "stage"` and `stack`. Row labels come from the recipe, not the tag.
+- **`ColumnItem`** and **`TopThreeItem`** — `label` (required: a string or a Text reference), optional
+  `icon` and `stack`. `TopThree` takes at most three.
+- **`TypewriterItem`** — copy comes from `text=` or from the element's own text, one or the other;
+  optional `winner="true"`, `stack`, and `emphasis-start` / `emphasis-end`, which are counted in
+  graphemes and must be given together.
+
+```svml
+<ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>
+<ranking:Column id="board" map={timing.map} space={speech.space} frame={board-frame}
+  during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
+  style={board-style}>
+  <ranking:ColumnItem id="row-regen" label="ReGen" icon={icon-regen}/>
+  <ranking:ColumnItem id="row-chatgpt" label="ChatGPT" icon={icon-chatgpt}/>
+  <ranking:ColumnItem id="row-remini" label="Remini" icon={icon-remini}/>
+</ranking:Column>
+```
+
+**Output:** `{board.visual}` — a VisualTrack. A board given a sound also exports `{board.audio}`, an
+AudioTrack; without one there is no audio output to add.
+
+## Card decks
+
+A deck holds cards in depth: one is in front, the others recede behind it, and each new card is dealt
+on a Moment. Where a Media Item places one shot in one Frame, a deck keeps a stack of them in the
+same Frame and moves the whole stack.
+
+```svml
+<import as="deck" from="@narratage/deck-track@1"/>
+```
+
+### deck:DepthStack
+
+`id`, `map`, `space`, `canvas`, `frame` and `appearance` are all required, as is `until`, which says
+what ends the deck: the literal `"program.end"`, a Moment, or a Selection. Only with a Selection may
+you add `until-boundary="start" | "end"` to choose which edge of it ends the deck; the default is
+`end`, and giving the attribute in the other two cases is refused rather than ignored.
+
+### deck:Card
+
+A direct child of the stack, self-closing, at least one, and dealt in document order.
+
+| Attribute | Takes |
+|---|---|
+| `source` | required — a still image, a Synchronized Medium, or a Compositable Surface |
+| `extent` | required for a still image and refused for anything else |
+| `at` | required — the Moment the card is dealt on |
+| `appearance` | optional — its own Recipe, otherwise the stack's |
+| `label` | optional — a `deck:Label` record |
+
+### deck:Label
+
+`id` and `font` are required. The copy is either the `content=` reference or the element's own text —
+give both and it is refused. `size`, `color`, `align`, `block` and `padding` are optional.
+
+```svml
+<space:Frame id="deck-frame" within={vertical} left="44%" top="60%" right="98%" bottom="88%"/>
+<deck:DepthStack id="deck" map={timing.map} space={speech.space} canvas={vertical}
+  frame={deck-frame} appearance={studio.deck.stack} until={story.moment.done}>
+  <deck:Card id="card-spatial" source={icon-spatial} extent={square} at={story.moment.deal-one}/>
+  <deck:Card id="card-type" source={icon-type} extent={square} at={story.moment.deal-two}/>
+</deck:DepthStack>
+```
+
+**Output:** `{deck.track}` — a VisualTrack, an ordinary peer of every other Track in the Film.
+
+## Screen overlays
+
+Effects that cover the picture rather than sit in a Frame: a flash on a cut, a vignette that holds
+for a Selection, grain over the whole programme. One Track carries them all, and each child is one
+effect bound to its own window.
+
+```svml
+<import as="screen" from="@narratage/screen-overlay@1"/>
+```
+
+`screen:Track` takes `id`, `canvas` and `space`. Its children are the effects, at least one, each
+empty, each with a required `z` for stacking order and a window that is one of:
+
+| Window | Written |
+|---|---|
+| The whole programme | `during="program"` |
+| A Selection | `during={story.selection.x} map={timing.map}` |
+| A Moment, for a length | `at={story.moment.x} for="12f" map={timing.map}` |
+| An explicit span | `start="…" end="…"`, optionally against a `selection=` or `moment=` |
+
+Anything bound to the Script needs `map`; an explicit span with no Script source must not have one.
+Lengths are `12f`, `250ms` or `1.5s`, and `occurrences="each"` repeats an effect at every occurrence
+of its marker rather than the first.
+
+Eleven effects are available — `Flash`, `ColorWash`, `Vignette`, `ScanLines`, `DirectionalMatte`,
+`WhipVeil`, `GlitchVeil`, `Grain`, `LightLeak`, `Bokeh` and `TVStatic` — and each carries its own
+required attributes, such as `color` / `intensity` / `attack` / `hold` / `decay` on a `Flash`, or
+`center-x` / `center-y` / `radius-x` / `radius-y` / `softness` / `color` / `opacity` on a `Vignette`.
+None have defaults: an effect states its whole shape or is refused.
+
+```svml
+<screen:Track id="effects" space={speech.space} canvas={vertical}>
+  <screen:Flash during={story.selection.overlay} map={timing.map} z="80"
+    color="#ffffff" intensity="0.6" attack="2" hold="2" decay="6"/>
+</screen:Track>
+```
+
+**Output:** `{effects.track}` — a VisualTrack.
+
+## Comment stickers
+
+Social-style comment cards placed in a Frame: an avatar, an author, the comment itself, and an
+optional metadata line.
+
+```svml
+<import as="comment" from="@narratage/comment-sticker@1"/>
+```
+
+`comment:Style` is empty and takes `id`, `recipe` and `font`, all required. The recipe carries the
+card's whole appearance — background, border, radius, tail, avatar, the three text rows, and the
+enter/hold/exit motion — and every key has a default, so a recipe may set only what it changes.
+
+`comment:Track` takes `id`, `canvas` and `space`. It takes `map` only if one of its stickers binds to
+the Script, and giving `map` when none does is refused rather than ignored.
+
+`comment:Sticker` requires `id`, `frame` and `style`, and takes the same windows as a screen overlay
+above. Its copy is either the `comment=` attribute or the element's own text — both is refused. The
+optional `author`, `header` and `meta` each take a string or a Text reference, `avatar` takes an
+image, and there is no `z`: stacking order comes from the recipe's `stack-order`.
+
+```svml
+<comment:Style id="social" recipe={studio.comment} font={ui-font}/>
+<comment:Track id="comments" canvas={vertical} space={speech.space} map={timing.map}>
+  <comment:Sticker id="one" frame={comment-frame} style={social} avatar={viewer-avatar}
+    author="@viewer" meta="Featured" during={story.selection.reaction}>
+    Wait, it pinned the caption to the word, not the second.
+  </comment:Sticker>
+</comment:Track>
+```
+
+**Output:** `{comments.track}` — a VisualTrack.
 
 ## Combination example
 
