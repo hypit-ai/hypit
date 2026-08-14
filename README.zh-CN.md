@@ -18,7 +18,6 @@
   <a href="https://github.com/hypit-ai/narratage/graphs/contributors"><img alt="Contributors" src="https://img.shields.io/github/contributors/hypit-ai/narratage?style=flat-square&color=2EA043&logo=github&logoColor=white"></a>
   <a href="./package.json"><img alt="Node 22+" src="https://img.shields.io/badge/node-22+-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white"></a>
   <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0%20with%20conditions-yellow?style=flat-square"></a>
-  <a href="https://github.com/hypit-ai/narratage/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hypit-ai/narratage/ci.yml?branch=main&style=flat-square&label=CI"></a>
 </p>
 
 <p align="center">
@@ -120,35 +119,64 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
 
 真实的 Build 还需要 `PATH` 上有 `ffmpeg` 与 `ffprobe`，以及视 Runtime Profile 而定的 Python 与 `uv` 或 API 凭据。运行 `narratage doctor` 查看缺什么；完整指南见[快速开始](https://narratage.hypit.ai/zh/quickstart)。
 
+### 项目文件
+
+Narratage 为文件规定不同的角色，但不保留任何固定文件名：
+
+| 角色 | 常用形式 | 如何选中 |
+|---|---|---|
+| **Author Source** | `.svml` | 直接传给 `check`，或由 Run Source 引用 |
+| **Recipe Source** | `.svs` | 被另一份 Source 导入 |
+| **Run Source** | `.svrun` | 传给 `plan` 或 `build` |
+| **Runtime Profile** | JSON | 通过 `--runtime` 显式传入 |
+| **包清单** | JSON lock 文件 | 由 Runtime Profile 引用，或通过 CLI 显式选择 |
+
+名称与后缀只是约定，不参与解析器分发。每份 Source 都通过 `<?svml using="..."?>` Header 选择自己的 Frontend；Runtime Profile 与包清单则通过显式路径选择。一个项目可以拥有任意数量的这些文件，同一份 Author Source 也可以被多份 Run Source 引用。
+
 ## 名字的由来
 
-1933 年《*New York Times*》对电影《*The Power and the Glory*》的影评造出了 **narratage**：旁白加蒙太奇——声音推动故事前进，画面组接出与之呼应的段落。
+1933 年，《*New York Times*》在评论 Spencer Tracy 主演的《*The Power and the Glory*》时，介绍了制片人 Jesse L. Lasky 提出的 **narratage** 一词——narration 加 montage——用来描述一种由旁白推动故事、画面随之组接场景的手法。
 
-这套系统做的正是这件事。作者写下口播剧本，编译器把生成的视频、字幕、B-roll、文字与音频装配成一部完整的影片。
+九十年后，Narratage 让同一个理念有了新的形态：一门围绕旁白编译蒙太奇的语言与系统。
 
 ## 架构
 
-AI 生成慢、贵、不确定，而且每一步的输出往往就是下一步的输入。Narratage 把由此产生的选择呈现为两张平级的图：**Author Graph** 表达工作本身，**Run Graph** 为一次 Build 选择目标。Core 只负责解析、校验并推进状态机——视频领域的概念都留在可独立安装的包里，Core 不硬编码任何模型、Track 或 Provider。
+AI 生成改变了编译的形态。一项工作可能运行数分钟、明确产生费用、发生失败，或返回一个成为下一步输入的产物。因此，Build 的真实状态不能存在进程调用栈里：Narratage 先冻结被需要的工作，再依据持久化事实推进它。
 
-三个文件各管一事：`.svml` 管*做什么视频*（剧本+样式+轨道），`.svrun` 管*这次要产出什么*（哪些目标、复用哪些旧结果），运行时配置管*在哪跑*（API key、并发、权限）。
+Core 是一个领域无关的语义内核，只做两件事：把 Target 和显式 Candidate 选择编译为一份有限的 BuildPlan；接受 Event 并推进 BuildState。执行阶段不可再约简的规则是 `BuildState + Event → BuildState`，下一批可运行的 Command 始终从该状态重新生成。Core 不解析 Source，不执行组件代码，不访问文件或网络，不选择 Provider，不更改 Candidate，也不理解任何视频概念。
+
+| 部分 | 负责什么 | 为什么留在 Core 外 |
+|---|---|---|
+| **Compiler Host 与 Frontend** | Source Header、导入闭包、语法解码，以及 Author/Run Graph 编译 | 语法和 Source 所处环境可以独立演进 |
+| **Author facet** | Surface、作者词汇与 Graph Fragment | 新的作者能力不应要求发布内核 |
+| **Compute facet** | 确定性的 Producer 与 Validator | 领域计算应当可以独立安装 |
+| **Runtime facet** | Scheduler、Worker、Store、凭据与 transport | 部署、持久化和权限随环境而变化 |
+| **Endpoint facet** | 模型 API、本地程序、Lambda、设备与人工服务 | 外部能力各有自己的并发、失败与恢复规则 |
+| **Application** | CLI、Playground 与产品界面 | 用户体验不能变成中央能力注册表 |
+
+一个物理包可以贡献一种或多种 facet。Source 导入只激活作者语义，不授予文件系统、网络、进程或凭据权限；拥有特权的 Endpoint 与 Runtime facet 必须由 Runtime Profile 显式选择。
+
+Core 与 CLI 都不维护模型、Track 或 Provider 的中央注册表。安装并锁定一个包即可加入它提供的能力，无需重新发布 Core。
 
 ## 接下来去哪
 
-- [演示](https://narratage.hypit.ai/zh/) —— 悬停 Script 中的标记区间，旁边即刻显示它对应的画面。
-- [快速开始](https://narratage.hypit.ai/zh/quickstart) —— 你掌控的文件、命令，以及第一次真实 Build。
-- [开发](https://narratage.hypit.ai/zh/guide/develop) —— 包架构、添加 Author 包或 Provider。
+- [演示](https://narratage.hypit.ai/zh/) —— 并排查看 SVML 源码与它渲染出的画面。
+- [快速开始](https://narratage.hypit.ai/zh/quickstart) —— 写作、预览、规划并构建你的第一支视频。
+- [开发](https://narratage.hypit.ai/zh/guide/develop) —— 理解包架构，并添加 Author 包或 Provider。
 
 ## 第三方软件
 
-Narratage 依赖一些它并不随附的工作。
+Narratage 集成了以下采用独立许可的软件：
 
-- [FFmpeg](https://ffmpeg.org/) —— 媒体探测、规范化与封装。作为一个由你自行安装的独立程序被调用，遵循其自身许可。
-- [HyperFrames](https://www.npmjs.com/package/hyperframes) —— 在无头 Chromium 中渲染 Composition。
-- [WhisperX](https://github.com/m-bain/whisperX) —— 字幕时间轴背后的词级语音对齐。
-- [Fontsource](https://fontsource.org/) —— 开放字体目录，以钉版包的形式交付，每个包自带各自的 SIL OFL 1.1 或 Apache 2.0 许可证与字体字节。Narratage 既不内置字体文件，也不读取系统字体。
+- [FFmpeg](https://ffmpeg.org/) —— 以独立许可的可执行程序完成媒体探测、规范化、变换与封装。
+- [HyperFrames](https://www.npmjs.com/package/hyperframes) —— 在 Chromium 中把 Composition 渲染为帧精确的视频。
+- [WhisperX](https://github.com/m-bain/whisperX) —— 把口播中的每个词对齐到时间，用于语义定位。
+- [Fontsource](https://fontsource.org/) —— 提供有版本的开放字体包，每款字体均附带自己的字体文件与许可证。
 
 ## 许可
 
-Narratage 以 [Narratage 开源许可](./LICENSE) 发布，基于 Apache 2.0 并附加额外条款。你可以在自己的基础设施上运行它，包括用于所在组织的商业工作；也可以 fork、修改并以相同条款公开源码。将 Narratage 作为多租户或托管服务运营，以及为商业利益向第三方提供它，都需要商业授权。你用 Narratage 产出的内容归你所有。
+Narratage 以 [Narratage 开源许可](./LICENSE) 发布，这是一份修改后的 Apache 2.0 许可。你可以自行部署，将它用于所在组织的工作——包括商业工作和客户项目——也可以为一个组织运营单租户部署。向第三方提供多租户或托管服务，以及商业再分发，均需要商业授权。只要不是为了商业利益向第三方供应，你可以按照同一许可 fork、修改并公开源码。Narratage 已呈现的品牌与版权信息必须保持完整。
+
+你用 Narratage 产出的内容归你所有。通过第三方模型或服务生成的产物，还可能受到相应服务商条款的约束。
 
 以英文 [`LICENSE`](./LICENSE) 文本为准。商业授权请联系 [official@hypit.ai](mailto:official@hypit.ai?subject=%5BGitHub%5DNarratage%20Commercial%20License%20Inquiry)。
