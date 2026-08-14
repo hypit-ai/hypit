@@ -142,7 +142,7 @@ A project can have any number of these files, and the same `.svml` can be built 
 
 <p align="center"><em>narration + montage = <strong>narratage</strong></em></p>
 
-> *“The new treatment, which the producer calls ‘narratage,’ is eminently well suited to this particular dramatic vehicle.”*
+> *“The new treatment, which the producer calls ‘narratage,’ is eminently well suited …”*
 >
 > — Mordaunt Hall, *The New York Times*, 1933
 
