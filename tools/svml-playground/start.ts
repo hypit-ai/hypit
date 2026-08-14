@@ -48,7 +48,9 @@ const run = runArgument === undefined ? undefined : resolve(invokedFrom, runArgu
 // Source that reuses an accepted take needs one.
 const runtimeArgument = values.get("runtime");
 const runtime = runtimeArgument === undefined ? undefined : resolve(invokedFrom, runtimeArgument);
-const packageRoot = resolve(repoRoot, "packages/video-cli/src");
+// Runtime packages belong to the project that selected them. Pointing into the
+// Narratage monorepo would make the preview work here and fail once installed.
+const packageRoot = invokedFrom;
 const port = Number(values.get("port") ?? "5179");
 if (!Number.isSafeInteger(port) || port <= 0) usage("--port must be a positive integer");
 

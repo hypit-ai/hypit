@@ -120,6 +120,10 @@ Playground 按以下顺序优先采用真实来源：
 把类型是 `VisualTrack` 或 `AudioTrack` 的那些建出来 —— 所以某个包新长出一种 Track，
 不需要教 Playground 就会出现在这里。
 
+这个应用显式携带 Narratage 的官方视频包清单。清单只属于 Playground：安装或卸载它，
+都不会改变编译与 Runtime。新增一个官方包时需要同步发布 Playground；已携带的包新增
+Track 时，不需要再为预览写一条特殊分支。
+
 每条 Track 各自构建。某条轨道在等一个这台机器没有密钥的 Provider，代价只有它自己：
 其余部分照常播放，而那条轨道会说明它在等什么，而不是凭空消失。
 

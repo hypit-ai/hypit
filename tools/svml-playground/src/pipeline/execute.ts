@@ -13,7 +13,8 @@ import type { BuildState } from "@narratage/protocol";
 import { createLocalHyperframesProvider } from "@narratage/provider-hyperframes-local";
 import { createLocalMediaProvider } from "@narratage/provider-media-local";
 import { createLocalWhisperXProvider } from "@narratage/provider-whisperx-local";
-import { videoDomainProducers, videoDomainValidators } from "@narratage/video-domain";
+
+import { officialVideoDomain } from "../official-video.js";
 
 /** A Capability no Provider on this machine could answer. */
 export type Unserved = { readonly capability: string; readonly count: number };
@@ -56,9 +57,10 @@ async function endpoints(): Promise<EndpointRegistry> {
 }
 
 export async function execute(planned: BuildState, artifacts: ArtifactStore): Promise<Executed> {
+  const domain = await officialVideoDomain();
   const result = await new NodeDriver({
-    producers: await videoDomainProducers(),
-    validators: await videoDomainValidators(),
+    producers: domain.producers,
+    validators: domain.validators,
     endpoints: await endpoints(),
     artifacts,
   }).run(planned);
