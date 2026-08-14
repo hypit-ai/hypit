@@ -119,17 +119,16 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
 
 ### 项目文件
 
-Narratage 为文件规定不同的角色，但不保留任何固定文件名：
+Narratage 把创作与执行分开：
 
-| 角色 | 常用形式 | 如何选中 |
-|---|---|---|
-| **Author Source** | `.svml` | 直接传给 `check`，或由 Run Source 引用 |
-| **Recipe Source** | `.svs` | 被另一份 Source 导入 |
-| **Run Source** | `.svrun` | 传给 `plan` 或 `build` |
-| **Runtime Profile** | JSON | 通过 `--runtime` 显式传入 |
-| **包清单** | JSON lock 文件 | 由 Runtime Profile 引用，或通过 CLI 显式选择 |
+| 文件 | 决定什么 |
+|---|---|
+| `.svml` | 制作什么视频，包括稿件、生成素材和轨道 |
+| `.svs` | 可复用的创作选择，例如 prompt、样式和布局 |
+| `.svrun` | 本次构建什么，包括 Target 和需要复用的历史产物 |
+| Runtime Profile | 在哪里、以何种方式运行，包括 Provider、存储和并发 |
 
-名称与后缀只是约定，不参与解析器分发。每份 Source 都通过 `<?svml using="..."?>` Header 选择自己的 Frontend；Runtime Profile 与包清单则通过显式路径选择。一个项目可以拥有任意数量的这些文件，同一份 Author Source 也可以被多份 Run Source 引用。
+一个项目可以包含任意数量的这些文件，同一份 `.svml` 也可以由多份 `.svrun` 构建。
 
 ## 名字的由来
 
@@ -141,7 +140,7 @@ Narratage 为文件规定不同的角色，但不保留任何固定文件名：
 
 AI 生成缓慢、昂贵且不确定。Narratage 把所需工作编译为一份持久化计划。
 
-Core 极小且领域无关——它不认识视频。安装一个包即可增加能力，无需重新发布 Core。
+Core 极小且领域无关：它不认识视频。安装一个包即可增加能力，无需重新发布 Core。
 
 | 层 | 负责什么 | 例子 |
 |---|---|---|
