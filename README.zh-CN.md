@@ -2,18 +2,16 @@
   <img alt="Narratage" src="docs/public/narratage-logo.svg" width="420">
 </p>
 
-<p align="center"><strong>一门给 AI Agent 做视频用的语言和系统。</strong></p>
-
-<p align="center"><em>人剪视频，Agent 编译视频。</em></p>
-
-<!-- TODO: Demo GIF（15秒内）—— 左边 SVML 剧本，右边编译出的视频。 -->
-
 <p align="center">
-  <a href="https://narratage.hypit.ai/zh/">演示</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/zh/quickstart">快速开始</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/zh/guide/develop">开发</a>&nbsp;&nbsp;<a href="./README.md">English</a>
+  <strong>世界上第一门给 Agent 做视频用的编程语言。</strong>
+  <br>
+  <em>基于一项超前了九十年的 1933 年电影制作技法。</em>
 </p>
 
 <p align="center">
   <a href="https://github.com/hypit-ai/narratage/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/hypit-ai/narratage?style=flat-square&color=FFD700&logo=github&logoColor=white&label=Stars"></a>
+  <a href="./packages"><img alt="Packages" src="https://img.shields.io/badge/Packages-103-4169E1?style=flat-square"></a>
+  <a href="./package.json"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-100K%2B%20lines-3178C6?style=flat-square&logo=typescript&logoColor=white"></a>
   <a href="./package.json"><img alt="Node 22+" src="https://img.shields.io/badge/node-22+-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white"></a>
   <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0%20with%20conditions-yellow?style=flat-square"></a>
 </p>
@@ -25,21 +23,37 @@
   <a href="https://t.me/narratage"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-Join%20Group-26A5E4?style=flat-square&logo=telegram&logoColor=white"></a>
 </p>
 
+<p align="center">
+  <a href="https://narratage.hypit.ai/zh/">演示</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/zh/quickstart">快速开始</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/zh/guide/develop">开发</a>&nbsp;&nbsp;<a href="./README.md">English</a>
+</p>
+
 ## 为什么是 Narratage
 
-每一款视频编辑器——Premiere、剪映、DaVinci、Final Cut——都是为人的双手在时间线上操作而造的。Narratage 是一门为 AI Agent 设计的语言与系统。
+1933 年，制片人 Jesse L. Lasky 为 Spencer Tracy 的 *The Power and the Glory* 造了一个词：**narratage**——narration 加 montage——旁白推动故事，画面跟随组接。好莱坞把这个词遗忘了九十年。而这恰恰是 AI Agent 需要的东西：写旁白，系统编译画面。没有时间线，没有鼠标——源文件进，成片出。
 
-- **没有时间线** —— 视频是写出来的，不是拖出来的。B-roll、特效以及每一条轨道都存在于源码里。
-- **Agent 原生** —— 输入纯文本，输出成片。Agent 像读写代码一样读写它。
-- **钉在词上** —— 重新生成一个段落，时间随之改变——而 B-roll 与特效始终钉在它们所属的词上。
-- **可批量** —— 一切都是源文件。以代码的规模产出视频，而不是以剪辑的速度。
+> **[并排查看 SVML 源码与渲染结果 →](https://narratage.hypit.ai/zh/)**
+
+## Narratage vs 时间线编辑器
+
+Premiere、剪映、DaVinci、Final Cut——每一款都是为人的双手在时间线上操作而造的。
+
+|  | 时间线编辑器 | Narratage |
+|---|---|---|
+| **为谁造的** | 用鼠标的人类剪辑师 | 读写文本的 AI Agent |
+| **视频结构** | 时间线上的片段 | 源文件编译成视频 |
+| **时间控制** | 手动逐帧放置 | 画面钉在口播词上 |
+| **重新生成** | 重做整段 | 保留满意的，只重新生成改动的 |
+| **批量生产** | 一次一个项目 | 以代码的规模产出 |
+| **版本控制** | 二进制项目文件 | 纯文本，可 diff |
+
+Narratage 不取代时间线编辑器做交互式手工剪辑。它取代的是——当剪辑师是 AI Agent 时——对时间线编辑器的需求。
 
 ## 怎么工作的
 
 Narratage 把 SVML 源文件编译成成片。
 
 1. **写** —— SVML 描述谁在说话、说什么，以及 B-roll 与特效放在哪里。不含时间码。
-2. **生成** —— Seedance、MiniMax H3 与 GPT Image 2 依据提示词和参考图产出每一个镜头。
+2. **生成** —— Seedance、MiniMax H3、GPT Image、Seedream 等依据提示词和参考图产出每一个镜头。
 3. **对齐** —— WhisperX 把每一个说出口的词钉到精确的时间上。B-roll 与特效跟随词，而不是跟随秒。
 4. **渲染** —— HyperFrames 把所有轨道逐帧合成为 MP4。
 
@@ -74,25 +88,39 @@ SVML——Semantic Video Markup Language——是创作语言。Narratage 是围
 
 | 构造 | 写法 | 干什么 |
 |---|---|---|
-| **Segment** | `<intro>...</intro>` | 命名的叙事段落——知道自己是段落的段落 |
+| **Segment** | `<intro>...</intro>` | 命名的叙事段落 |
 | **Speaker** | `<HOST>` | 标注谁在说话；一直生效到下一个 cue 或段落结束 |
 | **Split** | `<$299 \| two ninety-nine>` | 屏幕上显示的和嘴里说的可以不一样 |
 | **Hook** | `@product...@/product` | 把一个画面——B-roll、图形、特效——钩到具体的词上 |
 
 Script 外面的组件（视频生成器、语音模型、字幕渲染器、轨道合成器）消费 Script 声明的内容。Script 本身不含任何渲染逻辑。完整语法：[Script 规范](https://narratage.hypit.ai/zh/quickstart/script)。
 
+## 里面有什么
+
+103 个包，100,000+ 行 TypeScript。真正的编译器和运行时——不是套在别人 API 上的壳。
+
+| 层 | 负责什么 | 例子 |
+|---|---|---|
+| **Core** | 计划编译与 Build 状态机 | `core`、`protocol` |
+| **Compiler** | Source 解析、导入与图展开 | `host`、`markup`、`svs`、`elaborator` |
+| **Infrastructure** | 媒体处理、空间布局、字体与文本 | `media-pipeline`、`spatial`、`fonts-open` |
+| **Video authoring** | 稿件、生成、语音、Track、Film 与渲染 | `script`、`seedance`、`caption`、`film` |
+| **Providers** | 外部模型、程序与服务的适配器 | `provider-kie`、`provider-whisperx-local` |
+| **Runtime** | 调度、存储、凭据与执行 | `runtime`、`store-sqlite`、`local` |
+| **Applications** | 用户界面入口 | `cli`、`svml-playground` |
+
+AI 生成缓慢、昂贵且不确定。Core 把所需工作编译为一份持久化计划——你不说开始就不会跑。安装一个包即可增加能力，无需重新发布 Core。
+
 ## 快速开始
 
-### 克隆仓库
+### 用编程 Agent
+
+克隆仓库，发送给你的 Agent：
 
 ```bash
 git clone https://github.com/hypit-ai/narratage.git
 cd narratage
 ```
-
-### 用编程 Agent
-
-在这个工作目录下就可以直接使用 `/narratage`。发送给你的 Agent：
 
 ```text
 /narratage 配置我的环境，只向我索取当前 Runtime Profile 实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
@@ -131,34 +159,6 @@ Narratage 为文件规定不同的角色，但不保留任何固定文件名：
 
 名称与后缀只是约定，不参与解析器分发。每份 Source 都通过 `<?svml using="..."?>` Header 选择自己的 Frontend；Runtime Profile 与包清单则通过显式路径选择。一个项目可以拥有任意数量的这些文件，同一份 Author Source 也可以被多份 Run Source 引用。
 
-## 名字的由来
-
-1933 年，《*New York Times*》在评论 Spencer Tracy 主演的《*The Power and the Glory*》时，介绍了制片人 Jesse L. Lasky 提出的 **narratage** 一词——narration 加 montage——用来描述一种由旁白推动故事、画面随之组接场景的手法。
-
-九十年后，Narratage 让同一个理念有了新的形态：一门围绕旁白编译蒙太奇的语言与系统。
-
-## 架构
-
-AI 生成缓慢、昂贵且不确定。Narratage 把所需工作编译为一份持久化计划。
-
-Core 极小且领域无关——它不认识视频。安装一个包即可增加能力，无需重新发布 Core。
-
-| 层 | 负责什么 | 例子 |
-|---|---|---|
-| **Narratage Core** | 计划编译与 Build 状态机 | `core`、`protocol` |
-| **Compiler** | Source 解析、导入与图展开 | `host`、`markup`、`svs`、`elaborator` |
-| **Infrastructure** | 媒体处理、空间布局、字体与文本 | `media-pipeline`、`spatial`、`fonts-open` |
-| **Video authoring** | 稿件、生成、语音、Track、Film 与渲染 | `script`、`seedance`、`caption`、`film` |
-| **Providers** | 外部模型、程序与服务的适配器 | `provider-kie`、`provider-whisperx-local` |
-| **Runtime** | 调度、存储、凭据与执行 | `runtime`、`store-sqlite`、`local` |
-| **Applications** | 创作和操作 Narratage 的用户界面 | `cli`、`svml-playground` |
-
-## 接下来去哪
-
-- [演示](https://narratage.hypit.ai/zh/) —— 并排查看 SVML 源码与它渲染出的画面。
-- [快速开始](https://narratage.hypit.ai/zh/quickstart) —— 写作、预览、规划并构建你的第一支视频。
-- [开发](https://narratage.hypit.ai/zh/guide/develop) —— 理解包架构，并添加 Author 包或 Provider。
-
 ## 第三方软件
 
 Narratage 集成了以下采用独立许可的软件：
@@ -175,3 +175,9 @@ Narratage 以 [Narratage 开源许可](./LICENSE) 发布，这是一份修改后
 你用 Narratage 产出的内容归你所有。通过第三方模型或服务生成的产物，还可能受到相应服务商条款的约束。
 
 以英文 [`LICENSE`](./LICENSE) 文本为准。商业授权请联系 [official@hypit.ai](mailto:official@hypit.ai?subject=%5BGitHub%5DNarratage%20Commercial%20License%20Inquiry)。
+
+---
+
+<p align="center">
+  如果 Narratage 对你有用，一个 ⭐ 能帮助更多人发现它。
+</p>
