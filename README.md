@@ -56,12 +56,12 @@ Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for hu
 
 ## How it works
 
-1. **Write** a script — who speaks, what they say, where visuals go. No timecodes, no asset paths.
-2. **Generate** — video and speech models produce each segment's footage.
-3. **Align** — speech recognition pins every word to an exact time. Captions and B-roll snap to words, not seconds.
-4. **Render** — all tracks composite frame by frame into a finished MP4.
+1. **Write** — who speaks, what they say, and where B-roll and effects belong — in words, not timecodes.
+2. **Generate** — prompts, reference images and reference audio go into image, video and voice models to create each shot, from speaker footage to B-roll.
+3. **Align** — WhisperX measures the finished speech; Narratage maps it back to the script so B-roll, effects and captions stay pinned to words.
+4. **Render** — every visual and audio track is composited frame by frame into a finished MP4.
 
-Change one line in the script, recompile — only the affected segment regenerates. Already-generated results can be explicitly reused, so you never pay twice.
+Change the script, keep the results you approve, and regenerate only what you choose to replace.
 
 ## The language
 
