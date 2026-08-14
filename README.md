@@ -112,7 +112,7 @@ git clone https://github.com/hypit-ai/narratage.git
 cd narratage
 ```
 
-Then send:
+Then send to your agent:
 
 ```text
 /narratage Set up my environment, ask for only the API keys required by my Runtime Profile, and guide me through authoring and building my first SVML video.
