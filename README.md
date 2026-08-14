@@ -147,11 +147,9 @@ Ninety years later, Narratage gives the same idea a new form: a language and sys
 
 ## Architecture
 
-AI generation is slow, costly and non-deterministic, so Narratage compiles requested work into a durable plan that can pause, retry and resume without repeating completed work.
+AI generation is slow, costly and non-deterministic. Narratage compiles requested work into a durable plan.
 
-The domain-neutral Narratage Core only compiles plans and advances Build state. Parsing SVML, calling models and rendering frames all live in packages.
-
-Installing a package adds capability without requiring a Core release.
+The Core is small and domain-neutral—it knows nothing about video. Installing a package adds capability without requiring a Core release.
 
 | Layer | What it owns | Examples |
 |---|---|---|
