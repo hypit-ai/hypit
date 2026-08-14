@@ -143,17 +143,19 @@ AI 生成缓慢、昂贵且不确定。Narratage 把被要求的工作冻结为�
 
 系统中心是一个刻意保持极小、领域无关的 Core。它把被要求的输出和显式选择的实现编译为计划，接受执行事件，并决定下一步哪些工作可以运行。它不解析 SVML，不理解视频，不调用 Provider，不访问凭据，也不渲染画面。
 
-| 部分 | 负责什么 | 例子 |
-|---|---|---|
-| **Core** | 计划编译与 Build 状态机 | `core`、`protocol` |
-| **编译器** | Source 解析、导入与图展开 | `host`、`markup`、`svs`、`elaborator` |
-| **共享能力** | 媒体处理、空间布局、字体与文本 | `media-pipeline`、`spatial`、`fonts-open` |
-| **视频包** | 稿件、生成、语音、Track、Film 与渲染 | `script`、`seedance`、`caption`、`film` |
-| **Provider** | 外部模型、程序与服务的适配器 | `provider-kie`、`provider-whisperx-local` |
-| **Runtime** | 调度、存储、凭据与执行 | `runtime`、`store-sqlite`、`local` |
-| **应用** | 创作和操作 Narratage 的用户界面 | `cli`、`svml-playground` |
+安装一个包即可增加能力，无需重新发布 Core。
 
-SVML 的导入决定 Source 表达什么；Runtime Profile 另外选择可以访问文件、网络和凭据的包。Core 与 CLI 都不维护模型、Track 或 Provider 的中央注册表：安装一个包即可增加能力，无需重新发布 Core。
+| 层 | 负责什么 | 例子 |
+|---|---|---|
+| **Narratage Core** | 计划编译与 Build 状态机 | `core`、`protocol` |
+| **Compiler** | Source 解析、导入与图展开 | `host`、`markup`、`svs`、`elaborator` |
+| **Infrastructure** | 媒体处理、空间布局、字体与文本 | `media-pipeline`、`spatial`、`fonts-open` |
+| **Video authoring** | 稿件、生成、语音、Track、Film 与渲染 | `script`、`seedance`、`caption`、`film` |
+| **Providers** | 外部模型、程序与服务的适配器 | `provider-kie`、`provider-whisperx-local` |
+| **Runtime** | 调度、存储、凭据与执行 | `runtime`、`store-sqlite`、`local` |
+| **Applications** | 创作和操作 Narratage 的用户界面 | `cli`、`svml-playground` |
+
+SVML 的导入决定 Source 表达什么；Runtime Profile 另外选择可以访问文件、网络和凭据的包。
 
 ## 接下来去哪
 
