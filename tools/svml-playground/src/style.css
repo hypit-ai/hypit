@@ -5,7 +5,11 @@
   font: 13px/1.45 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 * { box-sizing:border-box; }
-html, body, #app { margin:0; height:100%; overflow:hidden; background:var(--bg); color:var(--text); }
+/* Two fingers sideways over a timeline is how a reader moves through it, and
+   on a trackpad it is also how the browser goes back. Losing the preview
+   mid-scrub is worse than the gesture is useful, and this tool navigates
+   nowhere, so the page keeps it. */
+html, body, #app { margin:0; height:100%; overflow:hidden; overscroll-behavior:none; background:var(--bg); color:var(--text); }
 #app { display:flex; flex-direction:column; position:relative; }
 
 .topbar { height:54px; flex:none; display:flex; align-items:center; gap:16px; padding:0 18px; border-bottom:1px solid var(--line); background:#101013; }
@@ -131,7 +135,7 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) a
 .timeline { height:100%; min-height:0; display:flex; flex-direction:column; border-top:1px solid var(--line); background:#0d0d10; }
 .timeline .pane-heading { justify-content:space-between; }
 .timeline [data-readout] { font-variant-numeric:tabular-nums; }
-.timeline-body { flex:1; min-height:0; display:grid; grid-template-columns:104px minmax(0,1fr); overflow-x:hidden; overflow-y:auto; }
+.timeline-body { flex:1; min-height:0; display:grid; grid-template-columns:104px minmax(0,1fr); overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; }
 .timeline-labels { position:sticky; left:0; z-index:3; border-right:1px solid var(--line); background:var(--panel2); }
 .label-corner { position:sticky; top:0; z-index:4; background:var(--panel2); height:24px; display:flex; align-items:center; justify-content:flex-end; padding-right:10px; border-bottom:1px solid var(--line); color:#55555f; font-size:10px; font-variant-numeric:tabular-nums; }
 .track-label { min-height:52px; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:2px; padding:0 10px; border-bottom:1px solid var(--line); }
