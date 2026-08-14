@@ -1,9 +1,9 @@
 ---
-title: 字幕、Media、Typography 与 Audio 轨道
+title: 轨道
 description: 对等 Track 组件——字幕、媒体、排版与作者声明的音频。
 ---
 
-# 字幕、Media、Typography 与 Audio 轨道
+# 轨道
 
 每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套）；视觉层的
 z 轴顺序由 SVS 中的 `stack-order` 属性决定。本页介绍 Caption、Media、Typography 与 Audio
@@ -272,6 +272,157 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.track}` 是普通
 Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 **输出：**`{titles.track}` —— 添加到 `film:Film` 的 VisualTrack。
+
+## 榜单板
+
+榜单板让一份有序列表跟着 Script 动起来：在某个 Selection 期间出现，在 Moment 上移动，在另一个 Moment 上定格。四个变体共用同一套形状——一个容器、它专属的条目标签、以及它专属的样式标签。
+
+| 容器 | 条目 | 样式 |
+|---|---|---|
+| `ranking:TierBoard` | `ranking:TierItem` | `ranking:TierBoardStyle` |
+| `ranking:Column` | `ranking:ColumnItem` | `ranking:ColumnStyle` |
+| `ranking:TopThree` | `ranking:TopThreeItem` | `ranking:TopThreeStyle` |
+| `ranking:TypewriterList` | `ranking:TypewriterItem` | `ranking:TypewriterListStyle` |
+
+```svml
+<import as="ranking" from="@narratage/ranking@1"/>
+```
+
+### 样式标签
+
+标签必须为空，三个属性全部必填：`id`、`recipe`（一份 SVS Recipe）与 `font`（Font Stack 或字体产物）。Recipe 承载这块板自己的键——行、配色、动效——并且会按变体校验，把 Column 的 recipe 给 TierBoard 会被指名拒绝。
+
+### 容器标签
+
+| 属性 | 取值 |
+|---|---|
+| `map` | 安放词语的 Semantic Map |
+| `space` | Program Space |
+| `frame` | 一个 `space:Frame` |
+| `during` | 一个 Selection——板在此期间留在画面上 |
+| `triggers` | 一个 Moment——行在它上面移动 |
+| `terminal` | 一个 Moment——板在它上面定格 |
+| `style` | 对应的样式记录，且只接受本变体的 |
+| `title` | 仅 `TypewriterList` 有，且必填：字符串或 Text 引用 |
+| `appear-sound`、`move-sound` | 可选，Synchronized Media |
+
+`move-sound` 在 `TopThree` 上会被拒绝——它没有移动阶段。在 `TierBoard` 上它要求至少有一个 `entry="stage"` 的条目，在 `TypewriterList` 上要求至少有一个 `winner="true"`：声音没有可响之处是创作错误，而不是静默的空操作。
+
+### 条目标签
+
+每个变体只接受自己的那一种，至少一个，且 id 在同一块板内不可重复。
+
+- **`TierItem`** —— `tier`（必填，须与 recipe 中某一行的 id 对上）、`icon`（必填），可选 `entry="direct" | "stage"` 与 `stack`。行的文字来自 recipe，不写在标签上。
+- **`ColumnItem`** 与 **`TopThreeItem`** —— `label`（必填：字符串或 Text 引用），可选 `icon` 与 `stack`。`TopThree` 最多三条。
+- **`TypewriterItem`** —— 文案来自 `text=` 或元素自身的文字，二者取其一；可选 `winner="true"`、`stack`，以及 `emphasis-start` / `emphasis-end`，二者按字素计数且必须成对出现。
+
+```svml
+<ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>
+<ranking:Column id="board" map={timing.map} space={speech.space} frame={board-frame}
+  during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
+  style={board-style}>
+  <ranking:ColumnItem id="row-regen" label="ReGen" icon={icon-regen}/>
+  <ranking:ColumnItem id="row-chatgpt" label="ChatGPT" icon={icon-chatgpt}/>
+  <ranking:ColumnItem id="row-remini" label="Remini" icon={icon-remini}/>
+</ranking:Column>
+```
+
+**输出：** `{board.visual}`——一条 VisualTrack。带了声音的板还会导出 `{board.audio}`，一条 AudioTrack；没有声音时就没有这个输出。
+
+## 卡片堆
+
+卡片堆按深度排布卡片：一张在最前，其余向后退去，每张新卡在一个 Moment 上发出。Media Item 是把一个镜头放进一个 Frame，而卡片堆是在同一个 Frame 里维持一叠并整体移动它们。
+
+```svml
+<import as="deck" from="@narratage/deck-track@1"/>
+```
+
+### deck:DepthStack
+
+`id`、`map`、`space`、`canvas`、`frame` 与 `appearance` 全部必填，`until` 同样必填——它说明什么结束这叠卡片：字面量 `"program.end"`、一个 Moment，或一个 Selection。只有在指向 Selection 时才可以再加 `until-boundary="start" | "end"` 来选择用它的哪一端结束，默认是 `end`；在另外两种情况下给出这个属性会被拒绝，而不是被忽略。
+
+### deck:Card
+
+DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出。
+
+| 属性 | 取值 |
+|---|---|
+| `source` | 必填——静态图片、Synchronized Medium 或 Compositable Surface |
+| `extent` | 静态图片必填，其余情况给了会被拒绝 |
+| `at` | 必填——这张卡发出的 Moment |
+| `appearance` | 可选——它自己的 Recipe，否则沿用整叠的 |
+| `label` | 可选——一条 `deck:Label` 记录 |
+
+### deck:Label
+
+`id` 与 `font` 必填。文案来自 `content=` 引用或元素自身的文字，两个都给会被拒绝。`size`、`color`、`align`、`block`、`padding` 可选。
+
+```svml
+<space:Frame id="deck-frame" within={vertical} left="44%" top="60%" right="98%" bottom="88%"/>
+<deck:DepthStack id="deck" map={timing.map} space={speech.space} canvas={vertical}
+  frame={deck-frame} appearance={studio.deck.stack} until={story.moment.done}>
+  <deck:Card id="card-spatial" source={icon-spatial} extent={square} at={story.moment.deal-one}/>
+  <deck:Card id="card-type" source={icon-type} extent={square} at={story.moment.deal-two}/>
+</deck:DepthStack>
+```
+
+**输出：** `{deck.track}`——一条 VisualTrack，与 Film 中其它每一条 Track 平级。
+
+## 屏幕叠加层
+
+覆盖在整个画面之上、而非落在某个 Frame 里的效果：切点上的一次闪白、持续整个 Selection 的暗角、铺满全片的颗粒。一条 Track 承载全部，每个子元素是一个效果加它自己的时间窗。
+
+```svml
+<import as="screen" from="@narratage/screen-overlay@1"/>
+```
+
+`screen:Track` 接受 `id`、`canvas` 与 `space`。它的子元素就是各个效果，至少一个，各自为空，都必须带 `z` 决定层叠顺序，并且各有一个时间窗，形式是以下之一：
+
+| 时间窗 | 写法 |
+|---|---|
+| 整个节目 | `during="program"` |
+| 一个 Selection | `during={story.selection.x} map={timing.map}` |
+| 一个 Moment，持续一段时长 | `at={story.moment.x} for="12f" map={timing.map}` |
+| 显式区间 | `start="…" end="…"`，可另外指定 `selection=` 或 `moment=` |
+
+凡是绑定到 Script 的都需要 `map`；不带 Script 来源的显式区间则不能给 `map`。时长写作 `12f`、`250ms` 或 `1.5s`，`occurrences="each"` 让效果在标记的每一次出现处重复，而不只是第一次。
+
+可用的效果有十一种——`Flash`、`ColorWash`、`Vignette`、`ScanLines`、`DirectionalMatte`、`WhipVeil`、`GlitchVeil`、`Grain`、`LightLeak`、`Bokeh` 与 `TVStatic`——每种各有自己的必填属性，例如 `Flash` 的 `color` / `intensity` / `attack` / `hold` / `decay`，或 `Vignette` 的 `center-x` / `center-y` / `radius-x` / `radius-y` / `softness` / `color` / `opacity`。它们都没有默认值：一个效果要么把自己的形状说全，要么被拒绝。
+
+```svml
+<screen:Track id="effects" space={speech.space} canvas={vertical}>
+  <screen:Flash during={story.selection.overlay} map={timing.map} z="80"
+    color="#ffffff" intensity="0.6" attack="2" hold="2" decay="6"/>
+</screen:Track>
+```
+
+**输出：** `{effects.track}`——一条 VisualTrack。
+
+## 评论贴纸
+
+放置在 Frame 中的社交风格评论卡：头像、作者、评论正文，以及可选的一行附注。
+
+```svml
+<import as="comment" from="@narratage/comment-sticker@1"/>
+```
+
+`comment:Style` 必须为空，接受 `id`、`recipe` 与 `font`，全部必填。Recipe 承载整张卡的外观——背景、描边、圆角、气泡尾、头像、三行文字，以及进入/停留/退出的动效——每个键都有默认值，所以一份 recipe 只需写它要改的部分。
+
+`comment:Track` 接受 `id`、`canvas` 与 `space`。只有当它的某张贴纸绑定到 Script 时才接受 `map`；没有任何贴纸绑定却给了 `map` 会被拒绝，而不是被忽略。
+
+`comment:Sticker` 必填 `id`、`frame` 与 `style`，时间窗与上面的屏幕叠加层相同。它的文案来自 `comment=` 属性或元素自身的文字，两个都给会被拒绝。可选的 `author`、`header` 与 `meta` 各接受字符串或 Text 引用，`avatar` 接受一张图片；这里没有 `z`，层叠顺序来自 recipe 的 `stack-order`。
+
+```svml
+<comment:Style id="social" recipe={studio.comment} font={ui-font}/>
+<comment:Track id="comments" canvas={vertical} space={speech.space} map={timing.map}>
+  <comment:Sticker id="one" frame={comment-frame} style={social} avatar={viewer-avatar}
+    author="@viewer" meta="Featured" during={story.selection.reaction}>
+    原来它把字幕钉在词上，而不是钉在秒上。
+  </comment:Sticker>
+</comment:Track>
+```
+
+**输出：** `{comments.track}`——一条 VisualTrack。
 
 ## 组合示例
 
