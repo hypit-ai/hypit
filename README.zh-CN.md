@@ -83,7 +83,7 @@ Script 外面的组件（视频生成器、语音模型、字幕渲染器、轨�
 
 ### 用编程 Agent
 
-skill 就在这个 checkout 里，所以先克隆仓库，并在其中启动你的编程 Agent：
+克隆仓库，在这个工作目录下就可以直接使用 `/narratage`：
 
 ```bash
 git clone https://github.com/hypit-ai/narratage.git
