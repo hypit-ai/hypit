@@ -26,7 +26,7 @@ pnpm svml:playground -- --source examples/all-components-preview/main.svml
 Both optional arguments are additive. With neither, the Playground still runs on a directory holding
 nothing but `main.svml` and its `.svs` style sheet — no package lock, no Runtime Profile, no build.
 
-::: tip Start one server, not four
+::: tip Stop the previous server before starting another
 A second Playground silently takes another port, and you end up reading a stale preview while
 describing a new one. Stop the old one first:
 
@@ -100,7 +100,7 @@ A Source can have all its footage and still have an estimated timeline: where a 
 question about speech, not about files. On the timeline itself each Track says whether it was
 `made`, is a `stand-in`, or is a black frame, and selecting a clip names the reason in full.
 
-## Feeding it what you already have
+## Supplying material you already have
 
 As material accumulates, the same preview gets more real without any change to `main.svml`. What a
 Source is read with is an authoring decision, so it is made in a Run Source — see
