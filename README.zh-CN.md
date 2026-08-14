@@ -139,9 +139,9 @@ Narratage 为文件规定不同的角色，但不保留任何固定文件名：
 
 ## 架构
 
-AI 生成缓慢、昂贵且不确定。Narratage 把被要求的工作冻结为一份有限计划，再依据持久化状态推进。Build 可以暂停、重试或更换实现，而不会丢失已完成的产物，也不会重复执行已经付费的工作。
+AI 生成缓慢、昂贵且不确定，因此 Narratage 把所需工作编译为一份持久化计划，可以暂停、重试和继续，而不会重复已经完成的工作。
 
-系统中心是一个刻意保持极小、领域无关的 Core。它把被要求的输出和显式选择的实现编译为计划，接受执行事件，并决定下一步哪些工作可以运行。它不解析 SVML，不理解视频，不调用 Provider，不访问凭据，也不渲染画面。
+领域无关的 Narratage Core 只负责编译计划和推进 Build 状态。解析 SVML、调用模型和渲染画面全部存在于包中。
 
 安装一个包即可增加能力，无需重新发布 Core。
 
@@ -154,8 +154,6 @@ AI 生成缓慢、昂贵且不确定。Narratage 把被要求的工作冻结为�
 | **Providers** | 外部模型、程序与服务的适配器 | `provider-kie`、`provider-whisperx-local` |
 | **Runtime** | 调度、存储、凭据与执行 | `runtime`、`store-sqlite`、`local` |
 | **Applications** | 创作和操作 Narratage 的用户界面 | `cli`、`svml-playground` |
-
-SVML 的导入决定 Source 表达什么；Runtime Profile 另外选择可以访问文件、网络和凭据的包。
 
 ## 接下来去哪
 
