@@ -1,0 +1,16 @@
+<?svml using="@narratage/run-markup@1"?>
+
+<svrun version="1">
+  <author source="./main.svml"/>
+  <target output="final.video"/>
+
+  <!-- The three takes the documentation site ships for this piece, one per
+       Segment. -->
+  <file id="take-1" from="../../docs/public/regen-ranking/avatar-1.mp4" media-type="video/mp4"/>
+  <file id="take-2" from="../../docs/public/regen-ranking/avatar-2.mp4" media-type="video/mp4"/>
+  <file id="take-3" from="../../docs/public/regen-ranking/avatar-3.mp4" media-type="video/mp4"/>
+
+  <satisfy output="take-intro.video" candidate="take-1"/>
+  <satisfy output="take-middle.video" candidate="take-2"/>
+  <satisfy output="take-payoff.video" candidate="take-3"/>
+</svrun>

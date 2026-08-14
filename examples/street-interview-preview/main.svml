@@ -1,0 +1,103 @@
+<?svml using="@narratage/markup@1"?>
+
+<svml>
+  <import from="@narratage/script@1"/>
+  <import as="wording" from="@narratage/text@1"/>
+  <import as="seedance" from="@narratage/seedance@1"/>
+  <import as="speech" from="@narratage/speech-spine@1"/>
+  <import as="whisperx" from="@narratage/whisperx@1"/>
+  <import as="media-track" from="@narratage/media-track@1"/>
+  <import as="caption" from="@narratage/caption@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
+  <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+  <import as="fonts" from="@narratage/fonts-open@1"/>
+  <import as="space" from="@narratage/spatial@1"/>
+  <import as="film" from="@narratage/film@1"/>
+  <import as="render" from="@narratage/render-hyperframes@1"/>
+  <import as="studio" source="./studio.svs"/>
+
+  <!-- The words are the ones actually spoken in the recorded interview, so the
+       Script and the picture describe the same programme. -->
+  <script id="story">
+    <hook>
+      <A>How much was your flight?
+      <B>$49. That's cheap. @seat The seat was cheap. The rainbow wasn't.@/seat
+    </hook>
+    <price>
+      <A>They charged you for the rainbow?
+      <B>@bags They counted it as seven carry-ons.@/bags
+      <A>Why seven?
+      <B>One bag for each color.
+    </price>
+    <rainbow>
+      <A>Couldn't you turn it off?
+      <B>I tried. @fee They charged me a @amount $35@/amount rainbow deactivation fee.@/fee
+      <A>What was the total?
+      <B>$2,846.
+      <A>Do you have the receipt?
+      <B>@receipt Yeah, but I can't screenshot the whole thing. It's still scrolling.@/receipt
+    </rainbow>
+    <payment>
+      <A>How did you pay for it?
+      <B>I took out a student loan.
+      <A>But you're not in college.
+      <B>@loan I am now. The airline enrolled me so I could finance the baggage fees.@/loan
+    </payment>
+  </script>
+
+  <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="speech-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+  <!-- The cutaways are shot 9:16 like the scenes, so they cut away from the
+       whole frame rather than sitting inside it. right and bottom are edge
+       positions, not insets. -->
+  <space:Frame id="full" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
+
+  <wording:Value id="direction">Handheld street interview, late afternoon, two speakers.</wording:Value>
+  <seedance:TextVideo id="take-hook" model="mini" prompt={direction} duration="5" generate-audio="true"/>
+  <seedance:TextVideo id="take-price" model="mini" prompt={direction} duration="6" generate-audio="true"/>
+  <seedance:TextVideo id="take-rainbow" model="mini" prompt={direction} duration="11" generate-audio="true"/>
+  <seedance:TextVideo id="take-payment" model="mini" prompt={direction} duration="9" generate-audio="true"/>
+  <seedance:TextVideo id="cutaway-bags" model="mini" prompt={direction} duration="4"/>
+  <seedance:TextVideo id="cutaway-fee" model="mini" prompt={direction} duration="4"/>
+  <seedance:TextVideo id="cutaway-receipt" model="mini" prompt={direction} duration="5"/>
+
+  <speech:Spine id="speech" frame-rate="24"
+    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
+    <speech:Take video={take-hook.video} segment={story.segment.hook}/>
+    <speech:Take video={take-price.video} segment={story.segment.price}/>
+    <speech:Take video={take-rainbow.video} segment={story.segment.rainbow}/>
+    <speech:Take video={take-payment.video} segment={story.segment.payment}/>
+  </speech:Spine>
+  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+
+  <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+  <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+  <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
+  <caption-ai:Planner id="cue-plan" display={story.caption} program={caption-program}
+    model="gemini-2.5-flash"/>
+  <caption-fine:Track id="captions" display={story.caption}
+    correspondence={story.caption.correspondence}
+    map={timing.map} space={speech.space}
+    plan={cue-plan.plan} program={caption-program}/>
+
+  <!-- Three cutaways on one Track. Their Selections do not overlap, so they
+       share a single timeline row the way an editor would lay them out. -->
+  <media-track:Track id="cutaways" map={timing.map} space={speech.space} canvas={vertical}>
+    <media-track:Item id="bags" video={cutaway-bags.video} during={story.selection.bags}
+      frame={full} appearance={studio.media.cutaway} motion={studio.motion.cut}/>
+    <media-track:Item id="fee" video={cutaway-fee.video} during={story.selection.fee}
+      frame={full} appearance={studio.media.cutaway} motion={studio.motion.cut}/>
+    <media-track:Item id="receipt" video={cutaway-receipt.video} during={story.selection.receipt}
+      frame={full} appearance={studio.media.cutaway} motion={studio.motion.drop}/>
+  </media-track:Track>
+
+  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audioTrack}/>
+    <film:Track source={cutaways.visual}/>
+    <film:Track source={captions.track}/>
+  </film:Film>
+  <render:Video id="final" composition={main.composition} space={speech.space}/>
+</svml>

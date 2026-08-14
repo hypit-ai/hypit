@@ -1,0 +1,39 @@
+<?svml using="@narratage/svs@1"?>
+
+<sheet version="1">
+  film.vertical { background: #08080a; }
+  speech.visual { fit: cover; }
+
+  /* A full-frame cutaway replaces the shot, so it has no box treatment at all. */
+  media.cutaway { stack-order: 40; fit: cover; playback: hold-start; }
+
+  /* An inset card, for contrast: rounded, padded and framed. */
+  media.card {
+    stack-order: 41; fit: cover; playback: hold-start;
+    frame-paint: #17171f; clip: rounded; radius: 26; padding: 14 14;
+    border-width: 1; border-color: #ffffff2b;
+    shadows: 0 18 40 -8 #000000cc;
+  }
+
+  /* A cutaway cuts; it does not slide. */
+  motion.cut {
+    enter: fade; enter-frames: 2; enter-easing: linear;
+    exit: fade; exit-frames: 2; exit-easing: linear;
+  }
+  motion.drop {
+    enter: scale; enter-frames: 6; enter-amount: 0.88; enter-easing: ease-out;
+    sustain: float 6 2;
+    exit: slide; exit-frames: 5; exit-direction: down; exit-easing: ease-in;
+  }
+
+  caption.base {
+    cue-min-words: 1; cue-max-words: 5;
+    stack-order: 70; x: 0.5; y: 0.84; width: 0.86; anchor-x: center; anchor-y: bottom;
+    size: 56; line-height: 1.05; align: center;
+    fill: #FFFFFF; stroke-color: #08080A; stroke-width: 2;
+    shadow-color: #000000; shadow-opacity: 0.7; shadow-x: 0; shadow-y: 3; shadow-blur: 8;
+    background: #08080ACC; border-color: #FFFFFF20; border-width: 1; padding: 14 22; radius: 16;
+    karaoke: trail; karaoke-transition: wipe; active-fill: #FFD54A;
+    cue-enter: fade; cue-enter-frames: 3; cue-exit: fade; cue-exit-frames: 3;
+  }
+</sheet>
