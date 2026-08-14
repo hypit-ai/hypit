@@ -5,6 +5,18 @@ B-roll is authored visual evidence, context, or emotional progression outside th
 take. Every insert must earn its place in the story and remain independent from editorial text and
 program audio.
 
+## See it before you generate it
+
+Where a cutaway lands, how long it holds, and whether its Frame sits in the right part of the
+picture are all decided by the Source, not by the footage. The SVML Playground answers all three
+without a generation: an Item whose material exists shows real frames, and one whose material does
+not is still placed, still scrubbable, and marked as standing in. Timings are estimated until a
+build or a Run Source supplies measured ones, and an estimated cut point will move once WhisperX has
+heard the audio.
+
+Do this after placing a Selection and before paying for a generation. Startup and arguments are in
+`docs/quickstart/preview.md`; the routine is under "Show the work" in `SKILL.md`.
+
 ## Choose the story beats first
 
 - Write the shot list before writing prompts. Give every shot one clear job: establish context, show
