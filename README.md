@@ -105,7 +105,7 @@ Components outside the Script (video generators, speech models, caption renderer
 
 ### With a coding agent
 
-The skill lives in the checkout, so clone the repository and start your coding agent inside it:
+Clone the repository. `/narratage` is available from that working directory:
 
 ```bash
 git clone https://github.com/hypit-ai/narratage.git

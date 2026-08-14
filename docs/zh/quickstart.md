@@ -19,7 +19,7 @@ Narratage 把这份源码编译成一张可见的执行图。在任何模型或�
 
 ## 使用 Narratage skill
 
-skill 就在这个 checkout 里，所以先克隆仓库，并在其中启动你的编程 Agent：
+克隆仓库，在这个工作目录下就可以直接使用 `/narratage`：
 
 ```bash
 git clone https://github.com/hypit-ai/narratage.git
