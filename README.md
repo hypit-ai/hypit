@@ -2,23 +2,40 @@
   <img alt="Narratage" src="docs/public/narratage-logo.svg" width="420">
 </p>
 
-<p align="center"><strong>A language and system for AI agents to create video.</strong></p>
-
-<p align="center"><em>Humans edit video. Agents compile it.</em></p>
-
-<!-- TODO: Demo GIF (15s max) — SVML script on left, compiled video on right. -->
+<p align="center">
+  <strong>A language and system for AI agents to create video.</strong>
+  <br>
+  <em>Humans edit video. Agents compile it.</em>
+</p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/">Demos</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/quickstart">Quickstart</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/guide/develop">Develop</a>&nbsp;&nbsp;<a href="./README.zh-CN.md">简体中文</a>
+  <a href="https://narratage.hypit.ai/"><strong>Demos</strong></a>
+  &nbsp;&bull;&nbsp;
+  <a href="https://narratage.hypit.ai/quickstart"><strong>Quickstart</strong></a>
+  &nbsp;&bull;&nbsp;
+  <a href="https://narratage.hypit.ai/guide/develop"><strong>Develop</strong></a>
+  &nbsp;&bull;&nbsp;
+  <a href="./README.zh-CN.md"><strong>简体中文</strong></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/hypit-ai/narratage/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hypit-ai/narratage/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI"></a>
+  <a href="https://github.com/hypit-ai/narratage/actions/workflows/deploy-pages.yml"><img alt="Docs" src="https://img.shields.io/github/actions/workflow/status/hypit-ai/narratage/deploy-pages.yml?branch=main&style=flat-square&logo=githubpages&logoColor=white&label=Docs"></a>
+  <a href="./package.json"><img alt="Node 22+" src="https://img.shields.io/badge/Node.js-22+-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white"></a>
+  <a href="./package.json"><img alt="pnpm 10.33" src="https://img.shields.io/badge/pnpm-10.33-F69220?style=flat-square&logo=pnpm&logoColor=white"></a>
+  <a href="./package.json"><img alt="TypeScript 5.9" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white"></a>
+  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0%20with%20conditions-E3B341?style=flat-square"></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/hypit-ai/narratage/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/hypit-ai/narratage?style=flat-square&color=FFD700&logo=github&logoColor=white&label=Stars"></a>
   <a href="https://github.com/hypit-ai/narratage/network/members"><img alt="Forks" src="https://img.shields.io/github/forks/hypit-ai/narratage?style=flat-square&color=6E40C9&logo=github&logoColor=white&label=Forks"></a>
   <a href="https://github.com/hypit-ai/narratage/graphs/contributors"><img alt="Contributors" src="https://img.shields.io/github/contributors/hypit-ai/narratage?style=flat-square&color=2EA043&logo=github&logoColor=white"></a>
-  <a href="./package.json"><img alt="Node 22+" src="https://img.shields.io/badge/node-22+-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white"></a>
-  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0%20with%20conditions-yellow?style=flat-square"></a>
-  <a href="https://github.com/hypit-ai/narratage/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hypit-ai/narratage/ci.yml?branch=main&style=flat-square&label=CI"></a>
+  <a href="https://github.com/hypit-ai/narratage/issues"><img alt="Open issues" src="https://img.shields.io/github/issues/hypit-ai/narratage?style=flat-square&color=D29922&logo=github&logoColor=white"></a>
+  <a href="https://github.com/hypit-ai/narratage/pulls"><img alt="Open pull requests" src="https://img.shields.io/github/issues-pr/hypit-ai/narratage?style=flat-square&color=1F6FEB&logo=github&logoColor=white"></a>
+  <a href="https://github.com/hypit-ai/narratage/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/hypit-ai/narratage?style=flat-square&color=8B949E&logo=git&logoColor=white"></a>
+  <a href="https://github.com/hypit-ai/narratage/commits/main"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/hypit-ai/narratage?style=flat-square&color=BF4B8A&logo=git&logoColor=white"></a>
+  <a href="https://github.com/hypit-ai/narratage"><img alt="Repository size" src="https://img.shields.io/github/repo-size/hypit-ai/narratage?style=flat-square&color=0969DA&logo=github&logoColor=white"></a>
 </p>
 
 <p align="center">
@@ -27,6 +44,10 @@
   <a href="https://x.com/hypitai"><img alt="X" src="https://img.shields.io/badge/Follow-%40hypitai-000000?style=flat-square&logo=x&logoColor=white"></a>
   <a href="https://t.me/narratage"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-Join%20Group-26A5E4?style=flat-square&logo=telegram&logoColor=white"></a>
 </p>
+
+---
+
+## Why Narratage
 
 Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for human hands on a timeline. Narratage is a language and compiler designed for AI agents. Write a script in SVML, and the compiler assembles generated video, speech, captions, and effects into a finished MP4.
 
