@@ -23,7 +23,7 @@ pnpm svml:playground -- --source examples/all-components-preview/main.svml
 
 两个可选参数是叠加的。两个都不给时，Playground 依然能在一个只有 `main.svml` 和 `.svs` 样式表的目录上运行——不需要包锁、不需要 Runtime Profile、不需要任何构建。
 
-::: tip 只开一个服务，不要开四个
+::: tip 启动新服务前先停掉上一个
 第二个 Playground 会悄悄占用另一个端口，于是你一边读着过期的预览，一边描述着新的改动。先把旧的停掉：
 
 ```bash
@@ -80,7 +80,7 @@ pkill -f svml-playground || true
 
 一个 Source 完全可能素材齐备、时间线却仍是估算的：剪切点落在哪里是关于语音的问题，不是关于文件的问题。在时间线上，每条 Track 会标明自己是 `made`、是 `stand-in`、还是黑场；选中某个片段则会完整说明原因。
 
-## 把已有的素材喂给它
+## 提供你已经有的素材
 
 随着素材逐渐积累，同一个预览会越来越接近真实，而 `main.svml` 一个字都不用改。用什么去读一个 Source 是一项创作决策，因此它写在 Run Source 里——见 [Run Source 与构建](./run)：
 
