@@ -125,7 +125,12 @@ Source — a Script edit, a Frame moved, a B-roll placed, a Recipe adjusted.
 Reading a diff is not the same as seeing where a cutaway lands, and this is the cheapest moment to
 say "that card is too high" — before a single Provider has run.
 
-## Next
+## Moving around it
 
-[SVML Playground](/guide/svml-playground) covers the three-way selection between code, timeline and
-picture, the nesting colours, keyboard transport, and how sound is handled.
+The timeline, the source and the picture are three views of the same thing, so selecting in any of
+them selects in all three. Click a clip and the playhead moves to its first frame, the picture
+outlines it, and the source scrolls to the tag that placed it. Click a marked line in the source, or
+whatever is drawn under the pointer, and the same happens.
+
+Drag the ruler to scrub. `Space` plays and pauses, `←` and `→` step one frame with `Shift` for ten,
+`Home` and `End` jump to the ends, and `Esc` clears the selection.
