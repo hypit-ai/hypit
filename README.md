@@ -67,7 +67,7 @@ Change the script, keep the results you approve, and regenerate only what you ch
 
 ## The language
 
-SVML is the authoring language. Narratage is the compiler, runtime and package ecosystem around it.
+SVML — Semantic Video Markup Language — is the authoring language. Narratage is the compiler, runtime and package ecosystem around it.
 
 A complete `.svml` file:
 
