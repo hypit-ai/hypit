@@ -1,0 +1,99 @@
+{
+  "format": "svml.runtime-config@1",
+  "packageLock": "./svml.packages.lock",
+  "runtimePackageLock": "./svml.runtime-packages.lock",
+  "runtimeServices": [
+    {
+      "use": "@narratage/local",
+      "instance": "execution"
+    },
+    {
+      "use": "@narratage/store-sqlite",
+      "instance": "state",
+      "config": {
+        "path": ".svml/runtime.sqlite"
+      }
+    },
+    {
+      "use": "@narratage/artifact-store-fs",
+      "instance": "artifacts",
+      "config": {
+        "path": ".svml/artifacts"
+      }
+    },
+    {
+      "use": "@narratage/credential-store-env",
+      "instance": "credentials.env",
+      "config": {}
+    }
+  ],
+  "services": {
+    "scheduler": "execution.scheduler",
+    "worker": "execution.worker",
+    "stores": {
+      "build": "state.builds",
+      "operations": "state.operations",
+      "dispatch": "state.dispatch",
+      "journal": "state.journal",
+      "artifacts": "artifacts",
+      "credentials": [
+        "credentials.env"
+      ]
+    }
+  },
+  "endpoints": [
+    {
+      "use": "@narratage/provider-kie",
+      "instance": "kie.all-components",
+      "authority": "generation",
+      "config": {
+        "apiKey": {
+          "store": "env",
+          "key": "KIE_API_KEY"
+        },
+        "defaultConcurrency": 2
+      }
+    },
+    {
+      "use": "@narratage/provider-media-local",
+      "instance": "media.all-components",
+      "authority": "media",
+      "config": {
+        "defaultConcurrency": 2
+      }
+    },
+    {
+      "use": "@narratage/provider-whisperx-local",
+      "instance": "whisperx.all-components",
+      "authority": "alignment",
+      "config": {
+        "defaultConcurrency": 1
+      }
+    },
+    {
+      "use": "@narratage/provider-hyperframes-local",
+      "instance": "hyperframes.all-components",
+      "authority": "render",
+      "config": {
+        "defaultConcurrency": 1
+      }
+    },
+    {
+      "use": "@narratage/provider-google-vertex",
+      "instance": "vertex.all-components",
+      "authority": "planning",
+      "config": {
+        "projectEnv": "GOOGLE_CLOUD_PROJECT",
+        "location": "global",
+        "credentials": {
+          "store": "env",
+          "key": "GOOGLE_VERTEX_CREDENTIALS_JSON"
+        },
+        "defaultConcurrency": 1
+      }
+    }
+  ],
+  "scheduling": {
+    "maxConcurrency": 4
+  }
+}
