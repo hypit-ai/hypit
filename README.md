@@ -35,13 +35,13 @@
 
 ## Why Narratage
 
-In 1933, producer Jesse L. Lasky coined **narratage** for Spencer Tracy's *The Power and the Glory*: narration drives montage — the narrator speaks, the screen assembles scenes to match. Hollywood moved on and the word disappeared for ninety years. It turns out to be exactly what AI agents need: write the narration, the system compiles the montage. No timeline, no mouse — source files in, finished video out.
+In 1933, producer Jesse L. Lasky coined **narratage** for Spencer Tracy's *The Power and the Glory*: narration drives montage — the narrator speaks, the screen assembles scenes to match. Hollywood moved on and the word disappeared for ninety years. It turns out to be exactly what AI agents need: write the narration, the system compiles the montage. No timeline, no mouse. Source files in, finished video out.
 
-> **[See demos — SVML source and rendered video side by side →](https://narratage.hypit.ai/)**
+> **[See demos: SVML source and rendered video side by side →](https://narratage.hypit.ai/)**
 
 ## Narratage vs timeline editors
 
-Every video editor — Premiere, CapCut, DaVinci, Final Cut — was designed for human hands on a timeline.
+Every video editor (Premiere, CapCut, DaVinci, Final Cut) was designed for human hands on a timeline.
 
 |  | Timeline editors | Narratage |
 |---|---|---|
@@ -58,16 +58,16 @@ Narratage does not replace timeline editors for interactive, hands-on editing. I
 
 Narratage compiles SVML source files into finished videos.
 
-1. **Write** — SVML describes who speaks, what they say, and where B-roll and effects go. No timecodes.
-2. **Generate** — Seedance, MiniMax H3, GPT Image, Seedream and others produce every shot from prompts and references.
-3. **Align** — WhisperX pins every spoken word to an exact time. B-roll and effects follow words, not seconds.
-4. **Render** — HyperFrames composites all tracks frame by frame into MP4.
+1. **Write**: SVML describes who speaks, what they say, and where B-roll and effects go. No timecodes.
+2. **Generate**: Seedance, MiniMax H3, GPT Image, Seedream and others produce every shot from prompts and references.
+3. **Align**: WhisperX pins every spoken word to an exact time. B-roll and effects follow words, not seconds.
+4. **Render**: HyperFrames composites all tracks frame by frame into MP4.
 
 Change the script, keep the results you approve, and regenerate only what you choose to replace.
 
 ## The language
 
-SVML — Semantic Video Markup Language — is the authoring surface. A complete `.svml` file:
+SVML (Semantic Video Markup Language) is the authoring surface. A complete `.svml` file:
 
 ```xml
 <?svml using="@narratage/markup@1"?>
@@ -88,20 +88,20 @@ SVML — Semantic Video Markup Language — is the authoring surface. A complete
 </svml>
 ```
 
-Four constructs — the whole authoring surface:
+Four constructs. The whole authoring surface:
 
 | Construct | Example | What it does |
 |---|---|---|
 | **Segment** | `<intro>...</intro>` | A named narrative block |
-| **Speaker** | `<HOST>` | Who speaks — in force until the next cue |
+| **Speaker** | `<HOST>` | Who speaks, in force until the next cue |
 | **Split** | `<$299 \| two ninety-nine>` | Screen text differs from spoken audio |
-| **Hook** | `@product...@/product` | Pins a visual — B-roll, graphic, effect — to specific words |
+| **Hook** | `@product...@/product` | Pins a visual (B-roll, graphic, effect) to specific words |
 
 Components outside the Script (video generators, speech models, caption renderers, track compositors) consume what the Script declares. The Script itself carries no rendering logic. Full syntax: [Script spec](https://narratage.hypit.ai/quickstart/script).
 
 ## What's inside
 
-103 packages. 100,000+ lines of TypeScript. A real compiler and runtime — not wrappers around someone else's API.
+103 packages. 100,000+ lines of TypeScript. A real compiler and runtime, not wrappers around someone else's API.
 
 | Layer | What it owns | Examples |
 |---|---|---|
@@ -113,7 +113,7 @@ Components outside the Script (video generators, speech models, caption renderer
 | **Runtime** | Scheduling, storage, credentials and execution | `runtime`, `store-sqlite`, `local` |
 | **Applications** | User-facing entry points | `cli`, `svml-playground` |
 
-AI generation is slow, costly and non-deterministic. The Core compiles requested work into a durable plan — nothing runs until you say so. Installing a package adds capability without requiring a Core release.
+AI generation is slow, costly and non-deterministic. The Core compiles requested work into a durable plan. Nothing runs until you say so. Installing a package adds capability without requiring a Core release.
 
 ## Quickstart
 
@@ -145,7 +145,7 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
   --package-lock examples/talking-film-graph-check/svml.packages.lock
 ```
 
-`check` verifies the source and prints its typed outputs. `plan` shows the exact execution subgraph and every external capability a real Build would need — without starting any of it.
+`check` verifies the source and prints its typed outputs. `plan` shows the exact execution subgraph and every external capability a real Build would need, without starting any of it.
 
 A real Build additionally needs `ffmpeg` and `ffprobe` on your `PATH`, and depending on the Runtime Profile, Python with `uv` or API credentials. Run `narratage doctor` to see what's missing; see [Quickstart](https://narratage.hypit.ai/quickstart) for the full walkthrough.
 
@@ -167,14 +167,14 @@ Names and suffixes are conventions, not parser dispatch. Every Source selects it
 
 Narratage integrates with independently licensed software:
 
-- [FFmpeg](https://ffmpeg.org/) — inspects, normalizes, transforms and muxes media as a separately licensed executable.
-- [HyperFrames](https://www.npmjs.com/package/hyperframes) — turns Compositions into frame-accurate video in Chromium.
-- [WhisperX](https://github.com/m-bain/whisperX) — aligns spoken words to time for semantic placement.
-- [Fontsource](https://fontsource.org/) — supplies versioned, openly licensed font packages, each with its own font files and license.
+- [FFmpeg](https://ffmpeg.org/): inspects, normalizes, transforms and muxes media as a separately licensed executable.
+- [HyperFrames](https://www.npmjs.com/package/hyperframes): turns Compositions into frame-accurate video in Chromium.
+- [WhisperX](https://github.com/m-bain/whisperX): aligns spoken words to time for semantic placement.
+- [Fontsource](https://fontsource.org/): supplies versioned, openly licensed font packages, each with its own font files and license.
 
 ## License
 
-Narratage is released under the [Narratage Open Source License](./LICENSE), a modified Apache 2.0 license. You may self-host it, use it for your organization's work — including commercial work and work for clients — and operate a single-tenant deployment for one organization. Multi-tenant or hosted offerings for third parties, and commercial redistribution, require a commercial license. You may fork, modify and publish the source under the same license when it is not supplied for commercial gain. Brand and copyright notices presented by Narratage must remain intact.
+Narratage is released under the [Narratage Open Source License](./LICENSE), a modified Apache 2.0 license. You may self-host it, use it for your organization's work, including commercial work and work for clients, and operate a single-tenant deployment for one organization. Multi-tenant or hosted offerings for third parties, and commercial redistribution, require a commercial license. You may fork, modify and publish the source under the same license when it is not supplied for commercial gain. Brand and copyright notices presented by Narratage must remain intact.
 
 The content you produce with Narratage belongs to you. Outputs created through third-party models or services may also be subject to those providers' terms.
 
