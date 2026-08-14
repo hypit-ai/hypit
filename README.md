@@ -45,15 +45,13 @@
   <a href="https://t.me/narratage"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-Join%20Group-26A5E4?style=flat-square&logo=telegram&logoColor=white"></a>
 </p>
 
----
-
 ## Why Narratage
 
-Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for human hands on a timeline. Narratage is a language and compiler designed for AI agents. Write a script in SVML, and the compiler assembles generated video, speech, captions, and effects into a finished MP4.
+Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for human hands on a timeline. Narratage is a language and compiler designed for AI agents. Write a video in SVML, and Narratage assembles generated or supplied media, speech, captions, and effects into a finished MP4.
 
-- **No timeline** — nothing is pinned to seconds on a track. Everything anchors to words in the narrative.
-- **Agent-native** — the input is plain text. Any LLM can read, write, and modify it directly.
-- **Reproducible** — same script, same output. Preview the full execution plan before spending on generation.
+- **No timeline** — write what happens instead of dragging clips around. Anchor visuals to words, moments, or exact time.
+- **Agent-native** — the authoring surface is plain text. Any LLM can read, write, and modify it directly.
+- **Semantically anchored** — regenerate a segment and its duration may shift; captions, B-roll and effects anchored to its words move with them instead of drifting on a timeline.
 
 ## How it works
 
