@@ -151,17 +151,19 @@ AI generation is slow, costly and non-deterministic. Narratage freezes requested
 
 At the center is a deliberately small, domain-neutral Core. It compiles requested outputs and explicit implementation choices into a plan, accepts execution events and decides what becomes ready next. It does not parse SVML, understand video, call providers, access credentials or render frames.
 
-| Part | What it owns | Examples |
+Installing a package adds capability without requiring a Core release.
+
+| Layer | What it owns | Examples |
 |---|---|---|
-| **Core** | Plan compilation and the Build state machine | `core`, `protocol` |
+| **Narratage Core** | Plan compilation and the Build state machine | `core`, `protocol` |
 | **Compiler** | Source parsing, imports and graph elaboration | `host`, `markup`, `svs`, `elaborator` |
-| **Shared capabilities** | Media processing, spatial layout, fonts and text | `media-pipeline`, `spatial`, `fonts-open` |
-| **Video packages** | Script, generation, speech, tracks, film and rendering | `script`, `seedance`, `caption`, `film` |
+| **Infrastructure** | Media processing, spatial layout, fonts and text | `media-pipeline`, `spatial`, `fonts-open` |
+| **Video authoring** | Script, generation, speech, tracks, film and rendering | `script`, `seedance`, `caption`, `film` |
 | **Providers** | Adapters for external models, programs and services | `provider-kie`, `provider-whisperx-local` |
 | **Runtime** | Scheduling, storage, credentials and execution | `runtime`, `store-sqlite`, `local` |
 | **Applications** | User-facing ways to author and operate Narratage | `cli`, `svml-playground` |
 
-SVML imports define what the source means. The Runtime Profile separately selects packages that may access files, networks and credentials. Neither Core nor the CLI maintains a central registry of models, tracks or providers: installing a package adds capability without requiring a Core release.
+SVML imports define what the source means. The Runtime Profile separately selects packages that may access files, networks and credentials.
 
 ## Where to go next
 
