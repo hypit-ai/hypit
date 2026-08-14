@@ -5,7 +5,7 @@
 <p align="center">
   <strong>The world's first programming language for agents to create video.</strong>
   <br>
-  <em>Built on a 1933 filmmaking technique that was ninety years ahead of its time.</em>
+  <em>Built on a filmmaking technique ninety years ahead.</em>
 </p>
 
 <p align="center">

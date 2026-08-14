@@ -5,7 +5,7 @@
 <p align="center">
   <strong>世界上第一门给 Agent 做视频用的编程语言。</strong>
   <br>
-  <em>基于一项超前了九十年的 1933 年电影制作技法。</em>
+  <em>基于一项超前了九十年的电影制作技法。</em>
 </p>
 
 <p align="center">
