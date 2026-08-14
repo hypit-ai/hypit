@@ -1,24 +1,4 @@
 
-
-## See it before you generate it
-
-Where a cutaway lands, how long it holds, and whether its Frame sits in the right
-part of the picture are all decided by the Source, not by the footage. The SVML
-Playground answers all three without a generation:
-
-```bash
-pkill -f svml-playground || true
-pnpm svml:playground -- --source path/to/main.svml --run path/to/build.svrun &
-# send the author http://localhost:5179/
-```
-
-Each Item shows real frames when its source already exists and already lives in
-the program's frame rate, and a painted box when it does not, so an unresolved
-B-roll is still placed and still scrubbable. Timings are estimated until a build
-or a Run Source supplies measured ones — the badges say which, and an estimated
-cut point will move once WhisperX has heard the audio.
-
-Do this after placing a Selection and before paying for a generation.
 # B-roll craft
 
 B-roll is authored visual evidence, context, or emotional progression outside the primary speaking

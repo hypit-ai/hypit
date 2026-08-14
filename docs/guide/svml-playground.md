@@ -142,6 +142,12 @@ the compiled Source for its exports and builds the ones typed `VisualTrack` or
 `AudioTrack` — so a package that grows a new kind of Track appears here without
 the Playground being taught about it.
 
+The application explicitly bundles Narratage's official video packages. That
+list belongs only to the Playground: installing or removing this application
+changes nothing about compilation or the Runtime. Adding another official
+package requires a Playground release; adding another Track to a package it
+already bundles does not require a special preview branch.
+
 Each Track is built on its own. A Track waiting on a Provider this machine has
 no key for costs only itself; the rest of the programme still plays, and the
 Track says what it was waiting for rather than disappearing.
