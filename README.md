@@ -39,7 +39,7 @@ Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for hu
 
 - **No timeline** — videos are written, not dragged. B-roll, effects and every track live in source.
 - **Agent-native** — plain text in, finished video out. Agents read and write it like code.
-- **Pinned to words** — regenerate a segment; B-roll and effects still follow their words.
+- **Pinned to words** — timing shifts when you regenerate a segment, yet B-roll and effects follow their words.
 - **Batch-ready** — it's all source files. Produce video at the scale of code, not at the speed of editing.
 
 ## How it works
