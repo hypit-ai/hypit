@@ -147,9 +147,9 @@ Ninety years later, Narratage gives the same idea a new form: a language and sys
 
 ## Architecture
 
-AI generation is slow, costly and non-deterministic. Narratage freezes requested work into a finite plan, then advances it from durable state. A build can pause, retry or change implementations without losing completed artifacts or repeating paid work.
+AI generation is slow, costly and non-deterministic, so Narratage compiles requested work into a durable plan that can pause, retry and resume without repeating completed work.
 
-At the center is a deliberately small, domain-neutral Core. It compiles requested outputs and explicit implementation choices into a plan, accepts execution events and decides what becomes ready next. It does not parse SVML, understand video, call providers, access credentials or render frames.
+The domain-neutral Narratage Core only compiles plans and advances Build state. Parsing SVML, calling models and rendering frames all live in packages.
 
 Installing a package adds capability without requiring a Core release.
 
@@ -162,8 +162,6 @@ Installing a package adds capability without requiring a Core release.
 | **Providers** | Adapters for external models, programs and services | `provider-kie`, `provider-whisperx-local` |
 | **Runtime** | Scheduling, storage, credentials and execution | `runtime`, `store-sqlite`, `local` |
 | **Applications** | User-facing ways to author and operate Narratage | `cli`, `svml-playground` |
-
-SVML imports define what the source means. The Runtime Profile separately selects packages that may access files, networks and credentials.
 
 ## Where to go next
 
