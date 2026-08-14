@@ -103,6 +103,8 @@ Components outside the Script (video generators, speech models, caption renderer
 
 ## Quickstart
 
+### Clone the repository
+
 ```bash
 git clone https://github.com/hypit-ai/narratage.git
 cd narratage
