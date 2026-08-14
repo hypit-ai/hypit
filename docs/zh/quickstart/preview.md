@@ -84,7 +84,7 @@ pkill -f svml-playground || true
 
 ## 提供你已经有的素材
 
-随着素材逐渐积累，同一个预览会越来越接近真实，而 `main.svml` 一个字都不用改。用什么去读一个 Source 是一项创作决策，因此它写在 Run Source 里——见 [Run Source 与构建](./run)：
+随着素材逐渐积累，同一个预览会越来越接近真实，而 `main.svml` 一个字都不用改。用什么去读一个 Source 是一项创作决策，因此它写在 Run Source 里——见 [Run Source 与 Build](./run)：
 
 ```svml
 <file id="take-1" type="@narratage/artifact@1#BlobArtifact"
