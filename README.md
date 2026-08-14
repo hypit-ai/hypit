@@ -147,22 +147,21 @@ Ninety years later, Narratage gives the same idea a new form: a language and sys
 
 ## Architecture
 
-AI generation changes the shape of compilation. A step may take minutes, cost money, fail, or return an artifact that becomes the next step's input. Build truth therefore cannot live on a process stack: Narratage freezes the demanded work first, then advances it from durable facts.
+AI generation is slow, costly and non-deterministic. Narratage freezes requested work into a finite plan, then advances it from durable state. A build can pause, retry or change implementations without losing completed artifacts or repeating paid work.
 
-Core is a domain-neutral semantic kernel with two jobs: compile Targets and explicit Candidate choices into one finite BuildPlan, then accept Events and advance BuildState. At execution time, its irreducible law is `BuildState + Event → BuildState`; ready Commands are regenerated from that state. Core never parses Source, executes component code, accesses files or networks, chooses a Provider, changes a Candidate, or understands video concepts.
+At the center is a deliberately small, domain-neutral Core. It compiles requested outputs and explicit implementation choices into a plan, accepts execution events and decides what becomes ready next. It does not parse SVML, understand video, call providers, access credentials or render frames.
 
-| Part | What it owns | Why it stays outside Core |
+| Part | What it owns | Examples |
 |---|---|---|
-| **Compiler Host & Frontends** | Source Headers, import closure, syntax decoding and Author/Run Graph compilation | Syntax and Source environments can evolve independently |
-| **Author facets** | Surfaces, author vocabulary and Graph Fragments | New authoring capabilities should not require a kernel release |
-| **Compute facets** | Deterministic Producers and Validators | Domain computation should remain independently installable |
-| **Runtime facets** | Scheduler, Worker, Stores, credentials and transports | Deployment, persistence and authority vary by environment |
-| **Endpoint facets** | Model APIs, local programs, Lambda functions, devices and human services | External capabilities have their own concurrency, failure and recovery laws |
-| **Applications** | CLI, Playgrounds and product interfaces | User experience must not become a central capability registry |
+| **Core** | Plan compilation and the Build state machine | `core`, `protocol` |
+| **Compiler** | Source parsing, imports and graph elaboration | `host`, `markup`, `svs`, `elaborator` |
+| **Shared capabilities** | Media processing, spatial layout, fonts and text | `media-pipeline`, `spatial`, `fonts-open` |
+| **Video packages** | Script, generation, speech, tracks, film and rendering | `script`, `seedance`, `caption`, `film` |
+| **Providers** | Adapters for external models, programs and services | `provider-kie`, `provider-whisperx-local` |
+| **Runtime** | Scheduling, storage, credentials and execution | `runtime`, `store-sqlite`, `local` |
+| **Applications** | User-facing ways to author and operate Narratage | `cli`, `svml-playground` |
 
-A physical package may contribute one or more facets. Source imports activate authoring meaning without granting filesystem, network, process or credential authority; privileged Endpoint and Runtime facets are selected explicitly by the Runtime Profile.
-
-Neither Core nor the CLI maintains a central registry of models, Tracks or Providers. Installing and locking a package adds its capability without requiring a Core release.
+SVML imports define what the source means. The Runtime Profile separately selects packages that may access files, networks and credentials. Neither Core nor the CLI maintains a central registry of models, tracks or providers: installing a package adds capability without requiring a Core release.
 
 ## Where to go next
 
