@@ -140,7 +140,13 @@ A project can have any number of these files, and the same `.svml` can be built 
 
 ## Where the name comes from
 
-In a 1933 *New York Times* review of Spencer Tracy's *The Power and the Glory*, producer Jesse L. Lasky's term **narratage** — narration plus montage — described a technique where a narrator's voice carries the story while the screen assembles scenes to match.
+<p align="center"><em>narration + montage = <strong>narratage</strong></em></p>
+
+> “The new treatment, which the producer calls ‘narratage,’ is eminently well suited to this particular dramatic vehicle.”
+>
+> Mordaunt Hall, *The New York Times*, 1933
+
+In the review of Spencer Tracy's *The Power and the Glory*, producer Jesse L. Lasky's term **narratage** described a technique where a narrator's voice carries the story while the screen assembles scenes to match.
 
 Ninety years later, Narratage gives the same idea a new form: a language and system that compiles the montage around the narration.
 
