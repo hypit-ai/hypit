@@ -31,7 +31,6 @@ export function projectSpeechProgramSpace(basis: SpeechBasis): ProgramSpace {
 export function projectSpeechAudio(basis: SpeechBasis): SpeechAudioBasis {
   assertSpeechBasisIdentity(basis);
   return {
-    contract: "svml.speech-audio-basis@1",
     programSpace: basis.programSpace,
     audio: basis.audio,
     segments: basis.segments,
@@ -41,24 +40,30 @@ export function projectSpeechAudio(basis: SpeechBasis): SpeechAudioBasis {
 export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
   assertSpeechBasisIdentity(basis);
   const trackId = `speech-visual:${basis.segments.map((segment) => segment.segmentId).join("+")}`;
+  const spans = new Map(basis.segments.map((segment) => [segment.segmentId, {
+    startFrame: segment.startFrame,
+    endFrameExclusive: segment.endFrameExclusive,
+  }]));
   return sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: trackId,
     presents: lowerRestrictedSpeechVisualPresents(
       trackId,
       basis.programSpace,
-      basis.visualTrack.clips.map((clip) => ({
-        id: clip.segmentId,
-        span: structuredClone(clip.span),
-        artifact: clip.artifact,
-        extent: clip.extent,
-        frameRate: clip.frameRate,
-        frameCount: clip.frameCount,
-        frame: clip.frame,
-        fit: clip.fit,
-        stackingOrder: clip.stackingOrder,
-      })),
+      basis.visualTrack.clips.map((clip) => {
+        const span = spans.get(clip.segmentId)!;
+        return {
+          id: clip.segmentId,
+          span,
+          artifact: clip.artifact,
+          extent: clip.extent,
+          frameRate: basis.programSpace.frameRate,
+          frameCount: span.endFrameExclusive - span.startFrame,
+          frame: clip.frame,
+          fit: clip.fit,
+          stackingOrder: clip.stackingOrder,
+        };
+      }),
     ),
   });
 }
@@ -67,7 +72,6 @@ export function projectSpeechAudioTrack(basis: SpeechBasis): AudioTrack {
   assertSpeechBasisIdentity(basis);
   const sampleFrames = programSpaceSampleFrames(basis.programSpace, 48_000);
   return sealAudioTrack({
-    contract: "svml.audio-track@1",
     id: `speech-audio:${basis.segments.map((segment) => segment.segmentId).join("+")}`,
     clips: [{
       id: "speech",

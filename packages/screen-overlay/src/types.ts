@@ -50,21 +50,20 @@ export type ScreenOverlayComponent =
   | WhipVeilOverlay | GlitchVeilOverlay | GrainOverlay | LightLeakOverlay | BokehOverlay | TvStaticOverlay;
 
 export type ScreenOverlayItemSpec = {
-  readonly contract: "svml.screen-overlay-item-spec@1";
   readonly id: string;
   readonly content: ScreenOverlayComponent;
   readonly projection: TemporalWindowProjection;
   readonly expansion: OccurrenceExpansion;
   readonly stackingOrder: number;
 };
-export type ScreenOverlayHeader = { readonly contract: "svml.screen-overlay-header@1"; readonly id: string };
+export type ScreenOverlayHeader = { readonly id: string };
 export type ScreenOverlayItemProgram = {
-  readonly id: string; readonly sourceOccurrenceId: string; readonly span: FrameSpan;
+  readonly id: string; readonly span: FrameSpan;
   readonly content: ScreenOverlayComponent;
   readonly stacking: { readonly order: number; readonly tieBreak: string };
 };
-export type ScreenOverlaySet = { readonly contract: "svml.screen-overlay-set@1"; readonly items: readonly ScreenOverlayItemProgram[] };
+export type ScreenOverlaySet = { readonly items: readonly ScreenOverlayItemProgram[] };
 export type ScreenOverlayProgram = {
-  readonly contract: "svml.screen-overlay-program@1"; readonly id: string;
+  readonly id: string;
   readonly items: readonly ScreenOverlayItemProgram[];
 };

@@ -26,10 +26,6 @@ import type {
 
 export const renderFineCaptionImplementationDigest = digestOf("@narratage/caption-fine/full-orthogonal-renderer-with-mute@1");
 
-function frameAt(space: ProgramSpace, seconds: number): number {
-  return Math.round(seconds * space.frameRate.numerator / space.frameRate.denominator);
-}
-
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
 }
@@ -748,14 +744,14 @@ export function renderFineCaption(
     if (style === undefined) throw new Error(`Fine Caption Cue ${cue.id} references unknown Style ${cue.styleId}`);
     const parameters = style.rendering.parameters as unknown as FineCaptionParameters;
     if (cue.fields.length > 0) throw new Error(`Fine Caption Cue ${cue.id} contains unsupported fields`);
-    const startFrame = Math.max(0, frameAt(space, cue.startSec));
-    const measuredEnd = Math.min(totalFrames, frameAt(space, cue.endSec));
+    const startFrame = Math.max(0, cue.startFrame);
+    const measuredEnd = Math.min(totalFrames, cue.endFrameExclusive);
     const endFrameExclusive = Math.min(totalFrames, Math.max(startFrame + 1, measuredEnd));
     if (startFrame >= totalFrames || endFrameExclusive <= startFrame) return [];
     const durationFrames = endFrameExclusive - startFrame;
     const atomFrames = new Map(cue.atoms.map((atom) => [atom.atomId, {
-      start: clamp(frameAt(space, atom.startSec) - startFrame, 0, durationFrames),
-      end: clamp(Math.max(frameAt(space, atom.endSec) - startFrame, frameAt(space, atom.startSec) - startFrame + 1), 0, durationFrames),
+      start: clamp(atom.startFrame - startFrame, 0, durationFrames),
+      end: clamp(Math.max(atom.endFrameExclusive - startFrame, atom.startFrame - startFrame + 1), 0, durationFrames),
     }]));
     return [{
       id: cue.id,
@@ -765,7 +761,6 @@ export function renderFineCaption(
     }];
   });
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: program.id,
     presents,

@@ -6,7 +6,9 @@
  * a preview that is to show those takes has to read the same archive a build
  * writes - opened read-only, because a preview may not change what was accepted.
  */
-import { createRuntimeControlFromConfig } from "@narratage/local/config";
+import {
+  createRuntimeArchiveFromConfig, createRuntimeArtifactAccessFromConfig,
+} from "@narratage/local/config";
 import type { BuildState } from "@narratage/protocol";
 
 export type Archive = {
@@ -25,9 +27,9 @@ export type Archive = {
  * needs to show produced material.
  */
 export async function openArchive(profilePath: string, packageRoot: string): Promise<Archive> {
-  const control = await createRuntimeControlFromConfig(profilePath, {
-    packageRoot, readOnly: true,
-  } as never);
+  const control = await createRuntimeArchiveFromConfig(profilePath, { packageRoot } as never);
+  // Which Build accepted what, and the bytes behind it, are two stores now.
+  const artifacts = await createRuntimeArtifactAccessFromConfig(profilePath, { packageRoot } as never);
   const seen = new Map<string, Awaited<ReturnType<typeof control.status>>>();
   const status = async (id: string): Promise<Awaited<ReturnType<typeof control.status>>> => {
     const held = seen.get(id);
@@ -47,7 +49,7 @@ export async function openArchive(profilePath: string, packageRoot: string): Pro
     },
     async resolveOutput(id, output) {
       try {
-        const alias = (await status(id)).catalog?.aliases.find((item) => item.name === output);
+        const alias = (await status(id)).catalog?.aliases.find((item: { name: string }) => item.name === output);
         if (alias === undefined) return output;
         return alias.ref.kind === "logical-output" ? alias.ref.id : undefined;
       } catch {
@@ -56,11 +58,11 @@ export async function openArchive(profilePath: string, packageRoot: string): Pro
     },
     async read(digest) {
       try {
-        return await control.readArtifact(digest as never) ?? undefined;
+        return await artifacts.readArtifact(digest as never) ?? undefined;
       } catch {
         return undefined;
       }
     },
-    close: async () => { await control.close(); },
+    close: async () => { await artifacts.close(); await control.close(); },
   };
 }

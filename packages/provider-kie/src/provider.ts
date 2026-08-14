@@ -13,7 +13,6 @@ import type {
   BlobRef,
   CanonicalValue,
   Digest,
-  Need,
 } from "@narratage/protocol";
 import {
   defineEndpointPackage,
@@ -574,23 +573,9 @@ function endpoint(options: {
           }
         }
         const result = route.packageResult(artifacts);
-        const vendorMetrics: Record<string, CanonicalValue> = {};
-        for (const name of ["creditsConsumed", "costTime", "completeTime"] as const) {
-          const metric = data[name];
-          if (typeof metric === "number" && Number.isFinite(metric) && metric >= 0) vendorMetrics[name] = metric;
-        }
         return {
           status: "completed",
-          result: {
-            value: result,
-            metadata: canonicalize({
-              provider: "kie",
-              taskId: checkpoint.taskId,
-              model: checkpoint.model,
-              artifacts: artifacts.map((artifact) => artifact.digest),
-              ...(Object.keys(vendorMetrics).length === 0 ? {} : { metrics: vendorMetrics }),
-            }),
-          },
+          result: { value: result },
         };
       } catch (error) {
         if (error instanceof KieError && [
@@ -648,7 +633,6 @@ export function createKieProvider(config: CreateKieProviderOptions) {
     instance: config.instance ?? "kie.default",
     authority: config.authority ?? config.instance ?? "kie.default",
     implementation: {
-      locator: "@narratage/provider-kie/market",
       digest: kieProviderImplementationDigest,
     },
     configuration: canonicalize({
@@ -670,7 +654,6 @@ export function createKieProvider(config: CreateKieProviderOptions) {
       lifecycle: "recoverable" as const,
       endpoint: providerEndpoint,
       retry: { maxAttempts: 3 },
-      supports: (need: Need) => route.supports(need.constraints),
     })),
   });
 }

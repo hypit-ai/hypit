@@ -32,7 +32,7 @@ let snapshot: CaptionPlaygroundSnapshot | undefined;
 let requestInFlight = false;
 const loadedFontCss = new Set<string>();
 
-function cueProjection(display: CaptionDisplaySequence, program: CaptionProgram): TimedCaptionProjection {
+function cueProjection(display: CaptionDisplaySequence, program: CaptionProgram, fps: number): TimedCaptionProjection {
   const atomByWord = new Map(display.atoms.flatMap((atom) => atom.wordIds.map((wordId) => [wordId, atom] as const)));
   const cues: TimedCaptionProjection["cues"][number][] = [];
   let cursor = 0;
@@ -55,41 +55,39 @@ function cueProjection(display: CaptionDisplaySequence, program: CaptionProgram)
     }
     for (const group of groups) {
       const words = group.reduce((sum, atom) => sum + atom.wordIds.length, 0);
-      const duration = Math.max(1, words * 0.42);
+      const duration = Math.max(1, Math.round(words * 0.42 * fps));
       const start = cursor;
       const end = cursor + duration;
       let atomCursor = start;
+      let consumedWords = 0;
       const timedAtoms = group.map((atom, index) => {
+        consumedWords += atom.wordIds.length;
         const atomEnd = index === group.length - 1
           ? end
-          : atomCursor + duration * atom.wordIds.length / words;
-        const value = { atomId: atom.id, startSec: atomCursor, endSec: atomEnd };
+          : start + Math.round(duration * consumedWords / words);
+        const value = { atomId: atom.id, startFrame: atomCursor, endFrameExclusive: atomEnd };
         atomCursor = atomEnd;
         return value;
       });
       cues.push({
         id: `caption-playground:cue:${cues.length + 1}`,
-        runId: run.id,
         styleId: run.styleId,
-        segmentId: group[0]!.segmentId,
-        startSec: start,
-        endSec: end,
+        startFrame: start,
+        endFrameExclusive: end,
         atoms: timedAtoms,
         fields: [],
       });
       cursor = end;
     }
   }
-  return { contract: "svml.timed-caption-projection@1", displaySequenceId: display.id, cues };
+  return { displaySequenceId: display.id, cues };
 }
 
 function showPreview(value: CaptionPlaygroundSnapshot): void {
   const program = resolveCaptionProgram(value.display, "caption-playground", value.style, []);
-  const projection = cueProjection(value.display, program);
-  const rawDuration = projection.cues.at(-1)?.endSec ?? 1;
-  const frameCount = Math.max(1, Math.ceil(rawDuration * value.preview.fps));
+  const projection = cueProjection(value.display, program, value.preview.fps);
+  const frameCount = projection.cues.at(-1)?.endFrameExclusive ?? 1;
   const space = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: frameCount / value.preview.fps,
     frameRate: { numerator: value.preview.fps, denominator: 1 },
   });

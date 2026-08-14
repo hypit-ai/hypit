@@ -15,7 +15,6 @@
     "@narratage/elaborator": "workspace:*",
     "@narratage/generation": "workspace:*",
     "@narratage/model-kit": "workspace:*",
-    "@narratage/narrative": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/speech": "workspace:*",
     "@narratage/text": "workspace:*",

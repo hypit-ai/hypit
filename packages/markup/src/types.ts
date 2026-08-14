@@ -5,15 +5,12 @@ import type {
   ResolvedModuleClosure,
   SourceRange,
   StoredValue,
-  SurfaceDeclaration,
   TypeRef,
-  TypedModule,
   TypedRecord,
 } from "@narratage/protocol";
 import type {
   AuthorComponent,
   AuthorFrontend,
-  AuthorModule,
   AuthorSourceAssetRequest,
   AuthorSourceExport,
   AuthorValueRef,
@@ -22,11 +19,10 @@ import type {
   ResolvedAuthorSourceImport,
 } from "@narratage/elaborator";
 
-export type SourceUnit = {
+/** Decoder-local Markup text; Source identity and closure ownership stay outside the parser. */
+export type MarkupSource = {
   readonly name: string;
   readonly text: string;
-  /** Whole unmasked source digest supplied by Source Closure compilation. */
-  readonly sourceDigest?: Digest;
 };
 
 export type MarkupImportRequest = {
@@ -71,7 +67,7 @@ export type SurfaceRecordDraft = {
   readonly range: SourceRange;
 };
 
-/** Source-local diagnostics are removed before the component enters the semantic AuthorModule. */
+/** Source-local diagnostics are removed before the component enters semantic elaboration. */
 export type SurfaceComponentDraft = AuthorComponent & {
   readonly range: SourceRange;
 };
@@ -80,7 +76,12 @@ export type SurfaceDecodeOutput = {
   readonly records: readonly SurfaceRecordDraft[];
   readonly components: readonly SurfaceComponentDraft[];
   readonly fragments: readonly GraphFragment[];
-  readonly sourceMaps?: readonly CanonicalValue[];
+  /**
+   * Public source bindings contributed by this Surface invocation. Omit to
+   * publish every generated binding; use an explicit list to keep plumbing
+   * addressable inside the source without exposing it from the source.
+   */
+  readonly exports?: readonly string[];
 };
 
 export type RawSurfaceInput = {
@@ -102,7 +103,7 @@ export type StructuredSurfaceInput = {
   readonly element: StructuredElement;
   /**
    * Resolve an explicitly written author reference. Imported record values are
-   * available because their SourceUnit has already been compiled and admitted.
+   * available because their source has already been compiled and admitted.
    * A component output has a ref and Type but no compile-time Record value.
    */
   readonly resolveReference: (path: string) => SurfaceResolvedReference | undefined;
@@ -119,13 +120,38 @@ export type SurfaceResolvedReference = {
 export type RawSurfaceHandler = (input: RawSurfaceInput) => Awaitable<RawSurfaceOutput>;
 export type StructuredSurfaceHandler = (input: StructuredSurfaceInput) => Awaitable<SurfaceDecodeOutput>;
 
-export type RegisteredSurface = {
+type MarkupSurfaceDeclarationBase = {
+  readonly name: string;
+  readonly tag: string;
+  readonly outputs: readonly TypeRef[];
+  readonly implementation: { readonly digest: Digest };
+};
+
+export type RawSurfaceDeclaration = MarkupSurfaceDeclarationBase & { readonly mode: "raw" };
+export type StructuredSurfaceDeclaration = MarkupSurfaceDeclarationBase & { readonly mode: "structured" };
+export type MarkupSurfaceDeclaration = RawSurfaceDeclaration | StructuredSurfaceDeclaration;
+
+type RegisteredSurfaceBase = {
   readonly module: ModuleRef;
   readonly surface: string;
+  readonly tag: string;
+  readonly outputs: readonly TypeRef[];
   readonly implementationDigest: Digest;
-  readonly mode: SurfaceDeclaration["mode"];
-  readonly handler: RawSurfaceHandler | StructuredSurfaceHandler;
 };
+
+export type RegisteredRawSurface = RegisteredSurfaceBase & {
+  readonly mode: "raw";
+  readonly handler: RawSurfaceHandler;
+};
+
+export type RegisteredStructuredSurface = RegisteredSurfaceBase & {
+  readonly mode: "structured";
+  readonly handler: StructuredSurfaceHandler;
+};
+
+export type RegisteredSurface =
+  | RegisteredRawSurface
+  | RegisteredStructuredSurface;
 
 export type MarkupDecodeContext = {
   readonly closure: ResolvedModuleClosure;
@@ -136,13 +162,10 @@ export type MarkupDecodeContext = {
 };
 
 export type MarkupDecodeResult = {
-  readonly module: TypedModule;
-  readonly author: AuthorModule;
+  readonly records: readonly TypedRecord[];
+  readonly components: readonly AuthorComponent[];
   readonly fragments: readonly GraphFragment[];
   readonly exports: readonly AuthorSourceExport[];
-  readonly imports: readonly MarkupImportRequest[];
-  readonly frontendClosureDigest: Digest;
-  readonly sourceMaps: readonly CanonicalValue[];
 };
 
 export type MarkupAuthorFrontendOptions = {
@@ -154,4 +177,5 @@ export type MarkupAuthorFrontend = AuthorFrontend;
 
 export interface MarkupSurfaceRegistryLike {
   resolve(module: ModuleRef, surface: string): RegisteredSurface | undefined;
+  surfaces(module: ModuleRef): readonly RegisteredSurface[];
 }

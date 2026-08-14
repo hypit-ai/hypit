@@ -10,7 +10,7 @@ export {
 export * from "./geometry.js";
 export {
   spatialDependency,
-  spatialManifest,
+  spatialManifest, spatialMarkupSurfaces,
   spatialManifestDigest,
   spatialModuleRef,
   spatialProducers,

@@ -45,10 +45,20 @@ export const spatialProducers = {
   fitContent: { module: spatialModuleRef, name: "fit-content" },
 } satisfies Record<string, ProducerRef>;
 
-const validator = (locator: string, digest: ReturnType<typeof digestOf>) => ({
-  abi: "svml.type-validator@1" as const,
-  implementation: { kind: "registered" as const, locator, digest },
+const validator = (digest: ReturnType<typeof digestOf>) => ({
+  implementation: { digest },
 });
+
+export const spatialMarkupSurfaces = [
+    { name: "canvas", tag: "Canvas", mode: "structured", outputs: [spatialTypes.canvas], implementation: { digest: spatialSurfaceDigests.canvas } },
+    { name: "point", tag: "Point", mode: "structured", outputs: [spatialTypes.point], implementation: { digest: spatialSurfaceDigests.point } },
+    { name: "path", tag: "Path", mode: "structured", outputs: [spatialTypes.path], implementation: { digest: spatialSurfaceDigests.path } },
+    { name: "extent", tag: "Extent", mode: "structured", outputs: [spatialTypes.extent], implementation: { digest: spatialSurfaceDigests.extent } },
+    { name: "frame", tag: "Frame", mode: "structured", outputs: [spatialTypes.frame, spatialTypes.frameEdgesProgram], implementation: { digest: spatialSurfaceDigests.frame } },
+    { name: "anchored-frame", tag: "AnchoredFrame", mode: "structured", outputs: [spatialTypes.frame, spatialTypes.anchoredFrameProgram], implementation: { digest: spatialSurfaceDigests.anchoredFrame } },
+    { name: "aspect-frame", tag: "AspectFrame", mode: "structured", outputs: [spatialTypes.frame, spatialTypes.extent, spatialTypes.aspectFrameProgram], implementation: { digest: spatialSurfaceDigests.aspectFrame } },
+  ] as const;
+
 
 export const spatialManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -56,33 +66,24 @@ export const spatialManifest: ModuleManifest = {
   version: spatialModuleRef.version,
   dependencies: [],
   types: [
-    { name: spatialTypes.canvas.name, schema: canvasSpaceSchema, validator: validator("@narratage/spatial/validate-canvas", spatialValidatorDigests.canvas) },
-    { name: spatialTypes.point.name, schema: spatialPointSchema, validator: validator("@narratage/spatial/validate-point", spatialValidatorDigests.point) },
-    { name: spatialTypes.frame.name, schema: spatialFrameSchema, validator: validator("@narratage/spatial/validate-frame", spatialValidatorDigests.frame) },
-    { name: spatialTypes.path.name, schema: spatialPathSchema, validator: validator("@narratage/spatial/validate-path", spatialValidatorDigests.path) },
-    { name: spatialTypes.extent.name, schema: intrinsicExtentSchema, validator: validator("@narratage/spatial/validate-extent", spatialValidatorDigests.extent) },
-    { name: spatialTypes.fit.name, schema: contentFitSchema, validator: validator("@narratage/spatial/validate-fit", spatialValidatorDigests.fit) },
-    { name: spatialTypes.fitted.name, schema: fittedContentSchema, validator: validator("@narratage/spatial/validate-fitted", spatialValidatorDigests.fitted) },
+    { name: spatialTypes.canvas.name, schema: canvasSpaceSchema, validator: validator(spatialValidatorDigests.canvas) },
+    { name: spatialTypes.point.name, schema: spatialPointSchema, validator: validator(spatialValidatorDigests.point) },
+    { name: spatialTypes.frame.name, schema: spatialFrameSchema, validator: validator(spatialValidatorDigests.frame) },
+    { name: spatialTypes.path.name, schema: spatialPathSchema, validator: validator(spatialValidatorDigests.path) },
+    { name: spatialTypes.extent.name, schema: intrinsicExtentSchema, validator: validator(spatialValidatorDigests.extent) },
+    { name: spatialTypes.fit.name, schema: contentFitSchema, validator: validator(spatialValidatorDigests.fit) },
+    { name: spatialTypes.fitted.name, schema: fittedContentSchema, validator: validator(spatialValidatorDigests.fitted) },
     { name: spatialTypes.frameEdgesProgram.name, schema: frameEdgesProgramSchema },
     { name: spatialTypes.anchoredFrameProgram.name, schema: anchoredFrameProgramSchema },
     { name: spatialTypes.aspectFrameProgram.name, schema: aspectFrameProgramSchema },
   ],
   capabilities: [],
-  surfaces: [
-    { name: "canvas", tag: "Canvas", mode: "structured", outputs: [spatialTypes.canvas], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/spatial/canvas-surface", digest: spatialSurfaceDigests.canvas } },
-    { name: "point", tag: "Point", mode: "structured", outputs: [spatialTypes.point], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/spatial/point-surface", digest: spatialSurfaceDigests.point } },
-    { name: "path", tag: "Path", mode: "structured", outputs: [spatialTypes.path], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/spatial/path-surface", digest: spatialSurfaceDigests.path } },
-    { name: "extent", tag: "Extent", mode: "structured", outputs: [spatialTypes.extent], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/spatial/extent-surface", digest: spatialSurfaceDigests.extent } },
-    { name: "frame", tag: "Frame", mode: "structured", outputs: [spatialTypes.frame, spatialTypes.frameEdgesProgram], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/spatial/frame-surface", digest: spatialSurfaceDigests.frame } },
-    { name: "anchored-frame", tag: "AnchoredFrame", mode: "structured", outputs: [spatialTypes.frame, spatialTypes.anchoredFrameProgram], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/spatial/anchored-frame-surface", digest: spatialSurfaceDigests.anchoredFrame } },
-    { name: "aspect-frame", tag: "AspectFrame", mode: "structured", outputs: [spatialTypes.frame, spatialTypes.extent, spatialTypes.aspectFrameProgram], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/spatial/aspect-frame-surface", digest: spatialSurfaceDigests.aspectFrame } },
-  ],
   producers: [
-    { name: spatialProducers.canvasFrame.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }], outputs: [{ name: "frame", type: spatialTypes.frame }], needs: [], implementation: { kind: "registered", locator: "@narratage/spatial/canvas-frame", digest: spatialImplementationDigests.canvasFrame } },
-    { name: spatialProducers.frameEdges.name, inputs: [{ name: "parent", type: spatialTypes.frame }, { name: "program", type: spatialTypes.frameEdgesProgram }], outputs: [{ name: "frame", type: spatialTypes.frame }], needs: [], implementation: { kind: "registered", locator: "@narratage/spatial/frame-edges", digest: spatialImplementationDigests.frameEdges } },
-    { name: spatialProducers.anchoredFrame.name, inputs: [{ name: "parent", type: spatialTypes.frame }, { name: "program", type: spatialTypes.anchoredFrameProgram }], outputs: [{ name: "frame", type: spatialTypes.frame }], needs: [], implementation: { kind: "registered", locator: "@narratage/spatial/anchored-frame", digest: spatialImplementationDigests.anchoredFrame } },
-    { name: spatialProducers.aspectFrame.name, inputs: [{ name: "parent", type: spatialTypes.frame }, { name: "extent", type: spatialTypes.extent }, { name: "program", type: spatialTypes.aspectFrameProgram }], outputs: [{ name: "frame", type: spatialTypes.frame }], needs: [], implementation: { kind: "registered", locator: "@narratage/spatial/aspect-frame", digest: spatialImplementationDigests.aspectFrame } },
-    { name: spatialProducers.fitContent.name, inputs: [{ name: "frame", type: spatialTypes.frame }, { name: "extent", type: spatialTypes.extent }, { name: "fit", type: spatialTypes.fit }], outputs: [{ name: "fitted", type: spatialTypes.fitted }], needs: [], implementation: { kind: "registered", locator: "@narratage/spatial/fit-content", digest: spatialImplementationDigests.fitContent } },
+    { name: spatialProducers.canvasFrame.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }], outputs: [{ name: "frame", type: spatialTypes.frame }], needs: [], implementation: { digest: spatialImplementationDigests.canvasFrame } },
+    { name: spatialProducers.frameEdges.name, inputs: [{ name: "parent", type: spatialTypes.frame }, { name: "program", type: spatialTypes.frameEdgesProgram }], outputs: [{ name: "frame", type: spatialTypes.frame }], needs: [], implementation: { digest: spatialImplementationDigests.frameEdges } },
+    { name: spatialProducers.anchoredFrame.name, inputs: [{ name: "parent", type: spatialTypes.frame }, { name: "program", type: spatialTypes.anchoredFrameProgram }], outputs: [{ name: "frame", type: spatialTypes.frame }], needs: [], implementation: { digest: spatialImplementationDigests.anchoredFrame } },
+    { name: spatialProducers.aspectFrame.name, inputs: [{ name: "parent", type: spatialTypes.frame }, { name: "extent", type: spatialTypes.extent }, { name: "program", type: spatialTypes.aspectFrameProgram }], outputs: [{ name: "frame", type: spatialTypes.frame }], needs: [], implementation: { digest: spatialImplementationDigests.aspectFrame } },
+    { name: spatialProducers.fitContent.name, inputs: [{ name: "frame", type: spatialTypes.frame }, { name: "extent", type: spatialTypes.extent }, { name: "fit", type: spatialTypes.fit }], outputs: [{ name: "fitted", type: spatialTypes.fitted }], needs: [], implementation: { digest: spatialImplementationDigests.fitContent } },
   ],
 };
 export const spatialManifestDigest = digestOf(spatialManifest);

@@ -94,7 +94,7 @@ test("the official Provider maps all three model contracts without owning them",
         assert.equal(String(input), "https://api.xiaomimimo.com/v1/chat/completions");
         assert.equal(new Headers(init?.headers).get("api-key"), "test-key");
         const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-        assert.equal(body.model, item.request.model);
+        assert.equal(body.model, item.endpoint.capability.name);
         assert.equal((body.messages as Array<Record<string, unknown>>).at(-1)?.role, "assistant");
         assert.equal((body.messages as Array<Record<string, unknown>>).at(-1)?.content, "Keep every authored word.");
         assert.equal("optimize_text_preview" in (body.audio as Record<string, unknown>), false);
@@ -105,7 +105,6 @@ test("the official Provider maps all three model contracts without owning them",
     assert.equal(calls, 1);
     assert.equal(result.value.kind, "inline");
     const set = result.value.kind === "inline" ? result.value.value as Record<string, unknown> : {};
-    assert.equal(set.contract, "svml.generated-audio-set@1");
     const audios = set.audios as Array<{ mediaType: string; digest: string }>;
     assert.equal(audios[0]?.mediaType, "audio/wav");
     assert.equal(await artifacts.has(audios[0]!.digest as `sha256:${string}`), true);

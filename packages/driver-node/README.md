@@ -2,8 +2,8 @@
 
 Node runtime for executing Core commands without adding workflow semantics to Core.
 
-Its Manifest helpers only read Node filesystem paths and construct a verified Closure. Pure static
-Manifest JSON parsing belongs to `@narratage/protocol`.
+Pure static Manifest JSON parsing belongs to `@narratage/protocol`; package loading and Closure
+construction remain outside the execution Driver.
 
 - `ProducerRegistry` implements the host-neutral `@narratage/component-kit` Producer registrar. Deterministic
   component packages depend on that tiny structural port, not on this Node Driver.
@@ -19,14 +19,15 @@ Manifest JSON parsing belongs to `@narratage/protocol`.
 - Production-style assembly uses `applyRuntimeClosure()`: Endpoint instance, exact capability and
   return Type, implementation digest, non-secret configuration digest, declared credential slots
   and Profile-owned scheduling must all match atomically.
-  Legacy direct `bind()` remains only as the low-level trusted test/embedding API.
+  A low-level trusted embedding may still register one immediate Endpoint directly; recoverable
+  execution always requires the locked Runtime Closure.
 - Long-lived external work uses `registerRecoverableEndpoint()`, not an immediate Handler. The Driver
   creates a content-addressed Operation before `start()`, persists pending checkpoints, calls
-  `resume()` for an existing Operation, and replays a journaled completion without another external
+  `resume()` for an existing Operation, and replays a persisted completion without another external
   call. A recoverable Endpoint is blocked unless both its locked Runtime Closure and an
   `OperationStore` are present.
 - Endpoint credentials are resolved only for the slots declared by that locked endpoint, immediately
-  before `start/resume/cancel`; secret bytes never become Driver journal or Core state.
+  before `start/resume/cancel`; secret bytes never become OperationStore or Core state.
 - A pending Endpoint may publish `wakeAt`. Retryable terminal failure creates a new attempt and
   Operation id under the endpoint's finite retry policy; cancellation becomes an explicit terminal
   failure that Core accepts through its ordinary command-failed Event.
@@ -44,7 +45,7 @@ Build state is serializable. Missing Endpoints, generation latency and transient
 build without replaying completed Producers.
 
 `start()` and `resume()` receive the same stable Operation id. `resume(undefined)` is intentional:
-it covers a stop after submission intent was journaled but before a remote job checkpoint was saved.
+it covers a stop after submission intent was persisted but before a remote job checkpoint was saved.
 The Endpoint must use that key to find-or-submit idempotently; the Driver cannot manufacture remote
 exactly-once semantics for an API that does not provide them.
 

@@ -8,7 +8,6 @@ export const grokImagineModels = ["grok-imagine-video", "grok-imagine-video-1.5-
 export type GrokImagineModel = typeof grokImagineModels[number];
 
 export const grokImagineVideoPorts: GenerationPortTable = sealGenerationPortTable({
-  contract: "svml.generation-ports@1",
   model: "grok-imagine-video",
   result: "video",
   ports: [
@@ -29,7 +28,6 @@ export const grokImagineVideoPorts: GenerationPortTable = sealGenerationPortTabl
 });
 
 export const grokImagine15PreviewPorts: GenerationPortTable = sealGenerationPortTable({
-  contract: "svml.generation-ports@1",
   model: "grok-imagine-video-1.5-preview",
   result: "video",
   ports: [
@@ -94,17 +92,17 @@ const surface = (
   mode: "structured" as const,
   outputs: [endpoint.draftType, endpoint.mediaBindings.images!.type],
   implementation: {
-    kind: "trusted-frontend-surface" as const,
-    locator: `@narratage/grok-imagine/${name}-surface`,
     digest,
   },
 });
-export const grokImagineManifest = {
-  ...grokImagineBaseDefinition.manifest,
-  surfaces: [
+
+export const grokImagineMarkupSurfaces = [
     surface("video", "Video", grokImagineEndpoints.video!, grokImagineSurfaceImplementationDigests.video),
     surface("preview-video", "PreviewVideo", grokImagineEndpoints["preview-1.5"]!, grokImagineSurfaceImplementationDigests.previewVideo),
-  ],
+  ] as const;
+
+export const grokImagineManifest = {
+  ...grokImagineBaseDefinition.manifest,
 };
 export const grokImagineManifestDigest = digestOf(grokImagineManifest);
 export const grokImagineDefinition = {

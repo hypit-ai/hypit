@@ -1,5 +1,4 @@
 export type CanvasSpace = {
-  readonly contract: "svml.canvas-space@1";
   readonly widthPx: number;
   readonly heightPx: number;
   readonly origin: "top-left";
@@ -9,13 +8,11 @@ export type CanvasSpace = {
 };
 
 export type SpatialPoint = {
-  readonly contract: "svml.spatial-point@1";
   readonly xPx: number;
   readonly yPx: number;
 };
 
 export type SpatialFrame = {
-  readonly contract: "svml.spatial-frame@1";
   readonly xPx: number;
   readonly yPx: number;
   readonly widthPx: number;
@@ -30,12 +27,10 @@ export type SpatialPathCommand =
   | { readonly kind: "close" };
 
 export type SpatialPath = {
-  readonly contract: "svml.spatial-path@1";
   readonly commands: readonly SpatialPathCommand[];
 };
 
 export type IntrinsicExtent = {
-  readonly contract: "svml.intrinsic-extent@1";
   readonly widthPx: number;
   readonly heightPx: number;
 };
@@ -46,7 +41,6 @@ export type NormalizedPoint = {
 };
 
 export type ContentFit = {
-  readonly contract: "svml.content-fit@1";
   readonly sizing: "contain" | "cover" | "fit-width" | "fit-height" | "native" | "scale-down" | "stretch";
   readonly framePoint: NormalizedPoint;
   readonly contentPoint: NormalizedPoint;
@@ -55,7 +49,6 @@ export type ContentFit = {
 };
 
 export type FittedContent = {
-  readonly contract: "svml.fitted-content@1";
   readonly contentFrame: SpatialFrame;
 };
 
@@ -65,7 +58,6 @@ export type SpatialLength = {
 };
 
 export type FrameEdgesProgram = {
-  readonly contract: "svml.frame-edges-program@1";
   readonly left: SpatialLength;
   readonly top: SpatialLength;
   readonly right: SpatialLength;
@@ -78,7 +70,6 @@ export type SpatialAnchor =
   | "bottom-left" | "bottom-center" | "bottom-right";
 
 export type AnchoredFrameProgram = {
-  readonly contract: "svml.anchored-frame-program@1";
   readonly x: SpatialLength;
   readonly y: SpatialLength;
   readonly width: SpatialLength;
@@ -88,7 +79,6 @@ export type AnchoredFrameProgram = {
 };
 
 export type AspectFrameProgram = {
-  readonly contract: "svml.aspect-frame-program@1";
   readonly x: SpatialLength;
   readonly y: SpatialLength;
   readonly primary: "width" | "height";

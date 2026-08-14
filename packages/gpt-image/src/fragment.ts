@@ -90,7 +90,6 @@ export function createGptImageCleanFragment(
     ...mediaInputs.map((item) => `${item.name}=${item.port}:media`),
   ].join(",") || "no-dynamic-inputs";
   return sealGraphFragment({
-    name: `@narratage/gpt-image/clean[${shape}]@1`,
     inputs,
     operations,
     exports: [{

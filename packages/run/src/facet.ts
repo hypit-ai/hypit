@@ -9,8 +9,6 @@ import type {
 export const runFragmentHostAbi = "svml.run-fragment-host@1";
 
 export type RunFragmentHostFacetIdentity = {
-  readonly contract: "svml.run-fragment-host-facet@1";
-  readonly package: string;
   readonly exports: readonly {
     readonly name: string;
     readonly fragment: string;
@@ -19,6 +17,7 @@ export type RunFragmentHostFacetIdentity = {
 
 export type RunFragmentHostFacet = HostFacet & {
   readonly abi: typeof runFragmentHostAbi;
+  readonly offers: readonly string[];
   readonly identity: RunFragmentHostFacetIdentity;
   readonly implementation: RunFragmentPackage;
 };
@@ -39,9 +38,8 @@ export function createRunFragmentHostFacet(item: RunFragmentPackage): RunFragmen
   if (item.name.trim().length === 0) throw new Error("Run Fragment Host facet package name is empty");
   return {
     abi: runFragmentHostAbi,
+    offers: [item.name],
     identity: {
-      contract: "svml.run-fragment-host-facet@1",
-      package: item.name,
       exports: normalizedExports(item.fragments),
     },
     implementation: item,
@@ -50,11 +48,10 @@ export function createRunFragmentHostFacet(item: RunFragmentPackage): RunFragmen
 
 function sameIdentity(facet: RunFragmentHostFacet): boolean {
   const expected: RunFragmentHostFacetIdentity = {
-    contract: "svml.run-fragment-host-facet@1",
-    package: facet.implementation.name,
     exports: normalizedExports(facet.implementation.fragments),
   };
-  return canonicalStringify(facet.identity) === canonicalStringify(expected);
+  return canonicalStringify(facet.identity) === canonicalStringify(expected)
+    && canonicalStringify(facet.offers) === canonicalStringify([facet.implementation.name]);
 }
 
 /**
@@ -73,11 +70,7 @@ export function installRunFragmentHostFacets(
       throw new Error("Run Fragment Host facet has an invalid identity or implementation");
     }
     const facet = opaque as RunFragmentHostFacet;
-    if (facet.identity.contract !== "svml.run-fragment-host-facet@1") {
-      throw new Error("Run Fragment Host facet has an unsupported identity");
-    }
-    if (typeof facet.identity.package !== "string"
-      || !Array.isArray(facet.identity.exports)
+    if (!Array.isArray(facet.identity.exports)
       || typeof facet.implementation.name !== "string"
       || facet.implementation.fragments === null
       || typeof facet.implementation.fragments !== "object"
@@ -85,7 +78,7 @@ export function installRunFragmentHostFacets(
       throw new Error("Run Fragment Host facet has an invalid package implementation");
     }
     if (!sameIdentity(facet)) {
-      throw new Error(`Run Fragment Host facet ${facet.identity.package} differs from its locked identity`);
+      throw new Error(`Run Fragment Host facet ${facet.implementation.name} differs from its locked identity`);
     }
     registry.register(facet.implementation);
   }

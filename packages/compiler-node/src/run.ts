@@ -1,24 +1,20 @@
-import type { Workspace, WorkspaceSession } from "@narratage/host";
+import type { WorkspaceSession } from "@narratage/workspace";
 import { resolveCompiledSourceExport } from "@narratage/elaborator";
 import {
-  compileBuild,
-  createResolvedClosure,
-  link,
   sealBuildRequest,
   sealCompiledGraph,
-  sealTypedModule,
+  sliceExecution,
   start,
 } from "@narratage/core";
 import type {
   ArtifactAttachment,
-} from "@narratage/host";
+} from "@narratage/workspace";
 import type {
   BuildPlan,
   BuildRequest,
   BuildState,
   BuildState as ArchivedBuildState,
   Digest,
-  ModuleRef,
   StoredValue,
 } from "@narratage/protocol";
 import {
@@ -33,18 +29,14 @@ import type {
   RunSourceUnit,
 } from "@narratage/run";
 import type { LinkedProgram } from "@narratage/protocol";
-import { NodeFilesystemWorkspace } from "@narratage/workspace-fs-node";
-import { resolve } from "node:path";
 
 import type { NodeCompiledSourceClosure } from "./compiler.js";
-import { NodeCompiler } from "./compiler.js";
+import { mergeAttachments, NodeCompiler } from "./compiler.js";
 
 export type NodeRunCompilerOptions = {
   readonly authorCompiler: NodeCompiler;
   readonly frontends: RunFrontendRegistryLike;
   readonly fragments: RunFragmentRegistryLike;
-  readonly root?: string;
-  readonly workspace?: Workspace;
   readonly readBuild?: (id: string) => Promise<ArchivedBuildState | undefined> | ArchivedBuildState | undefined;
   readonly resolveBuildOutput?: (
     build: string,
@@ -79,109 +71,12 @@ export type NodeCheckedRun = {
 
 export type PlannedBuild = {
   readonly compilation: NodeCompiledRun;
+  /** Convenience view of `state.request`; `state` remains the sole durable authority. */
   readonly request: BuildRequest;
+  /** Convenience view of `state.plan`; `state` remains the sole durable authority. */
   readonly plan: BuildPlan;
   readonly state: BuildState;
 };
-
-function moduleKey(ref: ModuleRef): string {
-  return `${ref.name}\u0000${ref.version}`;
-}
-
-/**
- * Materialize the exact execution slice selected by one BuildRequest.
- *
- * Author compilation deliberately keeps the whole document available. A durable
- * Build does not need unrelated Tracks, renderers and their schemas merely
- * because the Author Source imported them. Keeping those bytes in every state
- * revision made a four-node estimate Build carry megabytes of unrelated video
- * declarations. The Build graph below retains only the realized Candidates and
- * their reachable executable branches.
- */
-function executionSlice(
-  program: LinkedProgram,
-  graph: ReturnType<typeof sealCompiledGraph>,
-  request: BuildRequest,
-): { readonly program: LinkedProgram; readonly graph: ReturnType<typeof sealCompiledGraph> } {
-  const preliminary = compileBuild(program, graph, request);
-  const outputById = new Map(graph.outputs.map((item) => [item.id, item]));
-  const candidateById = new Map(graph.candidates.map((item) => [item.id, item]));
-  const operationById = new Map(graph.operations.map((item) => [item.id, item]));
-  const selectionByOutput = new Map(preliminary.selections.map((item) => [item.output, item]));
-  const outputs = new Set<string>();
-  const candidates = new Set<string>();
-  const operations = new Set<string>();
-  const records = new Set<string>();
-
-  const visitRef = (ref: import("@narratage/protocol").GraphValueRef): void => {
-    if (ref.kind === "record") {
-      records.add(ref.id);
-    } else if (ref.kind === "logical-output") {
-      visitOutput(ref.id);
-    } else {
-      visitOperation(ref.operation);
-    }
-  };
-  const visitOperation = (id: string): void => {
-    if (operations.has(id)) return;
-    const operation = operationById.get(id);
-    if (operation === undefined) throw new Error(`execution slice refers to absent Operation ${id}`);
-    operations.add(id);
-    Object.values(operation.inputs).forEach(visitRef);
-  };
-  const visitCandidate = (id: string): void => {
-    if (candidates.has(id)) return;
-    const candidate = candidateById.get(id);
-    if (candidate === undefined) throw new Error(`execution slice refers to absent Candidate ${id}`);
-    candidates.add(id);
-    if (candidate.root.kind === "operation") visitOperation(candidate.root.result.operation);
-  };
-  const visitOutput = (id: string): void => {
-    if (outputs.has(id)) return;
-    const output = outputById.get(id);
-    if (output === undefined) throw new Error(`execution slice refers to absent Logical Output ${id}`);
-    outputs.add(id);
-    visitCandidate(selectionByOutput.get(id)?.candidate ?? output.primary);
-  };
-  request.targets.forEach((target) => visitOutput(target.output));
-
-  const selectedOutputs = graph.outputs.filter((item) => outputs.has(item.id));
-  const selectedCandidates = graph.candidates.filter((item) => candidates.has(item.id));
-  const selectedOperations = graph.operations.filter((item) => operations.has(item.id));
-  const authoredRecords = program.records.filter((record) => records.has(record.id));
-
-  const requiredModules = new Set<string>();
-  const requireModule = (ref: ModuleRef): void => {
-    const key = moduleKey(ref);
-    if (requiredModules.has(key)) return;
-    const resolved = program.closure.modules.find((item) => moduleKey(item.ref) === key);
-    if (resolved === undefined) throw new Error(`execution slice refers to absent module ${ref.name}@${ref.version}`);
-    requiredModules.add(key);
-    resolved.manifest.dependencies.forEach((item) => requireModule(item.module));
-  };
-  selectedOperations.forEach((item) => requireModule(item.producer.module));
-  selectedOutputs.forEach((item) => requireModule(item.type.module));
-  selectedCandidates.forEach((item) => requireModule(item.type.module));
-  authoredRecords.forEach((item) => requireModule(item.type.module));
-
-  const closure = createResolvedClosure(program.closure.modules
-    .filter((item) => requiredModules.has(moduleKey(item.ref)))
-    .map((item) => item.manifest));
-  const typedModules = program.modules.flatMap((item) => {
-    const selected = item.records.filter((record) => records.has(record.id));
-    return selected.length === 0
-      ? []
-      : [sealTypedModule({ id: item.id, closureDigest: closure.digest, records: selected })];
-  });
-  const slicedProgram = link(closure, typedModules);
-  const slicedGraph = sealCompiledGraph({
-    program: slicedProgram.semanticDigest,
-    outputs: selectedOutputs,
-    candidates: selectedCandidates,
-    operations: selectedOperations,
-  });
-  return { program: slicedProgram, graph: slicedGraph };
-}
 
 function decodeStoredValue(bytes: Uint8Array, from: string): StoredValue {
   let parsed: unknown;
@@ -237,9 +132,6 @@ export class NodeRunCompiler {
   readonly #options: NodeRunCompilerOptions;
 
   constructor(options: NodeRunCompilerOptions) {
-    if (options.workspace !== undefined && options.root !== undefined) {
-      throw new Error("NodeRunCompiler accepts a Workspace or root, not both");
-    }
     this.#options = options;
   }
 
@@ -248,11 +140,7 @@ export class NodeRunCompiler {
   }
 
   async compileFile(file: string): Promise<NodeCompiledRun> {
-    const workspace = this.#options.workspace === undefined
-      ? await new NodeFilesystemWorkspace({
-          ...(this.#options.root === undefined ? {} : { root: this.#options.root }),
-        }).open(resolve(file))
-      : await this.#options.workspace.open(file);
+    const workspace = await this.#options.authorCompiler.openFile(file);
     return await this.compileSource(workspace.entry, workspace);
   }
 
@@ -341,7 +229,7 @@ export class NodeRunCompiler {
       unresolvedBuildRecords: decoded.document.candidates.flatMap((item) => item.kind === "build-record"
         ? [{ id: item.id, build: item.build, output: item.output }]
         : []),
-      attachments: await workspace.attachments(),
+      attachments: mergeAttachments([author.attachments, await workspace.attachments()]),
     };
   }
 
@@ -384,12 +272,12 @@ export class NodeRunCompiler {
       author,
       program,
       run,
-      attachments: await workspace.attachments(),
+      attachments: mergeAttachments([author.attachments, await workspace.attachments()]),
     };
   }
 
   planCompilation(compilation: NodeCompiledRun, implementationClosure?: Digest): PlannedBuild {
-    const authorGraph = compilation.author.elaboration.graph;
+    const authorGraph = compilation.author.graph;
     const selected = new Map(compilation.run.graph.satisfactions.map((item) => [item.output, item.candidate]));
     const fullGraph = sealCompiledGraph({
       program: compilation.program.semanticDigest,
@@ -405,14 +293,14 @@ export class NodeRunCompiler {
       ...(implementationClosure === undefined ? {} : { implementationClosure }),
       targets: compilation.run.graph.targets,
     });
-    const sliced = executionSlice(compilation.program, fullGraph, fullRequest);
+    const sliced = sliceExecution(compilation.program, fullGraph, fullRequest);
     const request = sealBuildRequest({
       graph: sliced.graph.id,
       ...(implementationClosure === undefined ? {} : { implementationClosure }),
       targets: compilation.run.graph.targets,
     });
     const state = start(sliced.program, sliced.graph, request);
-    return { compilation, request, plan: state.plan, state };
+    return { compilation, request: state.request, plan: state.plan, state };
   }
 
   async planFile(file: string, implementationClosure?: Digest): Promise<PlannedBuild> {

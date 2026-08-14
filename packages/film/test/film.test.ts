@@ -15,7 +15,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 import { ProducerRegistry, NodeDriver } from "@narratage/driver-node";
@@ -64,7 +63,6 @@ import type { TextStyle } from "@narratage/typography-track";
 import { admitRecord, TypeValidatorRegistry } from "@narratage/validation";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 4,
   frameRate: { numerator: 30, denominator: 1 },
 });
@@ -76,7 +74,6 @@ function validatorRegistry(): TypeValidatorRegistry {
   return registry;
 }
 const canvas = sealCanvasSpace({
-  contract: "svml.canvas-space@1",
   widthPx: 1080,
   heightPx: 1920,
   origin: "top-left",
@@ -85,12 +82,11 @@ const canvas = sealCanvasSpace({
   pixelAspect: "square",
 });
 const filmProgram = sealFilmProgram({
-  contract: "svml.film-program@1",
+
   id: "main-film",
   clearColor: "#000000",
 });
 const titleFont: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: {
     kind: "blob", digest: digestOf("film-test-title-font"), size: 1, mediaType: "font/woff2",
   } }],
@@ -98,7 +94,7 @@ const titleFont: FontArtifactRef = {
   style: "normal",
 };
 const titleStyle: TextStyle = {
-  contract: "svml.text-style@1",
+
   id: "title-style",
   stackingOrder: 60,
   typography: {
@@ -120,21 +116,19 @@ const titleStyle: TextStyle = {
   path: { side: "left", orientation: "follow", startMarginPx: 0, endMarginPx: 0, align: "start", reverse: false, overflow: "visible" },
 };
 const textProgram = sealTypographyTrackProgram({
-  contract: "svml.typography-track-program@1",
+
   id: "title-track",
   items: [{
     id: "title",
-    sourceOccurrenceId: "program",
     span: { startFrame: 10, endFrameExclusive: 100 },
     tieBreak: "title",
-    geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 86.4, yPx: 192, widthPx: 907.2, heightPx: 384 } },
+    geometry: { kind: "area", frame: { xPx: 86.4, yPx: 192, widthPx: 907.2, heightPx: 384 } },
     document: { paragraphs: [{ id: "title", inlines: [{ kind: "text", id: "title-text", text: "Semantic Video Markup Language" }] }] },
     style: titleStyle,
     motion: stillTextMotion(),
   }],
 });
 const background = sealVisualTrack({
-  contract: "svml.visual-track@1",
   visualIr: "svml.visual-ir@1",
   id: "background-track",
   presents: [{
@@ -145,7 +139,6 @@ const background = sealVisualTrack({
   }],
 });
 const audio = sealAudioTrack({
-  contract: "svml.audio-track@1",
   id: "empty-audio-track",
   clips: [],
 });
@@ -179,7 +172,7 @@ const records = await Promise.all([
   sealRecord({ id: "background", type: compositionTypes.visualTrack, value: stored(background), origin }),
   sealRecord({ id: "audio", type: compositionTypes.audioTrack, value: stored(audio), origin }),
 ].map(async (record) => await admitRecord(closure, record, validatorRegistry())));
-const linked = link(closure, [sealTypedModule({ id: "author:film-test", closureDigest: closure.digest, records })]);
+const linked = link(closure, records);
 
 const textInstance = elaborateGraphFragment(linked, typographyTrackFragment, {
   id: "title",

@@ -49,7 +49,7 @@ const providerManifest: RuntimeModuleManifest = {
   facets: [{
     name: providerFacet.name,
     role: "capability-endpoint",
-    implementation: { locator: "example.local-endpoint/generation", digest: providerDigest },
+    implementation: { digest: providerDigest },
     fulfills: [{ capability: capabilities.generation, returns: types.generated }],
     lifecycle: "recoverable",
     defaultConcurrency: 1,
@@ -60,11 +60,9 @@ function projectRuntimeFixture(directory: string) {
   const execution = createLocalExecutionPackage("execution.local");
   const state = createSqliteRuntimeServicePackage({
     path: join(directory, ".svml", "runtime.sqlite"),
-    name: "state.sqlite",
     buildInstance: "state.builds",
     operationInstance: "state.operations",
     dispatchInstance: "state.dispatch",
-    journalInstance: "state.journal",
   });
   const artifacts = createFileArtifactStorePackage({
     root: join(directory, ".svml", "artifacts"),
@@ -80,7 +78,6 @@ function projectRuntimeFixture(directory: string) {
         build: "state.builds",
         operations: "state.operations",
         dispatch: "state.dispatch",
-        journal: "state.journal",
         artifacts: "artifacts.fs",
         credentials: ["credentials.env"],
       },
@@ -89,14 +86,12 @@ function projectRuntimeFixture(directory: string) {
   } as const;
 }
 
-test("one local execution domain fences Runtime package revisions, not author package subsets", async () => {
+test("one local execution domain fences Runtime Closure revisions, not author package subsets", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-revision-gate-"));
   try {
-    const firstRuntimePackages = digestOf("runtime-packages:first");
     const first = await createProjectLocalRuntime({
       root: directory,
       ...projectRuntimeFixture(directory),
-      runtimePackageClosure: firstRuntimePackages,
     });
     await first.build({
       id: "unfinished-build",
@@ -105,11 +100,22 @@ test("one local execution domain fences Runtime package revisions, not author pa
     await first.close();
 
     const changedRuntimePackages = projectRuntimeFixture(directory);
+    const execution = changedRuntimePackages.runtimeServices[0];
+    const revisedExecution = {
+      ...execution,
+      manifest: {
+        ...execution.manifest,
+        facets: execution.manifest.facets.map((facet) => ({
+          ...facet,
+          implementation: { ...facet.implementation, digest: digestOf(`${facet.name}:revision-two`) },
+        })),
+      },
+    };
     await assert.rejects(
       createProjectLocalRuntime({
         root: directory,
         ...changedRuntimePackages,
-        runtimePackageClosure: digestOf("runtime-packages:second"),
+        runtimeServices: [revisedExecution, ...changedRuntimePackages.runtimeServices.slice(1)],
       }),
       /cannot enter this execution domain[\s\S]*unfinished-build[\s\S]*original Runtime Profile/u,
     );
@@ -146,13 +152,12 @@ test("Endpoint-declared credentials use the selected writable Store without a Pr
     async delete(ref) { return values.delete(ref.key); },
   };
   const memoryCredentials = defineRuntimeServicePackage({
-    name: "credentials.memory",
     module: { name: "example.credentials-memory", version: "1" },
     services: [{
       role: "credential-store",
       facet: "credential-store",
       instance: "credentials.memory",
-      implementation: { locator: "example.credentials-memory", digest: digestOf("credentials-memory@1") },
+      implementation: { digest: digestOf("credentials-memory@1") },
       service: credentialStore,
     }],
   });
@@ -161,7 +166,7 @@ test("Endpoint-declared credentials use the selected writable Store without a Pr
     facet: "generation",
     instance: "generation.auth-test",
     authority: "generation.auth-test",
-    implementation: { locator: "example.local-endpoint/generation", digest: providerDigest },
+    implementation: { digest: providerDigest },
     credentials: { apiKey: credentialRef("memory", "generation.api-key") },
     credentialInputs: { apiKey: { label: "Generation API key" } },
     capabilities: [{
@@ -209,7 +214,6 @@ test("project local runtime resumes durable work while component and endpoint pa
     source: { path: join(directory, "main.svml"), closure: digestOf("source:greeting") },
     aliases: [{
       name: "final.document",
-      type: initial.plan.goals[0]!.type,
       ref: { kind: "logical-output" as const, id: initial.request.targets[0]!.output },
     }],
   };
@@ -225,7 +229,6 @@ test("project local runtime resumes durable work while component and endpoint pa
   let startEntered: (() => void) | undefined;
   let releaseStart: (() => void) | undefined;
   const components: ComponentPackage = {
-    name: "example.components",
     producers: [
       {
         producer: producers.makePrompt,
@@ -287,7 +290,6 @@ test("project local runtime resumes durable work while component and endpoint pa
         status: "completed",
         result: {
           value: { kind: "inline", value: "Hello from durable local Runtime" },
-          metadata: { checkpoint },
         },
       };
     },
@@ -297,9 +299,13 @@ test("project local runtime resumes durable work while component and endpoint pa
     },
   };
   const endpointPackage: EndpointPackage = {
-    name: "example.endpoint.personal",
     manifest: providerManifest,
-    instance: { id: "generation.personal", facet: providerFacet, authority: "generation.personal" },
+    instance: {
+      id: "generation.personal",
+      facet: providerFacet,
+      authority: "generation.personal",
+      configurationDigest: digestOf({}),
+    },
     bindings: [{
       capability: capabilities.generation,
       returns: types.generated,
@@ -459,7 +465,6 @@ test("two durable Workers share one SQLite capacity limit across Runtime instanc
   const firstEntered = new Promise<void>((resolve) => { entered = resolve; });
   const holdFirst = new Promise<void>((resolve) => { release = resolve; });
   const components: ComponentPackage = {
-    name: "example.shared-capacity-components",
     producers: [{
       producer: producers.makePrompt,
       implementationDigest: implementationDigests.makePrompt,
@@ -559,10 +564,8 @@ test("project local runtime activates locked compute facets without deployment s
     const producer = (name) => ({ module, name });
     export default {
       format: "svml.node-package@1",
-      name: "example-greeting-components",
       modules: [{ manifest }],
       components: [{
-        name: "example-greeting-components/compute",
         producers: [
           {
             producer: producer("make-prompt"),
@@ -628,7 +631,6 @@ test("project local runtime uses only the explicitly selected Scheduler", async 
       facet: "scheduler",
       instance: "scheduler.example",
       implementation: {
-        locator: "example.scheduler/fair",
         digest: digestOf("example.scheduler/fair@1"),
       },
       service: {
@@ -661,14 +663,12 @@ test("two installed Schedulers are unambiguous because the Profile selects one",
   const creates = { one: 0, two: 0 };
   const closes = { one: 0, two: 0 };
   const scheduler = (name: "one" | "two") => defineRuntimeServicePackage({
-    name: `example.scheduler.${name}`,
     module: { name: `example.scheduler.${name}`, version: "1" },
     services: [{
       role: "scheduler",
       facet: "scheduler",
       instance: `scheduler.${name}`,
       implementation: {
-        locator: `example.scheduler.${name}/fair`,
         digest: digestOf(`example.scheduler.${name}/fair@1`),
       },
       service: {
@@ -703,14 +703,12 @@ test("project local runtime accepts an explicitly selected replacement ArtifactS
   const module = { name: "example.remote-artifacts", version: "1" } as const;
   const artifactStore = new MemoryArtifactStore();
   const artifacts = defineRuntimeServicePackage({
-    name: "example.remote-artifacts",
     module,
     services: [{
         facet: "artifact-store",
         instance: "artifacts.remote",
         role: "artifact-store",
         implementation: {
-          locator: "example.remote-artifacts",
           digest: digestOf("example.remote-artifacts@1"),
         },
         configuration: { bucket: "fixture" },
@@ -745,17 +743,34 @@ test("project local runtime accepts an explicitly selected replacement ArtifactS
     assert.equal(blocked?.terminal, "failed");
     assert.match(blocked?.reason ?? "", /does not bind demanded capability/u);
     assert.deepEqual(await artifactStore.get(sourceArtifact.digest), bytes);
-    await assert.rejects(
-      runtime.build({
-        id: "tampered-source-artifact",
-        state: createGreetingBuild(),
-        attachments: [{
-          artifact: sourceArtifact,
-          open: async () => (async function* () { yield new Uint8Array([0]); })(),
-        }],
-      }),
-      /does not match its staged bytes/u,
-    );
+    let reopened = false;
+    await runtime.build({
+      id: "existing-source-artifact",
+      state: createGreetingBuild(),
+      attachments: [{
+        artifact: sourceArtifact,
+        open: async () => {
+          reopened = true;
+          throw new Error("existing content-addressed bytes must not be reopened");
+        },
+      }],
+    });
+    assert.equal(reopened, false);
+    const absentBytes = new Uint8Array([10, 11, 12]);
+    const absentArtifact = {
+      kind: "blob" as const,
+      digest: `sha256:${createHash("sha256").update(absentBytes).digest("hex")}` as const,
+      size: absentBytes.byteLength,
+      mediaType: "application/octet-stream",
+    };
+    await assert.rejects(runtime.build({
+      id: "tampered-source-artifact",
+      state: createGreetingBuild(),
+      attachments: [{
+        artifact: absentArtifact,
+        open: async () => (async function* () { yield new Uint8Array([0]); })(),
+      }],
+    }), /does not match its staged bytes/u);
     await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

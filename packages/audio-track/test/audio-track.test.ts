@@ -3,9 +3,9 @@ import test from "node:test";
 
 import {
   audioTrackManifest,
+  audioTrackMarkupSurfaces,
   audioTrackModuleRef,
   audioTrackProducers,
-  audioTrackSurfaceImplementationDigest,
   appendMomentAudioItem,
   appendProgramAudioItem,
   appendSelectionAudioItem,
@@ -42,16 +42,14 @@ import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validati
 import { visualIrManifest } from "@narratage/visual-ir";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 10,
   frameRate: { numerator: 30, denominator: 1 },
 });
-const header = sealAudioTrackHeader({ contract: "svml.audio-track-header@1", id: "sound" });
+const header = sealAudioTrackHeader({ id: "sound" });
 const zero = { unit: "frames" as const, value: 0 };
 
 function media(id: string, sampleFrames: number): SynchronizedMedia {
   return {
-    contract: "svml.synchronized-media@1",
     timeline: {
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: Math.max(1, Math.round(sampleFrames / 1_600)),
@@ -64,7 +62,7 @@ function media(id: string, sampleFrames: number): SynchronizedMedia {
 
 function spec(overrides: Partial<AudioClipSpec> = {}): AudioClipSpec {
   return sealAudioClipSpec({
-    contract: "svml.audio-clip-spec@1",
+
     id: "clip",
     projection: {
       start: { ref: "program.start" },
@@ -150,19 +148,18 @@ test("trim and fades quantize once into the same sample domain", () => {
 });
 
 const map: CompleteSemanticMap = {
-  contract: "svml.complete-semantic-map@1",
   tokens: [],
   anchors: [
-    { identity: "a", timeSec: 1, frame: 30 },
-    { identity: "b", timeSec: 2, frame: 60 },
-    { identity: "c", timeSec: 3, frame: 90 },
-    { identity: "d", timeSec: 4, frame: 120 },
+    { identity: "a", frame: 30 },
+    { identity: "b", frame: 60 },
+    { identity: "c", frame: 90 },
+    { identity: "d", frame: 120 },
   ],
 };
 
 test("Selection and Moment each expansion creates independent overlapping items", () => {
   const selection: NarrativeSelectionRef = {
-    contract: "svml.narrative-selection@1",
+
     id: "mentions",
     occurrences: [
       { occurrence: 0, startAnchorId: "a", endAnchorId: "b" },
@@ -170,7 +167,7 @@ test("Selection and Moment each expansion creates independent overlapping items"
     ],
   };
   const moment: NarrativeMomentRef = {
-    contract: "svml.narrative-moment@1",
+
     id: "hits",
     occurrences: [{ occurrence: 0, anchorId: "a" }, { occurrence: 1, anchorId: "c" }],
   };
@@ -196,7 +193,7 @@ test("one Track with overlaps and two peer Tracks compile to the same determinis
   const first = { ...programTrack(sourceA, spec({ id: "a" })), id: "first" };
   const second = { ...programTrack(sourceB, spec({ id: "b" })), id: "second" };
   const combined = {
-    contract: "svml.audio-track@1" as const,
+    kind: "audio" as const,
     id: "combined",
     clips: [
       { ...first.clips[0]!, id: "a" },
@@ -204,11 +201,11 @@ test("one Track with overlaps and two peer Tracks compile to the same determinis
     ],
   };
   const peerPlan = compileAudioProgramPlan(sealComposition({
-    contract: "svml.composition@1", id: "peer", canvas: { width: 1, height: 1, clearColor: "#000000" },
+    id: "peer", canvas: { width: 1, height: 1, clearColor: "#000000" },
     tracks: [first, second],
   }), space);
   const combinedPlan = compileAudioProgramPlan(sealComposition({
-    contract: "svml.composition@1", id: "combined", canvas: { width: 1, height: 1, clearColor: "#000000" },
+    id: "combined", canvas: { width: 1, height: 1, clearColor: "#000000" },
     tracks: [combined],
   }), space);
   assert.deepEqual(
@@ -225,7 +222,7 @@ test("dynamic Fragment keeps every material and temporal dependency as an explic
     { kind: "program", mediaName: "music", specName: "music-spec" },
     { kind: "selection", mediaName: "voice", specName: "voice-spec", mapName: "map", sourceName: "selection" },
     { kind: "moment", mediaName: "impact", specName: "impact-spec", mapName: "map", sourceName: "moment" },
-  ], "example.audio@1");
+  ]);
   assert.deepEqual(fragment.inputs.map((input) => input.name), [
     "header", "impact", "impact-spec", "map", "moment", "music", "music-spec", "selection", "space", "voice", "voice-spec",
   ]);
@@ -235,6 +232,11 @@ test("dynamic Fragment keeps every material and temporal dependency as an explic
 test("the self-described Audio Surface parses into the same finite Producer graph", async () => {
   const fixtureModule = { name: "example.audio-inputs", version: "1" } as const;
   const fixtureSurfaceDigest = digestOf("example.audio-inputs/surface@1");
+  const fixtureSurface = {
+    name: "inputs", tag: "Inputs", mode: "structured",
+    outputs: [mediaTypes.synchronized, programSpaceTypes.programSpace],
+    implementation: { digest: fixtureSurfaceDigest },
+  } as const;
   const fixtureManifest: ModuleManifest = {
     format: "svml.module@1",
     name: fixtureModule.name,
@@ -242,17 +244,6 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     dependencies: [mediaDependency, programSpaceDependency],
     types: [],
     capabilities: [],
-    surfaces: [{
-      name: "inputs",
-      tag: "Inputs",
-      mode: "structured",
-      outputs: [mediaTypes.synchronized, programSpaceTypes.programSpace],
-      implementation: {
-        kind: "trusted-frontend-surface",
-        locator: "example.audio-inputs/surface",
-        digest: fixtureSurfaceDigest,
-      },
-    }],
     producers: [],
   };
   const closure = createResolvedClosure([
@@ -271,20 +262,19 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     fixtureManifest,
   ]);
   const registry = new MarkupSurfaceRegistry();
-  registry.registerStructured(fixtureModule, "inputs", fixtureSurfaceDigest, ({ element }) => ({
+  registry.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
       { id: "source", type: mediaTypes.synchronized, value: { kind: "inline", value: media("surface", 48_000) }, range: element.range },
       { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
     ],
     components: [],
     fragments: [],
-  }));
-  registry.registerStructured(
-    audioTrackModuleRef,
-    "track",
-    audioTrackSurfaceImplementationDigest,
-    decodeAudioTrackSurface,
-  );
+  }) });
+  registry.registerStructured({
+    module: audioTrackModuleRef,
+    declaration: audioTrackMarkupSurfaces.find((item) => item.name === "track")!,
+    handler: decodeAudioTrackSurface,
+  });
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({
     registry,
@@ -313,8 +303,8 @@ test("the self-described Audio Surface parses into the same finite Producer grap
   });
   const trackExport = resolveCompiledSourceExport(compiled, "sound.track", compositionTypes.audioTrack);
   assert.equal(trackExport.ref.kind, "logical-output");
-  const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
-    graph: compiled.elaboration.graph.id,
+  const build = start(compiled.program, compiled.graph, sealBuildRequest({
+    graph: compiled.graph.id,
     targets: [{ output: trackExport.ref.kind === "logical-output" ? trackExport.ref.id : "" }],
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [

@@ -1,15 +1,15 @@
 export {
-  assertNodePackageContribution,
   collectNodePackageComponents,
-  installNodePackageComponents,
 } from "./contribution.js";
 export {
   createNodePackageLock,
+  createNodePackageInventory,
   loadNodePackageSet,
   loadNodePackageSelection,
-  loadNodePackageContributions,
   NodePackageLockStaleError,
+  NodePackageSelectionMissingError,
   readNodePackageLock,
+  selectNodePackageSpecifiers,
   writeNodePackageLock,
 } from "./lock.js";
 export type { NodePackageArtifactDifference } from "./lock.js";

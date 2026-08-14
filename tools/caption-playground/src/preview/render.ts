@@ -21,7 +21,6 @@ export function renderPreview(input: {
   readonly tracks: readonly Track[];
 }): PreviewOutput {
   const document = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1",
     id: input.id,
     canvas: input.canvas,
     tracks: input.tracks,

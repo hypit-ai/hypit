@@ -109,7 +109,7 @@ const areaFlow = (() => {
 })();
 
 export const textStyleSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.text-style@1" } },
+
   id: { schema: string }, stackingOrder: { schema: signedInteger },
   typography: { schema: visualTextTypographySchema },
   paints: { schema: { kind: "array", items: visualTextPaintSchema } },
@@ -124,7 +124,7 @@ export const textStyleSchema: ValueSchema = object({
 });
 
 export const textMotionSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.text-motion@1" } }, id: { schema: string },
+  id: { schema: string },
   item: { schema: visualAnimation, optional: true },
   sequences: { schema: { kind: "array", items: visualTextSequenceSchema } },
   pathMargin: { schema: object({ keyframes: { schema: { kind: "array", minItems: 2, items: object({
@@ -139,31 +139,31 @@ const geometry: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "path" } }, path: { schema: spatialPathSchema } }),
 ] };
 export const textPlacementSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.text-placement@1" } }, geometry: { schema: geometry },
+  geometry: { schema: geometry },
 });
 export const textItemSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.text-item-spec@1" } }, id: { schema: string },
+  id: { schema: string },
   document: { schema: visualTextDocumentSchema },
   projection: { schema: projection }, expansion: { schema: expansion },
 });
 export const plainTextItemSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.plain-text-item-spec@1" } }, id: { schema: string },
+  id: { schema: string },
   projection: { schema: projection }, expansion: { schema: expansion },
 });
 const span = object({ startFrame: { schema: integer }, endFrameExclusive: { schema: positiveInteger } });
 const item = object({
-  id: { schema: string }, sourceOccurrenceId: { schema: string }, span: { schema: span }, geometry: { schema: geometry },
+  id: { schema: string }, span: { schema: span }, geometry: { schema: geometry },
   document: { schema: visualTextDocumentSchema }, style: { schema: textStyleSchema }, motion: { schema: textMotionSchema },
   tieBreak: { schema: string },
 });
 export const typographyTrackProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.typography-track-program@1" } }, id: { schema: string },
+  id: { schema: string },
   items: { schema: { kind: "array", minItems: 1, items: item } },
 });
-const typographyTrackHeaderSchema = object({ contract: { schema: { kind: "literal", value: "svml.typography-track-header@1" } }, id: { schema: string } });
-const typographyTrackSetSchema = object({ contract: { schema: { kind: "literal", value: "svml.typography-track-set@1" } }, items: { schema: { kind: "array", items: item } } });
+const typographyTrackHeaderSchema = object({ id: { schema: string } });
+const typographyTrackSetSchema = object({ items: { schema: { kind: "array", items: item } } });
 const textMaskSpecSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.text-mask-spec@1" } },
+
   id: { schema: string }, mode: { schema: enumString(["alpha", "luminance"]) },
   materialFit: { schema: enumString(["contain", "cover", "fill"]) },
 });
@@ -175,7 +175,15 @@ export const typographyTrackSurfaceImplementationDigests = {
   mask: digestOf("@narratage/typography-track/owned-mask-surface@1"),
 } as const;
 
-const registered = (locator: string, digest: ReturnType<typeof digestOf>) => ({ kind: "registered" as const, locator, digest });
+const registered = (digest: ReturnType<typeof digestOf>) => ({ digest });
+
+export const typographyTrackMarkupSurfaces = [
+    { name: "style", tag: "Style", mode: "structured", outputs: [typographyTrackTypes.style], implementation: { digest: typographyTrackSurfaceImplementationDigests.style } },
+    { name: "motion", tag: "Motion", mode: "structured", outputs: [typographyTrackTypes.motion], implementation: { digest: typographyTrackSurfaceImplementationDigests.motion } },
+    { name: "track", tag: "Track", mode: "structured", outputs: [typographyTrackTypes.header, typographyTrackTypes.itemSpec, typographyTrackTypes.plainItemSpec, typographyTrackTypes.motion, typographyTrackTypes.set, typographyTrackTypes.placement, typographyTrackTypes.program, compositionTypes.visualTrack], implementation: { digest: typographyTrackSurfaceImplementationDigests.track } },
+    { name: "mask", tag: "Mask", mode: "structured", outputs: [typographyTrackTypes.maskSpec, compositionTypes.visualTrack], implementation: { digest: typographyTrackSurfaceImplementationDigests.mask } },
+  ] as const;
+
 
 export const typographyTrackManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -194,24 +202,18 @@ export const typographyTrackManifest: ModuleManifest = {
     { name: typographyTrackTypes.maskSpec.name, schema: textMaskSpecSchema },
   ],
   capabilities: [],
-  surfaces: [
-    { name: "style", tag: "Style", mode: "structured", outputs: [typographyTrackTypes.style], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/typography-track/style-surface", digest: typographyTrackSurfaceImplementationDigests.style } },
-    { name: "motion", tag: "Motion", mode: "structured", outputs: [typographyTrackTypes.motion], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/typography-track/motion-surface", digest: typographyTrackSurfaceImplementationDigests.motion } },
-    { name: "track", tag: "Track", mode: "structured", outputs: [typographyTrackTypes.header, typographyTrackTypes.itemSpec, typographyTrackTypes.plainItemSpec, typographyTrackTypes.motion, typographyTrackTypes.set, typographyTrackTypes.placement, typographyTrackTypes.program, compositionTypes.visualTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/typography-track/complete-track-surface", digest: typographyTrackSurfaceImplementationDigests.track } },
-    { name: "mask", tag: "Mask", mode: "structured", outputs: [typographyTrackTypes.maskSpec, compositionTypes.visualTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/typography-track/owned-mask-surface", digest: typographyTrackSurfaceImplementationDigests.mask } },
-  ],
   producers: [
-    { name: typographyTrackProducers.materializePlainItem.name, inputs: [{ name: "spec", type: typographyTrackTypes.plainItemSpec }, { name: "content", type: textTypes.text }], outputs: [{ name: "spec", type: typographyTrackTypes.itemSpec }], needs: [], implementation: registered("@narratage/typography-track/materialize-plain-text-item", materializePlainTextItemImplementationDigest) },
-    { name: typographyTrackProducers.bindPoint.name, inputs: [{ name: "point", type: spatialTypes.point }], outputs: [{ name: "placement", type: typographyTrackTypes.placement }], needs: [], implementation: registered("@narratage/typography-track/bind-point-placement", bindPointTextPlacementImplementationDigest) },
-    { name: typographyTrackProducers.bindArea.name, inputs: [{ name: "frame", type: spatialTypes.frame }], outputs: [{ name: "placement", type: typographyTrackTypes.placement }], needs: [], implementation: registered("@narratage/typography-track/bind-area-placement", bindAreaTextPlacementImplementationDigest) },
-    { name: typographyTrackProducers.bindPath.name, inputs: [{ name: "path", type: spatialTypes.path }], outputs: [{ name: "placement", type: typographyTrackTypes.placement }], needs: [], implementation: registered("@narratage/typography-track/bind-path-placement", bindPathTextPlacementImplementationDigest) },
-    { name: typographyTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [], implementation: registered("@narratage/typography-track/create-set", createTypographyTrackSetImplementationDigest) },
-    { name: typographyTrackProducers.appendProgram.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "space", type: programSpaceTypes.programSpace }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [], implementation: registered("@narratage/typography-track/append-program", appendProgramTextItemImplementationDigest) },
-    { name: typographyTrackProducers.appendSelection.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }, { name: "space", type: programSpaceTypes.programSpace }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [], implementation: registered("@narratage/typography-track/append-selection", appendSelectionTextItemImplementationDigest) },
-    { name: typographyTrackProducers.appendMoment.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }, { name: "space", type: programSpaceTypes.programSpace }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [], implementation: registered("@narratage/typography-track/append-moment", appendMomentTextItemImplementationDigest) },
-    { name: typographyTrackProducers.finalize.name, inputs: [{ name: "header", type: typographyTrackTypes.header }, { name: "set", type: typographyTrackTypes.set }], outputs: [{ name: "program", type: typographyTrackTypes.program }], needs: [], implementation: registered("@narratage/typography-track/finalize", finalizeTypographyTrackImplementationDigest) },
-    { name: typographyTrackProducers.render.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: typographyTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [], implementation: registered("@narratage/typography-track/render", renderTypographyTrackImplementationDigest) },
-    { name: typographyTrackProducers.renderMask.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: typographyTrackTypes.program }, { name: "material", type: mediaTypes.compositableSurface }, { name: "spec", type: typographyTrackTypes.maskSpec }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [], implementation: registered("@narratage/typography-track/render-mask", renderTextMaskTrackImplementationDigest) },
+    { name: typographyTrackProducers.materializePlainItem.name, inputs: [{ name: "spec", type: typographyTrackTypes.plainItemSpec }, { name: "content", type: textTypes.text }], outputs: [{ name: "spec", type: typographyTrackTypes.itemSpec }], needs: [], implementation: registered(materializePlainTextItemImplementationDigest) },
+    { name: typographyTrackProducers.bindPoint.name, inputs: [{ name: "point", type: spatialTypes.point }], outputs: [{ name: "placement", type: typographyTrackTypes.placement }], needs: [], implementation: registered(bindPointTextPlacementImplementationDigest) },
+    { name: typographyTrackProducers.bindArea.name, inputs: [{ name: "frame", type: spatialTypes.frame }], outputs: [{ name: "placement", type: typographyTrackTypes.placement }], needs: [], implementation: registered(bindAreaTextPlacementImplementationDigest) },
+    { name: typographyTrackProducers.bindPath.name, inputs: [{ name: "path", type: spatialTypes.path }], outputs: [{ name: "placement", type: typographyTrackTypes.placement }], needs: [], implementation: registered(bindPathTextPlacementImplementationDigest) },
+    { name: typographyTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [], implementation: registered(createTypographyTrackSetImplementationDigest) },
+    { name: typographyTrackProducers.appendProgram.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "space", type: programSpaceTypes.programSpace }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [], implementation: registered(appendProgramTextItemImplementationDigest) },
+    { name: typographyTrackProducers.appendSelection.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }, { name: "space", type: programSpaceTypes.programSpace }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [], implementation: registered(appendSelectionTextItemImplementationDigest) },
+    { name: typographyTrackProducers.appendMoment.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }, { name: "space", type: programSpaceTypes.programSpace }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [], implementation: registered(appendMomentTextItemImplementationDigest) },
+    { name: typographyTrackProducers.finalize.name, inputs: [{ name: "header", type: typographyTrackTypes.header }, { name: "set", type: typographyTrackTypes.set }], outputs: [{ name: "program", type: typographyTrackTypes.program }], needs: [], implementation: registered(finalizeTypographyTrackImplementationDigest) },
+    { name: typographyTrackProducers.render.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: typographyTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [], implementation: registered(renderTypographyTrackImplementationDigest) },
+    { name: typographyTrackProducers.renderMask.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: typographyTrackTypes.program }, { name: "material", type: mediaTypes.compositableSurface }, { name: "spec", type: typographyTrackTypes.maskSpec }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [], implementation: registered(renderTextMaskTrackImplementationDigest) },
   ],
 };
 

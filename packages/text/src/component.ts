@@ -23,7 +23,6 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const textComponent = {
-  name: "@narratage/text",
   validators: [
     { type: textTypes.text, implementationDigest: textImplementationDigests.validateText,
       handler: ({ value }) => verifyText(inline(value, "Text")) },

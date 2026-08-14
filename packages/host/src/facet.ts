@@ -8,6 +8,9 @@ import type { CanonicalValue } from "@narratage/protocol";
  */
 export type HostFacet = {
   readonly abi: string;
-  readonly identity: CanonicalValue;
+  /** Logical names this exact facet offers through its opaque Host ABI. */
+  readonly offers?: readonly string[];
+  /** ABI-owned inert declaration, present only when the ABI has facts beyond its offers. */
+  readonly identity?: CanonicalValue;
   readonly implementation: unknown;
 };

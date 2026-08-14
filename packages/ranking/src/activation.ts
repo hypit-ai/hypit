@@ -11,34 +11,30 @@ import {
   decodeTypewriterListSurface,
   rankingComponent,
   rankingManifest,
+  rankingMarkupSurfaces,
   rankingModuleRef,
-  rankingSurfaceImplementationDigests,
 } from "./index.js";
 
 const facets = [
-  ["tier-style", rankingSurfaceImplementationDigests.tierStyle, decodeTierBoardStyleSurface],
-  ["column-style", rankingSurfaceImplementationDigests.columnStyle, decodeColumnStyleSurface],
-  ["top-three-style", rankingSurfaceImplementationDigests.topThreeStyle, decodeTopThreeStyleSurface],
-  ["typewriter-style", rankingSurfaceImplementationDigests.typewriterStyle, decodeTypewriterListStyleSurface],
-  ["tier", rankingSurfaceImplementationDigests.tier, decodeTierBoardSurface],
-  ["column", rankingSurfaceImplementationDigests.column, decodeColumnSurface],
-  ["top-three", rankingSurfaceImplementationDigests.topThree, decodeTopThreeSurface],
-  ["typewriter", rankingSurfaceImplementationDigests.typewriter, decodeTypewriterListSurface],
+  ["tier-style", decodeTierBoardStyleSurface],
+  ["column-style", decodeColumnStyleSurface],
+  ["top-three-style", decodeTopThreeStyleSurface],
+  ["typewriter-style", decodeTypewriterListStyleSurface],
+  ["tier", decodeTierBoardSurface],
+  ["column", decodeColumnSurface],
+  ["top-three", decodeTopThreeSurface],
+  ["typewriter", decodeTypewriterListSurface],
 ] as const;
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/ranking",
   modules: [{
     manifest: rankingManifest,
-    specifiers: [rankingModuleRef.name, `${rankingModuleRef.name}@1`],
   }],
   components: [rankingComponent],
-  hostFacets: facets.map(([surface, implementationDigest, handler]) => createMarkupSurfaceHostFacet({
+  hostFacets: facets.map(([surface, handler]) => createMarkupSurfaceHostFacet({
     module: rankingModuleRef,
-    surface,
-    mode: "structured",
-    implementationDigest,
+    declaration: rankingMarkupSurfaces.find((item) => item.name === surface)!,
     handler,
   })),
 };

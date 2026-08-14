@@ -2,7 +2,7 @@
 export { speechSpineComponent } from "./component.js";
 export { createSpeechSpineFragment } from "./fragment.js";
 export {
-  speechSpineManifest,
+  speechSpineManifest, speechSpineMarkupSurfaces,
   speechSpineManifestDigest,
   speechSpineModuleRef,
   speechSpineProducers,

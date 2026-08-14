@@ -16,9 +16,9 @@ import type { AuthorSourceUnit } from "@narratage/elaborator";
 import {
   decodeFilmSurface,
   filmManifest,
+  filmMarkupSurfaces,
   filmModuleRef,
   filmProducers,
-  filmSurfaceImplementationDigest,
   filmTypes,
 } from "@narratage/film";
 import type { ModuleManifest } from "@narratage/protocol";
@@ -26,8 +26,8 @@ import { svsFrontend, svsManifest } from "@narratage/svs";
 import {
   decodeCanvasSurface,
   spatialManifest,
+  spatialMarkupSurfaces,
   spatialModuleRef,
-  spatialSurfaceDigests,
 } from "@narratage/spatial";
 import {
   MarkupSurfaceRegistry,
@@ -37,6 +37,11 @@ import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validati
 
 const fixtureModule = { name: "example.film-fixture", version: "1" } as const;
 const fixtureSurfaceDigest = digestOf("example.film-fixture/inputs-surface@1");
+const fixtureSurface = {
+  name: "inputs", tag: "Inputs", mode: "structured",
+  outputs: [programSpaceTypes.programSpace, compositionTypes.visualTrack, compositionTypes.audioTrack],
+  implementation: { digest: fixtureSurfaceDigest },
+} as const;
 const fixtureManifest: ModuleManifest = {
   format: "svml.module@1",
   name: fixtureModule.name,
@@ -47,33 +52,19 @@ const fixtureManifest: ModuleManifest = {
   ],
   types: [],
   capabilities: [],
-  surfaces: [{
-    name: "inputs",
-    tag: "Inputs",
-    mode: "structured",
-    outputs: [programSpaceTypes.programSpace, compositionTypes.visualTrack, compositionTypes.audioTrack],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "example.film-fixture/inputs-surface",
-      digest: fixtureSurfaceDigest,
-    },
-  }],
   producers: [],
 };
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const visual = sealVisualTrack({
-  contract: "svml.visual-track@1",
   visualIr: "svml.visual-ir@1",
   id: "visual",
   presents: [],
 });
 const audio = sealAudioTrack({
-  contract: "svml.audio-track@1",
   id: "audio",
   clips: [],
 });
@@ -109,7 +100,7 @@ const validStyles = `<sheet version="1">
 
 async function compileFilm(options: { readonly reverse?: boolean; readonly styles?: string } = {}) {
   const surfaces = new MarkupSurfaceRegistry();
-  surfaces.registerStructured(fixtureModule, "inputs", fixtureSurfaceDigest, ({ element }) => ({
+  surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
       { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
       { id: "visual", type: compositionTypes.visualTrack, value: { kind: "inline", value: visual }, range: element.range },
@@ -117,19 +108,17 @@ async function compileFilm(options: { readonly reverse?: boolean; readonly style
     ],
     components: [],
     fragments: [],
-  }));
-  surfaces.registerStructured(
-    filmModuleRef,
-    "film",
-    filmSurfaceImplementationDigest,
-    decodeFilmSurface,
-  );
-  surfaces.registerStructured(
-    spatialModuleRef,
-    "canvas",
-    spatialSurfaceDigests.canvas,
-    decodeCanvasSurface,
-  );
+  }) });
+  surfaces.registerStructured({
+    module: filmModuleRef,
+    declaration: filmMarkupSurfaces.find((item) => item.name === "film")!,
+    handler: decodeFilmSurface,
+  });
+  surfaces.registerStructured({
+    module: spatialModuleRef,
+    declaration: spatialMarkupSurfaces.find((item) => item.name === "canvas")!,
+    handler: decodeCanvasSurface,
+  });
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
@@ -165,16 +154,16 @@ async function compileFilm(options: { readonly reverse?: boolean; readonly style
 
 test("the official Film Surface validates SVS and lowers dynamic peer Tracks", async () => {
   const compiled = await compileFilm();
-  const program = compiled.module.records.find((record) => record.type.name === filmTypes.program.name);
+  const program = compiled.program.records.find((record) => record.type.name === filmTypes.program.name);
   assert.deepEqual(program?.value.kind === "inline" ? program.value.value : undefined, {
-    contract: "svml.film-program@1",
+
     id: "main",
     clearColor: "#09090B",
   });
   const target = resolveCompiledSourceExport(compiled, "main.composition", compositionTypes.composition);
   assert.equal(target.ref.kind, "logical-output");
-  const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
-    graph: compiled.elaboration.graph.id,
+  const build = start(compiled.program, compiled.graph, sealBuildRequest({
+    graph: compiled.graph.id,
     targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [
@@ -188,7 +177,7 @@ test("the official Film Surface validates SVS and lowers dynamic peer Tracks", a
 test("Film child order remains organizational, not graph meaning", async () => {
   const normal = await compileFilm();
   const reversed = await compileFilm({ reverse: true });
-  assert.equal(normal.elaboration.graph.id, reversed.elaboration.graph.id);
+  assert.equal(normal.graph.id, reversed.graph.id);
 });
 
 test("Film rejects an invalid package-owned Recipe during check", async () => {

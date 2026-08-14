@@ -1,4 +1,4 @@
-import type { AudioTrack, FrameSpan, VisualTrack } from "@narratage/composition";
+import type { FrameSpan } from "@narratage/composition";
 import type { CompositableSurfaceRef, MediaRational } from "@narratage/media";
 import type { BlobRef } from "@narratage/protocol";
 import type {
@@ -110,14 +110,12 @@ export type MediaSampleLayerProgram = {
 export type MediaLayerProgram = MediaPaintLayerProgram | MediaSampleLayerProgram;
 
 export type MediaPaintLayerSpec = {
-  readonly contract: "svml.media-paint-layer-spec@1";
   readonly id: string;
   readonly paint: MediaPaint;
   readonly opacity: number;
 };
 
 export type MediaSampleLayerSpec = {
-  readonly contract: "svml.media-sample-layer-spec@1";
   readonly id: string;
   readonly trim?: MediaVisualTrim;
   readonly occupancy?: MediaVisualOccupancy;
@@ -126,7 +124,6 @@ export type MediaSampleLayerSpec = {
 };
 
 export type MediaLayerSet = {
-  readonly contract: "svml.media-layer-set@1";
   readonly layers: readonly MediaLayerProgram[];
 };
 
@@ -200,18 +197,16 @@ export type MediaSoundTrigger =
   | { readonly kind: "handoff"; readonly handoffId: string };
 
 export type MediaSoundSpec = {
-  readonly contract: "svml.media-sound-spec@1";
   readonly id: string;
   readonly trigger: MediaSoundTrigger;
   readonly gain: number;
 };
 
-export type MediaSoundEvent = Omit<MediaSoundSpec, "contract"> & {
+export type MediaSoundEvent = MediaSoundSpec & {
   readonly source: MediaSoundSource;
 };
 
 export type MediaSoundSet = {
-  readonly contract: "svml.media-sound-set@1";
   readonly sounds: readonly MediaSoundEvent[];
 };
 
@@ -221,7 +216,6 @@ export type MediaAbsoluteStacking = {
 };
 
 export type MediaItemSpec = {
-  readonly contract: "svml.media-item-spec@1";
   readonly id: string;
   readonly projection: TemporalWindowProjection;
   readonly expansion: OccurrenceExpansion;
@@ -233,7 +227,6 @@ export type MediaItemSpec = {
 
 export type MediaItemProgram = {
   readonly id: string;
-  readonly sourceOccurrenceId: string;
   readonly span: FrameSpan;
   readonly frame: SpatialFrame;
   readonly presentation: MediaFramePresentation;
@@ -268,13 +261,11 @@ export type MediaSequenceMemberProgram = {
 };
 
 export type MediaSequenceMemberSpec = {
-  readonly contract: "svml.media-sequence-member-spec@1";
   readonly id: string;
   readonly sourceAudio?: MediaSourceAudioProjection;
 };
 
 export type MediaSequenceMemberSet = {
-  readonly contract: "svml.media-sequence-member-set@1";
   readonly members: readonly {
     readonly id: string;
     readonly activationFrame: number;
@@ -284,11 +275,9 @@ export type MediaSequenceMemberSet = {
 };
 
 export type MediaHandoffSpec = Omit<MediaHandoffProgram, "span"> & {
-  readonly contract: "svml.media-handoff-spec@1";
 };
 
 export type MediaSequenceSpec = {
-  readonly contract: "svml.media-sequence-spec@1";
   readonly id: string;
   readonly presentation: MediaFramePresentation;
   readonly motion: MediaLifecycleMotion;
@@ -310,29 +299,16 @@ export type MediaSequenceProgram = {
 };
 
 export type MediaTrackProgram = {
-  readonly contract: "svml.media-track-program@1";
   readonly id: string;
   readonly items: readonly MediaItemProgram[];
   readonly sequences: readonly MediaSequenceProgram[];
 };
 
 export type MediaTrackHeader = {
-  readonly contract: "svml.media-track-header@1";
   readonly id: string;
 };
 
 export type MediaTrackSet = {
-  readonly contract: "svml.media-track-set@1";
   readonly items: readonly MediaItemProgram[];
   readonly sequences: readonly MediaSequenceProgram[];
-};
-
-export type MediaVisualProjection = {
-  readonly contract: "svml.media-visual-projection@1";
-  readonly track: VisualTrack;
-};
-
-export type MediaAudioProjection = {
-  readonly contract: "svml.media-audio-projection@1";
-  readonly track: AudioTrack;
 };

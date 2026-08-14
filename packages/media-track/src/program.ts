@@ -146,7 +146,6 @@ function assertSound(value: MediaSoundSource, label: string): void {
 }
 
 export function assertMediaItemSpec(value: MediaItemSpec): void {
-  assert(value.contract === "svml.media-item-spec@1", "Unsupported MediaItemSpec contract.");
   assertMediaIdentity(value.id, "MediaItemSpec.id");
   assertPoint(value.projection.start, "MediaItemSpec.projection.start");
   assertPoint(value.projection.end, "MediaItemSpec.projection.end");
@@ -171,16 +170,15 @@ export function sealMediaTrackHeader(value: MediaTrackHeader): MediaTrackHeader 
 }
 
 export function assertMediaTrackHeader(value: MediaTrackHeader): void {
-  assert(value.contract === "svml.media-track-header@1", "Unsupported MediaTrackHeader contract.");
   assertMediaIdentity(value.id, "MediaTrackHeader.id");
 }
 
 export function createMediaTrackSet(): MediaTrackSet {
-  return { contract: "svml.media-track-set@1", items: [], sequences: [] };
+  return { items: [], sequences: [] };
 }
 
 export function assertMediaTrackSet(value: MediaTrackSet): void {
-  assert(value.contract === "svml.media-track-set@1" && Array.isArray(value.items)
+  assert(Array.isArray(value.items)
     && Array.isArray(value.sequences), "MediaTrackSet is invalid.");
 }
 
@@ -220,7 +218,6 @@ function realizedItems(
     const motion = resolveMediaLifecycleMotion(spec.motion, frame, canvas);
     return {
       id: occurrence.id,
-      sourceOccurrenceId: occurrence.sourceOccurrenceId,
       span: { ...occurrence.span },
       frame: { ...frame },
       presentation: structuredClone(spec.presentation),
@@ -325,7 +322,6 @@ function assertSampleLayerForSpace(layer: MediaSampleLayerProgram, space: Progra
 
 function assertItem(item: MediaItemProgram, space: ProgramSpace, label: string): void {
   assertMediaIdentity(item.id, `${label}.id`);
-  assert(item.sourceOccurrenceId.length > 0, `${label}.sourceOccurrenceId is empty.`);
   assert(Number.isSafeInteger(item.span.startFrame) && Number.isSafeInteger(item.span.endFrameExclusive)
     && item.span.startFrame >= 0 && item.span.endFrameExclusive > item.span.startFrame
     && item.span.endFrameExclusive <= programSpaceFrameCount(space), `${label}.span is invalid.`);
@@ -336,7 +332,7 @@ function assertItem(item: MediaItemProgram, space: ProgramSpace, label: string):
     `${label}.motion contains an unresolved Canvas origin.`);
   assert(Number.isSafeInteger(item.stacking.order) && item.stacking.tieBreak.length > 0, `${label}.stacking is invalid.`);
   assert(item.layers.length > 0, `${label} requires layers.`);
-  const layerSet: MediaLayerSet = { contract: "svml.media-layer-set@1", layers: item.layers };
+  const layerSet: MediaLayerSet = { layers: item.layers };
   assertMediaLayerSet(layerSet);
   for (const layer of item.layers) if (layer.kind === "sample") assertSampleLayerForSpace(layer, space, `${label}.${layer.id}`);
   if (item.sourceAudio !== undefined) {
@@ -344,7 +340,7 @@ function assertItem(item: MediaItemProgram, space: ProgramSpace, label: string):
     assert(selected?.kind === "sample" && selected.source.kind === "timed" && selected.source.audio !== undefined,
       `${label}.sourceAudio is invalid.`);
   }
-  assertMediaSoundSet({ contract: "svml.media-sound-set@1", sounds: item.sounds });
+  assertMediaSoundSet({ sounds: item.sounds });
   assert(!item.sounds.some((sound) => sound.trigger.kind === "handoff"), `${label} owns a Handoff sound.`);
 }
 
@@ -449,7 +445,7 @@ function assertSequence(sequence: MediaSequenceProgram, space: ProgramSpace, lab
     assert(member.visualSpan.startFrame <= member.logicalSpan.startFrame
       && member.visualSpan.endFrameExclusive >= member.logicalSpan.endFrameExclusive,
     `${label}.members.${index}.visualSpan does not contain its logical phase.`);
-    const layerSet: MediaLayerSet = { contract: "svml.media-layer-set@1", layers: member.layers };
+    const layerSet: MediaLayerSet = { layers: member.layers };
     assertMediaLayerSet(layerSet);
     for (const layer of member.layers) if (layer.kind === "sample") {
       assertSampleLayerForSpace(layer, space, `${label}.members.${index}.${layer.id}`);
@@ -461,14 +457,14 @@ function assertSequence(sequence: MediaSequenceProgram, space: ProgramSpace, lab
     }
   }
   for (const [index, handoff] of sequence.handoffs.entries()) {
-    assertMediaHandoffSpec({ ...handoff, contract: "svml.media-handoff-spec@1" });
+    assertMediaHandoffSpec(handoff);
     assert(handoff.fromMemberId === sequence.members[index]!.id
       && handoff.toMemberId === sequence.members[index + 1]!.id
       && handoff.span.startFrame <= sequence.members[index]!.logicalSpan.endFrameExclusive
       && handoff.span.endFrameExclusive >= sequence.members[index + 1]!.logicalSpan.startFrame,
     `${label}.handoffs.${index} is disconnected.`);
   }
-  assertMediaSoundSet({ contract: "svml.media-sound-set@1", sounds: sequence.sounds });
+  assertMediaSoundSet({ sounds: sequence.sounds });
   for (const sound of sequence.sounds) {
     if (sound.trigger.kind === "handoff") {
       const { handoffId } = sound.trigger;
@@ -480,7 +476,7 @@ function assertSequence(sequence: MediaSequenceProgram, space: ProgramSpace, lab
 
 function normalizeProgram(value: MediaTrackProgram): MediaTrackProgram {
   return {
-    contract: "svml.media-track-program@1",
+
     id: value.id,
     items: [...value.items].map((item) => structuredClone(item)).sort((left, right) => left.id.localeCompare(right.id)),
     sequences: [...value.sequences].map((item) => structuredClone(item)).sort((left, right) => left.id.localeCompare(right.id)),
@@ -498,7 +494,7 @@ export function finalizeMediaTrack(set: MediaTrackSet, header: MediaTrackHeader,
   assertMediaTrackHeader(header);
   assert(set.items.length + set.sequences.length > 0, "Media Track requires at least one Item or Sequence.");
   return sealMediaTrackProgram({
-    contract: "svml.media-track-program@1",
+
     id: header.id,
     items: set.items,
     sequences: set.sequences,
@@ -506,7 +502,6 @@ export function finalizeMediaTrack(set: MediaTrackSet, header: MediaTrackHeader,
 }
 
 export function assertMediaTrackProgram(value: MediaTrackProgram): void {
-  assert(value.contract === "svml.media-track-program@1", "Unsupported MediaTrackProgram contract.");
   assertMediaIdentity(value.id, "MediaTrackProgram.id");
   assert(Array.isArray(value.items) && Array.isArray(value.sequences)
     && value.items.length + value.sequences.length > 0, "MediaTrackProgram is empty.");
@@ -531,7 +526,6 @@ export function assertMediaTrackProgramIdentity(value: MediaTrackProgram, space:
 export function projectMediaVisualTrack(space: ProgramSpace, program: MediaTrackProgram): VisualTrack {
   assertMediaTrackProgramIdentity(program, space);
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: program.id,
     presents: [
@@ -720,7 +714,7 @@ export function projectMediaAudioTrack(space: ProgramSpace, program: MediaTrackP
     return [...(source === undefined ? [] : [source]), ...edgeSoundClips(item, space)];
   }).concat(program.sequences.flatMap((sequence) => sequenceAudioClips(sequence, space)));
   assert(clips.length > 0, `Media Program ${program.id} has no explicitly authored audio projection.`);
-  const track = sealAudioTrack({ contract: "svml.audio-track@1", id: `${program.id}:audio`, clips });
+  const track = sealAudioTrack({ id: `${program.id}:audio`, clips });
   assertAudioTrackIdentity(track, space);
   return track;
 }

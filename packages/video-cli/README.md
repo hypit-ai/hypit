@@ -38,9 +38,9 @@ to contain Narratage's `package.json`.
 explicit asset bytes without widening Source imports. `--package-root` is only the Host
 override used to resolve the installed packages named by a lock; by default this Distribution uses
 its own installation location. Keeping the two concepts separate lets a video project live outside
-this checkout without weakening canonical-path source and asset containment. A JSON Runtime Profile
+this checkout without weakening canonical-path source and asset containment. The official JSON Runtime Profile
 has the same optional `packageRoot` override while retaining state and Artifacts under its own
-`root`.
+`root`; the generic CLI does not infer that syntax from its suffix.
 
 `check` is usable for an Author Source or a complete Run Source. `plan` and `build` require a Run
 Source because an Author Graph without execution intent is not a Build. The live example executes
@@ -89,7 +89,8 @@ or copies the prior Build's outstanding Commands.
 
 `@narratage/package-loader-node` supports explicitly trusted installed implementation packages. It
 verifies the complete physical dependency closure before executing an activation entry, then checks
-exact Module, Author/Run Frontend, Host-facet, Producer and Validator identities. The Loader does not
+exact Module, Host-facet, Producer and Validator identities. Frontends are ordinary
+`svml.source-frontend@1` Host facets, so the Loader does not
 select a syntax; each Source Header selects among Frontends trusted by this Distribution and its
 locked packages. Run Fragment libraries enter only through the `svml.run-fragment-host@1` facet.
 `plan` and `build` bind the lock digest into `BuildRequest.implementationClosure`. Source cannot

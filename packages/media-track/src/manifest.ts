@@ -111,11 +111,11 @@ const samplingKeyframe = object({
 });
 const samplingMotion = object({ keyframes: { schema: { kind: "array", minItems: 2, items: samplingKeyframe } } });
 export const mediaPaintLayerSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-paint-layer-spec@1" } },
+
   id: { schema: string }, paint: { schema: paint }, opacity: { schema: unsigned },
 });
 export const mediaSampleLayerSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-sample-layer-spec@1" } },
+
   id: { schema: string }, trim: { schema: trim, optional: true }, occupancy: { schema: occupancy, optional: true },
   appearance: { schema: appearance }, samplingMotion: { schema: samplingMotion, optional: true },
 });
@@ -136,7 +136,7 @@ const sampleLayer = object({
 });
 const layer = { kind: "oneOf", variants: [paintLayer, sampleLayer] } as const;
 export const mediaLayerSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-layer-set@1" } },
+
   layers: { schema: { kind: "array", items: layer } },
 });
 
@@ -191,23 +191,23 @@ const soundTrigger: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "handoff" } }, handoffId: { schema: string } }),
 ] };
 export const mediaSoundSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-sound-spec@1" } },
+
   id: { schema: string }, trigger: { schema: soundTrigger }, gain: { schema: unsigned },
 });
 const soundEvent = object({ id: { schema: string }, trigger: { schema: soundTrigger }, source: { schema: audioSource }, gain: { schema: unsigned } });
 export const mediaSoundSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-sound-set@1" } },
+
   sounds: { schema: { kind: "array", items: soundEvent } },
 });
 export const mediaItemSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-item-spec@1" } }, id: { schema: string },
+  id: { schema: string },
   projection: { schema: projection }, expansion: { schema: object({ kind: { schema: { kind: "string", enum: ["one", "each"] } } }) },
   presentation: { schema: mediaFramePresentationSchema }, motion: { schema: mediaLifecycleMotionSchema }, stackingOrder: { schema: integer },
   sourceAudio: { schema: object({ fromLayer: { schema: string }, gain: { schema: unsigned } }), optional: true },
 });
 const sourceAudio = object({ fromLayer: { schema: string }, gain: { schema: unsigned } });
 export const mediaSequenceMemberSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-sequence-member-spec@1" } },
+
   id: { schema: string },
   sourceAudio: { schema: sourceAudio, optional: true },
 });
@@ -217,7 +217,7 @@ const unresolvedMember = object({
   sourceAudio: { schema: sourceAudio, optional: true },
 });
 export const mediaSequenceMemberSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-sequence-member-set@1" } },
+
   members: { schema: { kind: "array", items: unresolvedMember } },
 });
 const direction = { kind: "string", enum: ["left", "right", "up", "down"] } as const;
@@ -228,17 +228,17 @@ const handoffFields = {
   direction: { schema: direction, optional: true }, audio: { schema: { kind: "string", enum: ["cut", "crossfade"] } },
 } as const;
 export const mediaHandoffSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-handoff-spec@1" } }, ...handoffFields,
+  ...handoffFields,
 });
 export const mediaSequenceSpecSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-sequence-spec@1" } },
+
   id: { schema: string }, presentation: { schema: mediaFramePresentationSchema },
   motion: { schema: mediaLifecycleMotionSchema }, stackingOrder: { schema: integer },
   handoffs: { schema: { kind: "array", minItems: 1, items: mediaHandoffSpecSchema } },
 });
 const frameSpan = object({ startFrame: { schema: unsignedInteger }, endFrameExclusive: { schema: positiveInteger } });
 const resolvedItem = object({
-  id: { schema: string }, sourceOccurrenceId: { schema: string }, span: { schema: frameSpan }, frame: { schema: spatialFrameSchema },
+  id: { schema: string }, span: { schema: frameSpan }, frame: { schema: spatialFrameSchema },
   presentation: { schema: mediaFramePresentationSchema }, layers: { schema: { kind: "array", minItems: 1, items: layer } }, motion: { schema: mediaLifecycleMotionSchema },
   stacking: { schema: object({ order: { schema: integer }, tieBreak: { schema: string } }) },
   sourceAudio: { schema: object({ fromLayer: { schema: string }, gain: { schema: unsigned } }), optional: true },
@@ -259,20 +259,19 @@ const resolvedSequence = object({
   sounds: { schema: { kind: "array", items: soundEvent } },
 });
 export const mediaTrackSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-track-set@1" } }, items: { schema: { kind: "array", items: resolvedItem } },
+  items: { schema: { kind: "array", items: resolvedItem } },
   sequences: { schema: { kind: "array", items: resolvedSequence } },
 });
 export const mediaTrackProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-track-program@1" } }, id: { schema: string },
+  id: { schema: string },
   items: { schema: { kind: "array", items: resolvedItem } }, sequences: { schema: { kind: "array", items: resolvedSequence } },
 });
 export const mediaTrackHeaderSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.media-track-header@1" } }, id: { schema: string },
+  id: { schema: string },
 });
 
-const validator = (locator: string, digest: ReturnType<typeof digestOf>) => ({
-  abi: "svml.type-validator@1" as const,
-  implementation: { kind: "registered" as const, locator, digest },
+const validator = (digest: ReturnType<typeof digestOf>) => ({
+  implementation: { digest },
 });
 const itemInputs = [
   { name: "set", type: mediaTrackTypes.set }, { name: "header", type: mediaTrackTypes.header },
@@ -292,6 +291,17 @@ const sequenceInputs = [
   { name: "frame", type: spatialTypes.frame }, { name: "spec", type: mediaTrackTypes.sequenceSpec },
   { name: "sounds", type: mediaTrackTypes.soundSet },
 ] as const;
+
+export const mediaTrackMarkupSurfaces = [{
+    name: "track", tag: "Track", mode: "structured",
+    outputs: [spatialTypes.fit, mediaTrackTypes.header, mediaTrackTypes.paintLayerSpec, mediaTrackTypes.sampleLayerSpec,
+      mediaTrackTypes.layerSet, mediaTrackTypes.soundSpec, mediaTrackTypes.soundSet,
+      mediaTrackTypes.itemSpec, mediaTrackTypes.memberSpec, mediaTrackTypes.memberSet,
+      mediaTrackTypes.handoffSpec, mediaTrackTypes.sequenceSpec, mediaTrackTypes.set, mediaTrackTypes.program,
+      compositionTypes.visualTrack, compositionTypes.audioTrack],
+    implementation: { digest: mediaTrackSurfaceImplementationDigest },
+  }] as const;
+
 
 export const mediaTrackManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -321,44 +331,35 @@ export const mediaTrackManifest: ModuleManifest = {
     { name: mediaTrackTypes.handoffSpec.name, schema: mediaHandoffSpecSchema },
     { name: mediaTrackTypes.sequenceSpec.name, schema: mediaSequenceSpecSchema },
     { name: mediaTrackTypes.set.name, schema: mediaTrackSetSchema },
-    { name: mediaTrackTypes.program.name, schema: mediaTrackProgramSchema, validator: validator("@narratage/media-track/validate-program", mediaTrackValidatorDigests.program) },
+    { name: mediaTrackTypes.program.name, schema: mediaTrackProgramSchema, validator: validator(mediaTrackValidatorDigests.program) },
   ],
   capabilities: [],
-  surfaces: [{
-    name: "track", tag: "Track", mode: "structured",
-    outputs: [spatialTypes.fit, mediaTrackTypes.header, mediaTrackTypes.paintLayerSpec, mediaTrackTypes.sampleLayerSpec,
-      mediaTrackTypes.layerSet, mediaTrackTypes.soundSpec, mediaTrackTypes.soundSet,
-      mediaTrackTypes.itemSpec, mediaTrackTypes.memberSpec, mediaTrackTypes.memberSet,
-      mediaTrackTypes.handoffSpec, mediaTrackTypes.sequenceSpec, mediaTrackTypes.set, mediaTrackTypes.program,
-      compositionTypes.visualTrack, compositionTypes.audioTrack],
-    implementation: { kind: "trusted-frontend-surface", locator: "@narratage/media-track/track-surface", digest: mediaTrackSurfaceImplementationDigest },
-  }],
   producers: [
-    { name: mediaTrackProducers.createLayers.name, inputs: [], outputs: [{ name: "layers", type: mediaTrackTypes.layerSet }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/create-layers", digest: mediaTrackImplementationDigests.createLayers } },
-    { name: mediaTrackProducers.appendPaintLayer.name, inputs: [{ name: "layers", type: mediaTrackTypes.layerSet }, { name: "spec", type: mediaTrackTypes.paintLayerSpec }], outputs: [{ name: "layers", type: mediaTrackTypes.layerSet }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-paint-layer", digest: mediaTrackImplementationDigests.appendPaintLayer } },
-    { name: mediaTrackProducers.appendStillLayer.name, inputs: [{ name: "layers", type: mediaTrackTypes.layerSet }, { name: "source", type: artifactTypes.blob }, { name: "extent", type: spatialTypes.extent }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: mediaTrackTypes.sampleLayerSpec }], outputs: [{ name: "layers", type: mediaTrackTypes.layerSet }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-still-layer", digest: mediaTrackImplementationDigests.appendStillLayer } },
-    { name: mediaTrackProducers.appendTimedLayer.name, inputs: [{ name: "layers", type: mediaTrackTypes.layerSet }, { name: "source", type: mediaTypes.synchronized }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: mediaTrackTypes.sampleLayerSpec }], outputs: [{ name: "layers", type: mediaTrackTypes.layerSet }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-timed-layer", digest: mediaTrackImplementationDigests.appendTimedLayer } },
-    { name: mediaTrackProducers.appendSurfaceLayer.name, inputs: [{ name: "layers", type: mediaTrackTypes.layerSet }, { name: "source", type: mediaTypes.compositableSurface }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: mediaTrackTypes.sampleLayerSpec }], outputs: [{ name: "layers", type: mediaTrackTypes.layerSet }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-surface-layer", digest: mediaTrackImplementationDigests.appendSurfaceLayer } },
-    { name: mediaTrackProducers.createSounds.name, inputs: [], outputs: [{ name: "sounds", type: mediaTrackTypes.soundSet }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/create-sounds", digest: mediaTrackImplementationDigests.createSounds } },
-    { name: mediaTrackProducers.appendSound.name, inputs: [{ name: "sounds", type: mediaTrackTypes.soundSet }, { name: "source", type: mediaTypes.synchronized }, { name: "spec", type: mediaTrackTypes.soundSpec }], outputs: [{ name: "sounds", type: mediaTrackTypes.soundSet }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-sound", digest: mediaTrackImplementationDigests.appendSound } },
-    { name: mediaTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/create-set", digest: mediaTrackImplementationDigests.createSet } },
-    { name: mediaTrackProducers.appendProgramItem.name, inputs: [...itemInputs], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-program-item", digest: mediaTrackImplementationDigests.appendProgramItem } },
-    { name: mediaTrackProducers.appendSelectionItem.name, inputs: [...itemInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-selection-item", digest: mediaTrackImplementationDigests.appendSelectionItem } },
-    { name: mediaTrackProducers.appendSegmentItem.name, inputs: [...itemInputs, { name: "map", type: semanticMapTypes.complete }, { name: "segment", type: narrativeTypes.excerpt }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-segment-item", digest: mediaTrackImplementationDigests.appendSegmentItem } },
-    { name: mediaTrackProducers.appendMomentItem.name, inputs: [...itemInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-moment-item", digest: mediaTrackImplementationDigests.appendMomentItem } },
-    { name: mediaTrackProducers.bindItemClipPath.name, inputs: [{ name: "spec", type: mediaTrackTypes.itemSpec }, { name: "path", type: spatialTypes.path }], outputs: [{ name: "spec", type: mediaTrackTypes.itemSpec }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/bind-item-clip-path", digest: mediaTrackImplementationDigests.bindItemClipPath } },
-    { name: mediaTrackProducers.bindSequenceClipPath.name, inputs: [{ name: "spec", type: mediaTrackTypes.sequenceSpec }, { name: "path", type: spatialTypes.path }], outputs: [{ name: "spec", type: mediaTrackTypes.sequenceSpec }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/bind-sequence-clip-path", digest: mediaTrackImplementationDigests.bindSequenceClipPath } },
-    { name: mediaTrackProducers.createMembers.name, inputs: [], outputs: [{ name: "members", type: mediaTrackTypes.memberSet }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/create-members", digest: mediaTrackImplementationDigests.createMembers } },
-    { name: mediaTrackProducers.appendMomentMember.name, inputs: [...memberInputs, { name: "moment", type: narrativeTypes.moment }, { name: "space", type: programSpaceTypes.programSpace }], outputs: [{ name: "members", type: mediaTrackTypes.memberSet }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-moment-member", digest: mediaTrackImplementationDigests.appendMomentMember } },
-    { name: mediaTrackProducers.appendSelectionStartMember.name, inputs: [...memberInputs, { name: "selection", type: narrativeTypes.selection }, { name: "space", type: programSpaceTypes.programSpace }], outputs: [{ name: "members", type: mediaTrackTypes.memberSet }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-selection-start-member", digest: mediaTrackImplementationDigests.appendSelectionStartMember } },
-    { name: mediaTrackProducers.appendSelectionEndMember.name, inputs: [...memberInputs, { name: "selection", type: narrativeTypes.selection }, { name: "space", type: programSpaceTypes.programSpace }], outputs: [{ name: "members", type: mediaTrackTypes.memberSet }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-selection-end-member", digest: mediaTrackImplementationDigests.appendSelectionEndMember } },
-    { name: mediaTrackProducers.appendSequenceProgramEnd.name, inputs: sequenceInputs, outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-sequence-program-end", digest: mediaTrackImplementationDigests.appendSequenceProgramEnd } },
-    { name: mediaTrackProducers.appendSequenceUntilMoment.name, inputs: [...sequenceInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-sequence-until-moment", digest: mediaTrackImplementationDigests.appendSequenceUntilMoment } },
-    { name: mediaTrackProducers.appendSequenceUntilSelectionStart.name, inputs: [...sequenceInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-sequence-until-selection-start", digest: mediaTrackImplementationDigests.appendSequenceUntilSelectionStart } },
-    { name: mediaTrackProducers.appendSequenceUntilSelectionEnd.name, inputs: [...sequenceInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-sequence-until-selection-end", digest: mediaTrackImplementationDigests.appendSequenceUntilSelectionEnd } },
-    { name: mediaTrackProducers.finalize.name, inputs: [{ name: "set", type: mediaTrackTypes.set }, { name: "header", type: mediaTrackTypes.header }, { name: "space", type: programSpaceTypes.programSpace }], outputs: [{ name: "program", type: mediaTrackTypes.program }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/finalize", digest: mediaTrackImplementationDigests.finalize } },
-    { name: mediaTrackProducers.projectVisual.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: mediaTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/project-visual", digest: mediaTrackImplementationDigests.projectVisual } },
-    { name: mediaTrackProducers.projectAudio.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: mediaTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/project-audio", digest: mediaTrackImplementationDigests.projectAudio } },
+    { name: mediaTrackProducers.createLayers.name, inputs: [], outputs: [{ name: "layers", type: mediaTrackTypes.layerSet }], needs: [], implementation: { digest: mediaTrackImplementationDigests.createLayers } },
+    { name: mediaTrackProducers.appendPaintLayer.name, inputs: [{ name: "layers", type: mediaTrackTypes.layerSet }, { name: "spec", type: mediaTrackTypes.paintLayerSpec }], outputs: [{ name: "layers", type: mediaTrackTypes.layerSet }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendPaintLayer } },
+    { name: mediaTrackProducers.appendStillLayer.name, inputs: [{ name: "layers", type: mediaTrackTypes.layerSet }, { name: "source", type: artifactTypes.blob }, { name: "extent", type: spatialTypes.extent }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: mediaTrackTypes.sampleLayerSpec }], outputs: [{ name: "layers", type: mediaTrackTypes.layerSet }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendStillLayer } },
+    { name: mediaTrackProducers.appendTimedLayer.name, inputs: [{ name: "layers", type: mediaTrackTypes.layerSet }, { name: "source", type: mediaTypes.synchronized }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: mediaTrackTypes.sampleLayerSpec }], outputs: [{ name: "layers", type: mediaTrackTypes.layerSet }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendTimedLayer } },
+    { name: mediaTrackProducers.appendSurfaceLayer.name, inputs: [{ name: "layers", type: mediaTrackTypes.layerSet }, { name: "source", type: mediaTypes.compositableSurface }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: mediaTrackTypes.sampleLayerSpec }], outputs: [{ name: "layers", type: mediaTrackTypes.layerSet }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendSurfaceLayer } },
+    { name: mediaTrackProducers.createSounds.name, inputs: [], outputs: [{ name: "sounds", type: mediaTrackTypes.soundSet }], needs: [], implementation: { digest: mediaTrackImplementationDigests.createSounds } },
+    { name: mediaTrackProducers.appendSound.name, inputs: [{ name: "sounds", type: mediaTrackTypes.soundSet }, { name: "source", type: mediaTypes.synchronized }, { name: "spec", type: mediaTrackTypes.soundSpec }], outputs: [{ name: "sounds", type: mediaTrackTypes.soundSet }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendSound } },
+    { name: mediaTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { digest: mediaTrackImplementationDigests.createSet } },
+    { name: mediaTrackProducers.appendProgramItem.name, inputs: [...itemInputs], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendProgramItem } },
+    { name: mediaTrackProducers.appendSelectionItem.name, inputs: [...itemInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendSelectionItem } },
+    { name: mediaTrackProducers.appendSegmentItem.name, inputs: [...itemInputs, { name: "map", type: semanticMapTypes.complete }, { name: "segment", type: narrativeTypes.excerpt }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendSegmentItem } },
+    { name: mediaTrackProducers.appendMomentItem.name, inputs: [...itemInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendMomentItem } },
+    { name: mediaTrackProducers.bindItemClipPath.name, inputs: [{ name: "spec", type: mediaTrackTypes.itemSpec }, { name: "path", type: spatialTypes.path }], outputs: [{ name: "spec", type: mediaTrackTypes.itemSpec }], needs: [], implementation: { digest: mediaTrackImplementationDigests.bindItemClipPath } },
+    { name: mediaTrackProducers.bindSequenceClipPath.name, inputs: [{ name: "spec", type: mediaTrackTypes.sequenceSpec }, { name: "path", type: spatialTypes.path }], outputs: [{ name: "spec", type: mediaTrackTypes.sequenceSpec }], needs: [], implementation: { digest: mediaTrackImplementationDigests.bindSequenceClipPath } },
+    { name: mediaTrackProducers.createMembers.name, inputs: [], outputs: [{ name: "members", type: mediaTrackTypes.memberSet }], needs: [], implementation: { digest: mediaTrackImplementationDigests.createMembers } },
+    { name: mediaTrackProducers.appendMomentMember.name, inputs: [...memberInputs, { name: "moment", type: narrativeTypes.moment }, { name: "space", type: programSpaceTypes.programSpace }], outputs: [{ name: "members", type: mediaTrackTypes.memberSet }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendMomentMember } },
+    { name: mediaTrackProducers.appendSelectionStartMember.name, inputs: [...memberInputs, { name: "selection", type: narrativeTypes.selection }, { name: "space", type: programSpaceTypes.programSpace }], outputs: [{ name: "members", type: mediaTrackTypes.memberSet }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendSelectionStartMember } },
+    { name: mediaTrackProducers.appendSelectionEndMember.name, inputs: [...memberInputs, { name: "selection", type: narrativeTypes.selection }, { name: "space", type: programSpaceTypes.programSpace }], outputs: [{ name: "members", type: mediaTrackTypes.memberSet }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendSelectionEndMember } },
+    { name: mediaTrackProducers.appendSequenceProgramEnd.name, inputs: sequenceInputs, outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendSequenceProgramEnd } },
+    { name: mediaTrackProducers.appendSequenceUntilMoment.name, inputs: [...sequenceInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendSequenceUntilMoment } },
+    { name: mediaTrackProducers.appendSequenceUntilSelectionStart.name, inputs: [...sequenceInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendSequenceUntilSelectionStart } },
+    { name: mediaTrackProducers.appendSequenceUntilSelectionEnd.name, inputs: [...sequenceInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { digest: mediaTrackImplementationDigests.appendSequenceUntilSelectionEnd } },
+    { name: mediaTrackProducers.finalize.name, inputs: [{ name: "set", type: mediaTrackTypes.set }, { name: "header", type: mediaTrackTypes.header }, { name: "space", type: programSpaceTypes.programSpace }], outputs: [{ name: "program", type: mediaTrackTypes.program }], needs: [], implementation: { digest: mediaTrackImplementationDigests.finalize } },
+    { name: mediaTrackProducers.projectVisual.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: mediaTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [], implementation: { digest: mediaTrackImplementationDigests.projectVisual } },
+    { name: mediaTrackProducers.projectAudio.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: mediaTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [], implementation: { digest: mediaTrackImplementationDigests.projectAudio } },
   ],
 };
 

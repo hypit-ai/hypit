@@ -346,7 +346,7 @@ export type VisualPresent = {
 };
 
 export type VisualTrack = {
-  readonly contract: "svml.visual-track@1";
+  readonly kind: "visual";
   /** The one terminal visual language shared by official video components. */
   readonly visualIr: typeof VISUAL_IR_V1;
   readonly id: string;
@@ -380,7 +380,7 @@ export type AudioClip = {
 };
 
 export type AudioTrack = {
-  readonly contract: "svml.audio-track@1";
+  readonly kind: "audio";
   readonly id: string;
   readonly clips: readonly AudioClip[];
 };
@@ -388,7 +388,6 @@ export type AudioTrack = {
 export type Track = VisualTrack | AudioTrack;
 
 export type Composition = {
-  readonly contract: "svml.composition@1";
   readonly id: string;
   readonly canvas: {
     readonly width: number;
@@ -1104,7 +1103,6 @@ function normalizeElement(element: VisualElement): VisualElement {
       kind: "text",
       text: element.text,
       fonts: element.fonts.map((font) => ({
-          contract: font.contract,
           sources: font.sources.map((source) => ({
             artifact: { ...source.artifact },
             ...(source.unicodeRange === undefined ? {} : { unicodeRange: source.unicodeRange }),
@@ -1167,9 +1165,9 @@ function normalizeElement(element: VisualElement): VisualElement {
   };
 }
 
-function visualTrackContent(value: VisualTrack): VisualTrack {
+function visualTrackContent(value: Omit<VisualTrack, "kind">): VisualTrack {
   return {
-    contract: "svml.visual-track@1",
+    kind: "visual",
     visualIr: value.visualIr,
     id: value.id,
     presents: [...value.presents]
@@ -1186,9 +1184,9 @@ function visualTrackContent(value: VisualTrack): VisualTrack {
   };
 }
 
-function audioTrackContent(value: AudioTrack): AudioTrack {
+function audioTrackContent(value: Omit<AudioTrack, "kind">): AudioTrack {
   return {
-    contract: "svml.audio-track@1",
+    kind: "audio",
     id: value.id,
     clips: [...value.clips]
       .map((clip) => ({
@@ -1206,17 +1204,17 @@ function audioTrackContent(value: AudioTrack): AudioTrack {
   };
 }
 
-export function sealVisualTrack(value: VisualTrack): VisualTrack {
+export function sealVisualTrack(value: Omit<VisualTrack, "kind">): VisualTrack {
   return visualTrackContent(value);
 }
 
-export function sealAudioTrack(value: AudioTrack): AudioTrack {
+export function sealAudioTrack(value: Omit<AudioTrack, "kind">): AudioTrack {
   return audioTrackContent(value);
 }
 
 export function assertVisualTrackIdentity(track: VisualTrack, programSpace?: ProgramSpace): void {
   if (programSpace !== undefined) assertProgramSpaceIdentity(programSpace);
-  if (track.contract !== "svml.visual-track@1") throw new Error("Unsupported VisualTrack contract.");
+  if (track.kind !== "visual") throw new Error("VisualTrack kind is invalid.");
   if (track.visualIr !== VISUAL_IR_V1) throw new Error("Unsupported VisualTrack visual IR.");
   assertNonEmpty(track.id, "VisualTrack id");
   const presentIds = new Set<string>();
@@ -1229,7 +1227,7 @@ export function assertVisualTrackIdentity(track: VisualTrack, programSpace?: Pro
 
 export function assertAudioTrackIdentity(track: AudioTrack, programSpace?: ProgramSpace): void {
   if (programSpace !== undefined) assertProgramSpaceIdentity(programSpace);
-  if (track.contract !== "svml.audio-track@1") throw new Error("Unsupported AudioTrack contract.");
+  if (track.kind !== "audio") throw new Error("AudioTrack kind is invalid.");
   assertNonEmpty(track.id, "AudioTrack id");
   const totalSamples = programSpace === undefined
     ? Number.MAX_SAFE_INTEGER
@@ -1276,12 +1274,11 @@ export function assertAudioTrackIdentity(track: AudioTrack, programSpace?: Progr
 }
 
 function trackKey(track: Track): string {
-  return `${track.contract}\u0000${track.id}`;
+  return `${track.kind}\u0000${track.id}`;
 }
 
 function compositionContent(value: Composition): Composition {
   return {
-    contract: "svml.composition@1",
     id: value.id,
     canvas: { ...value.canvas },
     tracks: [...value.tracks].map((track) => structuredClone(track)).sort((a, b) => trackKey(a).localeCompare(trackKey(b))),
@@ -1293,7 +1290,6 @@ export function sealComposition(value: Composition): Composition {
 }
 
 export function assertCompositionIdentity(composition: Composition, programSpace?: ProgramSpace): void {
-  if (composition.contract !== "svml.composition@1") throw new Error("Unsupported Composition contract.");
   assertNonEmpty(composition.id, "Composition id");
   if (programSpace !== undefined) assertProgramSpaceIdentity(programSpace);
   if (
@@ -1310,7 +1306,7 @@ export function assertCompositionIdentity(composition: Composition, programSpace
   for (const track of composition.tracks) {
     if (ids.has(track.id)) throw new Error(`Composition contains duplicate Track id ${track.id}.`);
     ids.add(track.id);
-    if (track.contract === "svml.visual-track@1") {
+    if (track.kind === "visual") {
       assertVisualTrackIdentity(track, programSpace);
       for (const present of track.presents) {
         const key = `${present.stacking.order}\u0000${present.stacking.tieBreak}`;

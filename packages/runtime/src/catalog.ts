@@ -1,14 +1,12 @@
-import { isDigest } from "@narratage/protocol";
+import { canonicalStringify, isDigest } from "@narratage/protocol";
 import type {
   Digest,
   LogicalOutputRef,
   RecordRef,
-  TypeRef,
 } from "@narratage/protocol";
 
 export type BuildCatalogAlias = {
   readonly name: string;
-  readonly type: TypeRef;
   readonly ref: RecordRef | LogicalOutputRef;
 };
 
@@ -42,12 +40,6 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function verifyType(type: TypeRef, subject: string): void {
-  assert(type.module.name.trim().length > 0, `${subject} module name is empty`);
-  assert(type.module.version.trim().length > 0, `${subject} module version is empty`);
-  assert(type.name.trim().length > 0, `${subject} type name is empty`);
-}
-
 export function verifyBuildCatalogDescriptor(descriptor: BuildCatalogDescriptor): void {
   assert(descriptor.format === "svml.build-catalog-descriptor@1", "Build Catalog descriptor format is invalid");
   assert(isDigest(descriptor.core), "Build Catalog Core identity is invalid");
@@ -61,7 +53,6 @@ export function verifyBuildCatalogDescriptor(descriptor: BuildCatalogDescriptor)
     assert(alias.name.trim().length > 0, "Build Catalog alias name is empty");
     assert(!names.has(alias.name), `Build Catalog repeats alias ${alias.name}`);
     names.add(alias.name);
-    verifyType(alias.type, `Build Catalog alias ${alias.name}`);
     assert(alias.ref.kind === "record" || alias.ref.kind === "logical-output",
       `Build Catalog alias ${alias.name} has an unsupported reference`);
     assert(alias.ref.id.trim().length > 0, `Build Catalog alias ${alias.name} reference is empty`);
@@ -80,6 +71,24 @@ function copy<T>(value: T): T {
   return structuredClone(value);
 }
 
+function descriptorValue(descriptor: BuildCatalogDescriptor): BuildCatalogDescriptor {
+  return {
+    format: descriptor.format,
+    core: descriptor.core,
+    source: descriptor.source,
+    ...(descriptor.run === undefined ? {} : { run: descriptor.run }),
+    aliases: descriptor.aliases,
+  };
+}
+
+/** One Build id keeps the exact Host presentation under which it was first submitted. */
+export function sameBuildCatalogDescriptor(
+  left: BuildCatalogDescriptor,
+  right: BuildCatalogDescriptor,
+): boolean {
+  return canonicalStringify(descriptorValue(left)) === canonicalStringify(descriptorValue(right));
+}
+
 export class MemoryBuildCatalog implements BuildCatalog {
   readonly #entries = new Map<string, BuildCatalogEntry>();
   readonly #now: () => number;
@@ -93,15 +102,17 @@ export class MemoryBuildCatalog implements BuildCatalog {
     verifyBuildCatalogDescriptor(descriptor);
     const existing = this.#entries.get(build);
     if (existing !== undefined) {
-      assert(existing.core === descriptor.core, `Build Catalog ${build} already names another Core Build`);
+      assert(sameBuildCatalogDescriptor(existing, descriptor),
+        `Build Catalog ${build} already has another source, Run Source or output naming`);
+      return copy(existing);
     }
     const now = this.#now();
     assert(Number.isSafeInteger(now) && now >= 0, "Build Catalog clock returned an invalid time");
     const entry: BuildCatalogEntry = {
       ...copy(descriptor),
       build,
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: Math.max(now, existing?.updatedAt ?? now),
+      createdAt: now,
+      updatedAt: now,
     };
     verifyBuildCatalogEntry(entry);
     this.#entries.set(build, entry);

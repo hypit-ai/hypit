@@ -80,10 +80,6 @@ function inline<T>(value: StoredValue | undefined, label: string): T {
   return value.value as unknown as T;
 }
 
-/**
- * An icon arrives as an Artifact Blob, whose Type stores the reference itself
- * rather than wrapping it, so it is read as a blob rather than as inline.
- */
 function blob(value: StoredValue | undefined, label: string): BlobRef {
   if (value?.kind !== "blob") throw new Error(`${label} must be a blob Artifact.`);
   return value;
@@ -100,7 +96,6 @@ function programInputs(inputs: ProducerHandlerContext["inputs"]) {
 }
 
 export const rankingComponent = {
-  name: "@narratage/ranking",
   producers: [
     {
       producer: rankingProducers.materializeTextItem,

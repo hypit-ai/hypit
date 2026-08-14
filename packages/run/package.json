@@ -13,9 +13,5 @@
     "@narratage/host": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/source": "workspace:*"
-  },
-  "devDependencies": {
-    "@narratage/run-markup": "workspace:*",
-    "@narratage/validation": "workspace:*"
   }
 }

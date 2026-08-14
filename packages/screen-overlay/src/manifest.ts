@@ -57,23 +57,26 @@ const component: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "tv-static" } }, amount: { schema: nonNegative }, noiseSizePx: { schema: nonNegative }, scanLineOpacity: { schema: nonNegative }, motionRatePxPerFrame: { schema: number }, seed: { schema: unsignedInteger } }),
 ] };
 const itemSpec = object({
-  contract: { schema: { kind: "literal", value: "svml.screen-overlay-item-spec@1" } }, id: { schema: string },
+  id: { schema: string },
   content: { schema: component }, projection: { schema: projection },
   expansion: { schema: object({ kind: { schema: { kind: "string", enum: ["one", "each"] } } }) },
   stackingOrder: { schema: integer },
 });
 const frameSpan = object({ startFrame: { schema: unsignedInteger }, endFrameExclusive: { schema: unsignedInteger } });
 const item = object({
-  id: { schema: string }, sourceOccurrenceId: { schema: string }, span: { schema: frameSpan }, content: { schema: component },
+  id: { schema: string }, span: { schema: frameSpan }, content: { schema: component },
   stacking: { schema: object({ order: { schema: integer }, tieBreak: { schema: string } }) },
 });
-export const screenOverlayHeaderSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.screen-overlay-header@1" } }, id: { schema: string } });
+export const screenOverlayHeaderSchema: ValueSchema = object({ id: { schema: string } });
 export const screenOverlayItemSpecSchema: ValueSchema = itemSpec;
-export const screenOverlaySetSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.screen-overlay-set@1" } }, items: { schema: { kind: "array", items: item } } });
-export const screenOverlayProgramSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.screen-overlay-program@1" } }, id: { schema: string }, items: { schema: { kind: "array", minItems: 1, items: item } } });
+export const screenOverlaySetSchema: ValueSchema = object({ items: { schema: { kind: "array", items: item } } });
+export const screenOverlayProgramSchema: ValueSchema = object({ id: { schema: string }, items: { schema: { kind: "array", minItems: 1, items: item } } });
 export const screenOverlaySurfaceImplementationDigest = digestOf("@narratage/screen-overlay/track-surface@1");
-const validator = (locator: string, digest: ReturnType<typeof digestOf>) => ({ abi: "svml.type-validator@1" as const, implementation: { kind: "registered" as const, locator, digest } });
+const validator = (digest: ReturnType<typeof digestOf>) => ({ implementation: { digest } });
 const appendInputs = [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }, { name: "space", type: programSpaceTypes.programSpace }, { name: "spec", type: screenOverlayTypes.itemSpec }] as const;
+
+export const screenOverlayMarkupSurfaces = [{ name: "track", tag: "Track", mode: "structured", outputs: [screenOverlayTypes.header, screenOverlayTypes.itemSpec, screenOverlayTypes.program, compositionTypes.visualTrack], implementation: { digest: screenOverlaySurfaceImplementationDigest } }] as const;
+
 
 export const screenOverlayManifest: ModuleManifest = {
   format: "svml.module@1", name: screenOverlayModuleRef.name, version: screenOverlayModuleRef.version,
@@ -82,16 +85,15 @@ export const screenOverlayManifest: ModuleManifest = {
     { name: screenOverlayTypes.header.name, schema: screenOverlayHeaderSchema },
     { name: screenOverlayTypes.itemSpec.name, schema: screenOverlayItemSpecSchema },
     { name: screenOverlayTypes.set.name, schema: screenOverlaySetSchema },
-    { name: screenOverlayTypes.program.name, schema: screenOverlayProgramSchema, validator: validator("@narratage/screen-overlay/validate-program", screenOverlayValidatorDigests.program) },
+    { name: screenOverlayTypes.program.name, schema: screenOverlayProgramSchema, validator: validator(screenOverlayValidatorDigests.program) },
   ], capabilities: [],
-  surfaces: [{ name: "track", tag: "Track", mode: "structured", outputs: [screenOverlayTypes.header, screenOverlayTypes.itemSpec, screenOverlayTypes.program, compositionTypes.visualTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/screen-overlay/track-surface", digest: screenOverlaySurfaceImplementationDigest } }],
   producers: [
-    { name: screenOverlayProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/screen-overlay/create-set", digest: screenOverlayImplementationDigests.createSet } },
-    { name: screenOverlayProducers.appendProgram.name, inputs: [...appendInputs], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/screen-overlay/append-program", digest: screenOverlayImplementationDigests.appendProgram } },
-    { name: screenOverlayProducers.appendSelection.name, inputs: [...appendInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/screen-overlay/append-selection", digest: screenOverlayImplementationDigests.appendSelection } },
-    { name: screenOverlayProducers.appendMoment.name, inputs: [...appendInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/screen-overlay/append-moment", digest: screenOverlayImplementationDigests.appendMoment } },
-    { name: screenOverlayProducers.finalize.name, inputs: [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }], outputs: [{ name: "program", type: screenOverlayTypes.program }], needs: [], implementation: { kind: "registered", locator: "@narratage/screen-overlay/finalize", digest: screenOverlayImplementationDigests.finalize } },
-    { name: screenOverlayProducers.render.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }, { name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: screenOverlayTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [], implementation: { kind: "registered", locator: "@narratage/screen-overlay/render", digest: screenOverlayImplementationDigests.render } },
+    { name: screenOverlayProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [], implementation: { digest: screenOverlayImplementationDigests.createSet } },
+    { name: screenOverlayProducers.appendProgram.name, inputs: [...appendInputs], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [], implementation: { digest: screenOverlayImplementationDigests.appendProgram } },
+    { name: screenOverlayProducers.appendSelection.name, inputs: [...appendInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [], implementation: { digest: screenOverlayImplementationDigests.appendSelection } },
+    { name: screenOverlayProducers.appendMoment.name, inputs: [...appendInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [], implementation: { digest: screenOverlayImplementationDigests.appendMoment } },
+    { name: screenOverlayProducers.finalize.name, inputs: [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }], outputs: [{ name: "program", type: screenOverlayTypes.program }], needs: [], implementation: { digest: screenOverlayImplementationDigests.finalize } },
+    { name: screenOverlayProducers.render.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }, { name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: screenOverlayTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [], implementation: { digest: screenOverlayImplementationDigests.render } },
   ],
 };
 export const screenOverlayManifestDigest = digestOf(screenOverlayManifest);

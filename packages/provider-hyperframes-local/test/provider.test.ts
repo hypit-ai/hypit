@@ -21,12 +21,10 @@ const hasFfprobe = spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).statu
 
 function documentFixture(surface?: CompositableSurfaceRef) {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 12, denominator: 1 },
   });
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: "provider-proof",
     presents: [{
@@ -62,7 +60,6 @@ function documentFixture(surface?: CompositableSurfaceRef) {
     }],
   });
   return compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1",
     id: "local-hyperframes-provider-proof",
     canvas: { width: 160, height: 96, clearColor: "#000000" },
     tracks: [track],
@@ -104,7 +101,7 @@ async function handlerFor(request: Need): Promise<{
 
 test("local HyperFrames Provider exposes one exact visual capability and two separate concurrency levels", async () => {
   const provider = createLocalHyperframesProvider({ workers: 4, defaultConcurrency: 2 });
-  assert.equal(provider.name, "hyperframes.local");
+  assert.equal(provider.instance.id, "hyperframes.local");
   const facet = provider.manifest.facets[0];
   assert.equal(facet?.role, "capability-endpoint");
   assert(facet?.role === "capability-endpoint");
@@ -137,7 +134,6 @@ test("local HyperFrames Provider really renders a silent frame-exact MP4 with pa
   );
   const surfaceArtifact = await artifacts.put(png, "image/png");
   const surface: CompositableSurfaceRef = {
-    contract: "svml.compositable-surface@1",
     artifact: surfaceArtifact,
     width: 1,
     height: 1,
@@ -159,15 +155,5 @@ test("local HyperFrames Provider really renders a silent frame-exact MP4 with pa
   const visual = value as unknown as RenderedVisual;
   assert.equal(visual.frameCount, 12);
   assert.deepEqual(visual.canvas, { width: 160, height: 96 });
-  assert.equal(visual.muted, true);
   assert.equal(await artifacts.has(visual.artifact.digest), true);
-  assert.equal((output.metadata as Record<string, CanonicalValue>).contract,
-    "svml.hyperframes-renderer-attestation@1");
-  const metadata = output.metadata as {
-    readonly browser: { readonly digest: string; readonly version: string };
-    readonly surfaceValidations: readonly { readonly artifactDigest: string }[];
-  };
-  assert.match(metadata.browser.digest, /^sha256:[0-9a-f]{64}$/u);
-  assert.match(metadata.browser.version, /(?:Chrome|Chromium)/u);
-  assert.deepEqual(metadata.surfaceValidations.map((item) => item.artifactDigest), [surfaceArtifact.digest]);
 });

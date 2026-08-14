@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/workspace",
+  "name": "@narratage/repository",
   "version": "0.0.1",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -17,7 +17,6 @@
     "test:image-opencv": "SVML_OPENCV_TESTS=1 SVML_OPENCV_PYTHON=services/image-opencv/.venv/bin/python node --import tsx --test packages/provider-image-opencv-local/test/provider.test.ts",
     "smoke:kie": "node --import tsx packages/provider-kie/test/live-smoke.ts",
     "narratage": "node --disable-warning=ExperimentalWarning --import tsx packages/video-cli/src/cli.ts",
-    "svml": "node --disable-warning=ExperimentalWarning --import tsx packages/video-cli/src/cli.ts",
     "caption:playground": "pnpm --filter @narratage/caption-playground exec node --import tsx start.ts",
     "svml:playground": "pnpm --filter @narratage/svml-playground exec node --import tsx start.ts",
     "build:media-lambda": "pnpm --filter @narratage/media-lambda build",

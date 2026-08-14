@@ -131,7 +131,6 @@ export const decodeTextRenderSurface: StructuredSurfaceHandler = ({ element, res
     const consumed = textTemplateBindingNames(templateValue);
     const recipe = reference(element, "recipe", svsRecipeType, resolveReference);
     const value = inline<SvsRecipe>(recipe, `${element.name}.recipe`);
-    if (value.contract !== "svml.svs-recipe@1") throw new Error(`${element.name}.recipe is invalid`);
     for (const [name, item] of Object.entries(value.properties)) {
       if (!consumed.has(name)) continue;
       if (typeof item !== "string" && typeof item !== "boolean" && !(typeof item === "number" && Number.isFinite(item))) {

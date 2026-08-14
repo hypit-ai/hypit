@@ -1,7 +1,7 @@
 export { createFilmAssemblyFragment } from "./fragment.js";
 export { filmComponent } from "./component.js";
 export {
-  filmManifest,
+  filmManifest, filmMarkupSurfaces,
   filmManifestDigest,
   filmModuleRef,
   filmProgramSchema,

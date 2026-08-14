@@ -13,8 +13,6 @@ import type { GenerationRequest } from "./request.js";
  * Provider package therefore never imports a model package: the model owns what
  * it eats, the service owns what it calls that on the wire.
  */
-export const GENERATION_WIRE_MAPPING_V1 = "svml.generation-wire-mapping@1" as const;
-
 export type GenerationArtifactUrlResolver = (artifact: BlobRef) => Promise<string>;
 
 export type GenerationFieldMapping =
@@ -44,7 +42,6 @@ export type GenerationWireRoute = {
 };
 
 export type GenerationWireMapping = {
-  readonly contract: "svml.generation-wire-mapping@1";
   /**
    * The exact Capability implemented, named as data. Binding the module version
    * here keeps a port change visible: a mapping written for one model version
@@ -91,9 +88,8 @@ export async function compileWireRequest(
   request: GenerationRequest,
   resolve: GenerationArtifactUrlResolver,
 ): Promise<GenerationWireRequest> {
-  assert(mapping.contract === GENERATION_WIRE_MAPPING_V1, "Generation wire mapping contract is invalid");
-  assert(request.model === mapping.capability.name,
-    `${mapping.capability.name} mapping received a ${request.model} request`);
+  assert(mappingSupportsRequest(mapping, request),
+    `${mapping.capability.name} request contains a port this Provider cannot map`);
   const present = presentPorts(request);
   const input: Record<string, CanonicalValue> = { ...(mapping.constants ?? {}) };
 
@@ -130,9 +126,7 @@ export async function compileWireRequest(
 /** Does this request only use ports this mapping can write? Needs no model package. */
 export function mappingSupportsRequest(mapping: GenerationWireMapping, value: unknown): boolean {
   const request = value as GenerationRequest | undefined;
-  if (request?.contract !== "svml.generation-request@1") return false;
-  if (request.model !== mapping.capability.name) return false;
-  if (request.ports === null || typeof request.ports !== "object") return false;
+  if (request === undefined || request.ports === null || typeof request.ports !== "object") return false;
   return Object.keys(request.ports).every((port) => mapping.fields[port] !== undefined);
 }
 
@@ -147,8 +141,6 @@ export function assertMappingCoversPorts(
   table: GenerationPortTable,
   mapping: GenerationWireMapping,
 ): void {
-  assert(mapping.contract === GENERATION_WIRE_MAPPING_V1,
-    `${table.model} mapping contract is invalid`);
   assert(mapping.capability.name === table.model,
     `mapping names Capability ${mapping.capability.name} but the port table declares ${table.model}`);
   assert(mapping.result === table.result,

@@ -38,7 +38,7 @@ export {
   mediaSequenceSpecSchema,
   mediaTrackDependency,
   mediaTrackHeaderSchema,
-  mediaTrackManifest,
+  mediaTrackManifest, mediaTrackMarkupSurfaces,
   mediaTrackManifestDigest,
   mediaTrackModuleRef,
   mediaTrackProducers,

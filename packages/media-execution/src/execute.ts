@@ -64,30 +64,11 @@ export type MediaExecutionEnvironment = {
   readonly sharedLibraryPath?: string;
   readonly processTimeoutMs: number;
   readonly maxProbeOutputBytes: number;
-  /** Recorded in each result's metadata, so an Operation says which Provider ran it. */
-  readonly label: string;
 };
 
 export type MediaOperationResult = {
   readonly value: StoredValue;
-  readonly metadata: CanonicalValue;
 };
-
-/** The request contract each capability answers. Both Providers admit Needs by this table. */
-export const mediaOperationContracts = {
-  inspect: "svml.inspect-media-request@1",
-  normalize: "svml.normalize-media-request@1",
-  transform: "svml.transform-media-request@1",
-  extractAudio: "svml.extract-audio-request@1",
-  extractFrame: "svml.extract-frame-request@1",
-  projectSpeechEvidenceAudio: "svml.project-speech-evidence-audio-request@1",
-  renderAudio: "svml.render-audio-request@1",
-  mux: "svml.mux-media-request@1",
-} as const;
-
-export function mediaNeedHasContract(value: unknown, contract: string): boolean {
-  return hasContract(value, contract);
-}
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -101,11 +82,6 @@ function positiveInteger(value: number, subject: string): number {
 function object(value: unknown, subject: string): Record<string, unknown> {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), `${subject} must be an object`);
   return value as Record<string, unknown>;
-}
-
-function hasContract(value: unknown, contract: string): boolean {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    && (value as Record<string, unknown>).contract === contract;
 }
 
 async function runProcess(args: {
@@ -365,7 +341,6 @@ function animatedWebpInspection(source: BlobRef, animation: AnimatedWebp): Media
   const numerator = animation.frames.length * 1_000;
   const factor = divisor(numerator, durationMs);
   return sealMediaInspection({
-    contract: "svml.media-inspection@1",
     container: { formatNames: ["webp", "webp-animation"] },
     streams: [{
       kind: "video",
@@ -449,25 +424,23 @@ async function outputInspection(args: {
     ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }) });
 }
 
-function inlineResult(value: CanonicalValue, metadata: CanonicalValue): MediaOperationResult {
-  return { value: { kind: "inline", value }, metadata };
+function inlineResult(value: CanonicalValue): MediaOperationResult {
+  return { value: { kind: "inline", value } };
 }
 
-function artifactResult(value: BlobRef, metadata: CanonicalValue): MediaOperationResult {
-  return { value, metadata };
+function artifactResult(value: BlobRef): MediaOperationResult {
+  return { value };
 }
 
 function inspectNeed(value: CanonicalValue): InspectMediaNeed {
   const item = object(value, "InspectMediaNeed") as unknown as InspectMediaNeed;
-  assert(item.contract === "svml.inspect-media-request@1" && item.source?.kind === "blob",
-    "InspectMediaNeed is invalid");
+  assert(item.source?.kind === "blob", "InspectMediaNeed is invalid");
   return item;
 }
 
 function normalizeNeed(value: CanonicalValue): NormalizeMediaNeed {
   const item = object(value, "NormalizeMediaNeed") as unknown as NormalizeMediaNeed;
-  assert(item.contract === "svml.normalize-media-request@1" && item.source?.kind === "blob",
-    "NormalizeMediaNeed is invalid");
+  assert(item.source?.kind === "blob", "NormalizeMediaNeed is invalid");
   verifyMediaInspection(item.inspection);
   verifyMediaStreamSelection(item.selection);
   assert(item.audio.sampleRate === 48_000 && item.audio.channels === 2
@@ -478,7 +451,6 @@ function normalizeNeed(value: CanonicalValue): NormalizeMediaNeed {
 
 function transformNeed(value: CanonicalValue): TransformMediaNeed {
   const item = object(value, "TransformMediaNeed") as unknown as TransformMediaNeed;
-  assert(item.contract === "svml.transform-media-request@1", "TransformMediaNeed is invalid");
   verifySynchronizedMedia(item.media);
   verifyMediaTransformProgram(item.program);
   assert(item.media.visual !== undefined, "TransformMediaNeed requires synchronized visual media");
@@ -487,12 +459,10 @@ function transformNeed(value: CanonicalValue): TransformMediaNeed {
 
 function extractAudioNeed(value: CanonicalValue): ExtractAudioNeed {
   const item = object(value, "ExtractAudioNeed") as unknown as ExtractAudioNeed;
-  assert(item.contract === "svml.extract-audio-request@1" && item.source?.kind === "blob",
-    "ExtractAudioNeed is invalid");
+  assert(item.source?.kind === "blob", "ExtractAudioNeed is invalid");
   assert(Number.isSafeInteger(item.streamIndex) && item.streamIndex >= 0,
     "ExtractAudioNeed streamIndex is invalid");
   verifyAudioExtractionRequest({
-    contract: "svml.audio-extraction-request@1",
     audio: { mode: "stream-index", streamIndex: item.streamIndex },
     output: item.output,
   });
@@ -501,13 +471,11 @@ function extractAudioNeed(value: CanonicalValue): ExtractAudioNeed {
 
 function extractFrameNeed(value: CanonicalValue): ExtractFrameNeed {
   const item = object(value, "ExtractFrameNeed") as unknown as ExtractFrameNeed;
-  assert(item.contract === "svml.extract-frame-request@1" && item.source?.kind === "blob",
-    "ExtractFrameNeed is invalid");
+  assert(item.source?.kind === "blob", "ExtractFrameNeed is invalid");
   assert(Number.isSafeInteger(item.streamIndex) && item.streamIndex >= 0
     && Number.isSafeInteger(item.sourceFrameCount) && item.sourceFrameCount > 0,
   "ExtractFrameNeed stream domain is invalid");
   verifyFrameExtractionRequest({
-    contract: "svml.frame-extraction-request@1",
     video: { mode: "stream-index", streamIndex: item.streamIndex },
     at: item.at,
     output: item.output,
@@ -520,28 +488,22 @@ function extractFrameNeed(value: CanonicalValue): ExtractFrameNeed {
 
 function evidenceAudioNeed(value: CanonicalValue): ProjectSpeechEvidenceAudioNeed {
   const item = object(value, "ProjectSpeechEvidenceAudioNeed") as unknown as ProjectSpeechEvidenceAudioNeed;
-  assert(item.contract === "svml.project-speech-evidence-audio-request@1" && item.source?.kind === "blob",
-    "ProjectSpeechEvidenceAudioNeed is invalid");
-  assert(item.sourceSampleRate === 48_000 && item.sourceChannels === 2 && item.sourceCodec === "pcm_s16le"
-    && item.evidenceSampleRate === 16_000 && item.evidenceChannels === 1 && item.evidenceCodec === "pcm_s16le",
-  "Speech evidence audio shape is invalid");
+  assert(item.source?.kind === "blob", "ProjectSpeechEvidenceAudioNeed is invalid");
   assert(Number.isSafeInteger(item.sourceSampleFrames) && item.sourceSampleFrames > 0
     && Number.isSafeInteger(item.evidenceSampleFrames) && item.evidenceSampleFrames > 0
     && item.evidenceSampleFrames === speechEvidenceSampleBoundary(item.sourceSampleFrames),
-  "Speech evidence audio sample map is invalid");
+  "Speech evidence audio sample projection is invalid");
   return item;
 }
 
 function renderAudioNeed(value: CanonicalValue): RenderAudioNeed {
   const item = object(value, "RenderAudioNeed") as unknown as RenderAudioNeed;
-  assert(item.contract === "svml.render-audio-request@1", "RenderAudioNeed is invalid");
   verifyAudioProgramPlan(item.plan);
   return item;
 }
 
 function muxMediaNeed(value: CanonicalValue): MuxMediaNeed {
   const item = object(value, "MuxMediaNeed") as unknown as MuxMediaNeed;
-  assert(item.contract === "svml.mux-media-request@1", "MuxMediaNeed is invalid");
   verifyRenderedVisual(item.visual);
   verifyTimelineAudio(item.audio);
   const expectedSamples = roundPositive(
@@ -639,7 +601,7 @@ export async function executeInspectMedia(
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
       })
       : animatedWebpInspection(need.source, animation);
-    return inlineResult(canonicalize(inspection), canonicalize({ provider: env.label, operation: "inspect" }));
+    return inlineResult(canonicalize(inspection));
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
@@ -741,7 +703,6 @@ export async function executeNormalizeMedia(
       audioArtifact = await env.artifacts.putFile(output, "audio/wav");
     }
     const media = sealSynchronizedMedia({
-      contract: "svml.synchronized-media@1",
       timeline: {
         frameRate: need.frameRate,
         frameCount: plan.frameCount,
@@ -759,8 +720,7 @@ export async function executeNormalizeMedia(
         },
       }),
     });
-    return inlineResult(canonicalize(media), canonicalize({ provider: env.label, operation: "normalize",
-      visual: visualArtifact !== undefined, audio: audioArtifact !== undefined }));
+    return inlineResult(canonicalize(media));
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
@@ -883,13 +843,7 @@ export async function executeTransformMedia(
         "Transformed media audio is not 48 kHz stereo");
     }
     const artifact = await env.artifacts.putFile(output, "video/mp4");
-    return artifactResult(artifact, canonicalize({
-      provider: env.label,
-      operation: "transform",
-      operations: need.program.operations.length,
-      frameCount: plan.frameCount,
-      sampleFrames: plan.sampleFrames,
-    }));
+    return artifactResult(artifact);
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
@@ -926,11 +880,7 @@ export async function executeExtractAudio(
       maxProbeOutputBytes: env.maxProbeOutputBytes,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
-    return artifactResult(artifact, canonicalize({
-      provider: env.label,
-      operation: "extract-audio",
-      sourceStream: need.streamIndex,
-    }));
+    return artifactResult(artifact);
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
@@ -978,12 +928,7 @@ export async function executeExtractFrame(
     assert(images.length === 1 && images[0]!.decodedUnitCount === 1,
       "Frame extraction output must decode to exactly one image");
     const artifact = await env.artifacts.put(bytes, "image/png");
-    return artifactResult(artifact, canonicalize({
-      provider: env.label,
-      operation: "extract-frame",
-      sourceStream: need.streamIndex,
-      at: need.at,
-    }));
+    return artifactResult(artifact);
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
@@ -1042,31 +987,11 @@ export async function executeProjectSpeechEvidenceAudio(
     "Alignment evidence must be exact 16 kHz mono PCM s16");
     const artifact = await env.artifacts.putFile(output, "audio/wav");
     const evidence: SpeechEvidenceAudio = sealSpeechEvidenceAudio({
-      contract: "svml.speech-evidence-audio@1",
       artifact,
-      codec: "pcm_s16le",
-      sampleRate: 16_000,
-      channels: 1,
       sampleFrames: need.evidenceSampleFrames,
-      durationSec: need.durationSec,
-      segments: need.segments,
-      sampleMap: {
-        algorithm: "rational-boundary-round@1",
-        sourceSampleRate: 48_000,
-        evidenceSampleRate: 16_000,
-        sourceSampleFrames: need.sourceSampleFrames,
-        evidenceSampleFrames: need.evidenceSampleFrames,
-        sourceOriginSample: 0,
-        evidenceOriginSample: 0,
-      },
     });
     assertSpeechEvidenceAudioIdentity(evidence);
-    return inlineResult(canonicalize(evidence), canonicalize({
-      provider: env.label,
-      operation: "project-speech-evidence-audio",
-      sourceSampleFrames: need.sourceSampleFrames,
-      evidenceSampleFrames: need.evidenceSampleFrames,
-    }));
+    return inlineResult(canonicalize(evidence));
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
@@ -1150,19 +1075,10 @@ export async function executeRenderTimelineAudio(
     assert(audio.decodedSampleFrames === plan.sampleFrames,
       "Rendered TimelineAudio sample count differs from its plan");
     const value: TimelineAudio = sealTimelineAudio({
-      contract: "svml.timeline-audio@1",
       artifact,
-      codec: "pcm_s16le",
-      sampleRate: 48_000,
-      channels: 2,
       sampleFrames: plan.sampleFrames,
-      loudness: "planned",
     });
-    return inlineResult(canonicalize(value), canonicalize({
-      provider: env.label,
-      operation: "render-audio",
-      clips: plan.clips.length,
-    }));
+    return inlineResult(canonicalize(value));
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
@@ -1250,19 +1166,13 @@ export async function executeMuxProgramMedia(
     "Final mux audio presentation span differs from TimelineAudio");
     const artifact = await env.artifacts.putFile(output, "video/mp4");
     const value: MuxedMedia = sealMuxedMedia({
-      contract: "svml.muxed-media@1",
       frameRate: need.visual.frameRate,
       frameCount: need.visual.frameCount,
       canvas: need.visual.canvas,
       presentationSampleFrames: need.audio.sampleFrames,
       artifact,
     });
-    return inlineResult(canonicalize(value), canonicalize({
-      provider: env.label,
-      operation: "mux",
-      videoStream: finalVideo[0]!.index,
-      audioStream: finalAudio[0]!.index,
-    }));
+    return inlineResult(canonicalize(value));
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }

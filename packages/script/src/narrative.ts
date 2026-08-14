@@ -1,4 +1,4 @@
-import { canonicalize } from "@narratage/core";
+import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue } from "@narratage/protocol";
 import type {
   CaptionCorrespondence,
@@ -78,7 +78,6 @@ function projectCaption(
         const wordId = `${atomId}:word:${groupIndex + 1}`;
         words.push({
           id: wordId,
-          index: words.length,
           atomId,
           segmentId: region.segmentId,
           turnId: turn.id,
@@ -89,7 +88,6 @@ function projectCaption(
       });
       atoms.push({
         id: atomId,
-        index: atoms.length,
         segmentId: region.segmentId,
         turnId: turn.id,
         ...(turn.role === undefined ? {} : { role: turn.role }),
@@ -110,13 +108,13 @@ function projectCaption(
   if (atoms.length === 0 || words.length === 0) throw new Error("Caption display contains no visible words");
   return {
     display: {
-      contract: "svml.caption-display-sequence@1",
+
       id,
       atoms,
       words,
     },
     correspondence: {
-      contract: "svml.caption-correspondence@1",
+
       displaySequenceId: id,
       atoms: correspondence,
     },
@@ -164,7 +162,7 @@ export function captionSelectionWordSubset(
     }
   }
   return {
-    contract: "svml.caption-display-word-subset@1",
+
     id: selection.id,
     sequenceId: sequence.id,
     wordIds,
@@ -232,7 +230,7 @@ export function narrativeSegmentExcerptValue(
   segment: ParsedNarrative["segments"][number],
 ): CanonicalValue {
   const content = {
-    contract: "svml.narrative-excerpt@1",
+
     kind: "segment",
     id: segment.id,
     tokenStart: segment.tokenStart,
@@ -255,7 +253,7 @@ export function narrativeSpeechTextValue(
 
 export function narrativeSelectionValue(selection: ParsedNarrative["selections"][number]): CanonicalValue {
   const content = {
-    contract: "svml.narrative-selection@1",
+
     id: selection.id,
     occurrences: selection.occurrences.map((occurrence) => ({
       occurrence: occurrence.occurrence,
@@ -268,7 +266,7 @@ export function narrativeSelectionValue(selection: ParsedNarrative["selections"]
 
 export function narrativeMomentValue(moment: ParsedNarrative["moments"][number]): CanonicalValue {
   const content = {
-    contract: "svml.narrative-moment@1",
+
     id: moment.id,
     occurrences: moment.occurrences.map((occurrence) => ({
       occurrence: occurrence.occurrence,
@@ -280,10 +278,9 @@ export function narrativeMomentValue(moment: ParsedNarrative["moments"][number])
 
 export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
   return canonicalize({
-    contract: "svml.narrative@1",
+
     segments: parsed.segments.map((segment) => ({
       id: segment.id,
-      index: segment.index,
       startAnchorId: segment.startAnchorId,
       endAnchorId: segment.endAnchorId,
       tokenStart: segment.tokenStart,
@@ -291,9 +288,7 @@ export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
     })),
     tokens: parsed.tokens.map((token) => ({
       id: token.id,
-      index: token.index,
       segmentId: token.segmentId,
-      segmentTokenIndex: token.segmentTokenIndex,
       startAnchorId: token.startAnchorId,
       endAnchorId: token.endAnchorId,
       text: token.text,
@@ -321,7 +316,15 @@ export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
         anchorId: occurrence.boundary.anchorId,
       })),
     })),
-    semanticIndex: parsed.semanticIndex,
+    semanticIndex: {
+
+      anchors: parsed.semanticIndex.anchors.map((anchor) => ({
+        id: anchor.id,
+        kind: anchor.kind,
+        segmentId: anchor.segmentId,
+        ...(anchor.tokenId === undefined ? {} : { tokenId: anchor.tokenId }),
+      })),
+    },
   });
 }
 
@@ -335,29 +338,4 @@ export function serializeDialogue(parsed: ParsedNarrative): string {
 
 export function serializeCaption(parsed: ParsedNarrative): string {
   return parsed.captionProjection.text;
-}
-
-export function narrativeSourceMap(recordId: string, parsed: ParsedNarrative): CanonicalValue {
-  return canonicalize({
-    format: "svml.script-source-map@1",
-    record: recordId,
-    segments: parsed.segments.map((segment) => ({ id: segment.id, range: segment.range })),
-    tokens: parsed.tokens.map((token) => ({ id: token.id, range: token.range })),
-    turns: parsed.turns.map((turn) => ({ id: turn.id, range: turn.range })),
-    selections: parsed.selections.map((selection) => ({
-      id: selection.id,
-      occurrences: selection.occurrences.map((occurrence) => ({
-        occurrence: occurrence.occurrence,
-        open: occurrence.open.range,
-        close: occurrence.close.range,
-      })),
-    })),
-    moments: parsed.moments.map((moment) => ({
-      id: moment.id,
-      occurrences: moment.occurrences.map((occurrence) => ({
-        occurrence: occurrence.occurrence,
-        range: occurrence.range,
-      })),
-    })),
-  });
 }

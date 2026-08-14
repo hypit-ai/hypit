@@ -40,25 +40,28 @@ test("SQLite stores verified Build facts and Operation checkpoints across reopen
     const initial = createGreetingBuild();
     const created = await first.builds.create("video", initial);
     assert.equal(created.revision, 0);
-    await first.catalog.record("video", {
+    const catalog = {
       format: "svml.build-catalog-descriptor@1",
       core: initial.id,
       source: { path: "/project/main.svml", closure: digestOf("source-closure") },
       aliases: [{
         name: "final.video",
-        type: initial.plan.goals[0]!.type,
         ref: { kind: "logical-output", id: initial.request.targets[0]!.output },
       }],
-    });
+    } as const;
+    await first.catalog.record("video", catalog);
+    assert.equal((await first.catalog.record("video", catalog)).aliases[0]?.name, "final.video");
+    await assert.rejects(first.catalog.record("video", {
+      ...catalog,
+      aliases: [{ ...catalog.aliases[0], name: "renamed.video" }],
+    }), /another source, Run Source or output naming/u);
     const operation = sealOperationIdentity({
       build: "video",
       command: "command:generation",
       endpoint: "kie.personal",
       authority: "kie.personal",
       route: "fixture.generation",
-      implementationDigest: digestOf("kie-implementation"),
       runtimeClosure: digestOf("runtime-closure"),
-      requestDigest: digestOf("generation-request"),
       attempt: 1,
     });
     const operationCreated = await first.operations.create(operation);
@@ -104,9 +107,7 @@ test("SQLite Operation CAS preserves a terminal completion", async () => {
       endpoint: "hyperframes.lambda",
       authority: "hyperframes.lambda",
       route: "fixture.render",
-      implementationDigest: digestOf("hyperframes-lambda"),
       runtimeClosure: digestOf("runtime"),
-      requestDigest: digestOf("render-request"),
       attempt: 1,
     });
     await state.operations.create(identity);
@@ -114,7 +115,6 @@ test("SQLite Operation CAS preserves a terminal completion", async () => {
       status: "completed",
       completion: {
         value: { kind: "inline", value: { artifact: "video.mp4" } },
-        metadata: { task: "lambda-1" },
       },
     });
     assert.equal(completed.status, "stored");
@@ -142,9 +142,7 @@ test("SQLite keeps cancellation control independent from execution state", async
       endpoint: "endpoint.cancel",
       authority: "endpoint.cancel",
       route: "fixture.cancel",
-      implementationDigest: digestOf("implementation.cancel"),
       runtimeClosure: digestOf("runtime.cancel"),
-      requestDigest: digestOf("request.cancel"),
       attempt: 1,
     });
     await state.operations.create(identity);
@@ -177,7 +175,7 @@ test("Host Catalog schema changes do not change the execution Runtime Closure", 
     assert.deepEqual(
       services.services.map((item) => item.instance.configurationDigest),
       [
-        ...Array(4).fill(digestOf({ path: join(directory, "runtime.sqlite"), schemaVersion: 6, busyTimeoutMs: 5_000 })),
+        ...Array(3).fill(digestOf({ path: join(directory, "runtime.sqlite"), schemaVersion: 6, busyTimeoutMs: 5_000 })),
       ],
     );
     await services.close?.();
@@ -192,14 +190,14 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
     const closure = digestOf("runtime:dispatch-test");
     await state.dispatch.create(createBuildDispatchIdentity({
-      build: "build-a", core: digestOf("core:a"), runtimeRevision: closure,
+      build: "build-a", core: digestOf("core:a"), runtimeClosure: closure,
     }), { now: 100 });
-    const first = await state.dispatch.claim({ runtimeRevision: closure, owner: "worker-a", token: "lease-a", now: 100, leaseMs: 10 });
+    const first = await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-a", token: "lease-a", now: 100, leaseMs: 10 });
     assert.ok(first?.lease);
     assert.equal(first.build, "build-a");
     assert.equal(first.lease.fence, 1);
-    assert.equal(await state.dispatch.claim({ runtimeRevision: closure, owner: "worker-b", token: "early", now: 105, leaseMs: 10 }), undefined);
-    const second = await state.dispatch.claim({ runtimeRevision: closure, owner: "worker-b", token: "lease-b", now: 111, leaseMs: 10 });
+    assert.equal(await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-b", token: "early", now: 105, leaseMs: 10 }), undefined);
+    const second = await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-b", token: "lease-b", now: 111, leaseMs: 10 });
     assert.ok(second?.lease);
     assert.equal(second.lease.fence, 2);
     const paidResources = [{ id: "authority:paid", maxActive: 1, maxInFlight: 1 }];
@@ -235,9 +233,9 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
     assert.equal(woken.phase, "waiting");
 
     await state.dispatch.create(createBuildDispatchIdentity({
-      build: "build-b", core: digestOf("core:b"), runtimeRevision: closure,
+      build: "build-b", core: digestOf("core:b"), runtimeClosure: closure,
     }), { now: 112 });
-    const third = await state.dispatch.claim({ runtimeRevision: closure, owner: "worker-c", token: "lease-c", now: 112, leaseMs: 10 });
+    const third = await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-c", token: "lease-c", now: 112, leaseMs: 10 });
     assert.ok(third?.lease);
     const blocked = await state.dispatch.acquireCapacity({
       build: "build-b", command: "command:b", resources: paidResources, mode: "recoverable",
@@ -247,9 +245,9 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
     assert.equal(blocked.status, "blocked");
 
     await state.dispatch.create(createBuildDispatchIdentity({
-      build: "build-c", core: digestOf("core:c"), runtimeRevision: closure,
+      build: "build-c", core: digestOf("core:c"), runtimeClosure: closure,
     }), { now: 200, priority: 100 });
-    const fourth = await state.dispatch.claim({ runtimeRevision: closure, owner: "worker-d", token: "lease-d", now: 200, leaseMs: 10 });
+    const fourth = await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-d", token: "lease-d", now: 200, leaseMs: 10 });
     assert.ok(fourth?.lease);
     await state.dispatch.requestCancellation("build-c", "stop", 201);
     const cancelledWake = await state.dispatch.release(
@@ -267,16 +265,16 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
   }
 });
 
-test("one SQLite execution domain rejects a second Runtime Revision until prior work is terminal", async () => {
+test("one SQLite execution domain rejects a second Runtime Closure until prior work is terminal", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-revision-gate-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    const firstRevision = digestOf("runtime:first");
-    const secondRevision = digestOf("runtime:second");
+    const firstClosure = digestOf("runtime:first");
+    const secondClosure = digestOf("runtime:second");
     const firstIdentity = createBuildDispatchIdentity({
       build: "first-build",
       core: digestOf("core:first"),
-      runtimeRevision: firstRevision,
+      runtimeClosure: firstClosure,
     });
     assert.equal((await state.dispatch.create(firstIdentity, { now: 100 })).status, "created");
     assert.equal((await state.dispatch.create(firstIdentity, { now: 101 })).status, "existing");
@@ -284,13 +282,13 @@ test("one SQLite execution domain rejects a second Runtime Revision until prior 
       state.dispatch.create(createBuildDispatchIdentity({
         build: "second-build",
         core: digestOf("core:second"),
-        runtimeRevision: secondRevision,
+        runtimeClosure: secondClosure,
       }), { now: 102 }),
       /cannot enter this execution domain[\s\S]*first-build[\s\S]*original Runtime Profile/u,
     );
 
     const claimed = await state.dispatch.claim({
-      runtimeRevision: firstRevision,
+      runtimeClosure: firstClosure,
       owner: "worker:first",
       token: "lease:first",
       now: 103,
@@ -301,7 +299,7 @@ test("one SQLite execution domain rejects a second Runtime Revision until prior 
     assert.equal((await state.dispatch.create(createBuildDispatchIdentity({
       build: "second-build",
       core: digestOf("core:second"),
-      runtimeRevision: secondRevision,
+      runtimeClosure: secondClosure,
     }), { now: 105 })).status, "created");
     state.close();
   } finally {
@@ -322,10 +320,10 @@ test("Authority and Route resources are acquired atomically across models", asyn
       await state.dispatch.create(createBuildDispatchIdentity({
         build,
         core: digestOf(`core:${build}`),
-        runtimeRevision: closure,
+        runtimeClosure: closure,
       }), { now });
       const claimed = await state.dispatch.claim({
-        runtimeRevision: closure,
+        runtimeClosure: closure,
         owner: `worker:${build}`,
         token: `lease:${build}`,
         now,

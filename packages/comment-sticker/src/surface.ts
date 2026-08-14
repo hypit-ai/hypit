@@ -172,7 +172,7 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
   const records: SurfaceRecordDraft[] = [{
     id: headerId,
     type: commentStickerTypes.header,
-    value: { kind: "inline", value: sealCommentStickerHeader({ contract: "svml.comment-sticker-header@1", id }) },
+    value: { kind: "inline", value: sealCommentStickerHeader({ id }) },
     range: element.range,
   }];
   const inputs: Record<string, typeof canvas.ref> = { canvas: canvas.ref, header: { kind: "record", id: headerId }, space: space.ref };
@@ -208,7 +208,7 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
       id: specId,
       type: commentStickerTypes.itemSpec,
       value: { kind: "inline", value: sealCommentStickerItemSpec({
-        contract: "svml.comment-sticker-item-spec@1",
+
         id: text(child, "id"),
         projection: temporal.projection,
         expansion: { kind: occurrences },
@@ -244,7 +244,7 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
   if (items.length === 0) throw new Error(`${element.name} requires at least one Sticker.`);
   if (usesMap) inputs.map = reference(element.attributes.map, `${element.name}.map`, semanticMapTypes.complete, resolveReference).ref;
   else if (element.attributes.map !== undefined) throw new Error(`${element.name}.map is unused.`);
-  const fragment = createCommentStickerFragment(items, `@narratage/comment-sticker/surface/${id}@1`);
+  const fragment = createCommentStickerFragment(items);
   return {
     records,
     components: [{ id, fragment: fragment.id, inputs, outputs: { program: `${id}.program`, track: `${id}.track` }, range: element.range }],

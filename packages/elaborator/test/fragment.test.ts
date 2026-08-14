@@ -1,7 +1,7 @@
 import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { speechDependency, speechTypes } from "@narratage/speech";
 import { compositionTypes } from "@narratage/composition";
-import { spatialTypes, spatialValidatorDigests } from "@narratage/spatial";
+import { spatialTypes } from "@narratage/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -12,15 +12,12 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypeValidationReceipt,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 import {
   bindAuthorFragment,
   elaborateGraphFragment,
   mergeFragmentContributions,
-  sameFragmentInstance,
   sealGraphFragment,
   verifyGraphFragment,
 } from "@narratage/elaborator";
@@ -51,7 +48,6 @@ const manifest: ModuleManifest = {
   dependencies: [speechDependency],
   types: [{ name: requestType.name, schema: { kind: "string", minLength: 1 } }],
   capabilities: [],
-  surfaces: [],
   producers: [{
     name: generateProducer.name,
     inputs: [
@@ -61,8 +57,6 @@ const manifest: ModuleManifest = {
     outputs: [{ name: "take", type: speechTypes.basis }],
     needs: [],
     implementation: {
-      kind: "registered",
-      locator: "example.fragment-speech/generate",
       digest: digestOf("example.fragment-speech/generate@1"),
     },
   }],
@@ -78,20 +72,13 @@ function program(): LinkedProgram {
     id: "canvas:root",
     type: spatialTypes.canvas,
     value: { kind: "inline", value: {
-      contract: "svml.canvas-space@1", widthPx: 1080, heightPx: 1920,
+      widthPx: 1080, heightPx: 1920,
       origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
     } },
     origin,
   });
-  const canvas = { ...rawCanvas, validation: sealTypeValidationReceipt({
-    type: rawCanvas.type,
-    recordDigest: rawCanvas.digest,
-    validatorDigest: spatialValidatorDigests.canvas,
-  }) };
-  return link(closure, [sealTypedModule({
-    id: "author:fragment",
-    closureDigest: closure.digest,
-    records: [
+  const canvas = rawCanvas;
+  return link(closure, [
       sealRecord({
         id: "request:root",
         type: requestType,
@@ -105,15 +92,13 @@ function program(): LinkedProgram {
         origin,
       }),
       canvas,
-    ],
-  })]);
+  ]);
 }
 
 function speechFragment(): GraphFragment {
   const input = (name: string) => ({ kind: "fragment-input" as const, name });
   const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
   return sealGraphFragment({
-    name: "official-speech-basis",
     inputs: [
       { name: "request", type: requestType },
       { name: "style", type: requestType },
@@ -218,7 +203,7 @@ test("the same Fragment instance is deterministic while distinct instances never
   const opening = instance(linked, "opening");
   const openingAgain = instance(linked, "opening");
   const closing = instance(linked, "closing");
-  assert.equal(sameFragmentInstance(opening, openingAgain), true);
+  assert.deepEqual(opening, openingAgain);
   assert.notEqual(opening.id, closing.id);
   assert.equal(
     new Set([...opening.operations, ...closing.operations].map((operation) => operation.id)).size,
@@ -255,7 +240,6 @@ test("Fragment references cannot escape through a raw Graph reference", () => {
   const valid = speechFragment();
   assert.throws(
     () => sealGraphFragment({
-      name: valid.name,
       inputs: valid.inputs,
       operations: valid.operations.map((item) => item.id === "generate"
         ? {

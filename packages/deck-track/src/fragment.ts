@@ -41,7 +41,6 @@ function sourceInput(card: DepthStackFragmentCard): GraphFragment["inputs"][numb
 export function createDepthStackFragment(
   cards: readonly DepthStackFragmentCard[],
   terminal: DepthStackFragmentTerminal,
-  name = "@narratage/deck-track/dynamic-depth-stack@1",
 ) {
   if (cards.length === 0) throw new Error("DepthStack Fragment requires Cards.");
   const inputs: Array<GraphFragment["inputs"][number]> = [
@@ -157,7 +156,6 @@ export function createDepthStackFragment(
     result: { kind: "output", name: "track" },
   });
   return sealGraphFragment({
-    name,
     inputs,
     operations,
     exports: [

@@ -17,7 +17,7 @@ import {
   videoDomainValidators,
 } from "@narratage/video-domain";
 
-import { createObserver, observeFrontends } from "./observe.js";
+import { createObserver } from "./observe.js";
 import type { Observations } from "./observe.js";
 
 /** Bytes a Source named, kept so the preview can serve the exact file. */
@@ -85,7 +85,7 @@ export async function compileSource(entryPath: string): Promise<CompiledSource> 
     compiled = await compileSourceClosure({
       entry: { id: entryPath, name: "main.svml", text: readFileSync(entryPath, "utf8") },
       closure,
-      frontends: observeFrontends(await videoDomainFrontends(resolveModule), observer),
+      frontends: await videoDomainFrontends(resolveModule, observer.surfaces),
       admitRecord: createRecordAdmitter(await videoDomainValidators()),
       resolveSource(importer: { readonly id: string }, request: { readonly from: string }) {
         const path = resolve(dirname(importer.id), request.from);
@@ -113,7 +113,7 @@ export async function compileSource(entryPath: string): Promise<CompiledSource> 
         served.set(digest, { mediaType: request.mediaType, bytes });
         return { artifact: { kind: "blob", digest, size: bytes.byteLength, mediaType: request.mediaType } };
       },
-    } as never) as CompiledClosure;
+    } as never) as unknown as CompiledClosure;
   } catch (error) {
     const held = error as { message?: string; range?: { start: number; end: number } };
     // The tag that failed is the one the Surfaces were last handed.

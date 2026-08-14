@@ -1,4 +1,4 @@
-import { digestOf } from "@narratage/core";
+import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, TypeRef } from "@narratage/protocol";
 
 export const svsModuleRef = { name: "@narratage/svs", version: "1" } as const;
@@ -16,7 +16,7 @@ export const svsManifest: ModuleManifest = {
     schema: {
       kind: "object",
       fields: {
-        contract: { schema: { kind: "literal", value: "svml.svs-recipe@1" } },
+
         path: { schema: { kind: "string", minLength: 3 } },
         properties: {
           schema: {
@@ -29,6 +29,5 @@ export const svsManifest: ModuleManifest = {
     },
   }],
   capabilities: [],
-  surfaces: [],
   producers: [],
 };

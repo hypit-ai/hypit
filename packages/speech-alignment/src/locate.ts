@@ -1,62 +1,85 @@
 import { digestOf, isDigest } from "@narratage/protocol";
 import type { Narrative, NarrativeToken } from "@narratage/narrative";
-import type { ProgramSpace } from "@narratage/program-space";
-import type { SpeechAudioBasis, SpeechBasis } from "@narratage/speech";
-import type { AlignedTranscriptEvidence, AlignedTranscriptSegment, SpeechCharacterEvidence, SpeechWordEvidence } from "@narratage/speech-evidence";
-import type { AlignmentGroup, CompleteSemanticMap, SemanticTimePoint, TimedSpeechSegment, TimedSpeechToken } from "@narratage/semantic-map";
+import { programFrameSampleBoundary, programSpaceFrameCount } from "@narratage/program-space";
+import type { SpeechAudioBasis } from "@narratage/speech";
+import type {
+  AlignedTranscriptEvidence,
+  SpeechActivitySpan,
+  SpeechCharacterEvidence,
+  SpeechTranscriptPassage,
+  SpeechWordEvidence,
+} from "@narratage/speech-evidence";
+import type { CompleteSemanticMap, SemanticTimePoint, TimedSpeechToken } from "@narratage/semantic-map";
 
 import { alignWordGroups } from "./align.js";
 import { SpeechAlignmentError } from "./error.js";
 import { alignCharacters, alignmentCharacters } from "./normalize.js";
+import type { AlignmentGroup, TimedSpeechSegment } from "./types.js";
 
-const EPSILON = 1e-6;
 export const speechLocatorDigest = digestOf("@narratage/speech-alignment/locate@1");
 
 type MutableTiming = {
-  startSec: number;
-  endSec: number;
+  startSample: number;
+  endSampleExclusive: number;
 };
 
 type TimedEvidenceChar = {
   readonly value: string;
   readonly wordIndex: number;
-  readonly startSec?: number;
-  readonly endSec?: number;
+  readonly startSample?: number;
+  readonly endSampleExclusive?: number;
+};
+
+type SegmentEvidence = {
+  readonly sourceSegmentId: string;
+  readonly words: SpeechWordEvidence[];
+  readonly chars: SpeechCharacterEvidence[];
+  readonly speechActivity: SpeechActivitySpan[];
 };
 
 function fail(code: string, message: string): never {
   throw new SpeechAlignmentError(code, message);
 }
 
-function finite(value: number | undefined): value is number {
-  return value !== undefined && Number.isFinite(value);
+function sampleWindowPresent(value: {
+  readonly startSample?: number;
+  readonly endSampleExclusive?: number;
+}): value is { readonly startSample: number; readonly endSampleExclusive: number } {
+  return value.startSample !== undefined && value.endSampleExclusive !== undefined;
 }
 
-/**
- * A time is rejected only when no frame can be derived from it. Whether a window
- * runs backwards, leaves its Segment or reaches past the programme is a fact
- * about the recording, reported as measured.
- */
-function validateWindow(start: number, end: number, _limit: number, label: string): void {
-  if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < 0) {
-    fail("SPEECH_WINDOW", `${label} has an unusable time ${start}..${end}.`);
+/** Provider measurements may overlap or run backwards; only unusable sample coordinates are rejected. */
+function validateSampleWindow(
+  value: { readonly startSample?: number; readonly endSampleExclusive?: number },
+  limit: number,
+  label: string,
+): void {
+  if ((value.startSample === undefined) !== (value.endSampleExclusive === undefined)) {
+    fail("SPEECH_WINDOW", `${label} must provide both sample boundaries or neither.`);
   }
+  if (value.startSample === undefined || value.endSampleExclusive === undefined) return;
+  if (!Number.isSafeInteger(value.startSample) || !Number.isSafeInteger(value.endSampleExclusive)
+    || value.startSample < 0 || value.endSampleExclusive < 0
+    || value.startSample > limit || value.endSampleExclusive > limit) {
+    fail("SPEECH_WINDOW", `${label} has an unusable sample window ${value.startSample}..${value.endSampleExclusive}.`);
+  }
+}
+
+function evidenceSampleFrames(basis: SpeechAudioBasis): number {
+  return programFrameSampleBoundary(
+    basis.programSpace,
+    programSpaceFrameCount(basis.programSpace),
+    16_000,
+  );
 }
 
 function validateBasis(narrative: Narrative, basis: SpeechAudioBasis): void {
-  if (basis.contract !== "svml.speech-audio-basis@1") {
-    fail("SPEECH_BASIS_CONTRACT", "Unsupported SpeechAudioBasis contract.");
-  }
   const { numerator, denominator } = basis.programSpace.frameRate;
-  if (!Number.isSafeInteger(numerator) || numerator <= 0 || !Number.isSafeInteger(denominator) || denominator <= 0) {
+  if (!Number.isSafeInteger(numerator) || numerator <= 0
+    || !Number.isSafeInteger(denominator) || denominator <= 0) {
     fail("SPEECH_FRAME_RATE", "ProgramSpace frame rate must be a positive rational number.");
   }
-  if (
-    !Number.isFinite(basis.programSpace.durationSec)
-    || basis.programSpace.durationSec <= 0
-  ) {
-    fail("SPEECH_BASIS_DURATION", "SpeechAudioBasis ProgramSpace must have a positive duration.");
-  }
+  const frameCount = programSpaceFrameCount(basis.programSpace);
   if (basis.audio.kind !== "blob" || !isDigest(basis.audio.digest)
     || basis.audio.mediaType !== "audio/wav" || !Number.isSafeInteger(basis.audio.size) || basis.audio.size < 0) {
     fail("SPEECH_AUDIO_DIGEST", "SpeechBasis audio BlobRef is invalid.");
@@ -64,73 +87,96 @@ function validateBasis(narrative: Narrative, basis: SpeechAudioBasis): void {
   if (basis.segments.length !== narrative.segments.length) {
     fail("SPEECH_BASIS_SEGMENTS", "SpeechAudioBasis must cover every Narrative Segment exactly once.");
   }
+  let previousEnd = 0;
   for (const [index, segment] of basis.segments.entries()) {
     const expected = narrative.segments[index]!;
     if (segment.segmentId !== expected.id) {
       fail("SPEECH_BASIS_SEGMENTS", `SpeechAudioBasis Segment ${segment.segmentId} does not match ${expected.id}.`);
     }
-    validateWindow(segment.startSec, segment.endSec, basis.programSpace.durationSec, `Basis Segment ${segment.segmentId}`);
+    if (!Number.isSafeInteger(segment.startFrame) || !Number.isSafeInteger(segment.endFrameExclusive)
+      || segment.startFrame !== previousEnd || segment.endFrameExclusive <= segment.startFrame
+      || segment.endFrameExclusive > frameCount) {
+      fail("SPEECH_BASIS_SEGMENTS", `SpeechAudioBasis Segment ${segment.segmentId} has an invalid frame window.`);
+    }
+    previousEnd = segment.endFrameExclusive;
+  }
+  if (previousEnd !== frameCount) {
+    fail("SPEECH_BASIS_SEGMENTS", "SpeechAudioBasis Segments must cover ProgramSpace exactly.");
   }
 }
 
-function validateEvidence(
-  narrative: Narrative,
+function validateEvidence(basis: SpeechAudioBasis, evidence: AlignedTranscriptEvidence): void {
+  const limit = evidenceSampleFrames(basis);
+  for (const [passageIndex, passage] of evidence.passages.entries()) {
+    validateSampleWindow(passage, limit, `Passage ${passageIndex + 1}`);
+    for (const [wordIndex, word] of passage.words.entries()) {
+      if (typeof word.text !== "string") fail("SPEECH_WORD_TEXT", `Word ${wordIndex + 1} has no text.`);
+      validateSampleWindow(word, limit, `Word ${wordIndex + 1}`);
+    }
+    for (const [charIndex, char] of passage.chars.entries()) {
+      if (!Number.isInteger(char.wordIndex) || char.wordIndex < 0 || char.wordIndex >= passage.words.length) {
+        fail("SPEECH_CHAR_WORD", `Character ${charIndex + 1} has an invalid wordIndex.`);
+      }
+      validateSampleWindow(char, limit, `Character ${charIndex + 1}`);
+    }
+    for (const [spanIndex, span] of (passage.speechActivity ?? []).entries()) {
+      validateSampleWindow(span, limit, `Speech activity span ${spanIndex + 1}`);
+    }
+  }
+}
+
+function sampleMidpoint(value: {
+  readonly startSample?: number;
+  readonly endSampleExclusive?: number;
+}): number | undefined {
+  return sampleWindowPresent(value)
+    ? (value.startSample + value.endSampleExclusive) / 2
+    : undefined;
+}
+
+/** Assign acoustic evidence to authored Segments only where both clocks are explicitly connected. */
+function partitionEvidence(
   basis: SpeechAudioBasis,
   evidence: AlignedTranscriptEvidence,
-): void {
-  if (evidence.contract !== "svml.aligned-transcript-evidence@1") {
-    fail("SPEECH_CONTRACT", `Unsupported aligned-transcript contract ${evidence.contract}.`);
-  }
-  if (!Number.isFinite(evidence.durationSec) || evidence.durationSec <= 0) {
-    fail("SPEECH_DURATION", "Aligned-transcript duration must be positive and finite.");
-  }
-  if (Math.abs(evidence.durationSec - basis.programSpace.durationSec) > EPSILON) {
-    fail("SPEECH_EVIDENCE_DURATION", "Aligned transcript duration differs from SpeechBasis.");
-  }
-  const expected = new Set(narrative.segments.map((segment) => segment.id));
-  const seen = new Set<string>();
-  for (const segment of evidence.segments) {
-    if (!expected.has(segment.sourceSegmentId)) {
-      fail("SPEECH_SEGMENT_UNKNOWN", `Aligned transcript references unknown Segment ${segment.sourceSegmentId}.`);
+): readonly SegmentEvidence[] {
+  const ranges = basis.segments.map((segment) => ({
+    segment,
+    startSample: programFrameSampleBoundary(basis.programSpace, segment.startFrame, 16_000),
+    endSampleExclusive: programFrameSampleBoundary(basis.programSpace, segment.endFrameExclusive, 16_000),
+  }));
+  const buckets = ranges.map(({ segment }) => ({
+    sourceSegmentId: segment.segmentId,
+    words: [] as SpeechWordEvidence[],
+    chars: [] as SpeechCharacterEvidence[],
+    speechActivity: [] as SpeechActivitySpan[],
+  }));
+  const bucketIndex = (point: number | undefined): number => {
+    const measured = point ?? 0;
+    const index = ranges.findIndex((range, rangeIndex) => measured >= range.startSample
+      && (measured < range.endSampleExclusive || rangeIndex === ranges.length - 1));
+    if (index >= 0) return index;
+    return measured < ranges[0]!.startSample ? 0 : ranges.length - 1;
+  };
+
+  for (const passage of evidence.passages) {
+    const passagePoint = sampleMidpoint(passage);
+    for (const [wordIndex, word] of passage.words.entries()) {
+      const target = buckets[bucketIndex(sampleMidpoint(word) ?? passagePoint)]!;
+      const targetWordIndex = target.words.length;
+      target.words.push(word);
+      target.chars.push(...passage.chars
+        .filter((char) => char.wordIndex === wordIndex)
+        .map((char) => ({ ...char, wordIndex: targetWordIndex })));
     }
-    if (seen.has(segment.sourceSegmentId)) {
-      fail("SPEECH_SEGMENT_DUPLICATE", `Aligned transcript repeats Segment ${segment.sourceSegmentId}.`);
-    }
-    seen.add(segment.sourceSegmentId);
-    validateWindow(segment.startSec, segment.endSec, evidence.durationSec, `Segment ${segment.sourceSegmentId}`);
-    for (const [index, word] of segment.words.entries()) {
-      if (typeof word.text !== "string") fail("SPEECH_WORD_TEXT", `Word ${index + 1} has no text.`);
-      if (finite(word.startSec) && finite(word.endSec)) {
-        validateWindow(word.startSec, word.endSec, evidence.durationSec, `Word ${index + 1}`);
-      }
-    }
-    for (const [index, char] of segment.chars.entries()) {
-      if (!Number.isInteger(char.wordIndex) || char.wordIndex < 0 || char.wordIndex >= segment.words.length) {
-        fail("SPEECH_CHAR_WORD", `Character ${index + 1} has an invalid wordIndex.`);
-      }
-      if (finite(char.startSec) && finite(char.endSec)) {
-        validateWindow(char.startSec, char.endSec, evidence.durationSec, `Character ${index + 1}`);
-      }
-    }
-    for (const [index, span] of (segment.speechActivity ?? []).entries()) {
-      validateWindow(span.startSec, span.endSec, evidence.durationSec, `VAD span ${index + 1}`);
+    for (const span of passage.speechActivity ?? []) {
+      buckets[bucketIndex(sampleMidpoint(span) ?? passagePoint)]!.speechActivity.push(span);
     }
   }
-  for (const id of expected) {
-    if (!seen.has(id)) fail("SPEECH_SEGMENT_MISSING", `Aligned transcript is missing Segment ${id}.`);
-  }
-  const segmentsById = new Map(evidence.segments.map((segment) => [segment.sourceSegmentId, segment]));
-  for (const sourceSegment of narrative.segments) {
-    const segment = segmentsById.get(sourceSegment.id)!;
-    const basisSegment = basis.segments.find((item) => item.segmentId === sourceSegment.id)!;
-    // The transcript must answer the segmentation it was asked about.
-    if (
-      Math.abs(segment.startSec - basisSegment.startSec) > EPSILON
-      || Math.abs(segment.endSec - basisSegment.endSec) > EPSILON
-    ) {
-      fail("SPEECH_EVIDENCE_SEGMENT_AFFINITY", `Segment ${segment.sourceSegmentId} differs from SpeechBasis.`);
-    }
-  }
+  return buckets;
+}
+
+function interpolatedBoundary(start: number, end: number, index: number, count: number): number {
+  return start + Math.round((end - start) * index / count);
 }
 
 function syntheticCharTimes(
@@ -138,14 +184,19 @@ function syntheticCharTimes(
   wordIndex: number,
   word: SpeechWordEvidence,
 ): TimedEvidenceChar[] {
-  const hasWindow = finite(word.startSec) && finite(word.endSec);
+  const hasWindow = sampleWindowPresent(word);
   return characters.map((value, index) => ({
     value,
     wordIndex,
     ...(hasWindow
       ? {
-          startSec: word.startSec! + (word.endSec! - word.startSec!) * index / characters.length,
-          endSec: word.startSec! + (word.endSec! - word.startSec!) * (index + 1) / characters.length,
+          startSample: interpolatedBoundary(word.startSample, word.endSampleExclusive, index, characters.length),
+          endSampleExclusive: interpolatedBoundary(
+            word.startSample,
+            word.endSampleExclusive,
+            index + 1,
+            characters.length,
+          ),
         }
       : {}),
   }));
@@ -163,8 +214,8 @@ function timedCharsForWord(
     .flatMap((char) => alignmentCharacters(char.char).map((value) => ({
       value,
       wordIndex,
-      ...(finite(char.startSec) && finite(char.endSec)
-        ? { startSec: char.startSec, endSec: char.endSec }
+      ...(sampleWindowPresent(char)
+        ? { startSample: char.startSample, endSampleExclusive: char.endSampleExclusive }
         : {}),
     })));
   if (!supplied.length) return syntheticCharTimes(expected, wordIndex, word);
@@ -173,22 +224,22 @@ function timedCharsForWord(
   const pairs = alignCharacters(expected, supplied.map((char) => char.value));
   for (const pair of pairs) {
     const suppliedChar = supplied[pair.evidenceIndex]!;
-    if (!finite(suppliedChar.startSec) || !finite(suppliedChar.endSec)) continue;
+    if (!sampleWindowPresent(suppliedChar)) continue;
     fallback[pair.sourceIndex] = {
       value: expected[pair.sourceIndex]!,
       wordIndex,
-      startSec: suppliedChar.startSec,
-      endSec: suppliedChar.endSec,
+      startSample: suppliedChar.startSample,
+      endSampleExclusive: suppliedChar.endSampleExclusive,
     };
   }
   return fallback;
 }
 
-function timedChars(segment: AlignedTranscriptSegment): TimedEvidenceChar[] {
+function timedChars(segment: SegmentEvidence): TimedEvidenceChar[] {
   return segment.words.flatMap((word, index) => timedCharsForWord(word, index, segment.chars));
 }
 
-function scoredWords(segment: AlignedTranscriptSegment): SpeechWordEvidence[] {
+function scoredWords(segment: SegmentEvidence): SpeechWordEvidence[] {
   return segment.words.map((word, wordIndex) => {
     const scores = [
       ...(word.score === undefined ? [] : [word.score]),
@@ -206,21 +257,20 @@ function groupWindow(
   group: AlignmentGroup,
   words: readonly SpeechWordEvidence[],
   chars: readonly TimedEvidenceChar[],
-): { readonly startSec: number; readonly endSec: number } | undefined {
+): MutableTiming | undefined {
   const wordRun = words.slice(group.evidenceWordStart, group.evidenceWordEndExclusive);
   const charRun = chars.filter((char) =>
     char.wordIndex >= group.evidenceWordStart && char.wordIndex < group.evidenceWordEndExclusive);
   const starts = [
-    ...wordRun.map((word) => word.startSec),
-    ...charRun.map((char) => char.startSec),
-  ].filter(finite);
+    ...wordRun.map((word) => word.startSample),
+    ...charRun.map((char) => char.startSample),
+  ].filter((value): value is number => value !== undefined);
   const ends = [
-    ...wordRun.map((word) => word.endSec),
-    ...charRun.map((char) => char.endSec),
-  ].filter(finite);
+    ...wordRun.map((word) => word.endSampleExclusive),
+    ...charRun.map((char) => char.endSampleExclusive),
+  ].filter((value): value is number => value !== undefined);
   if (!starts.length || !ends.length) return undefined;
-  // The envelope of a run of evidence, not a correction of any one measurement.
-  return { startSec: Math.min(...starts), endSec: Math.max(...ends) };
+  return { startSample: Math.min(...starts), endSampleExclusive: Math.max(...ends) };
 }
 
 function locatePairedGroup(
@@ -241,37 +291,45 @@ function locatePairedGroup(
     sourceCharacters.map((char) => char.value),
     evidenceCharacters.map((char) => char.value),
   );
-  const exactOneToOne = group.relation === "exact";
   const window = groupWindow(group, words, chars);
 
   for (let tokenOffset = 0; tokenOffset < sourceRun.length; tokenOffset += 1) {
     const evidenceForToken = pairs
       .filter((pair) => sourceCharacters[pair.sourceIndex]!.tokenOffset === tokenOffset)
       .map((pair) => evidenceCharacters[pair.evidenceIndex]!)
-      .filter((char) => finite(char.startSec) && finite(char.endSec));
-    let startSec = evidenceForToken[0]?.startSec;
-    let endSec = evidenceForToken.at(-1)?.endSec;
+      .filter(sampleWindowPresent);
+    let startSample = evidenceForToken[0]?.startSample;
+    let endSampleExclusive = evidenceForToken.at(-1)?.endSampleExclusive;
     if (sourceRun.length === 1 && window) {
-      startSec = window.startSec;
-      endSec = window.endSec;
+      startSample = window.startSample;
+      endSampleExclusive = window.endSampleExclusive;
     } else if (window) {
-      if (tokenOffset === 0 && finite(startSec)) startSec = window.startSec;
-      if (tokenOffset === sourceRun.length - 1 && finite(endSec)) endSec = window.endSec;
+      if (tokenOffset === 0 && startSample !== undefined) startSample = window.startSample;
+      if (tokenOffset === sourceRun.length - 1 && endSampleExclusive !== undefined) {
+        endSampleExclusive = window.endSampleExclusive;
+      }
     }
-    if (!finite(startSec) || !finite(endSec)) continue;
+    if (startSample === undefined || endSampleExclusive === undefined) continue;
     const sourceIndex = sourceIndexById.get(sourceRun[tokenOffset]!.id)!;
-    output[sourceIndex] = { startSec, endSec };
+    output[sourceIndex] = { startSample, endSampleExclusive };
   }
 }
 
-function speechBounds(segment: AlignedTranscriptSegment): { readonly start: number; readonly end: number } {
-  const spans = segment.speechActivity ?? [];
+function speechBounds(
+  basis: SpeechAudioBasis,
+  segment: SegmentEvidence,
+  basisSegment: SpeechAudioBasis["segments"][number],
+): { readonly start: number; readonly end: number } {
+  const spans = segment.speechActivity;
   return spans.length
-    ? { start: spans[0]!.startSec, end: spans.at(-1)!.endSec }
-    : { start: segment.startSec, end: segment.endSec };
+    ? { start: spans[0]!.startSample, end: spans.at(-1)!.endSampleExclusive }
+    : {
+        start: programFrameSampleBoundary(basis.programSpace, basisSegment.startFrame, 16_000),
+        end: programFrameSampleBoundary(basis.programSpace, basisSegment.endFrameExclusive, 16_000),
+      };
 }
 
-function fillEstimated(
+function fillMissingTiming(
   values: Array<MutableTiming | undefined>,
   source: readonly NarrativeToken[],
   startBound: number,
@@ -286,10 +344,8 @@ function fillEstimated(
     const runStart = cursor;
     while (cursor < values.length && !values[cursor]) cursor += 1;
     const runEnd = cursor;
-    const left = runStart > 0 ? values[runStart - 1]!.endSec : startBound;
-    const right = runEnd < values.length ? values[runEnd]!.startSec : endBound;
-    // These tokens have no measurement at all, so this bound shapes an invention
-    // rather than editing anything that was measured.
+    const left = runStart > 0 ? values[runStart - 1]!.endSampleExclusive : startBound;
+    const right = runEnd < values.length ? values[runEnd]!.startSample : endBound;
     const usableRight = Math.max(left, right);
     const weights = source
       .slice(runStart, runEnd)
@@ -298,51 +354,33 @@ function fillEstimated(
     let consumed = 0;
     for (let index = runStart; index < runEnd; index += 1) {
       const weight = weights[index - runStart]!;
-      const startSec = left + (usableRight - left) * consumed / totalWeight;
+      const startSample = interpolatedBoundary(left, usableRight, consumed, totalWeight);
       consumed += weight;
-      const endSec = left + (usableRight - left) * consumed / totalWeight;
-      values[index] = {
-        startSec,
-        endSec,
-      };
+      const endSampleExclusive = interpolatedBoundary(left, usableRight, consumed, totalWeight);
+      values[index] = { startSample, endSampleExclusive };
     }
   }
   return values as MutableTiming[];
 }
 
-function frameFor(basis: SpeechAudioBasis, timeSec: number): number {
-  const { numerator, denominator } = basis.programSpace.frameRate;
-  return Math.round(timeSec * numerator / denominator);
+function frameForEvidenceSample(basis: SpeechAudioBasis, sample: number): number {
+  const numerator = BigInt(sample) * BigInt(basis.programSpace.frameRate.numerator);
+  const denominator = 16_000n * BigInt(basis.programSpace.frameRate.denominator);
+  const frame = (numerator * 2n + denominator) / (denominator * 2n);
+  if (frame > BigInt(Number.MAX_SAFE_INTEGER)) fail("SPEECH_FRAME", "Speech evidence exceeds the frame domain.");
+  return Number(frame);
 }
 
-function secondsFor(basis: SpeechAudioBasis, frame: number): number {
-  const { numerator, denominator } = basis.programSpace.frameRate;
-  return frame * denominator / numerator;
-}
-
-/**
- * Locate every Script token against one recording.
- *
- * The result is total: every token of every Segment carries a window, whether it
- * was measured, derived from a neighbouring character run, or interpolated
- * because the transcript never reached it. Whether a window runs backwards,
- * overlaps its neighbour or leaves its Segment is reported as measured — those
- * are facts about the recording, and deciding what they mean belongs to whoever
- * projects them onto a timeline.
- *
- * Locating fails only when the Script, the audio and the transcript are not the
- * same three things: a missing or repeated Segment, a Segment the Script never
- * declared, a transcript answering a different segmentation, or a duration that
- * belongs to other audio. It never fails because of a timestamp.
- */
+/** Locate every Script token from one provider-neutral acoustic evidence pass. */
 export function locateSpeechTiming(
   narrative: Narrative,
   basis: SpeechAudioBasis,
   evidence: AlignedTranscriptEvidence,
 ): CompleteSemanticMap {
   validateBasis(narrative, basis);
-  validateEvidence(narrative, basis, evidence);
-  const evidenceBySegment = new Map(evidence.segments.map((segment) => [segment.sourceSegmentId, segment]));
+  validateEvidence(basis, evidence);
+  const evidenceBySegment = new Map(partitionEvidence(basis, evidence)
+    .map((segment) => [segment.sourceSegmentId, segment]));
   const timedSegments: TimedSpeechSegment[] = [];
   const timedTokens: TimedSpeechToken[] = [];
 
@@ -353,30 +391,22 @@ export function locateSpeechTiming(
     const chars = timedChars(aligned);
     const located: Array<MutableTiming | undefined> = Array(source.length).fill(undefined);
     for (const group of segmentGroups) locatePairedGroup(group, source, aligned.words, chars, located);
-    const bounds = speechBounds(aligned);
-    const complete = fillEstimated(located, source, bounds.start, bounds.end);
-    const segmentTokens = source.map((token, index): TimedSpeechToken => {
+    const basisSegment = basis.segments.find((item) => item.segmentId === segment.id)!;
+    const bounds = speechBounds(basis, aligned, basisSegment);
+    const complete = fillMissingTiming(located, source, bounds.start, bounds.end);
+    timedTokens.push(...source.map((token, index): TimedSpeechToken => {
       const timing = complete[index]!;
-      const startFrame = frameFor(basis, timing.startSec);
-      const endFrame = frameFor(basis, timing.endSec);
       return {
         tokenId: token.id,
         segmentId: segment.id,
-        startSec: secondsFor(basis, startFrame),
-        endSec: secondsFor(basis, endFrame),
-        startFrame,
-        endFrame,
+        startFrame: frameForEvidenceSample(basis, timing.startSample),
+        endFrameExclusive: frameForEvidenceSample(basis, timing.endSampleExclusive),
       };
-    });
-    timedTokens.push(...segmentTokens);
-    const startFrame = frameFor(basis, aligned.startSec);
-    const endFrame = frameFor(basis, aligned.endSec);
+    }));
     timedSegments.push({
       segmentId: segment.id,
-      startSec: secondsFor(basis, startFrame),
-      endSec: secondsFor(basis, endFrame),
-      startFrame,
-      endFrame,
+      startFrame: basisSegment.startFrame,
+      endFrameExclusive: basisSegment.endFrameExclusive,
     });
   }
 
@@ -386,17 +416,13 @@ export function locateSpeechTiming(
     if (anchor.kind === "segment-start" || anchor.kind === "segment-end") {
       const segment = segmentsById.get(anchor.segmentId)!;
       return anchor.kind === "segment-start"
-        ? { identity: anchor.id, timeSec: segment.startSec, frame: segment.startFrame }
-        : { identity: anchor.id, timeSec: segment.endSec, frame: segment.endFrame };
+        ? { identity: anchor.id, frame: segment.startFrame }
+        : { identity: anchor.id, frame: segment.endFrameExclusive };
     }
     const token = tokensById.get(anchor.tokenId!)!;
     return anchor.kind === "token-start"
-      ? { identity: anchor.id, timeSec: token.startSec, frame: token.startFrame }
-      : { identity: anchor.id, timeSec: token.endSec, frame: token.endFrame };
+      ? { identity: anchor.id, frame: token.startFrame }
+      : { identity: anchor.id, frame: token.endFrameExclusive };
   });
-  return {
-    contract: "svml.complete-semantic-map@1" as const,
-    tokens: timedTokens,
-    anchors,
-  };
+  return { tokens: timedTokens, anchors };
 }

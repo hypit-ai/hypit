@@ -21,7 +21,7 @@ const number = { kind: "number" } as const satisfies ValueSchema;
 const speechEstimatePolicySchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.speech-estimate-policy@1" } },
+
     language: { schema: { kind: "string", enum: ["auto", "en", "zh", "ja", "es"] } },
     pace: { schema: { kind: "string", enum: ["slow", "normal", "fast"] }, optional: true },
     rate: { schema: { kind: "number", minimum: 0.000001 }, optional: true },
@@ -30,6 +30,17 @@ const speechEstimatePolicySchema: ValueSchema = {
     rounding: { schema: { kind: "string", enum: ["none", "round", "ceil"] } },
   },
 };
+
+export const estimateMarkupSurfaces = [{
+    name: "speech",
+    tag: "Speech",
+    mode: "structured",
+    outputs: [estimateTypes.speechPolicy, speechTypes.duration],
+    implementation: {
+      digest: estimateSurfaceImplementationDigest,
+    },
+  }] as const;
+
 
 export const estimateManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -42,17 +53,6 @@ export const estimateManifest: ModuleManifest = {
   ],
   types: [{ name: estimateTypes.speechPolicy.name, schema: speechEstimatePolicySchema }],
   capabilities: [],
-  surfaces: [{
-    name: "speech",
-    tag: "Speech",
-    mode: "structured",
-    outputs: [estimateTypes.speechPolicy, speechTypes.duration],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@narratage/estimate/speech-surface",
-      digest: estimateSurfaceImplementationDigest,
-    },
-  }],
   producers: [{
     name: estimateProducers.speech.name,
     inputs: [
@@ -62,8 +62,6 @@ export const estimateManifest: ModuleManifest = {
     outputs: [{ name: "duration", type: speechTypes.duration }],
     needs: [],
     implementation: {
-      kind: "registered",
-      locator: "@narratage/estimate/estimate-speech",
       digest: estimateSpeechImplementationDigest,
     },
   }],

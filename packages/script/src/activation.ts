@@ -4,18 +4,15 @@ import {
   decodeScriptSurface,
   scriptManifest,
   scriptModuleRef,
-  scriptSurfaceImplementationDigest,
+  scriptMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/script",
-  modules: [{ manifest: scriptManifest, specifiers: ["@narratage/script", "@narratage/script@1"] }],
+  modules: [{ manifest: scriptManifest }],
   hostFacets: [createMarkupSurfaceHostFacet({
     module: scriptModuleRef,
-    surface: "script",
-    mode: "raw",
-    implementationDigest: scriptSurfaceImplementationDigest,
+    declaration: scriptMarkupSurfaces.find((item) => item.name === "script")!,
     handler: decodeScriptSurface,
   })],
 };

@@ -41,7 +41,6 @@ export function decodeContentFitProperties(
   owner = "Content-fit properties",
 ): ContentFit {
   return sealContentFit({
-    contract: "svml.content-fit@1",
     sizing: oneOf(properties, "fit", ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"] as const, "contain", owner),
     framePoint: {
       x: number(properties, "frame-x", 0.5, owner),

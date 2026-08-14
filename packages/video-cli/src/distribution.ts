@@ -1,26 +1,21 @@
 import type { CliDistribution } from "@narratage/cli";
 import { fileURLToPath } from "node:url";
-import { extname } from "node:path";
 import {
   createVideoCompiler,
-  videoBuiltInPackageContributions,
 } from "./compiler.js";
 
 const packageRoot = import.meta.dirname;
 
 /** Official video authoring and local Runtime-adapter assembly for the generic CLI engine. */
 export const videoCliDistribution: CliDistribution = {
-  name: "@narratage/video-cli",
   packageRoot,
-  builtInPackageContributions: videoBuiltInPackageContributions,
-  runFrontends: [],
+  bootstrapPackages: [],
   createCompiler: createVideoCompiler,
   discoverSourcePackages: async (path, options) => {
     const { discoverVideoSourcePackages } = await import("./package-selection.js");
     return await discoverVideoSourcePackages(path, options);
   },
   resolveCompilationPackages: async (path) => {
-    if (extname(path) !== ".json") return {};
     const { runtimeConfigPackageSelection } = await import("@narratage/local/config");
     const selection = await runtimeConfigPackageSelection(path, { packageRoot });
     return {
@@ -28,8 +23,12 @@ export const videoCliDistribution: CliDistribution = {
       ...(selection.packageLock === undefined ? {} : { packageLock: selection.packageLock }),
       ...(selection.runtimePackageLock === undefined ? {} : { runtimePackageLock: selection.runtimePackageLock }),
       packageRoot: selection.packageRoot,
-      runtimePackages: selection.runtimePackages,
+      runtimeSelection: selection.runtimeSelection,
     };
+  },
+  runtimeProfileRevision: async (path) => {
+    const { runtimeConfigRevision } = await import("@narratage/local/config");
+    return await runtimeConfigRevision(path);
   },
   runtimeWorkerLaunch: () => ({
     command: process.execPath,
@@ -39,9 +38,23 @@ export const videoCliDistribution: CliDistribution = {
     const { createVideoRuntimeFromConfig } = await import("./runtime-config.js");
     return await createVideoRuntimeFromConfig(path, packageRoot, options?.implementationPackages);
   },
-  createRuntimeControlFromConfig: async (path, options) => {
-    const { createRuntimeControlFromConfig } = await import("@narratage/local/config");
-    return await createRuntimeControlFromConfig(path, {
+  createRuntimeArchiveFromConfig: async (path, options) => {
+    const { createRuntimeArchiveFromConfig } = await import("@narratage/local/config");
+    return await createRuntimeArchiveFromConfig(path, {
+      packageRoot,
+      ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
+    });
+  },
+  createRuntimeArtifactAccessFromConfig: async (path, options) => {
+    const { createRuntimeArtifactAccessFromConfig } = await import("@narratage/local/config");
+    return await createRuntimeArtifactAccessFromConfig(path, {
+      packageRoot,
+      ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
+    });
+  },
+  createRuntimeMaintenanceFromConfig: async (path, options) => {
+    const { createRuntimeMaintenanceFromConfig } = await import("@narratage/local/config");
+    return await createRuntimeMaintenanceFromConfig(path, {
       packageRoot,
       ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
     });

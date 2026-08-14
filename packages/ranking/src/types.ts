@@ -1,8 +1,4 @@
-import type {
-  AudioTrack,
-  FrameSpan,
-  VisualTrack,
-} from "@narratage/composition";
+import type { FrameSpan } from "@narratage/composition";
 import type {
   FontArtifactRef,
   SynchronizedMedia,
@@ -13,14 +9,12 @@ import type { SpatialFrame } from "@narratage/spatial";
 export type RankingVariant = "tier-board" | "column" | "top-three" | "typewriter-list";
 
 export type RankingHeader = {
-  readonly contract: "svml.ranking-header@1";
   readonly id: string;
   readonly variant: RankingVariant;
 };
 
 export type RankingScheduleEntry = {
   readonly itemId: string;
-  readonly triggerOccurrenceId: string;
   readonly triggerFrame: number;
   readonly stage: FrameSpan;
   readonly cumulative: FrameSpan;
@@ -28,7 +22,6 @@ export type RankingScheduleEntry = {
 };
 
 export type RankingSchedule = {
-  readonly contract: "svml.ranking-schedule@1";
   readonly id: string;
   readonly variant: RankingVariant;
   readonly outer: FrameSpan;
@@ -65,7 +58,6 @@ export type RankingMotionStyle = {
 };
 
 export type RankingSoundStyle = {
-  readonly contract: "svml.ranking-sound-style@1";
   readonly appearGain: number;
   readonly moveGain: number;
   readonly fadeFrames: number;
@@ -78,7 +70,6 @@ export type TierRowStyle = {
 };
 
 export type TierBoardStyle = {
-  readonly contract: "svml.tier-board-style@1";
   readonly rows: readonly TierRowStyle[];
   readonly board: RankingBoardPaint;
   readonly text: RankingTextStyle;
@@ -99,7 +90,6 @@ export type TierBoardStyle = {
 };
 
 export type ColumnStyle = {
-  readonly contract: "svml.column-style@1";
   readonly board: RankingBoardPaint;
   readonly text: RankingTextStyle;
   readonly rankColors: readonly string[];
@@ -118,7 +108,6 @@ export type ColumnStyle = {
 };
 
 export type TopThreeStyle = {
-  readonly contract: "svml.top-three-style@1";
   readonly text: RankingTextStyle;
   readonly slotColors: readonly string[];
   readonly centerX: number;
@@ -135,7 +124,6 @@ export type TopThreeStyle = {
 };
 
 export type TypewriterListStyle = {
-  readonly contract: "svml.typewriter-list-style@1";
   readonly paper: RankingBoardPaint;
   readonly title: RankingTextStyle;
   readonly item: RankingTextStyle;
@@ -152,7 +140,6 @@ export type TypewriterListStyle = {
 };
 
 export type TierBoardItemSpec = {
-  readonly contract: "svml.tier-board-item-spec@1";
   readonly variant: "tier-board";
   readonly id: string;
   readonly tier: string;
@@ -161,7 +148,6 @@ export type TierBoardItemSpec = {
 };
 
 export type ColumnItemSpec = {
-  readonly contract: "svml.column-item-spec@1";
   readonly variant: "column";
   readonly id: string;
   readonly label: string;
@@ -169,7 +155,6 @@ export type ColumnItemSpec = {
 };
 
 export type TopThreeItemSpec = {
-  readonly contract: "svml.top-three-item-spec@1";
   readonly variant: "top-three";
   readonly id: string;
   readonly label: string;
@@ -177,7 +162,6 @@ export type TopThreeItemSpec = {
 };
 
 export type TypewriterItemSpec = {
-  readonly contract: "svml.typewriter-item-spec@1";
   readonly variant: "typewriter-list";
   readonly id: string;
   readonly text: string;
@@ -190,12 +174,11 @@ export type RankingItemSpec = TierBoardItemSpec | ColumnItemSpec | TopThreeItemS
 
 /** Structural half of an Item whose visible copy arrives on a Text graph edge. */
 export type RankingTextItemShell =
-  | Omit<ColumnItemSpec, "contract" | "label"> & { readonly contract: "svml.column-text-item-shell@1" }
-  | Omit<TopThreeItemSpec, "contract" | "label"> & { readonly contract: "svml.top-three-text-item-shell@1" }
-  | Omit<TypewriterItemSpec, "contract" | "text"> & { readonly contract: "svml.typewriter-text-item-shell@1" };
+  | Omit<ColumnItemSpec, "label">
+  | Omit<TopThreeItemSpec, "label">
+  | Omit<TypewriterItemSpec, "text">;
 
 export type RankingItemSpecSet = {
-  readonly contract: "svml.ranking-item-spec-set@1";
   readonly variant: RankingVariant;
   readonly items: readonly RankingItemSpec[];
 };
@@ -206,24 +189,19 @@ export type TopThreeItem = TopThreeItemSpec & { readonly icon?: BlobRef };
 export type TypewriterItem = TypewriterItemSpec;
 
 export type TierBoardItemSet = {
-  readonly contract: "svml.tier-board-item-set@1";
   readonly items: readonly TierBoardItem[];
 };
 export type ColumnItemSet = {
-  readonly contract: "svml.column-item-set@1";
   readonly items: readonly ColumnItem[];
 };
 export type TopThreeItemSet = {
-  readonly contract: "svml.top-three-item-set@1";
   readonly items: readonly TopThreeItem[];
 };
 export type TypewriterItemSet = {
-  readonly contract: "svml.typewriter-item-set@1";
   readonly items: readonly TypewriterItem[];
 };
 
 export type TierBoardProgram = {
-  readonly contract: "svml.tier-board-program@1";
   readonly id: string;
   readonly frame: SpatialFrame;
   readonly schedule: RankingSchedule;
@@ -231,7 +209,6 @@ export type TierBoardProgram = {
   readonly items: readonly TierBoardItem[];
 };
 export type ColumnProgram = {
-  readonly contract: "svml.column-program@1";
   readonly id: string;
   readonly frame: SpatialFrame;
   readonly schedule: RankingSchedule;
@@ -239,7 +216,6 @@ export type ColumnProgram = {
   readonly items: readonly ColumnItem[];
 };
 export type TopThreeProgram = {
-  readonly contract: "svml.top-three-program@1";
   readonly id: string;
   readonly frame: SpatialFrame;
   readonly schedule: RankingSchedule;
@@ -247,7 +223,6 @@ export type TopThreeProgram = {
   readonly items: readonly TopThreeItem[];
 };
 export type TypewriterListProgram = {
-  readonly contract: "svml.typewriter-list-program@1";
   readonly id: string;
   readonly title: string;
   readonly frame: SpatialFrame;
@@ -266,22 +241,12 @@ export type RankingSoundEvent = {
 };
 
 export type RankingSoundEventPlan = {
-  readonly contract: "svml.ranking-sound-event-plan@1";
   readonly id: string;
   readonly variant: RankingVariant;
   readonly events: readonly RankingSoundEvent[];
 };
 
 export type RankingSoundSet = {
-  readonly contract: "svml.ranking-sound-set@1";
   readonly appear?: SynchronizedMedia;
   readonly move?: SynchronizedMedia;
-};
-
-export type RankingVisualProduct = {
-  readonly track: VisualTrack;
-};
-
-export type RankingAudioProduct = {
-  readonly track: AudioTrack;
 };

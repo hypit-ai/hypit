@@ -119,6 +119,7 @@ function inline<T>(value: SurfaceResolvedReference, label: string): T {
 }
 
 function styleSurface<T>(
+  styleType: TypeRef,
   decode: (recipe: SvsRecipe, font: FontArtifactRef | FontStackRef) => { readonly style: T; readonly sound: RankingSoundStyle },
 ): StructuredSurfaceHandler {
   return ({ element, resolveReference }) => {
@@ -128,15 +129,6 @@ function styleSurface<T>(
     const recipeRef = reference(element.attributes.recipe, `${element.name}.recipe`, svsRecipeType, resolveReference);
     const fontRef = oneOfReference(element.attributes.font, `${element.name}.font`, [mediaTypes.fontArtifact, mediaTypes.fontStack], resolveReference);
     const decoded = decode(inline<SvsRecipe>(recipeRef, `${element.name}.recipe`), inline<FontArtifactRef | FontStackRef>(fontRef, `${element.name}.font`));
-    const type = decoded.style !== null && typeof decoded.style === "object" && "contract" in decoded.style
-      ? String((decoded.style as { readonly contract: string }).contract)
-      : "";
-    const styleType = type === "svml.tier-board-style@1" ? rankingTypes.tierStyle
-      : type === "svml.column-style@1" ? rankingTypes.columnStyle
-      : type === "svml.top-three-style@1" ? rankingTypes.topThreeStyle
-      : type === "svml.typewriter-list-style@1" ? rankingTypes.typewriterStyle
-      : undefined;
-    if (styleType === undefined) throw new Error(`${element.name} produced an unknown Ranking Style.`);
     return {
       records: [
         { id, type: styleType, value: { kind: "inline", value: decoded.style as unknown as CanonicalValue }, range: element.range },
@@ -147,10 +139,10 @@ function styleSurface<T>(
   };
 }
 
-export const decodeTierBoardStyleSurface = styleSurface(decodeTierBoardStyle);
-export const decodeColumnStyleSurface = styleSurface(decodeColumnStyle);
-export const decodeTopThreeStyleSurface = styleSurface(decodeTopThreeStyle);
-export const decodeTypewriterListStyleSurface = styleSurface(decodeTypewriterListStyle);
+export const decodeTierBoardStyleSurface = styleSurface(rankingTypes.tierStyle, decodeTierBoardStyle);
+export const decodeColumnStyleSurface = styleSurface(rankingTypes.columnStyle, decodeColumnStyle);
+export const decodeTopThreeStyleSurface = styleSurface(rankingTypes.topThreeStyle, decodeTopThreeStyle);
+export const decodeTypewriterListStyleSurface = styleSurface(rankingTypes.typewriterStyle, decodeTypewriterListStyle);
 
 function localName(element: StructuredElement): string {
   return element.name.slice(element.name.lastIndexOf(":") + 1);
@@ -191,7 +183,7 @@ function itemSpec(
     const entry = text(element, "entry", "direct");
     if (entry !== "direct" && entry !== "stage") throw new Error(`${element.name}.entry must be direct or stage.`);
     value = {
-      contract: "svml.tier-board-item-spec@1", variant, id, tier: text(element, "tier"), entry,
+      variant, id, tier: text(element, "tier"), entry,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     } satisfies TierBoardItemSpec;
     assertRankingItemSpec(value);
@@ -201,11 +193,11 @@ function itemSpec(
     empty(element);
     const label = textValue(element.attributes.label, `${element.name}.label`, resolve);
     if (typeof label === "string") value = {
-      contract: "svml.column-item-spec@1", variant, id, label,
+      variant, id, label,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     } satisfies ColumnItemSpec;
     else return { spec: sealRankingTextItemShell({
-      contract: "svml.column-text-item-shell@1", variant, id,
+      variant, id,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     }), content: label };
   } else if (variant === "top-three") {
@@ -213,11 +205,11 @@ function itemSpec(
     empty(element);
     const label = textValue(element.attributes.label, `${element.name}.label`, resolve);
     if (typeof label === "string") value = {
-      contract: "svml.top-three-item-spec@1", variant, id, label,
+      variant, id, label,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     } satisfies TopThreeItemSpec;
     else return { spec: sealRankingTextItemShell({
-      contract: "svml.top-three-text-item-shell@1", variant, id,
+      variant, id,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     }), content: label };
   } else {
@@ -234,10 +226,10 @@ function itemSpec(
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     } as const;
     if (typeof content === "string") value = {
-      contract: "svml.typewriter-item-spec@1", ...rest, text: content,
+      ...rest, text: content,
     } satisfies TypewriterItemSpec;
     else return { spec: sealRankingTextItemShell({
-      contract: "svml.typewriter-text-item-shell@1", ...rest,
+      ...rest,
     }), content };
   }
   assertRankingItemSpec(value);
@@ -269,7 +261,7 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
     const headerId = `${id}.header`;
     records.push({
       id: headerId, type: rankingTypes.header,
-      value: { kind: "inline", value: sealRankingHeader({ contract: "svml.ranking-header@1", id, variant }) as unknown as CanonicalValue },
+      value: { kind: "inline", value: sealRankingHeader({ id, variant }) as unknown as CanonicalValue },
       range: element.range,
     });
     const inputs: Record<string, typeof map.ref> = {
@@ -337,7 +329,7 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       }
       inputs["sound-style"] = soundStyle.ref;
     }
-    const fragment = createRankingFragment(variant, items, sound, `@narratage/ranking/surface/${id}@1`);
+    const fragment = createRankingFragment(variant, items, sound);
     return {
       records,
       components: [{

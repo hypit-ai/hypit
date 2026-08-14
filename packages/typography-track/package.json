@@ -28,7 +28,6 @@
   },
   "devDependencies": {
     "@narratage/core": "workspace:*",
-    "@narratage/hyperframes": "workspace:*",
     "@narratage/validation": "workspace:*"
   }
 }

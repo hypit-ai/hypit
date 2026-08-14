@@ -21,7 +21,6 @@ const timestamp = (ticks: string) => ({ ticks, timeBase });
 
 function grokInspection(): MediaInspection {
   return sealMediaInspection({
-    contract: "svml.media-inspection@1",
     container: { formatNames: ["mov", "mp4"] },
     streams: [
       {
@@ -83,7 +82,6 @@ function grokInspection(): MediaInspection {
 test("primary stream selection excludes Grok's MJPEG attached picture and observes AAC without speech semantics", () => {
   const inspection = grokInspection();
   const request = sealMediaSelectionRequest({
-    contract: "svml.media-selection-request@1",
     video: { mode: "primary-moving" },
     audio: { mode: "default" },
     spanAuthority: "video",
@@ -109,7 +107,6 @@ test("multiple moving streams without one default fail closed instead of guessin
     ],
   });
   const request = sealMediaSelectionRequest({
-    contract: "svml.media-selection-request@1",
     video: { mode: "primary-moving" },
     audio: { mode: "none" },
     spanAuthority: "video",
@@ -117,7 +114,6 @@ test("multiple moving streams without one default fail closed instead of guessin
   });
   assert.throws(() => selectMediaStreams(ambiguous, request), /ambiguous/u);
   const explicit = sealMediaSelectionRequest({
-    contract: "svml.media-selection-request@1",
     video: { mode: "stream-index", streamIndex: 3 },
     audio: { mode: "none" },
     spanAuthority: "video",
@@ -128,7 +124,6 @@ test("multiple moving streams without one default fail closed instead of guessin
 
 test("an attached picture cannot be forced into the moving-video normalization path", () => {
   const request = sealMediaSelectionRequest({
-    contract: "svml.media-selection-request@1",
     video: { mode: "stream-index", streamIndex: 2 },
     audio: { mode: "none" },
     spanAuthority: "video",

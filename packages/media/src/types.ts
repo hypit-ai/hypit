@@ -1,11 +1,4 @@
-import type { BlobRef, Digest } from "@narratage/protocol";
-
-export type MediaArtifactRef = {
-  readonly digest: Digest;
-  readonly size: number;
-  readonly mediaType: string;
-  readonly durationSec: number;
-};
+import type { BlobRef } from "@narratage/protocol";
 
 export type MediaRational = {
   readonly numerator: number;
@@ -66,7 +59,6 @@ export type MediaStream = MediaVideoStream | MediaAudioStream | MediaOtherStream
 
 /** Immutable observed facts about one exact content-addressed container. */
 export type MediaInspection = {
-  readonly contract: "svml.media-inspection@1";
   readonly container: {
     readonly formatNames: readonly string[];
   };
@@ -74,7 +66,6 @@ export type MediaInspection = {
 };
 
 export type MediaStreamSelection = {
-  readonly contract: "svml.media-stream-selection@1";
   readonly videoStreamIndex?: number;
   readonly audioStreamIndex?: number;
   readonly spanAuthority: "video" | "audio";
@@ -86,7 +77,6 @@ export type MediaStreamSelection = {
 };
 
 export type SynchronizedMedia = {
-  readonly contract: "svml.synchronized-media@1";
   readonly timeline: {
     readonly frameRate: MediaRational;
     readonly frameCount: number;
@@ -103,7 +93,6 @@ export type SynchronizedMedia = {
 
 /** Silent, frame-exact visual output from a renderer such as HyperFrames. */
 export type RenderedVisual = {
-  readonly contract: "svml.rendered-visual@1";
   readonly frameRate: MediaRational;
   readonly frameCount: number;
   readonly canvas: {
@@ -111,23 +100,16 @@ export type RenderedVisual = {
     readonly height: number;
   };
   readonly artifact: BlobRef;
-  readonly muted: true;
 };
 
 /** Exact 48 kHz stereo PCM result of one explicit timeline-audio plan. */
 export type TimelineAudio = {
-  readonly contract: "svml.timeline-audio@1";
   readonly artifact: BlobRef;
-  readonly codec: "pcm_s16le";
-  readonly sampleRate: 48_000;
-  readonly channels: 2;
   readonly sampleFrames: number;
-  readonly loudness: "planned";
 };
 
 /** Final mux result; visual rendering and program-audio preparation remain separate facts. */
 export type MuxedMedia = {
-  readonly contract: "svml.muxed-media@1";
   readonly frameRate: MediaRational;
   readonly frameCount: number;
   readonly canvas: {

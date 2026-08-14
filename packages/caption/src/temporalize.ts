@@ -1,5 +1,5 @@
 import type { CaptionCorrespondence, CaptionDisplaySequence } from "@narratage/narrative";
-import { tokenSpanSeconds } from "@narratage/semantic-map";
+import { tokenFrameSpan } from "@narratage/semantic-map";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 
 import { CaptionTimingError } from "./error.js";
@@ -27,7 +27,7 @@ export function applyCaptionMute(
     .filter((atom) => atom.wordIds.every((wordId) => mutedWords.has(wordId)))
     .map((atom) => atom.id));
   const result: TimedCaptionProjection = {
-    contract: "svml.timed-caption-projection@1",
+
     displaySequenceId: projection.displaySequenceId,
     cues: projection.cues.flatMap((cue) => {
       const atoms = cue.atoms.filter((atom) => !mutedAtoms.has(atom.atomId));
@@ -64,31 +64,36 @@ export function temporalizeCaptionPlan(
       if (atom === undefined || sourceTokenIds === undefined) {
         throw new CaptionTimingError("CAPTION_ATOM", `Caption Cue ${cue.id} references unknown Atom ${atomId}.`);
       }
-      const window = tokenSpanSeconds(map, sourceTokenIds);
+      const window = tokenFrameSpan(map, sourceTokenIds);
       if (window === undefined) {
         throw new CaptionTimingError(
           "CAPTION_SPEECH_COVERAGE",
           `Caption Atom ${atomId} is absent from the complete speech map.`,
         );
       }
-      return { atom, timing: { atomId, startSec: window.startSec, endSec: window.endSec } };
+      return {
+        atom,
+        timing: {
+          atomId,
+          startFrame: window.startFrame,
+          endFrameExclusive: window.endFrameExclusive,
+        },
+      };
     });
     if (new Set(atoms.map((item) => item.atom.segmentId)).size !== 1) {
       throw new CaptionTimingError("CAPTION_PLAN_SEGMENT", `Caption Cue ${cue.id} crosses a Script Segment.`);
     }
     return {
       id: cue.id,
-      runId: run.id,
       styleId: run.styleId,
-      segmentId: atoms[0]!.atom.segmentId,
-      startSec: atoms[0]!.timing.startSec,
-      endSec: atoms.at(-1)!.timing.endSec,
+      startFrame: atoms[0]!.timing.startFrame,
+      endFrameExclusive: atoms.at(-1)!.timing.endFrameExclusive,
       atoms: atoms.map((item) => item.timing),
       fields: cue.fields.map((field) => ({ ...field })),
     };
   }));
   const result = applyCaptionMute({
-    contract: "svml.timed-caption-projection@1",
+
     displaySequenceId: display.id,
     cues,
   }, program, display);
@@ -96,21 +101,22 @@ export function temporalizeCaptionPlan(
 }
 
 export function assertTimedCaptionProjection(projection: TimedCaptionProjection): void {
-  if (projection.contract !== "svml.timed-caption-projection@1" || projection.displaySequenceId.length === 0) {
-    throw new Error("Unsupported TimedCaptionProjection contract.");
+  if (projection.displaySequenceId.length === 0) {
+    throw new Error("TimedCaptionProjection display sequence is invalid.");
   }
   const cueIds = new Set<string>();
   const atomIds = new Set<string>();
   for (const cue of projection.cues) {
-    if (cue.id.length === 0 || cueIds.has(cue.id) || cue.runId.length === 0 || cue.styleId.length === 0
-      || cue.segmentId.length === 0 || cue.atoms.length === 0
-      || !Number.isFinite(cue.startSec) || !Number.isFinite(cue.endSec) || cue.endSec < cue.startSec) {
+    if (cue.id.length === 0 || cueIds.has(cue.id) || cue.styleId.length === 0 || cue.atoms.length === 0
+      || !Number.isSafeInteger(cue.startFrame) || !Number.isSafeInteger(cue.endFrameExclusive)
+      || cue.startFrame < 0 || cue.endFrameExclusive <= cue.startFrame) {
       throw new Error("TimedCaptionProjection contains an invalid Cue");
     }
     cueIds.add(cue.id);
     for (const atom of cue.atoms) {
       if (atom.atomId.length === 0 || atomIds.has(atom.atomId)
-        || !Number.isFinite(atom.startSec) || !Number.isFinite(atom.endSec) || atom.endSec < atom.startSec) {
+        || !Number.isSafeInteger(atom.startFrame) || !Number.isSafeInteger(atom.endFrameExclusive)
+        || atom.startFrame < 0 || atom.endFrameExclusive <= atom.startFrame) {
         throw new Error("TimedCaptionProjection contains an invalid or repeated Atom timing");
       }
       atomIds.add(atom.atomId);

@@ -46,7 +46,6 @@ export function createTextRenderFragment(entries: readonly TextFragmentBinding[]
     result: { kind: "output", name: "text" },
   });
   return sealGraphFragment({
-    name: `@narratage/text/render[${names.join(",") || "no-dynamic-bindings"}]@1`,
     inputs,
     operations,
     exports: [{

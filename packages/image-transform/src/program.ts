@@ -6,7 +6,6 @@ import type { ImageTransformProgram } from "./types.js";
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
 
 export function verifyImageTransformProgram(program: ImageTransformProgram): void {
-  assert(program.contract === "svml.image-transform-program@1", "Unsupported ImageTransformProgram contract");
   assertRasterTransformOperations(program.operations);
 }
 
@@ -17,7 +16,6 @@ export function sealImageTransformProgram(program: ImageTransformProgram): Image
 }
 
 export const gptImageDenoiseV1 = sealImageTransformProgram({
-  contract: "svml.image-transform-program@1",
   operations: [{
     kind: "denoise", method: "nlm-ycrcb", lumaStrength: 2, chromaStrength: 10,
     templateWindow: 7, searchWindow: 21, saturationRecovery: 1.02,

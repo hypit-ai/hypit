@@ -24,7 +24,7 @@ export type Executed = {
   readonly unserved: readonly Unserved[];
   /** Producers that threw, with what they said. */
   readonly errors: readonly string[];
-  readonly journal: readonly { readonly status: string; readonly message?: string }[];
+  readonly outcomes: readonly { readonly status: string; readonly message?: string }[];
 };
 
 /**
@@ -51,7 +51,6 @@ async function endpoints(): Promise<EndpointRegistry> {
   // none of them, so a Provider that grows a Capability grows the preview too.
   for (const provider of localProviders()) {
     await provider.install(registry);
-    for (const binding of provider.bindings) registry.bind(binding.capability, binding.endpoint);
   }
   return registry;
 }
@@ -76,10 +75,10 @@ export async function execute(planned: BuildState, artifacts: ArtifactStore): Pr
     state: result.state,
     status: result.status,
     unserved: [...counts].map(([capability, count]) => ({ capability, count })),
-    journal: result.journal as never,
-    errors: result.journal
-      .filter((entry) => entry.status === "error")
-      .map((entry) => entry.message ?? "a Producer failed without saying why"),
+    outcomes: result.outcomes as never,
+    errors: result.outcomes
+      .filter((entry: { status: string }) => entry.status === "error")
+      .map((entry: { message?: string }) => entry.message ?? "a Producer failed without saying why"),
   };
 }
 

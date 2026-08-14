@@ -199,19 +199,17 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
   const videoRequestId = `${id}.selection.video`;
   const audioRequestId = `${id}.selection.audio`;
   const program = sealSpeechSpineProgram({
-    contract: "svml.speech-spine-program@1",
+
     id,
     frameRate: rate,
   });
   const videoRequest = sealMediaSelectionRequest({
-    contract: "svml.media-selection-request@1",
     video: { mode: "primary-moving" },
     audio: { mode: "default" },
     spanAuthority: "video",
     frameRate: rate,
   });
   const audioRequest = sealMediaSelectionRequest({
-    contract: "svml.media-selection-request@1",
     video: { mode: "none" },
     audio: { mode: "default" },
     spanAuthority: "audio",
@@ -263,7 +261,7 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
         id: `${id}.${take.visual.visualSpecName}`,
         type: speechSpineTypes.visualSpec,
         value: { kind: "inline" as const, value: sealSpeechSpineVisualSpec({
-          contract: "svml.speech-spine-visual-spec@1",
+
           stackingOrder: take.visual.stackingOrder,
         }) },
         range: take.range,
@@ -312,5 +310,6 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
       },
     ],
     fragments: [...(normalizationComponents.length === 0 ? [] : [synchronizedMediaFragment]), assembly],
+    exports: [`${id}.basis`, `${id}.space`, `${id}.audio`, `${id}.visual`, `${id}.audioTrack`],
   };
 };

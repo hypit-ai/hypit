@@ -52,7 +52,9 @@ import {
   renderTierBoard,
   renderTopThree,
   renderTypewriterList,
+  rankingComponent,
   rankingManifest,
+  rankingMarkupSurfaces,
   rankingProducers,
   rankingTypes,
   sealRankingHeader,
@@ -80,51 +82,48 @@ import type {
 } from "@narratage/markup";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 8,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const frame = sealSpatialFrame({
-  contract: "svml.spatial-frame@1", xPx: 40, yPx: 80, widthPx: 720, heightPx: 560,
+  xPx: 40, yPx: 80, widthPx: 720, heightPx: 560,
 });
 const map: CompleteSemanticMap = {
-  contract: "svml.complete-semantic-map@1",
   tokens: [],
   anchors: [
-    { identity: "outer-start", timeSec: 10 / 30, frame: 10 },
-    { identity: "one", timeSec: 1, frame: 30 },
-    { identity: "two", timeSec: 70 / 30, frame: 70 },
-    { identity: "three", timeSec: 110 / 30, frame: 110 },
-    { identity: "four", timeSec: 150 / 30, frame: 150 },
-    { identity: "terminal", timeSec: 190 / 30, frame: 190 },
-    { identity: "outer-end", timeSec: 230 / 30, frame: 230 },
+    { identity: "outer-start", frame: 10 },
+    { identity: "one", frame: 30 },
+    { identity: "two", frame: 70 },
+    { identity: "three", frame: 110 },
+    { identity: "four", frame: 150 },
+    { identity: "terminal", frame: 190 },
+    { identity: "outer-end", frame: 230 },
   ],
 };
 const outer: NarrativeSelectionRef = {
-  contract: "svml.narrative-selection@1", id: "ranking-window",
+  id: "ranking-window",
   occurrences: [{ occurrence: 0, startAnchorId: "outer-start", endAnchorId: "outer-end" }],
 };
 const terminal: NarrativeMomentRef = {
-  contract: "svml.narrative-moment@1", id: "ranking-complete",
+  id: "ranking-complete",
   occurrences: [{ occurrence: 0, anchorId: "terminal" }],
 };
 const triggers = (count: number): NarrativeMomentRef => ({
-  contract: "svml.narrative-moment@1", id: "next-rank",
+  id: "next-rank",
   occurrences: ["one", "two", "three", "four"].slice(0, count)
     .map((anchorId, occurrence) => ({ occurrence, anchorId })),
 });
 const font: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: { kind: "blob", digest: digestOf("ranking-font"), size: 32, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
 };
 const recipe = (path: string, properties: SvsRecipe["properties"] = {}): SvsRecipe => ({
-  contract: "svml.svs-recipe@1", path, properties,
+  path, properties,
 });
 const image = (id: string) => ({ kind: "blob" as const, digest: digestOf(`ranking-image:${id}`), size: 64, mediaType: "image/png" });
 const header = (variant: RankingHeader["variant"], id: string = variant) => sealRankingHeader({
-  contract: "svml.ranking-header@1", id, variant,
+  id, variant,
 });
 
 function specs(headerValue: RankingHeader, values: readonly RankingItemSpec[]) {
@@ -141,25 +140,25 @@ function schedule(headerValue: RankingHeader, values: readonly RankingItemSpec[]
 }
 
 const tierSpec = (id: string, tier: string, entry: "direct" | "stage" = "direct"): TierBoardItemSpec => ({
-  contract: "svml.tier-board-item-spec@1", variant: "tier-board", id, tier, entry,
+  variant: "tier-board", id, tier, entry,
 });
 const columnSpec = (id: string): ColumnItemSpec => ({
-  contract: "svml.column-item-spec@1", variant: "column", id, label: id.toUpperCase(),
+  variant: "column", id, label: id.toUpperCase(),
 });
 const topSpec = (id: string): TopThreeItemSpec => ({
-  contract: "svml.top-three-item-spec@1", variant: "top-three", id, label: id.toUpperCase(),
+  variant: "top-three", id, label: id.toUpperCase(),
 });
 const typeSpec = (id: string, text: string, winner = false): TypewriterItemSpec => ({
-  contract: "svml.typewriter-item-spec@1", variant: "typewriter-list", id, text, winner,
+  variant: "typewriter-list", id, text, winner,
 });
 
 test("RankingSchedule zips authored item and Moment order and preserves a settled suffix", () => {
   const owner = header("column", "tools");
   const value = schedule(owner, [columnSpec("fourth"), columnSpec("third"), columnSpec("second")]);
-  assert.deepEqual(value.entries.map((entry) => [entry.itemId, entry.triggerOccurrenceId, entry.stage, entry.cumulative]), [
-    ["fourth", "next-rank#0", { startFrame: 30, endFrameExclusive: 70 }, { startFrame: 30, endFrameExclusive: 230 }],
-    ["third", "next-rank#1", { startFrame: 70, endFrameExclusive: 110 }, { startFrame: 70, endFrameExclusive: 230 }],
-    ["second", "next-rank#2", { startFrame: 110, endFrameExclusive: 190 }, { startFrame: 110, endFrameExclusive: 230 }],
+  assert.deepEqual(value.entries.map((entry) => [entry.itemId, entry.stage, entry.cumulative]), [
+    ["fourth", { startFrame: 30, endFrameExclusive: 70 }, { startFrame: 30, endFrameExclusive: 230 }],
+    ["third", { startFrame: 70, endFrameExclusive: 110 }, { startFrame: 70, endFrameExclusive: 230 }],
+    ["second", { startFrame: 110, endFrameExclusive: 190 }, { startFrame: 110, endFrameExclusive: 230 }],
   ]);
   assert.deepEqual(value.entries.at(-1)?.settled, { startFrame: 190, endFrameExclusive: 230 });
 });
@@ -285,7 +284,6 @@ test("Typewriter uses Unicode graphemes, explicit emphasis and winner timing wit
 });
 
 const sound = (id: string): SynchronizedMedia => ({
-  contract: "svml.synchronized-media@1",
   timeline: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 3 },
   audio: {
     artifact: { kind: "blob", digest: digestOf(`ranking-sound:${id}`), size: 128, mediaType: "audio/wav" },
@@ -423,6 +421,29 @@ test("all four author Surfaces preserve explicit semantic, spatial, font, image 
   assert.ok(column.fragments[0]!.operations.some((operation) => operation.producer.name === rankingProducers.materializeTextItem.name));
   assert(audio !== undefined);
   assert.deepEqual(Object.keys(column.components[0]!.outputs).sort(), ["audio", "program", "schedule", "visual"]);
+});
+
+test("Ranking Surfaces declare their sealed Records and icon Producers consume Blob values", async () => {
+  for (const name of ["tier", "column", "top-three", "typewriter"]) {
+    const surface = rankingMarkupSurfaces.find((item) => item.name === name);
+    assert.ok(surface?.outputs.some((type) => type.name === rankingTypes.header.name), `${name} header output`);
+    assert.ok(surface?.outputs.some((type) => type.name === rankingTypes.itemSpec.name), `${name} item output`);
+  }
+
+  const producer = rankingComponent.producers.find((item) =>
+    item.producer.name === rankingProducers.appendTierItem.name);
+  assert.ok(producer !== undefined);
+  const icon = image("producer");
+  const result = await producer.handler({
+    inputs: {
+      set: { value: { kind: "inline", value: createTierBoardItemSet() } },
+      spec: { value: { kind: "inline", value: tierSpec("one", "s") } },
+      icon: { value: icon },
+    },
+  } as never);
+  const set = (result.outputs as { readonly set: { readonly kind: "inline"; readonly value: unknown } }).set;
+  assert.equal(set.kind, "inline");
+  assert.deepEqual((set.value as { readonly items: readonly { readonly icon: unknown }[] }).items[0]?.icon, icon);
 });
 
 test("Ranking author Surfaces fail closed on impossible image and sound combinations", async () => {

@@ -25,7 +25,6 @@ export type RenderInput = {
  */
 export function renderPreview(input: RenderInput): string {
   const document = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1",
     id: input.id,
     canvas: input.canvas,
     tracks: input.tracks,

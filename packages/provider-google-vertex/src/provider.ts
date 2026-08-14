@@ -36,7 +36,7 @@ type GenerateCaptionContentInput = {
 
 export type GenerateCaptionContent = (
   input: GenerateCaptionContentInput,
-) => Promise<{ readonly text: string; readonly totalTokenCount?: number; readonly modelVersion?: string }>;
+) => Promise<{ readonly text: string }>;
 
 export type CreateGoogleVertexCaptionProviderOptions = {
   /** Literal deployment project, mutually exclusive with projectEnv. */
@@ -153,12 +153,7 @@ function sdkGenerateContent(): GenerateCaptionContent {
         abortSignal: input.abortSignal,
       },
     });
-    return {
-      text: response.text ?? "",
-      ...(response.usageMetadata?.totalTokenCount === undefined
-        ? {} : { totalTokenCount: response.usageMetadata.totalTokenCount }),
-      ...(response.modelVersion === undefined ? {} : { modelVersion: response.modelVersion }),
-    };
+    return { text: response.text ?? "" };
   };
 }
 
@@ -180,11 +175,8 @@ async function withTimeout<T>(timeoutMs: number, task: (signal: AbortSignal) => 
   }
 }
 
-function fulfillment(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfillment {
-  return {
-    value: { kind: "inline", value },
-    metadata,
-  };
+function fulfillment(value: CanonicalValue): EndpointFulfillment {
+  return { value: { kind: "inline", value } };
 }
 
 export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCaptionProviderOptions) {
@@ -221,7 +213,6 @@ export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCap
     instance: options.instance ?? "google-vertex.caption",
     authority: options.authority ?? options.instance ?? "google-vertex.caption",
     implementation: {
-      locator: "@narratage/provider-google-vertex/caption-gemini",
       digest: googleVertexProviderImplementationDigest,
     },
     configuration: canonicalize({
@@ -244,14 +235,6 @@ export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCap
       capability: captionGeminiCapabilities.plan,
       returns: captionTypes.plan,
       lifecycle: "immediate",
-      supports: (need) => {
-        try {
-          verifyCaptionGeminiRequest(need.constraints);
-          return true;
-        } catch {
-          return false;
-        }
-      },
       handler: async (context) => {
         const request = requestValue(context.need.constraints);
         const project = resolveProject();
@@ -276,15 +259,7 @@ export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCap
           throw new Error("Google Vertex returned invalid Caption JSON");
         }
         const plan = sealCaptionGeminiPlan(request, raw);
-        return fulfillment(canonicalize(plan), canonicalize({
-          provider: "google-vertex",
-          project,
-          location,
-          requestedModel: request.model,
-          ...(response.modelVersion === undefined ? {} : { modelVersion: response.modelVersion }),
-          ...(response.totalTokenCount === undefined ? {} : { totalTokenCount: response.totalTokenCount }),
-          responseDigest: digestOf(response.text),
-        }));
+        return fulfillment(canonicalize(plan));
       },
     }],
   });

@@ -57,26 +57,26 @@ export function estimateTiming(
   // Ordinary delivery, with the clamps a whole-utterance estimate would apply
   // turned off: each word is placed on its own here.
   const policy = sealSpeechEstimatePolicy({
-    contract: "svml.speech-estimate-policy@1", language: "auto", pace: "normal",
+    language: "auto", pace: "normal",
     rounding: "none", minimumSec: 0, maximumSec: Number.MAX_SAFE_INTEGER,
   } as never);
   const spoken = narrative.tokens.map((token) => token.text).join(" ");
   const language = resolveSpeechEstimateLanguage(spoken, "auto" as never);
   const rate = resolveSpeechEstimateRate(policy as never, language);
 
-  const anchors: { identity: string; timeSec: number; frame: number }[] = [];
+  const anchors: { identity: string; frame: number }[] = [];
   // Anchors are how a marker addresses time, but a consumer that reads a window
   // over words - a Caption, say - reads the token ranges, so both are placed.
   const timed: {
     tokenId: string; segmentId: string;
-    startSec: number; endSec: number; startFrame: number; endFrame: number;
+    startFrame: number; endFrameExclusive: number;
   }[] = [];
   const at = new Map<string, number>();
   let seconds = 0;
   let frame = 0;
   const place = (identity: string, value: number): void => {
     at.set(identity, value);
-    anchors.push({ identity, timeSec: value / perSecond, frame: value });
+    anchors.push({ identity, frame: value });
   };
 
   const bounds = new Map<string, { first: number; last: number }>();
@@ -90,8 +90,7 @@ export function estimateTiming(
     place(token.endAnchorId, frame);
     timed.push({
       tokenId: token.id, segmentId: token.segmentId,
-      startSec: began / perSecond, endSec: frame / perSecond,
-      startFrame: began, endFrame: frame,
+      startFrame: began, endFrameExclusive: frame,
     });
     const held = bounds.get(token.segmentId);
     bounds.set(token.segmentId, { first: held?.first ?? began, last: frame });
@@ -110,9 +109,8 @@ export function estimateTiming(
   }
   const frameCount = Math.max(1, frame);
   return {
-    map: { contract: "svml.complete-semantic-map@1", tokens: timed, anchors },
+    map: { tokens: timed, anchors },
     space: {
-      contract: "svml.program-space@1",
       durationSec: frameCount * frameRate.denominator / frameRate.numerator,
       frameRate: { ...frameRate },
     },
@@ -133,10 +131,10 @@ export function estimateTiming(
 function stretched(
   narrative: Narrative,
   frameRate: { readonly numerator: number; readonly denominator: number },
-  anchors: readonly { identity: string; timeSec: number; frame: number }[],
+  anchors: readonly { identity: string; frame: number }[],
   timed: readonly {
     tokenId: string; segmentId: string;
-    startSec: number; endSec: number; startFrame: number; endFrame: number;
+    startFrame: number; endFrameExclusive: number;
   }[],
   declared: ReadonlyMap<string, number>,
 ): EstimatedTiming {
@@ -146,7 +144,7 @@ function stretched(
     const held = guessed.get(token.segmentId);
     guessed.set(token.segmentId, {
       first: Math.min(held?.first ?? token.startFrame, token.startFrame),
-      last: Math.max(held?.last ?? token.endFrame, token.endFrame),
+      last: Math.max(held?.last ?? token.endFrameExclusive, token.endFrameExclusive),
     });
   }
 
@@ -177,13 +175,12 @@ function stretched(
 
   const placedTokens = timed.map((token) => {
     const startFrame = at(token.segmentId, token.startFrame);
-    const endFrame = Math.max(startFrame + 1, at(token.segmentId, token.endFrame));
+    const endFrameExclusive = Math.max(startFrame + 1, at(token.segmentId, token.endFrameExclusive));
     moved.set(`${token.tokenId}:start`, startFrame);
-    moved.set(`${token.tokenId}:end`, endFrame);
+    moved.set(`${token.tokenId}:end`, endFrameExclusive);
     return {
       tokenId: token.tokenId, segmentId: token.segmentId,
-      startSec: startFrame / perSecond, endSec: endFrame / perSecond,
-      startFrame, endFrame,
+      startFrame, endFrameExclusive,
     };
   });
 
@@ -194,7 +191,7 @@ function stretched(
     if (token !== undefined) {
       const edge = token.startAnchorId === anchor.identity ? "start" : "end";
       const frame = moved.get(`${token.id}:${edge}`) ?? anchor.frame;
-      return { identity: anchor.identity, timeSec: frame / perSecond, frame };
+      return { identity: anchor.identity, frame };
     }
     // A Segment's own edges close around the words it holds.
     const segment = narrative.segments.find((item) =>
@@ -204,16 +201,15 @@ function stretched(
     const own = placedTokens.filter((item) => item.segmentId === segment.id);
     const frame = segment.startAnchorId === anchor.identity
       ? own[0]?.startFrame ?? held?.from ?? anchor.frame
-      : own.at(-1)?.endFrame ?? held?.from ?? anchor.frame;
-    return { identity: anchor.identity, timeSec: frame / perSecond, frame };
+      : own.at(-1)?.endFrameExclusive ?? held?.from ?? anchor.frame;
+    return { identity: anchor.identity, frame };
   });
   void byToken;
 
   const frameCount = Math.max(1, cursor);
   return {
-    map: { contract: "svml.complete-semantic-map@1", tokens: placedTokens, anchors: placedAnchors },
+    map: { tokens: placedTokens, anchors: placedAnchors },
     space: {
-      contract: "svml.program-space@1",
       durationSec: frameCount * frameRate.denominator / frameRate.numerator,
       frameRate: { ...frameRate },
     },

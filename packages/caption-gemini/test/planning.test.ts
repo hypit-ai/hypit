@@ -13,7 +13,7 @@ import { captionDisplaySequence, parseScript } from "@narratage/script";
 
 function style(id: string, fields: readonly CaptionFieldDeclaration[] = []): CaptionStyleIntent {
   return sealCaptionStyle({
-    contract: "svml.caption-style@1",
+
     id,
     planning: {
       cue: { minimumWords: 1, maximumWords: 7, instruction: "Prefer short complete semantic phrases." },
@@ -24,7 +24,7 @@ function style(id: string, fields: readonly CaptionFieldDeclaration[] = []): Cap
 }
 
 function options() {
-  return sealCaptionGeminiProgram({ contract: "svml.caption-gemini-program@1", model: "gemini-2.5-flash" });
+  return sealCaptionGeminiProgram({ model: "gemini-2.5-flash" });
 }
 
 function validResponse(request: CaptionGeminiRequest): RawCaptionGeminiResponse {
@@ -56,7 +56,7 @@ test("Gemini sees only immutable display atoms and resolved Style runs", () => {
   const program = resolveCaptionProgram(display, "captions", style("normal"), [{
     id: "alice-use",
     words: {
-      contract: "svml.caption-display-word-subset@1", id: "role:ALICE", sequenceId: display.id,
+      id: "role:ALICE", sequenceId: display.id,
       wordIds: display.words.filter((word) => word.role === "ALICE").map((word) => word.id),
     },
     style: alice,
@@ -129,7 +129,7 @@ test("Caption Mute stays out of Gemini while muted Atoms remain in the immutable
   const program = resolveCaptionProgram(display, "captions", style("fine"), [], [{
     id: "private",
     words: {
-      contract: "svml.caption-display-word-subset@1",
+
       id: "selection:private",
       sequenceId: display.id,
       wordIds: muted.map((word) => word.id),
@@ -203,7 +203,7 @@ test("one indivisible Atom may exceed the preferred Cue maximum", () => {
   const parsed = parseScript("oversized.svml", "<line><one two three four | something></line>");
   const display = captionDisplaySequence(parsed, "story.caption");
   const compact = sealCaptionStyle({
-    contract: "svml.caption-style@1",
+
     id: "compact",
     planning: {
       cue: { minimumWords: 1, maximumWords: 3, instruction: "Prefer at most three visible words." },

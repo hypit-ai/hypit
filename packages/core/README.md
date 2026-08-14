@@ -22,8 +22,8 @@ receipt bound to the exact Type, value digest and locked validator digest. Core 
 receipt uniformly but never executes the validator; trusted Host admission lives in
 `@narratage/validation`.
 
-It generically verifies Surface declarations in the same immutable module closure, but never
-parses or dispatches one. It does not parse source, resolve package locations, execute
+It does not know whether author source has tags, indentation, prose or any other syntax. It does not
+parse source, resolve package locations, execute
 implementations, access artifact bytes, select Provider endpoints or discover undeclared graph
 structure. Those responsibilities remain outside Core.
 

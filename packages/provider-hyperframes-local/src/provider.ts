@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { createRequire } from "node:module";
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
@@ -15,7 +14,7 @@ import { stageHyperframesProject } from "@narratage/hyperframes/project";
 import { renderHyperframesCapabilities } from "@narratage/render-hyperframes";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import { isStreamingArtifactStore } from "@narratage/runtime";
-import type { BlobRef, CanonicalValue, Digest } from "@narratage/protocol";
+import type { BlobRef, CanonicalValue } from "@narratage/protocol";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 
 const HYPERFRAMES_VERSION = "0.7.101";
@@ -52,12 +51,6 @@ export type CreateLocalHyperframesProviderOptions = {
 type ProcessResult = {
   readonly stdout: Uint8Array;
   readonly stderr: string;
-};
-
-type BrowserIdentity = {
-  readonly path: string;
-  readonly version: string;
-  readonly digest: Digest;
 };
 
 type ProbeStream = {
@@ -159,16 +152,6 @@ async function artifactBytes(
   return bytes;
 }
 
-async function fileDigest(path: string): Promise<Digest> {
-  return await new Promise((resolve, reject) => {
-    const hash = createHash("sha256");
-    const stream = createReadStream(path);
-    stream.on("data", (chunk) => hash.update(chunk));
-    stream.on("error", reject);
-    stream.on("end", () => resolve(`sha256:${hash.digest("hex")}`));
-  });
-}
-
 function parseRational(value: unknown, subject: string): { readonly numerator: bigint; readonly denominator: bigint } {
   assert(typeof value === "string" && /^\d+\/\d+$/u.test(value), `${subject} is not a rational`);
   const [numerator, denominator] = value.split("/");
@@ -230,18 +213,13 @@ async function verifyOutput(args: {
 function visualRequest(value: CanonicalValue): HyperframesDocument {
   assert(value !== null && typeof value === "object" && !Array.isArray(value),
     "HyperFrames visual request must be an object");
-  const item = value as { readonly contract?: unknown; readonly document?: unknown };
-  assert(item.contract === "svml.hyperframes-visual-render-request@1",
-    "HyperFrames visual request contract is invalid");
+  const item = value as { readonly document?: unknown };
   assertHyperframesDocument(item.document as HyperframesDocument);
   return item.document as HyperframesDocument;
 }
 
-function result(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfillment {
-  return {
-    value: { kind: "inline", value },
-    metadata,
-  };
+function result(value: CanonicalValue): EndpointFulfillment {
+  return { value: { kind: "inline", value } };
 }
 
 export function createLocalHyperframesProvider(config: CreateLocalHyperframesProviderOptions) {
@@ -272,41 +250,12 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
     maxProcessOutputBytes,
     maxRenderedBytes,
   });
-  let browserIdentity: Promise<BrowserIdentity> | undefined;
-  const identifyBrowser = (): Promise<BrowserIdentity> => {
-    browserIdentity ??= (async () => {
-      const located = await runProcess({
-        executable: nodePath,
-        argv: [hyperframesCliPath, "browser", "path"],
-        timeoutMs: processTimeoutMs,
-        maxOutputBytes: maxProcessOutputBytes,
-      });
-      const path = Buffer.from(located.stdout).toString("utf8").trim();
-      assert(path.length > 0 && !path.includes("\n") && !path.includes("\r"),
-        "HyperFrames returned an invalid browser path");
-      const [versionResult, digest] = await Promise.all([
-        runProcess({
-          executable: path,
-          argv: ["--version"],
-          timeoutMs: processTimeoutMs,
-          maxOutputBytes: maxProcessOutputBytes,
-        }),
-        fileDigest(path),
-      ]);
-      const version = Buffer.from(versionResult.stdout).toString("utf8").trim();
-      assert(version.length > 0, "HyperFrames browser returned no version");
-      return { path, version, digest };
-    })();
-    return browserIdentity;
-  };
-
   return defineEndpointPackage({
     module: localHyperframesProviderModuleRef,
     facet: "render",
     instance: config.instance ?? "hyperframes.local",
     authority: config.authority ?? config.instance ?? "hyperframes.local",
     implementation: {
-      locator: "@narratage/provider-hyperframes-local/render",
       digest: localHyperframesProviderImplementationDigest,
     },
     configuration,
@@ -315,28 +264,23 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
       lifecycle: "immediate" as const,
       capability: renderHyperframesCapabilities.renderVisual,
       returns: mediaTypes.renderedVisual,
-      supports: (need) => need.constraints !== null && typeof need.constraints === "object"
-        && !Array.isArray(need.constraints)
-        && (need.constraints as { readonly contract?: unknown }).contract
-          === "svml.hyperframes-visual-render-request@1",
       handler: async (context) => {
         const document = visualRequest(context.need.constraints);
-        const browser = await identifyBrowser();
         const work = await mkdtemp(join(tmpdir(), "svml-hyperframes-local-"));
         try {
-          const staged = await stageHyperframesProject({
+          await stageHyperframesProject({
             document,
             directory: work,
             read: (artifact) => artifactBytes(context, artifact),
-            validateSurface: async (surface, bytes) => canonicalize(
+            validateSurface: async (surface, bytes) => {
               await verifyCompositableSurfaceBytes({
                 surface,
                 bytes,
                 ffprobePath,
                 processTimeoutMs,
                 maxProbeOutputBytes: maxProcessOutputBytes,
-              }),
-            ),
+              });
+            },
           });
           const output = join(work, "visual.mp4");
           const fps = document.frameRate.denominator === 1
@@ -378,28 +322,12 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
             ? await context.artifacts.putStream(createReadStream(output), "video/mp4")
             : await context.artifacts.put(await readFile(output), "video/mp4");
           const value: RenderedVisual = sealRenderedVisual({
-            contract: "svml.rendered-visual@1",
             frameRate: document.frameRate,
             frameCount: document.frameCount,
             canvas: document.canvas,
             artifact,
-            muted: true,
           });
-          return result(canonicalize(value), canonicalize({
-            contract: "svml.hyperframes-renderer-attestation@1",
-            provider: "hyperframes.local",
-            providerImplementationDigest: localHyperframesProviderImplementationDigest,
-            documentDigest: digestOf(document),
-            hyperframesVersion: HYPERFRAMES_VERSION,
-            browser: {
-              version: browser.version,
-              digest: browser.digest,
-            },
-            surfaceValidations: staged.surfaceValidations,
-            workers,
-            quality,
-            browserGpu,
-          }));
+          return result(canonicalize(value));
         } finally {
           await rm(work, { recursive: true, force: true }).catch(() => {});
         }

@@ -1,7 +1,4 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import test from "node:test";
 
 import { digestOf, recordDigest, reduce } from "@narratage/core";
@@ -10,7 +7,6 @@ import {
   MemoryArtifactStore,
   NodeDriver,
   EndpointRegistry,
-  loadResolvedClosure,
   parseBuildState,
   serializeBuildState,
 } from "@narratage/driver-node";
@@ -20,7 +16,6 @@ import {
   capabilities,
   createGreetingBuild,
   implementationDigests,
-  manifest,
   producers as greetingProducers,
   types,
 } from "../../core/test/greeting-fixture.js";
@@ -112,7 +107,6 @@ test("Driver pauses at an unbound Need, serializes, then resumes without rerunni
     assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
     return {
       value: { kind: "inline", value: "Hello, Ada!" },
-      metadata: { endpoint: "fixture" },
     };
   }, { runtimeImplementation: endpointImplementation });
 
@@ -126,7 +120,7 @@ test("Driver pauses at an unbound Need, serializes, then resumes without rerunni
   });
 });
 
-test("Endpoint Registry rejects ambiguity until the Runtime binds one endpoint", async () => {
+test("Endpoint Registry rejects ambiguity until a Runtime Closure selects one endpoint", async () => {
   const { producers, endpoints } = configuredRegistry();
   endpoints.registerImmediateEndpoint("example:alpha", capabilities.generation, types.generated, () => ({
     value: { kind: "inline", value: "Alpha" },
@@ -141,14 +135,6 @@ test("Endpoint Registry rejects ambiguity until the Runtime binds one endpoint",
   assert.equal(ambiguous.blocked[0]?.reason, "ambiguous-endpoint");
   assert.match(ambiguous.blocked[0]?.subject ?? "", /example:alpha, example:beta/u);
 
-  endpoints.bind(capabilities.generation, "example:beta");
-  const completed = await driver.run(ambiguous.state);
-  assert.equal(completed.status, "complete");
-  assert.equal(completed.state.receipts[0]?.fulfiller, "example:beta");
-  assert.deepEqual(
-    completed.state.records.find((record) => record.id === "document:root")?.value,
-    { kind: "inline", value: { text: "Beta" } },
-  );
 });
 
 test("an Endpoint receives only declared credential slots and secrets never enter BuildState", async () => {
@@ -162,7 +148,6 @@ test("an Endpoint receives only declared credential slots and secrets never ente
       assert.equal(credentials.apiKey?.secret, "top-secret-value");
       return {
         value: { kind: "inline", value: "Credentialed result" },
-        metadata: { authenticated: true },
       };
     },
     { credentials: { apiKey: credentialRef("test", "endpoint-key") } },
@@ -268,43 +253,13 @@ test("MemoryArtifactStore is content addressed and returns defensive copies", as
   assert.deepEqual(await store.get(first.digest), new Uint8Array([1, 2, 3]));
 });
 
-test("Driver reads static manifests without executing package code", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-driver-"));
-  const path = join(directory, "svml.module.json");
-  try {
-    const withSurface = {
-      ...manifest,
-      surfaces: [
-        {
-          name: "greeting",
-          tag: "greeting",
-          mode: "structured" as const,
-          outputs: [types.intent],
-          implementation: {
-            kind: "trusted-frontend-surface",
-            locator: "example.greeting/surface",
-            digest: digestOf("example.greeting/surface@0"),
-          },
-        },
-      ],
-    };
-    await writeFile(path, JSON.stringify(withSurface), "utf8");
-    const closure = await loadResolvedClosure([path]);
-    assert.equal(closure.modules.length, 1);
-    assert.equal(closure.modules[0]?.manifest.name, "example.greeting");
-    assert.equal(closure.modules[0]?.manifest.surfaces[0]?.mode, "structured");
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-});
-
 test("Core still owns scheduling when Driver has every implementation", async () => {
   const { producers, endpoints } = configuredRegistry();
   endpoints.registerImmediateEndpoint("example:cache", capabilities.generation, types.generated, () => ({
     value: { kind: "inline", value: "Hello, Ada!" },
   }));
   const start = createGreetingBuild();
-  assert.equal(reduce(start).commands[0]?.kind, "invoke-producer");
+  assert.equal(reduce(start).outstanding[0]?.kind, "invoke-producer");
   const result = await new NodeDriver({ producers, endpoints }).run(start);
   assert.equal(result.status, "complete");
 });
@@ -361,14 +316,13 @@ test("a transient Handler failure pauses and can resume without replaying comple
     if (attempts === 1) throw new Error("temporary outage");
     return {
       value: { kind: "inline", value: "Hello after retry" },
-      metadata: { attempt: attempts },
     };
   });
 
   const driver = new NodeDriver({ producers, endpoints });
   const paused = await driver.run(createGreetingBuild());
   assert.equal(paused.status, "paused");
-  assert.match(paused.journal.at(-1)?.message ?? "", /temporary outage/u);
+  assert.match(paused.outcomes.at(-1)?.message ?? "", /temporary outage/u);
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 0, fulfill: 1 });
 
   const completed = await driver.run(paused.state);

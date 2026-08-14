@@ -67,9 +67,7 @@ function operation(request: Need) {
     endpoint: "kie.default",
     authority: "kie.default",
     route: "fixture.video",
-    implementationDigest: kieProviderImplementationDigest,
     runtimeClosure: digestOf("runtime:kie-test"),
-    requestDigest: request.requestDigest,
     attempt: 1,
   });
 }
@@ -180,7 +178,6 @@ test("KIE uploads content-addressed references, resumes one task, and persists g
   assert.equal(completed.result.value.kind, "inline");
   const result = completed.result.value.kind === "inline"
     ? completed.result.value.value as Record<string, unknown> : {};
-  assert.equal(result.contract, "svml.generated-video-set@1");
   assert.equal("model" in result, false, "model choice belongs to the request graph and Receipt");
   assert.equal("requestDigest" in result, false, "request lineage belongs to the Need Receipt, not generated media");
   const videos = result.videos as Array<{ digest: string }>;

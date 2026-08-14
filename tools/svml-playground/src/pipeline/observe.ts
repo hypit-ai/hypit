@@ -10,8 +10,8 @@
 import type {
   MarkupSurfaceRegistryLike, RegisteredSurface, StructuredElement, SurfaceDecodeOutput,
 } from "@narratage/markup";
-import { decodeMarkup, markupAuthorFrontendId } from "@narratage/markup";
 import type { ModuleRef } from "@narratage/protocol";
+import { parseScript } from "@narratage/script";
 
 import type { Range } from "../shared.js";
 
@@ -82,12 +82,24 @@ export function createObserver(
   const placements: Placement[] = [];
   const sourceMaps: Record<string, unknown>[] = [];
 
-  const watchedSurfaces: MarkupSurfaceRegistryLike = {
-    resolve(module, surface) {
-      const found = surfaces.resolve(module, surface);
+  // A Frontend may reach a Surface by name or by walking a module's whole list,
+  // so both ways in are wrapped: an unwatched Surface decodes silently and the
+  // preview loses the tag that placed the picture.
+  const watch = (found: RegisteredSurface | undefined): RegisteredSurface | undefined => {
       // A raw Surface parses its own body and reports its own positions, so
       // there is nothing here to recover.
-      if (found === undefined || found.mode !== "structured") return found;
+      if (found === undefined) return found;
+      if (found.mode !== "structured") {
+        const raw = found.handler as (input: RawInput) => unknown;
+        return {
+          ...found,
+          async handler(input: RawInput) {
+            const output = await raw(input);
+            harvestScript(input, sourceMaps);
+            return output;
+          },
+        } as RegisteredSurface;
+      }
       const handler = found.handler as (input: { element: StructuredElement }) => unknown;
       return {
         ...found,
@@ -122,42 +134,18 @@ export function createObserver(
           return output;
         },
       } as RegisteredSurface;
+  };
+
+  const watchedSurfaces: MarkupSurfaceRegistryLike = {
+    surfaces(module) {
+      return surfaces.surfaces(module).map((found) => watch(found)!) as readonly RegisteredSurface[];
     },
+    resolve(module, surface) { return watch(surfaces.resolve(module, surface)); },
   };
 
   return {
     surfaces: watchedSurfaces,
-    frontend<T extends { readonly id: string }>(frontend: T): T {
-      if (frontend.id !== markupAuthorFrontendId) return frontend;
-      return {
-        ...frontend,
-        async decode(source: { name: string; text: string; sourceDigest: `sha256:${string}` }, context: {
-          readonly closure: never;
-          readonly imports?: never;
-          readonly resolveAsset?: never;
-        }) {
-          // The same decoder the Frontend calls, with the same inputs. Only the
-          // Source maps, which its return type has no room for, are kept.
-          const result = await decodeMarkup(
-            { name: source.name, text: source.text, sourceDigest: source.sourceDigest },
-            {
-              closure: context.closure,
-              registry: watchedSurfaces,
-              resolveModule,
-              ...(context.imports === undefined ? {} : { sourceImports: context.imports }),
-              ...(context.resolveAsset === undefined ? {} : { resolveAsset: context.resolveAsset }),
-            } as never,
-          );
-          for (const map of result.sourceMaps ?? []) sourceMaps.push(map as Record<string, unknown>);
-          return {
-            module: result.module,
-            author: result.author,
-            fragments: result.fragments,
-            exports: result.exports,
-          };
-        },
-      } as unknown as T;
-    },
+    frontend<T extends { readonly id: string }>(frontend: T): T { return frontend; },
     observations: () => ({ placements, sourceMaps }),
   };
 }
@@ -173,4 +161,60 @@ export function observeFrontends<R extends { resolve(id: string): unknown }>(
       return frontend === undefined ? undefined : observer.frontend(frontend);
     },
   } as unknown as R;
+}
+
+/** What a raw Surface is handed: the whole Source and where its body begins. */
+type RawInput = {
+  readonly sourceName: string;
+  readonly source: string;
+  readonly tag: string;
+  readonly openingStart: number;
+  readonly contentStart: number;
+  readonly attributes: Readonly<Record<string, unknown>>;
+};
+
+/**
+ * Where a Script wrote its markers.
+ *
+ * The compiler carries no Source map, and a Script is a raw Surface that parses
+ * its own body, so the same parser is asked again for the one thing the compile
+ * discards: the offsets. Nothing is decoded here that the package does not
+ * decode itself.
+ */
+function harvestScript(input: RawInput, into: Record<string, unknown>[]): void {
+  if (input.tag.split(":").at(-1) !== "script") return;
+  const id = input.attributes.id;
+  if (typeof id !== "string") return;
+  const closing = `</${input.tag}>`;
+  const end = input.source.indexOf(closing, input.contentStart);
+  if (end < 0) return;
+  try {
+    const parsed = parseScript(
+      input.sourceName,
+      input.source.slice(input.contentStart, end),
+      input.contentStart,
+    );
+    into.push({
+      format: "svml.script-source-map@1",
+      record: id,
+      range: { start: input.openingStart, end: end + closing.length },
+      segments: parsed.segments.map((segment) => ({ id: segment.id, range: segment.range })),
+      selections: parsed.selections.map((selection) => ({
+        id: selection.id,
+        occurrences: selection.occurrences.map((held) => ({
+          occurrence: held.occurrence, open: held.open.range, close: held.close.range,
+        })),
+      })),
+      moments: parsed.moments.map((moment) => ({
+        id: moment.id,
+        occurrences: moment.occurrences.map((held) => ({
+          occurrence: held.occurrence, range: held.range,
+        })),
+      })),
+      tokens: parsed.tokens.map((token) => ({ id: token.id, range: token.range })),
+    });
+  } catch {
+    // A Script the parser refuses is a Source that will not compile either, and
+    // the compile is what should report it.
+  }
 }

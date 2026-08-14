@@ -35,9 +35,9 @@ import {
   decodeTypographyStyleSurface,
   decodeTypographyTrackSurface,
   typographyTrackManifest,
+  typographyTrackMarkupSurfaces,
   typographyTrackModuleRef,
   typographyTrackProducers,
-  typographyTrackSurfaceImplementationDigests,
   typographyTrackTypes,
 } from "@narratage/typography-track";
 import type { TextStyle } from "@narratage/typography-track";
@@ -48,13 +48,11 @@ import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@narratage/ma
 import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 5,
   frameRate: { numerator: 30, denominator: 1 },
 });
 
 const exactTestFont: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: {
     kind: "blob",
     digest: digestOf("typography-track-test-font"),
@@ -66,7 +64,6 @@ const exactTestFont: FontArtifactRef = {
 };
 
 const exactTestSurface: CompositableSurfaceRef = {
-  contract: "svml.compositable-surface@1",
   artifact: {
     kind: "blob",
     digest: digestOf("typography-track-test-surface"),
@@ -82,7 +79,7 @@ const exactTestSurface: CompositableSurfaceRef = {
 
 function textStyle(id: string, stackingOrder = 50): TextStyle {
   return sealTextStyle({
-    contract: "svml.text-style@1",
+
     id,
     stackingOrder,
     typography: {
@@ -157,25 +154,23 @@ function document(text: string) {
 test("persistent and timed Text Items lower to ordinary VisualTrack Presents", () => {
   const style = textStyle("editorial", 55);
   const program = sealTypographyTrackProgram({
-    contract: "svml.typography-track-program@1",
+
     id: "editorial-text",
     items: [
       {
         id: "watermark",
-        sourceOccurrenceId: "program",
         span: { startFrame: 0, endFrameExclusive: 150 },
         tieBreak: "watermark",
-        geometry: { kind: "point", point: { contract: "svml.spatial-point@1", xPx: 900, yPx: 80 } },
+        geometry: { kind: "point", point: { xPx: 900, yPx: 80 } },
         document: document("SVML"),
         style: { ...style, id: "watermark", stackingOrder: 90 },
         motion: stillTextMotion(),
       },
       {
         id: "callout",
-        sourceOccurrenceId: "program",
         span: { startFrame: 30, endFrameExclusive: 90 },
         tieBreak: "callout",
-        geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 108, yPx: 1248, widthPx: 864, heightPx: 230.4 } },
+        geometry: { kind: "area", frame: { xPx: 108, yPx: 1248, widthPx: 864, heightPx: 230.4 } },
         document: document("Intent, not timeline"),
         style,
         motion: stillTextMotion(),
@@ -189,7 +184,6 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
   assert.equal(track.presents[0]?.elements[2]?.kind, "text-flow");
 
   const lower = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: "lower",
     presents: [{
@@ -200,7 +194,6 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
     }],
   });
   const rendered = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1",
     id: "text-film",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [track, lower],
@@ -212,11 +205,11 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
 
 test("Text Mask explicitly consumes one authored Text Program and one owned still Surface", () => {
   const program = sealTypographyTrackProgram({
-    contract: "svml.typography-track-program@1", id: "mask-shape",
+    id: "mask-shape",
     items: [{
-      id: "mask-title", sourceOccurrenceId: "program",
+      id: "mask-title",
       span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "mask-title",
-      geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 100, yPx: 200, widthPx: 800, heightPx: 240 } },
+      geometry: { kind: "area", frame: { xPx: 100, yPx: 200, widthPx: 800, heightPx: 240 } },
       document: document("OWNED MASK"),
       style: (() => {
         const style = textStyle("mask-style", 75);
@@ -226,18 +219,17 @@ test("Text Mask explicitly consumes one authored Text Program and one owned stil
     }],
   });
   const material: CompositableSurfaceRef = {
-    contract: "svml.compositable-surface@1",
     artifact: { kind: "blob", digest: digestOf("text-mask-material"), size: 1, mediaType: "image/png" },
     width: 800, height: 240, colorSpace: "srgb", alphaMode: "straight", timing: { kind: "still" },
   };
   const track = renderTextMaskTrack(space, program, material, sealTextMaskSpec({
-    contract: "svml.text-mask-spec@1", id: "masked-title", mode: "alpha", materialFit: "cover",
+    id: "masked-title", mode: "alpha", materialFit: "cover",
   }));
   assert.equal(track.id, "masked-title");
   assert.deepEqual(track.presents[0]?.elements.map((element) => element.kind), ["mask", "text", "surface"]);
   assert.equal(track.presents[0]?.elements[2]?.parent, "mask");
   const html = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1", id: "owned-mask-composition",
+    id: "owned-mask-composition",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [track],
   }), space).html;
   assert.match(html, /<foreignObject/u);
@@ -247,7 +239,7 @@ test("Text Mask explicitly consumes one authored Text Program and one owned stil
     ...material, artifact: { ...material.artifact, mediaType: "video/webm" },
     timing: { kind: "frames", frameCount: 150, frameRate: { numerator: 30, denominator: 1 } },
   }, sealTextMaskSpec({
-    contract: "svml.text-mask-spec@1", id: "timed-mask", mode: "alpha", materialFit: "cover",
+    id: "timed-mask", mode: "alpha", materialFit: "cover",
   })), /requires one explicit still material Surface/u);
   assert.throws(() => renderTextMaskTrack(space, sealTypographyTrackProgram({
     ...program,
@@ -257,20 +249,19 @@ test("Text Mask explicitly consumes one authored Text Program and one owned stil
       style: { ...item.style, area: { ...item.style.area, overflow: "shrink", minimumScale: 0.7 } },
     })),
   }), material, sealTextMaskSpec({
-    contract: "svml.text-mask-spec@1", id: "advanced-mask", mode: "alpha", materialFit: "cover",
+    id: "advanced-mask", mode: "alpha", materialFit: "cover",
   })), /must be materialized by an independent package/u);
 });
 
 test("TypographyTrackProgram rejects a frame span outside ProgramSpace", () => {
   const program = sealTypographyTrackProgram({
-    contract: "svml.typography-track-program@1",
+
     id: "invalid-text",
     items: [{
       id: "late",
-      sourceOccurrenceId: "program",
       span: { startFrame: 149, endFrameExclusive: 151 },
       tieBreak: "late",
-      geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 1080, heightPx: 192 } },
+      geometry: { kind: "area", frame: { xPx: 0, yPx: 0, widthPx: 1080, heightPx: 192 } },
       document: document("Too late"),
       style: textStyle("late"),
       motion: stillTextMotion(),
@@ -281,21 +272,20 @@ test("TypographyTrackProgram rejects a frame span outside ProgramSpace", () => {
 
 test("Selection Text consumes explicit Selection, SemanticMap, Style, Motion and Placement edges", () => {
   const map: CompleteSemanticMap = {
-    contract: "svml.complete-semantic-map@1",
     tokens: [],
     anchors: [
-      { identity: "selection:start", timeSec: 1, frame: 30 },
-      { identity: "selection:end", timeSec: 2, frame: 60 },
+      { identity: "selection:start", frame: 30 },
+      { identity: "selection:end", frame: 60 },
     ],
   };
   const selection: NarrativeSelectionRef = {
-    contract: "svml.narrative-selection@1",
+
     id: "callout",
     occurrences: [{ occurrence: 1, startAnchorId: "selection:start", endAnchorId: "selection:end" }],
   };
-  const header = sealTypographyTrackHeader({ contract: "svml.typography-track-header@1", id: "selected-text" });
+  const header = sealTypographyTrackHeader({ id: "selected-text" });
   const spec = sealTextItemSpec({
-    contract: "svml.text-item-spec@1",
+
     id: "meaning",
     document: document("MEANING"),
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
@@ -307,7 +297,7 @@ test("Selection Text consumes explicit Selection, SemanticMap, Style, Motion and
     map,
     selection,
     space,
-    bindAreaTextPlacement({ contract: "svml.spatial-frame@1", xPx: 108, yPx: 192, widthPx: 864, heightPx: 192 }),
+    bindAreaTextPlacement({ xPx: 108, yPx: 192, widthPx: 864, heightPx: 192 }),
     spec,
     textStyle("meaning", 80),
     stillTextMotion(),
@@ -318,6 +308,20 @@ test("Selection Text consumes explicit Selection, SemanticMap, Style, Motion and
 test("the self-described Markup Surfaces compile Style, Motion and all three spatial forms", async () => {
   const fixtureModule = { name: "example.text-inputs", version: "1" } as const;
   const fixtureDigest = digestOf("example.text-inputs/surface@1");
+  const fixtureSurface = {
+    name: "inputs", tag: "Inputs", mode: "structured",
+    outputs: [
+      svsRecipeType,
+      programSpaceTypes.programSpace,
+      spatialTypes.point,
+      spatialTypes.frame,
+      spatialTypes.path,
+      mediaTypes.fontArtifact,
+      mediaTypes.compositableSurface,
+      textTypes.text,
+    ],
+    implementation: { digest: fixtureDigest },
+  } as const;
   const fixtureManifest: ModuleManifest = {
     format: "svml.module@1",
     name: fixtureModule.name,
@@ -334,22 +338,6 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
     ],
     types: [],
     capabilities: [],
-    surfaces: [{
-      name: "inputs",
-      tag: "Inputs",
-      mode: "structured",
-      outputs: [
-        svsRecipeType,
-        programSpaceTypes.programSpace,
-        spatialTypes.point,
-        spatialTypes.frame,
-        spatialTypes.path,
-        mediaTypes.fontArtifact,
-        mediaTypes.compositableSurface,
-        textTypes.text,
-      ],
-      implementation: { kind: "trusted-frontend-surface", locator: "example.text-inputs/surface", digest: fixtureDigest },
-    }],
     producers: [],
   };
   const closure = createResolvedClosure([
@@ -360,13 +348,13 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
     fixtureManifest,
   ]);
   const surfaces = new MarkupSurfaceRegistry();
-  surfaces.registerStructured(fixtureModule, "inputs", fixtureDigest, ({ element }) => ({
+  surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
       {
         id: "editorial",
         type: svsRecipeType,
         value: { kind: "inline", value: {
-          contract: "svml.svs-recipe@1",
+
           path: "text.editorial",
           properties: {
             "stack-order": 70,
@@ -385,7 +373,7 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
         id: "mask-editorial",
         type: svsRecipeType,
         value: { kind: "inline", value: {
-          contract: "svml.svs-recipe@1",
+
           path: "text.mask-editorial",
           properties: {
             "stack-order": 75,
@@ -400,9 +388,9 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
         range: element.range,
       },
       { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
-      { id: "title-point", type: spatialTypes.point, value: { kind: "inline", value: { contract: "svml.spatial-point@1", xPx: 540, yPx: 120 } }, range: element.range },
-      { id: "body-frame", type: spatialTypes.frame, value: { kind: "inline", value: { contract: "svml.spatial-frame@1", xPx: 80, yPx: 220, widthPx: 920, heightPx: 520 } }, range: element.range },
-      { id: "arc", type: spatialTypes.path, value: { kind: "inline", value: { contract: "svml.spatial-path@1", commands: [
+      { id: "title-point", type: spatialTypes.point, value: { kind: "inline", value: { xPx: 540, yPx: 120 } }, range: element.range },
+      { id: "body-frame", type: spatialTypes.frame, value: { kind: "inline", value: { xPx: 80, yPx: 220, widthPx: 920, heightPx: 520 } }, range: element.range },
+      { id: "arc", type: spatialTypes.path, value: { kind: "inline", value: { commands: [
         { kind: "move", xPx: 120, yPx: 900 },
         { kind: "cubic", control1X: 360, control1Y: 760, control2X: 720, control2Y: 1_040, xPx: 960, yPx: 900 },
       ] } }, range: element.range },
@@ -412,11 +400,11 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
     ],
     components: [],
     fragments: [],
-  }));
-  surfaces.registerStructured(typographyTrackModuleRef, "style", typographyTrackSurfaceImplementationDigests.style, decodeTypographyStyleSurface);
-  surfaces.registerStructured(typographyTrackModuleRef, "motion", typographyTrackSurfaceImplementationDigests.motion, decodeTypographyMotionSurface);
-  surfaces.registerStructured(typographyTrackModuleRef, "track", typographyTrackSurfaceImplementationDigests.track, decodeTypographyTrackSurface);
-  surfaces.registerStructured(typographyTrackModuleRef, "mask", typographyTrackSurfaceImplementationDigests.mask, decodeTypographyMaskSurface);
+  }) });
+  surfaces.registerStructured({ module: typographyTrackModuleRef, declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "style")!, handler: decodeTypographyStyleSurface });
+  surfaces.registerStructured({ module: typographyTrackModuleRef, declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "motion")!, handler: decodeTypographyMotionSurface });
+  surfaces.registerStructured({ module: typographyTrackModuleRef, declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "track")!, handler: decodeTypographyTrackSurface });
+  surfaces.registerStructured({ module: typographyTrackModuleRef, declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "mask")!, handler: decodeTypographyMaskSurface });
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
@@ -474,8 +462,8 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
   assert.equal(program.ref.kind, "logical-output");
   assert.equal(ordinaryTrack.ref.kind, "logical-output");
   assert.equal(track.ref.kind, "logical-output");
-  const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
-    graph: compiled.elaboration.graph.id,
+  const build = start(compiled.program, compiled.graph, sealBuildRequest({
+    graph: compiled.graph.id,
     targets: [
       { output: ordinaryTrack.ref.kind === "logical-output" ? ordinaryTrack.ref.id : "" },
       { output: track.ref.kind === "logical-output" ? track.ref.id : "" },
@@ -544,7 +532,7 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     ] } }],
   });
   const motion = sealTextMotion({
-    contract: "svml.text-motion@1",
+
     id: "sequenced",
     item: { keyframes: [
       { atFrame: 0, style: [{ name: "opacity", value: 0 }, { name: "transform", value: "translateY(20px)" }] },
@@ -570,16 +558,16 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     ],
   });
   const pathMotion = sealTextMotion({
-    contract: "svml.text-motion@1", id: "path-motion", sequences: [],
+    id: "path-motion", sequences: [],
     pathMargin: { keyframes: [{ atFrame: 0, startMarginPx: 0 }, { atFrame: 180, startMarginPx: 120, easing: "ease-in-out" }] },
   });
   const track = renderTypographyTrack(space, sealTypographyTrackProgram({
-    contract: "svml.typography-track-program@1",
+
     id: "rich-text",
     items: [
       {
-        id: "area", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "area",
-        geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 80, yPx: 200, widthPx: 720, heightPx: 320 } },
+        id: "area", span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "area",
+        geometry: { kind: "area", frame: { xPx: 80, yPx: 200, widthPx: 720, heightPx: 320 } },
         document: { paragraphs: [{
           id: "p1",
           inlines: [
@@ -593,8 +581,8 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
         motion,
       },
       {
-        id: "path", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "path",
-        geometry: { kind: "path", path: { contract: "svml.spatial-path@1", commands: [
+        id: "path", span: { startFrame: 0, endFrameExclusive: 150 }, tieBreak: "path",
+        geometry: { kind: "path", path: { commands: [
           { kind: "move", xPx: 100, yPx: 700 },
           { kind: "quadratic", controlX: 540, controlY: 520, xPx: 980, yPx: 700 },
         ] } },
@@ -605,7 +593,7 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     ],
   }));
   const rendered = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1", id: "rich-text-film",
+    id: "rich-text-film",
     canvas: { width: 1080, height: 900, clearColor: "#000000" }, tracks: [track],
   }), space);
   assert.match(rendered.html, /data-svml-text-paint-layer="5"/u);

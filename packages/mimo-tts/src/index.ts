@@ -25,7 +25,7 @@ function table(model: MimoTtsModel): GenerationPortTable {
   ] as const;
   if (model === "mimo-v2.5-tts") {
     return sealGenerationPortTable({
-      contract: "svml.generation-ports@1", model, result: "audio",
+      model, result: "audio",
       ports: [
         ...common,
         { name: "instruction", value: instruction, minItems: 0, maxItems: 1 },
@@ -36,7 +36,7 @@ function table(model: MimoTtsModel): GenerationPortTable {
   }
   if (model === "mimo-v2.5-tts-voicedesign") {
     return sealGenerationPortTable({
-      contract: "svml.generation-ports@1", model, result: "audio",
+      model, result: "audio",
       ports: [
         ...common,
         { name: "voiceDescription", value: instruction, minItems: 1, maxItems: 1 },
@@ -45,7 +45,7 @@ function table(model: MimoTtsModel): GenerationPortTable {
     });
   }
   return sealGenerationPortTable({
-    contract: "svml.generation-ports@1", model, result: "audio",
+    model, result: "audio",
     ports: [
       ...common,
       { name: "instruction", value: instruction, minItems: 0, maxItems: 1 },
@@ -96,40 +96,35 @@ export const mimoTtsSurfaceDigests = {
   voiceClone: digestOf("@narratage/mimo-tts/voice-clone-surface@1"),
 } as const;
 
+export const mimoTtsMarkupSurfaces = [
+  {
+    name: "preset", tag: "Preset", mode: "structured",
+    outputs: [mimoTtsEndpoints.preset.draftType],
+    implementation: {
+      digest: mimoTtsSurfaceDigests.preset,
+    },
+  },
+  {
+    name: "voiceDesign", tag: "VoiceDesign", mode: "structured",
+    outputs: [mimoTtsEndpoints.voiceDesign.draftType],
+    implementation: {
+      digest: mimoTtsSurfaceDigests.voiceDesign,
+    },
+  },
+  {
+    name: "voiceClone", tag: "VoiceClone", mode: "structured",
+    outputs: [
+      mimoTtsEndpoints.voiceClone.draftType,
+      ...Object.values(mimoTtsEndpoints.voiceClone.mediaBindings).map((binding) => binding.type),
+    ],
+    implementation: {
+      digest: mimoTtsSurfaceDigests.voiceClone,
+    },
+  },
+] as const;
+
 export const mimoTtsManifest = {
   ...base.manifest,
-  surfaces: [
-    {
-      name: "preset", tag: "Preset", mode: "structured",
-      outputs: [mimoTtsEndpoints.preset.draftType],
-      implementation: {
-        kind: "trusted-frontend-surface" as const,
-        locator: "@narratage/mimo-tts/preset-surface",
-        digest: mimoTtsSurfaceDigests.preset,
-      },
-    },
-    {
-      name: "voiceDesign", tag: "VoiceDesign", mode: "structured",
-      outputs: [mimoTtsEndpoints.voiceDesign.draftType],
-      implementation: {
-        kind: "trusted-frontend-surface" as const,
-        locator: "@narratage/mimo-tts/voice-design-surface",
-        digest: mimoTtsSurfaceDigests.voiceDesign,
-      },
-    },
-    {
-      name: "voiceClone", tag: "VoiceClone", mode: "structured",
-      outputs: [
-        mimoTtsEndpoints.voiceClone.draftType,
-        ...Object.values(mimoTtsEndpoints.voiceClone.mediaBindings).map((binding) => binding.type),
-      ],
-      implementation: {
-        kind: "trusted-frontend-surface" as const,
-        locator: "@narratage/mimo-tts/voice-clone-surface",
-        digest: mimoTtsSurfaceDigests.voiceClone,
-      },
-    },
-  ],
 } as const;
 
 export const mimoTtsManifestDigest = digestOf(mimoTtsManifest);

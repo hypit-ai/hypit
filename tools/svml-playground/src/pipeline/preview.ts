@@ -78,8 +78,8 @@ export type Preview = {
  * programme's.
  */
 function authoredFrameRate(compiled: unknown): { numerator: number; denominator: number } {
-  const records = (compiled as { module: { records: readonly { value: { kind: string; value?: unknown } }[] } })
-    .module.records;
+  const records = (compiled as { program: { records: readonly { value: { kind: string; value?: unknown } }[] } })
+    .program.records;
   for (const record of records) {
     if (record.value.kind !== "inline") continue;
     const rate = (record.value.value as { frameRate?: { numerator?: number; denominator?: number } }).frameRate;
@@ -93,8 +93,8 @@ function authoredFrameRate(compiled: unknown): { numerator: number; denominator:
 
 /** The Canvas the Source declares, so a stand-in is the shape of the programme. */
 function authoredCanvas(compiled: unknown): { width: number; height: number } {
-  const records = (compiled as { module: { records: readonly { value: { kind: string; value?: unknown } }[] } })
-    .module.records;
+  const records = (compiled as { program: { records: readonly { value: { kind: string; value?: unknown } }[] } })
+    .program.records;
   for (const record of records) {
     if (record.value.kind !== "inline") continue;
     const canvas = record.value.value as { widthPx?: number; heightPx?: number; contract?: string };
@@ -107,8 +107,8 @@ function authoredCanvas(compiled: unknown): { width: number; height: number } {
 }
 
 function inlineRecord(compiled: unknown, id: string): unknown {
-  const records = (compiled as { module: { records: readonly { id: string; value: { kind: string; value?: unknown } }[] } })
-    .module.records;
+  const records = (compiled as { program: { records: readonly { id: string; value: { kind: string; value?: unknown } }[] } })
+    .program.records;
   const found = records.find((record) => record.id === id);
   return found?.value.kind === "inline" ? found.value.value : undefined;
 }
@@ -245,9 +245,11 @@ export async function preview(
     for (const candidate of run.graph.candidates) {
       const root = (candidate as { root?: { value?: { kind?: string; value?: unknown } } }).root;
       const held = root?.value?.kind === "inline" ? root.value.value : undefined;
-      const listed = (held as { contract?: string; anchors?: readonly { identity: string; frame: number }[] })
-        ?.anchors;
-      if ((held as { contract?: string })?.contract !== "svml.complete-semantic-map@1") continue;
+      const shape = held as {
+        anchors?: readonly { identity: string; frame: number }[]; tokens?: readonly unknown[];
+      };
+      const listed = shape?.anchors;
+      if (!Array.isArray(listed) || !Array.isArray(shape?.tokens)) continue;
       anchors = new Map((listed ?? []).map((anchor) => [anchor.identity, anchor.frame]));
       break;
     }
@@ -391,9 +393,11 @@ export async function preview(
     for (const candidate of run.graph.candidates) {
       const root = (candidate as { root?: { value?: { kind?: string; value?: unknown } } }).root;
       const held = root?.value?.kind === "inline" ? root.value.value : undefined;
-      const listed = (held as { contract?: string; anchors?: readonly { identity: string; frame: number }[] })
-        ?.anchors;
-      if ((held as { contract?: string })?.contract !== "svml.complete-semantic-map@1") continue;
+      const shape = held as {
+        anchors?: readonly { identity: string; frame: number }[]; tokens?: readonly unknown[];
+      };
+      const listed = shape?.anchors;
+      if (!Array.isArray(listed) || !Array.isArray(shape?.tokens)) continue;
       anchors = new Map((listed ?? []).map((anchor) => [anchor.identity, anchor.frame]));
       break;
     }
@@ -421,8 +425,8 @@ export async function preview(
 
 /** The clear colour the Film declares, or black when it declares none. */
 function authoredClearColor(compiled: unknown): string {
-  const records = (compiled as { module: { records: readonly { value: { kind: string; value?: unknown } }[] } })
-    .module.records;
+  const records = (compiled as { program: { records: readonly { value: { kind: string; value?: unknown } }[] } })
+    .program.records;
   for (const record of records) {
     if (record.value.kind !== "inline") continue;
     const held = record.value.value as { clearColor?: unknown; canvas?: { clearColor?: unknown } };
@@ -450,7 +454,6 @@ function builtSpace(
       .map((present) => present.span.endFrameExclusive));
   const frameCount = Math.max(1, declaredFrames, ...drawn);
   return {
-    contract: "svml.program-space@1",
     durationSec: frameCount * frameRate.denominator / frameRate.numerator,
     frameRate: { ...frameRate },
   };
@@ -528,8 +531,8 @@ async function pictureFor(
 
 /** A Record stored as the blob it is, rather than wrapped. */
 function blobDigest(compiled: unknown, id: string): string | undefined {
-  const records = (compiled as { module: { records: readonly { id: string; value: { kind: string; digest?: string } }[] } })
-    .module.records;
+  const records = (compiled as { program: { records: readonly { id: string; value: { kind: string; digest?: string } }[] } })
+    .program.records;
   const found = records.find((record) => record.id === id);
   return found?.value.kind === "blob" ? found.value.digest : undefined;
 }

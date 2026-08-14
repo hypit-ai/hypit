@@ -41,7 +41,6 @@ const RENDERER_IMPLEMENTATION = digestOf("hyperframes-lambda:test-renderer-deplo
 
 function documentFixture(fps = 30, denominator = 1): HyperframesDocument {
   return {
-    contract: "svml.hyperframes-document@1",
     visualIr: "svml.visual-ir@1",
     frameRate: { numerator: fps, denominator },
     frameCount: 60,
@@ -76,9 +75,7 @@ function operation(request: Need) {
     endpoint: "hyperframes.aws-lambda.test",
     authority: "hyperframes.aws-lambda.test",
     route: "fixture.render",
-    implementationDigest: digestOf("hyperframes-lambda:test-implementation"),
     runtimeClosure: digestOf("hyperframes-lambda:test-runtime"),
-    requestDigest: request.requestDigest,
     attempt: 1,
   });
 }
@@ -243,7 +240,6 @@ test("the Lambda Endpoint declines frame domains and requirements it cannot pres
   assert.equal(supportsAwsLambdaHyperframes(hyperframesVisualRequest(documentFixture(12))), false);
   assert.equal(supportsAwsLambdaHyperframes(hyperframesVisualRequest(documentFixture(30_000, 1_001))), false);
   assert.equal(supportsAwsLambdaHyperframes(canonicalize({
-    contract: "svml.hyperframes-visual-render-request@1",
     document: documentFixture(),
     browserGpu: "hardware",
   })), false, "an unsupported hardware requirement must fall through to another Endpoint");
@@ -257,7 +253,6 @@ test("the Lambda Endpoint declines frame domains and requirements it cannot pres
     ...documentFixture(30),
     artifacts: [artifact],
     surfaces: [{
-      contract: "svml.compositable-surface@1",
       artifact,
       width: 1,
       height: 1,
@@ -338,13 +333,8 @@ test("one deterministic submission resumes and streams the exact output into the
   verifyRenderedVisual(completed.result.value.value);
   const visual = completed.result.value.value as unknown as RenderedVisual;
   assert.equal(visual.frameCount, 60);
-  assert.equal(visual.muted, true);
   assert.equal(await artifacts.has(visual.artifact.digest), true);
   assert.deepEqual(await artifacts.get(visual.artifact.digest), new Uint8Array([1, 2, 3, 4, 5]));
-  const metadata = completed.result.metadata as Record<string, CanonicalValue>;
-  assert.equal(metadata.contract, "svml.hyperframes-renderer-attestation@1");
-  assert.equal(metadata.rendererImplementationDigest, RENDERER_IMPLEMENTATION);
-  assert.equal(metadata.documentDigest, digestOf(documentFixture()));
 });
 
 test("an ambiguous StartExecution is recovered by the same name without redeploying the site", async () => {

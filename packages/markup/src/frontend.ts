@@ -4,7 +4,6 @@ import {
   digestOf,
   isDigest,
   sealRecord,
-  sealTypedModule,
   verifyClosure,
   verifyRecordStructure,
 } from "@narratage/core";
@@ -12,10 +11,8 @@ import type {
   CanonicalValue,
   ModuleRef,
   ResolvedModule,
-  SurfaceDeclaration,
   TypedRecord,
 } from "@narratage/protocol";
-import { sealAuthorModule } from "@narratage/elaborator";
 import type {
   AuthorComponent,
   AuthorSourceExport,
@@ -34,12 +31,13 @@ import {
 } from "./syntax.js";
 import type {
   RawSurfaceHandler,
-  SourceUnit,
+  MarkupSource,
   StructuredSurfaceHandler,
   SurfaceComponentDraft,
   SurfaceDecodeOutput,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
+  RegisteredSurface,
   MarkupDecodeContext,
   MarkupDecodeResult,
   MarkupAuthorFrontend,
@@ -47,14 +45,13 @@ import type {
   MarkupImportRequest,
 } from "./types.js";
 
-export const markupFrontendRef = { module: "@narratage/markup", version: "1", name: "markup" } as const;
 export const markupFrontendImplementationDigest = digestOf("@narratage/markup/frontend@1");
 export const markupAuthorFrontendId = "@narratage/markup@1";
 
 type BoundSurface = {
   readonly tag: string;
   readonly module: ResolvedModule;
-  readonly declaration: SurfaceDeclaration;
+  readonly surface: RegisteredSurface;
 };
 
 function moduleKey(ref: ModuleRef): string {
@@ -65,17 +62,21 @@ function sameModule(left: ModuleRef, right: ModuleRef): boolean {
   return left.name === right.name && left.version === right.version;
 }
 
-function fail(source: SourceUnit, code: string, message: string, offset?: number): never {
+function resolvedModuleRef(module: ResolvedModule): ModuleRef {
+  return { name: module.manifest.name, version: module.manifest.version };
+}
+
+function fail(source: MarkupSource, code: string, message: string, offset?: number): never {
   throw new MarkupFrontendError(code, message, source.name, offset, source.text);
 }
 
 function moduleForImport(
-  source: SourceUnit,
+  source: MarkupSource,
   request: MarkupImportRequest,
   context: MarkupDecodeContext,
 ): ResolvedModule {
   const ref = context.resolveModule(request);
-  const module = context.closure.modules.find((item) => sameModule(item.ref, ref));
+  const module = context.closure.modules.find((item) => sameModule(item.manifest, ref));
   if (!module) {
     fail(source, "MARKUP_IMPORT_CLOSURE", `${moduleKey(ref)} is not present in the resolved closure.`, request.range.start);
   }
@@ -83,7 +84,7 @@ function moduleForImport(
 }
 
 function surfaceScope(
-  source: SourceUnit,
+  source: MarkupSource,
   imports: readonly MarkupImportRequest[],
   context: MarkupDecodeContext,
 ): Map<string, BoundSurface> {
@@ -96,16 +97,30 @@ function surfaceScope(
     }
     if (request.kind === "source") continue;
     const module = moduleForImport(source, request, context);
-    for (const declaration of module.manifest.surfaces) {
+    const moduleRef = resolvedModuleRef(module);
+    const allowed = new Set([
+      moduleKey(moduleRef),
+      ...module.manifest.dependencies.map((dependency) => moduleKey(dependency.module)),
+    ]);
+    for (const declaration of context.registry.surfaces(moduleRef)) {
+      for (const output of declaration.outputs) {
+        if (!allowed.has(moduleKey(output.module))) {
+          fail(source, "MARKUP_SURFACE_DEPENDENCY", `Surface ${moduleKey(moduleRef)}#${declaration.surface} outputs ${moduleKey(output.module)}#${output.name} without a Module dependency.`, request.range.start);
+        }
+        const target = context.closure.modules.find((item) => sameModule(item.manifest, output.module));
+        if (!target?.manifest.types.some((type) => type.name === output.name)) {
+          fail(source, "MARKUP_SURFACE_OUTPUT_TYPE", `Surface ${moduleKey(moduleRef)}#${declaration.surface} outputs unknown Type ${moduleKey(output.module)}#${output.name}.`, request.range.start);
+        }
+      }
       const tag = request.alias === undefined ? declaration.tag : `${request.alias}:${declaration.tag}`;
       if (scope.has(tag)) fail(source, "MARKUP_SURFACE_COLLISION", `Surface tag <${tag}> is imported more than once.`, request.range.start);
-      scope.set(tag, { tag, module, declaration });
+      scope.set(tag, { tag, module, surface: declaration });
     }
   }
   return scope;
 }
 
-export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeContext): Promise<MarkupDecodeResult> {
+export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeContext): Promise<MarkupDecodeResult> {
   verifyClosure(context.closure);
   const discovery = discoverMarkup(source);
   const sourceImports = context.sourceImports ?? [];
@@ -119,7 +134,7 @@ export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeCont
       fail(
         source,
         "MARKUP_SOURCE_IMPORT_UNRESOLVED",
-        `Source import "${request.from}" must be decoded before this SourceUnit.`,
+        `Source import "${request.from}" must be decoded before this source.`,
         request.range.start,
       );
     }
@@ -142,36 +157,13 @@ export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeCont
     }
   }
   const scope = surfaceScope(source, discovery.imports, context);
-  const sourceDigest = source.sourceDigest ?? digestOf(source.text);
-  const frontendClosureDigest = digestOf({
-    frontend: markupFrontendImplementationDigest,
-    surfaces: [...scope.values()]
-      .sort((left, right) => left.tag.localeCompare(right.tag))
-      .map((surface) => ({
-        tag: surface.tag,
-        module: surface.module.ref,
-        moduleDigest: surface.module.digest,
-        name: surface.declaration.name,
-        implementationDigest: surface.declaration.implementation.digest,
-      })),
-    sourceImports: sourceImports
-      .map((item) => ({
-        from: item.request.from,
-        alias: item.request.alias,
-        frontend: item.frontend,
-        frontendDigest: item.frontendDigest,
-        source: item.source,
-        exports: item.exports,
-      }))
-      .sort((left, right) => left.alias.localeCompare(right.alias)),
-  });
   const records: TypedRecord[] = [];
   const components: AuthorComponent[] = [];
   const componentRanges = new Map<string, SurfaceComponentDraft["range"]>();
   const fragments = new Map<string, GraphFragment>();
-  const sourceMaps: CanonicalValue[] = [];
   const recordIds = new Set<string>();
   const componentIds = new Set<string>();
+  const privateBindings = new Set<string>();
   let cursor = discovery.bodyStart;
   let closed = false;
   while (cursor < source.text.length) {
@@ -190,18 +182,9 @@ export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeCont
     }
     const bound = scope.get(opening.name);
     if (!bound) fail(source, "MARKUP_UNKNOWN_SURFACE", `No imported module declares <${opening.name}>.`, cursor);
-    const registered = context.registry.resolve(bound.module.ref, bound.declaration.name);
-    if (!registered) {
-      fail(source, "MARKUP_SURFACE_UNREGISTERED", `Surface ${moduleKey(bound.module.ref)}#${bound.declaration.name} is not registered.`, cursor);
-    }
-    if (
-      registered.mode !== bound.declaration.mode
-      || registered.implementationDigest !== bound.declaration.implementation.digest
-    ) {
-      fail(source, "MARKUP_SURFACE_MISMATCH", `Registered Surface ${bound.declaration.name} does not match the locked Manifest.`, cursor);
-    }
+    const registered = bound.surface;
     let output: SurfaceDecodeOutput;
-    if (bound.declaration.mode === "raw") {
+    if (registered.mode === "raw") {
       if (opening.selfClosing) fail(source, "MARKUP_RAW_SELF_CLOSING", `Raw Surface <${opening.name}> cannot be self-closing.`, cursor);
       const rawOutput = await (registered.handler as RawSurfaceHandler)({
         sourceName: source.name,
@@ -266,6 +249,34 @@ export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeCont
       });
       cursor = parsed.nextOffset;
     }
+    if (output.exports !== undefined) {
+      const generated = [
+        ...output.records.map((draft) => draft.id),
+        ...output.components.flatMap((draft) => Object.values(draft.outputs)),
+      ];
+      const available = new Set(generated);
+      const published = new Set<string>();
+      for (const name of output.exports) {
+        if (!available.has(name)) {
+          fail(
+            source,
+            "MARKUP_SURFACE_EXPORT_UNKNOWN",
+            `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} publishes unknown binding ${name}.`,
+            opening.start,
+          );
+        }
+        if (published.has(name)) {
+          fail(
+            source,
+            "MARKUP_SURFACE_EXPORT_DUPLICATE",
+            `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} publishes ${name} more than once.`,
+            opening.start,
+          );
+        }
+        published.add(name);
+      }
+      for (const name of generated) if (!published.has(name)) privateBindings.add(name);
+    }
     for (const draft of output.records) {
       if (
         !Number.isInteger(draft.range.start)
@@ -277,16 +288,16 @@ export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeCont
         fail(
           source,
           "MARKUP_SURFACE_RANGE",
-          `Surface ${moduleKey(bound.module.ref)}#${bound.declaration.name} returned an invalid source range.`,
+          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} returned an invalid source range.`,
           opening.start,
         );
       }
       if (recordIds.has(draft.id)) fail(source, "MARKUP_RECORD_DUPLICATE", `Duplicate authored record "${draft.id}".`, draft.range.start);
-      if (!bound.declaration.outputs.some((output) => sameModule(output.module, draft.type.module) && output.name === draft.type.name)) {
+      if (!registered.outputs.some((output) => sameModule(output.module, draft.type.module) && output.name === draft.type.name)) {
         fail(
           source,
           "MARKUP_SURFACE_OUTPUT",
-          `Surface ${moduleKey(bound.module.ref)}#${bound.declaration.name} did not declare output type ${moduleKey(draft.type.module)}#${draft.type.name}.`,
+          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} did not declare output type ${moduleKey(draft.type.module)}#${draft.type.name}.`,
           draft.range.start,
         );
       }
@@ -311,7 +322,7 @@ export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeCont
         fail(
           source,
           "MARKUP_COMPONENT_RANGE",
-          `Surface ${moduleKey(bound.module.ref)}#${bound.declaration.name} returned an invalid component source range.`,
+          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} returned an invalid component source range.`,
           opening.start,
         );
       }
@@ -338,7 +349,7 @@ export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeCont
         fail(
           source,
           "MARKUP_FRAGMENT_IDENTITY",
-          `Surface ${moduleKey(bound.module.ref)}#${bound.declaration.name} returned an invalid Graph Fragment identity.`,
+          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} returned an invalid Graph Fragment identity.`,
           opening.start,
         );
       }
@@ -348,7 +359,6 @@ export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeCont
       }
       fragments.set(fragment.id, fragment);
     }
-    sourceMaps.push(...(output.sourceMaps ?? []));
   }
   if (!closed) {
     fail(source, "MARKUP_ROOT_UNCLOSED", "Document is missing </svml>.", source.text.length);
@@ -374,7 +384,7 @@ export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeCont
       resolveImportedRef(ref),
     ])),
   }));
-  const exports: AuthorSourceExport[] = records.map((record) => ({
+  const exports: AuthorSourceExport[] = records.filter((record) => !privateBindings.has(record.id)).map((record) => ({
     name: record.id,
     ref: { kind: "record", id: record.id },
     type: record.type,
@@ -383,6 +393,7 @@ export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeCont
   for (const component of resolvedComponents) {
     const fragment = fragments.get(component.fragment) as GraphFragment;
     for (const [output, name] of Object.entries(component.outputs)) {
+      if (privateBindings.has(name)) continue;
       if (exportNames.has(name)) fail(source, "MARKUP_EXPORT_DUPLICATE", `Duplicate public export ${name}.`);
       const declaration = fragment.exports.find((item) => item.name === output);
       if (declaration === undefined) {
@@ -397,28 +408,12 @@ export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeCont
     }
   }
   return {
-    module: sealTypedModule({
-      id: `source:${source.name}`,
-      closureDigest: context.closure.digest,
-      records,
-    }),
-    author: sealAuthorModule({
-      name: `source:${source.name}`,
-      components: resolvedComponents,
-    }),
+    records,
+    components: resolvedComponents,
     fragments: [...fragments.values()].sort((left, right) => left.id.localeCompare(right.id)),
     exports: exports.sort((left, right) => left.name.localeCompare(right.name)),
-    imports: discovery.imports,
-    frontendClosureDigest,
-    sourceMaps,
   };
 }
-
-export const markupFrontend = {
-  id: markupFrontendRef,
-  discover: discoverMarkup,
-  decode: decodeMarkup,
-} as const;
 
 /** Adapt the official Markup decoder to the domain-neutral recursive Source Closure ABI. */
 export function createMarkupAuthorFrontend(options: MarkupAuthorFrontendOptions): MarkupAuthorFrontend {
@@ -441,7 +436,7 @@ export function createMarkupAuthorFrontend(options: MarkupAuthorFrontendOptions)
     },
     async decode(source, context) {
       const result = await decodeMarkup(
-        { name: source.name, text: source.text, sourceDigest: source.sourceDigest },
+        { name: source.name, text: source.text },
         {
           closure: context.closure,
           registry: options.registry,
@@ -451,8 +446,8 @@ export function createMarkupAuthorFrontend(options: MarkupAuthorFrontendOptions)
         },
       );
       return {
-        module: result.module,
-        author: result.author,
+        records: result.records,
+        components: result.components,
         fragments: result.fragments,
         exports: result.exports,
       };

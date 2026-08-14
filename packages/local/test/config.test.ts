@@ -13,11 +13,15 @@ import {
 } from "@narratage/runtime-adapter";
 import { digestOf } from "@narratage/protocol";
 import { credentialRef, defineRuntimeServicePackage } from "@narratage/runtime";
+import { createSqliteRuntimeServicePackage } from "@narratage/store-sqlite";
 
 import {
   createRuntimeFromConfig,
+  createRuntimeArchiveFromConfig,
+  createRuntimeArtifactAccessFromConfig,
   doctorRuntimeConfig,
   parseRuntimeConfig,
+  runtimeConfigRevision,
   RuntimeAdapterRegistry,
 } from "@narratage/local";
 
@@ -28,13 +32,106 @@ const services = {
     build: "state.builds",
     operations: "state.operations",
     dispatch: "state.dispatch",
-    journal: "state.journal",
     artifacts: "artifacts",
     credentials: ["credentials"],
   },
 };
 
 const required = { runtimeServices: [], services, scheduling: { maxConcurrency: 3 } } as const;
+
+test("archive observation does not construct the selected ArtifactStore adapter", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-runtime-archive-slice-"));
+  const path = join(root, "svml.runtime.json");
+  await writeFile(path, JSON.stringify({
+    format: "svml.runtime-config@1",
+    runtimeServices: [
+      { use: "example.state", instance: "state", config: {} },
+      { use: "example.artifacts", instance: "artifacts", config: {} },
+    ],
+    services: {
+      scheduler: "execution.scheduler",
+      worker: "execution.worker",
+      stores: {
+        build: "state.builds",
+        operations: "state.operations",
+        dispatch: "state.dispatch",
+        artifacts: "artifacts.store",
+        credentials: [],
+      },
+    },
+    scheduling: { maxConcurrency: 1 },
+    endpoints: [],
+  }));
+  let artifactConstructions = 0;
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeServiceAdapterFacet({
+    use: "example.state",
+    validate() {},
+    create(context) {
+      return createSqliteRuntimeServicePackage({
+        path: join(context.root, "runtime.sqlite"),
+        buildInstance: `${context.instance}.builds`,
+        operationInstance: `${context.instance}.operations`,
+        dispatchInstance: `${context.instance}.dispatch`,
+        readOnly: context.access === "read-only",
+      });
+    },
+  }));
+  registry.registerFacet(createRuntimeServiceAdapterFacet({
+    use: "example.artifacts",
+    validate() {},
+    create() {
+      artifactConstructions += 1;
+      throw new Error("artifact adapter constructed");
+    },
+  }));
+  try {
+    const archive = await createRuntimeArchiveFromConfig(path, { registry, readOnly: true });
+    assert.equal((await archive.status("missing")).build, undefined);
+    await archive.close();
+    assert.equal(artifactConstructions, 0);
+    await assert.rejects(createRuntimeArtifactAccessFromConfig(path, { registry, readOnly: true }),
+      /artifact adapter constructed/u);
+    assert.equal(artifactConstructions, 1);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("Runtime revision follows content and referenced locks, not a filename suffix", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-runtime-revision-"));
+  const path = join(root, "deployment.profile");
+  const lock = (label: string) => {
+    const content = {
+      format: "svml.node-package-lock@1" as const,
+      selected: [],
+      artifacts: [{ name: `example-${label}`, version: "1", digest: digestOf(label) }],
+      packages: [],
+    };
+    return JSON.stringify({ ...content, digest: digestOf(content) });
+  };
+  try {
+    await writeFile(join(root, "author.lock"), lock("author-v1"), "utf8");
+    await writeFile(join(root, "runtime.lock"), lock("runtime-v1"), "utf8");
+    const profile = {
+      format: "svml.runtime-config@1",
+      root: ".",
+      packageLock: "./author.lock",
+      runtimePackageLock: "./runtime.lock",
+      endpoints: [],
+      ...required,
+    } as const;
+    await writeFile(path, JSON.stringify(profile), "utf8");
+    const first = await runtimeConfigRevision(path);
+    await writeFile(path, JSON.stringify(profile, null, 2), "utf8");
+    assert.equal(await runtimeConfigRevision(path), first);
+    await writeFile(join(root, "runtime.lock"), lock("runtime-v2"), "utf8");
+    const second = await runtimeConfigRevision(path);
+    assert.notEqual(second, first);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 function endpointPackage(instance: string, credentials: readonly unknown[] = []) {
   return {
@@ -281,13 +378,12 @@ test("doctor resolves credentials from the same Endpoint declaration used by exe
     create(context) {
       credentialStoreConstructions += 1;
       return defineRuntimeServicePackage({
-        name: context.instance,
         module: { name: "example.credentials", version: "1" },
         services: [{
           role: "credential-store",
           facet: "credentials",
           instance: context.instance,
-          implementation: { locator: "example.credentials", digest: digestOf("example.credentials@1") },
+          implementation: { digest: digestOf("example.credentials@1") },
           service: { async resolve() { return undefined; } },
         }],
         close() { credentialStoreCloses += 1; },
@@ -330,7 +426,7 @@ test("plan-scoped doctor ignores unrelated Endpoints and diagnoses only demanded
       facet: "endpoint",
       instance,
       authority: `${instance}.account`,
-      implementation: { locator: `example.${instance}`, digest: digestOf(`example.${instance}@1`) },
+      implementation: { digest: digestOf(`example.${instance}@1`) },
       capabilities: [{ lifecycle: "immediate" as const, capability, returns: resultType, handler: async () => ({}) as never }],
       ...(credential === undefined ? {} : {
         credentials: { token: credentialRef("env", credential) },
@@ -353,13 +449,12 @@ test("plan-scoped doctor ignores unrelated Endpoints and diagnoses only demanded
     validate() {},
     create(context) {
       return defineRuntimeServicePackage({
-        name: context.instance,
         module: { name: "example.credentials", version: "1" },
         services: [{
           role: "credential-store",
           facet: "credentials",
           instance: context.instance,
-          implementation: { locator: "example.credentials", digest: digestOf("example.credentials@1") },
+          implementation: { digest: digestOf("example.credentials@1") },
           service: { async resolve() { return undefined; } },
         }],
       });

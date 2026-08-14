@@ -9,9 +9,8 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
-  verifyRecord,
+  verifyRecordStructure,
 } from "@narratage/core";
 import {
   ProducerRegistry,
@@ -72,16 +71,12 @@ const contractManifest: ModuleManifest = {
       },
     },
     validator: {
-      abi: "svml.type-validator@1",
       implementation: {
-        kind: "registered",
-        locator: "example.measurement-contract/even-integer-validator",
         digest: validatorDigest,
       },
     },
   }],
   capabilities: [],
-  surfaces: [],
   producers: [],
 };
 
@@ -97,7 +92,6 @@ const sensorManifest: ModuleManifest = {
   dependencies: [contractDependency],
   types: [],
   capabilities: [{ name: measurementCapability.name, returns: measurementType }],
-  surfaces: [],
   producers: [
     {
       name: measureProducer.name,
@@ -105,8 +99,6 @@ const sensorManifest: ModuleManifest = {
       outputs: [{ name: "measurement", type: measurementType }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "example.sensor/measure",
         digest: producerDigests.measure,
       },
     },
@@ -120,8 +112,6 @@ const sensorManifest: ModuleManifest = {
         returns: measurementType,
       }],
       implementation: {
-        kind: "registered",
-        locator: "example.sensor/request-measurement",
         digest: producerDigests.request,
       },
     },
@@ -135,15 +125,12 @@ const reportManifest: ModuleManifest = {
   dependencies: [contractDependency],
   types: [{ name: reportType.name, schema: { kind: "string", minLength: 1 } }],
   capabilities: [],
-  surfaces: [],
   producers: [{
     name: reportProducer.name,
     inputs: [{ name: "measurement", type: measurementType }],
     outputs: [{ name: "report", type: reportType }],
     needs: [],
     implementation: {
-      kind: "registered",
-      locator: "example.report/write-report",
       digest: producerDigests.report,
     },
   }],
@@ -166,11 +153,7 @@ function registry(digest = validatorDigest): TypeValidatorRegistry {
 
 function program(): LinkedProgram {
   const closure = createResolvedClosure([contractManifest, sensorManifest, reportManifest]);
-  return link(closure, [sealTypedModule({
-    id: "author:empty",
-    closureDigest: closure.digest,
-    records: [],
-  })]);
+  return link(closure, []);
 }
 
 function outputGraph(linked: LinkedProgram): CompiledGraph {
@@ -251,15 +234,11 @@ test("three independent packages communicate through an owner-validated nominal 
 
   assert.equal(result.status, "complete");
   const measurement = result.state.records.find((record) => record.id === "measurement:root");
-  assert.equal(measurement?.validation?.validatorDigest, validatorDigest);
-  assert.equal(measurement?.validation?.recordDigest, measurement?.digest);
+  assert.equal(measurement?.value.kind, "inline");
   assert.equal(result.state.records.find((record) => record.id === "report:root")?.type.name, "Report");
 
   const restored = parseBuildState(serializeBuildState(result.state));
-  assert.equal(
-    restored.records.find((record) => record.id === "measurement:root")?.validation?.id,
-    measurement?.validation?.id,
-  );
+  assert.equal(restored.records.find((record) => record.id === "measurement:root")?.digest, measurement?.digest);
 });
 
 test("a structurally valid but semantically invalid Producer value never enters BuildState", async () => {
@@ -270,7 +249,7 @@ test("a structurally valid but semantically invalid Producer value never enters 
   }).run(outputBuild(linked));
 
   assert.equal(result.status, "paused");
-  assert.match(result.journal[0]?.message ?? "", /measurement must be even/u);
+  assert.match(result.outcomes[0]?.message ?? "", /measurement must be even/u);
   assert.equal(result.state.records.some((record) => record.id === "measurement:root"), false);
   assert.equal(result.state.acceptedEvents.length, 0);
 });
@@ -282,14 +261,14 @@ test("missing or digest-mismatched validator implementations fail before record 
     validators: new TypeValidatorRegistry(),
   }).run(outputBuild(linked));
   assert.equal(missing.status, "paused");
-  assert.match(missing.journal[0]?.message ?? "", /validator is not registered/u);
+  assert.match(missing.outcomes[0]?.message ?? "", /validator is not registered/u);
 
   const mismatched = await new NodeDriver({
     producers: hosts(4),
     validators: registry(digestOf("wrong-validator")),
   }).run(outputBuild(linked));
   assert.equal(mismatched.status, "paused");
-  assert.match(mismatched.journal[0]?.message ?? "", /does not match the locked Manifest/u);
+  assert.match(mismatched.outcomes[0]?.message ?? "", /does not match the locked Manifest/u);
 });
 
 function providerGraph(linked: LinkedProgram): CompiledGraph {
@@ -349,15 +328,15 @@ async function providerBuild(measured: number) {
 test("Endpoint results pass the same Type-owner validation gate as Producer results", async () => {
   const valid = await providerBuild(8);
   assert.equal(valid.status, "complete");
-  assert.equal(valid.state.records[0]?.validation?.validatorDigest, validatorDigest);
+  assert.equal(valid.state.records[0]?.value.kind, "inline");
 
   const invalid = await providerBuild(7);
   assert.equal(invalid.status, "paused");
-  assert.match(invalid.journal.at(-1)?.message ?? "", /measurement must be even/u);
+  assert.match(invalid.outcomes.at(-1)?.message ?? "", /measurement must be even/u);
   assert.equal(invalid.state.records.some((record) => record.id === "measurement:endpoint"), false);
 });
 
-test("authored values require a receipt bound to their exact Type and content", async () => {
+test("authored values cross the Type owner's validation gate without carrying validation metadata", async () => {
   const linked = program();
   const raw = sealRecord({
     id: "measurement:authored",
@@ -367,28 +346,15 @@ test("authored values require a receipt bound to their exact Type and content", 
       kind: "authored",
     },
   });
-  assert.throws(() => verifyRecord(linked.closure, raw), /requires .*validator/u);
+  verifyRecordStructure(linked.closure, raw);
   const admitted = await admitRecord(linked.closure, raw, registry());
-  verifyRecord(linked.closure, admitted);
-  assert.equal(admitted.validation?.recordDigest, admitted.digest);
+  verifyRecordStructure(linked.closure, admitted);
+  assert.deepEqual(admitted, raw);
 });
 
 test("the static Manifest reader discovers validator declarations without executing them", () => {
   const parsed = parseModuleManifestText(JSON.stringify(contractManifest));
   assert.deepEqual(parsed.types[0]?.validator, contractManifest.types[0]?.validator);
-  assert.throws(
-    () => parseModuleManifestText(JSON.stringify({
-      ...contractManifest,
-      types: [{
-        ...contractManifest.types[0],
-        validator: {
-          ...contractManifest.types[0]?.validator,
-          abi: "arbitrary-javascript@1",
-        },
-      }],
-    })),
-    /validator.*abi must be svml\.type-validator@1/u,
-  );
 });
 
 test("Type validation errors remain machine distinguishable", async () => {

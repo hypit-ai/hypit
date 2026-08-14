@@ -6,18 +6,18 @@ import {
   canonicalStringify,
   verifyBuildState,
 } from "@narratage/core";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { digestOf } from "@narratage/protocol";
 import type {
   BuildState,
   Digest,
 } from "@narratage/protocol";
 import {
-  assertRuntimeRevisionAdmission,
+  assertRuntimeClosureAdmission,
+  sameBuildCatalogDescriptor,
   verifyBuildCatalogDescriptor,
   verifyBuildCatalogEntry,
   defineRuntimeServicePackage,
   capacityReservationId,
-  sealOperationCompletion,
   verifyBuildDispatchIdentity,
   verifyBuildDispatchSnapshot,
   verifyCapacityLimits,
@@ -25,7 +25,6 @@ import {
   verifyDispatchLease,
   verifyOperationIdentity,
   verifyOperationSnapshot,
-  verifyRuntimeJournalEntry,
 } from "@narratage/runtime";
 import type {
   BuildDispatchClaim,
@@ -52,9 +51,6 @@ import type {
   OperationStore,
   OperationStoreWrite,
   OperationUpdate,
-  RuntimeJournal,
-  RuntimeJournalEntry,
-  RuntimeJournalQuery,
   RuntimeServicePackage,
 } from "@narratage/runtime";
 
@@ -77,10 +73,6 @@ export const sqliteDispatchStoreImplementationDigest = digestOf(
   "@narratage/store-sqlite/dispatch-store@1",
 );
 
-export const sqliteRuntimeJournalImplementationDigest = digestOf(
-  "@narratage/store-sqlite/runtime-journal@1",
-);
-
 export type SqliteRuntimeStateOptions = {
   readonly busyTimeoutMs?: number;
   /** Open an existing archive without creating files or schema. */
@@ -89,11 +81,9 @@ export type SqliteRuntimeStateOptions = {
 
 export type CreateSqliteRuntimeServicePackageOptions = SqliteRuntimeStateOptions & {
   readonly path: string;
-  readonly name?: string;
   readonly buildInstance?: string;
   readonly operationInstance?: string;
   readonly dispatchInstance?: string;
-  readonly journalInstance?: string;
 };
 
 type Row = Record<string, unknown>;
@@ -125,7 +115,6 @@ function transaction<T>(database: DatabaseSync, body: () => T): T {
 }
 
 function durableBuildState(state: BuildState): BuildState {
-  verifyBuildState(state);
   const normalized = { ...structuredClone(state), outstanding: [] };
   verifyBuildState(normalized);
   return normalized;
@@ -150,9 +139,7 @@ function operationIdentity(snapshot: OperationSnapshot): OperationIdentity {
     endpoint: snapshot.endpoint,
     authority: snapshot.authority,
     route: snapshot.route,
-    implementationDigest: snapshot.implementationDigest,
     runtimeClosure: snapshot.runtimeClosure,
-    requestDigest: snapshot.requestDigest,
     attempt: snapshot.attempt,
   };
 }
@@ -289,22 +276,22 @@ class SqliteBuildCatalog implements BuildCatalog {
   async record(build: string, descriptor: BuildCatalogDescriptor): Promise<BuildCatalogEntry> {
     assert(build.trim().length > 0, "Build Catalog build id must not be empty");
     verifyBuildCatalogDescriptor(descriptor);
+    const existing = await this.read(build);
+    if (existing !== undefined) {
+      assert(sameBuildCatalogDescriptor(existing, descriptor),
+        `Build Catalog ${build} already has another source, Run Source or output naming`);
+      return existing;
+    }
     const now = Date.now();
-    const inserted = this.#database.prepare(`
+    this.#database.prepare(`
       INSERT OR IGNORE INTO svml_build_catalog (
         build_id, core_id, created_at, updated_at, descriptor_json
       ) VALUES (?, ?, ?, ?, ?)
     `).run(build, descriptor.core, now, now, canonicalStringify(descriptor));
-    if (inserted.changes !== 1) {
-      const updated = this.#database.prepare(`
-        UPDATE svml_build_catalog
-        SET updated_at = MAX(updated_at, ?), descriptor_json = ?
-        WHERE build_id = ? AND core_id = ?
-      `).run(now, canonicalStringify(descriptor), build, descriptor.core);
-      assert(updated.changes === 1, `Build Catalog ${build} already names another Core Build`);
-    }
     const stored = await this.read(build);
     if (stored === undefined) throw new Error(`Build Catalog ${build} disappeared after record`);
+    assert(sameBuildCatalogDescriptor(stored, descriptor),
+      `Build Catalog ${build} already has another source, Run Source or output naming`);
     return stored;
   }
 
@@ -374,7 +361,6 @@ class SqliteOperationStore implements OperationStore {
       ["authority", query.authority],
       ["route", query.route],
       ["runtimeClosure", query.runtimeClosure],
-      ["requestDigest", query.requestDigest],
     ] as const) {
       if (value === undefined) continue;
       predicates.push(`json_extract(identity_json, '$.${field}') = ?`);
@@ -425,7 +411,7 @@ class SqliteOperationStore implements OperationStore {
       ...(update.progress === undefined ? {} : { progress: update.progress }),
     }) : null;
     const completion = update.status === "completed"
-      ? canonicalStringify(sealOperationCompletion(update.completion))
+      ? canonicalStringify(update.completion)
       : null;
     const failure = update.status === "failed" ? canonicalStringify(update.failure) : null;
     const cancellation = update.status === "cancelled"
@@ -525,7 +511,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
           id: existing.id,
           build: existing.build,
           core: existing.core,
-          runtimeRevision: existing.runtimeRevision,
+          runtimeClosure: existing.runtimeClosure,
         }) === canonicalStringify(identity),
         `Dispatch ${identity.build} already names another Build or Runtime Closure`);
         return { status: "existing", snapshot: existing };
@@ -534,10 +520,10 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       const conflictingRows = this.#database.prepare(`
         SELECT * FROM svml_dispatches
         WHERE phase != 'terminal'
-          AND json_extract(identity_json, '$.runtimeRevision') != ?
+          AND json_extract(identity_json, '$.runtimeClosure') != ?
         ORDER BY created_at ASC, build_id ASC
-      `).all(identity.runtimeRevision) as Row[];
-      assertRuntimeRevisionAdmission(identity.runtimeRevision, conflictingRows.map(parseDispatchSnapshot));
+      `).all(identity.runtimeClosure) as Row[];
+      assertRuntimeClosureAdmission(identity.runtimeClosure, conflictingRows.map(parseDispatchSnapshot));
 
       const result = this.#database.prepare(`
         INSERT INTO svml_dispatches (
@@ -582,19 +568,19 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
 
   async claim(request: BuildDispatchClaim): Promise<BuildDispatchSnapshot | undefined> {
     assert(request.owner.trim().length > 0 && request.token.trim().length > 0, "Dispatch claim identity is empty");
-    assert(/^sha256:[0-9a-f]{64}$/u.test(request.runtimeRevision), "Dispatch claim Runtime Revision is invalid");
+    assert(/^sha256:[0-9a-f]{64}$/u.test(request.runtimeClosure), "Dispatch claim Runtime Closure is invalid");
     const now = nonNegativeInteger(request.now, "Dispatch claim time");
     const leaseMs = positiveInteger(request.leaseMs, "Dispatch leaseMs");
     return transaction(this.#database, () => {
       const row = this.#database.prepare(`
         SELECT * FROM svml_dispatches
         WHERE phase != 'terminal'
-          AND json_extract(identity_json, '$.runtimeRevision') = ?
+          AND json_extract(identity_json, '$.runtimeClosure') = ?
           AND available_at <= ?
           AND (lease_owner IS NULL OR lease_expires_at <= ?)
         ORDER BY priority DESC, available_at ASC, created_at ASC, build_id ASC
         LIMIT 1
-      `).get(request.runtimeRevision, now, now) as Row | undefined;
+      `).get(request.runtimeClosure, now, now) as Row | undefined;
       if (row === undefined) return undefined;
       assert(typeof row.build_id === "string" && typeof row.revision === "number" && typeof row.lease_fence === "number",
         "SQLite Dispatch claim row is invalid");
@@ -884,71 +870,12 @@ function parseCapacityReservation(row: Row): CapacityReservation {
   return value;
 }
 
-class SqliteRuntimeJournal implements RuntimeJournal {
-  readonly #database: DatabaseSync;
-
-  constructor(database: DatabaseSync) {
-    this.#database = database;
-  }
-
-  async append(entry: Omit<RuntimeJournalEntry, "format" | "sequence">): Promise<RuntimeJournalEntry> {
-    nonNegativeInteger(entry.at, "Runtime Journal timestamp");
-    const detail = canonicalize(entry.detail);
-    const result = this.#database.prepare(`
-      INSERT INTO svml_runtime_journal (at, kind, build_id, operation_id, worker_id, detail_json)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(entry.at, entry.kind, entry.build ?? null, entry.operation ?? null, entry.worker ?? null,
-      canonicalStringify(detail));
-    assert(typeof result.lastInsertRowid === "number" || typeof result.lastInsertRowid === "bigint",
-      "SQLite Runtime Journal returned no sequence");
-    const sequence = Number(result.lastInsertRowid);
-    const value: RuntimeJournalEntry = {
-      format: "svml.runtime-journal-entry@1",
-      sequence,
-      ...entry,
-      detail,
-    };
-    verifyRuntimeJournalEntry(value);
-    return value;
-  }
-
-  async list(query: RuntimeJournalQuery = {}): Promise<readonly RuntimeJournalEntry[]> {
-    const after = query.after ?? 0;
-    const limit = query.limit ?? 1_000;
-    nonNegativeInteger(after, "Runtime Journal after");
-    positiveInteger(limit, "Runtime Journal limit");
-    const rows = this.#database.prepare(`
-      SELECT sequence, at, kind, build_id, operation_id, worker_id, detail_json
-      FROM svml_runtime_journal WHERE sequence > ? ORDER BY sequence ASC LIMIT ?
-    `).all(after, limit) as Row[];
-    return rows.map((row) => {
-      assert(typeof row.sequence === "number" && typeof row.at === "number" && typeof row.kind === "string"
-        && typeof row.detail_json === "string", "SQLite Runtime Journal row is invalid");
-      const entry = {
-        format: "svml.runtime-journal-entry@1" as const,
-        sequence: row.sequence,
-        at: row.at,
-        kind: row.kind,
-        ...(typeof row.build_id === "string" ? { build: row.build_id } : {}),
-        ...(typeof row.operation_id === "string" ? { operation: row.operation_id as Digest } : {}),
-        ...(typeof row.worker_id === "string" ? { worker: row.worker_id } : {}),
-        detail: JSON.parse(row.detail_json),
-      } as RuntimeJournalEntry;
-      verifyRuntimeJournalEntry(entry);
-      return entry;
-    }).filter((entry) => query.build === undefined || entry.build === query.build)
-      .filter((entry) => query.operation === undefined || entry.operation === query.operation)
-      .filter((entry) => query.worker === undefined || entry.worker === query.worker);
-  }
-}
-
 /** One local database with domain-neutral execution facts and Host presentation catalog. */
 export class SqliteRuntimeState {
   readonly path: string;
   readonly builds: BuildStore;
   readonly operations: OperationStore;
   readonly dispatch: BuildDispatchStore;
-  readonly journal: RuntimeJournal;
   readonly catalog: BuildCatalog;
   readonly #database: DatabaseSync;
 
@@ -1053,17 +980,6 @@ export class SqliteRuntimeState {
         UNIQUE (build_id, command_id)
       ) STRICT;
       CREATE INDEX IF NOT EXISTS svml_capacity_state ON svml_capacity (in_flight, active_expires_at);
-      CREATE TABLE IF NOT EXISTS svml_runtime_journal (
-        sequence INTEGER PRIMARY KEY AUTOINCREMENT,
-        at INTEGER NOT NULL,
-        kind TEXT NOT NULL,
-        build_id TEXT,
-        operation_id TEXT,
-        worker_id TEXT,
-        detail_json TEXT NOT NULL
-      ) STRICT;
-      CREATE INDEX IF NOT EXISTS svml_runtime_journal_build ON svml_runtime_journal (build_id, sequence);
-      CREATE INDEX IF NOT EXISTS svml_runtime_journal_operation ON svml_runtime_journal (operation_id, sequence);
     `);
     if (alreadyInitialized === undefined) {
       this.#database.prepare("INSERT INTO svml_store_meta (singleton, schema_version) VALUES (1, ?)").run(databaseSchemaVersion);
@@ -1071,7 +987,6 @@ export class SqliteRuntimeState {
     this.builds = new SqliteBuildStore(database);
     this.operations = new SqliteOperationStore(database);
     this.dispatch = new SqliteBuildDispatchStore(database);
-    this.journal = new SqliteRuntimeJournal(database);
     this.catalog = new SqliteBuildCatalog(database);
   }
 
@@ -1082,7 +997,7 @@ export class SqliteRuntimeState {
 
 export function createSqliteRuntimeServicePackage(
   options: CreateSqliteRuntimeServicePackageOptions,
-): RuntimeServicePackage & { readonly catalog: BuildCatalog } {
+): RuntimeServicePackage {
   const state = new SqliteRuntimeState(options.path, {
     ...(options.busyTimeoutMs === undefined ? {} : { busyTimeoutMs: options.busyTimeoutMs }),
     ...(options.readOnly === undefined ? {} : { readOnly: options.readOnly }),
@@ -1090,10 +1005,8 @@ export function createSqliteRuntimeServicePackage(
   const buildInstance = options.buildInstance ?? "builds.sqlite";
   const operationInstance = options.operationInstance ?? "operations.sqlite";
   const dispatchInstance = options.dispatchInstance ?? "dispatch.sqlite";
-  const journalInstance = options.journalInstance ?? "journal.sqlite";
   try {
-    return Object.assign(defineRuntimeServicePackage({
-      name: options.name ?? "state.sqlite",
+    return defineRuntimeServicePackage({
       module: sqliteStoreModuleRef,
       services: [
         {
@@ -1101,7 +1014,6 @@ export function createSqliteRuntimeServicePackage(
           facet: "build-store",
           instance: buildInstance,
           implementation: {
-            locator: "@narratage/store-sqlite/build-store",
             digest: sqliteBuildStoreImplementationDigest,
           },
           configuration: {
@@ -1116,7 +1028,6 @@ export function createSqliteRuntimeServicePackage(
           facet: "operation-store",
           instance: operationInstance,
           implementation: {
-            locator: "@narratage/store-sqlite/operation-store",
             digest: sqliteOperationStoreImplementationDigest,
           },
           configuration: {
@@ -1131,7 +1042,6 @@ export function createSqliteRuntimeServicePackage(
           facet: "dispatch-store",
           instance: dispatchInstance,
           implementation: {
-            locator: "@narratage/store-sqlite/dispatch-store",
             digest: sqliteDispatchStoreImplementationDigest,
           },
           configuration: {
@@ -1141,24 +1051,10 @@ export function createSqliteRuntimeServicePackage(
           },
           service: state.dispatch,
         },
-        {
-          role: "runtime-journal",
-          facet: "runtime-journal",
-          instance: journalInstance,
-          implementation: {
-            locator: "@narratage/store-sqlite/runtime-journal",
-            digest: sqliteRuntimeJournalImplementationDigest,
-          },
-          configuration: {
-            path: state.path,
-            schemaVersion: databaseSchemaVersion,
-            busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
-          },
-          service: state.journal,
-        },
       ],
+      buildCatalog: state.catalog,
       close: () => state.close(),
-    }), { catalog: state.catalog });
+    });
   } catch (error) {
     state.close();
     throw error;

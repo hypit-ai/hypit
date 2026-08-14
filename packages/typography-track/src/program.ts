@@ -94,7 +94,6 @@ function assertDocument(document: TextItemSpec["document"], label: string): void
 }
 
 export function assertTextStyle(style: TextStyle): void {
-  if (style.contract !== "svml.text-style@1") throw new Error("Unsupported TextStyle contract.");
   nonEmpty(style.id, "TextStyle id");
   if (!Number.isSafeInteger(style.stackingOrder)) throw new Error("TextStyle stackingOrder must be a safe integer.");
   finite(style.typography.sizePx, "TextStyle typography size");
@@ -125,7 +124,7 @@ export function assertTextStyle(style: TextStyle): void {
     if (value < 0) throw new Error("TextStyle path margins must not be negative.");
   }
   assertVisualTrackIdentity({
-    contract: "svml.visual-track@1",
+    kind: "visual",
     visualIr: "svml.visual-ir@1",
     id: "text-style-validation",
     presents: [{
@@ -154,7 +153,6 @@ export function sealTextStyle(value: TextStyle): TextStyle {
 }
 
 export function assertTextMotion(motion: TextMotion): void {
-  if (motion.contract !== "svml.text-motion@1") throw new Error("Unsupported TextMotion contract.");
   nonEmpty(motion.id, "TextMotion id");
   const ids = new Set<string>();
   for (const sequence of motion.sequences) {
@@ -185,13 +183,12 @@ export function sealTextMotion(value: TextMotion): TextMotion {
 }
 
 export const stillTextMotion = (id = "still"): TextMotion => sealTextMotion({
-  contract: "svml.text-motion@1",
+
   id,
   sequences: [],
 });
 
 export function assertTextItemSpec(value: TextItemSpec): void {
-  if (value.contract !== "svml.text-item-spec@1") throw new Error("Unsupported TextItemSpec contract.");
   nonEmpty(value.id, "TextItemSpec id");
   assertDocument(value.document, `${value.id} document`);
 }
@@ -203,7 +200,6 @@ export function sealTextItemSpec(value: TextItemSpec): TextItemSpec {
 }
 
 export function assertPlainTextItemSpec(value: PlainTextItemSpec): void {
-  if (value.contract !== "svml.plain-text-item-spec@1") throw new Error("Unsupported PlainTextItemSpec contract.");
   nonEmpty(value.id, "PlainTextItemSpec id");
 }
 
@@ -218,7 +214,7 @@ export function materializePlainTextItem(spec: PlainTextItemSpec, content: Text)
   verifyText(content);
   if (!content.value.trim()) throw new Error("Typography plain Text content must not be empty.");
   return sealTextItemSpec({
-    contract: "svml.text-item-spec@1",
+
     id: spec.id,
     document: {
       paragraphs: [{
@@ -232,7 +228,6 @@ export function materializePlainTextItem(spec: PlainTextItemSpec, content: Text)
 }
 
 export function assertTypographyTrackHeader(value: TypographyTrackHeader): void {
-  if (value.contract !== "svml.typography-track-header@1") throw new Error("Unsupported TypographyTrackHeader contract.");
   nonEmpty(value.id, "TypographyTrackHeader id");
 }
 
@@ -250,7 +245,6 @@ function assertGeometry(geometry: TextGeometry): void {
 }
 
 export function assertTextPlacement(value: TextPlacement): void {
-  if (value.contract !== "svml.text-placement@1") throw new Error("Unsupported TextPlacement contract.");
   assertGeometry(value.geometry);
 }
 
@@ -262,21 +256,20 @@ export function sealTextPlacement(value: TextPlacement): TextPlacement {
 
 export function bindPointTextPlacement(point: SpatialPoint): TextPlacement {
   assertSpatialPoint(point);
-  return sealTextPlacement({ contract: "svml.text-placement@1", geometry: { kind: "point", point } });
+  return sealTextPlacement({ geometry: { kind: "point", point } });
 }
 
 export function bindAreaTextPlacement(frame: SpatialFrame): TextPlacement {
   assertSpatialFrame(frame);
-  return sealTextPlacement({ contract: "svml.text-placement@1", geometry: { kind: "area", frame } });
+  return sealTextPlacement({ geometry: { kind: "area", frame } });
 }
 
 export function bindPathTextPlacement(path: SpatialPath): TextPlacement {
   assertSpatialPath(path);
-  return sealTextPlacement({ contract: "svml.text-placement@1", geometry: { kind: "path", path } });
+  return sealTextPlacement({ geometry: { kind: "path", path } });
 }
 
 export function assertTypographyTrackSet(value: TypographyTrackSet): void {
-  if (value.contract !== "svml.typography-track-set@1") throw new Error("Unsupported TypographyTrackSet contract.");
   const ids = new Set<string>();
   for (const item of value.items) {
     if (ids.has(item.id)) throw new Error(`TypographyTrackSet repeats ${item.id}.`);
@@ -289,7 +282,7 @@ export function assertTypographyTrackSet(value: TypographyTrackSet): void {
 }
 
 export function createTypographyTrackSet(): TypographyTrackSet {
-  return { contract: "svml.typography-track-set@1", items: [] };
+  return { items: [] };
 }
 
 function occurrenceItem(
@@ -304,7 +297,6 @@ function occurrenceItem(
 ): TextItem {
   return {
     id: count === 1 ? spec.id : occurrence.id,
-    sourceOccurrenceId: occurrence.sourceOccurrenceId,
     span: { ...occurrence.span },
     geometry: structuredClone(geometry),
     document: structuredClone(spec.document),
@@ -332,7 +324,7 @@ function append(
   const existing = new Set(set.items.map((item) => item.id));
   const additions = occurrences.map((occurrence, index) => occurrenceItem(header, spec, style, motion, geometry, occurrence, index, occurrences.length));
   if (additions.some((item) => existing.has(item.id))) throw new Error(`TypographyTrackSet already contains ${spec.id}.`);
-  return { contract: "svml.typography-track-set@1", items: [...set.items, ...additions] };
+  return { items: [...set.items, ...additions] };
 }
 
 export function appendProgramTextItem(
@@ -392,7 +384,7 @@ export function appendMomentTextItem(
 
 function programContent(value: TypographyTrackProgram): TypographyTrackProgram {
   return {
-    contract: "svml.typography-track-program@1",
+
     id: value.id,
     items: [...value.items].map((item) => structuredClone(item)).sort((left, right) =>
       left.span.startFrame - right.span.startFrame
@@ -408,7 +400,6 @@ export function sealTypographyTrackProgram(value: TypographyTrackProgram): Typog
 
 export function assertTypographyTrackProgramIdentity(program: TypographyTrackProgram, space: ProgramSpace): void {
   assertProgramSpaceIdentity(space);
-  if (program.contract !== "svml.typography-track-program@1") throw new Error("Unsupported TypographyTrackProgram contract.");
   nonEmpty(program.id, "TypographyTrackProgram id");
   if (program.items.length === 0) throw new Error("TypographyTrackProgram has no Items.");
   const total = programSpaceFrameCount(space);
@@ -428,7 +419,6 @@ export function assertTypographyTrackProgramIdentity(program: TypographyTrackPro
 }
 
 export function assertTextMaskSpec(spec: TextMaskSpec): void {
-  if (spec.contract !== "svml.text-mask-spec@1") throw new Error("Unsupported TextMaskSpec contract.");
   nonEmpty(spec.id, "TextMaskSpec id");
   if (!["alpha", "luminance"].includes(spec.mode)) throw new Error("TextMaskSpec mode is invalid.");
   if (!["contain", "cover", "fill"].includes(spec.materialFit)) throw new Error("TextMaskSpec materialFit is invalid.");
@@ -444,7 +434,7 @@ export function finalizeTypographyTrack(header: TypographyTrackHeader, set: Typo
   assertTypographyTrackHeader(header);
   assertTypographyTrackSet(set);
   if (set.items.length === 0) throw new Error("TypographyTrack requires at least one Item.");
-  return sealTypographyTrackProgram({ contract: "svml.typography-track-program@1", id: header.id, items: set.items });
+  return sealTypographyTrackProgram({ id: header.id, items: set.items });
 }
 
 function baseBoxStyle(geometry: TextGeometry): VisualStyleDeclaration[] {
@@ -635,7 +625,6 @@ function elements(item: TextItem): VisualElement[] {
 export function renderTypographyTrack(space: ProgramSpace, program: TypographyTrackProgram): VisualTrack {
   assertTypographyTrackProgramIdentity(program, space);
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: program.id,
     presents: program.items.map((item) => ({
@@ -662,7 +651,6 @@ export function renderTextMaskTrack(
     throw new Error("Official Text Mask requires one explicit still material Surface; timed materials use an independent package.");
   }
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: spec.id,
     presents: program.items.map((item) => {

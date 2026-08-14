@@ -133,7 +133,6 @@ test("all model manifests close over the shared generation contract and every Fr
   ]);
   const program: LinkedProgram = {
     closure,
-    modules: [],
     records: [],
     semanticDigest: digestOf("kie-model-fragment-test"),
   };

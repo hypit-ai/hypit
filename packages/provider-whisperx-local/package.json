@@ -15,11 +15,11 @@
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime-adapter": "workspace:*",
-    "@narratage/speech": "workspace:*",
     "@narratage/speech-evidence": "workspace:*",
     "@narratage/whisperx": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/driver-node": "workspace:*"
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/speech": "workspace:*"
   }
 }

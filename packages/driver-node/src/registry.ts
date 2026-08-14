@@ -19,7 +19,6 @@ import {
   RuntimeModuleRegistry,
   runtimeEndpoint,
   verifyCredentialRef,
-  verifyRuntimeClosure,
 } from "@narratage/runtime";
 import type { RuntimeClosure } from "@narratage/runtime";
 
@@ -87,7 +86,7 @@ export class ProducerRegistry implements ProducerRegistrar {
     const key = producerRegistryKey(producer);
     if (this.#producers.has(key)) throw new Error(`producer ${key} is already registered`);
     verifyScheduling(options.scheduling);
-    this.#producers.set(key, { producer, implementationDigest, handler, ...options });
+    this.#producers.set(key, { implementationDigest, handler, ...options });
   }
 
   producer(ref: ProducerRef): ProducerRegistration | undefined {
@@ -171,21 +170,11 @@ export class EndpointRegistry implements EndpointRegistrar {
     return this.#runtimeClosure;
   }
 
-  bind(capability: CapabilityRef, endpointId: string): void {
-    const key = endpointCapabilityKey(capability);
-    if (!this.#registrations.some((registration) =>
-      registration.id === endpointId && sameRef(registration.capability, capability))) {
-      throw new Error(`endpoint ${endpointId} does not register capability ${key}`);
-    }
-    this.#bindings.set(key, endpointId);
-  }
-
   /** Bind only implementation-verified Endpoint instances from one locked Runtime Closure. */
   applyRuntimeClosure(
     closure: RuntimeClosure,
     modules: RuntimeModuleRegistry,
   ): void {
-    verifyRuntimeClosure(closure);
     modules.verifyClosure(closure);
     if (this.#runtimeClosure !== undefined && this.#runtimeClosure !== closure.digest) {
       throw new Error("Endpoint Registry is already bound to another Runtime Closure");
@@ -283,7 +272,4 @@ export class EndpointRegistry implements EndpointRegistrar {
     };
   }
 
-  endpoints(capability: CapabilityRef): readonly EndpointRegistration[] {
-    return this.#registrations.filter((registration) => sameRef(registration.capability, capability));
-  }
 }

@@ -22,7 +22,6 @@ import { localOpenCvService } from "../src/service.js";
 
 function need(source: BlobRef, program: ImageTransformProgram = gptImageDenoiseV1): Need {
   const constraints = canonicalize({
-    contract: "svml.raster-request@1",
     kind: "transform",
     source,
     operations: program.operations,
@@ -44,16 +43,15 @@ function need(source: BlobRef, program: ImageTransformProgram = gptImageDenoiseV
 
 function composeNeed(source: BlobRef): Need {
   const constraints = canonicalize({
-    contract: "svml.raster-request@1",
     kind: "compose",
     canvas: {
-      contract: "svml.canvas-space@1", widthPx: 3, heightPx: 2,
+      widthPx: 3, heightPx: 2,
       origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
     },
     background: "#00000000",
     layers: [{
       source,
-      frame: { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 3, heightPx: 2 },
+      frame: { xPx: 0, yPx: 0, widthPx: 3, heightPx: 2 },
       fit: "stretch", interpolation: "nearest", opacity: 1,
     }],
   });
@@ -66,7 +64,7 @@ function composeNeed(source: BlobRef): Need {
 
 test("the OpenCV package is one replaceable Endpoint with no second queue", async () => {
   const provider = createLocalOpenCvImageProvider({ defaultConcurrency: 3 });
-  assert.equal(provider.name, "image.opencv.local");
+  assert.equal(provider.instance.id, "image.opencv.local");
   const facet = provider.manifest.facets[0];
   assert(facet?.role === "capability-endpoint");
   assert.equal(facet.defaultConcurrency, 3);
@@ -113,7 +111,6 @@ test("the local Provider returns only a new image BlobArtifact", {
   );
   const source = await artifacts.put(png, "image/png");
   const program = sealImageTransformProgram({
-    contract: "svml.image-transform-program@1",
     operations: [{
       kind: "resize",
       width: 64,

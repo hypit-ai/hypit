@@ -43,12 +43,10 @@ export type CaptionPlannedRun = {
 
 /** Planner-neutral result. Model/provider identity remains in the producing Graph and Receipt. */
 export type CaptionPlan = {
-  readonly contract: "svml.caption-plan@1";
   readonly runs: readonly CaptionPlannedRun[];
 };
 
 export type CaptionStyleIntent = {
-  readonly contract: "svml.caption-style@1";
   readonly id: string;
   readonly planning: CaptionPlanningRequirements;
   readonly rendering: {
@@ -67,10 +65,8 @@ export type CaptionProgramRun = {
 
 /** Total, ordered style assignment plus an explicit post-planning visibility mask. */
 export type CaptionProgram = {
-  readonly contract: "svml.caption-program@1";
   readonly id: string;
   readonly displaySequenceId: string;
-  readonly defaultStyleId: string;
   readonly styles: readonly CaptionStyleIntent[];
   readonly runs: readonly CaptionProgramRun[];
   /** Ordered display-word ids hidden by the renderer. They remain present in CaptionPlan. */
@@ -79,22 +75,19 @@ export type CaptionProgram = {
 
 export type TimedCaptionCue = {
   readonly id: string;
-  readonly runId: string;
   readonly styleId: string;
-  readonly segmentId: string;
-  readonly startSec: number;
-  readonly endSec: number;
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
   /** Only whole-Atom timing is proven. No display-word timing exists here. */
   readonly atoms: readonly {
     readonly atomId: string;
-    readonly startSec: number;
-    readonly endSec: number;
+    readonly startFrame: number;
+    readonly endFrameExclusive: number;
   }[];
   readonly fields: readonly CaptionFieldAssignment[];
 };
 
 export type TimedCaptionProjection = {
-  readonly contract: "svml.timed-caption-projection@1";
   readonly displaySequenceId: string;
   readonly cues: readonly TimedCaptionCue[];
 };

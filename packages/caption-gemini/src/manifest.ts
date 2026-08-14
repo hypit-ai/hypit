@@ -59,11 +59,10 @@ const planningRun = object({
   cueInstruction: { schema: string }, fields: { schema: { kind: "array", items: fieldDeclaration } },
 });
 export const captionGeminiProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-gemini-program@1" } },
+
   model: { schema: model },
 });
 export const captionGeminiRequestSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-gemini-request@1" } },
   model: { schema: model },
   runs: { schema: { kind: "array", minItems: 1, items: planningRun } },
   systemInstruction: { schema: string }, prompt: { schema: string },
@@ -75,11 +74,21 @@ function ownedType(name: string, schema: ValueSchema, digestValue: ReturnType<ty
     name,
     schema,
     validator: {
-      abi: "svml.type-validator@1" as const,
-      implementation: { kind: "registered" as const, locator: `@narratage/caption-gemini/validate-${name}`, digest: digestValue },
+      implementation: { digest: digestValue },
     },
   };
 }
+
+export const captionGeminiMarkupSurfaces = [{
+    name: "planner",
+    tag: "Planner",
+    mode: "structured",
+    outputs: [captionGeminiTypes.program, captionTypes.plan],
+    implementation: {
+      digest: captionGeminiImplementationDigests.plannerSurface,
+    },
+  }] as const;
+
 
 export const captionGeminiManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -94,17 +103,6 @@ export const captionGeminiManifest: ModuleManifest = {
     ownedType(captionGeminiTypes.request.name, captionGeminiRequestSchema, captionGeminiImplementationDigests.requestValidator),
   ],
   capabilities: [{ name: captionGeminiCapabilities.plan.name, returns: captionTypes.plan }],
-  surfaces: [{
-    name: "planner",
-    tag: "Planner",
-    mode: "structured",
-    outputs: [captionGeminiTypes.program, captionTypes.plan],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@narratage/caption-gemini/planner-surface",
-      digest: captionGeminiImplementationDigests.plannerSurface,
-    },
-  }],
   producers: [
     {
       name: captionGeminiProducers.compile.name,
@@ -116,7 +114,7 @@ export const captionGeminiManifest: ModuleManifest = {
       outputs: [{ name: "request", type: captionGeminiTypes.request }],
       needs: [],
       implementation: {
-        kind: "registered", locator: "@narratage/caption-gemini/compile-request", digest: captionGeminiImplementationDigests.compile,
+        digest: captionGeminiImplementationDigests.compile,
       },
     },
     {
@@ -125,7 +123,7 @@ export const captionGeminiManifest: ModuleManifest = {
       outputs: [],
       needs: [{ name: "plan", capability: captionGeminiCapabilities.plan, returns: captionTypes.plan }],
       implementation: {
-        kind: "registered", locator: "@narratage/caption-gemini/request-plan", digest: captionGeminiImplementationDigests.request,
+        digest: captionGeminiImplementationDigests.request,
       },
     },
   ],

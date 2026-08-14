@@ -5,8 +5,9 @@ import {
   gptImageCleanModuleRef,
   gptImageComponent,
   gptImageManifest,
+  gptImageMarkupSurfaces,
   gptImageModuleRef,
-  gptImageSurfaceImplementationDigests,
+  gptImageCleanMarkupSurfaces,
 } from "./index.js";
 import {
   decodeCleanGptImageSurface,
@@ -14,28 +15,21 @@ import {
 } from "./surface.js";
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/gpt-image",
   modules: [{
     manifest: gptImageManifest,
-    specifiers: ["@narratage/gpt-image", "@narratage/gpt-image@1"],
   }, {
     manifest: gptImageCleanManifest,
-    specifiers: ["@narratage/gpt-image/clean", "@narratage/gpt-image/clean@1"],
   }],
   components: [gptImageComponent],
   hostFacets: [
     createMarkupSurfaceHostFacet({
       module: gptImageModuleRef,
-      surface: "image",
-      mode: "structured",
-      implementationDigest: gptImageSurfaceImplementationDigests.image,
+    declaration: gptImageMarkupSurfaces.find((item) => item.name === "image")!,
       handler: decodeGptImageSurface,
     }),
     createMarkupSurfaceHostFacet({
       module: gptImageCleanModuleRef,
-      surface: "image",
-      mode: "structured",
-      implementationDigest: gptImageSurfaceImplementationDigests.cleanImage,
+    declaration: gptImageCleanMarkupSurfaces.find((item) => item.name === "image")!,
       handler: decodeCleanGptImageSurface,
     }),
   ],

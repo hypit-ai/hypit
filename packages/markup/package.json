@@ -12,10 +12,5 @@
     "@narratage/elaborator": "workspace:*",
     "@narratage/host": "workspace:*",
     "@narratage/protocol": "workspace:*"
-  },
-  "devDependencies": {
-    "@narratage/narrative": "workspace:*",
-    "@narratage/script": "workspace:*",
-    "@narratage/text": "workspace:*"
   }
 }

@@ -75,8 +75,8 @@ for (const name of readdirSync(examples, { withFileTypes: true })
       return;
     }
     const compiled = await compile(entryPath) as {
-      elaboration: { graph: { outputs: readonly unknown[] } };
+      graph: { outputs: readonly unknown[] };
     };
-    assert.ok(compiled.elaboration.graph.outputs.length >= 0);
+    assert.ok(compiled.graph.outputs.length >= 0);
   });
 }

@@ -24,7 +24,6 @@ function speechBasis(value: StoredValue | undefined): SpeechBasis {
 
 /** Pure projections of one atomic SpeechBasis; no Artifact read or external capability is hidden here. */
 export const speechBasisComponent = {
-  name: "@narratage/speech-basis",
   producers: [
     {
       producer: speechBasisProducers.projectProgramSpace,

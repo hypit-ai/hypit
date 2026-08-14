@@ -20,7 +20,6 @@ import { sealSpeechBasis } from "@narratage/speech";
 import type { SpeechAudioBasis } from "@narratage/speech";
 import { locateSpeechTiming } from "@narratage/speech-alignment";
 import { sealAlignedTranscriptEvidence } from "@narratage/speech-evidence";
-import type { AlignedTranscriptSegment } from "@narratage/speech-evidence";
 import {
   captionCorrespondence,
   captionDisplaySequence,
@@ -29,28 +28,47 @@ import {
 } from "@narratage/script";
 import type { StructuredElement, SurfaceResolvedReference } from "@narratage/markup";
 
-function locate(narrative: Narrative, durationSec: number, segments: readonly AlignedTranscriptSegment[]) {
+type TranscriptFixture = {
+  readonly words: readonly {
+    readonly text: string;
+    readonly startSec?: number;
+    readonly endSec?: number;
+    readonly score?: number;
+  }[];
+  readonly chars: readonly [];
+};
+
+function locate(narrative: Narrative, durationSec: number, segments: readonly TranscriptFixture[]) {
   const space = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const audio = { kind: "blob" as const, digest: digestOf("caption:test-audio"), size: 1, mediaType: "audio/wav" };
   const basisSegments = narrative.segments.map((segment, index) => ({
     segmentId: segment.id,
-    startSec: segments[index]!.startSec,
-    endSec: segments[index]!.endSec,
+    startFrame: Math.round(durationSec * 30 * index / narrative.segments.length),
+    endFrameExclusive: Math.round(durationSec * 30 * (index + 1) / narrative.segments.length),
   }));
   const basis = sealSpeechBasis({
-    contract: "svml.speech-basis@1",
     programSpace: space,
     audio,
     visualTrack: { clips: [] },
     segments: basisSegments,
   });
-  const evidence = sealAlignedTranscriptEvidence({ contract: "svml.aligned-transcript-evidence@1", durationSec, segments });
+  const evidence = sealAlignedTranscriptEvidence({
+    passages: segments.map((segment) => ({
+      words: segment.words.map((word) => ({
+        text: word.text,
+        ...(word.startSec === undefined || word.endSec === undefined ? {} : {
+          startSample: Math.round(word.startSec * 16_000),
+          endSampleExclusive: Math.round(word.endSec * 16_000),
+        }),
+        ...(word.score === undefined ? {} : { score: word.score }),
+      })),
+      chars: [],
+    })),
+  });
   const audioBasis: SpeechAudioBasis = {
-    contract: "svml.speech-audio-basis@1",
     programSpace: basis.programSpace,
     audio: basis.audio,
     segments: basis.segments,
@@ -60,7 +78,7 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
 
 function style(id: string, fields: readonly CaptionFieldDeclaration[] = []): CaptionStyleIntent {
   return sealCaptionStyle({
-    contract: "svml.caption-style@1",
+
     id,
     planning: {
       cue: { minimumWords: 1, maximumWords: 5, instruction: "Use short complete semantic phrases." },
@@ -100,7 +118,7 @@ test("Selection and Role project to ordered whole-Atom display-word subsets", ()
   const program = resolveCaptionProgram(display, "captions", style("normal"), [{
     id: "alice-use",
     words: {
-      contract: "svml.caption-display-word-subset@1",
+
       id: "role:ALICE",
       sequenceId: display.id,
       wordIds: aliceIds,
@@ -117,7 +135,7 @@ test("Caption Mute is an ordered whole-Atom visibility mask and does not change 
   const program = resolveCaptionProgram(display, "captions", style("normal"), [], [{
     id: "hide-middle",
     words: {
-      contract: "svml.caption-display-word-subset@1",
+
       id: "selection:hide-middle",
       sequenceId: display.id,
       wordIds: mutedWords.map((word) => word.id),
@@ -136,14 +154,14 @@ test("Caption timing applies Mute after planning and preserves the original Cue 
   const program = resolveCaptionProgram(display, "captions", style("normal"), [], [{
     id: "hide-disconnected",
     words: {
-      contract: "svml.caption-display-word-subset@1",
+
       id: "selection:hide-disconnected",
       sequenceId: display.id,
       wordIds: mutedWordIds,
     },
   }]);
   const plan = sealCaptionPlan({
-    contract: "svml.caption-plan@1",
+
     runs: [{
       id: program.runs[0]!.id,
       styleId: program.runs[0]!.styleId,
@@ -151,9 +169,6 @@ test("Caption timing applies Mute after planning and preserves the original Cue 
     }],
   });
   const map = locate(parsed, 2, [{
-    sourceSegmentId: "line",
-    startSec: 0,
-    endSec: 2,
     words: ["Keep", "this", "hidden", "phrase", "visible"].map((text, index) => ({
       text,
       startSec: index * 0.3,
@@ -167,15 +182,15 @@ test("Caption timing applies Mute after planning and preserves the original Cue 
   assert.deepEqual(projection.cues[0]!.atoms.map((atom) => atom.atomId),
     display.atoms.filter((atom) => !atom.wordIds.some((wordId) => mutedWordIds.includes(wordId)))
       .map((atom) => atom.id));
-  assert.equal(projection.cues[0]!.startSec, 0);
-  assert.equal(projection.cues[0]!.endSec, 1.4);
+  assert.equal(projection.cues[0]!.startFrame, 0);
+  assert.equal(projection.cues[0]!.endFrameExclusive, 42);
 });
 
 test("caption:Program lowers explicit Mute word subsets without a temporal mask", async () => {
   const parsed = parseScript("mute-surface.svml", "<line>Keep this private phrase hidden.</line>");
   const display = captionDisplaySequence(parsed, "story.caption");
   const hidden: CaptionDisplayWordSubset = {
-    contract: "svml.caption-display-word-subset@1",
+
     id: "private",
     sequenceId: display.id,
     wordIds: display.words.slice(2, 4).map((word) => word.id),
@@ -248,7 +263,7 @@ test("Caption Plan partitions Atoms and assigns independent fields to display Wo
   const program = resolveCaptionProgram(display, "captions", style("fine", [important]), []);
   const run = program.runs[0]!;
   const plan = sealCaptionPlan({
-    contract: "svml.caption-plan@1",
+
     runs: [{ id: run.id, styleId: run.styleId, cues: [{
       id: "cue:1",
       atomIds: display.atoms.map((atom) => atom.id),
@@ -265,7 +280,7 @@ test("Cue word bounds are planner preferences and cannot split an oversized auth
   const parsed = parseScript("impossible.svml", "<line><one two three four | something></line>");
   const display = captionDisplaySequence(parsed, "story.caption");
   const compact = sealCaptionStyle({
-    contract: "svml.caption-style@1",
+
     id: "compact",
     planning: { cue: { minimumWords: 1, maximumWords: 3, instruction: "Prefer at most three words." }, fields: [] },
     rendering: { family: "test-caption@1", parameters: {} },
@@ -274,7 +289,7 @@ test("Cue word bounds are planner preferences and cannot split an oversized auth
   assert.equal(display.atoms.length, 1);
   assert.equal(display.atoms[0]!.wordIds.length, 4);
   assert.doesNotThrow(() => assertCaptionPlanForProgram(sealCaptionPlan({
-    contract: "svml.caption-plan@1",
+
     runs: [{ id: program.runs[0]!.id, styleId: compact.id, cues: [{
       id: "cue:1", atomIds: [display.atoms[0]!.id], fields: [],
     }] }],
@@ -292,13 +307,12 @@ test("Dual Text exposes one whole timed display Atom and never invents internal 
   const program = resolveCaptionProgram(display, "captions", style("fine"), []);
   const run = program.runs[0]!;
   const plan = sealCaptionPlan({
-    contract: "svml.caption-plan@1",
+
     runs: [{ id: run.id, styleId: run.styleId, cues: [{
       id: "cue:1", atomIds: [display.atoms[0]!.id], fields: [],
     }] }],
   });
   const map = locate(parsed, 1, [{
-    sourceSegmentId: "line", startSec: 0, endSec: 1,
     words: [
       { text: "what", startSec: 0.1, endSec: 0.25 },
       { text: "the", startSec: 0.3, endSec: 0.42 },
@@ -309,12 +323,10 @@ test("Dual Text exposes one whole timed display Atom and never invents internal 
   const projection = temporalizeCaptionPlan(display, correspondence, map, program, plan);
   assert.deepEqual(projection.cues, [{
     id: "cue:1",
-    runId: run.id,
     styleId: run.styleId,
-    segmentId: "line",
-    startSec: 0.1,
-    endSec: 22 / 30,
-    atoms: [{ atomId: display.atoms[0]!.id, startSec: 0.1, endSec: 22 / 30 }],
+    startFrame: 3,
+    endFrameExclusive: 22,
+    atoms: [{ atomId: display.atoms[0]!.id, startFrame: 3, endFrameExclusive: 22 }],
     fields: [],
   }]);
   assert.equal("words" in projection.cues[0]!, false);

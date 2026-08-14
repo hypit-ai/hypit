@@ -27,8 +27,6 @@
     "@narratage/markup": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/core": "workspace:*",
-    "@narratage/driver-node": "workspace:*",
-    "@narratage/validation": "workspace:*"
+    "@narratage/core": "workspace:*"
   }
 }

@@ -5,7 +5,6 @@ import { join } from "node:path";
 
 import { assertCompositableSurfaceRef } from "@narratage/media";
 import type { CompositableSurfaceRef } from "@narratage/media";
-import { canonicalize, digestOf } from "@narratage/protocol";
 
 type JsonObject = Record<string, unknown>;
 
@@ -33,31 +32,6 @@ type ProbeStream = {
 type PixelFormat = {
   readonly name?: unknown;
   readonly flags?: { readonly alpha?: unknown };
-};
-
-export type SurfaceByteVerification = {
-  readonly contract: "svml.compositable-surface-byte-verification@1";
-  readonly surfaceDigest: string;
-  readonly artifactDigest: string;
-  readonly verifier: {
-    readonly name: "ffprobe";
-    readonly version: string;
-  };
-  readonly observed: {
-    readonly codec: string;
-    readonly width: number;
-    readonly height: number;
-    readonly pixelFormat: string;
-    readonly colorSpace: "srgb";
-    readonly alphaMode: "opaque" | "straight";
-    readonly timing:
-      | { readonly kind: "still" }
-      | {
-          readonly kind: "frames";
-          readonly frameRate: { readonly numerator: number; readonly denominator: number };
-          readonly frameCount: number;
-        };
-  };
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -211,22 +185,6 @@ async function pixelFormatAlpha(
   return await pending;
 }
 
-async function ffprobeVersion(
-  ffprobePath: string,
-  timeoutMs: number,
-  maxOutputBytes: number,
-): Promise<string> {
-  const bytes = await runProcess({
-    executable: ffprobePath,
-    argv: ["-version"],
-    timeoutMs,
-    maxOutputBytes,
-  });
-  const version = Buffer.from(bytes).toString("utf8").split(/\r?\n/u, 1)[0]?.trim();
-  assert(version !== undefined && version.length > 0, "ffprobe returned no version");
-  return version;
-}
-
 function suffix(mediaType: string): string {
   if (mediaType === "image/png") return ".png";
   if (mediaType === "image/webp") return ".webp";
@@ -238,8 +196,8 @@ function suffix(mediaType: string): string {
 /**
  * Decode and verify one typed Surface before its bytes enter a renderer.
  *
- * The returned evidence belongs to the Runtime Receipt. It is not another media Product and must
- * not be copied through author-domain graph values.
+ * This is an admission gate, not a second media Product. Success returns no
+ * side-channel facts; anything a later graph step needs must be an explicit output.
  */
 export async function verifyCompositableSurfaceBytes(options: {
   readonly surface: CompositableSurfaceRef;
@@ -247,7 +205,7 @@ export async function verifyCompositableSurfaceBytes(options: {
   readonly ffprobePath?: string;
   readonly processTimeoutMs?: number;
   readonly maxProbeOutputBytes?: number;
-}): Promise<SurfaceByteVerification> {
+}): Promise<void> {
   assertCompositableSurfaceRef(options.surface);
   assert(options.bytes.byteLength === options.surface.artifact.size,
     `Surface ${options.surface.artifact.digest} byte size differs`);
@@ -258,7 +216,7 @@ export async function verifyCompositableSurfaceBytes(options: {
   try {
     const path = join(directory, `surface${suffix(options.surface.artifact.mediaType)}`);
     await writeFile(path, options.bytes);
-    const [probe, formats, version] = await Promise.all([
+    const [probe, formats] = await Promise.all([
       runProcess({
         executable: ffprobePath,
         argv: ["-v", "error", "-print_format", "json", "-show_streams", "-count_frames", path],
@@ -266,7 +224,6 @@ export async function verifyCompositableSurfaceBytes(options: {
         maxOutputBytes,
       }),
       pixelFormatAlpha(ffprobePath, timeoutMs, maxOutputBytes),
-      ffprobeVersion(ffprobePath, timeoutMs, maxOutputBytes),
     ]);
     const root = json(probe, "ffprobe Surface query");
     assert(Array.isArray(root.streams) && root.streams.length === 1,
@@ -298,38 +255,15 @@ export async function verifyCompositableSurfaceBytes(options: {
     }
 
     const frameCount = positiveInteger(stream.nb_read_frames ?? stream.nb_frames, "Surface frame count");
-    const observedTiming: SurfaceByteVerification["observed"]["timing"] =
-      options.surface.timing.kind === "still"
-        ? (() => {
-            assert(frameCount === 1, "Still Surface must decode to exactly one frame");
-            return { kind: "still" as const };
-          })()
-        : (() => {
-            assert(frameCount === options.surface.timing.frameCount,
-              "Surface decoded frame count differs from its declaration");
-            const rate = rational(stream.avg_frame_rate ?? stream.r_frame_rate, "Surface frame rate");
-            assert(sameRational(rate, options.surface.timing.frameRate),
-              "Surface decoded frame rate differs from its declaration");
-            return { kind: "frames" as const, frameRate: rate, frameCount };
-          })();
-    const codec = typeof stream.codec_name === "string" && stream.codec_name.length > 0
-      ? stream.codec_name
-      : "unknown";
-    return canonicalize({
-      contract: "svml.compositable-surface-byte-verification@1",
-      surfaceDigest: digestOf(options.surface),
-      artifactDigest: options.surface.artifact.digest,
-      verifier: { name: "ffprobe", version },
-      observed: {
-        codec,
-        width,
-        height,
-        pixelFormat: stream.pix_fmt,
-        colorSpace: "srgb",
-        alphaMode: options.surface.alphaMode,
-        timing: observedTiming,
-      },
-    }) as SurfaceByteVerification;
+    if (options.surface.timing.kind === "still") {
+      assert(frameCount === 1, "Still Surface must decode to exactly one frame");
+    } else {
+      assert(frameCount === options.surface.timing.frameCount,
+        "Surface decoded frame count differs from its declaration");
+      const rate = rational(stream.avg_frame_rate ?? stream.r_frame_rate, "Surface frame rate");
+      assert(sameRational(rate, options.surface.timing.frameRate),
+        "Surface decoded frame rate differs from its declaration");
+    }
   } finally {
     await rm(directory, { recursive: true, force: true }).catch(() => {});
   }

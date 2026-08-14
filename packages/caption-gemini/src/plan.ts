@@ -5,7 +5,6 @@ import { verifyCaptionGeminiRequest } from "./request.js";
 import type {
   CaptionGeminiPlan,
   CaptionGeminiRequest,
-  RawCaptionGeminiResponse,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -116,7 +115,7 @@ export function sealCaptionGeminiPlan(
     return { id: expectedRun.id, styleId: expectedRun.styleId, cues };
   });
   return sealCaptionPlan({
-    contract: "svml.caption-plan@1",
+
     runs,
   });
 }
@@ -124,5 +123,3 @@ export function sealCaptionGeminiPlan(
 export function verifyCaptionGeminiPlan(value: unknown): asserts value is CaptionGeminiPlan {
   assertCaptionPlan(value);
 }
-
-export const rawCaptionGeminiResponseShape = null as unknown as RawCaptionGeminiResponse;

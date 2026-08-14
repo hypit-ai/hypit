@@ -4,14 +4,13 @@ import {
   runCli,
 } from "@narratage/cli";
 import type { CliIo } from "@narratage/cli";
-import type { NodePackageContribution } from "@narratage/package-loader-node";
+import type { NodePackageBinding } from "@narratage/package-loader-node";
 
 import { videoCliDistribution } from "./distribution.js";
 
 export { materializeArtifact, materializeRecord };
 export {
   createVideoCompiler,
-  videoBuiltInPackageContributions,
 } from "./compiler.js";
 export { videoCliDistribution } from "./distribution.js";
 
@@ -23,10 +22,10 @@ export async function createVideoRuntimeFromConfig(path: string) {
 export function runVideoCli(
   argv: readonly string[],
   io: CliIo,
-  packageContributions: readonly NodePackageContribution[] = [],
+  packages: readonly NodePackageBinding[] = [],
 ): Promise<void> {
   return runCli(argv, io, {
     ...videoCliDistribution,
-    builtInPackageContributions: packageContributions,
+    bootstrapPackages: packages,
   });
 }

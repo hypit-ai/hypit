@@ -164,7 +164,6 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
     id: digest,
     graph: digest,
     request: digest,
-    initialValues: [],
     steps: [{
       id: "step-1",
       producer: { module: { name: "@narratage/media", version: "1" }, name: "inspect" },
@@ -190,7 +189,7 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
     machine: { format: "narratage.cli-plan@1", ok: true, plan },
     run: "/project/build.svrun",
     outputNames: { "logical:take": "take.video" },
-    candidateNames: { "candidate:preview": "preview" },
+    satisfactionNames: { "logical:take": "preview" },
   });
   assert.match(output, /Run choices/u);
   assert.match(output, /take\.video\s+← preview/u);
@@ -203,7 +202,7 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
     machine: { format: "narratage.cli-plan@1", ok: true, plan },
     run: "/project/build.svrun",
     outputNames: { "logical:take": "take.video" },
-    candidateNames: { "candidate:preview": "preview" },
+    satisfactionNames: { "logical:take": "preview" },
   }), /2\s+@narratage\/media@1/u);
 });
 
@@ -213,7 +212,6 @@ test("a plan with no Needs stays compact without knowing any Provider names", ()
     id: digest,
     graph: digest,
     request: digest,
-    initialValues: [],
     steps: [],
     goals: [],
     selections: [],
@@ -233,7 +231,6 @@ test("plan runtime preflight presents only demanded capabilities", () => {
     id: digest,
     graph: digest,
     request: digest,
-    initialValues: [],
     steps: [],
     goals: [],
     selections: [],

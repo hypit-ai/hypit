@@ -33,7 +33,7 @@ function assert(condition: unknown, message: string): asserts condition {
 
 function programContent(value: SpeechSpineProgram): SpeechSpineProgram {
   return {
-    contract: "svml.speech-spine-program@1",
+
     id: value.id,
     frameRate: { ...value.frameRate },
   };
@@ -44,7 +44,6 @@ export function sealSpeechSpineProgram(value: SpeechSpineProgram): SpeechSpinePr
 }
 
 export function assertSpeechSpineProgram(value: SpeechSpineProgram): void {
-  assert(value.contract === "svml.speech-spine-program@1", "Unsupported SpeechSpineProgram contract");
   assert(value.id.trim().length > 0, "SpeechSpineProgram id must not be empty");
   assert(Number.isSafeInteger(value.frameRate.numerator) && value.frameRate.numerator > 0
     && Number.isSafeInteger(value.frameRate.denominator) && value.frameRate.denominator > 0,
@@ -52,7 +51,7 @@ export function assertSpeechSpineProgram(value: SpeechSpineProgram): void {
 }
 
 function verifyExcerpt(value: NarrativeExcerpt): void {
-  assert(value.contract === "svml.narrative-excerpt@1" && value.kind === "segment",
+  assert(value.kind === "segment",
     "Speech Spine Take must reference a Segment NarrativeExcerpt");
   assert(value.id.length > 0 && Number.isSafeInteger(value.tokenStart)
     && Number.isSafeInteger(value.tokenEndExclusive) && value.tokenEndExclusive > value.tokenStart,
@@ -61,7 +60,7 @@ function verifyExcerpt(value: NarrativeExcerpt): void {
 
 function setContent(value: SpeechSpineSet): SpeechSpineSet {
   return canonicalize({
-    contract: "svml.speech-spine-set@1",
+
     takes: value.takes,
   }) as unknown as SpeechSpineSet;
 }
@@ -94,12 +93,10 @@ export function sealSpeechSpineVisualSpec(value: SpeechSpineVisualSpec): SpeechS
 }
 
 export function assertSpeechSpineVisualSpec(value: SpeechSpineVisualSpec): void {
-  assert(value.contract === "svml.speech-spine-visual-spec@1", "Unsupported SpeechSpineVisualSpec contract");
   assert(Number.isSafeInteger(value.stackingOrder), "SpeechSpineVisualSpec stacking order is invalid");
 }
 
 export function assertSpeechSpineSet(value: SpeechSpineSet): void {
-  assert(value.contract === "svml.speech-spine-set@1", "Unsupported SpeechSpineSet contract");
   const segments = new Set<string>();
   for (const take of value.takes) {
     verifyExcerpt(take.segment);
@@ -111,7 +108,7 @@ export function assertSpeechSpineSet(value: SpeechSpineSet): void {
 
 export function createSpeechSpineSet(): SpeechSpineSet {
   return sealSpeechSpineSet({
-    contract: "svml.speech-spine-set@1",
+
     takes: [],
   });
 }
@@ -126,7 +123,7 @@ function appendTake(
   assertTake(take, program);
   assert(!set.takes.some((item) => item.segment.id === take.segment.id), `Speech Spine repeats Segment ${take.segment.id}`);
   return sealSpeechSpineSet({
-    contract: "svml.speech-spine-set@1",
+
     takes: [...set.takes, take],
   });
 }
@@ -183,7 +180,6 @@ function programSpace(program: SpeechSpineProgram, set: SpeechSpineSet): Program
   for (const take of set.takes) assertTake(take, program);
   const frameCount = set.takes.reduce((sum, take) => sum + take.media.timeline.frameCount, 0);
   const space = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: frameCount * program.frameRate.denominator / program.frameRate.numerator,
     frameRate: { ...program.frameRate },
   });
@@ -221,7 +217,6 @@ export function compileSpeechSpineAudio(program: SpeechSpineProgram, set: Speech
     };
   });
   const plan = sealAudioProgramPlan({
-    contract: "svml.audio-program-plan@1",
     frameRate: { ...space.frameRate },
     frameCount: frame,
     sampleRate: 48_000,
@@ -245,35 +240,28 @@ export function assembleSpeechBasis(
     program.frameRate,
   ), "TimelineAudio does not cover this Speech Spine");
   let frame = 0;
-  const seconds = (value: number): number => value * space.frameRate.denominator / space.frameRate.numerator;
   const segments = set.takes.map((take) => {
     const startFrame = frame;
     frame += take.media.timeline.frameCount;
-    return { segmentId: take.segment.id, startSec: seconds(startFrame), endSec: seconds(frame) };
+    return { segmentId: take.segment.id, startFrame, endFrameExclusive: frame };
   });
   frame = 0;
   const visualClips = set.takes.flatMap((take) => {
-    const startFrame = frame;
     frame += take.media.timeline.frameCount;
     if (take.media.visual === undefined || take.visual === undefined) return [];
     return [{
       segmentId: take.segment.id,
-      span: { startFrame, endFrameExclusive: frame },
       artifact: structuredClone(take.media.visual.artifact),
       extent: {
-        contract: "svml.intrinsic-extent@1" as const,
         widthPx: take.media.visual.width,
         heightPx: take.media.visual.height,
       },
-      frameRate: { ...take.media.timeline.frameRate },
-      frameCount: take.media.timeline.frameCount,
       frame: structuredClone(take.visual.frame),
       fit: structuredClone(take.visual.fit),
       stackingOrder: take.visual.stackingOrder,
     }];
   });
   return sealSpeechBasis({
-    contract: "svml.speech-basis@1",
     programSpace: space,
     audio: structuredClone(audio.artifact),
     visualTrack: { clips: visualClips },

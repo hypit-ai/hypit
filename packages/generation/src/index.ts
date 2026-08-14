@@ -21,7 +21,6 @@ export {
 export {
   assertMappingCoversPorts,
   compileWireRequest,
-  GENERATION_WIRE_MAPPING_V1,
   mappingSupportsRequest,
   selectWireModel,
 } from "./mapping.js";
@@ -34,7 +33,6 @@ export type {
 } from "./mapping.js";
 export {
   assertGenerationPortTable,
-  GENERATION_PORTS_V1,
   generationPort,
   sealGenerationPortTable,
 } from "./ports.js";
@@ -57,9 +55,6 @@ export {
   bindGenerationMedia,
   bindGenerationText,
   finalizeGenerationRequestDraft,
-  GENERATION_MEDIA_BINDING_V1,
-  GENERATION_REQUEST_DRAFT_V1,
-  GENERATION_REQUEST_V1,
   mediaBindingSchemaFromPort,
   portsObjectSchema,
   requestDraftSchemaFromPorts,

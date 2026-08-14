@@ -53,7 +53,6 @@ export function lowerRestrictedSpeechVisualPresents(
     }
     const item: MediaItemProgram = {
       id: `${trackId}:${clip.id}`,
-      sourceOccurrenceId: clip.id,
       span: { ...clip.span },
       frame: structuredClone(clip.frame),
       presentation: {

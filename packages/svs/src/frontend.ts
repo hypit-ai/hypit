@@ -1,10 +1,8 @@
 import {
   sealRecord,
-  sealTypedModule,
   verifyClosure,
   verifyRecordStructure,
 } from "@narratage/core";
-import { sealAuthorModule } from "@narratage/elaborator";
 import type { AuthorFrontend, AuthorSourceExport } from "@narratage/elaborator";
 
 import {
@@ -24,7 +22,6 @@ export const svsFrontend: AuthorFrontend = {
   decode(source, context) {
     verifyClosure(context.closure);
     const parsed = parseSvs(source.name, source.text);
-    const sourceDigest = source.sourceDigest;
     const records = parsed.recipes.map((recipe) => sealRecord({
       id: recipe.value.path,
       type: svsRecipeType,
@@ -38,12 +35,8 @@ export const svsFrontend: AuthorFrontend = {
       type: record.type,
     }));
     return {
-      module: sealTypedModule({
-        id: `source:${source.name}`,
-        closureDigest: context.closure.digest,
-        records,
-      }),
-      author: sealAuthorModule({ name: `source:${source.name}`, components: [] }),
+      records,
+      components: [],
       fragments: [],
       exports,
     };

@@ -62,21 +62,19 @@ test("the function answers a real Need with real media, over a bucket it address
         operation: "inspect",
         artifacts: { bucket: "fixture", prefix: "svml" },
         constraints: {
-          contract: "svml.inspect-media-request@1",
           source: { kind: "blob", digest, size: bytes.byteLength, mediaType: "audio/wav" },
         },
       }) as Record<string, unknown>;
 
       assert.equal(reply.ok, true, `the function failed: ${JSON.stringify(reply)}`);
       assert.equal(reply.operation, "inspect");
-      const stored = reply.value as { kind: string; value: { contract: string; streams: { kind: string; sampleRate: number }[] } };
+      const stored = reply.value as { kind: string; value: { streams: { kind: string; sampleRate: number }[] } };
       assert.equal(stored.kind, "inline");
       const value = stored.value;
-      assert.equal(value.contract, "svml.media-inspection@1");
       assert.equal(value.streams.length, 1);
       assert.equal(value.streams[0]!.kind, "audio");
       assert.equal(value.streams[0]!.sampleRate, 48_000);
-      assert.deepEqual(reply.metadata, { operation: "inspect", provider: "media.aws-lambda" });
+      assert.equal("metadata" in reply, false);
     } finally {
       await rm(work, { recursive: true, force: true });
     }
@@ -89,7 +87,6 @@ test("a source the bucket does not hold is a typed failure, never a throw", asyn
     operation: "inspect",
     artifacts: { bucket: "fixture" },
     constraints: {
-      contract: "svml.inspect-media-request@1",
       source: { kind: "blob", digest: `sha256:${"0".repeat(64)}`, size: 1, mediaType: "audio/wav" },
     },
   }) as Record<string, unknown>;
@@ -119,7 +116,6 @@ test("a Layer that lies about its FFmpeg version fails before reading an Artifac
       operation: "inspect",
       artifacts: { bucket: "fixture" },
       constraints: {
-        contract: "svml.inspect-media-request@1",
         source: {
           kind: "blob",
           digest: `sha256:${"0".repeat(64)}`,

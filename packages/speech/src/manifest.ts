@@ -14,6 +14,6 @@ export const speechManifest: ModuleManifest = { format: "svml.module@1", name: s
   dependencies: [narrativeDependency, mediaDependency, programSpaceDependency, spatialDependency],
   types: [{ name: speechTypes.duration.name, schema: speechDurationSchema }, { name: speechTypes.basis.name, schema: speechBasisSchema },
     { name: speechTypes.audioBasis.name, schema: speechAudioBasisSchema }, { name: speechTypes.evidenceAudio.name, schema: speechEvidenceAudioSchema }],
-  capabilities: [], surfaces: [], producers: [] };
+  capabilities: [], producers: [] };
 export const speechManifestDigest = digestOf(speechManifest);
 export const speechDependency = { module: speechModuleRef, digest: speechManifestDigest } as const;

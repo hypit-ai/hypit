@@ -19,7 +19,6 @@ export type TextPaintLayer = VisualTextPaintLayer;
 export type TextAreaFlow = Omit<VisualTextFlow, "form">;
 
 export type TextStyle = {
-  readonly contract: "svml.text-style@1";
   readonly id: string;
   readonly stackingOrder: number;
   readonly typography: TextTypography;
@@ -41,7 +40,6 @@ export type TextStyle = {
 };
 
 export type TextMotion = {
-  readonly contract: "svml.text-motion@1";
   readonly id: string;
   readonly item?: VisualAnimation;
   readonly sequences: readonly VisualTextSequenceAnimation[];
@@ -60,12 +58,10 @@ export type TextGeometry =
   | { readonly kind: "path"; readonly path: SpatialPath };
 
 export type TextPlacement = {
-  readonly contract: "svml.text-placement@1";
   readonly geometry: TextGeometry;
 };
 
 export type TextItemSpec = {
-  readonly contract: "svml.text-item-spec@1";
   readonly id: string;
   readonly document: TextDocument;
   readonly projection: TemporalWindowProjection;
@@ -78,7 +74,6 @@ export type TextItemSpec = {
  * TextItemSpec before temporal projection.
  */
 export type PlainTextItemSpec = {
-  readonly contract: "svml.plain-text-item-spec@1";
   readonly id: string;
   readonly projection: TemporalWindowProjection;
   readonly expansion: OccurrenceExpansion;
@@ -86,7 +81,6 @@ export type PlainTextItemSpec = {
 
 export type TextItem = {
   readonly id: string;
-  readonly sourceOccurrenceId: string;
   readonly span: FrameSpan;
   readonly geometry: TextGeometry;
   readonly document: TextDocument;
@@ -96,7 +90,6 @@ export type TextItem = {
 };
 
 export type TypographyTrackProgram = {
-  readonly contract: "svml.typography-track-program@1";
   readonly id: string;
   readonly items: readonly TextItem[];
 };
@@ -107,18 +100,15 @@ export type TypographyTrackProgram = {
  * never samples another Track or the final composite.
  */
 export type TextMaskSpec = {
-  readonly contract: "svml.text-mask-spec@1";
   readonly id: string;
   readonly mode: "alpha" | "luminance";
   readonly materialFit: "contain" | "cover" | "fill";
 };
 
 export type TypographyTrackHeader = {
-  readonly contract: "svml.typography-track-header@1";
   readonly id: string;
 };
 
 export type TypographyTrackSet = {
-  readonly contract: "svml.typography-track-set@1";
   readonly items: readonly TextItem[];
 };

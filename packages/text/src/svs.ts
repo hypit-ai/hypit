@@ -118,7 +118,7 @@ export function textTemplateFromSvsRecipes(
 ): TextTemplate {
   const prefix = `text-template.${templateId}`;
   const meta = recipes.find((recipe) => recipe.path === prefix);
-  if (meta === undefined) throw new Error(`Missing ${prefix} metadata Recipe`);
+  if (meta === undefined) throw new Error(`Missing root Recipe ${prefix}`);
   exactProperties(meta, new Set(["separator"]), ["default-"]);
   if (text(meta, "separator", "paragraph") !== "paragraph") throw new Error(`${prefix}.separator must be paragraph`);
   const defaults: Record<string, TextScalar> = {};
@@ -177,7 +177,7 @@ export function textTemplateFromSvsRecipes(
   const stray = recipes.find((recipe) => recipe.path.startsWith(`${prefix}.`) && !consumed.has(recipe.path));
   if (stray !== undefined) throw new Error(`Unrecognized Text Template Recipe ${stray.path}`);
   return sealTextTemplate({
-    contract: "svml.text-template@1",
+
     defaults,
     root: {
       kind: "join",

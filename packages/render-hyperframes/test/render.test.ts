@@ -18,7 +18,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 import {
@@ -46,10 +45,10 @@ import {
   renderHyperframesComponent,
   renderHyperframesFragment,
   renderHyperframesManifest,
+  renderHyperframesMarkupSurfaces,
   renderHyperframesModuleRef,
   renderHyperframesProducers,
   hyperframesVisualRequest,
-  renderHyperframesSurfaceImplementationDigest,
 } from "@narratage/render-hyperframes";
 import {
   compileAudioProgramPlan,
@@ -58,8 +57,8 @@ import {
   mediaPipelineComponents,
   mediaPipelineCapabilities,
   mediaPipelineManifest,
+  mediaPipelineMarkupSurfaces,
   mediaPipelineModuleRef,
-  mediaOperationSurfaceImplementationDigests,
   mediaPipelineProducers,
 } from "@narratage/media-pipeline";
 import {
@@ -79,12 +78,10 @@ import {
 } from "@narratage/markup";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const composition = sealComposition({
-  contract: "svml.composition@1",
   id: "render-test",
   canvas: { width: 1080, height: 1920, clearColor: "#000000" },
   tracks: [],
@@ -118,11 +115,7 @@ const spaceRecord = await admitRecord(closure, sealRecord({
   value: stored(space),
   origin,
 }), validatorRegistry());
-const linked = link(closure, [sealTypedModule({
-  id: "author:render-hyperframes-test",
-  closureDigest: closure.digest,
-  records: [compositionRecord, spaceRecord],
-})]);
+const linked = link(closure, [compositionRecord, spaceRecord]);
 const instance = elaborateGraphFragment(linked, renderHyperframesFragment, {
   id: "final",
   fragment: renderHyperframesFragment.id,
@@ -205,20 +198,15 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
     mediaTypes.renderedVisual,
     ({ need }) => {
       const request = need.constraints as {
-        readonly contract: string;
         readonly document: ReturnType<typeof compileHyperframesDocument>;
       };
-      assert.equal(request.contract, "svml.hyperframes-visual-render-request@1");
       return {
         value: stored(sealRenderedVisual({
-          contract: "svml.rendered-visual@1",
           frameRate: request.document.frameRate,
           frameCount: request.document.frameCount,
           canvas: request.document.canvas,
           artifact: visualArtifact,
-          muted: true,
         })),
-        metadata: { runtime: "fixture-local" },
       };
     },
   );
@@ -230,13 +218,8 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       const request = need.constraints as { contract: string; plan: ReturnType<typeof compileAudioProgramPlan> };
       return {
         value: stored(sealTimelineAudio({
-          contract: "svml.timeline-audio@1",
           artifact: audioArtifact,
-          codec: "pcm_s16le",
-          sampleRate: 48_000,
-          channels: 2,
           sampleFrames: request.plan.sampleFrames,
-          loudness: "planned",
         })),
       };
     },
@@ -249,7 +232,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       const request = need.constraints as { visual: ReturnType<typeof sealRenderedVisual>; audio: ReturnType<typeof sealTimelineAudio> };
       return {
         value: stored(sealMuxedMedia({
-          contract: "svml.muxed-media@1",
           frameRate: request.visual.frameRate,
           frameCount: request.visual.frameCount,
           canvas: request.visual.canvas,
@@ -259,10 +241,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       };
     },
   );
-  endpoints.bind(renderHyperframesCapabilities.renderVisual, "example.hyperframes.local");
-  endpoints.bind(mediaPipelineCapabilities.renderAudio, "example.media.audio-real");
-  endpoints.bind(mediaPipelineCapabilities.mux, "example.media.mux");
-
   const result = await new NodeDriver({
     producers: producerRegistry(),
     endpoints,
@@ -287,7 +265,6 @@ test("a render Product with another frame domain is rejected by the explicit dow
     mediaTypes.renderedVisual,
     () => ({
       value: stored(sealRenderedVisual({
-        contract: "svml.rendered-visual@1",
         frameRate: document.frameRate,
         frameCount: document.frameCount + 1,
         canvas: document.canvas,
@@ -296,8 +273,7 @@ test("a render Product with another frame domain is rejected by the explicit dow
           digest: digestOf("render-hyperframes:wrong-domain"),
           size: 1,
           mediaType: "video/mp4",
-        },
-        muted: true,
+          },
       })),
     }),
   );
@@ -309,37 +285,34 @@ test("a render Product with another frame domain is rejected by the explicit dow
       const request = need.constraints as { readonly plan: ReturnType<typeof compileAudioProgramPlan> };
       return {
         value: stored(sealTimelineAudio({
-          contract: "svml.timeline-audio@1",
           artifact: {
             kind: "blob",
             digest: digestOf("render-hyperframes:domain-check-audio"),
             size: 1,
             mediaType: "audio/wav",
           },
-          codec: "pcm_s16le",
-          sampleRate: request.plan.sampleRate,
-          channels: 2,
           sampleFrames: request.plan.sampleFrames,
-          loudness: "planned",
         })),
       };
     },
   );
-  endpoints.bind(renderHyperframesCapabilities.renderVisual, "example.hyperframes.wrong-domain");
-  endpoints.bind(mediaPipelineCapabilities.renderAudio, "example.media.audio-for-domain-check");
-
   const result = await new NodeDriver({
     producers: producerRegistry(),
     endpoints,
     validators: validatorRegistry(),
   }).run(build());
   assert.equal(result.status, "paused");
-  assert.match(result.journal.at(-1)?.message ?? "", /different presentation durations/u);
+  assert.match(result.outcomes.at(-1)?.message ?? "", /different presentation durations/u);
   assert.equal(result.state.receipts.length, 2);
 });
 
 const fixtureModule = { name: "example.composition-fixture", version: "1" } as const;
 const fixtureSurfaceDigest = digestOf("example.composition-fixture/surface@1");
+const fixtureSurface = {
+  name: "composition", tag: "Composition", mode: "structured",
+  outputs: [compositionTypes.composition, programSpaceTypes.programSpace],
+  implementation: { digest: fixtureSurfaceDigest },
+} as const;
 const fixtureManifest: ModuleManifest = {
   format: "svml.module@1",
   name: fixtureModule.name,
@@ -347,17 +320,6 @@ const fixtureManifest: ModuleManifest = {
   dependencies: [compositionDependency, programSpaceDependency],
   types: [],
   capabilities: [],
-  surfaces: [{
-    name: "composition",
-    tag: "Composition",
-    mode: "structured",
-    outputs: [compositionTypes.composition, programSpaceTypes.programSpace],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "example.composition-fixture/surface",
-      digest: fixtureSurfaceDigest,
-    },
-  }],
   producers: [],
 };
 
@@ -378,26 +340,24 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
     fixtureManifest,
   ]);
   const surfaces = new MarkupSurfaceRegistry();
-  surfaces.registerStructured(fixtureModule, "composition", fixtureSurfaceDigest, ({ element }) => ({
+  surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
       { id: "composition", type: compositionTypes.composition, value: stored(composition), range: element.range },
       { id: "space", type: programSpaceTypes.programSpace, value: stored(space), range: element.range },
     ],
     components: [],
     fragments: [],
-  }));
-  surfaces.registerStructured(
-    renderHyperframesModuleRef,
-    "video",
-    renderHyperframesSurfaceImplementationDigest,
-    decodeHyperframesRenderSurface,
-  );
-  surfaces.registerStructured(
-    mediaPipelineModuleRef,
-    "extract-frame",
-    mediaOperationSurfaceImplementationDigests.extractFrame,
-    decodeExtractFrameSurface,
-  );
+  }) });
+  surfaces.registerStructured({
+    module: renderHyperframesModuleRef,
+    declaration: renderHyperframesMarkupSurfaces.find((item) => item.name === "video")!,
+    handler: decodeHyperframesRenderSurface,
+  });
+  surfaces.registerStructured({
+    module: mediaPipelineModuleRef,
+    declaration: mediaPipelineMarkupSurfaces.find((item) => item.name === "extract-frame")!,
+    handler: decodeExtractFrameSurface,
+  });
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
@@ -425,8 +385,8 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
   });
   const target = resolveCompiledSourceExport(compiled, "poster.image", artifactTypes.blob);
   assert.equal(target.ref.kind, "logical-output");
-  const state = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
-    graph: compiled.elaboration.graph.id,
+  const state = start(compiled.program, compiled.graph, sealBuildRequest({
+    graph: compiled.graph.id,
     targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
   }));
   assert.deepEqual(state.plan.steps.map((step) => step.producer.name).sort(), [

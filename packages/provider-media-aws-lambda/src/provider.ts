@@ -1,6 +1,5 @@
 import { mediaTypes } from "@narratage/media";
 import { artifactTypes } from "@narratage/artifact";
-import { mediaNeedHasContract, mediaOperationContracts } from "@narratage/media-execution";
 import { mediaPipelineCapabilities } from "@narratage/media-pipeline";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import type { BlobRef, CanonicalValue } from "@narratage/protocol";
@@ -108,10 +107,7 @@ export function createAwsLambdaMediaProvider(config: CreateAwsLambdaMediaProvide
           `AWS media ${name} reported Artifact ${artifact.digest}, which this Build's ArtifactStore cannot read`
           + ` — the Provider's bucket and the ArtifactStore's bucket are probably not the same`);
       }
-      return {
-        value: reply.value,
-        metadata: reply.metadata,
-      };
+      return { value: reply.value };
     };
 
   return defineEndpointPackage({
@@ -120,7 +116,6 @@ export function createAwsLambdaMediaProvider(config: CreateAwsLambdaMediaProvide
     instance: config.instance ?? "media.aws-lambda",
     authority: config.authority ?? config.instance ?? "media.aws-lambda",
     implementation: {
-      locator: "@narratage/provider-media-aws-lambda/media",
       digest: awsLambdaMediaProviderImplementationDigest,
     },
     configuration: canonicalize(configuration as unknown as CanonicalValue),
@@ -130,57 +125,48 @@ export function createAwsLambdaMediaProvider(config: CreateAwsLambdaMediaProvide
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.inspect,
         returns: mediaTypes.inspection,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.inspect),
         handler: operation("inspect"),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.normalize,
         returns: mediaTypes.synchronized,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.normalize),
         handler: operation("normalize"),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.transform,
         returns: artifactTypes.blob,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.transform),
         handler: operation("transform"),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.extractAudio,
         returns: artifactTypes.blob,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.extractAudio),
         handler: operation("extract-audio"),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.extractFrame,
         returns: artifactTypes.blob,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.extractFrame),
         handler: operation("extract-frame"),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.projectSpeechEvidenceAudio,
         returns: speechTypes.evidenceAudio,
-        supports: (need) =>
-          mediaNeedHasContract(need.constraints, mediaOperationContracts.projectSpeechEvidenceAudio),
         handler: operation("project-speech-evidence-audio"),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.renderAudio,
         returns: mediaTypes.timelineAudio,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.renderAudio),
         handler: operation("render-audio"),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.mux,
         returns: mediaTypes.muxed,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.mux),
         handler: operation("mux"),
       },
     ],

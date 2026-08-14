@@ -5,7 +5,7 @@ export {
   momentFrames,
   segmentFrameSpan,
   selectionFrameSpans,
-  tokenSpanSeconds,
+  tokenFrameSpan,
 } from "./location.js";
 export { completeSemanticMapSchema, semanticMapDependency, semanticMapManifest, semanticMapManifestDigest, semanticMapModuleRef, semanticMapTypes } from "./manifest.js";
 export type * from "./types.js";

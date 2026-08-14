@@ -11,8 +11,6 @@ import test from "node:test";
 import { digestOf } from "@narratage/protocol";
 import type { Digest, ProducerRef } from "@narratage/protocol";
 import {
-  normalizeWhisperXAlignment,
-  sealWhisperXAlignmentEvidence,
   whisperXComponent,
   whisperXProducers,
   whisperXRequestForEvidenceAudio,
@@ -20,69 +18,36 @@ import {
 
 function basis() {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
   return sealSpeechBasis({
-    contract: "svml.speech-basis@1",
     programSpace,
     audio: { kind: "blob", digest: digestOf("whisperx-test:audio"), size: 1, mediaType: "audio/wav" },
     visualTrack: { clips: [] },
-    segments: [{ segmentId: "line", startSec: 0, endSec: 1 }],
+    segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 30 }],
   });
 }
 
 function evidenceAudio(basis: SpeechBasis): SpeechEvidenceAudio {
   return sealSpeechEvidenceAudio({
-    contract: "svml.speech-evidence-audio@1",
     artifact: {
       kind: "blob",
       digest: digestOf("whisperx-test:evidence-audio"),
       size: 32_044,
       mediaType: "audio/wav",
     },
-    codec: "pcm_s16le",
-    sampleRate: 16_000,
-    channels: 1,
     sampleFrames: 16_000,
-    durationSec: 1,
-    segments: basis.segments,
-    sampleMap: {
-      algorithm: "rational-boundary-round@1",
-      sourceSampleRate: 48_000,
-      evidenceSampleRate: 16_000,
-      sourceSampleFrames: 48_000,
-      evidenceSampleFrames: 16_000,
-      sourceOriginSample: 0,
-      evidenceOriginSample: 0,
-    },
   });
 }
 
-test("WhisperX consumes only the canonical 16 kHz evidence projection", () => {
-  const valid = evidenceAudio(basis());
-  assert.equal(whisperXRequestForEvidenceAudio(valid).audio.digest, valid.artifact.digest);
-  const tampered = { ...valid, sampleFrames: 16_001 };
-  assert.throws(() => whisperXRequestForEvidenceAudio(tampered), /sample map|digest/u);
-});
-
-test("WhisperX normalization lowers model-specific evidence without leaking provider metadata", () => {
-  const measured = sealWhisperXAlignmentEvidence({
-    contract: "svml.whisperx-alignment-evidence@1",
-    durationSec: 1,
-    segments: [{
-      sourceSegmentId: "line",
-      startSec: 0,
-      endSec: 1,
-      words: [{ text: "hello", startSec: 0.1, endSec: 0.4 }],
-      chars: [],
-    }],
-  });
-  const normalized = normalizeWhisperXAlignment(measured);
-  assert.equal(normalized.contract, "svml.aligned-transcript-evidence@1");
-  assert.equal("engine" in normalized, false);
-  assert.deepEqual(normalized.segments, measured.segments);
+test("WhisperX receives normalized bytes without authored Segment truth", () => {
+  const source = basis();
+  const valid = evidenceAudio(source);
+  const request = whisperXRequestForEvidenceAudio(valid);
+  assert.equal(request.audio.digest, valid.artifact.digest);
+  assert.equal("segments" in request, false);
+  assert.equal(request.sampleFrames, 16_000);
 });
 
 test("WhisperX installs into the host-neutral compute port without a Node Driver", () => {
@@ -95,8 +60,5 @@ test("WhisperX installs into the host-neutral compute port without a Node Driver
 
   registerProducerFacets(registrar, whisperXComponent.producers);
 
-  assert.deepEqual(registrations.map((item) => item.producer), [
-    whisperXProducers.request,
-    whisperXProducers.normalize,
-  ]);
+  assert.deepEqual(registrations.map((item) => item.producer), [whisperXProducers.request]);
 });

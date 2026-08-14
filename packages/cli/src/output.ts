@@ -119,7 +119,7 @@ export type CliPresentation =
       readonly run: string;
       /** Presentation names declared by this Author Source and Run Source. Never used to plan. */
       readonly outputNames?: Readonly<Record<string, string>>;
-      readonly candidateNames?: Readonly<Record<string, string>>;
+      readonly satisfactionNames?: Readonly<Record<string, string>>;
     }
   | {
       readonly kind: "operational";
@@ -371,17 +371,17 @@ function renderPlan(
       }
     }
     const capabilityCount = view.machine.preflight.capabilities.length;
-    lines.push(`  ${colors.dim(`Only the ${capabilityCount} demanded ${capabilityCount === 1 ? "capability was" : "capabilities were"} checked.`)}`);
+    lines.push(`  ${colors.dim(`Runtime base checked; ${capabilityCount} demanded Endpoint ${capabilityCount === 1 ? "capability" : "capabilities"} checked.`)}`);
   }
   const visibleSelections = verbose
     ? plan.selections
-    : plan.selections.filter((selection) => view.candidateNames?.[selection.candidate] !== undefined);
+    : plan.selections.filter((selection) => view.satisfactionNames?.[selection.output] !== undefined);
   if (visibleSelections.length > 0) {
     lines.push("", colors.strong(verbose ? "Selections" : "Run choices"));
     for (const selection of visibleSelections) {
       const status = colors.success(glyph(io, "✓", "+"));
       const output = view.outputNames?.[selection.output] ?? shortOpaque(selection.output);
-      const candidate = view.candidateNames?.[selection.candidate];
+      const candidate = view.satisfactionNames?.[selection.output];
       lines.push(`  ${status} ${colors.accent(output)}`
         + `${candidate === undefined ? "" : ` ← ${candidate}`}`);
       if (verbose && (output !== selection.output || candidate !== undefined)) {
@@ -454,7 +454,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("narratage doctor")),
       colors.dim("Diagnose one complete declarative Runtime Profile without submitting work."),
       "",
-      "  narratage doctor <runtime-profile.json>",
+      "  narratage doctor <runtime-profile>",
     ],
     plan: [
       colors.accent(colors.strong("narratage plan")),
@@ -479,7 +479,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("narratage runtime")),
       colors.dim("Operate the Worker selected by one Runtime Profile."),
       "",
-      "  narratage runtime up <profile>       validate the Runtime Revision, start services and Worker",
+      "  narratage runtime up <profile>       validate the Runtime Closure, start services and Worker",
       "  narratage runtime status <profile>   inspect Worker, queue capacity and declared services",
       "  narratage runtime logs <profile>     read Worker logs",
       "  narratage runtime down <profile>     stop the owned Worker and external programs",

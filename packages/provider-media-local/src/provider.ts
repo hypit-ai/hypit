@@ -9,8 +9,6 @@ import {
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
   executeTransformMedia,
-  mediaNeedHasContract,
-  mediaOperationContracts,
 } from "@narratage/media-execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@narratage/media-execution";
 import { mediaPipelineCapabilities } from "@narratage/media-pipeline";
@@ -43,10 +41,7 @@ function positiveInteger(value: number, subject: string): number {
 }
 
 function fulfillment(result: MediaOperationResult): EndpointFulfillment {
-  return {
-    value: result.value,
-    metadata: result.metadata,
-  };
+  return { value: result.value };
 }
 
 /**
@@ -63,7 +58,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
   const common = { ffmpegPath, ffprobePath, processTimeoutMs, maxProbeOutputBytes };
   const environment = (context: EndpointInvocationContext): MediaExecutionEnvironment => ({
     ...common,
-    label: "media.local",
     artifacts: {
       get: async (source) => await context.artifacts.get(source.digest),
       open: async (source) => isStreamingArtifactStore(context.artifacts)
@@ -88,7 +82,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
     instance: config.instance ?? "media.local",
     authority: config.authority ?? config.instance ?? "media.local",
     implementation: {
-      locator: "@narratage/provider-media-local/ffmpeg",
       digest: localMediaProviderImplementationDigest,
     },
     configuration: canonicalize(common),
@@ -98,57 +91,48 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.inspect,
         returns: mediaTypes.inspection,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.inspect),
         handler: operation(executeInspectMedia),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.normalize,
         returns: mediaTypes.synchronized,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.normalize),
         handler: operation(executeNormalizeMedia),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.transform,
         returns: artifactTypes.blob,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.transform),
         handler: operation(executeTransformMedia),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.extractAudio,
         returns: artifactTypes.blob,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.extractAudio),
         handler: operation(executeExtractAudio),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.extractFrame,
         returns: artifactTypes.blob,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.extractFrame),
         handler: operation(executeExtractFrame),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.projectSpeechEvidenceAudio,
         returns: speechTypes.evidenceAudio,
-        supports: (need) =>
-          mediaNeedHasContract(need.constraints, mediaOperationContracts.projectSpeechEvidenceAudio),
         handler: operation(executeProjectSpeechEvidenceAudio),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.renderAudio,
         returns: mediaTypes.timelineAudio,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.renderAudio),
         handler: operation(executeRenderTimelineAudio),
       },
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.mux,
         returns: mediaTypes.muxed,
-        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.mux),
         handler: operation(executeMuxProgramMedia),
       },
     ],

@@ -1,19 +1,21 @@
 import {
   isDigest,
-  recordDigest,
   resolveType,
   sealRecord,
-  sealTypeValidationReceipt,
   validateStoredValue,
-  verifyRecord,
   verifyRecordStructure,
 } from "@narratage/core";
 import type {
+  TypeValidatorContext,
+  TypeValidatorHandler,
+  TypeValidatorRegistrar,
+} from "@narratage/component-kit";
+import type {
   Digest,
   ResolvedModuleClosure,
+  ResolvedTypeDeclaration,
   StoredValue,
   TypeRef,
-  TypeValidationReceipt,
   TypedRecord,
 } from "@narratage/protocol";
 
@@ -21,38 +23,15 @@ function typeKey(type: TypeRef): string {
   return `${type.module.name}@${type.module.version}#${type.name}`;
 }
 
-function sameType(left: TypeRef, right: TypeRef): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
-}
-
-export type TypeValidatorContext = {
-  readonly type: TypeRef;
-  readonly value: StoredValue;
-};
-
-export type TypeValidatorHandler = (
-  context: TypeValidatorContext,
-) => void | Promise<void>;
+export type { TypeValidatorContext, TypeValidatorHandler, TypeValidatorRegistrar } from "@narratage/component-kit";
 
 export type TypeValidatorRegistration = {
-  readonly type: TypeRef;
   readonly implementationDigest: Digest;
   readonly handler: TypeValidatorHandler;
 };
 
 export interface TypeValidatorRegistryLike {
   resolve(type: TypeRef): TypeValidatorRegistration | undefined;
-}
-
-/** Mutable package-install seam. Type owners register refinements; Core stays type-agnostic. */
-export interface TypeValidatorRegistrar {
-  register(
-    type: TypeRef,
-    implementationDigest: Digest,
-    handler: TypeValidatorHandler,
-  ): void;
 }
 
 export class TypeValidationError extends Error {
@@ -82,7 +61,7 @@ export class TypeValidatorRegistry implements TypeValidatorRegistryLike, TypeVal
     if (this.#validators.has(key)) {
       throw new TypeValidationError("DUPLICATE_TYPE_VALIDATOR", `${key} validator is already registered`, key);
     }
-    this.#validators.set(key, { type, implementationDigest, handler });
+    this.#validators.set(key, { implementationDigest, handler });
   }
 
   resolve(type: TypeRef): TypeValidatorRegistration | undefined {
@@ -90,25 +69,16 @@ export class TypeValidatorRegistry implements TypeValidatorRegistryLike, TypeVal
   }
 }
 
-export async function validateValue(
-  closure: ResolvedModuleClosure,
+async function refineValue(
+  declaration: ResolvedTypeDeclaration,
   type: TypeRef,
   value: StoredValue,
   registry: TypeValidatorRegistryLike,
-): Promise<TypeValidationReceipt | undefined> {
-  const declaration = resolveType(closure, type);
-  validateStoredValue(value, declaration.schema, `$validation.${typeKey(type)}`);
-  if (declaration.validator === undefined) return undefined;
+): Promise<void> {
+  if (declaration.validator === undefined) return;
   const registration = registry.resolve(type);
   if (registration === undefined) {
     throw new TypeValidationError("MISSING_TYPE_VALIDATOR", `${typeKey(type)} validator is not registered`, typeKey(type));
-  }
-  if (!sameType(registration.type, type)) {
-    throw new TypeValidationError(
-      "TYPE_VALIDATOR_REGISTRATION_MISMATCH",
-      `${typeKey(type)} registry returned another nominal Type`,
-      typeKey(type),
-    );
   }
   if (registration.implementationDigest !== declaration.validator.implementation.digest) {
     throw new TypeValidationError(
@@ -126,11 +96,17 @@ export async function validateValue(
       typeKey(type),
     );
   }
-  return sealTypeValidationReceipt({
-    type,
-    recordDigest: recordDigest(type, value),
-    validatorDigest: registration.implementationDigest,
-  });
+}
+
+export async function validateValue(
+  closure: ResolvedModuleClosure,
+  type: TypeRef,
+  value: StoredValue,
+  registry: TypeValidatorRegistryLike,
+): Promise<void> {
+  const declaration = resolveType(closure, type);
+  validateStoredValue(value, declaration.schema, `$validation.${typeKey(type)}`);
+  await refineValue(declaration, type, value, registry);
 }
 
 export async function admitRecord(
@@ -140,17 +116,11 @@ export async function admitRecord(
 ): Promise<TypedRecord> {
   const {
     digest: _digest,
-    validation: _validation,
     ...draft
   } = record;
-  const unvalidated = sealRecord(draft);
-  verifyRecordStructure(closure, unvalidated);
-  const validation = await validateValue(closure, record.type, record.value, registry);
-  const admitted = sealRecord({
-    ...draft,
-    ...(validation === undefined ? {} : { validation }),
-  });
-  verifyRecord(closure, admitted);
+  const admitted = sealRecord(draft);
+  const declaration = verifyRecordStructure(closure, admitted);
+  await refineValue(declaration, record.type, record.value, registry);
   return admitted;
 }
 

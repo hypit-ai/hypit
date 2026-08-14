@@ -9,7 +9,6 @@ export type NanoBananaModel = typeof nanoBananaModels[number];
 
 function nanoBananaPortTable(model: NanoBananaModel): GenerationPortTable {
   return sealGenerationPortTable({
-    contract: "svml.generation-ports@1",
     model,
     result: "image",
     ports: [
@@ -71,17 +70,17 @@ const surface = (
   mode: "structured" as const,
   outputs: [endpoint!.draftType, endpoint!.mediaBindings.images!.type],
   implementation: {
-    kind: "trusted-frontend-surface" as const,
-    locator: `@narratage/nano-banana/${name}-surface`,
     digest,
   },
 });
-export const nanoBananaManifest = {
-  ...nanoBananaBaseDefinition.manifest,
-  surfaces: [
+
+export const nanoBananaMarkupSurfaces = [
     surface("image", "Image", nanoBananaEndpoints.v2!, nanoBananaSurfaceImplementationDigests.image),
     surface("pro-image", "ProImage", nanoBananaEndpoints.pro!, nanoBananaSurfaceImplementationDigests.proImage),
-  ],
+  ] as const;
+
+export const nanoBananaManifest = {
+  ...nanoBananaBaseDefinition.manifest,
 };
 export const nanoBananaManifestDigest = digestOf(nanoBananaManifest);
 export const nanoBananaDefinition = {

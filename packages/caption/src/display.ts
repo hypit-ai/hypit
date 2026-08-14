@@ -10,13 +10,13 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 export function assertCaptionDisplaySequence(value: CaptionDisplaySequence): void {
-  assert(value.contract === "svml.caption-display-sequence@1" && value.id.length > 0,
+  assert(value.id.length > 0,
     "CaptionDisplaySequence identity is invalid");
   assert(value.atoms.length > 0 && value.words.length > 0,
     "CaptionDisplaySequence is empty");
   const words = new Map<string, CaptionDisplayWord>();
-  value.words.forEach((word, index) => {
-    assert(word.id.length > 0 && !words.has(word.id) && word.index === index,
+  value.words.forEach((word) => {
+    assert(word.id.length > 0 && !words.has(word.id),
       "Caption display-word identity is invalid or repeated");
     assert(word.atomId.length > 0 && word.segmentId.length > 0 && word.turnId.length > 0 && word.text.length > 0,
       `Caption display word ${word.id} context is invalid`);
@@ -24,8 +24,8 @@ export function assertCaptionDisplaySequence(value: CaptionDisplaySequence): voi
   });
   const planned: string[] = [];
   const atomIds = new Set<string>();
-  value.atoms.forEach((atom, index) => {
-    assert(atom.id.length > 0 && !atomIds.has(atom.id) && atom.index === index,
+  value.atoms.forEach((atom) => {
+    assert(atom.id.length > 0 && !atomIds.has(atom.id),
       "Caption Atom identity is invalid or repeated");
     atomIds.add(atom.id);
     assert(atom.segmentId.length > 0 && atom.turnId.length > 0 && atom.wordIds.length > 0,
@@ -48,8 +48,7 @@ export function assertCaptionCorrespondence(
   sequence: CaptionDisplaySequence,
 ): void {
   assertCaptionDisplaySequence(sequence);
-  assert(value.contract === "svml.caption-correspondence@1"
-    && value.displaySequenceId === sequence.id,
+  assert(value.displaySequenceId === sequence.id,
   "CaptionCorrespondence belongs to another display sequence");
   assert(value.atoms.length === sequence.atoms.length,
     "CaptionCorrespondence does not cover the exact Atom sequence");
@@ -70,11 +69,11 @@ export function assertCaptionDisplayWordSubset(
   sequence: CaptionDisplaySequence,
 ): void {
   assertCaptionDisplaySequence(sequence);
-  assert(value.contract === "svml.caption-display-word-subset@1" && value.id.length > 0,
+  assert(value.id.length > 0,
     "CaptionDisplayWordSubset identity is invalid");
   assert(value.sequenceId === sequence.id,
     `CaptionDisplayWordSubset ${value.id} belongs to another display sequence`);
-  const positions = new Map(sequence.words.map((word) => [word.id, word.index]));
+  const positions = new Map(sequence.words.map((word, index) => [word.id, index]));
   let previous = -1;
   const seen = new Set<string>();
   for (const id of value.wordIds) {
@@ -101,7 +100,7 @@ export function captionWordsForRole(
   const normalized = role.trim();
   assert(normalized.length > 0, "Caption Role is empty");
   return {
-    contract: "svml.caption-display-word-subset@1",
+
     id: `role:${normalized}`,
     sequenceId: sequence.id,
     wordIds: sequence.words.filter((word) => word.role === normalized).map((word) => word.id),

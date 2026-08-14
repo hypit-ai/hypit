@@ -139,7 +139,6 @@ export function assertMediaVisualSource(value: MediaVisualSource, label: string)
 }
 
 export function assertMediaSampleLayerSpec(value: MediaSampleLayerSpec): void {
-  assert(value.contract === "svml.media-sample-layer-spec@1", "Unsupported MediaSampleLayerSpec contract.");
   assertMediaIdentity(value.id, "MediaSampleLayerSpec.id");
   unit(value.appearance.opacity, "MediaSampleLayerSpec.appearance.opacity");
   const filter = value.appearance.filter;
@@ -159,7 +158,6 @@ export function sealMediaSampleLayerSpec(value: MediaSampleLayerSpec): MediaSamp
 }
 
 export function assertMediaPaintLayerSpec(value: MediaPaintLayerSpec): void {
-  assert(value.contract === "svml.media-paint-layer-spec@1", "Unsupported MediaPaintLayerSpec contract.");
   assertMediaIdentity(value.id, "MediaPaintLayerSpec.id");
   assertMediaPaint(value.paint, "MediaPaintLayerSpec.paint");
   unit(value.opacity, "MediaPaintLayerSpec.opacity");
@@ -171,11 +169,11 @@ export function sealMediaPaintLayerSpec(value: MediaPaintLayerSpec): MediaPaintL
 }
 
 export function createMediaLayerSet(): MediaLayerSet {
-  return { contract: "svml.media-layer-set@1", layers: [] };
+  return { layers: [] };
 }
 
 export function assertMediaLayerSet(value: MediaLayerSet): void {
-  assert(value.contract === "svml.media-layer-set@1" && Array.isArray(value.layers), "MediaLayerSet is invalid.");
+  assert(Array.isArray(value.layers), "MediaLayerSet is invalid.");
   const ids = new Set<string>();
   for (const layer of value.layers) {
     assertMediaIdentity(layer.id, "Media layer id");
@@ -206,7 +204,7 @@ export function assertMediaLayerSet(value: MediaLayerSet): void {
       }
     }
     assertMediaSampleLayerSpec({
-      contract: "svml.media-sample-layer-spec@1",
+
       id: layer.id,
       ...(layer.trim === undefined ? {} : { trim: layer.trim }),
       ...(layer.occupancy === undefined ? {} : { occupancy: layer.occupancy }),
@@ -219,7 +217,7 @@ export function assertMediaLayerSet(value: MediaLayerSet): void {
 function append(set: MediaLayerSet, layer: MediaLayerProgram): MediaLayerSet {
   assertMediaLayerSet(set);
   assert(!set.layers.some((item) => item.id === layer.id), `MediaLayerSet already contains ${layer.id}.`);
-  const result = { contract: "svml.media-layer-set@1" as const, layers: [...set.layers, layer] };
+  const result = { layers: [...set.layers, layer] };
   assertMediaLayerSet(result);
   return canonicalize(result) as unknown as MediaLayerSet;
 }
@@ -273,7 +271,6 @@ export function appendTimedMediaLayer(
     kind: "timed",
     artifact: structuredClone(media.visual.artifact),
     extent: {
-      contract: "svml.intrinsic-extent@1",
       widthPx: media.visual.width,
       heightPx: media.visual.height,
     },
@@ -306,6 +303,6 @@ export function appendSurfaceMediaLayer(
   return append(set, sampleLayer({
     kind: "surface",
     surface: structuredClone(surface),
-    extent: { contract: "svml.intrinsic-extent@1", widthPx: surface.width, heightPx: surface.height },
+    extent: { widthPx: surface.width, heightPx: surface.height },
   }, fit, effectiveSpec));
 }

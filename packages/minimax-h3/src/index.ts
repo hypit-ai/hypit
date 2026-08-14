@@ -15,7 +15,6 @@ export const minimaxH3ModuleRef = { name: "@narratage/minimax-h3", version: "1" 
  * spelling is MiniMax's, not any gateway's.
  */
 export const minimaxH3Ports: GenerationPortTable = sealGenerationPortTable({
-  contract: "svml.generation-ports@1",
   model: "minimax-h3",
   result: "video",
   ports: [
@@ -81,15 +80,17 @@ const declaration = (
 ) => ({
   name, tag, mode: "structured" as const,
   outputs: [endpoint.draftType, ...bindings.map((port) => endpoint.mediaBindings[port]!.type)],
-  implementation: { kind: "trusted-frontend-surface" as const, locator: `@narratage/minimax-h3/${name}-surface`, digest },
+  implementation: { digest },
 });
-export const minimaxH3Manifest = {
-  ...minimaxH3BaseDefinition.manifest,
-  surfaces: [
+
+export const minimaxH3MarkupSurfaces = [
     declaration("text-video", "TextVideo", minimaxH3SurfaceImplementationDigests.textVideo),
     declaration("frame-video", "FrameVideo", minimaxH3SurfaceImplementationDigests.frameVideo, ["firstFrame", "lastFrame"]),
     declaration("reference-video", "ReferenceVideo", minimaxH3SurfaceImplementationDigests.referenceVideo, ["referenceImage", "referenceVideo", "referenceAudio"]),
-  ],
+  ] as const;
+
+export const minimaxH3Manifest = {
+  ...minimaxH3BaseDefinition.manifest,
 };
 export const minimaxH3ManifestDigest = digestOf(minimaxH3Manifest);
 export const minimaxH3Definition = {

@@ -23,9 +23,27 @@ export const imageTransformImplementationDigests = {
 } as const;
 
 export const imageTransformProgramSchema: ValueSchema = { kind: "object", fields: {
-  contract: { schema: { kind: "literal", value: "svml.image-transform-program@1" } },
   operations: { schema: { kind: "array", minItems: 1, items: rasterTransformOperationSchema } },
 } };
+
+export const imageTransformMarkupSurfaces = [{
+    name: "program",
+    tag: "Program",
+    mode: "structured",
+    outputs: [imageTransformTypes.program],
+    implementation: {
+      digest: imageTransformImplementationDigests.programSurface,
+    },
+  }, {
+    name: "transform",
+    tag: "Transform",
+    mode: "structured",
+    outputs: [artifactTypes.blob],
+    implementation: {
+      digest: imageTransformImplementationDigests.transformSurface,
+    },
+  }] as const;
+
 
 export const imageTransformManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -36,36 +54,12 @@ export const imageTransformManifest: ModuleManifest = {
     name: imageTransformTypes.program.name,
     schema: imageTransformProgramSchema,
     validator: {
-      abi: "svml.type-validator@1",
       implementation: {
-        kind: "registered",
-        locator: "@narratage/image-transform/validate-program",
         digest: imageTransformImplementationDigests.validator,
       },
     },
   }],
   capabilities: [],
-  surfaces: [{
-    name: "program",
-    tag: "Program",
-    mode: "structured",
-    outputs: [imageTransformTypes.program],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@narratage/image-transform/program-surface",
-      digest: imageTransformImplementationDigests.programSurface,
-    },
-  }, {
-    name: "transform",
-    tag: "Transform",
-    mode: "structured",
-    outputs: [artifactTypes.blob],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@narratage/image-transform/transform-surface",
-      digest: imageTransformImplementationDigests.transformSurface,
-    },
-  }],
   producers: [{
     name: imageTransformProducers.request.name,
     inputs: [
@@ -79,8 +73,6 @@ export const imageTransformManifest: ModuleManifest = {
       returns: artifactTypes.blob,
     }],
     implementation: {
-      kind: "registered",
-      locator: "@narratage/image-transform/request-image-transform",
       digest: imageTransformImplementationDigests.request,
     },
   }],

@@ -1,21 +1,16 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { SpeechBasisSegment } from "@narratage/speech";
-import type { AlignedTranscriptSegment } from "@narratage/speech-evidence";
+import { sealAlignedTranscriptEvidence, speechEvidenceTypes } from "@narratage/speech-evidence";
+import type { AlignedTranscriptEvidence, SpeechTranscriptPassage } from "@narratage/speech-evidence";
 import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CanonicalValue } from "@narratage/protocol";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import {
-  sealWhisperXAlignmentEvidence,
   whisperXCapabilities,
-  whisperXTypes,
 } from "@narratage/whisperx";
-import type {
-  WhisperXAlignmentEvidence,
-  WhisperXAlignmentRequest,
-} from "@narratage/whisperx";
+import type { WhisperXAlignmentRequest } from "@narratage/whisperx";
 
 export const localWhisperXProviderModuleRef = {
   name: "@narratage/provider-whisperx-local",
@@ -80,13 +75,10 @@ function alignmentRequest(value: CanonicalValue): WhisperXAlignmentRequest {
   assert(value !== null && typeof value === "object" && !Array.isArray(value),
     "WhisperX alignment request must be an object");
   const item = value as unknown as WhisperXAlignmentRequest;
-  assert(item.contract === "svml.whisperx-alignment-request@1"
-    && item.audio?.kind === "blob"
+  assert(item.audio?.kind === "blob"
     && item.audio.mediaType === "audio/wav"
     && Number.isSafeInteger(item.sampleFrames)
-    && item.sampleFrames > 0
-    && item.segments.length > 0
-    && item.wordAlignment === true,
+    && item.sampleFrames > 0,
   "WhisperX alignment request is invalid");
   return item;
 }
@@ -127,47 +119,33 @@ function assertCanonicalEvidenceWav(bytes: Uint8Array, sampleFrames: number): vo
   assert(dataBytes === sampleFrames * 2, "WhisperX evidence sample count differs from its contract");
 }
 
-function sourceSegmentFor(
-  segments: readonly SpeechBasisSegment[],
-  start: number | undefined,
-  end: number | undefined,
-  fallbackStart: number | undefined,
-  fallbackEnd: number | undefined,
-): SpeechBasisSegment {
-  const point = start !== undefined && end !== undefined
-    ? (start + end) / 2
-    : fallbackStart !== undefined && fallbackEnd !== undefined ? (fallbackStart + fallbackEnd) / 2 : 0;
-  return segments.find((segment, index) => point >= segment.startSec
-    && (point < segment.endSec || index === segments.length - 1)) ?? segments[0]!;
+function sampleWindow(
+  startSec: unknown,
+  endSec: unknown,
+  sampleFrames: number,
+): { readonly startSample: number; readonly endSampleExclusive: number } | undefined {
+  if (!finite(startSec) || !finite(endSec) || startSec < 0 || endSec < startSec) return undefined;
+  const startSample = Math.round(startSec * 16_000);
+  const endSampleExclusive = Math.round(endSec * 16_000);
+  if (!Number.isSafeInteger(startSample) || !Number.isSafeInteger(endSampleExclusive)
+    || startSample > sampleFrames || endSampleExclusive > sampleFrames) return undefined;
+  return { startSample, endSampleExclusive };
 }
 
-/**
- * Lower service-specific pauses/segments onto authored structural Segments without inventing time.
- * A word crossing a structural cut keeps its lexical evidence but loses its per-word time; the
- * downstream locator may derive that uncertainty explicitly instead of receiving a clipped lie.
- */
+/** Lower WhisperX's wire-level seconds once into exact 16 kHz evidence-sample boundaries. */
 export function interpretWhisperXResponse(
   response: WhisperXServiceResponse,
-  sourceSegments: readonly SpeechBasisSegment[],
-  durationSec: number,
-): readonly AlignedTranscriptSegment[] {
-  assert(sourceSegments.length > 0, "WhisperX request has no source Segment");
+  sampleFrames: number,
+): readonly SpeechTranscriptPassage[] {
+  positiveInteger(sampleFrames, "WhisperX evidence sample count");
   assert(Array.isArray(response.segments), "WhisperX response has no Segment array");
-  const buckets = new Map(sourceSegments.map((segment) => [segment.segmentId, [] as Array<{
-    readonly text: string;
-    readonly startSec?: number;
-    readonly endSec?: number;
-    readonly score?: number;
-  }>]));
-  const previousEnd = new Map(sourceSegments.map((segment) => [segment.segmentId, segment.startSec]));
-
-  for (const rawSegmentValue of response.segments) {
+  return response.segments.map((rawSegmentValue): SpeechTranscriptPassage => {
     assert(rawSegmentValue !== null && typeof rawSegmentValue === "object" && !Array.isArray(rawSegmentValue),
       "WhisperX response Segment is invalid");
     const rawSegment = rawSegmentValue as RawSegment;
-    const segmentStart = finite(rawSegment.start) ? rawSegment.start : undefined;
-    const segmentEnd = finite(rawSegment.end) ? rawSegment.end : undefined;
+    const passageWindow = sampleWindow(rawSegment.start, rawSegment.end, sampleFrames);
     assert(Array.isArray(rawSegment.words), "WhisperX response Segment has no Word array");
+    const words: Array<SpeechTranscriptPassage["words"][number]> = [];
     for (const rawWordValue of rawSegment.words) {
       assert(rawWordValue !== null && typeof rawWordValue === "object" && !Array.isArray(rawWordValue),
         "WhisperX response Word is invalid");
@@ -176,43 +154,26 @@ export function interpretWhisperXResponse(
         ? rawWord.text.trim()
         : typeof rawWord.word === "string" ? rawWord.word.trim() : "";
       if (text.length === 0) continue;
-      const start = finite(rawWord.start) ? rawWord.start : undefined;
-      const end = finite(rawWord.end) ? rawWord.end : undefined;
-      const source = sourceSegmentFor(sourceSegments, start, end, segmentStart, segmentEnd);
-      const prior = previousEnd.get(source.segmentId)!;
-      // A word whose timing cannot be proved keeps its text and loses its clock,
-      // exactly as the service already does for words its aligner could not place.
-      const timingIsProvable = start !== undefined && end !== undefined
-        && start >= 0
-        && end >= start
-        && end <= durationSec + 1e-3
-        && start >= source.startSec - 1e-6
-        && end <= source.endSec + 1e-6
-        && start >= prior - 1e-6;
+      const wordWindow = sampleWindow(rawWord.start, rawWord.end, sampleFrames);
       const score = finite(rawWord.score) && rawWord.score >= 0 && rawWord.score <= 1
         ? rawWord.score
         : undefined;
-      buckets.get(source.segmentId)!.push({
+      words.push({
         text,
-        ...(timingIsProvable ? { startSec: start, endSec: end } : {}),
+        ...wordWindow,
         ...(score === undefined ? {} : { score }),
       });
-      if (timingIsProvable) previousEnd.set(source.segmentId, end);
     }
-  }
-
-  return sourceSegments.map((segment) => ({
-    sourceSegmentId: segment.segmentId,
-    startSec: segment.startSec,
-    endSec: segment.endSec,
-    words: buckets.get(segment.segmentId)!,
-    chars: [],
-  }));
+    return {
+      ...passageWindow,
+      words,
+      chars: [],
+    };
+  });
 }
 
 async function limitedJson(response: Response, maxBytes: number, subject: string): Promise<{
   readonly value: unknown;
-  readonly bytes: Uint8Array;
 }> {
   const reader = response.body?.getReader();
   let bytes: Uint8Array;
@@ -245,17 +206,14 @@ async function limitedJson(response: Response, maxBytes: number, subject: string
   }
   assert(response.ok, `${subject} failed with HTTP ${response.status}: ${Buffer.from(bytes).toString("utf8").slice(0, 500)}`);
   try {
-    return { value: JSON.parse(Buffer.from(bytes).toString("utf8")), bytes };
+    return { value: JSON.parse(Buffer.from(bytes).toString("utf8")) };
   } catch {
     throw new Error(`${subject} returned invalid JSON`);
   }
 }
 
-function result(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfillment {
-  return {
-    value: { kind: "inline", value },
-    metadata,
-  };
+function result(value: CanonicalValue): EndpointFulfillment {
+  return { value: { kind: "inline", value } };
 }
 
 export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderOptions) {
@@ -285,7 +243,6 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
     instance: config.instance ?? "whisperx.local",
     authority: config.authority ?? config.instance ?? "whisperx.local",
     implementation: {
-      locator: "@narratage/provider-whisperx-local/svml-service",
       digest: localWhisperXProviderImplementationDigest,
     },
     configuration: canonicalize({
@@ -304,10 +261,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
     capabilities: [{
       lifecycle: "immediate" as const,
       capability: whisperXCapabilities.alignment,
-      returns: whisperXTypes.alignmentEvidence,
-      supports: (need) => need.constraints !== null && typeof need.constraints === "object"
-        && !Array.isArray(need.constraints)
-        && (need.constraints as { readonly contract?: unknown }).contract === "svml.whisperx-alignment-request@1",
+      returns: speechEvidenceTypes.alignedTranscript,
       handler: async (context: EndpointInvocationContext) => {
         const request = alignmentRequest(context.need.constraints);
         const audio = await context.artifacts.get(request.audio.digest);
@@ -357,26 +311,11 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
           assert(raw.value !== null && typeof raw.value === "object" && !Array.isArray(raw.value),
             "WhisperX transcription response is invalid");
           const response = raw.value as WhisperXServiceResponse;
-          const segments = interpretWhisperXResponse(response, request.segments, request.durationSec);
-          const rawArtifact = await context.artifacts.put(raw.bytes, "application/json");
-          const evidence: WhisperXAlignmentEvidence = sealWhisperXAlignmentEvidence({
-            contract: "svml.whisperx-alignment-evidence@1",
-            durationSec: request.durationSec,
-            segments,
+          const passages = interpretWhisperXResponse(response, request.sampleFrames);
+          const evidence: AlignedTranscriptEvidence = sealAlignedTranscriptEvidence({
+            passages,
           });
-          return result(canonicalize(evidence), canonicalize({
-            provider: "whisperx.local",
-            model: expectedModel,
-            device: expectedDevice,
-            compute: expectedCompute,
-            batchSize: expectedBatchSize,
-            serviceVersion: expectedServiceVersion,
-            whisperxVersion: expectedWhisperXVersion,
-            punktTabDigest: expectedPunktTabDigest,
-            rawEvidenceArtifact: rawArtifact,
-            language: typeof response.language === "string" ? response.language : request.language ?? "unknown",
-            inputTranscoded: false,
-          }));
+          return result(canonicalize(evidence));
         } finally {
           await rm(work, { recursive: true, force: true }).catch(() => {});
         }

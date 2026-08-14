@@ -15,7 +15,6 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const captionGeminiComponent = {
-  name: "@narratage/caption-gemini",
   producers: [
     {
       producer: captionGeminiProducers.compile,

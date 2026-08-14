@@ -3,10 +3,14 @@
 Host ABI for turning locked Runtime Profile data into explicitly selected Endpoint and Runtime
 service packages.
 
-One adapter has a unique `use` name and exactly one kind:
+One adapter is addressed by `(kind, use)`:
 
 - `endpoint` constructs an external capability Endpoint;
 - `runtime-service` constructs a Scheduler, Store or credential service package.
+
+The two kinds have separate Host ABIs, so an Endpoint and Runtime service may intentionally share
+one `use` spelling. A physical package advertises the logical name through its Host-facet `offers`;
+the Runtime Profile never has to name that package once the inventory binds the offer.
 
 An Endpoint adapter has one pure `activate()` declaration. It parses the selected configuration once
 and returns the Endpoint package, optional diagnostics and an optional warm external service. The

@@ -4,41 +4,31 @@ import {
   decodeExtractAudioSurface,
   decodeExtractFrameSurface,
   decodeTransformMediaSurface,
-  mediaOperationSurfaceImplementationDigests,
   mediaPipelineComponent,
   mediaPipelineManifest,
   mediaPipelineModuleRef,
-  synchronizedMediaSurfaceImplementationDigest,
+  mediaPipelineMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/media-pipeline",
-  modules: [{ manifest: mediaPipelineManifest, specifiers: [mediaPipelineModuleRef.name, `${mediaPipelineModuleRef.name}@1`] }],
+  modules: [{ manifest: mediaPipelineManifest }],
   components: [mediaPipelineComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
     module: mediaPipelineModuleRef,
-    surface: "synchronized-media",
-    mode: "structured",
-    implementationDigest: synchronizedMediaSurfaceImplementationDigest,
+    declaration: mediaPipelineMarkupSurfaces.find((item) => item.name === "synchronized-media")!,
     handler: decodeSynchronizedMediaSurface,
   }), createMarkupSurfaceHostFacet({
     module: mediaPipelineModuleRef,
-    surface: "transform-media",
-    mode: "structured",
-    implementationDigest: mediaOperationSurfaceImplementationDigests.transform,
+    declaration: mediaPipelineMarkupSurfaces.find((item) => item.name === "transform-media")!,
     handler: decodeTransformMediaSurface,
   }), createMarkupSurfaceHostFacet({
     module: mediaPipelineModuleRef,
-    surface: "extract-audio",
-    mode: "structured",
-    implementationDigest: mediaOperationSurfaceImplementationDigests.extractAudio,
+    declaration: mediaPipelineMarkupSurfaces.find((item) => item.name === "extract-audio")!,
     handler: decodeExtractAudioSurface,
   }), createMarkupSurfaceHostFacet({
     module: mediaPipelineModuleRef,
-    surface: "extract-frame",
-    mode: "structured",
-    implementationDigest: mediaOperationSurfaceImplementationDigests.extractFrame,
+    declaration: mediaPipelineMarkupSurfaces.find((item) => item.name === "extract-frame")!,
     handler: decodeExtractFrameSurface,
   })],
 };

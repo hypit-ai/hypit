@@ -10,7 +10,7 @@ The first implementation contains:
 - static Runtime Module facets, sealed Profile resolution and a content-addressed Runtime Closure;
 - exact Endpoint capability/return bindings and implementation digests;
 - `BuildStore` and `OperationStore` ports with compare-and-swap in-memory references;
-- a recoverable Endpoint lifecycle that journals before `start`, checkpoints `pending`,
+- a recoverable Endpoint lifecycle that creates an Operation before `start`, checkpoints `pending`,
   calls `resume` after a restart, and records wake, retry, failure and cancellation state;
 - a narrow `CredentialStore`/`CredentialRef` port that keeps secrets out of framework facts.
 - one host-neutral `RuntimeServicePackage` ABI that binds configured Scheduler, BuildStore,
@@ -31,8 +31,8 @@ An Endpoint's vendor-side job system remains internal and cannot advance another
 content-addressed attempt identity, pending checkpoint and terminal result. The Operation id is also
 the stable key supplied to an upstream system when it supports idempotent submission.
 Changing the Build, Command, Endpoint implementation or Runtime Closure changes that identity.
-Nothing in the Operation journal becomes an accepted domain fact until an Endpoint completion is
-validated and reduced by Core. If a process stops after completion is journaled but before Core
+Nothing in the OperationStore becomes an accepted domain fact until an Endpoint completion is
+validated and reduced by Core. If a process stops after completion is persisted but before Core
 accepts its Event, the next run reconstructs the same Event from the stored completion and does not
 call the Endpoint again.
 

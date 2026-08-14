@@ -59,7 +59,6 @@ function promptContent(request: Pick<CaptionGeminiRequest, "runs">): string {
 
 function requestContent(value: CaptionGeminiRequest) {
   return {
-    contract: "svml.caption-gemini-request@1" as const,
     model: value.model,
     runs: value.runs.map((run) => ({
       id: run.id,
@@ -115,7 +114,6 @@ export function compileCaptionGeminiRequest(
     };
   });
   const base = {
-    contract: "svml.caption-gemini-request@1" as const,
     model: program.model,
     runs,
   };
@@ -129,7 +127,6 @@ export function compileCaptionGeminiRequest(
 export function verifyCaptionGeminiRequest(value: unknown): asserts value is CaptionGeminiRequest {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "Caption Gemini request must be an object");
   const request = value as CaptionGeminiRequest;
-  assert(request.contract === "svml.caption-gemini-request@1", "Caption Gemini request contract is invalid");
   assert(request.model === "gemini-2.5-flash" || request.model === "gemini-3.1-pro-preview", "Caption Gemini request model is unsupported");
   assert(request.temperature === 0.2, "Caption Gemini temperature is not the package-owned value");
   assert(Array.isArray(request.runs) && request.runs.length > 0, "Caption Gemini request runs are empty");

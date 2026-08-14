@@ -134,7 +134,6 @@ test("Stack makes exact CJK and emoji fallback a single reusable author edge", a
     range,
   });
   const stack = result.value as unknown as FontStackRef;
-  assert.equal(stack.contract, "svml.font-stack@1");
   assert.equal(stack.faces.length, 3);
   assert.equal(stack.faces[0]!.weight, 700);
   assert.equal(stack.faces[1]!.sources.length, 101);

@@ -23,7 +23,6 @@ export const speechAlignmentManifest: ModuleManifest = {
   ],
   types: [],
   capabilities: [],
-  surfaces: [],
   producers: [{
     name: speechAlignmentProducers.locate.name,
     inputs: [
@@ -34,8 +33,6 @@ export const speechAlignmentManifest: ModuleManifest = {
     outputs: [{ name: "map", type: semanticMapTypes.complete }],
     needs: [],
     implementation: {
-      kind: "registered",
-      locator: "@narratage/speech-alignment/locate",
       digest: speechLocatorDigest,
     },
   }],

@@ -14,7 +14,6 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
  * can use this ordinary downstream Fragment.
  */
 export const hyperframesDocumentFragment = sealGraphFragment({
-  name: "@narratage/hyperframes/document@1",
   inputs: [
     { name: "composition", type: compositionTypes.composition },
     { name: "space", type: programSpaceTypes.programSpace },

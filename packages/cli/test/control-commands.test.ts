@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { LocalCredentialControl, LocalRuntimeControl } from "@narratage/local";
-
 import type { CliDistribution } from "../src/distribution.js";
 import { runCli } from "../src/main.js";
+import type { CliCredentialControl, CliRuntimeArchiveControl } from "../src/runtime-port.js";
 
 test("queue opens durable control without constructing execution Providers", async () => {
   const calls: string[] = [];
@@ -16,9 +15,10 @@ test("queue opens durable control without constructing execution Providers", asy
     async close() {
       calls.push("control.close");
     },
-  } as unknown as LocalRuntimeControl;
+  } as unknown as CliRuntimeArchiveControl;
   const distribution = {
-    createRuntimeControlFromConfig: async () => {
+    runtimeProfileRevision: async () => "test-revision",
+    createRuntimeArchiveFromConfig: async () => {
       calls.push("control.create");
       return control;
     },
@@ -51,7 +51,11 @@ test("queue opens durable control without constructing execution Providers", asy
 });
 
 test("command options fail closed instead of being silently ignored", async () => {
-  const distribution = {} as CliDistribution;
+  const distribution = {
+    createRuntimeArchiveFromConfig: async (path: string) => {
+      throw new Error(`profile delegated: ${path}`);
+    },
+  } as unknown as CliDistribution;
   const io = { write() {} };
   await assert.rejects(
     async () => await runCli([
@@ -75,7 +79,7 @@ test("command options fail closed instead of being silently ignored", async () =
     async () => await runCli([
       "queue", "--runtime", "/tmp/svml.runtime.ts",
     ], io, distribution),
-    /CLI Runtime Profiles are declarative JSON files/u,
+    /profile delegated: .*svml\.runtime\.ts/u,
   );
 });
 
@@ -95,7 +99,7 @@ test("auth opens only one Endpoint credential control, never the execution Runti
       }];
     },
     async close() { calls.push("credentials.close"); },
-  } as unknown as LocalCredentialControl;
+  } as unknown as CliCredentialControl;
   const distribution = {
     createRuntimeCredentialsFromConfig: async (_path: string, endpoint: string) => {
       calls.push(`credentials.create:${endpoint}`);
@@ -136,7 +140,7 @@ test("auth login rejects a read-only CredentialStore before asking for a secret"
       }];
     },
     async close() { closed = true; },
-  } as unknown as LocalCredentialControl;
+  } as unknown as CliCredentialControl;
   const distribution = {
     createRuntimeCredentialsFromConfig: async () => credentials,
   } as unknown as CliDistribution;

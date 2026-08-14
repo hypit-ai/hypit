@@ -49,7 +49,7 @@ function normalizedField(field: CaptionFieldDeclaration): CaptionFieldDeclaratio
 
 function styleContent(value: CaptionStyleIntent): CaptionStyleIntent {
   return canonicalize({
-    contract: "svml.caption-style@1",
+
     id: value.id,
     planning: {
       cue: {
@@ -73,7 +73,7 @@ export function sealCaptionStyle(value: CaptionStyleIntent): CaptionStyleIntent 
 }
 
 export function assertCaptionStyle(value: CaptionStyleIntent): void {
-  assert(value.contract === "svml.caption-style@1" && ID.test(value.id), "Caption Style identity is invalid");
+  assert(ID.test(value.id), "Caption Style identity is invalid");
   const cue = value.planning.cue;
   assert(Number.isSafeInteger(cue.minimumWords) && cue.minimumWords > 0,
     `Caption Style ${value.id} Cue minimum is invalid`);
@@ -114,11 +114,11 @@ export function sealCaptionProgram(value: CaptionProgram): CaptionProgram {
 }
 
 export function assertCaptionProgram(value: CaptionProgram): void {
-  assert(value.contract === "svml.caption-program@1" && ID.test(value.id), "Caption Program identity is invalid");
+  assert(ID.test(value.id), "Caption Program identity is invalid");
   assert(value.displaySequenceId.length > 0 && value.runs.length > 0 && value.styles.length > 0,
     "Caption Program is empty");
   const styles = new Map(value.styles.map((style) => [style.id, style]));
-  assert(styles.size === value.styles.length && styles.has(value.defaultStyleId), "Caption Program styles are invalid");
+  assert(styles.size === value.styles.length, "Caption Program styles are invalid");
   value.styles.forEach(assertCaptionStyle);
   const families = new Set(value.styles.map((style) => style.rendering.family));
   assert(families.size === 1, "One Caption Program must use one Style rendering family");
@@ -128,6 +128,8 @@ export function assertCaptionProgram(value: CaptionProgram): void {
   assert(new Set(planned).size === planned.length, "Caption Program runs repeat a display word");
   assert(value.runs.every((run) => styles.has(run.styleId) && run.wordIds.length > 0),
     "Caption Program run style is invalid");
+  assert(new Set(value.runs.map((run) => run.styleId)).size === value.styles.length,
+    "Caption Program carries an unused Style");
   assert(Array.isArray(value.mutedWordIds)
     && value.mutedWordIds.every((wordId) => typeof wordId === "string" && wordId.length > 0)
     && new Set(value.mutedWordIds).size === value.mutedWordIds.length,
@@ -142,7 +144,7 @@ export function assertCaptionProgramForDisplay(value: CaptionProgram, sequence: 
     && value.runs.flatMap((run) => run.wordIds).join("\0") === sequence.words.map((word) => word.id).join("\0"),
   "Caption Program does not partition its CaptionDisplaySequence exactly once and in order");
   assertCaptionDisplayWordSubset({
-    contract: "svml.caption-display-word-subset@1",
+
     id: `${value.id}:mute`,
     sequenceId: sequence.id,
     wordIds: value.mutedWordIds,
@@ -212,11 +214,10 @@ export function resolveCaptionProgram(
     }
   }
   const program = sealCaptionProgram({
-    contract: "svml.caption-program@1",
+
     id,
     displaySequenceId: sequence.id,
-    defaultStyleId: defaultStyle.id,
-    styles: [...styles.values()],
+    styles: [...styles.values()].filter((style) => assignments.some((assignment) => assignment.styleId === style.id)),
     runs: runs.map(({ turnId: _turn, segmentId: _segment, ...run }) => run),
     mutedWordIds: sequence.words
       .filter((word) => mutes.some((mute) => mute.words.wordIds.includes(word.id)))

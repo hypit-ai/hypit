@@ -117,7 +117,6 @@ export const decodeCanvasSurface: StructuredSurfaceHandler = ({ element }) => {
   exact(element, ["id", "width", "height"], ["id", "width", "height"]);
   const id = text(element, "id");
   const canvas = sealCanvasSpace({
-    contract: "svml.canvas-space@1",
     widthPx: positiveInteger(element, "width"), heightPx: positiveInteger(element, "height"),
     origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
   });
@@ -128,7 +127,6 @@ export const decodePointSurface: StructuredSurfaceHandler = ({ element }) => {
   exact(element, ["id", "x", "y"], ["id", "x", "y"]);
   const id = text(element, "id");
   const point = sealSpatialPoint({
-    contract: "svml.spatial-point@1",
     xPx: number(element, "x"),
     yPx: number(element, "y"),
   });
@@ -191,7 +189,7 @@ export const decodePathSurface: StructuredSurfaceHandler = ({ element }) => {
     }
     commands.push(pathCommand(child));
   }
-  const path: SpatialPath = { contract: "svml.spatial-path@1", commands };
+  const path: SpatialPath = { commands };
   assertSpatialPath(path);
   return {
     records: [{ id, type: spatialTypes.path, value: { kind: "inline", value: path as unknown as CanonicalValue }, range: element.range }],
@@ -203,7 +201,6 @@ export const decodeExtentSurface: StructuredSurfaceHandler = ({ element }) => {
   exact(element, ["id", "width", "height"], ["id", "width", "height"]);
   const id = text(element, "id");
   const extent = sealIntrinsicExtent({
-    contract: "svml.intrinsic-extent@1",
     widthPx: positiveInteger(element, "width"),
     heightPx: positiveInteger(element, "height"),
   });
@@ -227,13 +224,13 @@ function frameSurface(
       { id, fragment: fragment.id, inputs: { parent: parent.ref, program: { kind: "record" as const, id: programId } }, outputs: { frame: id }, range: element.range },
     ],
     fragments: [...parent.fragments, fragment],
+    exports: [id],
   };
 }
 
 export const decodeFrameSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   exact(element, ["id", "within", "left", "top", "right", "bottom"], ["id", "within", "left", "top", "right", "bottom"]);
   return frameSurface(element, resolveReference, {
-    contract: "svml.frame-edges-program@1",
     left: length(element, "left"), top: length(element, "top"),
     right: length(element, "right"), bottom: length(element, "bottom"),
   }, spatialTypes.frameEdgesProgram, frameEdgesFragment);
@@ -242,7 +239,6 @@ export const decodeFrameSurface: StructuredSurfaceHandler = ({ element, resolveR
 export const decodeAnchoredFrameSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   exact(element, ["id", "within", "x", "y", "width", "height", "anchor", "offset-x", "offset-y"], ["id", "within", "x", "y", "width", "height", "anchor"]);
   return frameSurface(element, resolveReference, {
-    contract: "svml.anchored-frame-program@1",
     x: length(element, "x"), y: length(element, "y"),
     width: length(element, "width"), height: length(element, "height"), anchor: anchor(element),
     offsetPx: { x: number(element, "offset-x", 0), y: number(element, "offset-y", 0) },
@@ -263,7 +259,7 @@ function aspectExtent(
   const source = text(element, "aspect");
   const match = /^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/u.exec(source);
   if (match === null) throw new Error(`${element.name}.aspect must be IntrinsicExtent or width/height.`);
-  const extent = sealIntrinsicExtent({ contract: "svml.intrinsic-extent@1", widthPx: Number(match[1]), heightPx: Number(match[2]) });
+  const extent = sealIntrinsicExtent({ widthPx: Number(match[1]), heightPx: Number(match[2]) });
   const extentId = `${id}.__extent`;
   return { ref: { kind: "record", id: extentId }, records: [{ id: extentId, type: spatialTypes.extent, value: { kind: "inline", value: extent as unknown as CanonicalValue }, range: element.range }] };
 }
@@ -277,7 +273,6 @@ export const decodeAspectFrameSurface: StructuredSurfaceHandler = ({ element, re
   const parent = parentFrame(id, element, reference(element, "within", resolveReference));
   const extent = aspectExtent(id, element, resolveReference);
   const program: AspectFrameProgram = {
-    contract: "svml.aspect-frame-program@1",
     x: length(element, "x"), y: length(element, "y"),
     primary: hasWidth ? "width" : "height", size: length(element, hasWidth ? "width" : "height"),
     anchor: anchor(element), offsetPx: { x: number(element, "offset-x", 0), y: number(element, "offset-y", 0) },
@@ -293,5 +288,6 @@ export const decodeAspectFrameSurface: StructuredSurfaceHandler = ({ element, re
       { id, fragment: aspectFrameFragment.id, inputs: { parent: parent.ref, extent: extent.ref, program: { kind: "record" as const, id: programId } }, outputs: { frame: id }, range: element.range },
     ],
     fragments: [...parent.fragments, aspectFrameFragment],
+    exports: [id],
   };
 };

@@ -26,7 +26,6 @@ test("the GPT Image cleanup is one explicit reusable Program", () => {
     saturationRecovery: 1.02,
   }, { kind: "encode", format: "png" }]);
   assert.throws(() => sealImageTransformProgram({
-    contract: "svml.image-transform-program@1",
     operations: [{ kind: "encode", format: "png" }, { kind: "blur", sigma: 1 }],
   }), /encode must be final/u);
 });
@@ -94,7 +93,6 @@ test("the graph contract is exactly source plus Program to one image Need", asyn
   } as never);
   assert.deepEqual(result.outputs, {});
   assert.deepEqual(result.needs.image, {
-    contract: "svml.raster-request@1",
     kind: "transform",
     source,
     operations: gptImageDenoiseV1.operations,

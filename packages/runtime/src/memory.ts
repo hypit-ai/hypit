@@ -12,13 +12,12 @@ function copy(snapshot: BuildSnapshot): BuildSnapshot {
 }
 
 function durableState(state: BuildState): BuildState {
-  verifyBuildState(state);
   const normalized = { ...structuredClone(state), outstanding: [] };
   verifyBuildState(normalized);
   return normalized;
 }
 
-/** Reference CAS store for tests and one-process local Builds. It is not an Operation journal. */
+/** Reference CAS Store for tests and one-process local Builds. It does not persist Operations. */
 export class MemoryBuildStore implements BuildStore {
   readonly #builds = new Map<string, BuildSnapshot>();
 

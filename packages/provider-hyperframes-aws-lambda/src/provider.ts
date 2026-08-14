@@ -49,7 +49,6 @@ import type {
 } from "./client.js";
 
 const HYPERFRAMES_VERSION = "0.7.101";
-const REQUEST_CONTRACT = "svml.hyperframes-visual-render-request@1";
 const CHECKPOINT_CONTRACT = "svml.hyperframes-aws-lambda-operation@1";
 const SUPPORTED_FPS = new Set([24, 30, 60]);
 
@@ -135,9 +134,8 @@ function executionArn(machine: ReturnType<typeof stateMachine>, executionName: s
 function requestDocument(value: CanonicalValue): HyperframesDocument {
   assert(value !== null && typeof value === "object" && !Array.isArray(value),
     "HyperFrames visual request must be an object");
-  const request = value as { readonly contract?: unknown; readonly document?: unknown };
-  assert(request.contract === REQUEST_CONTRACT, "HyperFrames visual request contract is invalid");
-  assert(Object.keys(request).sort().join(",") === "contract,document",
+  const request = value as { readonly document?: unknown };
+  assert(Object.keys(request).sort().join(",") === "document",
     "HyperFrames visual request contains unsupported requirements");
   assertHyperframesDocument(request.document as HyperframesDocument);
   return request.document as HyperframesDocument;
@@ -332,36 +330,14 @@ async function storeOutput(
 function fulfillment(
   document: HyperframesDocument,
   artifact: BlobRef,
-  checkpoint: HyperframesCheckpoint,
-  progress: HyperframesLambdaProgress,
-  rendererImplementationDigest: Digest,
 ): EndpointFulfillment {
   const value: RenderedVisual = sealRenderedVisual({
-    contract: "svml.rendered-visual@1",
     frameRate: document.frameRate,
     frameCount: document.frameCount,
     canvas: document.canvas,
     artifact,
-    muted: true,
   });
-  return {
-    value: { kind: "inline", value: canonicalize(value) },
-    metadata: canonicalize({
-      contract: "svml.hyperframes-renderer-attestation@1",
-      provider: "hyperframes.aws-lambda",
-      providerImplementationDigest: awsLambdaHyperframesProviderImplementationDigest,
-      rendererImplementationDigest,
-      documentDigest: digestOf(document),
-      hyperframesVersion: HYPERFRAMES_VERSION,
-      renderId: checkpoint.renderId,
-      executionArn: checkpoint.executionArn,
-      siteId: checkpoint.site.siteId,
-      framesRendered: progress.framesRendered,
-      lambdasInvoked: progress.lambdasInvoked,
-      costs: progress.costs as unknown as CanonicalValue,
-      validation: "hyperframes-progress@1",
-    }),
-  };
+  return { value: { kind: "inline", value: canonicalize(value) } };
 }
 
 function renderConfiguration(document: HyperframesDocument, options: {
@@ -650,7 +626,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
         const artifact = await storeOutput(context, client, progress, next, region, maxRenderedBytes);
         return {
           status: "completed",
-          result: fulfillment(document, artifact, next, progress, config.rendererImplementationDigest),
+          result: fulfillment(document, artifact),
         };
       } catch (error) {
         return implementationFailure("HYPERFRAMES_OUTPUT_INVALID", error, true);
@@ -685,7 +661,6 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     instance: config.instance ?? "hyperframes.aws-lambda",
     authority: config.authority ?? config.instance ?? "hyperframes.aws-lambda",
     implementation: {
-      locator: "@narratage/provider-hyperframes-aws-lambda/render",
       digest: awsLambdaHyperframesProviderImplementationDigest,
     },
     configuration: canonicalize({

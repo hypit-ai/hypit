@@ -441,12 +441,9 @@ importers:
       '@narratage/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
-      '@narratage/host':
+      '@narratage/elaborator':
         specifier: workspace:*
-        version: link:../host
-      '@narratage/local':
-        specifier: workspace:*
-        version: link:../local
+        version: link:../elaborator
       '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
@@ -462,6 +459,13 @@ importers:
       '@narratage/source':
         specifier: workspace:*
         version: link:../source
+      '@narratage/workspace':
+        specifier: workspace:*
+        version: link:../workspace
+    devDependencies:
+      '@narratage/local':
+        specifier: workspace:*
+        version: link:../local
 
   packages/comment-sticker:
     dependencies:
@@ -523,9 +527,6 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../host
       '@narratage/markup':
         specifier: workspace:*
         version: link:../markup
@@ -535,10 +536,16 @@ importers:
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
+      '@narratage/workspace':
+        specifier: workspace:*
+        version: link:../workspace
     devDependencies:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/workspace-fs-node':
+        specifier: workspace:*
+        version: link:../workspace-fs-node
 
   packages/compiler-node:
     dependencies:
@@ -548,9 +555,6 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../host
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -563,9 +567,9 @@ importers:
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
-      '@narratage/workspace-fs-node':
+      '@narratage/workspace':
         specifier: workspace:*
-        version: link:../workspace-fs-node
+        version: link:../workspace
     devDependencies:
       '@narratage/markup':
         specifier: workspace:*
@@ -573,15 +577,15 @@ importers:
       '@narratage/run-markup':
         specifier: workspace:*
         version: link:../run-markup
+      '@narratage/workspace-fs-node':
+        specifier: workspace:*
+        version: link:../workspace-fs-node
 
   packages/component-kit:
     dependencies:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
 
   packages/composition:
     dependencies:
@@ -655,10 +659,6 @@ importers:
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-    devDependencies:
-      '@narratage/credential-store-env':
-        specifier: workspace:*
-        version: link:../credential-store-env
 
   packages/deck-track:
     dependencies:
@@ -735,41 +735,21 @@ importers:
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
-    devDependencies:
-      '@narratage/caption':
-        specifier: workspace:*
-        version: link:../caption
-      '@narratage/script':
-        specifier: workspace:*
-        version: link:../script
-      '@narratage/speech-alignment':
-        specifier: workspace:*
-        version: link:../speech-alignment
 
   packages/elaborator:
     dependencies:
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
+      '@narratage/host':
+        specifier: workspace:*
+        version: link:../host
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
       '@narratage/source':
         specifier: workspace:*
         version: link:../source
-    devDependencies:
-      '@narratage/composition':
-        specifier: workspace:*
-        version: link:../composition
-      '@narratage/spatial':
-        specifier: workspace:*
-        version: link:../spatial
-      '@narratage/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@narratage/speech-basis':
-        specifier: workspace:*
-        version: link:../speech-basis
 
   packages/endpoint-kit:
     dependencies:
@@ -1316,9 +1296,6 @@ importers:
 
   packages/host:
     dependencies:
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1437,9 +1414,6 @@ importers:
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../host
       '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
@@ -1455,6 +1429,9 @@ importers:
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
+      '@narratage/workspace':
+        specifier: workspace:*
+        version: link:../workspace
     devDependencies:
       '@narratage/artifact-store-fs':
         specifier: workspace:*
@@ -1483,16 +1460,6 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-    devDependencies:
-      '@narratage/narrative':
-        specifier: workspace:*
-        version: link:../narrative
-      '@narratage/script':
-        specifier: workspace:*
-        version: link:../script
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
 
   packages/media:
     dependencies:
@@ -1559,13 +1526,6 @@ importers:
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
-    devDependencies:
-      '@narratage/core':
-        specifier: workspace:*
-        version: link:../core
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
 
   packages/media-track:
     dependencies:
@@ -1611,19 +1571,12 @@ importers:
       '@narratage/temporal':
         specifier: workspace:*
         version: link:../temporal
-    devDependencies:
-      '@narratage/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
 
   packages/mimo-tts:
     dependencies:
       '@narratage/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
       '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
@@ -1708,56 +1661,25 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-    devDependencies:
-      '@narratage/composition':
-        specifier: workspace:*
-        version: link:../composition
-      '@narratage/media':
-        specifier: workspace:*
-        version: link:../media
-      '@narratage/program-space':
-        specifier: workspace:*
-        version: link:../program-space
-      '@narratage/semantic-map':
-        specifier: workspace:*
-        version: link:../semantic-map
-      '@narratage/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@narratage/speech-evidence':
-        specifier: workspace:*
-        version: link:../speech-evidence
-      '@narratage/visual-ir':
-        specifier: workspace:*
-        version: link:../visual-ir
 
   packages/package-loader-node:
     dependencies:
-      '@narratage/compiler-node':
-        specifier: workspace:*
-        version: link:../compiler-node
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
       '@narratage/host':
         specifier: workspace:*
         version: link:../host
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/run':
-        specifier: workspace:*
-        version: link:../run
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
     devDependencies:
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
+      '@narratage/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/program-space:
     dependencies:
@@ -1880,9 +1802,6 @@ importers:
       '@narratage/composition':
         specifier: workspace:*
         version: link:../composition
-      '@narratage/core':
-        specifier: workspace:*
-        version: link:../core
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
@@ -2057,9 +1976,6 @@ importers:
       '@narratage/media-pipeline':
         specifier: workspace:*
         version: link:../media-pipeline
-      '@narratage/program-space':
-        specifier: workspace:*
-        version: link:../program-space
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2076,24 +1992,9 @@ importers:
         specifier: workspace:*
         version: link:../speech
     devDependencies:
-      '@narratage/artifact-store-fs':
-        specifier: workspace:*
-        version: link:../artifact-store-fs
-      '@narratage/core':
-        specifier: workspace:*
-        version: link:../core
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@narratage/local':
-        specifier: workspace:*
-        version: link:../local
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
 
   packages/provider-whisperx-local:
     dependencies:
@@ -2106,9 +2007,6 @@ importers:
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-      '@narratage/speech':
-        specifier: workspace:*
-        version: link:../speech
       '@narratage/speech-evidence':
         specifier: workspace:*
         version: link:../speech-evidence
@@ -2119,6 +2017,9 @@ importers:
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
 
   packages/provider-xiaomi-mimo:
     dependencies:
@@ -2193,12 +2094,6 @@ importers:
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@narratage/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
 
   packages/raster:
     dependencies:
@@ -2272,13 +2167,6 @@ importers:
       '@narratage/source':
         specifier: workspace:*
         version: link:../source
-    devDependencies:
-      '@narratage/run-markup':
-        specifier: workspace:*
-        version: link:../run-markup
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
 
   packages/run-markup:
     dependencies:
@@ -2291,6 +2179,13 @@ importers:
       '@narratage/run':
         specifier: workspace:*
         version: link:../run
+    devDependencies:
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
 
   packages/runtime:
     dependencies:
@@ -2361,9 +2256,6 @@ importers:
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@narratage/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
@@ -2382,9 +2274,6 @@ importers:
 
   packages/script:
     dependencies:
-      '@narratage/core':
-        specifier: workspace:*
-        version: link:../core
       '@narratage/markup':
         specifier: workspace:*
         version: link:../markup
@@ -2397,6 +2286,10 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+    devDependencies:
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/seedance:
     dependencies:
@@ -2415,9 +2308,6 @@ importers:
       '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
-      '@narratage/narrative':
-        specifier: workspace:*
-        version: link:../narrative
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2463,9 +2353,6 @@ importers:
       '@narratage/narrative':
         specifier: workspace:*
         version: link:../narrative
-      '@narratage/program-space':
-        specifier: workspace:*
-        version: link:../program-space
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2473,7 +2360,11 @@ importers:
         specifier: workspace:*
         version: link:../speech-evidence
 
-  packages/source: {}
+  packages/source:
+    dependencies:
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/spatial:
     dependencies:
@@ -2489,13 +2380,13 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
     devDependencies:
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
+      '@narratage/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/speech:
     dependencies:
@@ -2585,9 +2476,6 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/speech':
-        specifier: workspace:*
-        version: link:../speech
 
   packages/speech-spine:
     dependencies:
@@ -2634,39 +2522,21 @@ importers:
         specifier: workspace:*
         version: link:../svs
     devDependencies:
-      '@narratage/caption':
-        specifier: workspace:*
-        version: link:../caption
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@narratage/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
       '@narratage/media-track':
         specifier: workspace:*
         version: link:../media-track
-      '@narratage/run':
-        specifier: workspace:*
-        version: link:../run
       '@narratage/script':
         specifier: workspace:*
         version: link:../script
-      '@narratage/speech-alignment':
-        specifier: workspace:*
-        version: link:../speech-alignment
-      '@narratage/speech-evidence':
-        specifier: workspace:*
-        version: link:../speech-evidence
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
-      '@narratage/whisperx':
-        specifier: workspace:*
-        version: link:../whisperx
 
   packages/store-sqlite:
     dependencies:
@@ -2698,9 +2568,6 @@ importers:
       '@narratage/markup':
         specifier: workspace:*
         version: link:../markup
-      '@narratage/source':
-        specifier: workspace:*
-        version: link:../source
 
   packages/temporal:
     dependencies:
@@ -2804,15 +2671,15 @@ importers:
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@narratage/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
 
   packages/validation:
     dependencies:
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
@@ -2837,12 +2704,9 @@ importers:
       '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
-      '@narratage/run-markup':
+      '@narratage/workspace-fs-node':
         specifier: workspace:*
-        version: link:../run-markup
-      '@narratage/source':
-        specifier: workspace:*
-        version: link:../source
+        version: link:../workspace-fs-node
 
   packages/video-domain:
     dependencies:
@@ -2953,17 +2817,26 @@ importers:
         specifier: workspace:*
         version: link:../program-space
 
-  packages/workspace-fs-node:
+  packages/workspace:
     dependencies:
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../host
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/source':
+        specifier: workspace:*
+        version: link:../source
+
+  packages/workspace-fs-node:
+    dependencies:
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/source':
+        specifier: workspace:*
+        version: link:../source
+      '@narratage/workspace':
+        specifier: workspace:*
+        version: link:../workspace
 
   services/media-lambda:
     dependencies:
@@ -3010,9 +2883,6 @@ importers:
       '@narratage/fonts-open':
         specifier: workspace:*
         version: link:../../packages/fonts-open
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../../packages/host
       '@narratage/hyperframes':
         specifier: workspace:*
         version: link:../../packages/hyperframes
@@ -3034,6 +2904,9 @@ importers:
       '@narratage/video-cli':
         specifier: workspace:*
         version: link:../../packages/video-cli
+      '@narratage/workspace':
+        specifier: workspace:*
+        version: link:../../packages/workspace
       vite:
         specifier: 5.4.21
         version: 5.4.21(@types/node@24.10.1)

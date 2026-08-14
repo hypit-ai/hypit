@@ -20,10 +20,12 @@ import {
 } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { digestOf, isDigest } from "@narratage/protocol";
+import { digestOf, isDigest, modulePackageAbi } from "@narratage/protocol";
 
 import { collectNodePackageComponents } from "./contribution.js";
 import type {
+  LogicalPackageAddress,
+  NodePackageBinding,
   LockedNodePackage,
   LockedPackageArtifact,
   LoadedNodePackageSet,
@@ -251,30 +253,23 @@ function activationPath(item: ResolvedPhysicalPackage): string {
 
 function contributionMetadata(value: NodePackageContribution): unknown {
   assert(value.format === "svml.node-package@1", "Node package contribution has an unsupported format");
-  assert(value.name.trim().length > 0, "Node package contribution name is empty");
   return {
     format: value.format,
-    name: value.name,
     modules: (value.modules ?? []).map((item) => ({
       manifestDigest: digestOf(item.manifest),
       specifiers: [...(item.specifiers ?? [])].sort(),
     })).sort((left, right) => left.manifestDigest.localeCompare(right.manifestDigest)),
-    authorFrontends: [...(value.authorFrontends ?? [])].map((item) => ({
-      id: item.id,
-      implementationDigest: item.implementationDigest,
-    })).sort((left, right) => left.id.localeCompare(right.id)),
-    runFrontends: [...(value.runFrontends ?? [])].map((item) => ({
-      id: item.id,
-      implementationDigest: item.implementationDigest,
-    })).sort((left, right) => left.id.localeCompare(right.id)),
     hostFacets: [...(value.hostFacets ?? [])].map((item) => ({
       abi: item.abi,
-      identity: item.identity,
-    })).sort((left, right) =>
-      `${left.abi}:${digestOf(left.identity)}`.localeCompare(`${right.abi}:${digestOf(right.identity)}`),
-    ),
+      offers: [...(item.offers ?? [])].sort(),
+      ...(item.identity === undefined ? {} : { identity: item.identity }),
+    })).sort((left, right) => {
+      const leftIdentity = "identity" in left ? digestOf(left.identity) : "";
+      const rightIdentity = "identity" in right ? digestOf(right.identity) : "";
+      return `${left.abi}:${left.offers.join("\u0000")}:${leftIdentity}`
+        .localeCompare(`${right.abi}:${right.offers.join("\u0000")}:${rightIdentity}`);
+    }),
     components: [...(value.components ?? [])].map((component) => ({
-      name: component.name,
       producers: [...(component.producers ?? [])].map((item) => ({
         producer: item.producer,
         implementationDigest: item.implementationDigest,
@@ -289,16 +284,25 @@ function contributionMetadata(value: NodePackageContribution): unknown {
         `${left.type.module.name}@${left.type.module.version}#${left.type.name}`
           .localeCompare(`${right.type.module.name}@${right.type.module.version}#${right.type.name}`),
       ),
-    })).sort((left, right) => left.name.localeCompare(right.name)),
+    })).sort((left, right) => digestOf(left).localeCompare(digestOf(right))),
   };
 }
 
-function contributionProvides(value: NodePackageContribution): readonly string[] {
-  return [...new Set([
-    ...(value.authorFrontends ?? []).map((item) => item.id),
-    ...(value.runFrontends ?? []).map((item) => item.id),
-    ...(value.modules ?? []).flatMap((item) => item.specifiers ?? []),
-  ])].sort();
+function addressKey(value: LogicalPackageAddress): string {
+  return `${value.abi}\u0000${value.name}`;
+}
+
+function contributionOffers(value: NodePackageContribution): readonly LogicalPackageAddress[] {
+  const offers = [
+    ...(value.modules ?? []).flatMap((item) => [
+      `${item.manifest.name}@${item.manifest.version}`,
+      ...(item.specifiers ?? []),
+    ].map((name) => ({ abi: modulePackageAbi, name }))),
+    ...(value.hostFacets ?? []).flatMap((facet) => (facet.offers ?? [])
+      .map((name) => ({ abi: facet.abi, name }))),
+  ];
+  return [...new Map(offers.map((item) => [addressKey(item), item])).values()]
+    .sort((left, right) => addressKey(left).localeCompare(addressKey(right)));
 }
 
 async function importContribution(item: ResolvedPhysicalPackage): Promise<NodePackageContribution> {
@@ -306,13 +310,10 @@ async function importContribution(item: ResolvedPhysicalPackage): Promise<NodePa
   assert((await stat(target)).isFile(), `${item.json.name} activation is not a file`);
   const imported = await import(pathToFileURL(target).href) as {
     readonly default?: unknown;
-    readonly svmlPackage?: unknown;
   };
-  const value = imported.default ?? imported.svmlPackage;
-  assert(value !== null && typeof value === "object", `${item.json.name} activation exports no package`);
+  const value = imported.default;
+  assert(value !== null && typeof value === "object", `${item.json.name} activation has no default package export`);
   const contribution = value as NodePackageContribution;
-  assert(contribution.name === item.json.name,
-    `${item.json.name} activation claims physical package ${contribution.name}`);
   collectNodePackageComponents([contribution]);
   return contribution;
 }
@@ -324,7 +325,7 @@ function lockContent(lock: Omit<NodePackageLock, "digest">): Omit<NodePackageLoc
     artifacts: [...lock.artifacts].sort((left, right) =>
       `${left.name}@${left.version}`.localeCompare(`${right.name}@${right.version}`),
     ),
-    packages: [...lock.packages].sort((left, right) => left.specifier.localeCompare(right.specifier)),
+    packages: [...lock.packages].sort((left, right) => left.package.name.localeCompare(right.package.name)),
   };
 }
 
@@ -358,18 +359,22 @@ function parseLock(value: unknown): NodePackageLock {
     assert(isDigest(facetsDigest), `$lock.packages[${index}].facetsDigest is invalid`);
     const closureDigest = string(item.closureDigest, `$lock.packages[${index}].closureDigest`);
     assert(isDigest(closureDigest), `$lock.packages[${index}].closureDigest is invalid`);
-    assert(item.provides === undefined || Array.isArray(item.provides),
-      `$lock.packages[${index}].provides must be an array`);
-    const provides = (item.provides ?? []).map((raw, provideIndex) =>
-      string(raw, `$lock.packages[${index}].provides[${provideIndex}]`));
-    assert(new Set(provides).size === provides.length, `$lock.packages[${index}].provides repeats a request`);
+    assert(Array.isArray(item.offers), `$lock.packages[${index}].offers must be an array`);
+    const offers = item.offers.map((raw, offerIndex) => {
+      const offer = object(raw, `$lock.packages[${index}].offers[${offerIndex}]`);
+      return {
+        abi: string(offer.abi, `$lock.packages[${index}].offers[${offerIndex}].abi`),
+        name: string(offer.name, `$lock.packages[${index}].offers[${offerIndex}].name`),
+      };
+    });
+    assert(new Set(offers.map(addressKey)).size === offers.length,
+      `$lock.packages[${index}].offers repeats a logical address`);
     return {
-      specifier: string(item.specifier, `$lock.packages[${index}].specifier`),
       package: {
         name: string(physical.name, `$lock.packages[${index}].package.name`),
         version: string(physical.version, `$lock.packages[${index}].package.version`),
       },
-      provides: [...provides].sort(),
+      offers: [...offers].sort((left, right) => addressKey(left).localeCompare(addressKey(right))),
       facetsDigest,
       closureDigest,
     };
@@ -377,19 +382,8 @@ function parseLock(value: unknown): NodePackageLock {
   const digest = string(parsed.digest, "$lock.digest");
   assert(isDigest(digest), "$lock.digest is invalid");
   const lock = sealLock({ format: "svml.node-package-lock@1", selected, artifacts, packages });
-  if (lock.digest === digest) return lock;
-  const legacyPackages = packages.map(({ provides: _provides, ...item }) => item);
-  const legacy = sealLock({
-    format: "svml.node-package-lock@1",
-    selected,
-    artifacts,
-    packages: legacyPackages as LockedNodePackage[],
-  });
-  assert(legacy.digest === digest, "Node package lock digest is invalid");
-  // Preserve the authenticated legacy identity so `packages sync` can read its
-  // selected roots and rewrite it. Exact activation still rejects it because
-  // it carries no logical `provides` inventory.
-  return { ...lock, digest };
+  assert(lock.digest === digest, "Node package lock digest is invalid");
+  return lock;
 }
 
 /** Parse and authenticate a lock without resolving or executing its packages. */
@@ -471,6 +465,24 @@ export class NodePackageLockStaleError extends Error {
   }
 }
 
+export class NodePackageSelectionMissingError extends Error {
+  readonly code = "PACKAGE_SELECTION_MISSING";
+  readonly subject: string;
+  readonly address: LogicalPackageAddress;
+
+  constructor(subject: string, address: LogicalPackageAddress) {
+    super([
+      `${subject} does not contain a package for the Source language selection:`,
+      `  ${address.abi} ${address.name}`,
+      "Synchronize the project package inventory after changing Source imports:",
+      "  narratage packages sync <run-source> --runtime <profile>",
+    ].join("\n"));
+    this.name = "NodePackageSelectionMissingError";
+    this.subject = subject;
+    this.address = address;
+  }
+}
+
 function artifactDifference(
   installed: readonly LockedPackageArtifact[],
   locked: readonly LockedPackageArtifact[],
@@ -494,6 +506,15 @@ export async function createNodePackageLock(
   options: NodePackageLockCreateOptions = {},
 ): Promise<NodePackageLock> {
   return (await createNodePackageSet(specifiers, root, options)).lock;
+}
+
+/** Trust selected physical roots and return the exact executable inventory assembled from them. */
+export async function createNodePackageInventory(
+  specifiers: readonly string[],
+  root: string,
+  options: NodePackageLockCreateOptions = {},
+): Promise<LoadedNodePackageSet> {
+  return await createNodePackageSet(specifiers, root, options);
 }
 
 async function createNodePackageSet(
@@ -635,9 +656,8 @@ async function createNodePackageSet(
       artifactsByPackage,
     );
     packages.push({
-      specifier: physical.json.name,
       package: { name: physical.json.name, version: physical.json.version },
-      provides: contributionProvides(contribution),
+      offers: contributionOffers(contribution),
       facetsDigest: digestOf(contributionMetadata(contribution)),
       closureDigest: digestOf({ format: "svml.package-closure@1", artifacts: ownArtifacts }),
     });
@@ -649,18 +669,21 @@ async function createNodePackageSet(
     packages,
   });
   if (inventory !== undefined) {
-    const trusted = new Map(inventory.lock.packages.map((item) => [item.specifier, item]));
+    const trusted = new Map(inventory.lock.packages.map((item) => [item.package.name, item]));
     for (const item of lock.packages) {
-      const expected = trusted.get(item.specifier);
-      assert(expected !== undefined, `${item.specifier} is absent from package inventory ${inventory.path}`);
+      const expected = trusted.get(item.package.name);
+      assert(expected !== undefined, `${item.package.name} is absent from package inventory ${inventory.path}`);
       assert(JSON.stringify(expected) === JSON.stringify(item),
-        `${item.specifier} activation differs from package inventory ${inventory.path}`);
+        `${item.package.name} activation differs from package inventory ${inventory.path}`);
     }
   }
   return {
     lock,
     inventoryDigest: inventory?.lock.digest ?? lock.digest,
-    contributions: [...activated.values()].map((item) => item.contribution),
+    packages: [...activated.values()].map((item) => ({
+      specifier: item.physical.json.name,
+      contribution: item.contribution,
+    })),
   };
 }
 
@@ -701,24 +724,63 @@ export async function loadNodePackageSet(
   }
   const artifactsByPackage = new Map(artifacts.map((item) => [artifactKey(item), item]));
   const byName = new Map(closure.map((item) => [`${item.json.name}@${item.json.version}`, item]));
-  const values: NodePackageContribution[] = [];
+  const values: NodePackageBinding[] = [];
   for (const expected of lock.packages) {
     const physical = byName.get(`${expected.package.name}@${expected.package.version}`);
     assert(physical !== undefined, `${expected.package.name}@${expected.package.version} is not installed`);
-    assert(physical.json.name === expected.specifier, `${expected.specifier} identifies another package`);
     const contribution = await importContribution(physical);
     assert(digestOf(contributionMetadata(contribution)) === expected.facetsDigest,
-      `${expected.specifier} facets do not match the lock`);
+      `${expected.package.name} facets do not match the lock`);
     const ownArtifacts = artifactsForClosure(
       await packageClosureFromPhysical([physical]),
       artifactsByPackage,
     );
     assert(digestOf({ format: "svml.package-closure@1", artifacts: ownArtifacts }) === expected.closureDigest,
-      `${expected.specifier} dependency closure does not match the lock`);
-    values.push(contribution);
+      `${expected.package.name} dependency closure does not match the lock`);
+    values.push({ specifier: expected.package.name, contribution });
   }
-  collectNodePackageComponents(values);
-  return { lock, inventoryDigest: lock.digest, contributions: values };
+  collectNodePackageComponents(values.map((item) => item.contribution));
+  return { lock, inventoryDigest: lock.digest, packages: values };
+}
+
+function selectedNodePackageSpecifiers(
+  inventory: NodePackageLock,
+  request: readonly string[] | NodePackageSelectionRequest,
+  subject: string,
+): readonly string[] {
+  const requested: NodePackageSelectionRequest = Array.isArray(request)
+    ? { selected: request }
+    : request as NodePackageSelectionRequest;
+  const logical = new Map((requested.logical ?? []).map((item) => [addressKey(item), item]));
+  // Physical spellings are enrollment hints only. Once a Source has logical addresses, the
+  // authenticated inventory binding is the sole authority for exact compilation selection.
+  const selected = new Set(logical.size === 0 ? requested.selected : []);
+  for (const address of logical.values()) {
+    const providers = inventory.packages.filter((item) =>
+      item.offers.some((offer) => addressKey(offer) === addressKey(address)));
+    if (providers.length === 0) throw new NodePackageSelectionMissingError(subject, address);
+    assert(providers.length === 1, [
+      `${subject} ambiguously provides this Source language selection:`,
+      `  ${address.abi} ${address.name}`,
+      ...providers.map((item) => `  ${item.package.name}`),
+    ].join("\n"));
+    selected.add(providers[0]!.package.name);
+  }
+  const available = new Set(inventory.selected);
+  const missing = [...selected].filter((item) => !available.has(item)).sort();
+  assert(missing.length === 0, [
+    `${subject} does not authorize this physical selection:`,
+    ...missing.map((item) => `  ${item}`),
+  ].join("\n"));
+  return [...selected].sort();
+}
+
+/** Resolve one logical Source selection against authenticated inventory metadata without execution. */
+export function selectNodePackageSpecifiers(
+  inventory: NodePackageLock,
+  request: readonly string[] | NodePackageSelectionRequest,
+): readonly string[] {
+  return selectedNodePackageSpecifiers(inventory, request, `package inventory ${inventory.digest}`);
 }
 
 /**
@@ -732,41 +794,6 @@ export async function loadNodePackageSelection(
 ): Promise<LoadedNodePackageSet> {
   const lockPath = resolve(path);
   const inventory = await readNodePackageLock(lockPath);
-  const requested: NodePackageSelectionRequest = Array.isArray(request)
-    ? { selected: request }
-    : request as NodePackageSelectionRequest;
-  const selected = new Set(requested.selected);
-  const logical = new Set(requested.logical ?? []);
-  if (logical.size > 0) {
-    for (const item of inventory.packages) {
-      if (item.provides.some((provided) => logical.has(provided))) selected.add(item.specifier);
-    }
-    const supplied = new Set(inventory.packages.flatMap((item) => item.provides));
-    const missingLogical = [...logical].filter((item) => !supplied.has(item)).sort();
-    assert(missingLogical.length === 0, [
-      `package inventory ${lockPath} does not provide this Source language selection:`,
-      ...missingLogical.map((item) => `  ${item}`),
-      "Synchronize the current Run Source with `narratage packages sync`.",
-    ].join("\n"));
-  }
-  const available = new Set(inventory.selected);
-  // A Source names logical language identity. Its npm-looking spelling is only a convenient
-  // physical hint; a trusted package may explicitly provide that identity under another name.
-  const missing = logical.size === 0
-    ? [...selected].filter((item) => !available.has(item)).sort()
-    : [];
-  for (const item of [...selected]) if (!available.has(item)) selected.delete(item);
-  assert(missing.length === 0, [
-    `package inventory ${lockPath} does not authorize this Source selection:`,
-    ...missing.map((item) => `  ${item}`),
-    "Synchronize the current Run Source with `narratage packages sync`.",
-  ].join("\n"));
-  return await createNodePackageSet([...selected], resolve(root), {}, { path: lockPath, lock: inventory });
-}
-
-export async function loadNodePackageContributions(
-  path: string,
-  root = dirname(resolve(path)),
-): Promise<readonly NodePackageContribution[]> {
-  return (await loadNodePackageSet(path, root)).contributions;
+  const selected = selectedNodePackageSpecifiers(inventory, request, `package inventory ${lockPath}`);
+  return await createNodePackageSet(selected, resolve(root), {}, { path: lockPath, lock: inventory });
 }

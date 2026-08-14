@@ -9,13 +9,8 @@
   },
   "dependencies": {
     "@narratage/core": "workspace:*",
+    "@narratage/host": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/source": "workspace:*"
-  },
-  "devDependencies": {
-    "@narratage/composition": "workspace:*",
-    "@narratage/spatial": "workspace:*",
-    "@narratage/speech": "workspace:*",
-    "@narratage/speech-basis": "workspace:*"
   }
 }

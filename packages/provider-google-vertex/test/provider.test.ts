@@ -27,7 +27,7 @@ function request(): CaptionGeminiRequest {
   const narrative = parseScript("provider.svml", "<line><ALICE>Meaning becomes the source.</line>");
   const display = captionDisplaySequence(narrative, "story.caption");
   const style = sealCaptionStyle({
-    contract: "svml.caption-style@1",
+
     id: "important",
     planning: {
       cue: { minimumWords: 1, maximumWords: 7, instruction: "Prefer one short complete semantic phrase." },
@@ -43,7 +43,7 @@ function request(): CaptionGeminiRequest {
   });
   const captionProgram = resolveCaptionProgram(display, "captions", style, []);
   return compileCaptionGeminiRequest(display, captionProgram, sealCaptionGeminiProgram({
-    contract: "svml.caption-gemini-program@1",
+
     model: "gemini-2.5-flash",
   }));
 }
@@ -81,8 +81,6 @@ test("Vertex transports the exact model request while the model package validate
       captured = input;
       return {
         text: JSON.stringify(response(requestValue)),
-        totalTokenCount: 123,
-        modelVersion: "gemini-2.5-flash-001",
       };
     },
   });
@@ -104,14 +102,11 @@ test("Vertex transports the exact model request while the model package validate
   assert.equal(captured?.systemInstruction, requestValue.systemInstruction);
   assert.equal(captured?.temperature, 0.2);
   assert.equal(result.value.kind, "inline");
-  const plan = result.value.kind === "inline" ? result.value.value as Record<string, unknown> : {};
-  assert.equal(plan.contract, "svml.caption-plan@1");
-  assert.equal((result.metadata as Record<string, unknown>).provider, "google-vertex");
 });
 
 test("Vertex configuration exposes credential/queue policy without changing the model request", () => {
   const provider = createGoogleVertexCaptionProvider({ project: "svml-test-project", defaultConcurrency: 3 });
-  assert.equal(provider.name, "google-vertex.caption");
+  assert.equal(provider.instance.id, "google-vertex.caption");
   const facet = provider.manifest.facets[0];
   assert.equal(facet?.role, "capability-endpoint");
   assert(facet?.role === "capability-endpoint");

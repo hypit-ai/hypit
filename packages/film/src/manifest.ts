@@ -32,13 +32,13 @@ const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; 
 });
 
 export const filmProgramSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.film-program@1" } },
+
   id: { schema: string },
   clearColor: { schema: string },
 });
 
 export const filmTrackSetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.film-track-set@1" } },
+
   tracks: {
     schema: {
       kind: "array",
@@ -46,6 +46,17 @@ export const filmTrackSetSchema: ValueSchema = object({
     },
   },
 });
+
+export const filmMarkupSurfaces = [{
+    name: "film",
+    tag: "Film",
+    mode: "structured",
+    outputs: [filmTypes.program],
+    implementation: {
+      digest: filmSurfaceImplementationDigest,
+    },
+  }] as const;
+
 
 export const filmManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -62,17 +73,6 @@ export const filmManifest: ModuleManifest = {
     { name: filmTypes.trackSet.name, schema: filmTrackSetSchema },
   ],
   capabilities: [],
-  surfaces: [{
-    name: "film",
-    tag: "Film",
-    mode: "structured",
-    outputs: [filmTypes.program],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@narratage/film/surface",
-      digest: filmSurfaceImplementationDigest,
-    },
-  }],
   producers: [
     {
       name: filmProducers.createTrackSet.name,
@@ -80,8 +80,6 @@ export const filmManifest: ModuleManifest = {
       outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/film/create-track-set",
         digest: createFilmTrackSetImplementationDigest,
       },
     },
@@ -95,8 +93,6 @@ export const filmManifest: ModuleManifest = {
       outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/film/append-visual-track",
         digest: appendFilmVisualTrackImplementationDigest,
       },
     },
@@ -110,8 +106,6 @@ export const filmManifest: ModuleManifest = {
       outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/film/append-audio-track",
         digest: appendFilmAudioTrackImplementationDigest,
       },
     },
@@ -126,8 +120,6 @@ export const filmManifest: ModuleManifest = {
       outputs: [{ name: "composition", type: compositionTypes.composition }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/film/compile-composition",
         digest: compileFilmCompositionImplementationDigest,
       },
     },

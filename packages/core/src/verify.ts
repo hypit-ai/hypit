@@ -9,8 +9,8 @@ import type {
 
 import { digestOf, isDigest } from "./canonical.js";
 import { invariant } from "./error.js";
-import { link, resolveProducer, verifyRecord } from "./link.js";
-import { producerStep, validatePlan } from "./plan.js";
+import { resolveProducer, verifyLinkedProgram, verifyRecordStructure } from "./link.js";
+import { producerStep, selectedProvidedRecords, validatePlan } from "./plan.js";
 import { commandId, derivationId, needRequestDigest, receiptId } from "./provenance.js";
 import { sameCapability, sameType } from "./reference.js";
 
@@ -107,12 +107,6 @@ function verifyReceipt(state: BuildState, receipt: Receipt): void {
       "INVALID_CONFIGURATION_DIGEST",
       receipt.id,
     );
-    invariant(
-      receipt.implementation.runtimeClosure === undefined
-        || isDigest(receipt.implementation.runtimeClosure),
-      "INVALID_RUNTIME_CLOSURE_DIGEST",
-      receipt.id,
-    );
   }
   invariant(
     receipt.requestDigest === need.requestDigest,
@@ -143,9 +137,6 @@ function verifyReceipt(state: BuildState, receipt: Receipt): void {
 }
 
 function verifyOutstanding(state: BuildState, command: CoreCommand): void {
-  if (command.kind === "complete") {
-    invariant(false, "STORED_COMPLETE_COMMAND", "complete commands must not remain outstanding");
-  }
   if (command.kind === "invoke-producer") {
     const step = state.steps.find((item) => item.id === command.step);
     invariant(step?.status === "pending", "OUTSTANDING_STEP_COMPLETE", `${command.step} is complete`);
@@ -180,26 +171,7 @@ export function verifyBuildState(state: BuildState): void {
   );
   invariant(isDigest(state.id), "INVALID_DIGEST", "build id is invalid");
 
-  const linked = link(state.program.closure, state.program.modules);
-  invariant(
-    linked.semanticDigest === state.program.semanticDigest,
-    "PROGRAM_SEMANTIC_DIGEST_MISMATCH",
-    "linked program semantic digest does not match",
-  );
-  invariant(
-    JSON.stringify(
-      [...linked.records]
-        .sort((left, right) => left.id.localeCompare(right.id))
-        .map((record) => ({ id: record.id, digest: record.digest })),
-    ) ===
-      JSON.stringify(
-        [...state.program.records]
-          .sort((left, right) => left.id.localeCompare(right.id))
-          .map((record) => ({ id: record.id, digest: record.digest })),
-      ),
-    "PROGRAM_RECORD_MISMATCH",
-    "linked program records do not match its typed modules",
-  );
+  verifyLinkedProgram(state.program);
   invariant(
     state.id ===
       digestOf({
@@ -229,12 +201,13 @@ export function verifyBuildState(state: BuildState): void {
     "build step state does not match the plan",
   );
 
-  for (const record of state.records) verifyRecord(state.program.closure, record);
+  for (const record of state.records) verifyRecordStructure(state.program.closure, record);
   for (const authored of state.program.records) {
     const record = findRecord(state, authored.id);
     invariant(record?.digest === authored.digest, "AUTHORED_RECORD_CHANGED", `${authored.id} changed`);
   }
-  for (const provided of state.plan.initialValues) {
+  const providedRecords = selectedProvidedRecords(state.program, state.graph, state.plan);
+  for (const provided of providedRecords) {
     const record = findRecord(state, provided.id);
     invariant(
       record !== undefined && digestOf(record) === digestOf(provided),
@@ -272,7 +245,7 @@ export function verifyBuildState(state: BuildState): void {
       invariant(receipt?.output === record.id, "OBSERVED_ORIGIN_MISMATCH", `${record.id} has no receipt`);
     } else {
       const origin = record.origin;
-      const expected = state.plan.initialValues.find((item) => item.id === record.id);
+      const expected = providedRecords.find((item) => item.id === record.id);
       invariant(
         expected !== undefined && digestOf(expected) === digestOf(record),
         "INJECTED_PROVIDED_RECORD",

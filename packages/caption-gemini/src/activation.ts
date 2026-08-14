@@ -1,17 +1,17 @@
 import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
-  captionGeminiComponent, captionGeminiImplementationDigests, captionGeminiManifest,
+  captionGeminiComponent, captionGeminiManifest,
   captionGeminiModuleRef, decodeCaptionGeminiPlannerSurface,
+  captionGeminiMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/caption-gemini",
-  modules: [{ manifest: captionGeminiManifest, specifiers: ["@narratage/caption-gemini", "@narratage/caption-gemini@1"] }],
+  modules: [{ manifest: captionGeminiManifest }],
   components: [captionGeminiComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
-    module: captionGeminiModuleRef, surface: "planner", mode: "structured",
-    implementationDigest: captionGeminiImplementationDigests.plannerSurface,
+    module: captionGeminiModuleRef,
+    declaration: captionGeminiMarkupSurfaces.find((item) => item.name === "planner")!,
     handler: decodeCaptionGeminiPlannerSurface,
   })],
 };

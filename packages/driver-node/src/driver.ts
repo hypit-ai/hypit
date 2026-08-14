@@ -43,7 +43,7 @@ import {
 import type {
   ArtifactStore,
   BlockedCommand,
-  DriverJournalEntry,
+  DriverExecutionOutcome,
   DriverRunResult,
   EndpointRegistration,
 } from "./types.js";
@@ -54,7 +54,6 @@ export type NodeDriverOptions = {
   readonly artifacts?: ArtifactStore;
   readonly operations?: OperationStore;
   readonly credentials?: CredentialStore;
-  readonly maxEvents?: number;
   readonly validators?: TypeValidatorRegistryLike;
 };
 
@@ -72,13 +71,30 @@ type Executable =
       readonly registration: EndpointRegistration;
     };
 
+function failureMessage(error: unknown): string {
+  const parts: string[] = [];
+  let cursor: unknown = error;
+  const seen = new Set<unknown>();
+  while (cursor !== undefined && cursor !== null && !seen.has(cursor)) {
+    seen.add(cursor);
+    if (cursor instanceof Error) {
+      const code = "code" in cursor && typeof cursor.code === "string" ? ` [${cursor.code}]` : "";
+      parts.push(`${cursor.message}${code}`);
+      cursor = cursor.cause;
+      continue;
+    }
+    parts.push(String(cursor));
+    break;
+  }
+  return [...new Set(parts)].join("; caused by: ");
+}
+
 export class NodeDriver {
   readonly producers: ProducerRegistry;
   readonly endpoints: EndpointRegistry;
   readonly artifacts: ArtifactStore;
   readonly operations: OperationStore | undefined;
   readonly credentials: CredentialStore | undefined;
-  readonly maxEvents: number;
   readonly validators: TypeValidatorRegistryLike;
 
   constructor(options: NodeDriverOptions = {}) {
@@ -87,7 +103,6 @@ export class NodeDriver {
     this.artifacts = options.artifacts ?? new MemoryArtifactStore();
     this.operations = options.operations;
     this.credentials = options.credentials;
-    this.maxEvents = options.maxEvents ?? 1_000;
     this.validators = options.validators ?? new TypeValidatorRegistry();
   }
 
@@ -130,7 +145,6 @@ export class NodeDriver {
     state: BuildState,
     command: CoreCommand,
   ): { readonly executable?: Executable; readonly blocked?: BlockedCommand } {
-    if (command.kind === "complete") return {};
     if (command.kind === "invoke-producer") {
       const registration = this.producers.producer(command.producer);
       if (registration === undefined) {
@@ -230,20 +244,18 @@ export class NodeDriver {
     executable: Extract<Executable, { readonly endpointId: string }>,
     result: EndpointFulfillment,
   ): Promise<BuildEvent> {
-    const validation = await validateValue(
+    await validateValue(
       state.program.closure,
       executable.command.need.returns,
       result.value,
       this.validators,
     );
     const runtimeImplementation = executable.registration.runtimeImplementation;
-    const runtimeClosure = this.endpoints.runtimeClosureDigest();
     const implementation = runtimeImplementation === undefined
       ? undefined
       : {
           digest: runtimeImplementation.digest,
           configurationDigest: runtimeImplementation.configurationDigest,
-          ...(runtimeClosure === undefined ? {} : { runtimeClosure }),
         };
     const content = {
       kind: "need-fulfilled",
@@ -252,7 +264,6 @@ export class NodeDriver {
       requestDigest: executable.command.need.requestDigest,
       fulfiller: executable.endpointId,
       ...(implementation === undefined ? {} : { implementation }),
-      ...(validation === undefined ? {} : { validation }),
     } as const;
     return { ...content, id: `event:${digestOf(content)}` };
   }
@@ -326,9 +337,7 @@ export class NodeDriver {
         || snapshot.endpoint !== expected.endpoint
         || snapshot.authority !== expected.authority
         || snapshot.route !== expected.route
-        || snapshot.implementationDigest !== expected.implementationDigest
-        || snapshot.runtimeClosure !== expected.runtimeClosure
-        || snapshot.requestDigest !== expected.requestDigest) {
+        || snapshot.runtimeClosure !== expected.runtimeClosure) {
         throw new Error(`Operation history for ${expected.command} is not one contiguous retry chain`);
       }
     });
@@ -353,9 +362,7 @@ export class NodeDriver {
       endpoint: executable.endpointId,
       authority: executable.queue.authority,
       route: executable.queue.route,
-      implementationDigest: implementation.digest,
       runtimeClosure,
-      requestDigest: executable.command.need.requestDigest,
     } as const;
     const maxAttempts = executable.registration.retry?.maxAttempts ?? 1;
     const history = await operations.list({
@@ -363,7 +370,6 @@ export class NodeDriver {
       command: base.command,
       endpoint: base.endpoint,
       runtimeClosure: base.runtimeClosure,
-      requestDigest: base.requestDigest,
     });
     this.#assertOperationHistory(history, base);
     let latest = history.at(-1);
@@ -454,48 +460,66 @@ export class NodeDriver {
     context?: RuntimeExecutionContext,
   ): Promise<RuntimeExecutionResult> {
     if (!("endpointId" in executable)) {
-      const result = (await executable.run()) as ProducerHandlerResult;
-      const producer = resolveProducer(state.program.closure, executable.command.producer);
-      const validations: Record<string, NonNullable<Awaited<ReturnType<typeof validateValue>>>> = {};
-      for (const port of producer.outputs) {
-        const value = result.outputs[port.name];
-        if (value === undefined) continue;
-        const validation = await validateValue(state.program.closure, port.type, value, this.validators);
-        if (validation !== undefined) validations[port.name] = validation;
+      try {
+        const result = (await executable.run()) as ProducerHandlerResult;
+        const producer = resolveProducer(state.program.closure, executable.command.producer);
+        for (const port of producer.outputs) {
+          const value = result.outputs[port.name];
+          if (value === undefined) continue;
+          await validateValue(state.program.closure, port.type, value, this.validators);
+        }
+        const content = {
+          kind: "producer-completed",
+          command: executable.command.id,
+          outputs: result.outputs,
+          needs: result.needs,
+        } as const;
+        return {
+          status: "completed",
+          event: { ...content, id: `event:${digestOf(content)}` },
+        };
+      } catch (error) {
+        const producer = executable.command.producer;
+        throw new Error(
+          `Producer ${producer.module.name}@${producer.module.version}#${producer.name} failed: ${failureMessage(error)}`,
+          { cause: error },
+        );
       }
-      const content = {
-        kind: "producer-completed",
-        command: executable.command.id,
-        outputs: result.outputs,
-        needs: result.needs,
-        validations,
-      } as const;
-      return {
-        status: "completed",
-        event: { ...content, id: `event:${digestOf(content)}` },
-      };
     }
     if (executable.registration.kind === "recoverable") {
       if (context === undefined) throw new Error("recoverable Endpoint execution requires a stable Build id");
-      return await this.#executeEndpoint(state, executable, context);
+      try {
+        return await this.#executeEndpoint(state, executable, context);
+      } catch (error) {
+        throw new Error(
+          `Endpoint ${executable.endpointId} failed ${executable.command.need.capability.name}: ${failureMessage(error)}`,
+          { cause: error },
+        );
+      }
     }
-    const result = await executable.registration.handler({
-      command: structuredClone(executable.command),
-      need: structuredClone(executable.command.need),
-      artifacts: this.artifacts,
-      credentials: await this.#endpointCredentials(executable.registration),
-    });
-    return { status: "completed", event: await this.#endpointEvent(state, executable, result) };
+    try {
+      const result = await executable.registration.handler({
+        command: structuredClone(executable.command),
+        need: structuredClone(executable.command.need),
+        artifacts: this.artifacts,
+        credentials: await this.#endpointCredentials(executable.registration),
+      });
+      return { status: "completed", event: await this.#endpointEvent(state, executable, result) };
+    } catch (error) {
+      throw new Error(
+        `Endpoint ${executable.endpointId} failed ${executable.command.need.capability.name}: ${failureMessage(error)}`,
+        { cause: error },
+      );
+    }
   }
 
   /** Regenerate Core commands, then classify only what this Host can execute. */
   prepare(initial: BuildState): RuntimePreparation {
-    const transition = reduce(initial);
-    const state = transition.state;
+    const state = reduce(initial);
     if (state.status === "complete" || state.status === "failed") {
       return { state, runnable: [], blocked: [] };
     }
-    const classifications = transition.commands.map((command) => ({
+    const classifications = state.outstanding.map((command) => ({
       command,
       ...this.#classify(state, command),
     }));
@@ -529,7 +553,7 @@ export class NodeDriver {
     return await this.#execute(prepared.state, classified.executable, context);
   }
 
-  /** Cancel one journaled external Operation without trusting serialized Command content. */
+  /** Cancel one persisted external Operation without trusting serialized Command content. */
   async cancelOperation(
     initial: BuildState,
     operation: OperationSnapshot,
@@ -574,9 +598,7 @@ export class NodeDriver {
       endpoint: operation.endpoint,
       authority: operation.authority,
       route: operation.route,
-      implementationDigest: operation.implementationDigest,
       runtimeClosure: operation.runtimeClosure,
-      requestDigest: operation.requestDigest,
       attempt: operation.attempt,
     };
     const endpointContext = {
@@ -663,19 +685,18 @@ export class NodeDriver {
 
   async run(initial: BuildState, context?: RuntimeExecutionContext): Promise<DriverRunResult> {
     let state = initial;
-    const journal: DriverJournalEntry[] = [];
+    const outcomes: DriverExecutionOutcome[] = [];
 
-    for (let processed = 0; processed < this.maxEvents; processed += 1) {
-      const transition = reduce(state);
-      state = transition.state;
+    while (true) {
+      state = reduce(state);
       if (state.status === "complete") {
-        return { status: "complete", state, journal, blocked: [] };
+        return { status: "complete", state, outcomes, blocked: [] };
       }
       if (state.status === "failed") {
-        return { status: "failed", state, journal, blocked: [] };
+        return { status: "failed", state, outcomes, blocked: [] };
       }
 
-      const classifications = transition.commands.map((command) => ({
+      const classifications = state.outstanding.map((command) => ({
         command,
         ...this.#classify(state, command),
       }));
@@ -684,52 +705,41 @@ export class NodeDriver {
         const blocked = classifications
           .map((item) => item.blocked)
           .filter((item): item is BlockedCommand => item !== undefined);
-        journal.push(
-          ...blocked.map((item) => ({
-            command: item.command,
-            kind: transition.commands.find((command) => command.id === item.command)?.kind ?? "fulfill-need",
-            status: "blocked" as const,
-            message: `${item.reason}: ${item.subject}`,
-          })),
-        );
-        return { status: "paused", state, journal, blocked };
+        return { status: "paused", state, outcomes, blocked };
       }
 
       try {
         const execution = await this.#execute(state, selected, context);
         if (execution.status === "pending") {
-          journal.push({
+          outcomes.push({
             command: selected.command.id,
             kind: selected.command.kind,
             status: "pending",
             operation: execution.operation,
             ...(execution.wakeAt === undefined ? {} : { wakeAt: execution.wakeAt }),
           });
-          return { status: "paused", state, journal, blocked: [] };
+          return { status: "paused", state, outcomes, blocked: [] };
         }
         if (execution.status === "deferred") {
           throw new Error("direct NodeDriver execution has no Runtime capacity admission to defer");
         }
         const event = execution.event;
-        const accepted = reduce(state, event);
-        state = accepted.state;
-        journal.push({
+        state = reduce(state, event);
+        outcomes.push({
           command: selected.command.id,
           kind: selected.command.kind,
           status: "completed",
           event: event.id,
         });
       } catch (error) {
-        journal.push({
+        outcomes.push({
           command: selected.command.id,
           kind: selected.command.kind,
           status: "error",
           message: error instanceof Error ? error.message : String(error),
         });
-        return { status: "paused", state, journal, blocked: [] };
+        return { status: "paused", state, outcomes, blocked: [] };
       }
     }
-
-    return { status: "paused", state, journal, blocked: [] };
   }
 }

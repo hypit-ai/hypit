@@ -7,7 +7,6 @@ import type { BackgroundRemovalRequest } from "@narratage/background-removal";
 import {
   compileWireRequest,
   generationTypes,
-  mappingSupportsRequest,
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
 } from "@narratage/generation";
@@ -28,7 +27,6 @@ export type KieRoute = {
   readonly returns: TypeRef;
   readonly media: "image" | "video";
   readonly maxResults: number;
-  readonly supports: (constraints: CanonicalValue) => boolean;
   readonly compile: (
     constraints: CanonicalValue,
     resolve: GenerationArtifactUrlResolver,
@@ -53,7 +51,6 @@ const generationRoutes: readonly KieRoute[] = kieGenerationMappings.map((mapping
   returns: mapping.result === "image" ? generationTypes.imageSet : generationTypes.videoSet,
   media: mapping.result,
   maxResults: mapping.result === "image" ? 16 : 8,
-  supports: (constraints) => mappingSupportsRequest(mapping, constraints),
   compile: async (constraints, resolve) => await compileWireRequest(
     mapping,
     constraints as unknown as GenerationRequest,
@@ -62,8 +59,8 @@ const generationRoutes: readonly KieRoute[] = kieGenerationMappings.map((mapping
   packageResult: (artifacts) => ({
     kind: "inline",
     value: canonicalize(mapping.result === "image"
-      ? sealGeneratedImageSet({ contract: "svml.generated-image-set@1", images: artifacts })
-      : sealGeneratedVideoSet({ contract: "svml.generated-video-set@1", videos: artifacts })),
+      ? sealGeneratedImageSet({ images: artifacts })
+      : sealGeneratedVideoSet({ videos: artifacts })),
   }),
 }));
 
@@ -73,14 +70,6 @@ const backgroundRemovalRoute: KieRoute = {
   returns: artifactTypes.blob,
   media: "image",
   maxResults: 1,
-  supports: (constraints) => {
-    try {
-      assertBackgroundRemovalRequest(constraints as unknown as BackgroundRemovalRequest);
-      return true;
-    } catch {
-      return false;
-    }
-  },
   compile: async (constraints, resolve) => {
     const request = constraints as unknown as BackgroundRemovalRequest;
     assertBackgroundRemovalRequest(request);

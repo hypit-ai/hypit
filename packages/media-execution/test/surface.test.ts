@@ -34,7 +34,6 @@ function surface(bytes: Uint8Array, options: {
 }): CompositableSurfaceRef {
   const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}` as const;
   return {
-    contract: "svml.compositable-surface@1",
     artifact: { kind: "blob", digest, size: bytes.byteLength, mediaType: options.mediaType },
     width: options.width,
     height: options.height,
@@ -44,7 +43,7 @@ function surface(bytes: Uint8Array, options: {
   };
 }
 
-test("Surface byte verification proves exact still/video facts and rejects contradictory declarations", {
+test("Surface byte admission accepts matching still/video bytes and rejects contradictions", {
   skip: !hasMediaTools,
 }, async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-surface-test-"));
@@ -72,14 +71,9 @@ test("Surface byte verification proves exact still/video facts and rejects contr
       timing: { kind: "frames", frameRate: { numerator: 4, denominator: 1 }, frameCount: 4 },
     });
 
-    const evidence = await verifyCompositableSurfaceBytes({ surface: opaqueSurface, bytes: opaque });
-    assert.equal(evidence.contract, "svml.compositable-surface-byte-verification@1");
-    assert.equal(evidence.artifactDigest, opaqueSurface.artifact.digest);
-    assert.deepEqual(evidence.observed.timing, { kind: "still" });
-    assert.equal((await verifyCompositableSurfaceBytes({ surface: alphaSurface, bytes: alpha }))
-      .observed.alphaMode, "straight");
-    assert.deepEqual((await verifyCompositableSurfaceBytes({ surface: videoSurface, bytes: video }))
-      .observed.timing, { kind: "frames", frameRate: { numerator: 4, denominator: 1 }, frameCount: 4 });
+    await verifyCompositableSurfaceBytes({ surface: opaqueSurface, bytes: opaque });
+    await verifyCompositableSurfaceBytes({ surface: alphaSurface, bytes: alpha });
+    await verifyCompositableSurfaceBytes({ surface: videoSurface, bytes: video });
 
     await assert.rejects(
       verifyCompositableSurfaceBytes({ surface: { ...opaqueSurface, width: 9 }, bytes: opaque }),

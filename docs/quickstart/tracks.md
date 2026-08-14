@@ -185,12 +185,11 @@ Placement is an explicit Spatial Frame edge; appearance and motion remain reusab
 </media-track:Track>
 ```
 
-`<space:Frame>` takes `left`, `top`, `right` and `bottom` as **edge positions
-within the parent**, not as insets from each side. A Frame covering the middle
-84% of the canvas horizontally is `left="8%" right="92%"`, and `right="8%"` would
-place its right edge to the left of its left edge, which is rejected.
-
-The Selection contributes semantic points; Media performs the package-owned window projection.
+`left`, `top`, `right` and `bottom` are edge coordinates inside the parent Frame; `right` and
+`bottom` are not CSS-style margins. A Frame covering the middle 84% of the canvas horizontally is
+`left="8%" right="92%"`, and `right="8%"` would place its right edge to the left of its left edge,
+which is rejected. The Selection contributes semantic points; Media performs the package-owned
+window projection.
 The same Item model also covers full-canvas cutaways, split screens and corner overlays. Ordered
 child layers, source occupancy and explicit Sequences are available when one source is not enough.
 

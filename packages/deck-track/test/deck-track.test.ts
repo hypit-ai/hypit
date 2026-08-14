@@ -12,6 +12,7 @@ import {
   createDepthStackCardSet,
   decodeDepthStackSpec,
   depthStackManifest,
+  depthStackMarkupSurfaces,
   depthStackProducers,
   depthStackTypes,
   finalizeDepthStack,
@@ -49,15 +50,13 @@ import type {
   MarkupAttributeValue,
 } from "@narratage/markup";
 import { artifactTypes } from "@narratage/artifact";
-import { mediaTrackManifest } from "@narratage/media-track";
+import { mediaTrackManifest, mediaTrackTypes } from "@narratage/media-track";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@1",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
 const canvas = sealCanvasSpace({
-  contract: "svml.canvas-space@1",
   widthPx: 360,
   heightPx: 640,
   origin: "top-left",
@@ -66,7 +65,6 @@ const canvas = sealCanvasSpace({
   pixelAspect: "square",
 });
 const frame = sealSpatialFrame({
-  contract: "svml.spatial-frame@1",
   xPx: 60,
   yPx: 220,
   widthPx: 240,
@@ -86,19 +84,39 @@ const video = (name: string) => ({
   mediaType: "video/mp4",
 });
 
+test("DepthStack Surface declares every sealed Record it may emit", () => {
+  const surface = depthStackMarkupSurfaces.find((item) => item.name === "track");
+  assert.ok(surface !== undefined);
+  const names = new Set(surface.outputs.map((type) => type.name));
+  for (const type of [
+    depthStackTypes.header,
+    depthStackTypes.spec,
+    depthStackTypes.cardSpec,
+    spatialTypes.fit,
+    mediaTrackTypes.sampleLayerSpec,
+    mediaTrackTypes.paintLayerSpec,
+    depthStackTypes.cardLabel,
+    depthStackTypes.cardLabelStyle,
+    textTypes.text,
+    depthStackTypes.program,
+    compositionTypes.visualTrack,
+  ]) {
+    assert.ok(names.has(type.name), `${type.name} output`);
+  }
+});
+
 function stillMaterial(name: string): MediaLayerSet {
   return {
-    contract: "svml.media-layer-set@1",
+
     layers: [{
       id: `${name}:sample`,
       kind: "sample",
       source: {
         kind: "still",
         artifact: image(name),
-        extent: { contract: "svml.intrinsic-extent@1", widthPx: 120, heightPx: 90 },
+        extent: { widthPx: 120, heightPx: 90 },
       },
       fit: {
-        contract: "svml.content-fit@1",
         sizing: "cover",
         framePoint: { x: 0.5, y: 0.5 },
         contentPoint: { x: 0.5, y: 0.5 },
@@ -112,19 +130,18 @@ function stillMaterial(name: string): MediaLayerSet {
 
 function timedMaterial(name: string, occupancy: "loop" | "hold" = "loop"): MediaLayerSet {
   return {
-    contract: "svml.media-layer-set@1",
+
     layers: [{
       id: `${name}:sample`,
       kind: "sample",
       source: {
         kind: "timed",
         artifact: video(name),
-        extent: { contract: "svml.intrinsic-extent@1", widthPx: 120, heightPx: 90 },
+        extent: { widthPx: 120, heightPx: 90 },
         frameRate: { numerator: 30, denominator: 1 },
         frameCount: 12,
       },
       fit: {
-        contract: "svml.content-fit@1",
         sizing: "contain",
         framePoint: { x: 0.5, y: 0.5 },
         contentPoint: { x: 0.5, y: 0.5 },
@@ -139,7 +156,7 @@ function timedMaterial(name: string, occupancy: "loop" | "hold" = "loop"): Media
 
 function baseSpec(input: Partial<DepthStackSpec> = {}): DepthStackSpec {
   return sealDepthStackSpec({
-    contract: "svml.depth-stack-spec@1",
+
     visibility: { previous: 2, next: 1, wrap: false },
     poses: {
       current: {
@@ -176,7 +193,7 @@ function baseSpec(input: Partial<DepthStackSpec> = {}): DepthStackSpec {
 
 function cardSpec(id: string, past: "hold-tail" | "continue" | "hide" = "hold-tail", future: "hold-head" | "continue" = "hold-head") {
   return sealDepthStackCardSpec({
-    contract: "svml.depth-stack-card-spec@1",
+
     id,
     playback: { future, past },
   });
@@ -204,7 +221,7 @@ function program(input: {
   }
   return finalizeDepthStack(
     set,
-    sealDepthStackHeader({ contract: "svml.depth-stack-header@1", id: "proof-stack" }),
+    sealDepthStackHeader({ id: "proof-stack" }),
     frame,
     input.spec ?? baseSpec(),
     input.terminal ?? 60,
@@ -241,7 +258,7 @@ test("explicit wrapping never aliases one Card into several relative depths", ()
 
 test("missing, equal, reversed and terminal-crossing triggers fail in authored order", () => {
   assert.throws(() => finalizeDepthStack(
-    createDepthStackCardSet(), sealDepthStackHeader({ contract: "svml.depth-stack-header@1", id: "empty" }),
+    createDepthStackCardSet(), sealDepthStackHeader({ id: "empty" }),
     frame, baseSpec(), 60, space,
   ), /at least one Card/u);
   assert.throws(() => program({ triggers: [0, 20, 20] }), /strictly increasing/u);
@@ -320,7 +337,6 @@ test("continue uses one explicit loop-start clock and past hide removes the reta
 });
 
 const font: FontArtifactRef = {
-  contract: "svml.font-artifact@1",
   sources: [{ artifact: { kind: "blob", digest: digestOf("deck-font"), size: 64, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
@@ -328,7 +344,7 @@ const font: FontArtifactRef = {
 
 function exactLabel(): DepthStackCardLabel {
   return sealDepthStackCardLabel({
-    contract: "svml.depth-stack-card-label@1",
+
     kind: "text",
     document: { paragraphs: [{ id: "p", inlines: [{ id: "t", kind: "text", text: "Proof" }] }] },
     typography: {
@@ -374,7 +390,7 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
   const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
   const appearance = (path: string, properties: SvsRecipe["properties"]): SurfaceResolvedReference => ({
     path, ref: { kind: "record", id: path }, type: svsRecipeType,
-    record: { value: { kind: "inline", value: { contract: "svml.svs-recipe@1", path, properties } } } as never,
+    record: { value: { kind: "inline", value: { path, properties } } } as never,
   });
   const references = new Map<string, SurfaceResolvedReference>([
     ["map", plain("map", semanticMapTypes.complete)], ["space", plain("space", programSpaceTypes.programSpace)],
@@ -411,7 +427,7 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
 
 test("Label Surface compiles explicit exact-font text rather than media metadata", async () => {
   const range = { source: "deck.svml", start: 0, end: 1 };
-  const stack = { contract: "svml.font-stack@1" as const, faces: [font] };
+  const stack = { faces: [font] };
   const result = await decodeDepthStackLabelSurface({
     sourceName: "deck.svml",
     element: {
@@ -434,7 +450,7 @@ test("Label Surface compiles explicit exact-font text rather than media metadata
 
 test("Label Surface accepts ordinary graph Text without copying it during author compilation", async () => {
   const range = { source: "deck.svml", start: 0, end: 1 };
-  const stack = { contract: "svml.font-stack@1" as const, faces: [font] };
+  const stack = { faces: [font] };
   const result = await decodeDepthStackLabelSurface({
     sourceName: "deck.svml",
     element: {
@@ -461,14 +477,12 @@ test("another Deck family can coexist by contributing only the existing VisualTr
     name: "example.carousel",
     version: "1",
     dependencies: [compositionDependency],
-    types: [], capabilities: [], surfaces: [], producers: [{
+    types: [], capabilities: [], producers: [{
       name: "render-carousel",
       inputs: [],
       outputs: [{ name: "track", type: compositionTypes.visualTrack }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "example.carousel/render",
         digest: digestOf("example.carousel/render@1"),
       },
     }],
@@ -481,14 +495,14 @@ test("another Deck family can coexist by contributing only the existing VisualTr
     depthStackManifest,
     other,
   ]);
-  assert.ok(closure.modules.some((module) => module.ref.name === "@narratage/deck-track"));
-  assert.ok(closure.modules.some((module) => module.ref.name === "example.carousel"));
+  assert.ok(closure.modules.some((module) => module.manifest.name === "@narratage/deck-track"));
+  assert.ok(closure.modules.some((module) => module.manifest.name === "example.carousel"));
   assert.deepEqual(other.producers[0]?.outputs[0]?.type, compositionTypes.visualTrack);
 });
 
 test("SVS decoding exposes all documented depth, frame, motion and playback axes", () => {
   const value = decodeDepthStackSpec({
-    contract: "svml.svs-recipe@1",
+
     path: "studio.deck.proof",
     properties: {
       "visible-previous": 3, "visible-next": 2, wrap: false,

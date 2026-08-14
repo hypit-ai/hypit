@@ -11,10 +11,12 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/core": "workspace:*",
     "@narratage/narrative": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/text": "workspace:*",
     "@narratage/markup": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/core": "workspace:*"
   }
 }

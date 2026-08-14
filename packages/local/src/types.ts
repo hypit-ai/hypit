@@ -1,5 +1,5 @@
 import type { Awaitable, ComponentPackage } from "@narratage/component-kit";
-import type { ArtifactAttachment } from "@narratage/host";
+import type { ArtifactAttachment } from "@narratage/workspace";
 import type { EndpointPackage } from "@narratage/endpoint-kit";
 import type { BuildState } from "@narratage/protocol";
 import type { Digest } from "@narratage/protocol";
@@ -20,7 +20,6 @@ import type {
   RuntimeModuleRegistry,
   RuntimeServicePackage,
   RuntimeServiceSelection,
-  RuntimeJournal,
   RuntimeWorkerFactory,
 } from "@narratage/runtime";
 import type { TypeValidatorRegistrar, TypeValidatorRegistryLike } from "@narratage/validation";
@@ -43,7 +42,6 @@ export type CreateLocalRuntimeOptions = {
   readonly buildCatalog?: BuildCatalog;
   readonly operationStore: OperationStore;
   readonly dispatchStore: import("@narratage/runtime").BuildDispatchStore;
-  readonly journal: RuntimeJournal;
   readonly artifactStore: ArtifactStore;
   readonly credentialStore: CredentialStore;
   readonly scheduler: BuildSchedulerFactory;
@@ -53,20 +51,25 @@ export type CreateLocalRuntimeOptions = {
   readonly closure: LocalRuntimeClosureOptions;
   readonly scheduling?: Omit<BuildSchedulerOptions, "buildStore" | "runtimeClosure">;
   readonly validators?: LocalTypeValidatorRegistry;
-  /** Verified physical Runtime-adapter package lock; absent only for trusted direct embedding. */
-  readonly runtimePackageClosure?: import("@narratage/protocol").Digest;
 };
 
-export type CreateLocalRuntimeControlOptions = {
+export type CreateLocalRuntimeArchiveControlOptions = {
   readonly buildStore: BuildStore;
   readonly buildCatalog?: BuildCatalog;
   readonly operationStore: OperationStore;
   readonly dispatchStore: BuildDispatchStore;
-  readonly journal: RuntimeJournal;
+  /** Optional owner supplied by the project service assembly. */
+  readonly close?: () => Awaitable<void>;
+};
+
+export type CreateLocalRuntimeArtifactAccessOptions = {
   readonly artifactStore: ArtifactStore;
   /** Optional owner supplied by the project service assembly. */
   readonly close?: () => Awaitable<void>;
 };
+
+export type CreateLocalRuntimeControlOptions = CreateLocalRuntimeArchiveControlOptions
+  & CreateLocalRuntimeArtifactAccessOptions;
 
 export type CreateLocalCredentialControlOptions = {
   readonly credentialStore: CredentialStore;
@@ -79,11 +82,8 @@ export type ProjectLocalRuntimeOptions = {
   readonly root?: string;
   /** Host directory whose node_modules contains the packages named by packageLock. Defaults to root. */
   readonly packageRoot?: string;
-  readonly buildCatalog?: BuildCatalog;
   /** Trusted implementation package inventory. Each compilation activates its exact Source subset. */
   readonly packageLock?: string;
-  /** Verified physical Runtime-adapter package lock; absent only for trusted direct embedding. */
-  readonly runtimePackageClosure?: import("@narratage/protocol").Digest;
   /**
    * Replaceable parts of the Runtime itself. One package may fill several roles;
    * every selected role is explicit, and two packages exposing the same instance
@@ -97,17 +97,18 @@ export type ProjectLocalRuntimeOptions = {
   readonly scheduling: {
     readonly maxConcurrency: number;
     readonly resources?: Readonly<Record<string, number>>;
-    readonly maxEventsPerBuild?: number;
   };
   readonly validators?: LocalTypeValidatorRegistry;
 };
 
-export type ProjectLocalRuntimeControlOptions = Pick<ProjectLocalRuntimeOptions,
+export type ProjectLocalRuntimeArchiveControlOptions = Pick<ProjectLocalRuntimeOptions,
   | "root"
-  | "buildCatalog"
   | "runtimeServices"
   | "runtimeSelection"
 >;
+
+export type ProjectLocalRuntimeArtifactAccessOptions = ProjectLocalRuntimeArchiveControlOptions;
+export type ProjectLocalRuntimeControlOptions = ProjectLocalRuntimeArchiveControlOptions;
 
 export type LocalBuildRequest = {
   /** Stable user/run identity. Reusing it resumes only the same Core Build identity. */
@@ -172,7 +173,6 @@ export type LocalRuntime = {
   activity(build: string): Promise<LocalRuntimeActivity>;
   queue(): Promise<LocalRuntimeQueue>;
   operation(id: Digest): Promise<OperationSnapshot | undefined>;
-  journal(query?: import("@narratage/runtime").RuntimeJournalQuery): Promise<readonly import("@narratage/runtime").RuntimeJournalEntry[]>;
   credentials(endpoint?: string): Promise<readonly LocalCredentialStatus[]>;
   putCredential(endpoint: string, slot: string, secret: string): Promise<LocalCredentialStatus>;
   deleteCredential(endpoint: string, slot: string): Promise<{ readonly deleted: boolean; readonly credential: LocalCredentialStatus }>;
@@ -189,13 +189,31 @@ export type LocalRuntime = {
   close(): Awaitable<void>;
 };
 
-/** Durable project control that needs Stores but no Producer, Endpoint, Driver or Worker. */
+/** Durable execution-state archive that never opens the selected ArtifactStore. */
+export type LocalRuntimeArchiveControl = Pick<LocalRuntime,
+  | "status"
+  | "activity"
+  | "queue"
+  | "operation"
+  | "builds"
+  | "cancel"
+  | "cancelOperation"
+  | "close"
+>;
+
+/** Explicit Artifact byte access that never opens Build, Operation or Dispatch state. */
+export type LocalRuntimeArtifactAccess = Pick<LocalRuntime,
+  | "readArtifact"
+  | "openArtifact"
+  | "close"
+>;
+
+/** Durable project control used only when one operation truly spans state and Artifacts. */
 export type LocalRuntimeControl = Pick<LocalRuntime,
   | "status"
   | "activity"
   | "queue"
   | "operation"
-  | "journal"
   | "builds"
   | "cancel"
   | "cancelOperation"

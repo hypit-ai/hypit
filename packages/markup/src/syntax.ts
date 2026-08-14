@@ -2,7 +2,7 @@ import type { SourceRange } from "@narratage/protocol";
 
 import { MarkupFrontendError } from "./error.js";
 import type {
-  SourceUnit,
+  MarkupSource,
   StructuredElement,
   StructuredNode,
   MarkupAttributeValue,
@@ -22,11 +22,11 @@ type OpeningTag = {
   readonly selfClosing: boolean;
 };
 
-function fail(source: SourceUnit, code: string, message: string, offset?: number): never {
+function fail(source: MarkupSource, code: string, message: string, offset?: number): never {
   throw new MarkupFrontendError(code, message, source.name, offset, source.text);
 }
 
-function decodeEntities(value: string, source: SourceUnit, offset: number): string {
+function decodeEntities(value: string, source: MarkupSource, offset: number): string {
   return value.replace(/&(?:lt|gt|amp|quot|apos);/gu, (entity) => {
     switch (entity) {
       case "&lt;": return "<";
@@ -45,7 +45,7 @@ function skipSpace(text: string, start: number): number {
   return cursor;
 }
 
-function skipTrivia(source: SourceUnit, start: number): number {
+function skipTrivia(source: MarkupSource, start: number): number {
   let cursor = start;
   while (cursor < source.text.length) {
     const next = skipSpace(source.text, cursor);
@@ -60,14 +60,14 @@ function skipTrivia(source: SourceUnit, start: number): number {
   return cursor;
 }
 
-function parseName(source: SourceUnit, start: number): { readonly value: string; readonly end: number } {
+function parseName(source: MarkupSource, start: number): { readonly value: string; readonly end: number } {
   const match = NAME.exec(source.text.slice(start));
   if (!match) fail(source, "MARKUP_NAME", "Expected a name.", start);
   return { value: match[0], end: start + match[0].length };
 }
 
 function parseAttributeValue(
-  source: SourceUnit,
+  source: MarkupSource,
   start: number,
 ): { readonly value: MarkupAttributeValue; readonly end: number } {
   const quote = source.text[start];
@@ -89,7 +89,7 @@ function parseAttributeValue(
   fail(source, "MARKUP_ATTRIBUTE", "Attribute values must be quoted strings or whole-value references.", start);
 }
 
-export function parseOpeningTag(source: SourceUnit, start: number): OpeningTag {
+export function parseOpeningTag(source: MarkupSource, start: number): OpeningTag {
   if (source.text[start] !== "<" || source.text[start + 1] === "/") {
     fail(source, "MARKUP_OPEN", "Expected an opening tag.", start);
   }
@@ -123,7 +123,7 @@ export function parseOpeningTag(source: SourceUnit, start: number): OpeningTag {
   fail(source, "MARKUP_OPEN", `Opening tag <${parsedName.value}> is not closed.`, start);
 }
 
-function parseClose(source: SourceUnit, start: number): { readonly name: string; readonly end: number } {
+function parseClose(source: MarkupSource, start: number): { readonly name: string; readonly end: number } {
   if (!source.text.startsWith("</", start)) fail(source, "MARKUP_CLOSE", "Expected a closing tag.", start);
   const name = parseName(source, start + 2);
   const cursor = skipSpace(source.text, name.end);
@@ -132,7 +132,7 @@ function parseClose(source: SourceUnit, start: number): { readonly name: string;
 }
 
 export function parseStructuredElement(
-  source: SourceUnit,
+  source: MarkupSource,
   start: number,
 ): { readonly element: StructuredElement; readonly nextOffset: number } {
   const opening = parseOpeningTag(source, start);
@@ -192,7 +192,7 @@ export function parseStructuredElement(
 }
 
 function stringAttribute(
-  source: SourceUnit,
+  source: MarkupSource,
   opening: OpeningTag,
   name: string,
   required = false,
@@ -206,7 +206,7 @@ function stringAttribute(
   return value;
 }
 
-function importRequest(source: SourceUnit, opening: OpeningTag): MarkupImportRequest {
+function importRequest(source: MarkupSource, opening: OpeningTag): MarkupImportRequest {
   if (opening.name !== "import" || !opening.selfClosing) {
     fail(source, "MARKUP_IMPORT", "Imports must use <import .../>.", opening.start);
   }
@@ -230,7 +230,7 @@ function importRequest(source: SourceUnit, opening: OpeningTag): MarkupImportReq
   };
 }
 
-export function discoverMarkup(source: SourceUnit): MarkupDiscovery {
+export function discoverMarkup(source: MarkupSource): MarkupDiscovery {
   let cursor = skipTrivia(source, 0);
   const root = parseOpeningTag(source, cursor);
   if (root.name !== "svml" || root.selfClosing) fail(source, "MARKUP_ROOT", "Document must open with <svml>.", cursor);
@@ -248,7 +248,7 @@ export function discoverMarkup(source: SourceUnit): MarkupDiscovery {
   return { imports, bodyStart: cursor };
 }
 
-export function closeDocument(source: SourceUnit, start: number): number {
+export function closeDocument(source: MarkupSource, start: number): number {
   const close = parseClose(source, start);
   if (close.name !== "svml") fail(source, "MARKUP_ROOT_CLOSE", `Expected </svml>, received </${close.name}>.`, start);
   const end = skipTrivia(source, close.end);
@@ -256,6 +256,6 @@ export function closeDocument(source: SourceUnit, start: number): number {
   return end;
 }
 
-export function skipTextTrivia(source: SourceUnit, start: number): number {
+export function skipTextTrivia(source: MarkupSource, start: number): number {
   return skipTrivia(source, start);
 }

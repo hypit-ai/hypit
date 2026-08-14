@@ -4,34 +4,27 @@ import {
   decodeMediaAudioSurface, decodeMediaFontSurface, decodeMediaImageSurface, mediaComponent,
   mediaManifest,
   mediaModuleRef,
-  mediaSurfaceImplementationDigests,
+  mediaMarkupSurfaces,
 } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/media",
-  modules: [{ manifest: mediaManifest, specifiers: ["@narratage/media", "@narratage/media@1"] }],
+  modules: [{ manifest: mediaManifest }],
   components: [mediaComponent],
   hostFacets: [
     createMarkupSurfaceHostFacet({
       module: mediaModuleRef,
-      surface: "image",
-      mode: "structured",
-      implementationDigest: mediaSurfaceImplementationDigests.image,
+    declaration: mediaMarkupSurfaces.find((item) => item.name === "image")!,
       handler: decodeMediaImageSurface,
     }),
     createMarkupSurfaceHostFacet({
       module: mediaModuleRef,
-      surface: "audio",
-      mode: "structured",
-      implementationDigest: mediaSurfaceImplementationDigests.audio,
+    declaration: mediaMarkupSurfaces.find((item) => item.name === "audio")!,
       handler: decodeMediaAudioSurface,
     }),
     createMarkupSurfaceHostFacet({
       module: mediaModuleRef,
-      surface: "font",
-      mode: "structured",
-      implementationDigest: mediaSurfaceImplementationDigests.font,
+    declaration: mediaMarkupSurfaces.find((item) => item.name === "font")!,
       handler: decodeMediaFontSurface,
     }),
   ],

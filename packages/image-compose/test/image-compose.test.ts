@@ -17,13 +17,13 @@ import type { CanonicalValue, StoredValue, TypeRef, TypedRecord } from "@narrata
 import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@narratage/spatial";
 
 const canvas = sealCanvasSpace({
-  contract: "svml.canvas-space@1", widthPx: 1080, heightPx: 1920,
+  widthPx: 1080, heightPx: 1920,
   origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
 });
-const frame = sealSpatialFrame({ contract: "svml.spatial-frame@1", xPx: -10, yPx: 20, widthPx: 500, heightPx: 400 });
-const options = sealImageComposeOptions({ contract: "svml.image-compose-options@1", background: "#11223344" });
+const frame = sealSpatialFrame({ xPx: -10, yPx: 20, widthPx: 500, heightPx: 400 });
+const options = sealImageComposeOptions({ background: "#11223344" });
 const spec = sealImageComposeLayerSpec({
-  contract: "svml.image-compose-layer-spec@1", fit: "cover", interpolation: "lanczos", opacity: 0.75,
+  fit: "cover", interpolation: "lanczos", opacity: 0.75,
 });
 const source = { kind: "blob" as const, digest: digestOf("hero-image"), size: 123, mediaType: "image/png" };
 
@@ -35,7 +35,7 @@ test("Image Compose is an ordered Layer graph with no privileged base image", ()
   const fragment = createImageComposeFragment([
     { sourceName: "a-source", frameName: "a-frame", specName: "a-spec" },
     { sourceName: "b-source", frameName: "b-frame", specName: "b-spec" },
-  ], "test:compose");
+  ]);
   assert.deepEqual(fragment.operations.map((operation) => operation.id).sort(), [
     "image:compose",
     "image:layers:append:0001", "image:layers:append:0002", "image:layers:empty",
@@ -62,10 +62,10 @@ test("component data flow preserves explicit Canvas, Frame and paint order", asy
     layers: record("layers", imageComposeTypes.layerSet, appended.outputs.layers!),
   } } as never);
   assert("image" in result.needs);
-  assert.deepEqual(result.needs.image, { constraints: {
-    contract: "svml.raster-request@1", kind: "compose", canvas, background: options.background,
+  assert.deepEqual(result.needs.image, {
+    kind: "compose", canvas, background: options.background,
     layers: [{ source, frame, fit: spec.fit, interpolation: spec.interpolation, opacity: spec.opacity }],
-  } });
+  });
 });
 
 test("the Surface declares once and paints child Layers in document order", async () => {

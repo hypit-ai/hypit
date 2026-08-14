@@ -50,7 +50,6 @@ function common(inputs: Record<string, { readonly value: StoredValue } | undefin
 }
 
 export const commentStickerComponent = {
-  name: "@narratage/comment-sticker",
   producers: [
     {
       producer: commentStickerProducers.createContent,

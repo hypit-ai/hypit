@@ -71,12 +71,10 @@ function documentFixture(canaryId: string): HyperframesDocument {
   const frameRate = { numerator: 24, denominator: 1 } as const;
   const frameCount = 24;
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate,
   });
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: `hyperframes-aws-canary-${canaryId}`,
     presents: [{
@@ -103,7 +101,6 @@ function documentFixture(canaryId: string): HyperframesDocument {
     }],
   });
   return compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1",
     id: `hyperframes-aws-canary-${canaryId}`,
     canvas: { width: 160, height: 96, clearColor: "#000000" },
     tracks: [track],
@@ -179,9 +176,7 @@ async function main(): Promise<void> {
     endpoint: "hyperframes.aws-lambda.canary",
     authority: "hyperframes.aws-lambda.canary",
     route: "fixture.render",
-    implementationDigest: digestOf("hyperframes-aws-canary:implementation"),
     runtimeClosure: digestOf("hyperframes-aws-canary:runtime"),
-    requestDigest: need.requestDigest,
     attempt: 1,
   });
   const context = {
@@ -237,7 +232,6 @@ async function main(): Promise<void> {
       frameRate: visual.frameRate,
       frameCount: visual.frameCount,
       canvas: visual.canvas,
-      metadata: outcome.result.metadata,
       probe: probe.streams[0],
     }, null, 2)}\n`);
   } finally {

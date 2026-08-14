@@ -2,15 +2,14 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { sealSpeechEvidenceAudio, speechTypes } from "@narratage/speech";
-import type { SpeechEvidenceAudio } from "@narratage/speech";
 import assert from "node:assert/strict";
 import { MemoryArtifactStore, EndpointRegistry } from "@narratage/driver-node";
 import { digestOf } from "@narratage/protocol";
 import type { Need } from "@narratage/protocol";
+import { speechEvidenceTypes } from "@narratage/speech-evidence";
 import {
   whisperXCapabilities,
   whisperXRequestForEvidenceAudio,
-  whisperXTypes,
 } from "@narratage/whisperx";
 
 import {
@@ -18,10 +17,6 @@ import {
   interpretWhisperXResponse,
 } from "../src/index.js";
 
-const sourceSegments = [
-  { segmentId: "opening", startSec: 0, endSec: 1 },
-  { segmentId: "answer", startSec: 1, endSec: 2 },
-];
 function wav(sampleFrames: number): Uint8Array {
   const bytes = new Uint8Array(44 + sampleFrames * 2);
   const view = new DataView(bytes.buffer);
@@ -46,7 +41,7 @@ function wav(sampleFrames: number): Uint8Array {
 
 test("local WhisperX Provider pins the complete service runtime and is independently queued", () => {
   const provider = createLocalWhisperXProvider({ expectedModel: "small", defaultConcurrency: 2 });
-  assert.equal(provider.name, "whisperx.local");
+  assert.equal(provider.instance.id, "whisperx.local");
   const facet = provider.manifest.facets[0];
   assert.equal(facet?.role, "capability-endpoint");
   assert(facet?.role === "capability-endpoint");
@@ -57,7 +52,7 @@ test("local WhisperX Provider pins the complete service runtime and is independe
   );
 });
 
-test("service pauses are projected onto authored Segments without clipping a crossing word into fake evidence", () => {
+test("wire seconds are lowered once to exact evidence samples without authored Segment knowledge", () => {
   const evidence = interpretWhisperXResponse({
     language: "en",
     segments: [{
@@ -69,14 +64,17 @@ test("service pauses are projected onto authored Segments without clipping a cro
         { text: "world", start: 1.2, end: 1.6 },
       ],
     }],
-  }, sourceSegments, 2);
-  assert.deepEqual(evidence.map((segment) => [segment.sourceSegmentId, segment.startSec, segment.endSec]), [
-    ["opening", 0, 1],
-    ["answer", 1, 2],
+  }, 32_000);
+  assert.equal(evidence.length, 1);
+  assert.deepEqual(
+    { startSample: evidence[0]!.startSample, endSampleExclusive: evidence[0]!.endSampleExclusive },
+    { startSample: 1_600, endSampleExclusive: 28_800 },
+  );
+  assert.deepEqual(evidence[0]!.words, [
+    { text: "hello", startSample: 1_600, endSampleExclusive: 6_400, score: 0.99 },
+    { text: "crossing", startSample: 14_400, endSampleExclusive: 17_600, score: 0.8 },
+    { text: "world", startSample: 19_200, endSampleExclusive: 25_600 },
   ]);
-  assert.deepEqual(evidence[0]!.words[0], { text: "hello", startSec: 0.1, endSec: 0.4, score: 0.99 });
-  assert.deepEqual(evidence[1]!.words[0], { text: "crossing", score: 0.8 });
-  assert.deepEqual(evidence[1]!.words[1], { text: "world", startSec: 1.2, endSec: 1.6 });
 });
 
 test("local Provider stages canonical evidence bytes unchanged and returns sealed alignment evidence", async () => {
@@ -127,35 +125,20 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
     const artifacts = new MemoryArtifactStore();
     const artifact = await artifacts.put(expected, "audio/wav");
     const evidenceAudio = sealSpeechEvidenceAudio({
-      contract: "svml.speech-evidence-audio@1",
       artifact,
-      codec: "pcm_s16le",
-      sampleRate: 16_000,
-      channels: 1,
       sampleFrames: 32_000,
-      durationSec: 2,
-      segments: sourceSegments,
-      sampleMap: {
-        algorithm: "rational-boundary-round@1",
-        sourceSampleRate: 48_000,
-        evidenceSampleRate: 16_000,
-        sourceSampleFrames: 96_000,
-        evidenceSampleFrames: 32_000,
-        sourceOriginSample: 0,
-        evidenceOriginSample: 0,
-      },
     });
     const constraints = whisperXRequestForEvidenceAudio(evidenceAudio, { language: "en" });
     const need: Need = {
       id: "need:whisperx-loopback",
       capability: whisperXCapabilities.alignment,
-      returns: whisperXTypes.alignmentEvidence,
+      returns: speechEvidenceTypes.alignedTranscript,
       constraints,
       requestedBy: "derivation:whisperx-loopback",
       result: "record:whisperx-loopback",
       requestDigest: digestOf({
         capability: whisperXCapabilities.alignment,
-        returns: whisperXTypes.alignmentEvidence,
+        returns: speechEvidenceTypes.alignedTranscript,
         constraints,
       }),
     };
@@ -177,8 +160,7 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
     assert.equal(stagedMatches, true);
     assert.equal(output.value.kind, "inline");
     const value = output.value.kind === "inline" ? output.value.value : null;
-    assert.equal((value as { readonly segments?: readonly unknown[] }).segments?.length, 2);
-    assert.equal((value as { readonly contract?: unknown }).contract, "svml.whisperx-alignment-evidence@1");
+    assert.equal((value as { readonly passages?: readonly unknown[] }).passages?.length, 1);
     assert.equal(speechTypes.evidenceAudio.name, "SpeechEvidenceAudio");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));

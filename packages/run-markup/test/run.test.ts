@@ -9,7 +9,6 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
-  sealTypedModule,
   start,
 } from "@narratage/core";
 import { sealGraphFragment } from "@narratage/elaborator";
@@ -43,15 +42,12 @@ const manifest: ModuleManifest = {
     { name: mediaType.name, schema: { kind: "string" } },
   ],
   capabilities: [],
-  surfaces: [],
   producers: [defaultProducer, previewProducer].map((producer) => ({
     name: producer.name,
     inputs: [{ name: "prompt", type: promptType }],
     outputs: [{ name: "media", type: mediaType }],
     needs: [],
     implementation: {
-      kind: "registered" as const,
-      locator: `example.run/${producer.name}`,
       digest: digestOf(`example.run/${producer.name}@1`),
     },
   })),
@@ -65,7 +61,7 @@ function fixture(): CompiledSourceClosure {
     value: { kind: "inline", value: "A deliberate preview." },
     origin: { kind: "authored" },
   });
-  const program = link(closure, [sealTypedModule({ id: "author:run", closureDigest: closure.digest, records: [prompt] })]);
+  const program = link(closure, [prompt]);
   const graph = sealCompiledGraph({
     program: program.semanticDigest,
     outputs: ["left", "right"].map((id) => ({ id, type: mediaType, primary: "default:candidate" })),
@@ -83,7 +79,7 @@ function fixture(): CompiledSourceClosure {
   });
   return {
     program,
-    elaboration: { graph },
+    graph,
     exports: [
       { name: "prompt", type: promptType, ref: { kind: "record", id: prompt.id } },
       { name: "left", type: mediaType, ref: { kind: "logical-output", id: "left" } },
@@ -94,7 +90,6 @@ function fixture(): CompiledSourceClosure {
 
 function previewFragment() {
   return sealGraphFragment({
-    name: "shared-preview",
     inputs: [{ name: "prompt", type: promptType }],
     operations: [{
       id: "preview",
@@ -114,12 +109,12 @@ function realize(compilation: CompiledSourceClosure, run: Awaited<ReturnType<typ
   const selected = new Map(run.graph.satisfactions.map((item) => [item.output, item.candidate]));
   return sealCompiledGraph({
     program: compilation.program.semanticDigest,
-    outputs: compilation.elaboration.graph.outputs.map((item) => ({
+    outputs: compilation.graph.outputs.map((item) => ({
       ...item,
       primary: selected.get(item.id) ?? item.primary,
     })),
-    candidates: [...compilation.elaboration.graph.candidates, ...run.graph.candidates],
-    operations: [...compilation.elaboration.graph.operations, ...run.graph.operations],
+    candidates: [...compilation.graph.candidates, ...run.graph.candidates],
+    operations: [...compilation.graph.operations, ...run.graph.operations],
   });
 }
 
@@ -132,6 +127,22 @@ async function compileDocument(body: string) {
     text: `<?svml using="@narratage/run-markup@1"?>\n${body}`,
   }, frontends);
 }
+
+test("Run Markup compilation consumes decode output without repeating package discovery", async () => {
+  const frontends = new RunFrontendRegistry();
+  frontends.register({
+    ...runMarkupFrontend,
+    discover() {
+      throw new Error("package discovery must not run during compilation");
+    },
+  });
+  const compiled = await compileRunSource({
+    id: "/project/build.svrun",
+    name: "build.svrun",
+    text: `<?svml using="@narratage/run-markup@1"?>\n<svrun version="1"><author source="./main.svml"/><target output="left"/></svrun>`,
+  }, frontends);
+  assert.equal(compiled.document.targets[0]?.output, "left");
+});
 
 test("Run Fragments enter the Host only through the locked Run facet ABI", () => {
   const fragment = previewFragment();
@@ -185,14 +196,14 @@ test("a Provided Value is an ordinary zero-input Candidate", async () => {
   const graph = realize(compilation, run);
   const state = start(compilation.program, graph, sealBuildRequest({ graph: graph.id, targets: run.graph.targets }));
   assert.equal(state.plan.steps.length, 0);
-  assert.equal(state.plan.initialValues.length, 1);
+  assert.equal(state.records.filter((record) => record.origin.kind === "provided").length, 1);
 });
 
 test("a source file is an ordinary BlobArtifact Candidate", async () => {
   const compiled = await compileDocument(`<svrun version="1">
     <author source="./main.svml"/>
     <target output="left"/>
-    <file id="approved" from="./approved.mp4" media-type="video/mp4"/>
+    <file id="approved" type="@narratage/artifact@1#BlobArtifact" from="./approved.mp4" media-type="video/mp4"/>
     <satisfy output="left" candidate="approved"/>
   </svrun>`);
   const compilation = fixture();
@@ -215,11 +226,11 @@ test("a source file is an ordinary BlobArtifact Candidate", async () => {
 
 test("a Build Record resolves a Host Catalog alias without entering Core", async () => {
   const compilation = fixture();
-  let historical = start(compilation.program, compilation.elaboration.graph, sealBuildRequest({
-    graph: compilation.elaboration.graph.id,
+  let historical = start(compilation.program, compilation.graph, sealBuildRequest({
+    graph: compilation.graph.id,
     targets: [{ output: "left" }],
   }));
-  historical = reduce(historical).state;
+  historical = reduce(historical);
   const command = historical.outstanding.find((item) => item.kind === "invoke-producer");
   assert.ok(command);
   const event = {
@@ -227,9 +238,8 @@ test("a Build Record resolves a Host Catalog alias without entering Core", async
     command: command.id,
     outputs: { media: { kind: "inline" as const, value: "archived media" } },
     needs: {},
-    validations: {},
   };
-  historical = reduce(historical, { ...event, id: `event:${digestOf(event)}` }).state;
+  historical = reduce(historical, { ...event, id: `event:${digestOf(event)}` });
 
   const compiled = await compileDocument(`<svrun version="1">
     <author source="./main.svml"/><target output="right"/>
@@ -259,6 +269,16 @@ test("Run imports are a prologue and Runtime settings are not language elements"
   </svrun>`), /does not accept <provider>/u);
 });
 
+test("duplicate satisfactions fail at the author-written Run edge", () => {
+  assert.throws(() => parseRunDocument("bad.svrun", `<svrun version="1">
+    <author source="./main.svml"/><target output="left"/>
+    <value id="one" type="example.run@1#Media" from="./one.json"/>
+    <value id="two" type="example.run@1#Media" from="./two.json"/>
+    <satisfy output="left" candidate="one"/>
+    <satisfy output="left" candidate="two"/>
+  </svrun>`), /bad\.svrun:6:\d+:.*repeats output left/u);
+});
+
 test("a Target-only source still compiles one mandatory Run Graph", async () => {
   const compiled = await compileDocument(`<svrun version="1"><author source="./main.svml"/><target output="left"/></svrun>`);
   const compilation = fixture();
@@ -270,7 +290,6 @@ test("a Target-only source still compiles one mandatory Run Graph", async () => 
     readFile() { throw new Error("not used"); },
     readBuild() { throw new Error("not used"); },
   });
-  assert.equal(run.graph.authorGraph, compilation.elaboration.graph.id);
   assert.equal(run.graph.operations.length, 0);
   assert.equal(run.graph.targets[0]?.output, "left");
 });
@@ -279,10 +298,9 @@ test("Run Source Closure separates source bytes from semantic meaning", async ()
   const first = await compileDocument(`<svrun version="1"><author source="./main.svml"/><target output="left"/></svrun>`);
   const second = await compileDocument(`<svrun version="1"><author source="./main.svml"/>\n\n<target output="left"/></svrun>`);
   assert.notEqual(first.closure.id, second.closure.id);
-  assert.equal(first.closure.units[0]?.semanticDigest, second.closure.units[0]?.semanticDigest);
-  const unit = first.closure.units[0]!;
+  assert.equal(first.closure.semanticDigest, second.closure.semanticDigest);
   assert.throws(() => verifyRunSourceClosure({
     ...first.closure,
-    units: [{ ...unit, sourceDigest: digestOf("tampered") }],
-  }), (error: unknown) => error instanceof RunSourceError && error.code === "RUN_SOURCE_UNIT_DIGEST_MISMATCH");
+    sourceDigest: digestOf("tampered"),
+  }), (error: unknown) => error instanceof RunSourceError && error.code === "RUN_SOURCE_CLOSURE_DIGEST_MISMATCH");
 });

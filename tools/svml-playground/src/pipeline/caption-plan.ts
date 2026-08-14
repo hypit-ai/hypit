@@ -48,7 +48,7 @@ export function evenCaptionPlan(display: DisplaySequence, program: Program): unk
     }
     return { id: run.id, styleId: run.styleId, cues };
   });
-  return { contract: "svml.caption-plan@1", runs };
+  return { runs };
 }
 
 /** Whether a sequence has anything to phrase at all. */

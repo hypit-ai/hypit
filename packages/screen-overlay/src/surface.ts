@@ -113,7 +113,7 @@ export const decodeScreenOverlaySurface: StructuredSurfaceHandler = ({ element, 
   const canvas = ref(element.attributes.canvas, `${element.name}.canvas`, spatialTypes.canvas, resolveReference);
   const space = ref(element.attributes.space, `${element.name}.space`, programSpaceTypes.programSpace, resolveReference);
   const headerId = `${id}.header`; const records: SurfaceRecordDraft[] = [{ id: headerId, type: screenOverlayTypes.header,
-    value: { kind: "inline", value: sealScreenOverlayHeader({ contract: "svml.screen-overlay-header@1", id }) }, range: element.range }];
+    value: { kind: "inline", value: sealScreenOverlayHeader({ id }) }, range: element.range }];
   const fragmentItems: Parameters<typeof createScreenOverlayFragment>[0][number][] = [];
   const inputs: Record<string, typeof canvas.ref> = { canvas: canvas.ref, header: { kind: "record", id: headerId }, space: space.ref };
   let index = 0;
@@ -123,7 +123,7 @@ export const decodeScreenOverlaySurface: StructuredSurfaceHandler = ({ element, 
     index += 1; const suffix = String(index).padStart(4, "0"); const decoded = content(child);
     allowed(child, ["id", "z", ...TIMING, ...decoded.attributes]); const temporal = binding(child, resolveReference);
     const occurrences = text(child, "occurrences", "one"); if (occurrences !== "one" && occurrences !== "each") throw new Error(`${child.name}.occurrences is invalid.`);
-    const itemSpec = sealScreenOverlayItemSpec({ contract: "svml.screen-overlay-item-spec@1",
+    const itemSpec = sealScreenOverlayItemSpec({
       id: optionalText(child, "id") ?? `${id}.${decoded.value.kind}.${suffix}`, content: decoded.value,
       projection: temporal.projection, expansion: { kind: occurrences }, stackingOrder: integer(child, "z") });
     const specId = `${id}.item.${suffix}.spec`; const specName = `item-${suffix}-spec`;
@@ -137,6 +137,6 @@ export const decodeScreenOverlaySurface: StructuredSurfaceHandler = ({ element, 
     }
   }
   if (fragmentItems.length === 0) throw new Error(`${element.name} requires at least one component.`);
-  const fragment = createScreenOverlayFragment(fragmentItems, `@narratage/screen-overlay/surface/${id}@1`);
+  const fragment = createScreenOverlayFragment(fragmentItems);
   return { records, components: [{ id, fragment: fragment.id, inputs, outputs: { program: `${id}.program`, track: `${id}.track` }, range: element.range }], fragments: [fragment] };
 };

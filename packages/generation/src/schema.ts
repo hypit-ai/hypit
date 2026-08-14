@@ -29,7 +29,6 @@ export function generationObjectSchema(
 }
 
 export const generatedImageSetSchema = generationObjectSchema({
-  contract: { schema: { kind: "literal", value: "svml.generated-image-set@1" } },
   images: {
     schema: {
       kind: "array",
@@ -41,7 +40,6 @@ export const generatedImageSetSchema = generationObjectSchema({
 });
 
 export const generatedVideoSetSchema = generationObjectSchema({
-  contract: { schema: { kind: "literal", value: "svml.generated-video-set@1" } },
   videos: {
     schema: {
       kind: "array",
@@ -53,7 +51,6 @@ export const generatedVideoSetSchema = generationObjectSchema({
 });
 
 export const generatedAudioSetSchema = generationObjectSchema({
-  contract: { schema: { kind: "literal", value: "svml.generated-audio-set@1" } },
   audios: {
     schema: {
       kind: "array",

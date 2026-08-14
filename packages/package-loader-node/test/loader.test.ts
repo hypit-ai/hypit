@@ -10,17 +10,15 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
+  collectNodePackageComponents,
   createNodePackageLock,
-  installNodePackageComponents,
   loadNodePackageSelection,
   loadNodePackageSet,
-  loadNodePackageContributions,
   writeNodePackageLock,
 } from "@narratage/package-loader-node";
-import { RuntimeAdapterRegistry } from "@narratage/runtime-adapter";
-import { TypeValidatorRegistry } from "@narratage/validation";
+import { modulePackageAbi } from "@narratage/protocol";
+import { runtimeEndpointAdapterHostAbi, RuntimeAdapterRegistry } from "@narratage/runtime-adapter";
 import { digestOf } from "@narratage/protocol";
-import type { ProducerRef } from "@narratage/protocol";
 
 const implementationDigest = `sha256:${"1".repeat(64)}`;
 const producerDigest = `sha256:${"3".repeat(64)}`;
@@ -53,7 +51,6 @@ async function fixture(): Promise<{
     dependencies: [],
     types: [],
     capabilities: [],
-    surfaces: [],
     producers: [],
   };
   await writeFile(join(dependencyRoot, "package.json"), JSON.stringify({
@@ -65,7 +62,6 @@ async function fixture(): Promise<{
   }, null, 2), "utf8");
   await writeFile(dependency, `export default {
     format: "svml.node-package@1",
-    name: "example-helper",
     modules: [{ manifest: ${JSON.stringify(helperManifest)} }],
   };\n`, "utf8");
   await writeFile(join(typesRoot, "package.json"), JSON.stringify({
@@ -85,7 +81,6 @@ async function fixture(): Promise<{
   }, null, 2), "utf8");
   await writeFile(join(extraRoot, "activation.mjs"), `export default {
     format: "svml.node-package@1",
-    name: "example-extra",
   };\n`, "utf8");
   await writeFile(join(packageRoot, "package.json"), JSON.stringify({
     name: "example-card",
@@ -105,7 +100,6 @@ async function fixture(): Promise<{
     const producer = { module, name: "make-card" };
     export default {
       format: "svml.node-package@1",
-      name: "example-card",
       modules: [{
         manifest: {
           format: "svml.module@1",
@@ -119,34 +113,18 @@ async function fixture(): Promise<{
             name: resultType.name,
             schema: { kind: "string", minLength: 1 },
             validator: {
-              abi: "svml.type-validator@1",
               implementation: {
-                kind: "registered",
-                locator: "example-card/validate-card-result",
                 digest,
               },
             },
           }],
           capabilities: [],
-          surfaces: [{
-            name: "card",
-            tag: "Card",
-            mode: "structured",
-            outputs: [resultType],
-            implementation: {
-              kind: "trusted-frontend-surface",
-              locator: "example-card/card",
-              digest,
-            },
-          }],
           producers: [{
             name: producer.name,
             inputs: [],
             outputs: [{ name: "result", type: resultType }],
             needs: [],
             implementation: {
-              kind: "registered",
-              locator: "example-card/make-card",
               digest: producerDigest,
             },
           }],
@@ -156,9 +134,10 @@ async function fixture(): Promise<{
       hostFacets: [{
         abi: "svml.markup-surface-host@1",
         identity: {
-          contract: "svml.markup-surface-host-facet@1",
           module,
           surface: "card",
+          tag: "Card",
+          outputs: [resultType],
           mode: "structured",
           implementationDigest: digest,
         },
@@ -222,24 +201,19 @@ test("an installed locked package carries inert Host facets and activatable comp
   const lock = await createNodePackageLock(["example-card"], item.root);
   assert.deepEqual(lock.artifacts.map((artifact) => artifact.name), ["example-card", "example-helper", "example-types"]);
   assert.deepEqual(lock.selected, ["example-card"]);
-  assert.deepEqual(lock.packages.map((value) => value.specifier), ["example-card", "example-helper"]);
+  assert.deepEqual(lock.packages.map((value) => value.package.name), ["example-card", "example-helper"]);
   await writeNodePackageLock(item.lock, lock);
-  const packages = await loadNodePackageContributions(item.lock, item.root);
+  const packages = (await loadNodePackageSet(item.lock, item.root)).packages.map((value) => value.contribution);
 
-  assert.equal(packages[0]?.name, "example-card");
-  assert.equal(packages[1]?.name, "example-helper");
+  assert.equal(packages[0]?.modules?.[0]?.manifest.name, "example.card");
+  assert.equal(packages[1]?.modules?.[0]?.manifest.name, "example.helper");
   assert.equal(packages[0]?.hostFacets?.[0]?.abi, "svml.markup-surface-host@1");
 
-  const registered: Array<{ readonly producer: ProducerRef; readonly digest: string }> = [];
-  installNodePackageComponents(packages, {
-    registerProducer(producer, digest) {
-      registered.push({ producer, digest });
-    },
-  }, new TypeValidatorRegistry());
-  assert.deepEqual(registered, [{
-    producer: { module: { name: "example.card", version: "1" }, name: "make-card" },
-    digest: producerDigest,
-  }]);
+  assert.deepEqual(collectNodePackageComponents(packages).flatMap((component) => component.producers ?? [])
+    .map((facet) => ({ producer: facet.producer, digest: facet.implementationDigest })), [{
+      producer: { module: { name: "example.card", version: "1" }, name: "make-card" },
+      digest: producerDigest,
+    }]);
 });
 
 test("an empty local trust selection is a valid authenticated package lock", async () => {
@@ -250,7 +224,7 @@ test("an empty local trust selection is a valid authenticated package lock", asy
   assert.deepEqual(lock.artifacts, []);
   assert.deepEqual(lock.packages, []);
   await writeNodePackageLock(path, lock);
-  assert.deepEqual(await loadNodePackageContributions(path, root), []);
+  assert.deepEqual((await loadNodePackageSet(path, root)).packages, []);
 });
 
 test("dependency bytes are rejected before a locked contribution entry is reused", async () => {
@@ -260,7 +234,7 @@ test("dependency bytes are rejected before a locked contribution entry is reused
   await writeFile(item.dependency, `${await readFile(item.dependency, "utf8")}\n// changed bytes\n`, "utf8");
 
   await assert.rejects(
-    async () => await loadNodePackageContributions(item.lock, item.root),
+    async () => await loadNodePackageSet(item.lock, item.root),
     /installed Node package bytes do not match the lock/,
   );
 });
@@ -292,7 +266,7 @@ test("two physical packages cannot ambiguously provide one required Module", asy
   }, null, 2), "utf8");
   await writeFile(
     join(copyRoot, "index.mjs"),
-    (await readFile(item.dependency, "utf8")).replace('name: "example-helper"', 'name: "example-helper-copy"'),
+    await readFile(item.dependency, "utf8"),
     "utf8",
   );
   const cardPackagePath = join(item.root, "node_modules", "example-card", "package.json");
@@ -312,8 +286,8 @@ test("an unrelated selected package does not contaminate another package's imple
   const item = await fixture();
   const alone = await createNodePackageLock(["example-card"], item.root);
   const together = await createNodePackageLock(["example-card", "example-extra"], item.root);
-  const left = alone.packages.find((value) => value.specifier === "example-card")!;
-  const right = together.packages.find((value) => value.specifier === "example-card")!;
+  const left = alone.packages.find((value) => value.package.name === "example-card")!;
+  const right = together.packages.find((value) => value.package.name === "example-card")!;
   assert.equal(left.closureDigest, right.closureDigest);
   assert.notEqual(alone.digest, together.digest);
 });
@@ -326,7 +300,7 @@ test("selection mutation keeps a shared dependency only through its retained roo
   });
   assert.deepEqual(next.selected, ["example-extra"]);
   assert.deepEqual(next.artifacts.map((artifact) => artifact.name), ["example-extra", "example-types"]);
-  assert.deepEqual(next.packages.map((value) => value.specifier), ["example-extra"]);
+  assert.deepEqual(next.packages.map((value) => value.package.name), ["example-extra"]);
 });
 
 test("a compute facet cannot claim another implementation than its static Manifest", async () => {
@@ -369,12 +343,8 @@ async function runtimeAdapterFixture(marker: string): Promise<{
     const capability = { module, name: "Generate" };
     const returns = { module, name: "Result" };
     const runtimeFacet = {
-      abi: "svml.runtime-adapter-host@1",
-      identity: {
-        contract: "svml.runtime-adapter-facet@1",
-        use: "example-runtime-adapter",
-        kind: "endpoint",
-      },
+      abi: "svml.runtime-endpoint-adapter-host@1",
+      offers: ["example.logical-endpoint"],
       implementation: {
         activate(context) {
           const facet = { module, name: "endpoint" };
@@ -387,7 +357,7 @@ async function runtimeAdapterFixture(marker: string): Promise<{
                 facets: [{
                   name: facet.name,
                   role: "capability-endpoint",
-                  implementation: { locator: "example-runtime-adapter/endpoint", digest: declared },
+                  implementation: { digest: declared },
                   fulfills: [{ capability, returns }],
                   lifecycle: "immediate",
                   defaultConcurrency: 1,
@@ -404,8 +374,6 @@ async function runtimeAdapterFixture(marker: string): Promise<{
                   returns,
                   () => ({
                     value: { kind: "inline", value: "external" },
-                    delivery: { kind: "inline" },
-                    metadata: null,
                   }),
                   { runtimeImplementation: { facet, digest: declared, configurationDigest: configuration } },
                 );
@@ -417,7 +385,6 @@ async function runtimeAdapterFixture(marker: string): Promise<{
     };
     export default {
       format: "svml.node-package@1",
-      name: "example-runtime-adapter",
       hostFacets: [runtimeFacet],
     };
   `, "utf8");
@@ -430,18 +397,18 @@ async function loadedExternalEndpointDigest(marker: string): Promise<string> {
     item.lock,
     await createNodePackageLock(["example-runtime-adapter"], item.root),
   );
-  const loaded = await loadNodePackageSet(item.lock, item.root);
-  const contribution = loaded.contributions[0]!;
+  const loaded = await loadNodePackageSelection(item.lock, {
+    selected: [],
+    logical: [{ abi: runtimeEndpointAdapterHostAbi, name: "example.logical-endpoint" }],
+  }, item.root);
+  const loadedPackage = loaded.packages[0]!;
+  const contribution = loadedPackage.contribution;
   const locked = loaded.lock.packages[0]!;
-  const artifact = loaded.lock.artifacts.find((value) =>
-    value.name === locked.package.name && value.version === locked.package.version)!;
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(contribution.hostFacets![0]!, {
-    packageName: contribution.name,
-    packageArtifactDigest: artifact.digest,
-    packageClosureDigest: locked.closureDigest,
+    closureDigest: locked.closureDigest,
   });
-  const endpoint = await registry.createEndpoint("example-runtime-adapter", {
+  const endpoint = await registry.createEndpoint("example.logical-endpoint", {
     root: item.root,
     instance: "external.fixture",
     config: {},
@@ -469,7 +436,6 @@ test("a package digest ignores Finder metadata but still binds authored hidden f
   }, null, 2), "utf8");
   await writeFile(join(packageRoot, "index.mjs"), `export default {
     format: "svml.node-package@1",
-    name: "example-dotfile",
   };\n`, "utf8");
 
   const before = await createNodePackageLock(["example-dotfile"], root);
@@ -507,16 +473,50 @@ test("one inventory activates only the exact package subset selected by a Source
     }), "utf8");
     await writeFile(join(packageRoot, "index.mjs"), `export default {
       format: "svml.node-package@1",
-      name: ${JSON.stringify(name)},
       modules: [{ manifest: { format: "svml.module@1", name: ${JSON.stringify(specifier!.slice(0, -2))},
-        version: "1", dependencies: [], types: [], capabilities: [], producers: [], surfaces: [] },
+        version: "1", dependencies: [], types: [], capabilities: [], producers: [] },
         specifiers: [${JSON.stringify(specifier)}] }],
     };\n`, "utf8");
   }
   const path = join(root, "svml.packages.lock");
   await writeNodePackageLock(path, await createNodePackageLock(["example-first", "example-second"], root));
-  const loaded = await loadNodePackageSelection(path, { selected: [], logical: ["example.first@1"] }, root);
+  const loaded = await loadNodePackageSelection(path, {
+    selected: [],
+    logical: [{ abi: modulePackageAbi, name: "example.first@1" }],
+  }, root);
   assert.deepEqual(loaded.lock.selected, ["example-first"]);
-  assert.deepEqual(loaded.contributions.map((item) => item.name), ["example-first"]);
+  assert.deepEqual(loaded.packages.map((item) => item.specifier), ["example-first"]);
   assert.notEqual(loaded.lock.digest, loaded.inventoryDigest);
+});
+
+test("inventory selection distinguishes the same logical name across opaque Host ABIs", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-package-abi-address-"));
+  const logical = "example.shared@1";
+  const facetAbi = "example.fragment-host@1";
+  for (const [name, activation] of [
+    ["example-module", `modules: [{ manifest: { format: "svml.module@1", name: "example.shared",
+      version: "1", dependencies: [], types: [], capabilities: [], producers: [] },
+      specifiers: [${JSON.stringify(logical)}] }]`],
+    ["example-fragment", `hostFacets: [{ abi: ${JSON.stringify(facetAbi)},
+      offers: [${JSON.stringify(logical)}], identity: { package: "example-fragment" }, implementation: {} }]`],
+  ] as const) {
+    const packageRoot = join(root, "node_modules", name);
+    await mkdir(packageRoot, { recursive: true });
+    await writeFile(join(packageRoot, "package.json"), JSON.stringify({
+      name, version: "1.0.0", type: "module", exports: "./index.mjs", svml: { activation: "./index.mjs" },
+    }), "utf8");
+    await writeFile(join(packageRoot, "index.mjs"), `export default {
+      format: "svml.node-package@1", ${activation}
+    };\n`, "utf8");
+  }
+  const path = join(root, "svml.packages.lock");
+  await writeNodePackageLock(path, await createNodePackageLock(["example-module", "example-fragment"], root));
+  const module = await loadNodePackageSelection(path, {
+    selected: [], logical: [{ abi: modulePackageAbi, name: logical }],
+  }, root);
+  const fragment = await loadNodePackageSelection(path, {
+    selected: [], logical: [{ abi: facetAbi, name: logical }],
+  }, root);
+  assert.deepEqual(module.lock.selected, ["example-module"]);
+  assert.deepEqual(fragment.lock.selected, ["example-fragment"]);
 });

@@ -16,41 +16,58 @@ import {
   locateSpeechTiming,
 } from "@narratage/speech-alignment";
 
+type WordFixture = {
+  readonly text: string;
+  readonly startSec?: number;
+  readonly endSec?: number;
+  readonly score?: number;
+};
+
+function wordEvidence(word: WordFixture): SpeechWordEvidence {
+  return {
+    text: word.text,
+    ...(word.startSec === undefined || word.endSec === undefined ? {} : {
+      startSample: Math.round(word.startSec * 16_000),
+      endSampleExclusive: Math.round(word.endSec * 16_000),
+    }),
+    ...(word.score === undefined ? {} : { score: word.score }),
+  };
+}
+
 /** The alignment classification is a property of alignWordGroups, tested at its own level. */
 function relations(
   narrative: Narrative,
-  words: readonly SpeechWordEvidence[],
+  words: readonly WordFixture[],
   segmentId = "line",
 ): string[] {
   const segment = narrative.segments.find((item) => item.id === segmentId)!;
   return alignWordGroups(
     segmentId,
     narrative.tokens.slice(segment.tokenStart, segment.tokenEndExclusive),
-    words,
+    words.map(wordEvidence),
   ).map((group) => group.relation);
 }
 
 function evidence(args: {
   readonly basis: SpeechAudioBasis;
-  readonly segmentId?: string;
   readonly durationSec?: number;
   readonly startSec?: number;
   readonly endSec?: number;
-  readonly words: readonly SpeechWordEvidence[];
+  readonly words: readonly WordFixture[];
   readonly chars?: readonly SpeechCharacterEvidence[];
   readonly vad?: readonly { readonly startSec: number; readonly endSec: number }[];
 }): AlignedTranscriptEvidence {
   return sealAlignedTranscriptEvidence({
-    contract: "svml.aligned-transcript-evidence@1",
-    durationSec: args.basis.programSpace.durationSec,
-    segments: [
+    passages: [
       {
-        sourceSegmentId: args.segmentId ?? "line",
-        startSec: args.startSec ?? 0,
-        endSec: args.endSec ?? args.basis.programSpace.durationSec,
-        words: args.words,
+        words: args.words.map(wordEvidence),
         chars: args.chars ?? [],
-        ...(args.vad === undefined ? {} : { speechActivity: args.vad }),
+        ...(args.vad === undefined ? {} : {
+          speechActivity: args.vad.map((span) => ({
+            startSample: Math.round(span.startSec * 16_000),
+            endSampleExclusive: Math.round(span.endSec * 16_000),
+          })),
+        }),
       },
     ],
   });
@@ -62,18 +79,16 @@ function speechBasis(
   windows?: readonly { readonly startSec: number; readonly endSec: number }[],
 ): SpeechAudioBasis {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec,
     frameRate: { numerator: 1_000, denominator: 1 },
   });
   const audioDigest = digestOf(`fixture:audio:${narrative.segments.map((segment) => segment.id).join("+")}:${durationSec}`);
   const segments = narrative.segments.map((segment, index) => ({
     segmentId: segment.id,
-    startSec: windows?.[index]?.startSec ?? durationSec * index / narrative.segments.length,
-    endSec: windows?.[index]?.endSec ?? durationSec * (index + 1) / narrative.segments.length,
+    startFrame: Math.round((windows?.[index]?.startSec ?? durationSec * index / narrative.segments.length) * 1_000),
+    endFrameExclusive: Math.round((windows?.[index]?.endSec ?? durationSec * (index + 1) / narrative.segments.length) * 1_000),
   }));
   const take = sealSpeechBasis({
-    contract: "svml.speech-basis@1",
     programSpace,
     audio: { kind: "blob", digest: audioDigest, size: 1, mediaType: "audio/wav" },
     visualTrack: { clips: [] },
@@ -84,7 +99,6 @@ function speechBasis(
 
 function audioProjection(basis: SpeechBasis): SpeechAudioBasis {
   return {
-    contract: "svml.speech-audio-basis@1",
     programSpace: basis.programSpace,
     audio: basis.audio,
     segments: basis.segments,
@@ -112,8 +126,8 @@ function characters(
   return [...text].map((char, index) => ({
     char,
     wordIndex,
-    startSec: starts[index]!,
-    endSec: ends[index]!,
+    startSample: Math.round(starts[index]! * 16_000),
+    endSampleExclusive: Math.round(ends[index]! * 16_000),
     score: 0.95,
   }));
 }
@@ -130,14 +144,13 @@ test("exact transcript words cover every Script and Segment anchor", () => {
   assert.equal(map.tokens.length, 2);
   assert.equal(map.anchors.length, 2 * narrative.tokens.length + 2 * narrative.segments.length);
   assert.deepEqual(
-    map.tokens.map((token) => [token.startSec, token.endSec]),
+    map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]),
     [
-      [0.1, 0.4],
-      [0.5, 0.9],
+      [100, 400],
+      [500, 900],
     ],
   );
   assert.equal(new Set(map.anchors.map((anchor) => anchor.identity)).size, map.anchors.length);
-  assert.equal(map.contract, "svml.complete-semantic-map@1");
 });
 
 test("M:1 uses evidence character times instead of dividing a merged word by length", () => {
@@ -156,10 +169,10 @@ test("M:1 uses evidence character times instead of dividing a merged word by len
 
   assert.deepEqual(relations(narrative, merged), ["merge"]);
   assert.deepEqual(
-    map.tokens.map((token) => [token.startSec, token.endSec]),
+    map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]),
     [
-      [0.1, 0.36],
-      [0.42, 0.78],
+      [100, 360],
+      [420, 780],
     ],
   );
 });
@@ -174,8 +187,8 @@ test("1:N wraps all evidence words in one Script token", () => {
 
   assert.deepEqual(relations(narrative, split), ["split"]);
   assert.deepEqual(
-    [map.tokens[0]?.startSec, map.tokens[0]?.endSec],
-    [0.2, 0.82],
+    [map.tokens[0]?.startFrame, map.tokens[0]?.endFrameExclusive],
+    [200, 820],
   );
 });
 
@@ -198,12 +211,12 @@ test("a recognized filler stays an insertion and does not absorb neighboring Scr
     "exact",
   ]);
   assert.deepEqual(
-    map.tokens.map((token) => [token.startSec, token.endSec]),
+    map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]),
     [
-      [0.1, 0.2],
-      [0.4, 0.62],
-      [0.67, 0.82],
-      [0.86, 0.96],
+      [100, 200],
+      [400, 620],
+      [670, 820],
+      [860, 960],
     ],
   );
 });
@@ -224,12 +237,12 @@ test("an omitted Script word receives the complete unmeasured interval between n
     "exact",
   ]);
   assert.deepEqual(
-    [map.tokens[2]?.startSec, map.tokens[2]?.endSec],
-    [0.4, 0.6],
+    [map.tokens[2]?.startFrame, map.tokens[2]?.endFrameExclusive],
+    [400, 600],
   );
 });
 
-test("VAD bounds contain estimates when an entire Script Segment has no recognized words", () => {
+test("VAD bounds contain missing tokens when a Script Segment has no recognized words", () => {
   const narrative = parseScript("vad.svml", "<line>One two.</line>");
   const map = locate(narrative, {
     words: [],
@@ -237,10 +250,10 @@ test("VAD bounds contain estimates when an entire Script Segment has no recogniz
   });
 
   assert.deepEqual(
-    map.tokens.map((token) => [token.startSec, token.endSec]),
+    map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]),
     [
-      [0.4, 0.8],
-      [0.8, 1.2],
+      [400, 800],
+      [800, 1_200],
     ],
   );
 });
@@ -252,30 +265,54 @@ test("multiple Script Segments stay independent even when evidence records arriv
     { startSec: 1, endSec: 2 },
   ]);
   const map = locateSpeechTiming(narrative, basis, sealAlignedTranscriptEvidence({
-    contract: "svml.aligned-transcript-evidence@1",
-    durationSec: 2,
-    segments: [
+    passages: [
       {
-        sourceSegmentId: "two",
-        startSec: 1,
-        endSec: 2,
-        words: [{ text: "Goodbye", startSec: 1.2, endSec: 1.6 }],
+        words: [wordEvidence({ text: "Goodbye", startSec: 1.2, endSec: 1.6 })],
         chars: [],
       },
       {
-        sourceSegmentId: "one",
-        startSec: 0,
-        endSec: 1,
-        words: [{ text: "Hello", startSec: 0.2, endSec: 0.55 }],
+        words: [wordEvidence({ text: "Hello", startSec: 0.2, endSec: 0.55 })],
         chars: [],
       },
     ],
   }));
 
-  assert.deepEqual(map.tokens.map((token) => [token.segmentId, token.startSec, token.endSec]), [
-    ["one", 0.2, 0.55],
-    ["two", 1.2, 1.6],
+  assert.deepEqual(map.tokens.map((token) => [token.segmentId, token.startFrame, token.endFrameExclusive]), [
+    ["one", 200, 550],
+    ["two", 1_200, 1_600],
   ]);
+});
+
+test("Segment anchors preserve exact frame cuts without a seconds round trip", () => {
+  const narrative = parseScript("frame-cuts.svml", "<one>Alpha.</one><two>Beta.</two>");
+  const take = sealSpeechBasis({
+    programSpace: sealProgramSpace({
+      durationSec: 1,
+      frameRate: { numerator: 24, denominator: 1 },
+    }),
+    audio: { kind: "blob", digest: digestOf("frame-cuts:audio"), size: 1, mediaType: "audio/wav" },
+    visualTrack: { clips: [] },
+    segments: [
+      { segmentId: "one", startFrame: 0, endFrameExclusive: 7 },
+      { segmentId: "two", startFrame: 7, endFrameExclusive: 24 },
+    ],
+  });
+  const map = locateSpeechTiming(narrative, audioProjection(take), sealAlignedTranscriptEvidence({
+    passages: [{
+      startSample: 0,
+      endSampleExclusive: 16_000,
+      words: [
+        { text: "Alpha", startSample: 1_000, endSampleExclusive: 3_000 },
+        { text: "Beta", startSample: 6_000, endSampleExclusive: 10_000 },
+      ],
+      chars: [],
+    }],
+  }));
+  const frameByAnchor = new Map(map.anchors.map((anchor) => [anchor.identity, anchor.frame]));
+  const structuralFrames = narrative.semanticIndex.anchors
+    .filter((anchor) => anchor.kind === "segment-start" || anchor.kind === "segment-end")
+    .map((anchor) => frameByAnchor.get(anchor.id));
+  assert.deepEqual(structuralFrames, [0, 7, 7, 24]);
 });
 
 test("overlapping evidence word windows reach the map overlapping", () => {
@@ -289,8 +326,8 @@ test("overlapping evidence word windows reach the map overlapping", () => {
       { text: "two", startSec: 0.4, endSec: 0.8 },
     ],
   });
-  assert.deepEqual(map.tokens.map((token) => [token.startSec, token.endSec]), [[0.1, 0.5], [0.4, 0.8]]);
-  assert.equal(map.tokens[1]!.startSec < map.tokens[0]!.endSec, true, "the overlap survived");
+  assert.deepEqual(map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]), [[100, 500], [400, 800]]);
+  assert.equal(map.tokens[1]!.startFrame < map.tokens[0]!.endFrameExclusive, true, "the overlap survived");
 });
 
 test("locating is total: every Script token carries a window", () => {
@@ -300,12 +337,13 @@ test("locating is total: every Script token carries a window", () => {
     words: [{ text: "alpha" }, { text: "beta" }, { text: "gamma" }, { text: "delta" }],
   });
   assert.equal(blind.tokens.length, narrative.tokens.length);
-  assert.equal(blind.tokens.every((token) => Number.isFinite(token.startSec) && Number.isFinite(token.endSec)), true);
+  assert.equal(blind.tokens.every((token) => Number.isSafeInteger(token.startFrame)
+    && Number.isSafeInteger(token.endFrameExclusive)), true);
 
   // The speaker said something else entirely; the Script is still fully located.
   const diverged = locate(narrative, { words: [{ text: "zzz", startSec: 0.2, endSec: 0.8 }] });
   assert.equal(diverged.tokens.length, narrative.tokens.length);
-  assert.equal(diverged.tokens.every((token) => Number.isFinite(token.startSec)), true);
+  assert.equal(diverged.tokens.every((token) => Number.isSafeInteger(token.startFrame)), true);
 });
 
 test("Evidence is interpreted only through the explicitly connected SpeechAudioBasis", () => {
@@ -316,11 +354,14 @@ test("Evidence is interpreted only through the explicitly connected SpeechAudioB
     words: [{ text: "Hello", startSec: 0.1, endSec: 0.4 }, { text: "world", startSec: 0.5, endSec: 0.9 }],
   });
   const anotherSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 2,
     frameRate: { numerator: 30, denominator: 1 },
   });
-  const anotherBasis = { ...basis, programSpace: anotherSpace };
+  const anotherBasis = {
+    ...basis,
+    programSpace: anotherSpace,
+    segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 60 }],
+  };
   const map = locateSpeechTiming(narrative, anotherBasis, mismatched);
   assert.equal(map.tokens[0]?.startFrame, 3);
 });
@@ -329,13 +370,13 @@ test("the final map is quantized once into the selected ProgramSpace", () => {
   const narrative = parseScript("frames.svml", "<line>Hello.</line>");
   const original = speechBasis(narrative, 1);
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const basis: SpeechAudioBasis = {
     ...original,
     programSpace,
+    segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 30 }],
   };
   const map = locateSpeechTiming(narrative, basis, evidence({
     basis,
@@ -344,10 +385,10 @@ test("the final map is quantized once into the selected ProgramSpace", () => {
     words: [{ text: "Hello", startSec: 0.111, endSec: 0.289 }],
   }));
   assert.deepEqual(
-    [map.tokens[0]?.startFrame, map.tokens[0]?.endFrame, map.tokens[0]?.startSec, map.tokens[0]?.endSec],
-    [3, 9, 0.1, 0.3],
+    [map.tokens[0]?.startFrame, map.tokens[0]?.endFrameExclusive],
+    [3, 9],
   );
-  assert.equal(map.anchors.every((anchor) => anchor.timeSec === anchor.frame / 30), true);
+  assert.equal(map.anchors.every((anchor) => Number.isSafeInteger(anchor.frame)), true);
 });
 
 test("a backwards character measurement reaches the map backwards, uncorrected", () => {
@@ -369,8 +410,8 @@ test("a backwards character measurement reaches the map backwards, uncorrected",
   });
   const middle = map.tokens[1]!;
   assert.equal(
-    middle.startSec > middle.endSec,
+    middle.startFrame > middle.endFrameExclusive,
     true,
-    `the inverted measurement survived, got ${middle.startSec}..${middle.endSec}`,
+    `the inverted measurement survived, got ${middle.startFrame}..${middle.endFrameExclusive}`,
   );
 });

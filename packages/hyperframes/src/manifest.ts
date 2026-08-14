@@ -21,7 +21,6 @@ const nonNegativeInteger = { kind: "number", integer: true, minimum: 0 } as cons
 export const hyperframesDocumentSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.hyperframes-document@1" } },
     visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } },
     frameRate: { schema: {
       kind: "object",
@@ -59,7 +58,6 @@ export const hyperframesManifest: ModuleManifest = {
   dependencies: [compositionDependency, mediaDependency, programSpaceDependency],
   types: [{ name: hyperframesTypes.document.name, schema: hyperframesDocumentSchema }],
   capabilities: [],
-  surfaces: [],
   producers: [{
     name: hyperframesProducers.compile.name,
     inputs: [
@@ -69,8 +67,6 @@ export const hyperframesManifest: ModuleManifest = {
     outputs: [{ name: "document", type: hyperframesTypes.document }],
     needs: [],
     implementation: {
-      kind: "registered",
-      locator: "@narratage/hyperframes/compile",
       digest: compileHyperframesImplementationDigest,
     },
   }],

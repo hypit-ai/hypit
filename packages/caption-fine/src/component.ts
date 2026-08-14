@@ -14,7 +14,6 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const captionFineComponent = {
-  name: "@narratage/caption-fine",
   producers: [{
     producer: captionFineProducers.render,
     implementationDigest: renderFineCaptionImplementationDigest,

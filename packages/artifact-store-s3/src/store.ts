@@ -56,8 +56,6 @@ export type CreateS3ArtifactStorePackageOptions = S3Location & {
   readonly client?: S3ObjectClient;
 };
 
-export type S3ArtifactStorePackage = RuntimeServicePackage;
-
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
@@ -383,7 +381,7 @@ export class S3ArtifactStore implements ArtifactStore {
 
 export function createS3ArtifactStorePackage(
   options: CreateS3ArtifactStorePackageOptions,
-): S3ArtifactStorePackage {
+): RuntimeServicePackage {
   const instance = options.instance ?? "artifacts.s3";
   assert(instance.trim().length > 0, "S3 ArtifactStore instance id must not be empty");
   const prefix = normalizePrefix(options.prefix);
@@ -402,14 +400,12 @@ export function createS3ArtifactStorePackage(
     ...(options.forcePathStyle === undefined ? {} : { forcePathStyle: options.forcePathStyle }),
   });
   return defineRuntimeServicePackage({
-    name: instance,
     module: s3ArtifactStoreModuleRef,
     services: [{
       role: "artifact-store",
       facet: "artifact-store",
       instance,
       implementation: {
-        locator: "@narratage/artifact-store-s3/artifact-store",
         digest: s3ArtifactStoreImplementationDigest,
       },
       configuration,

@@ -13,7 +13,6 @@ export type CommentStickerTextStyle = {
 };
 
 export type CommentStickerStyle = {
-  readonly contract: "svml.comment-sticker-style@1";
   readonly id: string;
   readonly stackingOrder: number;
   readonly card: {
@@ -75,7 +74,6 @@ export type CommentStickerStyle = {
 };
 
 export type CommentStickerContent = {
-  readonly contract: "svml.comment-sticker-content@1";
   readonly comment: string;
   readonly author?: string;
   readonly header?: string;
@@ -83,20 +81,17 @@ export type CommentStickerContent = {
 };
 
 export type CommentStickerItemSpec = {
-  readonly contract: "svml.comment-sticker-item-spec@1";
   readonly id: string;
   readonly projection: TemporalWindowProjection;
   readonly expansion: OccurrenceExpansion;
 };
 
 export type CommentStickerHeader = {
-  readonly contract: "svml.comment-sticker-header@1";
   readonly id: string;
 };
 
 export type CommentStickerItemProgram = {
   readonly id: string;
-  readonly sourceOccurrenceId: string;
   readonly span: FrameSpan;
   readonly frame: SpatialFrame;
   readonly style: CommentStickerStyle;
@@ -106,12 +101,10 @@ export type CommentStickerItemProgram = {
 };
 
 export type CommentStickerSet = {
-  readonly contract: "svml.comment-sticker-set@1";
   readonly items: readonly CommentStickerItemProgram[];
 };
 
 export type CommentStickerProgram = {
-  readonly contract: "svml.comment-sticker-program@1";
   readonly id: string;
   readonly items: readonly CommentStickerItemProgram[];
 };

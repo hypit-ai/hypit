@@ -19,56 +19,38 @@ export function speechEvidenceSampleBoundary(masterSampleBoundary: number): numb
 export function sealSpeechBasis(value: SpeechBasis): SpeechBasis { return structuredClone(value); }
 export function sealSpeechEvidenceAudio(value: SpeechEvidenceAudio): SpeechEvidenceAudio { return structuredClone(value); }
 export function assertSpeechEvidenceAudioIdentity(value: SpeechEvidenceAudio): void {
-  if (value.contract !== "svml.speech-evidence-audio@1" || value.artifact.kind !== "blob" || !isDigest(value.artifact.digest)
+  if (value.artifact.kind !== "blob" || !isDigest(value.artifact.digest)
     || !Number.isSafeInteger(value.artifact.size) || value.artifact.size < 0 || value.artifact.mediaType !== "audio/wav"
-    || value.codec !== "pcm_s16le" || value.sampleRate !== 16_000 || value.channels !== 1 || !Number.isSafeInteger(value.sampleFrames)
-    || value.sampleFrames < 1 || !Number.isFinite(value.durationSec) || value.durationSec <= 0) throw new Error("SpeechEvidenceAudio media identity is invalid.");
-  if (value.sampleMap.algorithm !== "rational-boundary-round@1" || value.sampleMap.sourceSampleRate !== 48_000
-    || value.sampleMap.evidenceSampleRate !== 16_000 || !Number.isSafeInteger(value.sampleMap.sourceSampleFrames)
-    || value.sampleMap.sourceSampleFrames < 1 || value.sampleMap.evidenceSampleFrames !== value.sampleFrames
-    || value.sampleMap.sourceOriginSample !== 0 || value.sampleMap.evidenceOriginSample !== 0
-    || speechEvidenceSampleBoundary(value.sampleMap.sourceSampleFrames) !== value.sampleFrames) throw new Error("SpeechEvidenceAudio sample map is invalid.");
-  if (value.segments.length === 0) throw new Error("SpeechEvidenceAudio has no Segment identity.");
+    || !Number.isSafeInteger(value.sampleFrames) || value.sampleFrames < 1) {
+    throw new Error("SpeechEvidenceAudio media identity is invalid.");
+  }
 }
 export function assertSpeechBasisIdentity(basis: SpeechBasis): void {
-  if (basis.contract !== "svml.speech-basis@1") throw new Error("Unsupported SpeechBasis contract.");
   assertProgramSpaceIdentity(basis.programSpace);
   assertAudioBlob(basis.audio, "SpeechBasis audio");
   if (basis.segments.length === 0) throw new Error("SpeechBasis must contain at least one Segment.");
   let previousEnd = 0;
-  const frameAt = (seconds: number): number => Math.round(
-    seconds * basis.programSpace.frameRate.numerator / basis.programSpace.frameRate.denominator,
-  );
-  const segmentSpans = new Map<string, { readonly startFrame: number; readonly endFrameExclusive: number }>();
+  const segmentIds = new Set<string>();
   for (const segment of basis.segments) {
-    if (!segment.segmentId || segment.startSec !== previousEnd || !Number.isFinite(segment.endSec)
-      || segment.endSec <= segment.startSec || segment.endSec > basis.programSpace.durationSec) {
+    if (!segment.segmentId || segment.startFrame !== previousEnd
+      || !Number.isSafeInteger(segment.endFrameExclusive)
+      || segment.endFrameExclusive <= segment.startFrame
+      || segment.endFrameExclusive > programSpaceFrameCount(basis.programSpace)) {
       throw new Error("SpeechBasis Segment is invalid or non-contiguous.");
     }
-    if (segmentSpans.has(segment.segmentId)) throw new Error(`SpeechBasis repeats Segment ${segment.segmentId}.`);
-    segmentSpans.set(segment.segmentId, {
-      startFrame: frameAt(segment.startSec),
-      endFrameExclusive: frameAt(segment.endSec),
-    });
-    previousEnd = segment.endSec;
+    if (segmentIds.has(segment.segmentId)) throw new Error(`SpeechBasis repeats Segment ${segment.segmentId}.`);
+    segmentIds.add(segment.segmentId);
+    previousEnd = segment.endFrameExclusive;
   }
-  if (frameAt(previousEnd) !== programSpaceFrameCount(basis.programSpace)) {
+  if (previousEnd !== programSpaceFrameCount(basis.programSpace)) {
     throw new Error("SpeechBasis Segments do not cover ProgramSpace.");
   }
   const seenVisuals = new Set<string>();
   for (const clip of basis.visualTrack.clips) {
-    const segmentSpan = segmentSpans.get(clip.segmentId);
-    if (segmentSpan === undefined || seenVisuals.has(clip.segmentId)
+    if (!segmentIds.has(clip.segmentId) || seenVisuals.has(clip.segmentId)
       || clip.artifact.kind !== "blob" || !isDigest(clip.artifact.digest)
       || !Number.isSafeInteger(clip.artifact.size) || clip.artifact.size < 0
       || !clip.artifact.mediaType.startsWith("video/")
-      || clip.frameRate.numerator !== basis.programSpace.frameRate.numerator
-      || clip.frameRate.denominator !== basis.programSpace.frameRate.denominator
-      || !Number.isSafeInteger(clip.frameCount) || clip.frameCount <= 0
-      || !Number.isSafeInteger(clip.span.startFrame) || !Number.isSafeInteger(clip.span.endFrameExclusive)
-      || clip.span.startFrame !== segmentSpan?.startFrame
-      || clip.span.endFrameExclusive !== segmentSpan?.endFrameExclusive
-      || clip.frameCount !== clip.span.endFrameExclusive - clip.span.startFrame
       || !Number.isSafeInteger(clip.stackingOrder)) {
       throw new Error(`SpeechBasis visual clip ${clip.segmentId} is invalid.`);
     }
@@ -79,14 +61,17 @@ export function assertSpeechBasisIdentity(basis: SpeechBasis): void {
   }
 }
 export function assertSpeechAudioBasisIdentity(basis: SpeechAudioBasis): void {
-  if (basis.contract !== "svml.speech-audio-basis@1") throw new Error("Unsupported SpeechAudioBasis contract.");
   assertProgramSpaceIdentity(basis.programSpace);
   assertAudioBlob(basis.audio, "SpeechAudioBasis audio");
   if (basis.segments.length === 0) throw new Error("SpeechAudioBasis must contain at least one Segment.");
   let previousEnd = 0;
+  const frameCount = programSpaceFrameCount(basis.programSpace);
   for (const segment of basis.segments) {
-    if (!segment.segmentId || !Number.isFinite(segment.startSec) || !Number.isFinite(segment.endSec) || segment.startSec < previousEnd
-      || segment.endSec < segment.startSec || segment.endSec > basis.programSpace.durationSec) throw new Error("SpeechAudioBasis Segment is invalid or out of order.");
-    previousEnd = segment.endSec;
+    if (!segment.segmentId || !Number.isSafeInteger(segment.startFrame)
+      || !Number.isSafeInteger(segment.endFrameExclusive) || segment.startFrame < previousEnd
+      || segment.endFrameExclusive < segment.startFrame || segment.endFrameExclusive > frameCount) {
+      throw new Error("SpeechAudioBasis Segment is invalid or out of order.");
+    }
+    previousEnd = segment.endFrameExclusive;
   }
 }

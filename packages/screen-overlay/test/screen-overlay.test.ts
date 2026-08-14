@@ -20,9 +20,9 @@ import {
   finalizeScreenOverlay,
   renderScreenOverlay,
   screenOverlayManifest,
+  screenOverlayMarkupSurfaces,
   screenOverlayModuleRef,
   screenOverlayProducers,
-  screenOverlaySurfaceImplementationDigest,
   sealScreenOverlayHeader,
   sealScreenOverlayItemSpec,
 } from "@narratage/screen-overlay";
@@ -37,13 +37,13 @@ import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validati
 import { visualIrManifest } from "@narratage/visual-ir";
 
 const canvas = sealCanvasSpace({
-  contract: "svml.canvas-space@1", widthPx: 1080, heightPx: 1920,
+  widthPx: 1080, heightPx: 1920,
   origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
 });
 const space = sealProgramSpace({
-  contract: "svml.program-space@1", durationSec: 2, frameRate: { numerator: 30, denominator: 1 },
+  durationSec: 2, frameRate: { numerator: 30, denominator: 1 },
 });
-const header = sealScreenOverlayHeader({ contract: "svml.screen-overlay-header@1", id: "screen" });
+const header = sealScreenOverlayHeader({ id: "screen" });
 const components: readonly ScreenOverlayComponent[] = [
   { kind: "flash", color: "#ffffff", intensity: 0.9, attackFrames: 2, holdFrames: 3, decayFrames: 5 },
   { kind: "color-wash", color: "#2244ff", opacity: 0.2 },
@@ -60,7 +60,7 @@ const components: readonly ScreenOverlayComponent[] = [
 
 function trackFor(content: ScreenOverlayComponent, stackingOrder = 50) {
   const spec = sealScreenOverlayItemSpec({
-    contract: "svml.screen-overlay-item-spec@1", id: content.kind,
+    id: content.kind,
     content, projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
     expansion: { kind: "one" }, stackingOrder,
   });
@@ -101,12 +101,12 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
   const below = trackFor(components[1]!, 20);
   const above = { ...trackFor(components[0]!, 80), id: "screen-above" };
   const middle = sealVisualTrack({
-    contract: "svml.visual-track@1", visualIr: "svml.visual-ir@1", id: "middle",
+    visualIr: "svml.visual-ir@1", id: "middle",
     presents: [{ id: "middle", span: { startFrame: 0, endFrameExclusive: 60 }, stacking: { order: 50, tieBreak: "middle" },
       elements: [{ id: "root", order: 0, kind: "box", style: [{ name: "background-color", value: "#112233" }] }] }],
   });
   const document = compileHyperframesDocument(sealComposition({
-    contract: "svml.composition@1", id: "stack", canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+    id: "stack", canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [above, middle, below],
   }), space);
   const belowAt = document.html.indexOf('data-svml-track-id="screen"');
@@ -116,11 +116,11 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
 });
 
 test("the package has no lower-composite, sibling Track, backdrop-filter or hidden audio port", () => {
-  const fragment = createScreenOverlayFragment([{ kind: "program", specName: "spec" }], "example.overlay@1");
+  const fragment = createScreenOverlayFragment([{ kind: "program", specName: "spec" }]);
   assert.deepEqual(fragment.inputs.map((input) => input.name), ["canvas", "header", "space", "spec"]);
   assert.equal(fragment.exports.some((output) => output.type.name === "AudioTrack"), false);
   assert.throws(() => sealScreenOverlayItemSpec({
-    contract: "svml.screen-overlay-item-spec@1", id: "blur",
+    id: "blur",
     content: { kind: "gaussian-blur" } as unknown as ScreenOverlayComponent,
     projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
     expansion: { kind: "one" }, stackingOrder: 1,
@@ -130,6 +130,11 @@ test("the package has no lower-composite, sibling Track, backdrop-filter or hidd
 test("the self-described Screen Surface parses into a finite peer-Track graph", async () => {
   const fixtureModule = { name: "example.screen-inputs", version: "1" } as const;
   const fixtureSurfaceDigest = digestOf("example.screen-inputs/surface@1");
+  const fixtureSurface = {
+    name: "inputs", tag: "Inputs", mode: "structured",
+    outputs: [spatialTypes.canvas, programSpaceTypes.programSpace],
+    implementation: { digest: fixtureSurfaceDigest },
+  } as const;
   const fixtureManifest: ModuleManifest = {
     format: "svml.module@1",
     name: fixtureModule.name,
@@ -137,17 +142,6 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
     dependencies: [spatialDependency, programSpaceDependency],
     types: [],
     capabilities: [],
-    surfaces: [{
-      name: "inputs",
-      tag: "Inputs",
-      mode: "structured",
-      outputs: [spatialTypes.canvas, programSpaceTypes.programSpace],
-      implementation: {
-        kind: "trusted-frontend-surface",
-        locator: "example.screen-inputs/surface",
-        digest: fixtureSurfaceDigest,
-      },
-    }],
     producers: [],
   };
   const closure = createResolvedClosure([
@@ -166,20 +160,19 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
     fixtureManifest,
   ]);
   const registry = new MarkupSurfaceRegistry();
-  registry.registerStructured(fixtureModule, "inputs", fixtureSurfaceDigest, ({ element }) => ({
+  registry.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
       { id: "canvas", type: spatialTypes.canvas, value: { kind: "inline", value: canvas }, range: element.range },
       { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
     ],
     components: [],
     fragments: [],
-  }));
-  registry.registerStructured(
-    screenOverlayModuleRef,
-    "track",
-    screenOverlaySurfaceImplementationDigest,
-    decodeScreenOverlaySurface,
-  );
+  }) });
+  registry.registerStructured({
+    module: screenOverlayModuleRef,
+    declaration: screenOverlayMarkupSurfaces.find((item) => item.name === "track")!,
+    handler: decodeScreenOverlaySurface,
+  });
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({
     registry,
@@ -208,8 +201,8 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
   });
   const trackExport = resolveCompiledSourceExport(compiled, "screen-fx.track", compositionTypes.visualTrack);
   assert.equal(trackExport.ref.kind, "logical-output");
-  const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
-    graph: compiled.elaboration.graph.id,
+  const build = start(compiled.program, compiled.graph, sealBuildRequest({
+    graph: compiled.graph.id,
     targets: [{ output: trackExport.ref.kind === "logical-output" ? trackExport.ref.id : "" }],
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [

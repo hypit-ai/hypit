@@ -6,7 +6,6 @@ import { digestOf } from "@narratage/protocol";
 export const seedreamModuleRef = { name: "@narratage/seedream", version: "1" } as const;
 
 export const seedream5LitePorts: GenerationPortTable = sealGenerationPortTable({
-  contract: "svml.generation-ports@1",
   model: "seedream-5-lite",
   result: "image",
   ports: [
@@ -50,17 +49,19 @@ export const seedreamSurfaceImplementationDigests = {
   referenceImage: digestOf("@narratage/seedream/reference-image-surface@1"),
 } as const;
 const endpoint = seedreamEndpoints.image!;
-export const seedreamManifest = {
-  ...seedreamBaseDefinition.manifest,
-  surfaces: [{
+
+export const seedreamMarkupSurfaces = [{
     name: "text-image", tag: "TextImage", mode: "structured" as const,
     outputs: [endpoint.draftType],
-    implementation: { kind: "trusted-frontend-surface" as const, locator: "@narratage/seedream/text-image-surface", digest: seedreamSurfaceImplementationDigests.textImage },
+    implementation: { digest: seedreamSurfaceImplementationDigests.textImage },
   }, {
     name: "reference-image", tag: "ReferenceImage", mode: "structured" as const,
     outputs: [endpoint.draftType, endpoint.mediaBindings.images!.type],
-    implementation: { kind: "trusted-frontend-surface" as const, locator: "@narratage/seedream/reference-image-surface", digest: seedreamSurfaceImplementationDigests.referenceImage },
-  }],
+    implementation: { digest: seedreamSurfaceImplementationDigests.referenceImage },
+  }] as const;
+
+export const seedreamManifest = {
+  ...seedreamBaseDefinition.manifest,
 };
 export const seedreamManifestDigest = digestOf(seedreamManifest);
 export const seedreamDefinition = {

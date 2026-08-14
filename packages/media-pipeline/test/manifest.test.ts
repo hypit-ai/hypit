@@ -42,7 +42,6 @@ test("the Normalize Surface makes inspection and normalization an explicit autho
   const request = result.records[0]?.value;
   assert.ok(request?.kind === "inline");
   assert.deepEqual(request.value, {
-    contract: "svml.media-selection-request@1",
     video: { mode: "primary-moving" },
     audio: { mode: "none" },
     spanAuthority: "video",
@@ -76,7 +75,6 @@ test("media operations are ordinary graph branches over BlobArtifact", async () 
   const program = transform.records.find((record) => record.id === "prepared.program");
   assert.ok(program?.value.kind === "inline");
   assert.deepEqual(program.value.value, {
-    contract: "svml.media-transform-program@1",
     operations: [
       { kind: "trim", tailSec: 0.25 },
       { kind: "retime", rate: 1.05, pitch: "preserve" },

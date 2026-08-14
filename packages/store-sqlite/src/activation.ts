@@ -21,12 +21,10 @@ const sqliteStateAdapter = createRuntimeServiceAdapterFacet({
     if (path === undefined) throw new Error("SQLite path is required");
     const { createSqliteRuntimeServicePackage } = await import("./store.js");
     return createSqliteRuntimeServicePackage({
-      name: context.instance,
       path: resolve(context.root, path),
       buildInstance: `${context.instance}.builds`,
       operationInstance: `${context.instance}.operations`,
       dispatchInstance: `${context.instance}.dispatch`,
-      journalInstance: `${context.instance}.journal`,
       ...(runtimeConfigPositiveInteger(config.busyTimeoutMs, "SQLite busyTimeoutMs") === undefined
         ? {} : { busyTimeoutMs: config.busyTimeoutMs as number }),
       ...(context.access === "read-only" ? { readOnly: true } : {}),
@@ -36,7 +34,6 @@ const sqliteStateAdapter = createRuntimeServiceAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@narratage/store-sqlite",
   hostFacets: [sqliteStateAdapter],
 };
 

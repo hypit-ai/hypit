@@ -10,12 +10,12 @@
  */
 
 import { artifactManifest } from "@narratage/artifact";
-import { compositionComponent, compositionManifest } from "@narratage/composition";
-import { mediaComponent, mediaManifest } from "@narratage/media";
+import { compositionManifest } from "@narratage/composition";
+import { mediaManifest } from "@narratage/media";
 import { narrativeManifest } from "@narratage/narrative";
 import { programSpaceManifest } from "@narratage/program-space";
 import { semanticMapManifest } from "@narratage/semantic-map";
-import { spatialComponent, spatialManifest } from "@narratage/spatial";
+import { spatialManifest } from "@narratage/spatial";
 import { speechManifest } from "@narratage/speech";
 import { speechEvidenceManifest } from "@narratage/speech-evidence";
 import { temporalManifest } from "@narratage/temporal";
@@ -32,8 +32,11 @@ import { registerProducerFacets, registerTypeValidatorFacets } from "@narratage/
 import type { ComponentPackage } from "@narratage/component-kit";
 import { createResolvedClosure } from "@narratage/core";
 import { ProducerRegistry } from "@narratage/driver-node";
-import { AuthorFrontendRegistry } from "@narratage/elaborator";
+import {
+  AuthorFrontendRegistry, installAuthorFrontendHostFacets,
+} from "@narratage/elaborator";
 import { createMarkupAuthorFrontend, installMarkupSurfaceHostFacets, MarkupSurfaceRegistry } from "@narratage/markup";
+import type { MarkupSurfaceRegistryLike } from "@narratage/markup";
 import type { ModuleManifest, ModuleRef, ResolvedModuleClosure } from "@narratage/protocol";
 import { TypeValidatorRegistry } from "@narratage/validation";
 
@@ -68,8 +71,9 @@ export type VideoDomainPackage = {
   }[];
   readonly components?: readonly ComponentPackage[];
   readonly hostFacets?: readonly unknown[];
+  /** The directory it was discovered in; an activation does not name itself. */
+  readonly from?: string;
   /** Sources that are not markup, such as a Style Sheet. */
-  readonly authorFrontends?: readonly unknown[];
 };
 
 /**
@@ -91,7 +95,7 @@ async function discover(): Promise<readonly VideoDomainPackage[]> {
     if (declared.svml?.activation === undefined) continue;
     const loaded = await import(pathToFileURL(join(root, entry.name, declared.svml.activation)).href) as
       { readonly default?: VideoDomainPackage };
-    if (loaded.default !== undefined) found.push(loaded.default);
+    if (loaded.default !== undefined) found.push({ ...loaded.default, from: entry.name });
   }
   discovered = found;
   return found;
@@ -103,11 +107,6 @@ let discovered: readonly VideoDomainPackage[] | undefined;
 export async function videoDomainPackages(): Promise<readonly VideoDomainPackage[]> {
   return await discover();
 }
-
-/** Contract components that carry Validators but no Surface. */
-const contractComponents: readonly ComponentPackage[] = [
-  compositionComponent, mediaComponent, spatialComponent,
-];
 
 let cachedManifests: readonly ModuleManifest[] | undefined;
 
@@ -122,12 +121,14 @@ async function manifests(): Promise<readonly ModuleManifest[]> {
 }
 
 async function components(): Promise<readonly ComponentPackage[]> {
-  // A package that carries both a Surface and a Validator appears in its own
-  // activation and in the contract list; registering it twice is an error.
+  // Every package that carries a Validator activates itself, so the discovery
+  // scan is the whole list; keyed by where it was found, because two packages
+  // may each contribute a Component at the same index.
   const seen = new Map<string, ComponentPackage>();
-  for (const component of contractComponents) seen.set(component.name, component);
   for (const item of await discover()) {
-    for (const component of item.components ?? []) seen.set(component.name, component);
+    for (const [index, component] of (item.components ?? []).entries()) {
+      seen.set(`${item.from}:${index}`, component);
+    }
   }
   return [...seen.values()];
 }
@@ -153,13 +154,21 @@ export async function videoDomainSurfaces(): Promise<MarkupSurfaceRegistry> {
  */
 export async function videoDomainFrontends(
   resolveModule: (request: { readonly from: string }) => ModuleRef,
+  /**
+   * The Surfaces the markup Frontend decodes with. A caller that wants to watch
+   * a decode passes its own registry over the discovered one; the Frontend is
+   * built the same way either way.
+   */
+  surfaces?: MarkupSurfaceRegistryLike,
 ): Promise<AuthorFrontendRegistry> {
   const registry = new AuthorFrontendRegistry();
   registry.register(createMarkupAuthorFrontend({
-    registry: await videoDomainSurfaces(), resolveModule,
+    registry: surfaces ?? await videoDomainSurfaces(), resolveModule,
   }) as never);
+  // A Frontend travels as a Host Facet, the same way a Surface does, so a
+  // package that publishes one is never asked to name it twice.
   for (const item of await discover()) {
-    for (const frontend of item.authorFrontends ?? []) registry.register(frontend as never);
+    installAuthorFrontendHostFacets((item.hostFacets ?? []) as never, registry as never);
   }
   return registry;
 }

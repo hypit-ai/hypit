@@ -104,7 +104,6 @@ function assertTextStyle(value: CommentStickerTextStyle, label: string): void {
 }
 
 export function assertCommentStickerStyle(value: CommentStickerStyle): void {
-  assert(value.contract === "svml.comment-sticker-style@1", "Unsupported CommentStickerStyle contract.");
   identity(value.id, "CommentStickerStyle.id");
   assert(Number.isSafeInteger(value.stackingOrder), "CommentStickerStyle.stackingOrder must be an integer.");
   color(value.card.background, "CommentStickerStyle.card.background");
@@ -155,7 +154,6 @@ export function sealCommentStickerStyle(value: CommentStickerStyle): CommentStic
 }
 
 export function assertCommentStickerContent(value: CommentStickerContent): void {
-  assert(value.contract === "svml.comment-sticker-content@1", "Unsupported CommentStickerContent contract.");
   assert(value.comment.trim().length > 0, "Comment Sticker comment cannot be blank.");
   optionalText(value.author, "Comment Sticker author");
   optionalText(value.header, "Comment Sticker header");
@@ -164,7 +162,7 @@ export function assertCommentStickerContent(value: CommentStickerContent): void 
 
 export function createCommentStickerContent(comment: Text): CommentStickerContent {
   verifyText(comment);
-  const value: CommentStickerContent = { contract: "svml.comment-sticker-content@1", comment: comment.value };
+  const value: CommentStickerContent = { comment: comment.value };
   assertCommentStickerContent(value);
   return canonicalize(value) as unknown as CommentStickerContent;
 }
@@ -188,7 +186,6 @@ function assertAvatar(value: BlobRef): void {
 }
 
 export function assertCommentStickerHeader(value: CommentStickerHeader): void {
-  assert(value.contract === "svml.comment-sticker-header@1", "Unsupported CommentStickerHeader contract.");
   identity(value.id, "CommentStickerHeader.id");
 }
 
@@ -198,7 +195,6 @@ export function sealCommentStickerHeader(value: CommentStickerHeader): CommentSt
 }
 
 export function assertCommentStickerItemSpec(value: CommentStickerItemSpec): void {
-  assert(value.contract === "svml.comment-sticker-item-spec@1", "Unsupported CommentStickerItemSpec contract.");
   identity(value.id, "CommentStickerItemSpec.id");
   assert(value.expansion.kind === "one" || value.expansion.kind === "each", "CommentStickerItemSpec expansion is invalid.");
 }
@@ -209,11 +205,11 @@ export function sealCommentStickerItemSpec(value: CommentStickerItemSpec): Comme
 }
 
 export function createCommentStickerSet(): CommentStickerSet {
-  return { contract: "svml.comment-sticker-set@1", items: [] };
+  return { items: [] };
 }
 
 export function assertCommentStickerSet(value: CommentStickerSet): void {
-  assert(value.contract === "svml.comment-sticker-set@1" && Array.isArray(value.items), "CommentStickerSet is invalid.");
+  assert(Array.isArray(value.items), "CommentStickerSet is invalid.");
 }
 
 function realized(
@@ -235,7 +231,6 @@ function realized(
   if (avatar !== undefined) assertAvatar(avatar);
   const additions = occurrences.map((occurrence, index): CommentStickerItemProgram => ({
     id: occurrence.id,
-    sourceOccurrenceId: occurrence.sourceOccurrenceId,
     span: { ...occurrence.span },
     frame: structuredClone(frame),
     style: structuredClone(style),
@@ -248,7 +243,7 @@ function realized(
     assert(!ids.has(item.id), `Comment Sticker already contains Item ${item.id}.`);
     ids.add(item.id);
   }
-  return { contract: "svml.comment-sticker-set@1", items: [...set.items, ...additions] };
+  return { items: [...set.items, ...additions] };
 }
 
 export function appendProgramCommentSticker(
@@ -298,7 +293,6 @@ export function appendMomentCommentSticker(
 }
 
 export function assertCommentStickerProgram(value: CommentStickerProgram): void {
-  assert(value.contract === "svml.comment-sticker-program@1", "Unsupported CommentStickerProgram contract.");
   identity(value.id, "CommentStickerProgram.id");
   assert(value.items.length > 0, "CommentStickerProgram requires Items.");
   const ids = new Set<string>();
@@ -306,7 +300,6 @@ export function assertCommentStickerProgram(value: CommentStickerProgram): void 
     identity(item.id, "CommentStickerItemProgram.id");
     assert(!ids.has(item.id), `Duplicate Comment Sticker Item ${item.id}.`);
     ids.add(item.id);
-    assert(item.sourceOccurrenceId.length > 0, `Comment Sticker Item ${item.id} source occurrence is empty.`);
     assert(item.span.startFrame >= 0 && item.span.endFrameExclusive > item.span.startFrame,
       `Comment Sticker Item ${item.id} timing is invalid.`);
     assertSpatialFrame(item.frame);
@@ -326,7 +319,7 @@ export function finalizeCommentSticker(set: CommentStickerSet, header: CommentSt
   assertCommentStickerSet(set);
   assertCommentStickerHeader(header);
   assert(set.items.length > 0, "Comment Sticker requires at least one Item.");
-  return sealCommentStickerProgram({ contract: "svml.comment-sticker-program@1", id: header.id, items: set.items });
+  return sealCommentStickerProgram({ id: header.id, items: set.items });
 }
 
 function px(value: number): string {
@@ -642,7 +635,6 @@ export function renderCommentSticker(canvas: CanvasSpace, space: ProgramSpace, p
   assertProgramSpaceIdentity(space);
   assertCommentStickerProgram(program);
   const track = sealVisualTrack({
-    contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: program.id,
     presents: program.items.map((item) => ({

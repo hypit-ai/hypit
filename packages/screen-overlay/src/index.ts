@@ -2,7 +2,7 @@ export { screenOverlayComponent } from "./component.js";
 export { createScreenOverlayFragment, programScreenOverlayFragment } from "./fragment.js";
 export type { ScreenOverlayFragmentItem } from "./fragment.js";
 export {
-  screenOverlayDependency, screenOverlayHeaderSchema, screenOverlayItemSpecSchema, screenOverlayManifest,
+  screenOverlayDependency, screenOverlayHeaderSchema, screenOverlayItemSpecSchema, screenOverlayManifest, screenOverlayMarkupSurfaces,
   screenOverlayManifestDigest, screenOverlayModuleRef, screenOverlayProducers, screenOverlayProgramSchema,
   screenOverlaySetSchema, screenOverlaySurfaceImplementationDigest, screenOverlayTypes,
 } from "./manifest.js";

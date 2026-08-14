@@ -185,7 +185,7 @@ async function handlerFor(request: Need): Promise<{ handler: ImmediateEndpointHa
 }
 
 async function inspectArtifact(artifacts: MemoryArtifactStore, source: Awaited<ReturnType<MemoryArtifactStore["put"]>>) {
-  const constraints = canonicalize({ contract: "svml.inspect-media-request@1", source });
+  const constraints = canonicalize({ source });
   const request = need("need:media-inspect", mediaPipelineCapabilities.inspect,
     mediaTypes.inspection, constraints);
   const provider = await handlerFor(request);
@@ -209,7 +209,6 @@ async function normalizeArtifact(args: {
   frameRate: { readonly numerator: number; readonly denominator: number };
 }): Promise<SynchronizedMedia> {
   const constraints = canonicalize({
-    contract: "svml.normalize-media-request@1",
     source: args.source,
     inspection: args.inspection,
     selection: args.selection,
@@ -250,7 +249,6 @@ test("local media Provider enumerates attached pictures and jointly normalizes 3
     assert.equal(audio?.kind === "audio" && audio.sampleRate, 32_000);
 
     const selectionRequest = sealMediaSelectionRequest({
-      contract: "svml.media-selection-request@1",
       video: { mode: "primary-moving" },
       audio: { mode: "default" },
       spanAuthority: "video",
@@ -328,7 +326,6 @@ test("local media normalization materializes rotation and sample aspect before S
     assert.deepEqual(inputVideo.sampleAspectRatio, { numerator: 2, denominator: 1 });
     assert.equal(inputVideo.rotationDegrees, 90);
     const request = sealMediaSelectionRequest({
-      contract: "svml.media-selection-request@1",
       video: { mode: "primary-moving" }, audio: { mode: "none" },
       spanAuthority: "video", frameRate: { numerator: 4, denominator: 1 },
     });
@@ -361,7 +358,6 @@ test("animated WebP keeps its authored frame timing before fixed-rate normalizat
   assert.equal(video?.startPts?.ticks, "0");
   assert.equal(video?.endPts?.ticks, "500");
   const request = sealMediaSelectionRequest({
-    contract: "svml.media-selection-request@1",
     video: { mode: "primary-moving" },
     audio: { mode: "none" },
     spanAuthority: "video",
@@ -392,7 +388,6 @@ test("animated GIF keeps its authored frame timing before fixed-rate normalizati
     assert.deepEqual(inspection.streams.map((stream) => [stream.kind, stream.kind === "video" ? stream.role : undefined,
       stream.decodedUnitCount]), [["video", "moving", 5]]);
     const request = sealMediaSelectionRequest({
-      contract: "svml.media-selection-request@1",
       video: { mode: "primary-moving" },
       audio: { mode: "none" },
       spanAuthority: "video",
@@ -423,22 +418,9 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
     const artifacts = new MemoryArtifactStore();
     const source = await artifacts.put(await readFile(sourcePath), "audio/wav");
     const constraints = canonicalize({
-      contract: "svml.project-speech-evidence-audio-request@1",
       source,
-      sourceSampleRate: 48_000,
-      sourceChannels: 2,
-      sourceCodec: "pcm_s16le",
       sourceSampleFrames: 48_001,
-      evidenceSampleRate: 16_000,
-      evidenceChannels: 1,
-      evidenceCodec: "pcm_s16le",
       evidenceSampleFrames: 16_000,
-      durationSec: 48_001 / 48_000,
-      segments: [{
-        segmentId: "line",
-        startSec: 0,
-        endSec: 48_001 / 48_000,
-      }],
     });
     const request = need(
       "need:speech-evidence-audio",
@@ -449,10 +431,6 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
     const value = await fulfillInline(artifacts, request);
     assertSpeechEvidenceAudioIdentity(value as unknown as SpeechEvidenceAudio);
     const evidence = value as unknown as SpeechEvidenceAudio;
-    assert.equal(evidence.sampleMap.sourceSampleFrames, 48_001);
-    assert.equal(evidence.sampleMap.evidenceSampleFrames, 16_000);
-    assert.equal(evidence.sampleMap.sourceOriginSample, 0);
-    assert.equal(evidence.sampleMap.evidenceOriginSample, 0);
     assert.equal(evidence.sampleFrames, 16_000);
     const inspected = await inspectArtifact(artifacts, evidence.artifact);
     const audio = inspected.streams.find((stream) => stream.kind === "audio");
@@ -486,7 +464,6 @@ test("local media Provider preserves one source A/V origin when audio starts lat
     const source = await artifacts.put(await readFile(sourcePath), "video/x-matroska");
     const inspection = await inspectArtifact(artifacts, source);
     const request = sealMediaSelectionRequest({
-      contract: "svml.media-selection-request@1",
       video: { mode: "primary-moving" },
       audio: { mode: "default" },
       spanAuthority: "video",
@@ -530,7 +507,6 @@ test("a silent generated MP4 remains a visual-only product and cannot satisfy a 
     const source = await artifacts.put(await readFile(sourcePath), "video/mp4");
     const inspection = await inspectArtifact(artifacts, source);
     const request = sealMediaSelectionRequest({
-      contract: "svml.media-selection-request@1",
       video: { mode: "primary-moving" },
       audio: { mode: "none" },
       spanAuthority: "video",
@@ -543,7 +519,6 @@ test("a silent generated MP4 remains a visual-only product and cannot satisfy a 
     assert.equal(normalized.audio, undefined);
 
     const invalid = sealMediaSelectionRequest({
-      contract: "svml.media-selection-request@1",
       video: { mode: "primary-moving" },
       audio: { mode: "default" },
       spanAuthority: "video",
@@ -565,7 +540,6 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
     const source = await artifacts.put(await readFile(sourcePath), "video/mp4");
     const inspection = await inspectArtifact(artifacts, source);
     const selectionRequest = sealMediaSelectionRequest({
-      contract: "svml.media-selection-request@1",
       video: { mode: "primary-moving" },
       audio: { mode: "default" },
       spanAuthority: "video",
@@ -592,10 +566,8 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
       mediaPipelineCapabilities.transform,
       artifactTypes.blob,
       canonicalize({
-        contract: "svml.transform-media-request@1",
         media: normalized,
         program: {
-          contract: "svml.media-transform-program@1",
           operations: [
             { kind: "trim", tailSec: 0.2 },
             { kind: "retime", rate: 2, pitch: "preserve" },
@@ -612,7 +584,6 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
       mediaPipelineCapabilities.extractAudio,
       artifactTypes.blob,
       canonicalize({
-        contract: "svml.extract-audio-request@1",
         source,
         streamIndex: audioIndex,
         output: { container: "wav", codec: "pcm_s16le", sampleRate: 48_000, channels: 2 },
@@ -629,7 +600,6 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
       mediaPipelineCapabilities.extractFrame,
       artifactTypes.blob,
       canonicalize({
-        contract: "svml.extract-frame-request@1",
         source,
         streamIndex: video.index,
         sourceFrameCount: video.decodedUnitCount,
@@ -677,7 +647,6 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
       artifacts.put(await readFile(visualPath), "video/mp4"),
     ]);
     const plan = sealAudioProgramPlan({
-      contract: "svml.audio-program-plan@1",
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 30,
       sampleRate: 48_000,
@@ -722,7 +691,7 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
       "need:render-program-audio",
       mediaPipelineCapabilities.renderAudio,
       mediaTypes.timelineAudio,
-      canonicalize({ contract: "svml.render-audio-request@1", plan }),
+      canonicalize({ plan }),
     );
     const audioValue = await fulfillInline(artifacts, audioRequest);
     verifyTimelineAudio(audioValue);
@@ -731,18 +700,16 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
     assert.equal(await artifacts.has(audio.artifact.digest), true);
 
     const visual = sealRenderedVisual({
-      contract: "svml.rendered-visual@1",
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 30,
       canvas: { width: 160, height: 96 },
       artifact: visualArtifact,
-      muted: true,
     });
     const muxRequest = need(
       "need:mux-program-media",
       mediaPipelineCapabilities.mux,
       mediaTypes.muxed,
-      canonicalize({ contract: "svml.mux-media-request@1", visual, audio }),
+      canonicalize({ visual, audio }),
     );
     const muxValue = await fulfillInline(artifacts, muxRequest);
     verifyMuxedMedia(muxValue);
@@ -776,7 +743,6 @@ test("local media Provider executes an end-aligned loop from the exact authored 
     const artifacts = new MemoryArtifactStore();
     const source = await artifacts.put(rampWav(100), "audio/wav");
     const plan = sealAudioProgramPlan({
-      contract: "svml.audio-program-plan@1",
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 30,
       sampleRate: 48_000,
@@ -803,7 +769,7 @@ test("local media Provider executes an end-aligned loop from the exact authored 
       "need:render-loop-audio",
       mediaPipelineCapabilities.renderAudio,
       mediaTypes.timelineAudio,
-      canonicalize({ contract: "svml.render-audio-request@1", plan }),
+      canonicalize({ plan }),
     ));
     verifyTimelineAudio(value);
     const audio = value as unknown as TimelineAudio;

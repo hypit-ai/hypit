@@ -88,7 +88,6 @@ const streamMode: ValueSchema = {
 export const mediaSelectionRequestSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.media-selection-request@1" } },
     video: { schema: { kind: "oneOf", variants: [mode("primary-moving"), streamMode, mode("none")] } },
     audio: { schema: { kind: "oneOf", variants: [mode("default"), streamMode, mode("none")] } },
     spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
@@ -131,7 +130,6 @@ const retimeOperationSchema: ValueSchema = {
 export const mediaTransformProgramSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.media-transform-program@1" } },
     operations: { schema: { kind: "array", minItems: 1, items: {
       kind: "oneOf", variants: [trimOperationSchema, retimeOperationSchema],
     } } },
@@ -140,7 +138,6 @@ export const mediaTransformProgramSchema: ValueSchema = {
 export const audioExtractionRequestSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.audio-extraction-request@1" } },
     audio: { schema: audioSelectorSchema },
     output: { schema: {
       kind: "object",
@@ -156,7 +153,6 @@ export const audioExtractionRequestSchema: ValueSchema = {
 export const frameExtractionRequestSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.frame-extraction-request@1" } },
     video: { schema: videoSelectorSchema },
     at: { schema: { kind: "oneOf", variants: [
       { kind: "object", fields: { kind: { schema: { kind: "literal", value: "first" } } } },
@@ -190,7 +186,6 @@ const blobRefSchema: ValueSchema = {
 export const audioProgramPlanSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.audio-program-plan@1" } },
     frameRate: { schema: {
       kind: "object",
       fields: {
@@ -230,6 +225,30 @@ export const audioProgramPlanSchema: ValueSchema = {
   },
 };
 
+export const mediaPipelineMarkupSurfaces = [
+    {
+      name: "synchronized-media", tag: "Normalize", mode: "structured",
+      outputs: [mediaPipelineTypes.selectionRequest, mediaTypes.synchronized],
+      implementation: { digest: synchronizedMediaSurfaceImplementationDigest },
+    },
+    {
+      name: "transform-media", tag: "Transform", mode: "structured",
+      outputs: [mediaPipelineTypes.selectionRequest, mediaPipelineTypes.transformProgram, artifactTypes.blob],
+      implementation: { digest: mediaOperationSurfaceImplementationDigests.transform },
+    },
+    {
+      name: "extract-audio", tag: "ExtractAudio", mode: "structured",
+      outputs: [mediaPipelineTypes.audioExtractionRequest, artifactTypes.blob],
+      implementation: { digest: mediaOperationSurfaceImplementationDigests.extractAudio },
+    },
+    {
+      name: "extract-frame", tag: "ExtractFrame", mode: "structured",
+      outputs: [mediaPipelineTypes.frameExtractionRequest, artifactTypes.blob],
+      implementation: { digest: mediaOperationSurfaceImplementationDigests.extractFrame },
+    },
+  ] as const;
+
+
 export const mediaPipelineManifest: ModuleManifest = {
   format: "svml.module@1",
   name: mediaPipelineModuleRef.name,
@@ -246,10 +265,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       name: mediaPipelineTypes.selectionRequest.name,
       schema: mediaSelectionRequestSchema,
       validator: {
-        abi: "svml.type-validator@1",
         implementation: {
-          kind: "registered",
-          locator: "@narratage/media-pipeline/validate-selection-request",
           digest: mediaPipelineImplementationDigests.requestValidator,
         },
       },
@@ -258,10 +274,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       name: mediaPipelineTypes.audioProgramPlan.name,
       schema: audioProgramPlanSchema,
       validator: {
-        abi: "svml.type-validator@1",
         implementation: {
-          kind: "registered",
-          locator: "@narratage/media-pipeline/validate-audio-program-plan",
           digest: mediaPipelineImplementationDigests.audioPlanValidator,
         },
       },
@@ -270,10 +283,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       name: mediaPipelineTypes.transformProgram.name,
       schema: mediaTransformProgramSchema,
       validator: {
-        abi: "svml.type-validator@1",
         implementation: {
-          kind: "registered",
-          locator: "@narratage/media-pipeline/validate-media-transform-program",
           digest: mediaPipelineImplementationDigests.transformProgramValidator,
         },
       },
@@ -282,10 +292,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       name: mediaPipelineTypes.audioExtractionRequest.name,
       schema: audioExtractionRequestSchema,
       validator: {
-        abi: "svml.type-validator@1",
         implementation: {
-          kind: "registered",
-          locator: "@narratage/media-pipeline/validate-audio-extraction-request",
           digest: mediaPipelineImplementationDigests.audioExtractionValidator,
         },
       },
@@ -294,10 +301,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       name: mediaPipelineTypes.frameExtractionRequest.name,
       schema: frameExtractionRequestSchema,
       validator: {
-        abi: "svml.type-validator@1",
         implementation: {
-          kind: "registered",
-          locator: "@narratage/media-pipeline/validate-frame-extraction-request",
           digest: mediaPipelineImplementationDigests.frameExtractionValidator,
         },
       },
@@ -313,28 +317,6 @@ export const mediaPipelineManifest: ModuleManifest = {
     { name: mediaPipelineCapabilities.renderAudio.name, returns: mediaTypes.timelineAudio },
     { name: mediaPipelineCapabilities.mux.name, returns: mediaTypes.muxed },
   ],
-  surfaces: [
-    {
-      name: "synchronized-media", tag: "Normalize", mode: "structured",
-      outputs: [mediaPipelineTypes.selectionRequest, mediaTypes.synchronized],
-      implementation: { kind: "trusted-frontend-surface", locator: "@narratage/media-pipeline/synchronized-media-surface", digest: synchronizedMediaSurfaceImplementationDigest },
-    },
-    {
-      name: "transform-media", tag: "Transform", mode: "structured",
-      outputs: [mediaPipelineTypes.selectionRequest, mediaPipelineTypes.transformProgram, artifactTypes.blob],
-      implementation: { kind: "trusted-frontend-surface", locator: "@narratage/media-pipeline/transform-media-surface", digest: mediaOperationSurfaceImplementationDigests.transform },
-    },
-    {
-      name: "extract-audio", tag: "ExtractAudio", mode: "structured",
-      outputs: [mediaPipelineTypes.audioExtractionRequest, artifactTypes.blob],
-      implementation: { kind: "trusted-frontend-surface", locator: "@narratage/media-pipeline/extract-audio-surface", digest: mediaOperationSurfaceImplementationDigests.extractAudio },
-    },
-    {
-      name: "extract-frame", tag: "ExtractFrame", mode: "structured",
-      outputs: [mediaPipelineTypes.frameExtractionRequest, artifactTypes.blob],
-      implementation: { kind: "trusted-frontend-surface", locator: "@narratage/media-pipeline/extract-frame-surface", digest: mediaOperationSurfaceImplementationDigests.extractFrame },
-    },
-  ],
   producers: [
     {
       name: mediaPipelineProducers.bindVisualRequest.name,
@@ -342,8 +324,6 @@ export const mediaPipelineManifest: ModuleManifest = {
       outputs: [{ name: "request", type: mediaPipelineTypes.selectionRequest }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/bind-visual-media-request-to-program",
         digest: mediaPipelineImplementationDigests.bindVisualRequest,
       },
     },
@@ -353,8 +333,6 @@ export const mediaPipelineManifest: ModuleManifest = {
       outputs: [{ name: "request", type: mediaPipelineTypes.selectionRequest }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/bind-av-media-request-to-program",
         digest: mediaPipelineImplementationDigests.bindAvRequest,
       },
     },
@@ -368,8 +346,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         returns: mediaTypes.inspection,
       }],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/request-media-inspection",
         digest: mediaPipelineImplementationDigests.inspect,
       },
     },
@@ -385,8 +361,6 @@ export const mediaPipelineManifest: ModuleManifest = {
       }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/select-media-streams",
         digest: mediaPipelineImplementationDigests.select,
       },
     },
@@ -405,8 +379,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         returns: mediaTypes.synchronized,
       }],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/request-media-normalization",
         digest: mediaPipelineImplementationDigests.normalize,
       },
     },
@@ -423,8 +395,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         returns: artifactTypes.blob,
       }],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/request-media-transform",
         digest: mediaPipelineImplementationDigests.transform,
       },
     },
@@ -442,8 +412,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         returns: artifactTypes.blob,
       }],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/request-audio-extraction",
         digest: mediaPipelineImplementationDigests.extractAudio,
       },
     },
@@ -461,8 +429,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         returns: artifactTypes.blob,
       }],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/request-frame-extraction",
         digest: mediaPipelineImplementationDigests.extractFrame,
       },
     },
@@ -476,8 +442,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         returns: speechTypes.evidenceAudio,
       }],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/request-speech-evidence-audio",
         digest: mediaPipelineImplementationDigests.projectSpeechEvidenceAudio,
       },
     },
@@ -490,8 +454,6 @@ export const mediaPipelineManifest: ModuleManifest = {
       outputs: [{ name: "plan", type: mediaPipelineTypes.audioProgramPlan }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/compile-audio-program",
         digest: mediaPipelineImplementationDigests.planAudio,
       },
     },
@@ -505,8 +467,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         returns: mediaTypes.timelineAudio,
       }],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/request-audio-render",
         digest: mediaPipelineImplementationDigests.renderAudio,
       },
     },
@@ -523,8 +483,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         returns: mediaTypes.muxed,
       }],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/request-media-mux",
         digest: mediaPipelineImplementationDigests.mux,
       },
     },
@@ -534,8 +492,6 @@ export const mediaPipelineManifest: ModuleManifest = {
       outputs: [{ name: "video", type: artifactTypes.blob }],
       needs: [],
       implementation: {
-        kind: "registered",
-        locator: "@narratage/media-pipeline/project-muxed-media",
         digest: mediaPipelineImplementationDigests.projectMuxed,
       },
     },

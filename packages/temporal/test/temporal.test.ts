@@ -18,30 +18,28 @@ import {
 } from "../src/index.js";
 
 const space: ProgramSpace = {
-  contract: "svml.program-space@1",
   durationSec: 10,
   frameRate: { numerator: 30, denominator: 1 },
 };
 
 const map: CompleteSemanticMap = {
-  contract: "svml.complete-semantic-map@1",
   tokens: [],
   anchors: [
-    { identity: "a", timeSec: 1, frame: 30 },
-    { identity: "b", timeSec: 2, frame: 60 },
-    { identity: "c", timeSec: 3, frame: 90 },
-    { identity: "d", timeSec: 4, frame: 120 },
-    { identity: "late", timeSec: 8, frame: 240 },
-    { identity: "segment:answer:start", timeSec: 2, frame: 60 },
-    { identity: "segment:answer:end", timeSec: 4, frame: 120 },
+    { identity: "a", frame: 30 },
+    { identity: "b", frame: 60 },
+    { identity: "c", frame: 90 },
+    { identity: "d", frame: 120 },
+    { identity: "late", frame: 240 },
+    { identity: "segment:answer:start", frame: 60 },
+    { identity: "segment:answer:end", frame: 120 },
   ],
 };
 
 const selection = (id: string, occurrences: NarrativeSelectionRef["occurrences"]): NarrativeSelectionRef => ({
-  contract: "svml.narrative-selection@1", id, occurrences,
+  id, occurrences,
 });
 const moment = (id: string, occurrences: NarrativeMomentRef["occurrences"]): NarrativeMomentRef => ({
-  contract: "svml.narrative-moment@1", id, occurrences,
+  id, occurrences,
 });
 const frames = (value: number) => ({ unit: "frames" as const, value });
 const seconds = (numerator: number, denominator = 1) => ({ unit: "seconds" as const, numerator, denominator });
@@ -57,7 +55,6 @@ test("one Selection projects exact local points and stable occurrence identity",
   });
   assert.deepEqual(result, [{
     id: "card::proof#7",
-    sourceOccurrenceId: "proof#7",
     span: { startFrame: 30, endFrameExclusive: 60 },
   }]);
 });
@@ -66,13 +63,12 @@ test("one Segment projects from its own structural start and end anchors", () =>
   const result = projectSegmentWindow({
     itemId: "answer-card",
     map,
-    segment: { contract: "svml.narrative-excerpt@1", kind: "segment", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
+    segment: { kind: "segment", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
     space,
     projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
   });
   assert.deepEqual(result, {
     id: "answer-card::answer",
-    sourceOccurrenceId: "answer",
     span: { startFrame: 60, endFrameExclusive: 120 },
   });
 });
@@ -89,7 +85,7 @@ test("each preserves source order, even when physical time is reversed between o
     expansion: { kind: "each" },
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
   });
-  assert.deepEqual(result.map((item) => item.sourceOccurrenceId), ["mentions#4", "mentions#9"]);
+  assert.deepEqual(result.map((item) => item.id), ["repeat::mentions#4", "repeat::mentions#9"]);
   assert.deepEqual(result.map((item) => item.span.startFrame), [90, 30]);
 });
 
@@ -125,7 +121,6 @@ test("negative intermediate points clip before nearest half-later frame quantiza
 
 test("program and absolute projections use exact rational frame-rate arithmetic", () => {
   const ntsc: ProgramSpace = {
-    contract: "svml.program-space@1",
     durationSec: 1.001,
     frameRate: { numerator: 30_000, denominator: 1_001 },
   };
@@ -142,7 +137,6 @@ test("program and absolute projections use exact rational frame-rate arithmetic"
 
 test("frame and authored durations enter one exact sample-boundary rule", () => {
   const ntsc: ProgramSpace = {
-    contract: "svml.program-space@1",
     durationSec: 1.001,
     frameRate: { numerator: 30_000, denominator: 1_001 },
   };
@@ -152,7 +146,6 @@ test("frame and authored durations enter one exact sample-boundary rule", () => 
   assert.equal(temporalDurationInSamples({ unit: "milliseconds", value: 125 }, ntsc), 6_000);
   assert.equal(temporalDurationInSamples(seconds(1, 3), ntsc), 16_000);
   const twentyFour: ProgramSpace = {
-    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 24, denominator: 1 },
   };
@@ -210,17 +203,16 @@ test("triggered schedule derives cumulative, exclusive and settled windows from 
     terminalFrame: 240,
     triggers: [{ id: "one", frame: 30 }, { id: "two", frame: 90 }, { id: "three", frame: 150 }],
   });
-  assert.deepEqual(result.cumulative.map((item) => item.span), [
+  assert.deepEqual(result.cumulative, [
     { startFrame: 30, endFrameExclusive: 300 },
     { startFrame: 90, endFrameExclusive: 300 },
     { startFrame: 150, endFrameExclusive: 300 },
   ]);
-  assert.deepEqual(result.exclusive.map((item) => item.span), [
+  assert.deepEqual(result.exclusive, [
     { startFrame: 30, endFrameExclusive: 90 },
     { startFrame: 90, endFrameExclusive: 150 },
     { startFrame: 150, endFrameExclusive: 240 },
   ]);
-  assert.deepEqual(result.settledSuffix, { startFrame: 240, endFrameExclusive: 300 });
 });
 
 test("triggered schedule rejects equal, reversed and out-of-bound points", () => {

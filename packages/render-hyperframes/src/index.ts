@@ -2,7 +2,7 @@ export { renderHyperframesFragment } from "./fragment.js";
 export { renderHyperframesComponent } from "./component.js";
 export {
   renderHyperframesCapabilities,
-  renderHyperframesManifest,
+  renderHyperframesManifest, renderHyperframesMarkupSurfaces,
   renderHyperframesManifestDigest,
   renderHyperframesModuleRef,
   renderHyperframesProducers,
@@ -13,4 +13,3 @@ export {
   requestHyperframesVisualImplementationDigest,
 } from "./product.js";
 export { decodeHyperframesRenderSurface } from "./surface.js";
-export type * from "./types.js";

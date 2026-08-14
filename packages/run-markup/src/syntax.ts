@@ -15,7 +15,7 @@ import {
   skipTextTrivia,
 } from "@narratage/markup";
 import type {
-  SourceUnit,
+  MarkupSource,
   StructuredElement,
 } from "@narratage/markup";
 
@@ -77,7 +77,7 @@ function empty(element: StructuredElement): void {
   if (elements(element).length > 0) fail(element, "RUN_CHILD", `<${element.name}> must be empty`);
 }
 
-export function parseTypeRef(value: string): TypeRef {
+function parseTypeRef(value: string): TypeRef {
   const hash = value.lastIndexOf("#");
   const version = hash <= 0 ? -1 : value.lastIndexOf("@", hash);
   if (hash <= 0 || version <= 0 || version === hash - 1 || hash === value.length - 1) {
@@ -125,8 +125,14 @@ function provided(element: StructuredElement): RunProvidedValue {
 }
 
 function file(element: StructuredElement): RunProvidedFile {
-  exactAttributes(element, ["id", "from", "media-type"]);
+  exactAttributes(element, ["id", "type", "from", "media-type"]);
   empty(element);
+  let type: TypeRef;
+  try {
+    type = parseTypeRef(stringAttribute(element, "type")!);
+  } catch (error) {
+    fail(element, "RUN_TYPE", error instanceof Error ? error.message : String(error));
+  }
   const mediaType = stringAttribute(element, "media-type")!;
   if (!/^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/iu.test(mediaType)) {
     fail(element, "RUN_MEDIA_TYPE", "<file> media-type must be a concrete MIME media type");
@@ -134,6 +140,7 @@ function file(element: StructuredElement): RunProvidedFile {
   return {
     kind: "file",
     id: stringAttribute(element, "id")!,
+    type,
     from: stringAttribute(element, "from")!,
     mediaType,
   };
@@ -204,7 +211,7 @@ function unique(values: readonly string[], subject: string, element: StructuredE
 
 /** Parse only the public Run language. No package code, Runtime or Provider executes here. */
 function parseRunDocumentBody(name: string, text: string): RunDocument {
-  const source: SourceUnit = { name, text };
+  const source: MarkupSource = { name, text };
   const start = skipTextTrivia(source, 0);
   const parsed = parseStructuredElement(source, start);
   const end = skipTextTrivia(source, parsed.nextOffset);
@@ -219,6 +226,7 @@ function parseRunDocumentBody(name: string, text: string): RunDocument {
   const targets: RunTarget[] = [];
   const candidates: RunCandidateDeclaration[] = [];
   const satisfactions: RunSatisfaction[] = [];
+  const satisfiedOutputs = new Set<string>();
   let bodyStarted = false;
   for (const child of elements(root)) {
     if (child.name === "author") {
@@ -241,7 +249,14 @@ function parseRunDocumentBody(name: string, text: string): RunDocument {
     else if (child.name === "file") candidates.push(file(child));
     else if (child.name === "build-record") candidates.push(buildRecord(child));
     else if (child.name === "fragment") candidates.push(fragment(child));
-    else if (child.name === "satisfy") satisfactions.push(satisfaction(child));
+    else if (child.name === "satisfy") {
+      const item = satisfaction(child);
+      if (satisfiedOutputs.has(item.output)) {
+        fail(child, "RUN_SATISFACTION_DUPLICATE", `<satisfy> repeats output ${item.output}`);
+      }
+      satisfiedOutputs.add(item.output);
+      satisfactions.push(item);
+    }
     else fail(child, "RUN_CHILD", `<svrun> does not accept <${child.name}>`);
   }
   if (author === undefined) fail(root, "RUN_AUTHOR_MISSING", "<svrun> requires exactly one <author> declaration");

@@ -18,7 +18,6 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 
 /** Provider-neutral deterministic alignment; acoustic measurement remains an explicit upstream Need. */
 export const speechAlignmentComponent = {
-  name: "@narratage/speech-alignment",
   producers: [{
     producer: speechAlignmentProducers.locate,
     implementationDigest: speechLocatorDigest,
