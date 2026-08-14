@@ -4,10 +4,9 @@
   <author source="./main.svml"/>
   <target output="final.video"/>
 
-  <!-- The presenter frame this project already generated. Naming the Build is
-       how a Source reuses an accepted shot; there is no path to write. -->
-  <build-record id="accepted-presenter"
-    build="sha256:6aea2d417b84985d09824ab9621939925854dc5fe7a8c606ce9aba8b14ef4191"
-    output="presenter.image"/>
+  <!-- The presenter frame this project generated, kept beside the Source so a
+       preview shows the real shot without reaching for a Runtime. -->
+  <file id="accepted-presenter" type="@narratage/artifact@1#BlobArtifact"
+    from="./assets/presenter.png" media-type="image/png"/>
   <satisfy output="presenter.image" candidate="accepted-presenter"/>
 </svrun>
