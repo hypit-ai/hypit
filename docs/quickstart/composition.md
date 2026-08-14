@@ -198,6 +198,10 @@ The complete data flow from Script to rendered video. This example is based on
 </svml>
 ```
 
+`right` and `bottom` are absolute edge positions, not insets. A Frame spanning the middle 80% of
+its parent is `left="10%" right="90%"`, not `left="10%" right="10%"` — the second resolves to zero
+width and is rejected.
+
 ### Stylesheet (`studio.svs`)
 
 ```svs
