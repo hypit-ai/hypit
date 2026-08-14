@@ -151,17 +151,16 @@ A real Build additionally needs `ffmpeg` and `ffprobe` on your `PATH`, and depen
 
 ### Project files
 
-Narratage gives files distinct roles without reserving their names:
+Narratage separates authorship from execution:
 
-| Role | Usual form | How it is selected |
-|---|---|---|
-| **Author Source** | `.svml` | Passed to `check`, or referenced by a Run Source |
-| **Recipe Source** | `.svs` | Imported by another Source |
-| **Run Source** | `.svrun` | Passed to `plan` or `build` |
-| **Runtime Profile** | JSON | Passed explicitly with `--runtime` |
-| **Package inventories** | JSON lock files | Referenced by a Runtime Profile or selected explicitly by the CLI |
+| File | What it decides |
+|---|---|
+| `.svml` | What video to make, including the script, generated media and tracks |
+| `.svs` | Reusable creative choices such as prompts, styles and layout |
+| `.svrun` | What to build this time, including targets and prior results to reuse |
+| Runtime profile | How and where to run, including providers, storage and concurrency |
 
-Names and suffixes are conventions, not parser dispatch. Every Source selects its own Frontend with a `<?svml using="..."?>` header; Runtime Profiles and package inventories are selected by explicit paths. A project may contain any number of each role, and one Author Source may be referenced by many Run Sources.
+A project can have any number of these files, and the same `.svml` can be built by many `.svrun` files.
 
 ## Third-party software
 
