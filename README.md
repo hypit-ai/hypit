@@ -142,9 +142,12 @@ A project can have any number of these files, and the same `.svml` can be built 
 
 <p align="center"><em>narration + montage = <strong>narratage</strong></em></p>
 
-> “The new treatment, which the producer calls ‘narratage,’ is eminently well suited to this particular dramatic vehicle.”
->
-> Mordaunt Hall, *The New York Times*, 1933
+<p align="center">
+  <em>“The new treatment, which the producer calls <strong>‘narratage,’</strong><br>
+  is eminently well suited to this particular dramatic vehicle.”</em>
+  <br>
+  — Mordaunt Hall, <em>The New York Times</em>, 1933
+</p>
 
 In the review of Spencer Tracy's *The Power and the Glory*, producer Jesse L. Lasky's term **narratage** described a technique where a narrator's voice carries the story while the screen assembles scenes to match.
 
