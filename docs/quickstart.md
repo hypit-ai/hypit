@@ -18,16 +18,16 @@ Narratage turns that source into a visible execution graph. Before any model or 
 runs, you can check the source, choose a Run, and inspect the exact work it would require. This
 page gets you to that first safe plan: it needs no API keys and makes no paid call.
 
-## Use the Narratage skill
-
-Clone the repository. `/narratage` is available from that working directory:
+Everything below starts from a clone of this repository:
 
 ```bash
 git clone https://github.com/hypit-ai/narratage.git
 cd narratage
 ```
 
-Then send to your agent:
+## Use the Narratage skill
+
+`/narratage` is available from that working directory. Send your agent:
 
 ```text
 /narratage Set up my environment, ask for only the API keys required by my Runtime Profile, and guide me through authoring and building my first SVML video.
@@ -38,12 +38,9 @@ needs. Work through them yourself if you would rather not use an agent.
 
 ## 1. Install the source workspace
 
-Narratage currently runs from a source checkout. You need Node.js 22+ and pnpm 10.33.x through
-Corepack.
+You need Node.js 22+ and pnpm 10.33.x through Corepack.
 
 ```bash
-git clone https://github.com/hypit-ai/narratage.git
-cd narratage
 corepack enable
 pnpm install --frozen-lockfile
 ```
