@@ -2,7 +2,11 @@
   <img alt="Narratage" src="docs/public/narratage-logo.svg" width="420">
 </p>
 
-<p align="center"><em>“First, there was narration. Then, there were montages.”</em></p>
+<p align="center"><strong>一门给 AI Agent 做视频用的语言和系统。</strong></p>
+
+<p align="center"><em>人剪视频，Agent 编译视频。</em></p>
+
+<!-- TODO: Demo GIF（15秒内）—— 左边 SVML 剧本，右边编译出的视频。 -->
 
 <p align="center">
   <a href="https://narratage.hypit.ai/zh/">演示</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/zh/quickstart">快速开始</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/zh/guide/develop">开发</a>&nbsp;&nbsp;<a href="./README.md">English</a>
@@ -24,94 +28,69 @@
   <a href="https://t.me/narratage"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-Join%20Group-26A5E4?style=flat-square&logo=telegram&logoColor=white"></a>
 </p>
 
-Narratage 是一套面向 AI 视频创作的语义化、图原生系统。你写下故事，选择模型与视觉组件，声明想要哪些输出；Narratage 把这份意图变成一张有限的执行计划，只运行结果真正依赖的工作，并把每一个已接受的输出保留下来，供后续 Run 使用。
+Premiere、剪映、DaVinci、Final Cut——全是给人的手和眼睛造的，钉在时间轴上。Narratage 是一门给 AI Agent 设计的语言和编译器。用 SVML 写一个剧本，编译器把生成的视频、语音、字幕和特效装配成一支完整的 MP4。
+
+- **没有时间线** —— 不钉在轨道的秒上，挂在叙事的词上。
+- **Agent 原生** —— 输入是纯文本，任何 LLM 天生就能读、写、改。
+- **可复现** —— 同样的剧本，同样的输出。编译前先看完整执行计划，确认了再花钱。
+
+## 怎么工作的
+
+1. **写剧本** —— 谁说什么话、画面放哪里。不含时间码，不含素材路径。
+2. **生成** —— 调用视频和语音模型，生成每段口播画面。
+3. **对齐** —— 语音识别测出每个词的精确时间，字幕和 B-roll 自动挂到词上，不是挂到秒上。
+4. **渲染** —— 所有轨道合成一张画布，逐帧渲染，输出 MP4。
+
+改剧本里一行字，重新编译——只有受影响的段落重新生成。已经生成过的结果可以显式复用，不重复花钱。
+
+## 语言
 
 SVML 是创作语言，Narratage 是围绕它的编译器、运行时与包生态。
 
-## 名字的由来
-
-1933 年《*New York Times*》对电影《*The Power and the Glory*》的一篇影评造出了 **narratage** 这个词，用来描述当时的一种新兴手法：旁白加蒙太奇——声音推动故事前进，画面组接出与之呼应的段落。
-
-这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器把生成的视频、字幕、B-roll、文字与音频组装成一部完成的影片。
-
-## 它写起来是什么样
-
-Script 始终是可读的散文。Segment 组织故事，Role Cue 指明谁在说话，Dual Text 把观众看到的文字与说话者念出的内容分开，Selection 与 Moment 为语义区间和时间点命名——全程不引入时间码。
+一个完整的 `.svml` 文件：
 
 ```xml
-<script id="story">
-  @whole
+<?svml using="@narratage/markup@1"?>
+<svml>
+  <import from="@narratage/script@1"/>
+  <import as="studio" source="./studio.svs"/>
 
-  <opening>
-    <MARA> @mystery @beat At <2:13 A.M. | two thirteen in the morning>,
-           every billboard in the city began telling the same story. @/beat @/mystery
-  </opening>
+  <script id="story">
+    <intro>
+      <HOST>I tested @product this espresso machine @/product for thirty days.
+    </intro>
 
-  <reveal>
-    <!-- The screens wake before the city does. -->
-    @claim
-    <NOAH> Whose story?
-    <MARA> Mine. They spent ten years ~@proof cutting me out of @flash!
-           every photograph. @/claim So I put myself back into all of them @/proof~.
-    <NOAH> @beat You rewrote the whole city? @/beat
-    <MARA> I < | only> changed one thing ~@cut!: the ending.
-           I signed it \@midnight.
-  </reveal>
-
-  @silence
-  <pause/>
-  @/silence
-
-  <tagline>
-    By sunrise, the city remembered the woman history had erased.
-  </tagline>
-
-  @/whole~
-</script>
-
-<seedance:TextVideo id="take"
-  model="mini"
-  prompt={story.segment.opening.dialogue}
-  duration="5"
-  generate-audio="true"/>
-
-<whisperx:Alignment id="timing"
-  narrative={story}
-  audio={speech.audio}/>
-
-<media-track:Item
-  video={motion.video}
-  during={story.selection.proof}
-  frame={card-frame}/>
+    <verdict>
+      <HOST>At <$299 | two ninety-nine>, best home espresso I've ever had.
+            If you care about your morning cup — this is the one.
+    </verdict>
+  </script>
+</svml>
 ```
 
-上面这段 Script 里的每一个标记：
+四个构造，这就是全部：
 
-| 写法 | 含义 |
-|---|---|
-| `<opening>...</opening>` / `<pause/>` | 一个有台词的 Segment，和一个空的 |
-| `<MARA>` | Role Cue，一直生效到下一个 Cue 或本 Segment 结束 |
-| `<2:13 A.M. \| two thirteen in the morning>` | 左边显示，右边念出 |
-| `< \| only>` | 只念，不进字幕 |
-| `@mystery ... @/mystery` | Selection，恰好覆盖两个标记之间的词 |
-| `~@proof ... @/proof~` | 同上，但两端各向外多吃掉相邻的一个词 |
-| 重复的 `@beat ... @/beat` | 同一个 Selection 出现在多个位置 |
-| `@flash!` / `~@cut!` | Moment，落在下一个词的词首／上一个词的词尾 |
-| `\@midnight` | 字面量 `@midnight` |
-| `<!-- ... -->` | 注释，不会进入任何输出文字 |
+| 构造 | 写法 | 干什么 |
+|---|---|---|
+| **Segment** | `<intro>...</intro>` | 命名的叙事段落——知道自己是段落的段落 |
+| **Speaker** | `<HOST>` | 标注谁在说话；一直生效到下一个 cue 或段落结束 |
+| **Split** | `<$299 \| two ninety-nine>` | 屏幕上显示的和嘴里说的可以不一样 |
+| **Hook** | `@product...@/product` | 把一个画面——B-roll、图形、特效——钩到具体的词上 |
 
-标记名本身不带行为：`@silence` 不会让音频静音，必须由 Audio、Caption 或 Track 组件显式消费这个 Selection。完整词汇见 [Script](https://narratage.hypit.ai/zh/quickstart/script)；完整且可检查的源码见 [`talking-film-graph-check`](./examples/talking-film-graph-check/main.svml)。
+Script 外面的组件（视频生成器、语音模型、字幕渲染器、轨道合成器）消费 Script 声明的内容。Script 本身不含任何渲染逻辑。完整语法：[Script 规范](https://narratage.hypit.ai/zh/quickstart/script)。
 
-## 使用 Narratage skill
+## 快速开始
 
-如果使用编程 Agent，把下面这段发给它：
+### 用编程 Agent
+
+把下面这段发给你的 Agent：
 
 ```text
 安装并使用这个仓库里的 narratage skill。配置我的环境，只向我索取当前 Runtime Profile
 实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
 ```
 
-## 不需要 API Key 也能试
+### 从终端
 
 需要 Node.js 22+ 与 pnpm 10.33.x：
 
@@ -128,17 +107,25 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
   --package-lock examples/talking-film-graph-check/svml.packages.lock
 ```
 
-`check` 校验 Author Source 并打印它的类型化输出。`plan` 展示被真正需要的子图，以及一次真实 Build 会用到的每一项外部能力，但不会启动其中任何一项。
+`check` 校验源码并打印类型化输出。`plan` 展示被真正需要的执行子图，以及一次真实 Build 会用到的每一项外部能力——但不会启动其中任何一项。
 
-上面两条命令只需要 Node.js 与 pnpm。一次真实的 Build 还需要 `PATH` 上有 `ffmpeg` 与 `ffprobe`——macOS 用 `brew install ffmpeg`，Debian 与 Ubuntu 用 `apt install ffmpeg`——以及视你选择的 Runtime Profile 而定的 Python 与 `uv`、或 API 凭据。运行 `narratage doctor` 会在 Build 开始前报告缺什么，另见[真实 Build 可能使用的本地工具](https://narratage.hypit.ai/zh/quickstart#真实-build-可能使用的本地工具)。
+真实的 Build 还需要 `PATH` 上有 `ffmpeg` 与 `ffprobe`，以及视 Runtime Profile 而定的 Python 与 `uv` 或 API 凭据。运行 `narratage doctor` 查看缺什么；完整指南见[快速开始](https://narratage.hypit.ai/zh/quickstart)。
 
-## 为什么用图
+## 名字的由来
 
-AI 生成慢、贵、不确定，而且每一步的输出往往就是下一步的输入。Narratage 把由此产生的选择呈现为两张平级的图：Author Graph 表达工作本身，Run Graph 为一次 Build 选择 Target 与 Candidate。Core 只负责解析、校验并推进由此得到的状态机，因此视频领域的概念都留在可独立安装的包里——Core 不硬编码任何模型、Track 或 Provider。
+1933 年《*New York Times*》对电影《*The Power and the Glory*》的影评造出了 **narratage**：旁白加蒙太奇——声音推动故事前进，画面组接出与之呼应的段落。
+
+这套系统做的正是这件事。作者写下口播剧本，编译器把生成的视频、字幕、B-roll、文字与音频装配成一部完整的影片。
+
+## 架构
+
+AI 生成慢、贵、不确定，而且每一步的输出往往就是下一步的输入。Narratage 把由此产生的选择呈现为两张平级的图：**Author Graph** 表达工作本身，**Run Graph** 为一次 Build 选择目标。Core 只负责解析、校验并推进状态机——视频领域的概念都留在可独立安装的包里，Core 不硬编码任何模型、Track 或 Provider。
+
+三个文件各管一事：`.svml` 管*做什么视频*（剧本+样式+轨道），`.svrun` 管*这次要产出什么*（哪些目标、复用哪些旧结果），运行时配置管*在哪跑*（API key、并发、权限）。
 
 ## 接下来去哪
 
-- [演示](https://narratage.hypit.ai/zh/) —— 直观演示：悬停 Script 中的标记区间，旁边即刻显示它对应的画面。
+- [演示](https://narratage.hypit.ai/zh/) —— 悬停 Script 中的标记区间，旁边即刻显示它对应的画面。
 - [快速开始](https://narratage.hypit.ai/zh/quickstart) —— 你掌控的文件、命令，以及第一次真实 Build。
 - [开发](https://narratage.hypit.ai/zh/guide/develop) —— 包架构、添加 Author 包或 Provider。
 
