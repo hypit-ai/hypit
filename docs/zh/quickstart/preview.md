@@ -5,11 +5,9 @@ description: 在任何素材生成之前，把 Source 当作时间线来读。
 
 # 实时预览
 
-到这里为止的一切都还是声明式的：一段 Script、若干 Recipe、一个生成镜头的请求。它们都还没有产出任何
-画面，而一次 Seedance 生成既花钱又花时间。
+到这里为止的一切都还是声明式的：一段 Script、若干 Recipe、一个生成镜头的请求。它们都还没有产出任何画面，而一次 Seedance 生成既花钱又花时间。
 
-**SVML Playground** 直接读取 Source 并把它画出来——右侧是代码，左上是画面，左下是时间线。它从不写入
-任何东西，也从不调用 Provider。
+**SVML Playground** 直接读取 Source 并把它画出来——右侧是代码，左上是画面，左下是时间线。它从不写入任何东西，也从不调用 Provider。
 
 ```bash
 pnpm svml:playground -- --source examples/all-components-preview/main.svml
@@ -23,8 +21,7 @@ pnpm svml:playground -- --source examples/all-components-preview/main.svml
 | `--runtime <svml.runtime.json>` | 早先 Build 产出的素材存放在哪里。只有通过 `<build-record>` 复用已接受镜头的 Source 才需要。 |
 | `--port <number>` | 默认 `5179`。 |
 
-两个可选参数是叠加的。两个都不给时，Playground 依然能在一个只有 `main.svml` 和 `.svs` 样式表的目录上
-运行——不需要包锁、不需要 Runtime Profile、不需要任何构建。
+两个可选参数是叠加的。两个都不给时，Playground 依然能在一个只有 `main.svml` 和 `.svs` 样式表的目录上运行——不需要包锁、不需要 Runtime Profile、不需要任何构建。
 
 ::: tip 只开一个服务，不要开四个
 第二个 Playground 会悄悄占用另一个端口，于是你一边读着过期的预览，一边描述着新的改动。先把旧的停掉：
@@ -38,15 +35,11 @@ pkill -f svml-playground || true
 
 ## 为什么它能画出还没人做出来的视频
 
-一条 Track 离开它所安放的素材就无法构建。但如果非要等到每个镜头都存在才肯画，预览恰好会在它最该派上
-用场的那个阶段变得毫无用处。所以 Playground 把**已知**的和**假设**的分开，并明确告诉你哪个是哪个。
+一条 Track 离开它所安放的素材就无法构建。但如果非要等到每个镜头都存在才肯画，预览恰好会在它最该派上用场的那个阶段变得毫无用处。所以 Playground 把**已知**的和**假设**的分开，并明确告诉你哪个是哪个。
 
-**所有结构性的东西都是真的。** Placement Frame、padding、堆叠顺序、动效以及 Track 布局，都由构建时调用
-的同一批函数、从你的 Source 和样式表算出。一张卡片如果在画面里的位置不对，在这里同样是不对的。
+**所有结构性的东西都是真的。** Placement Frame、padding、堆叠顺序、动效以及 Track 布局，都由构建时调用的同一批函数、从你的 Source 和样式表算出。一张卡片如果在画面里的位置不对，在这里同样是不对的。
 
-**时序是估算的**，直到某次构建对真实音频做过对齐为止。词的时长来自 `@narratage/estimate`——正是流水线在
-生成之前使用的那套音节模型。估算出的时间线是一种比例，而不是一个预言：等 WhisperX 对齐了真实音频，实际
-的剪切点会移动。
+**时序是估算的**，直到某次构建对真实音频做过对齐为止。词的时长来自 `@narratage/estimate`——正是流水线在生成之前使用的那套音节模型。估算出的时间线是一种比例，而不是一个预言：等 WhisperX 对齐了真实音频，实际的剪切点会移动。
 
 **缺失的素材会有替身**，而且每个替身都会被明确标注，不会被当作事实呈现：
 
@@ -66,17 +59,13 @@ pkill -f svml-playground || true
 </seedance:ReferenceVideo>
 ```
 
-在 Seedance 跑起来之前，`take-opening.video` 并不存在。但 Source 说清楚了它将由什么做成——
-`presenter.image`——以及它会持续多久：`duration="8"`。于是 Playground 就把那张参考图画出来，持续八秒，
-放在这个镜头所在的 Frame 里。
+在 Seedance 跑起来之前，`take-opening.video` 并不存在。但 Source 说清楚了它将由什么做成——`presenter.image`——以及它会持续多久：`duration="8"`。于是 Playground 就把那张参考图画出来，持续八秒，放在这个镜头所在的 Frame 里。
 
-那不是最终的镜头。但它是**正确的主体、正确的画幅、正确的时长**，这已经足以回答构图对不对、以及这个空镜
-是否落在语音需要它的位置上——**在**这张图片流入视频生成之前，也在你为一个剪切点其实不对的镜头付钱之前。
+那不是最终的镜头。但它是**正确的主体、正确的画幅、正确的时长**，这已经足以回答构图对不对、以及这个空镜是否落在语音需要它的位置上——**在**这张图片流入视频生成之前，也在你为一个剪切点其实不对的镜头付钱之前。
 
 凡是存在声明时长的地方都会被遵守。没有声明的地方，词按正常语速安放，剩余时间平均分配。
 
-绘制替身需要 `PATH` 上有 `ffmpeg`。没有它，这些镜头就保持未绘制状态、Track 会如实说明，而不是假装它们
-已经画好了。
+绘制替身需要 `PATH` 上有 `ffmpeg`。没有它，这些镜头就保持未绘制状态、Track 会如实说明，而不是假装它们已经画好了。
 
 ## 读懂徽章
 
@@ -89,13 +78,11 @@ pkill -f svml-playground || true
 | `picture: measured` | 每个元素展示的都是真实素材。 |
 | `picture: estimated` | 有镜头尚未做出来，正由替身顶替。 |
 
-一个 Source 完全可能素材齐备、时间线却仍是估算的：剪切点落在哪里是关于语音的问题，不是关于文件的问题。
-在时间线上，每条 Track 会标明自己是 `made`、是 `stand-in`、还是黑场；选中某个片段则会完整说明原因。
+一个 Source 完全可能素材齐备、时间线却仍是估算的：剪切点落在哪里是关于语音的问题，不是关于文件的问题。在时间线上，每条 Track 会标明自己是 `made`、是 `stand-in`、还是黑场；选中某个片段则会完整说明原因。
 
 ## 把已有的素材喂给它
 
-随着素材逐渐积累，同一个预览会越来越接近真实，而 `main.svml` 一个字都不用改。用什么去读一个 Source 是
-一项创作决策，因此它写在 Run Source 里——见 [Run Source 与构建](./run)：
+随着素材逐渐积累，同一个预览会越来越接近真实，而 `main.svml` 一个字都不用改。用什么去读一个 Source 是一项创作决策，因此它写在 Run Source 里——见 [Run Source 与构建](./run)：
 
 ```svml
 <file id="take-1" type="@narratage/artifact@1#BlobArtifact"
@@ -103,20 +90,14 @@ pkill -f svml-playground || true
 <satisfy output="take-opening.video" candidate="take-1"/>
 ```
 
-用 `--run` 指向它，那个镜头就不再是替身。`<build-record>` 候选指名的是早先某次 Build 做出的东西而非
-一个路径，需要 `--runtime` 才能找到；没有 `--runtime` 时，**只有那一个**镜头会被指名拒绝，其余一切照常
-绘制。
+用 `--run` 指向它，那个镜头就不再是替身。`<build-record>` 候选指名的是早先某次 Build 做出的东西而非一个路径，需要 `--runtime` 才能找到；没有 `--runtime` 时，**只有那一个**镜头会被指名拒绝，其余一切照常绘制。
 
 ## 当由 agent 来做这件事时
 
-如果你正在通过 [Narratage skill](https://github.com/hypit-ai/narratage/blob/main/.agents/skills/narratage/SKILL.md)
-工作，那么每当某个步骤改动了 Source——改了 Script、移了 Frame、放了 B-roll、调了 Recipe——agent 会为你
-启动 Playground 并把链接发给你。
+如果你正在通过 [Narratage skill](https://github.com/hypit-ai/narratage/blob/main/.agents/skills/narratage/SKILL.md)工作，那么每当某个步骤改动了 Source——改了 Script、移了 Frame、放了 B-roll、调了 Recipe——agent 会为你启动 Playground 并把链接发给你。
 
-读 diff 和亲眼看见空镜落在哪里不是一回事，而此刻正是说出"那张卡片太靠上了"的最便宜的时机——在任何一个
-Provider 跑起来之前。
+读 diff 和亲眼看见空镜落在哪里不是一回事，而此刻正是说出"那张卡片太靠上了"的最便宜的时机——在任何一个 Provider 跑起来之前。
 
 ## 下一步
 
-[SVML Playground](/zh/guide/svml-playground) 讲解代码、时间线与画面之间的三方联动，嵌套层级的配色、
-键盘走带控制，以及声音是怎么处理的。
+[SVML Playground](/zh/guide/svml-playground) 讲解代码、时间线与画面之间的三方联动，嵌套层级的配色、键盘走带控制，以及声音是怎么处理的。
