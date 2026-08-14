@@ -2708,72 +2708,6 @@ importers:
         specifier: workspace:*
         version: link:../workspace-fs-node
 
-  packages/video-domain:
-    dependencies:
-      '@narratage/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@narratage/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@narratage/composition':
-        specifier: workspace:*
-        version: link:../composition
-      '@narratage/core':
-        specifier: workspace:*
-        version: link:../core
-      '@narratage/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@narratage/generation':
-        specifier: workspace:*
-        version: link:../generation
-      '@narratage/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@narratage/media':
-        specifier: workspace:*
-        version: link:../media
-      '@narratage/narrative':
-        specifier: workspace:*
-        version: link:../narrative
-      '@narratage/program-space':
-        specifier: workspace:*
-        version: link:../program-space
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@narratage/semantic-map':
-        specifier: workspace:*
-        version: link:../semantic-map
-      '@narratage/spatial':
-        specifier: workspace:*
-        version: link:../spatial
-      '@narratage/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@narratage/speech-alignment':
-        specifier: workspace:*
-        version: link:../speech-alignment
-      '@narratage/speech-basis':
-        specifier: workspace:*
-        version: link:../speech-basis
-      '@narratage/speech-evidence':
-        specifier: workspace:*
-        version: link:../speech-evidence
-      '@narratage/temporal':
-        specifier: workspace:*
-        version: link:../temporal
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
-      '@narratage/visual-ir':
-        specifier: workspace:*
-        version: link:../visual-ir
-
   packages/visual-ir:
     dependencies:
       '@narratage/protocol':
@@ -2913,12 +2847,24 @@ importers:
 
   tools/svml-playground:
     dependencies:
+      '@narratage/audio-track':
+        specifier: workspace:*
+        version: link:../../packages/audio-track
+      '@narratage/background-removal':
+        specifier: workspace:*
+        version: link:../../packages/background-removal
       '@narratage/caption':
         specifier: workspace:*
         version: link:../../packages/caption
       '@narratage/caption-fine':
         specifier: workspace:*
         version: link:../../packages/caption-fine
+      '@narratage/caption-gemini':
+        specifier: workspace:*
+        version: link:../../packages/caption-gemini
+      '@narratage/comment-sticker':
+        specifier: workspace:*
+        version: link:../../packages/comment-sticker
       '@narratage/compiler-node':
         specifier: workspace:*
         version: link:../../packages/compiler-node
@@ -2931,6 +2877,9 @@ importers:
       '@narratage/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@narratage/deck-track':
+        specifier: workspace:*
+        version: link:../../packages/deck-track
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../../packages/driver-node
@@ -2949,21 +2898,51 @@ importers:
       '@narratage/fonts-open':
         specifier: workspace:*
         version: link:../../packages/fonts-open
+      '@narratage/gemini-omni':
+        specifier: workspace:*
+        version: link:../../packages/gemini-omni
+      '@narratage/gpt-image':
+        specifier: workspace:*
+        version: link:../../packages/gpt-image
+      '@narratage/grok-imagine':
+        specifier: workspace:*
+        version: link:../../packages/grok-imagine
       '@narratage/hyperframes':
         specifier: workspace:*
         version: link:../../packages/hyperframes
+      '@narratage/image-compose':
+        specifier: workspace:*
+        version: link:../../packages/image-compose
+      '@narratage/image-transform':
+        specifier: workspace:*
+        version: link:../../packages/image-transform
       '@narratage/markup':
         specifier: workspace:*
         version: link:../../packages/markup
       '@narratage/media':
         specifier: workspace:*
         version: link:../../packages/media
+      '@narratage/media-pipeline':
+        specifier: workspace:*
+        version: link:../../packages/media-pipeline
       '@narratage/media-track':
         specifier: workspace:*
         version: link:../../packages/media-track
+      '@narratage/mimo-tts':
+        specifier: workspace:*
+        version: link:../../packages/mimo-tts
+      '@narratage/minimax-h3':
+        specifier: workspace:*
+        version: link:../../packages/minimax-h3
+      '@narratage/nano-banana':
+        specifier: workspace:*
+        version: link:../../packages/nano-banana
       '@narratage/narrative':
         specifier: workspace:*
         version: link:../../packages/narrative
+      '@narratage/package-loader-node':
+        specifier: workspace:*
+        version: link:../../packages/package-loader-node
       '@narratage/program-space':
         specifier: workspace:*
         version: link:../../packages/program-space
@@ -2982,6 +2961,9 @@ importers:
       '@narratage/ranking':
         specifier: workspace:*
         version: link:../../packages/ranking
+      '@narratage/render-hyperframes':
+        specifier: workspace:*
+        version: link:../../packages/render-hyperframes
       '@narratage/run':
         specifier: workspace:*
         version: link:../../packages/run
@@ -2991,27 +2973,45 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
+      '@narratage/screen-overlay':
+        specifier: workspace:*
+        version: link:../../packages/screen-overlay
       '@narratage/script':
         specifier: workspace:*
         version: link:../../packages/script
+      '@narratage/seedance':
+        specifier: workspace:*
+        version: link:../../packages/seedance
+      '@narratage/seedream':
+        specifier: workspace:*
+        version: link:../../packages/seedream
       '@narratage/semantic-map':
         specifier: workspace:*
         version: link:../../packages/semantic-map
       '@narratage/spatial':
         specifier: workspace:*
         version: link:../../packages/spatial
+      '@narratage/speech-spine':
+        specifier: workspace:*
+        version: link:../../packages/speech-spine
       '@narratage/svs':
         specifier: workspace:*
         version: link:../../packages/svs
       '@narratage/temporal':
         specifier: workspace:*
         version: link:../../packages/temporal
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../../packages/text
+      '@narratage/typography-track':
+        specifier: workspace:*
+        version: link:../../packages/typography-track
       '@narratage/validation':
         specifier: workspace:*
         version: link:../../packages/validation
-      '@narratage/video-domain':
+      '@narratage/whisperx':
         specifier: workspace:*
-        version: link:../../packages/video-domain
+        version: link:../../packages/whisperx
       vite:
         specifier: 5.4.21
         version: 5.4.21(@types/node@24.10.1)

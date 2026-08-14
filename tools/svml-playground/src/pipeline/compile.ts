@@ -12,11 +12,8 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { compileSourceClosure, resolveCompiledSourceExport } from "@narratage/elaborator";
 import type { Digest } from "@narratage/protocol";
 import { createRecordAdmitter } from "@narratage/validation";
-import {
-  videoDomainClosure, videoDomainFrontends, videoDomainModule, videoDomainSurfaces,
-  videoDomainValidators,
-} from "@narratage/video-domain";
 
+import { officialVideoDomain } from "../official-video.js";
 import { createObserver } from "./observe.js";
 import type { Observations } from "./observe.js";
 
@@ -66,27 +63,26 @@ function digestOfBytes(bytes: Uint8Array): Digest {
 }
 
 export async function compileSource(entryPath: string): Promise<CompiledSource> {
+  const domain = await officialVideoDomain();
   const served = new Map<string, ServedFile>();
   // Everything a Source reads has to sit beside it, as it must in a build.
   const root = dirname(entryPath);
   const resolveModule = (request: { readonly from: string }) => {
-    const found = videoDomainModule(request.from);
+    const found = domain.resolveModule(request.from);
     if (found === undefined) {
       throw new CompileFailure(`No package in this preview declares ${request.from}.`);
     }
     return found;
   };
-  // Discovery has to run before a module can be resolved by name.
-  const closure = await videoDomainClosure();
-  const observer = createObserver(await videoDomainSurfaces(), resolveModule);
+  const observer = createObserver(domain.surfaces, resolveModule);
 
   let compiled: CompiledClosure;
   try {
     compiled = await compileSourceClosure({
       entry: { id: entryPath, name: "main.svml", text: readFileSync(entryPath, "utf8") },
-      closure,
-      frontends: await videoDomainFrontends(resolveModule, observer.surfaces),
-      admitRecord: createRecordAdmitter(await videoDomainValidators()),
+      closure: domain.closure,
+      frontends: domain.frontends(observer.surfaces),
+      admitRecord: createRecordAdmitter(domain.validators),
       resolveSource(importer: { readonly id: string }, request: { readonly from: string }) {
         const path = resolve(dirname(importer.id), request.from);
         return { id: path, name: request.from, text: readFileSync(path, "utf8") };

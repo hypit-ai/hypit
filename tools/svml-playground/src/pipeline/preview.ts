@@ -10,9 +10,9 @@
 import { createHash } from "node:crypto";
 
 import { createProvidedCandidate } from "@narratage/run";
-import { videoDomainClosure, videoDomainValidators } from "@narratage/video-domain";
 import { validateValue } from "@narratage/validation";
 
+import { officialVideoDomain } from "../official-video.js";
 import { compileSource } from "./compile.js";
 import type { CompiledSource, ServedFile } from "./compile.js";
 import type { Placement } from "./observe.js";
@@ -125,6 +125,7 @@ export async function preview(
   runPath?: string,
   archive?: Archive,
 ): Promise<Preview> {
+  const domain = await officialVideoDomain();
   const source = await compileSource(entryPath);
 
   let base: RunPlan;
@@ -186,15 +187,13 @@ export async function preview(
       );
       anchors = new Map((estimated.map as { anchors: readonly { identity: string; frame: number }[] })
         .anchors.map((anchor) => [anchor.identity, anchor.frame]));
-      const closure = await videoDomainClosure();
-      const validators = await videoDomainValidators();
       const added: unknown[] = [];
       const satisfactions = [...base.run.graph.satisfactions];
       for (const output of unsaid) {
         const supplied = output.type === TIMING ? estimated.map : estimated.space;
         const type = outputType(source, output.ref);
         const stored = { kind: "inline" as const, value: supplied as never };
-        const validation = await validateValue(closure, type as never, stored, validators);
+        const validation = await validateValue(domain.closure, type as never, stored, domain.validators);
         const candidate = createProvidedCandidate({
           type: type as never,
           value: stored,
@@ -332,8 +331,6 @@ export async function preview(
       ? undefined
       : inlineRecord(source.compiled, programExport.ref) as { runs?: readonly never[] } | undefined;
     if (hasAtoms(sequence) && Array.isArray(program?.runs) && program.runs.length > 0) {
-      const closure = await videoDomainClosure();
-      const validators = await videoDomainValidators();
       const added = new Map<string, unknown>(
         run.graph.candidates.map((item) => [(item as { id: string }).id, item]));
       const satisfactions = [...run.graph.satisfactions];
@@ -341,7 +338,7 @@ export async function preview(
         const plan = evenCaptionPlan(sequence, program as never);
         const type = outputType(source, output.ref);
         const stored = { kind: "inline" as const, value: plan as never };
-        const validation = await validateValue(closure, type as never, stored, validators);
+        const validation = await validateValue(domain.closure, type as never, stored, domain.validators);
         const candidate = createProvidedCandidate({
           type: type as never, value: stored,
           ...(validation === undefined ? {} : { validation }),
