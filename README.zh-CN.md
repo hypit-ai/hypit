@@ -83,11 +83,17 @@ Script 外面的组件（视频生成器、语音模型、字幕渲染器、轨�
 
 ### 用编程 Agent
 
-把下面这段发给你的 Agent：
+skill 就在这个 checkout 里，所以先克隆仓库，并在其中启动你的编程 Agent：
+
+```bash
+git clone https://github.com/hypit-ai/narratage.git
+cd narratage
+```
+
+然后发送：
 
 ```text
-安装并使用这个仓库里的 narratage skill。配置我的环境，只向我索取当前 Runtime Profile
-实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
+/narratage 配置我的环境，只向我索取当前 Runtime Profile 实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
 ```
 
 ### 从终端

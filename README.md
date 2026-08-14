@@ -105,12 +105,17 @@ Components outside the Script (video generators, speech models, caption renderer
 
 ### With a coding agent
 
-Send your agent this prompt:
+The skill lives in the checkout, so clone the repository and start your coding agent inside it:
+
+```bash
+git clone https://github.com/hypit-ai/narratage.git
+cd narratage
+```
+
+Then send:
 
 ```text
-Install and use the narratage skill from this repository. Set up my environment, ask for only the
-API keys required by my Runtime Profile, and guide me through authoring and building my first SVML
-video.
+/narratage Set up my environment, ask for only the API keys required by my Runtime Profile, and guide me through authoring and building my first SVML video.
 ```
 
 ### From the terminal

@@ -20,15 +20,21 @@ page gets you to that first safe plan: it needs no API keys and makes no paid ca
 
 ## Use the Narratage skill
 
-If you use a coding agent, send it this:
+The skill lives in the checkout, so clone the repository and start your coding agent inside it:
 
-```text
-Install and use the narratage skill from this repository. Set up my environment, ask for only the
-API keys required by my Runtime Profile, and guide me through authoring and building my first SVML
-video.
+```bash
+git clone https://github.com/hypit-ai/narratage.git
+cd narratage
 ```
 
-Otherwise, work through the five steps below.
+Then send:
+
+```text
+/narratage Set up my environment, ask for only the API keys required by my Runtime Profile, and guide me through authoring and building my first SVML video.
+```
+
+It works through the same five steps below, asking you only for what your Runtime Profile actually
+needs. Work through them yourself if you would rather not use an agent.
 
 ## 1. Install the source workspace
 

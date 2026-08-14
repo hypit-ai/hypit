@@ -65,6 +65,8 @@ pkill -f svml-playground || true
 
 凡是存在声明时长的地方都会被遵守。没有声明的地方，词按正常语速安放，剩余时间平均分配。
 
+这对 Source 产出的每一条 Track 都成立，无论它出自哪个包。Playground 向编译后的 Source 索要它的 export，并构建其中类型为 `VisualTrack` 或 `AudioTrack` 的那些——因此某个包新长出一种 Track 时，它会直接出现在这里，不需要 Playground 事先认识它。
+
 绘制替身需要 `PATH` 上有 `ffmpeg`。没有它，这些镜头就保持未绘制状态、Track 会如实说明，而不是假装它们已经画好了。
 
 ## 读懂徽章
@@ -102,4 +104,10 @@ pkill -f svml-playground || true
 
 时间线、代码与画面是同一件事的三个视角，因此在任何一个里选中，另外两个都会跟着选中。点击一个片段，播放头会移到它的首帧，画面上会把它框出来，代码会滚动到安放它的那个标签。点击代码里被标记的行，或者画面上指针所指之处，效果相同。
 
+Segment 包着 Selection，Selection 还能再包 Selection。每一层有自己的颜色——在源码、时间线和画面上保持一致——而且内层被框住时外层依然保持框住，因为嵌套关系正是这些标记存在的理由。播放头经过的每一个范围都会被框出来，不管有没有 Track 挂在它上面。
+
 拖动标尺即可走带。`Space` 播放与暂停，`←` 和 `→` 步进一帧、按住 `Shift` 为十帧，`Home` 和 `End` 跳到首尾，`Esc` 清除选中。
+
+## 声音
+
+HyperFrames 刻意只渲染无声画面：programme audio 是一条独立的 Track，由 media pipeline 在最后 mux 进去。但把 B-roll 对着语音安放，前提就是能听见那句话，所以走带播放时 Speech Spine 自己的素材允许发声。Cutaway 保持静音——除非显式声明要带音频，这和真实构建里的行为一致。喇叭按钮可以关掉。
