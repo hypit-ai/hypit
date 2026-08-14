@@ -139,22 +139,21 @@ Narratage 为文件规定不同的角色，但不保留任何固定文件名：
 
 ## 架构
 
-AI 生成改变了编译的形态。一项工作可能运行数分钟、明确产生费用、发生失败，或返回一个成为下一步输入的产物。因此，Build 的真实状态不能存在进程调用栈里：Narratage 先冻结被需要的工作，再依据持久化事实推进它。
+AI 生成缓慢、昂贵且不确定。Narratage 把被要求的工作冻结为一份有限计划，再依据持久化状态推进。Build 可以暂停、重试或更换实现，而不会丢失已完成的产物，也不会重复执行已经付费的工作。
 
-Core 是一个领域无关的语义内核，只做两件事：把 Target 和显式 Candidate 选择编译为一份有限的 BuildPlan；接受 Event 并推进 BuildState。执行阶段不可再约简的规则是 `BuildState + Event → BuildState`，下一批可运行的 Command 始终从该状态重新生成。Core 不解析 Source，不执行组件代码，不访问文件或网络，不选择 Provider，不更改 Candidate，也不理解任何视频概念。
+系统中心是一个刻意保持极小、领域无关的 Core。它把被要求的输出和显式选择的实现编译为计划，接受执行事件，并决定下一步哪些工作可以运行。它不解析 SVML，不理解视频，不调用 Provider，不访问凭据，也不渲染画面。
 
-| 部分 | 负责什么 | 为什么留在 Core 外 |
+| 部分 | 负责什么 | 例子 |
 |---|---|---|
-| **Compiler Host 与 Frontend** | Source Header、导入闭包、语法解码，以及 Author/Run Graph 编译 | 语法和 Source 所处环境可以独立演进 |
-| **Author facet** | Surface、作者词汇与 Graph Fragment | 新的作者能力不应要求发布内核 |
-| **Compute facet** | 确定性的 Producer 与 Validator | 领域计算应当可以独立安装 |
-| **Runtime facet** | Scheduler、Worker、Store、凭据与 transport | 部署、持久化和权限随环境而变化 |
-| **Endpoint facet** | 模型 API、本地程序、Lambda、设备与人工服务 | 外部能力各有自己的并发、失败与恢复规则 |
-| **Application** | CLI、Playground 与产品界面 | 用户体验不能变成中央能力注册表 |
+| **Core** | 计划编译与 Build 状态机 | `core`、`protocol` |
+| **编译器** | Source 解析、导入与图展开 | `host`、`markup`、`svs`、`elaborator` |
+| **共享能力** | 媒体处理、空间布局、字体与文本 | `media-pipeline`、`spatial`、`fonts-open` |
+| **视频包** | 稿件、生成、语音、Track、Film 与渲染 | `script`、`seedance`、`caption`、`film` |
+| **Provider** | 外部模型、程序与服务的适配器 | `provider-kie`、`provider-whisperx-local` |
+| **Runtime** | 调度、存储、凭据与执行 | `runtime`、`store-sqlite`、`local` |
+| **应用** | 创作和操作 Narratage 的用户界面 | `cli`、`svml-playground` |
 
-一个物理包可以贡献一种或多种 facet。Source 导入只激活作者语义，不授予文件系统、网络、进程或凭据权限；拥有特权的 Endpoint 与 Runtime facet 必须由 Runtime Profile 显式选择。
-
-Core 与 CLI 都不维护模型、Track 或 Provider 的中央注册表。安装并锁定一个包即可加入它提供的能力，无需重新发布 Core。
+SVML 的导入决定 Source 表达什么；Runtime Profile 另外选择可以访问文件、网络和凭据的包。Core 与 CLI 都不维护模型、Track 或 Provider 的中央注册表：安装一个包即可增加能力，无需重新发布 Core。
 
 ## 接下来去哪
 
