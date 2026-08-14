@@ -20,6 +20,8 @@ Source, and the declarative `svml.runtime.json` Runtime Profile separate.
   `references/playbooks/craft/visual-continuity.md`, then the relevant craft/format file.
 - Reference-video reconstruction → read `references/reference-vlm.md`; emit `main.svml`, optional
   `studio.svs`, and `build.svrun` directly.
+- Showing an author what they have so far → start the SVML Playground and send them the link.
+  See "Show the work" below.
 - Execution, Runtime control, Build inspection, or output retrieval → read
   `references/runtime.md`; diagnose and start the durable Runtime, `check` Author Source, `plan`
   before paid work, then submit, inspect, and retrieve the Build.
@@ -45,6 +47,33 @@ work.
 Reuse any accepted generated image or take in the next `.svrun` with `build-record` plus `satisfy`,
 then review the frozen plan before paid downstream work. Candidate selection has no Pin state or
 fidelity label.
+
+## Show the work
+
+After each step that changes a Source — a Script edit, a Frame moved, a B-roll placed, a Recipe
+adjusted — start the Playground and give the author the link. Reading a diff is not the same as
+seeing where a cutaway lands, and a Source draws before any Provider has run: an unmade shot stands
+in as the picture it names, held for the length it declares.
+
+```bash
+pkill -f svml-playground || true          # never leave the old one holding the port
+pnpm svml:playground -- --source path/to/main.svml \
+  --run path/to/build.svrun \
+  --runtime path/to/svml.runtime.json &
+# then send the author: http://localhost:5179/
+```
+
+Kill the previous server first. A second one silently picks another port, and the author ends up
+looking at a stale preview while you describe a new one. Pass `--port` only when the author asked to
+compare two Sources side by side, and send the port you actually used — read it from the startup
+line rather than assuming `5179`.
+
+Both extra arguments are optional and each answers one question. `--run` says which material and
+which timings to read the Source with. `--runtime` says where material earlier Builds produced is
+kept, and is needed only by a Source that reuses an accepted shot through `<build-record>`; without
+it that one shot is refused by name and everything else still draws.
+
+`docs/quickstart/preview.md` is the page to point an author at.
 
 Preserve unrelated changes. Keep credentials, generated media, runtime state, and logs out of commits.
 The repository's docs remain the syntax authority.
