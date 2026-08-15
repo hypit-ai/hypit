@@ -11,7 +11,6 @@ export const completeSemanticMapSchema: ValueSchema = object({
   tokens: { schema: { kind: "array", items: timedToken } }, anchors: { schema: { kind: "array", items: point } } });
 export const semanticMapModuleRef = { name: "@narratage/semantic-map", version: "1" } as const;
 export const semanticMapTypes = { complete: { module: semanticMapModuleRef, name: "CompleteSemanticMap" } } satisfies Record<string, TypeRef>;
-export const semanticMapManifest: ModuleManifest = { format: "svml.module@1", name: semanticMapModuleRef.name, version: semanticMapModuleRef.version,
-  dependencies: [narrativeDependency, speechEvidenceDependency], types: [{ name: semanticMapTypes.complete.name, schema: completeSemanticMapSchema }], capabilities: [], producers: [] };
-export const semanticMapManifestDigest = digestOf(semanticMapManifest);
-export const semanticMapDependency = { module: semanticMapModuleRef, digest: semanticMapManifestDigest } as const;
+export const semanticMapManifest: ModuleManifest = { format: "narratage.module@1", name: semanticMapModuleRef.name, version: semanticMapModuleRef.version,
+  dependencies: [narrativeDependency, speechEvidenceDependency], types: [{ name: semanticMapTypes.complete.name }], capabilities: [], producers: [] };
+export const semanticMapDependency = { module: semanticMapModuleRef } as const;

@@ -12,13 +12,7 @@ import {
 } from "@narratage/driver-node";
 import { credentialRef } from "@narratage/runtime";
 
-import {
-  capabilities,
-  createGreetingBuild,
-  implementationDigests,
-  producers as greetingProducers,
-  types,
-} from "../../core/test/greeting-fixture.js";
+import { capabilities, createGreetingBuild, producers as greetingProducers, types } from "../../core/test/greeting-fixture.js";
 
 function inlineString(value: unknown): string {
   if (typeof value !== "string") throw new Error("expected inline string");
@@ -41,7 +35,7 @@ function configuredRegistry(): {
   const endpoints = new EndpointRegistry();
   const calls = { prompt: 0, request: 0, assemble: 0, fulfill: 0 };
 
-  producers.registerProducer(greetingProducers.makePrompt, implementationDigests.makePrompt, ({ inputs }) => {
+  producers.registerProducer(greetingProducers.makePrompt, ({ inputs }) => {
     calls.prompt += 1;
     const intent = inputs.intent;
     if (intent?.value.kind !== "inline") throw new Error("intent must be inline");
@@ -56,7 +50,7 @@ function configuredRegistry(): {
     };
   });
 
-  producers.registerProducer(greetingProducers.requestText, implementationDigests.requestText, ({ inputs }) => {
+  producers.registerProducer(greetingProducers.requestText, ({ inputs }) => {
     calls.request += 1;
     const prompt = inputs.prompt;
     assert.equal(prompt?.value.kind, "inline");
@@ -66,7 +60,7 @@ function configuredRegistry(): {
     };
   });
 
-  producers.registerProducer(greetingProducers.assemble, implementationDigests.assemble, ({ inputs }) => {
+  producers.registerProducer(greetingProducers.assemble, ({ inputs }) => {
     calls.assemble += 1;
     const generated = inputs.generated;
     assert.equal(generated?.value.kind, "inline");
@@ -94,30 +88,18 @@ test("Driver pauses at an unbound Need, serializes, then resumes without rerunni
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 0, fulfill: 0 });
 
   const restored = parseBuildState(serializeBuildState(paused.state));
-  const endpointImplementation = {
-    facet: {
-      module: { name: "example/runtime", version: "1" },
-      name: "generation",
-    },
-    digest: digestOf("example:generation-implementation"),
-    configurationDigest: digestOf({ model: "fixture" }),
-  } as const;
   endpoints.registerImmediateEndpoint("example:generation", capabilities.generation, types.generated, ({ need }) => {
     calls.fulfill += 1;
     assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
     return {
       value: { kind: "inline", value: "Hello, Ada!" },
     };
-  }, { runtimeImplementation: endpointImplementation });
+  });
 
   const completed = await driver.run(restored);
   assert.equal(completed.status, "complete");
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 1, fulfill: 1 });
   assert.equal(completed.state.receipts[0]?.fulfiller, "example:generation");
-  assert.deepEqual(completed.state.receipts[0]?.implementation, {
-    digest: endpointImplementation.digest,
-    configurationDigest: endpointImplementation.configurationDigest,
-  });
 });
 
 test("Endpoint Registry rejects ambiguity until a Runtime Closure selects one endpoint", async () => {
@@ -211,7 +193,6 @@ test("an alternate Candidate is explicitly selected before execution, never by E
   const { producers, endpoints } = configuredRegistry();
   producers.registerProducer(
     greetingProducers.placeholderText,
-    implementationDigests.placeholderText,
     () => ({
       outputs: { generated: { kind: "inline", value: "Compatible placeholder" } },
       needs: {},
@@ -226,18 +207,6 @@ test("an alternate Candidate is explicitly selected before execution, never by E
   );
   assert.equal(accepted.status, "complete");
   assert.equal(accepted.state.receipts.length, 0, "an Alternative Producer is not disguised as an Endpoint receipt");
-});
-
-test("Driver refuses a registered implementation whose digest differs from the locked closure", async () => {
-  const producers = new ProducerRegistry();
-  producers.registerProducer(greetingProducers.makePrompt, implementationDigests.assemble, () => ({
-    outputs: { prompt: { kind: "inline", value: "wrong implementation" } },
-    needs: {},
-  }));
-  const result = await new NodeDriver({ producers }).run(createGreetingBuild());
-  assert.equal(result.status, "paused");
-  assert.equal(result.blocked[0]?.reason, "implementation-mismatch");
-  assert.equal(result.state.records.length, 1);
 });
 
 test("MemoryArtifactStore is content addressed and returns defensive copies", async () => {

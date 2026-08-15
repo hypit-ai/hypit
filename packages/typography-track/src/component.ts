@@ -9,30 +9,7 @@ import type { Text } from "@narratage/text";
 import { canonicalize } from "@narratage/protocol";
 
 import { typographyTrackProducers } from "./manifest.js";
-import {
-  appendMomentTextItem,
-  appendProgramTextItem,
-  appendSelectionTextItem,
-  bindAreaTextPlacement,
-  bindAreaTextPlacementImplementationDigest,
-  bindPathTextPlacement,
-  bindPathTextPlacementImplementationDigest,
-  bindPointTextPlacement,
-  bindPointTextPlacementImplementationDigest,
-  createTypographyTrackSet,
-  createTypographyTrackSetImplementationDigest,
-  finalizeTypographyTrack,
-  finalizeTypographyTrackImplementationDigest,
-  renderTypographyTrack,
-  renderTypographyTrackImplementationDigest,
-  renderTextMaskTrack,
-  renderTextMaskTrackImplementationDigest,
-  appendMomentTextItemImplementationDigest,
-  appendProgramTextItemImplementationDigest,
-  appendSelectionTextItemImplementationDigest,
-  materializePlainTextItem,
-  materializePlainTextItemImplementationDigest,
-} from "./program.js";
+import { appendMomentTextItem, appendProgramTextItem, appendSelectionTextItem, bindAreaTextPlacement, bindPathTextPlacement, bindPointTextPlacement, createTypographyTrackSet, finalizeTypographyTrack, renderTypographyTrack, renderTextMaskTrack, materializePlainTextItem } from "./program.js";
 import type {
   TextItemSpec,
   PlainTextItemSpec,
@@ -56,7 +33,6 @@ export const typographyTrackComponent = {
   producers: [
     {
       producer: typographyTrackProducers.materializePlainItem,
-      implementationDigest: materializePlainTextItemImplementationDigest,
       handler: ({ inputs }) => ({ outputs: { spec: output(materializePlainTextItem(
         inline<PlainTextItemSpec>(inputs.spec?.value, "PlainTextItemSpec"),
         inline<Text>(inputs.content?.value, "Text"),
@@ -64,27 +40,22 @@ export const typographyTrackComponent = {
     },
     {
       producer: typographyTrackProducers.bindPoint,
-      implementationDigest: bindPointTextPlacementImplementationDigest,
       handler: ({ inputs }) => ({ outputs: { placement: output(bindPointTextPlacement(inline<SpatialPoint>(inputs.point?.value, "SpatialPoint"))) }, needs: {} }),
     },
     {
       producer: typographyTrackProducers.bindArea,
-      implementationDigest: bindAreaTextPlacementImplementationDigest,
       handler: ({ inputs }) => ({ outputs: { placement: output(bindAreaTextPlacement(inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"))) }, needs: {} }),
     },
     {
       producer: typographyTrackProducers.bindPath,
-      implementationDigest: bindPathTextPlacementImplementationDigest,
       handler: ({ inputs }) => ({ outputs: { placement: output(bindPathTextPlacement(inline<SpatialPath>(inputs.path?.value, "SpatialPath"))) }, needs: {} }),
     },
     {
       producer: typographyTrackProducers.createSet,
-      implementationDigest: createTypographyTrackSetImplementationDigest,
       handler: () => ({ outputs: { set: output(createTypographyTrackSet()) }, needs: {} }),
     },
     {
       producer: typographyTrackProducers.appendProgram,
-      implementationDigest: appendProgramTextItemImplementationDigest,
       handler: ({ inputs }) => ({ outputs: { set: output(appendProgramTextItem(
         inline<TypographyTrackSet>(inputs.set?.value, "TypographyTrackSet"),
         inline<TypographyTrackHeader>(inputs.header?.value, "TypographyTrackHeader"),
@@ -97,7 +68,6 @@ export const typographyTrackComponent = {
     },
     {
       producer: typographyTrackProducers.appendSelection,
-      implementationDigest: appendSelectionTextItemImplementationDigest,
       handler: ({ inputs }) => ({ outputs: { set: output(appendSelectionTextItem(
         inline<TypographyTrackSet>(inputs.set?.value, "TypographyTrackSet"),
         inline<TypographyTrackHeader>(inputs.header?.value, "TypographyTrackHeader"),
@@ -112,7 +82,6 @@ export const typographyTrackComponent = {
     },
     {
       producer: typographyTrackProducers.appendMoment,
-      implementationDigest: appendMomentTextItemImplementationDigest,
       handler: ({ inputs }) => ({ outputs: { set: output(appendMomentTextItem(
         inline<TypographyTrackSet>(inputs.set?.value, "TypographyTrackSet"),
         inline<TypographyTrackHeader>(inputs.header?.value, "TypographyTrackHeader"),
@@ -127,7 +96,6 @@ export const typographyTrackComponent = {
     },
     {
       producer: typographyTrackProducers.finalize,
-      implementationDigest: finalizeTypographyTrackImplementationDigest,
       handler: ({ inputs }) => ({ outputs: { program: output(finalizeTypographyTrack(
         inline<TypographyTrackHeader>(inputs.header?.value, "TypographyTrackHeader"),
         inline<TypographyTrackSet>(inputs.set?.value, "TypographyTrackSet"),
@@ -135,7 +103,6 @@ export const typographyTrackComponent = {
     },
     {
       producer: typographyTrackProducers.render,
-      implementationDigest: renderTypographyTrackImplementationDigest,
       handler: ({ inputs }) => ({ outputs: { track: output(renderTypographyTrack(
         inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
         inline<TypographyTrackProgram>(inputs.program?.value, "TypographyTrackProgram"),
@@ -143,7 +110,6 @@ export const typographyTrackComponent = {
     },
     {
       producer: typographyTrackProducers.renderMask,
-      implementationDigest: renderTextMaskTrackImplementationDigest,
       handler: ({ inputs }) => ({ outputs: { track: output(renderTextMaskTrack(
         inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
         inline<TypographyTrackProgram>(inputs.program?.value, "TypographyTrackProgram"),

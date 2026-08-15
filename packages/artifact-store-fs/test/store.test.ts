@@ -7,7 +7,7 @@ import test from "node:test";
 import { FileArtifactStore } from "@narratage/artifact-store-fs";
 
 test("filesystem artifacts are content-addressed and survive adapter restart", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-artifacts-"));
+  const directory = await mkdtemp(join(tmpdir(), "narratage-artifacts-"));
   try {
     const bytes = new TextEncoder().encode("one immutable video artifact");
     const first = new FileArtifactStore(directory);
@@ -30,7 +30,7 @@ test("filesystem artifacts are content-addressed and survive adapter restart", a
 });
 
 test("filesystem artifacts expose optional streaming and explicit retention capabilities", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-artifacts-stream-"));
+  const directory = await mkdtemp(join(tmpdir(), "narratage-artifacts-stream-"));
   try {
     const store = new FileArtifactStore(directory);
     const artifact = await store.putStream((async function* () {

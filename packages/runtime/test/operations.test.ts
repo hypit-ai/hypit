@@ -1,30 +1,27 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { digestOf } from "@narratage/core";
 import {
   MemoryOperationStore,
   sealOperationIdentity,
   verifyOperationSnapshot,
 } from "@narratage/runtime";
 
-function identity(overrides: { readonly endpoint?: string; readonly runtimeClosure?: string } = {}) {
+function identity(overrides: { readonly endpoint?: string } = {}) {
   return sealOperationIdentity({
     build: "video-42",
     command: "command:render",
     endpoint: overrides.endpoint ?? "hyperframes.local",
-    authority: "hyperframes.local",
-    route: "fixture.render",
-    runtimeClosure: (overrides.runtimeClosure ?? digestOf("runtime-closure:local")) as never,
+    pool: "hyperframes.local",
+    lane: "fixture.render",
     attempt: 1,
   });
 }
 
-test("Operation identity locks Build, Command, Endpoint and Runtime Closure", () => {
+test("Operation identity distinguishes Build, Command and Endpoint", () => {
   const first = identity();
   assert.equal(first.id, identity().id);
   assert.notEqual(first.id, identity({ endpoint: "hyperframes.hosted" }).id);
-  assert.notEqual(first.id, identity({ runtimeClosure: digestOf("runtime-closure:hosted") }).id);
 });
 
 test("OperationStore idempotently discovers an existing submission after restart", async () => {

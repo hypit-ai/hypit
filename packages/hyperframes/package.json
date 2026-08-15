@@ -8,7 +8,7 @@
     ".": "./src/index.ts",
     "./project": "./src/project.ts"
   },
-  "svml": {
+  "narratage": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {

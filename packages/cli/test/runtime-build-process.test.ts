@@ -7,18 +7,16 @@ import { promisify } from "node:util";
 import test from "node:test";
 
 import {
-  createNodePackageLock,
-  readNodePackageLock,
-  writeNodePackageLock,
+  loadNodePackageSelection,
 } from "@narratage/package-loader-node";
 import { digestOf } from "@narratage/protocol";
-import { runtimeConfigRevision } from "@narratage/local/config";
+import { runtimeConfigRevision } from "@narratage/runtime-local/config";
 
 import {
   ensureRuntimeProcess,
   runtimeProcessStatus,
   stopRuntimeProcess,
-} from "@narratage/local/worker-process";
+} from "@narratage/runtime-local/worker-process";
 
 const execute = promisify(execFile);
 const cliEntry = join(process.cwd(), "packages", "video-cli", "src", "cli.ts");
@@ -78,22 +76,10 @@ async function waitForBuild(
 
 test("CLI exits after durable submission and a restarted detached Worker completes a non-video Build", async () => {
   const project = await mkdtemp(join(tmpdir(), "narratage-runtime-build-process-"));
-  const authorLockPath = join(project, "svml.packages.lock");
-  const runtimeLockPath = join(project, "svml.runtime-packages.lock");
-  const profile = join(project, "svml.runtime.json");
+  const profile = join(project, "narratage.runtime.json");
   const source = join(project, "main.svml");
   const run = join(project, "build.svrun");
   try {
-    await writeNodePackageLock(authorLockPath, await createNodePackageLock([
-      "@narratage/run-markup",
-      "@narratage/text",
-    ], process.cwd()));
-    await writeNodePackageLock(runtimeLockPath, await createNodePackageLock([
-      "@narratage/local",
-      "@narratage/store-sqlite",
-      "@narratage/artifact-store-fs",
-      "@narratage/credential-store-env",
-    ], process.cwd()));
     await writeFile(join(project, "pass.svs"), `<?svml using="@narratage/text/svs@1"?>
 
 <sheet version="1" id="pass">
@@ -115,39 +101,39 @@ test("CLI exits after durable submission and a restarted detached Worker complet
 `, "utf8");
     await writeFile(profile, JSON.stringify({
       format: "narratage.runtime-profile@1",
-      runtimePackageLock: "./svml.runtime-packages.lock",
       runtime: {
-        use: "@narratage/local",
+        use: "@narratage/runtime-local",
         config: {
           dataRoot: ".narratage/runtime",
-          components: {
-            execution: { use: "@narratage/local" },
+          infrastructure: {
+            execution: { use: "@narratage/runtime-local" },
             state: { use: "@narratage/store-sqlite", config: { path: "runtime.sqlite" } },
             artifacts: { use: "@narratage/artifact-store-fs", config: { path: "artifacts" } },
-            "credentials.env": { use: "@narratage/credential-store-env", config: {} },
+            credentials: { use: "@narratage/credential-store-env", config: {} },
           },
-          bindings: {
-            scheduler: "execution.scheduler",
-            worker: "execution.worker",
-            stores: {
-              build: "state.builds",
-              operations: "state.operations",
-              dispatch: "state.dispatch",
-              artifacts: "artifacts",
-              credentials: ["credentials.env"],
-            },
+          roles: {
+            scheduler: { from: "execution", part: "scheduler" },
+            worker: { from: "execution", part: "worker" },
+            buildStore: { from: "state", part: "builds" },
+            operationStore: { from: "state", part: "operations" },
+            dispatchStore: { from: "state", part: "dispatch" },
+            artifactStore: { from: "artifacts", part: "store" },
+            credentialStores: [{ from: "credentials", part: "store" }],
           },
           endpoints: {},
-          limits: { maxOperations: 2 },
+          capacity: { maxActiveOperations: 2 },
         },
       },
     }, null, 2), "utf8");
 
     const dataRoot = join(project, ".narratage", "runtime");
+    const authorPackages = await loadNodePackageSelection([
+      "@narratage/run-markup",
+      "@narratage/text",
+    ], process.cwd());
     const workerRevision = digestOf({
       format: "narratage.runtime-worker-revision@1",
       profile: await runtimeConfigRevision(profile),
-      source: (await readNodePackageLock(authorLockPath)).digest,
     });
     const parked = await ensureRuntimeProcess(profile, dataRoot, {
       command: process.execPath,
@@ -161,7 +147,7 @@ test("CLI exits after durable submission and a restarted detached Worker complet
         process.on("SIGTERM", () => process.exit(0));
         setInterval(() => {}, 1000);
       `],
-    }, workerRevision, 5_000);
+    }, workerRevision, 5_000, authorPackages.map((item) => item.specifier));
     const submitted = await cli(project, [
       "build", run,
       "--runtime", profile,

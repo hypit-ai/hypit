@@ -12,14 +12,14 @@ import {
   sealOperationIdentity,
 } from "@narratage/runtime";
 import {
-  createSqliteRuntimeComponentPackage,
+  createSqliteRuntimeInfrastructurePackage,
   SqliteRuntimeState,
 } from "@narratage/store-sqlite";
 
 import { createGreetingBuild } from "../../core/test/greeting-fixture.js";
 
 test("read-only SQLite observation of an absent archive creates no file", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-read-only-"));
+  const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-read-only-"));
   const path = join(directory, ".svml", "runtime.sqlite");
   try {
     const state = new SqliteRuntimeState(path, { readOnly: true });
@@ -34,7 +34,7 @@ test("read-only SQLite observation of an absent archive creates no file", async 
 });
 
 test("SQLite stores verified Build facts and Operation checkpoints across reopen", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-"));
+  const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-"));
   const path = join(directory, "runtime.sqlite");
   try {
     const first = new SqliteRuntimeState(path);
@@ -42,7 +42,7 @@ test("SQLite stores verified Build facts and Operation checkpoints across reopen
     const created = await first.builds.create("video", initial);
     assert.equal(created.revision, 0);
     const catalog = {
-      format: "svml.build-catalog-descriptor@1",
+      format: "narratage.build-catalog-descriptor@1",
       core: initial.id,
       source: { path: "/project/main.svml", closure: digestOf("source-closure") },
       aliases: [{
@@ -60,9 +60,8 @@ test("SQLite stores verified Build facts and Operation checkpoints across reopen
       build: "video",
       command: "command:generation",
       endpoint: "kie.personal",
-      authority: "kie.personal",
-      route: "fixture.generation",
-      runtimeClosure: digestOf("runtime-closure"),
+      pool: "kie.personal",
+      lane: "fixture.generation",
       attempt: 1,
     });
     const operationCreated = await first.operations.create(operation);
@@ -99,16 +98,15 @@ test("SQLite stores verified Build facts and Operation checkpoints across reopen
 });
 
 test("SQLite Operation CAS preserves a terminal completion", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-operation-"));
+  const directory = await mkdtemp(join(tmpdir(), "narratage-operation-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
     const identity = sealOperationIdentity({
       build: "video",
       command: "command:render",
       endpoint: "hyperframes.lambda",
-      authority: "hyperframes.lambda",
-      route: "fixture.render",
-      runtimeClosure: digestOf("runtime"),
+      pool: "hyperframes.lambda",
+      lane: "fixture.render",
       attempt: 1,
     });
     await state.operations.create(identity);
@@ -134,16 +132,15 @@ test("SQLite Operation CAS preserves a terminal completion", async () => {
 });
 
 test("SQLite keeps cancellation control independent from execution state", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-cancel-"));
+  const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-cancel-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
     const identity = sealOperationIdentity({
       build: "cancel-build",
       command: "command:cancel",
       endpoint: "endpoint.cancel",
-      authority: "endpoint.cancel",
-      route: "fixture.cancel",
-      runtimeClosure: digestOf("runtime.cancel"),
+      pool: "endpoint.cancel",
+      lane: "fixture.cancel",
       attempt: 1,
     });
     await state.operations.create(identity);
@@ -169,39 +166,22 @@ test("SQLite keeps cancellation control independent from execution state", async
   }
 });
 
-test("Host Catalog schema changes do not change the execution Runtime Closure", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-closure-"));
-  try {
-    const services = createSqliteRuntimeComponentPackage({ path: join(directory, "runtime.sqlite") });
-    assert.deepEqual(
-      services.components.map((item) => item.instance.configurationDigest),
-      [
-        ...Array(3).fill(digestOf({ path: join(directory, "runtime.sqlite"), schemaVersion: 6, busyTimeoutMs: 5_000 })),
-      ],
-    );
-    await services.close?.();
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-});
-
 test("SQLite fences expired Workers and shares capacity across Build dispatches", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-dispatch-"));
+  const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-dispatch-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    const closure = digestOf("runtime:dispatch-test");
     await state.dispatch.create(createBuildDispatchIdentity({
-      build: "build-a", core: digestOf("core:a"), runtimeClosure: closure,
+      build: "build-a", core: digestOf("core:a"),
     }), { now: 100 });
-    const first = await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-a", token: "lease-a", now: 100, leaseMs: 10 });
+    const first = await state.dispatch.claim({ owner: "worker-a", token: "lease-a", now: 100, leaseMs: 10 });
     assert.ok(first?.lease);
     assert.equal(first.build, "build-a");
     assert.equal(first.lease.fence, 1);
-    assert.equal(await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-b", token: "early", now: 105, leaseMs: 10 }), undefined);
-    const second = await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-b", token: "lease-b", now: 111, leaseMs: 10 });
+    assert.equal(await state.dispatch.claim({ owner: "worker-b", token: "early", now: 105, leaseMs: 10 }), undefined);
+    const second = await state.dispatch.claim({ owner: "worker-b", token: "lease-b", now: 111, leaseMs: 10 });
     assert.ok(second?.lease);
     assert.equal(second.lease.fence, 2);
-    const paidResources = [{ id: "authority:paid", maxActive: 1, maxInFlight: 1 }];
+    const paidResources = [{ id: "pool:paid", maxActive: 1, maxInFlight: 1 }];
     await assert.rejects(
       state.dispatch.release("build-a", first.lease, { phase: "waiting", availableAt: 120 }, 112),
       /stale/u,
@@ -234,9 +214,9 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
     assert.equal(woken.phase, "waiting");
 
     await state.dispatch.create(createBuildDispatchIdentity({
-      build: "build-b", core: digestOf("core:b"), runtimeClosure: closure,
+      build: "build-b", core: digestOf("core:b"),
     }), { now: 112 });
-    const third = await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-c", token: "lease-c", now: 112, leaseMs: 10 });
+    const third = await state.dispatch.claim({ owner: "worker-c", token: "lease-c", now: 112, leaseMs: 10 });
     assert.ok(third?.lease);
     const blocked = await state.dispatch.acquireCapacity({
       build: "build-b", command: "command:b", resources: paidResources, mode: "recoverable",
@@ -246,9 +226,9 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
     assert.equal(blocked.status, "blocked");
 
     await state.dispatch.create(createBuildDispatchIdentity({
-      build: "build-c", core: digestOf("core:c"), runtimeClosure: closure,
+      build: "build-c", core: digestOf("core:c"),
     }), { now: 200, priority: 100 });
-    const fourth = await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-d", token: "lease-d", now: 200, leaseMs: 10 });
+    const fourth = await state.dispatch.claim({ owner: "worker-d", token: "lease-d", now: 200, leaseMs: 10 });
     assert.ok(fourth?.lease);
     await state.dispatch.requestCancellation("build-c", "stop", 201);
     const cancelledWake = await state.dispatch.release(
@@ -267,14 +247,12 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
 });
 
 test("cancelling a never-claimed Build atomically withdraws it from dispatch", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-cancel-queued-"));
+  const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-cancel-queued-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    const closure = digestOf("runtime:cancel-queued");
     await state.dispatch.create(createBuildDispatchIdentity({
       build: "queued-build",
       core: digestOf("core:queued-build"),
-      runtimeClosure: closure,
     }), { now: 100 });
 
     const cancelled = await state.dispatch.requestCancellation("queued-build", "no longer needed", 101);
@@ -284,7 +262,6 @@ test("cancelling a never-claimed Build atomically withdraws it from dispatch", a
     assert.equal(cancelled.cancellation?.requestedAt, 101);
     assert.equal(cancelled.cancellation?.reason, "no longer needed");
     assert.equal(await state.dispatch.claim({
-      runtimeClosure: closure,
       owner: "worker",
       token: "lease",
       now: 102,
@@ -300,65 +277,20 @@ test("cancelling a never-claimed Build atomically withdraws it from dispatch", a
   }
 });
 
-test("one SQLite execution domain rejects a second Runtime Closure until prior work is terminal", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-revision-gate-"));
+test("Pool and Lane resources are acquired atomically across models", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-hierarchy-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    const firstClosure = digestOf("runtime:first");
-    const secondClosure = digestOf("runtime:second");
-    const firstIdentity = createBuildDispatchIdentity({
-      build: "first-build",
-      core: digestOf("core:first"),
-      runtimeClosure: firstClosure,
-    });
-    assert.equal((await state.dispatch.create(firstIdentity, { now: 100 })).status, "created");
-    assert.equal((await state.dispatch.create(firstIdentity, { now: 101 })).status, "existing");
-    await assert.rejects(
-      state.dispatch.create(createBuildDispatchIdentity({
-        build: "second-build",
-        core: digestOf("core:second"),
-        runtimeClosure: secondClosure,
-      }), { now: 102 }),
-      /cannot enter this execution domain[\s\S]*first-build[\s\S]*original Runtime Profile/u,
-    );
-
-    const claimed = await state.dispatch.claim({
-      runtimeClosure: firstClosure,
-      owner: "worker:first",
-      token: "lease:first",
-      now: 103,
-      leaseMs: 1_000,
-    });
-    assert.ok(claimed?.lease);
-    await state.dispatch.finish("first-build", claimed.lease, "complete", undefined, 104);
-    assert.equal((await state.dispatch.create(createBuildDispatchIdentity({
-      build: "second-build",
-      core: digestOf("core:second"),
-      runtimeClosure: secondClosure,
-    }), { now: 105 })).status, "created");
-    state.close();
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-});
-
-test("Authority and Route resources are acquired atomically across models", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-hierarchy-"));
-  try {
-    const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    const closure = digestOf("runtime:hierarchical-capacity");
-    const authority = { id: "authority:kie.main", maxActive: 2, maxInFlight: 2 };
-    const seedance = { id: "route:kie.main/seedance-2-mini", maxActive: 1, maxInFlight: 1 };
-    const minimax = { id: "route:kie.main/minimax-h3", maxActive: 2, maxInFlight: 2 };
+    const pool = { id: "pool:kie.main", maxActive: 2, maxInFlight: 2 };
+    const seedance = { id: "lane:kie.main/seedance-2-mini", maxActive: 1, maxInFlight: 1 };
+    const minimax = { id: "lane:kie.main/minimax-h3", maxActive: 2, maxInFlight: 2 };
 
     const leaseBuild = async (build: string, now: number) => {
       await state.dispatch.create(createBuildDispatchIdentity({
         build,
         core: digestOf(`core:${build}`),
-        runtimeClosure: closure,
       }), { now });
       const claimed = await state.dispatch.claim({
-        runtimeClosure: closure,
         owner: `worker:${build}`,
         token: `lease:${build}`,
         now,
@@ -373,8 +305,8 @@ test("Authority and Route resources are acquired atomically across models", asyn
     const first = await state.dispatch.acquireCapacity({
       build: "seedance-a",
       command: "generate:a",
-      resources: [authority, seedance],
-      queue: { authority: "kie.main", route: "seedance-2-mini" },
+      resources: [pool, seedance],
+      queue: { pool: "kie.main", lane: "seedance-2-mini" },
       mode: "recoverable",
       buildLease: firstLease,
       owner: "worker:seedance-a",
@@ -391,8 +323,8 @@ test("Authority and Route resources are acquired atomically across models", asyn
     const sameRoute = await state.dispatch.acquireCapacity({
       build: "seedance-b",
       command: "generate:b",
-      resources: [authority, seedance],
-      queue: { authority: "kie.main", route: "seedance-2-mini" },
+      resources: [pool, seedance],
+      queue: { pool: "kie.main", lane: "seedance-2-mini" },
       mode: "recoverable",
       buildLease: secondLease,
       owner: "worker:seedance-b",
@@ -412,8 +344,8 @@ test("Authority and Route resources are acquired atomically across models", asyn
     const otherRoute = await state.dispatch.acquireCapacity({
       build: "minimax-a",
       command: "generate:c",
-      resources: [authority, minimax],
-      queue: { authority: "kie.main", route: "minimax-h3" },
+      resources: [pool, minimax],
+      queue: { pool: "kie.main", lane: "minimax-h3" },
       mode: "recoverable",
       buildLease: thirdLease,
       owner: "worker:minimax-a",
@@ -423,7 +355,7 @@ test("Authority and Route resources are acquired atomically across models", asyn
       limits: { globalActive: 10 },
     });
     assert.equal(otherRoute.status, "acquired",
-      "another model may use the remaining Provider Authority capacity");
+      "another model may use the remaining Provider Pool capacity");
     state.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

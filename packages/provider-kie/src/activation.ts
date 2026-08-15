@@ -5,18 +5,18 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
 
 import { createKieProvider } from "./provider.js";
 
 const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-kie",
   activate(context) {
-    if (context.authority === undefined) throw new Error("KIE Provider Authority is required");
+    if (context.pool === undefined) throw new Error("KIE Provider Pool is required");
     const config = runtimeConfigObject(context.config, "KIE");
     runtimeConfigExact(config, [
       "apiBaseUrl", "uploadBaseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs",
-      "routeConcurrency", "submissionIntervalMs", "requestTimeoutMs", "maxOperationMs", "maxArtifactBytes",
+      "laneConcurrency", "submissionIntervalMs", "requestTimeoutMs", "maxOperationMs", "maxArtifactBytes",
     ], "KIE");
     const apiBaseUrl = runtimeConfigString(config.apiBaseUrl, "KIE apiBaseUrl");
     const uploadBaseUrl = runtimeConfigString(config.uploadBaseUrl, "KIE uploadBaseUrl");
@@ -30,13 +30,13 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     const apiKey = runtimeConfigCredentialRef(config.apiKey, "KIE apiKey");
     if (apiKey === undefined) throw new Error("KIE apiKey CredentialRef is required");
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "KIE defaultConcurrency");
-    const routeConcurrency = config.routeConcurrency === undefined
+    const laneConcurrency = config.laneConcurrency === undefined
       ? undefined
-      : Object.fromEntries(Object.entries(runtimeConfigObject(config.routeConcurrency, "KIE routeConcurrency"))
-        .map(([route, value]) => {
-          const concurrency = runtimeConfigPositiveInteger(value, `KIE routeConcurrency.${route}`);
-          if (concurrency === undefined) throw new Error(`KIE routeConcurrency.${route} is required`);
-          return [route, concurrency];
+      : Object.fromEntries(Object.entries(runtimeConfigObject(config.laneConcurrency, "KIE laneConcurrency"))
+        .map(([lane, value]) => {
+          const concurrency = runtimeConfigPositiveInteger(value, `KIE laneConcurrency.${lane}`);
+          if (concurrency === undefined) throw new Error(`KIE laneConcurrency.${lane} is required`);
+          return [lane, concurrency];
         }));
     const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "KIE pollIntervalMs");
     const submissionIntervalMs = runtimeConfigPositiveInteger(config.submissionIntervalMs, "KIE submissionIntervalMs");
@@ -46,12 +46,12 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createKieProvider({
         instance: context.instance,
-        authority: context.authority,
+        pool: context.pool,
         ...(apiBaseUrl === undefined ? {} : { apiBaseUrl }),
         ...(uploadBaseUrl === undefined ? {} : { uploadBaseUrl }),
         apiKey,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
-        ...(routeConcurrency === undefined ? {} : { routeConcurrency }),
+        ...(laneConcurrency === undefined ? {} : { laneConcurrency }),
         ...(pollIntervalMs === undefined ? {} : { pollIntervalMs }),
         ...(submissionIntervalMs === undefined ? {} : { submissionIntervalMs }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
@@ -62,9 +62,9 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [kieRuntimeAdapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

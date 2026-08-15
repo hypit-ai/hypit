@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  decodeMediaFontSurface,
-  mediaSurfaceImplementationDigests,
-  mediaTypes,
-} from "@narratage/media";
+import { decodeMediaFontSurface, mediaTypes } from "@narratage/media";
 import { digestOf } from "@narratage/protocol";
 
 const range = { start: 0, end: 80 };
@@ -51,7 +47,6 @@ test("Font Surface turns explicit author bytes and face metadata into one exact 
       style: "normal",
     },
   });
-  assert.ok(mediaSurfaceImplementationDigests.font.startsWith("sha256:"));
 });
 
 test("Font Surface rejects ambiguous files and invalid face metadata before accepting bytes", async () => {

@@ -10,23 +10,22 @@ construction remain outside the execution Driver.
 - `EndpointRegistry` binds an already explicit external capability to implementations that may use
   APIs, credentials, queues, local runtimes, devices or human services.
 - Registrations may declare generic scheduling resources. Provider registrations claim one shared
-  Authority plus one exact capability Route. The environment-neutral `@narratage/runtime`
+  Provider pool plus one exact capability lane. The environment-neutral `@narratage/runtime`
   Scheduler acquires all claims atomically across Builds; a Runtime Profile may override limits.
 - A Producer receives only its command identity and immutable typed inputs. It has no ArtifactStore,
   credentials, network, queue or store handle; external work must be emitted as a typed `Need`.
-- Endpoints match the locked `CapabilityRef` and return `TypeRef`. Multiple exact endpoints require
+- Endpoints match an exact `CapabilityRef` and return `TypeRef`. Multiple exact endpoints require
   `bind()`. The Registry never routes by return type alone.
 - Production-style assembly uses `applyRuntimeClosure()`: Endpoint instance, exact capability and
-  return Type, implementation digest, non-secret configuration digest, declared credential slots
-  and Profile-owned scheduling must all match atomically.
+  return Type, declared credential slots and Profile-owned scheduling must all match.
   A low-level trusted embedding may still register one immediate Endpoint directly; recoverable
-  execution always requires the locked Runtime Closure.
+  execution uses the Runtime selection supplied by the host.
 - Long-lived external work uses `registerRecoverableEndpoint()`, not an immediate Handler. The Driver
   creates a content-addressed Operation before `start()`, persists pending checkpoints, calls
   `resume()` for an existing Operation, and replays a persisted completion without another external
-  call. A recoverable Endpoint is blocked unless both its locked Runtime Closure and an
+  call. A recoverable Endpoint is blocked unless both its Runtime selection and an
   `OperationStore` are present.
-- Endpoint credentials are resolved only for the slots declared by that locked endpoint, immediately
+- Endpoint credentials are resolved only for the slots declared by that endpoint, immediately
   before `start/resume/cancel`; secret bytes never become OperationStore or Core state.
 - A pending Endpoint may publish `wakeAt`. Retryable terminal failure creates a new attempt and
   Operation id under the endpoint's finite retry policy; cancellation becomes an explicit terminal
@@ -34,12 +33,11 @@ construction remain outside the execution Driver.
 - Preview, fallback and reuse are graph-level Candidates selected before Core planning, not Endpoint
   modes. A reused value is an Existing-Value Candidate; “Pin” is only a possible host UI word for
   authoring that explicit selection.
-- Endpoint identity becomes the Receipt fulfiller. The Driver also copies the locked Endpoint
-  implementation/configuration and applied Runtime closure digests into the Receipt; handlers return
-  only value and operational metadata and cannot self-assert implementation identity.
+- Endpoint identity becomes the Receipt fulfiller; handlers return only value and operational
+  metadata and cannot choose that identity themselves.
 - `TypeValidatorRegistry` is a separate exact-Type registry. Before an Event exists, the Driver
-  structurally checks every result, executes the Type owner's digest-locked validator when declared,
-  and attaches the resulting receipt. Producer and Endpoint handlers cannot self-assert validation.
+  executes the selected Type owner's validator. Producer and Endpoint handlers cannot self-assert
+  validation.
 
 Build state is serializable. Missing Endpoints, generation latency and transient endpoint errors pause a
 build without replaying completed Producers.

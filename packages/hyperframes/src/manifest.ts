@@ -5,8 +5,6 @@ import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { VISUAL_IR_V1 } from "@narratage/visual-ir";
 
-import { compileHyperframesImplementationDigest } from "./document.js";
-
 export const hyperframesModuleRef = { name: "@narratage/hyperframes", version: "1" } as const;
 export const hyperframesTypes = {
   document: { module: hyperframesModuleRef, name: "HyperframesDocument" },
@@ -52,11 +50,11 @@ export const hyperframesDocumentSchema: ValueSchema = {
 };
 
 export const hyperframesManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: hyperframesModuleRef.name,
   version: hyperframesModuleRef.version,
   dependencies: [compositionDependency, mediaDependency, programSpaceDependency],
-  types: [{ name: hyperframesTypes.document.name, schema: hyperframesDocumentSchema }],
+  types: [{ name: hyperframesTypes.document.name }],
   capabilities: [],
   producers: [{
     name: hyperframesProducers.compile.name,
@@ -66,10 +64,5 @@ export const hyperframesManifest: ModuleManifest = {
     ],
     outputs: [{ name: "document", type: hyperframesTypes.document }],
     needs: [],
-    implementation: {
-      digest: compileHyperframesImplementationDigest,
-    },
   }],
 };
-
-export const hyperframesManifestDigest = digestOf(hyperframesManifest);

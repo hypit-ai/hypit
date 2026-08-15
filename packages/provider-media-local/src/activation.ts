@@ -4,11 +4,11 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
 import {
   diagnoseRuntimeExecutable,
   resolveRuntimeExecutable,
-} from "@narratage/runtime-adapter-node";
+} from "@narratage/runtime-host-node";
 
 import { createLocalMediaProvider } from "./provider.js";
 import { localMediaToolchainProgram } from "./program.js";
@@ -16,7 +16,7 @@ import { localMediaToolchainProgram } from "./program.js";
 const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-media-local",
   activate(context) {
-    if (context.authority === undefined) throw new Error("local media Provider Authority is required");
+    if (context.pool === undefined) throw new Error("local media Provider Pool is required");
     const config = runtimeConfigObject(context.config, "local media");
     runtimeConfigExact(config, [
       "ffmpegPath", "ffprobePath", "defaultConcurrency", "processTimeoutMs", "maxProbeOutputBytes",
@@ -31,7 +31,7 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createLocalMediaProvider({
         instance: context.instance,
-        authority: context.authority,
+        pool: context.pool,
         ...(ffmpegPath === undefined ? {} : { ffmpegPath }),
         ...(ffprobePath === undefined ? {} : { ffprobePath }),
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
@@ -57,9 +57,9 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [localMediaRuntimeAdapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

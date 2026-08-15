@@ -10,7 +10,7 @@ export const RUNTIME_SHIM = String.raw`
     root.style.height = (root.getAttribute('data-height') || '0') + 'px';
   }
   function seek(seconds) {
-    var clips = document.querySelectorAll('.svml-visual-present');
+    var clips = document.querySelectorAll('.narratage-visual-present');
     for (var i = 0; i < clips.length; i++) {
       var clip = clips[i];
       var start = parseFloat(clip.getAttribute('data-start') || '0') || 0;

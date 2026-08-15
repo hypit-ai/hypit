@@ -44,26 +44,19 @@ const seedreamBaseDefinition = defineExactModelModule({
 
 export const seedreamEndpoints = seedreamBaseDefinition.endpoints;
 export const seedreamComponent = seedreamBaseDefinition.component;
-export const seedreamSurfaceImplementationDigests = {
-  textImage: digestOf("@narratage/seedream/text-image-surface@1"),
-  referenceImage: digestOf("@narratage/seedream/reference-image-surface@1"),
-} as const;
 const endpoint = seedreamEndpoints.image!;
 
 export const seedreamMarkupSurfaces = [{
     name: "text-image", tag: "TextImage", mode: "structured" as const,
     outputs: [endpoint.draftType],
-    implementation: { digest: seedreamSurfaceImplementationDigests.textImage },
   }, {
     name: "reference-image", tag: "ReferenceImage", mode: "structured" as const,
     outputs: [endpoint.draftType, endpoint.mediaBindings.images!.type],
-    implementation: { digest: seedreamSurfaceImplementationDigests.referenceImage },
   }] as const;
 
 export const seedreamManifest = {
   ...seedreamBaseDefinition.manifest,
 };
-export const seedreamManifestDigest = digestOf(seedreamManifest);
 export const seedreamDefinition = {
-  ...seedreamBaseDefinition, manifest: seedreamManifest, manifestDigest: seedreamManifestDigest,
+  ...seedreamBaseDefinition, manifest: seedreamManifest,
 };

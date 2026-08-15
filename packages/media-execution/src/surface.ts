@@ -212,7 +212,7 @@ export async function verifyCompositableSurfaceBytes(options: {
   const ffprobePath = options.ffprobePath ?? "ffprobe";
   const timeoutMs = options.processTimeoutMs ?? 120_000;
   const maxOutputBytes = options.maxProbeOutputBytes ?? 8 * 1024 * 1024;
-  const directory = await mkdtemp(join(tmpdir(), "svml-surface-verify-"));
+  const directory = await mkdtemp(join(tmpdir(), "narratage-surface-verify-"));
   try {
     const path = join(directory, `surface${suffix(options.surface.artifact.mediaType)}`);
     await writeFile(path, options.bytes);

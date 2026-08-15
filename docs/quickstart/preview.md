@@ -20,11 +20,11 @@ pnpm svml:playground -- --source examples/all-components-preview/main.svml
 | --- | --- |
 | `--source <main.svml>` | The Author Source to read. Required. |
 | `--run <build.svrun>` | A Run Source, read for material and timings it already names. |
-| `--runtime <svml.runtime.json>` | Where material earlier Builds produced is kept. Only a Source that reuses an accepted shot through `<build-record>` needs one. |
+| `--runtime <narratage.runtime.json>` | Where material earlier Builds produced is kept. Only a Source that reuses an accepted shot through `<build-record>` needs one. |
 | `--port <number>` | Defaults to `5179`. |
 
 Both optional arguments are additive. With neither, the Playground still runs on a directory holding
-nothing but `main.svml` and its `.svs` style sheet — no package lock, no Runtime Profile, no build.
+nothing but `main.svml` and its `.svs` style sheet — no Runtime Profile and no Build.
 
 ::: tip Stop the previous server before starting another
 A second Playground silently takes another port, and you end up reading a stale preview while

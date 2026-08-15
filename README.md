@@ -113,17 +113,25 @@ Node.js 22+ and pnpm 10.33.x:
 ```bash
 corepack enable
 pnpm install --frozen-lockfile
-
-node --run narratage -- check examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock
-
-node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock
+npm link
 ```
 
-`check` verifies the source and prints its typed outputs. `plan` shows the exact execution subgraph and every external capability a real Build would need — without starting any of it.
+Then, from a video project:
 
-A real Build additionally needs `ffmpeg` and `ffprobe` on your `PATH`, and depending on the Runtime Profile, Python with `uv` or API credentials. Run `narratage doctor` to see what's missing; see [Quickstart](https://narratage.hypit.ai/quickstart) for the full walkthrough.
+```bash
+cd my-video
+narratage runtime use narratage.runtime.json
+narratage plan build.svrun
+narratage build build.svrun
+narratage status <build-id> --watch
+narratage get <build-id> --name final.video --to output/final.mp4
+```
+
+`build` prints a fresh Build ID and returns after durable submission. `status --watch` can attach to
+that Build from any later terminal. Use `check` while editing; package selection follows Source
+imports and the selected Runtime Profile.
+
+A real Build additionally needs `ffmpeg` and `ffprobe` on your `PATH`, and depending on the Runtime Profile, Python with `uv` or API credentials. Run `narratage doctor` to see what's missing; see [Quickstart](https://narratage.hypit.ai/quickstart) for the complete setup and a provider-free first plan.
 
 ### Project files
 
@@ -160,10 +168,10 @@ The Core is small and domain-neutral: it knows nothing about video. Installing a
 |---|---|---|
 | **Narratage Core** | Plan compilation and the Build state machine | `core`, `protocol` |
 | **Compiler** | Source parsing, imports and graph elaboration | `host`, `markup`, `svs`, `elaborator` |
-| **Infrastructure** | Media processing, spatial layout, fonts and text | `media-pipeline`, `spatial`, `fonts-open` |
+| **Foundations** | Reusable media, time, layout, text and transport building blocks | `media-pipeline`, `temporal`, `spatial` |
 | **Video authoring** | Script, generation, speech, tracks, film and rendering | `script`, `seedance`, `caption`, `film` |
 | **Providers** | Adapters for external models, APIs and Managed Programs | `provider-kie`, `provider-whisperx-local` |
-| **Runtime** | Scheduling, storage, credentials and execution | `runtime`, `store-sqlite`, `local` |
+| **Runtime** | Scheduling, storage, credentials and execution | `runtime`, `store-sqlite`, `runtime-local` |
 | **Applications** | User-facing ways to author and operate Narratage | `cli`, `svml-playground` |
 
 ## Where to go next

@@ -37,38 +37,19 @@ export const producers = {
   assemble: { module: moduleRef, name: "assemble" },
 } satisfies Record<string, ProducerRef>;
 
-export const implementationDigests = {
-  makePrompt: digestOf("example.greeting/make-prompt@0"),
-  requestText: digestOf("example.greeting/request-text@0"),
-  placeholderText: digestOf("example.greeting/placeholder-text@0"),
-  assemble: digestOf("example.greeting/assemble@0"),
-};
-
 export const manifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
   types: [
     {
       name: types.intent.name,
-      schema: {
-        kind: "object",
-        fields: {
-          name: { schema: { kind: "string", minLength: 1 } },
-        },
-      },
     },
-    { name: types.prompt.name, schema: { kind: "string", minLength: 1 } },
-    { name: types.generated.name, schema: { kind: "string", minLength: 1 } },
+    { name: types.prompt.name },
+    { name: types.generated.name },
     {
       name: types.document.name,
-      schema: {
-        kind: "object",
-        fields: {
-          text: { schema: { kind: "string", minLength: 1 } },
-        },
-      },
     },
   ],
   capabilities: [{ name: capabilities.generation.name, returns: types.generated }],
@@ -78,9 +59,6 @@ export const manifest: ModuleManifest = {
       inputs: [{ name: "intent", type: types.intent }],
       outputs: [{ name: "prompt", type: types.prompt }],
       needs: [],
-      implementation: {
-        digest: implementationDigests.makePrompt,
-      },
     },
     {
       name: producers.requestText.name,
@@ -91,27 +69,18 @@ export const manifest: ModuleManifest = {
         capability: capabilities.generation,
         returns: types.generated,
       }],
-      implementation: {
-        digest: implementationDigests.requestText,
-      },
     },
     {
       name: producers.placeholderText.name,
       inputs: [{ name: "prompt", type: types.prompt }],
       outputs: [{ name: "generated", type: types.generated }],
       needs: [],
-      implementation: {
-        digest: implementationDigests.placeholderText,
-      },
     },
     {
       name: producers.assemble.name,
       inputs: [{ name: "generated", type: types.generated }],
       outputs: [{ name: "document", type: types.document }],
       needs: [],
-      implementation: {
-        digest: implementationDigests.assemble,
-      },
     },
   ],
 };
@@ -197,7 +166,6 @@ export function greetingGraph(program: LinkedProgram, includeSide = false): Comp
 
 export function createGreetingBuild(options?: {
   readonly generationRealization?: "primary" | "placeholder";
-  readonly implementationClosure?: import("@narratage/protocol").Digest;
   readonly includeSideTarget?: boolean;
 }): BuildState {
   const closure = createResolvedClosure([manifest]);
@@ -221,9 +189,6 @@ export function createGreetingBuild(options?: {
     : sourceGraph;
   const request = sealBuildRequest({
     graph: graph.id,
-    ...(options?.implementationClosure === undefined
-      ? {}
-      : { implementationClosure: options.implementationClosure }),
     targets: [...(options?.includeSideTarget ? [{ output: "side-document" }] : []), {
       output: "document",
     }],

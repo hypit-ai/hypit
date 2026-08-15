@@ -23,35 +23,34 @@ single `final.video` target.
 The current deterministic estimate is 12, 15, 15 and 15 seconds. The Recipe deliberately caps a
 take at Seedance's 15-second request limit.
 
-Synchronize both package locks from the Run Source and Runtime Profile:
+Select the Runtime Profile:
 
 ```sh
 cd examples/talking-head-aroll
-../../narratage runtime use svml.runtime.json
-../../narratage packages sync build.svrun
+narratage runtime use narratage.runtime.json
 ```
 
 Inspect the authored graph—including the visible `*.prompt` Text output and `*.program`—without a paid call:
 
 ```sh
-../../narratage check main.svml
+narratage check main.svml
 ```
 
 Inspect the exact paid plan before submitting it:
 
 ```sh
-../../narratage plan build.svrun
+narratage plan build.svrun
 ```
 
 Build the complete film after preparing the managed local WhisperX service and exposing `KIE_API_KEY`,
 `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`:
 
 ```sh
-../../narratage runtime up
+narratage runtime up
 
-../../narratage build build.svrun --follow
+narratage build build.svrun --follow
 
-../../narratage get <build-id> \
+narratage get <build-id> \
   --name final.video \
   --to output/final.mp4
 ```
@@ -63,7 +62,7 @@ Run the same downstream film from the four archived generated shots without anot
 submission:
 
 ```sh
-../../narratage build reuse-generated.svrun --follow
+narratage build reuse-generated.svrun --follow
 ```
 
 Before this second command, replace `REPLACE_WITH_BUILD_ID` in `reuse-generated.svrun` with the
@@ -77,5 +76,5 @@ This brand-neutral fixture demonstrates the same topology with two explicit Run 
 generation and reuse through zero-input Build-Record Candidates. Local source assets and generated
 Records are intentionally not committed.
 
-The package lock lists independent packages. It is not a hidden video bundle, and the video CLI
+Source imports select independent packages. There is no hidden video bundle, and the video CLI
 contains no authoring or Run-language package by default.

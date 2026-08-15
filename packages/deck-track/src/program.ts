@@ -37,21 +37,6 @@ import type {
   DepthStackState,
 } from "./types.js";
 
-export const depthStackImplementationDigests = {
-  bindLabelText: digestOf("@narratage/deck-track/bind-label-text@1"),
-  createCards: digestOf("@narratage/deck-track/create-cards@1"),
-  appendMomentCard: digestOf("@narratage/deck-track/append-moment-card@1"),
-  finalizeProgramEnd: digestOf("@narratage/deck-track/finalize-program-end@1"),
-  finalizeUntilMoment: digestOf("@narratage/deck-track/finalize-until-moment@1"),
-  finalizeUntilSelectionStart: digestOf("@narratage/deck-track/finalize-until-selection-start@1"),
-  finalizeUntilSelectionEnd: digestOf("@narratage/deck-track/finalize-until-selection-end@1"),
-  render: digestOf("@narratage/deck-track/render-depth-stack@1"),
-} as const;
-
-export const depthStackValidatorDigests = {
-  program: digestOf("@narratage/deck-track/validate-program@1"),
-} as const;
-
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }

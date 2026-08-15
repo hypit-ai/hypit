@@ -100,16 +100,10 @@ export const mimoTtsMarkupSurfaces = [
   {
     name: "preset", tag: "Preset", mode: "structured",
     outputs: [mimoTtsEndpoints.preset.draftType],
-    implementation: {
-      digest: mimoTtsSurfaceDigests.preset,
-    },
   },
   {
     name: "voiceDesign", tag: "VoiceDesign", mode: "structured",
     outputs: [mimoTtsEndpoints.voiceDesign.draftType],
-    implementation: {
-      digest: mimoTtsSurfaceDigests.voiceDesign,
-    },
   },
   {
     name: "voiceClone", tag: "VoiceClone", mode: "structured",
@@ -117,9 +111,6 @@ export const mimoTtsMarkupSurfaces = [
       mimoTtsEndpoints.voiceClone.draftType,
       ...Object.values(mimoTtsEndpoints.voiceClone.mediaBindings).map((binding) => binding.type),
     ],
-    implementation: {
-      digest: mimoTtsSurfaceDigests.voiceClone,
-    },
   },
 ] as const;
 
@@ -127,7 +118,6 @@ export const mimoTtsManifest = {
   ...base.manifest,
 } as const;
 
-export const mimoTtsManifestDigest = digestOf(mimoTtsManifest);
 export const mimoTtsComponent = base.component;
 
 export { createMimoTtsAudioFragment } from "./fragment.js";

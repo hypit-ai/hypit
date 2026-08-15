@@ -19,11 +19,10 @@ import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import type { EndpointFulfillment, EndpointInvocationContext } from "@narratage/endpoint-kit";
 
 export const localMediaProviderModuleRef = { name: "@narratage/provider-media-local", version: "1" } as const;
-export const localMediaProviderImplementationDigest = digestOf("@narratage/provider-media-local/ffmpeg@1");
 
 export type CreateLocalMediaProviderOptions = {
   readonly instance?: string;
-  readonly authority?: string;
+  readonly pool?: string;
   readonly ffmpegPath?: string;
   readonly ffprobePath?: string;
   readonly defaultConcurrency?: number;
@@ -80,11 +79,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
     module: localMediaProviderModuleRef,
     facet: "media",
     instance: config.instance ?? "media.local",
-    authority: config.authority ?? config.instance ?? "media.local",
-    implementation: {
-      digest: localMediaProviderImplementationDigest,
-    },
-    configuration: canonicalize(common),
+    pool: config.pool ?? config.instance ?? "media.local",
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [
       {

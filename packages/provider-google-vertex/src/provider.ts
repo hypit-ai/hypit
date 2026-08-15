@@ -9,8 +9,8 @@ import {
 import type { CaptionGeminiRequest } from "@narratage/caption-gemini";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import type { EndpointFulfillment, EndpointInvocationContext } from "@narratage/endpoint-kit";
-import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
-import type { CanonicalValue, Digest } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
 import { credentialRef } from "@narratage/runtime";
 import type { CredentialRef } from "@narratage/runtime";
 
@@ -18,10 +18,6 @@ export const googleVertexProviderModuleRef = {
   name: "@narratage/provider-google-vertex",
   version: "1",
 } as const;
-export const googleVertexProviderImplementationDigest = digestOf(
-  "@narratage/provider-google-vertex/caption-atom-word-coordinates@1:@google/genai@1.52.0",
-);
-
 type GenerateCaptionContentInput = {
   readonly model: string;
   readonly systemInstruction: string;
@@ -45,15 +41,14 @@ export type CreateGoogleVertexCaptionProviderOptions = {
   readonly projectEnv?: string;
   readonly location?: string;
   readonly instance?: string;
-  readonly authority?: string;
+  readonly pool?: string;
   /** JSON contents, not a filesystem path. A CredentialStore decides where these bytes live. */
   readonly credentialsJson?: CredentialRef;
   readonly defaultConcurrency?: number;
   readonly requestTimeoutMs?: number;
   readonly maxResponseBytes?: number;
-  /** Test/private transport injection; its identity must be locked into Runtime configuration. */
+  /** Test/private transport injection. */
   readonly generateContent?: GenerateCaptionContent;
-  readonly generateContentImplementationDigest?: Digest;
 };
 
 const captionResponseSchema: Schema = {
@@ -197,33 +192,13 @@ export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCap
   assert(location.length > 0, "Google Vertex location is empty");
   const requestTimeoutMs = positiveInteger(options.requestTimeoutMs ?? 120_000, "requestTimeoutMs");
   const maxResponseBytes = positiveInteger(options.maxResponseBytes ?? 2_000_000, "maxResponseBytes");
-  if (options.generateContent !== undefined && options.generateContentImplementationDigest === undefined) {
-    throw new Error("custom Google Vertex generateContent requires generateContentImplementationDigest");
-  }
-  if (options.generateContentImplementationDigest !== undefined && !isDigest(options.generateContentImplementationDigest)) {
-    throw new Error("generateContentImplementationDigest is invalid");
-  }
   const generateContent = options.generateContent ?? sdkGenerateContent();
-  const transportDigest = options.generateContentImplementationDigest
-    ?? digestOf("@narratage/provider-google-vertex/@google-genai-1.52.0@1");
 
   return defineEndpointPackage({
     module: googleVertexProviderModuleRef,
     facet: "caption-gemini",
     instance: options.instance ?? "google-vertex.caption",
-    authority: options.authority ?? options.instance ?? "google-vertex.caption",
-    implementation: {
-      digest: googleVertexProviderImplementationDigest,
-    },
-    configuration: canonicalize({
-      project: projectValue === undefined
-        ? { source: "environment", name: projectEnv! }
-        : { source: "literal", value: projectValue },
-      location,
-      requestTimeoutMs,
-      maxResponseBytes,
-      transportDigest,
-    }),
+    pool: options.pool ?? options.instance ?? "google-vertex.caption",
     credentials: {
       googleCredentials: options.credentialsJson ?? credentialRef("env", "GOOGLE_APPLICATION_CREDENTIALS_JSON"),
     },

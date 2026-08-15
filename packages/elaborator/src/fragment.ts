@@ -47,7 +47,7 @@ export type FragmentExport = {
 };
 
 export type GraphFragment = {
-  readonly format: "svml.fragment@1";
+  readonly format: "narratage.fragment@1";
   readonly id: Digest;
   readonly inputs: readonly { readonly name: string; readonly type: TypeRef }[];
   readonly operations: readonly FragmentOperation[];
@@ -68,7 +68,7 @@ export type ElaboratedFragmentExport = {
 };
 
 export type ElaboratedFragment = {
-  readonly format: "svml.fragment-instance@1";
+  readonly format: "narratage.fragment-instance@1";
   readonly id: Digest;
   readonly fragment: Digest;
   readonly instance: string;
@@ -174,7 +174,7 @@ function normalizeExport(item: FragmentExport): FragmentExport {
 
 function fragmentContent(fragment: Omit<GraphFragment, "id">): Omit<GraphFragment, "id"> {
   return {
-    format: "svml.fragment@1",
+    format: "narratage.fragment@1",
     inputs: [...fragment.inputs]
       .map((input) => ({ name: input.name, type: input.type }))
       .sort((left, right) => left.name.localeCompare(right.name)),
@@ -186,7 +186,7 @@ function fragmentContent(fragment: Omit<GraphFragment, "id">): Omit<GraphFragmen
 export function sealGraphFragment(
   fragment: Omit<GraphFragment, "format" | "id">,
 ): GraphFragment {
-  const content = fragmentContent({ format: "svml.fragment@1", ...fragment });
+  const content = fragmentContent({ format: "narratage.fragment@1", ...fragment });
   return { ...content, id: digestOf(content) };
 }
 
@@ -213,7 +213,7 @@ function resultType(program: LinkedProgram, operation: FragmentOperation): TypeR
 }
 
 export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragment): void {
-  assert(fragment.format === "svml.fragment@1", "UNSUPPORTED_FRAGMENT", "unsupported Graph Fragment format");
+  assert(fragment.format === "narratage.fragment@1", "UNSUPPORTED_FRAGMENT", "unsupported Graph Fragment format");
   assert(isDigest(fragment.id), "INVALID_FRAGMENT_DIGEST", "Graph Fragment id is not a digest");
   assert(fragment.id === digestOf(fragmentContent(fragment)), "FRAGMENT_DIGEST_MISMATCH", "Graph Fragment digest differs");
   assert(fragment.exports.length > 0, "EMPTY_FRAGMENT_EXPORTS", `${fragment.id} has no exports`);
@@ -370,7 +370,7 @@ export function elaborateGraphFragment(
     };
   });
   const content = {
-    format: "svml.fragment-instance@1" as const,
+    format: "narratage.fragment-instance@1" as const,
     fragment: fragment.id,
     instance: request.id,
     inputs,

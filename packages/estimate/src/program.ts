@@ -11,10 +11,6 @@ import type {
   SpeechEstimatePolicy,
 } from "./types.js";
 
-export const estimateSpeechImplementationDigest = digestOf(
-  "@narratage/estimate/estimate-speech@1:explicit-delivery-density-without-padding",
-);
-
 const PACE_RATE: Readonly<Record<
   ResolvedSpeechEstimateLanguage,
   Readonly<Record<SpeechEstimatePace, number>>

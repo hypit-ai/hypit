@@ -1,23 +1,14 @@
 import type { CapabilityRef, Digest, ModuleRef, ProducerRef, TypeRef } from "./identity.js";
-import type { ValueSchema } from "./value.js";
 
 /** Logical package address for immutable semantic Modules. */
-export const modulePackageAbi = "svml.module@1";
+export const modulePackageAbi = "narratage.module@1";
 
 export type ModuleDependency = {
   readonly module: ModuleRef;
-  readonly digest: Digest;
 };
 
 export type TypeDeclaration = {
   readonly name: string;
-  readonly schema: ValueSchema;
-  /** Optional package-owned semantic refinement beyond the structural Schema. */
-  readonly validator?: TypeValidatorDeclaration;
-};
-
-export type TypeValidatorDeclaration = {
-  readonly implementation: ImplementationRef;
 };
 
 export type PortDeclaration = {
@@ -36,20 +27,15 @@ export type CapabilityDeclaration = {
   readonly returns: TypeRef;
 };
 
-export type ImplementationRef = {
-  readonly digest: Digest;
-};
-
 export type ProducerDeclaration = {
   readonly name: string;
   readonly inputs: readonly PortDeclaration[];
   readonly outputs: readonly PortDeclaration[];
   readonly needs: readonly NeedPortDeclaration[];
-  readonly implementation: ImplementationRef;
 };
 
 export type ModuleManifest = {
-  readonly format: "svml.module@1";
+  readonly format: "narratage.module@1";
   readonly name: string;
   readonly version: string;
   readonly dependencies: readonly ModuleDependency[];
@@ -58,18 +44,24 @@ export type ModuleManifest = {
   readonly producers: readonly ProducerDeclaration[];
 };
 
+/** Domain-neutral interface resolved into Core; package-owned value schemas stay outside it. */
+export type ResolvedModuleManifest = Omit<ModuleManifest, "types"> & {
+  readonly types: readonly { readonly name: string }[];
+};
+
 export type ResolvedModule = {
   readonly digest: Digest;
-  readonly manifest: ModuleManifest;
+  readonly manifest: ResolvedModuleManifest;
 };
 
 export type ResolvedModuleClosure = {
-  readonly format: "svml.closure@1";
+  readonly format: "narratage.closure@1";
   readonly modules: readonly ResolvedModule[];
   readonly digest: Digest;
 };
 
-export type ResolvedTypeDeclaration = TypeDeclaration & {
+export type ResolvedTypeDeclaration = {
+  readonly name: string;
   readonly ref: TypeRef;
 };
 

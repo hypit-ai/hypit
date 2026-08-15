@@ -45,7 +45,7 @@ Declarative activation names an ordinary CredentialRef, not an environment-speci
   "config": {
     "apiKey": { "store": "keychain", "key": "kie.api-key" },
     "defaultConcurrency": 8,
-    "routeConcurrency": {
+    "laneConcurrency": {
       "seedance-2.5": 4,
       "gpt-image-2": 3
     }
@@ -54,7 +54,7 @@ Declarative activation names an ordinary CredentialRef, not an environment-speci
 ```
 
 The selected writable CredentialStore then enables `narratage auth login kie.personal --runtime
-svml.runtime.json`; KIE contributes the credential description and the generic CLI contains no KIE
+narratage.runtime.json`; KIE contributes the credential description and the generic CLI contains no KIE
 branch.
 
 ```ts
@@ -65,22 +65,21 @@ const kie = createKieProvider({
   instance: "kie.personal",
   apiKey: credentialRef("env", "KIE_API_KEY"),
   defaultConcurrency: 8,
-  routeConcurrency: {
+  laneConcurrency: {
     "seedance-2.5": 4,
     "gpt-image-2": 3,
   },
 });
 ```
 
-`defaultConcurrency` is the total KIE authority capacity shared by all Builds. Each optional
-`routeConcurrency` entry limits one exact KIE model route inside that total. There is no cross-Provider
-`seedance` family queue: another Provider owns another authority and its own independently named
-routes. A task acquires its Provider and route capacity together, so it is queued once rather than
+`defaultConcurrency` is the total KIE pool capacity shared by all Builds. Each optional
+`laneConcurrency` entry limits one exact KIE model lane inside that total. There is no cross-Provider
+`seedance` family queue: another Provider owns another pool and its own independently named
+lanes. A task acquires its pool and lane capacity together, so it is queued once rather than
 copied between parent and child queues.
 
 An advanced embedding adds `kie` to its Endpoint list beside a complete, explicit set of Runtime
-service packages and selections. A reproducible project normally activates deterministic model
-components through `packageLock`. The `.svml` Module Closure separately contains only the model
+service packages and selections. The `.svml` Module Closure separately contains only the model
 Manifests actually imported by the author document; installing KIE does not add author intent.
 
 ## Paid-operation law
@@ -95,7 +94,7 @@ Manifests actually imported by the author document; installing KIE does not add 
    immediately written to the configured content-addressed ArtifactStore, and removed from durable
    result metadata.
 5. The selected `BuildDispatchStore` owns shared Build capacity. This Provider contributes one KIE
-   Authority plus exact capability Routes and a conservative create-task interval; it does not introduce Redis or another source of
+   pool plus exact capability lanes and a conservative create-task interval; it does not introduce Redis or another source of
    Build truth.
 
 The automated suite uses an adversarial fake KIE service. The credentialed smoke command is a paid
@@ -104,15 +103,15 @@ explicitly and keeps a stable Runtime directory under the operating system tempo
 an interrupted paid task can resume from its SQLite checkpoint:
 
 ```sh
-SVML_KIE_LIVE=1 KIE_API_KEY=... pnpm smoke:kie
+NARRATAGE_KIE_LIVE=1 KIE_API_KEY=... pnpm smoke:kie
 ```
 
-The default case is `gpt-image-2`. Set `SVML_KIE_SMOKE_CASES=all` or a comma-separated subset of
+The default case is `gpt-image-2`. Set `NARRATAGE_KIE_SMOKE_CASES=all` or a comma-separated subset of
 `gpt-image-2,nano-banana-2,seedream-5-lite,seedance-2-mini,minimax-h3,gemini-omni,grok-imagine`.
-Set `SVML_KIE_SMOKE_REFERENCE` to add the optional `gpt-image-2-edit` upload case; only use an asset
+Set `NARRATAGE_KIE_SMOKE_REFERENCE` to add the optional `gpt-image-2-edit` upload case; only use an asset
 that is explicitly approved for external upload.
 
-`KIE_BASE_URL` and `SVML_KIE_SMOKE_ROOT` are optional deployment overrides. The command prints
+`KIE_BASE_URL` and `NARRATAGE_KIE_SMOKE_ROOT` are optional deployment overrides. The command prints
 credit usage, the content digest and a local inspection copy, but never prints or persists the key.
 A representative run of all seven families and the optional upload case has passed. Generated
 results are deployment evidence and are intentionally not committed as a dated transcript.

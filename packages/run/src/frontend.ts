@@ -1,6 +1,5 @@
 import {
   digestOf,
-  isDigest,
 } from "@narratage/protocol";
 import {
   compiledSourceIdentity,
@@ -39,7 +38,6 @@ export class RunFrontendRegistry implements RunFrontendRegistryLike {
 
   register(frontend: RunFrontend): void {
     assert(frontend.id.trim().length > 0, "EMPTY_RUN_FRONTEND", "Run Frontend id is empty");
-    assert(isDigest(frontend.implementationDigest), "INVALID_RUN_FRONTEND_DIGEST", `${frontend.id} digest is invalid`);
     assert(!this.#frontends.has(frontend.id), "DUPLICATE_RUN_FRONTEND", `${frontend.id} is already registered`, frontend.id);
     this.#frontends.set(frontend.id, frontend);
   }
@@ -60,7 +58,7 @@ export function prepareRunSource(source: RunSourceUnit): RunFrontendSourceUnit {
 
 function closureContent(closure: RunSourceClosure): Omit<RunSourceClosure, "id"> {
   return {
-    format: "svml.run-source-closure@1",
+    format: "narratage.run-source-closure@1",
     ...compiledSourceIdentity(closure),
   };
 }
@@ -72,12 +70,10 @@ export async function compileRunSource(
   const prepared = prepareRunSource(source);
   const frontend = frontends.resolve(prepared.header.using);
   assert(frontend !== undefined, "UNKNOWN_RUN_FRONTEND", `Run Frontend ${prepared.header.using} is not registered`, prepared.header.using);
-  assert(isDigest(frontend.implementationDigest), "INVALID_RUN_FRONTEND_DIGEST", `${frontend.id} digest is invalid`);
   const decoded = await frontend.decode(prepared);
   const closureWithoutId = {
-    format: "svml.run-source-closure@1" as const,
+    format: "narratage.run-source-closure@1" as const,
     frontend: frontend.id,
-    frontendDigest: frontend.implementationDigest,
     sourceDigest: digestOf(source.text),
     semanticDigest: digestOf(decoded.document),
   };
@@ -87,7 +83,7 @@ export async function compileRunSource(
 }
 
 export function verifyRunSourceClosure(closure: RunSourceClosure): void {
-  assert(closure.format === "svml.run-source-closure@1", "UNSUPPORTED_RUN_SOURCE_CLOSURE", "unsupported Run Source Closure");
+  assert(closure.format === "narratage.run-source-closure@1", "UNSUPPORTED_RUN_SOURCE_CLOSURE", "unsupported Run Source Closure");
   verifyCompiledSourceIdentity(closure);
   assert(closure.id === digestOf(closureContent(closure)), "RUN_SOURCE_CLOSURE_DIGEST_MISMATCH", "Run Source Closure digest differs");
 }

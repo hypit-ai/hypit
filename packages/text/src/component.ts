@@ -2,7 +2,6 @@ import type { ComponentPackage, ProducerHandlerContext } from "@narratage/compon
 import type { StoredValue } from "@narratage/protocol";
 
 import {
-  textImplementationDigests,
   textProducers,
   textTypes,
 } from "./manifest.js";
@@ -24,24 +23,22 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 
 export const textComponent = {
   validators: [
-    { type: textTypes.text, implementationDigest: textImplementationDigests.validateText,
+    { type: textTypes.text,
       handler: ({ value }) => verifyText(inline(value, "Text")) },
-    { type: textTypes.template, implementationDigest: textImplementationDigests.validateTemplate,
+    { type: textTypes.template,
       handler: ({ value }) => verifyTextTemplate(inline(value, "TextTemplate")) },
-    { type: textTypes.bindings, implementationDigest: textImplementationDigests.validateBindings,
+    { type: textTypes.bindings,
       handler: ({ value }) => verifyTextBindings(inline(value, "TextBindings")) },
-    { type: textTypes.binding, implementationDigest: textImplementationDigests.validateBinding,
+    { type: textTypes.binding,
       handler: ({ value }) => verifyTextBinding(inline(value, "TextBinding")) },
   ],
   producers: [
     {
       producer: textProducers.emptyBindings,
-      implementationDigest: textImplementationDigests.emptyBindings,
       handler: () => ({ outputs: { bindings: { kind: "inline", value: sealTextBindings() } }, needs: {} }),
     },
     {
       producer: textProducers.bindText,
-      implementationDigest: textImplementationDigests.bindText,
       handler: ({ inputs }: ProducerHandlerContext) => ({
         outputs: {
           bindings: {
@@ -58,7 +55,6 @@ export const textComponent = {
     },
     {
       producer: textProducers.render,
-      implementationDigest: textImplementationDigests.render,
       handler: ({ inputs }: ProducerHandlerContext) => ({
         outputs: {
           text: {

@@ -6,14 +6,13 @@ import type {
 } from "@narratage/protocol";
 
 export type OperationIdentity = {
-  readonly format: "svml.operation-identity@1";
+  readonly format: "narratage.operation-identity@1";
   readonly id: Digest;
   readonly build: string;
   readonly command: string;
   readonly endpoint: string;
-  readonly authority: string;
-  readonly route: string;
-  readonly runtimeClosure: Digest;
+  readonly pool: string;
+  readonly lane: string;
   readonly attempt: number;
 };
 
@@ -90,9 +89,8 @@ export type OperationQuery = {
   readonly build?: string;
   readonly command?: string;
   readonly endpoint?: string;
-  readonly authority?: string;
-  readonly route?: string;
-  readonly runtimeClosure?: Digest;
+  readonly pool?: string;
+  readonly lane?: string;
 };
 
 export type OperationStore = {
@@ -118,13 +116,12 @@ function epochMillisecond(value: number, subject: string): number {
 
 function identityContent(value: Omit<OperationIdentity, "id">): Omit<OperationIdentity, "id"> {
   return {
-    format: "svml.operation-identity@1",
+    format: "narratage.operation-identity@1",
     build: value.build,
     command: value.command,
     endpoint: value.endpoint,
-    authority: value.authority,
-    route: value.route,
-    runtimeClosure: value.runtimeClosure,
+    pool: value.pool,
+    lane: value.lane,
     attempt: value.attempt,
   };
 }
@@ -135,12 +132,11 @@ export function sealOperationIdentity(
   assert(value.build.trim().length > 0, "Operation build id is empty");
   assert(value.command.trim().length > 0, "Operation command id is empty");
   assert(value.endpoint.trim().length > 0, "Operation Endpoint id is empty");
-  assert(value.authority.trim().length > 0, "Operation Provider Authority is empty");
-  assert(value.route.trim().length > 0, "Operation Capability Route is empty");
-  assert(isDigest(value.runtimeClosure), "Operation Runtime Closure digest is invalid");
+  assert(value.pool.trim().length > 0, "Operation Provider Pool is empty");
+  assert(value.lane.trim().length > 0, "Operation Capability Lane is empty");
   positiveInteger(value.attempt, "Operation attempt");
   const content = identityContent({
-    format: "svml.operation-identity@1",
+    format: "narratage.operation-identity@1",
     ...value,
   });
   return { ...content, id: digestOf(content) };
@@ -203,7 +199,7 @@ export function verifyOperationSnapshot(snapshot: OperationSnapshot): void {
 
 export function operationCancellationRequestId(operation: Digest, requestedAt: number): Digest {
   epochMillisecond(requestedAt, "Operation cancellation requestedAt");
-  return digestOf({ format: "svml.operation-cancellation-request@1", operation, requestedAt });
+  return digestOf({ format: "narratage.operation-cancellation-request@1", operation, requestedAt });
 }
 
 function verifyOperationCancellationControl(
@@ -256,9 +252,8 @@ export class MemoryOperationStore implements OperationStore {
       .filter((snapshot) => query.build === undefined || snapshot.build === query.build)
       .filter((snapshot) => query.command === undefined || snapshot.command === query.command)
       .filter((snapshot) => query.endpoint === undefined || snapshot.endpoint === query.endpoint)
-      .filter((snapshot) => query.authority === undefined || snapshot.authority === query.authority)
-      .filter((snapshot) => query.route === undefined || snapshot.route === query.route)
-      .filter((snapshot) => query.runtimeClosure === undefined || snapshot.runtimeClosure === query.runtimeClosure)
+      .filter((snapshot) => query.pool === undefined || snapshot.pool === query.pool)
+      .filter((snapshot) => query.lane === undefined || snapshot.lane === query.lane)
       .sort((left, right) => left.attempt - right.attempt || left.id.localeCompare(right.id))
       .map(copy);
   }
@@ -304,9 +299,8 @@ export class MemoryOperationStore implements OperationStore {
       build: current.build,
       command: current.command,
       endpoint: current.endpoint,
-      authority: current.authority,
-      route: current.route,
-      runtimeClosure: current.runtimeClosure,
+      pool: current.pool,
+      lane: current.lane,
       attempt: current.attempt,
       revision: current.revision + 1,
       ...mutable,

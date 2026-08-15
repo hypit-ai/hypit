@@ -1,11 +1,9 @@
-import { canonicalStringify, isDigest } from "@narratage/protocol";
-import type { Digest } from "@narratage/protocol";
+import { canonicalStringify } from "@narratage/protocol";
 
 import type { HostFacet } from "./facet.js";
 
 export type FrontendImplementation = {
   readonly id: string;
-  readonly implementationDigest: Digest;
 };
 
 export type FrontendHostFacet<
@@ -15,7 +13,6 @@ export type FrontendHostFacet<
   readonly offers: readonly [string];
   readonly identity: {
     readonly kind: Kind;
-    readonly implementationDigest: Digest;
   };
   readonly implementation: Frontend;
 };
@@ -26,15 +23,14 @@ export function createFrontendHostFacet<
   Frontend extends FrontendImplementation,
 >(abi: string, kind: Kind, frontend: Frontend): FrontendHostFacet<Kind, Frontend> {
   if (abi.trim().length === 0 || kind.trim().length === 0
-    || frontend.id.trim().length === 0 || !isDigest(frontend.implementationDigest)) {
-    throw new Error(`${kind || "Source"} Frontend Host facet has an invalid implementation identity`);
+    || frontend.id.trim().length === 0) {
+    throw new Error(`${kind || "Source"} Frontend Host facet has an invalid identity`);
   }
   return {
     abi,
     offers: [frontend.id],
     identity: {
       kind,
-      implementationDigest: frontend.implementationDigest,
     },
     implementation: frontend,
   };

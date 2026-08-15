@@ -1,27 +1,33 @@
 ---
 title: Package Architecture
-description: The five layers, dependency boundaries, package anatomy and facets.
+description: The seven layers, dependency boundaries, package anatomy and facets.
 ---
 
 # Package Architecture
 
-Workspace packages under `packages/` are organized into five architectural layers. Dependencies are
+Workspace packages under `packages/` are organized into seven architectural layers. Dependencies are
 declared by each package itself. The root installs the complete source checkout so the Package
-Loader can resolve any explicitly locked package, but TypeScript has no central path alias that can
+Loader can resolve any explicitly selected package, but TypeScript has no central path alias that can
 hide a package's undeclared import.
 
-## The five layers
+## The seven layers
 
-### Layer 1: Domain-neutral foundation
+### Layer 1: Narratage Core
 
-These packages implement the graph language, Build state machine, compiler infrastructure and
-Runtime ports. They are reusable by any domain — not just video — and have no dependency on Text,
-Script, Seedance, Film or any video concept.
+The immutable graph protocol, demand compiler and Build state machine. This closure is domain
+neutral and knows nothing about source syntax, files, networks, models or video.
 
 ```text
 @narratage/protocol              immutable wire contracts
-@narratage/artifact              domain-neutral content-addressed byte type
 @narratage/core                  Demand compiler and Build state machine
+```
+
+### Layer 2: Compiler
+
+Source discovery, Frontends, imports, graph elaboration and the reference Node Host. A source
+selects its own Frontend in its mandatory header; no central parser knows every language feature.
+
+```text
 @narratage/source                mandatory Source Header
 @narratage/elaborator            author declarations and Fragment expansion
 @narratage/run                   syntax-neutral Run Graph
@@ -30,49 +36,42 @@ Script, Seedance, Film or any video concept.
 @narratage/workspace             replaceable Source/Asset session
 @narratage/compiler-node         reference Node compiler Host
 @narratage/workspace-fs-node     workspace filesystem abstraction
-@narratage/component-kit         Producer/validator registration
-@narratage/runtime               Scheduler and Store ports
-@narratage/runtime-adapter       deployment-adapter ABI
-@narratage/runtime-adapter-node  project-root resolution
-@narratage/endpoint-kit          Endpoint registration
-@narratage/driver-node           trusted Node command executor
-@narratage/package-loader-node   byte-locked package loading
-@narratage/store-sqlite          SQLite Build/Operation stores
-@narratage/artifact-store-fs     filesystem Artifact store
-@narratage/artifact-store-s3     S3 Artifact store
-@narratage/credential-store-env  environment credentials
-@narratage/credential-store-keychain macOS Keychain credentials
-@narratage/transport             invocation seams
-@narratage/transport-aws-lambda  Lambda transport
-@narratage/local                 SQLite/filesystem developer assembly
-```
-
-### Layer 2: Author language
-
-Author-facing vocabulary: the Markup Frontend, Script Surface, SVS Recipes, Run Markup Frontend and
-reusable deterministic text compilation.
-
-```text
+@narratage/package-loader-node   installed package selection
 @narratage/markup                official .svml Markup Frontend
-@narratage/script                Script Surface
 @narratage/svs                   SVS Recipe Frontend
 @narratage/run-markup            official .svrun Markup Frontend
-@narratage/text                  graph-native text values, templates and deterministic rendering
 @narratage/compiler-markup-node  Markup Frontend + Surface Host assembly
 ```
 
-`@narratage/text` is domain-neutral in meaning even though it is author-language vocabulary. Its
-ordinary `Text` outputs may feed model ports or visible video consumers. Those consumers depend on
-the Text waist; Text never depends back on Typography, Ranking, Sticker, Deck or any model family.
+### Layer 3: Foundations
 
-### Layer 3: Video domain
-
-Video-specific types, generation model families, speech/caption/track contracts and composition.
-Depends on Layer 1 and 2 but not on any Provider.
+Reusable values and deterministic building blocks. They support video authoring but do not decide a
+film's creative structure or call an external service.
 
 ```text
-@narratage/media                 media types
+@narratage/artifact              content-addressed bytes
+@narratage/component-kit         Producer and validator registration
+@narratage/text                  graph-native text templates
+@narratage/media                 media values
+@narratage/temporal              Selection and Moment projection
+@narratage/spatial               layout geometry
+@narratage/visual-ir             renderer-neutral visual vocabulary
+@narratage/fonts-open            redistributable font assets
+@narratage/media-pipeline        media inspection and normalization
+@narratage/media-execution       shared ffmpeg execution body
+@narratage/transport             invocation seams
+@narratage/transport-aws-lambda  Lambda transport
+```
+
+### Layer 4: Video authoring
+
+The packages that give SVML its video vocabulary: narrative, exact model requests, speech,
+captions, peer Tracks, Film and render declarations. They depend on shared contracts, never on a
+specific Provider deployment.
+
+```text
 @narratage/narrative             authored narrative products
+@narratage/script                Script Surface
 @narratage/program-space         exact frame/sample domain
 @narratage/generation            image/video/audio generation contracts
 @narratage/model-kit             model family abstractions
@@ -93,12 +92,9 @@ Depends on Layer 1 and 2 but not on any Provider.
 @narratage/speech-alignment      speech alignment
 @narratage/speech-spine          ordered speech-take compilation
 @narratage/whisperx              WhisperX component
-@narratage/temporal              Selection/Moment projection and schedules
-@narratage/spatial               Canvas/Frame/Point/Path geometry
 @narratage/caption               caption planning and timing
 @narratage/caption-gemini        Gemini caption planner
 @narratage/caption-fine          field-free fine caption Track family
-@narratage/fonts-open            exact redistributable font catalog
 @narratage/media-track           unified Media Item/Sequence Track
 @narratage/typography-track      typography overlay Track
 @narratage/audio-track           arbitrary sample-domain Audio Track
@@ -107,18 +103,15 @@ Depends on Layer 1 and 2 but not on any Provider.
 @narratage/screen-overlay        self-contained full-canvas overlays
 @narratage/film                  Film composition
 @narratage/composition           peer Track composition
-@narratage/visual-ir             renderer-neutral visual vocabulary
 @narratage/hyperframes           HyperFrames document compiler
 @narratage/render-hyperframes    explicit HyperFrames rendering component
 @narratage/image-transform       image processing component
 @narratage/image-compose         ordered still-image composition
 @narratage/raster                shared deterministic raster execution contract
 @narratage/background-removal    external image cutout capability
-@narratage/media-pipeline        media inspection/normalization
-@narratage/media-execution       shared ffmpeg execution body for Providers
 ```
 
-### Layer 4: Provider (Endpoint) packages
+### Layer 5: Providers
 
 Privileged external capabilities. Depend on Runtime ports and shared capability vocabularies,
 never on exact-model packages or the CLI.
@@ -135,7 +128,26 @@ never on exact-model packages or the CLI.
 @narratage/provider-xiaomi-mimo           official Xiaomi MiMo TTS API
 ```
 
-### Layer 5: Application
+### Layer 6: Runtime
+
+Domain-neutral execution ports plus replaceable deployment implementations. Runtime packages own
+queues, leases, stores, credentials and process lifecycle; they never define author syntax.
+
+```text
+@narratage/runtime               Scheduler, Worker and Store ports
+@narratage/endpoint-kit          Endpoint declarations
+@narratage/driver-node           trusted Node command executor
+@narratage/runtime-kit           deployment package ABI
+@narratage/runtime-host-node     Node Runtime Host ABI
+@narratage/runtime-local         local Worker and assembly
+@narratage/store-sqlite          SQLite state
+@narratage/artifact-store-fs     filesystem Artifacts
+@narratage/artifact-store-s3     S3 Artifacts
+@narratage/credential-store-env  environment credentials
+@narratage/credential-store-keychain macOS Keychain credentials
+```
+
+### Layer 7: Applications
 
 ```text
 @narratage/cli           generic command engine (requires explicit Distribution)
@@ -148,13 +160,13 @@ The package layout follows three dependency rules:
 
 1. **Acyclic production graph.** No dependency cycle among any `@narratage/*` packages.
 
-2. **Domain-neutral closure.** Every Layer 1 package's transitive closure contains only Layer 1
-   packages. `@narratage/core` depends only on `@narratage/protocol`.
+2. **Domain-neutral Core closure.** Layer 1 contains only `protocol` and `core`; `core` depends only
+   on `protocol`. Compiler and Runtime may also be domain neutral, but they remain outside Core.
 
 3. **CLI independence.** Neither `@narratage/cli` nor `@narratage/video-cli` transitively depends on any
    Provider package. The video CLI also does not depend on any author-level video package
    (`@narratage/script`, `@narratage/seedance`, `@narratage/media-track`, `@narratage/typography-track`, `@narratage/film`).
-   Author packages are activated through the explicit package lock, not compile-time CLI
+   Author packages are activated through Source imports, not compile-time CLI
    dependencies. These rules are kept visible in package manifests and reviewed as architecture,
    rather than approximated by source-text regex tests.
 
@@ -183,7 +195,7 @@ packages/example/
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": {
+  "narratage": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
@@ -194,11 +206,10 @@ packages/example/
 
 - `"exports"` points to TypeScript source directly during development. pnpm's workspace links resolve
   `@narratage/*` imports through the dependency declared by the importing package.
-- `"svml.activation"` is the entry point that the Package Loader reads when this package is
-  byte-locked. It must default-export a `NodePackageContribution`.
+- `"narratage.activation"` is the entry point that the Package Loader reads when this package is
+  selected. It must default-export a `NodePackageContribution`.
 - The physical package version remains `0.0.0-dev` until publication. Module and Frontend manifests
-  use the independent logical protocol version `1`; exact implementation identity is the lock
-  digest.
+  use the independent logical protocol version `1`.
 
 ### activation.ts
 
@@ -216,66 +227,47 @@ A physical package may expose independently activated facets:
 | `author` | Frontend, Surface, Graph Fragment | author vocabulary only | source `<import>` through the compiler Host |
 | `compute` | deterministic Producer, Type Validator | pure computation | compiler Host |
 | `endpoint` | privileged external capability | network, filesystem, process, credentials | Runtime Profile |
-| `runtime` | Scheduler, Store implementation | persistence, scheduling | Runtime Profile |
+| `infrastructure` | Scheduler, Worker and Store implementation | persistence, scheduling | Runtime Profile |
 
 A source `<import>` activates only author facets. It never grants network, filesystem, process,
 credential or queue authority.
 
-## Package locking
+## Package selection
 
-SVML uses byte-locked trusted code execution. The loader records each package's name, version and
-SHA-256 digest:
+Narratage does not maintain a package registry or a second package-resolution layer. npm or pnpm
+installs packages and owns their versions and integrity. Narratage has two explicit selection paths:
 
-```json
-{
-  "format": "svml.node-package-lock@1",
-  "artifacts": [
-    {
-      "name": "@narratage/seedance",
-      "version": "0.0.0-dev",
-      "digest": "sha256:abc123..."
-    }
-  ]
-}
-```
+| Selection | Packages activated |
+|---|---|
+| Source imports | Frontends, Surfaces, Producers and Validators |
+| Runtime Profile `use` | Runtime Hosts, infrastructure and Provider Endpoints |
 
-Two independent package inventories serve different authority scopes:
-
-| Lock file | Contains | Identity scope |
-|---|---|---|
-| `svml.packages.lock` | Frontends, Surfaces, Producers, Validators | Author Graph + Run Graph + execution Program Closure |
-| `svml.runtime-packages.lock` | Providers, Stores, transports | Runtime Closure |
-
-`packages sync` grows or refreshes an inventory without deleting another Run's roots. One
-compilation activates only the exact subset its Source requests and binds that subset digest into
-the Build; Runtime adapter selection is likewise the exact subset declared by the Profile.
-Changing package bytes requires explicitly refreshing the inventory.
+A Source import never grants network, filesystem, process, credential or queue authority. Those
+remain available only to packages explicitly selected by the Runtime Profile.
 
 ### Logical package addresses and Source discovery
 
-Source code names logical language capabilities, not npm locations. The inventory binds each
-logical address to one byte-locked physical package as the pair `(Host ABI, logical name)`. Thus a
-Module and a Run Fragment may intentionally share a spelling without becoming the same capability,
-and one physical package may offer several logical names.
+Source code names logical language capabilities. By convention the logical name maps directly to
+the installed npm package name. A Module and a Run Fragment may share a spelling because their Host
+ABIs remain different, and one physical package may offer several logical names.
 
-Compilation reads only the mandatory Source Header first. It resolves that Frontend from the
-trusted inventory, calls the Frontend's own `discover()` method, resolves the reported Modules,
+Compilation reads only the mandatory Source Header first. It resolves that Frontend from installed
+packages, calls the Frontend's own `discover()` method, resolves the reported Modules,
 Run Fragments and child Sources, and repeats until the exact package subset stops growing. Only
 then does semantic decoding begin. Markup is the video Distribution's bootstrap Frontend; Script,
 SVS, Run Markup and third-party Frontends otherwise follow the same discovery protocol. The package
 selector contains no parser-specific branch.
 
 Frontend implementations are not privileged fields in the physical package format. They advertise
-the ordinary `svml.source-frontend@1` Host facet, exactly as Run Fragments, Markup Surfaces and
+the ordinary `narratage.source-frontend@1` Host facet, exactly as Run Fragments, Markup Surfaces and
 Runtime Adapters advertise their own Host ABIs. Only the Source Host interprets that facet.
 
 Runtime Profiles follow the same rule. Each `use` selects a Runtime Host, Endpoint Adapter or
-Runtime Component Adapter ABI plus a logical name. A physical npm package advertises that logical
-offer; its package name is only an enrollment hint and lockfile fact. The generic CLI therefore
+Runtime Infrastructure ABI plus a logical name. A physical npm package advertises that logical
+offer. The generic CLI therefore
 does not contain a Provider registry, and different Adapter kinds may share
 a logical spelling without colliding.
 
-When a logical name and physical npm package have the conventional same root, `packages sync` can
-enrol it directly. A differently named bundle must first be explicitly added to the project
-inventory; afterward Source remains bound only to its logical name. Unknown code is never downloaded
-or executed merely because a Source Header names it.
+The loader never downloads packages and never scans unrelated installed dependencies for plugins.
+It loads only packages selected by Source discovery or the Runtime Profile, plus exact Module
+dependencies declared by those packages.

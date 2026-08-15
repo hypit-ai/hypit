@@ -12,7 +12,6 @@ and `.svs` files that an ordinary Build compiles.
 ```bash
 pnpm caption:playground -- \
   --source examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock \
   --style base-caption \
   --display story.caption \
   --recipe examples/talking-film-graph-check/studio.svs#caption.base \
@@ -28,7 +27,6 @@ All selections are explicit:
 | Argument | Selected fact |
 |---|---|
 | `--source` | self-described author source |
-| `--package-lock` | trusted author compiler closure |
 | `--style` | authored Fine Caption Style export |
 | `--display` | authored Caption Display export |
 | `--recipe` | real SVS file and Recipe path to edit |

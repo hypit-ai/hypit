@@ -4,7 +4,6 @@ import {
   digestOf,
   isDigest,
   link,
-  verifyRecordStructure,
 } from "@narratage/core";
 import type {
   Digest,
@@ -93,7 +92,6 @@ export type Awaitable<T> = T | Promise<T>;
 
 export type AuthorFrontend = {
   readonly id: string;
-  readonly implementationDigest: Digest;
   discover(source: AuthorFrontendSourceUnit): Awaitable<AuthorSourceDiscovery>;
   decode(source: AuthorFrontendSourceUnit, context: AuthorSourceDecodeContext): Awaitable<DecodedAuthorSource>;
 };
@@ -107,9 +105,6 @@ export class AuthorFrontendRegistry implements AuthorFrontendRegistryLike {
 
   register(frontend: AuthorFrontend): void {
     if (frontend.id.length === 0) throw new SourceClosureError("EMPTY_FRONTEND_ID", "Frontend id is empty");
-    if (!isDigest(frontend.implementationDigest)) {
-      throw new SourceClosureError("INVALID_FRONTEND_DIGEST", `${frontend.id} implementation digest is invalid`);
-    }
     if (this.#frontends.has(frontend.id)) {
       throw new SourceClosureError("DUPLICATE_FRONTEND", `Frontend ${frontend.id} is already registered`, frontend.id);
     }
@@ -125,14 +120,14 @@ export type AuthorSourceResolver = SourceResolver;
 
 export type AuthorSourceAssetResolver = SourceAssetResolver;
 
-/** Host-owned admission gate; it may reject a Record but cannot rewrite author meaning. */
+/** Host-owned admission gate for one already sealed authored Record. */
 export type AuthorRecordAdmitter = (
   closure: ResolvedModuleClosure,
   record: TypedRecord,
-) => Awaitable<TypedRecord>;
+) => Awaitable<void>;
 
 export type SourceClosureUnit = CompiledSourceIdentity & {
-  readonly format: "svml.source-unit@1";
+  readonly format: "narratage.source-unit@1";
   readonly id: Digest;
   readonly imports: readonly {
     readonly alias: string;
@@ -141,7 +136,7 @@ export type SourceClosureUnit = CompiledSourceIdentity & {
 };
 
 export type SourceClosure = {
-  readonly format: "svml.source-closure@1";
+  readonly format: "narratage.source-closure@1";
   readonly id: Digest;
   readonly entry: Digest;
   readonly units: readonly SourceClosureUnit[];
@@ -191,7 +186,7 @@ export class SourceClosureError extends Error {
 
 function sourceUnitContent(unit: SourceClosureUnit): Omit<SourceClosureUnit, "id"> {
   return {
-    format: "svml.source-unit@1",
+    format: "narratage.source-unit@1",
     ...compiledSourceIdentity(unit),
     imports: [...unit.imports]
       .map((item) => ({
@@ -204,7 +199,7 @@ function sourceUnitContent(unit: SourceClosureUnit): Omit<SourceClosureUnit, "id
 
 function sourceClosureContent(closure: SourceClosure): Omit<SourceClosure, "id"> {
   return {
-    format: "svml.source-closure@1",
+    format: "narratage.source-closure@1",
     entry: closure.entry,
     units: [...closure.units].sort((left, right) => left.id.localeCompare(right.id)),
   };
@@ -346,9 +341,8 @@ function hygienizeSource(
   }));
   const exports = decoded.exports.map((item) => ({ ...item, ref: mapRef(item.ref) }));
   const unitContent = {
-    format: "svml.source-unit@1" as const,
+    format: "narratage.source-unit@1" as const,
     frontend: frontend.id,
-    frontendDigest: frontend.implementationDigest,
     sourceDigest,
     semanticDigest,
     imports: imports
@@ -361,9 +355,8 @@ function hygienizeSource(
   return {
     unit: {
       id: digestOf(unitContent),
-      format: "svml.source-unit@1",
+      format: "narratage.source-unit@1",
       frontend: frontend.id,
-      frontendDigest: frontend.implementationDigest,
       sourceDigest: unitContent.sourceDigest,
       semanticDigest,
       imports: unitContent.imports,
@@ -410,7 +403,6 @@ export async function compileSourceClosure(
     );
     const frontend = request.frontends.resolve(frontendId);
     assert(frontend !== undefined, "UNKNOWN_FRONTEND", `Frontend ${frontendId} is not registered`, frontendId);
-    assert(isDigest(frontend.implementationDigest), "INVALID_FRONTEND_DIGEST", `${frontendId} digest is invalid`);
     visiting.push(key);
     const discovery = await (request.discover === undefined
       ? frontend.discover(source)
@@ -490,35 +482,13 @@ export async function compileSourceClosure(
     });
     const admittedRecords: TypedRecord[] = [];
     for (const record of rawDecoded.records) {
-      const admitted = request.admitRecord === undefined
-        ? record
-        : await request.admitRecord(request.closure, record);
-      assert(
-        canonicalStringify({
-          id: admitted.id,
-          type: admitted.type,
-          value: admitted.value,
-          digest: admitted.digest,
-          origin: admitted.origin,
-        }) === canonicalStringify({
-          id: record.id,
-          type: record.type,
-          value: record.value,
-          digest: record.digest,
-          origin: record.origin,
-        }),
-        "RECORD_ADMISSION_REWRITE",
-        `Record admission rewrote ${source.name}:${record.id}`,
-        record.id,
-      );
-      verifyRecordStructure(request.closure, admitted);
-      admittedRecords.push(admitted);
+      await request.admitRecord?.(request.closure, record);
+      admittedRecords.push(record);
     }
     const decoded: DecodedAuthorSource = {
       ...rawDecoded,
       records: admittedRecords,
     };
-    link(request.closure, decoded.records);
     const result = hygienizeSource(source, digestOf(rawSource.text), frontend, decoded, imports);
     visiting.pop();
     cache.set(key, result);
@@ -549,7 +519,7 @@ export async function compileSourceClosure(
   const graph = elaborateAuthorGraph(program, components, (id) => fragments.get(id));
   const units = ordered.map((unit) => unit.unit).sort((left, right) => left.id.localeCompare(right.id));
   const closureContent = {
-    format: "svml.source-closure@1" as const,
+    format: "narratage.source-closure@1" as const,
     entry: entry.unit.id,
     units,
   };
@@ -571,11 +541,11 @@ export async function compileSourceClosure(
 }
 
 export function verifySourceClosure(closure: SourceClosure): void {
-  assert(closure.format === "svml.source-closure@1", "UNSUPPORTED_SOURCE_CLOSURE", "unsupported Source Closure format");
+  assert(closure.format === "narratage.source-closure@1", "UNSUPPORTED_SOURCE_CLOSURE", "unsupported Source Closure format");
   assert(isDigest(closure.id), "INVALID_SOURCE_CLOSURE_DIGEST", "Source Closure digest is invalid");
   const units = new Map<string, SourceClosureUnit>();
   for (const unit of closure.units) {
-    assert(unit.format === "svml.source-unit@1", "UNSUPPORTED_SOURCE_UNIT", "unsupported SourceUnit format");
+    assert(unit.format === "narratage.source-unit@1", "UNSUPPORTED_SOURCE_UNIT", "unsupported SourceUnit format");
     assert(isDigest(unit.id), "INVALID_SOURCE_UNIT_DIGEST", "SourceUnit digest is invalid");
     assert(unit.id === digestOf(sourceUnitContent(unit)), "SOURCE_UNIT_DIGEST_MISMATCH", `SourceUnit ${unit.id} digest differs`);
     assert(!units.has(unit.id), "DUPLICATE_SOURCE_UNIT", `Source Closure repeats ${unit.id}`, unit.id);

@@ -9,38 +9,7 @@ import type { SpatialFrame } from "@narratage/spatial";
 import type { Text } from "@narratage/text";
 
 import { rankingProducers, rankingTypes } from "./manifest.js";
-import {
-  appendColumnItem,
-  appendRankingItemSpec,
-  appendRankingSound,
-  appendTierBoardItem,
-  appendTopThreeItem,
-  appendTypewriterItem,
-  assertColumnProgram,
-  assertRankingSchedule,
-  assertRankingSoundEventPlan,
-  assertTierBoardProgram,
-  assertTopThreeProgram,
-  assertTypewriterListProgram,
-  buildColumnProgram,
-  buildColumnSoundEvents,
-  buildRankingSchedule,
-  buildTierBoardProgram,
-  buildTierBoardSoundEvents,
-  buildTopThreeProgram,
-  buildTopThreeSoundEvents,
-  buildTypewriterListProgram,
-  buildTypewriterSoundEvents,
-  createColumnItemSet,
-  createRankingItemSpecSet,
-  createRankingSoundSet,
-  createTierBoardItemSet,
-  createTopThreeItemSet,
-  createTypewriterItemSet,
-  rankingImplementationDigests,
-  rankingValidatorDigests,
-  materializeRankingTextItem,
-} from "./schedule.js";
+import { appendColumnItem, appendRankingItemSpec, appendRankingSound, appendTierBoardItem, appendTopThreeItem, appendTypewriterItem, assertColumnProgram, assertRankingSchedule, assertRankingSoundEventPlan, assertTierBoardProgram, assertTopThreeProgram, assertTypewriterListProgram, buildColumnProgram, buildColumnSoundEvents, buildRankingSchedule, buildTierBoardProgram, buildTierBoardSoundEvents, buildTopThreeProgram, buildTopThreeSoundEvents, buildTypewriterListProgram, buildTypewriterSoundEvents, createColumnItemSet, createRankingItemSpecSet, createRankingSoundSet, createTierBoardItemSet, createTopThreeItemSet, createTypewriterItemSet, materializeRankingTextItem } from "./schedule.js";
 import {
   renderColumn,
   renderRankingAudio,
@@ -99,7 +68,6 @@ export const rankingComponent = {
   producers: [
     {
       producer: rankingProducers.materializeTextItem,
-      implementationDigest: rankingImplementationDigests.materializeTextItem,
       handler: ({ inputs }) => ({ outputs: { spec: output(materializeRankingTextItem(
         inline<RankingTextItemShell>(inputs.shell?.value, "RankingTextItemShell"),
         inline<Text>(inputs.content?.value, "Text"),
@@ -107,19 +75,16 @@ export const rankingComponent = {
     },
     {
       producer: rankingProducers.createSpecs,
-      implementationDigest: rankingImplementationDigests.createSpecs,
       handler: ({ inputs }) => ({ outputs: { set: output(createRankingItemSpecSet(inline(inputs.header?.value, "RankingHeader"))) }, needs: {} }),
     },
     {
       producer: rankingProducers.appendSpec,
-      implementationDigest: rankingImplementationDigests.appendSpec,
       handler: ({ inputs }) => ({ outputs: { set: output(appendRankingItemSpec(
         inline(inputs.set?.value, "RankingItemSpecSet"), inline(inputs.spec?.value, "RankingItemSpec"),
       )) }, needs: {} }),
     },
     {
       producer: rankingProducers.schedule,
-      implementationDigest: rankingImplementationDigests.schedule,
       handler: ({ inputs }) => ({ outputs: { schedule: output(buildRankingSchedule({
         header: inline(inputs.header?.value, "RankingHeader"), items: inline(inputs.items?.value, "RankingItemSpecSet"),
         map: inline(inputs.map?.value, "CompleteSemanticMap"), space: inline(inputs.space?.value, "ProgramSpace"),
@@ -128,17 +93,16 @@ export const rankingComponent = {
       })) }, needs: {} }),
     },
     ...([
-      [rankingProducers.createTierItems, rankingImplementationDigests.createTierItems, createTierBoardItemSet],
-      [rankingProducers.createColumnItems, rankingImplementationDigests.createColumnItems, createColumnItemSet],
-      [rankingProducers.createTopThreeItems, rankingImplementationDigests.createTopThreeItems, createTopThreeItemSet],
-      [rankingProducers.createTypewriterItems, rankingImplementationDigests.createTypewriterItems, createTypewriterItemSet],
-    ] as const).map(([producer, implementationDigest, create]) => ({
-      producer, implementationDigest,
+      [rankingProducers.createTierItems, createTierBoardItemSet],
+      [rankingProducers.createColumnItems, createColumnItemSet],
+      [rankingProducers.createTopThreeItems, createTopThreeItemSet],
+      [rankingProducers.createTypewriterItems, createTypewriterItemSet],
+    ] as const).map(([producer, create]) => ({
+      producer,
       handler: () => ({ outputs: { set: output(create()) }, needs: {} }),
     })),
     {
       producer: rankingProducers.appendTierItem,
-      implementationDigest: rankingImplementationDigests.appendTierItem,
       handler: ({ inputs }) => ({ outputs: { set: output(appendTierBoardItem(
         inline<TierBoardItemSet>(inputs.set?.value, "TierBoardItemSet"),
         inline<TierBoardItemSpec>(inputs.spec?.value, "TierBoardItemSpec"),
@@ -146,10 +110,10 @@ export const rankingComponent = {
       )) }, needs: {} }),
     },
     ...([
-      [rankingProducers.appendColumnItem, rankingImplementationDigests.appendColumnItem, false],
-      [rankingProducers.appendColumnIconItem, rankingImplementationDigests.appendColumnIconItem, true],
-    ] as const).map(([producer, implementationDigest, hasIcon]) => ({
-      producer, implementationDigest,
+      [rankingProducers.appendColumnItem, false],
+      [rankingProducers.appendColumnIconItem, true],
+    ] as const).map(([producer, hasIcon]) => ({
+      producer,
       handler: ({ inputs }: ProducerHandlerContext) => ({ outputs: { set: output(appendColumnItem(
         inline<ColumnItemSet>(inputs.set?.value, "ColumnItemSet"),
         inline<ColumnItemSpec>(inputs.spec?.value, "ColumnItemSpec"),
@@ -157,10 +121,10 @@ export const rankingComponent = {
       )) }, needs: {} }),
     })),
     ...([
-      [rankingProducers.appendTopThreeItem, rankingImplementationDigests.appendTopThreeItem, false],
-      [rankingProducers.appendTopThreeIconItem, rankingImplementationDigests.appendTopThreeIconItem, true],
-    ] as const).map(([producer, implementationDigest, hasIcon]) => ({
-      producer, implementationDigest,
+      [rankingProducers.appendTopThreeItem, false],
+      [rankingProducers.appendTopThreeIconItem, true],
+    ] as const).map(([producer, hasIcon]) => ({
+      producer,
       handler: ({ inputs }: ProducerHandlerContext) => ({ outputs: { set: output(appendTopThreeItem(
         inline<TopThreeItemSet>(inputs.set?.value, "TopThreeItemSet"),
         inline<TopThreeItemSpec>(inputs.spec?.value, "TopThreeItemSpec"),
@@ -169,7 +133,6 @@ export const rankingComponent = {
     })),
     {
       producer: rankingProducers.appendTypewriterItem,
-      implementationDigest: rankingImplementationDigests.appendTypewriterItem,
       handler: ({ inputs }) => ({ outputs: { set: output(appendTypewriterItem(
         inline<TypewriterItemSet>(inputs.set?.value, "TypewriterItemSet"),
         inline<TypewriterItemSpec>(inputs.spec?.value, "TypewriterItemSpec"),
@@ -177,7 +140,6 @@ export const rankingComponent = {
     },
     {
       producer: rankingProducers.tierProgram,
-      implementationDigest: rankingImplementationDigests.tierProgram,
       handler: ({ inputs }) => {
         const common = programInputs(inputs);
         return { outputs: { program: output(buildTierBoardProgram(common.header, common.frame, common.schedule,
@@ -186,7 +148,6 @@ export const rankingComponent = {
     },
     {
       producer: rankingProducers.columnProgram,
-      implementationDigest: rankingImplementationDigests.columnProgram,
       handler: ({ inputs }) => {
         const common = programInputs(inputs);
         return { outputs: { program: output(buildColumnProgram(common.header, common.frame, common.schedule,
@@ -195,7 +156,6 @@ export const rankingComponent = {
     },
     {
       producer: rankingProducers.topThreeProgram,
-      implementationDigest: rankingImplementationDigests.topThreeProgram,
       handler: ({ inputs }) => {
         const common = programInputs(inputs);
         return { outputs: { program: output(buildTopThreeProgram(common.header, common.frame, common.schedule,
@@ -204,7 +164,6 @@ export const rankingComponent = {
     },
     {
       producer: rankingProducers.typewriterProgram,
-      implementationDigest: rankingImplementationDigests.typewriterProgram,
       handler: ({ inputs }) => {
         const common = programInputs(inputs);
         const title = inline<Text>(inputs.title?.value, "Text");
@@ -213,12 +172,12 @@ export const rankingComponent = {
       },
     },
     ...([
-      [rankingProducers.tierEvents, rankingImplementationDigests.tierEvents, buildTierBoardSoundEvents, "TierBoardStyle"],
-      [rankingProducers.columnEvents, rankingImplementationDigests.columnEvents, buildColumnSoundEvents, "ColumnStyle"],
-      [rankingProducers.topThreeEvents, rankingImplementationDigests.topThreeEvents, buildTopThreeSoundEvents, "TopThreeStyle"],
-      [rankingProducers.typewriterEvents, rankingImplementationDigests.typewriterEvents, buildTypewriterSoundEvents, "TypewriterListStyle"],
-    ] as const).map(([producer, implementationDigest, build, styleLabel]) => ({
-      producer, implementationDigest,
+      [rankingProducers.tierEvents, buildTierBoardSoundEvents, "TierBoardStyle"],
+      [rankingProducers.columnEvents, buildColumnSoundEvents, "ColumnStyle"],
+      [rankingProducers.topThreeEvents, buildTopThreeSoundEvents, "TopThreeStyle"],
+      [rankingProducers.typewriterEvents, buildTypewriterSoundEvents, "TypewriterListStyle"],
+    ] as const).map(([producer, build, styleLabel]) => ({
+      producer,
       handler: ({ inputs }: ProducerHandlerContext) => ({ outputs: { events: output(build(
         inline(inputs.schedule?.value, "RankingSchedule"),
         inline(inputs.style?.value, styleLabel) as never,
@@ -227,14 +186,13 @@ export const rankingComponent = {
     })),
     {
       producer: rankingProducers.createSounds,
-      implementationDigest: rankingImplementationDigests.createSounds,
       handler: () => ({ outputs: { sounds: output(createRankingSoundSet()) }, needs: {} }),
     },
     ...([
-      [rankingProducers.appendAppearSound, rankingImplementationDigests.appendAppearSound, "appear"],
-      [rankingProducers.appendMoveSound, rankingImplementationDigests.appendMoveSound, "move"],
-    ] as const).map(([producer, implementationDigest, kind]) => ({
-      producer, implementationDigest,
+      [rankingProducers.appendAppearSound, "appear"],
+      [rankingProducers.appendMoveSound, "move"],
+    ] as const).map(([producer, kind]) => ({
+      producer,
       handler: ({ inputs }: ProducerHandlerContext) => ({ outputs: { sounds: output(appendRankingSound(
         inline<RankingSoundSet>(inputs.sounds?.value, "RankingSoundSet"), kind,
         inline<SynchronizedMedia>(inputs.media?.value, `Ranking ${kind} sound`),
@@ -242,7 +200,6 @@ export const rankingComponent = {
     })),
     {
       producer: rankingProducers.renderAudio,
-      implementationDigest: rankingImplementationDigests.renderAudio,
       handler: ({ inputs }) => ({ outputs: { track: output(renderRankingAudio(
         inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
         inline<RankingSoundEventPlan>(inputs.events?.value, "RankingSoundEventPlan"),
@@ -251,29 +208,29 @@ export const rankingComponent = {
       )) }, needs: {} }),
     },
     ...([
-      [rankingProducers.renderTier, rankingImplementationDigests.renderTier, renderTierBoard, "TierBoardProgram"],
-      [rankingProducers.renderColumn, rankingImplementationDigests.renderColumn, renderColumn, "ColumnProgram"],
-      [rankingProducers.renderTopThree, rankingImplementationDigests.renderTopThree, renderTopThree, "TopThreeProgram"],
-      [rankingProducers.renderTypewriter, rankingImplementationDigests.renderTypewriter, renderTypewriterList, "TypewriterListProgram"],
-    ] as const).map(([producer, implementationDigest, render, label]) => ({
-      producer, implementationDigest,
+      [rankingProducers.renderTier, renderTierBoard, "TierBoardProgram"],
+      [rankingProducers.renderColumn, renderColumn, "ColumnProgram"],
+      [rankingProducers.renderTopThree, renderTopThree, "TopThreeProgram"],
+      [rankingProducers.renderTypewriter, renderTypewriterList, "TypewriterListProgram"],
+    ] as const).map(([producer, render, label]) => ({
+      producer,
       handler: ({ inputs }: ProducerHandlerContext) => ({ outputs: { track: output(render(
         inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"), inline(inputs.program?.value, label) as never,
       )) }, needs: {} }),
     })),
   ],
   validators: [
-    { type: rankingTypes.schedule, implementationDigest: rankingValidatorDigests.schedule,
+    { type: rankingTypes.schedule,
       handler: ({ value }) => assertRankingSchedule(inline<RankingSchedule>(value, "RankingSchedule")) },
-    { type: rankingTypes.tierProgram, implementationDigest: rankingValidatorDigests.tierProgram,
+    { type: rankingTypes.tierProgram,
       handler: ({ value }) => assertTierBoardProgram(inline<TierBoardProgram>(value, "TierBoardProgram")) },
-    { type: rankingTypes.columnProgram, implementationDigest: rankingValidatorDigests.columnProgram,
+    { type: rankingTypes.columnProgram,
       handler: ({ value }) => assertColumnProgram(inline<ColumnProgram>(value, "ColumnProgram")) },
-    { type: rankingTypes.topThreeProgram, implementationDigest: rankingValidatorDigests.topThreeProgram,
+    { type: rankingTypes.topThreeProgram,
       handler: ({ value }) => assertTopThreeProgram(inline<TopThreeProgram>(value, "TopThreeProgram")) },
-    { type: rankingTypes.typewriterProgram, implementationDigest: rankingValidatorDigests.typewriterProgram,
+    { type: rankingTypes.typewriterProgram,
       handler: ({ value }) => assertTypewriterListProgram(inline<TypewriterListProgram>(value, "TypewriterListProgram")) },
-    { type: rankingTypes.soundEvents, implementationDigest: rankingValidatorDigests.events,
+    { type: rankingTypes.soundEvents,
       handler: ({ value }) => assertRankingSoundEventPlan(inline<RankingSoundEventPlan>(value, "RankingSoundEventPlan")) },
   ],
 } satisfies ComponentPackage;

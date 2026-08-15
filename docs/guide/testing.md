@@ -40,8 +40,8 @@ unsafe. Test that fact once at its owning layer; use one checked-in graph fixtur
 assembly instead of rebuilding the same partial video in every higher layer.
 
 Do not add tests merely to make every package appear covered, mirror a Manifest array, preserve a
-removed pre-release flag or database shape, or exercise documentation-only UI helpers. Package
-locks and component registration already reject Manifest/implementation drift. Obsolete tests are
+removed pre-release flag or database shape, or exercise documentation-only UI helpers. Component
+registration already rejects Manifest/implementation drift. Obsolete tests are
 deleted with obsolete behavior rather than retained as project history.
 
 ## Test patterns
@@ -90,8 +90,8 @@ explicitly opt-in, use no committed secret and fail before spending money unless
 | Command | What it tests | Prerequisites |
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX service | Python 3.13, uv, frozen sync |
-| `pnpm test:image-opencv` | the shared OpenCV Raster interpreter across both request variants | `SVML_OPENCV_TESTS=1`, `SVML_OPENCV_PYTHON` |
-| `pnpm test:browser-visual` | rendered geometry, stacking and clipping in a real browser | a Chrome the HyperFrames CLI can start, `ffmpeg`, and `SVML_TEST_FONT_PATH` off macOS |
+| `pnpm test:image-opencv` | the shared OpenCV Raster interpreter across both request variants | `NARRATAGE_OPENCV_TESTS=1`, `NARRATAGE_OPENCV_PYTHON` |
+| `pnpm test:browser-visual` | rendered geometry, stacking and clipping in a real browser | a Chrome the HyperFrames CLI can start, `ffmpeg`, and `NARRATAGE_TEST_FONT_PATH` off macOS |
 | `pnpm smoke:kie` | Live paid KIE generation | `KIE_API_KEY` |
 
 ## Test fixtures

@@ -34,11 +34,9 @@ export type BlockedCommand = {
   readonly command: string;
   readonly reason:
     | "missing-producer"
-    | "implementation-mismatch"
     | "missing-endpoint"
     | "ambiguous-endpoint"
-    | "missing-operation-store"
-    | "missing-runtime-closure";
+    | "missing-operation-store";
   readonly subject: string;
 };
 
@@ -49,11 +47,10 @@ export type DriverRunResult = {
   readonly blocked: readonly BlockedCommand[];
 };
 
-/** Endpoint/implementation scheduling metadata; it never changes Core demand or command identity. */
+/** Endpoint scheduling metadata; it never changes Core demand or command identity. */
 export type SchedulingHint = EndpointScheduling;
 
 export type ProducerRegistration = {
-  readonly implementationDigest: Digest;
   readonly handler: ProducerHandler;
   readonly scheduling?: SchedulingHint;
 };

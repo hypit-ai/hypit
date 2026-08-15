@@ -13,7 +13,7 @@
     "@narratage/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/runtime-adapter": "workspace:*",
+    "@narratage/runtime-kit": "workspace:*",
     "@narratage/validation": "workspace:*"
   }
 }

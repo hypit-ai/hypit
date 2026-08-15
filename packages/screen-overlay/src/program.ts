@@ -19,16 +19,6 @@ import type {
   ScreenOverlaySet,
 } from "./types.js";
 
-export const screenOverlayImplementationDigests = {
-  createSet: digestOf("@narratage/screen-overlay/create-set@1"),
-  appendProgram: digestOf("@narratage/screen-overlay/append-program@1"),
-  appendSelection: digestOf("@narratage/screen-overlay/append-selection@1"),
-  appendMoment: digestOf("@narratage/screen-overlay/append-moment@1"),
-  finalize: digestOf("@narratage/screen-overlay/finalize@1"),
-  render: digestOf("@narratage/screen-overlay/render@1"),
-} as const;
-export const screenOverlayValidatorDigests = { program: digestOf("@narratage/screen-overlay/validate-program@1") } as const;
-
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
 function identity(value: string, label: string): void {
   assert(/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(value), `${label} is invalid.`);
@@ -319,7 +309,7 @@ function overlayElements(content: ScreenOverlayComponent, canvas: CanvasSpace, d
 export function renderScreenOverlay(canvas: CanvasSpace, space: ProgramSpace, program: ScreenOverlayProgram): VisualTrack {
   assertCanvasSpace(canvas); assertProgramSpaceIdentity(space); assertScreenOverlayProgram(program);
   const track = sealVisualTrack({
-    visualIr: "svml.visual-ir@1", id: program.id,
+    visualIr: "narratage.visual-ir@1", id: program.id,
     presents: program.items.map((item) => ({
       id: item.id, span: { ...item.span }, stacking: { ...item.stacking },
       elements: overlayElements(item.content, canvas, item.span.endFrameExclusive - item.span.startFrame),

@@ -26,11 +26,11 @@ function distribution(
     name: "test",
     bootstrapPackages: [{
       specifier: "@example/run-frontend",
+      digest: digestOf("@example/run-frontend"),
       contribution: {
-        format: "svml.node-package@1",
+        format: "narratage.node-package@1",
         hostFacets: [createRunFrontendHostFacet({
         id: "@narratage/run-markup@1",
-        implementationDigest: digestOf("test-run-frontend"),
         discover() { throw new Error("createRuntimeFromConfig is unavailable"); },
         decode() { throw new Error("createRuntimeFromConfig is unavailable"); },
         })],
@@ -44,7 +44,7 @@ function distribution(
     }),
     openRuntimeHost: async (path: string) => ({
       profile: path,
-      resolvePackages: async () => ({}),
+      resolvePaths: async () => ({}),
       controller: async () => ({
         profile: path,
         dataRoot: "/tmp",
@@ -72,7 +72,7 @@ function distribution(
 }
 
 async function runSource(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "svml-build-programs-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-build-programs-"));
   const path = join(root, "build.svrun");
   await writeFile(path, '<?svml using="@narratage/run-markup@1"?>\n<svrun/>\n', "utf8");
   return path;
@@ -83,7 +83,7 @@ test("a Build that cannot construct its Runtime starts no declared external prog
   const source = await runSource();
   await assert.rejects(
     async () => await runCli(
-      ["build", source, "--runtime", "/p/svml.runtime.json"],
+      ["build", source, "--runtime", "/p/narratage.runtime.json"],
       io,
       distribution(calls, [{
         id: "whisperx",
@@ -106,7 +106,7 @@ test("--no-programs leaves the declared programs alone", async () => {
   // never consulted rather than merely tolerated.
   await assert.rejects(
     async () => await runCli(
-      ["build", source, "--runtime", "/p/svml.runtime.json", "--no-programs"],
+      ["build", source, "--runtime", "/p/narratage.runtime.json", "--no-programs"],
       io,
       distribution(calls, [{
         id: "whisperx",

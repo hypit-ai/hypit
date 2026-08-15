@@ -233,7 +233,7 @@ async function normalizeArtifact(args: {
 test("local media Provider enumerates attached pictures and jointly normalizes 32k AAC without inventing speech", {
   skip: !hasMediaBinaries,
 }, async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-local-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-provider-media-local-"));
   try {
     const sourcePath = await fixture(root);
     const artifacts = new MemoryArtifactStore();
@@ -306,7 +306,7 @@ test("local media Provider enumerates attached pictures and jointly normalizes 3
 test("local media normalization materializes rotation and sample aspect before Spatial", {
   skip: !hasMediaBinaries,
 }, async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-display-geometry-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-provider-media-display-geometry-"));
   try {
     const base = join(root, "base.mp4");
     const sourcePath = join(root, "rotated.mp4");
@@ -375,7 +375,7 @@ test("animated WebP keeps its authored frame timing before fixed-rate normalizat
 test("animated GIF keeps its authored frame timing before fixed-rate normalization", {
   skip: !hasMediaBinaries,
 }, async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-gif-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-provider-media-gif-"));
   try {
     const path = join(root, "animated.gif");
     await run("ffmpeg", [
@@ -406,7 +406,7 @@ test("animated GIF keeps its authored frame timing before fixed-rate normalizati
 test("local media Provider derives one exact 16 kHz mono WhisperX evidence artifact without a hidden second transcode", {
   skip: !hasMediaBinaries,
 }, async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-evidence-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-provider-media-evidence-"));
   try {
     const sourcePath = join(root, "speech-master.wav");
     await run("ffmpeg", [
@@ -447,7 +447,7 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
 test("local media Provider preserves one source A/V origin when audio starts later than picture", {
   skip: !hasMediaBinaries,
 }, async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-offset-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-provider-media-offset-"));
   try {
     const sourcePath = join(root, "offset.mkv");
     await run("ffmpeg", [
@@ -496,7 +496,7 @@ test("local media Provider preserves one source A/V origin when audio starts lat
 test("a silent generated MP4 remains a visual-only product and cannot satisfy a requested audio stream", {
   skip: !hasMediaBinaries,
 }, async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-silent-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-provider-media-silent-"));
   try {
     const sourcePath = join(root, "silent.mp4");
     await run("ffmpeg", [
@@ -533,7 +533,7 @@ test("a silent generated MP4 remains a visual-only product and cannot satisfy a 
 test("local media Provider transforms A/V and extracts ordinary audio and frame Artifacts", {
   skip: !hasMediaBinaries,
 }, async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-ordinary-ops-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-provider-media-ordinary-ops-"));
   try {
     const sourcePath = await fixture(root);
     const artifacts = new MemoryArtifactStore();
@@ -618,7 +618,7 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
 test("local media Provider renders one frame-domain audio plan and muxes exactly one silent visual with it", {
   skip: !hasMediaBinaries,
 }, async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-program-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-provider-media-program-"));
   try {
     const firstPath = join(root, "first.wav");
     const secondPath = join(root, "second.wav");
@@ -738,7 +738,7 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
 test("local media Provider executes an end-aligned loop from the exact authored sample phase", {
   skip: !hasMediaBinaries,
 }, async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-loop-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-provider-media-loop-"));
   try {
     const artifacts = new MemoryArtifactStore();
     const source = await artifacts.put(rampWav(100), "audio/wav");

@@ -24,8 +24,6 @@ import type {
   FineCaptionUnderline,
 } from "./types.js";
 
-export const renderFineCaptionImplementationDigest = digestOf("@narratage/caption-fine/full-orthogonal-renderer-with-mute@1");
-
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
 }
@@ -761,7 +759,7 @@ export function renderFineCaption(
     }];
   });
   const track = sealVisualTrack({
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     id: program.id,
     presents,
   });

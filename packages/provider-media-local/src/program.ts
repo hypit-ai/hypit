@@ -1,7 +1,7 @@
 import { probeMediaToolchain } from "@narratage/media-execution";
-import { runtimeConfigObject, runtimeConfigString } from "@narratage/runtime-adapter";
-import type { RuntimeAdapterFactoryContext, ManagedProgram } from "@narratage/runtime-adapter";
-import { resolveRuntimeExecutable } from "@narratage/runtime-adapter-node";
+import { runtimeConfigObject, runtimeConfigString } from "@narratage/runtime-kit";
+import type { RuntimeAdapterFactoryContext, ManagedProgram } from "@narratage/runtime-kit";
+import { resolveRuntimeExecutable } from "@narratage/runtime-host-node";
 
 /** A system/custom FFmpeg deployment is external: programs up probes it but never mutates a package manager. */
 export function localMediaToolchainProgram(context: RuntimeAdapterFactoryContext): ManagedProgram {

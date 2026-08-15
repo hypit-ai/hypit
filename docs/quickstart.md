@@ -43,6 +43,7 @@ You need Node.js 22+ and pnpm 10.33.x through Corepack.
 ```bash
 corepack enable
 pnpm install --frozen-lockfile
+npm link
 ```
 
 If `corepack` is unavailable:
@@ -52,6 +53,7 @@ npm install --global corepack@0.34.5
 corepack enable
 corepack prepare pnpm@10.33.0 --activate
 pnpm install --frozen-lockfile
+npm link
 ```
 
 `pnpm check` and `pnpm test` are repository-development commands. You do not need to run the full
@@ -63,18 +65,17 @@ The checked-in example includes a Script, two generated-video requests, speech a
 alignment, captions, a media Track, text, Film and final rendering.
 
 ```bash
-node --run narratage -- check examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock
+cd examples/talking-film-graph-check
+narratage check main.svml
 ```
 
-`check` reads the self-described source, loads only its locked packages and prints the public typed
+`check` reads the self-described source, loads only its imported packages and prints the public typed
 outputs it declares.
 
 Now compile the Run Source:
 
 ```bash
-node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock
+narratage plan build.svrun
 ```
 
 `plan` binds the Author Graph and Run Graph, walks backward from `final.video`, and freezes the
@@ -88,16 +89,14 @@ Open the three source files next:
 
 ## 3. Understand the project files
 
-A working video project normally has four authored/configured inputs and two generated locks:
+A working video project normally has four authored or configured inputs:
 
 | File | Answers |
 |---|---|
 | `main.svml` | What video are you making? |
 | `studio.svs` | Which reusable Recipe values does it use? |
 | `build.svrun` | Which outputs and Candidates does this Run select? |
-| `svml.runtime.json` | Which machine, stores and Provider endpoints execute it? |
-| `svml.packages.lock` | Which author/compute package bytes are allowed? |
-| `svml.runtime-packages.lock` | Which privileged Runtime package bytes are allowed? |
+| `narratage.runtime.json` | Which machine, stores and Provider endpoints execute it? |
 
 The short form is:
 
@@ -112,23 +111,22 @@ shots without changing the authored video.
 
 ## 4. Start your own project
 
-Keep project files and generated media outside the Narratage repository. Call the checkout's
-lightweight `narratage` launcher from your project directory:
+Keep project files and generated media outside the Narratage repository. The linked `narratage`
+command works from that independent project directory:
 
 ```bash
 cd /path/to/my-video
 
-/path/to/narratage/narratage runtime use svml.runtime.json
+narratage runtime use narratage.runtime.json
 
-/path/to/narratage/narratage packages sync build.svrun
-/path/to/narratage/narratage plan build.svrun
+narratage plan build.svrun
 ```
 
-The launcher uses dependencies installed in the Narratage checkout while Source and exported files
-remain in your project. Runtime state and Artifacts live under the selected Profile's `dataRoot`.
-`runtime use` stores only a local pointer at `.narratage/runtime`. The Source lock belongs to the
-project; the Profile independently selects its Runtime lock. `packages sync` updates both
-inventories without removing packages needed by another Run.
+A project with `package.json` owns its installed capability packages. A plain creative folder needs
+no Node project and uses packages from the linked checkout. Source and exported files remain in the
+project. Runtime state and Artifacts live under the selected Profile's `dataRoot`.
+`runtime use` stores only a local pointer at `.narratage/runtime`. Source imports select author
+packages; the Profile independently selects Runtime packages through `use`.
 
 Start from [`examples/talking-film-live`](https://github.com/hypit-ai/narratage/tree/main/examples/talking-film-live) when you need a
 complete Runtime Profile. Copy the source structure, then replace its assets, Script, model choices
@@ -139,7 +137,7 @@ and credentials with your own.
 After reviewing the plan:
 
 ```bash
-/path/to/narratage/narratage build build.svrun --follow
+narratage build build.svrun --follow
 ```
 
 `build` assigns and prints a fresh Build id, stores the Build, ensures its Worker is available, and
@@ -150,11 +148,11 @@ Use `check` while editing a source. Use `doctor` to diagnose a new or broken dep
 safe, but neither is required as a repetitive pre-Build ceremony.
 
 ```bash
-/path/to/narratage/narratage status <build-id>
+narratage status <build-id> --watch
 
-/path/to/narratage/narratage queue --watch
+narratage queue
 
-/path/to/narratage/narratage get <build-id> \
+narratage get <build-id> \
   --name final.video \
   --to output/final.mp4
 ```
@@ -179,10 +177,10 @@ For local Python programs:
 uv python install 3.13
 uv sync --project services/whisperx --frozen
 uv sync --project services/image-opencv --frozen
-uv run --project services/whisperx --frozen svml-whisperx-prepare
+uv run --project services/whisperx --frozen narratage-whisperx-prepare
 ```
 
-Run `narratage doctor svml.runtime.json` after changing a Runtime Profile. It reports missing tools,
+Run `narratage doctor narratage.runtime.json` after changing a Runtime Profile. It reports missing tools,
 credentials and endpoint configuration without executing the graph.
 
 ## Read next

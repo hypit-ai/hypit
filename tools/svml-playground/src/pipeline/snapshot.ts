@@ -84,7 +84,7 @@ function scriptMap(
   maps: readonly Record<string, unknown>[],
   built: Preview,
 ): ScriptMap | undefined {
-  const found = maps.find((map) => map.format === "svml.script-source-map@1");
+  const found = maps.find((map) => map.format === "narratage.script-source-map@1");
   if (found === undefined) return undefined;
   const selections = (found.selections ?? []) as ScriptMap["selections"];
   const segments = (found.segments ?? []) as ScriptMap["segments"];

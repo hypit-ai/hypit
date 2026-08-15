@@ -128,7 +128,6 @@ function acceptProducerEvent(
   const derivationDraft: Omit<Derivation, "id"> = {
     step: step.id,
     producer: step.producer,
-    implementationDigest: producer.implementation.digest,
     inputs: inputs.map((record) => ({ id: record.id, digest: record.digest })),
     outputs: outputDrafts.map(({ id, digest }) => ({ id, digest })),
     needs: needDrafts.map((need) => ({ id: need.id, requestDigest: need.requestDigest })),
@@ -185,7 +184,6 @@ function acceptNeedEvent(
     need: need.id,
     requestDigest: event.requestDigest,
     fulfiller: event.fulfiller,
-    ...(event.implementation === undefined ? {} : { implementation: event.implementation }),
     output: need.result,
     outputDigest,
     event: { id: event.id, digest: acceptedEventDigest },
@@ -324,7 +322,7 @@ export function start(
 ): BuildState {
   const plan: BuildPlan = compileBuild(program, graph, request);
   const state: BuildState = {
-    format: "svml.build@1",
+    format: "narratage.build@1",
     id: digestOf({
       closure: program.closure.digest,
       semantic: program.semanticDigest,

@@ -1,28 +1,7 @@
 export { createFilmAssemblyFragment } from "./fragment.js";
 export { filmComponent } from "./component.js";
-export {
-  filmManifest, filmMarkupSurfaces,
-  filmManifestDigest,
-  filmModuleRef,
-  filmProgramSchema,
-  filmProducers,
-  filmSurfaceImplementationDigest,
-  filmTrackSetSchema,
-  filmTypes,
-} from "./manifest.js";
-export {
-  appendFilmAudioTrack,
-  appendFilmAudioTrackImplementationDigest,
-  appendFilmVisualTrack,
-  appendFilmVisualTrackImplementationDigest,
-  assertFilmProgramIdentity,
-  assertFilmTrackSetIdentity,
-  compileFilmComposition,
-  compileFilmCompositionImplementationDigest,
-  createFilmTrackSet,
-  createFilmTrackSetImplementationDigest,
-  sealFilmProgram,
-} from "./program.js";
+export { filmManifest, filmMarkupSurfaces, filmModuleRef, filmProgramSchema, filmProducers, filmTrackSetSchema, filmTypes } from "./manifest.js";
+export { appendFilmAudioTrack, appendFilmVisualTrack, assertFilmProgramIdentity, assertFilmTrackSetIdentity, compileFilmComposition, createFilmTrackSet, sealFilmProgram } from "./program.js";
 export {
   assertFilmRecipe,
   filmAppearanceFromRecipe,

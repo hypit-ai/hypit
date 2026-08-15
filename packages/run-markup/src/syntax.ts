@@ -266,7 +266,7 @@ function parseRunDocumentBody(name: string, text: string): RunDocument {
   unique(targets.map((item) => item.output), "Run target", root);
   if (targets.length === 0) fail(root, "RUN_TARGETS", "<svrun> requires at least one <target>");
   return {
-    format: "svml.run-document@1",
+    format: "narratage.run-document@1",
     author,
     imports,
     targets,

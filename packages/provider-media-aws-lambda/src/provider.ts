@@ -20,8 +20,6 @@ export const awsLambdaMediaProviderModuleRef = {
   name: "@narratage/provider-media-aws-lambda",
   version: "1",
 } as const;
-export const awsLambdaMediaProviderImplementationDigest =
-  digestOf("@narratage/provider-media-aws-lambda/media@1");
 
 /** `arn:aws:lambda:<region>:<account>:function:<name>:<version|alias>` */
 const QUALIFIED_ARN =
@@ -29,7 +27,7 @@ const QUALIFIED_ARN =
 
 export type CreateAwsLambdaMediaProviderOptions = {
   readonly instance?: string;
-  readonly authority?: string;
+  readonly pool?: string;
   /** Must name a version or alias. See the assertion below for why. */
   readonly functionArn: string;
   readonly bucket: string;
@@ -114,11 +112,7 @@ export function createAwsLambdaMediaProvider(config: CreateAwsLambdaMediaProvide
     module: awsLambdaMediaProviderModuleRef,
     facet: "media",
     instance: config.instance ?? "media.aws-lambda",
-    authority: config.authority ?? config.instance ?? "media.aws-lambda",
-    implementation: {
-      digest: awsLambdaMediaProviderImplementationDigest,
-    },
-    configuration: canonicalize(configuration as unknown as CanonicalValue),
+    pool: config.pool ?? config.instance ?? "media.aws-lambda",
     defaultConcurrency: config.defaultConcurrency ?? 8,
     capabilities: [
       {

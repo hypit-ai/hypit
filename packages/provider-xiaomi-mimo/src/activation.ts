@@ -5,14 +5,14 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
 
 import { createXiaomiMimoProvider } from "./provider.js";
 
 const adapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-xiaomi-mimo",
   activate(context) {
-    if (context.authority === undefined) throw new Error("Xiaomi MiMo Provider Authority is required");
+    if (context.pool === undefined) throw new Error("Xiaomi MiMo Provider Pool is required");
     const config = runtimeConfigObject(context.config, "Xiaomi MiMo");
     runtimeConfigExact(config, [
       "apiBaseUrl", "apiKey", "defaultConcurrency", "requestTimeoutMs",
@@ -37,7 +37,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createXiaomiMimoProvider({
         instance: context.instance,
-        authority: context.authority,
+        pool: context.pool,
         ...(apiBaseUrl === undefined ? {} : { apiBaseUrl }),
         apiKey,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
@@ -49,9 +49,9 @@ const adapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [adapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

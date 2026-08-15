@@ -584,7 +584,7 @@ export async function executeInspectMedia(
   constraints: CanonicalValue,
 ): Promise<MediaOperationResult> {
   const need = inspectNeed(constraints);
-  const work = await mkdtemp(join(tmpdir(), "svml-media-inspect-"));
+  const work = await mkdtemp(join(tmpdir(), "narratage-media-inspect-"));
   try {
     const input = join(work, "source.bin");
     const animationBytes = need.source.mediaType === "image/webp" ? await sourceBytes(env, need.source) : undefined;
@@ -613,7 +613,7 @@ export async function executeNormalizeMedia(
 ): Promise<MediaOperationResult> {
   const need = normalizeNeed(constraints);
   const plan = normalizationPlan(need.inspection, need.selection, need.frameRate);
-  const work = await mkdtemp(join(tmpdir(), "svml-media-normalize-"));
+  const work = await mkdtemp(join(tmpdir(), "narratage-media-normalize-"));
   try {
     const input = join(work, "source.bin");
     const animationBytes = need.source.mediaType === "image/webp" ? await sourceBytes(env, need.source) : undefined;
@@ -792,7 +792,7 @@ export async function executeTransformMedia(
   const need = transformNeed(constraints);
   const media = need.media;
   const plan = compileTransformPlan(media, need.program.operations);
-  const work = await mkdtemp(join(tmpdir(), "svml-media-transform-"));
+  const work = await mkdtemp(join(tmpdir(), "narratage-media-transform-"));
   try {
     const visualPath = join(work, "visual.mp4");
     const audioPath = join(work, "audio.wav");
@@ -855,7 +855,7 @@ export async function executeExtractAudio(
   constraints: CanonicalValue,
 ): Promise<MediaOperationResult> {
   const need = extractAudioNeed(constraints);
-  const work = await mkdtemp(join(tmpdir(), "svml-media-extract-audio-"));
+  const work = await mkdtemp(join(tmpdir(), "narratage-media-extract-audio-"));
   try {
     const input = join(work, "source.bin");
     const output = join(work, "audio.wav");
@@ -891,7 +891,7 @@ export async function executeExtractFrame(
   constraints: CanonicalValue,
 ): Promise<MediaOperationResult> {
   const need = extractFrameNeed(constraints);
-  const work = await mkdtemp(join(tmpdir(), "svml-media-extract-frame-"));
+  const work = await mkdtemp(join(tmpdir(), "narratage-media-extract-frame-"));
   try {
     const input = join(work, "source.bin");
     const output = join(work, "frame.png");
@@ -939,7 +939,7 @@ export async function executeProjectSpeechEvidenceAudio(
   constraints: CanonicalValue,
 ): Promise<MediaOperationResult> {
   const need = evidenceAudioNeed(constraints);
-  const work = await mkdtemp(join(tmpdir(), "svml-media-speech-evidence-"));
+  const work = await mkdtemp(join(tmpdir(), "narratage-media-speech-evidence-"));
   try {
     const input = join(work, "speech-master.wav");
     const output = join(work, "alignment-evidence.wav");
@@ -1003,7 +1003,7 @@ export async function executeRenderTimelineAudio(
 ): Promise<MediaOperationResult> {
   const need = renderAudioNeed(constraints);
   const plan: AudioProgramPlan = need.plan;
-  const work = await mkdtemp(join(tmpdir(), "svml-media-audio-"));
+  const work = await mkdtemp(join(tmpdir(), "narratage-media-audio-"));
   try {
     const artifacts = new Map<string, { source: BlobRef; path: string; inputIndex: number; sampleFrames: number }>();
     for (const clip of plan.clips) {
@@ -1089,7 +1089,7 @@ export async function executeMuxProgramMedia(
   constraints: CanonicalValue,
 ): Promise<MediaOperationResult> {
   const need = muxMediaNeed(constraints);
-  const work = await mkdtemp(join(tmpdir(), "svml-media-mux-"));
+  const work = await mkdtemp(join(tmpdir(), "narratage-media-mux-"));
   try {
     const visualPath = join(work, "visual.mp4");
     const audioPath = join(work, "audio.wav");

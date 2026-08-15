@@ -242,11 +242,9 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
 ### 编译与验证
 
 ```bash
-node --run narratage -- check examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock --workspace .
+narratage check examples/talking-film-graph-check/main.svml
 
-node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock --workspace .
+narratage plan examples/talking-film-graph-check/build.svrun
 ```
 
 `check` 编译 Author Graph——验证所有导入、类型和图的边，而不调用任何外部服务。`plan`

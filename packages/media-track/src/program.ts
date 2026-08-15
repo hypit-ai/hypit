@@ -64,34 +64,6 @@ import type {
   MediaTrackSet,
 } from "./types.js";
 
-export const mediaTrackImplementationDigests = {
-  createLayers: digestOf("@narratage/media-track/create-layers@1"),
-  appendPaintLayer: digestOf("@narratage/media-track/append-paint-layer@1"),
-  appendStillLayer: digestOf("@narratage/media-track/append-still-layer@1"),
-  appendTimedLayer: digestOf("@narratage/media-track/append-timed-layer@1"),
-  appendSurfaceLayer: digestOf("@narratage/media-track/append-surface-layer@1"),
-  createSounds: digestOf("@narratage/media-track/create-sounds@1"),
-  appendSound: digestOf("@narratage/media-track/append-sound@1"),
-  createSet: digestOf("@narratage/media-track/create-set@1"),
-  appendProgramItem: digestOf("@narratage/media-track/append-program-item@1"),
-  appendSelectionItem: digestOf("@narratage/media-track/append-selection-item@1"),
-  appendSegmentItem: digestOf("@narratage/media-track/append-segment-item@1"),
-  appendMomentItem: digestOf("@narratage/media-track/append-moment-item@1"),
-  bindItemClipPath: digestOf("@narratage/media-track/bind-item-clip-path@1"),
-  bindSequenceClipPath: digestOf("@narratage/media-track/bind-sequence-clip-path@1"),
-  createMembers: digestOf("@narratage/media-track/create-members@1"),
-  appendMomentMember: digestOf("@narratage/media-track/append-moment-member@1"),
-  appendSelectionStartMember: digestOf("@narratage/media-track/append-selection-start-member@1"),
-  appendSelectionEndMember: digestOf("@narratage/media-track/append-selection-end-member@1"),
-  appendSequenceProgramEnd: digestOf("@narratage/media-track/append-sequence-program-end@1"),
-  appendSequenceUntilMoment: digestOf("@narratage/media-track/append-sequence-until-moment@1"),
-  appendSequenceUntilSelectionStart: digestOf("@narratage/media-track/append-sequence-until-selection-start@1"),
-  appendSequenceUntilSelectionEnd: digestOf("@narratage/media-track/append-sequence-until-selection-end@1"),
-  finalize: digestOf("@narratage/media-track/finalize@1"),
-  projectVisual: digestOf("@narratage/media-track/project-visual@1"),
-  projectAudio: digestOf("@narratage/media-track/project-audio@1"),
-} as const;
-
 export function bindMediaItemClipPath(spec: MediaItemSpec, path: SpatialPath): MediaItemSpec {
   assertMediaItemSpec(spec);
   assertSpatialPath(path);
@@ -109,10 +81,6 @@ export function bindMediaSequenceClipPath(spec: MediaSequenceSpec, path: Spatial
     presentation: { ...spec.presentation, clip: { kind: "path", path: structuredClone(path) } },
   });
 }
-
-export const mediaTrackValidatorDigests = {
-  program: digestOf("@narratage/media-track/validate-program@1"),
-} as const;
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -526,7 +494,7 @@ export function assertMediaTrackProgramIdentity(value: MediaTrackProgram, space:
 export function projectMediaVisualTrack(space: ProgramSpace, program: MediaTrackProgram): VisualTrack {
   assertMediaTrackProgramIdentity(program, space);
   const track = sealVisualTrack({
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     id: program.id,
     presents: [
       ...program.items.map((item) => ({

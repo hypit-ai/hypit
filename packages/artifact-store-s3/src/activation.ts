@@ -1,12 +1,12 @@
 import {
-  createRuntimeComponentAdapterFacet,
+  createRuntimeInfrastructureAdapterFacet,
   runtimeConfigBoolean,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-adapter";
-import type { RuntimeAdapterFactoryContext } from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
+import type { RuntimeAdapterFactoryContext } from "@narratage/runtime-kit";
 
 import { AwsS3ObjectClient } from "./client.js";
 import { createS3ArtifactStorePackage, s3ArtifactKey } from "./store.js";
@@ -31,7 +31,7 @@ function validateConfig(context: RuntimeAdapterFactoryContext): void {
   }
 }
 
-const s3ArtifactStoreRuntimeAdapter = createRuntimeComponentAdapterFacet({
+const s3ArtifactStoreRuntimeAdapter = createRuntimeInfrastructureAdapterFacet({
   use: "@narratage/artifact-store-s3",
   validate: validateConfig,
   create(context) {
@@ -81,7 +81,7 @@ const s3ArtifactStoreRuntimeAdapter = createRuntimeComponentAdapterFacet({
       // bucket as the expected owner" without depending on any object.
       await client.head({
         Bucket: bucket,
-        Key: `${runtimeConfigString(config.prefix, "S3 prefix") ?? ""}/.svml-doctor-probe`.replace(/^\/+/u, ""),
+        Key: `${runtimeConfigString(config.prefix, "S3 prefix") ?? ""}/.narratage-doctor-probe`.replace(/^\/+/u, ""),
         ...(owner === undefined ? {} : { ExpectedBucketOwner: owner }),
       });
       return [];
@@ -96,9 +96,9 @@ const s3ArtifactStoreRuntimeAdapter = createRuntimeComponentAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [s3ArtifactStoreRuntimeAdapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

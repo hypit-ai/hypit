@@ -10,17 +10,7 @@ import type { Text } from "@narratage/text";
 
 import { renderDepthStack } from "./lower.js";
 import { depthStackProducers, depthStackTypes } from "./manifest.js";
-import {
-  appendDepthStackMomentCard,
-  assertDepthStackProgram,
-  createDepthStackCardSet,
-  depthStackImplementationDigests,
-  depthStackValidatorDigests,
-  finalizeDepthStackAtProgramEnd,
-  finalizeDepthStackUntilMoment,
-  finalizeDepthStackUntilSelection,
-  bindDepthStackCardLabelText,
-} from "./program.js";
+import { appendDepthStackMomentCard, assertDepthStackProgram, createDepthStackCardSet, finalizeDepthStackAtProgramEnd, finalizeDepthStackUntilMoment, finalizeDepthStackUntilSelection, bindDepthStackCardLabelText } from "./program.js";
 import type {
   DepthStackCardLabel,
   DepthStackCardLabelStyle,
@@ -51,7 +41,6 @@ export const depthStackComponent = {
   producers: [
     {
       producer: depthStackProducers.bindLabelText,
-      implementationDigest: depthStackImplementationDigests.bindLabelText,
       handler: ({ inputs }) => ({ outputs: { label: output(bindDepthStackCardLabelText(
         inline<DepthStackCardLabelStyle>(inputs.style?.value, "DepthStackCardLabelStyle"),
         inline<Text>(inputs.content?.value, "Text"),
@@ -59,12 +48,10 @@ export const depthStackComponent = {
     },
     {
       producer: depthStackProducers.createCards,
-      implementationDigest: depthStackImplementationDigests.createCards,
       handler: () => ({ outputs: { set: output(createDepthStackCardSet()) }, needs: {} }),
     },
     {
       producer: depthStackProducers.appendMomentCard,
-      implementationDigest: depthStackImplementationDigests.appendMomentCard,
       handler: ({ inputs }) => ({ outputs: { set: output(appendDepthStackMomentCard(
         inline<DepthStackCardSet>(inputs.set?.value, "DepthStackCardSet"),
         inline<MediaLayerSet>(inputs.material?.value, "MediaLayerSet"),
@@ -77,7 +64,6 @@ export const depthStackComponent = {
     },
     {
       producer: depthStackProducers.finalizeProgramEnd,
-      implementationDigest: depthStackImplementationDigests.finalizeProgramEnd,
       handler: ({ inputs }) => {
         const value = finalizeInputs(inputs);
         return { outputs: { program: output(finalizeDepthStackAtProgramEnd(
@@ -87,7 +73,6 @@ export const depthStackComponent = {
     },
     {
       producer: depthStackProducers.finalizeUntilMoment,
-      implementationDigest: depthStackImplementationDigests.finalizeUntilMoment,
       handler: ({ inputs }) => {
         const value = finalizeInputs(inputs);
         return { outputs: { program: output(finalizeDepthStackUntilMoment(
@@ -100,9 +85,6 @@ export const depthStackComponent = {
     ...([depthStackProducers.finalizeUntilSelectionStart, depthStackProducers.finalizeUntilSelectionEnd] as const)
       .map((producer, index) => ({
         producer,
-        implementationDigest: index === 0
-          ? depthStackImplementationDigests.finalizeUntilSelectionStart
-          : depthStackImplementationDigests.finalizeUntilSelectionEnd,
         handler: ({ inputs }: ProducerHandlerContext) => {
           const value = finalizeInputs(inputs);
           return { outputs: { program: output(finalizeDepthStackUntilSelection(
@@ -115,7 +97,6 @@ export const depthStackComponent = {
       })),
     {
       producer: depthStackProducers.render,
-      implementationDigest: depthStackImplementationDigests.render,
       handler: ({ inputs }) => ({ outputs: { track: output(renderDepthStack(
         inline<CanvasSpace>(inputs.canvas?.value, "CanvasSpace"),
         inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
@@ -125,7 +106,6 @@ export const depthStackComponent = {
   ],
   validators: [{
     type: depthStackTypes.program,
-    implementationDigest: depthStackValidatorDigests.program,
     handler: ({ value }) => assertDepthStackProgram(inline<DepthStackProgram>(value, "DepthStackProgram")),
   }],
 } satisfies ComponentPackage;

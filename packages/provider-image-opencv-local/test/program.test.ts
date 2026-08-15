@@ -34,7 +34,7 @@ test("an interpreter without cv2 is reported here, not mid-Build", async () => {
 test("an interpreter carrying another OpenCV major is a mismatch, not a failure", async () => {
   // A stand-in interpreter that answers truthfully about an environment this
   // Provider cannot drive: cv2 3.x predates the APIs it calls.
-  const directory = await mkdtemp(join(tmpdir(), "svml-opencv-probe-"));
+  const directory = await mkdtemp(join(tmpdir(), "narratage-opencv-probe-"));
   const fake = join(directory, "python");
   await writeFile(fake, "#!/bin/sh\necho '{\"cv2\": \"3.4.18\", \"numpy\": \"2.1.0\"}'\n", { mode: 0o755 });
   try {

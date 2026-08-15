@@ -32,40 +32,37 @@ Profile 选择一个 Runtime 包，并把封闭配置交给它：
 ```json
 {
   "format": "narratage.runtime-profile@1",
-  "runtimePackageLock": "./svml.runtime-packages.lock",
   "runtime": {
-    "use": "@narratage/local",
+    "use": "@narratage/runtime-local",
     "config": {
       "dataRoot": ".narratage/runtimes/local",
-      "components": {
-        "execution": { "use": "@narratage/local" },
+      "infrastructure": {
+        "execution": { "use": "@narratage/runtime-local" },
         "state": { "use": "@narratage/store-sqlite", "config": { "path": "state.sqlite" } },
         "artifacts": { "use": "@narratage/artifact-store-fs", "config": { "path": "artifacts" } }
       },
-      "bindings": {
-        "scheduler": "execution.scheduler",
-        "worker": "execution.worker",
-        "stores": {
-          "build": "state.builds",
-          "operations": "state.operations",
-          "dispatch": "state.dispatch",
-          "artifacts": "artifacts",
-          "credentials": []
-        }
+      "roles": {
+        "scheduler": { "from": "execution", "part": "scheduler" },
+        "worker": { "from": "execution", "part": "worker" },
+        "buildStore": { "from": "state", "part": "builds" },
+        "operationStore": { "from": "state", "part": "operations" },
+        "dispatchStore": { "from": "state", "part": "dispatch" },
+        "artifactStore": { "from": "artifacts", "part": "store" },
+        "credentialStores": []
       },
       "endpoints": {
         "media": { "use": "@narratage/provider-media-local" }
       },
-      "limits": { "maxOperations": 4 }
+      "capacity": { "maxActiveOperations": 4 }
     }
   }
 }
 ```
 
-`components` 配置可替换的 Runtime 基础设施，`bindings` 选择每个角色的确切实例，`endpoints`
-配置能力实现，`limits` 限制整个 Runtime。安装包只增加可用实现，不会自动激活或改变 Core。
+`infrastructure` 创建具名的包实例，`roles` 显式选择实例提供的 part，`endpoints`
+配置外部能力实现，`capacity` 限制整个 Runtime。安装包只增加可用实现，不会自动激活或改变 Core。
 
-Profile 不包含 Source Workspace、Source package lock 或 Author 包选择。相对 Profile 路径从
+Profile 不包含 Source Workspace 或 Author 包选择。相对 Profile 路径从
 Profile 文件解析；本地 Runtime 的私有路径从 `dataRoot` 解析。
 
 ## 项目状态与路径
@@ -83,16 +80,25 @@ Profile 文件解析；本地 Runtime 的私有路径从 `dataRoot` 解析。
 `runtime use` 只写 `.narratage/runtime` 指针，不启动进程。`check` 和 `plan` 不创建 Runtime 数据。
 `narratage paths` 会报告 Workspace、项目状态、Runtime 数据与操作系统级 Host 状态的位置。
 
-Workspace 独立按以下顺序确定：显式 `--workspace`、所选 `.narratage/runtime` 所在项目、最近的
-Source package lock、入口 Source 目录。Runtime Profile 无权扩大它。
+Workspace 独立按以下顺序确定：显式 `--workspace`、所选 `.narratage/runtime` 所在项目、入口
+Source 目录。Runtime Profile 无权扩大它。
 
-## Component、Endpoint 与 Managed Program
+## Package、instance、part 与 role
 
-Runtime Component 是 Scheduler、Worker、Store 等基础设施实现。Binding 明确选择一个实例，包的
-存在本身不具备路由权。Endpoint 实现声明过的 Capability，并负责 Provider 调用。
+Runtime 包是已安装代码；`infrastructure` 中的一项创建一个带配置的 instance。一个 instance
+可以公开多个内聚的 part。例如 `@narratage/store-sqlite` 的 `state` instance 从同一个数据库公开
+`builds`、`operations` 和 `dispatch`。role 通过 `{ from, part }` 精确选择其中一个：
 
-Managed Program 是 Endpoint 声明的长期外部进程，例如常驻 WhisperX 服务。它不是 Component，
-也不是队列。Endpoint 可以声明探测、准备和启动方法；外部托管时只声明探测。
+```json
+"buildStore": { "from": "state", "part": "builds" }
+```
+
+`from` 只指向 Profile 中的 instance，`part` 只由该包声明。Host 验证这个 part 是否实现所选 role；
+没有中央注册表认识 SQLite，也不会拆解点号字符串来猜归属。Endpoint 则实现声明过的 Capability，
+并负责 Provider 调用。
+
+Managed Program 是 Endpoint 声明的长期外部进程，例如常驻 WhisperX 服务。它不是 Runtime
+infrastructure，也不是队列。Endpoint 可以声明探测、准备和启动方法；外部托管时只声明探测。
 
 ```bash
 narratage programs status
@@ -106,7 +112,7 @@ Worker 不会自动停止可能被共享的 Program。
 ## 生命周期
 
 ```bash
-narratage runtime use svml.runtime.json
+narratage runtime use narratage.runtime.json
 narratage runtime up
 narratage runtime status
 narratage runtime logs

@@ -6,18 +6,7 @@ import { canonicalize } from "@narratage/protocol";
 import type { ContentFit, SpatialFrame } from "@narratage/spatial";
 
 import { speechSpineProducers } from "./manifest.js";
-import {
-  appendSpeechSpineAudioTake,
-  appendSpeechSpineAudioTakeImplementationDigest,
-  appendSpeechSpineVisualTake,
-  appendSpeechSpineVisualTakeImplementationDigest,
-  assembleSpeechBasis,
-  assembleSpeechBasisImplementationDigest,
-  compileSpeechSpineAudio,
-  compileSpeechSpineAudioImplementationDigest,
-  createSpeechSpineSet,
-  createSpeechSpineSetImplementationDigest,
-} from "./program.js";
+import { appendSpeechSpineAudioTake, appendSpeechSpineVisualTake, assembleSpeechBasis, compileSpeechSpineAudio, createSpeechSpineSet } from "./program.js";
 import type { SpeechSpineProgram, SpeechSpineSet, SpeechSpineVisualSpec } from "./types.js";
 
 function inline<T>(value: StoredValue | undefined, subject: string): T {
@@ -29,7 +18,6 @@ export const speechSpineComponent = {
   producers: [
     {
       producer: speechSpineProducers.createSet,
-      implementationDigest: createSpeechSpineSetImplementationDigest,
       handler: () => ({
         outputs: { set: { kind: "inline", value: canonicalize(createSpeechSpineSet()) } },
         needs: {},
@@ -37,7 +25,6 @@ export const speechSpineComponent = {
     },
     {
       producer: speechSpineProducers.appendAudioTake,
-      implementationDigest: appendSpeechSpineAudioTakeImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: { set: { kind: "inline", value: canonicalize(appendSpeechSpineAudioTake(
           inline<SpeechSpineSet>(inputs.set?.value, "SpeechSpineSet"),
@@ -50,7 +37,6 @@ export const speechSpineComponent = {
     },
     {
       producer: speechSpineProducers.appendVisualTake,
-      implementationDigest: appendSpeechSpineVisualTakeImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: { set: { kind: "inline", value: canonicalize(appendSpeechSpineVisualTake(
           inline<SpeechSpineSet>(inputs.set?.value, "SpeechSpineSet"),
@@ -66,7 +52,6 @@ export const speechSpineComponent = {
     },
     {
       producer: speechSpineProducers.compileAudio,
-      implementationDigest: compileSpeechSpineAudioImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: { plan: { kind: "inline", value: canonicalize(compileSpeechSpineAudio(
           inline<SpeechSpineProgram>(inputs.program?.value, "SpeechSpineProgram"),
@@ -77,7 +62,6 @@ export const speechSpineComponent = {
     },
     {
       producer: speechSpineProducers.assembleBasis,
-      implementationDigest: assembleSpeechBasisImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: { basis: { kind: "inline", value: canonicalize(assembleSpeechBasis(
           inline<SpeechSpineProgram>(inputs.program?.value, "SpeechSpineProgram"),

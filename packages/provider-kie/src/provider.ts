@@ -29,33 +29,30 @@ import {
 import type { KieTaskRequest } from "./routes.js";
 
 export const kieProviderModuleRef = { name: "@narratage/provider-kie", version: "1" } as const;
-export const kieProviderImplementationDigest = digestOf("@narratage/provider-kie/market-endpoint@1");
 
 type Fetch = typeof globalThis.fetch;
 
 export type CreateKieProviderOptions = {
   readonly instance?: string;
-  readonly authority?: string;
+  readonly pool?: string;
   readonly apiBaseUrl?: string;
   readonly uploadBaseUrl?: string;
   readonly apiKey?: CredentialRef;
-  /** Total in-flight capacity shared by every KIE route. */
+  /** Total in-flight capacity shared by every KIE lane. */
   readonly defaultConcurrency?: number;
-  /** Optional KIE route limits keyed by capability name, for example seedance-2.5. */
-  readonly routeConcurrency?: Readonly<Record<string, number>>;
+  /** Optional KIE lane limits keyed by capability name, for example seedance-2.5. */
+  readonly laneConcurrency?: Readonly<Record<string, number>>;
   readonly pollIntervalMs?: number;
   readonly submissionIntervalMs?: number;
   readonly requestTimeoutMs?: number;
   readonly maxOperationMs?: number;
   readonly maxArtifactBytes?: number;
-  /** Required when replacing global fetch so the configured transport changes Runtime identity. */
-  readonly fetchImplementationDigest?: Digest;
   readonly fetch?: Fetch;
   readonly now?: () => number;
 };
 
 type KieCheckpoint = {
-  readonly contract: "svml.kie-operation@1";
+  readonly contract: "narratage.kie-operation@1";
   readonly taskId: string;
   readonly routeKey: string;
   readonly model: string;
@@ -434,7 +431,7 @@ function verifyCheckpoint(value: CanonicalValue | undefined, context: EndpointRe
   }
   const checkpoint = object(value, "KIE checkpoint") as unknown as KieCheckpoint;
   const route = kieRouteForCapability(context.need.capability);
-  if (checkpoint.contract !== "svml.kie-operation@1"
+  if (checkpoint.contract !== "narratage.kie-operation@1"
     || typeof checkpoint.taskId !== "string"
     || route === undefined
     || checkpoint.routeKey !== route.key
@@ -495,7 +492,7 @@ function endpoint(options: {
         await options.gate.enter();
         const taskId = await options.client.createTask(task, key);
         const checkpoint: KieCheckpoint = {
-          contract: "svml.kie-operation@1",
+          contract: "narratage.kie-operation@1",
           taskId,
           routeKey: route.key,
           model: task.model,
@@ -600,10 +597,10 @@ function endpoint(options: {
 
 export function createKieProvider(config: CreateKieProviderOptions) {
   verifyKieRoutes();
-  const routeNames = new Set(kieRoutes.map((route) => route.capability.name));
-  const routeConcurrency = Object.fromEntries(Object.entries(config.routeConcurrency ?? {}).map(([route, limit]) => {
-    if (!routeNames.has(route)) throw new Error(`unknown KIE concurrency route ${route}`);
-    return [route, positiveInteger(limit, `${route} routeConcurrency`)];
+  const laneNames = new Set(kieRoutes.map((route) => route.capability.name));
+  const laneConcurrency = Object.fromEntries(Object.entries(config.laneConcurrency ?? {}).map(([lane, limit]) => {
+    if (!laneNames.has(lane)) throw new Error(`unknown KIE concurrency lane ${lane}`);
+    return [lane, positiveInteger(limit, `${lane} laneConcurrency`)];
   }));
   const apiBaseUrl = baseUrl(config.apiBaseUrl ?? "https://api.kie.ai", "apiBaseUrl");
   const uploadBaseUrl = baseUrl(config.uploadBaseUrl ?? "https://kieai.redpandaai.co", "uploadBaseUrl");
@@ -612,14 +609,6 @@ export function createKieProvider(config: CreateKieProviderOptions) {
   const requestTimeoutMs = positiveInteger(config.requestTimeoutMs ?? 30_000, "requestTimeoutMs");
   const maxOperationMs = positiveInteger(config.maxOperationMs ?? 20 * 60_000, "maxOperationMs");
   const maxArtifactBytes = positiveInteger(config.maxArtifactBytes ?? 512 * 1024 * 1024, "maxArtifactBytes");
-  if (config.fetch !== undefined && config.fetchImplementationDigest === undefined) {
-    throw new Error("custom KIE fetch requires fetchImplementationDigest");
-  }
-  if (config.fetchImplementationDigest !== undefined && !isDigest(config.fetchImplementationDigest)) {
-    throw new Error("fetchImplementationDigest is invalid");
-  }
-  const fetchImplementationDigest = config.fetchImplementationDigest
-    ?? digestOf("@narratage/provider-kie/node-global-fetch@1");
   const now = config.now ?? Date.now;
   const client = new KieClient({
     apiBaseUrl,
@@ -639,30 +628,17 @@ export function createKieProvider(config: CreateKieProviderOptions) {
     module: kieProviderModuleRef,
     facet: "market",
     instance: config.instance ?? "kie.default",
-    authority: config.authority ?? config.instance ?? "kie.default",
-    implementation: {
-      digest: kieProviderImplementationDigest,
-    },
-    configuration: canonicalize({
-      apiBaseUrl,
-      uploadBaseUrl,
-      pollIntervalMs,
-      submissionIntervalMs,
-      requestTimeoutMs,
-      maxOperationMs,
-      maxArtifactBytes,
-      fetchImplementationDigest,
-    }),
+    pool: config.pool ?? config.instance ?? "kie.default",
     credentials: { apiKey: config.apiKey ?? credentialRef("env", "KIE_API_KEY") },
     credentialInputs: { apiKey: { label: "KIE API key" } },
     defaultConcurrency: config.defaultConcurrency ?? 2,
     capabilities: kieRoutes.map((route) => ({
       capability: route.capability,
       returns: route.returns,
-      route: route.capability.name,
-      ...(routeConcurrency[route.capability.name] === undefined
+      lane: route.capability.name,
+      ...(laneConcurrency[route.capability.name] === undefined
         ? {}
-        : { maxConcurrency: routeConcurrency[route.capability.name] }),
+        : { maxConcurrency: laneConcurrency[route.capability.name] }),
       lifecycle: "recoverable" as const,
       endpoint: providerEndpoint,
       retry: { maxAttempts: 3 },

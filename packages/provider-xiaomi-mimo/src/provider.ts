@@ -5,16 +5,12 @@ import {
   sealGeneratedAudioSet,
 } from "@narratage/generation";
 import type { GenerationMediaValue, GenerationRequest } from "@narratage/generation";
-import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
-import type { CanonicalValue, CapabilityRef, Digest } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
+import type { CanonicalValue, CapabilityRef } from "@narratage/protocol";
 import { credentialRef } from "@narratage/runtime";
 import type { CredentialRef } from "@narratage/runtime";
 
 export const xiaomiMimoProviderModuleRef = { name: "@narratage/provider-xiaomi-mimo", version: "1" } as const;
-export const xiaomiMimoProviderImplementationDigest = digestOf(
-  "@narratage/provider-xiaomi-mimo/chat-completions-tts@1",
-);
-
 const mimoModelModule = { name: "@narratage/mimo-tts", version: "1" } as const;
 const modelNames = [
   "mimo-v2.5-tts",
@@ -32,7 +28,7 @@ type Fetch = typeof globalThis.fetch;
 
 export type CreateXiaomiMimoProviderOptions = {
   readonly instance?: string;
-  readonly authority?: string;
+  readonly pool?: string;
   readonly apiBaseUrl?: string;
   readonly apiKey?: CredentialRef;
   readonly defaultConcurrency?: number;
@@ -40,7 +36,6 @@ export type CreateXiaomiMimoProviderOptions = {
   readonly maxResponseBytes?: number;
   readonly maxVoiceSampleBase64Bytes?: number;
   readonly fetch?: Fetch;
-  readonly fetchImplementationDigest?: Digest;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -171,14 +166,7 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
     options.maxVoiceSampleBase64Bytes ?? 10_000_000,
     "maxVoiceSampleBase64Bytes",
   );
-  if (options.fetch !== undefined && options.fetchImplementationDigest === undefined) {
-    throw new Error("custom Xiaomi MiMo fetch requires fetchImplementationDigest");
-  }
-  if (options.fetchImplementationDigest !== undefined && !isDigest(options.fetchImplementationDigest)) {
-    throw new Error("Xiaomi MiMo fetchImplementationDigest is invalid");
-  }
   const fetcher = options.fetch ?? globalThis.fetch;
-  const transportDigest = options.fetchImplementationDigest ?? digestOf("@narratage/provider-xiaomi-mimo/global-fetch@1");
   const endpointCapabilities = modelNames.map((model) => ({
     capability: capabilities[model],
     returns: generationTypes.audioSet,
@@ -227,13 +215,7 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
     module: xiaomiMimoProviderModuleRef,
     facet: "tts",
     instance: options.instance ?? "xiaomi-mimo.default",
-    authority: options.authority ?? options.instance ?? "xiaomi-mimo.default",
-    implementation: {
-      digest: xiaomiMimoProviderImplementationDigest,
-    },
-    configuration: canonicalize({
-      apiBaseUrl, requestTimeoutMs, maxResponseBytes, maxVoiceSampleBase64Bytes, transportDigest,
-    }),
+    pool: options.pool ?? options.instance ?? "xiaomi-mimo.default",
     credentials: { apiKey: options.apiKey ?? credentialRef("env", "MIMO_API_KEY") },
     credentialInputs: { apiKey: { label: "Xiaomi MiMo API key" } },
     defaultConcurrency: options.defaultConcurrency ?? 2,

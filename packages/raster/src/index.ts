@@ -1,4 +1,4 @@
-export { rasterCapabilities, rasterDependency, rasterManifest, rasterManifestDigest, rasterModuleRef } from "./manifest.js";
+export { rasterCapabilities, rasterDependency, rasterManifest, rasterModuleRef } from "./manifest.js";
 export { rasterTransformOperationSchema } from "./schema.js";
 export {
   assertRasterRequest, assertRasterTransformOperations, rasterComposeRequest,

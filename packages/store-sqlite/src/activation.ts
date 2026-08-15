@@ -1,13 +1,13 @@
 import {
-  createRuntimeComponentAdapterFacet,
+  createRuntimeInfrastructureAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
 import { resolve } from "node:path";
 
-const sqliteStateAdapter = createRuntimeComponentAdapterFacet({
+const sqliteStateAdapter = createRuntimeInfrastructureAdapterFacet({
   use: "@narratage/store-sqlite",
   validate(context) {
     const config = runtimeConfigObject(context.config, "SQLite Runtime state");
@@ -19,12 +19,10 @@ const sqliteStateAdapter = createRuntimeComponentAdapterFacet({
     const config = runtimeConfigObject(context.config, "SQLite Runtime state");
     const path = runtimeConfigString(config.path, "SQLite path");
     if (path === undefined) throw new Error("SQLite path is required");
-    const { createSqliteRuntimeComponentPackage } = await import("./store.js");
-    return createSqliteRuntimeComponentPackage({
+    const { createSqliteRuntimeInfrastructurePackage } = await import("./store.js");
+    return createSqliteRuntimeInfrastructurePackage({
       path: resolve(context.dataRoot, path),
-      buildInstance: `${context.instance}.builds`,
-      operationInstance: `${context.instance}.operations`,
-      dispatchInstance: `${context.instance}.dispatch`,
+      instance: context.instance,
       ...(runtimeConfigPositiveInteger(config.busyTimeoutMs, "SQLite busyTimeoutMs") === undefined
         ? {} : { busyTimeoutMs: config.busyTimeoutMs as number }),
       ...(context.access === "read-only" ? { readOnly: true } : {}),
@@ -32,9 +30,9 @@ const sqliteStateAdapter = createRuntimeComponentAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [sqliteStateAdapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

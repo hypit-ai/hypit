@@ -12,7 +12,7 @@ import {
 
 /**
  * Every identity in the system is a digest of a canonical value: Record
- * identity, Operation identity, configuration identity, package locks. So these
+ * identity, Operation identity and configuration identity. So these
  * tests are about one property — two values that mean the same thing must
  * digest the same, and two that mean different things must not.
  */
@@ -105,8 +105,8 @@ test("a Record's identity includes its Type, and a set of Records is order-free"
  * Pins.
  *
  * These are not testing that sha256 works. They exist so that changing how a
- * value is canonicalized cannot be a quiet change: every archived Build, every
- * package lock and every recorded Runtime Profile is addressed by these bytes.
+ * value is canonicalized cannot be a quiet change: every archived Build and
+ * recorded Runtime Profile is addressed by these bytes.
  * Editing a constant here is a deliberate act that a reviewer can see; a
  * silently different digest is not.
  */
@@ -115,8 +115,8 @@ test("the canonical form of these values is fixed, and changing it is a visible 
     "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a");
   assert.equal(digestOf([]),
     "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945");
-  assert.equal(digestOf({ contract: "svml.example@1", count: 1, ok: true, none: null }),
-    "sha256:2b702b25c218cdbc1f242c1125cee07f648f503af78b0dd48d5f9743f22934c9");
+  assert.equal(digestOf({ contract: "narratage.example@1", count: 1, ok: true, none: null }),
+    "sha256:4067a46c456f9d497e2f5ddf050d448c0965fa4596d403d72bde387fbce8d750");
   // Non-ASCII must not depend on an escaping choice.
   assert.equal(digestOf({ zh: "口播稿", nested: { a: [1, "1", false] } }),
     "sha256:96519d6160460ea2b76578b1303fec47e9c3d53b012dce8738a3129126baea59");

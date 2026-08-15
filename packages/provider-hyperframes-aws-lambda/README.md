@@ -19,15 +19,14 @@ configuration.
 
 On success the Endpoint requires HyperFrames' plan and completed-frame counts to equal the source
 document, then streams the returned S3 object into the selected content-addressed ArtifactStore.
-Configuration must include the reviewed deployed renderer's content digest; a mutable state-machine
-ARN is not implementation identity. The Driver binds the locked Endpoint, configuration, Runtime
-closure, request and returned value in the generic Need Receipt; the Provider does not repeat those
-facts as vendor metadata. Container and stream conformance stays in the explicit media
+The Runtime Profile selects the state machine and deployment settings. The generic Need Receipt
+records the selected Endpoint, request and returned value; the Provider does not repeat those facts
+as vendor metadata. Container and stream conformance stays in the explicit media
 inspection/mux capabilities, so the orchestrating machine does not acquire a hidden FFmpeg
 dependency.
 
 The production client uses the AWS SDK default credential chain. No access key is accepted by the
-package configuration or written into Runtime identity.
+package configuration or written into Build state.
 
 The opt-in live canary uses a fresh operation identity on every run and cleans its exact
 render/site prefixes by default.

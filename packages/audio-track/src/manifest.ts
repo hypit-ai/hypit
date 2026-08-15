@@ -7,8 +7,6 @@ import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narrata
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import { temporalDependency } from "@narratage/temporal";
 
-import { audioTrackImplementationDigests, audioTrackValidatorDigests } from "./program.js";
-
 export const audioTrackModuleRef = { name: "@narratage/audio-track", version: "1" } as const;
 export const audioTrackTypes = {
   header: { module: audioTrackModuleRef, name: "AudioTrackHeader" },
@@ -82,8 +80,6 @@ export const audioTrackProgramSchema: ValueSchema = object({
   items: { schema: { kind: "array", minItems: 1, items: item } },
 });
 
-export const audioTrackSurfaceImplementationDigest = digestOf("@narratage/audio-track/track-surface@1");
-
 const validator = (digest: ReturnType<typeof digestOf>) => ({
   implementation: { digest },
 });
@@ -96,32 +92,28 @@ const baseInputs = [
 export const audioTrackMarkupSurfaces = [{
     name: "track", tag: "Track", mode: "structured",
     outputs: [audioTrackTypes.header, audioTrackTypes.clipSpec, audioTrackTypes.program, compositionTypes.audioTrack],
-    implementation: {
-      digest: audioTrackSurfaceImplementationDigest,
-    },
   }] as const;
 
 
 export const audioTrackManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: audioTrackModuleRef.name,
   version: audioTrackModuleRef.version,
   dependencies: [mediaDependency, narrativeDependency, semanticMapDependency, programSpaceDependency, temporalDependency, compositionDependency],
   types: [
-    { name: audioTrackTypes.header.name, schema: audioTrackHeaderSchema },
-    { name: audioTrackTypes.clipSpec.name, schema: audioClipSpecSchema },
-    { name: audioTrackTypes.set.name, schema: audioTrackSetSchema },
-    { name: audioTrackTypes.program.name, schema: audioTrackProgramSchema, validator: validator(audioTrackValidatorDigests.program) },
+    { name: audioTrackTypes.header.name },
+    { name: audioTrackTypes.clipSpec.name },
+    { name: audioTrackTypes.set.name },
+    { name: audioTrackTypes.program.name },
   ],
   capabilities: [],
   producers: [
-    { name: audioTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [], implementation: { digest: audioTrackImplementationDigests.createSet } },
-    { name: audioTrackProducers.appendProgram.name, inputs: [...baseInputs], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [], implementation: { digest: audioTrackImplementationDigests.appendProgram } },
-    { name: audioTrackProducers.appendSelection.name, inputs: [...baseInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [], implementation: { digest: audioTrackImplementationDigests.appendSelection } },
-    { name: audioTrackProducers.appendMoment.name, inputs: [...baseInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [], implementation: { digest: audioTrackImplementationDigests.appendMoment } },
-    { name: audioTrackProducers.finalize.name, inputs: [{ name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header }], outputs: [{ name: "program", type: audioTrackTypes.program }], needs: [], implementation: { digest: audioTrackImplementationDigests.finalize } },
-    { name: audioTrackProducers.render.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: audioTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [], implementation: { digest: audioTrackImplementationDigests.render } },
+    { name: audioTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
+    { name: audioTrackProducers.appendProgram.name, inputs: [...baseInputs], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
+    { name: audioTrackProducers.appendSelection.name, inputs: [...baseInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
+    { name: audioTrackProducers.appendMoment.name, inputs: [...baseInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
+    { name: audioTrackProducers.finalize.name, inputs: [{ name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header }], outputs: [{ name: "program", type: audioTrackTypes.program }], needs: [] },
+    { name: audioTrackProducers.render.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: audioTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [] },
   ],
 };
-export const audioTrackManifestDigest = digestOf(audioTrackManifest);
-export const audioTrackDependency = { module: audioTrackModuleRef, digest: audioTrackManifestDigest } as const;
+export const audioTrackDependency = { module: audioTrackModuleRef } as const;

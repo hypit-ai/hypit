@@ -11,12 +11,12 @@ import wave
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from svml_whisperx_service import PROTOCOL, SERVICE_VERSION  # noqa: E402
-from svml_whisperx_service.application import RequestError, WhisperXApplication  # noqa: E402
-from svml_whisperx_service.audio import AudioInputError, CanonicalAudio, read_canonical_audio  # noqa: E402
-from svml_whisperx_service.config import ServiceConfig  # noqa: E402
-from svml_whisperx_service.engine import InferenceBusyError, normalize_alignment, normalize_language  # noqa: E402
-from svml_whisperx_service.resources import assert_punkt_tab  # noqa: E402
+from narratage_whisperx_service import PROTOCOL, SERVICE_VERSION  # noqa: E402
+from narratage_whisperx_service.application import RequestError, WhisperXApplication  # noqa: E402
+from narratage_whisperx_service.audio import AudioInputError, CanonicalAudio, read_canonical_audio  # noqa: E402
+from narratage_whisperx_service.config import ServiceConfig  # noqa: E402
+from narratage_whisperx_service.engine import InferenceBusyError, normalize_alignment, normalize_language  # noqa: E402
+from narratage_whisperx_service.resources import assert_punkt_tab  # noqa: E402
 
 
 def write_wav(path: Path, frames: int = 32_000, rate: int = 16_000, channels: int = 1) -> None:
@@ -61,7 +61,7 @@ class BusyEngine(FakeEngine):
 
 def config(root: Path, **environment: str) -> ServiceConfig:
     return ServiceConfig.from_environment({
-        "SVML_WHISPERX_INPUT_ROOTS": str(root),
+        "NARRATAGE_WHISPERX_INPUT_ROOTS": str(root),
         **environment,
     })
 
@@ -79,7 +79,7 @@ class ConfigurationTests(unittest.TestCase):
     def test_invalid_limits_fail_before_loading_model_weights(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "PORT"):
-                config(Path(directory), SVML_WHISPERX_PORT="70000")
+                config(Path(directory), NARRATAGE_WHISPERX_PORT="70000")
 
 
 class AudioTests(unittest.TestCase):
@@ -108,7 +108,7 @@ class AudioTests(unittest.TestCase):
 class ResourceTests(unittest.TestCase):
     def test_locked_sentence_data_is_required_before_model_start(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(RuntimeError, "svml-whisperx-prepare"):
+            with self.assertRaisesRegex(RuntimeError, "narratage-whisperx-prepare"):
                 assert_punkt_tab(Path(directory))
 
 

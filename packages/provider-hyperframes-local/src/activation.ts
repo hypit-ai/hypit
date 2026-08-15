@@ -4,11 +4,11 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
 import {
   diagnoseRuntimeExecutable,
   resolveRuntimeExecutable,
-} from "@narratage/runtime-adapter-node";
+} from "@narratage/runtime-host-node";
 
 import { createLocalHyperframesProvider } from "./provider.js";
 import type { HyperframesBrowserGpu, HyperframesQuality, HyperframesWorkers } from "./provider.js";
@@ -17,7 +17,7 @@ import { localHyperframesBrowserProgram } from "./program.js";
 const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-hyperframes-local",
   activate(context) {
-    if (context.authority === undefined) throw new Error("local HyperFrames Provider Authority is required");
+    if (context.pool === undefined) throw new Error("local HyperFrames Provider Pool is required");
     const config = runtimeConfigObject(context.config, "local HyperFrames");
     runtimeConfigExact(config, [
       "nodePath", "hyperframesCliPath", "ffprobePath", "workers", "quality", "browserGpu",
@@ -52,7 +52,7 @@ const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createLocalHyperframesProvider({
         instance: context.instance,
-        authority: context.authority,
+        pool: context.pool,
         ...(nodePath === undefined ? {} : { nodePath }),
         ...(hyperframesCliPath === undefined ? {} : { hyperframesCliPath }),
         ...(ffprobePath === undefined ? {} : { ffprobePath }),
@@ -83,9 +83,9 @@ const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [localHyperframesRuntimeAdapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

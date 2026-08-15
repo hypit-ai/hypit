@@ -1,5 +1,5 @@
 [project]
-name = "svml-whisperx-service"
+name = "narratage-whisperx-service"
 version = "0.1.0"
 description = "Warm, loopback-only WhisperX alignment service for the SVML local Provider"
 readme = "README.md"
@@ -11,9 +11,9 @@ dependencies = [
 ]
 
 [project.scripts]
-svml-whisperx-service = "svml_whisperx_service.__main__:main"
-svml-whisperx-check = "svml_whisperx_service.check:main"
-svml-whisperx-prepare = "svml_whisperx_service.prepare:main"
+narratage-whisperx-service = "narratage_whisperx_service.__main__:main"
+narratage-whisperx-check = "narratage_whisperx_service.check:main"
+narratage-whisperx-prepare = "narratage_whisperx_service.prepare:main"
 
 [build-system]
 requires = ["setuptools>=77"]

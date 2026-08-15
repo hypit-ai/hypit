@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
 
 import { probeMediaToolchain } from "@narratage/media-execution";
-import { runtimeConfigObject, runtimeConfigString } from "@narratage/runtime-adapter";
-import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@narratage/runtime-adapter";
-import { resolveRuntimeExecutable } from "@narratage/runtime-adapter-node";
+import { runtimeConfigObject, runtimeConfigString } from "@narratage/runtime-kit";
+import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@narratage/runtime-kit";
+import { resolveRuntimeExecutable } from "@narratage/runtime-host-node";
 
 import { defaultHyperframesCliPath } from "./provider.js";
 
@@ -19,7 +19,7 @@ function run(executable: string, args: readonly string[]): Promise<{ ok: boolean
 
 /**
  * HyperFrames owns the browser cache behind its CLI. It is deployment state,
- * not an author dependency, so the Runtime Component lifecycle prepares it only
+ * not an author dependency, so the Endpoint lifecycle prepares it only
  * when this Provider is selected.
  */
 export function localHyperframesBrowserProgram(

@@ -19,4 +19,4 @@ export {
   verifyCompiledSourceIdentity,
 } from "./unit.js";
 /** Logical package address for Source Frontends selected by a Source Header. */
-export const sourceFrontendPackageAbi = "svml.source-frontend@1";
+export const sourceFrontendPackageAbi = "narratage.source-frontend@1";

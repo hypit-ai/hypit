@@ -15,10 +15,10 @@
     "@narratage/protocol": "workspace:*",
     "@narratage/run": "workspace:*",
     "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-adapter-node": "workspace:*",
+    "@narratage/runtime-host-node": "workspace:*",
     "@narratage/source": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/local": "workspace:*"
+    "@narratage/runtime-local": "workspace:*"
   }
 }

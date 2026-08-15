@@ -6,12 +6,10 @@ explicit HyperFrames rendering. `check` and `plan` do not invoke Seedance, Whisp
 HyperFrames.
 
 ```bash
-node --run narratage -- check examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
-node --run narratage -- check examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
-node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
+cd examples/talking-film-graph-check
+narratage check main.svml
+narratage check build.svrun
+narratage plan build.svrun
 ```
 
 The Gemini planner receives readable indivisible display atoms and resolved Style runs only. Its

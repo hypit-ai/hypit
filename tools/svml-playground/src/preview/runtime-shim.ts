@@ -40,7 +40,7 @@ function shim(audibleTrack: string | undefined): string {
    * while the transport insisted it was keeping time.
    */
   function apply(seconds, scrubbing) {
-    var clips = document.querySelectorAll('.svml-visual-present');
+    var clips = document.querySelectorAll('.narratage-visual-present');
     for (var i = 0; i < clips.length; i++) {
       var clip = clips[i];
       var start = parseFloat(clip.getAttribute('data-start') || '0') || 0;
@@ -58,7 +58,7 @@ function shim(audibleTrack: string | undefined): string {
         // separate Track the media pipeline muxes in. A preview is not a
         // render, and placing B-roll against speech means hearing the speech,
         // so the Spine's own material is allowed to sound.
-        var track = clip.getAttribute('data-svml-track-id');
+        var track = clip.getAttribute('data-narratage-track-id');
         element.muted = muted || scrubbing || audible === null || track !== audible;
         try {
           if (!inside) { element.pause(); continue; }

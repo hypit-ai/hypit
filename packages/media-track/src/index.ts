@@ -23,30 +23,7 @@ export {
   sealMediaSampleLayerSpec,
 } from "./layers.js";
 export { lowerMediaItemElements } from "./lower.js";
-export {
-  mediaItemSpecSchema,
-  mediaFramePresentationSchema,
-  mediaLifecycleMotionSchema,
-  mediaLayerSetSchema,
-  mediaHandoffSpecSchema,
-  mediaPaintLayerSpecSchema,
-  mediaSampleLayerSpecSchema,
-  mediaSoundSetSchema,
-  mediaSoundSpecSchema,
-  mediaSequenceMemberSetSchema,
-  mediaSequenceMemberSpecSchema,
-  mediaSequenceSpecSchema,
-  mediaTrackDependency,
-  mediaTrackHeaderSchema,
-  mediaTrackManifest, mediaTrackMarkupSurfaces,
-  mediaTrackManifestDigest,
-  mediaTrackModuleRef,
-  mediaTrackProducers,
-  mediaTrackSurfaceImplementationDigest,
-  mediaTrackProgramSchema,
-  mediaTrackSetSchema,
-  mediaTrackTypes,
-} from "./manifest.js";
+export { mediaItemSpecSchema, mediaFramePresentationSchema, mediaLifecycleMotionSchema, mediaLayerSetSchema, mediaHandoffSpecSchema, mediaPaintLayerSpecSchema, mediaSampleLayerSpecSchema, mediaSoundSetSchema, mediaSoundSpecSchema, mediaSequenceMemberSetSchema, mediaSequenceMemberSpecSchema, mediaSequenceSpecSchema, mediaTrackDependency, mediaTrackHeaderSchema, mediaTrackManifest, mediaTrackMarkupSurfaces, mediaTrackModuleRef, mediaTrackProducers, mediaTrackProgramSchema, mediaTrackSetSchema, mediaTrackTypes } from "./manifest.js";
 export {
   assertMediaEdgeMotion,
   assertMediaLifecycleMotion,
@@ -66,32 +43,7 @@ export {
   createMediaSoundSet,
   sealMediaSoundSpec,
 } from "./sounds.js";
-export {
-  appendMomentMediaItem,
-  appendMediaSequence,
-  appendMediaSequenceUntilMoment,
-  appendMediaSequenceUntilProgramEnd,
-  appendMediaSequenceUntilSelection,
-  appendProgramMediaItem,
-  appendSegmentMediaItem,
-  appendSelectionMediaItem,
-  bindMediaItemClipPath,
-  bindMediaSequenceClipPath,
-  assertMediaItemSpec,
-  assertMediaTrackHeader,
-  assertMediaTrackProgram,
-  assertMediaTrackProgramIdentity,
-  assertMediaTrackSet,
-  createMediaTrackSet,
-  finalizeMediaTrack,
-  mediaTrackImplementationDigests,
-  mediaTrackValidatorDigests,
-  projectMediaAudioTrack,
-  projectMediaVisualTrack,
-  sealMediaItemSpec,
-  sealMediaTrackHeader,
-  sealMediaTrackProgram,
-} from "./program.js";
+export { appendMomentMediaItem, appendMediaSequence, appendMediaSequenceUntilMoment, appendMediaSequenceUntilProgramEnd, appendMediaSequenceUntilSelection, appendProgramMediaItem, appendSegmentMediaItem, appendSelectionMediaItem, bindMediaItemClipPath, bindMediaSequenceClipPath, assertMediaItemSpec, assertMediaTrackHeader, assertMediaTrackProgram, assertMediaTrackProgramIdentity, assertMediaTrackSet, createMediaTrackSet, finalizeMediaTrack, projectMediaAudioTrack, projectMediaVisualTrack, sealMediaItemSpec, sealMediaTrackHeader, sealMediaTrackProgram } from "./program.js";
 export { resolveVisualSampling } from "./sampling.js";
 export { lowerRestrictedSpeechVisualPresents } from "./restricted-speech.js";
 export type { RestrictedSpeechVisualClip } from "./restricted-speech.js";

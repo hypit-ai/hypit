@@ -84,7 +84,7 @@ export type RunSatisfaction = {
 };
 
 export type RunDocument = {
-  readonly format: "svml.run-document@1";
+  readonly format: "narratage.run-document@1";
   readonly author: RunAuthorSourceRequest;
   readonly imports: readonly RunImport[];
   readonly targets: readonly RunTarget[];
@@ -103,7 +103,6 @@ export type DecodedRunSource = {
 
 export type RunFrontend = {
   readonly id: string;
-  readonly implementationDigest: Digest;
   discover(source: RunFrontendSourceUnit): RunSourceDiscovery | Promise<RunSourceDiscovery>;
   decode(source: RunFrontendSourceUnit): DecodedRunSource | Promise<DecodedRunSource>;
 };
@@ -114,7 +113,7 @@ export interface RunFrontendRegistryLike {
 
 /** One self-contained Run Source identity. Run Sources do not recursively import other Run Sources. */
 export type RunSourceClosure = CompiledSourceIdentity & {
-  readonly format: "svml.run-source-closure@1";
+  readonly format: "narratage.run-source-closure@1";
   readonly id: Digest;
 };
 
@@ -129,7 +128,7 @@ export interface RunFragmentRegistryLike {
 
 /** Complete, mandatory execution-intent graph. Empty alternate Candidate sets are still a Run Graph. */
 export type RunGraph = {
-  readonly format: "svml.run-graph@1";
+  readonly format: "narratage.run-graph@1";
   readonly id: Digest;
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];

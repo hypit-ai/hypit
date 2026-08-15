@@ -5,15 +5,15 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-adapter";
-import { diagnoseRuntimeEnvironmentCredential } from "@narratage/runtime-adapter-node";
+} from "@narratage/runtime-kit";
+import { diagnoseRuntimeEnvironmentCredential } from "@narratage/runtime-host-node";
 
 import { createGoogleVertexCaptionProvider } from "./provider.js";
 
 const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-google-vertex",
   activate(context) {
-    if (context.authority === undefined) throw new Error("Google Vertex Provider Authority is required");
+    if (context.pool === undefined) throw new Error("Google Vertex Provider Pool is required");
     const config = runtimeConfigObject(context.config, "Google Vertex");
     runtimeConfigExact(config, [
       "project", "projectEnv", "location", "credentials", "defaultConcurrency",
@@ -34,7 +34,7 @@ const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
       endpoint: createGoogleVertexCaptionProvider({
         ...(projectValue === undefined ? { projectEnv: projectEnv! } : { project: projectValue }),
         instance: context.instance,
-        authority: context.authority,
+        pool: context.pool,
         ...(location === undefined ? {} : { location }),
         credentialsJson: credentials,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
@@ -48,9 +48,9 @@ const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [googleVertexRuntimeAdapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

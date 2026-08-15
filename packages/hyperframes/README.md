@@ -3,7 +3,7 @@
 Deterministic reference lowering from the generic `Composition` contract to a portable
 `HyperframesDocument`.
 
-This package implements the one closed `svml.visual-ir@1` target declared by every
+This package implements the one closed `narratage.visual-ir@1` target declared by every
 VisualTrack. The vocabulary is owned by `@narratage/visual-ir`; Track and Composition values are
 owned by `@narratage/composition`. Neither is an author component
 and not arbitrary CSS. Unknown properties and alternate browser semantics fail before document
@@ -18,7 +18,7 @@ It deliberately ignores `AudioTrack`. HyperFrames produces a silent visual fact;
 compiles and renders program audio separately, then an explicit mux Provider joins the two. Changing
 audio can therefore never be implemented by secretly changing HyperFrames HTML or its renderer.
 
-Media remains content addressed in the compiled HTML as `svml-artifact://` placeholders. The
+Media remains content addressed in the compiled HTML as `narratage-artifact://` placeholders. The
 document separately carries each dependency's complete `BlobRef` (digest, byte count and MIME), so
 a Provider can verify and name staged bytes without guessing from the hash. A local or hosted
 render Runtime calls `materializeHyperframesHtml()` with its own Artifact URL resolver before
@@ -42,7 +42,7 @@ from a user font name or filename extension. The document carries a deduplicated
 beside its Artifact set so a staging Runtime can verify the exact bytes before rendering.
 
 The ordinary test suite validates deterministic HTML and Artifact collection. Set
-`SVML_BROWSER_TESTS=1` to run the host integration witness that invokes the installed Hyperframes
+`NARRATAGE_BROWSER_TESTS=1` to run the host integration witness that invokes the installed Hyperframes
 CLI, paints a real font and checks straight-alpha composition at the rendered pixel level. That
 test needs Chrome and FFmpeg; its multilingual case uses only the locked open-font package, not a
 system font. It is a renderer conformance witness, not Core logic.

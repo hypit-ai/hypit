@@ -24,7 +24,7 @@ export type HyperframesDocument = HyperframesFrameDomain & {
   readonly artifacts: readonly BlobRef[];
   /** Typed Surface dependencies that a Runtime must verify before rendering. */
   readonly surfaces: readonly CompositableSurfaceRef[];
-  /** Media URLs remain svml-artifact:// placeholders until a Runtime materializes them. */
+  /** Media URLs remain narratage-artifact:// placeholders until a Runtime materializes them. */
   readonly html: string;
 };
 

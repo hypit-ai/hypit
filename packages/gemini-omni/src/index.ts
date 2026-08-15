@@ -63,7 +63,6 @@ const geminiOmniBaseDefinition = defineExactModelModule({
 
 export const geminiOmniEndpoints = geminiOmniBaseDefinition.endpoints;
 export const geminiOmniComponent = geminiOmniBaseDefinition.component;
-export const geminiOmniSurfaceImplementationDigest = digestOf("@narratage/gemini-omni/video-surface@1");
 const geminiOmniEndpoint = geminiOmniEndpoints.video!;
 
 export const geminiOmniMarkupSurfaces = [{
@@ -75,17 +74,12 @@ export const geminiOmniMarkupSurfaces = [{
       geminiOmniEndpoint.mediaBindings.images!.type,
       geminiOmniEndpoint.mediaBindings.excerpts!.type,
     ],
-    implementation: {
-      digest: geminiOmniSurfaceImplementationDigest,
-    },
   }] as const;
 
 export const geminiOmniManifest = {
   ...geminiOmniBaseDefinition.manifest,
 };
-export const geminiOmniManifestDigest = digestOf(geminiOmniManifest);
 export const geminiOmniDefinition = {
   ...geminiOmniBaseDefinition,
   manifest: geminiOmniManifest,
-  manifestDigest: geminiOmniManifestDigest,
 };

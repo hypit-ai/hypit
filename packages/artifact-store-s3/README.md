@@ -21,17 +21,18 @@ actually perform instead of failing midway through a Build.
 ```ts
 const artifacts = createS3ArtifactStorePackage({
   instance: "artifacts.team",
-  bucket: "team-svml-artifacts",
+  bucket: "team-narratage-artifacts",
   prefix: "development",
   region: "us-east-1",
   expectedBucketOwner: "123456789012",
 });
 
-// Supply this package beside explicit Scheduler/Worker, state and CredentialStore packages,
-// then select `artifacts.team` as runtimeSelection.stores.artifacts.
+// A Runtime Profile creates this as a named infrastructure instance, then selects
+// its `store` part for the `artifactStore` role.
 ```
 
-`createProjectLocalRuntime()` never infers the other required Components from this package.
+The package exposes only its own `store` part. It never infers or installs the Scheduler, Worker,
+state or Credential Store selected for the other Runtime roles.
 
 The AWS SDK default credential chain or an explicitly injected trusted client owns AWS
 authentication. Secret bytes never enter the package contribution or Runtime Closure; bucket,

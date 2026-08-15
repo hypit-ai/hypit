@@ -235,10 +235,9 @@ test("the self-described Audio Surface parses into the same finite Producer grap
   const fixtureSurface = {
     name: "inputs", tag: "Inputs", mode: "structured",
     outputs: [mediaTypes.synchronized, programSpaceTypes.programSpace],
-    implementation: { digest: fixtureSurfaceDigest },
   } as const;
   const fixtureManifest: ModuleManifest = {
-    format: "svml.module@1",
+    format: "narratage.module@1",
     name: fixtureModule.name,
     version: fixtureModule.version,
     dependencies: [mediaDependency, programSpaceDependency],

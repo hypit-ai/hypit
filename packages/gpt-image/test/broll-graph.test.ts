@@ -25,12 +25,7 @@ import {
   gptImageManifest,
   sealGptImage2Draft,
 } from "@narratage/gpt-image";
-import {
-  gptImageDenoiseV1,
-  imageTransformImplementationDigests,
-  imageTransformManifest,
-  imageTransformTypes,
-} from "@narratage/image-transform";
+import { gptImageDenoiseV1, imageTransformManifest, imageTransformTypes } from "@narratage/image-transform";
 import { exactModelMediaInputNames } from "@narratage/model-kit";
 import { mediaManifest } from "@narratage/media";
 import { narrativeManifest } from "@narratage/narrative";
@@ -86,15 +81,13 @@ function fixture() {
     readonly id: string;
     readonly type: TypeRef;
     readonly value: StoredValue;
-    readonly validatorDigest?: Digest;
   }> = [];
-  const add = (id: string, type: TypeRef, value: StoredValue, validatorDigest?: Digest) =>
-    records.push({ id, type, value, ...(validatorDigest === undefined ? {} : { validatorDigest }) });
+  const add = (id: string, type: TypeRef, value: StoredValue) => records.push({ id, type, value });
   add("person", artifactTypes.blob, image("person"));
   add("product", artifactTypes.blob, image("product"));
   add("cleanup", imageTransformTypes.program, {
     kind: "inline", value: gptImageDenoiseV1 as unknown as CanonicalValue,
-  }, imageTransformImplementationDigests.validator);
+  });
 
   const gptFragments = {
     holding: createGptImageCleanFragment([
@@ -109,7 +102,7 @@ function fixture() {
       value: sealGptImage2Draft({
         prompt: [`${id} prompt`], aspectRatio: ["9:16"], resolution: ["1K"],
       }) as unknown as CanonicalValue,
-    }, gpt.draftValidatorDigest);
+    });
     for (const name of names) add(`${id}.${name}.binding`, gpt.mediaBindings.images!.type, {
       kind: "inline",
       value: sealGenerationMediaBinding(gptBindingPort as never, { role: "image" }) as unknown as CanonicalValue,
@@ -127,7 +120,7 @@ function fixture() {
       prompt: ["A fast montage from all three reference images."],
       resolution: ["720p"], aspectRatio: ["9:16"], duration: [6], generateAudio: [false], webSearch: [false],
     }) as unknown as CanonicalValue,
-  }, seedance.draftValidatorDigest);
+  });
   for (const name of ["holding", "walking", "interview"]) add(`montage.${name}.binding`, seedance.mediaBindings.referenceImage!.type, {
     kind: "inline",
     value: sealGenerationMediaBinding(seedanceBindingPort as never, { role: "image" }) as unknown as CanonicalValue,
@@ -184,8 +177,7 @@ function fixture() {
     ]),
     outputs: { video: "montage.video" },
   }];
-  const program = link(closure,
-    records.map(({ validatorDigest: _validatorDigest, ...record }) => sealRecord({ ...record, origin })));
+  const program = link(closure, records.map((record) => sealRecord({ ...record, origin })));
   const fragments = new Map([
     ...Object.values(gptFragments).map((fragment) => [fragment.id, fragment] as const),
     [seedanceFragment.id, seedanceFragment] as const,

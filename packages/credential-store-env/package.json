@@ -7,12 +7,12 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": {
+  "narratage": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-adapter": "workspace:*"
+    "@narratage/runtime-kit": "workspace:*"
   }
 }

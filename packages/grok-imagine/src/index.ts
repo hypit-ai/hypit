@@ -77,36 +77,26 @@ const grokImagineBaseDefinition = defineExactModelModule({
 
 export const grokImagineEndpoints = grokImagineBaseDefinition.endpoints;
 export const grokImagineComponent = grokImagineBaseDefinition.component;
-export const grokImagineSurfaceImplementationDigests = {
-  video: digestOf("@narratage/grok-imagine/video-surface@1"),
-  previewVideo: digestOf("@narratage/grok-imagine/preview-video-surface@1"),
-} as const;
 const surface = (
   name: "video" | "preview-video",
   tag: "Video" | "PreviewVideo",
   endpoint: NonNullable<(typeof grokImagineEndpoints)["video" | "preview-1.5"]>,
-  digest: (typeof grokImagineSurfaceImplementationDigests)["video" | "previewVideo"],
 ) => ({
   name,
   tag,
   mode: "structured" as const,
   outputs: [endpoint.draftType, endpoint.mediaBindings.images!.type],
-  implementation: {
-    digest,
-  },
 });
 
 export const grokImagineMarkupSurfaces = [
-    surface("video", "Video", grokImagineEndpoints.video!, grokImagineSurfaceImplementationDigests.video),
-    surface("preview-video", "PreviewVideo", grokImagineEndpoints["preview-1.5"]!, grokImagineSurfaceImplementationDigests.previewVideo),
+    surface("video", "Video", grokImagineEndpoints.video!),
+    surface("preview-video", "PreviewVideo", grokImagineEndpoints["preview-1.5"]!),
   ] as const;
 
 export const grokImagineManifest = {
   ...grokImagineBaseDefinition.manifest,
 };
-export const grokImagineManifestDigest = digestOf(grokImagineManifest);
 export const grokImagineDefinition = {
   ...grokImagineBaseDefinition,
   manifest: grokImagineManifest,
-  manifestDigest: grokImagineManifestDigest,
 };

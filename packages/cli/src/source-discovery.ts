@@ -3,7 +3,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 import { authorFrontendsFromHostFacets, prepareAuthorSource } from "@narratage/elaborator";
 import type { AuthorFrontend } from "@narratage/elaborator";
-import type { LogicalPackageAddress, NodePackageBinding } from "@narratage/package-loader-node";
+import type { LogicalPackageAddress, LoadedPackage } from "@narratage/package-loader-node";
 import { modulePackageAbi } from "@narratage/protocol";
 import { prepareRunSource, runFragmentHostAbi, runFrontendsFromHostFacets } from "@narratage/run";
 import type { RunFrontend } from "@narratage/run";
@@ -14,7 +14,7 @@ function isWithin(root: string, path: string): boolean {
   return relation === "" || (!relation.startsWith("..") && !isAbsolute(relation));
 }
 
-/** Conventional physical hint used only when the trusted inventory has no binding yet. */
+/** Conventional physical package name for a logical Source import. */
 function physicalPackage(request: string): string {
   const version = request.lastIndexOf("@");
   if (version <= 0) throw new Error(`Package request ${request} must end in @version`);
@@ -49,7 +49,7 @@ export async function discoverSourcePackages(
   sourcePath: string,
   options: {
     readonly workspaceRoot?: string;
-    readonly packages?: readonly NodePackageBinding[];
+    readonly packages?: readonly LoadedPackage[];
     readonly bootstrapAuthorFrontends?: readonly AuthorFrontend[];
     readonly bootstrapRunFrontends?: readonly RunFrontend[];
   } = {},

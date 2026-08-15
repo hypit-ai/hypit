@@ -10,7 +10,7 @@
   "scripts": {
     "canary": "node --import tsx test/live-canary.ts"
   },
-  "svml": {
+  "narratage": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
@@ -23,7 +23,7 @@
     "@narratage/protocol": "workspace:*",
     "@narratage/render-hyperframes": "workspace:*",
     "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-adapter": "workspace:*"
+    "@narratage/runtime-kit": "workspace:*"
   },
   "devDependencies": {
     "@narratage/composition": "workspace:*",

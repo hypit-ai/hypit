@@ -7,8 +7,8 @@ import {
 } from "./index.js";
 import { decodeGeminiOmniVideoSurface } from "./surface.js";
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   modules: [{ manifest: geminiOmniManifest }],
   components: [geminiOmniComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
@@ -17,4 +17,4 @@ export const svmlPackage = {
     handler: decodeGeminiOmniVideoSurface,
   })],
 };
-export default svmlPackage;
+export default narratagePackage;

@@ -39,20 +39,20 @@ const sampleSurfaceDigest = digestOf("example.text-laboratory/sample-surface@1")
 const measureSurfaceDigest = digestOf("example.text-laboratory/measure-surface@1");
 const reportSurfaceDigest = digestOf("example.text-laboratory/report-surface@1");
 const laboratorySurfaces = [
-  { name: "sample", tag: "Sample", mode: "structured", outputs: [sampleType], implementation: { digest: sampleSurfaceDigest } },
-  { name: "measure", tag: "Measure", mode: "structured", outputs: [], implementation: { digest: measureSurfaceDigest } },
-  { name: "report", tag: "Report", mode: "structured", outputs: [], implementation: { digest: reportSurfaceDigest } },
+  { name: "sample", tag: "Sample", mode: "structured", outputs: [sampleType] },
+  { name: "measure", tag: "Measure", mode: "structured", outputs: [] },
+  { name: "report", tag: "Report", mode: "structured", outputs: [] },
 ] as const;
 
 const manifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [],
   types: [
-    { name: sampleType.name, schema: { kind: "string", minLength: 1 } },
-    { name: measurementType.name, schema: { kind: "number" } },
-    { name: reportType.name, schema: { kind: "string", minLength: 1 } },
+    { name: sampleType.name },
+    { name: measurementType.name },
+    { name: reportType.name },
   ],
   capabilities: [],
   producers: [
@@ -61,18 +61,12 @@ const manifest: ModuleManifest = {
       inputs: [{ name: "sample", type: sampleType }],
       outputs: [{ name: "measurement", type: measurementType }],
       needs: [],
-      implementation: {
-        digest: digestOf("example.text-laboratory/measure@1"),
-      },
     },
     {
       name: reportProducer.name,
       inputs: [{ name: "measurement", type: measurementType }],
       outputs: [{ name: "report", type: reportType }],
       needs: [],
-      implementation: {
-        digest: digestOf("example.text-laboratory/write-report@1"),
-      },
     },
   ],
 };

@@ -6,6 +6,7 @@ import type {
   ModuleRef,
   ProducerRef,
   ResolvedModule,
+  ResolvedModuleManifest,
   ResolvedModuleClosure,
   ResolvedCapabilityDeclaration,
   ResolvedProducerDeclaration,
@@ -17,7 +18,6 @@ import type {
 import { digestOf, isDigest, recordDigest, semanticRecordsDigest } from "./canonical.js";
 import { invariant } from "./error.js";
 import { capabilityKey, moduleKey, producerKey, sameModule, sameType, typeKey } from "./reference.js";
-import { validateStoredValue } from "./schema.js";
 
 export type TypedRecordDraft = Omit<TypedRecord, "digest">;
 
@@ -25,13 +25,33 @@ function manifestRef(manifest: ModuleManifest): ModuleRef {
   return { name: manifest.name, version: manifest.version };
 }
 
-export function computeModuleDigest(manifest: ModuleManifest): Digest {
+function resolvedManifest(manifest: ModuleManifest): ResolvedModuleManifest {
+  return {
+    format: manifest.format,
+    name: manifest.name,
+    version: manifest.version,
+    dependencies: manifest.dependencies.map((dependency) => ({ module: { ...dependency.module } })),
+    types: manifest.types.map((type) => ({ name: type.name })),
+    capabilities: manifest.capabilities.map((capability) => ({
+      name: capability.name,
+      returns: structuredClone(capability.returns),
+    })),
+    producers: manifest.producers.map((producer) => ({
+      name: producer.name,
+      inputs: structuredClone(producer.inputs),
+      outputs: structuredClone(producer.outputs),
+      needs: structuredClone(producer.needs),
+    })),
+  };
+}
+
+export function computeModuleDigest(manifest: ResolvedModuleManifest): Digest {
   return digestOf(manifest);
 }
 
 function computeClosureDigest(modules: readonly ResolvedModule[]): Digest {
   return digestOf({
-    format: "svml.closure@1",
+    format: "narratage.closure@1",
     modules: [...modules]
       .sort((left, right) => moduleKey(left.manifest).localeCompare(moduleKey(right.manifest)))
       .map((module) => ({ ref: manifestRef(module.manifest), digest: module.digest })),
@@ -41,16 +61,15 @@ function computeClosureDigest(modules: readonly ResolvedModule[]): Digest {
 export function createResolvedClosure(
   manifests: readonly ModuleManifest[],
 ): ResolvedModuleClosure {
-  const modules = manifests.map((manifest) => ({
-    digest: computeModuleDigest(manifest),
-    manifest,
-  }));
+  const modules = manifests.map((definition) => {
+    const manifest = resolvedManifest(definition);
+    return { digest: computeModuleDigest(manifest), manifest };
+  });
   const closure: ResolvedModuleClosure = {
-    format: "svml.closure@1",
+    format: "narratage.closure@1",
     modules,
     digest: computeClosureDigest(modules),
   };
-  verifyClosure(closure);
   return closure;
 }
 
@@ -64,7 +83,7 @@ function ensureUniqueNames(names: readonly string[], kind: string, owner: string
 }
 
 export function verifyClosure(closure: ResolvedModuleClosure): void {
-  invariant(closure.format === "svml.closure@1", "UNSUPPORTED_CLOSURE", "unsupported closure format");
+  invariant(closure.format === "narratage.closure@1", "UNSUPPORTED_CLOSURE", "unsupported closure format");
   invariant(isDigest(closure.digest), "INVALID_DIGEST", "closure digest is invalid");
 
   const modules = new Map<string, ResolvedModule>();
@@ -73,7 +92,7 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
     const key = moduleKey(ref);
     invariant(ref.name.length > 0, "EMPTY_MODULE_NAME", "module name is empty");
     invariant(ref.version.length > 0, "EMPTY_MODULE_VERSION", `${ref.name} version is empty`);
-    invariant(module.manifest.format === "svml.module@1", "UNSUPPORTED_MODULE", `${key} format is unsupported`);
+    invariant(module.manifest.format === "narratage.module@1", "UNSUPPORTED_MODULE", `${key} format is unsupported`);
     invariant(!modules.has(key), "DUPLICATE_MODULE", `duplicate module ${key}`, key);
     invariant(isDigest(module.digest), "INVALID_DIGEST", `${key} digest is invalid`, key);
     invariant(
@@ -90,14 +109,6 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
       "dependency",
       key,
     );
-    for (const type of module.manifest.types) {
-      if (type.validator === undefined) continue;
-      invariant(
-        isDigest(type.validator.implementation.digest),
-        "INVALID_DIGEST",
-        `${key}#${type.name} validator digest is invalid`,
-      );
-    }
     for (const producer of module.manifest.producers) {
       ensureUniqueNames(producer.inputs.map((item) => item.name), "input port", `${key}#${producer.name}`);
       ensureUniqueNames(producer.outputs.map((item) => item.name), "output port", `${key}#${producer.name}`);
@@ -106,11 +117,6 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
         producer.outputs.length + producer.needs.length === 1,
         "PRODUCER_RESULT_NORMAL_FORM",
         `${key}#${producer.name} must declare exactly one public result`,
-      );
-      invariant(
-        isDigest(producer.implementation.digest),
-        "INVALID_DIGEST",
-        `${key}#${producer.name} implementation digest is invalid`,
       );
     }
     modules.set(key, module);
@@ -123,11 +129,6 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
         resolved !== undefined,
         "MISSING_DEPENDENCY",
         `${moduleKey(module.manifest)} requires ${moduleKey(dependency.module)}`,
-      );
-      invariant(
-        resolved.digest === dependency.digest,
-        "DEPENDENCY_DIGEST_MISMATCH",
-        `${moduleKey(dependency.module)} does not match the required digest`,
       );
     }
   }
@@ -256,7 +257,6 @@ export function verifyRecordStructure(
     record.id,
   );
   const declaration = resolveType(closure, record.type);
-  validateStoredValue(record.value, declaration.schema, `$record.${record.id}`);
   return declaration;
 }
 

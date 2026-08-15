@@ -11,7 +11,6 @@ export type {
   HyperframesLambdaSite,
 } from "./client.js";
 export {
-  awsLambdaHyperframesProviderImplementationDigest,
   awsLambdaHyperframesProviderModuleRef,
   createAwsLambdaHyperframesProvider,
   supportsAwsLambdaHyperframes,

@@ -1,6 +1,2 @@
-export {
-  createLocalOpenCvImageProvider,
-  localOpenCvImageProviderImplementationDigest,
-  localOpenCvImageProviderModuleRef,
-} from "./provider.js";
+export { createLocalOpenCvImageProvider, localOpenCvImageProviderModuleRef } from "./provider.js";
 export type { CreateLocalOpenCvImageProviderOptions } from "./provider.js";

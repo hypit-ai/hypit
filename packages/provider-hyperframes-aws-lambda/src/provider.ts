@@ -48,27 +48,20 @@ import type {
   HyperframesLambdaSite,
 } from "./client.js";
 
-const HYPERFRAMES_VERSION = "0.7.101";
-const CHECKPOINT_CONTRACT = "svml.hyperframes-aws-lambda-operation@1";
+const CHECKPOINT_CONTRACT = "narratage.hyperframes-aws-lambda-operation@1";
 const SUPPORTED_FPS = new Set([24, 30, 60]);
 
 export const awsLambdaHyperframesProviderModuleRef = {
   name: "@narratage/provider-hyperframes-aws-lambda",
   version: "1",
 } as const;
-export const awsLambdaHyperframesProviderImplementationDigest = digestOf(
-  `@narratage/provider-hyperframes-aws-lambda/render@1+hyperframes@${HYPERFRAMES_VERSION}`,
-);
-
 export type HyperframesLambdaQuality = "draft" | "standard" | "high";
 
 export type CreateAwsLambdaHyperframesProviderOptions = {
   readonly instance?: string;
-  readonly authority?: string;
+  readonly pool?: string;
   readonly stateMachineArn: string;
   readonly bucketName: string;
-  /** Content identity of the deployed remote renderer, not merely its mutable ARN. */
-  readonly rendererImplementationDigest: Digest;
   readonly region?: string;
   readonly quality?: HyperframesLambdaQuality;
   readonly chunkSize?: number;
@@ -81,8 +74,6 @@ export type CreateAwsLambdaHyperframesProviderOptions = {
   readonly maxRenderedBytes?: number;
   readonly maxPollFailures?: number;
   readonly maxAttempts?: number;
-  /** Required when injecting anything other than the locked official SDK client. */
-  readonly clientImplementationDigest?: Digest;
   readonly client?: HyperframesAwsLambdaClient;
   readonly now?: () => number;
 };
@@ -419,8 +410,6 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     && !config.bucketName.includes("-.")
     && !/^\d{1,3}(?:\.\d{1,3}){3}$/u.test(config.bucketName),
     "HyperFrames bucketName is invalid");
-  assert(isDigest(config.rendererImplementationDigest),
-    "HyperFrames rendererImplementationDigest is invalid");
   const quality = config.quality ?? "standard";
   assert(["draft", "standard", "high"].includes(quality), "HyperFrames quality is invalid");
   const chunkSize = config.chunkSize === undefined ? undefined : positiveInteger(config.chunkSize, "chunkSize");
@@ -436,14 +425,6 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     "maxRenderedBytes");
   const maxPollFailures = positiveInteger(config.maxPollFailures ?? 5, "maxPollFailures");
   const maxAttempts = positiveInteger(config.maxAttempts ?? 1, "maxAttempts");
-  if (config.client !== undefined && config.clientImplementationDigest === undefined) {
-    throw new Error("custom HyperFrames AWS client requires clientImplementationDigest");
-  }
-  if (config.clientImplementationDigest !== undefined && !isDigest(config.clientImplementationDigest)) {
-    throw new Error("HyperFrames AWS clientImplementationDigest is invalid");
-  }
-  const clientImplementationDigest = config.clientImplementationDigest
-    ?? digestOf(`@narratage/provider-hyperframes-aws-lambda/official-sdk@${HYPERFRAMES_VERSION}`);
   const client = config.client ?? createHyperframesAwsLambdaClient(region);
   const now = config.now ?? Date.now;
 
@@ -489,7 +470,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     });
     let site = existingSite;
     if (site === undefined) {
-      const work = await mkdtemp(join(tmpdir(), "svml-hyperframes-aws-"));
+      const work = await mkdtemp(join(tmpdir(), "narratage-hyperframes-aws-"));
       try {
         await stageHyperframesProject({
           document,
@@ -659,28 +640,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     module: awsLambdaHyperframesProviderModuleRef,
     facet: "render",
     instance: config.instance ?? "hyperframes.aws-lambda",
-    authority: config.authority ?? config.instance ?? "hyperframes.aws-lambda",
-    implementation: {
-      digest: awsLambdaHyperframesProviderImplementationDigest,
-    },
-    configuration: canonicalize({
-      stateMachineArn: machine.arn,
-      bucketName: config.bucketName,
-      rendererImplementationDigest: config.rendererImplementationDigest,
-      region,
-      hyperframesVersion: HYPERFRAMES_VERSION,
-      planProtocol: "v2",
-      quality,
-      ...(chunkSize === undefined ? {} : { chunkSize }),
-      maxParallelChunks,
-      ...(targetChunkFrames === undefined ? {} : { targetChunkFrames }),
-      defaultMemorySizeMb,
-      pollIntervalMs,
-      maxOperationMs,
-      maxRenderedBytes,
-      maxPollFailures,
-      clientImplementationDigest,
-    }),
+    pool: config.pool ?? config.instance ?? "hyperframes.aws-lambda",
     defaultConcurrency: config.defaultConcurrency ?? 2,
     capabilities: [{
       lifecycle: "recoverable" as const,

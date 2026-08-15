@@ -9,11 +9,5 @@ export type {
   OpenFontFamilyName,
   OpenFontStyle,
 } from "./catalog.js";
-export {
-  fontsOpenFaceSurfaceImplementationDigest,
-  fontsOpenStackSurfaceImplementationDigest,
-  fontsOpenManifest, fontsOpenMarkupSurfaces,
-  fontsOpenManifestDigest,
-  fontsOpenModuleRef,
-} from "./manifest.js";
+export { fontsOpenManifest, fontsOpenMarkupSurfaces, fontsOpenModuleRef } from "./manifest.js";
 export { decodeOpenFontFaceSurface, decodeOpenFontStackSurface } from "./surface.js";

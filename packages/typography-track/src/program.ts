@@ -52,18 +52,6 @@ import type {
   TypographyTrackSet,
 } from "./types.js";
 
-export const renderTypographyTrackImplementationDigest = digestOf("@narratage/typography-track/render-complete@1");
-export const renderTextMaskTrackImplementationDigest = digestOf("@narratage/typography-track/render-owned-mask@1");
-export const createTypographyTrackSetImplementationDigest = digestOf("@narratage/typography-track/create-set-complete@1");
-export const appendProgramTextItemImplementationDigest = digestOf("@narratage/typography-track/append-program-item@1");
-export const appendSelectionTextItemImplementationDigest = digestOf("@narratage/typography-track/append-selection-item@1");
-export const appendMomentTextItemImplementationDigest = digestOf("@narratage/typography-track/append-moment-item@1");
-export const finalizeTypographyTrackImplementationDigest = digestOf("@narratage/typography-track/finalize-complete@1");
-export const bindPointTextPlacementImplementationDigest = digestOf("@narratage/typography-track/bind-point-placement@1");
-export const bindAreaTextPlacementImplementationDigest = digestOf("@narratage/typography-track/bind-area-placement@1");
-export const bindPathTextPlacementImplementationDigest = digestOf("@narratage/typography-track/bind-path-placement@1");
-export const materializePlainTextItemImplementationDigest = digestOf("@narratage/typography-track/materialize-plain-text-item@1");
-
 function nonEmpty(value: string, label: string): void {
   if (!value.trim()) throw new Error(`${label} must not be empty.`);
 }
@@ -125,7 +113,7 @@ export function assertTextStyle(style: TextStyle): void {
   }
   assertVisualTrackIdentity({
     kind: "visual",
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     id: "text-style-validation",
     presents: [{
       id: "style",
@@ -625,7 +613,7 @@ function elements(item: TextItem): VisualElement[] {
 export function renderTypographyTrack(space: ProgramSpace, program: TypographyTrackProgram): VisualTrack {
   assertTypographyTrackProgramIdentity(program, space);
   const track = sealVisualTrack({
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     id: program.id,
     presents: program.items.map((item) => ({
       id: item.id,
@@ -651,7 +639,7 @@ export function renderTextMaskTrack(
     throw new Error("Official Text Mask requires one explicit still material Surface; timed materials use an independent package.");
   }
   const track = sealVisualTrack({
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     id: spec.id,
     presents: program.items.map((item) => {
       assertMotionDomain(item);

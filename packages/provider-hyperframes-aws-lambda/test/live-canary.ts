@@ -41,7 +41,6 @@ import {
 } from "@narratage/protocol";
 import type {
   CanonicalValue,
-  Digest,
   Need,
 } from "@narratage/protocol";
 import {
@@ -58,9 +57,6 @@ function requiredEnvironment(name: string): string {
 
 const stateMachineArn = requiredEnvironment("NARRATAGE_HYPERFRAMES_STATE_MACHINE_ARN");
 const bucketName = requiredEnvironment("NARRATAGE_HYPERFRAMES_BUCKET");
-const rendererImplementationDigest = requiredEnvironment("NARRATAGE_HYPERFRAMES_RENDERER_DIGEST") as Digest;
-assert(/^sha256:[0-9a-f]{64}$/u.test(rendererImplementationDigest),
-  "invalid NARRATAGE_HYPERFRAMES_RENDERER_DIGEST");
 const region = requiredEnvironment("AWS_REGION");
 
 const run = promisify(execFile);
@@ -75,7 +71,7 @@ function documentFixture(canaryId: string): HyperframesDocument {
     frameRate,
   });
   const track = sealVisualTrack({
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     id: `hyperframes-aws-canary-${canaryId}`,
     presents: [{
       id: "card",
@@ -130,7 +126,6 @@ async function endpointFor(request: Need): Promise<RecoverableEndpoint> {
     instance: "hyperframes.aws-lambda.canary",
     stateMachineArn,
     bucketName,
-    rendererImplementationDigest,
     region,
     quality: "draft",
     targetChunkFrames: 12,
@@ -174,9 +169,8 @@ async function main(): Promise<void> {
     build: `build:hyperframes-aws-canary:${canaryId}`,
     command: commandId,
     endpoint: "hyperframes.aws-lambda.canary",
-    authority: "hyperframes.aws-lambda.canary",
-    route: "fixture.render",
-    runtimeClosure: digestOf("hyperframes-aws-canary:runtime"),
+    pool: "hyperframes.aws-lambda.canary",
+    lane: "fixture.render",
     attempt: 1,
   });
   const context = {

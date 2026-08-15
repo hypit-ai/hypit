@@ -11,7 +11,7 @@ export type BuildCatalogAlias = {
 };
 
 export type BuildCatalogDescriptor = {
-  readonly format: "svml.build-catalog-descriptor@1";
+  readonly format: "narratage.build-catalog-descriptor@1";
   readonly core: Digest;
   readonly source: {
     readonly path: string;
@@ -41,7 +41,7 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 export function verifyBuildCatalogDescriptor(descriptor: BuildCatalogDescriptor): void {
-  assert(descriptor.format === "svml.build-catalog-descriptor@1", "Build Catalog descriptor format is invalid");
+  assert(descriptor.format === "narratage.build-catalog-descriptor@1", "Build Catalog descriptor format is invalid");
   assert(isDigest(descriptor.core), "Build Catalog Core identity is invalid");
   assert(descriptor.source.path.trim().length > 0, "Build Catalog source path is empty");
   assert(isDigest(descriptor.source.closure), "Build Catalog source closure is invalid");

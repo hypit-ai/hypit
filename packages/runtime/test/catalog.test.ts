@@ -6,7 +6,7 @@ import { MemoryBuildCatalog } from "@narratage/runtime";
 
 function descriptor(core = digestOf("core:one")) {
   return {
-    format: "svml.build-catalog-descriptor@1" as const,
+    format: "narratage.build-catalog-descriptor@1" as const,
     core,
     source: { path: "/project/main.svml", closure: digestOf("source:one") },
     run: { path: "/project/delivery.svrun" },

@@ -1,0 +1,34 @@
+{
+  "name": "@narratage/runtime-local",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/config.ts",
+    "./programs": "./src/programs.ts",
+    "./worker-process": "./src/worker-process.ts"
+  },
+  "narratage": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/workspace": "workspace:*",
+    "@narratage/package-loader-node": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime": "workspace:*",
+    "@narratage/runtime-kit": "workspace:*",
+    "@narratage/runtime-host-node": "workspace:*",
+    "@narratage/validation": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/artifact-store-fs": "workspace:*",
+    "@narratage/credential-store-env": "workspace:*",
+    "@narratage/core": "workspace:*",
+    "@narratage/store-sqlite": "workspace:*"
+  }
+}

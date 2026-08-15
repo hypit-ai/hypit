@@ -34,12 +34,5 @@ execution time; the Frontend never copies Script words into a request draft.
 
 Official API reference: <https://mimo.mi.com/docs/zh-CN/quick-start/usage-guide/audio/speech-synthesis-v2.5>
 
-Add the author package to the project's explicit package lock before compiling:
-
-```sh
-node --run narratage -- lock-packages svml.packages.lock \
-  --package @narratage/script \
-  --package @narratage/mimo-tts
-```
-
-This selects author syntax and exact model semantics only. It does not select an API service.
+The Source import selects author syntax and exact model semantics only. It does not select an API
+service; the Runtime Profile independently selects a Provider.

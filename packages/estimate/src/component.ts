@@ -4,7 +4,7 @@ import { canonicalize } from "@narratage/protocol";
 import type { Text } from "@narratage/text";
 
 import { estimateProducers } from "./manifest.js";
-import { estimateSpeechDuration, estimateSpeechImplementationDigest } from "./program.js";
+import { estimateSpeechDuration } from "./program.js";
 import type { SpeechEstimatePolicy } from "./types.js";
 
 function inline<T>(value: StoredValue | undefined, subject: string): T {
@@ -15,7 +15,6 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 export const estimateComponent = {
   producers: [{
     producer: estimateProducers.speech,
-    implementationDigest: estimateSpeechImplementationDigest,
     handler: ({ inputs }) => ({
       outputs: {
         duration: {

@@ -3,11 +3,7 @@ import type { BlobRef, StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 import { rasterTransformRequest } from "@narratage/raster";
 
-import {
-  imageTransformImplementationDigests,
-  imageTransformProducers,
-  imageTransformTypes,
-} from "./manifest.js";
+import { imageTransformProducers, imageTransformTypes } from "./manifest.js";
 import { verifyImageTransformProgram } from "./program.js";
 import type { ImageTransformProgram } from "./types.js";
 
@@ -25,14 +21,12 @@ function blob(value: StoredValue | undefined, subject: string): BlobRef {
 export const imageTransformComponent = {
   validators: [{
     type: imageTransformTypes.program,
-    implementationDigest: imageTransformImplementationDigests.validator,
     handler: ({ value }) => {
       verifyImageTransformProgram(inline(value, "ImageTransformProgram"));
     },
   }],
   producers: [{
     producer: imageTransformProducers.request,
-    implementationDigest: imageTransformImplementationDigests.request,
     handler: ({ inputs }) => {
       const source = blob(inputs.source?.value, "ImageTransform source");
       const program = inline(inputs.program?.value, "ImageTransformProgram");

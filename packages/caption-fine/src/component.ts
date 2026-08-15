@@ -6,7 +6,7 @@ import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 
 import { captionFineProducers } from "./manifest.js";
-import { renderFineCaption, renderFineCaptionImplementationDigest } from "./render.js";
+import { renderFineCaption } from "./render.js";
 
 function inline<T>(value: StoredValue | undefined, subject: string): T {
   if (value?.kind !== "inline") throw new Error(`${subject} must be inline`);
@@ -16,7 +16,6 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 export const captionFineComponent = {
   producers: [{
     producer: captionFineProducers.render,
-    implementationDigest: renderFineCaptionImplementationDigest,
     handler: ({ inputs }) => ({
       outputs: { track: { kind: "inline", value: canonicalize(renderFineCaption(
         inline<TimedCaptionProjection>(inputs.caption?.value, "TimedCaptionProjection"),

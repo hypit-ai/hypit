@@ -4,7 +4,6 @@ import test from "node:test";
 import {
   computeModuleDigest,
   createResolvedClosure,
-  digestOf,
   link,
   sealBuildRequest,
   sealCompiledGraph,
@@ -27,7 +26,6 @@ import type {
   ProducerRef,
   TypeRef,
 } from "@narratage/protocol";
-import { parseModuleManifestText } from "@narratage/protocol";
 import {
   TypeValidationError,
   TypeValidatorRegistry,
@@ -49,32 +47,13 @@ const measureProducer = { module: sensorModule, name: "measure" } satisfies Prod
 const requestProducer = { module: sensorModule, name: "request-measurement" } satisfies ProducerRef;
 const reportProducer = { module: reportModule, name: "write-report" } satisfies ProducerRef;
 
-const validatorDigest = digestOf("example.measurement-contract/even-integer-validator@1");
-const producerDigests = {
-  measure: digestOf("example.sensor/measure@1"),
-  request: digestOf("example.sensor/request-measurement@1"),
-  report: digestOf("example.report/write-report@1"),
-};
-
 const contractManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: contractModule.name,
   version: contractModule.version,
   dependencies: [],
   types: [{
     name: measurementType.name,
-    schema: {
-      kind: "object",
-      fields: {
-        value: { schema: { kind: "number", integer: true } },
-        unit: { schema: { kind: "literal", value: "ticks" } },
-      },
-    },
-    validator: {
-      implementation: {
-        digest: validatorDigest,
-      },
-    },
   }],
   capabilities: [],
   producers: [],
@@ -82,11 +61,10 @@ const contractManifest: ModuleManifest = {
 
 const contractDependency = {
   module: contractModule,
-  digest: computeModuleDigest(contractManifest),
 };
 
 const sensorManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: sensorModule.name,
   version: sensorModule.version,
   dependencies: [contractDependency],
@@ -98,9 +76,6 @@ const sensorManifest: ModuleManifest = {
       inputs: [],
       outputs: [{ name: "measurement", type: measurementType }],
       needs: [],
-      implementation: {
-        digest: producerDigests.measure,
-      },
     },
     {
       name: requestProducer.name,
@@ -111,34 +86,28 @@ const sensorManifest: ModuleManifest = {
         capability: measurementCapability,
         returns: measurementType,
       }],
-      implementation: {
-        digest: producerDigests.request,
-      },
     },
   ],
 };
 
 const reportManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: reportModule.name,
   version: reportModule.version,
   dependencies: [contractDependency],
-  types: [{ name: reportType.name, schema: { kind: "string", minLength: 1 } }],
+  types: [{ name: reportType.name }],
   capabilities: [],
   producers: [{
     name: reportProducer.name,
     inputs: [{ name: "measurement", type: measurementType }],
     outputs: [{ name: "report", type: reportType }],
     needs: [],
-    implementation: {
-      digest: producerDigests.report,
-    },
   }],
 };
 
-function registry(digest = validatorDigest): TypeValidatorRegistry {
+function registry(): TypeValidatorRegistry {
   const validators = new TypeValidatorRegistry();
-  validators.register(measurementType, digest, ({ value }) => {
+  validators.register(measurementType, ({ value }) => {
     if (value.kind !== "inline" || value.value === null || Array.isArray(value.value)
       || typeof value.value !== "object") {
       throw new Error("measurement must be inline");
@@ -209,11 +178,11 @@ function outputBuild(linked: LinkedProgram, graph = outputGraph(linked)) {
 
 function hosts(measured: number): ProducerRegistry {
   const hosts = new ProducerRegistry();
-  hosts.registerProducer(measureProducer, producerDigests.measure, () => ({
+  hosts.registerProducer(measureProducer, () => ({
     outputs: { measurement: { kind: "inline", value: { value: measured, unit: "ticks" } } },
     needs: {},
   }));
-  hosts.registerProducer(reportProducer, producerDigests.report, ({ inputs }) => ({
+  hosts.registerProducer(reportProducer, ({ inputs }) => ({
     outputs: {
       report: {
         kind: "inline",
@@ -254,23 +223,6 @@ test("a structurally valid but semantically invalid Producer value never enters 
   assert.equal(result.state.acceptedEvents.length, 0);
 });
 
-test("missing or digest-mismatched validator implementations fail before record admission", async () => {
-  const linked = program();
-  const missing = await new NodeDriver({
-    producers: hosts(4),
-    validators: new TypeValidatorRegistry(),
-  }).run(outputBuild(linked));
-  assert.equal(missing.status, "paused");
-  assert.match(missing.outcomes[0]?.message ?? "", /validator is not registered/u);
-
-  const mismatched = await new NodeDriver({
-    producers: hosts(4),
-    validators: registry(digestOf("wrong-validator")),
-  }).run(outputBuild(linked));
-  assert.equal(mismatched.status, "paused");
-  assert.match(mismatched.outcomes[0]?.message ?? "", /does not match the locked Manifest/u);
-});
-
 function providerGraph(linked: LinkedProgram): CompiledGraph {
   return sealCompiledGraph({
     program: linked.semanticDigest,
@@ -302,7 +254,7 @@ async function providerBuild(measured: number) {
   const linked = program();
   const graph = providerGraph(linked);
   const hosts = new ProducerRegistry();
-  hosts.registerProducer(requestProducer, producerDigests.request, () => ({
+  hosts.registerProducer(requestProducer, () => ({
     outputs: {},
     needs: { measurement: { sample: "latest" } },
   }));
@@ -350,11 +302,6 @@ test("authored values cross the Type owner's validation gate without carrying va
   const admitted = await admitRecord(linked.closure, raw, registry());
   verifyRecordStructure(linked.closure, admitted);
   assert.deepEqual(admitted, raw);
-});
-
-test("the static Manifest reader discovers validator declarations without executing them", () => {
-  const parsed = parseModuleManifestText(JSON.stringify(contractManifest));
-  assert.deepEqual(parsed.types[0]?.validator, contractManifest.types[0]?.validator);
 });
 
 test("Type validation errors remain machine distinguishable", async () => {

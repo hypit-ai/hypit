@@ -39,26 +39,6 @@ import type {
   CommentStickerTextStyle,
 } from "./types.js";
 
-export const commentStickerImplementationDigests = {
-  createSet: digestOf("@narratage/comment-sticker/create-set@1"),
-  appendProgram: digestOf("@narratage/comment-sticker/append-program@1"),
-  appendProgramAvatar: digestOf("@narratage/comment-sticker/append-program-avatar@1"),
-  appendSelection: digestOf("@narratage/comment-sticker/append-selection@1"),
-  appendSelectionAvatar: digestOf("@narratage/comment-sticker/append-selection-avatar@1"),
-  appendMoment: digestOf("@narratage/comment-sticker/append-moment@1"),
-  appendMomentAvatar: digestOf("@narratage/comment-sticker/append-moment-avatar@1"),
-  createContent: digestOf("@narratage/comment-sticker/create-content@1"),
-  setContentAuthor: digestOf("@narratage/comment-sticker/set-content-author@1"),
-  setContentHeader: digestOf("@narratage/comment-sticker/set-content-header@1"),
-  setContentMeta: digestOf("@narratage/comment-sticker/set-content-meta@1"),
-  finalize: digestOf("@narratage/comment-sticker/finalize@1"),
-  render: digestOf("@narratage/comment-sticker/render@1"),
-} as const;
-
-export const commentStickerValidatorDigests = {
-  program: digestOf("@narratage/comment-sticker/validate-program@1"),
-} as const;
-
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
@@ -635,7 +615,7 @@ export function renderCommentSticker(canvas: CanvasSpace, space: ProgramSpace, p
   assertProgramSpaceIdentity(space);
   assertCommentStickerProgram(program);
   const track = sealVisualTrack({
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     id: program.id,
     presents: program.items.map((item) => ({
       id: item.id,

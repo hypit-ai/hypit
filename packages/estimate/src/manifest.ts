@@ -4,8 +4,6 @@ import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { svsManifest, svsRecipeType } from "@narratage/svs";
 
-import { estimateSpeechImplementationDigest } from "./program.js";
-
 export const estimateModuleRef = { name: "@narratage/estimate", version: "1" } as const;
 export const estimateTypes = {
   speechPolicy: { module: estimateModuleRef, name: "SpeechEstimatePolicy" },
@@ -13,9 +11,6 @@ export const estimateTypes = {
 export const estimateProducers = {
   speech: { module: estimateModuleRef, name: "estimate-speech-duration" },
 } satisfies Record<string, ProducerRef>;
-export const estimateSurfaceImplementationDigest = digestOf(
-  "@narratage/estimate/speech-surface@1:explicit-policy-without-padding",
-);
 
 const number = { kind: "number" } as const satisfies ValueSchema;
 const speechEstimatePolicySchema: ValueSchema = {
@@ -36,22 +31,19 @@ export const estimateMarkupSurfaces = [{
     tag: "Speech",
     mode: "structured",
     outputs: [estimateTypes.speechPolicy, speechTypes.duration],
-    implementation: {
-      digest: estimateSurfaceImplementationDigest,
-    },
   }] as const;
 
 
 export const estimateManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: estimateModuleRef.name,
   version: estimateModuleRef.version,
   dependencies: [
     speechDependency,
     textDependency,
-    { module: svsRecipeType.module, digest: digestOf(svsManifest) },
+    { module: svsRecipeType.module },
   ],
-  types: [{ name: estimateTypes.speechPolicy.name, schema: speechEstimatePolicySchema }],
+  types: [{ name: estimateTypes.speechPolicy.name }],
   capabilities: [],
   producers: [{
     name: estimateProducers.speech.name,
@@ -61,11 +53,7 @@ export const estimateManifest: ModuleManifest = {
     ],
     outputs: [{ name: "duration", type: speechTypes.duration }],
     needs: [],
-    implementation: {
-      digest: estimateSpeechImplementationDigest,
-    },
   }],
 };
 
-export const estimateManifestDigest = digestOf(estimateManifest);
 export { speechEstimatePolicySchema };

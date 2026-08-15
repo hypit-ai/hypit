@@ -19,7 +19,7 @@ import {
   MarkupSurfaceRegistry,
 } from "@narratage/markup";
 import type { MarkupSurfaceRegistryLike } from "@narratage/markup";
-import { createNodePackageInventory } from "@narratage/package-loader-node";
+import { loadNodePackageSelection } from "@narratage/package-loader-node";
 import type { ModuleRef, ResolvedModuleClosure } from "@narratage/protocol";
 import { TypeValidatorRegistry } from "@narratage/validation";
 
@@ -71,8 +71,8 @@ type OfficialVideoDomain = {
 let loading: Promise<OfficialVideoDomain> | undefined;
 
 async function loadOfficialVideoDomain(): Promise<OfficialVideoDomain> {
-  const loaded = await createNodePackageInventory(OFFICIAL_VIDEO_PACKAGES, import.meta.dirname);
-  const contributions = loaded.packages.map((item) => item.contribution);
+  const loaded = await loadNodePackageSelection(OFFICIAL_VIDEO_PACKAGES, import.meta.dirname);
+  const contributions = loaded.map((item) => item.contribution);
   const manifests = contributions.flatMap((item) =>
     (item.modules ?? []).map((module) => module.manifest));
   const closure = createResolvedClosure(manifests);

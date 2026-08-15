@@ -59,48 +59,6 @@ import type {
   TypewriterListStyle,
 } from "./types.js";
 
-export const rankingImplementationDigests = {
-  createSpecs: digestOf("@narratage/ranking/create-item-specs@1"),
-  appendSpec: digestOf("@narratage/ranking/append-item-spec@1"),
-  schedule: digestOf("@narratage/ranking/build-schedule@1"),
-  createTierItems: digestOf("@narratage/ranking/create-tier-items@1"),
-  appendTierItem: digestOf("@narratage/ranking/append-tier-item@1"),
-  createColumnItems: digestOf("@narratage/ranking/create-column-items@1"),
-  appendColumnItem: digestOf("@narratage/ranking/append-column-item@1"),
-  appendColumnIconItem: digestOf("@narratage/ranking/append-column-icon-item@1"),
-  createTopThreeItems: digestOf("@narratage/ranking/create-top-three-items@1"),
-  appendTopThreeItem: digestOf("@narratage/ranking/append-top-three-item@1"),
-  appendTopThreeIconItem: digestOf("@narratage/ranking/append-top-three-icon-item@1"),
-  createTypewriterItems: digestOf("@narratage/ranking/create-typewriter-items@1"),
-  appendTypewriterItem: digestOf("@narratage/ranking/append-typewriter-item@1"),
-  tierProgram: digestOf("@narratage/ranking/build-tier-board-program@1"),
-  columnProgram: digestOf("@narratage/ranking/build-column-program@1"),
-  topThreeProgram: digestOf("@narratage/ranking/build-top-three-program@1"),
-  typewriterProgram: digestOf("@narratage/ranking/build-typewriter-list-program@1"),
-  tierEvents: digestOf("@narratage/ranking/build-tier-board-sound-events@1"),
-  columnEvents: digestOf("@narratage/ranking/build-column-sound-events@1"),
-  topThreeEvents: digestOf("@narratage/ranking/build-top-three-sound-events@1"),
-  typewriterEvents: digestOf("@narratage/ranking/build-typewriter-list-sound-events@1"),
-  createSounds: digestOf("@narratage/ranking/create-sounds@1"),
-  appendAppearSound: digestOf("@narratage/ranking/append-appear-sound@1"),
-  appendMoveSound: digestOf("@narratage/ranking/append-move-sound@1"),
-  renderAudio: digestOf("@narratage/ranking/render-audio@1"),
-  renderTier: digestOf("@narratage/ranking/render-tier-board@1"),
-  renderColumn: digestOf("@narratage/ranking/render-column@1"),
-  renderTopThree: digestOf("@narratage/ranking/render-top-three@1"),
-  renderTypewriter: digestOf("@narratage/ranking/render-typewriter-list@1"),
-  materializeTextItem: digestOf("@narratage/ranking/materialize-text-item@1"),
-} as const;
-
-export const rankingValidatorDigests = {
-  schedule: digestOf("@narratage/ranking/validate-schedule@1"),
-  tierProgram: digestOf("@narratage/ranking/validate-tier-board-program@1"),
-  columnProgram: digestOf("@narratage/ranking/validate-column-program@1"),
-  topThreeProgram: digestOf("@narratage/ranking/validate-top-three-program@1"),
-  typewriterProgram: digestOf("@narratage/ranking/validate-typewriter-list-program@1"),
-  events: digestOf("@narratage/ranking/validate-sound-events@1"),
-} as const;
-
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }

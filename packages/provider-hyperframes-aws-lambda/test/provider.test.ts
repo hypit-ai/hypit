@@ -22,7 +22,7 @@ import type {
 } from "@narratage/provider-hyperframes-aws-lambda";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
-import type { RuntimeEndpointAdapterImplementation } from "@narratage/runtime-adapter";
+import type { RuntimeEndpointAdapterImplementation } from "@narratage/runtime-kit";
 import {
   hyperframesVisualRequest,
   renderHyperframesCapabilities,
@@ -30,18 +30,16 @@ import {
 import type { ArtifactStore, StreamingArtifactStore } from "@narratage/runtime";
 import { sealOperationIdentity } from "@narratage/runtime";
 
-import { svmlPackage as awsLambdaActivation } from "../src/activation.js";
+import { narratagePackage as awsLambdaActivation } from "../src/activation.js";
 
 const ACCOUNT = "123456789012";
 const REGION = "us-east-1";
 const BUCKET = "narratage-render-test";
 const STATE_MACHINE = `arn:aws:states:${REGION}:${ACCOUNT}:stateMachine:narratage-hyperframes`;
 const EXECUTION_PREFIX = `arn:aws:states:${REGION}:${ACCOUNT}:execution:narratage-hyperframes:`;
-const RENDERER_IMPLEMENTATION = digestOf("hyperframes-lambda:test-renderer-deployment");
-
 function documentFixture(fps = 30, denominator = 1): HyperframesDocument {
   return {
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     frameRate: { numerator: fps, denominator },
     frameCount: 60,
     canvas: { width: 720, height: 1280 },
@@ -73,9 +71,8 @@ function operation(request: Need) {
     build: "build:hyperframes-lambda-test",
     command: "command:hyperframes-lambda-test",
     endpoint: "hyperframes.aws-lambda.test",
-    authority: "hyperframes.aws-lambda.test",
-    route: "fixture.render",
-    runtimeClosure: digestOf("hyperframes-lambda:test-runtime"),
+    pool: "hyperframes.aws-lambda.test",
+    lane: "fixture.render",
     attempt: 1,
   });
 }
@@ -208,9 +205,7 @@ async function endpointFor(
     instance: "hyperframes.aws-lambda.test",
     stateMachineArn: STATE_MACHINE,
     bucketName: BUCKET,
-    rendererImplementationDigest: RENDERER_IMPLEMENTATION,
     client,
-    clientImplementationDigest: digestOf("hyperframes-lambda:test-client"),
     pollIntervalMs: 1,
     maxOperationMs: 60_000,
     maxPollFailures: 2,
@@ -260,7 +255,7 @@ test("the Lambda Endpoint declines frame domains and requirements it cannot pres
       alphaMode: "straight",
       timing: { kind: "still" },
     }],
-    html: `<!doctype html><img data-svml-surface-artifact="${artifact.digest}" src="svml-artifact://sha256/${artifact.digest.slice("sha256:".length)}"/>`,
+    html: `<!doctype html><img data-narratage-surface-artifact="${artifact.digest}" src="narratage-artifact://sha256/${artifact.digest.slice("sha256:".length)}"/>`,
   };
   assert.equal(supportsAwsLambdaHyperframes(hyperframesVisualRequest(withSurface)), false,
     "a deployment without a Surface verifier must fail closed");
@@ -272,7 +267,7 @@ test("the Runtime adapter refuses a hardware-GPU deployment wish instead of igno
   assert.throws(() => implementation.activate({
     dataRoot: "/tmp",
     instance: "hyperframes.lambda.test",
-    authority: "hyperframes.lambda.test",
+    pool: "hyperframes.lambda.test",
     config: canonicalize({
       stateMachineArn: STATE_MACHINE,
       bucketName: BUCKET,
@@ -287,7 +282,7 @@ test("one deterministic submission resumes and streams the exact output into the
   const { endpoint, registration } = await endpointFor(request, client);
   assert.equal(registration.retry?.maxAttempts, 1);
   assert.equal(registration.scheduling?.resources.find((item) =>
-    item.id.startsWith("authority:"))?.maxActive, 2);
+    item.id.startsWith("pool:"))?.maxActive, 2);
 
   const memory = new MemoryArtifactStore();
   let streamed = 0;
@@ -507,30 +502,19 @@ test("the deployment identity is validated before any AWS client is constructed"
   assert.throws(() => createAwsLambdaHyperframesProvider({
     stateMachineArn: `${STATE_MACHINE}:mutable-alias`,
     bucketName: BUCKET,
-    rendererImplementationDigest: RENDERER_IMPLEMENTATION,
   }), /unqualified AWS Step Functions state-machine ARN/u);
   assert.throws(() => createAwsLambdaHyperframesProvider({
     stateMachineArn: STATE_MACHINE,
     bucketName: BUCKET,
-    rendererImplementationDigest: RENDERER_IMPLEMENTATION,
     region: "eu-west-1",
   }), /differs from state machine region/u);
   assert.throws(() => createAwsLambdaHyperframesProvider({
     stateMachineArn: STATE_MACHINE,
-    bucketName: BUCKET,
-    rendererImplementationDigest: RENDERER_IMPLEMENTATION,
-    client: fakeClient().client,
-  }), /requires clientImplementationDigest/u);
-  assert.throws(() => createAwsLambdaHyperframesProvider({
-    stateMachineArn: STATE_MACHINE,
     bucketName: "192.168.0.1",
-    rendererImplementationDigest: RENDERER_IMPLEMENTATION,
   }), /bucketName is invalid/u);
   assert.doesNotThrow(() => createAwsLambdaHyperframesProvider({
     stateMachineArn: "arn:aws-us-gov:states:us-gov-west-1:123456789012:stateMachine:narratage-hyperframes",
     bucketName: BUCKET,
-    rendererImplementationDigest: RENDERER_IMPLEMENTATION,
     client: fakeClient().client,
-    clientImplementationDigest: digestOf("hyperframes-lambda:test-gov-client"),
   }));
 });

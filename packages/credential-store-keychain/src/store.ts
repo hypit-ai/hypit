@@ -1,11 +1,11 @@
 import { execFile } from "node:child_process";
 
 import { digestOf } from "@narratage/protocol";
-import { defineRuntimeComponentPackage, verifyCredentialRef } from "@narratage/runtime";
+import { defineRuntimeInfrastructurePackage, verifyCredentialRef } from "@narratage/runtime";
 import type {
   CredentialRef,
   CredentialValue,
-  RuntimeComponentPackage,
+  RuntimeInfrastructurePackage,
   WritableCredentialStore,
 } from "@narratage/runtime";
 
@@ -13,10 +13,6 @@ export const keychainCredentialStoreModuleRef = {
   name: "@narratage/credential-store-keychain",
   version: "1",
 } as const;
-
-export const keychainCredentialStoreImplementationDigest = digestOf(
-  "@narratage/credential-store-keychain/credential-store@1",
-);
 
 /** Reads one named secret. Substituted in tests so no test touches a real keychain. */
 export type KeychainReader = (service: string, account: string) => Promise<string | undefined>;
@@ -133,19 +129,16 @@ export class KeychainCredentialStore implements WritableCredentialStore {
 
 export function createKeychainCredentialStorePackage(
   options: CreateKeychainCredentialStorePackageOptions = {},
-): RuntimeComponentPackage {
-  const instance = options.instance ?? "credentials.keychain";
+): RuntimeInfrastructurePackage {
+  const instance = options.instance ?? "credentials";
   const service = options.service ?? DEFAULT_SERVICE;
-  return defineRuntimeComponentPackage({
+  return defineRuntimeInfrastructurePackage({
     module: keychainCredentialStoreModuleRef,
-    components: [{
+    instance,
+    parts: [{
       role: "credential-store",
+      part: "store",
       facet: "credential-store",
-      instance,
-      implementation: {
-        digest: keychainCredentialStoreImplementationDigest,
-      },
-      configuration: { source: "os-keychain", service, explicitKeysOnly: true },
       port: new KeychainCredentialStore({
         service,
         ...(options.read === undefined ? {} : { read: options.read }),

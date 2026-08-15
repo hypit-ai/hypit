@@ -1,7 +1,7 @@
 import type { ComponentPackage, ProducerHandlerContext } from "@narratage/component-kit";
 import type { StoredValue } from "@narratage/protocol";
 
-import { backgroundRemovalImplementationDigests, backgroundRemovalProducers } from "./manifest.js";
+import { backgroundRemovalProducers } from "./manifest.js";
 import { backgroundRemovalRequest } from "./program.js";
 
 function blob(value: StoredValue | undefined) {
@@ -12,7 +12,6 @@ function blob(value: StoredValue | undefined) {
 export const backgroundRemovalComponent = {
   producers: [{
     producer: backgroundRemovalProducers.request,
-    implementationDigest: backgroundRemovalImplementationDigests.request,
     handler: ({ inputs }: ProducerHandlerContext) => ({
       outputs: {}, needs: { image: backgroundRemovalRequest(blob(inputs.source?.value)) },
     }),

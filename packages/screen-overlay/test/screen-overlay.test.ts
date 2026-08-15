@@ -101,7 +101,7 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
   const below = trackFor(components[1]!, 20);
   const above = { ...trackFor(components[0]!, 80), id: "screen-above" };
   const middle = sealVisualTrack({
-    visualIr: "svml.visual-ir@1", id: "middle",
+    visualIr: "narratage.visual-ir@1", id: "middle",
     presents: [{ id: "middle", span: { startFrame: 0, endFrameExclusive: 60 }, stacking: { order: 50, tieBreak: "middle" },
       elements: [{ id: "root", order: 0, kind: "box", style: [{ name: "background-color", value: "#112233" }] }] }],
   });
@@ -109,9 +109,9 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
     id: "stack", canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [above, middle, below],
   }), space);
-  const belowAt = document.html.indexOf('data-svml-track-id="screen"');
-  const middleAt = document.html.indexOf('data-svml-track-id="middle"');
-  const aboveAt = document.html.indexOf('data-svml-track-id="screen-above"');
+  const belowAt = document.html.indexOf('data-narratage-track-id="screen"');
+  const middleAt = document.html.indexOf('data-narratage-track-id="middle"');
+  const aboveAt = document.html.indexOf('data-narratage-track-id="screen-above"');
   assert.ok(belowAt < middleAt && middleAt < aboveAt);
 });
 
@@ -133,10 +133,9 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
   const fixtureSurface = {
     name: "inputs", tag: "Inputs", mode: "structured",
     outputs: [spatialTypes.canvas, programSpaceTypes.programSpace],
-    implementation: { digest: fixtureSurfaceDigest },
   } as const;
   const fixtureManifest: ModuleManifest = {
-    format: "svml.module@1",
+    format: "narratage.module@1",
     name: fixtureModule.name,
     version: fixtureModule.version,
     dependencies: [spatialDependency, programSpaceDependency],

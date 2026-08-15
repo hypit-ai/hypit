@@ -46,8 +46,8 @@ Adding a package does not require changing the root TypeScript configuration.
 - Project-owned Module and Frontend identities use the literal logical version `1`.
 - Workspace `package.json` versions remain `0.0.0-dev` until publication. They are physical package
   metadata, not logical protocol identities.
-- Exact executable identity comes from locked package bytes and closure digests, not either version
-  string.
+- npm or pnpm owns installed package versions and bytes. Narratage identities describe semantic
+  Modules, Frontends, Fragments and implementations rather than pretending to hash an installed package.
 - Wire types are defined in `@narratage/protocol` and are immutable.
 - Nominal Types are owned by Modules, not registered in a central union.
 - Type schemas use JSON-compatible structures, not TypeScript interfaces.

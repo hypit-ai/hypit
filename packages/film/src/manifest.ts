@@ -5,15 +5,7 @@ import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narrata
 import { spatialDependency, spatialTypes } from "@narratage/spatial";
 import { svsManifest, svsModuleRef } from "@narratage/svs";
 
-import {
-  appendFilmAudioTrackImplementationDigest,
-  appendFilmVisualTrackImplementationDigest,
-  compileFilmCompositionImplementationDigest,
-  createFilmTrackSetImplementationDigest,
-} from "./program.js";
-
 export const filmModuleRef = { name: "@narratage/film", version: "1" } as const;
-export const filmSurfaceImplementationDigest = digestOf("@narratage/film/surface@1");
 export const filmTypes = {
   program: { module: filmModuleRef, name: "FilmProgram" },
   trackSet: { module: filmModuleRef, name: "FilmTrackSet" },
@@ -52,25 +44,22 @@ export const filmMarkupSurfaces = [{
     tag: "Film",
     mode: "structured",
     outputs: [filmTypes.program],
-    implementation: {
-      digest: filmSurfaceImplementationDigest,
-    },
   }] as const;
 
 
 export const filmManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: filmModuleRef.name,
   version: filmModuleRef.version,
   dependencies: [
     programSpaceDependency,
     spatialDependency,
     compositionDependency,
-    { module: svsModuleRef, digest: digestOf(svsManifest) },
+    { module: svsModuleRef },
   ],
   types: [
-    { name: filmTypes.program.name, schema: filmProgramSchema },
-    { name: filmTypes.trackSet.name, schema: filmTrackSetSchema },
+    { name: filmTypes.program.name },
+    { name: filmTypes.trackSet.name },
   ],
   capabilities: [],
   producers: [
@@ -79,9 +68,6 @@ export const filmManifest: ModuleManifest = {
       inputs: [],
       outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
-      implementation: {
-        digest: createFilmTrackSetImplementationDigest,
-      },
     },
     {
       name: filmProducers.appendVisualTrack.name,
@@ -92,9 +78,6 @@ export const filmManifest: ModuleManifest = {
       ],
       outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
-      implementation: {
-        digest: appendFilmVisualTrackImplementationDigest,
-      },
     },
     {
       name: filmProducers.appendAudioTrack.name,
@@ -105,9 +88,6 @@ export const filmManifest: ModuleManifest = {
       ],
       outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
-      implementation: {
-        digest: appendFilmAudioTrackImplementationDigest,
-      },
     },
     {
       name: filmProducers.compileComposition.name,
@@ -119,11 +99,6 @@ export const filmManifest: ModuleManifest = {
       ],
       outputs: [{ name: "composition", type: compositionTypes.composition }],
       needs: [],
-      implementation: {
-        digest: compileFilmCompositionImplementationDigest,
-      },
     },
   ],
 };
-
-export const filmManifestDigest = digestOf(filmManifest);
