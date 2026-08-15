@@ -8,15 +8,17 @@ import test from "node:test";
 
 import {
   createNodePackageLock,
+  readNodePackageLock,
   writeNodePackageLock,
 } from "@narratage/package-loader-node";
+import { digestOf } from "@narratage/protocol";
 import { runtimeConfigRevision } from "@narratage/local/config";
 
 import {
   ensureRuntimeProcess,
   runtimeProcessStatus,
   stopRuntimeProcess,
-} from "../src/runtime-process.js";
+} from "@narratage/local/worker-process";
 
 const execute = promisify(execFile);
 const cliEntry = join(process.cwd(), "packages", "video-cli", "src", "cli.ts");
@@ -112,33 +114,42 @@ test("CLI exits after durable submission and a restarted detached Worker complet
 </svrun>
 `, "utf8");
     await writeFile(profile, JSON.stringify({
-      format: "svml.runtime-config@1",
-      root: ".",
-      packageRoot: process.cwd(),
-      packageLock: "./svml.packages.lock",
+      format: "narratage.runtime-profile@1",
       runtimePackageLock: "./svml.runtime-packages.lock",
-      runtimeServices: [
-        { use: "@narratage/local", instance: "execution" },
-        { use: "@narratage/store-sqlite", instance: "state", config: { path: ".svml/runtime.sqlite" } },
-        { use: "@narratage/artifact-store-fs", instance: "artifacts", config: { path: ".svml/artifacts" } },
-        { use: "@narratage/credential-store-env", instance: "credentials.env", config: {} },
-      ],
-      services: {
-        scheduler: "execution.scheduler",
-        worker: "execution.worker",
-        stores: {
-          build: "state.builds",
-          operations: "state.operations",
-          dispatch: "state.dispatch",
-          artifacts: "artifacts",
-          credentials: ["credentials.env"],
+      runtime: {
+        use: "@narratage/local",
+        config: {
+          dataRoot: ".narratage/runtime",
+          components: {
+            execution: { use: "@narratage/local" },
+            state: { use: "@narratage/store-sqlite", config: { path: "runtime.sqlite" } },
+            artifacts: { use: "@narratage/artifact-store-fs", config: { path: "artifacts" } },
+            "credentials.env": { use: "@narratage/credential-store-env", config: {} },
+          },
+          bindings: {
+            scheduler: "execution.scheduler",
+            worker: "execution.worker",
+            stores: {
+              build: "state.builds",
+              operations: "state.operations",
+              dispatch: "state.dispatch",
+              artifacts: "artifacts",
+              credentials: ["credentials.env"],
+            },
+          },
+          endpoints: {},
+          limits: { maxOperations: 2 },
         },
       },
-      endpoints: [],
-      scheduling: { maxConcurrency: 2 },
     }, null, 2), "utf8");
 
-    const parked = await ensureRuntimeProcess(profile, {
+    const dataRoot = join(project, ".narratage", "runtime");
+    const workerRevision = digestOf({
+      format: "narratage.runtime-worker-revision@1",
+      profile: await runtimeConfigRevision(profile),
+      source: (await readNodePackageLock(authorLockPath)).digest,
+    });
+    const parked = await ensureRuntimeProcess(profile, dataRoot, {
       command: process.execPath,
       args: ["-e", `
         const fs = require("node:fs");
@@ -150,22 +161,22 @@ test("CLI exits after durable submission and a restarted detached Worker complet
         process.on("SIGTERM", () => process.exit(0));
         setInterval(() => {}, 1000);
       `],
-    }, await runtimeConfigRevision(profile), 5_000);
+    }, workerRevision, 5_000);
     const submitted = await cli(project, [
       "build", run,
       "--runtime", profile,
-      "--root", project,
-      "--no-services",
+      "--workspace", project,
+      "--no-programs",
     ]);
     const build = String(submitted.build);
     assert.match(build, /^bld_[0-9a-f-]{36}$/u);
     assert.equal(submitted.status, "queued", "the foreground CLI reports durable admission, not execution ownership");
     assert.equal((submitted.dispatch as { readonly phase?: string }).phase, "queued");
-    const originalProcess = await runtimeProcessStatus(profile, await runtimeConfigRevision(profile));
+    const originalProcess = await runtimeProcessStatus(profile, dataRoot, workerRevision);
     assert.equal(originalProcess.state, "running", "the detached Runtime process outlives the submitting CLI process");
     assert.equal(originalProcess.pid, parked.pid, "build reuses one profile-scoped Runtime process");
 
-    await stopRuntimeProcess(profile, 10_000);
+    await stopRuntimeProcess(profile, dataRoot, 10_000);
     const interrupted = await cli(project, ["status", build, "--runtime", profile]);
     assert.notEqual((interrupted.dispatch as { readonly phase?: string }).phase, "terminal",
       "the long Build is durably incomplete when its first Worker is killed");
@@ -196,19 +207,19 @@ test("CLI exits after durable submission and a restarted detached Worker complet
     assert.equal((materialized.materialized as { readonly kind?: string }).kind, "json");
     assert.notEqual(JSON.parse(await readFile(exported, "utf8")), undefined);
 
-    await stopRuntimeProcess(profile, 10_000);
+    await stopRuntimeProcess(profile, dataRoot, 10_000);
     const repeated = await cli(project, [
       "build", run,
       "--runtime", profile,
-      "--root", project,
-      "--no-services",
+      "--workspace", project,
+      "--no-programs",
       "--follow",
     ]);
     assert.equal(repeated.status, "complete");
     assert.notEqual(repeated.build, build,
       "repeating the same Run Source creates a fresh Build instead of reclaiming source-derived state");
   } finally {
-    await stopRuntimeProcess(profile, 10_000).catch(() => undefined);
+    await stopRuntimeProcess(profile, join(project, ".narratage", "runtime"), 10_000).catch(() => undefined);
     await rm(project, { recursive: true, force: true });
   }
 });

@@ -88,7 +88,7 @@ export function registerTypeValidatorFacets(
   }
 }
 
-/** Trusted deterministic implementation package; it selects no Provider or Runtime service. */
+/** Trusted deterministic implementation package; it selects no Provider or Runtime Component. */
 export type ComponentPackage = {
   readonly producers?: readonly ProducerFacet[];
   readonly validators?: readonly TypeValidatorFacet[];

@@ -8,8 +8,7 @@
     ".": "./src/index.ts"
   },
   "svml": {
-    "activation": "./src/activation.ts",
-    "service": true
+    "activation": "./src/activation.ts"
   },
   "dependencies": {
     "@narratage/endpoint-kit": "workspace:*",

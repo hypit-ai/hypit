@@ -108,15 +108,13 @@ Narratage 没有隐式缓存。复用结果是显式的运行图编写——你�
 按照输出在各个历史 Build 冻结 Catalog 中的旧名字查询：
 
 ```bash
-node --run narratage -- history hook-take.video \
-  --runtime ./svml.runtime.json
+narratage history hook-take.video
 ```
 
 `history` 只列出该 Build 确实产出过的公开 Logical Output。仅仅在源码中声明但没有运行出来的别名，以及不能作为 `build-record` Candidate 的 authored Record 别名，都不会混入结果。如果忘了旧名字，可以按 Catalog 当时记录的精确源码路径列出真正验收过的输出名：
 
 ```bash
-node --run narratage -- history --source ./main.svml \
-  --runtime ./svml.runtime.json
+narratage history --source ./main.svml
 ```
 
 输出名只是某个不可变历史 Catalog 内供人查找的名字，不是产物身份。真正身份由历史 Core
@@ -169,104 +167,17 @@ Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本�
 
 ## Runtime Profile
 
-Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类型的工作：
+Runtime Profile 选择 Build 在哪里执行。它选择一个锁定的 Runtime 包；该包拥有自己的
+Component、Binding、Endpoint、并发限制、生命周期和私有 `dataRoot`。Profile 不定义
+Source Workspace，也不包含 Source package lock。
 
-官方 video Distribution 目前按 JSON 解析这份文档；CLI 根据命令把它交给 Distribution，
-不会根据文件后缀赋予语义。嵌入 Narratage 的应用可以通过 `@narratage/local` 直接组装
-相同的 Runtime 角色。完整说明见
-[Runtime Profile 指南](../guide/runtime-profile.md)。
-
-`narratage runtime use <profile>` 只在 `.svml/runtime` 保存一个项目本地指针，不复制 Profile、
-不启动环境，也不生成 lock。后续命令先通过该指针找到 Profile，再由 Profile 指定两份 lock。
-显式 `--runtime <profile>` 仍可作为单次覆盖，并且不会改变已经保存的选择。源码命令从入口
-Source 所在目录向上查找；Runtime 与归档命令则从当前目录向上查找。
-
-```json
-{
-  "format": "svml.runtime-config@1",
-  "packageLock": "./svml.packages.lock",
-  "runtimePackageLock": "./svml.runtime-packages.lock",
-  "runtimeServices": [
-    { "use": "@narratage/local", "instance": "execution" },
-    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/runtime.sqlite" } },
-    { "use": "@narratage/artifact-store-fs", "instance": "artifacts", "config": { "path": ".svml/artifacts" } },
-    { "use": "@narratage/credential-store-env", "instance": "credentials.env", "config": {} }
-  ],
-  "services": {
-    "scheduler": "execution.scheduler",
-    "worker": "execution.worker",
-    "stores": {
-      "build": "state.builds",
-      "operations": "state.operations",
-      "dispatch": "state.dispatch",
-      "artifacts": "artifacts",
-      "credentials": ["credentials.env"]
-    }
-  },
-  "endpoints": [
-    {
-      "use": "@narratage/provider-kie",
-      "instance": "kie.main",
-      "config": {
-        "apiKey": { "store": "env", "key": "KIE_API_KEY" },
-        "defaultConcurrency": 2
-      }
-    },
-    {
-      "use": "@narratage/provider-media-local",
-      "instance": "media.main",
-      "config": { "defaultConcurrency": 2 }
-    },
-    {
-      "use": "@narratage/provider-whisperx-local",
-      "instance": "whisperx.main",
-      "config": { "defaultConcurrency": 1 }
-    },
-    {
-      "use": "@narratage/provider-google-vertex",
-      "instance": "vertex.main",
-      "config": {
-        "projectEnv": "GOOGLE_CLOUD_PROJECT",
-        "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
-        "location": "global",
-        "defaultConcurrency": 1
-      }
-    },
-    {
-      "use": "@narratage/provider-hyperframes-local",
-      "instance": "hyperframes.main",
-      "config": {
-        "workers": 2,
-        "quality": "standard",
-        "defaultConcurrency": 1
-      }
-    }
-  ],
-  "scheduling": { "maxConcurrency": 4 }
-}
+```bash
+narratage runtime use svml.runtime.json
+narratage paths
 ```
 
-### Endpoint
-
-每个 endpoint 将一个 Provider 包绑定到命名实例与显式的 Provider Authority：
-
-| 字段 | 说明 |
-|---|---|
-| `use` | Provider 包名（例如 `@narratage/provider-kie`） |
-| `instance` | 唯一的实例标识符 |
-| `authority` | 可选的共享账号或计算池标识；实例独享容量时省略即可 |
-| `config` | Provider 专属非秘密配置、CredentialRef 与并发数 |
-
-### 信任边界
-
-Runtime 包目前作为可信本地代码执行。开放任意第三方 Runtime 包之前，需要真正的进程或
-Wasm 隔离；字符串 allowlist 不能限制同一 Node 进程里的代码。
-
-### 调度
-
-`maxConcurrency` 限制总的并行 Operation 数。Provider 会贡献一个 Authority 资源和一个精确
-Capability Route 资源，二者由 Store 原子获取；可选的 `resources` 只按不透明资源 id 覆盖容量。
-
+`runtime use` 只写入 `.narratage/runtime`，不会启动 Worker、创建 Runtime 数据或修改任何
+package lock。Profile 结构和完整边界见 [Runtime](../guide/runtime.md)。
 ## 配置所选凭据
 
 `check` 与 `plan` 不会请求在线 Provider，因此不需要 API key。在运行 `doctor` 或付费/外部
@@ -312,7 +223,7 @@ pnpm install
 ```
 
 这条命令只安装 JavaScript 工作区，不会下载 Python 模型，也不会准备仓库内的所有 Provider。
-`runtime up` / `services up` 会读取所选 Runtime Profile，只准备其中 Endpoint 声明的外部程序。只有 Profile 选择 WhisperX、OpenCV 等本地 Python 服务时，才需要先安装
+`runtime up` 会读取所选 Runtime Profile，并准备其中 Endpoint 声明的外部程序。只有 Profile 选择 WhisperX、OpenCV 等本地 Python 程序时，才需要先安装
 [`uv`](https://docs.astral.sh/uv/)；具体锁定环境命令见 Quickstart 首页的 [安装](../quickstart.md#安装)。
 
 `narratage runtime up` 管理后台 Worker 和外部程序；`build` 会确保 Runtime 已运行，但不拥有
@@ -331,15 +242,14 @@ cd /work/my-film
 /opt/narratage/narratage plan build.svrun
 ```
 
-选择 Runtime Profile 时，Profile 的 `root`（未写则为 Profile 所在目录）是该项目所有
-`.svml`、`.svs`、`.svrun` 的稳定 Source Workspace。没有 Profile 时，若选择了 package lock
-就以 lock 所在目录为边界，否则才以入口 Source 所在目录为边界。`--package-root` 是另一项无关的 Host 覆盖项：它只负责指定已安装的
-`node_modules`，然后按照 lock 校验包字节。官方 CLI 通常会自动提供自身的安装位置，所以上面的命令无需填写包路径。只有需要主动扩大源码边界时才传 `--root`。不要把外部项目软链接进仓库；canonical path 的边界检查会有意拒绝这种逃逸。
+Workspace 依次取显式 `--workspace`、所选 `.narratage/runtime` 所在项目、最近的 Source lock、
+入口 Source 目录。Runtime Profile 无权改变这条源码边界。`--package-root` 只定位已经安装的
+`node_modules`；`--asset-root` 只额外授权读取素材字节。
 
 外部项目通常应提交如下 `.gitignore`：
 
-```gitignore
-.svml/
+```text
+.narratage/
 output/
 ```
 
@@ -349,45 +259,14 @@ output/
 共享只读素材库不必复制进项目，也不必放宽 Source 边界：
 
 ```bash
-node --run narratage -- plan /work/my-film/build.svrun \
-  --runtime /work/my-film/svml.runtime.json \
-  --asset-root /work/shared-media
+narratage plan /work/my-film/build.svrun --asset-root /work/shared-media
 ```
 
 `--asset-root` 可重复使用，只授权读取素材字节，不允许从那里导入 `.svml/.svs` 源码。该 Host
 选项不进入作者或 Build 身份；真正进入图的仍是素材内容摘要。
 
-官方 CLI 读取外部项目的 Runtime Profile 时也会提供同一个安装位置，因此 Profile 仍可移植：
-
-```json
-{
-  "format": "svml.runtime-config@1",
-  "packageLock": "./svml.packages.lock",
-  "runtimePackageLock": "./svml.runtime-packages.lock",
-  "runtimeServices": [
-    { "use": "@narratage/local", "instance": "execution" },
-    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/runtime.sqlite" } },
-    { "use": "@narratage/artifact-store-fs", "instance": "artifacts", "config": { "path": ".svml/artifacts" } },
-    { "use": "@narratage/credential-store-env", "instance": "credentials.env", "config": {} }
-  ],
-  "services": {
-    "scheduler": "execution.scheduler",
-    "worker": "execution.worker",
-    "stores": {
-      "build": "state.builds",
-      "operations": "state.operations",
-      "dispatch": "state.dispatch",
-      "artifacts": "artifacts",
-      "credentials": ["credentials.env"]
-    }
-  },
-  "endpoints": [],
-  "scheduling": { "maxConcurrency": 4 }
-}
-```
-
-Runtime 状态、归档 Artifact 和 lock 仍全部留在 `/work/my-film`。只有包被有意安装在 CLI
-之外时，才使用 `--package-root` 或 Profile 的 `packageRoot` 覆盖位置。
+Runtime Profile 只选择 Runtime 包、Runtime lock 与该 Runtime 的封闭配置。完整结构只在
+[Runtime](../guide/runtime.md) 维护，不在 Quickstart 复制第二份。
 
 ### 1. 同步已安装包
 
@@ -395,8 +274,8 @@ Runtime 状态、归档 Artifact 和 lock 仍全部留在 `/work/my-film`。只�
 
 ```bash
 cd examples/talking-head-aroll
-node --run narratage -- runtime use svml.runtime.json
-node --run narratage -- packages sync build.svrun
+narratage runtime use svml.runtime.json
+narratage packages sync build.svrun
 ```
 
 当前 Author/Run Source 选择作者包，Runtime Profile 选择环境包。`packages sync` 只把本次
@@ -407,7 +286,7 @@ Provider，也不生成媒体。
 ### 2. 诊断环境
 
 ```bash
-node --run narratage -- doctor
+narratage doctor
 ```
 
 Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；它不启动 Worker，也不发付费请求。
@@ -419,23 +298,23 @@ Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭�
 ### 3. 检查 Source 与计划
 
 ```bash
-node --run narratage -- check main.svml
+narratage check main.svml
 ```
 
 ```bash
-node --run narratage -- plan build.svrun
+narratage plan build.svrun
 ```
 
 在花费资金之前审查冻结的 BuildPlan。该计划展示调度器将发出的每个 Operation 和 Needs；选择
 Runtime 后只预检这次计划真正需要的 Endpoint、凭据和外部程序，不启动任何外部工作。
 
 `build` 会自动启动或复用后台 Runtime。只有希望提交前预热时才需要显式执行 `runtime up`；
-`runtime status` 用于观察。范围更窄的 `services up|status|down` 只管理外部程序，不负责 Worker。
+`runtime status` 用于观察。范围更窄的 `programs up|status|down` 只管理外部程序，不负责 Worker。
 
 ### 4. 提交 Build
 
 ```bash
-node --run narratage -- build build.svrun --follow
+narratage build build.svrun --follow
 ```
 
 不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是观察者，并会报告 phase / Operation 数量变化；Ctrl-C 不会取消任务。
@@ -445,7 +324,7 @@ node --run narratage -- build build.svrun --follow
 | `--runtime` | 单次命令的 Runtime Profile 覆盖；通常用 `runtime use` 选择一次即可 |
 | `--package-lock` | 包锁定文件的路径 |
 | `--package-root` | 存放 lock 所列已安装包的 Host 目录 |
-| `--root` | 可选的 Source Workspace 覆盖项；未传时依次使用 Runtime Profile 根、package lock 目录或入口 Source 目录 |
+| `--workspace` | 显式 Source Workspace 覆盖项 |
 | `--follow` | 将 Build 进度流式输出到终端 |
 
 每次执行都会创建新的 Build id，即使 Author Source 和 Run Source 完全没变。这是非确定性生成
@@ -456,13 +335,13 @@ node --run narratage -- build build.svrun --follow
 ### 5. 检查并获取结果
 
 ```bash
-node --run narratage -- inspect <build-id>
+narratage inspect <build-id>
 ```
 
 `inspect` 会显示耐久 Build 状态、所需输出与已接受的 Record。确认这些事实正确后，再获取所选归档 Artifact：
 
 ```bash
-node --run narratage -- get <build-id> \
+narratage get <build-id> \
   --name final.video \
   --to examples/talking-head-aroll/output/final.mp4
 ```
@@ -477,16 +356,16 @@ Build 的最终输出会为每个目标别名打印精确的 `get --name …` �
 创建一个引用已完成 Build 的 Record 的新 `.svrun` 文件（参见上文 [复用结果](#复用结果)），然后提交：
 
 ```bash
-node --run narratage -- build reuse-generated.svrun --follow
+narratage build reuse-generated.svrun --follow
 ```
 
 ### 7. 诊断或停止本地 Runtime
 
 ```bash
-node --run narratage -- runtime logs
-node --run narratage -- runtime down
+narratage runtime logs
+narratage runtime down
 ```
 
 `runtime down` 只会让 Worker 停止领取新 lease，并保留外部程序；只有确实要停掉这些程序时
-才执行 `services down`。两条命令都不会取消耐久 Build 或远程 Provider 工作。再次启动同一
+才执行 `programs down`。两条命令都不会取消耐久 Build 或远程 Provider 工作。再次启动同一
 Profile 后，会继续其中尚未完成的 dispatch。

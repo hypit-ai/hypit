@@ -1,17 +1,6 @@
 import type { NodeCompiler } from "@narratage/compiler-node";
 import type { NodePackageBinding, NodePackageContribution } from "@narratage/package-loader-node";
-import type { LoadedNodePackageSet } from "@narratage/package-loader-node";
-import type { CapabilityRef } from "@narratage/protocol";
-import type {
-  CliCredentialControl,
-  CliExternalServiceProgress,
-  CliExternalServiceReport,
-  CliRuntime,
-  CliRuntimeArchiveControl,
-  CliRuntimeArtifactAccess,
-  CliRuntimeMaintenance,
-  CliRuntimeDoctorResult,
-} from "./runtime-port.js";
+import type { NodeRuntimeHost } from "@narratage/runtime-adapter-node";
 
 export type CliCompilerOptions = {
   /** Canonical containment boundary for Author and Run Sources plus source assets. */
@@ -48,53 +37,6 @@ export type CliDistribution = {
     readonly selected: readonly string[];
     readonly logical?: readonly import("@narratage/package-loader-node").LogicalPackageAddress[];
   }>;
-  /**
-   * Resolve the deterministic implementation lock named by a declarative
-   * Runtime Profile without constructing that Runtime. Trusted executable
-   * Runtime modules may decline and require an explicit CLI package lock.
-   */
-  resolveCompilationPackages?(path: string): Promise<{
-    /** Stable project Source boundary selected by this Runtime Profile. */
-    readonly root?: string;
-    readonly packageLock?: string;
-    readonly runtimePackageLock?: string;
-    readonly packageRoot?: string;
-    /** ABI-qualified Runtime adapters selected by the Profile. */
-    readonly runtimeSelection?: import("@narratage/package-loader-node").NodePackageSelectionRequest;
-  }>;
-  /** Opaque revision of the Profile and every deployment input that requires a fresh Worker. */
-  runtimeProfileRevision(path: string): Promise<string>;
-  createRuntimeFromConfig(path: string, options?: {
-    /** Same-process package set already verified for compilation. */
-    readonly implementationPackages?: LoadedNodePackageSet;
-  }): Promise<CliRuntime>;
-  /** Open only durable execution-state Stores for observation and cancellation. */
-  createRuntimeArchiveFromConfig(path: string, options?: { readonly readOnly?: boolean }): Promise<CliRuntimeArchiveControl>;
-  /** Open only the selected ArtifactStore for explicit byte ingress or egress. */
-  createRuntimeArtifactAccessFromConfig(path: string, options?: { readonly readOnly?: boolean }): Promise<CliRuntimeArtifactAccess>;
-  /** Open execution-state Stores plus the ArtifactStore for explicit retention maintenance. */
-  createRuntimeMaintenanceFromConfig(path: string, options?: { readonly readOnly?: boolean }): Promise<CliRuntimeMaintenance>;
-  /** Open only the selected Endpoint declaration and configured CredentialStores. */
-  createRuntimeCredentialsFromConfig(path: string, endpoint: string): Promise<CliCredentialControl>;
-  /** Re-enter this exact Distribution as the hidden durable Worker process. */
-  runtimeWorkerLaunch(): { readonly command: string; readonly args: readonly string[] };
-  doctorRuntimeConfig(path: string, options?: {
-    readonly capabilities?: readonly CapabilityRef[];
-    readonly implementationPackages?: LoadedNodePackageSet;
-  }): Promise<CliRuntimeDoctorResult>;
-  /** The external programs a Runtime Profile implies: probe, prepare and start them. */
-  readonly externalServices: {
-    up(path: string, options: {
-      readonly maxWaitMs?: number;
-      readonly onProgress?: (event: CliExternalServiceProgress) => void;
-      readonly capabilities?: readonly CapabilityRef[];
-    }): Promise<ExternalServiceResult>;
-    down(path: string): Promise<ExternalServiceResult>;
-    report(path: string): Promise<ExternalServiceResult>;
-  };
-};
-
-export type ExternalServiceResult = {
-  readonly root: string;
-  readonly services: readonly CliExternalServiceReport[];
+  /** Load the Runtime Host selected by the Profile's locked `runtime.use` package. */
+  openRuntimeHost(path: string): Promise<NodeRuntimeHost>;
 };

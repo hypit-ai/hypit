@@ -124,12 +124,11 @@ cd /path/to/my-video
 /path/to/narratage/narratage plan build.svrun
 ```
 
-The launcher uses dependencies installed in the Narratage checkout, but Source, SQLite state,
-Artifacts and outputs remain inside your project. `runtime use` stores only a local pointer at
-`.svml/runtime`; the selected Profile remains the single source for both lock paths and the
-execution environment. `packages sync` adds or refreshes the current
-Run and Runtime selections in the two project package inventories; it does not remove another
-Run's packages.
+The launcher uses dependencies installed in the Narratage checkout while Source and exported files
+remain in your project. Runtime state and Artifacts live under the selected Profile's `dataRoot`.
+`runtime use` stores only a local pointer at `.narratage/runtime`. The Source lock belongs to the
+project; the Profile independently selects its Runtime lock. `packages sync` updates both
+inventories without removing packages needed by another Run.
 
 Start from [`examples/talking-film-live`](https://github.com/hypit-ai/narratage/tree/main/examples/talking-film-live) when you need a
 complete Runtime Profile. Copy the source structure, then replace its assets, Script, model choices
@@ -174,7 +173,7 @@ Install only what your selected Runtime Profile needs:
 | Chromium | managed automatically by local HyperFrames rendering |
 | API credentials | selecting remote KIE, Vertex, Xiaomi or AWS endpoints |
 
-For local Python services:
+For local Python programs:
 
 ```bash
 uv python install 3.13

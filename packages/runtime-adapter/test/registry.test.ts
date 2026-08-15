@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
   createRuntimeEndpointAdapterFacet,
-  createRuntimeServiceAdapterFacet,
+  createRuntimeComponentAdapterFacet,
   isRuntimeAdapterHostFacet,
   runtimeConfigBoolean,
   runtimeConfigExact,
@@ -14,7 +14,7 @@ import {
 } from "@narratage/runtime-adapter";
 import type { RuntimeAdapterFactoryContext } from "@narratage/runtime-adapter";
 
-const context = { root: "/tmp", instance: "one", config: {} };
+const context = { dataRoot: "/tmp", instance: "one", config: {} };
 const endpointPackage = (instance: string) => ({
   name: instance,
   manifest: { facets: [] },
@@ -32,47 +32,47 @@ const endpoint = (use: string, extra: Record<string, unknown> = {}) =>
 test("a facet declares which kind it is, and the registry keeps the two apart", () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.endpoint"));
-  registry.registerFacet(createRuntimeServiceAdapterFacet({
+  registry.registerFacet(createRuntimeComponentAdapterFacet({
     use: "example.service",
     validate() {},
     create: () => ({}) as never,
   }));
 
   assert.ok(registry.has("example.endpoint", "endpoint"));
-  assert.equal(registry.has("example.endpoint", "runtime-service"), false);
-  assert.ok(registry.has("example.service", "runtime-service"));
+  assert.equal(registry.has("example.endpoint", "runtime-component"), false);
+  assert.ok(registry.has("example.service", "runtime-component"));
   assert.equal(registry.has("example.service", "endpoint"), false);
   assert.equal(registry.has("example.absent"), false);
 });
 
-test("Endpoint and Runtime Service may intentionally share one logical spelling", () => {
+test("Endpoint and Runtime Component may intentionally share one logical spelling", () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.shared"));
-  registry.registerFacet(createRuntimeServiceAdapterFacet({
+  registry.registerFacet(createRuntimeComponentAdapterFacet({
     use: "example.shared",
     validate() {},
-    create: () => ({ services: [] }) as never,
+    create: () => ({ components: [] }) as never,
   }));
   assert.ok(registry.has("example.shared", "endpoint"));
-  assert.ok(registry.has("example.shared", "runtime-service"));
+  assert.ok(registry.has("example.shared", "runtime-component"));
 });
 
-test("asking an Endpoint adapter for a Runtime Service is refused, not coerced", async () => {
+test("asking an Endpoint adapter for a Runtime Component is refused, not coerced", async () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.endpoint"));
-  await assert.rejects(async () => await registry.createService("example.endpoint", context));
+  await assert.rejects(async () => await registry.createComponent("example.endpoint", context));
   await assert.rejects(async () => await registry.createEndpoint("example.absent", context));
 });
 
-test("a Runtime Service adapter cannot escape its configured instance namespace", async () => {
+test("a Runtime Component adapter cannot escape its configured instance namespace", async () => {
   const registry = new RuntimeAdapterRegistry();
-  registry.registerFacet(createRuntimeServiceAdapterFacet({
+  registry.registerFacet(createRuntimeComponentAdapterFacet({
     use: "example.escaping-service",
     validate() {},
-    create: () => ({ services: [{ instance: { id: "someone-else" } }] }) as never,
+    create: () => ({ components: [{ instance: { id: "someone-else" } }] }) as never,
   }));
   await assert.rejects(
-    async () => await registry.createService("example.escaping-service", context),
+    async () => await registry.createComponent("example.escaping-service", context),
     /outside configured namespace one/u,
   );
 });

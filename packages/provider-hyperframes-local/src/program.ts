@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 
 import { probeMediaToolchain } from "@narratage/media-execution";
 import { runtimeConfigObject, runtimeConfigString } from "@narratage/runtime-adapter";
-import type { RuntimeAdapterFactoryContext, RuntimeExternalService, RuntimeServiceState } from "@narratage/runtime-adapter";
+import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@narratage/runtime-adapter";
 import { resolveRuntimeExecutable } from "@narratage/runtime-adapter-node";
 
 import { defaultHyperframesCliPath } from "./provider.js";
@@ -19,23 +19,23 @@ function run(executable: string, args: readonly string[]): Promise<{ ok: boolean
 
 /**
  * HyperFrames owns the browser cache behind its CLI. It is deployment state,
- * not an author dependency, so the Runtime service lifecycle prepares it only
+ * not an author dependency, so the Runtime Component lifecycle prepares it only
  * when this Provider is selected.
  */
-export function localHyperframesBrowserService(
+export function localHyperframesBrowserProgram(
   context: RuntimeAdapterFactoryContext,
-): RuntimeExternalService {
+): ManagedProgram {
   const config = runtimeConfigObject(context.config, "local HyperFrames");
   const configuredNode = runtimeConfigString(config.nodePath, "HyperFrames nodePath");
   const configuredCli = runtimeConfigString(config.hyperframesCliPath, "HyperFrames hyperframesCliPath");
   const configuredFfprobe = runtimeConfigString(config.ffprobePath, "HyperFrames ffprobePath");
-  const node = resolveRuntimeExecutable(context.root, configuredNode ?? process.execPath);
-  const cli = resolveRuntimeExecutable(context.root, configuredCli ?? defaultHyperframesCliPath());
-  const ffprobe = resolveRuntimeExecutable(context.root, configuredFfprobe ?? "ffprobe");
+  const node = resolveRuntimeExecutable(context.dataRoot, configuredNode ?? process.execPath);
+  const cli = resolveRuntimeExecutable(context.dataRoot, configuredCli ?? defaultHyperframesCliPath());
+  const ffprobe = resolveRuntimeExecutable(context.dataRoot, configuredFfprobe ?? "ffprobe");
   return {
     id: "hyperframes-browser",
     prepare: { command: node, args: [cli, "browser", "ensure"] },
-    async probe(): Promise<RuntimeServiceState> {
+    async probe(): Promise<ManagedProgramState> {
       const located = await run(node, [cli, "browser", "path"]);
       if (!located.ok) return { state: "down", detail: `HyperFrames browser is unavailable: ${located.output}` };
       const path = located.output.trim();

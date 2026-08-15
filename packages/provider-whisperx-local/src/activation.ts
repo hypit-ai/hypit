@@ -7,7 +7,7 @@ import {
 } from "@narratage/runtime-adapter";
 
 import { createLocalWhisperXProvider } from "./provider.js";
-import { localWhisperXService } from "./service.js";
+import { localWhisperXProgram } from "./program.js";
 
 const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-whisperx-local",
@@ -65,7 +65,7 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
         ...(maxResponseBytes === undefined ? {} : { maxResponseBytes }),
       }),
-      externalService: localWhisperXService(context),
+      program: localWhisperXProgram(context),
     };
   },
 });

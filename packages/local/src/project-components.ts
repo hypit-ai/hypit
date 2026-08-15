@@ -1,23 +1,23 @@
 import {
-  assembleRuntimeServices,
-  verifyRuntimeServicePackage,
+  assembleRuntimeComponents,
+  verifyRuntimeComponentPackage,
 } from "@narratage/runtime";
 import type {
   BuildCatalog,
-  RuntimeServiceAssembly,
-  RuntimeServicePackage,
-  RuntimeServiceSelection,
+  RuntimeComponentAssembly,
+  RuntimeComponentPackage,
+  RuntimeBindings,
 } from "@narratage/runtime";
 
 import type { ProjectLocalRuntimeControlOptions } from "./types.js";
 
-export type ProjectRuntimeServiceSelection = RuntimeServiceSelection;
-export type ProjectRuntimeServiceAssembly = RuntimeServiceAssembly;
+export type ProjectRuntimeBindings = RuntimeBindings;
+export type ProjectRuntimeComponentAssembly = RuntimeComponentAssembly;
 
-export type AssembledProjectRuntimeServices = {
-  readonly assembly: ProjectRuntimeServiceAssembly;
+export type AssembledProjectRuntimeComponents = {
+  readonly assembly: ProjectRuntimeComponentAssembly;
   readonly catalog: BuildCatalog | undefined;
-  readonly selection: ProjectRuntimeServiceSelection;
+  readonly selection: ProjectRuntimeBindings;
   close(): Promise<void>;
 };
 
@@ -26,11 +26,11 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 export function selectedBuildCatalog(
-  packages: readonly RuntimeServicePackage[],
+  packages: readonly RuntimeComponentPackage[],
   buildStore: string,
 ): BuildCatalog | undefined {
-  const owner = packages.find((item) => item.services.some((service) =>
-    service.role === "build-store" && service.instance.id === buildStore));
+  const owner = packages.find((item) => item.components.some((component) =>
+    component.role === "build-store" && component.instance.id === buildStore));
   if (owner === undefined) return undefined;
   const catalog = owner.buildCatalog;
   if (catalog === undefined) return undefined;
@@ -38,27 +38,27 @@ export function selectedBuildCatalog(
     && "record" in catalog && typeof catalog.record === "function"
     && "read" in catalog && typeof catalog.read === "function"
     && "list" in catalog && typeof catalog.list === "function",
-  `Runtime service ${buildStore} exposes an invalid Build Catalog`);
+  `Runtime Component ${buildStore} exposes an invalid Build Catalog`);
   return catalog as BuildCatalog;
 }
 
 /**
- * Assemble only the services named by the Runtime Profile. This layer never manufactures a
+ * Assemble only the Components named by the Runtime Profile. This layer never manufactures a
  * Scheduler, Worker, Store, path or credential source on the project's behalf.
  */
-export async function createProjectRuntimeServices(
+export async function createProjectRuntimeComponents(
   _root: string,
   options: ProjectLocalRuntimeControlOptions,
-): Promise<AssembledProjectRuntimeServices> {
-  const packages = [...options.runtimeServices];
+): Promise<AssembledProjectRuntimeComponents> {
+  const packages = [...options.runtimeComponents];
   try {
-    for (const item of packages) verifyRuntimeServicePackage(item);
-    const assembly = assembleRuntimeServices(packages, options.runtimeSelection);
-    const catalog = selectedBuildCatalog(packages, options.runtimeSelection.stores.build);
+    for (const item of packages) verifyRuntimeComponentPackage(item);
+    const assembly = assembleRuntimeComponents(packages, options.bindings);
+    const catalog = selectedBuildCatalog(packages, options.bindings.stores.build);
     return {
       assembly,
       catalog,
-      selection: options.runtimeSelection,
+      selection: options.bindings,
       close: () => assembly.close(),
     };
   } catch (error) {

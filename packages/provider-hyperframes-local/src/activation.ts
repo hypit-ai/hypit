@@ -12,7 +12,7 @@ import {
 
 import { createLocalHyperframesProvider } from "./provider.js";
 import type { HyperframesBrowserGpu, HyperframesQuality, HyperframesWorkers } from "./provider.js";
-import { localHyperframesBrowserService } from "./service.js";
+import { localHyperframesBrowserProgram } from "./program.js";
 
 const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-hyperframes-local",
@@ -42,9 +42,9 @@ const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     const configuredNode = runtimeConfigString(config.nodePath, "HyperFrames nodePath");
     const configuredCli = runtimeConfigString(config.hyperframesCliPath, "HyperFrames hyperframesCliPath");
     const configuredFfprobe = runtimeConfigString(config.ffprobePath, "HyperFrames ffprobePath");
-    const nodePath = configuredNode === undefined ? undefined : resolveRuntimeExecutable(context.root, configuredNode);
-    const hyperframesCliPath = configuredCli === undefined ? undefined : resolveRuntimeExecutable(context.root, configuredCli);
-    const ffprobePath = configuredFfprobe === undefined ? undefined : resolveRuntimeExecutable(context.root, configuredFfprobe);
+    const nodePath = configuredNode === undefined ? undefined : resolveRuntimeExecutable(context.dataRoot, configuredNode);
+    const hyperframesCliPath = configuredCli === undefined ? undefined : resolveRuntimeExecutable(context.dataRoot, configuredCli);
+    const ffprobePath = configuredFfprobe === undefined ? undefined : resolveRuntimeExecutable(context.dataRoot, configuredFfprobe);
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "HyperFrames defaultConcurrency");
     const processTimeoutMs = runtimeConfigPositiveInteger(config.processTimeoutMs, "HyperFrames processTimeoutMs");
     const maxProcessOutputBytes = runtimeConfigPositiveInteger(config.maxProcessOutputBytes, "HyperFrames maxProcessOutputBytes");
@@ -64,16 +64,16 @@ const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ...(maxProcessOutputBytes === undefined ? {} : { maxProcessOutputBytes }),
         ...(maxRenderedBytes === undefined ? {} : { maxRenderedBytes }),
       }),
-      externalService: localHyperframesBrowserService(context),
+      program: localHyperframesBrowserProgram(context),
       diagnose: async () => [
         ...await diagnoseRuntimeExecutable({
-          root: context.root,
+          root: context.dataRoot,
           configured: configuredNode,
           fallback: process.execPath,
           subject: "Node.js",
         }),
         ...await diagnoseRuntimeExecutable({
-          root: context.root,
+          root: context.dataRoot,
           configured: configuredFfprobe,
           fallback: "ffprobe",
           subject: "FFprobe",

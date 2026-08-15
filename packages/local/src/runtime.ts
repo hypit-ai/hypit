@@ -29,7 +29,7 @@ import type {
   RuntimeProfileInstance,
 } from "@narratage/runtime";
 
-import { createProjectRuntimeServices } from "./project-services.js";
+import { createProjectRuntimeComponents } from "./project-components.js";
 import { createLocalRuntimeControl } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
 import type {
@@ -283,14 +283,14 @@ export async function createLocalRuntime(
 }
 
 /**
- * Node project assembly over only the Runtime service packages selected by the caller. Capability
+ * Node project assembly over only the Runtime Component packages selected by the caller. Capability
  * Endpoints may execute locally, in a vendor API, in Lambda, or on a hosted service; none is
  * inferred from this local process boundary.
  */
 export async function createProjectLocalRuntime(
   options: ProjectLocalRuntimeOptions,
 ): Promise<LocalRuntime> {
-  const root = resolve(options.root ?? process.cwd());
+  const root = resolve(options.dataRoot ?? process.cwd());
   const packageRoot = resolve(options.packageRoot ?? root);
   const lockedPackageSet = options.packageLock === undefined
     ? undefined
@@ -299,21 +299,21 @@ export async function createProjectLocalRuntime(
     ? []
     : collectNodePackageComponents(lockedPackageSet.packages.map((item) => item.contribution));
   const configuredComponents = [...lockedComponents, ...(options.components ?? [])];
-  const projectServices = await createProjectRuntimeServices(root, options);
-  const services = projectServices.assembly;
-  const selection = projectServices.selection;
+  const projectComponents = await createProjectRuntimeComponents(root, options);
+  const components = projectComponents.assembly;
+  const selection = projectComponents.selection;
   const endpointPackages = options.endpoints ?? [];
 
   try {
     verifyEndpointPackages(endpointPackages);
     const modules = new RuntimeModuleRegistry();
     registerManifests(modules, [
-      ...services.manifests,
+      ...components.manifests,
       ...endpointPackages.map((item) => item.manifest),
     ]);
     const profile = sealRuntimeProfile({
       instances: [
-        ...services.instances,
+        ...components.instances,
         ...endpointPackages.map((item) => item.instance),
       ],
       scheduler: selection.scheduler,
@@ -336,14 +336,14 @@ export async function createProjectLocalRuntime(
     });
     const closure = resolveRuntimeProfile(modules, profile);
     const runtime = await createLocalRuntime({
-      buildStore: services.buildStore,
-      ...(projectServices.catalog === undefined ? {} : { buildCatalog: projectServices.catalog }),
-      operationStore: services.operationStore,
-      dispatchStore: services.dispatchStore,
-      artifactStore: services.artifactStore,
-      credentialStore: services.credentialStore,
-      scheduler: services.scheduler,
-      worker: services.worker,
+      buildStore: components.buildStore,
+      ...(projectComponents.catalog === undefined ? {} : { buildCatalog: projectComponents.catalog }),
+      operationStore: components.operationStore,
+      dispatchStore: components.dispatchStore,
+      artifactStore: components.artifactStore,
+      credentialStore: components.credentialStore,
+      scheduler: components.scheduler,
+      worker: components.worker,
       ...(configuredComponents.length === 0
         ? {}
         : { components: configuredComponents }),
@@ -370,11 +370,11 @@ export async function createProjectLocalRuntime(
       openArtifact: runtime.openArtifact,
       garbageCollectArtifacts: runtime.garbageCollectArtifacts,
       close() {
-        return projectServices.close();
+        return projectComponents.close();
       },
     };
   } catch (error) {
-    await projectServices.close();
+      await projectComponents.close();
     throw error;
   }
 }

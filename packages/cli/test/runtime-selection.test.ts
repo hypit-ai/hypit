@@ -20,7 +20,7 @@ test("project Runtime selection is a relative local pointer discovered from nest
 
     const selected = await selectRuntimeProfile(root, profile);
     assert.equal(selected.profile, await realpath(profile));
-    assert.equal((await readFile(join(root, ".svml", "runtime"), "utf8")).trim(), join("runtime", "local.json"));
+    assert.equal((await readFile(join(root, ".narratage", "runtime"), "utf8")).trim(), join("runtime", "local.json"));
 
     const found = await findRuntimeProfile(nested);
     assert.equal(found?.profile, selected.profile);
@@ -44,19 +44,20 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
       async close() {},
     } as unknown as CliRuntimeArchiveControl;
     const distribution = {
-      resolveCompilationPackages: async (path: string) => {
-        calls.push(`select:${resolve(path)}`);
-        return {
-          root,
-          packageLock: join(root, "svml.packages.lock"),
-          runtimePackageLock: join(root, "svml.runtime-packages.lock"),
-        };
-      },
-      createRuntimeArchiveFromConfig: async (path: string) => {
-        calls.push(`queue:${resolve(path)}`);
-        return control;
-      },
-      runtimeProfileRevision: async () => "runtime-selection-test",
+      openRuntimeHost: async (path: string) => ({
+        profile: path,
+        resolvePackages: async () => {
+          calls.push(`select:${resolve(path)}`);
+          return { runtimePackageLock: join(root, "svml.runtime-packages.lock") };
+        },
+        openArchive: async () => {
+          calls.push(`queue:${resolve(path)}`);
+          return control;
+        },
+        controller: async () => ({
+          worker: { status: async () => ({ state: "stopped", profile: path, logPath: "/tmp/worker.log" }) },
+        }),
+      }),
     } as unknown as CliDistribution;
     process.chdir(root);
 

@@ -12,7 +12,7 @@ import {
   sealOperationIdentity,
 } from "@narratage/runtime";
 import {
-  createSqliteRuntimeServicePackage,
+  createSqliteRuntimeComponentPackage,
   SqliteRuntimeState,
 } from "@narratage/store-sqlite";
 
@@ -172,9 +172,9 @@ test("SQLite keeps cancellation control independent from execution state", async
 test("Host Catalog schema changes do not change the execution Runtime Closure", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-closure-"));
   try {
-    const services = createSqliteRuntimeServicePackage({ path: join(directory, "runtime.sqlite") });
+    const services = createSqliteRuntimeComponentPackage({ path: join(directory, "runtime.sqlite") });
     assert.deepEqual(
-      services.services.map((item) => item.instance.configurationDigest),
+      services.components.map((item) => item.instance.configurationDigest),
       [
         ...Array(3).fill(digestOf({ path: join(directory, "runtime.sqlite"), schemaVersion: 6, busyTimeoutMs: 5_000 })),
       ],

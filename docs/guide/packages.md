@@ -269,10 +269,10 @@ Frontend implementations are not privileged fields in the physical package forma
 the ordinary `svml.source-frontend@1` Host facet, exactly as Run Fragments, Markup Surfaces and
 Runtime Adapters advertise their own Host ABIs. Only the Source Host interprets that facet.
 
-Runtime Profiles follow the same rule. Each `use` selects either an Endpoint Adapter ABI or a
-Runtime Service Adapter ABI plus a logical name. A physical npm package advertises that logical
+Runtime Profiles follow the same rule. Each `use` selects a Runtime Host, Endpoint Adapter or
+Runtime Component Adapter ABI plus a logical name. A physical npm package advertises that logical
 offer; its package name is only an enrollment hint and lockfile fact. The generic CLI therefore
-does not contain a Provider registry, and an Endpoint adapter and Runtime-service adapter may share
+does not contain a Provider registry, and different Adapter kinds may share
 a logical spelling without colliding.
 
 When a logical name and physical npm package have the conventional same root, `packages sync` can

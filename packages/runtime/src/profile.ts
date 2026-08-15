@@ -18,7 +18,7 @@ export type RuntimeFacetRole =
   | "credential-store"
   | "capability-endpoint";
 
-export type RuntimeServiceFacetRole = Exclude<RuntimeFacetRole, "capability-endpoint">;
+export type RuntimeComponentFacetRole = Exclude<RuntimeFacetRole, "capability-endpoint">;
 
 export type RuntimeFacetRef = {
   readonly module: ModuleRef;
@@ -34,9 +34,9 @@ export type RuntimeCapability = {
   readonly returns: TypeRef;
 };
 
-export type RuntimeServiceFacet = {
+export type RuntimeComponentFacet = {
   readonly name: string;
-  readonly role: RuntimeServiceFacetRole;
+  readonly role: RuntimeComponentFacetRole;
   readonly implementation: RuntimeImplementation;
 };
 
@@ -56,7 +56,7 @@ export type RuntimeEndpointFacet = {
   readonly credentialSlots?: readonly string[];
 };
 
-export type RuntimeFacet = RuntimeServiceFacet | RuntimeEndpointFacet;
+export type RuntimeFacet = RuntimeComponentFacet | RuntimeEndpointFacet;
 
 /** Static package metadata. Reading it must never execute the implementation it describes. */
 export type RuntimeModuleManifest = {
@@ -98,9 +98,9 @@ export type RuntimeProfile = {
   };
 };
 
-export type ResolvedRuntimeService = {
+export type ResolvedRuntimeComponent = {
   readonly id: string;
-  readonly role: RuntimeServiceFacetRole;
+  readonly role: RuntimeComponentFacetRole;
   readonly facet: RuntimeFacetRef;
   readonly implementation: RuntimeImplementation;
   readonly configurationDigest: Digest;
@@ -123,7 +123,7 @@ export type ResolvedRuntimeEndpoint = {
   })[];
 };
 
-export type ResolvedRuntimeInstance = ResolvedRuntimeService | ResolvedRuntimeEndpoint;
+export type ResolvedRuntimeInstance = ResolvedRuntimeComponent | ResolvedRuntimeEndpoint;
 
 export type RuntimeClosure = {
   readonly format: "svml.runtime-closure@1";

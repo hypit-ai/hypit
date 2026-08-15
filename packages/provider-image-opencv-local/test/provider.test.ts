@@ -18,7 +18,7 @@ import type { BlobRef, Need } from "@narratage/protocol";
 import { rasterCapabilities } from "@narratage/raster";
 
 import { resolveLocalOpenCvDeployment } from "../src/deployment.js";
-import { localOpenCvService } from "../src/service.js";
+import { localOpenCvProgram } from "../src/program.js";
 
 function need(source: BlobRef, program: ImageTransformProgram = gptImageDenoiseV1): Need {
   const constraints = canonicalize({
@@ -77,16 +77,16 @@ test("the OpenCV package is one replaceable Endpoint with no second queue", asyn
 });
 
 test("managed and external OpenCV deployments never mix their interpreters", () => {
-  const managedContext = { root: "/project", instance: "opencv", config: {} } as const;
+  const managedContext = { dataRoot: "/project", instance: "opencv", config: {} } as const;
   const managed = resolveLocalOpenCvDeployment(managedContext);
   assert.equal(managed.ownership, "managed");
   assert.match(managed.pythonExecutable, /services\/image-opencv\/\.venv\/(?:bin\/python|Scripts\/python\.exe)$/u);
   assert.deepEqual(managed.prepare?.args.slice(-1), ["--frozen"]);
-  const managedService = localOpenCvService(managedContext);
-  assert.deepEqual(managedService.prepare, managed.prepare);
+  const managedProgram = localOpenCvProgram(managedContext);
+  assert.deepEqual(managedProgram.prepare, managed.prepare);
 
   const externalContext = {
-    root: "/project",
+    dataRoot: "/project",
     instance: "opencv",
     config: { pythonExecutable: "./tools/python" },
   } as const;
@@ -94,7 +94,7 @@ test("managed and external OpenCV deployments never mix their interpreters", () 
   assert.equal(external.ownership, "external");
   assert.equal(external.pythonExecutable, "/project/tools/python");
   assert.equal(external.prepare, undefined);
-  assert.equal(localOpenCvService(externalContext).prepare, undefined);
+  assert.equal(localOpenCvProgram(externalContext).prepare, undefined);
 });
 
 const liveEnabled = process.env.SVML_OPENCV_TESTS === "1";

@@ -28,7 +28,7 @@ Provider 包依赖 Runtime 端口与共享能力词汇，不依赖精确模型�
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": { "activation": "./src/activation.ts", "service": true },
+  "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/protocol": "workspace:*",
@@ -115,16 +115,16 @@ export default svmlPackage;
 capability 和调度事实。Activation 不得解析密钥或环境来源的部署值、访问网络或启动任务；环境变量名会作为引用保留到真正处理匹配 Need 时。凭据是否存在由通用 CredentialStore 路径诊断，
 Provider 不得把环境变量硬编码成特殊的密钥 Store。
 
-## 5. 声明外部服务（如需要）
+## 5. 按需声明 Managed Program
 
-如果 Provider 依赖外部程序（Python 服务、本地服务器），在 `package.json` 的 `svml` 块中添加
-`"service": true`（见第 2 步），并在 `src/service.ts` 中导出工厂函数：
+如果 Provider 依赖需要保持温热的外部程序，就在 Endpoint 旁边导出它的声明。这里没有第二个
+manifest 开关，也没有中央 Program 注册表：
 
 ```typescript
-// src/service.ts
-import type { RuntimeExternalService } from "@narratage/local";
+// src/program.ts
+import type { ManagedProgram } from "@narratage/runtime-adapter";
 
-export function createMyExternalService(): RuntimeExternalService {
+export function createMyProgram(): ManagedProgram {
   return {
     id: "my-service",
     prepare: { command: "uv", args: ["sync", "--project", "services/my-service", "--frozen"] },
@@ -144,13 +144,14 @@ const adapter = createRuntimeEndpointAdapterFacet({
   activate(context) {
     return {
       endpoint: createMyServiceProvider(/* 已解析配置 */),
-      externalService: createMyExternalService(),
+      program: createMyProgram(),
     };
   },
 });
 ```
 
-`narratage runtime up` 会准备、启动并探测外部程序，然后启动耐久 Worker。`build` 只启动所选 Producer steps 声明的 capability 所需服务。只调用远程 API 的 Provider 不声明 service。
+`narratage runtime up` 会准备、启动并探测 Managed Program，然后启动耐久 Worker。`build` 只启动
+本次 Plan 所需 Capability 对应的 Program。只调用远程 API 的 Provider 不返回 `program`。
 
 ## 6. 注册并锁定
 

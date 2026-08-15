@@ -11,7 +11,7 @@ description: Getting started with Narratage development.
 |---|---|---|
 | Node.js | 22+ | everything |
 | pnpm | 10.33.x | workspace management; selected by the root `packageManager` field |
-| Python | 3.10–3.13 | WhisperX and OpenCV [local services](./services.md) |
+| Python | 3.10–3.13 | local WhisperX and OpenCV Managed Programs |
 | uv | latest | Python environment management |
 | ffmpeg / ffprobe | recent stable | media processing |
 | Chrome / Chromium | managed by HyperFrames | local HyperFrames rendering |
@@ -55,8 +55,7 @@ narratage/
 | [Package architecture](./packages.md) | The five layers, dependency rules, package anatomy, facets |
 | [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, activation |
 | [Adding a Provider](./providers.md) | Step-by-step: new Endpoint adapter |
-| [Runtime Profile](./runtime-profile.md) | Declarative CLI configuration, embedding boundary, diagnostics, Build archive |
+| [Runtime](./runtime.md) | Profile, Workspace, execution and lifecycle boundaries |
 | [Caption Playground](./caption-playground.md) | Edit real Caption SVML/SVS with live feedback |
-| [Local services](./services.md) | WhisperX and OpenCV setup |
 | [Testing](./testing.md) | Test runner, patterns, examples, boundary tests |
 | [Conventions](./conventions.md) | Naming, module boundaries, wire data, TypeScript config |

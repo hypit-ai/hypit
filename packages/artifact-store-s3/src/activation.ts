@@ -1,5 +1,5 @@
 import {
-  createRuntimeServiceAdapterFacet,
+  createRuntimeComponentAdapterFacet,
   runtimeConfigBoolean,
   runtimeConfigExact,
   runtimeConfigObject,
@@ -31,7 +31,7 @@ function validateConfig(context: RuntimeAdapterFactoryContext): void {
   }
 }
 
-const s3ArtifactStoreRuntimeAdapter = createRuntimeServiceAdapterFacet({
+const s3ArtifactStoreRuntimeAdapter = createRuntimeComponentAdapterFacet({
   use: "@narratage/artifact-store-s3",
   validate: validateConfig,
   create(context) {

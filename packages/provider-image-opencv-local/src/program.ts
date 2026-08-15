@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 
-import type { RuntimeAdapterFactoryContext, RuntimeExternalService, RuntimeServiceState } from "@narratage/runtime-adapter";
+import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@narratage/runtime-adapter";
 
 import { resolveLocalOpenCvDeployment } from "./deployment.js";
 
@@ -22,18 +22,18 @@ function run(executable: string, args: readonly string[]): Promise<{ ok: boolean
 
 /**
  * OpenCV runs as one bounded process per Need, so there is nothing to keep warm
- * and this service declares no `start`. What it does declare is the
+ * and this Program declares no `start`. What it does declare is the
  * interpreter's identity: a Python without `cv2`, or with a `cv2` from before
  * the APIs this Provider calls, fails in the middle of a Build with a
  * subprocess error. Probing says so at `doctor` time instead.
  */
-export function localOpenCvService(context: RuntimeAdapterFactoryContext): RuntimeExternalService {
+export function localOpenCvProgram(context: RuntimeAdapterFactoryContext): ManagedProgram {
   const deployment = resolveLocalOpenCvDeployment(context);
   const python = deployment.pythonExecutable;
   return {
     id: "image-opencv",
     ...(deployment.prepare === undefined ? {} : { prepare: deployment.prepare }),
-    async probe(): Promise<RuntimeServiceState> {
+    async probe(): Promise<ManagedProgramState> {
       const result = await run(python, ["-c", PROBE_PROGRAM]);
       if (!result.ok) return { state: "down", detail: `${python} cannot import cv2 and numpy: ${result.output}` };
       let found: Record<string, string>;

@@ -162,7 +162,7 @@ The Core is small and domain-neutral: it knows nothing about video. Installing a
 | **Compiler** | Source parsing, imports and graph elaboration | `host`, `markup`, `svs`, `elaborator` |
 | **Infrastructure** | Media processing, spatial layout, fonts and text | `media-pipeline`, `spatial`, `fonts-open` |
 | **Video authoring** | Script, generation, speech, tracks, film and rendering | `script`, `seedance`, `caption`, `film` |
-| **Providers** | Adapters for external models, programs and services | `provider-kie`, `provider-whisperx-local` |
+| **Providers** | Adapters for external models, APIs and Managed Programs | `provider-kie`, `provider-whisperx-local` |
 | **Runtime** | Scheduling, storage, credentials and execution | `runtime`, `store-sqlite`, `local` |
 | **Applications** | User-facing ways to author and operate Narratage | `cli`, `svml-playground` |
 

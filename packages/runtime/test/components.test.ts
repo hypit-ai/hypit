@@ -5,26 +5,26 @@ import { digestOf } from "@narratage/protocol";
 import {
   MemoryBuildStore,
   MemoryOperationStore,
-  assembleRuntimeServices,
-  defineRuntimeServicePackage,
-  verifyRuntimeServicePackage,
+  assembleRuntimeComponents,
+  defineRuntimeComponentPackage,
+  verifyRuntimeComponentPackage,
 } from "@narratage/runtime";
 
-const moduleRef = { name: "example.runtime-services", version: "1" } as const;
+const moduleRef = { name: "example.runtime-components", version: "1" } as const;
 
 function servicePackage(close?: () => void) {
-  return defineRuntimeServicePackage({
+  return defineRuntimeComponentPackage({
     module: moduleRef,
-    services: [
+    components: [
       {
         role: "scheduler",
         facet: "scheduler",
         instance: "scheduler.example",
         implementation: {
-          digest: digestOf("example.runtime-services/scheduler@1"),
+          digest: digestOf("example.runtime-components/scheduler@1"),
         },
         configuration: { algorithm: "fixture" },
-        service: {
+        port: {
           create() {
             return { async run() { return []; } };
           },
@@ -35,34 +35,34 @@ function servicePackage(close?: () => void) {
         facet: "worker",
         instance: "worker.example",
         implementation: { digest: digestOf("worker") },
-        service: { create() { return { async runOnce() { return undefined; }, async run() {} }; } },
+        port: { create() { return { async runOnce() { return undefined; }, async run() {} }; } },
       },
       {
         role: "build-store",
         facet: "build-store",
         instance: "builds.example",
         implementation: {
-          digest: digestOf("example.runtime-services/build-store@1"),
+          digest: digestOf("example.runtime-components/build-store@1"),
         },
         configuration: { database: "fixture" },
-        service: new MemoryBuildStore(),
+        port: new MemoryBuildStore(),
       },
       {
         role: "operation-store",
         facet: "operation-store",
         instance: "operations.example",
         implementation: {
-          digest: digestOf("example.runtime-services/operation-store@1"),
+          digest: digestOf("example.runtime-components/operation-store@1"),
         },
         configuration: { database: "fixture" },
-        service: new MemoryOperationStore(),
+        port: new MemoryOperationStore(),
       },
       {
         role: "dispatch-store",
         facet: "dispatch-store",
         instance: "dispatch.example",
         implementation: { digest: digestOf("dispatch") },
-        service: Object.fromEntries([
+        port: Object.fromEntries([
           "create", "read", "list", "wake", "claim", "heartbeat", "release", "finish", "requestCancellation",
           "acquireCapacity", "heartbeatCapacity", "parkCapacity", "releaseCapacity", "clearCapacity", "listCapacity",
         ].map((name) => [name, async () => undefined])) as never,
@@ -72,7 +72,7 @@ function servicePackage(close?: () => void) {
         facet: "artifact-store",
         instance: "artifacts.example",
         implementation: { digest: digestOf("artifacts") },
-        service: {
+        port: {
           async put() { throw new Error("unused"); },
           async get() { return undefined; },
           async has() { return false; },
@@ -83,17 +83,17 @@ function servicePackage(close?: () => void) {
         facet: "credential-store",
         instance: "credentials.example",
         implementation: { digest: digestOf("credentials") },
-        service: { async resolve() { return undefined; } },
+        port: { async resolve() { return undefined; } },
       },
     ],
     ...(close === undefined ? {} : { close }),
   });
 }
 
-test("one physical Runtime package exposes separately selected Scheduler and Store services", async () => {
+test("one physical Runtime package exposes separately selected Scheduler and Store Components", async () => {
   let closes = 0;
   const configured = servicePackage(() => { closes += 1; });
-  const assembly = assembleRuntimeServices([configured], {
+  const assembly = assembleRuntimeComponents([configured], {
     scheduler: "scheduler.example",
     worker: "worker.example",
     stores: {
@@ -126,11 +126,11 @@ test("one physical Runtime package exposes separately selected Scheduler and Sto
   assert.equal(closes, 1);
 });
 
-test("Runtime service configuration is identity-bound and role selection is exact", () => {
+test("Runtime Component configuration is identity-bound and role selection is exact", () => {
   const configured = servicePackage();
-  assert.ok(configured.services.every((item) => item.instance.configurationDigest !== undefined));
+  assert.ok(configured.components.every((item) => item.instance.configurationDigest !== undefined));
   assert.throws(
-    () => assembleRuntimeServices([configured], {
+    () => assembleRuntimeComponents([configured], {
       scheduler: "builds.example",
       worker: "worker.example",
       stores: {
@@ -147,16 +147,16 @@ test("Runtime service configuration is identity-bound and role selection is exac
   const tampered = {
     ...configured,
     manifest: structuredClone(configured.manifest),
-    services: [...configured.services],
+    components: [...configured.components],
   };
   (tampered.manifest.facets[1] as { role: "artifact-store" }).role = "artifact-store";
-  assert.throws(() => verifyRuntimeServicePackage(tampered), /role differs/u);
+  assert.throws(() => verifyRuntimeComponentPackage(tampered), /role differs/u);
 
   const missingPort = {
     ...configured,
-    services: configured.services.map((service) => service.role === "build-store"
-      ? { ...service, service: {} as never }
-      : service),
+    components: configured.components.map((component) => component.role === "build-store"
+      ? { ...component, port: {} as never }
+      : component),
   };
-  assert.throws(() => verifyRuntimeServicePackage(missingPort), /does not implement create/u);
+  assert.throws(() => verifyRuntimeComponentPackage(missingPort), /does not implement create/u);
 });

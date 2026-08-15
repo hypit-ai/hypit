@@ -39,8 +39,7 @@ Add the author package to the project's explicit package lock before compiling:
 ```sh
 node --run narratage -- lock-packages svml.packages.lock \
   --package @narratage/script \
-  --package @narratage/mimo-tts \
-  --root .
+  --package @narratage/mimo-tts
 ```
 
 This selects author syntax and exact model semantics only. It does not select an API service.

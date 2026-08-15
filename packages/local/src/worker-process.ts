@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { mkdir, open, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -6,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 export type RuntimeWorkerLaunch = {
   readonly command: string;
   readonly args: readonly string[];
+  readonly workerArgs?: readonly string[];
 };
 
 export type RuntimeProcessState = {
@@ -29,12 +29,8 @@ type ProcessRecord = {
 const LOG_TAIL_BYTES = 1024 * 1024;
 const LOG_ROTATE_BYTES = 10 * 1024 * 1024;
 
-function paths(profile: string) {
-  const absolute = resolve(profile);
-  const id = createHash("sha256").update(absolute).digest("hex").slice(0, 16);
-  // `.svml/runtime` is the project-local active Profile pointer. Worker process
-  // state is independent and must never compete with that file for the same path.
-  const root = join(dirname(absolute), ".svml", "workers", id);
+function paths(dataRoot: string) {
+  const root = join(resolve(dataRoot), "worker");
   return {
     root,
     pid: join(root, "worker.json"),
@@ -66,8 +62,8 @@ function alive(pid: number): boolean {
   }
 }
 
-async function withLifecycleLock<T>(profile: string, timeoutMs: number, run: () => Promise<T>): Promise<T> {
-  const location = paths(profile);
+async function withLifecycleLock<T>(dataRoot: string, timeoutMs: number, run: () => Promise<T>): Promise<T> {
+  const location = paths(dataRoot);
   await mkdir(location.root, { recursive: true });
   const deadline = Date.now() + timeoutMs;
   while (true) {
@@ -107,8 +103,8 @@ async function rotateLog(path: string): Promise<void> {
   await rename(path, previous);
 }
 
-async function record(profile: string): Promise<ProcessRecord | undefined> {
-  const path = paths(profile).pid;
+async function record(profile: string, dataRoot: string): Promise<ProcessRecord | undefined> {
+  const path = paths(dataRoot).pid;
   try {
     const value = JSON.parse(await readFile(path, "utf8")) as ProcessRecord;
     if (value.format !== "narratage.runtime-process@1" || value.profile !== resolve(profile)
@@ -123,10 +119,11 @@ async function record(profile: string): Promise<ProcessRecord | undefined> {
 
 export async function runtimeProcessStatus(
   profile: string,
+  dataRoot: string,
   currentProfileDigest: string,
 ): Promise<RuntimeProcessState> {
-  const location = paths(profile);
-  const current = await record(profile);
+  const location = paths(dataRoot);
+  const current = await record(profile, dataRoot);
   if (current === undefined || !alive(current.pid)) {
     return { state: "stopped", profile: resolve(profile), logPath: location.log };
   }
@@ -154,13 +151,14 @@ export async function runtimeProcessStatus(
 
 async function waitForReady(
   profile: string,
+  dataRoot: string,
   profileDigest: string,
   timeoutMs: number,
 ): Promise<RuntimeProcessState> {
-  const location = paths(profile);
+  const location = paths(dataRoot);
   const deadline = Date.now() + timeoutMs;
   while (Date.now() <= deadline) {
-    const state = await runtimeProcessStatus(profile, profileDigest);
+    const state = await runtimeProcessStatus(profile, dataRoot, profileDigest);
     if (state.state === "stopped") {
       const log = await readFile(location.log, "utf8").catch(() => "");
       throw new Error(`Runtime Worker exited before becoming ready${log.length === 0 ? "" : `: ${log.trim().split("\n").at(-1)}`}`);
@@ -173,16 +171,17 @@ async function waitForReady(
 
 export async function ensureRuntimeProcess(
   profile: string,
+  dataRoot: string,
   launch: RuntimeWorkerLaunch,
   profileDigest: string,
   timeoutMs = 10_000,
 ): Promise<RuntimeProcessState> {
-  return await withLifecycleLock(profile, timeoutMs, async () => {
-    const current = await runtimeProcessStatus(profile, profileDigest);
+  return await withLifecycleLock(dataRoot, timeoutMs, async () => {
+    const current = await runtimeProcessStatus(profile, dataRoot, profileDigest);
     if (current.state === "running") return current;
-    if (current.state === "stale") await stopRuntimeProcessUnlocked(profile, timeoutMs);
+    if (current.state === "stale") await stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs);
     const absolute = resolve(profile);
-    const location = paths(absolute);
+    const location = paths(dataRoot);
     await mkdir(location.root, { recursive: true });
     await unlink(location.ready).catch(() => undefined);
     await rotateLog(location.log);
@@ -193,6 +192,7 @@ export async function ensureRuntimeProcess(
       absolute,
       "--ready-file",
       location.ready,
+      ...(launch.workerArgs ?? []),
     ], {
       cwd: process.cwd(),
       detached: true,
@@ -210,13 +210,13 @@ export async function ensureRuntimeProcess(
     } satisfies ProcessRecord), "utf8");
     child.unref();
     await log.close();
-    return await waitForReady(absolute, profileDigest, timeoutMs);
+    return await waitForReady(absolute, dataRoot, profileDigest, timeoutMs);
   });
 }
 
-async function stopRuntimeProcessUnlocked(profile: string, timeoutMs: number): Promise<RuntimeProcessState> {
-  const current = await record(profile);
-  const location = paths(profile);
+async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, timeoutMs: number): Promise<RuntimeProcessState> {
+  const current = await record(profile, dataRoot);
+  const location = paths(dataRoot);
   if (current === undefined || !alive(current.pid)) {
     await unlink(location.pid).catch(() => undefined);
     await unlink(location.ready).catch(() => undefined);
@@ -242,12 +242,13 @@ async function stopRuntimeProcessUnlocked(profile: string, timeoutMs: number): P
   return { state: "stopped", profile: resolve(profile), logPath: location.log };
 }
 
-export async function stopRuntimeProcess(profile: string, timeoutMs = 10_000): Promise<RuntimeProcessState> {
-  return await withLifecycleLock(profile, timeoutMs, async () => await stopRuntimeProcessUnlocked(profile, timeoutMs));
+export async function stopRuntimeProcess(profile: string, dataRoot: string, timeoutMs = 10_000): Promise<RuntimeProcessState> {
+  return await withLifecycleLock(dataRoot, timeoutMs, async () =>
+    await stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs));
 }
 
-export async function runtimeProcessLogs(profile: string): Promise<{ readonly path: string; readonly text: string }> {
-  const path = paths(profile).log;
+export async function runtimeProcessLogs(dataRoot: string): Promise<{ readonly path: string; readonly text: string }> {
+  const path = paths(dataRoot).log;
   let file;
   try {
     file = await open(path, "r");

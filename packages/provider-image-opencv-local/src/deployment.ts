@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { runtimeConfigObject, runtimeConfigString } from "@narratage/runtime-adapter";
-import type { RuntimeAdapterFactoryContext, RuntimeServiceCommand } from "@narratage/runtime-adapter";
+import type { RuntimeAdapterFactoryContext, ManagedProgramCommand } from "@narratage/runtime-adapter";
 import { resolveRuntimeExecutable } from "@narratage/runtime-adapter-node";
 
 /**
@@ -17,7 +17,7 @@ export const localOpenCvManagedProject = fileURLToPath(
 
 export type LocalOpenCvDeployment = {
   readonly pythonExecutable: string;
-  readonly prepare?: RuntimeServiceCommand;
+  readonly prepare?: ManagedProgramCommand;
   readonly ownership: "managed" | "external";
 };
 
@@ -40,7 +40,7 @@ export function resolveLocalOpenCvDeployment(
   const configured = runtimeConfigString(config.pythonExecutable, "OpenCV pythonExecutable");
   if (configured !== undefined) {
     return {
-      pythonExecutable: resolveRuntimeExecutable(context.root, configured),
+      pythonExecutable: resolveRuntimeExecutable(context.dataRoot, configured),
       ownership: "external",
     };
   }

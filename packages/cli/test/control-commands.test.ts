@@ -17,15 +17,20 @@ test("queue opens durable control without constructing execution Providers", asy
     },
   } as unknown as CliRuntimeArchiveControl;
   const distribution = {
-    runtimeProfileRevision: async () => "test-revision",
-    createRuntimeArchiveFromConfig: async () => {
-      calls.push("control.create");
-      return control;
-    },
-    createRuntimeFromConfig: async () => {
-      calls.push("execution.create");
-      throw new Error("execution Providers must not be constructed");
-    },
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      openArchive: async () => {
+        calls.push("control.create");
+        return control;
+      },
+      controller: async () => ({
+        worker: { status: async () => ({ state: "stopped", profile: path, logPath: "/tmp/worker.log" }) },
+      }),
+      createRuntime: async () => {
+        calls.push("execution.create");
+        throw new Error("execution Providers must not be constructed");
+      },
+    }),
   } as unknown as CliDistribution;
   let output = "";
 
@@ -52,16 +57,16 @@ test("queue opens durable control without constructing execution Providers", asy
 
 test("command options fail closed instead of being silently ignored", async () => {
   const distribution = {
-    createRuntimeArchiveFromConfig: async (path: string) => {
+    openRuntimeHost: async (path: string) => {
       throw new Error(`profile delegated: ${path}`);
     },
   } as unknown as CliDistribution;
   const io = { write() {} };
   await assert.rejects(
     async () => await runCli([
-      "status", "build-1", "--runtime", "/tmp/runtime.json", "--root", "/tmp",
+      "status", "build-1", "--runtime", "/tmp/runtime.json", "--workspace", "/tmp",
     ], io, distribution),
-    /--root does not apply to status/u,
+    /--workspace does not apply to status/u,
   );
   await assert.rejects(
     async () => await runCli([
@@ -77,9 +82,9 @@ test("command options fail closed instead of being silently ignored", async () =
   );
   await assert.rejects(
     async () => await runCli([
-      "doctor", "/tmp/runtime.json", "--root", "/tmp",
+      "doctor", "/tmp/runtime.json", "--workspace", "/tmp",
     ], io, distribution),
-    /doctor already uses the Runtime Profile directory and its declared root; remove --root/u,
+    /doctor does not compile a Source Workspace; remove --workspace/u,
   );
   await assert.rejects(
     async () => await runCli([
@@ -107,14 +112,17 @@ test("auth opens only one Endpoint credential control, never the execution Runti
     async close() { calls.push("credentials.close"); },
   } as unknown as CliCredentialControl;
   const distribution = {
-    createRuntimeCredentialsFromConfig: async (_path: string, endpoint: string) => {
-      calls.push(`credentials.create:${endpoint}`);
-      return credentials;
-    },
-    createRuntimeFromConfig: async () => {
-      calls.push("execution.create");
-      throw new Error("auth must not construct execution");
-    },
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      openCredentials: async (endpoint: string) => {
+        calls.push(`credentials.create:${endpoint}`);
+        return credentials;
+      },
+      createRuntime: async () => {
+        calls.push("execution.create");
+        throw new Error("auth must not construct execution");
+      },
+    }),
   } as unknown as CliDistribution;
   let output = "";
 
@@ -148,7 +156,10 @@ test("auth login rejects a read-only CredentialStore before asking for a secret"
     async close() { closed = true; },
   } as unknown as CliCredentialControl;
   const distribution = {
-    createRuntimeCredentialsFromConfig: async () => credentials,
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      openCredentials: async () => credentials,
+    }),
   } as unknown as CliDistribution;
 
   await assert.rejects(
@@ -180,7 +191,10 @@ test("cancelling a completed Build reports that no cancellation was requested", 
     async close() {},
   } as unknown as CliRuntimeArchiveControl;
   const distribution = {
-    createRuntimeArchiveFromConfig: async () => control,
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      openArchive: async () => control,
+    }),
   } as unknown as CliDistribution;
   let output = "";
 

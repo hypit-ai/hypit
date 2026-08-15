@@ -8,7 +8,8 @@ import { digestOf } from "@narratage/protocol";
 import { createRunFrontendHostFacet } from "@narratage/run";
 
 import { runCli } from "../src/main.js";
-import type { CliDistribution, ExternalServiceResult } from "../src/distribution.js";
+import type { CliDistribution } from "../src/distribution.js";
+import type { CliManagedProgramReport } from "../src/runtime-port.js";
 
 const io = { write: () => {} };
 
@@ -19,7 +20,7 @@ const io = { write: () => {} };
  */
 function distribution(
   calls: string[],
-  services: ExternalServiceResult["services"],
+  programs: readonly CliManagedProgramReport[],
 ): CliDistribution {
   return {
     name: "test",
@@ -41,25 +42,43 @@ function distribution(
       }),
       supportsFrontend: () => false,
     }),
-    externalServices: {
-      up: async (path: string) => {
-        calls.push(`up ${path}`);
-        return { root: "/tmp", services };
-      },
-      down: async () => ({ root: "/tmp", services: [] }),
-      report: async () => ({ root: "/tmp", services: [] }),
-    },
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      resolvePackages: async () => ({}),
+      controller: async () => ({
+        profile: path,
+        dataRoot: "/tmp",
+        revision: async () => "test-revision",
+        worker: {
+          up: async () => ({ state: "stopped", profile: path, logPath: "/tmp/worker.log" }),
+          status: async () => ({ state: "stopped", profile: path, logPath: "/tmp/worker.log" }),
+          logs: async () => ({ path: "/tmp/worker.log", text: "" }),
+          down: async () => ({ state: "stopped", profile: path, logPath: "/tmp/worker.log" }),
+        },
+        programs: {
+          up: async () => {
+            calls.push(`up ${path}`);
+            return { dataRoot: "/tmp", programs };
+          },
+          down: async () => ({ dataRoot: "/tmp", programs: [] }),
+          report: async () => ({ dataRoot: "/tmp", programs: [] }),
+        },
+      }),
+      doctor: async () => ({ dataRoot: "/tmp", diagnostics: [] }),
+      createRuntime: async () => { throw new Error("createRuntimeFromConfig is unavailable"); },
+      openArchive: async () => ({ status: async () => ({}) }),
+    }),
   } as unknown as CliDistribution;
 }
 
 async function runSource(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "svml-build-services-"));
+  const root = await mkdtemp(join(tmpdir(), "svml-build-programs-"));
   const path = join(root, "build.svrun");
   await writeFile(path, '<?svml using="@narratage/run-markup@1"?>\n<svrun/>\n', "utf8");
   return path;
 }
 
-test("a Build that cannot construct its Runtime starts no declared external service", async () => {
+test("a Build that cannot construct its Runtime starts no declared external program", async () => {
   const calls: string[] = [];
   const source = await runSource();
   await assert.rejects(
@@ -79,15 +98,15 @@ test("a Build that cannot construct its Runtime starts no declared external serv
   assert.deepEqual(calls, []);
 });
 
-test("--no-services leaves the declared programs alone", async () => {
+test("--no-programs leaves the declared programs alone", async () => {
   const calls: string[] = [];
   const source = await runSource();
   // Reaching the Runtime is the boundary just past the gate: the stub has no
-  // createRuntimeFromConfig, so arriving there proves the down service was
+  // createRuntimeFromConfig, so arriving there proves the down program was
   // never consulted rather than merely tolerated.
   await assert.rejects(
     async () => await runCli(
-      ["build", source, "--runtime", "/p/svml.runtime.json", "--no-services"],
+      ["build", source, "--runtime", "/p/svml.runtime.json", "--no-programs"],
       io,
       distribution(calls, [{
         id: "whisperx",
@@ -100,13 +119,13 @@ test("--no-services leaves the declared programs alone", async () => {
   assert.deepEqual(calls, []);
 });
 
-test("--no-services belongs to build, the only command that starts a program", async () => {
+test("--no-programs belongs to build, the only command that starts a program", async () => {
   await assert.rejects(
     async () => await runCli(
-      ["plan", "/p/build.svrun", "--no-services"],
+      ["plan", "/p/build.svrun", "--no-programs"],
       io,
       distribution([], []),
     ),
-    /--no-services is only valid for build/u,
+    /--no-programs is only valid for build/u,
   );
 });

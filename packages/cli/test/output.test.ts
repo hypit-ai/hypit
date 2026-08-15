@@ -145,7 +145,7 @@ test("JSON mode is exact machine data with no terminal decoration", () => {
   const machine = {
     format: "narratage.cli-doctor@1" as const,
     ok: false,
-    root: "/project",
+    dataRoot: "/project",
     diagnostics: [{ severity: "error" as const, code: "MISSING", message: "not found" }],
   };
   const output = capture({ json: true, color: "always", verbose: true }, {
@@ -237,7 +237,7 @@ test("plan runtime preflight presents only demanded capabilities", () => {
   };
   const preflight: PlanPreflight = {
       ok: false,
-      root: "/project",
+      dataRoot: "/project",
       capabilities: ["@example/image@1#generate"],
       diagnostics: [{
         severity: "error",

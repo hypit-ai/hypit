@@ -47,11 +47,11 @@ export {
 } from "./profile.js";
 export type * from "./profile.js";
 export {
-  assembleRuntimeServices,
-  defineRuntimeServicePackage,
-  verifyRuntimeServicePackage,
-} from "./services.js";
-export type * from "./services.js";
+  assembleRuntimeComponents,
+  defineRuntimeComponentPackage,
+  verifyRuntimeComponentPackage,
+} from "./components.js";
+export type * from "./components.js";
 export { LocalBuildScheduler } from "./scheduler.js";
 export {
   isEnumerableBuildStore,

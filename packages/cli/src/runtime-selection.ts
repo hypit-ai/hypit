@@ -1,7 +1,7 @@
 import { mkdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 
-const stateDirectoryName = ".svml";
+const stateDirectoryName = ".narratage";
 const selectionFileName = "runtime";
 
 export type RuntimeProfileSelection = {
@@ -84,7 +84,7 @@ export async function findRuntimeProfile(start: string): Promise<RuntimeProfileS
   }
 }
 
-/** Remove only the local pointer. Runtime state, locks, services and Builds are untouched. */
+/** Remove only the local pointer. Runtime state, locks, Programs and Builds are untouched. */
 export async function clearRuntimeProfile(start: string): Promise<RuntimeProfileSelection | undefined> {
   const selected = await readSelectionFile(start);
   if (selected === undefined) return undefined;
