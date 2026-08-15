@@ -138,6 +138,10 @@ export type BuildDispatchStore = {
   heartbeat(build: string, lease: DispatchLease, now: number, leaseMs: number): Promise<BuildDispatchSnapshot>;
   release(build: string, lease: DispatchLease, update: BuildDispatchRelease, now?: number): Promise<BuildDispatchSnapshot>;
   finish(build: string, lease: DispatchLease, terminal: DispatchTerminal, reason?: string, now?: number): Promise<BuildDispatchSnapshot>;
+  /**
+   * Close future admission for one Build. A never-claimed queued Build becomes cancelled in the
+   * same atomic store transaction; an already-claimed Build is reconciled by its fenced Worker.
+   */
   requestCancellation(build: string, reason?: string, now?: number): Promise<BuildDispatchSnapshot>;
   /** Make non-terminal work immediately claimable without changing admission or creative intent. */
   wake(build: string, now?: number): Promise<BuildDispatchSnapshot>;

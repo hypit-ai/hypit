@@ -118,15 +118,16 @@ lightweight `narratage` launcher from your project directory:
 ```bash
 cd /path/to/my-video
 
-/path/to/narratage/narratage packages sync build.svrun \
-  --runtime svml.runtime.json
+/path/to/narratage/narratage runtime use svml.runtime.json
 
-/path/to/narratage/narratage plan build.svrun \
-  --runtime svml.runtime.json
+/path/to/narratage/narratage packages sync build.svrun
+/path/to/narratage/narratage plan build.svrun
 ```
 
 The launcher uses dependencies installed in the Narratage checkout, but Source, SQLite state,
-Artifacts and outputs remain inside your project. `packages sync` adds or refreshes the current
+Artifacts and outputs remain inside your project. `runtime use` stores only a local pointer at
+`.svml/runtime`; the selected Profile remains the single source for both lock paths and the
+execution environment. `packages sync` adds or refreshes the current
 Run and Runtime selections in the two project package inventories; it does not remove another
 Run's packages.
 
@@ -139,27 +140,22 @@ and credentials with your own.
 After reviewing the plan:
 
 ```bash
-/path/to/narratage/narratage build build.svrun \
-  --runtime svml.runtime.json \
-  --build-id my-video-001 \
-  --follow
+/path/to/narratage/narratage build build.svrun --follow
 ```
 
-`build` stores the Build, ensures its Worker is available, and starts only the external programs
-declared by the selected endpoints. `--follow` is an observer; closing it does not stop the Build.
+`build` assigns and prints a fresh Build id, stores the Build, ensures its Worker is available, and
+starts only the external programs declared by the selected endpoints. `--follow` is an observer;
+closing it does not stop the Build.
 
 Use `check` while editing a source. Use `doctor` to diagnose a new or broken deployment. They are
 safe, but neither is required as a repetitive pre-Build ceremony.
 
 ```bash
-/path/to/narratage/narratage status my-video-001 \
-  --runtime svml.runtime.json
+/path/to/narratage/narratage status <build-id>
 
-/path/to/narratage/narratage queue \
-  --runtime svml.runtime.json --watch
+/path/to/narratage/narratage queue --watch
 
-/path/to/narratage/narratage get my-video-001 \
-  --runtime svml.runtime.json \
+/path/to/narratage/narratage get <build-id> \
   --name final.video \
   --to output/final.mp4
 ```

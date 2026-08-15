@@ -434,7 +434,6 @@ test("one locked provider-free Build executes the checked-in Frame graph", async
     await runVideoCli([
       "build", join(fixture, "frame-smoke.svrun"),
       "--runtime", profile,
-      "--build-id", "frame-smoke",
       "--follow",
       "--max-wait-ms", "15000",
       "--json",
@@ -804,10 +803,6 @@ test("CLI inspect and get read the durable Build archive independently of build 
   const control = {
     async builds() { return [catalog]; },
     async queue() { return { dispatches: [dispatch], capacity: [], operations: [] }; },
-    async operation(id: string) { return id === operation.id ? operation : undefined; },
-    async cancelOperation(id: string) {
-      return id === operation.id ? { ...operation, cancellation: { status: "requested" } } : undefined;
-    },
     async cancel(id: string) {
       return id === "archive-1"
         ? { build: id, phase: "terminal", admission: "closed", terminal: "complete" }
@@ -924,8 +919,11 @@ test("CLI inspect and get read the durable Build archive independently of build 
     write: (text) => { statusOutput += text; },
   });
   const status = JSON.parse(statusOutput) as {
+    readonly build: { readonly status: string; readonly coreStatus: string };
     readonly catalog: { readonly aliasCount: number; readonly targets: readonly string[] };
   };
+  assert.equal(status.build.status, "waiting");
+  assert.equal(status.build.coreStatus, "active");
   assert.deepEqual(status.catalog, {
     source: catalog.source,
     run: catalog.run,
@@ -937,12 +935,6 @@ test("CLI inspect and get read the durable Build archive independently of build 
   await runArchiveCli(["queue", "--runtime", runtimePath], { write: (text) => { queueOutput += text; } });
   const queue = JSON.parse(queueOutput) as { readonly dispatches: readonly { readonly phase: string }[] };
   assert.equal(queue.dispatches[0]?.phase, "waiting");
-
-  let operationOutput = "";
-  await runArchiveCli(["operation", operationId, "--runtime", runtimePath], {
-    write: (text) => { operationOutput += text; },
-  });
-  assert.equal((JSON.parse(operationOutput) as { readonly operation?: { readonly id: string } }).operation?.id, operationId);
 
   let getOutput = "";
   await runArchiveCli([
@@ -960,26 +952,6 @@ test("CLI inspect and get read the durable Build archive independently of build 
   ], { write() {} });
   assert.deepEqual(await readFile(rawDestination), rawBytes);
 
-  let cancellationOutput = "";
-  await runArchiveCli([
-    "cancel", "operation", operationId, "--runtime", runtimePath,
-    "--reason", "stop this attempt",
-  ], { write: (text) => { cancellationOutput += text; } });
-  const cancellation = JSON.parse(cancellationOutput) as {
-    readonly scope: string;
-    readonly requested: boolean;
-    readonly build: string;
-    readonly control: string;
-  };
-  assert.deepEqual(cancellation, {
-    scope: "operation",
-    operation: operationId,
-    requested: true,
-    build: "archive-1",
-    execution: "pending",
-    control: "requested",
-  });
-
   const human = async (argv: readonly string[]) => {
     let output = "";
     await runCoreCli([...argv, "--color", "never"], { write: (text) => { output += text; } }, selected);
@@ -989,10 +961,7 @@ test("CLI inspect and get read the durable Build archive independently of build 
   assert.match(await human(["status", "archive-1", "--runtime", runtimePath]), /Build status[\s\S]*Dispatch\s+waiting/u);
   assert.match(await human(["inspect", "archive-1", "--runtime", runtimePath]),
     /Build archive detail[\s\S]*Target\s+final\.video[\s\S]*example@1\/Artifact/u);
-  assert.match(await human(["operation", operationId, "--runtime", runtimePath]), /Operation detail[\s\S]*Status\s+pending/u);
-  assert.match(await human(["cancel", "operation", operationId, "--runtime", runtimePath]),
-    /Operation cancellation requested[\s\S]*Control\s+requested/u);
-  assert.match(await human(["cancel", "build", "archive-1", "--runtime", runtimePath]),
+  assert.match(await human(["cancel", "archive-1", "--runtime", runtimePath]),
     /Build already finished[\s\S]*No running work was changed; this Build is already complete/u);
   await assert.rejects(
     runArchiveCli(["status", "archive-1", "--runtime", runtimePath, "--watch"], { write() {} }),

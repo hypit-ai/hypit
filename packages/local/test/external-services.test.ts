@@ -147,6 +147,10 @@ test("up starts the program once for every Endpoint that drives it, and down sto
   assert.equal(again.services[0]!.action, "already-running");
   assert.equal(again.services[0]!.pid, undefined, "nothing was started, so no pid is claimed");
 
+  const status = await reportExternalServices(path, options);
+  assert.equal(status.services[0]!.pid, pid);
+  assert.equal(status.services[0]!.logPath, join(root, ".svml", "services", "example.log"));
+
   await rm(marker, { force: true });
   const stopped = await takeExternalServicesDown(path, options);
   assert.equal(stopped.services[0]!.action, "stopped");

@@ -6,6 +6,7 @@
     "@narratage/caption-fine",
     "@narratage/caption-gemini",
     "@narratage/composition",
+    "@narratage/deck-track",
     "@narratage/film",
     "@narratage/fonts-open",
     "@narratage/generation",
@@ -620,6 +621,11 @@
       "digest": "sha256:1262fed3211025ac608b60c4f7f47c9d493473cb05307ade3671ebafb79f5fe0"
     },
     {
+      "name": "@narratage/deck-track",
+      "version": "0.0.0-dev",
+      "digest": "sha256:e3b3be48960c16775ce0c86aac74c183ede8df5c9881c3e890e0f3f981c7e979"
+    },
+    {
       "name": "@narratage/elaborator",
       "version": "0.0.0-dev",
       "digest": "sha256:e5e6d5de8eb028e582238f3cb987001a3a332a0645f823d60bb01c3964041161"
@@ -880,6 +886,20 @@
       ],
       "facetsDigest": "sha256:05c22bda8c301365c1cfff2c0afa80067f3d2a0fba167a57ebf923af720a5c34",
       "closureDigest": "sha256:8d42e7b295199f7775430131f7df5f3753474a44ff579ede2b8b36ae5a653e19"
+    },
+    {
+      "package": {
+        "name": "@narratage/deck-track",
+        "version": "0.0.0-dev"
+      },
+      "offers": [
+        {
+          "abi": "svml.module@1",
+          "name": "@narratage/deck-track@1"
+        }
+      ],
+      "facetsDigest": "sha256:a969929d929b22148363dc0dd12bc60d2e61f6e186d146554f1bcf51f55f7845",
+      "closureDigest": "sha256:0f7019ec7bf0e4d20f8c22c8c7d75423285069c54c19c44b968bbb38c8735c46"
     },
     {
       "package": {
@@ -1328,5 +1348,5 @@
       "closureDigest": "sha256:57cd991e800c5c55bcbb38931b6b81a67fe32cb532f9832784d219126f11fea8"
     }
   ],
-  "digest": "sha256:9842bc525ac90b2871aef022019ce7bf603900fa7658f5c79cf2d94f75f07746"
+  "digest": "sha256:be4bfc34df7f94b0bcd73ff8ae5aa6ffee4c80a789cd151595819d3bb9738345"
 }

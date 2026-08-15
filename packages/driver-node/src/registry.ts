@@ -205,30 +205,28 @@ export class EndpointRegistry implements EndpointRegistrar {
       if (JSON.stringify(credentialSlots) !== JSON.stringify(endpoint.credentialSlots)) {
         throw new Error(`Endpoint ${endpoint.id} credential slots do not match the Runtime Closure`);
       }
-      const route = endpointCapabilityKey(binding.capability);
-      const declaredRoute = registration.scheduling?.queue;
-      if (declaredRoute !== undefined
-        && (declaredRoute.authority !== endpoint.authority || declaredRoute.route !== route)) {
-        throw new Error(`Endpoint ${endpoint.id} scheduling route differs from the Runtime Closure`);
-      }
+      const route = endpoint.routes.find((item) =>
+        sameRef(item.capability, binding.capability) && sameRef(item.returns, binding.returns));
+      if (route === undefined) throw new Error(`Endpoint ${endpoint.id} has no locked scheduling route`);
+      const scheduling = {
+        queue: { authority: endpoint.authority, route: route.route },
+        resources: [
+          {
+            id: `authority:${endpoint.authority}`,
+            maxActive: endpoint.maxConcurrency,
+            maxInFlight: endpoint.maxConcurrency,
+          },
+          {
+            id: `route:${endpoint.authority}/${route.route}`,
+            maxActive: route.maxConcurrency,
+            maxInFlight: route.maxConcurrency,
+          },
+        ],
+      };
       pending.push({
         key: endpointCapabilityKey(binding.capability),
         endpoint: endpoint.id,
-        scheduling: {
-          queue: { authority: endpoint.authority, route },
-          resources: [
-            {
-              id: `authority:${endpoint.authority}`,
-              maxActive: endpoint.maxConcurrency,
-              maxInFlight: endpoint.maxConcurrency,
-            },
-            {
-              id: `route:${endpoint.authority}/${route}`,
-              maxActive: endpoint.maxConcurrency,
-              maxInFlight: endpoint.maxConcurrency,
-            },
-          ],
-        },
+        scheduling,
       });
     }
     for (const item of pending) {

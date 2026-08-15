@@ -85,7 +85,7 @@
     {
       "name": "@narratage/driver-node",
       "version": "0.0.0-dev",
-      "digest": "sha256:2f8cc8620e90e16f69fc97fd6c641d84b2d08031f0f9c0e82e513b7fd6526aed"
+      "digest": "sha256:22cd089084eb82ca73f08d8e768a480327106f705dffd14b26381d36ea1e08cf"
     },
     {
       "name": "@narratage/elaborator",
@@ -95,7 +95,7 @@
     {
       "name": "@narratage/endpoint-kit",
       "version": "0.0.0-dev",
-      "digest": "sha256:362d99c7ec0bd92d2350e455061ee835f1fef7281c8461ac210266e0433bdd72"
+      "digest": "sha256:89eeade4f411bc5c1095647a07502b3912efff590099fd00b998901a755e59c4"
     },
     {
       "name": "@narratage/generation",
@@ -115,7 +115,7 @@
     {
       "name": "@narratage/local",
       "version": "0.0.0-dev",
-      "digest": "sha256:327eeebd78d3fc40b5b3ab498206b6f162df3871dc7a7c935de5182a5e57a107"
+      "digest": "sha256:53bfb88dfb3cb16a1747f7dfa9d92864fd5385c45584491577cf2f714d2d4c27"
     },
     {
       "name": "@narratage/markup",
@@ -170,7 +170,7 @@
     {
       "name": "@narratage/provider-kie",
       "version": "0.0.0-dev",
-      "digest": "sha256:fd20bf5ea9611ff5f5b624871953b0cc39c02441d34ae314bcca0bf8950afbe7"
+      "digest": "sha256:c67139c64f5b841d73d245d190ac8134591d58e363e13a26d9370040f79d1eed"
     },
     {
       "name": "@narratage/provider-media-local",
@@ -200,7 +200,7 @@
     {
       "name": "@narratage/runtime",
       "version": "0.0.0-dev",
-      "digest": "sha256:9e8625deb9d5f75efc404f6854708cbf777b982073ed49328febc8736b74a4de"
+      "digest": "sha256:7fed643f688774621b28eb846d68bc4e70ca98a0b04a5d0cc3a521152e50a5c6"
     },
     {
       "name": "@narratage/semantic-map",
@@ -235,7 +235,7 @@
     {
       "name": "@narratage/store-sqlite",
       "version": "0.0.0-dev",
-      "digest": "sha256:66d118fc1f81b0fa02403ccce0e3d652feb9e6065b5fed93783e9853dff090f8"
+      "digest": "sha256:a277e24e32632a113b4b4713d3d3bce9eaef289ccc30a5f889c6fef935cb228a"
     },
     {
       "name": "@narratage/svs",
@@ -921,7 +921,7 @@
         }
       ],
       "facetsDigest": "sha256:89812ac838e22ffcec73619ddb033f6f9150c916e0a52693ec920cb9f41f13ff",
-      "closureDigest": "sha256:2449713b84436330832c5288e3c57a76f6324641e28e2c00d811d80d040bc7e1"
+      "closureDigest": "sha256:7a9bdee0c11fb6412e9a7ce176a3af25ff0fb0b2c40cfbd46f223e6b00cb8003"
     },
     {
       "package": {
@@ -935,7 +935,7 @@
         }
       ],
       "facetsDigest": "sha256:b2a771b23ea9dcdada76501804c717cc4509579244acbb09babc0807cb26401a",
-      "closureDigest": "sha256:3d75084d4f3ca34a2ed62fecfc062f525789cea3b661280785c3664ea6fc8b48"
+      "closureDigest": "sha256:24df31243ffc21fe8429a5c3f2584de75cf3189727a7c27e773bd81ca9e0af30"
     },
     {
       "package": {
@@ -949,7 +949,7 @@
         }
       ],
       "facetsDigest": "sha256:bacc2fe27612f029aeef34236fd5fa687259e08c980c310adc8118be2cceeaba",
-      "closureDigest": "sha256:995fa51ec3356b388006d89dc93268255976196dfa693875acb884f888637adc"
+      "closureDigest": "sha256:5019f5018c2a8b746382a8ba838c57855af0bbf155e82c2a3b6ac87aa37f4390"
     },
     {
       "package": {
@@ -963,7 +963,7 @@
         }
       ],
       "facetsDigest": "sha256:485fc29d1efcdaeb4e395980975b35090ea6aef0f78d02108d3bd9b3f11aeb91",
-      "closureDigest": "sha256:db9863c925ba36f4772a15bf785afd1a56ec3811d6780e9930b9b1d0b7140816"
+      "closureDigest": "sha256:ccd1e3307e9ebffceb5e0cf98e03868b9e2484b364d16f8f19eefbe234d36105"
     },
     {
       "package": {
@@ -977,7 +977,7 @@
         }
       ],
       "facetsDigest": "sha256:e08dde3e4d38b167dca29cdc54eb2bb5e9ebc294e0e42b371099d53d6c44b402",
-      "closureDigest": "sha256:971572ad4620ef234572dc565f65c3ad9ad237964b635a9f7050b50b0f8831b7"
+      "closureDigest": "sha256:cfadfcd967b2a7b5d51c6852d1f1045167734609dbcdd05a83de8eeff34f2f6d"
     },
     {
       "package": {
@@ -991,7 +991,7 @@
         }
       ],
       "facetsDigest": "sha256:110648301d69b5b49ea553d285a27626f6fb74ebc74ee67175f688f914d7d74b",
-      "closureDigest": "sha256:e6badc196393ed5b9fa8c897c9b39e57a160c6ee350b3f8c654b61dee2c3c730"
+      "closureDigest": "sha256:c6105b8f3a5583f35e48ba3e9882f6a4a76adfc9f19a31877c3c6c7f8957bbc8"
     },
     {
       "package": {
@@ -1005,7 +1005,7 @@
         }
       ],
       "facetsDigest": "sha256:998de772acb283828fee16310e77922bf43597bca1efa768e8398166a90af27d",
-      "closureDigest": "sha256:0cb531d106ed7b47abcf04eb8c68ee19e90e37d765b14ccfe3f3b87090b865a5"
+      "closureDigest": "sha256:c59d8d31a59a5f26b9a064789e16e6db9505d26e170eb21350ee3104922a737d"
     },
     {
       "package": {
@@ -1019,7 +1019,7 @@
         }
       ],
       "facetsDigest": "sha256:e7d4f1e2fd56f2bcb5dbc36e1faae48d2680bb839aed4a43eb0cb23207ffbe1d",
-      "closureDigest": "sha256:1a9c745c15014c5840993d433a807955f467ae088e2bd7ad2151b2b4ff268779"
+      "closureDigest": "sha256:75c92b5ae14e4672ceba48b91376363f6648574f7d3655329deae60ba9c20807"
     },
     {
       "package": {
@@ -1033,8 +1033,8 @@
         }
       ],
       "facetsDigest": "sha256:eb9df1ee7597620bc2e80c168971e020f77cd0880608957ca3048cac7c559c28",
-      "closureDigest": "sha256:45b1993d829b4be41c40379061bb063cdc41492337390b123a28f5f3238a948d"
+      "closureDigest": "sha256:e7ab56c71e2fc2b11fccdfadc2c95fb0929e6a3bd4af1bf28577bff4758ea73c"
     }
   ],
-  "digest": "sha256:4227546a3ea1b78111b0223943fa8e0c3fcf4b7e393fb98bc5541145a739c4a6"
+  "digest": "sha256:6984ff6c3e2d79950e3fae3f486718ebad0f4fab8376e4322e1bc2c90b5039e6"
 }

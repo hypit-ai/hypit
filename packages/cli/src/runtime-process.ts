@@ -32,7 +32,9 @@ const LOG_ROTATE_BYTES = 10 * 1024 * 1024;
 function paths(profile: string) {
   const absolute = resolve(profile);
   const id = createHash("sha256").update(absolute).digest("hex").slice(0, 16);
-  const root = join(dirname(absolute), ".svml", "runtime", id);
+  // `.svml/runtime` is the project-local active Profile pointer. Worker process
+  // state is independent and must never compete with that file for the same path.
+  const root = join(dirname(absolute), ".svml", "workers", id);
   return {
     root,
     pid: join(root, "worker.json"),
@@ -56,8 +58,11 @@ function alive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    // POSIX uses EPERM when the process exists but the caller may not signal it.
+    // Treat only an absent process as stopped; otherwise a restricted shell can
+    // make every CLI invocation launch another Worker for the same Profile.
+    return error instanceof Error && "code" in error && error.code === "EPERM";
   }
 }
 
@@ -217,7 +222,16 @@ async function stopRuntimeProcessUnlocked(profile: string, timeoutMs: number): P
     await unlink(location.ready).catch(() => undefined);
     return { state: "stopped", profile: resolve(profile), logPath: location.log };
   }
-  process.kill(current.pid, "SIGTERM");
+  try {
+    process.kill(current.pid, "SIGTERM");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "EPERM") {
+      throw new Error(
+        `Runtime Worker ${current.pid} is running but this environment cannot stop it; profile: ${resolve(profile)}`,
+      );
+    }
+    if (!(error instanceof Error && "code" in error && error.code === "ESRCH")) throw error;
+  }
   const deadline = Date.now() + timeoutMs;
   while (Date.now() <= deadline && alive(current.pid)) {
     await new Promise((resolveWait) => setTimeout(resolveWait, 50));

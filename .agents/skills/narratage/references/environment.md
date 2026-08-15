@@ -33,9 +33,10 @@ uv python install 3.13
 uv sync --project services/whisperx --frozen
 uv sync --project services/image-opencv --frozen
 uv run --project services/whisperx --frozen svml-whisperx-prepare
-node --run narratage -- doctor svml.runtime.json
-node --run narratage -- runtime up svml.runtime.json
-node --run narratage -- runtime status svml.runtime.json
+node --run narratage -- runtime use svml.runtime.json
+node --run narratage -- doctor
+node --run narratage -- runtime up
+node --run narratage -- runtime status
 ```
 
 Use `runtime up` for normal Build preparation: it owns the detached durable Worker and the external
@@ -46,7 +47,8 @@ After intentionally installing, removing or changing selected packages, refresh 
 project locks in one reviewed action:
 
 ```text
-node --run narratage -- packages sync build.svrun --runtime svml.runtime.json
+node --run narratage -- runtime use svml.runtime.json
+node --run narratage -- packages sync build.svrun
 ```
 
 This command derives Author roots from that Run/Author Source closure and Runtime roots from the

@@ -11,21 +11,20 @@ the corresponding physical package. They never grant network, credential or proc
 From the repository:
 
 ```bash
-node --run narratage -- packages sync path/to/build.svrun \
-  --runtime ./svml.runtime.json --root .
-node --run narratage -- check path/to/main.svml --runtime ./svml.runtime.json --root .
-node --run narratage -- plan path/to/build.svrun --runtime ./svml.runtime.json --root .
-node --run narratage -- build path/to/build.svrun \
-  --runtime ./svml.runtime.json --build-id delivery-01 --follow --root .
-node --run narratage -- status <build-id> --runtime ./svml.runtime.json
-node --run narratage -- builds --runtime ./svml.runtime.json
-node --run narratage -- history [source-output-name] --runtime ./svml.runtime.json [--source ./main.svml]
-node --run narratage -- inspect <build-id> --runtime ./svml.runtime.json
-node --run narratage -- get <build-id> --name final.video --runtime ./svml.runtime.json --to ./final.mp4
-node --run narratage -- cancel build <build-id> --runtime ./svml.runtime.json
-node --run narratage -- cancel operation <operation-id> --runtime ./svml.runtime.json
-node --run narratage -- doctor ./svml.runtime.json
-node --run narratage -- gc ./svml.runtime.json
+cd path/to/project
+/path/to/narratage/narratage runtime use svml.runtime.json
+/path/to/narratage/narratage packages sync build.svrun
+/path/to/narratage/narratage check main.svml
+/path/to/narratage/narratage plan build.svrun
+/path/to/narratage/narratage build build.svrun --follow
+/path/to/narratage/narratage status <build-id>
+/path/to/narratage/narratage builds
+/path/to/narratage/narratage history [source-output-name] [--source ./main.svml]
+/path/to/narratage/narratage inspect <build-id>
+/path/to/narratage/narratage get <build-id> --name final.video --to ./final.mp4
+/path/to/narratage/narratage cancel <build-id>
+/path/to/narratage/narratage doctor
+/path/to/narratage/narratage gc
 ```
 
 From a separate project directory during source development, run
@@ -47,9 +46,9 @@ Source because an Author Graph without execution intent is not a Build. The live
 the explicit Vertex Gemini Caption package and real local/remote Endpoints; the CLI never
 fabricates a Target, Candidate or missing fact.
 
-`build` compiles the same locked BuildState and passes it to a trusted local Runtime Profile.
-The default Build identity is content-derived, so the same invocation resumes durable local state;
-`--build-id take-02` names an explicit take. JSON Profiles resolve only adapters in their separately
+`build` compiles the locked BuildState and passes it to a trusted local Runtime Profile with a fresh,
+automatically assigned execution id. Source or Plan identity never reclaims an earlier Build; reuse
+across Builds exists only through explicit Run Source Candidates. JSON Profiles resolve only adapters in their separately
 verified `runtimePackageLock` and contain no executable callback. The CLI imports no Provider;
 loaded Runtime implementation identity is rebound to the actual package bytes. A TypeScript config
 module remains trusted deployment code with normal Node authority. Neither form is discovered from
@@ -57,10 +56,10 @@ a source import.
 
 Without `--follow`, `build` returns after durable submission and the detached Worker continues.
 With `--follow`, the CLI observes dispatch and Operation facts until terminal state or
-`--max-wait-ms`; Ctrl-C only detaches that observer. `status` reads durable verified state. Scoped
-Build/Operation cancellation records control separately from execution, continues reconciliation
-after `accepted` or `unsupported`, and never selects another Candidate. None of these commands
-creates or stores a ready-Command queue.
+`--max-wait-ms`; Ctrl-C only detaches that observer. `status` reads durable verified state. The CLI
+controls Builds, not individual Operations. Cancelling a Build atomically withdraws it before claim,
+or closes admission and continues Provider cancellation reconciliation after claim. It never selects
+another Candidate. None of these commands creates or stores a ready-Command queue.
 
 `build` archives every accepted Record in the demanded closure and every referenced byte Artifact,
 whether or not the user wants a conventional filesystem copy. `inspect` lists Targets, demanded

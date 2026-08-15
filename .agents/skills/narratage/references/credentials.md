@@ -38,5 +38,5 @@ values with, for example,
 An Endpoint whose Runtime Profile points at the read-only `env` CredentialStore must be configured
 by setting its exact environment variable. `narratage auth login` deliberately refuses to prompt in
 that case. For an interactive workstation, select the writable macOS Keychain CredentialStore in
-the Runtime Profile; then `narratage auth login <endpoint> --runtime <profile>` can store the secret.
+the Runtime Profile; after `runtime use`, `narratage auth login <endpoint>` can store the secret.
 This is an explicit deployment choice, not a Provider-specific CLI branch.
