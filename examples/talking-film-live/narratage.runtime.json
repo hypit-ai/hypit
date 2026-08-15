@@ -1,0 +1,54 @@
+{
+  "format": "narratage.runtime-profile@1",
+  "runtime": {
+    "use": "@narratage/runtime-local",
+    "config": {
+      "dataRoot": ".narratage/runtimes/local",
+      "infrastructure": {
+        "execution": { "use": "@narratage/runtime-local" },
+        "state": { "use": "@narratage/store-sqlite", "config": { "path": "state.sqlite" } },
+        "artifacts": { "use": "@narratage/artifact-store-fs", "config": { "path": "artifacts" } },
+        "credentials": { "use": "@narratage/credential-store-env", "config": {} }
+      },
+      "roles": {
+        "scheduler": { "from": "execution", "part": "scheduler" },
+        "worker": { "from": "execution", "part": "worker" },
+        "buildStore": { "from": "state", "part": "builds" },
+        "operationStore": { "from": "state", "part": "operations" },
+        "dispatchStore": { "from": "state", "part": "dispatch" },
+        "artifactStore": { "from": "artifacts", "part": "store" },
+        "credentialStores": [{ "from": "credentials", "part": "store" }]
+      },
+      "endpoints": {
+        "kie.talking-film": {
+          "use": "@narratage/provider-kie",
+          "config": {
+            "apiKey": { "store": "env", "key": "KIE_API_KEY" },
+            "defaultConcurrency": 2
+          }
+        },
+        "media.talking-film": {
+          "use": "@narratage/provider-media-local",
+          "config": { "defaultConcurrency": 2 }
+        },
+        "whisperx.talking-film": {
+          "use": "@narratage/provider-whisperx-local",
+          "config": { "defaultConcurrency": 1 }
+        },
+        "vertex.talking-film": {
+          "use": "@narratage/provider-google-vertex",
+          "config": {
+            "projectEnv": "GOOGLE_CLOUD_PROJECT",
+            "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
+            "defaultConcurrency": 1
+          }
+        },
+        "hyperframes.talking-film": {
+          "use": "@narratage/provider-hyperframes-local",
+          "config": { "workers": 2, "quality": "standard", "defaultConcurrency": 1 }
+        }
+      },
+      "capacity": { "maxActiveOperations": 4 }
+    }
+  }
+}

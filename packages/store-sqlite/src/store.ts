@@ -12,11 +12,10 @@ import type {
   Digest,
 } from "@narratage/protocol";
 import {
-  assertRuntimeClosureAdmission,
   sameBuildCatalogDescriptor,
   verifyBuildCatalogDescriptor,
   verifyBuildCatalogEntry,
-  defineRuntimeComponentPackage,
+  defineRuntimeInfrastructurePackage,
   capacityReservationId,
   verifyBuildDispatchIdentity,
   verifyBuildDispatchSnapshot,
@@ -51,7 +50,7 @@ import type {
   OperationStore,
   OperationStoreWrite,
   OperationUpdate,
-  RuntimeComponentPackage,
+  RuntimeInfrastructurePackage,
 } from "@narratage/runtime";
 
 const databaseSchemaVersion = 6;
@@ -61,29 +60,15 @@ export const sqliteStoreModuleRef = {
   version: "1",
 } as const;
 
-export const sqliteBuildStoreImplementationDigest = digestOf(
-  "@narratage/store-sqlite/build-store@1",
-);
-
-export const sqliteOperationStoreImplementationDigest = digestOf(
-  "@narratage/store-sqlite/operation-store@1",
-);
-
-export const sqliteDispatchStoreImplementationDigest = digestOf(
-  "@narratage/store-sqlite/dispatch-store@1",
-);
-
 export type SqliteRuntimeStateOptions = {
   readonly busyTimeoutMs?: number;
   /** Open an existing archive without creating files or schema. */
   readonly readOnly?: boolean;
 };
 
-export type CreateSqliteRuntimeComponentPackageOptions = SqliteRuntimeStateOptions & {
+export type CreateSqliteRuntimeInfrastructurePackageOptions = SqliteRuntimeStateOptions & {
   readonly path: string;
-  readonly buildInstance?: string;
-  readonly operationInstance?: string;
-  readonly dispatchInstance?: string;
+  readonly instance?: string;
 };
 
 type Row = Record<string, unknown>;
@@ -137,9 +122,8 @@ function operationIdentity(snapshot: OperationSnapshot): OperationIdentity {
     build: snapshot.build,
     command: snapshot.command,
     endpoint: snapshot.endpoint,
-    authority: snapshot.authority,
-    route: snapshot.route,
-    runtimeClosure: snapshot.runtimeClosure,
+    pool: snapshot.pool,
+    lane: snapshot.lane,
     attempt: snapshot.attempt,
   };
 }
@@ -158,7 +142,7 @@ function parseOperationSnapshot(row: Row): OperationSnapshot {
       }
     : undefined;
   if (row.status === "pending") {
-    assert(pending?.format === "svml.operation-pending@1" && pending.checkpoint !== undefined,
+    assert(pending?.format === "narratage.operation-pending@1" && pending.checkpoint !== undefined,
       "SQLite pending Operation has an unsupported checkpoint envelope");
   }
   const mutable = row.status === "pending"
@@ -201,7 +185,7 @@ class SqliteBuildStore implements BuildStore {
     assert(build.trim().length > 0, "build id must not be empty");
     const durable = durableBuildState(state);
     const result = this.#database.prepare(`
-      INSERT OR IGNORE INTO svml_builds (build_id, revision, state_json)
+      INSERT OR IGNORE INTO narratage_builds (build_id, revision, state_json)
       VALUES (?, 0, ?)
     `).run(build, canonicalStringify(durable));
     if (result.changes !== 1) throw new Error(`build ${build} already exists`);
@@ -211,7 +195,7 @@ class SqliteBuildStore implements BuildStore {
   async read(build: string): Promise<BuildSnapshot | undefined> {
     const row = this.#database.prepare(`
       SELECT build_id, revision, state_json
-      FROM svml_builds
+      FROM narratage_builds
       WHERE build_id = ?
     `).get(build) as Row | undefined;
     return row === undefined ? undefined : parseBuildSnapshot(row);
@@ -220,7 +204,7 @@ class SqliteBuildStore implements BuildStore {
   async list(): Promise<readonly BuildSnapshot[]> {
     const rows = this.#database.prepare(`
       SELECT build_id, revision, state_json
-      FROM svml_builds
+      FROM narratage_builds
       ORDER BY build_id ASC
     `).all() as Row[];
     return rows.map(parseBuildSnapshot);
@@ -234,7 +218,7 @@ class SqliteBuildStore implements BuildStore {
     assert(Number.isSafeInteger(expectedRevision) && expectedRevision >= 0, "expected revision is invalid");
     const durable = durableBuildState(state);
     const result = this.#database.prepare(`
-      UPDATE svml_builds
+      UPDATE narratage_builds
       SET revision = ?, state_json = ?
       WHERE build_id = ? AND revision = ?
     `).run(expectedRevision + 1, canonicalStringify(durable), build, expectedRevision);
@@ -284,7 +268,7 @@ class SqliteBuildCatalog implements BuildCatalog {
     }
     const now = Date.now();
     this.#database.prepare(`
-      INSERT OR IGNORE INTO svml_build_catalog (
+      INSERT OR IGNORE INTO narratage_build_catalog (
         build_id, core_id, created_at, updated_at, descriptor_json
       ) VALUES (?, ?, ?, ?, ?)
     `).run(build, descriptor.core, now, now, canonicalStringify(descriptor));
@@ -298,7 +282,7 @@ class SqliteBuildCatalog implements BuildCatalog {
   async read(build: string): Promise<BuildCatalogEntry | undefined> {
     const row = this.#database.prepare(`
       SELECT build_id, created_at, updated_at, descriptor_json
-      FROM svml_build_catalog
+      FROM narratage_build_catalog
       WHERE build_id = ?
     `).get(build) as Row | undefined;
     return row === undefined ? undefined : parseCatalogEntry(row);
@@ -307,7 +291,7 @@ class SqliteBuildCatalog implements BuildCatalog {
   async list(): Promise<readonly BuildCatalogEntry[]> {
     const rows = this.#database.prepare(`
       SELECT build_id, created_at, updated_at, descriptor_json
-      FROM svml_build_catalog
+      FROM narratage_build_catalog
       ORDER BY created_at DESC, build_id ASC
     `).all() as Row[];
     return rows.map(parseCatalogEntry);
@@ -324,7 +308,7 @@ class SqliteOperationStore implements OperationStore {
   async create(identity: OperationIdentity): Promise<OperationCreate> {
     verifyOperationIdentity(identity);
     const result = this.#database.prepare(`
-      INSERT OR IGNORE INTO svml_operations (
+      INSERT OR IGNORE INTO narratage_operations (
         operation_id, revision, status, identity_json,
         checkpoint_json, completion_json, failure_json, cancellation_json
       ) VALUES (?, 0, 'created', ?, NULL, NULL, NULL, NULL)
@@ -345,7 +329,7 @@ class SqliteOperationStore implements OperationStore {
   async read(id: Digest): Promise<OperationSnapshot | undefined> {
     const row = this.#database.prepare(`
       SELECT identity_json, revision, status, checkpoint_json, completion_json, failure_json, cancellation_json
-      FROM svml_operations
+      FROM narratage_operations
       WHERE operation_id = ?
     `).get(id) as Row | undefined;
     return row === undefined ? undefined : parseOperationSnapshot(row);
@@ -358,9 +342,8 @@ class SqliteOperationStore implements OperationStore {
       ["build", query.build],
       ["command", query.command],
       ["endpoint", query.endpoint],
-      ["authority", query.authority],
-      ["route", query.route],
-      ["runtimeClosure", query.runtimeClosure],
+      ["pool", query.pool],
+      ["lane", query.lane],
     ] as const) {
       if (value === undefined) continue;
       predicates.push(`json_extract(identity_json, '$.${field}') = ?`);
@@ -368,7 +351,7 @@ class SqliteOperationStore implements OperationStore {
     }
     const rows = this.#database.prepare(`
       SELECT identity_json, revision, status, checkpoint_json, completion_json, failure_json, cancellation_json
-      FROM svml_operations
+      FROM narratage_operations
       ${predicates.length === 0 ? "" : `WHERE ${predicates.join(" AND ")}`}
       ORDER BY operation_id ASC
     `).all(...values) as Row[];
@@ -391,7 +374,7 @@ class SqliteOperationStore implements OperationStore {
     }
     if (update.status === "control") {
       const result = this.#database.prepare(`
-        UPDATE svml_operations
+        UPDATE narratage_operations
         SET revision = ?, cancellation_json = ?
         WHERE operation_id = ? AND revision = ?
       `).run(expectedRevision + 1, canonicalStringify(update.cancellation), id, expectedRevision);
@@ -405,7 +388,7 @@ class SqliteOperationStore implements OperationStore {
       return { status: "stored", snapshot: stored };
     }
     const checkpoint = update.status === "pending" ? canonicalStringify({
-      format: "svml.operation-pending@1",
+      format: "narratage.operation-pending@1",
       checkpoint: update.checkpoint,
       ...(update.wakeAt === undefined ? {} : { wakeAt: update.wakeAt }),
       ...(update.progress === undefined ? {} : { progress: update.progress }),
@@ -418,7 +401,7 @@ class SqliteOperationStore implements OperationStore {
       ? canonicalStringify(update.cancellation)
       : current.cancellation === undefined ? null : canonicalStringify(current.cancellation);
     const result = this.#database.prepare(`
-      UPDATE svml_operations
+      UPDATE narratage_operations
       SET revision = ?, status = ?, checkpoint_json = ?, completion_json = ?, failure_json = ?, cancellation_json = ?
       WHERE operation_id = ? AND revision = ? AND status NOT IN ('completed', 'failed', 'cancelled')
     `).run(expectedRevision + 1, update.status, checkpoint, completion, failure, cancellation, id, expectedRevision);
@@ -502,7 +485,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     const availableAt = nonNegativeInteger(options.availableAt ?? now, "Dispatch availableAt");
     return transaction(this.#database, () => {
       const existingRow = this.#database.prepare(
-        "SELECT * FROM svml_dispatches WHERE build_id = ?",
+        "SELECT * FROM narratage_dispatches WHERE build_id = ?",
       ).get(identity.build) as Row | undefined;
       if (existingRow !== undefined) {
         const existing = parseDispatchSnapshot(existingRow);
@@ -511,22 +494,14 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
           id: existing.id,
           build: existing.build,
           core: existing.core,
-          runtimeClosure: existing.runtimeClosure,
+          implementationPackages: existing.implementationPackages,
         }) === canonicalStringify(identity),
-        `Dispatch ${identity.build} already names another Build or Runtime Closure`);
+        `Dispatch ${identity.build} already names another Build`);
         return { status: "existing", snapshot: existing };
       }
 
-      const conflictingRows = this.#database.prepare(`
-        SELECT * FROM svml_dispatches
-        WHERE phase != 'terminal'
-          AND json_extract(identity_json, '$.runtimeClosure') != ?
-        ORDER BY created_at ASC, build_id ASC
-      `).all(identity.runtimeClosure) as Row[];
-      assertRuntimeClosureAdmission(identity.runtimeClosure, conflictingRows.map(parseDispatchSnapshot));
-
       const result = this.#database.prepare(`
-        INSERT INTO svml_dispatches (
+        INSERT INTO narratage_dispatches (
           build_id, identity_json, revision, created_at, updated_at, priority, available_at,
           admission, phase, lease_owner, lease_token, lease_fence, lease_expires_at,
           reason, cancel_requested_at, cancel_reason, terminal
@@ -534,7 +509,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       `).run(identity.build, canonicalStringify(identity), now, now, priority, availableAt);
       assert(result.changes === 1, `Dispatch ${identity.build} was not created`);
       const createdRow = this.#database.prepare(
-        "SELECT * FROM svml_dispatches WHERE build_id = ?",
+        "SELECT * FROM narratage_dispatches WHERE build_id = ?",
       ).get(identity.build) as Row | undefined;
       if (createdRow === undefined) throw new Error(`Dispatch ${identity.build} disappeared after create`);
       return { status: "created", snapshot: parseDispatchSnapshot(createdRow) };
@@ -542,7 +517,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
   }
 
   async read(build: string): Promise<BuildDispatchSnapshot | undefined> {
-    const row = this.#database.prepare("SELECT * FROM svml_dispatches WHERE build_id = ?").get(build) as Row | undefined;
+    const row = this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(build) as Row | undefined;
     return row === undefined ? undefined : parseDispatchSnapshot(row);
   }
 
@@ -559,7 +534,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       values.push(query.admission);
     }
     const rows = this.#database.prepare(`
-      SELECT * FROM svml_dispatches
+      SELECT * FROM narratage_dispatches
       ${predicates.length === 0 ? "" : `WHERE ${predicates.join(" AND ")}`}
       ORDER BY priority DESC, available_at ASC, created_at ASC, build_id ASC
     `).all(...values) as Row[];
@@ -568,32 +543,30 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
 
   async claim(request: BuildDispatchClaim): Promise<BuildDispatchSnapshot | undefined> {
     assert(request.owner.trim().length > 0 && request.token.trim().length > 0, "Dispatch claim identity is empty");
-    assert(/^sha256:[0-9a-f]{64}$/u.test(request.runtimeClosure), "Dispatch claim Runtime Closure is invalid");
     const now = nonNegativeInteger(request.now, "Dispatch claim time");
     const leaseMs = positiveInteger(request.leaseMs, "Dispatch leaseMs");
     return transaction(this.#database, () => {
       const row = this.#database.prepare(`
-        SELECT * FROM svml_dispatches
+        SELECT * FROM narratage_dispatches
         WHERE phase != 'terminal'
-          AND json_extract(identity_json, '$.runtimeClosure') = ?
           AND available_at <= ?
           AND (lease_owner IS NULL OR lease_expires_at <= ?)
         ORDER BY priority DESC, available_at ASC, created_at ASC, build_id ASC
         LIMIT 1
-      `).get(request.runtimeClosure, now, now) as Row | undefined;
+      `).get(now, now) as Row | undefined;
       if (row === undefined) return undefined;
       assert(typeof row.build_id === "string" && typeof row.revision === "number" && typeof row.lease_fence === "number",
         "SQLite Dispatch claim row is invalid");
       const fence = row.lease_fence + 1;
       const updated = this.#database.prepare(`
-        UPDATE svml_dispatches
+        UPDATE narratage_dispatches
         SET revision = revision + 1, updated_at = ?, phase = 'leased',
             lease_owner = ?, lease_token = ?, lease_fence = ?, lease_expires_at = ?
         WHERE build_id = ? AND revision = ?
           AND phase != 'terminal' AND (lease_owner IS NULL OR lease_expires_at <= ?)
       `).run(now, request.owner, request.token, fence, now + leaseMs, row.build_id, row.revision, now);
       assert(updated.changes === 1, `Dispatch ${row.build_id} claim lost its transaction`);
-      const claimed = this.#database.prepare("SELECT * FROM svml_dispatches WHERE build_id = ?").get(row.build_id) as Row;
+      const claimed = this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(row.build_id) as Row;
       return parseDispatchSnapshot(claimed);
     });
   }
@@ -603,7 +576,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     nonNegativeInteger(now, "Dispatch heartbeat time");
     positiveInteger(leaseMs, "Dispatch heartbeat leaseMs");
     const updated = this.#database.prepare(`
-      UPDATE svml_dispatches
+      UPDATE narratage_dispatches
       SET revision = revision + 1, updated_at = ?, lease_expires_at = ?
       WHERE build_id = ? AND phase = 'leased'
         AND lease_owner = ? AND lease_token = ? AND lease_fence = ? AND lease_expires_at > ?
@@ -622,7 +595,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     nonNegativeInteger(now, "Dispatch release time");
     nonNegativeInteger(update.availableAt, "Dispatch release availableAt");
     const updated = this.#database.prepare(`
-      UPDATE svml_dispatches
+      UPDATE narratage_dispatches
       SET revision = revision + 1, updated_at = ?, phase = ?,
           available_at = CASE WHEN wake_at IS NULL THEN ? ELSE MIN(?, wake_at) END,
           wake_at = NULL, reason = ?,
@@ -644,7 +617,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
   ): Promise<BuildDispatchSnapshot> {
     verifyDispatchLease(lease);
     const updated = this.#database.prepare(`
-      UPDATE svml_dispatches
+      UPDATE narratage_dispatches
       SET revision = revision + 1, updated_at = ?, phase = 'terminal', admission = 'closed',
           terminal = ?, reason = ?, wake_at = NULL,
           lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL
@@ -659,7 +632,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     nonNegativeInteger(now, "cancellation request time");
     return transaction(this.#database, () => {
       const row = this.#database.prepare(
-        "SELECT * FROM svml_dispatches WHERE build_id = ?",
+        "SELECT * FROM narratage_dispatches WHERE build_id = ?",
       ).get(build) as Row | undefined;
       if (row === undefined) throw new Error(`Dispatch ${build} does not exist`);
       const current = parseDispatchSnapshot(row);
@@ -670,7 +643,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       // exist. Resolve it in this same transaction so a racing claim has exactly one winner.
       if (current.phase === "queued" && row.lease_fence === 0 && row.lease_owner === null) {
         const updated = this.#database.prepare(`
-          UPDATE svml_dispatches
+          UPDATE narratage_dispatches
           SET revision = revision + 1, updated_at = ?, admission = 'closed', phase = 'terminal',
               terminal = 'cancelled', reason = ?, cancel_requested_at = ?, cancel_reason = ?,
               wake_at = NULL, lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL
@@ -679,7 +652,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
         assert(updated.changes === 1, `Dispatch ${build} cancellation lost its transaction`);
       } else {
         const updated = this.#database.prepare(`
-          UPDATE svml_dispatches
+          UPDATE narratage_dispatches
           SET revision = revision + 1, updated_at = ?, admission = 'closing',
               cancel_requested_at = COALESCE(cancel_requested_at, ?),
               cancel_reason = COALESCE(cancel_reason, ?),
@@ -690,7 +663,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
         assert(updated.changes === 1, `Dispatch ${build} cancellation lost its transaction`);
       }
       const result = this.#database.prepare(
-        "SELECT * FROM svml_dispatches WHERE build_id = ?",
+        "SELECT * FROM narratage_dispatches WHERE build_id = ?",
       ).get(build) as Row | undefined;
       assert(result !== undefined, `Dispatch ${build} disappeared after cancellation`);
       return parseDispatchSnapshot(result);
@@ -700,7 +673,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
   async wake(build: string, now = Date.now()): Promise<BuildDispatchSnapshot> {
     nonNegativeInteger(now, "Dispatch wake time");
     const updated = this.#database.prepare(`
-      UPDATE svml_dispatches
+      UPDATE narratage_dispatches
       SET revision = revision + 1, updated_at = ?,
           available_at = CASE WHEN phase = 'leased' THEN available_at ELSE MIN(available_at, ?) END,
           wake_at = CASE WHEN phase = 'leased' THEN MIN(COALESCE(wake_at, ?), ?) ELSE wake_at END
@@ -731,29 +704,29 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     });
     assert(new Set(resourceIds).size === resourceIds.length, "Capacity resources contain duplicates");
     if (request.queue !== undefined) {
-      assert(request.queue.authority.trim().length > 0 && request.queue.route.trim().length > 0,
-        "Capacity queue authority and route are required");
+      assert(request.queue.pool.trim().length > 0 && request.queue.lane.trim().length > 0,
+        "Capacity queue pool and lane are required");
     }
     const resourcesJson = canonicalStringify(resources);
     const queueJson = request.queue === undefined ? null : canonicalStringify(request.queue);
     const id = capacityReservationId(request.build, request.command);
     return transaction(this.#database, () => {
       const dispatch = this.#database.prepare(`
-        SELECT lease_owner, lease_token, lease_fence FROM svml_dispatches
+        SELECT lease_owner, lease_token, lease_fence FROM narratage_dispatches
         WHERE build_id = ? AND phase = 'leased'
       `).get(request.build) as Row | undefined;
       assert(dispatch !== undefined && leaseMatches(dispatch, request.buildLease),
         `Dispatch ${request.build} lease is stale`);
-      let existing = this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row | undefined;
+      let existing = this.#database.prepare("SELECT * FROM narratage_capacity WHERE reservation_id = ?").get(id) as Row | undefined;
       if (existing === undefined) {
         this.#database.prepare(`
-          INSERT INTO svml_capacity (
+          INSERT INTO narratage_capacity (
             reservation_id, build_id, command_id, resources_json, queue_json, mode, in_flight,
             active_owner, active_token, active_fence, active_expires_at, created_at, updated_at
           ) VALUES (?, ?, ?, ?, ?, ?, 0, NULL, NULL, 0, NULL, ?, ?)
         `).run(id, request.build, request.command, resourcesJson, queueJson, request.mode,
           request.now, request.now);
-        existing = this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row;
+        existing = this.#database.prepare("SELECT * FROM narratage_capacity WHERE reservation_id = ?").get(id) as Row;
       }
       assert(existing.build_id === request.build && existing.command_id === request.command
         && existing.resources_json === resourcesJson && existing.queue_json === queueJson
@@ -763,12 +736,12 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
         return { status: "blocked", retryAt: existing.active_expires_at, reason: "resource-active" };
       }
       const activeGlobal = this.#database.prepare(`
-        SELECT COUNT(*) AS count FROM svml_capacity
+        SELECT COUNT(*) AS count FROM narratage_capacity
         WHERE active_owner IS NOT NULL AND active_expires_at > ? AND reservation_id != ?
       `).get(request.now, id) as Row;
       assert(typeof activeGlobal.count === "number", "SQLite global Capacity count is invalid");
       const retryAtRow = this.#database.prepare(`
-        SELECT MIN(active_expires_at) AS retry_at FROM svml_capacity
+        SELECT MIN(active_expires_at) AS retry_at FROM narratage_capacity
         WHERE active_owner IS NOT NULL AND active_expires_at > ?
       `).get(request.now) as Row;
       const retryAt = typeof retryAtRow.retry_at === "number" ? retryAtRow.retry_at : request.now + 100;
@@ -777,14 +750,14 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       for (const resource of resources) {
         const active = this.#database.prepare(`
           SELECT COUNT(DISTINCT capacity.reservation_id) AS count
-          FROM svml_capacity AS capacity, json_each(capacity.resources_json) AS claim
+          FROM narratage_capacity AS capacity, json_each(capacity.resources_json) AS claim
           WHERE json_extract(claim.value, '$.id') = ?
             AND capacity.active_owner IS NOT NULL AND capacity.active_expires_at > ?
             AND capacity.reservation_id != ?
         `).get(resource.id, request.now, id) as Row;
         const inFlight = this.#database.prepare(`
           SELECT COUNT(DISTINCT capacity.reservation_id) AS count
-          FROM svml_capacity AS capacity, json_each(capacity.resources_json) AS claim
+          FROM narratage_capacity AS capacity, json_each(capacity.resources_json) AS claim
           WHERE json_extract(claim.value, '$.id') = ?
             AND capacity.in_flight = 1 AND capacity.reservation_id != ?
         `).get(resource.id, id) as Row;
@@ -799,14 +772,14 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       }
       const fence = typeof existing?.active_fence === "number" ? existing.active_fence + 1 : 1;
       this.#database.prepare(`
-        UPDATE svml_capacity
+        UPDATE narratage_capacity
         SET in_flight = MAX(in_flight, ?), active_owner = ?, active_token = ?,
             active_fence = ?, active_expires_at = ?, updated_at = ?
         WHERE reservation_id = ?
       `).run(request.mode === "recoverable" ? 1 : 0, request.owner, request.token,
         fence, request.now + request.leaseMs, request.now, id);
       return { status: "acquired", reservation: parseCapacityReservation(
-        this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row,
+        this.#database.prepare("SELECT * FROM narratage_capacity WHERE reservation_id = ?").get(id) as Row,
       ) };
     });
   }
@@ -814,28 +787,28 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
   async heartbeatCapacity(id: Digest, lease: DispatchLease, now: number, leaseMs: number): Promise<CapacityReservation> {
     verifyDispatchLease(lease, "Capacity lease");
     const updated = this.#database.prepare(`
-      UPDATE svml_capacity SET active_expires_at = ?, updated_at = ?
+      UPDATE narratage_capacity SET active_expires_at = ?, updated_at = ?
       WHERE reservation_id = ? AND active_owner = ? AND active_token = ? AND active_fence = ? AND active_expires_at > ?
     `).run(now + leaseMs, now, id, lease.owner, lease.token, lease.fence, now);
     assert(updated.changes === 1, `Capacity reservation ${id} lease is stale`);
-    return parseCapacityReservation(this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row);
+    return parseCapacityReservation(this.#database.prepare("SELECT * FROM narratage_capacity WHERE reservation_id = ?").get(id) as Row);
   }
 
   async parkCapacity(id: Digest, lease: DispatchLease, inFlight: boolean, now = Date.now()): Promise<CapacityReservation> {
     verifyDispatchLease(lease, "Capacity lease");
     const updated = this.#database.prepare(`
-      UPDATE svml_capacity
+      UPDATE narratage_capacity
       SET in_flight = ?, active_owner = NULL, active_token = NULL, active_expires_at = NULL, updated_at = ?
       WHERE reservation_id = ? AND active_owner = ? AND active_token = ? AND active_fence = ?
     `).run(inFlight ? 1 : 0, now, id, lease.owner, lease.token, lease.fence);
     assert(updated.changes === 1, `Capacity reservation ${id} lease is stale`);
-    return parseCapacityReservation(this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row);
+    return parseCapacityReservation(this.#database.prepare("SELECT * FROM narratage_capacity WHERE reservation_id = ?").get(id) as Row);
   }
 
   async releaseCapacity(id: Digest, lease: DispatchLease): Promise<void> {
     verifyDispatchLease(lease, "Capacity lease");
     const removed = this.#database.prepare(`
-      DELETE FROM svml_capacity
+      DELETE FROM narratage_capacity
       WHERE reservation_id = ? AND active_owner = ? AND active_token = ? AND active_fence = ?
     `).run(id, lease.owner, lease.token, lease.fence);
     assert(removed.changes === 1, `Capacity reservation ${id} lease is stale`);
@@ -845,19 +818,19 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     verifyDispatchLease(buildLease);
     transaction(this.#database, () => {
       const dispatch = this.#database.prepare(`
-        SELECT lease_owner, lease_token, lease_fence FROM svml_dispatches
+        SELECT lease_owner, lease_token, lease_fence FROM narratage_dispatches
         WHERE build_id = ? AND phase = 'leased'
       `).get(build) as Row | undefined;
       assert(dispatch !== undefined && leaseMatches(dispatch, buildLease),
         `Dispatch ${build} lease is stale`);
       this.#database.prepare(`
-        DELETE FROM svml_capacity WHERE reservation_id = ? AND build_id = ?
+        DELETE FROM narratage_capacity WHERE reservation_id = ? AND build_id = ?
       `).run(id, build);
     });
   }
 
   async listCapacity(): Promise<readonly CapacityReservation[]> {
-    return (this.#database.prepare("SELECT * FROM svml_capacity ORDER BY created_at ASC, reservation_id ASC").all() as Row[])
+    return (this.#database.prepare("SELECT * FROM narratage_capacity ORDER BY created_at ASC, reservation_id ASC").all() as Row[])
       .map(parseCapacityReservation);
   }
 }
@@ -875,7 +848,7 @@ function parseCapacityReservation(row: Row): CapacityReservation {
     return { owner: row.active_owner, token: row.active_token, fence: row.active_fence, expiresAt: row.active_expires_at };
   })();
   const value = {
-    format: "svml.capacity-reservation@1" as const,
+    format: "narratage.capacity-reservation@1" as const,
     id: row.reservation_id as Digest,
     build: row.build_id,
     command: row.command_id,
@@ -921,11 +894,11 @@ export class SqliteRuntimeState {
     }
     const alreadyInitialized = this.#database.prepare(`
       SELECT 1 AS present FROM sqlite_master
-      WHERE type = 'table' AND name = 'svml_store_meta'
+      WHERE type = 'table' AND name = 'narratage_store_meta'
     `).get() as Row | undefined;
     if (alreadyInitialized !== undefined) {
       const version = this.#database.prepare(
-        "SELECT schema_version FROM svml_store_meta WHERE singleton = 1",
+        "SELECT schema_version FROM narratage_store_meta WHERE singleton = 1",
       ).get() as Row | undefined;
       if (version === undefined || version.schema_version !== databaseSchemaVersion) {
         const found = version === undefined ? "an incomplete schema" : `schema ${String(version.schema_version)}`;
@@ -938,16 +911,16 @@ export class SqliteRuntimeState {
       }
     }
     if (!options.readOnly || emptyReadOnly) this.#database.exec(`
-      CREATE TABLE IF NOT EXISTS svml_store_meta (
+      CREATE TABLE IF NOT EXISTS narratage_store_meta (
         singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
         schema_version INTEGER NOT NULL
       ) STRICT;
-      CREATE TABLE IF NOT EXISTS svml_builds (
+      CREATE TABLE IF NOT EXISTS narratage_builds (
         build_id TEXT PRIMARY KEY,
         revision INTEGER NOT NULL,
         state_json TEXT NOT NULL
       ) STRICT;
-      CREATE TABLE IF NOT EXISTS svml_operations (
+      CREATE TABLE IF NOT EXISTS narratage_operations (
         operation_id TEXT PRIMARY KEY,
         revision INTEGER NOT NULL,
         status TEXT NOT NULL CHECK (status IN ('created', 'pending', 'completed', 'failed', 'cancelled')),
@@ -957,14 +930,14 @@ export class SqliteRuntimeState {
         failure_json TEXT,
         cancellation_json TEXT
       ) STRICT;
-      CREATE TABLE IF NOT EXISTS svml_build_catalog (
+      CREATE TABLE IF NOT EXISTS narratage_build_catalog (
         build_id TEXT PRIMARY KEY,
         core_id TEXT NOT NULL,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
         descriptor_json TEXT NOT NULL
       ) STRICT;
-      CREATE TABLE IF NOT EXISTS svml_dispatches (
+      CREATE TABLE IF NOT EXISTS narratage_dispatches (
         build_id TEXT PRIMARY KEY,
         identity_json TEXT NOT NULL,
         revision INTEGER NOT NULL,
@@ -984,9 +957,9 @@ export class SqliteRuntimeState {
         cancel_reason TEXT,
         terminal TEXT CHECK (terminal IS NULL OR terminal IN ('complete', 'failed', 'cancelled'))
       ) STRICT;
-      CREATE INDEX IF NOT EXISTS svml_dispatch_ready
-        ON svml_dispatches (phase, available_at, priority DESC);
-      CREATE TABLE IF NOT EXISTS svml_capacity (
+      CREATE INDEX IF NOT EXISTS narratage_dispatch_ready
+        ON narratage_dispatches (phase, available_at, priority DESC);
+      CREATE TABLE IF NOT EXISTS narratage_capacity (
         reservation_id TEXT PRIMARY KEY,
         build_id TEXT NOT NULL,
         command_id TEXT NOT NULL,
@@ -1002,10 +975,10 @@ export class SqliteRuntimeState {
         updated_at INTEGER NOT NULL,
         UNIQUE (build_id, command_id)
       ) STRICT;
-      CREATE INDEX IF NOT EXISTS svml_capacity_state ON svml_capacity (in_flight, active_expires_at);
+      CREATE INDEX IF NOT EXISTS narratage_capacity_state ON narratage_capacity (in_flight, active_expires_at);
     `);
     if (alreadyInitialized === undefined) {
-      this.#database.prepare("INSERT INTO svml_store_meta (singleton, schema_version) VALUES (1, ?)").run(databaseSchemaVersion);
+      this.#database.prepare("INSERT INTO narratage_store_meta (singleton, schema_version) VALUES (1, ?)").run(databaseSchemaVersion);
     }
     this.builds = new SqliteBuildStore(database);
     this.operations = new SqliteOperationStore(database);
@@ -1018,60 +991,35 @@ export class SqliteRuntimeState {
   }
 }
 
-export function createSqliteRuntimeComponentPackage(
-  options: CreateSqliteRuntimeComponentPackageOptions,
-): RuntimeComponentPackage {
+export function createSqliteRuntimeInfrastructurePackage(
+  options: CreateSqliteRuntimeInfrastructurePackageOptions,
+): RuntimeInfrastructurePackage {
   const state = new SqliteRuntimeState(options.path, {
     ...(options.busyTimeoutMs === undefined ? {} : { busyTimeoutMs: options.busyTimeoutMs }),
     ...(options.readOnly === undefined ? {} : { readOnly: options.readOnly }),
   });
-  const buildInstance = options.buildInstance ?? "builds.sqlite";
-  const operationInstance = options.operationInstance ?? "operations.sqlite";
-  const dispatchInstance = options.dispatchInstance ?? "dispatch.sqlite";
+  const instance = options.instance ?? "state";
   try {
-    return defineRuntimeComponentPackage({
+    return defineRuntimeInfrastructurePackage({
       module: sqliteStoreModuleRef,
-      components: [
+      instance,
+      parts: [
         {
           role: "build-store",
+          part: "builds",
           facet: "build-store",
-          instance: buildInstance,
-          implementation: {
-            digest: sqliteBuildStoreImplementationDigest,
-          },
-          configuration: {
-            path: state.path,
-            schemaVersion: databaseSchemaVersion,
-            busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
-          },
           port: state.builds,
         },
         {
           role: "operation-store",
+          part: "operations",
           facet: "operation-store",
-          instance: operationInstance,
-          implementation: {
-            digest: sqliteOperationStoreImplementationDigest,
-          },
-          configuration: {
-            path: state.path,
-            schemaVersion: databaseSchemaVersion,
-            busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
-          },
           port: state.operations,
         },
         {
           role: "dispatch-store",
+          part: "dispatch",
           facet: "dispatch-store",
-          instance: dispatchInstance,
-          implementation: {
-            digest: sqliteDispatchStoreImplementationDigest,
-          },
-          configuration: {
-            path: state.path,
-            schemaVersion: databaseSchemaVersion,
-            busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
-          },
           port: state.dispatch,
         },
       ],

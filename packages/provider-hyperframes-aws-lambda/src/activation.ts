@@ -1,12 +1,12 @@
-import type { CanonicalValue, Digest } from "@narratage/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
 import {
   createRuntimeEndpointAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-adapter";
-import type { RuntimeAdapterFactoryContext } from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
+import type { RuntimeAdapterFactoryContext } from "@narratage/runtime-kit";
 
 import { createAwsLambdaHyperframesProvider } from "./provider.js";
 import type {
@@ -15,14 +15,14 @@ import type {
 } from "./provider.js";
 
 const CONFIG_KEYS = [
-  "stateMachineArn", "bucketName", "rendererImplementationDigest", "region", "quality", "chunkSize", "maxParallelChunks",
+  "stateMachineArn", "bucketName", "region", "quality", "chunkSize", "maxParallelChunks",
   "targetChunkFrames", "defaultMemorySizeMb", "defaultConcurrency", "pollIntervalMs",
   "maxOperationMs", "maxRenderedBytes", "maxPollFailures", "maxAttempts",
 ] as const;
 
 type RuntimeProviderOptions = Omit<
   CreateAwsLambdaHyperframesProviderOptions,
-  "client" | "clientImplementationDigest" | "now"
+  "client" | "now"
 >;
 
 function optionalInteger(
@@ -33,7 +33,7 @@ function optionalInteger(
 }
 
 function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProviderOptions {
-  if (context.authority === undefined) throw new Error("AWS Lambda HyperFrames Provider Authority is required");
+  if (context.pool === undefined) throw new Error("AWS Lambda HyperFrames Provider Pool is required");
   const config = runtimeConfigObject(context.config, "AWS Lambda HyperFrames");
   runtimeConfigExact(config, CONFIG_KEYS, "AWS Lambda HyperFrames");
   const stateMachineArn = runtimeConfigString(config.stateMachineArn, "HyperFrames stateMachineArn");
@@ -49,13 +49,6 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
     || bucketName.includes("..") || bucketName.includes(".-") || bucketName.includes("-.")
     || /^\d{1,3}(?:\.\d{1,3}){3}$/u.test(bucketName)) {
     throw new Error("HyperFrames bucketName is invalid");
-  }
-  const rendererImplementationDigest = runtimeConfigString(
-    config.rendererImplementationDigest,
-    "HyperFrames rendererImplementationDigest",
-  );
-  if (rendererImplementationDigest === undefined || !/^sha256:[0-9a-f]{64}$/u.test(rendererImplementationDigest)) {
-    throw new Error("AWS Lambda HyperFrames rendererImplementationDigest is required and must be a digest");
   }
   const region = runtimeConfigString(config.region, "HyperFrames region");
   if (region !== undefined && region !== machine[2]) {
@@ -80,10 +73,9 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
   const maxAttempts = optionalInteger(config, "maxAttempts");
   return {
     instance: context.instance,
-    authority: context.authority,
+    pool: context.pool,
     stateMachineArn,
     bucketName,
-    rendererImplementationDigest: rendererImplementationDigest as Digest,
     ...(region === undefined ? {} : { region }),
     ...(quality === undefined ? {} : { quality: quality as HyperframesLambdaQuality }),
     ...(chunkSize === undefined ? {} : { chunkSize }),
@@ -106,9 +98,9 @@ const awsLambdaHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [awsLambdaHyperframesRuntimeAdapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

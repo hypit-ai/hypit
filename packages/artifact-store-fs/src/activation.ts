@@ -1,15 +1,15 @@
 import { resolve } from "node:path";
 
 import {
-  createRuntimeComponentAdapterFacet,
+  createRuntimeInfrastructureAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigString,
-} from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
 
 import { createFileArtifactStorePackage } from "./store.js";
 
-const fileArtifactStoreAdapter = createRuntimeComponentAdapterFacet({
+const fileArtifactStoreAdapter = createRuntimeInfrastructureAdapterFacet({
   use: "@narratage/artifact-store-fs",
   validate(context) {
     const config = runtimeConfigObject(context.config, "filesystem ArtifactStore");
@@ -27,9 +27,9 @@ const fileArtifactStoreAdapter = createRuntimeComponentAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [fileArtifactStoreAdapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

@@ -50,10 +50,10 @@ export function createStage(store: Store): Stage {
   const measure = (clipId: string): { xPx: number; yPx: number; widthPx: number; heightPx: number } | undefined => {
     const document_ = iframe.contentDocument;
     if (document_ === null) return undefined;
-    const present = document_.querySelector(`[data-svml-present-id="${CSS.escape(clipId)}"]`);
+    const present = document_.querySelector(`[data-narratage-present-id="${CSS.escape(clipId)}"]`);
     // The present spans the whole canvas; the drawn box is its frame element.
-    const drawn = present?.querySelector(`[data-svml-element-id="${CSS.escape(`${clipId}:frame`)}"]`)
-      ?? present?.querySelector("[data-svml-element-id]");
+    const drawn = present?.querySelector(`[data-narratage-element-id="${CSS.escape(`${clipId}:frame`)}"]`)
+      ?? present?.querySelector("[data-narratage-element-id]");
     if (drawn === null || drawn === undefined) return undefined;
     const box = drawn.getBoundingClientRect();
     if (box.width === 0 && box.height === 0) return undefined;

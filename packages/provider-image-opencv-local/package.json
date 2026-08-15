@@ -7,7 +7,7 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": {
+  "narratage": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
@@ -15,8 +15,8 @@
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/raster": "workspace:*",
-    "@narratage/runtime-adapter": "workspace:*",
-    "@narratage/runtime-adapter-node": "workspace:*"
+    "@narratage/runtime-kit": "workspace:*",
+    "@narratage/runtime-host-node": "workspace:*"
   },
   "devDependencies": {
     "@narratage/driver-node": "workspace:*",

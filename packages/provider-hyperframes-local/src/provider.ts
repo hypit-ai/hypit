@@ -23,9 +23,6 @@ export const localHyperframesProviderModuleRef = {
   name: "@narratage/provider-hyperframes-local",
   version: "1",
 } as const;
-export const localHyperframesProviderImplementationDigest = digestOf(
-  `@narratage/provider-hyperframes-local/render@1+hyperframes@${HYPERFRAMES_VERSION}`,
-);
 
 export type HyperframesWorkers = number | "auto";
 export type HyperframesQuality = "draft" | "standard" | "high";
@@ -33,7 +30,7 @@ export type HyperframesBrowserGpu = "auto" | "software" | "hardware";
 
 export type CreateLocalHyperframesProviderOptions = {
   readonly instance?: string;
-  readonly authority?: string;
+  readonly pool?: string;
   readonly nodePath?: string;
   readonly hyperframesCliPath?: string;
   readonly ffprobePath?: string;
@@ -254,11 +251,7 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
     module: localHyperframesProviderModuleRef,
     facet: "render",
     instance: config.instance ?? "hyperframes.local",
-    authority: config.authority ?? config.instance ?? "hyperframes.local",
-    implementation: {
-      digest: localHyperframesProviderImplementationDigest,
-    },
-    configuration,
+    pool: config.pool ?? config.instance ?? "hyperframes.local",
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,
@@ -266,7 +259,7 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
       returns: mediaTypes.renderedVisual,
       handler: async (context) => {
         const document = visualRequest(context.need.constraints);
-        const work = await mkdtemp(join(tmpdir(), "svml-hyperframes-local-"));
+        const work = await mkdtemp(join(tmpdir(), "narratage-hyperframes-local-"));
         try {
           await stageHyperframesProject({
             document,

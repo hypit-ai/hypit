@@ -165,7 +165,7 @@ test("a snapshot points its clips back at the tags that placed them", async () =
   }
   // Every Present the picture draws must be addressable, or selecting a clip
   // could not box it.
-  assert.match(snapshot.preview.srcdoc, /data-svml-present-id/u);
+  assert.match(snapshot.preview.srcdoc, /data-narratage-present-id/u);
 });
 
 test("the Script's markers carry the frames its words are said on", async () => {

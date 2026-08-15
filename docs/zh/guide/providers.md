@@ -28,13 +28,13 @@ Provider 包依赖 Runtime 端口与共享能力词汇，不依赖精确模型�
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": { "activation": "./src/activation.ts" },
+  "narratage": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-adapter": "workspace:*",
-    "@narratage/runtime-adapter-node": "workspace:*",
+    "@narratage/runtime-kit": "workspace:*",
+    "@narratage/runtime-host-node": "workspace:*",
     "@narratage/generation": "workspace:*"
   }
 }
@@ -46,18 +46,29 @@ Provider 处理来自 Scheduler 的 Command：提交请求、轮询、下载以�
 
 ```typescript
 // src/provider.ts
-import type { EndpointManifest } from "@narratage/endpoint-kit";
+import { defineEndpointPackage } from "@narratage/endpoint-kit";
 
 export function createMyServiceProvider(options: {
   instance: string;
-  authority?: string;
+  pool: string;
   apiKey: CredentialRef;
   defaultConcurrency?: number;
 }) {
-  // 返回一个包含以下内容的对象：
-  // - manifest：声明该 Endpoint 实现的 Capability
-  // - handle：处理来自 Scheduler 的 Command
-  // - close：清理
+  return defineEndpointPackage({
+    module: { name: "@narratage/provider-my-service", version: "1" },
+    facet: "service",
+    instance: options.instance,
+    pool: options.pool,
+    credentials: { apiKey: options.apiKey },
+    defaultConcurrency: options.defaultConcurrency ?? 2,
+    capabilities: [{
+      capability: myCapability,
+      returns: myResultType,
+      lane: "generate",
+      lifecycle: "recoverable",
+      endpoint: myRecoverableEndpoint,
+    }],
+  });
 }
 ```
 
@@ -80,13 +91,14 @@ import {
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
-} from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
 import { createMyServiceProvider } from "./provider.js";
 
 const adapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-my-service",
 
   activate(context) {
+    if (context.pool === undefined) throw new Error("MyService pool is required");
     const config = runtimeConfigObject(context.config, "MyService");
     runtimeConfigExact(config, ["apiKey", "defaultConcurrency"], "MyService");
     const apiKey = runtimeConfigCredentialRef(config.apiKey, "MyService apiKey");
@@ -95,7 +107,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createMyServiceProvider({
         instance: context.instance,
-        authority: context.authority,
+        pool: context.pool,
         apiKey,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
       }),
@@ -103,12 +115,12 @@ const adapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [adapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;
 ```
 
 `activate` 是唯一的纯部署声明。它返回的 Endpoint 同时拥有供 `doctor` 与执行使用的凭据引用、
@@ -122,13 +134,13 @@ manifest 开关，也没有中央 Program 注册表：
 
 ```typescript
 // src/program.ts
-import type { ManagedProgram } from "@narratage/runtime-adapter";
+import type { ManagedProgram } from "@narratage/runtime-kit";
 
 export function createMyProgram(): ManagedProgram {
   return {
     id: "my-service",
     prepare: { command: "uv", args: ["sync", "--project", "services/my-service", "--frozen"] },
-    start: { command: "uv", args: ["run", "--project", "services/my-service", "--frozen", "svml-my-service"] },
+    start: { command: "uv", args: ["run", "--project", "services/my-service", "--frozen", "narratage-my-service"] },
     probe: async () => {
       // 返回 { state: "ready" } 或 { state: "down", detail: "..." }
     },
@@ -159,42 +171,33 @@ const adapter = createRuntimeEndpointAdapterFacet({
 
 ```json
 "dependencies": {
-  "@narratage/runtime-adapter": "workspace:*"
+  "@narratage/runtime-kit": "workspace:*"
 }
 ```
 
-锁定进 Runtime 包锁文件：
+用项目的包管理器安装它。Runtime Profile 用 `use` 显式实例化之前，这个包始终不会运行。
 
-```bash
-node --run narratage -- lock-packages <runtime-lock> \
-  --package @narratage/provider-my-service \
-  --package-root .
-```
-
-如果 Runtime 包锁已经存在，改用 `--add @narratage/provider-my-service`。这一步只改变本地信任选择；在 Runtime Profile 用 `use` 显式实例化之前，这个包仍然不会运行。
-
-## 7. 在 svml.runtime.json 中引用
+## 7. 在 narratage.runtime.json 中引用
 
 ```json
 {
-  "endpoints": [
-    {
+  "endpoints": {
+    "my-service": {
       "use": "@narratage/provider-my-service",
-      "instance": "my-service.project",
-      "authority": "my-service.project",
+      "pool": "my-service.account",
       "config": {
         "apiKey": { "store": "keychain", "key": "my-service.api-key" },
         "defaultConcurrency": 2
       }
     }
-  ]
+  }
 }
 ```
 
 验证配置：
 
 ```bash
-node --run narratage -- doctor svml.runtime.json
+narratage doctor narratage.runtime.json
 ```
 
 ## 可供研究的现有 Provider

@@ -16,15 +16,12 @@ export const localWhisperXProviderModuleRef = {
   name: "@narratage/provider-whisperx-local",
   version: "1",
 } as const;
-export const localWhisperXProviderImplementationDigest = digestOf(
-  "@narratage/provider-whisperx-local/svml-service@1",
-);
 export const localWhisperXPunktTabDigest =
   "e57f64187974277726a3417ca6f181ec5403676c717672eef6a748a7b20e0106";
 
 export type CreateLocalWhisperXProviderOptions = {
   readonly instance?: string;
-  readonly authority?: string;
+  readonly pool?: string;
   /** Must resolve to the same machine because the protocol passes a staged local path. */
   readonly baseUrl?: string;
   readonly expectedModel?: string;
@@ -241,22 +238,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
     module: localWhisperXProviderModuleRef,
     facet: "alignment",
     instance: config.instance ?? "whisperx.local",
-    authority: config.authority ?? config.instance ?? "whisperx.local",
-    implementation: {
-      digest: localWhisperXProviderImplementationDigest,
-    },
-    configuration: canonicalize({
-      baseUrl: normalizedBaseUrl,
-      expectedModel,
-      expectedDevice,
-      expectedCompute,
-      expectedBatchSize,
-      expectedServiceVersion,
-      expectedWhisperXVersion,
-      expectedPunktTabDigest,
-      requestTimeoutMs,
-      maxResponseBytes,
-    }),
+    pool: config.pool ?? config.instance ?? "whisperx.local",
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,
@@ -268,7 +250,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
         assert(audio !== undefined && audio.byteLength === request.audio.size,
           `WhisperX evidence Artifact ${request.audio.digest} is unavailable or has changed`);
         assertCanonicalEvidenceWav(audio, request.sampleFrames);
-        const work = await mkdtemp(join(tmpdir(), "svml-whisperx-local-"));
+        const work = await mkdtemp(join(tmpdir(), "narratage-whisperx-local-"));
         try {
           const audioPath = join(work, "alignment-evidence.wav");
           await writeFile(audioPath, audio);
@@ -289,7 +271,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
             readonly punktTabDigest?: unknown;
           };
           assert(healthValue.ok === true
-            && healthValue.protocol === "svml.whisperx-service@1"
+            && healthValue.protocol === "narratage.whisperx-service@1"
             && healthValue.serviceVersion === expectedServiceVersion
             && healthValue.whisperxVersion === expectedWhisperXVersion
             && healthValue.model === expectedModel

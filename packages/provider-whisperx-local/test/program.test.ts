@@ -13,8 +13,8 @@ test("the Provider declares how to bring WhisperX up and how to recognise it", (
   const program = localWhisperXProgram(context());
   assert.equal(program.id, "whisperx");
   assert.equal(program.start?.command, "uv");
-  assert.equal(program.start?.args.at(-1), "svml-whisperx-service");
-  assert.equal(program.prepare?.args.at(-1), "svml-whisperx-prepare");
+  assert.equal(program.start?.args.at(-1), "narratage-whisperx-service");
+  assert.equal(program.prepare?.args.at(-1), "narratage-whisperx-prepare");
   // Absolute: a Runtime root is wherever the Profile lives, not where the
   // pinned uv project lives.
   const project = program.start?.args.at(-3) ?? "";
@@ -38,7 +38,7 @@ test("a program answering with another identity is reported, never used", async 
   const original = globalThis.fetch;
   globalThis.fetch = (async () => new Response(JSON.stringify({
     ok: true,
-    protocol: "svml.whisperx-service@1",
+    protocol: "narratage.whisperx-service@1",
     serviceVersion: "0.1.0",
     whisperxVersion: "3.8.6",
     model: "large-v3",

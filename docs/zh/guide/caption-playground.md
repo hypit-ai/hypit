@@ -11,7 +11,6 @@ Playground 直接读写普通 Build 使用的同一份 `.svml` 与 `.svs`。
 ```bash
 pnpm caption:playground -- \
   --source examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock \
   --style base-caption \
   --display story.caption \
   --recipe examples/talking-film-graph-check/studio.svs#caption.base \
@@ -22,7 +21,7 @@ pnpm caption:playground -- \
 
 打开 `http://localhost:5178`。
 
-启动命令显式选择源码、包锁、Style 导出、Display 导出、SVS Recipe、字体栈以及本地预览画布。系统没有中央组件注册表、隐藏默认样式或
+启动命令显式选择源码、Style 导出、Display 导出、SVS Recipe、字体栈以及本地预览画布。系统没有中央组件注册表、隐藏默认样式或
 Playground 私有工程文件。
 
 表单编辑的是作者语汇，例如 `size`、`padding`、`fill`，不会暴露

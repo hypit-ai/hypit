@@ -22,6 +22,7 @@ Then install and validate the workspace:
 corepack enable
 corepack prepare pnpm@10.33.0 --activate
 pnpm install --frozen-lockfile
+npm link
 pnpm check
 pnpm test
 ```
@@ -32,11 +33,11 @@ For managed local programs:
 uv python install 3.13
 uv sync --project services/whisperx --frozen
 uv sync --project services/image-opencv --frozen
-uv run --project services/whisperx --frozen svml-whisperx-prepare
-node --run narratage -- runtime use svml.runtime.json
-node --run narratage -- doctor
-node --run narratage -- runtime up
-node --run narratage -- runtime status
+uv run --project services/whisperx --frozen narratage-whisperx-prepare
+narratage runtime use narratage.runtime.json
+narratage doctor
+narratage runtime up
+narratage runtime status
 ```
 
 Use `runtime up` for normal Build preparation: it owns the detached durable Worker and prepares the external
@@ -47,8 +48,7 @@ After intentionally installing, removing or changing selected packages, refresh 
 project locks in one reviewed action:
 
 ```text
-node --run narratage -- runtime use svml.runtime.json
-node --run narratage -- packages sync build.svrun
+narratage runtime use narratage.runtime.json
 ```
 
 This command derives Author roots from that Run/Author Source closure and Runtime roots from the

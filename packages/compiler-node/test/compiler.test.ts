@@ -53,7 +53,7 @@ import { NodeFilesystemWorkspace } from "@narratage/workspace-fs-node";
 
 function emptyManifest(name: string, version = "1"): ModuleManifest {
   return {
-    format: "svml.module@1",
+    format: "narratage.module@1",
     name,
     version,
     dependencies: [],
@@ -63,13 +63,12 @@ function emptyManifest(name: string, version = "1"): ModuleManifest {
   };
 }
 
-test("registered module imports close exact transitive manifest dependencies", () => {
+test("registered module imports close transitive module dependencies", () => {
   const base = emptyManifest("example.base");
   const feature: ModuleManifest = {
     ...emptyManifest("example.feature"),
     dependencies: [{
       module: { name: base.name, version: base.version },
-      digest: computeModuleDigest(base),
     }],
   };
   const modules = new ModulePackageRegistry();
@@ -83,7 +82,7 @@ test("registered module imports close exact transitive manifest dependencies", (
   );
 });
 
-test("module registration is atomic and dependency digests cannot drift", () => {
+test("module registration is atomic", () => {
   const first = emptyManifest("example.first");
   const second = emptyManifest("example.second");
   const modules = new ModulePackageRegistry();
@@ -94,19 +93,6 @@ test("module registration is atomic and dependency digests cannot drift", () => 
   );
   assert.equal(modules.resolve("example.second@1"), undefined);
 
-  const wrongDependency: ModuleManifest = {
-    ...emptyManifest("example.wrong"),
-    dependencies: [{
-      module: { name: first.name, version: first.version },
-      digest: digestOf("another implementation"),
-    }],
-  };
-  modules.register({ manifest: wrongDependency });
-  assert.throws(
-    () => modules.createClosure(["example.wrong@1"]),
-    (error: unknown) => error instanceof NodeCompilerError
-      && error.code === "MODULE_DEPENDENCY_DIGEST_MISMATCH",
-  );
 });
 
 const laboratory = { name: "example.compiler-lab", version: "1" } as const;
@@ -115,23 +101,19 @@ const producer = { module: laboratory, name: "produce" } satisfies ProducerRef;
 const surfaceDigest = digestOf("example.compiler-lab/surface@1");
 const resultSurface = {
   name: "result", tag: "Result", mode: "structured", outputs: [],
-  implementation: { digest: surfaceDigest },
 } as const;
 const laboratoryManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [],
-  types: [{ name: resultType.name, schema: { kind: "string", minLength: 1 } }],
+  types: [{ name: resultType.name }],
   capabilities: [],
   producers: [{
     name: producer.name,
     inputs: [],
     outputs: [{ name: "result", type: resultType }],
     needs: [],
-    implementation: {
-      digest: digestOf("example.compiler-lab/produce@1"),
-    },
   }],
 };
 const fragment = sealGraphFragment({
@@ -154,11 +136,10 @@ const assetType = { module: assetLaboratory, name: "Asset" } satisfies TypeRef;
 const assetSurfaceDigest = digestOf("example.asset-lab/surface@1");
 const assetSurface = {
   name: "asset", tag: "Asset", mode: "structured", outputs: [assetType],
-  implementation: { digest: assetSurfaceDigest },
 } as const;
 const assetManifest: ModuleManifest = {
   ...emptyManifest(assetLaboratory.name),
-  types: [{ name: assetType.name, schema: { kind: "blob" } }],
+  types: [{ name: assetType.name }],
 };
 
 function compiler(
@@ -214,16 +195,12 @@ const previewManifest: ModuleManifest = {
   ...emptyManifest(previewModule.name),
   dependencies: [{
     module: laboratory,
-    digest: computeModuleDigest(laboratoryManifest),
   }],
   producers: [{
     name: previewProducer.name,
     inputs: [],
     outputs: [{ name: "result", type: resultType }],
     needs: [],
-    implementation: {
-      digest: digestOf("example.compiler-preview/preview@1"),
-    },
   }],
 };
 const previewFragment = sealGraphFragment({
@@ -351,7 +328,7 @@ async function readAttachment(attachment: ArtifactAttachment | undefined): Promi
 }
 
 test("Node Compiler discovers real imports and emits a named public Author Graph export", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-compiler-node-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-compiler-node-"));
   const file = join(root, "main.svml");
   await writeFile(file, `<?svml using="@narratage/markup@1"?>
   <svml>
@@ -368,7 +345,7 @@ test("Node Compiler discovers real imports and emits a named public Author Graph
 });
 
 test("Author Frontend identity comes only from the mandatory Source Header, never the suffix", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-self-described-source-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-self-described-source-"));
   const text = `<?svml using="@narratage/markup@1"?>
   <svml>
     <import as="lab" from="example.compiler-lab@1"/>
@@ -392,7 +369,7 @@ test("Author Frontend identity comes only from the mandatory Source Header, neve
 });
 
 test("Run-only Fragment modules extend the execution closure without polluting the Author Graph", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-dual-graph-closure-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-dual-graph-closure-"));
   const unused = emptyManifest("example.unused-video-feature");
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "build.svrun");
@@ -440,7 +417,7 @@ test("Run-only Fragment modules extend the execution closure without polluting t
 });
 
 test("static Run checking accepts a future BuildRecord without opening a BuildArchive", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-future-build-record-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-future-build-record-"));
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "reuse.svrun");
   await writeFile(authorFile, `<?svml using="@narratage/markup@1"?>
@@ -477,7 +454,7 @@ test("static Run checking accepts a future BuildRecord without opening a BuildAr
 });
 
 test("static Run checking suggests the nearest Author export", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-run-target-suggestion-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-run-target-suggestion-"));
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "build.svrun");
   await writeFile(authorFile, `<?svml using="@narratage/markup@1"?>
@@ -505,7 +482,7 @@ test("static Run checking suggests the nearest Author export", async () => {
 });
 
 test("source assets become graph values and a Host transfer bundle without closure metadata", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-source-assets-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-source-assets-"));
   const file = join(root, "main.svml");
   const asset = join(root, "reference.bin");
   await writeFile(file, `<?svml using="@narratage/markup@1"?>
@@ -527,7 +504,7 @@ test("source assets become graph values and a Host transfer bundle without closu
 });
 
 test("an installed package Surface can contribute locked bytes without an author file or network", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-embedded-assets-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-embedded-assets-"));
   const file = join(root, "main.svml");
   await writeFile(file, `<?svml using="@narratage/markup@1"?>
   <svml>
@@ -545,7 +522,7 @@ test("an installed package Surface can contribute locked bytes without an author
 });
 
 test("Run compilation retains embedded Author attachments for later Runtime staging", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-run-author-attachments-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-run-author-attachments-"));
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "build.svrun");
   await writeFile(authorFile, `<?svml using="@narratage/markup@1"?>
@@ -575,7 +552,7 @@ test("Run compilation retains embedded Author attachments for later Runtime stag
 });
 
 test("filesystem Workspace contains symlinks and locks source text plus asset identity once", async () => {
-  const parent = await mkdtemp(join(tmpdir(), "svml-source-host-"));
+  const parent = await mkdtemp(join(tmpdir(), "narratage-source-host-"));
   const root = join(parent, "project");
   await mkdir(root);
   const entryPath = join(root, "main.svml");
@@ -623,7 +600,7 @@ test("filesystem Workspace contains symlinks and locks source text plus asset id
 });
 
 test("an asset root widens bytes without widening Source imports", async () => {
-  const parent = await mkdtemp(join(tmpdir(), "svml-asset-root-"));
+  const parent = await mkdtemp(join(tmpdir(), "narratage-asset-root-"));
   const project = join(parent, "project");
   const library = join(parent, "library");
   await mkdir(project);
@@ -646,7 +623,7 @@ test("an asset root widens bytes without widening Source imports", async () => {
 });
 
 test("filesystem and in-memory Workspaces compile identical source and bytes to one semantic result", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-workspace-equivalence-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-workspace-equivalence-"));
   const file = join(root, "main.svml");
   const source = `<?svml using="@narratage/markup@1"?>
   <svml>

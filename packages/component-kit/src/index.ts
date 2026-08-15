@@ -1,6 +1,5 @@
 import type {
   CanonicalValue,
-  Digest,
   InvokeProducerCommand,
   ProducerRef,
   StoredValue,
@@ -23,7 +22,6 @@ export type TypeValidatorHandler = (
 export interface TypeValidatorRegistrar {
   register(
     type: TypeRef,
-    implementationDigest: Digest,
     handler: TypeValidatorHandler,
   ): void;
 }
@@ -51,15 +49,13 @@ export type ProducerHandler = (
 export interface ProducerRegistrar {
   registerProducer(
     producer: ProducerRef,
-    implementationDigest: Digest,
     handler: ProducerHandler,
   ): void;
 }
 
-/** Enumerable deterministic Producer identity and its trusted implementation. */
+/** Enumerable deterministic Producer handler owned by its package. */
 export type ProducerFacet = {
   readonly producer: ProducerRef;
-  readonly implementationDigest: Digest;
   readonly handler: ProducerHandler;
 };
 
@@ -68,14 +64,13 @@ export function registerProducerFacets(
   facets: readonly ProducerFacet[],
 ): void {
   for (const facet of facets) {
-    registry.registerProducer(facet.producer, facet.implementationDigest, facet.handler);
+    registry.registerProducer(facet.producer, facet.handler);
   }
 }
 
-/** Enumerable validator identity. Package locks can bind this without serializing its handler. */
+/** Package-owned semantic validator. */
 export type TypeValidatorFacet = {
   readonly type: TypeRef;
-  readonly implementationDigest: Digest;
   readonly handler: TypeValidatorHandler;
 };
 
@@ -84,11 +79,11 @@ export function registerTypeValidatorFacets(
   facets: readonly TypeValidatorFacet[],
 ): void {
   for (const facet of facets) {
-    registry.register(facet.type, facet.implementationDigest, facet.handler);
+    registry.register(facet.type, facet.handler);
   }
 }
 
-/** Trusted deterministic implementation package; it selects no Provider or Runtime Component. */
+/** Trusted deterministic implementation package; it selects no Provider or Runtime infrastructure. */
 export type ComponentPackage = {
   readonly producers?: readonly ProducerFacet[];
   readonly validators?: readonly TypeValidatorFacet[];

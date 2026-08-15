@@ -41,7 +41,7 @@ Compiler Host, not the Surface, owns containment, read-once behavior and byte tr
 that does not request assets remains unchanged apart from being awaitable.
 
 Markup validates source ranges, duplicate identities, Host-facet-declared Record types and complete
-Fragment references. It strips diagnostic ranges before sealing one `svml.author-module@1`, so
+Fragment references. It strips diagnostic ranges before sealing one `narratage.author-module@1`, so
 source reflow does not change author semantics. It never expands a Fragment or resolves a component
 input while reading the body. After every declaration has been collected, `@narratage/elaborator`
 resolves forward references and emits the Core Graph.

@@ -51,14 +51,14 @@ test("WhisperX receives normalized bytes without authored Segment truth", () => 
 });
 
 test("WhisperX installs into the host-neutral compute port without a Node Driver", () => {
-  const registrations: { readonly producer: ProducerRef; readonly digest: Digest }[] = [];
+  const registrations: ProducerRef[] = [];
   const registrar: ProducerRegistrar = {
-    registerProducer(producer, implementationDigest) {
-      registrations.push({ producer, digest: implementationDigest });
+    registerProducer(producer) {
+      registrations.push(producer);
     },
   };
 
   registerProducerFacets(registrar, whisperXComponent.producers);
 
-  assert.deepEqual(registrations.map((item) => item.producer), [whisperXProducers.request]);
+  assert.deepEqual(registrations, [whisperXProducers.request]);
 });

@@ -13,4 +13,4 @@ export type {
   RuntimeHostMaintenance as CliRuntimeMaintenance,
   RuntimeHostStatus as CliRuntimeStatus,
   RuntimeWorkerState as CliRuntimeWorkerState,
-} from "@narratage/runtime-adapter-node";
+} from "@narratage/runtime-host-node";

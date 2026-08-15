@@ -1,18 +1,6 @@
 export { ScriptSyntaxError } from "./error.js";
 export { formatScript } from "./format.js";
-export {
-  captionCorrespondenceType,
-  captionDisplayType,
-  captionDisplayWordSubsetType,
-  narrativeExcerptType,
-  narrativeMomentType,
-  narrativeSelectionType,
-  narrativeSchema,
-  narrativeType,
-  scriptManifest, scriptMarkupSurfaces,
-  scriptModuleRef,
-  scriptSurfaceImplementationDigest,
-} from "./manifest.js";
+export { captionCorrespondenceType, captionDisplayType, captionDisplayWordSubsetType, narrativeExcerptType, narrativeMomentType, narrativeSelectionType, narrativeSchema, narrativeType, scriptManifest, scriptMarkupSurfaces, scriptModuleRef } from "./manifest.js";
 export {
   captionCorrespondence,
   captionCorrespondenceValue,

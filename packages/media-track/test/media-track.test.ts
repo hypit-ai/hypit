@@ -279,7 +279,7 @@ test("self-blur is two explicit samples of one Artifact and Artifact collection 
   assert.equal(document.artifacts.length, 1);
   assert.equal((document.html.match(new RegExp(source.digest, "gu")) ?? []).length, 0,
     "HTML uses artifact URIs without the digest prefix spelling");
-  assert.equal((document.html.match(/svml-artifact:\/\/sha256\//gu) ?? []).length, 2);
+  assert.equal((document.html.match(/narratage-artifact:\/\/sha256\//gu) ?? []).length, 2);
   const blurred = track.presents[0]!.elements.find((element) => element.id === "blurred");
   assert.equal(blurred?.style.find((entry) => entry.name === "left")?.value, "-48px");
   assert.equal(blurred?.style.find((entry) => entry.name === "top")?.value, "-48px");

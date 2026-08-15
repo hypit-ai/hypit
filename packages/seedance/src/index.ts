@@ -114,16 +114,6 @@ export const seedanceDurationCompileProducers = Object.fromEntries(
   }]),
 ) as Record<SeedanceModel, ProducerRef>;
 
-export const seedanceDurationCompileImplementationDigests = Object.fromEntries(
-  seedanceModels.map((model) => [model, digestOf(`@narratage/seedance/compile-${model}-duration-request@1`)]),
-) as Record<SeedanceModel, Digest>;
-
-export const seedanceSurfaceImplementationDigests = {
-  textVideo: digestOf("@narratage/seedance/text-video-surface@1"),
-  frameVideo: digestOf("@narratage/seedance/frame-video-surface@1"),
-  referenceVideo: digestOf("@narratage/seedance/reference-video-surface@1"),
-} as const;
-
 function assertObject(value: unknown): asserts value is Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Seedance value must be an object");
@@ -213,9 +203,6 @@ export const seedanceMarkupSurfaces = [
         ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
       ]),
     ],
-    implementation: {
-      digest: seedanceSurfaceImplementationDigests.textVideo,
-    },
   },
   {
     name: "frame-video",
@@ -224,9 +211,6 @@ export const seedanceMarkupSurfaces = [
     outputs: [seedanceTypes.durationProgram, ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
       endpoint.draftType, ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
     ])],
-    implementation: {
-      digest: seedanceSurfaceImplementationDigests.frameVideo,
-    },
   },
   {
     name: "reference-video",
@@ -235,9 +219,6 @@ export const seedanceMarkupSurfaces = [
     outputs: [seedanceTypes.durationProgram, ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
       endpoint.draftType, ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
     ])],
-    implementation: {
-      digest: seedanceSurfaceImplementationDigests.referenceVideo,
-    },
   },
 ] as const;
 
@@ -251,7 +232,6 @@ export const seedanceManifest = {
     ...seedanceBaseDefinition.manifest.types,
     {
       name: seedanceTypes.durationProgram.name,
-      schema: { kind: "oneOf", variants: seedanceModels.map(durationProgramSchema) } satisfies ValueSchema,
     },
   ],
   producers: [
@@ -264,20 +244,15 @@ export const seedanceManifest = {
       ],
       outputs: [{ name: "draft", type: seedanceEndpointsByModel[model].draftType }],
       needs: [],
-      implementation: {
-        digest: seedanceDurationCompileImplementationDigests[model],
-      },
     })),
   ],
 } as const;
-export const seedanceManifestDigest = digestOf(seedanceManifest);
 export const seedanceComponent = {
   ...seedanceBaseDefinition.component,
   producers: [
     ...seedanceBaseDefinition.component.producers,
     ...seedanceModels.map((model) => ({
       producer: seedanceDurationCompileProducers[model],
-      implementationDigest: seedanceDurationCompileImplementationDigests[model],
       handler: ({ inputs }: { readonly inputs: Readonly<Record<string, { readonly value: import("@narratage/protocol").StoredValue }>> }) => ({
         outputs: {
           draft: {
@@ -300,7 +275,6 @@ export const seedanceComponent = {
 export const seedanceDefinition = {
   ...seedanceBaseDefinition,
   manifest: seedanceManifest,
-  manifestDigest: seedanceManifestDigest,
 };
 
 export {

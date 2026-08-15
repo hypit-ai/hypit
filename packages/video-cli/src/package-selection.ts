@@ -3,7 +3,7 @@ import {
   createMarkupAuthorFrontend,
   MarkupSurfaceRegistry,
 } from "@narratage/markup";
-import type { NodePackageBinding } from "@narratage/package-loader-node";
+import type { LoadedPackage } from "@narratage/package-loader-node";
 
 const markupFrontend = createMarkupAuthorFrontend({
   registry: new MarkupSurfaceRegistry(),
@@ -17,7 +17,7 @@ export async function discoverVideoSourcePackages(
   sourcePath: string,
   options: {
     readonly workspaceRoot?: string;
-    readonly packages?: readonly NodePackageBinding[];
+    readonly packages?: readonly LoadedPackage[];
   } = {},
 ) {
   return await discoverSourcePackages(sourcePath, {

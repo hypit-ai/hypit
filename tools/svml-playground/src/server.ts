@@ -94,7 +94,7 @@ export function svmlPlaygroundPlugin(options: SvmlPlaygroundOptions): Plugin {
         if (changed === options.source || changed === options.run || path.endsWith(".svs")) schedule();
       });
       value.middlewares.use((request, response, next) => {
-        const url = new URL(request.url ?? "/", "http://svml.local");
+        const url = new URL(request.url ?? "/", "http://narratage.local");
         if (request.method !== "GET" && request.method !== "HEAD") {
           next();
           return;

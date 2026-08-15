@@ -9,11 +9,10 @@ The Author Source defines the video. A Run Source chooses which of its public ou
 which explicit Candidates, if any, should satisfy them. The Runtime Profile chooses the machine,
 stores and Provider endpoints that execute the resulting plan.
 
-Select the project Runtime once, then synchronize package trust after package selections change:
+Select the project Runtime once:
 
 ```bash
-narratage runtime use svml.runtime.json
-narratage packages sync build.svrun
+narratage runtime use narratage.runtime.json
 ```
 
 Ordinary work then follows the short path:
@@ -24,8 +23,8 @@ narratage build build.svrun --follow
 narratage get <build-id> --name final.video --to output/final.mp4
 ```
 
-The checked-in source launcher is `/path/to/narratage/narratage`; commands written as `narratage`
-on this page mean that launcher or the future installed CLI.
+The Quickstart links the checkout's command once. Every command on this page then works as
+`narratage`, including from a separate video project.
 
 Only `build` submits work. `plan` is the normal preview. `check` is an editing aid; `doctor` is a
 deployment diagnostic. They are safe to run, but not mandatory ceremony before every Build.
@@ -33,7 +32,7 @@ deployment diagnostic. They are safe to run, but not mandatory ceremony before e
 ```text
 main.svml          author meaning
 build.svrun        this Run's Targets and Candidate choices
-svml.runtime.json  execution environment
+narratage.runtime.json  execution environment
 ```
 
 Run Source and Runtime Profile do not silently rewrite the video. Creative model choices remain in
@@ -190,17 +189,18 @@ human-supplied result uses the same mechanism.
 
 ## Runtime Profile
 
-The Runtime Profile chooses where Builds execute. It selects one locked Runtime package; that package
-owns its Components, Bindings, Endpoints, limits, lifecycle and private `dataRoot`. The Profile never
-defines the Source Workspace or Source package lock.
+The Runtime Profile chooses where Builds execute. It creates named infrastructure instances from
+packages selected by logical `use` names, assigns their exported parts to Runtime roles, and
+configures Provider endpoints and capacity. It never defines the Source Workspace or Author package
+selection.
 
 ```bash
-narratage runtime use svml.runtime.json
+narratage runtime use narratage.runtime.json
 narratage paths
 ```
 
 `runtime use` writes only `.narratage/runtime`. It does not start a Worker, create Runtime data or
-change either package lock. See [Runtime](../guide/runtime.md) for the Profile schema and boundaries.
+change installed packages. See [Runtime](../guide/runtime.md) for the Profile schema and boundaries.
 
 ## Configure selected credentials
 
@@ -244,10 +244,10 @@ Keep credentials, generated media, Runtime data and logs out of commits. A proje
 
 ```bash
 cd /work/my-film
-/opt/narratage/narratage runtime use svml.runtime.json
+narratage runtime use narratage.runtime.json
 ```
 
-The Workspace is the selected project, nearest Source lock or entry Source directory. Override it
+The Workspace is the selected project or entry Source directory. Override it
 only with `--workspace`. `--package-root` locates installed packages and never widens Source access.
 `--asset-root` grants read access to additional asset bytes without permitting Source imports there.
 
@@ -256,21 +256,15 @@ only with `--workspace`. `--package-root` locates installed packages and never w
 output/
 ```
 
-### 1. Synchronize installed packages
-
-After installing or updating packages, synchronize the project inventories:
+### 1. Select a Runtime
 
 ```bash
 cd examples/talking-head-aroll
-narratage runtime use svml.runtime.json
-narratage packages sync build.svrun
+narratage runtime use narratage.runtime.json
 ```
 
-The current Author and Run sources choose author packages. The Runtime Profile chooses environment
-packages. `packages sync` adds or refreshes those requirements in the two inventories; it never
-removes packages required by another Run. Use `lock-packages --remove` for an intentional removal.
-Compilation activates only the exact subset demanded by the current Source. The command never
-scans the project, starts a Provider or generates media.
+Author and Run Sources select their packages through imports. The Runtime Profile selects its Host,
+infrastructure and Provider packages through `use`. The installed package manager owns their versions.
 
 ### 2. Diagnose the environment
 
@@ -278,7 +272,7 @@ scans the project, starts a Provider or generates media.
 narratage doctor
 ```
 
-Doctor validates the Runtime lock, every selected Runtime role, Endpoint configuration, credential
+Doctor validates every selected Runtime role, Endpoint configuration, credential
 presence and bounded environment probes. It never starts the Worker or performs a paid request.
 
 Doctor is intentionally a **full profile audit**. For the environment required by one Run, use
@@ -314,11 +308,19 @@ Without `--follow`, `build` returns after durable submission. The detached Worke
 `--follow`, the terminal is only an observer; it reports durable phase/Operation-count changes and
 interrupting it leaves the Build running.
 
+Attach or reattach an observer at any time:
+
+```bash
+narratage status <build-id> --watch
+```
+
+A plain `status <build-id>` prints one snapshot. `status --watch` exits at terminal state; use
+`--max-wait-ms` when a script needs a bounded wait.
+
 | Flag | Description |
 |---|---|
 | `--runtime` | One-command Runtime Profile override; normally select it once with `runtime use` |
-| `--package-lock` | Explicit Source package lock override |
-| `--package-root` | Host directory containing the installed packages named by the lock |
+| `--package-root` | Host directory containing the installed packages |
 | `--workspace` | Explicit Source Workspace override |
 | `--follow` | Wait for terminal state as an observer; durable execution remains with the Worker |
 

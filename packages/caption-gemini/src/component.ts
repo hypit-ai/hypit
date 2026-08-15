@@ -4,7 +4,7 @@ import type { CaptionDisplaySequence } from "@narratage/narrative";
 import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 
-import { captionGeminiImplementationDigests, captionGeminiProducers, captionGeminiTypes } from "./manifest.js";
+import { captionGeminiProducers, captionGeminiTypes } from "./manifest.js";
 import { verifyCaptionGeminiProgram } from "./program.js";
 import { compileCaptionGeminiRequest, verifyCaptionGeminiRequest } from "./request.js";
 import type { CaptionGeminiProgram, CaptionGeminiRequest } from "./types.js";
@@ -18,7 +18,6 @@ export const captionGeminiComponent = {
   producers: [
     {
       producer: captionGeminiProducers.compile,
-      implementationDigest: captionGeminiImplementationDigests.compile,
       handler: ({ inputs }) => ({
         outputs: {
           request: {
@@ -35,7 +34,6 @@ export const captionGeminiComponent = {
     },
     {
       producer: captionGeminiProducers.request,
-      implementationDigest: captionGeminiImplementationDigests.request,
       handler: ({ inputs }) => {
         const request = inline<CaptionGeminiRequest>(inputs.request?.value, "CaptionGeminiRequest");
         verifyCaptionGeminiRequest(request);
@@ -46,12 +44,10 @@ export const captionGeminiComponent = {
   validators: [
     {
       type: captionGeminiTypes.program,
-      implementationDigest: captionGeminiImplementationDigests.programValidator,
       handler: ({ value }) => verifyCaptionGeminiProgram(inline(value, "CaptionGeminiProgram")),
     },
     {
       type: captionGeminiTypes.request,
-      implementationDigest: captionGeminiImplementationDigests.requestValidator,
       handler: ({ value }) => verifyCaptionGeminiRequest(inline(value, "CaptionGeminiRequest")),
     },
   ],

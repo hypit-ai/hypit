@@ -21,12 +21,6 @@ import type {
   SpeechSpineVisualSpec,
 } from "./types.js";
 
-export const createSpeechSpineSetImplementationDigest = digestOf("@narratage/speech-spine/create-spine-set@1");
-export const appendSpeechSpineAudioTakeImplementationDigest = digestOf("@narratage/speech-spine/append-spine-audio-take@1");
-export const appendSpeechSpineVisualTakeImplementationDigest = digestOf("@narratage/speech-spine/append-spine-visual-take@1");
-export const compileSpeechSpineAudioImplementationDigest = digestOf("@narratage/speech-spine/compile-spine-audio@1");
-export const assembleSpeechBasisImplementationDigest = digestOf("@narratage/speech-spine/assemble-speech-basis@1");
-
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }

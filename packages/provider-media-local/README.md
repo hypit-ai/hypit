@@ -10,7 +10,7 @@ const media = createLocalMediaProvider({ instance: "media.local", defaultConcurr
 ```
 
 An embedding adds `media` to a complete explicit Runtime assembly and grants `process:media`; the
-declarative form selects this package from `runtimePackageLock`.
+declarative form selects this package through the Runtime Profile.
 
 The Endpoint:
 

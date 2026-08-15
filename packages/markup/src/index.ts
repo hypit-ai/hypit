@@ -1,10 +1,5 @@
 export { MarkupFrontendError } from "./error.js";
-export {
-  decodeMarkup,
-  createMarkupAuthorFrontend,
-  markupAuthorFrontendId,
-  markupFrontendImplementationDigest,
-} from "./frontend.js";
+export { decodeMarkup, createMarkupAuthorFrontend, markupAuthorFrontendId } from "./frontend.js";
 export { MarkupSurfaceRegistry } from "./registry.js";
 export {
   createMarkupSurfaceHostFacet,

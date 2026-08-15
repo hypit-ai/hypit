@@ -195,7 +195,7 @@ function harvestScript(input: RawInput, into: Record<string, unknown>[]): void {
       input.contentStart,
     );
     into.push({
-      format: "svml.script-source-map@1",
+      format: "narratage.script-source-map@1",
       record: id,
       range: { start: input.openingStart, end: end + closing.length },
       segments: parsed.segments.map((segment) => ({ id: segment.id, range: segment.range })),

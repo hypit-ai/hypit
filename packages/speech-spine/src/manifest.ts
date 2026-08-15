@@ -20,16 +20,7 @@ import {
 } from "@narratage/spatial";
 import { svsManifest, svsModuleRef } from "@narratage/svs";
 
-import {
-  appendSpeechSpineAudioTakeImplementationDigest,
-  appendSpeechSpineVisualTakeImplementationDigest,
-  assembleSpeechBasisImplementationDigest,
-  compileSpeechSpineAudioImplementationDigest,
-  createSpeechSpineSetImplementationDigest,
-} from "./program.js";
-
 export const speechSpineModuleRef = { name: "@narratage/speech-spine", version: "1" } as const;
-export const speechSpineSurfaceImplementationDigest = digestOf("@narratage/speech-spine/spine-surface@1");
 export const speechSpineTypes = {
   spineProgram: { module: speechSpineModuleRef, name: "SpeechSpineProgram" },
   spineSet: { module: speechSpineModuleRef, name: "SpeechSpineSet" },
@@ -83,14 +74,11 @@ export const speechSpineMarkupSurfaces = [{
       mediaPipelineTypes.selectionRequest,
       speechTypes.basis, programSpaceTypes.programSpace, speechTypes.audioBasis,
       compositionTypes.visualTrack, compositionTypes.audioTrack],
-    implementation: {
-      digest: speechSpineSurfaceImplementationDigest,
-    },
   }] as const;
 
 
 export const speechSpineManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: speechSpineModuleRef.name,
   version: speechSpineModuleRef.version,
   dependencies: [
@@ -101,14 +89,14 @@ export const speechSpineManifest: ModuleManifest = {
     speechDependency,
     compositionDependency,
     spatialDependency,
-    { module: svsModuleRef, digest: digestOf(svsManifest) },
-    { module: mediaPipelineModuleRef, digest: digestOf(mediaPipelineManifest) },
-    { module: speechBasisModuleRef, digest: digestOf(speechBasisManifest) },
+    { module: svsModuleRef },
+    { module: mediaPipelineModuleRef },
+    { module: speechBasisModuleRef },
   ],
   types: [
-    { name: speechSpineTypes.spineProgram.name, schema: speechSpineProgramSchema },
-    { name: speechSpineTypes.spineSet.name, schema: speechSpineSetSchema },
-    { name: speechSpineTypes.visualSpec.name, schema: speechSpineVisualSpecSchema },
+    { name: speechSpineTypes.spineProgram.name },
+    { name: speechSpineTypes.spineSet.name },
+    { name: speechSpineTypes.visualSpec.name },
   ],
   capabilities: [],
   producers: [
@@ -117,7 +105,6 @@ export const speechSpineManifest: ModuleManifest = {
       inputs: [],
       outputs: [{ name: "set", type: speechSpineTypes.spineSet }],
       needs: [],
-      implementation: { digest: createSpeechSpineSetImplementationDigest },
     },
     {
       name: speechSpineProducers.appendAudioTake.name,
@@ -129,7 +116,6 @@ export const speechSpineManifest: ModuleManifest = {
       ],
       outputs: [{ name: "set", type: speechSpineTypes.spineSet }],
       needs: [],
-      implementation: { digest: appendSpeechSpineAudioTakeImplementationDigest },
     },
     {
       name: speechSpineProducers.appendVisualTake.name,
@@ -144,7 +130,6 @@ export const speechSpineManifest: ModuleManifest = {
       ],
       outputs: [{ name: "set", type: speechSpineTypes.spineSet }],
       needs: [],
-      implementation: { digest: appendSpeechSpineVisualTakeImplementationDigest },
     },
     {
       name: speechSpineProducers.compileAudio.name,
@@ -154,7 +139,6 @@ export const speechSpineManifest: ModuleManifest = {
       ],
       outputs: [{ name: "plan", type: mediaPipelineTypes.audioProgramPlan }],
       needs: [],
-      implementation: { digest: compileSpeechSpineAudioImplementationDigest },
     },
     {
       name: speechSpineProducers.assembleBasis.name,
@@ -165,9 +149,6 @@ export const speechSpineManifest: ModuleManifest = {
       ],
       outputs: [{ name: "basis", type: speechTypes.basis }],
       needs: [],
-      implementation: { digest: assembleSpeechBasisImplementationDigest },
     },
   ],
 };
-
-export const speechSpineManifestDigest = digestOf(speechSpineManifest);

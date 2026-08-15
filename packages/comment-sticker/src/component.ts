@@ -8,19 +8,7 @@ import type { CanvasSpace, SpatialFrame } from "@narratage/spatial";
 import type { Text } from "@narratage/text";
 
 import { commentStickerProducers, commentStickerTypes } from "./manifest.js";
-import {
-  appendMomentCommentSticker,
-  appendProgramCommentSticker,
-  appendSelectionCommentSticker,
-  assertCommentStickerProgram,
-  commentStickerImplementationDigests,
-  commentStickerValidatorDigests,
-  createCommentStickerSet,
-  createCommentStickerContent,
-  setCommentStickerContentText,
-  finalizeCommentSticker,
-  renderCommentSticker,
-} from "./program.js";
+import { appendMomentCommentSticker, appendProgramCommentSticker, appendSelectionCommentSticker, assertCommentStickerProgram, createCommentStickerSet, createCommentStickerContent, setCommentStickerContentText, finalizeCommentSticker, renderCommentSticker } from "./program.js";
 import type {
   CommentStickerHeader,
   CommentStickerContent,
@@ -53,18 +41,16 @@ export const commentStickerComponent = {
   producers: [
     {
       producer: commentStickerProducers.createContent,
-      implementationDigest: commentStickerImplementationDigests.createContent,
       handler: ({ inputs }) => ({ outputs: { content: output(createCommentStickerContent(
         inline<Text>(inputs.comment?.value, "Text"),
       )) }, needs: {} }),
     },
     ...([
-      [commentStickerProducers.setContentAuthor, commentStickerImplementationDigests.setContentAuthor, "author"],
-      [commentStickerProducers.setContentHeader, commentStickerImplementationDigests.setContentHeader, "header"],
-      [commentStickerProducers.setContentMeta, commentStickerImplementationDigests.setContentMeta, "meta"],
-    ] as const).map(([producer, implementationDigest, field]) => ({
+      [commentStickerProducers.setContentAuthor, "author"],
+      [commentStickerProducers.setContentHeader, "header"],
+      [commentStickerProducers.setContentMeta, "meta"],
+    ] as const).map(([producer, field]) => ({
       producer,
-      implementationDigest,
       handler: ({ inputs }: ProducerHandlerContext) => ({ outputs: { content: output(setCommentStickerContentText(
         inline<CommentStickerContent>(inputs.content?.value, "CommentStickerContent"),
         field,
@@ -73,15 +59,13 @@ export const commentStickerComponent = {
     })),
     {
       producer: commentStickerProducers.createSet,
-      implementationDigest: commentStickerImplementationDigests.createSet,
       handler: () => ({ outputs: { set: output(createCommentStickerSet()) }, needs: {} }),
     },
     ...([
-      [commentStickerProducers.appendProgram, commentStickerImplementationDigests.appendProgram, false],
-      [commentStickerProducers.appendProgramAvatar, commentStickerImplementationDigests.appendProgramAvatar, true],
-    ] as const).map(([producer, implementationDigest, avatar]) => ({
+      [commentStickerProducers.appendProgram, false],
+      [commentStickerProducers.appendProgramAvatar, true],
+    ] as const).map(([producer, avatar]) => ({
       producer,
-      implementationDigest,
       handler: ({ inputs }: ProducerHandlerContext) => {
         const values = common(inputs);
         return { outputs: { set: output(appendProgramCommentSticker(
@@ -91,11 +75,10 @@ export const commentStickerComponent = {
       },
     })),
     ...([
-      [commentStickerProducers.appendSelection, commentStickerImplementationDigests.appendSelection, false],
-      [commentStickerProducers.appendSelectionAvatar, commentStickerImplementationDigests.appendSelectionAvatar, true],
-    ] as const).map(([producer, implementationDigest, avatar]) => ({
+      [commentStickerProducers.appendSelection, false],
+      [commentStickerProducers.appendSelectionAvatar, true],
+    ] as const).map(([producer, avatar]) => ({
       producer,
-      implementationDigest,
       handler: ({ inputs }: ProducerHandlerContext) => {
         const values = common(inputs);
         return { outputs: { set: output(appendSelectionCommentSticker(
@@ -107,11 +90,10 @@ export const commentStickerComponent = {
       },
     })),
     ...([
-      [commentStickerProducers.appendMoment, commentStickerImplementationDigests.appendMoment, false],
-      [commentStickerProducers.appendMomentAvatar, commentStickerImplementationDigests.appendMomentAvatar, true],
-    ] as const).map(([producer, implementationDigest, avatar]) => ({
+      [commentStickerProducers.appendMoment, false],
+      [commentStickerProducers.appendMomentAvatar, true],
+    ] as const).map(([producer, avatar]) => ({
       producer,
-      implementationDigest,
       handler: ({ inputs }: ProducerHandlerContext) => {
         const values = common(inputs);
         return { outputs: { set: output(appendMomentCommentSticker(
@@ -124,7 +106,6 @@ export const commentStickerComponent = {
     })),
     {
       producer: commentStickerProducers.finalize,
-      implementationDigest: commentStickerImplementationDigests.finalize,
       handler: ({ inputs }) => ({ outputs: { program: output(finalizeCommentSticker(
         inline<CommentStickerSet>(inputs.set?.value, "CommentStickerSet"),
         inline<CommentStickerHeader>(inputs.header?.value, "CommentStickerHeader"),
@@ -132,7 +113,6 @@ export const commentStickerComponent = {
     },
     {
       producer: commentStickerProducers.render,
-      implementationDigest: commentStickerImplementationDigests.render,
       handler: ({ inputs }) => ({ outputs: { track: output(renderCommentSticker(
         inline<CanvasSpace>(inputs.canvas?.value, "CanvasSpace"),
         inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
@@ -142,7 +122,6 @@ export const commentStickerComponent = {
   ],
   validators: [{
     type: commentStickerTypes.program,
-    implementationDigest: commentStickerValidatorDigests.program,
     handler: ({ value }) => assertCommentStickerProgram(inline<CommentStickerProgram>(value, "CommentStickerProgram")),
   }],
 } satisfies ComponentPackage;

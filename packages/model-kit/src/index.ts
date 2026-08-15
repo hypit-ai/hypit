@@ -10,7 +10,6 @@ import {
   bindGenerationMedia,
   bindGenerationText,
   finalizeGenerationRequestDraft,
-  generationManifestDigest,
   generationModuleRef,
   generationProducers,
   generationTypes,
@@ -31,12 +30,10 @@ import { textDependency, textTypes } from "@narratage/text";
 import type { Text } from "@narratage/text";
 import {
   canonicalize,
-  digestOf,
 } from "@narratage/protocol";
 import type {
   CanonicalValue,
   CapabilityRef,
-  Digest,
   ModuleManifest,
   ModuleRef,
   ProducerRef,
@@ -62,12 +59,8 @@ export type ExactModelEndpoint = {
   readonly capability: CapabilityRef;
   readonly producer: ProducerRef;
   readonly returns: TypeRef;
-  readonly implementationDigest: Digest;
-  readonly validatorDigest: Digest;
   readonly draftType: TypeRef;
-  readonly draftValidatorDigest: Digest;
   readonly finalizeProducer: ProducerRef;
-  readonly finalizeImplementationDigest: Digest;
   readonly mediaBindings: Readonly<Record<string, ExactModelMediaBindingEndpoint>>;
   readonly textBindings: Readonly<Record<string, ExactModelTextBindingEndpoint>>;
   readonly ports: GenerationPortTable;
@@ -78,13 +71,11 @@ export type ExactModelMediaBindingEndpoint = {
   readonly port: string;
   readonly type: TypeRef;
   readonly producer: ProducerRef;
-  readonly implementationDigest: Digest;
 };
 
 export type ExactModelTextBindingEndpoint = {
   readonly port: string;
   readonly producer: ProducerRef;
-  readonly implementationDigest: Digest;
 };
 
 export type ExactModelMediaInput = {
@@ -104,7 +95,6 @@ export type ExactModelTextInput = {
 export type ExactModelModule<Key extends string = string> = {
   readonly module: ModuleRef;
   readonly manifest: ModuleManifest;
-  readonly manifestDigest: Digest;
   /** Keyed by the exact endpoint keys the module declared, so a stale key fails to compile. */
   readonly endpoints: Readonly<Record<Key, ExactModelEndpoint>>;
   readonly component: ComponentPackage & {
@@ -130,25 +120,19 @@ function endpointRef(module: ModuleRef, spec: ExactModelEndpointSpec) {
   const returns = spec.ports.result === "audio"
     ? generationTypes.audioSet
     : spec.ports.result === "image" ? generationTypes.imageSet : generationTypes.videoSet;
-  const implementationDigest = digestOf(`${module.name}/${spec.producerName}@1`);
-  const validatorDigest = digestOf(`${module.name}/validate-${spec.requestTypeName}@1`);
-  const draftValidatorDigest = digestOf(`${module.name}/validate-${spec.requestTypeName}-draft@1`);
   const finalizeProducer = { module, name: `finalize-${spec.producerName}` };
-  const finalizeImplementationDigest = digestOf(`${module.name}/${finalizeProducer.name}@1`);
   const mediaBindings = Object.fromEntries(spec.ports.ports
     .filter((port): port is GenerationMediaPort => port.value.kind === "media")
     .map((port) => [port.name, {
       port: port.name,
       type: { module, name: `${spec.requestTypeName}${pascal(port.name)}Binding` },
       producer: { module, name: `bind-${spec.producerName}-${port.name}` },
-      implementationDigest: digestOf(`${module.name}/bind-${spec.producerName}-${port.name}@1`),
     } satisfies ExactModelMediaBindingEndpoint]));
   const textBindings = Object.fromEntries(spec.ports.ports
     .filter((port) => port.value.kind === "text")
     .map((port) => [port.name, {
       port: port.name,
       producer: { module, name: `bind-${spec.producerName}-${port.name}-text` },
-      implementationDigest: digestOf(`${module.name}/bind-${spec.producerName}-${port.name}-text@1`),
     } satisfies ExactModelTextBindingEndpoint]));
   return {
     requestType,
@@ -156,11 +140,7 @@ function endpointRef(module: ModuleRef, spec: ExactModelEndpointSpec) {
     capability,
     producer,
     returns,
-    implementationDigest,
-    validatorDigest,
-    draftValidatorDigest,
     finalizeProducer,
-    finalizeImplementationDigest,
     mediaBindings,
     textBindings,
   };
@@ -203,38 +183,26 @@ export function defineExactModelModule<const Key extends string>(
   const endpointData = options.endpoints.map((spec) => ({ spec, ...endpointRef(options.module, spec) }));
 
   const manifest: ModuleManifest = {
-    format: "svml.module@1",
+    format: "narratage.module@1",
     name: options.module.name,
     version: options.module.version,
     dependencies: [
-      { module: generationModuleRef, digest: generationManifestDigest },
+      { module: generationModuleRef },
       artifactDependency,
       textDependency,
     ],
     types: endpointData.flatMap((item) => [
       {
         name: item.requestType.name,
-        schema: requestSchemaFromPorts(item.spec.ports),
-        validator: {
-          implementation: {
-            digest: item.validatorDigest,
-          },
-        },
       },
       {
         name: item.draftType.name,
-        schema: requestDraftSchemaFromPorts(item.spec.ports),
-        validator: {
-          implementation: {
-            digest: item.draftValidatorDigest,
-          },
-        },
       },
       ...Object.values(item.mediaBindings).map((binding) => {
         const port = item.spec.ports.ports.find((candidate): candidate is GenerationMediaPort =>
           candidate.name === binding.port && candidate.value.kind === "media");
         assert(port !== undefined, `${item.spec.key} media binding ${binding.port} has no port`);
-        return { name: binding.type.name, schema: mediaBindingSchemaFromPort(port) };
+        return { name: binding.type.name };
       }),
     ]),
     capabilities: endpointData.map((item) => ({
@@ -251,9 +219,6 @@ export function defineExactModelModule<const Key extends string>(
           capability: item.capability,
           returns: item.returns,
         }],
-        implementation: {
-          digest: item.implementationDigest,
-        },
       },
       ...Object.values(item.mediaBindings).map((binding) => ({
         name: binding.producer.name,
@@ -264,9 +229,6 @@ export function defineExactModelModule<const Key extends string>(
         ],
         outputs: [{ name: "draft", type: item.draftType }],
         needs: [],
-        implementation: {
-          digest: binding.implementationDigest,
-        },
       })),
       ...Object.values(item.textBindings).map((binding) => ({
         name: binding.producer.name,
@@ -276,18 +238,12 @@ export function defineExactModelModule<const Key extends string>(
         ],
         outputs: [{ name: "draft", type: item.draftType }],
         needs: [],
-        implementation: {
-          digest: binding.implementationDigest,
-        },
       })),
       {
         name: item.finalizeProducer.name,
         inputs: [{ name: "draft", type: item.draftType }],
         outputs: [{ name: "request", type: item.requestType }],
         needs: [],
-        implementation: {
-          digest: item.finalizeImplementationDigest,
-        },
       },
     ]),
   };
@@ -313,12 +269,8 @@ export function defineExactModelModule<const Key extends string>(
       capability: item.capability,
       producer: item.producer,
       returns: item.returns,
-      implementationDigest: item.implementationDigest,
-      validatorDigest: item.validatorDigest,
       draftType: item.draftType,
-      draftValidatorDigest: item.draftValidatorDigest,
       finalizeProducer: item.finalizeProducer,
-      finalizeImplementationDigest: item.finalizeImplementationDigest,
       mediaBindings: item.mediaBindings,
       textBindings: item.textBindings,
       ports: item.spec.ports,
@@ -329,18 +281,15 @@ export function defineExactModelModule<const Key extends string>(
   return {
     module: { ...options.module },
     manifest,
-    manifestDigest: digestOf(manifest),
     endpoints: endpoints as Readonly<Record<Key, ExactModelEndpoint>>,
     component: {
       validators: endpointData.flatMap((item) => [{
         type: item.requestType,
-        implementationDigest: item.validatorDigest,
         handler({ value }) {
           verifyRequestAgainstPorts(item.spec.ports, inlineRequest(value, item.spec.key));
         },
       }, {
         type: item.draftType,
-        implementationDigest: item.draftValidatorDigest,
         handler({ value }) {
           verifyRequestDraftAgainstPorts(item.spec.ports, inlineRequest(value, `${item.spec.key} draft`));
         },
@@ -348,7 +297,6 @@ export function defineExactModelModule<const Key extends string>(
       producers: endpointData.flatMap((item) => [
         {
           producer: item.producer,
-          implementationDigest: item.implementationDigest,
           handler: ({ inputs }: ProducerHandlerContext) => {
             const requestRecord = inputs.request;
             assert(requestRecord !== undefined, `${item.spec.key} request input is missing`);
@@ -359,7 +307,6 @@ export function defineExactModelModule<const Key extends string>(
         },
         ...Object.values(item.mediaBindings).map((binding) => ({
           producer: binding.producer,
-          implementationDigest: binding.implementationDigest,
           handler: ({ inputs }: ProducerHandlerContext) => {
             const draft = inlineValue<GenerationRequestDraft>(inputs.draft!.value, `${item.spec.key} draft`);
             const value = inlineValue<GenerationMediaBinding>(inputs.binding!.value, `${binding.port} binding`);
@@ -382,7 +329,6 @@ export function defineExactModelModule<const Key extends string>(
         })),
         ...Object.values(item.textBindings).map((binding) => ({
           producer: binding.producer,
-          implementationDigest: binding.implementationDigest,
           handler: ({ inputs }: ProducerHandlerContext) => {
             const draft = inlineValue<GenerationRequestDraft>(inputs.draft!.value, `${item.spec.key} draft`);
             const text = inlineValue<Text>(inputs.text!.value, `${binding.port} Text`);
@@ -399,7 +345,6 @@ export function defineExactModelModule<const Key extends string>(
         })),
         {
           producer: item.finalizeProducer,
-          implementationDigest: item.finalizeImplementationDigest,
           handler: ({ inputs }) => ({
             outputs: {
               request: {

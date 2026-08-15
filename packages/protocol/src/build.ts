@@ -61,24 +61,12 @@ export type Need = {
   readonly requestDigest: Digest;
 };
 
-/**
- * Host-attested identity of the configured Runtime implementation that fulfilled a Need.
- *
- * The Endpoint never supplies this value itself. A trusted Driver derives it from the locked
- * Endpoint registration. Whole-Runtime identity stays in the execution layer rather than
- * contaminating one independent Need Receipt with unrelated services and Providers.
- */
-export type FulfillerImplementation = {
-  readonly digest: Digest;
-  readonly configurationDigest: Digest;
-};
-
+/** Exact request, selected Endpoint and returned value for one fulfilled Need. */
 export type Receipt = {
   readonly id: ReceiptId;
   readonly need: NeedId;
   readonly requestDigest: Digest;
   readonly fulfiller: string;
-  readonly implementation?: FulfillerImplementation;
   readonly output: RecordId;
   readonly outputDigest: Digest;
   readonly event: {
@@ -101,7 +89,6 @@ export type Derivation = {
   readonly id: DerivationId;
   readonly step: StepId;
   readonly producer: ProducerRef;
-  readonly implementationDigest: Digest;
   readonly inputs: readonly RecordDigestBinding[];
   readonly outputs: readonly RecordDigestBinding[];
   readonly needs: readonly NeedDigestBinding[];
@@ -176,7 +163,7 @@ export type Candidate = {
 };
 
 export type CompiledGraph = {
-  readonly format: "svml.graph@1";
+  readonly format: "narratage.graph@1";
   readonly id: Digest;
   readonly program: Digest;
   readonly outputs: readonly LogicalOutput[];
@@ -194,10 +181,8 @@ export type Satisfaction = {
 };
 
 export type BuildRequest = {
-  readonly format: "svml.build-request@1";
+  readonly format: "narratage.build-request@1";
   readonly graph: Digest;
-  /** Exact trusted implementation-package closure selected outside author source. */
-  readonly implementationClosure?: Digest;
   readonly targets: readonly BuildTarget[];
   readonly digest: Digest;
 };
@@ -222,7 +207,7 @@ export type BuildGoal = {
 };
 
 export type BuildPlan = {
-  readonly format: "svml.plan@1";
+  readonly format: "narratage.plan@1";
   readonly id: Digest;
   readonly graph: Digest;
   readonly request: Digest;
@@ -274,7 +259,6 @@ export type NeedFulfilledEvent = {
   readonly value: StoredValue;
   readonly requestDigest: Digest;
   readonly fulfiller: string;
-  readonly implementation?: FulfillerImplementation;
 };
 
 export type CommandFailedEvent = {
@@ -299,7 +283,7 @@ export type BuildDiagnostic = {
 };
 
 export type BuildState = {
-  readonly format: "svml.build@1";
+  readonly format: "narratage.build@1";
   readonly id: Digest;
   readonly program: LinkedProgram;
   readonly graph: CompiledGraph;

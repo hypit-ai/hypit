@@ -7,11 +7,10 @@ description: 声明 Build 目标、复用结果以及配置运行时环境。
 
 Author Source 定义视频本身。Run Source 从中挑选要产出哪些公开输出，以及是否用明确的 Candidate 来满足它们。Runtime Profile 则选择执行这份计划的机器、Store 与 Provider endpoint。
 
-先为项目选择一次 Runtime；之后只在包选择变化时同步包信任：
+先为项目选择一次 Runtime：
 
 ```bash
-narratage runtime use svml.runtime.json
-narratage packages sync build.svrun
+narratage runtime use narratage.runtime.json
 ```
 
 日常制作只需要这条短路径：
@@ -22,14 +21,14 @@ narratage build build.svrun --follow
 narratage get <build-id> --name final.video --to output/final.mp4
 ```
 
-仓库内的源码启动器是 `/path/to/narratage/narratage`；本页写作 `narratage` 的命令，指的是这个启动器，或将来安装好的 CLI。
+快速开始只需链接一次仓库命令。此后本页所有命令都直接写作 `narratage`，在仓库外的视频项目中也一样。
 
 只有 `build` 会真正提交工作。`plan` 是普通预览；`check` 用于编辑源码，`doctor` 用于配置和排查部署。它们都安全，但不是每次 Build 前必须重复的仪式。
 
 ```text
 main.svml          作者意图
 build.svrun        本次 Run 的 Target 与 Candidate 选择
-svml.runtime.json  执行环境
+narratage.runtime.json  执行环境
 ```
 
 Run Source 与 Runtime Profile 不会悄悄改写视频。创作性的模型选择仍然留在 Author Source，或它显式导入的包里。
@@ -167,17 +166,17 @@ Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本�
 
 ## Runtime Profile
 
-Runtime Profile 选择 Build 在哪里执行。它选择一个锁定的 Runtime 包；该包拥有自己的
-Component、Binding、Endpoint、并发限制、生命周期和私有 `dataRoot`。Profile 不定义
-Source Workspace，也不包含 Source package lock。
+Runtime Profile 选择 Build 在哪里执行。它通过逻辑 `use` 名称选择包、创建具名
+Infrastructure 实例，再把实例暴露的 part 分配给 Runtime role，并配置 Provider endpoint 与
+容量。Profile 不定义 Source Workspace 或 Author 包选择。
 
 ```bash
-narratage runtime use svml.runtime.json
+narratage runtime use narratage.runtime.json
 narratage paths
 ```
 
-`runtime use` 只写入 `.narratage/runtime`，不会启动 Worker、创建 Runtime 数据或修改任何
-package lock。Profile 结构和完整边界见 [Runtime](../guide/runtime.md)。
+`runtime use` 只写入 `.narratage/runtime`，不会启动 Worker、创建 Runtime 数据或修改已安装
+包。Profile 结构和完整边界见 [Runtime](../guide/runtime.md)。
 ## 配置所选凭据
 
 `check` 与 `plan` 不会请求在线 Provider，因此不需要 API key。在运行 `doctor` 或付费/外部
@@ -237,13 +236,12 @@ Worker。
 ```bash
 cd /work/my-film
 
-/opt/narratage/narratage runtime use svml.runtime.json
-/opt/narratage/narratage packages sync build.svrun
-/opt/narratage/narratage plan build.svrun
+narratage runtime use narratage.runtime.json
+narratage plan build.svrun
 ```
 
-Workspace 依次取显式 `--workspace`、所选 `.narratage/runtime` 所在项目、最近的 Source lock、
-入口 Source 目录。Runtime Profile 无权改变这条源码边界。`--package-root` 只定位已经安装的
+Workspace 依次取显式 `--workspace`、所选 `.narratage/runtime` 所在项目和入口 Source 目录。
+Runtime Profile 无权改变这条源码边界。`--package-root` 只定位已经安装的
 `node_modules`；`--asset-root` 只额外授权读取素材字节。
 
 外部项目通常应提交如下 `.gitignore`：
@@ -253,8 +251,7 @@ Workspace 依次取显式 `--workspace`、所选 `.narratage/runtime` 所在项�
 output/
 ```
 
-两份 package lock 属于项目源码，应正常提交。`status`、`builds` 等只读归档命令不会在状态
-尚不存在时初始化 Runtime 数据库。
+`status`、`builds` 等只读归档命令不会在状态尚不存在时初始化 Runtime 数据库。
 
 共享只读素材库不必复制进项目，也不必放宽 Source 边界：
 
@@ -265,23 +262,18 @@ narratage plan /work/my-film/build.svrun --asset-root /work/shared-media
 `--asset-root` 可重复使用，只授权读取素材字节，不允许从那里导入 `.svml/.svs` 源码。该 Host
 选项不进入作者或 Build 身份；真正进入图的仍是素材内容摘要。
 
-Runtime Profile 只选择 Runtime 包、Runtime lock 与该 Runtime 的封闭配置。完整结构只在
+Runtime Profile 只选择 Runtime 包与该 Runtime 的封闭配置。完整结构只在
 [Runtime](../guide/runtime.md) 维护，不在 Quickstart 复制第二份。
 
-### 1. 同步已安装包
-
-安装或更新包后，用一条显式命令同步两份项目包库存：
+### 1. 选择 Runtime
 
 ```bash
 cd examples/talking-head-aroll
-narratage runtime use svml.runtime.json
-narratage packages sync build.svrun
+narratage runtime use narratage.runtime.json
 ```
 
-当前 Author/Run Source 选择作者包，Runtime Profile 选择环境包。`packages sync` 只把本次
-需要的包加入或刷新到库存，不会删除其他 Run 所需的包；明确删除请使用
-`lock-packages --remove`。编译只激活当前 Source 的精确子集。该命令不扫描目录、不启动
-Provider，也不生成媒体。
+Author/Run Source 通过 import 选择作者包，Runtime Profile 通过 `use` 选择环境包；安装、版本
+与完整性由 npm 或 pnpm 负责，不再需要同步另一份包库存。
 
 ### 2. 诊断环境
 
@@ -289,7 +281,7 @@ Provider，也不生成媒体。
 narratage doctor
 ```
 
-Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；它不启动 Worker，也不发付费请求。
+Doctor 校验全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；它不启动 Worker，也不发付费请求。
 
 `doctor` 有意检查完整 Runtime Profile。若只想检查某次 Run 真正需要的环境，请使用带
 所选 Runtime 下的 `plan`。只要计划本身有效，命令就成功；凭据或服务未就绪会写在
@@ -319,11 +311,18 @@ narratage build build.svrun --follow
 
 不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是观察者，并会报告 phase / Operation 数量变化；Ctrl-C 不会取消任务。
 
+任何时候都可以重新接入观察：
+
+```bash
+narratage status <build-id> --watch
+```
+
+普通的 `status <build-id>` 只打印一次快照。`status --watch` 会在 Build 进入终态时退出；脚本需要限制等待时间时可以加 `--max-wait-ms`。
+
 | 标志 | 说明 |
 |---|---|
 | `--runtime` | 单次命令的 Runtime Profile 覆盖；通常用 `runtime use` 选择一次即可 |
-| `--package-lock` | 包锁定文件的路径 |
-| `--package-root` | 存放 lock 所列已安装包的 Host 目录 |
+| `--package-root` | 存放已安装包的 Host 目录 |
 | `--workspace` | 显式 Source Workspace 覆盖项 |
 | `--follow` | 将 Build 进度流式输出到终端 |
 

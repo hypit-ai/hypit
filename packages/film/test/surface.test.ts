@@ -40,10 +40,9 @@ const fixtureSurfaceDigest = digestOf("example.film-fixture/inputs-surface@1");
 const fixtureSurface = {
   name: "inputs", tag: "Inputs", mode: "structured",
   outputs: [programSpaceTypes.programSpace, compositionTypes.visualTrack, compositionTypes.audioTrack],
-  implementation: { digest: fixtureSurfaceDigest },
 } as const;
 const fixtureManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
   dependencies: [
@@ -60,7 +59,7 @@ const space = sealProgramSpace({
   frameRate: { numerator: 30, denominator: 1 },
 });
 const visual = sealVisualTrack({
-  visualIr: "svml.visual-ir@1",
+  visualIr: "narratage.visual-ir@1",
   id: "visual",
   presents: [],
 });

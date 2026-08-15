@@ -4,7 +4,7 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
 
 import { createLocalWhisperXProvider } from "./provider.js";
 import { localWhisperXProgram } from "./program.js";
@@ -12,7 +12,7 @@ import { localWhisperXProgram } from "./program.js";
 const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-whisperx-local",
   activate(context) {
-    if (context.authority === undefined) throw new Error("WhisperX Provider Authority is required");
+    if (context.pool === undefined) throw new Error("WhisperX Provider Pool is required");
     const config = runtimeConfigObject(context.config, "local WhisperX");
     runtimeConfigExact(config, [
       "baseUrl", "expectedModel", "expectedDevice", "expectedCompute", "expectedBatchSize",
@@ -52,7 +52,7 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createLocalWhisperXProvider({
         instance: context.instance,
-        authority: context.authority,
+        pool: context.pool,
         ...(baseUrl === undefined ? {} : { baseUrl }),
         ...(expectedModel === undefined ? {} : { expectedModel }),
         ...(expectedDevice === undefined ? {} : { expectedDevice }),
@@ -70,9 +70,9 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [localWhisperXRuntimeAdapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

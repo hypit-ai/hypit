@@ -27,26 +27,20 @@ the source and Run Graph without making a paid Provider request. `narratage buil
 selected Runtime and rejects missing capability coverage before scheduling external work; neither
 command promises that remote credentials and service health are valid.
 
-Run the complete graph through the explicit Run Graph and declarative local Runtime Profile:
-
-The checked-in `svml.packages.lock` selects each author, Run and deterministic compute package
-independently; there is no implicit video bundle. After changing a selected package implementation,
-refresh its already explicit selection with
-`node --run narratage -- lock-packages examples/talking-film-live/svml.packages.lock --refresh`.
-The independent `svml.runtime-packages.lock` selects Local execution, SQLite state, filesystem
-Artifacts, environment credentials, KIE, local media, local WhisperX, Vertex and local HyperFrames
-adapters; adding another implementation does not change the CLI.
+Run the complete graph through the explicit Run Graph and declarative local Runtime Profile. Source
+imports select author and compute packages. The Profile selects Local execution, SQLite state,
+filesystem Artifacts, credentials, KIE, media, WhisperX, Vertex and HyperFrames packages.
 
 ```bash
 cd examples/talking-film-live
-../../narratage runtime use svml.runtime.json
-../../narratage runtime up
+narratage runtime use narratage.runtime.json
+narratage runtime up
 
-../../narratage build build.svrun --follow
+narratage build build.svrun --follow
 
-../../narratage inspect <build-id>
+narratage inspect <build-id>
 
-../../narratage get <build-id> \
+narratage get <build-id> \
   --name final.video \
   --to output/final.mp4
 ```
@@ -54,11 +48,11 @@ cd examples/talking-film-live
 `build` prints the fresh automatic Build id assigned to this durable submission. `--follow` only
 observes the detached Worker; closing this terminal does not cancel the Build.
 
-`build.svrun` owns the Targets and any explicit Candidate selections. `svml.runtime.json` owns Provider instances,
+`build.svrun` owns the Targets and any explicit Candidate selections. `narratage.runtime.json` owns Provider instances,
 credentials and concurrency. The Build archives all accepted intermediate Records and referenced
 Artifacts even when no destination path is requested. `get` only makes an optional copy of the
 already archived named target. The CLI accepts the declarative JSON Runtime Profile shown here;
-applications that embed Narratage assemble Runtime roles directly through `@narratage/local`.
+applications that embed Narratage assemble Runtime roles directly through `@narratage/runtime-local`.
 
 To reuse the paid shot outputs from a verified earlier Build, add two zero-input Build Record
 Candidates and their explicit Satisfaction edges to another `.svrun`:

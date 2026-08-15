@@ -21,13 +21,10 @@ export const localOpenCvImageProviderModuleRef = {
   name: "@narratage/provider-image-opencv-local",
   version: "1",
 } as const;
-export const localOpenCvImageProviderImplementationDigest = digestOf(
-  "@narratage/provider-image-opencv-local/raster-opencv@1",
-);
 
 export type CreateLocalOpenCvImageProviderOptions = {
   readonly instance?: string;
-  readonly authority?: string;
+  readonly pool?: string;
   readonly pythonExecutable?: string;
   readonly processTimeoutMs?: number;
   readonly maxInputBytes?: number;
@@ -100,11 +97,7 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
     module: localOpenCvImageProviderModuleRef,
     facet: "raster",
     instance: config.instance ?? "image.opencv.local",
-    authority: config.authority ?? config.instance ?? "image.opencv.local",
-    implementation: {
-      digest: localOpenCvImageProviderImplementationDigest,
-    },
-    configuration: canonicalize({ pythonExecutable, processTimeoutMs, maxInputBytes, maxOutputBytes }),
+    pool: config.pool ?? config.instance ?? "image.opencv.local",
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,
@@ -115,7 +108,7 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
         const sources = [...new Map(rasterSources(need).map((source) => [source.digest, source])).values()];
         const totalInputBytes = sources.reduce((sum, source) => sum + source.size, 0);
         assert(totalInputBytes <= maxInputBytes, "Raster inputs exceed their configured byte limit");
-        const work = await mkdtemp(join(tmpdir(), "svml-raster-opencv-"));
+        const work = await mkdtemp(join(tmpdir(), "narratage-raster-opencv-"));
         try {
           const paths = new Map<string, string>();
           for (const [index, source] of sources.entries()) {

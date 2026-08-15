@@ -12,7 +12,7 @@ function usage(message?: string): never {
   if (message !== undefined) process.stderr.write(`${message}\n\n`);
   process.stderr.write(`Usage:
   pnpm svml:playground -- --source <main.svml> [--run <build.svrun>]
-    [--runtime <svml.runtime.json>] [--port <number>]
+    [--runtime <narratage.runtime.json>] [--port <number>]
 
 The Playground reads the Source. It never writes to it, and it never runs a
 Provider: with no build present it estimates timings from the Script text.

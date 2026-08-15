@@ -5,12 +5,7 @@ import {
   verifyGeneratedImageSet,
   verifyGeneratedVideoSet,
 } from "./identity.js";
-import {
-  generationProducerDigests,
-  generationProducers,
-  generationTypes,
-  generationValidatorDigests,
-} from "./manifest.js";
+import { generationProducers, generationTypes } from "./manifest.js";
 
 function inline(value: { readonly kind: string; readonly value?: unknown }, subject: string): unknown {
   if (value.kind !== "inline") throw new Error(`${subject} must be inline`);
@@ -39,7 +34,6 @@ export const generationComponent = {
   producers: [
     {
       producer: generationProducers.primaryAudio,
-      implementationDigest: generationProducerDigests.primaryAudio,
       handler: ({ inputs }) => ({
         outputs: { audio: primary(inputs.set!.value, "audio") },
         needs: {},
@@ -47,7 +41,6 @@ export const generationComponent = {
     },
     {
       producer: generationProducers.primaryImage,
-      implementationDigest: generationProducerDigests.primaryImage,
       handler: ({ inputs }) => ({
         outputs: { image: primary(inputs.set!.value, "image") },
         needs: {},
@@ -55,7 +48,6 @@ export const generationComponent = {
     },
     {
       producer: generationProducers.primaryVideo,
-      implementationDigest: generationProducerDigests.primaryVideo,
       handler: ({ inputs }) => ({
         outputs: { video: primary(inputs.set!.value, "video") },
         needs: {},
@@ -65,21 +57,18 @@ export const generationComponent = {
   validators: [
     {
       type: generationTypes.audioSet,
-      implementationDigest: generationValidatorDigests.audioSet,
       handler: ({ value }) => {
         verifyGeneratedAudioSet(inline(value, "GeneratedAudioSet"));
       },
     },
     {
       type: generationTypes.imageSet,
-      implementationDigest: generationValidatorDigests.imageSet,
       handler: ({ value }) => {
         verifyGeneratedImageSet(inline(value, "GeneratedImageSet"));
       },
     },
     {
       type: generationTypes.videoSet,
-      implementationDigest: generationValidatorDigests.videoSet,
       handler: ({ value }) => {
         verifyGeneratedVideoSet(inline(value, "GeneratedVideoSet"));
       },

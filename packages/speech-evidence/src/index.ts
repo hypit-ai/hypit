@@ -86,18 +86,16 @@ export const speechEvidenceTypes = {
   alignedTranscript: { module: speechEvidenceModuleRef, name: "AlignedTranscriptEvidence" },
 } satisfies Record<string, TypeRef>;
 export const speechEvidenceManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: speechEvidenceModuleRef.name,
   version: speechEvidenceModuleRef.version,
   dependencies: [],
-  types: [{ name: speechEvidenceTypes.alignedTranscript.name, schema: alignedTranscriptEvidenceSchema }],
+  types: [{ name: speechEvidenceTypes.alignedTranscript.name }],
   capabilities: [],
   producers: [],
 };
-export const speechEvidenceManifestDigest = digestOf(speechEvidenceManifest);
 export const speechEvidenceDependency = {
   module: speechEvidenceModuleRef,
-  digest: speechEvidenceManifestDigest,
 } as const;
 
 export function sealAlignedTranscriptEvidence(value: AlignedTranscriptEvidence): AlignedTranscriptEvidence {

@@ -9,7 +9,7 @@ export type * from "./types.js";
 
 export const temporalModuleRef = { name: "@narratage/temporal", version: "1" } as const;
 export const temporalManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: temporalModuleRef.name,
   version: temporalModuleRef.version,
   dependencies: [],
@@ -17,5 +17,4 @@ export const temporalManifest: ModuleManifest = {
   capabilities: [],
   producers: [],
 };
-export const temporalManifestDigest = digestOf(temporalManifest);
-export const temporalDependency = { module: temporalModuleRef, digest: temporalManifestDigest } as const;
+export const temporalDependency = { module: temporalModuleRef } as const;

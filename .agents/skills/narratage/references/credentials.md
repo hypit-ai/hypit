@@ -33,7 +33,7 @@ $env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\narra
 Keep keys outside Author/Run/Runtime source and committed files. Verify presence without printing
 values with, for example,
 `node .agents/skills/narratage/scripts/check-credentials.mjs KIE_API_KEY MIMO_API_KEY`, then run
-`node --run narratage -- doctor <profile>`.
+`narratage doctor <profile>`.
 
 An Endpoint whose Runtime Profile points at the read-only `env` CredentialStore must be configured
 by setting its exact environment variable. `narratage auth login` deliberately refuses to prompt in

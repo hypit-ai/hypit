@@ -4,10 +4,7 @@ import type { Composition } from "@narratage/composition";
 import type { CanonicalValue, StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 
-import {
-  compileHyperframesDocument,
-  compileHyperframesImplementationDigest,
-} from "./document.js";
+import { compileHyperframesDocument } from "./document.js";
 import { hyperframesProducers } from "./manifest.js";
 
 function inline(value: StoredValue, subject: string): CanonicalValue {
@@ -19,7 +16,6 @@ function inline(value: StoredValue, subject: string): CanonicalValue {
 export const hyperframesComponent = {
   producers: [{
     producer: hyperframesProducers.compile,
-    implementationDigest: compileHyperframesImplementationDigest,
     handler: ({ inputs }) => ({
       outputs: {
         document: {

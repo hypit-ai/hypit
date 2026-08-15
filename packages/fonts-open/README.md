@@ -4,9 +4,9 @@ Workspace package exposing 109 redistributable open font families as exact,
 content-addressed `FontArtifactRef` values. The installed packages carry their font bytes and license
 files. Author compilation and rendering never download fonts or inspect system font directories.
 
-A developer who pulls this repository gets the catalog with the ordinary `pnpm install`, then
-includes `@narratage/fonts-open` in the project's explicit `lock-packages` selection. Nothing is
-installed globally and this package has not been published to npm.
+A developer who pulls this repository gets the catalog with the ordinary `pnpm install`; importing
+`@narratage/fonts-open@1` selects it. Nothing is installed globally and this package has not been
+published to npm.
 
 ## One exact face
 

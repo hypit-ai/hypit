@@ -3,58 +3,56 @@
 Official video command application. It selects the Markup compiler Host, but deliberately carries
 no built-in author, Run, Provider or Store package.
 
-Every Frontend, Surface, deterministic Producer and Validator is activated from an explicit
-`svml.packages.lock`. Installing a new author package therefore does not require a video CLI or Core
-release. Source imports select logical author meaning only after the Host has reviewed and locked
-the corresponding physical package. They never grant network, credential or process authority.
+Every Frontend, Surface, deterministic Producer and Validator is activated from Source imports.
+Installing a new author package therefore does not require a video CLI or Core release. Source
+imports never grant network, credential or process authority.
 
 From the repository:
 
 ```bash
 cd path/to/project
-/path/to/narratage/narratage runtime use svml.runtime.json
-/path/to/narratage/narratage packages sync build.svrun
-/path/to/narratage/narratage check main.svml
-/path/to/narratage/narratage plan build.svrun
-/path/to/narratage/narratage build build.svrun --follow
-/path/to/narratage/narratage status <build-id>
-/path/to/narratage/narratage builds
-/path/to/narratage/narratage history [source-output-name] [--source ./main.svml]
-/path/to/narratage/narratage inspect <build-id>
-/path/to/narratage/narratage get <build-id> --name final.video --to ./final.mp4
-/path/to/narratage/narratage cancel <build-id>
-/path/to/narratage/narratage doctor
-/path/to/narratage/narratage gc
+narratage runtime use narratage.runtime.json
+narratage check main.svml
+narratage plan build.svrun
+narratage build build.svrun --follow
+narratage status <build-id> --watch
+narratage builds
+narratage history [source-output-name] [--source ./main.svml]
+narratage inspect <build-id>
+narratage get <build-id> --name final.video --to ./final.mp4
+narratage cancel <build-id>
+narratage doctor
+narratage gc
 ```
 
-From a separate project directory during source development, run
-`/path/to/narratage/narratage ...`. The root launcher resolves its own TypeScript loader, CLI and
-package installation, so it neither invokes pnpm per command nor requires the project directory to
-contain Narratage's `package.json`.
+Link the repository command once with `npm link`. It resolves its own TypeScript loader and CLI, so
+it neither invokes pnpm per command nor requires a separate project to contain Narratage's
+`package.json`.
 
 `--workspace` is only the Source Workspace containment boundary. `--asset-root` may additionally admit
 explicit asset bytes without widening Source imports. `--package-root` is only the Host
-override used to resolve the installed packages named by a lock; by default this Distribution uses
-its own installation location. Keeping the two concepts separate lets a video project live outside
-this checkout without weakening canonical-path source and asset containment. Runtime Profiles do
-not contain either Workspace or package-installation overrides.
+override used to resolve installed packages. By default, a project with
+`package.json` owns package resolution; a plain creative folder falls back to this Distribution's
+installation. Keeping that separate from Source containment lets a video project live outside this
+checkout without weakening canonical-path source and asset boundaries. Runtime Profiles do not
+contain either Workspace or package-installation overrides.
 
 `check` is usable for an Author Source or a complete Run Source. `plan` and `build` require a Run
 Source because an Author Graph without execution intent is not a Build. The live example executes
 the explicit Vertex Gemini Caption package and real local/remote Endpoints; the CLI never
 fabricates a Target, Candidate or missing fact.
 
-`build` compiles the locked BuildState and passes it to a trusted local Runtime Profile with a fresh,
+`build` compiles the BuildState and passes it to the selected Runtime Profile with a fresh,
 automatically assigned execution id. Source or Plan identity never reclaims an earlier Build; reuse
 across Builds exists only through explicit Run Source Candidates. JSON Profiles resolve only adapters in their separately
-verified `runtimePackageLock` and contain no executable callback. The CLI imports no Provider;
-loaded Runtime implementation identity is rebound to the actual package bytes. A TypeScript config
+selected `use` fields and contain no executable callback. The CLI imports no Provider. A TypeScript config
 module remains trusted deployment code with normal Node authority. Neither form is discovered from
 a source import.
 
 Without `--follow`, `build` returns after durable submission and the detached Worker continues.
 With `--follow`, the CLI observes dispatch and Operation facts until terminal state or
-`--max-wait-ms`; Ctrl-C only detaches that observer. `status` reads durable verified state. The CLI
+`--max-wait-ms`; Ctrl-C only detaches that observer. `status` reads durable verified state, and
+`status --watch` reattaches the same kind of observer to an existing Build. The CLI
 controls Builds, not individual Operations. Cancelling a Build atomically withdraws it before claim,
 or closes admission and continues Provider cancellation reconciliation after claim. It never selects
 another Candidate. None of these commands creates or stores a ready-Command queue.
@@ -84,12 +82,10 @@ output. Upstream work behind the selected Candidate is pruned by reverse reachab
 unbound reachable output follows the ordinary graph. This is a new Build identity and never resumes
 or copies the prior Build's outstanding Commands.
 
-`@narratage/package-loader-node` supports explicitly trusted installed implementation packages. It
-verifies the complete physical dependency closure before executing an activation entry, then checks
-exact Module, Host-facet, Producer and Validator identities. Frontends are ordinary
-`svml.source-frontend@1` Host facets, so the Loader does not
-select a syntax; each Source Header selects among Frontends trusted by this Distribution and its
-locked packages. Run Fragment libraries enter only through the `svml.run-fragment-host@1` facet.
-`plan` and `build` bind the lock digest into `BuildRequest.implementationClosure`. Source cannot
+`@narratage/package-loader-node` loads explicitly selected installed implementation packages and checks
+their Module, Host-facet, Producer and Validator contributions. Frontends are ordinary
+`narratage.source-frontend@1` Host facets, so the Loader does not
+select a syntax; each Source Header selects among installed Frontends. Run Fragment libraries enter
+only through the `narratage.run-fragment-host@1` facet. Source cannot
 install a package or activate Provider/Runtime authority. Arbitrary untrusted community execution
 remains absent until an isolated Worker and real permission boundary exist.

@@ -248,7 +248,7 @@ function directItemAnimation(duration: number, appearFrames: number): VisualAnim
 }
 
 function sealTrack(space: ProgramSpace, id: string, presents: readonly VisualPresent[]): VisualTrack {
-  const value = sealVisualTrack({ visualIr: "svml.visual-ir@1", id, presents });
+  const value = sealVisualTrack({ visualIr: "narratage.visual-ir@1", id, presents });
   assertVisualTrackIdentity(value, space);
   return value;
 }

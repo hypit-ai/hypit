@@ -19,7 +19,7 @@ export type RuntimeRunnableCommand = {
   readonly command: CoreCommand;
   /** Every resource is acquired atomically before the command can cause a side effect. */
   readonly resources: readonly RuntimeResourceClaim[];
-  readonly queue?: RuntimeQueueRoute;
+  readonly queue?: RuntimeQueueLane;
   /** Recoverable work retains one shared in-flight reservation while polling. */
   readonly capacityMode?: "active" | "recoverable";
 };
@@ -30,9 +30,9 @@ export type RuntimeResourceClaim = {
   readonly maxInFlight: number;
 };
 
-export type RuntimeQueueRoute = {
-  readonly authority: string;
-  readonly route: string;
+export type RuntimeQueueLane = {
+  readonly pool: string;
+  readonly lane: string;
 };
 
 export type RuntimeExecutionStores = {

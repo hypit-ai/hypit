@@ -311,10 +311,9 @@ const fixtureSurfaceDigest = digestOf("example.composition-fixture/surface@1");
 const fixtureSurface = {
   name: "composition", tag: "Composition", mode: "structured",
   outputs: [compositionTypes.composition, programSpaceTypes.programSpace],
-  implementation: { digest: fixtureSurfaceDigest },
 } as const;
 const fixtureManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
   dependencies: [compositionDependency, programSpaceDependency],

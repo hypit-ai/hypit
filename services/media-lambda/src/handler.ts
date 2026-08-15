@@ -181,8 +181,8 @@ export function createMediaLambdaHandler(options: MediaLambdaHandlerOptions = {}
         ffmpegPath,
         ffprobePath,
         ...(sharedLibraryPath === undefined ? {} : { sharedLibraryPath }),
-        processTimeoutMs: positiveInteger(process.env.SVML_MEDIA_TIMEOUT_MS, 14 * 60_000),
-        maxProbeOutputBytes: positiveInteger(process.env.SVML_MEDIA_MAX_PROBE_BYTES, 256 * 1024 * 1024),
+        processTimeoutMs: positiveInteger(process.env.NARRATAGE_MEDIA_TIMEOUT_MS, 14 * 60_000),
+        maxProbeOutputBytes: positiveInteger(process.env.NARRATAGE_MEDIA_MAX_PROBE_BYTES, 256 * 1024 * 1024),
       };
       const result = await OPERATIONS[operation](env, request.constraints);
       return {

@@ -150,7 +150,7 @@ test("JSON mode is exact machine data with no terminal decoration", () => {
   };
   const output = capture({ json: true, color: "always", verbose: true }, {
     kind: "doctor",
-    profile: "/project/svml.runtime.json",
+    profile: "/project/narratage.runtime.json",
     machine,
   }, { isTTY: true, color: true, unicode: true, columns: 100 });
   assert.deepEqual(JSON.parse(output), machine);
@@ -160,7 +160,7 @@ test("JSON mode is exact machine data with no terminal decoration", () => {
 
 test("plan keeps named Run choices visible and leaves graph internals to verbose output", () => {
   const plan: BuildPlan = {
-    format: "svml.plan@1",
+    format: "narratage.plan@1",
     id: digest,
     graph: digest,
     request: digest,
@@ -208,7 +208,7 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
 
 test("a plan with no Needs stays compact without knowing any Provider names", () => {
   const plan: BuildPlan = {
-    format: "svml.plan@1",
+    format: "narratage.plan@1",
     id: digest,
     graph: digest,
     request: digest,
@@ -227,7 +227,7 @@ test("a plan with no Needs stays compact without knowing any Provider names", ()
 
 test("plan runtime preflight presents only demanded capabilities", () => {
   const plan: BuildPlan = {
-    format: "svml.plan@1",
+    format: "narratage.plan@1",
     id: digest,
     graph: digest,
     request: digest,

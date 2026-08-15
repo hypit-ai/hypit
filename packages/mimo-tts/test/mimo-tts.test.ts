@@ -69,7 +69,7 @@ test("MiMo declares three audio models without Provider facts", () => {
 });
 
 test("one installed author package contributes all three Surfaces without a Runtime Provider", () => {
-  assert.equal(mimoNodePackage.format, "svml.node-package@1");
+  assert.equal(mimoNodePackage.format, "narratage.node-package@1");
   assert.equal(mimoNodePackage.modules[0]?.manifest.version, "1");
   assert.deepEqual(mimoTtsMarkupSurfaces.map((surface) => surface.name),
     ["preset", "voiceDesign", "voiceClone"]);

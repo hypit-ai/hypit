@@ -1,5 +1,5 @@
 export { compositionComponent } from "./component.js";
-export { compositionDependency, compositionManifest, compositionManifestDigest, compositionModuleRef, compositionTypes, compositionValidatorDigests } from "./manifest.js";
+export { compositionDependency, compositionManifest, compositionModuleRef, compositionTypes } from "./manifest.js";
 export {
   audioTrackSchema,
   compositionSchema,

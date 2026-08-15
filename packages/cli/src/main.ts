@@ -1,22 +1,17 @@
 import { randomUUID } from "node:crypto";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { readFile, stat } from "node:fs/promises";
 
 import type { NodeCompiledSourceClosure } from "@narratage/compiler-node";
-import type { NodeRuntimeHost } from "@narratage/runtime-adapter-node";
+import type { NodeRuntimeHost } from "@narratage/runtime-host-node";
 import { plannedNeeds } from "@narratage/runtime";
 import type { BuildCatalogDescriptor, CapacityReservation, OperationProgress } from "@narratage/runtime";
 import type { BuildState, CapabilityRef, TypeRef } from "@narratage/protocol";
 import { parseSourceHeader } from "@narratage/source";
 import {
-  createNodePackageLock,
-  createNodePackageInventory,
-  loadNodePackageSet,
-  readNodePackageLock,
-  selectNodePackageSpecifiers,
-  writeNodePackageLock,
+  loadNodePackageSelection,
 } from "@narratage/package-loader-node";
-import type { LoadedNodePackageSet, NodePackageLock } from "@narratage/package-loader-node";
+import type { LoadedPackage } from "@narratage/package-loader-node";
 
 import {
   acceptedArchivedOutputs,
@@ -42,12 +37,8 @@ import type {
 } from "./runtime-port.js";
 import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliColorMode, CliIo } from "./output.js";
-import { withPackageLockEdit } from "./package-lock-edit.js";
 import { narratageHostStateRoot, narratageProjectStateRoot } from "./paths.js";
-import {
-  createDiscoveredSourceInventory,
-  loadDiscoveredSourcePackages,
-} from "./source-packages.js";
+import { loadDiscoveredSourcePackages } from "./source-packages.js";
 import {
   clearRuntimeProfile,
   findRuntimeProfile,
@@ -62,17 +53,12 @@ type ParsedArgs = {
   /** Canonical containment boundary for Author and Run Sources plus source assets. */
   readonly workspaceRoot: string | undefined;
   readonly assetRoots: readonly string[];
-  /** Host directory whose node_modules contains the packages named by a package lock. */
+  /** Host directory whose node_modules contains selected packages. */
   readonly packageRoot: string | undefined;
   readonly runtime: string | undefined;
   readonly follow: boolean;
   readonly maxWaitMs: number | undefined;
-  readonly packageLock: string | undefined;
   readonly packages: readonly string[];
-  readonly addPackages: readonly string[];
-  readonly removePackages: readonly string[];
-  readonly refresh: boolean;
-  readonly verifyPackageLock: boolean;
   readonly record: string | undefined;
   readonly output: string | undefined;
   readonly name: string | undefined;
@@ -96,12 +82,12 @@ type ParsedArgs = {
   readonly seenOptions: readonly string[];
 };
 
-async function nearestSourcePackageLock(start: string): Promise<string | undefined> {
+async function nearestProjectPackageRoot(start: string): Promise<string | undefined> {
   let directory = resolve(start);
   while (true) {
-    const candidate = resolve(directory, "svml.packages.lock");
+    const candidate = resolve(directory, "package.json");
     try {
-      if ((await stat(candidate)).isFile()) return candidate;
+      if ((await stat(candidate)).isFile()) return directory;
     } catch (error) {
       if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
     }
@@ -111,10 +97,16 @@ async function nearestSourcePackageLock(start: string): Promise<string | undefin
   }
 }
 
+async function defaultPackageRoot(
+  projectStart: string,
+  fallback: string | undefined,
+): Promise<string> {
+  return await nearestProjectPackageRoot(projectStart) ?? fallback ?? resolve(projectStart);
+}
+
 function parseArgs(argv: readonly string[]): ParsedArgs {
   const [command, ...tail] = argv;
-  const scoped = command === "programs" || command === "runtime" || command === "auth"
-    || command === "packages";
+  const scoped = command === "programs" || command === "runtime" || command === "auth";
   const action = scoped ? tail[0] : undefined;
   const positional = scoped ? tail.slice(1) : tail;
   const noFile = command === "builds" || command === "queue" || command === "paths";
@@ -127,12 +119,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let runtime: string | undefined;
   let follow = false;
   let maxWaitMs: number | undefined;
-  let packageLock: string | undefined;
   const packages: string[] = [];
-  const addPackages: string[] = [];
-  const removePackages: string[] = [];
-  let refresh = false;
-  let verifyPackageLock = false;
   let record: string | undefined;
   let output: string | undefined;
   let name: string | undefined;
@@ -155,8 +142,8 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     const item = rest[index]!;
     if (item.startsWith("--")) {
       const repeatable = [
-        "--package", "--add", "--remove", "--json", "--jsonl", "--watch", "--verbose", "--debug",
-        "--no-color", "--refresh", "--follow", "--apply", "--no-programs", "--asset-root",
+        "--package", "--json", "--jsonl", "--watch", "--verbose", "--debug",
+        "--no-color", "--follow", "--apply", "--no-programs", "--asset-root",
       ].includes(item);
       if (!repeatable && seenOptions.has(item)) throw new Error(`${item} cannot be repeated`);
       seenOptions.add(item);
@@ -214,40 +201,11 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       index += 1;
       continue;
     }
-    if (item === "--package-lock") {
-      const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--package-lock requires a lock file");
-      packageLock = resolve(value);
-      index += 1;
-      continue;
-    }
     if (item === "--package") {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--package requires an installed package name");
       packages.push(value);
       index += 1;
-      continue;
-    }
-    if (item === "--add") {
-      const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--add requires an installed package name");
-      addPackages.push(value);
-      index += 1;
-      continue;
-    }
-    if (item === "--remove") {
-      const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--remove requires a selected package name");
-      removePackages.push(value);
-      index += 1;
-      continue;
-    }
-    if (item === "--refresh") {
-      refresh = true;
-      continue;
-    }
-    if (item === "--verify") {
-      verifyPackageLock = true;
       continue;
     }
     if (item === "--runtime") {
@@ -364,12 +322,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     runtime,
     follow,
     maxWaitMs,
-    packageLock,
     packages,
-    addPackages,
-    removePackages,
-    refresh,
-    verifyPackageLock,
     record,
     output,
     name,
@@ -396,16 +349,10 @@ function assertCommandOptions(args: ParsedArgs): void {
   const allowed = new Set(common);
   const add = (...items: readonly string[]): void => { for (const item of items) allowed.add(item); };
   switch (args.command) {
-    case "lock-packages":
-      add("--package", "--add", "--remove", "--refresh", "--verify", "--package-root");
-      break;
-    case "packages":
-      add("--runtime", "--workspace", "--package-root");
-      break;
     case "programs":
       // This command has older, more specific diagnostics for deployment-selection
       // flags and waiting on status/down; let its handler render those repairs.
-      add("--max-wait-ms", "--runtime", "--package-lock", "--package-root", "--package", "--apply");
+      add("--max-wait-ms", "--runtime", "--apply");
       break;
     case "runtime":
       add("--runtime");
@@ -431,6 +378,9 @@ function assertCommandOptions(args: ParsedArgs): void {
       add("--runtime", "--reason");
       break;
     case "status":
+      add("--runtime", "--watch");
+      if (args.watch) add("--max-wait-ms");
+      break;
     case "builds":
     case "history":
     case "inspect":
@@ -439,10 +389,10 @@ function assertCommandOptions(args: ParsedArgs): void {
       break;
     case "check":
     case "plan":
-      add("--runtime", "--package-lock", "--package-root", "--workspace", "--asset-root");
+      add("--runtime", "--package-root", "--workspace", "--asset-root");
       break;
     case "build":
-      add("--runtime", "--package-lock", "--package-root", "--workspace", "--asset-root", "--follow",
+      add("--runtime", "--package-root", "--workspace", "--asset-root", "--follow",
         "--max-wait-ms", "--no-programs");
       break;
   }
@@ -462,10 +412,6 @@ function assertCommandOptions(args: ParsedArgs): void {
 function usage(): string {
   return [
     "usage:",
-    "  narratage lock-packages <lock> --package name [...] [--package-root directory]  # exact create/replace",
-    "  narratage lock-packages <lock> (--add name [...] | --remove name [...]) [--package-root directory]",
-    "  narratage lock-packages <lock> (--refresh | --verify) [--package-root directory]",
-    "  narratage packages sync <run-source> [--runtime <runtime-profile>] [--workspace workspace]",
     "  narratage doctor [<runtime-profile>]",
     "  narratage programs up|down|status [<runtime-profile>] [--max-wait-ms milliseconds]",
     "  narratage runtime use <runtime-profile>",
@@ -473,10 +419,10 @@ function usage(): string {
     "  narratage runtime up|status|logs|down [<runtime-profile>]",
     "  narratage queue [--runtime profile.json] [--watch]",
     "  narratage gc [<runtime-profile>] [--apply]",
-    "  narratage check <self-described-source> [--runtime profile.json] [--package-lock file] [--workspace workspace] [--asset-root directory]",
-    "  narratage plan <run-source> [--runtime profile.json] [--package-lock file] [--workspace workspace] [--asset-root directory]",
+    "  narratage check <self-described-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
+    "  narratage plan <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
     "  narratage build <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow] [--no-programs]",
-    "  narratage status <build-id> [--runtime profile.json]",
+    "  narratage status <build-id> [--runtime profile.json] [--watch]",
     "  narratage builds [--runtime profile.json]",
     "  narratage history [source-output-name] [--runtime profile.json] [--source author.svml]",
     "  narratage inspect <build-id> [--runtime profile.json]",
@@ -502,7 +448,7 @@ function createCatalogDescriptor(options: {
     return { name: item.name, ref: item.ref };
   });
   return {
-    format: "svml.build-catalog-descriptor@1",
+    format: "narratage.build-catalog-descriptor@1",
     core: options.core,
     source: {
       path: resolve(options.source),
@@ -562,7 +508,7 @@ function capabilityName(capability: CapabilityRef): string {
 async function preflightPlan(
   host: NodeRuntimeHost,
   state: BuildState,
-  implementationPackages?: LoadedNodePackageSet,
+  implementationPackages?: readonly LoadedPackage[],
 ) {
   const capabilities = demandedCapabilities(state);
   const result = await host.doctor({
@@ -594,7 +540,7 @@ function assertPreflight(
 
 async function loadRuntime(
   host: NodeRuntimeHost,
-  implementationPackages?: LoadedNodePackageSet,
+  implementationPackages?: readonly LoadedPackage[],
 ): Promise<CliRuntime> {
   return await host.createRuntime({
     ...(implementationPackages === undefined ? {} : { implementationPackages }),
@@ -642,23 +588,23 @@ function formatOperationProgress(progress: OperationProgress): string {
   return `${progress.phase} · ${amount}${progress.unit === undefined ? "" : ` ${progress.unit}`}`;
 }
 
-type QueueRouteSummary = {
-  readonly authority: string;
-  readonly route: string;
+type QueueLaneSummary = {
+  readonly pool: string;
+  readonly lane: string;
   readonly queued: number;
   readonly active: number;
   readonly inFlight: number;
 };
 
 /** Derive the Provider → capability view from generic tickets; no model registry participates. */
-function summarizeQueueRoutes(capacity: readonly CapacityReservation[]): readonly QueueRouteSummary[] {
-  const groups = new Map<string, { authority: string; route: string; queued: number; active: number; inFlight: number }>();
+function summarizeQueueLanes(capacity: readonly CapacityReservation[]): readonly QueueLaneSummary[] {
+  const groups = new Map<string, { pool: string; lane: string; queued: number; active: number; inFlight: number }>();
   for (const ticket of capacity) {
     if (ticket.queue === undefined) continue;
-    const key = `${ticket.queue.authority}\u0000${ticket.queue.route}`;
+    const key = `${ticket.queue.pool}\u0000${ticket.queue.lane}`;
     const group = groups.get(key) ?? {
-      authority: ticket.queue.authority,
-      route: ticket.queue.route,
+      pool: ticket.queue.pool,
+      lane: ticket.queue.lane,
       queued: 0,
       active: 0,
       inFlight: 0,
@@ -669,18 +615,18 @@ function summarizeQueueRoutes(capacity: readonly CapacityReservation[]): readonl
     groups.set(key, group);
   }
   return [...groups.values()].sort((left, right) =>
-    left.authority.localeCompare(right.authority) || left.route.localeCompare(right.route));
+    left.pool.localeCompare(right.pool) || left.lane.localeCompare(right.lane));
 }
 
-function queueRouteLines(groups: readonly QueueRouteSummary[]): readonly string[] {
+function queueLaneLines(groups: readonly QueueLaneSummary[]): readonly string[] {
   const lines: string[] = [];
-  let authority: string | undefined;
+  let pool: string | undefined;
   for (const group of groups) {
-    if (group.authority !== authority) {
-      authority = group.authority;
-      lines.push(authority);
+    if (group.pool !== pool) {
+      pool = group.pool;
+      lines.push(pool);
     }
-    lines.push(`  ${group.route}: queued ${group.queued} · active ${group.active} · remote ${group.inFlight}`);
+    lines.push(`  ${group.lane}: queued ${group.queued} · active ${group.active} · remote ${group.inFlight}`);
   }
   return lines;
 }
@@ -702,7 +648,7 @@ function inlineValuePreview(value: unknown, limit = 240): string {
 }
 
 async function observeBuild(
-  runtime: CliRuntime,
+  runtime: Pick<CliRuntimeArchiveControl, "activity" | "status">,
   initial: CliBuildSubmission,
   options: {
     readonly maxWaitMs?: number;
@@ -747,7 +693,7 @@ async function observeBuild(
       if (worker.state !== "running") {
         throw new Error(
           `Runtime Worker is ${worker.state}; Build ${current.id} remains durable. `
-          + "Run narratage runtime up, then inspect the same Build again",
+          + `Run narratage runtime up, then run narratage status ${current.id} --watch again`,
         );
       }
     }
@@ -802,8 +748,7 @@ type RuntimeArchiveView = Pick<CliRuntimeArchiveControl, "status" | "close">;
 
 /**
  * A Run Source needs the archive only when it names a historical Build Candidate.
- * Delay Store assembly until that edge is actually resolved, while still letting
- * the Runtime Profile single-source the author package lock for every plan.
+ * Delay Store assembly until that edge is actually resolved.
  */
 function lazyRuntimeArchive(
   host: NodeRuntimeHost,
@@ -834,6 +779,15 @@ export async function runCli(
     return;
   }
   let args = parseArgs(argv);
+  let selectedRuntimeProjectRoot: string | undefined;
+  const commandProjectRoot = (): string => args.workspaceRoot
+    ?? selectedRuntimeProjectRoot
+    ?? ((args.command === "check" || args.command === "plan" || args.command === "build"
+      || args.command === "packages") && args.file !== undefined
+      ? dirname(resolve(args.file))
+      : process.cwd());
+  const packageRootForProject = async (projectRoot = commandProjectRoot()): Promise<string> =>
+    args.packageRoot ?? await defaultPackageRoot(projectRoot, distribution.fallbackPackageRoot);
   const writeOperational = (
     machine: unknown,
     title: string,
@@ -859,24 +813,23 @@ export async function runCli(
       io.write(`  · ${verb} ${event.id}\n`);
     };
   const runtimeHosts = new Map<string, Promise<NodeRuntimeHost>>();
-  const runtimeHost = async (path: string): Promise<NodeRuntimeHost> => {
+  const runtimeHost = async (path: string, requestedPackageRoot?: string): Promise<NodeRuntimeHost> => {
     const profile = resolve(path);
-    let opened = runtimeHosts.get(profile);
+    const packageRoot = requestedPackageRoot ?? await packageRootForProject();
+    const key = `${profile}\u0000${packageRoot}`;
+    let opened = runtimeHosts.get(key);
     if (opened === undefined) {
-      opened = distribution.openRuntimeHost(profile);
-      runtimeHosts.set(profile, opened);
+      opened = distribution.openRuntimeHost(profile, { packageRoot });
+      runtimeHosts.set(key, opened);
     }
     return await opened;
   };
   if (args.command === "_worker") {
     if (args.file === undefined || args.readyFile === undefined) throw new Error("internal Worker launch is incomplete");
-    const implementationPackages = args.packageLock === undefined
+    const implementationPackages = args.packages.length === 0
       ? undefined
-      : await loadNodePackageSet(
-          args.packageLock,
-          args.packageRoot ?? distribution.packageRoot ?? dirname(args.packageLock),
-        );
-    await (await runtimeHost(args.file)).runWorker(args.readyFile, {
+      : await loadNodePackageSelection(args.packages, await packageRootForProject());
+    await (await runtimeHost(args.file, await packageRootForProject())).runWorker(args.readyFile, {
       ...(implementationPackages === undefined ? {} : { implementationPackages }),
     });
     return;
@@ -888,20 +841,15 @@ export async function runCli(
     if (args.file === undefined) throw new Error("runtime use requires a Runtime Profile");
     assertCommandOptions(args);
     const profile = resolve(args.file);
-    const packageSelection = await (await runtimeHost(profile)).resolvePackages();
     const selected = await selectRuntimeProfile(args.workspaceRoot ?? process.cwd(), profile);
     writeOperational({
       format: "narratage.cli-runtime-selection@1",
       profile: selected.profile,
       project: selected.projectRoot,
       selectionFile: selected.selectionFile,
-      runtimePackageLock: packageSelection?.runtimePackageLock,
     }, "Runtime selected", "success", [
       ["Profile", selected.profile],
       ["Project", selected.projectRoot],
-      ...(packageSelection?.runtimePackageLock === undefined
-        ? []
-        : [["Runtime lock", packageSelection.runtimePackageLock] as const]),
     ]);
     return;
   }
@@ -928,10 +876,8 @@ export async function runCli(
     || args.command === "doctor" || args.command === "gc") && args.file !== undefined;
   const runtimeWasExplicit = args.runtime !== undefined || positionalRuntime;
   let runtimeNeedsHint = runtimeWasExplicit;
-  let selectedRuntimeProjectRoot: string | undefined;
   if (args.runtime === undefined && !positionalRuntime) {
-    const sourceScoped = args.command === "check" || args.command === "plan" || args.command === "build"
-      || args.command === "packages";
+    const sourceScoped = args.command === "check" || args.command === "plan" || args.command === "build";
     const start = sourceScoped && args.file !== undefined ? dirname(resolve(args.file)) : process.cwd();
     const selected = await findRuntimeProfile(start);
     if (selected !== undefined) {
@@ -942,7 +888,7 @@ export async function runCli(
         || isAbsolute(cwdFromProject);
     }
   }
-  const known = args.command === "lock-packages" || args.command === "packages" || args.command === "check" || args.command === "plan"
+  const known = args.command === "check" || args.command === "plan"
     || args.command === "build" || args.command === "status" || args.command === "builds"
     || args.command === "history"
     || args.command === "inspect" || args.command === "get" || args.command === "cancel"
@@ -956,11 +902,15 @@ export async function runCli(
   if (!operational || (!fileOptional && args.file === undefined)) {
     throw new Error(usage());
   }
-  if (args.watch && args.command !== "queue") throw new Error("--watch applies only to queue");
+  if (args.watch && args.command !== "queue" && args.command !== "status") {
+    throw new Error("--watch applies only to status or queue");
+  }
   if (args.jsonl && (args.command !== "queue" || !args.watch)) {
     throw new Error("--jsonl applies only to queue --watch");
   }
-  if (args.watch && args.json) throw new Error("queue --watch is a stream; use --jsonl instead of --json");
+  if (args.command === "queue" && args.watch && args.json) {
+    throw new Error("queue --watch is a stream; use --jsonl instead of --json");
+  }
   if (args.noPrograms && args.command !== "build") {
     throw new Error("--no-programs is only valid for build; no other command starts an external program");
   }
@@ -972,24 +922,23 @@ export async function runCli(
     const workspaceRoot = args.workspaceRoot
       ?? selectedRuntimeProjectRoot
       ?? (source === undefined ? process.cwd() : dirname(resolve(source)));
-    const packageLock = await nearestSourcePackageLock(workspaceRoot);
-    return await (await runtimeHost(profile)).controller({
+    const packageRoot = await packageRootForProject(workspaceRoot);
+    return await (await runtimeHost(profile, packageRoot)).controller({
       workspaceRoot,
-      ...(packageLock === undefined ? {} : { packageLock }),
-      packageRoot: args.packageRoot ?? distribution.packageRoot ?? workspaceRoot,
+      packageRoot,
     });
   };
   if (args.command === "paths") {
     const projectRoot = selectedRuntimeProjectRoot ?? process.cwd();
-    const runtimeSelection = args.runtime === undefined
+    const runtimePaths = args.runtime === undefined
       ? undefined
-      : await (await runtimeHost(args.runtime)).resolvePackages();
+      : await (await runtimeHost(args.runtime)).resolvePaths();
     const machine = {
       format: "narratage.cli-paths@1" as const,
       project: projectRoot,
       projectState: narratageProjectStateRoot(projectRoot),
       profile: args.runtime,
-      runtimeData: runtimeSelection?.runtimeDataRoot,
+      runtimeData: runtimePaths?.runtimeDataRoot,
       hostState: narratageHostStateRoot(),
     };
     writeOperational(machine, "Narratage paths", "info", [
@@ -1001,256 +950,8 @@ export async function runCli(
     ]);
     return;
   }
-  if (args.command === "lock-packages") {
-    const exact = args.packages.length > 0;
-    const mutation = args.addPackages.length > 0 || args.removePackages.length > 0;
-    const modes = [exact, mutation, args.refresh, args.verifyPackageLock].filter(Boolean).length;
-    if (modes !== 1) {
-      throw new Error(
-        "lock-packages requires exactly one operation: an exact --package selection, --add/--remove, --refresh, or --verify",
-      );
-    }
-    if (args.packageLock !== undefined) throw new Error("lock-packages does not accept --package-lock");
-    if (args.workspaceRoot !== undefined) {
-      throw new Error("lock-packages does not compile a Workspace; use --package-root to locate installed packages");
-    }
-    const output = resolve(args.file!);
-    const packageRoot = args.packageRoot ?? distribution.packageRoot ?? dirname(output);
-
-    if (args.verifyPackageLock) {
-      const loaded = await loadNodePackageSet(output, packageRoot);
-      writeOperational({
-        ok: true,
-        mode: "verify",
-        packageLock: output,
-        digest: loaded.lock.digest,
-        selected: loaded.lock.selected,
-        packages: loaded.lock.packages,
-      }, "Package lock verified", "success", [
-        ["Path", output], ["Selected", String(loaded.lock.selected.length)],
-        ["Activated", String(loaded.lock.packages.length)], ["Digest", loaded.lock.digest],
-      ]);
-      return;
-    }
-
-    await withPackageLockEdit(output, async () => {
-      let mode: "replace" | "mutate" | "refresh";
-      let selected: readonly string[];
-      let added: readonly string[] = [];
-      let removed: readonly string[] = [];
-      let previous: NodePackageLock | undefined;
-      let retainedSelection: readonly string[] | undefined;
-      if (exact) {
-        mode = "replace";
-        selected = [...new Set(args.packages)].sort();
-      } else {
-        const current = await readNodePackageLock(output);
-        if (args.refresh) {
-          mode = "refresh";
-          selected = current.selected;
-        } else {
-          mode = "mutate";
-          const additions = new Set(args.addPackages);
-          const removals = new Set(args.removePackages);
-          const conflict = [...additions].find((name) => removals.has(name));
-          if (conflict !== undefined) {
-            throw new Error(`${conflict} cannot be added and removed in the same package-lock transaction`);
-          }
-          const currentSet = new Set(current.selected);
-          const missing = [...removals].find((name) => !currentSet.has(name));
-          if (missing !== undefined) {
-            throw new Error(`${missing} is not selected by ${output}; no package authority was removed`);
-          }
-          added = [...additions].filter((name) => !currentSet.has(name)).sort();
-          removed = [...removals].sort();
-          if (added.length === 0 && removed.length === 0) {
-            writeOperational({
-              ok: true,
-              changed: false,
-              mode,
-              packageLock: output,
-              digest: current.digest,
-              selected: current.selected,
-              added,
-              removed,
-              packages: current.packages,
-            }, "Package lock unchanged", "info", [
-              ["Path", output], ["Selected", String(current.selected.length)], ["Digest", current.digest],
-            ]);
-            return;
-          }
-          previous = current;
-          retainedSelection = current.selected.filter((name) => !removals.has(name));
-          for (const name of removals) currentSet.delete(name);
-          for (const name of additions) currentSet.add(name);
-          selected = [...currentSet].sort();
-        }
-      }
-      const lock = await createNodePackageLock(selected, packageRoot,
-        previous === undefined || retainedSelection === undefined
-          ? {}
-          : { retain: { from: previous, selected: retainedSelection } });
-      const artifactKey = (item: { readonly name: string; readonly version: string }): string =>
-        `${item.name}@${item.version}`;
-      const packageKey = (item: NodePackageLock["packages"][number]): string =>
-        `${item.package.name}@${item.package.version}`;
-      const physicalBefore = new Set(previous?.artifacts.map(artifactKey) ?? []);
-      const physicalAfter = new Set(lock.artifacts.map(artifactKey));
-      const activatedBefore = new Set(previous?.packages.map(packageKey) ?? []);
-      const activatedAfter = new Set(lock.packages.map(packageKey));
-      const closureChanges = previous === undefined ? undefined : {
-        physical: {
-          added: [...physicalAfter].filter((key) => !physicalBefore.has(key)).sort(),
-          removed: [...physicalBefore].filter((key) => !physicalAfter.has(key)).sort(),
-        },
-        activated: {
-          added: [...activatedAfter].filter((key) => !activatedBefore.has(key)).sort(),
-          removed: [...activatedBefore].filter((key) => !activatedAfter.has(key)).sort(),
-        },
-      };
-      await writeNodePackageLock(output, lock);
-      writeOperational({
-        ok: true,
-        changed: true,
-        mode,
-        packageLock: output,
-        digest: lock.digest,
-        selected: lock.selected,
-        added,
-        removed,
-        ...(closureChanges === undefined ? {} : { closureChanges }),
-        packages: lock.packages,
-      },
-        "Package lock written", "success", [
-          ["Path", output], ["Mode", mode], ["Selected", String(lock.selected.length)],
-          ["Activated", String(lock.packages.length)],
-          ...(closureChanges === undefined ? [] : [
-            ["Physical + / -", `${closureChanges.physical.added.length} / ${closureChanges.physical.removed.length}`] as const,
-            ["Activated + / -", `${closureChanges.activated.added.length} / ${closureChanges.activated.removed.length}`] as const,
-          ]),
-          ["Digest", lock.digest],
-        ]);
-    });
-    return;
-  }
-  if (args.command === "packages") {
-    if (args.action !== "sync") {
-      throw new Error("packages takes one action: packages sync <run-source>");
-    }
-    if (args.runtime === undefined) {
-      throw new Error(
-        "packages sync requires a Runtime; run narratage runtime use <profile> or pass --runtime <profile>",
-      );
-    }
-    const source = resolve(args.file!);
-    const profile = resolve(args.runtime);
-    const selection = await (await runtimeHost(profile)).resolvePackages();
-    if (selection.runtimePackageLock === undefined) {
-      throw new Error("packages sync requires the Runtime Profile to declare runtimePackageLock");
-    }
-    if (selection.runtimeSelection === undefined) {
-      throw new Error("this Distribution cannot discover Runtime packages from the selected Profile");
-    }
-    const runtimeSelection = selection.runtimeSelection;
-    const sourceLock = await nearestSourcePackageLock(dirname(source))
-      ?? resolve(dirname(source), "svml.packages.lock");
-    const syncWorkspaceRoot = args.workspaceRoot ?? selectedRuntimeProjectRoot ?? dirname(sourceLock);
-    const packageRoot = args.packageRoot ?? selection.packageRoot ?? distribution.packageRoot ?? dirname(profile);
-    const locks = [resolve(sourceLock), resolve(selection.runtimePackageLock)].sort();
-    if (locks[0] === locks[1]) throw new Error("packageLock and runtimePackageLock must be different files");
-    const summarizeDifference = (before: NodePackageLock | undefined, after: NodePackageLock) => {
-      const oldArtifacts = new Map(before?.artifacts.map((item) => [`${item.name}@${item.version}`, item.digest]) ?? []);
-      const newArtifacts = new Map(after.artifacts.map((item) => [`${item.name}@${item.version}`, item.digest]));
-      return {
-        added: [...newArtifacts.keys()].filter((key) => !oldArtifacts.has(key)).sort(),
-        removed: [...oldArtifacts.keys()].filter((key) => !newArtifacts.has(key)).sort(),
-        changed: [...newArtifacts.entries()]
-          .filter(([key, digest]) => oldArtifacts.has(key) && oldArtifacts.get(key) !== digest)
-          .map(([key]) => key).sort(),
-      };
-    };
-    const readExistingLock = async (path: string): Promise<NodePackageLock | undefined> => {
-      try {
-        return await readNodePackageLock(path);
-      } catch (error) {
-        if (error !== null && typeof error === "object" && "code" in error
-          && (error as { readonly code?: unknown }).code === "ENOENT") return undefined;
-        throw error;
-      }
-    };
-    await withPackageLockEdit(locks[0]!, async () => await withPackageLockEdit(locks[1]!, async () => {
-      const authorBefore = await readExistingLock(sourceLock);
-      const runtimeBefore = await readExistingLock(selection.runtimePackageLock!);
-      const discovered = await createDiscoveredSourceInventory(distribution, {
-        source,
-        ...(syncWorkspaceRoot === undefined ? {} : { workspaceRoot: syncWorkspaceRoot }),
-        packageRoot,
-        selected: authorBefore?.selected ?? [],
-      });
-      const sourceSelection = discovered.sourceSelection;
-      const authorSelected = discovered.packages.lock.selected;
-      let runtimeRoots = [...new Set(runtimeBefore?.selected ?? [])].sort();
-      let runtimeInventory = await createNodePackageInventory(runtimeRoots, packageRoot);
-      const logical = runtimeSelection.logical ?? [];
-      while (true) {
-        const offered = new Set(runtimeInventory.lock.packages.flatMap((item) =>
-          item.offers.map((offer) => `${offer.abi}\u0000${offer.name}`)));
-        const missing = logical.filter((address) => !offered.has(`${address.abi}\u0000${address.name}`));
-        if (missing.length === 0) break;
-        const additions = missing.map((address) => address.name);
-        const next = [...new Set([...runtimeRoots, ...additions])].sort();
-        if (JSON.stringify(next) === JSON.stringify(runtimeRoots)) {
-          throw new Error("Runtime Adapter package discovery made no progress");
-        }
-        runtimeRoots = next;
-        runtimeInventory = await createNodePackageInventory(runtimeRoots, packageRoot);
-      }
-      selectNodePackageSpecifiers(runtimeInventory.lock, runtimeSelection);
-      const runtimeSelected = runtimeInventory.lock.selected;
-      const authorAfter = discovered.packages.lock;
-      const runtimeAfter = runtimeInventory.lock;
-      if (authorBefore?.digest !== authorAfter.digest) await writeNodePackageLock(sourceLock, authorAfter);
-      if (runtimeBefore?.digest !== runtimeAfter.digest) await writeNodePackageLock(selection.runtimePackageLock!, runtimeAfter);
-      const author = summarizeDifference(authorBefore, authorAfter);
-      const runtime = summarizeDifference(runtimeBefore, runtimeAfter);
-      const changed = [...author.added, ...author.removed, ...author.changed,
-        ...runtime.added, ...runtime.removed, ...runtime.changed].length > 0
-        || authorBefore?.digest !== authorAfter.digest || runtimeBefore?.digest !== runtimeAfter.digest;
-      writeOperational({
-        ok: true,
-        changed,
-        source,
-        profile,
-        packageRoot,
-        selected: {
-          author: authorSelected,
-          runtime: runtimeSelected,
-        },
-        author: { path: sourceLock, digest: authorAfter.digest, difference: author },
-        runtime: { path: selection.runtimePackageLock, digest: runtimeAfter.digest, difference: runtime },
-      }, changed ? "Project package locks synchronized" : "Project package locks already current",
-      changed ? "success" : "info", [
-        ["Run", source], ["Profile", profile],
-        ["Author packages", String(sourceSelection.selected.length)],
-        ["Runtime adapters", String(runtimeSelection.logical?.length ?? 0)],
-        ["Updated entries", String(author.added.length + author.removed.length + author.changed.length
-          + runtime.added.length + runtime.removed.length + runtime.changed.length)],
-      ], args.verbose ? [
-        `Package root     ${packageRoot}`,
-        ...sourceSelection.selected.map((item) => `Author selected  ${item}`),
-        ...(runtimeSelection.logical ?? []).map((item) => `Runtime selected ${item.abi} ${item.name}`),
-        ...author.changed.map((item) => `Author changed   ${item}`),
-        ...author.added.map((item) => `Author added     ${item}`),
-        ...author.removed.map((item) => `Author removed   ${item}`),
-        ...runtime.changed.map((item) => `Runtime changed  ${item}`),
-        ...runtime.added.map((item) => `Runtime added    ${item}`),
-        ...runtime.removed.map((item) => `Runtime removed  ${item}`),
-      ] : []);
-    }));
-    return;
-  }
   if (args.command === "doctor") {
-    if (args.packageLock !== undefined || args.packageRoot !== undefined || args.packages.length > 0 || args.apply) {
+    if (args.packageRoot !== undefined || args.packages.length > 0 || args.apply) {
       throw new Error("doctor reads all deployment selection from the Runtime Profile itself");
     }
     const profileInput = args.runtime ?? args.file;
@@ -1273,8 +974,7 @@ export async function runCli(
     if (args.file !== undefined && args.runtime !== undefined) {
       throw new Error("programs reads all deployment selection from the Runtime Profile itself; provide that Profile only once");
     }
-    if (args.packageLock !== undefined || args.packageRoot !== undefined
-      || args.packages.length > 0 || args.apply) {
+    if (args.packageRoot !== undefined || args.packages.length > 0 || args.apply) {
       throw new Error("programs reads all deployment selection from the Runtime Profile itself");
     }
     if (args.action !== "up" && args.action !== "down" && args.action !== "status") {
@@ -1329,17 +1029,9 @@ export async function runCli(
     const profile = resolve(profileInput);
     const controller = await runtimeController(profile);
     if (args.action === "up") {
-      // Validate the exact Runtime Closure against unfinished work before replacing a stale Worker
-      // or starting external programs. A refusal must leave the old execution environment intact.
-      const workspaceRoot = args.workspaceRoot ?? selectedRuntimeProjectRoot ?? process.cwd();
-      const sourceLock = await nearestSourcePackageLock(workspaceRoot);
-      const implementationPackages = sourceLock === undefined
-        ? undefined
-        : await loadNodePackageSet(
-            sourceLock,
-            args.packageRoot ?? distribution.packageRoot ?? workspaceRoot,
-          );
-      const validated = await loadRuntime(await runtimeHost(profile), implementationPackages);
+      // Validate the Runtime Profile before replacing a stale Worker or starting programs.
+      const packageRoot = await packageRootForProject();
+      const validated = await loadRuntime(await runtimeHost(profile, packageRoot));
       await validated.close();
       const external = await controller.programs.up({
         ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
@@ -1382,7 +1074,7 @@ export async function runCli(
       return;
     }
     // These are independent views over one Profile. Load them concurrently without inventing a
-    // second registry; each selected package remains the authority for its own report.
+    // second registry; each selected package remains responsible for its own report.
     const runtimeLoading = loadRuntimeArchive(await runtimeHost(profile));
     let runtime: CliRuntimeArchiveControl | undefined;
     try {
@@ -1396,7 +1088,7 @@ export async function runCli(
       const queue = await runtime.queue();
       const counts = Object.fromEntries(["queued", "leased", "waiting", "blocked", "settling", "terminal"]
         .map((phase) => [phase, queue.dispatches.filter((item) => item.phase === phase).length]));
-      const routes = summarizeQueueRoutes(queue.capacity);
+      const lanes = summarizeQueueLanes(queue.capacity);
       const ready = worker.state === "running"
         && external.programs.every((item) => item.state.state === "ready");
       const active = ["queued", "leased", "waiting", "blocked", "settling"]
@@ -1409,7 +1101,7 @@ export async function runCli(
         ready,
         attention,
         worker,
-        queue: { counts, routes, capacity: queue.capacity },
+        queue: { counts, lanes, capacity: queue.capacity },
         programs: external.programs,
       };
       writeOperational(machine, "Runtime status", attention ? "warning" : ready ? "success" : "info", [
@@ -1421,7 +1113,7 @@ export async function runCli(
         ["Capacity reservations", String(queue.capacity.length)],
       ], [
         ...unavailable.map(programLine),
-        ...queueRouteLines(routes),
+        ...queueLaneLines(lanes),
       ]);
     } finally {
       if (runtime !== undefined) await runtime.close();
@@ -1430,7 +1122,7 @@ export async function runCli(
     return;
   }
   if (args.command === "gc") {
-    if (args.packageLock !== undefined || args.packageRoot !== undefined || args.packages.length > 0) {
+    if (args.packageRoot !== undefined || args.packages.length > 0) {
       throw new Error("gc reads all deployment selection from the Runtime Profile itself");
     }
     const profileInput = args.runtime ?? args.file;
@@ -1518,7 +1210,6 @@ export async function runCli(
     return;
   }
   if (args.apply) throw new Error("--apply is only valid for gc");
-  if (args.refresh) throw new Error("--refresh is only valid for lock-packages");
   if (args.noPrograms && args.command !== "build") {
     throw new Error("--no-programs is only valid for build; no other command starts an external program");
   }
@@ -1567,14 +1258,14 @@ export async function runCli(
             at: Date.now(),
             worker,
             dispatches: queue.dispatches,
-            routes: summarizeQueueRoutes(queue.capacity),
+            lanes: summarizeQueueLanes(queue.capacity),
             capacity: queue.capacity,
             operations: queue.operations.map((item) => ({
               id: item.id,
               build: item.build,
               endpoint: item.endpoint,
-              authority: item.authority,
-              route: item.route,
+              pool: item.pool,
+              lane: item.lane,
               attempt: item.attempt,
               revision: item.revision,
               status: item.status,
@@ -1587,14 +1278,14 @@ export async function runCli(
             item.status === "created" || item.status === "pending");
           const buildLines = active.slice(0, args.verbose ? undefined : 12).map((item) =>
             `${item.build}: ${item.phase}${item.admission === "open" ? "" : ` · ${item.admission}`}`);
-          const routeLines = queueRouteLines(summarizeQueueRoutes(queue.capacity));
+          const laneLines = queueLaneLines(summarizeQueueLanes(queue.capacity));
           const genericCapacityLines = queue.capacity.filter((item) => item.queue === undefined)
             .slice(0, args.verbose ? undefined : 12)
             .map((item) => `${item.resources.map((resource) => resource.id).join(" + ")}: ${item.active === undefined
               ? "queued"
               : "active"} · ${item.build}`);
           const operationLines = activeOperations.slice(0, args.verbose ? undefined : 12).map((item) =>
-            `${item.build} · ${item.authority} → ${item.route}: ${item.progress === undefined
+            `${item.build} · ${item.pool} → ${item.lane}: ${item.progress === undefined
               ? item.status
               : formatOperationProgress(item.progress)}`);
           writeOperational(value, "Runtime queue", active.length === 0 ? "success" : "info", [
@@ -1605,7 +1296,7 @@ export async function runCli(
           ], [
             ...buildLines,
             ...(operationLines.length === 0 ? [] : ["Operations:", ...operationLines]),
-            ...(routeLines.length === 0 ? [] : ["Provider queues:", ...routeLines]),
+            ...(laneLines.length === 0 ? [] : ["Provider queues:", ...laneLines]),
             ...(genericCapacityLines.length === 0 ? [] : ["Other resources:", ...genericCapacityLines]),
           ]);
         };
@@ -1632,7 +1323,11 @@ export async function runCli(
           };
         }));
         writeOperational({ builds }, "Build archive", "info", [["Builds", String(entries.length)]],
-          builds.map((item) => `${item.build}: ${item.status ?? "unknown"}`));
+          builds.map((item) => {
+            const source = basename(item.run?.path ?? item.source.path);
+            const targets = item.targets.length === 0 ? "no named target" : item.targets.join(", ");
+            return `${item.build}: ${item.status ?? "unknown"} · ${source} · ${targets}`;
+          }));
       } else if (args.command === "history") {
         const catalogs = await runtime.builds();
         const entries = (await Promise.all(catalogs.map(async (catalog) => {
@@ -1675,12 +1370,34 @@ export async function runCli(
             return `${item.build}: ${item.output.name} · ${created} · ${shortDigest}`;
           }));
       } else if (args.command === "status") {
-        const status = await runtime.status(args.file!);
+        let status = await runtime.status(args.file!);
+        if (args.watch && status.build !== undefined && status.dispatch !== undefined) {
+          await observeBuild(runtime, {
+            id: status.build.build,
+            state: status.build.state,
+            status: submissionStatus(status.dispatch),
+            dispatch: status.dispatch,
+          }, {
+            ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
+            controller: await runtimeController(args.runtime),
+            ...(args.json ? {} : {
+              onProgress: (progress) => {
+                const operations = Object.entries(progress.operations)
+                  .map(([operationStatus, count]) => `${count} ${operationStatus}`)
+                  .join(", ");
+                io.write(`  · ${progress.build}: ${progress.phase}`
+                  + `${operations.length === 0 ? "" : ` · ${operations}`}\n`);
+                for (const line of progress.activity) io.write(`    ${line}\n`);
+              },
+            }),
+          });
+          status = await runtime.status(args.file!);
+        }
         const effectiveStatus = status.dispatch === undefined
           ? status.build?.state.status
           : submissionStatus(status.dispatch);
         const machine = {
-          build: status.build === undefined ? undefined : {
+          build: status.build === undefined ? null : {
             id: status.build.build,
             revision: status.build.revision,
             core: status.build.state.id,
@@ -1689,7 +1406,7 @@ export async function runCli(
             diagnostics: status.build.state.diagnostics,
           },
           catalog: status.catalog === undefined
-            ? undefined
+            ? null
             : summarizeBuildCatalog(status.catalog, status.build?.state),
           operations: status.operations.map((operation) => ({
             id: operation.id,
@@ -1703,13 +1420,22 @@ export async function runCli(
             ...(operation.failure === undefined ? {} : { failure: operation.failure }),
             ...(operation.cancellation === undefined ? {} : { cancellation: operation.cancellation }),
           })),
-          dispatch: status.dispatch,
+          dispatch: status.dispatch ?? null,
         };
         const phase = status.dispatch?.phase ?? "missing";
         const notableOperations = status.operations.filter((operation) =>
-          operation.status === "failed" || operation.status === "cancelled");
-        writeOperational(machine, status.build === undefined ? "Build not found" : "Build status",
-          status.build === undefined ? "warning" : status.dispatch?.terminal === "failed" ? "error" : "info", [
+          operation.status !== "completed").slice(0, args.verbose ? undefined : 12);
+        const terminal = status.dispatch?.phase === "terminal";
+        writeOperational(machine, status.build === undefined
+          ? "Build not found"
+          : args.watch
+            ? terminal ? "Build finished" : "Build still running"
+            : "Build status",
+        status.build === undefined
+          ? "warning"
+          : status.dispatch?.terminal === "failed"
+            ? "error"
+            : args.watch && !terminal ? "warning" : "info", [
             ["Build", args.file!],
             ["Status", effectiveStatus ?? "missing"],
             ...(status.build === undefined || effectiveStatus === status.build.state.status
@@ -1717,9 +1443,11 @@ export async function runCli(
               : [["Core", status.build.state.status] as const]),
             ["Dispatch", phase],
             ["Operations", String(status.operations.length)],
-          ], notableOperations.map((operation) => operation.failure === undefined
-            ? `${operation.endpoint}: ${operation.status}`
-            : `${operation.endpoint}: ${operation.failure.code} — ${operation.failure.message}`)
+          ], notableOperations.map((operation) => operation.failure !== undefined
+            ? `${operation.endpoint}: ${operation.failure.code} — ${operation.failure.message}`
+            : operation.progress === undefined
+              ? `${operation.endpoint}: ${operation.status}`
+              : `${operation.endpoint}: ${formatOperationProgress(operation.progress)}`)
             .concat(status.dispatch?.reason === undefined ? [] : [`Reason    ${status.dispatch.reason}`]));
         if (status.build === undefined || status.dispatch?.terminal === "failed") io.setExitCode?.(1);
       } else if (args.command === "inspect") {
@@ -1886,35 +1614,24 @@ export async function runCli(
     }
     return;
   }
-  if (args.packages.length > 0) throw new Error("--package is only valid for lock-packages");
-  const runtimePackageSelection = args.runtime === undefined
+  if (args.packages.length > 0) throw new Error("--package is reserved for the internal Worker launch");
+  const runtimePaths = args.runtime === undefined
     ? undefined
-    : await (await runtimeHost(args.runtime)).resolvePackages();
-  const discoveredPackageLock = args.file === undefined
-    ? undefined
-    : await nearestSourcePackageLock(dirname(resolve(args.file)));
-  const effectivePackageLock = args.packageLock ?? discoveredPackageLock;
-  const effectivePackageRoot = args.packageRoot ?? runtimePackageSelection?.packageRoot;
+    : await (await runtimeHost(args.runtime)).resolvePaths();
+  const effectivePackageRoot = args.packageRoot ?? runtimePaths?.packageRoot;
   const effectiveWorkspaceRoot = args.workspaceRoot
     ?? selectedRuntimeProjectRoot
-    ?? (effectivePackageLock === undefined ? dirname(resolve(args.file!)) : dirname(resolve(effectivePackageLock)));
-  if (effectivePackageRoot !== undefined && effectivePackageLock === undefined) {
-    throw new Error("--package-root locates the installed packages named by --package-lock; provide both options");
-  }
-  const loadedPackageSet = effectivePackageLock === undefined
+    ?? dirname(resolve(args.file!));
+  const sourcePackageRoot = effectivePackageRoot
+    ?? await defaultPackageRoot(effectiveWorkspaceRoot, distribution.fallbackPackageRoot);
+  const loadedPackageSet = distribution.discoverSourcePackages === undefined
     ? undefined
-    : distribution.discoverSourcePackages === undefined
-      ? await loadNodePackageSet(
-          effectivePackageLock,
-          effectivePackageRoot ?? distribution.packageRoot ?? dirname(effectivePackageLock),
-        )
-      : await loadDiscoveredSourcePackages(distribution, {
+    : await loadDiscoveredSourcePackages(distribution, {
           source: args.file!,
           ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
-          packageLock: effectivePackageLock,
-          packageRoot: effectivePackageRoot ?? distribution.packageRoot ?? dirname(effectivePackageLock),
+          packageRoot: sourcePackageRoot,
         });
-  const packageContributions = (loadedPackageSet?.packages ?? distribution.bootstrapPackages)
+  const packageContributions = (loadedPackageSet ?? distribution.bootstrapPackages)
     .map((item) => item.contribution);
   const runFrontends = collectRunFrontends(packageContributions);
   const compiler = distribution.createCompiler({
@@ -1930,9 +1647,7 @@ export async function runCli(
     const message = runMode
       ? `Frontend ${sourceHeader.using} is ambiguously registered as Author and Run`
       : `No trusted Author or Run compiler accepts Frontend ${sourceHeader.using}`;
-    throw new Error(effectivePackageLock === undefined && !runMode
-      ? `${message}; run narratage runtime use <profile>, or pass --runtime <profile> or --package-lock <lock>`
-      : message);
+    throw new Error(message);
   }
   if ((args.command === "plan" || args.command === "build") && !runMode) {
     throw new Error(`${args.command} requires a self-described Run Source; check Author Sources independently`);
@@ -2008,7 +1723,7 @@ export async function runCli(
     } finally {
       await archive.close();
     }
-    const result = loadedRun.compiler.planCompilation(loadedRun, loadedPackageSet?.lock.digest);
+    const result = loadedRun.compiler.planCompilation(loadedRun);
     let runtime: CliRuntime | undefined;
     try {
       const catalog = createCatalogDescriptor({
@@ -2024,13 +1739,18 @@ export async function runCli(
         // remain in Core; they never reclaim a previous Build.
         id: `bld_${randomUUID()}`,
         state: result.state,
+        ...(loadedPackageSet === undefined ? {} : {
+          implementationPackages: loadedPackageSet.map((item) => item.specifier),
+        }),
         catalog,
         attachments: result.compilation.attachments,
       } as const;
       const controller = await (await runtimeHost(args.runtime)).controller({
         workspaceRoot: effectiveWorkspaceRoot,
-        ...(effectivePackageLock === undefined ? {} : { packageLock: effectivePackageLock }),
-        packageRoot: effectivePackageRoot ?? distribution.packageRoot ?? effectiveWorkspaceRoot,
+        ...(loadedPackageSet === undefined ? {} : {
+          implementationPackages: loadedPackageSet.map((item) => item.specifier),
+        }),
+        packageRoot: sourcePackageRoot,
       });
       let programs: Awaited<ReturnType<typeof startDeclaredPrograms>> | undefined;
       let worker = await controller.worker.status();
@@ -2139,8 +1859,7 @@ export async function runCli(
           ["Worker", worker.state === "running" ? String(worker.pid) : worker.state],
           ["Goals", String(machine.goals.length)],
         ], terminal ? terminalLines : [
-          `Status   narratage status ${built.id}${runtimeHint}`,
-          `Watch    narratage queue${runtimeHint} --watch`,
+          `Watch    narratage status ${built.id}${runtimeHint} --watch`,
           `Cancel   narratage cancel ${built.id}${runtimeHint}`,
         ]);
       if (built.status === "failed") io.setExitCode?.(1);
@@ -2161,7 +1880,7 @@ export async function runCli(
       packageContributions,
       ...(runtime === undefined ? {} : { runtime }),
     });
-    const result = loaded.compiler.planCompilation(loaded, loadedPackageSet?.lock.digest);
+    const result = loaded.compiler.planCompilation(loaded);
     const preflight = args.runtime === undefined
       ? undefined
       : await preflightPlan(await runtimeHost(args.runtime), result.state, loadedPackageSet);

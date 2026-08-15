@@ -8,18 +8,15 @@ import {
   EndpointRegistry,
   serializeBuildState,
 } from "@narratage/driver-node";
-import type {
-  RecoverableEndpoint,
-  RuntimeEndpointImplementation,
-} from "@narratage/endpoint-kit";
+import type { RecoverableEndpoint } from "@narratage/endpoint-kit";
 import {
   LocalBuildScheduler,
   MemoryBuildStore,
   MemoryOperationStore,
   RuntimeModuleRegistry,
   localSchedulerOptionsFromClosure,
-  resolveRuntimeProfile,
-  sealRuntimeProfile,
+  resolveRuntimeClosure,
+  sealResolvedRuntimeProfile,
 } from "@narratage/runtime";
 import type {
   OperationStore,
@@ -36,14 +33,7 @@ import {
   start,
 } from "@narratage/core";
 
-import {
-  capabilities,
-  createGreetingBuild,
-  implementationDigests,
-  manifest,
-  producers as greetingProducers,
-  types,
-} from "../../core/test/greeting-fixture.js";
+import { capabilities, createGreetingBuild, manifest, producers as greetingProducers, types } from "../../core/test/greeting-fixture.js";
 
 function createParallelGreetingBuild(generationCount = 2) {
   const generations = ["a", "b", "c"].slice(0, generationCount);
@@ -116,7 +106,6 @@ function configuredExecutor(options: {
   readonly resource: string;
   readonly defaultConcurrency: number;
   readonly observe: (active: number) => void;
-  readonly runtimeImplementation?: RuntimeEndpointImplementation;
   readonly endpointId?: string;
 }) {
   const producers = new ProducerRegistry();
@@ -146,27 +135,24 @@ function configuredExecutor(options: {
           maxInFlight: options.defaultConcurrency,
         }],
       },
-      ...(options.runtimeImplementation === undefined
-        ? {}
-        : { runtimeImplementation: options.runtimeImplementation }),
     },
   );
   return { executor: new NodeDriver({ producers, endpoints }), endpoints, getCalls: () => calls };
 }
 
 function registerGreetingProducers(producers: ProducerRegistry): void {
-  producers.registerProducer(greetingProducers.makePrompt, implementationDigests.makePrompt, ({ inputs }) => {
+  producers.registerProducer(greetingProducers.makePrompt, ({ inputs }) => {
     const intent = inputs.intent;
     assert.equal(intent?.value.kind, "inline");
     const name = (intent.value.value as { readonly name: string }).name;
     return { outputs: { prompt: { kind: "inline", value: `Greet ${name}` } }, needs: {} };
   });
-  producers.registerProducer(greetingProducers.requestText, implementationDigests.requestText, ({ inputs }) => {
+  producers.registerProducer(greetingProducers.requestText, ({ inputs }) => {
     const prompt = inputs.prompt;
     assert.equal(prompt?.value.kind, "inline");
     return { outputs: {}, needs: { generation: { prompt: prompt.value.value } } };
   });
-  producers.registerProducer(greetingProducers.assemble, implementationDigests.assemble, ({ inputs }) => {
+  producers.registerProducer(greetingProducers.assemble, ({ inputs }) => {
     const generated = inputs.generated;
     assert.equal(generated?.value.kind, "inline");
     return {
@@ -178,27 +164,19 @@ function registerGreetingProducers(producers: ProducerRegistry): void {
 
 const runtimeModule = { name: "example.scheduler-runtime", version: "1" } as const;
 const providerFacet = { module: runtimeModule, name: "generation-endpoint" } as const;
-const providerImplementationDigest = digestOf("example.scheduler-runtime/generation-endpoint@1");
-
 function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverable" = "immediate") {
   const manifest: RuntimeModuleManifest = {
-    format: "svml.runtime-module@1",
+    format: "narratage.runtime-module@1",
     name: runtimeModule.name,
     version: runtimeModule.version,
     facets: [
       {
         name: "scheduler",
         role: "scheduler",
-        implementation: {
-          digest: digestOf("example.scheduler-runtime/scheduler@1"),
-        },
       },
       {
         name: "operations",
         role: "operation-store",
-        implementation: {
-          digest: digestOf("example.scheduler-runtime/operations@1"),
-        },
       },
       ...([
         ["worker", "worker"],
@@ -209,16 +187,10 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
       ] as const).map(([name, role]) => ({
         name,
         role,
-        implementation: {
-          digest: digestOf(`example.scheduler-runtime/${name}@1`),
-        },
       })),
       {
         name: providerFacet.name,
         role: "capability-endpoint",
-        implementation: {
-          digest: providerImplementationDigest,
-        },
         fulfills: [{ capability: capabilities.generation, returns: types.generated }],
         lifecycle,
         defaultConcurrency: 1,
@@ -227,7 +199,7 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
   };
   const modules = new RuntimeModuleRegistry();
   modules.register(manifest);
-  const closure = resolveRuntimeProfile(modules, sealRuntimeProfile({
+  const closure = resolveRuntimeClosure(modules, sealResolvedRuntimeProfile({
     instances: [
       { id: "scheduler.local", facet: { module: runtimeModule, name: "scheduler" } },
       { id: "worker.local", facet: { module: runtimeModule, name: "worker" } },
@@ -236,8 +208,8 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
       { id: "dispatch.memory", facet: { module: runtimeModule, name: "dispatch" } },
       { id: "artifacts.memory", facet: { module: runtimeModule, name: "artifacts" } },
       { id: "credentials.memory", facet: { module: runtimeModule, name: "credentials" } },
-      { id: "generation.local", facet: providerFacet, authority: "fixture.account" },
-    ].map((instance) => ({ ...instance, configurationDigest: digestOf({}) })),
+      { id: "generation.local", facet: providerFacet, pool: "fixture.account" },
+    ],
     scheduler: "scheduler.local",
     worker: "worker.local",
     stores: {
@@ -255,9 +227,9 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
     scheduling: {
       maxConcurrency: 8,
       resources: [
-        { id: "authority:fixture.account", maxConcurrency: laneLimit },
+        { id: "pool:fixture.account", maxConcurrency: laneLimit },
         {
-          id: `route:fixture.account/${capabilities.generation.module.name}@${capabilities.generation.module.version}#${capabilities.generation.name}`,
+          id: `lane:fixture.account/${capabilities.generation.module.name}@${capabilities.generation.module.version}#${capabilities.generation.name}`,
           maxConcurrency: laneLimit,
         },
       ],
@@ -280,14 +252,7 @@ function recoverableExecutor(
     capabilities.generation,
     types.generated,
     endpoint,
-    {
-      runtimeImplementation: {
-        facet: providerFacet,
-        digest: providerImplementationDigest,
-        configurationDigest: digestOf({}),
-      },
-      ...(retry === undefined ? {} : { retry }),
-    },
+    retry === undefined ? {} : { retry },
   );
   endpoints.applyRuntimeClosure(runtime.closure, runtime.modules);
   return {
@@ -299,7 +264,7 @@ function recoverableExecutor(
 test("one local Scheduler shares an Endpoint resource across multiple Builds", async () => {
   let maximumActive = 0;
   const { executor, getCalls } = configuredExecutor({
-    resource: "authority:fixture.account",
+    resource: "pool:fixture.account",
     defaultConcurrency: 1,
     observe(active) {
       maximumActive = Math.max(maximumActive, active);
@@ -315,12 +280,12 @@ test("one local Scheduler shares an Endpoint resource across multiple Builds", a
   assert.equal(getCalls(), 2);
   assert.equal(maximumActive, 1);
   assert.equal(results.every((result) =>
-    result.outcomes.some((entry) => entry.resources.includes("authority:fixture.account"))), true);
+    result.outcomes.some((entry) => entry.resources.includes("pool:fixture.account"))), true);
 });
 
-test("a Runtime Profile resource override changes parallelism without changing either Build", async () => {
+test("a Resolved Runtime resource override changes parallelism without changing either Build", async () => {
   let maximumActive = 0;
-  const resource = "authority:fixture.account";
+  const resource = "pool:fixture.account";
   const { executor } = configuredExecutor({
     resource,
     defaultConcurrency: 1,
@@ -346,7 +311,7 @@ test("a Runtime Profile resource override changes parallelism without changing e
 test("independent paid commands inside one Build may fill the same resource without duplicating their shared upstream", async () => {
   let maximumActive = 0;
   const { executor, getCalls } = configuredExecutor({
-    resource: "authority:fixture.account",
+    resource: "pool:fixture.account",
     defaultConcurrency: 2,
     observe(active) {
       maximumActive = Math.max(maximumActive, active);
@@ -367,7 +332,7 @@ test("independent paid commands inside one Build may fill the same resource with
 test("durable scheduling keeps the rest of an in-flight command batch after one event is stored", async () => {
   let maximumActive = 0;
   const { executor, getCalls } = configuredExecutor({
-    resource: "authority:fixture.account",
+    resource: "pool:fixture.account",
     defaultConcurrency: 2,
     observe(active) {
       maximumActive = Math.max(maximumActive, active);
@@ -392,13 +357,13 @@ test("durable scheduling keeps the rest of an in-flight command batch after one 
 
 test("durable scheduling can drain successful sibling commands after another sibling errors", async () => {
   const producers = new ProducerRegistry();
-  producers.registerProducer(greetingProducers.makePrompt, implementationDigests.makePrompt, ({ inputs }) => {
+  producers.registerProducer(greetingProducers.makePrompt, ({ inputs }) => {
     const intent = inputs.intent;
     assert.equal(intent?.value.kind, "inline");
     return { outputs: { prompt: { kind: "inline", value: "Greet Ada" } }, needs: {} };
   });
   let calls = 0;
-  producers.registerProducer(greetingProducers.requestText, implementationDigests.requestText, async () => {
+  producers.registerProducer(greetingProducers.requestText, async () => {
     calls += 1;
     const call = calls;
     if (call === 1) throw new Error("fixture producer failed");
@@ -424,17 +389,12 @@ test("durable scheduling can drain successful sibling commands after another sib
     item.producer.name === greetingProducers.requestText.name).length, 2);
 });
 
-test("a locked Runtime Closure assembles exact Endpoint code and Scheduler policy without manual bind", async () => {
+test("a resolved Runtime selects an Endpoint and Scheduler policy without manual bind", async () => {
   let maximumActive = 0;
   const { closure, modules } = resolvedRuntime(2);
   const { executor, endpoints } = configuredExecutor({
-    resource: "authority:ignored-registration",
+    resource: "pool:ignored-registration",
     defaultConcurrency: 1,
-    runtimeImplementation: {
-      facet: providerFacet,
-      digest: providerImplementationDigest,
-      configurationDigest: digestOf({}),
-    },
     endpointId: "generation.local",
     observe(active) {
       maximumActive = Math.max(maximumActive, active);
@@ -450,52 +410,15 @@ test("a locked Runtime Closure assembles exact Endpoint code and Scheduler polic
   ]);
 
   assert.deepEqual(results.map((result) => result.status), ["complete", "complete"]);
-  assert.equal(maximumActive, 2, "the locked Profile override, not registration order, owns the resource");
+  assert.equal(maximumActive, 2, "the selected Profile override owns the resource");
   assert.equal(results.every((result) => result.state.receipts[0]?.fulfiller === "generation.local"), true);
-});
-
-test("a same-name Endpoint with different implementation bytes is rejected before execution", () => {
-  const { closure, modules } = resolvedRuntime(1);
-  const { endpoints } = configuredExecutor({
-    resource: "authority:fixture.account",
-    defaultConcurrency: 1,
-    runtimeImplementation: {
-      facet: providerFacet,
-      digest: digestOf("tampered-endpoint-implementation"),
-      configurationDigest: digestOf({}),
-    },
-    endpointId: "generation.local",
-    observe() {},
-  });
-  assert.throws(() => endpoints.applyRuntimeClosure(closure, modules), /implementation does not match/u);
-});
-
-test("a same-name Endpoint with different configured-instance identity is rejected", () => {
-  const { closure, modules } = resolvedRuntime(1);
-  const { endpoints } = configuredExecutor({
-    resource: "authority:fixture.account",
-    defaultConcurrency: 1,
-    runtimeImplementation: {
-      facet: providerFacet,
-      digest: providerImplementationDigest,
-      configurationDigest: digestOf({ baseUrl: "https://another-endpoint.test" }),
-    },
-    endpointId: "generation.local",
-    observe() {},
-  });
-  assert.throws(() => endpoints.applyRuntimeClosure(closure, modules), /implementation does not match/u);
 });
 
 test("a recoverable Runtime facet cannot be activated by a one-shot Handler", () => {
   const { closure, modules } = resolvedRuntime(1, "recoverable");
   const { endpoints } = configuredExecutor({
-    resource: "authority:fixture.account",
+    resource: "pool:fixture.account",
     defaultConcurrency: 1,
-    runtimeImplementation: {
-      facet: providerFacet,
-      digest: providerImplementationDigest,
-      configurationDigest: digestOf({}),
-    },
     endpointId: "generation.local",
     observe() {},
   });

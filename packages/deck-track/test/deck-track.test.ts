@@ -473,7 +473,7 @@ test("Label Surface accepts ordinary graph Text without copying it during author
 
 test("another Deck family can coexist by contributing only the existing VisualTrack waist", () => {
   const other: ModuleManifest = {
-    format: "svml.module@1" as const,
+    format: "narratage.module@1" as const,
     name: "example.carousel",
     version: "1",
     dependencies: [compositionDependency],
@@ -482,9 +482,6 @@ test("another Deck family can coexist by contributing only the existing VisualTr
       inputs: [],
       outputs: [{ name: "track", type: compositionTypes.visualTrack }],
       needs: [],
-      implementation: {
-        digest: digestOf("example.carousel/render@1"),
-      },
     }],
   };
   const closure = createResolvedClosure([

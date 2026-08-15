@@ -77,9 +77,6 @@ importers:
       '@narratage/image-transform':
         specifier: workspace:*
         version: link:packages/image-transform
-      '@narratage/local':
-        specifier: workspace:*
-        version: link:packages/local
       '@narratage/media':
         specifier: workspace:*
         version: link:packages/media
@@ -146,12 +143,15 @@ importers:
       '@narratage/run-markup':
         specifier: workspace:*
         version: link:packages/run-markup
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-host-node':
         specifier: workspace:*
-        version: link:packages/runtime-adapter
-      '@narratage/runtime-adapter-node':
+        version: link:packages/runtime-host-node
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:packages/runtime-adapter-node
+        version: link:packages/runtime-kit
+      '@narratage/runtime-local':
+        specifier: workspace:*
+        version: link:packages/runtime-local
       '@narratage/screen-overlay':
         specifier: workspace:*
         version: link:packages/screen-overlay
@@ -239,9 +239,9 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter
+        version: link:../runtime-kit
 
   packages/artifact-store-s3:
     dependencies:
@@ -254,9 +254,9 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter
+        version: link:../runtime-kit
 
   packages/audio-track:
     dependencies:
@@ -456,9 +456,9 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter-node':
+      '@narratage/runtime-host-node':
         specifier: workspace:*
-        version: link:../runtime-adapter-node
+        version: link:../runtime-host-node
       '@narratage/source':
         specifier: workspace:*
         version: link:../source
@@ -466,9 +466,9 @@ importers:
         specifier: workspace:*
         version: link:../workspace
     devDependencies:
-      '@narratage/local':
+      '@narratage/runtime-local':
         specifier: workspace:*
-        version: link:../local
+        version: link:../runtime-local
 
   packages/comment-sticker:
     dependencies:
@@ -647,9 +647,9 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter
+        version: link:../runtime-kit
 
   packages/credential-store-keychain:
     dependencies:
@@ -659,9 +659,9 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter
+        version: link:../runtime-kit
 
   packages/deck-track:
     dependencies:
@@ -1406,52 +1406,6 @@ importers:
         specifier: workspace:*
         version: link:../raster
 
-  packages/local:
-    dependencies:
-      '@narratage/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@narratage/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-      '@narratage/endpoint-kit':
-        specifier: workspace:*
-        version: link:../endpoint-kit
-      '@narratage/package-loader-node':
-        specifier: workspace:*
-        version: link:../package-loader-node
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@narratage/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@narratage/runtime-adapter':
-        specifier: workspace:*
-        version: link:../runtime-adapter
-      '@narratage/runtime-adapter-node':
-        specifier: workspace:*
-        version: link:../runtime-adapter-node
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
-      '@narratage/workspace':
-        specifier: workspace:*
-        version: link:../workspace
-    devDependencies:
-      '@narratage/artifact-store-fs':
-        specifier: workspace:*
-        version: link:../artifact-store-fs
-      '@narratage/core':
-        specifier: workspace:*
-        version: link:../core
-      '@narratage/credential-store-env':
-        specifier: workspace:*
-        version: link:../credential-store-env
-      '@narratage/store-sqlite':
-        specifier: workspace:*
-        version: link:../store-sqlite
-
   packages/markup:
     dependencies:
       '@narratage/core':
@@ -1680,9 +1634,9 @@ importers:
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter
+        version: link:../runtime-kit
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
@@ -1715,12 +1669,12 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-host-node':
         specifier: workspace:*
-        version: link:../runtime-adapter
-      '@narratage/runtime-adapter-node':
+        version: link:../runtime-host-node
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter-node
+        version: link:../runtime-kit
     devDependencies:
       '@narratage/driver-node':
         specifier: workspace:*
@@ -1758,9 +1712,9 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter
+        version: link:../runtime-kit
     devDependencies:
       '@narratage/composition':
         specifier: workspace:*
@@ -1795,12 +1749,12 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-host-node':
         specifier: workspace:*
-        version: link:../runtime-adapter
-      '@narratage/runtime-adapter-node':
+        version: link:../runtime-host-node
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter-node
+        version: link:../runtime-kit
       hyperframes:
         specifier: 0.7.101
         version: 0.7.101(@types/node@24.10.1)
@@ -1829,12 +1783,12 @@ importers:
       '@narratage/raster':
         specifier: workspace:*
         version: link:../raster
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-host-node':
         specifier: workspace:*
-        version: link:../runtime-adapter
-      '@narratage/runtime-adapter-node':
+        version: link:../runtime-host-node
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter-node
+        version: link:../runtime-kit
     devDependencies:
       '@narratage/driver-node':
         specifier: workspace:*
@@ -1863,9 +1817,9 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter
+        version: link:../runtime-kit
     devDependencies:
       '@narratage/artifact-store-fs':
         specifier: workspace:*
@@ -1894,9 +1848,6 @@ importers:
       '@narratage/grok-imagine':
         specifier: workspace:*
         version: link:../grok-imagine
-      '@narratage/local':
-        specifier: workspace:*
-        version: link:../local
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
@@ -1912,6 +1863,9 @@ importers:
       '@narratage/narrative':
         specifier: workspace:*
         version: link:../narrative
+      '@narratage/runtime-local':
+        specifier: workspace:*
+        version: link:../runtime-local
       '@narratage/seedance':
         specifier: workspace:*
         version: link:../seedance
@@ -1948,9 +1902,9 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter
+        version: link:../runtime-kit
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
@@ -1988,12 +1942,12 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-host-node':
         specifier: workspace:*
-        version: link:../runtime-adapter
-      '@narratage/runtime-adapter-node':
+        version: link:../runtime-host-node
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter-node
+        version: link:../runtime-kit
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
@@ -2010,9 +1964,9 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter
+        version: link:../runtime-kit
       '@narratage/speech-evidence':
         specifier: workspace:*
         version: link:../speech-evidence
@@ -2041,9 +1995,9 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter
+        version: link:../runtime-kit
     devDependencies:
       '@narratage/driver-node':
         specifier: workspace:*
@@ -2202,7 +2156,28 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
-  packages/runtime-adapter:
+  packages/runtime-host-node:
+    dependencies:
+      '@narratage/host':
+        specifier: workspace:*
+        version: link:../host
+      '@narratage/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@narratage/runtime-kit':
+        specifier: workspace:*
+        version: link:../runtime-kit
+      '@narratage/workspace':
+        specifier: workspace:*
+        version: link:../workspace
+
+  packages/runtime-kit:
     dependencies:
       '@narratage/endpoint-kit':
         specifier: workspace:*
@@ -2217,11 +2192,17 @@ importers:
         specifier: workspace:*
         version: link:../runtime
 
-  packages/runtime-adapter-node:
+  packages/runtime-local:
     dependencies:
-      '@narratage/host':
+      '@narratage/component-kit':
         specifier: workspace:*
-        version: link:../host
+        version: link:../component-kit
+      '@narratage/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@narratage/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
       '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
@@ -2231,12 +2212,31 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-host-node':
         specifier: workspace:*
-        version: link:../runtime-adapter
+        version: link:../runtime-host-node
+      '@narratage/runtime-kit':
+        specifier: workspace:*
+        version: link:../runtime-kit
+      '@narratage/validation':
+        specifier: workspace:*
+        version: link:../validation
       '@narratage/workspace':
         specifier: workspace:*
         version: link:../workspace
+    devDependencies:
+      '@narratage/artifact-store-fs':
+        specifier: workspace:*
+        version: link:../artifact-store-fs
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/credential-store-env':
+        specifier: workspace:*
+        version: link:../credential-store-env
+      '@narratage/store-sqlite':
+        specifier: workspace:*
+        version: link:../store-sqlite
 
   packages/screen-overlay:
     dependencies:
@@ -2570,9 +2570,9 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-adapter':
+      '@narratage/runtime-kit':
         specifier: workspace:*
-        version: link:../runtime-adapter
+        version: link:../runtime-kit
 
   packages/svs:
     dependencies:
@@ -2722,9 +2722,9 @@ importers:
       '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
-      '@narratage/runtime-adapter-node':
+      '@narratage/runtime-host-node':
         specifier: workspace:*
-        version: link:../runtime-adapter-node
+        version: link:../runtime-host-node
       '@narratage/workspace-fs-node':
         specifier: workspace:*
         version: link:../workspace-fs-node

@@ -42,11 +42,11 @@ const requestType = { module: testModule, name: "Request" } satisfies TypeRef;
 const generateProducer = { module: testModule, name: "generate" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: testModule.name,
   version: testModule.version,
   dependencies: [speechDependency],
-  types: [{ name: requestType.name, schema: { kind: "string", minLength: 1 } }],
+  types: [{ name: requestType.name }],
   capabilities: [],
   producers: [{
     name: generateProducer.name,
@@ -56,9 +56,6 @@ const manifest: ModuleManifest = {
     ],
     outputs: [{ name: "take", type: speechTypes.basis }],
     needs: [],
-    implementation: {
-      digest: digestOf("example.fragment-speech/generate@1"),
-    },
   }],
 };
 

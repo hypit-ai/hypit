@@ -50,7 +50,7 @@ function fixture() {
     frameRate: { numerator: 30, denominator: 1 },
   });
   const visual = sealVisualTrack({
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     id: "caption",
     presents: [{
       id: "cue-1",
@@ -157,7 +157,7 @@ test("VisualTrack cannot silently extend the versioned public Visual IR", () => 
       canvas: { width: 1080, height: 1920, clearColor: "#000000" },
       tracks: [unknownStyle],
     }), programSpace),
-    /outside svml\.visual-ir@1/u,
+    /outside narratage\.visual-ir@1/u,
   );
 
   const fixedPosition = sealVisualTrack({

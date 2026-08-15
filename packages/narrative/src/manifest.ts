@@ -21,18 +21,17 @@ export const narrativeTypes = {
   captionDisplayWordSubset: { module: narrativeModuleRef, name: "CaptionDisplayWordSubset" },
 } satisfies Record<string, TypeRef>;
 export const narrativeManifest: ModuleManifest = {
-  format: "svml.module@1", name: narrativeModuleRef.name, version: narrativeModuleRef.version,
+  format: "narratage.module@1", name: narrativeModuleRef.name, version: narrativeModuleRef.version,
   dependencies: [],
   types: [
-    { name: narrativeTypes.narrative.name, schema: narrativeSchema },
-    { name: narrativeTypes.excerpt.name, schema: narrativeExcerptSchema },
-    { name: narrativeTypes.selection.name, schema: narrativeSelectionSchema },
-    { name: narrativeTypes.moment.name, schema: narrativeMomentSchema },
-    { name: narrativeTypes.captionDisplay.name, schema: captionDisplaySequenceSchema },
-    { name: narrativeTypes.captionCorrespondence.name, schema: captionCorrespondenceSchema },
-    { name: narrativeTypes.captionDisplayWordSubset.name, schema: captionDisplayWordSubsetSchema },
+    { name: narrativeTypes.narrative.name },
+    { name: narrativeTypes.excerpt.name },
+    { name: narrativeTypes.selection.name },
+    { name: narrativeTypes.moment.name },
+    { name: narrativeTypes.captionDisplay.name },
+    { name: narrativeTypes.captionCorrespondence.name },
+    { name: narrativeTypes.captionDisplayWordSubset.name },
   ],
   capabilities: [], producers: [],
 };
-export const narrativeManifestDigest = digestOf(narrativeManifest);
-export const narrativeDependency = { module: narrativeModuleRef, digest: narrativeManifestDigest } as const;
+export const narrativeDependency = { module: narrativeModuleRef } as const;

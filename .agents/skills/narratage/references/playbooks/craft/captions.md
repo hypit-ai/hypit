@@ -102,7 +102,6 @@ source, and starting a server nobody asked for interrupts the user for nothing.
 ```bash
 pnpm caption:playground -- \
   --source main.svml \
-  --package-lock svml.packages.lock \
   --style base-caption \
   --display story.caption \
   --recipe studio.svs#caption.base \

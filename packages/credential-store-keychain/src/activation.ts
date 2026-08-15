@@ -1,13 +1,13 @@
 import {
-  createRuntimeComponentAdapterFacet,
+  createRuntimeInfrastructureAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigString,
-} from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
 
 import { createKeychainCredentialStorePackage } from "./store.js";
 
-const keychainCredentialStoreRuntimeAdapter = createRuntimeComponentAdapterFacet({
+const keychainCredentialStoreRuntimeAdapter = createRuntimeInfrastructureAdapterFacet({
   use: "@narratage/credential-store-keychain",
   validate(context) {
     const config = runtimeConfigObject(context.config, "keychain CredentialStore");
@@ -25,9 +25,9 @@ const keychainCredentialStoreRuntimeAdapter = createRuntimeComponentAdapterFacet
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [keychainCredentialStoreRuntimeAdapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

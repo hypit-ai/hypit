@@ -91,8 +91,8 @@ test("explicit metadata is rendered and the terminal compiler accepts the Track 
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [rendered],
   }, space);
-  assert.match(document.html, /data-svml-element-id="meta"/u);
-  assert.match(document.html, /data-svml-element-id="body"/u);
+  assert.match(document.html, /data-narratage-element-id="meta"/u);
+  assert.match(document.html, /data-narratage-element-id="body"/u);
 });
 
 test("SVS controls appearance and local motion but cannot smuggle geometry", () => {

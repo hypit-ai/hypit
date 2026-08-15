@@ -34,7 +34,7 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
   const root = await mkdtemp(join(tmpdir(), "narratage-runtime-cli-"));
   const previous = process.cwd();
   try {
-    const profile = join(root, "svml.runtime.json");
+    const profile = join(root, "narratage.runtime.json");
     const otherProfile = join(root, "other.runtime.json");
     await writeFile(profile, "{}\n", "utf8");
     await writeFile(otherProfile, "{}\n", "utf8");
@@ -46,10 +46,7 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
     const distribution = {
       openRuntimeHost: async (path: string) => ({
         profile: path,
-        resolvePackages: async () => {
-          calls.push(`select:${resolve(path)}`);
-          return { runtimePackageLock: join(root, "svml.runtime-packages.lock") };
-        },
+        resolvePaths: async () => ({}),
         openArchive: async () => {
           calls.push(`queue:${resolve(path)}`);
           return control;
@@ -67,7 +64,6 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
     await runCli(["runtime", "unset", "--json"], { write() {} }, distribution);
 
     assert.deepEqual(calls, [
-      `select:${profile}`,
       `queue:${await realpath(profile)}`,
       `queue:${otherProfile}`,
     ]);

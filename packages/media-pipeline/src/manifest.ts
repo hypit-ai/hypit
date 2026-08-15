@@ -46,32 +46,6 @@ export const mediaPipelineProducers = {
   mux: { module: mediaPipelineModuleRef, name: "request-media-mux" },
   projectMuxed: { module: mediaPipelineModuleRef, name: "project-muxed-media" },
 } satisfies Record<string, ProducerRef>;
-export const mediaPipelineImplementationDigests = {
-  bindVisualRequest: digestOf("@narratage/media-pipeline/bind-visual-media-request-to-program@1"),
-  bindAvRequest: digestOf("@narratage/media-pipeline/bind-av-media-request-to-program@1"),
-  inspect: digestOf("@narratage/media-pipeline/request-media-inspection@1"),
-  select: digestOf("@narratage/media-pipeline/select-media-streams@1"),
-  normalize: digestOf("@narratage/media-pipeline/request-media-normalization@1"),
-  transform: digestOf("@narratage/media-pipeline/request-media-transform@1"),
-  extractAudio: digestOf("@narratage/media-pipeline/request-audio-extraction@1"),
-  extractFrame: digestOf("@narratage/media-pipeline/request-frame-extraction@1"),
-  projectSpeechEvidenceAudio: digestOf("@narratage/media-pipeline/request-speech-evidence-audio@1"),
-  requestValidator: digestOf("@narratage/media-pipeline/validate-selection-request@1"),
-  planAudio: digestOf("@narratage/media-pipeline/compile-audio-program@1"),
-  renderAudio: digestOf("@narratage/media-pipeline/request-audio-render@1"),
-  mux: digestOf("@narratage/media-pipeline/request-media-mux@1"),
-  projectMuxed: digestOf("@narratage/media-pipeline/project-muxed-media@1"),
-  audioPlanValidator: digestOf("@narratage/media-pipeline/validate-audio-program-plan@1"),
-  transformProgramValidator: digestOf("@narratage/media-pipeline/validate-media-transform-program@1"),
-  audioExtractionValidator: digestOf("@narratage/media-pipeline/validate-audio-extraction-request@1"),
-  frameExtractionValidator: digestOf("@narratage/media-pipeline/validate-frame-extraction-request@1"),
-} as const;
-export const synchronizedMediaSurfaceImplementationDigest = digestOf("@narratage/media-pipeline/synchronized-media-surface@1");
-export const mediaOperationSurfaceImplementationDigests = {
-  transform: digestOf("@narratage/media-pipeline/transform-media-surface@1"),
-  extractAudio: digestOf("@narratage/media-pipeline/extract-audio-surface@1"),
-  extractFrame: digestOf("@narratage/media-pipeline/extract-frame-surface@1"),
-} as const;
 
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const mode = (name: string): ValueSchema => ({
@@ -229,28 +203,24 @@ export const mediaPipelineMarkupSurfaces = [
     {
       name: "synchronized-media", tag: "Normalize", mode: "structured",
       outputs: [mediaPipelineTypes.selectionRequest, mediaTypes.synchronized],
-      implementation: { digest: synchronizedMediaSurfaceImplementationDigest },
     },
     {
       name: "transform-media", tag: "Transform", mode: "structured",
       outputs: [mediaPipelineTypes.selectionRequest, mediaPipelineTypes.transformProgram, artifactTypes.blob],
-      implementation: { digest: mediaOperationSurfaceImplementationDigests.transform },
     },
     {
       name: "extract-audio", tag: "ExtractAudio", mode: "structured",
       outputs: [mediaPipelineTypes.audioExtractionRequest, artifactTypes.blob],
-      implementation: { digest: mediaOperationSurfaceImplementationDigests.extractAudio },
     },
     {
       name: "extract-frame", tag: "ExtractFrame", mode: "structured",
       outputs: [mediaPipelineTypes.frameExtractionRequest, artifactTypes.blob],
-      implementation: { digest: mediaOperationSurfaceImplementationDigests.extractFrame },
     },
   ] as const;
 
 
 export const mediaPipelineManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: mediaPipelineModuleRef.name,
   version: mediaPipelineModuleRef.version,
   dependencies: [
@@ -263,48 +233,18 @@ export const mediaPipelineManifest: ModuleManifest = {
   types: [
     {
       name: mediaPipelineTypes.selectionRequest.name,
-      schema: mediaSelectionRequestSchema,
-      validator: {
-        implementation: {
-          digest: mediaPipelineImplementationDigests.requestValidator,
-        },
-      },
     },
     {
       name: mediaPipelineTypes.audioProgramPlan.name,
-      schema: audioProgramPlanSchema,
-      validator: {
-        implementation: {
-          digest: mediaPipelineImplementationDigests.audioPlanValidator,
-        },
-      },
     },
     {
       name: mediaPipelineTypes.transformProgram.name,
-      schema: mediaTransformProgramSchema,
-      validator: {
-        implementation: {
-          digest: mediaPipelineImplementationDigests.transformProgramValidator,
-        },
-      },
     },
     {
       name: mediaPipelineTypes.audioExtractionRequest.name,
-      schema: audioExtractionRequestSchema,
-      validator: {
-        implementation: {
-          digest: mediaPipelineImplementationDigests.audioExtractionValidator,
-        },
-      },
     },
     {
       name: mediaPipelineTypes.frameExtractionRequest.name,
-      schema: frameExtractionRequestSchema,
-      validator: {
-        implementation: {
-          digest: mediaPipelineImplementationDigests.frameExtractionValidator,
-        },
-      },
     },
   ],
   capabilities: [
@@ -323,18 +263,12 @@ export const mediaPipelineManifest: ModuleManifest = {
       inputs: [{ name: "space", type: programSpaceTypes.programSpace }],
       outputs: [{ name: "request", type: mediaPipelineTypes.selectionRequest }],
       needs: [],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.bindVisualRequest,
-      },
     },
     {
       name: mediaPipelineProducers.bindAvRequest.name,
       inputs: [{ name: "space", type: programSpaceTypes.programSpace }],
       outputs: [{ name: "request", type: mediaPipelineTypes.selectionRequest }],
       needs: [],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.bindAvRequest,
-      },
     },
     {
       name: mediaPipelineProducers.inspect.name,
@@ -345,9 +279,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         capability: mediaPipelineCapabilities.inspect,
         returns: mediaTypes.inspection,
       }],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.inspect,
-      },
     },
     {
       name: mediaPipelineProducers.select.name,
@@ -360,9 +291,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         type: mediaTypes.streamSelection,
       }],
       needs: [],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.select,
-      },
     },
     {
       name: mediaPipelineProducers.normalize.name,
@@ -378,9 +306,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         capability: mediaPipelineCapabilities.normalize,
         returns: mediaTypes.synchronized,
       }],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.normalize,
-      },
     },
     {
       name: mediaPipelineProducers.transform.name,
@@ -394,9 +319,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         capability: mediaPipelineCapabilities.transform,
         returns: artifactTypes.blob,
       }],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.transform,
-      },
     },
     {
       name: mediaPipelineProducers.extractAudio.name,
@@ -411,9 +333,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         capability: mediaPipelineCapabilities.extractAudio,
         returns: artifactTypes.blob,
       }],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.extractAudio,
-      },
     },
     {
       name: mediaPipelineProducers.extractFrame.name,
@@ -428,9 +347,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         capability: mediaPipelineCapabilities.extractFrame,
         returns: artifactTypes.blob,
       }],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.extractFrame,
-      },
     },
     {
       name: mediaPipelineProducers.projectSpeechEvidenceAudio.name,
@@ -441,9 +357,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         capability: mediaPipelineCapabilities.projectSpeechEvidenceAudio,
         returns: speechTypes.evidenceAudio,
       }],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.projectSpeechEvidenceAudio,
-      },
     },
     {
       name: mediaPipelineProducers.planAudio.name,
@@ -453,9 +366,6 @@ export const mediaPipelineManifest: ModuleManifest = {
       ],
       outputs: [{ name: "plan", type: mediaPipelineTypes.audioProgramPlan }],
       needs: [],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.planAudio,
-      },
     },
     {
       name: mediaPipelineProducers.renderAudio.name,
@@ -466,9 +376,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         capability: mediaPipelineCapabilities.renderAudio,
         returns: mediaTypes.timelineAudio,
       }],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.renderAudio,
-      },
     },
     {
       name: mediaPipelineProducers.mux.name,
@@ -482,20 +389,12 @@ export const mediaPipelineManifest: ModuleManifest = {
         capability: mediaPipelineCapabilities.mux,
         returns: mediaTypes.muxed,
       }],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.mux,
-      },
     },
     {
       name: mediaPipelineProducers.projectMuxed.name,
       inputs: [{ name: "media", type: mediaTypes.muxed }],
       outputs: [{ name: "video", type: artifactTypes.blob }],
       needs: [],
-      implementation: {
-        digest: mediaPipelineImplementationDigests.projectMuxed,
-      },
     },
   ],
 };
-
-export const mediaPipelineManifestDigest = digestOf(mediaPipelineManifest);

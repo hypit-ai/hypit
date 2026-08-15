@@ -23,42 +23,12 @@ import {
   elaborateGraphFragment,
   mergeFragmentContributions,
 } from "@narratage/elaborator";
-import {
-  appendFilmAudioTrack,
-  appendFilmAudioTrackImplementationDigest,
-  appendFilmVisualTrack,
-  appendFilmVisualTrackImplementationDigest,
-  compileFilmComposition,
-  compileFilmCompositionImplementationDigest,
-  createFilmAssemblyFragment,
-  createFilmTrackSet,
-  createFilmTrackSetImplementationDigest,
-  filmManifest,
-  filmProducers,
-  filmTypes,
-  sealFilmProgram,
-} from "@narratage/film";
-import {
-  compileHyperframesDocument,
-  compileHyperframesImplementationDigest,
-  hyperframesDocumentFragment,
-  hyperframesManifest,
-  hyperframesProducers,
-  hyperframesTypes,
-} from "@narratage/hyperframes";
+import { appendFilmAudioTrack, appendFilmVisualTrack, compileFilmComposition, createFilmAssemblyFragment, createFilmTrackSet, filmManifest, filmProducers, filmTypes, sealFilmProgram } from "@narratage/film";
+import { compileHyperframesDocument, hyperframesDocumentFragment, hyperframesManifest, hyperframesProducers, hyperframesTypes } from "@narratage/hyperframes";
 import type { CanonicalValue, CompiledGraph, StoredValue, TypedRecord } from "@narratage/protocol";
 import { svsManifest } from "@narratage/svs";
 import { textManifest } from "@narratage/text";
-import {
-  renderTypographyTrack,
-  renderTypographyTrackImplementationDigest,
-  sealTypographyTrackProgram,
-  stillTextMotion,
-  typographyTrackFragment,
-  typographyTrackManifest,
-  typographyTrackProducers,
-  typographyTrackTypes,
-} from "@narratage/typography-track";
+import { renderTypographyTrack, sealTypographyTrackProgram, stillTextMotion, typographyTrackFragment, typographyTrackManifest, typographyTrackProducers, typographyTrackTypes } from "@narratage/typography-track";
 import type { TextStyle } from "@narratage/typography-track";
 import { admitRecord, TypeValidatorRegistry } from "@narratage/validation";
 
@@ -129,7 +99,7 @@ const textProgram = sealTypographyTrackProgram({
   }],
 });
 const background = sealVisualTrack({
-  visualIr: "svml.visual-ir@1",
+  visualIr: "narratage.visual-ir@1",
   id: "background-track",
   presents: [{
     id: "background",
@@ -257,15 +227,15 @@ test("Film stops at Composition and Hyperframes remains an ordinary downstream F
 
 test("the Driver folds peer Tracks, then independently compiles the Composition", async () => {
   const registry = new ProducerRegistry();
-  registry.registerProducer(typographyTrackProducers.render, renderTypographyTrackImplementationDigest, ({ inputs }) => ({
+  registry.registerProducer(typographyTrackProducers.render, ({ inputs }) => ({
     outputs: { track: stored(renderTypographyTrack(inline(inputs.space) as typeof space, inline(inputs.program) as typeof textProgram)) },
     needs: {},
   }));
-  registry.registerProducer(filmProducers.createTrackSet, createFilmTrackSetImplementationDigest, () => ({
+  registry.registerProducer(filmProducers.createTrackSet, () => ({
     outputs: { set: stored(createFilmTrackSet()) },
     needs: {},
   }));
-  registry.registerProducer(filmProducers.appendVisualTrack, appendFilmVisualTrackImplementationDigest, ({ inputs }) => ({
+  registry.registerProducer(filmProducers.appendVisualTrack, ({ inputs }) => ({
     outputs: { set: stored(appendFilmVisualTrack(
       inline(inputs.set) as never,
       inline(inputs.space) as typeof space,
@@ -273,7 +243,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
     )) },
     needs: {},
   }));
-  registry.registerProducer(filmProducers.appendAudioTrack, appendFilmAudioTrackImplementationDigest, ({ inputs }) => ({
+  registry.registerProducer(filmProducers.appendAudioTrack, ({ inputs }) => ({
     outputs: { set: stored(appendFilmAudioTrack(
       inline(inputs.set) as never,
       inline(inputs.space) as typeof space,
@@ -281,7 +251,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
     )) },
     needs: {},
   }));
-  registry.registerProducer(filmProducers.compileComposition, compileFilmCompositionImplementationDigest, ({ inputs }) => ({
+  registry.registerProducer(filmProducers.compileComposition, ({ inputs }) => ({
     outputs: { composition: stored(compileFilmComposition(
       inline(inputs.program) as never,
       inline(inputs.canvas) as typeof canvas,
@@ -290,7 +260,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
     )) },
     needs: {},
   }));
-  registry.registerProducer(hyperframesProducers.compile, compileHyperframesImplementationDigest, ({ inputs }) => ({
+  registry.registerProducer(hyperframesProducers.compile, ({ inputs }) => ({
     outputs: { document: stored(compileHyperframesDocument(
       inline(inputs.composition) as never,
       inline(inputs.space) as typeof space,
@@ -303,7 +273,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
   const documentRecord = result.state.records.find((record) => record.type.module.name === hyperframesTypes.document.module.name);
   assert(documentRecord);
   const document = inline(documentRecord) as { readonly html: string };
-  assert.match(document.html, /data-svml-text-run="title-text"/u);
+  assert.match(document.html, /data-narratage-text-run="title-text"/u);
   assert.match(document.html, /background-track/u);
   assert.equal(result.state.records.filter((record) => record.type.name === filmTypes.trackSet.name).length, 4);
 });

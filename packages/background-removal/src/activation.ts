@@ -6,8 +6,8 @@ import {
   backgroundRemovalMarkupSurfaces,
 } from "./index.js";
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   modules: [{ manifest: backgroundRemovalManifest }],
   components: [backgroundRemovalComponent],
   hostFacets: [{ ...createMarkupSurfaceHostFacet({
@@ -15,4 +15,4 @@ export const svmlPackage = {
     declaration: backgroundRemovalMarkupSurfaces.find((item) => item.name === "background")!, handler: decodeBackgroundRemovalSurface,
   }) }],
 };
-export default svmlPackage;
+export default narratagePackage;

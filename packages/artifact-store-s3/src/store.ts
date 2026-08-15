@@ -2,8 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { digestOf, isDigest } from "@narratage/protocol";
 import type { BlobRef, Digest } from "@narratage/protocol";
-import { defineRuntimeComponentPackage } from "@narratage/runtime";
-import type { ArtifactStore, RuntimeComponentPackage } from "@narratage/runtime";
+import { defineRuntimeInfrastructurePackage } from "@narratage/runtime";
+import type { ArtifactStore, RuntimeInfrastructurePackage } from "@narratage/runtime";
 
 import { AwsS3ObjectClient } from "./client.js";
 import type { S3ListPage, S3ObjectClient } from "./client.js";
@@ -12,10 +12,6 @@ export const s3ArtifactStoreModuleRef = {
   name: "@narratage/artifact-store-s3",
   version: "1",
 } as const;
-
-export const s3ArtifactStoreImplementationDigest = digestOf(
-  "@narratage/artifact-store-s3/artifact-store@1",
-);
 
 /**
  * Where an Artifact lives in a bucket, given its digest.
@@ -146,8 +142,8 @@ export class S3ArtifactStore implements ArtifactStore {
       ChecksumSHA256: hash.digest("base64"),
       IfNoneMatch: "*",
       Metadata: {
-        "svml-digest": digest,
-        "svml-size": String(copy.byteLength),
+        "narratage-digest": digest,
+        "narratage-size": String(copy.byteLength),
       },
       ...(this.#expectedBucketOwner === undefined
         ? {}
@@ -326,7 +322,7 @@ export class S3ArtifactStore implements ArtifactStore {
         CopySource: `${this.#bucket}/${staging}`,
         ContentType: mediaType,
         MetadataDirective: "REPLACE",
-        Metadata: { "svml-digest": digest, "svml-size": String(size) },
+        Metadata: { "narratage-digest": digest, "narratage-size": String(size) },
         IfNoneMatch: "*",
         ...owner,
       });
@@ -381,8 +377,8 @@ export class S3ArtifactStore implements ArtifactStore {
 
 export function createS3ArtifactStorePackage(
   options: CreateS3ArtifactStorePackageOptions,
-): RuntimeComponentPackage {
-  const instance = options.instance ?? "artifacts.s3";
+): RuntimeInfrastructurePackage {
+  const instance = options.instance ?? "artifacts";
   assert(instance.trim().length > 0, "S3 ArtifactStore instance id must not be empty");
   const prefix = normalizePrefix(options.prefix);
   const configuration = {
@@ -399,16 +395,13 @@ export function createS3ArtifactStorePackage(
     ...(options.endpoint === undefined ? {} : { endpoint: options.endpoint }),
     ...(options.forcePathStyle === undefined ? {} : { forcePathStyle: options.forcePathStyle }),
   });
-  return defineRuntimeComponentPackage({
+  return defineRuntimeInfrastructurePackage({
     module: s3ArtifactStoreModuleRef,
-    components: [{
+    instance,
+    parts: [{
       role: "artifact-store",
+      part: "store",
       facet: "artifact-store",
-      instance,
-      implementation: {
-        digest: s3ArtifactStoreImplementationDigest,
-      },
-      configuration,
       port: new S3ArtifactStore({
         client,
         bucket: options.bucket,

@@ -53,6 +53,6 @@ The package contains no Script, video, Provider, queue, credentials or rendering
 non-video application can use it with only its own manifests, Frontends, Surfaces and chosen
 Workspace implementation.
 
-Package installation, lockfile-based third-party code loading and sandbox execution remain Host
+Package installation, third-party code loading and sandbox execution remain Host
 features above this registry; treating an import string as permission to execute npm code would
 violate the trust boundary.

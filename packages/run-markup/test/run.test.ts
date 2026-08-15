@@ -33,13 +33,13 @@ const defaultProducer = { module: moduleRef, name: "default" } satisfies Produce
 const previewProducer = { module: moduleRef, name: "preview" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
   types: [
-    { name: promptType.name, schema: { kind: "string" } },
-    { name: mediaType.name, schema: { kind: "string" } },
+    { name: promptType.name },
+    { name: mediaType.name },
   ],
   capabilities: [],
   producers: [defaultProducer, previewProducer].map((producer) => ({
@@ -47,9 +47,6 @@ const manifest: ModuleManifest = {
     inputs: [{ name: "prompt", type: promptType }],
     outputs: [{ name: "media", type: mediaType }],
     needs: [],
-    implementation: {
-      digest: digestOf(`example.run/${producer.name}@1`),
-    },
   })),
 };
 

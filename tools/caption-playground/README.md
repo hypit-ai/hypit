@@ -6,7 +6,6 @@ not a generic component inspector.
 ```bash
 pnpm caption:playground -- \
   --source examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock \
   --style base-caption \
   --display story.caption \
   --recipe examples/talking-film-graph-check/studio.svs#caption.base \
@@ -20,7 +19,7 @@ component registry, preview default or private Playground document.
 
 The author Source, SVS and font-source files may live outside this repository. Installed packages
 resolve from this tool's own installation by default; pass `--package-root <directory>` only when
-the lock names packages installed somewhere else. Source containment and package resolution remain
+the Source imports packages installed somewhere else. Source containment and package resolution remain
 separate boundaries, just as they are in the CLI.
 
 ## Source of truth
@@ -38,7 +37,7 @@ sections in memory.
 
 ## What is real and what is preview-only
 
-The Node side loads the selected package lock and runs the ordinary author
+The Node side loads the packages selected by the Source and runs the ordinary author
 compiler. The browser receives the real `CaptionStyleIntent`,
 `CaptionDisplaySequence` and exact font attachments, then calls the real Fine
 Caption renderer and Hyperframes document compiler.

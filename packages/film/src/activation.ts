@@ -4,8 +4,8 @@ import {
   filmMarkupSurfaces,
 } from "./index.js";
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   modules: [{ manifest: filmManifest }],
   components: [filmComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
@@ -13,4 +13,4 @@ export const svmlPackage = {
     declaration: filmMarkupSurfaces.find((item) => item.name === "film")!, handler: decodeFilmSurface,
   })],
 };
-export default svmlPackage;
+export default narratagePackage;

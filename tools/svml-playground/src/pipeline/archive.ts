@@ -8,7 +8,7 @@
  */
 import {
   createRuntimeArchiveFromConfig, createRuntimeArtifactAccessFromConfig,
-} from "@narratage/local/config";
+} from "@narratage/runtime-local/config";
 import type { BuildState } from "@narratage/protocol";
 
 export type Archive = {

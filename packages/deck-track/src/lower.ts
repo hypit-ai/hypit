@@ -358,7 +358,7 @@ export function renderDepthStack(
     }
   }
   const track = sealVisualTrack({
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     id: program.id,
     presents,
   });

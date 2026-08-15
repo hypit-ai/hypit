@@ -10,7 +10,7 @@ pnpm svml:playground -- --source examples/talking-film-broll-preview/main.svml
 Optional arguments:
 
 - `--run <build.svrun>` reads material and timings explicitly selected by a Run Source.
-- `--runtime <svml.runtime.json>` opens earlier Build records and Artifacts read-only.
+- `--runtime <narratage.runtime.json>` opens earlier Build records and Artifacts read-only.
 - `--port <number>` changes the listening port from `5179`.
 
 The Playground never writes a Source, Recipe, Build or Artifact and never calls

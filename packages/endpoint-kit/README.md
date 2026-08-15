@@ -4,7 +4,7 @@ Host-neutral SDK for exact external capability endpoints.
 
 An Endpoint is any installed implementation that fulfills one declared `Need`: a vendor API, local
 process, Lambda function, human service or device. `defineEndpointPackage()` produces its static
-Runtime Manifest, configured instance, exact bindings and installation facet from one source of
+Runtime Manifest, configured instance, exact offers and installation facet from one source of
 truth. It depends on no Driver, Node filesystem, queue or domain package.
 
 Concrete distributions may still be named after a real provider, such as `@narratage/provider-kie`.

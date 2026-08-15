@@ -6,7 +6,7 @@ description: Author, check, plan, build, inspect, and retrieve Narratage/SVML vi
 # Narratage
 
 Use this entrypoint for work in the `narratage` repository. Keep `.svml` Author Source, `.svrun` Run
-Source, and the declarative `svml.runtime.json` Runtime Profile separate.
+Source, and the declarative `narratage.runtime.json` Runtime Profile separate.
 
 ## Route the task
 
@@ -30,20 +30,23 @@ Source, and the declarative `svml.runtime.json` Runtime Profile separate.
 
 ```bash
 cd path/to/project
-node --run narratage -- runtime use svml.runtime.json
-node --run narratage -- plan build.svrun
-node --run narratage -- build build.svrun --follow
-node --run narratage -- inspect <build-id>
-node --run narratage -- get <build-id> \
+narratage runtime use narratage.runtime.json
+narratage plan build.svrun
+narratage build build.svrun --follow
+narratage inspect <build-id>
+narratage get <build-id> \
   --name final.video --to output/final.mp4
 ```
 
-Run `packages sync` after import or Runtime package selections change. Use `check` while editing and
+Install dependencies after import or Runtime package selections change. Use `check` while editing and
 `doctor` for deployment setup or diagnosis; do not impose either as ceremony before every Build.
 
 Treat `--follow` as an observer: stopping it does not stop the durable Build. Use `runtime down`
 to stop only the Worker; use `programs down` separately when external programs should also stop.
 Neither command cancels Builds or remote Provider work.
+
+After submitting without `--follow`, or after leaving an observer, reattach with
+`narratage status <build-id> --watch`. A plain `status` remains a one-time snapshot.
 
 Every `build` invocation receives a fresh automatic Build id. Never try to reclaim a prior Build by
 restoring Source bytes or choosing an id. Cross-Build reuse exists only through explicit
@@ -64,7 +67,7 @@ in as the picture it names, held for the length it declares.
 pkill -f svml-playground || true          # never leave the old one holding the port
 pnpm svml:playground -- --source path/to/main.svml \
   --run path/to/build.svrun \
-  --runtime path/to/svml.runtime.json &
+  --runtime path/to/narratage.runtime.json &
 # then send the author: http://localhost:5179/
 ```
 

@@ -6,16 +6,7 @@ import { canonicalize } from "@narratage/protocol";
 import {
   speechBasisProducers,
 } from "./manifest.js";
-import {
-  projectSpeechAudio,
-  projectSpeechAudioImplementationDigest,
-  projectSpeechAudioTrack,
-  projectSpeechAudioTrackImplementationDigest,
-  projectSpeechProgramSpace,
-  projectSpeechProgramSpaceImplementationDigest,
-  projectSpeechVisual,
-  projectSpeechVisualImplementationDigest,
-} from "./projection.js";
+import { projectSpeechAudio, projectSpeechAudioTrack, projectSpeechProgramSpace, projectSpeechVisual } from "./projection.js";
 
 function speechBasis(value: StoredValue | undefined): SpeechBasis {
   if (value?.kind !== "inline") throw new Error("SpeechBasis must be inline");
@@ -27,7 +18,6 @@ export const speechBasisComponent = {
   producers: [
     {
       producer: speechBasisProducers.projectProgramSpace,
-      implementationDigest: projectSpeechProgramSpaceImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: {
           programSpace: {
@@ -40,7 +30,6 @@ export const speechBasisComponent = {
     },
     {
       producer: speechBasisProducers.projectAudio,
-      implementationDigest: projectSpeechAudioImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: {
           audio: {
@@ -53,7 +42,6 @@ export const speechBasisComponent = {
     },
     {
       producer: speechBasisProducers.projectVisual,
-      implementationDigest: projectSpeechVisualImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: {
           visual: {
@@ -66,7 +54,6 @@ export const speechBasisComponent = {
     },
     {
       producer: speechBasisProducers.projectAudioTrack,
-      implementationDigest: projectSpeechAudioTrackImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: {
           track: {

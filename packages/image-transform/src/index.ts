@@ -1,14 +1,6 @@
 export { imageTransformComponent } from "./component.js";
 export { imageTransformFragment } from "./fragment.js";
-export {
-  imageTransformImplementationDigests,
-  imageTransformManifest, imageTransformMarkupSurfaces,
-  imageTransformManifestDigest,
-  imageTransformModuleRef,
-  imageTransformProducers,
-  imageTransformProgramSchema,
-  imageTransformTypes,
-} from "./manifest.js";
+export { imageTransformManifest, imageTransformMarkupSurfaces, imageTransformModuleRef, imageTransformProducers, imageTransformProgramSchema, imageTransformTypes } from "./manifest.js";
 export {
   gptImageDenoiseV1,
   sealImageTransformProgram,

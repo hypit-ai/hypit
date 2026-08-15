@@ -11,7 +11,6 @@ export * from "./geometry.js";
 export {
   spatialDependency,
   spatialManifest, spatialMarkupSurfaces,
-  spatialManifestDigest,
   spatialModuleRef,
   spatialProducers,
   spatialSurfaceDigests,

@@ -12,7 +12,7 @@ export const speechAlignmentProducers = {
 } satisfies Record<string, ProducerRef>;
 
 export const speechAlignmentManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: speechAlignmentModuleRef.name,
   version: speechAlignmentModuleRef.version,
   dependencies: [
@@ -32,8 +32,5 @@ export const speechAlignmentManifest: ModuleManifest = {
     ],
     outputs: [{ name: "map", type: semanticMapTypes.complete }],
     needs: [],
-    implementation: {
-      digest: speechLocatorDigest,
-    },
   }],
 };

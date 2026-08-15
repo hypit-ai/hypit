@@ -68,7 +68,7 @@ test("the OpenCV package is one replaceable Endpoint with no second queue", asyn
   const facet = provider.manifest.facets[0];
   assert(facet?.role === "capability-endpoint");
   assert.equal(facet.defaultConcurrency, 3);
-  assert.deepEqual(provider.bindings, [{
+  assert.deepEqual(provider.offers, [{
     capability: rasterCapabilities.execute,
     returns: artifactTypes.blob,
     endpoint: "image.opencv.local",
@@ -97,8 +97,8 @@ test("managed and external OpenCV deployments never mix their interpreters", () 
   assert.equal(localOpenCvProgram(externalContext).prepare, undefined);
 });
 
-const liveEnabled = process.env.SVML_OPENCV_TESTS === "1";
-const openCvPython = process.env.SVML_OPENCV_PYTHON ?? "python3";
+const liveEnabled = process.env.NARRATAGE_OPENCV_TESTS === "1";
+const openCvPython = process.env.NARRATAGE_OPENCV_PYTHON ?? "python3";
 const hasOpenCv = spawnSync(openCvPython, ["-c", "import cv2, numpy"], { stdio: "ignore" }).status === 0;
 
 test("the local Provider returns only a new image BlobArtifact", {

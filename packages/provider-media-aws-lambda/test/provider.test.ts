@@ -76,7 +76,7 @@ test("the Provider sends the Need verbatim with the bucket the function should u
   const store = new MemoryArtifactStore();
   const artifact = await store.put(new TextEncoder().encode("out!"), "video/mp4");
   const { invoker, seen } = recordingInvoker(() => canonicalize({
-    contract: "svml.media-lambda-response@1",
+    contract: "narratage.media-lambda-response@1",
     operation: "inspect",
     ok: true,
     value: { kind: "inline", value: { artifact } },
@@ -125,7 +125,7 @@ test("the remote Provider receives the exact AudioProgramPlan compiled for local
     plan,
   } as unknown as CanonicalValue);
   const { invoker, seen } = recordingInvoker(() => canonicalize({
-    contract: "svml.media-lambda-response@1",
+    contract: "narratage.media-lambda-response@1",
     operation: "render-audio",
     ok: true,
     value: { kind: "inline", value: {
@@ -143,7 +143,7 @@ test("a Provider aimed at another bucket fails naming the Artifact, not later wi
   const store = new MemoryArtifactStore();
   const stranger = digestOf("an artifact this Build's store never received");
   const { invoker } = recordingInvoker(() => canonicalize({
-    contract: "svml.media-lambda-response@1",
+    contract: "narratage.media-lambda-response@1",
     operation: "inspect",
     ok: true,
     value: { kind: "inline", value: {
@@ -165,7 +165,7 @@ test("a Provider aimed at another bucket fails naming the Artifact, not later wi
 
 test("a typed failure reaches the Build with its code, since the transport withholds the payload", async () => {
   const { invoker } = recordingInvoker(() => canonicalize({
-    contract: "svml.media-lambda-response@1",
+    contract: "narratage.media-lambda-response@1",
     operation: "inspect",
     ok: false,
     code: "MEDIA_SOURCE_UNAVAILABLE",
@@ -181,11 +181,11 @@ test("a typed failure reaches the Build with its code, since the transport withh
 });
 
 test("a reply that is not this contract is refused rather than half-read", () => {
-  assert.throws(() => parseMediaLambdaResponse({ contract: "svml.media-lambda-response@invalid", operation: "inspect" }),
-    /contract must be svml\.media-lambda-response@1/u);
-  assert.throws(() => parseMediaLambdaResponse({ contract: "svml.media-lambda-response@1", operation: "transcode" }),
+  assert.throws(() => parseMediaLambdaResponse({ contract: "narratage.media-lambda-response@invalid", operation: "inspect" }),
+    /contract must be narratage\.media-lambda-response@1/u);
+  assert.throws(() => parseMediaLambdaResponse({ contract: "narratage.media-lambda-response@1", operation: "transcode" }),
     /operation must be one of/u);
   assert.throws(() => parseMediaLambdaRequest({
-    contract: "svml.media-lambda-request@1", operation: "mux", artifacts: {}, constraints: {},
+    contract: "narratage.media-lambda-request@1", operation: "mux", artifacts: {}, constraints: {},
   }), /artifacts\.bucket must be a non-empty string/u);
 });

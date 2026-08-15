@@ -7,18 +7,18 @@ Build, retrieval, and reuse syntax. Use this file as the operational checklist.
 
 ```bash
 cd path/to/project
-node --run narratage -- runtime use svml.runtime.json
+narratage runtime use narratage.runtime.json
 
-node --run narratage -- plan build.svrun
+narratage plan build.svrun
 
-node --run narratage -- build build.svrun --follow
+narratage build build.svrun --follow
 
-node --run narratage -- inspect <build-id>
-node --run narratage -- get <build-id> \
+narratage inspect <build-id>
+narratage get <build-id> \
   --name final.video --to output/final.mp4
 ```
 
-Use `packages sync` only after package selection changes. Use `check` during authoring and `doctor`
+Install dependencies after package selection changes. Use `check` during authoring and `doctor`
 or `runtime status` when diagnosing the deployment. `build` already ensures the detached Worker
 and demanded Managed Programs are available.
 
@@ -29,11 +29,13 @@ Builds remain archived and neither command cancels remote Provider work.
 ## Preserve durable semantics
 
 - `runtime up` starts or reuses the detached Worker plus declared external programs. A direct
-  `build` also ensures the execution domain is running before submission.
+  `build` also ensures the selected Runtime is running before submission.
 - `programs up/status/down` manages external programs only. Do not use it as the normal Build
   bootstrap because it does not own the Worker lifecycle.
 - A Build continues after durable submission. `--follow` only observes progress; interrupting the
   terminal does not stop the Build.
+- `status <build-id>` reads one snapshot; `status <build-id> --watch` reattaches an observer until
+  terminal state without resubmitting or taking execution ownership.
 - Every `build` invocation creates a fresh automatic Build id. Source identity never reclaims an
   earlier Build; reuse across Builds exists only through explicit Run Source Candidates.
 - `inspect` reads durable Build state and accepted Records. `get` copies an archived Artifact to the
@@ -48,7 +50,7 @@ Prefer production projects outside the Narratage checkout. Relative Author Sourc
 inside the independently resolved Source Workspace.
 
 - `--workspace` explicitly selects the Source Workspace boundary.
-- `--package-root` only changes where the Host locates installed packages whose bytes are verified
-  by the package lock. It does not widen Source access.
+- `--package-root` only changes where the Host locates installed packages. It does not widen Source
+  access.
 - Do not symlink an external project into the repository to bypass containment; canonical-path
   checks reject that escape.

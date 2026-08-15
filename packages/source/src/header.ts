@@ -1,5 +1,5 @@
 export type SourceHeader = {
-  readonly format: "svml.source-header@1";
+  readonly format: "narratage.source-header@1";
   /** Logical Frontend request. A trusted Host resolves it to one exact implementation. */
   readonly using: string;
   readonly start: number;
@@ -76,7 +76,7 @@ export function parseSourceHeader(sourceName: string, text: string): SourceHeade
   if (nextContent !== null && after.startsWith("<?svml", nextContent.index)) {
     fail(sourceName, text, "SOURCE_HEADER_DUPLICATE", "Source declares more than one Source Header", end + nextContent.index);
   }
-  return { format: "svml.source-header@1", using, start, end };
+  return { format: "narratage.source-header@1", using, start, end };
 }
 
 /** Preserve every original offset while making the Header ordinary whitespace to body Frontends. */

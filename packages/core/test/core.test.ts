@@ -119,21 +119,6 @@ test("accepted events are idempotent and conflicting reuse is rejected", () => {
   );
 });
 
-test("schema-invalid producer output is rejected before it becomes a Record", () => {
-  const initial = onlyProducer(createGreetingBuild());
-  assert.throws(
-    () =>
-      reduce(initial.state, {
-        kind: "producer-completed",
-        id: "event:invalid",
-        command: initial.command.id,
-        outputs: { prompt: { kind: "inline", value: 42 } },
-        needs: {},
-      }),
-    (error: unknown) => error instanceof CoreError && error.code === "VALUE_SCHEMA_MISMATCH",
-  );
-});
-
 test("oneOf literal discrimination preserves exact-one semantics", () => {
   const tagged = (tag: string): ValueSchema => ({
     kind: "object",

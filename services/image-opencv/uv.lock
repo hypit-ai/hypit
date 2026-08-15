@@ -41,7 +41,7 @@ wheels = [
 ]
 
 [[package]]
-name = "svml-image-opencv-runtime"
+name = "narratage-image-opencv-runtime"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

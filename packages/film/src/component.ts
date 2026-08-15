@@ -6,16 +6,7 @@ import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 
 import { filmProducers } from "./manifest.js";
-import {
-  appendFilmAudioTrack,
-  appendFilmAudioTrackImplementationDigest,
-  appendFilmVisualTrack,
-  appendFilmVisualTrackImplementationDigest,
-  compileFilmComposition,
-  compileFilmCompositionImplementationDigest,
-  createFilmTrackSet,
-  createFilmTrackSetImplementationDigest,
-} from "./program.js";
+import { appendFilmAudioTrack, appendFilmVisualTrack, compileFilmComposition, createFilmTrackSet } from "./program.js";
 import type { FilmProgram, FilmTrackSet } from "./types.js";
 
 function inline<T>(value: StoredValue | undefined, subject: string): T {
@@ -27,7 +18,6 @@ export const filmComponent = {
   producers: [
     {
       producer: filmProducers.createTrackSet,
-      implementationDigest: createFilmTrackSetImplementationDigest,
       handler: () => ({
         outputs: { set: { kind: "inline", value: canonicalize(createFilmTrackSet()) } },
         needs: {},
@@ -35,7 +25,6 @@ export const filmComponent = {
     },
     {
       producer: filmProducers.appendVisualTrack,
-      implementationDigest: appendFilmVisualTrackImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: { set: { kind: "inline", value: canonicalize(appendFilmVisualTrack(
           inline<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
@@ -47,7 +36,6 @@ export const filmComponent = {
     },
     {
       producer: filmProducers.appendAudioTrack,
-      implementationDigest: appendFilmAudioTrackImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: { set: { kind: "inline", value: canonicalize(appendFilmAudioTrack(
           inline<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
@@ -59,7 +47,6 @@ export const filmComponent = {
     },
     {
       producer: filmProducers.compileComposition,
-      implementationDigest: compileFilmCompositionImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: { composition: { kind: "inline", value: canonicalize(compileFilmComposition(
           inline<FilmProgram>(inputs.program?.value, "FilmProgram"),

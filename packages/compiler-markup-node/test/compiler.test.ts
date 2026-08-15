@@ -10,30 +10,27 @@ import test from "node:test";
 
 import { createMarkupNodeCompiler } from "@narratage/compiler-markup-node";
 import type { NodePackageContribution } from "@narratage/package-loader-node";
-import { digestOf } from "@narratage/protocol";
 import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import { NodeFilesystemWorkspace } from "@narratage/workspace-fs-node";
 
 const module = { name: "example.card", version: "1" } as const;
 const resultType = { module, name: "CardResult" } as const;
-const implementationDigest = digestOf("example.card/card-surface@1");
 const cardSurface = {
   name: "card",
   tag: "Card",
   mode: "structured",
   outputs: [resultType],
-  implementation: { digest: implementationDigest },
 } as const;
 
 const installedPackage: NodePackageContribution = {
-  format: "svml.node-package@1",
+  format: "narratage.node-package@1",
   modules: [{
     manifest: {
-      format: "svml.module@1",
+      format: "narratage.module@1",
       name: module.name,
       version: module.version,
       dependencies: [],
-      types: [{ name: resultType.name, schema: { kind: "string", minLength: 1 } }],
+      types: [{ name: resultType.name }],
       capabilities: [],
       producers: [],
     },
@@ -67,7 +64,7 @@ const installedPackage: NodePackageContribution = {
 };
 
 test("Markup compiler alone selects Markup Surface Host facets from a generic package contribution", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-markup-compiler-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-markup-compiler-"));
   try {
     const source = join(root, "main.svml");
     await writeFile(source, `<?svml using="@narratage/markup@1"?>

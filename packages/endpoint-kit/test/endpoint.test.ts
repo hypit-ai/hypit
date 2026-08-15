@@ -40,21 +40,19 @@ function capturingRegistrar(registrations: CapturedRegistration[]): EndpointRegi
   };
 }
 
-test("one Endpoint definition generates Manifest, instance, bindings and host-neutral registration", async () => {
+test("one Endpoint definition generates Manifest, instance, offers and host-neutral registration", async () => {
   const endpoint = defineEndpointPackage({
     module: { name: "example.provider", version: "1" },
     facet: "http-json",
     instance: "example.personal",
-    authority: "example.personal",
-    implementation,
-    configuration: { baseUrl: "https://example.test" },
+    pool: "example.personal",
     credentials: { apiKey: credentialRef("env", "EXAMPLE_API_KEY") },
     defaultConcurrency: 3,
     capabilities: [{
       lifecycle: "immediate",
       capability: capabilities.generation,
       returns: types.generated,
-      route: "text-generation",
+      lane: "text-generation",
       maxConcurrency: 1,
       handler: () => ({
         value: { kind: "inline", value: "generated" },
@@ -65,7 +63,7 @@ test("one Endpoint definition generates Manifest, instance, bindings and host-ne
   assert.equal(endpoint.manifest.facets[0]?.defaultConcurrency, 3);
   assert.deepEqual(endpoint.manifest.facets[0]?.credentialSlots, ["apiKey"]);
   assert.equal(endpoint.instance.id, "example.personal");
-  assert.deepEqual(endpoint.bindings, [{
+  assert.deepEqual(endpoint.offers, [{
     capability: capabilities.generation,
     returns: types.generated,
     endpoint: "example.personal",
@@ -78,39 +76,13 @@ test("one Endpoint definition generates Manifest, instance, bindings and host-ne
   assert.deepEqual(registrations[0]?.options.credentials, {
     apiKey: credentialRef("env", "EXAMPLE_API_KEY"),
   });
-  assert.equal(
-    registrations[0]?.options.runtimeImplementation?.configurationDigest,
-    endpoint.instance.configurationDigest,
-  );
   assert.deepEqual(registrations[0]?.options.scheduling, {
-    queue: { authority: "example.personal", route: "text-generation" },
+    queue: { pool: "example.personal", lane: "text-generation" },
     resources: [
-      { id: "authority:example.personal", maxActive: 3, maxInFlight: 3 },
-      { id: "route:example.personal/text-generation", maxActive: 1, maxInFlight: 1 },
+      { id: "pool:example.personal", maxActive: 3, maxInFlight: 3 },
+      { id: "lane:example.personal/text-generation", maxActive: 1, maxInFlight: 1 },
     ],
   });
-});
-
-test("non-secret Endpoint configuration and credential references change instance identity", () => {
-  const configured = (baseUrl: string, variable: string) => defineEndpointPackage({
-    module: { name: "example.provider", version: "1" },
-    facet: "http-json",
-    instance: "example.personal",
-    authority: "example.personal",
-    implementation,
-    configuration: { baseUrl },
-    credentials: { apiKey: credentialRef("env", variable) },
-    capabilities: [{
-      lifecycle: "immediate",
-      capability: capabilities.generation,
-      returns: types.generated,
-      handler: () => ({
-        value: { kind: "inline", value: "generated" },
-      }),
-    }],
-  }).instance.configurationDigest;
-  assert.notEqual(configured("https://one.test", "KEY"), configured("https://two.test", "KEY"));
-  assert.notEqual(configured("https://one.test", "KEY"), configured("https://one.test", "OTHER_KEY"));
 });
 
 test("wakeAfter turns polling policy into an explicit Runtime wake hint", () => {

@@ -13,7 +13,7 @@ function usage(message?: string): never {
   if (message !== undefined) process.stderr.write(`${message}\n\n`);
   process.stderr.write(`Usage:
   pnpm caption:playground -- \\
-    --source <main.svml> --package-lock <svml.packages.lock> \\
+    --source <main.svml> \\
     --style <export> --display <export> --recipe <file.svs#recipe.path> \\
     --font <file.svml#font-stack-id> --canvas <width>x<height> --fps <number> \
     [--package-root <directory>] [--port <number>]
@@ -88,7 +88,6 @@ const server = await createServer({
   },
   plugins: [captionPlaygroundPlugin({
     source,
-    packageLock: resolve(required(values, "package-lock")),
     packageRoot,
     styleExport: required(values, "style"),
     displayExport: required(values, "display"),

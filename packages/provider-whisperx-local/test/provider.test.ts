@@ -85,7 +85,7 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
     if (url.endsWith("/health")) {
       return new Response(JSON.stringify({
           ok: true,
-          protocol: "svml.whisperx-service@1",
+          protocol: "narratage.whisperx-service@1",
           serviceVersion: "0.1.0",
           whisperxVersion: "3.8.6",
           model: "small",

@@ -3,7 +3,6 @@ import { mediaDependency, mediaTypes } from "@narratage/media";
 import { compositionDependency } from "@narratage/composition";
 import {
   hyperframesManifest,
-  hyperframesManifestDigest,
   hyperframesModuleRef,
   hyperframesTypes,
 } from "@narratage/hyperframes";
@@ -14,16 +13,10 @@ import type {
   ProducerRef,
 } from "@narratage/protocol";
 import {
-  mediaPipelineManifestDigest,
   mediaPipelineModuleRef,
 } from "@narratage/media-pipeline";
 
-import {
-  requestHyperframesVisualImplementationDigest,
-} from "./product.js";
-
 export const renderHyperframesModuleRef = { name: "@narratage/render-hyperframes", version: "1" } as const;
-export const renderHyperframesSurfaceImplementationDigest = digestOf("@narratage/render-hyperframes/surface@1");
 export const renderHyperframesCapabilities = {
   renderVisual: { module: renderHyperframesModuleRef, name: "render-visual" },
 } satisfies Record<string, CapabilityRef>;
@@ -36,22 +29,19 @@ export const renderHyperframesMarkupSurfaces = [{
     tag: "Video",
     mode: "structured",
     outputs: [],
-    implementation: {
-      digest: renderHyperframesSurfaceImplementationDigest,
-    },
   }] as const;
 
 
 export const renderHyperframesManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: renderHyperframesModuleRef.name,
   version: renderHyperframesModuleRef.version,
   dependencies: [
     artifactDependency,
     mediaDependency,
     compositionDependency,
-    { module: hyperframesModuleRef, digest: hyperframesManifestDigest },
-    { module: mediaPipelineModuleRef, digest: mediaPipelineManifestDigest },
+    { module: hyperframesModuleRef },
+    { module: mediaPipelineModuleRef },
   ],
   types: [],
   capabilities: [{
@@ -68,11 +58,6 @@ export const renderHyperframesManifest: ModuleManifest = {
         capability: renderHyperframesCapabilities.renderVisual,
         returns: mediaTypes.renderedVisual,
       }],
-      implementation: {
-        digest: requestHyperframesVisualImplementationDigest,
-      },
     },
   ],
 };
-
-export const renderHyperframesManifestDigest = digestOf(renderHyperframesManifest);

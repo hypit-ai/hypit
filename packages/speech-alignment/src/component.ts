@@ -20,7 +20,6 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 export const speechAlignmentComponent = {
   producers: [{
     producer: speechAlignmentProducers.locate,
-    implementationDigest: speechLocatorDigest,
     handler: ({ inputs }) => ({
       outputs: {
         map: {

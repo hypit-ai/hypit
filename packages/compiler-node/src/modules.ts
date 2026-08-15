@@ -1,7 +1,4 @@
-import {
-  computeModuleDigest,
-  createResolvedClosure,
-} from "@narratage/core";
+import { createResolvedClosure } from "@narratage/core";
 import type {
   ModuleManifest,
   ModuleRef,
@@ -87,13 +84,6 @@ export class ModulePackageRegistry implements ModulePackageRegistryLike {
           throw new NodeCompilerError(
             "MISSING_MODULE_DEPENDENCY",
             `${key} requires unregistered module ${dependencyKey}`,
-            dependencyKey,
-          );
-        }
-        if (computeModuleDigest(resolved) !== dependency.digest) {
-          throw new NodeCompilerError(
-            "MODULE_DEPENDENCY_DIGEST_MISMATCH",
-            `${key} requires another digest of ${dependencyKey}`,
             dependencyKey,
           );
         }

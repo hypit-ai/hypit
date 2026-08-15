@@ -7,10 +7,9 @@ export const rasterCapabilities = {
   execute: { module: rasterModuleRef, name: "execute-raster" },
 } satisfies Record<string, CapabilityRef>;
 export const rasterManifest: ModuleManifest = {
-  format: "svml.module@1", name: rasterModuleRef.name, version: rasterModuleRef.version,
+  format: "narratage.module@1", name: rasterModuleRef.name, version: rasterModuleRef.version,
   dependencies: [artifactDependency], types: [],
   capabilities: [{ name: rasterCapabilities.execute.name, returns: artifactTypes.blob }],
   producers: [],
 };
-export const rasterManifestDigest = digestOf(rasterManifest);
-export const rasterDependency = { module: rasterModuleRef, digest: rasterManifestDigest } as const;
+export const rasterDependency = { module: rasterModuleRef } as const;

@@ -26,7 +26,7 @@ mkdir -p packages/my-component/src packages/my-component/test
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": {
+  "narratage": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
@@ -53,7 +53,7 @@ export const myComponentModuleRef: ModuleRef = {
 };
 
 export const myComponentManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: myComponentModuleRef.name,
   version: myComponentModuleRef.version,
   dependencies: [],
@@ -107,8 +107,8 @@ import {
   decodeMyComponentSurface,
 } from "./index.js";
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   modules: [{
     manifest: myComponentManifest,
   }],
@@ -121,7 +121,7 @@ export const svmlPackage = {
   ],
 };
 
-export default svmlPackage;
+export default narratagePackage;
 ```
 
 The Module automatically offers its exact `manifest.name@manifest.version`, so authors import
@@ -140,32 +140,15 @@ not part of the semantic Module Manifest or Core.
 
 pnpm workspace links resolve the package. No root path registry is involved.
 
-## 7. Install and lock
+## 7. Install
 
 ```bash
 pnpm install --frozen-lockfile
-
-node --run narratage -- lock-packages <lock-file> \
-  --package @narratage/my-component \
-  [--package @narratage/other-direct-package ...] \
-  --package-root .
 ```
 
-Only name direct packages you chose. Exact logical Module dependencies declared by their Manifests
-are added from the installed physical dependency closure automatically; missing or ambiguous
-providers make lock creation fail.
-
-For an existing lock, add only this direct package without repeating the other selections:
-
-```bash
-node --run narratage -- lock-packages <lock-file> \
-  --add @narratage/my-component \
-  --package-root .
-```
-
-Use `--remove` for an explicit revocation, `--refresh` to accept changed bytes for the unchanged
-selection, and `--verify` for a read-only closure check. Repeated `--package` always means the exact
-complete direct selection.
+The package manager owns installation, versions and integrity. Narratage loads the package when an
+Author or Run Source imports one of its logical offers. Exact Module dependencies declared by its
+Manifest are loaded from its installed dependencies.
 
 ## 8. Use in Author Source
 

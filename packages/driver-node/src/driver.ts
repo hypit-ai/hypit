@@ -67,7 +67,7 @@ type Executable =
       readonly command: FulfillNeedCommand;
       readonly endpointId: string;
       readonly resources: readonly import("@narratage/runtime").RuntimeResourceClaim[];
-      readonly queue?: import("@narratage/runtime").RuntimeQueueRoute;
+      readonly queue?: import("@narratage/runtime").RuntimeQueueLane;
       readonly registration: EndpointRegistration;
     };
 
@@ -156,16 +156,6 @@ export class NodeDriver {
           },
         };
       }
-      const declaration = resolveProducer(state.program.closure, command.producer);
-      if (registration.implementationDigest !== declaration.implementation.digest) {
-        return {
-          blocked: {
-            command: command.id,
-            reason: "implementation-mismatch",
-            subject: producerRegistryKey(command.producer),
-          },
-        };
-      }
       return {
         executable: {
           command,
@@ -215,15 +205,6 @@ export class NodeDriver {
         },
       };
     }
-    if (registration.kind === "recoverable" && this.endpoints.runtimeClosureDigest() === undefined) {
-      return {
-        blocked: {
-          command: command.id,
-          reason: "missing-runtime-closure",
-          subject: registration.id,
-        },
-      };
-    }
     return {
       executable: {
         command,
@@ -250,20 +231,12 @@ export class NodeDriver {
       result.value,
       this.validators,
     );
-    const runtimeImplementation = executable.registration.runtimeImplementation;
-    const implementation = runtimeImplementation === undefined
-      ? undefined
-      : {
-          digest: runtimeImplementation.digest,
-          configurationDigest: runtimeImplementation.configurationDigest,
-        };
     const content = {
       kind: "need-fulfilled",
       command: executable.command.id,
       value: result.value,
       requestDigest: executable.command.need.requestDigest,
       fulfiller: executable.endpointId,
-      ...(implementation === undefined ? {} : { implementation }),
     } as const;
     return { ...content, id: `event:${digestOf(content)}` };
   }
@@ -311,7 +284,7 @@ export class NodeDriver {
         kind: "command-failed",
         command: executable.command.id,
         code: "CANCELLED",
-        message: `Operation ${snapshot.id} was cancelled by the Runtime authority`,
+        message: `Operation ${snapshot.id} was cancelled by the Runtime pool`,
       } as const;
       return {
         status: "completed",
@@ -335,9 +308,8 @@ export class NodeDriver {
         || snapshot.build !== expected.build
         || snapshot.command !== expected.command
         || snapshot.endpoint !== expected.endpoint
-        || snapshot.authority !== expected.authority
-        || snapshot.route !== expected.route
-        || snapshot.runtimeClosure !== expected.runtimeClosure) {
+        || snapshot.pool !== expected.pool
+        || snapshot.lane !== expected.lane) {
         throw new Error(`Operation history for ${expected.command} is not one contiguous retry chain`);
       }
     });
@@ -351,25 +323,19 @@ export class NodeDriver {
     if (executable.registration.kind !== "recoverable") throw new Error("Endpoint is not recoverable");
     const operations = this.operations;
     if (operations === undefined) throw new Error("recoverable Endpoint requires OperationStore");
-    const runtimeClosure = this.endpoints.runtimeClosureDigest();
-    if (runtimeClosure === undefined) throw new Error("recoverable Endpoint requires Runtime Closure");
-    const implementation = executable.registration.runtimeImplementation;
-    if (implementation === undefined) throw new Error("recoverable Endpoint has no implementation identity");
-    if (executable.queue === undefined) throw new Error("recoverable Endpoint has no Provider Authority route");
+    if (executable.queue === undefined) throw new Error("recoverable Endpoint has no Provider pool/lane");
     const base = {
       build: context.build,
       command: executable.command.id,
       endpoint: executable.endpointId,
-      authority: executable.queue.authority,
-      route: executable.queue.route,
-      runtimeClosure,
+      pool: executable.queue.pool,
+      lane: executable.queue.lane,
     } as const;
     const maxAttempts = executable.registration.retry?.maxAttempts ?? 1;
     const history = await operations.list({
       build: base.build,
       command: base.command,
       endpoint: base.endpoint,
-      runtimeClosure: base.runtimeClosure,
     });
     this.#assertOperationHistory(history, base);
     let latest = history.at(-1);
@@ -596,9 +562,8 @@ export class NodeDriver {
       build: operation.build,
       command: operation.command,
       endpoint: operation.endpoint,
-      authority: operation.authority,
-      route: operation.route,
-      runtimeClosure: operation.runtimeClosure,
+      pool: operation.pool,
+      lane: operation.lane,
       attempt: operation.attempt,
     };
     const endpointContext = {

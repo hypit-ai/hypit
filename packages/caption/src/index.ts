@@ -7,19 +7,7 @@ export {
 } from "./display.js";
 export { captionComponent } from "./component.js";
 export { plannedCaptionTimingFragment } from "./fragment.js";
-export {
-  captionProgramSchema,
-  captionProgramSurfaceImplementationDigest,
-  captionPlanImplementationDigest,
-  captionPlanSchema,
-  captionStyleSchema,
-  captionManifest, captionMarkupSurfaces,
-  captionModuleRef,
-  captionProducers,
-  captionTypes,
-  captionValidatorDigests,
-  timedCaptionProjectionSchema,
-} from "./manifest.js";
+export { captionProgramSchema, captionPlanSchema, captionStyleSchema, captionManifest, captionMarkupSurfaces, captionModuleRef, captionProducers, captionTypes, timedCaptionProjectionSchema } from "./manifest.js";
 export { decodeCaptionProgramSurface } from "./surface.js";
 export { assertCaptionPlan, assertCaptionPlanForProgram, sealCaptionPlan } from "./plan.js";
 export {

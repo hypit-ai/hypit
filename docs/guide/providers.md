@@ -31,13 +31,13 @@ packages or the CLI:
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": { "activation": "./src/activation.ts" },
+  "narratage": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-adapter": "workspace:*",
-    "@narratage/runtime-adapter-node": "workspace:*",
+    "@narratage/runtime-kit": "workspace:*",
+    "@narratage/runtime-host-node": "workspace:*",
     "@narratage/generation": "workspace:*"
   }
 }
@@ -50,18 +50,29 @@ ArtifactStore persistence.
 
 ```typescript
 // src/provider.ts
-import type { EndpointManifest } from "@narratage/endpoint-kit";
+import { defineEndpointPackage } from "@narratage/endpoint-kit";
 
 export function createMyServiceProvider(options: {
   instance: string;
-  authority?: string;
+  pool: string;
   apiKey: CredentialRef;
   defaultConcurrency?: number;
 }) {
-  // Return an object with:
-  // - manifest: declares Capabilities this Endpoint implements
-  // - handle: processes Commands from the Scheduler
-  // - close: cleanup
+  return defineEndpointPackage({
+    module: { name: "@narratage/provider-my-service", version: "1" },
+    facet: "service",
+    instance: options.instance,
+    pool: options.pool,
+    credentials: { apiKey: options.apiKey },
+    defaultConcurrency: options.defaultConcurrency ?? 2,
+    capabilities: [{
+      capability: myCapability,
+      returns: myResultType,
+      lane: "generate",
+      lifecycle: "recoverable",
+      endpoint: myRecoverableEndpoint,
+    }],
+  });
 }
 ```
 
@@ -84,13 +95,14 @@ import {
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
-} from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
 import { createMyServiceProvider } from "./provider.js";
 
 const adapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-my-service",
 
   activate(context) {
+    if (context.pool === undefined) throw new Error("MyService pool is required");
     const config = runtimeConfigObject(context.config, "MyService");
     runtimeConfigExact(config, ["apiKey", "defaultConcurrency"], "MyService");
     const apiKey = runtimeConfigCredentialRef(config.apiKey, "MyService apiKey");
@@ -99,7 +111,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createMyServiceProvider({
         instance: context.instance,
-        authority: context.authority,
+        pool: context.pool,
         apiKey,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
       }),
@@ -107,12 +119,12 @@ const adapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [adapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;
 ```
 
 `activate` is the one pure deployment declaration. The Endpoint it returns owns the credential
@@ -129,13 +141,13 @@ There is no second manifest flag or central program registry:
 
 ```typescript
 // src/program.ts
-import type { ManagedProgram } from "@narratage/runtime-adapter";
+import type { ManagedProgram } from "@narratage/runtime-kit";
 
 export function createMyProgram(): ManagedProgram {
   return {
     id: "my-service",
     prepare: { command: "uv", args: ["sync", "--project", "services/my-service", "--frozen"] },
-    start: { command: "uv", args: ["run", "--project", "services/my-service", "--frozen", "svml-my-service"] },
+    start: { command: "uv", args: ["run", "--project", "services/my-service", "--frozen", "narratage-my-service"] },
     probe: async () => {
       // Return { state: "ready" } or { state: "down", detail: "..." }
     },
@@ -161,50 +173,40 @@ const adapter = createRuntimeEndpointAdapterFacet({
 durable Worker. `build` starts only Programs backing capabilities demanded by its plan. Providers
 that call only remote APIs omit `program` entirely.
 
-## 6. Register and lock
+## 6. Install
 
 Declare every imported package in the Provider's own `package.json`:
 
 ```json
 "dependencies": {
-  "@narratage/runtime-adapter": "workspace:*"
+  "@narratage/runtime-kit": "workspace:*"
 }
 ```
 
-Lock into a Runtime package lock:
+Install the package with the project's package manager. It remains inert until the Runtime Profile
+explicitly selects its `use` id.
 
-```bash
-node --run narratage -- lock-packages <runtime-lock> \
-  --package @narratage/provider-my-service \
-  --package-root .
-```
-
-If the Runtime lock already exists, use `--add @narratage/provider-my-service` instead. This changes
-only the local trust selection; the package remains inert until the Runtime Profile explicitly
-instantiates its `use` id.
-
-## 7. Reference from svml.runtime.json
+## 7. Reference from narratage.runtime.json
 
 ```json
 {
-  "endpoints": [
-    {
+  "endpoints": {
+    "my-service": {
       "use": "@narratage/provider-my-service",
-      "instance": "my-service.project",
-      "authority": "my-service.project",
+      "pool": "my-service.account",
       "config": {
         "apiKey": { "store": "keychain", "key": "my-service.api-key" },
         "defaultConcurrency": 2
       }
     }
-  ]
+  }
 }
 ```
 
 Verify the configuration:
 
 ```bash
-node --run narratage -- doctor svml.runtime.json
+narratage doctor narratage.runtime.json
 ```
 
 ## Existing Providers to study

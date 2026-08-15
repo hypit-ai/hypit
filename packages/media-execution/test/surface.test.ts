@@ -46,7 +46,7 @@ function surface(bytes: Uint8Array, options: {
 test("Surface byte admission accepts matching still/video bytes and rejects contradictions", {
   skip: !hasMediaTools,
 }, async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-surface-test-"));
+  const directory = await mkdtemp(join(tmpdir(), "narratage-surface-test-"));
   try {
     const opaquePath = join(directory, "opaque.png");
     const alphaPath = join(directory, "alpha.png");

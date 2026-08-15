@@ -1,12 +1,12 @@
 import {
-  createRuntimeComponentAdapterFacet,
+  createRuntimeInfrastructureAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
-} from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
 
 import { createEnvironmentCredentialStorePackage } from "./index.js";
 
-const environmentCredentialStoreAdapter = createRuntimeComponentAdapterFacet({
+const environmentCredentialStoreAdapter = createRuntimeInfrastructureAdapterFacet({
   use: "@narratage/credential-store-env",
   validate(context) {
     const config = runtimeConfigObject(context.config, "environment CredentialStore");
@@ -17,9 +17,9 @@ const environmentCredentialStoreAdapter = createRuntimeComponentAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [environmentCredentialStoreAdapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

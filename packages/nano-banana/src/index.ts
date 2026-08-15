@@ -55,36 +55,26 @@ const nanoBananaBaseDefinition = defineExactModelModule({
 
 export const nanoBananaEndpoints = nanoBananaBaseDefinition.endpoints;
 export const nanoBananaComponent = nanoBananaBaseDefinition.component;
-export const nanoBananaSurfaceImplementationDigests = {
-  image: digestOf("@narratage/nano-banana/image-surface@1"),
-  proImage: digestOf("@narratage/nano-banana/pro-image-surface@1"),
-} as const;
 const surface = (
   name: "image" | "pro-image",
   tag: "Image" | "ProImage",
   endpoint: (typeof nanoBananaEndpoints)["v2" | "pro"],
-  digest: (typeof nanoBananaSurfaceImplementationDigests)["image" | "proImage"],
 ) => ({
   name,
   tag,
   mode: "structured" as const,
   outputs: [endpoint!.draftType, endpoint!.mediaBindings.images!.type],
-  implementation: {
-    digest,
-  },
 });
 
 export const nanoBananaMarkupSurfaces = [
-    surface("image", "Image", nanoBananaEndpoints.v2!, nanoBananaSurfaceImplementationDigests.image),
-    surface("pro-image", "ProImage", nanoBananaEndpoints.pro!, nanoBananaSurfaceImplementationDigests.proImage),
+    surface("image", "Image", nanoBananaEndpoints.v2!),
+    surface("pro-image", "ProImage", nanoBananaEndpoints.pro!),
   ] as const;
 
 export const nanoBananaManifest = {
   ...nanoBananaBaseDefinition.manifest,
 };
-export const nanoBananaManifestDigest = digestOf(nanoBananaManifest);
 export const nanoBananaDefinition = {
   ...nanoBananaBaseDefinition,
   manifest: nanoBananaManifest,
-  manifestDigest: nanoBananaManifestDigest,
 };

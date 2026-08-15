@@ -12,7 +12,7 @@ import { sourceFrontendPackageAbi } from "@narratage/source";
 import { discoverSourcePackages } from "../src/source-discovery.js";
 
 test("third-party Frontends discover same-named ABI requirements through physical package bindings", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-cli-third-party-discovery-"));
+  const root = await mkdtemp(join(tmpdir(), "narratage-cli-third-party-discovery-"));
   try {
     await writeFile(join(root, "build.svrun"), `<?svml using="@logical/run@1"?>\nrun`, "utf8");
     await writeFile(join(root, "main.story"), `<?svml using="@logical/story@1"?>\nstory`, "utf8");
@@ -20,9 +20,8 @@ test("third-party Frontends discover same-named ABI requirements through physica
     const packages = [
       {
         specifier: "@physical/run-suite",
-        contribution: { format: "svml.node-package@1" as const, hostFacets: [createRunFrontendHostFacet({
+        contribution: { format: "narratage.node-package@1" as const, hostFacets: [createRunFrontendHostFacet({
           id: "@logical/run@1",
-          implementationDigest: digestOf("third-party-run"),
           discover: () => ({
             author: { source: "./main.story" },
             imports: [{ from: "@logical/shared@1", as: "preview" }],
@@ -32,9 +31,8 @@ test("third-party Frontends discover same-named ABI requirements through physica
       },
       {
         specifier: "@physical/story-suite",
-        contribution: { format: "svml.node-package@1" as const, hostFacets: [createAuthorFrontendHostFacet({
+        contribution: { format: "narratage.node-package@1" as const, hostFacets: [createAuthorFrontendHostFacet({
           id: "@logical/story@1",
-          implementationDigest: digestOf("third-party-story"),
           discover: () => ({
             modules: ["@logical/shared@1"],
             sources: [{ from: "./child.svml", alias: "child" }],
@@ -44,9 +42,9 @@ test("third-party Frontends discover same-named ABI requirements through physica
       },
       {
         specifier: "@physical/module-suite",
-        contribution: { format: "svml.node-package@1" as const, modules: [{
+        contribution: { format: "narratage.node-package@1" as const, modules: [{
           manifest: {
-            format: "svml.module@1" as const,
+            format: "narratage.module@1" as const,
             name: "@logical/shared",
             version: "1",
             dependencies: [], types: [], capabilities: [], producers: [],
@@ -56,14 +54,14 @@ test("third-party Frontends discover same-named ABI requirements through physica
       },
       {
         specifier: "@physical/fragment-suite",
-        contribution: { format: "svml.node-package@1" as const, hostFacets: [{
+        contribution: { format: "narratage.node-package@1" as const, hostFacets: [{
           abi: runFragmentHostAbi,
           offers: ["@logical/shared@1"],
           identity: { contract: "example.fragment@1" },
           implementation: {},
         }] },
       },
-    ];
+    ].map((item) => ({ ...item, digest: digestOf(item.specifier) }));
     const discovered = await discoverSourcePackages(join(root, "build.svrun"), {
       workspaceRoot: root,
       packages,

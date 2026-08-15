@@ -54,13 +54,12 @@ const fixtureModule = { name: "example.speech-media", version: "1" } as const;
 const fixtureSurfaceDigest = digestOf("example.speech-media/surface@1");
 const fixtureSurface = {
   name: "media", tag: "Media", mode: "structured", outputs: [artifactTypes.blob, svsRecipeType],
-  implementation: { digest: fixtureSurfaceDigest },
 } as const;
 const fixtureManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
-  dependencies: [artifactDependency, mediaDependency, { module: svsModuleRef, digest: digestOf(svsManifest) }],
+  dependencies: [artifactDependency, mediaDependency, { module: svsModuleRef }],
   types: [], capabilities: [], producers: [],
 };
 

@@ -23,8 +23,6 @@ import { spatialDependency, spatialFrameSchema, spatialTypes } from "@narratage/
 import { temporalDependency } from "@narratage/temporal";
 import { textDependency, textTypes } from "@narratage/text";
 
-import { depthStackImplementationDigests, depthStackValidatorDigests } from "./program.js";
-
 export const depthStackModuleRef = { name: "@narratage/deck-track", version: "1" } as const;
 export const depthStackTypes = {
   header: { module: depthStackModuleRef, name: "DepthStackHeader" },
@@ -109,11 +107,6 @@ export const depthStackProgramSchema: ValueSchema = object({
   terminalFrame: { schema: positiveInteger }, frame: { schema: spatialFrameSchema }, spec: { schema: depthStackSpecSchema },
   cards: { schema: { kind: "array", minItems: 1, items: card } },
 });
-
-export const depthStackSurfaceImplementationDigests = {
-  label: digestOf("@narratage/deck-track/label-surface@1"),
-  track: digestOf("@narratage/deck-track/depth-stack-surface@1"),
-} as const;
 const registered = (digest: ReturnType<typeof digestOf>) => ({ digest });
 const validator = (digest: ReturnType<typeof digestOf>) => ({ implementation: registered(digest) });
 const finalizeInputs = [
@@ -123,51 +116,50 @@ const finalizeInputs = [
 ] as const;
 
 export const depthStackMarkupSurfaces = [
-    { name: "label", tag: "Label", mode: "structured", outputs: [textTypes.text, depthStackTypes.cardLabelStyle, depthStackTypes.cardLabel], implementation: { digest: depthStackSurfaceImplementationDigests.label } },
+    { name: "label", tag: "Label", mode: "structured", outputs: [textTypes.text, depthStackTypes.cardLabelStyle, depthStackTypes.cardLabel] },
     { name: "track", tag: "DepthStack", mode: "structured", outputs: [
       depthStackTypes.header, depthStackTypes.spec, depthStackTypes.cardSpec,
       spatialTypes.fit, mediaTrackTypes.sampleLayerSpec, mediaTrackTypes.paintLayerSpec,
       depthStackTypes.cardLabel, depthStackTypes.cardLabelStyle, textTypes.text,
       depthStackTypes.program, compositionTypes.visualTrack,
-    ], implementation: { digest: depthStackSurfaceImplementationDigests.track } },
+    ] },
   ] as const;
 
 
 export const depthStackManifest: ModuleManifest = {
-  format: "svml.module@1", name: depthStackModuleRef.name, version: depthStackModuleRef.version,
+  format: "narratage.module@1", name: depthStackModuleRef.name, version: depthStackModuleRef.version,
   dependencies: [narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, mediaDependency, mediaTrackDependency, compositionDependency, textDependency],
   types: [
-    { name: depthStackTypes.header.name, schema: depthStackHeaderSchema },
-    { name: depthStackTypes.spec.name, schema: depthStackSpecSchema },
-    { name: depthStackTypes.cardSpec.name, schema: depthStackCardSpecSchema },
-    { name: depthStackTypes.cardLabel.name, schema: depthStackCardLabelSchema },
-    { name: depthStackTypes.cardLabelStyle.name, schema: depthStackCardLabelStyleSchema },
-    { name: depthStackTypes.cardSet.name, schema: depthStackCardSetSchema },
-    { name: depthStackTypes.program.name, schema: depthStackProgramSchema, validator: validator(depthStackValidatorDigests.program) },
+    { name: depthStackTypes.header.name },
+    { name: depthStackTypes.spec.name },
+    { name: depthStackTypes.cardSpec.name },
+    { name: depthStackTypes.cardLabel.name },
+    { name: depthStackTypes.cardLabelStyle.name },
+    { name: depthStackTypes.cardSet.name },
+    { name: depthStackTypes.program.name },
   ], capabilities: [],
   producers: [
-    { name: depthStackProducers.bindLabelText.name, inputs: [{ name: "style", type: depthStackTypes.cardLabelStyle }, { name: "content", type: textTypes.text }], outputs: [{ name: "label", type: depthStackTypes.cardLabel }], needs: [], implementation: registered(depthStackImplementationDigests.bindLabelText) },
-    { name: depthStackProducers.createCards.name, inputs: [], outputs: [{ name: "set", type: depthStackTypes.cardSet }], needs: [], implementation: registered(depthStackImplementationDigests.createCards) },
+    { name: depthStackProducers.bindLabelText.name, inputs: [{ name: "style", type: depthStackTypes.cardLabelStyle }, { name: "content", type: textTypes.text }], outputs: [{ name: "label", type: depthStackTypes.cardLabel }], needs: [] },
+    { name: depthStackProducers.createCards.name, inputs: [], outputs: [{ name: "set", type: depthStackTypes.cardSet }], needs: [] },
     { name: depthStackProducers.appendMomentCard.name, inputs: [
       { name: "set", type: depthStackTypes.cardSet }, { name: "material", type: mediaTrackTypes.layerSet },
       { name: "label", type: depthStackTypes.cardLabel }, { name: "spec", type: depthStackTypes.cardSpec },
       { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment },
       { name: "space", type: programSpaceTypes.programSpace },
-    ], outputs: [{ name: "set", type: depthStackTypes.cardSet }], needs: [], implementation: registered(depthStackImplementationDigests.appendMomentCard) },
-    { name: depthStackProducers.finalizeProgramEnd.name, inputs: finalizeInputs, outputs: [{ name: "program", type: depthStackTypes.program }], needs: [], implementation: registered(depthStackImplementationDigests.finalizeProgramEnd) },
+    ], outputs: [{ name: "set", type: depthStackTypes.cardSet }], needs: [] },
+    { name: depthStackProducers.finalizeProgramEnd.name, inputs: finalizeInputs, outputs: [{ name: "program", type: depthStackTypes.program }], needs: [] },
     ...([
-      [depthStackProducers.finalizeUntilMoment, narrativeTypes.moment, depthStackImplementationDigests.finalizeUntilMoment],
-      [depthStackProducers.finalizeUntilSelectionStart, narrativeTypes.selection, depthStackImplementationDigests.finalizeUntilSelectionStart],
-      [depthStackProducers.finalizeUntilSelectionEnd, narrativeTypes.selection, depthStackImplementationDigests.finalizeUntilSelectionEnd],
-    ] as const).map(([producer, terminalType, implementationDigest]) => ({
+      [depthStackProducers.finalizeUntilMoment, narrativeTypes.moment],
+      [depthStackProducers.finalizeUntilSelectionStart, narrativeTypes.selection],
+      [depthStackProducers.finalizeUntilSelectionEnd, narrativeTypes.selection],
+    ] as const).map(([producer, terminalType]) => ({
       name: producer.name, inputs: [...finalizeInputs, { name: "map", type: semanticMapTypes.complete }, { name: "terminal", type: terminalType }],
-      outputs: [{ name: "program", type: depthStackTypes.program }], needs: [], implementation: registered(implementationDigest),
+      outputs: [{ name: "program", type: depthStackTypes.program }], needs: [],
     })),
     { name: depthStackProducers.render.name, inputs: [
       { name: "canvas", type: spatialTypes.canvas }, { name: "space", type: programSpaceTypes.programSpace },
       { name: "program", type: depthStackTypes.program },
-    ], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [], implementation: registered(depthStackImplementationDigests.render) },
+    ], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
   ],
 };
-export const depthStackManifestDigest = digestOf(depthStackManifest);
-export const depthStackDependency = { module: depthStackModuleRef, digest: depthStackManifestDigest } as const;
+export const depthStackDependency = { module: depthStackModuleRef } as const;

@@ -14,12 +14,12 @@ export type DispatchLease = {
 };
 
 export type BuildDispatchIdentity = {
-  readonly format: "svml.build-dispatch-identity@1";
+  readonly format: "narratage.build-dispatch-identity@1";
   readonly id: Digest;
   readonly build: string;
   readonly core: Digest;
-  /** Exact Runtime Closure selected for this execution domain. */
-  readonly runtimeClosure: Digest;
+  /** Installed compute packages required to execute this Build. */
+  readonly implementationPackages: readonly string[];
 };
 
 export type BuildDispatchSnapshot = BuildDispatchIdentity & {
@@ -44,8 +44,6 @@ export type BuildDispatchCreate =
   | { readonly status: "existing"; readonly snapshot: BuildDispatchSnapshot };
 
 export type BuildDispatchClaim = {
-  /** Exact Runtime Closure this Worker can execute. Claims are filtered before leasing. */
-  readonly runtimeClosure: Digest;
   readonly owner: string;
   readonly token: string;
   readonly now: number;
@@ -84,14 +82,14 @@ export type CapacityResourceClaim = {
 };
 
 export type CapacityReservation = {
-  readonly format: "svml.capacity-reservation@1";
+  readonly format: "narratage.capacity-reservation@1";
   readonly id: Digest;
   readonly build: string;
   readonly command: string;
   readonly resources: readonly CapacityResourceClaim[];
   readonly queue?: {
-    readonly authority: string;
-    readonly route: string;
+    readonly pool: string;
+    readonly lane: string;
   };
   readonly mode: CapacityMode;
   readonly inFlight: boolean;
@@ -106,7 +104,7 @@ export type CapacityAcquireRequest = {
   readonly resources: readonly CapacityResourceClaim[];
   readonly queue?: CapacityReservation["queue"];
   readonly mode: CapacityMode;
-  /** Current Build authority; a stale Worker cannot reserve capacity after being fenced. */
+  /** Current Build pool; a stale Worker cannot reserve capacity after being fenced. */
   readonly buildLease: DispatchLease;
   readonly owner: string;
   readonly token: string;
@@ -171,16 +169,17 @@ function positive(value: number, subject: string): number {
 export function createBuildDispatchIdentity(input: {
   readonly build: string;
   readonly core: Digest;
-  readonly runtimeClosure: Digest;
+  readonly implementationPackages?: readonly string[];
 }): BuildDispatchIdentity {
   assert(input.build.trim().length > 0, "Build Dispatch build id is empty");
   assert(isDigest(input.core), "Build Dispatch Core digest is invalid");
-  assert(isDigest(input.runtimeClosure), "Build Dispatch Runtime Closure digest is invalid");
+  const implementationPackages = [...new Set(input.implementationPackages ?? [])].sort();
+  assert(implementationPackages.every((item) => item.trim().length > 0), "Build Dispatch implementation package is empty");
   const content = {
-    format: "svml.build-dispatch-identity@1" as const,
+    format: "narratage.build-dispatch-identity@1" as const,
     build: input.build,
     core: input.core,
-    runtimeClosure: input.runtimeClosure,
+    implementationPackages,
   };
   return { ...content, id: digestOf(content) };
 }
@@ -213,31 +212,9 @@ export function verifyBuildDispatchSnapshot(value: BuildDispatchSnapshot): void 
   if (value.cancellation !== undefined) safeNonNegative(value.cancellation.requestedAt, "cancellation requestedAt");
 }
 
-/**
- * One DispatchStore is one execution domain. It may admit only one Runtime Closure while work is
- * unfinished. This keeps execution honest without retaining old code or inventing a multi-version
- * Worker supervisor. A caller that intentionally wants another execution domain selects another
- * DispatchStore.
- */
-export function assertRuntimeClosureAdmission(
-  runtimeClosure: Digest,
-  dispatches: readonly BuildDispatchSnapshot[],
-): void {
-  assert(isDigest(runtimeClosure), "Runtime Closure digest is invalid");
-  const conflicts = dispatches
-    .filter((item) => item.phase !== "terminal" && item.runtimeClosure !== runtimeClosure)
-    .sort((left, right) => left.build.localeCompare(right.build));
-  if (conflicts.length === 0) return;
-  throw new Error([
-    `Runtime Closure ${runtimeClosure} cannot enter this execution domain while unfinished Builds belong to another closure:`,
-    ...conflicts.map((item) => `  ${item.build} · ${item.phase} · ${item.runtimeClosure}`),
-    "Finish or cancel those Builds with their original Runtime Profile, restore that Profile and its package locks, or select another DispatchStore.",
-  ].join("\n"));
-}
-
 export function capacityReservationId(build: string, command: string): Digest {
   assert(build.trim().length > 0 && command.trim().length > 0, "Capacity reservation identity is empty");
-  return digestOf({ format: "svml.capacity-reservation-identity@1", build, command });
+  return digestOf({ format: "narratage.capacity-reservation-identity@1", build, command });
 }
 
 export function verifyCapacityLimits(value: CapacityLimits): void {
@@ -245,7 +222,7 @@ export function verifyCapacityLimits(value: CapacityLimits): void {
 }
 
 export function verifyCapacityReservation(value: CapacityReservation): void {
-  assert(value.format === "svml.capacity-reservation@1", "Capacity reservation format is unsupported");
+  assert(value.format === "narratage.capacity-reservation@1", "Capacity reservation format is unsupported");
   assert(value.id === capacityReservationId(value.build, value.command), "Capacity reservation identity differs");
   assert(value.resources.length > 0, "Capacity reservation resources are empty");
   const resources = value.resources.map((resource) => {
@@ -256,8 +233,8 @@ export function verifyCapacityReservation(value: CapacityReservation): void {
   });
   assert(new Set(resources).size === resources.length, "Capacity reservation repeats a resource");
   if (value.queue !== undefined) {
-    assert(value.queue.authority.trim().length > 0, "Capacity queue authority is empty");
-    assert(value.queue.route.trim().length > 0, "Capacity queue route is empty");
+    assert(value.queue.pool.trim().length > 0, "Capacity queue pool is empty");
+    assert(value.queue.lane.trim().length > 0, "Capacity queue lane is empty");
   }
   assert(value.mode === "active" || value.mode === "recoverable", "Capacity reservation mode is invalid");
   if (value.active !== undefined) verifyDispatchLease(value.active, "Capacity lease");

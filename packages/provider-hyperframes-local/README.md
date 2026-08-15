@@ -5,12 +5,12 @@ content-addressed dependencies declared by a `HyperframesDocument`, renders a si
 HyperFrames CLI, probes the bytes, and returns a verified `RenderedVisual`. Before staging a typed
 Surface it decodes the exact bytes and checks declared dimensions, still/frame timing, SDR/sRGB and
 opaque/straight-alpha facts. Artifact size and SHA-256 are checked for every dependency. These are
-admission gates, not hidden output metadata. The Driver binds the locked Endpoint implementation,
-configuration, request and returned value in the ordinary Need Receipt.
+admission gates, not hidden output metadata. The ordinary Need Receipt records the selected Endpoint,
+request and returned value.
 
 There are deliberately two concurrency controls:
 
-- `defaultConcurrency` limits whole render requests admitted by Runtime Authority/Route resources.
+- `defaultConcurrency` limits whole render requests admitted by Runtime pool/lane resources.
 - `workers` controls HyperFrames' parallel Chrome frame workers inside one admitted render.
 
 The Provider owns both controls because they are deployment policy, not author intent. It never

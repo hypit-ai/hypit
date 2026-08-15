@@ -55,6 +55,80 @@ test("queue opens durable control without constructing execution Providers", asy
   assert.deepEqual(result.operations, []);
 });
 
+test("status --watch reattaches to one durable Build until it becomes terminal", async () => {
+  const calls: string[] = [];
+  const state = {
+    id: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    status: "active",
+    diagnostics: [],
+  };
+  const dispatch = (phase: "queued" | "terminal") => ({
+    format: "narratage.build-dispatch-identity@1",
+    id: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    build: "build-watch",
+    core: state.id,
+    revision: phase === "queued" ? 0 : 1,
+    createdAt: 1,
+    updatedAt: phase === "queued" ? 1 : 2,
+    priority: 0,
+    availableAt: 1,
+    admission: phase === "queued" ? "open" : "closed",
+    phase,
+    ...(phase === "terminal" ? { terminal: "complete" } : {}),
+  });
+  let statusReads = 0;
+  const control = {
+    async status() {
+      statusReads += 1;
+      calls.push("archive.status");
+      const terminal = statusReads > 1;
+      return {
+        build: { build: "build-watch", revision: terminal ? 1 : 0, state },
+        catalog: undefined,
+        operations: [],
+        dispatch: dispatch(terminal ? "terminal" : "queued"),
+      };
+    },
+    async activity() {
+      calls.push("archive.activity");
+      return { operations: [], dispatch: dispatch("terminal") };
+    },
+    async close() { calls.push("archive.close"); },
+  } as unknown as CliRuntimeArchiveControl;
+  const distribution = {
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      openArchive: async () => control,
+      controller: async () => ({
+        worker: { status: async () => ({ state: "running", profile: path, pid: 1, logPath: "/tmp/worker.log" }) },
+      }),
+      createRuntime: async () => {
+        throw new Error("status must not construct execution Providers");
+      },
+    }),
+  } as unknown as CliDistribution;
+  let output = "";
+
+  await runCli([
+    "status", "build-watch", "--runtime", "/tmp/runtime.json", "--watch", "--json",
+  ], { write: (text) => { output += text; } }, distribution);
+
+  const result = JSON.parse(output) as {
+    readonly build: { readonly id: string; readonly status: string };
+    readonly dispatch: { readonly terminal?: string };
+  };
+  assert.equal(result.build.id, "build-watch");
+  assert.equal(result.build.status, "complete");
+  assert.equal(result.dispatch.terminal, "complete");
+  assert.deepEqual(calls, [
+    "archive.status",
+    "archive.activity",
+    "archive.status",
+    "archive.status",
+    "archive.close",
+  ]);
+});
+
 test("command options fail closed instead of being silently ignored", async () => {
   const distribution = {
     openRuntimeHost: async (path: string) => {
@@ -88,9 +162,9 @@ test("command options fail closed instead of being silently ignored", async () =
   );
   await assert.rejects(
     async () => await runCli([
-      "queue", "--runtime", "/tmp/svml.runtime.ts",
+      "queue", "--runtime", "/tmp/narratage.runtime.ts",
     ], io, distribution),
-    /profile delegated: .*svml\.runtime\.ts/u,
+    /profile delegated: .*narratage\.runtime\.ts/u,
   );
 });
 
@@ -104,7 +178,7 @@ test("auth opens only one Endpoint credential control, never the execution Runti
         slot: "apiKey",
         label: "KIE API key",
         kind: "secret",
-        ref: { format: "svml.credential-ref@1", store: "env", key: "KIE_API_KEY" },
+        ref: { format: "narratage.credential-ref@1", store: "env", key: "KIE_API_KEY" },
         configured: false,
         writable: false,
       }];
@@ -148,7 +222,7 @@ test("auth login rejects a read-only CredentialStore before asking for a secret"
         slot: "apiKey",
         label: "KIE API key",
         kind: "secret",
-        ref: { format: "svml.credential-ref@1", store: "env", key: "KIE_API_KEY" },
+        ref: { format: "narratage.credential-ref@1", store: "env", key: "KIE_API_KEY" },
         configured: false,
         writable: false,
       }];

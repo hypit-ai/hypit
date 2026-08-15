@@ -46,26 +46,26 @@ function distribution(calls: string[], reports: readonly CliManagedProgramReport
 
 test("programs dispatches lifecycle through the selected Runtime Controller", async () => {
   const calls: string[] = [];
-  await runCli(["programs", "up", "/p/svml.runtime.json", "--max-wait-ms", "1000"], io, distribution(calls));
-  await runCli(["programs", "down", "/p/svml.runtime.json"], io, distribution(calls));
-  await runCli(["programs", "status", "/p/svml.runtime.json"], io, distribution(calls));
+  await runCli(["programs", "up", "/p/narratage.runtime.json", "--max-wait-ms", "1000"], io, distribution(calls));
+  await runCli(["programs", "down", "/p/narratage.runtime.json"], io, distribution(calls));
+  await runCli(["programs", "status", "/p/narratage.runtime.json"], io, distribution(calls));
   assert.deepEqual(calls, [
-    'up /p/svml.runtime.json {"maxWaitMs":1000}',
-    "down /p/svml.runtime.json",
-    "report /p/svml.runtime.json",
+    'up /p/narratage.runtime.json {"maxWaitMs":1000}',
+    "down /p/narratage.runtime.json",
+    "report /p/narratage.runtime.json",
   ]);
 });
 
 test("programs accepts only up, down and status", async () => {
   await assert.rejects(
-    runCli(["programs", "restart", "/p/svml.runtime.json"], io, distribution([])),
+    runCli(["programs", "restart", "/p/narratage.runtime.json"], io, distribution([])),
     /programs takes up, down or status/u,
   );
 });
 
 test("waiting belongs only to programs up", async () => {
   await assert.rejects(
-    runCli(["programs", "status", "/p/svml.runtime.json", "--max-wait-ms", "1000"], io, distribution([])),
+    runCli(["programs", "status", "/p/narratage.runtime.json", "--max-wait-ms", "1000"], io, distribution([])),
     /--max-wait-ms applies to programs up/u,
   );
 });
@@ -73,7 +73,7 @@ test("waiting belongs only to programs up", async () => {
 test("program status may report down without failing the observation", async () => {
   let output = "";
   let exitCode: number | undefined;
-  await runCli(["programs", "status", "/project/svml.runtime.json"], {
+  await runCli(["programs", "status", "/project/narratage.runtime.json"], {
     write(text) { output += text; },
     setExitCode(code) { exitCode = code; },
   }, distribution([], [{
@@ -97,7 +97,7 @@ test("runtime up validates the Runtime before it starts Programs", async () => {
     }),
   } as unknown as CliDistribution;
   await assert.rejects(
-    runCli(["runtime", "up", "/p/svml.runtime.json"], io, selected),
+    runCli(["runtime", "up", "/p/narratage.runtime.json"], io, selected),
     /Runtime Closure conflict/u,
   );
   assert.deepEqual(calls, []);

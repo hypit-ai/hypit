@@ -80,7 +80,7 @@ for (const scene of SCENES) {
 // long as the whole frames its recordings occupy.
 const frameCount = Math.ceil(elapsed * FRAME_RATE.numerator / FRAME_RATE.denominator);
 const space: ProgramSpace = sealProgramSpace({
-  contract: "svml.program-space@1",
+  contract: "narratage.program-space@1",
   durationSec: frameCount * FRAME_RATE.denominator / FRAME_RATE.numerator,
   frameRate: { ...FRAME_RATE },
 });
@@ -104,7 +104,7 @@ const segments: AlignedTranscriptSegment[] = bounds.map((segment) => ({
 }));
 
 const evidence: AlignedTranscriptEvidence = {
-  contract: "svml.aligned-transcript-evidence@1",
+  contract: "narratage.aligned-transcript-evidence@1",
   durationSec: space.durationSec,
   segments,
 };
@@ -116,7 +116,7 @@ const evidence: AlignedTranscriptEvidence = {
  * the bytes.
  */
 const basis: SpeechAudioBasis = {
-  contract: "svml.speech-audio-basis@1",
+  contract: "narratage.speech-audio-basis@1",
   programSpace: space,
   audio: {
     kind: "blob",

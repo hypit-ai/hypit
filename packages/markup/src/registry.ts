@@ -1,4 +1,3 @@
-import { isDigest } from "@narratage/protocol";
 import type { ModuleRef } from "@narratage/protocol";
 
 import type {
@@ -18,7 +17,6 @@ export class MarkupSurfaceRegistry implements MarkupSurfaceRegistryLike {
   readonly #values = new Map<string, RegisteredSurface>();
 
   register(value: RegisteredSurface): void {
-    if (!isDigest(value.implementationDigest)) throw new Error("Surface implementation digest is invalid");
     if (value.module.name.trim().length === 0 || value.module.version.trim().length === 0) {
       throw new Error("Surface module identity is invalid");
     }
@@ -45,7 +43,6 @@ export class MarkupSurfaceRegistry implements MarkupSurfaceRegistryLike {
       surface: options.declaration.name,
       tag: options.declaration.tag,
       outputs: options.declaration.outputs,
-      implementationDigest: options.declaration.implementation.digest,
       mode: "raw",
       handler: options.handler,
     });
@@ -61,7 +58,6 @@ export class MarkupSurfaceRegistry implements MarkupSurfaceRegistryLike {
       surface: options.declaration.name,
       tag: options.declaration.tag,
       outputs: options.declaration.outputs,
-      implementationDigest: options.declaration.implementation.digest,
       mode: "structured",
       handler: options.handler,
     });
