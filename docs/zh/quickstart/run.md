@@ -7,18 +7,19 @@ description: 声明 Build 目标、复用结果以及配置运行时环境。
 
 Author Source 定义视频本身。Run Source 从中挑选要产出哪些公开输出，以及是否用明确的 Candidate 来满足它们。Runtime Profile 则选择执行这份计划的机器、Store 与 Provider endpoint。
 
-包选择变化后，只需同步一次包信任：
+先为项目选择一次 Runtime；之后只在包选择变化时同步包信任：
 
 ```bash
-narratage packages sync build.svrun --runtime svml.runtime.json
+narratage runtime use svml.runtime.json
+narratage packages sync build.svrun
 ```
 
 日常制作只需要这条短路径：
 
 ```bash
-narratage plan build.svrun --runtime svml.runtime.json
-narratage build build.svrun --runtime svml.runtime.json --build-id my-video-001 --follow
-narratage get my-video-001 --runtime svml.runtime.json --name final.video --to output/final.mp4
+narratage plan build.svrun
+narratage build build.svrun --follow
+narratage get <build-id> --name final.video --to output/final.mp4
 ```
 
 仓库内的源码启动器是 `/path/to/narratage/narratage`；本页写作 `narratage` 的命令，指的是这个启动器，或将来安装好的 CLI。
@@ -87,13 +88,13 @@ Narratage 没有隐式缓存。复用结果是显式的运行图编写——你�
   <target output="final.video"/>
 
   <build-record id="hook-video"
-    build="my-film-001" output="hook-take.video"/>
+    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="hook-take.video"/>
   <build-record id="meeting-video"
-    build="my-film-001" output="meeting-take.video"/>
+    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="meeting-take.video"/>
   <build-record id="evidence-video"
-    build="my-film-001" output="evidence-take.video"/>
+    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="evidence-take.video"/>
   <build-record id="payoff-video"
-    build="my-film-001" output="payoff-take.video"/>
+    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="payoff-take.video"/>
 
   <satisfy output="hook-take.video" candidate="hook-video"/>
   <satisfy output="meeting-take.video" candidate="meeting-video"/>
@@ -124,13 +125,13 @@ Build、Logical Output 和 Record 摘要共同确定。假如当前源码把 `ho
 
 ```svml
 <build-record id="approved-opening"
-  build="my-film-001" output="hook-take.video"/>
+  build="bld_01234567-89ab-cdef-0123-456789abcdef" output="hook-take.video"/>
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
-Narratage 永远不会猜测两个名字代表同一份作者意图。`my-film-001` 这样的可读 build-id 由
-`build --build-id` 提供；省略时使用不可变的编译后 Core Build 摘要。已经绑定的显式 build-id
-不能再用于另一份作者意图或运行意图。
+Narratage 永远不会猜测两个名字代表同一份作者意图。每次执行 `build` 都会得到一个新的
+Build id，由 CLI 打印并由 Runtime 归档。源码身份绝不会重新认领旧 Build；后续 Run 只有在
+这里明确写出历史 Build id 时，才会复用它已经接受的结果。
 
 ### build-record
 
@@ -139,7 +140,7 @@ Narratage 永远不会猜测两个名字代表同一份作者意图。`my-film-0
 | 属性 | 说明 |
 |---|---|
 | `id` | 此 Run Source 内的本地 Candidate 标识符 |
-| `build` | 先前 Build 的 build-id |
+| `build` | 先前 Build 自动分配的 id |
 | `output` | 该 Build 中的逻辑输出名 |
 
 ### satisfy
@@ -174,6 +175,11 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
 不会根据文件后缀赋予语义。嵌入 Narratage 的应用可以通过 `@narratage/local` 直接组装
 相同的 Runtime 角色。完整说明见
 [Runtime Profile 指南](../guide/runtime-profile.md)。
+
+`narratage runtime use <profile>` 只在 `.svml/runtime` 保存一个项目本地指针，不复制 Profile、
+不启动环境，也不生成 lock。后续命令先通过该指针找到 Profile，再由 Profile 指定两份 lock。
+显式 `--runtime <profile>` 仍可作为单次覆盖，并且不会改变已经保存的选择。源码命令从入口
+Source 所在目录向上查找；Runtime 与归档命令则从当前目录向上查找。
 
 ```json
 {
@@ -318,13 +324,11 @@ Worker。
 `/opt/narratage` 中已安装的包：
 
 ```bash
-cd /opt/narratage
+cd /work/my-film
 
-node --run narratage -- packages sync /work/my-film/build.svrun \
-  --runtime /work/my-film/svml.runtime.json
-
-node --run narratage -- plan /work/my-film/build.svrun \
-  --runtime /work/my-film/svml.runtime.json
+/opt/narratage/narratage runtime use svml.runtime.json
+/opt/narratage/narratage packages sync build.svrun
+/opt/narratage/narratage plan build.svrun
 ```
 
 选择 Runtime Profile 时，Profile 的 `root`（未写则为 Profile 所在目录）是该项目所有
@@ -390,9 +394,9 @@ Runtime 状态、归档 Artifact 和 lock 仍全部留在 `/work/my-film`。只�
 安装或更新包后，用一条显式命令同步两份项目包库存：
 
 ```bash
-node --run narratage -- packages sync examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root .
+cd examples/talking-head-aroll
+node --run narratage -- runtime use svml.runtime.json
+node --run narratage -- packages sync build.svrun
 ```
 
 当前 Author/Run Source 选择作者包，Runtime Profile 选择环境包。`packages sync` 只把本次
@@ -403,31 +407,27 @@ Provider，也不生成媒体。
 ### 2. 诊断环境
 
 ```bash
-node --run narratage -- doctor examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- doctor
 ```
 
 Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；它不启动 Worker，也不发付费请求。
 
 `doctor` 有意检查完整 Runtime Profile。若只想检查某次 Run 真正需要的环境，请使用带
-`--runtime` 的 `plan`。只要计划本身有效，命令就成功；凭据或服务未就绪会写在
+所选 Runtime 下的 `plan`。只要计划本身有效，命令就成功；凭据或服务未就绪会写在
 `preflight.ok` 中，由 `doctor` 或 `build` 在部署阶段严格处理。
 
 ### 3. 检查 Source 与计划
 
 ```bash
-node --run narratage -- check examples/talking-head-aroll/main.svml \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root .
+node --run narratage -- check main.svml
 ```
 
 ```bash
-node --run narratage -- plan examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root .
+node --run narratage -- plan build.svrun
 ```
 
-在花费资金之前审查冻结的 BuildPlan。该计划展示调度器将发出的每个 Operation 和 Needs；带
-`--runtime` 时只预检这次计划真正需要的 Endpoint、凭据和外部程序，不启动任何外部工作。
+在花费资金之前审查冻结的 BuildPlan。该计划展示调度器将发出的每个 Operation 和 Needs；选择
+Runtime 后只预检这次计划真正需要的 Endpoint、凭据和外部程序，不启动任何外部工作。
 
 `build` 会自动启动或复用后台 Runtime。只有希望提交前预热时才需要显式执行 `runtime up`；
 `runtime status` 用于观察。范围更窄的 `services up|status|down` 只管理外部程序，不负责 Worker。
@@ -435,39 +435,34 @@ node --run narratage -- plan examples/talking-head-aroll/build.svrun \
 ### 4. 提交 Build
 
 ```bash
-node --run narratage -- build examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root . \
-  --build-id my-film-001 \
-  --follow
+node --run narratage -- build build.svrun --follow
 ```
 
 不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是观察者，并会报告 phase / Operation 数量变化；Ctrl-C 不会取消任务。
 
 | 标志 | 说明 |
 |---|---|
-| `--runtime` | Runtime Profile 的路径 |
+| `--runtime` | 单次命令的 Runtime Profile 覆盖；通常用 `runtime use` 选择一次即可 |
 | `--package-lock` | 包锁定文件的路径 |
 | `--package-root` | 存放 lock 所列已安装包的 Host 目录 |
 | `--root` | 可选的 Source Workspace 覆盖项；未传时依次使用 Runtime Profile 根、package lock 目录或入口 Source 目录 |
-| `--build-id` | 用户为此 Build 选择的标识符（用于检索和复用） |
 | `--follow` | 将 Build 进度流式输出到终端 |
 
-不传 `--build-id` 时，身份由编译后的作者意图和运行意图派生；重复同一条命令只会寻址同一个耐久 Build，不会偷偷再买一次生成。未完成的 Build 从已验收 Record 和可恢复 Endpoint checkpoint
-继续；已完成、失败或取消的 Build 保持终态，只返回状态。相同 prompt 明确需要另一份随机结果时，使用新的显式 id。把已有显式 id 用到另一份编译意图上会被拒绝，并同时提示“换 id”或“恢复原 Source”。
+每次执行都会创建新的 Build id，即使 Author Source 和 Run Source 完全没变。这是非确定性生成
+所要求的边界：跨 Build 复用只能由 Run Source 里的显式 Candidate 决定。一次 Build 提交后
+具有耐久性；Worker 重启会继续它已经接受的 Record 和同一外部任务的 checkpoint，但不会让
+另一次命令变成这个 Build。
 
 ### 5. 检查并获取结果
 
 ```bash
-node --run narratage -- inspect my-film-001 \
-  --runtime examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- inspect <build-id>
 ```
 
 `inspect` 会显示耐久 Build 状态、所需输出与已接受的 Record。确认这些事实正确后，再获取所选归档 Artifact：
 
 ```bash
-node --run narratage -- get my-film-001 \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
+node --run narratage -- get <build-id> \
   --name final.video \
   --to examples/talking-head-aroll/output/final.mp4
 ```
@@ -482,17 +477,16 @@ Build 的最终输出会为每个目标别名打印精确的 `get --name …` �
 创建一个引用已完成 Build 的 Record 的新 `.svrun` 文件（参见上文 [复用结果](#复用结果)），然后提交：
 
 ```bash
-node --run narratage -- build examples/talking-head-aroll/reuse-generated.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --build-id my-film-reuse-001 --follow
+node --run narratage -- build reuse-generated.svrun --follow
 ```
 
 ### 7. 诊断或停止本地 Runtime
 
 ```bash
-node --run narratage -- runtime logs examples/talking-head-aroll/svml.runtime.json
-node --run narratage -- runtime down examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- runtime logs
+node --run narratage -- runtime down
 ```
 
-`runtime down` 会让 Worker 停止领取新 lease，并停止 Runtime 管理的程序；它不会取消耐久
-Build 或远程 Provider 工作。再次启动同一 Profile 即可恢复本地执行。
+`runtime down` 只会让 Worker 停止领取新 lease，并保留外部程序；只有确实要停掉这些程序时
+才执行 `services down`。两条命令都不会取消耐久 Build 或远程 Provider 工作。再次启动同一
+Profile 后，会继续其中尚未完成的 dispatch。

@@ -38,24 +38,21 @@ Artifacts, environment credentials, KIE, local media, local WhisperX, Vertex and
 adapters; adding another implementation does not change the CLI.
 
 ```bash
-node --run narratage -- runtime up examples/talking-film-live/svml.runtime.json
+cd examples/talking-film-live
+../../narratage runtime use svml.runtime.json
+../../narratage runtime up
 
-node --run narratage -- build examples/talking-film-live/build.svrun \
-  --runtime examples/talking-film-live/svml.runtime.json \
-  --build-id talking-film-live \
-  --follow
+../../narratage build build.svrun --follow
 
-node --run narratage -- inspect talking-film-live \
-  --runtime examples/talking-film-live/svml.runtime.json
+../../narratage inspect <build-id>
 
-node --run narratage -- get talking-film-live \
-  --runtime examples/talking-film-live/svml.runtime.json \
+../../narratage get <build-id> \
   --name final.video \
-  --to examples/talking-film-live/output/final.mp4
+  --to output/final.mp4
 ```
 
-`build` is a durable submission. `--follow` only observes the detached Worker; closing this terminal
-does not cancel the Build.
+`build` prints the fresh automatic Build id assigned to this durable submission. `--follow` only
+observes the detached Worker; closing this terminal does not cancel the Build.
 
 `build.svrun` owns the Targets and any explicit Candidate selections. `svml.runtime.json` owns Provider instances,
 credentials and concurrency. The Build archives all accepted intermediate Records and referenced

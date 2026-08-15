@@ -63,11 +63,11 @@
   </seedance:ReferenceVideo>
 
   <!-- Pictures on disk, so the Media Track and the board have real material. -->
-  <media:Image id="card-shot" src="./assets/card.webp"/>
-  <media:Image id="icon-spatial" src="./assets/icon-1.webp"/>
-  <media:Image id="icon-type" src="./assets/icon-2.webp"/>
-  <media:Image id="icon-ranking" src="./assets/icon-3.webp"/>
-  <media:Image id="icon-caption" src="./assets/icon-4.webp"/>
+  <media:Image id="card-shot" src="./fixtures/card.svg" media-type="image/svg+xml"/>
+  <media:Image id="icon-spatial" src="./fixtures/icon.svg" media-type="image/svg+xml"/>
+  <media:Image id="icon-type" src="./fixtures/icon.svg" media-type="image/svg+xml"/>
+  <media:Image id="icon-ranking" src="./fixtures/icon.svg" media-type="image/svg+xml"/>
+  <media:Image id="icon-caption" src="./fixtures/icon.svg" media-type="image/svg+xml"/>
   <space:Extent id="portrait" width="540" height="960"/>
   <space:Extent id="square" width="192" height="192"/>
 

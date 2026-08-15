@@ -26,43 +26,34 @@ take at Seedance's 15-second request limit.
 Synchronize both package locks from the Run Source and Runtime Profile:
 
 ```sh
-node --run narratage -- packages sync examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root .
+cd examples/talking-head-aroll
+../../narratage runtime use svml.runtime.json
+../../narratage packages sync build.svrun
 ```
 
 Inspect the authored graph—including the visible `*.prompt` Text output and `*.program`—without a paid call:
 
 ```sh
-node --run narratage -- check examples/talking-head-aroll/main.svml \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root .
+../../narratage check main.svml
 ```
 
 Inspect the exact paid plan before submitting it:
 
 ```sh
-node --run narratage -- plan examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root .
+../../narratage plan build.svrun
 ```
 
 Build the complete film after preparing the managed local WhisperX service and exposing `KIE_API_KEY`,
 `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`:
 
 ```sh
-node --run narratage -- runtime up examples/talking-head-aroll/svml.runtime.json
+../../narratage runtime up
 
-node --run narratage -- build examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root . \
-  --build-id talking-head-film-001 \
-  --follow
+../../narratage build build.svrun --follow
 
-node --run narratage -- get talking-head-film-001 \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
+../../narratage get <build-id> \
   --name final.video \
-  --to examples/talking-head-aroll/output/final.mp4
+  --to output/final.mp4
 ```
 
 `build` returns after durable submission unless `--follow` is present. Even with `--follow`, the
@@ -72,16 +63,13 @@ Run the same downstream film from the four archived generated shots without anot
 submission:
 
 ```sh
-node --run narratage -- build examples/talking-head-aroll/reuse-generated.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root . \
-  --build-id talking-head-film-reuse-001 \
-  --follow
+../../narratage build reuse-generated.svrun --follow
 ```
 
-`reuse-generated.svrun` names four shot aliases from `talking-head-film-001`, exposes each
-verified Record as a zero-input Candidate and explicitly satisfies the corresponding
-logical output as `substitute`. Reverse demand therefore removes all four Seedance branches while
+Before this second command, replace `REPLACE_WITH_BUILD_ID` in `reuse-generated.svrun` with the
+automatic id printed by the first Build. The Run exposes four shot aliases from that exact Build,
+each as a zero-input Candidate, and explicitly satisfies the corresponding logical output. Reverse
+demand therefore removes all four Seedance branches while
 keeping media normalization, WhisperX, Gemini planning, Film and rendering reachable. This is a new
 Build, not a continuation or automatic cache hit.
 

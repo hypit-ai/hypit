@@ -7,6 +7,16 @@ description: 显式配置 Build 的执行环境、状态存储、凭据与并发
 
 Runtime Profile 声明冻结后的 Build *在哪里*执行：Scheduler、Worker、全部 Store、Endpoint、凭据和并发。它属于部署配置，绝不进入 Author Graph 或 Run Graph 身份。
 
+每个项目只需选择一次：
+
+```bash
+narratage runtime use svml.runtime.json
+```
+
+CLI 只在 `.svml/runtime` 保存一个相对路径指针。Profile 仍然唯一决定项目根、两份 package
+lock、Store、Endpoint 与调度。`runtime unset` 只删除该指针，不停止任务、不删除状态；
+`--runtime <profile>` 则是单次命令覆盖。
+
 ## 声明式 Profile
 
 ```json
@@ -65,7 +75,7 @@ Narratage 安装目录加载校验后的包。
 
 ## 并发与信任边界
 
-`maxConcurrency`、Provider Authority 与精确 Capability Route 的上限由 DispatchStore 在所有共享 Worker 之间执行，不是某个 CLI 进程里的计数器。容量租约跟随 Build 的 fenced lease；过期 Worker 不能继续准入结果。
+`maxConcurrency`、每个 Provider 的总 Authority 上限与其内部实际模型/API route 上限，由 DispatchStore 在所有共享 Worker 之间执行。一次任务原子领取 Provider 与 route 两份容量，不会在父子队列间复制。Route 是 Provider 本地概念；KIE Seedance 与另一个 Provider 的 Seedance 不共享隐藏的家族计数器。容量租约跟随 Build 的 fenced lease；过期 Worker 不能继续准入结果。
 
 Runtime Adapter 当前是可信本地代码。开放任意第三方 Adapter 之前，需要真正的进程或 Wasm
 隔离；字符串 allowlist 不能限制同一 Node 进程里的代码。
@@ -79,11 +89,11 @@ KIE 不会被旧 Build 数据库或无关的 Vertex 配置拦住。
 ## 生命周期
 
 ```bash
-node --run narratage -- doctor svml.runtime.json
-node --run narratage -- runtime up svml.runtime.json
-node --run narratage -- runtime status svml.runtime.json
-node --run narratage -- runtime logs svml.runtime.json
-node --run narratage -- runtime down svml.runtime.json
+node --run narratage -- doctor
+node --run narratage -- runtime up
+node --run narratage -- runtime status
+node --run narratage -- runtime logs
+node --run narratage -- runtime down
 ```
 
 `runtime up` 管理耐久 Worker 与声明的外部程序。`services up/status/down` 只管理外部程序，不会启动 Worker。`build` 会确保 Runtime 已启动，但 Build 所在终端从不拥有执行权。Distribution 提供一个不透明 Runtime 修订；官方 JSON Profile 让它覆盖 Profile 与两份 package lock，通用 CLI 不解释其语法。任一文件变化后状态变为
@@ -99,14 +109,12 @@ CredentialStore 来解析引用，完成后立即关闭，并可执行显式声�
 ## Build、队列与归档
 
 ```bash
-node --run narratage -- build build.svrun --runtime svml.runtime.json
-node --run narratage -- build build.svrun --runtime svml.runtime.json --follow
-node --run narratage -- queue --runtime svml.runtime.json --watch
-node --run narratage -- status <build-id> --runtime svml.runtime.json
-node --run narratage -- operations <build-id> --runtime svml.runtime.json
-node --run narratage -- operation <operation-id> --runtime svml.runtime.json
-node --run narratage -- inspect <build-id> --runtime svml.runtime.json
-node --run narratage -- get <build-id> --runtime svml.runtime.json --name final.video --to output.mp4
+node --run narratage -- build build.svrun
+node --run narratage -- build build.svrun --follow
+node --run narratage -- queue --watch
+node --run narratage -- status <build-id>
+node --run narratage -- inspect <build-id>
+node --run narratage -- get <build-id> --name final.video --to output.mp4
 ```
 
 不带 `--follow` 时，`build` 在耐久提交后退出；Worker 继续执行。`--follow` 只是观察，Ctrl-C
@@ -115,11 +123,10 @@ node --run narratage -- get <build-id> --runtime svml.runtime.json --name final.
 ## 取消
 
 ```bash
-node --run narratage -- cancel build <build-id> --runtime svml.runtime.json
-node --run narratage -- cancel operation <operation-id> --runtime svml.runtime.json
+node --run narratage -- cancel <build-id>
 ```
 
-Build 取消先关闭准入；Operation 取消只抑制那个精确实现。`accepted` 只是远端接受停止请求，不等于已停止；系统继续协调到 `confirmed`、`unsupported`、`too-late` 或自然结束。迟到的付费产物继续归档，但不能进入被抑制的 Core 分支。Runtime 不会因此偷偷换 Candidate 或 Provider。
+CLI 唯一控制单位是 Build。尚未被 Worker 领取的排队 Build 会在 Store 中原子撤回；已经运行的 Build 会先关闭后续准入，再尽力取消已提交的 Provider 工作。`accepted` 只是远端接受停止请求，不等于已经停止；系统继续协调到 `confirmed`、`unsupported`、`too-late` 或自然结束。Operation 仍会作为 Build 详情显示，但不能被 CLI 单独控制。终态 Build 不会重新打开；再次运行同一 `.svrun` 会创建新 Build。Endpoint 的 checkpoint 恢复只用于 Worker 重启后续接同一个已提交外部任务，避免重复付费。
 
 ## 嵌入 API
 

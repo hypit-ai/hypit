@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -158,7 +159,6 @@ function resultExtension(mediaType: string): string {
 
 function caseIds(key: string, media: "image" | "video"): SmokeCase["ids"] {
   if (key === "gpt-image-2") {
-    // Preserve the identity of the first live Build so rerunning the suite resumes/reuses it.
     return {
       request: "request:gpt-image-2-live",
       source: "@narratage/provider-kie/live-smoke/gpt-image-2@1",
@@ -453,7 +453,7 @@ async function main(): Promise<void> {
       try {
         const state = await createBuild(item);
         const build = await runtime.build(
-          { id: `kie-live-${state.request.digest.slice("sha256:".length, "sha256:".length + 16)}`, state },
+          { id: `bld_${randomUUID()}`, state },
           { follow: true, pollIntervalMs: 1_000, maxWaitMs: 20 * 60_000 },
         );
         if (build.status !== "complete") throw new Error(failureMessage(item, build));

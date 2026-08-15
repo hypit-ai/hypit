@@ -122,8 +122,19 @@ function alive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    return error instanceof Error && "code" in error && error.code === "EPERM";
+  }
+}
+
+function signal(pid: number, name: NodeJS.Signals): "sent" | "gone" | "denied" {
+  try {
+    process.kill(pid, name);
+    return "sent";
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ESRCH") return "gone";
+    if (error instanceof Error && "code" in error && error.code === "EPERM") return "denied";
+    throw error;
   }
 }
 
@@ -254,10 +265,34 @@ export async function takeExternalServicesDown(
         // command's business; saying so is.
         : { ...base, action: "not-ours", state, detail: `${service.id} is running but this project did not start it` };
     }
-    process.kill(pid, "SIGTERM");
+    const term = signal(pid, "SIGTERM");
+    if (term === "denied") {
+      return {
+        ...base,
+        action: "unchanged",
+        state: await service.probe(),
+        pid,
+        detail: `process ${pid} is running but this environment cannot stop it`,
+      };
+    }
+    if (term === "gone") {
+      await rm(join(directory(root), `${service.id}.pid`), { force: true });
+      const state = await service.probe();
+      return state.state === "down"
+        ? { ...base, action: "nothing-to-stop", state }
+        : { ...base, action: "not-ours", state, detail: `${service.id} is now served by another process` };
+    }
     const deadline = Date.now() + 15_000;
     while (alive(pid) && Date.now() < deadline) await sleep(200);
-    if (alive(pid)) process.kill(pid, "SIGKILL");
+    if (alive(pid) && signal(pid, "SIGKILL") === "denied") {
+      return {
+        ...base,
+        action: "unchanged",
+        state: await service.probe(),
+        pid,
+        detail: `process ${pid} ignored SIGTERM and this environment cannot force-stop it`,
+      };
+    }
     await rm(join(directory(root), `${service.id}.pid`), { force: true });
     return { ...base, action: "stopped", state: await service.probe(), pid };
     })));
@@ -273,11 +308,14 @@ export async function reportExternalServices(
   const reports = await Promise.all(distinct(services).map(async ({ service, instances }): Promise<ExternalServiceReport> => {
     const state = await service.probe();
     const pid = await readPid(root, service.id);
+    const logPath = join(directory(root), `${service.id}.log`);
+    const hasLog = await stat(logPath).then(() => true).catch(() => false);
     return {
       id: service.id,
       instances,
       state,
       ...(pid !== undefined && alive(pid) ? { pid } : {}),
+      ...(hasLog ? { logPath } : {}),
     };
   }));
   return { root, services: reports };

@@ -114,15 +114,15 @@ Runtime Profile 说明在哪里做。
 ```bash
 cd /path/to/my-video
 
-/path/to/narratage/narratage packages sync build.svrun \
-  --runtime svml.runtime.json
+/path/to/narratage/narratage runtime use svml.runtime.json
 
-/path/to/narratage/narratage plan build.svrun \
-  --runtime svml.runtime.json
+/path/to/narratage/narratage packages sync build.svrun
+/path/to/narratage/narratage plan build.svrun
 ```
 
 启动器使用 Narratage 仓库已经安装好的依赖，但源码、SQLite 状态、Artifact 和输出都会留在你的项目里。
-`packages sync` 把当前 Run 与 Runtime 选择加入或刷新到两份项目包库存中，不会删除其他 Run 的包。
+`runtime use` 只在 `.svml/runtime` 保存一个本地指针；所选 Profile 仍然是两份 lock 路径和执行环境的
+唯一来源。`packages sync` 把当前 Run 与 Runtime 选择加入或刷新到两份项目包库存中，不会删除其他 Run 的包。
 
 需要完整 Runtime Profile 时，从
 [`examples/talking-film-live`](https://github.com/hypit-ai/narratage/tree/main/examples/talking-film-live) 的结构开始：复制文件结构，
@@ -133,27 +133,21 @@ cd /path/to/my-video
 检查并确认计划之后：
 
 ```bash
-/path/to/narratage/narratage build build.svrun \
-  --runtime svml.runtime.json \
-  --build-id my-video-001 \
-  --follow
+/path/to/narratage/narratage build build.svrun --follow
 ```
 
-`build` 会持久化这次 Build、确保对应 Worker 可用，并只启动所选 Endpoint 声明的外部程序。
-`--follow` 只是观察器；关掉它不会停止 Build。
+`build` 会自动分配并打印一个新的 Build id、持久化这次 Build、确保对应 Worker 可用，并只启动
+所选 Endpoint 声明的外部程序。`--follow` 只是观察器；关掉它不会停止 Build。
 
 编辑源码时使用 `check`；配置或排查部署时使用 `doctor`。它们都不会提交工作，但也不是每次
 Build 前必须重复的仪式。
 
 ```bash
-/path/to/narratage/narratage status my-video-001 \
-  --runtime svml.runtime.json
+/path/to/narratage/narratage status <build-id>
 
-/path/to/narratage/narratage queue \
-  --runtime svml.runtime.json --watch
+/path/to/narratage/narratage queue --watch
 
-/path/to/narratage/narratage get my-video-001 \
-  --runtime svml.runtime.json \
+/path/to/narratage/narratage get <build-id> \
   --name final.video \
   --to output/final.mp4
 ```

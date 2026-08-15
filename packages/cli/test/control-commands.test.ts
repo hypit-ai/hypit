@@ -71,6 +71,12 @@ test("command options fail closed instead of being silently ignored", async () =
   );
   await assert.rejects(
     async () => await runCli([
+      "build", "/tmp/build.svrun", "--runtime", "/tmp/runtime.json", "--build-id", "legacy-build",
+    ], io, distribution),
+    /unknown option --build-id/u,
+  );
+  await assert.rejects(
+    async () => await runCli([
       "doctor", "/tmp/runtime.json", "--root", "/tmp",
     ], io, distribution),
     /doctor already uses the Runtime Profile directory and its declared root; remove --root/u,
@@ -159,4 +165,34 @@ test("auth login rejects a read-only CredentialStore before asking for a secret"
   );
   assert.equal(prompted, false);
   assert.equal(closed, true);
+});
+
+test("cancelling a completed Build reports that no cancellation was requested", async () => {
+  const control = {
+    async cancel() {
+      return {
+        build: "build-complete",
+        phase: "terminal",
+        admission: "closed",
+        terminal: "complete",
+      };
+    },
+    async close() {},
+  } as unknown as CliRuntimeArchiveControl;
+  const distribution = {
+    createRuntimeArchiveFromConfig: async () => control,
+  } as unknown as CliDistribution;
+  let output = "";
+
+  await runCli([
+    "cancel", "build-complete", "--runtime", "/tmp/runtime.json", "--json",
+  ], { write: (text) => { output += text; } }, distribution);
+
+  assert.deepEqual(JSON.parse(output), {
+    build: "build-complete",
+    requested: false,
+    phase: "terminal",
+    admission: "closed",
+    terminal: "complete",
+  });
 });

@@ -52,9 +52,12 @@ asks the selected Scheduler to regenerate the current commands. Recoverable Prov
 remain in `OperationStore`; dispatch lease, heartbeat, admission and shared resource capacity remain in
 `BuildDispatchStore`. Queue and cancellation inspection read those authoritative stores directly.
 
-Cancellation first closes admission. Existing Operations keep their own execution fact and a
+Cancellation is Build-scoped. A queued Build that no Worker has claimed becomes terminal atomically;
+an active Build first closes admission. Existing Operations keep their own execution fact and a
 separate cancellation-control fact. Provider acceptance is not reported as cancellation; unsupported
 or too-late requests continue reconciling the same Operation and never select another Candidate.
+Endpoint checkpoint recovery continues the same in-flight task after Worker failure; it is not a way
+to reopen a terminal Build.
 
 ## Boundaries
 

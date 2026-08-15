@@ -16,7 +16,7 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     const config = runtimeConfigObject(context.config, "KIE");
     runtimeConfigExact(config, [
       "apiBaseUrl", "uploadBaseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs",
-      "submissionIntervalMs", "requestTimeoutMs", "maxOperationMs", "maxArtifactBytes",
+      "routeConcurrency", "submissionIntervalMs", "requestTimeoutMs", "maxOperationMs", "maxArtifactBytes",
     ], "KIE");
     const apiBaseUrl = runtimeConfigString(config.apiBaseUrl, "KIE apiBaseUrl");
     const uploadBaseUrl = runtimeConfigString(config.uploadBaseUrl, "KIE uploadBaseUrl");
@@ -30,6 +30,14 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     const apiKey = runtimeConfigCredentialRef(config.apiKey, "KIE apiKey");
     if (apiKey === undefined) throw new Error("KIE apiKey CredentialRef is required");
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "KIE defaultConcurrency");
+    const routeConcurrency = config.routeConcurrency === undefined
+      ? undefined
+      : Object.fromEntries(Object.entries(runtimeConfigObject(config.routeConcurrency, "KIE routeConcurrency"))
+        .map(([route, value]) => {
+          const concurrency = runtimeConfigPositiveInteger(value, `KIE routeConcurrency.${route}`);
+          if (concurrency === undefined) throw new Error(`KIE routeConcurrency.${route} is required`);
+          return [route, concurrency];
+        }));
     const pollIntervalMs = runtimeConfigPositiveInteger(config.pollIntervalMs, "KIE pollIntervalMs");
     const submissionIntervalMs = runtimeConfigPositiveInteger(config.submissionIntervalMs, "KIE submissionIntervalMs");
     const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "KIE requestTimeoutMs");
@@ -43,6 +51,7 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ...(uploadBaseUrl === undefined ? {} : { uploadBaseUrl }),
         apiKey,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
+        ...(routeConcurrency === undefined ? {} : { routeConcurrency }),
         ...(pollIntervalMs === undefined ? {} : { pollIntervalMs }),
         ...(submissionIntervalMs === undefined ? {} : { submissionIntervalMs }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),

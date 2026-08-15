@@ -29,20 +29,25 @@ Source, and the declarative `svml.runtime.json` Runtime Profile separate.
 ## Ordinary loop
 
 ```bash
-node --run narratage -- plan path/to/build.svrun --runtime path/to/svml.runtime.json
-node --run narratage -- build path/to/build.svrun --runtime path/to/svml.runtime.json \
-  --build-id my-build-001 --follow
-node --run narratage -- inspect my-build-001 --runtime path/to/svml.runtime.json
-node --run narratage -- get my-build-001 --runtime path/to/svml.runtime.json \
-  --name final.video --to path/to/output/final.mp4
+cd path/to/project
+node --run narratage -- runtime use svml.runtime.json
+node --run narratage -- plan build.svrun
+node --run narratage -- build build.svrun --follow
+node --run narratage -- inspect <build-id>
+node --run narratage -- get <build-id> \
+  --name final.video --to output/final.mp4
 ```
 
 Run `packages sync` after import or Runtime package selections change. Use `check` while editing and
 `doctor` for deployment setup or diagnosis; do not impose either as ceremony before every Build.
 
 Treat `--follow` as an observer: stopping it does not stop the durable Build. Use `runtime down`
-only to stop the Worker and Runtime-owned programs; it does not cancel Builds or remote Provider
-work.
+to stop only the Worker; use `services down` separately when external programs should also stop.
+Neither command cancels Builds or remote Provider work.
+
+Every `build` invocation receives a fresh automatic Build id. Never try to reclaim a prior Build by
+restoring Source bytes or choosing an id. Cross-Build reuse exists only through explicit
+`build-record` Candidates in a new Run Source.
 
 Reuse any accepted generated image or take in the next `.svrun` with `build-record` plus `satisfy`,
 then review the frozen plan before paid downstream work. Candidate selection has no Pin state or

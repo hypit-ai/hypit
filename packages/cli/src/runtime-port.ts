@@ -52,10 +52,8 @@ export type CliRuntimeArchiveControl = {
     readonly capacity: readonly CapacityReservation[];
     readonly operations: readonly OperationSnapshot[];
   }>;
-  operation(id: Digest): Promise<OperationSnapshot | undefined>;
   builds(): Promise<readonly BuildCatalogEntry[]>;
   cancel(build: string, reason?: string): Promise<BuildDispatchSnapshot | undefined>;
-  cancelOperation(id: Digest, reason?: string): Promise<OperationSnapshot | undefined>;
   close(): void | Promise<void>;
 };
 

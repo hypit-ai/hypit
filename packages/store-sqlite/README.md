@@ -19,4 +19,4 @@ rejected and recreated explicitly instead of carrying migration code before the 
 execution services plus a Host-only `catalog` handle. They share one connection and one close
 lifecycle. The catalog is deliberately absent from the Runtime service Manifest and Runtime
 Closure; changing the Host-only catalog table therefore cannot change the identity under which an
-active Build resumes.
+active Build continues.

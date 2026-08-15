@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { appendFile, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -22,6 +22,8 @@ test("one detached Runtime Worker is observable, reusable and explicitly stoppab
     packageLock: "./author.lock",
     runtimePackageLock: "./runtime.lock",
   }), "utf8");
+  await mkdir(join(root, ".svml"), { recursive: true });
+  await writeFile(join(root, ".svml", "runtime"), "runtime.json\n", "utf8");
   const program = `
     const fs = require("node:fs");
     const path = require("node:path");
@@ -38,6 +40,8 @@ test("one detached Runtime Worker is observable, reusable and explicitly stoppab
       profile, { command: process.execPath, args: ["-e", program] }, "revision-1", 5_000);
     assert.equal(first.state, "running");
     assert.ok(first.pid);
+    assert.equal(await readFile(join(root, ".svml", "runtime"), "utf8"), "runtime.json\n",
+      "Worker state must not overwrite or descend through the active Runtime Profile pointer");
     const second = await ensureRuntimeProcess(profile, { command: "must-not-run", args: [] }, "revision-1", 5_000);
     assert.equal(second.pid, first.pid);
     const concurrent = await Promise.all(Array.from({ length: 8 }, async () =>

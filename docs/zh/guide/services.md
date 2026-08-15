@@ -10,10 +10,11 @@ description: 管理耐久 Worker 与 Profile 明确选择的本地程序。
 ## 整个执行域
 
 ```bash
-node --run narratage -- runtime up svml.runtime.json
-node --run narratage -- runtime status svml.runtime.json
-node --run narratage -- runtime logs svml.runtime.json
-node --run narratage -- runtime down svml.runtime.json
+node --run narratage -- runtime use svml.runtime.json
+node --run narratage -- runtime up
+node --run narratage -- runtime status
+node --run narratage -- runtime logs
+node --run narratage -- runtime down
 ```
 
 `runtime up` 启动或复用当前 Profile 的后台 Worker，并准备、启动该 Profile 声明的外部程序。重复执行不会创建第二个同域 Worker。`runtime status` 同时展示 Worker、耐久队列、共享容量和外部程序健康状态。
@@ -23,8 +24,9 @@ node --run narratage -- runtime down svml.runtime.json
 
 后台进程同时绑定 Profile 路径与 Distribution 提供的不透明修订值。官方 JSON Profile 的实现让该修订覆盖 Profile 与两份 package lock；通用 CLI 不解析配置文档，也不假定哪些文件属于修订。任一文件变化后，官方 Worker 会显示为 `stale`；下一次 `runtime up` 或 `build` 会先替换旧进程，不会让新 Dispatch 偷偷进入旧执行闭包。
 
-`runtime down` 停止 Worker 和由该 Profile 管理的程序，但不会取消 Build 或远端 Provider
-任务。队列仍在 Store 中，下次启动后继续。
+`runtime down` 只停止 Worker，并故意保留外部程序，因为其他 Runtime Profile 可能正在共用
+它们。只有确实要停止这些程序时才执行 `services down`。两条命令都不会取消 Build 或远端
+Provider 任务，队列仍在 Store 中，下次启动后继续。
 
 ## 只管理外部程序
 
@@ -58,14 +60,17 @@ Operation 数量变化时输出一行。中断观察终端不会中断 Worker。
 ## 可见性
 
 ```bash
-node --run narratage -- queue --runtime svml.runtime.json --watch
-node --run narratage -- status <build-id> --runtime svml.runtime.json
-node --run narratage -- operations <build-id> --runtime svml.runtime.json
-node --run narratage -- operation <operation-id> --runtime svml.runtime.json
+node --run narratage -- queue --watch
+node --run narratage -- status <build-id>
+node --run narratage -- inspect <build-id>
+node --run narratage -- cancel <build-id>
 ```
 
 这些命令展示活跃 dispatch、Worker 状态、租约/容量、Operation 的通用进度、checkpoint 和取消状态。并发启动按 Profile 串行化，只会复用一个 Worker 和每个受管外部服务的一个实例；
 `--follow` 若发现 Worker 已停止会明确报出重启命令，不会无限等待。`--json` 输出一次结构化结果，watch 命令可用 `--jsonl`。`queue --watch` 只输出第一份快照和后续变化，不会在远端任务状态没变时每秒重复刷同一个块。
+
+CLI 的公开控制单位只有 Build。未被 Worker 领取的排队 Build 会被原子撤回；已运行的 Build
+会关闭后续准入并协调已经提交的 Provider 工作。Operation 仍显示在 Build 详情中，但不能单独控制。终态 Build 不会重新打开；再次运行同一 `.svrun` 会创建新 Build。Endpoint checkpoint 只用于 Worker 重启后续接同一个已提交的外部任务，避免重复付费。
 
 ## WhisperX
 

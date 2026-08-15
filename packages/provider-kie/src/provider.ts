@@ -39,7 +39,10 @@ export type CreateKieProviderOptions = {
   readonly apiBaseUrl?: string;
   readonly uploadBaseUrl?: string;
   readonly apiKey?: CredentialRef;
+  /** Total in-flight capacity shared by every KIE route. */
   readonly defaultConcurrency?: number;
+  /** Optional KIE route limits keyed by capability name, for example seedance-2.5. */
+  readonly routeConcurrency?: Readonly<Record<string, number>>;
   readonly pollIntervalMs?: number;
   readonly submissionIntervalMs?: number;
   readonly requestTimeoutMs?: number;
@@ -597,6 +600,11 @@ function endpoint(options: {
 
 export function createKieProvider(config: CreateKieProviderOptions) {
   verifyKieRoutes();
+  const routeNames = new Set(kieRoutes.map((route) => route.capability.name));
+  const routeConcurrency = Object.fromEntries(Object.entries(config.routeConcurrency ?? {}).map(([route, limit]) => {
+    if (!routeNames.has(route)) throw new Error(`unknown KIE concurrency route ${route}`);
+    return [route, positiveInteger(limit, `${route} routeConcurrency`)];
+  }));
   const apiBaseUrl = baseUrl(config.apiBaseUrl ?? "https://api.kie.ai", "apiBaseUrl");
   const uploadBaseUrl = baseUrl(config.uploadBaseUrl ?? "https://kieai.redpandaai.co", "uploadBaseUrl");
   const pollIntervalMs = nonNegativeInteger(config.pollIntervalMs ?? 3_000, "pollIntervalMs");
@@ -651,6 +659,10 @@ export function createKieProvider(config: CreateKieProviderOptions) {
     capabilities: kieRoutes.map((route) => ({
       capability: route.capability,
       returns: route.returns,
+      route: route.capability.name,
+      ...(routeConcurrency[route.capability.name] === undefined
+        ? {}
+        : { maxConcurrency: routeConcurrency[route.capability.name] }),
       lifecycle: "recoverable" as const,
       endpoint: providerEndpoint,
       retry: { maxAttempts: 3 },

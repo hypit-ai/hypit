@@ -657,21 +657,44 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
 
   async requestCancellation(build: string, reason?: string, now = Date.now()): Promise<BuildDispatchSnapshot> {
     nonNegativeInteger(now, "cancellation request time");
-    const updated = this.#database.prepare(`
-      UPDATE svml_dispatches
-      SET revision = revision + 1, updated_at = ?, admission = 'closing',
-          cancel_requested_at = COALESCE(cancel_requested_at, ?),
-          cancel_reason = COALESCE(cancel_reason, ?),
-          available_at = CASE WHEN phase = 'leased' THEN available_at ELSE MIN(available_at, ?) END,
-          wake_at = CASE WHEN phase = 'leased' THEN MIN(COALESCE(wake_at, ?), ?) ELSE wake_at END
-      WHERE build_id = ? AND phase != 'terminal'
-    `).run(now, now, reason ?? null, now, now, now, build);
-    if (updated.changes === 0) {
-      const current = await this.read(build);
-      if (current === undefined) throw new Error(`Dispatch ${build} does not exist`);
-      return current;
-    }
-    return (await this.read(build))!;
+    return transaction(this.#database, () => {
+      const row = this.#database.prepare(
+        "SELECT * FROM svml_dispatches WHERE build_id = ?",
+      ).get(build) as Row | undefined;
+      if (row === undefined) throw new Error(`Dispatch ${build} does not exist`);
+      const current = parseDispatchSnapshot(row);
+      if (current.phase === "terminal") return current;
+
+      // A zero fence proves that no Worker has ever owned this Build. Cancellation is therefore
+      // pure queue withdrawal: no Core command, capacity reservation or Provider Operation can
+      // exist. Resolve it in this same transaction so a racing claim has exactly one winner.
+      if (current.phase === "queued" && row.lease_fence === 0 && row.lease_owner === null) {
+        const updated = this.#database.prepare(`
+          UPDATE svml_dispatches
+          SET revision = revision + 1, updated_at = ?, admission = 'closed', phase = 'terminal',
+              terminal = 'cancelled', reason = ?, cancel_requested_at = ?, cancel_reason = ?,
+              wake_at = NULL, lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL
+          WHERE build_id = ? AND phase = 'queued' AND lease_fence = 0 AND lease_owner IS NULL
+        `).run(now, reason ?? "cancelled before dispatch", now, reason ?? null, build);
+        assert(updated.changes === 1, `Dispatch ${build} cancellation lost its transaction`);
+      } else {
+        const updated = this.#database.prepare(`
+          UPDATE svml_dispatches
+          SET revision = revision + 1, updated_at = ?, admission = 'closing',
+              cancel_requested_at = COALESCE(cancel_requested_at, ?),
+              cancel_reason = COALESCE(cancel_reason, ?),
+              available_at = CASE WHEN phase = 'leased' THEN available_at ELSE MIN(available_at, ?) END,
+              wake_at = CASE WHEN phase = 'leased' THEN MIN(COALESCE(wake_at, ?), ?) ELSE wake_at END
+          WHERE build_id = ? AND phase != 'terminal'
+        `).run(now, now, reason ?? null, now, now, now, build);
+        assert(updated.changes === 1, `Dispatch ${build} cancellation lost its transaction`);
+      }
+      const result = this.#database.prepare(
+        "SELECT * FROM svml_dispatches WHERE build_id = ?",
+      ).get(build) as Row | undefined;
+      assert(result !== undefined, `Dispatch ${build} disappeared after cancellation`);
+      return parseDispatchSnapshot(result);
+    });
   }
 
   async wake(build: string, now = Date.now()): Promise<BuildDispatchSnapshot> {
