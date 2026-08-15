@@ -24,7 +24,7 @@ const implementationDigest = `sha256:${"1".repeat(64)}`;
 const producerDigest = `sha256:${"3".repeat(64)}`;
 
 async function fixture(): Promise<{
-  readonly root: string;
+  readonly dataRoot: string;
   readonly activation: string;
   readonly dependency: string;
   readonly helperDigest: string;
@@ -187,7 +187,7 @@ async function fixture(): Promise<{
     <example:Card/>
   </svml>`, "utf8");
   return {
-    root,
+    dataRoot: root,
     activation,
     dependency,
     helperDigest: digestOf(helperManifest),
@@ -198,12 +198,12 @@ async function fixture(): Promise<{
 
 test("an installed locked package carries inert Host facets and activatable compute", async () => {
   const item = await fixture();
-  const lock = await createNodePackageLock(["example-card"], item.root);
+  const lock = await createNodePackageLock(["example-card"], item.dataRoot);
   assert.deepEqual(lock.artifacts.map((artifact) => artifact.name), ["example-card", "example-helper", "example-types"]);
   assert.deepEqual(lock.selected, ["example-card"]);
   assert.deepEqual(lock.packages.map((value) => value.package.name), ["example-card", "example-helper"]);
   await writeNodePackageLock(item.lock, lock);
-  const packages = (await loadNodePackageSet(item.lock, item.root)).packages.map((value) => value.contribution);
+  const packages = (await loadNodePackageSet(item.lock, item.dataRoot)).packages.map((value) => value.contribution);
 
   assert.equal(packages[0]?.modules?.[0]?.manifest.name, "example.card");
   assert.equal(packages[1]?.modules?.[0]?.manifest.name, "example.helper");
@@ -229,12 +229,12 @@ test("an empty local trust selection is a valid authenticated package lock", asy
 
 test("dependency bytes are rejected before a locked contribution entry is reused", async () => {
   const item = await fixture();
-  const lock = await createNodePackageLock(["example-card"], item.root);
+  const lock = await createNodePackageLock(["example-card"], item.dataRoot);
   await writeNodePackageLock(item.lock, lock);
   await writeFile(item.dependency, `${await readFile(item.dependency, "utf8")}\n// changed bytes\n`, "utf8");
 
   await assert.rejects(
-    async () => await loadNodePackageSet(item.lock, item.root),
+    async () => await loadNodePackageSet(item.lock, item.dataRoot),
     /installed Node package bytes do not match the lock/,
   );
 });
@@ -248,14 +248,14 @@ test("a missing exact Module provider is rejected while the lock is created", as
   );
 
   await assert.rejects(
-    async () => await createNodePackageLock(["example-card"], item.root),
+    async () => await createNodePackageLock(["example-card"], item.dataRoot),
     /no installed package .* provides required Module example\.helper@1/u,
   );
 });
 
 test("two physical packages cannot ambiguously provide one required Module", async () => {
   const item = await fixture();
-  const copyRoot = join(item.root, "node_modules", "example-helper-copy");
+  const copyRoot = join(item.dataRoot, "node_modules", "example-helper-copy");
   await mkdir(copyRoot, { recursive: true });
   await writeFile(join(copyRoot, "package.json"), JSON.stringify({
     name: "example-helper-copy",
@@ -269,7 +269,7 @@ test("two physical packages cannot ambiguously provide one required Module", asy
     await readFile(item.dependency, "utf8"),
     "utf8",
   );
-  const cardPackagePath = join(item.root, "node_modules", "example-card", "package.json");
+  const cardPackagePath = join(item.dataRoot, "node_modules", "example-card", "package.json");
   const cardPackage = JSON.parse(await readFile(cardPackagePath, "utf8")) as {
     dependencies: Record<string, string>;
   };
@@ -277,15 +277,15 @@ test("two physical packages cannot ambiguously provide one required Module", asy
   await writeFile(cardPackagePath, JSON.stringify(cardPackage, null, 2), "utf8");
 
   await assert.rejects(
-    async () => await createNodePackageLock(["example-card"], item.root),
+    async () => await createNodePackageLock(["example-card"], item.dataRoot),
     /multiple installed packages .* provide required Module example\.helper@1/u,
   );
 });
 
 test("an unrelated selected package does not contaminate another package's implementation closure", async () => {
   const item = await fixture();
-  const alone = await createNodePackageLock(["example-card"], item.root);
-  const together = await createNodePackageLock(["example-card", "example-extra"], item.root);
+  const alone = await createNodePackageLock(["example-card"], item.dataRoot);
+  const together = await createNodePackageLock(["example-card", "example-extra"], item.dataRoot);
   const left = alone.packages.find((value) => value.package.name === "example-card")!;
   const right = together.packages.find((value) => value.package.name === "example-card")!;
   assert.equal(left.closureDigest, right.closureDigest);
@@ -294,8 +294,8 @@ test("an unrelated selected package does not contaminate another package's imple
 
 test("selection mutation keeps a shared dependency only through its retained root", async () => {
   const item = await fixture();
-  const old = await createNodePackageLock(["example-card", "example-extra"], item.root);
-  const next = await createNodePackageLock(["example-extra"], item.root, {
+  const old = await createNodePackageLock(["example-card", "example-extra"], item.dataRoot);
+  const next = await createNodePackageLock(["example-extra"], item.dataRoot, {
     retain: { from: old, selected: ["example-extra"] },
   });
   assert.deepEqual(next.selected, ["example-extra"]);
@@ -316,13 +316,13 @@ test("a compute facet cannot claim another implementation than its static Manife
   );
 
   await assert.rejects(
-    async () => await createNodePackageLock(["example-card"], item.root),
+    async () => await createNodePackageLock(["example-card"], item.dataRoot),
     /Producer .* differs from its Manifest/u,
   );
 });
 
 async function runtimeAdapterFixture(marker: string): Promise<{
-  readonly root: string;
+  readonly dataRoot: string;
   readonly lock: string;
 }> {
   const root = await mkdtemp(join(tmpdir(), "svml-external-runtime-adapter-"));
@@ -388,19 +388,19 @@ async function runtimeAdapterFixture(marker: string): Promise<{
       hostFacets: [runtimeFacet],
     };
   `, "utf8");
-  return { root, lock: join(root, "runtime.packages.lock") };
+  return { dataRoot: root, lock: join(root, "runtime.packages.lock") };
 }
 
 async function loadedExternalEndpointDigest(marker: string): Promise<string> {
   const item = await runtimeAdapterFixture(marker);
   await writeNodePackageLock(
     item.lock,
-    await createNodePackageLock(["example-runtime-adapter"], item.root),
+    await createNodePackageLock(["example-runtime-adapter"], item.dataRoot),
   );
   const loaded = await loadNodePackageSelection(item.lock, {
     selected: [],
     logical: [{ abi: runtimeEndpointAdapterHostAbi, name: "example.logical-endpoint" }],
-  }, item.root);
+  }, item.dataRoot);
   const loadedPackage = loaded.packages[0]!;
   const contribution = loadedPackage.contribution;
   const locked = loaded.lock.packages[0]!;
@@ -409,7 +409,7 @@ async function loadedExternalEndpointDigest(marker: string): Promise<string> {
     closureDigest: locked.closureDigest,
   });
   const endpoint = await registry.createEndpoint("example.logical-endpoint", {
-    root: item.root,
+    dataRoot: item.dataRoot,
     instance: "external.fixture",
     config: {},
   });

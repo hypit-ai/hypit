@@ -1,9 +1,9 @@
 import { digestOf } from "@narratage/protocol";
 import {
   LocalBuildScheduler,
-  defineRuntimeServicePackage,
+  defineRuntimeComponentPackage,
 } from "@narratage/runtime";
-import type { RuntimeServicePackage } from "@narratage/runtime";
+import type { RuntimeComponentPackage } from "@narratage/runtime";
 
 import { durableLocalWorkerFactory } from "./worker.js";
 
@@ -17,10 +17,10 @@ const localWorkerImplementationDigest = digestOf("@narratage/local/worker@1/bloc
 
 export function createLocalExecutionPackage(
   instance: string,
-): RuntimeServicePackage {
-  return defineRuntimeServicePackage({
+): RuntimeComponentPackage {
+  return defineRuntimeComponentPackage({
     module: localRuntimeModuleRef,
-    services: [
+    components: [
       {
         role: "scheduler",
         facet: "scheduler",
@@ -29,7 +29,7 @@ export function createLocalExecutionPackage(
           digest: localSchedulerImplementationDigest,
         },
         configuration: { algorithm: "atomic-resources", version: 1 },
-        service: {
+        port: {
           create(executor, options) {
             return new LocalBuildScheduler(executor, options);
           },
@@ -43,7 +43,7 @@ export function createLocalExecutionPackage(
           digest: localWorkerImplementationDigest,
         },
         configuration: { dispatch: "leased", capacity: "shared", version: 1 },
-        service: durableLocalWorkerFactory,
+        port: durableLocalWorkerFactory,
       },
     ],
   });

@@ -15,6 +15,7 @@
     "@narratage/protocol": "workspace:*",
     "@narratage/run": "workspace:*",
     "@narratage/runtime": "workspace:*",
+    "@narratage/runtime-adapter-node": "workspace:*",
     "@narratage/source": "workspace:*"
   },
   "devDependencies": {

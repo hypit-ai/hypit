@@ -1,6 +1,6 @@
 export {
   SqliteRuntimeState,
-  createSqliteRuntimeServicePackage,
+  createSqliteRuntimeComponentPackage,
   sqliteBuildStoreImplementationDigest,
   sqliteDispatchStoreImplementationDigest,
   sqliteOperationStoreImplementationDigest,

@@ -37,7 +37,7 @@ export type CliDiagnostic = {
 export type DoctorOutput = {
   readonly format: "narratage.cli-doctor@1";
   readonly ok: boolean;
-  readonly root: string;
+  readonly dataRoot: string;
   readonly diagnostics: readonly CliDiagnostic[];
 };
 
@@ -84,7 +84,7 @@ export type RunCheckOutput = {
 
 export type PlanPreflight = {
   readonly ok: boolean;
-  readonly root: string;
+  readonly dataRoot: string;
   readonly capabilities: readonly string[];
   readonly diagnostics: readonly CliDiagnostic[];
 };
@@ -212,7 +212,7 @@ function renderDoctor(view: Extract<CliPresentation, { kind: "doctor" }>, io: Cl
   const lines = [colors.accent(colors.strong("Narratage Doctor")), ""];
   lines.push(...facts([
     ["Profile", shortPath(view.profile)],
-    ["Root", shortPath(view.machine.root)],
+    ["Data root", shortPath(view.machine.dataRoot)],
   ], colors));
   lines.push("");
   if (view.machine.diagnostics.length === 0) {
@@ -448,7 +448,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("narratage check")),
       colors.dim("Validate one self-described Author Source or Run Source without executing it."),
       "",
-      "  narratage check <source> [--runtime <profile>] [--package-lock <lock>] [--root <workspace>] [--asset-root <directory>]",
+      "  narratage check <source> [--runtime <profile>] [--package-lock <lock>] [--workspace <workspace>] [--asset-root <directory>]",
     ],
     doctor: [
       colors.accent(colors.strong("narratage doctor")),
@@ -460,7 +460,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("narratage plan")),
       colors.dim("Freeze the demanded subgraph and expose explicit Run choices and every external Need."),
       "",
-      "  narratage plan <run-source> [--runtime <profile>] [--package-lock <lock>] [--root <workspace>] [--asset-root <directory>]",
+      "  narratage plan <run-source> [--runtime <profile>] [--package-lock <lock>] [--workspace <workspace>] [--asset-root <directory>]",
       "",
       "With --runtime, plan also preflights only the demanded deployment slice.",
       "Planning never starts external work.",
@@ -469,10 +469,10 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("narratage build")),
       colors.dim("Submit one durable Build and ensure its selected Runtime Worker is available."),
       "",
-      "  narratage build <run-source> [--runtime <profile>] [--asset-root <directory>] [--follow] [--no-services]",
+      "  narratage build <run-source> [--runtime <profile>] [--asset-root <directory>] [--follow] [--no-programs]",
       "",
       "  --follow                   observe the Build; the Worker still owns execution",
-      "  --no-services              do not start declared external programs",
+      "  --no-programs              do not start declared external programs",
       "  --max-wait-ms <ms>         bound startup or follow waiting",
     ],
     runtime: [
@@ -481,18 +481,18 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "",
       "  narratage runtime use <profile>       select the Profile for this project",
       "  narratage runtime unset               remove only the local selection",
-      "  narratage runtime up [<profile>]      validate the Runtime Closure, start services and Worker",
-      "  narratage runtime status [<profile>]  inspect Worker, queue capacity and declared services",
+      "  narratage runtime up [<profile>]      validate the Runtime Closure, start programs and Worker",
+      "  narratage runtime status [<profile>]  inspect Worker, queue capacity and declared programs",
       "  narratage runtime logs [<profile>]    read Worker logs",
       "  narratage runtime down [<profile>]    stop the Worker; external programs keep running",
     ],
-    services: [
-      colors.accent(colors.strong("narratage services")),
+    programs: [
+      colors.accent(colors.strong("narratage programs")),
       colors.dim("Operate only the external programs declared by Endpoints in one Runtime Profile."),
       "",
-      "  narratage services up [<profile>] [--max-wait-ms <ms>]",
-      "  narratage services status [<profile>]",
-      "  narratage services down [<profile>]",
+      "  narratage programs up [<profile>] [--max-wait-ms <ms>]",
+      "  narratage programs status [<profile>]",
+      "  narratage programs down [<profile>]",
     ],
     queue: [
       colors.accent(colors.strong("narratage queue")),
@@ -500,6 +500,12 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "",
       "  narratage queue [--runtime <profile>] [--watch]",
       "  narratage queue [--runtime <profile>] --watch --jsonl",
+    ],
+    paths: [
+      colors.accent(colors.strong("narratage paths")),
+      colors.dim("Show project, Runtime and host state locations without creating them."),
+      "",
+      "  narratage paths [--runtime <profile>]",
     ],
     builds: [
       colors.accent(colors.strong("narratage builds")),
@@ -556,7 +562,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("narratage packages")),
       colors.dim("Derive both package locks from one Run Source and Runtime Profile."),
       "",
-      "  narratage packages sync <run-source> [--runtime <profile>] [--root <workspace>]",
+      "  narratage packages sync <run-source> [--runtime <profile>] [--workspace <workspace>]",
       "",
       "The sources select author packages; the Profile selects Runtime packages.",
       "This never installs packages or runs Providers.",
@@ -604,8 +610,9 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
     "  doctor <profile>           validate deployment without executing",
     "  runtime use|unset         select this project's Runtime Profile",
     "  runtime up|status|logs|down manage the durable Worker",
-    "  services up|status|down    manage declared external programs only",
+    "  programs up|status|down    manage declared external programs only",
     "  queue [--watch]            inspect durable dispatch and shared capacity",
+    "  paths                      show every effective state location",
     "  auth status|login|logout   manage Endpoint-declared credential references",
     "  gc <profile>               report unreachable Artifacts; --apply deletes",
     "",

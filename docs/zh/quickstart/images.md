@@ -7,7 +7,7 @@ description: 在图片流向生成器或 Track 之前，对它做合成、校正
 
 有三个包接收一张图片、交还一张图片。它们都不产出 Track：每个输出都是一张可供下游引用的图片——作为 Seedance 的参考帧、作为 Media Item，或作为下一次操作的来源。
 
-它们都需要 endpoint。`image-compose` 与 `image-transform` 索取 raster 能力，由 `@narratage/provider-image-opencv-local` 在你自己机器上以受限的 Python 进程运行 OpenCV 来满足；`background-removal` 索取的是它自己声明的能力，由 `@narratage/provider-kie` 远程满足。本仓库没有任何示例绑定过这两者，所以在 plan 一次用到它们的 Build 之前，先把 endpoint 加进你的 [Runtime Profile](/zh/guide/runtime-profile)。
+它们都需要 Endpoint。`image-compose` 与 `image-transform` 索取 raster 能力，由 `@narratage/provider-image-opencv-local` 在本机运行 OpenCV 来满足；`background-removal` 索取的是它自己声明的能力，由 `@narratage/provider-kie` 远程满足。本仓库没有示例默认绑定这两者，所以在 plan 一次用到它们的 Build 之前，先把 Endpoint 加进你的 [Runtime Profile](/zh/guide/runtime)。
 
 ## 合成图层
 

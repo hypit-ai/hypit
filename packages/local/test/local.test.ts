@@ -25,10 +25,10 @@ import {
   createNodePackageLock,
   writeNodePackageLock,
 } from "@narratage/package-loader-node";
-import { LocalBuildScheduler, credentialRef, defineRuntimeServicePackage } from "@narratage/runtime";
+import { LocalBuildScheduler, credentialRef, defineRuntimeComponentPackage } from "@narratage/runtime";
 import type { CredentialValue, WritableCredentialStore } from "@narratage/runtime";
 import type { RuntimeModuleManifest } from "@narratage/runtime";
-import { createSqliteRuntimeServicePackage } from "@narratage/store-sqlite";
+import { createSqliteRuntimeComponentPackage } from "@narratage/store-sqlite";
 
 import {
   capabilities,
@@ -58,20 +58,20 @@ const providerManifest: RuntimeModuleManifest = {
 
 function projectRuntimeFixture(directory: string) {
   const execution = createLocalExecutionPackage("execution.local");
-  const state = createSqliteRuntimeServicePackage({
-    path: join(directory, ".svml", "runtime.sqlite"),
+  const state = createSqliteRuntimeComponentPackage({
+    path: join(directory, ".narratage", "runtime.sqlite"),
     buildInstance: "state.builds",
     operationInstance: "state.operations",
     dispatchInstance: "state.dispatch",
   });
   const artifacts = createFileArtifactStorePackage({
-    root: join(directory, ".svml", "artifacts"),
+    root: join(directory, ".narratage", "artifacts"),
     instance: "artifacts.fs",
   });
   const credentials = createEnvironmentCredentialStorePackage({ instance: "credentials.env" });
   return {
-    runtimeServices: [execution, state, artifacts, credentials],
-    runtimeSelection: {
+    runtimeComponents: [execution, state, artifacts, credentials],
+    bindings: {
       scheduler: "execution.local.scheduler",
       worker: "execution.local.worker",
       stores: {
@@ -90,7 +90,7 @@ test("one local execution domain fences Runtime Closure revisions, not author pa
   const directory = await mkdtemp(join(tmpdir(), "svml-local-revision-gate-"));
   try {
     const first = await createProjectLocalRuntime({
-      root: directory,
+      dataRoot: directory,
       ...projectRuntimeFixture(directory),
     });
     await first.build({
@@ -100,7 +100,7 @@ test("one local execution domain fences Runtime Closure revisions, not author pa
     await first.close();
 
     const changedRuntimePackages = projectRuntimeFixture(directory);
-    const execution = changedRuntimePackages.runtimeServices[0];
+    const execution = changedRuntimePackages.runtimeComponents[0];
     const revisedExecution = {
       ...execution,
       manifest: {
@@ -113,9 +113,9 @@ test("one local execution domain fences Runtime Closure revisions, not author pa
     };
     await assert.rejects(
       createProjectLocalRuntime({
-        root: directory,
+        dataRoot: directory,
         ...changedRuntimePackages,
-        runtimeServices: [revisedExecution, ...changedRuntimePackages.runtimeServices.slice(1)],
+        runtimeComponents: [revisedExecution, ...changedRuntimePackages.runtimeComponents.slice(1)],
       }),
       /cannot enter this execution domain[\s\S]*unfinished-build[\s\S]*original Runtime Profile/u,
     );
@@ -127,9 +127,9 @@ test("one local execution domain fences Runtime Closure revisions, not author pa
 test("Artifact GC is explicit, dry-run by default, and only removes unreachable managed bytes", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-artifact-gc-"));
   try {
-    const artifacts = new FileArtifactStore(join(directory, ".svml", "artifacts"));
+    const artifacts = new FileArtifactStore(join(directory, ".narratage", "artifacts"));
     const orphan = await artifacts.put(new TextEncoder().encode("orphan"), "application/octet-stream");
-    const runtime = await createProjectLocalRuntime({ root: directory, ...projectRuntimeFixture(directory) });
+    const runtime = await createProjectLocalRuntime({ dataRoot: directory, ...projectRuntimeFixture(directory) });
     const preview = await runtime.garbageCollectArtifacts();
     assert.deepEqual(preview.unreachable, [orphan.digest]);
     assert.deepEqual(preview.deleted, []);
@@ -151,14 +151,14 @@ test("Endpoint-declared credentials use the selected writable Store without a Pr
     async put(ref, value) { values.set(ref.key, value); },
     async delete(ref) { return values.delete(ref.key); },
   };
-  const memoryCredentials = defineRuntimeServicePackage({
+  const memoryCredentials = defineRuntimeComponentPackage({
     module: { name: "example.credentials-memory", version: "1" },
-    services: [{
+    components: [{
       role: "credential-store",
       facet: "credential-store",
       instance: "credentials.memory",
       implementation: { digest: digestOf("credentials-memory@1") },
-      service: credentialStore,
+      port: credentialStore,
     }],
   });
   const endpoint = defineEndpointPackage({
@@ -182,12 +182,12 @@ test("Endpoint-declared credentials use the selected writable Store without a Pr
   try {
     const base = projectRuntimeFixture(directory);
     const runtime = await createProjectLocalRuntime({
-      root: directory,
+      dataRoot: directory,
       ...base,
-      runtimeServices: [...base.runtimeServices.slice(0, -1), memoryCredentials],
-      runtimeSelection: {
-        ...base.runtimeSelection,
-        stores: { ...base.runtimeSelection.stores, credentials: ["credentials.memory"] },
+      runtimeComponents: [...base.runtimeComponents.slice(0, -1), memoryCredentials],
+      bindings: {
+        ...base.bindings,
+        stores: { ...base.bindings.stores, credentials: ["credentials.memory"] },
       },
       endpoints: [endpoint],
     });
@@ -331,7 +331,7 @@ test("project local runtime resumes durable work while component and endpoint pa
 
   try {
     const firstRuntime = await createProjectLocalRuntime({
-      root: directory,
+      dataRoot: directory,
       ...projectRuntimeFixture(directory),
       components: [components],
       endpoints: [endpointPackage],
@@ -344,7 +344,7 @@ test("project local runtime resumes durable work while component and endpoint pa
     await firstRuntime.close();
 
     const secondRuntime = await createProjectLocalRuntime({
-      root: directory,
+      dataRoot: directory,
       ...projectRuntimeFixture(directory),
       components: [components],
       endpoints: [endpointPackage],
@@ -510,8 +510,8 @@ test("two durable Workers share one SQLite capacity limit across Runtime instanc
   let firstTurn: Promise<unknown> | undefined;
   let secondTurn: Promise<unknown> | undefined;
   try {
-    first = await createProjectLocalRuntime({ root: directory, ...options() });
-    second = await createProjectLocalRuntime({ root: directory, ...options() });
+    first = await createProjectLocalRuntime({ dataRoot: directory, ...options() });
+    second = await createProjectLocalRuntime({ dataRoot: directory, ...options() });
     await first.build({
       id: "capacity-a",
       state: createGreetingBuild({ generationRealization: "placeholder" }),
@@ -598,7 +598,7 @@ test("project local runtime activates locked compute facets without deployment s
     const lock = await createNodePackageLock(["example-greeting-components"], installedRoot);
     await writeNodePackageLock(lockPath, lock);
     const runtime = await createProjectLocalRuntime({
-      root: runtimeRoot,
+      dataRoot: runtimeRoot,
       ...projectRuntimeFixture(runtimeRoot),
       packageRoot: installedRoot,
       packageLock: "../svml.packages.lock",
@@ -624,16 +624,16 @@ test("project local runtime activates locked compute facets without deployment s
 test("project local runtime uses only the explicitly selected Scheduler", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-scheduler-service-"));
   let creates = 0;
-  const scheduler = defineRuntimeServicePackage({
+  const scheduler = defineRuntimeComponentPackage({
     module: { name: "example.scheduler", version: "1" },
-    services: [{
+    components: [{
       role: "scheduler",
       facet: "scheduler",
       instance: "scheduler.example",
       implementation: {
         digest: digestOf("example.scheduler/fair@1"),
       },
-      service: {
+      port: {
         create(executor, options) {
           creates += 1;
           return new LocalBuildScheduler(executor, options);
@@ -644,10 +644,10 @@ test("project local runtime uses only the explicitly selected Scheduler", async 
   try {
     const base = projectRuntimeFixture(directory);
     const runtime = await createProjectLocalRuntime({
-      root: directory,
+      dataRoot: directory,
       ...base,
-      runtimeServices: [...base.runtimeServices, scheduler],
-      runtimeSelection: { ...base.runtimeSelection, scheduler: "scheduler.example" },
+      runtimeComponents: [...base.runtimeComponents, scheduler],
+      bindings: { ...base.bindings, scheduler: "scheduler.example" },
     });
     await runtime.build({ id: "scheduler-selection", state: createGreetingBuild() });
     await runtime.workOnce({ owner: "scheduler-test", leaseMs: 5_000 });
@@ -662,16 +662,16 @@ test("two installed Schedulers are unambiguous because the Profile selects one",
   const directory = await mkdtemp(join(tmpdir(), "svml-local-scheduler-selection-"));
   const creates = { one: 0, two: 0 };
   const closes = { one: 0, two: 0 };
-  const scheduler = (name: "one" | "two") => defineRuntimeServicePackage({
+  const scheduler = (name: "one" | "two") => defineRuntimeComponentPackage({
     module: { name: `example.scheduler.${name}`, version: "1" },
-    services: [{
+    components: [{
       role: "scheduler",
       facet: "scheduler",
       instance: `scheduler.${name}`,
       implementation: {
         digest: digestOf(`example.scheduler.${name}/fair@1`),
       },
-      service: {
+      port: {
         create(executor, options) {
           creates[name] += 1;
           return new LocalBuildScheduler(executor, options);
@@ -683,10 +683,10 @@ test("two installed Schedulers are unambiguous because the Profile selects one",
   try {
     const base = projectRuntimeFixture(directory);
     const runtime = await createProjectLocalRuntime({
-      root: directory,
+      dataRoot: directory,
       ...base,
-      runtimeServices: [...base.runtimeServices, scheduler("one"), scheduler("two")],
-      runtimeSelection: { ...base.runtimeSelection, scheduler: "scheduler.two" },
+      runtimeComponents: [...base.runtimeComponents, scheduler("one"), scheduler("two")],
+      bindings: { ...base.bindings, scheduler: "scheduler.two" },
     });
     await runtime.build({ id: "scheduler-two", state: createGreetingBuild() });
     await runtime.workOnce({ owner: "scheduler-test", leaseMs: 5_000 });
@@ -702,9 +702,9 @@ test("project local runtime accepts an explicitly selected replacement ArtifactS
   const directory = await mkdtemp(join(tmpdir(), "svml-local-artifacts-"));
   const module = { name: "example.remote-artifacts", version: "1" } as const;
   const artifactStore = new MemoryArtifactStore();
-  const artifacts = defineRuntimeServicePackage({
+  const artifacts = defineRuntimeComponentPackage({
     module,
-    services: [{
+    components: [{
         facet: "artifact-store",
         instance: "artifacts.remote",
         role: "artifact-store",
@@ -712,18 +712,18 @@ test("project local runtime accepts an explicitly selected replacement ArtifactS
           digest: digestOf("example.remote-artifacts@1"),
         },
         configuration: { bucket: "fixture" },
-        service: artifactStore,
+        port: artifactStore,
     }],
   });
   try {
     const selected = projectRuntimeFixture(directory);
     const runtime = await createProjectLocalRuntime({
-      root: directory,
+      dataRoot: directory,
       ...selected,
-      runtimeServices: [...selected.runtimeServices, artifacts],
-      runtimeSelection: {
-        ...selected.runtimeSelection,
-        stores: { ...selected.runtimeSelection.stores, artifacts: "artifacts.remote" },
+      runtimeComponents: [...selected.runtimeComponents, artifacts],
+      bindings: {
+        ...selected.bindings,
+        stores: { ...selected.bindings.stores, artifacts: "artifacts.remote" },
       },
     });
     const bytes = new Uint8Array([7, 8, 9]);

@@ -1,0 +1,104 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { runCli } from "../src/main.js";
+import type { CliDistribution } from "../src/distribution.js";
+import type { CliManagedProgramReport, CliRuntimeController } from "../src/runtime-port.js";
+
+const io = { write: () => {} };
+
+function controller(
+  path: string,
+  calls: string[],
+  reports: readonly CliManagedProgramReport[] = [],
+): CliRuntimeController {
+  const worker = { state: "stopped" as const, profile: path, logPath: "/tmp/worker.log" };
+  return {
+    profile: path,
+    dataRoot: "/tmp",
+    revision: async () => "test-revision",
+    worker: {
+      up: async () => worker,
+      status: async () => worker,
+      logs: async () => ({ path: worker.logPath, text: "" }),
+      down: async () => worker,
+    },
+    programs: {
+      up: async (options) => {
+        calls.push(`up ${path} ${JSON.stringify(options)}`);
+        return { dataRoot: "/tmp", programs: reports };
+      },
+      down: async () => { calls.push(`down ${path}`); return { dataRoot: "/tmp", programs: reports }; },
+      report: async () => { calls.push(`report ${path}`); return { dataRoot: "/tmp", programs: reports }; },
+    },
+  };
+}
+
+function distribution(calls: string[], reports: readonly CliManagedProgramReport[] = []): CliDistribution {
+  return {
+    bootstrapPackages: [],
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      controller: async () => controller(path, calls, reports),
+    }),
+  } as unknown as CliDistribution;
+}
+
+test("programs dispatches lifecycle through the selected Runtime Controller", async () => {
+  const calls: string[] = [];
+  await runCli(["programs", "up", "/p/svml.runtime.json", "--max-wait-ms", "1000"], io, distribution(calls));
+  await runCli(["programs", "down", "/p/svml.runtime.json"], io, distribution(calls));
+  await runCli(["programs", "status", "/p/svml.runtime.json"], io, distribution(calls));
+  assert.deepEqual(calls, [
+    'up /p/svml.runtime.json {"maxWaitMs":1000}',
+    "down /p/svml.runtime.json",
+    "report /p/svml.runtime.json",
+  ]);
+});
+
+test("programs accepts only up, down and status", async () => {
+  await assert.rejects(
+    runCli(["programs", "restart", "/p/svml.runtime.json"], io, distribution([])),
+    /programs takes up, down or status/u,
+  );
+});
+
+test("waiting belongs only to programs up", async () => {
+  await assert.rejects(
+    runCli(["programs", "status", "/p/svml.runtime.json", "--max-wait-ms", "1000"], io, distribution([])),
+    /--max-wait-ms applies to programs up/u,
+  );
+});
+
+test("program status may report down without failing the observation", async () => {
+  let output = "";
+  let exitCode: number | undefined;
+  await runCli(["programs", "status", "/project/svml.runtime.json"], {
+    write(text) { output += text; },
+    setExitCode(code) { exitCode = code; },
+  }, distribution([], [{
+    id: "speech-evidence.local",
+    instances: ["speech.primary"],
+    state: { state: "down", detail: "not running" },
+  }]));
+  assert.equal(exitCode, undefined);
+  assert.match(output, /speech-evidence\.local: down/u);
+});
+
+test("runtime up validates the Runtime before it starts Programs", async () => {
+  const calls: string[] = [];
+  const base = distribution(calls);
+  const selected = {
+    ...base,
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      controller: async () => controller(path, calls),
+      createRuntime: async () => { throw new Error("Runtime Closure conflict"); },
+    }),
+  } as unknown as CliDistribution;
+  await assert.rejects(
+    runCli(["runtime", "up", "/p/svml.runtime.json"], io, selected),
+    /Runtime Closure conflict/u,
+  );
+  assert.deepEqual(calls, []);
+});

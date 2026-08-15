@@ -14,11 +14,6 @@ export {
 } from "./compiler.js";
 export { videoCliDistribution } from "./distribution.js";
 
-export async function createVideoRuntimeFromConfig(path: string) {
-  const implementation = await import("./runtime-config.js");
-  return await implementation.createVideoRuntimeFromConfig(path);
-}
-
 export function runVideoCli(
   argv: readonly string[],
   io: CliIo,

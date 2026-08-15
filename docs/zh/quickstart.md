@@ -120,9 +120,10 @@ cd /path/to/my-video
 /path/to/narratage/narratage plan build.svrun
 ```
 
-启动器使用 Narratage 仓库已经安装好的依赖，但源码、SQLite 状态、Artifact 和输出都会留在你的项目里。
-`runtime use` 只在 `.svml/runtime` 保存一个本地指针；所选 Profile 仍然是两份 lock 路径和执行环境的
-唯一来源。`packages sync` 把当前 Run 与 Runtime 选择加入或刷新到两份项目包库存中，不会删除其他 Run 的包。
+启动器使用 Narratage 仓库已经安装好的依赖，Source 与导出的文件留在项目里；Runtime 状态与
+Artifact 位于所选 Profile 的 `dataRoot`。`runtime use` 只在 `.narratage/runtime` 保存一个本地指针。
+Source lock 属于项目，Profile 独立选择 Runtime lock。`packages sync` 根据两项选择更新库存，
+不会删除其他 Run 需要的包。
 
 需要完整 Runtime Profile 时，从
 [`examples/talking-film-live`](https://github.com/hypit-ai/narratage/tree/main/examples/talking-film-live) 的结构开始：复制文件结构，
@@ -166,7 +167,7 @@ Runtime 会归档所有已经接受的中间 Record 和媒体。`get` 只负责�
 | Chromium | 本地 HyperFrames 渲染时由 Adapter 管理 |
 | API 凭据 | 选择 KIE、Vertex、Xiaomi 或 AWS Endpoint 时 |
 
-准备本地 Python 服务：
+准备本地 Python 程序：
 
 ```bash
 uv python install 3.13

@@ -245,10 +245,10 @@ Frontend 实现不是物理包格式里的特权字段。它们与 Run Fragment�
 Adapter 一样，通过自己的 Host ABI 发布普通 facet；Frontend 使用
 `svml.source-frontend@1`，只有 Source Host 会解释它。
 
-Runtime Profile 也遵循同一规则。每个 `use` 选择的是 Endpoint Adapter ABI 或 Runtime Service
-Adapter ABI 加逻辑名；物理 npm 包只负责声明它提供这个逻辑能力。包名只是首次纳入库存的提示
+Runtime Profile 也遵循同一规则。每个 `use` 选择的是 Runtime Host、Endpoint Adapter 或 Runtime
+Component Adapter ABI 加逻辑名；物理 npm 包只负责声明它提供这个逻辑能力。包名只是首次纳入库存的提示
 和 lockfile 事实，通用 CLI 不维护 Provider 注册表；同名的 Endpoint Adapter 与 Runtime
-Service Adapter 也不会互相冲突。
+Component Adapter 也不会互相冲突。
 
 逻辑名与物理 npm 包根同名时，`packages sync` 可以直接完成首次纳入。若一个物理合集包
 使用不同名字，开发者需先把它显式加入项目库存；此后 Source 仍只依赖逻辑名。系统绝不会

@@ -1,12 +1,13 @@
 import {
-  createRuntimeServiceAdapterFacet,
+  createRuntimeComponentAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
 } from "@narratage/runtime-adapter";
 
 import { createLocalExecutionPackage } from "./scheduler-package.js";
+import { localRuntimeHostAdapter } from "./host.js";
 
-const localExecutionAdapter = createRuntimeServiceAdapterFacet({
+const localExecutionAdapter = createRuntimeComponentAdapterFacet({
   use: "@narratage/local",
   validate(context) {
     const config = runtimeConfigObject(context.config, "local execution");
@@ -19,7 +20,7 @@ const localExecutionAdapter = createRuntimeServiceAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  hostFacets: [localExecutionAdapter],
+  hostFacets: [localRuntimeHostAdapter, localExecutionAdapter],
 };
 
 export default svmlPackage;

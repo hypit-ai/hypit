@@ -20,17 +20,17 @@ node --run narratage -- get <build-id> \
 
 Use `packages sync` only after package selection changes. Use `check` during authoring and `doctor`
 or `runtime status` when diagnosing the deployment. `build` already ensures the detached Worker
-and demanded managed services are available.
+and demanded Managed Programs are available.
 
 Use `runtime logs` to diagnose the Worker. Use `runtime down` to stop it from claiming more leases.
-External programs are intentionally independent; stop them only with `services down`. Durable
+External programs are intentionally independent; stop them only with `programs down`. Durable
 Builds remain archived and neither command cancels remote Provider work.
 
 ## Preserve durable semantics
 
 - `runtime up` starts or reuses the detached Worker plus declared external programs. A direct
   `build` also ensures the execution domain is running before submission.
-- `services up/status/down` manages external programs only. Do not use it as the normal Build
+- `programs up/status/down` manages external programs only. Do not use it as the normal Build
   bootstrap because it does not own the Worker lifecycle.
 - A Build continues after durable submission. `--follow` only observes progress; interrupting the
   terminal does not stop the Build.
@@ -45,9 +45,9 @@ Builds remain archived and neither command cancels remote Provider work.
 ## Keep project and package boundaries distinct
 
 Prefer production projects outside the Narratage checkout. Relative Author Sources and assets stay
-inside the Source Workspace, which defaults to the directory containing the entry `.svrun`.
+inside the independently resolved Source Workspace.
 
-- `--root` deliberately widens the Source Workspace boundary.
+- `--workspace` explicitly selects the Source Workspace boundary.
 - `--package-root` only changes where the Host locates installed packages whose bytes are verified
   by the package lock. It does not widen Source access.
 - Do not symlink an external project into the repository to bypass containment; canonical-path

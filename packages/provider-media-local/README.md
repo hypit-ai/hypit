@@ -26,7 +26,7 @@ The Endpoint:
 - muxes exactly one verified silent visual stream and one verified program-audio stream into MP4;
 - distinguishes AAC coding-frame padding from the authoritative packet presentation span.
 
-The Runtime Adapter declares the selected `ffmpeg`/`ffprobe` pair as an external, non-daemon service.
+The Runtime Adapter declares the selected `ffmpeg`/`ffprobe` pair as an external, non-daemon Program.
 Its shared probe checks the encoders and filters used by the execution body. Compatible custom paths
 remain valid; the package neither pins a semantic Capability to one FFmpeg version nor mutates a
 system package manager.

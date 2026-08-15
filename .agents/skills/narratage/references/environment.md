@@ -26,7 +26,7 @@ pnpm check
 pnpm test
 ```
 
-For managed local services:
+For managed local programs:
 
 ```text
 uv python install 3.13
@@ -39,8 +39,8 @@ node --run narratage -- runtime up
 node --run narratage -- runtime status
 ```
 
-Use `runtime up` for normal Build preparation: it owns the detached durable Worker and the external
-programs declared by the Runtime Profile. `services up/status/down` is only the narrow external-
+Use `runtime up` for normal Build preparation: it owns the detached durable Worker and prepares the external
+programs declared by the Runtime Profile. `programs up/status/down` is only the narrow external-
 program view and does not manage the Worker. See `references/runtime.md` for the Build lifecycle.
 
 After intentionally installing, removing or changing selected packages, refresh both explicit

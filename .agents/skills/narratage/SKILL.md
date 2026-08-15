@@ -42,7 +42,7 @@ Run `packages sync` after import or Runtime package selections change. Use `chec
 `doctor` for deployment setup or diagnosis; do not impose either as ceremony before every Build.
 
 Treat `--follow` as an observer: stopping it does not stop the durable Build. Use `runtime down`
-to stop only the Worker; use `services down` separately when external programs should also stop.
+to stop only the Worker; use `programs down` separately when external programs should also stop.
 Neither command cancels Builds or remote Provider work.
 
 Every `build` invocation receives a fresh automatic Build id. Never try to reclaim a prior Build by

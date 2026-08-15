@@ -23,13 +23,13 @@ Run-specific fragment field or interpretation branch. Author and Run Frontends l
 ordinary `svml.source-frontend@1` Host facet; the Loader has no Frontend fields or parser registry.
 
 This package is deliberately not an npm client and does not activate Provider or privileged Runtime
-services. Source `<import>` can select only an already installed author contribution; trusted
+packages. Source `<import>` can select only an already installed author contribution; trusted
 deployment configuration independently chooses whether to grant author or deterministic compute registries.
 Executable plans bind the package-lock digest as `BuildRequest.implementationClosure`.
 
 ```bash
 narratage lock-packages ./svml.packages.lock --package @example/cards --package-root .
-narratage check ./main.svml --package-lock ./svml.packages.lock --root .
+narratage check ./main.svml --package-lock ./svml.packages.lock --workspace .
 ```
 
 If `@example/cards` requires a Module exported by an installed dependency, that dependency does not

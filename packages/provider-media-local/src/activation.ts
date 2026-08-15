@@ -11,7 +11,7 @@ import {
 } from "@narratage/runtime-adapter-node";
 
 import { createLocalMediaProvider } from "./provider.js";
-import { localMediaToolchainService } from "./service.js";
+import { localMediaToolchainProgram } from "./program.js";
 
 const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-media-local",
@@ -23,8 +23,8 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     ], "local media");
     const configuredFfmpeg = runtimeConfigString(config.ffmpegPath, "media ffmpegPath");
     const configuredFfprobe = runtimeConfigString(config.ffprobePath, "media ffprobePath");
-    const ffmpegPath = configuredFfmpeg === undefined ? undefined : resolveRuntimeExecutable(context.root, configuredFfmpeg);
-    const ffprobePath = configuredFfprobe === undefined ? undefined : resolveRuntimeExecutable(context.root, configuredFfprobe);
+    const ffmpegPath = configuredFfmpeg === undefined ? undefined : resolveRuntimeExecutable(context.dataRoot, configuredFfmpeg);
+    const ffprobePath = configuredFfprobe === undefined ? undefined : resolveRuntimeExecutable(context.dataRoot, configuredFfprobe);
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "media defaultConcurrency");
     const processTimeoutMs = runtimeConfigPositiveInteger(config.processTimeoutMs, "media processTimeoutMs");
     const maxProbeOutputBytes = runtimeConfigPositiveInteger(config.maxProbeOutputBytes, "media maxProbeOutputBytes");
@@ -38,16 +38,16 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ...(processTimeoutMs === undefined ? {} : { processTimeoutMs }),
         ...(maxProbeOutputBytes === undefined ? {} : { maxProbeOutputBytes }),
       }),
-      externalService: localMediaToolchainService(context),
+      program: localMediaToolchainProgram(context),
       diagnose: async () => [
         ...await diagnoseRuntimeExecutable({
-          root: context.root,
+          root: context.dataRoot,
           configured: configuredFfmpeg,
           fallback: "ffmpeg",
           subject: "FFmpeg",
         }),
         ...await diagnoseRuntimeExecutable({
-          root: context.root,
+          root: context.dataRoot,
           configured: configuredFfprobe,
           fallback: "ffprobe",
           subject: "FFprobe",

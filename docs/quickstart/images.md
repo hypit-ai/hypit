@@ -13,7 +13,7 @@ They all need an endpoint. `image-compose` and `image-transform` ask for the ras
 `@narratage/provider-image-opencv-local` answers by running OpenCV in a bounded Python process on
 your own machine; `background-removal` asks for its own capability, which `@narratage/provider-kie`
 answers remotely. No example in this repository binds either, so add the endpoint to your
-[Runtime Profile](/guide/runtime-profile) before planning a Build that uses one.
+[Runtime Profile](/guide/runtime) before planning a Build that uses one.
 
 ## Composing layers
 

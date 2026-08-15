@@ -25,17 +25,17 @@ import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@narratage/protocol";
 
 import { createLocalMediaProvider } from "../src/index.js";
-import { localMediaToolchainService } from "../src/service.js";
+import { localMediaToolchainProgram } from "../src/program.js";
 
 const hasMediaBinaries = spawnSync("ffmpeg", ["-version"], { stdio: "ignore" }).status === 0
   && spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
 
 test("the local media Provider declares its external toolchain without owning a second daemon", async () => {
-  const service = localMediaToolchainService({ root: "/project", instance: "media", config: {} });
-  assert.equal(service.id, "media-ffmpeg-toolchain");
-  assert.equal(service.prepare, undefined);
-  assert.equal(service.start, undefined);
-  const state = await service.probe();
+  const program = localMediaToolchainProgram({ dataRoot: "/project", instance: "media", config: {} });
+  assert.equal(program.id, "media-ffmpeg-toolchain");
+  assert.equal(program.prepare, undefined);
+  assert.equal(program.start, undefined);
+  const state = await program.probe();
   assert.equal(state.state, hasMediaBinaries ? "ready" : "down");
 });
 
@@ -122,10 +122,10 @@ function presentationSampleFrames(stream: MediaAudioStream): number {
   return Number((numerator * 2n + denominator) / (denominator * 2n));
 }
 
-async function fixture(root: string): Promise<string> {
-  const primary = join(root, "primary.mp4");
-  const cover = join(root, "cover.jpg");
-  const source = join(root, "source.mp4");
+async function fixture(dataRoot: string): Promise<string> {
+  const primary = join(dataRoot, "primary.mp4");
+  const cover = join(dataRoot, "cover.jpg");
+  const source = join(dataRoot, "source.mp4");
   await run("ffmpeg", [
     "-v", "error", "-y",
     "-f", "lavfi", "-i", "testsrc2=s=160x96:r=24:d=1",

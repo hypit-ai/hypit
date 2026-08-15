@@ -6,7 +6,7 @@ reference plus implementation digest and handler. Package locks and Hosts can in
 the identities without running an opaque `install()` callback. Producer handlers receive only the
 Core command, Producer identity and immutable typed inputs.
 
-They receive no ArtifactStore, credentials, network client, queue or Runtime service. Work that
+They receive no ArtifactStore, credentials, network client, queue or Runtime Component. Work that
 needs those authorities must emit an explicit Need and be implemented by a separately selected
 Endpoint package. `@narratage/driver-node` implements the structural registrar but is not part of this
 SDK.

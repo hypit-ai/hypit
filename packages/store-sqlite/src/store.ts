@@ -16,7 +16,7 @@ import {
   sameBuildCatalogDescriptor,
   verifyBuildCatalogDescriptor,
   verifyBuildCatalogEntry,
-  defineRuntimeServicePackage,
+  defineRuntimeComponentPackage,
   capacityReservationId,
   verifyBuildDispatchIdentity,
   verifyBuildDispatchSnapshot,
@@ -51,7 +51,7 @@ import type {
   OperationStore,
   OperationStoreWrite,
   OperationUpdate,
-  RuntimeServicePackage,
+  RuntimeComponentPackage,
 } from "@narratage/runtime";
 
 const databaseSchemaVersion = 6;
@@ -79,7 +79,7 @@ export type SqliteRuntimeStateOptions = {
   readonly readOnly?: boolean;
 };
 
-export type CreateSqliteRuntimeServicePackageOptions = SqliteRuntimeStateOptions & {
+export type CreateSqliteRuntimeComponentPackageOptions = SqliteRuntimeStateOptions & {
   readonly path: string;
   readonly buildInstance?: string;
   readonly operationInstance?: string;
@@ -1018,9 +1018,9 @@ export class SqliteRuntimeState {
   }
 }
 
-export function createSqliteRuntimeServicePackage(
-  options: CreateSqliteRuntimeServicePackageOptions,
-): RuntimeServicePackage {
+export function createSqliteRuntimeComponentPackage(
+  options: CreateSqliteRuntimeComponentPackageOptions,
+): RuntimeComponentPackage {
   const state = new SqliteRuntimeState(options.path, {
     ...(options.busyTimeoutMs === undefined ? {} : { busyTimeoutMs: options.busyTimeoutMs }),
     ...(options.readOnly === undefined ? {} : { readOnly: options.readOnly }),
@@ -1029,9 +1029,9 @@ export function createSqliteRuntimeServicePackage(
   const operationInstance = options.operationInstance ?? "operations.sqlite";
   const dispatchInstance = options.dispatchInstance ?? "dispatch.sqlite";
   try {
-    return defineRuntimeServicePackage({
+    return defineRuntimeComponentPackage({
       module: sqliteStoreModuleRef,
-      services: [
+      components: [
         {
           role: "build-store",
           facet: "build-store",
@@ -1044,7 +1044,7 @@ export function createSqliteRuntimeServicePackage(
             schemaVersion: databaseSchemaVersion,
             busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
           },
-          service: state.builds,
+          port: state.builds,
         },
         {
           role: "operation-store",
@@ -1058,7 +1058,7 @@ export function createSqliteRuntimeServicePackage(
             schemaVersion: databaseSchemaVersion,
             busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
           },
-          service: state.operations,
+          port: state.operations,
         },
         {
           role: "dispatch-store",
@@ -1072,7 +1072,7 @@ export function createSqliteRuntimeServicePackage(
             schemaVersion: databaseSchemaVersion,
             busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
           },
-          service: state.dispatch,
+          port: state.dispatch,
         },
       ],
       buildCatalog: state.catalog,

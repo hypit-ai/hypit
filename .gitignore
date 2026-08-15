@@ -41,6 +41,7 @@ docs/.vitepress/cache/
 docs/.vitepress/dist/
 *.tsbuildinfo
 .svml-cache/
+.narratage/
 examples/**/assets/
 examples/**/build/
 examples/**/output/

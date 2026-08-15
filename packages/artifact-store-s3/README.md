@@ -31,7 +31,7 @@ const artifacts = createS3ArtifactStorePackage({
 // then select `artifacts.team` as runtimeSelection.stores.artifacts.
 ```
 
-`createProjectLocalRuntime()` never infers the other required services from this package.
+`createProjectLocalRuntime()` never infers the other required Components from this package.
 
 The AWS SDK default credential chain or an explicitly injected trusted client owns AWS
 authentication. Secret bytes never enter the package contribution or Runtime Closure; bucket,

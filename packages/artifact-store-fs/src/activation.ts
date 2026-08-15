@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 
 import {
-  createRuntimeServiceAdapterFacet,
+  createRuntimeComponentAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigString,
@@ -9,7 +9,7 @@ import {
 
 import { createFileArtifactStorePackage } from "./store.js";
 
-const fileArtifactStoreAdapter = createRuntimeServiceAdapterFacet({
+const fileArtifactStoreAdapter = createRuntimeComponentAdapterFacet({
   use: "@narratage/artifact-store-fs",
   validate(context) {
     const config = runtimeConfigObject(context.config, "filesystem ArtifactStore");
@@ -21,7 +21,7 @@ const fileArtifactStoreAdapter = createRuntimeServiceAdapterFacet({
     const path = runtimeConfigString(config.path, "Artifact path");
     if (path === undefined) throw new Error("Artifact path is required");
     return createFileArtifactStorePackage({
-      root: resolve(context.root, path),
+      root: resolve(context.dataRoot, path),
       instance: context.instance,
     });
   },

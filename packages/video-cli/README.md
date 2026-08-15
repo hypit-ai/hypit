@@ -28,18 +28,16 @@ cd path/to/project
 ```
 
 From a separate project directory during source development, run
-`/path/to/narratage/narratage ...`. The Runtime Profile may point `packageRoot` at the checkout while the
-root launcher resolves its own
-installed TypeScript loader and CLI, so it neither invokes pnpm nor requires the current directory
-to contain Narratage's `package.json`.
+`/path/to/narratage/narratage ...`. The root launcher resolves its own TypeScript loader, CLI and
+package installation, so it neither invokes pnpm per command nor requires the project directory to
+contain Narratage's `package.json`.
 
-`--root` is only the Source Workspace containment boundary. `--asset-root` may additionally admit
+`--workspace` is only the Source Workspace containment boundary. `--asset-root` may additionally admit
 explicit asset bytes without widening Source imports. `--package-root` is only the Host
 override used to resolve the installed packages named by a lock; by default this Distribution uses
 its own installation location. Keeping the two concepts separate lets a video project live outside
-this checkout without weakening canonical-path source and asset containment. The official JSON Runtime Profile
-has the same optional `packageRoot` override while retaining state and Artifacts under its own
-`root`; the generic CLI does not infer that syntax from its suffix.
+this checkout without weakening canonical-path source and asset containment. Runtime Profiles do
+not contain either Workspace or package-installation overrides.
 
 `check` is usable for an Author Source or a complete Run Source. `plan` and `build` require a Run
 Source because an Author Graph without execution intent is not a Build. The live example executes

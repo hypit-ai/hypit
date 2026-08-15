@@ -298,33 +298,39 @@ test("CLI delegates a declarative Runtime Profile by content, not filename suffi
     ], process.cwd()),
   );
   await writeFile(profile, JSON.stringify({
-    format: "svml.runtime-config@1",
-    root,
+    format: "narratage.runtime-profile@1",
     runtimePackageLock,
-    runtimeServices: [
-      { use: "@narratage/local", instance: "execution" },
-      { use: "@narratage/store-sqlite", instance: "state", config: { path: "state.sqlite" } },
-      { use: "@narratage/artifact-store-fs", instance: "artifacts", config: { path: "artifacts" } },
-      { use: "@narratage/credential-store-env", instance: "credentials", config: {} },
-    ],
-    services: {
-      scheduler: "execution.scheduler",
-      worker: "execution.worker",
-      stores: {
-        build: "state.builds",
-        operations: "state.operations",
-        dispatch: "state.dispatch",
-        artifacts: "artifacts",
-        credentials: ["credentials"],
+    runtime: {
+      use: "@narratage/local",
+      config: {
+        dataRoot: ".",
+        components: {
+          execution: { use: "@narratage/local" },
+          state: { use: "@narratage/store-sqlite", config: { path: "state.sqlite" } },
+          artifacts: { use: "@narratage/artifact-store-fs", config: { path: "artifacts" } },
+          credentials: { use: "@narratage/credential-store-env", config: {} },
+        },
+        bindings: {
+          scheduler: "execution.scheduler",
+          worker: "execution.worker",
+          stores: {
+            build: "state.builds",
+            operations: "state.operations",
+            dispatch: "state.dispatch",
+            artifacts: "artifacts",
+            credentials: ["credentials"],
+          },
+        },
+        endpoints: {
+          "kie.cli-test": {
+            use: "@narratage/provider-kie",
+            authority: "kie.cli-test",
+            config: { apiKey: { store: "env", key: "SVML_TEST_MISSING_KIE_KEY" }, defaultConcurrency: 2 },
+          },
+        },
+        limits: { maxOperations: 4, resources: { "authority:kie.cli-test": 2 } },
       },
     },
-    endpoints: [{
-      use: "@narratage/provider-kie",
-      instance: "kie.cli-test",
-      authority: "kie.cli-test",
-      config: { apiKey: { store: "env", key: "SVML_TEST_MISSING_KIE_KEY" }, defaultConcurrency: 2 },
-    }],
-    scheduling: { maxConcurrency: 4, resources: { "authority:kie.cli-test": 2 } },
   }), "utf8");
   let output = "";
   await runCli(["status", "missing-build", "--runtime", profile], {
@@ -363,7 +369,7 @@ test("one checked-in fixture closes the complete provider-free video plan", asyn
     join(fixture, "build.svrun"),
     "--package-lock",
     join(fixture, "svml.packages.lock"),
-    "--root",
+    "--workspace",
     process.cwd(),
   ], { write: (text) => { output += text; } });
   const plan = (JSON.parse(output) as { readonly plan: {
@@ -405,28 +411,32 @@ test("one locked provider-free Build executes the checked-in Frame graph", async
     "@narratage/artifact-store-fs",
   ], process.cwd()));
   await writeFile(profile, JSON.stringify({
-    format: "svml.runtime-config@1",
-    root: process.cwd(),
-    packageLock: join(fixture, "svml.packages.lock"),
+    format: "narratage.runtime-profile@1",
     runtimePackageLock,
-    runtimeServices: [
-      { use: "@narratage/local", instance: "execution" },
-      { use: "@narratage/store-sqlite", instance: "state", config: { path: join(runtimeRoot, "state.sqlite") } },
-      { use: "@narratage/artifact-store-fs", instance: "artifacts", config: { path: join(runtimeRoot, "artifacts") } },
-    ],
-    services: {
-      scheduler: "execution.scheduler",
-      worker: "execution.worker",
-      stores: {
-        build: "state.builds",
-        operations: "state.operations",
-        dispatch: "state.dispatch",
-        artifacts: "artifacts",
-        credentials: [],
+    runtime: {
+      use: "@narratage/local",
+      config: {
+        dataRoot: ".",
+        components: {
+          execution: { use: "@narratage/local" },
+          state: { use: "@narratage/store-sqlite", config: { path: "state.sqlite" } },
+          artifacts: { use: "@narratage/artifact-store-fs", config: { path: "artifacts" } },
+        },
+        bindings: {
+          scheduler: "execution.scheduler",
+          worker: "execution.worker",
+          stores: {
+            build: "state.builds",
+            operations: "state.operations",
+            dispatch: "state.dispatch",
+            artifacts: "artifacts",
+            credentials: [],
+          },
+        },
+        endpoints: {},
+        limits: { maxOperations: 2, resources: {} },
       },
     },
-    endpoints: [],
-    scheduling: { maxConcurrency: 2, resources: {} },
   }), "utf8");
 
   let output = "";
@@ -434,8 +444,9 @@ test("one locked provider-free Build executes the checked-in Frame graph", async
     await runVideoCli([
       "build", join(fixture, "frame-smoke.svrun"),
       "--runtime", profile,
+      "--workspace", fixture,
       "--follow",
-      "--max-wait-ms", "15000",
+      "--max-wait-ms", "60000",
       "--json",
     ], { write: (text) => { output += text; } });
     const result = JSON.parse(output) as {
@@ -828,9 +839,14 @@ test("CLI inspect and get read the durable Build archive independently of build 
     async close() {},
   };
   const selected = {
-    runtimeProfileRevision: async () => "test-revision",
-    createRuntimeArchiveFromConfig: async () => control,
-    createRuntimeArtifactAccessFromConfig: async () => control,
+    openRuntimeHost: async (path: string) => ({
+      profile: path,
+      openArchive: async () => control,
+      openArtifacts: async () => control,
+      controller: async () => ({
+        worker: { status: async () => ({ state: "stopped", profile: path, logPath: "/tmp/worker.log" }) },
+      }),
+    }),
   } as unknown as CliDistribution;
   const runArchiveCli = (
     argv: readonly string[],
