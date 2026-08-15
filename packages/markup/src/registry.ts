@@ -15,6 +15,8 @@ function key(module: ModuleRef, surface: string): string {
 
 export class MarkupSurfaceRegistry implements MarkupSurfaceRegistryLike {
   readonly #values = new Map<string, RegisteredSurface>();
+  readonly #tags = new Set<string>();
+  readonly #byModule = new Map<string, RegisteredSurface[]>();
 
   register(value: RegisteredSurface): void {
     if (value.module.name.trim().length === 0 || value.module.version.trim().length === 0) {
@@ -25,12 +27,14 @@ export class MarkupSurfaceRegistry implements MarkupSurfaceRegistryLike {
     if (value.mode !== "raw" && value.mode !== "structured") throw new Error("Surface mode is invalid");
     const identity = key(value.module, value.surface);
     if (this.#values.has(identity)) throw new Error(`Surface ${identity} is already registered`);
-    const tag = [...this.#values.values()].find((item) =>
-      item.module.name === value.module.name
-      && item.module.version === value.module.version
-      && item.tag === value.tag);
-    if (tag !== undefined) throw new Error(`Surface tag ${value.tag} is already registered for ${value.module.name}@${value.module.version}`);
+    const module = `${value.module.name}@${value.module.version}`;
+    const tag = `${module}#${value.tag}`;
+    if (this.#tags.has(tag)) throw new Error(`Surface tag ${value.tag} is already registered for ${module}`);
     this.#values.set(identity, value);
+    this.#tags.add(tag);
+    const surfaces = this.#byModule.get(module) ?? [];
+    surfaces.push(value);
+    this.#byModule.set(module, surfaces);
   }
 
   registerRaw(options: {
@@ -68,8 +72,6 @@ export class MarkupSurfaceRegistry implements MarkupSurfaceRegistryLike {
   }
 
   surfaces(module: ModuleRef): readonly RegisteredSurface[] {
-    return [...this.#values.values()]
-      .filter((item) => item.module.name === module.name && item.module.version === module.version)
-      .sort((left, right) => left.surface.localeCompare(right.surface));
+    return [...(this.#byModule.get(`${module.name}@${module.version}`) ?? [])];
   }
 }

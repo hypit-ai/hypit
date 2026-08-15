@@ -18,6 +18,35 @@ import { invariant } from "./error.js";
 import { resolveProducer, sealRecord, verifyRecordStructure } from "./link.js";
 import { producerKey, sameType, typeKey } from "./reference.js";
 
+type GraphIndex = {
+  readonly outputs: ReadonlyMap<string, LogicalOutput>;
+  readonly candidates: ReadonlyMap<string, Candidate>;
+  readonly operations: ReadonlyMap<string, OperationNode>;
+};
+
+const graphIndexes = new WeakMap<CompiledGraph, GraphIndex>();
+const programRecordIndexes = new WeakMap<LinkedProgram, ReadonlyMap<string, LinkedProgram["records"][number]>>();
+
+function graphIndex(graph: CompiledGraph): GraphIndex {
+  const existing = graphIndexes.get(graph);
+  if (existing !== undefined) return existing;
+  const created = {
+    outputs: new Map(graph.outputs.map((item) => [item.id, item])),
+    candidates: new Map(graph.candidates.map((item) => [item.id, item])),
+    operations: new Map(graph.operations.map((item) => [item.id, item])),
+  };
+  graphIndexes.set(graph, created);
+  return created;
+}
+
+function programRecords(program: LinkedProgram): ReadonlyMap<string, LinkedProgram["records"][number]> {
+  const existing = programRecordIndexes.get(program);
+  if (existing !== undefined) return existing;
+  const created = new Map(program.records.map((item) => [item.id, item]));
+  programRecordIndexes.set(program, created);
+  return created;
+}
+
 function normalizeRef(ref: GraphValueRef): GraphValueRef {
   if (ref.kind === "record") return { kind: "record", id: ref.id };
   if (ref.kind === "logical-output") return { kind: "logical-output", id: ref.id };
@@ -112,19 +141,19 @@ export function sealBuildRequest(
 }
 
 export function resolveLogicalOutput(graph: CompiledGraph, id: string): LogicalOutput {
-  const output = graph.outputs.find((item) => item.id === id);
+  const output = graphIndex(graph).outputs.get(id);
   invariant(output !== undefined, "UNKNOWN_LOGICAL_OUTPUT", `unknown logical output ${id}`, id);
   return output;
 }
 
-function resolveCandidate(graph: CompiledGraph, id: string): Candidate {
-  const candidate = graph.candidates.find((item) => item.id === id);
+export function resolveCandidate(graph: CompiledGraph, id: string): Candidate {
+  const candidate = graphIndex(graph).candidates.get(id);
   invariant(candidate !== undefined, "UNKNOWN_CANDIDATE", `unknown Candidate ${id}`, id);
   return candidate;
 }
 
 export function resolveOperation(graph: CompiledGraph, id: string): OperationNode {
-  const operation = graph.operations.find((item) => item.id === id);
+  const operation = graphIndex(graph).operations.get(id);
   invariant(operation !== undefined, "UNKNOWN_OPERATION", `unknown Operation ${id}`, id);
   return operation;
 }
@@ -165,7 +194,7 @@ function operationResultType(program: LinkedProgram, operation: OperationNode): 
 
 function graphValueType(program: LinkedProgram, graph: CompiledGraph, ref: GraphValueRef): TypeRef {
   if (ref.kind === "record") {
-    const record = program.records.find((item) => item.id === ref.id);
+    const record = programRecords(program).get(ref.id);
     invariant(record !== undefined, "UNKNOWN_GRAPH_INPUT", `unknown authored record ${ref.id}`, ref.id);
     return record.type;
   }

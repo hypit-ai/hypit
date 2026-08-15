@@ -30,6 +30,7 @@ import type {
   RuntimeExecutionContext,
   RuntimeExecutionResult,
   RuntimePreparation,
+  RuntimeRunnableCommand,
 } from "@narratage/runtime";
 
 import { MemoryArtifactStore } from "./artifacts.js";
@@ -128,8 +129,9 @@ export class NodeDriver {
 
   #producerInputs(state: BuildState, command: InvokeProducerCommand): Record<string, TypedRecord> {
     const inputs: Record<string, TypedRecord> = {};
+    const records = new Map(state.records.map((item) => [item.id, item]));
     for (const [port, id] of Object.entries(command.inputs)) {
-      const record = state.records.find((item) => item.id === id);
+      const record = records.get(id);
       if (record === undefined) throw new Error(`${command.id} input ${id} is missing`);
       Object.defineProperty(inputs, port, {
         value: structuredClone(record),
@@ -505,18 +507,17 @@ export class NodeDriver {
     };
   }
 
-  /** Execute one command regenerated from trusted state; callers never supply serialized command content. */
+  /** Execute one command emitted by `prepare` in the same scheduling turn. */
   async executeCommand(
-    initial: BuildState,
-    commandId: string,
+    state: BuildState,
+    descriptor: RuntimeRunnableCommand,
     context: RuntimeExecutionContext,
   ): Promise<RuntimeExecutionResult> {
-    const prepared = this.prepare(initial);
-    const descriptor = prepared.runnable.find((item) => item.command.id === commandId);
-    if (descriptor === undefined) throw new Error(`command ${commandId} is not currently executable`);
-    const classified = this.#classify(prepared.state, descriptor.command);
-    if (classified.executable === undefined) throw new Error(`command ${commandId} is no longer executable`);
-    return await this.#execute(prepared.state, classified.executable, context);
+    const classified = this.#classify(state, descriptor.command);
+    if (classified.executable === undefined) {
+      throw new Error(`command ${descriptor.command.id} is no longer executable`);
+    }
+    return await this.#execute(state, classified.executable, context);
   }
 
   /** Cancel one persisted external Operation without trusting serialized Command content. */

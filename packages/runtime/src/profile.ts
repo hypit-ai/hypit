@@ -123,7 +123,18 @@ export type RuntimeClosure = {
 
 type RegisteredRuntimeModule = {
   readonly manifest: RuntimeModuleManifest;
+  readonly facets: ReadonlyMap<string, RuntimeFacet>;
 };
+
+const runtimeInstanceIndexes = new WeakMap<RuntimeClosure, ReadonlyMap<string, ResolvedRuntimeInstance>>();
+
+function runtimeInstances(closure: RuntimeClosure): ReadonlyMap<string, ResolvedRuntimeInstance> {
+  const existing = runtimeInstanceIndexes.get(closure);
+  if (existing !== undefined) return existing;
+  const created = new Map(closure.instances.map((instance) => [instance.id, instance]));
+  runtimeInstanceIndexes.set(closure, created);
+  return created;
+}
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -156,11 +167,6 @@ function offerKey(offer: RuntimeCapability): string {
 
 function sameModule(left: ModuleRef, right: ModuleRef): boolean {
   return left.name === right.name && left.version === right.version;
-}
-
-function sameCapability(left: RuntimeCapability, right: RuntimeCapability): boolean {
-  return capabilityKey(left.capability) === capabilityKey(right.capability)
-    && typeKey(left.returns) === typeKey(right.returns);
 }
 
 function sortedUniqueStrings(values: readonly string[], subject: string): readonly string[] {
@@ -251,12 +257,15 @@ export class RuntimeModuleRegistry {
     const normalized = normalizeManifest(manifest);
     const key = moduleKey(normalized);
     assert(!this.#modules.has(key), `runtime module ${key} is already registered`);
-    this.#modules.set(key, { manifest: normalized });
+    this.#modules.set(key, {
+      manifest: normalized,
+      facets: new Map(normalized.facets.map((facet) => [facet.name, facet])),
+    });
   }
 
   resolve(ref: RuntimeFacetRef): { readonly module: RegisteredRuntimeModule; readonly facet: RuntimeFacet } | undefined {
     const registered = this.#modules.get(moduleKey(ref.module));
-    const facet = registered?.manifest.facets.find((candidate) => candidate.name === ref.name);
+    const facet = registered?.facets.get(ref.name);
     return registered === undefined || facet === undefined ? undefined : { module: registered, facet };
   }
 
@@ -372,6 +381,7 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
   });
   assert(new Set(resourceNames).size === resourceNames.length, "Runtime Closure repeats a resource override");
   const instances = new Map<string, ResolvedRuntimeInstance>();
+  const endpointOffers = new Map<string, ReadonlySet<string>>();
   for (const instance of closure.instances) {
     assert(!instances.has(instance.id), `Runtime Closure repeats instance ${instance.id}`);
     assert(instance.facet.module.name.trim().length > 0 && instance.facet.module.version.trim().length > 0,
@@ -381,15 +391,17 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
       assert(instance.pool.trim().length > 0, `${instance.id} Endpoint pool is empty`);
       positiveInteger(instance.maxConcurrency, `${instance.id} Endpoint maxConcurrency`);
       assert(instance.fulfills.length > 0, `${instance.id} Endpoint fulfills nothing`);
-      assert(new Set(instance.fulfills.map(offerKey)).size === instance.fulfills.length,
+      const fulfills = new Set(instance.fulfills.map(offerKey));
+      assert(fulfills.size === instance.fulfills.length,
         `${instance.id} Endpoint repeats a capability`);
+      endpointOffers.set(instance.id, fulfills);
       assert(instance.lanes.length === instance.fulfills.length,
         `${instance.id} Endpoint lanes differ from capabilities`);
       const laneConcurrency = new Map<string, number>();
       for (const lane of instance.lanes) {
         assert(lane.lane.trim().length > 0, `${instance.id} Endpoint lane is empty`);
         positiveInteger(lane.maxConcurrency, `${instance.id} Endpoint lane ${lane.lane}`);
-        assert(instance.fulfills.some((item) => offerKey(item) === offerKey(lane)),
+        assert(fulfills.has(offerKey(lane)),
           `${instance.id} Endpoint lane is outside its capabilities`);
         const previous = laneConcurrency.get(lane.lane);
         assert(previous === undefined || previous === lane.maxConcurrency,
@@ -420,7 +432,7 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
   for (const offer of closure.endpoints) {
     const endpoint = instances.get(offer.endpoint);
     assert(endpoint?.role === "capability-endpoint", `${offer.endpoint} is not a capability Endpoint`);
-    assert(endpoint.fulfills.some((item) => sameCapability(item, offer)), `${offer.endpoint} does not fulfill ${offerKey(offer)}`);
+    assert(endpointOffers.get(offer.endpoint)?.has(offerKey(offer)), `${offer.endpoint} does not fulfill ${offerKey(offer)}`);
   }
   assert(new Set(closure.endpoints.map(offerKey)).size === closure.endpoints.length,
     "Runtime Closure repeats an Endpoint offer");
@@ -474,17 +486,17 @@ export function runtimeEndpoint(
   closure: RuntimeClosure,
   id: string,
 ): ResolvedRuntimeEndpoint | undefined {
-  verifyRuntimeClosure(closure);
-  const instance = closure.instances.find((candidate) => candidate.id === id);
+  const instance = runtimeInstances(closure).get(id);
   return instance?.role === "capability-endpoint" ? instance : undefined;
 }
 
 /** Fail before execution if the selected finite BuildPlan has an unbound external requirement. */
 export function verifyRuntimeCoverage(closure: RuntimeClosure, state: BuildState): void {
   verifyRuntimeClosure(closure);
+  const offers = new Set(closure.endpoints.map(offerKey));
   for (const requirement of plannedNeeds(state)) {
     assert(
-      closure.endpoints.some((offer) => sameCapability(offer, requirement)),
+      offers.has(offerKey(requirement)),
       `Runtime Closure does not bind demanded capability ${offerKey(requirement)}`,
     );
   }

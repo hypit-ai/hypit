@@ -1,4 +1,3 @@
-import { verifyBuildState } from "@narratage/core";
 import type { BuildState } from "@narratage/protocol";
 
 import type {
@@ -12,9 +11,7 @@ function copy(snapshot: BuildSnapshot): BuildSnapshot {
 }
 
 function durableState(state: BuildState): BuildState {
-  const normalized = { ...structuredClone(state), outstanding: [] };
-  verifyBuildState(normalized);
-  return normalized;
+  return { ...structuredClone(state), outstanding: [] };
 }
 
 /** Reference CAS Store for tests and one-process local Builds. It does not persist Operations. */

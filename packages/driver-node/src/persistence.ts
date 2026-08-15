@@ -2,7 +2,6 @@ import { canonicalStringify, verifyBuildState } from "@narratage/core";
 import type { BuildState } from "@narratage/protocol";
 
 export function serializeBuildState(state: BuildState): string {
-  verifyBuildState(state);
   // Outstanding commands are derived scheduling output, not trusted durable state.
   // A resumed Core deterministically regenerates them from completed facts.
   return canonicalStringify({ ...state, outstanding: [] });

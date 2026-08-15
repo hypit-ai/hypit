@@ -14,20 +14,27 @@ import { producerStep, selectedProvidedRecords, validatePlan } from "./plan.js";
 import { commandId, derivationId, needRequestDigest, receiptId } from "./provenance.js";
 import { sameCapability, sameType } from "./reference.js";
 
-function unique<T>(items: readonly T[], key: (item: T) => string, kind: string): void {
-  const seen = new Set<string>();
+function uniqueIndex<T>(items: readonly T[], key: (item: T) => string, kind: string): ReadonlyMap<string, T> {
+  const seen = new Map<string, T>();
   for (const item of items) {
     const id = key(item);
     invariant(!seen.has(id), "DUPLICATE_STATE_ID", `duplicate ${kind} ${id}`, id);
-    seen.add(id);
+    seen.set(id, item);
   }
+  return seen;
 }
 
-function findRecord(state: BuildState, id: string): TypedRecord | undefined {
-  return state.records.find((record) => record.id === id);
-}
+type StateIndex = {
+  readonly records: ReadonlyMap<string, TypedRecord>;
+  readonly steps: ReadonlyMap<string, BuildState["steps"][number]>;
+  readonly needs: ReadonlyMap<string, Need>;
+  readonly receipts: ReadonlyMap<string, Receipt>;
+  readonly derivations: ReadonlyMap<string, Derivation>;
+  readonly acceptedEvents: ReadonlyMap<string, BuildState["acceptedEvents"][number]>;
+  readonly programRecords: ReadonlyMap<string, TypedRecord>;
+};
 
-function verifyDerivation(state: BuildState, derivation: Derivation): void {
+function verifyDerivation(state: BuildState, index: StateIndex, derivation: Derivation): void {
   const step = producerStep(state.plan, derivation.step);
   const producer = resolveProducer(state.program.closure, derivation.producer);
   invariant(
@@ -60,12 +67,12 @@ function verifyDerivation(state: BuildState, derivation: Derivation): void {
     derivation.id,
   );
   for (const binding of [...derivation.inputs, ...derivation.outputs]) {
-    const record = findRecord(state, binding.id);
+    const record = index.records.get(binding.id);
     invariant(record !== undefined, "DERIVATION_RECORD_MISSING", `${binding.id} is missing`, derivation.id);
     invariant(record.digest === binding.digest, "DERIVATION_RECORD_DIGEST", `${binding.id} digest differs`, derivation.id);
   }
   for (const binding of derivation.needs) {
-    const need = state.needs.find((item) => item.id === binding.id);
+    const need = index.needs.get(binding.id);
     invariant(need !== undefined, "DERIVATION_NEED_MISSING", `${binding.id} is missing`, derivation.id);
     invariant(
       need.requestDigest === binding.requestDigest,
@@ -74,7 +81,7 @@ function verifyDerivation(state: BuildState, derivation: Derivation): void {
       derivation.id,
     );
   }
-  const accepted = state.acceptedEvents.find((item) => item.id === derivation.event.id);
+  const accepted = index.acceptedEvents.get(derivation.event.id);
   invariant(
     accepted?.digest === derivation.event.digest,
     "DERIVATION_EVENT_MISMATCH",
@@ -90,8 +97,8 @@ function verifyDerivation(state: BuildState, derivation: Derivation): void {
   );
 }
 
-function verifyReceipt(state: BuildState, receipt: Receipt): void {
-  const need = state.needs.find((item) => item.id === receipt.need);
+function verifyReceipt(index: StateIndex, receipt: Receipt): void {
+  const need = index.needs.get(receipt.need);
   invariant(need !== undefined, "RECEIPT_UNKNOWN_NEED", `${receipt.id} references an unknown need`);
   invariant(receipt.fulfiller.length > 0, "EMPTY_FULFILLER", `${receipt.id} fulfiller is empty`);
   invariant(
@@ -99,7 +106,7 @@ function verifyReceipt(state: BuildState, receipt: Receipt): void {
     "REQUEST_DIGEST_MISMATCH",
     `${receipt.id} request digest does not match`,
   );
-  const record = findRecord(state, receipt.output);
+  const record = index.records.get(receipt.output);
   invariant(record !== undefined, "RECEIPT_OUTPUT_MISSING", `${receipt.id} output is missing`);
   invariant(receipt.output === need.result, "RECEIPT_OUTPUT_BINDING", `${receipt.id} output is not its Need result`);
   invariant(sameType(record.type, need.returns), "RECEIPT_OUTPUT_TYPE", `${receipt.id} output type differs`);
@@ -110,7 +117,7 @@ function verifyReceipt(state: BuildState, receipt: Receipt): void {
     `${receipt.id} output has another origin`,
   );
   invariant(
-    state.acceptedEvents.some((item) => item.id === receipt.event.id && item.digest === receipt.event.digest),
+    index.acceptedEvents.get(receipt.event.id)?.digest === receipt.event.digest,
     "RECEIPT_EVENT_MISMATCH",
     `${receipt.id} accepted event differs`,
   );
@@ -122,9 +129,9 @@ function verifyReceipt(state: BuildState, receipt: Receipt): void {
   );
 }
 
-function verifyOutstanding(state: BuildState, command: CoreCommand): void {
+function verifyOutstanding(state: BuildState, index: StateIndex, command: CoreCommand): void {
   if (command.kind === "invoke-producer") {
-    const step = state.steps.find((item) => item.id === command.step);
+    const step = index.steps.get(command.step);
     invariant(step?.status === "pending", "OUTSTANDING_STEP_COMPLETE", `${command.step} is complete`);
     const planned = producerStep(state.plan, command.step);
     const expected: CoreCommand = {
@@ -137,9 +144,9 @@ function verifyOutstanding(state: BuildState, command: CoreCommand): void {
     invariant(digestOf(command) === digestOf(expected), "COMMAND_PRODUCER_MISMATCH", command.id);
     return;
   }
-  const need = state.needs.find((item) => item.id === command.need.id);
+  const need = index.needs.get(command.need.id);
   invariant(need !== undefined, "OUTSTANDING_NEED_UNKNOWN", `${command.need.id} is unknown`);
-  invariant(findRecord(state, need.result) === undefined, "OUTSTANDING_NEED_COMPLETE", `${need.id} is fulfilled`);
+  invariant(index.records.get(need.result) === undefined, "OUTSTANDING_NEED_COMPLETE", `${need.id} is fulfilled`);
   const expected: CoreCommand = {
     kind: "fulfill-need",
     id: commandId(state.id, "need", need.id),
@@ -172,13 +179,16 @@ export function verifyBuildState(state: BuildState): void {
   );
   validatePlan(state.program, state.graph, state.request, state.plan);
 
-  unique(state.records, (item) => item.id, "record");
-  unique(state.steps, (item) => item.id, "step state");
-  unique(state.needs, (item) => item.id, "need");
-  unique(state.receipts, (item) => item.id, "receipt");
-  unique(state.derivations, (item) => item.id, "derivation");
-  unique(state.outstanding, (item) => item.id, "command");
-  unique(state.acceptedEvents, (item) => item.id, "event");
+  const index: StateIndex = {
+    records: uniqueIndex(state.records, (item) => item.id, "record"),
+    steps: uniqueIndex(state.steps, (item) => item.id, "step state"),
+    needs: uniqueIndex(state.needs, (item) => item.id, "need"),
+    receipts: uniqueIndex(state.receipts, (item) => item.id, "receipt"),
+    derivations: uniqueIndex(state.derivations, (item) => item.id, "derivation"),
+    acceptedEvents: uniqueIndex(state.acceptedEvents, (item) => item.id, "event"),
+    programRecords: new Map(state.program.records.map((item) => [item.id, item])),
+  };
+  uniqueIndex(state.outstanding, (item) => item.id, "command");
 
   invariant(
     JSON.stringify(state.steps.map((item) => item.id).sort()) ===
@@ -189,12 +199,14 @@ export function verifyBuildState(state: BuildState): void {
 
   for (const record of state.records) verifyRecordStructure(state.program.closure, record);
   for (const authored of state.program.records) {
-    const record = findRecord(state, authored.id);
+    const record = index.records.get(authored.id);
     invariant(record?.digest === authored.digest, "AUTHORED_RECORD_CHANGED", `${authored.id} changed`);
   }
   const providedRecords = selectedProvidedRecords(state.program, state.graph, state.plan);
+  const providedById = new Map(providedRecords.map((item) => [item.id, item]));
+  const selectedRecords = new Set(state.plan.selections.map((selection) => selection.record));
   for (const provided of providedRecords) {
-    const record = findRecord(state, provided.id);
+    const record = index.records.get(provided.id);
     invariant(
       record !== undefined && digestOf(record) === digestOf(provided),
       "PROVIDED_RECORD_CHANGED",
@@ -206,13 +218,13 @@ export function verifyBuildState(state: BuildState): void {
   for (const record of state.records) {
     if (record.origin.kind === "authored") {
       invariant(
-        state.program.records.some((item) => item.id === record.id && item.digest === record.digest),
+        index.programRecords.get(record.id)?.digest === record.digest,
         "INJECTED_AUTHORED_RECORD",
         `${record.id} was not present in the linked author program`,
       );
     } else if (record.origin.kind === "derived") {
       const origin = record.origin;
-      const derivation = state.derivations.find((item) => item.id === origin.derivation);
+      const derivation = index.derivations.get(origin.derivation);
       invariant(
         derivation !== undefined,
         "DERIVED_ORIGIN_MISMATCH",
@@ -223,15 +235,15 @@ export function verifyBuildState(state: BuildState): void {
         "DERIVED_ORIGIN_MISMATCH",
         `${record.id} is not an output of ${origin.derivation}`,
       );
-      const inputs = derivation.inputs.map((binding) => findRecord(state, binding.id));
+      const inputs = derivation.inputs.map((binding) => index.records.get(binding.id));
       invariant(inputs.every((item) => item !== undefined), "DERIVATION_INPUT_MISSING", derivation.id);
     } else if (record.origin.kind === "observed") {
       const origin = record.origin;
-      const receipt = state.receipts.find((item) => item.id === origin.receipt);
+      const receipt = index.receipts.get(origin.receipt);
       invariant(receipt?.output === record.id, "OBSERVED_ORIGIN_MISMATCH", `${record.id} has no receipt`);
     } else {
       const origin = record.origin;
-      const expected = providedRecords.find((item) => item.id === record.id);
+      const expected = providedById.get(record.id);
       invariant(
         expected !== undefined && digestOf(expected) === digestOf(record),
         "INJECTED_PROVIDED_RECORD",
@@ -240,7 +252,7 @@ export function verifyBuildState(state: BuildState): void {
       );
       invariant(
         origin.kind === "provided"
-          && state.plan.selections.some((selection) => selection.record === record.id),
+          && selectedRecords.has(record.id),
         "PROVIDED_ORIGIN_MISMATCH",
         `${record.id} is not bound to its selected Candidate`,
         record.id,
@@ -254,7 +266,7 @@ export function verifyBuildState(state: BuildState): void {
       "NEED_DIGEST_MISMATCH",
       `${need.id} digest differs`,
     );
-    const derivation = state.derivations.find((item) => item.id === need.requestedBy);
+    const derivation = index.derivations.get(need.requestedBy);
     invariant(
       derivation?.needs.some((item) => item.id === need.id && item.requestDigest === need.requestDigest),
       "NEED_ORIGIN_MISMATCH",
@@ -278,21 +290,21 @@ export function verifyBuildState(state: BuildState): void {
       need.id,
     );
   }
-  for (const receipt of state.receipts) verifyReceipt(state, receipt);
-  for (const derivation of state.derivations) verifyDerivation(state, derivation);
+  for (const receipt of state.receipts) verifyReceipt(index, receipt);
+  for (const derivation of state.derivations) verifyDerivation(state, index, derivation);
 
   for (const stepState of state.steps) {
     if (stepState.status === "complete") {
       invariant(stepState.derivation !== undefined, "COMPLETE_STEP_NO_DERIVATION", stepState.id);
       invariant(
-        state.derivations.some((item) => item.id === stepState.derivation && item.step === stepState.id),
+        index.derivations.get(stepState.derivation)?.step === stepState.id,
         "STEP_DERIVATION_MISMATCH",
         stepState.id,
       );
     }
   }
 
-  for (const command of state.outstanding) verifyOutstanding(state, command);
+  for (const command of state.outstanding) verifyOutstanding(state, index, command);
   for (const event of state.acceptedEvents) {
     invariant(event.id.length > 0, "EMPTY_EVENT_ID", "accepted event id is empty");
     invariant(isDigest(event.digest), "INVALID_DIGEST", `${event.id} digest is invalid`);
@@ -301,7 +313,7 @@ export function verifyBuildState(state: BuildState): void {
   if (state.status === "complete") {
     invariant(state.outstanding.length === 0, "COMPLETE_WITH_COMMANDS", "complete build has commands");
     for (const goal of state.plan.goals) {
-      const record = findRecord(state, goal.record);
+      const record = index.records.get(goal.record);
       invariant(record !== undefined, "COMPLETE_GOAL_MISSING", `${goal.record} is missing`);
       invariant(sameType(record.type, goal.type), "COMPLETE_GOAL_TYPE_MISMATCH", goal.record);
     }
