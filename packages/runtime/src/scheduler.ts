@@ -175,7 +175,7 @@ export class LocalBuildScheduler implements BuildScheduler {
     const launch = (build: MutableBuild, command: RuntimeRunnableCommand): void => {
       const key = buildCommandKey(build.id, command.command.id);
       const startedFrom = build.state;
-      const promise = this.#executor.executeCommand(startedFrom, command.command.id, { build: build.id }).then(
+      const promise = this.#executor.executeCommand(startedFrom, command, { build: build.id }).then(
         (execution) => ({ key, build, command, execution }),
         (error: unknown) => ({ key, build, command, error }),
       );

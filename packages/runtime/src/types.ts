@@ -84,15 +84,12 @@ export type RuntimeExecutionResult =
   | { readonly status: "pending"; readonly operation: Digest; readonly wakeAt?: number }
   | { readonly status: "deferred"; readonly wakeAt: number; readonly reason: string };
 
-/**
- * Minimal execution port used by a Scheduler. Implementations must regenerate the command from
- * trusted BuildState before causing side effects; the caller supplies only its identity.
- */
+/** Minimal execution port used by a Scheduler. `prepare` is the sole command-generation boundary. */
 export type RuntimeCommandExecutor = {
   prepare(state: BuildState): RuntimePreparation;
   executeCommand(
     state: BuildState,
-    commandId: string,
+    command: RuntimeRunnableCommand,
     context: RuntimeExecutionContext,
   ): Promise<RuntimeExecutionResult>;
   cancelOperation?(

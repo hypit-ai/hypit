@@ -256,6 +256,13 @@ function hygienizeSource(
   decoded: DecodedAuthorSource,
   imports: readonly ResolvedAuthorSourceImport[],
 ): HygienicSource {
+  const recordsById = new Map(decoded.records.map((record) => [record.id, record]));
+  const componentsById = new Map(decoded.components.map((component) => [component.id, component]));
+  const fragmentsById = new Map(decoded.fragments.map((fragment) => [fragment.id, fragment]));
+  const fragmentExports = new Map(decoded.fragments.map((fragment) => [
+    fragment.id,
+    new Map(fragment.exports.map((item) => [item.name, item])),
+  ]));
   const fragmentIds = new Set<string>();
   for (const fragment of decoded.fragments) {
     assert(!fragmentIds.has(fragment.id), "DUPLICATE_SOURCE_FRAGMENT", `${source.name} repeats Fragment ${fragment.id}`);
@@ -268,7 +275,7 @@ function hygienizeSource(
     exportNames.add(item.name);
     const ref = item.ref;
     if (ref.kind === "record") {
-      const record = decoded.records.find((candidate) => candidate.id === ref.id);
+      const record = recordsById.get(ref.id);
       assert(record !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unknown Record ${ref.id}`);
       assert(
         sameType(record.type, item.type),
@@ -276,11 +283,11 @@ function hygienizeSource(
         `${source.name}.${item.name} declares ${typeName(item.type)} but exports ${typeName(record.type)}`,
       );
     } else {
-      const component = decoded.components.find((candidate) => candidate.id === ref.component);
+      const component = componentsById.get(ref.component);
       assert(component !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unknown component ${ref.component}`);
-      const fragment = decoded.fragments.find((candidate) => candidate.id === component.fragment);
+      const fragment = fragmentsById.get(component.fragment);
       assert(fragment !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unavailable Fragment ${component.fragment}`);
-      const declaration = fragment.exports.find((candidate) => candidate.name === ref.output);
+      const declaration = fragmentExports.get(fragment.id)?.get(ref.output);
       assert(declaration !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unknown output ${ref.output}`);
       assert(
         sameType(declaration.type, item.type),
@@ -385,6 +392,7 @@ export async function compileSourceClosure(
 ): Promise<CompiledSourceClosure> {
   const cache = new Map<string, HygienicSource>();
   const visiting: string[] = [];
+  const visitingAt = new Map<string, number>();
   const ordered: HygienicSource[] = [];
 
   const compile = async (rawSource: AuthorSourceUnit): Promise<HygienicSource> => {
@@ -394,7 +402,7 @@ export async function compileSourceClosure(
     const key = sourceKey(rawSource, frontendId);
     const cached = cache.get(key);
     if (cached !== undefined) return cached;
-    const cycle = visiting.indexOf(key);
+    const cycle = visitingAt.get(key) ?? -1;
     assert(
       cycle === -1,
       "SOURCE_IMPORT_CYCLE",
@@ -403,6 +411,7 @@ export async function compileSourceClosure(
     );
     const frontend = request.frontends.resolve(frontendId);
     assert(frontend !== undefined, "UNKNOWN_FRONTEND", `Frontend ${frontendId} is not registered`, frontendId);
+    visitingAt.set(key, visiting.length);
     visiting.push(key);
     const discovery = await (request.discover === undefined
       ? frontend.discover(source)
@@ -491,6 +500,7 @@ export async function compileSourceClosure(
     };
     const result = hygienizeSource(source, digestOf(rawSource.text), frontend, decoded, imports);
     visiting.pop();
+    visitingAt.delete(key);
     cache.set(key, result);
     ordered.push(result);
     return result;

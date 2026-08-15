@@ -149,46 +149,53 @@ export async function loadNodePackageSelection(
   const roots = await Promise.all([...selected].sort().map(async (name) => await resolvePackage(name, root)));
   type ActivatedPackage = { readonly physical: ResolvedPackage; readonly contribution: NodePackageContribution };
   const activated = new Map<string, ActivatedPackage>();
+  const providedModules = new Set<string>();
+  const requirements: { readonly key: string; readonly from: string }[] = [];
+  const moduleKey = (name: string, version: string) => `${name}@${version}`;
+  const add = (item: ActivatedPackage): void => {
+    assert(!activated.has(item.physical.json.name), `selected package ${item.physical.json.name} is repeated`);
+    activated.set(item.physical.json.name, item);
+    for (const module of item.contribution.modules ?? []) {
+      const key = moduleKey(module.manifest.name, module.manifest.version);
+      assert(!providedModules.has(key), `selected packages provide ${key} more than once`);
+      providedModules.add(key);
+      for (const dependency of module.manifest.dependencies) {
+        requirements.push({
+          key: moduleKey(dependency.module.name, dependency.module.version),
+          from: item.physical.root,
+        });
+      }
+    }
+  };
   for (const item of await Promise.all(roots.map(async (physical) => ({
     physical,
     contribution: await importContribution(physical),
-  })))) {
-    activated.set(item.physical.json.name, item);
-  }
-  for (const address of normalized.logical ?? []) {
-    const providers = [...activated.values()].filter((item) => offers(item.contribution)
-      .some((offer) => addressKey(offer) === addressKey(address)));
-    if (providers.length === 0) throw new NodePackageSelectionMissingError(address);
-    assert(providers.length === 1, `${address.abi} ${address.name} is provided by more than one selected package`);
+  })))) add(item);
+
+  for (let cursor = 0; cursor < requirements.length; cursor += 1) {
+    const requirement = requirements[cursor] as { readonly key: string; readonly from: string };
+    if (providedModules.has(requirement.key)) continue;
+    const providerPackage = physicalHint(requirement.key);
+    assert(!activated.has(providerPackage), `selected package ${providerPackage} provides the wrong ${requirement.key}`);
+    const physical = await resolvePackage(providerPackage, requirement.from);
+    const provider = { physical, contribution: await importContribution(physical) };
+    add(provider);
+    assert(providedModules.has(requirement.key), `${providerPackage} does not provide the required ${requirement.key}`);
   }
 
-  const moduleKey = (name: string, version: string) => `${name}@${version}`;
-  while (true) {
-    const provided = new Set<string>();
-    const required = new Map<string, { readonly from: string }>();
-    for (const item of activated.values()) {
-      for (const module of item.contribution.modules ?? []) {
-        provided.add(moduleKey(module.manifest.name, module.manifest.version));
-        for (const dependency of module.manifest.dependencies) {
-          required.set(moduleKey(dependency.module.name, dependency.module.version), {
-            from: item.physical.root,
-          });
-        }
-      }
+  const offerOwners = new Map<string, Set<string>>();
+  for (const item of activated.values()) {
+    for (const offer of offers(item.contribution)) {
+      const key = addressKey(offer);
+      const owners = offerOwners.get(key) ?? new Set<string>();
+      owners.add(item.physical.json.name);
+      offerOwners.set(key, owners);
     }
-    const missing = [...required].filter(([key]) => !provided.has(key));
-    if (missing.length === 0) break;
-    const additions = await Promise.all(missing.map(async ([key, requirement]) => {
-      const providerPackage = physicalHint(key);
-      assert(!activated.has(providerPackage), `selected package ${providerPackage} provides the wrong ${key}`);
-      const physical = await resolvePackage(providerPackage, requirement.from);
-      const provider = { physical, contribution: await importContribution(physical) };
-      const offered = (provider.contribution.modules ?? []).some((module) =>
-        moduleKey(module.manifest.name, module.manifest.version) === key);
-      assert(offered, `${providerPackage} does not provide the required ${key}`);
-      return provider;
-    }));
-    for (const provider of additions) activated.set(provider.physical.json.name, provider);
+  }
+  for (const address of normalized.logical ?? []) {
+    const providers = offerOwners.get(addressKey(address));
+    if (providers === undefined || providers.size === 0) throw new NodePackageSelectionMissingError(address);
+    assert(providers.size === 1, `${address.abi} ${address.name} is provided by more than one selected package`);
   }
 
   const packages: LoadedPackage[] = [...activated.values()]
