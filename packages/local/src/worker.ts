@@ -238,6 +238,15 @@ class DurableLocalWorker implements RuntimeWorker {
         reason: "cancellation is awaiting remote terminal facts",
       });
     }
+    const stranded = (await this.#options.stores.dispatch.listCapacity())
+      .filter((reservation) => reservation.build === dispatch.build);
+    for (const reservation of stranded) {
+      await this.#options.stores.dispatch.clearCapacity(
+        reservation.id,
+        dispatch.build,
+        lease,
+      );
+    }
     return await this.#options.stores.dispatch.finish(
       dispatch.build,
       lease,

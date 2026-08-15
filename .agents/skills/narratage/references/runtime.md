@@ -6,26 +6,25 @@ Build, retrieval, and reuse syntax. Use this file as the operational checklist.
 ## Execute the lifecycle
 
 ```bash
-node --run narratage -- plan path/to/build.svrun \
-  --runtime path/to/svml.runtime.json
+cd path/to/project
+node --run narratage -- runtime use svml.runtime.json
 
-node --run narratage -- build path/to/build.svrun \
-  --runtime path/to/svml.runtime.json \
-  --build-id my-build-001 --follow
+node --run narratage -- plan build.svrun
 
-node --run narratage -- inspect my-build-001 --runtime path/to/svml.runtime.json
-node --run narratage -- get my-build-001 \
-  --runtime path/to/svml.runtime.json \
-  --name final.video --to path/to/output/final.mp4
+node --run narratage -- build build.svrun --follow
+
+node --run narratage -- inspect <build-id>
+node --run narratage -- get <build-id> \
+  --name final.video --to output/final.mp4
 ```
 
 Use `packages sync` only after package selection changes. Use `check` during authoring and `doctor`
 or `runtime status` when diagnosing the deployment. `build` already ensures the detached Worker
 and demanded managed services are available.
 
-Use `runtime logs` to diagnose the Worker and managed programs. Use `runtime down` for an orderly
-stop. It stops the Worker from claiming more leases and stops Runtime-owned programs, but preserves
-durable Builds and does not cancel remote Provider work.
+Use `runtime logs` to diagnose the Worker. Use `runtime down` to stop it from claiming more leases.
+External programs are intentionally independent; stop them only with `services down`. Durable
+Builds remain archived and neither command cancels remote Provider work.
 
 ## Preserve durable semantics
 
@@ -35,6 +34,8 @@ durable Builds and does not cancel remote Provider work.
   bootstrap because it does not own the Worker lifecycle.
 - A Build continues after durable submission. `--follow` only observes progress; interrupting the
   terminal does not stop the Build.
+- Every `build` invocation creates a fresh automatic Build id. Source identity never reclaims an
+  earlier Build; reuse across Builds exists only through explicit Run Source Candidates.
 - `inspect` reads durable Build state and accepted Records. `get` copies an archived Artifact to the
   requested destination.
 - There is no implicit cache or Pin state. Reuse Records through a new `.svrun` containing

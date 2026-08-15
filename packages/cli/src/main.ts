@@ -1,10 +1,10 @@
-import { dirname, resolve } from "node:path";
+import { randomUUID } from "node:crypto";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { readFile } from "node:fs/promises";
 
 import type { NodeCompiledSourceClosure } from "@narratage/compiler-node";
-import { plannedNeeds, sameBuildCatalogDescriptor } from "@narratage/runtime";
+import { plannedNeeds } from "@narratage/runtime";
 import type { BuildCatalogDescriptor, CapacityReservation, OperationProgress } from "@narratage/runtime";
-import { isDigest } from "@narratage/protocol";
 import type { BuildState, CapabilityRef, TypeRef } from "@narratage/protocol";
 import { parseSourceHeader } from "@narratage/source";
 import {
@@ -52,6 +52,11 @@ import {
   runtimeProcessStatus,
   stopRuntimeProcess,
 } from "./runtime-process.js";
+import {
+  clearRuntimeProfile,
+  findRuntimeProfile,
+  selectRuntimeProfile,
+} from "./runtime-selection.js";
 
 type ParsedArgs = {
   readonly command: string | undefined;
@@ -64,7 +69,6 @@ type ParsedArgs = {
   /** Host directory whose node_modules contains the packages named by a package lock. */
   readonly packageRoot: string | undefined;
   readonly runtime: string | undefined;
-  readonly buildId: string | undefined;
   readonly follow: boolean;
   readonly maxWaitMs: number | undefined;
   readonly packageLock: string | undefined;
@@ -98,7 +102,7 @@ type ParsedArgs = {
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
   const [command, ...tail] = argv;
-  const scoped = command === "services" || command === "runtime" || command === "cancel" || command === "auth"
+  const scoped = command === "services" || command === "runtime" || command === "auth"
     || command === "packages";
   const action = scoped ? tail[0] : undefined;
   const positional = scoped ? tail.slice(1) : tail;
@@ -110,7 +114,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   const assetRoots: string[] = [];
   let packageRoot: string | undefined;
   let runtime: string | undefined;
-  let buildId: string | undefined;
   let follow = false;
   let maxWaitMs: number | undefined;
   let packageLock: string | undefined;
@@ -281,13 +284,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       index += 1;
       continue;
     }
-    if (item === "--build-id") {
-      const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--build-id requires a stable identity");
-      buildId = value;
-      index += 1;
-      continue;
-    }
     if (item === "--follow") {
       follow = true;
       continue;
@@ -355,7 +351,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     assetRoots,
     packageRoot,
     runtime,
-    buildId,
     follow,
     maxWaitMs,
     packageLock,
@@ -425,8 +420,6 @@ function assertCommandOptions(args: ParsedArgs): void {
     case "builds":
     case "history":
     case "inspect":
-    case "operations":
-    case "operation":
       add("--runtime");
       if (args.command === "history") add("--source");
       break;
@@ -435,7 +428,7 @@ function assertCommandOptions(args: ParsedArgs): void {
       add("--runtime", "--package-lock", "--package-root", "--root", "--asset-root");
       break;
     case "build":
-      add("--runtime", "--package-lock", "--package-root", "--root", "--asset-root", "--build-id", "--follow",
+      add("--runtime", "--package-lock", "--package-root", "--root", "--asset-root", "--follow",
         "--max-wait-ms", "--no-services");
       break;
   }
@@ -458,25 +451,24 @@ function usage(): string {
     "  narratage lock-packages <lock> --package name [...] [--package-root directory]  # exact create/replace",
     "  narratage lock-packages <lock> (--add name [...] | --remove name [...]) [--package-root directory]",
     "  narratage lock-packages <lock> (--refresh | --verify) [--package-root directory]",
-    "  narratage packages sync <run-source> --runtime <runtime-profile> [--root workspace]",
-    "  narratage doctor <runtime-profile>",
-    "  narratage services up|down|status <runtime-profile> [--max-wait-ms milliseconds]",
-    "  narratage runtime up|status|logs|down <runtime-profile>",
-    "  narratage queue --runtime profile.json [--watch]",
-    "  narratage gc <runtime-profile> [--apply]",
+    "  narratage packages sync <run-source> [--runtime <runtime-profile>] [--root workspace]",
+    "  narratage doctor [<runtime-profile>]",
+    "  narratage services up|down|status [<runtime-profile>] [--max-wait-ms milliseconds]",
+    "  narratage runtime use <runtime-profile>",
+    "  narratage runtime unset",
+    "  narratage runtime up|status|logs|down [<runtime-profile>]",
+    "  narratage queue [--runtime profile.json] [--watch]",
+    "  narratage gc [<runtime-profile>] [--apply]",
     "  narratage check <self-described-source> [--runtime profile.json] [--package-lock file] [--root workspace] [--asset-root directory]",
     "  narratage plan <run-source> [--runtime profile.json] [--package-lock file] [--root workspace] [--asset-root directory]",
-    "  narratage build <run-source> --runtime profile.json [--root workspace] [--asset-root directory] [--follow] [--no-services]",
-    "  narratage status <build-id> --runtime profile.json",
-    "  narratage builds --runtime profile.json",
-    "  narratage history [source-output-name] --runtime profile.json [--source author.svml]",
-    "  narratage inspect <build-id> --runtime profile.json",
-    "  narratage get <build-id> --runtime profile.json [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
-    "  narratage operations <build-id> --runtime profile.json",
-    "  narratage operation <operation-id> --runtime profile.json",
-    "  narratage cancel build <build-id> --runtime profile.json [--reason text]",
-    "  narratage cancel operation <operation-id> --runtime profile.json [--reason text]",
-    "  narratage auth status|login|logout <endpoint-instance> --runtime profile.json [--slot name] [--from secret-file]",
+    "  narratage build <run-source> [--runtime profile.json] [--root workspace] [--asset-root directory] [--follow] [--no-services]",
+    "  narratage status <build-id> [--runtime profile.json]",
+    "  narratage builds [--runtime profile.json]",
+    "  narratage history [source-output-name] [--runtime profile.json] [--source author.svml]",
+    "  narratage inspect <build-id> [--runtime profile.json]",
+    "  narratage get <build-id> [--runtime profile.json] [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
+    "  narratage cancel <build-id> [--runtime profile.json] [--reason text]",
+    "  narratage auth status|login|logout <endpoint-instance> [--runtime profile.json] [--slot name] [--from secret-file]",
     "",
     "output:",
     "  --json  --verbose  --color auto|always|never  --no-color  --debug",
@@ -690,7 +682,9 @@ function externalServiceLine(service: CliExternalServiceReport): string {
   const action = service.action === undefined ? "" : ` · ${service.action}`;
   const detail = service.detail === undefined ? "" : ` · ${service.detail}`;
   const instances = service.instances.length === 0 ? "" : ` · ${service.instances.join(", ")}`;
-  return `${service.id}: ${service.state.state}${stateDetail}${action}${detail}${instances}`;
+  const pid = service.pid === undefined ? "" : ` · pid ${service.pid}`;
+  const log = service.logPath === undefined ? "" : ` · log ${service.logPath}`;
+  return `${service.id}: ${service.state.state}${stateDetail}${action}${detail}${instances}${pid}${log}`;
 }
 
 function inlineValuePreview(value: unknown, limit = 240): string {
@@ -834,7 +828,7 @@ export async function runCli(
     writeCliHelp(io, topic);
     return;
   }
-  const args = parseArgs(argv);
+  let args = parseArgs(argv);
   const writeOperational = (
     machine: unknown,
     title: string,
@@ -881,16 +875,79 @@ export async function runCli(
     }
     return;
   }
+  if (args.command === "runtime" && args.action === "use") {
+    if (args.runtime !== undefined) {
+      throw new Error("runtime use takes the Runtime Profile positionally, not through --runtime");
+    }
+    if (args.file === undefined) throw new Error("runtime use requires a Runtime Profile");
+    assertCommandOptions(args);
+    const profile = resolve(args.file);
+    const packageSelection = await distribution.resolveCompilationPackages?.(profile);
+    const selected = await selectRuntimeProfile(packageSelection?.root ?? dirname(profile), profile);
+    writeOperational({
+      format: "narratage.cli-runtime-selection@1",
+      profile: selected.profile,
+      root: selected.projectRoot,
+      selectionFile: selected.selectionFile,
+      authorPackageLock: packageSelection?.packageLock,
+      runtimePackageLock: packageSelection?.runtimePackageLock,
+    }, "Runtime selected", "success", [
+      ["Profile", selected.profile],
+      ["Project", selected.projectRoot],
+      ...(packageSelection?.packageLock === undefined
+        ? []
+        : [["Author lock", packageSelection.packageLock] as const]),
+      ...(packageSelection?.runtimePackageLock === undefined
+        ? []
+        : [["Runtime lock", packageSelection.runtimePackageLock] as const]),
+    ]);
+    return;
+  }
+  if (args.command === "runtime" && args.action === "unset") {
+    if (args.file !== undefined || args.runtime !== undefined) {
+      throw new Error("runtime unset does not take a Runtime Profile");
+    }
+    assertCommandOptions(args);
+    const cleared = await clearRuntimeProfile(process.cwd());
+    writeOperational({
+      format: "narratage.cli-runtime-selection@1",
+      selected: false,
+      removed: cleared !== undefined,
+      profile: cleared?.profile,
+      root: cleared?.projectRoot,
+    }, cleared === undefined ? "No Runtime was selected" : "Runtime selection removed",
+    cleared === undefined ? "info" : "success", cleared === undefined ? [] : [
+      ["Profile", cleared.profile], ["Project", cleared.projectRoot],
+    ]);
+    return;
+  }
+
+  const positionalRuntime = (args.command === "runtime" || args.command === "services"
+    || args.command === "doctor" || args.command === "gc") && args.file !== undefined;
+  const runtimeWasExplicit = args.runtime !== undefined || positionalRuntime;
+  let runtimeNeedsHint = runtimeWasExplicit;
+  if (args.runtime === undefined && !positionalRuntime) {
+    const sourceScoped = args.command === "check" || args.command === "plan" || args.command === "build"
+      || args.command === "packages";
+    const start = sourceScoped && args.file !== undefined ? dirname(resolve(args.file)) : process.cwd();
+    const selected = await findRuntimeProfile(start);
+    if (selected !== undefined) {
+      args = { ...args, runtime: selected.profile };
+      const cwdFromProject = relative(selected.projectRoot, resolve(process.cwd()));
+      runtimeNeedsHint = cwdFromProject === ".." || cwdFromProject.startsWith(`..${sep}`)
+        || isAbsolute(cwdFromProject);
+    }
+  }
   const known = args.command === "lock-packages" || args.command === "packages" || args.command === "check" || args.command === "plan"
     || args.command === "build" || args.command === "status" || args.command === "builds"
     || args.command === "history"
     || args.command === "inspect" || args.command === "get" || args.command === "cancel"
     || args.command === "doctor" || args.command === "gc" || args.command === "services"
-    || args.command === "runtime" || args.command === "queue" || args.command === "operations"
-    || args.command === "operation";
+    || args.command === "runtime" || args.command === "queue";
   const operational = known || args.command === "auth";
   const fileOptional = args.command === "builds" || args.command === "history" || args.command === "queue"
-    || ((args.command === "services" || args.command === "runtime") && args.runtime !== undefined);
+    || args.command === "services" || args.command === "runtime" || args.command === "doctor"
+    || args.command === "gc";
   if (!operational || (!fileOptional && args.file === undefined)) {
     throw new Error(usage());
   }
@@ -1040,10 +1097,12 @@ export async function runCli(
   }
   if (args.command === "packages") {
     if (args.action !== "sync") {
-      throw new Error("packages takes one action: packages sync <run-source> --runtime <runtime-profile>");
+      throw new Error("packages takes one action: packages sync <run-source>");
     }
     if (args.runtime === undefined) {
-      throw new Error("packages sync requires --runtime <runtime-profile>");
+      throw new Error(
+        "packages sync requires a Runtime; run narratage runtime use <profile> or pass --runtime <profile>",
+      );
     }
     const source = resolve(args.file!);
     const profile = resolve(args.runtime);
@@ -1151,11 +1210,14 @@ export async function runCli(
     return;
   }
   if (args.command === "doctor") {
-    if (args.runtime !== undefined || args.packageLock !== undefined || args.packageRoot !== undefined
-      || args.packages.length > 0 || args.apply) {
+    if (args.packageLock !== undefined || args.packageRoot !== undefined || args.packages.length > 0 || args.apply) {
       throw new Error("doctor reads all deployment selection from the Runtime Profile itself");
     }
-    const profile = resolve(args.file!);
+    const profileInput = args.runtime ?? args.file;
+    if (profileInput === undefined) {
+      throw new Error("doctor requires a Runtime Profile; run narratage runtime use <profile> or provide it positionally");
+    }
+    const profile = resolve(profileInput);
     const result = await distribution.doctorRuntimeConfig(profile);
     const machine = {
       format: "narratage.cli-doctor@1" as const,
@@ -1265,11 +1327,9 @@ export async function runCli(
     }
     if (args.action === "down") {
       const worker = await stopRuntimeProcess(profile, args.maxWaitMs ?? 10_000);
-      const external = await distribution.externalServices.down(profile);
-      writeOperational({ ok: true, worker, services: external.services }, "Runtime is down", "success", [
+      writeOperational({ ok: true, worker }, "Runtime Worker is down", "success", [
         ["Worker", worker.state],
-        ["External services", String(external.services.length)],
-      ]);
+      ], ["External programs were left running. Stop them explicitly with narratage services down."]);
       return;
     }
     // These are independent views over one Profile. Load them concurrently without inventing a
@@ -1322,11 +1382,14 @@ export async function runCli(
     return;
   }
   if (args.command === "gc") {
-    if (args.runtime !== undefined || args.packageLock !== undefined || args.packageRoot !== undefined
-      || args.packages.length > 0) {
+    if (args.packageLock !== undefined || args.packageRoot !== undefined || args.packages.length > 0) {
       throw new Error("gc reads all deployment selection from the Runtime Profile itself");
     }
-    const runtime = await loadRuntimeMaintenance(resolve(args.file!), distribution, !args.apply);
+    const profileInput = args.runtime ?? args.file;
+    if (profileInput === undefined) {
+      throw new Error("gc requires a Runtime Profile; run narratage runtime use <profile> or provide it positionally");
+    }
+    const runtime = await loadRuntimeMaintenance(resolve(profileInput), distribution, !args.apply);
     try {
       const report = await runtime.garbageCollectArtifacts({ apply: args.apply });
       const machine = {
@@ -1350,7 +1413,9 @@ export async function runCli(
     if (args.action !== "status" && args.action !== "login" && args.action !== "logout") {
       throw new Error("auth takes status, login or logout");
     }
-    if (args.runtime === undefined) throw new Error("auth requires --runtime");
+    if (args.runtime === undefined) {
+      throw new Error("auth requires a Runtime; run narratage runtime use <profile> or pass --runtime <profile>");
+    }
     if (args.from !== undefined && args.action !== "login") throw new Error("--from applies only to auth login");
     const runtime = await distribution.createRuntimeCredentialsFromConfig(args.runtime, args.file!);
     try {
@@ -1419,8 +1484,12 @@ export async function runCli(
   }
   if (args.command === "status" || args.command === "builds" || args.command === "inspect"
     || args.command === "history" || args.command === "get" || args.command === "cancel" || args.command === "queue"
-    || args.command === "operations" || args.command === "operation") {
-    if (args.runtime === undefined) throw new Error(`${args.command} requires --runtime`);
+  ) {
+    if (args.runtime === undefined) {
+      throw new Error(
+        `${args.command} requires a Runtime; run narratage runtime use <profile> or pass --runtime <profile>`,
+      );
+    }
     const runtime = await loadRuntimeArchive(args.runtime, distribution, args.command !== "cancel");
     try {
       if (args.command === "queue") {
@@ -1497,28 +1566,6 @@ export async function runCli(
           await writeQueue();
           await new Promise((resolveWait) => setTimeout(resolveWait, 1_000));
         }
-      } else if (args.command === "operations") {
-        const status = await runtime.status(args.file!);
-        const machine = { build: args.file, operations: status.operations };
-        writeOperational(machine, "Build operations", "info", [
-          ["Build", args.file!], ["Operations", String(status.operations.length)],
-        ], status.operations.map((item) => `${item.id}: ${item.status} · ${item.authority} → ${item.route}`
-          + `${item.progress === undefined ? "" : ` · ${formatOperationProgress(item.progress)}`}`
-          + `${item.failure === undefined ? "" : ` · ${item.failure.code}: ${item.failure.message}`}`
-          + `${item.cancellation === undefined ? "" : ` · cancellation ${item.cancellation.status}`}`));
-      } else if (args.command === "operation") {
-        if (!isDigest(args.file!)) throw new Error("operation id must be a content digest");
-        const operation = await runtime.operation(args.file!);
-        writeOperational({ operation }, operation === undefined ? "Operation not found" : "Operation detail",
-          operation === undefined ? "warning" : "info", operation === undefined ? [] : [
-            ["Operation", operation.id], ["Status", operation.status], ["Endpoint", operation.endpoint],
-            ["Authority", operation.authority], ["Route", operation.route],
-            ["Attempt", String(operation.attempt)],
-            ...(operation.progress === undefined ? [] : [["Progress", formatOperationProgress(operation.progress)] as const]),
-          ], operation?.failure === undefined ? [] : [
-            `${operation.failure.code}: ${operation.failure.message}`,
-          ]);
-        if (operation === undefined) io.setExitCode?.(1);
       } else if (args.command === "builds") {
         const entries = await runtime.builds();
         const inspected = args.json || args.verbose ? entries : entries.slice(0, 20);
@@ -1581,12 +1628,16 @@ export async function runCli(
           }));
       } else if (args.command === "status") {
         const status = await runtime.status(args.file!);
+        const effectiveStatus = status.dispatch === undefined
+          ? status.build?.state.status
+          : submissionStatus(status.dispatch);
         const machine = {
           build: status.build === undefined ? undefined : {
             id: status.build.build,
             revision: status.build.revision,
             core: status.build.state.id,
-            status: status.build.state.status,
+            status: effectiveStatus,
+            coreStatus: status.build.state.status,
             diagnostics: status.build.state.diagnostics,
           },
           catalog: status.catalog === undefined
@@ -1612,7 +1663,10 @@ export async function runCli(
         writeOperational(machine, status.build === undefined ? "Build not found" : "Build status",
           status.build === undefined ? "warning" : status.dispatch?.terminal === "failed" ? "error" : "info", [
             ["Build", args.file!],
-            ["Core", status.build?.state.status ?? "missing"],
+            ["Status", effectiveStatus ?? "missing"],
+            ...(status.build === undefined || effectiveStatus === status.build.state.status
+              ? []
+              : [["Core", status.build.state.status] as const]),
             ["Dispatch", phase],
             ["Operations", String(status.operations.length)],
           ], notableOperations.map((operation) => operation.failure === undefined
@@ -1755,52 +1809,29 @@ export async function runCli(
           ]);
         }
       } else {
-        if (args.action === "build") {
-          const result = await runtime.cancel(args.file!, args.reason);
-          const machine = {
-            scope: "build",
-            build: args.file,
-            requested: result !== undefined,
-            phase: result?.phase,
-            admission: result?.admission,
-            terminal: result?.terminal,
-          };
-          const title = result === undefined
-            ? "Build not found"
-            : result.terminal === "cancelled"
-              ? "Build cancelled"
-              : result.phase === "terminal"
-                ? "Build already finished"
-                : "Build cancellation requested";
-          writeOperational(machine, title,
-            result === undefined ? "warning" : result.phase === "terminal" && result.terminal !== "cancelled" ? "info" : "success", [
-              ["Build", args.file!], ["Admission", result?.admission ?? "missing"], ["Phase", result?.phase ?? "missing"],
-            ], result?.phase === "terminal" && result.terminal !== "cancelled"
-              ? [`No running work was changed; this Build is already ${result.terminal}.`]
-              : []);
-          if (result === undefined) io.setExitCode?.(1);
-        } else if (args.action === "operation") {
-          if (args.file === undefined || !isDigest(args.file)) {
-            throw new Error("cancel operation requires an Operation digest");
-          }
-          const result = await runtime.cancelOperation(args.file!, args.reason);
-          const machine = {
-            scope: "operation",
-            operation: args.file,
-            requested: result !== undefined,
-            build: result?.build,
-            execution: result?.status,
-            control: result?.cancellation?.status,
-          };
-          writeOperational(machine, result === undefined ? "Operation not found" : "Operation cancellation requested",
-            result === undefined ? "warning" : "success", [
-              ["Operation", args.file!], ["Build", result?.build ?? "missing"],
-              ["Execution", result?.status ?? "missing"], ["Control", result?.cancellation?.status ?? "missing"],
-            ]);
-          if (result === undefined) io.setExitCode?.(1);
-        } else {
-          throw new Error("cancel must name its scope: cancel build <build-id> or cancel operation <operation-id>");
-        }
+        const result = await runtime.cancel(args.file!, args.reason);
+        const machine = {
+          build: args.file,
+          requested: result !== undefined
+            && (result.phase !== "terminal" || result.terminal === "cancelled"),
+          phase: result?.phase,
+          admission: result?.admission,
+          terminal: result?.terminal,
+        };
+        const title = result === undefined
+          ? "Build not found"
+          : result.terminal === "cancelled"
+            ? "Build cancelled"
+            : result.phase === "terminal"
+              ? "Build already finished"
+              : "Build cancellation requested";
+        writeOperational(machine, title,
+          result === undefined ? "warning" : result.phase === "terminal" && result.terminal !== "cancelled" ? "info" : "success", [
+            ["Build", args.file!], ["Admission", result?.admission ?? "missing"], ["Phase", result?.phase ?? "missing"],
+          ], result?.phase === "terminal" && result.terminal !== "cancelled"
+            ? [`No running work was changed; this Build is already ${result.terminal}.`]
+            : []);
+        if (result === undefined) io.setExitCode?.(1);
       }
     } finally {
       await runtime.close();
@@ -1855,7 +1886,7 @@ export async function runCli(
       ? `Frontend ${sourceHeader.using} is ambiguously registered as Author and Run`
       : `No trusted Author or Run compiler accepts Frontend ${sourceHeader.using}`;
     throw new Error(effectivePackageLock === undefined && !runMode
-      ? `${message}; select the project's package inventory with --runtime <profile> or --package-lock <lock>`
+      ? `${message}; run narratage runtime use <profile>, or pass --runtime <profile> or --package-lock <lock>`
       : message);
   }
   if ((args.command === "plan" || args.command === "build") && !runMode) {
@@ -1916,7 +1947,9 @@ export async function runCli(
     }
   }
   if (args.command === "build") {
-    if (args.runtime === undefined) throw new Error("build requires --runtime with a Runtime Profile");
+    if (args.runtime === undefined) {
+      throw new Error("build requires a Runtime; run narratage runtime use <profile> or pass --runtime <profile>");
+    }
     const archive = lazyRuntimeArchive(args.runtime, distribution);
     let loadedRun;
     try {
@@ -1931,13 +1964,6 @@ export async function runCli(
       await archive.close();
     }
     const result = loadedRun.compiler.planCompilation(loadedRun, loadedPackageSet?.lock.digest);
-    const runtimeArchive = await loadRuntimeArchive(args.runtime, distribution);
-    let archived;
-    try {
-      archived = await runtimeArchive.status(args.buildId ?? result.state.id);
-    } finally {
-      await runtimeArchive.close();
-    }
     let runtime: CliRuntime | undefined;
     try {
       const catalog = createCatalogDescriptor({
@@ -1949,61 +1975,39 @@ export async function runCli(
         },
       });
       const request = {
-        id: args.buildId ?? result.state.id,
+        // One CLI invocation is one execution instance. Source and Plan identity
+        // remain in Core; they never reclaim a previous Build.
+        id: `bld_${randomUUID()}`,
         state: result.state,
         catalog,
         attachments: result.compilation.attachments,
       } as const;
       const workerProfileDigest = await distribution.runtimeProfileRevision(args.runtime);
-      const terminalArchive = archived.build !== undefined
-        && archived.dispatch?.phase === "terminal";
-      if (archived.build !== undefined && archived.build.state.id !== request.state.id) {
-        throw new Error(
-          `Build ${request.id} already names another Core Build. Choose a new --build-id for a new Run, `
-          + "or restore the original Author/Run Sources to resume this Build",
-        );
-      }
-      if (archived.catalog !== undefined && !sameBuildCatalogDescriptor(archived.catalog, request.catalog)) {
-        throw new Error(
-          `Build ${request.id} already has another source, Run Source or output naming. `
-          + "Choose a new --build-id instead of changing the presentation of an existing Build",
-        );
-      }
       let services: Awaited<ReturnType<typeof startDeclaredServices>> | undefined;
       let worker = await runtimeProcessStatus(args.runtime, workerProfileDigest);
-      let built: CliBuildSubmission;
-      if (terminalArchive) {
-        built = {
-          id: request.id,
-          state: archived.build!.state,
-          status: submissionStatus(archived.dispatch!),
-          dispatch: archived.dispatch!,
-        };
-      } else {
-        const preflight = await preflightPlan(args.runtime, distribution, result.state, loadedPackageSet);
-        // A managed program being down is repairable after Runtime validation;
-        // every other deployment error fails before we construct execution or
-        // start anything. With --no-services, readiness errors remain fatal.
-        assertPreflight(preflight, args.noServices
-          ? new Set()
-          : new Set(["EXTERNAL_SERVICE_DOWN", "EXTERNAL_SERVICE_MISMATCH"]));
-        services = args.noServices
-          ? undefined
-          : await startDeclaredServices(
-              args.runtime,
-              distribution,
-              demandedCapabilities(result.state),
-              reportServiceProgress,
-            );
-        runtime = await loadRuntime(args.runtime, distribution, loadedPackageSet);
-        worker = await ensureRuntimeProcess(
-          args.runtime,
-          distribution.runtimeWorkerLaunch(),
-          workerProfileDigest,
-          args.maxWaitMs ?? 10_000,
-        );
-        built = await runtime.build(request);
-      }
+      const preflight = await preflightPlan(args.runtime, distribution, result.state, loadedPackageSet);
+      // A managed program being down is repairable after Runtime validation;
+      // every other deployment error fails before we construct execution or
+      // start anything. With --no-services, readiness errors remain fatal.
+      assertPreflight(preflight, args.noServices
+        ? new Set()
+        : new Set(["EXTERNAL_SERVICE_DOWN", "EXTERNAL_SERVICE_MISMATCH"]));
+      services = args.noServices
+        ? undefined
+        : await startDeclaredServices(
+            args.runtime,
+            distribution,
+            demandedCapabilities(result.state),
+            reportServiceProgress,
+          );
+      runtime = await loadRuntime(args.runtime, distribution, loadedPackageSet);
+      worker = await ensureRuntimeProcess(
+        args.runtime,
+        distribution.runtimeWorkerLaunch(),
+        workerProfileDigest,
+        args.maxWaitMs ?? 10_000,
+      );
+      let built = await runtime.build(request);
       if (args.follow && runtime !== undefined) {
         built = await observeBuild(runtime, built, {
           ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
@@ -2022,7 +2026,7 @@ export async function runCli(
         });
       }
       const targetOutputs = new Set(built.state.request.targets.map((target) => target.output));
-      const presentation = archived.catalog ?? catalog;
+      const presentation = catalog;
       const targetAliases = presentation.aliases.filter((alias) =>
         alias.ref.kind === "logical-output" && targetOutputs.has(alias.ref.id));
       const targetPresentations = targetAliases.flatMap((alias) => {
@@ -2061,14 +2065,15 @@ export async function runCli(
           ...(built.dispatch.reason === undefined ? {} : { reason: built.dispatch.reason }),
         },
       };
+      const runtimeHint = runtimeNeedsHint ? ` --runtime ${args.runtime}` : "";
       const terminalLines = targetPresentations.length === 0
         ? [
             ...(built.dispatch.reason === undefined ? [] : [`Reason   ${built.dispatch.reason}`]),
-            `Inspect  narratage inspect ${built.id} --runtime ${args.runtime}`,
+            `Inspect  narratage inspect ${built.id}${runtimeHint}`,
           ]
         : [
             ...(built.dispatch.reason === undefined ? [] : [`Reason   ${built.dispatch.reason}`]),
-            `Inspect  narratage inspect ${built.id} --runtime ${args.runtime}`,
+            `Inspect  narratage inspect ${built.id}${runtimeHint}`,
             ...targetPresentations
               .filter((item) => item.inline !== undefined)
               .slice(0, args.verbose ? undefined : 8)
@@ -2077,7 +2082,7 @@ export async function runCli(
               .filter((item) => item.inline === undefined)
               .slice(0, args.verbose ? undefined : 4)
               .map((item) =>
-                `Export   narratage get ${built.id} --runtime ${args.runtime} --name ${item.alias.name} --to <path>`),
+                `Export   narratage get ${built.id}${runtimeHint} --name ${item.alias.name} --to <path>`),
           ];
       const terminal = built.dispatch.phase === "terminal";
       writeOperational(machine, args.follow
@@ -2090,9 +2095,9 @@ export async function runCli(
           ["Worker", worker.state === "running" ? String(worker.pid) : worker.state],
           ["Goals", String(machine.goals.length)],
         ], terminal ? terminalLines : [
-          `Status   narratage status ${built.id} --runtime ${args.runtime}`,
-          `Watch    narratage queue --runtime ${args.runtime} --watch`,
-          `Cancel   narratage cancel build ${built.id} --runtime ${args.runtime}`,
+          `Status   narratage status ${built.id}${runtimeHint}`,
+          `Watch    narratage queue${runtimeHint} --watch`,
+          `Cancel   narratage cancel ${built.id}${runtimeHint}`,
         ]);
       if (built.status === "failed") io.setExitCode?.(1);
     } finally {

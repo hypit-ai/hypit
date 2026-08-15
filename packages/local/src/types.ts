@@ -111,7 +111,7 @@ export type ProjectLocalRuntimeArtifactAccessOptions = ProjectLocalRuntimeArchiv
 export type ProjectLocalRuntimeControlOptions = ProjectLocalRuntimeArchiveControlOptions;
 
 export type LocalBuildRequest = {
-  /** Stable user/run identity. Reusing it resumes only the same Core Build identity. */
+  /** Caller-generated identity for one submission; Source identity is separate. */
   readonly id: string;
   readonly state: BuildState;
   /** Source aliases and paths for Host inspection. Not trusted Build input. */

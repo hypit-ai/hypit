@@ -9,6 +9,16 @@ The Runtime Profile declares *where* a frozen Build executes: the Scheduler and 
 Stores, Endpoints, credentials and concurrency. It is deployment configuration, not
 creative content—it never enters Author or Run graph identity.
 
+Select it once for the project:
+
+```bash
+narratage runtime use svml.runtime.json
+```
+
+The CLI stores only a relative pointer in `.svml/runtime`. The Profile remains authoritative for
+its root, both package-lock paths, Stores, Endpoints and scheduling. `runtime unset` removes the
+pointer without stopping work or deleting state. `--runtime <profile>` is a one-command override.
+
 ## Declarative JSON
 
 ```json
@@ -106,10 +116,12 @@ Neither value enters Author or Run graph identity.
 
 ### Scheduling
 
-`maxConcurrency` caps admitted Operations across all Workers sharing the DispatchStore. Provider
-packages contribute an Authority resource and an exact capability Route resource; the Store
-acquires both atomically. Optional `resources` overrides address those opaque ids. Capacity tickets
-are durable and fenced by the Build lease rather than process-local counters.
+`maxConcurrency` caps admitted Operations across all Workers sharing the DispatchStore. Each
+configured Provider contributes one total Authority limit plus its own route limits for actual model
+or API lanes. The Store acquires both for one task atomically; work is not copied through two queues.
+Routes are Provider-local, so KIE Seedance and another Provider's Seedance never share a hidden
+family counter. Capacity tickets are durable and fenced by the Build lease rather than process-local
+counters.
 
 ### Trust boundary
 
@@ -132,7 +144,7 @@ roles directly through `@narratage/local`.
 Checks the Runtime Profile without running a Build or making paid requests:
 
 ```bash
-node --run narratage -- doctor svml.runtime.json
+node --run narratage -- doctor
 ```
 
 Validates:
@@ -161,10 +173,10 @@ Build database or an unrelated Vertex configuration.
 ## Runtime lifecycle
 
 ```bash
-node --run narratage -- runtime up svml.runtime.json
-node --run narratage -- runtime status svml.runtime.json
-node --run narratage -- runtime logs svml.runtime.json
-node --run narratage -- runtime down svml.runtime.json
+node --run narratage -- runtime up
+node --run narratage -- runtime status
+node --run narratage -- runtime logs
+node --run narratage -- runtime down
 ```
 
 `runtime up` owns the detached Worker plus declared external programs. `services` remains a narrow
@@ -180,8 +192,8 @@ refusal.
 ### gc (garbage collection)
 
 ```bash
-node --run narratage -- gc svml.runtime.json            # dry-run
-node --run narratage -- gc svml.runtime.json --apply     # delete unreachable Artifacts
+node --run narratage -- gc            # dry-run
+node --run narratage -- gc --apply    # delete unreachable Artifacts
 ```
 
 Walks every retained BuildState and Operation, computes reachable Artifact digests, and reports
@@ -195,13 +207,13 @@ Every Build archives all accepted Records and referenced Artifacts durably, inde
 ### List Builds
 
 ```bash
-node --run narratage -- builds --runtime svml.runtime.json
+node --run narratage -- builds
 ```
 
 ### Inspect
 
 ```bash
-node --run narratage -- inspect <build-id> --runtime svml.runtime.json
+node --run narratage -- inspect <build-id>
 ```
 
 Shows target bindings, demanded Logical Outputs, every accepted Record and Operation status.
@@ -210,19 +222,19 @@ Shows target bindings, demanded Logical Outputs, every accepted Record and Opera
 
 ```bash
 # By source output name
-node --run narratage -- get <build-id> --runtime svml.runtime.json \
+node --run narratage -- get <build-id> \
   --name final.video --to output.mp4
 
 # By Record id
-node --run narratage -- get <build-id> --runtime svml.runtime.json \
+node --run narratage -- get <build-id> \
   --record <record-id> --to output.json
 
 # By Logical Output id
-node --run narratage -- get <build-id> --runtime svml.runtime.json \
+node --run narratage -- get <build-id> \
   --output <output-id>
 
 # By Artifact digest
-node --run narratage -- get <build-id> --runtime svml.runtime.json \
+node --run narratage -- get <build-id> \
   --artifact <sha256:...> --to file.bin
 ```
 

@@ -10,10 +10,11 @@ Two lifecycle scopes are deliberately separate.
 ## Runtime execution domain
 
 ```bash
-node --run narratage -- runtime up svml.runtime.json
-node --run narratage -- runtime status svml.runtime.json
-node --run narratage -- runtime logs svml.runtime.json
-node --run narratage -- runtime down svml.runtime.json
+node --run narratage -- runtime use svml.runtime.json
+node --run narratage -- runtime up
+node --run narratage -- runtime status
+node --run narratage -- runtime logs
+node --run narratage -- runtime down
 ```
 
 `runtime up` starts or reuses the detached fenced Worker and also prepares/starts the external
@@ -42,9 +43,9 @@ same Profile path or regenerating either lock therefore makes the official Worke
 old revision rejects the new revision without stopping the old Worker or starting external
 programs. Once old work is terminal, replacement is allowed.
 
-`runtime down` asks the Worker to stop and then stops programs that the Profile owns. It does not
-cancel Builds or remote Provider jobs. Queued Builds remain durable and continue after the Runtime
-is brought up again.
+`runtime down` stops only the Worker. It deliberately leaves external programs alone because another
+Runtime Profile may share them. Use `services down` when the programs themselves should stop.
+Neither command cancels Builds or remote Provider jobs; queued Builds remain durable.
 
 ## External programs only
 
@@ -71,8 +72,8 @@ successful command. Readiness remains explicit in its structured `ready` field. 
 ## Build relationship
 
 ```bash
-node --run narratage -- build build.svrun --runtime svml.runtime.json
-node --run narratage -- build build.svrun --runtime svml.runtime.json --follow
+node --run narratage -- build build.svrun
+node --run narratage -- build build.svrun --follow
 ```
 
 Before submission, `build` derives the capabilities declared by the selected Producer steps and
@@ -95,17 +96,24 @@ the deployment, not one Build.
 ## Visibility
 
 ```bash
-node --run narratage -- queue --runtime svml.runtime.json
-node --run narratage -- queue --runtime svml.runtime.json --watch
-node --run narratage -- status <build-id> --runtime svml.runtime.json
-node --run narratage -- operations <build-id> --runtime svml.runtime.json
-node --run narratage -- operation <operation-id> --runtime svml.runtime.json
+node --run narratage -- queue
+node --run narratage -- queue --watch
+node --run narratage -- status <build-id>
+node --run narratage -- inspect <build-id>
+node --run narratage -- cancel <build-id>
 ```
 
 These views expose the active durable dispatch set, Worker state, lease/capacity facts, Operation
 attempts, generic Endpoint progress, checkpoints and cancellation state. They do not reconstruct a
 secret second graph or ask a Provider for creative
 routing.
+
+The public control unit is the Build. `cancel` atomically withdraws a queued Build that no Worker
+has claimed, or closes admission and reconciles already-submitted Provider work for a running
+Build. Individual Operations remain visible inside Build status but are not independently
+controlled by the CLI. A terminal Build is never reopened; running the same `.svrun` submits a new
+Build. Endpoint checkpoint recovery only continues the same already-paid external task after a
+Worker restart.
 
 Use `--json` for one versioned result and `--jsonl` for a watch stream. `queue --watch` emits the
 first snapshot and later changes; it does not print an identical block every second while a remote

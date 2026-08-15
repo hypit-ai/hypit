@@ -44,7 +44,11 @@ Declarative activation names an ordinary CredentialRef, not an environment-speci
   "instance": "kie.personal",
   "config": {
     "apiKey": { "store": "keychain", "key": "kie.api-key" },
-    "defaultConcurrency": 2
+    "defaultConcurrency": 8,
+    "routeConcurrency": {
+      "seedance-2.5": 4,
+      "gpt-image-2": 3
+    }
   }
 }
 ```
@@ -60,9 +64,19 @@ import { credentialRef } from "@narratage/runtime";
 const kie = createKieProvider({
   instance: "kie.personal",
   apiKey: credentialRef("env", "KIE_API_KEY"),
-  defaultConcurrency: 2,
+  defaultConcurrency: 8,
+  routeConcurrency: {
+    "seedance-2.5": 4,
+    "gpt-image-2": 3,
+  },
 });
 ```
+
+`defaultConcurrency` is the total KIE authority capacity shared by all Builds. Each optional
+`routeConcurrency` entry limits one exact KIE model route inside that total. There is no cross-Provider
+`seedance` family queue: another Provider owns another authority and its own independently named
+routes. A task acquires its Provider and route capacity together, so it is queued once rather than
+copied between parent and child queues.
 
 An advanced embedding adds `kie` to its Endpoint list beside a complete, explicit set of Runtime
 service packages and selections. A reproducible project normally activates deterministic model
@@ -75,7 +89,7 @@ Manifests actually imported by the author document; installing KIE does not add 
    stream API. KIE temporary URLs never enter author source or generated Product identity.
 2. `createTask` is persisted as one recoverable Operation. Because KIE does not document an
    idempotency key, an ambiguous network/5xx submission is not automatically retried.
-3. Once a `taskId` exists, restart resumes only that task. Poll/download errors cannot create a new
+3. Once a `taskId` exists, Worker recovery resumes only that same task. Poll/download errors cannot create a new
    paid generation.
 4. Successful result URLs are converted to short-lived download URLs, bounded while streaming,
    immediately written to the configured content-addressed ArtifactStore, and removed from durable

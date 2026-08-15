@@ -54,6 +54,8 @@ test("one Endpoint definition generates Manifest, instance, bindings and host-ne
       lifecycle: "immediate",
       capability: capabilities.generation,
       returns: types.generated,
+      route: "text-generation",
+      maxConcurrency: 1,
       handler: () => ({
         value: { kind: "inline", value: "generated" },
       }),
@@ -80,6 +82,13 @@ test("one Endpoint definition generates Manifest, instance, bindings and host-ne
     registrations[0]?.options.runtimeImplementation?.configurationDigest,
     endpoint.instance.configurationDigest,
   );
+  assert.deepEqual(registrations[0]?.options.scheduling, {
+    queue: { authority: "example.personal", route: "text-generation" },
+    resources: [
+      { id: "authority:example.personal", maxActive: 3, maxInFlight: 3 },
+      { id: "route:example.personal/text-generation", maxActive: 1, maxInFlight: 1 },
+    ],
+  });
 });
 
 test("non-secret Endpoint configuration and credential references change instance identity", () => {

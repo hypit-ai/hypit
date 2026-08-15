@@ -16,7 +16,7 @@
   <import as="film" from="@narratage/film@1"/>
   <import as="render" from="@narratage/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
-  <import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
+  <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 
   <script id="story">
     <hook>

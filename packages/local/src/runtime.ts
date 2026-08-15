@@ -223,6 +223,9 @@ export async function createLocalRuntime(
         `Build Catalog ${request.id} already has another source, Run Source or output naming`);
     }
     await stageAttachments(request);
+    // The Host creates a fresh id for every Build. Reading an exact duplicate
+    // here only closes the crash window between durable Store writes; it is not
+    // a Source-based lookup and is not exposed as a way to reopen an old Build.
     let stored = await options.buildStore.read(request.id);
     if (stored === undefined) {
       try {
@@ -233,8 +236,7 @@ export async function createLocalRuntime(
       }
     }
     assert(stored.state.id === request.state.id,
-      `Build ${request.id} already names another Core Build. Choose a new --build-id for a new Run, `
-      + "or restore the original Author/Run Sources to resume this Build");
+      `Build submission ${request.id} conflicts with another Core state`);
     const created = await options.dispatchStore.create(createBuildDispatchIdentity({
       build: request.id,
       core: request.state.id,

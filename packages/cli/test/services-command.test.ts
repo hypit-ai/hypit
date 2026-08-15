@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import { runCli } from "../src/main.js";
@@ -120,4 +123,15 @@ test("an idle stopped Runtime is status data, not a command failure", async () =
   assert.equal(exitCode, undefined);
   assert.match(output, /Runtime status/u);
   assert.match(output, /Worker\s+stopped/u);
+});
+
+test("runtime down stops only its Worker and never an external program shared by another Profile", async () => {
+  const root = await mkdtemp(join(tmpdir(), "narratage-runtime-down-"));
+  const calls: string[] = [];
+  try {
+    await runCli(["runtime", "down", join(root, "svml.runtime.json")], io, distribution(calls));
+    assert.deepEqual(calls, []);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

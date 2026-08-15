@@ -47,6 +47,11 @@ export type RuntimeEndpointFacet = {
   readonly fulfills: readonly RuntimeCapability[];
   readonly lifecycle: "immediate" | "recoverable";
   readonly defaultConcurrency: number;
+  /** Provider-local lanes. When omitted, each capability inherits the Provider total. */
+  readonly routes?: readonly (RuntimeCapability & {
+    readonly route: string;
+    readonly maxConcurrency: number;
+  })[];
   /** Named secret inputs. Values are resolved by the selected CredentialStore only at invocation. */
   readonly credentialSlots?: readonly string[];
 };
@@ -112,6 +117,10 @@ export type ResolvedRuntimeEndpoint = {
   readonly credentialSlots: readonly string[];
   readonly authority: string;
   readonly maxConcurrency: number;
+  readonly routes: readonly (RuntimeCapability & {
+    readonly route: string;
+    readonly maxConcurrency: number;
+  })[];
 };
 
 export type ResolvedRuntimeInstance = ResolvedRuntimeService | ResolvedRuntimeEndpoint;
@@ -214,12 +223,33 @@ function normalizeFacet(facet: RuntimeFacet): RuntimeFacet {
   assert(fulfills.length > 0, `${facet.name} must fulfill at least one exact capability`);
   assert(new Set(fulfills.map(bindingKey)).size === fulfills.length, `${facet.name} repeats a capability binding`);
   assert(facet.lifecycle === "immediate" || facet.lifecycle === "recoverable", `${facet.name} lifecycle is invalid`);
+  const defaultConcurrency = positiveInteger(facet.defaultConcurrency, `${facet.name} defaultConcurrency`);
+  const routes = (facet.routes ?? fulfills.map((item) => ({
+    ...item,
+    route: capabilityKey(item.capability),
+    maxConcurrency: defaultConcurrency,
+  }))).map((item) => ({
+    ...normalizeCapability(item),
+    route: item.route,
+    maxConcurrency: positiveInteger(item.maxConcurrency, `${facet.name} route ${item.route}`),
+  })).sort((left, right) => bindingKey(left).localeCompare(bindingKey(right)));
+  assert(routes.every((item) => item.route.trim().length > 0), `${facet.name} has an empty route`);
+  assert(JSON.stringify(routes.map(bindingKey)) === JSON.stringify(fulfills.map(bindingKey)),
+    `${facet.name} routes must cover every fulfilled capability exactly once`);
+  const routeConcurrency = new Map<string, number>();
+  for (const item of routes) {
+    const previous = routeConcurrency.get(item.route);
+    assert(previous === undefined || previous === item.maxConcurrency,
+      `${facet.name} route ${item.route} has conflicting concurrency limits`);
+    routeConcurrency.set(item.route, item.maxConcurrency);
+  }
   return {
     ...common,
     role: "capability-endpoint",
     fulfills,
     lifecycle: facet.lifecycle,
-    defaultConcurrency: positiveInteger(facet.defaultConcurrency, `${facet.name} defaultConcurrency`),
+    defaultConcurrency,
+    routes,
     credentialSlots: sortedUniqueStrings(facet.credentialSlots ?? [], `${facet.name} credential slots`),
   };
 }
@@ -274,6 +304,8 @@ export class RuntimeModuleRegistry {
           === JSON.stringify(resolved.facet.fulfills.map(bindingKey)), `${instance.id} Endpoint capabilities differ`);
         assert(instance.maxConcurrency === resolved.facet.defaultConcurrency,
           `${instance.id} Endpoint concurrency differs`);
+        assert(JSON.stringify(instance.routes) === JSON.stringify(resolved.facet.routes),
+          `${instance.id} Endpoint routes differ`);
       }
     }
   }
@@ -410,6 +442,19 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
       assert(instance.fulfills.length > 0, `${instance.id} Endpoint fulfills nothing`);
       assert(new Set(instance.fulfills.map(bindingKey)).size === instance.fulfills.length,
         `${instance.id} Endpoint repeats a capability`);
+      assert(instance.routes.length === instance.fulfills.length,
+        `${instance.id} Endpoint routes differ from capabilities`);
+      const routeConcurrency = new Map<string, number>();
+      for (const route of instance.routes) {
+        assert(route.route.trim().length > 0, `${instance.id} Endpoint route is empty`);
+        positiveInteger(route.maxConcurrency, `${instance.id} Endpoint route ${route.route}`);
+        assert(instance.fulfills.some((item) => bindingKey(item) === bindingKey(route)),
+          `${instance.id} Endpoint route is outside its capabilities`);
+        const previous = routeConcurrency.get(route.route);
+        assert(previous === undefined || previous === route.maxConcurrency,
+          `${instance.id} Endpoint route ${route.route} has conflicting concurrency limits`);
+        routeConcurrency.set(route.route, route.maxConcurrency);
+      }
       sortedUniqueStrings(instance.credentialSlots, `${instance.id} Endpoint credential slots`);
     }
     instances.set(instance.id, instance);
@@ -472,6 +517,7 @@ export function resolveRuntimeProfile(
       credentialSlots: [...(resolved.facet.credentialSlots ?? [])],
       authority: instance.authority,
       maxConcurrency: resolved.facet.defaultConcurrency,
+      routes: structuredClone(resolved.facet.routes ?? []),
     };
   });
   const draft: Omit<RuntimeClosure, "digest"> = {

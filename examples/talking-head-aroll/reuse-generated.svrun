@@ -4,10 +4,10 @@
 
   <target output="final.video"/>
 
-  <build-record id="hook-video" build="talking-head-film-001" output="hook-take.video"/>
-  <build-record id="meeting-video" build="talking-head-film-001" output="meeting-take.video"/>
-  <build-record id="evidence-video" build="talking-head-film-001" output="evidence-take.video"/>
-  <build-record id="payoff-video" build="talking-head-film-001" output="payoff-take.video"/>
+  <build-record id="hook-video" build="REPLACE_WITH_BUILD_ID" output="hook-take.video"/>
+  <build-record id="meeting-video" build="REPLACE_WITH_BUILD_ID" output="meeting-take.video"/>
+  <build-record id="evidence-video" build="REPLACE_WITH_BUILD_ID" output="evidence-take.video"/>
+  <build-record id="payoff-video" build="REPLACE_WITH_BUILD_ID" output="payoff-take.video"/>
 
   <satisfy output="hook-take.video" candidate="hook-video"/>
   <satisfy output="meeting-take.video" candidate="meeting-video"/>

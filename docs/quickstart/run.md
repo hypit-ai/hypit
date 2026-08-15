@@ -9,18 +9,19 @@ The Author Source defines the video. A Run Source chooses which of its public ou
 which explicit Candidates, if any, should satisfy them. The Runtime Profile chooses the machine,
 stores and Provider endpoints that execute the resulting plan.
 
-Package trust is synchronized once after package selections change:
+Select the project Runtime once, then synchronize package trust after package selections change:
 
 ```bash
-narratage packages sync build.svrun --runtime svml.runtime.json
+narratage runtime use svml.runtime.json
+narratage packages sync build.svrun
 ```
 
 Ordinary work then follows the short path:
 
 ```bash
-narratage plan build.svrun --runtime svml.runtime.json
-narratage build build.svrun --runtime svml.runtime.json --build-id my-video-001 --follow
-narratage get my-video-001 --runtime svml.runtime.json --name final.video --to output/final.mp4
+narratage plan build.svrun
+narratage build build.svrun --follow
+narratage get <build-id> --name final.video --to output/final.mp4
 ```
 
 The checked-in source launcher is `/path/to/narratage/narratage`; commands written as `narratage`
@@ -99,13 +100,13 @@ Core has no Pin state or fidelity label.
   <target output="final.video"/>
 
   <build-record id="hook-video"
-    build="my-film-001" output="hook-take.video"/>
+    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="hook-take.video"/>
   <build-record id="meeting-video"
-    build="my-film-001" output="meeting-take.video"/>
+    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="meeting-take.video"/>
   <build-record id="evidence-video"
-    build="my-film-001" output="evidence-take.video"/>
+    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="evidence-take.video"/>
   <build-record id="payoff-video"
-    build="my-film-001" output="payoff-take.video"/>
+    build="bld_01234567-89ab-cdef-0123-456789abcdef" output="payoff-take.video"/>
 
   <satisfy output="hook-take.video" candidate="hook-video"/>
   <satisfy output="meeting-take.video" candidate="meeting-video"/>
@@ -140,13 +141,13 @@ current name on `<satisfy>`:
 
 ```svml
 <build-record id="approved-opening"
-  build="my-film-001" output="hook-take.video"/>
+  build="bld_01234567-89ab-cdef-0123-456789abcdef" output="hook-take.video"/>
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
-Narratage never infers that two names mean the same author intent. A human-readable build-id such
-as `my-film-001` is supplied with `build --build-id`; omitting it uses the immutable compiled Core
-Build digest. Reusing one explicit build-id for different compiled Author or Run intent is rejected.
+Narratage never infers that two names mean the same author intent. Every `build` invocation receives
+a fresh Build id, which the CLI prints and the Runtime archives. Source identity never reclaims an
+earlier Build. A later Run reuses an accepted result only by naming that historical Build id here.
 
 ### build-record
 
@@ -155,7 +156,7 @@ Declares a zero-input Candidate backed by a historical Record from a previous Bu
 | Attribute | Description |
 |---|---|
 | `id` | Local Candidate id within this Run Source |
-| `build` | The build-id of the previous Build |
+| `build` | The automatically assigned id of the previous Build |
 | `output` | The Logical Output name from that Build |
 
 ### satisfy
@@ -196,6 +197,12 @@ work. The official video Distribution parses this document as JSON; the command 
 Distribution instead of assigning semantics from the filename suffix. Applications embedding
 Narratage may assemble the same Runtime roles through `@narratage/local`. See the complete
 [Runtime Profile guide](../guide/runtime-profile.md).
+
+`narratage runtime use <profile>` stores only a project-local pointer in `.svml/runtime`. It does
+not copy the Profile, start anything or generate locks. Commands resolve the Profile through that
+pointer; the Profile then names both lock files. An explicit `--runtime <profile>` remains a
+one-command override and never changes the saved selection. Source commands search upward from the
+entry Source; Runtime and archive commands search upward from the current directory.
 
 ```json
 {
@@ -346,13 +353,11 @@ Author files do not have to live under this repository. For example, keep a proj
 `/work/my-film` while using packages installed in `/opt/narratage`:
 
 ```bash
-cd /opt/narratage
+cd /work/my-film
 
-node --run narratage -- packages sync /work/my-film/build.svrun \
-  --runtime /work/my-film/svml.runtime.json
-
-node --run narratage -- plan /work/my-film/build.svrun \
-  --runtime /work/my-film/svml.runtime.json
+/opt/narratage/narratage runtime use svml.runtime.json
+/opt/narratage/narratage packages sync build.svrun
+/opt/narratage/narratage plan build.svrun
 ```
 
 When a Runtime Profile is selected, its `root` (or its own directory when `root` is omitted) is the
@@ -426,9 +431,9 @@ other than the CLI installation.
 After installing or updating packages, synchronize the project inventories:
 
 ```bash
-node --run narratage -- packages sync examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root .
+cd examples/talking-head-aroll
+node --run narratage -- runtime use svml.runtime.json
+node --run narratage -- packages sync build.svrun
 ```
 
 The current Author and Run sources choose author packages. The Runtime Profile chooses environment
@@ -440,33 +445,29 @@ scans the project, starts a Provider or generates media.
 ### 2. Diagnose the environment
 
 ```bash
-node --run narratage -- doctor examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- doctor
 ```
 
 Doctor validates both locks, every selected Runtime role, Endpoint configuration, credential
 presence and bounded environment probes. It never starts the Worker or performs a paid request.
 
 Doctor is intentionally a **full profile audit**. For the environment required by one Run, use
-`plan --runtime`: it checks only capabilities demanded by that finite plan. A valid plan remains a
+`plan`: it checks only capabilities demanded by that finite plan. A valid plan remains a
 successful command even when `preflight.ok` is false; `doctor` or `build` enforces deployment
 readiness.
 
 ### 3. Check source and inspect the plan
 
 ```bash
-node --run narratage -- check examples/talking-head-aroll/main.svml \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root .
+node --run narratage -- check main.svml
 ```
 
 ```bash
-node --run narratage -- plan examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root .
+node --run narratage -- plan build.svrun
 ```
 
 Review the frozen BuildPlan before spending money. The plan shows every Operation and Needs the
-Scheduler would issue. With `--runtime`, it also reports only the relevant Endpoint, credential and
+Scheduler would issue. With a selected Runtime, it also reports only the relevant Endpoint, credential and
 external-program diagnostics. It never starts external work.
 
 `build` starts or reuses the detached Runtime automatically. Use `runtime up` only when you want to
@@ -476,11 +477,7 @@ commands manage external programs only and do not own the Worker lifecycle.
 ### 4. Submit the Build
 
 ```bash
-node --run narratage -- build examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root . \
-  --build-id my-film-001 \
-  --follow
+node --run narratage -- build build.svrun --follow
 ```
 
 Without `--follow`, `build` returns after durable submission. The detached Worker continues. With
@@ -489,33 +486,28 @@ interrupting it leaves the Build running.
 
 | Flag | Description |
 |---|---|
-| `--runtime` | Path to the Runtime Profile |
+| `--runtime` | One-command Runtime Profile override; normally select it once with `runtime use` |
 | `--package-lock` | Standalone compilation lock when no Runtime Profile is supplied; a JSON Profile single-sources it for `check`, `plan` and `build` |
 | `--package-root` | Host directory containing the installed packages named by the lock |
 | `--root` | Optional Source Workspace override; otherwise the Runtime Profile root, package-lock directory, or entry Source directory is used in that order |
-| `--build-id` | User-chosen identifier for this Build (used for retrieval and reuse) |
 | `--follow` | Wait for terminal state as an observer; durable execution remains with the Worker |
 
-Without `--build-id`, identity is derived from the compiled Author and Run intent: repeating the
-same command addresses the same durable Build and does not silently buy another generation. An
-unfinished Build continues from accepted Records and recoverable Endpoint checkpoints; a completed,
-failed or cancelled Build remains terminal and is only reported. Use a new explicit id when the same
-unchanged prompt intentionally needs another stochastic take. Reusing an explicit id for different
-compiled intent is rejected with both repair choices.
+Each invocation creates a fresh Build id, even when the Author and Run Sources are unchanged. That
+is necessary for non-deterministic generation: cross-Build reuse belongs only to explicit Candidates
+in a Run Source. Once submitted, that one Build is durable. A Worker restart continues its accepted
+Records and the same external task checkpoints; it never turns another invocation into that Build.
 
 ### 5. Inspect and retrieve results
 
 ```bash
-node --run narratage -- inspect my-film-001 \
-  --runtime examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- inspect <build-id>
 ```
 
 `inspect` reports durable Build state, demanded outputs, and accepted Records. Retrieve the selected
 archived Artifact only after those facts are correct:
 
 ```bash
-node --run narratage -- get my-film-001 \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
+node --run narratage -- get <build-id> \
   --name final.video \
   --to examples/talking-head-aroll/output/final.mp4
 ```
@@ -534,18 +526,16 @@ Create a new `.svrun` file that references the completed Build's Records (see [R
 above), then submit it:
 
 ```bash
-node --run narratage -- build examples/talking-head-aroll/reuse-generated.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json \
-  --build-id my-film-reuse-001 --follow
+node --run narratage -- build reuse-generated.svrun --follow
 ```
 
 ### 7. Diagnose or stop the local Runtime
 
 ```bash
-node --run narratage -- runtime logs examples/talking-head-aroll/svml.runtime.json
-node --run narratage -- runtime down examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- runtime logs
+node --run narratage -- runtime down
 ```
 
-`runtime down` stops the Worker from claiming more leases and stops Runtime-owned programs. It does
-not cancel durable Builds or remote Provider work. Start the same Profile again to resume local
-execution.
+`runtime down` stops the Worker from claiming more leases but leaves external programs running.
+Use `services down` only when those programs should also stop. Neither command cancels durable
+Builds or remote Provider work. Starting the same Profile again continues unfinished dispatches.

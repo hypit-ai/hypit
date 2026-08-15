@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFile, spawn } from "node:child_process";
+import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -81,7 +81,6 @@ test("CLI exits after durable submission and a restarted detached Worker complet
   const profile = join(project, "svml.runtime.json");
   const source = join(project, "main.svml");
   const run = join(project, "build.svrun");
-  const build = "process-recovery-build";
   try {
     await writeNodePackageLock(authorLockPath, await createNodePackageLock([
       "@narratage/run-markup",
@@ -154,40 +153,17 @@ test("CLI exits after durable submission and a restarted detached Worker complet
     }, await runtimeConfigRevision(profile), 5_000);
     const submitted = await cli(project, [
       "build", run,
-      "--build-id", build,
       "--runtime", profile,
       "--root", project,
       "--no-services",
     ]);
+    const build = String(submitted.build);
+    assert.match(build, /^bld_[0-9a-f-]{36}$/u);
     assert.equal(submitted.status, "queued", "the foreground CLI reports durable admission, not execution ownership");
     assert.equal((submitted.dispatch as { readonly phase?: string }).phase, "queued");
     const originalProcess = await runtimeProcessStatus(profile, await runtimeConfigRevision(profile));
     assert.equal(originalProcess.state, "running", "the detached Runtime process outlives the submitting CLI process");
     assert.equal(originalProcess.pid, parked.pid, "build reuses one profile-scoped Runtime process");
-
-    const follower = spawn(process.execPath, [
-      "--import", tsxImport, cliEntry,
-      "build", run,
-      "--build-id", build,
-      "--runtime", profile,
-      "--root", project,
-      "--no-services",
-      "--follow",
-      "--json",
-    ], { cwd: project, stdio: "ignore" });
-    let followerEnded = false;
-    const followerExit = new Promise<void>((resolve, reject) => {
-      follower.once("exit", () => { followerEnded = true; resolve(); });
-      follower.once("error", (error) => { followerEnded = true; reject(error); });
-    });
-    void followerExit.catch(() => {});
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    assert.equal(followerEnded, false, "--follow is observing the still-queued Build");
-    follower.kill("SIGINT");
-    await followerExit;
-    const afterInterrupt = await cli(project, ["status", build, "--runtime", profile]);
-    assert.equal((afterInterrupt.dispatch as { readonly admission?: string }).admission, "open",
-      "interrupting --follow does not translate into Build cancellation");
 
     await stopRuntimeProcess(profile, 10_000);
     const interrupted = await cli(project, ["status", build, "--runtime", profile]);
@@ -221,17 +197,16 @@ test("CLI exits after durable submission and a restarted detached Worker complet
     assert.notEqual(JSON.parse(await readFile(exported, "utf8")), undefined);
 
     await stopRuntimeProcess(profile, 10_000);
-    const replayed = await cli(project, [
+    const repeated = await cli(project, [
       "build", run,
-      "--build-id", build,
       "--runtime", profile,
       "--root", project,
       "--no-services",
       "--follow",
     ]);
-    assert.equal(replayed.status, "complete");
-    assert.equal((replayed.worker as { readonly state?: string }).state, "stopped",
-      "replaying a terminal Build reads its durable result without starting a Worker");
+    assert.equal(repeated.status, "complete");
+    assert.notEqual(repeated.build, build,
+      "repeating the same Run Source creates a fresh Build instead of reclaiming source-derived state");
   } finally {
     await stopRuntimeProcess(profile, 10_000).catch(() => undefined);
     await rm(project, { recursive: true, force: true });

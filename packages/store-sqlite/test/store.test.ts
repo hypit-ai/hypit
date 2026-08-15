@@ -7,6 +7,7 @@ import test from "node:test";
 import { digestOf } from "@narratage/core";
 import {
   createBuildDispatchIdentity,
+  nonTerminalDispatchPhases,
   operationCancellationRequestId,
   sealOperationIdentity,
 } from "@narratage/runtime";
@@ -259,6 +260,40 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
     assert.equal(cancelledWake.admission, "closing");
     assert.equal(cancelledWake.availableAt, 201,
       "a cancellation racing with release cannot be delayed by the Worker's stale schedule");
+    state.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("cancelling a never-claimed Build atomically withdraws it from dispatch", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-cancel-queued-"));
+  try {
+    const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
+    const closure = digestOf("runtime:cancel-queued");
+    await state.dispatch.create(createBuildDispatchIdentity({
+      build: "queued-build",
+      core: digestOf("core:queued-build"),
+      runtimeClosure: closure,
+    }), { now: 100 });
+
+    const cancelled = await state.dispatch.requestCancellation("queued-build", "no longer needed", 101);
+    assert.equal(cancelled.phase, "terminal");
+    assert.equal(cancelled.admission, "closed");
+    assert.equal(cancelled.terminal, "cancelled");
+    assert.equal(cancelled.cancellation?.requestedAt, 101);
+    assert.equal(cancelled.cancellation?.reason, "no longer needed");
+    assert.equal(await state.dispatch.claim({
+      runtimeClosure: closure,
+      owner: "worker",
+      token: "lease",
+      now: 102,
+      leaseMs: 1_000,
+    }), undefined, "a cancelled queued Build can never be claimed");
+    assert.deepEqual(await state.dispatch.list({ phases: nonTerminalDispatchPhases }), []);
+
+    const repeated = await state.dispatch.requestCancellation("queued-build", "second reason", 103);
+    assert.deepEqual(repeated, cancelled, "terminal cancellation is idempotent");
     state.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

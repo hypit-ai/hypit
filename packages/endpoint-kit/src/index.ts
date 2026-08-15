@@ -153,6 +153,10 @@ type EndpointCapabilityBase = {
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
   readonly supports?: (need: Need) => boolean;
+  /** Stable Provider-local queue lane. Defaults to the capability name. */
+  readonly route?: string;
+  /** Route capacity; the Provider authority keeps its independent total capacity. */
+  readonly maxConcurrency?: number;
 };
 
 export type ImmediateEndpointCapability = EndpointCapabilityBase & {
@@ -184,6 +188,7 @@ export type DefineEndpointPackageOptions = {
     readonly label: string;
     readonly kind?: "secret" | "json";
   }>>;
+  /** Total capacity shared by every route under this configured Provider authority. */
   readonly defaultConcurrency?: number;
   readonly capabilities: readonly EndpointCapability[];
 };
@@ -215,6 +220,20 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     "one Endpoint facet cannot mix immediate and recoverable lifecycles");
   const keys = options.capabilities.map((item) => refKey(item.capability));
   assert(new Set(keys).size === keys.length, "Endpoint package repeats a capability");
+  const routes = options.capabilities.map((item) => item.route ?? item.capability.name);
+  assert(routes.every((route) => route.trim().length > 0), "Endpoint package route is empty");
+  const routeConcurrency = new Map<string, number>();
+  for (const capability of options.capabilities) {
+    const route = capability.route ?? capability.capability.name;
+    const concurrency = positiveInteger(
+      capability.maxConcurrency ?? options.defaultConcurrency ?? 1,
+      `${capability.capability.name} maxConcurrency`,
+    );
+    const previous = routeConcurrency.get(route);
+    assert(previous === undefined || previous === concurrency,
+      `Endpoint package route ${route} has conflicting concurrency limits`);
+    routeConcurrency.set(route, concurrency);
+  }
   const credentials = Object.fromEntries(Object.entries(options.credentials ?? {})
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([slot, ref]) => {
@@ -243,6 +262,11 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
   const configuration = canonicalize(options.configuration ?? null);
   const executionPolicy = options.capabilities.map((capability) => ({
     capability: refKey(capability.capability),
+    route: capability.route ?? capability.capability.name,
+    maxConcurrency: positiveInteger(
+      capability.maxConcurrency ?? options.defaultConcurrency ?? 1,
+      `${capability.capability.name} maxConcurrency`,
+    ),
     lifecycle: capability.lifecycle,
     ...(capability.lifecycle === "recoverable" && capability.retry !== undefined
       ? { retry: { maxAttempts: capability.retry.maxAttempts } }
@@ -266,6 +290,15 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
       fulfills,
       lifecycle,
       defaultConcurrency: positiveInteger(options.defaultConcurrency ?? 1, "defaultConcurrency"),
+      routes: options.capabilities.map((capability) => ({
+        capability: structuredClone(capability.capability),
+        returns: structuredClone(capability.returns),
+        route: capability.route ?? capability.capability.name,
+        maxConcurrency: positiveInteger(
+          capability.maxConcurrency ?? options.defaultConcurrency ?? 1,
+          `${capability.capability.name} maxConcurrency`,
+        ),
+      })),
       credentialSlots: Object.keys(credentials),
     }],
   };
@@ -286,8 +319,12 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     credentials: credentialDescriptions,
     install(registry) {
       for (const capability of options.capabilities) {
-        const route = refKey(capability.capability);
-        const concurrency = positiveInteger(options.defaultConcurrency ?? 1, "defaultConcurrency");
+        const route = capability.route ?? capability.capability.name;
+        const authorityConcurrency = positiveInteger(options.defaultConcurrency ?? 1, "defaultConcurrency");
+        const routeConcurrency = positiveInteger(
+          capability.maxConcurrency ?? authorityConcurrency,
+          `${route} maxConcurrency`,
+        );
         const common: EndpointRegistrationOptions = {
           ...(capability.supports === undefined ? {} : { supports: capability.supports }),
           runtimeImplementation: {
@@ -301,13 +338,13 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
             resources: [
               {
                 id: `authority:${options.authority}`,
-                maxActive: concurrency,
-                maxInFlight: concurrency,
+                maxActive: authorityConcurrency,
+                maxInFlight: authorityConcurrency,
               },
               {
                 id: `route:${options.authority}/${route}`,
-                maxActive: concurrency,
-                maxInFlight: concurrency,
+                maxActive: routeConcurrency,
+                maxInFlight: routeConcurrency,
               },
             ],
           },
