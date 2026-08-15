@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { runtimeConfigObject, runtimeConfigString } from "@narratage/runtime-adapter";
-import type { RuntimeAdapterFactoryContext, RuntimeExternalService, RuntimeServiceState } from "@narratage/runtime-adapter";
+import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@narratage/runtime-adapter";
 
 import { localWhisperXPunktTabDigest } from "./provider.js";
 
@@ -33,7 +33,7 @@ function configuredCommand(value: unknown, key: string) {
   return { command: value[0] as string, args: (value as string[]).slice(1) };
 }
 
-export function localWhisperXService(context: RuntimeAdapterFactoryContext): RuntimeExternalService {
+export function localWhisperXProgram(context: RuntimeAdapterFactoryContext): ManagedProgram {
   const config = runtimeConfigObject(context.config, "local WhisperX");
   const baseUrl = (runtimeConfigString(config.baseUrl, "WhisperX baseUrl") ?? "http://127.0.0.1:8765")
     .replace(/\/+$/u, "");
@@ -59,7 +59,7 @@ export function localWhisperXService(context: RuntimeAdapterFactoryContext): Run
     id: "whisperx",
     ...(prepare === undefined ? {} : { prepare }),
     ...(start === undefined ? {} : { start }),
-    async probe(): Promise<RuntimeServiceState> {
+    async probe(): Promise<ManagedProgramState> {
       let health: Record<string, unknown>;
       try {
         const response = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(2000) });

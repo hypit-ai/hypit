@@ -10,9 +10,9 @@
   "dependencies": {
     "@narratage/cli": "workspace:*",
     "@narratage/compiler-markup-node": "workspace:*",
-    "@narratage/local": "workspace:*",
     "@narratage/markup": "workspace:*",
     "@narratage/package-loader-node": "workspace:*",
+    "@narratage/runtime-adapter-node": "workspace:*",
     "@narratage/workspace-fs-node": "workspace:*"
   }
 }

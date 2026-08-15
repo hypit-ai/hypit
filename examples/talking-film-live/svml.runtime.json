@@ -1,67 +1,57 @@
 {
-  "format": "svml.runtime-config@1",
-  "packageLock": "./svml.packages.lock",
+  "format": "narratage.runtime-profile@1",
   "runtimePackageLock": "./svml.runtime-packages.lock",
-  "runtimeServices": [
-    { "use": "@narratage/local", "instance": "execution" },
-    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/state.sqlite" } },
-    { "use": "@narratage/artifact-store-fs", "instance": "artifacts", "config": { "path": ".svml/artifacts" } },
-    { "use": "@narratage/credential-store-env", "instance": "credentials.env", "config": {} }
-  ],
-  "services": {
-    "scheduler": "execution.scheduler",
-    "worker": "execution.worker",
-    "stores": {
-      "build": "state.builds",
-      "operations": "state.operations",
-      "dispatch": "state.dispatch",
-      "artifacts": "artifacts",
-      "credentials": ["credentials.env"]
+  "runtime": {
+    "use": "@narratage/local",
+    "config": {
+      "dataRoot": ".narratage/runtimes/local",
+      "components": {
+        "execution": { "use": "@narratage/local" },
+        "state": { "use": "@narratage/store-sqlite", "config": { "path": "state.sqlite" } },
+        "artifacts": { "use": "@narratage/artifact-store-fs", "config": { "path": "artifacts" } },
+        "credentials.env": { "use": "@narratage/credential-store-env", "config": {} }
+      },
+      "bindings": {
+        "scheduler": "execution.scheduler",
+        "worker": "execution.worker",
+        "stores": {
+          "build": "state.builds",
+          "operations": "state.operations",
+          "dispatch": "state.dispatch",
+          "artifacts": "artifacts",
+          "credentials": ["credentials.env"]
+        }
+      },
+      "endpoints": {
+        "kie.talking-film": {
+          "use": "@narratage/provider-kie",
+          "config": {
+            "apiKey": { "store": "env", "key": "KIE_API_KEY" },
+            "defaultConcurrency": 2
+          }
+        },
+        "media.talking-film": {
+          "use": "@narratage/provider-media-local",
+          "config": { "defaultConcurrency": 2 }
+        },
+        "whisperx.talking-film": {
+          "use": "@narratage/provider-whisperx-local",
+          "config": { "defaultConcurrency": 1 }
+        },
+        "vertex.talking-film": {
+          "use": "@narratage/provider-google-vertex",
+          "config": {
+            "projectEnv": "GOOGLE_CLOUD_PROJECT",
+            "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
+            "defaultConcurrency": 1
+          }
+        },
+        "hyperframes.talking-film": {
+          "use": "@narratage/provider-hyperframes-local",
+          "config": { "workers": 2, "quality": "standard", "defaultConcurrency": 1 }
+        }
+      },
+      "limits": { "maxOperations": 4 }
     }
-  },
-  "endpoints": [
-    {
-      "use": "@narratage/provider-kie",
-      "instance": "kie.talking-film",
-      "config": {
-        "apiKey": { "store": "env", "key": "KIE_API_KEY" },
-        "defaultConcurrency": 2
-      }
-    },
-    {
-      "use": "@narratage/provider-media-local",
-      "instance": "media.talking-film",
-      "config": {
-        "defaultConcurrency": 2
-      }
-    },
-    {
-      "use": "@narratage/provider-whisperx-local",
-      "instance": "whisperx.talking-film",
-      "config": {
-        "defaultConcurrency": 1
-      }
-    },
-    {
-      "use": "@narratage/provider-google-vertex",
-      "instance": "vertex.talking-film",
-      "config": {
-        "projectEnv": "GOOGLE_CLOUD_PROJECT",
-        "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
-        "defaultConcurrency": 1
-      }
-    },
-    {
-      "use": "@narratage/provider-hyperframes-local",
-      "instance": "hyperframes.talking-film",
-      "config": {
-        "workers": 2,
-        "quality": "standard",
-        "defaultConcurrency": 1
-      }
-    }
-  ],
-  "scheduling": {
-    "maxConcurrency": 4
   }
 }

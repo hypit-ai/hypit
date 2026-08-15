@@ -11,7 +11,7 @@ import {
 
 import { resolveLocalOpenCvDeployment } from "./deployment.js";
 import { createLocalOpenCvImageProvider } from "./provider.js";
-import { localOpenCvService } from "./service.js";
+import { localOpenCvProgram } from "./program.js";
 
 const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-image-opencv-local",
@@ -37,9 +37,9 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ...(maxInputBytes === undefined ? {} : { maxInputBytes }),
         ...(maxOutputBytes === undefined ? {} : { maxOutputBytes }),
       }),
-      externalService: localOpenCvService(context),
+      program: localOpenCvProgram(context),
       diagnose: () => diagnoseRuntimeExecutable({
-        root: context.root,
+        root: context.dataRoot,
         configured: deployment.pythonExecutable,
         fallback: deployment.pythonExecutable,
         subject: "OpenCV Python",

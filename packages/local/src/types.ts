@@ -18,8 +18,8 @@ import type {
   OperationStore,
   OperationSnapshot,
   RuntimeModuleRegistry,
-  RuntimeServicePackage,
-  RuntimeServiceSelection,
+  RuntimeComponentPackage,
+  RuntimeBindings,
   RuntimeWorkerFactory,
 } from "@narratage/runtime";
 import type { TypeValidatorRegistrar, TypeValidatorRegistryLike } from "@narratage/validation";
@@ -29,7 +29,7 @@ export type { ComponentPackage } from "@narratage/component-kit";
 export type LocalTypeValidatorRegistry = TypeValidatorRegistryLike & TypeValidatorRegistrar;
 
 export type { EndpointPackage } from "@narratage/endpoint-kit";
-export type { RuntimeServicePackage } from "@narratage/runtime";
+export type { RuntimeComponentPackage } from "@narratage/runtime";
 
 export type LocalRuntimeClosureOptions = {
   readonly modules: RuntimeModuleRegistry;
@@ -58,13 +58,13 @@ export type CreateLocalRuntimeArchiveControlOptions = {
   readonly buildCatalog?: BuildCatalog;
   readonly operationStore: OperationStore;
   readonly dispatchStore: BuildDispatchStore;
-  /** Optional owner supplied by the project service assembly. */
+  /** Optional owner supplied by the project Component assembly. */
   readonly close?: () => Awaitable<void>;
 };
 
 export type CreateLocalRuntimeArtifactAccessOptions = {
   readonly artifactStore: ArtifactStore;
-  /** Optional owner supplied by the project service assembly. */
+  /** Optional owner supplied by the project Component assembly. */
   readonly close?: () => Awaitable<void>;
 };
 
@@ -78,9 +78,9 @@ export type CreateLocalCredentialControlOptions = {
 };
 
 export type ProjectLocalRuntimeOptions = {
-  /** Project directory containing the private .svml Runtime directory. Defaults to cwd. */
-  readonly root?: string;
-  /** Host directory whose node_modules contains the packages named by packageLock. Defaults to root. */
+  /** Runtime data boundary. It does not grant access to author source. */
+  readonly dataRoot?: string;
+  /** Host directory whose node_modules contains the packages named by packageLock. Defaults to dataRoot. */
   readonly packageRoot?: string;
   /** Trusted implementation package inventory. Each compilation activates its exact Source subset. */
   readonly packageLock?: string;
@@ -89,9 +89,9 @@ export type ProjectLocalRuntimeOptions = {
    * every selected role is explicit, and two packages exposing the same instance
    * id are a configuration error rather than a choice made here.
    */
-  readonly runtimeServices: readonly RuntimeServicePackage[];
-  /** Exact service instances selected from runtimeServices; no role is inferred by uniqueness. */
-  readonly runtimeSelection: RuntimeServiceSelection;
+  readonly runtimeComponents: readonly RuntimeComponentPackage[];
+  /** Exact Component instances selected by role; no role is inferred by uniqueness. */
+  readonly bindings: RuntimeBindings;
   readonly components?: readonly ComponentPackage[];
   readonly endpoints?: readonly EndpointPackage[];
   readonly scheduling: {
@@ -102,9 +102,9 @@ export type ProjectLocalRuntimeOptions = {
 };
 
 export type ProjectLocalRuntimeArchiveControlOptions = Pick<ProjectLocalRuntimeOptions,
-  | "root"
-  | "runtimeServices"
-  | "runtimeSelection"
+  | "dataRoot"
+  | "runtimeComponents"
+  | "bindings"
 >;
 
 export type ProjectLocalRuntimeArtifactAccessOptions = ProjectLocalRuntimeArchiveControlOptions;

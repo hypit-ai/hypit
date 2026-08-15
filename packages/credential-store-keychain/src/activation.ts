@@ -1,5 +1,5 @@
 import {
-  createRuntimeServiceAdapterFacet,
+  createRuntimeComponentAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigString,
@@ -7,7 +7,7 @@ import {
 
 import { createKeychainCredentialStorePackage } from "./store.js";
 
-const keychainCredentialStoreRuntimeAdapter = createRuntimeServiceAdapterFacet({
+const keychainCredentialStoreRuntimeAdapter = createRuntimeComponentAdapterFacet({
   use: "@narratage/credential-store-keychain",
   validate(context) {
     const config = runtimeConfigObject(context.config, "keychain CredentialStore");

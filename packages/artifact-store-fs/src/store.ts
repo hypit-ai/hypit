@@ -11,8 +11,8 @@ import { dirname, join, resolve } from "node:path";
 
 import { digestOf, isDigest } from "@narratage/protocol";
 import type { BlobRef, Digest } from "@narratage/protocol";
-import { defineRuntimeServicePackage } from "@narratage/runtime";
-import type { ArtifactStore, RuntimeServicePackage } from "@narratage/runtime";
+import { defineRuntimeComponentPackage } from "@narratage/runtime";
+import type { ArtifactStore, RuntimeComponentPackage } from "@narratage/runtime";
 
 export const fileArtifactStoreModuleRef = {
   name: "@narratage/artifact-store-fs",
@@ -188,11 +188,11 @@ export class FileArtifactStore implements ArtifactStore {
 
 export function createFileArtifactStorePackage(
   options: CreateFileArtifactStorePackageOptions,
-): RuntimeServicePackage {
+): RuntimeComponentPackage {
   const instance = options.instance ?? "artifacts.fs";
-  return defineRuntimeServicePackage({
+  return defineRuntimeComponentPackage({
     module: fileArtifactStoreModuleRef,
-    services: [{
+    components: [{
       role: "artifact-store",
       facet: "artifact-store",
       instance,
@@ -200,7 +200,7 @@ export function createFileArtifactStorePackage(
         digest: fileArtifactStoreImplementationDigest,
       },
       configuration: { root: resolve(options.root) },
-      service: new FileArtifactStore(options.root),
+      port: new FileArtifactStore(options.root),
     }],
   });
 }

@@ -2,8 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { digestOf, isDigest } from "@narratage/protocol";
 import type { BlobRef, Digest } from "@narratage/protocol";
-import { defineRuntimeServicePackage } from "@narratage/runtime";
-import type { ArtifactStore, RuntimeServicePackage } from "@narratage/runtime";
+import { defineRuntimeComponentPackage } from "@narratage/runtime";
+import type { ArtifactStore, RuntimeComponentPackage } from "@narratage/runtime";
 
 import { AwsS3ObjectClient } from "./client.js";
 import type { S3ListPage, S3ObjectClient } from "./client.js";
@@ -381,7 +381,7 @@ export class S3ArtifactStore implements ArtifactStore {
 
 export function createS3ArtifactStorePackage(
   options: CreateS3ArtifactStorePackageOptions,
-): RuntimeServicePackage {
+): RuntimeComponentPackage {
   const instance = options.instance ?? "artifacts.s3";
   assert(instance.trim().length > 0, "S3 ArtifactStore instance id must not be empty");
   const prefix = normalizePrefix(options.prefix);
@@ -399,9 +399,9 @@ export function createS3ArtifactStorePackage(
     ...(options.endpoint === undefined ? {} : { endpoint: options.endpoint }),
     ...(options.forcePathStyle === undefined ? {} : { forcePathStyle: options.forcePathStyle }),
   });
-  return defineRuntimeServicePackage({
+  return defineRuntimeComponentPackage({
     module: s3ArtifactStoreModuleRef,
-    services: [{
+    components: [{
       role: "artifact-store",
       facet: "artifact-store",
       instance,
@@ -409,7 +409,7 @@ export function createS3ArtifactStorePackage(
         digest: s3ArtifactStoreImplementationDigest,
       },
       configuration,
-      service: new S3ArtifactStore({
+      port: new S3ArtifactStore({
         client,
         bucket: options.bucket,
         ...(options.partSizeBytes === undefined ? {} : { partSizeBytes: options.partSizeBytes }),

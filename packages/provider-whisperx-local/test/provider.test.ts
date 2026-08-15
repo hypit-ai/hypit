@@ -1,4 +1,3 @@
-import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { sealSpeechEvidenceAudio, speechTypes } from "@narratage/speech";
@@ -80,11 +79,11 @@ test("wire seconds are lowered once to exact evidence samples without authored S
 test("local Provider stages canonical evidence bytes unchanged and returns sealed alignment evidence", async () => {
   const expected = wav(32_000);
   let stagedMatches = false;
-  const server = createServer((request, response) => {
-    void (async () => {
-      if (request.url === "/health") {
-        response.setHeader("content-type", "application/json");
-        response.end(JSON.stringify({
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/health")) {
+      return new Response(JSON.stringify({
           ok: true,
           protocol: "svml.whisperx-service@1",
           serviceVersion: "0.1.0",
@@ -94,34 +93,22 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
           compute: "int8",
           batchSize: 8,
           punktTabDigest: "e57f64187974277726a3417ca6f181ec5403676c717672eef6a748a7b20e0106",
-        }));
-        return;
-      }
-      assert.equal(request.url, "/transcribe");
-      const chunks: Buffer[] = [];
-      for await (const chunk of request) chunks.push(Buffer.from(chunk));
-      const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as { readonly audio_path: string };
-      stagedMatches = Buffer.compare(Buffer.from(await readFile(body.audio_path)), Buffer.from(expected)) === 0;
-      response.setHeader("content-type", "application/json");
-      response.end(JSON.stringify({
-        language: "en",
-        segments: [{ start: 0, end: 2, words: [
-          { text: "hello", start: 0.1, end: 0.4 },
-          { text: "world", start: 1.2, end: 1.6 },
-        ] }],
-      }));
-    })().catch((error: unknown) => {
-      response.statusCode = 500;
-      response.end(String(error));
-    });
-  });
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
+      }), { headers: { "content-type": "application/json" } });
+    }
+    assert.ok(url.endsWith("/transcribe"));
+    const requestBody = init?.body;
+    if (typeof requestBody !== "string") throw new Error("WhisperX request body is not JSON text");
+    const body = JSON.parse(requestBody) as { readonly audio_path: string };
+    stagedMatches = Buffer.compare(Buffer.from(await readFile(body.audio_path)), Buffer.from(expected)) === 0;
+    return new Response(JSON.stringify({
+      language: "en",
+      segments: [{ start: 0, end: 2, words: [
+        { text: "hello", start: 0.1, end: 0.4 },
+        { text: "world", start: 1.2, end: 1.6 },
+      ] }],
+    }), { headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
   try {
-    const address = server.address();
-    assert(address !== null && typeof address === "object");
     const artifacts = new MemoryArtifactStore();
     const artifact = await artifacts.put(expected, "audio/wav");
     const evidenceAudio = sealSpeechEvidenceAudio({
@@ -144,7 +131,7 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
     };
     const registry = new EndpointRegistry();
     await createLocalWhisperXProvider({
-      baseUrl: `http://127.0.0.1:${address.port}`,
+      baseUrl: "http://127.0.0.1:8765",
       expectedModel: "small",
       expectedDevice: "cpu",
     }).install(registry);
@@ -163,6 +150,6 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
     assert.equal((value as { readonly passages?: readonly unknown[] }).passages?.length, 1);
     assert.equal(speechTypes.evidenceAudio.name, "SpeechEvidenceAudio");
   } finally {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    globalThis.fetch = originalFetch;
   }
 });

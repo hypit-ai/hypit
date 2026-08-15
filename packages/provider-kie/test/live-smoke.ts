@@ -63,7 +63,7 @@ import type {
   TypedRecord,
 } from "@narratage/protocol";
 import { credentialRef } from "@narratage/runtime";
-import { createSqliteRuntimeServicePackage } from "@narratage/store-sqlite";
+import { createSqliteRuntimeComponentPackage } from "@narratage/store-sqlite";
 import {
   sealSeedanceRequest,
   seedanceComponent,
@@ -409,18 +409,18 @@ async function main(): Promise<void> {
     pollIntervalMs: 3_000,
   });
   const execution = createLocalExecutionPackage("execution.local");
-  const state = createSqliteRuntimeServicePackage({
-    path: join(root, ".svml", "runtime.sqlite"),
+  const state = createSqliteRuntimeComponentPackage({
+    path: join(root, ".narratage", "runtime.sqlite"),
     buildInstance: "state.builds",
     operationInstance: "state.operations",
     dispatchInstance: "state.dispatch",
   });
-  const artifacts = createFileArtifactStorePackage({ root: join(root, ".svml", "artifacts"), instance: "artifacts.fs" });
+  const artifacts = createFileArtifactStorePackage({ root: join(root, ".narratage", "artifacts"), instance: "artifacts.fs" });
   const credentials = createEnvironmentCredentialStorePackage({ instance: "credentials.env" });
   const runtime = await createProjectLocalRuntime({
-    root,
-    runtimeServices: [execution, state, artifacts, credentials],
-    runtimeSelection: {
+    dataRoot: root,
+    runtimeComponents: [execution, state, artifacts, credentials],
+    bindings: {
       scheduler: "execution.local.scheduler",
       worker: "execution.local.worker",
       stores: {

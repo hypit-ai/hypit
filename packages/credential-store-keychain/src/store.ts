@@ -1,11 +1,11 @@
 import { execFile } from "node:child_process";
 
 import { digestOf } from "@narratage/protocol";
-import { defineRuntimeServicePackage, verifyCredentialRef } from "@narratage/runtime";
+import { defineRuntimeComponentPackage, verifyCredentialRef } from "@narratage/runtime";
 import type {
   CredentialRef,
   CredentialValue,
-  RuntimeServicePackage,
+  RuntimeComponentPackage,
   WritableCredentialStore,
 } from "@narratage/runtime";
 
@@ -133,12 +133,12 @@ export class KeychainCredentialStore implements WritableCredentialStore {
 
 export function createKeychainCredentialStorePackage(
   options: CreateKeychainCredentialStorePackageOptions = {},
-): RuntimeServicePackage {
+): RuntimeComponentPackage {
   const instance = options.instance ?? "credentials.keychain";
   const service = options.service ?? DEFAULT_SERVICE;
-  return defineRuntimeServicePackage({
+  return defineRuntimeComponentPackage({
     module: keychainCredentialStoreModuleRef,
-    services: [{
+    components: [{
       role: "credential-store",
       facet: "credential-store",
       instance,
@@ -146,7 +146,7 @@ export function createKeychainCredentialStorePackage(
         digest: keychainCredentialStoreImplementationDigest,
       },
       configuration: { source: "os-keychain", service, explicitKeysOnly: true },
-      service: new KeychainCredentialStore({
+      port: new KeychainCredentialStore({
         service,
         ...(options.read === undefined ? {} : { read: options.read }),
         ...(options.write === undefined ? {} : { write: options.write }),

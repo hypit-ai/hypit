@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -54,14 +54,23 @@ const STYLES = `<?svml using="@narratage/svs@1"?>
 </sheet>
 `;
 
-async function fixture(): Promise<PlaygroundSnapshot> {
-  const directory = mkdtempSync(join(tmpdir(), "svml-playground-markers-"));
-  writeFileSync(join(directory, "main.svml"), SOURCE, "utf8");
-  writeFileSync(join(directory, "studio.svs"), STYLES, "utf8");
-  return (await readSource({
-    source: join(directory, "main.svml"), packageRoot: directory, revision: 1,
-  })).snapshot;
+let fixtureDirectory: string | undefined;
+let fixtureSnapshot: Promise<PlaygroundSnapshot> | undefined;
+
+function fixture(): Promise<PlaygroundSnapshot> {
+  if (fixtureSnapshot !== undefined) return fixtureSnapshot;
+  fixtureDirectory = mkdtempSync(join(tmpdir(), "svml-playground-markers-"));
+  writeFileSync(join(fixtureDirectory, "main.svml"), SOURCE, "utf8");
+  writeFileSync(join(fixtureDirectory, "studio.svs"), STYLES, "utf8");
+  fixtureSnapshot = readSource({
+    source: join(fixtureDirectory, "main.svml"), packageRoot: fixtureDirectory, revision: 1,
+  }).then((result) => result.snapshot);
+  return fixtureSnapshot;
 }
+
+test.after(() => {
+  if (fixtureDirectory !== undefined) rmSync(fixtureDirectory, { recursive: true, force: true });
+});
 
 test("a Segment is the outermost level and Selections nest inside it", async () => {
   const snapshot = await fixture();

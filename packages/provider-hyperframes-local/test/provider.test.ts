@@ -14,7 +14,7 @@ import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
 
 import { createLocalHyperframesProvider } from "../src/index.js";
-import { localHyperframesBrowserService } from "../src/service.js";
+import { localHyperframesBrowserProgram } from "../src/program.js";
 
 const liveEnabled = process.env.SVML_BROWSER_TESTS === "1";
 const hasFfprobe = spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
@@ -118,10 +118,10 @@ test("local HyperFrames Provider exposes one exact visual capability and two sep
 });
 
 test("the selected HyperFrames Provider owns one idempotent browser preparation", () => {
-  const service = localHyperframesBrowserService({ root: "/project", instance: "hyperframes", config: {} });
-  assert.equal(service.id, "hyperframes-browser");
-  assert.equal(service.start, undefined);
-  assert.deepEqual(service.prepare?.args.slice(-2), ["browser", "ensure"]);
+  const program = localHyperframesBrowserProgram({ dataRoot: "/project", instance: "hyperframes", config: {} });
+  assert.equal(program.id, "hyperframes-browser");
+  assert.equal(program.start, undefined);
+  assert.deepEqual(program.prepare?.args.slice(-2), ["browser", "ensure"]);
 });
 
 test("local HyperFrames Provider really renders a silent frame-exact MP4 with parallel workers", {

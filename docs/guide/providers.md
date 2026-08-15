@@ -31,7 +31,7 @@ packages or the CLI:
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": { "activation": "./src/activation.ts", "service": true },
+  "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/protocol": "workspace:*",
@@ -122,17 +122,16 @@ start work. It keeps environment names as references until a matching Need is ha
 presence is diagnosed through the generic CredentialStore path; a Provider must not special-case
 environment variables as a secret Store.
 
-## 5. Declare an external service (if needed)
+## 5. Declare a Managed Program when needed
 
-If the Provider depends on an external program (a Python service, a local server), add
-`"service": true` to the `svml` block in `package.json` (shown in step 2) and export a factory
-from `src/service.ts`:
+If the Provider depends on a warm external program, export its declaration beside the Endpoint.
+There is no second manifest flag or central program registry:
 
 ```typescript
-// src/service.ts
-import type { RuntimeExternalService } from "@narratage/local";
+// src/program.ts
+import type { ManagedProgram } from "@narratage/runtime-adapter";
 
-export function createMyExternalService(): RuntimeExternalService {
+export function createMyProgram(): ManagedProgram {
   return {
     id: "my-service",
     prepare: { command: "uv", args: ["sync", "--project", "services/my-service", "--frozen"] },
@@ -152,16 +151,15 @@ const adapter = createRuntimeEndpointAdapterFacet({
   activate(context) {
     return {
       endpoint: createMyServiceProvider(/* parsed config */),
-      externalService: createMyExternalService(),
+      program: createMyProgram(),
     };
   },
 });
 ```
 
-`narratage runtime up` prepares, starts and probes declared external programs before starting the
-durable Worker. `build` starts only services backing capabilities declared by its selected Producer
-steps. Providers that call only remote APIs omit this step entirely—leave `"service"` out of
-`package.json`.
+`narratage runtime up` prepares, starts and probes declared Managed Programs before starting the
+durable Worker. `build` starts only Programs backing capabilities demanded by its plan. Providers
+that call only remote APIs omit `program` entirely.
 
 ## 6. Register and lock
 

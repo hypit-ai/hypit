@@ -7,5 +7,5 @@ same adapter can later be replaced by S3 without changing Core, component or End
 This package does not store BuildState, Endpoint checkpoints, credentials or author library records.
 
 `createFileArtifactStorePackage()` contributes the configured store through the generic Runtime
-service-package protocol. Its absolute root is bound into Runtime instance identity; the Local Host
+Component Adapter protocol. Its absolute root is bound into Runtime instance identity; the Local Host
 does not need filesystem-specific registration code.

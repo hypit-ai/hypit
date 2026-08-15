@@ -34,15 +34,15 @@ test("a malformed reference is refused before anything is looked up", async () =
 
 test("the configured service is part of the instance's identity", () => {
   const configured = createKeychainCredentialStorePackage({ instance: "credentials.team", service: "acme" });
-  assert.equal(configured.services[0]?.instance.id, "credentials.team");
+  assert.equal(configured.components[0]?.instance.id, "credentials.team");
   // Configuration reaches identity as a digest and is not carried in the
   // Closure, so the proof that the service name counts is that a different
   // name is a different instance.
   const other = createKeychainCredentialStorePackage({ instance: "credentials.team", service: "other" });
-  assert.ok(configured.services[0]?.instance.configurationDigest);
+  assert.ok(configured.components[0]?.instance.configurationDigest);
   assert.notEqual(
-    configured.services[0]?.instance.configurationDigest,
-    other.services[0]?.instance.configurationDigest,
+    configured.components[0]?.instance.configurationDigest,
+    other.components[0]?.instance.configurationDigest,
   );
 });
 

@@ -1,10 +1,10 @@
 import { digestOf } from "@narratage/protocol";
-import { defineRuntimeServicePackage } from "@narratage/runtime";
+import { defineRuntimeComponentPackage } from "@narratage/runtime";
 import type {
   CredentialRef,
   CredentialStore,
   CredentialValue,
-  RuntimeServicePackage,
+  RuntimeComponentPackage,
 } from "@narratage/runtime";
 import { verifyCredentialRef } from "@narratage/runtime";
 
@@ -41,11 +41,11 @@ export class EnvironmentCredentialStore implements CredentialStore {
 
 export function createEnvironmentCredentialStorePackage(
   options: CreateEnvironmentCredentialStorePackageOptions = {},
-): RuntimeServicePackage {
+): RuntimeComponentPackage {
   const instance = options.instance ?? "credentials.env";
-  return defineRuntimeServicePackage({
+  return defineRuntimeComponentPackage({
     module: environmentCredentialStoreModuleRef,
-    services: [{
+    components: [{
       role: "credential-store",
       facet: "credential-store",
       instance,
@@ -53,7 +53,7 @@ export function createEnvironmentCredentialStorePackage(
         digest: environmentCredentialStoreImplementationDigest,
       },
       configuration: { source: "process-environment", explicitKeysOnly: true },
-      service: new EnvironmentCredentialStore(options.environment),
+      port: new EnvironmentCredentialStore(options.environment),
     }],
   });
 }

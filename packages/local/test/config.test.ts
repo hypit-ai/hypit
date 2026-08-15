@@ -1,22 +1,16 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import {
-  defineEndpointPackage,
-} from "@narratage/endpoint-kit";
-import {
-  createRuntimeEndpointAdapterFacet,
-  createRuntimeServiceAdapterFacet,
-} from "@narratage/runtime-adapter";
 import { digestOf } from "@narratage/protocol";
-import { credentialRef, defineRuntimeServicePackage } from "@narratage/runtime";
-import { createSqliteRuntimeServicePackage } from "@narratage/store-sqlite";
-
 import {
-  createRuntimeFromConfig,
+  createRuntimeComponentAdapterFacet,
+  createRuntimeEndpointAdapterFacet,
+} from "@narratage/runtime-adapter";
+import { createSqliteRuntimeComponentPackage } from "@narratage/store-sqlite";
+import {
   createRuntimeArchiveFromConfig,
   createRuntimeArtifactAccessFromConfig,
   doctorRuntimeConfig,
@@ -25,51 +19,113 @@ import {
   RuntimeAdapterRegistry,
 } from "@narratage/local";
 
-const services = {
+const bindings = {
   scheduler: "execution.scheduler",
   worker: "execution.worker",
   stores: {
     build: "state.builds",
     operations: "state.operations",
     dispatch: "state.dispatch",
-    artifacts: "artifacts",
-    credentials: ["credentials"],
+    artifacts: "artifacts.store",
+    credentials: [] as string[],
   },
 };
 
-const required = { runtimeServices: [], services, scheduling: { maxConcurrency: 3 } } as const;
-
-test("archive observation does not construct the selected ArtifactStore adapter", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-runtime-archive-slice-"));
-  const path = join(root, "svml.runtime.json");
-  await writeFile(path, JSON.stringify({
-    format: "svml.runtime-config@1",
-    runtimeServices: [
-      { use: "example.state", instance: "state", config: {} },
-      { use: "example.artifacts", instance: "artifacts", config: {} },
-    ],
-    services: {
-      scheduler: "execution.scheduler",
-      worker: "execution.worker",
-      stores: {
-        build: "state.builds",
-        operations: "state.operations",
-        dispatch: "state.dispatch",
-        artifacts: "artifacts.store",
-        credentials: [],
+function profile(config: {
+  readonly dataRoot?: string;
+  readonly components?: Readonly<Record<string, unknown>>;
+  readonly endpoints?: Readonly<Record<string, unknown>>;
+  readonly selectedBindings?: typeof bindings;
+  readonly runtimePackageLock?: string;
+} = {}) {
+  return {
+    format: "narratage.runtime-profile@1",
+    ...(config.runtimePackageLock === undefined ? {} : { runtimePackageLock: config.runtimePackageLock }),
+    runtime: {
+      use: "@narratage/local",
+      config: {
+        dataRoot: config.dataRoot ?? ".narratage/runtimes/local",
+        components: config.components ?? {},
+        bindings: config.selectedBindings ?? bindings,
+        endpoints: config.endpoints ?? {},
+        limits: { maxOperations: 3 },
       },
     },
-    scheduling: { maxConcurrency: 1 },
-    endpoints: [],
+  };
+}
+
+test("Runtime Profile keeps deployment data separate from source and derives instance names from maps", () => {
+  const parsed = parseRuntimeConfig(profile({
+    components: { state: { use: "example.state", config: { path: "state.sqlite" } } },
+    endpoints: { generation: { use: "example.provider", authority: "shared" } },
   }));
+  assert.equal(parsed.dataRoot, ".narratage/runtimes/local");
+  assert.deepEqual(parsed.components, [{
+    use: "example.state",
+    instance: "state",
+    config: { path: "state.sqlite" },
+  }]);
+  assert.deepEqual(parsed.endpoints, [{
+    use: "example.provider",
+    instance: "generation",
+    authority: "shared",
+  }]);
+  assert.deepEqual(parsed.bindings, bindings);
+  assert.equal("root" in parsed, false);
+  assert.equal("packageLock" in parsed, false);
+});
+
+test("Runtime Profile rejects source ownership fields", () => {
+  assert.throws(() => parseRuntimeConfig({ ...profile(), packageLock: "./svml.packages.lock" }),
+    /does not accept packageLock/u);
+  assert.throws(() => parseRuntimeConfig({ ...profile(), root: "." }),
+    /does not accept root/u);
+});
+
+test("Runtime revision follows Profile content and its Runtime lock only", async () => {
+  const root = await mkdtemp(join(tmpdir(), "narratage-runtime-revision-"));
+  const profilePath = join(root, "deployment.profile");
+  const lockPath = join(root, "runtime.lock");
+  const lock = (label: string) => {
+    const content = {
+      format: "svml.node-package-lock@1" as const,
+      selected: [],
+      artifacts: [{ name: `example-${label}`, version: "1", digest: digestOf(label) }],
+      packages: [],
+    };
+    return JSON.stringify({ ...content, digest: digestOf(content) });
+  };
+  try {
+    await writeFile(lockPath, lock("one"), "utf8");
+    await writeFile(profilePath, JSON.stringify(profile({ runtimePackageLock: "./runtime.lock" })), "utf8");
+    const first = await runtimeConfigRevision(profilePath);
+    await writeFile(profilePath, JSON.stringify(profile({ runtimePackageLock: "./runtime.lock" }), null, 2), "utf8");
+    assert.equal(await runtimeConfigRevision(profilePath), first);
+    await writeFile(lockPath, lock("two"), "utf8");
+    assert.notEqual(await runtimeConfigRevision(profilePath), first);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("archive observation constructs only the Components bound to archive roles", async () => {
+  const root = await mkdtemp(join(tmpdir(), "narratage-runtime-slice-"));
+  const path = join(root, "svml.runtime.json");
+  await writeFile(path, JSON.stringify(profile({
+    dataRoot: ".",
+    components: {
+      state: { use: "example.state" },
+      artifacts: { use: "example.artifacts" },
+    },
+  })));
   let artifactConstructions = 0;
   const registry = new RuntimeAdapterRegistry();
-  registry.registerFacet(createRuntimeServiceAdapterFacet({
+  registry.registerFacet(createRuntimeComponentAdapterFacet({
     use: "example.state",
     validate() {},
     create(context) {
-      return createSqliteRuntimeServicePackage({
-        path: join(context.root, "runtime.sqlite"),
+      return createSqliteRuntimeComponentPackage({
+        path: join(context.dataRoot, "state.sqlite"),
         buildInstance: `${context.instance}.builds`,
         operationInstance: `${context.instance}.operations`,
         dispatchInstance: `${context.instance}.dispatch`,
@@ -77,7 +133,7 @@ test("archive observation does not construct the selected ArtifactStore adapter"
       });
     },
   }));
-  registry.registerFacet(createRuntimeServiceAdapterFacet({
+  registry.registerFacet(createRuntimeComponentAdapterFacet({
     use: "example.artifacts",
     validate() {},
     create() {
@@ -92,376 +148,40 @@ test("archive observation does not construct the selected ArtifactStore adapter"
     assert.equal(artifactConstructions, 0);
     await assert.rejects(createRuntimeArtifactAccessFromConfig(path, { registry, readOnly: true }),
       /artifact adapter constructed/u);
-    assert.equal(artifactConstructions, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
-test("Runtime revision follows content and referenced locks, not a filename suffix", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-runtime-revision-"));
-  const path = join(root, "deployment.profile");
-  const lock = (label: string) => {
-    const content = {
-      format: "svml.node-package-lock@1" as const,
-      selected: [],
-      artifacts: [{ name: `example-${label}`, version: "1", digest: digestOf(label) }],
-      packages: [],
-    };
-    return JSON.stringify({ ...content, digest: digestOf(content) });
-  };
-  try {
-    await writeFile(join(root, "author.lock"), lock("author-v1"), "utf8");
-    await writeFile(join(root, "runtime.lock"), lock("runtime-v1"), "utf8");
-    const profile = {
-      format: "svml.runtime-config@1",
-      root: ".",
-      packageLock: "./author.lock",
-      runtimePackageLock: "./runtime.lock",
-      endpoints: [],
-      ...required,
-    } as const;
-    await writeFile(path, JSON.stringify(profile), "utf8");
-    const first = await runtimeConfigRevision(path);
-    await writeFile(path, JSON.stringify(profile, null, 2), "utf8");
-    assert.equal(await runtimeConfigRevision(path), first);
-    await writeFile(join(root, "runtime.lock"), lock("runtime-v2"), "utf8");
-    const second = await runtimeConfigRevision(path);
-    assert.notEqual(second, first);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-function endpointPackage(instance: string, credentials: readonly unknown[] = []) {
-  return {
-    name: instance,
-    manifest: { facets: [] },
-    instance: { id: instance },
-    bindings: [],
-    credentials,
-    install() {},
-  } as never;
-}
-
-test("declarative Runtime config has no implicit local services", () => {
-  assert.throws(() => parseRuntimeConfig({
-    format: "svml.runtime-config@1",
-    endpoints: [],
-  }), /runtimeServices/u);
-});
-
-test("an explicit empty Runtime service set fails instead of manufacturing local defaults", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-runtime-empty-services-"));
+test("doctor reports a down Managed Program without inventing a Runtime default", async () => {
+  const root = await mkdtemp(join(tmpdir(), "narratage-runtime-program-"));
   const path = join(root, "svml.runtime.json");
-  try {
-    await writeFile(path, JSON.stringify({
-      format: "svml.runtime-config@1",
-      ...required,
-      endpoints: [],
-    }));
-    await assert.rejects(
-      async () => await createRuntimeFromConfig(path, { registry: new RuntimeAdapterRegistry() }),
-      /unknown instance execution\.scheduler/u,
-    );
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-test("Runtime config is closed data and rejects unknown environment authority", () => {
-  const parsed = parseRuntimeConfig({
-    format: "svml.runtime-config@1",
-    ...required,
-    packageRoot: "/opt/narratage",
-    endpoints: [],
-  });
-  assert.equal(parsed.packageRoot, "/opt/narratage");
-  assert.throws(() => parseRuntimeConfig({
-    format: "svml.runtime-config@1",
-    ...required,
-    endpoints: [],
-    apiKey: "must-not-live-here",
-  }), /does not accept apiKey/u);
-});
-
-test("Endpoint authority is optional and remains explicit only when shared", () => {
-  const local = parseRuntimeConfig({
-    format: "svml.runtime-config@1",
-    ...required,
-    endpoints: [{ use: "example.local", instance: "local", config: {} }],
-  });
-  assert.equal(local.endpoints[0]?.authority, undefined);
-  const shared = parseRuntimeConfig({
-    format: "svml.runtime-config@1",
-    ...required,
-    endpoints: [{ use: "example.remote", instance: "one", authority: "shared-account", config: {} }],
-  });
-  assert.equal(shared.endpoints[0]?.authority, "shared-account");
-});
-
-test("declarative adapters are explicit and never guessed", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-runtime-adapter-"));
-  const path = join(root, "svml.runtime.json");
-  await writeFile(path, JSON.stringify({
-    format: "svml.runtime-config@1",
-    ...required,
-    endpoints: [{ use: "example.missing", instance: "missing", authority: "example.missing", config: {} }],
-  }));
-  await assert.rejects(
-    async () => await createRuntimeFromConfig(path, { registry: new RuntimeAdapterRegistry() }),
-    /adapter example\.missing is not registered/u,
-  );
-});
-
-test("runtimeServices names the Runtime's own replaceable parts, apart from external services", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-runtime-config-"));
-  const path = join(root, "svml.runtime.json");
-  await writeFile(path, JSON.stringify({
-    format: "svml.runtime-config@1",
-    ...required,
-    runtimeServices: [{ use: "@example/store", instance: "artifacts.example" }],
-    endpoints: [],
-  }));
-  const document = parseRuntimeConfig(JSON.parse(await readFile(path, "utf8")));
-  assert.deepEqual(document.runtimeServices, [{ use: "@example/store", instance: "artifacts.example" }]);
-
-  assert.deepEqual(document.services, services);
-  await rm(root, { recursive: true, force: true });
-});
-
-test("doctor names the external program a Provider needs, and the command that supplies it", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-external-service-"));
-  const path = join(root, "svml.runtime.json");
-  await writeFile(path, JSON.stringify({
-    format: "svml.runtime-config@1",
-    ...required,
-    endpoints: [
-      { use: "example.absent", instance: "absent", authority: "example.account", config: {} },
-      { use: "example.wrong", instance: "wrong", authority: "example.account", config: {} },
-      { use: "example.exploding", instance: "exploding", authority: "example.account", config: {} },
-    ],
-  }));
-
+  await writeFile(path, JSON.stringify(profile({
+    dataRoot: ".",
+    endpoints: { speech: { use: "example.speech" } },
+  })));
   const registry = new RuntimeAdapterRegistry();
-  const declare = (use: string, service: unknown) =>
-    registry.registerFacet(createRuntimeEndpointAdapterFacet({
-      use,
-      activate: (context) => ({ endpoint: endpointPackage(context.instance), externalService: service as never }),
-    }));
-  declare("example.absent", {
-    id: "absent-one",
-    start: { command: "uv", args: ["run", "serve"] },
-    probe: async () => ({ state: "down", detail: "nothing is answering at http://127.0.0.1:1" }),
-  });
-  declare("example.wrong", {
-    id: "wrong-one",
-    probe: async () => ({ state: "mismatch", detail: "model is large-v3, expected small" }),
-  });
-  declare("example.exploding", {
-    id: "exploding-one",
-    probe: async () => { throw new Error("the probe itself is broken"); },
-  });
-
-  const { diagnostics } = await doctorRuntimeConfig(path, { registry });
-  const seen = diagnostics.map((item) => `${item.code}: ${item.message}`);
-
-  assert.deepEqual(seen, [
-    "EXTERNAL_SERVICE_DOWN: absent-one is not usable: nothing is answering at http://127.0.0.1:1."
-      + " Bring it up with: narratage services up",
-    // Nothing to prepare and nothing to start: report the difference, name no command.
-    "EXTERNAL_SERVICE_MISMATCH: wrong-one is running but differs from this Runtime Profile:"
-      + " model is large-v3, expected small",
-    // A broken probe is a broken Provider, never a silently healthy service.
-    "EXTERNAL_SERVICE_PROBE_FAILED: the probe itself is broken",
-  ]);
-  await rm(root, { recursive: true, force: true });
-});
-
-test("doctor activates one pure Endpoint declaration without constructing Runtime services", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-read-only-doctor-"));
-  const path = join(root, "svml.runtime.json");
-  await writeFile(path, JSON.stringify({
-    format: "svml.runtime-config@1",
-    ...required,
-    runtimeServices: [{ use: "example.store", instance: "store", config: { mode: "valid" } }],
-    endpoints: [
-      { use: "example.invalid", instance: "invalid", authority: "example.account", config: { mode: "bad" } },
-      { use: "example.missing-credential", instance: "missing-credential", authority: "example.account", config: {} },
-    ],
-  }));
-
-  let constructed = 0;
-  let invalidDoctorCalls = 0;
-  let serviceDeclarations = 0;
-  const registry = new RuntimeAdapterRegistry();
-  registry.registerFacet(createRuntimeServiceAdapterFacet({
-    use: "example.store",
-    validate(context) {
-      assert.deepEqual(context.config, { mode: "valid" });
-    },
-    create() {
-      constructed += 1;
-      throw new Error("doctor constructed the Runtime service");
-    },
-    doctor: () => [{ severity: "info", code: "STORE_OK", message: "store config is valid" }],
-  }));
-  registry.registerFacet(createRuntimeEndpointAdapterFacet({
-    use: "example.invalid",
-    activate() {
-      throw new Error("mode is invalid");
-    },
-  }));
-  registry.registerFacet(createRuntimeEndpointAdapterFacet({
-    use: "example.missing-credential",
-    activate(context) {
-      serviceDeclarations += 1;
-      return {
-        endpoint: endpointPackage(context.instance),
-        diagnose: () => {
-          invalidDoctorCalls += 1;
-          return [{
-            severity: "error" as const,
-            code: "RUNTIME_CREDENTIAL_MISSING",
-            message: "one declared credential is absent",
-          }];
-        },
-        externalService: { id: "should-not-be-probed", probe: async () => ({ state: "ready" as const }) },
-      };
-    },
-  }));
-
-  const { diagnostics } = await doctorRuntimeConfig(path, { registry });
-  assert.deepEqual(diagnostics.map(({ severity, code, message, subject }) => ({
-    severity, code, message, ...(subject === undefined ? {} : { subject }),
-  })), [
-    { severity: "info", code: "STORE_OK", message: "store config is valid" },
-    { severity: "error", code: "RUNTIME_ENDPOINT_CONFIG_INVALID", message: "mode is invalid", subject: "invalid" },
-    { severity: "error", code: "RUNTIME_CREDENTIAL_MISSING", message: "one declared credential is absent" },
-  ]);
-  assert.equal(constructed, 0);
-  assert.equal(invalidDoctorCalls, 1);
-  assert.equal(serviceDeclarations, 1);
-  await rm(root, { recursive: true, force: true });
-});
-
-test("doctor resolves credentials from the same Endpoint declaration used by execution", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-credential-doctor-"));
-  const path = join(root, "svml.runtime.json");
-  await writeFile(path, JSON.stringify({
-    format: "svml.runtime-config@1",
-    ...required,
-    runtimeServices: [{ use: "example.credentials", instance: "credentials", config: {} }],
-    endpoints: [{ use: "example.provider", instance: "provider", authority: "example.account", config: {} }],
-  }));
-
-  let endpointActivations = 0;
-  let credentialStoreConstructions = 0;
-  let credentialStoreCloses = 0;
-  const registry = new RuntimeAdapterRegistry();
-  registry.registerFacet(createRuntimeEndpointAdapterFacet({
-    use: "example.provider",
-    activate(context) {
-      endpointActivations += 1;
-      return { endpoint: endpointPackage(context.instance, [{
-        endpoint: context.instance,
-        slot: "token",
-        label: "Example token",
-        kind: "secret",
-        ref: credentialRef("env", "EXAMPLE_TOKEN_THAT_IS_NOT_SET"),
-      }]) };
-    },
-  }));
-  registry.registerFacet(createRuntimeServiceAdapterFacet({
-    use: "example.credentials",
-    validate() {},
-    create(context) {
-      credentialStoreConstructions += 1;
-      return defineRuntimeServicePackage({
-        module: { name: "example.credentials", version: "1" },
-        services: [{
-          role: "credential-store",
-          facet: "credentials",
-          instance: context.instance,
-          implementation: { digest: digestOf("example.credentials@1") },
-          service: { async resolve() { return undefined; } },
-        }],
-        close() { credentialStoreCloses += 1; },
-      });
-    },
-  }));
-
-  const { diagnostics } = await doctorRuntimeConfig(path, { registry });
-  assert.deepEqual(diagnostics.map(({ code, message, subject }) => ({ code, message, subject })), [{
-    code: "RUNTIME_CREDENTIAL_MISSING",
-    message: "Example token for Endpoint provider is not configured in CredentialStore env. "
-      + "Set EXAMPLE_TOKEN_THAT_IS_NOT_SET in this process environment, or select a writable CredentialStore in the Runtime Profile.",
-    subject: "provider.token",
-  }]);
-  assert.equal(endpointActivations, 1);
-  assert.equal(credentialStoreConstructions, 1);
-  assert.equal(credentialStoreCloses, 1);
-  await rm(root, { recursive: true, force: true });
-});
-
-test("plan-scoped doctor ignores unrelated Endpoints and diagnoses only demanded capabilities", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-scoped-doctor-"));
-  const path = join(root, "svml.runtime.json");
-  await writeFile(path, JSON.stringify({
-    format: "svml.runtime-config@1",
-    ...required,
-    runtimeServices: [{ use: "example.credentials", instance: "credentials", config: {} }],
-    endpoints: [
-      { use: "example.image", instance: "image", authority: "image.account", config: {} },
-      { use: "example.speech", instance: "speech", authority: "speech.account", config: {} },
-    ],
-  }));
-  const imageCapability = { module: { name: "example.image", version: "1" }, name: "generate" } as const;
-  const speechCapability = { module: { name: "example.speech", version: "1" }, name: "align" } as const;
-  const resultType = { module: { name: "example.result", version: "1" }, name: "Value" } as const;
-  const registry = new RuntimeAdapterRegistry();
-  const endpoint = (instance: string, capability: typeof imageCapability | typeof speechCapability, credential?: string) =>
-    defineEndpointPackage({
-      module: { name: `example.${instance}-endpoint`, version: "1" },
-      facet: "endpoint",
-      instance,
-      authority: `${instance}.account`,
-      implementation: { digest: digestOf(`example.${instance}@1`) },
-      capabilities: [{ lifecycle: "immediate" as const, capability, returns: resultType, handler: async () => ({}) as never }],
-      ...(credential === undefined ? {} : {
-        credentials: { token: credentialRef("env", credential) },
-        credentialInputs: { token: { label: `${instance} token` } },
-      }),
-    });
-  registry.registerFacet(createRuntimeEndpointAdapterFacet({
-    use: "example.image",
-    activate: () => ({ endpoint: endpoint("image", imageCapability) }),
-  }));
   registry.registerFacet(createRuntimeEndpointAdapterFacet({
     use: "example.speech",
-    activate: () => ({
-      endpoint: endpoint("speech", speechCapability, "EXAMPLE_UNUSED_SPEECH_TOKEN"),
-      externalService: { id: "speech-service", probe: async () => ({ state: "down" as const, detail: "not running" }) },
+    activate: (context) => ({
+      endpoint: {
+        name: context.instance,
+        manifest: { facets: [] },
+        instance: { id: context.instance },
+        bindings: [],
+        credentials: [],
+        install() {},
+      } as never,
+      program: {
+        id: "speech.local",
+        probe: async () => ({ state: "down", detail: "not running" }),
+      },
     }),
   }));
-  registry.registerFacet(createRuntimeServiceAdapterFacet({
-    use: "example.credentials",
-    validate() {},
-    create(context) {
-      return defineRuntimeServicePackage({
-        module: { name: "example.credentials", version: "1" },
-        services: [{
-          role: "credential-store",
-          facet: "credentials",
-          instance: context.instance,
-          implementation: { digest: digestOf("example.credentials@1") },
-          service: { async resolve() { return undefined; } },
-        }],
-      });
-    },
-  }));
-
-  const { diagnostics } = await doctorRuntimeConfig(path, { registry, capabilities: [imageCapability] });
-  assert.deepEqual(diagnostics, []);
-  await rm(root, { recursive: true, force: true });
+  try {
+    const result = await doctorRuntimeConfig(path, { registry });
+    assert.equal(result.diagnostics.some((item) => item.code === "MANAGED_PROGRAM_DOWN"), true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

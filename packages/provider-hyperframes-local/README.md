@@ -17,8 +17,8 @@ The Provider owns both controls because they are deployment policy, not author i
 renders program audio; `@narratage/provider-media-local` separately prepares `TimelineAudio` and muxes
 the final media.
 
-The Runtime Adapter also owns one non-daemon browser service. `services up` invokes the pinned
-HyperFrames CLI's `browser ensure`; the service probe resolves and starts that browser and checks
+The Runtime Adapter also declares one managed browser program. `programs up` invokes the pinned
+HyperFrames CLI's `browser ensure`; its probe resolves and starts that browser and checks
 ffprobe before a Build.
 
 ```ts

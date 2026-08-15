@@ -20,20 +20,20 @@ export {
   createRuntimeArtifactAccessFromConfig,
   createRuntimeMaintenanceFromConfig,
   createRuntimeCredentialsFromConfig,
-  declaredExternalServices,
+  declaredManagedPrograms,
   doctorRuntimeConfig,
   parseRuntimeConfig,
   runtimeConfigPackageSelection,
   runtimeConfigRevision,
 } from "./config.js";
 export {
-  bringExternalServicesUp,
-  reportExternalServices,
-  takeExternalServicesDown,
-} from "./external-services.js";
+  bringManagedProgramsUp,
+  reportManagedPrograms,
+  takeManagedProgramsDown,
+} from "./programs.js";
 export {
   RuntimeAdapterRegistry,
 } from "@narratage/runtime-adapter";
 export type * from "./types.js";
 export type * from "./config.js";
-export type * from "./external-services.js";
+export type * from "./programs.js";

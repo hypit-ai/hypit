@@ -10,7 +10,7 @@ The store resolves only the requested key at Endpoint invocation time. It never 
 serializes the environment. Secret values are handed only to that Endpoint call and do not enter
 BuildState, Runtime Closure, Operation checkpoints, logs or SQLite through framework code.
 
-`createEnvironmentCredentialStorePackage()` exposes it through the same generic Runtime service
+`createEnvironmentCredentialStorePackage()` exposes it through the same generic Runtime Component
 package ABI as every other CredentialStore. A Runtime Profile must activate and select it
 explicitly; `@narratage/local` supplies no credential default. Several selected Stores may coexist,
 and this one declines every reference whose `store` is not `env`.
