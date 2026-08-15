@@ -311,10 +311,8 @@ type DeclaredManagedProgram = {
   readonly program: ManagedProgram;
 };
 
-function sameCapability(left: CapabilityRef, right: CapabilityRef): boolean {
-  return left.name === right.name
-    && left.module.name === right.module.name
-    && left.module.version === right.module.version;
+function capabilityKey(capability: CapabilityRef): string {
+  return `${capability.module.name}@${capability.module.version}#${capability.name}`;
 }
 
 /**
@@ -335,6 +333,9 @@ export async function declaredManagedPrograms(
   // declared program.
   if (options.capabilities?.length === 0) return { dataRoot: root, programs: [] };
   const registry = options.registry ?? new RuntimeAdapterRegistry();
+  const requestedCapabilities = options.capabilities === undefined
+    ? undefined
+    : new Set(options.capabilities.map(capabilityKey));
   await installRuntimeAdapters(
     registry,
     packageRoot,
@@ -351,8 +352,8 @@ export async function declaredManagedPrograms(
       pool: item.pool ?? item.instance,
       config: item.config ?? {},
     });
-    if (options.capabilities !== undefined && !activation.endpoint.offers.some((offer) =>
-      options.capabilities!.some((capability) => sameCapability(offer.capability, capability)))) {
+    if (requestedCapabilities !== undefined && !activation.endpoint.offers.some((offer) =>
+      requestedCapabilities.has(capabilityKey(offer.capability)))) {
       continue;
     }
     const program = activation.program;
@@ -382,8 +383,9 @@ export async function doctorRuntimeConfig(
     readonly activation: RuntimeEndpointActivation;
   }> = [];
   const coveredCapabilities = new Set<string>();
-  const capabilityKey = (capability: CapabilityRef) =>
-    `${capability.module.name}@${capability.module.version}#${capability.name}`;
+  const requestedCapabilities = options.capabilities === undefined
+    ? undefined
+    : new Set(options.capabilities.map(capabilityKey));
   try {
     if (!(await stat(root)).isDirectory()) throw new Error(`Runtime root ${root} is not a directory`);
   } catch (error) {
@@ -435,12 +437,12 @@ export async function doctorRuntimeConfig(
       diagnostics.push(diagnostic(error, "RUNTIME_ENDPOINT_CONFIG_INVALID", item.instance));
       continue;
     }
-    if (options.capabilities !== undefined && !activation.endpoint.offers.some((offer) =>
-      options.capabilities!.some((capability) => sameCapability(offer.capability, capability)))) {
+    if (requestedCapabilities !== undefined && !activation.endpoint.offers.some((offer) =>
+      requestedCapabilities.has(capabilityKey(offer.capability)))) {
       continue;
     }
     for (const offer of activation.endpoint.offers) {
-      if (options.capabilities?.some((capability) => sameCapability(offer.capability, capability))) {
+      if (requestedCapabilities?.has(capabilityKey(offer.capability))) {
         coveredCapabilities.add(capabilityKey(offer.capability));
       }
     }

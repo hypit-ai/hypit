@@ -29,7 +29,6 @@ import {
   needRequestDigest,
   receiptId,
 } from "./provenance.js";
-import { verifyBuildState } from "./verify.js";
 
 function withoutCommand(state: BuildState, id: string): readonly CoreCommand[] {
   return state.outstanding.filter((command) => command.id !== id);
@@ -255,14 +254,15 @@ function applyEvent(state: BuildState, event: BuildEvent): BuildState {
   );
 }
 
-function goalsComplete(state: BuildState): boolean {
-  return state.plan.goals.every((goal) => state.records.some((record) => record.id === goal.record));
+function goalsComplete(state: BuildState, records: ReadonlySet<string>): boolean {
+  return state.plan.goals.every((goal) => records.has(goal.record));
 }
 
 function schedule(state: BuildState): BuildState {
   if (state.status !== "active" || state.outstanding.length > 0) return state;
+  const records = new Set(state.records.map((record) => record.id));
 
-  if (goalsComplete(state)) {
+  if (goalsComplete(state, records)) {
     const complete = {
       ...state,
       status: "complete" as const,
@@ -272,7 +272,7 @@ function schedule(state: BuildState): BuildState {
 
   const commands: CoreCommand[] = [];
   for (const need of state.needs) {
-    if (state.records.some((record) => record.id === need.result)) continue;
+    if (records.has(need.result)) continue;
     commands.push({
       kind: "fulfill-need",
       id: commandId(state.id, "need", need.id),
@@ -283,7 +283,7 @@ function schedule(state: BuildState): BuildState {
   for (const stepState of state.steps) {
     if (stepState.status !== "pending") continue;
     const step = producerStep(state.plan, stepState.id);
-    if (!Object.values(step.inputs).every((id) => state.records.some((record) => record.id === id))) {
+    if (!Object.values(step.inputs).every((id) => records.has(id))) {
       continue;
     }
     commands.push({
@@ -344,14 +344,10 @@ export function start(
     acceptedEvents: [],
     diagnostics: [],
   };
-  verifyBuildState(state);
   return state;
 }
 
 export function reduce(state: BuildState, event?: BuildEvent): BuildState {
-  verifyBuildState(state);
   const next = event === undefined ? state : applyEvent(state, event);
-  const scheduled = schedule(next);
-  verifyBuildState(scheduled);
-  return scheduled;
+  return schedule(next);
 }

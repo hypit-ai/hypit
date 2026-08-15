@@ -39,6 +39,7 @@ export function collectNodePackageComponents(
   const components: ComponentPackage[] = [];
   const producers = new Set<string>();
   const validators = new Set<string>();
+  const declarations = new Set<string>();
   for (const item of packages) {
     assertPackage(item);
     for (const module of item.modules ?? []) {
@@ -51,6 +52,12 @@ export function collectNodePackageComponents(
         moduleSpecifiers.set(specifier, key);
       }
       manifests.set(key, module);
+      for (const producer of module.manifest.producers) {
+        declarations.add(`${key}#producer:${producer.name}`);
+      }
+      for (const type of module.manifest.types) {
+        declarations.add(`${key}#type:${type.name}`);
+      }
     }
     for (const component of item.components ?? []) {
       components.push(component);
@@ -68,14 +75,12 @@ export function collectNodePackageComponents(
   }
   for (const component of components) {
     for (const facet of component.producers ?? []) {
-      const manifest = manifests.get(`${facet.producer.module.name}@${facet.producer.module.version}`)?.manifest;
-      const declaration = manifest?.producers.find((item) => item.name === facet.producer.name);
-      if (declaration === undefined) throw new Error(`Module ${facet.producer.module.name} implements undeclared Producer ${facetKey(facet.producer)}`);
+      const key = `${facet.producer.module.name}@${facet.producer.module.version}#producer:${facet.producer.name}`;
+      if (!declarations.has(key)) throw new Error(`Module ${facet.producer.module.name} implements undeclared Producer ${facetKey(facet.producer)}`);
     }
     for (const facet of component.validators ?? []) {
-      const manifest = manifests.get(`${facet.type.module.name}@${facet.type.module.version}`)?.manifest;
-      const declaration = manifest?.types.find((item) => item.name === facet.type.name);
-      if (declaration === undefined) throw new Error(`Module ${facet.type.module.name} validates undeclared Type ${facetKey(facet.type)}`);
+      const key = `${facet.type.module.name}@${facet.type.module.version}#type:${facet.type.name}`;
+      if (!declarations.has(key)) throw new Error(`Module ${facet.type.module.name} validates undeclared Type ${facetKey(facet.type)}`);
     }
   }
   return components;

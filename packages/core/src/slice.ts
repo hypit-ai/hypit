@@ -70,10 +70,11 @@ export function sliceExecution(
   const authoredRecords = program.records.filter((record) => records.has(record.id));
 
   const requiredModules = new Set<string>();
+  const modulesByKey = new Map(program.closure.modules.map((item) => [moduleKey(item.manifest), item]));
   const requireModule = (ref: ModuleRef): void => {
     const key = moduleKey(ref);
     if (requiredModules.has(key)) return;
-    const resolved = program.closure.modules.find((item) => moduleKey(item.manifest) === key);
+    const resolved = modulesByKey.get(key);
     if (resolved === undefined) throw new Error(`execution slice refers to absent module ${ref.name}@${ref.version}`);
     requiredModules.add(key);
     resolved.manifest.dependencies.forEach((item) => requireModule(item.module));

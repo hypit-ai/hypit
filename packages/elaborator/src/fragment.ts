@@ -264,13 +264,12 @@ export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragm
 
   const exports = new Set<string>();
   const reachableOperations = new Set<string>();
-  const collectDependencies = (ref: FragmentValueRef, seen: Set<string>): void => {
-    if (ref.kind === "fragment-input" || seen.has(ref.operation)) return;
-    seen.add(ref.operation);
+  const collectDependencies = (ref: FragmentValueRef): void => {
+    if (ref.kind === "fragment-input" || reachableOperations.has(ref.operation)) return;
     reachableOperations.add(ref.operation);
     const operation = operations.get(ref.operation);
     assert(operation !== undefined, "UNKNOWN_FRAGMENT_OPERATION", `${fragment.id} references ${ref.operation}`);
-    Object.values(operation.inputs).forEach((input) => collectDependencies(input, seen));
+    Object.values(operation.inputs).forEach(collectDependencies);
   };
 
   for (const item of fragment.exports) {
@@ -288,7 +287,7 @@ export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragm
       "FRAGMENT_EXPORT_TYPE_MISMATCH",
       `${fragment.id}.${item.name} declares ${typeName(item.type)} but returns ${typeName(supplied)}`,
     );
-    collectDependencies(item.root, new Set());
+    collectDependencies(item.root);
   }
   for (const id of operations.keys()) {
     assert(

@@ -115,12 +115,10 @@ class CapacityExecutor implements RuntimeCommandExecutor {
 
   async executeCommand(
     state: BuildState,
-    commandId: string,
+    descriptor: RuntimeRunnableCommand,
     context: { readonly build: string },
   ): Promise<RuntimeExecutionResult> {
     assert(context.build === this.#build, "Capacity executor received another Build identity");
-    const descriptor = this.#delegate.prepare(state).runnable.find((item) => item.command.id === commandId);
-    assert(descriptor !== undefined, `command ${commandId} is not currently executable`);
     const acquired = await this.#acquire(descriptor);
     if (acquired.status === "blocked") {
       return {
@@ -147,7 +145,7 @@ class CapacityExecutor implements RuntimeCommandExecutor {
       }).catch((error: unknown) => { heartbeatError = error; });
     }, Math.max(1, Math.floor(this.#leaseMs / 3)));
     try {
-      const result = await this.#delegate.executeCommand(state, commandId, context);
+      const result = await this.#delegate.executeCommand(state, descriptor, context);
       clearInterval(heartbeatTimer);
       await heartbeat;
       if (heartbeatError !== undefined) throw heartbeatError;
@@ -160,7 +158,7 @@ class CapacityExecutor implements RuntimeCommandExecutor {
       }
       const controlled = (await this.#options.stores.operations.list({
         build: this.#build,
-        command: commandId,
+        command: descriptor.command.id,
       })).find((item) => item.cancellation !== undefined);
       if (controlled !== undefined) {
         return {

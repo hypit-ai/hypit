@@ -222,19 +222,21 @@ export function elaborateAuthorGraph(
   const collected = collectAuthorGraph(program, components, resolveFragment);
   const records = new Map(program.records.map((record) => [record.id, record]));
   const visiting: string[] = [];
+  const visitingAt = new Map<string, number>();
   const visited = new Set<string>();
   const ordered: CollectedComponent[] = [];
 
   const visit = (component: CollectedComponent): void => {
     const id = component.declaration.id;
     if (visited.has(id)) return;
-    const cycleStart = visiting.indexOf(id);
+    const cycleStart = visitingAt.get(id) ?? -1;
     assert(
       cycleStart === -1,
       "AUTHOR_COMPONENT_CYCLE",
       `Author components cycle through ${[...visiting.slice(cycleStart), id].join(" -> ")}`,
       id,
     );
+    visitingAt.set(id, visiting.length);
     visiting.push(id);
     for (const ref of Object.values(component.declaration.inputs)) {
       if (ref.kind !== "component-output") continue;
@@ -248,6 +250,7 @@ export function elaborateAuthorGraph(
       visit(dependency);
     }
     visiting.pop();
+    visitingAt.delete(id);
     visited.add(id);
     ordered.push(component);
   };

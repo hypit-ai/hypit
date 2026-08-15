@@ -17,6 +17,7 @@ import { canonicalStringify, digestOf } from "./canonical.js";
 import { invariant } from "./error.js";
 import {
   operationResultRecord,
+  resolveCandidate,
   resolveLogicalOutput,
   resolveOperation,
   satisfiedCandidate,
@@ -71,6 +72,8 @@ export type PlannedNeed = {
   readonly returns: TypeRef;
 };
 
+const planStepIndexes = new WeakMap<BuildPlan, ReadonlyMap<string, ProducerStep>>();
+
 function plannedNeedKey(need: PlannedNeed): string {
   const ref = (value: { readonly module: { readonly name: string; readonly version: string }; readonly name: string }) =>
     `${value.module.name}@${value.module.version}#${value.name}`;
@@ -117,41 +120,12 @@ export function compileBuild(
   verifyBuildRequest(program, graph, request);
 
   const authored = new Map(program.records.map((record) => [record.id, record]));
-  const demanded = new Map<string, DemandedOperation>();
+  const demandedOperations = new Map<string, OperationNode>();
   const resolvedOutputs = new Map<string, ResolvedSource>();
-  const resolvingOutputs = new Set<string>();
-  const resolvingOperations = new Set<string>();
   const selections = new Map<string, BuildPlan["selections"][number]>();
 
-  const resolveRef = (ref: GraphValueRef): ResolvedSource => {
-    if (ref.kind === "record") {
-      const record = authored.get(ref.id);
-      invariant(record !== undefined, "UNKNOWN_RECORD", `unknown authored record ${ref.id}`, ref.id);
-      return { record: record.id, type: record.type };
-    }
-    if (ref.kind === "logical-output") return resolveOutput(ref.id);
-    return demandOperation(ref.operation);
-  };
-
-  const demandOperation = (id: string): ResolvedSource => {
-    const existing = demanded.get(id);
-    if (existing !== undefined) {
-      const operation = existing.operation;
-      const producer = resolveProducer(program.closure, operation.producer);
-      const type = operation.result.kind === "output"
-        ? producer.outputs.find((port) => port.name === operation.result.name)?.type
-        : producer.needs.find((port) => port.name === operation.result.name)?.returns;
-      invariant(type !== undefined, "OPERATION_RESULT_MISMATCH", `${id} result is not declared`, id);
-      return { record: operationResultRecord(operation), type };
-    }
-    invariant(!resolvingOperations.has(id), "SELECTED_GRAPH_CYCLE", `selected graph cycles through ${id}`, id);
-    resolvingOperations.add(id);
+  const operationSource = (id: string): ResolvedSource => {
     const operation = resolveOperation(graph, id);
-    const inputs = Object.fromEntries(
-      Object.entries(operation.inputs).map(([name, ref]) => [name, resolveRef(ref).record]),
-    );
-    resolvingOperations.delete(id);
-    demanded.set(id, { operation, inputs });
     const producer = resolveProducer(program.closure, operation.producer);
     const type = operation.result.kind === "output"
       ? producer.outputs.find((port) => port.name === operation.result.name)?.type
@@ -160,27 +134,39 @@ export function compileBuild(
     return { record: operationResultRecord(operation), type };
   };
 
-  const resolveOutput = (id: string): ResolvedSource => {
-    const known = resolvedOutputs.get(id);
-    if (known !== undefined) return known;
-    invariant(!resolvingOutputs.has(id), "SELECTED_GRAPH_CYCLE", `selected graph cycles through ${id}`, id);
-    resolvingOutputs.add(id);
-    const output = resolveLogicalOutput(graph, id);
-    const candidate = satisfiedCandidate(graph, id);
+  const pending: GraphValueRef[] = request.targets.map((target) => ({
+    kind: "logical-output",
+    id: target.output,
+  }));
+  while (pending.length > 0) {
+    const ref = pending.pop() as GraphValueRef;
+    if (ref.kind === "record") {
+      invariant(authored.has(ref.id), "UNKNOWN_RECORD", `unknown authored record ${ref.id}`, ref.id);
+      continue;
+    }
+    if (ref.kind === "operation-result") {
+      if (demandedOperations.has(ref.operation)) continue;
+      const operation = resolveOperation(graph, ref.operation);
+      demandedOperations.set(operation.id, operation);
+      pending.push(...Object.values(operation.inputs));
+      continue;
+    }
+    if (resolvedOutputs.has(ref.id)) continue;
+    const output = resolveLogicalOutput(graph, ref.id);
+    const candidate = satisfiedCandidate(graph, ref.id);
     let resolved: ResolvedSource;
     if (candidate.root.kind === "value") {
       const record = sealRecord({
         id: candidate.root.value.id,
         type: candidate.type,
         value: candidate.root.value.value,
-        origin: {
-          kind: "provided",
-        },
+        origin: { kind: "provided" },
       });
       invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`);
       resolved = { record: record.id, type: record.type };
     } else {
-      resolved = demandOperation(candidate.root.result.operation);
+      resolved = operationSource(candidate.root.result.operation);
+      pending.push(candidate.root.result);
     }
     invariant(
       sameType(resolved.type, output.type),
@@ -188,15 +174,37 @@ export function compileBuild(
       `${candidate.id} returns ${typeKey(resolved.type)}, not ${typeKey(output.type)}`,
       candidate.id,
     );
-    resolvingOutputs.delete(id);
-    resolvedOutputs.set(id, resolved);
-    selections.set(id, { output: id, candidate: candidate.id, record: resolved.record });
-    return resolved;
+    resolvedOutputs.set(output.id, resolved);
+    selections.set(output.id, { output: output.id, candidate: candidate.id, record: resolved.record });
+  }
+
+  const resolveRef = (ref: GraphValueRef): ResolvedSource => {
+    if (ref.kind === "record") {
+      const record = authored.get(ref.id);
+      invariant(record !== undefined, "UNKNOWN_RECORD", `unknown authored record ${ref.id}`, ref.id);
+      return { record: record.id, type: record.type };
+    }
+    if (ref.kind === "logical-output") {
+      const resolved = resolvedOutputs.get(ref.id);
+      invariant(resolved !== undefined, "UNKNOWN_LOGICAL_OUTPUT", `unresolved logical output ${ref.id}`, ref.id);
+      return resolved;
+    }
+    invariant(demandedOperations.has(ref.operation), "UNKNOWN_OPERATION", `undemanded Operation ${ref.operation}`, ref.operation);
+    return operationSource(ref.operation);
   };
 
-  const targetSources = request.targets.map((target) => ({ target, source: resolveOutput(target.output) }));
+  const demanded = [...demandedOperations.values()].map((operation): DemandedOperation => ({
+    operation,
+    inputs: Object.fromEntries(
+      Object.entries(operation.inputs).map(([name, ref]) => [name, resolveRef(ref).record]),
+    ),
+  }));
+  const targetSources = request.targets.map((target) => ({
+    target,
+    source: resolvedOutputs.get(target.output) as ResolvedSource,
+  }));
 
-  const steps: ProducerStep[] = [...demanded.values()]
+  const steps: ProducerStep[] = demanded
     .sort((a, b) => a.operation.id.localeCompare(b.operation.id))
     .map(({ operation, inputs }) => ({
       id: operation.id,
@@ -329,8 +337,7 @@ export function selectedProvidedRecords(
   const authored = new Set(program.records.map((record) => record.id));
   const records = new Map<string, TypedRecord>();
   for (const selection of plan.selections) {
-    const candidate = graph.candidates.find((item) => item.id === selection.candidate);
-    invariant(candidate !== undefined, "UNKNOWN_CANDIDATE", `unknown Candidate ${selection.candidate}`, selection.candidate);
+    const candidate = resolveCandidate(graph, selection.candidate);
     if (candidate.root.kind !== "value") continue;
     const record = sealRecord({
       id: candidate.root.value.id,
@@ -353,23 +360,35 @@ export function selectedProvidedRecords(
 }
 
 function assertAcyclic(plan: BuildPlan, records: ReadonlyMap<RecordId, ProducedRecord>): void {
-  const dependencies = new Map<string, Set<string>>();
-  for (const step of plan.steps) dependencies.set(step.id, new Set());
+  const remaining = new Map<string, number>();
+  const dependents = new Map<string, string[]>();
   for (const step of plan.steps) {
-    const own = dependencies.get(step.id) as Set<string>;
+    remaining.set(step.id, 0);
+    dependents.set(step.id, []);
+  }
+  for (const step of plan.steps) {
+    const dependencies = new Set<string>();
     for (const input of Object.values(step.inputs)) {
       const producer = records.get(input)?.step;
-      if (producer !== undefined) own.add(producer);
+      if (producer !== undefined) dependencies.add(producer);
+    }
+    remaining.set(step.id, dependencies.size);
+    for (const dependency of dependencies) {
+      (dependents.get(dependency) as string[]).push(step.id);
     }
   }
-  const complete = new Set<string>();
-  while (complete.size < plan.steps.length) {
-    const ready = [...dependencies.entries()]
-      .filter(([id, required]) => !complete.has(id) && [...required].every((item) => complete.has(item)))
-      .map(([id]) => id);
-    invariant(ready.length > 0, "PLAN_CYCLE", "build plan contains a producer cycle");
-    ready.forEach((id) => complete.add(id));
+  const ready = [...remaining].filter(([, count]) => count === 0).map(([id]) => id);
+  let visited = 0;
+  for (let cursor = 0; cursor < ready.length; cursor += 1) {
+    const id = ready[cursor] as string;
+    visited += 1;
+    for (const dependent of dependents.get(id) as string[]) {
+      const count = (remaining.get(dependent) as number) - 1;
+      remaining.set(dependent, count);
+      if (count === 0) ready.push(dependent);
+    }
   }
+  invariant(visited === plan.steps.length, "PLAN_CYCLE", "build plan contains a producer cycle");
 }
 
 function assertAllStepsReachGoal(
@@ -398,7 +417,12 @@ function assertAllStepsReachGoal(
 }
 
 export function producerStep(plan: BuildPlan, id: string): ProducerStep {
-  const step = plan.steps.find((item) => item.id === id);
+  let index = planStepIndexes.get(plan);
+  if (index === undefined) {
+    index = new Map(plan.steps.map((item) => [item.id, item]));
+    planStepIndexes.set(plan, index);
+  }
+  const step = index.get(id);
   invariant(step !== undefined, "UNKNOWN_STEP", `unknown step ${id}`, id);
   return step;
 }

@@ -70,9 +70,10 @@ function moduleForImport(
   source: MarkupSource,
   request: MarkupImportRequest,
   context: MarkupDecodeContext,
+  modules: ReadonlyMap<string, ResolvedModule>,
 ): ResolvedModule {
   const ref = context.resolveModule(request);
-  const module = context.closure.modules.find((item) => sameModule(item.manifest, ref));
+  const module = modules.get(moduleKey(ref));
   if (!module) {
     fail(source, "MARKUP_IMPORT_CLOSURE", `${moduleKey(ref)} is not present in the resolved closure.`, request.range.start);
   }
@@ -86,13 +87,16 @@ function surfaceScope(
 ): Map<string, BoundSurface> {
   const scope = new Map<string, BoundSurface>();
   const aliases = new Set<string>();
+  const modules = new Map(context.closure.modules.map((item) => [moduleKey(item.manifest), item]));
+  const types = new Set(context.closure.modules.flatMap((item) => item.manifest.types.map((type) =>
+    `${moduleKey(item.manifest)}#${type.name}`)));
   for (const request of imports) {
     if (request.alias !== undefined) {
       if (aliases.has(request.alias)) fail(source, "MARKUP_ALIAS_DUPLICATE", `Duplicate import alias "${request.alias}".`, request.range.start);
       aliases.add(request.alias);
     }
     if (request.kind === "source") continue;
-    const module = moduleForImport(source, request, context);
+    const module = moduleForImport(source, request, context, modules);
     const moduleRef = resolvedModuleRef(module);
     const allowed = new Set([
       moduleKey(moduleRef),
@@ -103,8 +107,7 @@ function surfaceScope(
         if (!allowed.has(moduleKey(output.module))) {
           fail(source, "MARKUP_SURFACE_DEPENDENCY", `Surface ${moduleKey(moduleRef)}#${declaration.surface} outputs ${moduleKey(output.module)}#${output.name} without a Module dependency.`, request.range.start);
         }
-        const target = context.closure.modules.find((item) => sameModule(item.manifest, output.module));
-        if (!target?.manifest.types.some((type) => type.name === output.name)) {
+        if (!types.has(`${moduleKey(output.module)}#${output.name}`)) {
           fail(source, "MARKUP_SURFACE_OUTPUT_TYPE", `Surface ${moduleKey(moduleRef)}#${declaration.surface} outputs unknown Type ${moduleKey(output.module)}#${output.name}.`, request.range.start);
         }
       }
@@ -119,12 +122,14 @@ function surfaceScope(
 export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeContext): Promise<MarkupDecodeResult> {
   const discovery = discoverMarkup(source);
   const sourceImports = context.sourceImports ?? [];
+  const sourceImportsByRequest = new Map(sourceImports.map((item) => [
+    `${item.request.from}\u0000${item.request.alias}`,
+    item,
+  ]));
   const importedBindings = new Map<string, AuthorSourceExport>();
   const importedReferences = new Map<string, SurfaceResolvedReference>();
   for (const request of discovery.imports.filter((item) => item.kind === "source")) {
-    const resolved = sourceImports.find((item) =>
-      item.request.from === request.from
-      && item.request.alias === request.alias);
+    const resolved = sourceImportsByRequest.get(`${request.from}\u0000${request.alias}`);
     if (resolved === undefined) {
       fail(
         source,
@@ -133,6 +138,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         request.range.start,
       );
     }
+    const importedRecords = new Map(resolved.records.map((record) => [record.id, record]));
     for (const item of resolved.exports) {
       const name = `${request.alias}.${item.name}`;
       if (importedBindings.has(name)) {
@@ -142,7 +148,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
       const recordId = item.ref.kind === "record" ? item.ref.id : undefined;
       const record = recordId === undefined
         ? undefined
-        : resolved.records.find((candidate) => candidate.id === recordId);
+        : importedRecords.get(recordId);
       importedReferences.set(name, {
         path: name,
         ref: item.ref,
@@ -153,9 +159,27 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
   }
   const scope = surfaceScope(source, discovery.imports, context);
   const records: TypedRecord[] = [];
+  const recordsById = new Map<string, TypedRecord>();
   const components: AuthorComponent[] = [];
   const componentRanges = new Map<string, SurfaceComponentDraft["range"]>();
   const fragments = new Map<string, GraphFragment>();
+  const fragmentExports = new Map<string, ReadonlyMap<string, GraphFragment["exports"][number]>>();
+  const componentReferences = new Map<string, SurfaceResolvedReference>();
+  const waitingComponents = new Map<string, AuthorComponent[]>();
+  const indexComponent = (component: AuthorComponent, fragment: GraphFragment): void => {
+    const declarations = fragmentExports.get(fragment.id)
+      ?? new Map(fragment.exports.map((item) => [item.name, item]));
+    fragmentExports.set(fragment.id, declarations);
+    for (const [output, path] of Object.entries(component.outputs)) {
+      const declaration = declarations.get(output);
+      if (declaration === undefined) continue;
+      componentReferences.set(path, {
+        path,
+        ref: { kind: "component-output", component: component.id, output },
+        type: declaration.type,
+      });
+    }
+  };
   const recordIds = new Set<string>();
   const componentIds = new Set<string>();
   const privateBindings = new Set<string>();
@@ -212,7 +236,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
               ? imported
               : { ...imported, record: canonicalize(imported.record) as unknown as TypedRecord };
           }
-          const record = records.find((candidate) => candidate.id === path);
+          const record = recordsById.get(path);
           if (record !== undefined) {
             return {
                 path,
@@ -221,19 +245,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
                 record: canonicalize(record) as unknown as TypedRecord,
             };
           }
-          for (const component of components) {
-            const output = Object.entries(component.outputs).find(([, publicName]) => publicName === path);
-            if (output === undefined) continue;
-            const fragment = fragments.get(component.fragment);
-            const declaration = fragment?.exports.find((candidate) => candidate.name === output[0]);
-            if (declaration === undefined) continue;
-            return {
-              path,
-              ref: { kind: "component-output", component: component.id, output: output[0] },
-              type: declaration.type,
-            };
-          }
-          return undefined;
+          return componentReferences.get(path);
         },
         resolveAsset(request) {
           if (context.resolveAsset === undefined) {
@@ -304,6 +316,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         origin: { kind: "authored" },
       });
       records.push(record);
+      recordsById.set(record.id, record);
     }
     for (const draft of output.components) {
       if (
@@ -331,12 +344,21 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
       }
       componentIds.add(draft.id);
       componentRanges.set(draft.id, draft.range);
-      components.push({
+      const component = {
         id: draft.id,
         fragment: draft.fragment,
         inputs: draft.inputs,
         outputs: draft.outputs,
-      });
+      };
+      components.push(component);
+      const fragment = fragments.get(component.fragment);
+      if (fragment === undefined) {
+        const waiting = waitingComponents.get(component.fragment) ?? [];
+        waiting.push(component);
+        waitingComponents.set(component.fragment, waiting);
+      } else {
+        indexComponent(component, fragment);
+      }
     }
     for (const fragment of output.fragments) {
       if (fragment.format !== "narratage.fragment@1" || !isDigest(fragment.id)) {
@@ -352,6 +374,9 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         fail(source, "MARKUP_FRAGMENT_CONFLICT", `Graph Fragment ${fragment.id} has conflicting definitions.`, opening.start);
       }
       fragments.set(fragment.id, fragment);
+      fragmentExports.set(fragment.id, new Map(fragment.exports.map((item) => [item.name, item])));
+      for (const component of waitingComponents.get(fragment.id) ?? []) indexComponent(component, fragment);
+      waitingComponents.delete(fragment.id);
     }
   }
   if (!closed) {
@@ -389,7 +414,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
     for (const [output, name] of Object.entries(component.outputs)) {
       if (privateBindings.has(name)) continue;
       if (exportNames.has(name)) fail(source, "MARKUP_EXPORT_DUPLICATE", `Duplicate public export ${name}.`);
-      const declaration = fragment.exports.find((item) => item.name === output);
+      const declaration = fragmentExports.get(fragment.id)?.get(output);
       if (declaration === undefined) {
         fail(source, "MARKUP_COMPONENT_EXPORT", `${component.id} binds unknown Fragment export ${output}.`);
       }

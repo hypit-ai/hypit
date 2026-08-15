@@ -1,7 +1,6 @@
 import {
   canonicalize,
   digestOf,
-  verifyBuildState,
 } from "@narratage/core";
 import type {
   BuildState,
@@ -65,7 +64,6 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
  * No historical execution state crosses this boundary.
  */
 export function createBuildRecordCandidate(input: BuildRecordCandidateInput): Candidate {
-  verifyBuildState(input.build);
   const selection = input.build.plan.selections.find((item) => item.output === input.sourceOutput);
   assert(
     selection !== undefined,

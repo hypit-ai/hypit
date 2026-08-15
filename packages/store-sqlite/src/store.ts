@@ -100,9 +100,7 @@ function transaction<T>(database: DatabaseSync, body: () => T): T {
 }
 
 function durableBuildState(state: BuildState): BuildState {
-  const normalized = { ...structuredClone(state), outstanding: [] };
-  verifyBuildState(normalized);
-  return normalized;
+  return { ...structuredClone(state), outstanding: [] };
 }
 
 function parseBuildSnapshot(row: Row): BuildSnapshot {
