@@ -14,11 +14,7 @@ import {
   compileAudioProgramPlan,
   verifyAudioProgramPlan,
 } from "./audio-plan.js";
-import {
-  mediaPipelineImplementationDigests,
-  mediaPipelineProducers,
-  mediaPipelineTypes,
-} from "./manifest.js";
+import { mediaPipelineProducers, mediaPipelineTypes } from "./manifest.js";
 import {
   sealMediaSelectionRequest,
   selectMediaStreams,
@@ -74,35 +70,30 @@ export const mediaPipelineComponent = {
   validators: [
     {
       type: mediaPipelineTypes.selectionRequest,
-      implementationDigest: mediaPipelineImplementationDigests.requestValidator,
       handler: ({ value }) => {
         verifyMediaSelectionRequest(inline(value, "MediaSelectionRequest"));
       },
     },
     {
       type: mediaPipelineTypes.audioProgramPlan,
-      implementationDigest: mediaPipelineImplementationDigests.audioPlanValidator,
       handler: ({ value }) => {
         verifyAudioProgramPlan(inline(value, "AudioProgramPlan"));
       },
     },
     {
       type: mediaPipelineTypes.transformProgram,
-      implementationDigest: mediaPipelineImplementationDigests.transformProgramValidator,
       handler: ({ value }) => {
         verifyMediaTransformProgram(inline(value, "MediaTransformProgram"));
       },
     },
     {
       type: mediaPipelineTypes.audioExtractionRequest,
-      implementationDigest: mediaPipelineImplementationDigests.audioExtractionValidator,
       handler: ({ value }) => {
         verifyAudioExtractionRequest(inline(value, "AudioExtractionRequest"));
       },
     },
     {
       type: mediaPipelineTypes.frameExtractionRequest,
-      implementationDigest: mediaPipelineImplementationDigests.frameExtractionValidator,
       handler: ({ value }) => {
         verifyFrameExtractionRequest(inline(value, "FrameExtractionRequest"));
       },
@@ -111,7 +102,6 @@ export const mediaPipelineComponent = {
   producers: [
     {
       producer: mediaPipelineProducers.bindVisualRequest,
-      implementationDigest: mediaPipelineImplementationDigests.bindVisualRequest,
       handler: ({ inputs }) => ({
         outputs: {
           request: {
@@ -127,7 +117,6 @@ export const mediaPipelineComponent = {
     },
     {
       producer: mediaPipelineProducers.bindAvRequest,
-      implementationDigest: mediaPipelineImplementationDigests.bindAvRequest,
       handler: ({ inputs }) => ({
         outputs: {
           request: {
@@ -143,7 +132,6 @@ export const mediaPipelineComponent = {
     },
     {
       producer: mediaPipelineProducers.inspect,
-      implementationDigest: mediaPipelineImplementationDigests.inspect,
       handler: ({ inputs }) => {
         const source = blob(inputs.source!.value, "Media inspection source");
         const need: InspectMediaNeed = { source };
@@ -152,7 +140,6 @@ export const mediaPipelineComponent = {
     },
     {
       producer: mediaPipelineProducers.select,
-      implementationDigest: mediaPipelineImplementationDigests.select,
       handler: ({ inputs }) => {
         const inspection = inline(inputs.inspection!.value, "MediaInspection");
         const request = inline(inputs.request!.value, "MediaSelectionRequest");
@@ -168,7 +155,6 @@ export const mediaPipelineComponent = {
     },
     {
       producer: mediaPipelineProducers.normalize,
-      implementationDigest: mediaPipelineImplementationDigests.normalize,
       handler: ({ inputs }) => {
         const source = blob(inputs.source!.value, "Media normalization source");
         const inspection = inline(inputs.inspection!.value, "MediaInspection");
@@ -189,7 +175,6 @@ export const mediaPipelineComponent = {
     },
     {
       producer: mediaPipelineProducers.transform,
-      implementationDigest: mediaPipelineImplementationDigests.transform,
       handler: ({ inputs }) => {
         const media = inline(inputs.media!.value, "SynchronizedMedia");
         const program = inline(inputs.program!.value, "MediaTransformProgram");
@@ -205,7 +190,6 @@ export const mediaPipelineComponent = {
     },
     {
       producer: mediaPipelineProducers.extractAudio,
-      implementationDigest: mediaPipelineImplementationDigests.extractAudio,
       handler: ({ inputs }) => {
         const source = blob(inputs.source!.value, "Audio extraction source");
         const inspection = inline(inputs.inspection!.value, "MediaInspection");
@@ -223,7 +207,6 @@ export const mediaPipelineComponent = {
     },
     {
       producer: mediaPipelineProducers.extractFrame,
-      implementationDigest: mediaPipelineImplementationDigests.extractFrame,
       handler: ({ inputs }) => {
         const source = blob(inputs.source!.value, "Frame extraction source");
         const inspection = inline(inputs.inspection!.value, "MediaInspection");
@@ -246,7 +229,6 @@ export const mediaPipelineComponent = {
     },
     {
       producer: mediaPipelineProducers.projectSpeechEvidenceAudio,
-      implementationDigest: mediaPipelineImplementationDigests.projectSpeechEvidenceAudio,
       handler: ({ inputs }) => {
         const audio = inline(inputs.audio!.value, "SpeechAudioBasis") as unknown as SpeechAudioBasis;
         assertSpeechAudioBasisIdentity(audio);
@@ -271,7 +253,6 @@ export const mediaPipelineComponent = {
     },
     {
       producer: mediaPipelineProducers.planAudio,
-      implementationDigest: mediaPipelineImplementationDigests.planAudio,
       handler: ({ inputs }) => {
         const composition = inline(inputs.composition!.value, "Composition") as unknown as Composition;
         const space = inline(inputs.space!.value, "ProgramSpace") as unknown as ProgramSpace;
@@ -283,7 +264,6 @@ export const mediaPipelineComponent = {
     },
     {
       producer: mediaPipelineProducers.renderAudio,
-      implementationDigest: mediaPipelineImplementationDigests.renderAudio,
       handler: ({ inputs }) => {
         const plan = inline(inputs.plan!.value, "AudioProgramPlan");
         verifyAudioProgramPlan(plan);
@@ -293,7 +273,6 @@ export const mediaPipelineComponent = {
     },
     {
       producer: mediaPipelineProducers.mux,
-      implementationDigest: mediaPipelineImplementationDigests.mux,
       handler: ({ inputs }) => {
         const visual = inline(inputs.visual!.value, "RenderedVisual");
         const audio = inline(inputs.audio!.value, "TimelineAudio");
@@ -309,7 +288,6 @@ export const mediaPipelineComponent = {
     },
     {
       producer: mediaPipelineProducers.projectMuxed,
-      implementationDigest: mediaPipelineImplementationDigests.projectMuxed,
       handler: ({ inputs }) => {
         const media = inline(inputs.media!.value, "MuxedMedia");
         verifyMuxedMedia(media);

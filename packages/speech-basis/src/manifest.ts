@@ -4,13 +4,6 @@ import { compositionDependency, compositionTypes } from "@narratage/composition"
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
 
-import {
-  projectSpeechAudioImplementationDigest,
-  projectSpeechAudioTrackImplementationDigest,
-  projectSpeechProgramSpaceImplementationDigest,
-  projectSpeechVisualImplementationDigest,
-} from "./projection.js";
-
 export const speechBasisModuleRef = { name: "@narratage/speech-basis", version: "1" } as const;
 
 export const speechBasisProducers = {
@@ -21,7 +14,7 @@ export const speechBasisProducers = {
 } satisfies Record<string, ProducerRef>;
 
 export const speechBasisManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: speechBasisModuleRef.name,
   version: speechBasisModuleRef.version,
   dependencies: [
@@ -37,38 +30,24 @@ export const speechBasisManifest: ModuleManifest = {
       inputs: [{ name: "basis", type: speechTypes.basis }],
       outputs: [{ name: "programSpace", type: programSpaceTypes.programSpace }],
       needs: [],
-      implementation: {
-        digest: projectSpeechProgramSpaceImplementationDigest,
-      },
     },
     {
       name: speechBasisProducers.projectAudio.name,
       inputs: [{ name: "basis", type: speechTypes.basis }],
       outputs: [{ name: "audio", type: speechTypes.audioBasis }],
       needs: [],
-      implementation: {
-        digest: projectSpeechAudioImplementationDigest,
-      },
     },
     {
       name: speechBasisProducers.projectVisual.name,
       inputs: [{ name: "basis", type: speechTypes.basis }],
       outputs: [{ name: "visual", type: compositionTypes.visualTrack }],
       needs: [],
-      implementation: {
-        digest: projectSpeechVisualImplementationDigest,
-      },
     },
     {
       name: speechBasisProducers.projectAudioTrack.name,
       inputs: [{ name: "basis", type: speechTypes.basis }],
       outputs: [{ name: "track", type: compositionTypes.audioTrack }],
       needs: [],
-      implementation: {
-        digest: projectSpeechAudioTrackImplementationDigest,
-      },
     },
   ],
 };
-
-export const speechBasisManifestDigest = digestOf(speechBasisManifest);

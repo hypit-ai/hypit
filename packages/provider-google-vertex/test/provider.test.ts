@@ -16,10 +16,7 @@ import { EndpointRegistry, MemoryArtifactStore } from "@narratage/driver-node";
 import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";
 import { digestOf } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
-import {
-  createGoogleVertexCaptionProvider,
-  googleVertexProviderImplementationDigest,
-} from "@narratage/provider-google-vertex";
+import { createGoogleVertexCaptionProvider } from "@narratage/provider-google-vertex";
 import type { GenerateCaptionContent } from "@narratage/provider-google-vertex";
 import { captionDisplaySequence, parseScript } from "@narratage/script";
 
@@ -74,9 +71,8 @@ test("Vertex transports the exact model request while the model package validate
   const requestValue = request();
   let captured: Parameters<GenerateCaptionContent>[0] | undefined;
   const provider = createGoogleVertexCaptionProvider({
-    project: "svml-test-project",
+    project: "narratage-test-project",
     location: "global",
-    generateContentImplementationDigest: digestOf("caption-gemini:test-transport"),
     generateContent: async (input) => {
       captured = input;
       return {
@@ -105,19 +101,18 @@ test("Vertex transports the exact model request while the model package validate
 });
 
 test("Vertex configuration exposes credential/queue policy without changing the model request", () => {
-  const provider = createGoogleVertexCaptionProvider({ project: "svml-test-project", defaultConcurrency: 3 });
+  const provider = createGoogleVertexCaptionProvider({ project: "narratage-test-project", defaultConcurrency: 3 });
   assert.equal(provider.instance.id, "google-vertex.caption");
   const facet = provider.manifest.facets[0];
   assert.equal(facet?.role, "capability-endpoint");
   assert(facet?.role === "capability-endpoint");
   assert.equal(facet.defaultConcurrency, 3);
   assert.deepEqual(facet.credentialSlots, ["googleCredentials"]);
-  assert.deepEqual(provider.bindings, [{
+  assert.deepEqual(provider.offers, [{
     capability: captionGeminiCapabilities.plan,
     returns: captionTypes.plan,
     endpoint: "google-vertex.caption",
   }]);
-  assert.equal(facet.implementation.digest, googleVertexProviderImplementationDigest);
 });
 
 test("Vertex defers projectEnv resolution until the Endpoint handles a Need", async () => {
@@ -127,7 +122,6 @@ test("Vertex defers projectEnv resolution until the Endpoint handles a Need", as
   try {
     const provider = createGoogleVertexCaptionProvider({
       projectEnv: variable,
-      generateContentImplementationDigest: digestOf("caption-gemini:unreached-transport"),
       generateContent: async () => {
         throw new Error("transport must not be reached");
       },

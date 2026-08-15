@@ -7,22 +7,6 @@ import { sealAudioTrack, sealVisualTrack } from "@narratage/composition";
 import type { AudioTrack, VisualTrack } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
 
-export const projectSpeechAudioImplementationDigest = digestOf(
-  "@narratage/speech-basis/project-audio@1",
-);
-
-export const projectSpeechVisualImplementationDigest = digestOf(
-  "@narratage/speech-basis/project-visual@1",
-);
-
-export const projectSpeechAudioTrackImplementationDigest = digestOf(
-  "@narratage/speech-basis/project-audio-track@1",
-);
-
-export const projectSpeechProgramSpaceImplementationDigest = digestOf(
-  "@narratage/speech-basis/project-program-space@1",
-);
-
 export function projectSpeechProgramSpace(basis: SpeechBasis): ProgramSpace {
   assertSpeechBasisIdentity(basis);
   return basis.programSpace;
@@ -45,7 +29,7 @@ export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
     endFrameExclusive: segment.endFrameExclusive,
   }]));
   return sealVisualTrack({
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     id: trackId,
     presents: lowerRestrictedSpeechVisualPresents(
       trackId,

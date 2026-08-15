@@ -15,24 +15,6 @@ import type {
   SpatialPoint,
 } from "./types.js";
 
-export const spatialImplementationDigests = {
-  canvasFrame: digestOf("@narratage/spatial/canvas-frame@1"),
-  frameEdges: digestOf("@narratage/spatial/frame-edges@1"),
-  anchoredFrame: digestOf("@narratage/spatial/anchored-frame@1"),
-  aspectFrame: digestOf("@narratage/spatial/aspect-frame@1"),
-  fitContent: digestOf("@narratage/spatial/fit-content@1"),
-} as const;
-
-export const spatialValidatorDigests = {
-  canvas: digestOf("@narratage/spatial/validate-canvas@1"),
-  point: digestOf("@narratage/spatial/validate-point@1"),
-  frame: digestOf("@narratage/spatial/validate-frame@1"),
-  path: digestOf("@narratage/spatial/validate-path@1"),
-  extent: digestOf("@narratage/spatial/validate-extent@1"),
-  fit: digestOf("@narratage/spatial/validate-fit@1"),
-  fitted: digestOf("@narratage/spatial/validate-fitted@1"),
-} as const;
-
 function finite(value: number, label: string): void {
   if (!Number.isFinite(value)) throw new Error(`${label} must be finite.`);
 }

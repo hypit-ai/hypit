@@ -91,7 +91,7 @@ export function sealCompiledGraph(
     operations: [...graph.operations].map(normalizeOperation).sort((a, b) => a.id.localeCompare(b.id)),
   };
   const content = {
-    format: "svml.graph@1" as const,
+    format: "narratage.graph@1" as const,
     ...normalized,
   };
   return { ...content, id: digestOf(content) };
@@ -104,11 +104,8 @@ export function sealBuildRequest(
     .map((target) => ({ output: target.output }))
     .sort((a, b) => a.output.localeCompare(b.output));
   const content = {
-    format: "svml.build-request@1" as const,
+    format: "narratage.build-request@1" as const,
     graph: request.graph,
-    ...(request.implementationClosure === undefined
-      ? {}
-      : { implementationClosure: request.implementationClosure }),
     targets,
   };
   return { ...content, digest: digestOf(content) };
@@ -251,7 +248,7 @@ function verifySatisfaction(
 }
 
 export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph): void {
-  invariant(graph.format === "svml.graph@1", "UNSUPPORTED_GRAPH", "unsupported compiled graph format");
+  invariant(graph.format === "narratage.graph@1", "UNSUPPORTED_GRAPH", "unsupported compiled graph format");
   invariant(isDigest(graph.id), "INVALID_DIGEST", "compiled graph id is invalid");
   invariant(
     graph.program === program.semanticDigest,
@@ -309,17 +306,12 @@ export function verifyBuildRequest(
 ): void {
   verifyCompiledGraph(program, graph);
   invariant(
-    request.format === "svml.build-request@1",
+    request.format === "narratage.build-request@1",
     "UNSUPPORTED_BUILD_REQUEST",
     "unsupported BuildRequest format",
   );
   invariant(isDigest(request.digest), "INVALID_DIGEST", "BuildRequest digest is invalid");
   invariant(request.graph === graph.id, "BUILD_REQUEST_GRAPH_MISMATCH", "BuildRequest belongs to another graph");
-  invariant(
-    request.implementationClosure === undefined || isDigest(request.implementationClosure),
-    "INVALID_IMPLEMENTATION_CLOSURE_DIGEST",
-    "BuildRequest implementation closure digest is invalid",
-  );
   const { digest: _digest, ...content } = request;
   invariant(request.digest === digestOf(content), "BUILD_REQUEST_DIGEST_MISMATCH", "BuildRequest digest differs");
   invariant(request.targets.length > 0, "EMPTY_BUILD_TARGETS", "BuildRequest has no Targets");

@@ -4,8 +4,6 @@ import {
   digestOf,
   isDigest,
   sealRecord,
-  verifyClosure,
-  verifyRecordStructure,
 } from "@narratage/core";
 import type {
   CanonicalValue,
@@ -44,8 +42,6 @@ import type {
   MarkupAuthorFrontendOptions,
   MarkupImportRequest,
 } from "./types.js";
-
-export const markupFrontendImplementationDigest = digestOf("@narratage/markup/frontend@1");
 export const markupAuthorFrontendId = "@narratage/markup@1";
 
 type BoundSurface = {
@@ -121,7 +117,6 @@ function surfaceScope(
 }
 
 export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeContext): Promise<MarkupDecodeResult> {
-  verifyClosure(context.closure);
   const discovery = discoverMarkup(source);
   const sourceImports = context.sourceImports ?? [];
   const importedBindings = new Map<string, AuthorSourceExport>();
@@ -308,7 +303,6 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         value: draft.value,
         origin: { kind: "authored" },
       });
-      verifyRecordStructure(context.closure, record);
       records.push(record);
     }
     for (const draft of output.components) {
@@ -345,7 +339,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
       });
     }
     for (const fragment of output.fragments) {
-      if (fragment.format !== "svml.fragment@1" || !isDigest(fragment.id)) {
+      if (fragment.format !== "narratage.fragment@1" || !isDigest(fragment.id)) {
         fail(
           source,
           "MARKUP_FRAGMENT_IDENTITY",
@@ -419,7 +413,6 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
 export function createMarkupAuthorFrontend(options: MarkupAuthorFrontendOptions): MarkupAuthorFrontend {
   return {
     id: markupAuthorFrontendId,
-    implementationDigest: markupFrontendImplementationDigest,
     discover(source) {
       const discovery = discoverMarkup(source);
       return {

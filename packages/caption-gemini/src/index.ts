@@ -1,16 +1,6 @@
 export { captionGeminiComponent } from "./component.js";
 export { captionGeminiPlanningFragment } from "./fragment.js";
-export {
-  captionGeminiCapabilities,
-  captionGeminiImplementationDigests,
-  captionGeminiManifest, captionGeminiMarkupSurfaces,
-  captionGeminiManifestDigest,
-  captionGeminiModuleRef,
-  captionGeminiProducers,
-  captionGeminiProgramSchema,
-  captionGeminiRequestSchema,
-  captionGeminiTypes,
-} from "./manifest.js";
+export { captionGeminiCapabilities, captionGeminiManifest, captionGeminiMarkupSurfaces, captionGeminiModuleRef, captionGeminiProducers, captionGeminiTypes } from "./manifest.js";
 export { sealCaptionGeminiPlan, verifyCaptionGeminiPlan } from "./plan.js";
 export { sealCaptionGeminiProgram, verifyCaptionGeminiProgram } from "./program.js";
 export {

@@ -17,7 +17,7 @@ function document_() {
     id: "caption-preview",
     canvas: { width: 1080, height: 1920, clearColor: "#09090b" },
     tracks: [sealVisualTrack({
-      visualIr: "svml.visual-ir@1",
+      visualIr: "narratage.visual-ir@1",
       id: "caption",
       presents: [{
         id: "one", span: { startFrame: 0, endFrameExclusive: 30 },

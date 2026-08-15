@@ -13,8 +13,8 @@ Operation. Selecting an Existing `SpeechBasis` stops generation and leaves both 
 selecting only an Existing visual Candidate does not change the independent audio path.
 
 `speechBasisComponent` enumerates all four Producer facets. Their identities are checked against the
-static `speechBasisManifest`, enter the installed implementation package lock, and can be activated by
-any compatible compute Host without a Driver or Runtime source change. The component has no Provider,
+static `speechBasisManifest` and can be activated by any compatible compute Host selected by Source
+imports without a Driver or Runtime source change. The component has no Provider,
 Artifact access, queue or credentials.
 
 The package intentionally publishes no Type validators: it does not own any of its input or output

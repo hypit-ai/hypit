@@ -4,9 +4,7 @@ export { createTextRenderFragment } from "./fragment.js";
 export type { TextFragmentBinding } from "./fragment.js";
 export {
   textDependency,
-  textImplementationDigests,
   textManifest, textMarkupSurfaces,
-  textManifestDigest,
   textModuleRef,
   textProducers,
   textTypes,

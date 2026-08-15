@@ -12,4 +12,4 @@ The repository ships the frozen deployment environment in `services/image-opencv
 Adapter's declared configuration, `programs up` runs `uv sync --frozen`; the Endpoint and program probe
 and doctor all resolve the resulting `.venv` interpreter. An explicit `pythonExecutable` selects an
 operator-managed compatible environment and suppresses that managed prepare. Runtime admission and
-inner image work share the configured Endpoint Authority/Route resources; no separate queue is hidden in this package.
+inner image work share the configured Endpoint pool/lane resources; no separate queue is hidden in this package.

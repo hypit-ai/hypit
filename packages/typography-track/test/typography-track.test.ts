@@ -184,7 +184,7 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
   assert.equal(track.presents[0]?.elements[2]?.kind, "text-flow");
 
   const lower = sealVisualTrack({
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     id: "lower",
     presents: [{
       id: "lower",
@@ -198,9 +198,9 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [track, lower],
   }), space);
-  assert.match(rendered.html, /data-svml-text-run="run"/u);
+  assert.match(rendered.html, /data-narratage-text-run="run"/u);
   assert.match(rendered.html, /background-image:linear-gradient\(#111111,#111111\)/u);
-  assert.ok(rendered.html.indexOf('data-svml-present-id="lower"') < rendered.html.indexOf('data-svml-present-id="callout"'));
+  assert.ok(rendered.html.indexOf('data-narratage-present-id="lower"') < rendered.html.indexOf('data-narratage-present-id="callout"'));
 });
 
 test("Text Mask explicitly consumes one authored Text Program and one owned still Surface", () => {
@@ -320,10 +320,9 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
       mediaTypes.compositableSurface,
       textTypes.text,
     ],
-    implementation: { digest: fixtureDigest },
   } as const;
   const fixtureManifest: ModuleManifest = {
-    format: "svml.module@1",
+    format: "narratage.module@1",
     name: fixtureModule.name,
     version: fixtureModule.version,
     dependencies: [
@@ -332,7 +331,6 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
       mediaDependency,
       {
         module: { name: svsManifest.name, version: svsManifest.version },
-        digest: computeModuleDigest(svsManifest),
       },
       textDependency,
     ],
@@ -596,12 +594,12 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     id: "rich-text-film",
     canvas: { width: 1080, height: 900, clearColor: "#000000" }, tracks: [track],
   }), space);
-  assert.match(rendered.html, /data-svml-text-paint-layer="5"/u);
+  assert.match(rendered.html, /data-narratage-text-paint-layer="5"/u);
   assert.match(rendered.html, /feMorphology/u);
   assert.match(rendered.html, /linear-gradient\(30deg/u);
   assert.match(rendered.html, /radial-gradient/u);
-  assert.match(rendered.html, /data-svml-text-overflow="shrink"/u);
-  assert.match(rendered.html, /data-svml-text-line-sequences/u);
+  assert.match(rendered.html, /data-narratage-text-overflow="shrink"/u);
+  assert.match(rendered.html, /data-narratage-text-line-sequences/u);
   assert.match(rendered.html, /<textPath/u);
-  assert.match(rendered.html, /data-svml-text-path-margin/u);
+  assert.match(rendered.html, /data-narratage-text-path-margin/u);
 });

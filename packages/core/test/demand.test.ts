@@ -67,28 +67,20 @@ const implementation = (name: string) => ({
 });
 
 const manifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
   types: [
-    { name: types.head.name, schema: { kind: "string", minLength: 1 } },
-    { name: types.duration.name, schema: { kind: "number", minimum: 0 } },
-    { name: types.image.name, schema: { kind: "string", minLength: 1 } },
-    { name: types.imageSet.name, schema: { kind: "array", items: { kind: "string" }, minItems: 1 } },
+    { name: types.head.name },
+    { name: types.duration.name },
+    { name: types.image.name },
+    { name: types.imageSet.name },
     {
       name: types.product.name,
-      schema: {
-        kind: "object",
-        fields: {
-          C: { schema: { kind: "string", minLength: 1 } },
-          D: { schema: { kind: "string", minLength: 1 } },
-        },
-      },
     },
     ...[types.a, types.b, types.c, types.d, types.combined].map((type) => ({
       name: type.name,
-      schema: { kind: "string" as const, minLength: 1 },
     })),
   ],
   capabilities: [{ name: seedanceCapability.name, returns: types.image }],
@@ -98,14 +90,12 @@ const manifest: ModuleManifest = {
       inputs: [{ name: "head", type: types.head }],
       outputs: [{ name: "image", type: types.image }],
       needs: [],
-      implementation: implementation("p1"),
     },
     {
       name: producers.p2.name,
       inputs: [{ name: "head", type: types.head }, { name: "image1", type: types.image }],
       outputs: [{ name: "image", type: types.image }],
       needs: [],
-      implementation: implementation("p2"),
     },
     {
       name: producers.p3.name,
@@ -116,7 +106,6 @@ const manifest: ModuleManifest = {
       ],
       outputs: [{ name: "image", type: types.image }],
       needs: [],
-      implementation: implementation("p3"),
     },
     {
       name: producers.collect.name,
@@ -127,7 +116,6 @@ const manifest: ModuleManifest = {
       ],
       outputs: [{ name: "images", type: types.imageSet }],
       needs: [],
-      implementation: implementation("collect"),
     },
     {
       name: producers.seedance.name,
@@ -139,14 +127,12 @@ const manifest: ModuleManifest = {
       ],
       outputs: [],
       needs: [{ name: "media", capability: seedanceCapability, returns: types.image }],
-      implementation: implementation("seedance"),
     },
     {
       name: producers.black.name,
       inputs: [{ name: "duration", type: types.duration }],
       outputs: [{ name: "media", type: types.image }],
       needs: [],
-      implementation: implementation("black"),
     },
     ...[
       [producers.a1, "value", types.a],
@@ -156,49 +142,42 @@ const manifest: ModuleManifest = {
       inputs: [],
       outputs: [{ name: name as string, type: type as TypeRef }],
       needs: [],
-      implementation: implementation((ref as ProducerRef).name),
     })),
     {
       name: producers.b1.name,
       inputs: [{ name: "A", type: types.a }, { name: "B", type: types.b }],
       outputs: [{ name: "C", type: types.c }],
       needs: [],
-      implementation: implementation("b1"),
     },
     {
       name: producers.b2.name,
       inputs: [{ name: "A", type: types.a }, { name: "B", type: types.b }],
       outputs: [{ name: "D", type: types.d }],
       needs: [],
-      implementation: implementation("b2"),
     },
     {
       name: producers.makeProduct.name,
       inputs: [{ name: "A", type: types.a }, { name: "B", type: types.b }],
       outputs: [{ name: "product", type: types.product }],
       needs: [],
-      implementation: implementation("make-product"),
     },
     {
       name: producers.projectC.name,
       inputs: [{ name: "product", type: types.product }],
       outputs: [{ name: "C", type: types.c }],
       needs: [],
-      implementation: implementation("project-c"),
     },
     {
       name: producers.projectD.name,
       inputs: [{ name: "product", type: types.product }],
       outputs: [{ name: "D", type: types.d }],
       needs: [],
-      implementation: implementation("project-d"),
     },
     {
       name: producers.c.name,
       inputs: [{ name: "C", type: types.c }, { name: "D", type: types.d }],
       outputs: [{ name: "combined", type: types.combined }],
       needs: [],
-      implementation: implementation("c"),
     },
   ],
 };
@@ -396,21 +375,6 @@ test("an Existing Value is a normal Candidate root and prevents the paid Need fr
   assert.equal(transition.status, "complete");
   assert.equal(transition.needs.length, 0);
   assert.deepEqual(transition.outstanding, []);
-});
-
-test("Provided Values are checked against the Logical Output Contract", () => {
-  const program = createProgram();
-  const graph = createImageGraph(program);
-  const invalid = sealCompiledGraph({
-    program: graph.program,
-    outputs: graph.outputs,
-    operations: graph.operations,
-    candidates: graph.candidates.map((item) => item.id === "existing-image1"
-      ? providedCandidate("existing-image1", types.image, "provided:image1", 42)
-      : item),
-  });
-  const selected = selectCandidates(invalid, [choose("image1", "existing-image1")]);
-  assert.throws(() => start(program, selected, request(selected, ["image1"])), /must be a string/u);
 });
 
 test("Provided state survives JSON round-trip and regenerates identical ready Commands", () => {

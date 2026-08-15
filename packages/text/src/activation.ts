@@ -11,8 +11,8 @@ import {
   textMarkupSurfaces,
 } from "./index.js";
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   modules: [{ manifest: textManifest }],
   components: [textComponent],
   hostFacets: [
@@ -30,4 +30,4 @@ export const svmlPackage = {
   ],
 };
 
-export default svmlPackage;
+export default narratagePackage;

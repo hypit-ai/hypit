@@ -4,10 +4,10 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-adapter";
+} from "@narratage/runtime-kit";
 import {
   diagnoseRuntimeExecutable,
-} from "@narratage/runtime-adapter-node";
+} from "@narratage/runtime-host-node";
 
 import { resolveLocalOpenCvDeployment } from "./deployment.js";
 import { createLocalOpenCvImageProvider } from "./provider.js";
@@ -16,7 +16,7 @@ import { localOpenCvProgram } from "./program.js";
 const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-image-opencv-local",
   activate(context) {
-    if (context.authority === undefined) throw new Error("local OpenCV Provider Authority is required");
+    if (context.pool === undefined) throw new Error("local OpenCV Provider Pool is required");
     const config = runtimeConfigObject(context.config, "local OpenCV image");
     runtimeConfigExact(config, [
       "pythonExecutable", "defaultConcurrency", "processTimeoutMs", "maxInputBytes", "maxOutputBytes",
@@ -30,7 +30,7 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createLocalOpenCvImageProvider({
         instance: context.instance,
-        authority: context.authority,
+        pool: context.pool,
         pythonExecutable: deployment.pythonExecutable,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
         ...(processTimeoutMs === undefined ? {} : { processTimeoutMs }),
@@ -48,9 +48,9 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   hostFacets: [localOpenCvRuntimeAdapter],
 };
 
-export default svmlPackage;
+export default narratagePackage;

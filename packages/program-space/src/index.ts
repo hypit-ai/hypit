@@ -22,15 +22,13 @@ export const programSpaceSchema: ValueSchema = {
   },
 };
 export const programSpaceManifest: ModuleManifest = {
-  format: "svml.module@1", name: programSpaceModuleRef.name, version: programSpaceModuleRef.version,
+  format: "narratage.module@1", name: programSpaceModuleRef.name, version: programSpaceModuleRef.version,
   dependencies: [], types: [{
     name: programSpaceTypes.programSpace.name,
-    schema: programSpaceSchema,
   }],
   capabilities: [], producers: [],
 };
-export const programSpaceManifestDigest = digestOf(programSpaceManifest);
-export const programSpaceDependency = { module: programSpaceModuleRef, digest: programSpaceManifestDigest } as const;
+export const programSpaceDependency = { module: programSpaceModuleRef } as const;
 
 export function sealProgramSpace(value: ProgramSpace): ProgramSpace { return structuredClone(value); }
 

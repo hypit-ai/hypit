@@ -6,11 +6,7 @@ import {
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
 import { digestOf } from "@narratage/protocol";
-import {
-  imageTransformManifestDigest,
-  imageTransformModuleRef,
-  imageTransformTypes,
-} from "@narratage/image-transform";
+import { imageTransformModuleRef, imageTransformTypes } from "@narratage/image-transform";
 
 export const gptImageModuleRef = { name: "@narratage/gpt-image", version: "1" } as const;
 
@@ -60,18 +56,11 @@ const gptImageBaseDefinition = defineExactModelModule({
 
 export const gptImageEndpoints = gptImageBaseDefinition.endpoints;
 export const gptImageComponent = gptImageBaseDefinition.component;
-export const gptImageSurfaceImplementationDigests = {
-  image: digestOf("@narratage/gpt-image/image-surface@1"),
-  cleanImage: digestOf("@narratage/gpt-image/clean/image-surface@1"),
-} as const;
 const gptImageSurfaceDeclaration = {
   name: "image",
   tag: "Image",
   mode: "structured" as const,
   outputs: [gptImageEndpoints.image!.draftType, gptImageEndpoints.image!.mediaBindings.images!.type],
-  implementation: {
-    digest: gptImageSurfaceImplementationDigests.image,
-  },
 };
 
 export const gptImageMarkupSurfaces = [gptImageSurfaceDeclaration] as const;
@@ -79,11 +68,9 @@ export const gptImageMarkupSurfaces = [gptImageSurfaceDeclaration] as const;
 export const gptImageManifest = {
   ...gptImageBaseDefinition.manifest,
 };
-export const gptImageManifestDigest = digestOf(gptImageManifest);
 export const gptImageDefinition = {
   ...gptImageBaseDefinition,
   manifest: gptImageManifest,
-  manifestDigest: gptImageManifestDigest,
 };
 
 /** Optional authoring submodule; the exact GPT model remains independent of post-processing. */
@@ -98,22 +85,18 @@ export const gptImageCleanMarkupSurfaces = [{
       gptImageEndpoints.image!.mediaBindings.images!.type,
       imageTransformTypes.program,
     ],
-    implementation: {
-      digest: gptImageSurfaceImplementationDigests.cleanImage,
-    },
   }] as const;
 
 export const gptImageCleanManifest = {
-  format: "svml.module@1" as const,
+  format: "narratage.module@1" as const,
   name: gptImageCleanModuleRef.name,
   version: gptImageCleanModuleRef.version,
   dependencies: [
-    { module: gptImageModuleRef, digest: gptImageManifestDigest },
-    { module: imageTransformModuleRef, digest: imageTransformManifestDigest },
+    { module: gptImageModuleRef },
+    { module: imageTransformModuleRef },
   ],
   types: [],
   capabilities: [],
   producers: [],
 };
-export const gptImageCleanManifestDigest = digestOf(gptImageCleanManifest);
 export { createGptImageCleanFragment } from "./fragment.js";

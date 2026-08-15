@@ -13,22 +13,7 @@ export {
   sealAudioProgramPlan,
   verifyAudioProgramPlan,
 } from "./audio-plan.js";
-export {
-  mediaPipelineCapabilities,
-  mediaPipelineImplementationDigests,
-  mediaPipelineManifest, mediaPipelineMarkupSurfaces,
-  mediaPipelineManifestDigest,
-  mediaPipelineModuleRef,
-  mediaPipelineProducers,
-  mediaPipelineTypes,
-  audioProgramPlanSchema,
-  mediaSelectionRequestSchema,
-  synchronizedMediaSurfaceImplementationDigest,
-  mediaOperationSurfaceImplementationDigests,
-  audioExtractionRequestSchema,
-  frameExtractionRequestSchema,
-  mediaTransformProgramSchema,
-} from "./manifest.js";
+export { mediaPipelineCapabilities, mediaPipelineManifest, mediaPipelineMarkupSurfaces, mediaPipelineModuleRef, mediaPipelineProducers, mediaPipelineTypes, audioProgramPlanSchema, mediaSelectionRequestSchema, audioExtractionRequestSchema, frameExtractionRequestSchema, mediaTransformProgramSchema } from "./manifest.js";
 export {
   sealMediaSelectionRequest,
   selectMediaStreams,

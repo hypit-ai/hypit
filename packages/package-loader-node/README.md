@@ -1,37 +1,22 @@
 # `@narratage/package-loader-node`
 
-Trusted installed-package locking and loading for Node Hosts. One package lock binds every directly selected
-physical package and declared dependency byte plus Module, Host-facet, Producer and Type
-Validator identities. Loading verifies all artifacts and checks deterministic compute facets
-against their static Manifests before returning physical-package/`NodePackageContribution` bindings.
+Installed-package selection for Node Hosts. npm or pnpm owns installation, versions and byte
+integrity. This loader imports only packages selected by Source discovery or a Runtime Profile,
+then validates the contribution boundary Narratage consumes.
 
-The artifact digest covers the files that ship the package's behavior and assets. Package-root test suites,
-coverage/cache directories and project-only README, license and tool configuration files are excluded, so
-editing documentation or tests does not make an otherwise identical installed implementation unusable.
-Nested runtime assets are not excluded merely because one of their parent directories happens to be named
-`test`.
-
-The caller selects only package roots. During the explicit lock action, the Loader follows exact
-Module Manifest dependencies (`ModuleRef + digest`) and adds the unique installed contribution that
-provides each one. This is a local dependency closure, not a built-in package map or registry.
+Exact Module Manifest dependencies (`ModuleRef + digest`) load from the selected package's installed
+dependencies. The loader neither scans unrelated dependencies for plugins nor maintains a package registry.
 
 This package does not select an author syntax. Syntax-specific executable facets remain inert until
 an exact Host ABI installs them. `@narratage/compiler-markup-node` selects the official Markup Surface ABI;
-`@narratage/local` can load the same package's deterministic compute facets without depending on Markup.
-Run Fragment libraries use the ordinary `svml.run-fragment-host@1` Host facet; the Loader has no
+`@narratage/runtime-local` can load the same package's deterministic compute facets without depending on Markup.
+Run Fragment libraries use the ordinary `narratage.run-fragment-host@1` Host facet; the Loader has no
 Run-specific fragment field or interpretation branch. Author and Run Frontends likewise use the
-ordinary `svml.source-frontend@1` Host facet; the Loader has no Frontend fields or parser registry.
+ordinary `narratage.source-frontend@1` Host facet; the Loader has no Frontend fields or parser registry.
 
-This package is deliberately not an npm client and does not activate Provider or privileged Runtime
-packages. Source `<import>` can select only an already installed author contribution; trusted
-deployment configuration independently chooses whether to grant author or deterministic compute registries.
-Executable plans bind the package-lock digest as `BuildRequest.implementationClosure`.
-
-```bash
-narratage lock-packages ./svml.packages.lock --package @example/cards --package-root .
-narratage check ./main.svml --package-lock ./svml.packages.lock --workspace .
-```
+This package is deliberately not an npm client. Source `<import>` can select only an already installed
+author contribution. Provider and privileged Runtime packages are independently selected by a Runtime
+Profile.
 
 If `@example/cards` requires a Module exported by an installed dependency, that dependency does not
-need another `--package`. Missing, digest-mismatched or ambiguous providers fail while creating the
-lock, before compilation.
+need another Source import. Missing or digest-mismatched Module providers fail before compilation.

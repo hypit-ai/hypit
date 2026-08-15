@@ -16,7 +16,7 @@ import type { CanonicalValue, Need } from "@narratage/protocol";
 import { createLocalHyperframesProvider } from "../src/index.js";
 import { localHyperframesBrowserProgram } from "../src/program.js";
 
-const liveEnabled = process.env.SVML_BROWSER_TESTS === "1";
+const liveEnabled = process.env.NARRATAGE_BROWSER_TESTS === "1";
 const hasFfprobe = spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
 
 function documentFixture(surface?: CompositableSurfaceRef) {
@@ -25,7 +25,7 @@ function documentFixture(surface?: CompositableSurfaceRef) {
     frameRate: { numerator: 12, denominator: 1 },
   });
   const track = sealVisualTrack({
-    visualIr: "svml.visual-ir@1",
+    visualIr: "narratage.visual-ir@1",
     id: "provider-proof",
     presents: [{
       id: "card",
@@ -106,14 +106,14 @@ test("local HyperFrames Provider exposes one exact visual capability and two sep
   assert.equal(facet?.role, "capability-endpoint");
   assert(facet?.role === "capability-endpoint");
   assert.equal(facet.defaultConcurrency, 2);
-  assert.deepEqual(provider.bindings, [{
+  assert.deepEqual(provider.offers, [{
     capability: renderHyperframesCapabilities.renderVisual,
     returns: mediaTypes.renderedVisual,
     endpoint: "hyperframes.local",
   }]);
   const resolved = await handlerFor(requestNeed());
   assert.equal(resolved.registration.scheduling?.resources.find((item) =>
-    item.id.startsWith("authority:"))?.maxActive, 1,
+    item.id.startsWith("pool:"))?.maxActive, 1,
     "Runtime request admission must remain separate from HyperFrames frame workers");
 });
 

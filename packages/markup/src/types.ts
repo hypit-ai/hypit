@@ -1,6 +1,5 @@
 import type {
   CanonicalValue,
-  Digest,
   ModuleRef,
   ResolvedModuleClosure,
   SourceRange,
@@ -124,7 +123,6 @@ type MarkupSurfaceDeclarationBase = {
   readonly name: string;
   readonly tag: string;
   readonly outputs: readonly TypeRef[];
-  readonly implementation: { readonly digest: Digest };
 };
 
 export type RawSurfaceDeclaration = MarkupSurfaceDeclarationBase & { readonly mode: "raw" };
@@ -136,7 +134,6 @@ type RegisteredSurfaceBase = {
   readonly surface: string;
   readonly tag: string;
   readonly outputs: readonly TypeRef[];
-  readonly implementationDigest: Digest;
 };
 
 export type RegisteredRawSurface = RegisteredSurfaceBase & {

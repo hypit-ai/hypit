@@ -44,23 +44,19 @@ import { mediaTrackManifest } from "@narratage/media-track";
 const testModule = { name: "example.speech-basis-product", version: "0.0.0" } as const;
 const requestType = { module: testModule, name: "SpeechRequest" } satisfies TypeRef;
 const generateProducer = { module: testModule, name: "generate-speech-basis" } satisfies ProducerRef;
-const generateImplementationDigest = digestOf("example.speech-basis-product/generate@1");
 
 const testManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: testModule.name,
   version: testModule.version,
   dependencies: [speechDependency],
-  types: [{ name: requestType.name, schema: { kind: "string", minLength: 1 } }],
+  types: [{ name: requestType.name }],
   capabilities: [],
   producers: [{
     name: generateProducer.name,
     inputs: [{ name: "request", type: requestType }],
     outputs: [{ name: "take", type: speechTypes.basis }],
     needs: [],
-    implementation: {
-      digest: generateImplementationDigest,
-    },
   }],
 };
 
@@ -313,7 +309,7 @@ test("selecting an Existing SpeechBasis stops generation but keeps both projecti
 test("the Build Machine executes one shared generation for both projected outputs", async () => {
   let generations = 0;
   const registry = new ProducerRegistry();
-  registry.registerProducer(generateProducer, generateImplementationDigest, () => {
+  registry.registerProducer(generateProducer, () => {
     generations += 1;
     return { outputs: { take: { kind: "inline", value: sampleTake() } }, needs: {} };
   });

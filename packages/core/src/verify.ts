@@ -39,12 +39,6 @@ function verifyDerivation(state: BuildState, derivation: Derivation): void {
     derivation.id,
   );
   invariant(
-    derivation.implementationDigest === producer.implementation.digest,
-    "IMPLEMENTATION_DIGEST_MISMATCH",
-    `${derivation.id} implementation digest does not match`,
-    derivation.id,
-  );
-  invariant(
     JSON.stringify(derivation.inputs.map((item) => item.id).sort()) ===
       JSON.stringify(Object.values(step.inputs).sort()),
     "DERIVATION_INPUT_MISMATCH",
@@ -100,14 +94,6 @@ function verifyReceipt(state: BuildState, receipt: Receipt): void {
   const need = state.needs.find((item) => item.id === receipt.need);
   invariant(need !== undefined, "RECEIPT_UNKNOWN_NEED", `${receipt.id} references an unknown need`);
   invariant(receipt.fulfiller.length > 0, "EMPTY_FULFILLER", `${receipt.id} fulfiller is empty`);
-  if (receipt.implementation !== undefined) {
-    invariant(isDigest(receipt.implementation.digest), "INVALID_IMPLEMENTATION_DIGEST", receipt.id);
-    invariant(
-      isDigest(receipt.implementation.configurationDigest),
-      "INVALID_CONFIGURATION_DIGEST",
-      receipt.id,
-    );
-  }
   invariant(
     receipt.requestDigest === need.requestDigest,
     "REQUEST_DIGEST_MISMATCH",
@@ -163,7 +149,7 @@ function verifyOutstanding(state: BuildState, command: CoreCommand): void {
 }
 
 export function verifyBuildState(state: BuildState): void {
-  invariant(state.format === "svml.build@1", "UNSUPPORTED_BUILD", "unsupported build state format");
+  invariant(state.format === "narratage.build@1", "UNSUPPORTED_BUILD", "unsupported build state format");
   invariant(
     state.status === "active" || state.status === "complete" || state.status === "failed",
     "INVALID_BUILD_STATUS",

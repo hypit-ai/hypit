@@ -44,27 +44,17 @@ const renderProducer = { module: laboratory, name: "render-card" } satisfies Pro
 const cardSurfaceDigest = digestOf("example.recipe-card/card-surface@1");
 const cardSurface = {
   name: "card", tag: "Card", mode: "structured", outputs: [cardAppearanceType],
-  implementation: { digest: cardSurfaceDigest },
 } as const;
 
 const manifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: laboratory.name,
   version: laboratory.version,
-  dependencies: [{ module: { name: svsManifest.name, version: svsManifest.version }, digest: computeModuleDigest(svsManifest) }],
+  dependencies: [{ module: { name: svsManifest.name, version: svsManifest.version } }],
   types: [
-    { name: cardType.name, schema: { kind: "string", minLength: 1 } },
+    { name: cardType.name },
     {
       name: cardAppearanceType.name,
-      schema: {
-        kind: "object",
-        fields: {
-          contract: { schema: { kind: "literal", value: "example.card-appearance@1" } },
-          sourceRecipeDigest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
-          fill: { schema: { kind: "string", minLength: 1 } },
-          padding: { schema: { kind: "string", minLength: 1 } },
-        },
-      },
     },
   ],
   capabilities: [],
@@ -73,9 +63,6 @@ const manifest: ModuleManifest = {
     inputs: [{ name: "appearance", type: cardAppearanceType }],
     outputs: [{ name: "card", type: cardType }],
     needs: [],
-    implementation: {
-      digest: digestOf("example.recipe-card/render-card@1"),
-    },
   }],
 };
 
@@ -278,7 +265,6 @@ test("Frontend identity changes Source Closure identity but not equal decoded au
   const alternate = {
     ...svsFrontend,
     id: "example.svs-compatible@1",
-    implementationDigest: digestOf("example.svs-compatible/implementation@1"),
   };
   const compileWith = async (frontend: typeof svsFrontend | typeof alternate) => {
     const frontends = new AuthorFrontendRegistry();
@@ -293,7 +279,6 @@ test("Frontend identity changes Source Closure identity but not equal decoded au
   const official = await compileWith(svsFrontend);
   const compatible = await compileWith(alternate);
   assert.notEqual(official.closure.id, compatible.closure.id);
-  assert.notEqual(official.closure.units[0]?.frontendDigest, compatible.closure.units[0]?.frontendDigest);
   assert.equal(official.closure.units[0]?.semanticDigest, compatible.closure.units[0]?.semanticDigest);
   assert.equal(official.program.semanticDigest, compatible.program.semanticDigest);
   assert.equal(official.graph.id, compatible.graph.id);

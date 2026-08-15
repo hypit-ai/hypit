@@ -1,8 +1,4 @@
-export {
-  createLocalHyperframesProvider,
-  localHyperframesProviderImplementationDigest,
-  localHyperframesProviderModuleRef,
-} from "./provider.js";
+export { createLocalHyperframesProvider, localHyperframesProviderModuleRef } from "./provider.js";
 export type {
   CreateLocalHyperframesProviderOptions,
   HyperframesBrowserGpu,

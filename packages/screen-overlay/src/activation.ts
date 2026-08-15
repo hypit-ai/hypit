@@ -3,8 +3,8 @@ import {
   decodeScreenOverlaySurface, screenOverlayComponent, screenOverlayManifest, screenOverlayModuleRef,
   screenOverlayMarkupSurfaces,
 } from "./index.js";
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   modules: [{ manifest: screenOverlayManifest }],
   components: [screenOverlayComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
@@ -12,4 +12,4 @@ export const svmlPackage = {
     declaration: screenOverlayMarkupSurfaces.find((item) => item.name === "track")!, handler: decodeScreenOverlaySurface,
   })],
 };
-export default svmlPackage;
+export default narratagePackage;

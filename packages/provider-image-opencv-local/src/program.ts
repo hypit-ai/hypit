@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 
-import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@narratage/runtime-adapter";
+import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@narratage/runtime-kit";
 
 import { resolveLocalOpenCvDeployment } from "./deployment.js";
 

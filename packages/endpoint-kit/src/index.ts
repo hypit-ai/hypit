@@ -1,12 +1,6 @@
-import {
-  canonicalize,
-  digestOf,
-  isDigest,
-} from "@narratage/protocol";
 import type {
   CanonicalValue,
   CapabilityRef,
-  Digest,
   FulfillNeedCommand,
   ModuleRef,
   Need,
@@ -20,10 +14,10 @@ import type {
   OperationFailure,
   OperationIdentity,
   OperationProgress,
-  RuntimeEndpointBinding,
+  EndpointOffer,
   RuntimeFacetRef,
   RuntimeModuleManifest,
-  RuntimeProfileInstance,
+  RuntimeFacetInstance,
 } from "@narratage/runtime";
 import { verifyCredentialRef } from "@narratage/runtime";
 
@@ -89,8 +83,8 @@ export type EndpointScheduling = {
     readonly maxInFlight: number;
   }[];
   readonly queue?: {
-    readonly authority: string;
-    readonly route: string;
+    readonly pool: string;
+    readonly lane: string;
   };
 };
 
@@ -99,17 +93,9 @@ export type EndpointRetryPolicy = {
   readonly maxAttempts: number;
 };
 
-export type RuntimeEndpointImplementation = {
-  readonly facet: RuntimeFacetRef;
-  readonly digest: Digest;
-  /** Identity of the configured endpoint instance; secret values are never part of it. */
-  readonly configurationDigest: Digest;
-};
-
 export type EndpointRegistrationOptions = {
   readonly supports?: (need: Need) => boolean;
   readonly scheduling?: EndpointScheduling;
-  readonly runtimeImplementation?: RuntimeEndpointImplementation;
   readonly credentials?: Readonly<Record<string, CredentialRef>>;
   readonly retry?: EndpointRetryPolicy;
 };
@@ -134,8 +120,8 @@ export interface EndpointRegistrar {
 
 export type EndpointPackage = {
   readonly manifest: RuntimeModuleManifest;
-  readonly instance: RuntimeProfileInstance;
-  readonly bindings: readonly RuntimeEndpointBinding[];
+  readonly instance: RuntimeFacetInstance;
+  readonly offers: readonly EndpointOffer[];
   /** Host-facing login material declared by this exact configured Endpoint instance. */
   readonly credentials: readonly EndpointCredentialDescription[];
   install(registry: EndpointRegistrar): Awaitable<void>;
@@ -154,8 +140,8 @@ type EndpointCapabilityBase = {
   readonly returns: TypeRef;
   readonly supports?: (need: Need) => boolean;
   /** Stable Provider-local queue lane. Defaults to the capability name. */
-  readonly route?: string;
-  /** Route capacity; the Provider authority keeps its independent total capacity. */
+  readonly lane?: string;
+  /** Lane capacity; the Provider pool keeps its independent total capacity. */
   readonly maxConcurrency?: number;
 };
 
@@ -177,18 +163,13 @@ export type DefineEndpointPackageOptions = {
   readonly facet: string;
   readonly instance: string;
   /** Explicit non-secret account, deployment or compute-pool identity. */
-  readonly authority: string;
-  readonly implementation: {
-    readonly digest: Digest;
-  };
-  /** Non-secret deployment facts such as base URL, region and credential references. */
-  readonly configuration?: CanonicalValue;
+  readonly pool: string;
   readonly credentials?: Readonly<Record<string, CredentialRef>>;
   readonly credentialInputs?: Readonly<Record<string, {
     readonly label: string;
     readonly kind?: "secret" | "json";
   }>>;
-  /** Total capacity shared by every route under this configured Provider authority. */
+  /** Total capacity shared by every lane under this configured Provider pool. */
   readonly defaultConcurrency?: number;
   readonly capabilities: readonly EndpointCapability[];
 };
@@ -212,27 +193,26 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     "Endpoint module identity is invalid");
   assert(options.facet.trim().length > 0, "Endpoint facet is empty");
   assert(options.instance.trim().length > 0, "Endpoint instance is empty");
-  assert(options.authority.trim().length > 0, "Endpoint Provider Authority is empty");
-  assert(isDigest(options.implementation.digest), "Endpoint implementation digest is invalid");
+  assert(options.pool.trim().length > 0, "Endpoint Provider Pool is empty");
   assert(options.capabilities.length > 0, "Endpoint package declares no capability");
   const lifecycle = options.capabilities[0]!.lifecycle;
   assert(options.capabilities.every((item) => item.lifecycle === lifecycle),
     "one Endpoint facet cannot mix immediate and recoverable lifecycles");
   const keys = options.capabilities.map((item) => refKey(item.capability));
   assert(new Set(keys).size === keys.length, "Endpoint package repeats a capability");
-  const routes = options.capabilities.map((item) => item.route ?? item.capability.name);
-  assert(routes.every((route) => route.trim().length > 0), "Endpoint package route is empty");
-  const routeConcurrency = new Map<string, number>();
+  const lanes = options.capabilities.map((item) => item.lane ?? item.capability.name);
+  assert(lanes.every((lane) => lane.trim().length > 0), "Endpoint package lane is empty");
+  const laneConcurrency = new Map<string, number>();
   for (const capability of options.capabilities) {
-    const route = capability.route ?? capability.capability.name;
+    const lane = capability.lane ?? capability.capability.name;
     const concurrency = positiveInteger(
       capability.maxConcurrency ?? options.defaultConcurrency ?? 1,
       `${capability.capability.name} maxConcurrency`,
     );
-    const previous = routeConcurrency.get(route);
+    const previous = laneConcurrency.get(lane);
     assert(previous === undefined || previous === concurrency,
-      `Endpoint package route ${route} has conflicting concurrency limits`);
-    routeConcurrency.set(route, concurrency);
+      `Endpoint package lane ${lane} has conflicting concurrency limits`);
+    laneConcurrency.set(lane, concurrency);
   }
   const credentials = Object.fromEntries(Object.entries(options.credentials ?? {})
     .sort(([left], [right]) => left.localeCompare(right))
@@ -259,20 +239,6 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
       ref: structuredClone(ref),
     } satisfies EndpointCredentialDescription;
   });
-  const configuration = canonicalize(options.configuration ?? null);
-  const executionPolicy = options.capabilities.map((capability) => ({
-    capability: refKey(capability.capability),
-    route: capability.route ?? capability.capability.name,
-    maxConcurrency: positiveInteger(
-      capability.maxConcurrency ?? options.defaultConcurrency ?? 1,
-      `${capability.capability.name} maxConcurrency`,
-    ),
-    lifecycle: capability.lifecycle,
-    ...(capability.lifecycle === "recoverable" && capability.retry !== undefined
-      ? { retry: { maxAttempts: capability.retry.maxAttempts } }
-      : {}),
-  })).sort((left, right) => left.capability.localeCompare(right.capability));
-  const configurationDigest = digestOf({ configuration, credentials, executionPolicy });
   const module = { ...options.module };
   const facet = { module, name: options.facet };
   const fulfills = options.capabilities.map((item) => ({
@@ -280,20 +246,19 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     returns: structuredClone(item.returns),
   }));
   const manifest: RuntimeModuleManifest = {
-    format: "svml.runtime-module@1",
+    format: "narratage.runtime-module@1",
     name: module.name,
     version: module.version,
     facets: [{
       name: options.facet,
       role: "capability-endpoint",
-      implementation: { ...options.implementation },
       fulfills,
       lifecycle,
       defaultConcurrency: positiveInteger(options.defaultConcurrency ?? 1, "defaultConcurrency"),
-      routes: options.capabilities.map((capability) => ({
+      lanes: options.capabilities.map((capability) => ({
         capability: structuredClone(capability.capability),
         returns: structuredClone(capability.returns),
-        route: capability.route ?? capability.capability.name,
+        lane: capability.lane ?? capability.capability.name,
         maxConcurrency: positiveInteger(
           capability.maxConcurrency ?? options.defaultConcurrency ?? 1,
           `${capability.capability.name} maxConcurrency`,
@@ -302,49 +267,43 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
       credentialSlots: Object.keys(credentials),
     }],
   };
-  const instance: RuntimeProfileInstance = {
+  const instance: RuntimeFacetInstance = {
     id: options.instance,
     facet,
-    authority: options.authority,
-    configurationDigest,
+    pool: options.pool,
   };
-  const bindings: readonly RuntimeEndpointBinding[] = fulfills.map((item) => ({
+  const offers: readonly EndpointOffer[] = fulfills.map((item) => ({
     ...item,
     endpoint: options.instance,
   }));
   return {
     manifest,
     instance,
-    bindings,
+    offers,
     credentials: credentialDescriptions,
     install(registry) {
       for (const capability of options.capabilities) {
-        const route = capability.route ?? capability.capability.name;
+        const lane = capability.lane ?? capability.capability.name;
         const authorityConcurrency = positiveInteger(options.defaultConcurrency ?? 1, "defaultConcurrency");
-        const routeConcurrency = positiveInteger(
+        const laneConcurrency = positiveInteger(
           capability.maxConcurrency ?? authorityConcurrency,
-          `${route} maxConcurrency`,
+          `${lane} maxConcurrency`,
         );
         const common: EndpointRegistrationOptions = {
           ...(capability.supports === undefined ? {} : { supports: capability.supports }),
-          runtimeImplementation: {
-            facet,
-            digest: options.implementation.digest,
-            configurationDigest,
-          },
           credentials,
           scheduling: {
-            queue: { authority: options.authority, route },
+            queue: { pool: options.pool, lane },
             resources: [
               {
-                id: `authority:${options.authority}`,
+                id: `pool:${options.pool}`,
                 maxActive: authorityConcurrency,
                 maxInFlight: authorityConcurrency,
               },
               {
-                id: `route:${options.authority}/${route}`,
-                maxActive: routeConcurrency,
-                maxInFlight: routeConcurrency,
+                id: `lane:${options.pool}/${lane}`,
+                maxActive: laneConcurrency,
+                maxInFlight: laneConcurrency,
               },
             ],
           },

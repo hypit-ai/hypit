@@ -46,8 +46,8 @@ import {
 } from "@narratage/typography-track";
 import type { TextStyle } from "@narratage/typography-track";
 
-const enabled = process.env.SVML_BROWSER_TESTS === "1";
-const localFont = process.env.SVML_TEST_FONT_PATH
+const enabled = process.env.NARRATAGE_BROWSER_TESTS === "1";
+const localFont = process.env.NARRATAGE_TEST_FONT_PATH
   ?? (process.platform === "darwin" ? "/System/Library/Fonts/SFNSMono.ttf" : undefined);
 const hyperframesCli = createRequire(path.join(process.cwd(), "packages/provider-hyperframes-local/package.json"))
   .resolve("hyperframes/bin/hyperframes.mjs");
@@ -281,7 +281,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
   timeout: 120_000,
 }, async () => {
   assert(localFont !== undefined);
-  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-hyperframes-visual-"));
+  const temp = await mkdtemp(path.join(os.tmpdir(), "narratage-hyperframes-visual-"));
   try {
     const fontBytes = await import("node:fs/promises").then(({ readFile }) => readFile(localFont));
     const surfaceBytes = rgbaPng(64, 64, [255, 0, 0, 128]);
@@ -297,7 +297,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       frameRate: { numerator: 30, denominator: 1 },
     });
     const lower = sealVisualTrack({
-      visualIr: "svml.visual-ir@1",
+      visualIr: "narratage.visual-ir@1",
       id: "blue",
       presents: [{
         id: "blue",
@@ -316,7 +316,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       }],
     });
     const surface = sealVisualTrack({
-      visualIr: "svml.visual-ir@1",
+      visualIr: "narratage.visual-ir@1",
       id: "surface",
       presents: [{
         id: "surface",
@@ -339,7 +339,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       }],
     });
     const text = sealVisualTrack({
-      visualIr: "svml.visual-ir@1",
+      visualIr: "narratage.visual-ir@1",
       id: "text",
       presents: [{
         id: "text",
@@ -426,7 +426,7 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
   timeout: 120_000,
 }, async () => {
   assert(localFont !== undefined);
-  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-caption-fine-visual-"));
+  const temp = await mkdtemp(path.join(os.tmpdir(), "narratage-caption-fine-visual-"));
   try {
     const width = 720;
     const height = 240;
@@ -521,7 +521,7 @@ test("Fine Caption joined trail Pill follows real wrapped browser line fragments
   timeout: 120_000,
 }, async () => {
   assert(localFont !== undefined);
-  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-caption-fine-pill-"));
+  const temp = await mkdtemp(path.join(os.tmpdir(), "narratage-caption-fine-pill-"));
   try {
     const width = 480;
     const height = 280;
@@ -597,7 +597,7 @@ test("installed open fonts render CJK, emoji and independent stroke, shadow and 
   skip: !enabled,
   timeout: 120_000,
 }, async () => {
-  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-caption-fine-multilingual-"));
+  const temp = await mkdtemp(path.join(os.tmpdir(), "narratage-caption-fine-multilingual-"));
   try {
     const width = 720;
     const height = 320;
@@ -714,7 +714,7 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
   skip: !enabled,
   timeout: 180_000,
 }, async () => {
-  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-text-complete-"));
+  const temp = await mkdtemp(path.join(os.tmpdir(), "narratage-text-complete-"));
   try {
     const width = 960;
     const height = 720;
@@ -898,8 +898,8 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
       id: "complete-text-browser",
       canvas: { width, height, clearColor: "#000000" }, tracks: [typographyTrack, maskTrack],
     }), space);
-    assert.match(document.html, /data-svml-text-shrink-scale/u);
-    assert.match(document.html, /data-svml-text-path-upright/u);
+    assert.match(document.html, /data-narratage-text-shrink-scale/u);
+    assert.match(document.html, /data-narratage-text-path-upright/u);
     assert.match(document.html, /mask-type:alpha/u);
     const paths = new Map<Digest, string>();
     await Promise.all([...fontBytes].map(async ([artifactDigest, bytes], index) => {
@@ -974,7 +974,7 @@ test("Text box targets, rich runs and every sequence direction remain stable acr
   skip: !enabled,
   timeout: 180_000,
 }, async () => {
-  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-text-box-sequence-"));
+  const temp = await mkdtemp(path.join(os.tmpdir(), "narratage-text-box-sequence-"));
   try {
     const width = 960;
     const height = 440;
@@ -1102,11 +1102,11 @@ test("Text box targets, rich runs and every sequence direction remain stable acr
       id: "text-box-sequence-browser",
       canvas: { width, height, clearColor: "#000000" }, tracks: [track],
     }), space);
-    assert.match(compiled.html, /data-svml-text-line-sequences/u);
+    assert.match(compiled.html, /data-narratage-text-line-sequences/u);
     assert.match(compiled.html, /background-image:linear-gradient\(#312e81,#312e81\)/u);
     assert.match(compiled.html, /order&quot;:&quot;forward/u);
     assert.match(compiled.html, /order&quot;:&quot;reverse/u);
-    assert.match(compiled.html, /data-svml-text-run="reverse-grapheme-run"/u);
+    assert.match(compiled.html, /data-narratage-text-run="reverse-grapheme-run"/u);
     const paths = new Map<Digest, string>();
     let fontIndex = 0;
     for (const [artifactDigest, bytes] of installed.bytes) {
@@ -1167,7 +1167,7 @@ test("vertical Text paints in its authored direction and bounded shrink fails cl
   skip: !enabled,
   timeout: 120_000,
 }, async () => {
-  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-text-vertical-shrink-"));
+  const temp = await mkdtemp(path.join(os.tmpdir(), "narratage-text-vertical-shrink-"));
   try {
     const width = 320;
     const height = 320;
@@ -1267,7 +1267,7 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
   skip: !enabled,
   timeout: 120_000,
 }, async () => {
-  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-media-track-visual-"));
+  const temp = await mkdtemp(path.join(os.tmpdir(), "narratage-media-track-visual-"));
   try {
     const width = 160;
     const height = 120;
@@ -1404,7 +1404,7 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
   skip: !enabled,
   timeout: 120_000,
 }, async () => {
-  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-depth-stack-visual-"));
+  const temp = await mkdtemp(path.join(os.tmpdir(), "narratage-depth-stack-visual-"));
   try {
     const width = 240;
     const height = 180;
@@ -1585,7 +1585,7 @@ test("all four Ranking components paint frame-pure progressive states under part
   skip: !enabled,
   timeout: 120_000,
 }, async () => {
-  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-ranking-visual-"));
+  const temp = await mkdtemp(path.join(os.tmpdir(), "narratage-ranking-visual-"));
   try {
     const width = 480;
     const height = 720;
@@ -1787,7 +1787,7 @@ test("all Spatial fit modes and equal-point alignments reach exact browser pixel
   skip: !enabled,
   timeout: 120_000,
 }, async () => {
-  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-spatial-visual-"));
+  const temp = await mkdtemp(path.join(os.tmpdir(), "narratage-spatial-visual-"));
   try {
     const width = 530;
     const height = 280;
@@ -1968,7 +1968,7 @@ test("every official Screen Overlay survives real sequential and parallel browse
   skip: !enabled,
   timeout: 120_000,
 }, async () => {
-  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-screen-overlay-visual-"));
+  const temp = await mkdtemp(path.join(os.tmpdir(), "narratage-screen-overlay-visual-"));
   try {
     const width = 128;
     const height = 96;

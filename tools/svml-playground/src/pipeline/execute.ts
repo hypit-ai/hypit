@@ -35,9 +35,9 @@ export type Executed = {
 function localProviders(): readonly EndpointPackage[] {
   const built: EndpointPackage[] = [];
   for (const create of [
-    () => createLocalMediaProvider({ instance: "media.local", authority: "media.local" }),
-    () => createLocalHyperframesProvider({ instance: "hyperframes.local", authority: "hyperframes.local" }),
-    () => createLocalWhisperXProvider({ instance: "whisperx.local", authority: "whisperx.local" }),
+    () => createLocalMediaProvider({ instance: "media.local", pool: "media.local" }),
+    () => createLocalHyperframesProvider({ instance: "hyperframes.local", pool: "hyperframes.local" }),
+    () => createLocalWhisperXProvider({ instance: "whisperx.local", pool: "whisperx.local" }),
   ]) {
     // A Provider whose tool is not installed is simply one the preview does
     // not have, which is the same as any other unserved Capability.

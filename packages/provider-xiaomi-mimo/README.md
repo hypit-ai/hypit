@@ -11,12 +11,15 @@ Runtime Profile example:
 
 ```json
 {
-  "use": "@narratage/provider-xiaomi-mimo",
-  "instance": "mimo.official",
-  "authority": "mimo.official",
-  "config": {
-    "apiKey": { "store": "keychain", "key": "xiaomi-mimo.api-key" },
-    "defaultConcurrency": 2
+  "endpoints": {
+    "mimo.official": {
+      "use": "@narratage/provider-xiaomi-mimo",
+      "pool": "mimo.official",
+      "config": {
+        "apiKey": { "store": "keychain", "key": "xiaomi-mimo.api-key" },
+        "defaultConcurrency": 2
+      }
+    }
   }
 }
 ```
@@ -24,13 +27,6 @@ Runtime Profile example:
 The Provider always requests final WAV bytes. Streaming is a service transport optimization and is
 not part of the author model.
 
-Add the Provider independently to the Runtime package lock:
-
-```sh
-node --run narratage -- lock-packages svml.runtime-packages.lock \
-  --package @narratage/provider-xiaomi-mimo \
-  --package-root .
-```
-
-The Provider declares default concurrency on its Authority and exact capability Routes. The shared
+Selecting the Provider in the Runtime Profile activates it independently from author model syntax.
+It declares default concurrency on its pool and exact capability lanes. The shared
 Scheduler owns queuing across Builds; this package does not create a private queue.

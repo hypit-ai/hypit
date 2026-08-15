@@ -26,8 +26,8 @@ const facets = [
   ["typewriter", decodeTypewriterListSurface],
 ] as const;
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   modules: [{
     manifest: rankingManifest,
   }],
@@ -39,4 +39,4 @@ export const svmlPackage = {
   })),
 };
 
-export default svmlPackage;
+export default narratagePackage;

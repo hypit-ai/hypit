@@ -10,8 +10,8 @@ import {
   mediaPipelineMarkupSurfaces,
 } from "./index.js";
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   modules: [{ manifest: mediaPipelineManifest }],
   components: [mediaPipelineComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
@@ -32,4 +32,4 @@ export const svmlPackage = {
     handler: decodeExtractFrameSurface,
   })],
 };
-export default svmlPackage;
+export default narratagePackage;

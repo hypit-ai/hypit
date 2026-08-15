@@ -41,6 +41,7 @@ cd narratage
 ```bash
 corepack enable
 pnpm install --frozen-lockfile
+npm link
 ```
 
 如果系统没有 `corepack`：
@@ -50,6 +51,7 @@ npm install --global corepack@0.34.5
 corepack enable
 corepack prepare pnpm@10.33.0 --activate
 pnpm install --frozen-lockfile
+npm link
 ```
 
 `pnpm check` 和 `pnpm test` 是修改 Narratage 本身时使用的整仓检查。第一次使用 CLI
@@ -61,17 +63,16 @@ pnpm install --frozen-lockfile
 文字、Film 与最终渲染。
 
 ```bash
-node --run narratage -- check examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock
+cd examples/talking-film-graph-check
+narratage check main.svml
 ```
 
-`check` 会读取自描述的源码，只加载锁中允许的包，并列出这份 Author Source 声明的公共类型化输出。
+`check` 会读取自描述的源码，只加载源码导入的包，并列出这份 Author Source 声明的公共类型化输出。
 
 接着编译 Run Source：
 
 ```bash
-node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock
+narratage plan build.svrun
 ```
 
 `plan` 会连接 Author Graph 和 Run Graph，从 `final.video` 反向找到真正需要的子图，冻结将要使用的
@@ -85,16 +86,14 @@ Operations 与外部 Needs。它绝不会启动 Provider。
 
 ## 3. 认识项目里的文件
 
-一个实际视频项目通常有四份由人编写或配置的输入，以及两份自动生成的锁：
+一个实际视频项目通常有四份由人编写或配置的输入：
 
 | 文件 | 回答的问题 |
 |---|---|
 | `main.svml` | 要做的是什么视频？ |
 | `studio.svs` | 使用哪些可复用的 Recipe 值？ |
 | `build.svrun` | 这一次 Run 要哪些输出、选择哪些 Candidate？ |
-| `svml.runtime.json` | 在哪台机器、哪些 Store 和 Provider Endpoint 上执行？ |
-| `svml.packages.lock` | 允许使用哪些 Author/Compute 包字节？ |
-| `svml.runtime-packages.lock` | 允许使用哪些特权 Runtime 包字节？ |
+| `narratage.runtime.json` | 在哪台机器、哪些 Store 和 Provider Endpoint 上执行？ |
 
 最短的记法是：
 
@@ -109,21 +108,21 @@ Runtime Profile 说明在哪里做。
 
 ## 4. 建立自己的项目
 
-把视频项目和生成产物放在 Narratage 仓库之外。在项目目录里直接调用源码仓库提供的轻量启动器：
+把视频项目和生成产物放在 Narratage 仓库之外。完成上面的链接后，可以在独立项目目录里直接使用
+`narratage`：
 
 ```bash
 cd /path/to/my-video
 
-/path/to/narratage/narratage runtime use svml.runtime.json
+narratage runtime use narratage.runtime.json
 
-/path/to/narratage/narratage packages sync build.svrun
-/path/to/narratage/narratage plan build.svrun
+narratage plan build.svrun
 ```
 
-启动器使用 Narratage 仓库已经安装好的依赖，Source 与导出的文件留在项目里；Runtime 状态与
-Artifact 位于所选 Profile 的 `dataRoot`。`runtime use` 只在 `.narratage/runtime` 保存一个本地指针。
-Source lock 属于项目，Profile 独立选择 Runtime lock。`packages sync` 根据两项选择更新库存，
-不会删除其他 Run 需要的包。
+含有 `package.json` 的项目负责自己的能力包安装；普通创作文件夹不需要成为 Node 项目，直接使用
+链接仓库里的包。Source 与导出的文件留在项目里，Runtime 状态与 Artifact 位于所选 Profile 的
+`dataRoot`。`runtime use` 只在 `.narratage/runtime` 保存一个本地指针。Source import 选择作者包，
+Profile 则通过 `use` 独立选择 Runtime 包。
 
 需要完整 Runtime Profile 时，从
 [`examples/talking-film-live`](https://github.com/hypit-ai/narratage/tree/main/examples/talking-film-live) 的结构开始：复制文件结构，
@@ -134,7 +133,7 @@ Source lock 属于项目，Profile 独立选择 Runtime lock。`packages sync` �
 检查并确认计划之后：
 
 ```bash
-/path/to/narratage/narratage build build.svrun --follow
+narratage build build.svrun --follow
 ```
 
 `build` 会自动分配并打印一个新的 Build id、持久化这次 Build、确保对应 Worker 可用，并只启动
@@ -144,11 +143,11 @@ Source lock 属于项目，Profile 独立选择 Runtime lock。`packages sync` �
 Build 前必须重复的仪式。
 
 ```bash
-/path/to/narratage/narratage status <build-id>
+narratage status <build-id> --watch
 
-/path/to/narratage/narratage queue --watch
+narratage queue
 
-/path/to/narratage/narratage get <build-id> \
+narratage get <build-id> \
   --name final.video \
   --to output/final.mp4
 ```
@@ -173,10 +172,10 @@ Runtime 会归档所有已经接受的中间 Record 和媒体。`get` 只负责�
 uv python install 3.13
 uv sync --project services/whisperx --frozen
 uv sync --project services/image-opencv --frozen
-uv run --project services/whisperx --frozen svml-whisperx-prepare
+uv run --project services/whisperx --frozen narratage-whisperx-prepare
 ```
 
-修改 Runtime Profile 后运行 `narratage doctor svml.runtime.json`。它会报告缺少的工具、凭据和
+修改 Runtime Profile 后运行 `narratage doctor narratage.runtime.json`。它会报告缺少的工具、凭据和
 Endpoint 配置，但不会执行作者图。
 
 ## 接下来读什么

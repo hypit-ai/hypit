@@ -7,7 +7,7 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": {
+  "narratage": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
@@ -17,7 +17,7 @@
     "@narratage/generation": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-adapter": "workspace:*"
+    "@narratage/runtime-kit": "workspace:*"
   },
   "devDependencies": {
     "@narratage/artifact-store-fs": "workspace:*",
@@ -29,7 +29,7 @@
     "@narratage/gemini-omni": "workspace:*",
     "@narratage/gpt-image": "workspace:*",
     "@narratage/grok-imagine": "workspace:*",
-    "@narratage/local": "workspace:*",
+    "@narratage/runtime-local": "workspace:*",
     "@narratage/media": "workspace:*",
     "@narratage/minimax-h3": "workspace:*",
     "@narratage/model-kit": "workspace:*",

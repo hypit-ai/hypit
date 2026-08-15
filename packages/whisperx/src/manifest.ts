@@ -13,32 +13,25 @@ export const whisperXCapabilities = {
 export const whisperXProducers = {
   request: { module: whisperXModuleRef, name: "request-whisperx-alignment" },
 } satisfies Record<string, ProducerRef>;
-export const whisperXImplementationDigests = {
-  request: digestOf("@narratage/whisperx/request@1"),
-  surface: digestOf("@narratage/whisperx/alignment-surface@1"),
-};
 
 export const whisperXMarkupSurfaces = [{
     name: "alignment",
     tag: "Alignment",
     mode: "structured",
     outputs: [speechEvidenceTypes.alignedTranscript, semanticMapTypes.complete],
-    implementation: {
-      digest: whisperXImplementationDigests.surface,
-    },
   }] as const;
 
 
 export const whisperXManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: whisperXModuleRef.name,
   version: whisperXModuleRef.version,
   dependencies: [
     speechDependency,
     speechEvidenceDependency,
     semanticMapDependency,
-    { module: mediaPipelineModuleRef, digest: digestOf(mediaPipelineManifest) },
-    { module: speechAlignmentModuleRef, digest: digestOf(speechAlignmentManifest) },
+    { module: mediaPipelineModuleRef },
+    { module: speechAlignmentModuleRef },
   ],
   types: [],
   capabilities: [{
@@ -55,9 +48,6 @@ export const whisperXManifest: ModuleManifest = {
         capability: whisperXCapabilities.alignment,
         returns: speechEvidenceTypes.alignedTranscript,
       }],
-      implementation: {
-        digest: whisperXImplementationDigests.request,
-      },
     },
   ],
 };

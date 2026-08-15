@@ -12,10 +12,7 @@ import { backgroundRemovalCapabilities, backgroundRemovalRequest } from "@narrat
 import { seedanceEndpoints, sealSeedanceRequest } from "@narratage/seedance";
 import { digestOf } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
-import {
-  createKieProvider,
-  kieProviderImplementationDigest,
-} from "@narratage/provider-kie";
+import { createKieProvider } from "@narratage/provider-kie";
 import { sealOperationIdentity } from "@narratage/runtime";
 
 function need(constraints: CanonicalValue): Need {
@@ -46,7 +43,6 @@ async function endpointFor(
   const registry = new EndpointRegistry();
   const provider = createKieProvider({
     fetch,
-    fetchImplementationDigest: digestOf("provider-kie:test-fetch"),
     now,
     pollIntervalMs: 0,
     submissionIntervalMs: 0,
@@ -65,28 +61,26 @@ function operation(request: Need) {
     build: "build:kie-test",
     command: "command:kie-test",
     endpoint: "kie.default",
-    authority: "kie.default",
-    route: "fixture.video",
-    runtimeClosure: digestOf("runtime:kie-test"),
+    pool: "kie.default",
+    lane: "fixture.video",
     attempt: 1,
   });
 }
 
-test("all KIE capabilities share one recoverable task engine and differ only by Route", async () => {
+test("all KIE capabilities share one recoverable task engine and differ only by Lane", async () => {
   const provider = createKieProvider({
     fetch: async () => { throw new Error("no request expected"); },
-    fetchImplementationDigest: digestOf("provider-kie:route-registry-test"),
     defaultConcurrency: 8,
-    routeConcurrency: { "seedance-2-mini": 4 },
+    laneConcurrency: { "seedance-2-mini": 4 },
   });
-  assert.equal(provider.bindings.length, 13);
+  assert.equal(provider.offers.length, 13);
   const registry = new EndpointRegistry();
   await provider.install(registry);
   const seed = need(sealSeedanceRequest("seedance-2-mini", {
     prompt: ["A clean studio shot."], resolution: ["720p"], aspectRatio: ["16:9"],
     duration: [5], generateAudio: [false], webSearch: [false],
   }) as unknown as CanonicalValue);
-  const source = { kind: "blob" as const, digest: digestOf("route-source"), size: 1, mediaType: "image/png" };
+  const source = { kind: "blob" as const, digest: digestOf("lane-source"), size: 1, mediaType: "image/png" };
   const removal = removeBackgroundNeed(backgroundRemovalRequest(source) as unknown as CanonicalValue);
   const seedResolution = registry.resolve(seed);
   const removalResolution = registry.resolve(removal);
@@ -96,10 +90,10 @@ test("all KIE capabilities share one recoverable task engine and differ only by 
   assert.equal(removalResolution.registration.kind, "recoverable");
   assert.equal(seedResolution.registration.endpoint, removalResolution.registration.endpoint);
   assert.deepEqual(seedResolution.registration.scheduling, {
-    queue: { authority: "kie.default", route: "seedance-2-mini" },
+    queue: { pool: "kie.default", lane: "seedance-2-mini" },
     resources: [
-      { id: "authority:kie.default", maxActive: 8, maxInFlight: 8 },
-      { id: "route:kie.default/seedance-2-mini", maxActive: 4, maxInFlight: 4 },
+      { id: "pool:kie.default", maxActive: 8, maxInFlight: 8 },
+      { id: "lane:kie.default/seedance-2-mini", maxActive: 4, maxInFlight: 4 },
     ],
   });
 });

@@ -30,11 +30,9 @@ import {
   terminalTextLayoutScript,
 } from "./text.js";
 
-export const compileHyperframesImplementationDigest = digestOf("@narratage/hyperframes/compile@1");
-
 const NANOSECONDS = 1_000_000_000n;
-const ARTIFACT_URI = /svml-artifact:\/\/sha256\/([0-9a-f]{64})/gu;
-const SURFACE_ARTIFACT = /data-svml-surface-artifact="(sha256:[0-9a-f]{64})"/gu;
+const ARTIFACT_URI = /narratage-artifact:\/\/sha256\/([0-9a-f]{64})/gu;
+const SURFACE_ARTIFACT = /data-narratage-surface-artifact="(sha256:[0-9a-f]{64})"/gu;
 
 function escapeHtml(value: string): string {
   return value
@@ -179,7 +177,7 @@ function percentage(frame: number, totalFrames: number): string {
 
 export function hyperframesArtifactUri(digest: Digest): string {
   if (!isDigest(digest)) throw new Error("HyperFrames Artifact digest is invalid.");
-  return `svml-artifact://sha256/${digest.slice("sha256:".length)}`;
+  return `narratage-artifact://sha256/${digest.slice("sha256:".length)}`;
 }
 
 function css(style: readonly VisualStyleDeclaration[]): string {
@@ -200,7 +198,7 @@ function attributes(values: readonly VisualAttribute[] | undefined): string {
 }
 
 function stableDomId(parts: readonly string[]): string {
-  return `svml-${digestOf(parts).slice("sha256:".length, "sha256:".length + 20)}`;
+  return `narratage-${digestOf(parts).slice("sha256:".length, "sha256:".length + 20)}`;
 }
 
 function exactFontFamily(font: FontArtifactRef): string {
@@ -259,10 +257,10 @@ function renderElement(
       "animation-timing-function:linear",
     ]),
   ].filter(Boolean).join(";");
-  const commonAttributes = `id="${id}" data-svml-element-id="${escapeHtml(element.id)}"${attributes(element.attributes)}`;
+  const commonAttributes = `id="${id}" data-narratage-element-id="${escapeHtml(element.id)}"${attributes(element.attributes)}`;
   const animationAttributes = animationName === undefined
     ? ""
-    : ` data-svml-frame-animation data-svml-animation-start-frame="${context.presentStartFrame}" data-svml-animation-duration-frames="${animationDurationFrames}" data-svml-animation-sample-frames="${context.presentDurationFrames}" data-svml-animation-properties="${animationProperties.join(",")}"`;
+    : ` data-narratage-frame-animation data-narratage-animation-start-frame="${context.presentStartFrame}" data-narratage-animation-duration-frames="${animationDurationFrames}" data-narratage-animation-sample-frames="${context.presentDurationFrames}" data-narratage-animation-properties="${animationProperties.join(",")}"`;
   const common = `${commonAttributes}${animationAttributes} style="${escapeHtml(inlineStyle)}"`;
   if (element.kind === "mask") {
     const direct = children.get(element.id) ?? [];
@@ -307,7 +305,7 @@ function renderElement(
         return `<image x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
       }
       if (maskRoot.kind === "surface" && maskRoot.surface.timing.kind === "still") {
-        return `<image data-svml-surface-artifact="${maskRoot.surface.artifact.digest}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.surface.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
+        return `<image data-narratage-surface-artifact="${maskRoot.surface.artifact.digest}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.surface.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
       }
       throw new Error(`Local mask ${element.id} requires a terminal owned text, image or still Surface mask source.`);
     })();
@@ -345,23 +343,23 @@ function renderElement(
       const partId = `${id}-sample-${String(part).padStart(4, "0")}`;
       const media = [
         `id="${partId}"`,
-        `data-svml-element-id="${escapeHtml(element.id)}"`,
-        `data-svml-sampling-part="${part}"`,
+        `data-narratage-element-id="${escapeHtml(element.id)}"`,
+        `data-narratage-sampling-part="${part}"`,
         `data-start="${frameSeconds(startFrame, context.programNumerator, context.programDenominator)}"`,
         `data-duration="${frameSeconds(durationFrames, context.programNumerator, context.programDenominator)}"`,
         `data-track-index="${context.stackIndex}"`,
         `data-media-start="${sourceSeconds(run.sourceFrame, element.sampling!.sourceFrameRate)}"`,
         `data-playback-rate="${sampledPlaybackRate(segment.rate, element.sampling!.sourceFrameRate, context.programNumerator, context.programDenominator)}"`,
-        `data-svml-source-frame="${run.sourceFrame.numerator}/${run.sourceFrame.denominator}"`,
-        `data-svml-source-rate="${segment.rate.numerator}/${segment.rate.denominator}"`,
+        `data-narratage-source-frame="${run.sourceFrame.numerator}/${run.sourceFrame.denominator}"`,
+        `data-narratage-source-rate="${segment.rate.numerator}/${segment.rate.denominator}"`,
         `style="${escapeHtml(inlineStyle)}"`,
         attributes(element.attributes).trim(),
         "muted",
         "playsinline",
         ...(element.kind === "surface" ? [
-          `data-svml-surface-artifact="${element.surface.artifact.digest}"`,
-          `data-svml-alpha-mode="${element.surface.alphaMode}"`,
-          `data-svml-color-space="${element.surface.colorSpace}"`,
+          `data-narratage-surface-artifact="${element.surface.artifact.digest}"`,
+          `data-narratage-alpha-mode="${element.surface.alphaMode}"`,
+          `data-narratage-color-space="${element.surface.colorSpace}"`,
           `width="${element.surface.width}"`,
           `height="${element.surface.height}"`,
         ] : []),
@@ -372,12 +370,12 @@ function renderElement(
   if (element.kind === "surface") {
     const source = escapeHtml(hyperframesArtifactUri(element.surface.artifact.digest));
     const surface = [
-      `data-svml-surface-artifact="${element.surface.artifact.digest}"`,
+      `data-narratage-surface-artifact="${element.surface.artifact.digest}"`,
       `data-start="${context.presentStart}"`,
       `data-duration="${context.presentDuration}"`,
       `data-track-index="${context.stackIndex}"`,
-      `data-svml-alpha-mode="${element.surface.alphaMode}"`,
-      `data-svml-color-space="${element.surface.colorSpace}"`,
+      `data-narratage-alpha-mode="${element.surface.alphaMode}"`,
+      `data-narratage-color-space="${element.surface.colorSpace}"`,
       `width="${element.surface.width}"`,
       `height="${element.surface.height}"`,
     ].join(" ");
@@ -426,7 +424,7 @@ function renderVisualPresent(
     programDenominator: denominator,
     stackIndex,
   });
-  return `<div class="clip svml-visual-present" data-svml-track-id="${escapeHtml(track.id)}" data-svml-present-id="${escapeHtml(present.id)}" data-svml-stack-order="${present.stacking.order}" data-svml-stack-tie="${escapeHtml(present.stacking.tieBreak)}" data-track-index="${stackIndex}" data-start="${start}" data-duration="${duration}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${contents}</div>`;
+  return `<div class="clip narratage-visual-present" data-narratage-track-id="${escapeHtml(track.id)}" data-narratage-present-id="${escapeHtml(present.id)}" data-narratage-stack-order="${present.stacking.order}" data-narratage-stack-tie="${escapeHtml(present.stacking.tieBreak)}" data-track-index="${stackIndex}" data-start="${start}" data-duration="${duration}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${contents}</div>`;
 }
 
 function renderAnimationRules(track: VisualTrack, present: VisualPresent): string[] {
@@ -578,14 +576,14 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
   const denominator = ${denominator};
   const millisecondsPerFrame = denominator * 1000 / numerator;
   const timelines = [];
-  for (const element of document.querySelectorAll("[data-svml-frame-animation]")) {
+  for (const element of document.querySelectorAll("[data-narratage-frame-animation]")) {
     void element.getBoundingClientRect();
     const animation = element.getAnimations()[0];
     if (animation === undefined) throw new Error("Visual IR frame animation did not materialize.");
-    const start = Number(element.getAttribute("data-svml-animation-start-frame"));
-    const duration = Number(element.getAttribute("data-svml-animation-duration-frames"));
-    const sampleDuration = Number(element.getAttribute("data-svml-animation-sample-frames"));
-    const properties = String(element.getAttribute("data-svml-animation-properties") || "")
+    const start = Number(element.getAttribute("data-narratage-animation-start-frame"));
+    const duration = Number(element.getAttribute("data-narratage-animation-duration-frames"));
+    const sampleDuration = Number(element.getAttribute("data-narratage-animation-sample-frames"));
+    const properties = String(element.getAttribute("data-narratage-animation-properties") || "")
       .split(",").filter(Boolean);
     const frames = [];
     for (let frame = 0; frame <= sampleDuration; frame += 1) {
@@ -642,7 +640,7 @@ function emitHtml(composition: Composition, programSpace: ProgramSpace): string 
   </style>
 </head>
 <body>
-  <div data-composition-id="${escapeHtml(composition.id)}" data-start="0" data-no-timeline data-width="${composition.canvas.width}" data-height="${composition.canvas.height}" data-duration="${duration}" data-fps="${fps}" data-svml-frame-count="${frameCount}">
+  <div data-composition-id="${escapeHtml(composition.id)}" data-start="0" data-no-timeline data-width="${composition.canvas.width}" data-height="${composition.canvas.height}" data-duration="${duration}" data-fps="${fps}" data-narratage-frame-count="${frameCount}">
     ${visualHtml}
   </div>${animationRuntime}${textRuntime}
 </body>

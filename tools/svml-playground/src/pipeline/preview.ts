@@ -98,7 +98,7 @@ function authoredCanvas(compiled: unknown): { width: number; height: number } {
   for (const record of records) {
     if (record.value.kind !== "inline") continue;
     const canvas = record.value.value as { widthPx?: number; heightPx?: number; contract?: string };
-    if (canvas.contract === "svml.canvas-space@1"
+    if (canvas.contract === "narratage.canvas-space@1"
       && typeof canvas.widthPx === "number" && typeof canvas.heightPx === "number") {
       return { width: canvas.widthPx, height: canvas.heightPx };
     }

@@ -40,8 +40,8 @@ import {
   grokImagineManifest,
   sealGrokImagineRequest,
 } from "@narratage/grok-imagine";
-import { createLocalExecutionPackage, createProjectLocalRuntime } from "@narratage/local";
-import type { LocalBuildSubmission } from "@narratage/local";
+import { createLocalExecutionPackage, createProjectLocalRuntime } from "@narratage/runtime-local";
+import type { LocalBuildSubmission } from "@narratage/runtime-local";
 import {
   minimaxH3Component,
   minimaxH3Endpoints,
@@ -63,7 +63,7 @@ import type {
   TypedRecord,
 } from "@narratage/protocol";
 import { credentialRef } from "@narratage/runtime";
-import { createSqliteRuntimeComponentPackage } from "@narratage/store-sqlite";
+import { createSqliteRuntimeInfrastructurePackage } from "@narratage/store-sqlite";
 import {
   sealSeedanceRequest,
   seedanceComponent,
@@ -185,7 +185,7 @@ function referenceMediaType(path: string): string {
   if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
   if (lower.endsWith(".webp")) return "image/webp";
   if (lower.endsWith(".png")) return "image/png";
-  throw new Error("SVML_KIE_SMOKE_REFERENCE must be a PNG, JPEG or WebP image");
+  throw new Error("NARRATAGE_KIE_SMOKE_REFERENCE must be a PNG, JPEG or WebP image");
 }
 
 async function smokeCases(root: string): Promise<readonly SmokeCase[]> {
@@ -284,7 +284,7 @@ async function smokeCases(root: string): Promise<readonly SmokeCase[]> {
       }) as unknown as CanonicalValue,
     },
   ];
-  const referencePath = process.env.SVML_KIE_SMOKE_REFERENCE;
+  const referencePath = process.env.NARRATAGE_KIE_SMOKE_REFERENCE;
   if (referencePath !== undefined) {
     const absolute = resolve(referencePath);
     const store = new FileArtifactStore(join(root, ".svml", "artifacts"));
@@ -306,10 +306,10 @@ async function smokeCases(root: string): Promise<readonly SmokeCase[]> {
 }
 
 function selectCases(cases: readonly SmokeCase[]): readonly SmokeCase[] {
-  const requested = process.env.SVML_KIE_SMOKE_CASES ?? "gpt-image-2";
+  const requested = process.env.NARRATAGE_KIE_SMOKE_CASES ?? "gpt-image-2";
   if (requested === "all") return cases;
   const keys = requested.split(",").map((item) => item.trim()).filter((item) => item.length > 0);
-  assert(keys.length > 0, "SVML_KIE_SMOKE_CASES selected no cases");
+  assert(keys.length > 0, "NARRATAGE_KIE_SMOKE_CASES selected no cases");
   const available = new Map(cases.map((item) => [item.key, item]));
   return keys.map((key) => {
     const item = available.get(key);
@@ -390,12 +390,12 @@ function failureMessage(item: SmokeCase, build: LocalBuildSubmission): string {
 }
 
 async function main(): Promise<void> {
-  assert(process.env.SVML_KIE_LIVE === "1",
-    "KIE live smoke is paid and opt-in; set SVML_KIE_LIVE=1 explicitly");
+  assert(process.env.NARRATAGE_KIE_LIVE === "1",
+    "KIE live smoke is paid and opt-in; set NARRATAGE_KIE_LIVE=1 explicitly");
   const key = process.env.KIE_API_KEY;
   assert(key !== undefined && key.length > 0, "KIE_API_KEY is required");
   const baseUrl = apiBaseUrl(process.env.KIE_BASE_URL ?? "https://api.kie.ai");
-  const root = resolve(process.env.SVML_KIE_SMOKE_ROOT ?? join(tmpdir(), "svml-kie-live"));
+  const root = resolve(process.env.NARRATAGE_KIE_SMOKE_ROOT ?? join(tmpdir(), "narratage-kie-live"));
   await mkdir(root, { recursive: true });
   const selected = selectCases(await smokeCases(root));
   console.log(`KIE smoke cases: ${selected.map((item) => item.key).join(", ")}`);
@@ -408,28 +408,24 @@ async function main(): Promise<void> {
     defaultConcurrency: 1,
     pollIntervalMs: 3_000,
   });
-  const execution = createLocalExecutionPackage("execution.local");
-  const state = createSqliteRuntimeComponentPackage({
+  const execution = createLocalExecutionPackage("execution");
+  const state = createSqliteRuntimeInfrastructurePackage({
     path: join(root, ".narratage", "runtime.sqlite"),
-    buildInstance: "state.builds",
-    operationInstance: "state.operations",
-    dispatchInstance: "state.dispatch",
+    instance: "state",
   });
-  const artifacts = createFileArtifactStorePackage({ root: join(root, ".narratage", "artifacts"), instance: "artifacts.fs" });
-  const credentials = createEnvironmentCredentialStorePackage({ instance: "credentials.env" });
+  const artifacts = createFileArtifactStorePackage({ root: join(root, ".narratage", "artifacts"), instance: "artifacts" });
+  const credentials = createEnvironmentCredentialStorePackage({ instance: "credentials" });
   const runtime = await createProjectLocalRuntime({
     dataRoot: root,
-    runtimeComponents: [execution, state, artifacts, credentials],
-    bindings: {
-      scheduler: "execution.local.scheduler",
-      worker: "execution.local.worker",
-      stores: {
-        build: "state.builds",
-        operations: "state.operations",
-        dispatch: "state.dispatch",
-        artifacts: "artifacts.fs",
-        credentials: ["credentials.env"],
-      },
+    infrastructure: [execution, state, artifacts, credentials],
+    roles: {
+      scheduler: { from: "execution", part: "scheduler" },
+      worker: { from: "execution", part: "worker" },
+      buildStore: { from: "state", part: "builds" },
+      operationStore: { from: "state", part: "operations" },
+      dispatchStore: { from: "state", part: "dispatch" },
+      artifactStore: { from: "artifacts", part: "store" },
+      credentialStores: [{ from: "credentials", part: "store" }],
     },
     components: [
       generationComponent,

@@ -2,14 +2,14 @@
 
 Domain-neutral command engine for Build compilation, execution, inspection and egress.
 
-The engine implements `lock-packages`, `check`, `plan`, `build`, `status`, `builds`, `inspect`, `get`
+The engine implements `check`, `plan`, `build`, `status`, `builds`, `inspect`, `get`
 and `cancel`, but owns no default author vocabulary, Frontend or Provider adapter. Its caller
 must pass one explicit `CliDistribution`:
 
 ```ts
 type CliDistribution = {
   packageRoot?: string;
-  bootstrapPackages: readonly NodePackageBinding[];
+  bootstrapPackages: readonly LoadedPackage[];
   createCompiler(options): NodeCompiler;
   runtimeProfileRevision(path): Promise<string>;
   createRuntimeFromConfig(path): Promise<CliRuntime>;
@@ -18,7 +18,8 @@ type CliDistribution = {
 
 A Distribution is trusted application assembly, not Core data or source-import authority. The
 official `@narratage/video-cli` selects `@narratage/compiler-markup-node` and the current video Runtime
-adapters, but no author-package aggregate. A package lock selects the exact Author/Run packages.
+adapters, but no author-package aggregate. Source imports select Author and Run packages from the
+project's installed dependencies.
 Another domain can reuse this command engine without installing any video package.
 The Worker lifecycle compares only the opaque revision supplied by the Distribution; the command
 engine does not parse a Runtime Profile or know which files that Profile considers deployment input.

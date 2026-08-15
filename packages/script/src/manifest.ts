@@ -13,8 +13,6 @@ export const captionCorrespondenceType: TypeRef = narrativeTypes.captionCorrespo
 export const captionDisplayWordSubsetType: TypeRef = narrativeTypes.captionDisplayWordSubset;
 export { narrativeSchema };
 
-export const scriptSurfaceImplementationDigest = digestOf("@narratage/script/display-atoms-with-structural-order-surface@1");
-
 export const scriptMarkupSurfaces = [
   {
     name: "script",
@@ -30,14 +28,11 @@ export const scriptMarkupSurfaces = [
       captionCorrespondenceType,
       captionDisplayWordSubsetType,
     ],
-    implementation: {
-      digest: scriptSurfaceImplementationDigest,
-    },
   },
 ] as const;
 
 export const scriptManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: scriptModuleRef.name,
   version: scriptModuleRef.version,
   dependencies: [narrativeDependency, textDependency],

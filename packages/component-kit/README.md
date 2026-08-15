@@ -2,11 +2,11 @@
 
 The minimal host-neutral SDK for trusted deterministic compute components. A package exports
 enumerable Producer and Type-owner Validator facets. Both identities are data: an exact nominal
-reference plus implementation digest and handler. Package locks and Hosts can inspect and compare
-the identities without running an opaque `install()` callback. Producer handlers receive only the
+reference plus handler. Hosts enumerate them without running an opaque `install()` callback.
+Producer handlers receive only the
 Core command, Producer identity and immutable typed inputs.
 
-They receive no ArtifactStore, credentials, network client, queue or Runtime Component. Work that
+They receive no ArtifactStore, credentials, network client, queue or Runtime infrastructure. Work that
 needs those authorities must emit an explicit Need and be implemented by a separately selected
 Endpoint package. `@narratage/driver-node` implements the structural registrar but is not part of this
 SDK.

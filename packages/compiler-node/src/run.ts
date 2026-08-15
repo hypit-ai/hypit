@@ -14,7 +14,6 @@ import type {
   BuildRequest,
   BuildState,
   BuildState as ArchivedBuildState,
-  Digest,
   StoredValue,
 } from "@narratage/protocol";
 import {
@@ -276,7 +275,7 @@ export class NodeRunCompiler {
     };
   }
 
-  planCompilation(compilation: NodeCompiledRun, implementationClosure?: Digest): PlannedBuild {
+  planCompilation(compilation: NodeCompiledRun): PlannedBuild {
     const authorGraph = compilation.author.graph;
     const selected = new Map(compilation.run.graph.satisfactions.map((item) => [item.output, item.candidate]));
     const fullGraph = sealCompiledGraph({
@@ -290,20 +289,18 @@ export class NodeRunCompiler {
     });
     const fullRequest = sealBuildRequest({
       graph: fullGraph.id,
-      ...(implementationClosure === undefined ? {} : { implementationClosure }),
       targets: compilation.run.graph.targets,
     });
     const sliced = sliceExecution(compilation.program, fullGraph, fullRequest);
     const request = sealBuildRequest({
       graph: sliced.graph.id,
-      ...(implementationClosure === undefined ? {} : { implementationClosure }),
       targets: compilation.run.graph.targets,
     });
     const state = start(sliced.program, sliced.graph, request);
     return { compilation, request: state.request, plan: state.plan, state };
   }
 
-  async planFile(file: string, implementationClosure?: Digest): Promise<PlannedBuild> {
-    return this.planCompilation(await this.compileFile(file), implementationClosure);
+  async planFile(file: string): Promise<PlannedBuild> {
+    return this.planCompilation(await this.compileFile(file));
   }
 }

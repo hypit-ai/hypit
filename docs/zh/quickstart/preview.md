@@ -18,10 +18,10 @@ pnpm svml:playground -- --source examples/all-components-preview/main.svml
 | --- | --- |
 | `--source <main.svml>` | 要读取的 Author Source。必填。 |
 | `--run <build.svrun>` | 一个 Run Source，从中读取它已经指名的素材与时序。 |
-| `--runtime <svml.runtime.json>` | 早先 Build 产出的素材存放在哪里。只有通过 `<build-record>` 复用已接受镜头的 Source 才需要。 |
+| `--runtime <narratage.runtime.json>` | 早先 Build 产出的素材存放在哪里。只有通过 `<build-record>` 复用已接受镜头的 Source 才需要。 |
 | `--port <number>` | 默认 `5179`。 |
 
-两个可选参数是叠加的。两个都不给时，Playground 依然能在一个只有 `main.svml` 和 `.svs` 样式表的目录上运行——不需要包锁、不需要 Runtime Profile、不需要任何构建。
+两个可选参数是叠加的。两个都不给时，Playground 依然能在一个只有 `main.svml` 和 `.svs` 样式表的目录上运行，不需要 Runtime Profile 或已有 Build。
 
 ::: tip 启动新服务前先停掉上一个
 第二个 Playground 会悄悄占用另一个端口，于是你一边读着过期的预览，一边描述着新的改动。先把旧的停掉：

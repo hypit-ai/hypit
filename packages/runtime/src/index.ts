@@ -16,7 +16,6 @@ export {
 } from "./credentials.js";
 export type * from "./credentials.js";
 export {
-  assertRuntimeClosureAdmission,
   capacityReservationId,
   createBuildDispatchIdentity,
   nonTerminalDispatchPhases,
@@ -38,20 +37,20 @@ export type * from "./operations.js";
 export {
   RuntimeModuleRegistry,
   localSchedulerOptionsFromClosure,
-  resolveRuntimeProfile,
+  resolveRuntimeClosure,
   runtimeEndpoint,
-  sealRuntimeProfile,
+  sealResolvedRuntimeProfile,
   verifyRuntimeClosure,
   verifyRuntimeCoverage,
-  verifyRuntimeProfile,
+  verifyResolvedRuntimeProfile,
 } from "./profile.js";
 export type * from "./profile.js";
 export {
-  assembleRuntimeComponents,
-  defineRuntimeComponentPackage,
-  verifyRuntimeComponentPackage,
-} from "./components.js";
-export type * from "./components.js";
+  assembleRuntimeInfrastructure,
+  defineRuntimeInfrastructurePackage,
+  verifyRuntimeInfrastructurePackage,
+} from "./infrastructure.js";
+export type * from "./infrastructure.js";
 export { LocalBuildScheduler } from "./scheduler.js";
 export {
   isEnumerableBuildStore,

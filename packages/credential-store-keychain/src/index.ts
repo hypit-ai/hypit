@@ -1,9 +1,4 @@
-export {
-  KeychainCredentialStore,
-  createKeychainCredentialStorePackage,
-  keychainCredentialStoreImplementationDigest,
-  keychainCredentialStoreModuleRef,
-} from "./store.js";
+export { KeychainCredentialStore, createKeychainCredentialStorePackage, keychainCredentialStoreModuleRef } from "./store.js";
 export type {
   CreateKeychainCredentialStorePackageOptions,
   KeychainDeleter,

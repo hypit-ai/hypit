@@ -4,7 +4,7 @@ import { textManifest } from "@narratage/text";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createResolvedClosure, digestOf, isDigest } from "@narratage/core";
+import { createResolvedClosure, isDigest } from "@narratage/core";
 import type { ModuleManifest } from "@narratage/protocol";
 import {
   decodeScriptSurface,
@@ -172,26 +172,20 @@ test("Markup also exposes a generic structured Surface tree", () => {
 test("a module can use Markup's generic structured parser without adding another parser", async () => {
   const module = { name: "example.card", version: "1" } as const;
   const type = { module, name: "Card" } as const;
-  const implementationDigest = digestOf("example.card/surface@1");
   const cardSurface = {
     name: "card",
     tag: "card",
     mode: "structured",
     outputs: [type],
-    implementation: { digest: implementationDigest },
   } as const;
   const manifest: ModuleManifest = {
-    format: "svml.module@1",
+    format: "narratage.module@1",
     name: module.name,
     version: module.version,
     dependencies: [],
     types: [
       {
         name: type.name,
-        schema: {
-          kind: "object",
-          fields: { tag: { schema: { kind: "literal", value: "card" } } },
-        },
       },
     ],
     capabilities: [],

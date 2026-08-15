@@ -31,14 +31,14 @@ const reportProducer = { module: laboratory, name: "write-report" } satisfies Pr
 const echoProducer = { module: laboratory, name: "echo-sample" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [],
   types: [
-    { name: sampleType.name, schema: { kind: "string", minLength: 1 } },
-    { name: measurementType.name, schema: { kind: "number" } },
-    { name: reportType.name, schema: { kind: "string", minLength: 1 } },
+    { name: sampleType.name },
+    { name: measurementType.name },
+    { name: reportType.name },
   ],
   capabilities: [],
   producers: [
@@ -47,27 +47,18 @@ const manifest: ModuleManifest = {
       inputs: [{ name: "sample", type: sampleType }],
       outputs: [{ name: "measurement", type: measurementType }],
       needs: [],
-      implementation: {
-        digest: digestOf("example.laboratory/measure@1"),
-      },
     },
     {
       name: reportProducer.name,
       inputs: [{ name: "measurement", type: measurementType }],
       outputs: [{ name: "report", type: reportType }],
       needs: [],
-      implementation: {
-        digest: digestOf("example.laboratory/write-report@1"),
-      },
     },
     {
       name: echoProducer.name,
       inputs: [{ name: "sample", type: sampleType }],
       outputs: [{ name: "sample", type: sampleType }],
       needs: [],
-      implementation: {
-        digest: digestOf("example.laboratory/echo-sample@1"),
-      },
     },
   ],
 };

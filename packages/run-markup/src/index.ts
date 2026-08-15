@@ -1,8 +1,4 @@
-export {
-  runMarkupFrontend,
-  runMarkupFrontendId,
-  runMarkupFrontendImplementationDigest,
-} from "./frontend.js";
+export { runMarkupFrontend, runMarkupFrontendId } from "./frontend.js";
 export {
   parseRunDocument,
   RunSyntaxError,

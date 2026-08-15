@@ -6,7 +6,7 @@ import type {
   RunFragmentPackage,
 } from "./types.js";
 
-export const runFragmentHostAbi = "svml.run-fragment-host@1";
+export const runFragmentHostAbi = "narratage.run-fragment-host@1";
 
 export type RunFragmentHostFacetIdentity = {
   readonly exports: readonly {

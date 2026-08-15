@@ -24,7 +24,7 @@ mkdir -p packages/my-component/src packages/my-component/test
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": {
+  "narratage": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
@@ -50,7 +50,7 @@ export const myComponentModuleRef: ModuleRef = {
 };
 
 export const myComponentManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: myComponentModuleRef.name,
   version: myComponentModuleRef.version,
   dependencies: [],
@@ -103,8 +103,8 @@ import {
   decodeMyComponentSurface,
 } from "./index.js";
 
-export const svmlPackage = {
-  format: "svml.node-package@1" as const,
+export const narratagePackage = {
+  format: "narratage.node-package@1" as const,
   modules: [{
     manifest: myComponentManifest,
   }],
@@ -117,7 +117,7 @@ export const svmlPackage = {
   ],
 };
 
-export default svmlPackage;
+export default narratagePackage;
 ```
 
 Module 会自动提供精确的 `manifest.name@manifest.version`，所以作者直接导入
@@ -135,29 +135,14 @@ Module 会自动提供精确的 `manifest.name@manifest.version`，所以作者�
 
 pnpm 工作区链接负责解析包，不需要根路径注册表。
 
-## 7. 安装并锁定
+## 7. 安装
 
 ```bash
 pnpm install --frozen-lockfile
-
-node --run narratage -- lock-packages <lock-file> \
-  --package @narratage/my-component \
-  [--package @narratage/other-direct-package ...] \
-  --package-root .
 ```
 
-这里只列出你直接选择的包。它们的 Manifest 声明的精确逻辑 Module 依赖，会从已安装的物理依赖闭包中自动加入；缺失、摘要不匹配或存在多个候选时，建锁会直接失败。
-
-已有锁只需增加这个直接包时，不必重写其他选择：
-
-```bash
-node --run narratage -- lock-packages <lock-file> \
-  --add @narratage/my-component \
-  --package-root .
-```
-
-`--remove` 明确撤销一个直接选择，`--refresh` 在选择不变时接受当前安装字节，`--verify`
-只读验证闭包。重复的 `--package` 始终表示一份完整、精确的直接选择，而不是增量添加。
+包管理器负责安装、版本与完整性。Author 或 Run Source 导入逻辑能力时，Narratage 才会加载
+对应包；Manifest 声明的精确 Module 依赖从该包的已安装依赖中加载。
 
 ## 8. 在 Author Source 中使用
 

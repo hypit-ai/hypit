@@ -17,7 +17,7 @@ Canonical path:
 
 `Script → estimate:Speech/text → Seedance or supplied media → Speech Spine → WhisperX SemanticMap → peer Caption/Media/Typography/Audio Tracks → Film → render:Video`.
 
-Use explicit imports, exact fonts, Canvas/Frames, ProgramSpace, package locks, Targets, and Runtime
+Use explicit imports, exact fonts, Canvas/Frames, ProgramSpace, Targets, and Runtime
 authority. There is no implicit cache; reuse is explicit with `build-record` + `satisfy`.
 
 Use `speech:Take video={...}` for a speech-bearing A/V take and `speech:Take audio={...}` for

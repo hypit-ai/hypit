@@ -8,11 +8,6 @@ import { digestOf } from "@narratage/protocol";
 
 import type { FilmProgram, FilmTrackSet } from "./types.js";
 
-export const createFilmTrackSetImplementationDigest = digestOf("@narratage/film/create-track-set@1");
-export const appendFilmVisualTrackImplementationDigest = digestOf("@narratage/film/append-visual-track@1");
-export const appendFilmAudioTrackImplementationDigest = digestOf("@narratage/film/append-audio-track@1");
-export const compileFilmCompositionImplementationDigest = digestOf("@narratage/film/compile-composition@1");
-
 function assertNonEmpty(value: string, label: string): void {
   if (!value.trim()) throw new Error(`${label} must not be empty.`);
 }

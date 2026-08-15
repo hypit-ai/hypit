@@ -1,7 +1,6 @@
 import { canonicalize, isDigest } from "./canonical.js";
 import type {
   CapabilityDeclaration,
-  ImplementationRef,
   ModuleDependency,
   ModuleManifest,
   NeedPortDeclaration,
@@ -167,7 +166,6 @@ function dependency(value: unknown, path: string): ModuleDependency {
   const parsed = object(value, path);
   return {
     module: moduleRef(parsed.module, `${path}.module`),
-    digest: digest(parsed.digest, `${path}.digest`),
   };
 }
 
@@ -175,17 +173,6 @@ function typeDeclaration(value: unknown, path: string): TypeDeclaration {
   const parsed = object(value, path);
   return {
     name: string(parsed.name, `${path}.name`),
-    schema: valueSchema(parsed.schema, `${path}.schema`),
-    ...(parsed.validator === undefined
-      ? {}
-      : { validator: typeValidator(parsed.validator, `${path}.validator`) }),
-  };
-}
-
-function typeValidator(value: unknown, path: string): NonNullable<TypeDeclaration["validator"]> {
-  const parsed = object(value, path);
-  return {
-    implementation: implementation(parsed.implementation, `${path}.implementation`),
   };
 }
 
@@ -214,13 +201,6 @@ function needPort(value: unknown, path: string): NeedPortDeclaration {
   };
 }
 
-function implementation(value: unknown, path: string): ImplementationRef {
-  const parsed = object(value, path);
-  return {
-    digest: digest(parsed.digest, `${path}.digest`),
-  };
-}
-
 function producer(value: unknown, path: string): ProducerDeclaration {
   const parsed = object(value, path);
   return {
@@ -234,15 +214,14 @@ function producer(value: unknown, path: string): ProducerDeclaration {
     needs: array(parsed.needs, `${path}.needs`).map((item, index) =>
       needPort(item, `${path}.needs[${index}]`),
     ),
-    implementation: implementation(parsed.implementation, `${path}.implementation`),
   };
 }
 
 export function parseModuleManifest(value: unknown): ModuleManifest {
   const parsed = object(canonicalize(value), "$manifest");
-  if (parsed.format !== "svml.module@1") throw new Error("$manifest.format must be svml.module@1");
+  if (parsed.format !== "narratage.module@1") throw new Error("$manifest.format must be narratage.module@1");
   return {
-    format: "svml.module@1",
+    format: "narratage.module@1",
     name: string(parsed.name, "$manifest.name"),
     version: string(parsed.version, "$manifest.version"),
     dependencies: array(parsed.dependencies, "$manifest.dependencies").map((item, index) =>

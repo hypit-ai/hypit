@@ -57,8 +57,7 @@ test("configured S3 service locks its location", () => {
     region: "us-east-1",
     expectedBucketOwner: "123456789012",
   });
-  assert.equal(configured.components[0]?.instance.id, "artifacts.team");
-  assert.ok(configured.components[0]?.instance.configurationDigest);
+  assert.equal(configured.parts[0]?.instance.id, "artifacts.team.store");
 });
 
 /** A client that can do everything, backed by an in-memory bucket. */

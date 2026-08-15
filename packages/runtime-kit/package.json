@@ -1,0 +1,16 @@
+{
+  "name": "@narratage/runtime-kit",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/host": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime": "workspace:*"
+  }
+}

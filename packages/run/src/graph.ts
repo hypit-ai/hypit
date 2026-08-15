@@ -21,7 +21,7 @@ function assert(condition: unknown, code: string, message: string): asserts cond
 
 function content(graph: Omit<RunGraph, "id">): Omit<RunGraph, "id"> {
   return {
-    format: "svml.run-graph@1",
+    format: "narratage.run-graph@1",
     candidates: [...graph.candidates].sort((left, right) => left.id.localeCompare(right.id)),
     operations: [...graph.operations].sort((left, right) => left.id.localeCompare(right.id)),
     satisfactions: [...graph.satisfactions].sort((left, right) => left.output.localeCompare(right.output)),
@@ -30,14 +30,14 @@ function content(graph: Omit<RunGraph, "id">): Omit<RunGraph, "id"> {
 }
 
 export function sealRunGraph(input: Omit<RunGraph, "format" | "id">): RunGraph {
-  const normalized = content({ format: "svml.run-graph@1", ...input });
+  const normalized = content({ format: "narratage.run-graph@1", ...input });
   const graph: RunGraph = { ...normalized, id: digestOf(normalized) };
   verifyRunGraph(graph);
   return graph;
 }
 
 export function verifyRunGraph(graph: RunGraph): void {
-  assert(graph.format === "svml.run-graph@1", "UNSUPPORTED_RUN_GRAPH", "unsupported Run Graph");
+  assert(graph.format === "narratage.run-graph@1", "UNSUPPORTED_RUN_GRAPH", "unsupported Run Graph");
   assert(isDigest(graph.id), "INVALID_RUN_GRAPH_DIGEST", "Run Graph digest is invalid");
   const candidateIds = new Set<string>();
   for (const candidate of graph.candidates) {

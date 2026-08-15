@@ -7,7 +7,7 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": {
+  "narratage": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
@@ -18,8 +18,8 @@
     "@narratage/protocol": "workspace:*",
     "@narratage/render-hyperframes": "workspace:*",
     "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-adapter": "workspace:*",
-    "@narratage/runtime-adapter-node": "workspace:*",
+    "@narratage/runtime-kit": "workspace:*",
+    "@narratage/runtime-host-node": "workspace:*",
     "hyperframes": "0.7.101"
   },
   "devDependencies": {

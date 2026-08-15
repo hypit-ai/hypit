@@ -1,5 +1,5 @@
 [project]
-name = "svml-image-opencv-runtime"
+name = "narratage-image-opencv-runtime"
 version = "0.1.0"
 description = "Locked Python runtime for the SVML local OpenCV image Provider"
 requires-python = ">=3.13,<3.14"

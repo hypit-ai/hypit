@@ -9,15 +9,7 @@ export {
   verifyGeneratedAudioSet,
   verifyGeneratedVideoSet,
 } from "./identity.js";
-export {
-  generationManifest,
-  generationManifestDigest,
-  generationModuleRef,
-  generationProducerDigests,
-  generationProducers,
-  generationTypes,
-  generationValidatorDigests,
-} from "./manifest.js";
+export { generationManifest, generationModuleRef, generationProducers, generationTypes } from "./manifest.js";
 export {
   assertMappingCoversPorts,
   compileWireRequest,

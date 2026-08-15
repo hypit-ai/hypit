@@ -6,10 +6,7 @@ import { generationTypes } from "@narratage/generation";
 import { mimoTtsEndpoints, sealMimoTtsRequest } from "@narratage/mimo-tts";
 import { digestOf } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
-import {
-  createXiaomiMimoProvider,
-  xiaomiMimoProviderImplementationDigest,
-} from "@narratage/provider-xiaomi-mimo";
+import { createXiaomiMimoProvider } from "@narratage/provider-xiaomi-mimo";
 
 function need(
   endpoint: (typeof mimoTtsEndpoints)[keyof typeof mimoTtsEndpoints],
@@ -30,7 +27,6 @@ function need(
 async function invoke(request: Need, artifacts: MemoryArtifactStore, fetch: typeof globalThis.fetch) {
   const provider = createXiaomiMimoProvider({
     fetch,
-    fetchImplementationDigest: digestOf("xiaomi-mimo:test-fetch"),
   });
   const registry = new EndpointRegistry();
   await provider.install(registry);
@@ -117,8 +113,7 @@ test("Provider configuration owns credentials and queue policy, not model semant
   assert(facet?.role === "capability-endpoint");
   assert.equal(facet.defaultConcurrency, 3);
   assert.deepEqual(facet.credentialSlots, ["apiKey"]);
-  assert.equal(facet.implementation.digest, xiaomiMimoProviderImplementationDigest);
-  assert.equal(provider.bindings.length, 3);
-  assert.ok(provider.bindings.every((binding) => binding.returns.name === generationTypes.audioSet.name));
+  assert.equal(provider.offers.length, 3);
+  assert.ok(provider.offers.every((binding) => binding.returns.name === generationTypes.audioSet.name));
   assert.equal(JSON.stringify(provider.manifest).includes("voiceDescription"), false);
 });

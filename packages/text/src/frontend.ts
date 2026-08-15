@@ -1,24 +1,20 @@
 import {
   sealRecord,
-  verifyClosure,
-  verifyRecordStructure,
 } from "@narratage/core";
 import type { AuthorFrontend, AuthorSourceExport } from "@narratage/elaborator";
 import { parseSvs } from "@narratage/svs";
 
-import { textImplementationDigests, textModuleRef, textTypes } from "./manifest.js";
+import { textModuleRef, textTypes } from "./manifest.js";
 import { textTemplateFromSvsRecipes } from "./svs.js";
 
 export const textSvsFrontendId = "@narratage/text/svs@1";
 
 export const textSvsFrontend: AuthorFrontend = {
   id: textSvsFrontendId,
-  implementationDigest: textImplementationDigests.svsFrontend,
   discover() {
     return { modules: [`${textModuleRef.name}@${textModuleRef.version}`], sources: [] };
   },
   decode(source, context) {
-    verifyClosure(context.closure);
     const parsed = parseSvs(source.name, source.text);
     const recipes = parsed.recipes.map((item) => item.value);
     const candidates = recipes
@@ -33,7 +29,6 @@ export const textSvsFrontend: AuthorFrontend = {
       value: { kind: "inline", value: template as unknown as import("@narratage/protocol").CanonicalValue },
       origin: { kind: "authored" },
     });
-    verifyRecordStructure(context.closure, record);
     const exports: AuthorSourceExport[] = [{ name: id, ref: { kind: "record", id }, type: textTypes.template }];
     return {
       records: [record],

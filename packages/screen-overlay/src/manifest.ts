@@ -7,8 +7,6 @@ import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map
 import { spatialDependency, spatialTypes } from "@narratage/spatial";
 import { temporalDependency } from "@narratage/temporal";
 
-import { screenOverlayImplementationDigests, screenOverlayValidatorDigests } from "./program.js";
-
 export const screenOverlayModuleRef = { name: "@narratage/screen-overlay", version: "1" } as const;
 export const screenOverlayTypes = {
   header: { module: screenOverlayModuleRef, name: "ScreenOverlayHeader" },
@@ -71,30 +69,28 @@ export const screenOverlayHeaderSchema: ValueSchema = object({ id: { schema: str
 export const screenOverlayItemSpecSchema: ValueSchema = itemSpec;
 export const screenOverlaySetSchema: ValueSchema = object({ items: { schema: { kind: "array", items: item } } });
 export const screenOverlayProgramSchema: ValueSchema = object({ id: { schema: string }, items: { schema: { kind: "array", minItems: 1, items: item } } });
-export const screenOverlaySurfaceImplementationDigest = digestOf("@narratage/screen-overlay/track-surface@1");
 const validator = (digest: ReturnType<typeof digestOf>) => ({ implementation: { digest } });
 const appendInputs = [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }, { name: "space", type: programSpaceTypes.programSpace }, { name: "spec", type: screenOverlayTypes.itemSpec }] as const;
 
-export const screenOverlayMarkupSurfaces = [{ name: "track", tag: "Track", mode: "structured", outputs: [screenOverlayTypes.header, screenOverlayTypes.itemSpec, screenOverlayTypes.program, compositionTypes.visualTrack], implementation: { digest: screenOverlaySurfaceImplementationDigest } }] as const;
+export const screenOverlayMarkupSurfaces = [{ name: "track", tag: "Track", mode: "structured", outputs: [screenOverlayTypes.header, screenOverlayTypes.itemSpec, screenOverlayTypes.program, compositionTypes.visualTrack] }] as const;
 
 
 export const screenOverlayManifest: ModuleManifest = {
-  format: "svml.module@1", name: screenOverlayModuleRef.name, version: screenOverlayModuleRef.version,
+  format: "narratage.module@1", name: screenOverlayModuleRef.name, version: screenOverlayModuleRef.version,
   dependencies: [narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, compositionDependency],
   types: [
-    { name: screenOverlayTypes.header.name, schema: screenOverlayHeaderSchema },
-    { name: screenOverlayTypes.itemSpec.name, schema: screenOverlayItemSpecSchema },
-    { name: screenOverlayTypes.set.name, schema: screenOverlaySetSchema },
-    { name: screenOverlayTypes.program.name, schema: screenOverlayProgramSchema, validator: validator(screenOverlayValidatorDigests.program) },
+    { name: screenOverlayTypes.header.name },
+    { name: screenOverlayTypes.itemSpec.name },
+    { name: screenOverlayTypes.set.name },
+    { name: screenOverlayTypes.program.name },
   ], capabilities: [],
   producers: [
-    { name: screenOverlayProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [], implementation: { digest: screenOverlayImplementationDigests.createSet } },
-    { name: screenOverlayProducers.appendProgram.name, inputs: [...appendInputs], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [], implementation: { digest: screenOverlayImplementationDigests.appendProgram } },
-    { name: screenOverlayProducers.appendSelection.name, inputs: [...appendInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [], implementation: { digest: screenOverlayImplementationDigests.appendSelection } },
-    { name: screenOverlayProducers.appendMoment.name, inputs: [...appendInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [], implementation: { digest: screenOverlayImplementationDigests.appendMoment } },
-    { name: screenOverlayProducers.finalize.name, inputs: [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }], outputs: [{ name: "program", type: screenOverlayTypes.program }], needs: [], implementation: { digest: screenOverlayImplementationDigests.finalize } },
-    { name: screenOverlayProducers.render.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }, { name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: screenOverlayTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [], implementation: { digest: screenOverlayImplementationDigests.render } },
+    { name: screenOverlayProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [] },
+    { name: screenOverlayProducers.appendProgram.name, inputs: [...appendInputs], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [] },
+    { name: screenOverlayProducers.appendSelection.name, inputs: [...appendInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [] },
+    { name: screenOverlayProducers.appendMoment.name, inputs: [...appendInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [] },
+    { name: screenOverlayProducers.finalize.name, inputs: [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }], outputs: [{ name: "program", type: screenOverlayTypes.program }], needs: [] },
+    { name: screenOverlayProducers.render.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }, { name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: screenOverlayTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
   ],
 };
-export const screenOverlayManifestDigest = digestOf(screenOverlayManifest);
-export const screenOverlayDependency = { module: screenOverlayModuleRef, digest: screenOverlayManifestDigest } as const;
+export const screenOverlayDependency = { module: screenOverlayModuleRef } as const;

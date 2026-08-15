@@ -31,8 +31,13 @@ import svs from "../../svs/src/activation.js";
 import typographyTrack from "../../typography-track/src/activation.js";
 import whisperX from "../../whisperx/src/activation.js";
 import type { NodePackageContribution } from "@narratage/package-loader-node";
+import { digestOf } from "@narratage/protocol";
 
-const bind = (specifier: string, contribution: NodePackageContribution) => ({ specifier, contribution });
+const bind = (specifier: string, contribution: NodePackageContribution) => ({
+  specifier,
+  digest: digestOf(specifier),
+  contribution,
+});
 
 /** Test-only explicit environment; production video CLI starts with no author packages. */
 export const videoTestPackages = [

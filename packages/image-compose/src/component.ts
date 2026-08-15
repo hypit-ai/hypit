@@ -4,7 +4,7 @@ import { canonicalize } from "@narratage/protocol";
 import { rasterComposeRequest } from "@narratage/raster";
 import type { CanvasSpace, SpatialFrame } from "@narratage/spatial";
 
-import { imageComposeImplementationDigests, imageComposeProducers, imageComposeTypes } from "./manifest.js";
+import { imageComposeProducers, imageComposeTypes } from "./manifest.js";
 import {
   appendImageComposeLayer,
   assertImageComposeLayerSet,
@@ -27,11 +27,9 @@ const output = (value: unknown) => ({ kind: "inline" as const, value: canonicali
 export const imageComposeComponent = {
   producers: [{
     producer: imageComposeProducers.createLayers,
-    implementationDigest: imageComposeImplementationDigests.createLayers,
     handler: () => ({ outputs: { layers: output(createImageComposeLayerSet()) }, needs: {} }),
   }, {
     producer: imageComposeProducers.appendLayer,
-    implementationDigest: imageComposeImplementationDigests.appendLayer,
     handler: ({ inputs }: ProducerHandlerContext) => ({
       outputs: { layers: output(appendImageComposeLayer(
         inline<ImageComposeLayerSet>(inputs.layers?.value, "ImageComposeLayerSet"),
@@ -43,7 +41,6 @@ export const imageComposeComponent = {
     }),
   }, {
     producer: imageComposeProducers.request,
-    implementationDigest: imageComposeImplementationDigests.request,
     handler: ({ inputs }: ProducerHandlerContext) => {
       const canvas = inline<CanvasSpace>(inputs.canvas?.value, "CanvasSpace");
       const options = inline<ImageComposeOptions>(inputs.options?.value, "ImageComposeOptions");
@@ -59,15 +56,12 @@ export const imageComposeComponent = {
   }],
   validators: [{
     type: imageComposeTypes.options,
-    implementationDigest: imageComposeImplementationDigests.validateOptions,
     handler: ({ value }) => assertImageComposeOptions(inline<ImageComposeOptions>(value, "ImageComposeOptions")),
   }, {
     type: imageComposeTypes.layerSpec,
-    implementationDigest: imageComposeImplementationDigests.validateLayerSpec,
     handler: ({ value }) => assertImageComposeLayerSpec(inline<ImageComposeLayerSpec>(value, "ImageComposeLayerSpec")),
   }, {
     type: imageComposeTypes.layerSet,
-    implementationDigest: imageComposeImplementationDigests.validateLayerSet,
     handler: ({ value }) => assertImageComposeLayerSet(inline<ImageComposeLayerSet>(value, "ImageComposeLayerSet")),
   }],
 } satisfies ComponentPackage;

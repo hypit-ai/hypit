@@ -1,12 +1,12 @@
 import {
-  createNodePackageInventory,
   loadNodePackageSelection,
-  selectNodePackageSpecifiers,
 } from "@narratage/package-loader-node";
 import type {
-  LoadedNodePackageSet,
-  NodePackageBinding,
+  LoadedPackage,
+  LogicalPackageAddress,
+  NodePackageSelectionRequest,
 } from "@narratage/package-loader-node";
+import { modulePackageAbi } from "@narratage/protocol";
 
 import type { CliDistribution } from "./distribution.js";
 
@@ -16,20 +16,16 @@ type DiscoveryOptions = {
   readonly packageRoot: string;
 };
 
-function selectedKey(value: LoadedNodePackageSet): string {
-  return JSON.stringify(value.lock.selected);
-}
-
 function mergePackages(
-  ...groups: readonly (readonly NodePackageBinding[])[]
-): readonly NodePackageBinding[] {
+  ...groups: readonly (readonly LoadedPackage[])[]
+): readonly LoadedPackage[] {
   return [...new Map(groups.flat().map((item) => [item.specifier, item])).values()];
 }
 
 async function discover(
   distribution: CliDistribution,
   options: DiscoveryOptions,
-  packages: readonly NodePackageBinding[],
+  packages: readonly LoadedPackage[],
 ) {
   const selection = await distribution.discoverSourcePackages?.(options.source, {
     ...(options.workspaceRoot === undefined ? {} : { workspaceRoot: options.workspaceRoot }),
@@ -39,47 +35,40 @@ async function discover(
   return selection;
 }
 
-/** Select only the trusted inventory subset reached by recursive Frontend discovery. */
-export async function loadDiscoveredSourcePackages(
-  distribution: CliDistribution,
-  options: DiscoveryOptions & { readonly packageLock: string },
-): Promise<LoadedNodePackageSet> {
-  let packages = distribution.bootstrapPackages;
-  let previous = "";
-  while (true) {
-    const selection = await discover(distribution, options, packages);
-    const loaded = await loadNodePackageSelection(options.packageLock, selection, options.packageRoot);
-    const key = selectedKey(loaded);
-    if (key === previous) return loaded;
-    previous = key;
-    packages = mergePackages(distribution.bootstrapPackages, loaded.packages);
-  }
+function offers(packages: readonly LoadedPackage[], address: LogicalPackageAddress): number {
+  return packages.filter((item) => [
+    ...(item.contribution.modules ?? []).flatMap((module) => [
+      `${module.manifest.name}@${module.manifest.version}`,
+      ...(module.specifiers ?? []),
+    ].map((name) => ({ abi: modulePackageAbi, name }))),
+    ...(item.contribution.hostFacets ?? []).flatMap((facet) =>
+      (facet.offers ?? []).map((name) => ({ abi: facet.abi, name }))),
+  ].some((offer) => offer.abi === address.abi && offer.name === address.name)).length;
 }
 
-/**
- * Grow a project inventory until every package exposed by recursive Frontend discovery is trusted.
- * Unknown logical names use their conventional npm-looking spelling only for first enrollment.
- */
-export async function createDiscoveredSourceInventory(
+function selectionSatisfied(
+  selection: NodePackageSelectionRequest,
+  packages: readonly LoadedPackage[],
+): boolean {
+  const installed = new Set(packages.map((item) => item.specifier));
+  return selection.selected.every((item) => installed.has(item))
+    && (selection.logical ?? []).every((address) => offers(packages, address) === 1);
+}
+
+/** Load only the installed packages reached by recursive Frontend discovery. */
+export async function loadDiscoveredSourcePackages(
   distribution: CliDistribution,
-  options: DiscoveryOptions & { readonly selected: readonly string[] },
-): Promise<{
-  readonly packages: LoadedNodePackageSet;
-  readonly sourceSelection: Awaited<ReturnType<NonNullable<CliDistribution["discoverSourcePackages"]>>>;
-}> {
-  let roots = [...new Set(options.selected)].sort();
-  let inventory = await createNodePackageInventory(roots, options.packageRoot);
+  options: DiscoveryOptions,
+): Promise<readonly LoadedPackage[]> {
+  let packages = distribution.bootstrapPackages;
   while (true) {
-    const sourceSelection = await discover(distribution, options,
-      mergePackages(distribution.bootstrapPackages, inventory.packages));
-    const next = [...new Set([...roots, ...sourceSelection.selected])].sort();
-    if (JSON.stringify(next) === JSON.stringify(roots)) {
-      // A conventional physical hint is not proof that the package actually offers the requested
-      // logical ABI. Refuse a stable but invalid inventory before writing it.
-      selectNodePackageSpecifiers(inventory.lock, sourceSelection);
-      return { packages: inventory, sourceSelection };
+    const selection = await discover(distribution, options, packages);
+    if (selectionSatisfied(selection, packages)) return packages;
+    const loaded = await loadNodePackageSelection(selection, options.packageRoot);
+    const next = mergePackages(distribution.bootstrapPackages, loaded);
+    if (next.map((item) => item.specifier).join("\u0000") === packages.map((item) => item.specifier).join("\u0000")) {
+      throw new Error("Source package discovery did not satisfy its logical package requirements");
     }
-    roots = next;
-    inventory = await createNodePackageInventory(roots, options.packageRoot);
+    packages = next;
   }
 }

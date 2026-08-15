@@ -105,17 +105,25 @@ cd narratage
 ```bash
 corepack enable
 pnpm install --frozen-lockfile
-
-node --run narratage -- check examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock
-
-node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock
+npm link
 ```
 
-`check` 校验源码并打印类型化输出。`plan` 展示被真正需要的执行子图，以及一次真实 Build 会用到的每一项外部能力——但不会启动其中任何一项。
+然后在视频项目中运行：
 
-真实的 Build 还需要 `PATH` 上有 `ffmpeg` 与 `ffprobe`，以及视 Runtime Profile 而定的 Python 与 `uv` 或 API 凭据。运行 `narratage doctor` 查看缺什么；完整指南见[快速开始](https://narratage.hypit.ai/zh/quickstart)。
+```bash
+cd my-video
+narratage runtime use narratage.runtime.json
+narratage plan build.svrun
+narratage build build.svrun
+narratage status <build-id> --watch
+narratage get <build-id> --name final.video --to output/final.mp4
+```
+
+`build` 会打印一个新的 Build ID，并在耐久提交后立即返回。之后可以从任何终端用
+`status --watch` 重新接上这个 Build。编辑时使用 `check`；包选择直接来自 Source import
+与当前 Runtime Profile。
+
+真实的 Build 还需要 `PATH` 上有 `ffmpeg` 与 `ffprobe`，以及视 Runtime Profile 而定的 Python 与 `uv` 或 API 凭据。运行 `narratage doctor` 查看缺什么；完整环境配置与第一次无 Provider 计划见[快速开始](https://narratage.hypit.ai/zh/quickstart)。
 
 ### 项目文件
 
@@ -152,10 +160,10 @@ Core 极小且领域无关：它不认识视频。安装一个包即可增加能
 |---|---|---|
 | **Narratage Core** | 计划编译与 Build 状态机 | `core`、`protocol` |
 | **Compiler** | Source 解析、导入与图展开 | `host`、`markup`、`svs`、`elaborator` |
-| **Infrastructure** | 媒体处理、空间布局、字体与文本 | `media-pipeline`、`spatial`、`fonts-open` |
+| **Foundations** | 可复用的媒体、时间、布局、文本与调用基础能力 | `media-pipeline`、`temporal`、`spatial` |
 | **Video authoring** | 稿件、生成、语音、Track、Film 与渲染 | `script`、`seedance`、`caption`、`film` |
 | **Providers** | 外部模型、程序与服务的适配器 | `provider-kie`、`provider-whisperx-local` |
-| **Runtime** | 调度、存储、凭据与执行 | `runtime`、`store-sqlite`、`local` |
+| **Runtime** | 调度、存储、凭据与执行 | `runtime`、`store-sqlite`、`runtime-local` |
 | **Applications** | 创作和操作 Narratage 的用户界面 | `cli`、`svml-playground` |
 
 ## 接下来去哪

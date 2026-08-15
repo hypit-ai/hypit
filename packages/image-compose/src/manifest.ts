@@ -15,15 +15,6 @@ export const imageComposeProducers = {
   appendLayer: { module: imageComposeModuleRef, name: "append-image-compose-layer" },
   request: { module: imageComposeModuleRef, name: "request-image-compose" },
 } satisfies Record<string, ProducerRef>;
-export const imageComposeImplementationDigests = {
-  createLayers: digestOf("@narratage/image-compose/create-layers@1"),
-  appendLayer: digestOf("@narratage/image-compose/append-layer@1"),
-  request: digestOf("@narratage/image-compose/request@1/direct-need"),
-  validateOptions: digestOf("@narratage/image-compose/validate-options@1"),
-  validateLayerSpec: digestOf("@narratage/image-compose/validate-layer-spec@1"),
-  validateLayerSet: digestOf("@narratage/image-compose/validate-layer-set@1"),
-  surface: digestOf("@narratage/image-compose/image-surface@1"),
-} as const;
 
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number" } as const;
@@ -61,39 +52,31 @@ const validator = (digest: ReturnType<typeof digestOf>) => ({
 export const imageComposeMarkupSurfaces = [{
     name: "image", tag: "Image", mode: "structured",
     outputs: [imageComposeTypes.options, imageComposeTypes.layerSpec, artifactTypes.blob],
-    implementation: { digest: imageComposeImplementationDigests.surface },
   }] as const;
 
 
 export const imageComposeManifest: ModuleManifest = {
-  format: "svml.module@1",
+  format: "narratage.module@1",
   name: imageComposeModuleRef.name,
   version: imageComposeModuleRef.version,
   dependencies: [artifactDependency, spatialDependency, rasterDependency],
   types: [
-    { name: imageComposeTypes.options.name, schema: imageComposeOptionsSchema,
-      validator: validator(imageComposeImplementationDigests.validateOptions) },
-    { name: imageComposeTypes.layerSpec.name, schema: imageComposeLayerSpecSchema,
-      validator: validator(imageComposeImplementationDigests.validateLayerSpec) },
-    { name: imageComposeTypes.layerSet.name, schema: imageComposeLayerSetSchema,
-      validator: validator(imageComposeImplementationDigests.validateLayerSet) },
+    { name: imageComposeTypes.options.name },
+    { name: imageComposeTypes.layerSpec.name },
+    { name: imageComposeTypes.layerSet.name },
   ],
   capabilities: [],
   producers: [
-    { name: imageComposeProducers.createLayers.name, inputs: [], outputs: [{ name: "layers", type: imageComposeTypes.layerSet }], needs: [],
-      implementation: registered(imageComposeImplementationDigests.createLayers) },
+    { name: imageComposeProducers.createLayers.name, inputs: [], outputs: [{ name: "layers", type: imageComposeTypes.layerSet }], needs: [] },
     { name: imageComposeProducers.appendLayer.name, inputs: [
       { name: "layers", type: imageComposeTypes.layerSet }, { name: "source", type: artifactTypes.blob },
       { name: "frame", type: spatialTypes.frame }, { name: "spec", type: imageComposeTypes.layerSpec },
-    ], outputs: [{ name: "layers", type: imageComposeTypes.layerSet }], needs: [],
-      implementation: registered(imageComposeImplementationDigests.appendLayer) },
+    ], outputs: [{ name: "layers", type: imageComposeTypes.layerSet }], needs: [] },
     { name: imageComposeProducers.request.name, inputs: [
       { name: "canvas", type: spatialTypes.canvas }, { name: "options", type: imageComposeTypes.options },
       { name: "layers", type: imageComposeTypes.layerSet },
-    ], outputs: [], needs: [{ name: "image", capability: rasterCapabilities.execute, returns: artifactTypes.blob }],
-      implementation: registered(imageComposeImplementationDigests.request) },
+    ], outputs: [], needs: [{ name: "image", capability: rasterCapabilities.execute, returns: artifactTypes.blob }] },
   ],
 };
 
-export const imageComposeManifestDigest = digestOf(imageComposeManifest);
-export const imageComposeDependency = { module: imageComposeModuleRef, digest: imageComposeManifestDigest } as const;
+export const imageComposeDependency = { module: imageComposeModuleRef } as const;

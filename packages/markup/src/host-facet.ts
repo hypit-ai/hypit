@@ -1,6 +1,5 @@
 import type { HostFacet } from "@narratage/host";
-import { isDigest } from "@narratage/protocol";
-import type { Digest, ModuleRef, TypeRef } from "@narratage/protocol";
+import type { ModuleRef, TypeRef } from "@narratage/protocol";
 
 import type {
   RawSurfaceHandler,
@@ -12,7 +11,7 @@ import type {
   StructuredSurfaceDeclaration,
 } from "./types.js";
 
-export const markupSurfaceHostFacetAbi = "svml.markup-surface-host@1";
+export const markupSurfaceHostFacetAbi = "narratage.markup-surface-host@1";
 
 type RawMarkupSurfaceHostFacetOptions =
   | {
@@ -21,7 +20,6 @@ type RawMarkupSurfaceHostFacetOptions =
       readonly tag: string;
       readonly outputs: readonly TypeRef[];
       readonly mode: "raw";
-      readonly implementationDigest: Digest;
       readonly handler: RawSurfaceHandler;
     }
   | {
@@ -37,7 +35,6 @@ type StructuredMarkupSurfaceHostFacetOptions =
       readonly tag: string;
       readonly outputs: readonly TypeRef[];
       readonly mode: "structured";
-      readonly implementationDigest: Digest;
       readonly handler: StructuredSurfaceHandler;
     }
   | {
@@ -99,14 +96,12 @@ export function createMarkupSurfaceHostFacet(options: MarkupSurfaceHostFacetOpti
         tag: options.declaration.tag,
         outputs: options.declaration.outputs,
         mode: options.declaration.mode,
-        implementationDigest: options.declaration.implementation.digest,
       }
     : options;
   assert(options.module.name.trim().length > 0 && options.module.version.trim().length > 0,
     "Markup Surface module identity is invalid");
   assert(declaration.surface.trim().length > 0, "Markup Surface name is empty");
   assert(declaration.tag.trim().length > 0, "Markup Surface tag is empty");
-  assert(isDigest(declaration.implementationDigest), "Markup Surface implementation digest is invalid");
   return {
     abi: markupSurfaceHostFacetAbi,
     identity: {
@@ -115,7 +110,6 @@ export function createMarkupSurfaceHostFacet(options: MarkupSurfaceHostFacetOpti
       tag: declaration.tag,
       outputs: declaration.outputs,
       mode: declaration.mode,
-      implementationDigest: declaration.implementationDigest,
     },
     implementation: options.handler,
   };
@@ -129,7 +123,7 @@ export function installMarkupSurfaceHostFacets(
   for (const facet of facets) {
     if (facet.abi !== markupSurfaceHostFacetAbi) continue;
     const identity = object(facet.identity, "Markup Surface Host facet identity");
-    exact(identity, ["module", "surface", "tag", "outputs", "mode", "implementationDigest"],
+    exact(identity, ["module", "surface", "tag", "outputs", "mode"],
       "Markup Surface Host facet identity");
     const module = object(identity.module, "Markup Surface Host facet module");
     exact(module, ["name", "version"], "Markup Surface Host facet module");
@@ -141,11 +135,6 @@ export function installMarkupSurfaceHostFacets(
     const tag = nonEmptyString(identity.tag, "Markup Surface Host facet tag");
     assert(Array.isArray(identity.outputs), "Markup Surface Host facet outputs must be an array");
     const outputs = identity.outputs.map((item, index) => typeRef(item, `Markup Surface Host facet outputs[${index}]`));
-    const implementationDigest = nonEmptyString(
-      identity.implementationDigest,
-      "Markup Surface Host facet implementation digest",
-    );
-    assert(isDigest(implementationDigest), "Markup Surface Host facet implementation digest is invalid");
     assert(typeof facet.implementation === "function", "Markup Surface Host facet implementation must be a function");
     assert(identity.mode === "raw" || identity.mode === "structured", "Markup Surface Host facet mode is invalid");
     if (identity.mode === "raw") {
@@ -154,7 +143,6 @@ export function installMarkupSurfaceHostFacets(
         surface,
         tag,
         outputs,
-        implementationDigest,
         mode: "raw",
         handler: facet.implementation as RawSurfaceHandler,
       });
@@ -164,7 +152,6 @@ export function installMarkupSurfaceHostFacets(
         surface,
         tag,
         outputs,
-        implementationDigest,
         mode: "structured",
         handler: facet.implementation as StructuredSurfaceHandler,
       });

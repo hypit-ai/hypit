@@ -7,7 +7,7 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": {
+  "narratage": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
@@ -17,7 +17,7 @@
     "@narratage/media-execution": "workspace:*",
     "@narratage/media-pipeline": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/runtime-adapter": "workspace:*",
+    "@narratage/runtime-kit": "workspace:*",
     "@narratage/speech": "workspace:*",
     "@narratage/transport": "workspace:*",
     "@narratage/transport-aws-lambda": "workspace:*"

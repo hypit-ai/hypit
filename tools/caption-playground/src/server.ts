@@ -7,11 +7,12 @@ import { dirname, relative, resolve } from "node:path";
 import { fineCaptionRecipeSchema, FINE_CAPTION_FAMILY } from "@narratage/caption-fine";
 import { openFontFamilies } from "@narratage/fonts-open";
 import type { OpenFontFamily, OpenFontStyle } from "@narratage/fonts-open";
-import { loadNodePackageSet } from "@narratage/package-loader-node";
+import { loadNodePackageSelection } from "@narratage/package-loader-node";
+import type { LoadedPackage } from "@narratage/package-loader-node";
 import type { ArtifactAttachment } from "@narratage/workspace";
 import type { CanonicalValue, TypedRecord } from "@narratage/protocol";
 import { parseSvs } from "@narratage/svs";
-import { createVideoCompiler } from "@narratage/video-cli";
+import { createVideoCompiler, discoverVideoSourcePackages } from "@narratage/video-cli";
 import type { Plugin, ViteDevServer } from "vite";
 
 import type {
@@ -28,8 +29,7 @@ const require = createRequire(new URL("../../../packages/fonts-open/src/surface.
 
 export type CaptionPlaygroundOptions = {
   readonly source: string;
-  readonly packageLock: string;
-  /** Host directory whose installed packages are named by packageLock. */
+  /** Host directory whose package manager installation supplies Source imports. */
   readonly packageRoot: string;
   readonly styleExport: string;
   readonly displayExport: string;
@@ -197,12 +197,25 @@ export function captionPlaygroundPlugin(options: CaptionPlaygroundOptions): Plug
   let server: ViteDevServer | undefined;
   let compileTimer: ReturnType<typeof setTimeout> | undefined;
   const galleryFiles = new Map<string, string>();
-  const loaded = loadNodePackageSet(options.packageLock, options.packageRoot);
+  const loaded = (async () => {
+    let packages: readonly LoadedPackage[] = [];
+    let previous = "";
+    while (true) {
+      const selection = await discoverVideoSourcePackages(options.source, {
+        workspaceRoot: dirname(options.source),
+        packages,
+      });
+      packages = await loadNodePackageSelection(selection, options.packageRoot);
+      const key = JSON.stringify(packages.map((item) => item.specifier));
+      if (key === previous) return packages;
+      previous = key;
+    }
+  })();
 
   const compile = async (): Promise<CurrentState> => {
-    const packageSet = await loaded;
+    const packages = await loaded;
     const compiler = createVideoCompiler({
-      packageContributions: packageSet.packages.map((item) => item.contribution),
+      packageContributions: packages.map((item) => item.contribution),
       workspaceRoot: dirname(options.source),
     });
     const [result, fontText, recipeText] = await Promise.all([
@@ -212,8 +225,8 @@ export function captionPlaygroundPlugin(options: CaptionPlaygroundOptions): Plug
     ]);
     const style = inlineExport(result, options.styleExport);
     const display = inlineExport(result, options.displayExport);
-    assertRecord(style, "svml.caption-style@1", options.styleExport);
-    assertRecord(display, "svml.caption-display-sequence@1", options.displayExport);
+    assertRecord(style, "narratage.caption-style@1", options.styleExport);
+    assertRecord(display, "narratage.caption-display-sequence@1", options.displayExport);
     if ((style.rendering as Record<string, unknown> | undefined)?.family !== FINE_CAPTION_FAMILY) {
       throw new Error(`${options.styleExport} is not a Fine Caption Style`);
     }

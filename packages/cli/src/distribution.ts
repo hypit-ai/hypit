@@ -1,6 +1,6 @@
 import type { NodeCompiler } from "@narratage/compiler-node";
-import type { NodePackageBinding, NodePackageContribution } from "@narratage/package-loader-node";
-import type { NodeRuntimeHost } from "@narratage/runtime-adapter-node";
+import type { LoadedPackage, NodePackageContribution } from "@narratage/package-loader-node";
+import type { NodeRuntimeHost } from "@narratage/runtime-host-node";
 
 export type CliCompilerOptions = {
   /** Canonical containment boundary for Author and Run Sources plus source assets. */
@@ -17,10 +17,13 @@ export type CliCompilerOptions = {
  * It is Host configuration, never Core state or source-import authority.
  */
 export type CliDistribution = {
-  /** Host location from which installed locked packages resolve. A caller may explicitly override it. */
-  readonly packageRoot?: string;
+  /**
+   * Installation-local fallback for development checkouts and embedded Distributions.
+   * A real project with package.json always resolves its own installed capability packages first.
+   */
+  readonly fallbackPackageRoot?: string;
   /** Explicit Host bootstrap packages; never inferred from Source contents. */
-  readonly bootstrapPackages: readonly NodePackageBinding[];
+  readonly bootstrapPackages: readonly LoadedPackage[];
   createCompiler(options: CliCompilerOptions): NodeCompiler;
   /**
    * Read the self-described Run Source and its Author Source closure, then return
@@ -32,11 +35,11 @@ export type CliDistribution = {
   discoverSourcePackages?(path: string, options?: {
     readonly workspaceRoot?: string;
     /** Exact packages already trusted for the current fixed-point discovery pass. */
-    readonly packages?: readonly NodePackageBinding[];
+    readonly packages?: readonly LoadedPackage[];
   }): Promise<{
     readonly selected: readonly string[];
     readonly logical?: readonly import("@narratage/package-loader-node").LogicalPackageAddress[];
   }>;
-  /** Load the Runtime Host selected by the Profile's locked `runtime.use` package. */
-  openRuntimeHost(path: string): Promise<NodeRuntimeHost>;
+  /** Load the Runtime Host selected by the Profile's `runtime.use` package. */
+  openRuntimeHost(path: string, options: { readonly packageRoot: string }): Promise<NodeRuntimeHost>;
 };

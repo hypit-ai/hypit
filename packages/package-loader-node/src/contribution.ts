@@ -4,7 +4,7 @@ import { canonicalize } from "@narratage/protocol";
 import type { NodeModuleContribution, NodePackageContribution } from "./types.js";
 
 function assertPackage(value: NodePackageContribution): void {
-  if (value.format !== "svml.node-package@1") {
+  if (value.format !== "narratage.node-package@1") {
     throw new Error("Node package contribution has an unsupported format");
   }
   const hostFacets = new Set<string>();
@@ -71,17 +71,11 @@ export function collectNodePackageComponents(
       const manifest = manifests.get(`${facet.producer.module.name}@${facet.producer.module.version}`)?.manifest;
       const declaration = manifest?.producers.find((item) => item.name === facet.producer.name);
       if (declaration === undefined) throw new Error(`Module ${facet.producer.module.name} implements undeclared Producer ${facetKey(facet.producer)}`);
-      if (declaration.implementation.digest !== facet.implementationDigest) {
-        throw new Error(`Producer ${facetKey(facet.producer)} differs from its Manifest`);
-      }
     }
     for (const facet of component.validators ?? []) {
       const manifest = manifests.get(`${facet.type.module.name}@${facet.type.module.version}`)?.manifest;
       const declaration = manifest?.types.find((item) => item.name === facet.type.name);
-      if (declaration?.validator === undefined) throw new Error(`Module ${facet.type.module.name} validates undeclared Type ${facetKey(facet.type)}`);
-      if (declaration.validator.implementation.digest !== facet.implementationDigest) {
-        throw new Error(`Type Validator ${facetKey(facet.type)} differs from its Manifest`);
-      }
+      if (declaration === undefined) throw new Error(`Module ${facet.type.module.name} validates undeclared Type ${facetKey(facet.type)}`);
     }
   }
   return components;

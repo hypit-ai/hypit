@@ -68,31 +68,24 @@ const minimaxH3BaseDefinition = defineExactModelModule({
 
 export const minimaxH3Endpoints = minimaxH3BaseDefinition.endpoints;
 export const minimaxH3Component = minimaxH3BaseDefinition.component;
-export const minimaxH3SurfaceImplementationDigests = {
-  textVideo: digestOf("@narratage/minimax-h3/text-video-surface@1"),
-  frameVideo: digestOf("@narratage/minimax-h3/frame-video-surface@1"),
-  referenceVideo: digestOf("@narratage/minimax-h3/reference-video-surface@1"),
-} as const;
 const endpoint = minimaxH3Endpoints.video!;
 const declaration = (
-  name: string, tag: string, digest: (typeof minimaxH3SurfaceImplementationDigests)[keyof typeof minimaxH3SurfaceImplementationDigests],
+  name: string, tag: string,
   bindings: readonly (keyof typeof endpoint.mediaBindings)[] = [],
 ) => ({
   name, tag, mode: "structured" as const,
   outputs: [endpoint.draftType, ...bindings.map((port) => endpoint.mediaBindings[port]!.type)],
-  implementation: { digest },
 });
 
 export const minimaxH3MarkupSurfaces = [
-    declaration("text-video", "TextVideo", minimaxH3SurfaceImplementationDigests.textVideo),
-    declaration("frame-video", "FrameVideo", minimaxH3SurfaceImplementationDigests.frameVideo, ["firstFrame", "lastFrame"]),
-    declaration("reference-video", "ReferenceVideo", minimaxH3SurfaceImplementationDigests.referenceVideo, ["referenceImage", "referenceVideo", "referenceAudio"]),
+    declaration("text-video", "TextVideo"),
+    declaration("frame-video", "FrameVideo", ["firstFrame", "lastFrame"]),
+    declaration("reference-video", "ReferenceVideo", ["referenceImage", "referenceVideo", "referenceAudio"]),
   ] as const;
 
 export const minimaxH3Manifest = {
   ...minimaxH3BaseDefinition.manifest,
 };
-export const minimaxH3ManifestDigest = digestOf(minimaxH3Manifest);
 export const minimaxH3Definition = {
-  ...minimaxH3BaseDefinition, manifest: minimaxH3Manifest, manifestDigest: minimaxH3ManifestDigest,
+  ...minimaxH3BaseDefinition, manifest: minimaxH3Manifest,
 };

@@ -35,7 +35,7 @@ describe("someFunction", () => {
 
 默认测试集只保留三类测试：可观察合同、架构边界，以及可能破坏产物、重复付费调用或让运行环境不安全的失败模式。同一事实只在其归属层测试一次；跨包装配使用一个已提交的完整图夹具，不在每个上层重复搭建半条视频链路。
 
-不要为了让每个包看起来都有覆盖率而写测试，也不要重复比对 Manifest 数组、保留已经删除的预发布参数或数据库形态、把纯文档 UI helper 塞进系统测试。包锁和组件注册本身已经会拒绝 Manifest 与实现漂移。过时行为删除时，其测试也一起删除，不把测试集当作项目历史档案。
+不要为了让每个包看起来都有覆盖率而写测试，也不要重复比对 Manifest 数组、保留已经删除的预发布参数或数据库形态、把纯文档 UI helper 塞进系统测试。组件注册本身会拒绝 Manifest 与实现漂移。过时行为删除时，其测试也一起删除，不把测试集当作项目历史档案。
 
 ## 测试模式
 
@@ -79,8 +79,8 @@ test("generates a video", async (t) => {
 | 命令 | 测试内容 | 前置条件 |
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX 服务 | Python 3.13、uv、frozen sync |
-| `pnpm test:image-opencv` | OpenCV 图像变换 | `SVML_OPENCV_TESTS=1`、`SVML_OPENCV_PYTHON` |
-| `pnpm test:browser-visual` | 真实浏览器中的渲染几何、层叠与裁剪 | HyperFrames CLI 能启动的 Chrome、`ffmpeg`；非 macOS 还需 `SVML_TEST_FONT_PATH` |
+| `pnpm test:image-opencv` | OpenCV 图像变换 | `NARRATAGE_OPENCV_TESTS=1`、`NARRATAGE_OPENCV_PYTHON` |
+| `pnpm test:browser-visual` | 真实浏览器中的渲染几何、层叠与裁剪 | HyperFrames CLI 能启动的 Chrome、`ffmpeg`；非 macOS 还需 `NARRATAGE_TEST_FONT_PATH` |
 | `pnpm smoke:kie` | 实时付费的 KIE 生成 | `KIE_API_KEY` |
 
 ## 测试 fixtures

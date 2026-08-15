@@ -248,11 +248,9 @@ width and is rejected.
 ### Compile and verify
 
 ```bash
-node --run narratage -- check examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock --workspace .
+narratage check examples/talking-film-graph-check/main.svml
 
-node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock --workspace .
+narratage plan examples/talking-film-graph-check/build.svrun
 ```
 
 `check` compiles the Author Graph — validates all imports, types, and graph edges without calling

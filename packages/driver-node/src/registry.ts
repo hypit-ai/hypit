@@ -9,12 +9,10 @@ import type {
 } from "@narratage/component-kit";
 import type {
   CapabilityRef,
-  Digest,
   Need,
   ProducerRef,
   TypeRef,
 } from "@narratage/protocol";
-import { isDigest } from "@narratage/protocol";
 import {
   RuntimeModuleRegistry,
   runtimeEndpoint,
@@ -57,8 +55,8 @@ function verifyScheduling(scheduling: SchedulingHint | undefined): void {
   });
   if (new Set(ids).size !== ids.length) throw new Error("scheduling resources contain duplicate ids");
   if (scheduling.queue !== undefined
-    && (scheduling.queue.authority.trim().length === 0 || scheduling.queue.route.trim().length === 0)) {
-    throw new Error("scheduling queue authority and route must not be empty");
+    && (scheduling.queue.pool.trim().length === 0 || scheduling.queue.lane.trim().length === 0)) {
+    throw new Error("scheduling queue pool and lane must not be empty");
   }
 }
 
@@ -79,14 +77,13 @@ export class ProducerRegistry implements ProducerRegistrar {
 
   registerProducer(
     producer: ProducerRef,
-    implementationDigest: Digest,
     handler: ProducerHandler,
     options: { readonly scheduling?: SchedulingHint } = {},
   ): void {
     const key = producerRegistryKey(producer);
     if (this.#producers.has(key)) throw new Error(`producer ${key} is already registered`);
     verifyScheduling(options.scheduling);
-    this.#producers.set(key, { implementationDigest, handler, ...options });
+    this.#producers.set(key, { handler, ...options });
   }
 
   producer(ref: ProducerRef): ProducerRegistration | undefined {
@@ -110,9 +107,9 @@ function verifyEndpointOptions(options: EndpointOptions): void {
 
 export class EndpointRegistry implements EndpointRegistrar {
   readonly #registrations: EndpointRegistration[] = [];
-  readonly #bindings = new Map<string, string>();
+  readonly #offers = new Map<string, string>();
   readonly #runtimeScheduling = new Map<string, SchedulingHint>();
-  #runtimeClosure: Digest | undefined;
+  #bound = false;
 
   registerImmediateEndpoint(
     id: string,
@@ -123,18 +120,6 @@ export class EndpointRegistry implements EndpointRegistrar {
   ): void {
     if (!id.trim()) throw new Error("endpoint id must not be empty");
     verifyEndpointOptions(options);
-    if (options.runtimeImplementation !== undefined) {
-      if (!isDigest(options.runtimeImplementation.digest)) {
-        throw new Error("Endpoint runtime implementation digest is invalid");
-      }
-      if (!isDigest(options.runtimeImplementation.configurationDigest)) {
-        throw new Error("Endpoint runtime configuration digest is invalid");
-      }
-      const facet = options.runtimeImplementation.facet;
-      if (!facet.name.trim() || !facet.module.name.trim() || !facet.module.version.trim()) {
-        throw new Error("Endpoint runtime implementation facet is invalid");
-      }
-    }
     const duplicate = this.#registrations.some((candidate) =>
       candidate.id === id && sameRef(candidate.capability, capability));
     if (duplicate) throw new Error(`endpoint ${id} already registers ${endpointCapabilityKey(capability)}`);
@@ -150,95 +135,72 @@ export class EndpointRegistry implements EndpointRegistrar {
   ): void {
     if (!id.trim()) throw new Error("endpoint id must not be empty");
     verifyEndpointOptions(options);
-    if (options.runtimeImplementation === undefined || !isDigest(options.runtimeImplementation.digest)) {
-      throw new Error("recoverable Endpoint requires a valid Runtime implementation identity");
-    }
-    if (!isDigest(options.runtimeImplementation.configurationDigest)) {
-      throw new Error("recoverable Endpoint requires a valid Runtime configuration identity");
-    }
-    const facet = options.runtimeImplementation.facet;
-    if (!facet.name.trim() || !facet.module.name.trim() || !facet.module.version.trim()) {
-      throw new Error("Endpoint runtime implementation facet is invalid");
-    }
     const duplicate = this.#registrations.some((candidate) =>
       candidate.id === id && sameRef(candidate.capability, capability));
     if (duplicate) throw new Error(`endpoint ${id} already registers ${endpointCapabilityKey(capability)}`);
     this.#registrations.push({ kind: "recoverable", id, capability, returns, endpoint, ...options });
   }
 
-  runtimeClosureDigest(): Digest | undefined {
-    return this.#runtimeClosure;
-  }
-
-  /** Bind only implementation-verified Endpoint instances from one locked Runtime Closure. */
+  /** Bind the Endpoint instances selected by one resolved Runtime profile. */
   applyRuntimeClosure(
     closure: RuntimeClosure,
     modules: RuntimeModuleRegistry,
   ): void {
     modules.verifyClosure(closure);
-    if (this.#runtimeClosure !== undefined && this.#runtimeClosure !== closure.digest) {
-      throw new Error("Endpoint Registry is already bound to another Runtime Closure");
-    }
+    if (this.#bound) throw new Error("Endpoint Registry is already bound");
     const pending: { readonly key: string; readonly endpoint: string; readonly scheduling: SchedulingHint }[] = [];
-    for (const binding of closure.endpoints) {
-      const endpoint = runtimeEndpoint(closure, binding.endpoint);
-      if (endpoint === undefined) throw new Error(`Runtime Endpoint ${binding.endpoint} is unavailable`);
+    for (const offer of closure.endpoints) {
+      const endpoint = runtimeEndpoint(closure, offer.endpoint);
+      if (endpoint === undefined) throw new Error(`Runtime Endpoint ${offer.endpoint} is unavailable`);
       const registration = this.#registrations.find((candidate) =>
         candidate.id === endpoint.id
-        && sameRef(candidate.capability, binding.capability)
-        && sameRef(candidate.returns, binding.returns));
+        && sameRef(candidate.capability, offer.capability)
+        && sameRef(candidate.returns, offer.returns));
       if (registration === undefined) {
-        throw new Error(`Endpoint ${endpoint.id} is not registered for ${endpointCapabilityKey(binding.capability)}`);
+        throw new Error(`Endpoint ${endpoint.id} is not registered for ${endpointCapabilityKey(offer.capability)}`);
       }
       const expectedKind = endpoint.lifecycle;
       if (registration.kind !== expectedKind) {
         throw new Error(`Endpoint ${endpoint.id} lifecycle does not match the Runtime Closure`);
       }
-      const implementation = registration.runtimeImplementation;
-      if (implementation === undefined
-        || implementation.digest !== endpoint.implementation.digest
-        || implementation.configurationDigest !== endpoint.configurationDigest
-        || !sameRef(implementation.facet, endpoint.facet)) {
-        throw new Error(`Endpoint ${endpoint.id} implementation does not match the Runtime Closure`);
-      }
       const credentialSlots = Object.keys(registration.credentials ?? {}).sort();
       if (JSON.stringify(credentialSlots) !== JSON.stringify(endpoint.credentialSlots)) {
         throw new Error(`Endpoint ${endpoint.id} credential slots do not match the Runtime Closure`);
       }
-      const route = endpoint.routes.find((item) =>
-        sameRef(item.capability, binding.capability) && sameRef(item.returns, binding.returns));
-      if (route === undefined) throw new Error(`Endpoint ${endpoint.id} has no locked scheduling route`);
+      const lane = endpoint.lanes.find((item) =>
+        sameRef(item.capability, offer.capability) && sameRef(item.returns, offer.returns));
+      if (lane === undefined) throw new Error(`Endpoint ${endpoint.id} has no locked scheduling lane`);
       const scheduling = {
-        queue: { authority: endpoint.authority, route: route.route },
+        queue: { pool: endpoint.pool, lane: lane.lane },
         resources: [
           {
-            id: `authority:${endpoint.authority}`,
+            id: `pool:${endpoint.pool}`,
             maxActive: endpoint.maxConcurrency,
             maxInFlight: endpoint.maxConcurrency,
           },
           {
-            id: `route:${endpoint.authority}/${route.route}`,
-            maxActive: route.maxConcurrency,
-            maxInFlight: route.maxConcurrency,
+            id: `lane:${endpoint.pool}/${lane.lane}`,
+            maxActive: lane.maxConcurrency,
+            maxInFlight: lane.maxConcurrency,
           },
         ],
       };
       pending.push({
-        key: endpointCapabilityKey(binding.capability),
+        key: endpointCapabilityKey(offer.capability),
         endpoint: endpoint.id,
         scheduling,
       });
     }
     for (const item of pending) {
-      this.#bindings.set(item.key, item.endpoint);
+      this.#offers.set(item.key, item.endpoint);
       this.#runtimeScheduling.set(`${item.endpoint}\n${item.key}`, item.scheduling);
     }
-    this.#runtimeClosure = closure.digest;
+    this.#bound = true;
   }
 
   resolve(need: Need): EndpointResolution {
     const key = endpointCapabilityKey(need.capability);
-    const bound = this.#bindings.get(key);
+    const bound = this.#offers.get(key);
     const registrations = this.#registrations.filter((registration) =>
       sameRef(registration.capability, need.capability)
       && sameRef(registration.returns, need.returns)

@@ -28,19 +28,6 @@ import type {
   AudioTrackSet,
 } from "./types.js";
 
-export const audioTrackImplementationDigests = {
-  createSet: digestOf("@narratage/audio-track/create-set@1"),
-  appendProgram: digestOf("@narratage/audio-track/append-program@1"),
-  appendSelection: digestOf("@narratage/audio-track/append-selection@1"),
-  appendMoment: digestOf("@narratage/audio-track/append-moment@1"),
-  finalize: digestOf("@narratage/audio-track/finalize@1"),
-  render: digestOf("@narratage/audio-track/render@1"),
-} as const;
-
-export const audioTrackValidatorDigests = {
-  program: digestOf("@narratage/audio-track/validate-program@1"),
-} as const;
-
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
