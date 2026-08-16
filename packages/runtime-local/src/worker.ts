@@ -242,22 +242,20 @@ class DurableLocalWorker {
       }
       const pending = result.outcomes.filter((item) => item.status === "pending");
       const deferred = result.outcomes.filter((item) => item.status === "deferred");
+      if (pending.length === 0 && deferred.length === 0 && result.blocked.length > 0) {
+        const reason = result.blocked.map((item) => `${item.reason}: ${item.subject}`).join(", ");
+        await this.#options.stores.dispatch.releaseBuildCapacity(dispatch.build);
+        return await this.#options.stores.dispatch.finish(dispatch.build, "failed", reason);
+      }
       const now = Date.now();
       const wakeTimes = [
         ...pending.map((item) => item.wakeAt ?? now + 1_000),
         ...deferred.map((item) => item.wakeAt ?? now + 1_000),
       ];
-      const wakeAt = wakeTimes.length === 0
-        ? result.blocked.length > 0 ? Number.MAX_SAFE_INTEGER : now
-        : Math.min(...wakeTimes);
+      const wakeAt = wakeTimes.length === 0 ? now : Math.min(...wakeTimes);
       const released = await this.#options.stores.dispatch.release(dispatch.build, {
-        phase: pending.length > 0
-          ? "waiting"
-          : result.blocked.length > 0 ? "blocked" : "queued",
+        phase: pending.length > 0 ? "waiting" : "queued",
         availableAt: wakeAt,
-        ...(result.blocked.length === 0 ? {} : {
-          reason: result.blocked.map((item) => `${item.reason}: ${item.subject}`).join(", "),
-        }),
       });
       return released.cancellation === undefined ? released : await this.#cancel(released);
     } catch (error) {

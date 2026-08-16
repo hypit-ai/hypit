@@ -11,12 +11,10 @@ import type {
   BuildFact,
 } from "@narratage/protocol";
 import {
-  verifyBuildCatalogDescriptor,
-  verifyBuildCatalogEntry,
   capacityReservationId,
 } from "@narratage/runtime";
 import type {
-  BuildDispatchIdentity,
+  BuildDispatchRequest,
   BuildDispatchRelease,
   BuildDispatchSnapshot,
   BuildDispatchStore,
@@ -36,7 +34,7 @@ import type {
   OperationUpdate,
 } from "@narratage/runtime";
 
-const databaseSchemaVersion = 11;
+const databaseSchemaVersion = 12;
 
 export type SqliteRuntimeStateOptions = {
   readonly busyTimeoutMs?: number;
@@ -196,13 +194,11 @@ function parseCatalogEntry(row: Row): BuildCatalogEntry {
   assert(typeof row.created_at === "number", "SQLite Build Catalog row has no creation time");
   assert(typeof row.descriptor_json === "string", "SQLite Build Catalog row has no descriptor");
   const descriptor = JSON.parse(row.descriptor_json) as BuildCatalogDescriptor;
-  const entry = {
+  return {
     ...descriptor,
     build: row.build_id,
     createdAt: row.created_at,
   };
-  verifyBuildCatalogEntry(entry);
-  return entry;
 }
 
 class SqliteBuildCatalog implements BuildCatalog {
@@ -214,16 +210,13 @@ class SqliteBuildCatalog implements BuildCatalog {
 
   async record(build: string, descriptor: BuildCatalogDescriptor): Promise<BuildCatalogEntry> {
     assert(build.trim().length > 0, "Build Catalog build id must not be empty");
-    verifyBuildCatalogDescriptor(descriptor);
     const now = Date.now();
     this.#database.prepare(`
       INSERT INTO narratage_build_catalog (
         build_id, created_at, descriptor_json
       ) VALUES (?, ?, ?)
     `).run(build, now, canonicalStringify(descriptor));
-    const entry = { ...copy(descriptor), build, createdAt: now };
-    verifyBuildCatalogEntry(entry);
-    return entry;
+    return { ...copy(descriptor), build, createdAt: now };
   }
 
   async read(build: string): Promise<BuildCatalogEntry | undefined> {
@@ -289,8 +282,6 @@ class SqliteOperationStore implements OperationStore {
       ["build_id", query.build],
       ["command_id", query.command],
       ["endpoint_id", query.endpoint],
-      ["pool_id", query.pool],
-      ["lane_id", query.lane],
     ] as const) {
       if (value === undefined) continue;
       predicates.push(`${field} = ?`);
@@ -344,21 +335,22 @@ class SqliteOperationStore implements OperationStore {
 
 
 function parseDispatchSnapshot(row: Row): BuildDispatchSnapshot {
-  assert(typeof row.identity_json === "string", "SQLite Dispatch row has no identity");
+  assert(typeof row.build_id === "string", "SQLite Dispatch row has no Build id");
+  assert(typeof row.implementation_packages_json === "string", "SQLite Dispatch row has no implementation packages");
   assert(typeof row.created_at === "number", "SQLite Dispatch time is invalid");
   assert(typeof row.available_at === "number", "SQLite Dispatch schedule is invalid");
   assert(typeof row.phase === "string", "SQLite Dispatch state is invalid");
-  const identity = JSON.parse(row.identity_json) as BuildDispatchIdentity;
-  const cancellation = typeof row.cancel_requested_at === "number"
+  const implementationPackages = JSON.parse(row.implementation_packages_json) as readonly string[];
+  const cancellation = row.cancel_requested === 1
     ? {
         cancellation: {
-          requestedAt: row.cancel_requested_at,
           ...(typeof row.cancel_reason === "string" ? { reason: row.cancel_reason } : {}),
         },
       }
     : {};
   const snapshot = {
-    ...identity,
+    build: row.build_id,
+    implementationPackages,
     createdAt: row.created_at,
     availableAt: row.available_at,
     phase: row.phase,
@@ -377,19 +369,19 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
   }
 
   async create(
-    identity: BuildDispatchIdentity,
+    request: BuildDispatchRequest,
     options: { readonly now?: number } = {},
   ): Promise<BuildDispatchSnapshot> {
     const now = options.now ?? Date.now();
     nonNegativeInteger(now, "Dispatch creation time");
     this.#database.prepare(`
       INSERT INTO narratage_dispatches (
-        build_id, identity_json, created_at, available_at,
-        phase, reason, cancel_requested_at, cancel_reason, terminal
-      ) VALUES (?, ?, ?, ?, 'queued', NULL, NULL, NULL, NULL)
-    `).run(identity.build, canonicalStringify(identity), now, now);
+        build_id, implementation_packages_json, created_at, available_at,
+        phase, reason, cancel_requested, cancel_reason, terminal
+      ) VALUES (?, ?, ?, ?, 'queued', NULL, 0, NULL, NULL)
+    `).run(request.build, canonicalStringify(request.implementationPackages), now, now);
     return {
-      ...copy(identity),
+      ...copy(request),
       createdAt: now,
       availableAt: now,
       phase: "queued",
@@ -418,21 +410,21 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     const available = new Set(implementationPackages);
     return transaction(this.#database, () => {
       const rows = this.#database.prepare(`
-        SELECT build_id, identity_json FROM narratage_dispatches
-        WHERE phase IN ('queued', 'waiting', 'blocked') AND available_at <= ?
+        SELECT build_id, implementation_packages_json FROM narratage_dispatches
+        WHERE phase IN ('queued', 'waiting') AND available_at <= ?
         ORDER BY available_at ASC, created_at ASC, build_id ASC
       `).all(now) as Row[];
       const row = rows.find((candidate) => {
-        assert(typeof candidate.identity_json === "string", "SQLite ready Dispatch has no identity");
-        const identity = JSON.parse(candidate.identity_json) as BuildDispatchIdentity;
-        return identity.implementationPackages.every((item) => available.has(item));
+        assert(typeof candidate.implementation_packages_json === "string", "SQLite ready Dispatch has no implementation packages");
+        const packages = JSON.parse(candidate.implementation_packages_json) as readonly string[];
+        return packages.every((item) => available.has(item));
       });
       if (row === undefined) return undefined;
       assert(typeof row.build_id === "string", "SQLite ready Dispatch has no Build id");
       const updated = this.#database.prepare(`
         UPDATE narratage_dispatches
         SET phase = 'running'
-        WHERE build_id = ? AND phase IN ('queued', 'waiting', 'blocked') AND available_at <= ?
+        WHERE build_id = ? AND phase IN ('queued', 'waiting') AND available_at <= ?
       `).run(row.build_id, now);
       if (updated.changes !== 1) return undefined;
       return parseDispatchSnapshot(
@@ -483,8 +475,8 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     });
   }
 
-  async requestCancellation(build: string, reason?: string, now = Date.now()): Promise<BuildDispatchSnapshot> {
-    nonNegativeInteger(now, "Dispatch cancellation time");
+  async requestCancellation(build: string, reason?: string): Promise<BuildDispatchSnapshot> {
+    const now = Date.now();
     return transaction(this.#database, () => {
       const row = this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(build) as Row | undefined;
       if (row === undefined) throw new Error(`Dispatch ${build} does not exist`);
@@ -494,35 +486,23 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
         this.#database.prepare(`
           UPDATE narratage_dispatches
           SET phase = 'terminal', terminal = 'cancelled',
-              reason = ?, cancel_requested_at = ?, cancel_reason = ?
+              reason = ?, cancel_requested = 1, cancel_reason = ?
           WHERE build_id = ?
-        `).run(reason ?? "cancelled before execution", now, reason ?? null, build);
+        `).run(reason ?? "cancelled before execution", reason ?? null, build);
       } else {
         this.#database.prepare(`
           UPDATE narratage_dispatches
           SET phase = CASE WHEN phase = 'running' THEN phase ELSE 'queued' END,
               available_at = CASE WHEN phase = 'running' THEN available_at ELSE ? END,
-              reason = ?, cancel_requested_at = COALESCE(cancel_requested_at, ?),
+              reason = ?, cancel_requested = 1,
               cancel_reason = COALESCE(cancel_reason, ?)
           WHERE build_id = ?
-        `).run(now, reason ?? "cancellation requested", now, reason ?? null, build);
+        `).run(now, reason ?? "cancellation requested", reason ?? null, build);
       }
       return parseDispatchSnapshot(
         this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(build) as Row,
       );
     });
-  }
-
-  async wake(build: string, now = Date.now()): Promise<BuildDispatchSnapshot> {
-    nonNegativeInteger(now, "Dispatch wake time");
-    this.#database.prepare(`
-      UPDATE narratage_dispatches
-      SET available_at = MIN(available_at, ?)
-      WHERE build_id = ? AND phase != 'terminal'
-    `).run(now, build);
-    const current = await this.read(build);
-    if (current === undefined) throw new Error(`Dispatch ${build} does not exist`);
-    return current;
   }
 
   async acquireCapacity(request: CapacityAcquireRequest): Promise<CapacityAcquire> {
@@ -631,7 +611,7 @@ export class SqliteRuntimeState {
     this.#database.exec(`PRAGMA busy_timeout = ${positiveInteger(options.busyTimeoutMs ?? 5_000, "busyTimeoutMs")}`);
     if (!options.readOnly || emptyReadOnly) {
       this.#database.exec("PRAGMA journal_mode = WAL");
-      this.#database.exec("PRAGMA synchronous = FULL");
+      this.#database.exec("PRAGMA synchronous = NORMAL");
     }
     const alreadyInitialized = this.#database.prepare(`
       SELECT 1 AS present FROM sqlite_master
@@ -686,12 +666,12 @@ export class SqliteRuntimeState {
       ) STRICT;
       CREATE TABLE IF NOT EXISTS narratage_dispatches (
         build_id TEXT PRIMARY KEY,
-        identity_json TEXT NOT NULL,
+        implementation_packages_json TEXT NOT NULL,
         created_at INTEGER NOT NULL,
         available_at INTEGER NOT NULL,
-        phase TEXT NOT NULL CHECK (phase IN ('queued', 'running', 'waiting', 'blocked', 'terminal')),
+        phase TEXT NOT NULL CHECK (phase IN ('queued', 'running', 'waiting', 'terminal')),
         reason TEXT,
-        cancel_requested_at INTEGER,
+        cancel_requested INTEGER NOT NULL DEFAULT 0 CHECK (cancel_requested IN (0, 1)),
         cancel_reason TEXT,
         terminal TEXT CHECK (terminal IS NULL OR terminal IN ('complete', 'failed', 'cancelled'))
       ) STRICT;

@@ -4,11 +4,6 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
 import { BuildMachine, buildDefinition } from "@narratage/core";
-import {
-  createBuildDispatchIdentity,
-  nonTerminalDispatchPhases,
-  sealOperationIdentity,
-} from "@narratage/runtime";
 import { SqliteRuntimeState } from "@narratage/store-sqlite";
 
 import { createGreetingBuild } from "../../core/test/greeting-fixture.js";
@@ -36,7 +31,6 @@ test("SQLite stores verified Build facts and Operation handles across reopen", a
     const definition = buildDefinition(initial);
     await first.builds.create("video", definition);
     const catalog = {
-      format: "narratage.build-catalog-descriptor@1",
       source: { path: "/project/main.svml" },
       aliases: [{
         name: "final.video",
@@ -45,14 +39,14 @@ test("SQLite stores verified Build facts and Operation handles across reopen", a
     } as const;
     await first.catalog.record("video", catalog);
     assert.equal((await first.catalog.read("video"))?.aliases[0]?.name, "final.video");
-    const operation = sealOperationIdentity({
+    const operation = {
       id: "operation:generation",
       build: "video",
       command: "command:generation",
       endpoint: "kie.personal",
       pool: "kie.personal",
       lane: "fixture.generation",
-    });
+    };
     const pending = await first.operations.create({ ...operation,
       status: "pending",
       handle: { remoteJob: "job-1" },
@@ -89,14 +83,14 @@ test("SQLite Operation updates preserve a terminal completion", async () => {
   const directory = await mkdtemp(join(tmpdir(), "narratage-operation-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    const identity = sealOperationIdentity({
+    const identity = {
       id: "operation:render",
       build: "video",
       command: "command:render",
       endpoint: "hyperframes.lambda",
       pool: "hyperframes.lambda",
       lane: "fixture.render",
-    });
+    };
     const completed = await state.operations.create({ ...identity,
       status: "completed",
       completion: {
@@ -118,17 +112,16 @@ test("cancelling a never-claimed Build atomically withdraws it from dispatch", a
   const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-cancel-queued-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    await state.dispatch.create(createBuildDispatchIdentity({ build: "queued-build" }), { now: 100 });
+    await state.dispatch.create({ build: "queued-build", implementationPackages: [] }, { now: 100 });
 
-    const cancelled = await state.dispatch.requestCancellation("queued-build", "no longer needed", 101);
+    const cancelled = await state.dispatch.requestCancellation("queued-build", "no longer needed");
     assert.equal(cancelled.phase, "terminal");
     assert.equal(cancelled.terminal, "cancelled");
-    assert.equal(cancelled.cancellation?.requestedAt, 101);
     assert.equal(cancelled.cancellation?.reason, "no longer needed");
     assert.equal(await state.dispatch.claim(102), undefined);
-    assert.deepEqual(await state.dispatch.list({ phases: nonTerminalDispatchPhases }), []);
+    assert.deepEqual(await state.dispatch.list({ phases: ["queued", "running", "waiting"] }), []);
 
-    const repeated = await state.dispatch.requestCancellation("queued-build", "second reason", 103);
+    const repeated = await state.dispatch.requestCancellation("queued-build", "second reason");
     assert.deepEqual(repeated, cancelled);
     state.close();
   } finally {
@@ -140,13 +133,14 @@ test("a Worker skips ready Builds whose implementation packages it has not loade
   const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-package-admission-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    await state.dispatch.create(createBuildDispatchIdentity({
+    await state.dispatch.create({
       build: "a-needs-image",
       implementationPackages: ["@example/image"],
-    }), { now: 100 });
-    await state.dispatch.create(createBuildDispatchIdentity({
+    }, { now: 100 });
+    await state.dispatch.create({
       build: "b-needs-nothing",
-    }), { now: 100 });
+      implementationPackages: [],
+    }, { now: 100 });
 
     assert.equal((await state.dispatch.claim(101, []))?.build, "b-needs-nothing");
     assert.equal(await state.dispatch.claim(102, []), undefined);

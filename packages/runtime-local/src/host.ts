@@ -41,18 +41,15 @@ async function createLocalRuntimeHost(context: NodeRuntimeHostAdapterContext): P
     const selection = await resolveRuntimeConfigPaths(profile, { packageRoot });
     const implementationPackages = async (): Promise<readonly string[]> => {
       const values = new Set(options.implementationPackages ?? []);
-      let archive: Awaited<ReturnType<typeof createRuntimeArchiveFromConfig>> | undefined;
+      const archive = await createRuntimeArchiveFromConfig(profile, { packageRoot, readOnly: true });
       try {
-        archive = await createRuntimeArchiveFromConfig(profile, { packageRoot, readOnly: true });
         const queue = await archive.queue();
         for (const dispatch of queue.dispatches) {
           if (dispatch.phase === "terminal") continue;
           for (const item of dispatch.implementationPackages) values.add(item);
         }
-      } catch {
-        // Before the first submission there may be no durable Runtime state to inspect.
       } finally {
-        await archive?.close();
+        await archive.close();
       }
       return [...values].sort();
     };

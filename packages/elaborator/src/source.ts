@@ -10,10 +10,8 @@ import type {
 import {
   maskSourceHeader,
   parseSourceHeader,
-  verifyCompiledSourceIdentity,
 } from "@narratage/source";
 import type {
-  CompiledSourceIdentity,
   ResolvedSourceAsset,
   SourceAssetRequest,
   SourceAssetResolver,
@@ -118,9 +116,9 @@ export type AuthorRecordAdmitter = (
   record: TypedRecord,
 ) => Awaitable<void>;
 
-export type SourceClosureUnit = CompiledSourceIdentity & {
-  readonly format: "narratage.source-unit@1";
+export type SourceClosureUnit = {
   readonly id: string;
+  readonly frontend: string;
   readonly imports: readonly {
     readonly alias: string;
     readonly source: string;
@@ -128,7 +126,6 @@ export type SourceClosureUnit = CompiledSourceIdentity & {
 };
 
 export type SourceClosure = {
-  readonly format: "narratage.source-closure@1";
   readonly entry: string;
   readonly units: readonly SourceClosureUnit[];
 };
@@ -305,7 +302,6 @@ function hygienizeSource(
   }));
   const exports = decoded.exports.map((item) => ({ ...item, ref: mapRef(item.ref) }));
   const unitContent = {
-    format: "narratage.source-unit@1" as const,
     id: source.id,
     frontend: frontend.id,
     imports: imports
@@ -461,12 +457,10 @@ export async function compileSourceClosure(
   const graph = elaborateAuthorGraph(program, components, (id) => fragments.get(id));
   const units = ordered.map((unit) => unit.unit).sort((left, right) => left.id.localeCompare(right.id));
   const sourceClosure: SourceClosure = {
-    format: "narratage.source-closure@1" as const,
     entry: entry.unit.id,
     units,
   };
   const componentsById = new Map(components.map((component) => [component.id, component]));
-  verifySourceClosure(sourceClosure);
   return {
     closure: sourceClosure,
     program,
@@ -479,24 +473,6 @@ export async function compileSourceClosure(
       }))
       .sort((left, right) => left.name.localeCompare(right.name)),
   };
-}
-
-export function verifySourceClosure(closure: SourceClosure): void {
-  assert(closure.format === "narratage.source-closure@1", "UNSUPPORTED_SOURCE_CLOSURE", "unsupported Source Closure format");
-  const units = new Map<string, SourceClosureUnit>();
-  for (const unit of closure.units) {
-    assert(unit.format === "narratage.source-unit@1", "UNSUPPORTED_SOURCE_UNIT", "unsupported SourceUnit format");
-    assert(unit.id.length > 0, "EMPTY_SOURCE_UNIT", "SourceUnit id is empty");
-    assert(!units.has(unit.id), "DUPLICATE_SOURCE_UNIT", `Source Closure repeats ${unit.id}`, unit.id);
-    verifyCompiledSourceIdentity(unit);
-    units.set(unit.id, unit);
-  }
-  assert(units.has(closure.entry), "UNKNOWN_SOURCE_ENTRY", `Source Closure entry ${closure.entry} is absent`);
-  for (const unit of closure.units) {
-    for (const item of unit.imports) {
-      assert(units.has(item.source), "UNKNOWN_SOURCE_IMPORT", `${unit.id} imports absent SourceUnit ${item.source}`);
-    }
-  }
 }
 
 export function resolveCompiledSourceExport(

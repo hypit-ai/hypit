@@ -114,7 +114,7 @@ export type LocalCredentialStatus = import("@narratage/endpoint-kit").EndpointCr
 export type LocalBuildSubmission = {
   readonly id: string;
   readonly state: BuildState;
-  readonly status: "queued" | "running" | "waiting" | "blocked" | "complete" | "failed" | "cancelled";
+  readonly status: "queued" | "running" | "waiting" | "complete" | "failed" | "cancelled";
   readonly dispatch: BuildDispatchSnapshot;
 };
 

@@ -76,7 +76,6 @@ export async function materializeArtifact(
       size += chunk.byteLength;
       await output.write(chunk);
     }
-    await output.sync();
     await output.close();
     if (size !== artifact.size) throw new Error(`Artifact ${artifact.digest} size differs from ${subject}`);
     // Replace an explicitly selected destination only after the stream completes.

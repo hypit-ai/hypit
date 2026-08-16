@@ -8,7 +8,6 @@ import {
   EndpointRegistry,
 } from "@narratage/driver-node";
 import {
-  createBuildDispatchIdentity,
   isStreamingArtifactStore,
 } from "@narratage/runtime";
 import { TypeValidatorRegistry } from "@narratage/validation";
@@ -140,12 +139,10 @@ export async function createLocalRuntime(
     }
     await stageAttachments(request);
     await options.buildStore.create(request.id, request.definition);
-    await options.dispatchStore.create(createBuildDispatchIdentity({
+    await options.dispatchStore.create({
       build: request.id,
-      ...(request.implementationPackages === undefined ? {} : {
-        implementationPackages: request.implementationPackages,
-      }),
-    }));
+      implementationPackages: [...new Set(request.implementationPackages ?? [])].sort(),
+    });
     if (request.catalog !== undefined) {
       await buildCatalog!.record(request.id, request.catalog);
     }

@@ -16,9 +16,6 @@ import {
   validateValue,
 } from "@narratage/validation";
 import type { TypeValidatorRegistryLike } from "@narratage/validation";
-import {
-  sealOperationIdentity,
-} from "@narratage/runtime";
 import type {
   CredentialStore,
   CredentialValue,
@@ -159,11 +156,7 @@ export class NodeDriver {
       return {
         executable: {
           command,
-          resources: registration.scheduling?.resources ?? [{
-            id: `producer:${producerRegistryKey(command.producer)}`,
-            maxActive: Number.MAX_SAFE_INTEGER,
-            maxInFlight: Number.MAX_SAFE_INTEGER,
-          }],
+          resources: registration.scheduling?.resources ?? [],
           run: async () =>
             registration.handler({
               command: structuredClone(command),
@@ -319,7 +312,7 @@ export class NodeDriver {
     }
     const fresh = latest === undefined;
     const identity = fresh
-      ? sealOperationIdentity({ id: `op_${randomUUID()}`, ...base })
+      ? { id: `op_${randomUUID()}`, ...base }
       : latest;
     const endpointContext = {
       command: structuredClone(executable.command),

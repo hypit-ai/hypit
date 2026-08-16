@@ -16,7 +16,6 @@ export {
   compileSourceClosure,
   prepareAuthorSource,
   resolveCompiledSourceExport,
-  verifySourceClosure,
 } from "./source.js";
 export {
   authorFrontendsFromHostFacets,

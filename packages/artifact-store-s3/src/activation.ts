@@ -9,9 +9,7 @@ import {
 import type { RuntimeAdapterFactoryContext } from "@narratage/runtime-kit";
 
 import { AwsS3ObjectClient } from "./client.js";
-import { createS3ArtifactStore, s3ArtifactKey } from "./store.js";
-
-const VALIDATION_DIGEST = "sha256:0000000000000000000000000000000000000000000000000000000000000000" as const;
+import { createS3ArtifactStore, normalizeS3ArtifactPrefix } from "./store.js";
 
 function validateConfig(context: RuntimeAdapterFactoryContext): void {
   const config = runtimeConfigObject(context.config, "S3 ArtifactStore");
@@ -20,7 +18,7 @@ function validateConfig(context: RuntimeAdapterFactoryContext): void {
   ], "S3 ArtifactStore");
   if (runtimeConfigString(config.bucket, "S3 bucket") === undefined) throw new Error("S3 bucket is required");
   const prefix = runtimeConfigString(config.prefix, "S3 prefix");
-  s3ArtifactKey(prefix, VALIDATION_DIGEST);
+  normalizeS3ArtifactPrefix(prefix);
   runtimeConfigString(config.expectedBucketOwner, "S3 expectedBucketOwner");
   runtimeConfigString(config.region, "S3 region");
   runtimeConfigString(config.endpoint, "S3 endpoint");
