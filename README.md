@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>A language and system for AI agents to create video.</strong>
+  <strong>World's #1 video programming language and system for AI agents.</strong>
   <br>
   <em>Humans edit video. Agents compile it.</em>
 </p>
