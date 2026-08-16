@@ -1,6 +1,5 @@
 import type { GraphFragment } from "@narratage/elaborator";
 import type { HostFacet } from "@narratage/host";
-import { canonicalStringify, isDigest } from "@narratage/protocol";
 
 import type {
   RunFragmentPackage,
@@ -8,50 +7,29 @@ import type {
 
 export const runFragmentHostAbi = "narratage.run-fragment-host@1";
 
-export type RunFragmentHostFacetIdentity = {
-  readonly exports: readonly {
-    readonly name: string;
-    readonly fragment: string;
-  }[];
-};
-
 export type RunFragmentHostFacet = HostFacet & {
   readonly abi: typeof runFragmentHostAbi;
   readonly offers: readonly string[];
-  readonly identity: RunFragmentHostFacetIdentity;
   readonly implementation: RunFragmentPackage;
 };
 
-function normalizedExports(fragments: Readonly<Record<string, GraphFragment>>): RunFragmentHostFacetIdentity["exports"] {
-  return Object.entries(fragments)
-    .map(([name, fragment]) => {
-      if (name.trim().length === 0 || !isDigest(fragment.id)) {
-        throw new Error("Run Fragment Host facet has an invalid export identity");
-      }
-      return { name, fragment: fragment.id };
-    })
-    .sort((left, right) => left.name.localeCompare(right.name));
+function validateFragments(fragments: Readonly<Record<string, GraphFragment>>): void {
+  for (const [name, fragment] of Object.entries(fragments)) {
+    if (name.trim().length === 0 || fragment.id.trim().length === 0) {
+      throw new Error("Run Fragment Host facet has an invalid export");
+    }
+  }
 }
 
 /** Package helper: expose inert Run Fragments through the exact Run Host ABI. */
 export function createRunFragmentHostFacet(item: RunFragmentPackage): RunFragmentHostFacet {
   if (item.name.trim().length === 0) throw new Error("Run Fragment Host facet package name is empty");
+  validateFragments(item.fragments);
   return {
     abi: runFragmentHostAbi,
     offers: [item.name],
-    identity: {
-      exports: normalizedExports(item.fragments),
-    },
     implementation: item,
   };
-}
-
-function sameIdentity(facet: RunFragmentHostFacet): boolean {
-  const expected: RunFragmentHostFacetIdentity = {
-    exports: normalizedExports(facet.implementation.fragments),
-  };
-  return canonicalStringify(facet.identity) === canonicalStringify(expected)
-    && canonicalStringify(facet.offers) === canonicalStringify([facet.implementation.name]);
 }
 
 /**
@@ -64,22 +42,18 @@ export function installRunFragmentHostFacets(
 ): void {
   for (const opaque of facets) {
     if (opaque.abi !== runFragmentHostAbi) continue;
-    if (opaque.identity === null || typeof opaque.identity !== "object" || Array.isArray(opaque.identity)
-      || opaque.implementation === null || typeof opaque.implementation !== "object"
+    if (opaque.implementation === null || typeof opaque.implementation !== "object"
       || Array.isArray(opaque.implementation)) {
-      throw new Error("Run Fragment Host facet has an invalid identity or implementation");
+      throw new Error("Run Fragment Host facet has an invalid implementation");
     }
     const facet = opaque as RunFragmentHostFacet;
-    if (!Array.isArray(facet.identity.exports)
-      || typeof facet.implementation.name !== "string"
+    if (typeof facet.implementation.name !== "string"
       || facet.implementation.fragments === null
       || typeof facet.implementation.fragments !== "object"
       || Array.isArray(facet.implementation.fragments)) {
       throw new Error("Run Fragment Host facet has an invalid package implementation");
     }
-    if (!sameIdentity(facet)) {
-      throw new Error(`Run Fragment Host facet ${facet.implementation.name} differs from its locked identity`);
-    }
+    validateFragments(facet.implementation.fragments);
     registry.register(facet.implementation);
   }
 }

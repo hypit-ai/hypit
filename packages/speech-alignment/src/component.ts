@@ -7,7 +7,6 @@ import { canonicalize } from "@narratage/protocol";
 
 import {
   locateSpeechTiming,
-  speechLocatorDigest,
 } from "./locate.js";
 import { speechAlignmentProducers } from "./manifest.js";
 

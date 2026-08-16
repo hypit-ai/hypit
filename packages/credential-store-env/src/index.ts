@@ -1,4 +1,3 @@
-import { digestOf } from "@narratage/protocol";
 import { defineRuntimeInfrastructurePackage } from "@narratage/runtime";
 import type {
   CredentialRef,

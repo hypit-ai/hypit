@@ -69,10 +69,7 @@ test("status --watch reattaches to one durable Build until it becomes terminal",
     core: state.id,
     revision: phase === "queued" ? 0 : 1,
     createdAt: 1,
-    updatedAt: phase === "queued" ? 1 : 2,
-    priority: 0,
     availableAt: 1,
-    admission: phase === "queued" ? "open" : "closed",
     phase,
     ...(phase === "terminal" ? { terminal: "complete" } : {}),
   });
@@ -83,7 +80,7 @@ test("status --watch reattaches to one durable Build until it becomes terminal",
       calls.push("archive.status");
       const terminal = statusReads > 1;
       return {
-        build: { build: "build-watch", revision: terminal ? 1 : 0, state },
+        build: { build: "build-watch", state },
         catalog: undefined,
         operations: [],
         dispatch: dispatch(terminal ? "terminal" : "queued"),
@@ -258,7 +255,6 @@ test("cancelling a completed Build reports that no cancellation was requested", 
       return {
         build: "build-complete",
         phase: "terminal",
-        admission: "closed",
         terminal: "complete",
       };
     },
@@ -280,7 +276,6 @@ test("cancelling a completed Build reports that no cancellation was requested", 
     build: "build-complete",
     requested: false,
     phase: "terminal",
-    admission: "closed",
     terminal: "complete",
   });
 });

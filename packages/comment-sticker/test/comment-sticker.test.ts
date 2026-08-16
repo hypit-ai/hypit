@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { artifactTypes } from "@narratage/artifact";
 import { compileHyperframesDocument } from "@narratage/hyperframes";
 import type { FontArtifactRef, FontStackRef } from "@narratage/media";
 import { mediaTypes } from "@narratage/media";
 import { sealProgramSpace } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import { spatialTypes } from "@narratage/spatial";
 import { svsRecipeType } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";
@@ -32,7 +32,7 @@ import {
 } from "../src/index.js";
 
 const font: FontArtifactRef = {
-  sources: [{ artifact: { kind: "blob", digest: digestOf("comment-sticker-font"), size: 1_024, mediaType: "font/woff2" } }],
+  sources: [{ artifact: { kind: "blob", digest: fixtureDigest("comment-sticker-font"), size: 1_024, mediaType: "font/woff2" } }],
   weight: 800,
   style: "normal",
 };
@@ -137,8 +137,6 @@ function authored(path: string, type: SurfaceResolvedReference["type"], value: u
       id: path,
       type,
       value: { kind: "inline", value: value as never },
-      digest: digestOf(value),
-      origin: { kind: "authored" },
     },
   };
 }
@@ -160,7 +158,7 @@ test("Style Surface consumes an explicit SVS Recipe and exact Font Stack", async
 });
 
 test("Track Surface lowers mixed program and semantic Stickers to a finite explicit graph", async () => {
-  const blob = { kind: "blob" as const, digest: digestOf("comment-avatar"), size: 128, mediaType: "image/png" };
+  const blob = { kind: "blob" as const, digest: fixtureDigest("comment-avatar"), size: 128, mediaType: "image/png" };
   const refs = new Map<string, SurfaceResolvedReference>([
     ["video.canvas", authored("video.canvas", spatialTypes.canvas, canvas)],
     ["video.space", authored("video.space", { module: { name: "@narratage/program-space", version: "1" }, name: "ProgramSpace" }, space)],

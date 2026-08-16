@@ -1,5 +1,4 @@
 import { artifactDependency, artifactTypes } from "@narratage/artifact";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { rasterCapabilities, rasterDependency } from "@narratage/raster";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@narratage/spatial";
@@ -43,10 +42,6 @@ const layer = object({
 export const imageComposeLayerSetSchema: ValueSchema = object({
 
   layers: { schema: { kind: "array", maxItems: 64, items: layer } },
-});
-const registered = (digest: ReturnType<typeof digestOf>) => ({ digest });
-const validator = (digest: ReturnType<typeof digestOf>) => ({
-  implementation: registered(digest),
 });
 
 export const imageComposeMarkupSurfaces = [{

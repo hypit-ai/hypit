@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { digestOf } from "@narratage/core";
 import type { Narrative } from "@narratage/narrative";
 import {
   ScriptSyntaxError,
@@ -32,7 +32,7 @@ test("named blocks are Segments and Role Cues do not depend on line breaks", () 
     `,
   );
 
-  assert.equal(digestOf(narrativeValue(compact)), digestOf(narrativeValue(multiline)));
+  assert.equal(fixtureDigest(narrativeValue(compact)), fixtureDigest(narrativeValue(multiline)));
   assert.deepEqual(compact.segments.map((segment) => segment.id), ["opening", "pause"]);
   assert.deepEqual(compact.turns.map((turn) => turn.role), ["ALICE", "BOB"]);
   assert.equal(serializeDialogue(compact), "ALICE: Hello there.\nBOB: Good morning.");
@@ -137,7 +137,7 @@ test("the formatter is semantic-preserving and idempotent", () => {
   const twice = formatScript("format.svml", once);
   assert.equal(twice, once);
   assert.equal(
-    digestOf(narrativeValue(parseScript("before.svml", input))),
-    digestOf(narrativeValue(parseScript("after.svml", once))),
+    fixtureDigest(narrativeValue(parseScript("before.svml", input))),
+    fixtureDigest(narrativeValue(parseScript("after.svml", once))),
   );
 });

@@ -3,7 +3,7 @@ import type { VisualAnimation, VisualElement, VisualStyleDeclaration, VisualTrac
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
 import { assertProgramSpaceIdentity } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import { assertCanvasSpace } from "@narratage/spatial";
 import type { CanvasSpace } from "@narratage/spatial";

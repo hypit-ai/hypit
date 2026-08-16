@@ -3,13 +3,13 @@ import test from "node:test";
 import { sealSpeechEvidenceAudio, speechTypes } from "@narratage/speech";
 import assert from "node:assert/strict";
 import { MemoryArtifactStore, EndpointRegistry } from "@narratage/driver-node";
-import { digestOf } from "@narratage/protocol";
 import type { Need } from "@narratage/protocol";
 import { speechEvidenceTypes } from "@narratage/speech-evidence";
 import {
   whisperXCapabilities,
   whisperXRequestForEvidenceAudio,
 } from "@narratage/whisperx";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   createLocalWhisperXProvider,
@@ -121,13 +121,7 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
       capability: whisperXCapabilities.alignment,
       returns: speechEvidenceTypes.alignedTranscript,
       constraints,
-      requestedBy: "derivation:whisperx-loopback",
       result: "record:whisperx-loopback",
-      requestDigest: digestOf({
-        capability: whisperXCapabilities.alignment,
-        returns: speechEvidenceTypes.alignedTranscript,
-        constraints,
-      }),
     };
     const registry = new EndpointRegistry();
     await createLocalWhisperXProvider({

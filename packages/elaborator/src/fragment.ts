@@ -1,6 +1,4 @@
 import {
-  digestOf,
-  isDigest,
   resolveProducer,
 } from "@narratage/core";
 import type {
@@ -8,7 +6,6 @@ import type {
   Satisfaction,
   CandidateRoot,
   CompiledGraph,
-  Digest,
   GraphValueRef,
   LinkedProgram,
   LogicalOutput,
@@ -48,7 +45,7 @@ export type FragmentExport = {
 
 export type GraphFragment = {
   readonly format: "narratage.fragment@1";
-  readonly id: Digest;
+  readonly id: string;
   readonly inputs: readonly { readonly name: string; readonly type: TypeRef }[];
   readonly operations: readonly FragmentOperation[];
   readonly exports: readonly FragmentExport[];
@@ -57,7 +54,7 @@ export type GraphFragment = {
 export type FragmentInstanceRequest = {
   /** Stable author instance identity, not a content-deduplication key. */
   readonly id: string;
-  readonly fragment: Digest;
+  readonly fragment: string;
   readonly inputs: Readonly<Record<string, GraphValueRef>>;
 };
 
@@ -69,8 +66,8 @@ export type ElaboratedFragmentExport = {
 
 export type ElaboratedFragment = {
   readonly format: "narratage.fragment-instance@1";
-  readonly id: Digest;
-  readonly fragment: Digest;
+  readonly id: string;
+  readonly fragment: string;
   readonly instance: string;
   readonly inputs: Readonly<Record<string, GraphValueRef>>;
   readonly operations: readonly OperationNode[];
@@ -187,7 +184,10 @@ export function sealGraphFragment(
   fragment: Omit<GraphFragment, "format" | "id">,
 ): GraphFragment {
   const content = fragmentContent({ format: "narratage.fragment@1", ...fragment });
-  return { ...content, id: digestOf(content) };
+  const producers = content.operations.map((operation) =>
+    `${operation.producer.module.name}@${operation.producer.module.version}#${operation.producer.name}:${operation.id}`);
+  const exports = content.exports.map((item) => item.name);
+  return { ...content, id: `fragment:${producers.join("+")}=>${exports.join("+")}` };
 }
 
 function resultType(program: LinkedProgram, operation: FragmentOperation): TypeRef {
@@ -214,8 +214,7 @@ function resultType(program: LinkedProgram, operation: FragmentOperation): TypeR
 
 export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragment): void {
   assert(fragment.format === "narratage.fragment@1", "UNSUPPORTED_FRAGMENT", "unsupported Graph Fragment format");
-  assert(isDigest(fragment.id), "INVALID_FRAGMENT_DIGEST", "Graph Fragment id is not a digest");
-  assert(fragment.id === digestOf(fragmentContent(fragment)), "FRAGMENT_DIGEST_MISMATCH", "Graph Fragment digest differs");
+  assert(fragment.id.trim().length > 0, "INVALID_FRAGMENT_ID", "Graph Fragment id is empty");
   assert(fragment.exports.length > 0, "EMPTY_FRAGMENT_EXPORTS", `${fragment.id} has no exports`);
 
   const inputs = new Map<string, TypeRef>();
@@ -310,8 +309,8 @@ function normalizeGraphRef(ref: GraphValueRef): GraphValueRef {
   return { kind: "operation-result", operation: ref.operation };
 }
 
-function hygienicId(kind: string, fragment: Digest, instance: string, local: string): string {
-  return `${kind}:${digestOf({ fragment, instance, local }).slice("sha256:".length)}`;
+function hygienicId(kind: string, instance: string, local: string): string {
+  return `${kind}:${encodeURIComponent(instance)}:${encodeURIComponent(local)}`;
 }
 
 export function elaborateGraphFragment(
@@ -330,7 +329,7 @@ export function elaborateGraphFragment(
   );
   const operationIds = new Map(fragment.operations.map((operation) => [
     operation.id,
-    hygienicId("operation", fragment.id, request.id, operation.id),
+    hygienicId("operation", request.id, operation.id),
   ]));
   const mapRef = (ref: FragmentValueRef): GraphValueRef => {
     if (ref.kind === "fragment-input") {
@@ -344,7 +343,7 @@ export function elaborateGraphFragment(
   };
   const operations: OperationNode[] = fragment.operations.map((operation) => {
     const id = operationIds.get(operation.id) as string;
-    const record = hygienicId("record", fragment.id, request.id, operation.id);
+    const record = hygienicId("record", request.id, operation.id);
     return {
       id,
       producer: operation.producer,
@@ -354,7 +353,7 @@ export function elaborateGraphFragment(
         : {
             kind: "need",
             name: operation.result.name,
-            id: hygienicId("need", fragment.id, request.id, operation.id),
+            id: hygienicId("need", request.id, operation.id),
             record,
           },
     };
@@ -376,7 +375,7 @@ export function elaborateGraphFragment(
     operations,
     exports,
   };
-  return { ...content, id: digestOf(content) };
+  return { ...content, id: `fragment-instance:${request.id}` };
 }
 
 function exportMap(instance: ElaboratedFragment): Map<string, ElaboratedFragmentExport> {
@@ -422,7 +421,7 @@ function bindExports(
     const output = bindings[item.name] as string;
     assert(output.length > 0, "EMPTY_LOGICAL_OUTPUT_ID", `${instance.instance}.${item.name} output is empty`);
     return {
-      id: hygienicId("candidate", instance.fragment, instance.instance, item.name),
+      id: hygienicId("candidate", instance.instance, item.name),
       type: item.type,
       root: item.root,
     };
@@ -468,7 +467,7 @@ export function exportRunFragment(
     return item;
   });
   const candidates: Candidate[] = selected.map((item) => ({
-    id: hygienicId("candidate", instance.fragment, instance.instance, item.name),
+    id: hygienicId("candidate", instance.instance, item.name),
     type: item.type,
     root: item.root,
   }));

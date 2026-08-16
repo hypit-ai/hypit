@@ -1,6 +1,5 @@
 import type {
   CapabilityRef,
-  Digest,
   LinkedProgram,
   ModuleManifest,
   ModuleRef,
@@ -15,11 +14,10 @@ import type {
   TypedRecord,
 } from "@narratage/protocol";
 
-import { digestOf, isDigest, recordDigest, semanticRecordsDigest } from "./canonical.js";
 import { invariant } from "./error.js";
 import { capabilityKey, moduleKey, producerKey, sameType, typeKey } from "./reference.js";
 
-export type TypedRecordDraft = Omit<TypedRecord, "digest">;
+export type TypedRecordDraft = TypedRecord;
 
 type ClosureIndex = {
   readonly types: ReadonlyMap<string, ResolvedTypeDeclaration>;
@@ -73,32 +71,17 @@ function resolvedManifest(manifest: ModuleManifest): ResolvedModuleManifest {
   };
 }
 
-export function computeModuleDigest(manifest: ResolvedModuleManifest): Digest {
-  return digestOf(manifest);
-}
-
-function computeClosureDigest(modules: readonly ResolvedModule[]): Digest {
-  return digestOf({
-    format: "narratage.closure@1",
-    modules: [...modules]
-      .sort((left, right) => moduleKey(left.manifest).localeCompare(moduleKey(right.manifest)))
-      .map((module) => ({ ref: manifestRef(module.manifest), digest: module.digest })),
-  });
-}
-
 export function createResolvedClosure(
   manifests: readonly ModuleManifest[],
 ): ResolvedModuleClosure {
   const modules = manifests.map((definition) => {
     const manifest = resolvedManifest(definition);
-    return { digest: computeModuleDigest(manifest), manifest };
+    return { manifest };
   });
-  const closure: ResolvedModuleClosure = {
+  return {
     format: "narratage.closure@1",
     modules,
-    digest: computeClosureDigest(modules),
   };
-  return closure;
 }
 
 function ensureUniqueNames(names: readonly string[], kind: string, owner: string): void {
@@ -112,7 +95,6 @@ function ensureUniqueNames(names: readonly string[], kind: string, owner: string
 
 export function verifyClosure(closure: ResolvedModuleClosure): void {
   invariant(closure.format === "narratage.closure@1", "UNSUPPORTED_CLOSURE", "unsupported closure format");
-  invariant(isDigest(closure.digest), "INVALID_DIGEST", "closure digest is invalid");
 
   const modules = new Map<string, ResolvedModule>();
   const declaredTypes = new Set<string>();
@@ -124,13 +106,6 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
     invariant(ref.version.length > 0, "EMPTY_MODULE_VERSION", `${ref.name} version is empty`);
     invariant(module.manifest.format === "narratage.module@1", "UNSUPPORTED_MODULE", `${key} format is unsupported`);
     invariant(!modules.has(key), "DUPLICATE_MODULE", `duplicate module ${key}`, key);
-    invariant(isDigest(module.digest), "INVALID_DIGEST", `${key} digest is invalid`, key);
-    invariant(
-      module.digest === computeModuleDigest(module.manifest),
-      "MODULE_DIGEST_MISMATCH",
-      `${key} manifest digest does not match`,
-      key,
-    );
     ensureUniqueNames(module.manifest.types.map((item) => item.name), "type", key);
     ensureUniqueNames(module.manifest.capabilities.map((item) => item.name), "capability", key);
     ensureUniqueNames(module.manifest.producers.map((item) => item.name), "producer", key);
@@ -169,12 +144,6 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
       );
     }
   }
-
-  invariant(
-    closure.digest === computeClosureDigest(closure.modules),
-    "CLOSURE_DIGEST_MISMATCH",
-    "resolved module closure digest does not match",
-  );
 
   for (const module of closure.modules) {
     const allowed = new Set([
@@ -263,7 +232,7 @@ export function resolveProducer(
 }
 
 export function sealRecord(record: TypedRecordDraft): TypedRecord {
-  return { ...record, digest: recordDigest(record.type, record.value) };
+  return { ...record };
 }
 
 export function verifyRecordStructure(
@@ -271,13 +240,6 @@ export function verifyRecordStructure(
   record: TypedRecord,
 ): ResolvedTypeDeclaration {
   invariant(record.id.length > 0, "EMPTY_RECORD_ID", "record id is empty");
-  invariant(isDigest(record.digest), "INVALID_DIGEST", `${record.id} digest is invalid`, record.id);
-  invariant(
-    record.digest === recordDigest(record.type, record.value),
-    "RECORD_DIGEST_MISMATCH",
-    `${record.id} digest does not match its value`,
-    record.id,
-  );
   const declaration = resolveType(closure, record.type);
   return declaration;
 }
@@ -289,7 +251,6 @@ export function link(
   const program: LinkedProgram = {
     closure,
     records: [...authoredRecords],
-    semanticDigest: semanticRecordsDigest(authoredRecords),
   };
   verifyLinkedProgram(program);
   return program;
@@ -301,10 +262,6 @@ export function verifyLinkedProgram(program: LinkedProgram): void {
   for (const record of program.records) {
     invariant(!ids.has(record.id), "DUPLICATE_RECORD", `duplicate record ${record.id}`, record.id);
     ids.add(record.id);
-    invariant(record.origin.kind === "authored", "NON_AUTHORED_PROGRAM_RECORD",
-      `${record.id} is not an authored input record`, record.id);
     verifyRecordStructure(program.closure, record);
   }
-  invariant(program.semanticDigest === semanticRecordsDigest(program.records),
-    "PROGRAM_SEMANTIC_DIGEST_MISMATCH", "linked program semantic digest does not match");
 }

@@ -3,7 +3,6 @@ import {
   isEnumerableBuildStore,
   isManagedArtifactStore,
   isStreamingArtifactStore,
-  operationCancellationRequestId,
   verifyRuntimeInfrastructurePackage,
 } from "@narratage/runtime";
 import type {
@@ -79,7 +78,7 @@ export function createLocalRuntimeArchiveControl(
     },
     async queue() {
       const [dispatches, capacity] = await Promise.all([
-        options.dispatchStore.list({ phases: ["queued", "leased", "waiting", "blocked", "settling"] }),
+        options.dispatchStore.list({ phases: ["queued", "running", "waiting", "blocked"] }),
         options.dispatchStore.listCapacity(),
       ]);
       const operationHistory = (await Promise.all(dispatches.map(async (item) =>
@@ -99,30 +98,6 @@ export function createLocalRuntimeArchiveControl(
     async cancel(build, reason) {
       if (await options.dispatchStore.read(build) === undefined) return undefined;
       return await options.dispatchStore.requestCancellation(build, reason);
-    },
-    async cancelOperation(id, reason) {
-      let current = await options.operationStore.read(id);
-      if (current === undefined) return undefined;
-      if (current.cancellation === undefined) {
-        const requestedAt = Date.now();
-        while (current.cancellation === undefined) {
-          const status = current.status === "completed" || current.status === "failed" || current.status === "cancelled"
-            ? "too-late" as const
-            : "requested" as const;
-          const written = await options.operationStore.compareAndSwap(current.id, current.revision, {
-            status: "control",
-            cancellation: {
-              requestedAt,
-              requestId: operationCancellationRequestId(current.id, requestedAt),
-              status,
-              attempts: 0,
-            },
-          });
-          current = written.status === "stored" ? written.snapshot : written.current;
-        }
-      }
-      await options.dispatchStore.wake(current.build);
-      return current;
     },
     close() {
       return options.close?.();

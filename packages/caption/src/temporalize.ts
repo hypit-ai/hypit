@@ -10,7 +10,7 @@ import type { CaptionPlan, CaptionProgram, TimedCaptionProjection } from "./type
 
 /**
  * Apply Caption-owned post-planning visibility without changing Cue identity, timing or grouping.
- * The operation is idempotent so Style-family renderers may enforce the contract defensively.
+ * Style-family renderers may apply the operation directly.
  */
 export function applyCaptionMute(
   projection: TimedCaptionProjection,

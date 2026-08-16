@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
@@ -70,20 +70,16 @@ export async function materializeArtifact(
   if (source === undefined) throw new Error(`Artifact ${artifact.digest} is absent from the selected ArtifactStore`);
   const temporary = `${destination}.narratage-${randomUUID()}.part`;
   const output = await open(temporary, "wx");
-  const hash = createHash("sha256");
   let size = 0;
   try {
     for await (const chunk of source) {
       size += chunk.byteLength;
-      hash.update(chunk);
       await output.write(chunk);
     }
     await output.sync();
     await output.close();
     if (size !== artifact.size) throw new Error(`Artifact ${artifact.digest} size differs from ${subject}`);
-    const digest = `sha256:${hash.digest("hex")}`;
-    if (digest !== artifact.digest) throw new Error(`Artifact ${artifact.digest} bytes differ from ${subject}`);
-    // Validate the complete temporary file before replacing an explicitly selected destination.
+    // Replace an explicitly selected destination only after the stream completes.
     await rename(temporary, destination);
   } catch (error) {
     await output.close().catch(() => undefined);
@@ -128,8 +124,6 @@ function summarizeRecord(record: TypedRecord) {
   return {
     id: record.id,
     type: record.type,
-    digest: record.digest,
-    origin: record.origin,
     storage: record.value.kind,
     artifacts: collectArtifacts(value),
   };
@@ -155,7 +149,6 @@ export function acceptedArchivedOutputs(
   state: BuildState,
   catalog: BuildCatalogEntry,
 ): readonly ArchivedLogicalOutput[] {
-  if (catalog.core !== state.id) throw new Error("Build Catalog entry names another Core Build");
   const records = new Map(state.records.map((record) => [record.id, record]));
   const selections = new Map(state.plan.selections.map((selection) => [selection.output, selection]));
   return catalog.aliases.flatMap((alias) => {
@@ -191,7 +184,6 @@ export function selectArchivedRecord(
   let output = options.output;
   if (options.name !== undefined) {
     if (options.catalog === undefined) throw new Error("Build has no Host Catalog aliases");
-    if (options.catalog.core !== state.id) throw new Error("Build Catalog entry names another Core Build");
     const alias = options.catalog.aliases.find((item) => item.name === options.name);
     if (alias === undefined) throw new Error(`Build Catalog has no output named ${options.name}`);
     if (alias.ref.kind === "record") id = alias.ref.id;
@@ -215,16 +207,10 @@ export function selectArchivedRecord(
 }
 
 export function inspectBuild(state: BuildState, catalog?: BuildCatalogEntry) {
-  if (catalog !== undefined && catalog.core !== state.id) {
-    throw new Error("Build Catalog entry names another Core Build");
-  }
   const records = new Map(state.records.map((record) => [record.id, record]));
   const selections = new Map(state.plan.selections.map((selection) => [selection.output, selection]));
   return {
-    core: state.id,
     status: state.status,
-    graph: state.graph.id,
-    request: state.request.digest,
     targets: state.request.targets.map((target) => {
       const selection = selections.get(target.output);
       const record = selection === undefined ? undefined : records.get(selection.record);
@@ -244,8 +230,6 @@ export function inspectBuild(state: BuildState, catalog?: BuildCatalogEntry) {
       accepted: records.has(selection.record),
     })),
     records: state.records.map(summarizeRecord),
-    receipts: state.receipts.length,
-    derivations: state.derivations.length,
     diagnostics: state.diagnostics,
     ...(catalog === undefined ? {} : {
       presentation: {

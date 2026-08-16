@@ -3,7 +3,6 @@ import { compositionDependency, compositionTypes } from "@narratage/composition"
 import { fontArtifactSchema, mediaDependency } from "@narratage/media";
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@narratage/spatial";
@@ -134,8 +133,6 @@ export const commentStickerProgramSchema: ValueSchema = object({
   id: { schema: string },
   items: { schema: { kind: "array", minItems: 1, items: item } },
 });
-const registered = (digest: ReturnType<typeof digestOf>) => ({ digest });
-const validator = (digest: ReturnType<typeof digestOf>) => ({ implementation: registered(digest) });
 const appendInputs = [
   { name: "set", type: commentStickerTypes.set }, { name: "header", type: commentStickerTypes.header },
   { name: "frame", type: spatialTypes.frame }, { name: "style", type: commentStickerTypes.style },

@@ -4,14 +4,11 @@ import test from "node:test";
 import {
   ProducerRegistry,
   NodeDriver,
-  parseBuildState,
   EndpointRegistry,
-  serializeBuildState,
 } from "@narratage/driver-node";
-import type { RecoverableEndpoint } from "@narratage/endpoint-kit";
+import type { AsyncEndpoint } from "@narratage/endpoint-kit";
 import {
   LocalBuildScheduler,
-  MemoryBuildStore,
   MemoryOperationStore,
   RuntimeModuleRegistry,
   localSchedulerOptionsFromClosure,
@@ -22,10 +19,8 @@ import type {
   OperationStore,
   RuntimeModuleManifest,
 } from "@narratage/runtime";
-import type { Digest } from "@narratage/protocol";
 import {
   createResolvedClosure,
-  digestOf,
   link,
   sealBuildRequest,
   sealCompiledGraph,
@@ -42,13 +37,9 @@ function createParallelGreetingBuild(generationCount = 2) {
     id: "intent:root",
     type: types.intent,
     value: { kind: "inline", value: { name: "Ada" } },
-    origin: {
-      kind: "authored" as const,
-    },
   });
   const program = link(closure, [authored]);
   const graph = sealCompiledGraph({
-    program: program.semanticDigest,
     outputs: [
       {
         id: "prompt",
@@ -97,7 +88,6 @@ function createParallelGreetingBuild(generationCount = 2) {
     ],
   });
   return start(program, graph, sealBuildRequest({
-    graph: graph.id,
     targets: generations.map((suffix) => ({ output: `generated-${suffix}` })),
   }));
 }
@@ -164,7 +154,7 @@ function registerGreetingProducers(producers: ProducerRegistry): void {
 
 const runtimeModule = { name: "example.scheduler-runtime", version: "1" } as const;
 const providerFacet = { module: runtimeModule, name: "generation-endpoint" } as const;
-function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverable" = "immediate") {
+function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "asynchronous" = "immediate") {
   const manifest: RuntimeModuleManifest = {
     format: "narratage.runtime-module@1",
     name: runtimeModule.name,
@@ -238,21 +228,19 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
   return { closure, modules };
 }
 
-function recoverableExecutor(
-  endpoint: RecoverableEndpoint,
+function asyncExecutor(
+  endpoint: AsyncEndpoint,
   operations: OperationStore,
-  runtime = resolvedRuntime(1, "recoverable"),
-  retry?: { readonly maxAttempts: number },
+  runtime = resolvedRuntime(1, "asynchronous"),
 ) {
   const producers = new ProducerRegistry();
   registerGreetingProducers(producers);
   const endpoints = new EndpointRegistry();
-  endpoints.registerRecoverableEndpoint(
+  endpoints.registerAsyncEndpoint(
     "generation.local",
     capabilities.generation,
     types.generated,
     endpoint,
-    retry === undefined ? {} : { retry },
   );
   endpoints.applyRuntimeClosure(runtime.closure, runtime.modules);
   return {
@@ -283,7 +271,7 @@ test("one local Scheduler shares an Endpoint resource across multiple Builds", a
     result.outcomes.some((entry) => entry.resources.includes("pool:fixture.account"))), true);
 });
 
-test("a Resolved Runtime resource override changes parallelism without changing either Build", async () => {
+test("a Resolved Runtime resource override changes parallelism", async () => {
   let maximumActive = 0;
   const resource = "pool:fixture.account";
   const { executor } = configuredExecutor({
@@ -305,7 +293,6 @@ test("a Resolved Runtime resource override changes parallelism without changing 
 
   assert.deepEqual(results.map((result) => result.status), ["complete", "complete"]);
   assert.equal(maximumActive, 2);
-  assert.equal(results[0]?.state.request.digest, results[1]?.state.request.digest);
 });
 
 test("independent paid commands inside one Build may fill the same resource without duplicating their shared upstream", async () => {
@@ -325,68 +312,10 @@ test("independent paid commands inside one Build may fill the same resource with
   assert.equal(result?.status, "complete");
   assert.equal(getCalls(), 2);
   assert.equal(maximumActive, 2);
-  assert.equal(result?.state.derivations.filter((item) => item.producer.name === greetingProducers.makePrompt.name).length, 1);
-  assert.equal(result?.state.receipts.length, 2);
-});
-
-test("durable scheduling keeps the rest of an in-flight command batch after one event is stored", async () => {
-  let maximumActive = 0;
-  const { executor, getCalls } = configuredExecutor({
-    resource: "pool:fixture.account",
-    defaultConcurrency: 2,
-    observe(active) {
-      maximumActive = Math.max(maximumActive, active);
-    },
-  });
-  const store = new MemoryBuildStore();
-  const [result] = await new LocalBuildScheduler(executor, {
-    buildStore: store,
-    maxConcurrency: 8,
-  }).run([{
-    id: "durable-two-shots",
-    state: createParallelGreetingBuild(),
-  }]);
-
-  assert.equal(result?.status, "complete");
-  assert.equal(getCalls(), 2);
-  assert.equal(maximumActive, 2);
-  assert.equal(result?.outcomes.some((entry) =>
-    entry.status === "error" && entry.message?.includes("event references command")), false);
-  assert.equal((await store.read("durable-two-shots"))?.state.status, "complete");
-});
-
-test("durable scheduling can drain successful sibling commands after another sibling errors", async () => {
-  const producers = new ProducerRegistry();
-  producers.registerProducer(greetingProducers.makePrompt, ({ inputs }) => {
-    const intent = inputs.intent;
-    assert.equal(intent?.value.kind, "inline");
-    return { outputs: { prompt: { kind: "inline", value: "Greet Ada" } }, needs: {} };
-  });
-  let calls = 0;
-  producers.registerProducer(greetingProducers.requestText, async () => {
-    calls += 1;
-    const call = calls;
-    if (call === 1) throw new Error("fixture producer failed");
-    await new Promise<void>((resolve) => setTimeout(resolve, call * 5));
-    return { outputs: {}, needs: { generation: { prompt: `request ${call}` } } };
-  });
-  const store = new MemoryBuildStore();
-  const [result] = await new LocalBuildScheduler(new NodeDriver({ producers }), {
-    buildStore: store,
-    maxConcurrency: 8,
-  }).run([{
-    id: "durable-error-with-siblings",
-    state: createParallelGreetingBuild(3),
-  }]);
-
-  assert.equal(result?.status, "paused");
-  assert.equal(calls, 3);
-  assert.equal(result?.outcomes.filter((entry) => entry.status === "completed"
-    && entry.kind === "invoke-producer").length, 3, "the prompt and both successful requests are accepted");
-  assert.equal(result?.outcomes.some((entry) =>
-    entry.status === "error" && entry.message?.includes("event references command")), false);
-  assert.equal(result?.state.derivations.filter((item) =>
-    item.producer.name === greetingProducers.requestText.name).length, 2);
+  assert.equal(result?.state.plan.steps.filter((step) =>
+    step.producer.name === greetingProducers.makePrompt.name).length, 1);
+  assert.equal(result?.state.records.filter((record) =>
+    record.type.name === types.generated.name).length, 2);
 });
 
 test("a resolved Runtime selects an Endpoint and Scheduler policy without manual bind", async () => {
@@ -411,11 +340,12 @@ test("a resolved Runtime selects an Endpoint and Scheduler policy without manual
 
   assert.deepEqual(results.map((result) => result.status), ["complete", "complete"]);
   assert.equal(maximumActive, 2, "the selected Profile override owns the resource");
-  assert.equal(results.every((result) => result.state.receipts[0]?.fulfiller === "generation.local"), true);
+  assert.equal(results.every((result) =>
+    result.state.records.some((record) => record.id === "generated:root")), true);
 });
 
-test("a recoverable Runtime facet cannot be activated by a one-shot Handler", () => {
-  const { closure, modules } = resolvedRuntime(1, "recoverable");
+test("a asynchronous Runtime facet cannot be activated by a one-shot Handler", () => {
+  const { closure, modules } = resolvedRuntime(1, "asynchronous");
   const { endpoints } = configuredExecutor({
     resource: "pool:fixture.account",
     defaultConcurrency: 1,
@@ -425,46 +355,32 @@ test("a recoverable Runtime facet cannot be activated by a one-shot Handler", ()
   assert.throws(() => endpoints.applyRuntimeClosure(closure, modules), /lifecycle does not match/u);
 });
 
-test("BuildStore CAS prevents two Scheduler revisions from silently overwriting each other", async () => {
-  const store = new MemoryBuildStore();
-  const initial = createGreetingBuild();
-  const created = await store.create("video", initial);
-  assert.equal(created.revision, 0);
-  const first = await store.compareAndSwap("video", 0, initial);
-  assert.equal(first.status, "stored");
-  const stale = await store.compareAndSwap("video", 0, initial);
-  assert.equal(stale.status, "conflict");
-  if (stale.status === "conflict") assert.equal(stale.current.revision, 1);
-  const read = await store.read("video");
-  assert.equal(read?.revision, 1);
-});
-
-test("a recoverable Endpoint resumes its persisted Operation after restart without submitting twice", async () => {
+test("a asynchronous Endpoint starts once and is polled until complete", async () => {
   const operations = new MemoryOperationStore();
-  const runtime = resolvedRuntime(1, "recoverable");
+  const runtime = resolvedRuntime(1, "asynchronous");
   let starts = 0;
   let resumes = 0;
   let operationId: string | undefined;
-  const endpoint: RecoverableEndpoint = {
+  const endpoint: AsyncEndpoint = {
     start({ operation }) {
       starts += 1;
-      operationId = operation.id;
-      return { status: "pending", checkpoint: { remoteJob: "job-1" } };
+      operationId = operation;
+      return { status: "pending", handle: { remoteJob: "job-1" } };
     },
-    resume({ operation, checkpoint }) {
+    poll({ operation, handle }) {
       resumes += 1;
-      assert.equal(operation.id, operationId);
-      assert.deepEqual(checkpoint, { remoteJob: "job-1" });
+      assert.equal(operation, operationId);
+      assert.deepEqual(handle, { remoteJob: "job-1" });
       return {
         status: "completed",
         result: {
-          value: { kind: "inline", value: "Hello after restart" },
+          value: { kind: "inline", value: "Hello after polling" },
         },
       };
     },
   };
 
-  const firstExecutor = recoverableExecutor(endpoint, operations, runtime).executor;
+  const firstExecutor = asyncExecutor(endpoint, operations, runtime).executor;
   const [first] = await new LocalBuildScheduler(
     firstExecutor,
     localSchedulerOptionsFromClosure(runtime.closure),
@@ -472,197 +388,44 @@ test("a recoverable Endpoint resumes its persisted Operation after restart witho
   assert.equal(first?.status, "paused");
   assert.equal(starts, 1);
   assert.equal(resumes, 0);
-  assert.equal(first?.state.receipts.length, 0, "pending external work is not a Core event");
+  assert.equal(first?.state.records.some((record) => record.id === "generated:root"), false);
   const pending = first?.outcomes.find((entry) => entry.status === "pending");
   assert.ok(pending?.operation);
   assert.equal((await operations.read(pending.operation))?.status, "pending");
 
-  const restored = parseBuildState(serializeBuildState(first.state));
-  const secondExecutor = recoverableExecutor(endpoint, operations, runtime).executor;
+  const secondExecutor = asyncExecutor(endpoint, operations, runtime).executor;
   const [second] = await new LocalBuildScheduler(
     secondExecutor,
     localSchedulerOptionsFromClosure(runtime.closure),
-  ).run([{ id: "video", state: restored }]);
+  ).run([{ id: "video", state: createGreetingBuild() }]);
 
   assert.equal(second?.status, "complete");
-  assert.equal(starts, 1, "the already persisted Operation must not call start again");
+  assert.equal(starts, 1);
   assert.equal(resumes, 1);
   assert.equal((await operations.read(pending.operation))?.status, "completed");
 });
 
-test("a crash after Operation intent but before checkpoint resumes with the same Operation id", async () => {
-  const operations = new MemoryOperationStore();
-  const runtime = resolvedRuntime(1, "recoverable");
-  let starts = 0;
-  let resumes = 0;
-  let operationId: Digest | undefined;
-  const endpoint: RecoverableEndpoint = {
-    start({ operation }) {
-      starts += 1;
-      operationId = operation.id;
-      throw new Error("process stopped after the remote submit");
-    },
-    resume({ operation, checkpoint }) {
-      resumes += 1;
-      assert.equal(checkpoint, undefined);
-      assert.equal(operation.id, operationId);
-      return {
-        status: "completed",
-        result: {
-          value: { kind: "inline", value: "Recovered by idempotency key" },
-        },
-      };
-    },
-  };
-
-  const firstExecutor = recoverableExecutor(endpoint, operations, runtime).executor;
-  const [first] = await new LocalBuildScheduler(
-    firstExecutor,
-    localSchedulerOptionsFromClosure(runtime.closure),
-  ).run([{ id: "video", state: createGreetingBuild() }]);
-  assert.equal(first?.status, "paused");
-  assert.match(first?.outcomes.at(-1)?.message ?? "", /process stopped/u);
-  assert.equal(starts, 1);
-  // An exception happens before the Scheduler sees the Operation id, but OperationStore already has it.
-  assert.ok(operationId);
-  assert.equal((await operations.read(operationId))?.status, "created");
-
-  const secondExecutor = recoverableExecutor(endpoint, operations, runtime).executor;
-  const [second] = await new LocalBuildScheduler(
-    secondExecutor,
-    localSchedulerOptionsFromClosure(runtime.closure),
-  ).run([{
-    id: "video",
-    state: parseBuildState(serializeBuildState(first!.state)),
-  }]);
-  assert.equal(second?.status, "complete");
-  assert.equal(starts, 1);
-  assert.equal(resumes, 1);
-});
-
-test("a completion persisted before a crash is replayed into Core without calling the Endpoint again", async () => {
-  const operations = new MemoryOperationStore();
-  const runtime = resolvedRuntime(1, "recoverable");
-  let starts = 0;
-  let resumes = 0;
-  let crashOnce = true;
-  const crashingStore: OperationStore = {
-    create: (identity) => operations.create(identity),
-    read: (id) => operations.read(id),
-    list: (query) => operations.list(query),
-    async compareAndSwap(id, revision, update) {
-      const result = await operations.compareAndSwap(id, revision, update);
-      if (update.status === "completed" && crashOnce) {
-        crashOnce = false;
-        throw new Error("process stopped after completion was persisted");
-      }
-      return result;
-    },
-  };
-  const endpoint: RecoverableEndpoint = {
-    start() {
-      starts += 1;
-      return {
-        status: "completed",
-        result: {
-          value: { kind: "inline", value: "Persisted completion" },
-        },
-      };
-    },
-    resume() {
-      resumes += 1;
-      throw new Error("a completed Operation must never resume");
-    },
-  };
-
-  const [first] = await new LocalBuildScheduler(
-    recoverableExecutor(endpoint, crashingStore, runtime).executor,
-    localSchedulerOptionsFromClosure(runtime.closure),
-  ).run([{ id: "video", state: createGreetingBuild() }]);
-  assert.equal(first?.status, "paused");
-  assert.equal(first?.state.receipts.length, 0);
-  assert.match(first?.outcomes.at(-1)?.message ?? "", /completion was persisted/u);
-  assert.equal(starts, 1);
-
-  const [second] = await new LocalBuildScheduler(
-    recoverableExecutor(endpoint, operations, runtime).executor,
-    localSchedulerOptionsFromClosure(runtime.closure),
-  ).run([{
-    id: "video",
-    state: parseBuildState(serializeBuildState(first!.state)),
-  }]);
-  assert.equal(second?.status, "complete");
-  assert.equal(second?.state.receipts.length, 1);
-  assert.equal(starts, 1);
-  assert.equal(resumes, 0);
-});
-
-test("a retryable terminal failure creates a new Operation attempt identity", async () => {
-  const operations = new MemoryOperationStore();
-  const runtime = resolvedRuntime(1, "recoverable");
-  const attempts: number[] = [];
-  const keys: string[] = [];
-  const endpoint: RecoverableEndpoint = {
-    start({ operation }) {
-      attempts.push(operation.attempt);
-      keys.push(operation.id);
-      if (operation.attempt === 1) {
-        return {
-          status: "failed",
-          failure: { code: "RATE_LIMITED", message: "retry this request", retryable: true, retryAt: 0 },
-        };
-      }
-      return {
-        status: "completed",
-        result: {
-          value: { kind: "inline", value: "Succeeded on attempt two" },
-        },
-      };
-    },
-    resume() {
-      throw new Error("terminal attempts must not resume");
-    },
-  };
-  const executor = recoverableExecutor(endpoint, operations, runtime, { maxAttempts: 2 }).executor;
-  const [first] = await new LocalBuildScheduler(executor, {
-    ...localSchedulerOptionsFromClosure(runtime.closure),
-  }).run([{ id: "retry-video", state: createGreetingBuild() }]);
-  assert.equal(first?.status, "paused");
-  assert.deepEqual(attempts, [1]);
-
-  const [second] = await new LocalBuildScheduler(executor, {
-    ...localSchedulerOptionsFromClosure(runtime.closure),
-  }).run([{ id: "retry-video", state: first!.state }]);
-  assert.equal(second?.status, "complete");
-  assert.deepEqual(attempts, [1, 2]);
-  assert.notEqual(keys[0], keys[1]);
-  assert.deepEqual((await operations.list({ build: "retry-video" })).map((item) => item.status), [
-    "failed",
-    "completed",
-  ]);
-});
-
 test("wakeAt prevents early polling and Runtime cancellation becomes a terminal Core failure", async () => {
   const operations = new MemoryOperationStore();
-  const runtime = resolvedRuntime(1, "recoverable");
+  const runtime = resolvedRuntime(1, "asynchronous");
   let resumes = 0;
   let cancels = 0;
   const wakeAt = Date.now() + 60_000;
-  const endpoint: RecoverableEndpoint = {
+  const endpoint: AsyncEndpoint = {
     start() {
-      return { status: "pending", checkpoint: { remoteJob: "job-wait" }, wakeAt };
+      return { status: "pending", handle: { remoteJob: "job-wait" }, wakeAt };
     },
-    resume() {
+    poll() {
       resumes += 1;
       throw new Error("wakeAt must stop early polling");
     },
-    cancel({ checkpoint }) {
+    cancel({ handle }) {
       cancels += 1;
-      assert.deepEqual(checkpoint, { remoteJob: "job-wait" });
+      assert.deepEqual(handle, { remoteJob: "job-wait" });
       return { status: "confirmed" };
     },
   };
-  const executor = recoverableExecutor(endpoint, operations, runtime).executor;
+  const executor = asyncExecutor(endpoint, operations, runtime).executor;
   const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
   const [first] = await scheduler.run([{ id: "cancel-video", state: createGreetingBuild() }]);
   const operationId = first?.outcomes.find((item) => item.status === "pending")?.operation;
@@ -674,119 +437,9 @@ test("wakeAt prevents early polling and Runtime cancellation becomes a terminal 
 
   const operation = await operations.read(operationId);
   assert.ok(operation);
-  await executor.cancelOperation(early!.state, operation, Date.now());
+  await executor.cancelOperation(early!.state, operation);
   assert.equal(cancels, 1);
   const [cancelled] = await scheduler.run([{ id: "cancel-video", state: early!.state }]);
   assert.equal(cancelled?.status, "failed");
   assert.equal(cancelled?.state.diagnostics.at(-1)?.code, "CANCELLED");
-});
-
-test("cancellation acknowledgement never invents a remote terminal fact", async () => {
-  const operations = new MemoryOperationStore();
-  const runtime = resolvedRuntime(1, "recoverable");
-  let cancelCalls = 0;
-  const endpoint: RecoverableEndpoint = {
-    start() {
-      return { status: "pending", checkpoint: { remoteJob: "still-running" } };
-    },
-    resume({ checkpoint }) {
-      return { status: "pending", checkpoint: checkpoint ?? { remoteJob: "still-running" } };
-    },
-    cancel() {
-      cancelCalls += 1;
-      return cancelCalls === 1 ? { status: "accepted" } : { status: "confirmed" };
-    },
-  };
-  const executor = recoverableExecutor(endpoint, operations, runtime).executor;
-  const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
-  const [first] = await scheduler.run([{ id: "accepted-cancel", state: createGreetingBuild() }]);
-  const operationId = first?.outcomes.find((item) => item.status === "pending")?.operation;
-  assert.ok(operationId);
-  const operation = await operations.read(operationId);
-  assert.ok(operation);
-  const controlled = await executor.cancelOperation(first!.state, operation, 123);
-  assert.equal(controlled.status, "pending");
-  assert.equal(controlled.cancellation?.status, "accepted");
-  const confirmed = await executor.cancelOperation(first!.state, controlled, 123);
-  assert.equal(confirmed.status, "cancelled");
-  assert.equal(confirmed.cancellation?.status, "confirmed");
-  assert.equal(cancelCalls, 2, "accepted acknowledgement is reconciled until a terminal fact exists");
-});
-
-test("a completion racing with cancellation is recorded as too late instead of overwritten", async () => {
-  const stored = new MemoryOperationStore();
-  let race = false;
-  const operations: OperationStore = {
-    create: (identity) => stored.create(identity),
-    read: (id) => stored.read(id),
-    list: (query) => stored.list(query),
-    async compareAndSwap(id, revision, update) {
-      if (race && update.status === "control") {
-        race = false;
-        const completed = await stored.compareAndSwap(id, revision, {
-          status: "completed",
-          completion: {
-            value: { kind: "inline", value: "remote fact won the race" },
-          },
-        });
-        assert.equal(completed.status, "stored");
-        return { status: "conflict", current: completed.snapshot };
-      }
-      return await stored.compareAndSwap(id, revision, update);
-    },
-  };
-  let cancelCalls = 0;
-  const endpoint: RecoverableEndpoint = {
-    start() {
-      return { status: "pending", checkpoint: { remoteJob: "finishing" } };
-    },
-    resume() {
-      throw new Error("the raced terminal fact must be observed before resume");
-    },
-    cancel() {
-      cancelCalls += 1;
-      return { status: "confirmed" };
-    },
-  };
-  const runtime = resolvedRuntime(1, "recoverable");
-  const executor = recoverableExecutor(endpoint, operations, runtime).executor;
-  const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
-  const [first] = await scheduler.run([{ id: "cancel-completion-race", state: createGreetingBuild() }]);
-  const operationId = first?.outcomes.find((item) => item.status === "pending")?.operation;
-  assert.ok(operationId);
-  const operation = await operations.read(operationId);
-  assert.ok(operation);
-  race = true;
-  const observed = await executor.cancelOperation(first!.state, operation, 789);
-  assert.equal(observed.status, "completed");
-  assert.equal(observed.cancellation?.status, "too-late");
-  assert.equal(cancelCalls, 0);
-});
-
-test("an Endpoint without cancellation stays observable instead of changing Candidate or fact", async () => {
-  const operations = new MemoryOperationStore();
-  const runtime = resolvedRuntime(1, "recoverable");
-  const endpoint: RecoverableEndpoint = {
-    start() {
-      return { status: "pending", checkpoint: { remoteJob: "cannot-cancel" } };
-    },
-    resume() {
-      return {
-        status: "completed",
-        result: {
-          value: { kind: "inline", value: "late but real" },
-        },
-      };
-    },
-  };
-  const executor = recoverableExecutor(endpoint, operations, runtime).executor;
-  const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
-  const [first] = await scheduler.run([{ id: "unsupported-cancel", state: createGreetingBuild() }]);
-  const operationId = first?.outcomes.find((item) => item.status === "pending")?.operation;
-  assert.ok(operationId);
-  const operation = await operations.read(operationId);
-  assert.ok(operation);
-  const observed = await executor.cancelOperation(first!.state, operation, 456);
-  assert.equal(observed.status, "completed");
-  assert.equal(observed.cancellation?.status, "unsupported");
 });

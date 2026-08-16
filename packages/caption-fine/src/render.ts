@@ -13,7 +13,6 @@ import type {
 import type { CaptionDisplayAtom, CaptionDisplaySequence } from "@narratage/narrative";
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 
 import { assertFineCaptionParameters, FINE_CAPTION_FAMILY } from "./style.js";
 import type {

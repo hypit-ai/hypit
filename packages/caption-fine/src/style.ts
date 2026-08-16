@@ -2,7 +2,7 @@ import type { CaptionStyleIntent } from "@narratage/caption";
 import { sealCaptionStyle } from "@narratage/caption";
 import { assertFontArtifactRef } from "@narratage/media";
 import type { FontArtifactRef } from "@narratage/media";
-import { digestOf } from "@narratage/protocol";
+import { canonicalStringify } from "@narratage/protocol";
 import type { SvsRecipe } from "@narratage/svs";
 
 import type { FineCaptionGlyphPaint, FineCaptionParameters } from "./types.js";
@@ -293,7 +293,7 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
   const faces = new Set<string>();
   for (const [index, font] of value.typography.exactFonts.entries()) {
     assertFontArtifactRef(font, `Fine Caption exact Font ${index + 1}`);
-    const identity = digestOf(font);
+    const identity = canonicalStringify(font);
     if (faces.has(identity)) throw new Error("Fine Caption exact Font stack contains a duplicate face");
     faces.add(identity);
   }

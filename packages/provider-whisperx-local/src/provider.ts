@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { sealAlignedTranscriptEvidence, speechEvidenceTypes } from "@narratage/speech-evidence";
 import type { AlignedTranscriptEvidence, SpeechTranscriptPassage } from "@narratage/speech-evidence";
 import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue } from "@narratage/protocol";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import {

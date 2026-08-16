@@ -1,36 +1,16 @@
-import { digestOf, isDigest } from "@narratage/protocol";
-import type { Digest } from "@narratage/protocol";
-
-export type DispatchAdmission = "open" | "closing" | "closed";
-export type DispatchPhase = "queued" | "leased" | "waiting" | "blocked" | "settling" | "terminal";
+export type DispatchPhase = "queued" | "running" | "waiting" | "blocked" | "terminal";
 export type DispatchTerminal = "complete" | "failed" | "cancelled";
 
-export type DispatchLease = {
-  readonly owner: string;
-  readonly token: string;
-  /** Monotonic fencing value. A stale owner can never commit with an older fence. */
-  readonly fence: number;
-  readonly expiresAt: number;
-};
-
 export type BuildDispatchIdentity = {
-  readonly format: "narratage.build-dispatch-identity@1";
-  readonly id: Digest;
   readonly build: string;
-  readonly core: Digest;
-  /** Installed compute packages required to execute this Build. */
+  /** Compute packages the Worker loads for this Build. */
   readonly implementationPackages: readonly string[];
 };
 
 export type BuildDispatchSnapshot = BuildDispatchIdentity & {
-  readonly revision: number;
   readonly createdAt: number;
-  readonly updatedAt: number;
-  readonly priority: number;
   readonly availableAt: number;
-  readonly admission: DispatchAdmission;
   readonly phase: DispatchPhase;
-  readonly lease?: DispatchLease;
   readonly reason?: string;
   readonly cancellation?: {
     readonly requestedAt: number;
@@ -39,41 +19,22 @@ export type BuildDispatchSnapshot = BuildDispatchIdentity & {
   readonly terminal?: DispatchTerminal;
 };
 
-export type BuildDispatchCreate =
-  | { readonly status: "created"; readonly snapshot: BuildDispatchSnapshot }
-  | { readonly status: "existing"; readonly snapshot: BuildDispatchSnapshot };
-
-export type BuildDispatchClaim = {
-  readonly owner: string;
-  readonly token: string;
-  readonly now: number;
-  readonly leaseMs: number;
-};
-
 export type BuildDispatchRelease = {
-  readonly phase: "queued" | "waiting" | "blocked" | "settling";
+  readonly phase: "queued" | "waiting" | "blocked";
   readonly availableAt: number;
   readonly reason?: string;
 };
 
 export type DispatchQuery = {
   readonly phases?: readonly DispatchPhase[];
-  readonly admission?: DispatchAdmission;
 };
 
 export const nonTerminalDispatchPhases = [
   "queued",
-  "leased",
+  "running",
   "waiting",
   "blocked",
-  "settling",
 ] as const satisfies readonly DispatchPhase[];
-
-export type CapacityMode = "active" | "recoverable";
-
-export type CapacityLimits = {
-  readonly globalActive: number;
-};
 
 export type CapacityResourceClaim = {
   readonly id: string;
@@ -81,9 +42,9 @@ export type CapacityResourceClaim = {
   readonly maxInFlight: number;
 };
 
+/** One asynchronous external Operation that currently occupies Provider capacity. */
 export type CapacityReservation = {
-  readonly format: "narratage.capacity-reservation@1";
-  readonly id: Digest;
+  readonly id: string;
   readonly build: string;
   readonly command: string;
   readonly resources: readonly CapacityResourceClaim[];
@@ -91,11 +52,7 @@ export type CapacityReservation = {
     readonly pool: string;
     readonly lane: string;
   };
-  readonly mode: CapacityMode;
-  readonly inFlight: boolean;
-  readonly active?: DispatchLease;
   readonly createdAt: number;
-  readonly updatedAt: number;
 };
 
 export type CapacityAcquireRequest = {
@@ -103,52 +60,34 @@ export type CapacityAcquireRequest = {
   readonly command: string;
   readonly resources: readonly CapacityResourceClaim[];
   readonly queue?: CapacityReservation["queue"];
-  readonly mode: CapacityMode;
-  /** Current Build pool; a stale Worker cannot reserve capacity after being fenced. */
-  readonly buildLease: DispatchLease;
-  readonly owner: string;
-  readonly token: string;
   readonly now: number;
-  readonly leaseMs: number;
-  readonly limits: CapacityLimits;
 };
 
 export type CapacityAcquire =
   | { readonly status: "acquired"; readonly reservation: CapacityReservation }
   | {
       readonly status: "blocked";
-      readonly retryAt: number;
-      readonly reason: "global-active" | "resource-active" | "resource-in-flight";
-      readonly resource?: string;
+      readonly availableAt: number;
+      readonly reason: "resource-in-flight";
+      readonly resource: string;
     };
 
-/**
- * Durable execution control for Build identities, leases and shared capacity.
- *
- * It deliberately stores no Core Command body. `command` is only the identity regenerated from
- * verified BuildState by the Worker. Provider checkpoints remain in OperationStore.
- */
+/** Durable queue state. Process ownership belongs to the Runtime Host, not each Build row. */
 export type BuildDispatchStore = {
-  create(identity: BuildDispatchIdentity, options?: { readonly priority?: number; readonly availableAt?: number; readonly now?: number }): Promise<BuildDispatchCreate>;
+  create(identity: BuildDispatchIdentity, options?: {
+    readonly now?: number;
+  }): Promise<BuildDispatchSnapshot>;
   read(build: string): Promise<BuildDispatchSnapshot | undefined>;
   list(query?: DispatchQuery): Promise<readonly BuildDispatchSnapshot[]>;
-  claim(request: BuildDispatchClaim): Promise<BuildDispatchSnapshot | undefined>;
-  heartbeat(build: string, lease: DispatchLease, now: number, leaseMs: number): Promise<BuildDispatchSnapshot>;
-  release(build: string, lease: DispatchLease, update: BuildDispatchRelease, now?: number): Promise<BuildDispatchSnapshot>;
-  finish(build: string, lease: DispatchLease, terminal: DispatchTerminal, reason?: string, now?: number): Promise<BuildDispatchSnapshot>;
-  /**
-   * Close future admission for one Build. A never-claimed queued Build becomes cancelled in the
-   * same atomic store transaction; an already-claimed Build is reconciled by its fenced Worker.
-   */
+  /** Claim one ready Build for the Runtime's single Worker process. */
+  claim(now?: number): Promise<BuildDispatchSnapshot | undefined>;
+  release(build: string, update: BuildDispatchRelease): Promise<BuildDispatchSnapshot>;
+  finish(build: string, terminal: DispatchTerminal, reason?: string): Promise<BuildDispatchSnapshot>;
   requestCancellation(build: string, reason?: string, now?: number): Promise<BuildDispatchSnapshot>;
-  /** Make non-terminal work immediately claimable without changing admission or creative intent. */
   wake(build: string, now?: number): Promise<BuildDispatchSnapshot>;
   acquireCapacity(request: CapacityAcquireRequest): Promise<CapacityAcquire>;
-  heartbeatCapacity(id: Digest, lease: DispatchLease, now: number, leaseMs: number): Promise<CapacityReservation>;
-  parkCapacity(id: Digest, lease: DispatchLease, inFlight: boolean, now?: number): Promise<CapacityReservation>;
-  releaseCapacity(id: Digest, lease: DispatchLease, now?: number): Promise<void>;
-  /** Remove a parked reservation only while holding the owning Build's current fenced lease. */
-  clearCapacity(id: Digest, build: string, buildLease: DispatchLease): Promise<void>;
+  releaseCapacity(id: string): Promise<void>;
+  releaseBuildCapacity(build: string): Promise<void>;
   listCapacity(): Promise<readonly CapacityReservation[]>;
 };
 
@@ -156,88 +95,17 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function safeNonNegative(value: number, subject: string): number {
-  assert(Number.isSafeInteger(value) && value >= 0, `${subject} must be a non-negative safe integer`);
-  return value;
-}
-
-function positive(value: number, subject: string): number {
-  assert(Number.isSafeInteger(value) && value > 0, `${subject} must be a positive safe integer`);
-  return value;
-}
-
 export function createBuildDispatchIdentity(input: {
   readonly build: string;
-  readonly core: Digest;
   readonly implementationPackages?: readonly string[];
 }): BuildDispatchIdentity {
   assert(input.build.trim().length > 0, "Build Dispatch build id is empty");
-  assert(isDigest(input.core), "Build Dispatch Core digest is invalid");
   const implementationPackages = [...new Set(input.implementationPackages ?? [])].sort();
   assert(implementationPackages.every((item) => item.trim().length > 0), "Build Dispatch implementation package is empty");
-  const content = {
-    format: "narratage.build-dispatch-identity@1" as const,
-    build: input.build,
-    core: input.core,
-    implementationPackages,
-  };
-  return { ...content, id: digestOf(content) };
+  return { build: input.build, implementationPackages };
 }
 
-export function verifyBuildDispatchIdentity(value: BuildDispatchIdentity): void {
-  const expected = createBuildDispatchIdentity(value);
-  assert(value.format === expected.format && value.id === expected.id, "Build Dispatch identity differs");
-}
-
-export function verifyDispatchLease(value: DispatchLease, subject = "Dispatch lease"): void {
-  assert(value.owner.trim().length > 0, `${subject} owner is empty`);
-  assert(value.token.trim().length > 0, `${subject} token is empty`);
-  positive(value.fence, `${subject} fence`);
-  safeNonNegative(value.expiresAt, `${subject} expiry`);
-}
-
-export function verifyBuildDispatchSnapshot(value: BuildDispatchSnapshot): void {
-  verifyBuildDispatchIdentity(value);
-  safeNonNegative(value.revision, "Build Dispatch revision");
-  safeNonNegative(value.createdAt, "Build Dispatch createdAt");
-  safeNonNegative(value.updatedAt, "Build Dispatch updatedAt");
-  assert(Number.isSafeInteger(value.priority), "Build Dispatch priority must be a safe integer");
-  safeNonNegative(value.availableAt, "Build Dispatch availableAt");
-  assert(["open", "closing", "closed"].includes(value.admission), "Build Dispatch admission is invalid");
-  assert(["queued", "leased", "waiting", "blocked", "settling", "terminal"].includes(value.phase), "Build Dispatch phase is invalid");
-  if (value.lease !== undefined) verifyDispatchLease(value.lease);
-  assert((value.phase === "leased") === (value.lease !== undefined), "only a leased Dispatch may carry a lease");
-  assert((value.phase === "terminal") === (value.terminal !== undefined), "only a terminal Dispatch may carry a terminal outcome");
-  if (value.phase === "terminal") assert(value.admission === "closed", "terminal Dispatch admission must be closed");
-  if (value.cancellation !== undefined) safeNonNegative(value.cancellation.requestedAt, "cancellation requestedAt");
-}
-
-export function capacityReservationId(build: string, command: string): Digest {
+export function capacityReservationId(build: string, command: string): string {
   assert(build.trim().length > 0 && command.trim().length > 0, "Capacity reservation identity is empty");
-  return digestOf({ format: "narratage.capacity-reservation-identity@1", build, command });
-}
-
-export function verifyCapacityLimits(value: CapacityLimits): void {
-  positive(value.globalActive, "global active capacity");
-}
-
-export function verifyCapacityReservation(value: CapacityReservation): void {
-  assert(value.format === "narratage.capacity-reservation@1", "Capacity reservation format is unsupported");
-  assert(value.id === capacityReservationId(value.build, value.command), "Capacity reservation identity differs");
-  assert(value.resources.length > 0, "Capacity reservation resources are empty");
-  const resources = value.resources.map((resource) => {
-    assert(resource.id.trim().length > 0, "Capacity resource id is empty");
-    positive(resource.maxActive, `Capacity resource ${resource.id} active limit`);
-    positive(resource.maxInFlight, `Capacity resource ${resource.id} in-flight limit`);
-    return resource.id;
-  });
-  assert(new Set(resources).size === resources.length, "Capacity reservation repeats a resource");
-  if (value.queue !== undefined) {
-    assert(value.queue.pool.trim().length > 0, "Capacity queue pool is empty");
-    assert(value.queue.lane.trim().length > 0, "Capacity queue lane is empty");
-  }
-  assert(value.mode === "active" || value.mode === "recoverable", "Capacity reservation mode is invalid");
-  if (value.active !== undefined) verifyDispatchLease(value.active, "Capacity lease");
-  safeNonNegative(value.createdAt, "Capacity reservation createdAt");
-  safeNonNegative(value.updatedAt, "Capacity reservation updatedAt");
+  return `capacity:${encodeURIComponent(build)}:${encodeURIComponent(command)}`;
 }

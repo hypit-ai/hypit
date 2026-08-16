@@ -10,10 +10,10 @@ import { compositionTypes } from "@narratage/composition";
 import { mediaPipelineManifest } from "@narratage/media-pipeline";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   createResolvedClosure,
-  digestOf,
   link,
   sealBuildRequest,
   sealCompiledGraph,
@@ -83,13 +83,13 @@ function sampleTake(label = "generated"): SpeechBasis {
   });
   const audio = {
     kind: "blob" as const,
-    digest: digestOf(`${label}:audio`),
+    digest: fixtureDigest(`${label}:audio`),
     size: 12,
     mediaType: "audio/wav",
   };
   const visual = {
     kind: "blob" as const,
-    digest: digestOf(`${label}:visual`),
+    digest: fixtureDigest(`${label}:visual`),
     size: 24,
     mediaType: "video/mp4",
   };
@@ -123,9 +123,6 @@ function createProgram(): LinkedProgram {
     id: "request:opening",
     type: requestType,
     value: { kind: "inline", value: "Generate the opening speech take." },
-    origin: {
-      kind: "authored",
-    },
   });
   return link(closure, [request]);
 }
@@ -138,7 +135,6 @@ function createGraph(program: LinkedProgram): CompiledGraph {
   const existingVisual = projectSpeechVisual(existingTake);
   const existingVisualValue = { kind: "inline" as const, value: existingVisual };
   return sealCompiledGraph({
-    program: program.semanticDigest,
     outputs: [
       {
         id: "opening.take",
@@ -225,7 +221,6 @@ function build(
   const program = createProgram();
   const sourceGraph = createGraph(program);
   const graph = sealCompiledGraph({
-    program: sourceGraph.program,
     outputs: sourceGraph.outputs.map((item) => ({
       ...item,
       primary: satisfactionMap[item.id] ?? item.primary,
@@ -234,7 +229,6 @@ function build(
     operations: sourceGraph.operations,
   });
   const request: BuildRequest = sealBuildRequest({
-    graph: graph.id,
     targets: targets.map((outputId) => ({ output: outputId })),
   });
   return start(program, graph, request);
@@ -299,7 +293,7 @@ test("selecting an Existing SpeechBasis stops generation but keeps both projecti
     { "opening.take": "opening.take.existing" },
   );
   assert.deepEqual(stepIds(state), ["project-opening-audio", "project-opening-visual"]);
-  assert.deepEqual(state.records.filter((record) => record.origin.kind === "provided").map((record) => record.id), ["provided:opening-take"]);
+  assert.equal(state.records.some((record) => record.id === "provided:opening-take"), true);
   assert.equal(
     state.plan.steps.find((step) => step.id === "project-opening-audio")?.inputs.basis,
     "provided:opening-take",

@@ -32,15 +32,6 @@ test("a malformed reference is refused before anything is looked up", async () =
   assert.equal(asked, 0);
 });
 
-test("the configured service is part of the instance's identity", () => {
-  const configured = createKeychainCredentialStorePackage({ instance: "credentials.team", service: "acme" });
-  assert.equal(configured.parts[0]?.instance.id, "credentials.team.store");
-  // Configuration reaches identity as a digest and is not carried in the
-  // Closure, so the proof that the service name counts is that a different
-  // name is a different instance.
-  const other = createKeychainCredentialStorePackage({ instance: "credentials.team", service: "other" });
-});
-
 test("writable facet stores and removes only keychain-owned references", async () => {
   const values = new Map<string, string>();
   const store = new KeychainCredentialStore({

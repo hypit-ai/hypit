@@ -199,21 +199,13 @@ export class NodeCompiler {
   }
 
   /**
-   * Add modules used only by Run implementations without changing Author records or Author Graph
-   * identity. Authored Records are rebound to the larger verified closure before Core sees Run code.
+   * Add modules used only by Run implementations. Author records stay unchanged.
    */
   extendExecutionProgram(program: LinkedProgram, requests: readonly string[]): LinkedProgram {
     const existing = program.closure.modules.map((item) => `${item.manifest.name}@${item.manifest.version}`);
+    if (requests.every((request) => existing.includes(request))) return program;
     const closure = this.#options.modules.createClosure([...existing, ...requests]);
-    if (closure.digest === program.closure.digest) return program;
-    const extended = link(closure, program.records);
-    if (extended.semanticDigest !== program.semanticDigest) {
-      throw new NodeCompilerError(
-        "EXECUTION_PROGRAM_SEMANTIC_DRIFT",
-        "Run-only Module closure extension changed Author program semantics",
-      );
-    }
-    return extended;
+    return link(closure, program.records);
   }
 
 }

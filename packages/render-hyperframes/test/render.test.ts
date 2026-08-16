@@ -10,10 +10,10 @@ import { compositionDependency, compositionTypes, sealComposition } from "@narra
 import type { Composition } from "@narratage/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   createResolvedClosure,
-  digestOf,
   link,
   sealBuildRequest,
   sealCompiledGraph,
@@ -100,20 +100,15 @@ const closure = createResolvedClosure([
   mediaPipelineManifest,
   renderHyperframesManifest,
 ]);
-const origin = {
-  kind: "authored" as const,
-};
 const compositionRecord = await admitRecord(closure, sealRecord({
   id: "composition",
   type: compositionTypes.composition,
   value: stored(composition),
-  origin,
 }), validatorRegistry());
 const spaceRecord = await admitRecord(closure, sealRecord({
   id: "space",
   type: programSpaceTypes.programSpace,
   value: stored(space),
-  origin,
 }), validatorRegistry());
 const linked = link(closure, [compositionRecord, spaceRecord]);
 const instance = elaborateGraphFragment(linked, renderHyperframesFragment, {
@@ -125,11 +120,10 @@ const instance = elaborateGraphFragment(linked, renderHyperframesFragment, {
   },
 });
 const contribution = bindAuthorFragment(instance, { video: "final.video" });
-const graph = sealCompiledGraph({ program: linked.semanticDigest, ...contribution });
+const graph = sealCompiledGraph({ ...contribution });
 
 function build() {
   return start(linked, graph, sealBuildRequest({
-    graph: graph.id,
     targets: [{ output: "final.video" }],
   }));
 }
@@ -175,19 +169,19 @@ test("HyperFrames rendering is an explicit exact Need after ordinary document co
 test("separate visual, audio and mux Endpoints complete one author-visible render", async () => {
   const visualArtifact = {
     kind: "blob" as const,
-    digest: digestOf("render-hyperframes:visual"),
+    digest: fixtureDigest("render-hyperframes:visual"),
     size: 12_345,
     mediaType: "video/mp4",
   };
   const audioArtifact = {
     kind: "blob" as const,
-    digest: digestOf("render-hyperframes:audio"),
+    digest: fixtureDigest("render-hyperframes:audio"),
     size: 4_096,
     mediaType: "audio/wav",
   };
   const finalArtifact = {
     kind: "blob" as const,
-    digest: digestOf("render-hyperframes:final-video"),
+    digest: fixtureDigest("render-hyperframes:final-video"),
     size: 16_441,
     mediaType: "video/mp4",
   };
@@ -270,7 +264,7 @@ test("a render Product with another frame domain is rejected by the explicit dow
         canvas: document.canvas,
         artifact: {
           kind: "blob",
-          digest: digestOf("render-hyperframes:wrong-domain"),
+          digest: fixtureDigest("render-hyperframes:wrong-domain"),
           size: 1,
           mediaType: "video/mp4",
           },
@@ -287,7 +281,7 @@ test("a render Product with another frame domain is rejected by the explicit dow
         value: stored(sealTimelineAudio({
           artifact: {
             kind: "blob",
-            digest: digestOf("render-hyperframes:domain-check-audio"),
+            digest: fixtureDigest("render-hyperframes:domain-check-audio"),
             size: 1,
             mediaType: "audio/wav",
           },
@@ -303,11 +297,10 @@ test("a render Product with another frame domain is rejected by the explicit dow
   }).run(build());
   assert.equal(result.status, "paused");
   assert.match(result.outcomes.at(-1)?.message ?? "", /different presentation durations/u);
-  assert.equal(result.state.receipts.length, 2);
 });
 
 const fixtureModule = { name: "example.composition-fixture", version: "1" } as const;
-const fixtureSurfaceDigest = digestOf("example.composition-fixture/surface@1");
+const fixtureSurfaceDigest = fixtureDigest("example.composition-fixture/surface@1");
 const fixtureSurface = {
   name: "composition", tag: "Composition", mode: "structured",
   outputs: [compositionTypes.composition, programSpaceTypes.programSpace],
@@ -385,7 +378,6 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
   const target = resolveCompiledSourceExport(compiled, "poster.image", artifactTypes.blob);
   assert.equal(target.ref.kind, "logical-output");
   const state = start(compiled.program, compiled.graph, sealBuildRequest({
-    graph: compiled.graph.id,
     targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
   }));
   assert.deepEqual(state.plan.steps.map((step) => step.producer.name).sort(), [

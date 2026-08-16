@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import type { SynchronizedMedia, TimelineAudio } from "@narratage/media";
 import type { NarrativeExcerpt } from "@narratage/narrative";
-import { digestOf } from "@narratage/protocol";
 import {
   appendSpeechSpineAudioTake,
   appendSpeechSpineVisualTake,
@@ -33,12 +33,12 @@ function synchronized(id: string, visual: boolean): SynchronizedMedia {
       frameCount: 30,
     },
     ...(visual ? { visual: {
-      artifact: { kind: "blob" as const, digest: digestOf(`${id}:video`), size: 1, mediaType: "video/mp4" },
+      artifact: { kind: "blob" as const, digest: fixtureDigest(`${id}:video`), size: 1, mediaType: "video/mp4" },
       width: 720,
       height: 1280,
     } } : {}),
     audio: {
-      artifact: { kind: "blob", digest: digestOf(`${id}:audio`), size: 1, mediaType: "audio/wav" },
+      artifact: { kind: "blob", digest: fixtureDigest(`${id}:audio`), size: 1, mediaType: "audio/wav" },
     },
   };
 }
@@ -61,7 +61,7 @@ test("audio Takes lengthen the speech program without inventing a visual clip", 
     sealSpeechSpineVisualSpec({ stackingOrder: 30 }),
   );
   const audio: TimelineAudio = {
-    artifact: { kind: "blob", digest: digestOf("speech:mix"), size: 1, mediaType: "audio/wav" },
+    artifact: { kind: "blob", digest: fixtureDigest("speech:mix"), size: 1, mediaType: "audio/wav" },
     sampleFrames: 96_000,
   };
   const basis = assembleSpeechBasis(program, set, audio);

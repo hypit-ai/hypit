@@ -8,11 +8,10 @@ Objects use deterministic keys:
 <prefix>/sha256/<first-two-hex>/<full-hex>
 ```
 
-Writes use `If-None-Match: *`; an already-existing object is downloaded and digest-verified rather
-than trusted by key. Whole-object reads always recompute SHA-256. The AWS client also exposes the
-optional streaming and retention facets: streamed writes use multipart upload to an isolated
-staging key followed by a server-side copy to the content-addressed key; streamed reads verify the
-digest before their iterator completes; `list`/`delete` support explicit reachability GC.
+Writes compute the content digest once and store it at the corresponding key. The AWS client also
+exposes the optional streaming and retention facets: streamed writes use multipart upload to an isolated
+staging key followed by a server-side copy to the content-addressed key; `list`/`delete` support
+explicit maintenance.
 
 Those optional facets are attached only when an injected client supplies every operation needed to
 implement them. A reduced test or MinIO client therefore advertises only the capabilities it can

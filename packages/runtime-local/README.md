@@ -42,7 +42,7 @@ their Managed Programs. `capacity` belongs to this Runtime deployment, not to Co
 
 Build submission creates durable state and returns. A detached Worker claims dispatches and asks
 Core to regenerate Commands from verified Build facts after every restart. Provider recovery data
-stays with each Operation; cancellation closes Build admission and reconciles work already submitted.
+stays with each Operation; cancellation stops new work and makes one best-effort attempt for work already submitted.
 
 The Runtime Controller owns the local Worker and Managed Program lifecycle. The generic CLI calls
 that Controller and has no PID, signal, log path or Python/Node process policy of its own.

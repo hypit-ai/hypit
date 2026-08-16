@@ -5,7 +5,6 @@ import type { SpeechAudioBasis, SpeechBasis } from "@narratage/speech";
 import { lowerRestrictedSpeechVisualPresents } from "@narratage/media-track";
 import { sealAudioTrack, sealVisualTrack } from "@narratage/composition";
 import type { AudioTrack, VisualTrack } from "@narratage/composition";
-import { digestOf } from "@narratage/protocol";
 
 export function projectSpeechProgramSpace(basis: SpeechBasis): ProgramSpace {
   assertSpeechBasisIdentity(basis);

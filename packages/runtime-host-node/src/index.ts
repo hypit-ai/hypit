@@ -8,7 +8,7 @@ import {
 } from "@narratage/package-loader-node";
 import type { LoadedPackage } from "@narratage/package-loader-node";
 import type { ArtifactAttachment } from "@narratage/workspace";
-import type { BuildState, CanonicalValue, CapabilityRef, Digest } from "@narratage/protocol";
+import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef, Digest } from "@narratage/protocol";
 import type {
   BuildCatalogDescriptor,
   BuildCatalogEntry,
@@ -26,7 +26,7 @@ export const nodeRuntimeHostAdapterAbi = "narratage.node-runtime-host-adapter@1"
 export type RuntimeHostBuildSubmission = {
   readonly id: string;
   readonly state: BuildState;
-  readonly status: "queued" | "running" | "waiting" | "blocked" | "settling" | "complete" | "failed" | "cancelled";
+  readonly status: "queued" | "running" | "waiting" | "blocked" | "complete" | "failed" | "cancelled";
   readonly dispatch: BuildDispatchSnapshot;
 };
 
@@ -92,7 +92,7 @@ export type RuntimeHostCredentialControl = {
 export type RuntimeHostExecution = RuntimeHostMaintenance & RuntimeHostCredentialControl & {
   build(request: {
     readonly id: string;
-    readonly state: BuildState;
+    readonly definition: BuildDefinition;
     readonly implementationPackages?: readonly string[];
     readonly catalog?: BuildCatalogDescriptor;
     readonly attachments?: readonly ArtifactAttachment[];
@@ -129,19 +129,16 @@ export type ManagedProgramReport = {
 };
 
 export type RuntimeWorkerState = {
-  readonly state: "running" | "stale" | "stopped";
+  readonly state: "running" | "stopped";
   readonly profile: string;
   readonly pid?: number;
   readonly startedAt?: number;
-  readonly profileDigest?: string;
-  readonly currentProfileDigest?: string;
   readonly logPath: string;
 };
 
 export type RuntimeController = {
   readonly profile: string;
   readonly dataRoot: string;
-  revision(): Promise<string>;
   readonly worker: {
     up(options?: { readonly maxWaitMs?: number }): Promise<RuntimeWorkerState>;
     status(): Promise<RuntimeWorkerState>;
@@ -200,7 +197,6 @@ export type NodeRuntimeHostAdapterContext = {
 export type NodeRuntimeHostAdapterFacet = HostFacet & {
   readonly abi: typeof nodeRuntimeHostAdapterAbi;
   readonly offers: readonly [string];
-  readonly identity?: never;
   readonly implementation: {
     open(context: NodeRuntimeHostAdapterContext): NodeRuntimeHost | Promise<NodeRuntimeHost>;
   };

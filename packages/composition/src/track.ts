@@ -1,4 +1,4 @@
-import { digestOf, isDigest } from "@narratage/protocol";
+import { canonicalStringify, isDigest } from "@narratage/protocol";
 import type { BlobRef } from "@narratage/protocol";
 
 import {
@@ -546,7 +546,7 @@ function assertExactFonts(fonts: readonly FontArtifactRef[], label: string): voi
   const faces = new Set<string>();
   for (const [index, font] of fonts.entries()) {
     assertFontArtifactRef(font, `${label}.${index}`);
-    const face = digestOf(font);
+    const face = canonicalStringify(font);
     if (faces.has(face)) throw new Error(`${label} has a duplicate font face.`);
     faces.add(face);
   }

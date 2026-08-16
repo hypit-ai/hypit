@@ -15,7 +15,7 @@ import type {
   VisualStyleDeclaration,
   VisualTrack,
 } from "@narratage/composition";
-import { digestOf, isDigest } from "@narratage/protocol";
+import { canonicalStringify, isDigest } from "@narratage/protocol";
 import type { BlobRef, Digest } from "@narratage/protocol";
 import { VISUAL_IR_V1 } from "@narratage/visual-ir";
 
@@ -198,11 +198,11 @@ function attributes(values: readonly VisualAttribute[] | undefined): string {
 }
 
 function stableDomId(parts: readonly string[]): string {
-  return `narratage-${digestOf(parts).slice("sha256:".length, "sha256:".length + 20)}`;
+  return `narratage-${Buffer.from(JSON.stringify(parts)).toString("base64url")}`;
 }
 
 function exactFontFamily(font: FontArtifactRef): string {
-  return stableDomId(["font", digestOf(font)]);
+  return stableDomId(["font", canonicalStringify(font)]);
 }
 
 function exactFontStyle(element: VisualElement): string[] {
@@ -504,7 +504,7 @@ function collectSurfaces(composition: Composition): CompositableSurfaceRef[] {
         if (element.kind !== "surface") continue;
         const surface = structuredClone(element.surface);
         const existing = surfaces.get(surface.artifact.digest);
-        if (existing !== undefined && digestOf(existing) !== digestOf(surface)) {
+        if (existing !== undefined && canonicalStringify(existing) !== canonicalStringify(surface)) {
           throw new Error(`HyperFrames Surface ${surface.artifact.digest} has conflicting declarations.`);
         }
         surfaces.set(surface.artifact.digest, surface);
@@ -522,7 +522,7 @@ function collectFonts(composition: Composition): FontArtifactRef[] {
     for (const present of track.presents) {
       for (const element of present.elements) {
         if (element.kind !== "text") continue;
-        for (const font of element.fonts ?? []) fonts.set(digestOf(font), font);
+        for (const font of element.fonts ?? []) fonts.set(canonicalStringify(font), font);
       }
     }
   }
@@ -531,7 +531,7 @@ function collectFonts(composition: Composition): FontArtifactRef[] {
     for (const present of track.presents) {
       for (const element of present.elements) {
         if (element.kind !== "text-flow" && element.kind !== "path-text") continue;
-        for (const font of collectTerminalTextFonts(element)) fonts.set(digestOf(font), font);
+        for (const font of collectTerminalTextFonts(element)) fonts.set(canonicalStringify(font), font);
       }
     }
   }

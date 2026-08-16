@@ -3,7 +3,6 @@ import type { ProgramSpace } from "@narratage/program-space";
 import { spatialTypes } from "@narratage/spatial";
 import { compositionTypes } from "@narratage/composition";
 import type { AudioTrack, Track, VisualTrack } from "@narratage/composition";
-import { digestOf } from "@narratage/protocol";
 import { svsRecipeType } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";
 import type {
@@ -117,9 +116,9 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
     clearColor: appearance.clearColor,
   });
 
-  const tracks = trackChildren(element).map((child) => {
+  const tracks = trackChildren(element).map((child, index) => {
     const source = requiredReference(child, "source", resolveReference);
-    const name = `track-${digestOf({ ref: source.ref, type: source.type }).slice("sha256:".length, 28)}`;
+    const name = `track-${index + 1}`;
     return { name, kind: trackKind(source), source };
   });
   if (new Set(tracks.map((track) => track.name)).size !== tracks.length) {

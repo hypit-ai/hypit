@@ -97,11 +97,11 @@ async function nearestProjectPackageRoot(start: string): Promise<string | undefi
   }
 }
 
-async function defaultPackageRoot(
+async function resolvePackageRoot(
   projectStart: string,
-  fallback: string | undefined,
+  distributionRoot: string | undefined,
 ): Promise<string> {
-  return await nearestProjectPackageRoot(projectStart) ?? fallback ?? resolve(projectStart);
+  return await nearestProjectPackageRoot(projectStart) ?? distributionRoot ?? resolve(projectStart);
 }
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
@@ -436,7 +436,6 @@ function usage(): string {
 }
 
 function createCatalogDescriptor(options: {
-  readonly core: BuildCatalogDescriptor["core"];
   readonly source: string;
   readonly compilation: NodeCompiledSourceClosure;
   readonly run?: { readonly path: string };
@@ -449,10 +448,8 @@ function createCatalogDescriptor(options: {
   });
   return {
     format: "narratage.build-catalog-descriptor@1",
-    core: options.core,
     source: {
       path: resolve(options.source),
-      closure: options.compilation.closure.id,
     },
     ...(options.run === undefined ? {} : { run: {
       path: resolve(options.run.path),
@@ -577,7 +574,7 @@ function submissionStatus(
 ): CliBuildSubmission["status"] {
   return dispatch.phase === "terminal"
     ? dispatch.terminal!
-    : dispatch.phase === "leased" ? "running" : dispatch.phase;
+    : dispatch.phase;
 }
 
 function formatOperationProgress(progress: OperationProgress): string {
@@ -591,28 +588,21 @@ function formatOperationProgress(progress: OperationProgress): string {
 type QueueLaneSummary = {
   readonly pool: string;
   readonly lane: string;
-  readonly queued: number;
-  readonly active: number;
   readonly inFlight: number;
 };
 
 /** Derive the Provider → capability view from generic tickets; no model registry participates. */
 function summarizeQueueLanes(capacity: readonly CapacityReservation[]): readonly QueueLaneSummary[] {
-  const groups = new Map<string, { pool: string; lane: string; queued: number; active: number; inFlight: number }>();
+  const groups = new Map<string, QueueLaneSummary>();
   for (const ticket of capacity) {
     if (ticket.queue === undefined) continue;
     const key = `${ticket.queue.pool}\u0000${ticket.queue.lane}`;
-    const group = groups.get(key) ?? {
+    const previous = groups.get(key);
+    groups.set(key, {
       pool: ticket.queue.pool,
       lane: ticket.queue.lane,
-      queued: 0,
-      active: 0,
-      inFlight: 0,
-    };
-    if (ticket.active === undefined && !ticket.inFlight) group.queued += 1;
-    if (ticket.active !== undefined) group.active += 1;
-    if (ticket.inFlight) group.inFlight += 1;
-    groups.set(key, group);
+      inFlight: (previous?.inFlight ?? 0) + 1,
+    });
   }
   return [...groups.values()].sort((left, right) =>
     left.pool.localeCompare(right.pool) || left.lane.localeCompare(right.lane));
@@ -626,7 +616,7 @@ function queueLaneLines(groups: readonly QueueLaneSummary[]): readonly string[] 
       pool = group.pool;
       lines.push(pool);
     }
-    lines.push(`  ${group.lane}: queued ${group.queued} · active ${group.active} · remote ${group.inFlight}`);
+    lines.push(`  ${group.lane}: ${group.inFlight} remote`);
   }
   return lines;
 }
@@ -662,7 +652,7 @@ async function observeBuild(
   },
 ): Promise<CliBuildSubmission> {
   let current = initial;
-  let fingerprint: string | undefined;
+  let lastProgress: string | undefined;
   let pollDelayMs = 100;
   let observedActivity = false;
   const startedAt = Date.now();
@@ -700,24 +690,22 @@ async function observeBuild(
     const operations = Object.fromEntries([...new Set(status.operations.map((item) => item.status))]
       .sort().map((state) => [state, status.operations.filter((item) => item.status === state).length]));
     const activity = status.operations
-      .filter((item) => item.status === "created" || item.status === "pending")
+      .filter((item) => item.status === "pending")
       .map((item) => `${item.endpoint}: ${item.progress === undefined
         ? item.status
         : formatOperationProgress(item.progress)}`);
-    const nextFingerprint = JSON.stringify({
+    const nextProgress = JSON.stringify({
       phase: status.dispatch.phase,
       terminal: status.dispatch.terminal,
       operations,
       activity: status.operations.map((item) => ({
         id: item.id,
-        revision: item.revision,
         status: item.status,
         progress: item.progress,
-        cancellation: item.cancellation?.status,
       })),
     });
-    if (nextFingerprint !== fingerprint) {
-      fingerprint = nextFingerprint;
+    if (nextProgress !== lastProgress) {
+      lastProgress = nextProgress;
       pollDelayMs = 100;
       options.onProgress?.({
         build: current.id,
@@ -787,7 +775,7 @@ export async function runCli(
       ? dirname(resolve(args.file))
       : process.cwd());
   const packageRootForProject = async (projectRoot = commandProjectRoot()): Promise<string> =>
-    args.packageRoot ?? await defaultPackageRoot(projectRoot, distribution.fallbackPackageRoot);
+    args.packageRoot ?? await resolvePackageRoot(projectRoot, distribution.packageRoot);
   const writeOperational = (
     machine: unknown,
     title: string,
@@ -1029,7 +1017,7 @@ export async function runCli(
     const profile = resolve(profileInput);
     const controller = await runtimeController(profile);
     if (args.action === "up") {
-      // Validate the Runtime Profile before replacing a stale Worker or starting programs.
+      // Read the Runtime Profile before starting the Worker or its programs.
       const packageRoot = await packageRootForProject();
       const validated = await loadRuntime(await runtimeHost(profile, packageRoot));
       await validated.close();
@@ -1086,12 +1074,12 @@ export async function runCli(
       const [worker, external, selectedRuntime] = loaded;
       runtime = selectedRuntime;
       const queue = await runtime.queue();
-      const counts = Object.fromEntries(["queued", "leased", "waiting", "blocked", "settling", "terminal"]
+      const counts = Object.fromEntries(["queued", "running", "waiting", "blocked", "terminal"]
         .map((phase) => [phase, queue.dispatches.filter((item) => item.phase === phase).length]));
       const lanes = summarizeQueueLanes(queue.capacity);
       const ready = worker.state === "running"
         && external.programs.every((item) => item.state.state === "ready");
-      const active = ["queued", "leased", "waiting", "blocked", "settling"]
+      const active = ["queued", "running", "waiting", "blocked"]
         .reduce((total, phase) => total + (counts[phase] ?? 0), 0);
       const attention = active > 0 && !ready;
       const unavailable = external.programs.filter((item) => item.state.state !== "ready");
@@ -1107,7 +1095,7 @@ export async function runCli(
       writeOperational(machine, "Runtime status", attention ? "warning" : ready ? "success" : "info", [
         ["Worker", worker.state],
         ["Queued", String(counts.queued ?? 0)],
-        ["Running", String(counts.leased ?? 0)],
+        ["Running", String(counts.running ?? 0)],
         ["Waiting", String(counts.waiting ?? 0)],
         ["Programs", `${external.programs.length - unavailable.length}/${external.programs.length} ready`],
         ["Capacity reservations", String(queue.capacity.length)],
@@ -1239,20 +1227,18 @@ export async function runCli(
             runtime.queue(),
             controller.worker.status(),
           ]);
-          const fingerprint = JSON.stringify({
+          const queueView = JSON.stringify({
             dispatches: queue.dispatches,
             capacity: queue.capacity,
             worker,
             operations: queue.operations.map((item) => ({
               id: item.id,
-              revision: item.revision,
               status: item.status,
               progress: item.progress,
-              cancellation: item.cancellation?.status,
             })),
           });
-          if (args.watch && fingerprint === previous) return;
-          previous = fingerprint;
+          if (args.watch && queueView === previous) return;
+          previous = queueView;
           const value = {
             format: "narratage.cli-queue@1",
             at: Date.now(),
@@ -1266,24 +1252,19 @@ export async function runCli(
               endpoint: item.endpoint,
               pool: item.pool,
               lane: item.lane,
-              attempt: item.attempt,
-              revision: item.revision,
               status: item.status,
               ...(item.progress === undefined ? {} : { progress: item.progress }),
-              ...(item.cancellation === undefined ? {} : { cancellation: item.cancellation }),
             })),
           };
           const active = queue.dispatches.filter((item) => item.phase !== "terminal");
           const activeOperations = queue.operations.filter((item) =>
-            item.status === "created" || item.status === "pending");
+            item.status === "pending");
           const buildLines = active.slice(0, args.verbose ? undefined : 12).map((item) =>
-            `${item.build}: ${item.phase}${item.admission === "open" ? "" : ` · ${item.admission}`}`);
+            `${item.build}: ${item.phase}${item.cancellation === undefined ? "" : " · cancelling"}`);
           const laneLines = queueLaneLines(summarizeQueueLanes(queue.capacity));
           const genericCapacityLines = queue.capacity.filter((item) => item.queue === undefined)
             .slice(0, args.verbose ? undefined : 12)
-            .map((item) => `${item.resources.map((resource) => resource.id).join(" + ")}: ${item.active === undefined
-              ? "queued"
-              : "active"} · ${item.build}`);
+            .map((item) => `${item.resources.map((resource) => resource.id).join(" + ")}: remote · ${item.build}`);
           const operationLines = activeOperations.slice(0, args.verbose ? undefined : 12).map((item) =>
             `${item.build} · ${item.pool} → ${item.lane}: ${item.progress === undefined
               ? item.status
@@ -1312,9 +1293,7 @@ export async function runCli(
           const status = await runtime.status(entry.build);
           return {
             build: entry.build,
-            core: entry.core,
             createdAt: entry.createdAt,
-            updatedAt: entry.updatedAt,
             status: status.dispatch === undefined
               ? status.build?.state.status
               : submissionStatus(status.dispatch),
@@ -1339,9 +1318,7 @@ export async function runCli(
             .filter((output) => args.file === undefined || output.name === args.file)
             .map((output) => ({
               build: catalog.build,
-              core: catalog.core,
               createdAt: catalog.createdAt,
-              updatedAt: catalog.updatedAt,
               status: status.dispatch === undefined
                 ? status.build!.state.status
                 : submissionStatus(status.dispatch),
@@ -1365,9 +1342,7 @@ export async function runCli(
             ["Records", String(entries.length)],
           ], shown.map((item) => {
             const created = new Date(item.createdAt).toISOString();
-            const digest = item.output.record.digest;
-            const shortDigest = `${digest.slice(0, 18)}…`;
-            return `${item.build}: ${item.output.name} · ${created} · ${shortDigest}`;
+            return `${item.build}: ${item.output.name} · ${created} · ${item.output.record.id}`;
           }));
       } else if (args.command === "status") {
         let status = await runtime.status(args.file!);
@@ -1399,8 +1374,6 @@ export async function runCli(
         const machine = {
           build: status.build === undefined ? null : {
             id: status.build.build,
-            revision: status.build.revision,
-            core: status.build.state.id,
             status: effectiveStatus,
             coreStatus: status.build.state.status,
             diagnostics: status.build.state.diagnostics,
@@ -1412,13 +1385,10 @@ export async function runCli(
             id: operation.id,
             command: operation.command,
             endpoint: operation.endpoint,
-            attempt: operation.attempt,
             status: operation.status,
-            revision: operation.revision,
             ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
             ...(operation.progress === undefined ? {} : { progress: operation.progress }),
             ...(operation.failure === undefined ? {} : { failure: operation.failure }),
-            ...(operation.cancellation === undefined ? {} : { cancellation: operation.cancellation }),
           })),
           dispatch: status.dispatch ?? null,
         };
@@ -1459,7 +1429,6 @@ export async function runCli(
           : submissionStatus(status.dispatch);
         const machine = {
           build: status.build.build,
-          revision: status.build.revision,
           status: effectiveStatus,
           coreStatus: status.build.state.status,
           dispatch: status.dispatch,
@@ -1468,9 +1437,7 @@ export async function runCli(
             id: operation.id,
             command: operation.command,
             endpoint: operation.endpoint,
-            attempt: operation.attempt,
             status: operation.status,
-            revision: operation.revision,
             ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
             ...(operation.progress === undefined ? {} : { progress: operation.progress }),
             ...(operation.failure === undefined ? {} : { failure: operation.failure }),
@@ -1486,7 +1453,7 @@ export async function runCli(
           const record = target.record === undefined ? undefined : recordById.get(target.record);
           const name = alias?.name ?? target.output;
           if (record === undefined) return `Target    ${name} · not accepted`;
-          return `Target    ${name} · ${displayType(record.type)} · ${record.digest.slice(0, 18)}…`;
+          return `Target    ${name} · ${displayType(record.type)} · ${record.id}`;
         });
         const otherAccepted = archive.demandedOutputs.filter((item) =>
           item.accepted && !targetOutputs.has(item.output));
@@ -1497,7 +1464,7 @@ export async function runCli(
               const name = alias?.name ?? item.output;
               return record === undefined
                 ? `Output    ${name}`
-                : `Output    ${name} · ${displayType(record.type)} · ${record.digest.slice(0, 18)}…`;
+                : `Output    ${name} · ${displayType(record.type)} · ${record.id}`;
             })
           : otherAccepted.length === 0
             ? []
@@ -1507,7 +1474,6 @@ export async function runCli(
           ...(effectiveStatus === archive.status ? [] : [["Core", archive.status] as const]),
           ["Targets", String(archive.targets.length)], ["Accepted records", String(archive.records.length)],
           ["Operations", String(status.operations.length)],
-          ...(args.verbose ? [["Revision", String(status.build.revision)] as const] : []),
         ], [
           ...(status.dispatch?.reason === undefined ? [] : [`Reason    ${status.dispatch.reason}`]),
           ...targetLines,
@@ -1556,7 +1522,6 @@ export async function runCli(
         if (args.to === undefined) {
           const machine = {
             build: status.build.build,
-            revision: status.build.revision,
             record,
             artifacts: collectArtifacts(record.value.kind === "blob" ? record.value : record.value.value),
           };
@@ -1591,7 +1556,6 @@ export async function runCli(
           requested: result !== undefined
             && (result.phase !== "terminal" || result.terminal === "cancelled"),
           phase: result?.phase,
-          admission: result?.admission,
           terminal: result?.terminal,
         };
         const title = result === undefined
@@ -1603,7 +1567,7 @@ export async function runCli(
               : "Build cancellation requested";
         writeOperational(machine, title,
           result === undefined ? "warning" : result.phase === "terminal" && result.terminal !== "cancelled" ? "info" : "success", [
-            ["Build", args.file!], ["Admission", result?.admission ?? "missing"], ["Phase", result?.phase ?? "missing"],
+            ["Build", args.file!], ["Phase", result?.phase ?? "missing"],
           ], result?.phase === "terminal" && result.terminal !== "cancelled"
             ? [`No running work was changed; this Build is already ${result.terminal}.`]
             : []);
@@ -1623,7 +1587,7 @@ export async function runCli(
     ?? selectedRuntimeProjectRoot
     ?? dirname(resolve(args.file!));
   const sourcePackageRoot = effectivePackageRoot
-    ?? await defaultPackageRoot(effectiveWorkspaceRoot, distribution.fallbackPackageRoot);
+    ?? await resolvePackageRoot(effectiveWorkspaceRoot, distribution.packageRoot);
   const loadedPackageSet = distribution.discoverSourcePackages === undefined
     ? undefined
     : await loadDiscoveredSourcePackages(distribution, {
@@ -1666,11 +1630,6 @@ export async function runCli(
           ok: true,
           run: loaded.source,
           source: loaded.authorSource,
-          authorSourceClosure: loaded.author.closure.id,
-          runSourceClosure: loaded.closure.id,
-          authorModuleClosure: loaded.author.program.closure.digest,
-          executionModuleClosure: loaded.program.closure.digest,
-          authorGraph: loaded.author.graph.id,
           targets: loaded.document.targets,
           candidates: Object.fromEntries(loaded.document.candidates.map((item) => [item.id, item.kind])),
           satisfactions: loaded.document.satisfactions,
@@ -1687,12 +1646,9 @@ export async function runCli(
       const result = await compiler.compileSource(workspace.entry, workspace);
       const machine = {
         format: "narratage.cli-check@1" as const,
-        sourceKind: "author" as const,
-        ok: true,
-        sourceClosure: result.closure.id,
-        moduleClosure: result.program.closure.digest,
-        graph: result.graph.id,
-        units: result.closure.units.length,
+          sourceKind: "author" as const,
+          ok: true,
+          units: result.closure.units.length,
         sourceAssets: result.attachments.map((item) => item.artifact),
         modules: result.program.closure.modules.map((item) => `${item.manifest.name}@${item.manifest.version}`),
         exports: result.exports.map((item) => ({ name: item.name, type: item.type, kind: item.ref.kind })),
@@ -1727,7 +1683,6 @@ export async function runCli(
     let runtime: CliRuntime | undefined;
     try {
       const catalog = createCatalogDescriptor({
-        core: result.state.id,
         source: loadedRun.authorSource,
         compilation: result.compilation.author,
         run: {
@@ -1738,7 +1693,7 @@ export async function runCli(
         // One CLI invocation is one execution instance. Source and Plan identity
         // remain in Core; they never reclaim a previous Build.
         id: `bld_${randomUUID()}`,
-        state: result.state,
+        definition: result.definition,
         ...(loadedPackageSet === undefined ? {} : {
           implementationPackages: loadedPackageSet.map((item) => item.specifier),
         }),
@@ -1809,7 +1764,6 @@ export async function runCli(
       });
       const machine = {
         build: built.id,
-        core: built.state.id,
         status: built.status,
         worker,
         ...(programs === undefined ? {} : {
@@ -1820,12 +1774,12 @@ export async function runCli(
           return {
             record: goal.record,
             type: goal.type,
-            ...(record === undefined ? {} : { digest: record.digest, value: record.value }),
+            ...(record === undefined ? {} : { value: record.value }),
           };
         }),
         dispatch: {
           phase: built.dispatch.phase,
-          admission: built.dispatch.admission,
+          ...(built.dispatch.cancellation === undefined ? {} : { cancellation: true }),
           ...(built.dispatch.reason === undefined ? {} : { reason: built.dispatch.reason }),
         },
       };

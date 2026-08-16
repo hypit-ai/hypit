@@ -3,7 +3,6 @@ import { compositionDependency, compositionTypes } from "@narratage/composition"
 import { mediaDependency, mediaTypes } from "@narratage/media";
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@narratage/spatial";

@@ -2,7 +2,6 @@ import {
   artifactDependency,
   artifactTypes,
 } from "@narratage/artifact";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef } from "@narratage/protocol";
 
 import { generatedAudioSetSchema, generatedImageSetSchema, generatedVideoSetSchema } from "./schema.js";

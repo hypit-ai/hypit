@@ -98,7 +98,7 @@ export async function applyRunSource(input: {
   frontends.register(runMarkupFrontend);
 
   const text = readFileSync(input.runPath, "utf8");
-  const { document, closure } = await compileRunSource(
+  const { document } = await compileRunSource(
     { id: input.runPath, name: input.runPath, text } as never,
     frontends,
   );
@@ -132,7 +132,6 @@ export async function applyRunSource(input: {
   const beside = (from: string): string => resolve(dirname(input.runPath), from);
   const run = await resolveRunDocument(named as never, {
     compilation: input.compiled as never,
-    sourceClosure: closure,
     fragments: new RunFragmentRegistry(),
     readStoredValue(from: string): StoredValue {
       return { kind: "inline", value: JSON.parse(readFileSync(beside(from), "utf8")) };

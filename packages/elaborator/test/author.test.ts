@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   createResolvedClosure,
-  digestOf,
   link,
   sealBuildRequest,
   sealRecord,
@@ -66,14 +66,10 @@ const manifest: ModuleManifest = {
 const closure = createResolvedClosure([manifest]);
 
 function program(): LinkedProgram {
-  const origin = {
-    kind: "authored" as const,
-  };
   return link(closure, [sealRecord({
       id: "sample:soil",
       type: sampleType,
       value: { kind: "inline", value: "soil" },
-      origin,
   })]);
 }
 
@@ -164,7 +160,6 @@ test("Author linking resolves forward component references without Text or video
   });
 
   const request = sealBuildRequest({
-    graph: elaborated.id,
     targets: [{ output: "report:final" }],
   });
   const state = start(linked, elaborated, request);

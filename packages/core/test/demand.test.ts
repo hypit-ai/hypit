@@ -1,16 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
 import {
   createResolvedClosure,
-  digestOf,
   link,
   reduce,
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
   start,
-  verifyBuildState,
 } from "@narratage/core";
 import type {
   BuildRequest,
@@ -61,10 +58,6 @@ const producers = {
   c: producer("c"),
 };
 const seedanceCapability = { module: moduleRef, name: "seedance-media" } as const;
-
-const implementation = (name: string) => ({
-  digest: digestOf(`${name}@1`),
-});
 
 const manifest: ModuleManifest = {
   format: "narratage.module@1",
@@ -231,19 +224,16 @@ function createProgram(): LinkedProgram {
       id: "head:root",
       type: types.head,
       value: { kind: "inline", value: "reference" },
-      origin: { kind: "authored" },
     }),
     sealRecord({
       id: "duration:root",
       type: types.duration,
       value: { kind: "inline", value: 3 },
-      origin: { kind: "authored" },
     }),
     sealRecord({
       id: "duration:other",
       type: types.duration,
       value: { kind: "inline", value: 9 },
-      origin: { kind: "authored" },
     }),
   ];
   return link(closure, authored);
@@ -251,7 +241,6 @@ function createProgram(): LinkedProgram {
 
 function createImageGraph(program: LinkedProgram): CompiledGraph {
   return sealCompiledGraph({
-    program: program.semanticDigest,
     outputs: [
       output("image1", types.image, "p1"),
       output("image2", types.image, "p2"),
@@ -292,7 +281,6 @@ function request(
   targets: readonly string[],
 ): BuildRequest {
   return sealBuildRequest({
-    graph: graph.id,
     targets: targets.map((outputId) => ({ output: outputId })),
   });
 }
@@ -300,7 +288,6 @@ function request(
 function selectCandidates(graph: CompiledGraph, satisfactions: readonly Satisfaction[]): CompiledGraph {
   const selected = new Map(satisfactions.map((item) => [item.output, item.candidate]));
   return sealCompiledGraph({
-    program: graph.program,
     outputs: graph.outputs.map((item) => ({ ...item, primary: selected.get(item.id) ?? item.primary })),
     candidates: graph.candidates,
     operations: graph.operations,
@@ -353,13 +340,10 @@ test("an ordinary aggregator intentionally demands every selected image", () => 
   ])), ["collect", "p3"]);
 });
 
-test("multiple Targets share Operations once and target order is not semantic", () => {
+test("multiple Targets share Operations once", () => {
   const first = fixture(["image3", "image2"]);
-  const second = fixture(["image2", "image3"]);
   assert.deepEqual(stepIds(first), ["p1", "p2", "p3"]);
   assert.equal(new Set(first.plan.steps.map((step) => step.id)).size, first.plan.steps.length);
-  assert.equal(first.request.digest, second.request.digest);
-  assert.equal(first.plan.id, second.plan.id);
 });
 
 test("the selected Candidate alone determines demanded upstream inputs", () => {
@@ -371,7 +355,7 @@ test("an Existing Value is a normal Candidate root and prevents the paid Need fr
   const state = fixture(["media"], [choose("media", "existing-media")]);
   const transition = reduce(state);
   assert.deepEqual(stepIds(state), []);
-  assert.deepEqual(state.records.filter((record) => record.origin.kind === "provided").map((record) => record.id), ["provided:media"]);
+  assert.equal(state.records.some((record) => record.id === "provided:media"), true);
   assert.equal(transition.status, "complete");
   assert.equal(transition.needs.length, 0);
   assert.deepEqual(transition.outstanding, []);
@@ -384,7 +368,6 @@ test("Provided state survives JSON round-trip and regenerates identical ready Co
   ]);
   const scheduled = reduce(state);
   const restored = JSON.parse(JSON.stringify({ ...scheduled, outstanding: [] })) as BuildState;
-  verifyBuildState(restored);
   assert.deepEqual(reduce(restored).outstanding, scheduled.outstanding);
 });
 
@@ -392,7 +375,6 @@ function createCaseGGraph(program: LinkedProgram, roots: "value" | "operation"):
   const a1Id = roots === "value" ? "a1-value" : "a1-operation";
   const a2Id = roots === "value" ? "a2-value" : "a2-operation";
   return sealCompiledGraph({
-    program: program.semanticDigest,
     outputs: [
       output("a.A", types.a, a1Id),
       output("a.B", types.b, a2Id),
@@ -426,7 +408,8 @@ test("Case G: two single-output full-input Candidates share both upstream Values
   const graph = createCaseGGraph(program, "value");
   const state = start(program, graph, request(graph, ["c.result"]));
   assert.deepEqual(stepIds(state), ["b1", "b2", "c"]);
-  assert.deepEqual(state.records.filter((record) => record.origin.kind === "provided").map((record) => record.id), ["provided:A", "provided:B"]);
+  assert.equal(state.records.some((record) => record.id === "provided:A"), true);
+  assert.equal(state.records.some((record) => record.id === "provided:B"), true);
   const b1 = state.plan.steps.find((step) => step.id === "b1");
   const b2 = state.plan.steps.find((step) => step.id === "b2");
   assert.deepEqual(b1?.inputs, { A: "provided:A", B: "provided:B" });
@@ -453,7 +436,6 @@ function createOperationIdentityGraph(
   mode: "shared" | "distinct",
 ): CompiledGraph {
   return sealCompiledGraph({
-    program: program.semanticDigest,
     outputs: [
       output("left", types.image, "left-candidate"),
       output("right", types.image, "right-candidate"),
@@ -551,7 +533,6 @@ function createProductReplacementGraph(
   const altCProduct = "b.alt.product.c";
   const altDProduct = alternate === "shared" ? altCProduct : "b.alt.product.d";
   return sealCompiledGraph({
-    program: program.semanticDigest,
     outputs: [
       output("a.A", types.a, "a.A.primary"),
       output("a.B", types.b, "a.B.primary"),

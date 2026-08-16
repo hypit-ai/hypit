@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { artifactTypes } from "@narratage/artifact";
 import {
@@ -11,7 +12,6 @@ import {
   sealImageComposeLayerSpec,
   sealImageComposeOptions,
 } from "@narratage/image-compose";
-import { digestOf } from "@narratage/protocol";
 import { rasterCapabilities } from "@narratage/raster";
 import type { CanonicalValue, StoredValue, TypeRef, TypedRecord } from "@narratage/protocol";
 import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@narratage/spatial";
@@ -25,10 +25,10 @@ const options = sealImageComposeOptions({ background: "#11223344" });
 const spec = sealImageComposeLayerSpec({
   fit: "cover", interpolation: "lanczos", opacity: 0.75,
 });
-const source = { kind: "blob" as const, digest: digestOf("hero-image"), size: 123, mediaType: "image/png" };
+const source = { kind: "blob" as const, digest: fixtureDigest("hero-image"), size: 123, mediaType: "image/png" };
 
 function record(id: string, type: TypeRef, value: StoredValue): TypedRecord {
-  return { id, type, value, digest: digestOf({ id, value }), origin: { kind: "authored" } };
+  return { id, type, value };
 }
 
 test("Image Compose is an ordered Layer graph with no privileged base image", () => {

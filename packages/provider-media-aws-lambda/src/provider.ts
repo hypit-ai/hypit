@@ -1,7 +1,7 @@
 import { mediaTypes } from "@narratage/media";
 import { artifactTypes } from "@narratage/artifact";
 import { mediaPipelineCapabilities } from "@narratage/media-pipeline";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { BlobRef, CanonicalValue } from "@narratage/protocol";
 import { speechTypes } from "@narratage/speech";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";

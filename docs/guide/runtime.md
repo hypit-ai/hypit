@@ -25,7 +25,7 @@ video.
 A Runtime receives one already compiled Build and owns everything environmental:
 
 * durable Build and Operation state;
-* dispatch, leases and concurrency;
+* dispatch and concurrency;
 * Artifact and Credential storage;
 * Endpoint activation and Provider calls;
 * optional long lived programs;

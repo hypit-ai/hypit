@@ -22,14 +22,12 @@ export type CaptionPlaygroundSnapshot = {
   readonly recipe: {
     readonly file: string;
     readonly path: string;
-    readonly digest: string;
     readonly values: Readonly<Record<string, CanonicalValue>>;
     readonly schema: ValueSchema;
   };
   readonly font: {
     readonly file: string;
     readonly id: string;
-    readonly digest: string;
     readonly family: string;
     readonly weight: number;
     readonly style: OpenFontStyle;
@@ -53,14 +51,12 @@ export type CaptionPlaygroundFailure = {
 };
 
 export type RecipePatch = {
-  readonly expectedDigest: string;
   readonly name: string;
   readonly value?: CanonicalValue;
   readonly remove?: true;
 };
 
 export type FontPatch = {
-  readonly expectedDigest: string;
   readonly family: string;
   readonly weight: number;
   readonly style: OpenFontStyle;

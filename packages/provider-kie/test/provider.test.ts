@@ -1,19 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   MemoryArtifactStore,
   EndpointRegistry,
 } from "@narratage/driver-node";
 import type { EndpointRegistration } from "@narratage/driver-node";
-import type { RecoverableEndpoint } from "@narratage/endpoint-kit";
+import type { AsyncEndpoint } from "@narratage/endpoint-kit";
 import { artifactTypes } from "@narratage/artifact";
 import { backgroundRemovalCapabilities, backgroundRemovalRequest } from "@narratage/background-removal";
 import { seedanceEndpoints, sealSeedanceRequest } from "@narratage/seedance";
-import { digestOf } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
 import { createKieProvider } from "@narratage/provider-kie";
-import { sealOperationIdentity } from "@narratage/runtime";
 
 function need(constraints: CanonicalValue): Need {
   return {
@@ -21,17 +20,14 @@ function need(constraints: CanonicalValue): Need {
     capability: seedanceEndpoints.mini!.capability,
     returns: seedanceEndpoints.mini!.returns,
     constraints,
-    requestedBy: "derivation:kie-test",
     result: "record:kie-test",
-    requestDigest: digestOf({ capability: "seedance-mini", constraints }),
   };
 }
 
 function removeBackgroundNeed(constraints: CanonicalValue): Need {
   return {
     id: "need:remove-background", capability: backgroundRemovalCapabilities.remove, returns: artifactTypes.blob,
-    constraints, requestedBy: "derivation:remove-background", result: "record:remove-background",
-    requestDigest: digestOf({ capability: backgroundRemovalCapabilities.remove, constraints }),
+    constraints, result: "record:remove-background",
   };
 }
 
@@ -39,7 +35,7 @@ async function endpointFor(
   request: Need,
   fetch: typeof globalThis.fetch,
   now = () => 1_000,
-): Promise<{ endpoint: RecoverableEndpoint; registration: EndpointRegistration }> {
+): Promise<{ endpoint: AsyncEndpoint; registration: EndpointRegistration }> {
   const registry = new EndpointRegistry();
   const provider = createKieProvider({
     fetch,
@@ -52,22 +48,15 @@ async function endpointFor(
   await provider.install(registry);
   const resolution = registry.resolve(request);
   assert.equal(resolution.status, "resolved");
-  assert.equal(resolution.registration.kind, "recoverable");
+  assert.equal(resolution.registration.kind, "asynchronous");
   return { endpoint: resolution.registration.endpoint, registration: resolution.registration };
 }
 
-function operation(request: Need) {
-  return sealOperationIdentity({
-    build: "build:kie-test",
-    command: "command:kie-test",
-    endpoint: "kie.default",
-    pool: "kie.default",
-    lane: "fixture.video",
-    attempt: 1,
-  });
+function operation(_request: Need): string {
+  return "operation:kie-test";
 }
 
-test("all KIE capabilities share one recoverable task engine and differ only by Lane", async () => {
+test("all KIE capabilities share one asynchronous task engine and differ only by Lane", async () => {
   const provider = createKieProvider({
     fetch: async () => { throw new Error("no request expected"); },
     defaultConcurrency: 8,
@@ -80,14 +69,14 @@ test("all KIE capabilities share one recoverable task engine and differ only by 
     prompt: ["A clean studio shot."], resolution: ["720p"], aspectRatio: ["16:9"],
     duration: [5], generateAudio: [false], webSearch: [false],
   }) as unknown as CanonicalValue);
-  const source = { kind: "blob" as const, digest: digestOf("lane-source"), size: 1, mediaType: "image/png" };
+  const source = { kind: "blob" as const, digest: fixtureDigest("lane-source"), size: 1, mediaType: "image/png" };
   const removal = removeBackgroundNeed(backgroundRemovalRequest(source) as unknown as CanonicalValue);
   const seedResolution = registry.resolve(seed);
   const removalResolution = registry.resolve(removal);
   assert.equal(seedResolution.status, "resolved");
   assert.equal(removalResolution.status, "resolved");
-  assert.equal(seedResolution.registration.kind, "recoverable");
-  assert.equal(removalResolution.registration.kind, "recoverable");
+  assert.equal(seedResolution.registration.kind, "asynchronous");
+  assert.equal(removalResolution.registration.kind, "asynchronous");
   assert.equal(seedResolution.registration.endpoint, removalResolution.registration.endpoint);
   assert.deepEqual(seedResolution.registration.scheduling, {
     queue: { pool: "kie.default", lane: "seedance-2-mini" },
@@ -168,12 +157,13 @@ test("KIE uploads content-addressed references, resumes one task, and persists g
   };
   const started = await endpoint.start(common);
   assert.equal(started.status, "pending");
+  if (started.status !== "pending") return;
   assert.deepEqual(started.status === "pending" && started.progress, { phase: "submitted" });
   assert.equal(calls.length, 2);
-  assert.equal(started.status === "pending" && (started.checkpoint as Record<string, unknown>).taskId, "task_seedance_test");
-  const completed = await endpoint.resume({
+  assert.equal(started.status === "pending" && (started.handle as Record<string, unknown>).taskId, "task_seedance_test");
+  const completed = await endpoint.poll({
     ...common,
-    checkpoint: started.status === "pending" ? started.checkpoint : undefined,
+    handle: started.handle,
   });
   assert.equal(completed.status, "completed");
   assert.equal(calls.length, 5);
@@ -181,100 +171,10 @@ test("KIE uploads content-addressed references, resumes one task, and persists g
   assert.equal(completed.result.value.kind, "inline");
   const result = completed.result.value.kind === "inline"
     ? completed.result.value.value as Record<string, unknown> : {};
-  assert.equal("model" in result, false, "model choice belongs to the request graph and Receipt");
-  assert.equal("requestDigest" in result, false, "request lineage belongs to the Need Receipt, not generated media");
+  assert.equal("model" in result, false, "model choice belongs to the request graph");
   const videos = result.videos as Array<{ digest: string }>;
   assert.equal(videos.length, 1);
   assert.equal(await artifacts.has(videos[0]!.digest as `sha256:${string}`), true);
-});
-
-test("KIE never retries an ambiguous paid submission", async () => {
-  const requestValue = sealSeedanceRequest("seedance-2-mini", {
-    prompt: ["A clean studio shot."],
-    resolution: ["720p"],
-    aspectRatio: ["16:9"],
-    duration: [5],
-    generateAudio: [false],
-    webSearch: [false],
-  });
-  const request = need(requestValue as unknown as CanonicalValue);
-  let calls = 0;
-  const { endpoint } = await endpointFor(request, async () => {
-    calls += 1;
-    throw new TypeError("socket closed after write");
-  });
-  const outcome = await endpoint.start({
-    command: { kind: "fulfill-need", id: "command:kie-test", need: request },
-    need: request,
-    artifacts: new MemoryArtifactStore(),
-    credentials: { apiKey: { secret: "test-key" } },
-    operation: operation(request),
-  });
-  assert.equal(calls, 1);
-  assert.equal(outcome.status, "failed");
-  if (outcome.status !== "failed") return;
-  assert.equal(outcome.failure.code, "KIE_SUBMISSION_OUTCOME_UNKNOWN");
-  assert.equal(outcome.failure.retryable, false);
-});
-
-test("KIE preserves an HTTP-200 business rejection without calling it an ambiguous submission", async () => {
-  const requestValue = sealSeedanceRequest("seedance-2-mini", {
-    prompt: ["A clean studio shot."],
-    resolution: ["720p"],
-    aspectRatio: ["16:9"],
-    duration: [5],
-    generateAudio: [false],
-    webSearch: [false],
-  });
-  const request = need(requestValue as unknown as CanonicalValue);
-  let calls = 0;
-  const { endpoint } = await endpointFor(request, async () => {
-    calls += 1;
-    return Response.json({ code: 422, msg: "aspect_ratio is required", data: null });
-  });
-  const outcome = await endpoint.start({
-    command: { kind: "fulfill-need", id: "command:kie-test", need: request },
-    need: request,
-    artifacts: new MemoryArtifactStore(),
-    credentials: { apiKey: { secret: "test-key" } },
-    operation: operation(request),
-  });
-  assert.equal(calls, 1);
-  assert.equal(outcome.status, "failed");
-  if (outcome.status !== "failed") return;
-  assert.equal(outcome.failure.code, "KIE_SUBMISSION_REJECTED");
-  assert.match(outcome.failure.message, /aspect_ratio is required.*422/u);
-  assert.equal(outcome.failure.retryable, false);
-});
-
-test("KIE refuses to resubmit when a recovered Operation has no task checkpoint", async () => {
-  const requestValue = sealSeedanceRequest("seedance-2-mini", {
-    prompt: ["A clean studio shot."],
-    resolution: ["720p"],
-    aspectRatio: ["16:9"],
-    duration: [5],
-    generateAudio: [false],
-    webSearch: [false],
-  });
-  const request = need(requestValue as unknown as CanonicalValue);
-  let calls = 0;
-  const { endpoint } = await endpointFor(request, async () => {
-    calls += 1;
-    throw new Error("must not fetch");
-  });
-  const outcome = await endpoint.resume({
-    command: { kind: "fulfill-need", id: "command:kie-test", need: request },
-    need: request,
-    artifacts: new MemoryArtifactStore(),
-    credentials: { apiKey: { secret: "test-key" } },
-    operation: operation(request),
-    checkpoint: undefined,
-  });
-  assert.equal(calls, 0);
-  assert.equal(outcome.status, "failed");
-  if (outcome.status !== "failed") return;
-  assert.equal(outcome.failure.code, "KIE_SUBMISSION_CHECKPOINT_MISSING");
-  assert.equal(outcome.failure.retryable, false);
 });
 
 test("KIE fulfills generic Background Removal with the documented Recraft wire contract", async () => {
@@ -314,8 +214,9 @@ test("KIE fulfills generic Background Removal with the documented Recraft wire c
   };
   const started = await endpoint.start(common);
   assert.equal(started.status, "pending");
-  const completed = await endpoint.resume({
-    ...common, checkpoint: started.status === "pending" ? started.checkpoint : undefined,
+  if (started.status !== "pending") return;
+  const completed = await endpoint.poll({
+    ...common, handle: started.handle,
   });
   assert.equal(completed.status, "completed");
   if (completed.status !== "completed") return;

@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { resolveCaptionProgram } from "@narratage/caption";
 import type { TimedCaptionProjection } from "@narratage/caption";
 import { fineCaptionParameters, fineCaptionStyle, renderFineCaption } from "@narratage/caption-fine";
 import type { FontArtifactRef } from "@narratage/media";
 import { sealProgramSpace } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import { captionDisplaySequence, parseScript } from "@narratage/script";
 import type { SvsRecipe } from "@narratage/svs";
 
@@ -31,7 +31,7 @@ const recipe: SvsRecipe = {
 };
 
 const exactFont: FontArtifactRef = {
-  sources: [{ artifact: { kind: "blob", digest: digestOf("caption-fine:test-font"), size: 1_024, mediaType: "font/woff2" } }],
+  sources: [{ artifact: { kind: "blob", digest: fixtureDigest("caption-fine:test-font"), size: 1_024, mediaType: "font/woff2" } }],
   weight: 800,
   style: "normal",
 };
@@ -361,7 +361,7 @@ test("an exact Font is explicit Style input and reaches every base and active gl
 test("an ordered exact Font stack preserves honest fallback faces and rejects duplicates", () => {
   const fallback: FontArtifactRef = {
     ...exactFont,
-    sources: [{ artifact: { ...exactFont.sources[0]!.artifact, digest: digestOf("caption-fine:test-fallback") } }],
+    sources: [{ artifact: { ...exactFont.sources[0]!.artifact, digest: fixtureDigest("caption-fine:test-fallback") } }],
     weight: 400,
   };
   const parameters = fineCaptionParameters(recipe, [exactFont, fallback]);

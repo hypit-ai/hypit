@@ -3,7 +3,7 @@ import type {
   CaptionDisplayWord,
   CaptionDisplayWordSubset,
 } from "@narratage/narrative";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalStringify, canonicalize } from "@narratage/protocol";
 
 import { assertCaptionDisplaySequence, assertCaptionDisplayWordSubset } from "./display.js";
 import type {
@@ -180,7 +180,7 @@ export function resolveCaptionProgram(
   const styles = new Map<string, CaptionStyleIntent>([[defaultStyle.id, defaultStyle]]);
   applications.forEach((application) => {
     const previous = styles.get(application.style.id);
-    assert(previous === undefined || digestOf(previous) === digestOf(application.style),
+    assert(previous === undefined || canonicalStringify(previous) === canonicalStringify(application.style),
       `Caption Style ${application.style.id} has conflicting definitions`);
     styles.set(application.style.id, application.style);
   });

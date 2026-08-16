@@ -1,7 +1,6 @@
 import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/generation";
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
-import { digestOf } from "@narratage/protocol";
 
 export const nanoBananaModuleRef = { name: "@narratage/nano-banana", version: "1" } as const;
 export const nanoBananaModels = ["nano-banana-2", "nano-banana-pro"] as const;

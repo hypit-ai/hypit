@@ -46,7 +46,7 @@ function manifest(): RuntimeModuleManifest {
         name: endpointFacet.name,
         role: "capability-endpoint",
         fulfills: [{ capability: capabilities.generation, returns: types.generated }],
-        lifecycle: "recoverable",
+        lifecycle: "asynchronous",
         defaultConcurrency: 1,
       },
     ],
@@ -128,7 +128,7 @@ test("Profile order does not change the resolved selection", () => {
   );
 });
 
-test("recoverable Endpoints require an OperationStore before any paid execution", () => {
+test("asynchronous Endpoints require an OperationStore before any paid execution", () => {
   const registry = new RuntimeModuleRegistry();
   registry.register(manifest());
   assert.throws(
@@ -172,9 +172,9 @@ test("Runtime Closure content is structurally validated", () => {
   const registry = new RuntimeModuleRegistry();
   registry.register(manifest());
   const closure = resolveRuntimeClosure(registry, profile());
-  const tampered = structuredClone(closure);
-  (tampered.scheduling as { maxConcurrency: number }).maxConcurrency = 0;
-  assert.throws(() => verifyRuntimeClosure(tampered), /positive safe integer/u);
+  const invalid = structuredClone(closure);
+  (invalid.scheduling as { maxConcurrency: number }).maxConcurrency = 0;
+  assert.throws(() => verifyRuntimeClosure(invalid), /positive safe integer/u);
 });
 
 test("unsupported Runtime formats are rejected instead of being reinterpreted", () => {

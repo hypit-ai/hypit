@@ -10,18 +10,10 @@ import { isManagedArtifactStore, isStreamingArtifactStore } from "@narratage/run
 
 class FakeS3 implements S3ObjectClient {
   readonly values = new Map<string, Uint8Array>();
-  conflicts = 0;
   gets = 0;
 
   async put(input: Parameters<S3ObjectClient["put"]>[0]): Promise<void> {
     const key = input.Key!;
-    if (this.conflicts > 0) {
-      this.conflicts -= 1;
-      throw { $metadata: { httpStatusCode: 409 } };
-    }
-    if (input.IfNoneMatch === "*" && this.values.has(key)) {
-      throw { $metadata: { httpStatusCode: 412 } };
-    }
     assert.ok(input.Body instanceof Uint8Array);
     this.values.set(key, Uint8Array.from(input.Body));
   }
@@ -33,19 +25,15 @@ class FakeS3 implements S3ObjectClient {
   }
 }
 
-test("S3 artifacts use conditional immutable writes and verify downloaded content", async () => {
+test("S3 artifacts use deterministic content-addressed keys", async () => {
   const client = new FakeS3();
   const store = new S3ArtifactStore({ client, bucket: "fixture", prefix: "projects/acme" });
   const bytes = new TextEncoder().encode("one immutable remote artifact");
-  client.conflicts = 1;
   const first = await store.put(bytes, "video/mp4");
   const second = await store.put(bytes, "video/mp4");
   assert.equal(first.digest, second.digest);
   assert.match(store.key(first.digest), /^projects\/acme\/sha256\//u);
   assert.deepEqual(await store.get(first.digest), bytes);
-
-  client.values.set(store.key(first.digest), new TextEncoder().encode("tampered"));
-  await assert.rejects(store.get(first.digest), /content digest differs/u);
 });
 
 test("configured S3 service locks its location", () => {
@@ -114,9 +102,6 @@ class FullFakeS3 extends FakeS3 {
     const source = input.CopySource!.slice(input.CopySource!.indexOf("/") + 1);
     const value = this.values.get(source);
     if (value === undefined) throw new Error(`copy source ${source} is absent`);
-    if (input.IfNoneMatch === "*" && this.values.has(input.Key!)) {
-      throw { $metadata: { httpStatusCode: 412 } };
-    }
     this.values.set(input.Key!, Uint8Array.from(value));
   }
 
@@ -160,17 +145,17 @@ test("an empty Artifact is a legitimate one, and S3 will not accept a partless u
   assert.deepEqual(await store.get(ref.digest), new Uint8Array(0));
 });
 
-test("two Builds streaming identical bytes agree instead of conflicting", async () => {
+test("two Builds streaming identical bytes use the same destination", async () => {
   const client = new FullFakeS3();
   const store = new S3ArtifactStore({ client, bucket: "fixture" });
   const bytes = () => (async function* () { yield new TextEncoder().encode("same"); })();
   const first = await store.putStream!(bytes(), "text/plain");
   const second = await store.putStream!(bytes(), "text/plain");
   assert.equal(first.digest, second.digest);
-  assert.equal(client.copies, 2, "both attempted the copy; the second was refused as already present");
+  assert.equal(client.copies, 2);
 });
 
-test("a streamed read hands back bytes as they arrive, and refuses tampered content at the end", async () => {
+test("a streamed read hands back bytes as they arrive", async () => {
   const client = new FullFakeS3();
   const store = new S3ArtifactStore({ client, bucket: "fixture" });
   const bytes = new TextEncoder().encode("streamed artifact bytes");
@@ -179,14 +164,9 @@ test("a streamed read hands back bytes as they arrive, and refuses tampered cont
   const chunks: Uint8Array[] = [];
   for await (const chunk of (await store.open!(ref.digest))!) chunks.push(chunk);
   assert.equal(chunks.length, 2, "the stream was not assembled on the caller's behalf");
-
-  client.values.set(store.key(ref.digest), new TextEncoder().encode("tampered artifact bytes"));
-  await assert.rejects(async () => {
-    for await (const chunk of (await store.open!(ref.digest))!) void chunk;
-  }, /content digest differs/u);
 });
 
-test("presence uses object metadata while byte reads retain integrity verification", async () => {
+test("presence uses object metadata without downloading bytes", async () => {
   const client = new FullFakeS3();
   const store = new S3ArtifactStore({ client, bucket: "fixture" });
   const ref = await store.put(new TextEncoder().encode("present"), "text/plain");

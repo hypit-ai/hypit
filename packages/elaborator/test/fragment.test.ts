@@ -4,10 +4,10 @@ import { compositionTypes } from "@narratage/composition";
 import { spatialTypes } from "@narratage/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   createResolvedClosure,
-  digestOf,
   link,
   sealBuildRequest,
   sealCompiledGraph,
@@ -62,9 +62,6 @@ const manifest: ModuleManifest = {
 const closure = createResolvedClosure([...videoContractManifests, speechBasisManifest, manifest]);
 
 function program(): LinkedProgram {
-  const origin = {
-    kind: "authored" as const,
-  };
   const rawCanvas = sealRecord({
     id: "canvas:root",
     type: spatialTypes.canvas,
@@ -72,7 +69,6 @@ function program(): LinkedProgram {
       widthPx: 1080, heightPx: 1920,
       origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
     } },
-    origin,
   });
   const canvas = rawCanvas;
   return link(closure, [
@@ -80,13 +76,11 @@ function program(): LinkedProgram {
         id: "request:root",
         type: requestType,
         value: { kind: "inline", value: "Say hello." },
-        origin,
       }),
       sealRecord({
         id: "style:root",
         type: requestType,
         value: { kind: "inline", value: "Direct to camera." },
-        origin,
       }),
       canvas,
   ]);
@@ -159,7 +153,7 @@ function graph(programValue: LinkedProgram, ...contributions: readonly FragmentC
     { outputs: [], candidates: [], operations: [] },
     ...contributions,
   );
-  return sealCompiledGraph({ program: programValue.semanticDigest, ...merged });
+  return sealCompiledGraph({ ...merged });
 }
 
 test("one FragmentInstance shares its generation Operation across all exports", () => {
@@ -172,7 +166,6 @@ test("one FragmentInstance shares its generation Operation across all exports", 
   });
   const compiled = graph(linked, contribution);
   const request = sealBuildRequest({
-    graph: compiled.id,
     targets: [
       { output: "opening.audio" },
       { output: "opening.visual" },
@@ -221,7 +214,6 @@ test("the same Fragment instance is deterministic while distinct instances never
     }),
   );
   const state = start(linked, compiled, sealBuildRequest({
-    graph: compiled.id,
     targets: [
       { output: "opening.audio" },
       { output: "closing.audio" },

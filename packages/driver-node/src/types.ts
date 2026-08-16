@@ -1,7 +1,6 @@
 import type {
   BuildState,
   CoreCommand,
-  Digest,
   ProducerRef,
   TypeRef,
   CapabilityRef,
@@ -9,7 +8,7 @@ import type {
 import type {
   ProducerHandler,
 } from "@narratage/component-kit";
-import type { EndpointRegistrationOptions, EndpointScheduling, ImmediateEndpointHandler, RecoverableEndpoint } from "@narratage/endpoint-kit";
+import type { EndpointRegistrationOptions, EndpointScheduling, ImmediateEndpointHandler, AsyncEndpoint } from "@narratage/endpoint-kit";
 
 export type { ArtifactStore } from "@narratage/runtime";
 
@@ -24,8 +23,7 @@ export type DriverExecutionOutcome = {
   readonly command: string;
   readonly kind: CoreCommand["kind"];
   readonly status: "completed" | "pending" | "error";
-  readonly event?: string;
-  readonly operation?: Digest;
+  readonly operation?: string;
   readonly wakeAt?: number;
   readonly message?: string;
 };
@@ -63,7 +61,7 @@ type EndpointRegistrationBase = {
 
 export type EndpointRegistration = EndpointRegistrationBase & (
   | { readonly kind: "immediate"; readonly handler: ImmediateEndpointHandler }
-  | { readonly kind: "recoverable"; readonly endpoint: RecoverableEndpoint }
+  | { readonly kind: "asynchronous"; readonly endpoint: AsyncEndpoint }
 );
 
 export type EndpointResolution =

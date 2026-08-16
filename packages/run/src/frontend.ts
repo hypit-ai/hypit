@@ -1,11 +1,6 @@
 import {
-  digestOf,
-} from "@narratage/protocol";
-import {
-  compiledSourceIdentity,
   maskSourceHeader,
   parseSourceHeader,
-  verifyCompiledSourceIdentity,
 } from "@narratage/source";
 
 import type {
@@ -13,7 +8,6 @@ import type {
   RunFrontend,
   RunFrontendRegistryLike,
   RunFrontendSourceUnit,
-  RunSourceClosure,
   RunSourceUnit,
 } from "./types.js";
 
@@ -56,34 +50,13 @@ export function prepareRunSource(source: RunSourceUnit): RunFrontendSourceUnit {
   };
 }
 
-function closureContent(closure: RunSourceClosure): Omit<RunSourceClosure, "id"> {
-  return {
-    format: "narratage.run-source-closure@1",
-    ...compiledSourceIdentity(closure),
-  };
-}
-
 export async function compileRunSource(
   source: RunSourceUnit,
   frontends: RunFrontendRegistryLike,
-): Promise<{ readonly document: RunDocument; readonly closure: RunSourceClosure }> {
+): Promise<{ readonly document: RunDocument }> {
   const prepared = prepareRunSource(source);
   const frontend = frontends.resolve(prepared.header.using);
   assert(frontend !== undefined, "UNKNOWN_RUN_FRONTEND", `Run Frontend ${prepared.header.using} is not registered`, prepared.header.using);
   const decoded = await frontend.decode(prepared);
-  const closureWithoutId = {
-    format: "narratage.run-source-closure@1" as const,
-    frontend: frontend.id,
-    sourceDigest: digestOf(source.text),
-    semanticDigest: digestOf(decoded.document),
-  };
-  const closure: RunSourceClosure = { ...closureWithoutId, id: digestOf(closureWithoutId) };
-  verifyRunSourceClosure(closure);
-  return { document: decoded.document, closure };
-}
-
-export function verifyRunSourceClosure(closure: RunSourceClosure): void {
-  assert(closure.format === "narratage.run-source-closure@1", "UNSUPPORTED_RUN_SOURCE_CLOSURE", "unsupported Run Source Closure");
-  verifyCompiledSourceIdentity(closure);
-  assert(closure.id === digestOf(closureContent(closure)), "RUN_SOURCE_CLOSURE_DIGEST_MISMATCH", "Run Source Closure digest differs");
+  return { document: decoded.document };
 }

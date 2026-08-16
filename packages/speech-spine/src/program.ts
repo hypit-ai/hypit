@@ -10,7 +10,7 @@ import {
   verifyAudioProgramPlan,
 } from "@narratage/media-pipeline";
 import type { AudioProgramPlan } from "@narratage/media-pipeline";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import { assertContentFit, assertSpatialFrame } from "@narratage/spatial";
 import type { ContentFit, SpatialFrame } from "@narratage/spatial";
 

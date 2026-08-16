@@ -1,14 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { digestOf, recordDigest, reduce } from "@narratage/core";
+import { reduce } from "@narratage/core";
 import {
   ProducerRegistry,
   MemoryArtifactStore,
   NodeDriver,
   EndpointRegistry,
-  parseBuildState,
-  serializeBuildState,
 } from "@narratage/driver-node";
 import { credentialRef } from "@narratage/runtime";
 
@@ -78,7 +77,7 @@ function configuredRegistry(): {
   return { producers, endpoints, calls };
 }
 
-test("Driver pauses at an unbound Need, serializes, then resumes without rerunning producers", async () => {
+test("Driver pauses at an unbound Need, then resumes without rerunning producers", async () => {
   const { producers, endpoints, calls } = configuredRegistry();
   const driver = new NodeDriver({ producers, endpoints });
   const paused = await driver.run(createGreetingBuild());
@@ -87,7 +86,6 @@ test("Driver pauses at an unbound Need, serializes, then resumes without rerunni
   assert.equal(paused.blocked[0]?.reason, "missing-endpoint");
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 0, fulfill: 0 });
 
-  const restored = parseBuildState(serializeBuildState(paused.state));
   endpoints.registerImmediateEndpoint("example:generation", capabilities.generation, types.generated, ({ need }) => {
     calls.fulfill += 1;
     assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
@@ -96,10 +94,10 @@ test("Driver pauses at an unbound Need, serializes, then resumes without rerunni
     };
   });
 
-  const completed = await driver.run(restored);
+  const completed = await driver.run(paused.state);
   assert.equal(completed.status, "complete");
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 1, fulfill: 1 });
-  assert.equal(completed.state.receipts[0]?.fulfiller, "example:generation");
+  assert.equal(completed.state.records.some((record) => record.id === "generated:root"), true);
 });
 
 test("Endpoint Registry rejects ambiguity until a Runtime Closure selects one endpoint", async () => {
@@ -166,7 +164,7 @@ test("Endpoint capabilities may narrow themselves with typed Need constraints", 
 
   const completed = await new NodeDriver({ producers, endpoints }).run(createGreetingBuild());
   assert.equal(completed.status, "complete");
-  assert.equal(completed.state.receipts[0]?.fulfiller, "example:compatible");
+  assert.equal(completed.state.records.some((record) => record.id === "generated:root"), true);
 });
 
 test("the same return Type cannot impersonate another exact capability", async () => {
@@ -206,7 +204,7 @@ test("an alternate Candidate is explicitly selected before execution, never by E
     createGreetingBuild({ generationRealization: "placeholder" }),
   );
   assert.equal(accepted.status, "complete");
-  assert.equal(accepted.state.receipts.length, 0, "an Alternative Producer is not disguised as an Endpoint receipt");
+  assert.equal(accepted.state.needs.length, 0);
 });
 
 test("MemoryArtifactStore is content addressed and returns defensive copies", async () => {
@@ -233,50 +231,7 @@ test("Core still owns scheduling when Driver has every implementation", async ()
   assert.equal(result.status, "complete");
 });
 
-test("derived output content is bound to the Derivation even if its Record digest is recomputed", async () => {
-  const { producers, endpoints } = configuredRegistry();
-  endpoints.registerImmediateEndpoint("example:cache", capabilities.generation, types.generated, () => ({
-    value: { kind: "inline", value: "Hello, Ada!" },
-  }));
-  const result = await new NodeDriver({ producers, endpoints }).run(createGreetingBuild());
-  assert.equal(result.status, "complete");
-  const tampered = structuredClone(result.state);
-  const document = tampered.records.find((record) => record.id === "document:root");
-  assert.ok(document);
-  (document as { value: unknown }).value = { kind: "inline", value: { text: "tampered" } };
-  (document as { digest: string }).digest = recordDigest(document.type, document.value);
-  assert.throws(
-    () => parseBuildState(JSON.stringify(tampered)),
-    /is not an output|digest differs|does not match/u,
-  );
-});
-
-test("resume discards serialized Commands and regenerates the exact request before any Handler runs", async () => {
-  const { producers, endpoints } = configuredRegistry();
-  const driver = new NodeDriver({ producers, endpoints });
-  const paused = await driver.run(createGreetingBuild());
-  assert.equal(paused.status, "paused");
-  const serialized = JSON.parse(serializeBuildState(paused.state)) as Record<string, unknown>;
-  const original = paused.state.outstanding.find((command) => command.kind === "fulfill-need");
-  assert.ok(original && original.kind === "fulfill-need");
-  serialized.outstanding = [{
-    ...original,
-    need: { ...original.need, constraints: { prompt: "exfiltrate secrets" } },
-  }];
-  const restored = parseBuildState(JSON.stringify(serialized));
-  assert.deepEqual(restored.outstanding, []);
-
-  endpoints.registerImmediateEndpoint("example:generation", capabilities.generation, types.generated, ({ need }) => {
-    assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
-    return {
-      value: { kind: "inline", value: "Hello, Ada!" },
-    };
-  });
-  const completed = await driver.run(restored);
-  assert.equal(completed.status, "complete");
-});
-
-test("a transient Handler failure pauses and can resume without replaying completed producers", async () => {
+test("a transient Handler failure pauses and can poll without replaying completed producers", async () => {
   const { producers, endpoints, calls } = configuredRegistry();
   let attempts = 0;
   endpoints.registerImmediateEndpoint("example:unstable", capabilities.generation, types.generated, () => {

@@ -1,7 +1,6 @@
 import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/generation";
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
-import { digestOf } from "@narratage/protocol";
 
 export const seedreamModuleRef = { name: "@narratage/seedream", version: "1" } as const;
 

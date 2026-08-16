@@ -5,7 +5,6 @@ import {
 } from "@narratage/generation";
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
-import { digestOf } from "@narratage/protocol";
 import { imageTransformModuleRef, imageTransformTypes } from "@narratage/image-transform";
 
 export const gptImageModuleRef = { name: "@narratage/gpt-image", version: "1" } as const;
