@@ -1,27 +1,26 @@
 import {
-  createRuntimeInfrastructureAdapterFacet,
+  createRuntimeCredentialStoreAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigString,
 } from "@narratage/runtime-kit";
 
-import { createKeychainCredentialStorePackage } from "./store.js";
+import { KeychainCredentialStore } from "./store.js";
 
-const keychainCredentialStoreRuntimeAdapter = createRuntimeInfrastructureAdapterFacet({
+const keychainCredentialStoreRuntimeAdapter = createRuntimeCredentialStoreAdapterFacet({
   use: "@narratage/credential-store-keychain",
   validate(context) {
     const config = runtimeConfigObject(context.config, "keychain CredentialStore");
     runtimeConfigExact(config, ["service"], "keychain CredentialStore");
     runtimeConfigString(config.service, "keychain service");
   },
-  create(context) {
+  open(context) {
     const config = runtimeConfigObject(context.config, "keychain CredentialStore");
     runtimeConfigExact(config, ["service"], "keychain CredentialStore");
-    return createKeychainCredentialStorePackage({
-      instance: context.instance,
+    return { value: new KeychainCredentialStore({
       ...(runtimeConfigString(config.service, "keychain service") === undefined
         ? {} : { service: config.service as string }),
-    });
+    }) };
   },
 });
 

@@ -4,20 +4,9 @@
     "use": "@narratage/runtime-local",
     "config": {
       "dataRoot": ".narratage/runtimes/local",
-      "infrastructure": {
-        "execution": { "use": "@narratage/runtime-local" },
-        "state": { "use": "@narratage/store-sqlite", "config": { "path": "state.sqlite" } },
-        "artifacts": { "use": "@narratage/artifact-store-fs", "config": { "path": "artifacts" } },
-        "credentials": { "use": "@narratage/credential-store-env", "config": {} }
-      },
-      "roles": {
-        "scheduler": { "from": "execution", "part": "scheduler" },
-        "worker": { "from": "execution", "part": "worker" },
-        "buildStore": { "from": "state", "part": "builds" },
-        "operationStore": { "from": "state", "part": "operations" },
-        "dispatchStore": { "from": "state", "part": "dispatch" },
-        "artifactStore": { "from": "artifacts", "part": "store" },
-        "credentialStores": [{ "from": "credentials", "part": "store" }]
+      "artifacts": { "use": "@narratage/artifact-store-fs", "config": { "path": "artifacts" } },
+      "credentials": {
+        "environment": { "use": "@narratage/credential-store-env" }
       },
       "endpoints": {
         "kie.all-components": {
@@ -54,7 +43,7 @@
           }
         }
       },
-      "capacity": { "maxActiveOperations": 4 }
+      "concurrency": 4
     }
   }
 }

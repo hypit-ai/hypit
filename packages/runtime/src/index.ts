@@ -25,23 +25,6 @@ export {
   sealOperationIdentity,
 } from "./operations.js";
 export type * from "./operations.js";
-export {
-  RuntimeModuleRegistry,
-  localSchedulerOptionsFromClosure,
-  resolveRuntimeClosure,
-  runtimeEndpoint,
-  sealResolvedRuntimeProfile,
-  verifyRuntimeClosure,
-  verifyRuntimeCoverage,
-  verifyResolvedRuntimeProfile,
-} from "./profile.js";
-export type * from "./profile.js";
-export {
-  assembleRuntimeInfrastructure,
-  defineRuntimeInfrastructurePackage,
-  verifyRuntimeInfrastructurePackage,
-} from "./infrastructure.js";
-export type * from "./infrastructure.js";
 export { LocalBuildScheduler } from "./scheduler.js";
 export {
   isEnumerableBuildStore,

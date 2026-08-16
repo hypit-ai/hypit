@@ -16,8 +16,6 @@ import type {
   CredentialStore,
   OperationStore,
   OperationSnapshot,
-  RuntimeInfrastructurePackage,
-  RuntimeRoleSelection,
 } from "@narratage/runtime";
 import type { TypeValidatorRegistrar, TypeValidatorRegistryLike } from "@narratage/validation";
 
@@ -26,11 +24,10 @@ export type { ComponentPackage } from "@narratage/component-kit";
 export type LocalTypeValidatorRegistry = TypeValidatorRegistryLike & TypeValidatorRegistrar;
 
 export type { EndpointPackage } from "@narratage/endpoint-kit";
-export type { RuntimeInfrastructurePackage } from "@narratage/runtime";
 
 export type CreateLocalRuntimeOptions = {
   readonly buildStore: BuildStore;
-  /** Host presentation metadata only; never part of Runtime Closure or Core state. */
+  /** Host presentation metadata only; never part of Core state. */
   readonly buildCatalog?: BuildCatalog;
   readonly operationStore: OperationStore;
   readonly dispatchStore: import("@narratage/runtime").BuildDispatchStore;
@@ -48,13 +45,13 @@ export type CreateLocalRuntimeArchiveControlOptions = {
   readonly buildCatalog?: BuildCatalog;
   readonly operationStore: OperationStore;
   readonly dispatchStore: BuildDispatchStore;
-  /** Optional owner supplied by the project infrastructure assembly. */
+  /** Optional owner supplied by the Runtime assembly. */
   readonly close?: () => Awaitable<void>;
 };
 
 export type CreateLocalRuntimeArtifactAccessOptions = {
   readonly artifactStore: ArtifactStore;
-  /** Optional owner supplied by the project infrastructure assembly. */
+  /** Optional owner supplied by the Runtime assembly. */
   readonly close?: () => Awaitable<void>;
 };
 
@@ -66,37 +63,6 @@ export type CreateLocalCredentialControlOptions = {
   readonly endpoints: readonly EndpointPackage[];
   readonly close?: () => Awaitable<void>;
 };
-
-export type ProjectLocalRuntimeOptions = {
-  /** Runtime data boundary. It does not grant access to author source. */
-  readonly dataRoot?: string;
-  /** Host directory whose node_modules contains selected implementation packages. Defaults to dataRoot. */
-  readonly packageRoot?: string;
-  /**
-   * Replaceable parts of the Runtime itself. One package may fill several roles;
-   * every selected role is explicit, and two packages exposing the same instance
-   * id are a configuration error rather than a choice made here.
-   */
-  readonly infrastructure: readonly RuntimeInfrastructurePackage[];
-  /** Exact Component instances selected by role; no role is inferred by uniqueness. */
-  readonly roles: RuntimeRoleSelection;
-  readonly components?: readonly ComponentPackage[];
-  readonly endpoints?: readonly EndpointPackage[];
-  readonly scheduling: {
-    readonly maxConcurrency: number;
-    readonly resources?: Readonly<Record<string, number>>;
-  };
-  readonly validators?: LocalTypeValidatorRegistry;
-};
-
-export type ProjectLocalRuntimeArchiveControlOptions = Pick<ProjectLocalRuntimeOptions,
-  | "dataRoot"
-  | "infrastructure"
-  | "roles"
->;
-
-export type ProjectLocalRuntimeArtifactAccessOptions = ProjectLocalRuntimeArchiveControlOptions;
-export type ProjectLocalRuntimeControlOptions = ProjectLocalRuntimeArchiveControlOptions;
 
 export type LocalBuildRequest = {
   /** Caller-generated identity for one submission; Source identity is separate. */

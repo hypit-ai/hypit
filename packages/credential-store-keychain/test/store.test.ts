@@ -3,10 +3,7 @@ import test from "node:test";
 
 import { credentialRef } from "@narratage/runtime";
 
-import {
-  KeychainCredentialStore,
-  createKeychainCredentialStorePackage,
-} from "@narratage/credential-store-keychain";
+import { KeychainCredentialStore } from "@narratage/credential-store-keychain";
 
 const reader = (entries: Readonly<Record<string, string>>) =>
   async (_service: string, account: string) => entries[account];

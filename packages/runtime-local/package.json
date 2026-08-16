@@ -23,12 +23,12 @@
     "@narratage/runtime": "workspace:*",
     "@narratage/runtime-kit": "workspace:*",
     "@narratage/runtime-host-node": "workspace:*",
+    "@narratage/store-sqlite": "workspace:*",
     "@narratage/validation": "workspace:*"
   },
   "devDependencies": {
     "@narratage/artifact-store-fs": "workspace:*",
     "@narratage/credential-store-env": "workspace:*",
-    "@narratage/core": "workspace:*",
-    "@narratage/store-sqlite": "workspace:*"
+    "@narratage/core": "workspace:*"
   }
 }

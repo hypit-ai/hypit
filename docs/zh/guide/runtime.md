@@ -9,25 +9,19 @@ Narratage 把三个决定分开：
 
 | 所有者 | 决定什么 |
 |---|---|
-| Workspace | 一次编译能读取哪些 Source 和本地素材 |
-| Runtime Profile | 编译完成的 Build 交给哪个执行环境 |
-| Runtime | Build 如何排队、执行、存储和被观察 |
-
-Runtime Profile 不定义 Workspace。同一 Profile 可以服务多个项目，同一项目也可以在不改
-Author Source 的情况下选择不同 Runtime。
-
-## 边界
+| Workspace | 编译能读取哪些 Source 和本地素材 |
+| Runtime Profile | 允许使用哪些环境包 |
+| Local Runtime | Build 如何排队、执行、保存和被观察 |
 
 Core 是领域无关的状态机。它接收事实、派生 Command、验证 Record，不启动进程、不读取凭证、
 不选择 Provider，也不知道 Build 最终是不是视频。
 
-Runtime 接收已经编译完成的 Build，负责耐久状态、队列、租约、并发、Artifact、凭证、Endpoint、
-Provider 调用和可选的长期运行程序。通用 CLI 只通过 Runtime Controller 与它通信，不假设它是
-本地 Node 进程。本地 Controller 可以管理独立 Worker；远程 Controller 可以通过 HTTP 接收同一份 Build。
+`@narratage/runtime-local` 是默认执行环境。它自己拥有 Worker、调度器、Build 队列和 SQLite。
+这些是同一个本地实现，不再伪装成需要用户逐项选择的组件。
 
 ## Runtime Profile
 
-Profile 选择一个 Runtime 包，并把封闭配置交给它：
+Profile 只保留真正会随环境变化的选择：
 
 ```json
 {
@@ -36,69 +30,62 @@ Profile 选择一个 Runtime 包，并把封闭配置交给它：
     "use": "@narratage/runtime-local",
     "config": {
       "dataRoot": ".narratage/runtimes/local",
-      "infrastructure": {
-        "execution": { "use": "@narratage/runtime-local" },
-        "state": { "use": "@narratage/store-sqlite", "config": { "path": "state.sqlite" } },
-        "artifacts": { "use": "@narratage/artifact-store-fs", "config": { "path": "artifacts" } }
+      "artifacts": {
+        "use": "@narratage/artifact-store-fs",
+        "config": { "path": "artifacts" }
       },
-      "roles": {
-        "scheduler": { "from": "execution", "part": "scheduler" },
-        "worker": { "from": "execution", "part": "worker" },
-        "buildStore": { "from": "state", "part": "builds" },
-        "operationStore": { "from": "state", "part": "operations" },
-        "dispatchStore": { "from": "state", "part": "dispatch" },
-        "artifactStore": { "from": "artifacts", "part": "store" },
-        "credentialStores": []
+      "credentials": {
+        "environment": { "use": "@narratage/credential-store-env" }
       },
       "endpoints": {
         "media": { "use": "@narratage/provider-media-local" }
       },
-      "capacity": { "maxActiveOperations": 4 }
+      "concurrency": 4
     }
   }
 }
 ```
 
-`infrastructure` 创建具名的包实例，`roles` 显式选择实例提供的 part，`endpoints`
-配置外部能力实现，`capacity` 限制整个 Runtime。安装包只增加可用实现，不会自动激活或改变 Core。
+`artifacts` 决定产物字节放在哪里；`credentials` 选择凭证存储；`endpoints` 选择明确的
+Provider 实现；`concurrency` 限制这个本地 Worker 同时执行的 Command 数量。
 
-Profile 不包含 Source Workspace 或 Author 包选择。相对 Profile 路径从
-Profile 文件解析；本地 Runtime 的私有路径从 `dataRoot` 解析。
+安装包只增加一种可选实现，不会自动激活。Profile 不包含 Workspace、作者 import 或隐藏的
+创作路由。
 
-## 项目状态与路径
+## 本地状态
+
+选择 Profile 会写入项目指针，执行数据位于 `dataRoot`：
 
 ```text
 .narratage/
   runtime
   runtimes/
     local/
-      worker/
-      state.sqlite
+      runtime.sqlite
       artifacts/
+      worker/
+      programs/
 ```
 
-`runtime use` 只写 `.narratage/runtime` 指针，不启动进程。`check` 和 `plan` 不创建 Runtime 数据。
-`narratage paths` 会报告 Workspace、项目状态、Runtime 数据与操作系统级 Host 状态的位置。
+`check` 和 `plan` 不创建 Runtime 数据。SQLite 保存 Build 事实、Operation 与队列；产物字节进入
+Artifact Store；密钥只留在 Credential Store。
 
-Workspace 独立按以下顺序确定：显式 `--workspace`、所选 `.narratage/runtime` 所在项目、入口
-Source 目录。Runtime Profile 无权扩大它。
+Workspace 独立由显式 `--workspace`、Runtime 指针所在项目或入口 Source 目录确定。Runtime 配置
+不能扩大源码读取范围。
 
-## Package、instance、part 与 role
+## 队列与并发
 
-Runtime 包是已安装代码；`infrastructure` 中的一项创建一个带配置的 instance。一个 instance
-可以公开多个内聚的 part。例如 `@narratage/store-sqlite` 的 `state` instance 从同一个数据库公开
-`builds`、`operations` 和 `dispatch`。role 通过 `{ from, part }` 精确选择其中一个：
+`build` 保存一个全新 Build 后立即返回。Worker 可以并行推进多个 Build，它们共同受 Profile 的
+进程级并发限制。Endpoint 包还会声明 Provider 与模型自身的限制，因此不同 Build 的外部调用仍
+共享同一额度。
 
-```json
-"buildStore": { "from": "state", "part": "builds" }
-```
+取消是尽力而为：未开始的工作直接撤回；运行中的 Build 不再接收新 Command，Endpoint 可以尝试
+取消已经提交的外部 Operation。已经完成的产物永远保留，不做回滚。
 
-`from` 只指向 Profile 中的 instance，`part` 只由该包声明。Host 验证这个 part 是否实现所选 role；
-没有中央注册表认识 SQLite，也不会拆解点号字符串来猜归属。Endpoint 则实现声明过的 Capability，
-并负责 Provider 调用。
+## Managed Programs
 
-Managed Program 是 Endpoint 声明的长期外部进程，例如常驻 WhisperX 服务。它不是 Runtime
-infrastructure，也不是队列。Endpoint 可以声明探测、准备和启动方法；外部托管时只声明探测。
+Endpoint 可以声明 WhisperX 这类需要常驻的辅助程序。Endpoint 提供探测和可选启动命令，本地
+Runtime 只负责管理它。
 
 ```bash
 narratage programs status
@@ -106,8 +93,7 @@ narratage programs up
 narratage programs down
 ```
 
-Build 只准备本次所需能力对应的 Program。显式 `programs up` 检查完整 Profile；停止 Runtime
-Worker 不会自动停止可能被共享的 Program。
+这些命令只加载 Endpoint 包，不打开 SQLite、Artifact Store 或 Credential Store。
 
 ## 生命周期
 
@@ -119,8 +105,8 @@ narratage runtime logs
 narratage runtime down
 ```
 
-这些都是 Controller 操作。`build` 每次提交一个新的 Build id；`--follow` 只负责观察。终态 Build
-不会重新打开，复用已有结果必须由新的 Run Source Candidate 显式表达。
+`runtime up` 启动本地 Worker。`build` 提交任务，`status`、`queue`、`cancel` 用来观察和控制。
+终态 Build 不恢复；复用以前的结果必须在新的 `.svrun` 中显式写 Candidate。
 
-Source 包和 Runtime 包使用不同锁，因为它们拥有不同权限。目前 Node Runtime 包仍是可信部署代码；
-在真正的进程或 Wasm 隔离完成前，Manifest 和 digest 都不能充当沙箱。
+Runtime 包是本地可信部署代码，其安装版本由 npm 或 pnpm 管理。Runtime 不再实现另一套包管理器，
+也不会把元数据冒充成沙箱。

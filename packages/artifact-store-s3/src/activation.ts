@@ -1,5 +1,5 @@
 import {
-  createRuntimeInfrastructureAdapterFacet,
+  createRuntimeArtifactStoreAdapterFacet,
   runtimeConfigBoolean,
   runtimeConfigExact,
   runtimeConfigObject,
@@ -9,7 +9,7 @@ import {
 import type { RuntimeAdapterFactoryContext } from "@narratage/runtime-kit";
 
 import { AwsS3ObjectClient } from "./client.js";
-import { createS3ArtifactStorePackage, s3ArtifactKey } from "./store.js";
+import { createS3ArtifactStore, s3ArtifactKey } from "./store.js";
 
 const VALIDATION_DIGEST = "sha256:0000000000000000000000000000000000000000000000000000000000000000" as const;
 
@@ -31,18 +31,17 @@ function validateConfig(context: RuntimeAdapterFactoryContext): void {
   }
 }
 
-const s3ArtifactStoreRuntimeAdapter = createRuntimeInfrastructureAdapterFacet({
+const s3ArtifactStoreRuntimeAdapter = createRuntimeArtifactStoreAdapterFacet({
   use: "@narratage/artifact-store-s3",
   validate: validateConfig,
-  create(context) {
+  open(context) {
     const config = runtimeConfigObject(context.config, "S3 ArtifactStore");
     runtimeConfigExact(config, [
       "bucket", "prefix", "expectedBucketOwner", "region", "endpoint", "forcePathStyle", "partSizeBytes",
     ], "S3 ArtifactStore");
     const bucket = runtimeConfigString(config.bucket, "S3 bucket");
     if (bucket === undefined) throw new Error("S3 bucket is required");
-    return createS3ArtifactStorePackage({
-      instance: context.instance,
+    return { value: createS3ArtifactStore({
       bucket,
       ...(runtimeConfigString(config.prefix, "S3 prefix") === undefined
         ? {} : { prefix: config.prefix as string }),
@@ -56,7 +55,7 @@ const s3ArtifactStoreRuntimeAdapter = createRuntimeInfrastructureAdapterFacet({
         ? {} : { forcePathStyle: config.forcePathStyle as boolean }),
       ...(runtimeConfigPositiveInteger(config.partSizeBytes, "S3 partSizeBytes") === undefined
         ? {} : { partSizeBytes: config.partSizeBytes as number }),
-    });
+    }) };
   },
   /**
    * A bucket that cannot be reached, or is owned by another account, is a

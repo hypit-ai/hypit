@@ -1,15 +1,22 @@
 import type { BuildState } from "@narratage/protocol";
 import type {
   BuildDispatchSnapshot,
+  BuildSchedulerOptions,
   CapacityResourceClaim,
   RuntimeCommandExecutor,
   RuntimeExecutionResult,
   RuntimePreparation,
   RuntimeRunnableCommand,
   RuntimeWorker,
-  RuntimeWorkerFactoryOptions,
+  RuntimeExecutionStores,
   RuntimeWorkerRunOptions,
 } from "@narratage/runtime";
+import { LocalBuildScheduler } from "@narratage/runtime";
+
+type LocalWorkerOptions = {
+  readonly stores: RuntimeExecutionStores;
+  readonly scheduling: BuildSchedulerOptions;
+};
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -98,10 +105,10 @@ class CommandGate {
 /** Adds persistent in-flight limits only to asynchronous external Operations. */
 class CapacityExecutor implements RuntimeCommandExecutor {
   readonly #delegate: RuntimeCommandExecutor;
-  readonly #options: RuntimeWorkerFactoryOptions;
+  readonly #options: LocalWorkerOptions;
   readonly #gate: CommandGate;
 
-  constructor(delegate: RuntimeCommandExecutor, options: RuntimeWorkerFactoryOptions, gate: CommandGate) {
+  constructor(delegate: RuntimeCommandExecutor, options: LocalWorkerOptions, gate: CommandGate) {
     this.#delegate = delegate;
     this.#options = options;
     this.#gate = gate;
@@ -175,10 +182,10 @@ class CapacityExecutor implements RuntimeCommandExecutor {
 
 class DurableLocalWorker implements RuntimeWorker {
   readonly #executor: RuntimeCommandExecutor;
-  readonly #options: RuntimeWorkerFactoryOptions;
+  readonly #options: LocalWorkerOptions;
   readonly #executorWithCapacity: CapacityExecutor;
 
-  constructor(executor: RuntimeCommandExecutor, options: RuntimeWorkerFactoryOptions) {
+  constructor(executor: RuntimeCommandExecutor, options: LocalWorkerOptions) {
     this.#executor = executor;
     this.#options = options;
     this.#executorWithCapacity = new CapacityExecutor(executor, options, new CommandGate(
@@ -211,7 +218,7 @@ class DurableLocalWorker implements RuntimeWorker {
     if (dispatch.cancellation !== undefined) return await this.#cancel(dispatch);
     const stored = await this.#options.stores.builds.read(dispatch.build);
     assert(stored !== undefined, `Dispatch ${dispatch.build} has no Build Definition`);
-    const scheduler = this.#options.scheduler.create(this.#executorWithCapacity, {
+    const scheduler = new LocalBuildScheduler(this.#executorWithCapacity, {
       ...this.#options.scheduling,
       buildStore: this.#options.stores.builds,
     });
@@ -298,7 +305,7 @@ class DurableLocalWorker implements RuntimeWorker {
 
 export function createDurableLocalWorker(
   executor: RuntimeCommandExecutor,
-  options: RuntimeWorkerFactoryOptions,
+  options: LocalWorkerOptions,
 ): RuntimeWorker {
   return new DurableLocalWorker(executor, options);
 }

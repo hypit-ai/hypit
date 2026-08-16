@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { FileArtifactStore, createFileArtifactStorePackage } from "@narratage/artifact-store-fs";
-import { createEnvironmentCredentialStorePackage } from "@narratage/credential-store-env";
+import { FileArtifactStore } from "@narratage/artifact-store-fs";
+import { EnvironmentCredentialStore } from "@narratage/credential-store-env";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import {
   buildDefinition,
@@ -40,7 +40,7 @@ import {
   grokImagineManifest,
   sealGrokImagineRequest,
 } from "@narratage/grok-imagine";
-import { createLocalExecutionPackage, createProjectLocalRuntime } from "@narratage/runtime-local";
+import { createLocalRuntime } from "@narratage/runtime-local";
 import type { LocalBuildSubmission } from "@narratage/runtime-local";
 import {
   minimaxH3Component,
@@ -63,7 +63,7 @@ import type {
   TypedRecord,
 } from "@narratage/protocol";
 import { credentialRef } from "@narratage/runtime";
-import { createSqliteRuntimeInfrastructurePackage } from "@narratage/store-sqlite";
+import { SqliteRuntimeState } from "@narratage/store-sqlite";
 import {
   sealSeedanceRequest,
   seedanceComponent,
@@ -390,31 +390,21 @@ async function main(): Promise<void> {
     defaultConcurrency: 1,
     pollIntervalMs: 3_000,
   });
-  const execution = createLocalExecutionPackage("execution");
-  const state = createSqliteRuntimeInfrastructurePackage({
-    path: join(root, ".narratage", "runtime.sqlite"),
-    instance: "state",
-  });
-  const artifacts = createFileArtifactStorePackage({ root: join(root, ".narratage", "artifacts"), instance: "artifacts" });
-  const credentials = createEnvironmentCredentialStorePackage({ instance: "credentials" });
-  const runtime = await createProjectLocalRuntime({
-    dataRoot: root,
-    infrastructure: [execution, state, artifacts, credentials],
-    roles: {
-      scheduler: { from: "execution", part: "scheduler" },
-      worker: { from: "execution", part: "worker" },
-      buildStore: { from: "state", part: "builds" },
-      operationStore: { from: "state", part: "operations" },
-      dispatchStore: { from: "state", part: "dispatch" },
-      artifactStore: { from: "artifacts", part: "store" },
-      credentialStores: [{ from: "credentials", part: "store" }],
-    },
+  const state = new SqliteRuntimeState(join(root, ".narratage", "runtime.sqlite"));
+  const runtime = await createLocalRuntime({
+    buildStore: state.builds,
+    buildCatalog: state.catalog,
+    operationStore: state.operations,
+    dispatchStore: state.dispatch,
+    artifactStore: new FileArtifactStore(join(root, ".narratage", "artifacts")),
+    credentialStore: new EnvironmentCredentialStore(),
     components: [
       generationComponent,
       ...[...new Map(selected.map((item) => [item.manifest.name, item.component])).values()],
     ],
     endpoints: [provider],
     scheduling: { maxConcurrency: 1 },
+    close: () => state.close(),
   });
   const failures: string[] = [];
   const workerAbort = new AbortController();
