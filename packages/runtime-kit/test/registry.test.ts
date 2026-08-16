@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  createRuntimeArtifactStoreAdapterFacet,
   createRuntimeEndpointAdapterFacet,
-  createRuntimeInfrastructureAdapterFacet,
   isRuntimeAdapterHostFacet,
   runtimeConfigBoolean,
   runtimeConfigExact,
@@ -32,49 +32,47 @@ const endpoint = (use: string, extra: Record<string, unknown> = {}) =>
 test("a facet declares which kind it is, and the registry keeps the two apart", () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.endpoint"));
-  registry.registerFacet(createRuntimeInfrastructureAdapterFacet({
+  registry.registerFacet(createRuntimeArtifactStoreAdapterFacet({
     use: "example.service",
     validate() {},
-    create: () => ({}) as never,
+    open: () => ({ value: {} as never }),
   }));
 
   assert.ok(registry.has("example.endpoint", "endpoint"));
-  assert.equal(registry.has("example.endpoint", "infrastructure"), false);
-  assert.ok(registry.has("example.service", "infrastructure"));
+  assert.equal(registry.has("example.endpoint", "artifact-store"), false);
+  assert.ok(registry.has("example.service", "artifact-store"));
   assert.equal(registry.has("example.service", "endpoint"), false);
   assert.equal(registry.has("example.absent"), false);
 });
 
-test("Endpoint and Runtime infrastructure may intentionally share one logical spelling", () => {
+test("Endpoint and Artifact Store adapters may share one package address", () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.shared"));
-  registry.registerFacet(createRuntimeInfrastructureAdapterFacet({
+  registry.registerFacet(createRuntimeArtifactStoreAdapterFacet({
     use: "example.shared",
     validate() {},
-    create: () => ({ parts: [] }) as never,
+    open: () => ({ value: {} as never }),
   }));
   assert.ok(registry.has("example.shared", "endpoint"));
-  assert.ok(registry.has("example.shared", "infrastructure"));
+  assert.ok(registry.has("example.shared", "artifact-store"));
 });
 
-test("asking an Endpoint adapter for a Runtime infrastructure is refused, not coerced", async () => {
+test("asking an Endpoint adapter for an Artifact Store is refused, not coerced", async () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.endpoint"));
-  await assert.rejects(async () => await registry.createInfrastructure("example.endpoint", context));
+  await assert.rejects(async () => await registry.openArtifactStore("example.endpoint", context));
   await assert.rejects(async () => await registry.createEndpoint("example.absent", context));
 });
 
-test("a Runtime infrastructure adapter cannot escape its configured instance namespace", async () => {
+test("an Artifact Store adapter returns the selected Store directly", async () => {
   const registry = new RuntimeAdapterRegistry();
-  registry.registerFacet(createRuntimeInfrastructureAdapterFacet({
-    use: "example.escaping-service",
+  const value = { put() {}, get() {}, has() {} } as never;
+  registry.registerFacet(createRuntimeArtifactStoreAdapterFacet({
+    use: "example.artifacts",
     validate() {},
-    create: () => ({ parts: [{ part: "escape", instance: { id: "someone-else" } }] }) as never,
+    open: () => ({ value }),
   }));
-  await assert.rejects(
-    async () => await registry.createInfrastructure("example.escaping-service", context),
-    /outside configured instance one/u,
-  );
+  assert.equal((await registry.openArtifactStore("example.artifacts", context)).value, value);
 });
 
 test("one kind and logical name has one adapter, so a second registration is an error", () => {

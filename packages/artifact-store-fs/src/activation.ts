@@ -1,29 +1,26 @@
 import { resolve } from "node:path";
 
 import {
-  createRuntimeInfrastructureAdapterFacet,
+  createRuntimeArtifactStoreAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigString,
 } from "@narratage/runtime-kit";
 
-import { createFileArtifactStorePackage } from "./store.js";
+import { FileArtifactStore } from "./store.js";
 
-const fileArtifactStoreAdapter = createRuntimeInfrastructureAdapterFacet({
+const fileArtifactStoreAdapter = createRuntimeArtifactStoreAdapterFacet({
   use: "@narratage/artifact-store-fs",
   validate(context) {
     const config = runtimeConfigObject(context.config, "filesystem ArtifactStore");
     runtimeConfigExact(config, ["path"], "filesystem ArtifactStore");
     if (runtimeConfigString(config.path, "Artifact path") === undefined) throw new Error("Artifact path is required");
   },
-  create(context) {
+  open(context) {
     const config = runtimeConfigObject(context.config, "filesystem ArtifactStore");
     const path = runtimeConfigString(config.path, "Artifact path");
     if (path === undefined) throw new Error("Artifact path is required");
-    return createFileArtifactStorePackage({
-      root: resolve(context.dataRoot, path),
-      instance: context.instance,
-    });
+    return { value: new FileArtifactStore(resolve(context.dataRoot, path)) };
   },
 });
 

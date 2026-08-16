@@ -2215,6 +2215,9 @@ importers:
       '@narratage/runtime-kit':
         specifier: workspace:*
         version: link:../runtime-kit
+      '@narratage/store-sqlite':
+        specifier: workspace:*
+        version: link:../store-sqlite
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
@@ -2231,9 +2234,6 @@ importers:
       '@narratage/credential-store-env':
         specifier: workspace:*
         version: link:../credential-store-env
-      '@narratage/store-sqlite':
-        specifier: workspace:*
-        version: link:../store-sqlite
 
   packages/screen-overlay:
     dependencies:
@@ -2567,9 +2567,6 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@narratage/runtime-kit':
-        specifier: workspace:*
-        version: link:../runtime-kit
 
   packages/svs:
     dependencies:

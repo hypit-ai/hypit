@@ -4,7 +4,7 @@ macOS Keychain-backed implementation of the domain-neutral Runtime `CredentialSt
 its optional writable facet.
 
 It resolves only explicit `{ store: "keychain", key }` references and cannot enumerate credentials.
-Secrets never enter Runtime Profile, Runtime Closure or BuildState. The package invokes the bounded
+Secrets never enter Runtime Profile or BuildState. The package invokes the bounded
 `/usr/bin/security find-generic-password` command without a shell and returns no command output on
 failure.
 

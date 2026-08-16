@@ -1,5 +1,3 @@
-import { resolve } from "node:path";
-
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
@@ -10,13 +8,11 @@ import {
   EndpointRegistry,
 } from "@narratage/driver-node";
 import {
-  LocalBuildScheduler,
   createBuildDispatchIdentity,
   isStreamingArtifactStore,
 } from "@narratage/runtime";
 import { TypeValidatorRegistry } from "@narratage/validation";
 
-import { createProjectRuntimeInfrastructure } from "./project-infrastructure.js";
 import { createLocalRuntimeControl } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
 import { createDurableLocalWorker } from "./worker.js";
@@ -27,7 +23,6 @@ import type {
   LocalBuildSubmission,
   LocalRuntime,
   EndpointPackage,
-  ProjectLocalRuntimeOptions,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -92,11 +87,6 @@ export async function createLocalRuntime(
   });
   const scheduling = options.scheduling;
   const worker = createDurableLocalWorker(driver, {
-    scheduler: {
-      create(executor, schedulerOptions) {
-        return new LocalBuildScheduler(executor, schedulerOptions);
-      },
-    },
     stores: {
       builds: options.buildStore,
       operations: options.operationStore,
@@ -209,66 +199,4 @@ export async function createLocalRuntime(
     },
     close: control.close,
   };
-}
-
-/**
- * Node project assembly over only the Runtime infrastructure packages selected by the caller. Capability
- * Endpoints may execute locally, in a vendor API, in Lambda, or on a hosted service; none is
- * inferred from this local process boundary.
- */
-export async function createProjectLocalRuntime(
-  options: ProjectLocalRuntimeOptions,
-): Promise<LocalRuntime> {
-  const root = resolve(options.dataRoot ?? process.cwd());
-  const packageRoot = resolve(options.packageRoot ?? root);
-  const configuredComponents = options.components ?? [];
-  const projectInfrastructure = await createProjectRuntimeInfrastructure(root, options);
-  const infrastructure = projectInfrastructure.assembly;
-  const endpointPackages = options.endpoints ?? [];
-
-  try {
-    verifyEndpointPackages(endpointPackages);
-    const runtime = await createLocalRuntime({
-      buildStore: infrastructure.buildStore,
-      ...(projectInfrastructure.catalog === undefined ? {} : { buildCatalog: projectInfrastructure.catalog }),
-      operationStore: infrastructure.operationStore,
-      dispatchStore: infrastructure.dispatchStore,
-      artifactStore: infrastructure.artifactStore,
-      credentialStore: infrastructure.credentialStore,
-      ...(configuredComponents.length === 0
-        ? {}
-        : { components: configuredComponents }),
-      endpoints: endpointPackages,
-      scheduling: {
-        maxConcurrency: options.scheduling.maxConcurrency,
-        ...(options.scheduling.resources === undefined ? {} : {
-          resourceLimits: options.scheduling.resources,
-        }),
-      },
-      close: projectInfrastructure.close,
-      ...(options.validators === undefined ? {} : { validators: options.validators }),
-    });
-    return {
-      build: runtime.build,
-      buildMany: runtime.buildMany,
-      status: runtime.status,
-      activity: runtime.activity,
-      queue: runtime.queue,
-      operation: runtime.operation,
-      credentials: runtime.credentials,
-      putCredential: runtime.putCredential,
-      deleteCredential: runtime.deleteCredential,
-      builds: runtime.builds,
-      cancel: runtime.cancel,
-      workOnce: runtime.workOnce,
-      work: runtime.work,
-      readArtifact: runtime.readArtifact,
-      openArtifact: runtime.openArtifact,
-      garbageCollectArtifacts: runtime.garbageCollectArtifacts,
-      close: runtime.close,
-    };
-  } catch (error) {
-      await projectInfrastructure.close();
-    throw error;
-  }
 }

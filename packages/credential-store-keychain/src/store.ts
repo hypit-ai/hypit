@@ -1,10 +1,9 @@
 import { execFile } from "node:child_process";
 
-import { defineRuntimeInfrastructurePackage, verifyCredentialRef } from "@narratage/runtime";
+import { verifyCredentialRef } from "@narratage/runtime";
 import type {
   CredentialRef,
   CredentialValue,
-  RuntimeInfrastructurePackage,
   WritableCredentialStore,
 } from "@narratage/runtime";
 
@@ -124,26 +123,4 @@ export class KeychainCredentialStore implements WritableCredentialStore {
     if (!this.owns(ref)) throw new Error(`keychain CredentialStore does not own ${ref.store}`);
     return await this.#remove(this.#service, ref.key);
   }
-}
-
-export function createKeychainCredentialStorePackage(
-  options: CreateKeychainCredentialStorePackageOptions = {},
-): RuntimeInfrastructurePackage {
-  const instance = options.instance ?? "credentials";
-  const service = options.service ?? DEFAULT_SERVICE;
-  return defineRuntimeInfrastructurePackage({
-    module: keychainCredentialStoreModuleRef,
-    instance,
-    parts: [{
-      role: "credential-store",
-      part: "store",
-      facet: "credential-store",
-      port: new KeychainCredentialStore({
-        service,
-        ...(options.read === undefined ? {} : { read: options.read }),
-        ...(options.write === undefined ? {} : { write: options.write }),
-        ...(options.remove === undefined ? {} : { remove: options.remove }),
-      }),
-    }],
-  });
 }

@@ -440,7 +440,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "",
       "  narratage runtime use <profile>       select the Profile for this project",
       "  narratage runtime unset               remove only the local selection",
-      "  narratage runtime up [<profile>]      validate the Runtime Closure, start programs and Worker",
+      "  narratage runtime up [<profile>]      validate the Profile, start programs and Worker",
       "  narratage runtime status [<profile>]  inspect Worker, queue capacity and declared programs",
       "  narratage runtime logs [<profile>]    read Worker logs",
       "  narratage runtime down [<profile>]    stop the Worker; external programs keep running",

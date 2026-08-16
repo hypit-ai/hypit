@@ -5,10 +5,11 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
-  createRuntimeInfrastructureAdapterFacet,
+  createRuntimeArtifactStoreAdapterFacet,
   createRuntimeEndpointAdapterFacet,
 } from "@narratage/runtime-kit";
-import { createSqliteRuntimeInfrastructurePackage } from "@narratage/store-sqlite";
+import { MemoryArtifactStore } from "@narratage/driver-node";
+import { SqliteRuntimeState } from "@narratage/store-sqlite";
 import {
   createRuntimeArchiveFromConfig,
   createRuntimeArtifactAccessFromConfig,
@@ -17,21 +18,11 @@ import {
   RuntimeAdapterRegistry,
 } from "@narratage/runtime-local";
 
-const roles = {
-  scheduler: { from: "execution", part: "scheduler" },
-  worker: { from: "execution", part: "worker" },
-  buildStore: { from: "state", part: "builds" },
-  operationStore: { from: "state", part: "operations" },
-  dispatchStore: { from: "state", part: "dispatch" },
-  artifactStore: { from: "artifacts", part: "store" },
-  credentialStores: [] as { from: string; part: string }[],
-};
-
 function profile(config: {
   readonly dataRoot?: string;
-  readonly infrastructure?: Readonly<Record<string, unknown>>;
+  readonly artifacts?: Readonly<Record<string, unknown>>;
+  readonly credentials?: Readonly<Record<string, unknown>>;
   readonly endpoints?: Readonly<Record<string, unknown>>;
-  readonly selectedRoles?: typeof roles;
 } = {}) {
   return {
     format: "narratage.runtime-profile@1",
@@ -39,69 +30,45 @@ function profile(config: {
       use: "@narratage/runtime-local",
       config: {
         dataRoot: config.dataRoot ?? ".narratage/runtimes/local",
-        infrastructure: config.infrastructure ?? {},
-        roles: config.selectedRoles ?? roles,
+        artifacts: config.artifacts ?? { use: "example.artifacts" },
+        credentials: config.credentials ?? {},
         endpoints: config.endpoints ?? {},
-        capacity: { maxActiveOperations: 3 },
+        concurrency: 3,
       },
     },
   };
 }
 
-test("Runtime Profile keeps deployment data separate from source and derives instance names from maps", () => {
+test("Runtime Profile names the stores and Endpoints used by one local Runtime", () => {
   const parsed = parseRuntimeConfig(profile({
-    infrastructure: { state: { use: "example.state", config: { path: "state.sqlite" } } },
+    credentials: { secrets: { use: "example.credentials" } },
     endpoints: { generation: { use: "example.provider", pool: "shared" } },
   }));
   assert.equal(parsed.dataRoot, ".narratage/runtimes/local");
-  assert.deepEqual(parsed.infrastructure, [{
-    use: "example.state",
-    instance: "state",
-    config: { path: "state.sqlite" },
-  }]);
-  assert.deepEqual(parsed.endpoints, [{
-    use: "example.provider",
-    instance: "generation",
-    pool: "shared",
-  }]);
-  assert.deepEqual(parsed.roles, roles);
-  assert.equal("root" in parsed, false);
+  assert.deepEqual(parsed.artifacts, { use: "example.artifacts", instance: "artifacts" });
+  assert.deepEqual(parsed.credentials, [{ use: "example.credentials", instance: "secrets" }]);
+  assert.deepEqual(parsed.endpoints, [{ use: "example.provider", instance: "generation", pool: "shared" }]);
+  assert.equal(parsed.concurrency, 3);
 });
 
 test("Runtime Profile rejects source ownership fields", () => {
-  assert.throws(() => parseRuntimeConfig({ ...profile(), root: "." }),
-    /does not accept root/u);
+  assert.throws(() => parseRuntimeConfig({ ...profile(), root: "." }), /does not accept root/u);
 });
 
-test("archive observation constructs only the infrastructure selected by archive roles", async () => {
+test("archive inspection opens SQLite only; Artifact access opens the selected Store", async () => {
   const root = await mkdtemp(join(tmpdir(), "narratage-runtime-slice-"));
   const path = join(root, "narratage.runtime.json");
-  await writeFile(path, JSON.stringify(profile({
-    dataRoot: ".",
-    infrastructure: {
-      state: { use: "example.state" },
-      artifacts: { use: "example.artifacts" },
-    },
-  })));
+  await writeFile(path, JSON.stringify(profile({ dataRoot: "." })));
+  const state = new SqliteRuntimeState(join(root, "runtime.sqlite"));
+  state.close();
   let artifactConstructions = 0;
   const registry = new RuntimeAdapterRegistry();
-  registry.registerFacet(createRuntimeInfrastructureAdapterFacet({
-    use: "example.state",
-    validate() {},
-    create(context) {
-      return createSqliteRuntimeInfrastructurePackage({
-        path: join(context.dataRoot, "state.sqlite"),
-        instance: context.instance,
-        readOnly: context.access === "read-only",
-      });
-    },
-  }));
-  registry.registerFacet(createRuntimeInfrastructureAdapterFacet({
+  registry.registerFacet(createRuntimeArtifactStoreAdapterFacet({
     use: "example.artifacts",
     validate() {},
-    create() {
+    open() {
       artifactConstructions += 1;
-      throw new Error("artifact adapter constructed");
+      return { value: new MemoryArtifactStore() };
     },
   }));
   try {
@@ -109,14 +76,15 @@ test("archive observation constructs only the infrastructure selected by archive
     assert.equal((await archive.status("missing")).build, undefined);
     await archive.close();
     assert.equal(artifactConstructions, 0);
-    await assert.rejects(createRuntimeArtifactAccessFromConfig(path, { registry, readOnly: true }),
-      /artifact adapter constructed/u);
+    const artifacts = await createRuntimeArtifactAccessFromConfig(path, { registry, readOnly: true });
+    await artifacts.close();
+    assert.equal(artifactConstructions, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
-test("doctor reports a down Managed Program without inventing a Runtime default", async () => {
+test("doctor reports a down Managed Program", async () => {
   const root = await mkdtemp(join(tmpdir(), "narratage-runtime-program-"));
   const path = join(root, "narratage.runtime.json");
   await writeFile(path, JSON.stringify(profile({
@@ -124,13 +92,17 @@ test("doctor reports a down Managed Program without inventing a Runtime default"
     endpoints: { speech: { use: "example.speech" } },
   })));
   const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeArtifactStoreAdapterFacet({
+    use: "example.artifacts",
+    validate() {},
+    open: () => ({ value: new MemoryArtifactStore() }),
+  }));
   registry.registerFacet(createRuntimeEndpointAdapterFacet({
     use: "example.speech",
     activate: (context) => ({
       endpoint: {
         name: context.instance,
-        manifest: { facets: [] },
-        instance: { id: context.instance },
+        instance: { id: context.instance, pool: context.pool ?? context.instance },
         offers: [],
         credentials: [],
         install() {},

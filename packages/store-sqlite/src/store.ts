@@ -14,7 +14,6 @@ import type {
 import {
   verifyBuildCatalogDescriptor,
   verifyBuildCatalogEntry,
-  defineRuntimeInfrastructurePackage,
   capacityReservationId,
 } from "@narratage/runtime";
 import type {
@@ -36,25 +35,14 @@ import type {
   OperationSnapshot,
   OperationStore,
   OperationUpdate,
-  RuntimeInfrastructurePackage,
 } from "@narratage/runtime";
 
 const databaseSchemaVersion = 11;
-
-export const sqliteStoreModuleRef = {
-  name: "@narratage/store-sqlite",
-  version: "1",
-} as const;
 
 export type SqliteRuntimeStateOptions = {
   readonly busyTimeoutMs?: number;
   /** Open an existing archive without creating files or schema. */
   readonly readOnly?: boolean;
-};
-
-export type CreateSqliteRuntimeInfrastructurePackageOptions = SqliteRuntimeStateOptions & {
-  readonly path: string;
-  readonly instance?: string;
 };
 
 type Row = Record<string, unknown>;
@@ -723,46 +711,5 @@ export class SqliteRuntimeState {
 
   close(): void {
     this.#database.close();
-  }
-}
-
-export function createSqliteRuntimeInfrastructurePackage(
-  options: CreateSqliteRuntimeInfrastructurePackageOptions,
-): RuntimeInfrastructurePackage {
-  const state = new SqliteRuntimeState(options.path, {
-    ...(options.busyTimeoutMs === undefined ? {} : { busyTimeoutMs: options.busyTimeoutMs }),
-    ...(options.readOnly === undefined ? {} : { readOnly: options.readOnly }),
-  });
-  const instance = options.instance ?? "state";
-  try {
-    return defineRuntimeInfrastructurePackage({
-      module: sqliteStoreModuleRef,
-      instance,
-      parts: [
-        {
-          role: "build-store",
-          part: "builds",
-          facet: "build-store",
-          port: state.builds,
-        },
-        {
-          role: "operation-store",
-          part: "operations",
-          facet: "operation-store",
-          port: state.operations,
-        },
-        {
-          role: "dispatch-store",
-          part: "dispatch",
-          facet: "dispatch-store",
-          port: state.dispatch,
-        },
-      ],
-      buildCatalog: state.catalog,
-      close: () => state.close(),
-    });
-  } catch (error) {
-    state.close();
-    throw error;
   }
 }

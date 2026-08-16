@@ -3,12 +3,6 @@ import {
   isEnumerableBuildStore,
   isManagedArtifactStore,
   isStreamingArtifactStore,
-  verifyRuntimeInfrastructurePackage,
-} from "@narratage/runtime";
-import type {
-  RuntimePart,
-  RuntimeInfrastructurePackage,
-  RuntimePartReference,
 } from "@narratage/runtime";
 
 import type {
@@ -18,11 +12,7 @@ import type {
   LocalRuntimeArchiveControl,
   LocalRuntimeArtifactAccess,
   LocalRuntimeControl,
-  ProjectLocalRuntimeArchiveControlOptions,
-  ProjectLocalRuntimeArtifactAccessOptions,
-  ProjectLocalRuntimeControlOptions,
 } from "./types.js";
-import { selectedBuildCatalog } from "./project-infrastructure.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -159,115 +149,4 @@ export function createLocalRuntimeControl(
       return options.close?.();
     },
   };
-}
-
-type OpenedProjectInfrastructure = {
-  readonly packages: readonly RuntimeInfrastructurePackage[];
-  readonly parts: ReadonlyMap<string, { readonly package: RuntimeInfrastructurePackage; readonly part: RuntimePart }>;
-  close(): Promise<void>;
-};
-
-async function openProjectInfrastructure(
-  options: ProjectLocalRuntimeControlOptions,
-): Promise<OpenedProjectInfrastructure> {
-  const packages = [...options.infrastructure];
-  const parts = new Map<string, { readonly package: RuntimeInfrastructurePackage; readonly part: RuntimePart }>();
-  try {
-    for (const item of packages) {
-      verifyRuntimeInfrastructurePackage(item);
-      for (const part of item.parts) {
-        const key = `${part.owner}\u0000${part.part}`;
-        assert(!parts.has(key), `Runtime part ${part.owner}.${part.part} is configured twice`);
-        parts.set(key, { package: item, part });
-      }
-    }
-    let closed = false;
-    return {
-      packages,
-      parts,
-      close: async () => {
-        if (closed) return;
-        closed = true;
-        for (const item of [...packages].reverse()) await item.close?.();
-      },
-    };
-  } catch (error) {
-    for (const item of [...packages].reverse()) await item.close?.();
-    throw error;
-  }
-}
-
-function selectedPart<Role extends RuntimePart["role"]>(
-  opened: OpenedProjectInfrastructure,
-  reference: RuntimePartReference,
-  role: Role,
-): Extract<RuntimePart, { readonly role: Role }> {
-  const key = `${reference.from}\u0000${reference.part}`;
-  const item = opened.parts.get(key);
-  assert(item !== undefined, `Runtime role refers to unknown part ${reference.from}.${reference.part}`);
-  assert(item.part.role === role,
-    `Runtime part ${reference.from}.${reference.part} is ${item.part.role}, not ${role}`);
-  return item.part as Extract<RuntimePart, { readonly role: Role }>;
-}
-
-/** Assemble only Build, Operation and Dispatch state selected by the Profile. */
-export async function createProjectLocalRuntimeArchiveControl(
-  options: ProjectLocalRuntimeArchiveControlOptions,
-): Promise<LocalRuntimeArchiveControl> {
-  const opened = await openProjectInfrastructure(options);
-  try {
-    const build = selectedPart(opened, options.roles.buildStore, "build-store");
-    const operations = selectedPart(opened, options.roles.operationStore, "operation-store");
-    const dispatch = selectedPart(opened, options.roles.dispatchStore, "dispatch-store");
-    const catalog = selectedBuildCatalog(opened.packages, options.roles.buildStore);
-    return createLocalRuntimeArchiveControl({
-      buildStore: build.port,
-      ...(catalog === undefined ? {} : { buildCatalog: catalog }),
-      operationStore: operations.port,
-      dispatchStore: dispatch.port,
-      close: opened.close,
-    });
-  } catch (error) {
-    await opened.close();
-    throw error;
-  }
-}
-
-/** Assemble only the ArtifactStore selected by the Profile. */
-export async function createProjectLocalRuntimeArtifactAccess(
-  options: ProjectLocalRuntimeArtifactAccessOptions,
-): Promise<LocalRuntimeArtifactAccess> {
-  const opened = await openProjectInfrastructure(options);
-  try {
-    const artifacts = selectedPart(opened, options.roles.artifactStore, "artifact-store");
-    return createLocalRuntimeArtifactAccess({ artifactStore: artifacts.port, close: opened.close });
-  } catch (error) {
-    await opened.close();
-    throw error;
-  }
-}
-
-/** Assemble all durable Stores only for execution or explicit cross-store maintenance. */
-export async function createProjectLocalRuntimeControl(
-  options: ProjectLocalRuntimeControlOptions,
-): Promise<LocalRuntimeControl> {
-  const opened = await openProjectInfrastructure(options);
-  try {
-    const build = selectedPart(opened, options.roles.buildStore, "build-store");
-    const operations = selectedPart(opened, options.roles.operationStore, "operation-store");
-    const dispatch = selectedPart(opened, options.roles.dispatchStore, "dispatch-store");
-    const artifacts = selectedPart(opened, options.roles.artifactStore, "artifact-store");
-    const catalog = selectedBuildCatalog(opened.packages, options.roles.buildStore);
-    return createLocalRuntimeControl({
-      buildStore: build.port,
-      ...(catalog === undefined ? {} : { buildCatalog: catalog }),
-      operationStore: operations.port,
-      dispatchStore: dispatch.port,
-      artifactStore: artifacts.port,
-      close: opened.close,
-    });
-  } catch (error) {
-    await opened.close();
-    throw error;
-  }
 }

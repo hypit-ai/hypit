@@ -55,17 +55,6 @@ export type RuntimeWorker = {
   run(options: RuntimeWorkerRunOptions): Promise<void>;
 };
 
-export type RuntimeWorkerFactoryOptions = {
-  readonly scheduler: BuildSchedulerFactory;
-  readonly stores: RuntimeExecutionStores;
-  readonly scheduling: BuildSchedulerOptions;
-};
-
-/** Selected execution strategy. Process supervision remains a generic Host concern. */
-export type RuntimeWorkerFactory = {
-  create(executor: RuntimeCommandExecutor, options: RuntimeWorkerFactoryOptions): RuntimeWorker;
-};
-
 export type RuntimePreparation = {
   readonly state: BuildState;
   readonly runnable: readonly RuntimeRunnableCommand[];
@@ -185,12 +174,7 @@ export type BuildSchedulerOptions = {
   readonly buildStore?: BuildStore;
 };
 
-/** Environment-neutral scheduling authority selected by the Runtime Profile. */
+/** Internal scheduler used by an execution Runtime. */
 export type BuildScheduler = {
   run(requests: readonly ScheduledBuild[]): Promise<readonly ScheduledBuildResult[]>;
-};
-
-/** Installed Scheduler implementation. It receives policy only after Runtime Closure resolution. */
-export type BuildSchedulerFactory = {
-  create(executor: RuntimeCommandExecutor, options?: BuildSchedulerOptions): BuildScheduler;
 };

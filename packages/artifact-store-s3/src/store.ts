@@ -2,8 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { isDigest } from "@narratage/protocol";
 import type { BlobRef, Digest } from "@narratage/protocol";
-import { defineRuntimeInfrastructurePackage } from "@narratage/runtime";
-import type { ArtifactStore, RuntimeInfrastructurePackage } from "@narratage/runtime";
+import type { ArtifactStore } from "@narratage/runtime";
 
 import { AwsS3ObjectClient } from "./client.js";
 import type { S3ListPage, S3ObjectClient } from "./client.js";
@@ -311,11 +310,9 @@ export class S3ArtifactStore implements ArtifactStore {
   }
 }
 
-export function createS3ArtifactStorePackage(
+export function createS3ArtifactStore(
   options: CreateS3ArtifactStorePackageOptions,
-): RuntimeInfrastructurePackage {
-  const instance = options.instance ?? "artifacts";
-  assert(instance.trim().length > 0, "S3 ArtifactStore instance id must not be empty");
+): S3ArtifactStore {
   const prefix = normalizePrefix(options.prefix);
   const configuration = {
     bucket: options.bucket,
@@ -331,22 +328,13 @@ export function createS3ArtifactStorePackage(
     ...(options.endpoint === undefined ? {} : { endpoint: options.endpoint }),
     ...(options.forcePathStyle === undefined ? {} : { forcePathStyle: options.forcePathStyle }),
   });
-  return defineRuntimeInfrastructurePackage({
-    module: s3ArtifactStoreModuleRef,
-    instance,
-    parts: [{
-      role: "artifact-store",
-      part: "store",
-      facet: "artifact-store",
-      port: new S3ArtifactStore({
-        client,
-        bucket: options.bucket,
-        ...(options.partSizeBytes === undefined ? {} : { partSizeBytes: options.partSizeBytes }),
-        ...(prefix.length === 0 ? {} : { prefix }),
-        ...(options.expectedBucketOwner === undefined
-          ? {}
-          : { expectedBucketOwner: options.expectedBucketOwner }),
-      }),
-    }],
+  return new S3ArtifactStore({
+    client,
+    bucket: options.bucket,
+    ...(options.partSizeBytes === undefined ? {} : { partSizeBytes: options.partSizeBytes }),
+    ...(prefix.length === 0 ? {} : { prefix }),
+    ...(options.expectedBucketOwner === undefined
+      ? {}
+      : { expectedBucketOwner: options.expectedBucketOwner }),
   });
 }

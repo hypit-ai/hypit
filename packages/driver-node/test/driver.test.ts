@@ -100,7 +100,7 @@ test("Driver pauses at an unbound Need, then resumes without rerunning producers
   assert.equal(completed.state.records.some((record) => record.id === "generated:root"), true);
 });
 
-test("Endpoint Registry rejects ambiguity until a Runtime Closure selects one endpoint", async () => {
+test("Endpoint Registry rejects an ambiguous Runtime Profile", async () => {
   const { producers, endpoints } = configuredRegistry();
   endpoints.registerImmediateEndpoint("example:alpha", capabilities.generation, types.generated, () => ({
     value: { kind: "inline", value: "Alpha" },

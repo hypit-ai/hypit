@@ -11,18 +11,7 @@ import { dirname, join, resolve } from "node:path";
 
 import { isDigest } from "@narratage/protocol";
 import type { BlobRef, Digest } from "@narratage/protocol";
-import { defineRuntimeInfrastructurePackage } from "@narratage/runtime";
-import type { ArtifactStore, RuntimeInfrastructurePackage } from "@narratage/runtime";
-
-export const fileArtifactStoreModuleRef = {
-  name: "@narratage/artifact-store-fs",
-  version: "1",
-} as const;
-
-export type CreateFileArtifactStorePackageOptions = {
-  readonly root: string;
-  readonly instance?: string;
-};
+import type { ArtifactStore } from "@narratage/runtime";
 
 function digestPath(root: string, digest: Digest): string {
   if (!isDigest(digest)) throw new Error("Artifact digest is invalid");
@@ -176,20 +165,4 @@ export class FileArtifactStore implements ArtifactStore {
       throw error;
     }
   }
-}
-
-export function createFileArtifactStorePackage(
-  options: CreateFileArtifactStorePackageOptions,
-): RuntimeInfrastructurePackage {
-  const instance = options.instance ?? "artifacts";
-  return defineRuntimeInfrastructurePackage({
-    module: fileArtifactStoreModuleRef,
-    instance,
-    parts: [{
-      role: "artifact-store",
-      part: "store",
-      facet: "artifact-store",
-      port: new FileArtifactStore(options.root),
-    }],
-  });
 }

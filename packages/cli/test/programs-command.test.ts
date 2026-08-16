@@ -92,12 +92,12 @@ test("runtime up validates the Runtime before it starts Programs", async () => {
     openRuntimeHost: async (path: string) => ({
       profile: path,
       controller: async () => controller(path, calls),
-      createRuntime: async () => { throw new Error("Runtime Closure conflict"); },
+      createRuntime: async () => { throw new Error("Runtime Profile conflict"); },
     }),
   } as unknown as CliDistribution;
   await assert.rejects(
     runCli(["runtime", "up", "/p/narratage.runtime.json"], io, selected),
-    /Runtime Closure conflict/u,
+    /Runtime Profile conflict/u,
   );
   assert.deepEqual(calls, []);
 });

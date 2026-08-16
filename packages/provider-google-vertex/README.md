@@ -18,7 +18,7 @@ createGoogleVertexCaptionProvider({
 The Runtime Profile must provide an ordinary `{ store, key }` credential reference. The referenced
 value is the JSON contents rather than a path, keeping filesystem authority out of the Provider.
 The low-level TypeScript factory retains an environment-reference convenience for embeddings;
-declarative Runtime activation has no implicit credential source. Credentials never enter author source, Runtime Closure, BuildState,
+declarative Runtime activation has no implicit credential source. Credentials never enter author source, BuildState,
 Operation state, Prompt or Receipt metadata.
 
 A host may expose an ADC file through a file-backed CredentialStore, but the Provider itself does
