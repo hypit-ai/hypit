@@ -10,21 +10,16 @@ import {
   EndpointRegistry,
 } from "@narratage/driver-node";
 import {
-  RuntimeModuleRegistry,
+  LocalBuildScheduler,
   createBuildDispatchIdentity,
   isStreamingArtifactStore,
-  resolveRuntimeClosure,
-  sealResolvedRuntimeProfile,
 } from "@narratage/runtime";
 import { TypeValidatorRegistry } from "@narratage/validation";
-import type {
-  RuntimeModuleManifest,
-  RuntimeFacetInstance,
-} from "@narratage/runtime";
 
 import { createProjectRuntimeInfrastructure } from "./project-infrastructure.js";
 import { createLocalRuntimeControl } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
+import { createDurableLocalWorker } from "./worker.js";
 import type {
   CreateLocalRuntimeOptions,
   LocalBuildOptions,
@@ -37,14 +32,6 @@ import type {
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
-}
-
-function moduleKey(manifest: RuntimeModuleManifest): string {
-  return `${manifest.name}@${manifest.version}`;
-}
-
-function facetKey(instance: RuntimeFacetInstance): string {
-  return `${instance.facet.module.name}@${instance.facet.module.version}#${instance.facet.name}`;
 }
 
 function nonNegativeInteger(value: number, subject: string): number {
@@ -69,33 +56,12 @@ async function wait(delayMs: number, signal: AbortSignal | undefined): Promise<v
   });
 }
 
-function registerManifests(
-  registry: RuntimeModuleRegistry,
-  manifests: readonly RuntimeModuleManifest[],
-): void {
-  const seen = new Map<string, string>();
-  for (const manifest of manifests) {
-    const key = moduleKey(manifest);
-    const declaration = JSON.stringify(manifest);
-    const existing = seen.get(key);
-    if (existing !== undefined) {
-      assert(existing === declaration, `Runtime package ${key} was configured with conflicting Manifests`);
-      continue;
-    }
-    seen.set(key, declaration);
-    registry.register(manifest);
-  }
-}
-
 function verifyEndpointPackages(packages: readonly EndpointPackage[]): void {
   const instances = new Set<string>();
   for (const item of packages) {
     assert(item.instance.id.trim().length > 0, "Endpoint instance id is empty");
     assert(!instances.has(item.instance.id), `Endpoint instance ${item.instance.id} is configured twice`);
     instances.add(item.instance.id);
-    assert(item.manifest.name === item.instance.facet.module.name
-      && item.manifest.version === item.instance.facet.module.version,
-    `${item.instance.id} instance ${facetKey(item.instance)} is outside its Runtime Manifest`);
     assert(item.offers.length > 0, `${item.instance.id} binds no exact capability`);
     for (const offer of item.offers) {
       assert(offer.endpoint === item.instance.id,
@@ -108,9 +74,6 @@ export async function createLocalRuntime(
   options: CreateLocalRuntimeOptions,
 ): Promise<LocalRuntime> {
   const buildCatalog = options.buildCatalog;
-  if (options.scheduling?.maxConcurrency !== undefined || options.scheduling?.resourceLimits !== undefined) {
-    throw new Error("the selected Runtime profile owns maxConcurrency and resource limits");
-  }
   const producers = new ProducerRegistry();
   const endpoints = new EndpointRegistry();
   const validators = options.validators ?? new TypeValidatorRegistry();
@@ -119,7 +82,6 @@ export async function createLocalRuntime(
     registerProducerFacets(producers, component.producers ?? []);
   }
   for (const endpoint of options.endpoints ?? []) await endpoint.install(endpoints);
-  endpoints.applyRuntimeClosure(options.closure.value, options.closure.modules);
   const driver = new NodeDriver({
     producers,
     endpoints,
@@ -128,12 +90,13 @@ export async function createLocalRuntime(
     operations: options.operationStore,
     validators,
   });
-  const scheduling = {
-    maxConcurrency: options.closure.value.scheduling.maxConcurrency,
-    resourceLimits: Object.fromEntries(options.closure.value.scheduling.resources.map((resource) => [resource.id, resource.maxConcurrency])),
-  };
-  const worker = options.worker.create(driver, {
-    scheduler: options.scheduler,
+  const scheduling = options.scheduling;
+  const worker = createDurableLocalWorker(driver, {
+    scheduler: {
+      create(executor, schedulerOptions) {
+        return new LocalBuildScheduler(executor, schedulerOptions);
+      },
+    },
     stores: {
       builds: options.buildStore,
       operations: options.operationStore,
@@ -141,7 +104,6 @@ export async function createLocalRuntime(
       artifacts: options.artifactStore,
     },
     scheduling,
-    runtimeClosure: options.closure.value,
   });
   const credentialControl = createLocalCredentialControl({
     credentialStore: options.credentialStore,
@@ -153,6 +115,7 @@ export async function createLocalRuntime(
     operationStore: options.operationStore,
     dispatchStore: options.dispatchStore,
     artifactStore: options.artifactStore,
+    ...(options.close === undefined ? {} : { close: options.close }),
   });
   const stageAttachments = async (request: LocalBuildRequest): Promise<void> => {
     for (const item of request.attachments ?? []) {
@@ -261,42 +224,10 @@ export async function createProjectLocalRuntime(
   const configuredComponents = options.components ?? [];
   const projectInfrastructure = await createProjectRuntimeInfrastructure(root, options);
   const infrastructure = projectInfrastructure.assembly;
-  const selection = projectInfrastructure.selection;
-  const partId = (reference: { readonly from: string; readonly part: string }) =>
-    `${reference.from}.${reference.part}`;
   const endpointPackages = options.endpoints ?? [];
 
   try {
     verifyEndpointPackages(endpointPackages);
-    const modules = new RuntimeModuleRegistry();
-    registerManifests(modules, [
-      ...infrastructure.manifests,
-      ...endpointPackages.map((item) => item.manifest),
-    ]);
-    const profile = sealResolvedRuntimeProfile({
-      instances: [
-        ...infrastructure.instances,
-        ...endpointPackages.map((item) => item.instance),
-      ],
-      scheduler: partId(selection.scheduler),
-      worker: partId(selection.worker),
-      stores: {
-        build: partId(selection.buildStore),
-        operations: partId(selection.operationStore),
-        dispatch: partId(selection.dispatchStore),
-        artifacts: partId(selection.artifactStore),
-        credentials: selection.credentialStores.map(partId),
-      },
-      endpoints: endpointPackages.flatMap((item) => item.offers),
-      scheduling: {
-        maxConcurrency: options.scheduling.maxConcurrency,
-        resources: Object.entries(options.scheduling.resources ?? {}).map(([id, maxConcurrency]) => ({
-          id,
-          maxConcurrency,
-        })),
-      },
-    });
-    const closure = resolveRuntimeClosure(modules, profile);
     const runtime = await createLocalRuntime({
       buildStore: infrastructure.buildStore,
       ...(projectInfrastructure.catalog === undefined ? {} : { buildCatalog: projectInfrastructure.catalog }),
@@ -304,13 +235,17 @@ export async function createProjectLocalRuntime(
       dispatchStore: infrastructure.dispatchStore,
       artifactStore: infrastructure.artifactStore,
       credentialStore: infrastructure.credentialStore,
-      scheduler: infrastructure.scheduler,
-      worker: infrastructure.worker,
       ...(configuredComponents.length === 0
         ? {}
         : { components: configuredComponents }),
       endpoints: endpointPackages,
-      closure: { modules, value: closure },
+      scheduling: {
+        maxConcurrency: options.scheduling.maxConcurrency,
+        ...(options.scheduling.resources === undefined ? {} : {
+          resourceLimits: options.scheduling.resources,
+        }),
+      },
+      close: projectInfrastructure.close,
       ...(options.validators === undefined ? {} : { validators: options.validators }),
     });
     return {
@@ -330,9 +265,7 @@ export async function createProjectLocalRuntime(
       readArtifact: runtime.readArtifact,
       openArtifact: runtime.openArtifact,
       garbageCollectArtifacts: runtime.garbageCollectArtifacts,
-      close() {
-        return projectInfrastructure.close();
-      },
+      close: runtime.close,
     };
   } catch (error) {
       await projectInfrastructure.close();

@@ -26,9 +26,8 @@ import {
   collectNodePackageComponents,
   loadNodePackageSelection,
 } from "@narratage/package-loader-node";
-import { LocalBuildScheduler, credentialRef, defineRuntimeInfrastructurePackage } from "@narratage/runtime";
+import { credentialRef, defineRuntimeInfrastructurePackage } from "@narratage/runtime";
 import type { CredentialValue, WritableCredentialStore } from "@narratage/runtime";
-import type { RuntimeModuleManifest } from "@narratage/runtime";
 import { createSqliteRuntimeInfrastructurePackage } from "@narratage/store-sqlite";
 
 import {
@@ -40,19 +39,6 @@ import {
 } from "../../core/test/greeting-fixture.js";
 
 const providerModule = { name: "example.local-endpoint", version: "1" } as const;
-const providerFacet = { module: providerModule, name: "generation" } as const;
-const providerManifest: RuntimeModuleManifest = {
-  format: "narratage.runtime-module@1",
-  name: providerModule.name,
-  version: providerModule.version,
-  facets: [{
-    name: providerFacet.name,
-    role: "capability-endpoint",
-    fulfills: [{ capability: capabilities.generation, returns: types.generated }],
-    lifecycle: "asynchronous",
-    defaultConcurrency: 1,
-  }],
-};
 
 function projectRuntimeFixture(directory: string) {
   const execution = createLocalExecutionPackage("execution");
@@ -238,28 +224,18 @@ test("project local runtime queues, polls and cancels work with replaceable pack
       return { status: "confirmed" };
     },
   };
-  const endpointPackage: EndpointPackage = {
-    manifest: providerManifest,
-    instance: {
-      id: "generation.personal",
-      facet: providerFacet,
-      pool: "generation.personal",
-    },
-    offers: [{
+  const endpointPackage: EndpointPackage = defineEndpointPackage({
+    module: providerModule,
+    facet: "generation",
+    instance: "generation.personal",
+    pool: "generation.personal",
+    capabilities: [{
+      lifecycle: "asynchronous",
       capability: capabilities.generation,
       returns: types.generated,
-      endpoint: "generation.personal",
+      endpoint: asyncEndpoint,
     }],
-    credentials: [],
-    install(registry) {
-      registry.registerAsyncEndpoint(
-        "generation.personal",
-        capabilities.generation,
-        types.generated,
-        asyncEndpoint,
-      );
-    },
-  };
+  });
 
   try {
     const firstRuntime = await createProjectLocalRuntime({
@@ -452,79 +428,6 @@ test("project local runtime accepts components loaded from an installed package"
   }
 });
 
-test("project local runtime uses only the explicitly selected Scheduler", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-local-scheduler-service-"));
-  let creates = 0;
-  const scheduler = defineRuntimeInfrastructurePackage({
-    module: { name: "example.scheduler", version: "1" },
-    instance: "custom-scheduler",
-    parts: [{
-      role: "scheduler",
-      facet: "scheduler",
-      part: "scheduler",
-      port: {
-        create(executor, options) {
-          creates += 1;
-          return new LocalBuildScheduler(executor, options);
-        },
-      },
-    }],
-  });
-  try {
-    const base = projectRuntimeFixture(directory);
-    const runtime = await createProjectLocalRuntime({
-      dataRoot: directory,
-      ...base,
-      infrastructure: [...base.infrastructure, scheduler],
-      roles: { ...base.roles, scheduler: { from: "custom-scheduler", part: "scheduler" } },
-    });
-    await runtime.build({ id: "scheduler-selection", definition: buildDefinition(createGreetingBuild()) });
-    await runtime.workOnce();
-    assert.equal(creates, 1);
-    await runtime.close();
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-});
-
-test("two installed Schedulers are unambiguous because the Profile selects one", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-local-scheduler-selection-"));
-  const creates = { one: 0, two: 0 };
-  const closes = { one: 0, two: 0 };
-  const scheduler = (name: "one" | "two") => defineRuntimeInfrastructurePackage({
-    module: { name: `example.scheduler.${name}`, version: "1" },
-    instance: `scheduler-${name}`,
-    parts: [{
-      role: "scheduler",
-      facet: "scheduler",
-      part: "scheduler",
-      port: {
-        create(executor, options) {
-          creates[name] += 1;
-          return new LocalBuildScheduler(executor, options);
-        },
-      },
-    }],
-    close() { closes[name] += 1; },
-  });
-  try {
-    const base = projectRuntimeFixture(directory);
-    const runtime = await createProjectLocalRuntime({
-      dataRoot: directory,
-      ...base,
-      infrastructure: [...base.infrastructure, scheduler("one"), scheduler("two")],
-      roles: { ...base.roles, scheduler: { from: "scheduler-two", part: "scheduler" } },
-    });
-    await runtime.build({ id: "scheduler-two", definition: buildDefinition(createGreetingBuild()) });
-    await runtime.workOnce();
-    assert.deepEqual(creates, { one: 0, two: 1 });
-    await runtime.close();
-    assert.deepEqual(closes, { one: 1, two: 1 });
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-});
-
 test("project local runtime accepts an explicitly selected replacement ArtifactStore package", async () => {
   const directory = await mkdtemp(join(tmpdir(), "narratage-local-artifacts-"));
   const module = { name: "example.remote-artifacts", version: "1" } as const;
@@ -564,8 +467,7 @@ test("project local runtime accepts an explicitly selected replacement ArtifactS
       attachments: [{ artifact: sourceArtifact, open: async () => (async function* () { yield bytes; })() }],
     });
     const blocked = await runtime.workOnce();
-    assert.equal(blocked?.terminal, "failed");
-    assert.match(blocked?.reason ?? "", /does not bind demanded capability/u);
+    assert.equal(blocked?.phase, "blocked");
     assert.deepEqual(await artifactStore.get(sourceArtifact.digest), bytes);
     let reopened = false;
     await runtime.build({

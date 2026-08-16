@@ -1,7 +1,5 @@
 import { BuildMachine, buildDefinition, reduce } from "@narratage/core";
 import type { BuildState } from "@narratage/protocol";
-import { verifyRuntimeCoverage } from "./profile.js";
-import type { RuntimeClosure } from "./profile.js";
 
 import type {
   BuildScheduler,
@@ -55,15 +53,11 @@ export class LocalBuildScheduler implements BuildScheduler {
   readonly #executor: RuntimeCommandExecutor;
   readonly #maxConcurrency: number;
   readonly #resourceLimits: Readonly<Record<string, number>>;
-  readonly #runtimeClosure: RuntimeClosure | undefined;
   readonly #buildStore: BuildSchedulerOptions["buildStore"];
 
   constructor(executor: RuntimeCommandExecutor, options: BuildSchedulerOptions = {}) {
     this.#executor = executor;
     this.#maxConcurrency = positiveInteger(options.maxConcurrency ?? 4, "maxConcurrency");
-    this.#runtimeClosure = options.runtimeClosure === undefined
-      ? undefined
-      : structuredClone(options.runtimeClosure);
     this.#buildStore = options.buildStore;
     for (const [resource, limit] of Object.entries(options.resourceLimits ?? {})) {
       if (resource.trim().length === 0) throw new Error("resource override name must not be empty");
@@ -97,7 +91,6 @@ export class LocalBuildScheduler implements BuildScheduler {
         state = snapshot.state;
         machine = new BuildMachine(snapshot.definition, snapshot.facts);
       }
-      if (this.#runtimeClosure !== undefined) verifyRuntimeCoverage(this.#runtimeClosure, state);
       builds.push({
         id: request.id,
         state,

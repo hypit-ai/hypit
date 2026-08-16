@@ -10,15 +10,8 @@ import type { AsyncEndpoint } from "@narratage/endpoint-kit";
 import {
   LocalBuildScheduler,
   MemoryOperationStore,
-  RuntimeModuleRegistry,
-  localSchedulerOptionsFromClosure,
-  resolveRuntimeClosure,
-  sealResolvedRuntimeProfile,
 } from "@narratage/runtime";
-import type {
-  OperationStore,
-  RuntimeModuleManifest,
-} from "@narratage/runtime";
+import type { OperationStore } from "@narratage/runtime";
 import {
   createResolvedClosure,
   link,
@@ -152,86 +145,9 @@ function registerGreetingProducers(producers: ProducerRegistry): void {
   });
 }
 
-const runtimeModule = { name: "example.scheduler-runtime", version: "1" } as const;
-const providerFacet = { module: runtimeModule, name: "generation-endpoint" } as const;
-function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "asynchronous" = "immediate") {
-  const manifest: RuntimeModuleManifest = {
-    format: "narratage.runtime-module@1",
-    name: runtimeModule.name,
-    version: runtimeModule.version,
-    facets: [
-      {
-        name: "scheduler",
-        role: "scheduler",
-      },
-      {
-        name: "operations",
-        role: "operation-store",
-      },
-      ...([
-        ["worker", "worker"],
-        ["builds", "build-store"],
-        ["dispatch", "dispatch-store"],
-        ["artifacts", "artifact-store"],
-        ["credentials", "credential-store"],
-      ] as const).map(([name, role]) => ({
-        name,
-        role,
-      })),
-      {
-        name: providerFacet.name,
-        role: "capability-endpoint",
-        fulfills: [{ capability: capabilities.generation, returns: types.generated }],
-        lifecycle,
-        defaultConcurrency: 1,
-      },
-    ],
-  };
-  const modules = new RuntimeModuleRegistry();
-  modules.register(manifest);
-  const closure = resolveRuntimeClosure(modules, sealResolvedRuntimeProfile({
-    instances: [
-      { id: "scheduler.local", facet: { module: runtimeModule, name: "scheduler" } },
-      { id: "worker.local", facet: { module: runtimeModule, name: "worker" } },
-      { id: "builds.memory", facet: { module: runtimeModule, name: "builds" } },
-      { id: "operations.memory", facet: { module: runtimeModule, name: "operations" } },
-      { id: "dispatch.memory", facet: { module: runtimeModule, name: "dispatch" } },
-      { id: "artifacts.memory", facet: { module: runtimeModule, name: "artifacts" } },
-      { id: "credentials.memory", facet: { module: runtimeModule, name: "credentials" } },
-      { id: "generation.local", facet: providerFacet, pool: "fixture.account" },
-    ],
-    scheduler: "scheduler.local",
-    worker: "worker.local",
-    stores: {
-      build: "builds.memory",
-      operations: "operations.memory",
-      dispatch: "dispatch.memory",
-      artifacts: "artifacts.memory",
-      credentials: ["credentials.memory"],
-    },
-    endpoints: [{
-      capability: capabilities.generation,
-      returns: types.generated,
-      endpoint: "generation.local",
-    }],
-    scheduling: {
-      maxConcurrency: 8,
-      resources: [
-        { id: "pool:fixture.account", maxConcurrency: laneLimit },
-        {
-          id: `lane:fixture.account/${capabilities.generation.module.name}@${capabilities.generation.module.version}#${capabilities.generation.name}`,
-          maxConcurrency: laneLimit,
-        },
-      ],
-    },
-  }));
-  return { closure, modules };
-}
-
 function asyncExecutor(
   endpoint: AsyncEndpoint,
   operations: OperationStore,
-  runtime = resolvedRuntime(1, "asynchronous"),
 ) {
   const producers = new ProducerRegistry();
   registerGreetingProducers(producers);
@@ -241,12 +157,17 @@ function asyncExecutor(
     capabilities.generation,
     types.generated,
     endpoint,
+    {
+      scheduling: {
+        queue: { pool: "fixture.account", lane: "generation" },
+        resources: [
+          { id: "pool:fixture.account", maxActive: 1, maxInFlight: 1 },
+          { id: "lane:fixture.account/generation", maxActive: 1, maxInFlight: 1 },
+        ],
+      },
+    },
   );
-  endpoints.applyRuntimeClosure(runtime.closure, runtime.modules);
-  return {
-    executor: new NodeDriver({ producers, endpoints, operations }),
-    runtime,
-  };
+  return new NodeDriver({ producers, endpoints, operations });
 }
 
 test("one local Scheduler shares an Endpoint resource across multiple Builds", async () => {
@@ -318,46 +239,8 @@ test("independent paid commands inside one Build may fill the same resource with
     record.type.name === types.generated.name).length, 2);
 });
 
-test("a resolved Runtime selects an Endpoint and Scheduler policy without manual bind", async () => {
-  let maximumActive = 0;
-  const { closure, modules } = resolvedRuntime(2);
-  const { executor, endpoints } = configuredExecutor({
-    resource: "pool:ignored-registration",
-    defaultConcurrency: 1,
-    endpointId: "generation.local",
-    observe(active) {
-      maximumActive = Math.max(maximumActive, active);
-    },
-  });
-  endpoints.applyRuntimeClosure(closure, modules);
-  const results = await new LocalBuildScheduler(
-    executor,
-    localSchedulerOptionsFromClosure(closure),
-  ).run([
-    { id: "video-a", state: createGreetingBuild() },
-    { id: "video-b", state: createGreetingBuild() },
-  ]);
-
-  assert.deepEqual(results.map((result) => result.status), ["complete", "complete"]);
-  assert.equal(maximumActive, 2, "the selected Profile override owns the resource");
-  assert.equal(results.every((result) =>
-    result.state.records.some((record) => record.id === "generated:root")), true);
-});
-
-test("a asynchronous Runtime facet cannot be activated by a one-shot Handler", () => {
-  const { closure, modules } = resolvedRuntime(1, "asynchronous");
-  const { endpoints } = configuredExecutor({
-    resource: "pool:fixture.account",
-    defaultConcurrency: 1,
-    endpointId: "generation.local",
-    observe() {},
-  });
-  assert.throws(() => endpoints.applyRuntimeClosure(closure, modules), /lifecycle does not match/u);
-});
-
 test("a asynchronous Endpoint starts once and is polled until complete", async () => {
   const operations = new MemoryOperationStore();
-  const runtime = resolvedRuntime(1, "asynchronous");
   let starts = 0;
   let resumes = 0;
   let operationId: string | undefined;
@@ -380,11 +263,9 @@ test("a asynchronous Endpoint starts once and is polled until complete", async (
     },
   };
 
-  const firstExecutor = asyncExecutor(endpoint, operations, runtime).executor;
-  const [first] = await new LocalBuildScheduler(
-    firstExecutor,
-    localSchedulerOptionsFromClosure(runtime.closure),
-  ).run([{ id: "video", state: createGreetingBuild() }]);
+  const firstExecutor = asyncExecutor(endpoint, operations);
+  const [first] = await new LocalBuildScheduler(firstExecutor, { maxConcurrency: 8 })
+    .run([{ id: "video", state: createGreetingBuild() }]);
   assert.equal(first?.status, "paused");
   assert.equal(starts, 1);
   assert.equal(resumes, 0);
@@ -393,11 +274,9 @@ test("a asynchronous Endpoint starts once and is polled until complete", async (
   assert.ok(pending?.operation);
   assert.equal((await operations.read(pending.operation))?.status, "pending");
 
-  const secondExecutor = asyncExecutor(endpoint, operations, runtime).executor;
-  const [second] = await new LocalBuildScheduler(
-    secondExecutor,
-    localSchedulerOptionsFromClosure(runtime.closure),
-  ).run([{ id: "video", state: createGreetingBuild() }]);
+  const secondExecutor = asyncExecutor(endpoint, operations);
+  const [second] = await new LocalBuildScheduler(secondExecutor, { maxConcurrency: 8 })
+    .run([{ id: "video", state: createGreetingBuild() }]);
 
   assert.equal(second?.status, "complete");
   assert.equal(starts, 1);
@@ -407,7 +286,6 @@ test("a asynchronous Endpoint starts once and is polled until complete", async (
 
 test("wakeAt prevents early polling and Runtime cancellation becomes a terminal Core failure", async () => {
   const operations = new MemoryOperationStore();
-  const runtime = resolvedRuntime(1, "asynchronous");
   let resumes = 0;
   let cancels = 0;
   const wakeAt = Date.now() + 60_000;
@@ -425,8 +303,8 @@ test("wakeAt prevents early polling and Runtime cancellation becomes a terminal 
       return { status: "confirmed" };
     },
   };
-  const executor = asyncExecutor(endpoint, operations, runtime).executor;
-  const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
+  const executor = asyncExecutor(endpoint, operations);
+  const scheduler = new LocalBuildScheduler(executor, { maxConcurrency: 8 });
   const [first] = await scheduler.run([{ id: "cancel-video", state: createGreetingBuild() }]);
   const operationId = first?.outcomes.find((item) => item.status === "pending")?.operation;
   assert.ok(operationId);

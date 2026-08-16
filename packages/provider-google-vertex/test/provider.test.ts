@@ -101,11 +101,6 @@ test("Vertex transports the exact model request while the model package validate
 test("Vertex configuration exposes credential/queue policy without changing the model request", () => {
   const provider = createGoogleVertexCaptionProvider({ project: "narratage-test-project", defaultConcurrency: 3 });
   assert.equal(provider.instance.id, "google-vertex.caption");
-  const facet = provider.manifest.facets[0];
-  assert.equal(facet?.role, "capability-endpoint");
-  assert(facet?.role === "capability-endpoint");
-  assert.equal(facet.defaultConcurrency, 3);
-  assert.deepEqual(facet.credentialSlots, ["googleCredentials"]);
   assert.deepEqual(provider.offers, [{
     capability: captionGeminiCapabilities.plan,
     returns: captionTypes.plan,

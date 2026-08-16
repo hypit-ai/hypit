@@ -8,7 +8,6 @@ import type {
   BuildCatalog,
   BuildCatalogDescriptor,
   BuildCatalogEntry,
-  BuildSchedulerFactory,
   BuildSchedulerOptions,
   BuildSnapshot,
   BuildStore,
@@ -17,10 +16,8 @@ import type {
   CredentialStore,
   OperationStore,
   OperationSnapshot,
-  RuntimeModuleRegistry,
   RuntimeInfrastructurePackage,
   RuntimeRoleSelection,
-  RuntimeWorkerFactory,
 } from "@narratage/runtime";
 import type { TypeValidatorRegistrar, TypeValidatorRegistryLike } from "@narratage/validation";
 
@@ -31,11 +28,6 @@ export type LocalTypeValidatorRegistry = TypeValidatorRegistryLike & TypeValidat
 export type { EndpointPackage } from "@narratage/endpoint-kit";
 export type { RuntimeInfrastructurePackage } from "@narratage/runtime";
 
-export type LocalRuntimeClosureOptions = {
-  readonly modules: RuntimeModuleRegistry;
-  readonly value: import("@narratage/runtime").RuntimeClosure;
-};
-
 export type CreateLocalRuntimeOptions = {
   readonly buildStore: BuildStore;
   /** Host presentation metadata only; never part of Runtime Closure or Core state. */
@@ -44,13 +36,11 @@ export type CreateLocalRuntimeOptions = {
   readonly dispatchStore: import("@narratage/runtime").BuildDispatchStore;
   readonly artifactStore: ArtifactStore;
   readonly credentialStore: CredentialStore;
-  readonly scheduler: BuildSchedulerFactory;
-  readonly worker: RuntimeWorkerFactory;
   readonly components?: readonly ComponentPackage[];
   readonly endpoints?: readonly EndpointPackage[];
-  readonly closure: LocalRuntimeClosureOptions;
-  readonly scheduling?: Omit<BuildSchedulerOptions, "buildStore" | "runtimeClosure">;
+  readonly scheduling: Omit<BuildSchedulerOptions, "buildStore">;
   readonly validators?: LocalTypeValidatorRegistry;
+  readonly close?: () => Awaitable<void>;
 };
 
 export type CreateLocalRuntimeArchiveControlOptions = {

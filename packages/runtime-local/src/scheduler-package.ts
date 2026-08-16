@@ -4,7 +4,7 @@ import {
 } from "@narratage/runtime";
 import type { RuntimeInfrastructurePackage } from "@narratage/runtime";
 
-import { durableLocalWorkerFactory } from "./worker.js";
+import { createDurableLocalWorker } from "./worker.js";
 
 const localRuntimeModuleRef = {
   name: "@narratage/runtime-local",
@@ -32,7 +32,7 @@ export function createLocalExecutionPackage(
         role: "worker",
         part: "worker",
         facet: "worker",
-        port: durableLocalWorkerFactory,
+        port: { create: createDurableLocalWorker },
       },
     ],
   });

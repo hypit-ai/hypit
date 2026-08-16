@@ -7,7 +7,6 @@ import type {
   CoreCommand,
   Digest,
 } from "@narratage/protocol";
-import type { RuntimeClosure } from "./profile.js";
 import type { BuildDispatchSnapshot, BuildDispatchStore } from "./dispatch.js";
 import type { OperationSnapshot } from "./operations.js";
 
@@ -60,7 +59,6 @@ export type RuntimeWorkerFactoryOptions = {
   readonly scheduler: BuildSchedulerFactory;
   readonly stores: RuntimeExecutionStores;
   readonly scheduling: BuildSchedulerOptions;
-  readonly runtimeClosure: RuntimeClosure;
 };
 
 /** Selected execution strategy. Process supervision remains a generic Host concern. */
@@ -183,7 +181,6 @@ export type ScheduledBuildResult = {
 export type BuildSchedulerOptions = {
   readonly maxConcurrency?: number;
   readonly resourceLimits?: Readonly<Record<string, number>>;
-  readonly runtimeClosure?: RuntimeClosure;
   /** Optional durable authority. When present, every admitted Core Fact is appended. */
   readonly buildStore?: BuildStore;
 };
