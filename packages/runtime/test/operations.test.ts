@@ -3,18 +3,17 @@ import test from "node:test";
 
 import {
   MemoryOperationStore,
-  sealOperationIdentity,
 } from "@narratage/runtime";
 
 function operation() {
-  return sealOperationIdentity({
+  return {
     id: "operation:render",
     build: "video-42",
     command: "command:render",
     endpoint: "hyperframes.local",
     pool: "hyperframes.local",
     lane: "render",
-  });
+  };
 }
 
 test("OperationStore keeps the handle needed to poll external work", async () => {

@@ -62,6 +62,10 @@ function directory(root: string): string {
 
 const LOG_ROTATE_BYTES = 10 * 1024 * 1024;
 
+function nodeError(error: unknown, code: string): boolean {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+
 async function withProgramLifecycleLock<T>(
   root: string,
   id: string,
@@ -76,22 +80,28 @@ async function withProgramLifecycleLock<T>(
     try {
       lock = await open(path, "wx");
     } catch (error) {
-      if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
-      const owner = await readFile(path, "utf8").then((text) => JSON.parse(text) as {
-        readonly pid?: unknown;
-      }).catch(() => undefined);
-      if (owner === undefined || !Number.isSafeInteger(owner.pid) || !alive(owner.pid as number)) {
+      if (!nodeError(error, "EEXIST")) throw error;
+      let owner: { readonly pid?: unknown } | undefined;
+      try {
+        owner = JSON.parse(await readFile(path, "utf8")) as { readonly pid?: unknown };
+      } catch (readError) {
+        if (nodeError(readError, "ENOENT")) continue;
+        if (Date.now() >= deadline) throw new Error(`External program ${id} lifecycle lock is unreadable: ${path}`);
+        await sleep(25);
+        continue;
+      }
+      if (Number.isSafeInteger(owner.pid) && !alive(owner.pid as number)) {
         await rm(path, { force: true });
         continue;
       }
       if (Date.now() >= deadline) {
-        throw new Error(`External program ${id} lifecycle is busy in process ${String(owner.pid)}; lock: ${path}`);
+        throw new Error(`External program ${id} lifecycle is busy${Number.isSafeInteger(owner.pid) ? ` in process ${String(owner.pid)}` : ""}; lock: ${path}`);
       }
       await sleep(25);
       continue;
     }
     try {
-      await lock.writeFile(JSON.stringify({ pid: process.pid, acquiredAt: Date.now() }), "utf8");
+      await lock.writeFile(JSON.stringify({ pid: process.pid }), "utf8");
       return await runLocked();
     } finally {
       await lock.close();
@@ -101,7 +111,12 @@ async function withProgramLifecycleLock<T>(
 }
 
 async function rotateLog(path: string): Promise<void> {
-  const size = await stat(path).then((value) => value.size).catch(() => 0);
+  let size = 0;
+  try {
+    size = (await stat(path)).size;
+  } catch (error) {
+    if (!nodeError(error, "ENOENT")) throw error;
+  }
   if (size <= LOG_ROTATE_BYTES) return;
   const previous = `${path}.previous`;
   await rm(previous, { force: true });
@@ -112,9 +127,11 @@ async function readPid(root: string, id: string): Promise<number | undefined> {
   try {
     const text = await readFile(join(directory(root), `${id}.pid`), "utf8");
     const pid = Number.parseInt(text.trim(), 10);
-    return Number.isSafeInteger(pid) && pid > 0 ? pid : undefined;
-  } catch {
-    return undefined;
+    if (!Number.isSafeInteger(pid) || pid < 1) throw new Error(`External program ${id} pid file is invalid`);
+    return pid;
+  } catch (error) {
+    if (nodeError(error, "ENOENT")) return undefined;
+    throw error;
   }
 }
 
@@ -309,7 +326,13 @@ export async function reportManagedPrograms(
     const state = await program.probe();
     const pid = await readPid(dataRoot, program.id);
     const logPath = join(directory(dataRoot), `${program.id}.log`);
-    const hasLog = await stat(logPath).then(() => true).catch(() => false);
+    let hasLog = false;
+    try {
+      await stat(logPath);
+      hasLog = true;
+    } catch (error) {
+      if (!nodeError(error, "ENOENT")) throw error;
+    }
     return {
       id: program.id,
       instances,

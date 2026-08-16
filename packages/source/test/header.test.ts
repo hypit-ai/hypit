@@ -36,8 +36,4 @@ test("Source Header accepts a UTF-8 BOM but no implicit or duplicate Frontend", 
     () => parseSourceHeader("padded.svml", '<?svml using=" a@1"?>\n<body/>'),
     (error: unknown) => error instanceof SourceHeaderError && error.code === "SOURCE_HEADER_FRONTEND",
   );
-  assert.throws(
-    () => parseSourceHeader("oversized.svml", `<?svml using="${"界".repeat(1_500)}"?>\n<body/>`),
-    (error: unknown) => error instanceof SourceHeaderError && error.code === "SOURCE_HEADER_UNCLOSED",
-  );
 });

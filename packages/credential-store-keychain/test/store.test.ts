@@ -25,7 +25,7 @@ test("an absent entry is absent, and an empty one is not a secret", async () => 
 test("a malformed reference is refused before anything is looked up", async () => {
   let asked = 0;
   const store = new KeychainCredentialStore({ read: async () => { asked += 1; return "x"; } });
-  await assert.rejects(async () => await store.resolve({ format: "narratage.credential-ref@1", store: "keychain", key: " " } as never));
+  await assert.rejects(async () => await store.resolve({ store: "keychain", key: " " } as never));
   assert.equal(asked, 0);
 });
 

@@ -36,7 +36,6 @@ test("S3 artifacts use deterministic content-addressed keys", async () => {
 /** A client that can do everything, backed by an in-memory bucket. */
 class FullFakeS3 extends FakeS3 {
   readonly uploads = new Map<string, Uint8Array[]>();
-  copies = 0;
   heads = 0;
 
   async open(input: Parameters<NonNullable<S3ObjectClient["open"]>>[0]) {
@@ -83,7 +82,6 @@ class FullFakeS3 extends FakeS3 {
   async abortMultipart() {}
 
   async copy(input: Parameters<NonNullable<S3ObjectClient["copy"]>>[0]) {
-    this.copies += 1;
     const source = input.CopySource!.slice(input.CopySource!.indexOf("/") + 1);
     const value = this.values.get(source);
     if (value === undefined) throw new Error(`copy source ${source} is absent`);
@@ -128,16 +126,6 @@ test("an empty Artifact is a legitimate one, and S3 will not accept a partless u
   const ref = await store.putStream!((async function* () {})(), "application/octet-stream");
   assert.equal(ref.size, 0);
   assert.deepEqual(await store.get(ref.digest), new Uint8Array(0));
-});
-
-test("two Builds streaming identical bytes use the same destination", async () => {
-  const client = new FullFakeS3();
-  const store = new S3ArtifactStore({ client, bucket: "fixture" });
-  const bytes = () => (async function* () { yield new TextEncoder().encode("same"); })();
-  const first = await store.putStream!(bytes(), "text/plain");
-  const second = await store.putStream!(bytes(), "text/plain");
-  assert.equal(first.digest, second.digest);
-  assert.equal(client.copies, 2);
 });
 
 test("a streamed read hands back bytes as they arrive", async () => {

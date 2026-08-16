@@ -7,21 +7,6 @@ export type SourceUnit = {
   readonly text: string;
 };
 
-/** Shared identity fields of any successfully decoded self-described Source. */
-export type CompiledSourceIdentity = {
-  readonly frontend: string;
-};
-
-export function compiledSourceIdentity(value: CompiledSourceIdentity): CompiledSourceIdentity {
-  return {
-    frontend: value.frontend,
-  };
-}
-
-export function verifyCompiledSourceIdentity(value: CompiledSourceIdentity): void {
-  if (value.frontend.trim().length === 0) throw new Error("Source Frontend is empty");
-}
-
 export type SourceImportRequest = {
   readonly from: string;
   readonly alias: string;

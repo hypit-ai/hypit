@@ -4,6 +4,7 @@ import {
   mkdir,
   open as openFile,
   readdir,
+  rm,
   stat,
   unlink,
 } from "node:fs/promises";
@@ -64,7 +65,7 @@ export class FileArtifactStore implements ArtifactStore {
         await handle.close();
       }
     } catch (error) {
-      await unlink(temporary).catch(() => undefined);
+      await rm(temporary, { force: true });
       throw error;
     }
     const digest = `sha256:${hash.digest("hex")}` as Digest;
@@ -74,11 +75,11 @@ export class FileArtifactStore implements ArtifactStore {
       await link(temporary, path);
     } catch (error) {
       if (!isNodeError(error, "EEXIST")) {
-        await unlink(temporary).catch(() => undefined);
+        await rm(temporary, { force: true });
         throw error;
       }
     }
-    await unlink(temporary).catch(() => undefined);
+    await rm(temporary, { force: true });
     return { kind: "blob", digest, size, mediaType };
   }
 

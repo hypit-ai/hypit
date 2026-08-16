@@ -63,11 +63,8 @@ test("status --watch reattaches to one durable Build until it becomes terminal",
     diagnostics: [],
   };
   const dispatch = (phase: "queued" | "terminal") => ({
-    format: "narratage.build-dispatch-identity@1",
-    id: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     build: "build-watch",
-    core: state.id,
-    revision: phase === "queued" ? 0 : 1,
+    implementationPackages: [],
     createdAt: 1,
     availableAt: 1,
     phase,
@@ -175,7 +172,7 @@ test("auth opens only one Endpoint credential control, never the execution Runti
         slot: "apiKey",
         label: "KIE API key",
         kind: "secret",
-        ref: { format: "narratage.credential-ref@1", store: "env", key: "KIE_API_KEY" },
+        ref: { store: "env", key: "KIE_API_KEY" },
         configured: false,
         writable: false,
       }];
@@ -219,7 +216,7 @@ test("auth login rejects a read-only CredentialStore before asking for a secret"
         slot: "apiKey",
         label: "KIE API key",
         kind: "secret",
-        ref: { format: "narratage.credential-ref@1", store: "env", key: "KIE_API_KEY" },
+        ref: { store: "env", key: "KIE_API_KEY" },
         configured: false,
         writable: false,
       }];

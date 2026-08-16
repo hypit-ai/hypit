@@ -1,26 +1,25 @@
-export type DispatchPhase = "queued" | "running" | "waiting" | "blocked" | "terminal";
+export type DispatchPhase = "queued" | "running" | "waiting" | "terminal";
 export type DispatchTerminal = "complete" | "failed" | "cancelled";
 
-export type BuildDispatchIdentity = {
+export type BuildDispatchRequest = {
   readonly build: string;
   /** Compute packages the Worker loads for this Build. */
   readonly implementationPackages: readonly string[];
 };
 
-export type BuildDispatchSnapshot = BuildDispatchIdentity & {
+export type BuildDispatchSnapshot = BuildDispatchRequest & {
   readonly createdAt: number;
   readonly availableAt: number;
   readonly phase: DispatchPhase;
   readonly reason?: string;
   readonly cancellation?: {
-    readonly requestedAt: number;
     readonly reason?: string;
   };
   readonly terminal?: DispatchTerminal;
 };
 
 export type BuildDispatchRelease = {
-  readonly phase: "queued" | "waiting" | "blocked";
+  readonly phase: "queued" | "waiting";
   readonly availableAt: number;
   readonly reason?: string;
 };
@@ -28,13 +27,6 @@ export type BuildDispatchRelease = {
 export type DispatchQuery = {
   readonly phases?: readonly DispatchPhase[];
 };
-
-export const nonTerminalDispatchPhases = [
-  "queued",
-  "running",
-  "waiting",
-  "blocked",
-] as const satisfies readonly DispatchPhase[];
 
 export type CapacityResourceClaim = {
   readonly id: string;
@@ -74,7 +66,7 @@ export type CapacityAcquire =
 
 /** Durable queue state. Process ownership belongs to the Runtime Host, not each Build row. */
 export type BuildDispatchStore = {
-  create(identity: BuildDispatchIdentity, options?: {
+  create(request: BuildDispatchRequest, options?: {
     readonly now?: number;
   }): Promise<BuildDispatchSnapshot>;
   read(build: string): Promise<BuildDispatchSnapshot | undefined>;
@@ -83,8 +75,7 @@ export type BuildDispatchStore = {
   claim(now?: number, implementationPackages?: readonly string[]): Promise<BuildDispatchSnapshot | undefined>;
   release(build: string, update: BuildDispatchRelease): Promise<BuildDispatchSnapshot>;
   finish(build: string, terminal: DispatchTerminal, reason?: string): Promise<BuildDispatchSnapshot>;
-  requestCancellation(build: string, reason?: string, now?: number): Promise<BuildDispatchSnapshot>;
-  wake(build: string, now?: number): Promise<BuildDispatchSnapshot>;
+  requestCancellation(build: string, reason?: string): Promise<BuildDispatchSnapshot>;
   acquireCapacity(request: CapacityAcquireRequest): Promise<CapacityAcquire>;
   releaseCapacity(id: string): Promise<void>;
   releaseBuildCapacity(build: string): Promise<void>;
@@ -93,16 +84,6 @@ export type BuildDispatchStore = {
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
-}
-
-export function createBuildDispatchIdentity(input: {
-  readonly build: string;
-  readonly implementationPackages?: readonly string[];
-}): BuildDispatchIdentity {
-  assert(input.build.trim().length > 0, "Build Dispatch build id is empty");
-  const implementationPackages = [...new Set(input.implementationPackages ?? [])].sort();
-  assert(implementationPackages.every((item) => item.trim().length > 0), "Build Dispatch implementation package is empty");
-  return { build: input.build, implementationPackages };
 }
 
 export function capacityReservationId(build: string, command: string): string {

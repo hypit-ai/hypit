@@ -4,5 +4,6 @@ export {
 export {
   loadNodePackageSelection,
   NodePackageSelectionMissingError,
+  physicalPackageName,
 } from "./loader.js";
 export type * from "./types.js";
