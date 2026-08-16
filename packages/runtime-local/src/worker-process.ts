@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, open, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
 export type RuntimeWorkerLaunch = {
@@ -18,7 +18,6 @@ export type RuntimeProcessState = {
 };
 
 type ProcessRecord = {
-  readonly format: "narratage.runtime-process@1";
   readonly profile: string;
   readonly pid: number;
   readonly startedAt: number;
@@ -27,6 +26,10 @@ type ProcessRecord = {
 
 const LOG_TAIL_BYTES = 1024 * 1024;
 const LOG_ROTATE_BYTES = 10 * 1024 * 1024;
+
+function nodeError(error: unknown, code: string): boolean {
+  return error instanceof Error && "code" in error && error.code === code;
+}
 
 function paths(dataRoot: string) {
   const root = join(resolve(dataRoot), "worker");
@@ -70,35 +73,46 @@ async function withLifecycleLock<T>(dataRoot: string, timeoutMs: number, run: ()
     try {
       lock = await open(location.lock, "wx");
     } catch (error) {
-      if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
-      const owner = await readFile(location.lock, "utf8").then((text) => JSON.parse(text) as {
-        readonly pid?: unknown;
-      }).catch(() => undefined);
-      if (owner === undefined || !Number.isSafeInteger(owner.pid) || !alive(owner.pid as number)) {
-        await unlink(location.lock).catch(() => undefined);
+      if (!nodeError(error, "EEXIST")) throw error;
+      let owner: { readonly pid?: unknown } | undefined;
+      try {
+        owner = JSON.parse(await readFile(location.lock, "utf8")) as { readonly pid?: unknown };
+      } catch (readError) {
+        if (nodeError(readError, "ENOENT")) continue;
+        if (Date.now() >= deadline) throw new Error(`Runtime lifecycle lock is unreadable: ${location.lock}`);
+        await new Promise((resolveWait) => setTimeout(resolveWait, 25));
+        continue;
+      }
+      if (Number.isSafeInteger(owner.pid) && !alive(owner.pid as number)) {
+        await rm(location.lock, { force: true });
         continue;
       }
       if (Date.now() >= deadline) {
-        throw new Error(`Runtime lifecycle is busy in process ${String(owner.pid)}; lock: ${location.lock}`);
+        throw new Error(`Runtime lifecycle is busy${Number.isSafeInteger(owner.pid) ? ` in process ${String(owner.pid)}` : ""}; lock: ${location.lock}`);
       }
       await new Promise((resolveWait) => setTimeout(resolveWait, 25));
       continue;
     }
     try {
-      await lock.writeFile(JSON.stringify({ pid: process.pid, acquiredAt: Date.now() }), "utf8");
+      await lock.writeFile(JSON.stringify({ pid: process.pid }), "utf8");
       return await run();
     } finally {
       await lock.close();
-      await unlink(location.lock).catch(() => undefined);
+      await rm(location.lock, { force: true });
     }
   }
 }
 
 async function rotateLog(path: string): Promise<void> {
-  const size = await stat(path).then((value) => value.size).catch(() => 0);
+  let size = 0;
+  try {
+    size = (await stat(path)).size;
+  } catch (error) {
+    if (!nodeError(error, "ENOENT")) throw error;
+  }
   if (size <= LOG_ROTATE_BYTES) return;
   const previous = `${path}.previous`;
-  await unlink(previous).catch(() => undefined);
+  await rm(previous, { force: true });
   await rename(path, previous);
 }
 
@@ -106,14 +120,17 @@ async function record(profile: string, dataRoot: string): Promise<ProcessRecord 
   const path = paths(dataRoot).pid;
   try {
     const value = JSON.parse(await readFile(path, "utf8")) as ProcessRecord;
-    if (value.format !== "narratage.runtime-process@1" || value.profile !== resolve(profile)
+    if (value.profile !== resolve(profile)
       || !Number.isSafeInteger(value.pid) || value.pid < 1
+      || !Number.isSafeInteger(value.startedAt) || value.startedAt < 0
       || !Array.isArray(value.implementationPackages)
-      || !value.implementationPackages.every((item) => typeof item === "string" && item.length > 0)) return undefined;
+      || !value.implementationPackages.every((item) => typeof item === "string" && item.length > 0)) {
+      throw new Error(`Runtime Worker record is invalid: ${path}`);
+    }
     return value;
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
-    return undefined;
+    if (nodeError(error, "ENOENT")) return undefined;
+    throw error;
   }
 }
 
@@ -152,7 +169,12 @@ async function waitForReady(
   while (Date.now() <= deadline) {
     const state = await runtimeProcessStatus(profile, dataRoot, implementationPackages);
     if (state.state === "stopped") {
-      const log = await readFile(location.log, "utf8").catch(() => "");
+      let log = "";
+      try {
+        log = await readFile(location.log, "utf8");
+      } catch (error) {
+        if (!nodeError(error, "ENOENT")) throw error;
+      }
       throw new Error(`Runtime Worker exited before becoming ready${log.length === 0 ? "" : `: ${log.trim().split("\n").at(-1)}`}`);
     }
     if (await exists(location.ready)) return state;
@@ -179,7 +201,7 @@ export async function ensureRuntimeProcess(
     const absolute = resolve(profile);
     const location = paths(dataRoot);
     await mkdir(location.root, { recursive: true });
-    await unlink(location.ready).catch(() => undefined);
+    await rm(location.ready, { force: true });
     await rotateLog(location.log);
     const log = await open(location.log, "a");
     const child = spawn(launch.command, [
@@ -198,7 +220,6 @@ export async function ensureRuntimeProcess(
     if (child.pid === undefined) throw new Error("Runtime Worker process has no pid");
     const startedAt = Date.now();
     await writeFile(location.pid, JSON.stringify({
-      format: "narratage.runtime-process@1",
       profile: absolute,
       pid: child.pid,
       startedAt,
@@ -214,8 +235,8 @@ async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, tim
   const current = await record(profile, dataRoot);
   const location = paths(dataRoot);
   if (current === undefined || !alive(current.pid)) {
-    await unlink(location.pid).catch(() => undefined);
-    await unlink(location.ready).catch(() => undefined);
+    await rm(location.pid, { force: true });
+    await rm(location.ready, { force: true });
     return { state: "stopped", profile: resolve(profile), logPath: location.log };
   }
   try {
@@ -233,8 +254,8 @@ async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, tim
     await new Promise((resolveWait) => setTimeout(resolveWait, 50));
   }
   if (alive(current.pid)) throw new Error(`Runtime Worker ${current.pid} did not stop within ${timeoutMs}ms`);
-  await unlink(location.pid).catch(() => undefined);
-  await unlink(location.ready).catch(() => undefined);
+  await rm(location.pid, { force: true });
+  await rm(location.ready, { force: true });
   return { state: "stopped", profile: resolve(profile), logPath: location.log };
 }
 
@@ -263,5 +284,5 @@ export async function runtimeProcessLogs(dataRoot: string): Promise<{ readonly p
 
 export async function markRuntimeProcessReady(path: string): Promise<void> {
   await mkdir(dirname(resolve(path)), { recursive: true });
-  await writeFile(resolve(path), `${process.pid}\n`, "utf8");
+  await writeFile(resolve(path), "", "utf8");
 }

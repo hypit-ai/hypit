@@ -49,14 +49,18 @@ async function packageJson(root: string): Promise<PackageJson> {
   return parsePackageJson(JSON.parse(await readFile(path, "utf8")), path);
 }
 
+function missingFile(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
+}
+
 async function packageRoot(entry: string, expectedName: string): Promise<ResolvedPackage> {
   let cursor = dirname(await realpath(entry));
   while (true) {
     try {
       const json = await packageJson(cursor);
       if (json.name === expectedName) return { root: cursor, json };
-    } catch {
-      // Continue to the package that owns the resolved entry.
+    } catch (error) {
+      if (!missingFile(error)) throw error;
     }
     const parent = dirname(cursor);
     if (parent === cursor) throw new Error(`resolved entry for ${expectedName} is outside its package`);
@@ -66,15 +70,17 @@ async function packageRoot(entry: string, expectedName: string): Promise<Resolve
 
 async function resolvePackage(specifier: string, from: string): Promise<ResolvedPackage> {
   const resolver = createRequire(join(resolve(from), "__narratage_package_loader__.cjs"));
+  let entry: string;
   try {
-    return await packageRoot(resolver.resolve(specifier), specifier);
+    entry = resolver.resolve(specifier);
   } catch (entryError) {
     try {
-      return await packageRoot(resolver.resolve(`${specifier}/package.json`), specifier);
+      entry = resolver.resolve(`${specifier}/package.json`);
     } catch {
       throw new Error(`cannot resolve installed package ${specifier} from ${from}: ${entryError instanceof Error ? entryError.message : String(entryError)}`);
     }
   }
+  return await packageRoot(entry, specifier);
 }
 
 function activationPath(item: ResolvedPackage): string {
@@ -112,7 +118,7 @@ function offers(value: NodePackageContribution): readonly LogicalPackageAddress[
 }
 
 /** Conventional physical package spelling for a logical @scope/name@version address. */
-function physicalHint(logical: string): string {
+export function physicalPackageName(logical: string): string {
   const slash = logical.startsWith("@") ? logical.indexOf("/", 1) : -1;
   const version = logical.lastIndexOf("@");
   const unversioned = version > Math.max(slash, 0) ? logical.slice(0, version) : logical;
@@ -143,7 +149,7 @@ export async function loadNodePackageSelection(
     ? { selected: request }
     : request as NodePackageSelectionRequest;
   const selected = new Set(normalized.selected);
-  for (const address of normalized.logical ?? []) selected.add(physicalHint(address.name));
+  for (const address of normalized.logical ?? []) selected.add(physicalPackageName(address.name));
   if (selected.size === 0) return [];
 
   const roots = await Promise.all([...selected].sort().map(async (name) => await resolvePackage(name, root)));
@@ -175,7 +181,7 @@ export async function loadNodePackageSelection(
   for (let cursor = 0; cursor < requirements.length; cursor += 1) {
     const requirement = requirements[cursor] as { readonly key: string; readonly from: string };
     if (providedModules.has(requirement.key)) continue;
-    const providerPackage = physicalHint(requirement.key);
+    const providerPackage = physicalPackageName(requirement.key);
     assert(!activated.has(providerPackage), `selected package ${providerPackage} provides the wrong ${requirement.key}`);
     const physical = await resolvePackage(providerPackage, requirement.from);
     const provider = { physical, contribution: await importContribution(physical) };

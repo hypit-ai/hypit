@@ -26,9 +26,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
   readonly entry: SourceUnit;
   readonly #assetRoots: readonly string[];
   readonly #sourceCache = new Map<string, SourceUnit>();
-  readonly #sourceEdges = new Map<string, SourceUnit>();
   readonly #assetIdentity = new Map<string, { readonly digest: BlobRef["digest"]; readonly size: number }>();
-  readonly #assetEdges = new Map<string, string>();
   readonly #attachments = new Map<string, ArtifactAttachment>();
 
   private constructor(root: string, entry: SourceUnit, assetRoots: readonly string[]) {
@@ -95,12 +93,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     if (!isWithin(this.root, importer.id)) {
       throw new WorkspaceError("UNKNOWN_SOURCE_IMPORTER", `${importer.id} is outside this Workspace`, importer.id);
     }
-    const edge = `${importer.id}\u0000${request.from}`;
-    const locked = this.#sourceEdges.get(edge);
-    if (locked !== undefined) return locked;
-    const loaded = await this.#loadSource(resolve(dirname(importer.id), request.from));
-    this.#sourceEdges.set(edge, loaded);
-    return loaded;
+    return await this.#loadSource(resolve(dirname(importer.id), request.from));
   };
 
   readonly resolveAsset = async (
@@ -117,18 +110,13 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     if (!isWithin(this.root, importer.id)) {
       throw new WorkspaceError("UNKNOWN_SOURCE_IMPORTER", `${importer.id} is outside this Workspace`, importer.id);
     }
-    const edge = `${importer.id}\u0000${request.from}`;
-    let canonical = this.#assetEdges.get(edge);
-    if (canonical === undefined) {
-      canonical = await realpath(resolve(dirname(importer.id), request.from));
-      if (!this.#assetRoots.some((root) => isWithin(root, canonical!))) {
-        throw new WorkspaceError(
-          "SOURCE_ASSET_OUTSIDE_ROOT",
-          `Source asset ${canonical} is outside the workspace and every allowed asset root`,
-          canonical,
-        );
-      }
-      this.#assetEdges.set(edge, canonical);
+    const canonical = await realpath(resolve(dirname(importer.id), request.from));
+    if (!this.#assetRoots.some((root) => isWithin(root, canonical))) {
+      throw new WorkspaceError(
+        "SOURCE_ASSET_OUTSIDE_ROOT",
+        `Source asset ${canonical} is outside the workspace and every allowed asset root`,
+        canonical,
+      );
     }
     let identity = this.#assetIdentity.get(canonical);
     if (identity === undefined) {

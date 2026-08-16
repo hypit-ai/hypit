@@ -127,7 +127,6 @@ test("project local runtime queues, polls and cancels work with replaceable pack
   const directory = await mkdtemp(join(tmpdir(), "narratage-local-"));
   const initial = createGreetingBuild();
   const catalog = {
-    format: "narratage.build-catalog-descriptor@1" as const,
     source: { path: join(directory, "main.svml") },
     aliases: [{
       name: "final.document",
@@ -424,8 +423,8 @@ test("project local runtime accepts an explicitly selected replacement ArtifactS
       definition: buildDefinition(createGreetingBuild()),
       attachments: [{ artifact: sourceArtifact, open: async () => (async function* () { yield bytes; })() }],
     });
-    const blocked = await runtime.workOnce();
-    assert.equal(blocked?.phase, "blocked");
+    const failed = await runtime.workOnce();
+    assert.equal(failed?.terminal, "failed");
     assert.deepEqual(await artifactStore.get(sourceArtifact.digest), bytes);
     let reopened = false;
     await runtime.build({

@@ -26,7 +26,7 @@ export const nodeRuntimeHostAdapterAbi = "narratage.node-runtime-host-adapter@1"
 export type RuntimeHostBuildSubmission = {
   readonly id: string;
   readonly state: BuildState;
-  readonly status: "queued" | "running" | "waiting" | "blocked" | "complete" | "failed" | "cancelled";
+  readonly status: "queued" | "running" | "waiting" | "complete" | "failed" | "cancelled";
   readonly dispatch: BuildDispatchSnapshot;
 };
 
@@ -267,20 +267,23 @@ export function resolveRuntimeExecutable(root: string, value: string): string {
 }
 
 async function executableExists(value: string): Promise<boolean> {
+  const unavailable = (error: unknown) => error instanceof Error && "code" in error
+    && ["ENOENT", "ENOTDIR", "EACCES"].includes(String(error.code));
   if (pathLike(value)) {
     try {
       await access(value, constants.X_OK);
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      if (unavailable(error)) return false;
+      throw error;
     }
   }
   for (const directory of (process.env.PATH ?? "").split(delimiter).filter(Boolean)) {
     try {
       await access(resolve(directory, value), constants.X_OK);
       return true;
-    } catch {
-      // Continue searching PATH.
+    } catch (error) {
+      if (!unavailable(error)) throw error;
     }
   }
   return false;

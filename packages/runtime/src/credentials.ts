@@ -1,5 +1,4 @@
 export type CredentialRef = {
-  readonly format: "narratage.credential-ref@1";
   /** CredentialStore implementation name, for example env, keychain or aws-default. */
   readonly store: string;
   /** Store-local opaque lookup key. It is configuration, never the secret value. */
@@ -27,13 +26,12 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 export function credentialRef(store: string, key: string): CredentialRef {
-  const value = { format: "narratage.credential-ref@1", store, key } as const;
+  const value = { store, key };
   verifyCredentialRef(value);
   return value;
 }
 
 export function verifyCredentialRef(ref: CredentialRef): void {
-  assert(ref.format === "narratage.credential-ref@1", "unsupported CredentialRef format");
   assert(ref.store.trim().length > 0, "CredentialRef store is empty");
   assert(ref.key.trim().length > 0, "CredentialRef key is empty");
 }

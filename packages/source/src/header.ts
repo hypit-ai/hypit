@@ -1,5 +1,4 @@
 export type SourceHeader = {
-  readonly format: "narratage.source-header@1";
   /** Logical Frontend request. A trusted Host resolves it to one exact implementation. */
   readonly using: string;
   readonly start: number;
@@ -27,7 +26,6 @@ export class SourceHeaderError extends Error {
   }
 }
 
-const MAX_HEADER_BYTES = 4_096;
 const FRONTEND = /^[^\s<>&'"]+$/u;
 
 function fail(sourceName: string, source: string, code: string, message: string, offset: number): never {
@@ -46,16 +44,12 @@ export function parseSourceHeader(sourceName: string, text: string): SourceHeade
   if (!text.startsWith("<?svml", start)) {
     fail(sourceName, text, "SOURCE_HEADER_MISSING", 'Source must begin with <?svml using="..."?>', start);
   }
-  const bounded = text.slice(start, start + MAX_HEADER_BYTES + 1);
-  const relativeClose = bounded.indexOf("?>", "<?svml".length);
+  const relativeClose = text.indexOf("?>", start + "<?svml".length);
   if (relativeClose < 0) {
-    fail(sourceName, text, "SOURCE_HEADER_UNCLOSED", `Source Header must close within ${MAX_HEADER_BYTES} bytes`, start);
+    fail(sourceName, text, "SOURCE_HEADER_UNCLOSED", "Source Header is not closed", start);
   }
-  const close = start + relativeClose;
+  const close = relativeClose;
   const raw = text.slice(start, close + 2);
-  if (new TextEncoder().encode(raw).byteLength > MAX_HEADER_BYTES) {
-    fail(sourceName, text, "SOURCE_HEADER_UNCLOSED", `Source Header must close within ${MAX_HEADER_BYTES} bytes`, start);
-  }
   const match = /^<\?svml[ \t]+using=(['"])([^'"\r\n]+)\1[ \t]*\?>$/u.exec(raw);
   if (match === null) {
     fail(
@@ -76,7 +70,7 @@ export function parseSourceHeader(sourceName: string, text: string): SourceHeade
   if (nextContent !== null && after.startsWith("<?svml", nextContent.index)) {
     fail(sourceName, text, "SOURCE_HEADER_DUPLICATE", "Source declares more than one Source Header", end + nextContent.index);
   }
-  return { format: "narratage.source-header@1", using, start, end };
+  return { using, start, end };
 }
 
 /** Preserve every original offset while making the Header ordinary whitespace to body Frontends. */

@@ -68,7 +68,7 @@ export function createLocalRuntimeArchiveControl(
     },
     async queue() {
       const [dispatches, capacity] = await Promise.all([
-        options.dispatchStore.list({ phases: ["queued", "running", "waiting", "blocked"] }),
+        options.dispatchStore.list({ phases: ["queued", "running", "waiting"] }),
         options.dispatchStore.listCapacity(),
       ]);
       const operationHistory = (await Promise.all(dispatches.map(async (item) =>
@@ -129,7 +129,7 @@ export function createLocalRuntimeControl(
       assert(isEnumerableBuildStore(options.buildStore),
         "selected BuildStore does not expose the maintenance index required for Artifact GC");
       if (gc.apply === true) {
-        const active = await options.dispatchStore.list({ phases: ["queued", "running", "waiting", "blocked"] });
+        const active = await options.dispatchStore.list({ phases: ["queued", "running", "waiting"] });
         assert(active.length === 0,
           `Artifact GC cannot delete while ${active.length} Build${active.length === 1 ? " is" : "s are"} active`);
       }

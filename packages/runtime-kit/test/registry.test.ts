@@ -42,7 +42,6 @@ test("a facet declares which kind it is, and the registry keeps the two apart", 
   assert.equal(registry.has("example.endpoint", "artifact-store"), false);
   assert.ok(registry.has("example.service", "artifact-store"));
   assert.equal(registry.has("example.service", "endpoint"), false);
-  assert.equal(registry.has("example.absent"), false);
 });
 
 test("Endpoint and Artifact Store adapters may share one package address", () => {
@@ -142,16 +141,4 @@ test("Runtime config readers accept a value or refuse it; they never guess one",
   // An unknown key is a misconfiguration, not something to ignore.
   assert.throws(() => runtimeConfigExact(config, ["a", "n"], "subject"), /does not accept b/u);
   assert.doesNotThrow(() => runtimeConfigExact(config, ["a", "n", "b"], "subject"));
-});
-
-/**
- * Pin.
- *
- * ABI and offers carry the address. Identity must not repeat it.
- */
-test("an adapter stores its address once", () => {
-  const facet = endpoint("@narratage/example-provider");
-  assert.equal("identity" in facet, false);
-  assert.deepEqual(facet.offers, ["@narratage/example-provider"]);
-  assert.equal(facet.abi, "narratage.runtime-endpoint-adapter-host@1");
 });

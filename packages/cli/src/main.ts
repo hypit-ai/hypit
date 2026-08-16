@@ -447,7 +447,6 @@ function createCatalogDescriptor(options: {
     return { name: item.name, ref: item.ref };
   });
   return {
-    format: "narratage.build-catalog-descriptor@1",
     source: {
       path: resolve(options.source),
     },
@@ -1074,12 +1073,12 @@ export async function runCli(
       const [worker, external, selectedRuntime] = loaded;
       runtime = selectedRuntime;
       const queue = await runtime.queue();
-      const counts = Object.fromEntries(["queued", "running", "waiting", "blocked", "terminal"]
+      const counts = Object.fromEntries(["queued", "running", "waiting", "terminal"]
         .map((phase) => [phase, queue.dispatches.filter((item) => item.phase === phase).length]));
       const lanes = summarizeQueueLanes(queue.capacity);
       const ready = worker.state === "running"
         && external.programs.every((item) => item.state.state === "ready");
-      const active = ["queued", "running", "waiting", "blocked"]
+      const active = ["queued", "running", "waiting"]
         .reduce((total, phase) => total + (counts[phase] ?? 0), 0);
       const attention = active > 0 && !ready;
       const unavailable = external.programs.filter((item) => item.state.state !== "ready");

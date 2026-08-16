@@ -23,7 +23,7 @@ export function s3ArtifactKey(prefix: string | undefined, digest: Digest): strin
   if (!isDigest(digest)) throw new Error("Artifact digest is invalid");
   const [algorithm, hex] = digest.split(":");
   if (algorithm !== "sha256" || hex === undefined) throw new Error(`unsupported Artifact digest ${digest}`);
-  const normalized = normalizePrefix(prefix);
+  const normalized = normalizeS3ArtifactPrefix(prefix);
   const relative = `${algorithm}/${hex.slice(0, 2)}/${hex}`;
   return normalized.length === 0 ? relative : `${normalized}/${relative}`;
 }
@@ -54,7 +54,7 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function normalizePrefix(prefix: string | undefined): string {
+export function normalizeS3ArtifactPrefix(prefix: string | undefined): string {
   if (prefix === undefined || prefix.length === 0) return "";
   const normalized = prefix.replace(/^\/+|\/+$/gu, "");
   assert(normalized.length > 0, "S3 Artifact prefix must contain a non-slash character");
@@ -96,7 +96,7 @@ export class S3ArtifactStore implements ArtifactStore {
     }
     this.#client = options.client;
     this.#bucket = options.bucket;
-    this.#prefix = normalizePrefix(options.prefix);
+    this.#prefix = normalizeS3ArtifactPrefix(options.prefix);
     this.#expectedBucketOwner = options.expectedBucketOwner;
     this.#partSizeBytes = positiveInteger(options.partSizeBytes ?? 16 * 1024 * 1024, "partSizeBytes");
     assert(this.#partSizeBytes >= 5 * 1024 * 1024, "S3 requires multipart parts of at least 5 MiB");
@@ -129,10 +129,6 @@ export class S3ArtifactStore implements ArtifactStore {
       ContentLength: copy.byteLength,
       ContentType: mediaType,
       ChecksumSHA256: hash.digest("base64"),
-      Metadata: {
-        "narratage-digest": digest,
-        "narratage-size": String(copy.byteLength),
-      },
       ...(this.#expectedBucketOwner === undefined
         ? {}
         : { ExpectedBucketOwner: this.#expectedBucketOwner }),
@@ -262,7 +258,6 @@ export class S3ArtifactStore implements ArtifactStore {
         CopySource: `${this.#bucket}/${staging}`,
         ContentType: mediaType,
         MetadataDirective: "REPLACE",
-        Metadata: { "narratage-digest": digest, "narratage-size": String(size) },
         ...owner,
       });
     } finally {
@@ -313,7 +308,7 @@ export class S3ArtifactStore implements ArtifactStore {
 export function createS3ArtifactStore(
   options: CreateS3ArtifactStorePackageOptions,
 ): S3ArtifactStore {
-  const prefix = normalizePrefix(options.prefix);
+  const prefix = normalizeS3ArtifactPrefix(options.prefix);
   const client = options.client ?? new AwsS3ObjectClient({
     ...(options.region === undefined ? {} : { region: options.region }),
     ...(options.endpoint === undefined ? {} : { endpoint: options.endpoint }),

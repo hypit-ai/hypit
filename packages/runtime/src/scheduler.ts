@@ -1,4 +1,4 @@
-import { BuildMachine, buildDefinition, reduce } from "@narratage/core";
+import { BuildMachine, reduce } from "@narratage/core";
 import type { BuildState } from "@narratage/protocol";
 
 import type {
@@ -75,17 +75,12 @@ export class LocalBuildScheduler {
       let state = structuredClone(request.state);
       let machine: BuildMachine | undefined;
       if (this.#buildStore !== undefined) {
-        let snapshot = request.snapshot ?? await this.#buildStore.read(request.id);
-        if (snapshot !== undefined && snapshot.build !== request.id) {
-          throw new Error(`scheduled Build snapshot ${snapshot.build} does not belong to ${request.id}`);
-        }
+        const snapshot = request.snapshot;
         if (snapshot === undefined) {
-          try {
-            snapshot = await this.#buildStore.create(request.id, buildDefinition(state));
-          } catch (error) {
-            snapshot = await this.#buildStore.read(request.id);
-            if (snapshot === undefined) throw error;
-          }
+          throw new Error(`scheduled Build ${request.id} has no durable snapshot`);
+        }
+        if (snapshot.build !== request.id) {
+          throw new Error(`scheduled Build snapshot ${snapshot.build} does not belong to ${request.id}`);
         }
         state = snapshot.state;
         machine = new BuildMachine(snapshot.definition, snapshot.facts);

@@ -191,11 +191,8 @@ export class RuntimeAdapterRegistry {
     this.#registrations.set(key, facet.implementation);
   }
 
-  has(use: string, kind?: RuntimeAdapterKind): boolean {
-    return kind === undefined
-      ? (["endpoint", "artifact-store", "credential-store"] as const).some((value) =>
-          this.#registrations.has(this.#key(use, value)))
-      : this.#registrations.has(this.#key(use, kind));
+  has(use: string, kind: RuntimeAdapterKind): boolean {
+    return this.#registrations.has(this.#key(use, kind));
   }
 
   async activateEndpoint(use: string, context: RuntimeAdapterFactoryContext): Promise<RuntimeEndpointActivation> {

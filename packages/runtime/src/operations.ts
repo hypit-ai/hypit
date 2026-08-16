@@ -62,8 +62,6 @@ export type OperationQuery = {
   readonly build?: string;
   readonly command?: string;
   readonly endpoint?: string;
-  readonly pool?: string;
-  readonly lane?: string;
 };
 
 export type OperationStore = {
@@ -76,18 +74,6 @@ export type OperationStore = {
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
-}
-
-export function sealOperationIdentity(
-  value: OperationIdentity,
-): OperationIdentity {
-  assert(value.id.trim().length > 0, "Operation id is empty");
-  assert(value.build.trim().length > 0, "Operation build id is empty");
-  assert(value.command.trim().length > 0, "Operation command id is empty");
-  assert(value.endpoint.trim().length > 0, "Operation Endpoint id is empty");
-  assert(value.pool.trim().length > 0, "Operation Provider Pool is empty");
-  assert(value.lane.trim().length > 0, "Operation Capability Lane is empty");
-  return { ...value };
 }
 
 function copy(snapshot: OperationSnapshot): OperationSnapshot {
@@ -114,8 +100,6 @@ export class MemoryOperationStore implements OperationStore {
       .filter((snapshot) => query.build === undefined || snapshot.build === query.build)
       .filter((snapshot) => query.command === undefined || snapshot.command === query.command)
       .filter((snapshot) => query.endpoint === undefined || snapshot.endpoint === query.endpoint)
-      .filter((snapshot) => query.pool === undefined || snapshot.pool === query.pool)
-      .filter((snapshot) => query.lane === undefined || snapshot.lane === query.lane)
       .sort((left, right) => left.id.localeCompare(right.id))
       .map(copy);
   }

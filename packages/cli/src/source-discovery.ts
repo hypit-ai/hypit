@@ -3,6 +3,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 import { authorFrontendsFromHostFacets, prepareAuthorSource } from "@narratage/elaborator";
 import type { AuthorFrontend } from "@narratage/elaborator";
+import { physicalPackageName } from "@narratage/package-loader-node";
 import type { LogicalPackageAddress, LoadedPackage } from "@narratage/package-loader-node";
 import { modulePackageAbi } from "@narratage/protocol";
 import { prepareRunSource, runFragmentHostAbi, runFrontendsFromHostFacets } from "@narratage/run";
@@ -14,19 +15,10 @@ function isWithin(root: string, path: string): boolean {
   return relation === "" || (!relation.startsWith("..") && !isAbsolute(relation));
 }
 
-/** Conventional physical package name for a logical Source import. */
-function physicalPackage(request: string): string {
+function selectedPackage(request: string): string {
   const version = request.lastIndexOf("@");
   if (version <= 0) throw new Error(`Package request ${request} must end in @version`);
-  const logical = request.slice(0, version);
-  if (logical.startsWith("@")) {
-    const slash = logical.indexOf("/", 1);
-    if (slash < 0) throw new Error(`Scoped package request ${request} is invalid`);
-    const subpath = logical.indexOf("/", slash + 1);
-    return subpath < 0 ? logical : logical.slice(0, subpath);
-  }
-  const subpath = logical.indexOf("/");
-  return subpath < 0 ? logical : logical.slice(0, subpath);
+  return physicalPackageName(request);
 }
 
 function relativeSource(importer: string, request: string): string {
@@ -75,7 +67,7 @@ export async function discoverSourcePackages(
 
   const requireLogical = (address: LogicalPackageAddress, physical: string | undefined): void => {
     logical.set(addressKey(address), address);
-    selected.add(physical ?? physicalPackage(address.name));
+    selected.add(physical ?? selectedPackage(address.name));
   };
   const moduleOwner = (request: string): string | undefined => packages.find((item) =>
     (item.contribution.modules ?? []).some((module) => [
