@@ -1724,10 +1724,15 @@ export async function runCli(
             reportProgramProgress,
           );
       runtime = await loadRuntime(await runtimeHost(args.runtime), loadedPackageSet);
-      worker = await controller.worker.up({
-        ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
-      });
       let built = await runtime.build(request);
+      try {
+        worker = await controller.worker.up({
+          ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Error(`Build ${built.id} is queued, but the Runtime Worker could not start: ${detail}`);
+      }
       if (args.follow && runtime !== undefined) {
         built = await observeBuild(runtime, built, {
           ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),

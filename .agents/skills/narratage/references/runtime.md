@@ -29,7 +29,8 @@ Builds remain archived and neither command cancels remote Provider work.
 ## Preserve durable semantics
 
 - `runtime up` starts or reuses the detached Worker plus declared external programs. A direct
-  `build` also ensures the selected Runtime is running before submission.
+  `build` durably submits first, then ensures a Worker containing every queued Build's implementation
+  packages is running. A Worker skips work whose packages it has not loaded.
 - `programs up/status/down` manages external programs only. Do not use it as the normal Build
   bootstrap because it does not own the Worker lifecycle.
 - A Build continues after durable submission. `--follow` only observes progress; interrupting the

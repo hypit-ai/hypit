@@ -451,6 +451,7 @@ export async function createRuntimeFromConfig(
         ...collectNodePackageComponents((options.implementationPackages ?? []).map((item) => item.contribution)),
         ...(options.components ?? []),
       ],
+      implementationPackages: (options.implementationPackages ?? []).map((item) => item.specifier),
       endpoints,
       scheduling: { maxConcurrency: document.concurrency },
       close: async () => {

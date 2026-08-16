@@ -16,6 +16,7 @@ import { LocalBuildScheduler } from "@narratage/runtime";
 type LocalWorkerOptions = {
   readonly stores: RuntimeExecutionStores;
   readonly scheduling: BuildSchedulerOptions;
+  readonly implementationPackages: readonly string[];
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -267,7 +268,10 @@ class DurableLocalWorker implements RuntimeWorker {
   }
 
   async runOnce(): Promise<BuildDispatchSnapshot | undefined> {
-    const dispatch = await this.#options.stores.dispatch.claim();
+    const dispatch = await this.#options.stores.dispatch.claim(
+      Date.now(),
+      this.#options.implementationPackages,
+    );
     return dispatch === undefined ? undefined : await this.#runClaimed(dispatch);
   }
 
@@ -282,7 +286,10 @@ class DurableLocalWorker implements RuntimeWorker {
     };
     while (options.signal?.aborted !== true) {
       while (active.size < maxBuilds) {
-        const dispatch = await this.#options.stores.dispatch.claim();
+        const dispatch = await this.#options.stores.dispatch.claim(
+          Date.now(),
+          this.#options.implementationPackages,
+        );
         if (dispatch === undefined) break;
         launch(dispatch);
       }

@@ -128,6 +128,11 @@ export function createLocalRuntimeControl(
         "selected ArtifactStore does not expose explicit retention management");
       assert(isEnumerableBuildStore(options.buildStore),
         "selected BuildStore does not expose the maintenance index required for Artifact GC");
+      if (gc.apply === true) {
+        const active = await options.dispatchStore.list({ phases: ["queued", "running", "waiting", "blocked"] });
+        assert(active.length === 0,
+          `Artifact GC cannot delete while ${active.length} Build${active.length === 1 ? " is" : "s are"} active`);
+      }
       const reachable = new Set<import("@narratage/protocol").Digest>();
       for (const snapshot of await options.buildStore.list()) collectArtifactDigests(snapshot.state, reachable);
       for (const operation of await options.operationStore.list({})) collectArtifactDigests(operation, reachable);

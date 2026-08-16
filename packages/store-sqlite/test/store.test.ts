@@ -136,6 +136,27 @@ test("cancelling a never-claimed Build atomically withdraws it from dispatch", a
   }
 });
 
+test("a Worker skips ready Builds whose implementation packages it has not loaded", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-package-admission-"));
+  try {
+    const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
+    await state.dispatch.create(createBuildDispatchIdentity({
+      build: "a-needs-image",
+      implementationPackages: ["@example/image"],
+    }), { now: 100 });
+    await state.dispatch.create(createBuildDispatchIdentity({
+      build: "b-needs-nothing",
+    }), { now: 100 });
+
+    assert.equal((await state.dispatch.claim(101, []))?.build, "b-needs-nothing");
+    assert.equal(await state.dispatch.claim(102, []), undefined);
+    assert.equal((await state.dispatch.claim(103, ["@example/image"]))?.build, "a-needs-image");
+    state.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("Pool and Lane limits count only asynchronous Operations still in flight", async () => {
   const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-hierarchy-"));
   try {
