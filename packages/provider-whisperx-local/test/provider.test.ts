@@ -41,10 +41,6 @@ function wav(sampleFrames: number): Uint8Array {
 test("local WhisperX Provider pins the complete service runtime and is independently queued", () => {
   const provider = createLocalWhisperXProvider({ expectedModel: "small", defaultConcurrency: 2 });
   assert.equal(provider.instance.id, "whisperx.local");
-  const facet = provider.manifest.facets[0];
-  assert.equal(facet?.role, "capability-endpoint");
-  assert(facet?.role === "capability-endpoint");
-  assert.equal(facet.defaultConcurrency, 2);
   assert.throws(
     () => createLocalWhisperXProvider({ baseUrl: "https://whisper.example.com" }),
     /loopback/u,

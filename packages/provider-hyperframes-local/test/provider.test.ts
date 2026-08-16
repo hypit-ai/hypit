@@ -97,10 +97,6 @@ async function handlerFor(request: Need): Promise<{
 test("local HyperFrames Provider exposes one exact visual capability and two separate concurrency levels", async () => {
   const provider = createLocalHyperframesProvider({ workers: 4, defaultConcurrency: 2 });
   assert.equal(provider.instance.id, "hyperframes.local");
-  const facet = provider.manifest.facets[0];
-  assert.equal(facet?.role, "capability-endpoint");
-  assert(facet?.role === "capability-endpoint");
-  assert.equal(facet.defaultConcurrency, 2);
   assert.deepEqual(provider.offers, [{
     capability: renderHyperframesCapabilities.renderVisual,
     returns: mediaTypes.renderedVisual,

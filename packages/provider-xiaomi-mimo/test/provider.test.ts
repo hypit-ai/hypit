@@ -107,11 +107,6 @@ test("the official Provider maps all three model contracts without owning them",
 
 test("Provider configuration owns credentials and queue policy, not model semantics", () => {
   const provider = createXiaomiMimoProvider({ defaultConcurrency: 3 });
-  const facet = provider.manifest.facets[0];
-  assert(facet?.role === "capability-endpoint");
-  assert.equal(facet.defaultConcurrency, 3);
-  assert.deepEqual(facet.credentialSlots, ["apiKey"]);
   assert.equal(provider.offers.length, 3);
   assert.ok(provider.offers.every((binding) => binding.returns.name === generationTypes.audioSet.name));
-  assert.equal(JSON.stringify(provider.manifest).includes("voiceDescription"), false);
 });

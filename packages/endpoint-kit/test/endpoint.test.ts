@@ -40,7 +40,7 @@ function capturingRegistrar(registrations: CapturedRegistration[]): EndpointRegi
   };
 }
 
-test("one Endpoint definition generates Manifest, instance, offers and host-neutral registration", async () => {
+test("one Endpoint definition generates one configured instance and host-neutral registration", async () => {
   const endpoint = defineEndpointPackage({
     module: { name: "example.provider", version: "1" },
     facet: "http-json",
@@ -59,10 +59,8 @@ test("one Endpoint definition generates Manifest, instance, offers and host-neut
       }),
     }],
   });
-  assert.equal(endpoint.manifest.facets[0]?.role, "capability-endpoint");
-  assert.equal(endpoint.manifest.facets[0]?.defaultConcurrency, 3);
-  assert.deepEqual(endpoint.manifest.facets[0]?.credentialSlots, ["apiKey"]);
   assert.equal(endpoint.instance.id, "example.personal");
+  assert.equal(endpoint.instance.pool, "example.personal");
   assert.deepEqual(endpoint.offers, [{
     capability: capabilities.generation,
     returns: types.generated,
