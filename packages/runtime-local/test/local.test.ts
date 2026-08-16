@@ -310,6 +310,76 @@ test("project local runtime queues, polls and cancels work with replaceable pack
   }
 });
 
+test("one local Worker advances independent Builds concurrently under one command limit", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "narratage-local-parallel-builds-"));
+  let active = 0;
+  let mostActive = 0;
+  const components: ComponentPackage = {
+    producers: [
+      {
+        producer: producers.makePrompt,
+        handler: ({ inputs }) => {
+          if (inputs.intent?.value.kind !== "inline") throw new Error("missing greeting intent");
+          const intent = inputs.intent.value.value as { readonly name: string };
+          return {
+            outputs: { prompt: { kind: "inline", value: `Greet ${intent.name}` } },
+            needs: {},
+          };
+        },
+      },
+      {
+        producer: producers.placeholderText,
+        handler: async ({ inputs }) => {
+          if (inputs.prompt?.value.kind !== "inline") throw new Error("missing greeting prompt");
+          active += 1;
+          mostActive = Math.max(mostActive, active);
+          await new Promise((resolve) => setTimeout(resolve, 80));
+          active -= 1;
+          return {
+            outputs: { generated: { kind: "inline", value: `Preview: ${inputs.prompt.value.value}` } },
+            needs: {},
+          };
+        },
+      },
+      {
+        producer: producers.assemble,
+        handler: ({ inputs }) => {
+          if (inputs.generated?.value.kind !== "inline") throw new Error("missing generated greeting");
+          return {
+            outputs: { document: { kind: "inline", value: { text: inputs.generated.value.value } } },
+            needs: {},
+          };
+        },
+      },
+    ],
+  };
+  try {
+    const runtime = await createProjectLocalRuntime({
+      dataRoot: directory,
+      ...projectRuntimeFixture(directory),
+      components: [components],
+    });
+    await runtime.buildMany(["parallel-a", "parallel-b"].map((id) => ({
+      id,
+      definition: buildDefinition(createGreetingBuild({ generationRealization: "placeholder" })),
+    })));
+    const controller = new AbortController();
+    const work = runtime.work({ idlePollMs: 5, signal: controller.signal });
+    while (true) {
+      const states = await Promise.all(["parallel-a", "parallel-b"].map(async (id) =>
+        (await runtime.status(id)).dispatch?.terminal));
+      if (states.every((state) => state === "complete")) break;
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    controller.abort();
+    await work;
+    assert.equal(mostActive, 2);
+    await runtime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("project local runtime accepts components loaded from an installed package", async () => {
   const directory = await mkdtemp(join(tmpdir(), "narratage-local-components-"));
   const runtimeRoot = join(directory, "external-project");
