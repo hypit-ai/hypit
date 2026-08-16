@@ -1,21 +1,9 @@
-import { defineRuntimeInfrastructurePackage } from "@narratage/runtime";
 import type {
   CredentialRef,
   CredentialStore,
   CredentialValue,
-  RuntimeInfrastructurePackage,
 } from "@narratage/runtime";
 import { verifyCredentialRef } from "@narratage/runtime";
-
-export const environmentCredentialStoreModuleRef = {
-  name: "@narratage/credential-store-env",
-  version: "1",
-} as const;
-
-export type CreateEnvironmentCredentialStorePackageOptions = {
-  readonly instance?: string;
-  readonly environment?: NodeJS.ProcessEnv;
-};
 
 /** Resolves only explicitly requested environment variables and never snapshots or enumerates env. */
 export class EnvironmentCredentialStore implements CredentialStore {
@@ -32,20 +20,4 @@ export class EnvironmentCredentialStore implements CredentialStore {
     if (secret === undefined || secret.length === 0) return undefined;
     return { secret };
   }
-}
-
-export function createEnvironmentCredentialStorePackage(
-  options: CreateEnvironmentCredentialStorePackageOptions = {},
-): RuntimeInfrastructurePackage {
-  const instance = options.instance ?? "credentials";
-  return defineRuntimeInfrastructurePackage({
-    module: environmentCredentialStoreModuleRef,
-    instance,
-    parts: [{
-      role: "credential-store",
-      part: "store",
-      facet: "credential-store",
-      port: new EnvironmentCredentialStore(options.environment),
-    }],
-  });
 }

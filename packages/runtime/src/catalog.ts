@@ -24,7 +24,7 @@ export type BuildCatalogEntry = BuildCatalogDescriptor & {
   readonly createdAt: number;
 };
 
-/** Host presentation index only. It is never Build truth or part of Runtime Closure. */
+/** Host presentation index only. It is never Build truth. */
 export type BuildCatalog = {
   record(build: string, descriptor: BuildCatalogDescriptor): Promise<BuildCatalogEntry>;
   read(build: string): Promise<BuildCatalogEntry | undefined>;

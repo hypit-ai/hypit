@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  S3ArtifactStore,
-  createS3ArtifactStorePackage,
-} from "@narratage/artifact-store-s3";
+import { S3ArtifactStore } from "@narratage/artifact-store-s3";
 import type { S3ObjectClient } from "@narratage/artifact-store-s3";
 import { isManagedArtifactStore, isStreamingArtifactStore } from "@narratage/runtime";
 
@@ -34,18 +31,6 @@ test("S3 artifacts use deterministic content-addressed keys", async () => {
   assert.equal(first.digest, second.digest);
   assert.match(store.key(first.digest), /^projects\/acme\/sha256\//u);
   assert.deepEqual(await store.get(first.digest), bytes);
-});
-
-test("configured S3 service locks its location", () => {
-  const configured = createS3ArtifactStorePackage({
-    instance: "artifacts.team",
-    client: new FakeS3(),
-    bucket: "team-artifacts",
-    prefix: "svml",
-    region: "us-east-1",
-    expectedBucketOwner: "123456789012",
-  });
-  assert.equal(configured.parts[0]?.instance.id, "artifacts.team.store");
 });
 
 /** A client that can do everything, backed by an in-memory bucket. */

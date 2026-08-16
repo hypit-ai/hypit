@@ -36,21 +36,13 @@ async function project(program: (root: string) => ManagedProgram) {
       use: "@narratage/runtime-local",
       config: {
         dataRoot: ".",
-        infrastructure: {},
-        roles: {
-          scheduler: { from: "execution", part: "scheduler" },
-          worker: { from: "execution", part: "worker" },
-          buildStore: { from: "state", part: "builds" },
-          operationStore: { from: "state", part: "operations" },
-          dispatchStore: { from: "state", part: "dispatch" },
-          artifactStore: { from: "artifacts", part: "store" },
-          credentialStores: [{ from: "credentials", part: "store" }],
-        },
+        artifacts: { use: "example.artifacts" },
+        credentials: {},
         endpoints: {
           one: { use: "example.program", pool: "example.local", config: {} },
           two: { use: "example.program", pool: "example.local", config: {} },
         },
-        capacity: { maxActiveOperations: 1 },
+        concurrency: 1,
       },
     },
   }));

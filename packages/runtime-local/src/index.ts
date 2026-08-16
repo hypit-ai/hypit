@@ -1,18 +1,11 @@
 export {
-  createLocalExecutionPackage,
-} from "./scheduler-package.js";
-export {
   createLocalRuntimeArchiveControl,
   createLocalRuntimeArtifactAccess,
   createLocalRuntimeControl,
-  createProjectLocalRuntimeArchiveControl,
-  createProjectLocalRuntimeArtifactAccess,
-  createProjectLocalRuntimeControl,
 } from "./control.js";
 export { createLocalCredentialControl } from "./credentials.js";
 export {
   createLocalRuntime,
-  createProjectLocalRuntime,
 } from "./runtime.js";
 export {
   createRuntimeFromConfig,

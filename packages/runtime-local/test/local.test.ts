@@ -11,8 +11,8 @@ import { join } from "node:path";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { FileArtifactStore, createFileArtifactStorePackage } from "@narratage/artifact-store-fs";
-import { createEnvironmentCredentialStorePackage } from "@narratage/credential-store-env";
+import { FileArtifactStore } from "@narratage/artifact-store-fs";
+import { EnvironmentCredentialStore } from "@narratage/credential-store-env";
 import { MemoryArtifactStore } from "@narratage/driver-node";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import type { AsyncEndpoint } from "@narratage/endpoint-kit";
@@ -20,15 +20,15 @@ import type {
   ComponentPackage,
   EndpointPackage,
 } from "@narratage/runtime-local";
-import { createLocalExecutionPackage, createProjectLocalRuntime } from "@narratage/runtime-local";
+import { createLocalRuntime } from "@narratage/runtime-local";
 import { buildDefinition } from "@narratage/core";
 import {
   collectNodePackageComponents,
   loadNodePackageSelection,
 } from "@narratage/package-loader-node";
-import { credentialRef, defineRuntimeInfrastructurePackage } from "@narratage/runtime";
+import { credentialRef } from "@narratage/runtime";
 import type { CredentialValue, WritableCredentialStore } from "@narratage/runtime";
-import { createSqliteRuntimeInfrastructurePackage } from "@narratage/store-sqlite";
+import { SqliteRuntimeState } from "@narratage/store-sqlite";
 
 import {
   capabilities,
@@ -41,28 +41,16 @@ import {
 const providerModule = { name: "example.local-endpoint", version: "1" } as const;
 
 function projectRuntimeFixture(directory: string) {
-  const execution = createLocalExecutionPackage("execution");
-  const state = createSqliteRuntimeInfrastructurePackage({
-    path: join(directory, ".narratage", "runtime.sqlite"),
-    instance: "state",
-  });
-  const artifacts = createFileArtifactStorePackage({
-    root: join(directory, ".narratage", "artifacts"),
-    instance: "artifacts",
-  });
-  const credentials = createEnvironmentCredentialStorePackage({ instance: "credentials" });
+  const state = new SqliteRuntimeState(join(directory, ".narratage", "runtime.sqlite"));
   return {
-    infrastructure: [execution, state, artifacts, credentials],
-    roles: {
-      scheduler: { from: "execution", part: "scheduler" },
-      worker: { from: "execution", part: "worker" },
-      buildStore: { from: "state", part: "builds" },
-      operationStore: { from: "state", part: "operations" },
-      dispatchStore: { from: "state", part: "dispatch" },
-      artifactStore: { from: "artifacts", part: "store" },
-      credentialStores: [{ from: "credentials", part: "store" }],
-    },
+    buildStore: state.builds,
+    buildCatalog: state.catalog,
+    operationStore: state.operations,
+    dispatchStore: state.dispatch,
+    artifactStore: new FileArtifactStore(join(directory, ".narratage", "artifacts")),
+    credentialStore: new EnvironmentCredentialStore(),
     scheduling: { maxConcurrency: 4 },
+    close: () => state.close(),
   } as const;
 }
 
@@ -71,7 +59,7 @@ test("Artifact GC is explicit, dry-run by default, and only removes unreachable 
   try {
     const artifacts = new FileArtifactStore(join(directory, ".narratage", "artifacts"));
     const orphan = await artifacts.put(new TextEncoder().encode("orphan"), "application/octet-stream");
-    const runtime = await createProjectLocalRuntime({ dataRoot: directory, ...projectRuntimeFixture(directory) });
+    const runtime = await createLocalRuntime(projectRuntimeFixture(directory));
     const preview = await runtime.garbageCollectArtifacts();
     assert.deepEqual(preview.unreachable, [orphan.digest]);
     assert.deepEqual(preview.deleted, []);
@@ -93,16 +81,6 @@ test("Endpoint-declared credentials use the selected writable Store without a Pr
     async put(ref, value) { values.set(ref.key, value); },
     async delete(ref) { return values.delete(ref.key); },
   };
-  const memoryCredentials = defineRuntimeInfrastructurePackage({
-    module: { name: "example.credentials-memory", version: "1" },
-    instance: "memory-credentials",
-    parts: [{
-      role: "credential-store",
-      facet: "credential-store",
-      part: "store",
-      port: credentialStore,
-    }],
-  });
   const endpoint = defineEndpointPackage({
     module: providerModule,
     facet: "generation",
@@ -121,15 +99,9 @@ test("Endpoint-declared credentials use the selected writable Store without a Pr
     }],
   });
   try {
-    const base = projectRuntimeFixture(directory);
-    const runtime = await createProjectLocalRuntime({
-      dataRoot: directory,
-      ...base,
-      infrastructure: [...base.infrastructure.slice(0, -1), memoryCredentials],
-      roles: {
-        ...base.roles,
-        credentialStores: [{ from: "memory-credentials", part: "store" }],
-      },
+    const runtime = await createLocalRuntime({
+      ...projectRuntimeFixture(directory),
+      credentialStore,
       endpoints: [endpoint],
     });
     assert.deepEqual((await runtime.credentials("generation.auth-test")).map((item) => ({
@@ -238,8 +210,7 @@ test("project local runtime queues, polls and cancels work with replaceable pack
   });
 
   try {
-    const firstRuntime = await createProjectLocalRuntime({
-      dataRoot: directory,
+    const firstRuntime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
       components: [components],
       endpoints: [endpointPackage],
@@ -330,8 +301,7 @@ test("one local Worker advances independent Builds concurrently under one comman
     ],
   };
   try {
-    const runtime = await createProjectLocalRuntime({
-      dataRoot: directory,
+    const runtime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
       components: [components],
     });
@@ -405,10 +375,8 @@ test("project local runtime accepts components loaded from an installed package"
 
   try {
     const loaded = await loadNodePackageSelection(["example-greeting-components"], installedRoot);
-    const runtime = await createProjectLocalRuntime({
-      dataRoot: runtimeRoot,
+    const runtime = await createLocalRuntime({
       ...projectRuntimeFixture(runtimeRoot),
-      packageRoot: installedRoot,
       components: collectNodePackageComponents(loaded.map((item) => item.contribution)),
     });
     const result = await runtime.build({
@@ -430,28 +398,11 @@ test("project local runtime accepts components loaded from an installed package"
 
 test("project local runtime accepts an explicitly selected replacement ArtifactStore package", async () => {
   const directory = await mkdtemp(join(tmpdir(), "narratage-local-artifacts-"));
-  const module = { name: "example.remote-artifacts", version: "1" } as const;
   const artifactStore = new MemoryArtifactStore();
-  const artifacts = defineRuntimeInfrastructurePackage({
-    module,
-    instance: "remote-artifacts",
-    parts: [{
-        facet: "artifact-store",
-        part: "store",
-        role: "artifact-store",
-        port: artifactStore,
-    }],
-  });
   try {
-    const selected = projectRuntimeFixture(directory);
-    const runtime = await createProjectLocalRuntime({
-      dataRoot: directory,
-      ...selected,
-      infrastructure: [...selected.infrastructure, artifacts],
-      roles: {
-        ...selected.roles,
-        artifactStore: { from: "remote-artifacts", part: "store" },
-      },
+    const runtime = await createLocalRuntime({
+      ...projectRuntimeFixture(directory),
+      artifactStore,
     });
     const bytes = new Uint8Array([7, 8, 9]);
     const sourceArtifact = {

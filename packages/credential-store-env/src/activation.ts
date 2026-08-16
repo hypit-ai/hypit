@@ -1,19 +1,19 @@
 import {
-  createRuntimeInfrastructureAdapterFacet,
+  createRuntimeCredentialStoreAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
 } from "@narratage/runtime-kit";
 
-import { createEnvironmentCredentialStorePackage } from "./index.js";
+import { EnvironmentCredentialStore } from "./index.js";
 
-const environmentCredentialStoreAdapter = createRuntimeInfrastructureAdapterFacet({
+const environmentCredentialStoreAdapter = createRuntimeCredentialStoreAdapterFacet({
   use: "@narratage/credential-store-env",
   validate(context) {
     const config = runtimeConfigObject(context.config, "environment CredentialStore");
     runtimeConfigExact(config, [], "environment CredentialStore");
   },
-  create(context) {
-    return createEnvironmentCredentialStorePackage({ instance: context.instance });
+  open() {
+    return { value: new EnvironmentCredentialStore() };
   },
 });
 

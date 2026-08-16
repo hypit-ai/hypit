@@ -1,2 +1,2 @@
-export { SqliteRuntimeState, createSqliteRuntimeInfrastructurePackage, sqliteStoreModuleRef } from "./store.js";
+export { SqliteRuntimeState } from "./store.js";
 export type * from "./store.js";

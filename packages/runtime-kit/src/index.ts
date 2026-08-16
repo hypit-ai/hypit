@@ -2,20 +2,14 @@ import type { EndpointPackage } from "@narratage/endpoint-kit";
 import type { HostFacet } from "@narratage/host";
 import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue } from "@narratage/protocol";
-import type { RuntimeInfrastructurePackage } from "@narratage/runtime";
 import { credentialRef } from "@narratage/runtime";
-import type { CredentialRef } from "@narratage/runtime";
+import type { ArtifactStore, CredentialRef, CredentialStore } from "@narratage/runtime";
 
 export const runtimeEndpointAdapterHostAbi = "narratage.runtime-endpoint-adapter-host@1";
-export const runtimeInfrastructureHostAbi = "narratage.runtime-infrastructure-adapter-host@1";
+export const runtimeArtifactStoreAdapterHostAbi = "narratage.runtime-artifact-store-adapter-host@1";
+export const runtimeCredentialStoreAdapterHostAbi = "narratage.runtime-credential-store-adapter-host@1";
 
-export type RuntimeAdapterKind = "endpoint" | "infrastructure";
-
-function runtimeAdapterHostAbi(kind: RuntimeAdapterKind):
-  | typeof runtimeEndpointAdapterHostAbi
-  | typeof runtimeInfrastructureHostAbi {
-  return kind === "endpoint" ? runtimeEndpointAdapterHostAbi : runtimeInfrastructureHostAbi;
-}
+export type RuntimeAdapterKind = "endpoint" | "artifact-store" | "credential-store";
 
 type RuntimeAdapterAddress = {
   readonly use: string;
@@ -23,13 +17,10 @@ type RuntimeAdapterAddress = {
 };
 
 export type RuntimeAdapterFactoryContext = {
-  /** Absolute private data root selected by the Runtime adapter. Never a source boundary. */
   readonly dataRoot: string;
   readonly instance: string;
-  /** Required for Endpoint adapters; absent for Runtime infrastructure adapters. */
   readonly pool?: string;
   readonly config: CanonicalValue;
-  /** Observation commands may request adapters to avoid creating durable state. */
   readonly access?: "read-write" | "read-only";
 };
 
@@ -40,7 +31,6 @@ export type RuntimeDoctorDiagnostic = {
   readonly subject?: string;
 };
 
-/** One command this deployment may run on the developer's machine. */
 export type ManagedProgramCommand = {
   readonly command: string;
   readonly args: readonly string[];
@@ -49,17 +39,8 @@ export type ManagedProgramCommand = {
 export type ManagedProgramState =
   | { readonly state: "ready" }
   | { readonly state: "down"; readonly detail: string }
-  /** Something answers, but not as the configured deployment expects. */
   | { readonly state: "mismatch"; readonly detail: string };
 
-/**
- * A separate program that must already be running for this Endpoint to work.
- *
- * An Endpoint that spawns a bounded process per Need declares nothing here; this
- * is for a program whose cost is its warm state, which therefore outlives one
- * Need and one Build. `start` is absent when the deployment does not own the
- * program's lifetime, as with a remote host, leaving `probe` to report on it.
- */
 export type ManagedProgram = {
   readonly id: string;
   probe(): Promise<ManagedProgramState>;
@@ -67,71 +48,92 @@ export type ManagedProgram = {
   readonly start?: ManagedProgramCommand;
 };
 
-/**
- * The complete, side-effect-free declaration of one configured Endpoint.
- *
- * `activate` may parse configuration and construct handlers, but it must not
- * resolve credentials or environment-sourced deployment values, access the
- * network, start a process or mutate durable state. That gives normal execution, `doctor`, credential management and
- * program lifecycle one source of truth without making a second manifest just
- * for diagnostics.
- */
 export type RuntimeEndpointActivation = {
   readonly endpoint: EndpointPackage;
   readonly program?: ManagedProgram;
   readonly diagnose?: () => readonly RuntimeDoctorDiagnostic[] | Promise<readonly RuntimeDoctorDiagnostic[]>;
 };
 
+export type RuntimeOpened<T> = {
+  readonly value: T;
+  readonly close?: () => void | Promise<void>;
+};
+
 export type RuntimeEndpointAdapterImplementation = {
   activate(context: RuntimeAdapterFactoryContext): RuntimeEndpointActivation | Promise<RuntimeEndpointActivation>;
 };
 
-export type RuntimeInfrastructureImplementation = {
-  /** Pure, closed-data validation. Must not construct a service or touch the environment. */
+type RuntimeStoreAdapterImplementation<T> = {
   validate(context: RuntimeAdapterFactoryContext): void;
-  create(context: RuntimeAdapterFactoryContext): RuntimeInfrastructurePackage | Promise<RuntimeInfrastructurePackage>;
+  open(context: RuntimeAdapterFactoryContext): RuntimeOpened<T> | Promise<RuntimeOpened<T>>;
   doctor?(context: RuntimeAdapterFactoryContext): readonly RuntimeDoctorDiagnostic[] | Promise<readonly RuntimeDoctorDiagnostic[]>;
 };
 
-export type RuntimeAdapterHostFacet = HostFacet & {
-  readonly abi: ReturnType<typeof runtimeAdapterHostAbi>;
-  readonly implementation: RuntimeEndpointAdapterImplementation | RuntimeInfrastructureImplementation;
-};
+type RuntimeAdapterImplementation =
+  | RuntimeEndpointAdapterImplementation
+  | RuntimeStoreAdapterImplementation<ArtifactStore>
+  | RuntimeStoreAdapterImplementation<CredentialStore>;
 
-type RuntimeAdapterRegistration = {
-  readonly implementation: RuntimeAdapterHostFacet["implementation"];
+export type RuntimeAdapterHostFacet = HostFacet & {
+  readonly abi:
+    | typeof runtimeEndpointAdapterHostAbi
+    | typeof runtimeArtifactStoreAdapterHostAbi
+    | typeof runtimeCredentialStoreAdapterHostAbi;
+  readonly implementation: RuntimeAdapterImplementation;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+function abiFor(kind: RuntimeAdapterKind): RuntimeAdapterHostFacet["abi"] {
+  if (kind === "endpoint") return runtimeEndpointAdapterHostAbi;
+  if (kind === "artifact-store") return runtimeArtifactStoreAdapterHostAbi;
+  return runtimeCredentialStoreAdapterHostAbi;
+}
+
 function address(facet: RuntimeAdapterHostFacet): RuntimeAdapterAddress {
   const kind = facet.abi === runtimeEndpointAdapterHostAbi
     ? "endpoint"
-    : facet.abi === runtimeInfrastructureHostAbi ? "infrastructure" : undefined;
+    : facet.abi === runtimeArtifactStoreAdapterHostAbi
+      ? "artifact-store"
+      : facet.abi === runtimeCredentialStoreAdapterHostAbi ? "credential-store" : undefined;
   assert(kind !== undefined, `Runtime Adapter ${facet.abi} ABI is unsupported`);
   assert(facet.offers?.length === 1 && facet.offers[0]!.trim().length > 0,
     "Runtime Adapter must offer exactly one non-empty use name");
   return { use: facet.offers[0]!, kind };
 }
 
-function implementation(
-  value: unknown,
-  subject: string,
-  kind: RuntimeAdapterKind,
-): RuntimeAdapterHostFacet["implementation"] {
+function verifyImplementation(value: unknown, subject: string, kind: RuntimeAdapterKind): RuntimeAdapterImplementation {
   assert(value !== null && typeof value === "object", `${subject} implementation is not an object`);
   if (kind === "endpoint") {
-    assert(typeof (value as { activate?: unknown }).activate === "function",
-      `${subject} does not implement activate()`);
+    assert(typeof (value as { activate?: unknown }).activate === "function", `${subject} does not implement activate()`);
     return value as RuntimeEndpointAdapterImplementation;
   }
-  assert(typeof (value as { create?: unknown }).create === "function", `${subject} does not implement create()`);
   assert(typeof (value as { validate?: unknown }).validate === "function", `${subject} does not implement validate()`);
+  assert(typeof (value as { open?: unknown }).open === "function", `${subject} does not implement open()`);
   const doctor = (value as { doctor?: unknown }).doctor;
   assert(doctor === undefined || typeof doctor === "function", `${subject}.doctor must be a function`);
-  return value as RuntimeInfrastructureImplementation;
+  return value as RuntimeAdapterImplementation;
+}
+
+function storeFacet<T>(kind: "artifact-store" | "credential-store", options: {
+  readonly use: string;
+  readonly validate: RuntimeStoreAdapterImplementation<T>["validate"];
+  readonly open: RuntimeStoreAdapterImplementation<T>["open"];
+  readonly doctor?: RuntimeStoreAdapterImplementation<T>["doctor"];
+}): RuntimeAdapterHostFacet {
+  assert(options.use.trim().length > 0, "Runtime Adapter use name is empty");
+  const implementation = {
+    validate: options.validate,
+    open: options.open,
+    ...(options.doctor === undefined ? {} : { doctor: options.doctor }),
+  };
+  return {
+    abi: abiFor(kind),
+    offers: [options.use],
+    implementation: verifyImplementation(implementation, `Runtime Adapter ${options.use}`, kind),
+  };
 }
 
 export function createRuntimeEndpointAdapterFacet(options: {
@@ -139,36 +141,35 @@ export function createRuntimeEndpointAdapterFacet(options: {
   readonly activate: RuntimeEndpointAdapterImplementation["activate"];
 }): RuntimeAdapterHostFacet {
   assert(options.use.trim().length > 0, "Runtime Adapter use name is empty");
-  const facet: RuntimeAdapterHostFacet = {
+  return {
     abi: runtimeEndpointAdapterHostAbi,
     offers: [options.use],
-    implementation: implementation({ activate: options.activate }, `Runtime Adapter ${options.use}`, "endpoint"),
+    implementation: verifyImplementation({ activate: options.activate }, `Runtime Adapter ${options.use}`, "endpoint"),
   };
-  return facet;
 }
 
-export function createRuntimeInfrastructureAdapterFacet(options: {
+export function createRuntimeArtifactStoreAdapterFacet(options: {
   readonly use: string;
-  readonly validate: RuntimeInfrastructureImplementation["validate"];
-  readonly create: RuntimeInfrastructureImplementation["create"];
-  readonly doctor?: RuntimeInfrastructureImplementation["doctor"];
+  readonly validate: RuntimeStoreAdapterImplementation<ArtifactStore>["validate"];
+  readonly open: RuntimeStoreAdapterImplementation<ArtifactStore>["open"];
+  readonly doctor?: RuntimeStoreAdapterImplementation<ArtifactStore>["doctor"];
 }): RuntimeAdapterHostFacet {
-  assert(options.use.trim().length > 0, "Runtime Adapter use name is empty");
-  return {
-    abi: runtimeInfrastructureHostAbi,
-    offers: [options.use],
-    implementation: implementation({
-      validate: options.validate,
-      create: options.create,
-      ...(options.doctor === undefined ? {} : { doctor: options.doctor }),
-    }, `Runtime Adapter ${options.use}`, "infrastructure"),
-  };
+  return storeFacet("artifact-store", options);
+}
+
+export function createRuntimeCredentialStoreAdapterFacet(options: {
+  readonly use: string;
+  readonly validate: RuntimeStoreAdapterImplementation<CredentialStore>["validate"];
+  readonly open: RuntimeStoreAdapterImplementation<CredentialStore>["open"];
+  readonly doctor?: RuntimeStoreAdapterImplementation<CredentialStore>["doctor"];
+}): RuntimeAdapterHostFacet {
+  return storeFacet("credential-store", options);
 }
 
 export function isRuntimeAdapterHostFacet(value: HostFacet): value is RuntimeAdapterHostFacet {
   try {
     const resolved = address(value as RuntimeAdapterHostFacet);
-    implementation(value.implementation, "Runtime Adapter", resolved.kind);
+    verifyImplementation(value.implementation, "Runtime Adapter", resolved.kind);
     return true;
   } catch {
     return false;
@@ -176,70 +177,33 @@ export function isRuntimeAdapterHostFacet(value: HostFacet): value is RuntimeAda
 }
 
 export class RuntimeAdapterRegistry {
-  readonly #registrations = new Map<string, RuntimeAdapterRegistration>();
+  readonly #registrations = new Map<string, RuntimeAdapterImplementation>();
 
   #key(use: string, kind: RuntimeAdapterKind): string {
     return `${kind}\u0000${use}`;
   }
 
-  #register(facet: RuntimeAdapterHostFacet): void {
-    const resolved = address(facet);
-    implementation(facet.implementation, `Runtime Adapter ${resolved.use}`, resolved.kind);
-    const key = this.#key(resolved.use, resolved.kind);
-    assert(!this.#registrations.has(key), `Runtime ${resolved.kind} Adapter ${resolved.use} is already registered`);
-    this.#registrations.set(key, { implementation: facet.implementation });
-  }
-
   registerFacet(facet: HostFacet): void {
     assert(isRuntimeAdapterHostFacet(facet), `Host facet ${facet.abi} is not a valid Runtime Adapter`);
-    this.#register(facet);
+    const resolved = address(facet);
+    const key = this.#key(resolved.use, resolved.kind);
+    assert(!this.#registrations.has(key), `Runtime ${resolved.kind} Adapter ${resolved.use} is already registered`);
+    this.#registrations.set(key, facet.implementation);
   }
 
   has(use: string, kind?: RuntimeAdapterKind): boolean {
     return kind === undefined
-      ? this.#registrations.has(this.#key(use, "endpoint")) || this.#registrations.has(this.#key(use, "infrastructure"))
+      ? (["endpoint", "artifact-store", "credential-store"] as const).some((value) =>
+          this.#registrations.has(this.#key(use, value)))
       : this.#registrations.has(this.#key(use, kind));
   }
 
-  /**
-   * Validate one selected adapter without constructing it. Missing/kind errors
-   * are diagnostics; adapter-owned configuration errors remain throws so the
-   * Host can attach the selected instance and component/Endpoint-specific code.
-   */
-  validate(
-    use: string,
-    kind: RuntimeAdapterKind,
-    context: RuntimeAdapterFactoryContext,
-  ): readonly RuntimeDoctorDiagnostic[] {
-    const value = this.#registrations.get(this.#key(use, kind));
-    if (value === undefined) return [{
-      severity: "error",
-      code: "RUNTIME_ADAPTER_MISSING",
-      message: `Runtime Adapter ${use} is not registered`,
-      subject: use,
-    }];
-    assert(kind === "infrastructure", "Endpoint configuration is validated by its activation");
-    (value.implementation as RuntimeInfrastructureImplementation).validate(context);
-    return [];
-  }
-
-  async activateEndpoint(
-    use: string,
-    context: RuntimeAdapterFactoryContext,
-  ): Promise<RuntimeEndpointActivation> {
-    const value = this.#registrations.get(this.#key(use, "endpoint"));
-    assert(value !== undefined, `Runtime Endpoint adapter ${use} is not registered`);
-    const implementation = value.implementation as RuntimeEndpointAdapterImplementation;
+  async activateEndpoint(use: string, context: RuntimeAdapterFactoryContext): Promise<RuntimeEndpointActivation> {
+    const implementation = this.#registrations.get(this.#key(use, "endpoint")) as RuntimeEndpointAdapterImplementation | undefined;
+    assert(implementation !== undefined, `Runtime Endpoint adapter ${use} is not registered`);
     const activation = await implementation.activate(context);
-    assert(activation !== null && typeof activation === "object", `Runtime Endpoint adapter ${use} returned no activation`);
-    assert(activation.endpoint !== null && typeof activation.endpoint === "object",
-      `Runtime Endpoint adapter ${use} activation has no Endpoint package`);
     assert(activation.endpoint.instance.id === context.instance,
       `Runtime Endpoint adapter ${use} created Endpoint ${activation.endpoint.instance.id} outside configured instance ${context.instance}`);
-    assert(activation.program === undefined || activation.program.id.trim().length > 0,
-      `Runtime Endpoint adapter ${use} Managed Program id is empty`);
-    assert(activation.diagnose === undefined || typeof activation.diagnose === "function",
-      `Runtime Endpoint adapter ${use} activation diagnose must be a function`);
     return activation;
   }
 
@@ -247,25 +211,38 @@ export class RuntimeAdapterRegistry {
     return (await this.activateEndpoint(use, context)).endpoint;
   }
 
-  async createInfrastructure(use: string, context: RuntimeAdapterFactoryContext): Promise<RuntimeInfrastructurePackage> {
-    const value = this.#registrations.get(this.#key(use, "infrastructure"));
-    assert(value !== undefined, `Runtime infrastructure adapter ${use} is not registered`);
-    const implementation = value.implementation as RuntimeInfrastructureImplementation;
+  async #openStore<T>(use: string, kind: "artifact-store" | "credential-store", context: RuntimeAdapterFactoryContext): Promise<RuntimeOpened<T>> {
+    const implementation = this.#registrations.get(this.#key(use, kind)) as RuntimeStoreAdapterImplementation<T> | undefined;
+    assert(implementation !== undefined, `Runtime ${kind} adapter ${use} is not registered`);
     implementation.validate(context);
-    const created = await implementation.create(context);
-    for (const part of created.parts) {
-      assert(part.instance.id === `${context.instance}.${part.part}`,
-        `Runtime Adapter ${use} created part ${part.instance.id} outside configured instance ${context.instance}`);
-    }
-    return created;
+    const opened = await implementation.open(context);
+    assert(opened.value !== null && typeof opened.value === "object", `Runtime ${kind} adapter ${use} returned no value`);
+    return opened;
   }
 
-  async doctor(use: string, kind: RuntimeAdapterKind, context: RuntimeAdapterFactoryContext): Promise<readonly RuntimeDoctorDiagnostic[]> {
-    const value = this.#registrations.get(this.#key(use, kind));
-    if (value === undefined) return [{ severity: "error", code: "RUNTIME_ADAPTER_MISSING", message: `Runtime Adapter ${use} is not registered`, subject: use }];
-    assert(kind === "infrastructure", "Endpoint diagnostics belong to its activation");
-    const diagnose = (value.implementation as RuntimeInfrastructureImplementation).doctor;
-    return diagnose === undefined ? [] : await diagnose(context);
+  async openArtifactStore(use: string, context: RuntimeAdapterFactoryContext): Promise<RuntimeOpened<ArtifactStore>> {
+    return await this.#openStore(use, "artifact-store", context);
+  }
+
+  async openCredentialStore(use: string, context: RuntimeAdapterFactoryContext): Promise<RuntimeOpened<CredentialStore>> {
+    return await this.#openStore(use, "credential-store", context);
+  }
+
+  validate(use: string, kind: Exclude<RuntimeAdapterKind, "endpoint">, context: RuntimeAdapterFactoryContext): readonly RuntimeDoctorDiagnostic[] {
+    const implementation = this.#registrations.get(this.#key(use, kind)) as RuntimeStoreAdapterImplementation<unknown> | undefined;
+    if (implementation === undefined) return [{
+      severity: "error", code: "RUNTIME_ADAPTER_MISSING", message: `Runtime Adapter ${use} is not registered`, subject: use,
+    }];
+    implementation.validate(context);
+    return [];
+  }
+
+  async doctor(use: string, kind: Exclude<RuntimeAdapterKind, "endpoint">, context: RuntimeAdapterFactoryContext): Promise<readonly RuntimeDoctorDiagnostic[]> {
+    const implementation = this.#registrations.get(this.#key(use, kind)) as RuntimeStoreAdapterImplementation<unknown> | undefined;
+    if (implementation === undefined) return [{
+      severity: "error", code: "RUNTIME_ADAPTER_MISSING", message: `Runtime Adapter ${use} is not registered`, subject: use,
+    }];
+    return implementation.doctor === undefined ? [] : await implementation.doctor(context);
   }
 }
 
@@ -297,7 +274,6 @@ export function runtimeConfigBoolean(value: CanonicalValue | undefined, subject:
   return value;
 }
 
-/** Closed deployment syntax for a CredentialRef; secret bytes never enter the Profile. */
 export function runtimeConfigCredentialRef(
   value: CanonicalValue | undefined,
   subject: string,
@@ -309,4 +285,8 @@ export function runtimeConfigCredentialRef(
   const key = runtimeConfigString(object.key, `${subject}.key`);
   assert(store !== undefined && key !== undefined, `${subject} requires store and key`);
   return credentialRef(store, key);
+}
+
+export function canonicalRuntimeConfig(value: unknown): CanonicalValue {
+  return canonicalize(value);
 }

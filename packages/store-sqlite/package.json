@@ -10,13 +10,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
-    "activation": "./src/activation.ts"
-  },
   "dependencies": {
     "@narratage/core": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-kit": "workspace:*"
+    "@narratage/runtime": "workspace:*"
   }
 }

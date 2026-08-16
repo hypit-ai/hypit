@@ -9,16 +9,13 @@ import {
   nonTerminalDispatchPhases,
   sealOperationIdentity,
 } from "@narratage/runtime";
-import {
-  createSqliteRuntimeInfrastructurePackage,
-  SqliteRuntimeState,
-} from "@narratage/store-sqlite";
+import { SqliteRuntimeState } from "@narratage/store-sqlite";
 
 import { createGreetingBuild } from "../../core/test/greeting-fixture.js";
 
 test("read-only SQLite observation of an absent archive creates no file", async () => {
   const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-read-only-"));
-  const path = join(directory, ".svml", "runtime.sqlite");
+  const path = join(directory, ".narratage", "runtime.sqlite");
   try {
     const state = new SqliteRuntimeState(path, { readOnly: true });
     assert.equal(await state.builds.read("missing"), undefined);

@@ -69,7 +69,7 @@ writing a temporary file, then atomically replaces the requested destination. A 
 loaded into CLI memory and a corrupt stream cannot overwrite an existing export.
 
 `builds` and source aliases come from an optional Host `BuildCatalog`. The Catalog contains paths
-and presentation names only. It is not Core truth or a Runtime Closure facet; `inspect` and `get`
+and presentation names only. It is not Core truth; `inspect` and `get`
 always resolve the alias back through the verified BuildState before accepting it.
 `history` searches those frozen Catalog names across Builds, but reports only Logical Outputs whose
 selected Record is present in the reconstructed Build view. It neither infers renames nor lists unbuilt
