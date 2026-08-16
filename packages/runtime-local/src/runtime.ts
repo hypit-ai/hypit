@@ -22,7 +22,6 @@ import type {
   LocalBuildRequest,
   LocalBuildSubmission,
   LocalRuntime,
-  EndpointPackage,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -51,20 +50,6 @@ async function wait(delayMs: number, signal: AbortSignal | undefined): Promise<v
   });
 }
 
-function verifyEndpointPackages(packages: readonly EndpointPackage[]): void {
-  const instances = new Set<string>();
-  for (const item of packages) {
-    assert(item.instance.id.trim().length > 0, "Endpoint instance id is empty");
-    assert(!instances.has(item.instance.id), `Endpoint instance ${item.instance.id} is configured twice`);
-    instances.add(item.instance.id);
-    assert(item.offers.length > 0, `${item.instance.id} binds no exact capability`);
-    for (const offer of item.offers) {
-      assert(offer.endpoint === item.instance.id,
-        `${item.instance.id} offer points to ${offer.endpoint}, not ${item.instance.id}`);
-    }
-  }
-}
-
 export async function createLocalRuntime(
   options: CreateLocalRuntimeOptions,
 ): Promise<LocalRuntime> {
@@ -91,7 +76,6 @@ export async function createLocalRuntime(
       builds: options.buildStore,
       operations: options.operationStore,
       dispatch: options.dispatchStore,
-      artifacts: options.artifactStore,
     },
     scheduling,
     implementationPackages: [...new Set(options.implementationPackages ?? [])],

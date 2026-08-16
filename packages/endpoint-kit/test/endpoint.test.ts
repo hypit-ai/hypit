@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   defineEndpointPackage,
@@ -16,10 +15,6 @@ import type { CapabilityRef, TypeRef } from "@narratage/protocol";
 import { credentialRef } from "@narratage/runtime";
 
 import { capabilities, types } from "../../core/test/greeting-fixture.js";
-
-const implementation = {
-  digest: fixtureDigest("example.provider/http-json@1"),
-} as const;
 
 type CapturedRegistration = {
   readonly id: string;

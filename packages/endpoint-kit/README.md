@@ -1,16 +1,14 @@
 # `@narratage/endpoint-kit`
 
-Host-neutral SDK for exact external capability endpoints.
+SDK for packages that fulfill exact external capabilities.
 
-An Endpoint is any installed implementation that fulfills one declared `Need`: a vendor API, local
-process, Lambda function, human service or device. `defineEndpointPackage()` produces its static
-Runtime Manifest, configured instance, exact offers and installation facet from one source of
-truth. It depends on no Driver, Node filesystem, queue or domain package.
+An endpoint can call a vendor API, local process, Lambda function, device or human service. An
+endpoint package declares the capabilities it fulfills, its result types, credentials and scheduling
+limits, then installs handlers into a Host registrar.
 
-Concrete distributions may still be named after a real provider, such as `@narratage/provider-kie`.
-Local WhisperX and HyperFrames use the same Endpoint contract without pretending to be vendors.
-Endpoint packages are trusted Host configuration and are never activated by author imports.
+Immediate endpoints return a result directly. Asynchronous endpoints implement `start`, `poll` and
+optional best effort `cancel`. Provider pool and capability lane limits control concurrency without
+changing Core demand.
 
-The Runtime Scheduler owns readiness and concurrency. A recoverable Endpoint owns only one external
-operation's `start/resume/cancel` law. Process, Lambda and HTTP are lower-level Transports and do not
-register capabilities by themselves.
+Endpoint packages are selected by a Runtime Profile, never activated by author imports. This package
+depends on no Node filesystem, queue implementation or video domain.

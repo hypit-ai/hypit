@@ -223,14 +223,13 @@ export function compileBuild(
     .sort((a, b) => a.record.localeCompare(b.record));
   const sortedSelections = [...selections.values()].sort((a, b) => a.output.localeCompare(b.output));
   const plan = planContent(steps, goals, sortedSelections);
-  validatePlanStructure(program, graph, request, plan);
+  validatePlanStructure(program, graph, plan);
   return plan;
 }
 
 function validatePlanStructure(
   program: LinkedProgram,
   graph: CompiledGraph,
-  request: BuildRequest,
   plan: BuildPlan,
 ): void {
   invariant(plan.format === "narratage.plan@1", "UNSUPPORTED_PLAN", "unsupported build plan format");
@@ -311,7 +310,7 @@ export function validatePlan(
   plan: BuildPlan,
 ): void {
   verifyBuildRequest(program, graph, request);
-  validatePlanStructure(program, graph, request, plan);
+  validatePlanStructure(program, graph, plan);
 }
 
 /** Materialize selected zero-input values from their sole source of truth: the Run Graph. */

@@ -116,7 +116,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @narratage/provider-whisperx-local       local WhisperX service
 @narratage/provider-google-vertex        Vertex Gemini caption planning
 @narratage/provider-hyperframes-local    local Chrome rendering
-@narratage/provider-hyperframes-aws-lambda recoverable distributed rendering
+@narratage/provider-hyperframes-aws-lambda asynchronous distributed rendering
 @narratage/provider-image-opencv-local   本地 OpenCV 光栅执行
 @narratage/provider-media-aws-lambda     synchronous AWS media execution
 @narratage/provider-xiaomi-mimo           Xiaomi 官方 MiMo TTS API
@@ -124,7 +124,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 
 ### Layer 6：Runtime
 
-领域无关的执行端口与可替换部署实现。Runtime 包负责队列、租约、Store、凭据与进程生命周期，
+领域无关的执行端口与可替换部署实现。Runtime 包负责队列、Store、凭据与进程生命周期，
 但不定义作者语法。
 
 ```text

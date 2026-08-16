@@ -94,7 +94,6 @@ test("module registration is atomic", () => {
 const laboratory = { name: "example.compiler-lab", version: "1" } as const;
 const resultType = { module: laboratory, name: "Result" } satisfies TypeRef;
 const producer = { module: laboratory, name: "produce" } satisfies ProducerRef;
-const surfaceDigest = "surface:example.compiler-lab/result";
 const resultSurface = {
   name: "result", tag: "Result", mode: "structured", outputs: [],
 } as const;
@@ -129,7 +128,6 @@ const fragment = sealGraphFragment({
 
 const assetLaboratory = { name: "example.asset-lab", version: "1" } as const;
 const assetType = { module: assetLaboratory, name: "Asset" } satisfies TypeRef;
-const assetSurfaceDigest = "surface:example.asset-lab/asset";
 const assetSurface = {
   name: "asset", tag: "Asset", mode: "structured", outputs: [assetType],
 } as const;

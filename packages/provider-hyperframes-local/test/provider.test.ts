@@ -12,7 +12,6 @@ import { compileHyperframesDocument } from "@narratage/hyperframes";
 import { renderHyperframesCapabilities, hyperframesVisualRequest } from "@narratage/render-hyperframes";
 import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { createLocalHyperframesProvider } from "../src/index.js";
 import { localHyperframesBrowserProgram } from "../src/program.js";

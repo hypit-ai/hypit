@@ -8,7 +8,6 @@ import type {
   LogicalOutput,
   OperationNode,
   OperationResult,
-  ProducerRef,
   StoredValue,
   TypeRef,
 } from "@narratage/protocol";

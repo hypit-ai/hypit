@@ -239,10 +239,10 @@ test("independent paid commands inside one Build may fill the same resource with
     record.type.name === types.generated.name).length, 2);
 });
 
-test("a asynchronous Endpoint starts once and is polled until complete", async () => {
+test("an asynchronous Endpoint starts once and is polled until complete", async () => {
   const operations = new MemoryOperationStore();
   let starts = 0;
-  let resumes = 0;
+  let polls = 0;
   let operationId: string | undefined;
   const endpoint: AsyncEndpoint = {
     start({ operation }) {
@@ -251,7 +251,7 @@ test("a asynchronous Endpoint starts once and is polled until complete", async (
       return { status: "pending", handle: { remoteJob: "job-1" } };
     },
     poll({ operation, handle }) {
-      resumes += 1;
+      polls += 1;
       assert.equal(operation, operationId);
       assert.deepEqual(handle, { remoteJob: "job-1" });
       return {
@@ -268,7 +268,7 @@ test("a asynchronous Endpoint starts once and is polled until complete", async (
     .run([{ id: "video", state: createGreetingBuild() }]);
   assert.equal(first?.status, "paused");
   assert.equal(starts, 1);
-  assert.equal(resumes, 0);
+  assert.equal(polls, 0);
   assert.equal(first?.state.records.some((record) => record.id === "generated:root"), false);
   const pending = first?.outcomes.find((entry) => entry.status === "pending");
   assert.ok(pending?.operation);
@@ -280,13 +280,13 @@ test("a asynchronous Endpoint starts once and is polled until complete", async (
 
   assert.equal(second?.status, "complete");
   assert.equal(starts, 1);
-  assert.equal(resumes, 1);
+  assert.equal(polls, 1);
   assert.equal((await operations.read(pending.operation))?.status, "completed");
 });
 
 test("wakeAt prevents early polling and Runtime cancellation becomes a terminal Core failure", async () => {
   const operations = new MemoryOperationStore();
-  let resumes = 0;
+  let polls = 0;
   let cancels = 0;
   const wakeAt = Date.now() + 60_000;
   const endpoint: AsyncEndpoint = {
@@ -294,7 +294,7 @@ test("wakeAt prevents early polling and Runtime cancellation becomes a terminal 
       return { status: "pending", handle: { remoteJob: "job-wait" }, wakeAt };
     },
     poll() {
-      resumes += 1;
+      polls += 1;
       throw new Error("wakeAt must stop early polling");
     },
     cancel({ handle }) {
@@ -311,7 +311,7 @@ test("wakeAt prevents early polling and Runtime cancellation becomes a terminal 
 
   const [early] = await scheduler.run([{ id: "cancel-video", state: first!.state }]);
   assert.equal(early?.outcomes.at(-1)?.wakeAt, wakeAt);
-  assert.equal(resumes, 0);
+  assert.equal(polls, 0);
 
   const operation = await operations.read(operationId);
   assert.ok(operation);

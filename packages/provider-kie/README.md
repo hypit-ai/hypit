@@ -1,6 +1,6 @@
 # `@narratage/provider-kie`
 
-Recoverable KIE Market Provider for the twelve explicitly selected exact models and one generic
+Asynchronous KIE Market Provider for the twelve explicitly selected exact models and one generic
 background-removal capability.
 
 This package is deployment code. Author source imports model modules such as `@narratage/seedance` or
@@ -86,9 +86,9 @@ Manifests actually imported by the author document; installing KIE does not add 
 
 1. Reference `BlobRef`s are read from the configured ArtifactStore and uploaded through KIE's file
    stream API. KIE temporary URLs never enter author source or generated Product identity.
-2. `createTask` is persisted as one recoverable Operation. Because KIE does not document an
+2. A successful `createTask` response is persisted as one asynchronous Operation. Because KIE does not document an
    idempotency key, an ambiguous network/5xx submission is not automatically retried.
-3. Once a `taskId` exists, Worker recovery resumes only that same task. Poll/download errors cannot create a new
+3. Once a `taskId` exists, later Worker polling continues only that same task. Poll/download errors cannot create a new
    paid generation.
 4. Successful result URLs are converted to short-lived download URLs, bounded while streaming,
    immediately written to the configured content-addressed ArtifactStore, and removed from durable
@@ -100,7 +100,7 @@ Manifests actually imported by the author document; installing KIE does not add 
 The automated suite uses an adversarial fake KIE service. The credentialed smoke command is a paid
 deployment test and is intentionally not run by the public repository test suite. It must be enabled
 explicitly and keeps a stable Runtime directory under the operating system temporary directory so
-an interrupted paid task can resume from its SQLite checkpoint:
+an interrupted paid task can continue polling from its SQLite checkpoint:
 
 ```sh
 NARRATAGE_KIE_LIVE=1 KIE_API_KEY=... pnpm smoke:kie

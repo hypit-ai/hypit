@@ -1,6 +1,6 @@
 # `@narratage/provider-hyperframes-aws-lambda`
 
-Recoverable AWS Step Functions/Lambda implementation of the exact
+Asynchronous AWS Step Functions/Lambda implementation of the exact
 `@narratage/render-hyperframes#render-visual` capability.
 
 The Endpoint stages the immutable `HyperframesDocument` with the shared
@@ -19,9 +19,8 @@ configuration.
 
 On success the Endpoint requires HyperFrames' plan and completed-frame counts to equal the source
 document, then streams the returned S3 object into the selected content-addressed ArtifactStore.
-The Runtime Profile selects the state machine and deployment settings. The generic Need Receipt
-records the selected Endpoint, request and returned value; the Provider does not repeat those facts
-as vendor metadata. Container and stream conformance stays in the explicit media
+The Runtime Profile selects the state machine and deployment settings. The Provider does not repeat
+the request or selected endpoint as vendor metadata. Container and stream conformance stays in the explicit media
 inspection/mux capabilities, so the orchestrating machine does not acquire a hidden FFmpeg
 dependency.
 

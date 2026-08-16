@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { EndpointRegistry, MemoryArtifactStore } from "@narratage/driver-node";
 import { generationTypes } from "@narratage/generation";

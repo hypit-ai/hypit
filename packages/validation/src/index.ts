@@ -4,7 +4,6 @@ import {
   verifyRecordStructure,
 } from "@narratage/core";
 import type {
-  TypeValidatorContext,
   TypeValidatorHandler,
   TypeValidatorRegistrar,
 } from "@narratage/component-kit";

@@ -239,7 +239,7 @@ function createProgram(): LinkedProgram {
   return link(closure, authored);
 }
 
-function createImageGraph(program: LinkedProgram): CompiledGraph {
+function createImageGraph(): CompiledGraph {
   return sealCompiledGraph({
     outputs: [
       output("image1", types.image, "p1"),
@@ -276,10 +276,7 @@ function createImageGraph(program: LinkedProgram): CompiledGraph {
   });
 }
 
-function request(
-  graph: CompiledGraph,
-  targets: readonly string[],
-): BuildRequest {
+function request(targets: readonly string[]): BuildRequest {
   return sealBuildRequest({
     targets: targets.map((outputId) => ({ output: outputId })),
   });
@@ -301,12 +298,12 @@ function startSelected(
   satisfactions: readonly Satisfaction[] = [],
 ): BuildState {
   const selected = selectCandidates(graph, satisfactions);
-  return start(program, selected, request(selected, targets));
+  return start(program, selected, request(targets));
 }
 
 function fixture(targets: readonly string[], satisfactions: readonly Satisfaction[] = []): BuildState {
   const program = createProgram();
-  const graph = createImageGraph(program);
+  const graph = createImageGraph();
   return startSelected(program, graph, targets, satisfactions);
 }
 
@@ -371,7 +368,7 @@ test("Provided state survives JSON round-trip and regenerates identical ready Co
   assert.deepEqual(reduce(restored).outstanding, scheduled.outstanding);
 });
 
-function createCaseGGraph(program: LinkedProgram, roots: "value" | "operation"): CompiledGraph {
+function createCaseGGraph(roots: "value" | "operation"): CompiledGraph {
   const a1Id = roots === "value" ? "a1-value" : "a1-operation";
   const a2Id = roots === "value" ? "a2-value" : "a2-operation";
   return sealCompiledGraph({
@@ -405,8 +402,8 @@ function createCaseGGraph(program: LinkedProgram, roots: "value" | "operation"):
 
 test("Case G: two single-output full-input Candidates share both upstream Values", () => {
   const program = createProgram();
-  const graph = createCaseGGraph(program, "value");
-  const state = start(program, graph, request(graph, ["c.result"]));
+  const graph = createCaseGGraph("value");
+  const state = start(program, graph, request(["c.result"]));
   assert.deepEqual(stepIds(state), ["b1", "b2", "c"]);
   assert.equal(state.records.some((record) => record.id === "provided:A"), true);
   assert.equal(state.records.some((record) => record.id === "provided:B"), true);
@@ -420,8 +417,8 @@ test("Case G: two single-output full-input Candidates share both upstream Values
 
 test("Case G: shared zero-input upstream Operations appear exactly once", () => {
   const program = createProgram();
-  const graph = createCaseGGraph(program, "operation");
-  const state = start(program, graph, request(graph, ["c.result"]));
+  const graph = createCaseGGraph("operation");
+  const state = start(program, graph, request(["c.result"]));
   assert.deepEqual(stepIds(state), ["a1", "a2", "b1", "b2", "c"]);
   assert.equal(state.plan.steps.filter((step) => step.id === "a1").length, 1);
   assert.equal(state.plan.steps.filter((step) => step.id === "a2").length, 1);
@@ -432,7 +429,6 @@ test("Case G: shared zero-input upstream Operations appear exactly once", () => 
 });
 
 function createOperationIdentityGraph(
-  program: LinkedProgram,
   mode: "shared" | "distinct",
 ): CompiledGraph {
   return sealCompiledGraph({
@@ -470,8 +466,8 @@ function createOperationIdentityGraph(
 
 test("two Candidates that name one OperationId demand exactly one execution", () => {
   const program = createProgram();
-  const graph = createOperationIdentityGraph(program, "shared");
-  const state = start(program, graph, request(graph, ["left", "right"]));
+  const graph = createOperationIdentityGraph("shared");
+  const state = start(program, graph, request(["left", "right"]));
   assert.deepEqual(stepIds(state), ["left-operation"]);
   assert.deepEqual(
     state.plan.selections.map((selection) => [selection.output, selection.record]),
@@ -481,7 +477,7 @@ test("two Candidates that name one OperationId demand exactly one execution", ()
 
 test("one independent Candidate may explicitly satisfy multiple compatible Logical Outputs", () => {
   const program = createProgram();
-  const graph = createOperationIdentityGraph(program, "shared");
+  const graph = createOperationIdentityGraph("shared");
   const state = startSelected(program, graph, ["left", "right"], [
     { output: "left", candidate: "shared-candidate" },
     { output: "right", candidate: "shared-candidate" },
@@ -495,8 +491,8 @@ test("one independent Candidate may explicitly satisfy multiple compatible Logic
 
 test("different OperationIds are never content-deduplicated", () => {
   const program = createProgram();
-  const graph = createOperationIdentityGraph(program, "distinct");
-  const state = start(program, graph, request(graph, ["left", "right"]));
+  const graph = createOperationIdentityGraph("distinct");
+  const state = start(program, graph, request(["left", "right"]));
   assert.deepEqual(stepIds(state), ["left-operation", "right-operation"]);
   assert.deepEqual(
     state.plan.steps.map((step) => step.producer),
@@ -506,7 +502,6 @@ test("different OperationIds are never content-deduplicated", () => {
 });
 
 function createProductReplacementGraph(
-  program: LinkedProgram,
   alternate: "shared" | "distinct",
 ): CompiledGraph {
   const productOperation = (
@@ -575,7 +570,7 @@ const select = (outputId: string, candidateId: string): Satisfaction => ({
 
 test("one Run-Graph instance satisfies two Logical Outputs through one shared Product", () => {
   const program = createProgram();
-  const graph = createProductReplacementGraph(program, "shared");
+  const graph = createProductReplacementGraph("shared");
   const state = startSelected(program, graph, ["c.result"], [
     select("b.C", "b.C.alternate"),
     select("b.D", "b.D.alternate"),
@@ -587,7 +582,7 @@ test("one Run-Graph instance satisfies two Logical Outputs through one shared Pr
 
 test("two explicit Run-Graph instances may separately satisfy the two outputs", () => {
   const program = createProgram();
-  const graph = createProductReplacementGraph(program, "distinct");
+  const graph = createProductReplacementGraph("distinct");
   const state = startSelected(program, graph, ["c.result"], [
     select("b.C", "b.C.alternate"),
     select("b.D", "b.D.alternate"),
@@ -601,7 +596,7 @@ test("two explicit Run-Graph instances may separately satisfy the two outputs", 
 
 test("partial satisfaction keeps only the demanded projection of the default Product", () => {
   const program = createProgram();
-  const graph = createProductReplacementGraph(program, "shared");
+  const graph = createProductReplacementGraph("shared");
   const state = startSelected(program, graph, ["c.result"], [
     select("b.C", "b.C.alternate"),
   ]);
@@ -613,7 +608,7 @@ test("partial satisfaction keeps only the demanded projection of the default Pro
 
 test("an unbound sibling output cannot keep an unreachable default Product alive", () => {
   const program = createProgram();
-  const graph = createProductReplacementGraph(program, "shared");
+  const graph = createProductReplacementGraph("shared");
   const state = startSelected(program, graph, ["b.C"], [
     select("b.C", "b.C.alternate"),
   ]);

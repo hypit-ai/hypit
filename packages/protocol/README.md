@@ -1,16 +1,11 @@
 # `@narratage/protocol`
 
-Execution-free wire contracts shared by Core, Drivers and future modules. The package defines
-canonical values, module/type references, records and origins, explicit plans, Needs, Receipts,
-Derivations, events and commands. It also parses the static
-JSON representation of a Module Manifest without reading files or executing package code. It
-contains no author-source parser, Surface, runtime or video vocabulary. Source syntax belongs to the
-Frontend Host that executes it, not to the semantic Module protocol.
+Data contracts shared across package boundaries.
 
-Types and Producers are named by their owning `TypeRef` and `ProducerRef`. Manifests declare that
-shared vocabulary; executable validators and handlers stay in the package that owns it. Protocol
-does not assign hashes or second identities to JavaScript functions.
+This package defines module manifests, nominal references, typed values, author and run graphs,
+build plans, Core commands, command results, build facts and build state. It also parses a module
+manifest from JSON without loading executable package code.
 
-A Need Receipt records the exact request, selected Endpoint name and returned Record. It carries no
-Runtime snapshot, package inventory, domain lineage or renderer-specific metadata. Graph edges and
-Derivations retain facts at their actual source.
+Protocol contains no source parser, package loader, runtime, filesystem access or video vocabulary.
+Packages own their types, producers and capabilities by module name and version. Core and Hosts
+communicate through those names and the values declared here.
