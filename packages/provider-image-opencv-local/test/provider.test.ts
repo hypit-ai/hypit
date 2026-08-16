@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { artifactTypes } from "@narratage/artifact";
 import { EndpointRegistry, MemoryArtifactStore } from "@narratage/driver-node";

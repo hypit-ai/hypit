@@ -1,5 +1,3 @@
-import type { SourceRange } from "@narratage/protocol";
-
 import { MarkupFrontendError } from "./error.js";
 import type {
   MarkupSource,

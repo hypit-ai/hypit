@@ -7,8 +7,8 @@ BlobArtifact(image) + ImageTransformProgram -> Need -> BlobArtifact(image)
 ```
 
 The result is the transformed image itself. It contains no source digest, Provider name,
-post-processing report or copied upstream metadata. Core's Derivation records the input edges and
-the Need/Receipt records the selected execution endpoint.
+post-processing report or copied upstream metadata. The graph already contains the source and
+program edges; the Runtime selects the endpoint that fulfills the explicit Need.
 
 `gptImageDenoiseV1` applies the GPT Image cleanup profile: YCrCb NLM with luma 2,
 chroma 10, 7/21 windows and 1.02 saturation recovery, followed by PNG encoding. It is now an

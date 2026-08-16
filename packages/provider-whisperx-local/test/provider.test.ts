@@ -9,7 +9,6 @@ import {
   whisperXCapabilities,
   whisperXRequestForEvidenceAudio,
 } from "@narratage/whisperx";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   createLocalWhisperXProvider,

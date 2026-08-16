@@ -9,7 +9,6 @@ import type {
   TypeDeclaration,
 } from "./module.js";
 import type { CapabilityRef, ModuleRef, TypeRef } from "./identity.js";
-import type { ObjectFieldSchema, ValueSchema } from "./value.js";
 
 function object(value: unknown, path: string): Record<string, unknown> {
   if (value === null || Array.isArray(value) || typeof value !== "object") {
@@ -25,21 +24,6 @@ function array(value: unknown, path: string): unknown[] {
 
 function string(value: unknown, path: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${path} must be a string`);
-  return value;
-}
-
-function possiblyEmptyString(value: unknown, path: string): string {
-  if (typeof value !== "string") throw new Error(`${path} must be a string`);
-  return value;
-}
-
-function boolean(value: unknown, path: string): boolean {
-  if (typeof value !== "boolean") throw new Error(`${path} must be a boolean`);
-  return value;
-}
-
-function number(value: unknown, path: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`${path} must be a number`);
   return value;
 }
 
@@ -65,95 +49,6 @@ function capabilityRef(value: unknown, path: string): CapabilityRef {
     module: moduleRef(parsed.module, `${path}.module`),
     name: string(parsed.name, `${path}.name`),
   };
-}
-
-function optionalNumber(
-  parsed: Record<string, unknown>,
-  name: string,
-  path: string,
-): { readonly [key: string]: number } {
-  return parsed[name] === undefined ? {} : { [name]: number(parsed[name], `${path}.${name}`) };
-}
-
-function valueSchema(value: unknown, path: string): ValueSchema {
-  const parsed = object(value, path);
-  const kind = string(parsed.kind, `${path}.kind`);
-  switch (kind) {
-    case "null":
-    case "boolean":
-      return { kind };
-    case "number":
-      return {
-        kind,
-        ...(parsed.integer === undefined ? {} : { integer: boolean(parsed.integer, `${path}.integer`) }),
-        ...optionalNumber(parsed, "minimum", path),
-        ...optionalNumber(parsed, "maximum", path),
-      } as ValueSchema;
-    case "string":
-      return {
-        kind,
-        ...(parsed.enum === undefined
-          ? {}
-          : { enum: array(parsed.enum, `${path}.enum`).map((item, index) => string(item, `${path}.enum[${index}]`)) }),
-        ...optionalNumber(parsed, "minLength", path),
-        ...optionalNumber(parsed, "maxLength", path),
-      } as ValueSchema;
-    case "literal":
-      return { kind, value: canonicalize(parsed.value) };
-    case "array":
-      return {
-        kind,
-        items: valueSchema(parsed.items, `${path}.items`),
-        ...optionalNumber(parsed, "minItems", path),
-        ...optionalNumber(parsed, "maxItems", path),
-      } as ValueSchema;
-    case "object": {
-      const rawFields = object(parsed.fields, `${path}.fields`);
-      const fields: Record<string, ObjectFieldSchema> = {};
-      for (const [name, rawField] of Object.entries(rawFields)) {
-        const field = object(rawField, `${path}.fields.${name}`);
-        Object.defineProperty(fields, name, {
-          value: {
-            schema: valueSchema(field.schema, `${path}.fields.${name}.schema`),
-            ...(field.optional === undefined
-              ? {}
-              : { optional: boolean(field.optional, `${path}.fields.${name}.optional`) }),
-          },
-          enumerable: true,
-          configurable: true,
-          writable: true,
-        });
-      }
-      return {
-        kind,
-        fields,
-        ...(parsed.allowUnknown === undefined
-          ? {}
-          : { allowUnknown: boolean(parsed.allowUnknown, `${path}.allowUnknown`) }),
-      };
-    }
-    case "oneOf":
-      return {
-        kind,
-        variants: array(parsed.variants, `${path}.variants`).map((item, index) =>
-          valueSchema(item, `${path}.variants[${index}]`),
-        ),
-      };
-    case "blob":
-      return {
-        kind,
-        ...(parsed.mediaTypes === undefined
-          ? {}
-          : {
-              mediaTypes: array(parsed.mediaTypes, `${path}.mediaTypes`).map((item, index) =>
-                string(item, `${path}.mediaTypes[${index}]`),
-              ),
-            }),
-        ...optionalNumber(parsed, "maxBytes", path),
-      } as ValueSchema;
-    default:
-      throw new Error(`${path}.kind ${kind} is unsupported`);
-  }
 }
 
 function dependency(value: unknown, path: string): ModuleDependency {

@@ -88,7 +88,7 @@ test("a Build capability selection ignores unrelated Programs", async () => {
   assert.equal(probes, 0);
 });
 
-test("an empty Build capability set loads no Runtime Adapter closure", async () => {
+test("an empty Build capability set loads no Runtime Adapter packages", async () => {
   const configured = await project(() => ({
     id: "must-not-load",
     async probe() {
@@ -103,7 +103,7 @@ test("an empty Build capability set loads no Runtime Adapter closure", async () 
   assert.deepEqual(result, { dataRoot: configured.root, programs: [] });
 });
 
-function fileBackedProgram(root: string, marker: string): ManagedProgram {
+function fileBackedProgram(marker: string): ManagedProgram {
   return {
     id: "example",
     start: { command: "sh", args: ["-c", `printf ready > ${marker}; while true; do sleep 1; done`] },
@@ -120,7 +120,7 @@ function fileBackedProgram(root: string, marker: string): ManagedProgram {
 
 test("up starts the program once for every Endpoint that drives it, and down stops it", async () => {
   const marker = join(await mkdtemp(join(tmpdir(), "narratage-marker-")), "ready");
-  const { root, path, options } = await project((projectRoot) => fileBackedProgram(projectRoot, marker));
+  const { root, path, options } = await project(() => fileBackedProgram(marker));
   const progress: string[] = [];
 
   const started = await bringManagedProgramsUp(path, {
@@ -159,7 +159,7 @@ test("up starts the program once for every Endpoint that drives it, and down sto
 test("concurrent up calls atomically share one Managed Program process", async () => {
   const markerRoot = await mkdtemp(join(tmpdir(), "narratage-marker-concurrent-"));
   const marker = join(markerRoot, "ready");
-  const { root, path, options } = await project((projectRoot) => fileBackedProgram(projectRoot, marker));
+  const { root, path, options } = await project(() => fileBackedProgram(marker));
   try {
     const results = await Promise.all(Array.from({ length: 6 }, async () =>
       await bringManagedProgramsUp(path, { ...options, maxWaitMs: 20_000 })));

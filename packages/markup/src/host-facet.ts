@@ -6,7 +6,6 @@ import type {
   RegisteredSurface,
   StructuredSurfaceHandler,
   MarkupSurfaceRegistryLike,
-  MarkupSurfaceDeclaration,
   RawSurfaceDeclaration,
   StructuredSurfaceDeclaration,
 } from "./types.js";

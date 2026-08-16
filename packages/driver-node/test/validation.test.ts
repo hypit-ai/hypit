@@ -122,7 +122,7 @@ function program(): LinkedProgram {
   return link(closure, []);
 }
 
-function outputGraph(linked: LinkedProgram): CompiledGraph {
+function outputGraph(): CompiledGraph {
   return sealCompiledGraph({
     outputs: [
       {
@@ -165,7 +165,7 @@ function outputGraph(linked: LinkedProgram): CompiledGraph {
   });
 }
 
-function outputBuild(linked: LinkedProgram, graph = outputGraph(linked)) {
+function outputBuild(linked: LinkedProgram, graph = outputGraph()) {
   return start(linked, graph, sealBuildRequest({
     targets: [{ output: "report" }],
   }));
@@ -215,7 +215,7 @@ test("a structurally valid but semantically invalid Producer value never enters 
   assert.equal(result.state.records.some((record) => record.id === "measurement:root"), false);
 });
 
-function providerGraph(linked: LinkedProgram): CompiledGraph {
+function providerGraph(): CompiledGraph {
   return sealCompiledGraph({
     outputs: [{
       id: "measurement",
@@ -243,7 +243,7 @@ function providerGraph(linked: LinkedProgram): CompiledGraph {
 
 async function providerBuild(measured: number) {
   const linked = program();
-  const graph = providerGraph(linked);
+  const graph = providerGraph();
   const hosts = new ProducerRegistry();
   hosts.registerProducer(requestProducer, () => ({
     outputs: {},

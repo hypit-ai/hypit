@@ -314,15 +314,6 @@ export function createS3ArtifactStore(
   options: CreateS3ArtifactStorePackageOptions,
 ): S3ArtifactStore {
   const prefix = normalizePrefix(options.prefix);
-  const configuration = {
-    bucket: options.bucket,
-    prefix,
-    ...(options.expectedBucketOwner === undefined ? {} : { expectedBucketOwner: options.expectedBucketOwner }),
-    ...(options.region === undefined ? {} : { region: options.region }),
-    ...(options.endpoint === undefined ? {} : { endpoint: options.endpoint }),
-    ...(options.forcePathStyle === undefined ? {} : { forcePathStyle: options.forcePathStyle }),
-    ...(options.partSizeBytes === undefined ? {} : { partSizeBytes: options.partSizeBytes }),
-  };
   const client = options.client ?? new AwsS3ObjectClient({
     ...(options.region === undefined ? {} : { region: options.region }),
     ...(options.endpoint === undefined ? {} : { endpoint: options.endpoint }),

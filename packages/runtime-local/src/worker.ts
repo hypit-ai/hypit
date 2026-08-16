@@ -7,14 +7,16 @@ import type {
   RuntimeExecutionResult,
   RuntimePreparation,
   RuntimeRunnableCommand,
-  RuntimeWorker,
-  RuntimeExecutionStores,
   RuntimeWorkerRunOptions,
 } from "@narratage/runtime";
 import { LocalBuildScheduler } from "@narratage/runtime";
 
 type LocalWorkerOptions = {
-  readonly stores: RuntimeExecutionStores;
+  readonly stores: {
+    readonly builds: import("@narratage/runtime").BuildStore;
+    readonly operations: import("@narratage/runtime").OperationStore;
+    readonly dispatch: import("@narratage/runtime").BuildDispatchStore;
+  };
   readonly scheduling: BuildSchedulerOptions;
   readonly implementationPackages: readonly string[];
 };
@@ -181,7 +183,7 @@ class CapacityExecutor implements RuntimeCommandExecutor {
   }
 }
 
-class DurableLocalWorker implements RuntimeWorker {
+class DurableLocalWorker {
   readonly #executor: RuntimeCommandExecutor;
   readonly #options: LocalWorkerOptions;
   readonly #executorWithCapacity: CapacityExecutor;
@@ -313,6 +315,6 @@ class DurableLocalWorker implements RuntimeWorker {
 export function createDurableLocalWorker(
   executor: RuntimeCommandExecutor,
   options: LocalWorkerOptions,
-): RuntimeWorker {
+) {
   return new DurableLocalWorker(executor, options);
 }

@@ -31,11 +31,9 @@ import svs from "../../svs/src/activation.js";
 import typographyTrack from "../../typography-track/src/activation.js";
 import whisperX from "../../whisperx/src/activation.js";
 import type { NodePackageContribution } from "@narratage/package-loader-node";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 const bind = (specifier: string, contribution: NodePackageContribution) => ({
   specifier,
-  digest: fixtureDigest(specifier),
   contribution,
 });
 

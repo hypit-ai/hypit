@@ -12,7 +12,7 @@ Endpoint-specific code owns:
 - the function name, version/alias and retry semantics included in Endpoint configuration identity.
 
 The transport always uses `RequestResponse`. Lambda `Event` invocation has its own at-least-once
-queue and no immediate result/checkpoint, so treating it as a recoverable SVML Endpoint would be
+queue and no immediate result/checkpoint, so treating it as an asynchronous Narratage Endpoint would be
 misleading. An Endpoint may invoke a coordinator Lambda synchronously; that coordinator can submit
 long work and return a checkpoint which the Endpoint later polls through another synchronous call.
 

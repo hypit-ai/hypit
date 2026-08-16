@@ -4,7 +4,6 @@ import {
   sealRecord,
 } from "@narratage/core";
 import type {
-  CanonicalValue,
   ModuleRef,
   ResolvedModule,
   TypedRecord,
@@ -14,7 +13,6 @@ import type {
   AuthorSourceExport,
   AuthorValueRef,
   GraphFragment,
-  ResolvedAuthorSourceImport,
 } from "@narratage/elaborator";
 
 import { MarkupFrontendError } from "./error.js";
@@ -31,7 +29,6 @@ import type {
   StructuredSurfaceHandler,
   SurfaceComponentDraft,
   SurfaceDecodeOutput,
-  SurfaceRecordDraft,
   SurfaceResolvedReference,
   RegisteredSurface,
   MarkupDecodeContext,

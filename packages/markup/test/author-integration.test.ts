@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   createResolvedClosure,
@@ -35,9 +34,6 @@ const measurementType = { module: laboratory, name: "Measurement" } satisfies Ty
 const reportType = { module: laboratory, name: "Report" } satisfies TypeRef;
 const measureProducer = { module: laboratory, name: "measure" } satisfies ProducerRef;
 const reportProducer = { module: laboratory, name: "write-report" } satisfies ProducerRef;
-const sampleSurfaceDigest = fixtureDigest("example.text-laboratory/sample-surface@1");
-const measureSurfaceDigest = fixtureDigest("example.text-laboratory/measure-surface@1");
-const reportSurfaceDigest = fixtureDigest("example.text-laboratory/report-surface@1");
 const laboratorySurfaces = [
   { name: "sample", tag: "Sample", mode: "structured", outputs: [sampleType] },
   { name: "measure", tag: "Measure", mode: "structured", outputs: [] },

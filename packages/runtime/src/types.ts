@@ -7,7 +7,6 @@ import type {
   CoreCommand,
   Digest,
 } from "@narratage/protocol";
-import type { BuildDispatchSnapshot, BuildDispatchStore } from "./dispatch.js";
 import type { OperationSnapshot } from "./operations.js";
 
 export type RuntimeBlockedCommand = {
@@ -36,23 +35,9 @@ export type RuntimeQueueLane = {
   readonly lane: string;
 };
 
-export type RuntimeExecutionStores = {
-  readonly builds: BuildStore;
-  readonly operations: import("./operations.js").OperationStore;
-  readonly dispatch: BuildDispatchStore;
-  readonly artifacts: ArtifactStore;
-};
-
 export type RuntimeWorkerRunOptions = {
   readonly idlePollMs: number;
   readonly signal?: AbortSignal;
-};
-
-export type RuntimeWorker = {
-  /** Claim and advance at most one Build. Undefined means no Dispatch was ready. */
-  runOnce(): Promise<BuildDispatchSnapshot | undefined>;
-  /** Continue until the caller-owned process signal is aborted. */
-  run(options: RuntimeWorkerRunOptions): Promise<void>;
 };
 
 export type RuntimePreparation = {
@@ -172,9 +157,4 @@ export type BuildSchedulerOptions = {
   readonly resourceLimits?: Readonly<Record<string, number>>;
   /** Optional durable authority. When present, every admitted Core Fact is appended. */
   readonly buildStore?: BuildStore;
-};
-
-/** Internal scheduler used by an execution Runtime. */
-export type BuildScheduler = {
-  run(requests: readonly ScheduledBuild[]): Promise<readonly ScheduledBuildResult[]>;
 };

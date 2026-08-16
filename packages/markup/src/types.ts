@@ -1,5 +1,4 @@
 import type {
-  CanonicalValue,
   ModuleRef,
   ResolvedModuleClosure,
   SourceRange,

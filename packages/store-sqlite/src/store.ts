@@ -9,7 +9,6 @@ import {
 import type {
   BuildDefinition,
   BuildFact,
-  Digest,
 } from "@narratage/protocol";
 import {
   verifyBuildCatalogDescriptor,

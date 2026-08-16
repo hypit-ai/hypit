@@ -65,8 +65,8 @@ export function createMyServiceProvider(options: {
       capability: myCapability,
       returns: myResultType,
       lane: "generate",
-      lifecycle: "recoverable",
-      endpoint: myRecoverableEndpoint,
+      lifecycle: "asynchronous",
+      endpoint: myAsyncEndpoint,
     }],
   });
 }
@@ -77,7 +77,7 @@ export function createMyServiceProvider(options: {
 - `packages/provider-media-local/` — 本地进程执行（ffprobe/ffmpeg）
 - `packages/provider-whisperx-local/` — 本地 HTTP 服务
 - `packages/provider-hyperframes-local/` — 本地 Chrome 渲染
-- `packages/provider-hyperframes-aws-lambda/` — 可恢复的 Step Functions/Lambda 渲染
+- `packages/provider-hyperframes-aws-lambda/` — 异步 Step Functions/Lambda 渲染
 - `packages/provider-media-aws-lambda/` — 通过共享 ffmpeg 执行体完成同步 Lambda 媒体操作
 - `packages/provider-xiaomi-mimo/` — 不依赖 MiMo 模型包的官方即时 TTS API
 
