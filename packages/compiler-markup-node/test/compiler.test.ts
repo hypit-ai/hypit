@@ -55,7 +55,6 @@ const installedPackage: NodePackageContribution = {
     }),
     {
       abi: "example.unselected-host@1",
-      identity: { name: "must-remain-inert" },
       implementation() {
         throw new Error("an unselected Host facet executed");
       },

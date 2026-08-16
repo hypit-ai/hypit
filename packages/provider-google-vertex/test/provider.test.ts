@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   captionGeminiCapabilities,
@@ -14,7 +15,6 @@ import {
 import type { CaptionGeminiRequest, RawCaptionGeminiResponse } from "@narratage/caption-gemini";
 import { EndpointRegistry, MemoryArtifactStore } from "@narratage/driver-node";
 import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";
-import { digestOf } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
 import { createGoogleVertexCaptionProvider } from "@narratage/provider-google-vertex";
 import type { GenerateCaptionContent } from "@narratage/provider-google-vertex";
@@ -61,9 +61,7 @@ function need(requestValue: CaptionGeminiRequest): Need {
     capability: captionGeminiCapabilities.plan,
     returns: captionTypes.plan,
     constraints,
-    requestedBy: "derivation:caption-gemini",
     result: "record:caption-gemini",
-    requestDigest: digestOf({ capability: captionGeminiCapabilities.plan, constraints }),
   };
 }
 

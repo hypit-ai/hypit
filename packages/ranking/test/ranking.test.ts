@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { videoContractManifests } from "../../../test/support/video-domain.js";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { createResolvedClosure } from "@narratage/core";
 import type { FontArtifactRef, SynchronizedMedia } from "@narratage/media";
 import { mediaTypes } from "@narratage/media";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
 import { sealProgramSpace } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import { sealSpatialFrame } from "@narratage/spatial";
 import type { SvsRecipe } from "@narratage/svs";
@@ -114,14 +114,14 @@ const triggers = (count: number): NarrativeMomentRef => ({
     .map((anchorId, occurrence) => ({ occurrence, anchorId })),
 });
 const font: FontArtifactRef = {
-  sources: [{ artifact: { kind: "blob", digest: digestOf("ranking-font"), size: 32, mediaType: "font/woff2" } }],
+  sources: [{ artifact: { kind: "blob", digest: fixtureDigest("ranking-font"), size: 32, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
 };
 const recipe = (path: string, properties: SvsRecipe["properties"] = {}): SvsRecipe => ({
   path, properties,
 });
-const image = (id: string) => ({ kind: "blob" as const, digest: digestOf(`ranking-image:${id}`), size: 64, mediaType: "image/png" });
+const image = (id: string) => ({ kind: "blob" as const, digest: fixtureDigest(`ranking-image:${id}`), size: 64, mediaType: "image/png" });
 const header = (variant: RankingHeader["variant"], id: string = variant) => sealRankingHeader({
   id, variant,
 });
@@ -286,7 +286,7 @@ test("Typewriter uses Unicode graphemes, explicit emphasis and winner timing wit
 const sound = (id: string): SynchronizedMedia => ({
   timeline: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 3 },
   audio: {
-    artifact: { kind: "blob", digest: digestOf(`ranking-sound:${id}`), size: 128, mediaType: "audio/wav" },
+    artifact: { kind: "blob", digest: fixtureDigest(`ranking-sound:${id}`), size: 128, mediaType: "audio/wav" },
   },
 });
 

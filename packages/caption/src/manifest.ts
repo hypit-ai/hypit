@@ -1,6 +1,5 @@
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
 export const captionModuleRef = { name: "@narratage/caption", version: "1" } as const;

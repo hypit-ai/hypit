@@ -1,4 +1,4 @@
-import type { CapabilityRef, Digest, ModuleRef, ProducerRef, TypeRef } from "./identity.js";
+import type { CapabilityRef, ModuleRef, ProducerRef, TypeRef } from "./identity.js";
 
 /** Logical package address for immutable semantic Modules. */
 export const modulePackageAbi = "narratage.module@1";
@@ -50,14 +50,12 @@ export type ResolvedModuleManifest = Omit<ModuleManifest, "types"> & {
 };
 
 export type ResolvedModule = {
-  readonly digest: Digest;
   readonly manifest: ResolvedModuleManifest;
 };
 
 export type ResolvedModuleClosure = {
   readonly format: "narratage.closure@1";
   readonly modules: readonly ResolvedModule[];
-  readonly digest: Digest;
 };
 
 export type ResolvedTypeDeclaration = {

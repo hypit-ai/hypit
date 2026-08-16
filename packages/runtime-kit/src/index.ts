@@ -95,7 +95,6 @@ export type RuntimeInfrastructureImplementation = {
 
 export type RuntimeAdapterHostFacet = HostFacet & {
   readonly abi: ReturnType<typeof runtimeAdapterHostAbi>;
-  readonly identity?: never;
   readonly implementation: RuntimeEndpointAdapterImplementation | RuntimeInfrastructureImplementation;
 };
 
@@ -168,7 +167,6 @@ export function createRuntimeInfrastructureAdapterFacet(options: {
 
 export function isRuntimeAdapterHostFacet(value: HostFacet): value is RuntimeAdapterHostFacet {
   try {
-    assert(value.identity === undefined, "Runtime Adapter facet must not carry a second identity");
     const resolved = address(value as RuntimeAdapterHostFacet);
     implementation(value.implementation, "Runtime Adapter", resolved.kind);
     return true;

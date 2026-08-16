@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { videoContractManifests } from "../../../test/support/video-domain.js";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { compositionDependency, compositionTypes } from "@narratage/composition";
 import type { VisualElement, VisualTimedSampling } from "@narratage/composition";
@@ -36,7 +37,6 @@ import { mediaPipelineManifest } from "@narratage/media-pipeline";
 import type { MediaLayerSet } from "@narratage/media-track";
 import { narrativeTypes } from "@narratage/narrative";
 import { programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest } from "@narratage/protocol";
 import { semanticMapTypes } from "@narratage/semantic-map";
 import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@narratage/spatial";
@@ -73,13 +73,13 @@ const frame = sealSpatialFrame({
 
 const image = (name: string) => ({
   kind: "blob" as const,
-  digest: digestOf(`deck-image:${name}`),
+  digest: fixtureDigest(`deck-image:${name}`),
   size: 16,
   mediaType: "image/png",
 });
 const video = (name: string) => ({
   kind: "blob" as const,
-  digest: digestOf(`deck-video:${name}`),
+  digest: fixtureDigest(`deck-video:${name}`),
   size: 32,
   mediaType: "video/mp4",
 });
@@ -337,7 +337,7 @@ test("continue uses one explicit loop-start clock and past hide removes the reta
 });
 
 const font: FontArtifactRef = {
-  sources: [{ artifact: { kind: "blob", digest: digestOf("deck-font"), size: 64, mediaType: "font/woff2" } }],
+  sources: [{ artifact: { kind: "blob", digest: fixtureDigest("deck-font"), size: 64, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
 };

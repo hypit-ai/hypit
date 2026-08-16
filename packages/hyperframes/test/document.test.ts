@@ -6,7 +6,6 @@ import {
   hyperframesTime,
   materializeHyperframesHtml,
 } from "@narratage/hyperframes";
-import { digestOf } from "@narratage/protocol";
 import type { FontArtifactRef } from "@narratage/media";
 import { sealProgramSpace } from "@narratage/program-space";
 import { sealAudioTrack, sealComposition, sealVisualTrack } from "@narratage/composition";
@@ -14,9 +13,10 @@ import type { Track } from "@narratage/composition";
 import { VISUAL_IR_V1 } from "@narratage/visual-ir";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 const fixtureFont: FontArtifactRef = {
-  sources: [{ artifact: { kind: "blob", digest: digestOf("hyperframes:fixture-font"), size: 1_024, mediaType: "font/woff2" } }],
+  sources: [{ artifact: { kind: "blob", digest: fixtureDigest("hyperframes:fixture-font"), size: 1_024, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
 };
@@ -28,13 +28,13 @@ function fixture() {
   });
   const picture = {
     kind: "blob" as const,
-    digest: digestOf("hyperframes:picture"),
+    digest: fixtureDigest("hyperframes:picture"),
     size: 10,
     mediaType: "image/png",
   };
   const sound = {
     kind: "blob" as const,
-    digest: digestOf("hyperframes:sound"),
+    digest: fixtureDigest("hyperframes:sound"),
     size: 20,
     mediaType: "audio/wav",
   };
@@ -94,15 +94,8 @@ test("HyperFrames flattens generic peer visual Track Presents without absorbing 
   const document = compileHyperframesDocument(composition, programSpace);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
   assert.equal(document.visualIr, VISUAL_IR_V1);
-  assert.deepEqual(document.artifacts, [
-    {
-      kind: "blob",
-      digest: picture.digest,
-      size: picture.size,
-      mediaType: picture.mediaType,
-    },
-    fixtureFont.sources[0]!.artifact,
-  ]);
+  assert.deepEqual(new Set(document.artifacts.map((artifact) => artifact.digest)),
+    new Set([picture.digest, fixtureFont.sources[0]!.artifact.digest]));
   assert.ok(document.html.indexOf('data-narratage-track-id="lower"') < document.html.indexOf('data-narratage-track-id="upper"'));
   assert.equal((document.html.match(/class="clip narratage-visual-present"/gu) ?? []).length, 2);
   assert.doesNotMatch(document.html, /<audio/u);
@@ -226,14 +219,14 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   const font: FontArtifactRef = {
     sources: [{ artifact: {
       kind: "blob",
-      digest: digestOf("hyperframes:font"),
+      digest: fixtureDigest("hyperframes:font"),
       size: 1_024,
       mediaType: "font/woff2",
     } }],
     weight: 700,
     style: "normal",
   };
-  const surfaceDigest = digestOf("hyperframes:alpha-surface");
+  const surfaceDigest = fixtureDigest("hyperframes:alpha-surface");
   const track = sealVisualTrack({
     visualIr: "narratage.visual-ir@1",
     id: "bound-render-dependencies",
@@ -300,7 +293,7 @@ test("exact timed sampling lowers loop boundaries and held frames without zero-r
   });
   const artifact = {
     kind: "blob" as const,
-    digest: digestOf("hyperframes:sampled-video"),
+    digest: fixtureDigest("hyperframes:sampled-video"),
     size: 1_000,
     mediaType: "video/mp4",
   };

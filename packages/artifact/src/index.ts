@@ -1,4 +1,3 @@
-import { digestOf } from "@narratage/protocol";
 import type {
   ModuleManifest,
   TypeRef,

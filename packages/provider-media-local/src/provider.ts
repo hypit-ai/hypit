@@ -12,7 +12,7 @@ import {
 } from "@narratage/media-execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@narratage/media-execution";
 import { mediaPipelineCapabilities } from "@narratage/media-pipeline";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import { isStreamingArtifactStore } from "@narratage/runtime";
 import { speechTypes } from "@narratage/speech";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";

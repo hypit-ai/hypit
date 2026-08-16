@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  computeModuleDigest,
   createResolvedClosure,
   link,
   sealBuildRequest,
@@ -15,8 +14,6 @@ import {
   ProducerRegistry,
   NodeDriver,
   EndpointRegistry,
-  parseBuildState,
-  serializeBuildState,
 } from "@narratage/driver-node";
 import type {
   CapabilityRef,
@@ -127,7 +124,6 @@ function program(): LinkedProgram {
 
 function outputGraph(linked: LinkedProgram): CompiledGraph {
   return sealCompiledGraph({
-    program: linked.semanticDigest,
     outputs: [
       {
         id: "measurement",
@@ -171,7 +167,6 @@ function outputGraph(linked: LinkedProgram): CompiledGraph {
 
 function outputBuild(linked: LinkedProgram, graph = outputGraph(linked)) {
   return start(linked, graph, sealBuildRequest({
-    graph: graph.id,
     targets: [{ output: "report" }],
   }));
 }
@@ -206,8 +201,6 @@ test("three independent packages communicate through an owner-validated nominal 
   assert.equal(measurement?.value.kind, "inline");
   assert.equal(result.state.records.find((record) => record.id === "report:root")?.type.name, "Report");
 
-  const restored = parseBuildState(serializeBuildState(result.state));
-  assert.equal(restored.records.find((record) => record.id === "measurement:root")?.digest, measurement?.digest);
 });
 
 test("a structurally valid but semantically invalid Producer value never enters BuildState", async () => {
@@ -220,12 +213,10 @@ test("a structurally valid but semantically invalid Producer value never enters 
   assert.equal(result.status, "paused");
   assert.match(result.outcomes[0]?.message ?? "", /measurement must be even/u);
   assert.equal(result.state.records.some((record) => record.id === "measurement:root"), false);
-  assert.equal(result.state.acceptedEvents.length, 0);
 });
 
 function providerGraph(linked: LinkedProgram): CompiledGraph {
   return sealCompiledGraph({
-    program: linked.semanticDigest,
     outputs: [{
       id: "measurement",
       type: measurementType,
@@ -271,7 +262,6 @@ async function providerBuild(measured: number) {
     linked,
     graph,
     sealBuildRequest({
-      graph: graph.id,
       targets: [{ output: "measurement" }],
     }),
   ));
@@ -294,9 +284,6 @@ test("authored values cross the Type owner's validation gate without carrying va
     id: "measurement:authored",
     type: measurementType,
     value: { kind: "inline", value: { value: 10, unit: "ticks" } },
-    origin: {
-      kind: "authored",
-    },
   });
   verifyRecordStructure(linked.closure, raw);
   const admitted = await admitRecord(linked.closure, raw, registry());

@@ -6,10 +6,7 @@ export type CandidateId = string;
 export type OperationId = string;
 export type NeedId = string;
 export type StepId = string;
-export type DerivationId = string;
-export type ReceiptId = string;
 export type CommandId = string;
-export type EventId = string;
 
 export type ModuleRef = {
   readonly name: string;

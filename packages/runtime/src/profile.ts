@@ -37,7 +37,7 @@ export type RuntimeEndpointFacet = {
   readonly name: string;
   readonly role: "capability-endpoint";
   readonly fulfills: readonly RuntimeCapability[];
-  readonly lifecycle: "immediate" | "recoverable";
+  readonly lifecycle: "immediate" | "asynchronous";
   readonly defaultConcurrency: number;
   /** Provider-local lanes. When omitted, each capability inherits the Provider total. */
   readonly lanes?: readonly (RuntimeCapability & {
@@ -99,7 +99,7 @@ export type ResolvedRuntimeEndpoint = {
   readonly role: "capability-endpoint";
   readonly facet: RuntimeFacetRef;
   readonly fulfills: readonly RuntimeCapability[];
-  readonly lifecycle: "immediate" | "recoverable";
+  readonly lifecycle: "immediate" | "asynchronous";
   readonly credentialSlots: readonly string[];
   readonly pool: string;
   readonly maxConcurrency: number;
@@ -205,7 +205,7 @@ function normalizeFacet(facet: RuntimeFacet): RuntimeFacet {
     .sort((left, right) => offerKey(left).localeCompare(offerKey(right)));
   assert(fulfills.length > 0, `${facet.name} must fulfill at least one exact capability`);
   assert(new Set(fulfills.map(offerKey)).size === fulfills.length, `${facet.name} repeats a capability offer`);
-  assert(facet.lifecycle === "immediate" || facet.lifecycle === "recoverable", `${facet.name} lifecycle is invalid`);
+  assert(facet.lifecycle === "immediate" || facet.lifecycle === "asynchronous", `${facet.name} lifecycle is invalid`);
   const defaultConcurrency = positiveInteger(facet.defaultConcurrency, `${facet.name} defaultConcurrency`);
   const lanes = (facet.lanes ?? fulfills.map((item) => ({
     ...item,
@@ -436,8 +436,8 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
   }
   assert(new Set(closure.endpoints.map(offerKey)).size === closure.endpoints.length,
     "Runtime Closure repeats an Endpoint offer");
-  if (closure.instances.some((instance) => instance.role === "capability-endpoint" && instance.lifecycle === "recoverable")) {
-    assert(instances.get(closure.stores.operations)?.role === "operation-store", "recoverable Endpoints require an OperationStore");
+  if (closure.instances.some((instance) => instance.role === "capability-endpoint" && instance.lifecycle === "asynchronous")) {
+    assert(instances.get(closure.stores.operations)?.role === "operation-store", "asynchronous Endpoints require an OperationStore");
   }
   if (closure.instances.some((instance) => instance.role === "capability-endpoint" && instance.credentialSlots.length > 0)) {
     assert(closure.stores.credentials.length > 0, "credentialed Endpoints require a CredentialStore");
@@ -492,7 +492,6 @@ export function runtimeEndpoint(
 
 /** Fail before execution if the selected finite BuildPlan has an unbound external requirement. */
 export function verifyRuntimeCoverage(closure: RuntimeClosure, state: BuildState): void {
-  verifyRuntimeClosure(closure);
   const offers = new Set(closure.endpoints.map(offerKey));
   for (const requirement of plannedNeeds(state)) {
     assert(
@@ -507,7 +506,6 @@ export function localSchedulerOptionsFromClosure(closure: RuntimeClosure): {
   readonly resourceLimits: Readonly<Record<string, number>>;
   readonly runtimeClosure: RuntimeClosure;
 } {
-  verifyRuntimeClosure(closure);
   return {
     maxConcurrency: closure.scheduling.maxConcurrency,
     resourceLimits: Object.fromEntries(closure.scheduling.resources.map((resource) => [resource.id, resource.maxConcurrency])),

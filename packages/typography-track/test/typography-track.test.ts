@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import { compositionTypes, sealComposition, sealVisualTrack } from "@narratage/composition";
-import { computeModuleDigest, createResolvedClosure, sealBuildRequest, start } from "@narratage/core";
+import { createResolvedClosure, sealBuildRequest, start } from "@narratage/core";
 import { AuthorFrontendRegistry, compileSourceClosure, resolveCompiledSourceExport } from "@narratage/elaborator";
 import { compileHyperframesDocument } from "@narratage/hyperframes";
 import { mediaDependency, mediaTypes } from "@narratage/media";
@@ -12,7 +13,6 @@ import type { CompositableSurfaceRef, FontArtifactRef } from "@narratage/media";
 import type { NarrativeSelectionRef } from "@narratage/narrative";
 import { sealProgramSpace } from "@narratage/program-space";
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest } from "@narratage/protocol";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import {
@@ -55,7 +55,7 @@ const space = sealProgramSpace({
 const exactTestFont: FontArtifactRef = {
   sources: [{ artifact: {
     kind: "blob",
-    digest: digestOf("typography-track-test-font"),
+    digest: fixtureDigest("typography-track-test-font"),
     size: 1,
     mediaType: "font/woff2",
   } }],
@@ -66,7 +66,7 @@ const exactTestFont: FontArtifactRef = {
 const exactTestSurface: CompositableSurfaceRef = {
   artifact: {
     kind: "blob",
-    digest: digestOf("typography-track-test-surface"),
+    digest: fixtureDigest("typography-track-test-surface"),
     size: 1,
     mediaType: "image/png",
   },
@@ -219,7 +219,7 @@ test("Text Mask explicitly consumes one authored Text Program and one owned stil
     }],
   });
   const material: CompositableSurfaceRef = {
-    artifact: { kind: "blob", digest: digestOf("text-mask-material"), size: 1, mediaType: "image/png" },
+    artifact: { kind: "blob", digest: fixtureDigest("text-mask-material"), size: 1, mediaType: "image/png" },
     width: 800, height: 240, colorSpace: "srgb", alphaMode: "straight", timing: { kind: "still" },
   };
   const track = renderTextMaskTrack(space, program, material, sealTextMaskSpec({
@@ -307,7 +307,6 @@ test("Selection Text consumes explicit Selection, SemanticMap, Style, Motion and
 
 test("the self-described Markup Surfaces compile Style, Motion and all three spatial forms", async () => {
   const fixtureModule = { name: "example.text-inputs", version: "1" } as const;
-  const fixtureDigest = digestOf("example.text-inputs/surface@1");
   const fixtureSurface = {
     name: "inputs", tag: "Inputs", mode: "structured",
     outputs: [
@@ -461,7 +460,6 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
   assert.equal(ordinaryTrack.ref.kind, "logical-output");
   assert.equal(track.ref.kind, "logical-output");
   const build = start(compiled.program, compiled.graph, sealBuildRequest({
-    graph: compiled.graph.id,
     targets: [
       { output: ordinaryTrack.ref.kind === "logical-output" ? ordinaryTrack.ref.id : "" },
       { output: track.ref.kind === "logical-output" ? track.ref.id : "" },

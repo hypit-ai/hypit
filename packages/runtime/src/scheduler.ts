@@ -1,6 +1,6 @@
-import { reduce } from "@narratage/core";
+import { BuildMachine, buildDefinition, reduce } from "@narratage/core";
 import type { BuildState } from "@narratage/protocol";
-import { verifyRuntimeClosure, verifyRuntimeCoverage } from "./profile.js";
+import { verifyRuntimeCoverage } from "./profile.js";
 import type { RuntimeClosure } from "./profile.js";
 
 import type {
@@ -17,7 +17,7 @@ import type {
 type MutableBuild = {
   readonly id: string;
   state: BuildState;
-  revision: number | undefined;
+  machine: BuildMachine | undefined;
   readonly outcomes: SchedulerExecutionOutcome[];
   blocked: ScheduledBuildResult["blocked"];
   stopped: boolean;
@@ -65,7 +65,6 @@ export class LocalBuildScheduler implements BuildScheduler {
       ? undefined
       : structuredClone(options.runtimeClosure);
     this.#buildStore = options.buildStore;
-    if (this.#runtimeClosure !== undefined) verifyRuntimeClosure(this.#runtimeClosure);
     for (const [resource, limit] of Object.entries(options.resourceLimits ?? {})) {
       if (resource.trim().length === 0) throw new Error("resource override name must not be empty");
       positiveInteger(limit, `resource ${resource}`);
@@ -81,28 +80,28 @@ export class LocalBuildScheduler implements BuildScheduler {
       if (ids.has(request.id)) throw new Error(`scheduled build ${request.id} is duplicated`);
       ids.add(request.id);
       let state = structuredClone(request.state);
-      let revision: number | undefined;
+      let machine: BuildMachine | undefined;
       if (this.#buildStore !== undefined) {
-        let snapshot = await this.#buildStore.read(request.id);
+        let snapshot = request.snapshot ?? await this.#buildStore.read(request.id);
+        if (snapshot !== undefined && snapshot.build !== request.id) {
+          throw new Error(`scheduled Build snapshot ${snapshot.build} does not belong to ${request.id}`);
+        }
         if (snapshot === undefined) {
           try {
-            snapshot = await this.#buildStore.create(request.id, state);
+            snapshot = await this.#buildStore.create(request.id, buildDefinition(state));
           } catch (error) {
             snapshot = await this.#buildStore.read(request.id);
             if (snapshot === undefined) throw error;
           }
         }
-        if (snapshot.state.id !== state.id) {
-          throw new Error(`scheduled build ${request.id} already names a different Core Build`);
-        }
         state = snapshot.state;
-        revision = snapshot.revision;
+        machine = new BuildMachine(snapshot.definition, snapshot.facts);
       }
       if (this.#runtimeClosure !== undefined) verifyRuntimeCoverage(this.#runtimeClosure, state);
       builds.push({
         id: request.id,
         state,
-        revision,
+        machine,
         outcomes: [],
         blocked: [],
         stopped: false,
@@ -124,25 +123,19 @@ export class LocalBuildScheduler implements BuildScheduler {
       return proposed;
     };
 
-    const persist = async (build: MutableBuild, state: BuildState): Promise<void> => {
-      if (this.#buildStore === undefined) {
-        build.state = state;
+    const accept = async (build: MutableBuild, event: import("@narratage/protocol").CommandResult): Promise<void> => {
+      if (this.#buildStore === undefined || build.machine === undefined) {
+        build.state = reduce(build.state, event);
         return;
       }
-      if (build.revision === undefined) throw new Error(`Build ${build.id} has no durable revision`);
-      const written = await this.#buildStore.compareAndSwap(build.id, build.revision, state);
-      if (written.status === "conflict") {
-        build.state = written.current.state;
-        build.revision = written.current.revision;
-        throw new Error(`Build ${build.id} lost its authoritative Store revision`);
+      const fact = build.machine.evaluate(event);
+      if (fact === undefined) {
+        build.state = build.machine.view();
+        return;
       }
-      // Stores deliberately remove derived outstanding Commands from their durable snapshot.
-      // The state supplied here has already passed Core verification and remains the authority
-      // for this live scheduling turn; replacing it with the durable projection would forget
-      // sibling Commands which are still executing. A restarted Scheduler will regenerate those
-      // Commands from the stored facts instead.
-      build.state = state;
-      build.revision = written.snapshot.revision;
+      await this.#buildStore.append(build.id, fact);
+      build.machine.commit();
+      build.state = build.machine.view();
     };
 
     const preparations = async (): Promise<Map<string, readonly RuntimeRunnableCommand[]>> => {
@@ -153,8 +146,7 @@ export class LocalBuildScheduler implements BuildScheduler {
           continue;
         }
         const prepared = this.#executor.prepare(build.state);
-        if (prepared.state.status !== build.state.status) await persist(build, prepared.state);
-        else build.state = prepared.state;
+        build.state = prepared.state;
         build.blocked = prepared.blocked;
         ready.set(build.id, prepared.runnable.filter((item) =>
           !active.has(buildCommandKey(build.id, item.command.id))));
@@ -251,14 +243,12 @@ export class LocalBuildScheduler implements BuildScheduler {
       }
       const event = settled.execution.event;
       try {
-        const next = reduce(build.state, event);
-        await persist(build, next);
+        await accept(build, event);
         build.outcomes.push({
           command: settled.command.command.id,
           kind: settled.command.command.kind,
           resources: settled.command.resources.map((resource) => resource.id),
           status: "completed",
-          event: event.id,
         });
       } catch (error) {
         build.stopped = true;

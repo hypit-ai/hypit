@@ -8,7 +8,6 @@ import {
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
 import { mediaPipelineManifest, mediaPipelineModuleRef } from "@narratage/media-pipeline";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import {
@@ -266,9 +265,6 @@ export const mediaTrackHeaderSchema: ValueSchema = object({
   id: { schema: string },
 });
 
-const validator = (digest: ReturnType<typeof digestOf>) => ({
-  implementation: { digest },
-});
 const itemInputs = [
   { name: "set", type: mediaTrackTypes.set }, { name: "header", type: mediaTrackTypes.header },
   { name: "space", type: programSpaceTypes.programSpace }, { name: "canvas", type: spatialTypes.canvas },

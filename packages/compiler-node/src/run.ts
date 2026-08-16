@@ -4,17 +4,19 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sliceExecution,
-  start,
+  defineBuild,
+  materializeBuild,
 } from "@narratage/core";
 import type {
   ArtifactAttachment,
 } from "@narratage/workspace";
 import type {
   BuildPlan,
+  BuildDefinition,
   BuildRequest,
   BuildState,
-  BuildState as ArchivedBuildState,
   StoredValue,
+  TypeRef,
 } from "@narratage/protocol";
 import {
   collectRunModuleRequests,
@@ -36,11 +38,12 @@ export type NodeRunCompilerOptions = {
   readonly authorCompiler: NodeCompiler;
   readonly frontends: RunFrontendRegistryLike;
   readonly fragments: RunFragmentRegistryLike;
-  readonly readBuild?: (id: string) => Promise<ArchivedBuildState | undefined> | ArchivedBuildState | undefined;
-  readonly resolveBuildOutput?: (
+  readonly resolveBuildRecord?: (
     build: string,
     output: string,
-  ) => Promise<string | undefined> | string | undefined;
+  ) => Promise<{ readonly type: TypeRef; readonly value: StoredValue } | undefined>
+    | { readonly type: TypeRef; readonly value: StoredValue }
+    | undefined;
 };
 
 export type NodeCompiledRun = {
@@ -58,7 +61,6 @@ export type NodeCheckedRun = {
   readonly authorSource: string;
   readonly author: NodeCompiledSourceClosure;
   readonly program: LinkedProgram;
-  readonly closure: RunCompilation["closure"];
   readonly document: RunCompilation["document"];
   readonly unresolvedBuildRecords: readonly {
     readonly id: string;
@@ -70,10 +72,13 @@ export type NodeCheckedRun = {
 
 export type PlannedBuild = {
   readonly compilation: NodeCompiledRun;
-  /** Convenience view of `state.request`; `state` remains the sole durable authority. */
+  /** Immutable authority persisted once for every fresh Runtime Build. */
+  readonly definition: BuildDefinition;
+  /** Convenience view of `definition.request`. */
   readonly request: BuildRequest;
-  /** Convenience view of `state.plan`; `state` remains the sole durable authority. */
+  /** Convenience view of `definition.plan`. */
   readonly plan: BuildPlan;
+  /** Materialized plan/read view; durable Stores persist Definition + Facts instead. */
   readonly state: BuildState;
 };
 
@@ -223,7 +228,6 @@ export class NodeRunCompiler {
       authorSource: authorSource.id,
       author,
       program,
-      closure: decoded.closure,
       document: decoded.document,
       unresolvedBuildRecords: decoded.document.candidates.flatMap((item) => item.kind === "build-record"
         ? [{ id: item.id, build: item.build, output: item.output }]
@@ -245,25 +249,18 @@ export class NodeRunCompiler {
       collectRunModuleRequests(decoded.document, this.#options.fragments),
     );
     const executionCompilation = program === author.program ? author : { ...author, program };
-    const readBuild = this.#options.readBuild;
-    const resolveBuildOutput = this.#options.resolveBuildOutput;
+    const resolveBuildRecord = this.#options.resolveBuildRecord;
     const run = await resolveRunDocument(decoded.document, {
       compilation: executionCompilation,
-      sourceClosure: decoded.closure,
       fragments: this.#options.fragments,
       readStoredValue: async (from) => await storedValueFromWorkspace(workspace, source, from),
       readFile: async (from, mediaType) => await fileValueFromWorkspace(workspace, source, from, mediaType),
-      async readBuild(id) {
-        if (readBuild === undefined) {
-          throw new Error(`Run contains historical Build Candidate ${id}; plan/build requires --runtime to resolve it`);
+      async resolveBuildRecord(build, output) {
+        if (resolveBuildRecord === undefined) {
+          throw new Error(`Run contains historical Build Candidate ${build}; plan/build requires --runtime to resolve it`);
         }
-        return await readBuild(id);
+        return await resolveBuildRecord(build, output);
       },
-      ...(resolveBuildOutput === undefined ? {} : {
-        async resolveBuildOutput(build: string, output: string) {
-          return await resolveBuildOutput(build, output);
-        },
-      }),
     });
     return {
       source: source.id,
@@ -279,7 +276,6 @@ export class NodeRunCompiler {
     const authorGraph = compilation.author.graph;
     const selected = new Map(compilation.run.graph.satisfactions.map((item) => [item.output, item.candidate]));
     const fullGraph = sealCompiledGraph({
-      program: compilation.program.semanticDigest,
       outputs: authorGraph.outputs.map((output) => ({
         ...output,
         primary: selected.get(output.id) ?? output.primary,
@@ -288,16 +284,15 @@ export class NodeRunCompiler {
       operations: [...authorGraph.operations, ...compilation.run.graph.operations],
     });
     const fullRequest = sealBuildRequest({
-      graph: fullGraph.id,
       targets: compilation.run.graph.targets,
     });
     const sliced = sliceExecution(compilation.program, fullGraph, fullRequest);
     const request = sealBuildRequest({
-      graph: sliced.graph.id,
       targets: compilation.run.graph.targets,
     });
-    const state = start(sliced.program, sliced.graph, request);
-    return { compilation, request: state.request, plan: state.plan, state };
+    const definition = defineBuild(sliced.program, sliced.graph, request);
+    const state = materializeBuild(definition, []);
+    return { compilation, definition, request: definition.request, plan: definition.plan, state };
   }
 
   async planFile(file: string): Promise<PlannedBuild> {

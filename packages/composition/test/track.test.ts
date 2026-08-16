@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import { createResolvedClosure } from "@narratage/core";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { BlobRef } from "@narratage/protocol";
 import { TypeValidatorRegistry, validateValue } from "@narratage/validation";
 import { artifactManifest } from "@narratage/artifact";
@@ -33,13 +34,13 @@ const videoContractManifests = [artifactManifest, narrativeManifest, mediaManife
   speechManifest, speechEvidenceManifest, semanticMapManifest, spatialManifest, visualIrManifest, compositionManifest] as const;
 
 const font: FontArtifactRef = {
-  sources: [{ artifact: { kind: "blob", digest: digestOf("track:test-font"), size: 1_024, mediaType: "font/woff2" } }],
+  sources: [{ artifact: { kind: "blob", digest: fixtureDigest("track:test-font"), size: 1_024, mediaType: "font/woff2" } }],
   weight: 700,
   style: "normal",
 };
 const audio: BlobRef = {
   kind: "blob",
-  digest: digestOf("audio"),
+  digest: fixtureDigest("audio"),
   size: 24,
   mediaType: "audio/wav",
 };
@@ -236,19 +237,6 @@ test("Composition validates Track frame ranges against the explicitly connected 
   });
   assert.throws(() => assertCompositionIdentity(composition, foreign), /outside ProgramSpace/);
   assert.notDeepEqual(programSpace, foreign);
-});
-
-test("Composition is a plain product value; the enclosing Record binds its integrity", () => {
-  const { programSpace, visual } = fixture();
-  const composition = sealComposition({
-    id: "main",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    tracks: [visual],
-  });
-  const tampered = structuredClone(composition);
-  (tampered.tracks[0] as { id: string }).id = "changed";
-  assert.doesNotThrow(() => assertCompositionIdentity(tampered, programSpace));
-  assert.equal(tampered.tracks[0]?.id, "changed");
 });
 
 test("one authoring Track may contribute independently stacked Presents", () => {

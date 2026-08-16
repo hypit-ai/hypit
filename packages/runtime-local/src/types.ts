@@ -1,7 +1,7 @@
 import type { Awaitable, ComponentPackage } from "@narratage/component-kit";
 import type { ArtifactAttachment } from "@narratage/workspace";
 import type { EndpointPackage } from "@narratage/endpoint-kit";
-import type { BuildState } from "@narratage/protocol";
+import type { BuildDefinition, BuildState } from "@narratage/protocol";
 import type { Digest } from "@narratage/protocol";
 import type {
   ArtifactStore,
@@ -111,7 +111,7 @@ export type ProjectLocalRuntimeControlOptions = ProjectLocalRuntimeArchiveContro
 export type LocalBuildRequest = {
   /** Caller-generated identity for one submission; Source identity is separate. */
   readonly id: string;
-  readonly state: BuildState;
+  readonly definition: BuildDefinition;
   /** Installed compute packages selected by this Build's Source closure. */
   readonly implementationPackages?: readonly string[];
   /** Source aliases and paths for Host inspection. Not trusted Build input. */
@@ -156,7 +156,7 @@ export type LocalCredentialStatus = import("@narratage/endpoint-kit").EndpointCr
 export type LocalBuildSubmission = {
   readonly id: string;
   readonly state: BuildState;
-  readonly status: "queued" | "running" | "waiting" | "blocked" | "settling" | "complete" | "failed" | "cancelled";
+  readonly status: "queued" | "running" | "waiting" | "blocked" | "complete" | "failed" | "cancelled";
   readonly dispatch: BuildDispatchSnapshot;
 };
 
@@ -172,15 +172,13 @@ export type LocalRuntime = {
   status(build: string): Promise<LocalRuntimeStatus>;
   activity(build: string): Promise<LocalRuntimeActivity>;
   queue(): Promise<LocalRuntimeQueue>;
-  operation(id: Digest): Promise<OperationSnapshot | undefined>;
+  operation(id: string): Promise<OperationSnapshot | undefined>;
   credentials(endpoint?: string): Promise<readonly LocalCredentialStatus[]>;
   putCredential(endpoint: string, slot: string, secret: string): Promise<LocalCredentialStatus>;
   deleteCredential(endpoint: string, slot: string): Promise<{ readonly deleted: boolean; readonly credential: LocalCredentialStatus }>;
   builds(): Promise<readonly BuildCatalogEntry[]>;
   cancel(build: string, reason?: string): Promise<BuildDispatchSnapshot | undefined>;
-  /** Request control of one exact Operation attempt without closing the whole Build. */
-  cancelOperation(id: Digest, reason?: string): Promise<OperationSnapshot | undefined>;
-  workOnce(options: { readonly owner: string; readonly leaseMs: number }): Promise<BuildDispatchSnapshot | undefined>;
+  workOnce(): Promise<BuildDispatchSnapshot | undefined>;
   work(options: import("@narratage/runtime").RuntimeWorkerRunOptions): Promise<void>;
   readArtifact(digest: Digest): Promise<Uint8Array | undefined>;
   openArtifact(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
@@ -197,7 +195,6 @@ export type LocalRuntimeArchiveControl = Pick<LocalRuntime,
   | "operation"
   | "builds"
   | "cancel"
-  | "cancelOperation"
   | "close"
 >;
 
@@ -216,7 +213,6 @@ export type LocalRuntimeControl = Pick<LocalRuntime,
   | "operation"
   | "builds"
   | "cancel"
-  | "cancelOperation"
   | "readArtifact"
   | "openArtifact"
   | "garbageCollectArtifacts"

@@ -7,8 +7,8 @@ import { sealSpeechBasis, sealSpeechEvidenceAudio } from "@narratage/speech";
 import type { SpeechBasis, SpeechEvidenceAudio } from "@narratage/speech";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { digestOf } from "@narratage/protocol";
 import type { Digest, ProducerRef } from "@narratage/protocol";
 import {
   whisperXComponent,
@@ -23,7 +23,7 @@ function basis() {
   });
   return sealSpeechBasis({
     programSpace,
-    audio: { kind: "blob", digest: digestOf("whisperx-test:audio"), size: 1, mediaType: "audio/wav" },
+    audio: { kind: "blob", digest: fixtureDigest("whisperx-test:audio"), size: 1, mediaType: "audio/wav" },
     visualTrack: { clips: [] },
     segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 30 }],
   });
@@ -33,7 +33,7 @@ function evidenceAudio(basis: SpeechBasis): SpeechEvidenceAudio {
   return sealSpeechEvidenceAudio({
     artifact: {
       kind: "blob",
-      digest: digestOf("whisperx-test:evidence-audio"),
+      digest: fixtureDigest("whisperx-test:evidence-audio"),
       size: 32_044,
       mediaType: "audio/wav",
     },

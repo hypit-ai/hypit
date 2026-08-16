@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   audioTrackManifest,
@@ -29,7 +30,6 @@ import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narra
 import { narrativeManifest } from "@narratage/narrative";
 import { compileAudioProgramPlan } from "@narratage/media-pipeline";
 import { programSpaceDependency, programSpaceManifest, programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest } from "@narratage/protocol";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import { semanticMapManifest } from "@narratage/semantic-map";
@@ -55,7 +55,7 @@ function media(id: string, sampleFrames: number): SynchronizedMedia {
       frameCount: Math.max(1, Math.round(sampleFrames / 1_600)),
     },
     audio: {
-      artifact: { kind: "blob", digest: digestOf(`audio:${id}`), size: sampleFrames * 4, mediaType: "audio/wav" },
+      artifact: { kind: "blob", digest: fixtureDigest(`audio:${id}`), size: sampleFrames * 4, mediaType: "audio/wav" },
     },
   };
 }
@@ -231,7 +231,7 @@ test("dynamic Fragment keeps every material and temporal dependency as an explic
 
 test("the self-described Audio Surface parses into the same finite Producer graph", async () => {
   const fixtureModule = { name: "example.audio-inputs", version: "1" } as const;
-  const fixtureSurfaceDigest = digestOf("example.audio-inputs/surface@1");
+  const fixtureSurfaceDigest = fixtureDigest("example.audio-inputs/surface@1");
   const fixtureSurface = {
     name: "inputs", tag: "Inputs", mode: "structured",
     outputs: [mediaTypes.synchronized, programSpaceTypes.programSpace],
@@ -303,7 +303,6 @@ test("the self-described Audio Surface parses into the same finite Producer grap
   const trackExport = resolveCompiledSourceExport(compiled, "sound.track", compositionTypes.audioTrack);
   assert.equal(trackExport.ref.kind, "logical-output");
   const build = start(compiled.program, compiled.graph, sealBuildRequest({
-    graph: compiled.graph.id,
     targets: [{ output: trackExport.ref.kind === "logical-output" ? trackExport.ref.id : "" }],
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [

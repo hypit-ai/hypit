@@ -13,7 +13,7 @@ import type {
   TypedRecord,
 } from "@narratage/protocol";
 
-import { canonicalStringify, digestOf } from "./canonical.js";
+import { canonicalStringify } from "./canonical.js";
 import { invariant } from "./error.js";
 import {
   operationResultRecord,
@@ -96,16 +96,12 @@ export function plannedNeeds(state: BuildState): readonly PlannedNeed[] {
 }
 
 function planContent(
-  graph: CompiledGraph,
-  request: BuildRequest,
   steps: readonly ProducerStep[],
   goals: BuildPlan["goals"],
   selections: BuildPlan["selections"],
-): Omit<BuildPlan, "id"> {
+): BuildPlan {
   return {
     format: "narratage.plan@1",
-    graph: graph.id,
-    request: request.digest,
     steps,
     goals,
     selections,
@@ -160,7 +156,6 @@ export function compileBuild(
         id: candidate.root.value.id,
         type: candidate.type,
         value: candidate.root.value.value,
-        origin: { kind: "provided" },
       });
       invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`);
       resolved = { record: record.id, type: record.type };
@@ -227,8 +222,7 @@ export function compileBuild(
     .map(({ source }) => ({ record: source.record, type: source.type }))
     .sort((a, b) => a.record.localeCompare(b.record));
   const sortedSelections = [...selections.values()].sort((a, b) => a.output.localeCompare(b.output));
-  const content = planContent(graph, request, steps, goals, sortedSelections);
-  const plan: BuildPlan = { ...content, id: digestOf(content) };
+  const plan = planContent(steps, goals, sortedSelections);
   validatePlanStructure(program, graph, request, plan);
   return plan;
 }
@@ -240,10 +234,6 @@ function validatePlanStructure(
   plan: BuildPlan,
 ): void {
   invariant(plan.format === "narratage.plan@1", "UNSUPPORTED_PLAN", "unsupported build plan format");
-  invariant(plan.graph === graph.id, "PLAN_GRAPH_MISMATCH", "build plan belongs to another graph");
-  invariant(plan.request === request.digest, "PLAN_REQUEST_MISMATCH", "build plan belongs to another request");
-  const { id: _id, ...content } = plan;
-  invariant(plan.id === digestOf(content), "PLAN_DIGEST_MISMATCH", "build plan digest differs");
   invariant(plan.goals.length > 0, "EMPTY_PLAN_GOALS", "build plan has no goals");
 
   const records = new Map<RecordId, ProducedRecord>();
@@ -320,12 +310,8 @@ export function validatePlan(
   request: BuildRequest,
   plan: BuildPlan,
 ): void {
-  const expected = compileBuild(program, graph, request);
-  invariant(
-    canonicalStringify(plan) === canonicalStringify(expected),
-    "PLAN_NOT_DERIVED",
-    "build plan is not the plan compiled from its graph and BuildRequest",
-  );
+  verifyBuildRequest(program, graph, request);
+  validatePlanStructure(program, graph, request, plan);
 }
 
 /** Materialize selected zero-input values from their sole source of truth: the Run Graph. */
@@ -343,7 +329,6 @@ export function selectedProvidedRecords(
       id: candidate.root.value.id,
       type: candidate.type,
       value: candidate.root.value.value,
-      origin: { kind: "provided" },
     });
     invariant(selection.record === record.id, "SELECTION_RECORD_MISMATCH", `${selection.output} does not select ${record.id}`);
     invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`, record.id);

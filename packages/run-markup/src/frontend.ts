@@ -1,4 +1,3 @@
-import { digestOf } from "@narratage/protocol";
 import type { RunFrontend } from "@narratage/run";
 
 import { parseRunDocument } from "./syntax.js";

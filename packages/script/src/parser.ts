@@ -1,4 +1,3 @@
-import { digestOf } from "@narratage/protocol";
 
 import { ScriptSyntaxError } from "./error.js";
 import type {

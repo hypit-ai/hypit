@@ -9,9 +9,9 @@ import {
 import type {
   EndpointFulfillment,
   EndpointOutcome,
-  EndpointResumeContext,
+  EndpointPollContext,
   EndpointStartContext,
-  RecoverableEndpoint,
+  AsyncEndpoint,
 } from "@narratage/endpoint-kit";
 import {
   assertHyperframesDocument,
@@ -25,13 +25,10 @@ import {
 import type { RenderedVisual } from "@narratage/media";
 import {
   canonicalize,
-  digestOf,
-  isDigest,
 } from "@narratage/protocol";
 import type {
   BlobRef,
   CanonicalValue,
-  Digest,
 } from "@narratage/protocol";
 import { renderHyperframesCapabilities } from "@narratage/render-hyperframes";
 import { isStreamingArtifactStore } from "@narratage/runtime";
@@ -48,7 +45,7 @@ import type {
   HyperframesLambdaSite,
 } from "./client.js";
 
-const CHECKPOINT_CONTRACT = "narratage.hyperframes-aws-lambda-operation@1";
+const HANDLE_CONTRACT = "narratage.hyperframes-aws-lambda-operation@1";
 const SUPPORTED_FPS = new Set([24, 30, 60]);
 
 export const awsLambdaHyperframesProviderModuleRef = {
@@ -62,7 +59,6 @@ export type CreateAwsLambdaHyperframesProviderOptions = {
   readonly pool?: string;
   readonly stateMachineArn: string;
   readonly bucketName: string;
-  readonly region?: string;
   readonly quality?: HyperframesLambdaQuality;
   readonly chunkSize?: number;
   readonly maxParallelChunks?: number;
@@ -72,27 +68,19 @@ export type CreateAwsLambdaHyperframesProviderOptions = {
   readonly pollIntervalMs?: number;
   readonly maxOperationMs?: number;
   readonly maxRenderedBytes?: number;
-  readonly maxPollFailures?: number;
-  readonly maxAttempts?: number;
   readonly client?: HyperframesAwsLambdaClient;
   readonly now?: () => number;
 };
 
-type HyperframesCheckpoint = {
-  readonly contract: typeof CHECKPOINT_CONTRACT;
-  readonly requestDigest: Digest;
-  readonly operationId: Digest;
-  readonly executionName: string;
+type HyperframesHandle = {
+  readonly contract: typeof HANDLE_CONTRACT;
+  readonly operationId: string;
   readonly executionArn: string;
-  readonly renderId: string;
   readonly outputS3Uri: string;
-  readonly stateMachineArn: string;
   readonly bucketName: string;
   readonly site: HyperframesLambdaSite;
   readonly startedAt: number;
   readonly polls: number;
-  readonly pollFailures: number;
-  readonly submission: "confirmed" | "unknown";
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -143,71 +131,26 @@ export function supportsAwsLambdaHyperframes(value: CanonicalValue): boolean {
   }
 }
 
-function implementationFailure(code: string, error: unknown, retryable: boolean): EndpointOutcome {
+function implementationFailure(code: string, error: unknown): EndpointOutcome {
   return {
     status: "failed",
     failure: {
       code,
       message: error instanceof Error ? error.message : String(error),
-      retryable,
     },
   };
 }
 
-function executionName(operationId: Digest): string {
-  return `narratage-${operationId.slice("sha256:".length)}`;
+function operationName(operationId: string): string {
+  return operationId.replace(/[^A-Za-z0-9_-]/gu, "-").slice(0, 64);
 }
 
-function outputKey(operationId: Digest): string {
-  return `renders/narratage/${operationId.slice("sha256:".length)}/visual.mp4`;
+function executionName(operationId: string): string {
+  return `narratage-${operationName(operationId)}`;
 }
 
-function expectedOutputUri(bucketName: string, key: string): string {
-  return `s3://${bucketName}/${key}`;
-}
-
-function sameRender(actual: HyperframesLambdaRender, expected: {
-  readonly executionName: string;
-  readonly executionArn: string;
-  readonly outputS3Uri: string;
-  readonly stateMachineArn: string;
-  readonly bucketName: string;
-  readonly projectS3Uri: string;
-}): void {
-  assert(actual.renderId === expected.executionName, "HyperFrames render id differs from its Operation id");
-  assert(actual.executionArn === expected.executionArn, "HyperFrames execution ARN differs from its deterministic identity");
-  assert(actual.outputS3Uri === expected.outputS3Uri, "HyperFrames output URI differs from its deterministic key");
-  assert(actual.stateMachineArn === expected.stateMachineArn, "HyperFrames render used another state machine");
-  assert(actual.bucketName === expected.bucketName, "HyperFrames render used another bucket");
-  assert(actual.projectS3Uri === expected.projectS3Uri, "HyperFrames render used another staged project");
-}
-
-function duplicateExecution(error: unknown): boolean {
-  return error !== null && typeof error === "object"
-    && (error as { readonly name?: unknown }).name === "ExecutionAlreadyExists";
-}
-
-function rejectedSubmission(error: unknown): { readonly code: string; readonly retryable: boolean } | undefined {
-  if (error === null || typeof error !== "object") return undefined;
-  const name = String((error as { readonly name?: unknown }).name);
-  if (["ExecutionLimitExceeded", "KmsThrottlingException", "ThrottlingException"].includes(name)) {
-    return { code: "HYPERFRAMES_SUBMISSION_THROTTLED", retryable: true };
-  }
-  if ([
-    "InvalidConfigError", "ValidationException", "InvalidArn", "InvalidExecutionInput", "InvalidName",
-    "AccessDeniedException", "KmsAccessDeniedException", "KmsInvalidStateException",
-    "StateMachineDeleting", "StateMachineDoesNotExist",
-  ].includes(name)) {
-    return { code: "HYPERFRAMES_SUBMISSION_REJECTED", retryable: false };
-  }
-  return undefined;
-}
-
-function missingExecution(error: unknown): boolean {
-  return error !== null && typeof error === "object"
-    && ["ExecutionDoesNotExist", "SFN.ExecutionDoesNotExist"].includes(
-      String((error as { readonly name?: unknown }).name),
-    );
+function outputKey(operationId: string): string {
+  return `renders/narratage/${operationName(operationId)}/visual.mp4`;
 }
 
 function alreadyStopped(error: unknown): boolean {
@@ -242,22 +185,16 @@ function verifySite(site: HyperframesLambdaSite, bucketName: string): void {
   assert(typeof site.uploaded === "boolean", "HyperFrames site upload state is invalid");
 }
 
-function verifyCheckpoint(value: CanonicalValue | undefined, context: EndpointResumeContext): HyperframesCheckpoint {
+function readHandle(value: CanonicalValue | undefined, context: EndpointPollContext): HyperframesHandle {
   assert(value !== undefined && value !== null && typeof value === "object" && !Array.isArray(value),
-    "HyperFrames checkpoint is absent or invalid");
-  const item = value as unknown as HyperframesCheckpoint;
-  assert(item.contract === CHECKPOINT_CONTRACT, "HyperFrames checkpoint contract is invalid");
-  assert(item.requestDigest === context.need.requestDigest, "HyperFrames checkpoint request differs");
-  assert(item.operationId === context.operation.id, "HyperFrames checkpoint Operation differs");
-  assert(item.executionName === executionName(context.operation.id),
-    "HyperFrames checkpoint execution name differs");
-  assert(item.renderId === item.executionName, "HyperFrames checkpoint render id differs");
-  assert(isDigest(item.requestDigest) && isDigest(item.operationId), "HyperFrames checkpoint digest is invalid");
-  assert(item.startedAt >= 0 && Number.isSafeInteger(item.startedAt), "HyperFrames checkpoint start time is invalid");
-  nonNegativeInteger(item.polls, "HyperFrames checkpoint polls");
-  nonNegativeInteger(item.pollFailures, "HyperFrames checkpoint poll failures");
-  assert(item.submission === "confirmed" || item.submission === "unknown",
-    "HyperFrames checkpoint submission state is invalid");
+    "HyperFrames handle is absent or invalid");
+  const item = value as unknown as HyperframesHandle;
+  assert(item.contract === HANDLE_CONTRACT, "HyperFrames handle contract is invalid");
+  assert(item.operationId === context.operation, "HyperFrames handle Operation differs");
+  assert(typeof item.executionArn === "string" && item.executionArn.length > 0,
+    "HyperFrames handle execution ARN is missing");
+  assert(item.startedAt >= 0 && Number.isSafeInteger(item.startedAt), "HyperFrames handle start time is invalid");
+  nonNegativeInteger(item.polls, "HyperFrames handle polls");
   return structuredClone(item);
 }
 
@@ -280,18 +217,18 @@ function boundedChunks(
 }
 
 async function storeOutput(
-  context: EndpointResumeContext,
+  context: EndpointPollContext,
   client: HyperframesAwsLambdaClient,
   progress: HyperframesLambdaProgress,
-  checkpoint: HyperframesCheckpoint,
+  handle: HyperframesHandle,
   region: string,
   maxRenderedBytes: number,
 ): Promise<BlobRef> {
   const output = progress.outputFile;
   assert(output !== null, "HyperFrames succeeded without an output file");
-  assert(output.s3Uri === checkpoint.outputS3Uri, "HyperFrames completed at an unexpected output URI");
+  assert(output.s3Uri === handle.outputS3Uri, "HyperFrames completed at an unexpected output URI");
   const target = parseS3Uri(output.s3Uri);
-  assert(target.bucket === checkpoint.bucketName, "HyperFrames output is outside its configured bucket");
+  assert(target.bucket === handle.bucketName, "HyperFrames output is outside its configured bucket");
   if (output.bytes !== null) positiveInteger(output.bytes, "HyperFrames output bytes");
   const source = await client.openOutput({ s3Uri: output.s3Uri, region });
   if (source.contentLength !== undefined) {
@@ -401,15 +338,7 @@ function verifyProgress(progress: HyperframesLambdaProgress, document: Hyperfram
 
 export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperframesProviderOptions) {
   const machine = stateMachine(config.stateMachineArn);
-  const region = config.region ?? machine.region;
-  assert(region === machine.region,
-    `HyperFrames region ${region} differs from state machine region ${machine.region}`);
-  assert(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/u.test(config.bucketName)
-    && !config.bucketName.includes("..")
-    && !config.bucketName.includes(".-")
-    && !config.bucketName.includes("-.")
-    && !/^\d{1,3}(?:\.\d{1,3}){3}$/u.test(config.bucketName),
-    "HyperFrames bucketName is invalid");
+  const region = machine.region;
   const quality = config.quality ?? "standard";
   assert(["draft", "standard", "high"].includes(quality), "HyperFrames quality is invalid");
   const chunkSize = config.chunkSize === undefined ? undefined : positiveInteger(config.chunkSize, "chunkSize");
@@ -423,44 +352,29 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
   const maxOperationMs = positiveInteger(config.maxOperationMs ?? 6 * 60 * 60_000, "maxOperationMs");
   const maxRenderedBytes = positiveInteger(config.maxRenderedBytes ?? 16 * 1024 * 1024 * 1024,
     "maxRenderedBytes");
-  const maxPollFailures = positiveInteger(config.maxPollFailures ?? 5, "maxPollFailures");
-  const maxAttempts = positiveInteger(config.maxAttempts ?? 1, "maxAttempts");
   const client = config.client ?? createHyperframesAwsLambdaClient(region);
   const now = config.now ?? Date.now;
 
-  const makeCheckpoint = (
+  const makeHandle = (
     context: EndpointStartContext,
     site: HyperframesLambdaSite,
-    submission: HyperframesCheckpoint["submission"],
+    handle: HyperframesLambdaRender,
     startedAt: number,
-  ): HyperframesCheckpoint => {
-    const name = executionName(context.operation.id);
-    const output = expectedOutputUri(config.bucketName, outputKey(context.operation.id));
-    const expectedArn = executionArn(machine, name);
+  ): HyperframesHandle => {
     return {
-      contract: CHECKPOINT_CONTRACT,
-      requestDigest: context.need.requestDigest,
-      operationId: context.operation.id,
-      executionName: name,
-      executionArn: expectedArn,
-      renderId: name,
-      outputS3Uri: output,
-      stateMachineArn: machine.arn,
-      bucketName: config.bucketName,
+      contract: HANDLE_CONTRACT,
+      operationId: context.operation,
+      executionArn: handle.executionArn,
+      outputS3Uri: handle.outputS3Uri,
+      bucketName: handle.bucketName,
       site,
       startedAt,
       polls: 0,
-      pollFailures: 0,
-      submission,
     };
   };
 
-  const submit = async (
-    context: EndpointStartContext,
-    existingSite?: HyperframesLambdaSite,
-    existingStartedAt?: number,
-  ): Promise<EndpointOutcome> => {
-    const startedAt = existingStartedAt ?? now();
+  const submit = async (context: EndpointStartContext): Promise<EndpointOutcome> => {
+    const startedAt = now();
     const document = requestDocument(context.need.constraints);
     const renderConfig = renderConfiguration(document, {
       quality,
@@ -468,127 +382,82 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
       maxParallelChunks,
       ...(targetChunkFrames === undefined ? {} : { targetChunkFrames }),
     });
-    let site = existingSite;
-    if (site === undefined) {
-      const work = await mkdtemp(join(tmpdir(), "narratage-hyperframes-aws-"));
-      try {
-        await stageHyperframesProject({
-          document,
-          directory: work,
-          read: (artifact) => artifactBytes(context, artifact),
-        });
-        site = await client.deploySite({ projectDir: work, bucketName: config.bucketName, region });
-      } catch (error) {
-        return implementationFailure("HYPERFRAMES_SITE_DEPLOY_FAILED", error, true);
-      } finally {
-        await rm(work, { recursive: true, force: true }).catch(() => {});
-      }
+    let site: HyperframesLambdaSite;
+    const work = await mkdtemp(join(tmpdir(), "narratage-hyperframes-aws-"));
+    try {
+      await stageHyperframesProject({
+        document,
+        directory: work,
+        read: (artifact) => artifactBytes(context, artifact),
+      });
+      site = await client.deploySite({ projectDir: work, bucketName: config.bucketName, region });
+    } catch (error) {
+      return implementationFailure("HYPERFRAMES_SITE_DEPLOY_FAILED", error);
+    } finally {
+      await rm(work, { recursive: true, force: true }).catch(() => {});
     }
     verifySite(site, config.bucketName);
-    const checkpoint = makeCheckpoint(context, site, "unknown", startedAt);
-    let handle: HyperframesLambdaRender;
+    let render: HyperframesLambdaRender;
     try {
-      handle = await client.render({
+      render = await client.render({
         siteHandle: site,
         config: renderConfig,
         bucketName: config.bucketName,
         stateMachineArn: machine.arn,
         region,
-        outputKey: outputKey(context.operation.id),
-        executionName: checkpoint.executionName,
+        outputKey: outputKey(context.operation),
+        executionName: executionName(context.operation),
       });
     } catch (error) {
-      if (duplicateExecution(error)) {
-        return wakeAfter(canonicalize({ ...checkpoint, submission: "confirmed" }), pollIntervalMs, now(), {
-          phase: "submitted",
-        });
-      }
-      const rejected = rejectedSubmission(error);
-      if (rejected !== undefined) return implementationFailure(rejected.code, error, rejected.retryable);
-      // StartExecution may have reached AWS even when its response did not reach us. The
-      // deterministic execution name makes polling this derived ARN safer than submitting a new job.
-      return wakeAfter(canonicalize(checkpoint), pollIntervalMs, now(), {
-        phase: "confirming-submission",
-      });
+      return implementationFailure("HYPERFRAMES_SUBMISSION_FAILED", error);
     }
-    try {
-      sameRender(handle, {
-        executionName: checkpoint.executionName,
-        executionArn: checkpoint.executionArn,
-        outputS3Uri: checkpoint.outputS3Uri,
-        stateMachineArn: checkpoint.stateMachineArn,
-        bucketName: checkpoint.bucketName,
-        projectS3Uri: checkpoint.site.projectS3Uri,
-      });
-    } catch (error) {
-      return implementationFailure("HYPERFRAMES_SUBMISSION_IDENTITY_MISMATCH", error, false);
-    }
-    return wakeAfter(canonicalize({ ...checkpoint, submission: "confirmed" }), pollIntervalMs, now(), {
+    const handle = makeHandle(context, site, render, startedAt);
+    return wakeAfter(canonicalize(handle), pollIntervalMs, now(), {
       phase: "submitted",
     });
   };
 
   const safeSubmit = async (
     context: EndpointStartContext,
-    existingSite?: HyperframesLambdaSite,
-    existingStartedAt?: number,
   ): Promise<EndpointOutcome> => {
     try {
-      return await submit(context, existingSite, existingStartedAt);
+      return await submit(context);
     } catch (error) {
-      return implementationFailure("HYPERFRAMES_SUBMISSION_INVALID", error, false);
+      return implementationFailure("HYPERFRAMES_SUBMISSION_INVALID", error);
     }
   };
 
-  const endpoint: RecoverableEndpoint = {
+  const endpoint: AsyncEndpoint = {
     start: async (context) => await safeSubmit(context),
-    async resume(context) {
-      if (context.checkpoint === undefined) return await safeSubmit(context);
-      let checkpoint: HyperframesCheckpoint;
+    async poll(context) {
+      let handle: HyperframesHandle;
       try {
-        checkpoint = verifyCheckpoint(context.checkpoint, context);
-        verifySite(checkpoint.site, config.bucketName);
-        assert(checkpoint.stateMachineArn === machine.arn && checkpoint.bucketName === config.bucketName,
-          "HyperFrames checkpoint deployment differs");
-        assert(checkpoint.executionArn === executionArn(machine, checkpoint.executionName),
-          "HyperFrames checkpoint execution ARN differs");
-        assert(checkpoint.outputS3Uri === expectedOutputUri(config.bucketName, outputKey(context.operation.id)),
-          "HyperFrames checkpoint output URI differs");
+        handle = readHandle(context.handle, context);
       } catch (error) {
-        return implementationFailure("HYPERFRAMES_CHECKPOINT_INVALID", error, false);
+        return implementationFailure("HYPERFRAMES_HANDLE_INVALID", error);
       }
-      if (now() - checkpoint.startedAt >= maxOperationMs) {
+      if (now() - handle.startedAt >= maxOperationMs) {
         return implementationFailure("HYPERFRAMES_OPERATION_TIMEOUT",
-          new Error("HyperFrames render exceeded its operation deadline"), false);
+          new Error("HyperFrames render exceeded its operation deadline"));
       }
       let document: HyperframesDocument;
       let progress: HyperframesLambdaProgress;
       try {
         document = requestDocument(context.need.constraints);
         progress = await client.progress({
-          executionArn: checkpoint.executionArn,
+          executionArn: handle.executionArn,
           defaultMemorySizeMb,
           region,
         });
       } catch (error) {
-        if (checkpoint.submission === "unknown" && missingExecution(error)) {
-          return await safeSubmit(context, checkpoint.site, checkpoint.startedAt);
-        }
-        const failures = checkpoint.pollFailures + 1;
-        if (failures >= maxPollFailures) {
-          return implementationFailure("HYPERFRAMES_PROGRESS_UNAVAILABLE", error, true);
-        }
-        return wakeAfter(canonicalize({ ...checkpoint, pollFailures: failures }), pollIntervalMs, now(), {
-          phase: "progress-retry",
-        });
+        return implementationFailure("HYPERFRAMES_PROGRESS_UNAVAILABLE", error);
       }
       try {
         verifyProgress(progress, document);
       } catch (error) {
-        return implementationFailure("HYPERFRAMES_PROGRESS_INVALID", error, false);
+        return implementationFailure("HYPERFRAMES_PROGRESS_INVALID", error);
       }
-      const next = { ...checkpoint, submission: "confirmed" as const,
-        polls: checkpoint.polls + 1, pollFailures: 0 };
+      const next = { ...handle, polls: handle.polls + 1 };
       if (progress.status === "RUNNING") {
         return wakeAfter(canonicalize(next), pollIntervalMs, now(), {
           phase: "rendering",
@@ -600,8 +469,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
       if (progress.status !== "SUCCEEDED") {
         const details = progress.errors.map((item) => `${item.state}: ${item.error}: ${item.cause}`).join("; ");
         return implementationFailure(`HYPERFRAMES_${progress.status}`,
-          new Error(details || `HyperFrames execution ended as ${progress.status}`),
-          progress.status === "FAILED" || progress.status === "TIMED_OUT" || progress.status === "PENDING_REDRIVE");
+          new Error(details || `HyperFrames execution ended as ${progress.status}`));
       }
       try {
         const artifact = await storeOutput(context, client, progress, next, region, maxRenderedBytes);
@@ -610,24 +478,16 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
           result: fulfillment(document, artifact),
         };
       } catch (error) {
-        return implementationFailure("HYPERFRAMES_OUTPUT_INVALID", error, true);
+        return implementationFailure("HYPERFRAMES_OUTPUT_INVALID", error);
       }
     },
     async cancel(context) {
-      const target = executionArn(machine, executionName(context.operation.id));
-      if (context.checkpoint !== undefined) {
-        const checkpoint = verifyCheckpoint(context.checkpoint, context);
-        verifySite(checkpoint.site, config.bucketName);
-        assert(checkpoint.stateMachineArn === machine.arn && checkpoint.bucketName === config.bucketName,
-          "HyperFrames checkpoint deployment differs");
-        assert(checkpoint.executionArn === target,
-          "HyperFrames checkpoint execution ARN differs");
-      }
+      const target = readHandle(context.handle, context).executionArn;
       try {
         await client.stop({
           executionArn: target,
           region,
-          reason: `Narratage cancelled Operation ${context.operation.id}`,
+          reason: `Narratage cancelled Operation ${context.operation}`,
         });
       } catch (error) {
         if (!alreadyStopped(error)) throw error;
@@ -643,12 +503,11 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     pool: config.pool ?? config.instance ?? "hyperframes.aws-lambda",
     defaultConcurrency: config.defaultConcurrency ?? 2,
     capabilities: [{
-      lifecycle: "recoverable" as const,
+      lifecycle: "asynchronous" as const,
       capability: renderHyperframesCapabilities.renderVisual,
       returns: mediaTypes.renderedVisual,
       supports: (need) => supportsAwsLambdaHyperframes(need.constraints),
       endpoint,
-      retry: { maxAttempts },
     }],
   });
 }

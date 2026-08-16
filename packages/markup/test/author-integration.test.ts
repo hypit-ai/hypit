@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   createResolvedClosure,
-  digestOf,
   link,
   sealBuildRequest,
   start,
@@ -35,9 +35,9 @@ const measurementType = { module: laboratory, name: "Measurement" } satisfies Ty
 const reportType = { module: laboratory, name: "Report" } satisfies TypeRef;
 const measureProducer = { module: laboratory, name: "measure" } satisfies ProducerRef;
 const reportProducer = { module: laboratory, name: "write-report" } satisfies ProducerRef;
-const sampleSurfaceDigest = digestOf("example.text-laboratory/sample-surface@1");
-const measureSurfaceDigest = digestOf("example.text-laboratory/measure-surface@1");
-const reportSurfaceDigest = digestOf("example.text-laboratory/report-surface@1");
+const sampleSurfaceDigest = fixtureDigest("example.text-laboratory/sample-surface@1");
+const measureSurfaceDigest = fixtureDigest("example.text-laboratory/measure-surface@1");
+const reportSurfaceDigest = fixtureDigest("example.text-laboratory/report-surface@1");
 const laboratorySurfaces = [
   { name: "sample", tag: "Sample", mode: "structured", outputs: [sampleType] },
   { name: "measure", tag: "Measure", mode: "structured", outputs: [] },
@@ -222,7 +222,6 @@ test("Markup Surfaces compile forward author references into a Core BuildPlan", 
   const catalog = new Map(decoded.fragments.map((fragment) => [fragment.id, fragment]));
   const elaborated = elaborateAuthorGraph(program, decoded.components, (id) => catalog.get(id));
   const state = start(program, elaborated, sealBuildRequest({
-    graph: elaborated.id,
     targets: [{ output: "final.result" }],
   }));
 

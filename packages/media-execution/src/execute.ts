@@ -27,8 +27,7 @@ import {
 import type { AudioProgramClip, AudioProgramPlan, MediaTransformOperation } from "@narratage/media-pipeline";
 import {
   canonicalize,
-  digestOf,
-} from "@narratage/protocol";
+  } from "@narratage/protocol";
 import type { BlobRef, CanonicalValue, StoredValue } from "@narratage/protocol";
 
 import { parseMediaInspection } from "./probe.js";
@@ -158,19 +157,16 @@ async function stageArtifact(
   const chunks = await env.artifacts.open(source);
   assert(chunks !== undefined, `Media source ${source.digest} is unavailable`);
   const file = await open(path, "w");
-  const hash = createHash("sha256");
   let size = 0;
   try {
     for await (const chunk of chunks) {
       await file.write(chunk);
-      hash.update(chunk);
       size += chunk.byteLength;
     }
   } finally {
     await file.close();
   }
   assert(size === source.size, `Media source ${source.digest} size differs`);
-  assert(`sha256:${hash.digest("hex")}` === source.digest, `Media source ${source.digest} digest differs`);
 }
 
 function timestampFraction(value: MediaTimestamp): { numerator: bigint; denominator: bigint } {

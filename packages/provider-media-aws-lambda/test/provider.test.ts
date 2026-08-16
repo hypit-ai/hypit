@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { MemoryArtifactStore } from "@narratage/driver-node";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue } from "@narratage/protocol";
 import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";
 import type { JsonInvoker } from "@narratage/transport";
@@ -27,7 +28,7 @@ function recordingInvoker(reply: (request: CanonicalValue) => CanonicalValue) {
 }
 
 const inspectNeed = {
-  source: { kind: "blob", digest: digestOf("source"), size: 4, mediaType: "video/mp4" },
+  source: { kind: "blob", digest: fixtureDigest("source"), size: 4, mediaType: "video/mp4" },
 } as unknown as CanonicalValue;
 
 /** Installs the Provider into a registrar that keeps the handlers, as the Runtime does. */
@@ -48,8 +49,8 @@ async function endpointFor(invoker: JsonInvoker, options: { bucket?: string; cap
     ) => {
       handlers.set(capability.name, handler);
     },
-    registerRecoverableEndpoint: () => {
-      throw new Error("the AWS media Provider registers no recoverable endpoint");
+    registerAsyncEndpoint: () => {
+      throw new Error("the AWS media Provider registers no asynchronous endpoint");
     },
   } as never);
   const capability = options.capability ?? "inspect-media";
@@ -105,7 +106,7 @@ test("the remote Provider receives the exact AudioProgramPlan compiled for local
     sampleFrames: 48_048,
     clips: [{
       id: "end-loop",
-      artifact: { kind: "blob", digest: digestOf("audio-source"), size: 400, mediaType: "audio/wav" },
+      artifact: { kind: "blob", digest: fixtureDigest("audio-source"), size: 400, mediaType: "audio/wav" },
       targetStartSample: 0,
       targetEndSampleExclusive: 48_048,
       sourceSampleFrames: 20_000,
@@ -141,7 +142,7 @@ test("the remote Provider receives the exact AudioProgramPlan compiled for local
 
 test("a Provider aimed at another bucket fails naming the Artifact, not later with an unreadable Record", async () => {
   const store = new MemoryArtifactStore();
-  const stranger = digestOf("an artifact this Build's store never received");
+  const stranger = fixtureDigest("an artifact this Build's store never received");
   const { invoker } = recordingInvoker(() => canonicalize({
     contract: "narratage.media-lambda-response@1",
     operation: "inspect",

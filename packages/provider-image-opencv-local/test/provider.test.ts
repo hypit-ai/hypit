@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { artifactTypes } from "@narratage/artifact";
 import { EndpointRegistry, MemoryArtifactStore } from "@narratage/driver-node";
@@ -13,7 +14,7 @@ import {
   createLocalOpenCvImageProvider,
   localOpenCvImageProviderModuleRef,
 } from "@narratage/provider-image-opencv-local";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { BlobRef, Need } from "@narratage/protocol";
 import { rasterCapabilities } from "@narratage/raster";
 
@@ -31,13 +32,7 @@ function need(source: BlobRef, program: ImageTransformProgram = gptImageDenoiseV
     capability: rasterCapabilities.execute,
     returns: artifactTypes.blob,
     constraints,
-    requestedBy: "derivation:image-transform",
     result: "record:image-transform",
-    requestDigest: digestOf({
-      capability: rasterCapabilities.execute,
-      returns: artifactTypes.blob,
-      constraints,
-    }),
   };
 }
 
@@ -57,8 +52,7 @@ function composeNeed(source: BlobRef): Need {
   });
   return {
     id: "need:image-compose", capability: rasterCapabilities.execute, returns: artifactTypes.blob,
-    constraints, requestedBy: "derivation:image-compose", result: "record:image-compose",
-    requestDigest: digestOf({ capability: rasterCapabilities.execute, constraints }),
+    constraints, result: "record:image-compose",
   };
 }
 

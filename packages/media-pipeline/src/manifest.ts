@@ -4,7 +4,6 @@ import { programSpaceDependency, programSpaceTypes } from "@narratage/program-sp
 import { speechDependency, speechTypes } from "@narratage/speech";
 import { compositionDependency, compositionTypes } from "@narratage/composition";
 import { artifactTypes } from "@narratage/artifact";
-import { digestOf } from "@narratage/protocol";
 import type {
   CapabilityRef,
   ModuleManifest,

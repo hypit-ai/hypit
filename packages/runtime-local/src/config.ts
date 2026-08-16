@@ -7,7 +7,7 @@ import {
   loadNodePackageSelection,
 } from "@narratage/package-loader-node";
 import type { LoadedPackage, NodePackageSelectionRequest } from "@narratage/package-loader-node";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue, CapabilityRef } from "@narratage/protocol";
 import {
   isRuntimeAdapterHostFacet,
@@ -270,15 +270,6 @@ export async function resolveRuntimeConfigPaths(
     packageRoot,
     dataRoot: root,
   };
-}
-
-/** Deployment revision understood only by this Runtime Profile implementation. */
-export async function runtimeConfigRevision(path: string): Promise<string> {
-  const { document } = await openRuntimeConfig(path);
-  return digestOf(canonicalize({
-    format: "narratage.runtime-profile-revision@1",
-    document,
-  }));
 }
 
 async function installRuntimeAdapters(

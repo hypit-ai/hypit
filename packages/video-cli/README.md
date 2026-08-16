@@ -42,7 +42,7 @@ Source because an Author Graph without execution intent is not a Build. The live
 the explicit Vertex Gemini Caption package and real local/remote Endpoints; the CLI never
 fabricates a Target, Candidate or missing fact.
 
-`build` compiles the BuildState and passes it to the selected Runtime Profile with a fresh,
+`build` compiles one immutable Build Definition and passes it to the selected Runtime Profile with a fresh,
 automatically assigned execution id. Source or Plan identity never reclaims an earlier Build; reuse
 across Builds exists only through explicit Run Source Candidates. JSON Profiles resolve only adapters in their separately
 selected `use` fields and contain no executable callback. The CLI imports no Provider. A TypeScript config
@@ -54,7 +54,7 @@ With `--follow`, the CLI observes dispatch and Operation facts until terminal st
 `--max-wait-ms`; Ctrl-C only detaches that observer. `status` reads durable verified state, and
 `status --watch` reattaches the same kind of observer to an existing Build. The CLI
 controls Builds, not individual Operations. Cancelling a Build atomically withdraws it before claim,
-or closes admission and continues Provider cancellation reconciliation after claim. It never selects
+or marks running work for one best-effort Provider cancellation call after claim. It never selects
 another Candidate. None of these commands creates or stores a ready-Command queue.
 
 `build` archives every accepted Record in the demanded closure and every referenced byte Artifact,
@@ -72,7 +72,7 @@ loaded into CLI memory and a corrupt stream cannot overwrite an existing export.
 and presentation names only. It is not Core truth or a Runtime Closure facet; `inspect` and `get`
 always resolve the alias back through the verified BuildState before accepting it.
 `history` searches those frozen Catalog names across Builds, but reports only Logical Outputs whose
-selected Record is present in verified BuildState. It neither infers renames nor lists unbuilt
+selected Record is present in the reconstructed Build view. It neither infers renames nor lists unbuilt
 aliases; an old Catalog name and a current output name are connected explicitly in the Run Source.
 
 Historical Records, fixed files and generated previews are declared as ordinary Candidates in the

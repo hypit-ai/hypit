@@ -7,8 +7,8 @@ import { sealAlignedTranscriptEvidence } from "@narratage/speech-evidence";
 import type { AlignedTranscriptEvidence, SpeechCharacterEvidence, SpeechWordEvidence } from "@narratage/speech-evidence";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { digestOf } from "@narratage/protocol";
 import { parseScript } from "@narratage/script";
 import {
   SpeechAlignmentError,
@@ -82,7 +82,7 @@ function speechBasis(
     durationSec,
     frameRate: { numerator: 1_000, denominator: 1 },
   });
-  const audioDigest = digestOf(`fixture:audio:${narrative.segments.map((segment) => segment.id).join("+")}:${durationSec}`);
+  const audioDigest = fixtureDigest(`fixture:audio:${narrative.segments.map((segment) => segment.id).join("+")}:${durationSec}`);
   const segments = narrative.segments.map((segment, index) => ({
     segmentId: segment.id,
     startFrame: Math.round((windows?.[index]?.startSec ?? durationSec * index / narrative.segments.length) * 1_000),
@@ -290,7 +290,7 @@ test("Segment anchors preserve exact frame cuts without a seconds round trip", (
       durationSec: 1,
       frameRate: { numerator: 24, denominator: 1 },
     }),
-    audio: { kind: "blob", digest: digestOf("frame-cuts:audio"), size: 1, mediaType: "audio/wav" },
+    audio: { kind: "blob", digest: fixtureDigest("frame-cuts:audio"), size: 1, mediaType: "audio/wav" },
     visualTrack: { clips: [] },
     segments: [
       { segmentId: "one", startFrame: 0, endFrameExclusive: 7 },

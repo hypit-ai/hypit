@@ -1,6 +1,5 @@
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
 import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@narratage/composition";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { spatialDependency, spatialTypes } from "@narratage/spatial";
 import { svsManifest, svsModuleRef } from "@narratage/svs";

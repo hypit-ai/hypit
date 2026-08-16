@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { videoContractManifests } from "../../../test/support/video-domain.js";
-import { createResolvedClosure, digestOf } from "@narratage/core";
+import { createResolvedClosure } from "@narratage/core";
 
 import { verifyGraphFragment } from "@narratage/elaborator";
 import {
@@ -134,7 +134,6 @@ test("all model manifests close over the shared generation contract and every Fr
   const program: LinkedProgram = {
     closure,
     records: [],
-    semanticDigest: digestOf("kie-model-fragment-test"),
   };
   definitions.forEach((definition) => {
     Object.values(definition.endpoints).forEach((endpoint) => verifyGraphFragment(program, endpoint.fragment));
@@ -180,7 +179,7 @@ test("Gemini Omni binds its documented output controls into the KIE request", as
   });
 });
 
-test("Seedream safety policy is explicit author content and contributes to request identity", () => {
+test("Seedream safety policy remains explicit author content", () => {
   const base = {
     prompt: ["A fashion editorial."],
     aspectRatio: ["3:4"],
@@ -190,7 +189,7 @@ test("Seedream safety policy is explicit author content and contributes to reque
   const unchecked = sealSeedreamRequest({ ...base, nsfwCheck: [false] });
   const checked = sealSeedreamRequest({ ...base, nsfwCheck: [true] });
   assert.deepEqual(unchecked.ports.nsfwCheck, [false]);
-  assert.notEqual(digestOf(unchecked), digestOf(checked));
+  assert.deepEqual(checked.ports.nsfwCheck, [true]);
 });
 
 test("all twelve exact capabilities route to their documented KIE model slug", async () => {

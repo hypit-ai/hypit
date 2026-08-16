@@ -1,5 +1,4 @@
 import { artifactDependency, artifactTypes } from "@narratage/artifact";
-import { digestOf } from "@narratage/protocol";
 import type { CapabilityRef, ModuleManifest } from "@narratage/protocol";
 
 export const rasterModuleRef = { name: "@narratage/raster", version: "1" } as const;

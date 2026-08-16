@@ -1,5 +1,3 @@
-import { canonicalStringify } from "@narratage/protocol";
-
 import type { HostFacet } from "./facet.js";
 
 export type FrontendImplementation = {
@@ -11,10 +9,10 @@ export type FrontendHostFacet<
   Frontend extends FrontendImplementation,
 > = HostFacet & {
   readonly offers: readonly [string];
-  readonly identity: {
+  readonly implementation: {
     readonly kind: Kind;
+    readonly frontend: Frontend;
   };
-  readonly implementation: Frontend;
 };
 
 /** Build the common inert declaration shared by every self-described Source Frontend. */
@@ -29,10 +27,10 @@ export function createFrontendHostFacet<
   return {
     abi,
     offers: [frontend.id],
-    identity: {
+    implementation: {
       kind,
+      frontend,
     },
-    implementation: frontend,
   };
 }
 
@@ -42,24 +40,17 @@ export function frontendsFromHostFacets<
   Frontend extends FrontendImplementation,
 >(abi: string, kind: Kind, facets: readonly HostFacet[]): readonly Frontend[] {
   const values: Frontend[] = [];
-  for (const opaque of facets) {
-    if (opaque.abi !== abi
-      || opaque.identity === undefined
-      || opaque.identity === null
-      || typeof opaque.identity !== "object"
-      || Array.isArray(opaque.identity)
-      || (opaque.identity as { readonly kind?: unknown }).kind !== kind) continue;
-    const facet = opaque as FrontendHostFacet<Kind, Frontend>;
-    const frontend = facet.implementation;
-    if (frontend === null || typeof frontend !== "object" || Array.isArray(frontend)) {
+  for (const facet of facets) {
+    if (facet.abi !== abi || facet.implementation === null
+      || typeof facet.implementation !== "object" || Array.isArray(facet.implementation)) continue;
+    const implementation = facet.implementation as { readonly kind?: unknown; readonly frontend?: unknown };
+    if (implementation.kind !== kind) continue;
+    const frontend = implementation.frontend;
+    if (frontend === null || typeof frontend !== "object" || Array.isArray(frontend)
+      || typeof (frontend as { readonly id?: unknown }).id !== "string") {
       throw new Error(`${kind} Frontend Host facet has an invalid implementation`);
     }
-    const expected = createFrontendHostFacet(abi, kind, frontend);
-    if (canonicalStringify(facet.offers) !== canonicalStringify(expected.offers)
-      || canonicalStringify(facet.identity) !== canonicalStringify(expected.identity)) {
-      throw new Error(`${kind} Frontend Host facet ${frontend.id} differs from its locked identity`);
-    }
-    values.push(frontend);
+    values.push(frontend as Frontend);
   }
   return values;
 }

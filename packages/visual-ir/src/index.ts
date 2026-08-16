@@ -1,4 +1,3 @@
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest } from "@narratage/protocol";
 export { assertVisualStyleV1, VISUAL_IR_V1, VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "./style.js";
 export type * from "./style.js";

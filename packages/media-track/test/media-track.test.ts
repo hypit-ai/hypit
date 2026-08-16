@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { sealComposition } from "@narratage/composition";
 import type { AudioTrack } from "@narratage/composition";
@@ -55,7 +56,6 @@ import type {
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
 import { sealProgramSpace } from "@narratage/program-space";
 import { programSpaceTypes } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import type { BlobRef } from "@narratage/protocol";
 import { semanticMapTypes } from "@narratage/semantic-map";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
@@ -79,7 +79,7 @@ const canvas = {
 const header = sealMediaTrackHeader({ id: "proof" });
 const source: BlobRef = {
   kind: "blob",
-  digest: digestOf("media-track:still"),
+  digest: fixtureDigest("media-track:still"),
   size: 4_096,
   mediaType: "image/png",
 };
@@ -141,12 +141,12 @@ function timed(id = "timed", withAudio = true): SynchronizedMedia {
       frameCount: 60,
     },
     visual: {
-      artifact: { kind: "blob", digest: digestOf(`video:${id}`), size: 10_000, mediaType: "video/mp4" },
+      artifact: { kind: "blob", digest: fixtureDigest(`video:${id}`), size: 10_000, mediaType: "video/mp4" },
       width: 720,
       height: 1280,
     },
     ...(withAudio ? { audio: {
-      artifact: { kind: "blob" as const, digest: digestOf(`audio:${id}`), size: sampleFrames * 4, mediaType: "audio/wav" },
+      artifact: { kind: "blob" as const, digest: fixtureDigest(`audio:${id}`), size: sampleFrames * 4, mediaType: "audio/wav" },
     } } : {}),
   };
 }
@@ -399,7 +399,7 @@ test("source audio and edge SFX project separately from the visual Track", () =>
 
 test("still and animated typed Surfaces use the same layer law without browser format guesses", () => {
   const still: CompositableSurfaceRef = {
-    artifact: { kind: "blob", digest: digestOf("surface:still"), size: 500, mediaType: "image/png" },
+    artifact: { kind: "blob", digest: fixtureDigest("surface:still"), size: 500, mediaType: "image/png" },
     width: 100,
     height: 100,
     colorSpace: "srgb",
@@ -408,7 +408,7 @@ test("still and animated typed Surfaces use the same layer law without browser f
   };
   const animated: CompositableSurfaceRef = {
     ...still,
-    artifact: { kind: "blob", digest: digestOf("surface:animated"), size: 2_000, mediaType: "video/webm" },
+    artifact: { kind: "blob", digest: fixtureDigest("surface:animated"), size: 2_000, mediaType: "video/webm" },
     timing: { kind: "frames", frameRate: { numerator: 30, denominator: 1 }, frameCount: 30 },
   };
   let layers = appendSurfaceMediaLayer(createMediaLayerSet(), still, fit, sealMediaSampleLayerSpec({
@@ -604,7 +604,7 @@ test("every documented Media frame and fit remains one ordinary Item instead of 
 });
 
 test("transparent, Paint, self-blur and alternate-source backing are only ordered owned layers", () => {
-  const alternate: BlobRef = { kind: "blob", digest: digestOf("media-track:alternate"), size: 2_048, mediaType: "image/webp" };
+  const alternate: BlobRef = { kind: "blob", digest: fixtureDigest("media-track:alternate"), size: 2_048, mediaType: "image/webp" };
   let layers = createMediaLayerSet();
   layers = appendMediaPaintLayer(layers, sealMediaPaintLayerSpec({
     id: "solid", paint: { kind: "solid", color: "#101018" }, opacity: 1,
@@ -806,7 +806,7 @@ test("Sequence resolves strict logical phases, expanded handoffs and one uninter
 
 test("Sequence handoffs accept still, timed and alpha Surface members through one lowering path", () => {
   const alphaSurface: CompositableSurfaceRef = {
-    artifact: { kind: "blob", digest: digestOf("surface:alpha-member"), size: 800, mediaType: "image/png" },
+    artifact: { kind: "blob", digest: fixtureDigest("surface:alpha-member"), size: 800, mediaType: "image/png" },
     width: 200, height: 300, colorSpace: "srgb", alphaMode: "straight", timing: { kind: "still" },
   };
   const surfaceLayers = () => appendSurfaceMediaLayer(createMediaLayerSet(), alphaSurface, fit, sealMediaSampleLayerSpec({

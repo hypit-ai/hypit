@@ -1,4 +1,3 @@
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest } from "@narratage/protocol";
 
 export * from "./location.js";

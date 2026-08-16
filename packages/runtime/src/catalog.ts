@@ -1,6 +1,4 @@
-import { canonicalStringify, isDigest } from "@narratage/protocol";
 import type {
-  Digest,
   LogicalOutputRef,
   RecordRef,
 } from "@narratage/protocol";
@@ -12,10 +10,8 @@ export type BuildCatalogAlias = {
 
 export type BuildCatalogDescriptor = {
   readonly format: "narratage.build-catalog-descriptor@1";
-  readonly core: Digest;
   readonly source: {
     readonly path: string;
-    readonly closure: Digest;
   };
   readonly run?: {
     readonly path: string;
@@ -26,7 +22,6 @@ export type BuildCatalogDescriptor = {
 export type BuildCatalogEntry = BuildCatalogDescriptor & {
   readonly build: string;
   readonly createdAt: number;
-  readonly updatedAt: number;
 };
 
 /** Host presentation index only. It is never Build truth or part of Runtime Closure. */
@@ -42,9 +37,7 @@ function assert(condition: unknown, message: string): asserts condition {
 
 export function verifyBuildCatalogDescriptor(descriptor: BuildCatalogDescriptor): void {
   assert(descriptor.format === "narratage.build-catalog-descriptor@1", "Build Catalog descriptor format is invalid");
-  assert(isDigest(descriptor.core), "Build Catalog Core identity is invalid");
   assert(descriptor.source.path.trim().length > 0, "Build Catalog source path is empty");
-  assert(isDigest(descriptor.source.closure), "Build Catalog source closure is invalid");
   if (descriptor.run !== undefined) {
     assert(descriptor.run.path.trim().length > 0, "Build Catalog Run path is empty");
   }
@@ -63,30 +56,10 @@ export function verifyBuildCatalogEntry(entry: BuildCatalogEntry): void {
   verifyBuildCatalogDescriptor(entry);
   assert(entry.build.trim().length > 0, "Build Catalog build id is empty");
   assert(Number.isSafeInteger(entry.createdAt) && entry.createdAt >= 0, "Build Catalog createdAt is invalid");
-  assert(Number.isSafeInteger(entry.updatedAt) && entry.updatedAt >= entry.createdAt,
-    "Build Catalog updatedAt is invalid");
 }
 
 function copy<T>(value: T): T {
   return structuredClone(value);
-}
-
-function descriptorValue(descriptor: BuildCatalogDescriptor): BuildCatalogDescriptor {
-  return {
-    format: descriptor.format,
-    core: descriptor.core,
-    source: descriptor.source,
-    ...(descriptor.run === undefined ? {} : { run: descriptor.run }),
-    aliases: descriptor.aliases,
-  };
-}
-
-/** One Build id keeps the exact Host presentation under which it was first submitted. */
-export function sameBuildCatalogDescriptor(
-  left: BuildCatalogDescriptor,
-  right: BuildCatalogDescriptor,
-): boolean {
-  return canonicalStringify(descriptorValue(left)) === canonicalStringify(descriptorValue(right));
 }
 
 export class MemoryBuildCatalog implements BuildCatalog {
@@ -100,19 +73,13 @@ export class MemoryBuildCatalog implements BuildCatalog {
   async record(build: string, descriptor: BuildCatalogDescriptor): Promise<BuildCatalogEntry> {
     assert(build.trim().length > 0, "Build Catalog build id is empty");
     verifyBuildCatalogDescriptor(descriptor);
-    const existing = this.#entries.get(build);
-    if (existing !== undefined) {
-      assert(sameBuildCatalogDescriptor(existing, descriptor),
-        `Build Catalog ${build} already has another source, Run Source or output naming`);
-      return copy(existing);
-    }
+    assert(!this.#entries.has(build), `Build Catalog ${build} already exists`);
     const now = this.#now();
     assert(Number.isSafeInteger(now) && now >= 0, "Build Catalog clock returned an invalid time");
     const entry: BuildCatalogEntry = {
       ...copy(descriptor),
       build,
       createdAt: now,
-      updatedAt: now,
     };
     verifyBuildCatalogEntry(entry);
     this.#entries.set(build, entry);

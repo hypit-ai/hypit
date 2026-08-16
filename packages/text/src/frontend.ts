@@ -27,7 +27,6 @@ export const textSvsFrontend: AuthorFrontend = {
       id,
       type: textTypes.template,
       value: { kind: "inline", value: template as unknown as import("@narratage/protocol").CanonicalValue },
-      origin: { kind: "authored" },
     });
     const exports: AuthorSourceExport[] = [{ name: id, ref: { kind: "record", id }, type: textTypes.template }];
     return {

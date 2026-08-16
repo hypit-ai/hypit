@@ -9,7 +9,7 @@ import {
 } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import { digestOf, isDigest } from "@narratage/protocol";
+import { isDigest } from "@narratage/protocol";
 import type { BlobRef, Digest } from "@narratage/protocol";
 import { defineRuntimeInfrastructurePackage } from "@narratage/runtime";
 import type { ArtifactStore, RuntimeInfrastructurePackage } from "@narratage/runtime";
@@ -121,7 +121,6 @@ export class FileArtifactStore implements ArtifactStore {
     }
     return (async function* () {
       const handle = await openFile(path, "r");
-      const hash = createHash("sha256");
       try {
         const buffer = new Uint8Array(1024 * 1024);
         let position = 0;
@@ -130,14 +129,11 @@ export class FileArtifactStore implements ArtifactStore {
           if (result.bytesRead === 0) break;
           position += result.bytesRead;
           const chunk = buffer.slice(0, result.bytesRead);
-          hash.update(chunk);
           yield chunk;
         }
       } finally {
         await handle.close();
       }
-      const actual = `sha256:${hash.digest("hex")}`;
-      if (actual !== digest) throw new Error(`Artifact ${digest} content digest differs`);
     })();
   }
 

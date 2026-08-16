@@ -74,8 +74,7 @@ class AwsSdkLambdaInvocationClient implements LambdaInvocationClient {
 }
 
 /**
- * Synchronous JSON transport. Endpoint packages still own request shape, checkpoint law,
- * capability identity and conversion into an Endpoint outcome.
+ * Synchronous JSON transport. Endpoint packages still own request shape and outcomes.
  */
 export class AwsLambdaJsonInvoker implements JsonInvoker {
   readonly #client: LambdaInvocationClient;

@@ -16,7 +16,6 @@ import {
 } from "@narratage/media-track";
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@narratage/spatial";
@@ -107,8 +106,6 @@ export const depthStackProgramSchema: ValueSchema = object({
   terminalFrame: { schema: positiveInteger }, frame: { schema: spatialFrameSchema }, spec: { schema: depthStackSpecSchema },
   cards: { schema: { kind: "array", minItems: 1, items: card } },
 });
-const registered = (digest: ReturnType<typeof digestOf>) => ({ digest });
-const validator = (digest: ReturnType<typeof digestOf>) => ({ implementation: registered(digest) });
 const finalizeInputs = [
   { name: "set", type: depthStackTypes.cardSet }, { name: "header", type: depthStackTypes.header },
   { name: "frame", type: spatialTypes.frame }, { name: "spec", type: depthStackTypes.spec },

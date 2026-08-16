@@ -1,7 +1,6 @@
 import { speechDependency, speechTypes } from "@narratage/speech";
 import { speechEvidenceDependency, speechEvidenceTypes } from "@narratage/speech-evidence";
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
-import { digestOf } from "@narratage/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef } from "@narratage/protocol";
 import { mediaPipelineManifest, mediaPipelineModuleRef } from "@narratage/media-pipeline";
 import { speechAlignmentManifest, speechAlignmentModuleRef } from "@narratage/speech-alignment";

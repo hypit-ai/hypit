@@ -1,5 +1,4 @@
 import { artifactDependency, artifactTypes } from "@narratage/artifact";
-import { digestOf } from "@narratage/protocol";
 import { rasterCapabilities, rasterDependency, rasterTransformOperationSchema } from "@narratage/raster";
 import type {
   ModuleManifest,

@@ -20,17 +20,17 @@ export class MarkupSurfaceRegistry implements MarkupSurfaceRegistryLike {
 
   register(value: RegisteredSurface): void {
     if (value.module.name.trim().length === 0 || value.module.version.trim().length === 0) {
-      throw new Error("Surface module identity is invalid");
+      throw new Error("Surface module is invalid");
     }
     if (value.surface.trim().length === 0) throw new Error("Surface name is empty");
     if (value.tag.trim().length === 0) throw new Error("Surface tag is empty");
     if (value.mode !== "raw" && value.mode !== "structured") throw new Error("Surface mode is invalid");
-    const identity = key(value.module, value.surface);
-    if (this.#values.has(identity)) throw new Error(`Surface ${identity} is already registered`);
+    const surfaceKey = key(value.module, value.surface);
+    if (this.#values.has(surfaceKey)) throw new Error(`Surface ${surfaceKey} is already registered`);
     const module = `${value.module.name}@${value.module.version}`;
     const tag = `${module}#${value.tag}`;
     if (this.#tags.has(tag)) throw new Error(`Surface tag ${value.tag} is already registered for ${module}`);
-    this.#values.set(identity, value);
+    this.#values.set(surfaceKey, value);
     this.#tags.add(tag);
     const surfaces = this.#byModule.get(module) ?? [];
     surfaces.push(value);

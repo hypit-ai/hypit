@@ -91,7 +91,6 @@ export function sliceExecution(
   return {
     program: slicedProgram,
     graph: sealCompiledGraph({
-      program: slicedProgram.semanticDigest,
       outputs: selectedOutputs,
       candidates: selectedCandidates,
       operations: selectedOperations,

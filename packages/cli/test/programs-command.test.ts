@@ -16,7 +16,6 @@ function controller(
   return {
     profile: path,
     dataRoot: "/tmp",
-    revision: async () => "test-revision",
     worker: {
       up: async () => worker,
       status: async () => worker,

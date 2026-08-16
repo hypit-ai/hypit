@@ -13,7 +13,7 @@ import {
   programSpaceSampleFrames,
 } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
-import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
+import { canonicalize, isDigest } from "@narratage/protocol";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import { assertCanvasSpace, assertSpatialFrame } from "@narratage/spatial";
 import type { CanvasSpace } from "@narratage/spatial";

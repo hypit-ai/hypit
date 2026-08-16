@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { artifactManifest, artifactTypes } from "@narratage/artifact";
 import {
   createResolvedClosure,
-  digestOf,
   link,
   sealBuildRequest,
   sealCompiledGraph,
@@ -43,13 +43,9 @@ import { speechManifest } from "@narratage/speech";
 import { spatialManifest } from "@narratage/spatial";
 import { textManifest } from "@narratage/text";
 
-const origin = {
-  kind: "authored" as const,
-};
-
 const image = (name: string) => ({
   kind: "blob" as const,
-  digest: digestOf(`image:${name}`),
+  digest: fixtureDigest(`image:${name}`),
   size: 100,
   mediaType: "image/png",
 });
@@ -177,7 +173,7 @@ function fixture() {
     ]),
     outputs: { video: "montage.video" },
   }];
-  const program = link(closure, records.map((record) => sealRecord({ ...record, origin })));
+  const program = link(closure, records.map((record) => sealRecord(record)));
   const fragments = new Map([
     ...Object.values(gptFragments).map((fragment) => [fragment.id, fragment] as const),
     [seedanceFragment.id, seedanceFragment] as const,
@@ -190,7 +186,6 @@ function fixture() {
 test("the common B-roll topology is one graph with one shared holding image", () => {
   const { program, graph } = fixture();
   const state = start(program, graph, sealBuildRequest({
-    graph: graph.id,
     targets: [{ output: "montage.video" }],
   }));
   const producers = state.plan.steps.map((step) => step.producer.name);
@@ -205,9 +200,12 @@ test("the common B-roll topology is one graph with one shared holding image", ()
 
 test("an explicitly selected holding-image Candidate prunes only that branch", () => {
   const { program, graph } = fixture();
-  const candidate = createProvidedCandidate({ type: artifactTypes.blob, value: image("approved-holding") });
+  const candidate = createProvidedCandidate({
+    id: "approved-holding",
+    type: artifactTypes.blob,
+    value: image("approved-holding"),
+  });
   const realized = sealCompiledGraph({
-    program: graph.program,
     outputs: graph.outputs.map((item) => item.id === "holding.image"
       ? { ...item, primary: candidate.id }
       : item),
@@ -215,7 +213,6 @@ test("an explicitly selected holding-image Candidate prunes only that branch", (
     operations: graph.operations,
   });
   const state = start(program, realized, sealBuildRequest({
-    graph: realized.id,
     targets: [{ output: "montage.video" }],
   }));
   const producers = state.plan.steps.map((step) => step.producer.name);

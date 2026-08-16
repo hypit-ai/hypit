@@ -1,7 +1,6 @@
 import type { Text } from "@narratage/text";
 import { assertSpeechDurationIdentity, sealSpeechDuration } from "@narratage/speech";
 import type { SpeechDuration } from "@narratage/speech";
-import { digestOf } from "@narratage/protocol";
 import { dictionary as cmuPronouncingDictionary } from "cmu-pronouncing-dictionary";
 
 import type {

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { artifactManifest } from "@narratage/artifact";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
@@ -10,7 +11,6 @@ import { compileHyperframesDocument } from "@narratage/hyperframes";
 import { mediaManifest } from "@narratage/media";
 import { narrativeManifest } from "@narratage/narrative";
 import { programSpaceDependency, programSpaceManifest, programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest } from "@narratage/protocol";
 import {
   appendProgramScreenOverlay,
@@ -129,7 +129,7 @@ test("the package has no lower-composite, sibling Track, backdrop-filter or hidd
 
 test("the self-described Screen Surface parses into a finite peer-Track graph", async () => {
   const fixtureModule = { name: "example.screen-inputs", version: "1" } as const;
-  const fixtureSurfaceDigest = digestOf("example.screen-inputs/surface@1");
+  const fixtureSurfaceDigest = fixtureDigest("example.screen-inputs/surface@1");
   const fixtureSurface = {
     name: "inputs", tag: "Inputs", mode: "structured",
     outputs: [spatialTypes.canvas, programSpaceTypes.programSpace],
@@ -201,7 +201,6 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
   const trackExport = resolveCompiledSourceExport(compiled, "screen-fx.track", compositionTypes.visualTrack);
   assert.equal(trackExport.ref.kind, "logical-output");
   const build = start(compiled.program, compiled.graph, sealBuildRequest({
-    graph: compiled.graph.id,
     targets: [{ output: trackExport.ref.kind === "logical-output" ? trackExport.ref.id : "" }],
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [

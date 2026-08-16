@@ -24,7 +24,6 @@ export {
   doctorRuntimeConfig,
   parseRuntimeConfig,
   resolveRuntimeConfigPaths,
-  runtimeConfigRevision,
 } from "./config.js";
 export {
   bringManagedProgramsUp,

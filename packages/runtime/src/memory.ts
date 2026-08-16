@@ -1,61 +1,59 @@
-import type { BuildState } from "@narratage/protocol";
+import { materializeBuild } from "@narratage/core";
+import type { BuildDefinition, BuildFact } from "@narratage/protocol";
 
 import type {
   BuildSnapshot,
   BuildStore,
-  BuildStoreWrite,
 } from "./types.js";
 
-function copy(snapshot: BuildSnapshot): BuildSnapshot {
-  return structuredClone(snapshot);
+type StoredBuild = {
+  readonly build: string;
+  readonly definition: BuildDefinition;
+  readonly facts: readonly BuildFact[];
+};
+
+function snapshotBuild(stored: StoredBuild): BuildSnapshot {
+  const definition = structuredClone(stored.definition);
+  const facts = structuredClone(stored.facts);
+  return {
+    build: stored.build,
+    definition,
+    facts,
+    state: materializeBuild(definition, facts),
+  };
 }
 
-function durableState(state: BuildState): BuildState {
-  return { ...structuredClone(state), outstanding: [] };
-}
-
-/** Reference CAS Store for tests and one-process local Builds. It does not persist Operations. */
+/** Reference Fact Store for tests and one-process local Builds. It does not persist Operations. */
 export class MemoryBuildStore implements BuildStore {
-  readonly #builds = new Map<string, BuildSnapshot>();
+  readonly #builds = new Map<string, StoredBuild>();
 
-  async create(build: string, state: BuildState): Promise<BuildSnapshot> {
+  async create(build: string, definition: BuildDefinition): Promise<BuildSnapshot> {
     if (build.trim().length === 0) throw new Error("build id must not be empty");
     if (this.#builds.has(build)) throw new Error(`build ${build} already exists`);
-    const snapshot = { build, revision: 0, state: durableState(state) };
-    this.#builds.set(build, snapshot);
-    return copy(snapshot);
+    const stored = { build, definition: structuredClone(definition), facts: [] };
+    this.#builds.set(build, stored);
+    return snapshotBuild(stored);
   }
 
   async read(build: string): Promise<BuildSnapshot | undefined> {
     const snapshot = this.#builds.get(build);
-    return snapshot === undefined ? undefined : copy(snapshot);
+    return snapshot === undefined ? undefined : snapshotBuild(snapshot);
   }
 
   async list(): Promise<readonly BuildSnapshot[]> {
     return [...this.#builds.values()]
       .sort((left, right) => left.build.localeCompare(right.build))
-      .map(copy);
+      .map(snapshotBuild);
   }
 
-  async compareAndSwap(
-    build: string,
-    expectedRevision: number,
-    state: BuildState,
-  ): Promise<BuildStoreWrite> {
-    if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
-      throw new Error("expected revision must be a non-negative safe integer");
-    }
+  async append(build: string, fact: BuildFact): Promise<void> {
     const current = this.#builds.get(build);
     if (current === undefined) throw new Error(`build ${build} does not exist`);
-    if (current.revision !== expectedRevision) {
-      return { status: "conflict", current: copy(current) };
-    }
-    const snapshot = {
+    const stored = {
       build,
-      revision: current.revision + 1,
-      state: durableState(state),
+      definition: current.definition,
+      facts: [...current.facts, structuredClone(fact)],
     };
-    this.#builds.set(build, snapshot);
-    return { status: "stored", snapshot: copy(snapshot) };
+    this.#builds.set(build, stored);
   }
 }

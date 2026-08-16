@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   defineEndpointPackage,
@@ -9,23 +10,22 @@ import type {
   EndpointRegistrar,
   EndpointRegistrationOptions,
   ImmediateEndpointHandler,
-  RecoverableEndpoint,
+  AsyncEndpoint,
 } from "@narratage/endpoint-kit";
 import type { CapabilityRef, TypeRef } from "@narratage/protocol";
-import { digestOf } from "@narratage/protocol";
 import { credentialRef } from "@narratage/runtime";
 
 import { capabilities, types } from "../../core/test/greeting-fixture.js";
 
 const implementation = {
-  digest: digestOf("example.provider/http-json@1"),
+  digest: fixtureDigest("example.provider/http-json@1"),
 } as const;
 
 type CapturedRegistration = {
   readonly id: string;
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
-  readonly kind: "immediate" | "recoverable";
+  readonly kind: "immediate" | "asynchronous";
   readonly options: EndpointRegistrationOptions;
 };
 
@@ -34,8 +34,8 @@ function capturingRegistrar(registrations: CapturedRegistration[]): EndpointRegi
     registerImmediateEndpoint(id, capability, returns, _handler: ImmediateEndpointHandler, options = {}) {
       registrations.push({ id, capability, returns, kind: "immediate", options });
     },
-    registerRecoverableEndpoint(id, capability, returns, _endpoint: RecoverableEndpoint, options = {}) {
-      registrations.push({ id, capability, returns, kind: "recoverable", options });
+    registerAsyncEndpoint(id, capability, returns, _endpoint: AsyncEndpoint, options = {}) {
+      registrations.push({ id, capability, returns, kind: "asynchronous", options });
     },
   };
 }
@@ -88,7 +88,7 @@ test("one Endpoint definition generates Manifest, instance, offers and host-neut
 test("wakeAfter turns polling policy into an explicit Runtime wake hint", () => {
   assert.deepEqual(wakeAfter({ job: "123" }, 5_000, 10_000), {
     status: "pending",
-    checkpoint: { job: "123" },
+    handle: { job: "123" },
     wakeAt: 15_000,
   });
 });

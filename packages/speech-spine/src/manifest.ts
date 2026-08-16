@@ -9,7 +9,6 @@ import {
   mediaPipelineModuleRef,
   mediaPipelineTypes,
 } from "@narratage/media-pipeline";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { speechBasisManifest, speechBasisModuleRef } from "@narratage/speech-basis";
 import {

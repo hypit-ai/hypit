@@ -15,7 +15,7 @@ import type {
 import { defineExactModelModule } from "@narratage/model-kit";
 import { assertSpeechDurationIdentity, speechDependency, speechTypes } from "@narratage/speech";
 import type { SpeechDuration } from "@narratage/speech";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { Digest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
 export const seedanceModuleRef = { name: "@narratage/seedance", version: "1" } as const;

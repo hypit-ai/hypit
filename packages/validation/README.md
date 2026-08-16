@@ -9,7 +9,7 @@ digest here.
 
 `validateValue()` runs the owner validator as a Host admission gate. `admitRecord()` applies the
 same gate to authored or externally provided Records. `NodeDriver` applies it to Producer and
-Provider results before creating an Event. Core neither executes the validator nor learns the
+Provider results before creating a Command result. Core neither executes the validator nor learns the
 domain meaning; admitted Records carry no validation metadata through the graph.
 
 Validators are refinements, not converters. They may accept or reject a value; they may not rewrite

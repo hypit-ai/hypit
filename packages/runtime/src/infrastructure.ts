@@ -138,18 +138,18 @@ function verifyPartPort(part: RuntimePart): void {
     case "build-store":
       callable(part.port, "create", part.instance.id);
       callable(part.port, "read", part.instance.id);
-      callable(part.port, "compareAndSwap", part.instance.id);
+      callable(part.port, "append", part.instance.id);
       break;
     case "operation-store":
       callable(part.port, "create", part.instance.id);
       callable(part.port, "read", part.instance.id);
       callable(part.port, "list", part.instance.id);
-      callable(part.port, "compareAndSwap", part.instance.id);
+      callable(part.port, "update", part.instance.id);
       break;
     case "dispatch-store":
       for (const method of [
-        "create", "read", "list", "claim", "heartbeat", "release", "finish", "requestCancellation", "wake",
-        "acquireCapacity", "heartbeatCapacity", "parkCapacity", "releaseCapacity", "clearCapacity", "listCapacity",
+        "create", "read", "list", "claim", "release", "finish", "requestCancellation", "wake",
+        "acquireCapacity", "releaseCapacity", "releaseBuildCapacity", "listCapacity",
       ]) callable(part.port, method, part.instance.id);
       break;
     case "artifact-store":

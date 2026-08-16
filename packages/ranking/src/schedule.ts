@@ -12,7 +12,7 @@ import {
   programSpaceFrameCount,
 } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
-import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
+import { canonicalize, isDigest } from "@narratage/protocol";
 import { verifyText } from "@narratage/text";
 import type { Text } from "@narratage/text";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { artifactTypes } from "@narratage/artifact";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import type { EndpointFulfillment } from "@narratage/endpoint-kit";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue } from "@narratage/protocol";
 import {
   assertRasterRequest,

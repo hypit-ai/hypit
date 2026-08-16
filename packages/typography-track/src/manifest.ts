@@ -20,7 +20,6 @@ import {
 import { VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@narratage/visual-ir";
 import { mediaDependency, mediaTypes } from "@narratage/media";
 import { textDependency, textTypes } from "@narratage/text";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
 export const typographyTrackModuleRef = { name: "@narratage/typography-track", version: "1" } as const;
@@ -154,7 +153,6 @@ const textMaskSpecSchema = object({
   materialFit: { schema: enumString(["contain", "cover", "fill"]) },
 });
 
-const registered = (digest: ReturnType<typeof digestOf>) => ({ digest });
 
 export const typographyTrackMarkupSurfaces = [
     { name: "style", tag: "Style", mode: "structured", outputs: [typographyTrackTypes.style] },

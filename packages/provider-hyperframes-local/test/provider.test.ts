@@ -10,8 +10,9 @@ import type { EndpointRegistration } from "@narratage/driver-node";
 import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";
 import { compileHyperframesDocument } from "@narratage/hyperframes";
 import { renderHyperframesCapabilities, hyperframesVisualRequest } from "@narratage/render-hyperframes";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { createLocalHyperframesProvider } from "../src/index.js";
 import { localHyperframesBrowserProgram } from "../src/program.js";
@@ -26,7 +27,7 @@ function documentFixture(surface?: CompositableSurfaceRef) {
   });
   const track = sealVisualTrack({
     visualIr: "narratage.visual-ir@1",
-    id: "provider-proof",
+    id: "provider-fixture",
     presents: [{
       id: "card",
       span: { startFrame: 0, endFrameExclusive: 12 },
@@ -60,7 +61,7 @@ function documentFixture(surface?: CompositableSurfaceRef) {
     }],
   });
   return compileHyperframesDocument(sealComposition({
-    id: "local-hyperframes-provider-proof",
+    id: "local-hyperframes-provider-fixture",
     canvas: { width: 160, height: 96, clearColor: "#000000" },
     tracks: [track],
   }), programSpace);
@@ -69,17 +70,11 @@ function documentFixture(surface?: CompositableSurfaceRef) {
 function requestNeed(document = documentFixture()): Need {
   const constraints = hyperframesVisualRequest(document);
   return {
-    id: "need:local-hyperframes-proof",
+    id: "need:local-hyperframes-fixture",
     capability: renderHyperframesCapabilities.renderVisual,
     returns: mediaTypes.renderedVisual,
     constraints,
-    requestedBy: "derivation:local-hyperframes-proof",
-    result: "record:local-hyperframes-proof",
-    requestDigest: digestOf({
-      capability: renderHyperframesCapabilities.renderVisual,
-      returns: mediaTypes.renderedVisual,
-      constraints,
-    }),
+    result: "record:local-hyperframes-fixture",
   };
 }
 
@@ -144,7 +139,7 @@ test("local HyperFrames Provider really renders a silent frame-exact MP4 with pa
   const request = requestNeed(documentFixture(surface));
   const { handler } = await handlerFor(request);
   const output = await handler({
-    command: { kind: "fulfill-need", id: "command:local-hyperframes-proof", need: request },
+    command: { kind: "fulfill-need", id: "command:local-hyperframes-fixture", need: request },
     need: request,
     artifacts,
     credentials: {},

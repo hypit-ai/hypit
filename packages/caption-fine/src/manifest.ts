@@ -4,7 +4,6 @@ import { mediaDependency } from "@narratage/media";
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { semanticMapDependency } from "@narratage/semantic-map";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
 
 export const captionFineModuleRef = { name: "@narratage/caption-fine", version: "1" } as const;

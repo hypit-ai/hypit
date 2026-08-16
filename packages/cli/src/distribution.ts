@@ -17,11 +17,8 @@ export type CliCompilerOptions = {
  * It is Host configuration, never Core state or source-import authority.
  */
 export type CliDistribution = {
-  /**
-   * Installation-local fallback for development checkouts and embedded Distributions.
-   * A real project with package.json always resolves its own installed capability packages first.
-   */
-  readonly fallbackPackageRoot?: string;
+  /** Packages shipped with this CLI distribution. */
+  readonly packageRoot?: string;
   /** Explicit Host bootstrap packages; never inferred from Source contents. */
   readonly bootstrapPackages: readonly LoadedPackage[];
   createCompiler(options: CliCompilerOptions): NodeCompiler;

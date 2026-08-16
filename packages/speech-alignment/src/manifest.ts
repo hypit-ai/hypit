@@ -4,8 +4,6 @@ import { speechEvidenceDependency, speechEvidenceTypes } from "@narratage/speech
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
 
-import { speechLocatorDigest } from "./locate.js";
-
 export const speechAlignmentModuleRef = { name: "@narratage/speech-alignment", version: "1" } as const;
 export const speechAlignmentProducers = {
   locate: { module: speechAlignmentModuleRef, name: "locate-speech" },
