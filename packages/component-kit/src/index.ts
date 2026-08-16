@@ -45,7 +45,7 @@ export type ProducerHandler = (
   context: ProducerHandlerContext,
 ) => Awaitable<ProducerHandlerResult>;
 
-/** Minimal structural port implemented by Node ProducerRegistry and any future compute Host. */
+/** Minimal structural port implemented by a Producer registry. */
 export interface ProducerRegistrar {
   registerProducer(
     producer: ProducerRef,

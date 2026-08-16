@@ -2,10 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   BuildMachine,
-  CoreError,
-  buildDefinition,
+  defineBuild,
   reduce,
-  validateStoredValue,
 } from "@narratage/core";
 import type {
   CommandResult,
@@ -13,7 +11,6 @@ import type {
   BuildState,
   FulfillNeedCommand,
   InvokeProducerCommand,
-  ValueSchema,
 } from "@narratage/protocol";
 
 import { createGreetingBuild } from "./greeting-fixture.js";
@@ -91,37 +88,9 @@ test("Core executes a finite plan through an external Need and completion", () =
   });
 });
 
-test("oneOf literal discrimination preserves exact-one semantics", () => {
-  const tagged = (tag: string): ValueSchema => ({
-    kind: "object",
-    fields: {
-      kind: { schema: { kind: "literal", value: tag } },
-      payload: { schema: { kind: "string" } },
-    },
-  });
-  const generic: ValueSchema = {
-    kind: "object",
-    fields: {
-      kind: { schema: { kind: "string" } },
-      payload: { schema: { kind: "string" } },
-    },
-  };
-
-  assert.doesNotThrow(() => validateStoredValue(
-    { kind: "inline", value: { kind: "alpha", payload: "hello" } },
-    { kind: "oneOf", variants: [tagged("alpha"), tagged("beta")] },
-  ));
-  assert.throws(
-    () => validateStoredValue(
-      { kind: "inline", value: { kind: "alpha", payload: "hello" } },
-      { kind: "oneOf", variants: [tagged("alpha"), generic] },
-    ),
-    (error: unknown) => error instanceof CoreError && error.code === "VALUE_SCHEMA_MISMATCH",
-  );
-});
-
 test("Build Definition plus admitted Facts restores the same next Command", () => {
-  const definition = buildDefinition(createGreetingBuild());
+  const initial = createGreetingBuild();
+  const definition = defineBuild(initial.program, initial.graph, initial.request);
   const machine = new BuildMachine(definition);
   const facts: BuildFact[] = [];
   const prompt = machine.commands()[0];

@@ -1,14 +1,8 @@
-import { access, readFile } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import { constants } from "node:fs";
-import { delimiter, dirname, isAbsolute, resolve } from "node:path";
-
-import type { HostFacet } from "@narratage/host";
-import {
-  loadNodePackageSelection,
-} from "@narratage/package-loader-node";
-import type { LoadedPackage } from "@narratage/package-loader-node";
+import { delimiter, isAbsolute, resolve } from "node:path";
 import type { ArtifactAttachment } from "@narratage/workspace";
-import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef, Digest } from "@narratage/protocol";
+import type { BuildDefinition, BuildState, CapabilityRef, Digest } from "@narratage/protocol";
 import type {
   BuildCatalogDescriptor,
   BuildCatalogEntry,
@@ -20,8 +14,6 @@ import type {
   RuntimeWorkerRunOptions,
 } from "@narratage/runtime";
 import type { RuntimeDoctorDiagnostic } from "@narratage/runtime-kit";
-
-export const nodeRuntimeHostAdapterAbi = "narratage.node-runtime-host-adapter@1";
 
 export type RuntimeHostBuildSubmission = {
   readonly id: string;
@@ -93,7 +85,7 @@ export type RuntimeHostExecution = RuntimeHostMaintenance & RuntimeHostCredentia
   build(request: {
     readonly id: string;
     readonly definition: BuildDefinition;
-    readonly implementationPackages?: readonly string[];
+    readonly componentPackages?: readonly string[];
     readonly catalog?: BuildCatalogDescriptor;
     readonly attachments?: readonly ArtifactAttachment[];
   }, options?: {
@@ -168,94 +160,18 @@ export type NodeRuntimeHost = {
     readonly runtimeDataRoot?: string;
   }>;
   controller(options?: {
-    readonly workspaceRoot?: string;
-    readonly implementationPackages?: readonly string[];
     readonly packageRoot?: string;
   }): Promise<RuntimeController>;
-  createRuntime(options?: { readonly implementationPackages?: readonly LoadedPackage[] }): Promise<RuntimeHostExecution>;
+  createRuntime(): Promise<RuntimeHostExecution>;
   openArchive(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostArchive>;
   openArtifacts(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostArtifactAccess>;
   openMaintenance(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostMaintenance>;
   openCredentials(endpoint: string): Promise<RuntimeHostCredentialControl>;
   doctor(options?: {
     readonly capabilities?: readonly CapabilityRef[];
-    readonly implementationPackages?: readonly LoadedPackage[];
   }): Promise<RuntimeHostDoctorResult>;
-  runWorker(readyFile: string, options?: {
-    readonly implementationPackages?: readonly LoadedPackage[];
-  }): Promise<void>;
+  runWorker(readyFile: string): Promise<void>;
 };
-
-export type NodeRuntimeHostAdapterContext = {
-  readonly profile: string;
-  readonly profileRoot: string;
-  readonly packageRoot: string;
-  readonly config: CanonicalValue;
-  readonly workerLaunch: RuntimeWorkerLaunch;
-};
-
-export type NodeRuntimeHostAdapterFacet = HostFacet & {
-  readonly abi: typeof nodeRuntimeHostAdapterAbi;
-  readonly offers: readonly [string];
-  readonly implementation: {
-    open(context: NodeRuntimeHostAdapterContext): NodeRuntimeHost | Promise<NodeRuntimeHost>;
-  };
-};
-
-function nonEmpty(value: unknown, subject: string): string {
-  if (typeof value !== "string" || value.trim().length === 0) throw new Error(`${subject} must be a non-empty string`);
-  return value;
-}
-
-export function createNodeRuntimeHostAdapterFacet(options: {
-  readonly use: string;
-  readonly open: NodeRuntimeHostAdapterFacet["implementation"]["open"];
-}): NodeRuntimeHostAdapterFacet {
-  return {
-    abi: nodeRuntimeHostAdapterAbi,
-    offers: [nonEmpty(options.use, "Runtime Host Adapter use")],
-    implementation: { open: options.open },
-  };
-}
-
-export async function loadNodeRuntimeHost(
-  path: string,
-  options: { readonly packageRoot: string; readonly workerLaunch: RuntimeWorkerLaunch },
-): Promise<NodeRuntimeHost> {
-  const profile = resolve(path);
-  const profileRoot = dirname(profile);
-  const value = JSON.parse(await readFile(profile, "utf8")) as Record<string, unknown>;
-  if (value.format !== "narratage.runtime-profile@1") {
-    throw new Error("Runtime Profile format must be narratage.runtime-profile@1");
-  }
-  const runtime = value.runtime;
-  if (runtime === null || typeof runtime !== "object" || Array.isArray(runtime)) {
-    throw new Error("Runtime Profile runtime must be an object");
-  }
-  const record = runtime as Record<string, unknown>;
-  const use = nonEmpty(record.use, "Runtime Profile runtime.use");
-  const config = (record.config ?? {}) as CanonicalValue;
-  const loaded = await loadNodePackageSelection({
-    selected: [],
-    logical: [{ abi: nodeRuntimeHostAdapterAbi, name: use }],
-  }, options.packageRoot);
-  const matches = loaded.flatMap((item) => item.contribution.hostFacets ?? [])
-    .filter((facet): facet is NodeRuntimeHostAdapterFacet => facet.abi === nodeRuntimeHostAdapterAbi
-      && facet.offers?.includes(use) === true);
-  if (matches.length !== 1) throw new Error(`Runtime Host Adapter ${use} must have exactly one implementation`);
-  const implementation = matches[0]!.implementation;
-  if (implementation === null || typeof implementation !== "object"
-    || typeof (implementation as { readonly open?: unknown }).open !== "function") {
-    throw new Error(`Runtime Host Adapter ${use} does not implement open()`);
-  }
-  return await implementation.open({
-    profile,
-    profileRoot,
-    packageRoot: resolve(options.packageRoot),
-    config,
-    workerLaunch: options.workerLaunch,
-  });
-}
 
 function pathLike(value: string): boolean {
   return isAbsolute(value) || value.includes("/") || value.includes("\\");

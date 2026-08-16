@@ -18,7 +18,7 @@ type LocalWorkerOptions = {
     readonly dispatch: import("@narratage/runtime").BuildDispatchStore;
   };
   readonly scheduling: BuildSchedulerOptions;
-  readonly implementationPackages: readonly string[];
+  readonly installComponentPackages: (specifiers: readonly string[]) => Promise<void>;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -219,13 +219,14 @@ class DurableLocalWorker {
 
   async #runClaimed(dispatch: BuildDispatchSnapshot): Promise<BuildDispatchSnapshot> {
     if (dispatch.cancellation !== undefined) return await this.#cancel(dispatch);
-    const stored = await this.#options.stores.builds.read(dispatch.build);
-    assert(stored !== undefined, `Dispatch ${dispatch.build} has no Build Definition`);
-    const scheduler = new LocalBuildScheduler(this.#executorWithCapacity, {
-      ...this.#options.scheduling,
-      buildStore: this.#options.stores.builds,
-    });
     try {
+      await this.#options.installComponentPackages(dispatch.componentPackages);
+      const stored = await this.#options.stores.builds.read(dispatch.build);
+      assert(stored !== undefined, `Dispatch ${dispatch.build} has no Build Definition`);
+      const scheduler = new LocalBuildScheduler(this.#executorWithCapacity, {
+        ...this.#options.scheduling,
+        buildStore: this.#options.stores.builds,
+      });
       const [result] = await scheduler.run([{ id: dispatch.build, state: stored.state, snapshot: stored }]);
       assert(result !== undefined, `Scheduler returned no result for ${dispatch.build}`);
       const current = await this.#options.stores.dispatch.read(dispatch.build);
@@ -268,10 +269,7 @@ class DurableLocalWorker {
   }
 
   async runOnce(): Promise<BuildDispatchSnapshot | undefined> {
-    const dispatch = await this.#options.stores.dispatch.claim(
-      Date.now(),
-      this.#options.implementationPackages,
-    );
+    const dispatch = await this.#options.stores.dispatch.claim(Date.now());
     return dispatch === undefined ? undefined : await this.#runClaimed(dispatch);
   }
 
@@ -286,10 +284,7 @@ class DurableLocalWorker {
     };
     while (options.signal?.aborted !== true) {
       while (active.size < maxBuilds) {
-        const dispatch = await this.#options.stores.dispatch.claim(
-          Date.now(),
-          this.#options.implementationPackages,
-        );
+        const dispatch = await this.#options.stores.dispatch.claim(Date.now());
         if (dispatch === undefined) break;
         launch(dispatch);
       }

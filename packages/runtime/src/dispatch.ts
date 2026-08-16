@@ -3,8 +3,8 @@ export type DispatchTerminal = "complete" | "failed" | "cancelled";
 
 export type BuildDispatchRequest = {
   readonly build: string;
-  /** Compute packages the Worker loads for this Build. */
-  readonly implementationPackages: readonly string[];
+  /** Installed component packages loaded when a Worker claims this Build. */
+  readonly componentPackages: readonly string[];
 };
 
 export type BuildDispatchSnapshot = BuildDispatchRequest & {
@@ -71,8 +71,7 @@ export type BuildDispatchStore = {
   }): Promise<BuildDispatchSnapshot>;
   read(build: string): Promise<BuildDispatchSnapshot | undefined>;
   list(query?: DispatchQuery): Promise<readonly BuildDispatchSnapshot[]>;
-  /** Claim one ready Build that this Worker has the implementation packages to execute. */
-  claim(now?: number, implementationPackages?: readonly string[]): Promise<BuildDispatchSnapshot | undefined>;
+  claim(now?: number): Promise<BuildDispatchSnapshot | undefined>;
   release(build: string, update: BuildDispatchRelease): Promise<BuildDispatchSnapshot>;
   finish(build: string, terminal: DispatchTerminal, reason?: string): Promise<BuildDispatchSnapshot>;
   requestCancellation(build: string, reason?: string): Promise<BuildDispatchSnapshot>;

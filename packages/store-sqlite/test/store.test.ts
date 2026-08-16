@@ -3,7 +3,7 @@ import { mkdtemp, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
-import { BuildMachine, buildDefinition } from "@narratage/core";
+import { BuildMachine, defineBuild } from "@narratage/core";
 import { SqliteRuntimeState } from "@narratage/store-sqlite";
 
 import { createGreetingBuild } from "../../core/test/greeting-fixture.js";
@@ -28,7 +28,7 @@ test("SQLite stores verified Build facts and Operation handles across reopen", a
   try {
     const first = new SqliteRuntimeState(path);
     const initial = createGreetingBuild();
-    const definition = buildDefinition(initial);
+    const definition = defineBuild(initial.program, initial.graph, initial.request);
     await first.builds.create("video", definition);
     const catalog = {
       source: { path: "/project/main.svml" },
@@ -112,7 +112,7 @@ test("cancelling a never-claimed Build atomically withdraws it from dispatch", a
   const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-cancel-queued-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    await state.dispatch.create({ build: "queued-build", implementationPackages: [] }, { now: 100 });
+    await state.dispatch.create({ build: "queued-build", componentPackages: [] }, { now: 100 });
 
     const cancelled = await state.dispatch.requestCancellation("queued-build", "no longer needed");
     assert.equal(cancelled.phase, "terminal");
@@ -123,28 +123,6 @@ test("cancelling a never-claimed Build atomically withdraws it from dispatch", a
 
     const repeated = await state.dispatch.requestCancellation("queued-build", "second reason");
     assert.deepEqual(repeated, cancelled);
-    state.close();
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-});
-
-test("a Worker skips ready Builds whose implementation packages it has not loaded", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-package-admission-"));
-  try {
-    const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
-    await state.dispatch.create({
-      build: "a-needs-image",
-      implementationPackages: ["@example/image"],
-    }, { now: 100 });
-    await state.dispatch.create({
-      build: "b-needs-nothing",
-      implementationPackages: [],
-    }, { now: 100 });
-
-    assert.equal((await state.dispatch.claim(101, []))?.build, "b-needs-nothing");
-    assert.equal(await state.dispatch.claim(102, []), undefined);
-    assert.equal((await state.dispatch.claim(103, ["@example/image"]))?.build, "a-needs-image");
     state.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

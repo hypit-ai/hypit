@@ -20,7 +20,7 @@ import type {
   EndpointPackage,
 } from "@narratage/runtime-local";
 import { createLocalRuntime } from "@narratage/runtime-local";
-import { buildDefinition } from "@narratage/core";
+import { defineBuild } from "@narratage/core";
 import {
   collectNodePackageComponents,
   loadNodePackageSelection,
@@ -38,6 +38,10 @@ import {
 } from "../../core/test/greeting-fixture.js";
 
 const providerModule = { name: "example.local-endpoint", version: "1" } as const;
+
+function definition(state: ReturnType<typeof createGreetingBuild>) {
+  return defineBuild(state.program, state.graph, state.request);
+}
 
 function projectRuntimeFixture(directory: string) {
   const state = new SqliteRuntimeState(join(directory, ".narratage", "runtime.sqlite"));
@@ -63,7 +67,7 @@ test("Artifact GC is explicit, dry-run by default, and only removes unreachable 
     assert.deepEqual(preview.unreachable, [orphan.digest]);
     assert.deepEqual(preview.deleted, []);
     assert.equal(await artifacts.has(orphan.digest), true);
-    await runtime.build({ id: "active-build", definition: buildDefinition(createGreetingBuild()) });
+    await runtime.build({ id: "active-build", definition: definition(createGreetingBuild()) });
     await assert.rejects(
       async () => await runtime.garbageCollectArtifacts({ apply: true }),
       /Artifact GC cannot delete while 1 Build is active/u,
@@ -219,7 +223,7 @@ test("project local runtime queues, polls and cancels work with replaceable pack
       components: [components],
       endpoints: [endpointPackage],
     });
-    const first = await firstRuntime.build({ id: "greeting-build", definition: buildDefinition(initial), catalog });
+    const first = await firstRuntime.build({ id: "greeting-build", definition: definition(initial), catalog });
     assert.equal(first.status, "queued");
     assert.equal((await firstRuntime.workOnce())?.phase, "waiting");
     assert.equal(starts, 1);
@@ -236,7 +240,7 @@ test("project local runtime queues, polls and cancels work with replaceable pack
     assert.equal(clientStatus.catalog?.aliases[0]?.name, "final.document");
     assert.deepEqual((await firstRuntime.builds()).map((item) => item.build), ["greeting-build"]);
 
-    await firstRuntime.build({ id: "greeting-follow", definition: buildDefinition(createGreetingBuild()) });
+    await firstRuntime.build({ id: "greeting-follow", definition: definition(createGreetingBuild()) });
     await firstRuntime.workOnce();
     await firstRuntime.workOnce();
     const followed = await firstRuntime.status("greeting-follow");
@@ -247,7 +251,7 @@ test("project local runtime queues, polls and cancels work with replaceable pack
     assert.equal(followedStatus.build?.state.status, "complete");
     assert.equal(followedStatus.operations.length, 1);
 
-    const waiting = await firstRuntime.build({ id: "greeting-cancel", definition: buildDefinition(createGreetingBuild()) });
+    const waiting = await firstRuntime.build({ id: "greeting-cancel", definition: definition(createGreetingBuild()) });
     assert.equal(waiting.status, "queued");
     await firstRuntime.workOnce();
     const requested = await firstRuntime.cancel("greeting-cancel");
@@ -308,12 +312,10 @@ test("one local Worker advances independent Builds concurrently under one comman
     const runtime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
       components: [components],
-      implementationPackages: ["@example/parallel-a", "@example/parallel-b"],
     });
-    await runtime.buildMany(["parallel-a", "parallel-b"].map((id) => ({
+    await Promise.all(["parallel-a", "parallel-b"].map(async (id) => await runtime.build({
       id,
-      definition: buildDefinition(createGreetingBuild({ generationRealization: "placeholder" })),
-      implementationPackages: [`@example/${id}`],
+      definition: definition(createGreetingBuild({ generationRealization: "placeholder" })),
     })));
     const controller = new AbortController();
     const work = runtime.work({ idlePollMs: 5, signal: controller.signal });
@@ -380,16 +382,19 @@ test("project local runtime accepts components loaded from an installed package"
   `, "utf8");
 
   try {
-    const loaded = await loadNodePackageSelection(["example-greeting-components"], installedRoot);
     const runtime = await createLocalRuntime({
       ...projectRuntimeFixture(runtimeRoot),
-      components: collectNodePackageComponents(loaded.map((item) => item.contribution)),
+      loadComponentPackages: async (specifiers) => {
+        const loaded = await loadNodePackageSelection(specifiers, installedRoot);
+        return collectNodePackageComponents(loaded.map((item) => item.contribution));
+      },
     });
     const result = await runtime.build({
       id: "selected-preview",
-      definition: buildDefinition(createGreetingBuild({
+      definition: definition(createGreetingBuild({
         generationRealization: "placeholder",
       })),
+      componentPackages: ["example-greeting-components"],
     });
     assert.equal(result.status, "queued");
     const completed = await runtime.workOnce();
@@ -420,7 +425,7 @@ test("project local runtime accepts an explicitly selected replacement ArtifactS
     assert.equal(await artifactStore.has(sourceArtifact.digest), false);
     await runtime.build({
       id: "source-artifact-staging",
-      definition: buildDefinition(createGreetingBuild()),
+      definition: definition(createGreetingBuild()),
       attachments: [{ artifact: sourceArtifact, open: async () => (async function* () { yield bytes; })() }],
     });
     const failed = await runtime.workOnce();
@@ -429,7 +434,7 @@ test("project local runtime accepts an explicitly selected replacement ArtifactS
     let reopened = false;
     await runtime.build({
       id: "existing-source-artifact",
-      definition: buildDefinition(createGreetingBuild()),
+      definition: definition(createGreetingBuild()),
       attachments: [{
         artifact: sourceArtifact,
         open: async () => {
@@ -448,7 +453,7 @@ test("project local runtime accepts an explicitly selected replacement ArtifactS
     };
     await assert.rejects(runtime.build({
       id: "mismatched-source-artifact",
-      definition: buildDefinition(createGreetingBuild()),
+      definition: definition(createGreetingBuild()),
       attachments: [{
         artifact: absentArtifact,
         open: async () => (async function* () { yield new Uint8Array([0]); })(),

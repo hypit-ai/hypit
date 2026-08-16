@@ -6,8 +6,5 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
-  },
-  "dependencies": {
-    "@narratage/protocol": "workspace:*"
   }
 }

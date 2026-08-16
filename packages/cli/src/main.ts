@@ -8,10 +8,6 @@ import { plannedNeeds } from "@narratage/runtime";
 import type { BuildCatalogDescriptor, CapacityReservation, OperationProgress } from "@narratage/runtime";
 import type { BuildState, CapabilityRef, TypeRef } from "@narratage/protocol";
 import { parseSourceHeader } from "@narratage/source";
-import {
-  loadNodePackageSelection,
-} from "@narratage/package-loader-node";
-import type { LoadedPackage } from "@narratage/package-loader-node";
 
 import {
   acceptedArchivedOutputs,
@@ -58,7 +54,6 @@ type ParsedArgs = {
   readonly runtime: string | undefined;
   readonly follow: boolean;
   readonly maxWaitMs: number | undefined;
-  readonly packages: readonly string[];
   readonly record: string | undefined;
   readonly output: string | undefined;
   readonly name: string | undefined;
@@ -119,7 +114,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let runtime: string | undefined;
   let follow = false;
   let maxWaitMs: number | undefined;
-  const packages: string[] = [];
   let record: string | undefined;
   let output: string | undefined;
   let name: string | undefined;
@@ -142,7 +136,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     const item = rest[index]!;
     if (item.startsWith("--")) {
       const repeatable = [
-        "--package", "--json", "--jsonl", "--watch", "--verbose", "--debug",
+        "--json", "--jsonl", "--watch", "--verbose", "--debug",
         "--no-color", "--follow", "--apply", "--no-programs", "--asset-root",
       ].includes(item);
       if (!repeatable && seenOptions.has(item)) throw new Error(`${item} cannot be repeated`);
@@ -198,13 +192,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--package-root requires a directory");
       packageRoot = resolve(value);
-      index += 1;
-      continue;
-    }
-    if (item === "--package") {
-      const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--package requires an installed package name");
-      packages.push(value);
       index += 1;
       continue;
     }
@@ -322,7 +309,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     runtime,
     follow,
     maxWaitMs,
-    packages,
     record,
     output,
     name,
@@ -504,13 +490,9 @@ function capabilityName(capability: CapabilityRef): string {
 async function preflightPlan(
   host: NodeRuntimeHost,
   state: BuildState,
-  implementationPackages?: readonly LoadedPackage[],
 ) {
   const capabilities = demandedCapabilities(state);
-  const result = await host.doctor({
-    capabilities,
-    ...(implementationPackages === undefined ? {} : { implementationPackages }),
-  });
+  const result = await host.doctor({ capabilities });
   return {
     ok: !result.diagnostics.some((item) => item.severity === "error"),
     dataRoot: result.dataRoot,
@@ -534,13 +516,8 @@ function assertPreflight(
   ].join("\n"));
 }
 
-async function loadRuntime(
-  host: NodeRuntimeHost,
-  implementationPackages?: readonly LoadedPackage[],
-): Promise<CliRuntime> {
-  return await host.createRuntime({
-    ...(implementationPackages === undefined ? {} : { implementationPackages }),
-  });
+async function loadRuntime(host: NodeRuntimeHost): Promise<CliRuntime> {
+  return await host.createRuntime();
 }
 
 async function loadRuntimeArchive(
@@ -813,12 +790,7 @@ export async function runCli(
   };
   if (args.command === "_worker") {
     if (args.file === undefined || args.readyFile === undefined) throw new Error("internal Worker launch is incomplete");
-    const implementationPackages = args.packages.length === 0
-      ? undefined
-      : await loadNodePackageSelection(args.packages, await packageRootForProject());
-    await (await runtimeHost(args.file, await packageRootForProject())).runWorker(args.readyFile, {
-      ...(implementationPackages === undefined ? {} : { implementationPackages }),
-    });
+    await (await runtimeHost(args.file, await packageRootForProject())).runWorker(args.readyFile);
     return;
   }
   if (args.command === "runtime" && args.action === "use") {
@@ -911,7 +883,6 @@ export async function runCli(
       ?? (source === undefined ? process.cwd() : dirname(resolve(source)));
     const packageRoot = await packageRootForProject(workspaceRoot);
     return await (await runtimeHost(profile, packageRoot)).controller({
-      workspaceRoot,
       packageRoot,
     });
   };
@@ -938,7 +909,7 @@ export async function runCli(
     return;
   }
   if (args.command === "doctor") {
-    if (args.packageRoot !== undefined || args.packages.length > 0 || args.apply) {
+    if (args.packageRoot !== undefined || args.apply) {
       throw new Error("doctor reads all deployment selection from the Runtime Profile itself");
     }
     const profileInput = args.runtime ?? args.file;
@@ -961,7 +932,7 @@ export async function runCli(
     if (args.file !== undefined && args.runtime !== undefined) {
       throw new Error("programs reads all deployment selection from the Runtime Profile itself; provide that Profile only once");
     }
-    if (args.packageRoot !== undefined || args.packages.length > 0 || args.apply) {
+    if (args.packageRoot !== undefined || args.apply) {
       throw new Error("programs reads all deployment selection from the Runtime Profile itself");
     }
     if (args.action !== "up" && args.action !== "down" && args.action !== "status") {
@@ -1109,7 +1080,7 @@ export async function runCli(
     return;
   }
   if (args.command === "gc") {
-    if (args.packageRoot !== undefined || args.packages.length > 0) {
+    if (args.packageRoot !== undefined) {
       throw new Error("gc reads all deployment selection from the Runtime Profile itself");
     }
     const profileInput = args.runtime ?? args.file;
@@ -1577,7 +1548,6 @@ export async function runCli(
     }
     return;
   }
-  if (args.packages.length > 0) throw new Error("--package is reserved for the internal Worker launch");
   const runtimePaths = args.runtime === undefined
     ? undefined
     : await (await runtimeHost(args.runtime)).resolvePaths();
@@ -1694,21 +1664,19 @@ export async function runCli(
         id: `bld_${randomUUID()}`,
         definition: result.definition,
         ...(loadedPackageSet === undefined ? {} : {
-          implementationPackages: loadedPackageSet.map((item) => item.specifier),
+          componentPackages: loadedPackageSet
+            .filter((item) => (item.contribution.components?.length ?? 0) > 0)
+            .map((item) => item.specifier),
         }),
         catalog,
         attachments: result.compilation.attachments,
       } as const;
       const controller = await (await runtimeHost(args.runtime)).controller({
-        workspaceRoot: effectiveWorkspaceRoot,
-        ...(loadedPackageSet === undefined ? {} : {
-          implementationPackages: loadedPackageSet.map((item) => item.specifier),
-        }),
         packageRoot: sourcePackageRoot,
       });
       let programs: Awaited<ReturnType<typeof startDeclaredPrograms>> | undefined;
       let worker = await controller.worker.status();
-      const preflight = await preflightPlan(await runtimeHost(args.runtime), result.state, loadedPackageSet);
+      const preflight = await preflightPlan(await runtimeHost(args.runtime), result.state);
       // A managed program being down is repairable after Runtime validation;
       // every other deployment error fails before we construct execution or
       // start anything. With --no-programs, readiness errors remain fatal.
@@ -1722,7 +1690,7 @@ export async function runCli(
             demandedCapabilities(result.state),
             reportProgramProgress,
           );
-      runtime = await loadRuntime(await runtimeHost(args.runtime), loadedPackageSet);
+      runtime = await loadRuntime(await runtimeHost(args.runtime));
       let built = await runtime.build(request);
       try {
         worker = await controller.worker.up({
@@ -1841,7 +1809,7 @@ export async function runCli(
     const result = loaded.compiler.planCompilation(loaded);
     const preflight = args.runtime === undefined
       ? undefined
-      : await preflightPlan(await runtimeHost(args.runtime), result.state, loadedPackageSet);
+      : await preflightPlan(await runtimeHost(args.runtime), result.state);
     writeCliOutput(io, args, {
       kind: "plan",
       machine: {

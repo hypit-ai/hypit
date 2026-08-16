@@ -1,6 +1,5 @@
 export * from "./canonical.js";
 export * from "./error.js";
-export { parseModuleManifest, parseModuleManifestText } from "./manifest.js";
 export { modulePackageAbi } from "./module.js";
 export { blobRefObjectSchema } from "./value.js";
 export type * from "./build.js";

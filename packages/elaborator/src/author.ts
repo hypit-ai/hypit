@@ -52,7 +52,7 @@ export type AuthorOutputBinding = {
   readonly type: TypeRef;
 };
 
-/** Resolve a locked Graph Fragment without executing package code. */
+/** Resolve a selected Graph Fragment without executing package code. */
 export type GraphFragmentResolver = (id: string) => GraphFragment | undefined;
 
 export class AuthorGraphError extends Error {
@@ -145,7 +145,7 @@ function outputKey(component: string, output: string): string {
   return `${component}\u0000${output}`;
 }
 
-/** Phase one: lock every component and predeclare every public output before resolving any input. */
+/** Phase one: collect every component and predeclare every public output before resolving any input. */
 function collectAuthorGraph(
   program: LinkedProgram,
   declarations: readonly AuthorComponent[],

@@ -37,6 +37,6 @@ export type CliDistribution = {
     readonly selected: readonly string[];
     readonly logical?: readonly import("@narratage/package-loader-node").LogicalPackageAddress[];
   }>;
-  /** Load the Runtime Host selected by the Profile's `runtime.use` package. */
+  /** Open the Runtime Profile with this application's Runtime implementation. */
   openRuntimeHost(path: string, options: { readonly packageRoot: string }): Promise<NodeRuntimeHost>;
 };

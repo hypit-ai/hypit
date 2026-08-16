@@ -34,7 +34,7 @@ import type {
   OperationUpdate,
 } from "@narratage/runtime";
 
-const databaseSchemaVersion = 12;
+const databaseSchemaVersion = 13;
 
 export type SqliteRuntimeStateOptions = {
   readonly busyTimeoutMs?: number;
@@ -336,11 +336,11 @@ class SqliteOperationStore implements OperationStore {
 
 function parseDispatchSnapshot(row: Row): BuildDispatchSnapshot {
   assert(typeof row.build_id === "string", "SQLite Dispatch row has no Build id");
-  assert(typeof row.implementation_packages_json === "string", "SQLite Dispatch row has no implementation packages");
+  assert(typeof row.component_packages_json === "string", "SQLite Dispatch row has no component packages");
   assert(typeof row.created_at === "number", "SQLite Dispatch time is invalid");
   assert(typeof row.available_at === "number", "SQLite Dispatch schedule is invalid");
   assert(typeof row.phase === "string", "SQLite Dispatch state is invalid");
-  const implementationPackages = JSON.parse(row.implementation_packages_json) as readonly string[];
+  const componentPackages = JSON.parse(row.component_packages_json) as readonly string[];
   const cancellation = row.cancel_requested === 1
     ? {
         cancellation: {
@@ -350,7 +350,7 @@ function parseDispatchSnapshot(row: Row): BuildDispatchSnapshot {
     : {};
   const snapshot = {
     build: row.build_id,
-    implementationPackages,
+    componentPackages,
     createdAt: row.created_at,
     availableAt: row.available_at,
     phase: row.phase,
@@ -376,10 +376,10 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     nonNegativeInteger(now, "Dispatch creation time");
     this.#database.prepare(`
       INSERT INTO narratage_dispatches (
-        build_id, implementation_packages_json, created_at, available_at,
+        build_id, component_packages_json, created_at, available_at,
         phase, reason, cancel_requested, cancel_reason, terminal
       ) VALUES (?, ?, ?, ?, 'queued', NULL, 0, NULL, NULL)
-    `).run(request.build, canonicalStringify(request.implementationPackages), now, now);
+    `).run(request.build, canonicalStringify(request.componentPackages), now, now);
     return {
       ...copy(request),
       createdAt: now,
@@ -402,23 +402,15 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       .filter((item) => query.phases === undefined || query.phases.includes(item.phase));
   }
 
-  async claim(
-    now = Date.now(),
-    implementationPackages: readonly string[] = [],
-  ): Promise<BuildDispatchSnapshot | undefined> {
+  async claim(now = Date.now()): Promise<BuildDispatchSnapshot | undefined> {
     nonNegativeInteger(now, "Dispatch claim time");
-    const available = new Set(implementationPackages);
     return transaction(this.#database, () => {
-      const rows = this.#database.prepare(`
-        SELECT build_id, implementation_packages_json FROM narratage_dispatches
+      const row = this.#database.prepare(`
+        SELECT build_id FROM narratage_dispatches
         WHERE phase IN ('queued', 'waiting') AND available_at <= ?
         ORDER BY available_at ASC, created_at ASC, build_id ASC
-      `).all(now) as Row[];
-      const row = rows.find((candidate) => {
-        assert(typeof candidate.implementation_packages_json === "string", "SQLite ready Dispatch has no implementation packages");
-        const packages = JSON.parse(candidate.implementation_packages_json) as readonly string[];
-        return packages.every((item) => available.has(item));
-      });
+        LIMIT 1
+      `).get(now) as Row | undefined;
       if (row === undefined) return undefined;
       assert(typeof row.build_id === "string", "SQLite ready Dispatch has no Build id");
       const updated = this.#database.prepare(`
@@ -666,7 +658,7 @@ export class SqliteRuntimeState {
       ) STRICT;
       CREATE TABLE IF NOT EXISTS narratage_dispatches (
         build_id TEXT PRIMARY KEY,
-        implementation_packages_json TEXT NOT NULL,
+        component_packages_json TEXT NOT NULL,
         created_at INTEGER NOT NULL,
         available_at INTEGER NOT NULL,
         phase TEXT NOT NULL CHECK (phase IN ('queued', 'running', 'waiting', 'terminal')),

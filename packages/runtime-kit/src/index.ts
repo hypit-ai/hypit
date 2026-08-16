@@ -1,6 +1,5 @@
 import type { EndpointPackage } from "@narratage/endpoint-kit";
 import type { HostFacet } from "@narratage/host";
-import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue } from "@narratage/protocol";
 import { credentialRef } from "@narratage/runtime";
 import type { ArtifactStore, CredentialRef, CredentialStore } from "@narratage/runtime";
@@ -282,8 +281,4 @@ export function runtimeConfigCredentialRef(
   const key = runtimeConfigString(object.key, `${subject}.key`);
   assert(store !== undefined && key !== undefined, `${subject} requires store and key`);
   return credentialRef(store, key);
-}
-
-export function canonicalRuntimeConfig(value: unknown): CanonicalValue {
-  return canonicalize(value);
 }
