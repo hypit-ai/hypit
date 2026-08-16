@@ -411,15 +411,23 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       .filter((item) => query.phases === undefined || query.phases.includes(item.phase));
   }
 
-  async claim(now = Date.now()): Promise<BuildDispatchSnapshot | undefined> {
+  async claim(
+    now = Date.now(),
+    implementationPackages: readonly string[] = [],
+  ): Promise<BuildDispatchSnapshot | undefined> {
     nonNegativeInteger(now, "Dispatch claim time");
+    const available = new Set(implementationPackages);
     return transaction(this.#database, () => {
-      const row = this.#database.prepare(`
-        SELECT build_id FROM narratage_dispatches
+      const rows = this.#database.prepare(`
+        SELECT build_id, identity_json FROM narratage_dispatches
         WHERE phase IN ('queued', 'waiting', 'blocked') AND available_at <= ?
         ORDER BY available_at ASC, created_at ASC, build_id ASC
-        LIMIT 1
-      `).get(now) as Row | undefined;
+      `).all(now) as Row[];
+      const row = rows.find((candidate) => {
+        assert(typeof candidate.identity_json === "string", "SQLite ready Dispatch has no identity");
+        const identity = JSON.parse(candidate.identity_json) as BuildDispatchIdentity;
+        return identity.implementationPackages.every((item) => available.has(item));
+      });
       if (row === undefined) return undefined;
       assert(typeof row.build_id === "string", "SQLite ready Dispatch has no Build id");
       const updated = this.#database.prepare(`

@@ -34,6 +34,8 @@ export type CreateLocalRuntimeOptions = {
   readonly artifactStore: ArtifactStore;
   readonly credentialStore: CredentialStore;
   readonly components?: readonly ComponentPackage[];
+  /** Package specifiers already loaded into this Worker process. */
+  readonly implementationPackages?: readonly string[];
   readonly endpoints?: readonly EndpointPackage[];
   readonly scheduling: Omit<BuildSchedulerOptions, "buildStore">;
   readonly validators?: LocalTypeValidatorRegistry;

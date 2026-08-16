@@ -94,6 +94,7 @@ export async function createLocalRuntime(
       artifacts: options.artifactStore,
     },
     scheduling,
+    implementationPackages: [...new Set(options.implementationPackages ?? [])],
   });
   const credentialControl = createLocalCredentialControl({
     credentialStore: options.credentialStore,
