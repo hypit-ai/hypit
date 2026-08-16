@@ -12,7 +12,7 @@
     "@narratage/compiler-markup-node": "workspace:*",
     "@narratage/markup": "workspace:*",
     "@narratage/package-loader-node": "workspace:*",
-    "@narratage/runtime-host-node": "workspace:*",
+    "@narratage/runtime-local": "workspace:*",
     "@narratage/workspace-fs-node": "workspace:*"
   }
 }

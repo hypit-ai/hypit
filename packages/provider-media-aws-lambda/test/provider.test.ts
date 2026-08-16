@@ -6,7 +6,7 @@ import { MemoryArtifactStore } from "@narratage/driver-node";
 import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue } from "@narratage/protocol";
 import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";
-import type { JsonInvoker } from "@narratage/transport";
+import type { JsonInvoker } from "@narratage/transport-aws-lambda";
 
 import {
   createAwsLambdaMediaProvider,

@@ -1,22 +1,26 @@
 import type { Awaitable, ComponentPackage } from "@narratage/component-kit";
-import type { ArtifactAttachment } from "@narratage/workspace";
 import type { EndpointPackage } from "@narratage/endpoint-kit";
-import type { BuildDefinition, BuildState } from "@narratage/protocol";
-import type { Digest } from "@narratage/protocol";
 import type {
   ArtifactStore,
   BuildCatalog,
-  BuildCatalogDescriptor,
-  BuildCatalogEntry,
   BuildSchedulerOptions,
-  BuildSnapshot,
   BuildStore,
   BuildDispatchStore,
   BuildDispatchSnapshot,
   CredentialStore,
   OperationStore,
-  OperationSnapshot,
 } from "@narratage/runtime";
+import type {
+  RuntimeHostArchive,
+  RuntimeHostArtifactAccess,
+  RuntimeHostArtifactGarbageCollection,
+  RuntimeHostBuildSubmission,
+  RuntimeHostCredentialControl,
+  RuntimeHostCredentialStatus,
+  RuntimeHostExecution,
+  RuntimeHostMaintenance,
+  RuntimeHostStatus,
+} from "@narratage/runtime-host-node";
 import type { TypeValidatorRegistrar, TypeValidatorRegistryLike } from "@narratage/validation";
 
 export type { ComponentPackage } from "@narratage/component-kit";
@@ -34,8 +38,8 @@ export type CreateLocalRuntimeOptions = {
   readonly artifactStore: ArtifactStore;
   readonly credentialStore: CredentialStore;
   readonly components?: readonly ComponentPackage[];
-  /** Package specifiers already loaded into this Worker process. */
-  readonly implementationPackages?: readonly string[];
+  /** Load the component packages named by a claimed Build. */
+  readonly loadComponentPackages?: (specifiers: readonly string[]) => Awaitable<readonly ComponentPackage[]>;
   readonly endpoints?: readonly EndpointPackage[];
   readonly scheduling: Omit<BuildSchedulerOptions, "buildStore">;
   readonly validators?: LocalTypeValidatorRegistry;
@@ -66,121 +70,27 @@ export type CreateLocalCredentialControlOptions = {
   readonly close?: () => Awaitable<void>;
 };
 
-export type LocalBuildRequest = {
-  /** Caller-generated identity for one submission; Source identity is separate. */
-  readonly id: string;
-  readonly definition: BuildDefinition;
-  /** Installed compute packages selected by this Build's Source closure. */
-  readonly implementationPackages?: readonly string[];
-  /** Source aliases and paths for Host inspection. Not trusted Build input. */
-  readonly catalog?: BuildCatalogDescriptor;
-  /** Host transfer bundle. It is staged before Core commands run and never enters BuildState. */
-  readonly attachments?: readonly ArtifactAttachment[];
-};
+export type LocalBuildRequest = Parameters<RuntimeHostExecution["build"]>[0];
+export type LocalBuildOptions = Parameters<RuntimeHostExecution["build"]>[1];
+export type LocalBuildSubmission = RuntimeHostBuildSubmission;
+export type LocalRuntimeStatus = RuntimeHostStatus;
+export type LocalRuntimeActivity = Awaited<ReturnType<RuntimeHostArchive["activity"]>>;
+export type LocalRuntimeQueue = Awaited<ReturnType<RuntimeHostArchive["queue"]>>;
+export type LocalCredentialStatus = RuntimeHostCredentialStatus;
+export type ArtifactGarbageCollection = RuntimeHostArtifactGarbageCollection;
 
-export type LocalBuildOptions = {
-  /** Observe the durable Dispatch until terminal; execution remains owned by a Worker process. */
-  readonly follow?: boolean;
-  readonly pollIntervalMs?: number;
-  readonly maxWaitMs?: number;
-  readonly signal?: AbortSignal;
-};
-
-export type LocalRuntimeStatus = {
-  readonly build: BuildSnapshot | undefined;
-  readonly catalog: BuildCatalogEntry | undefined;
-  readonly operations: readonly OperationSnapshot[];
-  readonly dispatch: BuildDispatchSnapshot | undefined;
-};
-
-/** Lightweight execution facts. Unlike status(), this does not read or verify the BuildState. */
-export type LocalRuntimeActivity = {
-  readonly operations: readonly OperationSnapshot[];
-  readonly dispatch: BuildDispatchSnapshot | undefined;
-};
-
-export type LocalRuntimeQueue = {
-  readonly dispatches: readonly BuildDispatchSnapshot[];
-  readonly capacity: readonly import("@narratage/runtime").CapacityReservation[];
-  /** Execution facts belonging to non-terminal queued Builds. */
-  readonly operations: readonly OperationSnapshot[];
-};
-
-export type LocalCredentialStatus = import("@narratage/endpoint-kit").EndpointCredentialDescription & {
-  readonly configured: boolean;
-  readonly writable: boolean;
-};
-
-export type LocalBuildSubmission = {
-  readonly id: string;
-  readonly state: BuildState;
-  readonly status: "queued" | "running" | "waiting" | "complete" | "failed" | "cancelled";
-  readonly dispatch: BuildDispatchSnapshot;
-};
-
-export type ArtifactGarbageCollection = {
-  readonly reachable: readonly Digest[];
-  readonly unreachable: readonly Digest[];
-  readonly deleted: readonly Digest[];
-};
-
-export type LocalRuntime = {
-  build(request: LocalBuildRequest, options?: LocalBuildOptions): Promise<LocalBuildSubmission>;
-  buildMany(requests: readonly LocalBuildRequest[]): Promise<readonly LocalBuildSubmission[]>;
-  status(build: string): Promise<LocalRuntimeStatus>;
-  activity(build: string): Promise<LocalRuntimeActivity>;
-  queue(): Promise<LocalRuntimeQueue>;
-  operation(id: string): Promise<OperationSnapshot | undefined>;
-  credentials(endpoint?: string): Promise<readonly LocalCredentialStatus[]>;
-  putCredential(endpoint: string, slot: string, secret: string): Promise<LocalCredentialStatus>;
-  deleteCredential(endpoint: string, slot: string): Promise<{ readonly deleted: boolean; readonly credential: LocalCredentialStatus }>;
-  builds(): Promise<readonly BuildCatalogEntry[]>;
-  cancel(build: string, reason?: string): Promise<BuildDispatchSnapshot | undefined>;
+export type LocalRuntime = RuntimeHostExecution & {
   workOnce(): Promise<BuildDispatchSnapshot | undefined>;
-  work(options: import("@narratage/runtime").RuntimeWorkerRunOptions): Promise<void>;
-  readArtifact(digest: Digest): Promise<Uint8Array | undefined>;
-  openArtifact(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
-  /** Explicit maintenance only. apply=false is a read-only reachability report. */
-  garbageCollectArtifacts(options?: { readonly apply?: boolean }): Promise<ArtifactGarbageCollection>;
-  close(): Awaitable<void>;
 };
 
 /** Durable execution-state archive that never opens the selected ArtifactStore. */
-export type LocalRuntimeArchiveControl = Pick<LocalRuntime,
-  | "status"
-  | "activity"
-  | "queue"
-  | "operation"
-  | "builds"
-  | "cancel"
-  | "close"
->;
+export type LocalRuntimeArchiveControl = RuntimeHostArchive;
 
 /** Explicit Artifact byte access that never opens Build, Operation or Dispatch state. */
-export type LocalRuntimeArtifactAccess = Pick<LocalRuntime,
-  | "readArtifact"
-  | "openArtifact"
-  | "close"
->;
+export type LocalRuntimeArtifactAccess = RuntimeHostArtifactAccess;
 
 /** Durable project control used only when one operation truly spans state and Artifacts. */
-export type LocalRuntimeControl = Pick<LocalRuntime,
-  | "status"
-  | "activity"
-  | "queue"
-  | "operation"
-  | "builds"
-  | "cancel"
-  | "readArtifact"
-  | "openArtifact"
-  | "garbageCollectArtifacts"
-  | "close"
->;
+export type LocalRuntimeControl = RuntimeHostMaintenance;
 
 /** Credential control for one or more exact Endpoint declarations; no execution state is opened. */
-export type LocalCredentialControl = Pick<LocalRuntime,
-  | "credentials"
-  | "putCredential"
-  | "deleteCredential"
-  | "close"
->;
+export type LocalCredentialControl = RuntimeHostCredentialControl;

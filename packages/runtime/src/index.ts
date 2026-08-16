@@ -12,9 +12,6 @@ export {
   capacityReservationId,
 } from "./dispatch.js";
 export type * from "./dispatch.js";
-export {
-  MemoryOperationStore,
-} from "./operations.js";
 export type * from "./operations.js";
 export { LocalBuildScheduler } from "./scheduler.js";
 export {

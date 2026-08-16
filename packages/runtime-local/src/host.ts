@@ -1,11 +1,9 @@
-import {
-  createNodeRuntimeHostAdapterFacet,
-} from "@narratage/runtime-host-node";
 import type {
   NodeRuntimeHost,
-  NodeRuntimeHostAdapterContext,
   RuntimeController,
+  RuntimeWorkerLaunch,
 } from "@narratage/runtime-host-node";
+import { resolve } from "node:path";
 
 import {
   createRuntimeArchiveFromConfig,
@@ -29,56 +27,35 @@ import {
   stopRuntimeProcess,
 } from "./worker-process.js";
 
-async function createLocalRuntimeHost(context: NodeRuntimeHostAdapterContext): Promise<NodeRuntimeHost> {
-  const profile = context.profile;
-  const basePackageRoot = context.packageRoot;
-  const controller = async (options: {
-    readonly workspaceRoot?: string;
-    readonly implementationPackages?: readonly string[];
+export async function openLocalRuntimeHost(
+  path: string,
+  hostOptions: { readonly packageRoot: string; readonly workerLaunch: RuntimeWorkerLaunch },
+): Promise<NodeRuntimeHost> {
+  const profile = resolve(path);
+  const basePackageRoot = resolve(hostOptions.packageRoot);
+  const controller = async (controllerOptions: {
     readonly packageRoot?: string;
   } = {}): Promise<RuntimeController> => {
-    const packageRoot = options.packageRoot ?? basePackageRoot;
+    const packageRoot = controllerOptions.packageRoot ?? basePackageRoot;
     const selection = await resolveRuntimeConfigPaths(profile, { packageRoot });
-    const implementationPackages = async (): Promise<readonly string[]> => {
-      const values = new Set(options.implementationPackages ?? []);
-      const archive = await createRuntimeArchiveFromConfig(profile, { packageRoot, readOnly: true });
-      try {
-        const queue = await archive.queue();
-        for (const dispatch of queue.dispatches) {
-          if (dispatch.phase === "terminal") continue;
-          for (const item of dispatch.implementationPackages) values.add(item);
-        }
-      } finally {
-        await archive.close();
-      }
-      return [...values].sort();
-    };
     return {
       profile,
       dataRoot: selection.dataRoot,
       worker: {
         up: async (workerOptions) => {
-          const packages = await implementationPackages();
           return await ensureRuntimeProcess(
             profile,
             selection.dataRoot,
             {
-              ...context.workerLaunch,
+              ...hostOptions.workerLaunch,
               workerArgs: [
-                ...(options.workspaceRoot === undefined ? [] : ["--workspace", options.workspaceRoot]),
-                ...packages.flatMap((item) => ["--package", item]),
                 "--package-root", packageRoot,
               ],
             },
             workerOptions?.maxWaitMs ?? 10_000,
-            packages,
           );
         },
-        status: async () => await runtimeProcessStatus(
-          profile,
-          selection.dataRoot,
-          await implementationPackages(),
-        ),
+        status: async () => await runtimeProcessStatus(profile, selection.dataRoot),
         logs: async () => await runtimeProcessLogs(selection.dataRoot),
         down: async (workerOptions) => await stopRuntimeProcess(
           profile,
@@ -103,12 +80,7 @@ async function createLocalRuntimeHost(context: NodeRuntimeHostAdapterContext): P
       };
     },
     controller,
-    createRuntime: async (options) => await createRuntimeFromConfig(profile, {
-      packageRoot: basePackageRoot,
-      ...(options?.implementationPackages === undefined
-        ? {}
-        : { implementationPackages: options.implementationPackages }),
-    }),
+    createRuntime: async () => await createRuntimeFromConfig(profile, { packageRoot: basePackageRoot }),
     openArchive: async (options) => await createRuntimeArchiveFromConfig(profile, {
       packageRoot: basePackageRoot,
       ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
@@ -129,17 +101,9 @@ async function createLocalRuntimeHost(context: NodeRuntimeHostAdapterContext): P
     doctor: async (options) => await doctorRuntimeConfig(profile, {
       packageRoot: basePackageRoot,
       ...(options?.capabilities === undefined ? {} : { capabilities: options.capabilities }),
-      ...(options?.implementationPackages === undefined
-        ? {}
-        : { implementationPackages: options.implementationPackages }),
     }),
-    runWorker: async (readyFile, options) => {
-      const runtime = await createRuntimeFromConfig(profile, {
-        packageRoot: basePackageRoot,
-        ...(options?.implementationPackages === undefined
-          ? {}
-          : { implementationPackages: options.implementationPackages }),
-      });
+    runWorker: async (readyFile) => {
+      const runtime = await createRuntimeFromConfig(profile, { packageRoot: basePackageRoot });
       const abort = new AbortController();
       const stop = (): void => abort.abort();
       process.once("SIGTERM", stop);
@@ -158,8 +122,3 @@ async function createLocalRuntimeHost(context: NodeRuntimeHostAdapterContext): P
     },
   };
 }
-
-export const localRuntimeHostAdapter = createNodeRuntimeHostAdapterFacet({
-  use: "@narratage/runtime-local",
-  open: createLocalRuntimeHost,
-});

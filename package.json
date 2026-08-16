@@ -19,7 +19,6 @@
     "test:browser-visual": "NARRATAGE_BROWSER_TESTS=1 node --import tsx --test packages/hyperframes/test/browser-visual.test.ts",
     "test:image-opencv": "NARRATAGE_OPENCV_TESTS=1 NARRATAGE_OPENCV_PYTHON=services/image-opencv/.venv/bin/python node --import tsx --test packages/provider-image-opencv-local/test/provider.test.ts",
     "smoke:kie": "node --import tsx packages/provider-kie/test/live-smoke.ts",
-    "cli:build": "node bin/build-cli.mjs",
     "narratage": "node bin/narratage.mjs",
     "caption:playground": "pnpm --filter @narratage/caption-playground exec node --import tsx start.ts",
     "svml:playground": "pnpm --filter @narratage/svml-playground exec node --import tsx start.ts",

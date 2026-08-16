@@ -1,10 +1,9 @@
 # `@narratage/runtime-host-node`
 
-Node.js Host for Runtime packages selected by a Runtime Profile, plus environment helpers for adapter
-implementations.
+Node.js Runtime port shared by the generic CLI and an application's chosen Runtime implementation,
+plus environment helpers for Endpoint adapters.
 
-The package keeps Node-specific hosting out of the host-neutral `@narratage/runtime-kit` ABI. It
-defines the Node Runtime Host port loaded by the CLI and also provides:
+The package keeps Node-specific process control out of the host-neutral Runtime contracts. It provides:
 
 - project-root resolution for configured relative executable paths;
 - executable availability diagnostics for absolute, relative and `PATH` commands;
@@ -13,6 +12,6 @@ defines the Node Runtime Host port loaded by the CLI and also provides:
 These functions produce `RuntimeDoctorDiagnostic` values only. They do not construct Endpoints,
 read secret values, execute commands or choose fallback Providers.
 
-`loadNodeRuntimeHost()` reads only the Runtime Profile header, resolves the installed package selected
-by `runtime.use`, and opens its Host facet. The selected package then owns Runtime assembly, lifecycle
-and storage. The generic CLI never imports `@narratage/runtime-local` or assumes a local Worker.
+The generic CLI depends only on this port. The official video application selects
+`@narratage/runtime-local` directly; Runtime Profiles vary stores and Endpoints rather than replacing
+the Runtime itself.

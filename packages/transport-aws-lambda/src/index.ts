@@ -7,7 +7,11 @@ import type {
 } from "@aws-sdk/client-lambda";
 import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue } from "@narratage/protocol";
-import type { JsonInvoker } from "@narratage/transport";
+
+/** One canonical JSON exchange; callers may inject any structurally compatible transport. */
+export interface JsonInvoker {
+  invoke(request: CanonicalValue, options?: { readonly signal?: AbortSignal }): Promise<CanonicalValue>;
+}
 
 export type LambdaInvocationInput = {
   readonly functionName: string;

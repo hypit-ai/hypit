@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 
 import type { ComponentPackage } from "@narratage/component-kit";
 import { collectNodePackageComponents, loadNodePackageSelection } from "@narratage/package-loader-node";
-import type { LoadedPackage, NodePackageSelectionRequest } from "@narratage/package-loader-node";
+import type { NodePackageSelectionRequest } from "@narratage/package-loader-node";
 import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue, CapabilityRef } from "@narratage/protocol";
 import {
@@ -50,7 +50,6 @@ export type RuntimeConfigEntry = {
 
 export type RuntimeConfigDocument = {
   readonly format: "narratage.runtime-profile@1";
-  readonly runtimeUse: "@narratage/runtime-local";
   readonly dataRoot: string;
   readonly artifacts: RuntimeConfigEntry;
   readonly credentials: readonly RuntimeConfigEntry[];
@@ -62,7 +61,6 @@ export type LoadRuntimeConfigOptions = {
   readonly registry?: RuntimeAdapterRegistry;
   readonly components?: readonly ComponentPackage[];
   readonly packageRoot?: string;
-  readonly implementationPackages?: readonly LoadedPackage[];
   readonly readOnly?: boolean;
 };
 
@@ -148,7 +146,6 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   if (new Set(ids).size !== ids.length) throw new Error("$runtime repeats a Runtime instance id");
   return {
     format: "narratage.runtime-profile@1",
-    runtimeUse: "@narratage/runtime-local",
     dataRoot: requiredString(config.dataRoot, "$runtime.runtime.config.dataRoot"),
     artifacts,
     credentials,
@@ -447,11 +444,11 @@ export async function createRuntimeFromConfig(
       dispatchStore: state.dispatch,
       artifactStore: artifacts.value,
       credentialStore: credentials.store,
-      components: [
-        ...collectNodePackageComponents((options.implementationPackages ?? []).map((item) => item.contribution)),
-        ...(options.components ?? []),
-      ],
-      implementationPackages: (options.implementationPackages ?? []).map((item) => item.specifier),
+      components: options.components ?? [],
+      loadComponentPackages: async (specifiers) => {
+        const loaded = await loadNodePackageSelection(specifiers, packageRoot);
+        return collectNodePackageComponents(loaded.map((item) => item.contribution));
+      },
       endpoints,
       scheduling: { maxConcurrency: document.concurrency },
       close: async () => {

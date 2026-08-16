@@ -465,10 +465,6 @@ importers:
       '@narratage/workspace':
         specifier: workspace:*
         version: link:../workspace
-    devDependencies:
-      '@narratage/runtime-local':
-        specifier: workspace:*
-        version: link:../runtime-local
 
   packages/comment-sticker:
     dependencies:
@@ -543,9 +539,6 @@ importers:
         specifier: workspace:*
         version: link:../workspace
     devDependencies:
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
       '@narratage/workspace-fs-node':
         specifier: workspace:*
         version: link:../workspace-fs-node
@@ -641,9 +634,6 @@ importers:
 
   packages/credential-store-env:
     dependencies:
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -653,9 +643,6 @@ importers:
 
   packages/credential-store-keychain:
     dependencies:
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -1297,11 +1284,7 @@ importers:
         specifier: workspace:*
         version: link:../text
 
-  packages/host:
-    dependencies:
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
+  packages/host: {}
 
   packages/hyperframes:
     dependencies:
@@ -1633,13 +1616,6 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-    devDependencies:
-      '@narratage/runtime-kit':
-        specifier: workspace:*
-        version: link:../runtime-kit
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
 
   packages/program-space:
     dependencies:
@@ -1893,9 +1869,6 @@ importers:
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
-      '@narratage/media-execution':
-        specifier: workspace:*
-        version: link:../media-execution
       '@narratage/media-pipeline':
         specifier: workspace:*
         version: link:../media-pipeline
@@ -1908,9 +1881,6 @@ importers:
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
-      '@narratage/transport':
-        specifier: workspace:*
-        version: link:../transport
       '@narratage/transport-aws-lambda':
         specifier: workspace:*
         version: link:../transport-aws-lambda
@@ -2155,12 +2125,6 @@ importers:
 
   packages/runtime-host-node:
     dependencies:
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../host
-      '@narratage/package-loader-node':
-        specifier: workspace:*
-        version: link:../package-loader-node
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2221,9 +2185,6 @@ importers:
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
-      '@narratage/workspace':
-        specifier: workspace:*
-        version: link:../workspace
     devDependencies:
       '@narratage/artifact-store-fs':
         specifier: workspace:*
@@ -2620,12 +2581,6 @@ importers:
         specifier: workspace:*
         version: link:../svs
 
-  packages/transport:
-    dependencies:
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-
   packages/transport-aws-lambda:
     dependencies:
       '@aws-sdk/client-lambda':
@@ -2634,9 +2589,6 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/transport':
-        specifier: workspace:*
-        version: link:../transport
 
   packages/typography-track:
     dependencies:
@@ -2716,9 +2668,9 @@ importers:
       '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
-      '@narratage/runtime-host-node':
+      '@narratage/runtime-local':
         specifier: workspace:*
-        version: link:../runtime-host-node
+        version: link:../runtime-local
       '@narratage/workspace-fs-node':
         specifier: workspace:*
         version: link:../workspace-fs-node

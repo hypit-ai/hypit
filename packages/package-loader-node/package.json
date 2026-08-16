@@ -11,9 +11,5 @@
     "@narratage/component-kit": "workspace:*",
     "@narratage/host": "workspace:*",
     "@narratage/protocol": "workspace:*"
-  },
-  "devDependencies": {
-    "@narratage/runtime-kit": "workspace:*",
-    "@narratage/validation": "workspace:*"
   }
 }

@@ -1,5 +1,5 @@
 import type { CliDistribution } from "@narratage/cli";
-import { loadNodeRuntimeHost } from "@narratage/runtime-host-node";
+import { openLocalRuntimeHost } from "@narratage/runtime-local";
 import { fileURLToPath } from "node:url";
 import {
   createVideoCompiler,
@@ -17,12 +17,12 @@ export const videoCliDistribution: CliDistribution = {
     const { discoverVideoSourcePackages } = await import("./package-selection.js");
     return await discoverVideoSourcePackages(path, options);
   },
-  openRuntimeHost: async (path, options) => await loadNodeRuntimeHost(path, {
+  openRuntimeHost: async (path, options) => await openLocalRuntimeHost(path, {
     packageRoot: options.packageRoot,
     workerLaunch: {
       command: process.execPath,
-      // The installed cross-platform bin is self-bootstrapping. Tests and direct
-      // source imports retain the explicit TypeScript loader fallback.
+      // The repository launcher registers TypeScript support before entering the CLI.
+      // Tests that import this Distribution directly keep the current Node arguments.
       args: installedLauncher === undefined
         ? [
             ...process.execArgv.filter((item) => !item.startsWith("--test")),

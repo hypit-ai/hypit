@@ -7,6 +7,7 @@ export { createLocalCredentialControl } from "./credentials.js";
 export {
   createLocalRuntime,
 } from "./runtime.js";
+export { openLocalRuntimeHost } from "./host.js";
 export {
   createRuntimeFromConfig,
   createRuntimeArchiveFromConfig,

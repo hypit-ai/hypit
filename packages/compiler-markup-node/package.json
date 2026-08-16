@@ -17,7 +17,6 @@
     "@narratage/validation": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/protocol": "workspace:*",
     "@narratage/workspace-fs-node": "workspace:*"
   }
 }
