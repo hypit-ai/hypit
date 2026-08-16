@@ -32,9 +32,6 @@ test("author check renders a compact human summary without dumping identity", ()
       format: "narratage.cli-check@1",
       sourceKind: "author",
       ok: true,
-      sourceClosure: digest,
-      moduleClosure: digest,
-      graph: digest,
       units: 2,
       sourceAssets: [{ digest }],
       modules: ["@narratage/script@1"],
@@ -66,9 +63,6 @@ test("large author exports are bounded until verbose output is requested", () =>
       format: "narratage.cli-check@1" as const,
       sourceKind: "author" as const,
       ok: true as const,
-      sourceClosure: digest,
-      moduleClosure: digest,
-      graph: digest,
       units: 1,
       sourceAssets: [],
       modules: [],
@@ -86,9 +80,6 @@ test("author check hides generated graph plumbing without deleting machine expor
     format: "narratage.cli-check@1" as const,
     sourceKind: "author" as const,
     ok: true as const,
-    sourceClosure: digest,
-    moduleClosure: digest,
-    graph: digest,
     units: 1,
     sourceAssets: [],
     modules: [],
@@ -119,28 +110,6 @@ test("author check hides generated graph plumbing without deleting machine expor
   assert.deepEqual(machine.exports.length, 3);
 });
 
-test("verbose human output reveals shortened identities", () => {
-  const output = capture({ ...human, verbose: true }, {
-    kind: "check-author",
-    source: "/project/main.svml",
-    frontend: "@narratage/markup@1",
-    machine: {
-      format: "narratage.cli-check@1",
-      sourceKind: "author",
-      ok: true,
-      sourceClosure: digest,
-      moduleClosure: digest,
-      graph: digest,
-      units: 1,
-      sourceAssets: [],
-      modules: [],
-      exports: [],
-    },
-  });
-  assert.match(output, /Identity/u);
-  assert.match(output, /sha256:11111111…111111/u);
-});
-
 test("JSON mode is exact machine data with no terminal decoration", () => {
   const machine = {
     format: "narratage.cli-doctor@1" as const,
@@ -161,9 +130,6 @@ test("JSON mode is exact machine data with no terminal decoration", () => {
 test("plan keeps named Run choices visible and leaves graph internals to verbose output", () => {
   const plan: BuildPlan = {
     format: "narratage.plan@1",
-    id: digest,
-    graph: digest,
-    request: digest,
     steps: [{
       id: "step-1",
       producer: { module: { name: "@narratage/media", version: "1" }, name: "inspect" },
@@ -209,9 +175,6 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
 test("a plan with no Needs stays compact without knowing any Provider names", () => {
   const plan: BuildPlan = {
     format: "narratage.plan@1",
-    id: digest,
-    graph: digest,
-    request: digest,
     steps: [],
     goals: [],
     selections: [],
@@ -228,9 +191,6 @@ test("a plan with no Needs stays compact without knowing any Provider names", ()
 test("plan runtime preflight presents only demanded capabilities", () => {
   const plan: BuildPlan = {
     format: "narratage.plan@1",
-    id: digest,
-    graph: digest,
-    request: digest,
     steps: [],
     goals: [],
     selections: [],

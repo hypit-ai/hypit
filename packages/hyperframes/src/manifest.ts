@@ -1,7 +1,6 @@
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
 import { compositionDependency, compositionTypes } from "@narratage/composition";
 import { compositableSurfaceSchema, mediaDependency } from "@narratage/media";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { VISUAL_IR_V1 } from "@narratage/visual-ir";
 

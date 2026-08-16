@@ -5,12 +5,12 @@ import {
   createVideoCompiler,
 } from "./compiler.js";
 
-const fallbackPackageRoot = import.meta.dirname;
+const packageRoot = import.meta.dirname;
 const installedLauncher = process.env.NARRATAGE_CLI_LAUNCHER;
 
 /** Official video authoring assembly for the generic CLI engine. */
 export const videoCliDistribution: CliDistribution = {
-  fallbackPackageRoot,
+  packageRoot,
   bootstrapPackages: [],
   createCompiler: createVideoCompiler,
   discoverSourcePackages: async (path, options) => {

@@ -12,7 +12,6 @@ import type {
   StoredValue,
 } from "@narratage/protocol";
 import {
-  createBuildRecordCandidate,
   createProvidedCandidate,
 } from "./candidate.js";
 
@@ -93,14 +92,14 @@ export async function resolveRunDocument(
   const addCandidate = (candidate: Candidate): void => {
     const existing = candidates.get(candidate.id);
     if (existing !== undefined && canonicalStringify(existing) !== canonicalStringify(candidate)) {
-      throw new Error(`Run Candidate identity ${candidate.id} has conflicting definitions`);
+      throw new Error(`Run Candidate ${candidate.id} has conflicting definitions`);
     }
     candidates.set(candidate.id, candidate);
   };
   const addOperation = (operation: OperationNode): void => {
     const existing = operations.get(operation.id);
     if (existing !== undefined && canonicalStringify(existing) !== canonicalStringify(operation)) {
-      throw new Error(`Run Operation identity ${operation.id} has conflicting definitions`);
+      throw new Error(`Run Operation ${operation.id} has conflicting definitions`);
     }
     operations.set(operation.id, operation);
   };
@@ -114,7 +113,7 @@ export async function resolveRunDocument(
     if (declaration.kind === "provided") {
       const value = await context.readStoredValue(declaration.from);
       assertStoredValue(value, declaration.from);
-      const candidate = createProvidedCandidate({ type: declaration.type, value });
+      const candidate = createProvidedCandidate({ id: declaration.id, type: declaration.type, value });
       addCandidate(candidate);
       bindCandidateName(declaration.id, candidate.id);
       continue;
@@ -123,6 +122,7 @@ export async function resolveRunDocument(
       const value = await context.readFile(declaration.from, declaration.mediaType);
       assertStoredValue(value, declaration.from);
       const candidate = createProvidedCandidate({
+        id: declaration.id,
         type: declaration.type,
         value,
       });
@@ -131,18 +131,13 @@ export async function resolveRunDocument(
       continue;
     }
     if (declaration.kind === "build-record") {
-      const build = await context.readBuild(declaration.build);
-      if (build === undefined) {
+      const record = await context.resolveBuildRecord(declaration.build, declaration.output);
+      if (record === undefined) {
         throw new Error(
-          `Build ${declaration.build} does not exist; create that Build first or update build-record ${declaration.id}`,
+          `Build ${declaration.build} has no accepted output ${declaration.output}; update build-record ${declaration.id}`,
         );
       }
-      const sourceOutput = await context.resolveBuildOutput?.(declaration.build, declaration.output)
-        ?? declaration.output;
-      const candidate = createBuildRecordCandidate({
-        build,
-        sourceOutput,
-      });
+      const candidate = createProvidedCandidate({ id: declaration.id, ...record });
       addCandidate(candidate);
       bindCandidateName(declaration.id, candidate.id);
       continue;
@@ -188,7 +183,6 @@ export async function resolveRunDocument(
     targets,
   });
   return {
-    closure: context.sourceClosure,
     document,
     graph,
     candidates: Object.fromEntries([...candidateNames.entries()].sort(([left], [right]) => left.localeCompare(right))),

@@ -3,8 +3,8 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { digestOf } from "@narratage/protocol";
 import { createRunFrontendHostFacet } from "@narratage/run";
 
 import { runCli } from "../src/main.js";
@@ -26,7 +26,7 @@ function distribution(
     name: "test",
     bootstrapPackages: [{
       specifier: "@example/run-frontend",
-      digest: digestOf("@example/run-frontend"),
+      digest: fixtureDigest("@example/run-frontend"),
       contribution: {
         format: "narratage.node-package@1",
         hostFacets: [createRunFrontendHostFacet({

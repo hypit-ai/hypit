@@ -1,6 +1,5 @@
 import { execFile } from "node:child_process";
 
-import { digestOf } from "@narratage/protocol";
 import { defineRuntimeInfrastructurePackage, verifyCredentialRef } from "@narratage/runtime";
 import type {
   CredentialRef,

@@ -2,7 +2,7 @@ import type {
   EndpointRegistrar,
   EndpointRegistrationOptions,
   ImmediateEndpointHandler,
-  RecoverableEndpoint,
+  AsyncEndpoint,
 } from "@narratage/endpoint-kit";
 import type {
   ProducerRegistrar,
@@ -98,10 +98,6 @@ function verifyEndpointOptions(options: EndpointOptions): void {
     if (slot.trim().length === 0) throw new Error("Endpoint credential slot must not be empty");
     verifyCredentialRef(ref);
   }
-  if (options.retry !== undefined
-    && (!Number.isSafeInteger(options.retry.maxAttempts) || options.retry.maxAttempts < 1)) {
-    throw new Error("Endpoint retry maxAttempts must be a positive safe integer");
-  }
 }
 
 export class EndpointRegistry implements EndpointRegistrar {
@@ -131,18 +127,18 @@ export class EndpointRegistry implements EndpointRegistrar {
     this.#registrationsByCapability.set(endpointCapabilityKey(capability), registrations);
   }
 
-  registerRecoverableEndpoint(
+  registerAsyncEndpoint(
     id: string,
     capability: CapabilityRef,
     returns: TypeRef,
-    endpoint: RecoverableEndpoint,
+    endpoint: AsyncEndpoint,
     options: EndpointOptions = {},
   ): void {
     if (!id.trim()) throw new Error("endpoint id must not be empty");
     verifyEndpointOptions(options);
     const key = `${id}\n${endpointCapabilityKey(capability)}`;
     if (this.#registrationKeys.has(key)) throw new Error(`endpoint ${id} already registers ${endpointCapabilityKey(capability)}`);
-    const registration = { kind: "recoverable" as const, id, capability, returns, endpoint, ...options };
+    const registration = { kind: "asynchronous" as const, id, capability, returns, endpoint, ...options };
     this.#registrationKeys.add(key);
     this.#registrations.push(registration);
     const registrations = this.#registrationsByCapability.get(endpointCapabilityKey(capability)) ?? [];

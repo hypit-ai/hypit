@@ -1,4 +1,4 @@
-import { canonicalize, isDigest } from "./canonical.js";
+import { canonicalize } from "./canonical.js";
 import type {
   CapabilityDeclaration,
   ModuleDependency,
@@ -8,7 +8,7 @@ import type {
   ProducerDeclaration,
   TypeDeclaration,
 } from "./module.js";
-import type { CapabilityRef, Digest, ModuleRef, TypeRef } from "./identity.js";
+import type { CapabilityRef, ModuleRef, TypeRef } from "./identity.js";
 import type { ObjectFieldSchema, ValueSchema } from "./value.js";
 
 function object(value: unknown, path: string): Record<string, unknown> {
@@ -41,12 +41,6 @@ function boolean(value: unknown, path: string): boolean {
 function number(value: unknown, path: string): number {
   if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`${path} must be a number`);
   return value;
-}
-
-function digest(value: unknown, path: string): Digest {
-  const parsed = string(value, path);
-  if (!isDigest(parsed)) throw new Error(`${path} must be a sha256 digest`);
-  return parsed;
 }
 
 function moduleRef(value: unknown, path: string): ModuleRef {

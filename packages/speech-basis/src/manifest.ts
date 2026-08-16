@@ -1,7 +1,6 @@
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
 import { speechDependency, speechTypes } from "@narratage/speech";
 import { compositionDependency, compositionTypes } from "@narratage/composition";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
 
 export const speechBasisModuleRef = { name: "@narratage/speech-basis", version: "1" } as const;

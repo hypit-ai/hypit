@@ -1,4 +1,3 @@
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef } from "@narratage/protocol";
 import {
   anchoredFrameProgramSchema,
@@ -14,15 +13,6 @@ import {
 } from "./schema.js";
 
 export const spatialModuleRef = { name: "@narratage/spatial", version: "1" } as const;
-export const spatialSurfaceDigests = {
-  canvas: digestOf("@narratage/spatial/canvas-surface@1"),
-  point: digestOf("@narratage/spatial/point-surface@1"),
-  path: digestOf("@narratage/spatial/path-surface@1"),
-  extent: digestOf("@narratage/spatial/extent-surface@1"),
-  frame: digestOf("@narratage/spatial/frame-surface@1"),
-  anchoredFrame: digestOf("@narratage/spatial/anchored-frame-surface@1"),
-  aspectFrame: digestOf("@narratage/spatial/aspect-frame-surface@1"),
-} as const;
 export const spatialTypes = {
   canvas: { module: spatialModuleRef, name: "CanvasSpace" },
   point: { module: spatialModuleRef, name: "SpatialPoint" },
@@ -42,10 +32,6 @@ export const spatialProducers = {
   aspectFrame: { module: spatialModuleRef, name: "aspect-frame" },
   fitContent: { module: spatialModuleRef, name: "fit-content" },
 } satisfies Record<string, ProducerRef>;
-
-const validator = (digest: ReturnType<typeof digestOf>) => ({
-  implementation: { digest },
-});
 
 export const spatialMarkupSurfaces = [
     { name: "canvas", tag: "Canvas", mode: "structured", outputs: [spatialTypes.canvas] },

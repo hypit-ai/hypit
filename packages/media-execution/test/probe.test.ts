@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { digestOf } from "@narratage/protocol";
 
 import { parseMediaInspection } from "@narratage/media-execution";
 
@@ -9,7 +9,7 @@ test("probe derives the last decoded-unit duration instead of adding whole-strea
   const inspection = parseMediaInspection({
     source: {
       kind: "blob",
-      digest: digestOf("probe-duration-fixture"),
+      digest: fixtureDigest("probe-duration-fixture"),
       size: 1,
       mediaType: "video/mp4",
     },
@@ -59,7 +59,7 @@ test("probe derives the last decoded-unit duration instead of adding whole-strea
 test("probe preserves square-pixel and quarter-turn facts needed before Spatial", () => {
   const source = {
     kind: "blob" as const,
-    digest: digestOf("probe-display-geometry-fixture"),
+    digest: fixtureDigest("probe-display-geometry-fixture"),
     size: 1,
     mediaType: "video/mp4",
   };

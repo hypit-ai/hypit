@@ -15,9 +15,9 @@ import type {
 } from "./provider.js";
 
 const CONFIG_KEYS = [
-  "stateMachineArn", "bucketName", "region", "quality", "chunkSize", "maxParallelChunks",
+  "stateMachineArn", "bucketName", "quality", "chunkSize", "maxParallelChunks",
   "targetChunkFrames", "defaultMemorySizeMb", "defaultConcurrency", "pollIntervalMs",
-  "maxOperationMs", "maxRenderedBytes", "maxPollFailures", "maxAttempts",
+  "maxOperationMs", "maxRenderedBytes",
 ] as const;
 
 type RuntimeProviderOptions = Omit<
@@ -50,10 +50,6 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
     || /^\d{1,3}(?:\.\d{1,3}){3}$/u.test(bucketName)) {
     throw new Error("HyperFrames bucketName is invalid");
   }
-  const region = runtimeConfigString(config.region, "HyperFrames region");
-  if (region !== undefined && region !== machine[2]) {
-    throw new Error(`HyperFrames region ${region} differs from state machine region ${machine[2]}`);
-  }
   const quality = runtimeConfigString(config.quality, "HyperFrames quality");
   if (quality !== undefined && quality !== "draft" && quality !== "standard" && quality !== "high") {
     throw new Error("HyperFrames quality is invalid");
@@ -69,14 +65,11 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
   const pollIntervalMs = optionalInteger(config, "pollIntervalMs");
   const maxOperationMs = optionalInteger(config, "maxOperationMs");
   const maxRenderedBytes = optionalInteger(config, "maxRenderedBytes");
-  const maxPollFailures = optionalInteger(config, "maxPollFailures");
-  const maxAttempts = optionalInteger(config, "maxAttempts");
   return {
     instance: context.instance,
     pool: context.pool,
     stateMachineArn,
     bucketName,
-    ...(region === undefined ? {} : { region }),
     ...(quality === undefined ? {} : { quality: quality as HyperframesLambdaQuality }),
     ...(chunkSize === undefined ? {} : { chunkSize }),
     ...(maxParallelChunks === undefined ? {} : { maxParallelChunks }),
@@ -86,8 +79,6 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
     ...(pollIntervalMs === undefined ? {} : { pollIntervalMs }),
     ...(maxOperationMs === undefined ? {} : { maxOperationMs }),
     ...(maxRenderedBytes === undefined ? {} : { maxRenderedBytes }),
-    ...(maxPollFailures === undefined ? {} : { maxPollFailures }),
-    ...(maxAttempts === undefined ? {} : { maxAttempts }),
   };
 }
 

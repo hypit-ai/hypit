@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { validateDistributedRenderConfig } from "@hyperframes/aws-lambda/sdk";
 import { EndpointRegistry, MemoryArtifactStore } from "@narratage/driver-node";
 import type { EndpointRegistration } from "@narratage/driver-node";
-import type { RecoverableEndpoint } from "@narratage/endpoint-kit";
+import type { AsyncEndpoint } from "@narratage/endpoint-kit";
 import type { HyperframesDocument } from "@narratage/hyperframes";
 import { mediaTypes, verifyRenderedVisual } from "@narratage/media";
 import type { RenderedVisual } from "@narratage/media";
@@ -20,7 +21,7 @@ import type {
   HyperframesLambdaRenderConfig,
   HyperframesLambdaSite,
 } from "@narratage/provider-hyperframes-aws-lambda";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
 import type { RuntimeEndpointAdapterImplementation } from "@narratage/runtime-kit";
 import {
@@ -28,7 +29,6 @@ import {
   renderHyperframesCapabilities,
 } from "@narratage/render-hyperframes";
 import type { ArtifactStore, StreamingArtifactStore } from "@narratage/runtime";
-import { sealOperationIdentity } from "@narratage/runtime";
 
 import { narratagePackage as awsLambdaActivation } from "../src/activation.js";
 
@@ -56,29 +56,12 @@ function requestNeed(document = documentFixture()): Need {
     capability: renderHyperframesCapabilities.renderVisual,
     returns: mediaTypes.renderedVisual,
     constraints,
-    requestedBy: "derivation:hyperframes-lambda-test",
     result: "record:hyperframes-lambda-test",
-    requestDigest: digestOf({
-      capability: renderHyperframesCapabilities.renderVisual,
-      returns: mediaTypes.renderedVisual,
-      constraints,
-    }),
   };
 }
 
 function operation(request: Need) {
-  return sealOperationIdentity({
-    build: "build:hyperframes-lambda-test",
-    command: "command:hyperframes-lambda-test",
-    endpoint: "hyperframes.aws-lambda.test",
-    pool: "hyperframes.aws-lambda.test",
-    lane: "fixture.render",
-    attempt: 1,
-  });
-}
-
-function outputKey(operationId: string): string {
-  return `renders/narratage/${operationId.slice("sha256:".length)}/visual.mp4`;
+  return `operation:${request.id}`;
 }
 
 function successfulProgress(outputS3Uri: string, overrides: Partial<HyperframesLambdaProgress> = {}) {
@@ -173,8 +156,7 @@ function fakeClient(options: {
     async progress(input) {
       state.progressCalls += 1;
       if (options.progress !== undefined) return await options.progress(input.executionArn, state.progressCalls);
-      const name = input.executionArn.slice(EXECUTION_PREFIX.length);
-      return successfulProgress(`s3://${BUCKET}/${outputKey(`sha256:${name.slice("narratage-".length)}`)}`);
+      return successfulProgress(`s3://${BUCKET}/${state.renderInputs.at(-1)!.outputKey}`);
     },
     async stop(input) {
       state.stopped.push(input.executionArn);
@@ -199,7 +181,7 @@ function fakeClient(options: {
 async function endpointFor(
   request: Need,
   client: HyperframesAwsLambdaClient,
-): Promise<{ readonly endpoint: RecoverableEndpoint; readonly registration: EndpointRegistration }> {
+): Promise<{ readonly endpoint: AsyncEndpoint; readonly registration: EndpointRegistration }> {
   const registry = new EndpointRegistry();
   const provider = createAwsLambdaHyperframesProvider({
     instance: "hyperframes.aws-lambda.test",
@@ -208,13 +190,12 @@ async function endpointFor(
     client,
     pollIntervalMs: 1,
     maxOperationMs: 60_000,
-    maxPollFailures: 2,
     now: () => 1_000,
   });
   await provider.install(registry);
   const resolution = registry.resolve(request);
   assert.equal(resolution.status, "resolved");
-  assert.equal(resolution.registration.kind, "recoverable");
+  assert.equal(resolution.registration.kind, "asynchronous");
   return { endpoint: resolution.registration.endpoint, registration: resolution.registration };
 }
 
@@ -240,7 +221,7 @@ test("the Lambda Endpoint declines frame domains and requirements it cannot pres
   })), false, "an unsupported hardware requirement must fall through to another Endpoint");
   const artifact = {
     kind: "blob" as const,
-    digest: digestOf("lambda-surface-without-verifier"),
+    digest: fixtureDigest("lambda-surface-without-verifier"),
     size: 100,
     mediaType: "image/png",
   };
@@ -280,7 +261,6 @@ test("one deterministic submission resumes and streams the exact output into the
   const request = requestNeed();
   const { client, state } = fakeClient();
   const { endpoint, registration } = await endpointFor(request, client);
-  assert.equal(registration.retry?.maxAttempts, 1);
   assert.equal(registration.scheduling?.resources.find((item) =>
     item.id.startsWith("pool:"))?.maxActive, 2);
 
@@ -307,6 +287,7 @@ test("one deterministic submission resumes and streams the exact output into the
   const common = context(request, artifacts);
   const started = await endpoint.start(common);
   assert.equal(started.status, "pending");
+  if (started.status !== "pending") return;
   assert.equal(state.deployCalls, 1);
   assert.equal(state.renderInputs.length, 1);
   assert.equal(state.renderInputs[0]!.config.fps, 30);
@@ -315,13 +296,13 @@ test("one deterministic submission resumes and streams the exact output into the
   assert.doesNotThrow(() => validateDistributedRenderConfig(state.renderInputs[0]!.config),
     "the locked SDK must accept the exact configuration sent by the Endpoint");
   assert.equal(state.renderInputs[0]!.executionName,
-    `narratage-${common.operation.id.slice("sha256:".length)}`);
+    `narratage-${common.operation.replace(/[^A-Za-z0-9_-]/gu, "-")}`);
 
-  const completed = await endpoint.resume({
+  const completed = await endpoint.poll({
     ...common,
-    checkpoint: started.status === "pending" ? started.checkpoint : undefined,
+    handle: started.handle,
   });
-  assert.equal(completed.status, "completed");
+  assert.equal(completed.status, "completed", JSON.stringify(completed));
   assert.equal(streamed, 2, "the remote object should use the streaming ArtifactStore facet");
   assert.equal(state.opened.length, 1);
   if (completed.status !== "completed" || completed.result.value.kind !== "inline") return;
@@ -332,45 +313,7 @@ test("one deterministic submission resumes and streams the exact output into the
   assert.deepEqual(await artifacts.get(visual.artifact.digest), new Uint8Array([1, 2, 3, 4, 5]));
 });
 
-test("an ambiguous StartExecution is recovered by the same name without redeploying the site", async () => {
-  let renderCalls = 0;
-  const request = requestNeed();
-  const { client, state } = fakeClient({
-    async render() {
-      renderCalls += 1;
-      if (renderCalls === 1) throw new TypeError("socket closed after request write");
-      const error = new Error("execution already exists");
-      error.name = "ExecutionAlreadyExists";
-      throw error;
-    },
-    async progress(_executionArn, call) {
-      if (call === 1) {
-        const error = new Error("not visible yet");
-        error.name = "ExecutionDoesNotExist";
-        throw error;
-      }
-      throw new Error("test should stop after the duplicate is confirmed");
-    },
-  });
-  const { endpoint } = await endpointFor(request, client);
-  const common = context(request, new MemoryArtifactStore());
-  const uncertain = await endpoint.start(common);
-  assert.equal(uncertain.status, "pending");
-  const confirmed = await endpoint.resume({
-    ...common,
-    checkpoint: uncertain.status === "pending" ? uncertain.checkpoint : undefined,
-  });
-  assert.equal(confirmed.status, "pending");
-  assert.equal(state.deployCalls, 1, "the immutable staged site belongs in the checkpoint");
-  assert.equal(state.renderInputs.length, 2);
-  assert.equal(state.renderInputs[0]!.executionName, state.renderInputs[1]!.executionName);
-  assert.deepEqual(state.renderInputs[0]!.config, state.renderInputs[1]!.config);
-  if (confirmed.status === "pending") {
-    assert.equal((confirmed.checkpoint as Record<string, unknown>).submission, "confirmed");
-  }
-});
-
-test("running render progress is projected without exposing the recovery checkpoint", async () => {
+test("running render progress is projected without exposing the private handle", async () => {
   const request = requestNeed();
   const { client } = fakeClient({
     async progress() {
@@ -387,9 +330,10 @@ test("running render progress is projected without exposing the recovery checkpo
   const { endpoint } = await endpointFor(request, client);
   const common = context(request, new MemoryArtifactStore());
   const started = await endpoint.start(common);
-  const running = await endpoint.resume({
+  if (started.status !== "pending") return;
+  const running = await endpoint.poll({
     ...common,
-    checkpoint: started.status === "pending" ? started.checkpoint : undefined,
+    handle: started.handle,
   });
   assert.equal(running.status, "pending");
   if (running.status === "pending") {
@@ -398,123 +342,18 @@ test("running render progress is projected without exposing the recovery checkpo
   }
 });
 
-test("a successful execution with another frame domain is refused before its bytes are opened", async () => {
-  const request = requestNeed();
-  let outputUri = "";
-  const { client, state } = fakeClient({
-    async render(input) {
-      outputUri = `s3://${BUCKET}/${input.outputKey}`;
-      return {
-        renderId: input.executionName,
-        executionArn: `${EXECUTION_PREFIX}${input.executionName}`,
-        bucketName: BUCKET,
-        stateMachineArn: STATE_MACHINE,
-        outputS3Uri: outputUri,
-        projectS3Uri: input.site.projectS3Uri,
-        startedAt: "2026-08-08T00:00:00.000Z",
-      };
-    },
-    async progress() {
-      return successfulProgress(outputUri, { totalFrames: 61, framesRendered: 61 });
-    },
-  });
-  const { endpoint } = await endpointFor(request, client);
-  const common = context(request, new MemoryArtifactStore());
-  const started = await endpoint.start(common);
-  const failed = await endpoint.resume({
-    ...common,
-    checkpoint: started.status === "pending" ? started.checkpoint : undefined,
-  });
-  assert.equal(failed.status, "failed");
-  if (failed.status === "failed") {
-    assert.equal(failed.failure.code, "HYPERFRAMES_PROGRESS_INVALID");
-    assert.equal(failed.failure.retryable, false);
-  }
-  assert.equal(state.opened.length, 0);
-});
-
-test("a handle that names another execution is not downgraded to an ambiguous submission", async () => {
-  const request = requestNeed();
-  const { client } = fakeClient({
-    async render(input) {
-      return {
-        renderId: "another-render",
-        executionArn: `${EXECUTION_PREFIX}another-render`,
-        bucketName: BUCKET,
-        stateMachineArn: STATE_MACHINE,
-        outputS3Uri: `s3://${BUCKET}/${input.outputKey}`,
-        projectS3Uri: input.site.projectS3Uri,
-        startedAt: "2026-08-08T00:00:00.000Z",
-      };
-    },
-  });
-  const { endpoint } = await endpointFor(request, client);
-  const failed = await endpoint.start(context(request, new MemoryArtifactStore()));
-  assert.equal(failed.status, "failed");
-  if (failed.status === "failed") {
-    assert.equal(failed.failure.code, "HYPERFRAMES_SUBMISSION_IDENTITY_MISMATCH");
-    assert.equal(failed.failure.retryable, false);
-  }
-});
-
-test("a client-side config rejection is terminal, not an ambiguous remote submission", async () => {
-  const request = requestNeed();
-  const { client } = fakeClient({
-    async render() {
-      const error = new Error("invalid distributed config");
-      error.name = "InvalidConfigError";
-      throw error;
-    },
-  });
-  const { endpoint } = await endpointFor(request, client);
-  const failed = await endpoint.start(context(request, new MemoryArtifactStore()));
-  assert.equal(failed.status, "failed");
-  if (failed.status === "failed") {
-    assert.equal(failed.failure.code, "HYPERFRAMES_SUBMISSION_REJECTED");
-    assert.equal(failed.failure.retryable, false);
-  }
-});
-
-test("cancellation stops the deterministic execution even before a checkpoint exists", async () => {
+test("cancellation stops the submitted execution", async () => {
   const request = requestNeed();
   const { client, state } = fakeClient();
   const { endpoint } = await endpointFor(request, client);
   assert.ok(endpoint.cancel);
   const common = context(request, new MemoryArtifactStore());
-  await endpoint.cancel({ ...common, checkpoint: undefined });
-  assert.deepEqual(state.stopped, [
-    `${EXECUTION_PREFIX}narratage-${common.operation.id.slice("sha256:".length)}`,
-  ]);
   const started = await endpoint.start(common);
   assert.equal(started.status, "pending");
   if (started.status !== "pending") return;
-  await assert.rejects(async () => await endpoint.cancel!({
+  await endpoint.cancel({
     ...common,
-    checkpoint: canonicalize({
-      ...(started.checkpoint as Record<string, CanonicalValue>),
-      executionArn: `${EXECUTION_PREFIX}someone-elses-render`,
-    }),
-  }), /checkpoint execution ARN differs/u);
-  assert.equal(state.stopped.length, 1, "an untrusted checkpoint cannot redirect StopExecution");
-});
-
-test("the deployment identity is validated before any AWS client is constructed", () => {
-  assert.throws(() => createAwsLambdaHyperframesProvider({
-    stateMachineArn: `${STATE_MACHINE}:mutable-alias`,
-    bucketName: BUCKET,
-  }), /unqualified AWS Step Functions state-machine ARN/u);
-  assert.throws(() => createAwsLambdaHyperframesProvider({
-    stateMachineArn: STATE_MACHINE,
-    bucketName: BUCKET,
-    region: "eu-west-1",
-  }), /differs from state machine region/u);
-  assert.throws(() => createAwsLambdaHyperframesProvider({
-    stateMachineArn: STATE_MACHINE,
-    bucketName: "192.168.0.1",
-  }), /bucketName is invalid/u);
-  assert.doesNotThrow(() => createAwsLambdaHyperframesProvider({
-    stateMachineArn: "arn:aws-us-gov:states:us-gov-west-1:123456789012:stateMachine:narratage-hyperframes",
-    bucketName: BUCKET,
-    client: fakeClient().client,
-  }));
+    handle: started.handle,
+  });
+  assert.equal(state.stopped.length, 1);
 });

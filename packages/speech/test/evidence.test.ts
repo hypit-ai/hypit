@@ -3,8 +3,8 @@ import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvide
 import type { SpeechEvidenceAudio } from "@narratage/speech";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { digestOf } from "@narratage/protocol";
 
 test("speech evidence uses integer rational boundary projection rather than floating duration arithmetic", () => {
   assert.equal(speechEvidenceSampleBoundary(0), 0);
@@ -22,7 +22,7 @@ test("SpeechEvidenceAudio carries only normalized evidence bytes and their exact
   const value = sealSpeechEvidenceAudio({
     artifact: {
       kind: "blob",
-      digest: digestOf("evidence"),
+      digest: fixtureDigest("evidence"),
       size: 32_044,
       mediaType: "audio/wav",
     },

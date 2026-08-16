@@ -28,19 +28,19 @@ construction remain outside the execution Driver.
 - Endpoint credentials are resolved only for the slots declared by that endpoint, immediately
   before `start/resume/cancel`; secret bytes never become OperationStore or Core state.
 - A pending Endpoint may publish `wakeAt`. Retryable terminal failure creates a new attempt and
-  Operation id under the endpoint's finite retry policy; cancellation becomes an explicit terminal
-  failure that Core accepts through its ordinary command-failed Event.
+  Operation id under the endpoint's finite retry policy. Build cancellation stops local polling and
+  makes one best-effort call to the Endpoint's optional `cancel()` method.
 - Preview, fallback and reuse are graph-level Candidates selected before Core planning, not Endpoint
   modes. A reused value is an Existing-Value Candidate; “Pin” is only a possible host UI word for
   authoring that explicit selection.
 - Endpoint identity becomes the Receipt fulfiller; handlers return only value and operational
   metadata and cannot choose that identity themselves.
-- `TypeValidatorRegistry` is a separate exact-Type registry. Before an Event exists, the Driver
+- `TypeValidatorRegistry` is a separate exact-Type registry. Before a Command result exists, the Driver
   executes the selected Type owner's validator. Producer and Endpoint handlers cannot self-assert
   validation.
 
-Build state is serializable. Missing Endpoints, generation latency and transient endpoint errors pause a
-build without replaying completed Producers.
+Missing Endpoints, generation latency and transient endpoint errors pause a Build without replaying
+completed Producers. Durable recovery reads the immutable Build Definition and accepted Core Facts.
 
 `start()` and `resume()` receive the same stable Operation id. `resume(undefined)` is intentional:
 it covers a stop after submission intent was persisted but before a remote job checkpoint was saved.
@@ -56,8 +56,8 @@ Callers using a recoverable Endpoint through the serial path must pass a stable 
 because two identical requests may still be distinct Builds. The Scheduler always supplies its
 declared Build id.
 
-Outstanding Commands are not trusted persistence. Serialization drops them and Core regenerates
-the exact commands from verified facts on resume, before any Handler can run. The Registry never
+Outstanding Commands are not persisted. Core regenerates them from Definition plus Facts before
+any Handler can run. The Registry never
 turns a generic speaker request into a model choice: Seedance, WhisperX or another external method
 must already be present as a specific Need in the locked BuildPlan.
 The BuildPlan itself is derived and sealed by Core from the locked CompiledGraph and BuildRequest.

@@ -14,7 +14,6 @@ import {
   createRuntimeArtifactAccessFromConfig,
   doctorRuntimeConfig,
   parseRuntimeConfig,
-  runtimeConfigRevision,
   RuntimeAdapterRegistry,
 } from "@narratage/runtime-local";
 
@@ -72,21 +71,6 @@ test("Runtime Profile keeps deployment data separate from source and derives ins
 test("Runtime Profile rejects source ownership fields", () => {
   assert.throws(() => parseRuntimeConfig({ ...profile(), root: "." }),
     /does not accept root/u);
-});
-
-test("Runtime revision follows Profile meaning rather than formatting", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-runtime-revision-"));
-  const profilePath = join(root, "deployment.profile");
-  try {
-    await writeFile(profilePath, JSON.stringify(profile()), "utf8");
-    const first = await runtimeConfigRevision(profilePath);
-    await writeFile(profilePath, JSON.stringify(profile(), null, 2), "utf8");
-    assert.equal(await runtimeConfigRevision(profilePath), first);
-    await writeFile(profilePath, JSON.stringify(profile({ dataRoot: "elsewhere" })), "utf8");
-    assert.notEqual(await runtimeConfigRevision(profilePath), first);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
 });
 
 test("archive observation constructs only the infrastructure selected by archive roles", async () => {

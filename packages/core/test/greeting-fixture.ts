@@ -1,6 +1,5 @@
 import {
   createResolvedClosure,
-  digestOf,
   link,
   sealBuildRequest,
   sealCompiledGraph,
@@ -16,7 +15,6 @@ import type {
   ProducerRef,
   TypeRef,
 } from "@narratage/protocol";
-
 export const moduleRef = { name: "example.greeting", version: "0.0.0" } as const;
 
 export const types = {
@@ -87,7 +85,6 @@ export const manifest: ModuleManifest = {
 
 export function greetingGraph(program: LinkedProgram, includeSide = false): CompiledGraph {
   return sealCompiledGraph({
-    program: program.semanticDigest,
     outputs: [
       {
         id: "prompt",
@@ -173,13 +170,11 @@ export function createGreetingBuild(options?: {
     id: "intent:root",
     type: types.intent,
     value: { kind: "inline", value: { name: "Ada" } },
-    origin: { kind: "authored" },
   });
   const program = link(closure, [authored]);
   const sourceGraph = greetingGraph(program, options?.includeSideTarget ?? false);
   const graph = options?.generationRealization === "placeholder"
     ? sealCompiledGraph({
-        program: sourceGraph.program,
         outputs: sourceGraph.outputs.map((item) => item.id === "generated"
           ? { ...item, primary: "placeholder-text" }
           : item),
@@ -188,7 +183,6 @@ export function createGreetingBuild(options?: {
       })
     : sourceGraph;
   const request = sealBuildRequest({
-    graph: graph.id,
     targets: [...(options?.includeSideTarget ? [{ output: "side-document" }] : []), {
       output: "document",
     }],

@@ -2,14 +2,10 @@ import type {
   CandidateId,
   CommandId,
   CapabilityRef,
-  DerivationId,
-  Digest,
-  EventId,
   LogicalOutputId,
   NeedId,
   OperationId,
   ProducerRef,
-  ReceiptId,
   RecordId,
   StepId,
   TypeRef,
@@ -22,33 +18,11 @@ export type SourceRange = {
   readonly end: number;
 };
 
-export type AuthoredOrigin = {
-  readonly kind: "authored";
-};
-
-export type DerivedOrigin = {
-  readonly kind: "derived";
-  readonly derivation: DerivationId;
-};
-
-export type ObservedOrigin = {
-  readonly kind: "observed";
-  readonly receipt: ReceiptId;
-};
-
-export type ProvidedOrigin = {
-  readonly kind: "provided";
-};
-
-export type RecordOrigin = AuthoredOrigin | DerivedOrigin | ObservedOrigin | ProvidedOrigin;
-
 /** One typed value in the graph; semantic validation happens at the Host admission boundary. */
 export type TypedRecord = {
   readonly id: RecordId;
   readonly type: TypeRef;
   readonly value: StoredValue;
-  readonly digest: Digest;
-  readonly origin: RecordOrigin;
 };
 
 export type Need = {
@@ -56,46 +30,7 @@ export type Need = {
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
   readonly constraints: CanonicalValue;
-  readonly requestedBy: DerivationId;
   readonly result: RecordId;
-  readonly requestDigest: Digest;
-};
-
-/** Exact request, selected Endpoint and returned value for one fulfilled Need. */
-export type Receipt = {
-  readonly id: ReceiptId;
-  readonly need: NeedId;
-  readonly requestDigest: Digest;
-  readonly fulfiller: string;
-  readonly output: RecordId;
-  readonly outputDigest: Digest;
-  readonly event: {
-    readonly id: EventId;
-    readonly digest: Digest;
-  };
-};
-
-export type RecordDigestBinding = {
-  readonly id: RecordId;
-  readonly digest: Digest;
-};
-
-export type NeedDigestBinding = {
-  readonly id: NeedId;
-  readonly requestDigest: Digest;
-};
-
-export type Derivation = {
-  readonly id: DerivationId;
-  readonly step: StepId;
-  readonly producer: ProducerRef;
-  readonly inputs: readonly RecordDigestBinding[];
-  readonly outputs: readonly RecordDigestBinding[];
-  readonly needs: readonly NeedDigestBinding[];
-  readonly event: {
-    readonly id: EventId;
-    readonly digest: Digest;
-  };
 };
 
 export type NeedBinding = {
@@ -164,8 +99,6 @@ export type Candidate = {
 
 export type CompiledGraph = {
   readonly format: "narratage.graph@1";
-  readonly id: Digest;
-  readonly program: Digest;
   readonly outputs: readonly LogicalOutput[];
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
@@ -182,9 +115,7 @@ export type Satisfaction = {
 
 export type BuildRequest = {
   readonly format: "narratage.build-request@1";
-  readonly graph: Digest;
   readonly targets: readonly BuildTarget[];
-  readonly digest: Digest;
 };
 
 export type BuildSelection = {
@@ -208,9 +139,6 @@ export type BuildGoal = {
 
 export type BuildPlan = {
   readonly format: "narratage.plan@1";
-  readonly id: Digest;
-  readonly graph: Digest;
-  readonly request: Digest;
   readonly steps: readonly ProducerStep[];
   readonly goals: readonly BuildGoal[];
   readonly selections: readonly BuildSelection[];
@@ -219,13 +147,11 @@ export type BuildPlan = {
 export type LinkedProgram = {
   readonly closure: ResolvedModuleClosure;
   readonly records: readonly TypedRecord[];
-  readonly semanticDigest: Digest;
 };
 
 export type StepState = {
   readonly id: StepId;
   readonly status: "pending" | "complete";
-  readonly derivation?: DerivationId;
 };
 
 export type InvokeProducerCommand = {
@@ -246,7 +172,6 @@ export type CoreCommand = InvokeProducerCommand | FulfillNeedCommand;
 
 export type ProducerCompletedEvent = {
   readonly kind: "producer-completed";
-  readonly id: EventId;
   readonly command: CommandId;
   readonly outputs: Readonly<Record<string, StoredValue>>;
   readonly needs: Readonly<Record<string, CanonicalValue>>;
@@ -254,27 +179,19 @@ export type ProducerCompletedEvent = {
 
 export type NeedFulfilledEvent = {
   readonly kind: "need-fulfilled";
-  readonly id: EventId;
   readonly command: CommandId;
   readonly value: StoredValue;
-  readonly requestDigest: Digest;
-  readonly fulfiller: string;
 };
 
 export type CommandFailedEvent = {
   readonly kind: "command-failed";
-  readonly id: EventId;
   readonly command: CommandId;
   readonly code: string;
   readonly message: string;
 };
 
-export type BuildEvent = ProducerCompletedEvent | NeedFulfilledEvent | CommandFailedEvent;
-
-export type AcceptedEvent = {
-  readonly id: EventId;
-  readonly digest: Digest;
-};
+/** One execution result offered to Core. */
+export type CommandResult = ProducerCompletedEvent | NeedFulfilledEvent | CommandFailedEvent;
 
 export type BuildDiagnostic = {
   readonly code: string;
@@ -282,9 +199,47 @@ export type BuildDiagnostic = {
   readonly subject?: string;
 };
 
+/** Immutable finite program selected by one Author Graph plus one Run Graph. */
+export type BuildDefinition = {
+  readonly format: "narratage.build-definition@1";
+  readonly program: LinkedProgram;
+  readonly graph: CompiledGraph;
+  readonly request: BuildRequest;
+  readonly plan: BuildPlan;
+};
+
+type BuildFactBase = {
+  readonly format: "narratage.build-fact@1";
+  readonly command: CommandId;
+};
+
+/** One Producer result admitted by Core. Every added value is stored exactly once. */
+export type ProducerAppliedFact = BuildFactBase & {
+  readonly kind: "producer-applied";
+  readonly step: StepId;
+  readonly records: readonly TypedRecord[];
+  readonly needs: readonly Need[];
+};
+
+/** One external Need result admitted by Core. */
+export type NeedAppliedFact = BuildFactBase & {
+  readonly kind: "need-applied";
+  readonly need: NeedId;
+  readonly record: TypedRecord;
+};
+
+/** One terminal command failure admitted by Core. */
+export type CommandFailedFact = BuildFactBase & {
+  readonly kind: "command-failed";
+  readonly diagnostic: BuildDiagnostic;
+};
+
+/** Fixed Core facts, not an extensible event or patch system. */
+export type BuildFact = ProducerAppliedFact | NeedAppliedFact | CommandFailedFact;
+
+/** Materialized read/execution view. Durable Stores persist Definition + Facts, never this object. */
 export type BuildState = {
   readonly format: "narratage.build@1";
-  readonly id: Digest;
   readonly program: LinkedProgram;
   readonly graph: CompiledGraph;
   readonly request: BuildRequest;
@@ -293,9 +248,6 @@ export type BuildState = {
   readonly records: readonly TypedRecord[];
   readonly steps: readonly StepState[];
   readonly needs: readonly Need[];
-  readonly receipts: readonly Receipt[];
-  readonly derivations: readonly Derivation[];
   readonly outstanding: readonly CoreCommand[];
-  readonly acceptedEvents: readonly AcceptedEvent[];
   readonly diagnostics: readonly BuildDiagnostic[];
 };

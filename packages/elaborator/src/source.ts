@@ -1,12 +1,5 @@
-import {
-  canonicalize,
-  canonicalStringify,
-  digestOf,
-  isDigest,
-  link,
-} from "@narratage/core";
+import { canonicalStringify, isDigest, link } from "@narratage/core";
 import type {
-  Digest,
   CompiledGraph,
   GraphValueRef,
   LinkedProgram,
@@ -15,7 +8,6 @@ import type {
   TypedRecord,
 } from "@narratage/protocol";
 import {
-  compiledSourceIdentity,
   maskSourceHeader,
   parseSourceHeader,
   verifyCompiledSourceIdentity,
@@ -68,7 +60,7 @@ export type AuthorSourceExport = {
 
 export type ResolvedAuthorSourceImport = {
   readonly request: AuthorSourceImport;
-  readonly source: Digest;
+  readonly source: string;
   readonly exports: readonly AuthorSourceExport[];
   /** Public record exports available to a package-owned Surface during author compilation. */
   readonly records: readonly TypedRecord[];
@@ -128,17 +120,16 @@ export type AuthorRecordAdmitter = (
 
 export type SourceClosureUnit = CompiledSourceIdentity & {
   readonly format: "narratage.source-unit@1";
-  readonly id: Digest;
+  readonly id: string;
   readonly imports: readonly {
     readonly alias: string;
-    readonly source: Digest;
+    readonly source: string;
   }[];
 };
 
 export type SourceClosure = {
   readonly format: "narratage.source-closure@1";
-  readonly id: Digest;
-  readonly entry: Digest;
+  readonly entry: string;
   readonly units: readonly SourceClosureUnit[];
 };
 
@@ -184,27 +175,6 @@ export class SourceClosureError extends Error {
   }
 }
 
-function sourceUnitContent(unit: SourceClosureUnit): Omit<SourceClosureUnit, "id"> {
-  return {
-    format: "narratage.source-unit@1",
-    ...compiledSourceIdentity(unit),
-    imports: [...unit.imports]
-      .map((item) => ({
-        alias: item.alias,
-        source: item.source,
-      }))
-      .sort((left, right) => left.alias.localeCompare(right.alias)),
-  };
-}
-
-function sourceClosureContent(closure: SourceClosure): Omit<SourceClosure, "id"> {
-  return {
-    format: "narratage.source-closure@1",
-    entry: closure.entry,
-    units: [...closure.units].sort((left, right) => left.id.localeCompare(right.id)),
-  };
-}
-
 function assert(
   condition: unknown,
   code: string,
@@ -245,13 +215,12 @@ type HygienicSource = {
   readonly exports: readonly AuthorSourceExport[];
 };
 
-function hygienicId(kind: string, unit: Digest, local: string): string {
-  return `${kind}:${digestOf({ unit, local }).slice("sha256:".length)}`;
+function hygienicId(kind: string, unit: string, local: string): string {
+  return `${unit}::${kind}::${local}`;
 }
 
 function hygienizeSource(
   source: AuthorFrontendSourceUnit,
-  sourceDigest: Digest,
   frontend: AuthorFrontend,
   decoded: DecodedAuthorSource,
   imports: readonly ResolvedAuthorSourceImport[],
@@ -297,30 +266,18 @@ function hygienizeSource(
     }
   }
 
-  const semanticDigest = digestOf({
-    records: [...decoded.records]
-      .sort((left, right) => left.id.localeCompare(right.id))
-      .map((record) => ({
-        id: record.id,
-        type: record.type,
-        value: record.value,
-      })),
-    components: decoded.components,
-    fragments: [...decoded.fragments].map((fragment) => fragment.id).sort(),
-    exports: [...decoded.exports].sort((left, right) => left.name.localeCompare(right.name)),
-  });
   const recordIds = new Map(decoded.records.map((record) => [
     record.id,
-    hygienicId("source-record", semanticDigest, record.id),
+    hygienicId("record", source.id, record.id),
   ]));
   const componentIds = new Map(decoded.components.map((component) => [
     component.id,
-    hygienicId("source-component", semanticDigest, component.id),
+    hygienicId("component", source.id, component.id),
   ]));
   const outputIds = new Map<string, string>();
   for (const component of decoded.components) {
     for (const output of Object.values(component.outputs)) {
-      outputIds.set(output, hygienicId("source-output", semanticDigest, output));
+      outputIds.set(output, hygienicId("output", source.id, output));
     }
   }
   const mapRef = (ref: AuthorValueRef): AuthorValueRef => {
@@ -349,9 +306,8 @@ function hygienizeSource(
   const exports = decoded.exports.map((item) => ({ ...item, ref: mapRef(item.ref) }));
   const unitContent = {
     format: "narratage.source-unit@1" as const,
+    id: source.id,
     frontend: frontend.id,
-    sourceDigest,
-    semanticDigest,
     imports: imports
       .map((item) => ({
         alias: item.request.alias,
@@ -360,14 +316,7 @@ function hygienizeSource(
       .sort((left, right) => left.alias.localeCompare(right.alias)),
   };
   return {
-    unit: {
-      id: digestOf(unitContent),
-      format: "narratage.source-unit@1",
-      frontend: frontend.id,
-      sourceDigest: unitContent.sourceDigest,
-      semanticDigest,
-      imports: unitContent.imports,
-    },
+    unit: unitContent,
     records,
     components,
     fragments: decoded.fragments,
@@ -437,7 +386,7 @@ export async function compileSourceClosure(
     const assets = new Map<string, ResolvedAuthorSourceAsset>();
     const rawDecoded = await frontend.decode(source, {
       closure: request.closure,
-      imports: canonicalize(imports) as unknown as readonly ResolvedAuthorSourceImport[],
+      imports: structuredClone(imports),
       async resolveAsset(assetRequest) {
         assert(assetRequest.from.trim().length > 0, "EMPTY_SOURCE_ASSET", `${source.name} requested an empty asset`);
         assert(assetRequest.mediaType.trim().length > 0, "EMPTY_SOURCE_ASSET_MEDIA_TYPE", `${source.name} requested an asset without a media type`);
@@ -449,23 +398,6 @@ export async function compileSourceClosure(
             `${source.name} assigns conflicting media types to ${assetRequest.from}`,
             assetRequest.from,
           );
-          if (assetRequest.bytes !== undefined) {
-            assert(
-              request.resolveAsset !== undefined,
-              "SOURCE_ASSET_RESOLVER_MISSING",
-              `${source.name} requires embedded asset ${assetRequest.from}, but the Host has no asset resolver`,
-              assetRequest.from,
-            );
-            const repeated = await request.resolveAsset(rawSource, assetRequest);
-            assert(
-              repeated.artifact.digest === existing.artifact.digest
-                && repeated.artifact.size === existing.artifact.size
-                && repeated.artifact.mediaType === existing.artifact.mediaType,
-              "SOURCE_ASSET_CONTENT_CONFLICT",
-              `${source.name} supplies conflicting bytes for ${assetRequest.from}`,
-              assetRequest.from,
-            );
-          }
           return { artifact: existing.artifact };
         }
         assert(
@@ -498,7 +430,7 @@ export async function compileSourceClosure(
       ...rawDecoded,
       records: admittedRecords,
     };
-    const result = hygienizeSource(source, digestOf(rawSource.text), frontend, decoded, imports);
+    const result = hygienizeSource(source, frontend, decoded, imports);
     visiting.pop();
     visitingAt.delete(key);
     cache.set(key, result);
@@ -528,13 +460,12 @@ export async function compileSourceClosure(
   const program = link(request.closure, records);
   const graph = elaborateAuthorGraph(program, components, (id) => fragments.get(id));
   const units = ordered.map((unit) => unit.unit).sort((left, right) => left.id.localeCompare(right.id));
-  const closureContent = {
+  const sourceClosure: SourceClosure = {
     format: "narratage.source-closure@1" as const,
     entry: entry.unit.id,
     units,
   };
   const componentsById = new Map(components.map((component) => [component.id, component]));
-  const sourceClosure: SourceClosure = { ...closureContent, id: digestOf(closureContent) };
   verifySourceClosure(sourceClosure);
   return {
     closure: sourceClosure,
@@ -552,12 +483,10 @@ export async function compileSourceClosure(
 
 export function verifySourceClosure(closure: SourceClosure): void {
   assert(closure.format === "narratage.source-closure@1", "UNSUPPORTED_SOURCE_CLOSURE", "unsupported Source Closure format");
-  assert(isDigest(closure.id), "INVALID_SOURCE_CLOSURE_DIGEST", "Source Closure digest is invalid");
   const units = new Map<string, SourceClosureUnit>();
   for (const unit of closure.units) {
     assert(unit.format === "narratage.source-unit@1", "UNSUPPORTED_SOURCE_UNIT", "unsupported SourceUnit format");
-    assert(isDigest(unit.id), "INVALID_SOURCE_UNIT_DIGEST", "SourceUnit digest is invalid");
-    assert(unit.id === digestOf(sourceUnitContent(unit)), "SOURCE_UNIT_DIGEST_MISMATCH", `SourceUnit ${unit.id} digest differs`);
+    assert(unit.id.length > 0, "EMPTY_SOURCE_UNIT", "SourceUnit id is empty");
     assert(!units.has(unit.id), "DUPLICATE_SOURCE_UNIT", `Source Closure repeats ${unit.id}`, unit.id);
     verifyCompiledSourceIdentity(unit);
     units.set(unit.id, unit);
@@ -568,11 +497,6 @@ export function verifySourceClosure(closure: SourceClosure): void {
       assert(units.has(item.source), "UNKNOWN_SOURCE_IMPORT", `${unit.id} imports absent SourceUnit ${item.source}`);
     }
   }
-  assert(
-    closure.id === digestOf(sourceClosureContent(closure)),
-    "SOURCE_CLOSURE_DIGEST_MISMATCH",
-    "Source Closure digest differs",
-  );
 }
 
 export function resolveCompiledSourceExport(
@@ -582,31 +506,7 @@ export function resolveCompiledSourceExport(
 ): CompiledSourceExport {
   const item = compiled.exports.find((candidate) => candidate.name === name);
   if (item === undefined) {
-    const distance = (left: string, right: string): number => {
-      const row = Array.from({ length: right.length + 1 }, (_, index) => index);
-      for (let leftIndex = 0; leftIndex < left.length; leftIndex += 1) {
-        let diagonal = leftIndex;
-        row[0] = leftIndex + 1;
-        for (let rightIndex = 0; rightIndex < right.length; rightIndex += 1) {
-          const above = row[rightIndex + 1]!;
-          const next = Math.min(
-            above + 1,
-            row[rightIndex]! + 1,
-            diagonal + (left[leftIndex] === right[rightIndex] ? 0 : 1),
-          );
-          diagonal = above;
-          row[rightIndex + 1] = next;
-        }
-      }
-      return row[right.length] ?? left.length;
-    };
-    const nearest = compiled.exports
-      .map((candidate) => ({ name: candidate.name, distance: distance(name, candidate.name) }))
-      .sort((left, right) => left.distance - right.distance || left.name.localeCompare(right.name))[0];
-    const suggestion = nearest !== undefined && nearest.distance <= Math.max(2, Math.floor(name.length / 3))
-      ? `; did you mean ${nearest.name}?`
-      : "";
-    throw new SourceClosureError("UNKNOWN_SOURCE_EXPORT", `unknown source export ${name}${suggestion}`, name);
+    throw new SourceClosureError("UNKNOWN_SOURCE_EXPORT", `unknown source export ${name}`, name);
   }
   if (expected !== undefined) {
     assert(

@@ -1,7 +1,6 @@
 import { compositionDependency, compositionTypes } from "@narratage/composition";
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import { spatialDependency, spatialTypes } from "@narratage/spatial";
@@ -69,7 +68,6 @@ export const screenOverlayHeaderSchema: ValueSchema = object({ id: { schema: str
 export const screenOverlayItemSpecSchema: ValueSchema = itemSpec;
 export const screenOverlaySetSchema: ValueSchema = object({ items: { schema: { kind: "array", items: item } } });
 export const screenOverlayProgramSchema: ValueSchema = object({ id: { schema: string }, items: { schema: { kind: "array", minItems: 1, items: item } } });
-const validator = (digest: ReturnType<typeof digestOf>) => ({ implementation: { digest } });
 const appendInputs = [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }, { name: "space", type: programSpaceTypes.programSpace }, { name: "spec", type: screenOverlayTypes.itemSpec }] as const;
 
 export const screenOverlayMarkupSurfaces = [{ name: "track", tag: "Track", mode: "structured", outputs: [screenOverlayTypes.header, screenOverlayTypes.itemSpec, screenOverlayTypes.program, compositionTypes.visualTrack] }] as const;

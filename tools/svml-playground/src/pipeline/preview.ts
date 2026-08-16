@@ -10,7 +10,6 @@
 import { createHash } from "node:crypto";
 
 import { createProvidedCandidate } from "@narratage/run";
-import { validateValue } from "@narratage/validation";
 
 import { officialVideoDomain } from "../official-video.js";
 import { compileSource } from "./compile.js";
@@ -193,11 +192,10 @@ export async function preview(
         const supplied = output.type === TIMING ? estimated.map : estimated.space;
         const type = outputType(source, output.ref);
         const stored = { kind: "inline" as const, value: supplied as never };
-        const validation = await validateValue(domain.closure, type as never, stored, domain.validators);
         const candidate = createProvidedCandidate({
+          id: `playground:timing:${output.ref}`,
           type: type as never,
           value: stored,
-          ...(validation === undefined ? {} : { validation }),
         } as never);
         added.push(candidate);
         satisfactions.push({ output: output.ref, candidate: candidate.id });
@@ -300,6 +298,7 @@ export async function preview(
         }
         // The same bytes are the same Candidate, however many shots they cover.
         const candidate = createProvidedCandidate({
+          id: `playground:stand-in:${shown.digest}`,
           type: outputType(source, output.ref) as never,
           value: {
             kind: "blob", digest: shown.digest,
@@ -338,10 +337,9 @@ export async function preview(
         const plan = evenCaptionPlan(sequence, program as never);
         const type = outputType(source, output.ref);
         const stored = { kind: "inline" as const, value: plan as never };
-        const validation = await validateValue(domain.closure, type as never, stored, domain.validators);
         const candidate = createProvidedCandidate({
+          id: `playground:caption:${output.ref}`,
           type: type as never, value: stored,
-          ...(validation === undefined ? {} : { validation }),
         } as never);
         added.set(candidate.id, candidate);
         satisfactions.push({ output: output.ref, candidate: candidate.id });

@@ -5,14 +5,14 @@ Durable local adapters for the environment-neutral Build, Operation and Dispatch
 One SQLite file may physically contain the execution tables and an optional Host index, but their
 interfaces remain separate:
 
-- BuildStore persists verified Core facts with compare-and-swap revisions;
+- BuildStore persists one Definition and appends admitted Core Facts in order;
 - OperationStore persists external attempt identities, checkpoints and completions;
-- BuildDispatchStore persists current Build admission, leases and generic capacity reservations;
+- BuildDispatchStore persists the local Build queue and remote in-flight capacity reservations;
 - BuildCatalog indexes source/run paths and output aliases for Host presentation only;
-- no ready-command queue is stored. Core regenerates readiness from BuildState after every restart.
+- no ready-command queue is stored. Core regenerates readiness from Definition plus Facts after every restart.
 
 Artifacts and credentials never enter this database. The adapter owns its private pre-release
-schema `6`; Core and Endpoint packages do not import SQLite. Incompatible development databases are
+schema `9`; Core and Endpoint packages do not import SQLite. Incompatible development databases are
 rejected and recreated explicitly instead of carrying migration code before the first release.
 
 `createSqliteRuntimeInfrastructurePackage()` returns one configured instance with three separately selectable

@@ -1,11 +1,9 @@
 import {
-  isDigest,
   sealCompiledGraph,
   verifyCompiledGraph,
 } from "@narratage/core";
 import type {
   CompiledGraph,
-  Digest,
   GraphValueRef,
   LinkedProgram,
   TypeRef,
@@ -38,12 +36,11 @@ export type AuthorComponentOutputRef = {
 export type AuthorValueRef = AuthorRecordRef | AuthorComponentOutputRef;
 
 /**
- * One author-visible component call. The Fragment is locked by digest; its implementation remains
- * declarative data. `outputs` binds every public Fragment export to a Logical Output identity.
+ * One author-visible component call. `outputs` binds every public Fragment export to a Logical Output.
  */
 export type AuthorComponent = {
   readonly id: string;
-  readonly fragment: Digest;
+  readonly fragment: string;
   readonly inputs: Readonly<Record<string, AuthorValueRef>>;
   readonly outputs: Readonly<Record<string, string>>;
 };
@@ -56,7 +53,7 @@ export type AuthorOutputBinding = {
 };
 
 /** Resolve a locked Graph Fragment without executing package code. */
-export type GraphFragmentResolver = (id: Digest) => GraphFragment | undefined;
+export type GraphFragmentResolver = (id: string) => GraphFragment | undefined;
 
 export class AuthorGraphError extends Error {
   readonly code: string;
@@ -167,7 +164,7 @@ function collectAuthorGraph(
       `Author Graph repeats component ${declaration.id}`,
       declaration.id,
     );
-    assert(isDigest(declaration.fragment), "INVALID_FRAGMENT_DIGEST", `${declaration.id} Fragment digest is invalid`);
+    assert(declaration.fragment.trim().length > 0, "INVALID_FRAGMENT_ID", `${declaration.id} Fragment id is empty`);
     const fragment = resolveFragment(declaration.fragment);
     assert(
       fragment !== undefined,
@@ -305,7 +302,7 @@ export function elaborateAuthorGraph(
     { outputs: [], candidates: [], operations: [] },
     ...contributions,
   );
-  const graph = sealCompiledGraph({ program: program.semanticDigest, ...merged });
+  const graph = sealCompiledGraph(merged);
   verifyCompiledGraph(program, graph);
   return graph;
 }

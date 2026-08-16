@@ -12,7 +12,7 @@ import { assertHyperframesDocument } from "@narratage/hyperframes";
 import type { HyperframesDocument } from "@narratage/hyperframes";
 import { stageHyperframesProject } from "@narratage/hyperframes/project";
 import { renderHyperframesCapabilities } from "@narratage/render-hyperframes";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import { isStreamingArtifactStore } from "@narratage/runtime";
 import type { BlobRef, CanonicalValue } from "@narratage/protocol";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";

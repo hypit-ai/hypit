@@ -88,11 +88,7 @@ export async function admitRecord(
   record: TypedRecord,
   registry: TypeValidatorRegistryLike,
 ): Promise<TypedRecord> {
-  const {
-    digest: _digest,
-    ...draft
-  } = record;
-  const admitted = sealRecord(draft);
+  const admitted = sealRecord(record);
   verifyRecordStructure(closure, admitted);
   await refineValue(record.type, record.value, registry);
   return admitted;

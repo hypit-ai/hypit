@@ -6,7 +6,6 @@ import {
   hyperframesModuleRef,
   hyperframesTypes,
 } from "@narratage/hyperframes";
-import { digestOf } from "@narratage/protocol";
 import type {
   CapabilityRef,
   ModuleManifest,

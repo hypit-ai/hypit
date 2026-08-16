@@ -6,8 +6,9 @@ import { compositionTypes } from "@narratage/composition";
 import { artifactTypes } from "@narratage/artifact";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { createResolvedClosure, digestOf, sealBuildRequest, start } from "@narratage/core";
+import { createResolvedClosure, sealBuildRequest, start } from "@narratage/core";
 import {
   AuthorFrontendRegistry,
   compileSourceClosure,
@@ -51,7 +52,7 @@ import {
 import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
 
 const fixtureModule = { name: "example.speech-media", version: "1" } as const;
-const fixtureSurfaceDigest = digestOf("example.speech-media/surface@1");
+const fixtureSurfaceDigest = fixtureDigest("example.speech-media/surface@1");
 const fixtureSurface = {
   name: "media", tag: "Media", mode: "structured", outputs: [artifactTypes.blob, svsRecipeType],
 } as const;
@@ -92,7 +93,7 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
     records: [
       ...["take-one", "take-two", "voice-one"].map((id) => ({
         id, type: artifactTypes.blob,
-        value: { kind: "blob" as const, digest: digestOf(id), size: 128,
+        value: { kind: "blob" as const, digest: fixtureDigest(id), size: 128,
           mediaType: id === "voice-one" ? "audio/mpeg" : "video/mp4" },
         range: element.range,
       })),
@@ -146,7 +147,6 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   });
   const target = resolveCompiledSourceExport(compiled, "speech.visual", compositionTypes.visualTrack);
   const build = start(compiled.program, compiled.graph, sealBuildRequest({
-    graph: compiled.graph.id,
     targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
   }));
   const names = build.plan.steps.map((step) => step.producer.name);

@@ -1,5 +1,4 @@
-import { isDigest } from "@narratage/protocol";
-import type { BlobRef, Digest, SourceRange } from "@narratage/protocol";
+import type { BlobRef, SourceRange } from "@narratage/protocol";
 
 export type SourceUnit = {
   /** Host-canonical identity used only for recursion and diagnostics. */
@@ -11,22 +10,16 @@ export type SourceUnit = {
 /** Shared identity fields of any successfully decoded self-described Source. */
 export type CompiledSourceIdentity = {
   readonly frontend: string;
-  readonly sourceDigest: Digest;
-  readonly semanticDigest: Digest;
 };
 
 export function compiledSourceIdentity(value: CompiledSourceIdentity): CompiledSourceIdentity {
   return {
     frontend: value.frontend,
-    sourceDigest: value.sourceDigest,
-    semanticDigest: value.semanticDigest,
   };
 }
 
 export function verifyCompiledSourceIdentity(value: CompiledSourceIdentity): void {
   if (value.frontend.trim().length === 0) throw new Error("Source Frontend is empty");
-  if (!isDigest(value.sourceDigest)) throw new Error("Source digest is invalid");
-  if (!isDigest(value.semanticDigest)) throw new Error("Source semantic digest is invalid");
 }
 
 export type SourceImportRequest = {

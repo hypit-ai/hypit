@@ -13,7 +13,6 @@ export {
   spatialManifest, spatialMarkupSurfaces,
   spatialModuleRef,
   spatialProducers,
-  spatialSurfaceDigests,
   spatialTypes,
 } from "./manifest.js";
 export {

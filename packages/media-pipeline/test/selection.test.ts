@@ -2,8 +2,8 @@ import { sealMediaInspection, verifyMediaStreamSelection } from "@narratage/medi
 import type { MediaInspection, MediaVideoStream } from "@narratage/media";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { digestOf } from "@narratage/protocol";
 
 import {
   sealMediaSelectionRequest,
@@ -12,7 +12,7 @@ import {
 
 const source = {
   kind: "blob" as const,
-  digest: digestOf("grok-container"),
+  digest: fixtureDigest("grok-container"),
   size: 123,
   mediaType: "video/mp4",
 };

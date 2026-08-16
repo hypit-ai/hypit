@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   decodeImageTransformProgramSurface,
@@ -12,7 +13,6 @@ import {
 } from "@narratage/image-transform";
 import { artifactTypes } from "@narratage/artifact";
 import { rasterCapabilities } from "@narratage/raster";
-import { digestOf } from "@narratage/protocol";
 import type { CanonicalValue, TypedRecord } from "@narratage/protocol";
 
 test("the GPT Image cleanup is one explicit reusable Program", () => {
@@ -71,7 +71,7 @@ test("the graph contract is exactly source plus Program to one image Need", asyn
   const producer = imageTransformComponent.producers[0]!;
   const source = {
     kind: "blob" as const,
-    digest: digestOf("image-source"),
+    digest: fixtureDigest("image-source"),
     size: 123,
     mediaType: "image/png",
   };
@@ -79,10 +79,6 @@ test("the graph contract is exactly source plus Program to one image Need", asyn
     id,
     type,
     value,
-    digest: digestOf({ id, value }),
-    origin: {
-      kind: "authored",
-    },
   });
   const result = await producer.handler({
     inputs: {

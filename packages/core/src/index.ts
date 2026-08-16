@@ -1,7 +1,6 @@
-export { canonicalStringify, canonicalize, digestOf, isDigest, recordDigest } from "./canonical.js";
+export { canonicalStringify, canonicalize, isDigest } from "./canonical.js";
 export { CoreError } from "./error.js";
 export {
-  computeModuleDigest,
   createResolvedClosure,
   link,
   resolveProducer,
@@ -19,7 +18,14 @@ export {
 export { compileBuild, plannedNeeds, validatePlan } from "./plan.js";
 export type { PlannedNeed } from "./plan.js";
 export { sliceExecution } from "./slice.js";
-export { reduce, start } from "./reducer.js";
-export { verifyBuildState } from "./verify.js";
+export {
+  admitBuildResult,
+  buildDefinition,
+  defineBuild,
+  materializeBuild,
+  reduce,
+  start,
+} from "./reducer.js";
+export { BuildMachine, restoreBuildMachine } from "./machine.js";
 export { validateStoredValue } from "./schema.js";
 export type { TypedRecordDraft } from "./link.js";

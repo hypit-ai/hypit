@@ -1,4 +1,4 @@
-import { digestOf, isDigest } from "@narratage/protocol";
+import { isDigest } from "@narratage/protocol";
 import type { Narrative, NarrativeToken } from "@narratage/narrative";
 import { programFrameSampleBoundary, programSpaceFrameCount } from "@narratage/program-space";
 import type { SpeechAudioBasis } from "@narratage/speech";
@@ -15,8 +15,6 @@ import { alignWordGroups } from "./align.js";
 import { SpeechAlignmentError } from "./error.js";
 import { alignCharacters, alignmentCharacters } from "./normalize.js";
 import type { AlignmentGroup, TimedSpeechSegment } from "./types.js";
-
-export const speechLocatorDigest = digestOf("@narratage/speech-alignment/locate@1");
 
 type MutableTiming = {
   startSample: number;

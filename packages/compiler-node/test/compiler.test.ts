@@ -18,10 +18,6 @@ import {
   NodeRunCompiler,
 } from "@narratage/compiler-node";
 import {
-  computeModuleDigest,
-  digestOf,
-} from "@narratage/core";
-import {
   AuthorFrontendRegistry,
   sealGraphFragment,
 } from "@narratage/elaborator";
@@ -98,7 +94,7 @@ test("module registration is atomic", () => {
 const laboratory = { name: "example.compiler-lab", version: "1" } as const;
 const resultType = { module: laboratory, name: "Result" } satisfies TypeRef;
 const producer = { module: laboratory, name: "produce" } satisfies ProducerRef;
-const surfaceDigest = digestOf("example.compiler-lab/surface@1");
+const surfaceDigest = "surface:example.compiler-lab/result";
 const resultSurface = {
   name: "result", tag: "Result", mode: "structured", outputs: [],
 } as const;
@@ -133,7 +129,7 @@ const fragment = sealGraphFragment({
 
 const assetLaboratory = { name: "example.asset-lab", version: "1" } as const;
 const assetType = { module: assetLaboratory, name: "Asset" } satisfies TypeRef;
-const assetSurfaceDigest = digestOf("example.asset-lab/surface@1");
+const assetSurfaceDigest = "surface:example.asset-lab/asset";
 const assetSurface = {
   name: "asset", tag: "Asset", mode: "structured", outputs: [assetType],
 } as const;
@@ -344,7 +340,7 @@ test("Node Compiler discovers real imports and emits a named public Author Graph
 
 });
 
-test("Author Frontend identity comes only from the mandatory Source Header, never the suffix", async () => {
+test("the mandatory Source Header selects the Frontend independently of the filename suffix", async () => {
   const root = await mkdtemp(join(tmpdir(), "narratage-self-described-source-"));
   const text = `<?svml using="@narratage/markup@1"?>
   <svml>
@@ -357,8 +353,8 @@ test("Author Frontend identity comes only from the mandatory Source Header, neve
   await writeFile(arbitrary, text, "utf8");
   const first = await compiler(root).compileFile(svml);
   const second = await compiler(root).compileFile(arbitrary);
-  assert.equal(first.closure.id, second.closure.id);
-  assert.equal(first.graph.id, second.graph.id);
+  assert.equal(first.exports[0]?.name, "hello.result");
+  assert.equal(second.exports[0]?.name, "hello.result");
 
   const missing = join(root, "missing.svml");
   await writeFile(missing, "<svml/>", "utf8");
@@ -453,34 +449,6 @@ test("static Run checking accepts a future BuildRecord without opening a BuildAr
   );
 });
 
-test("static Run checking suggests the nearest Author export", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-run-target-suggestion-"));
-  const authorFile = join(root, "main.svml");
-  const runFile = join(root, "build.svrun");
-  await writeFile(authorFile, `<?svml using="@narratage/markup@1"?>
-  <svml>
-    <import as="lab" from="example.compiler-lab@1"/>
-    <lab:Result id="hello"/>
-  </svml>`, "utf8");
-  await writeFile(runFile, `<?svml using="@narratage/run-markup@1"?>
-  <svrun version="1">
-    <author source="./main.svml"/>
-    <target output="hello.reslt"/>
-  </svrun>`, "utf8");
-  const frontends = new RunFrontendRegistry();
-  frontends.register(runMarkupFrontend);
-  const runCompiler = new NodeRunCompiler({
-    authorCompiler: compiler(root),
-    frontends,
-    fragments: new RunFragmentRegistry(),
-  });
-  const workspace = await new NodeFilesystemWorkspace({ root }).open(runFile);
-  await assert.rejects(
-    runCompiler.checkSource(workspace.entry, workspace),
-    /unknown source export hello\.reslt; did you mean hello\.result\?/u,
-  );
-});
-
 test("source assets become graph values and a Host transfer bundle without closure metadata", async () => {
   const root = await mkdtemp(join(tmpdir(), "narratage-source-assets-"));
   const file = join(root, "main.svml");
@@ -499,7 +467,6 @@ test("source assets become graph values and a Host transfer bundle without closu
   assert.equal(first.program.records[0]?.value.kind === "blob" ? first.program.records[0].value.digest : undefined, attachment?.artifact.digest);
   await writeFile(asset, new Uint8Array([9, 8, 7]));
   const second = await assetCompiler({ root }).compileFile(file);
-  assert.notEqual(second.closure.id, first.closure.id);
   assert.notEqual(second.attachments[0]?.artifact.digest, attachment?.artifact.digest);
 });
 
@@ -622,7 +589,7 @@ test("an asset root widens bytes without widening Source imports", async () => {
   }), (error: unknown) => error instanceof WorkspaceError && error.code === "SOURCE_OUTSIDE_ROOT");
 });
 
-test("filesystem and in-memory Workspaces compile identical source and bytes to one semantic result", async () => {
+test("filesystem and in-memory Workspaces load identical asset bytes", async () => {
   const root = await mkdtemp(join(tmpdir(), "narratage-workspace-equivalence-"));
   const file = join(root, "main.svml");
   const source = `<?svml using="@narratage/markup@1"?>
@@ -637,9 +604,6 @@ test("filesystem and in-memory Workspaces compile identical source and bytes to 
   const filesystem = await assetCompiler({ root }).compileFile(file);
   const memory = await assetCompiler({ workspace: memoryWorkspace(source, bytes) }).compileFile("memory:main");
 
-  assert.equal(memory.closure.id, filesystem.closure.id);
-  assert.equal(memory.program.semanticDigest, filesystem.program.semanticDigest);
-  assert.equal(memory.graph.id, filesystem.graph.id);
   assert.deepEqual(memory.attachments.map((item) => item.artifact),
     filesystem.attachments.map((item) => item.artifact));
   assert.deepEqual(await readAttachment(memory.attachments[0]),

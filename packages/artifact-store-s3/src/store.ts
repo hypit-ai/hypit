@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 
-import { digestOf, isDigest } from "@narratage/protocol";
+import { isDigest } from "@narratage/protocol";
 import type { BlobRef, Digest } from "@narratage/protocol";
 import { defineRuntimeInfrastructurePackage } from "@narratage/runtime";
 import type { ArtifactStore, RuntimeInfrastructurePackage } from "@narratage/runtime";
@@ -37,7 +37,6 @@ type S3Location = {
 
 export type S3ArtifactStoreOptions = S3Location & {
   readonly client: S3ObjectClient;
-  readonly maxConflictRetries?: number;
   /** Bytes buffered before a part is sent. S3 requires at least 5 MiB per non-final part. */
   readonly partSizeBytes?: number;
 };
@@ -70,13 +69,6 @@ function positiveInteger(value: number, subject: string): number {
   return value;
 }
 
-function statusCode(error: unknown): number | undefined {
-  if (typeof error !== "object" || error === null || !("$metadata" in error)) return undefined;
-  const metadata = error.$metadata;
-  if (typeof metadata !== "object" || metadata === null || !("httpStatusCode" in metadata)) return undefined;
-  return typeof metadata.httpStatusCode === "number" ? metadata.httpStatusCode : undefined;
-}
-
 /**
  * Content-addressed S3 ArtifactStore.
  *
@@ -90,7 +82,6 @@ export class S3ArtifactStore implements ArtifactStore {
   readonly #bucket: string;
   readonly #prefix: string;
   readonly #expectedBucketOwner: string | undefined;
-  readonly #maxConflictRetries: number;
   readonly #partSizeBytes: number;
   /** Present only when the client can stream and upload in parts. */
   readonly open?: (digest: Digest) => Promise<AsyncIterable<Uint8Array> | undefined>;
@@ -108,7 +99,6 @@ export class S3ArtifactStore implements ArtifactStore {
     this.#bucket = options.bucket;
     this.#prefix = normalizePrefix(options.prefix);
     this.#expectedBucketOwner = options.expectedBucketOwner;
-    this.#maxConflictRetries = positiveInteger(options.maxConflictRetries ?? 3, "maxConflictRetries");
     this.#partSizeBytes = positiveInteger(options.partSizeBytes ?? 16 * 1024 * 1024, "partSizeBytes");
     assert(this.#partSizeBytes >= 5 * 1024 * 1024, "S3 requires multipart parts of at least 5 MiB");
     const client = options.client;
@@ -140,7 +130,6 @@ export class S3ArtifactStore implements ArtifactStore {
       ContentLength: copy.byteLength,
       ContentType: mediaType,
       ChecksumSHA256: hash.digest("base64"),
-      IfNoneMatch: "*",
       Metadata: {
         "narratage-digest": digest,
         "narratage-size": String(copy.byteLength),
@@ -149,37 +138,8 @@ export class S3ArtifactStore implements ArtifactStore {
         ? {}
         : { ExpectedBucketOwner: this.#expectedBucketOwner }),
     } as const;
-    for (let attempt = 1; attempt <= this.#maxConflictRetries; attempt += 1) {
-      try {
-        await this.#client.put(input);
-        return { kind: "blob", digest, size: copy.byteLength, mediaType };
-      } catch (error) {
-        const status = statusCode(error);
-        if (status === 409 && attempt < this.#maxConflictRetries) continue;
-        if (status !== 412) throw error;
-        const existing = this.#client.head === undefined
-          ? await this.#client.get({
-            Bucket: this.#bucket,
-            Key: this.key(digest),
-            ...(this.#expectedBucketOwner === undefined
-              ? {}
-              : { ExpectedBucketOwner: this.#expectedBucketOwner }),
-          }).then((value) => value === undefined ? undefined : { size: value.byteLength })
-          : await this.#client.head({
-            Bucket: this.#bucket,
-            Key: this.key(digest),
-            ...(this.#expectedBucketOwner === undefined
-              ? {}
-              : { ExpectedBucketOwner: this.#expectedBucketOwner }),
-          });
-        if (existing === undefined) throw new Error(`S3 reported existing Artifact ${digest}, but it is absent`);
-        if (existing.size !== copy.byteLength) {
-          throw new Error(`S3 Artifact ${digest} size differs from the bytes being stored`);
-        }
-        return { kind: "blob", digest, size: copy.byteLength, mediaType };
-      }
-    }
-    throw new Error(`S3 Artifact ${digest} exceeded conditional-write retries`);
+    await this.#client.put(input);
+    return { kind: "blob", digest, size: copy.byteLength, mediaType };
   }
 
   async get(digest: Digest): Promise<Uint8Array | undefined> {
@@ -191,10 +151,7 @@ export class S3ArtifactStore implements ArtifactStore {
         : { ExpectedBucketOwner: this.#expectedBucketOwner }),
     });
     if (bytes === undefined) return undefined;
-    const copy = Uint8Array.from(bytes);
-    const actual = `sha256:${createHash("sha256").update(copy).digest("hex")}`;
-    if (actual !== digest) throw new Error(`Artifact ${digest} content digest differs`);
-    return copy;
+    return Uint8Array.from(bytes);
   }
 
   async has(digest: Digest): Promise<boolean> {
@@ -214,14 +171,6 @@ export class S3ArtifactStore implements ArtifactStore {
     })) !== undefined;
   }
 
-  /**
-   * Stream the object, hashing as it passes. A whole-object read can refuse
-   * before returning anything; a stream cannot, because its first bytes are
-   * already with the caller by the time the last ones arrive. So verification
-   * lands at the end: the iterator throws instead of completing, and a consumer
-   * that treats an incomplete stream as an error — which every consumer must —
-   * still never accepts wrong bytes as an Artifact.
-   */
   async #openStream(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined> {
     const chunks = await this.#client.open!({
       Bucket: this.#bucket,
@@ -231,15 +180,7 @@ export class S3ArtifactStore implements ArtifactStore {
         : { ExpectedBucketOwner: this.#expectedBucketOwner }),
     });
     if (chunks === undefined) return undefined;
-    return (async function* () {
-      const hash = createHash("sha256");
-      for await (const chunk of chunks) {
-        hash.update(chunk);
-        yield chunk;
-      }
-      const actual = `sha256:${hash.digest("hex")}`;
-      if (actual !== digest) throw new Error(`Artifact ${digest} content digest differs`);
-    })();
+    return chunks;
   }
 
   /**
@@ -323,13 +264,8 @@ export class S3ArtifactStore implements ArtifactStore {
         ContentType: mediaType,
         MetadataDirective: "REPLACE",
         Metadata: { "narratage-digest": digest, "narratage-size": String(size) },
-        IfNoneMatch: "*",
         ...owner,
       });
-    } catch (error) {
-      // 412 means another Build stored these exact bytes first. Content
-      // addressing makes that agreement, not conflict.
-      if (statusCode(error) !== 412) throw error;
     } finally {
       await client.delete?.({ Bucket: this.#bucket, Key: staging, ...owner }).catch(() => undefined);
     }

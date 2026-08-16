@@ -344,7 +344,7 @@ export function sealGenerationMediaBinding(
 
 /**
  * Attach one Blob supplied by a real graph edge. The returned draft contains
- * the Provider-facing value, while Derivation preserves where that Blob came
+ * the Provider-facing value, while the Graph preserves where that Blob came
  * from; no lineage or project metadata is copied through the payload.
  */
 export function bindGenerationMedia(

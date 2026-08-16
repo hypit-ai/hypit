@@ -1,7 +1,6 @@
 import { sealGenerationPortRequest, sealGenerationRequestDraft, sealGenerationPortTable } from "@narratage/generation";
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
-import { digestOf } from "@narratage/protocol";
 
 export const mimoTtsModuleRef = { name: "@narratage/mimo-tts", version: "1" } as const;
 export const mimoTtsModels = [
@@ -90,12 +89,6 @@ const base = defineExactModelModule({
 });
 
 export const mimoTtsEndpoints = base.endpoints;
-export const mimoTtsSurfaceDigests = {
-  preset: digestOf("@narratage/mimo-tts/preset-surface@1"),
-  voiceDesign: digestOf("@narratage/mimo-tts/voice-design-surface@1"),
-  voiceClone: digestOf("@narratage/mimo-tts/voice-clone-surface@1"),
-} as const;
-
 export const mimoTtsMarkupSurfaces = [
   {
     name: "preset", tag: "Preset", mode: "structured",

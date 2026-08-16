@@ -5,8 +5,9 @@ import { compositionDependency, compositionTypes, sealAudioTrack, sealVisualTrac
 import type { Track } from "@narratage/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { createResolvedClosure, digestOf, sealBuildRequest, start } from "@narratage/core";
+import { createResolvedClosure, sealBuildRequest, start } from "@narratage/core";
 import {
   AuthorFrontendRegistry,
   compileSourceClosure,
@@ -36,7 +37,7 @@ import {
 import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
 
 const fixtureModule = { name: "example.film-fixture", version: "1" } as const;
-const fixtureSurfaceDigest = digestOf("example.film-fixture/inputs-surface@1");
+const fixtureSurfaceDigest = fixtureDigest("example.film-fixture/inputs-surface@1");
 const fixtureSurface = {
   name: "inputs", tag: "Inputs", mode: "structured",
   outputs: [programSpaceTypes.programSpace, compositionTypes.visualTrack, compositionTypes.audioTrack],
@@ -97,7 +98,7 @@ const validStyles = `<sheet version="1">
   }
 </sheet>`;
 
-async function compileFilm(options: { readonly reverse?: boolean; readonly styles?: string } = {}) {
+async function compileFilm(options: { readonly styles?: string } = {}) {
   const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
@@ -129,9 +130,6 @@ async function compileFilm(options: { readonly reverse?: boolean; readonly style
   }));
   frontends.register(svsFrontend);
 
-  const tracks = options.reverse === true
-    ? `<film:Track source={audio}/><film:Track source={visual}/>`
-    : `<film:Track source={visual}/><film:Track source={audio}/>`;
   return await compileSourceClosure({
     entry: source("/project/main.svml", `<svml>
       <import as="fixture" from="example.film-fixture@1"/>
@@ -140,7 +138,9 @@ async function compileFilm(options: { readonly reverse?: boolean; readonly style
       <import as="studio" source="./studio.svs"/>
       <fixture:Inputs/>
       <space:Canvas id="vertical" width="1080" height="1920"/>
-      <film:Film id="main" canvas={vertical} space={space} appearance={studio.film.vertical}>${tracks}</film:Film>
+      <film:Film id="main" canvas={vertical} space={space} appearance={studio.film.vertical}>
+        <film:Track source={visual}/><film:Track source={audio}/>
+      </film:Film>
     </svml>`),
     closure,
     frontends,
@@ -162,7 +162,6 @@ test("the official Film Surface validates SVS and lowers dynamic peer Tracks", a
   const target = resolveCompiledSourceExport(compiled, "main.composition", compositionTypes.composition);
   assert.equal(target.ref.kind, "logical-output");
   const build = start(compiled.program, compiled.graph, sealBuildRequest({
-    graph: compiled.graph.id,
     targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [
@@ -171,12 +170,6 @@ test("the official Film Surface validates SVS and lowers dynamic peer Tracks", a
     filmProducers.appendVisualTrack.name,
     filmProducers.compileComposition.name,
   ].sort());
-});
-
-test("Film child order remains organizational, not graph meaning", async () => {
-  const normal = await compileFilm();
-  const reversed = await compileFilm({ reverse: true });
-  assert.equal(normal.graph.id, reversed.graph.id);
 });
 
 test("Film rejects an invalid package-owned Recipe during check", async () => {

@@ -6,8 +6,8 @@ import { FileArtifactStore, createFileArtifactStorePackage } from "@narratage/ar
 import { createEnvironmentCredentialStorePackage } from "@narratage/credential-store-env";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import {
+  buildDefinition,
   createResolvedClosure,
-  digestOf,
   link,
   sealBuildRequest,
   sealCompiledGraph,
@@ -77,6 +77,7 @@ import {
   seedreamManifest,
 } from "@narratage/seedream";
 import { admitRecord, TypeValidatorRegistry } from "@narratage/validation";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 type SmokeCase = {
   readonly key: string;
@@ -117,32 +118,16 @@ function apiBaseUrl(value: string): string {
 }
 
 async function accountCredits(baseUrl: string, key: string): Promise<number> {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= 4; attempt += 1) {
-    let response: Response;
-    try {
-      response = await fetch(`${baseUrl}/api/v1/chat/credit`, {
-        method: "GET",
-        headers: { authorization: `Bearer ${key}` },
-      });
-    } catch (error) {
-      lastError = error;
-      if (attempt < 4) await new Promise((done) => setTimeout(done, attempt * 1_000));
-      continue;
-    }
-    const text = await response.text();
-    if (response.ok) {
-      const body = object(JSON.parse(text), "KIE credit response");
-      assert(body.code === 200 && typeof body.data === "number" && Number.isFinite(body.data),
-        `KIE credit response is invalid: ${text.slice(0, 300)}`);
-      return body.data;
-    }
-    const retryable = response.status === 429 || response.status >= 500;
-    if (!retryable) throw new Error(`KIE credit check returned HTTP ${response.status}: ${text.slice(0, 300)}`);
-    lastError = new Error(`KIE credit check returned retryable HTTP ${response.status}`);
-    if (attempt < 4) await new Promise((done) => setTimeout(done, attempt * 1_000));
-  }
-  throw lastError instanceof Error ? lastError : new Error("KIE credit check failed");
+  const response = await fetch(`${baseUrl}/api/v1/chat/credit`, {
+    method: "GET",
+    headers: { authorization: `Bearer ${key}` },
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`KIE credit check returned HTTP ${response.status}: ${text.slice(0, 300)}`);
+  const body = object(JSON.parse(text), "KIE credit response");
+  assert(body.code === 200 && typeof body.data === "number" && Number.isFinite(body.data),
+    `KIE credit response is invalid: ${text.slice(0, 300)}`);
+  return body.data;
 }
 
 function resultExtension(mediaType: string): string {
@@ -327,12 +312,10 @@ async function createBuild(item: SmokeCase): Promise<ReturnType<typeof start>> {
     id: item.ids.request,
     type: item.endpoint.requestType,
     value: { kind: "inline", value: item.request },
-    origin: { kind: "authored" },
   });
   const authored = await admitRecord(closure, draft, validators);
   const program = link(closure, [authored]);
   const graph = sealCompiledGraph({
-    program: program.semanticDigest,
     outputs: [{
       id: item.ids.output,
       type: item.endpoint.returns,
@@ -356,7 +339,6 @@ async function createBuild(item: SmokeCase): Promise<ReturnType<typeof start>> {
     }],
   });
   return start(program, graph, sealBuildRequest({
-    graph: graph.id,
     targets: [{ output: item.ids.output }],
   }));
 }
@@ -437,8 +419,6 @@ async function main(): Promise<void> {
   const failures: string[] = [];
   const workerAbort = new AbortController();
   const workerRun = runtime.work({
-    owner: `kie-smoke-${process.pid}`,
-    leaseMs: 30_000,
     idlePollMs: 100,
     signal: workerAbort.signal,
   });
@@ -449,7 +429,7 @@ async function main(): Promise<void> {
       try {
         const state = await createBuild(item);
         const build = await runtime.build(
-          { id: `bld_${randomUUID()}`, state },
+          { id: `bld_${randomUUID()}`, definition: buildDefinition(state) },
           { follow: true, pollIntervalMs: 1_000, maxWaitMs: 20 * 60_000 },
         );
         if (build.status !== "complete") throw new Error(failureMessage(item, build));

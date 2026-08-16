@@ -4,7 +4,7 @@ import { textManifest } from "@narratage/text";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createResolvedClosure, isDigest } from "@narratage/core";
+import { createResolvedClosure } from "@narratage/core";
 import type { ModuleManifest } from "@narratage/protocol";
 import {
   decodeScriptSurface,
@@ -91,8 +91,7 @@ test("the same Script meaning has the same authored Record digest across reflow"
     scriptContext(),
   );
 
-  assert.equal(compact.records[0]?.digest, multiline.records[0]?.digest);
-  assert.equal(compact.records[1]?.digest, multiline.records[1]?.digest);
+  assert.deepEqual(compact.records, multiline.records);
 });
 
 test("without the import, Markup has no hard-coded knowledge of Script", async () => {
@@ -214,7 +213,6 @@ test("a module can use Markup's generic structured parser without adding another
   );
 
   assert.equal(result.records[0]?.id, "card");
-  assert.equal(isDigest(result.records[0]?.digest ?? ""), true);
 
   const overreachingRegistry = new MarkupSurfaceRegistry();
   overreachingRegistry.registerStructured({ module, declaration: cardSurface, handler: ({ element }) => ({

@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
 import {
-  computeModuleDigest,
   createResolvedClosure,
-  digestOf,
   sealBuildRequest,
   start,
 } from "@narratage/core";
@@ -14,7 +11,6 @@ import {
   compileSourceClosure,
   resolveCompiledSourceExport,
   sealGraphFragment,
-  verifySourceClosure,
 } from "@narratage/elaborator";
 import type { AuthorSourceUnit } from "@narratage/elaborator";
 import type {
@@ -41,7 +37,7 @@ const laboratory = { name: "example.recipe-card", version: "1" } as const;
 const cardType = { module: laboratory, name: "Card" } satisfies TypeRef;
 const cardAppearanceType = { module: laboratory, name: "CardAppearance" } satisfies TypeRef;
 const renderProducer = { module: laboratory, name: "render-card" } satisfies ProducerRef;
-const cardSurfaceDigest = digestOf("example.recipe-card/card-surface@1");
+const cardSurfaceDigest = "surface:example.recipe-card/card";
 const cardSurface = {
   name: "card", tag: "Card", mode: "structured", outputs: [cardAppearanceType],
 } as const;
@@ -133,7 +129,6 @@ function sourceRegistry(): MarkupSurfaceRegistry {
           kind: "inline",
           value: {
             contract: "example.card-appearance@1",
-            sourceRecipeDigest: resolved.record?.digest ?? "",
             fill,
             padding,
           },
@@ -214,7 +209,6 @@ test("Text and SVS recursively compile one aliased Recipe into a Core BuildPlan"
     kind: "inline",
     value: {
       contract: "example.card-appearance@1",
-      sourceRecipeDigest: recipe?.digest,
       fill: "#73FBD3",
       padding: "16 24",
     },
@@ -222,7 +216,6 @@ test("Text and SVS recursively compile one aliased Recipe into a Core BuildPlan"
   const target = resolveCompiledSourceExport(compiled, "answer.result", cardType);
   assert.equal(target.ref.kind, "logical-output");
   const state = start(compiled.program, compiled.graph, sealBuildRequest({
-    graph: compiled.graph.id,
     targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
   }));
   assert.equal(state.plan.steps.length, 1);
@@ -239,62 +232,6 @@ test("the consuming package rejects an invalid generic Recipe during author comp
       }
     </sheet>`),
     /Card Recipe fill must be a six-digit hex color/u,
-  );
-});
-
-test("source import alias changes source identity but not Recipe or Graph semantics", async () => {
-  const studio = await compileMain("studio");
-  const brand = await compileMain("brand");
-  assert.notEqual(studio.closure.id, brand.closure.id);
-  const studioAppearance = studio.program.records.find((record) => record.type.name === cardAppearanceType.name);
-  const brandAppearance = brand.program.records.find((record) => record.type.name === cardAppearanceType.name);
-  assert.equal(studioAppearance?.id, brandAppearance?.id);
-  assert.equal(studioAppearance?.digest, brandAppearance?.digest);
-  assert.equal(studio.graph.id, brand.graph.id);
-});
-
-test("relocating the same source tree preserves Source Closure and Graph identity", async () => {
-  const original = await compileMain("studio", "/project");
-  const relocated = await compileMain("studio", "/copy/project");
-  assert.equal(original.closure.id, relocated.closure.id);
-  assert.equal(original.program.semanticDigest, relocated.program.semanticDigest);
-  assert.equal(original.graph.id, relocated.graph.id);
-});
-
-test("Frontend identity changes Source Closure identity but not equal decoded author meaning", async () => {
-  const alternate = {
-    ...svsFrontend,
-    id: "example.svs-compatible@1",
-  };
-  const compileWith = async (frontend: typeof svsFrontend | typeof alternate) => {
-    const frontends = new AuthorFrontendRegistry();
-    frontends.register(frontend);
-    return await compileSourceClosure({
-      entry: unit("/project/studio.any", styleText, frontend.id),
-      closure,
-      frontends,
-      resolveSource() { throw new Error("not used"); },
-    });
-  };
-  const official = await compileWith(svsFrontend);
-  const compatible = await compileWith(alternate);
-  assert.notEqual(official.closure.id, compatible.closure.id);
-  assert.equal(official.closure.units[0]?.semanticDigest, compatible.closure.units[0]?.semanticDigest);
-  assert.equal(official.program.semanticDigest, compatible.program.semanticDigest);
-  assert.equal(official.graph.id, compatible.graph.id);
-});
-
-test("Source Closure binds every recursive SourceUnit digest", async () => {
-  const compiled = await compileMain("studio");
-  const first = compiled.closure.units[0]!;
-  const tampered = {
-    ...compiled.closure,
-    units: [{ ...first, sourceDigest: digestOf("tampered source") }, ...compiled.closure.units.slice(1)],
-  };
-  assert.throws(
-    () => verifySourceClosure(tampered),
-    (error: unknown) => error instanceof SourceClosureError
-      && error.code === "SOURCE_UNIT_DIGEST_MISMATCH",
   );
 });
 

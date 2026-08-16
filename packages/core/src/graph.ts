@@ -13,7 +13,7 @@ import type {
   TypeRef,
 } from "@narratage/protocol";
 
-import { canonicalize, digestOf, isDigest } from "./canonical.js";
+import { canonicalize } from "./canonical.js";
 import { invariant } from "./error.js";
 import { resolveProducer, sealRecord, verifyRecordStructure } from "./link.js";
 import { producerKey, sameType, typeKey } from "./reference.js";
@@ -111,33 +111,29 @@ function normalizeOperation(operation: OperationNode): OperationNode {
 }
 
 export function sealCompiledGraph(
-  graph: Omit<CompiledGraph, "format" | "id">,
+  graph: Omit<CompiledGraph, "format">,
 ): CompiledGraph {
   const normalized = {
-    program: graph.program,
     outputs: [...graph.outputs].map(normalizeOutput).sort((a, b) => a.id.localeCompare(b.id)),
     candidates: [...graph.candidates].map(normalizeCandidate).sort((a, b) => a.id.localeCompare(b.id)),
     operations: [...graph.operations].map(normalizeOperation).sort((a, b) => a.id.localeCompare(b.id)),
   };
-  const content = {
+  return {
     format: "narratage.graph@1" as const,
     ...normalized,
   };
-  return { ...content, id: digestOf(content) };
 }
 
 export function sealBuildRequest(
-  request: Omit<BuildRequest, "format" | "digest">,
+  request: Omit<BuildRequest, "format">,
 ): BuildRequest {
   const targets = [...request.targets]
     .map((target) => ({ output: target.output }))
     .sort((a, b) => a.output.localeCompare(b.output));
-  const content = {
+  return {
     format: "narratage.build-request@1" as const,
-    graph: request.graph,
     targets,
   };
-  return { ...content, digest: digestOf(content) };
 }
 
 export function resolveLogicalOutput(graph: CompiledGraph, id: string): LogicalOutput {
@@ -257,9 +253,6 @@ function verifyCandidateValue(program: LinkedProgram, graph: CompiledGraph, cand
     id: candidate.root.value.id,
     type: candidate.type,
     value: candidate.root.value.value,
-    origin: {
-      kind: "provided",
-    },
   });
   verifyRecordStructure(program.closure, provisional);
 }
@@ -278,14 +271,6 @@ function verifySatisfaction(
 
 export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph): void {
   invariant(graph.format === "narratage.graph@1", "UNSUPPORTED_GRAPH", "unsupported compiled graph format");
-  invariant(isDigest(graph.id), "INVALID_DIGEST", "compiled graph id is invalid");
-  invariant(
-    graph.program === program.semanticDigest,
-    "GRAPH_PROGRAM_MISMATCH",
-    "compiled graph belongs to another linked program",
-  );
-  const { id: _id, ...content } = graph;
-  invariant(graph.id === digestOf(content), "GRAPH_DIGEST_MISMATCH", "compiled graph digest differs");
   const outputIds = new Set<string>();
   const candidateIds = new Set<string>();
   const operationIds = new Set<string>();
@@ -339,10 +324,6 @@ export function verifyBuildRequest(
     "UNSUPPORTED_BUILD_REQUEST",
     "unsupported BuildRequest format",
   );
-  invariant(isDigest(request.digest), "INVALID_DIGEST", "BuildRequest digest is invalid");
-  invariant(request.graph === graph.id, "BUILD_REQUEST_GRAPH_MISMATCH", "BuildRequest belongs to another graph");
-  const { digest: _digest, ...content } = request;
-  invariant(request.digest === digestOf(content), "BUILD_REQUEST_DIGEST_MISMATCH", "BuildRequest digest differs");
   invariant(request.targets.length > 0, "EMPTY_BUILD_TARGETS", "BuildRequest has no Targets");
 
   const targets = new Set<string>();

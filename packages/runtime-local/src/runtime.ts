@@ -14,7 +14,6 @@ import {
   createBuildDispatchIdentity,
   isStreamingArtifactStore,
   resolveRuntimeClosure,
-  sameBuildCatalogDescriptor,
   sealResolvedRuntimeProfile,
 } from "@narratage/runtime";
 import { TypeValidatorRegistry } from "@narratage/validation";
@@ -192,7 +191,7 @@ export async function createLocalRuntime(
     assert(snapshot !== undefined && dispatch !== undefined, `Build ${build} has no durable Runtime state`);
     const status: LocalBuildSubmission["status"] = dispatch.phase === "terminal"
       ? dispatch.terminal!
-      : dispatch.phase === "leased" ? "running" : dispatch.phase;
+      : dispatch.phase;
     return { id: build, state: snapshot.state, status, dispatch };
   };
 
@@ -200,30 +199,11 @@ export async function createLocalRuntime(
     assert(request.id.trim().length > 0, "Build id must not be empty");
     if (request.catalog !== undefined) {
       assert(buildCatalog !== undefined, "Build supplied Host catalog metadata but no BuildCatalog was selected");
-      assert(request.catalog.core === request.state.id,
-        `Build Catalog Core ${request.catalog.core} differs from Build ${request.state.id}`);
-      const existingCatalog = await buildCatalog.read(request.id);
-      assert(existingCatalog === undefined || sameBuildCatalogDescriptor(existingCatalog, request.catalog),
-        `Build Catalog ${request.id} already has another source, Run Source or output naming`);
     }
     await stageAttachments(request);
-    // The Host creates a fresh id for every Build. Reading an exact duplicate
-    // here only closes the crash window between durable Store writes; it is not
-    // a Source-based lookup and is not exposed as a way to reopen an old Build.
-    let stored = await options.buildStore.read(request.id);
-    if (stored === undefined) {
-      try {
-        stored = await options.buildStore.create(request.id, request.state);
-      } catch (error) {
-        stored = await options.buildStore.read(request.id);
-        if (stored === undefined) throw error;
-      }
-    }
-    assert(stored.state.id === request.state.id,
-      `Build submission ${request.id} conflicts with another Core state`);
-    const created = await options.dispatchStore.create(createBuildDispatchIdentity({
+    await options.buildStore.create(request.id, request.definition);
+    await options.dispatchStore.create(createBuildDispatchIdentity({
       build: request.id,
-      core: request.state.id,
       ...(request.implementationPackages === undefined ? {} : {
         implementationPackages: request.implementationPackages,
       }),
@@ -258,8 +238,8 @@ export async function createLocalRuntime(
     async buildMany(requests) {
       return await Promise.all(requests.map(submit));
     },
-    async workOnce(workOptions) {
-      return await worker.runOnce(workOptions);
+    async workOnce() {
+      return await worker.runOnce();
     },
     async work(workOptions) {
       await worker.run(workOptions);
@@ -345,7 +325,6 @@ export async function createProjectLocalRuntime(
       deleteCredential: runtime.deleteCredential,
       builds: runtime.builds,
       cancel: runtime.cancel,
-      cancelOperation: runtime.cancelOperation,
       workOnce: runtime.workOnce,
       work: runtime.work,
       readArtifact: runtime.readArtifact,

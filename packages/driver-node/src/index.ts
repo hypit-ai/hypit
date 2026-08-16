@@ -1,6 +1,5 @@
 export { MemoryArtifactStore } from "./artifacts.js";
 export { NodeDriver } from "./driver.js";
-export { parseBuildState, serializeBuildState } from "./persistence.js";
 export {
   ProducerRegistry,
   EndpointRegistry,

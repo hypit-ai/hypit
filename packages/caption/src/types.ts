@@ -41,7 +41,7 @@ export type CaptionPlannedRun = {
   readonly cues: readonly CaptionPlannedCue[];
 };
 
-/** Planner-neutral result. Model/provider identity remains in the producing Graph and Receipt. */
+/** Planner-neutral result. Model/provider choice remains in the producing Graph. */
 export type CaptionPlan = {
   readonly runs: readonly CaptionPlannedRun[];
 };

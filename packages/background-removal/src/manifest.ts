@@ -1,5 +1,4 @@
 import { artifactDependency, artifactTypes } from "@narratage/artifact";
-import { digestOf } from "@narratage/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef } from "@narratage/protocol";
 
 export const backgroundRemovalModuleRef = { name: "@narratage/background-removal", version: "1" } as const;

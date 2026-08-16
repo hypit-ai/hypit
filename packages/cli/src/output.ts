@@ -45,9 +45,6 @@ export type AuthorCheckOutput = {
   readonly format: "narratage.cli-check@1";
   readonly sourceKind: "author";
   readonly ok: true;
-  readonly sourceClosure: string;
-  readonly moduleClosure: string;
-  readonly graph: string;
   readonly units: number;
   readonly sourceAssets: readonly unknown[];
   readonly modules: readonly string[];
@@ -64,13 +61,6 @@ export type RunCheckOutput = {
   readonly ok: true;
   readonly run: string;
   readonly source: string;
-  readonly authorSourceClosure: string;
-  readonly runSourceClosure: string;
-  readonly authorModuleClosure: string;
-  readonly executionModuleClosure: string;
-  readonly authorGraph: string;
-  readonly runGraph?: string;
-  readonly graph?: string;
   readonly targets: readonly unknown[];
   readonly candidates: Readonly<Record<string, string>>;
   readonly satisfactions: readonly unknown[];
@@ -169,11 +159,6 @@ function shortPath(path: string): string {
   return local.length > 0 && !local.startsWith("..") ? local : absolute;
 }
 
-function shortIdentity(value: string): string {
-  if (!value.startsWith("sha256:") || value.length <= 22) return value;
-  return `${value.slice(0, 15)}…${value.slice(-6)}`;
-}
-
 function shortOpaque(value: string): string {
   if (value.length <= 38) return value;
   return `${value.slice(0, 24)}…${value.slice(-8)}`;
@@ -269,14 +254,6 @@ function renderAuthorCheck(
       lines.push(`  ${colors.dim(`${ordered.length - shown.length} more · use --verbose for the complete list`)}`);
     }
   }
-  if (verbose) {
-    lines.push("", colors.strong("Identity"));
-    lines.push(...facts([
-      ["Source closure", shortIdentity(view.machine.sourceClosure)],
-      ["Module closure", shortIdentity(view.machine.moduleClosure)],
-      ["Graph", shortIdentity(view.machine.graph)],
-    ], colors));
-  }
   return `${lines.join("\n")}\n`;
 }
 
@@ -301,16 +278,6 @@ function renderRunCheck(
     lines.push("", heading("warning", `${unresolved.length} historical Candidate${unresolved.length === 1 ? "" : "s"} unresolved`, io, colors));
     for (const item of unresolved) lines.push(`  ${item.id} ← ${item.build}/${item.output}`);
     lines.push(`  ${colors.dim("The Run source is valid. plan/build will resolve these archived values.")}`);
-  }
-  if (verbose) {
-    lines.push("", colors.strong("Identity"));
-    lines.push(...facts([
-      ["Author graph", shortIdentity(view.machine.authorGraph)],
-      ...(view.machine.runGraph === undefined ? [] : [["Run graph", shortIdentity(view.machine.runGraph)] as const]),
-      ...(view.machine.graph === undefined ? [] : [["Build graph", shortIdentity(view.machine.graph)] as const]),
-      ["Author closure", shortIdentity(view.machine.authorSourceClosure)],
-      ["Run closure", shortIdentity(view.machine.runSourceClosure)],
-    ], colors));
   }
   return `${lines.join("\n")}\n`;
 }
@@ -388,14 +355,6 @@ function renderPlan(
         lines.push(`    ${colors.dim(`${shortOpaque(selection.output)} ← ${shortOpaque(selection.candidate)}`)}`);
       }
     }
-  }
-  if (verbose) {
-    lines.push("", colors.strong("Identity"));
-    lines.push(...facts([
-      ["Plan", shortIdentity(plan.id)],
-      ["Graph", shortIdentity(plan.graph)],
-      ["Request", shortIdentity(plan.request)],
-    ], colors));
   }
   return `${lines.join("\n")}\n`;
 }

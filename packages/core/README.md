@@ -7,8 +7,9 @@ The package accepts an already resolved module closure, typed authored modules, 
 BuildPlan by traversing backwards from every Target, resolving Logical Outputs and memoizing shared
 atomic Operations by stable OperationId during compilation. The BuildPlan is frozen before any
 external Command; execution performs no Candidate selection, graph mutation or content-based
-deduplication. It then validates immutable Records, Needs, Receipts and
-Derivations and advances a serializable `BuildState` with pure `reduce(state, event)` calls.
+deduplication. Durable execution is one immutable `BuildDefinition` plus fixed, append-only
+`BuildFact` values. `BuildMachine` reconstructs a disposable read/execution view and derives every
+pending Command; Commands and the materialized `BuildState` are never stored as authority.
 
 Derivations bind Producer and implementation identity, input/output Record digests, Need request
 digests and the accepted event digest. Need Receipts content-address the Driver-attested Endpoint

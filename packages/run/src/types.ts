@@ -3,15 +3,13 @@ import type {
   GraphFragment,
 } from "@narratage/elaborator";
 import type {
-  BuildState,
   Candidate,
-  Digest,
   OperationNode,
   Satisfaction,
   StoredValue,
   TypeRef,
 } from "@narratage/protocol";
-import type { CompiledSourceIdentity, SourceHeader, SourceUnit } from "@narratage/source";
+import type { SourceHeader, SourceUnit } from "@narratage/source";
 
 export type RunSourceUnit = SourceUnit;
 
@@ -111,12 +109,6 @@ export interface RunFrontendRegistryLike {
   resolve(id: string): RunFrontend | undefined;
 }
 
-/** One self-contained Run Source identity. Run Sources do not recursively import other Run Sources. */
-export type RunSourceClosure = CompiledSourceIdentity & {
-  readonly format: "narratage.run-source-closure@1";
-  readonly id: Digest;
-};
-
 export type RunFragmentPackage = {
   readonly name: string;
   readonly fragments: Readonly<Record<string, GraphFragment>>;
@@ -129,7 +121,6 @@ export interface RunFragmentRegistryLike {
 /** Complete, mandatory execution-intent graph. Empty alternate Candidate sets are still a Run Graph. */
 export type RunGraph = {
   readonly format: "narratage.run-graph@1";
-  readonly id: Digest;
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
   readonly satisfactions: readonly Satisfaction[];
@@ -138,20 +129,19 @@ export type RunGraph = {
 
 export type ResolveRunDocumentContext = {
   readonly compilation: CompiledSourceClosure;
-  readonly sourceClosure: RunSourceClosure;
   readonly fragments: RunFragmentRegistryLike;
   readonly readStoredValue: (from: string) => Promise<StoredValue> | StoredValue;
   readonly readFile: (from: string, mediaType: string) => Promise<StoredValue> | StoredValue;
-  readonly readBuild: (id: string) => Promise<BuildState | undefined> | BuildState | undefined;
-  /** Host presentation lookup: resolve a prior Build's public output alias to its Logical Output id. */
-  readonly resolveBuildOutput?: (
+  /** Host archive boundary: resolve exactly one accepted historical output, never expose Build state. */
+  readonly resolveBuildRecord: (
     build: string,
     output: string,
-  ) => Promise<string | undefined> | string | undefined;
+  ) => Promise<{ readonly type: TypeRef; readonly value: StoredValue } | undefined>
+    | { readonly type: TypeRef; readonly value: StoredValue }
+    | undefined;
 };
 
 export type RunCompilation = {
-  readonly closure: RunSourceClosure;
   readonly document: RunDocument;
   readonly graph: RunGraph;
   readonly candidates: Readonly<Record<string, string>>;

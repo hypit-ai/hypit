@@ -2,7 +2,7 @@ import { compositionDependency, compositionTypes } from "@narratage/composition"
 import { mediaDependency, mediaTypes } from "@narratage/media";
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { blobRefObjectSchema, digestOf } from "@narratage/protocol";
+import { blobRefObjectSchema } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import { temporalDependency } from "@narratage/temporal";
@@ -80,9 +80,6 @@ export const audioTrackProgramSchema: ValueSchema = object({
   items: { schema: { kind: "array", minItems: 1, items: item } },
 });
 
-const validator = (digest: ReturnType<typeof digestOf>) => ({
-  implementation: { digest },
-});
 const baseInputs = [
   { name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header },
   { name: "space", type: programSpaceTypes.programSpace }, { name: "media", type: mediaTypes.synchronized },

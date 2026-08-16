@@ -3,8 +3,9 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { digestOf, modulePackageAbi } from "@narratage/protocol";
+import { modulePackageAbi } from "@narratage/protocol";
 import { createAuthorFrontendHostFacet } from "@narratage/elaborator";
 import { createRunFrontendHostFacet, runFragmentHostAbi } from "@narratage/run";
 import { sourceFrontendPackageAbi } from "@narratage/source";
@@ -61,7 +62,7 @@ test("third-party Frontends discover same-named ABI requirements through physica
           implementation: {},
         }] },
       },
-    ].map((item) => ({ ...item, digest: digestOf(item.specifier) }));
+    ].map((item) => ({ ...item, digest: fixtureDigest(item.specifier) }));
     const discovered = await discoverSourcePackages(join(root, "build.svrun"), {
       workspaceRoot: root,
       packages,

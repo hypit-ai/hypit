@@ -1,13 +1,11 @@
 import type {
-  RecoverableEndpoint,
-  EndpointResumeContext,
+  AsyncEndpoint,
+  EndpointPollContext,
   EndpointStartContext,
   EndpointOutcome,
 } from "@narratage/endpoint-kit";
 import {
   canonicalize,
-  digestOf,
-  isDigest,
 } from "@narratage/protocol";
 import type {
   BlobRef,
@@ -51,28 +49,22 @@ export type CreateKieProviderOptions = {
   readonly now?: () => number;
 };
 
-type KieCheckpoint = {
+type KieHandle = {
   readonly contract: "narratage.kie-operation@1";
   readonly taskId: string;
   readonly routeKey: string;
-  readonly model: string;
-  readonly requestDigest: Digest;
-  readonly contentRequestDigest: Digest;
   readonly startedAt: number;
   readonly polls: number;
-  readonly pollFailures: number;
 };
 
 class KieError extends Error {
   readonly code: string;
-  readonly retryable: boolean;
   readonly status: number | undefined;
 
-  constructor(code: string, message: string, options: { readonly retryable?: boolean; readonly status?: number } = {}) {
+  constructor(code: string, message: string, options: { readonly status?: number } = {}) {
     super(message);
     this.name = "KieError";
     this.code = code;
-    this.retryable = options.retryable ?? false;
     this.status = options.status;
   }
 }
@@ -102,11 +94,7 @@ function object(value: unknown, subject: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function contentRequestDigest(value: unknown): Digest {
-  return digestOf(object(value, "KIE request"));
-}
-
-function secret(context: EndpointStartContext | EndpointResumeContext): string {
+function secret(context: EndpointStartContext | EndpointPollContext): string {
   const value = context.credentials.apiKey?.secret;
   if (value === undefined || value.length === 0) throw new KieError("KIE_MISSING_CREDENTIAL", "KIE API key is unavailable");
   return value;
@@ -246,7 +234,7 @@ class KieClient {
         ? undefined
         : (async function* () { yield bytes; })());
     if (source === undefined) {
-      throw new KieError("KIE_ARTIFACT_MISSING", `Artifact ${artifact.digest} is unavailable`, { retryable: false });
+      throw new KieError("KIE_ARTIFACT_MISSING", `Artifact ${artifact.digest} is unavailable`);
     }
     const maximum = this.#options.maxArtifactBytes;
     const multipart = (async function* () {
@@ -281,7 +269,6 @@ class KieClient {
     } catch (error) {
       if (error instanceof KieError) {
         throw new KieError("KIE_UPLOAD_FAILED", error.message, {
-          retryable: error.status === undefined || error.status === 429 || error.status >= 500,
           ...(error.status === undefined ? {} : { status: error.status }),
         });
       }
@@ -319,13 +306,13 @@ class KieClient {
       if (error instanceof KieError) {
         if (error.code === "KIE_SUBMISSION_REJECTED") throw error;
         if (error.status === 429) {
-          throw new KieError("KIE_RATE_LIMITED", "KIE createTask was rate limited", { retryable: true, status: 429 });
+          throw new KieError("KIE_RATE_LIMITED", "KIE createTask was rate limited", { status: 429 });
         }
         if (error.status !== undefined && error.status >= 400 && error.status < 500) {
           throw new KieError("KIE_SUBMISSION_REJECTED", error.message, { status: error.status });
         }
-        // KIE does not document an idempotency key. Retrying an ambiguous createTask can double-spend.
-        throw new KieError("KIE_SUBMISSION_OUTCOME_UNKNOWN", "KIE createTask outcome is unknown; automatic resubmission is disabled");
+        throw new KieError("KIE_SUBMISSION_FAILED", error.message,
+          error.status === undefined ? {} : { status: error.status });
       }
       throw error;
     }
@@ -422,27 +409,24 @@ function resultUrls(data: Record<string, unknown>): string[] {
   });
 }
 
-function verifyCheckpoint(value: CanonicalValue | undefined, context: EndpointResumeContext): KieCheckpoint {
+function readHandle(value: CanonicalValue | undefined, context: EndpointPollContext): KieHandle {
   if (value === undefined) {
     throw new KieError(
-      "KIE_SUBMISSION_CHECKPOINT_MISSING",
-      "KIE Operation has no task checkpoint; resubmission is disabled to avoid duplicate spend",
+      "KIE_SUBMISSION_HANDLE_MISSING",
+      "KIE Operation has no task handle",
     );
   }
-  const checkpoint = object(value, "KIE checkpoint") as unknown as KieCheckpoint;
+  const handle = object(value, "KIE handle") as unknown as KieHandle;
   const route = kieRouteForCapability(context.need.capability);
-  if (checkpoint.contract !== "narratage.kie-operation@1"
-    || typeof checkpoint.taskId !== "string"
+  if (handle.contract !== "narratage.kie-operation@1"
+    || typeof handle.taskId !== "string"
     || route === undefined
-    || checkpoint.routeKey !== route.key
-    || checkpoint.requestDigest !== context.need.requestDigest
-    || !isDigest(checkpoint.contentRequestDigest)
-    || !Number.isSafeInteger(checkpoint.startedAt)
-    || !Number.isSafeInteger(checkpoint.polls)
-    || !Number.isSafeInteger(checkpoint.pollFailures)) {
-    throw new KieError("KIE_CHECKPOINT_INVALID", "KIE checkpoint does not match the regenerated Need");
+    || handle.routeKey !== route.key
+    || !Number.isSafeInteger(handle.startedAt)
+    || !Number.isSafeInteger(handle.polls)) {
+    throw new KieError("KIE_HANDLE_INVALID", "KIE handle does not match the regenerated Need");
   }
-  return checkpoint;
+  return handle;
 }
 
 function endpoint(options: {
@@ -451,7 +435,7 @@ function endpoint(options: {
   readonly pollIntervalMs: number;
   readonly maxOperationMs: number;
   readonly now: () => number;
-}): RecoverableEndpoint {
+}): AsyncEndpoint {
   const failure = (error: unknown): EndpointOutcome => {
     const known = error instanceof KieError ? error : new KieError("KIE_INTERNAL_ERROR", error instanceof Error ? error.message : String(error));
     return {
@@ -459,20 +443,8 @@ function endpoint(options: {
       failure: {
         code: known.code,
         message: known.message,
-        retryable: known.retryable,
-        ...(known.retryable ? { retryAt: options.now() + 2_000 } : {}),
       },
     };
-  };
-  const pendingAfterError = (checkpoint: KieCheckpoint, error: unknown): EndpointOutcome => {
-    const failures = checkpoint.pollFailures + 1;
-    if (options.now() - checkpoint.startedAt >= options.maxOperationMs) {
-      return failure(new KieError("KIE_OPERATION_TIMEOUT", "KIE task did not become durably available before the deadline"));
-    }
-    const delayMs = Math.min(30_000, options.pollIntervalMs * (2 ** Math.min(failures, 5)));
-    return wakeAfter(canonicalize({ ...checkpoint, pollFailures: failures }), delayMs, options.now(), {
-      phase: "poll-retry",
-    });
   };
   return {
     async start(context) {
@@ -491,53 +463,40 @@ function endpoint(options: {
         const task = await route.compile(context.need.constraints, resolve);
         await options.gate.enter();
         const taskId = await options.client.createTask(task, key);
-        const checkpoint: KieCheckpoint = {
+        const handle: KieHandle = {
           contract: "narratage.kie-operation@1",
           taskId,
           routeKey: route.key,
-          model: task.model,
-          requestDigest: context.need.requestDigest,
-          contentRequestDigest: contentRequestDigest(context.need.constraints),
           startedAt: options.now(),
           polls: 0,
-          pollFailures: 0,
         };
-        return wakeAfter(canonicalize(checkpoint), options.pollIntervalMs, options.now(), {
+        return wakeAfter(canonicalize(handle), options.pollIntervalMs, options.now(), {
           phase: "submitted",
         });
       } catch (error) {
         return failure(error);
       }
     },
-    async resume(context) {
-      let checkpoint: KieCheckpoint;
+    async poll(context) {
+      let handle: KieHandle;
       try {
-        checkpoint = verifyCheckpoint(context.checkpoint, context);
+        handle = readHandle(context.handle, context);
       } catch (error) {
         return failure(error);
       }
       try {
         const route = kieRouteForCapability(context.need.capability);
-        if (route === undefined || route.key !== checkpoint.routeKey) {
-          throw new KieError("KIE_CHECKPOINT_INVALID", "KIE checkpoint capability differs");
+        if (route === undefined || route.key !== handle.routeKey) {
+          throw new KieError("KIE_HANDLE_INVALID", "KIE handle capability differs");
         }
-        if (contentRequestDigest(context.need.constraints) !== checkpoint.contentRequestDigest) {
-          throw new KieError("KIE_CHECKPOINT_INVALID", "KIE checkpoint request content differs");
-        }
-        if (options.now() - checkpoint.startedAt >= options.maxOperationMs) {
+        if (options.now() - handle.startedAt >= options.maxOperationMs) {
           throw new KieError("KIE_OPERATION_TIMEOUT", "KIE task exceeded its operation deadline");
         }
         const key = secret(context);
-        const data = await options.client.taskInfo(checkpoint.taskId, key);
-        if (typeof data.taskId === "string" && data.taskId !== checkpoint.taskId) {
-          throw new KieError("KIE_TASK_ID_MISMATCH", "KIE returned another task identity");
-        }
-        if (typeof data.model === "string" && data.model !== checkpoint.model) {
-          throw new KieError("KIE_TASK_MODEL_MISMATCH", "KIE task model differs from the submitted model");
-        }
+        const data = await options.client.taskInfo(handle.taskId, key);
         const state = data.state;
         if (state === "waiting" || state === "queuing" || state === "generating") {
-          const next = { ...checkpoint, polls: checkpoint.polls + 1, pollFailures: 0 };
+          const next = { ...handle, polls: handle.polls + 1 };
           return wakeAfter(canonicalize(next), options.pollIntervalMs, options.now(), {
             phase: state,
           });
@@ -578,18 +537,7 @@ function endpoint(options: {
           result: { value: result },
         };
       } catch (error) {
-        if (error instanceof KieError && [
-          "KIE_CHECKPOINT_INVALID",
-          "KIE_OPERATION_TIMEOUT",
-          "KIE_TASK_ID_MISMATCH",
-          "KIE_TASK_MODEL_MISMATCH",
-          "KIE_TASK_FAILED",
-          "KIE_TASK_STATE_INVALID",
-          "KIE_RESULT_COUNT_EXCEEDED",
-        ].includes(error.code)) {
-          return failure(error);
-        }
-        return pendingAfterError(checkpoint, error);
+        return failure(error);
       }
     },
   };
@@ -639,9 +587,8 @@ export function createKieProvider(config: CreateKieProviderOptions) {
       ...(laneConcurrency[route.capability.name] === undefined
         ? {}
         : { maxConcurrency: laneConcurrency[route.capability.name] }),
-      lifecycle: "recoverable" as const,
+      lifecycle: "asynchronous" as const,
       endpoint: providerEndpoint,
-      retry: { maxAttempts: 3 },
     })),
   });
 }

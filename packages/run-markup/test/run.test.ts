@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   createResolvedClosure,
-  digestOf,
   link,
   reduce,
   sealBuildRequest,
@@ -21,8 +21,6 @@ import {
   resolveRunDocument,
   RunFragmentRegistry,
   RunFrontendRegistry,
-  RunSourceError,
-  verifyRunSourceClosure,
 } from "@narratage/run";
 import { parseRunDocument, runMarkupFrontend } from "@narratage/run-markup";
 
@@ -56,11 +54,9 @@ function fixture(): CompiledSourceClosure {
     id: "prompt:root",
     type: promptType,
     value: { kind: "inline", value: "A deliberate preview." },
-    origin: { kind: "authored" },
   });
   const program = link(closure, [prompt]);
   const graph = sealCompiledGraph({
-    program: program.semanticDigest,
     outputs: ["left", "right"].map((id) => ({ id, type: mediaType, primary: "default:candidate" })),
     candidates: [{
       id: "default:candidate",
@@ -105,7 +101,6 @@ function previewFragment() {
 function realize(compilation: CompiledSourceClosure, run: Awaited<ReturnType<typeof resolveRunDocument>>): CompiledGraph {
   const selected = new Map(run.graph.satisfactions.map((item) => [item.output, item.candidate]));
   return sealCompiledGraph({
-    program: compilation.program.semanticDigest,
     outputs: compilation.graph.outputs.map((item) => ({
       ...item,
       primary: selected.get(item.id) ?? item.primary,
@@ -163,14 +158,13 @@ test("one multi-export Fragment declaration remains one execution", async () => 
   fragments.register({ name: "@example/run-preview", fragments: { shared: previewFragment() } });
   const run = await resolveRunDocument(compiled.document, {
     compilation,
-    sourceClosure: compiled.closure,
     fragments,
     readStoredValue() { throw new Error("not used"); },
     readFile() { throw new Error("not used"); },
-    readBuild() { throw new Error("not used"); },
+    resolveBuildRecord() { throw new Error("not used"); },
   });
   const graph = realize(compilation, run);
-  const state = start(compilation.program, graph, sealBuildRequest({ graph: graph.id, targets: run.graph.targets }));
+  const state = start(compilation.program, graph, sealBuildRequest({ targets: run.graph.targets }));
   assert.equal(state.plan.steps.filter((item) => item.producer.name === "preview").length, 1);
 });
 
@@ -184,16 +178,15 @@ test("a Provided Value is an ordinary zero-input Candidate", async () => {
   const compilation = fixture();
   const run = await resolveRunDocument(compiled.document, {
     compilation,
-    sourceClosure: compiled.closure,
     fragments: new RunFragmentRegistry(),
     readStoredValue() { return { kind: "inline", value: "already rendered" }; },
     readFile() { throw new Error("not used"); },
-    readBuild() { throw new Error("not used"); },
+    resolveBuildRecord() { throw new Error("not used"); },
   });
   const graph = realize(compilation, run);
-  const state = start(compilation.program, graph, sealBuildRequest({ graph: graph.id, targets: run.graph.targets }));
+  const state = start(compilation.program, graph, sealBuildRequest({ targets: run.graph.targets }));
   assert.equal(state.plan.steps.length, 0);
-  assert.equal(state.records.filter((record) => record.origin.kind === "provided").length, 1);
+  assert.equal(state.records.some((record) => record.id === "provided:fixed"), true);
 });
 
 test("a source file is an ordinary BlobArtifact Candidate", async () => {
@@ -206,15 +199,14 @@ test("a source file is an ordinary BlobArtifact Candidate", async () => {
   const compilation = fixture();
   const run = await resolveRunDocument(compiled.document, {
     compilation,
-    sourceClosure: compiled.closure,
     fragments: new RunFragmentRegistry(),
     readStoredValue() { throw new Error("not used"); },
     readFile(from, mediaType) {
       assert.equal(from, "./approved.mp4");
       assert.equal(mediaType, "video/mp4");
-      return { kind: "blob", digest: digestOf("approved video"), size: 14, mediaType };
+      return { kind: "blob", digest: fixtureDigest("approved video"), size: 14, mediaType };
     },
-    readBuild() { throw new Error("not used"); },
+    resolveBuildRecord() { throw new Error("not used"); },
   });
   assert.equal(run.graph.candidates.length, 1);
   assert.equal(run.graph.candidates[0]?.type.module.name, "@narratage/artifact");
@@ -224,7 +216,6 @@ test("a source file is an ordinary BlobArtifact Candidate", async () => {
 test("a Build Record resolves a Host Catalog alias without entering Core", async () => {
   const compilation = fixture();
   let historical = start(compilation.program, compilation.graph, sealBuildRequest({
-    graph: compilation.graph.id,
     targets: [{ output: "left" }],
   }));
   historical = reduce(historical);
@@ -236,7 +227,7 @@ test("a Build Record resolves a Host Catalog alias without entering Core", async
     outputs: { media: { kind: "inline" as const, value: "archived media" } },
     needs: {},
   };
-  historical = reduce(historical, { ...event, id: `event:${digestOf(event)}` });
+  historical = reduce(historical, event);
 
   const compiled = await compileDocument(`<svrun version="1">
     <author source="./main.svml"/><target output="right"/>
@@ -245,15 +236,20 @@ test("a Build Record resolves a Host Catalog alias without entering Core", async
   </svrun>`);
   const run = await resolveRunDocument(compiled.document, {
     compilation,
-    sourceClosure: compiled.closure,
     fragments: new RunFragmentRegistry(),
     readStoredValue() { throw new Error("not used"); },
     readFile() { throw new Error("not used"); },
-    readBuild() { return historical; },
-    resolveBuildOutput(_build, output) { assert.equal(output, "friendly-shot"); return "left"; },
+    resolveBuildRecord(build, output) {
+      assert.equal(build, "prior-build");
+      assert.equal(output, "friendly-shot");
+      const selection = historical.plan.selections.find((item) => item.output === "left");
+      const record = historical.records.find((item) => item.id === selection?.record);
+      assert.ok(record);
+      return { type: record.type, value: record.value };
+    },
   });
   const graph = realize(compilation, run);
-  const state = start(compilation.program, graph, sealBuildRequest({ graph: graph.id, targets: run.graph.targets }));
+  const state = start(compilation.program, graph, sealBuildRequest({ targets: run.graph.targets }));
   assert.equal(state.plan.steps.length, 0);
 });
 
@@ -281,23 +277,11 @@ test("a Target-only source still compiles one mandatory Run Graph", async () => 
   const compilation = fixture();
   const run = await resolveRunDocument(compiled.document, {
     compilation,
-    sourceClosure: compiled.closure,
     fragments: new RunFragmentRegistry(),
     readStoredValue() { throw new Error("not used"); },
     readFile() { throw new Error("not used"); },
-    readBuild() { throw new Error("not used"); },
+    resolveBuildRecord() { throw new Error("not used"); },
   });
   assert.equal(run.graph.operations.length, 0);
   assert.equal(run.graph.targets[0]?.output, "left");
-});
-
-test("Run Source Closure separates source bytes from semantic meaning", async () => {
-  const first = await compileDocument(`<svrun version="1"><author source="./main.svml"/><target output="left"/></svrun>`);
-  const second = await compileDocument(`<svrun version="1"><author source="./main.svml"/>\n\n<target output="left"/></svrun>`);
-  assert.notEqual(first.closure.id, second.closure.id);
-  assert.equal(first.closure.semanticDigest, second.closure.semanticDigest);
-  assert.throws(() => verifyRunSourceClosure({
-    ...first.closure,
-    sourceDigest: digestOf("tampered"),
-  }), (error: unknown) => error instanceof RunSourceError && error.code === "RUN_SOURCE_CLOSURE_DIGEST_MISMATCH");
 });

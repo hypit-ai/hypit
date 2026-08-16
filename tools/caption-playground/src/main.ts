@@ -151,7 +151,6 @@ function editor(name: string, value: CanonicalValue | undefined, schema: ValueSc
     const parsed: CanonicalValue = schema.kind === "number" ? Number(control.value) : control.value;
     if (schema.kind === "number" && !Number.isFinite(parsed)) return;
     await patch("/__caption/recipe", {
-      expectedDigest: snapshot.recipe.digest,
       name,
       value: parsed,
     } satisfies RecipePatch);
@@ -162,7 +161,6 @@ function editor(name: string, value: CanonicalValue | undefined, schema: ValueSc
     control.disabled = !enabled.checked;
     if (!enabled.checked) {
       void patch("/__caption/recipe", {
-        expectedDigest: snapshot.recipe.digest,
         name,
         remove: true,
       } satisfies RecipePatch);
@@ -207,7 +205,6 @@ function fontPanel(value: CaptionPlaygroundSnapshot): HTMLElement {
 
   const choose = (family: CaptionPlaygroundFont, selectedWeight = family.previewWeight, selectedStyle = family.previewStyle): void => {
     void patch("/__caption/font", {
-      expectedDigest: snapshot!.font.digest,
       family: family.id,
       weight: selectedWeight,
       style: selectedStyle,

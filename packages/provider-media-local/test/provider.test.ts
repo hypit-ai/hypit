@@ -21,8 +21,9 @@ import {
   sealMediaSelectionRequest,
   selectMediaStreams,
 } from "@narratage/media-pipeline";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@narratage/protocol";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { createLocalMediaProvider } from "../src/index.js";
 import { localMediaToolchainProgram } from "../src/program.js";
@@ -157,9 +158,7 @@ function need(
     capability,
     returns,
     constraints,
-    requestedBy: `derivation:${id}`,
     result: `record:${id}`,
-    requestDigest: digestOf({ capability, returns, constraints }),
   };
 }
 

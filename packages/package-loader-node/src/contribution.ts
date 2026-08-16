@@ -1,5 +1,4 @@
 import type { ComponentPackage } from "@narratage/component-kit";
-import { canonicalize } from "@narratage/protocol";
 
 import type { NodeModuleContribution, NodePackageContribution } from "./types.js";
 
@@ -7,7 +6,6 @@ function assertPackage(value: NodePackageContribution): void {
   if (value.format !== "narratage.node-package@1") {
     throw new Error("Node package contribution has an unsupported format");
   }
-  const hostFacets = new Set<string>();
   for (const facet of value.hostFacets ?? []) {
     if (facet.abi.trim().length === 0) throw new Error("Node package contribution has an empty Host facet ABI");
     const offers = facet.offers ?? [];
@@ -17,10 +15,6 @@ function assertPackage(value: NodePackageContribution): void {
     if (new Set(offers).size !== offers.length) {
       throw new Error(`Node package contribution repeats a logical name for Host facet ${facet.abi}`);
     }
-    const identity = facet.identity === undefined ? undefined : canonicalize(facet.identity);
-    const key = `${facet.abi}:${JSON.stringify([...offers].sort())}:${identity === undefined ? "" : JSON.stringify(identity)}`;
-    if (hostFacets.has(key)) throw new Error(`Node package contribution repeats Host facet ${facet.abi}`);
-    hostFacets.add(key);
   }
 }
 
@@ -30,7 +24,7 @@ function facetKey(
   return `${ref.module.name}@${ref.module.version}#${ref.name}`;
 }
 
-/** Verify package-local facet identities before any Host registry receives executable handlers. */
+/** Collect declarative modules and executable component implementations from loaded packages. */
 export function collectNodePackageComponents(
   packages: readonly NodePackageContribution[],
 ): readonly ComponentPackage[] {

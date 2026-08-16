@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   assertCompositableSurfaceRef,
@@ -13,7 +14,6 @@ import {
   sealVisualTrack,
 } from "../src/index.js";
 import type { VisualTrack } from "../src/index.js";
-import { digestOf } from "@narratage/protocol";
 
 const space = sealProgramSpace({
   durationSec: 2,
@@ -23,7 +23,7 @@ const space = sealProgramSpace({
 const font: FontArtifactRef = {
   sources: [{ artifact: {
     kind: "blob",
-    digest: digestOf("font:inter-bold"),
+    digest: fixtureDigest("font:inter-bold"),
     size: 1_024,
     mediaType: "font/woff2",
   } }],
@@ -34,7 +34,7 @@ const font: FontArtifactRef = {
 const animatedSurface: CompositableSurfaceRef = {
   artifact: {
     kind: "blob",
-    digest: digestOf("surface:alpha-webm"),
+    digest: fixtureDigest("surface:alpha-webm"),
     size: 2_048,
     mediaType: "video/webm",
   },

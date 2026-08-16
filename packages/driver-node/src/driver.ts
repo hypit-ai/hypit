@@ -1,11 +1,12 @@
-import { digestOf, reduce, resolveProducer } from "@narratage/core";
+import { randomUUID } from "node:crypto";
+
+import { reduce, resolveProducer } from "@narratage/core";
 import type { ProducerHandlerResult } from "@narratage/component-kit";
-import type { EndpointFulfillment } from "@narratage/endpoint-kit";
+import type { EndpointFulfillment, EndpointOutcome } from "@narratage/endpoint-kit";
 import type {
-  BuildEvent,
   BuildState,
+  CommandResult,
   CoreCommand,
-  Digest,
   FulfillNeedCommand,
   InvokeProducerCommand,
   TypedRecord,
@@ -16,17 +17,14 @@ import {
 } from "@narratage/validation";
 import type { TypeValidatorRegistryLike } from "@narratage/validation";
 import {
-  operationCancellationRequestId,
   sealOperationIdentity,
-  verifyOperationSnapshot,
 } from "@narratage/runtime";
 import type {
-  OperationCancellationControl,
-  OperationIdentity,
   CredentialStore,
   CredentialValue,
   OperationSnapshot,
   OperationStore,
+  OperationUpdate,
   RuntimeExecutionContext,
   RuntimeExecutionResult,
   RuntimePreparation,
@@ -198,7 +196,7 @@ export class NodeDriver {
       };
     }
     const registration = resolution.registration;
-    if (registration.kind === "recoverable" && this.operations === undefined) {
+    if (registration.kind === "asynchronous" && this.operations === undefined) {
       return {
         blocked: {
           command: command.id,
@@ -226,21 +224,18 @@ export class NodeDriver {
     state: BuildState,
     executable: Extract<Executable, { readonly endpointId: string }>,
     result: EndpointFulfillment,
-  ): Promise<BuildEvent> {
+  ): Promise<CommandResult> {
     await validateValue(
       state.program.closure,
       executable.command.need.returns,
       result.value,
       this.validators,
     );
-    const content = {
+    return {
       kind: "need-fulfilled",
       command: executable.command.id,
       value: result.value,
-      requestDigest: executable.command.need.requestDigest,
-      fulfiller: executable.endpointId,
     } as const;
-    return { ...content, id: `event:${digestOf(content)}` };
   }
 
   async #completedOperation(
@@ -248,9 +243,7 @@ export class NodeDriver {
     executable: Extract<Executable, { readonly endpointId: string }>,
     snapshot: OperationSnapshot,
     expectedOperation: string,
-    maxAttempts: number,
   ): Promise<RuntimeExecutionResult> {
-    verifyOperationSnapshot(snapshot);
     if (snapshot.id !== expectedOperation) {
       throw new Error(`OperationStore returned ${snapshot.id} for ${expectedOperation}`);
     }
@@ -263,13 +256,6 @@ export class NodeDriver {
     if (snapshot.status === "failed") {
       const failure = snapshot.failure;
       if (failure === undefined) throw new Error(`Operation ${snapshot.id} has no failure`);
-      if (failure.retryable && snapshot.attempt < maxAttempts) {
-        return {
-          status: "pending",
-          operation: snapshot.id,
-          ...(failure.retryAt === undefined ? {} : { wakeAt: failure.retryAt }),
-        };
-      }
       const content = {
         kind: "command-failed",
         command: executable.command.id,
@@ -278,7 +264,7 @@ export class NodeDriver {
       } as const;
       return {
         status: "completed",
-        event: { ...content, id: `event:${digestOf(content)}` },
+        event: content,
       };
     }
     if (snapshot.status === "cancelled") {
@@ -290,7 +276,7 @@ export class NodeDriver {
       } as const;
       return {
         status: "completed",
-        event: { ...content, id: `event:${digestOf(content)}` },
+        event: content,
       };
     }
     return {
@@ -300,32 +286,15 @@ export class NodeDriver {
     };
   }
 
-  #assertOperationHistory(
-    history: readonly OperationSnapshot[],
-    expected: Omit<OperationIdentity, "format" | "id" | "attempt">,
-  ): void {
-    history.forEach((snapshot, index) => {
-      verifyOperationSnapshot(snapshot);
-      if (snapshot.attempt !== index + 1
-        || snapshot.build !== expected.build
-        || snapshot.command !== expected.command
-        || snapshot.endpoint !== expected.endpoint
-        || snapshot.pool !== expected.pool
-        || snapshot.lane !== expected.lane) {
-        throw new Error(`Operation history for ${expected.command} is not one contiguous retry chain`);
-      }
-    });
-  }
-
   async #executeEndpoint(
     state: BuildState,
     executable: Extract<Executable, { readonly endpointId: string }>,
     context: RuntimeExecutionContext,
   ): Promise<RuntimeExecutionResult> {
-    if (executable.registration.kind !== "recoverable") throw new Error("Endpoint is not recoverable");
+    if (executable.registration.kind !== "asynchronous") throw new Error("Endpoint is not asynchronous");
     const operations = this.operations;
-    if (operations === undefined) throw new Error("recoverable Endpoint requires OperationStore");
-    if (executable.queue === undefined) throw new Error("recoverable Endpoint has no Provider pool/lane");
+    if (operations === undefined) throw new Error("asynchronous Endpoint requires OperationStore");
+    if (executable.queue === undefined) throw new Error("asynchronous Endpoint has no Provider pool/lane");
     const base = {
       build: context.build,
       command: executable.command.id,
@@ -333,92 +302,81 @@ export class NodeDriver {
       pool: executable.queue.pool,
       lane: executable.queue.lane,
     } as const;
-    const maxAttempts = executable.registration.retry?.maxAttempts ?? 1;
     const history = await operations.list({
       build: base.build,
       command: base.command,
       endpoint: base.endpoint,
     });
-    this.#assertOperationHistory(history, base);
-    let latest = history.at(-1);
+    const latest = history[0];
     if (latest?.status === "completed" || latest?.status === "cancelled") {
-      return await this.#completedOperation(state, executable, latest, latest.id, maxAttempts);
+      return await this.#completedOperation(state, executable, latest, latest.id);
     }
     if (latest?.status === "pending" && latest.wakeAt !== undefined && latest.wakeAt > Date.now()) {
       return { status: "pending", operation: latest.id, wakeAt: latest.wakeAt };
     }
     if (latest?.status === "failed") {
-      const failure = latest.failure;
-      if (failure === undefined || !failure.retryable || latest.attempt >= maxAttempts) {
-        return await this.#completedOperation(state, executable, latest, latest.id, maxAttempts);
-      }
-      if (failure.retryAt !== undefined && failure.retryAt > Date.now()) {
-        return { status: "pending", operation: latest.id, wakeAt: failure.retryAt };
-      }
-      latest = undefined;
+      return await this.#completedOperation(state, executable, latest, latest.id);
     }
-    const attempt = history.length + (latest === undefined ? 1 : 0);
-    const identity = sealOperationIdentity({ ...base, attempt });
-    const created = await operations.create(identity);
-    const current = created.snapshot;
-    verifyOperationSnapshot(current);
-    if (current.id !== identity.id) {
-      throw new Error(`OperationStore returned ${current.id} for ${identity.id}`);
-    }
-    if (current.status === "completed" || current.status === "failed" || current.status === "cancelled") {
-      return await this.#completedOperation(state, executable, current, identity.id, maxAttempts);
-    }
+    const fresh = latest === undefined;
+    const identity = fresh
+      ? sealOperationIdentity({ id: `op_${randomUUID()}`, ...base })
+      : latest;
     const endpointContext = {
       command: structuredClone(executable.command),
       need: structuredClone(executable.command.need),
       artifacts: this.artifacts,
       credentials: await this.#endpointCredentials(executable.registration),
-      operation: structuredClone(identity),
+      operation: identity.id,
     };
-    const outcome = created.status === "created"
-      ? await executable.registration.endpoint.start(endpointContext)
-      : await executable.registration.endpoint.resume({
-          ...endpointContext,
-          checkpoint: current.status === "pending" ? structuredClone(current.checkpoint) : undefined,
-        });
+    let outcome: EndpointOutcome;
+    if (latest === undefined) {
+      outcome = await executable.registration.endpoint.start(endpointContext);
+    } else {
+      if (latest.status !== "pending" || latest.handle === undefined) {
+        throw new Error(`Operation ${latest.id} cannot be polled`);
+      }
+      outcome = await executable.registration.endpoint.poll({
+        ...endpointContext,
+        handle: structuredClone(latest.handle),
+      });
+    }
+    const write = async (update: OperationUpdate): Promise<OperationSnapshot> =>
+      fresh ? await operations.create({ ...identity, ...update }) : await operations.update(identity.id, update);
     if (outcome.status === "pending") {
-      const written = await operations.compareAndSwap(identity.id, current.revision, {
+      const written = await write({
         status: "pending",
-        checkpoint: outcome.checkpoint,
+        handle: outcome.handle,
         ...(outcome.wakeAt === undefined ? {} : { wakeAt: outcome.wakeAt }),
         ...(outcome.progress === undefined ? {} : { progress: outcome.progress }),
       });
       return await this.#completedOperation(
         state,
         executable,
-        written.status === "stored" ? written.snapshot : written.current,
+        written,
         identity.id,
-        maxAttempts,
       );
     }
     if (outcome.status === "failed") {
-      const written = await operations.compareAndSwap(identity.id, current.revision, {
+      const written = await write({
         status: "failed",
         failure: outcome.failure,
       });
       return await this.#completedOperation(
         state,
         executable,
-        written.status === "stored" ? written.snapshot : written.current,
+        written,
         identity.id,
-        maxAttempts,
       );
     }
-    const written = await operations.compareAndSwap(identity.id, current.revision, {
+    const written = await write({
       status: "completed",
       completion: outcome.result,
     });
     return await this.#completedOperation(
       state,
       executable,
-      written.status === "stored" ? written.snapshot : written.current,
+      written,
       identity.id,
-      maxAttempts,
     );
   }
 
@@ -444,7 +402,7 @@ export class NodeDriver {
         } as const;
         return {
           status: "completed",
-          event: { ...content, id: `event:${digestOf(content)}` },
+          event: content,
         };
       } catch (error) {
         const producer = executable.command.producer;
@@ -454,8 +412,8 @@ export class NodeDriver {
         );
       }
     }
-    if (executable.registration.kind === "recoverable") {
-      if (context === undefined) throw new Error("recoverable Endpoint execution requires a stable Build id");
+    if (executable.registration.kind === "asynchronous") {
+      if (context === undefined) throw new Error("asynchronous Endpoint execution requires a stable Build id");
       try {
         return await this.#executeEndpoint(state, executable, context);
       } catch (error) {
@@ -497,8 +455,8 @@ export class NodeDriver {
         command: executable.command,
         resources: executable.resources,
         ...(("queue" in executable && executable.queue !== undefined) ? { queue: executable.queue } : {}),
-        capacityMode: "endpointId" in executable && executable.registration.kind === "recoverable"
-          ? "recoverable"
+        capacityMode: "endpointId" in executable && executable.registration.kind === "asynchronous"
+          ? "asynchronous"
           : "active",
       }]),
       blocked: classifications
@@ -520,33 +478,15 @@ export class NodeDriver {
     return await this.#execute(state, classified.executable, context);
   }
 
-  /** Cancel one persisted external Operation without trusting serialized Command content. */
+  /** Stop polling one persisted external Operation and make one best-effort Provider cancel call. */
   async cancelOperation(
     initial: BuildState,
     operation: OperationSnapshot,
-    requestedAt: number,
   ): Promise<OperationSnapshot> {
-    verifyOperationSnapshot(operation);
     const operations = this.operations;
     if (operations === undefined) throw new Error("cancelling an Operation requires OperationStore");
-    const requestId = operationCancellationRequestId(operation.id, requestedAt);
-    const write = async (current: OperationSnapshot, update: import("@narratage/runtime").OperationUpdate) => {
-      const result = await operations.compareAndSwap(current.id, current.revision, update);
-      return result.status === "stored" ? result.snapshot : result.current;
-    };
-    let current = await operations.read(operation.id) ?? operation;
-    while (current.cancellation === undefined) {
-      const terminal = current.status === "completed" || current.status === "failed" || current.status === "cancelled";
-      current = await write(current, {
-        status: "control",
-        cancellation: { requestedAt, requestId, status: terminal ? "too-late" : "requested", attempts: 0 },
-      });
-    }
+    const current = await operations.read(operation.id) ?? operation;
     if (current.status === "completed" || current.status === "failed" || current.status === "cancelled") return current;
-    const control = current.cancellation;
-    if (control === undefined || control.requestId !== requestId) {
-      throw new Error(`Operation ${operation.id} already has another cancellation request`);
-    }
     const prepared = this.prepare(initial);
     const descriptor = prepared.runnable.find((item) => item.command.id === operation.command);
     if (descriptor === undefined) throw new Error(`Operation ${operation.id} Command is not currently runnable`);
@@ -554,99 +494,23 @@ export class NodeDriver {
     const executable = classified.executable;
     if (executable === undefined || !("endpointId" in executable)
       || executable.endpointId !== operation.endpoint
-      || executable.registration.kind !== "recoverable") {
+      || executable.registration.kind !== "asynchronous") {
       throw new Error(`Operation ${operation.id} does not match the regenerated Endpoint Command`);
     }
-    const identity: OperationIdentity = {
-      format: operation.format,
-      id: operation.id,
-      build: operation.build,
-      command: operation.command,
-      endpoint: operation.endpoint,
-      pool: operation.pool,
-      lane: operation.lane,
-      attempt: operation.attempt,
-    };
     const endpointContext = {
       command: structuredClone(executable.command),
       need: structuredClone(executable.command.need),
       artifacts: this.artifacts,
       credentials: await this.#endpointCredentials(executable.registration),
-      operation: identity,
-      checkpoint: current.status === "pending" ? structuredClone(current.checkpoint) : undefined,
+      operation: current.id,
+      handle: structuredClone(current.handle as NonNullable<typeof current.handle>),
     };
-    if (control.status === "requested" || control.status === "accepted") {
-      if (executable.registration.endpoint.cancel === undefined) {
-        current = await write(current, {
-          status: "control",
-          cancellation: { ...control, status: "unsupported", attempts: control.attempts + 1 },
-        });
-      } else if (control.retryAt === undefined || control.retryAt <= Date.now()) {
-        try {
-          const outcome = await executable.registration.endpoint.cancel(endpointContext);
-          const nextControl: OperationCancellationControl = {
-            requestedAt,
-            requestId,
-            status: outcome.status,
-            attempts: control.attempts + 1,
-            ...(outcome.status === "accepted" && outcome.wakeAt !== undefined ? { retryAt: outcome.wakeAt } : {}),
-          };
-          current = outcome.status === "confirmed"
-            ? await write(current, { status: "cancelled", cancellation: nextControl })
-            : await write(current, { status: "control", cancellation: nextControl });
-        } catch (error) {
-          current = await write(current, {
-            status: "control",
-            cancellation: {
-              ...control,
-              attempts: control.attempts + 1,
-              retryAt: Date.now() + 1_000,
-              lastError: {
-                code: "CANCEL_REQUEST_FAILED",
-                message: error instanceof Error ? error.message : String(error),
-              },
-            },
-          });
-        }
-      }
-    }
-    if (current.status === "cancelled" || current.cancellation?.status === "requested") return current;
-
-    // Acknowledgement is not a terminal fact. Reconcile the same remote submission until it
-    // either confirms cancellation through `cancel`, or naturally completes/fails.
-    let observed: Awaited<ReturnType<typeof executable.registration.endpoint.resume>>;
     try {
-      observed = await executable.registration.endpoint.resume({
-        ...endpointContext,
-        checkpoint: current.status === "pending" ? structuredClone(current.checkpoint) : undefined,
-      });
-    } catch (error) {
-      const cancellation = current.cancellation;
-      if (cancellation === undefined) throw error;
-      return await write(current, {
-        status: "control",
-        cancellation: {
-          ...cancellation,
-          retryAt: Date.now() + 1_000,
-          lastError: {
-            code: "CANCEL_RECONCILE_FAILED",
-            message: error instanceof Error ? error.message : String(error),
-          },
-        },
-      });
+      await executable.registration.endpoint.cancel?.(endpointContext);
+    } catch {
+      // Build cancellation is best effort. Local execution stops even if the Provider cannot.
     }
-    if (observed.status === "pending") {
-      return await write(current, {
-        status: "pending",
-        checkpoint: observed.checkpoint,
-        ...(observed.wakeAt === undefined ? {} : { wakeAt: observed.wakeAt }),
-        ...(observed.progress === undefined ? {} : { progress: observed.progress }),
-      });
-    }
-    if (observed.status === "failed") {
-      return await write(current, { status: "failed", failure: observed.failure });
-    }
-    return await write(current, { status: "completed", completion: observed.result });
+    return await operations.update(current.id, { status: "cancelled" });
   }
 
   async run(initial: BuildState, context?: RuntimeExecutionContext): Promise<DriverRunResult> {
@@ -695,7 +559,6 @@ export class NodeDriver {
           command: selected.command.id,
           kind: selected.command.kind,
           status: "completed",
-          event: event.id,
         });
       } catch (error) {
         outcomes.push({

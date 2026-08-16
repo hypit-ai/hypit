@@ -49,8 +49,8 @@ function servicePackage(close?: () => void) {
         facet: "dispatch-store",
         part: "dispatch",
         port: Object.fromEntries([
-          "create", "read", "list", "wake", "claim", "heartbeat", "release", "finish", "requestCancellation",
-          "acquireCapacity", "heartbeatCapacity", "parkCapacity", "releaseCapacity", "clearCapacity", "listCapacity",
+          "create", "read", "list", "wake", "claim", "release", "finish", "requestCancellation",
+          "acquireCapacity", "releaseCapacity", "releaseBuildCapacity", "listCapacity",
         ].map((name) => [name, async () => undefined])) as never,
       },
       {
@@ -123,13 +123,13 @@ test("Runtime infrastructure role selection is exact", () => {
     /not scheduler/u,
   );
 
-  const tampered = {
+  const inconsistent = {
     ...configured,
     manifest: structuredClone(configured.manifest),
     parts: [...configured.parts],
   };
-  (tampered.manifest.facets[1] as { role: "artifact-store" }).role = "artifact-store";
-  assert.throws(() => verifyRuntimeInfrastructurePackage(tampered), /role differs/u);
+  (inconsistent.manifest.facets[1] as { role: "artifact-store" }).role = "artifact-store";
+  assert.throws(() => verifyRuntimeInfrastructurePackage(inconsistent), /role differs/u);
 
   const missingPort = {
     ...configured,

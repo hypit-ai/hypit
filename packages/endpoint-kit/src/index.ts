@@ -12,7 +12,6 @@ import type {
   CredentialRef,
   CredentialValue,
   OperationFailure,
-  OperationIdentity,
   OperationProgress,
   EndpointOffer,
   RuntimeFacetRef,
@@ -42,7 +41,7 @@ export type ImmediateEndpointHandler = (
 export type EndpointOutcome =
   | {
       readonly status: "pending";
-      readonly checkpoint: CanonicalValue;
+      readonly handle: CanonicalValue;
       readonly wakeAt?: number;
       readonly progress?: OperationProgress;
     }
@@ -50,12 +49,13 @@ export type EndpointOutcome =
   | { readonly status: "failed"; readonly failure: OperationFailure };
 
 export type EndpointStartContext = EndpointInvocationContext & {
-  readonly operation: OperationIdentity;
+  /** Runtime-local identifier used to poll or cancel this submission. */
+  readonly operation: string;
 };
 
-export type EndpointResumeContext = EndpointStartContext & {
-  /** Undefined means the process stopped after intent was persisted but before a checkpoint existed. */
-  readonly checkpoint: CanonicalValue | undefined;
+export type EndpointPollContext = EndpointStartContext & {
+  /** Provider task state returned by start(). */
+  readonly handle: CanonicalValue;
 };
 
 /**
@@ -69,13 +69,13 @@ export type EndpointCancelOutcome =
   | { readonly status: "unsupported" }
   | { readonly status: "too-late" };
 
-export type RecoverableEndpoint = {
+export type AsyncEndpoint = {
   start(context: EndpointStartContext): Awaitable<EndpointOutcome>;
-  resume(context: EndpointResumeContext): Awaitable<EndpointOutcome>;
-  cancel?(context: EndpointResumeContext): Awaitable<EndpointCancelOutcome>;
+  poll(context: EndpointPollContext): Awaitable<EndpointOutcome>;
+  cancel?(context: EndpointPollContext): Awaitable<EndpointCancelOutcome>;
 };
 
-/** Endpoint/implementation scheduling metadata; it never changes Core demand or command identity. */
+/** Endpoint scheduling. It never changes Core demand. */
 export type EndpointScheduling = {
   readonly resources: readonly {
     readonly id: string;
@@ -88,16 +88,10 @@ export type EndpointScheduling = {
   };
 };
 
-export type EndpointRetryPolicy = {
-  /** Includes the first submission. A new attempt receives a new Operation id. */
-  readonly maxAttempts: number;
-};
-
 export type EndpointRegistrationOptions = {
   readonly supports?: (need: Need) => boolean;
   readonly scheduling?: EndpointScheduling;
   readonly credentials?: Readonly<Record<string, CredentialRef>>;
-  readonly retry?: EndpointRetryPolicy;
 };
 
 /** Minimal structural port implemented by a trusted execution Host. */
@@ -109,11 +103,11 @@ export interface EndpointRegistrar {
     handler: ImmediateEndpointHandler,
     options?: EndpointRegistrationOptions,
   ): void;
-  registerRecoverableEndpoint(
+  registerAsyncEndpoint(
     id: string,
     capability: CapabilityRef,
     returns: TypeRef,
-    endpoint: RecoverableEndpoint,
+    endpoint: AsyncEndpoint,
     options?: EndpointRegistrationOptions,
   ): void;
 }
@@ -150,13 +144,12 @@ export type ImmediateEndpointCapability = EndpointCapabilityBase & {
   readonly handler: ImmediateEndpointHandler;
 };
 
-export type RecoverableEndpointCapability = EndpointCapabilityBase & {
-  readonly lifecycle: "recoverable";
-  readonly endpoint: RecoverableEndpoint;
-  readonly retry?: EndpointRetryPolicy;
+export type AsyncEndpointCapability = EndpointCapabilityBase & {
+  readonly lifecycle: "asynchronous";
+  readonly endpoint: AsyncEndpoint;
 };
 
-export type EndpointCapability = ImmediateEndpointCapability | RecoverableEndpointCapability;
+export type EndpointCapability = ImmediateEndpointCapability | AsyncEndpointCapability;
 
 export type DefineEndpointPackageOptions = {
   readonly module: ModuleRef;
@@ -197,7 +190,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
   assert(options.capabilities.length > 0, "Endpoint package declares no capability");
   const lifecycle = options.capabilities[0]!.lifecycle;
   assert(options.capabilities.every((item) => item.lifecycle === lifecycle),
-    "one Endpoint facet cannot mix immediate and recoverable lifecycles");
+    "one Endpoint facet cannot mix immediate and asynchronous lifecycles");
   const keys = options.capabilities.map((item) => refKey(item.capability));
   assert(new Set(keys).size === keys.length, "Endpoint package repeats a capability");
   const lanes = options.capabilities.map((item) => item.lane ?? item.capability.name);
@@ -307,9 +300,6 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
               },
             ],
           },
-          ...(capability.lifecycle === "recoverable" && capability.retry !== undefined
-            ? { retry: capability.retry }
-            : {}),
         };
         if (capability.lifecycle === "immediate") {
           registry.registerImmediateEndpoint(
@@ -320,7 +310,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
             common,
           );
         } else {
-          registry.registerRecoverableEndpoint(
+          registry.registerAsyncEndpoint(
             options.instance,
             capability.capability,
             capability.returns,
@@ -334,13 +324,13 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
 }
 
 export function wakeAfter(
-  checkpoint: CanonicalValue,
+  handle: CanonicalValue,
   delayMs: number,
   now = Date.now(),
   progress?: OperationProgress,
 ): {
   readonly status: "pending";
-  readonly checkpoint: CanonicalValue;
+  readonly handle: CanonicalValue;
   readonly wakeAt: number;
   readonly progress?: OperationProgress;
 } {
@@ -348,7 +338,7 @@ export function wakeAfter(
   assert(Number.isSafeInteger(now) && now >= 0, "current time must be a non-negative epoch millisecond");
   return {
     status: "pending",
-    checkpoint,
+    handle,
     wakeAt: now + delayMs,
     ...(progress === undefined ? {} : { progress }),
   };

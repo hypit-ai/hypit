@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { artifactTypes } from "@narratage/artifact";
 import { generationProducers, generationTypes } from "@narratage/generation";
-import { digestOf } from "@narratage/protocol";
 import { sealText, textTypes } from "@narratage/text";
 import { parseStructuredElement } from "@narratage/markup";
 import type { SurfaceResolvedReference } from "@narratage/markup";
@@ -34,14 +34,12 @@ function authored(path: string, type: SurfaceResolvedReference["type"], value: u
       value: type.name === artifactTypes.blob.name
         ? value as never
         : { kind: "inline", value: value as never },
-      digest: digestOf(value),
-      origin: { kind: "authored" },
     },
   };
 }
 
 const speech = sealText("Exact authored words stay exact.");
-const sample = { kind: "blob" as const, digest: digestOf("voice-sample"), size: 4, mediaType: "audio/wav" };
+const sample = { kind: "blob" as const, digest: fixtureDigest("voice-sample"), size: 4, mediaType: "audio/wav" };
 const refs = new Map<string, SurfaceResolvedReference>([
   ["story.segment.opening.speech", authored("story.segment.opening.speech", textTypes.text, speech)],
   ["voice", authored("voice", artifactTypes.blob, sample)],

@@ -1,8 +1,3 @@
-import {
-  digestOf,
-  isDigest,
-} from "@narratage/protocol";
-
 import type { RunGraph } from "./types.js";
 
 export class RunGraphError extends Error {
@@ -19,7 +14,7 @@ function assert(condition: unknown, code: string, message: string): asserts cond
   if (!condition) throw new RunGraphError(code, message);
 }
 
-function content(graph: Omit<RunGraph, "id">): Omit<RunGraph, "id"> {
+function content(graph: RunGraph): RunGraph {
   return {
     format: "narratage.run-graph@1",
     candidates: [...graph.candidates].sort((left, right) => left.id.localeCompare(right.id)),
@@ -29,16 +24,14 @@ function content(graph: Omit<RunGraph, "id">): Omit<RunGraph, "id"> {
   };
 }
 
-export function sealRunGraph(input: Omit<RunGraph, "format" | "id">): RunGraph {
-  const normalized = content({ format: "narratage.run-graph@1", ...input });
-  const graph: RunGraph = { ...normalized, id: digestOf(normalized) };
+export function sealRunGraph(input: Omit<RunGraph, "format">): RunGraph {
+  const graph = content({ format: "narratage.run-graph@1", ...input });
   verifyRunGraph(graph);
   return graph;
 }
 
 export function verifyRunGraph(graph: RunGraph): void {
   assert(graph.format === "narratage.run-graph@1", "UNSUPPORTED_RUN_GRAPH", "unsupported Run Graph");
-  assert(isDigest(graph.id), "INVALID_RUN_GRAPH_DIGEST", "Run Graph digest is invalid");
   const candidateIds = new Set<string>();
   for (const candidate of graph.candidates) {
     assert(!candidateIds.has(candidate.id), "DUPLICATE_RUN_CANDIDATE", `Run Graph repeats Candidate ${candidate.id}`);
@@ -61,5 +54,4 @@ export function verifyRunGraph(graph: RunGraph): void {
     assert(!targets.has(target.output), "DUPLICATE_RUN_TARGET", `Run Graph repeats Target ${target.output}`);
     targets.add(target.output);
   }
-  assert(graph.id === digestOf(content(graph)), "RUN_GRAPH_DIGEST_MISMATCH", "Run Graph digest differs");
 }

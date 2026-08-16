@@ -95,7 +95,7 @@ export type ExactModelTextInput = {
 export type ExactModelModule<Key extends string = string> = {
   readonly module: ModuleRef;
   readonly manifest: ModuleManifest;
-  /** Keyed by the exact endpoint keys the module declared, so a stale key fails to compile. */
+  /** Keyed by the endpoint keys declared by the module. */
   readonly endpoints: Readonly<Record<Key, ExactModelEndpoint>>;
   readonly component: ComponentPackage & {
     readonly validators: readonly TypeValidatorFacet[];

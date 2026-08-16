@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   sealGenerationMediaBinding,
@@ -10,7 +11,6 @@ import {
   createExactModelPrimaryGenerationFragment,
   defineExactModelModule,
 } from "@narratage/model-kit";
-import { digestOf } from "@narratage/protocol";
 import { sealText } from "@narratage/text";
 
 const ports = sealGenerationPortTable({
@@ -42,7 +42,7 @@ test("one exact model definition owns draft, media binding, finalization and gen
 
   const artifact = {
     kind: "blob" as const,
-    digest: digestOf("graph-native-image"),
+    digest: fixtureDigest("graph-native-image"),
     size: 4,
     mediaType: "image/png",
   };

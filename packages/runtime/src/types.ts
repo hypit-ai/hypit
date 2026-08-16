@@ -1,7 +1,9 @@
 import type {
   BlobRef,
-  BuildEvent,
+  BuildDefinition,
+  BuildFact,
   BuildState,
+  CommandResult,
   CoreCommand,
   Digest,
 } from "@narratage/protocol";
@@ -20,8 +22,8 @@ export type RuntimeRunnableCommand = {
   /** Every resource is acquired atomically before the command can cause a side effect. */
   readonly resources: readonly RuntimeResourceClaim[];
   readonly queue?: RuntimeQueueLane;
-  /** Recoverable work retains one shared in-flight reservation while polling. */
-  readonly capacityMode?: "active" | "recoverable";
+  /** Asynchronous work retains one shared in-flight reservation while polling. */
+  readonly capacityMode?: "active" | "asynchronous";
 };
 
 export type RuntimeResourceClaim = {
@@ -43,15 +45,13 @@ export type RuntimeExecutionStores = {
 };
 
 export type RuntimeWorkerRunOptions = {
-  readonly owner: string;
-  readonly leaseMs: number;
   readonly idlePollMs: number;
   readonly signal?: AbortSignal;
 };
 
 export type RuntimeWorker = {
   /** Claim and advance at most one Build. Undefined means no Dispatch was ready. */
-  runOnce(options: Omit<RuntimeWorkerRunOptions, "idlePollMs" | "signal">): Promise<BuildDispatchSnapshot | undefined>;
+  runOnce(): Promise<BuildDispatchSnapshot | undefined>;
   /** Continue until the caller-owned process signal is aborted. */
   run(options: RuntimeWorkerRunOptions): Promise<void>;
 };
@@ -80,8 +80,8 @@ export type RuntimeExecutionContext = {
 };
 
 export type RuntimeExecutionResult =
-  | { readonly status: "completed"; readonly event: BuildEvent }
-  | { readonly status: "pending"; readonly operation: Digest; readonly wakeAt?: number }
+  | { readonly status: "completed"; readonly event: CommandResult }
+  | { readonly status: "pending"; readonly operation: string; readonly wakeAt?: number }
   | { readonly status: "deferred"; readonly wakeAt: number; readonly reason: string };
 
 /** Minimal execution port used by a Scheduler. `prepare` is the sole command-generation boundary. */
@@ -95,7 +95,6 @@ export type RuntimeCommandExecutor = {
   cancelOperation?(
     state: BuildState,
     operation: OperationSnapshot,
-    requestedAt: number,
   ): Promise<OperationSnapshot>;
 };
 
@@ -103,16 +102,16 @@ export type RuntimeCommandExecutor = {
 export type ArtifactStore = {
   /** Admit bytes and compute their identity in the same pass. */
   put(bytes: Uint8Array, mediaType: string): Promise<BlobRef>;
-  /** Return verified bytes; a digest mismatch is an error, not a cache miss. */
+  /** Read bytes previously admitted under this digest. */
   get(digest: Digest): Promise<Uint8Array | undefined>;
-  /** Cheap presence query only. Integrity is checked when bytes cross get/open. */
+  /** Cheap presence query. */
   has(digest: Digest): Promise<boolean>;
 };
 
 /** Optional transfer capability. Core and components never require storage to expose it. */
 export type StreamingArtifactStore = ArtifactStore & {
   putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string): Promise<BlobRef>;
-  /** Stream bytes once and reject completion when their digest does not match. */
+  /** Stream bytes previously admitted under this digest. */
   open(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
@@ -134,22 +133,20 @@ export function isManagedArtifactStore(value: ArtifactStore): value is ManagedAr
 
 export type BuildSnapshot = {
   readonly build: string;
-  readonly revision: number;
+  readonly definition: BuildDefinition;
+  readonly facts: readonly BuildFact[];
+  /** Materialized read view reconstructed from Definition + Facts; never stored as authority. */
   readonly state: BuildState;
 };
 
-export type BuildStoreWrite =
-  | { readonly status: "stored"; readonly snapshot: BuildSnapshot }
-  | { readonly status: "conflict"; readonly current: BuildSnapshot };
-
-/** Stores only verified Core state; execution attempts and checkpoints belong to OperationStore. */
+/** Stores one Definition and the Core Facts accepted for it in order. */
 export type BuildStore = {
-  create(build: string, state: BuildState): Promise<BuildSnapshot>;
+  create(build: string, definition: BuildDefinition): Promise<BuildSnapshot>;
   read(build: string): Promise<BuildSnapshot | undefined>;
-  compareAndSwap(build: string, expectedRevision: number, state: BuildState): Promise<BuildStoreWrite>;
+  append(build: string, fact: BuildFact): Promise<void>;
 };
 
-/** Optional maintenance index; execution still depends only on BuildStore's three CAS operations. */
+/** Optional maintenance index; execution still depends only on BuildStore create/read/append. */
 export type EnumerableBuildStore = BuildStore & {
   list(): Promise<readonly BuildSnapshot[]>;
 };
@@ -161,6 +158,8 @@ export function isEnumerableBuildStore(value: BuildStore): value is EnumerableBu
 export type ScheduledBuild = {
   readonly id: string;
   readonly state: BuildState;
+  /** Optional Store read already performed by the Worker; avoids reconstructing the same Build twice. */
+  readonly snapshot?: BuildSnapshot;
 };
 
 export type SchedulerExecutionOutcome = {
@@ -168,8 +167,7 @@ export type SchedulerExecutionOutcome = {
   readonly kind: CoreCommand["kind"];
   readonly resources: readonly string[];
   readonly status: "completed" | "pending" | "deferred" | "error";
-  readonly event?: string;
-  readonly operation?: Digest;
+  readonly operation?: string;
   readonly wakeAt?: number;
   readonly message?: string;
 };
@@ -186,7 +184,7 @@ export type BuildSchedulerOptions = {
   readonly maxConcurrency?: number;
   readonly resourceLimits?: Readonly<Record<string, number>>;
   readonly runtimeClosure?: RuntimeClosure;
-  /** Optional durable authority. When present, every accepted Core Event is persisted by CAS. */
+  /** Optional durable authority. When present, every admitted Core Fact is appended. */
   readonly buildStore?: BuildStore;
 };
 

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   assertCaptionPlanForProgram,
@@ -13,7 +14,7 @@ import {
 import type { CaptionFieldDeclaration, CaptionStyleIntent } from "@narratage/caption";
 import { narrativeTypes } from "@narratage/narrative";
 import type { CaptionDisplayWordSubset, Narrative } from "@narratage/narrative";
-import { canonicalize, digestOf, recordDigest } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import type { StoredValue, TypeRef } from "@narratage/protocol";
 import { sealProgramSpace } from "@narratage/program-space";
 import { sealSpeechBasis } from "@narratage/speech";
@@ -43,7 +44,7 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Tr
     durationSec,
     frameRate: { numerator: 30, denominator: 1 },
   });
-  const audio = { kind: "blob" as const, digest: digestOf("caption:test-audio"), size: 1, mediaType: "audio/wav" };
+  const audio = { kind: "blob" as const, digest: fixtureDigest("caption:test-audio"), size: 1, mediaType: "audio/wav" };
   const basisSegments = narrative.segments.map((segment, index) => ({
     segmentId: segment.id,
     startFrame: Math.round(durationSec * 30 * index / narrative.segments.length),
@@ -206,8 +207,6 @@ test("caption:Program lowers explicit Mute word subsets without a temporal mask"
         id: path,
         type,
         value: stored,
-        digest: recordDigest(type, stored),
-        origin: { kind: "authored" },
       },
     };
   };

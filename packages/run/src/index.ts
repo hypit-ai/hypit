@@ -1,11 +1,8 @@
 export { RunFragmentRegistry } from "./registry.js";
 export {
-  createBuildRecordCandidate,
   createProvidedCandidate,
-  CandidateError,
 } from "./candidate.js";
 export type {
-  BuildRecordCandidateInput,
   ProvidedCandidateInput,
 } from "./candidate.js";
 export {
@@ -15,7 +12,6 @@ export {
 } from "./facet.js";
 export type {
   RunFragmentHostFacet,
-  RunFragmentHostFacetIdentity,
 } from "./facet.js";
 export { collectRunModuleRequests, resolveRunDocument } from "./resolve.js";
 export {
@@ -23,7 +19,6 @@ export {
   prepareRunSource,
   RunFrontendRegistry,
   RunSourceError,
-  verifyRunSourceClosure,
 } from "./frontend.js";
 export {
   createRunFrontendHostFacet,

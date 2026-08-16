@@ -23,7 +23,7 @@ import {
 } from "@narratage/driver-node";
 import type {
   EndpointOutcome,
-  RecoverableEndpoint,
+  AsyncEndpoint,
 } from "@narratage/endpoint-kit";
 import { compileHyperframesDocument } from "@narratage/hyperframes";
 import type { HyperframesDocument } from "@narratage/hyperframes";
@@ -37,8 +37,7 @@ import {
   createAwsLambdaHyperframesProvider,
 } from "@narratage/provider-hyperframes-aws-lambda";
 import {
-  digestOf,
-} from "@narratage/protocol";
+  } from "@narratage/protocol";
 import type {
   CanonicalValue,
   Need,
@@ -47,7 +46,6 @@ import {
   hyperframesVisualRequest,
   renderHyperframesCapabilities,
 } from "@narratage/render-hyperframes";
-import { sealOperationIdentity } from "@narratage/runtime";
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name];
@@ -110,23 +108,16 @@ function requestNeed(document: HyperframesDocument, canaryId: string): Need {
     capability: renderHyperframesCapabilities.renderVisual,
     returns: mediaTypes.renderedVisual,
     constraints,
-    requestedBy: `derivation:hyperframes-aws-canary:${canaryId}`,
     result: `record:hyperframes-aws-canary:${canaryId}`,
-    requestDigest: digestOf({
-      capability: renderHyperframesCapabilities.renderVisual,
-      returns: mediaTypes.renderedVisual,
-      constraints,
-    }),
   };
 }
 
-async function endpointFor(request: Need): Promise<RecoverableEndpoint> {
+async function endpointFor(request: Need): Promise<AsyncEndpoint> {
   const registry = new EndpointRegistry();
   await createAwsLambdaHyperframesProvider({
     instance: "hyperframes.aws-lambda.canary",
     stateMachineArn,
     bucketName,
-    region,
     quality: "draft",
     targetChunkFrames: 12,
     maxParallelChunks: 2,
@@ -134,11 +125,10 @@ async function endpointFor(request: Need): Promise<RecoverableEndpoint> {
     defaultConcurrency: 1,
     pollIntervalMs: 2_000,
     maxOperationMs: 10 * 60_000,
-    maxPollFailures: 10,
   }).install(registry);
   const resolution = registry.resolve(request);
   assert.equal(resolution.status, "resolved");
-  assert.equal(resolution.registration.kind, "recoverable");
+  assert.equal(resolution.registration.kind, "asynchronous");
   return resolution.registration.endpoint;
 }
 
@@ -159,20 +149,13 @@ async function deletePrefix(s3: S3Client, prefix: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const canaryId = digestOf(process.env.NARRATAGE_HYPERFRAMES_CANARY_ID ?? randomUUID()).slice(7, 23);
+  const canaryId = process.env.NARRATAGE_HYPERFRAMES_CANARY_ID ?? randomUUID().slice(0, 16);
   const document = documentFixture(canaryId);
   const need = requestNeed(document, canaryId);
   const endpoint = await endpointFor(need);
   const artifacts = new MemoryArtifactStore();
   const commandId = `command:hyperframes-aws-canary:${canaryId}`;
-  const operation = sealOperationIdentity({
-    build: `build:hyperframes-aws-canary:${canaryId}`,
-    command: commandId,
-    endpoint: "hyperframes.aws-lambda.canary",
-    pool: "hyperframes.aws-lambda.canary",
-    lane: "fixture.render",
-    attempt: 1,
-  });
+  const operation = `operation:hyperframes-aws-canary:${canaryId}`;
   const context = {
     command: { kind: "fulfill-need", id: commandId, need } as const,
     need,
@@ -180,16 +163,16 @@ async function main(): Promise<void> {
     credentials: {},
     operation,
   };
-  let lastCheckpoint: CanonicalValue | undefined;
+  let lastHandle: CanonicalValue | undefined;
   const work = await mkdtemp(join(tmpdir(), "narratage-hyperframes-canary-"));
   try {
     let outcome: EndpointOutcome = await endpoint.start(context);
     for (let polls = 0; outcome.status === "pending"; polls += 1) {
       assert(polls < 300, "HyperFrames canary exceeded 300 polls");
-      lastCheckpoint = outcome.checkpoint;
+      lastHandle = outcome.handle;
       const waitMs = Math.max(0, (outcome.wakeAt ?? Date.now()) - Date.now());
       if (waitMs > 0) await delay(waitMs);
-      outcome = await endpoint.resume({ ...context, checkpoint: outcome.checkpoint });
+      outcome = await endpoint.poll({ ...context, handle: outcome.handle });
     }
     if (outcome.status === "failed") {
       throw new Error(`${outcome.failure.code}: ${outcome.failure.message}`);
@@ -230,11 +213,11 @@ async function main(): Promise<void> {
     }, null, 2)}\n`);
   } finally {
     await rm(work, { recursive: true, force: true });
-    if (process.env.NARRATAGE_HYPERFRAMES_CANARY_KEEP !== "1" && lastCheckpoint !== undefined) {
-      const checkpoint = lastCheckpoint as unknown as { executionName?: string; site?: { siteId?: string } };
+    if (process.env.NARRATAGE_HYPERFRAMES_CANARY_KEEP !== "1" && lastHandle !== undefined) {
+      const handle = lastHandle as unknown as { executionName?: string; site?: { siteId?: string } };
       const s3 = new S3Client({ region });
-      if (checkpoint.executionName !== undefined) await deletePrefix(s3, `renders/${checkpoint.executionName}/`);
-      if (checkpoint.site?.siteId !== undefined) await deletePrefix(s3, `sites/${checkpoint.site.siteId}/`);
+      if (handle.executionName !== undefined) await deletePrefix(s3, `renders/${handle.executionName}/`);
+      if (handle.site?.siteId !== undefined) await deletePrefix(s3, `sites/${handle.site.siteId}/`);
     }
   }
 }

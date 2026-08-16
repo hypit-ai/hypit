@@ -22,7 +22,7 @@ Install dependencies after package selection changes. Use `check` during authori
 or `runtime status` when diagnosing the deployment. `build` already ensures the detached Worker
 and demanded Managed Programs are available.
 
-Use `runtime logs` to diagnose the Worker. Use `runtime down` to stop it from claiming more leases.
+Use `runtime logs` to diagnose the Worker. Use `runtime down` to stop it from claiming more Builds.
 External programs are intentionally independent; stop them only with `programs down`. Durable
 Builds remain archived and neither command cancels remote Provider work.
 

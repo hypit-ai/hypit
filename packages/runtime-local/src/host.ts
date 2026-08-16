@@ -1,4 +1,3 @@
-import { digestOf } from "@narratage/protocol";
 import {
   createNodeRuntimeHostAdapterFacet,
 } from "@narratage/runtime-host-node";
@@ -16,7 +15,6 @@ import {
   createRuntimeMaintenanceFromConfig,
   doctorRuntimeConfig,
   resolveRuntimeConfigPaths,
-  runtimeConfigRevision,
 } from "./config.js";
 import {
   bringManagedProgramsUp,
@@ -41,10 +39,6 @@ async function createLocalRuntimeHost(context: NodeRuntimeHostAdapterContext): P
   } = {}): Promise<RuntimeController> => {
     const packageRoot = options.packageRoot ?? basePackageRoot;
     const selection = await resolveRuntimeConfigPaths(profile, { packageRoot });
-    const revision = async (): Promise<string> => digestOf({
-      format: "narratage.runtime-worker-revision@1",
-      profile: await runtimeConfigRevision(profile),
-    });
     const implementationPackages = async (): Promise<readonly string[]> => {
       const values = new Set(options.implementationPackages ?? []);
       let archive: Awaited<ReturnType<typeof createRuntimeArchiveFromConfig>> | undefined;
@@ -65,7 +59,6 @@ async function createLocalRuntimeHost(context: NodeRuntimeHostAdapterContext): P
     return {
       profile,
       dataRoot: selection.dataRoot,
-      revision,
       worker: {
         up: async (workerOptions) => {
           const packages = await implementationPackages();
@@ -80,7 +73,6 @@ async function createLocalRuntimeHost(context: NodeRuntimeHostAdapterContext): P
                 "--package-root", packageRoot,
               ],
             },
-            await revision(),
             workerOptions?.maxWaitMs ?? 10_000,
             packages,
           );
@@ -88,7 +80,6 @@ async function createLocalRuntimeHost(context: NodeRuntimeHostAdapterContext): P
         status: async () => await runtimeProcessStatus(
           profile,
           selection.dataRoot,
-          await revision(),
           await implementationPackages(),
         ),
         logs: async () => await runtimeProcessLogs(selection.dataRoot),
@@ -159,8 +150,6 @@ async function createLocalRuntimeHost(context: NodeRuntimeHostAdapterContext): P
       try {
         await markRuntimeProcessReady(readyFile);
         await runtime.work({
-          owner: `worker-${process.pid}`,
-          leaseMs: 30_000,
           idlePollMs: 250,
           signal: abort.signal,
         });

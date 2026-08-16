@@ -1,5 +1,4 @@
 import { mediaDependency, mediaTypes } from "@narratage/media";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest } from "@narratage/protocol";
 
 export const fontsOpenModuleRef = { name: "@narratage/fonts-open", version: "1" } as const;

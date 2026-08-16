@@ -1,4 +1,3 @@
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, TypeRef, ValueSchema } from "@narratage/protocol";
 
 /** Exact boundaries in the fixed 16 kHz Speech Evidence Audio sample domain. */

@@ -4,7 +4,6 @@ import { assertCanvasSpace } from "@narratage/spatial";
 import type { CanvasSpace } from "@narratage/spatial";
 import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualTrackIdentity, sealComposition } from "@narratage/composition";
 import type { AudioTrack, Composition, Track, VisualTrack } from "@narratage/composition";
-import { digestOf } from "@narratage/protocol";
 
 import type { FilmProgram, FilmTrackSet } from "./types.js";
 

@@ -7,10 +7,10 @@ import type { FontArtifactRef } from "@narratage/media";
 import { sealCanvasSpace, spatialTypes } from "@narratage/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   createResolvedClosure,
-  digestOf,
   link,
   sealBuildRequest,
   sealCompiledGraph,
@@ -58,7 +58,7 @@ const filmProgram = sealFilmProgram({
 });
 const titleFont: FontArtifactRef = {
   sources: [{ artifact: {
-    kind: "blob", digest: digestOf("film-test-title-font"), size: 1, mediaType: "font/woff2",
+    kind: "blob", digest: fixtureDigest("film-test-title-font"), size: 1, mediaType: "font/woff2",
   } }],
   weight: 800,
   style: "normal",
@@ -131,16 +131,13 @@ const closure = createResolvedClosure([
   filmManifest,
   typographyTrackManifest,
 ]);
-const origin = {
-  kind: "authored" as const,
-};
 const records = await Promise.all([
-  sealRecord({ id: "space", type: programSpaceTypes.programSpace, value: stored(space), origin }),
-  sealRecord({ id: "canvas", type: spatialTypes.canvas, value: stored(canvas), origin }),
-  sealRecord({ id: "film-program", type: filmTypes.program, value: stored(filmProgram), origin }),
-  sealRecord({ id: "text-program", type: typographyTrackTypes.program, value: stored(textProgram), origin }),
-  sealRecord({ id: "background", type: compositionTypes.visualTrack, value: stored(background), origin }),
-  sealRecord({ id: "audio", type: compositionTypes.audioTrack, value: stored(audio), origin }),
+  sealRecord({ id: "space", type: programSpaceTypes.programSpace, value: stored(space) }),
+  sealRecord({ id: "canvas", type: spatialTypes.canvas, value: stored(canvas) }),
+  sealRecord({ id: "film-program", type: filmTypes.program, value: stored(filmProgram) }),
+  sealRecord({ id: "text-program", type: typographyTrackTypes.program, value: stored(textProgram) }),
+  sealRecord({ id: "background", type: compositionTypes.visualTrack, value: stored(background) }),
+  sealRecord({ id: "audio", type: compositionTypes.audioTrack, value: stored(audio) }),
 ].map(async (record) => await admitRecord(closure, record, validatorRegistry())));
 const linked = link(closure, records);
 
@@ -194,11 +191,10 @@ const merged = mergeFragmentContributions(
   filmContribution,
   hyperframesContribution,
 );
-const graph: CompiledGraph = sealCompiledGraph({ program: linked.semanticDigest, ...merged });
+const graph: CompiledGraph = sealCompiledGraph({ ...merged });
 
 function build(target: string) {
   return start(linked, graph, sealBuildRequest({
-    graph: graph.id,
     targets: [{ output: target }],
   }));
 }

@@ -1,7 +1,6 @@
 import { mediaDependency } from "@narratage/media";
 import { narrativeDependency } from "@narratage/narrative";
 import { programSpaceDependency } from "@narratage/program-space";
-import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, TypeRef } from "@narratage/protocol";
 import { spatialDependency } from "@narratage/spatial";
 import { speechAudioBasisSchema, speechBasisSchema, speechDurationSchema, speechEvidenceAudioSchema } from "./schema.js";

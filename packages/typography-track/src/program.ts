@@ -34,7 +34,7 @@ import type {
 } from "@narratage/composition";
 import { assertCompositableSurfaceRef } from "@narratage/media";
 import type { CompositableSurfaceRef } from "@narratage/media";
-import { canonicalize, digestOf } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 import { verifyText } from "@narratage/text";
 import type { Text } from "@narratage/text";
 

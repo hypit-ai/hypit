@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -46,10 +45,6 @@ type CurrentState = {
   readonly snapshot: CaptionPlaygroundSnapshot;
   readonly attachments: ReadonlyMap<string, ArtifactAttachment>;
 };
-
-function sha256(value: string): string {
-  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
-}
 
 function maskedSourceHeader(source: string): string {
   return source.replace(/^\s*<\?svml\s+using=(['"])[^'"]+\1\s*\?>/u, (header) =>
@@ -244,14 +239,12 @@ export function captionPlaygroundPlugin(options: CaptionPlaygroundOptions): Plug
         recipe: {
           file: relative(process.cwd(), options.recipeFile),
           path: options.recipePath,
-          digest: sha256(recipeText),
           values: recipe.value.properties,
           schema: fineCaptionRecipeSchema,
         },
         font: {
           file: relative(process.cwd(), options.fontFile),
           id: options.fontId,
-          digest: sha256(fontText),
           family: selectedFont.family,
           weight: selectedFont.weight,
           style: selectedFont.style,
@@ -283,7 +276,6 @@ export function captionPlaygroundPlugin(options: CaptionPlaygroundOptions): Plug
 
   const patchRecipe = async (patch: RecipePatch): Promise<void> => {
     const source = await readFile(options.recipeFile, "utf8");
-    if (sha256(source) !== patch.expectedDigest) throw Object.assign(new Error("SVS changed outside the browser; reloaded newest source"), { status: 409 });
     const parsed = parseSvs(options.recipeFile, maskedSourceHeader(source)).recipes
       .find((item) => item.value.path === options.recipePath);
     if (parsed === undefined) throw new Error(`Recipe ${options.recipePath} no longer exists`);
@@ -313,7 +305,6 @@ export function captionPlaygroundPlugin(options: CaptionPlaygroundOptions): Plug
       throw new Error(`${patch.family} does not provide ${patch.weight} ${patch.style}`);
     }
     const source = await readFile(options.fontFile, "utf8");
-    if (sha256(source) !== patch.expectedDigest) throw Object.assign(new Error("SVML changed outside the browser; reloaded newest source"), { status: 409 });
     const selected = fontTag(source, options.fontId);
     let replacement = replaceAttribute(selected.text, "family", patch.family);
     replacement = replaceAttribute(replacement, "weight", String(patch.weight));
@@ -371,7 +362,7 @@ export function captionPlaygroundPlugin(options: CaptionPlaygroundOptions): Plug
               ? splitFontFiles(family, weight, style)
               : [{ file: defaultFontFile(family, weight, style) }];
             const css = files.map((item) => {
-              const token = createHash("sha256").update(item.file).digest("hex");
+              const token = String(galleryFiles.size);
               galleryFiles.set(token, item.file);
               const range = "unicodeRange" in item ? `unicode-range:${item.unicodeRange};` : "";
               return `@font-face{font-family:${JSON.stringify(`caption-gallery-${familyId}`)};src:url('/__caption/font-file/${token}') format('woff2');font-style:${style};font-weight:${weight};${range}font-display:swap;}`;

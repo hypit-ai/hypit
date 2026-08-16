@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { EndpointRegistry, MemoryArtifactStore } from "@narratage/driver-node";
 import { generationTypes } from "@narratage/generation";
 import { mimoTtsEndpoints, sealMimoTtsRequest } from "@narratage/mimo-tts";
-import { digestOf } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
 import { createXiaomiMimoProvider } from "@narratage/provider-xiaomi-mimo";
 
@@ -18,9 +18,7 @@ function need(
     capability: endpoint.capability,
     returns: endpoint.returns,
     constraints,
-    requestedBy: `derivation:${id}`,
     result: `record:${id}`,
-    requestDigest: digestOf({ capability: endpoint.capability, constraints }),
   };
 }
 

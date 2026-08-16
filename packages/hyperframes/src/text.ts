@@ -10,7 +10,7 @@ import type {
   VisualTextTypography,
   VisualVectorPathCommand,
 } from "@narratage/composition";
-import { digestOf } from "@narratage/protocol";
+import { canonicalStringify } from "@narratage/protocol";
 
 type TerminalTextElement = VisualTextFlowElement | VisualPathTextElement;
 
@@ -171,7 +171,7 @@ function glyphFilterId(
   paint: Extract<GlyphPaintLayer, { kind: "stroke" | "shadow" | "glow" }>,
   context: TextRenderContext,
 ): string {
-  return context.stableId([context.trackId, context.presentId, "text-glyph-filter", digestOf(paint)]);
+  return context.stableId([context.trackId, context.presentId, "text-glyph-filter", canonicalStringify(paint)]);
 }
 
 function glyphFilterDefinition(
@@ -216,7 +216,7 @@ function glyphFilterDefinitions(element: TerminalTextElement, context: TextRende
     for (const inline of paragraph.inlines) if (inline.kind === "text") append(inline.style?.paints);
   }
   const filtered = layers.filter((paint): paint is Extract<GlyphPaintLayer, { kind: "stroke" | "shadow" | "glow" }> => paint.kind !== "fill");
-  const definitions = [...new Map(filtered.map((paint) => [digestOf(paint), paint])).values()]
+  const definitions = [...new Map(filtered.map((paint) => [canonicalStringify(paint), paint])).values()]
     .map((paint) => glyphFilterDefinition(paint, context)).join("");
   return definitions;
 }
@@ -565,11 +565,11 @@ function allDocumentPaints(element: TerminalTextElement): VisualColorPaint[] {
     append(paragraph.style?.paints);
     for (const inline of paragraph.inlines) if (inline.kind === "text") append(inline.style?.paints);
   }
-  return [...new Map(result.map((paint) => [digestOf(paint), paint])).values()];
+  return [...new Map(result.map((paint) => [canonicalStringify(paint), paint])).values()];
 }
 
 function svgPaintId(paint: VisualColorPaint, context: TextRenderContext): string {
-  return context.stableId([context.trackId, context.presentId, "text-paint", digestOf(paint)]);
+  return context.stableId([context.trackId, context.presentId, "text-paint", canonicalStringify(paint)]);
 }
 
 function svgPaintValue(paint: VisualColorPaint, context: TextRenderContext): string {
@@ -713,7 +713,7 @@ export function collectTerminalTextFonts(element: TerminalTextElement): FontArti
       if (inline.kind === "text") result.push(...(inline.style?.typography?.fonts ?? []));
     }
   }
-  const unique = new Map(result.map((font) => [digestOf(font), font]));
+  const unique = new Map(result.map((font) => [canonicalStringify(font), font]));
   return [...unique.values()];
 }
 

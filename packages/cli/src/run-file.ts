@@ -15,6 +15,7 @@ import {
   RunFrontendRegistry,
 } from "@narratage/run";
 import type { RunFrontend } from "@narratage/run";
+import { selectArchivedRecord } from "./archive.js";
 
 export type LoadedRunFile = NodeCompiledRun & {
   readonly path: string;
@@ -56,16 +57,21 @@ function createRunCompiler(options: {
     frontends,
     fragments,
     ...(options.runtime === undefined ? {} : {
-      async readBuild(id: string) {
-        return (await archived(id)).build?.state;
-      },
-      async resolveBuildOutput(id: string, output: string) {
-        const alias = (await archived(id)).catalog?.aliases.find((item) => item.name === output);
-        if (alias === undefined) return output;
-        if (alias.ref.kind !== "logical-output") {
+      async resolveBuildRecord(id: string, output: string) {
+        const status = await archived(id);
+        if (status.build === undefined) return undefined;
+        const catalog = status.catalog;
+        const alias = catalog?.aliases.find((item) => item.name === output);
+        if (alias !== undefined && alias.ref.kind !== "logical-output") {
           throw new Error(`Build ${id} alias ${output} is an authored Record, not a Logical Output`);
         }
-        return alias.ref.id;
+        const record = alias === undefined
+          ? selectArchivedRecord(status.build.state, { output })
+          : selectArchivedRecord(status.build.state, {
+              name: output,
+              catalog: catalog as NonNullable<typeof catalog>,
+            });
+        return { type: record.type, value: record.value };
       },
     }),
   });

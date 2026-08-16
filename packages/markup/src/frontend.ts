@@ -1,8 +1,6 @@
 import {
   canonicalize,
   canonicalStringify,
-  digestOf,
-  isDigest,
   sealRecord,
 } from "@narratage/core";
 import type {
@@ -313,7 +311,6 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         id: draft.id,
         type: draft.type,
         value: draft.value,
-        origin: { kind: "authored" },
       });
       records.push(record);
       recordsById.set(record.id, record);
@@ -339,8 +336,8 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
       if (componentIds.has(draft.id)) {
         fail(source, "MARKUP_COMPONENT_DUPLICATE", `Duplicate author component "${draft.id}".`, draft.range.start);
       }
-      if (!isDigest(draft.fragment)) {
-        fail(source, "MARKUP_COMPONENT_FRAGMENT", `${draft.id} returned an invalid Fragment digest.`, draft.range.start);
+      if (draft.fragment.length === 0) {
+        fail(source, "MARKUP_COMPONENT_FRAGMENT", `${draft.id} returned an empty Fragment id.`, draft.range.start);
       }
       componentIds.add(draft.id);
       componentRanges.set(draft.id, draft.range);
@@ -361,11 +358,11 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
       }
     }
     for (const fragment of output.fragments) {
-      if (fragment.format !== "narratage.fragment@1" || !isDigest(fragment.id)) {
+      if (fragment.format !== "narratage.fragment@1" || fragment.id.length === 0) {
         fail(
           source,
           "MARKUP_FRAGMENT_IDENTITY",
-          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} returned an invalid Graph Fragment identity.`,
+          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} returned an invalid Graph Fragment.`,
           opening.start,
         );
       }

@@ -1,4 +1,4 @@
-import { digestOf } from "@narratage/protocol";
+import { canonicalStringify } from "@narratage/protocol";
 
 import { ScriptSyntaxError } from "./error.js";
 import { narrativeValue } from "./narrative.js";
@@ -72,7 +72,7 @@ export function formatScript(sourceName: string, source: string): string {
   while (output.at(-1) === "") output.pop();
   const formatted = `${output.join("\n")}\n`;
   const reparsed = parseScript(sourceName, formatted);
-  if (digestOf(narrativeValue(parsed)) !== digestOf(narrativeValue(reparsed))) {
+  if (canonicalStringify(narrativeValue(parsed)) !== canonicalStringify(narrativeValue(reparsed))) {
     throw new ScriptSyntaxError(
       "SCRIPT_FORMAT_SEMANTICS",
       "Formatter refused to change Script semantics.",

@@ -17,7 +17,6 @@ export const svsFrontend: AuthorFrontend = {
       id: recipe.value.path,
       type: svsRecipeType,
       value: { kind: "inline", value: recipe.value },
-      origin: { kind: "authored" },
     }));
     const exports: AuthorSourceExport[] = records.map((record) => ({
       name: record.id,
