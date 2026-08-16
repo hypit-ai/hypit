@@ -79,9 +79,6 @@ export function createLocalRuntimeArchiveControl(
         operations: operationHistory,
       };
     },
-    async operation(id) {
-      return await options.operationStore.read(id);
-    },
     async builds() {
       return await buildCatalog?.list() ?? [];
     },

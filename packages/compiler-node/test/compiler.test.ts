@@ -468,7 +468,7 @@ test("source assets become graph values and a Host transfer bundle without closu
   assert.notEqual(second.attachments[0]?.artifact.digest, attachment?.artifact.digest);
 });
 
-test("an installed package Surface can contribute locked bytes without an author file or network", async () => {
+test("an installed package Surface can contribute embedded bytes without an author file or network", async () => {
   const root = await mkdtemp(join(tmpdir(), "narratage-embedded-assets-"));
   const file = join(root, "main.svml");
   await writeFile(file, `<?svml using="@narratage/markup@1"?>
@@ -516,7 +516,7 @@ test("Run compilation retains embedded Author attachments for later Runtime stag
   assert.deepEqual(await readAttachment(compiled.attachments[0]), new Uint8Array([8, 6, 7, 5, 3, 0, 9]));
 });
 
-test("filesystem Workspace contains symlinks and locks source text plus asset identity once", async () => {
+test("filesystem Workspace captures source text and asset identity once", async () => {
   const parent = await mkdtemp(join(tmpdir(), "narratage-source-host-"));
   const root = join(parent, "project");
   await mkdir(root);
@@ -542,11 +542,11 @@ test("filesystem Workspace contains symlinks and locks source text plus asset id
   assert.equal(firstIncluded.text, "included-first");
   const firstAsset = await workspace.resolveAsset(entry, { from: "./asset.bin", mediaType: "application/octet-stream" });
   await writeFile(assetPath, new Uint8Array([4, 5, 6, 7]));
-  const lockedAsset = await workspace.resolveAsset(entry, { from: "./asset.bin", mediaType: "application/octet-stream" });
-  assert.deepEqual(lockedAsset, firstAsset, "one Host locks an asset edge to the first bytes read");
+  const capturedAsset = await workspace.resolveAsset(entry, { from: "./asset.bin", mediaType: "application/octet-stream" });
+  assert.deepEqual(capturedAsset, firstAsset, "one Workspace keeps an asset edge bound to the first bytes read");
   const detached = await workspace.attachments();
   assert.deepEqual(await readAttachment(detached[0]), new Uint8Array([4, 5, 6, 7]),
-    "attachment bytes are opened lazily; Runtime rejects them if they no longer match the locked identity");
+    "attachment bytes are opened lazily; Runtime rejects them if they no longer match the captured identity");
   assert.equal((await workspace.attachments())[0]?.artifact.digest, firstAsset.artifact.digest);
   await assert.rejects(
     async () => await workspace.resolveSource(entry, {

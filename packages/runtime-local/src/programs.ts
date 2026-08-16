@@ -66,50 +66,6 @@ function nodeError(error: unknown, code: string): boolean {
   return error instanceof Error && "code" in error && error.code === code;
 }
 
-async function withProgramLifecycleLock<T>(
-  root: string,
-  id: string,
-  timeoutMs: number,
-  runLocked: () => Promise<T>,
-): Promise<T> {
-  const path = join(directory(root), `${id}.lifecycle.lock`);
-  await mkdir(directory(root), { recursive: true });
-  const deadline = Date.now() + timeoutMs;
-  while (true) {
-    let lock;
-    try {
-      lock = await open(path, "wx");
-    } catch (error) {
-      if (!nodeError(error, "EEXIST")) throw error;
-      let owner: { readonly pid?: unknown } | undefined;
-      try {
-        owner = JSON.parse(await readFile(path, "utf8")) as { readonly pid?: unknown };
-      } catch (readError) {
-        if (nodeError(readError, "ENOENT")) continue;
-        if (Date.now() >= deadline) throw new Error(`External program ${id} lifecycle lock is unreadable: ${path}`);
-        await sleep(25);
-        continue;
-      }
-      if (Number.isSafeInteger(owner.pid) && !alive(owner.pid as number)) {
-        await rm(path, { force: true });
-        continue;
-      }
-      if (Date.now() >= deadline) {
-        throw new Error(`External program ${id} lifecycle is busy${Number.isSafeInteger(owner.pid) ? ` in process ${String(owner.pid)}` : ""}; lock: ${path}`);
-      }
-      await sleep(25);
-      continue;
-    }
-    try {
-      await lock.writeFile(JSON.stringify({ pid: process.pid }), "utf8");
-      return await runLocked();
-    } finally {
-      await lock.close();
-      await rm(path, { force: true });
-    }
-  }
-}
-
 async function rotateLog(path: string): Promise<void> {
   let size = 0;
   try {
@@ -258,8 +214,7 @@ export async function bringManagedProgramsUp(
 ): Promise<{ readonly dataRoot: string; readonly programs: readonly ManagedProgramReport[] }> {
   const { dataRoot, programs } = await declaredManagedPrograms(path, options);
   const reports = await Promise.all(distinct(programs).map(async ({ program, instances }) =>
-    await withProgramLifecycleLock(dataRoot, program.id, options.maxWaitMs ?? 300_000, async () =>
-      await bringUp(dataRoot, program, instances, options.maxWaitMs ?? 300_000, options.onProgress))));
+    await bringUp(dataRoot, program, instances, options.maxWaitMs ?? 300_000, options.onProgress)));
   return { dataRoot, programs: reports };
 }
 
@@ -269,8 +224,7 @@ export async function takeManagedProgramsDown(
   options: ManagedProgramOptions = {},
 ): Promise<{ readonly dataRoot: string; readonly programs: readonly ManagedProgramReport[] }> {
   const { dataRoot, programs } = await declaredManagedPrograms(path, options);
-  const reports = await Promise.all(distinct(programs).map(async ({ program, instances }): Promise<ManagedProgramReport> =>
-    await withProgramLifecycleLock(dataRoot, program.id, 30_000, async () => {
+  const reports = await Promise.all(distinct(programs).map(async ({ program, instances }): Promise<ManagedProgramReport> => {
     const base = { id: program.id, instances };
     const pid = await readPid(dataRoot, program.id);
     if (pid === undefined || !alive(pid)) {
@@ -312,7 +266,7 @@ export async function takeManagedProgramsDown(
     }
     await rm(join(directory(dataRoot), `${program.id}.pid`), { force: true });
     return { ...base, action: "stopped", state: await program.probe(), pid };
-    })));
+    }));
   return { dataRoot, programs: reports };
 }
 

@@ -13,7 +13,6 @@ export type RuntimeProcessState = {
   readonly profile: string;
   readonly pid?: number;
   readonly startedAt?: number;
-  readonly implementationPackages?: readonly string[];
   readonly logPath: string;
 };
 
@@ -21,7 +20,6 @@ type ProcessRecord = {
   readonly profile: string;
   readonly pid: number;
   readonly startedAt: number;
-  readonly implementationPackages: readonly string[];
 };
 
 const LOG_TAIL_BYTES = 1024 * 1024;
@@ -38,7 +36,6 @@ function paths(dataRoot: string) {
     pid: join(root, "worker.json"),
     ready: join(root, "ready"),
     log: join(root, "worker.log"),
-    lock: join(root, "lifecycle.lock"),
   };
 }
 
@@ -64,45 +61,6 @@ function alive(pid: number): boolean {
   }
 }
 
-async function withLifecycleLock<T>(dataRoot: string, timeoutMs: number, run: () => Promise<T>): Promise<T> {
-  const location = paths(dataRoot);
-  await mkdir(location.root, { recursive: true });
-  const deadline = Date.now() + timeoutMs;
-  while (true) {
-    let lock;
-    try {
-      lock = await open(location.lock, "wx");
-    } catch (error) {
-      if (!nodeError(error, "EEXIST")) throw error;
-      let owner: { readonly pid?: unknown } | undefined;
-      try {
-        owner = JSON.parse(await readFile(location.lock, "utf8")) as { readonly pid?: unknown };
-      } catch (readError) {
-        if (nodeError(readError, "ENOENT")) continue;
-        if (Date.now() >= deadline) throw new Error(`Runtime lifecycle lock is unreadable: ${location.lock}`);
-        await new Promise((resolveWait) => setTimeout(resolveWait, 25));
-        continue;
-      }
-      if (Number.isSafeInteger(owner.pid) && !alive(owner.pid as number)) {
-        await rm(location.lock, { force: true });
-        continue;
-      }
-      if (Date.now() >= deadline) {
-        throw new Error(`Runtime lifecycle is busy${Number.isSafeInteger(owner.pid) ? ` in process ${String(owner.pid)}` : ""}; lock: ${location.lock}`);
-      }
-      await new Promise((resolveWait) => setTimeout(resolveWait, 25));
-      continue;
-    }
-    try {
-      await lock.writeFile(JSON.stringify({ pid: process.pid }), "utf8");
-      return await run();
-    } finally {
-      await lock.close();
-      await rm(location.lock, { force: true });
-    }
-  }
-}
-
 async function rotateLog(path: string): Promise<void> {
   let size = 0;
   try {
@@ -122,9 +80,7 @@ async function record(profile: string, dataRoot: string): Promise<ProcessRecord 
     const value = JSON.parse(await readFile(path, "utf8")) as ProcessRecord;
     if (value.profile !== resolve(profile)
       || !Number.isSafeInteger(value.pid) || value.pid < 1
-      || !Number.isSafeInteger(value.startedAt) || value.startedAt < 0
-      || !Array.isArray(value.implementationPackages)
-      || !value.implementationPackages.every((item) => typeof item === "string" && item.length > 0)) {
+      || !Number.isSafeInteger(value.startedAt) || value.startedAt < 0) {
       throw new Error(`Runtime Worker record is invalid: ${path}`);
     }
     return value;
@@ -137,23 +93,17 @@ async function record(profile: string, dataRoot: string): Promise<ProcessRecord 
 export async function runtimeProcessStatus(
   profile: string,
   dataRoot: string,
-  requiredImplementationPackages: readonly string[] = [],
 ): Promise<RuntimeProcessState> {
   const location = paths(dataRoot);
   const current = await record(profile, dataRoot);
   if (current === undefined || !alive(current.pid)) {
     return { state: "stopped", profile: resolve(profile), logPath: location.log };
   }
-  const currentPackages = new Set(current.implementationPackages);
-  if (requiredImplementationPackages.some((item) => !currentPackages.has(item))) {
-    return { state: "stopped", profile: current.profile, logPath: location.log };
-  }
   return {
     state: "running",
     profile: current.profile,
     pid: current.pid,
     startedAt: current.startedAt,
-    implementationPackages: current.implementationPackages,
     logPath: location.log,
   };
 }
@@ -162,12 +112,11 @@ async function waitForReady(
   profile: string,
   dataRoot: string,
   timeoutMs: number,
-  implementationPackages: readonly string[],
 ): Promise<RuntimeProcessState> {
   const location = paths(dataRoot);
   const deadline = Date.now() + timeoutMs;
   while (Date.now() <= deadline) {
-    const state = await runtimeProcessStatus(profile, dataRoot, implementationPackages);
+    const state = await runtimeProcessStatus(profile, dataRoot);
     if (state.state === "stopped") {
       let log = "";
       try {
@@ -188,47 +137,42 @@ export async function ensureRuntimeProcess(
   dataRoot: string,
   launch: RuntimeWorkerLaunch,
   timeoutMs = 10_000,
-  implementationPackages: readonly string[] = [],
 ): Promise<RuntimeProcessState> {
-  return await withLifecycleLock(dataRoot, timeoutMs, async () => {
-    const selectedPackages = [...new Set(implementationPackages)].sort();
-    const existing = await record(profile, dataRoot);
-    const current = await runtimeProcessStatus(profile, dataRoot, selectedPackages);
-    if (current.state === "running") return current;
-    if (existing !== undefined && alive(existing.pid)) {
-      await stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs);
-    }
-    const absolute = resolve(profile);
-    const location = paths(dataRoot);
-    await mkdir(location.root, { recursive: true });
-    await rm(location.ready, { force: true });
-    await rotateLog(location.log);
-    const log = await open(location.log, "a");
-    const child = spawn(launch.command, [
-      ...launch.args,
-      "_worker",
-      absolute,
-      "--ready-file",
-      location.ready,
-      ...(launch.workerArgs ?? []),
-    ], {
-      cwd: process.cwd(),
-      detached: true,
-      stdio: ["ignore", log.fd, log.fd],
-      env: process.env,
-    });
-    if (child.pid === undefined) throw new Error("Runtime Worker process has no pid");
-    const startedAt = Date.now();
-    await writeFile(location.pid, JSON.stringify({
-      profile: absolute,
-      pid: child.pid,
-      startedAt,
-      implementationPackages: selectedPackages,
-    } satisfies ProcessRecord), "utf8");
-    child.unref();
-    await log.close();
-    return await waitForReady(absolute, dataRoot, timeoutMs, selectedPackages);
+  const existing = await record(profile, dataRoot);
+  const current = await runtimeProcessStatus(profile, dataRoot);
+  if (current.state === "running") return current;
+  if (existing !== undefined && alive(existing.pid)) {
+    await stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs);
+  }
+  const absolute = resolve(profile);
+  const location = paths(dataRoot);
+  await mkdir(location.root, { recursive: true });
+  await rm(location.ready, { force: true });
+  await rotateLog(location.log);
+  const log = await open(location.log, "a");
+  const child = spawn(launch.command, [
+    ...launch.args,
+    "_worker",
+    absolute,
+    "--ready-file",
+    location.ready,
+    ...(launch.workerArgs ?? []),
+  ], {
+    cwd: process.cwd(),
+    detached: true,
+    stdio: ["ignore", log.fd, log.fd],
+    env: process.env,
   });
+  if (child.pid === undefined) throw new Error("Runtime Worker process has no pid");
+  const startedAt = Date.now();
+  await writeFile(location.pid, JSON.stringify({
+    profile: absolute,
+    pid: child.pid,
+    startedAt,
+  } satisfies ProcessRecord), "utf8");
+  child.unref();
+  await log.close();
+  return await waitForReady(absolute, dataRoot, timeoutMs);
 }
 
 async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, timeoutMs: number): Promise<RuntimeProcessState> {
@@ -260,8 +204,7 @@ async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, tim
 }
 
 export async function stopRuntimeProcess(profile: string, dataRoot: string, timeoutMs = 10_000): Promise<RuntimeProcessState> {
-  return await withLifecycleLock(dataRoot, timeoutMs, async () =>
-    await stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs));
+  return await stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs);
 }
 
 export async function runtimeProcessLogs(dataRoot: string): Promise<{ readonly path: string; readonly text: string }> {

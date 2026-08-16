@@ -303,16 +303,6 @@ function validatePlanStructure(
   assertAllStepsReachGoal(plan, records);
 }
 
-export function validatePlan(
-  program: LinkedProgram,
-  graph: CompiledGraph,
-  request: BuildRequest,
-  plan: BuildPlan,
-): void {
-  verifyBuildRequest(program, graph, request);
-  validatePlanStructure(program, graph, plan);
-}
-
 /** Materialize selected zero-input values from their sole source of truth: the Run Graph. */
 export function selectedProvidedRecords(
   program: LinkedProgram,

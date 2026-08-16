@@ -61,6 +61,24 @@ export async function createLocalRuntime(
     registerProducerFacets(producers, component.producers ?? []);
   }
   for (const endpoint of options.endpoints ?? []) await endpoint.install(endpoints);
+  const loadedComponentPackages = new Set<string>();
+  let componentInstallation = Promise.resolve();
+  const installComponentPackages = async (specifiers: readonly string[]): Promise<void> => {
+    const task = componentInstallation.then(async () => {
+      const missing = [...new Set(specifiers)].filter((item) => !loadedComponentPackages.has(item));
+      if (missing.length === 0) return;
+      assert(options.loadComponentPackages !== undefined,
+        `Build requires component package ${missing[0]} but this Runtime cannot load installed packages`);
+      const components = await options.loadComponentPackages(missing);
+      for (const component of components) {
+        registerTypeValidatorFacets(validators, component.validators ?? []);
+        registerProducerFacets(producers, component.producers ?? []);
+      }
+      for (const item of missing) loadedComponentPackages.add(item);
+    });
+    componentInstallation = task.then(() => undefined, () => undefined);
+    await task;
+  };
   const driver = new NodeDriver({
     producers,
     endpoints,
@@ -77,7 +95,7 @@ export async function createLocalRuntime(
       dispatch: options.dispatchStore,
     },
     scheduling,
-    implementationPackages: [...new Set(options.implementationPackages ?? [])],
+    installComponentPackages,
   });
   const credentialControl = createLocalCredentialControl({
     credentialStore: options.credentialStore,
@@ -141,7 +159,7 @@ export async function createLocalRuntime(
     await options.buildStore.create(request.id, request.definition);
     await options.dispatchStore.create({
       build: request.id,
-      implementationPackages: [...new Set(request.implementationPackages ?? [])].sort(),
+      componentPackages: [...new Set(request.componentPackages ?? [])].sort(),
     });
     if (request.catalog !== undefined) {
       await buildCatalog!.record(request.id, request.catalog);
@@ -170,9 +188,6 @@ export async function createLocalRuntime(
     ...control,
     ...credentialControl,
     build: runBuild,
-    async buildMany(requests) {
-      return await Promise.all(requests.map(submit));
-    },
     async workOnce() {
       return await worker.runOnce();
     },

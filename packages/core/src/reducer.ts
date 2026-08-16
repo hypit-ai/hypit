@@ -282,14 +282,6 @@ export function defineBuild(
   };
 }
 
-/** Extract the immutable definition from a materialized compatibility view. */
-export function buildDefinition(state: BuildState): BuildDefinition {
-  return {
-    format: "narratage.build-definition@1",
-    ...definitionContent(state),
-  };
-}
-
 function initialBuildView(definition: BuildDefinition): BuildState {
   return {
     format: "narratage.build@1",

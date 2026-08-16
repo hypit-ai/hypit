@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.1103.0",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/transport": "workspace:*"
+    "@narratage/protocol": "workspace:*"
   }
 }

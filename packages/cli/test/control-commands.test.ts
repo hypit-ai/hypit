@@ -64,7 +64,7 @@ test("status --watch reattaches to one durable Build until it becomes terminal",
   };
   const dispatch = (phase: "queued" | "terminal") => ({
     build: "build-watch",
-    implementationPackages: [],
+    componentPackages: [],
     createdAt: 1,
     availableAt: 1,
     phase,

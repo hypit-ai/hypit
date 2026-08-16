@@ -8,8 +8,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@narratage/host": "workspace:*",
-    "@narratage/package-loader-node": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime": "workspace:*",
     "@narratage/runtime-kit": "workspace:*",

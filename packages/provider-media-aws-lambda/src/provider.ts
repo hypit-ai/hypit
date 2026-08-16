@@ -7,7 +7,7 @@ import { speechTypes } from "@narratage/speech";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import type { EndpointFulfillment, EndpointInvocationContext } from "@narratage/endpoint-kit";
 import { AwsLambdaJsonInvoker } from "@narratage/transport-aws-lambda";
-import type { JsonInvoker } from "@narratage/transport";
+import type { JsonInvoker } from "@narratage/transport-aws-lambda";
 
 import {
   MEDIA_LAMBDA_REQUEST,

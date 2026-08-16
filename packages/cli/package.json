@@ -17,8 +17,5 @@
     "@narratage/runtime": "workspace:*",
     "@narratage/runtime-host-node": "workspace:*",
     "@narratage/source": "workspace:*"
-  },
-  "devDependencies": {
-    "@narratage/runtime-local": "workspace:*"
   }
 }

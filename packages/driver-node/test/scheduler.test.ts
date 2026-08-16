@@ -9,9 +9,8 @@ import {
 import type { AsyncEndpoint } from "@narratage/endpoint-kit";
 import {
   LocalBuildScheduler,
-  MemoryOperationStore,
 } from "@narratage/runtime";
-import type { OperationStore } from "@narratage/runtime";
+import type { OperationSnapshot, OperationStore, OperationUpdate } from "@narratage/runtime";
 import {
   createResolvedClosure,
   link,
@@ -22,6 +21,42 @@ import {
 } from "@narratage/core";
 
 import { capabilities, createGreetingBuild, manifest, producers as greetingProducers, types } from "../../core/test/greeting-fixture.js";
+
+function memoryOperations(): OperationStore {
+  const values = new Map<string, OperationSnapshot>();
+  return {
+    async create(operation) {
+      values.set(operation.id, structuredClone(operation));
+      return structuredClone(operation);
+    },
+    async read(id) {
+      const value = values.get(id);
+      return value === undefined ? undefined : structuredClone(value);
+    },
+    async list(query) {
+      return [...values.values()].filter((item) =>
+        (query.build === undefined || item.build === query.build)
+        && (query.command === undefined || item.command === query.command)
+        && (query.endpoint === undefined || item.endpoint === query.endpoint));
+    },
+    async update(id, update: OperationUpdate) {
+      const current = values.get(id);
+      if (current === undefined) throw new Error(`Operation ${id} does not exist`);
+      if (["completed", "failed", "cancelled"].includes(current.status)) return structuredClone(current);
+      const next = {
+        id: current.id,
+        build: current.build,
+        command: current.command,
+        endpoint: current.endpoint,
+        pool: current.pool,
+        lane: current.lane,
+        ...structuredClone(update),
+      } as OperationSnapshot;
+      values.set(id, next);
+      return structuredClone(next);
+    },
+  };
+}
 
 function createParallelGreetingBuild(generationCount = 2) {
   const generations = ["a", "b", "c"].slice(0, generationCount);
@@ -240,7 +275,7 @@ test("independent paid commands inside one Build may fill the same resource with
 });
 
 test("an asynchronous Endpoint starts once and is polled until complete", async () => {
-  const operations = new MemoryOperationStore();
+  const operations = memoryOperations();
   let starts = 0;
   let polls = 0;
   let operationId: string | undefined;
@@ -285,7 +320,7 @@ test("an asynchronous Endpoint starts once and is polled until complete", async 
 });
 
 test("wakeAt prevents early polling and Runtime cancellation becomes a terminal Core failure", async () => {
-  const operations = new MemoryOperationStore();
+  const operations = memoryOperations();
   let polls = 0;
   let cancels = 0;
   const wakeAt = Date.now() + 60_000;

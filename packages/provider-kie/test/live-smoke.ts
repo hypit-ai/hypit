@@ -6,8 +6,8 @@ import { FileArtifactStore } from "@narratage/artifact-store-fs";
 import { EnvironmentCredentialStore } from "@narratage/credential-store-env";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import {
-  buildDefinition,
   createResolvedClosure,
+  defineBuild,
   link,
   sealBuildRequest,
   sealCompiledGraph,
@@ -418,7 +418,7 @@ async function main(): Promise<void> {
       try {
         const state = await createBuild(item);
         const build = await runtime.build(
-          { id: `bld_${randomUUID()}`, definition: buildDefinition(state) },
+          { id: `bld_${randomUUID()}`, definition: defineBuild(state.program, state.graph, state.request) },
           { follow: true, pollIntervalMs: 1_000, maxWaitMs: 20 * 60_000 },
         );
         if (build.status !== "complete") throw new Error(failureMessage(item, build));

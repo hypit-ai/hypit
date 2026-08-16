@@ -136,7 +136,7 @@ test("Run Markup compilation consumes decode output without repeating package di
   assert.equal(compiled.document.targets[0]?.output, "left");
 });
 
-test("Run Fragments enter the Host only through the locked Run facet ABI", () => {
+test("Run Fragments enter the Host only through the selected Run facet ABI", () => {
   const fragment = previewFragment();
   const facet = createRunFragmentHostFacet({ name: "@example/run-preview", fragments: { shared: fragment } });
   const registry = new RunFragmentRegistry();

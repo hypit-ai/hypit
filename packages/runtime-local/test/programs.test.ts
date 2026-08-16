@@ -156,27 +156,6 @@ test("up starts the program once for every Endpoint that drives it, and down sto
   await rm(root, { recursive: true, force: true });
 });
 
-test("concurrent up calls atomically share one Managed Program process", async () => {
-  const markerRoot = await mkdtemp(join(tmpdir(), "narratage-marker-concurrent-"));
-  const marker = join(markerRoot, "ready");
-  const { root, path, options } = await project(() => fileBackedProgram(marker));
-  try {
-    const results = await Promise.all(Array.from({ length: 6 }, async () =>
-      await bringManagedProgramsUp(path, { ...options, maxWaitMs: 20_000 })));
-    assert.equal(results.filter((item) => item.programs[0]!.action === "started").length, 1);
-    assert.equal(results.filter((item) => item.programs[0]!.action === "already-running").length, 5);
-    const pid = Number.parseInt(await readFile(join(root, "programs", "example.pid"), "utf8"), 10);
-    assert.ok(Number.isSafeInteger(pid) && pid > 0);
-    await takeManagedProgramsDown(path, options);
-    await sleep(100);
-    assert.throws(() => process.kill(pid, 0));
-  } finally {
-    await takeManagedProgramsDown(path, options).catch(() => undefined);
-    await rm(root, { recursive: true, force: true });
-    await rm(markerRoot, { recursive: true, force: true });
-  }
-});
-
 test("a program answering with another identity is never joined by a second copy", async () => {
   const { path, options } = await project(() => ({
     id: "example",

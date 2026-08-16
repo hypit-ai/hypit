@@ -36,7 +36,7 @@ export class BuildMachine {
     return this.#state.records.find((item) => item.id === id);
   }
 
-  /** Materialized compatibility/read view. It is never the durable Store representation. */
+  /** Materialized read view. It is never the durable Store representation. */
   view(): BuildState {
     return this.#state;
   }
@@ -57,11 +57,4 @@ export class BuildMachine {
     this.#state = this.#proposal.state;
     this.#proposal = undefined;
   }
-}
-
-export function restoreBuildMachine(
-  definition: BuildDefinition,
-  facts: readonly BuildFact[],
-): BuildMachine {
-  return new BuildMachine(definition, facts);
 }
