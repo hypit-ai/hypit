@@ -7,7 +7,6 @@ import type {
   RuntimePreparation,
   RuntimeRunnableCommand,
   RuntimeWorker,
-  RuntimeWorkerFactory,
   RuntimeWorkerFactoryOptions,
   RuntimeWorkerRunOptions,
 } from "@narratage/runtime";
@@ -215,7 +214,6 @@ class DurableLocalWorker implements RuntimeWorker {
     const scheduler = this.#options.scheduler.create(this.#executorWithCapacity, {
       ...this.#options.scheduling,
       buildStore: this.#options.stores.builds,
-      runtimeClosure: this.#options.runtimeClosure,
     });
     try {
       const [result] = await scheduler.run([{ id: dispatch.build, state: stored.state, snapshot: stored }]);
@@ -298,8 +296,9 @@ class DurableLocalWorker implements RuntimeWorker {
   }
 }
 
-export const durableLocalWorkerFactory: RuntimeWorkerFactory = {
-  create(executor, options) {
-    return new DurableLocalWorker(executor, options);
-  },
-};
+export function createDurableLocalWorker(
+  executor: RuntimeCommandExecutor,
+  options: RuntimeWorkerFactoryOptions,
+): RuntimeWorker {
+  return new DurableLocalWorker(executor, options);
+}

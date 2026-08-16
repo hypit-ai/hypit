@@ -13,10 +13,6 @@ import type {
   CredentialValue,
   OperationFailure,
   OperationProgress,
-  EndpointOffer,
-  RuntimeFacetRef,
-  RuntimeModuleManifest,
-  RuntimeFacetInstance,
 } from "@narratage/runtime";
 import { verifyCredentialRef } from "@narratage/runtime";
 
@@ -113,12 +109,20 @@ export interface EndpointRegistrar {
 }
 
 export type EndpointPackage = {
-  readonly manifest: RuntimeModuleManifest;
-  readonly instance: RuntimeFacetInstance;
+  readonly instance: {
+    readonly id: string;
+    readonly pool: string;
+  };
   readonly offers: readonly EndpointOffer[];
   /** Host-facing login material declared by this exact configured Endpoint instance. */
   readonly credentials: readonly EndpointCredentialDescription[];
   install(registry: EndpointRegistrar): Awaitable<void>;
+};
+
+export type EndpointOffer = {
+  readonly capability: CapabilityRef;
+  readonly returns: TypeRef;
+  readonly endpoint: string;
 };
 
 export type EndpointCredentialDescription = {
@@ -232,37 +236,12 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
       ref: structuredClone(ref),
     } satisfies EndpointCredentialDescription;
   });
-  const module = { ...options.module };
-  const facet = { module, name: options.facet };
   const fulfills = options.capabilities.map((item) => ({
     capability: structuredClone(item.capability),
     returns: structuredClone(item.returns),
   }));
-  const manifest: RuntimeModuleManifest = {
-    format: "narratage.runtime-module@1",
-    name: module.name,
-    version: module.version,
-    facets: [{
-      name: options.facet,
-      role: "capability-endpoint",
-      fulfills,
-      lifecycle,
-      defaultConcurrency: positiveInteger(options.defaultConcurrency ?? 1, "defaultConcurrency"),
-      lanes: options.capabilities.map((capability) => ({
-        capability: structuredClone(capability.capability),
-        returns: structuredClone(capability.returns),
-        lane: capability.lane ?? capability.capability.name,
-        maxConcurrency: positiveInteger(
-          capability.maxConcurrency ?? options.defaultConcurrency ?? 1,
-          `${capability.capability.name} maxConcurrency`,
-        ),
-      })),
-      credentialSlots: Object.keys(credentials),
-    }],
-  };
-  const instance: RuntimeFacetInstance = {
+  const instance = {
     id: options.instance,
-    facet,
     pool: options.pool,
   };
   const offers: readonly EndpointOffer[] = fulfills.map((item) => ({
@@ -270,7 +249,6 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     endpoint: options.instance,
   }));
   return {
-    manifest,
     instance,
     offers,
     credentials: credentialDescriptions,
