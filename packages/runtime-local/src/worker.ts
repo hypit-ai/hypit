@@ -1,6 +1,7 @@
 import type { BuildState } from "@narratage/protocol";
 import type {
   BuildDispatchSnapshot,
+  CapacityResourceClaim,
   RuntimeCommandExecutor,
   RuntimeExecutionResult,
   RuntimePreparation,
@@ -31,26 +32,90 @@ async function pause(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
+type GateWaiter = {
+  readonly resources: readonly CapacityResourceClaim[];
+  readonly resolve: (release: () => void) => void;
+};
+
+/** One process-wide command limit shared by every Build owned by this Worker. */
+class CommandGate {
+  readonly #limit: number;
+  readonly #overrides: Readonly<Record<string, number>>;
+  readonly #activeByResource = new Map<string, number>();
+  readonly #waiters: GateWaiter[] = [];
+  #active = 0;
+
+  constructor(limit: number, overrides: Readonly<Record<string, number>> = {}) {
+    this.#limit = positive(limit, "Worker command concurrency");
+    this.#overrides = overrides;
+  }
+
+  #canRun(resources: readonly CapacityResourceClaim[]): boolean {
+    if (this.#active >= this.#limit) return false;
+    return resources.every((resource) =>
+      (this.#activeByResource.get(resource.id) ?? 0)
+        < (this.#overrides[resource.id] ?? resource.maxActive));
+  }
+
+  #start(resources: readonly CapacityResourceClaim[]): () => void {
+    this.#active += 1;
+    for (const resource of resources) {
+      this.#activeByResource.set(resource.id, (this.#activeByResource.get(resource.id) ?? 0) + 1);
+    }
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.#active -= 1;
+      for (const resource of resources) {
+        const remaining = (this.#activeByResource.get(resource.id) ?? 1) - 1;
+        if (remaining === 0) this.#activeByResource.delete(resource.id);
+        else this.#activeByResource.set(resource.id, remaining);
+      }
+      this.#drain();
+    };
+  }
+
+  #drain(): void {
+    for (let index = 0; index < this.#waiters.length;) {
+      const waiter = this.#waiters[index]!;
+      if (!this.#canRun(waiter.resources)) {
+        index += 1;
+        continue;
+      }
+      this.#waiters.splice(index, 1);
+      waiter.resolve(this.#start(waiter.resources));
+    }
+  }
+
+  async acquire(resources: readonly CapacityResourceClaim[]): Promise<() => void> {
+    if (this.#canRun(resources)) return this.#start(resources);
+    return await new Promise<() => void>((resolve) => {
+      this.#waiters.push({ resources, resolve });
+    });
+  }
+}
+
 /** Adds persistent in-flight limits only to asynchronous external Operations. */
 class CapacityExecutor implements RuntimeCommandExecutor {
   readonly #delegate: RuntimeCommandExecutor;
   readonly #options: RuntimeWorkerFactoryOptions;
-  readonly #build: string;
+  readonly #gate: CommandGate;
 
-  constructor(delegate: RuntimeCommandExecutor, options: RuntimeWorkerFactoryOptions, build: string) {
+  constructor(delegate: RuntimeCommandExecutor, options: RuntimeWorkerFactoryOptions, gate: CommandGate) {
     this.#delegate = delegate;
     this.#options = options;
-    this.#build = build;
+    this.#gate = gate;
   }
 
   prepare(state: BuildState): RuntimePreparation {
     return this.#delegate.prepare(state);
   }
 
-  async #assertRunning(): Promise<void> {
-    const dispatch = await this.#options.stores.dispatch.read(this.#build);
-    assert(dispatch?.phase === "running", `Build ${this.#build} is not owned by the Worker`);
-    assert(dispatch.cancellation === undefined, `Build ${this.#build} is being cancelled`);
+  async #assertRunning(build: string): Promise<void> {
+    const dispatch = await this.#options.stores.dispatch.read(build);
+    assert(dispatch?.phase === "running", `Build ${build} is not owned by the Worker`);
+    assert(dispatch.cancellation === undefined, `Build ${build} is being cancelled`);
   }
 
   async executeCommand(
@@ -58,40 +123,45 @@ class CapacityExecutor implements RuntimeCommandExecutor {
     descriptor: RuntimeRunnableCommand,
     context: { readonly build: string },
   ): Promise<RuntimeExecutionResult> {
-    assert(context.build === this.#build, "Capacity executor received another Build identity");
-    await this.#assertRunning();
-    if (descriptor.capacityMode !== "asynchronous") {
-      return await this.#delegate.executeCommand(state, descriptor, context);
-    }
     const resources = descriptor.resources.map((resource) => {
       const override = this.#options.scheduling.resourceLimits?.[resource.id];
       return override === undefined
         ? resource
         : { ...resource, maxActive: override, maxInFlight: override };
     });
-    const acquired = await this.#options.stores.dispatch.acquireCapacity({
-      build: this.#build,
-      command: descriptor.command.id,
-      resources,
-      ...(descriptor.queue === undefined ? {} : { queue: descriptor.queue }),
-      now: Date.now(),
-    });
-    if (acquired.status === "blocked") {
-      return {
-        status: "deferred",
-        wakeAt: acquired.availableAt,
-        reason: `${acquired.reason}:${acquired.resource}`,
-      };
-    }
+    await this.#assertRunning(context.build);
+    const releaseCommand = await this.#gate.acquire(resources);
     try {
-      const result = await this.#delegate.executeCommand(state, descriptor, context);
-      if (result.status !== "pending") {
-        await this.#options.stores.dispatch.releaseCapacity(acquired.reservation.id);
+      await this.#assertRunning(context.build);
+      if (descriptor.capacityMode !== "asynchronous") {
+        return await this.#delegate.executeCommand(state, descriptor, context);
       }
-      return result;
-    } catch (error) {
-      await this.#options.stores.dispatch.releaseCapacity(acquired.reservation.id).catch(() => undefined);
-      throw error;
+      const acquired = await this.#options.stores.dispatch.acquireCapacity({
+        build: context.build,
+        command: descriptor.command.id,
+        resources,
+        ...(descriptor.queue === undefined ? {} : { queue: descriptor.queue }),
+        now: Date.now(),
+      });
+      if (acquired.status === "blocked") {
+        return {
+          status: "deferred",
+          wakeAt: acquired.availableAt,
+          reason: `${acquired.reason}:${acquired.resource}`,
+        };
+      }
+      try {
+        const result = await this.#delegate.executeCommand(state, descriptor, context);
+        if (result.status !== "pending") {
+          await this.#options.stores.dispatch.releaseCapacity(acquired.reservation.id);
+        }
+        return result;
+      } catch (error) {
+        await this.#options.stores.dispatch.releaseCapacity(acquired.reservation.id).catch(() => undefined);
+        throw error;
+      }
+    } finally {
+      releaseCommand();
     }
   }
 
@@ -107,10 +177,15 @@ class CapacityExecutor implements RuntimeCommandExecutor {
 class DurableLocalWorker implements RuntimeWorker {
   readonly #executor: RuntimeCommandExecutor;
   readonly #options: RuntimeWorkerFactoryOptions;
+  readonly #executorWithCapacity: CapacityExecutor;
 
   constructor(executor: RuntimeCommandExecutor, options: RuntimeWorkerFactoryOptions) {
     this.#executor = executor;
     this.#options = options;
+    this.#executorWithCapacity = new CapacityExecutor(executor, options, new CommandGate(
+      options.scheduling.maxConcurrency ?? 1,
+      options.scheduling.resourceLimits,
+    ));
   }
 
   async #cancel(dispatch: BuildDispatchSnapshot): Promise<BuildDispatchSnapshot> {
@@ -133,14 +208,11 @@ class DurableLocalWorker implements RuntimeWorker {
     );
   }
 
-  async runOnce(): Promise<BuildDispatchSnapshot | undefined> {
-    const dispatch = await this.#options.stores.dispatch.claim();
-    if (dispatch === undefined) return undefined;
+  async #runClaimed(dispatch: BuildDispatchSnapshot): Promise<BuildDispatchSnapshot> {
     if (dispatch.cancellation !== undefined) return await this.#cancel(dispatch);
     const stored = await this.#options.stores.builds.read(dispatch.build);
     assert(stored !== undefined, `Dispatch ${dispatch.build} has no Build Definition`);
-    const controlled = new CapacityExecutor(this.#executor, this.#options, dispatch.build);
-    const scheduler = this.#options.scheduler.create(controlled, {
+    const scheduler = this.#options.scheduler.create(this.#executorWithCapacity, {
       ...this.#options.scheduling,
       buildStore: this.#options.stores.builds,
       runtimeClosure: this.#options.runtimeClosure,
@@ -189,14 +261,40 @@ class DurableLocalWorker implements RuntimeWorker {
     }
   }
 
+  async runOnce(): Promise<BuildDispatchSnapshot | undefined> {
+    const dispatch = await this.#options.stores.dispatch.claim();
+    return dispatch === undefined ? undefined : await this.#runClaimed(dispatch);
+  }
+
   async run(options: RuntimeWorkerRunOptions): Promise<void> {
     positive(options.idlePollMs, "Worker idlePollMs");
+    const active = new Set<Promise<BuildDispatchSnapshot>>();
+    const maxBuilds = positive(this.#options.scheduling.maxConcurrency ?? 1, "Worker active Builds");
+    const launch = (dispatch: BuildDispatchSnapshot): void => {
+      const task = this.#runClaimed(dispatch);
+      active.add(task);
+      void task.finally(() => active.delete(task)).catch(() => undefined);
+    };
     while (options.signal?.aborted !== true) {
-      const dispatch = await this.runOnce();
-      if (dispatch === undefined) await pause(options.idlePollMs, options.signal).catch((error: unknown) => {
+      while (active.size < maxBuilds) {
+        const dispatch = await this.#options.stores.dispatch.claim();
+        if (dispatch === undefined) break;
+        launch(dispatch);
+      }
+      if (active.size === 0) {
+        await pause(options.idlePollMs, options.signal).catch((error: unknown) => {
+          if (options.signal?.aborted !== true) throw error;
+        });
+        continue;
+      }
+      await Promise.race([
+        ...active,
+        pause(options.idlePollMs, options.signal).then(() => undefined),
+      ]).catch((error: unknown) => {
         if (options.signal?.aborted !== true) throw error;
       });
     }
+    await Promise.all(active);
   }
 }
 
