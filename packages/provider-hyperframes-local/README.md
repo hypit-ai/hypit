@@ -5,8 +5,7 @@ content-addressed dependencies declared by a `HyperframesDocument`, renders a si
 HyperFrames CLI, probes the bytes, and returns a verified `RenderedVisual`. Before staging a typed
 Surface it decodes the exact bytes and checks declared dimensions, still/frame timing, SDR/sRGB and
 opaque/straight-alpha facts. Artifact size and SHA-256 are checked for every dependency. These are
-admission gates, not hidden output metadata. The ordinary Need Receipt records the selected Endpoint,
-request and returned value.
+admission gates, not hidden output metadata.
 
 There are deliberately two concurrency controls:
 

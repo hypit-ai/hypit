@@ -77,7 +77,6 @@ import {
   seedreamManifest,
 } from "@narratage/seedream";
 import { admitRecord, TypeValidatorRegistry } from "@narratage/validation";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 type SmokeCase = {
   readonly key: string;

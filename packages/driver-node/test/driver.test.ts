@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { reduce } from "@narratage/core";
 import {
@@ -77,7 +76,7 @@ function configuredRegistry(): {
   return { producers, endpoints, calls };
 }
 
-test("Driver pauses at an unbound Need, then resumes without rerunning producers", async () => {
+test("Driver can continue a returned state after its missing Endpoint is installed", async () => {
   const { producers, endpoints, calls } = configuredRegistry();
   const driver = new NodeDriver({ producers, endpoints });
   const paused = await driver.run(createGreetingBuild());
@@ -231,7 +230,7 @@ test("Core still owns scheduling when Driver has every implementation", async ()
   assert.equal(result.status, "complete");
 });
 
-test("a transient Handler failure pauses and can poll without replaying completed producers", async () => {
+test("a direct Driver caller can retry one failed Handler without replaying completed producers", async () => {
   const { producers, endpoints, calls } = configuredRegistry();
   let attempts = 0;
   endpoints.registerImmediateEndpoint("example:unstable", capabilities.generation, types.generated, () => {

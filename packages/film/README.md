@@ -10,8 +10,8 @@ of VisualTrack and AudioTrack inputs while every Core Operation retains a fixed 
 port list and one atomic result.
 
 `FilmTrackSet` is an immutable lowering value, not an author-facing workflow collection. Each append
-receives the previous set and newly added Track through explicit graph edges; their enclosing Core
-Records and Derivation bind integrity. The domain value copies no lineage digests. Final Composition
+receives the previous set and newly added Track through explicit graph edges. The domain value copies
+no lineage metadata. Final Composition
 remains order-independent because the public contract canonicalizes Tracks and visual ordering
 belongs to each Present's absolute stacking key.
 

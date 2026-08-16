@@ -261,7 +261,6 @@ function renderRunCheck(
   view: Extract<CliPresentation, { kind: "check-run" }>,
   io: CliIo,
   colors: Palette,
-  verbose: boolean,
 ): string {
   const lines = [heading("success", "Run source is valid", io, colors), ""];
   lines.push(...facts([
@@ -385,7 +384,7 @@ export function writeCliOutput(
     : presentation.kind === "check-author"
       ? renderAuthorCheck(presentation, io, colors, options.verbose)
       : presentation.kind === "check-run"
-        ? renderRunCheck(presentation, io, colors, options.verbose)
+        ? renderRunCheck(presentation, io, colors)
         : presentation.kind === "plan"
           ? renderPlan(presentation, io, colors, options.verbose)
           : renderOperational(presentation, io, colors);

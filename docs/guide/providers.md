@@ -69,8 +69,8 @@ export function createMyServiceProvider(options: {
       capability: myCapability,
       returns: myResultType,
       lane: "generate",
-      lifecycle: "recoverable",
-      endpoint: myRecoverableEndpoint,
+      lifecycle: "asynchronous",
+      endpoint: myAsyncEndpoint,
     }],
   });
 }
@@ -81,7 +81,7 @@ Look at existing Providers for reference:
 - `packages/provider-media-local/` — local process execution (ffprobe/ffmpeg)
 - `packages/provider-whisperx-local/` — local HTTP service
 - `packages/provider-hyperframes-local/` — local Chrome rendering
-- `packages/provider-hyperframes-aws-lambda/` — recoverable Step Functions/Lambda rendering
+- `packages/provider-hyperframes-aws-lambda/` — asynchronous Step Functions/Lambda rendering
 - `packages/provider-media-aws-lambda/` — synchronous Lambda media execution over the shared ffmpeg body
 - `packages/provider-xiaomi-mimo/` — immediate official TTS API without importing the MiMo model package
 
@@ -218,7 +218,7 @@ narratage doctor narratage.runtime.json
 | `provider-whisperx-local` | Local HTTP service with a warm model, single-admit concurrency |
 | `provider-google-vertex` | Cloud API: Vertex AI with project/credentials configuration |
 | `provider-hyperframes-local` | Local process: Chrome rendering with worker parallelism and output probe validation |
-| `provider-hyperframes-aws-lambda` | Remote recoverable job: deterministic Step Functions submission, polling and S3 streaming |
+| `provider-hyperframes-aws-lambda` | Remote asynchronous job: Step Functions submission, polling and S3 streaming |
 | `provider-image-opencv-local` | Local Python: bounded OpenCV/NumPy with locked Python environment |
 | `provider-media-aws-lambda` | Remote synchronous Lambda: the same eight capabilities as local media |
 | `provider-xiaomi-mimo` | Remote immediate API: exact MiMo TTS requests to persisted audio Artifacts |

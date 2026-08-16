@@ -1,7 +1,6 @@
 import type {
   BuildState,
   CoreCommand,
-  ProducerRef,
   TypeRef,
   CapabilityRef,
 } from "@narratage/protocol";

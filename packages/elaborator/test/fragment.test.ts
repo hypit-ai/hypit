@@ -4,7 +4,6 @@ import { compositionTypes } from "@narratage/composition";
 import { spatialTypes } from "@narratage/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import {
   createResolvedClosure,
@@ -19,7 +18,6 @@ import {
   elaborateGraphFragment,
   mergeFragmentContributions,
   sealGraphFragment,
-  verifyGraphFragment,
 } from "@narratage/elaborator";
 import type {
   FragmentContribution,
@@ -148,7 +146,7 @@ function instance(programValue: LinkedProgram, id: string) {
   });
 }
 
-function graph(programValue: LinkedProgram, ...contributions: readonly FragmentContribution[]): CompiledGraph {
+function graph(...contributions: readonly FragmentContribution[]): CompiledGraph {
   const merged = mergeFragmentContributions(
     { outputs: [], candidates: [], operations: [] },
     ...contributions,
@@ -164,7 +162,7 @@ test("one FragmentInstance shares its generation Operation across all exports", 
     audio: "opening.audio",
     visual: "opening.visual",
   });
-  const compiled = graph(linked, contribution);
+  const compiled = graph(contribution);
   const request = sealBuildRequest({
     targets: [
       { output: "opening.audio" },
@@ -201,7 +199,6 @@ test("the same Fragment instance is deterministic while distinct instances never
   );
 
   const compiled = graph(
-    linked,
     bindAuthorFragment(opening, {
       take: "opening.take",
       audio: "opening.audio",

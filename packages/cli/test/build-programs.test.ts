@@ -3,7 +3,6 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { createRunFrontendHostFacet } from "@narratage/run";
 
@@ -23,16 +22,14 @@ function distribution(
   programs: readonly CliManagedProgramReport[],
 ): CliDistribution {
   return {
-    name: "test",
     bootstrapPackages: [{
       specifier: "@example/run-frontend",
-      digest: fixtureDigest("@example/run-frontend"),
       contribution: {
         format: "narratage.node-package@1",
         hostFacets: [createRunFrontendHostFacet({
         id: "@narratage/run-markup@1",
-        discover() { throw new Error("createRuntimeFromConfig is unavailable"); },
-        decode() { throw new Error("createRuntimeFromConfig is unavailable"); },
+        discover() { throw new Error("createRuntime is unavailable"); },
+        decode() { throw new Error("createRuntime is unavailable"); },
         })],
       },
     }],
@@ -48,7 +45,6 @@ function distribution(
       controller: async () => ({
         profile: path,
         dataRoot: "/tmp",
-        revision: async () => "test-revision",
         worker: {
           up: async () => ({ state: "stopped", profile: path, logPath: "/tmp/worker.log" }),
           status: async () => ({ state: "stopped", profile: path, logPath: "/tmp/worker.log" }),
@@ -65,7 +61,7 @@ function distribution(
         },
       }),
       doctor: async () => ({ dataRoot: "/tmp", diagnostics: [] }),
-      createRuntime: async () => { throw new Error("createRuntimeFromConfig is unavailable"); },
+      createRuntime: async () => { throw new Error("createRuntime is unavailable"); },
       openArchive: async () => ({ status: async () => ({}) }),
     }),
   } as unknown as CliDistribution;
@@ -93,7 +89,7 @@ test("a Build that cannot construct its Runtime starts no declared external prog
         detail: "uv failed: no such project",
       }]),
     ),
-    /createRuntimeFromConfig/u,
+    /createRuntime is unavailable/u,
   );
   assert.deepEqual(calls, []);
 });
@@ -102,7 +98,7 @@ test("--no-programs leaves the declared programs alone", async () => {
   const calls: string[] = [];
   const source = await runSource();
   // Reaching the Runtime is the boundary just past the gate: the stub has no
-  // createRuntimeFromConfig, so arriving there proves the down program was
+  // createRuntime, so arriving there proves the down program was
   // never consulted rather than merely tolerated.
   await assert.rejects(
     async () => await runCli(
@@ -114,7 +110,7 @@ test("--no-programs leaves the declared programs alone", async () => {
         state: { state: "down", detail: "nothing is answering" },
       }]),
     ),
-    /createRuntimeFromConfig/u,
+    /createRuntime is unavailable/u,
   );
   assert.deepEqual(calls, []);
 });

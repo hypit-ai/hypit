@@ -10,7 +10,6 @@ import type {
   BuildState,
   CapabilityRef,
   CompiledGraph,
-  LinkedProgram,
   ModuleManifest,
   ProducerRef,
   TypeRef,
@@ -83,7 +82,7 @@ export const manifest: ModuleManifest = {
   ],
 };
 
-export function greetingGraph(program: LinkedProgram, includeSide = false): CompiledGraph {
+export function greetingGraph(includeSide = false): CompiledGraph {
   return sealCompiledGraph({
     outputs: [
       {
@@ -172,7 +171,7 @@ export function createGreetingBuild(options?: {
     value: { kind: "inline", value: { name: "Ada" } },
   });
   const program = link(closure, [authored]);
-  const sourceGraph = greetingGraph(program, options?.includeSideTarget ?? false);
+  const sourceGraph = greetingGraph(options?.includeSideTarget ?? false);
   const graph = options?.generationRealization === "placeholder"
     ? sealCompiledGraph({
         outputs: sourceGraph.outputs.map((item) => item.id === "generated"

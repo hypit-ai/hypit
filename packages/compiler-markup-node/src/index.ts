@@ -13,7 +13,6 @@ import {
   createMarkupAuthorFrontend,
   installMarkupSurfaceHostFacets,
   MarkupSurfaceRegistry,
-  markupAuthorFrontendId,
 } from "@narratage/markup";
 import { TypeValidatorRegistry } from "@narratage/validation";
 

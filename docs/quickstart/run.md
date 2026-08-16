@@ -368,6 +368,6 @@ narratage runtime logs
 narratage runtime down
 ```
 
-`runtime down` stops the Worker from claiming more leases but leaves external programs running.
+`runtime down` stops the Worker from claiming more Builds but leaves external programs running.
 Use `programs down` only when those programs should also stop. Neither command cancels durable
 Builds or remote Provider work. Starting the same Profile again continues unfinished dispatches.

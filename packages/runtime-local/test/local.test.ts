@@ -9,7 +9,6 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { FileArtifactStore } from "@narratage/artifact-store-fs";
 import { EnvironmentCredentialStore } from "@narratage/credential-store-env";
@@ -139,7 +138,7 @@ test("project local runtime queues, polls and cancels work with replaceable pack
   let requestCalls = 0;
   let assembleCalls = 0;
   let starts = 0;
-  let resumes = 0;
+  let polls = 0;
   let cancels = 0;
   const components: ComponentPackage = {
     producers: [
@@ -188,7 +187,7 @@ test("project local runtime queues, polls and cancels work with replaceable pack
       return { status: "pending" as const, handle: { remoteJob: operation }, wakeAt: Date.now() };
     },
     poll({ handle }) {
-      resumes += 1;
+      polls += 1;
       assert.ok(handle);
       return {
         status: "completed",
@@ -225,12 +224,12 @@ test("project local runtime queues, polls and cancels work with replaceable pack
     assert.equal(first.status, "queued");
     assert.equal((await firstRuntime.workOnce())?.phase, "waiting");
     assert.equal(starts, 1);
-    assert.equal(resumes, 0);
+    assert.equal(polls, 0);
     const second = await firstRuntime.status("greeting-build");
     assert.equal(second.dispatch?.phase, "waiting");
     assert.equal((await firstRuntime.workOnce())?.terminal, "complete");
     assert.equal(starts, 1);
-    assert.equal(resumes, 1);
+    assert.equal(polls, 1);
     assert.equal(promptCalls, 1, "persisted Core facts stop deterministic upstream replay");
     assert.equal(requestCalls, 1, "the Need request Producer is also persisted");
     assert.equal(assembleCalls, 1);
@@ -244,7 +243,7 @@ test("project local runtime queues, polls and cancels work with replaceable pack
     const followed = await firstRuntime.status("greeting-follow");
     assert.equal(followed.dispatch?.terminal, "complete");
     assert.equal(starts, 2);
-    assert.equal(resumes, 2);
+    assert.equal(polls, 2);
     const followedStatus = await firstRuntime.status("greeting-follow");
     assert.equal(followedStatus.build?.state.status, "complete");
     assert.equal(followedStatus.operations.length, 1);

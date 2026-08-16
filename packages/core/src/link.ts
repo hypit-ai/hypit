@@ -1,5 +1,4 @@
 import type {
-  CapabilityRef,
   LinkedProgram,
   ModuleManifest,
   ModuleRef,
@@ -15,7 +14,7 @@ import type {
 } from "@narratage/protocol";
 
 import { invariant } from "./error.js";
-import { capabilityKey, moduleKey, producerKey, sameType, typeKey } from "./reference.js";
+import { capabilityKey, moduleKey, producerKey, typeKey } from "./reference.js";
 
 export type TypedRecordDraft = TypedRecord;
 

@@ -16,7 +16,7 @@ import type {
   ValueSchema,
 } from "@narratage/protocol";
 
-import { createGreetingBuild, producers } from "./greeting-fixture.js";
+import { createGreetingBuild } from "./greeting-fixture.js";
 
 function onlyProducer(state: BuildState): { state: BuildState; command: InvokeProducerCommand } {
   const next = reduce(state);

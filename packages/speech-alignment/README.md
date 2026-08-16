@@ -19,12 +19,12 @@ floating-point seconds.
 The locator accepts Narrative, SpeechAudioBasis and AlignedTranscriptEvidence through three explicit
 graph edges. Evidence carries no authored Segment identity; the locator checks its sample windows
 against the supplied Basis and performs that association locally.
-Artifact/Basis lineage stays in the upstream request edges and Derivations instead of being copied
+Artifact and Basis relationships stay in explicit upstream graph edges instead of being copied
 through every evidence value.
 
 `speechAlignmentComponent` exposes the locator as one enumerable deterministic Producer facet. Its
-identity is checked against `speechAlignmentManifest`, enters the installed implementation package
-lock and executes through the host-neutral compute port. The package depends only on public video
+identity is checked against `speechAlignmentManifest` and executes through the host-neutral compute
+port. The package depends only on public video
 contracts and protocol utilities; it has no Core, Driver, Provider, Artifact, queue or credential
 authority.
 

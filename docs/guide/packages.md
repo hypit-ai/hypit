@@ -122,7 +122,7 @@ never on exact-model packages or the CLI.
 @narratage/provider-whisperx-local       local WhisperX service
 @narratage/provider-google-vertex        Vertex Gemini caption planning
 @narratage/provider-hyperframes-local    local Chrome rendering
-@narratage/provider-hyperframes-aws-lambda recoverable distributed rendering
+@narratage/provider-hyperframes-aws-lambda asynchronous distributed rendering
 @narratage/provider-image-opencv-local   local OpenCV Raster execution
 @narratage/provider-media-aws-lambda     synchronous AWS media execution
 @narratage/provider-xiaomi-mimo           official Xiaomi MiMo TTS API
@@ -131,7 +131,7 @@ never on exact-model packages or the CLI.
 ### Layer 6: Runtime
 
 Domain-neutral execution ports plus replaceable deployment implementations. Runtime packages own
-queues, leases, stores, credentials and process lifecycle; they never define author syntax.
+queues, stores, credentials and process lifecycle; they never define author syntax.
 
 ```text
 @narratage/runtime               Scheduler, Worker and Store ports

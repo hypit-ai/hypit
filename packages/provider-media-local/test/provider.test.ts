@@ -23,7 +23,6 @@ import {
 } from "@narratage/media-pipeline";
 import { canonicalize } from "@narratage/protocol";
 import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@narratage/protocol";
-import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { createLocalMediaProvider } from "../src/index.js";
 import { localMediaToolchainProgram } from "../src/program.js";

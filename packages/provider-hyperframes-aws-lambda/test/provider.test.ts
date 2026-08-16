@@ -257,7 +257,7 @@ test("the Runtime adapter refuses a hardware-GPU deployment wish instead of igno
   }), /does not accept browserGpu/u);
 });
 
-test("one deterministic submission resumes and streams the exact output into the ArtifactStore", async () => {
+test("one submission is polled and streams the output into the ArtifactStore", async () => {
   const request = requestNeed();
   const { client, state } = fakeClient();
   const { endpoint, registration } = await endpointFor(request, client);

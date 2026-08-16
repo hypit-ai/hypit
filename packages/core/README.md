@@ -1,36 +1,14 @@
 # `@narratage/core`
 
-The domain-neutral Demand compiler and verified Build state machine.
+The domain neutral graph compiler and build state machine.
 
-The package accepts an already resolved module closure, typed authored modules, a complete
-`narratage.graph@1` and a `narratage.build-request@1`. It verifies explicit Satisfaction and compiles the finite
-BuildPlan by traversing backwards from every Target, resolving Logical Outputs and memoizing shared
-atomic Operations by stable OperationId during compilation. The BuildPlan is frozen before any
-external Command; execution performs no Candidate selection, graph mutation or content-based
-deduplication. Durable execution is one immutable `BuildDefinition` plus fixed, append-only
-`BuildFact` values. `BuildMachine` reconstructs a disposable read/execution view and derives every
-pending Command; Commands and the materialized `BuildState` are never stored as authority.
+Core links module declarations, validates a compiled graph and walks backwards from the requested
+targets. Explicit candidate selections decide how each logical output is realized. The result is a
+finite `BuildPlan` containing only the operations needed for that build.
 
-Derivations bind Producer and implementation identity, input/output Record digests, Need request
-digests and the accepted event digest. Need Receipts content-address the Driver-attested Endpoint
-implementation/configuration/Runtime closure binding when present, without Core learning what that
-implementation does.
+Execution is one immutable `BuildDefinition` followed by accepted `BuildFact` values. `BuildMachine`
+reconstructs the current view, emits the next commands and accepts their results. The materialized
+`BuildState` is a disposable view rather than durable authority.
 
-Cross-package Types are nominal: exact module name, version and type name must match. Core checks
-their package-owned structural Schema. If the Type owner locked a semantic validator in its
-Manifest, every authored, provided, Producer or Provider Record must also carry a validation
-receipt bound to the exact Type, value digest and locked validator digest. Core verifies this
-receipt uniformly but never executes the validator; trusted Host admission lives in
-`@narratage/validation`.
-
-It does not know whether author source has tags, indentation, prose or any other syntax. It does not
-parse source, resolve package locations, execute
-implementations, access artifact bytes, select Provider endpoints or discover undeclared graph
-structure. Those responsibilities remain outside Core.
-
-For a non-video domain, the irreducible reusable base is only `@narratage/protocol` plus `@narratage/core`.
-Most source languages will also use `@narratage/elaborator` to turn modular component declarations into a
-Graph, and a Driver/Runtime package to execute Commands. `@narratage/markup`, `@narratage/run` and every
-domain contract package are optional layers; none receives Kernel privilege by being official.
-Domains that declare semantic Type validators additionally need a Host admission implementation;
-the reference one is `@narratage/validation`.
+Core does not parse source files, load packages, execute components, call providers, store artifact
+bytes or know what a video is. Those responsibilities remain in compiler and runtime packages.

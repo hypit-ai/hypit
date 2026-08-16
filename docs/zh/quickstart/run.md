@@ -365,6 +365,6 @@ narratage runtime logs
 narratage runtime down
 ```
 
-`runtime down` 只会让 Worker 停止领取新 lease，并保留外部程序；只有确实要停掉这些程序时
+`runtime down` 只会让 Worker 停止领取新 Build，并保留外部程序；只有确实要停掉这些程序时
 才执行 `programs down`。两条命令都不会取消耐久 Build 或远程 Provider 工作。再次启动同一
 Profile 后，会继续其中尚未完成的 dispatch。
