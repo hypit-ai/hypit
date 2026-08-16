@@ -64,6 +64,12 @@ test("Artifact GC is explicit, dry-run by default, and only removes unreachable 
     assert.deepEqual(preview.unreachable, [orphan.digest]);
     assert.deepEqual(preview.deleted, []);
     assert.equal(await artifacts.has(orphan.digest), true);
+    await runtime.build({ id: "active-build", definition: buildDefinition(createGreetingBuild()) });
+    await assert.rejects(
+      async () => await runtime.garbageCollectArtifacts({ apply: true }),
+      /Artifact GC cannot delete while 1 Build is active/u,
+    );
+    await runtime.cancel("active-build");
     const applied = await runtime.garbageCollectArtifacts({ apply: true });
     assert.deepEqual(applied.deleted, [orphan.digest]);
     assert.equal(await artifacts.has(orphan.digest), false);
@@ -304,10 +310,12 @@ test("one local Worker advances independent Builds concurrently under one comman
     const runtime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
       components: [components],
+      implementationPackages: ["@example/parallel-a", "@example/parallel-b"],
     });
     await runtime.buildMany(["parallel-a", "parallel-b"].map((id) => ({
       id,
       definition: buildDefinition(createGreetingBuild({ generationRealization: "placeholder" })),
+      implementationPackages: [`@example/${id}`],
     })));
     const controller = new AbortController();
     const work = runtime.work({ idlePollMs: 5, signal: controller.signal });
