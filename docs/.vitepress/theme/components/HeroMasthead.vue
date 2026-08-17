@@ -8,6 +8,11 @@ const isChinese = computed(() => lang.value.toLowerCase().startsWith("zh"));
 
 <template>
   <div class="np-masthead">
+    <div class="np-masthead-meta">
+      <span class="np-masthead-label">{{ isChinese ? "开源项目" : "Open source" }}</span>
+      <span class="np-rule tick-r np-masthead-rule"></span>
+    </div>
+
     <div class="np-masthead-wrap">
       <!--
         One <text> with two <tspan>s, not two <text>s: textLength is applied per
@@ -46,9 +51,6 @@ const isChinese = computed(() => lang.value.toLowerCase().startsWith("zh"));
             ? "全球第一的 AI agent 视频编程语言与系统。"
             : "World's #1 video programming language and system for AI agents."
         }}
-      </p>
-      <p class="np-masthead-subline">
-        {{ isChinese ? "为终结 Adobe 而生。" : "Built to kill Adobe." }}
       </p>
     </div>
   </div>
