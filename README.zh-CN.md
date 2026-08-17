@@ -1,24 +1,33 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/public/logo-bounce-dark.png">
-    <img alt="Narratage" src="docs/public/logo-bounce-light.png" width="420" height="217">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/logo-bounce-dark.png" type="image/apng">
+    <source srcset="docs/public/logo-bounce-light.png" type="image/apng">
+    <img alt="Narratage" src="docs/public/narratage-logo.svg" width="420" height="217">
   </picture>
 </p>
 
-<p align="center"><strong>一门给 AI Agent 做视频用的语言和系统。</strong></p>
-
-<p align="center"><em>人剪视频，Agent 编译视频。</em></p>
-
-<!-- TODO: Demo GIF（15秒内）—— 左边 SVML 剧本，右边编译出的视频。 -->
+<p align="center">
+  <strong>世界首个 AI agent 视频编程语言与系统。</strong>
+  <br>
+  <em>人剪视频，Agent 编译视频。</em>
+</p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/zh/">演示</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/zh/quickstart">快速开始</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/zh/guide/develop">开发</a>&nbsp;&nbsp;<a href="./README.md">English</a>
+  <a href="https://narratage.hypit.ai/zh/"><strong>演示</strong></a>
+  &nbsp;&bull;&nbsp;
+  <a href="https://narratage.hypit.ai/zh/quickstart"><strong>快速开始</strong></a>
+  &nbsp;&bull;&nbsp;
+  <a href="https://narratage.hypit.ai/zh/guide/develop"><strong>开发</strong></a>
+  &nbsp;&bull;&nbsp;
+  <a href="./README.md"><strong>English</strong></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/hypit-ai/narratage/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/hypit-ai/narratage?style=flat-square&color=FFD700&logo=github&logoColor=white&label=Stars"></a>
-  <a href="./package.json"><img alt="Node 22+" src="https://img.shields.io/badge/node-22+-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white"></a>
-  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0%20with%20conditions-yellow?style=flat-square"></a>
+  <a href="./package.json"><img alt="Node 22+" src="https://img.shields.io/badge/Node.js-22+-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white"></a>
+  <a href="./package.json"><img alt="pnpm 10.33" src="https://img.shields.io/badge/pnpm-10.33-F69220?style=flat-square&logo=pnpm&logoColor=white"></a>
+  <a href="./package.json"><img alt="TypeScript 5.9" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white"></a>
+  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0%20with%20conditions-E3B341?style=flat-square"></a>
 </p>
 
 <p align="center">
