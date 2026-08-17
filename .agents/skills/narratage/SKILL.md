@@ -26,6 +26,16 @@ Source, and the declarative `narratage.runtime.json` Runtime Profile separate.
   `references/runtime.md`; diagnose and start the durable Runtime, `check` Author Source, `plan`
   before paid work, then submit, inspect, and retrieve the Build.
 
+## Read the package README before writing its syntax
+
+Before writing any element from a package, read that package's README. The import
+`@narratage/<name>@1` is `packages/<name>/README.md` — every package that defines SVML elements has
+one, and it is the authority on that package's components, attributes, and ports.
+
+Never write a component or attribute you have not seen in that file, and never infer one package's
+syntax from another that looks similar. Two packages covering neighboring ground rarely take the
+same attributes.
+
 ## Ordinary loop
 
 ```bash
