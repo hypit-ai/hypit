@@ -56,6 +56,5 @@ narratage/
 | [添加 Author 包](./author-packages.md) | 分步说明：新增组件、Surface、activation |
 | [添加 Provider](./providers.md) | 分步说明：新增 Endpoint 适配器 |
 | [Runtime](./runtime.md) | Profile、Workspace、执行与生命周期边界 |
-| [字幕 Playground](./caption-playground.md) | 直接编辑真实字幕 SVML/SVS 并实时预览 |
 | [测试](./testing.md) | 测试运行器、写法、示例、boundary tests |
 | [代码规范](./conventions.md) | 命名、模块边界、wire 数据、TypeScript 配置 |
