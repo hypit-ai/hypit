@@ -5,10 +5,10 @@
     mobile app cannot authenticate and it draws a broken image instead.
   -->
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://narratage.hypit.ai/banner-dark.webp?v=e9f817d3" type="image/webp">
-    <source media="(prefers-color-scheme: dark)" srcset="https://narratage.hypit.ai/banner-dark.jpg?v=b3dddde1">
-    <source srcset="https://narratage.hypit.ai/banner-light.webp?v=851f5b3c" type="image/webp">
-    <img alt="Narratage" src="https://narratage.hypit.ai/banner-light.jpg?v=351ea0c3" width="720" height="405">
+    <source media="(prefers-color-scheme: dark)" srcset="https://narratage.hypit.ai/banner-dark.webp?v=451cf0ca" type="image/webp">
+    <source media="(prefers-color-scheme: dark)" srcset="https://narratage.hypit.ai/banner-dark.jpg?v=84aa86a4">
+    <source srcset="https://narratage.hypit.ai/banner-light.webp?v=d64489dc" type="image/webp">
+    <img alt="Narratage" src="https://narratage.hypit.ai/banner-light.jpg?v=1113a0c6" width="560" height="315">
   </picture>
 </p>
 
