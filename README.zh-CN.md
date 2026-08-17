@@ -25,9 +25,9 @@
   <a href="https://t.me/narratage"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-Join%20Group-26A5E4?style=flat-square&logo=telegram&logoColor=white"></a>
 </p>
 
-## 为什么是 Narratage
+每一款视频编辑器——Premiere、剪映、DaVinci、Final Cut——都是为人的双手在时间线上操作而造的。
 
-每一款视频编辑器——Premiere、剪映、DaVinci、Final Cut——都是为人的双手在时间线上操作而造的。Narratage 是一门为 AI Agent 设计的语言与系统。
+**Narratage 是一门为 AI Agent 设计的语言与系统。**
 
 - **没有时间线** —— 视频是写出来的，不是拖出来的。B-roll、特效以及每一条轨道都存在于源码里。
 - **Agent 原生** —— 输入纯文本，输出成片。Agent 像读写代码一样读写它。

@@ -33,9 +33,9 @@
   <a href="https://t.me/narratage"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-Join%20Group-26A5E4?style=flat-square&logo=telegram&logoColor=white"></a>
 </p>
 
-## Why Narratage
+Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for human hands on a timeline.
 
-Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for human hands on a timeline. Narratage is a language and system designed for AI agents.
+**Narratage is a language and system designed for AI agents.**
 
 - **No timeline** — videos are written, not dragged. B-roll, effects and every track live in source.
 - **Agent-native** — plain text in, finished video out. Agents read and write it like code.
