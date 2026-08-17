@@ -14,7 +14,7 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "test": "node --import tsx --test 'packages/*/test/**/*.test.ts' 'services/*/test/**/*.test.ts' 'test/**/*.test.ts'",
-    "test:release": "node --import tsx --test tools/repository-hygiene.test.mjs",
+    "test:release": "node --import tsx --test test/repository-hygiene.test.mjs",
     "test:whisperx-service": "uv run --project services/whisperx --frozen python -m unittest discover -s services/whisperx/tests -p 'test_*.py'",
     "test:browser-visual": "NARRATAGE_BROWSER_TESTS=1 node --import tsx --test packages/hyperframes/test/browser-visual.test.ts",
     "test:image-opencv": "NARRATAGE_OPENCV_TESTS=1 NARRATAGE_OPENCV_PYTHON=services/image-opencv/.venv/bin/python node --import tsx --test packages/provider-image-opencv-local/test/provider.test.ts",

@@ -42,7 +42,7 @@ narratage/
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources
 ├── services/              Python 服务 (whisperx, image-opencv)
-├── tools/                 boundary tests and build scripts
+├── test/                  repository boundary tests and shared fixtures
 ├── package.json           root workspace manifest
 ├── pnpm-workspace.yaml    workspace: [packages/*]
 └── tsconfig.json          TypeScript config
