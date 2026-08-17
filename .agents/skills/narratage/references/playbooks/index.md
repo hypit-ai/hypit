@@ -9,7 +9,8 @@ needed for that craft or format.
 1. Always read `craft/production-gates.md` and `craft/visual-continuity.md`.
 2. Read `craft/seedance-directing.md` whenever the Author Source invokes Seedance.
 3. Read the selected format file and only the additional craft files it names.
-4. Read the relevant authoritative Quickstart or package README before writing unfamiliar syntax.
+4. Read `packages/<name>/README.md` for every package whose elements you write, and the relevant
+   authoritative Quickstart page for the model behind them.
 
 ## Shared SVML contract
 
