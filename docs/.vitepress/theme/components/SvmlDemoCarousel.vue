@@ -111,8 +111,14 @@ function place() {
  * Landing on a clone, the track is repositioned onto the matching real card
  * with the transition switched off, so the wrap is invisible: the clone is
  * identical to what replaces it and nothing appears to move.
+ *
+ * The guard matters. `transitionend` bubbles, and each slide runs its own .4s
+ * opacity fade — a tenth of a second shorter than the track's .5s slide. Acting
+ * on those would reposition the track while it was still travelling, which
+ * reads as the carousel rewinding just before it reaches the last card.
  */
-function onTransitionEnd() {
+function onTransitionEnd(event: TransitionEvent) {
+  if (event.target !== track.value || event.propertyName !== "transform") return;
   if (index.value < 0 || index.value >= cards.length) {
     animating.value = false;
     index.value = active.value;
@@ -124,11 +130,41 @@ watch(index, () => {
   void preloadDemo(active.value);
 });
 
-// Re-enable the transition only once the repositioned frame has painted.
+/*
+ * Re-enable the transition only once the repositioned frame has actually been
+ * painted. One frame is not enough: a callback scheduled from the same tick
+ * still runs before that frame paints, so restoring the transition there lets
+ * the browser animate the reposition it was supposed to hide.
+ */
 watch(animating, (on) => {
   if (on) return;
-  void nextTick(() => requestAnimationFrame(() => (animating.value = true)));
+  void nextTick(() =>
+    requestAnimationFrame(() => requestAnimationFrame(() => (animating.value = true))),
+  );
 });
+
+/**
+ * There are only five slides on the track, so `index` may never leave
+ * [-1, cards.length]. A press that arrives while the track is still travelling
+ * to a clone would otherwise aim past the last one, sending the carousel into
+ * blank paper and then snapping it back. Land the pending wrap first, without
+ * animating, and take the step from the real card it settles on.
+ */
+function step(delta: number) {
+  if (index.value >= 0 && index.value < cards.length) {
+    index.value += delta;
+    return;
+  }
+  animating.value = false;
+  index.value = active.value;
+  void nextTick(() =>
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        index.value += delta;
+      }),
+    ),
+  );
+}
 
 function onResize() {
   animating.value = false;
@@ -190,12 +226,12 @@ onBeforeUnmount(() => window.removeEventListener("resize", onResize));
         </article>
       </div>
 
-      <button class="demo-nav demo-prev" :aria-label="isChinese ? '上一张' : 'Previous slide'" @click="index--">
+      <button class="demo-nav demo-prev" :aria-label="isChinese ? '上一张' : 'Previous slide'" @click="step(-1)">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M15 4 7 12l8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </button>
-      <button class="demo-nav demo-next" :aria-label="isChinese ? '下一张' : 'Next slide'" @click="index++">
+      <button class="demo-nav demo-next" :aria-label="isChinese ? '下一张' : 'Next slide'" @click="step(1)">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M9 4l8 8-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
@@ -209,7 +245,7 @@ onBeforeUnmount(() => window.removeEventListener("resize", onResize));
         class="demo-dot"
         :aria-current="n === active"
         :aria-label="cardLabel(card)"
-        @click="index = n"
+        @click="step(n - active)"
       ></button>
     </div>
   </section>
