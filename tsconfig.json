@@ -19,9 +19,7 @@
   },
   "include": [
     "packages/**/*.ts",
-    "services/media-lambda/src/**/*.ts",
-    "tools/caption-playground/**/*.ts",
-    "tools/svml-playground/**/*.ts"
+    "services/media-lambda/src/**/*.ts"
   ],
   "exclude": [
     "dist",
