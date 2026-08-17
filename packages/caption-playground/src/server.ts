@@ -3,13 +3,15 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, relative, resolve } from "node:path";
 
+import { captionTypes } from "@narratage/caption";
 import { fineCaptionRecipeSchema, FINE_CAPTION_FAMILY } from "@narratage/caption-fine";
 import { openFontFamilies } from "@narratage/fonts-open";
 import type { OpenFontFamily, OpenFontStyle } from "@narratage/fonts-open";
+import { narrativeTypes } from "@narratage/narrative";
 import { loadNodePackageSelection } from "@narratage/package-loader-node";
 import type { LoadedPackage } from "@narratage/package-loader-node";
 import type { ArtifactAttachment } from "@narratage/workspace";
-import type { CanonicalValue, TypedRecord } from "@narratage/protocol";
+import type { CanonicalValue, TypedRecord, TypeRef } from "@narratage/protocol";
 import { parseSvs } from "@narratage/svs";
 import { createVideoCompiler, discoverVideoSourcePackages } from "@narratage/video-cli";
 import type { Plugin, ViteDevServer } from "vite";
@@ -63,9 +65,14 @@ async function body<T>(request: import("node:http").IncomingMessage): Promise<T>
   return JSON.parse(Buffer.concat(chunks).toString("utf8")) as T;
 }
 
+function typeLabel(type: TypeRef): string {
+  return `${type.module.name}@${type.module.version} ${type.name}`;
+}
+
 function inlineExport(
   result: Awaited<ReturnType<ReturnType<typeof createVideoCompiler>["compileFile"]>>,
   name: string,
+  expected: TypeRef,
 ): unknown {
   const item = result.exports.find((candidate) => candidate.name === name);
   if (item === undefined) throw new Error(`Source exports no ${name}`);
@@ -73,13 +80,18 @@ function inlineExport(
   const recordId = item.ref.id;
   const record: TypedRecord | undefined = result.program.records.find((candidate) => candidate.id === recordId);
   if (record?.value.kind !== "inline") throw new Error(`${name} is not an authored inline value`);
+  // A Record carries its Type identity; the authored value itself names no contract.
+  if (record.type.module.name !== expected.module.name
+    || record.type.module.version !== expected.module.version
+    || record.type.name !== expected.name) {
+    throw new Error(`${name} is ${typeLabel(record.type)}, not ${typeLabel(expected)}`);
+  }
   return record.value.value;
 }
 
-function assertRecord(value: unknown, contract: string, subject: string): asserts value is Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)
-    || (value as Record<string, unknown>).contract !== contract) {
-    throw new Error(`${subject} is not ${contract}`);
+function assertRecord(value: unknown, subject: string): asserts value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${subject} is not an authored record`);
   }
 }
 
@@ -218,10 +230,10 @@ export function captionPlaygroundPlugin(options: CaptionPlaygroundOptions): Plug
       readFile(options.fontFile, "utf8"),
       readFile(options.recipeFile, "utf8"),
     ]);
-    const style = inlineExport(result, options.styleExport);
-    const display = inlineExport(result, options.displayExport);
-    assertRecord(style, "narratage.caption-style@1", options.styleExport);
-    assertRecord(display, "narratage.caption-display-sequence@1", options.displayExport);
+    const style = inlineExport(result, options.styleExport, captionTypes.style);
+    const display = inlineExport(result, options.displayExport, narrativeTypes.captionDisplay);
+    assertRecord(style, options.styleExport);
+    assertRecord(display, options.displayExport);
     if ((style.rendering as Record<string, unknown> | undefined)?.family !== FINE_CAPTION_FAMILY) {
       throw new Error(`${options.styleExport} is not a Fine Caption Style`);
     }
