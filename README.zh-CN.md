@@ -1,8 +1,13 @@
 <p align="center">
+  <!--
+    Absolute, and pointing at the published site rather than the repository:
+    this repo is private, so a relative path resolves to something the GitHub
+    mobile app cannot authenticate and it draws a broken image instead.
+  -->
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/public/logo-bounce-dark.png" type="image/apng">
-    <source srcset="docs/public/logo-bounce-light.png" type="image/apng">
-    <img alt="Narratage" src="docs/public/narratage-logo.svg" width="420" height="217">
+    <source media="(prefers-color-scheme: dark)" srcset="https://narratage.hypit.ai/logo-bounce-dark.png" type="image/apng">
+    <source srcset="https://narratage.hypit.ai/logo-bounce-light.png" type="image/apng">
+    <img alt="Narratage" src="https://narratage.hypit.ai/narratage-logo.svg" width="420" height="217">
   </picture>
 </p>
 
@@ -40,6 +45,8 @@
 <p align="center">
   ⭐ <em>让更多人发现 Narratage，一起壮大社区。给仓库点个 Star！</em>
 </p>
+
+## 为什么是 Narratage
 
 每一款视频编辑器——Premiere、剪映、DaVinci、Final Cut——都是为人的双手在时间线上操作而造的。
 
