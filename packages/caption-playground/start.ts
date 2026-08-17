@@ -67,10 +67,13 @@ const fps = Number(required(values, "fps"));
 const port = Number(values.get("port") ?? "5178");
 if (!Number.isSafeInteger(fps) || fps <= 0 || !Number.isSafeInteger(port) || port <= 0) usage("--fps and --port must be positive integers");
 
-const source = resolve(required(values, "source"));
-const recipeFile = resolve(recipeArgument.slice(0, hash));
-const fontFile = resolve(fontArgument.slice(0, fontHash));
-const packageRoot = resolve(values.get("package-root") ?? repoRoot);
+// `pnpm --filter … exec` runs inside the package directory, so a relative
+// path must be resolved against the directory the author typed it in.
+const invokedFrom = process.env.INIT_CWD ?? process.cwd();
+const source = resolve(invokedFrom, required(values, "source"));
+const recipeFile = resolve(invokedFrom, recipeArgument.slice(0, hash));
+const fontFile = resolve(invokedFrom, fontArgument.slice(0, fontHash));
+const packageRoot = resolve(invokedFrom, values.get("package-root") ?? repoRoot);
 const server = await createServer({
   configFile: false,
   root: here,
