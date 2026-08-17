@@ -85,6 +85,21 @@ function preloadDemo(index: number) {
   return promise;
 }
 
+/**
+ * Current card first, then the rest in the order they will be shown. Sequential
+ * on purpose: the card being watched should not be competing for bandwidth with
+ * the ones behind it. A newer call supersedes an older one, so changing card
+ * mid-chain re-prioritises rather than queueing behind the old order.
+ */
+let preloadGeneration = 0;
+async function preloadFromCurrent() {
+  const generation = ++preloadGeneration;
+  for (let offset = 0; offset < cards.length; offset += 1) {
+    if (generation !== preloadGeneration) return;
+    await preloadDemo((active.value + offset) % cards.length);
+  }
+}
+
 function restoreCachedDemos() {
   try {
     if (window.localStorage.getItem(mediaCacheVersionKey) !== demoMediaVersion) return false;
@@ -127,7 +142,7 @@ function onTransitionEnd(event: TransitionEvent) {
 
 watch(index, () => {
   place();
-  void preloadDemo(active.value);
+  void preloadFromCurrent();
 });
 
 /*
@@ -166,6 +181,39 @@ function step(delta: number) {
   );
 }
 
+/**
+ * Each demo reports the end of its first pass and then loops, which is the cue
+ * to move on — except while someone is pointing at the card. Hovering a marked
+ * range is the whole point of these demos, and pulling the card away mid-read
+ * would be rude, so the move waits for the pointer to leave that card.
+ *
+ * The question is "is the pointer on this card", so `:hover` asks it directly
+ * rather than tracking enter and leave over a full-bleed section that reaches
+ * well beyond the card itself.
+ */
+let advanceOnLeave = false;
+
+function activeSlide() {
+  return viewport.value?.querySelector<HTMLElement>(".demo-slide[data-active]") ?? null;
+}
+
+function onEnded(slot: number) {
+  // Clones carry their original's active state, so both report the same pass.
+  const isClone = slot < 1 || slot > cards.length;
+  if (isClone || realIndexOf(slot) !== active.value) return;
+  if (activeSlide()?.matches(":hover")) {
+    advanceOnLeave = true;
+    return;
+  }
+  step(1);
+}
+
+function onSlideLeave(slot: number) {
+  if (!advanceOnLeave || realIndexOf(slot) !== active.value) return;
+  advanceOnLeave = false;
+  step(1);
+}
+
 function onResize() {
   animating.value = false;
   place();
@@ -173,7 +221,7 @@ function onResize() {
 
 onMounted(() => {
   restoreCachedDemos();
-  void preloadDemo(active.value);
+  void preloadFromCurrent();
   void nextTick(place);
   window.addEventListener("resize", onResize);
 });
@@ -210,6 +258,7 @@ onBeforeUnmount(() => window.removeEventListener("resize", onResize));
           :data-active="realIndexOf(slot) === active ? '' : undefined"
           :aria-hidden="realIndexOf(slot) === active ? undefined : 'true'"
           :aria-label="cardLabel(card)"
+          @pointerleave="onSlideLeave(slot)"
         >
           <div v-if="!loadedIndices.has(realIndexOf(slot))" class="demo-loading" role="status" aria-live="polite">
             <span class="demo-loading-spinner" aria-hidden="true"></span>
@@ -221,6 +270,7 @@ onBeforeUnmount(() => window.removeEventListener("resize", onResize));
               v-bind="card.props"
               :active="realIndexOf(slot) === active"
               :show-heading="false"
+              @ended="onEnded(slot)"
             />
           </div>
         </article>
