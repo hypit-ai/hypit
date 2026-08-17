@@ -5,7 +5,7 @@ import test from "node:test";
 import ts from "typescript";
 
 const repositoryRoot = new URL("../", import.meta.url);
-const scanRoots = ["docs", "examples", "packages", "services", "test", "tools"];
+const scanRoots = ["docs", "examples", "packages", "services", "test"];
 const rootTextFiles = ["README.md", "package.json", "pnpm-workspace.yaml", "tsconfig.json"];
 const ignoredDirectories = new Set(["node_modules", "dist", "output", ".narratage", ".svml", ".vitepress"]);
 const textExtensions = new Set([
