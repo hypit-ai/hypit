@@ -1,9 +1,9 @@
 ---
 layout: home
 
+# The headline lives in HeroMasthead.vue, which replaces the default hero info
+# block; only `actions` is read from here.
 hero:
-  name: "Narratage"
-  text: "“First, there was narration. Then, there were montages.”"
   actions:
     - theme: brand
       text: Quickstart
