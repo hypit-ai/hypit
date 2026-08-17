@@ -1,8 +1,13 @@
 <p align="center">
+  <!--
+    Absolute, and pointing at the published site rather than the repository:
+    this repo is private, so a relative path resolves to something the GitHub
+    mobile app cannot authenticate and it draws a broken image instead.
+  -->
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/public/logo-bounce-dark.png" type="image/apng">
-    <source srcset="docs/public/logo-bounce-light.png" type="image/apng">
-    <img alt="Narratage" src="docs/public/narratage-logo.svg" width="420" height="217">
+    <source media="(prefers-color-scheme: dark)" srcset="https://narratage.hypit.ai/logo-bounce-dark.png" type="image/apng">
+    <source srcset="https://narratage.hypit.ai/logo-bounce-light.png" type="image/apng">
+    <img alt="Narratage" src="https://narratage.hypit.ai/narratage-logo.svg" width="420" height="217">
   </picture>
 </p>
 
@@ -41,6 +46,8 @@
 <p align="center">
   ⭐ <em>Help more people find Narratage and grow the community. Star this repo!</em>
 </p>
+
+## Why Narratage
 
 Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for human hands on a timeline.
 
