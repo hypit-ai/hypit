@@ -149,25 +149,47 @@ const lines: SourceLine[] = [
   { html: '<span class="syn-tag">&lt;/broll-track&gt;</span>' },
 ];
 
+type Point = { line: number; column: number };
+
 type SemanticRangeBounds = {
   id: SelectionId;
   start: number;
   end: number;
+  opensAt: Point;
+  closesAt: Point;
   depth: number;
 };
 
-const rawRangeBounds = semanticSelections.map((selection) => ({
-  id: selection.id,
-  start: lines.findIndex((line) => line.html.includes(`>@${selection.id}</span>`)),
-  end: lines.findIndex((line) => line.html.includes(`>@/${selection.id}`)),
-})).filter((range) => range.start >= 0 && range.end >= range.start);
+/**
+ * Containment is measured at (line, column), not by line number alone. Two
+ * markers can share a line — one closing exactly where the next opens — and
+ * comparing only line numbers counts those siblings as nested, colouring one of
+ * them a level deeper than the items beside it.
+ */
+function atOrBefore(a: { line: number; column: number }, b: { line: number; column: number }) {
+  return a.line !== b.line ? a.line < b.line : a.column <= b.column;
+}
+
+const rawRangeBounds = semanticSelections.map((selection) => {
+  const open = `>@${selection.id}</span>`;
+  const close = `>@/${selection.id}`;
+  const start = lines.findIndex((line) => line.html.includes(open));
+  const end = lines.findIndex((line) => line.html.includes(close));
+  return {
+    id: selection.id,
+    start,
+    end,
+    opensAt: { line: start, column: start < 0 ? -1 : lines[start].html.indexOf(open) },
+    closesAt: { line: end, column: end < 0 ? -1 : lines[end].html.indexOf(close) },
+  };
+}).filter((range) => range.start >= 0 && range.end >= range.start);
 
 const semanticRangeBounds: SemanticRangeBounds[] = rawRangeBounds.map((range) => ({
   ...range,
   depth: rawRangeBounds.filter((candidate) => (
     candidate.id !== range.id
-    && candidate.start <= range.start
-    && candidate.end >= range.end
+    && atOrBefore(candidate.opensAt, range.opensAt)
+    && atOrBefore(range.closesAt, candidate.closesAt)
   )).length,
 }));
 

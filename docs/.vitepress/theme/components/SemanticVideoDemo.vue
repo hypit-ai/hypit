@@ -37,27 +37,49 @@ const sourceLines = config.lines;
 const sceneSelections = config.selections.filter((selection) => selection.layer === "scene");
 const overlaySelections = config.selections.filter((selection) => selection.layer === "overlay");
 
+type Point = { line: number; column: number };
+
 type RangeBounds = {
   id: string;
   start: number;
   end: number;
+  opensAt: Point;
+  closesAt: Point;
   depth: number;
 };
 
 type DisplayLine = SourceDisplayEntry<DemoSourceLine>;
 
-const rawBounds = config.selections.map((selection) => ({
-  id: selection.id,
-  start: sourceLines.findIndex((line) => line.html.includes(`>@${selection.id}</span>`)),
-  end: sourceLines.findIndex((line) => line.html.includes(`>@/${selection.id}</span>`)),
-})).filter((range) => range.start >= 0 && range.end >= range.start);
+/**
+ * Containment is measured at (line, column), not by line number alone. Two
+ * markers can share a line — one closing exactly where the next opens — and
+ * comparing only line numbers counts those siblings as nested, colouring one of
+ * them a level deeper than the items beside it.
+ */
+function atOrBefore(a: { line: number; column: number }, b: { line: number; column: number }) {
+  return a.line !== b.line ? a.line < b.line : a.column <= b.column;
+}
+
+const rawBounds = config.selections.map((selection) => {
+  const open = `>@${selection.id}</span>`;
+  const close = `>@/${selection.id}</span>`;
+  const start = sourceLines.findIndex((line) => line.html.includes(open));
+  const end = sourceLines.findIndex((line) => line.html.includes(close));
+  return {
+    id: selection.id,
+    start,
+    end,
+    opensAt: { line: start, column: start < 0 ? -1 : sourceLines[start].html.indexOf(open) },
+    closesAt: { line: end, column: end < 0 ? -1 : sourceLines[end].html.indexOf(close) },
+  };
+}).filter((range) => range.start >= 0 && range.end >= range.start);
 
 const rangeBounds: RangeBounds[] = rawBounds.map((range) => ({
   ...range,
   depth: rawBounds.filter((candidate) => (
     candidate.id !== range.id
-    && candidate.start <= range.start
-    && candidate.end >= range.end
+    && atOrBefore(candidate.opensAt, range.opensAt)
+    && atOrBefore(range.closesAt, candidate.closesAt)
   )).length,
 }));
 
