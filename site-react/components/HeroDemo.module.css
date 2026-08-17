@@ -1,0 +1,388 @@
+/* 实验版首屏：轮播铺满，字标面板压在左下角 */
+
+.stage {
+  /* 激活卡片与顶栏内容区（1280 上限、两侧 --pad）等宽，
+     卡片左沿因此贴齐 logo、右沿贴齐 GitHub 图标 */
+  --card-w: min(calc(1280px - var(--pad) * 2), calc(100vw - var(--pad) * 2));
+  /* demo 各层统一用的底色；深色下跟随主题，不写死浅色 */
+  --demo-paper: #ede9e2;
+
+  position: relative;
+  /* 顶栏之外的可视高度，减去底部留一点让人知道下面还有内容 */
+  min-height: calc(100svh - var(--nav-h) - 32px);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+:global(:root:not([data-theme='light'])) .stage {
+  @media (prefers-color-scheme: dark) {
+    --demo-paper: var(--paper-2);
+  }
+}
+
+:global(:root[data-theme='dark']) .stage {
+  --demo-paper: var(--paper-2);
+}
+
+.car {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.track {
+  display: flex;
+  gap: 26px;
+  align-items: center;
+  transition: transform 0.5s cubic-bezier(0.3, 0.8, 0.35, 1);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    transition: none !important;
+  }
+}
+
+.slide {
+  flex: 0 0 var(--card-w);
+  background: var(--paper-2);
+  min-height: 505px;
+  opacity: 0.4;
+  transition: opacity 0.4s ease;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+.slide[data-active] {
+  opacity: 1;
+}
+
+/* ---- 字标面板：毛玻璃，压在轮播左下 ---- */
+
+/* 与激活卡片同宽并居中：面板和控件因此贴着卡片的下缘，
+   而不是浮在屏幕边缘那张变暗的邻卡上。本身不接收指针事件，
+   代码区的悬停交互仍然直达下方的 demo。 */
+.overlay {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: var(--card-w); /* 与 .slide 同宽 */
+  height: 100%;
+  pointer-events: none;
+}
+
+.overlay > * {
+  pointer-events: auto;
+}
+
+/* demo 外壳是等分两列，50% 正是代码列的右边界 —— 面板铺满代码列的下缘 */
+.panel {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 50%;
+  /* 左内边距与字标左沿一致，标语因此和 NARRATAGE 对齐同一条竖线 */
+  padding: 26px clamp(24px, 2.4vw, 34px) 28px;
+  /* 底色与模糊都放在伪元素上，遮罩才不会把面板里的文字一起淡掉 */
+  isolation: isolate;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  /* 向上溢出面板本身，渐变因此有更长的行程慢慢淡入代码区 */
+  inset: -260px 0 0;
+  z-index: -1;
+  /* 底部最实、向上渐隐 —— 字标一端几乎透明，与代码自然接续 */
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--paper) 92%, transparent) 0%,
+    color-mix(in srgb, var(--paper) 82%, transparent) 30%,
+    color-mix(in srgb, var(--paper) 60%, transparent) 55%,
+    color-mix(in srgb, var(--paper) 30%, transparent) 78%,
+    transparent 100%
+  );
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  /* 模糊本身同样向上收起，否则渐隐末端会留一道硬边 */
+  mask-image: linear-gradient(to top, #000 38%, rgba(0, 0, 0, 0.45) 72%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, #000 38%, rgba(0, 0, 0, 0.45) 72%, transparent 100%);
+}
+
+/* backdrop-filter 不可用时加重底色，避免文字压在代码上读不清 */
+@supports not (backdrop-filter: blur(1px)) {
+  .panel::before {
+    background: linear-gradient(
+      to top,
+      var(--paper) 0%,
+      color-mix(in srgb, var(--paper) 94%, transparent) 50%,
+      color-mix(in srgb, var(--paper) 70%, transparent) 82%,
+      transparent 100%
+    );
+  }
+}
+
+.wordmark {
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  display: block;
+}
+
+.wInk {
+  fill: var(--ink);
+}
+
+.wRed {
+  fill: var(--crimson);
+}
+
+/* 整句排成一行：字号跟着面板宽度缩放，容不下时才允许收窄字距 */
+.tag {
+  font-size: clamp(10px, 1.02vw, 14px);
+  letter-spacing: -0.045em;
+  margin: 16px 0 0;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.sub {
+  color: var(--muted);
+  font-size: clamp(11px, 1vw, 13px);
+  margin: 9px 0 0;
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  padding: 0 22px;
+  border: 1px solid var(--crimson);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.solid {
+  background: var(--crimson);
+  color: #f7f3ec;
+}
+
+.solid:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--crimson);
+}
+
+.ghost:hover {
+  background: var(--crimson);
+  color: #f7f3ec;
+}
+
+.arw {
+  margin-left: 9px;
+  transition: transform 0.18s ease;
+}
+
+.btn:hover .arw {
+  transform: translateX(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arw,
+  .btn:hover .arw {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* ---- 轮播控件：成组放右下，避开字标面板 ---- */
+
+.controls {
+  position: absolute;
+  right: clamp(18px, 2.2vw, 30px);
+  bottom: clamp(18px, 3.5vh, 34px);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 12px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--paper) 62%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dots {
+  display: flex;
+  gap: 8px;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: var(--crimson);
+  opacity: 0.32;
+  transition: opacity 0.2s ease;
+}
+
+.dot[aria-current='true'] {
+  opacity: 1;
+}
+
+.dot:hover {
+  opacity: 0.7;
+}
+
+.arrows {
+  display: flex;
+  gap: 2px;
+}
+
+.nav {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--ink);
+  font: inherit;
+}
+
+.nav:hover {
+  color: var(--crimson);
+}
+
+.nav svg {
+  display: block;
+}
+
+/* ---- demo 外壳适配 ---- */
+
+.slide :global(.svml-demo-showcase) {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* demo 卡片沿用站点底色，卡片与页面之间不再有色差 */
+.slide :global(.demo-card-content),
+.slide :global(.demo-shell),
+.slide :global(.real-demo-shell) {
+  --demo-card-bg: var(--demo-paper);
+  --demo-code-bg: var(--demo-paper);
+  --demo-preview-bg: var(--demo-paper);
+  min-height: 700px;
+  background: var(--demo-paper);
+}
+
+.slide :global(.source-panel) {
+  background: var(--demo-paper);
+  border-right: 1px solid var(--rule-soft);
+}
+
+.slide :global(.real-demo-shell) :global(.code-scroll) {
+  height: 700px;
+}
+
+.slide :global(.demo-loading) {
+  min-height: 700px;
+}
+
+/* 画面顶到卡片上沿：去掉上留白，并从居中改为顶对齐 */
+.slide :global(.real-preview-body) {
+  place-items: start center;
+  padding: 0 16px 0;
+}
+
+.slide :global(.semantic-live-stage),
+.slide :global(.live-ranking-stage) {
+  height: 600px;
+}
+
+/* 时间轴块的上沿与 GET STARTED 上沿齐平：
+   按钮上沿距卡片底 = 面板下内边距 28px + 按钮高 46px = 74px。
+   这里让整块的高度也占到 74px，标签与进度条因此落在同一条线下方。 */
+.slide :global(.real-semantic-controls) {
+  box-sizing: border-box;
+  align-content: start;
+  height: 74px;
+  margin: 0 20px;
+  padding-top: 0;
+}
+
+/* 面板遮住代码左侧，窄屏改为常规上下排列 */
+@media (max-width: 900px) {
+  .stage {
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .slide {
+    min-height: 0;
+  }
+  /* 叠放取消：覆盖层退回普通块，内容上下排列 */
+  .overlay {
+    position: static;
+    order: -1; /* 字标整组排到轮播上方 */
+    transform: none;
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel {
+    position: static;
+    width: auto;
+    margin: 0 var(--pad) 20px;
+    border: 0;
+    padding: 20px 0 0;
+  }
+  /* 不再叠在代码上，渐变底也就不需要了 */
+  .panel::before {
+    display: none;
+  }
+  /* 小屏一行排不下整句，放开换行并回到常规字号 */
+  .tag {
+    white-space: normal;
+    font-size: clamp(14px, 3.4vw, 19px);
+    text-wrap: balance;
+  }
+  /* 覆盖层整组已上移，控件在组内排到字标之后仍紧跟轮播 */
+  .controls {
+    position: static;
+    order: 1;
+    align-self: center;
+    margin-top: 4px;
+    padding: 0;
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

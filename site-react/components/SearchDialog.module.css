@@ -1,0 +1,205 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: clamp(56px, 12vh, 140px) var(--pad) var(--pad);
+  background: color-mix(in srgb, var(--ink) 34%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: fade 0.14s ease;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.dialog {
+  width: min(660px, 100%);
+  max-height: min(70vh, 620px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--paper);
+  box-shadow: 0 24px 60px -18px color-mix(in srgb, var(--ink) 45%, transparent);
+  animation: rise 0.16s cubic-bezier(0.3, 0.8, 0.35, 1);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .dialog {
+    animation: none;
+  }
+}
+
+/* ---- 输入区 ---- */
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 0 14px 0 18px;
+  height: 56px;
+  border-bottom: 1px solid var(--rule-soft);
+  color: var(--muted);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 15px;
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--muted);
+}
+
+.esc {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: none;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.esc:hover {
+  border-color: var(--crimson);
+  color: var(--crimson);
+}
+
+/* ---- 结果 ---- */
+
+.results {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-color: var(--rule) transparent;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+}
+
+.hit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hitActive {
+  background: var(--crimson-soft);
+  box-shadow: inset 0 0 0 1px var(--crimson);
+}
+
+.crumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.sep {
+  color: var(--muted);
+}
+
+.snippet {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  /* 片段限两行，长段落不会把列表撑开 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.mark {
+  background: none;
+  color: var(--crimson);
+  font-weight: 700;
+}
+
+.empty {
+  margin: 0;
+  padding: 26px 20px 30px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.empty strong {
+  color: var(--ink);
+}
+
+/* ---- 底部提示 ---- */
+
+.foot {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 18px;
+  padding: 9px 16px;
+  border-top: 1px solid var(--rule-soft);
+  background: var(--paper-2);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.foot kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  margin-right: 3px;
+  padding: 0 4px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--paper);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+@media (max-width: 560px) {
+  .foot {
+    display: none;
+  }
+}

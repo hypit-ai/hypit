@@ -1,0 +1,137 @@
+/* 参考比例：左栏 21% · 正文 47% · 目录 20% */
+
+.doc {
+  display: grid;
+  grid-template-columns: 21% minmax(0, 1fr) 20%;
+  align-items: start;
+}
+
+/* ============ 左侧栏 ============ */
+.side {
+  background: var(--paper-2);
+  border-right: 1px solid var(--rule-soft);
+  padding: 30px 0 60px;
+  position: sticky;
+  top: var(--nav-h);
+  min-height: calc(100vh - var(--nav-h));
+}
+
+.sideLabel {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 20px 0 40px;
+  margin: 0 0 22px;
+}
+
+.side ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  margin-left: 45px;
+  /* Continuous rail behind the items; the active link paints its own segment
+     over it via border-left. */
+  box-shadow: inset 2px 0 0 var(--rule-soft);
+}
+
+.side a {
+  display: block;
+  padding: 7px 20px 7px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  border-left: 2px solid transparent;
+}
+
+.side a:hover {
+  color: var(--ink);
+}
+
+.side a[aria-current="page"] {
+  color: var(--ink);
+  border-left-color: var(--ink);
+  font-weight: 700;
+}
+
+/* ============ 正文 ============ */
+.body {
+  /* 页脚接在正文之后，底部留白不必再撑那么高 */
+  padding: 44px 24px 72px clamp(28px, 5vw, 86px);
+}
+
+/* Prose ran to 62ch while the column itself is much wider, leaving a wide gap
+   before the table of contents. It now fills the column, with a ceiling that
+   still keeps lines short enough to read comfortably. */
+.body > * {
+  max-width: min(100%, 82ch);
+}
+
+/* ============ 右侧目录 ============ */
+.toc {
+  padding: 46px 20px 60px 0;
+  position: sticky;
+  top: var(--nav-h);
+  font-size: 12.5px;
+}
+
+.toc h3 {
+  font-size: 13px;
+  margin: 0 0 14px;
+  font-weight: 700;
+  padding-left: 13px;
+}
+
+.toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  box-shadow: inset 2px 0 0 var(--rule-soft);
+}
+
+.toc a {
+  display: block;
+  padding: 6px 0 6px 13px;
+  color: var(--muted);
+  border-left: 2px solid transparent;
+}
+
+.toc a:hover {
+  color: var(--ink);
+}
+
+.toc a[aria-current="true"] {
+  color: var(--crimson);
+  border-left-color: var(--crimson);
+  font-weight: 700;
+}
+
+@media (max-width: 1180px) {
+  .doc {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+  .toc {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .doc {
+    grid-template-columns: 1fr;
+  }
+  .side {
+    position: static;
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 26px;
+  }
+}
+
+/* Sections stack down the sidebar, each with its own label and rail. */
+.sideSection + .sideSection {
+  margin-top: 34px;
+}

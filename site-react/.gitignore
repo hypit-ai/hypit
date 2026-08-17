@@ -1,0 +1,28 @@
+# 依赖
+node_modules/
+
+# 构建产物
+.next/
+out/
+dist/
+
+# 系统
+.DS_Store
+*.log
+
+# 参考资料（不纳入版本库）
+_reference/
+源文件/
+
+# TypeScript 增量编译缓存
+*.tsbuildinfo
+
+# 编辑器 / 工具残留
+.Rhistory
+
+# 本地备份
+.backup/
+
+# 本地 agent 配置（由工具生成）
+AGENTS.md
+CLAUDE.md

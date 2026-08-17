@@ -1,0 +1,179 @@
+/* Ranking demo stage. Ported from the .live-ranking-* rules in the upstream
+   VitePress style.css plus SvmlPlayground.vue's scoped block. Colours that sit
+   over video keep their original values; chrome follows the site tokens. */
+
+.stage {
+  position: relative;
+  justify-self: center;
+  height: 500px;
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  background: #000;
+  isolation: isolate;
+  container-type: inline-size;
+}
+
+.title {
+  position: absolute;
+  top: 9.8958%;
+  left: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 7.8125%;
+  padding: .9cqw 2%;
+  background: #fff;
+  color: #050505;
+  text-align: center;
+  font-family: Poppins, Inter, Arial, sans-serif;
+  font-size: 4.7cqw;
+  font-weight: 950;
+  line-height: 1.05;
+  letter-spacing: .2px;
+}
+
+.board {
+  position: absolute;
+  top: 16.9792%;
+  left: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  row-gap: 2.625%;
+  width: 30.463%;
+  height: 41.6667%;
+  padding: 5.47%;
+  border-radius: 6px;
+  background: rgba(7, 8, 12, .94);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+}
+
+.rankRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 9%;
+  min-height: 0;
+}
+
+.rankRow strong,
+.rankRow span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.rankRow strong {
+  color: #fff;
+  font-family: "Archivo Black", Poppins, Inter, sans-serif;
+  font-size: 5.9cqw;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.04em;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .12);
+}
+
+.rankCell {
+  background: rgba(0, 0, 0, .72);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
+}
+
+.rankRow img { width: 100%; height: 100%; object-fit: contain; }
+
+.activeIcon {
+  position: absolute;
+  z-index: 5;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 23%;
+  background: rgba(255, 255, 255, .98);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .38);
+  transform-origin: center;
+  will-change: left, top, width, transform;
+}
+
+.activeIcon img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+.activeIcon i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .18) 46%, transparent 62%);
+}
+
+.broll {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  transform-origin: center;
+}
+
+/* Selection outlines, from the component's scoped block. */
+.selected { outline: 1px solid var(--crimson); outline-offset: 3px; }
+.brollSelected { outline: 1px solid #b09257; outline-offset: -5px; }
+
+.caption {
+  position: absolute;
+  top: 50%;
+  left: 5%;
+  z-index: 30;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  width: 90%;
+  column-gap: 4px;
+  color: #fff;
+  font-family: Arial Black, Poppins, Inter, sans-serif;
+  font-size: 5.3cqw;
+  font-weight: 900;
+  line-height: 1.08;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  -webkit-text-stroke: .75px #000;
+  paint-order: stroke fill;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .7);
+}
+
+.caption span { display: inline-block; transition: color .08s linear, transform .08s linear; }
+.captionActive { color: #ffd34d; transform: scale(1.08); }
+
+/* Same single-line treatment as the other demos' timeline. */
+.progressTrack {
+  display: flex;
+  gap: 0;
+  height: 3px;
+  border-radius: 0;
+  background: var(--rule-soft);
+  overflow: hidden;
+}
+
+.segment {
+  min-width: 0;
+  height: 100%;
+  flex-basis: 0;
+  border-radius: 0;
+  background: transparent;
+  transition: background .22s ease;
+}
+
+.segmentActive { background: var(--crimson); }
+
+@media (max-width: 900px) {
+  .stage { height: 480px; }
+}
+
+@media (max-width: 520px) {
+  .stage { height: min(480px, 145vw); }
+}

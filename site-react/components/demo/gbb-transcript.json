@@ -1,0 +1,592 @@
+[
+  {
+    "text": "Good.",
+    "start": 0.19,
+    "end": 1
+  },
+  {
+    "text": "Better.",
+    "start": 1,
+    "end": 1.61
+  },
+  {
+    "text": "Best.",
+    "start": 1.7,
+    "end": 2.26
+  },
+  {
+    "text": "Face",
+    "start": 2.26,
+    "end": 2.62
+  },
+  {
+    "text": "Rating",
+    "start": 2.62,
+    "end": 3.16
+  },
+  {
+    "text": "Edition.",
+    "start": 3.16,
+    "end": 3.83
+  },
+  {
+    "text": "Good",
+    "start": 4.01,
+    "end": 4.32
+  },
+  {
+    "text": "is",
+    "start": 4.34,
+    "end": 4.57
+  },
+  {
+    "text": "ChatGBT.",
+    "start": 4.57,
+    "end": 5.44
+  },
+  {
+    "text": "Everyone's",
+    "start": 5.7,
+    "end": 6.35
+  },
+  {
+    "text": "asked",
+    "start": 6.38,
+    "end": 6.63
+  },
+  {
+    "text": "it",
+    "start": 6.72,
+    "end": 6.81
+  },
+  {
+    "text": "to",
+    "start": 6.86,
+    "end": 7
+  },
+  {
+    "text": "rate",
+    "start": 7,
+    "end": 7.2
+  },
+  {
+    "text": "their",
+    "start": 7.2,
+    "end": 7.42
+  },
+  {
+    "text": "selfie.",
+    "start": 7.61,
+    "end": 8.42
+  },
+  {
+    "text": "But",
+    "start": 8.42,
+    "end": 8.56
+  },
+  {
+    "text": "it's",
+    "start": 8.68,
+    "end": 8.78
+  },
+  {
+    "text": "a",
+    "start": 8.78,
+    "end": 8.83
+  },
+  {
+    "text": "chatbot,",
+    "start": 8.83,
+    "end": 9.24
+  },
+  {
+    "text": "not",
+    "start": 9.35,
+    "end": 9.44
+  },
+  {
+    "text": "a",
+    "start": 9.44,
+    "end": 9.57
+  },
+  {
+    "text": "face",
+    "start": 9.57,
+    "end": 9.72
+  },
+  {
+    "text": "scanner.",
+    "start": 9.94,
+    "end": 10.31
+  },
+  {
+    "text": "It",
+    "start": 10.34,
+    "end": 10.41
+  },
+  {
+    "text": "can't",
+    "start": 10.42,
+    "end": 10.66
+  },
+  {
+    "text": "measure",
+    "start": 10.66,
+    "end": 10.99
+  },
+  {
+    "text": "a",
+    "start": 10.99,
+    "end": 11.05
+  },
+  {
+    "text": "jawline,",
+    "start": 11.05,
+    "end": 11.52
+  },
+  {
+    "text": "so",
+    "start": 11.52,
+    "end": 12.08
+  },
+  {
+    "text": "it",
+    "start": 12.08,
+    "end": 12.18
+  },
+  {
+    "text": "just",
+    "start": 12.18,
+    "end": 12.38
+  },
+  {
+    "text": "guesses",
+    "start": 12.38,
+    "end": 12.76
+  },
+  {
+    "text": "to",
+    "start": 12.77,
+    "end": 12.78
+  },
+  {
+    "text": "keep",
+    "start": 12.95,
+    "end": 13.24
+  },
+  {
+    "text": "you",
+    "start": 13.24,
+    "end": 13.36
+  },
+  {
+    "text": "happy.",
+    "start": 13.6,
+    "end": 14.12
+  },
+  {
+    "text": "Better",
+    "start": 14.12,
+    "end": 14.56
+  },
+  {
+    "text": "is",
+    "start": 14.56,
+    "end": 14.73
+  },
+  {
+    "text": "LooksMax",
+    "start": 14.73,
+    "end": 15.34
+  },
+  {
+    "text": "AI,",
+    "start": 15.34,
+    "end": 15.64
+  },
+  {
+    "text": "an",
+    "start": 15.68,
+    "end": 15.79
+  },
+  {
+    "text": "app",
+    "start": 15.79,
+    "end": 16.02
+  },
+  {
+    "text": "actually",
+    "start": 16.02,
+    "end": 16.39
+  },
+  {
+    "text": "built",
+    "start": 16.77,
+    "end": 17.04
+  },
+  {
+    "text": "to",
+    "start": 17.04,
+    "end": 17.16
+  },
+  {
+    "text": "score",
+    "start": 17.16,
+    "end": 17.49
+  },
+  {
+    "text": "your",
+    "start": 17.49,
+    "end": 17.73
+  },
+  {
+    "text": "face.",
+    "start": 17.75,
+    "end": 18.2
+  },
+  {
+    "text": "But",
+    "start": 18.4,
+    "end": 18.43
+  },
+  {
+    "text": "it",
+    "start": 18.43,
+    "end": 18.57
+  },
+  {
+    "text": "scores",
+    "start": 18.57,
+    "end": 18.82
+  },
+  {
+    "text": "the",
+    "start": 19.06,
+    "end": 19.2
+  },
+  {
+    "text": "photo,",
+    "start": 19.2,
+    "end": 19.69
+  },
+  {
+    "text": "not",
+    "start": 19.69,
+    "end": 19.83
+  },
+  {
+    "text": "you.",
+    "start": 19.92,
+    "end": 20.23
+  },
+  {
+    "text": "Same",
+    "start": 20.37,
+    "end": 20.54
+  },
+  {
+    "text": "guy,",
+    "start": 20.74,
+    "end": 20.85
+  },
+  {
+    "text": "new",
+    "start": 20.9,
+    "end": 21.04
+  },
+  {
+    "text": "lighting,",
+    "start": 21.04,
+    "end": 21.6
+  },
+  {
+    "text": "totally",
+    "start": 21.6,
+    "end": 21.94
+  },
+  {
+    "text": "different",
+    "start": 22.23,
+    "end": 22.54
+  },
+  {
+    "text": "number.",
+    "start": 22.54,
+    "end": 23.12
+  },
+  {
+    "text": "Best",
+    "start": 23.12,
+    "end": 23.41
+  },
+  {
+    "text": "is",
+    "start": 23.45,
+    "end": 23.46
+  },
+  {
+    "text": "a",
+    "start": 23.46,
+    "end": 23.63
+  },
+  {
+    "text": "drone.",
+    "start": 23.63,
+    "end": 24.03
+  },
+  {
+    "text": "It",
+    "start": 24.19,
+    "end": 24.2
+  },
+  {
+    "text": "scans",
+    "start": 24.28,
+    "end": 24.54
+  },
+  {
+    "text": "your",
+    "start": 24.54,
+    "end": 24.79
+  },
+  {
+    "text": "face",
+    "start": 24.79,
+    "end": 25.03
+  },
+  {
+    "text": "in",
+    "start": 25.03,
+    "end": 25.16
+  },
+  {
+    "text": "3D",
+    "start": 25.16,
+    "end": 25.4
+  },
+  {
+    "text": "with",
+    "start": 25.4,
+    "end": 25.65
+  },
+  {
+    "text": "Face",
+    "start": 25.65,
+    "end": 25.76
+  },
+  {
+    "text": "ID.",
+    "start": 25.96,
+    "end": 26.2
+  },
+  {
+    "text": "No",
+    "start": 26.2,
+    "end": 26.32
+  },
+  {
+    "text": "angles,",
+    "start": 26.36,
+    "end": 26.81
+  },
+  {
+    "text": "no",
+    "start": 26.81,
+    "end": 26.93
+  },
+  {
+    "text": "lighting",
+    "start": 26.93,
+    "end": 27.2
+  },
+  {
+    "text": "tricks.",
+    "start": 27.45,
+    "end": 27.9
+  },
+  {
+    "text": "And",
+    "start": 27.99,
+    "end": 28.2
+  },
+  {
+    "text": "it",
+    "start": 28.27,
+    "end": 28.28
+  },
+  {
+    "text": "doesn't",
+    "start": 28.45,
+    "end": 28.87
+  },
+  {
+    "text": "stop",
+    "start": 29.1,
+    "end": 29.33
+  },
+  {
+    "text": "at",
+    "start": 29.33,
+    "end": 29.41
+  },
+  {
+    "text": "a",
+    "start": 29.54,
+    "end": 29.57
+  },
+  {
+    "text": "score.",
+    "start": 29.57,
+    "end": 30.24
+  },
+  {
+    "text": "It's",
+    "start": 30.24,
+    "end": 30.56
+  },
+  {
+    "text": "built",
+    "start": 30.79,
+    "end": 30.98
+  },
+  {
+    "text": "on",
+    "start": 30.98,
+    "end": 31.14
+  },
+  {
+    "text": "7",
+    "start": 31.18,
+    "end": 31.39
+  },
+  {
+    "text": "million",
+    "start": 31.39,
+    "end": 31.87
+  },
+  {
+    "text": "real",
+    "start": 31.97,
+    "end": 32.3
+  },
+  {
+    "text": "human",
+    "start": 32.3,
+    "end": 32.69
+  },
+  {
+    "text": "votes.",
+    "start": 32.72,
+    "end": 33.45
+  },
+  {
+    "text": "Shows",
+    "start": 33.49,
+    "end": 33.73
+  },
+  {
+    "text": "you",
+    "start": 33.92,
+    "end": 34.05
+  },
+  {
+    "text": "which",
+    "start": 34.06,
+    "end": 34.2
+  },
+  {
+    "text": "type",
+    "start": 34.39,
+    "end": 34.49
+  },
+  {
+    "text": "of",
+    "start": 34.5,
+    "end": 34.65
+  },
+  {
+    "text": "people",
+    "start": 34.65,
+    "end": 35.1
+  },
+  {
+    "text": "you",
+    "start": 35.1,
+    "end": 35.31
+  },
+  {
+    "text": "attract,",
+    "start": 35.31,
+    "end": 36
+  },
+  {
+    "text": "and",
+    "start": 36,
+    "end": 36.22
+  },
+  {
+    "text": "tells",
+    "start": 36.35,
+    "end": 36.52
+  },
+  {
+    "text": "you",
+    "start": 36.72,
+    "end": 36.81
+  },
+  {
+    "text": "exactly",
+    "start": 36.81,
+    "end": 37.34
+  },
+  {
+    "text": "which",
+    "start": 37.34,
+    "end": 37.69
+  },
+  {
+    "text": "feature",
+    "start": 37.7,
+    "end": 38.24
+  },
+  {
+    "text": "to",
+    "start": 38.24,
+    "end": 38.39
+  },
+  {
+    "text": "fix",
+    "start": 38.39,
+    "end": 38.6
+  },
+  {
+    "text": "first.",
+    "start": 38.6,
+    "end": 39.28
+  },
+  {
+    "text": "Your",
+    "start": 39.28,
+    "end": 39.39
+  },
+  {
+    "text": "glow",
+    "start": 39.43,
+    "end": 39.52
+  },
+  {
+    "text": "up,",
+    "start": 39.53,
+    "end": 39.83
+  },
+  {
+    "text": "finally",
+    "start": 39.83,
+    "end": 40.39
+  },
+  {
+    "text": "measurable.",
+    "start": 40.39,
+    "end": 41.34
+  }
+]

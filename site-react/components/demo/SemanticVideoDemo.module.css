@@ -1,0 +1,151 @@
+/* Ported from the `<style scoped>` block of SemanticVideoDemo.vue.
+   Selectors that the component shares with global demo chrome (.demo-shell,
+   .code-line, .source-panel, …) live in demo.css instead. */
+
+.demo :global(.code-scroll) { overflow-y: auto; }
+.demo :global(.source-following) :global(.code-scroll) { overflow-y: hidden; }
+
+.stage {
+  position: relative;
+  height: 540px;
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  background: #000;
+  isolation: isolate;
+  container-type: inline-size;
+}
+
+.broll {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.brollActive { display: block; }
+
+.outline { position: absolute; z-index: 24; pointer-events: none; }
+.sceneOutline { inset: 4px; border: 1px solid var(--crimson); }
+.brollOutline { inset: 9px; border: 1px solid #b09257; }
+
+.caption {
+  position: absolute;
+  z-index: 30;
+  left: 5%;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  width: 90%;
+  column-gap: 4px;
+  color: #fff;
+  font-family: Arial Black, Poppins, Inter, sans-serif;
+  font-size: 5.3cqw;
+  font-weight: 900;
+  line-height: 1.08;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  -webkit-text-stroke: .75px #000;
+  paint-order: stroke fill;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .7);
+}
+.captionStreet { top: 50%; }
+.captionGbb { top: 65%; }
+.caption span { display: inline-block; transition: color .08s linear, transform .08s linear; }
+.captionActive { color: #ffd34d; transform: scale(1.08); }
+
+/* One continuous rule, not four. The segments butt together with no gap and
+   no rounding, so the line reads as a single unbroken bar; only the segment
+   being spoken lights up, matching its label above. */
+.progressTrack {
+  display: flex;
+  grid-template-columns: none;
+  gap: 0;
+  height: 3px;
+  border-radius: 0;
+  background: var(--rule-soft);
+  overflow: hidden;
+}
+
+.segment {
+  min-width: 0;
+  height: 100%;
+  flex-basis: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: background .22s ease;
+}
+
+.segmentActive {
+  background: var(--crimson);
+}
+
+/* Good-Better-Best stage: the three-logo header row and the deck card that
+   appears while a @votes / @attract / @features range is speaking. */
+.gbbHeader {
+  position: absolute;
+  z-index: 8;
+  top: 8.9%;
+  left: 5.8%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7.2%;
+  width: 88.4%;
+}
+
+.gbbSlot { position: relative; display: grid; justify-items: center; }
+
+.gbbSlot img {
+  width: 80%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 20%;
+  opacity: 0;
+  transform: translateY(-6px) scale(.94);
+  transition: opacity .28s ease, transform .38s cubic-bezier(.2, .8, .2, 1);
+}
+.gbbSlotVisible img { opacity: 1; transform: translateY(0) scale(1); }
+
+.gbbSlot strong {
+  margin-top: 8%;
+  font-family: Arial Black, Poppins, Inter, sans-serif;
+  font-size: 5.6cqw;
+  font-weight: 950;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+}
+.slotGood strong { color: #ff1749; }
+.slotBetter strong { color: #ffb300; }
+.slotBest strong { color: #00b96b; }
+
+.gbbSlotSelected::after {
+  content: "";
+  position: absolute;
+  inset: -4px -2px -5px;
+  border: 1px solid var(--crimson);
+  pointer-events: none;
+}
+
+.gbbDeck {
+  position: absolute;
+  z-index: 12;
+  top: 61.7%;
+  left: 11%;
+  width: 78%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 9px 28px rgba(0, 0, 0, .28);
+}
+.gbbDeckSelected { outline: 1px solid #b09257; outline-offset: 3px; }
+
+@media (max-width: 900px) {
+  .stage { height: 520px; }
+}
+
+@media (max-width: 520px) {
+  .stage { height: min(520px, 145vw); }
+}

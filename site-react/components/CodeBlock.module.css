@@ -1,0 +1,111 @@
+.wrap {
+  position: relative;
+  margin: 0 0 24px;
+}
+
+.pre {
+  margin: 0;
+  padding: 18px 20px;
+  overflow-x: auto;
+  border: 1px solid var(--rule-soft);
+  background: var(--paper-2);
+  line-height: 1.7;
+}
+
+.pre code {
+  padding: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+/* Rests at low opacity so it does not compete with the code, and comes forward
+   on hover or keyboard focus anywhere in the block. */
+.copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid var(--rule-soft);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.wrap:hover .copy,
+.copy:focus-visible {
+  opacity: 1;
+}
+
+.copy:hover {
+  color: var(--crimson);
+  border-color: var(--crimson);
+}
+
+.copy:focus-visible {
+  outline: 2px solid var(--crimson);
+  outline-offset: 2px;
+}
+
+.copy svg {
+  display: block;
+}
+
+/* Touch devices have no hover, so the button stays visible there. */
+@media (hover: none) {
+  .copy {
+    opacity: 1;
+  }
+}
+
+/* Shiki emits its own <pre class="shiki">; match the plain block's chrome and
+   drive colours from the CSS variables it writes for both themes. */
+.shiki :global(pre.shiki) {
+  margin: 0;
+  padding: 18px 20px;
+  overflow-x: auto;
+  border: 1px solid var(--rule-soft);
+  background: var(--paper-2) !important;
+  line-height: 1.7;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+.shiki :global(pre.shiki code) {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.shiki :global(span) {
+  color: var(--shiki-light);
+}
+
+:global([data-theme='dark']) .shiki :global(span),
+:global([data-theme='dark']) .shiki :global(pre.shiki) {
+  color: var(--shiki-dark);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .shiki :global(span) {
+    color: var(--shiki-dark);
+  }
+}
+
+/* Semantic markers stay visually distinct from ordinary syntax. */
+.shiki :global(.svml-selection) {
+  border-radius: 2px;
+  background: var(--crimson-soft);
+  color: var(--crimson) !important;
+  font-weight: 700;
+}
