@@ -536,6 +536,7 @@ html.home-page .svml-demo {
   --demo-segment-pink: var(--crimson);
   --demo-segment-violet: #6b6280;
   --demo-cursor: var(--crimson);
+  --demo-word-tint: 8%;
   width: 100%;
   margin: 0 auto;
 }
@@ -550,7 +551,11 @@ html.home-page.dark .svml-demo {
   --demo-attr: #00fff2;
   --demo-string: #eeff00;
   --demo-expression: #ff7e34;
+  /* The pill carries dark text, and the crimson at its dark-theme value only
+     reaches 4.33:1 behind it. Same hue, lifted until it clears 5. */
+  --demo-marker-active-bg: #e15175;
   --demo-marker-active-text: #131211;
+  --demo-word-tint: 20%;
 }
 
 .vp-doc .demo-heading h2 { margin: 0; border: 0; padding: 0; color: var(--ink); font-family: var(--mono); font-size: clamp(15px, 1.7vw, 19px); font-weight: 700; line-height: 1.3; letter-spacing: -.01em; }
@@ -583,13 +588,20 @@ html.home-page .vp-doc .code-line code { font-size: inherit; }
 .code-fold code { display: flex; align-items: center; justify-content: center; width: 100%; height: 26px; color: var(--demo-line-number) !important; text-align: center; font-size: 16px !important; font-weight: 700 !important; letter-spacing: 0 !important; line-height: 1 !important; }
 .code-spacer { height: 26px; }
 .semantic-token.semantic-active { --semantic-color: var(--demo-marker-active-bg); --semantic-ring: var(--demo-marker); background: var(--semantic-color); color: var(--demo-marker-active-text); font-weight: 700; text-shadow: none; box-shadow: 0 0 0 1.5px var(--semantic-ring); }
-.semantic-token.semantic-active.semantic-depth-1 { --semantic-color: var(--demo-attr); --semantic-ring: var(--demo-attr); color: #fdf8ee; }
-.semantic-token.semantic-active.semantic-depth-2 { --semantic-color: var(--demo-expression); --semantic-ring: var(--demo-expression); color: #f2f6ff; }
+/* The pill text has to follow the theme, not be assumed light. These
+   backgrounds are dark on paper but bright in the dark palette, where a
+   near-white label fell to 1.2:1 on the cyan and 2.3:1 on the orange. Reusing
+   the marker's own per-theme label colour gives 5.5:1 either side. */
+.semantic-token.semantic-active.semantic-depth-1 { --semantic-color: var(--demo-attr); --semantic-ring: var(--demo-attr); color: var(--demo-marker-active-text); }
+.semantic-token.semantic-active.semantic-depth-2 { --semantic-color: var(--demo-expression); --semantic-ring: var(--demo-expression); color: var(--demo-marker-active-text); }
 .code-line.binding-active,
 .code-line.binding-active.binding-depth-1,
 .code-line.binding-active.binding-depth-2 { background: transparent; }
 .script-word { border-radius: 3px; transition: color .08s linear, background-color .08s linear; }
-.script-word.active { background: color-mix(in srgb, var(--demo-attr) 20%, transparent); color: var(--demo-attr); box-shadow: 0 0 0 1px var(--demo-attr); }
+/* Tint and text are the same hue, so every percent of tint costs contrast:
+   at 20% the paper theme fell to 3.8:1. The dark theme can carry far more
+   before it matters, hence the split. */
+.script-word.active { background: color-mix(in srgb, var(--demo-attr) var(--demo-word-tint), transparent); color: var(--demo-attr); box-shadow: 0 0 0 1px var(--demo-attr); }
 .semantic-timeline { min-width: 0; }
 .timeline-labels { display: grid; grid-template-columns: 31fr 44fr 25fr; margin-bottom: 5px; color: var(--muted); font-family: var(--mono); font-size: 7px; }
 .timeline-labels span:nth-child(2) { text-align: center; }.timeline-labels span:nth-child(3) { text-align: right; }
