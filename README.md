@@ -45,6 +45,8 @@ Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for hu
 - **Pinned to words** — regeneration shifts timing, yet B-roll and effects follow their words.
 - **Batch-ready** — it's all source files. Produce video at the scale of code, not at the speed of editing.
 
+<h3 align="center"><a href="https://narratage.hypit.ai/">See demos — SVML source and rendered video side by side →</a></h3>
+
 ## How it works
 
 Narratage compiles SVML source files into finished videos.
