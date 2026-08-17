@@ -30,10 +30,14 @@
 </p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/"><img alt="Website" src="https://img.shields.io/badge/Website-narratage.hypit.ai-000000?style=flat-square&logo=googlechrome&logoColor=white"></a>
-  <a href="https://discord.gg/85hnyQnxpn"><img alt="Discord" src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat-square&logo=discord&logoColor=white"></a>
-  <a href="https://x.com/hypitai"><img alt="X" src="https://img.shields.io/badge/Follow-%40hypitai-000000?style=flat-square&logo=x&logoColor=white"></a>
-  <a href="https://t.me/narratage"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-Join%20Group-26A5E4?style=flat-square&logo=telegram&logoColor=white"></a>
+  <a href="https://narratage.hypit.ai/"><img alt="Visit our website" src="https://img.shields.io/badge/Visit%20our%20website-000000?style=for-the-badge&logo=googlechrome&logoColor=white"></a>
+  <a href="https://discord.gg/85hnyQnxpn"><img alt="Join our Discord" src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
+  <a href="https://t.me/narratage"><img alt="Join our Telegram" src="https://img.shields.io/badge/Join%20our%20Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white"></a>
+  <a href="https://x.com/hypitai"><img alt="Follow @hypitai on X" src="https://img.shields.io/badge/Follow%20%40hypitai-000000?style=for-the-badge&logo=x&logoColor=white"></a>
+</p>
+
+<p align="center">
+  ⭐ <em>Help more people find Narratage and grow the community. Star this repo!</em>
 </p>
 
 Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for human hands on a timeline.
@@ -45,7 +49,7 @@ Every video editor — Premiere, CapCut, DaVinci, Final Cut — was built for hu
 - **Pinned to words** — regeneration shifts timing, yet B-roll and effects follow their words.
 - **Batch-ready** — it's all source files. Produce video at the scale of code, not at the speed of editing.
 
-<h3 align="center"><a href="https://narratage.hypit.ai/">See demos — SVML source and rendered video side by side →</a></h3>
+> ### [See demos — SVML source and rendered video side by side →](https://narratage.hypit.ai/)
 
 ## How it works
 
