@@ -1,12 +1,14 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/public/logo-bounce-dark.png">
-    <img alt="Narratage" src="docs/public/logo-bounce-light.png" width="420" height="217">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/logo-bounce-dark.png" type="image/apng">
+    <source srcset="docs/public/logo-bounce-light.png" type="image/apng">
+    <img alt="Narratage" src="docs/public/narratage-logo.svg" width="420" height="217">
   </picture>
 </p>
 
 <p align="center">
-  <strong>World's #1 video programming language and system for AI agents.</strong>
+  <!-- The empty comment stops GFM autolinking "#1" as a reference to issue 1. -->
+  <strong>World's #<!-- -->1 video programming language and system for AI agents.</strong>
   <br>
   <em>Humans edit video. Agents compile it.</em>
 </p>
