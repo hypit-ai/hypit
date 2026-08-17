@@ -529,10 +529,13 @@ html.home-page.dark .svml-demo {
 .source-measure { position: absolute; z-index: -1; top: 0; left: 0; visibility: hidden; width: 100%; pointer-events: none; }
 /* SvmlPlayground counts wrapped rows as ceil(height / 26) — keep this line-height. */
 .code-scroll { position: relative; height: 621px; overflow-x: hidden; overflow-y: auto; overflow-anchor: none; padding: var(--source-vertical-padding, 9px) 0; scrollbar-color: var(--rule) transparent; }
-.code-line { position: relative; display: grid; grid-template-columns: 44px minmax(0,1fr); width: 100%; min-width: 0; min-height: 26px; margin: 0; padding: 0 18px 0 0; border: 0; outline: 0; background: transparent; color: var(--demo-text); text-align: left; font-family: var(--mono); font-size: 13.5px; font-weight: 400; letter-spacing: normal; line-height: 26px; }
+.code-line { position: relative; display: grid; grid-template-columns: 44px minmax(0,1fr); width: 100%; min-width: 0; min-height: 26px; margin: 0; padding: 0 18px 0 0; border: 0; outline: 0; background: transparent; color: var(--demo-text); text-align: left; font-family: var(--mono); font-size: 14.5px; font-weight: 400; letter-spacing: normal; line-height: 26px; }
 .line-number { padding-right: 13px; color: var(--demo-line-number); text-align: right; font-weight: 400; user-select: none; }
 .code-line.active .line-number { color: var(--demo-text); }
 .code-line code { min-width: 0; padding: 0; color: inherit; background: none; font-family: inherit; font-size: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* The home body is markdown, so `.vp-doc :not(pre) > code` (0,1,2) also matches
+   here and would shrink the demo source by its .875em code ratio. */
+html.home-page .vp-doc .code-line code { font-size: inherit; }
 .svml-demo .code-line code { padding: 0 !important; border: 0 !important; border-radius: 0 !important; outline: 0 !important; background: transparent !important; box-shadow: none !important; letter-spacing: normal !important; }
 .syn-tag { color: var(--demo-tag); }.syn-attr { color: var(--demo-attr); }.syn-string { color: var(--demo-string); }.syn-expr { color: var(--demo-expression); }.syn-marker { color: var(--demo-marker); font-weight: 700; background: var(--demo-marker-bg); box-shadow: inset 0 0 0 1px var(--demo-marker-border); text-shadow: none; }
 .semantic-token { margin: -3px; padding: 3px; border-radius: 4px; cursor: pointer; }
@@ -566,7 +569,7 @@ html.home-page.dark .svml-demo {
 .real-preview-body { display: grid; place-items: center; flex: 1; min-height: 0; padding: 28px 20px 18px; background: var(--demo-preview-bg); }
 .real-video-frame { position: relative; justify-self: center; height: 490px; aspect-ratio: 9/16; overflow: hidden; border: 1px solid var(--rule); border-radius: 2px; background: #161820; }
 .real-video-frame video { display: block; width: 100%; height: 100%; object-fit: cover; background: #191b22; }
-.live-ranking-stage { position: relative; justify-self: center; height: 540px; aspect-ratio: 9/16; overflow: hidden; border: 1px solid var(--rule); background: #000; isolation: isolate; }
+.live-ranking-stage { position: relative; justify-self: center; height: 540px; aspect-ratio: 9/16; overflow: hidden; border: 1px solid var(--rule); background: #000; isolation: isolate; container-type: inline-size; }
 .live-base-layer { position: absolute; inset: 0; z-index: 0; background: #000; }
 .live-base-layer video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
 .live-base-layer video.active { opacity: 1; }
@@ -574,11 +577,11 @@ html.home-page.dark .svml-demo {
  * Everything from here to `.live-caption` is typography inside the rendered video,
  * not site typography — the hard-coded families and colours are deliberate.
  */
-.live-title { position: absolute; top: 9.8958%; left: 0; z-index: 4; display: grid; place-items: center; width: 100%; height: 7.8125%; padding: 0 2%; background: #fff; color: #050505; text-align: center; font-family: Poppins, Inter, Arial, sans-serif; font-size: 15px; font-weight: 950; line-height: .92; letter-spacing: .2px; }
+.live-title { position: absolute; top: 9.8958%; left: 0; z-index: 4; display: grid; place-items: center; width: 100%; height: 7.8125%; padding: .9cqw 2%; background: #fff; color: #050505; text-align: center; font-family: Poppins, Inter, Arial, sans-serif; font-size: 4.7cqw; font-weight: 950; line-height: .92; letter-spacing: .2px; }
 .live-ranking-board { position: absolute; top: 16.9792%; left: 0; z-index: 3; display: grid; grid-template-rows: repeat(5,minmax(0,1fr)); row-gap: 2.625%; width: 30.463%; height: 41.6667%; padding: 5.47%; border-radius: 6px; background: rgba(7,8,12,.94); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
 .live-rank-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: center; gap: 9%; min-height: 0; }
 .live-rank-row strong, .live-rank-row span { display: grid; place-items: center; width: 100%; height: auto; min-width: 0; aspect-ratio: 1; overflow: hidden; border-radius: 4px; }
-.live-rank-row strong { color: #fff; font-family: "Archivo Black", Poppins, Inter, sans-serif; font-size: 18px; font-weight: 900; line-height: 1; letter-spacing: -.04em; text-shadow: 0 1px 1px rgba(0,0,0,.12); }
+.live-rank-row strong { color: #fff; font-family: "Archivo Black", Poppins, Inter, sans-serif; font-size: 5.9cqw; font-weight: 900; line-height: 1; letter-spacing: -.04em; text-shadow: 0 1px 1px rgba(0,0,0,.12); }
 .live-rank-row span { background: rgba(0,0,0,.72); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
 .live-rank-row img { width: 100%; height: 100%; object-fit: contain; }
 .live-active-icon { position: absolute; z-index: 5; aspect-ratio: 1; overflow: hidden; border-radius: 23%; background: rgba(255,255,255,.98); box-shadow: 0 14px 34px rgba(0,0,0,.38); transform-origin: center; will-change: left,top,width,transform; }
@@ -589,7 +592,7 @@ html.home-page.dark .svml-demo {
 .live-audio-toggle:hover { background: rgba(0,0,0,.78); }
 .live-audio-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .live-audio-toggle .material-symbols-rounded { font-size: 18px; font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20; line-height: 1; }
-.live-caption { position: absolute; top: 54%; left: 37%; z-index: 30; display: flex; align-items: baseline; justify-content: center; width: 64%; column-gap: 4px; color: #fff; font-family: Poppins, Inter, Arial, sans-serif; font-size: 14px; font-weight: 800; line-height: 1.15; letter-spacing: -.3px; text-align: center; white-space: nowrap; pointer-events: none; -webkit-text-stroke: .55px rgba(0,0,0,.82); paint-order: stroke fill; text-shadow: 0 1px 4px rgba(0,0,0,.72); }
+.live-caption { position: absolute; top: 54%; left: 37%; z-index: 30; display: flex; align-items: baseline; justify-content: center; width: 64%; column-gap: 4px; color: #fff; font-family: Poppins, Inter, Arial, sans-serif; font-size: 5.3cqw; font-weight: 900; line-height: 1.08; letter-spacing: -.3px; text-align: center; white-space: nowrap; pointer-events: none; -webkit-text-stroke: .55px rgba(0,0,0,.82); paint-order: stroke fill; text-shadow: 0 1px 4px rgba(0,0,0,.72); }
 .live-caption span { display: inline-block; transition: color .08s linear, transform .08s linear; }
 .live-caption span.active { color: #ffd34d; transform: scale(1.08); }
 .ranking-board-outline, .ranking-stage-outline { position: absolute; z-index: 3; border: 2px solid var(--crimson); opacity: 0; pointer-events: none; transition: opacity .18s ease; }
@@ -599,7 +602,7 @@ html.home-page.dark .svml-demo {
 .ranking-board-outline span, .ranking-stage-outline span { position: absolute; top: -13px; left: -1px; padding: 2px 4px; border-radius: 2px 2px 0 0; background: var(--crimson); color: #f7f3ec; font-family: var(--mono); font-size: 6px; line-height: 10px; }
 .real-semantic-controls { display: grid; grid-template-columns: minmax(0,1fr); align-items: center; margin: 0 28px 26px; padding: 12px 0 0; border-top: 0; }
 .ranking-labels { display: flex; gap: 0; }
-.ranking-labels button { min-width: 0; flex-basis: 0; overflow: hidden; padding: 4px 2px; border: 0; background: none; color: var(--muted); text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: normal; text-overflow: ellipsis; cursor: pointer; }.ranking-labels button.current { color: var(--crimson); font-weight: 700; }
+.ranking-labels button { min-width: 0; flex-basis: 0; overflow: hidden; padding: 4px 2px; border: 0; background: none; color: var(--muted); text-align: center; font-family: var(--mono); font-size: 11px; line-height: normal; letter-spacing: normal; text-overflow: ellipsis; cursor: pointer; }.ranking-labels button.current { color: var(--crimson); font-weight: 700; }
 .ranking-track { display: flex; gap: 0; }
 .ranking-track .segment { min-width: 0; flex-basis: 0; }
 .ranking-track .segment { border-radius: 0; box-shadow: inset -1px 0 var(--paper-2); }
