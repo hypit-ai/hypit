@@ -8,11 +8,6 @@ const isChinese = computed(() => lang.value.toLowerCase().startsWith("zh"));
 
 <template>
   <div class="np-masthead">
-    <div class="np-masthead-meta">
-      <span class="np-masthead-label">{{ isChinese ? "开源项目" : "Open source" }}</span>
-      <span class="np-rule tick-r np-masthead-rule"></span>
-    </div>
-
     <div class="np-masthead-wrap">
       <!--
         One <text> with two <tspan>s, not two <text>s: textLength is applied per

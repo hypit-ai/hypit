@@ -239,13 +239,12 @@ export default defineConfig({
   head: [
     ["meta", { name: "theme-color", content: "#f3f0e8", media: "(prefers-color-scheme: light)" }],
     ["meta", { name: "theme-color", content: "#131211", media: "(prefers-color-scheme: dark)" }],
-    // Runs before first paint: restores the "intro already seen" flag, marks the
-    // home page so the branded palette paints without a flash, and sends
-    // zh-preferring visitors to the Chinese home.
+    // Runs before first paint: marks the home page so the branded palette paints
+    // without a flash, and sends zh-preferring visitors to the Chinese home.
     [
       "script",
       {},
-      `(function(){var p=location.pathname,b=${JSON.stringify(base)},k="narratage-locale",h="narratage-hero-intro-seen",d=document.documentElement,l;try{if(sessionStorage.getItem(h)==="1")d.classList.add("hero-intro-seen");l=localStorage.getItem(k)}catch(e){}if(!l)l=(navigator.language||"").toLowerCase().indexOf("zh")===0?"zh":"en";var en=p===b||(b.length>1&&p===b.slice(0,-1)),zh=p===b+"zh/"||p===b+"zh";if(en||zh)d.classList.add("home-page");if(en&&l==="zh")location.replace(b+"zh/"+location.search+location.hash)})()`,
+      `(function(){var p=location.pathname,b=${JSON.stringify(base)},k="narratage-locale",d=document.documentElement,l;try{l=localStorage.getItem(k)}catch(e){}if(!l)l=(navigator.language||"").toLowerCase().indexOf("zh")===0?"zh":"en";var en=p===b||(b.length>1&&p===b.slice(0,-1)),zh=p===b+"zh/"||p===b+"zh";if(en||zh)d.classList.add("home-page");if(en&&l==="zh")location.replace(b+"zh/"+location.search+location.hash)})()`,
     ],
     ["link", { rel: "preconnect", href: "https://fonts.googleapis.com" }],
     ["link", { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" }],

@@ -119,6 +119,8 @@ onBeforeUnmount(() => cardObserver?.disconnect());
     @pointermove="updateDemoPointer"
     @pointerleave="clearDemoPointer"
   >
+    <div class="np-rule"></div>
+
     <header class="demo-heading carousel-heading">
       <h2><span class="hover-interaction-copy">{{ isChinese ? "悬停标记范围，查看对应画面" : "Hover a marked range to see the corresponding frame" }}</span><span class="touch-interaction-copy">{{ isChinese ? "点击标记范围，查看对应画面" : "Tap a marked range to see the corresponding frame" }}</span></h2>
     </header>
@@ -155,40 +157,27 @@ onBeforeUnmount(() => cardObserver?.disconnect());
 <style scoped>
 /* The cap covers the padding as well, so this column and the masthead — which is
    capped at 1280px inside the same padding — share a left edge. */
-.svml-demo-showcase { width: 100%; max-width: calc(1280px + var(--pad) * 2); margin: 0 auto; padding: 48px var(--pad) 96px; box-sizing: border-box; }
+.svml-demo-showcase { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 var(--pad) 60px; box-sizing: border-box; }
 .demo-list { display: grid; gap: 64px; width: 100%; margin-inline: 0; }
 .carousel-heading { width: 100%; margin-right: 0; margin-left: 0; }
-.demo-card { width: 100%; min-width: 0; border-radius: 2px; background: transparent; opacity: 0; transform: translateY(18px); animation: demo-card-rise .48s cubic-bezier(.22,1,.36,1) forwards; }
-.demo-card:nth-child(1) { animation-delay: 1.59s; }
-.demo-card:nth-child(2) { animation-delay: 1.75s; }
-.demo-card:nth-child(3) { animation-delay: 1.91s; }
-/* These delays continue the intro sequence in style.css, which ends at the carousel
-   heading. That file cancels the sequence under `.hero-intro-seen`; the cards are the
-   only part of it living outside it, so they need the matching cancellation here. */
-.hero-intro-seen .demo-card { opacity: 1; transform: none; animation: none; }
+.demo-card { width: 100%; min-width: 0; border-radius: 2px; background: transparent; }
 .demo-card-content { min-width: 0; overflow: hidden; border-radius: 2px; background: var(--paper-2); }
 .demo-card-content :deep(.svml-demo) { margin-top: 0; }
 .demo-card-content :deep(.demo-shell) { box-shadow: none; }
 .demo-loading { display: grid; place-content: center; justify-items: center; gap: 14px; min-height: 720px; border: 1px solid var(--rule-soft); border-radius: 2px; background: var(--paper-2); color: var(--muted); font-family: var(--mono); font-size: 12px; letter-spacing: .04em; }
 .demo-loading-spinner { width: 30px; height: 30px; border: 2px solid var(--crimson-soft); border-top-color: var(--crimson); border-radius: 50%; animation: demo-loading-spin .7s linear infinite; }
 @keyframes demo-loading-spin { to { transform: rotate(360deg); } }
-@keyframes demo-card-rise { to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 959px) {
-  .svml-demo-showcase { width: calc(100% - 96px); }
   .demo-loading { min-height: 990px; }
 }
 
 @media (max-width: 639px) {
-  .svml-demo-showcase { width: 100%; padding-inline: 24px; }
+  .svml-demo-showcase { width: 100%; }
 }
 
 @media (max-width: 520px) {
-  .svml-demo-showcase { padding: 48px 24px 72px; }
+  .svml-demo-showcase { padding: 0 24px 48px; }
   .demo-list { gap: 32px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .demo-card { opacity: 1; transform: none; animation: none; }
 }
 </style>
