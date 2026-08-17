@@ -46,6 +46,7 @@
     "@narratage/run": "workspace:*",
     "@narratage/run-markup": "workspace:*",
     "@narratage/runtime": "workspace:*",
+    "@narratage/runtime-local": "workspace:*",
     "@narratage/screen-overlay": "workspace:*",
     "@narratage/script": "workspace:*",
     "@narratage/seedance": "workspace:*",
