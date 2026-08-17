@@ -839,14 +839,13 @@ onBeforeUnmount(() => {
 .demo-caption span.active { color: #ffd34d; transform: scale(1.08); }
 .demo-progress-track { display: flex; grid-template-columns: none; gap: 0; background: transparent; }
 .demo-progress-labels { gap: 2px; }
-.demo-progress-track .segment { min-width: 0; height: 100%; flex-basis: 0; border-radius: 0; box-shadow: inset -1px 0 var(--paper-2); transition: box-shadow .2s ease; }
+.demo-progress-track .segment { min-width: 0; height: 100%; flex-basis: 0; border-radius: 0; box-shadow: inset -1px 0 var(--paper-2); }
 .demo-progress-track .segment:first-child { border-radius: 3px 0 0 3px; }
 .demo-progress-track .segment:nth-child(4) { border-radius: 0 3px 3px 0; box-shadow: none; }
 .demo-progress-track .segment:nth-child(1) { background: var(--demo-segment-cyan); }
 .demo-progress-track .segment:nth-child(2) { background: var(--demo-segment-green); }
 .demo-progress-track .segment:nth-child(3) { background: var(--demo-segment-gold); }
 .demo-progress-track .segment:nth-child(4) { background: var(--demo-segment-pink); }
-.demo-progress-track .segment.active { box-shadow: inset 0 -2px var(--demo-cursor), inset -1px 0 var(--paper-2); }
 
 @media (max-width: 900px) {
   .semantic-live-stage { height: 520px; }
