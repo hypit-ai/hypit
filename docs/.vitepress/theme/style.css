@@ -36,9 +36,10 @@ html.home-page {
     "Roboto Mono", Consolas, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
     "Noto Sans SC", monospace;
   --pad: clamp(20px, 4vw, 56px);
+  --vp-nav-height: 74px;
 
   /* Paper grain. Multiplied over a light page, overlaid on a dark one. */
-  --grain-op: .34;
+  --grain-op: .42;
   --grain-blend: multiply;
   --collage-blend: multiply;
 
@@ -86,6 +87,8 @@ html.home-page.dark {
 html.home-page body {
   background: var(--paper);
   color: var(--ink);
+  font-size: 14px;
+  line-height: 1.65;
   letter-spacing: 0;
   font-variant-ligatures: none;
 }
@@ -108,8 +111,6 @@ html.home-page :focus-visible { outline: 2px solid var(--crimson); outline-offse
 .np-rule::after { content: ""; position: absolute; top: -4px; width: 1px; height: 9px; background: var(--rule); }
 .np-rule::before { left: 0; }
 .np-rule::after { right: 0; }
-.np-rule.tick-r::before { display: none; }
-.np-rule.tick-l::after { display: none; }
 
 /*
  * Paper grain, over the page and the nav but under the search modal (z-100),
@@ -144,38 +145,32 @@ html.home-page .VPNavBar {
 html.home-page .VPNavBar .content-body { background-color: transparent !important; }
 html.home-page .VPNavBar .divider-line { background-color: var(--rule) !important; }
 
-html.home-page .VPNavBarTitle { display: flex; align-items: center; height: 64px; }
+html.home-page .VPNavBar .wrapper { padding: 0; }
+html.home-page .VPNavBar .container { max-width: 1280px; padding-inline: var(--pad); }
+html.home-page .VPNavBarTitle { display: flex; align-items: center; height: var(--vp-nav-height); }
 html.home-page .VPNavBarTitle .title {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
   width: auto;
-  height: 32px;
+  height: auto;
   padding: 0;
+  border-bottom: 0;
   color: var(--ink);
   font-size: 0;
 }
-/* The configured siteTitle text; the mark and wordmark stand in for it. */
+/* The configured siteTitle text; the logotype stands in for it. */
 html.home-page .VPNavBarTitle .title > span:not([class]) { display: none; }
-html.home-page .nav-narratage-mark {
-  display: block;
+html.home-page .nav-narratage-logo { display: block; flex: 0 0 auto; height: 46px; color: var(--ink); }
+html.home-page .nav-narratage-logo svg { display: block; width: auto; height: 100%; }
+/* The rule that separates the brand from the rest of the bar. */
+html.home-page .VPNavBarTitle::after {
+  content: "";
   flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  color: var(--ink);
+  width: 1px;
+  height: 44px;
+  margin-left: 22px;
+  background: var(--rule);
 }
-html.home-page .nav-narratage-mark svg { display: block; width: 100%; height: 100%; }
-html.home-page .nav-narratage-wordmark {
-  display: inline-flex;
-  align-items: center;
-  width: auto;
-  height: 30px;
-  gap: .09em;
-  color: var(--ink);
-  font-size: 25px;
-  transform: translateY(1px);
-}
-html.home-page .nav-narratage-wordmark .narratage-wordmark-letter { height: 25px; }
 
 html.home-page .VPNavBarMenuLink,
 html.home-page .VPNavBarMenuGroup .text,
@@ -215,20 +210,45 @@ html.home-page .VPNavScreen { background: var(--paper); }
 
 html.home-page .VPNav .DocSearch-Button,
 html.home-page .VPNav .VPNavBarSearchButton {
+  height: 38px;
+  border: 1px solid var(--ink);
   border-radius: 0;
-  border-color: var(--ink);
+  padding: 0 10px 0 12px;
   background: transparent;
-  color: var(--ink);
+  color: var(--muted);
   font-family: var(--mono);
+  font-size: 13px;
 }
-html.home-page .VPNav .DocSearch-Button:hover { border-color: var(--crimson); }
-html.home-page .VPNav .DocSearch-Button-Placeholder,
-html.home-page .VPNav .DocSearch-Button-Key { color: var(--muted); }
+html.home-page .VPNav .DocSearch-Button:hover { border-color: var(--crimson); color: var(--ink); }
+html.home-page .VPNav .DocSearch-Button-Placeholder { color: var(--muted); font-size: 13px; }
+html.home-page .VPNav .DocSearch-Button-Keys { gap: 2px; }
 html.home-page .VPNav .DocSearch-Button-Key {
+  width: auto;
+  min-width: 0;
   border-radius: 0;
+  padding: 1px 5px;
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--rule);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .06em;
 }
+html.home-page .VPNavBarSearch { padding-left: 22px; }
+
+/*
+ * Stock draws a `::before` separator before each of the three icon controls. The
+ * React header has one rule before the group, so the first is kept and restyled
+ * to match the brand divider, and the other two are dropped.
+ */
+html.home-page .VPNavBarTranslations { margin-left: 28px; }
+html.home-page .VPNavBarTranslations::before {
+  height: 44px;
+  margin-right: 10px;
+  background-color: var(--rule);
+}
+html.home-page .VPNavBarAppearance::before,
+html.home-page .VPNavBarSocialLinks::before { display: none; }
 
 /* The appearance toggle also renders inside this flyout between 768 and 1279px. */
 html.home-page .VPMenu {
@@ -246,23 +266,14 @@ html.home-page .VPHome { margin-bottom: 0; overflow-x: clip; }
 html.home-page .VPContent,
 html.home-page .VPPage { background: var(--paper); }
 
-html.home-page .VPHero { padding: 104px var(--pad) 0; }
+html.home-page .VPHero { padding: calc(var(--vp-nav-height) + 20px) 0 28px; }
 html.home-page .VPHomeHero .container {
   max-width: 1280px;
   margin-inline: auto;
+  padding-inline: var(--pad);
   text-align: left;
 }
 html.home-page .VPHomeHero .main { width: 100%; max-width: none; }
-
-.np-masthead-meta { display: flex; align-items: center; gap: 22px; }
-.np-masthead-label {
-  flex: 0 0 auto;
-  color: var(--muted);
-  font-size: 11px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-}
-.np-masthead-rule { flex: 1; }
 
 .np-masthead-wrap { position: relative; }
 
@@ -270,7 +281,7 @@ html.home-page .VPHomeHero .main { width: 100%; max-width: none; }
   display: block;
   width: 52%;
   height: auto;
-  margin: 6px 0 0;
+  margin: 0;
 }
 .np-masthead-ink { fill: var(--ink); }
 .np-masthead-red { fill: var(--crimson); }
@@ -381,7 +392,7 @@ html.home-page .VPHome .vp-doc.container {
   /* A flex item in `.Layout`, so it needs an explicit width to stop shrinking
      to its columns before the cap and the auto margins can centre it. */
   width: 100%;
-  max-width: calc(1280px + var(--pad) * 2);
+  max-width: 1280px;
   margin: 0 auto;
   border-top: 1px solid var(--rule);
   padding: 44px var(--pad) 52px;
@@ -467,7 +478,7 @@ html.home-page.dark .svml-demo {
   --demo-marker-active-text: #131211;
 }
 
-.demo-heading { margin: 0 0 28px; }
+.demo-heading { margin: 26px 0 20px; }
 .vp-doc .demo-heading h2 { margin: 0; border: 0; padding: 0; color: var(--ink); font-family: var(--mono); font-size: clamp(15px, 1.7vw, 19px); font-weight: 700; line-height: 1.3; letter-spacing: -.01em; }
 .VPHome .vp-doc .demo-heading h2 { font-size: clamp(15px, 1.7vw, 19px); }
 .touch-interaction-copy { display: none; }
@@ -559,67 +570,11 @@ html.home-page.dark .svml-demo {
 .demo-provenance { margin: 12px 4px 0 !important; color: var(--muted); font-size: 11px; text-align: right; }.demo-provenance code { color: var(--crimson); background: transparent; }
 
 /* ============================================================
-   Intro sequence
-   ============================================================ */
-
-/* The nav wordmark types itself in; the layout rules below it are load-bearing. */
-.narratage-wordmark { display: inline-flex; align-items: flex-end; gap: .09em; color: currentColor; vertical-align: bottom; }
-.narratage-wordmark-letter { display: block; width: var(--narratage-letter-width); height: 1em; flex: 0 0 auto; }
-.narratage-wordmark-letter svg { display: block; width: 100%; height: 100%; color: inherit; }
-.narratage-wordmark.is-animated .narratage-wordmark-letter { opacity: 0; transform: translateY(.12em); animation: wordmark-letter-type .11s cubic-bezier(.22,1,.36,1) forwards; }
-.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(1) { animation-delay: .18s; }
-.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(2) { animation-delay: .25s; }
-.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(3) { animation-delay: .32s; }
-.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(4) { animation-delay: .39s; }
-.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(5) { animation-delay: .46s; }
-.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(6) { animation-delay: .53s; }
-.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(7) { animation-delay: .60s; }
-.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(8) { animation-delay: .67s; }
-.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(9) { animation-delay: .74s; }
-@keyframes wordmark-letter-type { to { opacity: 1; transform: translateY(0); } }
-
-/*
- * The masthead reveals in the same rhythm — label, hairline, wordmark, then the
- * reading order below it — and hands off to the demo cards, which continue the
- * sequence at 1.59s in SvmlDemoCarousel.vue. Keep the tail delays in step.
- */
-.np-masthead-label { opacity: 0; animation: hero-content-rise .32s cubic-bezier(.22,1,.36,1) .1s forwards; }
-.np-masthead-rule { transform: scaleX(0); transform-origin: left; animation: hero-rule-draw .52s cubic-bezier(.22,1,.36,1) .16s forwards; }
-/* Nine steps, one per letter of NARRATAGE — a typewriter, without nine elements. */
-.np-masthead-wordmark { clip-path: inset(0 100% 0 0); animation: hero-wordmark-wipe .62s steps(9, end) .34s forwards; }
-.np-masthead-stamp { opacity: 0; animation: hero-content-rise .4s cubic-bezier(.22,1,.36,1) .8s forwards; }
-.np-masthead-tagline,
-.np-masthead-subline,
-.VPHome .VPHero .actions,
-.VPHome .carousel-heading {
-  opacity: 0;
-  transform: translateY(12px);
-  animation: hero-content-rise .4s cubic-bezier(.22,1,.36,1) forwards;
-}
-.np-masthead-tagline { animation-delay: 1.03s; }
-.np-masthead-subline { animation-delay: 1.17s; }
-.VPHome .VPHero .actions { animation-delay: 1.31s; }
-.VPHome .carousel-heading { animation-delay: 1.45s; }
-@keyframes hero-content-rise { to { opacity: 1; transform: translateY(0); } }
-@keyframes hero-rule-draw { to { transform: scaleX(1); } }
-@keyframes hero-wordmark-wipe { to { clip-path: inset(0 0 0 0); } }
-
-.hero-intro-seen .narratage-wordmark.is-animated .narratage-wordmark-letter,
-.hero-intro-seen .np-masthead-label,
-.hero-intro-seen .np-masthead-stamp,
-.hero-intro-seen .np-masthead-tagline,
-.hero-intro-seen .np-masthead-subline,
-.hero-intro-seen .VPHome .VPHero .actions,
-.hero-intro-seen .VPHome .carousel-heading { opacity: 1; transform: none; animation: none; }
-.hero-intro-seen .np-masthead-rule { transform: none; animation: none; }
-.hero-intro-seen .np-masthead-wordmark { clip-path: none; animation: none; }
-
-/* ============================================================
    Breakpoints
    ============================================================ */
 
 @media (max-width: 900px) {
-  html.home-page .VPHero { padding-top: 88px; }
+  html.home-page .VPHero { padding-top: calc(var(--vp-nav-height) + 16px); }
   .demo-shell { grid-template-columns: 1fr; }
   .source-panel { border-right: 0; border-bottom: 1px solid var(--rule-soft); }
   .code-scroll { height: 390px; }
@@ -642,7 +597,6 @@ html.home-page.dark .svml-demo {
 }
 
 @media (max-width: 520px) {
-  .np-masthead-meta { gap: 14px; }
   .np-masthead-wordmark { width: 100%; }
   .np-footer-grid { gap: 32px; }
   .code-line { font-size: 12.5px; }
@@ -652,21 +606,7 @@ html.home-page.dark .svml-demo {
   .real-semantic-controls { margin-inline: 12px; grid-template-columns: minmax(0,1fr); }
 }
 
-/*
- * Scoped to the home page: documentation pages keep the stock theme's own motion.
- * Enumerated rather than blanket-disabled, because zeroing `animation-duration`
- * alone leaves these elements invisible for the length of their delay.
- */
 @media (prefers-reduced-motion: reduce) {
-  html.home-page .narratage-wordmark.is-animated .narratage-wordmark-letter,
-  html.home-page .np-masthead-label,
-  html.home-page .np-masthead-stamp,
-  html.home-page .np-masthead-tagline,
-  html.home-page .np-masthead-subline,
-  html.home-page .VPHome .VPHero .actions,
-  html.home-page .VPHome .carousel-heading { opacity: 1; transform: none; animation: none !important; }
-  html.home-page .np-masthead-rule { transform: none; animation: none !important; }
-  html.home-page .np-masthead-wordmark { clip-path: none; animation: none !important; }
   html.home-page .VPHero .VPButton.brand::after,
   html.home-page .VPNavBarMenuLink::after { transition: none; }
 }

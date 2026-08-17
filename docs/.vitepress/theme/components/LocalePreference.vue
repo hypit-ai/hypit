@@ -2,7 +2,6 @@
 import { onBeforeUnmount, onMounted } from "vue";
 
 const storageKey = "narratage-locale";
-const heroIntroKey = "narratage-hero-intro-seen";
 
 // The dev server serves the site under `/docs/`; the Pages deploy builds with
 // VITEPRESS_BASE=/ and serves it at the domain root. Vite substitutes the right
@@ -20,20 +19,10 @@ function rememberLocale(event: MouseEvent) {
   if (!link) return;
   const url = new URL(link.href, window.location.href);
   if (!url.pathname.startsWith(base)) return;
-  const nextLocale = localeFromPath(url.pathname);
-  const currentLocale = localeFromPath(window.location.pathname);
   try {
-    window.localStorage.setItem(storageKey, nextLocale);
+    window.localStorage.setItem(storageKey, localeFromPath(url.pathname));
   } catch {
     // Storage can be unavailable in private or restricted browser contexts.
-  }
-  if (nextLocale !== currentLocale) {
-    document.documentElement.classList.add("hero-intro-seen");
-    try {
-      window.sessionStorage.setItem(heroIntroKey, "1");
-    } catch {
-      // The in-document class still skips the animation for SPA navigation.
-    }
   }
 }
 
