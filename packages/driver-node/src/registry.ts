@@ -1,6 +1,7 @@
 import type {
   EndpointRegistrar,
   EndpointRegistrationOptions,
+  EndpointScheduling,
   ImmediateEndpointHandler,
   AsyncEndpoint,
 } from "@narratage/endpoint-kit";
@@ -20,7 +21,6 @@ import type {
   ProducerRegistration,
   EndpointRegistration,
   EndpointResolution,
-  SchedulingHint,
 } from "./types.js";
 
 function moduleKey(ref: { readonly name: string; readonly version: string }): string {
@@ -36,7 +36,7 @@ function sameRef(
     && left.name === right.name;
 }
 
-function verifyScheduling(scheduling: SchedulingHint | undefined): void {
+function verifyScheduling(scheduling: EndpointScheduling | undefined): void {
   if (scheduling === undefined) return;
   if (scheduling.resources.length === 0) throw new Error("scheduling resources must not be empty");
   const ids = scheduling.resources.map((resource) => {
@@ -73,7 +73,7 @@ export class ProducerRegistry implements ProducerRegistrar {
   registerProducer(
     producer: ProducerRef,
     handler: ProducerHandler,
-    options: { readonly scheduling?: SchedulingHint } = {},
+    options: { readonly scheduling?: EndpointScheduling } = {},
   ): void {
     const key = producerRegistryKey(producer);
     if (this.#producers.has(key)) throw new Error(`producer ${key} is already registered`);

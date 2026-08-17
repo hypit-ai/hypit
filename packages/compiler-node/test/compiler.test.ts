@@ -404,10 +404,10 @@ test("Run-only Fragment modules extend the execution closure without polluting t
     [laboratory.name, previewModule.name].sort(),
     "the durable Build keeps only modules needed by its selected execution slice",
   );
-  assert.equal(planned.plan, planned.state.plan);
-  assert.equal(planned.request, planned.state.request);
-  assert.equal(planned.plan.steps.length, 1);
-  assert.equal(planned.plan.steps[0]?.producer.name, previewProducer.name);
+  assert.equal(planned.definition.plan, planned.state.plan);
+  assert.equal(planned.definition.request, planned.state.request);
+  assert.equal(planned.definition.plan.steps.length, 1);
+  assert.equal(planned.definition.plan.steps[0]?.producer.name, previewProducer.name);
 });
 
 test("static Run checking accepts a future BuildRecord without opening a BuildArchive", async () => {

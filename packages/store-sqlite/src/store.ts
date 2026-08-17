@@ -2,17 +2,11 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import {
-  canonicalStringify,
-  materializeBuild,
-} from "@narratage/core";
+import { materializeBuild } from "@narratage/core";
 import type {
   BuildDefinition,
   BuildFact,
 } from "@narratage/protocol";
-import {
-  capacityReservationId,
-} from "@narratage/runtime";
 import type {
   BuildDispatchRequest,
   BuildDispatchRelease,
@@ -33,8 +27,6 @@ import type {
   OperationStore,
   OperationUpdate,
 } from "@narratage/runtime";
-
-const databaseSchemaVersion = 13;
 
 export type SqliteRuntimeStateOptions = {
   readonly busyTimeoutMs?: number;
@@ -98,13 +90,12 @@ function parseOperationSnapshot(row: Row): OperationSnapshot {
     assert(typeof row[field] === "string", `SQLite Operation row has no ${field}`);
   }
   assert(typeof row.status === "string", "SQLite Operation row has no status");
-  const pending = row.status === "pending"
-    ? JSON.parse(String(row.handle_json)) as {
+  const payload = typeof row.payload_json === "string" ? JSON.parse(row.payload_json) as unknown : undefined;
+  const pending = row.status === "pending" ? payload as {
         readonly handle: unknown;
         readonly wakeAt?: number;
         readonly progress?: OperationSnapshot["progress"];
-      }
-    : undefined;
+      } : undefined;
   const mutable = row.status === "pending"
     ? {
         handle: pending!.handle,
@@ -112,9 +103,9 @@ function parseOperationSnapshot(row: Row): OperationSnapshot {
         ...(pending!.progress === undefined ? {} : { progress: pending!.progress }),
       }
     : row.status === "completed"
-      ? { completion: JSON.parse(String(row.completion_json)) }
+      ? { completion: payload }
       : row.status === "failed"
-        ? { failure: JSON.parse(String(row.failure_json)) }
+        ? { failure: payload }
         : {};
   return {
     id: row.operation_id,
@@ -153,7 +144,7 @@ class SqliteBuildStore implements BuildStore {
     const result = this.#database.prepare(`
       INSERT OR IGNORE INTO narratage_builds (build_id, definition_json)
       VALUES (?, ?)
-    `).run(build, canonicalStringify(definition));
+    `).run(build, JSON.stringify(definition));
     if (result.changes !== 1) throw new Error(`build ${build} already exists`);
     const storedDefinition = copy(definition);
     const facts: readonly BuildFact[] = [];
@@ -170,21 +161,12 @@ class SqliteBuildStore implements BuildStore {
     return row === undefined ? undefined : parseBuildSnapshot(row, this.#facts(build));
   }
 
-  async list(): Promise<readonly BuildSnapshot[]> {
-    const rows = this.#database.prepare(`
-      SELECT build_id, definition_json
-      FROM narratage_builds
-      ORDER BY build_id ASC
-    `).all() as Row[];
-    return rows.map((row) => parseBuildSnapshot(row, this.#facts(String(row.build_id))));
-  }
-
   async append(build: string, fact: BuildFact): Promise<void> {
     const result = this.#database.prepare(`
       INSERT INTO narratage_build_facts (
         build_id, command_id, fact_json
       ) VALUES (?, ?, ?)
-    `).run(build, fact.command, canonicalStringify(fact));
+    `).run(build, fact.command, JSON.stringify(fact));
     if (result.changes !== 1) throw new Error(`Build ${build} Fact was not stored`);
   }
 }
@@ -215,7 +197,7 @@ class SqliteBuildCatalog implements BuildCatalog {
       INSERT INTO narratage_build_catalog (
         build_id, created_at, descriptor_json
       ) VALUES (?, ?, ?)
-    `).run(build, now, canonicalStringify(descriptor));
+    `).run(build, now, JSON.stringify(descriptor));
     return { ...copy(descriptor), build, createdAt: now };
   }
 
@@ -247,20 +229,22 @@ class SqliteOperationStore implements OperationStore {
 
   async create(operation: OperationSnapshot): Promise<OperationSnapshot> {
     const identity = operationIdentityFrom(operation);
-    const handle = operation.status === "pending" ? canonicalStringify({
-      handle: operation.handle,
-      ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
-      ...(operation.progress === undefined ? {} : { progress: operation.progress }),
-    }) : null;
-    const completion = operation.status === "completed" ? canonicalStringify(operation.completion) : null;
-    const failure = operation.status === "failed" ? canonicalStringify(operation.failure) : null;
+    const payload = operation.status === "pending"
+      ? JSON.stringify({
+          handle: operation.handle,
+          ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
+          ...(operation.progress === undefined ? {} : { progress: operation.progress }),
+        })
+      : operation.status === "completed"
+        ? JSON.stringify(operation.completion)
+        : operation.status === "failed" ? JSON.stringify(operation.failure) : null;
     const result = this.#database.prepare(`
       INSERT INTO narratage_operations (
         operation_id, build_id, command_id, endpoint_id, pool_id, lane_id, status,
-        handle_json, completion_json, failure_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        payload_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(identity.id, identity.build, identity.command, identity.endpoint, identity.pool, identity.lane,
-      operation.status, handle, completion, failure);
+      operation.status, payload);
     if (result.changes !== 1) throw new Error(`Operation ${identity.id} was not created`);
     return copy(operation);
   }
@@ -268,7 +252,7 @@ class SqliteOperationStore implements OperationStore {
   async read(id: string): Promise<OperationSnapshot | undefined> {
     const row = this.#database.prepare(`
       SELECT operation_id, build_id, command_id, endpoint_id, pool_id, lane_id,
-        status, handle_json, completion_json, failure_json
+        status, payload_json
       FROM narratage_operations
       WHERE operation_id = ?
     `).get(id) as Row | undefined;
@@ -289,7 +273,7 @@ class SqliteOperationStore implements OperationStore {
     }
     const rows = this.#database.prepare(`
       SELECT operation_id, build_id, command_id, endpoint_id, pool_id, lane_id,
-        status, handle_json, completion_json, failure_json
+        status, payload_json
       FROM narratage_operations
       ${predicates.length === 0 ? "" : `WHERE ${predicates.join(" AND ")}`}
       ORDER BY operation_id ASC
@@ -302,20 +286,20 @@ class SqliteOperationStore implements OperationStore {
     const current = await this.read(id);
     if (current === undefined) throw new Error(`Operation ${id} does not exist`);
     if (current.status === "completed" || current.status === "failed" || current.status === "cancelled") return current;
-    const handle = update.status === "pending" ? canonicalStringify({
-      handle: update.handle,
-      ...(update.wakeAt === undefined ? {} : { wakeAt: update.wakeAt }),
-      ...(update.progress === undefined ? {} : { progress: update.progress }),
-    }) : null;
-    const completion = update.status === "completed"
-      ? canonicalStringify(update.completion)
-      : null;
-    const failure = update.status === "failed" ? canonicalStringify(update.failure) : null;
+    const payload = update.status === "pending"
+      ? JSON.stringify({
+          handle: update.handle,
+          ...(update.wakeAt === undefined ? {} : { wakeAt: update.wakeAt }),
+          ...(update.progress === undefined ? {} : { progress: update.progress }),
+        })
+      : update.status === "completed"
+        ? JSON.stringify(update.completion)
+        : update.status === "failed" ? JSON.stringify(update.failure) : null;
     const result = this.#database.prepare(`
       UPDATE narratage_operations
-      SET status = ?, handle_json = ?, completion_json = ?, failure_json = ?
+      SET status = ?, payload_json = ?
       WHERE operation_id = ?
-    `).run(update.status, handle, completion, failure, id);
+    `).run(update.status, payload, id);
     if (result.changes !== 1) throw new Error(`Operation ${id} disappeared during update`);
     const mutable = update.status === "pending"
       ? {
@@ -344,7 +328,7 @@ function parseDispatchSnapshot(row: Row): BuildDispatchSnapshot {
   const cancellation = row.cancel_requested === 1
     ? {
         cancellation: {
-          ...(typeof row.cancel_reason === "string" ? { reason: row.cancel_reason } : {}),
+          ...(typeof row.reason === "string" ? { reason: row.reason } : {}),
         },
       }
     : {};
@@ -377,9 +361,9 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     this.#database.prepare(`
       INSERT INTO narratage_dispatches (
         build_id, component_packages_json, created_at, available_at,
-        phase, reason, cancel_requested, cancel_reason, terminal
-      ) VALUES (?, ?, ?, ?, 'queued', NULL, 0, NULL, NULL)
-    `).run(request.build, canonicalStringify(request.componentPackages), now, now);
+        phase, reason, cancel_requested, terminal
+      ) VALUES (?, ?, ?, ?, 'queued', NULL, 0, NULL)
+    `).run(request.build, JSON.stringify(request.componentPackages), now, now);
     return {
       ...copy(request),
       createdAt: now,
@@ -474,22 +458,22 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       if (row === undefined) throw new Error(`Dispatch ${build} does not exist`);
       const current = parseDispatchSnapshot(row);
       if (current.phase === "terminal") return current;
+      if (current.cancellation !== undefined) return current;
       if (current.phase === "queued") {
         this.#database.prepare(`
           UPDATE narratage_dispatches
           SET phase = 'terminal', terminal = 'cancelled',
-              reason = ?, cancel_requested = 1, cancel_reason = ?
+              reason = ?, cancel_requested = 1
           WHERE build_id = ?
-        `).run(reason ?? "cancelled before execution", reason ?? null, build);
+        `).run(reason ?? "cancelled before execution", build);
       } else {
         this.#database.prepare(`
           UPDATE narratage_dispatches
           SET phase = CASE WHEN phase = 'running' THEN phase ELSE 'queued' END,
               available_at = CASE WHEN phase = 'running' THEN available_at ELSE ? END,
-              reason = ?, cancel_requested = 1,
-              cancel_reason = COALESCE(cancel_reason, ?)
+              reason = ?, cancel_requested = 1
           WHERE build_id = ?
-        `).run(now, reason ?? "cancellation requested", reason ?? null, build);
+        `).run(now, reason ?? "cancellation requested", build);
       }
       return parseDispatchSnapshot(
         this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(build) as Row,
@@ -502,7 +486,6 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     assert(request.resources.length > 0, "Capacity resources are empty");
     const resources = [...request.resources].sort((left, right) => left.id.localeCompare(right.id));
     const reservation: CapacityReservation = {
-      id: capacityReservationId(request.build, request.command),
       build: request.build,
       command: request.command,
       resources,
@@ -511,14 +494,14 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     };
     return transaction(this.#database, () => {
       const existing = this.#database.prepare(
-        "SELECT * FROM narratage_capacity WHERE reservation_id = ?",
-      ).get(reservation.id) as Row | undefined;
+        "SELECT * FROM narratage_capacity WHERE build_id = ? AND command_id = ?",
+      ).get(reservation.build, reservation.command) as Row | undefined;
       if (existing !== undefined) {
         return { status: "acquired", reservation: parseCapacityReservation(existing) };
       }
       for (const resource of resources) {
         const count = this.#database.prepare(`
-          SELECT COUNT(DISTINCT capacity.reservation_id) AS count
+          SELECT COUNT(DISTINCT capacity.rowid) AS count
           FROM narratage_capacity AS capacity, json_each(capacity.resources_json) AS claim
           WHERE json_extract(claim.value, '$.id') = ?
         `).get(resource.id) as Row;
@@ -534,22 +517,23 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       }
       this.#database.prepare(`
         INSERT INTO narratage_capacity (
-          reservation_id, build_id, command_id, resources_json, queue_json, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          build_id, command_id, resources_json, queue_json, created_at
+        ) VALUES (?, ?, ?, ?, ?)
       `).run(
-        reservation.id,
         reservation.build,
         reservation.command,
-        canonicalStringify(reservation.resources),
-        reservation.queue === undefined ? null : canonicalStringify(reservation.queue),
+        JSON.stringify(reservation.resources),
+        reservation.queue === undefined ? null : JSON.stringify(reservation.queue),
         reservation.createdAt,
       );
       return { status: "acquired", reservation };
     });
   }
 
-  async releaseCapacity(id: string): Promise<void> {
-    this.#database.prepare("DELETE FROM narratage_capacity WHERE reservation_id = ?").run(id);
+  async releaseCapacity(build: string, command: string): Promise<void> {
+    this.#database.prepare(
+      "DELETE FROM narratage_capacity WHERE build_id = ? AND command_id = ?",
+    ).run(build, command);
   }
 
   async releaseBuildCapacity(build: string): Promise<void> {
@@ -558,17 +542,16 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
 
   async listCapacity(): Promise<readonly CapacityReservation[]> {
     return (this.#database.prepare(
-      "SELECT * FROM narratage_capacity ORDER BY created_at ASC, reservation_id ASC",
+      "SELECT * FROM narratage_capacity ORDER BY created_at ASC, build_id ASC, command_id ASC",
     ).all() as Row[]).map(parseCapacityReservation);
   }
 }
 
 function parseCapacityReservation(row: Row): CapacityReservation {
-  assert(typeof row.reservation_id === "string" && typeof row.build_id === "string"
-    && typeof row.command_id === "string" && typeof row.resources_json === "string"
+  assert(typeof row.build_id === "string" && typeof row.command_id === "string"
+    && typeof row.resources_json === "string"
     && typeof row.created_at === "number", "SQLite Capacity row is invalid");
   const value = {
-    id: row.reservation_id,
     build: row.build_id,
     command: row.command_id,
     resources: JSON.parse(row.resources_json) as CapacityReservation["resources"],
@@ -605,29 +588,7 @@ export class SqliteRuntimeState {
       this.#database.exec("PRAGMA journal_mode = WAL");
       this.#database.exec("PRAGMA synchronous = NORMAL");
     }
-    const alreadyInitialized = this.#database.prepare(`
-      SELECT 1 AS present FROM sqlite_master
-      WHERE type = 'table' AND name = 'narratage_store_meta'
-    `).get() as Row | undefined;
-    if (alreadyInitialized !== undefined) {
-      const version = this.#database.prepare(
-        "SELECT schema_version FROM narratage_store_meta WHERE singleton = 1",
-      ).get() as Row | undefined;
-      if (version === undefined || version.schema_version !== databaseSchemaVersion) {
-        const found = version === undefined ? "an incomplete schema" : `schema ${String(version.schema_version)}`;
-        this.#database.close();
-        throw new Error(
-          `@narratage/store-sqlite found ${found} at ${absolute}; expected schema ${databaseSchemaVersion}. `
-          + "Pre-release Runtime state is not migrated automatically. Archive that database (including its -wal and -shm files) "
-          + "or select a new SQLite path in the Runtime Profile; Artifact files are separate and are not deleted.",
-        );
-      }
-    }
     if (!options.readOnly || emptyReadOnly) this.#database.exec(`
-      CREATE TABLE IF NOT EXISTS narratage_store_meta (
-        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-        schema_version INTEGER NOT NULL
-      ) STRICT;
       CREATE TABLE IF NOT EXISTS narratage_builds (
         build_id TEXT PRIMARY KEY,
         definition_json TEXT NOT NULL
@@ -647,9 +608,7 @@ export class SqliteRuntimeState {
         pool_id TEXT NOT NULL,
         lane_id TEXT NOT NULL,
         status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'failed', 'cancelled')),
-        handle_json TEXT,
-        completion_json TEXT,
-        failure_json TEXT
+        payload_json TEXT
       ) STRICT;
       CREATE TABLE IF NOT EXISTS narratage_build_catalog (
         build_id TEXT PRIMARY KEY,
@@ -664,24 +623,19 @@ export class SqliteRuntimeState {
         phase TEXT NOT NULL CHECK (phase IN ('queued', 'running', 'waiting', 'terminal')),
         reason TEXT,
         cancel_requested INTEGER NOT NULL DEFAULT 0 CHECK (cancel_requested IN (0, 1)),
-        cancel_reason TEXT,
         terminal TEXT CHECK (terminal IS NULL OR terminal IN ('complete', 'failed', 'cancelled'))
       ) STRICT;
       CREATE INDEX IF NOT EXISTS narratage_dispatch_ready
         ON narratage_dispatches (phase, available_at);
       CREATE TABLE IF NOT EXISTS narratage_capacity (
-        reservation_id TEXT PRIMARY KEY,
         build_id TEXT NOT NULL,
         command_id TEXT NOT NULL,
         resources_json TEXT NOT NULL,
         queue_json TEXT,
         created_at INTEGER NOT NULL,
-        UNIQUE (build_id, command_id)
+        PRIMARY KEY (build_id, command_id)
       ) STRICT;
     `);
-    if (alreadyInitialized === undefined) {
-      this.#database.prepare("INSERT INTO narratage_store_meta (singleton, schema_version) VALUES (1, ?)").run(databaseSchemaVersion);
-    }
     this.builds = new SqliteBuildStore(database);
     this.operations = new SqliteOperationStore(database);
     this.dispatch = new SqliteBuildDispatchStore(database);

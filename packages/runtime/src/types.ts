@@ -87,20 +87,9 @@ export type StreamingArtifactStore = ArtifactStore & {
   open(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
-/** Optional retention capability used only by explicit deployment maintenance. */
-export type ManagedArtifactStore = ArtifactStore & {
-  list(): Promise<readonly Digest[]>;
-  delete(digest: Digest): Promise<boolean>;
-};
-
 export function isStreamingArtifactStore(value: ArtifactStore): value is StreamingArtifactStore {
   return "putStream" in value && typeof value.putStream === "function"
     && "open" in value && typeof value.open === "function";
-}
-
-export function isManagedArtifactStore(value: ArtifactStore): value is ManagedArtifactStore {
-  return "list" in value && typeof value.list === "function"
-    && "delete" in value && typeof value.delete === "function";
 }
 
 export type BuildSnapshot = {
@@ -118,21 +107,9 @@ export type BuildStore = {
   append(build: string, fact: BuildFact): Promise<void>;
 };
 
-/** Optional maintenance index; execution still depends only on BuildStore create/read/append. */
-export type EnumerableBuildStore = BuildStore & {
-  list(): Promise<readonly BuildSnapshot[]>;
-};
-
-export function isEnumerableBuildStore(value: BuildStore): value is EnumerableBuildStore {
-  return "list" in value && typeof value.list === "function";
-}
-
-export type ScheduledBuild = {
-  readonly id: string;
-  readonly state: BuildState;
-  /** Optional Store read already performed by the Worker; avoids reconstructing the same Build twice. */
-  readonly snapshot?: BuildSnapshot;
-};
+export type ScheduledBuild =
+  | { readonly id: string; readonly state: BuildState; readonly snapshot?: never }
+  | { readonly id: string; readonly snapshot: BuildSnapshot; readonly state?: never };
 
 export type SchedulerExecutionOutcome = {
   readonly command: string;
@@ -153,8 +130,6 @@ export type ScheduledBuildResult = {
 };
 
 export type BuildSchedulerOptions = {
-  readonly maxConcurrency?: number;
-  readonly resourceLimits?: Readonly<Record<string, number>>;
   /** Optional durable authority. When present, every admitted Core Fact is appended. */
   readonly buildStore?: BuildStore;
 };

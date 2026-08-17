@@ -12,7 +12,7 @@ import {
 } from "@narratage/runtime";
 import { TypeValidatorRegistry } from "@narratage/validation";
 
-import { createLocalRuntimeControl } from "./control.js";
+import { createLocalRuntimeArchiveControl, createLocalRuntimeArtifactAccess } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
 import { createDurableLocalWorker } from "./worker.js";
 import type {
@@ -55,7 +55,7 @@ export async function createLocalRuntime(
   const buildCatalog = options.buildCatalog;
   const producers = new ProducerRegistry();
   const endpoints = new EndpointRegistry();
-  const validators = options.validators ?? new TypeValidatorRegistry();
+  const validators = new TypeValidatorRegistry();
   for (const component of options.components ?? []) {
     registerTypeValidatorFacets(validators, component.validators ?? []);
     registerProducerFacets(producers, component.producers ?? []);
@@ -87,27 +87,26 @@ export async function createLocalRuntime(
     operations: options.operationStore,
     validators,
   });
-  const scheduling = options.scheduling;
   const worker = createDurableLocalWorker(driver, {
     stores: {
       builds: options.buildStore,
       operations: options.operationStore,
       dispatch: options.dispatchStore,
     },
-    scheduling,
     installComponentPackages,
   });
   const credentialControl = createLocalCredentialControl({
     credentialStore: options.credentialStore,
     endpoints: options.endpoints ?? [],
   });
-  const control = createLocalRuntimeControl({
+  const archive = createLocalRuntimeArchiveControl({
     buildStore: options.buildStore,
     ...(buildCatalog === undefined ? {} : { buildCatalog }),
     operationStore: options.operationStore,
     dispatchStore: options.dispatchStore,
+  });
+  const artifacts = createLocalRuntimeArtifactAccess({
     artifactStore: options.artifactStore,
-    ...(options.close === undefined ? {} : { close: options.close }),
   });
   const stageAttachments = async (request: LocalBuildRequest): Promise<void> => {
     for (const item of request.attachments ?? []) {
@@ -185,7 +184,8 @@ export async function createLocalRuntime(
     return result;
   };
   return {
-    ...control,
+    ...archive,
+    ...artifacts,
     ...credentialControl,
     build: runBuild,
     async workOnce() {
@@ -194,6 +194,8 @@ export async function createLocalRuntime(
     async work(workOptions) {
       await worker.run(workOptions);
     },
-    close: control.close,
+    close() {
+      return options.close?.();
+    },
   };
 }

@@ -214,7 +214,7 @@ test("one local Scheduler shares an Endpoint resource across multiple Builds", a
       maximumActive = Math.max(maximumActive, active);
     },
   });
-  const scheduler = new LocalBuildScheduler(executor, { maxConcurrency: 8 });
+  const scheduler = new LocalBuildScheduler(executor);
   const results = await scheduler.run([
     { id: "video-a", state: createGreetingBuild() },
     { id: "video-b", state: createGreetingBuild() },
@@ -227,30 +227,6 @@ test("one local Scheduler shares an Endpoint resource across multiple Builds", a
     result.outcomes.some((entry) => entry.resources.includes("pool:fixture.account"))), true);
 });
 
-test("a Resolved Runtime resource override changes parallelism", async () => {
-  let maximumActive = 0;
-  const resource = "pool:fixture.account";
-  const { executor } = configuredExecutor({
-    resource,
-    defaultConcurrency: 1,
-    observe(active) {
-      maximumActive = Math.max(maximumActive, active);
-    },
-  });
-  const initial = createGreetingBuild();
-  const scheduler = new LocalBuildScheduler(executor, {
-    maxConcurrency: 8,
-    resourceLimits: { [resource]: 2 },
-  });
-  const results = await scheduler.run([
-    { id: "video-a", state: initial },
-    { id: "video-b", state: initial },
-  ]);
-
-  assert.deepEqual(results.map((result) => result.status), ["complete", "complete"]);
-  assert.equal(maximumActive, 2);
-});
-
 test("independent paid commands inside one Build may fill the same resource without duplicating their shared upstream", async () => {
   let maximumActive = 0;
   const { executor, getCalls } = configuredExecutor({
@@ -260,7 +236,7 @@ test("independent paid commands inside one Build may fill the same resource with
       maximumActive = Math.max(maximumActive, active);
     },
   });
-  const [result] = await new LocalBuildScheduler(executor, { maxConcurrency: 8 }).run([{
+  const [result] = await new LocalBuildScheduler(executor).run([{
     id: "two-shots",
     state: createParallelGreetingBuild(),
   }]);
@@ -299,7 +275,7 @@ test("an asynchronous Endpoint starts once and is polled until complete", async 
   };
 
   const firstExecutor = asyncExecutor(endpoint, operations);
-  const [first] = await new LocalBuildScheduler(firstExecutor, { maxConcurrency: 8 })
+  const [first] = await new LocalBuildScheduler(firstExecutor)
     .run([{ id: "video", state: createGreetingBuild() }]);
   assert.equal(first?.status, "paused");
   assert.equal(starts, 1);
@@ -310,7 +286,7 @@ test("an asynchronous Endpoint starts once and is polled until complete", async 
   assert.equal((await operations.read(pending.operation))?.status, "pending");
 
   const secondExecutor = asyncExecutor(endpoint, operations);
-  const [second] = await new LocalBuildScheduler(secondExecutor, { maxConcurrency: 8 })
+  const [second] = await new LocalBuildScheduler(secondExecutor)
     .run([{ id: "video", state: createGreetingBuild() }]);
 
   assert.equal(second?.status, "complete");
@@ -339,7 +315,7 @@ test("wakeAt prevents early polling and Runtime cancellation becomes a terminal 
     },
   };
   const executor = asyncExecutor(endpoint, operations);
-  const scheduler = new LocalBuildScheduler(executor, { maxConcurrency: 8 });
+  const scheduler = new LocalBuildScheduler(executor);
   const [first] = await scheduler.run([{ id: "cancel-video", state: createGreetingBuild() }]);
   const operationId = first?.outcomes.find((item) => item.status === "pending")?.operation;
   assert.ok(operationId);

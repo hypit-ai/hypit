@@ -9,8 +9,6 @@ import type {
 } from "@narratage/component-kit";
 import type { EndpointRegistrationOptions, EndpointScheduling, ImmediateEndpointHandler, AsyncEndpoint } from "@narratage/endpoint-kit";
 
-export type { ArtifactStore } from "@narratage/runtime";
-
 export type {
   ProducerHandler,
   ProducerHandlerContext,
@@ -44,12 +42,9 @@ export type DriverRunResult = {
   readonly blocked: readonly BlockedCommand[];
 };
 
-/** Endpoint scheduling metadata; it never changes Core demand or command identity. */
-export type SchedulingHint = EndpointScheduling;
-
 export type ProducerRegistration = {
   readonly handler: ProducerHandler;
-  readonly scheduling?: SchedulingHint;
+  readonly scheduling?: EndpointScheduling;
 };
 
 type EndpointRegistrationBase = {

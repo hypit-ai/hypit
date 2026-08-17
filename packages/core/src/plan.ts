@@ -13,7 +13,7 @@ import type {
   TypedRecord,
 } from "@narratage/protocol";
 
-import { canonicalStringify } from "./canonical.js";
+import { canonicalStringify } from "@narratage/protocol";
 import { invariant } from "./error.js";
 import {
   operationResultRecord,
@@ -23,7 +23,7 @@ import {
   satisfiedCandidate,
   verifyBuildRequest,
 } from "./graph.js";
-import { resolveProducer, sealRecord } from "./link.js";
+import { resolveProducer } from "./link.js";
 import { sameType, typeKey } from "./reference.js";
 
 function exactKeys(
@@ -152,11 +152,11 @@ export function compileBuild(
     const candidate = satisfiedCandidate(graph, ref.id);
     let resolved: ResolvedSource;
     if (candidate.root.kind === "value") {
-      const record = sealRecord({
+      const record: TypedRecord = {
         id: candidate.root.value.id,
         type: candidate.type,
         value: candidate.root.value.value,
-      });
+      };
       invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`);
       resolved = { record: record.id, type: record.type };
     } else {
@@ -314,11 +314,11 @@ export function selectedProvidedRecords(
   for (const selection of plan.selections) {
     const candidate = resolveCandidate(graph, selection.candidate);
     if (candidate.root.kind !== "value") continue;
-    const record = sealRecord({
+    const record: TypedRecord = {
       id: candidate.root.value.id,
       type: candidate.type,
       value: candidate.root.value.value,
-    });
+    };
     invariant(selection.record === record.id, "SELECTION_RECORD_MISMATCH", `${selection.output} does not select ${record.id}`);
     invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`, record.id);
     const previous = records.get(record.id);

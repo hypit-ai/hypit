@@ -36,7 +36,6 @@ export type CapacityResourceClaim = {
 
 /** One asynchronous external Operation that currently occupies Provider capacity. */
 export type CapacityReservation = {
-  readonly id: string;
   readonly build: string;
   readonly command: string;
   readonly resources: readonly CapacityResourceClaim[];
@@ -76,16 +75,7 @@ export type BuildDispatchStore = {
   finish(build: string, terminal: DispatchTerminal, reason?: string): Promise<BuildDispatchSnapshot>;
   requestCancellation(build: string, reason?: string): Promise<BuildDispatchSnapshot>;
   acquireCapacity(request: CapacityAcquireRequest): Promise<CapacityAcquire>;
-  releaseCapacity(id: string): Promise<void>;
+  releaseCapacity(build: string, command: string): Promise<void>;
   releaseBuildCapacity(build: string): Promise<void>;
   listCapacity(): Promise<readonly CapacityReservation[]>;
 };
-
-function assert(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message);
-}
-
-export function capacityReservationId(build: string, command: string): string {
-  assert(build.trim().length > 0 && command.trim().length > 0, "Capacity reservation identity is empty");
-  return `capacity:${encodeURIComponent(build)}:${encodeURIComponent(command)}`;
-}

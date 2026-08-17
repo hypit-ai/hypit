@@ -42,8 +42,7 @@
             "defaultConcurrency": 1
           }
         }
-      },
-      "concurrency": 4
+      }
     }
   }
 }

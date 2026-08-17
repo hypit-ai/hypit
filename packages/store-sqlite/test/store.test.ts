@@ -169,7 +169,9 @@ test("Pool and Lane limits count only asynchronous Operations still in flight", 
     });
     assert.equal(otherRoute.status, "acquired");
 
-    if (first.status === "acquired") await state.dispatch.releaseCapacity(first.reservation.id);
+    if (first.status === "acquired") {
+      await state.dispatch.releaseCapacity(first.reservation.build, first.reservation.command);
+    }
     const retried = await state.dispatch.acquireCapacity({
       build: "seedance-b",
       command: "generate:b",

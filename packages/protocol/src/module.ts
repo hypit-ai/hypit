@@ -44,13 +44,8 @@ export type ModuleManifest = {
   readonly producers: readonly ProducerDeclaration[];
 };
 
-/** Domain-neutral interface resolved into Core; package-owned value schemas stay outside it. */
-export type ResolvedModuleManifest = Omit<ModuleManifest, "types"> & {
-  readonly types: readonly { readonly name: string }[];
-};
-
 export type ResolvedModule = {
-  readonly manifest: ResolvedModuleManifest;
+  readonly manifest: ModuleManifest;
 };
 
 export type ResolvedModuleClosure = {

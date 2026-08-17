@@ -6,7 +6,6 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
-  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
   UploadPartCommand,
@@ -18,21 +17,15 @@ import type {
   CreateMultipartUploadCommandInput,
   DeleteObjectCommandInput,
   GetObjectCommandInput,
-  ListObjectsV2CommandInput,
   PutObjectCommandInput,
   S3ClientConfig,
   UploadPartCommandInput,
 } from "@aws-sdk/client-s3";
 
-export type S3ListPage = {
-  readonly keys: readonly string[];
-  readonly continuationToken?: string;
-};
-
 /**
  * `put` and `get` are the whole port. The rest are optional: a client that
  * omits them leaves the store implementing only the three-method ArtifactStore,
- * which is exactly what the optional Streaming and Managed facets mean.
+ * which is exactly what the optional Streaming facet means.
  */
 export type S3ObjectClient = {
   put(input: PutObjectCommandInput): Promise<void>;
@@ -51,7 +44,6 @@ export type S3ObjectClient = {
   abortMultipart?(input: AbortMultipartUploadCommandInput): Promise<void>;
   copy?(input: CopyObjectCommandInput): Promise<void>;
   delete?(input: DeleteObjectCommandInput): Promise<void>;
-  list?(input: ListObjectsV2CommandInput): Promise<S3ListPage>;
 };
 
 function statusCode(error: unknown): number | undefined {
@@ -149,16 +141,4 @@ export class AwsS3ObjectClient implements S3ObjectClient {
     await this.#client.send(new DeleteObjectCommand(input));
   }
 
-  async list(input: ListObjectsV2CommandInput): Promise<S3ListPage> {
-    const response = await this.#client.send(new ListObjectsV2Command(input));
-    const keys = (response.Contents ?? [])
-      .map((item) => item.Key)
-      .filter((key): key is string => key !== undefined);
-    return {
-      keys,
-      ...(response.IsTruncated === true && response.NextContinuationToken !== undefined
-        ? { continuationToken: response.NextContinuationToken }
-        : {}),
-    };
-  }
 }

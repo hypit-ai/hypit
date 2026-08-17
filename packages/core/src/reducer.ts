@@ -17,11 +17,14 @@ import type {
   TypedRecord,
 } from "@narratage/protocol";
 
-import { canonicalize } from "./canonical.js";
-import { CoreError, invariant } from "./error.js";
+import { canonicalize, SvmlError } from "@narratage/protocol";
+import { invariant } from "./error.js";
 import { resolveProducer, verifyRecordStructure } from "./link.js";
 import { compileBuild, producerStep, selectedProvidedRecords } from "./plan.js";
-import { commandId } from "./provenance.js";
+
+function commandId(kind: "producer" | "need", subject: string): string {
+  return `${kind}:${subject}`;
+}
 
 function withoutCommand(state: BuildState, id: string): readonly CoreCommand[] {
   return state.outstanding.filter((command) => command.id !== id);
@@ -163,7 +166,7 @@ function applyEvent(state: BuildState, event: CommandResult): BuildState {
   if (command.kind === "fulfill-need" && event.kind === "need-fulfilled") {
     return acceptNeedEvent(state, command, event);
   }
-  throw new CoreError(
+  throw new SvmlError(
     "EVENT_COMMAND_MISMATCH",
     `${event.kind} cannot complete ${command.kind}`,
     command.id,

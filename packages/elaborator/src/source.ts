@@ -1,4 +1,5 @@
-import { canonicalStringify, isDigest, link } from "@narratage/core";
+import { link } from "@narratage/core";
+import { canonicalStringify, isDigest } from "@narratage/protocol";
 import type {
   CompiledGraph,
   GraphValueRef,

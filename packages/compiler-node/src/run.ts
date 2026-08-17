@@ -11,9 +11,7 @@ import type {
   ArtifactAttachment,
 } from "@narratage/workspace";
 import type {
-  BuildPlan,
   BuildDefinition,
-  BuildRequest,
   BuildState,
   StoredValue,
   TypeRef,
@@ -74,10 +72,6 @@ export type PlannedBuild = {
   readonly compilation: NodeCompiledRun;
   /** Immutable authority persisted once for every fresh Runtime Build. */
   readonly definition: BuildDefinition;
-  /** Convenience view of `definition.request`. */
-  readonly request: BuildRequest;
-  /** Convenience view of `definition.plan`. */
-  readonly plan: BuildPlan;
   /** Materialized plan/read view; durable Stores persist Definition + Facts instead. */
   readonly state: BuildState;
 };
@@ -287,12 +281,9 @@ export class NodeRunCompiler {
       targets: compilation.run.graph.targets,
     });
     const sliced = sliceExecution(compilation.program, fullGraph, fullRequest);
-    const request = sealBuildRequest({
-      targets: compilation.run.graph.targets,
-    });
-    const definition = defineBuild(sliced.program, sliced.graph, request);
+    const definition = defineBuild(sliced.program, sliced.graph, fullRequest);
     const state = materializeBuild(definition, []);
-    return { compilation, definition, request: definition.request, plan: definition.plan, state };
+    return { compilation, definition, state };
   }
 
   async planFile(file: string): Promise<PlannedBuild> {

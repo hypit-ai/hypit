@@ -19,8 +19,7 @@ A Runtime Profile selects only the environmental parts that genuinely vary:
       "credentials": {
         "environment": { "use": "@narratage/credential-store-env" }
       },
-      "endpoints": {},
-      "concurrency": 4
+      "endpoints": {}
     }
   }
 }

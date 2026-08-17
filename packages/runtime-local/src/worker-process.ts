@@ -138,12 +138,8 @@ export async function ensureRuntimeProcess(
   launch: RuntimeWorkerLaunch,
   timeoutMs = 10_000,
 ): Promise<RuntimeProcessState> {
-  const existing = await record(profile, dataRoot);
   const current = await runtimeProcessStatus(profile, dataRoot);
   if (current.state === "running") return current;
-  if (existing !== undefined && alive(existing.pid)) {
-    await stopRuntimeProcessUnlocked(profile, dataRoot, timeoutMs);
-  }
   const absolute = resolve(profile);
   const location = paths(dataRoot);
   await mkdir(location.root, { recursive: true });

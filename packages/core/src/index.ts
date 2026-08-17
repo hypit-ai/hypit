@@ -1,5 +1,3 @@
-export { canonicalStringify, canonicalize, isDigest } from "./canonical.js";
-export { CoreError } from "./error.js";
 export {
   createResolvedClosure,
   link,
@@ -26,4 +24,3 @@ export {
   start,
 } from "./reducer.js";
 export { BuildMachine } from "./machine.js";
-export type { TypedRecordDraft } from "./link.js";
