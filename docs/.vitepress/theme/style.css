@@ -221,19 +221,53 @@ html.home-page .VPNav .VPNavBarSearchButton {
 }
 html.home-page .VPNav .DocSearch-Button:hover { border-color: var(--crimson); color: var(--ink); }
 html.home-page .VPNav .DocSearch-Button-Placeholder { color: var(--muted); font-size: 13px; }
-html.home-page .VPNav .DocSearch-Button-Keys { gap: 2px; }
-html.home-page .VPNav .DocSearch-Button-Key {
-  width: auto;
+/*
+ * Stock builds one pill out of two `<kbd>` halves — the first drops its right
+ * border and rounds only its left corners, the second mirrors it. Both halves
+ * are reset to a full square box here, sized and centred explicitly so neither
+ * the asymmetric borders nor the line-box maths can throw the glyphs off.
+ */
+html.home-page .VPNav .DocSearch-Button-Keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+html.home-page .VPNav .DocSearch-Button-Key,
+html.home-page .VPNav .DocSearch-Button-Key + .DocSearch-Button-Key {
+  display: grid;
+  place-content: center;
+  box-sizing: border-box;
+  width: 20px;
   min-width: 0;
+  height: 20px;
+  margin: 0;
+  border: 1px solid var(--rule);
   border-radius: 0;
-  padding: 1px 5px;
+  padding: 0;
   background: transparent;
-  box-shadow: inset 0 0 0 1px var(--rule);
+  box-shadow: none;
   color: var(--muted);
   font-family: var(--mono);
   font-size: 11px;
-  letter-spacing: .06em;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  /*
+   * Optical centring. The em box is ascent 10 + descent 3, and neither glyph
+   * has a descender, so centring the line box leaves the ink ~.6px high. With
+   * `place-content: center` a top padding shifts the ink by half its value.
+   */
+  padding-top: 1.2px;
 }
+/* The command glyph is drawn by stock as `::after`, the parent's font-size
+   forced to 0, so it needs its own metrics. */
+html.home-page .VPNav .DocSearch-Button-Key:first-child::after {
+  display: block;
+  color: inherit;
+  font-size: 11px;
+  line-height: 1;
+}
+
 html.home-page .VPNavBarSearch { padding-left: 22px; }
 
 /*
