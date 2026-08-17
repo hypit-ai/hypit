@@ -212,7 +212,6 @@ const zhTheme = {
           { text: "添加 Author 包", link: "/zh/guide/author-packages" },
           { text: "添加 Provider", link: "/zh/guide/providers" },
           { text: "Runtime", link: "/zh/guide/runtime" },
-          { text: "字幕 Playground", link: "/zh/guide/caption-playground" },
           { text: "测试", link: "/zh/guide/testing" },
           { text: "代码规范", link: "/zh/guide/conventions" },
         ],
