@@ -22,10 +22,14 @@
 </p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/zh/"><img alt="Website" src="https://img.shields.io/badge/Website-narratage.hypit.ai-000000?style=flat-square&logo=googlechrome&logoColor=white"></a>
-  <a href="https://discord.gg/85hnyQnxpn"><img alt="Discord" src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat-square&logo=discord&logoColor=white"></a>
-  <a href="https://x.com/hypitai"><img alt="X" src="https://img.shields.io/badge/Follow-%40hypitai-000000?style=flat-square&logo=x&logoColor=white"></a>
-  <a href="https://t.me/narratage"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-Join%20Group-26A5E4?style=flat-square&logo=telegram&logoColor=white"></a>
+  <a href="https://narratage.hypit.ai/zh/"><img alt="Visit our website" src="https://img.shields.io/badge/Visit%20our%20website-000000?style=for-the-badge&logo=googlechrome&logoColor=white"></a>
+  <a href="https://discord.gg/85hnyQnxpn"><img alt="Join our Discord" src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
+  <a href="https://t.me/narratage"><img alt="Join our Telegram" src="https://img.shields.io/badge/Join%20our%20Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white"></a>
+  <a href="https://x.com/hypitai"><img alt="Follow @hypitai on X" src="https://img.shields.io/badge/Follow%20%40hypitai-000000?style=for-the-badge&logo=x&logoColor=white"></a>
+</p>
+
+<p align="center">
+  ⭐ <em>让更多人发现 Narratage，一起壮大社区。给仓库点个 Star！</em>
 </p>
 
 每一款视频编辑器——Premiere、剪映、DaVinci、Final Cut——都是为人的双手在时间线上操作而造的。
@@ -37,7 +41,7 @@
 - **钉在词上** —— 重新生成会改变时间排布，但 B-roll 与特效仍会跟随它们所属的词。
 - **可批量** —— 一切都是源文件。以代码的规模产出视频，而不是以剪辑的速度。
 
-<h3 align="center"><a href="https://narratage.hypit.ai/">看演示 —— SVML 源码与渲染成片并排对照 →</a></h3>
+> ### [看演示 —— SVML 源码与渲染成片并排对照 →](https://narratage.hypit.ai/zh/)
 
 ## 怎么工作的
 
