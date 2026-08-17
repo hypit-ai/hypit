@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/public/logo-bounce-dark.png">
-    <img alt="Narratage" src="docs/public/logo-bounce-light.png" width="420">
+    <img alt="Narratage" src="docs/public/logo-bounce-light.png" width="420" height="217">
   </picture>
 </p>
 
