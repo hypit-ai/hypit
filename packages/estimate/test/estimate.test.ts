@@ -74,6 +74,37 @@ test("a numeric rate gives SVS a continuous author-controlled pace", () => {
   assert.equal(result, 10);
 });
 
+test("optional padding extends speech before bounds and rounding", async () => {
+  const source = sealText(Array.from({ length: 23 }, () => "day").join(" "));
+  const policy = sealSpeechEstimatePolicy({
+    language: "en",
+    pace: "normal",
+    minimumSec: 1,
+    maximumSec: 30,
+    rounding: "none",
+    paddingSec: 1,
+  });
+  assert.equal(estimateSpeechDuration(source, policy), 6);
+
+  const output = await estimateSurface('<estimate:Speech id="duration" source={speech} language="en" pace="normal" min="1" max="30" rounding="none" padding="1"/>');
+  const value = output.records[0]!.value;
+  assert.equal(value.kind === "inline" && (value.value as { readonly paddingSec?: number }).paddingSec, 1);
+
+  const recipe = speechEstimatePolicyFromRecipe({
+    path: "speech.padded",
+    properties: {
+      language: "en",
+      pace: "normal",
+      min: 1,
+      max: 30,
+      rounding: "none",
+      padding: 1,
+    },
+  });
+  assert.equal(recipe.paddingSec, 1);
+  assert.throws(() => sealSpeechEstimatePolicy({ ...policy, paddingSec: -1 }), /invalid/u);
+});
+
 test("the author Surface requires one complete explicit inline policy", async () => {
   const output = await estimateSurface('<estimate:Speech id="duration" source={speech} language="en" rate="4.75" min="4" max="15" rounding="round"/>');
   const value = output.records[0]!.value;
