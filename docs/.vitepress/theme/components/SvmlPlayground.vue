@@ -1040,7 +1040,7 @@ onBeforeUnmount(() => {
 }
 
 .live-broll.semantic-selected {
-  outline: 1px solid rgba(99, 216, 255, .95);
+  outline: 1px solid #b09257;
   outline-offset: -5px;
 }
 </style>

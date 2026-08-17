@@ -230,9 +230,12 @@ onBeforeUnmount(() => window.removeEventListener("resize", onResize));
 .demo-card-content :deep(.svml-demo) { margin-top: 0; }
 .demo-card-content :deep(.demo-shell),
 .demo-card-content :deep(.real-demo-shell) { min-height: 660px; box-shadow: none; border: 0; }
-.demo-card-content :deep(.real-demo-shell) :deep(.code-scroll) { height: 660px; }
+.demo-card-content :deep(.real-demo-shell .code-scroll) { height: 660px; }
 .demo-card-content :deep(.real-preview-body) { padding: 18px 16px 10px; }
-.demo-card-content :deep(.semantic-live-stage) { height: 500px; }
+/* Both stages, or the ranking demo keeps its taller default and its
+   container-scaled type comes out larger than the other card's. */
+.demo-card-content :deep(.semantic-live-stage),
+.demo-card-content :deep(.live-ranking-stage) { height: 500px; }
 .demo-card-content :deep(.real-semantic-controls) { margin: 0 20px 18px; }
 
 .demo-loading { display: grid; place-content: center; justify-items: center; gap: 14px; min-height: 660px; border-radius: 2px; background: var(--paper-2); color: var(--muted); font-family: var(--mono); font-size: 12px; letter-spacing: .04em; }
