@@ -56,6 +56,5 @@ narratage/
 | [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, activation |
 | [Adding a Provider](./providers.md) | Step-by-step: new Endpoint adapter |
 | [Runtime](./runtime.md) | Profile, Workspace, execution and lifecycle boundaries |
-| [Caption Playground](./caption-playground.md) | Edit real Caption SVML/SVS with live feedback |
 | [Testing](./testing.md) | Test runner, patterns, examples, boundary tests |
 | [Conventions](./conventions.md) | Naming, module boundaries, wire data, TypeScript config |
