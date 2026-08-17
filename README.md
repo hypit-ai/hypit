@@ -1,5 +1,8 @@
 <p align="center">
-  <img alt="Narratage" src="docs/public/narratage-logo.svg" width="420">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/logo-bounce-dark.png">
+    <img alt="Narratage" src="docs/public/logo-bounce-light.png" width="420">
+  </picture>
 </p>
 
 <p align="center">
