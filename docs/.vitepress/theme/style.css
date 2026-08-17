@@ -488,13 +488,33 @@ html.home-page .svml-demo {
   --demo-card-bg: var(--paper-2);
   --demo-code-bg: var(--paper-2);
   --demo-preview-bg: var(--paper-2);
-  --demo-text: #383a42;
+  /*
+   * JellyFish (pawelborkar/vscode-jellyfish), fitted to this paper rather than
+   * transplanted onto it. The theme ships dark only, and its own values land
+   * between 1.04:1 and 3.14:1 against this background — the cyan attribute and
+   * yellow string are effectively invisible on cream.
+   *
+   * Each role keeps its hue and takes the most saturated value that still meets
+   * its own contrast target, so the set has a hierarchy instead of being
+   * flattened onto one threshold: ink 16.7:1, tag 5.5, attribute and string and
+   * binding 5.0, line numbers 3.2 because they should stay quiet. The four
+   * syntax hues sit 53 to 94 apart in CIE76, so none reads as another.
+   *
+   * Plain text takes the theme's own background navy as the ink; darkening its
+   * near-white foreground would only have produced another teal. Line numbers
+   * carry a trace of that navy for the same reason.
+   *
+   * Tags use the theme's markup.changed violet rather than its entity.name.tag
+   * pink: that pink sits only 12.7 from this page's marker crimson in CIE76, so
+   * markup and semantic markers read as one colour. The violet is 95 away.
+   */
+  --demo-text: #00002c;
   --demo-text-muted: var(--muted);
-  --demo-line-number: #9d9d9f;
-  --demo-tag: #a626a4;
-  --demo-attr: #986801;
-  --demo-string: #50a14f;
-  --demo-expression: #4078f2;
+  --demo-line-number: #7d7dac;
+  --demo-tag: #8800e2;
+  --demo-attr: #006e69;
+  --demo-string: #616700;
+  --demo-expression: #ab3f00;
   --demo-marker: var(--crimson);
   --demo-marker-bg: var(--crimson-soft);
   --demo-marker-border: var(--crimson);
@@ -510,12 +530,16 @@ html.home-page .svml-demo {
   margin: 0 auto;
 }
 html.home-page.dark .svml-demo {
-  --demo-text: #abb2bf;
-  --demo-line-number: #636d83;
-  --demo-tag: #c678dd;
-  --demo-attr: #d19a66;
-  --demo-string: #98c379;
-  --demo-expression: #61afef;
+  /* JellyFish verbatim, except the tag: its entity.name.tag pink is 20.6 from
+     the marker crimson, so tags take the theme's markup.changed violet, 61.9
+     away. Everything else is the theme's own — foreground, line number,
+     attribute, string, and the constant hue it gives numbers. */
+  --demo-text: #eeffff;
+  --demo-line-number: #8686867c;
+  --demo-tag: #c792ea;
+  --demo-attr: #00fff2;
+  --demo-string: #eeff00;
+  --demo-expression: #ff7e34;
   --demo-marker-active-text: #131211;
 }
 
