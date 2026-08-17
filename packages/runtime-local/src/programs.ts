@@ -130,10 +130,10 @@ function run(root: string, command: ManagedProgramCommand): Promise<{ ok: boolea
  * weights; `mismatch` is not, and stops the wait — a program that is answering
  * with another identity will not become the right one by waiting.
  */
-async function waitForReady(program: ManagedProgram, maxWaitMs: number): Promise<ManagedProgramState> {
+async function waitForReady(program: ManagedProgram, pid: number, maxWaitMs: number): Promise<ManagedProgramState> {
   const deadline = Date.now() + maxWaitMs;
   let state = await program.probe();
-  while (state.state === "down" && Date.now() < deadline) {
+  while (state.state === "down" && alive(pid) && Date.now() < deadline) {
     await sleep(1000);
     state = await program.probe();
   }
@@ -192,15 +192,19 @@ async function bringUp(
     }
     await writeFile(join(directory(root), `${program.id}.pid`), `${child.pid}\n`);
     onProgress?.({ id: program.id, phase: "waiting" });
-    const state = await waitForReady(program, maxWaitMs);
+    const state = await waitForReady(program, child.pid, maxWaitMs);
     if (state.state === "ready") onProgress?.({ id: program.id, phase: "ready" });
+    const exited = state.state === "down" && !alive(child.pid);
+    if (exited) await rm(join(directory(root), `${program.id}.pid`), { force: true });
     return {
       ...base,
       action: state.state === "ready" ? "started" : "unchanged",
       state,
       pid: child.pid,
       logPath,
-      ...(state.state === "ready" ? {} : { detail: `see ${logPath}` }),
+      ...(state.state === "ready" ? {} : {
+        detail: exited ? `process exited; see ${logPath}` : `see ${logPath}`,
+      }),
     };
   } finally {
     await log.close();
@@ -213,6 +217,9 @@ export async function bringManagedProgramsUp(
   options: ManagedProgramOptions = {},
 ): Promise<{ readonly dataRoot: string; readonly programs: readonly ManagedProgramReport[] }> {
   const { dataRoot, programs } = await declaredManagedPrograms(path, options);
+  // A fresh Runtime has no data directory yet. Managed commands use it as
+  // their working directory, so create it before the first prepare/start.
+  await mkdir(dataRoot, { recursive: true });
   const reports = await Promise.all(distinct(programs).map(async ({ program, instances }) =>
     await bringUp(dataRoot, program, instances, options.maxWaitMs ?? 300_000, options.onProgress)));
   return { dataRoot, programs: reports };

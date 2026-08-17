@@ -17,6 +17,7 @@ import {
 } from "@narratage/validation";
 import type { TypeValidatorRegistryLike } from "@narratage/validation";
 import type {
+  ArtifactStore,
   CredentialStore,
   CredentialValue,
   OperationSnapshot,
@@ -37,7 +38,6 @@ import {
   endpointReturnKey,
 } from "./registry.js";
 import type {
-  ArtifactStore,
   BlockedCommand,
   DriverExecutionOutcome,
   DriverRunResult,

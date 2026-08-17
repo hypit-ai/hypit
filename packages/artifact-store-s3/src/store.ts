@@ -5,7 +5,7 @@ import type { BlobRef, Digest } from "@narratage/protocol";
 import type { ArtifactStore } from "@narratage/runtime";
 
 import { AwsS3ObjectClient } from "./client.js";
-import type { S3ListPage, S3ObjectClient } from "./client.js";
+import type { S3ObjectClient } from "./client.js";
 
 export const s3ArtifactStoreModuleRef = {
   name: "@narratage/artifact-store-s3",
@@ -71,8 +71,8 @@ function positiveInteger(value: number, subject: string): number {
 /**
  * Content-addressed S3 ArtifactStore.
  *
- * The streaming and retention facets are detected by method presence, so this
- * store attaches them only when the injected client can back them. Claiming a
+ * The streaming facet is detected by method presence, so this
+ * store attaches it only when the injected client can back it. Claiming a
  * facet and then throwing would be worse than not claiming it: a deployment
  * would discover the gap during a Build rather than when it chose the client.
  */
@@ -85,9 +85,6 @@ export class S3ArtifactStore implements ArtifactStore {
   /** Present only when the client can stream and upload in parts. */
   readonly open?: (digest: Digest) => Promise<AsyncIterable<Uint8Array> | undefined>;
   readonly putStream?: (chunks: AsyncIterable<Uint8Array>, mediaType: string) => Promise<BlobRef>;
-  /** Present only when the client can enumerate and remove objects. */
-  readonly list?: () => Promise<readonly Digest[]>;
-  readonly delete?: (digest: Digest) => Promise<boolean>;
 
   constructor(options: S3ArtifactStoreOptions) {
     assert(options.bucket.trim().length > 0, "S3 Artifact bucket must not be empty");
@@ -105,10 +102,6 @@ export class S3ArtifactStore implements ArtifactStore {
       && client.completeMultipart !== undefined && client.copy !== undefined) {
       this.open = (digest) => this.#openStream(digest);
       this.putStream = (chunks, mediaType) => this.#putStream(chunks, mediaType);
-    }
-    if (client.list !== undefined && client.delete !== undefined && client.head !== undefined) {
-      this.list = () => this.#list();
-      this.delete = (digest) => this.#delete(digest);
     }
   }
 
@@ -266,43 +259,6 @@ export class S3ArtifactStore implements ArtifactStore {
     return { kind: "blob", digest, size, mediaType };
   }
 
-  /** Every Artifact this store holds. Staging keys are not Artifacts and are not listed. */
-  async #list(): Promise<readonly Digest[]> {
-    const root = this.#prefix.length === 0 ? "sha256/" : `${this.#prefix}/sha256/`;
-    const digests: Digest[] = [];
-    let continuationToken: string | undefined;
-    do {
-      const page: S3ListPage = await this.#client.list!({
-        Bucket: this.#bucket,
-        Prefix: root,
-        ...(continuationToken === undefined ? {} : { ContinuationToken: continuationToken }),
-        ...(this.#expectedBucketOwner === undefined
-          ? {}
-          : { ExpectedBucketOwner: this.#expectedBucketOwner }),
-      });
-      for (const key of page.keys) {
-        const hex = key.slice(root.length).split("/").at(-1);
-        if (hex === undefined) continue;
-        const digest = `sha256:${hex}`;
-        // A key this store did not write is not reported as an Artifact.
-        if (isDigest(digest) && this.key(digest as Digest) === key) digests.push(digest as Digest);
-      }
-      continuationToken = page.continuationToken;
-    } while (continuationToken !== undefined);
-    return digests;
-  }
-
-  /** True when the Artifact was there to remove. */
-  async #delete(digest: Digest): Promise<boolean> {
-    const key = this.key(digest);
-    const owner = this.#expectedBucketOwner === undefined
-      ? {}
-      : { ExpectedBucketOwner: this.#expectedBucketOwner };
-    const existing = await this.#client.head!({ Bucket: this.#bucket, Key: key, ...owner });
-    if (existing === undefined) return false;
-    await this.#client.delete!({ Bucket: this.#bucket, Key: key, ...owner });
-    return true;
-  }
 }
 
 export function createS3ArtifactStore(

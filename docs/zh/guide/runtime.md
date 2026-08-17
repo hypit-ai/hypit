@@ -39,15 +39,14 @@ Profile 只保留真正会随环境变化的选择：
       },
       "endpoints": {
         "media": { "use": "@narratage/provider-media-local" }
-      },
-      "concurrency": 4
+      }
     }
   }
 }
 ```
 
 `artifacts` 决定产物字节放在哪里；`credentials` 选择凭证存储；`endpoints` 选择明确的
-Provider 实现；`concurrency` 限制这个本地 Worker 同时执行的 Command 数量。
+Provider 实现。
 
 安装包只增加一种可选实现，不会自动激活。Profile 不包含 Workspace、作者 import 或隐藏的
 创作路由。
@@ -75,9 +74,9 @@ Workspace 独立由显式 `--workspace`、Runtime 指针所在项目或入口 So
 
 ## 队列与并发
 
-`build` 保存一个全新 Build 后立即返回。Worker 可以并行推进多个 Build，它们共同受 Profile 的
-进程级并发限制。Endpoint 包还会声明 Provider 与模型自身的限制，因此不同 Build 的外部调用仍
-共享同一额度。
+`build` 保存一个全新 Build 后立即返回。Worker 推进所有可运行的 Build，Core 保留每个
+Build 的图依赖。Endpoint 包声明 Provider 与 capability 上限，因此不同 Build 的工作共享真正
+执行它们的外部容量。
 
 取消是尽力而为：未开始的工作直接撤回；运行中的 Build 不再接收新 Command，Endpoint 可以尝试
 取消已经提交的外部 Operation。已经完成的产物永远保留，不做回滚。

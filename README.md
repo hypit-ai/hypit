@@ -142,7 +142,7 @@ Narratage separates authorship from execution:
 | `.svml` | What video to make, including the script, generated media and tracks |
 | `.svs` | Reusable creative choices such as prompts, styles and layout |
 | `.svrun` | What to build this time, including targets and prior results to reuse |
-| Runtime profile | How and where to run, including providers, storage and concurrency |
+| Runtime profile | How and where to run, including providers, credentials and storage |
 
 A project can have any number of these files, and the same `.svml` can be built by many `.svrun` files.
 

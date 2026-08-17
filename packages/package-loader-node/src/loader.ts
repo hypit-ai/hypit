@@ -14,7 +14,6 @@ import type {
 
 type PackageJson = {
   readonly name: string;
-  readonly version: string;
   readonly narratage?: { readonly activation?: string };
 };
 
@@ -39,7 +38,6 @@ function parsePackageJson(value: unknown, subject: string): PackageJson {
   const narratage = item.narratage === undefined ? undefined : object(item.narratage, `${subject}.narratage`);
   return {
     name: text(item.name, `${subject}.name`),
-    version: text(item.version, `${subject}.version`),
     ...(narratage?.activation === undefined ? {} : { narratage: { activation: text(narratage.activation, `${subject}.narratage.activation`) } }),
   };
 }

@@ -95,8 +95,6 @@ export type NodeCompilerOptions = {
   readonly workspace: Workspace;
   /** Trusted Type-owner validators used to admit authored Records before linking. */
   readonly validators?: TypeValidatorRegistryLike;
-  /** Low-level Host hook for a sandboxed or remote admission implementation. */
-  readonly admitRecord?: AuthorRecordAdmitter;
 };
 
 export type NodeCompiledSourceClosure = CompiledSourceClosure & {
@@ -110,15 +108,8 @@ export class NodeCompiler {
   readonly #admitRecord: AuthorRecordAdmitter;
 
   constructor(options: NodeCompilerOptions) {
-    if (options.validators !== undefined && options.admitRecord !== undefined) {
-      throw new NodeCompilerError(
-        "AMBIGUOUS_RECORD_ADMISSION",
-        "NodeCompiler accepts validators or a custom Record admitter, not both",
-      );
-    }
     this.#options = options;
-    this.#admitRecord = options.admitRecord
-      ?? createRecordAdmitter(options.validators ?? new TypeValidatorRegistry());
+    this.#admitRecord = createRecordAdmitter(options.validators ?? new TypeValidatorRegistry());
   }
 
   supportsFrontend(id: string): boolean {

@@ -29,7 +29,6 @@ import type {
   CliRuntimeArchiveControl,
   CliRuntimeArtifactAccess,
   CliRuntimeController,
-  CliRuntimeMaintenance,
 } from "./runtime-port.js";
 import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliColorMode, CliIo } from "./output.js";
@@ -59,7 +58,6 @@ type ParsedArgs = {
   readonly name: string | undefined;
   readonly artifact: string | undefined;
   readonly to: string | undefined;
-  readonly apply: boolean;
   /** Leave the declared external programs alone; build against what is running. */
   readonly noPrograms: boolean;
   readonly json: boolean;
@@ -119,7 +117,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let name: string | undefined;
   let artifact: string | undefined;
   let to: string | undefined;
-  let apply = false;
   let noPrograms = false;
   let json = false;
   let color: CliColorMode = "auto";
@@ -137,7 +134,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     if (item.startsWith("--")) {
       const repeatable = [
         "--json", "--jsonl", "--watch", "--verbose", "--debug",
-        "--no-color", "--follow", "--apply", "--no-programs", "--asset-root",
+        "--no-color", "--follow", "--no-programs", "--asset-root",
       ].includes(item);
       if (!repeatable && seenOptions.has(item)) throw new Error(`${item} cannot be repeated`);
       seenOptions.add(item);
@@ -244,10 +241,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       follow = true;
       continue;
     }
-    if (item === "--apply") {
-      apply = true;
-      continue;
-    }
     if (item === "--no-programs") {
       noPrograms = true;
       continue;
@@ -314,7 +307,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     name,
     artifact,
     to,
-    apply,
     noPrograms,
     json,
     color,
@@ -338,14 +330,11 @@ function assertCommandOptions(args: ParsedArgs): void {
     case "programs":
       // This command has older, more specific diagnostics for deployment-selection
       // flags and waiting on status/down; let its handler render those repairs.
-      add("--max-wait-ms", "--runtime", "--apply");
+      add("--max-wait-ms", "--runtime");
       break;
     case "runtime":
       add("--runtime");
       if (args.action === "up" || args.action === "down") add("--max-wait-ms");
-      break;
-    case "gc":
-      add("--apply");
       break;
     case "auth":
       add("--runtime", "--slot");
@@ -404,7 +393,6 @@ function usage(): string {
     "  narratage runtime unset",
     "  narratage runtime up|status|logs|down [<runtime-profile>]",
     "  narratage queue [--runtime profile.json] [--watch]",
-    "  narratage gc [<runtime-profile>] [--apply]",
     "  narratage check <self-described-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
     "  narratage plan <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
     "  narratage build <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow] [--no-programs]",
@@ -529,16 +517,8 @@ async function loadRuntimeArchive(
 
 async function loadRuntimeArtifactAccess(
   host: NodeRuntimeHost,
-  readOnly = true,
 ): Promise<CliRuntimeArtifactAccess> {
-  return await host.openArtifacts({ readOnly });
-}
-
-async function loadRuntimeMaintenance(
-  host: NodeRuntimeHost,
-  readOnly = true,
-): Promise<CliRuntimeMaintenance> {
-  return await host.openMaintenance({ readOnly });
+  return await host.openArtifacts();
 }
 
 function displayType(type: TypeRef): string {
@@ -746,8 +726,8 @@ export async function runCli(
   let selectedRuntimeProjectRoot: string | undefined;
   const commandProjectRoot = (): string => args.workspaceRoot
     ?? selectedRuntimeProjectRoot
-    ?? ((args.command === "check" || args.command === "plan" || args.command === "build"
-      || args.command === "packages") && args.file !== undefined
+    ?? ((args.command === "check" || args.command === "plan" || args.command === "build")
+      && args.file !== undefined
       ? dirname(resolve(args.file))
       : process.cwd());
   const packageRootForProject = async (projectRoot = commandProjectRoot()): Promise<string> =>
@@ -832,7 +812,7 @@ export async function runCli(
   }
 
   const positionalRuntime = (args.command === "runtime" || args.command === "programs"
-    || args.command === "doctor" || args.command === "gc") && args.file !== undefined;
+    || args.command === "doctor") && args.file !== undefined;
   const runtimeWasExplicit = args.runtime !== undefined || positionalRuntime;
   let runtimeNeedsHint = runtimeWasExplicit;
   if (args.runtime === undefined && !positionalRuntime) {
@@ -851,13 +831,12 @@ export async function runCli(
     || args.command === "build" || args.command === "status" || args.command === "builds"
     || args.command === "history"
     || args.command === "inspect" || args.command === "get" || args.command === "cancel"
-    || args.command === "doctor" || args.command === "gc" || args.command === "programs"
+    || args.command === "doctor" || args.command === "programs"
     || args.command === "runtime" || args.command === "queue" || args.command === "paths";
   const operational = known || args.command === "auth";
   const fileOptional = args.command === "builds" || args.command === "history" || args.command === "queue"
     || args.command === "paths"
-    || args.command === "programs" || args.command === "runtime" || args.command === "doctor"
-    || args.command === "gc";
+    || args.command === "programs" || args.command === "runtime" || args.command === "doctor";
   if (!operational || (!fileOptional && args.file === undefined)) {
     throw new Error(usage());
   }
@@ -909,7 +888,7 @@ export async function runCli(
     return;
   }
   if (args.command === "doctor") {
-    if (args.packageRoot !== undefined || args.apply) {
+    if (args.packageRoot !== undefined) {
       throw new Error("doctor reads all deployment selection from the Runtime Profile itself");
     }
     const profileInput = args.runtime ?? args.file;
@@ -932,7 +911,7 @@ export async function runCli(
     if (args.file !== undefined && args.runtime !== undefined) {
       throw new Error("programs reads all deployment selection from the Runtime Profile itself; provide that Profile only once");
     }
-    if (args.packageRoot !== undefined || args.apply) {
+    if (args.packageRoot !== undefined) {
       throw new Error("programs reads all deployment selection from the Runtime Profile itself");
     }
     if (args.action !== "up" && args.action !== "down" && args.action !== "status") {
@@ -1079,34 +1058,6 @@ export async function runCli(
     }
     return;
   }
-  if (args.command === "gc") {
-    if (args.packageRoot !== undefined) {
-      throw new Error("gc reads all deployment selection from the Runtime Profile itself");
-    }
-    const profileInput = args.runtime ?? args.file;
-    if (profileInput === undefined) {
-      throw new Error("gc requires a Runtime Profile; run narratage runtime use <profile> or provide it positionally");
-    }
-    const runtime = await loadRuntimeMaintenance(await runtimeHost(profileInput), !args.apply);
-    try {
-      const report = await runtime.garbageCollectArtifacts({ apply: args.apply });
-      const machine = {
-        applied: args.apply,
-        reachable: report.reachable,
-        unreachable: report.unreachable,
-        deleted: report.deleted,
-      };
-      writeOperational(machine, args.apply ? "Artifact garbage collection applied" : "Artifact garbage collection preview",
-        report.unreachable.length === 0 ? "success" : "warning", [
-          ["Reachable", String(report.reachable.length)],
-          ["Unreachable", String(report.unreachable.length)],
-          ["Deleted", String(report.deleted.length)],
-        ]);
-    } finally {
-      await runtime.close();
-    }
-    return;
-  }
   if (args.command === "auth") {
     if (args.action !== "status" && args.action !== "login" && args.action !== "logout") {
       throw new Error("auth takes status, login or logout");
@@ -1166,18 +1117,6 @@ export async function runCli(
       await runtime.close();
     }
     return;
-  }
-  if (args.apply) throw new Error("--apply is only valid for gc");
-  if (args.noPrograms && args.command !== "build") {
-    throw new Error("--no-programs is only valid for build; no other command starts an external program");
-  }
-  if ((args.record !== undefined || args.output !== undefined || args.name !== undefined
-    || args.artifact !== undefined || args.to !== undefined)
-    && args.command !== "get") {
-    throw new Error("--name, --record, --output, --artifact and --to are only valid for get");
-  }
-  if (args.source !== undefined && args.command !== "history") {
-    throw new Error("--source is only valid for history");
   }
   if (args.command === "status" || args.command === "builds" || args.command === "inspect"
     || args.command === "history" || args.command === "get" || args.command === "cancel" || args.command === "queue"
@@ -1378,7 +1317,7 @@ export async function runCli(
             : args.watch && !terminal ? "warning" : "info", [
             ["Build", args.file!],
             ["Status", effectiveStatus ?? "missing"],
-            ...(status.build === undefined || effectiveStatus === status.build.state.status
+            ...(status.build === undefined || terminal || effectiveStatus === status.build.state.status
               ? []
               : [["Core", status.build.state.status] as const]),
             ["Dispatch", phase],
@@ -1441,7 +1380,8 @@ export async function runCli(
             : [`Other accepted outputs  ${otherAccepted.length} · use --verbose to list them`];
         writeOperational(machine, "Build archive detail", "info", [
           ["Build", status.build.build], ["Status", effectiveStatus],
-          ...(effectiveStatus === archive.status ? [] : [["Core", archive.status] as const]),
+          ...(status.dispatch?.phase === "terminal" || effectiveStatus === archive.status
+            ? [] : [["Core", archive.status] as const]),
           ["Targets", String(archive.targets.length)], ["Accepted records", String(archive.records.length)],
           ["Operations", String(status.operations.length)],
         ], [
@@ -1815,7 +1755,7 @@ export async function runCli(
       machine: {
         format: "narratage.cli-plan@1",
         ok: true,
-        plan: result.plan,
+        plan: result.definition.plan,
         ...(preflight === undefined ? {} : { preflight }),
       },
       run: loaded.path,

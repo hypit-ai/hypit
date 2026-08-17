@@ -1,7 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-import type { ComponentPackage } from "@narratage/component-kit";
 import { collectNodePackageComponents, loadNodePackageSelection } from "@narratage/package-loader-node";
 import type { NodePackageSelectionRequest } from "@narratage/package-loader-node";
 import { canonicalize } from "@narratage/protocol";
@@ -30,7 +29,6 @@ import { createLocalRuntime } from "./runtime.js";
 import {
   createLocalRuntimeArchiveControl,
   createLocalRuntimeArtifactAccess,
-  createLocalRuntimeControl,
 } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
 import type {
@@ -38,7 +36,6 @@ import type {
   LocalRuntime,
   LocalRuntimeArchiveControl,
   LocalRuntimeArtifactAccess,
-  LocalRuntimeControl,
 } from "./types.js";
 
 export type RuntimeConfigEntry = {
@@ -54,14 +51,11 @@ export type RuntimeConfigDocument = {
   readonly artifacts: RuntimeConfigEntry;
   readonly credentials: readonly RuntimeConfigEntry[];
   readonly endpoints: readonly RuntimeConfigEntry[];
-  readonly concurrency: number;
 };
 
 export type LoadRuntimeConfigOptions = {
   readonly registry?: RuntimeAdapterRegistry;
-  readonly components?: readonly ComponentPackage[];
   readonly packageRoot?: string;
-  readonly readOnly?: boolean;
 };
 
 export type RuntimeConfigDoctorResult = {
@@ -101,11 +95,6 @@ function requiredString(value: unknown, subject: string): string {
   return value;
 }
 
-function positiveInteger(value: unknown, subject: string): number {
-  if (!Number.isSafeInteger(value) || (value as number) < 1) throw new Error(`${subject} must be a positive integer`);
-  return value as number;
-}
-
 function entry(value: unknown, instance: string, subject: string, poolAllowed = false): RuntimeConfigEntry {
   const item = object(value, subject);
   exactKeys(item, poolAllowed ? ["use", "pool", "config"] : ["use", "config"], subject);
@@ -138,7 +127,7 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
     throw new Error(`Local Runtime loader cannot activate ${String(runtime.use)}`);
   }
   const config = object(runtime.config, "$runtime.runtime.config");
-  exactKeys(config, ["dataRoot", "artifacts", "credentials", "endpoints", "concurrency"], "$runtime.runtime.config");
+  exactKeys(config, ["dataRoot", "artifacts", "credentials", "endpoints"], "$runtime.runtime.config");
   const artifacts = entry(config.artifacts, "artifacts", "$runtime.runtime.config.artifacts");
   const credentials = entries(config.credentials, "$runtime.runtime.config.credentials");
   const endpoints = entries(config.endpoints, "$runtime.runtime.config.endpoints", true);
@@ -150,7 +139,6 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
     artifacts,
     credentials,
     endpoints,
-    concurrency: positiveInteger(config.concurrency, "$runtime.runtime.config.concurrency"),
   };
 }
 
@@ -264,7 +252,6 @@ async function openCredentialStores(
   document: RuntimeConfigDocument,
   root: string,
   registry: RuntimeAdapterRegistry,
-  readOnly: boolean,
 ): Promise<{ readonly store: CredentialStore; close(): Promise<void> }> {
   const opened: RuntimeOpened<CredentialStore>[] = [];
   try {
@@ -273,7 +260,6 @@ async function openCredentialStores(
         dataRoot: root,
         instance: item.instance,
         config: item.config ?? {},
-        access: readOnly ? "read-only" : "read-write",
       }));
     }
     return {
@@ -292,14 +278,12 @@ async function openArtifactStore(
   document: RuntimeConfigDocument,
   root: string,
   registry: RuntimeAdapterRegistry,
-  readOnly: boolean,
 ): Promise<RuntimeOpened<ArtifactStore>> {
   const item = document.artifacts;
   return await registry.openArtifactStore(item.use, {
     dataRoot: root,
     instance: item.instance,
     config: item.config ?? {},
-    access: readOnly ? "read-only" : "read-write",
   });
 }
 
@@ -394,7 +378,7 @@ export async function doctorRuntimeConfig(
   if (credentialEndpoints.some((item) => item.endpoint.credentials.length > 0)) {
     let stores: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
     try {
-      stores = await openCredentialStores(document, root, registry, true);
+      stores = await openCredentialStores(document, root, registry);
       for (const activation of credentialEndpoints) {
         for (const slot of activation.endpoint.credentials) {
           if (await stores.store.resolve(slot.ref) !== undefined) continue;
@@ -429,8 +413,8 @@ export async function createRuntimeFromConfig(
   let artifacts: RuntimeOpened<ArtifactStore> | undefined;
   let credentials: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
   try {
-    artifacts = await openArtifactStore(document, root, registry, false);
-    credentials = await openCredentialStores(document, root, registry, false);
+    artifacts = await openArtifactStore(document, root, registry);
+    credentials = await openCredentialStores(document, root, registry);
     const endpoints = await Promise.all(document.endpoints.map(async (item) => await registry.createEndpoint(item.use, {
       dataRoot: root,
       instance: item.instance,
@@ -444,13 +428,11 @@ export async function createRuntimeFromConfig(
       dispatchStore: state.dispatch,
       artifactStore: artifacts.value,
       credentialStore: credentials.store,
-      components: options.components ?? [],
       loadComponentPackages: async (specifiers) => {
         const loaded = await loadNodePackageSelection(specifiers, packageRoot);
         return collectNodePackageComponents(loaded.map((item) => item.contribution));
       },
       endpoints,
-      scheduling: { maxConcurrency: document.concurrency },
       close: async () => {
         await credentials?.close();
         await artifacts?.close?.();
@@ -467,7 +449,7 @@ export async function createRuntimeFromConfig(
 
 export async function createRuntimeArchiveFromConfig(
   path: string,
-  options: LoadRuntimeConfigOptions = {},
+  options: LoadRuntimeConfigOptions & { readonly readOnly?: boolean } = {},
 ): Promise<LocalRuntimeArchiveControl> {
   const { root } = await openRuntimeConfig(path, options.packageRoot);
   const state = new SqliteRuntimeState(statePath(root), { readOnly: options.readOnly === true });
@@ -489,40 +471,11 @@ export async function createRuntimeArtifactAccessFromConfig(
   await installRuntimeAdapters(registry, packageRoot, {
     selected: [], logical: [{ abi: runtimeArtifactStoreAdapterHostAbi, name: document.artifacts.use }],
   });
-  const opened = await openArtifactStore(document, root, registry, options.readOnly === true);
+  const opened = await openArtifactStore(document, root, registry);
   return createLocalRuntimeArtifactAccess({
     artifactStore: opened.value,
     ...(opened.close === undefined ? {} : { close: opened.close }),
   });
-}
-
-export async function createRuntimeMaintenanceFromConfig(
-  path: string,
-  options: LoadRuntimeConfigOptions = {},
-): Promise<LocalRuntimeControl> {
-  const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
-  const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installRuntimeAdapters(registry, packageRoot, {
-    selected: [], logical: [{ abi: runtimeArtifactStoreAdapterHostAbi, name: document.artifacts.use }],
-  });
-  const state = new SqliteRuntimeState(statePath(root), { readOnly: options.readOnly === true });
-  try {
-    const artifacts = await openArtifactStore(document, root, registry, options.readOnly === true);
-    return createLocalRuntimeControl({
-      buildStore: state.builds,
-      buildCatalog: state.catalog,
-      operationStore: state.operations,
-      dispatchStore: state.dispatch,
-      artifactStore: artifacts.value,
-      close: async () => {
-        await artifacts.close?.();
-        state.close();
-      },
-    });
-  } catch (error) {
-    state.close();
-    throw error;
-  }
 }
 
 export async function createRuntimeCredentialsFromConfig(
@@ -535,7 +488,7 @@ export async function createRuntimeCredentialsFromConfig(
   if (endpoint === undefined) throw new Error(`Runtime Profile has no Endpoint instance ${endpointInstance}`);
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document));
-  const credentials = await openCredentialStores(document, root, registry, false);
+  const credentials = await openCredentialStores(document, root, registry);
   try {
     const endpointPackage = await registry.createEndpoint(endpoint.use, {
       dataRoot: root,

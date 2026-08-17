@@ -4,7 +4,6 @@ import type {
   ModuleRef,
   ProducerRef,
   ResolvedModule,
-  ResolvedModuleManifest,
   ResolvedModuleClosure,
   ResolvedCapabilityDeclaration,
   ResolvedProducerDeclaration,
@@ -15,8 +14,6 @@ import type {
 
 import { invariant } from "./error.js";
 import { capabilityKey, moduleKey, producerKey, typeKey } from "./reference.js";
-
-export type TypedRecordDraft = TypedRecord;
 
 type ClosureIndex = {
   readonly types: ReadonlyMap<string, ResolvedTypeDeclaration>;
@@ -50,33 +47,10 @@ function closureIndex(closure: ResolvedModuleClosure): ClosureIndex {
   return created;
 }
 
-function resolvedManifest(manifest: ModuleManifest): ResolvedModuleManifest {
-  return {
-    format: manifest.format,
-    name: manifest.name,
-    version: manifest.version,
-    dependencies: manifest.dependencies.map((dependency) => ({ module: { ...dependency.module } })),
-    types: manifest.types.map((type) => ({ name: type.name })),
-    capabilities: manifest.capabilities.map((capability) => ({
-      name: capability.name,
-      returns: structuredClone(capability.returns),
-    })),
-    producers: manifest.producers.map((producer) => ({
-      name: producer.name,
-      inputs: structuredClone(producer.inputs),
-      outputs: structuredClone(producer.outputs),
-      needs: structuredClone(producer.needs),
-    })),
-  };
-}
-
 export function createResolvedClosure(
   manifests: readonly ModuleManifest[],
 ): ResolvedModuleClosure {
-  const modules = manifests.map((definition) => {
-    const manifest = resolvedManifest(definition);
-    return { manifest };
-  });
+  const modules = manifests.map((manifest) => ({ manifest: structuredClone(manifest) }));
   return {
     format: "narratage.closure@1",
     modules,
@@ -230,7 +204,7 @@ export function resolveProducer(
   return declaration;
 }
 
-export function sealRecord(record: TypedRecordDraft): TypedRecord {
+export function sealRecord(record: TypedRecord): TypedRecord {
   return { ...record };
 }
 

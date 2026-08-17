@@ -36,8 +36,7 @@
           "use": "@narratage/provider-hyperframes-local",
           "config": { "workers": 2, "quality": "standard", "defaultConcurrency": 1 }
         }
-      },
-      "concurrency": 4
+      }
     }
   }
 }

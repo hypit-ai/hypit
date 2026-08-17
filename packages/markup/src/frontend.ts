@@ -1,8 +1,4 @@
-import {
-  canonicalize,
-  canonicalStringify,
-  sealRecord,
-} from "@narratage/core";
+import { canonicalStringify } from "@narratage/protocol";
 import type {
   ModuleRef,
   ResolvedModule,
@@ -229,7 +225,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
           if (imported !== undefined) {
             return imported.record === undefined
               ? imported
-              : { ...imported, record: canonicalize(imported.record) as unknown as TypedRecord };
+              : { ...imported, record: structuredClone(imported.record) };
           }
           const record = recordsById.get(path);
           if (record !== undefined) {
@@ -237,7 +233,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
                 path,
                 ref: { kind: "record", id: record.id },
                 type: record.type,
-                record: canonicalize(record) as unknown as TypedRecord,
+                record: structuredClone(record),
             };
           }
           return componentReferences.get(path);
@@ -304,11 +300,11 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         );
       }
       recordIds.add(draft.id);
-      const record = sealRecord({
+      const record: TypedRecord = {
         id: draft.id,
         type: draft.type,
         value: draft.value,
-      });
+      };
       records.push(record);
       recordsById.set(record.id, record);
     }

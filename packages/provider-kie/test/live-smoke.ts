@@ -402,7 +402,6 @@ async function main(): Promise<void> {
       ...[...new Map(selected.map((item) => [item.manifest.name, item.component])).values()],
     ],
     endpoints: [provider],
-    scheduling: { maxConcurrency: 1 },
     close: () => state.close(),
   });
   const failures: string[] = [];

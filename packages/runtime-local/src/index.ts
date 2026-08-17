@@ -1,7 +1,6 @@
 export {
   createLocalRuntimeArchiveControl,
   createLocalRuntimeArtifactAccess,
-  createLocalRuntimeControl,
 } from "./control.js";
 export { createLocalCredentialControl } from "./credentials.js";
 export {
@@ -12,7 +11,6 @@ export {
   createRuntimeFromConfig,
   createRuntimeArchiveFromConfig,
   createRuntimeArtifactAccessFromConfig,
-  createRuntimeMaintenanceFromConfig,
   createRuntimeCredentialsFromConfig,
   declaredManagedPrograms,
   doctorRuntimeConfig,
@@ -24,9 +22,6 @@ export {
   reportManagedPrograms,
   takeManagedProgramsDown,
 } from "./programs.js";
-export {
-  RuntimeAdapterRegistry,
-} from "@narratage/runtime-kit";
 export type * from "./types.js";
 export type * from "./config.js";
 export type * from "./programs.js";
