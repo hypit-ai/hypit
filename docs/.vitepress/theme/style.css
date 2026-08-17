@@ -111,6 +111,8 @@ html.home-page :focus-visible { outline: 2px solid var(--crimson); outline-offse
 .np-rule::after { content: ""; position: absolute; top: -4px; width: 1px; height: 9px; background: var(--rule); }
 .np-rule::before { left: 0; }
 .np-rule::after { right: 0; }
+.np-rule.tick-r::before { display: none; }
+.np-rule.tick-l::after { display: none; }
 
 /*
  * Paper grain, over the page and the nav but under the search modal (z-100),
@@ -309,13 +311,23 @@ html.home-page .VPHomeHero .container {
 }
 html.home-page .VPHomeHero .main { width: 100%; max-width: none; }
 
+.np-masthead-meta { display: flex; align-items: center; gap: 22px; }
+.np-masthead-label {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.np-masthead-rule { flex: 1; }
+
 .np-masthead-wrap { position: relative; }
 
 .np-masthead-wordmark {
   display: block;
   width: 52%;
   height: auto;
-  margin: 0;
+  margin: 6px 0 0;
 }
 .np-masthead-ink { fill: var(--ink); }
 .np-masthead-red { fill: var(--crimson); }
@@ -342,11 +354,6 @@ html.home-page .VPHomeHero .main { width: 100%; max-width: none; }
   letter-spacing: -.045em;
   line-height: 1.35;
   text-wrap: balance;
-}
-.np-masthead-subline {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: clamp(12px, 1.25vw, 15px);
 }
 
 html.home-page .VPHero .actions {
@@ -512,9 +519,7 @@ html.home-page.dark .svml-demo {
   --demo-marker-active-text: #131211;
 }
 
-.demo-heading { margin: 26px 0 20px; }
 .vp-doc .demo-heading h2 { margin: 0; border: 0; padding: 0; color: var(--ink); font-family: var(--mono); font-size: clamp(15px, 1.7vw, 19px); font-weight: 700; line-height: 1.3; letter-spacing: -.01em; }
-.VPHome .vp-doc .demo-heading h2 { font-size: clamp(15px, 1.7vw, 19px); }
 .touch-interaction-copy { display: none; }
 .demo-shell { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-height: 670px; overflow: hidden; border: 1px solid var(--rule-soft); border-radius: 2px; background: var(--demo-card-bg); }
 .source-panel, .preview-panel { min-width: 0; }

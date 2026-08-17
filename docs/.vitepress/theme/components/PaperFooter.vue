@@ -56,8 +56,8 @@ const t = (en: string, zh: string) => (isChinese.value ? zh : en);
         <p>
           {{
             t(
-              "World's #1 video programming language and system for AI agents. Built to kill Adobe.",
-              "全球第一的 AI agent 视频编程语言与系统。为终结 Adobe 而生。"
+              "World's #1 video programming language and system for AI agents.",
+              "全球第一的 AI agent 视频编程语言与系统。"
             )
           }}
         </p>
