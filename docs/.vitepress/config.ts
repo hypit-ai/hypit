@@ -1,6 +1,11 @@
 import { defineConfig } from "vitepress";
 import type { ShikiTransformer } from "shiki";
 
+// Keep the server deployment at /docs/ while allowing the custom-domain
+// GitHub Pages workflow to publish the same site at the domain root. The
+// pre-paint script below has to agree with this, so both read the one value.
+const base = process.env.VITEPRESS_BASE || "/docs/";
+
 function svmlSelectionHighlighter(): ShikiTransformer {
   return {
     name: "svml-selection-highlighter",
@@ -213,9 +218,7 @@ const zhTheme = {
 };
 
 export default defineConfig({
-  // Keep the server deployment at /docs/ while allowing the custom-domain
-  // GitHub Pages workflow to publish the same site at the domain root.
-  base: process.env.VITEPRESS_BASE || "/docs/",
+  base,
   lang: "en-US",
   title: "Narratage",
   description: "Write the story. Compile the video.",
@@ -234,21 +237,20 @@ export default defineConfig({
     codeTransformers: [svmlSelectionHighlighter()],
   },
   head: [
-    ["meta", { name: "theme-color", content: "#2C2126" }],
+    ["meta", { name: "theme-color", content: "#f3f0e8", media: "(prefers-color-scheme: light)" }],
+    ["meta", { name: "theme-color", content: "#131211", media: "(prefers-color-scheme: dark)" }],
+    // Runs before first paint: restores the "intro already seen" flag, marks the
+    // home page so the branded palette paints without a flash, and sends
+    // zh-preferring visitors to the Chinese home.
     [
       "script",
       {},
-      `(function(){var p=location.pathname,b="/docs/",k="narratage-locale",h="narratage-hero-intro-seen",l;try{if(sessionStorage.getItem(h)==="1")document.documentElement.classList.add("hero-intro-seen");l=localStorage.getItem(k)}catch(e){}if(!l)l=(navigator.language||"").toLowerCase().indexOf("zh")===0?"zh":"en";if(p===b||p===b+"zh/"||p===b.slice(0,-1)||p===b+"zh")document.documentElement.classList.add("home-page");if(p===b&&l==="zh")location.replace(b+"zh/"+location.search+location.hash)})()`,
+      `(function(){var p=location.pathname,b=${JSON.stringify(base)},k="narratage-locale",h="narratage-hero-intro-seen",d=document.documentElement,l;try{if(sessionStorage.getItem(h)==="1")d.classList.add("hero-intro-seen");l=localStorage.getItem(k)}catch(e){}if(!l)l=(navigator.language||"").toLowerCase().indexOf("zh")===0?"zh":"en";var en=p===b||(b.length>1&&p===b.slice(0,-1)),zh=p===b+"zh/"||p===b+"zh";if(en||zh)d.classList.add("home-page");if(en&&l==="zh")location.replace(b+"zh/"+location.search+location.hash)})()`,
     ],
     ["link", { rel: "preconnect", href: "https://fonts.googleapis.com" }],
     ["link", { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" }],
-    [
-      "link",
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Cutive+Mono&family=Google+Sans+Code:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&display=swap",
-      },
-    ],
+    // The only webfont the site still needs: the demo players' audio toggle.
+    // Everything else is the system monospace stack.
     [
       "link",
       {
