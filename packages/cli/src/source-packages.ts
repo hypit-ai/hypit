@@ -35,15 +35,22 @@ async function discover(
   return selection;
 }
 
-function offers(packages: readonly LoadedPackage[], address: LogicalPackageAddress): number {
-  return packages.filter((item) => [
-    ...(item.contribution.modules ?? []).flatMap((module) => [
-      `${module.manifest.name}@${module.manifest.version}`,
-      ...(module.specifiers ?? []),
-    ].map((name) => ({ abi: modulePackageAbi, name }))),
-    ...(item.contribution.hostFacets ?? []).flatMap((facet) =>
-      (facet.offers ?? []).map((name) => ({ abi: facet.abi, name }))),
-  ].some((offer) => offer.abi === address.abi && offer.name === address.name)).length;
+function offerCounts(packages: readonly LoadedPackage[]): ReadonlyMap<string, number> {
+  const counts = new Map<string, number>();
+  for (const item of packages) {
+    const offers = [
+      ...(item.contribution.modules ?? []).flatMap((module) => [
+        `${module.manifest.name}@${module.manifest.version}`,
+        ...(module.specifiers ?? []),
+      ].map((name) => ({ abi: modulePackageAbi, name }))),
+      ...(item.contribution.hostFacets ?? []).flatMap((facet) =>
+        (facet.offers ?? []).map((name) => ({ abi: facet.abi, name }))),
+    ];
+    for (const address of new Set(offers.map((offer) => `${offer.abi}\u0000${offer.name}`))) {
+      counts.set(address, (counts.get(address) ?? 0) + 1);
+    }
+  }
+  return counts;
 }
 
 function selectionSatisfied(
@@ -51,8 +58,9 @@ function selectionSatisfied(
   packages: readonly LoadedPackage[],
 ): boolean {
   const installed = new Set(packages.map((item) => item.specifier));
+  const counts = offerCounts(packages);
   return selection.selected.every((item) => installed.has(item))
-    && (selection.logical ?? []).every((address) => offers(packages, address) === 1);
+    && (selection.logical ?? []).every((address) => counts.get(`${address.abi}\u0000${address.name}`) === 1);
 }
 
 /** Load only the installed packages reached by recursive Frontend discovery. */

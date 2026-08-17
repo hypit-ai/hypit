@@ -20,7 +20,6 @@ export type RuntimeAdapterFactoryContext = {
   readonly instance: string;
   readonly pool?: string;
   readonly config: CanonicalValue;
-  readonly access?: "read-write" | "read-only";
 };
 
 export type RuntimeDoctorDiagnostic = {

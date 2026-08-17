@@ -39,12 +39,6 @@ export type RuntimeHostCredentialStatus = {
   readonly writable: boolean;
 };
 
-export type RuntimeHostArtifactGarbageCollection = {
-  readonly reachable: readonly Digest[];
-  readonly unreachable: readonly Digest[];
-  readonly deleted: readonly Digest[];
-};
-
 export type RuntimeHostArchive = {
   status(build: string): Promise<RuntimeHostStatus>;
   activity(build: string): Promise<{
@@ -67,10 +61,6 @@ export type RuntimeHostArtifactAccess = {
   close(): void | Promise<void>;
 };
 
-export type RuntimeHostMaintenance = RuntimeHostArchive & RuntimeHostArtifactAccess & {
-  garbageCollectArtifacts(options?: { readonly apply?: boolean }): Promise<RuntimeHostArtifactGarbageCollection>;
-};
-
 export type RuntimeHostCredentialControl = {
   credentials(endpoint?: string): Promise<readonly RuntimeHostCredentialStatus[]>;
   putCredential(endpoint: string, slot: string, secret: string): Promise<RuntimeHostCredentialStatus>;
@@ -81,7 +71,7 @@ export type RuntimeHostCredentialControl = {
   close(): void | Promise<void>;
 };
 
-export type RuntimeHostExecution = RuntimeHostMaintenance & RuntimeHostCredentialControl & {
+export type RuntimeHostExecution = RuntimeHostArchive & RuntimeHostArtifactAccess & RuntimeHostCredentialControl & {
   build(request: {
     readonly id: string;
     readonly definition: BuildDefinition;
@@ -164,8 +154,7 @@ export type NodeRuntimeHost = {
   }): Promise<RuntimeController>;
   createRuntime(): Promise<RuntimeHostExecution>;
   openArchive(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostArchive>;
-  openArtifacts(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostArtifactAccess>;
-  openMaintenance(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostMaintenance>;
+  openArtifacts(): Promise<RuntimeHostArtifactAccess>;
   openCredentials(endpoint: string): Promise<RuntimeHostCredentialControl>;
   doctor(options?: {
     readonly capabilities?: readonly CapabilityRef[];

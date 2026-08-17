@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { S3ArtifactStore } from "@narratage/artifact-store-s3";
 import type { S3ObjectClient } from "@narratage/artifact-store-s3";
-import { isManagedArtifactStore, isStreamingArtifactStore } from "@narratage/runtime";
+import { isStreamingArtifactStore } from "@narratage/runtime";
 
 class FakeS3 implements S3ObjectClient {
   readonly values = new Map<string, Uint8Array>();
@@ -92,19 +92,13 @@ class FullFakeS3 extends FakeS3 {
     this.values.delete(input.Key!);
   }
 
-  async list(input: Parameters<NonNullable<S3ObjectClient["list"]>>[0]) {
-    const keys = [...this.values.keys()].filter((key) => key.startsWith(input.Prefix ?? "")).sort();
-    return { keys };
-  }
 }
 
-test("a client that cannot stream or enumerate makes the store admit it, rather than throw later", () => {
+test("streaming is exposed only when the client supports it", () => {
   const store = new S3ArtifactStore({ client: new FakeS3(), bucket: "fixture" });
   assert.equal(isStreamingArtifactStore(store), false);
-  assert.equal(isManagedArtifactStore(store), false);
   const full = new S3ArtifactStore({ client: new FullFakeS3(), bucket: "fixture" });
   assert.equal(isStreamingArtifactStore(full), true);
-  assert.equal(isManagedArtifactStore(full), true);
 });
 
 test("a streamed Artifact reaches the content-addressed key it earned by being hashed", async () => {
@@ -147,18 +141,4 @@ test("presence uses object metadata without downloading bytes", async () => {
   assert.equal(await store.has(ref.digest), true);
   assert.equal(client.heads, 1);
   assert.equal(client.gets, gets, "has did not download the object");
-});
-
-test("retention reports the Artifacts it stored, and whether a delete found one", async () => {
-  const client = new FullFakeS3();
-  const store = new S3ArtifactStore({ client, bucket: "fixture", prefix: "svml" });
-  const one = await store.put(new TextEncoder().encode("one"), "text/plain");
-  const two = await store.put(new TextEncoder().encode("two"), "text/plain");
-  // A key under the same prefix that this store did not write is not an Artifact.
-  client.values.set("svml/sha256/zz/not-a-digest", new Uint8Array(1));
-
-  assert.deepEqual([...await store.list!()].sort(), [one.digest, two.digest].sort());
-  assert.equal(await store.delete!(one.digest), true);
-  assert.equal(await store.delete!(one.digest), false, "deleting what is gone is not an error");
-  assert.deepEqual(await store.list!(), [two.digest]);
 });

@@ -50,19 +50,11 @@ function buildCommandKey(build: string, command: string): string {
  */
 export class LocalBuildScheduler {
   readonly #executor: RuntimeCommandExecutor;
-  readonly #maxConcurrency: number;
-  readonly #resourceLimits: Readonly<Record<string, number>>;
   readonly #buildStore: BuildSchedulerOptions["buildStore"];
 
   constructor(executor: RuntimeCommandExecutor, options: BuildSchedulerOptions = {}) {
     this.#executor = executor;
-    this.#maxConcurrency = positiveInteger(options.maxConcurrency ?? 4, "maxConcurrency");
     this.#buildStore = options.buildStore;
-    for (const [resource, limit] of Object.entries(options.resourceLimits ?? {})) {
-      if (resource.trim().length === 0) throw new Error("resource override name must not be empty");
-      positiveInteger(limit, `resource ${resource}`);
-    }
-    this.#resourceLimits = { ...(options.resourceLimits ?? {}) };
   }
 
   async run(requests: readonly ScheduledBuild[]): Promise<readonly ScheduledBuildResult[]> {
@@ -72,9 +64,12 @@ export class LocalBuildScheduler {
       if (request.id.trim().length === 0) throw new Error("scheduled build id must not be empty");
       if (ids.has(request.id)) throw new Error(`scheduled build ${request.id} is duplicated`);
       ids.add(request.id);
-      let state = structuredClone(request.state);
+      let state: BuildState;
       let machine: BuildMachine | undefined;
-      if (this.#buildStore !== undefined) {
+      if (this.#buildStore === undefined) {
+        if (request.state === undefined) throw new Error(`scheduled Build ${request.id} has no in-memory state`);
+        state = structuredClone(request.state);
+      } else {
         const snapshot = request.snapshot;
         if (snapshot === undefined) {
           throw new Error(`scheduled Build ${request.id} has no durable snapshot`);
@@ -99,8 +94,6 @@ export class LocalBuildScheduler {
     let cursor = 0;
 
     const resourceLimit = (resource: RuntimeRunnableCommand["resources"][number]): number => {
-      const override = this.#resourceLimits[resource.id];
-      if (override !== undefined) return override;
       const proposed = positiveInteger(resource.maxActive, `resource ${resource.id} default`);
       const previous = resourceDefaults.get(resource.id);
       if (previous !== undefined && previous !== proposed) {
@@ -164,9 +157,8 @@ export class LocalBuildScheduler {
     while (true) {
       const ready = await preparations();
       const counts = resourceCounts();
-      let slots = this.#maxConcurrency - active.size;
 
-      while (slots > 0 && builds.length > 0) {
+      while (builds.length > 0) {
         let selected = false;
         for (let offset = 0; offset < builds.length; offset += 1) {
           const index = (cursor + offset) % builds.length;
@@ -182,7 +174,6 @@ export class LocalBuildScheduler {
             counts.set(resource.id, (counts.get(resource.id) ?? 0) + 1);
           }
           cursor = (index + 1) % builds.length;
-          slots -= 1;
           selected = true;
           break;
         }

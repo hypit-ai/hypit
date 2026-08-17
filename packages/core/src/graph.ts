@@ -10,11 +10,12 @@ import type {
   OperationResult,
   StoredValue,
   TypeRef,
+  TypedRecord,
 } from "@narratage/protocol";
 
-import { canonicalize } from "./canonical.js";
+import { canonicalize } from "@narratage/protocol";
 import { invariant } from "./error.js";
-import { resolveProducer, sealRecord, verifyRecordStructure } from "./link.js";
+import { resolveProducer, verifyRecordStructure } from "./link.js";
 import { producerKey, sameType, typeKey } from "./reference.js";
 
 type GraphIndex = {
@@ -248,11 +249,11 @@ function verifyCandidateValue(program: LinkedProgram, graph: CompiledGraph, cand
     );
     return;
   }
-  const provisional = sealRecord({
+  const provisional: TypedRecord = {
     id: candidate.root.value.id,
     type: candidate.type,
     value: candidate.root.value.value,
-  });
+  };
   verifyRecordStructure(program.closure, provisional);
 }
 

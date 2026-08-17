@@ -14,11 +14,8 @@ import { FileArtifactStore } from "@narratage/artifact-store-fs";
 import { EnvironmentCredentialStore } from "@narratage/credential-store-env";
 import { MemoryArtifactStore } from "@narratage/driver-node";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
-import type { AsyncEndpoint } from "@narratage/endpoint-kit";
-import type {
-  ComponentPackage,
-  EndpointPackage,
-} from "@narratage/runtime-local";
+import type { AsyncEndpoint, EndpointPackage } from "@narratage/endpoint-kit";
+import type { ComponentPackage } from "@narratage/component-kit";
 import { createLocalRuntime } from "@narratage/runtime-local";
 import { defineBuild } from "@narratage/core";
 import {
@@ -52,34 +49,9 @@ function projectRuntimeFixture(directory: string) {
     dispatchStore: state.dispatch,
     artifactStore: new FileArtifactStore(join(directory, ".narratage", "artifacts")),
     credentialStore: new EnvironmentCredentialStore(),
-    scheduling: { maxConcurrency: 4 },
     close: () => state.close(),
   } as const;
 }
-
-test("Artifact GC is explicit, dry-run by default, and only removes unreachable managed bytes", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-local-artifact-gc-"));
-  try {
-    const artifacts = new FileArtifactStore(join(directory, ".narratage", "artifacts"));
-    const orphan = await artifacts.put(new TextEncoder().encode("orphan"), "application/octet-stream");
-    const runtime = await createLocalRuntime(projectRuntimeFixture(directory));
-    const preview = await runtime.garbageCollectArtifacts();
-    assert.deepEqual(preview.unreachable, [orphan.digest]);
-    assert.deepEqual(preview.deleted, []);
-    assert.equal(await artifacts.has(orphan.digest), true);
-    await runtime.build({ id: "active-build", definition: definition(createGreetingBuild()) });
-    await assert.rejects(
-      async () => await runtime.garbageCollectArtifacts({ apply: true }),
-      /Artifact GC cannot delete while 1 Build is active/u,
-    );
-    await runtime.cancel("active-build");
-    const applied = await runtime.garbageCollectArtifacts({ apply: true });
-    assert.deepEqual(applied.deleted, [orphan.digest]);
-    assert.equal(await artifacts.has(orphan.digest), false);
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-});
 
 test("Endpoint-declared credentials use the selected writable Store without a Provider switch", async () => {
   const directory = await mkdtemp(join(tmpdir(), "narratage-local-auth-"));
@@ -265,17 +237,27 @@ test("project local runtime queues, polls and cancels work with replaceable pack
   }
 });
 
-test("one local Worker advances independent Builds concurrently under one command limit", async () => {
+test("one local Worker admits later Builds while preserving shared Endpoint capacity", async () => {
   const directory = await mkdtemp(join(tmpdir(), "narratage-local-parallel-builds-"));
-  let active = 0;
-  let mostActive = 0;
+  let unrestrictedActive = 0;
+  let mostUnrestricted = 0;
+  let limitedActive = 0;
+  let mostLimited = 0;
+  let markFirstStarted: (() => void) | undefined;
+  const firstStarted = new Promise<void>((resolve) => { markFirstStarted = resolve; });
   const components: ComponentPackage = {
     producers: [
       {
         producer: producers.makePrompt,
-        handler: ({ inputs }) => {
+        handler: async ({ inputs }) => {
           if (inputs.intent?.value.kind !== "inline") throw new Error("missing greeting intent");
           const intent = inputs.intent.value.value as { readonly name: string };
+          unrestrictedActive += 1;
+          mostUnrestricted = Math.max(mostUnrestricted, unrestrictedActive);
+          markFirstStarted?.();
+          markFirstStarted = undefined;
+          await new Promise((resolve) => setTimeout(resolve, 80));
+          unrestrictedActive -= 1;
           return {
             outputs: { prompt: { kind: "inline", value: `Greet ${intent.name}` } },
             needs: {},
@@ -283,17 +265,10 @@ test("one local Worker advances independent Builds concurrently under one comman
         },
       },
       {
-        producer: producers.placeholderText,
-        handler: async ({ inputs }) => {
+        producer: producers.requestText,
+        handler: ({ inputs }) => {
           if (inputs.prompt?.value.kind !== "inline") throw new Error("missing greeting prompt");
-          active += 1;
-          mostActive = Math.max(mostActive, active);
-          await new Promise((resolve) => setTimeout(resolve, 80));
-          active -= 1;
-          return {
-            outputs: { generated: { kind: "inline", value: `Preview: ${inputs.prompt.value.value}` } },
-            needs: {},
-          };
+          return { outputs: {}, needs: { generation: { prompt: inputs.prompt.value.value } } };
         },
       },
       {
@@ -308,17 +283,42 @@ test("one local Worker advances independent Builds concurrently under one comman
       },
     ],
   };
+  const endpoint = defineEndpointPackage({
+    module: providerModule,
+    facet: "generation",
+    instance: "generation.serial",
+    pool: "generation.serial",
+    defaultConcurrency: 1,
+    capabilities: [{
+      lifecycle: "immediate",
+      capability: capabilities.generation,
+      returns: types.generated,
+      handler: async () => {
+        limitedActive += 1;
+        mostLimited = Math.max(mostLimited, limitedActive);
+        await new Promise((resolve) => setTimeout(resolve, 80));
+        limitedActive -= 1;
+        return { value: { kind: "inline", value: "Hello" } };
+      },
+    }],
+  });
   try {
     const runtime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
       components: [components],
+      endpoints: [endpoint],
     });
-    await Promise.all(["parallel-a", "parallel-b"].map(async (id) => await runtime.build({
-      id,
-      definition: definition(createGreetingBuild({ generationRealization: "placeholder" })),
-    })));
+    await runtime.build({
+      id: "parallel-a",
+      definition: definition(createGreetingBuild()),
+    });
     const controller = new AbortController();
     const work = runtime.work({ idlePollMs: 5, signal: controller.signal });
+    await firstStarted;
+    await runtime.build({
+      id: "parallel-b",
+      definition: definition(createGreetingBuild()),
+    });
     while (true) {
       const states = await Promise.all(["parallel-a", "parallel-b"].map(async (id) =>
         (await runtime.status(id)).dispatch?.terminal));
@@ -327,7 +327,8 @@ test("one local Worker advances independent Builds concurrently under one comman
     }
     controller.abort();
     await work;
-    assert.equal(mostActive, 2);
+    assert.equal(mostUnrestricted, 2, "a later Build must join work already in progress");
+    assert.equal(mostLimited, 1, "declared capacity must span independent Builds");
     await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

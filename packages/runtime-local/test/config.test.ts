@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   createRuntimeArtifactStoreAdapterFacet,
   createRuntimeEndpointAdapterFacet,
+  RuntimeAdapterRegistry,
 } from "@narratage/runtime-kit";
 import { MemoryArtifactStore } from "@narratage/driver-node";
 import { SqliteRuntimeState } from "@narratage/store-sqlite";
@@ -15,7 +16,6 @@ import {
   createRuntimeArtifactAccessFromConfig,
   doctorRuntimeConfig,
   parseRuntimeConfig,
-  RuntimeAdapterRegistry,
 } from "@narratage/runtime-local";
 
 function profile(config: {
@@ -33,7 +33,6 @@ function profile(config: {
         artifacts: config.artifacts ?? { use: "example.artifacts" },
         credentials: config.credentials ?? {},
         endpoints: config.endpoints ?? {},
-        concurrency: 3,
       },
     },
   };
@@ -48,7 +47,6 @@ test("Runtime Profile names the stores and Endpoints used by one local Runtime",
   assert.deepEqual(parsed.artifacts, { use: "example.artifacts", instance: "artifacts" });
   assert.deepEqual(parsed.credentials, [{ use: "example.credentials", instance: "secrets" }]);
   assert.deepEqual(parsed.endpoints, [{ use: "example.provider", instance: "generation", pool: "shared" }]);
-  assert.equal(parsed.concurrency, 3);
 });
 
 test("Runtime Profile rejects source ownership fields", () => {
@@ -76,7 +74,7 @@ test("archive inspection opens SQLite only; Artifact access opens the selected S
     assert.equal((await archive.status("missing")).build, undefined);
     await archive.close();
     assert.equal(artifactConstructions, 0);
-    const artifacts = await createRuntimeArtifactAccessFromConfig(path, { registry, readOnly: true });
+    const artifacts = await createRuntimeArtifactAccessFromConfig(path, { registry });
     await artifacts.close();
     assert.equal(artifactConstructions, 1);
   } finally {

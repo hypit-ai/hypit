@@ -3,10 +3,8 @@ import {
   link,
   mkdir,
   open as openFile,
-  readdir,
   rm,
   stat,
-  unlink,
 } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
@@ -136,34 +134,4 @@ export class FileArtifactStore implements ArtifactStore {
     }
   }
 
-  async list(): Promise<readonly Digest[]> {
-    const algorithm = join(this.root, "sha256");
-    let prefixes;
-    try {
-      prefixes = await readdir(algorithm, { withFileTypes: true });
-    } catch (error) {
-      if (isNodeError(error, "ENOENT")) return [];
-      throw error;
-    }
-    const digests: Digest[] = [];
-    for (const prefix of prefixes) {
-      if (!prefix.isDirectory() || !/^[0-9a-f]{2}$/u.test(prefix.name)) continue;
-      for (const entry of await readdir(join(algorithm, prefix.name), { withFileTypes: true })) {
-        if (entry.isFile() && /^[0-9a-f]{64}$/u.test(entry.name) && entry.name.startsWith(prefix.name)) {
-          digests.push(`sha256:${entry.name}` as Digest);
-        }
-      }
-    }
-    return digests.sort();
-  }
-
-  async delete(digest: Digest): Promise<boolean> {
-    try {
-      await unlink(digestPath(this.root, digest));
-      return true;
-    } catch (error) {
-      if (isNodeError(error, "ENOENT")) return false;
-      throw error;
-    }
-  }
 }

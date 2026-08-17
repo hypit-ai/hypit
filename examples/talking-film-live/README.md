@@ -49,7 +49,7 @@ narratage get <build-id> \
 observes the detached Worker; closing this terminal does not cancel the Build.
 
 `build.svrun` owns the Targets and any explicit Candidate selections. `narratage.runtime.json` owns Provider instances,
-credentials and concurrency. The Build archives all accepted intermediate Records and referenced
+credentials and their capacity. The Build archives all accepted intermediate Records and referenced
 Artifacts even when no destination path is requested. `get` only makes an optional copy of the
 already archived named target. The CLI accepts the declarative JSON Runtime Profile shown here;
 applications that embed Narratage assemble Runtime roles directly through `@narratage/runtime-local`.

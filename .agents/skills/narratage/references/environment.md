@@ -44,16 +44,5 @@ Use `runtime up` for normal Build preparation: it owns the detached durable Work
 programs declared by the Runtime Profile. `programs up/status/down` is only the narrow external-
 program view and does not manage the Worker. See `references/runtime.md` for the Build lifecycle.
 
-After intentionally installing, removing or changing selected packages, refresh both explicit
-project locks in one reviewed action:
-
-```text
-narratage runtime use narratage.runtime.json
-```
-
-This command derives Author roots from that Run/Author Source closure and Runtime roots from the
-Profile's explicit `use` entries, then records the exact installed closures. It does not install
-packages, discover a default set or mutate SVML/Run intent.
-
 The repository owns skill discovery: `.agents/skills` is canonical, with repository-root
 `.codex/skills` and `.claude/skills` links. This is checkout layout, not a skill setup operation.

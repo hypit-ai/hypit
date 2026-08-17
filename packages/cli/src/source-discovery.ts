@@ -64,20 +64,24 @@ export async function discoverSourcePackages(
   const selected = new Set<string>();
   const logical = new Map<string, LogicalPackageAddress>();
   const visited = new Set<string>();
+  const moduleOwners = new Map<string, string>();
+  const fragmentOwners = new Map<string, string>();
+  for (const item of packages) {
+    for (const module of item.contribution.modules ?? []) {
+      for (const request of [`${module.manifest.name}@${module.manifest.version}`, ...(module.specifiers ?? [])]) {
+        moduleOwners.set(request, item.specifier);
+      }
+    }
+    for (const facet of item.contribution.hostFacets ?? []) {
+      if (facet.abi !== runFragmentHostAbi) continue;
+      for (const request of facet.offers ?? []) fragmentOwners.set(request, item.specifier);
+    }
+  }
 
   const requireLogical = (address: LogicalPackageAddress, physical: string | undefined): void => {
     logical.set(addressKey(address), address);
     selected.add(physical ?? selectedPackage(address.name));
   };
-  const moduleOwner = (request: string): string | undefined => packages.find((item) =>
-    (item.contribution.modules ?? []).some((module) => [
-      `${module.manifest.name}@${module.manifest.version}`,
-      ...(module.specifiers ?? []),
-    ].includes(request)))?.specifier;
-  const fragmentOwner = (request: string): string | undefined => packages.find((item) =>
-    (item.contribution.hostFacets ?? []).some((facet) => facet.abi === runFragmentHostAbi
-      && (facet.offers ?? []).includes(request)))?.specifier;
-
   const discover = async (path: string): Promise<void> => {
     const canonical = await realpath(path);
     if (!isWithin(root, canonical)) throw new Error(`Source ${canonical} is outside workspace root ${root}`);
@@ -100,7 +104,7 @@ export async function discoverSourcePackages(
       }
       const discovery = await owner.frontend.discover(prepareAuthorSource({ id: canonical, name, text }));
       for (const request of discovery.modules) {
-        requireLogical({ abi: modulePackageAbi, name: request }, moduleOwner(request));
+        requireLogical({ abi: modulePackageAbi, name: request }, moduleOwners.get(request));
       }
       for (const child of discovery.sources) await discover(relativeSource(canonical, child.from));
       return;
@@ -111,7 +115,7 @@ export async function discoverSourcePackages(
     }
     const discovery = await owner.frontend.discover(prepareRunSource({ id: canonical, name, text }));
     for (const item of discovery.imports) {
-      requireLogical({ abi: runFragmentHostAbi, name: item.from }, fragmentOwner(item.from));
+      requireLogical({ abi: runFragmentHostAbi, name: item.from }, fragmentOwners.get(item.from));
     }
     await discover(relativeSource(canonical, discovery.author.source));
   };

@@ -10,7 +10,6 @@ import {
   createRuntimeArtifactAccessFromConfig,
   createRuntimeCredentialsFromConfig,
   createRuntimeFromConfig,
-  createRuntimeMaintenanceFromConfig,
   doctorRuntimeConfig,
   resolveRuntimeConfigPaths,
 } from "./config.js";
@@ -85,13 +84,8 @@ export async function openLocalRuntimeHost(
       packageRoot: basePackageRoot,
       ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
     }),
-    openArtifacts: async (options) => await createRuntimeArtifactAccessFromConfig(profile, {
+    openArtifacts: async () => await createRuntimeArtifactAccessFromConfig(profile, {
       packageRoot: basePackageRoot,
-      ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
-    }),
-    openMaintenance: async (options) => await createRuntimeMaintenanceFromConfig(profile, {
-      packageRoot: basePackageRoot,
-      ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
     }),
     openCredentials: async (endpoint) => await createRuntimeCredentialsFromConfig(
       profile,

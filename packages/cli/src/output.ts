@@ -512,12 +512,6 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "  narratage auth login <endpoint-instance> [--runtime <profile>] [--slot <name>] [--from <secret-file>]",
       "  narratage auth logout <endpoint-instance> [--runtime <profile>] [--slot <name>]",
     ],
-    gc: [
-      colors.accent(colors.strong("narratage gc")),
-      colors.dim("Report unreachable archived Artifacts; delete them only with --apply."),
-      "",
-      "  narratage gc [<profile>] [--apply]",
-    ],
   };
   const selected = topics[topic];
   return selected === undefined ? undefined : [...selected, ...common];
@@ -566,7 +560,6 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
     row("queue [--watch]", "inspect durable dispatch and shared capacity"),
     row("paths", "show every effective state location"),
     row("auth status|login|logout", "manage Endpoint-declared credential references"),
-    row("gc [profile]", "report unreachable Artifacts; --apply deletes"),
     "",
     colors.strong("Output"),
     row("--json", "complete machine-readable result"),

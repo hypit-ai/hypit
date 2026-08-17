@@ -1,6 +1,5 @@
 import {
   resolveType,
-  sealRecord,
   verifyRecordStructure,
 } from "@narratage/core";
 import type {
@@ -87,10 +86,9 @@ export async function admitRecord(
   record: TypedRecord,
   registry: TypeValidatorRegistryLike,
 ): Promise<TypedRecord> {
-  const admitted = sealRecord(record);
-  verifyRecordStructure(closure, admitted);
+  verifyRecordStructure(closure, record);
   await refineValue(record.type, record.value, registry);
-  return admitted;
+  return record;
 }
 
 export function createRecordAdmitter(

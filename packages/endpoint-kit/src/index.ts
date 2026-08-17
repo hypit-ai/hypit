@@ -192,9 +192,6 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
   assert(options.instance.trim().length > 0, "Endpoint instance is empty");
   assert(options.pool.trim().length > 0, "Endpoint Provider Pool is empty");
   assert(options.capabilities.length > 0, "Endpoint package declares no capability");
-  const lifecycle = options.capabilities[0]!.lifecycle;
-  assert(options.capabilities.every((item) => item.lifecycle === lifecycle),
-    "one Endpoint facet cannot mix immediate and asynchronous lifecycles");
   const keys = options.capabilities.map((item) => refKey(item.capability));
   assert(new Set(keys).size === keys.length, "Endpoint package repeats a capability");
   const lanes = options.capabilities.map((item) => item.lane ?? item.capability.name);

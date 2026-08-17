@@ -1,7 +1,5 @@
 import { SvmlError } from "@narratage/protocol";
 
-export { SvmlError as CoreError };
-
 export function invariant(
   condition: unknown,
   code: string,

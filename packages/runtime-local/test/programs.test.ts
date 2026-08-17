@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { createRuntimeEndpointAdapterFacet } from "@narratage/runtime-kit";
+import { createRuntimeEndpointAdapterFacet, RuntimeAdapterRegistry } from "@narratage/runtime-kit";
 import type { ManagedProgram } from "@narratage/runtime-kit";
 import type { CapabilityRef } from "@narratage/protocol";
 
@@ -13,7 +13,6 @@ import {
   bringManagedProgramsUp,
   declaredManagedPrograms,
   reportManagedPrograms,
-  RuntimeAdapterRegistry,
   takeManagedProgramsDown,
 } from "@narratage/runtime-local";
 
@@ -42,7 +41,6 @@ async function project(program: (root: string) => ManagedProgram) {
           one: { use: "example.program", pool: "example.local", config: {} },
           two: { use: "example.program", pool: "example.local", config: {} },
         },
-        concurrency: 1,
       },
     },
   }));
@@ -201,6 +199,59 @@ test("a program with nothing to start is prepared, and preparing is the whole jo
   await rm(directory, { recursive: true, force: true });
 });
 
+test("up creates a fresh Runtime data directory before running commands", async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "narratage-fresh-runtime-"));
+  const dataRoot = join(projectRoot, "never-created");
+  const path = join(projectRoot, "narratage.runtime.json");
+  await writeFile(path, JSON.stringify({
+    format: "narratage.runtime-profile@1",
+    runtime: {
+      use: "@narratage/runtime-local",
+      config: {
+        dataRoot: "./never-created",
+        artifacts: { use: "example.artifacts" },
+        credentials: {},
+        endpoints: { one: { use: "example.program", config: {} } },
+      },
+    },
+  }));
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.program",
+    activate: () => ({
+      endpoint: {
+        name: "one",
+        manifest: { facets: [] },
+        instance: { id: "one" },
+        offers: [{
+          capability: requiredCapability,
+          returns: { module: { name: "example.values", version: "1" }, name: "Value" },
+          endpoint: "one",
+        }],
+        credentials: [],
+        install() {},
+      } as never,
+      program: {
+        id: "example",
+        prepare: { command: "sh", args: ["-c", "printf ready > prepared"] },
+        async probe() {
+          try {
+            await readFile(join(dataRoot, "prepared"), "utf8");
+            return { state: "ready" as const };
+          } catch {
+            return { state: "down" as const, detail: "not prepared" };
+          }
+        },
+      },
+    }),
+  }));
+
+  const result = await bringManagedProgramsUp(path, { registry });
+  assert.equal(result.programs[0]!.action, "prepared");
+  assert.equal(await readFile(join(dataRoot, "prepared"), "utf8"), "ready");
+  await rm(projectRoot, { recursive: true, force: true });
+});
+
 test("a failing prepare stops before starting anything, and says which command failed", async () => {
   const { path, options } = await project(() => ({
     id: "example",
@@ -212,6 +263,20 @@ test("a failing prepare stops before starting anything, and says which command f
   assert.equal(result.programs[0]!.action, "unchanged");
   assert.match(result.programs[0]!.detail ?? "", /sh failed: no such project/u);
   assert.equal(result.programs[0]!.logPath, undefined, "nothing was started, so nothing logged");
+});
+
+test("up stops waiting when a started program exits", async () => {
+  const { root, path, options } = await project(() => ({
+    id: "example",
+    start: { command: "sh", args: ["-c", "exit 1"] },
+    probe: async () => ({ state: "down", detail: "nothing is answering" }),
+  }));
+  const startedAt = Date.now();
+  const result = await bringManagedProgramsUp(path, { ...options, maxWaitMs: 20_000 });
+  assert.ok(Date.now() - startedAt < 5_000, "a dead program must not consume the readiness timeout");
+  assert.equal(result.programs[0]!.action, "unchanged");
+  assert.match(result.programs[0]!.detail ?? "", /process exited; see/u);
+  await assert.rejects(async () => await readFile(join(root, "programs", "example.pid"), "utf8"));
 });
 
 test("status probes and changes nothing, so it claims no action", async () => {

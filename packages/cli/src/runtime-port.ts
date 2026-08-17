@@ -4,13 +4,11 @@ export type {
   RuntimeController as CliRuntimeController,
   RuntimeHostArchive as CliRuntimeArchiveControl,
   RuntimeHostArtifactAccess as CliRuntimeArtifactAccess,
-  RuntimeHostArtifactGarbageCollection as CliArtifactGarbageCollection,
   RuntimeHostBuildSubmission as CliBuildSubmission,
   RuntimeHostCredentialControl as CliCredentialControl,
   RuntimeHostCredentialStatus as CliCredentialStatus,
   RuntimeHostDoctorResult as CliRuntimeDoctorResult,
   RuntimeHostExecution as CliRuntime,
-  RuntimeHostMaintenance as CliRuntimeMaintenance,
   RuntimeHostStatus as CliRuntimeStatus,
   RuntimeWorkerState as CliRuntimeWorkerState,
 } from "@narratage/runtime-host-node";
