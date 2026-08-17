@@ -46,7 +46,7 @@ const t = (en: string, zh: string) => (isChinese.value ? zh : en);
       <section>
         <h2>{{ t("Community", "社区") }}</h2>
         <ul>
-          <li><a href="https://discord.gg/cWQ92BaKV" target="_blank" rel="noreferrer">Discord</a></li>
+          <li><a href="https://discord.gg/85hnyQnxpn" target="_blank" rel="noreferrer">Discord</a></li>
           <li><a href="https://t.me/narratage" target="_blank" rel="noreferrer">Telegram</a></li>
         </ul>
       </section>

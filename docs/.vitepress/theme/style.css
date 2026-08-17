@@ -37,6 +37,9 @@ html.home-page {
     "Noto Sans SC", monospace;
   --pad: clamp(20px, 4vw, 56px);
   --vp-nav-height: 74px;
+  /* One rhythm for the nav bar: between its groups, and between the icons. */
+  --nav-gap: 30px;
+  --nav-icon-gap: 15px;
 
   /* Paper grain. Multiplied over a light page, overlaid on a dark one. */
   --grain-op: .42;
@@ -170,7 +173,7 @@ html.home-page .VPNavBarTitle::after {
   flex: 0 0 auto;
   width: 1px;
   height: 44px;
-  margin-left: 22px;
+  margin-left: var(--nav-gap);
   background: var(--rule);
 }
 
@@ -186,13 +189,14 @@ html.home-page .VPNavScreenMenuGroup .button {
   letter-spacing: .14em;
   text-transform: uppercase;
 }
-/* Anchored inside the stock 12px inline padding so the rule tracks the text. */
+html.home-page .VPNavBarMenu .VPNavBarMenuLink { padding-inline: calc(var(--nav-gap) / 2); }
+/* Anchored inside the link's own inline padding so the rule tracks the text. */
 html.home-page .VPNavBarMenuLink::after {
   content: "";
   position: absolute;
-  right: 12px;
+  right: calc(var(--nav-gap) / 2);
   bottom: 20px;
-  left: 12px;
+  left: calc(var(--nav-gap) / 2);
   height: 1.5px;
   background: var(--crimson);
   transform: scaleX(0);
@@ -270,21 +274,27 @@ html.home-page .VPNav .DocSearch-Button-Key:first-child::after {
   line-height: 1;
 }
 
-html.home-page .VPNavBarSearch { padding-left: 22px; }
+html.home-page .VPNavBarSearch { padding-left: var(--nav-gap); }
 
 /*
  * Stock draws a `::before` separator before each of the three icon controls. The
  * React header has one rule before the group, so the first is kept and restyled
  * to match the brand divider, and the other two are dropped.
  */
-html.home-page .VPNavBarTranslations { margin-left: 28px; }
+html.home-page .VPNavBarTranslations { margin-left: var(--nav-gap); }
 html.home-page .VPNavBarTranslations::before {
   height: 44px;
-  margin-right: 10px;
+  margin-right: var(--nav-gap);
   background-color: var(--rule);
 }
 html.home-page .VPNavBarAppearance::before,
 html.home-page .VPNavBarSocialLinks::before { display: none; }
+html.home-page .VPNavBarAppearance { margin-left: var(--nav-icon-gap); }
+html.home-page .VPNavBarSocialLinks { margin-left: var(--nav-icon-gap); gap: var(--nav-icon-gap); }
+html.home-page .VPSocialLink { margin: 0; padding: 0; }
+/* Optical, not nominal: at a shared 20px box the Discord mark lays down 16.8%
+   ink against GitHub's 13.4%, so it reads heavier. sqrt(13.4/16.8) evens them. */
+html.home-page .VPSocialLink[aria-label="Discord"] svg { width: 18px; height: 18px; }
 
 /* The appearance toggle also renders inside this flyout between 768 and 1279px. */
 html.home-page .VPMenu {
