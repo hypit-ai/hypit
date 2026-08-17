@@ -168,7 +168,6 @@ const enTheme = {
           { text: "Adding an Author Package", link: "/guide/author-packages" },
           { text: "Adding a Provider", link: "/guide/providers" },
           { text: "Runtime", link: "/guide/runtime" },
-          { text: "Caption Playground", link: "/guide/caption-playground" },
           { text: "Testing", link: "/guide/testing" },
           { text: "Conventions", link: "/guide/conventions" },
         ],
