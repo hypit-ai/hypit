@@ -75,9 +75,13 @@ main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) a
 .spoken { position:absolute; z-index:0; pointer-events:none; border-radius:3px; background:#ffd34d26; box-shadow:inset 0 0 0 1px #ffd34d66; transition:left .08s linear, width .08s linear; }
 .range { transition:opacity .08s linear; }
 .range-element { fill:#ffffff14; stroke:#ffffff; stroke-width:1.5; }
-/* Drawn at this frame, but not the thing chosen. Present without competing. */
-.range-binding { fill:color-mix(in srgb, var(--tone, var(--marker)) 12%, transparent);
-  stroke:var(--tone, var(--marker)); stroke-width:1.5; }
+/* Drawn at this frame, but not the thing chosen. Present without competing.
+   A solid outline of the same weight as the chosen one read as a second
+   selection, so what the playhead is merely passing through is dashed and
+   thinner: still legible as nesting, no longer a claim that it was picked. */
+.range-binding { fill:color-mix(in srgb, var(--tone, var(--marker)) 7%, transparent);
+  stroke:color-mix(in srgb, var(--tone, var(--marker)) 55%, transparent);
+  stroke-width:1; stroke-dasharray:3 3; }
 
 /* The picture takes the room that is left; the strip and the timeline are rows
    of the layout, so neither can ever cover the frame or the transport. */
