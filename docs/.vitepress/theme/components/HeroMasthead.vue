@@ -48,7 +48,7 @@ const isChinese = computed(() => lang.value.toLowerCase().startsWith("zh"));
       <p class="np-masthead-tagline">
         {{
           isChinese
-            ? "全球第一的 AI agent 视频编程语言与系统。"
+            ? "世界首个 AI agent 视频编程语言与系统。"
             : "World's #1 video programming language and system for AI agents."
         }}
       </p>
