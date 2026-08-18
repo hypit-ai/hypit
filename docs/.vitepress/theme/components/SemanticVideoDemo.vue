@@ -274,50 +274,96 @@ function updateRangeGeometry() {
   const markers = Array.from(container.querySelectorAll<HTMLElement>(".syn-marker[data-selection]"));
   const geometry: Record<string, { path: string; depth: number }> = {};
 
+  // The folded source view keeps whichever active range fits the row budget, so
+  // an enclosing range routinely has one of its markers folded away. Drawing
+  // nothing in that case reads as "not selected"; the outline instead runs to
+  // the fold and stops there, showing that the range carries on past it.
+  const foldRows = Array.from(container.querySelectorAll<HTMLElement>(":scope > .code-fold"));
+  const foldEdgeAfter = (line: HTMLElement) => foldRows.find((fold) => fold.offsetTop > line.offsetTop)?.offsetTop;
+  const foldEdgeBefore = (line: HTMLElement) => {
+    const fold = foldRows.filter((candidate) => candidate.offsetTop < line.offsetTop).at(-1);
+    return fold ? fold.offsetTop + fold.offsetHeight : undefined;
+  };
+
   for (const range of rangeBounds) {
     const startMarker = markers.find((marker) => marker.dataset.selection === range.id && marker.textContent?.trim() === `@${range.id}`);
     const endMarker = markers.find((marker) => marker.dataset.selection === range.id && marker.textContent?.trim() === `@/${range.id}`);
     const startLine = startMarker?.closest<HTMLElement>(".code-line");
     const endLine = endMarker?.closest<HTMLElement>(".code-line");
-    if (!startMarker || !endMarker || !startLine || !endLine) continue;
-    const startFragments = Array.from(startMarker.getClientRects());
-    const endFragments = Array.from(endMarker.getClientRects());
-    const startRect = startFragments[0] ?? startMarker.getBoundingClientRect();
-    const endRect = endFragments.at(-1) ?? endMarker.getBoundingClientRect();
-    const lineHeight = Number.parseFloat(getComputedStyle(startLine).lineHeight) || 26;
-    const blockPadding = 0;
-    const startCenter = ((startRect.top + startRect.bottom) / 2 - containerRect.top) / scaleY + container.scrollTop;
-    const endCenter = ((endRect.top + endRect.bottom) / 2 - containerRect.top) / scaleY + container.scrollTop;
+    if ((!startMarker || !startLine) && (!endMarker || !endLine)) continue;
+
     const inlinePadding = 3;
     const edgeOverhang = 3;
-    const startX = Math.max(3, Math.min(width - 3, (startRect.left - containerRect.left) / scaleX + container.scrollLeft - inlinePadding));
-    const endX = Math.max(3, Math.min(width - 3, (endRect.right - containerRect.left) / scaleX + container.scrollLeft + inlinePadding));
     const left = 44 - edgeOverhang;
     const right = width - 12 + edgeOverhang;
-    const top = startCenter - lineHeight / 2 - blockPadding;
-    const bottom = endCenter + lineHeight / 2 + blockPadding;
-    const sameLine = Math.abs(startCenter - endCenter) < lineHeight / 2;
-    const endTop = endCenter - lineHeight / 2;
-    const startBottom = startCenter + lineHeight / 2;
-    const points = sameLine
-      ? [
-        { x: startX, y: top },
-        { x: endX, y: top },
-        { x: endX, y: bottom },
-        { x: startX, y: bottom },
-      ]
-      : [
-        { x: startX, y: top },
-        { x: right, y: top },
-        { x: right, y: endTop },
-        { x: endX, y: endTop },
-        { x: endX, y: bottom },
-        { x: left, y: bottom },
+    const lineHeight = Number.parseFloat(getComputedStyle((startLine ?? endLine) as HTMLElement).lineHeight) || 26;
+    const centerOf = (rect: DOMRect) => ((rect.top + rect.bottom) / 2 - containerRect.top) / scaleY + container.scrollTop;
+    const leftEdgeOf = (rect: DOMRect) => Math.max(3, Math.min(width - 3, (rect.left - containerRect.left) / scaleX + container.scrollLeft - inlinePadding));
+    const rightEdgeOf = (rect: DOMRect) => Math.max(3, Math.min(width - 3, (rect.right - containerRect.left) / scaleX + container.scrollLeft + inlinePadding));
+    const firstRectOf = (marker: HTMLElement) => Array.from(marker.getClientRects())[0] ?? marker.getBoundingClientRect();
+    const lastRectOf = (marker: HTMLElement) => Array.from(marker.getClientRects()).at(-1) ?? marker.getBoundingClientRect();
+
+    let points: Array<{ x: number; y: number }>;
+    if (startMarker && startLine && endMarker && endLine) {
+      const startRect = firstRectOf(startMarker);
+      const endRect = lastRectOf(endMarker);
+      const startX = leftEdgeOf(startRect);
+      const endX = rightEdgeOf(endRect);
+      const startCenter = centerOf(startRect);
+      const endCenter = centerOf(endRect);
+      const top = startCenter - lineHeight / 2;
+      const startBottom = startCenter + lineHeight / 2;
+      const endTop = endCenter - lineHeight / 2;
+      const bottom = endCenter + lineHeight / 2;
+      points = Math.abs(startCenter - endCenter) < lineHeight / 2
+        ? [
+          { x: startX, y: top },
+          { x: endX, y: top },
+          { x: endX, y: bottom },
+          { x: startX, y: bottom },
+        ]
+        : [
+          { x: startX, y: top },
+          { x: right, y: top },
+          { x: right, y: endTop },
+          { x: endX, y: endTop },
+          { x: endX, y: bottom },
+          { x: left, y: bottom },
+          { x: left, y: startBottom },
+          { x: startX, y: startBottom },
+        ];
+    } else if (startMarker && startLine) {
+      const startRect = firstRectOf(startMarker);
+      const startX = leftEdgeOf(startRect);
+      const startCenter = centerOf(startRect);
+      const startBottom = startCenter + lineHeight / 2;
+      const cut = foldEdgeAfter(startLine) ?? height;
+      if (cut <= startBottom) continue;
+      points = [
+        { x: startX, y: startCenter - lineHeight / 2 },
+        { x: right, y: startCenter - lineHeight / 2 },
+        { x: right, y: cut },
+        { x: left, y: cut },
         { x: left, y: startBottom },
         { x: startX, y: startBottom },
       ];
-    const path = roundedRangePath(points);
-    geometry[range.id] = { path, depth: range.depth };
+    } else {
+      const endRect = lastRectOf(endMarker as HTMLElement);
+      const endX = rightEdgeOf(endRect);
+      const endCenter = centerOf(endRect);
+      const endTop = endCenter - lineHeight / 2;
+      const cut = foldEdgeBefore(endLine as HTMLElement) ?? 0;
+      if (cut >= endTop) continue;
+      points = [
+        { x: left, y: cut },
+        { x: right, y: cut },
+        { x: right, y: endTop },
+        { x: endX, y: endTop },
+        { x: endX, y: endCenter + lineHeight / 2 },
+        { x: left, y: endCenter + lineHeight / 2 },
+      ];
+    }
+    geometry[range.id] = { path: roundedRangePath(points), depth: range.depth };
   }
 
   rangeCanvas.value = { width, height };
