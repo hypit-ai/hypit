@@ -24,6 +24,54 @@ function json(response: import("node:http").ServerResponse, status: number, valu
   response.end(`${JSON.stringify(value)}\n`);
 }
 
+/**
+ * Hand over one piece of material.
+ *
+ * A picture is scrubbed, and a browser only seeks inside material its server
+ * offers in parts: answer every request with the whole file and the media
+ * element reports nothing as seekable, so every seek collapses to the first
+ * frame and the take stands still while the playhead moves on. Serving the
+ * asked-for bytes is what makes the timeline move real footage.
+ */
+function serveMaterial(
+  request: import("node:http").IncomingMessage,
+  response: import("node:http").ServerResponse,
+  file: ServedFile,
+): void {
+  const bytes = Buffer.from(file.bytes);
+  response.setHeader("content-type", file.mediaType);
+  response.setHeader("cache-control", "no-store");
+  response.setHeader("accept-ranges", "bytes");
+
+  // One range is what a media element asks for. A request for several is met
+  // with the whole file, which is a legitimate answer to any range request.
+  const asked = /^bytes=(\d*)-(\d*)$/u.exec((request.headers.range ?? "").trim());
+  const from = asked?.[1] === undefined || asked[1] === "" ? undefined : Number(asked[1]);
+  const to = asked?.[2] === undefined || asked[2] === "" ? undefined : Number(asked[2]);
+  const start = from ?? (to === undefined ? 0 : Math.max(0, bytes.length - to));
+  const end = from === undefined && to !== undefined ? bytes.length - 1 : Math.min(to ?? bytes.length - 1, bytes.length - 1);
+
+  if (asked === null || start > end || start >= bytes.length) {
+    // An unsatisfiable range is worth saying so: answering 200 instead would
+    // have the element decode bytes it did not ask for.
+    if (asked !== null) {
+      response.statusCode = 416;
+      response.setHeader("content-range", `bytes */${bytes.length}`);
+      response.end();
+      return;
+    }
+    response.statusCode = 200;
+    response.setHeader("content-length", String(bytes.length));
+    response.end(request.method === "HEAD" ? undefined : bytes);
+    return;
+  }
+
+  response.statusCode = 206;
+  response.setHeader("content-range", `bytes ${start}-${end}/${bytes.length}`);
+  response.setHeader("content-length", String(end - start + 1));
+  response.end(request.method === "HEAD" ? undefined : bytes.subarray(start, end + 1));
+}
+
 function rangeOf(error: unknown): Range | undefined {
   if (typeof error !== "object" || error === null) return undefined;
   const range = (error as { range?: unknown }).range;
@@ -115,10 +163,7 @@ export function svmlPlaygroundPlugin(options: SvmlPlaygroundOptions): Plugin {
             response.end();
             return;
           }
-          response.statusCode = 200;
-          response.setHeader("content-type", file.mediaType);
-          response.setHeader("cache-control", "no-store");
-          response.end(Buffer.from(file.bytes));
+          serveMaterial(request, response, file);
           return;
         }
         next();
