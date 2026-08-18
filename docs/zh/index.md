@@ -10,6 +10,9 @@ hero:
     - theme: alt
       text: 开发指南
       link: /zh/guide/develop
+    - theme: alt
+      text: GitHub
+      link: https://github.com/hypit-ai/narratage
 ---
 
 <ClientOnly>
