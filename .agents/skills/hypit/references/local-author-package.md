@@ -4,6 +4,21 @@ Use this workflow only after proving that no legal composition of installed pack
 required behavior. A similar-looking tag is insufficient when its declared Types, timing or output
 behavior differs. Never write an unknown tag before its package exists.
 
+## Read the observation before deciding the package's shape
+
+The observation is the contract, and it is read before the first line of the package — not assumed,
+not remembered, not rediscovered halfway. In the reference-video route the evidence for the element
+this package owns lives in the shot observations (`type:` and `visual:` for its text and picture,
+`persistent_systems` for its whole-reference life) and the word-level transcript. Read them.
+
+Then write out, one line each, every appearance property the observation states — the typeface
+character, the weights, the mix of faces, the colours, the stroke, the shadow, the motion, the
+timing. A package whose declared vocabulary cannot express one of those lines is wrong before it is
+written: either widen the package to carry it, or record it as an accepted deviation with its reason
+**before** you start. The one thing that may not happen is authoring a package that silently drops a
+stated property — that is how a reference whose title runs two typefaces ends up as a package that
+draws one font, and the loop cannot repair what the package cannot express.
+
 ## Write `package.json` and the activation first
 
 Write those two before any implementation, run `pnpm install` once, and only then start on the
