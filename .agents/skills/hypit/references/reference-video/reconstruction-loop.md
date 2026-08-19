@@ -10,6 +10,13 @@ element *builds at all* is a different gate with a different rule: `preview-chec
 repaired until they pass without any attempt ceiling. A build failure is not a difference to weigh;
 it is work that is not done.
 
+The difference between the two gates is what each reports. `preview-check` names the build failure —
+the Producer and why it failed, down to the offending value — so its repairs are not guessing. This
+loop names the appearance difference: `compare_reconstruction` sends the rendered element and the
+reference frame to Gemini and returns what differs in words, and a repair aims at a difference the
+comparison named. Neither gate expects the agent to guess; each one tells you what is wrong, and you
+repair that.
+
 ## The reference side is finished
 
 The reference video does not change, and its observations are cached. Re-observing at a fixed
