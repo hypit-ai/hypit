@@ -20,7 +20,10 @@ Use staged Run Sources so unreviewed expensive outputs cannot silently feed late
 4. Reject and regenerate any failed image. Do not connect a failed image to Seedance, Media Track,
    image composition, or another downstream generator.
 5. Reuse accepted image Records with `.svrun` `build-record` and connect them to the next Build with
-   `satisfy`. Changing the Target list alone does not select those Records.
+   `satisfy`. Changing the Target list alone does not select those Records. Do not transcribe the
+   Build ids by hand — `hypit history --source <author.svml> --pin` emits the pairs for the newest
+   accepted Record of each output, ready to paste. Every Record you fail to pin is a generation you
+   pay for twice.
 
 Apply this checklist to every image:
 
