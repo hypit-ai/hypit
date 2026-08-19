@@ -238,7 +238,22 @@ test("a declared Surface preview names a picture that exists", async () => {
     const match = /^((?:examples\/[^/]+\/)?packages\/[^/]+)\/src\/.*\.ts$/u.exec(entry.path);
     if (match === null || !entry.isFile) continue;
     const source = await readFile(entry.child, "utf8");
-    for (const declared of source.matchAll(/previewImage\(\s*"([^"]+)"\s*\)/gu)) {
+    // Read the syntax tree, not the text: a template that generates a package writes the preview
+    // call that package will have, and its filename is an interpolation rather than a path.
+    const parsed = ts.createSourceFile(entry.path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    const declaredNames = [];
+    const collect = (node) => {
+      if (ts.isCallExpression(node)
+        && ts.isIdentifier(node.expression)
+        && node.expression.text === "previewImage"
+        && node.arguments.length === 1
+        && ts.isStringLiteral(node.arguments[0])) {
+        declaredNames.push(node.arguments[0].text);
+      }
+      ts.forEachChild(node, collect);
+    };
+    collect(parsed);
+    for (const declared of declaredNames.map((name) => [undefined, name])) {
       const file = new URL(`./${match[1]}/preview/${declared[1]}`, repositoryRoot);
       const size = await stat(file).then((item) => item.size, () => undefined);
       if (size === undefined) failures.push(`${entry.path} declares preview/${declared[1]}, which does not exist`);

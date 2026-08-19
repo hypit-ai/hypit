@@ -57,3 +57,6 @@ services/media-lambda/build/
 # macOS Finder metadata
 .DS_Store
 examples/**/.svml/
+
+# Reverse-engineering scratch projects: real output, but not the repository
+/examples/*-reverse/
