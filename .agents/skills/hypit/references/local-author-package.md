@@ -14,10 +14,10 @@ this package owns lives in the shot observations (`type:` and `visual:` for its 
 Then write out, one line each, every appearance property the observation states — the typeface
 character, the weights, the mix of faces, the colours, the stroke, the shadow, the motion, the
 timing. A package whose declared vocabulary cannot express one of those lines is wrong before it is
-written: either widen the package to carry it, or record it as an accepted deviation with its reason
-**before** you start. The one thing that may not happen is authoring a package that silently drops a
-stated property — that is how a reference whose title runs two typefaces ends up as a package that
-draws one font, and the loop cannot repair what the package cannot express.
+written: widen the package until it carries every one of them. There is no acceptable shortfall —
+a property the observation states is either expressed by the package or the package is not done. A
+stated property silently dropped is how a reference whose title runs two typefaces ends up as a
+package that draws one font, and the loop cannot repair what the package cannot express.
 
 ## Write `package.json` and the activation first
 

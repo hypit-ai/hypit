@@ -45,8 +45,8 @@ node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/main.sv
 ```
 
 It reports every track that failed to build, and every track waiting on a Provider it cannot reach,
-and exits non-zero when either exists. Repair until it passes or until what remains is waiting on a
-capability the machine genuinely lacks — recorded as an accepted deviation, not left silent.
+and exits non-zero when either exists. Repair until it passes. A track that cannot be built is not
+done; the author should never meet a failure this check can see.
 
 Fix package resolution and package implementation before repairing source use. Continue until all
 three files are accepted. Do not create `check_svml_project` or another wrapper.
