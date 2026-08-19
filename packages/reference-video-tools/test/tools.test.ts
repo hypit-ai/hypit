@@ -173,6 +173,24 @@ test("an unsupported media extension fails loudly instead of being sent as opaqu
     /unsupported media extension/u);
 });
 
+test("a rejected request fails once instead of being retried until the loop gives up", async () => {
+  const { root } = await workspace(1);
+  let attempts = 0;
+  const rejecting = createReferenceVideoTools({
+    workspaceRoot: root,
+    concurrency: 4,
+    launchGapMs: 0,
+    retryDelayMs: 0,
+    generate: async () => {
+      attempts += 1;
+      throw new Error(`{"error":{"code":400,"message":"Request contains an invalid argument.","status":"INVALID_ARGUMENT"}}`);
+    },
+  });
+  const result = await rejecting.observe_reference({ reference_id: REFERENCE });
+  assert.equal(attempts, 3, "one shot has three observations, and each one must give up after a single rejected request");
+  assert.deepEqual((result["unresolved"] as readonly string[]).sort(), ["audio:shot-001", "type:shot-001", "visual:shot-001"]);
+});
+
 test("a failed observation is reported as unresolved instead of an empty list", async () => {
   const { root } = await workspace(1);
   const failing = createReferenceVideoTools({
