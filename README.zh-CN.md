@@ -6,204 +6,61 @@
 </p>
 
 <p align="center">
-  <strong>世界首个 AI agent 视频编程语言与系统。</strong>
+  <strong>让 AI Agent 复刻任何爆款视频。</strong>
   <br>
-  <em>人剪视频，Agent 编译视频。</em>
+  <em>一条命令，100 个变体，1 亿播放量。</em>
 </p>
 
 <p align="center">
-  <a href="https://hypit.ai/zh/"><strong>演示</strong></a>
+  <a href="https://hypit.ai/"><strong>官网</strong></a>
   &nbsp;&bull;&nbsp;
-  <a href="https://hypit.ai/zh/quickstart"><strong>快速开始</strong></a>
+  <a href="https://narratage.hypit.ai/zh/"><strong>文档</strong></a>
   &nbsp;&bull;&nbsp;
-  <a href="https://hypit.ai/zh/guide/develop"><strong>开发</strong></a>
+  <a href="https://discord.gg/85hnyQnxpn"><strong>Discord</strong></a>
   &nbsp;&bull;&nbsp;
   <a href="./README.md"><strong>English</strong></a>
 </p>
 
-<p align="center">
-  <a href="https://github.com/hypit-ai/hypit/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/hypit-ai/hypit?style=flat-square&color=FFD700&logo=github&logoColor=white&label=Stars"></a>
-  <a href="./package.json"><img alt="Node 22+" src="https://img.shields.io/badge/Node.js-22+-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white"></a>
-  <a href="./package.json"><img alt="pnpm 10.33" src="https://img.shields.io/badge/pnpm-10.33-F69220?style=flat-square&logo=pnpm&logoColor=white"></a>
-  <a href="./package.json"><img alt="TypeScript 5.9" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white"></a>
-  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0%20with%20conditions-E3B341?style=flat-square"></a>
-</p>
+## Hypit 能做什么
 
-<p align="center">
-  <a href="https://hypit.ai/zh/"><img alt="Visit our website" src="https://img.shields.io/badge/Visit%20our%20website-000000?style=for-the-badge&logo=googlechrome&logoColor=white"></a>
-  <a href="https://discord.gg/85hnyQnxpn"><img alt="Join our Discord" src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
-  <a href="https://t.me/hypit"><img alt="Join our Telegram" src="https://img.shields.io/badge/Join%20our%20Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white"></a>
-  <a href="https://x.com/hypitai"><img alt="Follow @hypitai on X" src="https://img.shields.io/badge/Follow%20%40hypitai-000000?style=for-the-badge&logo=x&logoColor=white"></a>
-</p>
+让 AI Agent 复刻任何爆款视频。交付的不仅仅是拆解的脚本，而是一份 workflow：可以换脸、换词、换 B-roll，一次跑出 50 个变体，拿下你的 1 亿播放。
 
-<p align="center">
-  ⭐ <em>让更多人发现 Hypit，一起壮大社区。给仓库点个 Star！</em>
-</p>
+## 30 秒介绍
 
-## 为什么是 Hypit
+Hypit 为 AI Agent（Claude Code、Codex……）提供一套创作视频的语言与系统。丢进一条视频，Agent 会把它复刻成完整 workflow：画面、字幕、B-roll 和特效，全部锚定在具体文字上，而不是秒数上。
 
-每一款视频编辑器——Premiere、剪映、DaVinci、Final Cut——都是为人的双手在时间线上操作而造的。
+明确一点：复刻视频是最快的上手方式，但不是唯一方式。你可以从模板开始，也可以直接描述想要的视频，让 Agent 从零写出 workflow。生成模型同样可选：workflow 可以在不调用任何生成模型的情况下，把字幕、motion graphics 和代码渲染画面编译成完整视频，因此一条视频的生成成本可以恰好是 $0。
 
-**Hypit 是一门为 AI Agent 设计的语言与系统。**
+## 安装
 
-- **没有时间线** —— 视频是写出来的，不是拖出来的。B-roll、特效以及每一条轨道都存在于源码里。
-- **Agent 原生** —— 输入纯文本，输出成片。Agent 像读写代码一样读写它。
-- **钉在词上** —— 重新生成会改变时间排布，但 B-roll 与特效仍会跟随它们所属的词。
-- **可批量** —— 一切都是源文件。以代码的规模产出视频，而不是以剪辑的速度。
-
-> ### [看演示 —— SVML 源码与渲染成片并排对照 →](https://hypit.ai/zh/)
-
-## 怎么工作的
-
-Hypit 把 SVML 源文件编译成成片。
-
-1. **写** —— SVML 描述谁在说话、说什么，以及 B-roll 与特效放在哪里。不含时间码。
-2. **生成** —— Seedance、MiniMax H3 与 GPT Image 2 依据提示词和参考图产出每一个镜头。
-3. **对齐** —— WhisperX 把每一个说出口的词钉到精确的时间上。B-roll 与特效跟随词，而不是跟随秒。
-4. **渲染** —— HyperFrames 把所有轨道逐帧合成为 MP4。
-
-改动剧本，保留你已认可的结果，只重新生成你选择替换的那部分。
-
-## 语言
-
-SVML——Semantic Video Markup Language——是创作语言。Hypit 是围绕它的编译器、运行时与包生态。
-
-一个完整的 `.svml` 文件：
-
-```xml
-<?svml using="@hypit/markup@1"?>
-<svml>
-  <import from="@hypit/script@1"/>
-  <import as="studio" source="./studio.svs"/>
-
-  <script id="story">
-    <intro>
-      <HOST>I tested @product this espresso machine @/product for thirty days.
-    </intro>
-
-    <verdict>
-      <HOST>At <$299 | two ninety-nine>, best home espresso I've ever had.
-            If you care about your morning cup — this is the one.
-    </verdict>
-  </script>
-</svml>
-```
-
-四个构造，这就是全部：
-
-| 构造 | 写法 | 干什么 |
-|---|---|---|
-| **Segment** | `<intro>...</intro>` | 命名的叙事段落——知道自己是段落的段落 |
-| **Speaker** | `<HOST>` | 标注谁在说话；一直生效到下一个 cue 或段落结束 |
-| **Split** | `<$299 \| two ninety-nine>` | 屏幕上显示的和嘴里说的可以不一样 |
-| **Hook** | `@product...@/product` | 把一个画面——B-roll、图形、特效——钩到具体的词上 |
-
-Script 外面的组件（视频生成器、语音模型、字幕渲染器、轨道合成器）消费 Script 声明的内容。Script 本身不含任何渲染逻辑。完整语法：[Script 规范](https://hypit.ai/zh/quickstart/script)。
-
-## 快速开始
-
-### 克隆仓库
+需要 Node.js 22+ 与 pnpm 10.33.x。
 
 ```bash
 git clone https://github.com/hypit-ai/hypit.git
 cd hypit
-```
-
-### 用编程 Agent
-
-在这个工作目录下就可以直接使用 `/hypit`。发送给你的 Agent：
-
-```text
-/hypit 配置我的环境，只向我索取当前 Runtime Profile 实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
-```
-
-### 从终端
-
-需要 Node.js 22+ 与 pnpm 10.33.x：
-
-```bash
 corepack enable
 pnpm install --frozen-lockfile
 npm link
 ```
 
-然后在视频项目中运行：
+构建最终视频需要安装 `ffmpeg` 和 `ffprobe`。部分可选 Provider 还可能需要 Python、`uv` 或 API 凭据。
 
-```bash
-cd my-video
-hypit runtime use hypit.runtime.json
-hypit plan build.svrun
-hypit build build.svrun
-hypit status <build-id> --watch
-hypit get <build-id> --name final.video --to output/final.mp4
+## 使用 Hypit skill
+
+克隆仓库后，编程 Agent 可以直接使用 `/hypit` skill。让 Agent 配置环境并为你创建 workflow：
+
+```text
+/hypit 把这条爆款视频复刻成可复用的 workflow，展示预览，并带我批量生成变体。
 ```
 
-`build` 会打印一个新的 Build ID，并在耐久提交后立即返回。之后可以从任何终端用
-`status --watch` 重新接上这个 Build。编辑时使用 `check`；包选择直接来自 Source import
-与当前 Runtime Profile。
+也可以不提供参考视频，直接从描述开始：
 
-真实的 Build 还需要 `PATH` 上有 `ffmpeg` 与 `ffprobe`，以及视 Runtime Profile 而定的 Python 与 `uv` 或 API 凭据。运行 `hypit doctor` 查看缺什么；完整环境配置与第一次无 Provider 计划见[快速开始](https://hypit.ai/zh/quickstart)。
+```text
+/hypit 根据我的描述创建视频 workflow，优先使用模板和成本为 $0 的代码渲染画面。
+```
 
-### 项目文件
+Agent 会检查环境，只索取当前 workflow 实际需要的凭据，展示预览并执行构建。
 
-Hypit 把创作与执行分开：
+## 许可证
 
-| 文件 | 决定什么 |
-|---|---|
-| `.svml` | 制作什么视频，包括稿件、生成素材和轨道 |
-| `.svs` | 可复用的创作选择，例如 prompt、样式和布局 |
-| `.svrun` | 本次构建什么，包括 Target 和需要复用的历史产物 |
-| Runtime Profile | 在哪里、以何种方式运行，包括 Provider、存储和并发 |
-
-一个项目可以包含任意数量的这些文件，同一份 `.svml` 也可以由多份 `.svrun` 构建。
-
-## 名字的由来
-
-<p align="center"><em>narration + montage = <strong>hypit</strong></em></p>
-
-> *“The new treatment, which the producer calls ‘hypit,’ is eminently well suited …”*
->
-> — Mordaunt Hall，*The New York Times*，1933
-
-在这篇对 Spencer Tracy 主演的《*The Power and the Glory*》的评论中，制片人 Jesse L. Lasky 所称的 **hypit** 描述了一种由旁白推动故事、画面随之组接场景的手法。
-
-九十年后，Hypit 让同一个理念有了新的形态：一门围绕旁白编译蒙太奇的语言与系统。
-
-## 架构
-
-AI 生成缓慢、昂贵且不确定。Hypit 把所需工作编译为一份持久化计划。
-
-Core 极小且领域无关：它不认识视频。安装一个包即可增加能力，无需重新发布 Core。
-
-| 层 | 负责什么 | 例子 |
-|---|---|---|
-| **Hypit Core** | 计划编译与 Build 状态机 | `core`、`protocol` |
-| **Compiler** | Source 解析、导入与图展开 | `host`、`markup`、`svs`、`elaborator` |
-| **Foundations** | 可复用的媒体、时间、布局、文本与调用基础能力 | `media-pipeline`、`temporal`、`spatial` |
-| **Video authoring** | 稿件、生成、语音、Track、Film 与渲染 | `script`、`seedance`、`caption`、`film` |
-| **Providers** | 外部模型、程序与服务的适配器 | `provider-kie`、`provider-whisperx-local` |
-| **Runtime** | 调度、存储、凭据与执行 | `runtime`、`store-sqlite`、`runtime-local` |
-| **Applications** | 创作和操作 Hypit 的用户界面 | `cli`、`svml-playground` |
-
-## 接下来去哪
-
-- [演示](https://hypit.ai/zh/) —— 并排查看 SVML 源码与它渲染出的画面。
-- [快速开始](https://hypit.ai/zh/quickstart) —— 写作、预览、规划并构建你的第一支视频。
-- [开发](https://hypit.ai/zh/guide/develop) —— 理解包架构，并添加 Author 包或 Provider。
-
-## 第三方软件
-
-Hypit 集成了以下采用独立许可的软件：
-
-- [FFmpeg](https://ffmpeg.org/) —— 以独立许可的可执行程序完成媒体探测、规范化、变换与封装。
-- [HyperFrames](https://www.npmjs.com/package/hyperframes) —— 在 Chromium 中把 Composition 渲染为帧精确的视频。
-- [WhisperX](https://github.com/m-bain/whisperX) —— 把口播中的每个词对齐到时间，用于语义定位。
-- [Fontsource](https://fontsource.org/) —— 提供有版本的开放字体包，每款字体均附带自己的字体文件与许可证。
-
-## 许可
-
-Hypit 以 [Hypit 开源许可](./LICENSE) 发布，这是一份修改后的 Apache 2.0 许可。你可以自行部署，将它用于所在组织的工作——包括商业工作和客户项目——也可以为一个组织运营单租户部署。向第三方提供多租户或托管服务，以及商业再分发，均需要商业授权。只要不是为了商业利益向第三方供应，你可以按照同一许可 fork、修改并公开源码。Hypit 已呈现的品牌与版权信息必须保持完整。
-
-你用 Hypit 产出的内容归你所有。通过第三方模型或服务生成的产物，还可能受到相应服务商条款的约束。
-
-以英文 [`LICENSE`](./LICENSE) 文本为准。商业授权请联系 [official@hypit.ai](mailto:official@hypit.ai?subject=%5BGitHub%5DHypit%20Commercial%20License%20Inquiry)。
+Hypit 采用 [Hypit 开源许可证](./LICENSE)。你创作的视频和其他产出归你所有；第三方模型与服务可能另有条款。
