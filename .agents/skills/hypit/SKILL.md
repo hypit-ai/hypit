@@ -18,13 +18,50 @@ Source, and the declarative `hypit.runtime.json` Runtime Profile separate.
 - Production craft or format choice → read `references/playbooks/index.md`,
   `references/playbooks/craft/production-gates.md`, and
   `references/playbooks/craft/visual-continuity.md`, then the relevant craft/format file.
-- Reference-video reconstruction → read `references/reference-vlm.md`; emit `main.svml`, optional
-  `studio.svs`, and `build.svrun` directly.
+- Reference-video reconstruction → read `references/reference-vlm.md`; use the three reference-video
+  MCP tools, then author `main.svml`, `studio.svs`, and `build.svrun` yourself.
 - Showing an author what they have so far → start the SVML Playground and send them the link.
   See "Show the work" below.
 - Execution, Runtime control, Build inspection, or output retrieval → read
   `references/runtime.md`; diagnose and start the durable Runtime, `check` Author Source, `plan`
   before paid work, then submit, inspect, and retrieve the Build.
+
+## Reference-video reconstruction workflow
+
+When the user asks to reproduce, reverse, reconstruct, or analyze a reference video, this is a
+tool-driven task rather than an ordinary hand-authored video task.
+
+1. Read `references/reference-vlm.md` completely.
+2. Call `prepare_reference` with the local video path.
+3. Call `observe_reference` for the full reference. It prepares the previous tail frame, previous
+   audio tail, whole-reference people, voice, and product context automatically and observes shots
+   in parallel.
+4. Read every failed or unresolved observation. Ask `observe_reference` a narrow follow-up only
+   where evidence conflicts or remains uncertain.
+5. Choose the packages needed by the observed video and call `inspect_svml_vocabulary` before
+   writing any component, attribute, child, port, or Recipe.
+6. Write one complete `main.svml`, one `studio.svs`, and one `build.svrun`. Do not write one partial
+   SVML fragment per shot and concatenate them.
+7. Run the existing `pnpm hypit check` command and repair the sources until the project is legal.
+
+Gemini is only the eyes and ears. It returns natural-language evidence, never SVML, SVS, SVRun,
+component declarations, prompts containing package syntax, or a final structural decision. The
+calling agent owns the synthesis and all final files.
+
+The reconstruction invariants are mandatory:
+
+- The person who is speaking owns base; the lowest or largest picture does not.
+- Picture ownership and sound ownership are separate. Full-screen B-roll can cover the picture
+  while the previous speaker remains the sound owner and base.
+- A B-roll person who appears to speak but whose B-roll is silent cannot take over the speaker,
+  sound, or base.
+- A shot with no visible person can still carry the previous speaker's continuing sound.
+- The same overlay continuing across a cut remains one visual track; a cut alone never creates a
+  replacement overlay.
+- Merge incorrectly split continuous shots only when the observations confirm one shot and the
+  combined duration is at most 15 seconds. Three-shot continuity requires explicit evidence too.
+- Reuse the full-reference people, voice, and product evidence. Describe a promoted product once;
+  do not invent a new product description in every shot.
 
 ## Read the package README before writing its syntax
 

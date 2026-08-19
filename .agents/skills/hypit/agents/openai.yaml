@@ -1,4 +1,4 @@
 interface:
   display_name: "Hypit"
-  short_description: "Build SVML videos with production playbooks"
-  default_prompt: "Use $hypit to author, validate, or refine native SVML video sources and production craft."
+  short_description: "Build SVML videos and reconstruct reference videos with MCP tools"
+  default_prompt: "Use $hypit to author, validate, or refine native SVML video sources; for reference-video reconstruction, call prepare_reference, observe_reference, and inspect_svml_vocabulary before writing complete SVML, SVS, and SVRun sources."

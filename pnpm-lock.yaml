@@ -2084,9 +2084,6 @@ importers:
       '@google/genai':
         specifier: 1.52.0
         version: 1.52.0(@modelcontextprotocol/sdk@1.30.0(zod@3.25.76))
-      '@hypit/artifact-store-fs':
-        specifier: workspace:*
-        version: link:../artifact-store-fs
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
@@ -2096,9 +2093,6 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
       '@modelcontextprotocol/sdk':
         specifier: 1.30.0
         version: 1.30.0(zod@3.25.76)
