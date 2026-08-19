@@ -57,6 +57,10 @@ visual QA.
 
 - Build `speech:Spine` only from accepted speech-bearing video or audio Takes, then run one
   `whisperx:Alignment` for the authored Narrative.
+- Recompute that alignment whenever the speech audio changes. Every Track timed against it — Caption,
+  Media, Typography, Ranking, Deck, Comment, Screen, Audio — is measured against audio that no longer
+  exists otherwise, and the drift is invisible in a still frame. A Style-only change does not prove a
+  prior review still holds.
 - Review Caption, Media, Typography, Ranking, Deck, Comment, Screen, and Audio Tracks against the
   real ProgramSpace and SemanticMap. Check timing, safe zones, occlusion, stacking, audio clarity,
   and whether each Track contributes unique information.
