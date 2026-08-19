@@ -188,7 +188,7 @@ test("a rejected request fails once instead of being retried until the loop give
   });
   const result = await rejecting.observe_reference({ reference_id: REFERENCE });
   assert.equal(attempts, 3, "one shot has three observations, and each one must give up after a single rejected request");
-  assert.deepEqual((result["unresolved"] as readonly string[]).sort(), ["audio:shot-001", "type:shot-001", "visual:shot-001"]);
+  assert.deepEqual([...(result["unresolved"] as readonly string[])].sort(), ["audio:shot-001", "type:shot-001", "visual:shot-001"]);
 });
 
 test("a failed observation is reported as unresolved instead of an empty list", async () => {
