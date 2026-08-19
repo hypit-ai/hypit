@@ -46,7 +46,8 @@ visual QA.
 ## Gate 2: generate and review video takes
 
 - Demand only the takes whose reference images have passed Gate 1.
-- Keep Seedance duration inside the declared 4–15 second range; invalid values fail validation rather
+- Keep Seedance duration inside the selected model's declared range, read from that model rather than
+  from memory: the models differ and one accepts far longer takes. Invalid values fail validation rather
   than being silently clamped.
 - Review each take before assembly: verify the first-frame identity, reference continuity, lip-sync
   when applicable, physical motion, stable props/text, intended camera/edit language, and absence of

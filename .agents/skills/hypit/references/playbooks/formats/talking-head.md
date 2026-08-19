@@ -6,7 +6,7 @@ captions, B-roll, and editorial typography as peer Tracks.
 ## Author the SVML program
 
 1. Write one Script with a strong opening Segment and 2–3 following Segments for context, evidence,
-   mechanism, payoff, or CTA. Keep each generated speaking take within 4–15 seconds; 8–12 seconds is
+   mechanism, payoff, or CTA. Keep each generated speaking take inside the selected model's declared range; 8–12 seconds is
    a useful target when the delivery remains natural.
 2. Run `estimate:Speech` for each Segment before generation.
 3. Vendor `speaker-v1.svs`. Put stable `composition-stability`, `camera-motion`, `edit-rhythm`,

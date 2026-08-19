@@ -14,7 +14,8 @@ texture sound to create a calm, satisfying micro-film.
    place, or another small event that can complete naturally in one take.
 4. Use `seedance:FrameVideo` for one controlling first frame or `seedance:ReferenceVideo` for
    multiple ordered material references. Set `generate-audio="false"`.
-5. Keep raw Seedance duration at an integer 4–15 seconds. Use explicit media Trim/Retime only after
+5. Keep raw Seedance duration an integer inside the selected model's declared range. Use explicit
+   media Trim/Retime only after
    reviewing the generated take.
 
 Avoid rapid edits, large camera moves, busy backgrounds, multiple simultaneous actions, or motion
