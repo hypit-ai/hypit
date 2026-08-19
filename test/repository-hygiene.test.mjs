@@ -114,9 +114,30 @@ test("project-owned production Module and Frontend identities use literal versio
     `project-owned logical identities must use literal version \"1\":\n${failures.join("\n")}`);
 });
 
-function packageImports(source) {
-  const matches = source.matchAll(/(?:\bfrom\s+|\bimport\s*\(|^\s*import\s+)["'](@hypit\/[a-z0-9-]+)(?:\/[^"']*)?["']/gmu);
-  return [...matches].map((match) => match[1]);
+/**
+ * Module specifiers this file really imports.
+ *
+ * Read from the syntax tree rather than the text: a template that generates a package writes the
+ * imports that package will have, and matching those would demand the generator depend on
+ * everything it can generate.
+ */
+function packageImports(path, source) {
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true,
+    path.endsWith(".tsx") ? ts.ScriptKind.TSX : path.endsWith(".mjs") ? ts.ScriptKind.JS : ts.ScriptKind.TS);
+  const found = [];
+  const take = (node) => {
+    if (node !== undefined && ts.isStringLiteralLike(node)) {
+      const match = /^(@hypit\/[a-z0-9-]+)(?:\/.*)?$/u.exec(node.text);
+      if (match !== null) found.push(match[1]);
+    }
+  };
+  const visit = (node) => {
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) take(node.moduleSpecifier);
+    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) take(node.arguments[0]);
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return found;
 }
 
 test("production imports belong to each package while the root owns repository tests", async () => {
@@ -150,13 +171,62 @@ test("production imports belong to each package while the root owns repository t
       ] : []),
     ]);
     const source = await readFile(entry.child, "utf8");
-    for (const dependency of new Set(packageImports(source))) {
+    for (const dependency of new Set(packageImports(entry.path, source))) {
       if (dependency !== manifest.name && !allowed.has(dependency)) {
         failures.push(`${entry.path} (${dependency})`);
       }
     }
   }
   assert.deepEqual(failures, [], `undeclared package imports found:\n${failures.join("\n")}`);
+});
+
+function objectProperties(node) {
+  const properties = new Map();
+  for (const property of node.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    const name = propertyName(property.name);
+    if (name !== undefined) properties.set(name, property.initializer);
+  }
+  return properties;
+}
+
+/** A Surface declaration that publishes a VisualTrack draws something a reader has to see. */
+function visualSurfaceTag(node) {
+  const properties = objectProperties(node);
+  const tag = properties.get("tag");
+  const outputs = properties.get("outputs");
+  if (tag === undefined || outputs === undefined || !ts.isArrayLiteralExpression(outputs)) return undefined;
+  const visual = outputs.elements.some((element) => element.getText().includes("visualTrack"));
+  if (!visual || !ts.isStringLiteralLike(tag)) return undefined;
+  const vocabulary = properties.get("vocabulary");
+  const declaresPreview = vocabulary !== undefined
+    && ts.isObjectLiteralExpression(vocabulary)
+    && objectProperties(vocabulary).has("preview");
+  return declaresPreview ? undefined : tag.text;
+}
+
+test("a Surface that draws declares a preview at all", async () => {
+  // The check below only fires once a preview is declared, so a package that skips the declaration
+  // escapes it entirely — and a component that cannot draw itself is exactly the one whose author
+  // never got a preview out of it. Publishing a VisualTrack is the structural signal, independent
+  // of whether anyone remembered to promise a picture.
+  const entries = await repositoryEntries();
+  const failures = [];
+  for (const entry of entries) {
+    if (!entry.isFile || !/^((?:examples\/[^/]+\/)?packages\/[^/]+)\/src\/.*\.ts$/u.test(entry.path)) continue;
+    const source = await readFile(entry.child, "utf8");
+    if (!source.includes("visualTrack")) continue;
+    const file = ts.createSourceFile(entry.path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    const visit = (node) => {
+      if (ts.isObjectLiteralExpression(node)) {
+        const tag = visualSurfaceTag(node);
+        if (tag !== undefined) failures.push(`${entry.path} declares ${tag}, which publishes a VisualTrack and promises no preview`);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(file);
+  }
+  assert.deepEqual(failures, [], `drawing Surfaces without a preview:\n${failures.join("\n")}`);
 });
 
 test("a declared Surface preview names a picture that exists", async () => {
