@@ -167,11 +167,8 @@ html.home-page .VPNavBarTitle .title {
 }
 /* The configured siteTitle text; the logotype stands in for it. */
 html.home-page .VPNavBarTitle .title > span:not([class]) { display: none; }
-html.home-page .nav-hypit-logo { display: block; flex: 0 0 auto; height: 46px; }
-html.home-page .nav-hypit-logo img { display: block; width: auto; height: 100%; }
-html.home-page .hypit-logo-on-dark { display: none; }
-html.home-page.dark .hypit-logo-on-light { display: none; }
-html.home-page.dark .hypit-logo-on-dark { display: block; }
+html.home-page .nav-narratage-logo { display: block; flex: 0 0 auto; height: 46px; color: var(--ink); }
+html.home-page .nav-narratage-logo svg { display: block; width: auto; height: 100%; }
 /* The rule that separates the brand from the rest of the bar. */
 html.home-page .VPNavBarTitle::after {
   content: "";
@@ -344,7 +341,8 @@ html.home-page .VPHomeHero .main { width: 100%; max-width: none; }
   height: auto;
   margin: 6px 0 0;
 }
-.np-masthead-wordmark img { display: block; width: 100%; height: auto; }
+.np-masthead-ink { fill: var(--ink); }
+.np-masthead-red { fill: var(--crimson); }
 /* Collage scrap, positioned off the wordmark. Decorative only. */
 .np-masthead-stamp {
   position: absolute;

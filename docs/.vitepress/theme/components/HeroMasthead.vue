@@ -14,22 +14,23 @@ const isChinese = computed(() => lang.value.toLowerCase().startsWith("zh"));
     </div>
 
     <div class="np-masthead-wrap">
-      <span class="np-masthead-wordmark">
-        <img
-          class="hypit-logo-on-light"
-          :src="withBase('/hypit-logo-dark.png')"
-          alt="Hypit"
-          width="641"
-          height="125"
-        />
-        <img
-          class="hypit-logo-on-dark"
-          :src="withBase('/hypit-logo-light.png')"
-          alt="Hypit"
-          width="641"
-          height="125"
-        />
-      </span>
+      <svg
+        class="np-masthead-wordmark"
+        viewBox="0 0 1200 268"
+        role="img"
+        aria-label="Narratage"
+      >
+        <text
+          x="0"
+          y="252"
+          font-family="Impact, Haettenschweiler, 'Arial Narrow Bold', 'Arial Black', sans-serif"
+          font-size="268"
+          textLength="1200"
+          lengthAdjust="spacingAndGlyphs"
+        >
+          <tspan class="np-masthead-ink">NARRA</tspan><tspan class="np-masthead-red">TAGE</tspan>
+        </text>
+      </svg>
 
       <!-- Outside the wordmark, or the intro wipe would clip it too. -->
       <img
