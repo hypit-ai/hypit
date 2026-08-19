@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "hypit-reference-video-tools": "./src/server.ts"
+    "hypit-reference-video-tools": "./bin/reference-video-tools.mjs"
   },
   "exports": {
     ".": "./src/index.ts"
@@ -15,11 +15,9 @@
     "@hypit/markup": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@modelcontextprotocol/sdk": "1.30.0",
-    "zod": "3.25.76"
+    "tsx": "4.21.0"
   },
   "devDependencies": {
-    "@types/node": "24.10.1",
-    "tsx": "4.21.0"
+    "@types/node": "24.10.1"
   }
 }

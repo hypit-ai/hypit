@@ -1,28 +1,28 @@
 # Reference video reconstruction
 
 Use this only when the task is to reproduce or reverse a complete reference video into usable
-Hypit sources. The public interface is exactly three MCP tools in
+Hypit sources. The public interface is exactly three CLI subcommands in
 `@hypit/reference-video-tools`:
 
-- `prepare_reference({ video_path, rebuild? })` prepares the local video once, splits shots at or
+- `hypit-reference-video-tools prepare_reference --video-path <path>` (or `--input <json>`) prepares the local video once, splits shots at or
   below 15 seconds, extracts every clip, representative frame, tail frame, and audio tail, and
   performs the one whole-reference people/product analysis and one whole-reference voice analysis.
-- `observe_reference({ reference_id, shot_ids?, question?, refresh? })` observes all selected shots in
+- `hypit-reference-video-tools observe_reference --reference-id <id>` (or `--input <json>`) observes all selected shots in
   parallel. It automatically supplies the previous shot's tail frame and audio tail, the whole
   reference people/voice/product evidence, and all neighboring boundaries. It returns natural
   language picture, sound, camera-continuity, overlay-continuity, and any three-shot or follow-up
   evidence.
-- `inspect_svml_vocabulary({ package_names, tags?, include_previews? })` reads the selected packages'
+- `hypit-reference-video-tools inspect_svml_vocabulary --package <name>` (or `--input <json>`) reads the selected packages'
   current declarations and previews. It does not call Gemini and it does not know which component
   a visual observation should become.
 
 The fixed loop is:
 
 ```text
-prepare_reference
-→ observe_reference for all shots
-→ observe_reference with one narrow follow-up for each unresolved conflict
-→ inspect_svml_vocabulary for the packages actually needed
+run prepare_reference
+→ run observe_reference for all shots
+→ run observe_reference with one narrow follow-up for each unresolved conflict
+→ run inspect_svml_vocabulary for the packages actually needed
 → main agent writes complete main.svml, studio.svs, build.svrun
 → pnpm hypit check
 → repair source syntax and run pnpm hypit check again
@@ -46,6 +46,6 @@ The reconstruction must preserve these facts:
   once and reused consistently.
 
 After observations, read the selected package README as syntax authority as well as the dynamic
-vocabulary returned by `inspect_svml_vocabulary`. Author one complete dependency graph, not separate
+vocabulary returned by the `inspect_svml_vocabulary` CLI. Author one complete dependency graph, not separate
 per-shot source fragments. Use only declared tags, attributes, children, ports, Recipe properties,
 and admitted values. Use the existing `pnpm hypit check`; do not add or invent a check wrapper.
