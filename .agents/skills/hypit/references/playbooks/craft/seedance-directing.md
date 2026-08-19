@@ -32,8 +32,14 @@ than relying on an unstated assumption.
 
 ## Respect model contracts
 
-- Use model values `standard`, `fast`, or `mini`. `fast` and `mini` support only 480p/720p;
-  `standard` also supports 1080p/4k.
+- **`fast` is the model, unless the author named another one.** Write `model="fast"` on every take
+  and do not reach for `standard` or `2.5` on your own judgement: a video is many takes, most of them
+  are regenerated more than once, and the top model multiplies the whole bill for a difference that
+  costs more to find than it is worth. Take an instruction to use a particular model literally when
+  one is given, and otherwise never raise the tier and never stop to ask which to use.
+- The other values are `standard`, `mini` and `2.5`. `fast` and `mini` support only 480p/720p;
+  `standard` also supports 1080p/4k, which is the one reason to name it — a delivery that genuinely
+  requires 1080p, recorded as the deliberate choice it is.
 - Keep duration an integer inside the selected model's declared range, and read that range from the
   model rather than from memory: they differ, and one accepts far longer takes than the others.
   Invalid values fail closed.
