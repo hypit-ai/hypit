@@ -225,8 +225,11 @@ importers:
         specifier: ^1.6.4
         version: 1.6.4(@algolia/client-search@5.56.0)(@types/node@24.10.1)(postcss@8.5.25)(search-insights@2.17.3)(typescript@5.9.3)
 
-  examples/ranking-typewriter-reverse/packages/local-paper-list:
+  examples/ranking-typewriter-reverse/packages/local-notebook-list:
     dependencies:
+      '@hypit/artifact':
+        specifier: workspace:*
+        version: link:../../../../packages/artifact
       '@hypit/component-kit':
         specifier: workspace:*
         version: link:../../../../packages/component-kit
@@ -270,6 +273,21 @@ importers:
       '@hypit/core':
         specifier: workspace:*
         version: link:../../../../packages/core
+      '@hypit/fonts-open':
+        specifier: workspace:*
+        version: link:../../../../packages/fonts-open
+      '@hypit/hyperframes':
+        specifier: workspace:*
+        version: link:../../../../packages/hyperframes
+      '@hypit/provider-hyperframes-local':
+        specifier: workspace:*
+        version: link:../../../../packages/provider-hyperframes-local
+      '@types/node':
+        specifier: 24.10.1
+        version: 24.10.1
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
 
   packages/artifact:
     dependencies:
