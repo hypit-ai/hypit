@@ -88,6 +88,9 @@ test("installed packages can be listed, and one that will not load is reported r
   assert.equal(packages[0]!["description"], "declares a Surface");
   assert.equal(typeof packages[0]!["unreadable"], "string",
     "a package that declares an activation it cannot load is named, not silently dropped");
+  assert.equal(packages[0]!["tags"] !== undefined
+    && (packages[0]!["tags"] as readonly unknown[]).includes(null), false,
+    "a facet that is not a Markup Surface has no tag, and reading one out of it produced a null entry");
 });
 
 test("observation covers picture, drawn type and sound for every shot and caches every key", async () => {
