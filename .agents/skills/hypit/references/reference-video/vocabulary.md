@@ -49,8 +49,11 @@ just written the package: it proves the specifier resolves, the activation contr
 the loader can decode the Surface. `pnpm check` proves none of those, because activation lookups fail
 at runtime rather than at compile time.
 
-The new package owns the whole observed composition, including the surface its elements sit on, and
-consumes missing pictures as material edges rather than generating or embedding them itself.
+The new package owns the whole observed composition. Its own surface — the paper, board, panel or
+texture the composition always shows — is committed inside the package as a file, never demanded
+from the graph. Only pictures that differ between videos are edges the source supplies.
+`../playbooks/craft/graphic-compositions.md` draws that line; a component that cannot draw itself
+without a project document is on the wrong side of it.
 
 Installing the package is not the end of the gap route. Continue into `reconstruction-loop.md`: a
 component that loads is not yet a component that looks like the reference.

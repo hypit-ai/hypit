@@ -44,6 +44,29 @@ Choose raw versus structured Surface, timing dependencies, ProgramSpace, Frame, 
 Artifact, Recipe and output Types from the observed behavior and closest package architecture. A
 declaration-only or Surface-only package is incomplete.
 
+## The package draws itself
+
+A package is installed vocabulary. `.svml`, `.svs` and `.svrun` are documents that use it. A package
+that needs one of those documents in order to draw its own appearance has inverted that
+relationship, and the symptom is unmistakable: the component imports cleanly and still shows
+nothing.
+
+- Chrome the component always shows — its paper, board, panel, ruled lines, texture, default
+  backdrop — belongs to the package. Commit it as an ordinary file under the package and read it
+  with `readFile(new URL("../assets/…", import.meta.url))`, the same way the Surface preview image
+  is read. Generate it once while authoring the package if it does not exist.
+- Produce that file outside the graph. Call the image provider's HTTP API directly with the
+  credentials already in the environment, or use any equivalent tool, and save the bytes into the
+  package. A package asset is authoring input, not the output of anybody's video: it is never a
+  Target, never a Record, and never a reason to write a Run Source. Writing one to obtain it is the
+  mistake this section exists to prevent.
+- Only pictures that differ between videos are input ports: photographs, screenshots, thumbnails,
+  product shots, character images.
+- Never require an input the installing project has no reason to choose. If a Run Source exists only
+  to produce the component's own texture, the texture is in the wrong place.
+- A component that cannot render on its own cannot produce the preview image its Surface owes. Treat
+  a missing preview as evidence of this mistake rather than a step to skip.
+
 ## Install and validate
 
 Reuse an existing workspace when it already includes `packages/*`; otherwise make only the minimal
