@@ -38,7 +38,7 @@ export async function readSource(input: {
 }
 
 async function read(
-  input: { readonly source: string; readonly run?: string; readonly revision: number },
+  input: { readonly source: string; readonly run?: string; readonly revision: number; readonly packageRoot: string },
   archive: Archive | undefined,
 ): Promise<Session> {
   const built = await preview(input.source, input.run, archive);
