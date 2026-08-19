@@ -166,6 +166,7 @@ const enTheme = {
           { text: "Overview", link: "/guide/develop" },
           { text: "Package Architecture", link: "/guide/packages" },
           { text: "Adding an Author Package", link: "/guide/author-packages" },
+          { text: "Component Anatomy", link: "/guide/component-anatomy" },
           { text: "Adding a Provider", link: "/guide/providers" },
           { text: "Runtime", link: "/guide/runtime" },
           { text: "Testing", link: "/guide/testing" },
