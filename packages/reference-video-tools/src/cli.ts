@@ -6,6 +6,7 @@ type Flags = ReadonlyMap<string, string | readonly string[] | boolean>;
 function usage(): string {
   return [
     "Usage:",
+    "  hypit-reference-video-tools list_svml_packages",
     "  hypit-reference-video-tools prepare_reference --video-path <path> [--redo media|people|voices|systems|all]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> [--shot-id <id> ...] [--reobserve]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> --shot-id <id> [--shot-id <id> ...] --question <text>",
@@ -79,7 +80,9 @@ async function main(): Promise<void> {
   const tools = createReferenceVideoTools();
   const supplied = inputObject(flags);
   let result: unknown;
-  if (command === "prepare_reference") {
+  if (command === "list_svml_packages") {
+    result = await tools.list_svml_packages();
+  } else if (command === "prepare_reference") {
     const input = supplied ?? {
       video_path: required(flags, "video-path"),
       ...(one(flags, "redo") === undefined ? {} : { redo: one(flags, "redo") }),

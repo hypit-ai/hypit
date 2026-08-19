@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import type { Part } from "@google/genai";
-import { access, stat, writeFile } from "node:fs/promises";
+import { access, readdir, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { loadNodePackageSelection } from "@hypit/package-loader-node";
@@ -41,6 +41,7 @@ export type CompareReconstructionInput = {
 };
 
 export type ReferenceVideoTools = {
+  list_svml_packages(): Promise<Record<string, unknown>>;
   prepare_reference(input: PrepareReferenceInput): Promise<PrepareResult>;
   observe_reference(input: ObserveReferenceInput): Promise<Record<string, unknown>>;
   inspect_svml_vocabulary(input: InspectVocabularyInput): Promise<Record<string, unknown>>;
@@ -261,6 +262,38 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
   };
 
   return {
+    // Which packages exist is the first question of every reconstruction, and until now the only
+    // answer was to read a guide and a directory listing by hand. The Build CLI deliberately never
+    // scans a directory; this is a development tool, so it may.
+    async list_svml_packages(): Promise<Record<string, unknown>> {
+      const scope = join(packageRoot, "node_modules", "@hypit");
+      const names = await readdir(scope).catch(() => [] as string[]);
+      assert(names.length > 0, `no installed @hypit packages under ${scope}`);
+      const packages: Record<string, unknown>[] = [];
+      for (const name of [...names].sort()) {
+        const specifier = `@hypit/${name}`;
+        const manifest = await readJson<{ readonly hypit?: { readonly activation?: string }; readonly description?: string }>(
+          join(scope, name, "package.json"));
+        if (manifest?.hypit?.activation === undefined) continue;
+        const tags: string[] = [];
+        let note: string | undefined;
+        try {
+          for (const pack of await loadNodePackageSelection([specifier], packageRoot)) {
+            for (const facet of pack.contribution.hostFacets ?? []) {
+              tags.push((facet.implementation as RegisteredSurface).tag);
+            }
+          }
+        } catch (error) { note = error instanceof Error ? error.message : String(error); }
+        packages.push({
+          package_name: specifier,
+          ...(manifest.description === undefined ? {} : { description: manifest.description }),
+          tags: [...new Set(tags)].sort(),
+          ...(note === undefined ? {} : { unreadable: note }),
+        });
+      }
+      return { package_root: packageRoot, packages };
+    },
+
     async prepare_reference(input): Promise<PrepareResult> {
       assert(input.redo === undefined || input.redo === "media" || input.redo === "people" || input.redo === "voices" || input.redo === "systems" || input.redo === "all", "redo must be one of: media, people, voices, systems, all");
       const videoPath = resolve(input.video_path);
