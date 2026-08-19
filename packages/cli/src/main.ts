@@ -20,6 +20,7 @@ import {
   selectArchivedRecord,
   summarizeBuildCatalog,
 } from "./archive.js";
+import { unreachedGenerations } from "./reachability.js";
 import { checkRunFile, collectRunFrontends, loadRunFile } from "./run-file.js";
 import type { CliDistribution } from "./distribution.js";
 import type {
@@ -1911,17 +1912,19 @@ export async function runCli(
     const preflight = args.runtime === undefined
       ? undefined
       : await preflightPlan(await runtimeHost(args.runtime), result.state);
+    const outputNames = Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
+      item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : []));
     writeCliOutput(io, args, {
       kind: "plan",
       machine: {
         format: "hypit.cli-plan@1",
         ok: true,
         plan: result.definition.plan,
+        unreached: unreachedGenerations(result.compilation.author.graph, result.state, outputNames),
         ...(preflight === undefined ? {} : { preflight }),
       },
       run: loaded.path,
-      outputNames: Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
-        item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : [])),
+      outputNames,
       satisfactionNames: loaded.run.satisfactionNames,
     });
   } finally {
