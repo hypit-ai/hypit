@@ -108,15 +108,18 @@ reported letters being *deleted* from the screen where the text was only typing 
 
 The frames are already on disk at
 `.hypit/reference-video-tools/<reference-id>/shots/NNN-representative.jpg`, and the shot clips beside
-them. Opening one costs nothing and settles the question outright, so when evidence disagrees —
-one shot against the next, a shot against a whole-reference pass, or an observation against what the
-video plainly is — look at the frame and decide from it. Do not re-observe: that is paid, and at
-temperature `1.0` it returns a paraphrase rather than a correction.
+them. When evidence disagrees — one shot against the next, a shot against a whole-reference pass, or
+an observation against what the video plainly is — settle it by asking Gemini to look, through a
+narrow `observe_reference --question` over that shot, not by opening the frame yourself. You do not
+view the reference; `reconstruction-loop.md` says this is a rule, not a preference. Do not re-observe
+the full shot: that is paid, and at temperature `1.0` it returns a paraphrase rather than a
+correction.
 
 Be most suspicious of anything an observation asserts about change over time — something appearing,
 vanishing, being removed, being drawn in a single frame. A describer working from one pass infers
-those rather than seeing them, and infers them wrongly. Extract a few frames across the stretch with
-`ffmpeg` and look at the sequence yourself before building anything on such a claim.
+those rather than seeing them, and infers them wrongly. A `compare_reconstruction` against a rendered
+probe, or a narrow question over the stretch, is how such a claim is checked — not by extracting
+frames and reading the sequence yourself.
 
 ## Narrow questions
 
@@ -137,6 +140,11 @@ Ask about visible attributes. Never ask which component to use.
 and returns a description of their visible differences. It is never told which image is which, what
 was built, or how; `--question` may narrow it to one region of the picture and nothing else. Results
 are not cached. `reconstruction-loop.md` governs when and how to use it.
+
+This is the only way the reference is ever seen. Do not open the reference frame yourself and look
+at it, even if the model running this route can read images — the reference has one observer, the
+same Gemini that wrote the observations, and it reports through this command. `reconstruction-loop.md`
+states this as a rule, not a preference.
 
 ## Boundaries
 
