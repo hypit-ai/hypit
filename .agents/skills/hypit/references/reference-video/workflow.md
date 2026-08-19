@@ -15,11 +15,13 @@ Defaults are sufficient for normal use. Each also accepts `--input <json>`. Foll
 ```text
 list_svml_packages
 → prepare_reference
-→ observe_reference for all shots
+→ observe_reference for all shots, in the background — read the route's required
+  files while it runs, since its prompts do not depend on anything you read
 → narrow observe_reference questions for unresolved appearance and conflicts
 → inspect_svml_vocabulary for candidate packages
 → develop a project-local package only for a proven vocabulary gap
 → read final-sources.md, then author complete main.svml, studio.svs, build.svrun
+  and the hypit.runtime.json that binds every capability they demand
 → use existing checks and repair until legal
 → read reconstruction-loop.md, then render each authored element and compare it
 ```
@@ -33,13 +35,26 @@ is missing.
 
 ## prepare_reference
 
-`prepare_reference` deterministically prepares clips, representative frames, tail frames, audio tails
-and storyboard context, then obtains four whole-reference observations. `people_and_product` and `voices` cover who recurs.
+`prepare_reference` deterministically prepares clips, representative frames, tail frames, audio tails,
+storyboard context and a word-level transcript, then obtains four whole-reference observations. `people_and_product` and `voices` cover who recurs.
 `persistent_systems` covers the on-screen text and graphic systems that continue or recur across the
 whole video, each one's lifetime, and whether its appearance ever changes. `places` covers how many
 locations the video was shot in, which camera positions appear in each, which parts of the video use
 each one, and each position described in enough detail to draw from the words alone — which is what
 reconstructing a location depends on, since reference frames are never fed to generation.
+
+`transcript` is the verbatim speech of the whole reference with a start and an end for every single
+word, measured locally by WhisperX. It is not an observation: no model wrote it, nothing about it is
+sent to Gemini, and it does not go in the observation cache. Read it whenever a decision depends on
+when a word is said — placing each on-screen text reveal against the line that triggers it, timing a
+caption, or checking that a voice observation matches what was actually spoken. Do not run WhisperX
+by hand and do not ask a model to transcribe: the transcript is already there.
+
+`transcript` reports `status`, `transcript_ref` and `word_count`. Read the words from
+`transcript_ref`, a JSON file of passages, each with its own `words` array of
+`{ text, start_seconds, end_seconds, score }`. A machine with no WhisperX service running reports
+`status: "unavailable"` with a `reason` and prepares everything else; start the service with
+`uv run --project services/whisperx --frozen hypit-whisperx-service` and prepare again.
 
 When a completed preparation stage must be rerun, use one small `--redo` value:
 
@@ -47,7 +62,8 @@ When a completed preparation stage must be rerun, use one small `--redo` value:
 hypit-reference-video-tools prepare_reference --video-path <path> --redo people
 ```
 
-`--redo media` rebuilds shot media and clears every derived observation. `--redo people`,
+`--redo media` rebuilds shot media and clears every derived observation. `--redo transcript`
+re-extracts the speech audio and measures the words again. `--redo people`,
 `--redo voices`, `--redo systems` and `--redo places` rerun one whole-reference stage. `--redo all` reruns everything.
 
 ## observe_reference
@@ -80,6 +96,25 @@ run a completed observation again, and it exists for rebuilt media, not for doub
 `unresolved` lists the keys of observations that failed outright. It is not a judgement about
 evidence quality: a complete observation that says "unclear" is still complete, and that is what a
 narrow question is for.
+
+## A complete observation can still be wrong
+
+An observation is prose written once, at a fixed temperature, by a model that saw the shot and
+nothing else. It comes back complete and confident whether or not it is right. On a twenty-shot
+reference, four shots came back wrong: two described a picture belonging to a different shot, and two
+reported letters being *deleted* from the screen where the text was only typing in.
+
+The frames are already on disk at
+`.hypit/reference-video-tools/<reference-id>/shots/NNN-representative.jpg`, and the shot clips beside
+them. Opening one costs nothing and settles the question outright, so when evidence disagrees —
+one shot against the next, a shot against a whole-reference pass, or an observation against what the
+video plainly is — look at the frame and decide from it. Do not re-observe: that is paid, and at
+temperature `1.0` it returns a paraphrase rather than a correction.
+
+Be most suspicious of anything an observation asserts about change over time — something appearing,
+vanishing, being removed, being drawn in a single frame. A describer working from one pass infers
+those rather than seeing them, and infers them wrongly. Extract a few frames across the stretch with
+`ffmpeg` and look at the sequence yourself before building anything on such a claim.
 
 ## Narrow questions
 

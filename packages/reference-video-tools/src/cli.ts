@@ -7,7 +7,7 @@ function usage(): string {
   return [
     "Usage:",
     "  hypit-reference-video-tools list_svml_packages",
-    "  hypit-reference-video-tools prepare_reference --video-path <path> [--redo media|people|voices|systems|places|all]",
+    "  hypit-reference-video-tools prepare_reference --video-path <path> [--redo media|transcript|people|voices|systems|places|all]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> [--shot-id <id> ...] [--reobserve]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> --shot-id <id> [--shot-id <id> ...] --question <text>",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
@@ -87,7 +87,7 @@ async function main(): Promise<void> {
       video_path: required(flags, "video-path"),
       ...(one(flags, "redo") === undefined ? {} : { redo: one(flags, "redo") }),
     };
-    result = await tools.prepare_reference(input as { video_path: string; redo?: "media" | "people" | "voices" | "systems" | "places" | "all" });
+    result = await tools.prepare_reference(input as { video_path: string; redo?: "media" | "transcript" | "people" | "voices" | "systems" | "places" | "all" });
   } else if (command === "observe_reference") {
     const input = supplied ?? {
       reference_id: required(flags, "reference-id"),
