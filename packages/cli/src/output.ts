@@ -83,6 +83,8 @@ export type PlanOutput = {
   readonly format: "hypit.cli-plan@1";
   readonly ok: boolean;
   readonly plan: BuildPlan;
+  /** Generations the Source declares that these Targets do not reach and no Record supplies. */
+  readonly unreached?: readonly { readonly name: string; readonly producer: string }[];
   readonly preflight?: PlanPreflight;
 };
 
@@ -323,6 +325,15 @@ function renderPlan(
       lines.push(`  ${colors.warning(String(count).padStart(countWidth))}  ${producer}`);
     }
     lines.push(`  ${colors.dim("These Needs may reach the Endpoints selected by the Runtime Profile during build.")}`);
+  }
+  const unreached = view.machine.unreached ?? [];
+  if (unreached.length > 0) {
+    lines.push("", colors.strong("Declared but not reached"));
+    const width = Math.max(...unreached.map((item) => item.name.length));
+    for (const item of unreached) {
+      lines.push(`  ${colors.accent(item.name.padEnd(width))}  ${colors.dim(item.producer)}`);
+    }
+    lines.push(`  ${colors.dim("This Run will not perform these. Either nothing needs them, a Target is missing, or an accepted Record was never pinned.")}`);
   }
   if (view.machine.preflight !== undefined
     && (view.machine.preflight.capabilities.length > 0 || view.machine.preflight.diagnostics.length > 0)) {
