@@ -1,0 +1,27 @@
+{
+  "name": "@hypit/reference-video-tools",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "hypit-reference-video-tools": "./src/server.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@google/genai": "1.52.0",
+    "@hypit/artifact-store-fs": "workspace:*",
+    "@hypit/markup": "workspace:*",
+    "@hypit/package-loader-node": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "tsx": "4.21.0"
+  }
+}
