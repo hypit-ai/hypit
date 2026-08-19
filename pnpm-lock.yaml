@@ -77,9 +77,6 @@ importers:
       '@hypit/image-transform':
         specifier: workspace:*
         version: link:packages/image-transform
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:packages/markup
       '@hypit/media':
         specifier: workspace:*
         version: link:packages/media
@@ -1197,6 +1194,9 @@ importers:
       '@fontsource/zcool-xiaowei':
         specifier: 5.3.0
         version: 5.3.0
+      '@infolektuell/noto-color-emoji':
+        specifier: 0.2.0
+        version: 0.2.0
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
@@ -1206,9 +1206,6 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@infolektuell/noto-color-emoji':
-        specifier: 0.2.0
-        version: 0.2.0
 
   packages/gemini-omni:
     dependencies:
