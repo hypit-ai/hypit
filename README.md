@@ -41,19 +41,11 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
 
 **To be clear:** cloning a video is the fastest way in, not the only one. You can start from our templates, or just describe the video you want and your agent writes the workflow from scratch. Generation models are optional too: a workflow can compile captions, motion graphics and code-rendered visuals into a finished video without calling a single model, so a video can cost exactly $0.
 
-## Install
-
-Requires Node.js 22+ and pnpm 10.33.x.
+## Clone the repo
 
 ```bash
-git clone https://github.com/hypit-ai/hypit.git
-cd hypit
-corepack enable
-pnpm install --frozen-lockfile
-npm link
+git clone https://github.com/hypit-ai/hypit.git && cd hypit
 ```
-
-For finished video builds, install `ffmpeg` and `ffprobe`. Some optional providers may also require Python, `uv`, or API credentials.
 
 ## Use the Hypit skill
 
