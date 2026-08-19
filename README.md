@@ -59,19 +59,19 @@ For finished video builds, install `ffmpeg` and `ffprobe`. Some optional provide
 
 ## Use the Hypit skill
 
-The `/hypit` skill is available to coding agents from the cloned repository. Ask your agent to set up the environment and create the workflow for you:
+The `/hypit` skill is available to coding agents from the cloned repository. Ask your agent to set up the environment and create the Hypit sources for you:
 
 ```text
-/hypit Clone this viral video into a reusable workflow, show me a preview, and guide me through producing variants.
+/hypit Reconstruct this viral video as Hypit Author Source and Run Source, show me a preview, and guide me through building variants.
 ```
 
 Or start without a reference video:
 
 ```text
-/hypit Create a video workflow from my description, using templates and $0 code-rendered visuals wherever possible.
+/hypit Create .svml Author Source and .svrun Run Source for this video, using templates and $0 code-rendered visuals wherever possible.
 ```
 
-Your agent can check the environment, request only the credentials the chosen workflow needs, preview the result, and run the build.
+Your agent can check the environment, request only the credentials required by the selected Runtime Profile, preview the Author Source, plan the Run Source, and submit the Build.
 
 ## License
 
