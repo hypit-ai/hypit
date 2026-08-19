@@ -601,3 +601,92 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
   assert.match(rendered.html, /<textPath/u);
   assert.match(rendered.html, /data-hypit-text-path-margin/u);
 });
+
+test("a paragraph's source indentation is not part of its words", async () => {
+  const fixtureModule = { name: "example.text-inputs", version: "1" } as const;
+  const fixtureSurface = {
+    name: "inputs", tag: "Inputs", mode: "structured",
+    outputs: [
+      svsRecipeType, programSpaceTypes.programSpace, spatialTypes.frame,
+      mediaTypes.fontArtifact, textTypes.text,
+    ],
+  } as const;
+  const fixtureManifest: ModuleManifest = {
+    format: "hypit.module@1", name: fixtureModule.name, version: fixtureModule.version,
+    dependencies: [programSpaceDependency, spatialDependency, mediaDependency,
+      { module: { name: svsManifest.name, version: svsManifest.version } }, textDependency],
+    types: [], capabilities: [], producers: [],
+  };
+  const closure = createResolvedClosure([
+    ...videoContractManifests, svsManifest, textManifest, typographyTrackManifest, fixtureManifest,
+  ]);
+  const surfaces = new MarkupSurfaceRegistry();
+  surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
+    records: [
+      { id: "editorial", type: svsRecipeType, value: { kind: "inline", value: {
+          path: "text.editorial", properties: { "stack-order": 70, size: 44, "line-height": 1.15,
+            "inline-size": "fixed", "block-size": "fixed", wrap: "word", overflow: "shrink", "minimum-scale": 0.65 } } },
+        range: element.range },
+      { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
+      { id: "body-frame", type: spatialTypes.frame, value: { kind: "inline", value: { xPx: 80, yPx: 220, widthPx: 920, heightPx: 520 } }, range: element.range },
+      { id: "exact-font", type: mediaTypes.fontArtifact, value: { kind: "inline", value: exactTestFont }, range: element.range },
+    ],
+    components: [], fragments: [],
+  }) });
+  surfaces.registerStructured({ module: typographyTrackModuleRef, declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "style")!, handler: decodeTypographyStyleSurface });
+  surfaces.registerStructured({ module: typographyTrackModuleRef, declaration: typographyTrackMarkupSurfaces.find((item) => item.name === "track")!, handler: decodeTypographyTrackSurface });
+  const frontends = new AuthorFrontendRegistry();
+  frontends.register(createMarkupAuthorFrontend({
+    registry: surfaces,
+    resolveModule: (request) => request.from === "example.text-inputs@1" ? fixtureModule : typographyTrackModuleRef,
+  }));
+  const validators = new TypeValidatorRegistry();
+  registerTypeValidatorFacets(validators, spatialComponent.validators ?? []);
+  registerTypeValidatorFacets(validators, textComponent.validators ?? []);
+  const compiled = await compileSourceClosure({
+    entry: {
+      id: "/project/text.svml", name: "text.svml",
+      text: `<?svml using="@hypit/markup@1"?>
+        <svml>
+          <import as="fixture" from="example.text-inputs@1"/>
+          <import as="text" from="@hypit/typography-track@1"/>
+          <fixture:Inputs/>
+          <text:Style id="poster" recipe={editorial} font={exact-font}>
+            <text:Fill color="#f8fafc"/>
+          </text:Style>
+          <text:Track id="titles" space={space}>
+            <text:Area id="body" placement={body-frame} style={poster} during="program">
+              <text:P id="first">
+                Top 5 Most Popular
+                Ways to <text:Span style={poster}>learn AI</text:Span>
+              </text:P>
+            </text:Area>
+          </text:Track>
+        </svml>`,
+    },
+    closure, frontends,
+    admitRecord: createRecordAdmitter(validators),
+    resolveSource() { throw new Error("Text fixture has no source imports."); },
+  });
+  const track = resolveCompiledSourceExport(compiled, "titles.track", compositionTypes.visualTrack);
+  assert.equal(track.ref.kind, "logical-output");
+  // The paragraph's words are the copy, not the indentation the file put around it.
+  const runs: unknown[] = [];
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) { for (const item of value) visit(item); return; }
+    if (value !== null && typeof value === "object") {
+      const record = value as Record<string, unknown>;
+      if (typeof record.text === "string") runs.push(record.text);
+      for (const key of Object.keys(record)) visit(record[key]);
+    }
+  };
+  visit(compiled.program);
+  assert.ok(runs.length >= 2, "the compiled program holds the track's text runs");
+  const clean = runs.join("|");
+  // The paragraph's runs read as the copy written across two lines, not the file's layout.
+  assert.match(clean, /Top 5 Most Popular\nWays to /u,
+    "the two source lines remain one paragraph with a line break");
+  assert.match(clean, /learn AI/u, "the Span run keeps its words");
+  assert.doesNotMatch(clean, /\n +/u, "no line begins with indentation");
+  assert.doesNotMatch(clean, /\\n +Top 5/u, "leading indentation must not be part of the words");
+});
