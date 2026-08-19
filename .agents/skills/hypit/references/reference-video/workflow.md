@@ -34,9 +34,12 @@ is missing.
 ## prepare_reference
 
 `prepare_reference` deterministically prepares clips, representative frames, tail frames, audio tails
-and storyboard context, then obtains three whole-reference observations: `people_and_product`,
-`voices`, and `persistent_systems` — the on-screen text and graphic systems that continue or recur
-across the whole video, each one's lifetime, and whether its appearance ever changes.
+and storyboard context, then obtains four whole-reference observations. `people_and_product` and `voices` cover who recurs.
+`persistent_systems` covers the on-screen text and graphic systems that continue or recur across the
+whole video, each one's lifetime, and whether its appearance ever changes. `places` covers how many
+locations the video was shot in, which camera positions appear in each, which parts of the video use
+each one, and each position described in enough detail to draw from the words alone — which is what
+reconstructing a location depends on, since reference frames are never fed to generation.
 
 When a completed preparation stage must be rerun, use one small `--redo` value:
 
@@ -45,7 +48,7 @@ hypit-reference-video-tools prepare_reference --video-path <path> --redo people
 ```
 
 `--redo media` rebuilds shot media and clears every derived observation. `--redo people`,
-`--redo voices` and `--redo systems` rerun one whole-reference stage. `--redo all` reruns everything.
+`--redo voices`, `--redo systems` and `--redo places` rerun one whole-reference stage. `--redo all` reruns everything.
 
 ## observe_reference
 
@@ -58,6 +61,9 @@ selected shots. Each shot produces three observations:
 - `text_appearance` — the typeface character, weight, size, spacing, alignment, colour, stroke,
   shadow, glow, per-word emphasis, position and entry of text drawn over the picture;
 - `audio` — who is speaking, and what continues from the previous shot.
+
+The picture observation also says whether the picture moves and how, separating camera movement from
+movement inside the frame. A held still and a moving shot are reconstructed differently.
 
 Each cut produces one `continuity` observation answering both questions under their own headings —
 whether the two shots are one continuous camera shot, and whether an overlay continues across the

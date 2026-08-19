@@ -26,6 +26,7 @@ export type ReferenceState = {
   readonly people_and_product?: Observation;
   readonly voices?: Observation;
   readonly persistent_systems?: Observation;
+  readonly places?: Observation;
 };
 
 export type PrepareResult = {
@@ -37,4 +38,5 @@ export type PrepareResult = {
   readonly people_and_product: Observation;
   readonly voices: Observation;
   readonly persistent_systems: Observation;
+  readonly places: Observation;
 };
