@@ -2,7 +2,7 @@ import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space"
 import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@hypit/composition";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
-import { svsManifest, svsModuleRef } from "@hypit/svs";
+import { svsManifest, svsModuleRef, svsRecipeType } from "@hypit/svs";
 
 export const filmModuleRef = { name: "@hypit/film", version: "1" } as const;
 export const filmTypes = {
@@ -43,6 +43,54 @@ export const filmMarkupSurfaces = [{
     tag: "Film",
     mode: "structured",
     outputs: [filmTypes.program],
+    vocabulary: {
+      summary:
+        "Assembles any number of peer VisualTrack and AudioTrack references into one Composition against a Canvas and a ProgramSpace.",
+      appearance:
+        "One flat fill of the entire Canvas, in the single hexadecimal color the Recipe's `background` carries, lying behind everything else in the Frame. It covers the full Canvas width and height, holds that one color from the first Frame to the last, and never moves, fades or changes. Wherever nothing is painted over it, that color is what the Frame shows; the Film puts no mark of its own on top of it.",
+      attributes: [
+        { name: "id", kind: "identifier", required: true,
+          summary: "Names the Film component and the Composition binding it publishes." },
+        { name: "canvas", kind: "reference", required: true,
+          accepts: [spatialTypes.canvas],
+          summary: "Selects the CanvasSpace that decides the Composition's dimensions." },
+        { name: "space", kind: "reference", required: true,
+          accepts: [programSpaceTypes.programSpace],
+          summary: "Selects the ProgramSpace that decides the Composition's duration and frame rate." },
+        { name: "appearance", kind: "reference", required: true,
+          accepts: [svsRecipeType],
+          summary: "Selects the SVS Recipe that decides the clear color behind every Track.",
+          recipe: [
+            { name: "background", required: true,
+              summary: "Decides the color the Film clears to behind every Track, written as `#rrggbb` or `#rrggbbaa`." },
+          ] },
+      ],
+      children: [
+        { tag: "Track", cardinality: "many",
+          summary: "Adds one VisualTrack or AudioTrack to the assembly.",
+          attributes: [
+            { name: "source", kind: "reference", required: true,
+              accepts: [compositionTypes.visualTrack, compositionTypes.audioTrack],
+              summary: "Selects the Track this entry contributes to the Composition." },
+          ] },
+      ],
+      ports: [
+        { name: "composition", type: compositionTypes.composition,
+          summary: "The assembled Composition, addressed as `<id>.composition`." },
+      ],
+      example: [
+        '<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>',
+        "  <film:Track source={speech.visual}/>",
+        "  <film:Track source={speech.audioTrack}/>",
+        "  <film:Track source={captions.track}/>",
+        "</film:Film>",
+      ].join("\n"),
+      notes: [
+        "At least one `Track` is required.",
+        "The Recipe carries exactly one property, `background`, written as a hexadecimal color; any other property is rejected, and Canvas geometry and frame rate stay on their own edges.",
+        "Child order is organizational: Track identity, timing and absolute stacking stay in their own typed values.",
+      ],
+    },
   }] as const;
 
 

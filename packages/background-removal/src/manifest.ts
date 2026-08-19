@@ -11,6 +11,24 @@ export const backgroundRemovalProducers = {
 
 export const backgroundRemovalMarkupSurfaces = [{
     name: "background", tag: "Background", mode: "structured", outputs: [artifactTypes.blob],
+    vocabulary: {
+      summary: "Removes the background from one image Artifact and publishes the cut-out image.",
+      attributes: [
+        { name: "id", kind: "identifier", required: true,
+          summary: "Names this removal so its image can be referenced elsewhere in the Source." },
+        { name: "source", kind: "reference", required: true, accepts: [artifactTypes.blob],
+          summary: "Chooses the image whose background is removed." },
+      ],
+      ports: [
+        { name: "image", type: artifactTypes.blob,
+          summary: "The source image with its background removed." },
+      ],
+      example: `<remove:Background id="cutout" source={portrait.image}/>`,
+      notes: [
+        "The element is empty; it accepts no children and no text.",
+        "The package chooses no model, threshold or storage — the selected Endpoint fulfills the capability.",
+      ],
+    },
   }] as const;
 
 
