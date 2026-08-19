@@ -1,0 +1,43 @@
+{
+  "format": "hypit.runtime-profile@1",
+  "runtime": {
+    "use": "@hypit/runtime-local",
+    "config": {
+      "dataRoot": ".hypit/runtimes/local",
+      "artifacts": { "use": "@hypit/artifact-store-fs", "config": { "path": "artifacts" } },
+      "credentials": {
+        "environment": { "use": "@hypit/credential-store-env" }
+      },
+      "endpoints": {
+        "kie.reference-reconstruction": {
+          "use": "@hypit/provider-kie",
+          "config": {
+            "apiKey": { "store": "env", "key": "KIE_API_KEY" },
+            "defaultConcurrency": 2
+          }
+        },
+        "media.reference-reconstruction": {
+          "use": "@hypit/provider-media-local",
+          "config": { "defaultConcurrency": 2 }
+        },
+        "whisperx.reference-reconstruction": {
+          "use": "@hypit/provider-whisperx-local",
+          "config": { "defaultConcurrency": 1 }
+        },
+        "vertex.reference-reconstruction": {
+          "use": "@hypit/provider-google-vertex",
+          "config": {
+            "projectEnv": "GOOGLE_CLOUD_PROJECT",
+            "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
+            "location": "global",
+            "defaultConcurrency": 1
+          }
+        },
+        "hyperframes.reference-reconstruction": {
+          "use": "@hypit/provider-hyperframes-local",
+          "config": { "workers": 2, "quality": "standard", "defaultConcurrency": 1 }
+        }
+      }
+    }
+  }
+}
