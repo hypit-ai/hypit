@@ -3,8 +3,7 @@
 ## Author images in SVML
 
 - Put each prompt in a `copy:Value` from `@hypit/text@1`.
-- Generate with an explicit image Surface such as `gpt:Image`, `nano:Image`, `nano:ProImage`,
-  `seedream:TextImage`, or `seedream:ReferenceImage`. Use the exact package README for its ports.
+- Generate with an explicit image Surface — `gpt:Image` — and read its package README for the ports.
 - Connect every identity, product, scene, or UI reference as a visible Artifact edge. For GPT Image,
   use ordered `gpt:Reference` children and consume `{shot.image}` downstream.
 - Set aspect ratio and resolution on the model Surface. Do not put pixels, resolution, or aspect-ratio
@@ -14,9 +13,19 @@
 
 Use four ordered parts:
 
-1. **Reality contract:** name the capture medium and texture, such as a realistic phone-video frame,
-   natural light, visible background detail, realistic skin/material texture, and unpolished motion-frame
-   character.
+1. **Reality contract:** open every photographic prompt with this sentence, verbatim, with only the
+   bracketed shot replaced. It is concatenated in front of the rest, not paraphrased — a described
+   reality contract drifts between prompts and a copied one does not.
+
+   > A photograph with the texture of real iPhone footage. Generate a vertical [SHOT — for example a
+   > seated medium close-up], as one frame cut out of video actually shot on an iPhone: genuinely
+   > real rather than glossy, carrying the texture of video and not of a posed photograph. The
+   > background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real,
+   > the light is natural, and no part of the picture is broken.
+
+   This is for pictures of the photographed world — people, places, products, held objects. A drawn
+   asset such as a paper texture, a board or a panel is not a photograph, and this sentence would
+   damage it; write those prompts plainly.
 2. **Visible story:** state the exact person/product, wardrobe, location, action, emotion, objects,
    object count, and initial physical state that must be visible.
 3. **Camera geometry:** state shot size, camera owner/placement, height, direction, lens relationship,

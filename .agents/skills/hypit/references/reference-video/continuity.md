@@ -46,5 +46,11 @@ generated base plus an overlay, and where a missing picture comes from, are deci
 not weakened by any observation, package convenience or check result.
 
 Each shot's `visual` observation states explicitly whether the frame is a depicted scene or a flat
-designed field, and describes each framed element's inner picture separately from its frame. That
-answer is the evidence for this decision.
+designed field, describes each framed element's inner picture separately from its frame, and says
+whether the picture moves. Those answers are the evidence for this decision and for how a stretch too
+short to be a take is reconstructed.
+
+The whole-reference `places` observation says how many locations there are, which camera positions
+appear in each, and which parts of the video use each one — the grouping that
+`../playbooks/craft/generated-dependencies.md` turns into one accepted image per position. Do not
+infer that grouping by comparing per-shot prose.

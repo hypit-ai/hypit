@@ -34,7 +34,11 @@ than relying on an unstated assumption.
 
 - Use model values `standard`, `fast`, or `mini`. `fast` and `mini` support only 480p/720p;
   `standard` also supports 1080p/4k.
-- Keep duration at an integer from 4 through 15 seconds. Invalid values fail closed.
+- Keep duration an integer inside the selected model's declared range, and read that range from the
+  model rather than from memory: they differ, and one accepts far longer takes than the others.
+  Invalid values fail closed.
+- Never generate from a prompt alone, and never author a take shorter than the floor.
+  `generated-dependencies.md` says what to do with a stretch too short to be a take.
 - Respect the ReferenceVideo caps: at most 9 images, 3 videos, 3 audio clips, and 12 total files.
   Reference audio requires at least one visual reference.
 - Use `estimate:Speech` for speech-driven duration planning; it estimates pronunciation length but
