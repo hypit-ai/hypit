@@ -36,6 +36,12 @@ compositable surface:
 Changing or scrolling content must remain explicit. Author distinct timed Text/Media Items or a
 Sequence for each state; do not bake several states into one generated image.
 
+When the overlay is a *picture within the picture* — the base must stay dominant and a smaller
+framed image, a cutout, or a video sits on top of it — read `pip-overlay.md`. It is a specific
+craft: the source forms (a rectangular `media-track:Item`, a `remove:Background` cutout, a
+`compose:Image` freeze) are a chain rather than alternatives, and placement, appearance and cutout
+edges are inspected. A PIP is not an ordinary overlay and is not covered by this file alone.
+
 ## Bind overlays to story time
 
 - Use `during={story.selection.NAME}` for a semantic range and pass `{timing.map}` to the Track.
