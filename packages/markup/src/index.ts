@@ -7,6 +7,7 @@ export {
   markupSurfaceHostFacetAbi,
 } from "./host-facet.js";
 export type { MarkupSurfaceHostFacetOptions } from "./host-facet.js";
+export { describeSurfaceVocabulary } from "./vocabulary.js";
 export {
   closeDocument,
   discoverMarkup,

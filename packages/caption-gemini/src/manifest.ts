@@ -20,6 +20,53 @@ export const captionGeminiMarkupSurfaces = [{
     tag: "Planner",
     mode: "structured",
     outputs: [captionGeminiTypes.program, captionTypes.plan],
+    vocabulary: {
+      summary: "Asks a Gemini model to cut a Caption display sequence into Cues and assign declared fields, producing a CaptionPlan.",
+      attributes: [
+        {
+          name: "id",
+          kind: "identifier",
+          required: true,
+          summary: "Names this planner and prefixes the bindings it publishes.",
+        },
+        {
+          name: "display",
+          kind: "reference",
+          required: true,
+          summary: "The display sequence whose Atoms Gemini reads and must cover completely.",
+          accepts: [narrativeTypes.captionDisplay],
+        },
+        {
+          name: "program",
+          kind: "reference",
+          required: true,
+          summary: "The Caption Program whose resolved Style runs bound each planning request.",
+          accepts: [captionTypes.program],
+        },
+        {
+          name: "model",
+          kind: "literal",
+          required: true,
+          summary: "Which Gemini model the Runtime capability answers with.",
+          values: ["gemini-2.5-flash", "gemini-3.1-pro-preview"],
+        },
+      ],
+      ports: [{
+        name: "plan",
+        type: captionTypes.plan,
+        summary: "The validated CaptionPlan, with stable Atom and Word ids restored.",
+      }],
+      example: `<caption-ai:Planner
+  id="caption-plan"
+  display={story.caption}
+  program={caption-program}
+  model="gemini-2.5-flash"
+/>`,
+      notes: [
+        "The element accepts no children.",
+        "Model choice is author-visible; the Runtime separately binds the planning capability to an Endpoint.",
+      ],
+    },
   }] as const;
 
 
