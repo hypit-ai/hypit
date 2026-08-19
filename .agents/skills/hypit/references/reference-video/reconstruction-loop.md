@@ -72,16 +72,31 @@ return a difference every round for ever. So the loop ends on whichever of these
 - **No progress ends it immediately.** If a comparison returns the same difference it returned before
   the repair, stop. The repair is not reaching the problem, and two more rounds of the same reasoning
   will not find it. Rendering and comparing cost real time on every round.
-- **Two aimed attempts per element is the ceiling.** The first fixes what is obvious, the second
-  fixes what the first revealed. A third round is where guessing starts to overshoot — correcting
-  past the reference rather than towards it — and the run has more elements waiting than any one of
-  them is worth. Time beats fidelity here by explicit choice.
+- **There are two loops, each with its own two-attempt ceiling.** The first loop is over the
+  *package*: render what it draws and compare it; a difference that the package cannot express is a
+  package defect, and fixing it means changing the package's structure. The second loop is over the
+  *values*: once the package can express everything the observation states, tune the Recipe, the
+  font, the placement and the motion until it looks like the reference. The two never share attempts.
+
+  **Write-and-remake the package: two attempts.** The first fixes what is obvious, the second fixes
+  what the first revealed. If after two repairs the difference is still one the package cannot
+  express — a typeface mix it has no port for, a motion it cannot draw — the package is wrong, not
+  the values, and continuing to tune values is thrashing. Widen the package instead, which starts a
+  fresh write-and-remake loop for the widened shape.
+
+  **Fill the parameters: two attempts.** A difference the package *can* express — the wrong weight,
+  the wrong size, the wrong colour, the wrong position — is a value, and tuning it is the second
+  loop. Two attempts, then stop.
+
+  Beyond each ceiling, guesses start to overshoot — correcting past the reference rather than
+  towards it. Time beats fidelity here by explicit choice.
 
 ## Measure what can be measured; iterate only on what cannot
 
-Two attempts is not enough to converge by guessing, and it is not meant to be. A difference stated as
-a quantity — a stroke that is too thick, a shape that is too tall, type that is too large, a margin
-that is too wide — is not a guessing problem. Read the value off the reference frame directly:
+Two attempts per loop is not enough to converge by guessing, and it is not meant to be. A difference
+stated as a quantity — a stroke that is too thick, a shape that is too tall, type that is too large,
+a margin that is too wide — is not a guessing problem. Read the value off the reference frame
+directly:
 the frames are ordinary images in `.hypit/reference-video-tools/<reference-id>/shots/`, and measuring
 one against the known frame size gives the number in a single step.
 
