@@ -37,6 +37,22 @@ card:
    `.hypit/reference-video-tools/<reference-id>/shots/NNN-representative.jpg`.
 3. Repair, then render again.
 
+### The reference is seen by Gemini, never by you
+
+The reference frame is looked at exactly one way: through `compare_reconstruction`, which sends it
+and the rendered image to Gemini as an unlabelled pair and returns the differences in words. You do
+not open the reference frame yourself and look at it. Whatever visual ability you have — the model
+running this loop may be able to read images directly — is not to be used on the reference or on the
+rendered reconstruction. There is one observer of the reference, the same VLM that wrote the
+observations, and it reports through `compare_reconstruction`. A second observer is a second opinion
+that is paid for with the very bias it claims to correct: it sees the reconstruction, knows what was
+built, and confirms what it expects.
+
+This is why a font that is wrong is caught: `compare_reconstruction` names it, and the package is
+repaired. It is not caught by looking at the frame yourself and choosing a font that happens to
+resemble it — that route silently depends on the loop model having vision, and stops working the
+moment it does not.
+
 The SVML Playground in `../preview.md` is a browser preview for a person to look at. It is not a
 source of the image this loop needs.
 
@@ -100,10 +116,10 @@ return a difference every round for ever. So the loop ends on whichever of these
 
 Two attempts per loop is not enough to converge by guessing, and it is not meant to be. A difference
 stated as a quantity — a stroke that is too thick, a shape that is too tall, type that is too large,
-a margin that is too wide — is not a guessing problem. Read the value off the reference frame
-directly:
-the frames are ordinary images in `.hypit/reference-video-tools/<reference-id>/shots/`, and measuring
-one against the known frame size gives the number in a single step.
+a margin that is too wide — is not a guessing problem. Ask Gemini for the number: a
+`compare_reconstruction --question "how tall is the oval relative to the frame?"` over the shot that
+shows it most clearly returns a measurement in one step. The reference is seen by Gemini, never by
+you, and this is how a quantity is measured without ever opening the frame yourself.
 
 Do that instead of spending an attempt. An attempt is for differences that have no number — a
 typeface's character, a texture, a rhythm — where the only route is change it and look again.
