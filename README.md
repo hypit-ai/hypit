@@ -17,10 +17,6 @@
   &nbsp;&bull;&nbsp;
   <a href="https://hypit.ai/guide/develop"><strong>Develop</strong></a>
   &nbsp;&bull;&nbsp;
-  <a href="https://narratage.hypit.ai/"><strong>Docs</strong></a>
-  &nbsp;&bull;&nbsp;
-  <a href="https://discord.gg/85hnyQnxpn"><strong>Discord</strong></a>
-  &nbsp;&bull;&nbsp;
   <a href="./README.zh-CN.md"><strong>简体中文</strong></a>
 </p>
 
