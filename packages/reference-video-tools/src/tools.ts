@@ -315,7 +315,12 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         /uncertain|unknown|possibly|may be|contin(?:ue|ues)|same take|same shot/iu.test(boundaryText)
       );
       const windows = (needsThreeShotReview
-        ? selected.flatMap((_, index) => index + 2 < selected.length ? [selected.slice(index, index + 3)] : [])
+        ? selected.flatMap((shot, index) => {
+            const window = selected.slice(index, index + 3);
+            return window.length === 3 && window[1]!.index === shot.index + 1 && window[2]!.index === shot.index + 2
+              ? [window]
+              : [];
+          })
         : []).map((items) => items as unknown as readonly [Shot, Shot, Shot]);
       const threeShotObservations = await pacedMap(windows, concurrency, gapMs, async (items) => {
         const parts: Part[] = [];
