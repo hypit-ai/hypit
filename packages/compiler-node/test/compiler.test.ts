@@ -16,40 +16,40 @@ import {
   NodeCompiler,
   NodeCompilerError,
   NodeRunCompiler,
-} from "@narratage/compiler-node";
+} from "@hypit/compiler-node";
 import {
   AuthorFrontendRegistry,
   sealGraphFragment,
-} from "@narratage/elaborator";
+} from "@hypit/elaborator";
 import type {
   AuthorSourceAssetRequest,
   AuthorSourceImport,
   AuthorSourceUnit,
-} from "@narratage/elaborator";
+} from "@hypit/elaborator";
 import type {
   BlobRef,
   ModuleManifest,
   ModuleRef,
   ProducerRef,
   TypeRef,
-} from "@narratage/protocol";
-import { SourceHeaderError } from "@narratage/source";
+} from "@hypit/protocol";
+import { SourceHeaderError } from "@hypit/source";
 import {
   RunFragmentRegistry,
   RunFrontendRegistry,
-} from "@narratage/run";
-import { runMarkupFrontend } from "@narratage/run-markup";
-import type { ArtifactAttachment, Workspace } from "@narratage/workspace";
-import { WorkspaceError } from "@narratage/workspace";
+} from "@hypit/run";
+import { runMarkupFrontend } from "@hypit/run-markup";
+import type { ArtifactAttachment, Workspace } from "@hypit/workspace";
+import { WorkspaceError } from "@hypit/workspace";
 import {
   createMarkupAuthorFrontend,
   MarkupSurfaceRegistry,
-} from "@narratage/markup";
-import { NodeFilesystemWorkspace } from "@narratage/workspace-fs-node";
+} from "@hypit/markup";
+import { NodeFilesystemWorkspace } from "@hypit/workspace-fs-node";
 
 function emptyManifest(name: string, version = "1"): ModuleManifest {
   return {
-    format: "narratage.module@1",
+    format: "hypit.module@1",
     name,
     version,
     dependencies: [],
@@ -98,7 +98,7 @@ const resultSurface = {
   name: "result", tag: "Result", mode: "structured", outputs: [],
 } as const;
 const laboratoryManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [],
@@ -322,9 +322,9 @@ async function readAttachment(attachment: ArtifactAttachment | undefined): Promi
 }
 
 test("Node Compiler discovers real imports and emits a named public Author Graph export", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-compiler-node-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-compiler-node-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<?svml using="@narratage/markup@1"?>
+  await writeFile(file, `<?svml using="@hypit/markup@1"?>
   <svml>
     <import as="lab" from="example.compiler-lab@1"/>
     <lab:Result id="hello"/>
@@ -339,8 +339,8 @@ test("Node Compiler discovers real imports and emits a named public Author Graph
 });
 
 test("the mandatory Source Header selects the Frontend independently of the filename suffix", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-self-described-source-"));
-  const text = `<?svml using="@narratage/markup@1"?>
+  const root = await mkdtemp(join(tmpdir(), "hypit-self-described-source-"));
+  const text = `<?svml using="@hypit/markup@1"?>
   <svml>
     <import as="lab" from="example.compiler-lab@1"/>
     <lab:Result id="hello"/>
@@ -363,17 +363,17 @@ test("the mandatory Source Header selects the Frontend independently of the file
 });
 
 test("Run-only Fragment modules extend the execution closure without polluting the Author Graph", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-dual-graph-closure-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-dual-graph-closure-"));
   const unused = emptyManifest("example.unused-video-feature");
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "build.svrun");
-  await writeFile(authorFile, `<?svml using="@narratage/markup@1"?>
+  await writeFile(authorFile, `<?svml using="@hypit/markup@1"?>
   <svml>
     <import as="lab" from="example.compiler-lab@1"/>
     <import as="unused" from="example.unused-video-feature@1"/>
     <lab:Result id="hello"/>
   </svml>`, "utf8");
-  await writeFile(runFile, `<?svml using="@narratage/run-markup@1"?>
+  await writeFile(runFile, `<?svml using="@hypit/run-markup@1"?>
   <svrun version="1">
     <author source="./main.svml"/>
     <import from="@example/preview" as="preview"/>
@@ -411,15 +411,15 @@ test("Run-only Fragment modules extend the execution closure without polluting t
 });
 
 test("static Run checking accepts a future BuildRecord without opening a BuildArchive", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-future-build-record-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-future-build-record-"));
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "reuse.svrun");
-  await writeFile(authorFile, `<?svml using="@narratage/markup@1"?>
+  await writeFile(authorFile, `<?svml using="@hypit/markup@1"?>
   <svml>
     <import as="lab" from="example.compiler-lab@1"/>
     <lab:Result id="hello"/>
   </svml>`, "utf8");
-  await writeFile(runFile, `<?svml using="@narratage/run-markup@1"?>
+  await writeFile(runFile, `<?svml using="@hypit/run-markup@1"?>
   <svrun version="1">
     <author source="./main.svml"/>
     <target output="hello.result"/>
@@ -448,10 +448,10 @@ test("static Run checking accepts a future BuildRecord without opening a BuildAr
 });
 
 test("source assets become graph values and a Host transfer bundle without closure metadata", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-source-assets-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-source-assets-"));
   const file = join(root, "main.svml");
   const asset = join(root, "reference.bin");
-  await writeFile(file, `<?svml using="@narratage/markup@1"?>
+  await writeFile(file, `<?svml using="@hypit/markup@1"?>
   <svml>
     <import as="asset" from="example.asset-lab@1"/>
     <asset:Asset id="reference" src="./reference.bin"/>
@@ -469,9 +469,9 @@ test("source assets become graph values and a Host transfer bundle without closu
 });
 
 test("an installed package Surface can contribute embedded bytes without an author file or network", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-embedded-assets-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-embedded-assets-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<?svml using="@narratage/markup@1"?>
+  await writeFile(file, `<?svml using="@hypit/markup@1"?>
   <svml>
     <import as="asset" from="example.asset-lab@1"/>
     <asset:Asset id="embedded" src="package:example.asset-lab/embedded.bin"/>
@@ -487,17 +487,17 @@ test("an installed package Surface can contribute embedded bytes without an auth
 });
 
 test("Run compilation retains embedded Author attachments for later Runtime staging", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-run-author-attachments-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-run-author-attachments-"));
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "build.svrun");
-  await writeFile(authorFile, `<?svml using="@narratage/markup@1"?>
+  await writeFile(authorFile, `<?svml using="@hypit/markup@1"?>
   <svml>
     <import as="asset" from="example.asset-lab@1"/>
     <import as="lab" from="example.compiler-lab@1"/>
     <asset:Asset id="embedded" src="package:example.asset-lab/embedded.bin"/>
     <lab:Result id="hello"/>
   </svml>`, "utf8");
-  await writeFile(runFile, `<?svml using="@narratage/run-markup@1"?>
+  await writeFile(runFile, `<?svml using="@hypit/run-markup@1"?>
   <svrun version="1">
     <author source="./main.svml"/>
     <target output="hello.result"/>
@@ -517,7 +517,7 @@ test("Run compilation retains embedded Author attachments for later Runtime stag
 });
 
 test("filesystem Workspace captures source text and asset identity once", async () => {
-  const parent = await mkdtemp(join(tmpdir(), "narratage-source-host-"));
+  const parent = await mkdtemp(join(tmpdir(), "hypit-source-host-"));
   const root = join(parent, "project");
   await mkdir(root);
   const entryPath = join(root, "main.svml");
@@ -565,7 +565,7 @@ test("filesystem Workspace captures source text and asset identity once", async 
 });
 
 test("an asset root widens bytes without widening Source imports", async () => {
-  const parent = await mkdtemp(join(tmpdir(), "narratage-asset-root-"));
+  const parent = await mkdtemp(join(tmpdir(), "hypit-asset-root-"));
   const project = join(parent, "project");
   const library = join(parent, "library");
   await mkdir(project);
@@ -588,9 +588,9 @@ test("an asset root widens bytes without widening Source imports", async () => {
 });
 
 test("filesystem and in-memory Workspaces load identical asset bytes", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-workspace-equivalence-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-workspace-equivalence-"));
   const file = join(root, "main.svml");
-  const source = `<?svml using="@narratage/markup@1"?>
+  const source = `<?svml using="@hypit/markup@1"?>
   <svml>
     <import as="asset" from="example.asset-lab@1"/>
     <asset:Asset id="reference" src="./reference.bin"/>

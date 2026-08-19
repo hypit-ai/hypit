@@ -1,4 +1,4 @@
-import type { CaptionDisplaySequence } from "@narratage/narrative";
+import type { CaptionDisplaySequence } from "@hypit/narrative";
 
 import type { CaptionFieldDeclaration, CaptionPlan, CaptionProgram } from "./types.js";
 

@@ -3,14 +3,14 @@ import { mkdtemp, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
-import { BuildMachine, defineBuild } from "@narratage/core";
-import { SqliteRuntimeState } from "@narratage/store-sqlite";
+import { BuildMachine, defineBuild } from "@hypit/core";
+import { SqliteRuntimeState } from "@hypit/store-sqlite";
 
 import { createGreetingBuild } from "../../core/test/greeting-fixture.js";
 
 test("read-only SQLite observation of an absent archive creates no file", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-read-only-"));
-  const path = join(directory, ".narratage", "runtime.sqlite");
+  const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-read-only-"));
+  const path = join(directory, ".hypit", "runtime.sqlite");
   try {
     const state = new SqliteRuntimeState(path, { readOnly: true });
     assert.equal(await state.builds.read("missing"), undefined);
@@ -23,7 +23,7 @@ test("read-only SQLite observation of an absent archive creates no file", async 
   }
 });
 test("SQLite stores verified Build facts and Operation handles across reopen", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-"));
   const path = join(directory, "runtime.sqlite");
   try {
     const first = new SqliteRuntimeState(path);
@@ -80,7 +80,7 @@ test("SQLite stores verified Build facts and Operation handles across reopen", a
 });
 
 test("SQLite Operation updates preserve a terminal completion", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-operation-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-operation-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
     const identity = {
@@ -109,7 +109,7 @@ test("SQLite Operation updates preserve a terminal completion", async () => {
   }
 });
 test("cancelling a never-claimed Build atomically withdraws it from dispatch", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-cancel-queued-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-cancel-queued-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
     await state.dispatch.create({ build: "queued-build", componentPackages: [] }, { now: 100 });
@@ -130,7 +130,7 @@ test("cancelling a never-claimed Build atomically withdraws it from dispatch", a
 });
 
 test("Pool and Lane limits count only asynchronous Operations still in flight", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-sqlite-hierarchy-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-sqlite-hierarchy-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
     const pool = { id: "pool:kie.main", maxActive: 2, maxInFlight: 2 };

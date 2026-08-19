@@ -1,4 +1,4 @@
-<?svml using="@narratage/text/svs@1"?>
+<?svml using="@hypit/text/svs@1"?>
 
 <sheet version="1" id="podcast-v1">
   text-template.podcast-v1 {

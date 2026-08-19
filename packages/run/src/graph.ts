@@ -16,7 +16,7 @@ function assert(condition: unknown, code: string, message: string): asserts cond
 
 function content(graph: RunGraph): RunGraph {
   return {
-    format: "narratage.run-graph@1",
+    format: "hypit.run-graph@1",
     candidates: [...graph.candidates].sort((left, right) => left.id.localeCompare(right.id)),
     operations: [...graph.operations].sort((left, right) => left.id.localeCompare(right.id)),
     satisfactions: [...graph.satisfactions].sort((left, right) => left.output.localeCompare(right.output)),
@@ -25,13 +25,13 @@ function content(graph: RunGraph): RunGraph {
 }
 
 export function sealRunGraph(input: Omit<RunGraph, "format">): RunGraph {
-  const graph = content({ format: "narratage.run-graph@1", ...input });
+  const graph = content({ format: "hypit.run-graph@1", ...input });
   verifyRunGraph(graph);
   return graph;
 }
 
 export function verifyRunGraph(graph: RunGraph): void {
-  assert(graph.format === "narratage.run-graph@1", "UNSUPPORTED_RUN_GRAPH", "unsupported Run Graph");
+  assert(graph.format === "hypit.run-graph@1", "UNSUPPORTED_RUN_GRAPH", "unsupported Run Graph");
   const candidateIds = new Set<string>();
   for (const candidate of graph.candidates) {
     assert(!candidateIds.has(candidate.id), "DUPLICATE_RUN_CANDIDATE", `Run Graph repeats Candidate ${candidate.id}`);

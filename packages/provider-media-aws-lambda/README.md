@@ -1,7 +1,7 @@
-# `@narratage/provider-media-aws-lambda`
+# `@hypit/provider-media-aws-lambda`
 
 AWS Lambda Endpoint package for the eight exact capabilities declared by
-`@narratage/media-pipeline` and implemented by `@narratage/media-execution`.
+`@hypit/media-pipeline` and implemented by `@hypit/media-execution`.
 
 The Provider invokes one versioned or aliased Lambda ARN synchronously. Source and result bytes stay
 in the configured S3 ArtifactStore bucket; invocation carries only bounded JSON and content-addressed

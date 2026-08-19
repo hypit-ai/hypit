@@ -1,5 +1,5 @@
-import { BuildMachine, reduce } from "@narratage/core";
-import type { BuildState } from "@narratage/protocol";
+import { BuildMachine, reduce } from "@hypit/core";
+import type { BuildState } from "@hypit/protocol";
 
 import type {
   BuildSchedulerOptions,
@@ -103,7 +103,7 @@ export class LocalBuildScheduler {
       return proposed;
     };
 
-    const accept = async (build: MutableBuild, event: import("@narratage/protocol").CommandResult): Promise<void> => {
+    const accept = async (build: MutableBuild, event: import("@hypit/protocol").CommandResult): Promise<void> => {
       if (this.#buildStore === undefined || build.machine === undefined) {
         build.state = reduce(build.state, event);
         return;

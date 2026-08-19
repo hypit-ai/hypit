@@ -6,7 +6,7 @@ import type {
   CommandResult,
   CoreCommand,
   Digest,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import type { OperationSnapshot } from "./operations.js";
 
 export type RuntimeBlockedCommand = {

@@ -1,15 +1,15 @@
-import { speechTypes } from "@narratage/speech";
-import { artifactTypes } from "@narratage/artifact";
-import { sealGraphFragment } from "@narratage/elaborator";
-import { generationProducers } from "@narratage/generation";
+import { speechTypes } from "@hypit/speech";
+import { artifactTypes } from "@hypit/artifact";
+import { sealGraphFragment } from "@hypit/elaborator";
+import { generationProducers } from "@hypit/generation";
 import {
   createExactModelPrimaryGenerationFragment,
   exactModelMediaInputNames,
   exactModelTextInputName,
-} from "@narratage/model-kit";
-import type { ExactModelEndpoint, ExactModelMediaInput, ExactModelTextInput } from "@narratage/model-kit";
-import { textTypes } from "@narratage/text";
-import type { ProducerRef } from "@narratage/protocol";
+} from "@hypit/model-kit";
+import type { ExactModelEndpoint, ExactModelMediaInput, ExactModelTextInput } from "@hypit/model-kit";
+import { textTypes } from "@hypit/text";
+import type { ProducerRef } from "@hypit/protocol";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
@@ -62,7 +62,7 @@ export function createSeedanceDurationGenerationFragment(
     { name: "program", type: { module: endpoint.producer.module, name: "DurationProgram" } },
     { name: "duration", type: speechTypes.duration },
   ];
-  const operations: Array<import("@narratage/elaborator").FragmentOperation> = [{
+  const operations: Array<import("@hypit/elaborator").FragmentOperation> = [{
     id: "compile-draft",
     producer: compileProducer,
     inputs: { program: input("program"), duration: input("duration") },

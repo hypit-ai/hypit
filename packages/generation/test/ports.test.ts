@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MemoryArtifactStore } from "@narratage/driver-node";
+import { MemoryArtifactStore } from "@hypit/driver-node";
 import {
   assertMappingCoversPorts,
   bindGenerationMedia,
@@ -14,8 +14,8 @@ import {
   sealGenerationPortTable,
   selectWireModel,
   verifyRequestAgainstPorts,
-} from "@narratage/generation";
-import type { GenerationPortTable, GenerationWireMapping } from "@narratage/generation";
+} from "@hypit/generation";
+import type { GenerationPortTable, GenerationWireMapping } from "@hypit/generation";
 
 const table: GenerationPortTable = sealGenerationPortTable({
   model: "demo-video",
@@ -52,7 +52,7 @@ const table: GenerationPortTable = sealGenerationPortTable({
 });
 
 const mapping: GenerationWireMapping = {
-  capability: { module: { name: "@narratage/demo", version: "0.0.0-dev" }, name: "demo-video" },
+  capability: { module: { name: "@hypit/demo", version: "0.0.0-dev" }, name: "demo-video" },
   result: "video",
   routes: [
     { model: "demo/image-to-video", whenPresent: ["firstFrame"] },

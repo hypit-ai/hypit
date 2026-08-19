@@ -1,33 +1,33 @@
-import type { WorkspaceSession } from "@narratage/workspace";
-import { resolveCompiledSourceExport } from "@narratage/elaborator";
+import type { WorkspaceSession } from "@hypit/workspace";
+import { resolveCompiledSourceExport } from "@hypit/elaborator";
 import {
   sealBuildRequest,
   sealCompiledGraph,
   sliceExecution,
   defineBuild,
   materializeBuild,
-} from "@narratage/core";
+} from "@hypit/core";
 import type {
   ArtifactAttachment,
-} from "@narratage/workspace";
+} from "@hypit/workspace";
 import type {
   BuildDefinition,
   BuildState,
   StoredValue,
   TypeRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import {
   collectRunModuleRequests,
   compileRunSource,
   resolveRunDocument,
-} from "@narratage/run";
+} from "@hypit/run";
 import type {
   RunCompilation,
   RunFragmentRegistryLike,
   RunFrontendRegistryLike,
   RunSourceUnit,
-} from "@narratage/run";
-import type { LinkedProgram } from "@narratage/protocol";
+} from "@hypit/run";
+import type { LinkedProgram } from "@hypit/protocol";
 
 import type { NodeCompiledSourceClosure } from "./compiler.js";
 import { mergeAttachments, NodeCompiler } from "./compiler.js";

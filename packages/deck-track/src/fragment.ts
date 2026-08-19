@@ -1,13 +1,13 @@
-import { artifactTypes } from "@narratage/artifact";
-import { compositionTypes } from "@narratage/composition";
-import { sealGraphFragment } from "@narratage/elaborator";
-import type { FragmentOperation, GraphFragment } from "@narratage/elaborator";
-import { mediaTypes } from "@narratage/media";
-import { mediaTrackProducers, mediaTrackTypes } from "@narratage/media-track";
-import { narrativeTypes } from "@narratage/narrative";
-import { programSpaceTypes } from "@narratage/program-space";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { spatialTypes } from "@narratage/spatial";
+import { artifactTypes } from "@hypit/artifact";
+import { compositionTypes } from "@hypit/composition";
+import { sealGraphFragment } from "@hypit/elaborator";
+import type { FragmentOperation, GraphFragment } from "@hypit/elaborator";
+import { mediaTypes } from "@hypit/media";
+import { mediaTrackProducers, mediaTrackTypes } from "@hypit/media-track";
+import { narrativeTypes } from "@hypit/narrative";
+import { programSpaceTypes } from "@hypit/program-space";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import { spatialTypes } from "@hypit/spatial";
 
 import { depthStackProducers, depthStackTypes } from "./manifest.js";
 

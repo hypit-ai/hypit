@@ -1,6 +1,6 @@
-# @narratage/provider-hyperframes-local
+# @hypit/provider-hyperframes-local
 
-Trusted local Provider for the `@narratage/render-hyperframes#render-visual` capability. It stages the
+Trusted local Provider for the `@hypit/render-hyperframes#render-visual` capability. It stages the
 content-addressed dependencies declared by a `HyperframesDocument`, renders a silent MP4 with the
 HyperFrames CLI, probes the bytes, and returns a verified `RenderedVisual`. Before staging a typed
 Surface it decodes the exact bytes and checks declared dimensions, still/frame timing, SDR/sRGB and
@@ -13,7 +13,7 @@ There are deliberately two concurrency controls:
 - `workers` controls HyperFrames' parallel Chrome frame workers inside one admitted render.
 
 The Provider owns both controls because they are deployment policy, not author intent. It never
-renders program audio; `@narratage/provider-media-local` separately prepares `TimelineAudio` and muxes
+renders program audio; `@hypit/provider-media-local` separately prepares `TimelineAudio` and muxes
 the final media.
 
 The Runtime Adapter also declares one managed browser program. `programs up` invokes the pinned

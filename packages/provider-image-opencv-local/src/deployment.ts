@@ -2,9 +2,9 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { runtimeConfigObject, runtimeConfigString } from "@narratage/runtime-kit";
-import type { RuntimeAdapterFactoryContext, ManagedProgramCommand } from "@narratage/runtime-kit";
-import { resolveRuntimeExecutable } from "@narratage/runtime-host-node";
+import { runtimeConfigObject, runtimeConfigString } from "@hypit/runtime-kit";
+import type { RuntimeAdapterFactoryContext, ManagedProgramCommand } from "@hypit/runtime-kit";
+import { resolveRuntimeExecutable } from "@hypit/runtime-host-node";
 
 /**
  * Repository deployment bundled beside this Provider during development. A

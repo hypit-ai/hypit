@@ -1,12 +1,12 @@
 import {
   artifactDependency,
   artifactTypes,
-} from "@narratage/artifact";
-import type { ModuleManifest, ProducerRef, TypeRef } from "@narratage/protocol";
+} from "@hypit/artifact";
+import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 
 import { generatedAudioSetSchema, generatedImageSetSchema, generatedVideoSetSchema } from "./schema.js";
 
-export const generationModuleRef = { name: "@narratage/generation", version: "1" } as const;
+export const generationModuleRef = { name: "@hypit/generation", version: "1" } as const;
 export const generationTypes = {
   audioSet: { module: generationModuleRef, name: "GeneratedAudioSet" },
   imageSet: { module: generationModuleRef, name: "GeneratedImageSet" },
@@ -20,7 +20,7 @@ export const generationProducers = {
 } satisfies Record<string, ProducerRef>;
 
 export const generationManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: generationModuleRef.name,
   version: generationModuleRef.version,
   dependencies: [artifactDependency],

@@ -5,7 +5,7 @@ import type {
   CoreCommand,
   CommandResult,
   TypedRecord,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 import { admitBuildResult, materializeBuild } from "./reducer.js";
 

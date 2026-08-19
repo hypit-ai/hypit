@@ -9,12 +9,12 @@ import {
   sealRecord,
   start,
   verifyRecordStructure,
-} from "@narratage/core";
+} from "@hypit/core";
 import {
   ProducerRegistry,
   NodeDriver,
   EndpointRegistry,
-} from "@narratage/driver-node";
+} from "@hypit/driver-node";
 import type {
   CapabilityRef,
   CompiledGraph,
@@ -22,13 +22,13 @@ import type {
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import {
   TypeValidationError,
   TypeValidatorRegistry,
   admitRecord,
   validateValue,
-} from "@narratage/validation";
+} from "@hypit/validation";
 
 const contractModule = { name: "example.measurement-contract", version: "1.0.0" } as const;
 const sensorModule = { name: "example.sensor", version: "1.0.0" } as const;
@@ -45,7 +45,7 @@ const requestProducer = { module: sensorModule, name: "request-measurement" } sa
 const reportProducer = { module: reportModule, name: "write-report" } satisfies ProducerRef;
 
 const contractManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: contractModule.name,
   version: contractModule.version,
   dependencies: [],
@@ -61,7 +61,7 @@ const contractDependency = {
 };
 
 const sensorManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: sensorModule.name,
   version: sensorModule.version,
   dependencies: [contractDependency],
@@ -88,7 +88,7 @@ const sensorManifest: ModuleManifest = {
 };
 
 const reportManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: reportModule.name,
   version: reportModule.version,
   dependencies: [contractDependency],

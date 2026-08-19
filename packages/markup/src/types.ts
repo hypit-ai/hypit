@@ -5,7 +5,7 @@ import type {
   StoredValue,
   TypeRef,
   TypedRecord,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import type {
   AuthorComponent,
   AuthorFrontend,
@@ -15,7 +15,7 @@ import type {
   Awaitable,
   GraphFragment,
   ResolvedAuthorSourceImport,
-} from "@narratage/elaborator";
+} from "@hypit/elaborator";
 
 /** Decoder-local Markup text; Source identity and closure ownership stay outside the parser. */
 export type MarkupSource = {
@@ -89,7 +89,7 @@ export type RawSurfaceInput = {
   readonly openingStart: number;
   readonly contentStart: number;
   readonly attributes: Readonly<Record<string, MarkupAttributeValue>>;
-  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<import("@narratage/elaborator").ResolvedAuthorSourceAsset>;
+  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<import("@hypit/elaborator").ResolvedAuthorSourceAsset>;
 };
 
 export type RawSurfaceOutput = SurfaceDecodeOutput & {
@@ -105,7 +105,7 @@ export type StructuredSurfaceInput = {
    * A component output has a ref and Type but no compile-time Record value.
    */
   readonly resolveReference: (path: string) => SurfaceResolvedReference | undefined;
-  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<import("@narratage/elaborator").ResolvedAuthorSourceAsset>;
+  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<import("@hypit/elaborator").ResolvedAuthorSourceAsset>;
 };
 
 export type SurfaceResolvedReference = {
@@ -154,7 +154,7 @@ export type MarkupDecodeContext = {
   readonly registry: MarkupSurfaceRegistryLike;
   readonly resolveModule: (request: MarkupImportRequest) => ModuleRef;
   readonly sourceImports?: readonly ResolvedAuthorSourceImport[];
-  readonly resolveAsset?: (request: AuthorSourceAssetRequest) => Awaitable<import("@narratage/elaborator").ResolvedAuthorSourceAsset>;
+  readonly resolveAsset?: (request: AuthorSourceAssetRequest) => Awaitable<import("@hypit/elaborator").ResolvedAuthorSourceAsset>;
 };
 
 export type MarkupDecodeResult = {

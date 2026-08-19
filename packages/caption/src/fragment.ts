@@ -1,6 +1,6 @@
-import { narrativeTypes } from "@narratage/narrative";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { sealGraphFragment } from "@narratage/elaborator";
+import { narrativeTypes } from "@hypit/narrative";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import { sealGraphFragment } from "@hypit/elaborator";
 
 import { captionProducers, captionTypes } from "./manifest.js";
 

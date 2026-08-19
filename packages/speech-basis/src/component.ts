@@ -1,7 +1,7 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { SpeechBasis } from "@narratage/speech";
-import type { StoredValue } from "@narratage/protocol";
-import { canonicalize } from "@narratage/protocol";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { SpeechBasis } from "@hypit/speech";
+import type { StoredValue } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 
 import {
   speechBasisProducers,

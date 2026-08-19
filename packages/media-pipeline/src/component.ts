@@ -1,14 +1,14 @@
-import { mediaComponent } from "@narratage/media";
-import type { ComponentPackage } from "@narratage/component-kit";
-import { verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
-import type { MediaInspection, MediaStreamSelection, MuxedMedia, RenderedVisual, TimelineAudio } from "@narratage/media";
-import { assertProgramSpaceIdentity, programSpaceSampleFrames } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { assertSpeechAudioBasisIdentity, speechEvidenceSampleBoundary } from "@narratage/speech";
-import type { SpeechAudioBasis } from "@narratage/speech";
-import type { Composition } from "@narratage/composition";
-import type { BlobRef, CanonicalValue, StoredValue } from "@narratage/protocol";
-import { canonicalize } from "@narratage/protocol";
+import { mediaComponent } from "@hypit/media";
+import type { ComponentPackage } from "@hypit/component-kit";
+import { verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
+import type { MediaInspection, MediaStreamSelection, MuxedMedia, RenderedVisual, TimelineAudio } from "@hypit/media";
+import { assertProgramSpaceIdentity, programSpaceSampleFrames } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { assertSpeechAudioBasisIdentity, speechEvidenceSampleBoundary } from "@hypit/speech";
+import type { SpeechAudioBasis } from "@hypit/speech";
+import type { Composition } from "@hypit/composition";
+import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 
 import {
   compileAudioProgramPlan,

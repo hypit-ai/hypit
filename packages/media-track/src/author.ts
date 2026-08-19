@@ -1,6 +1,6 @@
-import type { SvsRecipe } from "@narratage/svs";
-import { decodeContentFitProperties } from "@narratage/spatial";
-import type { ContentFit } from "@narratage/spatial";
+import type { SvsRecipe } from "@hypit/svs";
+import { decodeContentFitProperties } from "@hypit/spatial";
+import type { ContentFit } from "@hypit/spatial";
 
 import {
   sealMediaPaintLayerSpec,

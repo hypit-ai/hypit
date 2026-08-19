@@ -1,15 +1,15 @@
-import { canonicalStringify } from "@narratage/protocol";
+import { canonicalStringify } from "@hypit/protocol";
 import type {
   ModuleRef,
   ResolvedModule,
   TypedRecord,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import type {
   AuthorComponent,
   AuthorSourceExport,
   AuthorValueRef,
   GraphFragment,
-} from "@narratage/elaborator";
+} from "@hypit/elaborator";
 
 import { MarkupFrontendError } from "./error.js";
 import {
@@ -33,7 +33,7 @@ import type {
   MarkupAuthorFrontendOptions,
   MarkupImportRequest,
 } from "./types.js";
-export const markupAuthorFrontendId = "@narratage/markup@1";
+export const markupAuthorFrontendId = "@hypit/markup@1";
 
 type BoundSurface = {
   readonly tag: string;
@@ -351,7 +351,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
       }
     }
     for (const fragment of output.fragments) {
-      if (fragment.format !== "narratage.fragment@1" || fragment.id.length === 0) {
+      if (fragment.format !== "hypit.fragment@1" || fragment.id.length === 0) {
         fail(
           source,
           "MARKUP_FRAGMENT_IDENTITY",

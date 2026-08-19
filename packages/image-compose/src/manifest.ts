@@ -1,9 +1,9 @@
-import { artifactDependency, artifactTypes } from "@narratage/artifact";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
-import { rasterCapabilities, rasterDependency } from "@narratage/raster";
-import { spatialDependency, spatialFrameSchema, spatialTypes } from "@narratage/spatial";
+import { artifactDependency, artifactTypes } from "@hypit/artifact";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { rasterCapabilities, rasterDependency } from "@hypit/raster";
+import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 
-export const imageComposeModuleRef = { name: "@narratage/image-compose", version: "1" } as const;
+export const imageComposeModuleRef = { name: "@hypit/image-compose", version: "1" } as const;
 export const imageComposeTypes = {
   options: { module: imageComposeModuleRef, name: "ImageComposeOptions" },
   layerSpec: { module: imageComposeModuleRef, name: "ImageComposeLayerSpec" },
@@ -51,7 +51,7 @@ export const imageComposeMarkupSurfaces = [{
 
 
 export const imageComposeManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: imageComposeModuleRef.name,
   version: imageComposeModuleRef.version,
   dependencies: [artifactDependency, spatialDependency, rasterDependency],

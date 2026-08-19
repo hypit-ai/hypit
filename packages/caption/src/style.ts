@@ -2,8 +2,8 @@ import type {
   CaptionDisplaySequence,
   CaptionDisplayWord,
   CaptionDisplayWordSubset,
-} from "@narratage/narrative";
-import { canonicalStringify, canonicalize } from "@narratage/protocol";
+} from "@hypit/narrative";
+import { canonicalStringify, canonicalize } from "@hypit/protocol";
 
 import { assertCaptionDisplaySequence, assertCaptionDisplayWordSubset } from "./display.js";
 import type {

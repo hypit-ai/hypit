@@ -3,10 +3,10 @@ import type {
   VisualElement,
   VisualStyleDeclaration,
   VisualTimedSampling,
-} from "@narratage/composition";
-import type { ProgramSpace } from "@narratage/program-space";
-import { fitContent } from "@narratage/spatial";
-import type { SpatialFrame, SpatialPath } from "@narratage/spatial";
+} from "@hypit/composition";
+import type { ProgramSpace } from "@hypit/program-space";
+import { fitContent } from "@hypit/spatial";
+import type { SpatialFrame, SpatialPath } from "@hypit/spatial";
 
 import { lifecycleAnimation, samplingAnimation, sustainAnimation } from "./motion.js";
 import { resolveVisualSampling } from "./sampling.js";

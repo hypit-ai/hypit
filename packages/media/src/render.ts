@@ -1,5 +1,5 @@
-import { isDigest } from "@narratage/protocol";
-import type { BlobRef } from "@narratage/protocol";
+import { isDigest } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 
 const FONT_MEDIA_TYPES = new Set([
   "font/otf",

@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/compiler-markup-node",
+  "name": "@hypit/compiler-markup-node",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -8,15 +8,15 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@narratage/compiler-node": "workspace:*",
-    "@narratage/component-kit": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/workspace": "workspace:*",
-    "@narratage/package-loader-node": "workspace:*",
-    "@narratage/markup": "workspace:*",
-    "@narratage/validation": "workspace:*"
+    "@hypit/compiler-node": "workspace:*",
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/workspace": "workspace:*",
+    "@hypit/package-loader-node": "workspace:*",
+    "@hypit/markup": "workspace:*",
+    "@hypit/validation": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/workspace-fs-node": "workspace:*"
+    "@hypit/workspace-fs-node": "workspace:*"
   }
 }

@@ -1,12 +1,12 @@
-import type { CanonicalValue } from "@narratage/protocol";
-import { svsRecipeType } from "@narratage/svs";
-import type { SvsRecipe } from "@narratage/svs";
+import type { CanonicalValue } from "@hypit/protocol";
+import { svsRecipeType } from "@hypit/svs";
+import type { SvsRecipe } from "@hypit/svs";
 import type {
   MarkupAttributeValue,
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import { createTextRenderFragment } from "./fragment.js";
 import {

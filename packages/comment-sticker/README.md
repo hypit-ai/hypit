@@ -1,4 +1,4 @@
-# `@narratage/comment-sticker`
+# `@hypit/comment-sticker`
 
 An optional author package for timed social-comment cards. It lowers every sticker to one ordinary,
 self-contained `VisualTrack`; it has no privileged Film behavior and never samples a sibling Track.
@@ -10,7 +10,7 @@ The author surface keeps the three independent concerns visible:
 - the shared Temporal projection owns when an item exists.
 
 ```xml
-<import as="copy" from="@narratage/text@1"/>
+<import as="copy" from="@hypit/text@1"/>
 
 <copy:Value id="comment-copy">This part finally made the idea click.</copy:Value>
 <copy:Value id="comment-author">@viewer</copy:Value>

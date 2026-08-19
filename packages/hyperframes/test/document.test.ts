@@ -5,12 +5,12 @@ import {
   compileHyperframesDocument,
   hyperframesTime,
   materializeHyperframesHtml,
-} from "@narratage/hyperframes";
-import type { FontArtifactRef } from "@narratage/media";
-import { sealProgramSpace } from "@narratage/program-space";
-import { sealAudioTrack, sealComposition, sealVisualTrack } from "@narratage/composition";
-import type { Track } from "@narratage/composition";
-import { VISUAL_IR_V1 } from "@narratage/visual-ir";
+} from "@hypit/hyperframes";
+import type { FontArtifactRef } from "@hypit/media";
+import { sealProgramSpace } from "@hypit/program-space";
+import { sealAudioTrack, sealComposition, sealVisualTrack } from "@hypit/composition";
+import type { Track } from "@hypit/composition";
+import { VISUAL_IR_V1 } from "@hypit/visual-ir";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
@@ -39,7 +39,7 @@ function fixture() {
     mediaType: "audio/wav",
   };
   const lower = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: "lower",
     presents: [{
       id: "picture",
@@ -55,7 +55,7 @@ function fixture() {
     }],
   });
   const upper = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: "upper",
     presents: [{
       id: "words",
@@ -96,11 +96,11 @@ test("HyperFrames flattens generic peer visual Track Presents without absorbing 
   assert.equal(document.visualIr, VISUAL_IR_V1);
   assert.deepEqual(new Set(document.artifacts.map((artifact) => artifact.digest)),
     new Set([picture.digest, fixtureFont.sources[0]!.artifact.digest]));
-  assert.ok(document.html.indexOf('data-narratage-track-id="lower"') < document.html.indexOf('data-narratage-track-id="upper"'));
-  assert.equal((document.html.match(/class="clip narratage-visual-present"/gu) ?? []).length, 2);
+  assert.ok(document.html.indexOf('data-hypit-track-id="lower"') < document.html.indexOf('data-hypit-track-id="upper"'));
+  assert.equal((document.html.match(/class="clip hypit-visual-present"/gu) ?? []).length, 2);
   assert.doesNotMatch(document.html, /<audio/u);
   assert.doesNotMatch(document.html, new RegExp(sound.digest, "u"));
-  assert.doesNotMatch(document.html, /isolation:isolate|narratage-visual-track/u);
+  assert.doesNotMatch(document.html, /isolation:isolate|hypit-visual-track/u);
   assert.match(document.html, /Hello &lt;world&gt;/u);
   assert.doesNotMatch(document.html, /speech-visual-track|caption-track/u);
 });
@@ -108,10 +108,10 @@ test("HyperFrames flattens generic peer visual Track Presents without absorbing 
 test("visual Artifact placeholders are materialized only by the Runtime boundary", () => {
   const { composition, picture, sound, programSpace } = fixture();
   const document = compileHyperframesDocument(composition, programSpace);
-  assert.match(document.html, /narratage-artifact:\/\/sha256\//u);
+  assert.match(document.html, /hypit-artifact:\/\/sha256\//u);
   const resolved = materializeHyperframesHtml(document,
     (artifact) => `https://assets.example/${artifact.digest}?x=1&y=2`);
-  assert.doesNotMatch(resolved, /narratage-artifact:\/\//u);
+  assert.doesNotMatch(resolved, /hypit-artifact:\/\//u);
   assert.match(resolved, new RegExp(`https://assets\\.example/${picture.digest}\\?x=1&amp;y=2`, "u"));
   assert.doesNotMatch(resolved, new RegExp(sound.digest, "u"));
   assert.equal(document.html.includes("assets.example"), false, "materialization must not mutate the compiled document");
@@ -125,7 +125,7 @@ test("HyperframesDocument carries render facts while its Record binds integrity"
   assert.equal(document.frameCount, 30);
   assert.deepEqual(document.canvas, { width: 1080, height: 1920 });
   assert.match(document.html, /data-fps="30000\/1001"/u);
-  assert.match(document.html, /data-narratage-frame-count="30"/u);
+  assert.match(document.html, /data-hypit-frame-count="30"/u);
   assert.equal(hyperframesTime.frameSeconds(30, 30_000, 1_001), "1.001");
   assert.equal(hyperframesTime.fpsDecimal(30_000, 1_001), "29.970029970029");
 });
@@ -182,7 +182,7 @@ test("HyperFrames emits frame-bound local animation without creating a Track sta
     ...composition,
     tracks: composition.tracks.map((track) => track.id === "lower" ? animated : track),
   }), programSpace);
-  assert.match(document.html, /@keyframes narratage-/u);
+  assert.match(document.html, /@keyframes hypit-/u);
   assert.match(document.html, /33\.333333333%\{opacity:1;transform:translateY\(0%\)/u);
   assert.match(document.html, /animation-duration:1\.001s/u);
   assert.match(document.html, /100%\{opacity:1;transform:translateY\(0%\)\}/u);
@@ -207,7 +207,7 @@ test("HyperFrames clips a long animation by Present visibility instead of reject
     tracks: composition.tracks.map((track) => track.id === "lower" ? animated : track),
   }), programSpace);
   assert.match(document.html, /animation-duration:1\.5015s/u);
-  assert.match(document.html, /data-narratage-animation-duration-frames="45" data-narratage-animation-sample-frames="30"/u);
+  assert.match(document.html, /data-hypit-animation-duration-frames="45" data-hypit-animation-sample-frames="30"/u);
   assert.match(document.html, /100%\{opacity:1\}/u);
 });
 
@@ -228,7 +228,7 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   };
   const surfaceDigest = fixtureDigest("hyperframes:alpha-surface");
   const track = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: "bound-render-dependencies",
     presents: [{
       id: "bound",
@@ -277,11 +277,11 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   assert.match(document.html, /@font-face\{/u);
   assert.match(document.html, /format\("woff2"\)/u);
   assert.match(document.html, /font-synthesis:none/u);
-  assert.match(document.html, /data-narratage-alpha-mode="straight"/u);
-  assert.match(document.html, /data-narratage-color-space="srgb"/u);
+  assert.match(document.html, /data-hypit-alpha-mode="straight"/u);
+  assert.match(document.html, /data-hypit-color-space="srgb"/u);
   const materialized = materializeHyperframesHtml(document,
     (artifact) => `https://assets.example/${artifact.digest}?token=1&part=2`);
-  assert.doesNotMatch(materialized, /narratage-artifact:\/\//u);
+  assert.doesNotMatch(materialized, /hypit-artifact:\/\//u);
   assert.match(materialized, new RegExp(font.sources[0]!.artifact.digest, "u"));
   assert.match(materialized, new RegExp(surfaceDigest, "u"));
 });
@@ -298,7 +298,7 @@ test("exact timed sampling lowers loop boundaries and held frames without zero-r
     mediaType: "video/mp4",
   };
   const track = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: "sampled",
     presents: [{
       id: "sampled",
@@ -336,7 +336,7 @@ test("exact timed sampling lowers loop boundaries and held frames without zero-r
     canvas: { width: 100, height: 100, clearColor: "#000000" },
     tracks: [track],
   }), programSpace);
-  assert.equal((document.html.match(/data-narratage-sampling-part=/gu) ?? []).length, 4);
+  assert.equal((document.html.match(/data-hypit-sampling-part=/gu) ?? []).length, 4);
   assert.match(document.html, /data-media-start="0\.066666666666"/u);
   assert.match(document.html, /data-media-start="0"/u);
   assert.equal((document.html.match(/data-playback-rate="1"/gu) ?? []).length, 4);

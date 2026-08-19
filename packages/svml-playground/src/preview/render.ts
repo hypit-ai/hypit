@@ -1,7 +1,7 @@
-import { sealComposition } from "@narratage/composition";
-import type { Composition, Track } from "@narratage/composition";
-import { compileHyperframesDocument, materializeHyperframesHtml } from "@narratage/hyperframes";
-import type { ProgramSpace } from "@narratage/program-space";
+import { sealComposition } from "@hypit/composition";
+import type { Composition, Track } from "@hypit/composition";
+import { compileHyperframesDocument, materializeHyperframesHtml } from "@hypit/hyperframes";
+import type { ProgramSpace } from "@hypit/program-space";
 
 import { injectRuntimeShim } from "./runtime-shim.js";
 

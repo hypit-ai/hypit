@@ -1,4 +1,4 @@
-import type { ModuleManifest, TypeRef, ValueSchema } from "@narratage/protocol";
+import type { ModuleManifest, TypeRef, ValueSchema } from "@hypit/protocol";
 
 /** Exact boundaries in the fixed 16 kHz Speech Evidence Audio sample domain. */
 export type SpeechWordEvidence = {
@@ -80,12 +80,12 @@ export const alignedTranscriptEvidenceFields = {
 } as const satisfies Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>;
 
 export const alignedTranscriptEvidenceSchema: ValueSchema = object(alignedTranscriptEvidenceFields);
-export const speechEvidenceModuleRef = { name: "@narratage/speech-evidence", version: "1" } as const;
+export const speechEvidenceModuleRef = { name: "@hypit/speech-evidence", version: "1" } as const;
 export const speechEvidenceTypes = {
   alignedTranscript: { module: speechEvidenceModuleRef, name: "AlignedTranscriptEvidence" },
 } satisfies Record<string, TypeRef>;
 export const speechEvidenceManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: speechEvidenceModuleRef.name,
   version: speechEvidenceModuleRef.version,
   dependencies: [],

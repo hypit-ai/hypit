@@ -3,22 +3,22 @@ import {
   assertVisualTrackIdentity,
   sealAudioTrack,
   sealVisualTrack,
-} from "@narratage/composition";
-import type { AudioClip, AudioTrack, VisualTrack } from "@narratage/composition";
-import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+} from "@hypit/composition";
+import type { AudioClip, AudioTrack, VisualTrack } from "@hypit/composition";
+import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import {
   assertProgramSpaceIdentity,
   programFrameSampleBoundary,
   programSpaceFrameCount,
   programSpaceSampleFrames,
-} from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { canonicalize, isDigest } from "@narratage/protocol";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import { assertCanvasSpace, assertSpatialFrame } from "@narratage/spatial";
-import type { CanvasSpace } from "@narratage/spatial";
-import { assertSpatialPath } from "@narratage/spatial";
-import type { SpatialPath } from "@narratage/spatial";
+} from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { canonicalize, isDigest } from "@hypit/protocol";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
+import type { CanvasSpace } from "@hypit/spatial";
+import { assertSpatialPath } from "@hypit/spatial";
+import type { SpatialPath } from "@hypit/spatial";
 import {
   locateMomentOccurrences,
   locateSelectionOccurrences,
@@ -26,8 +26,8 @@ import {
   projectProgramWindow,
   projectSegmentWindow,
   projectSelectionWindows,
-} from "@narratage/temporal";
-import type { ProjectedOccurrence, TemporalDuration, TemporalPointExpression } from "@narratage/temporal";
+} from "@hypit/temporal";
+import type { ProjectedOccurrence, TemporalDuration, TemporalPointExpression } from "@hypit/temporal";
 
 import {
   assertMediaIdentity,
@@ -494,7 +494,7 @@ export function assertMediaTrackProgramIdentity(value: MediaTrackProgram, space:
 export function projectMediaVisualTrack(space: ProgramSpace, program: MediaTrackProgram): VisualTrack {
   assertMediaTrackProgramIdentity(program, space);
   const track = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: program.id,
     presents: [
       ...program.items.map((item) => ({

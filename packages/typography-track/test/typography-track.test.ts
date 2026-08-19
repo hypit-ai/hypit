@@ -3,18 +3,18 @@ import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import { spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
-import { compositionTypes, sealComposition, sealVisualTrack } from "@narratage/composition";
-import { createResolvedClosure, sealBuildRequest, start } from "@narratage/core";
-import { AuthorFrontendRegistry, compileSourceClosure, resolveCompiledSourceExport } from "@narratage/elaborator";
-import { compileHyperframesDocument } from "@narratage/hyperframes";
-import { mediaDependency, mediaTypes } from "@narratage/media";
-import type { CompositableSurfaceRef, FontArtifactRef } from "@narratage/media";
-import type { NarrativeSelectionRef } from "@narratage/narrative";
-import { sealProgramSpace } from "@narratage/program-space";
-import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import type { ModuleManifest } from "@narratage/protocol";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import { registerTypeValidatorFacets } from "@hypit/component-kit";
+import { compositionTypes, sealComposition, sealVisualTrack } from "@hypit/composition";
+import { createResolvedClosure, sealBuildRequest, start } from "@hypit/core";
+import { AuthorFrontendRegistry, compileSourceClosure, resolveCompiledSourceExport } from "@hypit/elaborator";
+import { compileHyperframesDocument } from "@hypit/hyperframes";
+import { mediaDependency, mediaTypes } from "@hypit/media";
+import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
+import type { NarrativeSelectionRef } from "@hypit/narrative";
+import { sealProgramSpace } from "@hypit/program-space";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import type { ModuleManifest } from "@hypit/protocol";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
 import {
   appendSelectionTextItem,
   bindAreaTextPlacement,
@@ -39,13 +39,13 @@ import {
   typographyTrackModuleRef,
   typographyTrackProducers,
   typographyTrackTypes,
-} from "@narratage/typography-track";
-import type { TextStyle } from "@narratage/typography-track";
-import { spatialDependency, spatialTypes } from "@narratage/spatial";
-import { svsManifest, svsRecipeType } from "@narratage/svs";
-import { sealText, textComponent, textDependency, textManifest, textTypes } from "@narratage/text";
-import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@narratage/markup";
-import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
+} from "@hypit/typography-track";
+import type { TextStyle } from "@hypit/typography-track";
+import { spatialDependency, spatialTypes } from "@hypit/spatial";
+import { svsManifest, svsRecipeType } from "@hypit/svs";
+import { sealText, textComponent, textDependency, textManifest, textTypes } from "@hypit/text";
+import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
+import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
 
 const space = sealProgramSpace({
   durationSec: 5,
@@ -184,7 +184,7 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
   assert.equal(track.presents[0]?.elements[2]?.kind, "text-flow");
 
   const lower = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: "lower",
     presents: [{
       id: "lower",
@@ -198,9 +198,9 @@ test("persistent and timed Text Items lower to ordinary VisualTrack Presents", (
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [track, lower],
   }), space);
-  assert.match(rendered.html, /data-narratage-text-run="run"/u);
+  assert.match(rendered.html, /data-hypit-text-run="run"/u);
   assert.match(rendered.html, /background-image:linear-gradient\(#111111,#111111\)/u);
-  assert.ok(rendered.html.indexOf('data-narratage-present-id="lower"') < rendered.html.indexOf('data-narratage-present-id="callout"'));
+  assert.ok(rendered.html.indexOf('data-hypit-present-id="lower"') < rendered.html.indexOf('data-hypit-present-id="callout"'));
 });
 
 test("Text Mask explicitly consumes one authored Text Program and one owned still Surface", () => {
@@ -321,7 +321,7 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
     ],
   } as const;
   const fixtureManifest: ModuleManifest = {
-    format: "narratage.module@1",
+    format: "hypit.module@1",
     name: fixtureModule.name,
     version: fixtureModule.version,
     dependencies: [
@@ -414,10 +414,10 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
     entry: {
       id: "/project/text.svml",
       name: "text.svml",
-      text: `<?svml using="@narratage/markup@1"?>
+      text: `<?svml using="@hypit/markup@1"?>
       <svml>
         <import as="fixture" from="example.text-inputs@1"/>
-        <import as="text" from="@narratage/typography-track@1"/>
+        <import as="text" from="@hypit/typography-track@1"/>
         <fixture:Inputs/>
         <text:Style id="poster" recipe={editorial} font={exact-font}>
           <text:Fill color="#f8fafc"/>
@@ -592,12 +592,12 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     id: "rich-text-film",
     canvas: { width: 1080, height: 900, clearColor: "#000000" }, tracks: [track],
   }), space);
-  assert.match(rendered.html, /data-narratage-text-paint-layer="5"/u);
+  assert.match(rendered.html, /data-hypit-text-paint-layer="5"/u);
   assert.match(rendered.html, /feMorphology/u);
   assert.match(rendered.html, /linear-gradient\(30deg/u);
   assert.match(rendered.html, /radial-gradient/u);
-  assert.match(rendered.html, /data-narratage-text-overflow="shrink"/u);
-  assert.match(rendered.html, /data-narratage-text-line-sequences/u);
+  assert.match(rendered.html, /data-hypit-text-overflow="shrink"/u);
+  assert.match(rendered.html, /data-hypit-text-line-sequences/u);
   assert.match(rendered.html, /<textPath/u);
-  assert.match(rendered.html, /data-narratage-text-path-margin/u);
+  assert.match(rendered.html, /data-hypit-text-path-margin/u);
 });

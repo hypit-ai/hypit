@@ -1,12 +1,12 @@
-import { createMarkupSurfaceHostFacet } from "@narratage/markup";
+import { createMarkupSurfaceHostFacet } from "@hypit/markup";
 import {
   decodeHyperframesRenderSurface, renderHyperframesComponent, renderHyperframesManifest,
   renderHyperframesModuleRef,
   renderHyperframesMarkupSurfaces,
 } from "./index.js";
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   modules: [{ manifest: renderHyperframesManifest }],
   components: [renderHyperframesComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
@@ -15,4 +15,4 @@ export const narratagePackage = {
     handler: decodeHyperframesRenderSurface,
   })],
 };
-export default narratagePackage;
+export default hypitPackage;

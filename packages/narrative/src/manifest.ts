@@ -1,4 +1,4 @@
-import type { ModuleManifest, TypeRef } from "@narratage/protocol";
+import type { ModuleManifest, TypeRef } from "@hypit/protocol";
 import {
   captionCorrespondenceSchema,
   captionDisplaySequenceSchema,
@@ -9,7 +9,7 @@ import {
   narrativeSelectionSchema,
 } from "./schema.js";
 
-export const narrativeModuleRef = { name: "@narratage/narrative", version: "1" } as const;
+export const narrativeModuleRef = { name: "@hypit/narrative", version: "1" } as const;
 export const narrativeTypes = {
   narrative: { module: narrativeModuleRef, name: "Narrative" },
   excerpt: { module: narrativeModuleRef, name: "NarrativeExcerpt" },
@@ -20,7 +20,7 @@ export const narrativeTypes = {
   captionDisplayWordSubset: { module: narrativeModuleRef, name: "CaptionDisplayWordSubset" },
 } satisfies Record<string, TypeRef>;
 export const narrativeManifest: ModuleManifest = {
-  format: "narratage.module@1", name: narrativeModuleRef.name, version: narrativeModuleRef.version,
+  format: "hypit.module@1", name: narrativeModuleRef.name, version: narrativeModuleRef.version,
   dependencies: [],
   types: [
     { name: narrativeTypes.narrative.name },

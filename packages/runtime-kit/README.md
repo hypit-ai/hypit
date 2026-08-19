@@ -1,4 +1,4 @@
-# `@narratage/runtime-kit`
+# `@hypit/runtime-kit`
 
 Host facets for the three environmental choices a Runtime Profile may select:
 

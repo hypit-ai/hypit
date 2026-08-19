@@ -1,4 +1,6 @@
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="1" y="1" width="30" height="30" rx="8" fill="#EC4899"/>
-  <path d="M9 10.5C9 8.567 10.567 7 12.5 7H23V11H13V14H19.5C21.433 14 23 15.567 23 17.5V21.5C23 23.433 21.433 25 19.5 25H9V21H19V18H12.5C10.567 18 9 16.433 9 14.5V10.5Z" fill="#0B0D10"/>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hypit">
+  <title>Hypit</title>
+  <path d="M7.6 3.8H14.6L12.6 7.2H5.6L7.6 3.8Z" fill="#ED98B9"/>
+  <path d="M4.1 10.4H16.6L18.7 7H30.4L27.9 11.1H16.1L14.1 14.2H1.8L4.1 10.4Z" fill="#ED98B9"/>
+  <path d="M19.1 14.1H23.1L19.3 20.7H15.4L19.1 14.1Z" fill="#ED98B9"/>
 </svg>

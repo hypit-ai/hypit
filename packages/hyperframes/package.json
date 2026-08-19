@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/hyperframes",
+  "name": "@hypit/hyperframes",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -8,29 +8,29 @@
     ".": "./src/index.ts",
     "./project": "./src/project.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/component-kit": "workspace:*",
-    "@narratage/composition": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/media": "workspace:*",
-    "@narratage/program-space": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/visual-ir": "workspace:*"
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/composition": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/program-space": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/visual-ir": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/caption": "workspace:*",
-    "@narratage/caption-fine": "workspace:*",
-    "@narratage/deck-track": "workspace:*",
-    "@narratage/fonts-open": "workspace:*",
-    "@narratage/media-track": "workspace:*",
-    "@narratage/ranking": "workspace:*",
-    "@narratage/screen-overlay": "workspace:*",
-    "@narratage/script": "workspace:*",
-    "@narratage/spatial": "workspace:*",
-    "@narratage/svs": "workspace:*",
-    "@narratage/typography-track": "workspace:*"
+    "@hypit/caption": "workspace:*",
+    "@hypit/caption-fine": "workspace:*",
+    "@hypit/deck-track": "workspace:*",
+    "@hypit/fonts-open": "workspace:*",
+    "@hypit/media-track": "workspace:*",
+    "@hypit/ranking": "workspace:*",
+    "@hypit/screen-overlay": "workspace:*",
+    "@hypit/script": "workspace:*",
+    "@hypit/spatial": "workspace:*",
+    "@hypit/svs": "workspace:*",
+    "@hypit/typography-track": "workspace:*"
   }
 }

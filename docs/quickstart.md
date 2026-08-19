@@ -1,11 +1,11 @@
 ---
 title: Quickstart
-description: Install Narratage, compile a complete SVML video graph, and prepare a real Build.
+description: Install Hypit, compile a complete SVML video graph, and prepare a real Build.
 ---
 
 # Quickstart
 
-The name **Narratage** comes from a 1933 *New York Times* review of the film *The Power and the
+The name **Hypit** comes from a 1933 *New York Times* review of the film *The Power and the
 Glory*. The critic coined the word to describe a then-new cinematic technique:
 **Narration + Montage** — a narrator's voice carries the story forward while the screen assembles
 a montage of scenes to match.
@@ -14,23 +14,23 @@ That is exactly what this system does. The author writes a narrated Script with 
 and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
 Author Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml` extension.
 
-Narratage turns that source into a visible execution graph. Before any model or external service
+Hypit turns that source into a visible execution graph. Before any model or external service
 runs, you can check the source, choose a Run, and inspect the exact work it would require. This
 page gets you to that first safe plan: it needs no API keys and makes no paid call.
 
 ## Clone the repository
 
 ```bash
-git clone https://github.com/hypit-ai/narratage.git
-cd narratage
+git clone https://github.com/hypit-ai/hypit.git
+cd hypit
 ```
 
-## Use the Narratage skill
+## Use the Hypit skill
 
-`/narratage` is available from that working directory. Send your agent:
+`/hypit` is available from that working directory. Send your agent:
 
 ```text
-/narratage Set up my environment, ask for only the API keys required by my Runtime Profile, and guide me through authoring and building my first SVML video.
+/hypit Set up my environment, ask for only the API keys required by my Runtime Profile, and guide me through authoring and building my first SVML video.
 ```
 
 It works through the same five steps below, asking you only for what your Runtime Profile actually
@@ -66,7 +66,7 @@ alignment, captions, a media Track, text, Film and final rendering.
 
 ```bash
 cd examples/talking-film-graph-check
-narratage check main.svml
+hypit check main.svml
 ```
 
 `check` reads the self-described source, loads only its imported packages and prints the public typed
@@ -75,7 +75,7 @@ outputs it declares.
 Now compile the Run Source:
 
 ```bash
-narratage plan build.svrun
+hypit plan build.svrun
 ```
 
 `plan` binds the Author Graph and Run Graph, walks backward from `final.video`, and freezes the
@@ -83,9 +83,9 @@ Operations and external Needs that a Build would use. It never starts a Provider
 
 Open the three source files next:
 
-- [`main.svml`](https://github.com/hypit-ai/narratage/blob/main/examples/talking-film-graph-check/main.svml) — the video;
-- [`studio.svs`](https://github.com/hypit-ai/narratage/blob/main/examples/talking-film-graph-check/studio.svs) — reusable visual Recipes;
-- [`build.svrun`](https://github.com/hypit-ai/narratage/blob/main/examples/talking-film-graph-check/build.svrun) — the requested output.
+- [`main.svml`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/main.svml) — the video;
+- [`studio.svs`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/studio.svs) — reusable visual Recipes;
+- [`build.svrun`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/build.svrun) — the requested output.
 
 ## 3. Understand the project files
 
@@ -96,7 +96,7 @@ A working video project normally has four authored or configured inputs:
 | `main.svml` | What video are you making? |
 | `studio.svs` | Which reusable Recipe values does it use? |
 | `build.svrun` | Which outputs and Candidates does this Run select? |
-| `narratage.runtime.json` | Which machine, stores and Provider endpoints execute it? |
+| `hypit.runtime.json` | Which machine, stores and Provider endpoints execute it? |
 
 The short form is:
 
@@ -111,24 +111,24 @@ shots without changing the authored video.
 
 ## 4. Start your own project
 
-Keep project files and generated media outside the Narratage repository. The linked `narratage`
+Keep project files and generated media outside the Hypit repository. The linked `hypit`
 command works from that independent project directory:
 
 ```bash
 cd /path/to/my-video
 
-narratage runtime use narratage.runtime.json
+hypit runtime use hypit.runtime.json
 
-narratage plan build.svrun
+hypit plan build.svrun
 ```
 
 A project with `package.json` owns its installed capability packages. A plain creative folder needs
 no Node project and uses packages from the linked checkout. Source and exported files remain in the
 project. Runtime state and Artifacts live under the selected Profile's `dataRoot`.
-`runtime use` stores only a local pointer at `.narratage/runtime`. Source imports select author
+`runtime use` stores only a local pointer at `.hypit/runtime`. Source imports select author
 packages; the Profile independently selects Runtime packages through `use`.
 
-Start from [`examples/talking-film-live`](https://github.com/hypit-ai/narratage/tree/main/examples/talking-film-live) when you need a
+Start from [`examples/talking-film-live`](https://github.com/hypit-ai/hypit/tree/main/examples/talking-film-live) when you need a
 complete Runtime Profile. Copy the source structure, then replace its assets, Script, model choices
 and credentials with your own.
 
@@ -137,7 +137,7 @@ and credentials with your own.
 After reviewing the plan:
 
 ```bash
-narratage build build.svrun --follow
+hypit build build.svrun --follow
 ```
 
 `build` assigns and prints a fresh Build id, stores the Build, ensures its Worker is available, and
@@ -148,11 +148,11 @@ Use `check` while editing a source. Use `doctor` to diagnose a new or broken dep
 safe, but neither is required as a repetitive pre-Build ceremony.
 
 ```bash
-narratage status <build-id> --watch
+hypit status <build-id> --watch
 
-narratage queue
+hypit queue
 
-narratage get <build-id> \
+hypit get <build-id> \
   --name final.video \
   --to output/final.mp4
 ```
@@ -177,10 +177,10 @@ For local Python programs:
 uv python install 3.13
 uv sync --project services/whisperx --frozen
 uv sync --project services/image-opencv --frozen
-uv run --project services/whisperx --frozen narratage-whisperx-prepare
+uv run --project services/whisperx --frozen hypit-whisperx-prepare
 ```
 
-Run `narratage doctor narratage.runtime.json` after changing a Runtime Profile. It reports missing tools,
+Run `hypit doctor hypit.runtime.json` after changing a Runtime Profile. It reports missing tools,
 credentials and endpoint configuration without executing the graph.
 
 ## Read next

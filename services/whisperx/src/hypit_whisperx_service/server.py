@@ -7,7 +7,7 @@ import threading
 from .application import RequestError, WhisperXApplication
 
 
-LOGGER = logging.getLogger("narratage.whisperx")
+LOGGER = logging.getLogger("hypit.whisperx")
 
 
 class WhisperXHttpServer(ThreadingHTTPServer):
@@ -21,7 +21,7 @@ class WhisperXHttpServer(ThreadingHTTPServer):
 
 class WhisperXRequestHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
-    server_version = "narratage-whisperx"
+    server_version = "hypit-whisperx"
     sys_version = ""
 
     @property

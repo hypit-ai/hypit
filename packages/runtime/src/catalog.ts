@@ -1,7 +1,7 @@
 import type {
   LogicalOutputRef,
   RecordRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 export type BuildCatalogAlias = {
   readonly name: string;

@@ -8,9 +8,9 @@ import {
 } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import { isDigest } from "@narratage/protocol";
-import type { BlobRef, Digest } from "@narratage/protocol";
-import type { ArtifactStore } from "@narratage/runtime";
+import { isDigest } from "@hypit/protocol";
+import type { BlobRef, Digest } from "@hypit/protocol";
+import type { ArtifactStore } from "@hypit/runtime";
 
 function digestPath(root: string, digest: Digest): string {
   if (!isDigest(digest)) throw new Error("Artifact digest is invalid");

@@ -1,21 +1,21 @@
-import { artifactDependency } from "@narratage/artifact";
-import { mediaDependency, mediaTypes } from "@narratage/media";
-import { compositionDependency } from "@narratage/composition";
+import { artifactDependency } from "@hypit/artifact";
+import { mediaDependency, mediaTypes } from "@hypit/media";
+import { compositionDependency } from "@hypit/composition";
 import {
   hyperframesManifest,
   hyperframesModuleRef,
   hyperframesTypes,
-} from "@narratage/hyperframes";
+} from "@hypit/hyperframes";
 import type {
   CapabilityRef,
   ModuleManifest,
   ProducerRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import {
   mediaPipelineModuleRef,
-} from "@narratage/media-pipeline";
+} from "@hypit/media-pipeline";
 
-export const renderHyperframesModuleRef = { name: "@narratage/render-hyperframes", version: "1" } as const;
+export const renderHyperframesModuleRef = { name: "@hypit/render-hyperframes", version: "1" } as const;
 export const renderHyperframesCapabilities = {
   renderVisual: { module: renderHyperframesModuleRef, name: "render-visual" },
 } satisfies Record<string, CapabilityRef>;
@@ -32,7 +32,7 @@ export const renderHyperframesMarkupSurfaces = [{
 
 
 export const renderHyperframesManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: renderHyperframesModuleRef.name,
   version: renderHyperframesModuleRef.version,
   dependencies: [

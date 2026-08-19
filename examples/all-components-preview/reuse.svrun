@@ -1,4 +1,4 @@
-<?svml using="@narratage/run-markup@1"?>
+<?svml using="@hypit/run-markup@1"?>
 
 <svrun version="1">
   <author source="./main.svml"/>
@@ -6,7 +6,7 @@
 
   <!-- The presenter frame this project generated, kept beside the Source so a
        preview shows the real shot without reaching for a Runtime. -->
-  <file id="accepted-presenter" type="@narratage/artifact@1#BlobArtifact"
+  <file id="accepted-presenter" type="@hypit/artifact@1#BlobArtifact"
     from="./assets/presenter.png" media-type="image/png"/>
   <satisfy output="presenter.image" candidate="accepted-presenter"/>
 </svrun>

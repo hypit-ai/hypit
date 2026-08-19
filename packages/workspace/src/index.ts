@@ -3,8 +3,8 @@ import type {
   SourceAssetResolver,
   SourceResolver,
   SourceUnit,
-} from "@narratage/source";
-import type { BlobRef } from "@narratage/protocol";
+} from "@hypit/source";
+import type { BlobRef } from "@hypit/protocol";
 
 /** Repeatably openable transfer bytes admitted by the selected Workspace. */
 export type ArtifactAttachment = {

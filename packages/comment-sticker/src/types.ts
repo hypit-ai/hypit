@@ -1,8 +1,8 @@
-import type { FrameSpan } from "@narratage/composition";
-import type { FontArtifactRef } from "@narratage/media";
-import type { BlobRef } from "@narratage/protocol";
-import type { SpatialFrame } from "@narratage/spatial";
-import type { OccurrenceExpansion, TemporalWindowProjection } from "@narratage/temporal";
+import type { FrameSpan } from "@hypit/composition";
+import type { FontArtifactRef } from "@hypit/media";
+import type { BlobRef } from "@hypit/protocol";
+import type { SpatialFrame } from "@hypit/spatial";
+import type { OccurrenceExpansion, TemporalWindowProjection } from "@hypit/temporal";
 
 export type CommentStickerTextStyle = {
   readonly fonts: readonly FontArtifactRef[];

@@ -6,9 +6,9 @@ import {
   assertFontArtifactRef,
   assertFontStackRef,
   mediaTypes,
-} from "@narratage/media";
-import type { FontArtifactRef, FontStackRef } from "@narratage/media";
-import type { StructuredElement, StructuredSurfaceHandler } from "@narratage/markup";
+} from "@hypit/media";
+import type { FontArtifactRef, FontStackRef } from "@hypit/media";
+import type { StructuredElement, StructuredSurfaceHandler } from "@hypit/markup";
 
 import {
   openFontFamilies,
@@ -114,7 +114,7 @@ async function materializeFace(
     const bytes = Uint8Array.from(await readFile(file.path));
     const basename = file.path.split("/").at(-1)!;
     const resolved = await resolveAsset({
-      from: `package:@narratage/fonts-open/${request.familyName}/${basename}`,
+      from: `package:@hypit/fonts-open/${request.familyName}/${basename}`,
       mediaType: "font/woff2",
       bytes,
       range: element.range,

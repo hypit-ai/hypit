@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/speech-spine",
+  "name": "@hypit/speech-spine",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,30 +7,30 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/artifact": "workspace:*",
-    "@narratage/component-kit": "workspace:*",
-    "@narratage/composition": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/media": "workspace:*",
-    "@narratage/media-pipeline": "workspace:*",
-    "@narratage/narrative": "workspace:*",
-    "@narratage/program-space": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/speech": "workspace:*",
-    "@narratage/speech-basis": "workspace:*",
-    "@narratage/spatial": "workspace:*",
-    "@narratage/svs": "workspace:*",
-    "@narratage/markup": "workspace:*"
+    "@hypit/artifact": "workspace:*",
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/composition": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/media-pipeline": "workspace:*",
+    "@hypit/narrative": "workspace:*",
+    "@hypit/program-space": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/speech": "workspace:*",
+    "@hypit/speech-basis": "workspace:*",
+    "@hypit/spatial": "workspace:*",
+    "@hypit/svs": "workspace:*",
+    "@hypit/markup": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/core": "workspace:*",
-    "@narratage/media-track": "workspace:*",
-    "@narratage/script": "workspace:*",
-    "@narratage/text": "workspace:*",
-    "@narratage/validation": "workspace:*"
+    "@hypit/core": "workspace:*",
+    "@hypit/media-track": "workspace:*",
+    "@hypit/script": "workspace:*",
+    "@hypit/text": "workspace:*",
+    "@hypit/validation": "workspace:*"
   }
 }

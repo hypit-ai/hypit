@@ -1,15 +1,15 @@
-import { isDigest } from "@narratage/protocol";
-import type { Narrative, NarrativeToken } from "@narratage/narrative";
-import { programFrameSampleBoundary, programSpaceFrameCount } from "@narratage/program-space";
-import type { SpeechAudioBasis } from "@narratage/speech";
+import { isDigest } from "@hypit/protocol";
+import type { Narrative, NarrativeToken } from "@hypit/narrative";
+import { programFrameSampleBoundary, programSpaceFrameCount } from "@hypit/program-space";
+import type { SpeechAudioBasis } from "@hypit/speech";
 import type {
   AlignedTranscriptEvidence,
   SpeechActivitySpan,
   SpeechCharacterEvidence,
   SpeechTranscriptPassage,
   SpeechWordEvidence,
-} from "@narratage/speech-evidence";
-import type { CompleteSemanticMap, SemanticTimePoint, TimedSpeechToken } from "@narratage/semantic-map";
+} from "@hypit/speech-evidence";
+import type { CompleteSemanticMap, SemanticTimePoint, TimedSpeechToken } from "@hypit/semantic-map";
 
 import { alignWordGroups } from "./align.js";
 import { SpeechAlignmentError } from "./error.js";

@@ -1,10 +1,10 @@
-import { narrativeTypes } from "@narratage/narrative";
-import { speechTypes } from "@narratage/speech";
-import { speechEvidenceTypes } from "@narratage/speech-evidence";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { sealGraphFragment } from "@narratage/elaborator";
-import { mediaPipelineProducers } from "@narratage/media-pipeline";
-import { speechAlignmentProducers } from "@narratage/speech-alignment";
+import { narrativeTypes } from "@hypit/narrative";
+import { speechTypes } from "@hypit/speech";
+import { speechEvidenceTypes } from "@hypit/speech-evidence";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import { sealGraphFragment } from "@hypit/elaborator";
+import { mediaPipelineProducers } from "@hypit/media-pipeline";
+import { speechAlignmentProducers } from "@hypit/speech-alignment";
 
 import { whisperXProducers } from "./manifest.js";
 

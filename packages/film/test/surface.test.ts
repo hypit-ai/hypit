@@ -1,19 +1,19 @@
 import { compositionComponent, spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
-import { programSpaceDependency, programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
-import { compositionDependency, compositionTypes, sealAudioTrack, sealVisualTrack } from "@narratage/composition";
-import type { Track } from "@narratage/composition";
+import { registerTypeValidatorFacets } from "@hypit/component-kit";
+import { programSpaceDependency, programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
+import { compositionDependency, compositionTypes, sealAudioTrack, sealVisualTrack } from "@hypit/composition";
+import type { Track } from "@hypit/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { createResolvedClosure, sealBuildRequest, start } from "@narratage/core";
+import { createResolvedClosure, sealBuildRequest, start } from "@hypit/core";
 import {
   AuthorFrontendRegistry,
   compileSourceClosure,
   resolveCompiledSourceExport,
-} from "@narratage/elaborator";
-import type { AuthorSourceUnit } from "@narratage/elaborator";
+} from "@hypit/elaborator";
+import type { AuthorSourceUnit } from "@hypit/elaborator";
 import {
   decodeFilmSurface,
   filmManifest,
@@ -21,20 +21,20 @@ import {
   filmModuleRef,
   filmProducers,
   filmTypes,
-} from "@narratage/film";
-import type { ModuleManifest } from "@narratage/protocol";
-import { svsFrontend, svsManifest } from "@narratage/svs";
+} from "@hypit/film";
+import type { ModuleManifest } from "@hypit/protocol";
+import { svsFrontend, svsManifest } from "@hypit/svs";
 import {
   decodeCanvasSurface,
   spatialManifest,
   spatialMarkupSurfaces,
   spatialModuleRef,
-} from "@narratage/spatial";
+} from "@hypit/spatial";
 import {
   MarkupSurfaceRegistry,
   createMarkupAuthorFrontend,
-} from "@narratage/markup";
-import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
+} from "@hypit/markup";
+import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
 
 const fixtureModule = { name: "example.film-fixture", version: "1" } as const;
 const fixtureSurfaceDigest = fixtureDigest("example.film-fixture/inputs-surface@1");
@@ -43,7 +43,7 @@ const fixtureSurface = {
   outputs: [programSpaceTypes.programSpace, compositionTypes.visualTrack, compositionTypes.audioTrack],
 } as const;
 const fixtureManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
   dependencies: [
@@ -60,7 +60,7 @@ const space = sealProgramSpace({
   frameRate: { numerator: 30, denominator: 1 },
 });
 const visual = sealVisualTrack({
-  visualIr: "narratage.visual-ir@1",
+  visualIr: "hypit.visual-ir@1",
   id: "visual",
   presents: [],
 });
@@ -77,7 +77,7 @@ const closure = createResolvedClosure([
 ]);
 
 function source(id: string, text: string): AuthorSourceUnit {
-  const frontend = id.endsWith(".svs") ? "@narratage/svs@1" : "@narratage/markup@1";
+  const frontend = id.endsWith(".svs") ? "@hypit/svs@1" : "@hypit/markup@1";
   return {
     id,
     name: id.split("/").at(-1) ?? id,
@@ -123,8 +123,8 @@ async function compileFilm(options: { readonly styles?: string } = {}) {
   frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
     resolveModule(request) {
-      if (request.from.startsWith("@narratage/film")) return filmModuleRef;
-      if (request.from.startsWith("@narratage/spatial")) return spatialModuleRef;
+      if (request.from.startsWith("@hypit/film")) return filmModuleRef;
+      if (request.from.startsWith("@hypit/spatial")) return spatialModuleRef;
       return fixtureModule;
     },
   }));
@@ -133,8 +133,8 @@ async function compileFilm(options: { readonly styles?: string } = {}) {
   return await compileSourceClosure({
     entry: source("/project/main.svml", `<svml>
       <import as="fixture" from="example.film-fixture@1"/>
-      <import as="film" from="@narratage/film@1"/>
-      <import as="space" from="@narratage/spatial@1"/>
+      <import as="film" from="@hypit/film@1"/>
+      <import as="space" from="@hypit/spatial@1"/>
       <import as="studio" source="./studio.svs"/>
       <fixture:Inputs/>
       <space:Canvas id="vertical" width="1080" height="1920"/>

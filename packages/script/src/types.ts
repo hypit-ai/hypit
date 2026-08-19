@@ -1,7 +1,7 @@
-import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@narratage/protocol";
-import type { Narrative, NarrativeMomentOccurrence, NarrativeSegment, NarrativeSelectionOccurrence, NarrativeToken, NarrativeTurn } from "@narratage/narrative";
+import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@hypit/protocol";
+import type { Narrative, NarrativeMomentOccurrence, NarrativeSegment, NarrativeSelectionOccurrence, NarrativeToken, NarrativeTurn } from "@hypit/narrative";
 
-export type { Narrative, SemanticAnchor } from "@narratage/narrative";
+export type { Narrative, SemanticAnchor } from "@hypit/narrative";
 
 export type Affinity = "left" | "right";
 

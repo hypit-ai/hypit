@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/component-kit",
+  "name": "@hypit/component-kit",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -8,6 +8,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@narratage/protocol": "workspace:*"
+    "@hypit/protocol": "workspace:*"
   }
 }

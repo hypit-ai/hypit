@@ -1,7 +1,7 @@
-# `@narratage/markup`
+# `@hypit/markup`
 
 Official XML-like Author Frontend normally used by `.svml` source units. The suffix has no parser
-authority; a mandatory `<?svml using="@narratage/markup@1"?>` Header selects this Frontend. It owns only the `<svml>` envelope,
+authority; a mandatory `<?svml using="@hypit/markup@1"?>` Header selects this Frontend. It owns only the `<svml>` envelope,
 the leading Import Prologue, namespace binding, generic structured elements and dispatch to
 package-owned Markup Surface Host facets.
 
@@ -11,9 +11,9 @@ Manifest contains no XML or parser fact. The current registry is for trusted off
 sandbox for third-party parser code.
 
 ```svml
-<?svml using="@narratage/markup@1"?>
+<?svml using="@hypit/markup@1"?>
 <svml>
-  <import from="@narratage/script@1"/>
+  <import from="@hypit/script@1"/>
   <import as="studio" source="./studio.svs"/>
 
   <script id="story">
@@ -41,13 +41,13 @@ Compiler Host, not the Surface, owns containment, read-once behavior and byte tr
 that does not request assets remains unchanged apart from being awaitable.
 
 Markup validates source ranges, duplicate identities, Host-facet-declared Record types and complete
-Fragment references. It strips diagnostic ranges before sealing one `narratage.author-module@1`, so
+Fragment references. It strips diagnostic ranges before sealing one `hypit.author-module@1`, so
 source reflow does not change author semantics. It never expands a Fragment or resolves a component
-input while reading the body. After every declaration has been collected, `@narratage/elaborator`
+input while reading the body. After every declaration has been collected, `@hypit/elaborator`
 resolves forward references and emits the Core Graph.
 
 Direct `decodeMarkup()` calls require every source import to be supplied as an already resolved
-namespace. The reference `compileSourceClosure()` orchestration in `@narratage/elaborator` recursively
+namespace. The reference `compileSourceClosure()` orchestration in `@hypit/elaborator` recursively
 discovers those SourceUnits. Each dependency's own Source Header selects its exact Frontend; Markup
 never chooses a dependency parser. The compiler decodes dependencies first and then calls Markup
 with their locked public exports. Markup itself never reads a file or guesses a Frontend.

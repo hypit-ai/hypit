@@ -6,15 +6,15 @@ import type {
   Need,
   StoredValue,
   TypeRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import type {
   ArtifactStore,
   CredentialRef,
   CredentialValue,
   OperationFailure,
   OperationProgress,
-} from "@narratage/runtime";
-import { verifyCredentialRef } from "@narratage/runtime";
+} from "@hypit/runtime";
+import { verifyCredentialRef } from "@hypit/runtime";
 
 export type Awaitable<T> = T | Promise<T>;
 

@@ -1,4 +1,4 @@
-# `@narratage/runtime`
+# `@hypit/runtime`
 
 Environment neutral execution and storage contracts around Core.
 
@@ -13,8 +13,8 @@ The package defines the small ports used by a runtime:
 * `LocalBuildScheduler` runs ready commands concurrently while respecting declared resource limits.
 
 These contracts do not choose a filesystem, database, provider or source language. The default local
-implementation lives in `@narratage/runtime-local`; Node component and endpoint execution lives in
-`@narratage/driver-node`.
+implementation lives in `@hypit/runtime-local`; Node component and endpoint execution lives in
+`@hypit/driver-node`.
 
 The scheduler never changes graph meaning. Targets and candidates are fixed before execution, and
 resource limits only control when an already selected command may run.

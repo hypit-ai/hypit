@@ -1,6 +1,6 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { HostFacet } from "@narratage/host";
-import type { ModuleManifest } from "@narratage/protocol";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { HostFacet } from "@hypit/host";
+import type { ModuleManifest } from "@hypit/protocol";
 
 /** Semantic Module declaration carried by one physical Node package. */
 export type NodeModuleContribution = {
@@ -20,7 +20,7 @@ export type LogicalPackageAddress = {
  * each exact Host ABI. Runtime facets remain inert unless a Runtime Profile selects the package.
  */
 export type NodePackageContribution = {
-  readonly format: "narratage.node-package@1";
+  readonly format: "hypit.node-package@1";
   readonly modules?: readonly NodeModuleContribution[];
   /** Syntax- or Host-specific executable facets, inert until their exact Host ABI selects them. */
   readonly hostFacets?: readonly HostFacet[];

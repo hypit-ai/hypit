@@ -2,7 +2,7 @@ import type {
   NodeRuntimeHost,
   RuntimeController,
   RuntimeWorkerLaunch,
-} from "@narratage/runtime-host-node";
+} from "@hypit/runtime-host-node";
 import { resolve } from "node:path";
 
 import {

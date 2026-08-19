@@ -1,6 +1,6 @@
-import { speechTypes } from "@narratage/speech";
-import { sealGraphFragment } from "@narratage/elaborator";
-import { textTypes } from "@narratage/text";
+import { speechTypes } from "@hypit/speech";
+import { sealGraphFragment } from "@hypit/elaborator";
+import { textTypes } from "@hypit/text";
 
 import { estimateProducers, estimateTypes } from "./manifest.js";
 

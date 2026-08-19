@@ -1,4 +1,4 @@
-# @narratage/ranking
+# @hypit/ranking
 
 Four independent progressive-ranking author components over one private schedule utility:
 
@@ -23,7 +23,7 @@ result across schedule, event and render work. Tier row names remain Style confi
 they define the board vocabulary rather than dynamic item copy.
 
 ```svml
-<import as="copy" from="@narratage/text@1"/>
+<import as="copy" from="@hypit/text@1"/>
 
 <copy:Value id="winner">No hidden runtime choice</copy:Value>
 

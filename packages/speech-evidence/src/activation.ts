@@ -1,3 +1,3 @@
 import { speechEvidenceManifest } from "./index.js";
-export const narratagePackage = { format: "narratage.node-package@1" as const, modules: [{ manifest: speechEvidenceManifest }] };
-export default narratagePackage;
+export const hypitPackage = { format: "hypit.node-package@1" as const, modules: [{ manifest: speechEvidenceManifest }] };
+export default hypitPackage;

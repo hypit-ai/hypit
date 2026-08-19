@@ -1,4 +1,4 @@
-import type { CanonicalValue } from "@narratage/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
 
 import type {
   ParsedSvsProperty,

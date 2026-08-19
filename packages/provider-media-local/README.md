@@ -1,10 +1,10 @@
-# `@narratage/provider-media-local`
+# `@hypit/provider-media-local`
 
-Trusted local ffprobe/ffmpeg implementation of `@narratage/media-pipeline`'s eight exact byte-operation
+Trusted local ffprobe/ffmpeg implementation of `@hypit/media-pipeline`'s eight exact byte-operation
 capabilities. It is Runtime configuration and is never imported by author `.svml`.
 
 ```ts
-import { createLocalMediaProvider } from "@narratage/provider-media-local";
+import { createLocalMediaProvider } from "@hypit/provider-media-local";
 
 const media = createLocalMediaProvider({ instance: "media.local", defaultConcurrency: 1 });
 ```

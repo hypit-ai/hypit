@@ -6,12 +6,12 @@ import {
   sealGenerationMediaBinding,
   sealGenerationRequestDraft,
   sealGenerationPortTable,
-} from "@narratage/generation";
+} from "@hypit/generation";
 import {
   createExactModelPrimaryGenerationFragment,
   defineExactModelModule,
-} from "@narratage/model-kit";
-import { sealText } from "@narratage/text";
+} from "@hypit/model-kit";
+import { sealText } from "@hypit/text";
 
 const ports = sealGenerationPortTable({
   model: "graph-native-image",

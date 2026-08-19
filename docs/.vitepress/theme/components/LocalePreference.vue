@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from "vue";
 
-const storageKey = "narratage-locale";
+const storageKey = "hypit-locale";
 
 // The dev server serves the site under `/docs/`; the Pages deploy builds with
 // VITEPRESS_BASE=/ and serves it at the domain root. Vite substitutes the right

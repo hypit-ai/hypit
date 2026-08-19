@@ -13,7 +13,7 @@ export type Range = { readonly start: number; readonly end: number };
  * moves it and only the picture knows where it ended up.
  */
 export type Clip = {
-  /** The Present's own id, identical to the preview's data-narratage-present-id. */
+  /** The Present's own id, identical to the preview's data-hypit-present-id. */
   readonly id: string;
   /** The authored id this Present is named after, when it names one. */
   readonly authoredId: string;

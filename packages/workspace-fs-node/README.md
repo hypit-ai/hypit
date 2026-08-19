@@ -1,4 +1,4 @@
-# `@narratage/workspace-fs-node`
+# `@hypit/workspace-fs-node`
 
 Reference Node filesystem implementation of the host-neutral `Workspace` contract.
 

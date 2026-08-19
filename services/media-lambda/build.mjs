@@ -14,7 +14,7 @@ const out = join(root, "build");
 await mkdir(out, { recursive: true });
 
 const deployment = {
-  contract: "narratage.media-lambda-deployment@1",
+  contract: "hypit.media-lambda-deployment@1",
   runtime: "nodejs22.x",
   architecture: "x86_64",
   handler: "index.handler",
@@ -67,7 +67,7 @@ const archiveStat = await stat(archive);
 const archiveBytes = await readFile(archive);
 const archiveSha256 = createHash("sha256").update(archiveBytes).digest();
 const functionArtifact = {
-  contract: "narratage.media-lambda-function-artifact@1",
+  contract: "hypit.media-lambda-function-artifact@1",
   bundleHash: hash,
   archiveSha256: archiveSha256.toString("hex"),
   codeSha256: archiveSha256.toString("base64"),

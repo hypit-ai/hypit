@@ -4,15 +4,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { modulePackageAbi } from "@narratage/protocol";
-import { createAuthorFrontendHostFacet } from "@narratage/elaborator";
-import { createRunFrontendHostFacet, runFragmentHostAbi } from "@narratage/run";
-import { sourceFrontendPackageAbi } from "@narratage/source";
+import { modulePackageAbi } from "@hypit/protocol";
+import { createAuthorFrontendHostFacet } from "@hypit/elaborator";
+import { createRunFrontendHostFacet, runFragmentHostAbi } from "@hypit/run";
+import { sourceFrontendPackageAbi } from "@hypit/source";
 
 import { discoverSourcePackages } from "../src/source-discovery.js";
 
 test("third-party Frontends discover same-named ABI requirements through physical package bindings", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-cli-third-party-discovery-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-cli-third-party-discovery-"));
   try {
     await writeFile(join(root, "build.svrun"), `<?svml using="@logical/run@1"?>\nrun`, "utf8");
     await writeFile(join(root, "main.story"), `<?svml using="@logical/story@1"?>\nstory`, "utf8");
@@ -20,7 +20,7 @@ test("third-party Frontends discover same-named ABI requirements through physica
     const packages = [
       {
         specifier: "@physical/run-suite",
-        contribution: { format: "narratage.node-package@1" as const, hostFacets: [createRunFrontendHostFacet({
+        contribution: { format: "hypit.node-package@1" as const, hostFacets: [createRunFrontendHostFacet({
           id: "@logical/run@1",
           discover: () => ({
             author: { source: "./main.story" },
@@ -31,7 +31,7 @@ test("third-party Frontends discover same-named ABI requirements through physica
       },
       {
         specifier: "@physical/story-suite",
-        contribution: { format: "narratage.node-package@1" as const, hostFacets: [createAuthorFrontendHostFacet({
+        contribution: { format: "hypit.node-package@1" as const, hostFacets: [createAuthorFrontendHostFacet({
           id: "@logical/story@1",
           discover: () => ({
             modules: ["@logical/shared@1"],
@@ -42,9 +42,9 @@ test("third-party Frontends discover same-named ABI requirements through physica
       },
       {
         specifier: "@physical/module-suite",
-        contribution: { format: "narratage.node-package@1" as const, modules: [{
+        contribution: { format: "hypit.node-package@1" as const, modules: [{
           manifest: {
-            format: "narratage.module@1" as const,
+            format: "hypit.module@1" as const,
             name: "@logical/shared",
             version: "1",
             dependencies: [], types: [], capabilities: [], producers: [],
@@ -54,7 +54,7 @@ test("third-party Frontends discover same-named ABI requirements through physica
       },
       {
         specifier: "@physical/fragment-suite",
-        contribution: { format: "narratage.node-package@1" as const, hostFacets: [{
+        contribution: { format: "hypit.node-package@1" as const, hostFacets: [{
           abi: runFragmentHostAbi,
           offers: ["@logical/shared@1"],
           implementation: {},

@@ -1,4 +1,4 @@
-import { SvmlError } from "@narratage/protocol";
+import { SvmlError } from "@hypit/protocol";
 
 export function invariant(
   condition: unknown,

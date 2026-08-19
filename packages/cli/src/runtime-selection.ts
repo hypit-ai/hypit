@@ -1,7 +1,7 @@
 import { mkdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 
-const stateDirectoryName = ".narratage";
+const stateDirectoryName = ".hypit";
 const selectionFileName = "runtime";
 
 export type RuntimeProfileSelection = {
@@ -64,7 +64,7 @@ export async function findRuntimeProfile(start: string): Promise<RuntimeProfileS
   const selected = await readSelectionFile(start);
   if (selected === undefined) return undefined;
   if (selected.value.length === 0) {
-    throw new Error(`Runtime selection is empty: ${selected.selectionFile}; run narratage runtime use <profile>`);
+    throw new Error(`Runtime selection is empty: ${selected.selectionFile}; run hypit runtime use <profile>`);
   }
   const projectRoot = await realpath(selected.projectRoot);
   const candidate = resolve(projectRoot, selected.value);
@@ -77,7 +77,7 @@ export async function findRuntimeProfile(start: string): Promise<RuntimeProfileS
   } catch (error) {
     if (errorCode(error) === "ENOENT") {
       throw new Error(
-        `Selected Runtime Profile no longer exists: ${candidate}; run narratage runtime use <profile>`,
+        `Selected Runtime Profile no longer exists: ${candidate}; run hypit runtime use <profile>`,
       );
     }
     throw error;

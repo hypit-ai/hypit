@@ -2,9 +2,9 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { FileArtifactStore } from "@narratage/artifact-store-fs";
-import { EnvironmentCredentialStore } from "@narratage/credential-store-env";
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
+import { FileArtifactStore } from "@hypit/artifact-store-fs";
+import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
+import { registerTypeValidatorFacets } from "@hypit/component-kit";
 import {
   createResolvedClosure,
   defineBuild,
@@ -13,70 +13,70 @@ import {
   sealCompiledGraph,
   sealRecord,
   start,
-} from "@narratage/core";
-import { narrativeManifest } from "@narratage/narrative";
-import { mediaManifest } from "@narratage/media";
+} from "@hypit/core";
+import { narrativeManifest } from "@hypit/narrative";
+import { mediaManifest } from "@hypit/media";
 import {
   geminiOmniComponent,
   geminiOmniEndpoints,
   geminiOmniManifest,
   sealGeminiOmniRequest,
-} from "@narratage/gemini-omni";
+} from "@hypit/gemini-omni";
 import {
   generationComponent,
   generationManifest,
   verifyGeneratedImageSet,
   verifyGeneratedVideoSet,
-} from "@narratage/generation";
+} from "@hypit/generation";
 import {
   gptImageComponent,
   gptImageEndpoints,
   gptImageManifest,
   sealGptImage2Request,
-} from "@narratage/gpt-image";
+} from "@hypit/gpt-image";
 import {
   grokImagineComponent,
   grokImagineEndpoints,
   grokImagineManifest,
   sealGrokImagineRequest,
-} from "@narratage/grok-imagine";
-import { createLocalRuntime } from "@narratage/runtime-local";
-import type { LocalBuildSubmission } from "@narratage/runtime-local";
+} from "@hypit/grok-imagine";
+import { createLocalRuntime } from "@hypit/runtime-local";
+import type { LocalBuildSubmission } from "@hypit/runtime-local";
 import {
   minimaxH3Component,
   minimaxH3Endpoints,
   minimaxH3Manifest,
   sealMinimaxH3Request,
-} from "@narratage/minimax-h3";
-import type { ExactModelEndpoint, ExactModelModule } from "@narratage/model-kit";
+} from "@hypit/minimax-h3";
+import type { ExactModelEndpoint, ExactModelModule } from "@hypit/model-kit";
 import {
   nanoBananaComponent,
   nanoBananaEndpoints,
   nanoBananaManifest,
   sealNanoBananaRequest,
-} from "@narratage/nano-banana";
-import { createKieProvider } from "@narratage/provider-kie";
+} from "@hypit/nano-banana";
+import { createKieProvider } from "@hypit/provider-kie";
 import type {
   BlobRef,
   CanonicalValue,
   ModuleManifest,
   TypedRecord,
-} from "@narratage/protocol";
-import { credentialRef } from "@narratage/runtime";
-import { SqliteRuntimeState } from "@narratage/store-sqlite";
+} from "@hypit/protocol";
+import { credentialRef } from "@hypit/runtime";
+import { SqliteRuntimeState } from "@hypit/store-sqlite";
 import {
   sealSeedanceRequest,
   seedanceComponent,
   seedanceEndpoints,
   seedanceManifest,
-} from "@narratage/seedance";
+} from "@hypit/seedance";
 import {
   sealSeedreamRequest,
   seedreamComponent,
   seedreamEndpoints,
   seedreamManifest,
-} from "@narratage/seedream";
-import { admitRecord, TypeValidatorRegistry } from "@narratage/validation";
+} from "@hypit/seedream";
+import { admitRecord, TypeValidatorRegistry } from "@hypit/validation";
 
 type SmokeCase = {
   readonly key: string;
@@ -145,7 +145,7 @@ function caseIds(key: string, media: "image" | "video"): SmokeCase["ids"] {
   if (key === "gpt-image-2") {
     return {
       request: "request:gpt-image-2-live",
-      source: "@narratage/provider-kie/live-smoke/gpt-image-2@1",
+      source: "@hypit/provider-kie/live-smoke/gpt-image-2@1",
       output: "result:image",
       candidate: "candidate:gpt-image-2",
       operation: "operation:gpt-image-2",
@@ -155,7 +155,7 @@ function caseIds(key: string, media: "image" | "video"): SmokeCase["ids"] {
   }
   return {
     request: `request:${key}-live`,
-    source: `@narratage/provider-kie/live-smoke/${key}@1`,
+    source: `@hypit/provider-kie/live-smoke/${key}@1`,
     output: `result:${key}`,
     candidate: `candidate:${key}`,
     operation: `operation:${key}`,
@@ -169,7 +169,7 @@ function referenceMediaType(path: string): string {
   if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
   if (lower.endsWith(".webp")) return "image/webp";
   if (lower.endsWith(".png")) return "image/png";
-  throw new Error("NARRATAGE_KIE_SMOKE_REFERENCE must be a PNG, JPEG or WebP image");
+  throw new Error("HYPIT_KIE_SMOKE_REFERENCE must be a PNG, JPEG or WebP image");
 }
 
 async function smokeCases(root: string): Promise<readonly SmokeCase[]> {
@@ -268,7 +268,7 @@ async function smokeCases(root: string): Promise<readonly SmokeCase[]> {
       }) as unknown as CanonicalValue,
     },
   ];
-  const referencePath = process.env.NARRATAGE_KIE_SMOKE_REFERENCE;
+  const referencePath = process.env.HYPIT_KIE_SMOKE_REFERENCE;
   if (referencePath !== undefined) {
     const absolute = resolve(referencePath);
     const store = new FileArtifactStore(join(root, ".svml", "artifacts"));
@@ -290,10 +290,10 @@ async function smokeCases(root: string): Promise<readonly SmokeCase[]> {
 }
 
 function selectCases(cases: readonly SmokeCase[]): readonly SmokeCase[] {
-  const requested = process.env.NARRATAGE_KIE_SMOKE_CASES ?? "gpt-image-2";
+  const requested = process.env.HYPIT_KIE_SMOKE_CASES ?? "gpt-image-2";
   if (requested === "all") return cases;
   const keys = requested.split(",").map((item) => item.trim()).filter((item) => item.length > 0);
-  assert(keys.length > 0, "NARRATAGE_KIE_SMOKE_CASES selected no cases");
+  assert(keys.length > 0, "HYPIT_KIE_SMOKE_CASES selected no cases");
   const available = new Map(cases.map((item) => [item.key, item]));
   return keys.map((key) => {
     const item = available.get(key);
@@ -371,12 +371,12 @@ function failureMessage(item: SmokeCase, build: LocalBuildSubmission): string {
 }
 
 async function main(): Promise<void> {
-  assert(process.env.NARRATAGE_KIE_LIVE === "1",
-    "KIE live smoke is paid and opt-in; set NARRATAGE_KIE_LIVE=1 explicitly");
+  assert(process.env.HYPIT_KIE_LIVE === "1",
+    "KIE live smoke is paid and opt-in; set HYPIT_KIE_LIVE=1 explicitly");
   const key = process.env.KIE_API_KEY;
   assert(key !== undefined && key.length > 0, "KIE_API_KEY is required");
   const baseUrl = apiBaseUrl(process.env.KIE_BASE_URL ?? "https://api.kie.ai");
-  const root = resolve(process.env.NARRATAGE_KIE_SMOKE_ROOT ?? join(tmpdir(), "narratage-kie-live"));
+  const root = resolve(process.env.HYPIT_KIE_SMOKE_ROOT ?? join(tmpdir(), "hypit-kie-live"));
   await mkdir(root, { recursive: true });
   const selected = selectCases(await smokeCases(root));
   console.log(`KIE smoke cases: ${selected.map((item) => item.key).join(", ")}`);
@@ -389,13 +389,13 @@ async function main(): Promise<void> {
     defaultConcurrency: 1,
     pollIntervalMs: 3_000,
   });
-  const state = new SqliteRuntimeState(join(root, ".narratage", "runtime.sqlite"));
+  const state = new SqliteRuntimeState(join(root, ".hypit", "runtime.sqlite"));
   const runtime = await createLocalRuntime({
     buildStore: state.builds,
     buildCatalog: state.catalog,
     operationStore: state.operations,
     dispatchStore: state.dispatch,
-    artifactStore: new FileArtifactStore(join(root, ".narratage", "artifacts")),
+    artifactStore: new FileArtifactStore(join(root, ".hypit", "artifacts")),
     credentialStore: new EnvironmentCredentialStore(),
     components: [
       generationComponent,

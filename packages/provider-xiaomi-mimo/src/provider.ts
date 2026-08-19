@@ -1,17 +1,17 @@
-import { defineEndpointPackage } from "@narratage/endpoint-kit";
-import type { EndpointInvocationContext } from "@narratage/endpoint-kit";
+import { defineEndpointPackage } from "@hypit/endpoint-kit";
+import type { EndpointInvocationContext } from "@hypit/endpoint-kit";
 import {
   generationTypes,
   sealGeneratedAudioSet,
-} from "@narratage/generation";
-import type { GenerationMediaValue, GenerationRequest } from "@narratage/generation";
-import { canonicalize } from "@narratage/protocol";
-import type { CanonicalValue, CapabilityRef } from "@narratage/protocol";
-import { credentialRef } from "@narratage/runtime";
-import type { CredentialRef } from "@narratage/runtime";
+} from "@hypit/generation";
+import type { GenerationMediaValue, GenerationRequest } from "@hypit/generation";
+import { canonicalize } from "@hypit/protocol";
+import type { CanonicalValue, CapabilityRef } from "@hypit/protocol";
+import { credentialRef } from "@hypit/runtime";
+import type { CredentialRef } from "@hypit/runtime";
 
-export const xiaomiMimoProviderModuleRef = { name: "@narratage/provider-xiaomi-mimo", version: "1" } as const;
-const mimoModelModule = { name: "@narratage/mimo-tts", version: "1" } as const;
+export const xiaomiMimoProviderModuleRef = { name: "@hypit/provider-xiaomi-mimo", version: "1" } as const;
+const mimoModelModule = { name: "@hypit/mimo-tts", version: "1" } as const;
 const modelNames = [
   "mimo-v2.5-tts",
   "mimo-v2.5-tts-voicedesign",

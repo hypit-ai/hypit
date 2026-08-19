@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 
-import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@narratage/runtime-kit";
+import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@hypit/runtime-kit";
 
 import { resolveLocalOpenCvDeployment } from "./deployment.js";
 

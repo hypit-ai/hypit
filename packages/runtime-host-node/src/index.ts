@@ -1,8 +1,8 @@
 import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { delimiter, isAbsolute, resolve } from "node:path";
-import type { ArtifactAttachment } from "@narratage/workspace";
-import type { BuildDefinition, BuildState, CapabilityRef, Digest } from "@narratage/protocol";
+import type { ArtifactAttachment } from "@hypit/workspace";
+import type { BuildDefinition, BuildState, CapabilityRef, Digest } from "@hypit/protocol";
 import type {
   BuildCatalogDescriptor,
   BuildCatalogEntry,
@@ -12,8 +12,8 @@ import type {
   CredentialRef,
   OperationSnapshot,
   RuntimeWorkerRunOptions,
-} from "@narratage/runtime";
-import type { RuntimeDoctorDiagnostic } from "@narratage/runtime-kit";
+} from "@hypit/runtime";
+import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-kit";
 
 export type RuntimeHostBuildSubmission = {
   readonly id: string;

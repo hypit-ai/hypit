@@ -17,29 +17,29 @@ import {
   sealAudioClipSpec,
   sealAudioTrackHeader,
   decodeAudioTrackSurface,
-} from "@narratage/audio-track";
-import type { AudioClipSpec, AudioTrackSet } from "@narratage/audio-track";
-import { artifactManifest } from "@narratage/artifact";
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
-import { sealComposition, compositionManifest, compositionTypes } from "@narratage/composition";
-import { createResolvedClosure, sealBuildRequest, start } from "@narratage/core";
-import { AuthorFrontendRegistry, compileSourceClosure, resolveCompiledSourceExport } from "@narratage/elaborator";
-import type { SynchronizedMedia } from "@narratage/media";
-import { mediaComponent, mediaDependency, mediaManifest, mediaTypes } from "@narratage/media";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import { narrativeManifest } from "@narratage/narrative";
-import { compileAudioProgramPlan } from "@narratage/media-pipeline";
-import { programSpaceDependency, programSpaceManifest, programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
-import type { ModuleManifest } from "@narratage/protocol";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import { semanticMapManifest } from "@narratage/semantic-map";
-import { speechEvidenceManifest } from "@narratage/speech-evidence";
-import { speechManifest } from "@narratage/speech";
-import { spatialManifest } from "@narratage/spatial";
-import { temporalManifest } from "@narratage/temporal";
-import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@narratage/markup";
-import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
-import { visualIrManifest } from "@narratage/visual-ir";
+} from "@hypit/audio-track";
+import type { AudioClipSpec, AudioTrackSet } from "@hypit/audio-track";
+import { artifactManifest } from "@hypit/artifact";
+import { registerTypeValidatorFacets } from "@hypit/component-kit";
+import { sealComposition, compositionManifest, compositionTypes } from "@hypit/composition";
+import { createResolvedClosure, sealBuildRequest, start } from "@hypit/core";
+import { AuthorFrontendRegistry, compileSourceClosure, resolveCompiledSourceExport } from "@hypit/elaborator";
+import type { SynchronizedMedia } from "@hypit/media";
+import { mediaComponent, mediaDependency, mediaManifest, mediaTypes } from "@hypit/media";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import { narrativeManifest } from "@hypit/narrative";
+import { compileAudioProgramPlan } from "@hypit/media-pipeline";
+import { programSpaceDependency, programSpaceManifest, programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
+import type { ModuleManifest } from "@hypit/protocol";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { semanticMapManifest } from "@hypit/semantic-map";
+import { speechEvidenceManifest } from "@hypit/speech-evidence";
+import { speechManifest } from "@hypit/speech";
+import { spatialManifest } from "@hypit/spatial";
+import { temporalManifest } from "@hypit/temporal";
+import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
+import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
+import { visualIrManifest } from "@hypit/visual-ir";
 
 const space = sealProgramSpace({
   durationSec: 10,
@@ -237,7 +237,7 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     outputs: [mediaTypes.synchronized, programSpaceTypes.programSpace],
   } as const;
   const fixtureManifest: ModuleManifest = {
-    format: "narratage.module@1",
+    format: "hypit.module@1",
     name: fixtureModule.name,
     version: fixtureModule.version,
     dependencies: [mediaDependency, programSpaceDependency],
@@ -285,10 +285,10 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     entry: {
       id: "/project/audio.svml",
       name: "audio.svml",
-      text: `<?svml using="@narratage/markup@1"?>
+      text: `<?svml using="@hypit/markup@1"?>
       <svml>
         <import as="fixture" from="example.audio-inputs@1"/>
-        <import as="audio" from="@narratage/audio-track@1"/>
+        <import as="audio" from="@hypit/audio-track@1"/>
         <fixture:Inputs/>
         <audio:Track id="sound" space={space}>
           <audio:Clip source={source} during="program" playback="loop-end" gain="0.5" fade-in="2f" fade-out="3f"/>

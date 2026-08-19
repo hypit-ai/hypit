@@ -1,5 +1,5 @@
 
-import type { CanonicalValue } from "@narratage/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
 
 export type CaptionFieldValueSchema =
   | { readonly kind: "boolean" }

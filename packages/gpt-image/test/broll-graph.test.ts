@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { artifactManifest, artifactTypes } from "@narratage/artifact";
+import { artifactManifest, artifactTypes } from "@hypit/artifact";
 import {
   createResolvedClosure,
   link,
@@ -10,13 +10,13 @@ import {
   sealCompiledGraph,
   sealRecord,
   start,
-} from "@narratage/core";
-import { elaborateAuthorGraph } from "@narratage/elaborator";
+} from "@hypit/core";
+import { elaborateAuthorGraph } from "@hypit/elaborator";
 import {
   generationManifest,
   sealGenerationMediaBinding,
   sealGenerationRequestDraft,
-} from "@narratage/generation";
+} from "@hypit/generation";
 import {
   createGptImageCleanFragment,
   gptImage2Ports,
@@ -24,24 +24,24 @@ import {
   gptImageEndpoints,
   gptImageManifest,
   sealGptImage2Draft,
-} from "@narratage/gpt-image";
-import { gptImageDenoiseV1, imageTransformManifest, imageTransformTypes } from "@narratage/image-transform";
-import { exactModelMediaInputNames } from "@narratage/model-kit";
-import { mediaManifest } from "@narratage/media";
-import { narrativeManifest } from "@narratage/narrative";
-import { programSpaceManifest } from "@narratage/program-space";
-import type { CanonicalValue, Digest, ModuleManifest, StoredValue, TypeRef } from "@narratage/protocol";
-import { rasterManifest } from "@narratage/raster";
-import { createProvidedCandidate } from "@narratage/run";
+} from "@hypit/gpt-image";
+import { gptImageDenoiseV1, imageTransformManifest, imageTransformTypes } from "@hypit/image-transform";
+import { exactModelMediaInputNames } from "@hypit/model-kit";
+import { mediaManifest } from "@hypit/media";
+import { narrativeManifest } from "@hypit/narrative";
+import { programSpaceManifest } from "@hypit/program-space";
+import type { CanonicalValue, Digest, ModuleManifest, StoredValue, TypeRef } from "@hypit/protocol";
+import { rasterManifest } from "@hypit/raster";
+import { createProvidedCandidate } from "@hypit/run";
 import {
   createSeedanceAssembledGenerationFragment,
   seedanceEndpoints,
   seedanceManifest,
   seedancePorts,
-} from "@narratage/seedance";
-import { speechManifest } from "@narratage/speech";
-import { spatialManifest } from "@narratage/spatial";
-import { textManifest } from "@narratage/text";
+} from "@hypit/seedance";
+import { speechManifest } from "@hypit/speech";
+import { spatialManifest } from "@hypit/spatial";
+import { textManifest } from "@hypit/text";
 
 const image = (name: string) => ({
   kind: "blob" as const,

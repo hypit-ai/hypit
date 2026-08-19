@@ -35,7 +35,7 @@ test("queue opens durable control without constructing execution Providers", asy
   let output = "";
 
   await runCli(
-    ["queue", "--runtime", "/tmp/narratage-control-profile.json", "--json"],
+    ["queue", "--runtime", "/tmp/hypit-control-profile.json", "--json"],
     { write: (text) => { output += text; } },
     distribution,
   );
@@ -48,7 +48,7 @@ test("queue opens durable control without constructing execution Providers", asy
     readonly capacity: readonly unknown[];
     readonly operations: readonly unknown[];
   };
-  assert.equal(result.format, "narratage.cli-queue@1");
+  assert.equal(result.format, "hypit.cli-queue@1");
   assert.equal(typeof result.at, "number");
   assert.deepEqual(result.dispatches, []);
   assert.deepEqual(result.capacity, []);
@@ -156,9 +156,9 @@ test("command options fail closed instead of being silently ignored", async () =
   );
   await assert.rejects(
     async () => await runCli([
-      "queue", "--runtime", "/tmp/narratage.runtime.ts",
+      "queue", "--runtime", "/tmp/hypit.runtime.ts",
     ], io, distribution),
-    /profile delegated: .*narratage\.runtime\.ts/u,
+    /profile delegated: .*hypit\.runtime\.ts/u,
   );
 });
 

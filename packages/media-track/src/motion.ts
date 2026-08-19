@@ -2,7 +2,7 @@ import type {
   VisualAnimation,
   VisualEasing,
   VisualStyleDeclaration,
-} from "@narratage/composition";
+} from "@hypit/composition";
 
 import type {
   MediaEdgeMotion,
@@ -11,7 +11,7 @@ import type {
   MediaSamplingMotion,
   MediaSustainMotion,
 } from "./types.js";
-import type { CanvasSpace, SpatialFrame } from "@narratage/spatial";
+import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

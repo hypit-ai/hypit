@@ -1,8 +1,8 @@
-# `@narratage/media-execution`
+# `@hypit/media-execution`
 
-Shared FFmpeg execution body for Narratage media Providers.
+Shared FFmpeg execution body for Hypit media Providers.
 
-`@narratage/media-pipeline` owns provider-neutral Needs, plans and result contracts. This package
+`@hypit/media-pipeline` owns provider-neutral Needs, plans and result contracts. This package
 owns the byte-level implementations of the eight current operations:
 
 - inspect every media stream;

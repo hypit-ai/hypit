@@ -4,11 +4,11 @@ import { createReadStream } from "node:fs";
 import { mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mediaTypes, sealMediaInspection, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
-import type { MediaAudioStream, MediaInspection, MediaRational, MediaStream, MediaStreamSelection, MediaTimestamp, MediaVideoStream, MuxedMedia, RenderedVisual, SynchronizedMedia, TimelineAudio } from "@narratage/media";
-import type { ProgramSpace } from "@narratage/program-space";
-import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleBoundary, speechTypes } from "@narratage/speech";
-import type { SpeechEvidenceAudio } from "@narratage/speech";
+import { mediaTypes, sealMediaInspection, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
+import type { MediaAudioStream, MediaInspection, MediaRational, MediaStream, MediaStreamSelection, MediaTimestamp, MediaVideoStream, MuxedMedia, RenderedVisual, SynchronizedMedia, TimelineAudio } from "@hypit/media";
+import type { ProgramSpace } from "@hypit/program-space";
+import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleBoundary, speechTypes } from "@hypit/speech";
+import type { SpeechEvidenceAudio } from "@hypit/speech";
 import {
   mediaPipelineCapabilities,
   verifyAudioExtractionRequest,
@@ -23,12 +23,12 @@ import {
   type ProjectSpeechEvidenceAudioNeed,
   type RenderAudioNeed,
   type TransformMediaNeed,
-} from "@narratage/media-pipeline";
-import type { AudioProgramClip, AudioProgramPlan, MediaTransformOperation } from "@narratage/media-pipeline";
+} from "@hypit/media-pipeline";
+import type { AudioProgramClip, AudioProgramPlan, MediaTransformOperation } from "@hypit/media-pipeline";
 import {
   canonicalize,
-  } from "@narratage/protocol";
-import type { BlobRef, CanonicalValue, StoredValue } from "@narratage/protocol";
+  } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/protocol";
 
 import { parseMediaInspection } from "./probe.js";
 import {
@@ -42,7 +42,7 @@ import type { AnimatedWebp } from "./webp.js";
 /**
  * Where the bytes live and which binaries transform them.
  *
- * These byte operations are the whole of Narratage's media execution, and they
+ * These byte operations are the whole of Hypit's media execution, and they
  * are written once. A local Provider supplies the Build's own ArtifactStore and
  * the ffmpeg on its PATH; a Lambda Provider supplies an S3-backed gateway and
  * the ffmpeg carried by its deployment. Nothing below knows which it is, so the two
@@ -580,7 +580,7 @@ export async function executeInspectMedia(
   constraints: CanonicalValue,
 ): Promise<MediaOperationResult> {
   const need = inspectNeed(constraints);
-  const work = await mkdtemp(join(tmpdir(), "narratage-media-inspect-"));
+  const work = await mkdtemp(join(tmpdir(), "hypit-media-inspect-"));
   try {
     const input = join(work, "source.bin");
     const animationBytes = need.source.mediaType === "image/webp" ? await sourceBytes(env, need.source) : undefined;
@@ -609,7 +609,7 @@ export async function executeNormalizeMedia(
 ): Promise<MediaOperationResult> {
   const need = normalizeNeed(constraints);
   const plan = normalizationPlan(need.inspection, need.selection, need.frameRate);
-  const work = await mkdtemp(join(tmpdir(), "narratage-media-normalize-"));
+  const work = await mkdtemp(join(tmpdir(), "hypit-media-normalize-"));
   try {
     const input = join(work, "source.bin");
     const animationBytes = need.source.mediaType === "image/webp" ? await sourceBytes(env, need.source) : undefined;
@@ -788,7 +788,7 @@ export async function executeTransformMedia(
   const need = transformNeed(constraints);
   const media = need.media;
   const plan = compileTransformPlan(media, need.program.operations);
-  const work = await mkdtemp(join(tmpdir(), "narratage-media-transform-"));
+  const work = await mkdtemp(join(tmpdir(), "hypit-media-transform-"));
   try {
     const visualPath = join(work, "visual.mp4");
     const audioPath = join(work, "audio.wav");
@@ -851,7 +851,7 @@ export async function executeExtractAudio(
   constraints: CanonicalValue,
 ): Promise<MediaOperationResult> {
   const need = extractAudioNeed(constraints);
-  const work = await mkdtemp(join(tmpdir(), "narratage-media-extract-audio-"));
+  const work = await mkdtemp(join(tmpdir(), "hypit-media-extract-audio-"));
   try {
     const input = join(work, "source.bin");
     const output = join(work, "audio.wav");
@@ -887,7 +887,7 @@ export async function executeExtractFrame(
   constraints: CanonicalValue,
 ): Promise<MediaOperationResult> {
   const need = extractFrameNeed(constraints);
-  const work = await mkdtemp(join(tmpdir(), "narratage-media-extract-frame-"));
+  const work = await mkdtemp(join(tmpdir(), "hypit-media-extract-frame-"));
   try {
     const input = join(work, "source.bin");
     const output = join(work, "frame.png");
@@ -935,7 +935,7 @@ export async function executeProjectSpeechEvidenceAudio(
   constraints: CanonicalValue,
 ): Promise<MediaOperationResult> {
   const need = evidenceAudioNeed(constraints);
-  const work = await mkdtemp(join(tmpdir(), "narratage-media-speech-evidence-"));
+  const work = await mkdtemp(join(tmpdir(), "hypit-media-speech-evidence-"));
   try {
     const input = join(work, "speech-master.wav");
     const output = join(work, "alignment-evidence.wav");
@@ -999,7 +999,7 @@ export async function executeRenderTimelineAudio(
 ): Promise<MediaOperationResult> {
   const need = renderAudioNeed(constraints);
   const plan: AudioProgramPlan = need.plan;
-  const work = await mkdtemp(join(tmpdir(), "narratage-media-audio-"));
+  const work = await mkdtemp(join(tmpdir(), "hypit-media-audio-"));
   try {
     const artifacts = new Map<string, { source: BlobRef; path: string; inputIndex: number; sampleFrames: number }>();
     for (const clip of plan.clips) {
@@ -1085,7 +1085,7 @@ export async function executeMuxProgramMedia(
   constraints: CanonicalValue,
 ): Promise<MediaOperationResult> {
   const need = muxMediaNeed(constraints);
-  const work = await mkdtemp(join(tmpdir(), "narratage-media-mux-"));
+  const work = await mkdtemp(join(tmpdir(), "hypit-media-mux-"));
   try {
     const visualPath = join(work, "visual.mp4");
     const audioPath = join(work, "audio.wav");

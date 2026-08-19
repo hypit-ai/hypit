@@ -1,8 +1,8 @@
-import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
-import { defineExactModelModule } from "@narratage/model-kit";
+import { sealGenerationPortRequest, sealGenerationPortTable } from "@hypit/generation";
+import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import { defineExactModelModule } from "@hypit/model-kit";
 
-export const geminiOmniModuleRef = { name: "@narratage/gemini-omni", version: "1" } as const;
+export const geminiOmniModuleRef = { name: "@hypit/gemini-omni", version: "1" } as const;
 
 export const geminiOmniVideoPorts: GenerationPortTable = sealGenerationPortTable({
   model: "gemini-omni-video",

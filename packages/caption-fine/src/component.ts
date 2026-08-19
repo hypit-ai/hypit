@@ -1,9 +1,9 @@
-import type { CaptionProgram, TimedCaptionProjection } from "@narratage/caption";
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { CaptionDisplaySequence } from "@narratage/narrative";
-import type { ProgramSpace } from "@narratage/program-space";
-import type { StoredValue } from "@narratage/protocol";
-import { canonicalize } from "@narratage/protocol";
+import type { CaptionProgram, TimedCaptionProjection } from "@hypit/caption";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { CaptionDisplaySequence } from "@hypit/narrative";
+import type { ProgramSpace } from "@hypit/program-space";
+import type { StoredValue } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 
 import { captionFineProducers } from "./manifest.js";
 import { renderFineCaption } from "./render.js";

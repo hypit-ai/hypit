@@ -1,9 +1,9 @@
-import { createResolvedClosure } from "@narratage/core";
+import { createResolvedClosure } from "@hypit/core";
 import type {
   ModuleManifest,
   ModuleRef,
   ResolvedModuleClosure,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 import { NodeCompilerError } from "./error.js";
 

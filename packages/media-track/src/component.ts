@@ -1,11 +1,11 @@
-import type { ComponentPackage, ProducerHandlerContext } from "@narratage/component-kit";
-import type { CompositableSurfaceRef, SynchronizedMedia } from "@narratage/media";
-import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import type { ProgramSpace } from "@narratage/program-space";
-import { canonicalize } from "@narratage/protocol";
-import type { BlobRef, StoredValue } from "@narratage/protocol";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import type { CanvasSpace, ContentFit, IntrinsicExtent, SpatialFrame, SpatialPath } from "@narratage/spatial";
+import type { ComponentPackage, ProducerHandlerContext } from "@hypit/component-kit";
+import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
+import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import type { ProgramSpace } from "@hypit/program-space";
+import { canonicalize } from "@hypit/protocol";
+import type { BlobRef, StoredValue } from "@hypit/protocol";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { CanvasSpace, ContentFit, IntrinsicExtent, SpatialFrame, SpatialPath } from "@hypit/spatial";
 
 import {
   appendMediaPaintLayer,

@@ -1,5 +1,5 @@
 {
-  "contract": "narratage.program-space@1",
+  "contract": "hypit.program-space@1",
   "durationSec": 31.291666666666668,
   "frameRate": {
     "numerator": 24,

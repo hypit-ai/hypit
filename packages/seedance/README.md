@@ -1,4 +1,4 @@
-# `@narratage/seedance`
+# `@hypit/seedance`
 
 Exact Seedance author model module. It owns the request schema and exactly three invocation Surfaces;
 it does not contain KIE credentials, HTTP code, queues, runtime routing or usage-specific Prompt assembly.

@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
-import { createResolvedClosure, sealBuildRequest, start } from "@narratage/core";
-import { AuthorFrontendRegistry, compileSourceClosure, resolveCompiledSourceExport } from "@narratage/elaborator";
-import type { AuthorSourceUnit } from "@narratage/elaborator";
+import { registerTypeValidatorFacets } from "@hypit/component-kit";
+import { createResolvedClosure, sealBuildRequest, start } from "@hypit/core";
+import { AuthorFrontendRegistry, compileSourceClosure, resolveCompiledSourceExport } from "@hypit/elaborator";
+import type { AuthorSourceUnit } from "@hypit/elaborator";
 import {
   MarkupSurfaceRegistry,
   createMarkupAuthorFrontend,
-} from "@narratage/markup";
-import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
+} from "@hypit/markup";
+import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
 
 import {
   anchoredFrame,
@@ -190,7 +190,7 @@ test("SpatialPath is typed geometry and rejects an empty or stateful command str
 });
 
 function source(text: string): AuthorSourceUnit {
-  return { id: "/project/main.svml", name: "main.svml", text: `<?svml using="@narratage/markup@1"?>\n${text}` };
+  return { id: "/project/main.svml", name: "main.svml", text: `<?svml using="@hypit/markup@1"?>\n${text}` };
 }
 
 test("self-described Spatial Surfaces produce an explicit Canvas edge and finite Frame graph", async () => {
@@ -213,7 +213,7 @@ test("self-described Spatial Surfaces produce an explicit Canvas edge and finite
   registerTypeValidatorFacets(validators, spatialComponent.validators ?? []);
   const compiled = await compileSourceClosure({
     entry: source(`<svml>
-      <import as="space" from="@narratage/spatial@1"/>
+      <import as="space" from="@hypit/spatial@1"/>
       <space:Canvas id="vertical" width="1080" height="1920"/>
       <space:Point id="headline-origin" x="120" y="280"/>
       <space:Path id="headline-path">

@@ -1,16 +1,16 @@
-import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
-import { speechDependency, speechTypes } from "@narratage/speech";
-import { speechEvidenceDependency, speechEvidenceTypes } from "@narratage/speech-evidence";
-import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
-import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
+import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { speechDependency, speechTypes } from "@hypit/speech";
+import { speechEvidenceDependency, speechEvidenceTypes } from "@hypit/speech-evidence";
+import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import type { ModuleManifest, ProducerRef } from "@hypit/protocol";
 
-export const speechAlignmentModuleRef = { name: "@narratage/speech-alignment", version: "1" } as const;
+export const speechAlignmentModuleRef = { name: "@hypit/speech-alignment", version: "1" } as const;
 export const speechAlignmentProducers = {
   locate: { module: speechAlignmentModuleRef, name: "locate-speech" },
 } satisfies Record<string, ProducerRef>;
 
 export const speechAlignmentManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: speechAlignmentModuleRef.name,
   version: speechAlignmentModuleRef.version,
   dependencies: [

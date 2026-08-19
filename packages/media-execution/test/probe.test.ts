@@ -3,7 +3,7 @@ import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 
-import { parseMediaInspection } from "@narratage/media-execution";
+import { parseMediaInspection } from "@hypit/media-execution";
 
 test("probe derives the last decoded-unit duration instead of adding whole-stream duration_ts", () => {
   const inspection = parseMediaInspection({

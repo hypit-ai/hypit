@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { decodeMediaFontSurface, mediaTypes } from "@narratage/media";
+import { decodeMediaFontSurface, mediaTypes } from "@hypit/media";
 
 const range = { start: 0, end: 80 };
 

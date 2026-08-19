@@ -1,4 +1,4 @@
-# `@narratage/spatial`
+# `@hypit/spatial`
 
 Shared video-domain geometry: explicit Canvas coordinates, Points, Frames, Paths, intrinsic extents
 and deterministic two-frame content fitting. It owns no timing, Paint, motion, media decoding,

@@ -22,8 +22,8 @@ Prerequisites for the exact checked-in Runtime Profile:
 - `ffmpeg`, `ffprobe`, Chrome/HyperFrames and the prepared managed local WhisperX service.
 
 Prepare and health-check WhisperX as described in
-[`../../services/whisperx/README.md`](../../services/whisperx/README.md). `narratage check` validates
-the source and Run Graph without making a paid Provider request. `narratage build` assembles the
+[`../../services/whisperx/README.md`](../../services/whisperx/README.md). `hypit check` validates
+the source and Run Graph without making a paid Provider request. `hypit build` assembles the
 selected Runtime and rejects missing capability coverage before scheduling external work; neither
 command promises that remote credentials and service health are valid.
 
@@ -33,14 +33,14 @@ filesystem Artifacts, credentials, KIE, media, WhisperX, Vertex and HyperFrames 
 
 ```bash
 cd examples/talking-film-live
-narratage runtime use narratage.runtime.json
-narratage runtime up
+hypit runtime use hypit.runtime.json
+hypit runtime up
 
-narratage build build.svrun --follow
+hypit build build.svrun --follow
 
-narratage inspect <build-id>
+hypit inspect <build-id>
 
-narratage get <build-id> \
+hypit get <build-id> \
   --name final.video \
   --to output/final.mp4
 ```
@@ -48,17 +48,17 @@ narratage get <build-id> \
 `build` prints the fresh automatic Build id assigned to this durable submission. `--follow` only
 observes the detached Worker; closing this terminal does not cancel the Build.
 
-`build.svrun` owns the Targets and any explicit Candidate selections. `narratage.runtime.json` owns Provider instances,
+`build.svrun` owns the Targets and any explicit Candidate selections. `hypit.runtime.json` owns Provider instances,
 credentials and their capacity. The Build archives all accepted intermediate Records and referenced
 Artifacts even when no destination path is requested. `get` only makes an optional copy of the
 already archived named target. The CLI accepts the declarative JSON Runtime Profile shown here;
-applications that embed Narratage assemble Runtime roles directly through `@narratage/runtime-local`.
+applications that embed Hypit assemble Runtime roles directly through `@hypit/runtime-local`.
 
 To reuse the paid shot outputs from a verified earlier Build, add two zero-input Build Record
 Candidates and their explicit Satisfaction edges to another `.svrun`:
 
 ```xml
-<?svml using="@narratage/run-markup@1"?>
+<?svml using="@hypit/run-markup@1"?>
 <svrun version="1">
   <author source="./main.svml"/>
   <target output="final.video"/>

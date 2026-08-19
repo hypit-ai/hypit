@@ -10,9 +10,9 @@ import {
   openFontFamilies,
   openFontFamiliesByCategory,
   openFontFamilyNames,
-} from "@narratage/fonts-open";
-import type { FontArtifactRef, FontStackRef } from "@narratage/media";
-import type { StructuredElement, StructuredSurfaceHandler } from "@narratage/markup";
+} from "@hypit/fonts-open";
+import type { FontArtifactRef, FontStackRef } from "@hypit/media";
+import type { StructuredElement, StructuredSurfaceHandler } from "@hypit/markup";
 
 const require = createRequire(import.meta.url);
 const range = { start: 0, end: 80 };

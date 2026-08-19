@@ -10,11 +10,11 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 此处展示的每个组件在使用前都必须通过包标识符导入：
 
 ```svml
-<import as="media" from="@narratage/media@1"/>
-<import as="mediaop" from="@narratage/media-pipeline@1"/>
-<import as="estimate" from="@narratage/estimate@1"/>
-<import as="text" from="@narratage/text@1"/>
-<import as="seedance" from="@narratage/seedance@1"/>
+<import as="media" from="@hypit/media@1"/>
+<import as="mediaop" from="@hypit/media-pipeline@1"/>
+<import as="estimate" from="@hypit/estimate@1"/>
+<import as="text" from="@hypit/text@1"/>
+<import as="seedance" from="@hypit/seedance@1"/>
 <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 ```
 
@@ -94,7 +94,7 @@ speech.normal {
 一个可复用的字面 `Text` 值。它与模型无关，可以进入 Seedance、GPT Image 或任何声明的文字端口。
 
 ```svml
-<import as="text" from="@narratage/text@1"/>
+<import as="text" from="@hypit/text@1"/>
 
 <text:Value id="alice-direction">
   Locked medium close-up. Alice speaks directly to camera in a quiet daylight studio.
@@ -180,18 +180,18 @@ Endpoint，不会改变作者图。
 
 ## Seedance 语义 Kit
 
-`@narratage/seedance-kits` 包含七个纯数据 Text Template。Kit 不是模型包装器：先用通用
+`@hypit/seedance-kits` 包含七个纯数据 Text Template。Kit 不是模型包装器：先用通用
 `text:Render` 生成 prompt，再把该 Text 与真实媒体引用显式接入低层 Seedance Surface。
 
-只把项目实际选择的 Kit `.svs` 文件复制进视频项目的 `./kits/` 目录，并导入这份项目内副本，使 Kit 字节保持在 Source Closure 内；项目源码不要反向引用 Narratage 仓库 checkout。
+只把项目实际选择的 Kit `.svs` 文件复制进视频项目的 `./kits/` 目录，并导入这份项目内副本，使 Kit 字节保持在 Source Closure 内；项目源码不要反向引用 Hypit 仓库 checkout。
 
 创作前阅读
-[`@narratage/seedance-kits` 指南](https://github.com/hypit-ai/narratage/blob/main/packages/seedance-kits/README.md)
-和 [所选 Kit 源文件](https://github.com/hypit-ai/narratage/tree/main/packages/seedance-kits/kits)。格式匹配时优先使用官方 Kit。生成指令与动态 prompt slot 必须使用英语；只有需要逐字说出的对白保留作者原语言。七个 Kit 都不适用时，才编写自由格式的英语 prompt。
+[`@hypit/seedance-kits` 指南](https://github.com/hypit-ai/hypit/blob/main/packages/seedance-kits/README.md)
+和 [所选 Kit 源文件](https://github.com/hypit-ai/hypit/tree/main/packages/seedance-kits/kits)。格式匹配时优先使用官方 Kit。生成指令与动态 prompt slot 必须使用英语；只有需要逐字说出的对白保留作者原语言。七个 Kit 都不适用时，才编写自由格式的英语 prompt。
 
 ```svml
-<import as="text" from="@narratage/text@1"/>
-<import as="seedance" from="@narratage/seedance@1"/>
+<import as="text" from="@hypit/text@1"/>
+<import as="seedance" from="@hypit/seedance@1"/>
 <import as="broll-kit" source="./kits/broll-v1.svs"/>
 
 <text:Value id="product-story">
@@ -230,8 +230,8 @@ Endpoint，不会改变作者图。
 使用 `street-interview-v1` 复用场景、角色、麦克风、音色和无叠加文字契约。构图、剪辑、节奏、表演、反应与手势由 SVS Recipe 选择；动态输入只保留对白与可选的单段动作：
 
 ```svml
-<import as="text" from="@narratage/text@1"/>
-<import as="seedance" from="@narratage/seedance@1"/>
+<import as="text" from="@hypit/text@1"/>
+<import as="seedance" from="@hypit/seedance@1"/>
 <import as="interview-kit" source="./kits/street-interview-v1.svs"/>
 
 <text:Value id="interview-action">
@@ -262,8 +262,8 @@ Endpoint，不会改变作者图。
 dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一样通过显式 `prompt` 边进入 Seedance。
 
 ```svml
-<import as="text" from="@narratage/text@1"/>
-<import as="seedance" from="@narratage/seedance@1"/>
+<import as="text" from="@hypit/text@1"/>
+<import as="seedance" from="@hypit/seedance@1"/>
 <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 
 <text:Value id="hook-action">
@@ -293,10 +293,10 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 一个两段拍摄的设置，估算时长进入显式 Text 组装与 Seedance 生成：
 
 ```svml
-<import as="media" from="@narratage/media@1"/>
-<import as="estimate" from="@narratage/estimate@1"/>
-<import as="text" from="@narratage/text@1"/>
-<import as="seedance" from="@narratage/seedance@1"/>
+<import as="media" from="@hypit/media@1"/>
+<import as="estimate" from="@hypit/estimate@1"/>
+<import as="text" from="@hypit/text@1"/>
+<import as="seedance" from="@hypit/seedance@1"/>
 <import as="studio" source="./studio.svs"/>
 <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 

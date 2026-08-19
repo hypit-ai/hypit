@@ -1,10 +1,10 @@
-import { createRunFrontendHostFacet } from "@narratage/run";
+import { createRunFrontendHostFacet } from "@hypit/run";
 
 import { runMarkupFrontend } from "./index.js";
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [createRunFrontendHostFacet(runMarkupFrontend)],
 };
 
-export default narratagePackage;
+export default hypitPackage;

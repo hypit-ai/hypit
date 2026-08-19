@@ -3,12 +3,12 @@ import {
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigString,
-} from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
 
 import { KeychainCredentialStore } from "./store.js";
 
 const keychainCredentialStoreRuntimeAdapter = createRuntimeCredentialStoreAdapterFacet({
-  use: "@narratage/credential-store-keychain",
+  use: "@hypit/credential-store-keychain",
   validate(context) {
     const config = runtimeConfigObject(context.config, "keychain CredentialStore");
     runtimeConfigExact(config, ["service"], "keychain CredentialStore");
@@ -24,9 +24,9 @@ const keychainCredentialStoreRuntimeAdapter = createRuntimeCredentialStoreAdapte
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [keychainCredentialStoreRuntimeAdapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

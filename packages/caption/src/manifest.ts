@@ -1,8 +1,8 @@
-import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
-import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
-export const captionModuleRef = { name: "@narratage/caption", version: "1" } as const;
+export const captionModuleRef = { name: "@hypit/caption", version: "1" } as const;
 export const captionProducers = {
   temporalizePlan: { module: captionModuleRef, name: "temporalize-caption-plan" },
 } satisfies Record<string, ProducerRef>;
@@ -99,7 +99,7 @@ export const captionMarkupSurfaces = [{
 
 
 export const captionManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: captionModuleRef.name,
   version: captionModuleRef.version,
   dependencies: [narrativeDependency, semanticMapDependency],

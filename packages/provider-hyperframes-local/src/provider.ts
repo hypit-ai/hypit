@@ -4,23 +4,23 @@ import { createRequire } from "node:module";
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { mediaTypes, sealRenderedVisual } from "@narratage/media";
-import type { RenderedVisual } from "@narratage/media";
-import { verifyCompositableSurfaceBytes } from "@narratage/media-execution";
-import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
-import { assertHyperframesDocument } from "@narratage/hyperframes";
-import type { HyperframesDocument } from "@narratage/hyperframes";
-import { stageHyperframesProject } from "@narratage/hyperframes/project";
-import { renderHyperframesCapabilities } from "@narratage/render-hyperframes";
-import { canonicalize } from "@narratage/protocol";
-import { isStreamingArtifactStore } from "@narratage/runtime";
-import type { BlobRef, CanonicalValue } from "@narratage/protocol";
-import { defineEndpointPackage } from "@narratage/endpoint-kit";
+import { mediaTypes, sealRenderedVisual } from "@hypit/media";
+import type { RenderedVisual } from "@hypit/media";
+import { verifyCompositableSurfaceBytes } from "@hypit/media-execution";
+import type { EndpointInvocationContext, EndpointFulfillment } from "@hypit/endpoint-kit";
+import { assertHyperframesDocument } from "@hypit/hyperframes";
+import type { HyperframesDocument } from "@hypit/hyperframes";
+import { stageHyperframesProject } from "@hypit/hyperframes/project";
+import { renderHyperframesCapabilities } from "@hypit/render-hyperframes";
+import { canonicalize } from "@hypit/protocol";
+import { isStreamingArtifactStore } from "@hypit/runtime";
+import type { BlobRef, CanonicalValue } from "@hypit/protocol";
+import { defineEndpointPackage } from "@hypit/endpoint-kit";
 
 const HYPERFRAMES_VERSION = "0.7.101";
 
 export const localHyperframesProviderModuleRef = {
-  name: "@narratage/provider-hyperframes-local",
+  name: "@hypit/provider-hyperframes-local",
   version: "1",
 } as const;
 
@@ -259,7 +259,7 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
       returns: mediaTypes.renderedVisual,
       handler: async (context) => {
         const document = visualRequest(context.need.constraints);
-        const work = await mkdtemp(join(tmpdir(), "narratage-hyperframes-local-"));
+        const work = await mkdtemp(join(tmpdir(), "hypit-hyperframes-local-"));
         try {
           await stageHyperframesProject({
             document,

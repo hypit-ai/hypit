@@ -2,21 +2,21 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
-import { createResolvedClosure } from "@narratage/core";
-import { canonicalize } from "@narratage/protocol";
-import type { BlobRef } from "@narratage/protocol";
-import { TypeValidatorRegistry, validateValue } from "@narratage/validation";
-import { artifactManifest } from "@narratage/artifact";
-import type { FontArtifactRef } from "@narratage/media";
-import { mediaManifest } from "@narratage/media";
-import { narrativeManifest } from "@narratage/narrative";
-import { programSpaceManifest, sealProgramSpace } from "@narratage/program-space";
-import { speechManifest } from "@narratage/speech";
-import { speechEvidenceManifest } from "@narratage/speech-evidence";
-import { semanticMapManifest } from "@narratage/semantic-map";
-import { spatialManifest } from "@narratage/spatial";
-import { VISUAL_IR_V1, visualIrManifest } from "@narratage/visual-ir";
+import { registerTypeValidatorFacets } from "@hypit/component-kit";
+import { createResolvedClosure } from "@hypit/core";
+import { canonicalize } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
+import { TypeValidatorRegistry, validateValue } from "@hypit/validation";
+import { artifactManifest } from "@hypit/artifact";
+import type { FontArtifactRef } from "@hypit/media";
+import { mediaManifest } from "@hypit/media";
+import { narrativeManifest } from "@hypit/narrative";
+import { programSpaceManifest, sealProgramSpace } from "@hypit/program-space";
+import { speechManifest } from "@hypit/speech";
+import { speechEvidenceManifest } from "@hypit/speech-evidence";
+import { semanticMapManifest } from "@hypit/semantic-map";
+import { spatialManifest } from "@hypit/spatial";
+import { VISUAL_IR_V1, visualIrManifest } from "@hypit/visual-ir";
 
 import {
   assertCompositionIdentity,
@@ -51,7 +51,7 @@ function fixture() {
     frameRate: { numerator: 30, denominator: 1 },
   });
   const visual = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: "caption",
     presents: [{
       id: "cue-1",
@@ -158,7 +158,7 @@ test("VisualTrack cannot silently extend the versioned public Visual IR", () => 
       canvas: { width: 1080, height: 1920, clearColor: "#000000" },
       tracks: [unknownStyle],
     }), programSpace),
-    /outside narratage\.visual-ir@1/u,
+    /outside hypit\.visual-ir@1/u,
   );
 
   const fixedPosition = sealVisualTrack({

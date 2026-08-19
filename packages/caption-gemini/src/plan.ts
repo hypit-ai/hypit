@@ -1,5 +1,5 @@
-import { assertCaptionPlan, sealCaptionPlan } from "@narratage/caption";
-import type { CaptionFieldDeclaration, CaptionPlannedCue } from "@narratage/caption";
+import { assertCaptionPlan, sealCaptionPlan } from "@hypit/caption";
+import type { CaptionFieldDeclaration, CaptionPlannedCue } from "@hypit/caption";
 
 import { verifyCaptionGeminiRequest } from "./request.js";
 import type {

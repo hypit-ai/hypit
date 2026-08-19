@@ -5,8 +5,8 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-kit";
-import type { RuntimeAdapterFactoryContext } from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
+import type { RuntimeAdapterFactoryContext } from "@hypit/runtime-kit";
 
 import { AwsS3ObjectClient } from "./client.js";
 import { createS3ArtifactStore, normalizeS3ArtifactPrefix } from "./store.js";
@@ -30,7 +30,7 @@ function validateConfig(context: RuntimeAdapterFactoryContext): void {
 }
 
 const s3ArtifactStoreRuntimeAdapter = createRuntimeArtifactStoreAdapterFacet({
-  use: "@narratage/artifact-store-s3",
+  use: "@hypit/artifact-store-s3",
   validate: validateConfig,
   open(context) {
     const config = runtimeConfigObject(context.config, "S3 ArtifactStore");
@@ -78,7 +78,7 @@ const s3ArtifactStoreRuntimeAdapter = createRuntimeArtifactStoreAdapterFacet({
       // bucket as the expected owner" without depending on any object.
       await client.head({
         Bucket: bucket,
-        Key: `${runtimeConfigString(config.prefix, "S3 prefix") ?? ""}/.narratage-doctor-probe`.replace(/^\/+/u, ""),
+        Key: `${runtimeConfigString(config.prefix, "S3 prefix") ?? ""}/.hypit-doctor-probe`.replace(/^\/+/u, ""),
         ...(owner === undefined ? {} : { ExpectedBucketOwner: owner }),
       });
       return [];
@@ -93,9 +93,9 @@ const s3ArtifactStoreRuntimeAdapter = createRuntimeArtifactStoreAdapterFacet({
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [s3ArtifactStoreRuntimeAdapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

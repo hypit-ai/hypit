@@ -1,6 +1,6 @@
-import type { NodeCompiler } from "@narratage/compiler-node";
-import type { LoadedPackage, NodePackageContribution } from "@narratage/package-loader-node";
-import type { NodeRuntimeHost } from "@narratage/runtime-host-node";
+import type { NodeCompiler } from "@hypit/compiler-node";
+import type { LoadedPackage, NodePackageContribution } from "@hypit/package-loader-node";
+import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
 
 export type CliCompilerOptions = {
   /** Canonical containment boundary for Author and Run Sources plus source assets. */
@@ -35,7 +35,7 @@ export type CliDistribution = {
     readonly packages?: readonly LoadedPackage[];
   }): Promise<{
     readonly selected: readonly string[];
-    readonly logical?: readonly import("@narratage/package-loader-node").LogicalPackageAddress[];
+    readonly logical?: readonly import("@hypit/package-loader-node").LogicalPackageAddress[];
   }>;
   /** Open the Runtime Profile with this application's Runtime implementation. */
   openRuntimeHost(path: string, options: { readonly packageRoot: string }): Promise<NodeRuntimeHost>;

@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { sealComposition } from "@narratage/composition";
-import type { AudioTrack } from "@narratage/composition";
-import { compileHyperframesDocument } from "@narratage/hyperframes";
-import { mediaTypes } from "@narratage/media";
-import type { CompositableSurfaceRef, SynchronizedMedia } from "@narratage/media";
-import { mediaPipelineProducers } from "@narratage/media-pipeline";
-import { artifactTypes } from "@narratage/artifact";
-import { narrativeTypes } from "@narratage/narrative";
+import { sealComposition } from "@hypit/composition";
+import type { AudioTrack } from "@hypit/composition";
+import { compileHyperframesDocument } from "@hypit/hyperframes";
+import { mediaTypes } from "@hypit/media";
+import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
+import { mediaPipelineProducers } from "@hypit/media-pipeline";
+import { artifactTypes } from "@hypit/artifact";
+import { narrativeTypes } from "@hypit/narrative";
 import {
   appendMediaPaintLayer,
   appendMediaSound,
@@ -46,23 +46,23 @@ import {
   stillMediaTrackFragment,
   mediaTrackManifest,
   mediaTrackMarkupSurfaces,
-} from "@narratage/media-track";
+} from "@hypit/media-track";
 import type {
   MediaHandoffOperator,
   MediaItemSpec,
   MediaLayerSet,
   MediaSequenceSpec,
-} from "@narratage/media-track";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import { sealProgramSpace } from "@narratage/program-space";
-import { programSpaceTypes } from "@narratage/program-space";
-import type { BlobRef } from "@narratage/protocol";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import { spatialTypes } from "@narratage/spatial";
-import { svsRecipeType } from "@narratage/svs";
-import type { SvsRecipe } from "@narratage/svs";
-import type { StructuredElement, StructuredNode, SurfaceResolvedReference, MarkupAttributeValue } from "@narratage/markup";
+} from "@hypit/media-track";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import { sealProgramSpace } from "@hypit/program-space";
+import { programSpaceTypes } from "@hypit/program-space";
+import type { BlobRef } from "@hypit/protocol";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { spatialTypes } from "@hypit/spatial";
+import { svsRecipeType } from "@hypit/svs";
+import type { SvsRecipe } from "@hypit/svs";
+import type { StructuredElement, StructuredNode, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
 
 const space = sealProgramSpace({
   durationSec: 4,
@@ -279,7 +279,7 @@ test("self-blur is two explicit samples of one Artifact and Artifact collection 
   assert.equal(document.artifacts.length, 1);
   assert.equal((document.html.match(new RegExp(source.digest, "gu")) ?? []).length, 0,
     "HTML uses artifact URIs without the digest prefix spelling");
-  assert.equal((document.html.match(/narratage-artifact:\/\/sha256\//gu) ?? []).length, 2);
+  assert.equal((document.html.match(/hypit-artifact:\/\/sha256\//gu) ?? []).length, 2);
   const blurred = track.presents[0]!.elements.find((element) => element.id === "blurred");
   assert.equal(blurred?.style.find((entry) => entry.name === "left")?.value, "-48px");
   assert.equal(blurred?.style.find((entry) => entry.name === "top")?.value, "-48px");

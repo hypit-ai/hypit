@@ -1,4 +1,4 @@
-import type { ComponentPackage } from "@narratage/component-kit";
+import type { ComponentPackage } from "@hypit/component-kit";
 import { compositionTypes } from "./manifest.js";
 import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualTrackIdentity } from "./track.js";
 import type { AudioTrack, Composition, VisualTrack } from "./track.js";

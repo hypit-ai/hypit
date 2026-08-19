@@ -1,8 +1,8 @@
-import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { momentFrames, segmentFrameSpan, selectionFrameSpans } from "@narratage/semantic-map";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { momentFrames, segmentFrameSpan, selectionFrameSpans } from "@hypit/semantic-map";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
 
 import type {
   LocatedMomentOccurrence,

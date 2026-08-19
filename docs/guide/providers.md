@@ -24,21 +24,21 @@ packages or the CLI:
 
 ```json
 {
-  "name": "@narratage/provider-my-service",
+  "name": "@hypit/provider-my-service",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": { "activation": "./src/activation.ts" },
+  "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-kit": "workspace:*",
-    "@narratage/runtime-host-node": "workspace:*",
-    "@narratage/generation": "workspace:*"
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*",
+    "@hypit/runtime-host-node": "workspace:*",
+    "@hypit/generation": "workspace:*"
   }
 }
 ```
@@ -50,7 +50,7 @@ ArtifactStore persistence.
 
 ```typescript
 // src/provider.ts
-import { defineEndpointPackage } from "@narratage/endpoint-kit";
+import { defineEndpointPackage } from "@hypit/endpoint-kit";
 
 export function createMyServiceProvider(options: {
   instance: string;
@@ -59,7 +59,7 @@ export function createMyServiceProvider(options: {
   defaultConcurrency?: number;
 }) {
   return defineEndpointPackage({
-    module: { name: "@narratage/provider-my-service", version: "1" },
+    module: { name: "@hypit/provider-my-service", version: "1" },
     facet: "service",
     instance: options.instance,
     pool: options.pool,
@@ -95,11 +95,11 @@ import {
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
-} from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
 import { createMyServiceProvider } from "./provider.js";
 
 const adapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-my-service",
+  use: "@hypit/provider-my-service",
 
   activate(context) {
     if (context.pool === undefined) throw new Error("MyService pool is required");
@@ -119,12 +119,12 @@ const adapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [adapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;
 ```
 
 `activate` is the one pure deployment declaration. The Endpoint it returns owns the credential
@@ -141,13 +141,13 @@ There is no second manifest flag or central program registry:
 
 ```typescript
 // src/program.ts
-import type { ManagedProgram } from "@narratage/runtime-kit";
+import type { ManagedProgram } from "@hypit/runtime-kit";
 
 export function createMyProgram(): ManagedProgram {
   return {
     id: "my-service",
     prepare: { command: "uv", args: ["sync", "--project", "services/my-service", "--frozen"] },
-    start: { command: "uv", args: ["run", "--project", "services/my-service", "--frozen", "narratage-my-service"] },
+    start: { command: "uv", args: ["run", "--project", "services/my-service", "--frozen", "hypit-my-service"] },
     probe: async () => {
       // Return { state: "ready" } or { state: "down", detail: "..." }
     },
@@ -159,7 +159,7 @@ Return it beside the Endpoint from the same activation:
 
 ```typescript
 const adapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-my-service",
+  use: "@hypit/provider-my-service",
   activate(context) {
     return {
       endpoint: createMyServiceProvider(/* parsed config */),
@@ -169,7 +169,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 ```
 
-`narratage runtime up` prepares, starts and probes declared Managed Programs before starting the
+`hypit runtime up` prepares, starts and probes declared Managed Programs before starting the
 durable Worker. `build` starts only Programs backing capabilities demanded by its plan. Providers
 that call only remote APIs omit `program` entirely.
 
@@ -179,20 +179,20 @@ Declare every imported package in the Provider's own `package.json`:
 
 ```json
 "dependencies": {
-  "@narratage/runtime-kit": "workspace:*"
+  "@hypit/runtime-kit": "workspace:*"
 }
 ```
 
 Install the package with the project's package manager. It remains inert until the Runtime Profile
 explicitly selects its `use` id.
 
-## 7. Reference from narratage.runtime.json
+## 7. Reference from hypit.runtime.json
 
 ```json
 {
   "endpoints": {
     "my-service": {
-      "use": "@narratage/provider-my-service",
+      "use": "@hypit/provider-my-service",
       "pool": "my-service.account",
       "config": {
         "apiKey": { "store": "keychain", "key": "my-service.api-key" },
@@ -206,7 +206,7 @@ explicitly selects its `use` id.
 Verify the configuration:
 
 ```bash
-narratage doctor narratage.runtime.json
+hypit doctor hypit.runtime.json
 ```
 
 ## Existing Providers to study

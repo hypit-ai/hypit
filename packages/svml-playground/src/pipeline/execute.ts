@@ -6,13 +6,13 @@
  * Capability means - the Providers declare what they fulfil, and a Need nobody
  * can fulfil is reported rather than faked.
  */
-import { EndpointRegistry, MemoryArtifactStore, NodeDriver } from "@narratage/driver-node";
-import type { EndpointPackage } from "@narratage/endpoint-kit";
-import type { ArtifactStore } from "@narratage/runtime";
-import type { BuildState } from "@narratage/protocol";
-import { createLocalHyperframesProvider } from "@narratage/provider-hyperframes-local";
-import { createLocalMediaProvider } from "@narratage/provider-media-local";
-import { createLocalWhisperXProvider } from "@narratage/provider-whisperx-local";
+import { EndpointRegistry, MemoryArtifactStore, NodeDriver } from "@hypit/driver-node";
+import type { EndpointPackage } from "@hypit/endpoint-kit";
+import type { ArtifactStore } from "@hypit/runtime";
+import type { BuildState } from "@hypit/protocol";
+import { createLocalHyperframesProvider } from "@hypit/provider-hyperframes-local";
+import { createLocalMediaProvider } from "@hypit/provider-media-local";
+import { createLocalWhisperXProvider } from "@hypit/provider-whisperx-local";
 
 import { officialVideoDomain } from "../official-video.js";
 

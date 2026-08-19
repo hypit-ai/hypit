@@ -21,21 +21,21 @@ Provider 包依赖 Runtime 端口与共享能力词汇，不依赖精确模型�
 
 ```json
 {
-  "name": "@narratage/provider-my-service",
+  "name": "@hypit/provider-my-service",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": { "activation": "./src/activation.ts" },
+  "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-kit": "workspace:*",
-    "@narratage/runtime-host-node": "workspace:*",
-    "@narratage/generation": "workspace:*"
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*",
+    "@hypit/runtime-host-node": "workspace:*",
+    "@hypit/generation": "workspace:*"
   }
 }
 ```
@@ -46,7 +46,7 @@ Provider 处理来自 Scheduler 的 Command：提交请求、轮询、下载以�
 
 ```typescript
 // src/provider.ts
-import { defineEndpointPackage } from "@narratage/endpoint-kit";
+import { defineEndpointPackage } from "@hypit/endpoint-kit";
 
 export function createMyServiceProvider(options: {
   instance: string;
@@ -55,7 +55,7 @@ export function createMyServiceProvider(options: {
   defaultConcurrency?: number;
 }) {
   return defineEndpointPackage({
-    module: { name: "@narratage/provider-my-service", version: "1" },
+    module: { name: "@hypit/provider-my-service", version: "1" },
     facet: "service",
     instance: options.instance,
     pool: options.pool,
@@ -91,11 +91,11 @@ import {
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
-} from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
 import { createMyServiceProvider } from "./provider.js";
 
 const adapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-my-service",
+  use: "@hypit/provider-my-service",
 
   activate(context) {
     if (context.pool === undefined) throw new Error("MyService pool is required");
@@ -115,12 +115,12 @@ const adapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [adapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;
 ```
 
 `activate` 是唯一的纯部署声明。它返回的 Endpoint 同时拥有供 `doctor` 与执行使用的凭据引用、
@@ -134,13 +134,13 @@ manifest 开关，也没有中央 Program 注册表：
 
 ```typescript
 // src/program.ts
-import type { ManagedProgram } from "@narratage/runtime-kit";
+import type { ManagedProgram } from "@hypit/runtime-kit";
 
 export function createMyProgram(): ManagedProgram {
   return {
     id: "my-service",
     prepare: { command: "uv", args: ["sync", "--project", "services/my-service", "--frozen"] },
-    start: { command: "uv", args: ["run", "--project", "services/my-service", "--frozen", "narratage-my-service"] },
+    start: { command: "uv", args: ["run", "--project", "services/my-service", "--frozen", "hypit-my-service"] },
     probe: async () => {
       // 返回 { state: "ready" } 或 { state: "down", detail: "..." }
     },
@@ -152,7 +152,7 @@ export function createMyProgram(): ManagedProgram {
 
 ```typescript
 const adapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-my-service",
+  use: "@hypit/provider-my-service",
   activate(context) {
     return {
       endpoint: createMyServiceProvider(/* 已解析配置 */),
@@ -162,7 +162,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 ```
 
-`narratage runtime up` 会准备、启动并探测 Managed Program，然后启动耐久 Worker。`build` 只启动
+`hypit runtime up` 会准备、启动并探测 Managed Program，然后启动耐久 Worker。`build` 只启动
 本次 Plan 所需 Capability 对应的 Program。只调用远程 API 的 Provider 不返回 `program`。
 
 ## 6. 注册并锁定
@@ -171,19 +171,19 @@ const adapter = createRuntimeEndpointAdapterFacet({
 
 ```json
 "dependencies": {
-  "@narratage/runtime-kit": "workspace:*"
+  "@hypit/runtime-kit": "workspace:*"
 }
 ```
 
 用项目的包管理器安装它。Runtime Profile 用 `use` 显式实例化之前，这个包始终不会运行。
 
-## 7. 在 narratage.runtime.json 中引用
+## 7. 在 hypit.runtime.json 中引用
 
 ```json
 {
   "endpoints": {
     "my-service": {
-      "use": "@narratage/provider-my-service",
+      "use": "@hypit/provider-my-service",
       "pool": "my-service.account",
       "config": {
         "apiKey": { "store": "keychain", "key": "my-service.api-key" },
@@ -197,7 +197,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
 验证配置：
 
 ```bash
-narratage doctor narratage.runtime.json
+hypit doctor hypit.runtime.json
 ```
 
 ## 可供研究的现有 Provider

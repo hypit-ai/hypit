@@ -8,7 +8,7 @@ description: Script Surface——Segment、Role Cue、Dual Text、Selection、Mo
 `<script>` 元素承载旁白或讲者说出的每一个字。Script 以**散文为先**：它不包含时间码、不引用媒体、不设定样式、不携带生成参数。管线中的其他组件都会读取 Script；Script 本身不读取任何内容。
 
 ```svml
-<import from="@narratage/script@1"/>
+<import from="@hypit/script@1"/>
 
 <script id="story">
   <opening>
@@ -17,7 +17,7 @@ description: Script Surface——Segment、Role Cue、Dual Text、Selection、Mo
 </script>
 ```
 
-引入 `@narratage/script@1` 会激活 Script Surface。`id` 属性让其他组件可以引用该 Script 及其各部分。
+引入 `@hypit/script@1` 会激活 Script Surface。`id` 属性让其他组件可以引用该 Script 及其各部分。
 
 ## Segment
 

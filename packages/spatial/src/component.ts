@@ -1,6 +1,6 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import { canonicalize } from "@narratage/protocol";
-import type { StoredValue } from "@narratage/protocol";
+import type { ComponentPackage } from "@hypit/component-kit";
+import { canonicalize } from "@hypit/protocol";
+import type { StoredValue } from "@hypit/protocol";
 
 import { anchoredFrame, aspectFrame, assertCanvasSpace, assertContentFit, assertFittedContent, assertIntrinsicExtent, assertSpatialFrame, assertSpatialPath, assertSpatialPoint, canvasFrame, fitContent, frameFromEdges } from "./geometry.js";
 import { spatialProducers, spatialTypes } from "./manifest.js";

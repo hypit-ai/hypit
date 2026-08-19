@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { runtimeConfigObject, runtimeConfigString } from "@narratage/runtime-kit";
-import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@narratage/runtime-kit";
+import { runtimeConfigObject, runtimeConfigString } from "@hypit/runtime-kit";
+import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@hypit/runtime-kit";
 
 import { localWhisperXPunktTabDigest } from "./provider.js";
 
@@ -13,7 +13,7 @@ import { localWhisperXPunktTabDigest } from "./provider.js";
  * command for an environment that installs WhisperX differently.
  *
  * The default names the pinned uv project shipped beside this package in the
- * Narratage repository, by absolute path — a Runtime root is wherever the
+ * Hypit repository, by absolute path — a Runtime root is wherever the
  * operator keeps their Profile, and it is not where that project lives. An
  * installation that obtained this package on its own has no such directory and
  * must say what to run instead; `serviceCommand` is that.
@@ -38,7 +38,7 @@ export function localWhisperXProgram(context: RuntimeAdapterFactoryContext): Man
   const baseUrl = (runtimeConfigString(config.baseUrl, "WhisperX baseUrl") ?? "http://127.0.0.1:8765")
     .replace(/\/+$/u, "");
   const expected = {
-    protocol: "narratage.whisperx-service@1",
+    protocol: "hypit.whisperx-service@1",
     serviceVersion: runtimeConfigString(config.expectedServiceVersion, "WhisperX expectedServiceVersion") ?? "0.1.0",
     whisperxVersion: runtimeConfigString(config.expectedWhisperXVersion, "WhisperX expectedWhisperXVersion") ?? "3.8.6",
     model: runtimeConfigString(config.expectedModel, "WhisperX expectedModel") ?? "small",
@@ -53,8 +53,8 @@ export function localWhisperXProgram(context: RuntimeAdapterFactoryContext): Man
   // systemd or container command. With no override the bundled project is the
   // managed default; when it is not present this becomes probe-only.
   const managed = customStart === undefined && customPrepare === undefined;
-  const prepare = customPrepare ?? (managed ? workspaceCommand("narratage-whisperx-prepare") : undefined);
-  const start = customStart ?? (managed ? workspaceCommand("narratage-whisperx-service") : undefined);
+  const prepare = customPrepare ?? (managed ? workspaceCommand("hypit-whisperx-prepare") : undefined);
+  const start = customStart ?? (managed ? workspaceCommand("hypit-whisperx-service") : undefined);
   return {
     id: "whisperx",
     ...(prepare === undefined ? {} : { prepare }),

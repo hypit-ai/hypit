@@ -1,25 +1,25 @@
-import { artifactDependency } from "@narratage/artifact";
-import { narrativeDependency, narrativeExcerptSchema, narrativeTypes } from "@narratage/narrative";
-import { mediaDependency, mediaTypes, synchronizedMediaSchema } from "@narratage/media";
-import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { speechDependency, speechTypes } from "@narratage/speech";
-import { compositionDependency, compositionTypes } from "@narratage/composition";
+import { artifactDependency } from "@hypit/artifact";
+import { narrativeDependency, narrativeExcerptSchema, narrativeTypes } from "@hypit/narrative";
+import { mediaDependency, mediaTypes, synchronizedMediaSchema } from "@hypit/media";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import { speechDependency, speechTypes } from "@hypit/speech";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
 import {
   mediaPipelineManifest,
   mediaPipelineModuleRef,
   mediaPipelineTypes,
-} from "@narratage/media-pipeline";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
-import { speechBasisManifest, speechBasisModuleRef } from "@narratage/speech-basis";
+} from "@hypit/media-pipeline";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { speechBasisManifest, speechBasisModuleRef } from "@hypit/speech-basis";
 import {
   contentFitSchema,
   spatialDependency,
   spatialFrameSchema,
   spatialTypes,
-} from "@narratage/spatial";
-import { svsManifest, svsModuleRef } from "@narratage/svs";
+} from "@hypit/spatial";
+import { svsManifest, svsModuleRef } from "@hypit/svs";
 
-export const speechSpineModuleRef = { name: "@narratage/speech-spine", version: "1" } as const;
+export const speechSpineModuleRef = { name: "@hypit/speech-spine", version: "1" } as const;
 export const speechSpineTypes = {
   spineProgram: { module: speechSpineModuleRef, name: "SpeechSpineProgram" },
   spineSet: { module: speechSpineModuleRef, name: "SpeechSpineSet" },
@@ -77,7 +77,7 @@ export const speechSpineMarkupSurfaces = [{
 
 
 export const speechSpineManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: speechSpineModuleRef.name,
   version: speechSpineModuleRef.version,
   dependencies: [

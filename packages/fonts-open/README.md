@@ -1,17 +1,17 @@
-# `@narratage/fonts-open`
+# `@hypit/fonts-open`
 
 Workspace package exposing 109 redistributable open font families as exact,
 content-addressed `FontArtifactRef` values. The installed packages carry their font bytes and license
 files. Author compilation and rendering never download fonts or inspect system font directories.
 
 A developer who pulls this repository gets the catalog with the ordinary `pnpm install`; importing
-`@narratage/fonts-open@1` selects it. Nothing is installed globally and this package has not been
+`@hypit/fonts-open@1` selects it. Nothing is installed globally and this package has not been
 published to npm.
 
 ## One exact face
 
 ```svml
-<import as="fonts" from="@narratage/fonts-open@1"/>
+<import as="fonts" from="@hypit/fonts-open@1"/>
 
 <fonts:Face id="headline" family="archivo-black" weight="400" style="normal"/>
 ```

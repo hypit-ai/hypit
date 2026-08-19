@@ -9,9 +9,9 @@
  */
 import type {
   MarkupSurfaceRegistryLike, RegisteredSurface, StructuredElement, SurfaceDecodeOutput,
-} from "@narratage/markup";
-import type { ModuleRef } from "@narratage/protocol";
-import { parseScript } from "@narratage/script";
+} from "@hypit/markup";
+import type { ModuleRef } from "@hypit/protocol";
+import { parseScript } from "@hypit/script";
 
 import type { Range } from "../shared.js";
 
@@ -195,7 +195,7 @@ function harvestScript(input: RawInput, into: Record<string, unknown>[]): void {
       input.contentStart,
     );
     into.push({
-      format: "narratage.script-source-map@1",
+      format: "hypit.script-source-map@1",
       record: id,
       range: { start: input.openingStart, end: end + closing.length },
       segments: parsed.segments.map((segment) => ({ id: segment.id, range: segment.range })),

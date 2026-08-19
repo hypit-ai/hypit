@@ -1,12 +1,12 @@
-import { compositionDependency, compositionTypes } from "@narratage/composition";
-import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
-import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
-import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
-import { spatialDependency, spatialTypes } from "@narratage/spatial";
-import { temporalDependency } from "@narratage/temporal";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
+import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import { spatialDependency, spatialTypes } from "@hypit/spatial";
+import { temporalDependency } from "@hypit/temporal";
 
-export const screenOverlayModuleRef = { name: "@narratage/screen-overlay", version: "1" } as const;
+export const screenOverlayModuleRef = { name: "@hypit/screen-overlay", version: "1" } as const;
 export const screenOverlayTypes = {
   header: { module: screenOverlayModuleRef, name: "ScreenOverlayHeader" },
   itemSpec: { module: screenOverlayModuleRef, name: "ScreenOverlayItemSpec" },
@@ -74,7 +74,7 @@ export const screenOverlayMarkupSurfaces = [{ name: "track", tag: "Track", mode:
 
 
 export const screenOverlayManifest: ModuleManifest = {
-  format: "narratage.module@1", name: screenOverlayModuleRef.name, version: screenOverlayModuleRef.version,
+  format: "hypit.module@1", name: screenOverlayModuleRef.name, version: screenOverlayModuleRef.version,
   dependencies: [narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, compositionDependency],
   types: [
     { name: screenOverlayTypes.header.name },

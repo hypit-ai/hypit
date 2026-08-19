@@ -2,15 +2,15 @@ import {
   elaborateGraphFragment,
   exportRunFragment,
   resolveCompiledSourceExport,
-} from "@narratage/elaborator";
-import { canonicalStringify } from "@narratage/protocol";
+} from "@hypit/elaborator";
+import { canonicalStringify } from "@hypit/protocol";
 import type {
   Candidate,
   GraphValueRef,
   ModuleRef,
   OperationNode,
   StoredValue,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import {
   createProvidedCandidate,
 } from "./candidate.js";

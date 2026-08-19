@@ -3,22 +3,22 @@ import { createHash } from "node:crypto";
 import {
   compileSourceClosure,
   prepareAuthorSource,
-} from "@narratage/elaborator";
-import { link } from "@narratage/core";
+} from "@hypit/elaborator";
+import { link } from "@hypit/core";
 import type {
   AuthorFrontendRegistryLike,
   AuthorSourceDiscovery,
   CompiledSourceClosure,
   AuthorRecordAdmitter,
-} from "@narratage/elaborator";
-import type { SourceUnit } from "@narratage/source";
-import type { ArtifactAttachment, Workspace, WorkspaceSession } from "@narratage/workspace";
-import type { BlobRef, LinkedProgram } from "@narratage/protocol";
+} from "@hypit/elaborator";
+import type { SourceUnit } from "@hypit/source";
+import type { ArtifactAttachment, Workspace, WorkspaceSession } from "@hypit/workspace";
+import type { BlobRef, LinkedProgram } from "@hypit/protocol";
 import {
   TypeValidatorRegistry,
   createRecordAdmitter,
-} from "@narratage/validation";
-import type { TypeValidatorRegistryLike } from "@narratage/validation";
+} from "@hypit/validation";
+import type { TypeValidatorRegistryLike } from "@hypit/validation";
 
 import { NodeCompilerError } from "./error.js";
 import type { ModulePackageRegistryLike } from "./modules.js";

@@ -1,11 +1,11 @@
-import { artifactTypes } from "@narratage/artifact";
+import { artifactTypes } from "@hypit/artifact";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
-import type { CanonicalValue } from "@narratage/protocol";
+} from "@hypit/markup";
+import type { CanonicalValue } from "@hypit/protocol";
 
 import { imageTransformFragment } from "./fragment.js";
 import { imageTransformTypes } from "./manifest.js";

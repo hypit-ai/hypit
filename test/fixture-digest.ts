@@ -1,4 +1,4 @@
-import type { Digest } from "@narratage/protocol";
+import type { Digest } from "@hypit/protocol";
 
 /** Test-only Blob address. It encodes fixture text; it does not hash program meaning. */
 export function fixtureDigest(value: unknown): Digest {

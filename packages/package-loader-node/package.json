@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/package-loader-node",
+  "name": "@hypit/package-loader-node",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -8,8 +8,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@narratage/component-kit": "workspace:*",
-    "@narratage/host": "workspace:*",
-    "@narratage/protocol": "workspace:*"
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/host": "workspace:*",
+    "@hypit/protocol": "workspace:*"
   }
 }

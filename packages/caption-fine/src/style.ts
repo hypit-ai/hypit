@@ -1,9 +1,9 @@
-import type { CaptionStyleIntent } from "@narratage/caption";
-import { sealCaptionStyle } from "@narratage/caption";
-import { assertFontArtifactRef } from "@narratage/media";
-import type { FontArtifactRef } from "@narratage/media";
-import { canonicalStringify } from "@narratage/protocol";
-import type { SvsRecipe } from "@narratage/svs";
+import type { CaptionStyleIntent } from "@hypit/caption";
+import { sealCaptionStyle } from "@hypit/caption";
+import { assertFontArtifactRef } from "@hypit/media";
+import type { FontArtifactRef } from "@hypit/media";
+import { canonicalStringify } from "@hypit/protocol";
+import type { SvsRecipe } from "@hypit/svs";
 
 import type { FineCaptionGlyphPaint, FineCaptionParameters } from "./types.js";
 import {
@@ -12,7 +12,7 @@ import {
   fineCaptionRequiredRecipeProperties,
 } from "./recipe.js";
 
-export const FINE_CAPTION_FAMILY = "@narratage/caption-fine@1";
+export const FINE_CAPTION_FAMILY = "@hypit/caption-fine@1";
 
 const ALLOWED_PROPERTIES = new Set<string>([
   ...fineCaptionRequiredRecipeProperties,

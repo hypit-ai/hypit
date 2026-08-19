@@ -1,10 +1,10 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import type { ProgramSpace } from "@narratage/program-space";
-import { canonicalize } from "@narratage/protocol";
-import type { StoredValue } from "@narratage/protocol";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import type { CanvasSpace } from "@narratage/spatial";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import type { ProgramSpace } from "@hypit/program-space";
+import { canonicalize } from "@hypit/protocol";
+import type { StoredValue } from "@hypit/protocol";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { CanvasSpace } from "@hypit/spatial";
 import { screenOverlayProducers, screenOverlayTypes } from "./manifest.js";
 import { appendMomentScreenOverlay, appendProgramScreenOverlay, appendSelectionScreenOverlay, assertScreenOverlayProgram, createScreenOverlaySet, finalizeScreenOverlay, renderScreenOverlay } from "./program.js";
 import type { ScreenOverlayHeader, ScreenOverlayItemSpec, ScreenOverlayProgram, ScreenOverlaySet } from "./types.js";

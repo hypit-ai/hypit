@@ -1,4 +1,4 @@
-# `@narratage/validation`
+# `@hypit/validation`
 
 Host side semantic validation for package owned types.
 

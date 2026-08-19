@@ -2,9 +2,9 @@ import {
   materializeArtifact,
   materializeRecord,
   runCli,
-} from "@narratage/cli";
-import type { CliIo } from "@narratage/cli";
-import type { LoadedPackage } from "@narratage/package-loader-node";
+} from "@hypit/cli";
+import type { CliIo } from "@hypit/cli";
+import type { LoadedPackage } from "@hypit/package-loader-node";
 
 import { videoCliDistribution } from "./distribution.js";
 

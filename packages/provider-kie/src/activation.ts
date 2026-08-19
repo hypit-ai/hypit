@@ -5,12 +5,12 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
 
 import { createKieProvider } from "./provider.js";
 
 const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-kie",
+  use: "@hypit/provider-kie",
   activate(context) {
     if (context.pool === undefined) throw new Error("KIE Provider Pool is required");
     const config = runtimeConfigObject(context.config, "KIE");
@@ -62,9 +62,9 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [kieRuntimeAdapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

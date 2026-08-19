@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
-import { MemoryArtifactStore } from "@narratage/driver-node";
+import { registerTypeValidatorFacets } from "@hypit/component-kit";
+import { MemoryArtifactStore } from "@hypit/driver-node";
 import {
   generationComponent,
   generationProducers,
@@ -12,8 +12,8 @@ import {
   sealGeneratedVideoSet,
   verifyGeneratedImageSet,
   verifyGeneratedAudioSet,
-} from "@narratage/generation";
-import { TypeValidatorRegistry } from "@narratage/validation";
+} from "@hypit/generation";
+import { TypeValidatorRegistry } from "@hypit/validation";
 
 test("generated media validators bind artifacts and result contents", async () => {
   const store = new MemoryArtifactStore();

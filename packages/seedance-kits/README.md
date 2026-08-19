@@ -1,19 +1,19 @@
-# `@narratage/seedance-kits`
+# `@hypit/seedance-kits`
 
 Data-only authoring Kits for recurring Seedance semantics. They are `TextTemplate` source modules,
 not model wrappers, Providers or new execution nodes.
 
 Vendor the selected `.svs` file into the video project (for example `./kits/speaker-v1.svs`). This
 keeps its bytes inside the project's Source Closure and Workspace boundary; a project must not
-reach back into a Narratage checkout through `../../packages/...`.
+reach back into a Hypit checkout through `../../packages/...`.
 
 Each Kit is rendered by the domain-neutral `text:Render` Surface. Its Text output then feeds one of
-the three low-level `@narratage/seedance` invocation modes. Reference media and duration remain
+the three low-level `@hypit/seedance` invocation modes. Reference media and duration remain
 ordinary explicit graph edges:
 
 ```svml
-<import as="text" from="@narratage/text@1"/>
-<import as="seedance" from="@narratage/seedance@1"/>
+<import as="text" from="@hypit/text@1"/>
+<import as="seedance" from="@hypit/seedance@1"/>
 <import as="broll-kit" source="./kits/broll-v1.svs"/>
 
 <text:Render id="broll-prompt" template={broll-kit.broll-v1} recipe={studio.broll}>

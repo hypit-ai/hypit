@@ -10,8 +10,8 @@ description: Naming, module boundaries, TypeScript configuration and wire data.
 | Thing | Convention | Example |
 |---|---|---|
 | Package directory | kebab-case | `packages/speech-alignment/` |
-| Package name | `@narratage/` scope | `@narratage/speech-alignment` |
-| Provider package | `provider-` prefix | `@narratage/provider-kie` |
+| Package name | `@hypit/` scope | `@hypit/speech-alignment` |
+| Provider package | `provider-` prefix | `@hypit/provider-kie` |
 | TypeScript file | kebab-case | `align.ts` |
 | Exported type | PascalCase | `SpeechAlignment` |
 | Exported function | camelCase | `createSpeechAlignment` |
@@ -20,7 +20,7 @@ description: Naming, module boundaries, TypeScript configuration and wire data.
 
 - Each package has exactly one public entry point: `src/index.ts`.
 - Internal modules use explicit `.js` extensions (NodeNext resolution).
-- Cross-package imports use `@narratage/*`, never relative paths across package boundaries.
+- Cross-package imports use `@hypit/*`, never relative paths across package boundaries.
 - Circular production dependencies are forbidden.
 
 ## TypeScript configuration
@@ -46,9 +46,9 @@ Adding a package does not require changing the root TypeScript configuration.
 - Project-owned Module and Frontend identities use the literal logical version `1`.
 - Workspace `package.json` versions remain `0.0.0-dev` until publication. They are physical package
   metadata, not logical protocol identities.
-- npm or pnpm owns installed package versions and bytes. Narratage identities describe semantic
+- npm or pnpm owns installed package versions and bytes. Hypit identities describe semantic
   Modules, Frontends, Fragments and implementations rather than pretending to hash an installed package.
-- Wire types are defined in `@narratage/protocol` and are immutable.
+- Wire types are defined in `@hypit/protocol` and are immutable.
 - Nominal Types are owned by Modules, not registered in a central union.
 - Type schemas use JSON-compatible structures, not TypeScript interfaces.
 

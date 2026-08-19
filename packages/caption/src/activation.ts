@@ -1,12 +1,12 @@
-import { createMarkupSurfaceHostFacet } from "@narratage/markup";
+import { createMarkupSurfaceHostFacet } from "@hypit/markup";
 import {
   captionComponent, captionManifest, captionModuleRef,
   decodeCaptionProgramSurface,
   captionMarkupSurfaces,
 } from "./index.js";
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   modules: [{ manifest: captionManifest }],
   components: [captionComponent],
   hostFacets: [
@@ -14,4 +14,4 @@ export const narratagePackage = {
     declaration: captionMarkupSurfaces.find((item) => item.name === "program")!, handler: decodeCaptionProgramSurface }),
   ],
 };
-export default narratagePackage;
+export default hypitPackage;

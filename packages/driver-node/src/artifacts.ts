@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 
-import type { BlobRef, Digest } from "@narratage/protocol";
+import type { BlobRef, Digest } from "@hypit/protocol";
 
-import type { ArtifactStore } from "@narratage/runtime";
+import type { ArtifactStore } from "@hypit/runtime";
 
 export class MemoryArtifactStore implements ArtifactStore {
   readonly #values = new Map<Digest, Uint8Array>();

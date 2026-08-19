@@ -10,24 +10,24 @@ import {
   sealCaptionPlan,
   sealCaptionStyle,
   temporalizeCaptionPlan,
-} from "@narratage/caption";
-import type { CaptionFieldDeclaration, CaptionStyleIntent } from "@narratage/caption";
-import { narrativeTypes } from "@narratage/narrative";
-import type { CaptionDisplayWordSubset, Narrative } from "@narratage/narrative";
-import { canonicalize } from "@narratage/protocol";
-import type { StoredValue, TypeRef } from "@narratage/protocol";
-import { sealProgramSpace } from "@narratage/program-space";
-import { sealSpeechBasis } from "@narratage/speech";
-import type { SpeechAudioBasis } from "@narratage/speech";
-import { locateSpeechTiming } from "@narratage/speech-alignment";
-import { sealAlignedTranscriptEvidence } from "@narratage/speech-evidence";
+} from "@hypit/caption";
+import type { CaptionFieldDeclaration, CaptionStyleIntent } from "@hypit/caption";
+import { narrativeTypes } from "@hypit/narrative";
+import type { CaptionDisplayWordSubset, Narrative } from "@hypit/narrative";
+import { canonicalize } from "@hypit/protocol";
+import type { StoredValue, TypeRef } from "@hypit/protocol";
+import { sealProgramSpace } from "@hypit/program-space";
+import { sealSpeechBasis } from "@hypit/speech";
+import type { SpeechAudioBasis } from "@hypit/speech";
+import { locateSpeechTiming } from "@hypit/speech-alignment";
+import { sealAlignedTranscriptEvidence } from "@hypit/speech-evidence";
 import {
   captionCorrespondence,
   captionDisplaySequence,
   captionSelectionWordSubset,
   parseScript,
-} from "@narratage/script";
-import type { StructuredElement, SurfaceResolvedReference } from "@narratage/markup";
+} from "@hypit/script";
+import type { StructuredElement, SurfaceResolvedReference } from "@hypit/markup";
 
 type TranscriptFixture = {
   readonly words: readonly {

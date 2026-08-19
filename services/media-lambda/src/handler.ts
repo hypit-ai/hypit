@@ -1,5 +1,5 @@
-import { AwsS3ObjectClient, S3ArtifactStore } from "@narratage/artifact-store-s3";
-import type { S3ObjectClient } from "@narratage/artifact-store-s3";
+import { AwsS3ObjectClient, S3ArtifactStore } from "@hypit/artifact-store-s3";
+import type { S3ObjectClient } from "@hypit/artifact-store-s3";
 import {
   executeInspectMedia,
   executeExtractAudio,
@@ -9,23 +9,23 @@ import {
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
   executeTransformMedia,
-} from "@narratage/media-execution";
-import type { MediaExecutionEnvironment, MediaOperationResult } from "@narratage/media-execution";
+} from "@hypit/media-execution";
+import type { MediaExecutionEnvironment, MediaOperationResult } from "@hypit/media-execution";
 import { execFile } from "node:child_process";
 import { createReadStream } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import type { BlobRef, CanonicalValue, Digest } from "@narratage/protocol";
+import type { BlobRef, CanonicalValue, Digest } from "@hypit/protocol";
 import {
   MEDIA_LAMBDA_RESPONSE,
   parseMediaLambdaRequest,
-} from "@narratage/provider-media-aws-lambda";
-import type { MediaLambdaArtifactLocation, MediaLambdaOperation } from "@narratage/provider-media-aws-lambda";
+} from "@hypit/provider-media-aws-lambda";
+import type { MediaLambdaArtifactLocation, MediaLambdaOperation } from "@hypit/provider-media-aws-lambda";
 
 /**
  * The whole function.
  *
- * It owns no media logic: `@narratage/media-execution` holds the ffmpeg argv
+ * It owns no media logic: `@hypit/media-execution` holds the ffmpeg argv
  * and the frame arithmetic, and the same code answers a local Build. What is
  * particular to this deployment is only where the bytes live and which ffmpeg
  * binary its immutable Layer carries.
@@ -46,7 +46,7 @@ const OPERATIONS: Record<
 
 const FFMPEG_PATH = process.env.FFMPEG_PATH ?? "/opt/bin/ffmpeg";
 const FFPROBE_PATH = process.env.FFPROBE_PATH ?? "/opt/bin/ffprobe";
-const FFMPEG_LIBRARY_PATH = process.env.NARRATAGE_FFMPEG_LIBRARY_PATH;
+const FFMPEG_LIBRARY_PATH = process.env.HYPIT_FFMPEG_LIBRARY_PATH;
 const run = promisify(execFile);
 
 function positiveInteger(value: string | undefined, fallback: number): number {
@@ -172,7 +172,7 @@ export function createMediaLambdaHandler(options: MediaLambdaHandlerOptions = {}
       binariesReady ??= assertBinaryPair(
         ffmpegPath,
         ffprobePath,
-        options.expectedFfmpegVersion ?? process.env.NARRATAGE_FFMPEG_VERSION,
+        options.expectedFfmpegVersion ?? process.env.HYPIT_FFMPEG_VERSION,
         sharedLibraryPath,
       );
       await binariesReady;
@@ -181,8 +181,8 @@ export function createMediaLambdaHandler(options: MediaLambdaHandlerOptions = {}
         ffmpegPath,
         ffprobePath,
         ...(sharedLibraryPath === undefined ? {} : { sharedLibraryPath }),
-        processTimeoutMs: positiveInteger(process.env.NARRATAGE_MEDIA_TIMEOUT_MS, 14 * 60_000),
-        maxProbeOutputBytes: positiveInteger(process.env.NARRATAGE_MEDIA_MAX_PROBE_BYTES, 256 * 1024 * 1024),
+        processTimeoutMs: positiveInteger(process.env.HYPIT_MEDIA_TIMEOUT_MS, 14 * 60_000),
+        maxProbeOutputBytes: positiveInteger(process.env.HYPIT_MEDIA_MAX_PROBE_BYTES, 256 * 1024 * 1024),
       };
       const result = await OPERATIONS[operation](env, request.constraints);
       return {

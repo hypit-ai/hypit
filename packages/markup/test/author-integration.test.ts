@@ -6,27 +6,27 @@ import {
   link,
   sealBuildRequest,
   start,
-} from "@narratage/core";
+} from "@hypit/core";
 import {
   AuthorGraphError,
   elaborateAuthorGraph,
   sealGraphFragment,
-} from "@narratage/elaborator";
-import type { GraphFragment } from "@narratage/elaborator";
+} from "@hypit/elaborator";
+import type { GraphFragment } from "@hypit/elaborator";
 import type {
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import {
   MarkupFrontendError,
   MarkupSurfaceRegistry,
   decodeMarkup,
-} from "@narratage/markup";
+} from "@hypit/markup";
 import type {
   StructuredElement,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 const laboratory = { name: "example.text-laboratory", version: "1" } as const;
 const sampleType = { module: laboratory, name: "Sample" } satisfies TypeRef;
@@ -41,7 +41,7 @@ const laboratorySurfaces = [
 ] as const;
 
 const manifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [],

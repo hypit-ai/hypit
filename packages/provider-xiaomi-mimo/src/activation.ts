@@ -5,12 +5,12 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
 
 import { createXiaomiMimoProvider } from "./provider.js";
 
 const adapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-xiaomi-mimo",
+  use: "@hypit/provider-xiaomi-mimo",
   activate(context) {
     if (context.pool === undefined) throw new Error("Xiaomi MiMo Provider Pool is required");
     const config = runtimeConfigObject(context.config, "Xiaomi MiMo");
@@ -49,9 +49,9 @@ const adapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [adapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

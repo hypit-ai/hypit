@@ -1,9 +1,9 @@
-import type { ComponentPackage } from "@narratage/component-kit";
+import type { ComponentPackage } from "@hypit/component-kit";
 
 import type { NodeModuleContribution, NodePackageContribution } from "./types.js";
 
 function assertPackage(value: NodePackageContribution): void {
-  if (value.format !== "narratage.node-package@1") {
+  if (value.format !== "hypit.node-package@1") {
     throw new Error("Node package contribution has an unsupported format");
   }
   for (const facet of value.hostFacets ?? []) {

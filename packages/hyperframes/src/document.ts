@@ -1,8 +1,8 @@
-import { assertCompositableSurfaceRef } from "@narratage/media";
-import type { CompositableSurfaceRef, FontArtifactRef } from "@narratage/media";
-import { programSpaceFrameCount } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { assertCompositionIdentity } from "@narratage/composition";
+import { assertCompositableSurfaceRef } from "@hypit/media";
+import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
+import { programSpaceFrameCount } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { assertCompositionIdentity } from "@hypit/composition";
 import type {
   Composition,
   Track,
@@ -14,10 +14,10 @@ import type {
   VisualSamplingSegment,
   VisualStyleDeclaration,
   VisualTrack,
-} from "@narratage/composition";
-import { canonicalStringify, isDigest } from "@narratage/protocol";
-import type { BlobRef, Digest } from "@narratage/protocol";
-import { VISUAL_IR_V1 } from "@narratage/visual-ir";
+} from "@hypit/composition";
+import { canonicalStringify, isDigest } from "@hypit/protocol";
+import type { BlobRef, Digest } from "@hypit/protocol";
+import { VISUAL_IR_V1 } from "@hypit/visual-ir";
 
 import type {
   ArtifactUrlResolver,
@@ -31,8 +31,8 @@ import {
 } from "./text.js";
 
 const NANOSECONDS = 1_000_000_000n;
-const ARTIFACT_URI = /narratage-artifact:\/\/sha256\/([0-9a-f]{64})/gu;
-const SURFACE_ARTIFACT = /data-narratage-surface-artifact="(sha256:[0-9a-f]{64})"/gu;
+const ARTIFACT_URI = /hypit-artifact:\/\/sha256\/([0-9a-f]{64})/gu;
+const SURFACE_ARTIFACT = /data-hypit-surface-artifact="(sha256:[0-9a-f]{64})"/gu;
 
 function escapeHtml(value: string): string {
   return value
@@ -177,7 +177,7 @@ function percentage(frame: number, totalFrames: number): string {
 
 export function hyperframesArtifactUri(digest: Digest): string {
   if (!isDigest(digest)) throw new Error("HyperFrames Artifact digest is invalid.");
-  return `narratage-artifact://sha256/${digest.slice("sha256:".length)}`;
+  return `hypit-artifact://sha256/${digest.slice("sha256:".length)}`;
 }
 
 function css(style: readonly VisualStyleDeclaration[]): string {
@@ -198,7 +198,7 @@ function attributes(values: readonly VisualAttribute[] | undefined): string {
 }
 
 function stableDomId(parts: readonly string[]): string {
-  return `narratage-${Buffer.from(JSON.stringify(parts)).toString("base64url")}`;
+  return `hypit-${Buffer.from(JSON.stringify(parts)).toString("base64url")}`;
 }
 
 function exactFontFamily(font: FontArtifactRef): string {
@@ -257,10 +257,10 @@ function renderElement(
       "animation-timing-function:linear",
     ]),
   ].filter(Boolean).join(";");
-  const commonAttributes = `id="${id}" data-narratage-element-id="${escapeHtml(element.id)}"${attributes(element.attributes)}`;
+  const commonAttributes = `id="${id}" data-hypit-element-id="${escapeHtml(element.id)}"${attributes(element.attributes)}`;
   const animationAttributes = animationName === undefined
     ? ""
-    : ` data-narratage-frame-animation data-narratage-animation-start-frame="${context.presentStartFrame}" data-narratage-animation-duration-frames="${animationDurationFrames}" data-narratage-animation-sample-frames="${context.presentDurationFrames}" data-narratage-animation-properties="${animationProperties.join(",")}"`;
+    : ` data-hypit-frame-animation data-hypit-animation-start-frame="${context.presentStartFrame}" data-hypit-animation-duration-frames="${animationDurationFrames}" data-hypit-animation-sample-frames="${context.presentDurationFrames}" data-hypit-animation-properties="${animationProperties.join(",")}"`;
   const common = `${commonAttributes}${animationAttributes} style="${escapeHtml(inlineStyle)}"`;
   if (element.kind === "mask") {
     const direct = children.get(element.id) ?? [];
@@ -305,7 +305,7 @@ function renderElement(
         return `<image x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
       }
       if (maskRoot.kind === "surface" && maskRoot.surface.timing.kind === "still") {
-        return `<image data-narratage-surface-artifact="${maskRoot.surface.artifact.digest}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.surface.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
+        return `<image data-hypit-surface-artifact="${maskRoot.surface.artifact.digest}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.surface.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
       }
       throw new Error(`Local mask ${element.id} requires a terminal owned text, image or still Surface mask source.`);
     })();
@@ -343,23 +343,23 @@ function renderElement(
       const partId = `${id}-sample-${String(part).padStart(4, "0")}`;
       const media = [
         `id="${partId}"`,
-        `data-narratage-element-id="${escapeHtml(element.id)}"`,
-        `data-narratage-sampling-part="${part}"`,
+        `data-hypit-element-id="${escapeHtml(element.id)}"`,
+        `data-hypit-sampling-part="${part}"`,
         `data-start="${frameSeconds(startFrame, context.programNumerator, context.programDenominator)}"`,
         `data-duration="${frameSeconds(durationFrames, context.programNumerator, context.programDenominator)}"`,
         `data-track-index="${context.stackIndex}"`,
         `data-media-start="${sourceSeconds(run.sourceFrame, element.sampling!.sourceFrameRate)}"`,
         `data-playback-rate="${sampledPlaybackRate(segment.rate, element.sampling!.sourceFrameRate, context.programNumerator, context.programDenominator)}"`,
-        `data-narratage-source-frame="${run.sourceFrame.numerator}/${run.sourceFrame.denominator}"`,
-        `data-narratage-source-rate="${segment.rate.numerator}/${segment.rate.denominator}"`,
+        `data-hypit-source-frame="${run.sourceFrame.numerator}/${run.sourceFrame.denominator}"`,
+        `data-hypit-source-rate="${segment.rate.numerator}/${segment.rate.denominator}"`,
         `style="${escapeHtml(inlineStyle)}"`,
         attributes(element.attributes).trim(),
         "muted",
         "playsinline",
         ...(element.kind === "surface" ? [
-          `data-narratage-surface-artifact="${element.surface.artifact.digest}"`,
-          `data-narratage-alpha-mode="${element.surface.alphaMode}"`,
-          `data-narratage-color-space="${element.surface.colorSpace}"`,
+          `data-hypit-surface-artifact="${element.surface.artifact.digest}"`,
+          `data-hypit-alpha-mode="${element.surface.alphaMode}"`,
+          `data-hypit-color-space="${element.surface.colorSpace}"`,
           `width="${element.surface.width}"`,
           `height="${element.surface.height}"`,
         ] : []),
@@ -370,12 +370,12 @@ function renderElement(
   if (element.kind === "surface") {
     const source = escapeHtml(hyperframesArtifactUri(element.surface.artifact.digest));
     const surface = [
-      `data-narratage-surface-artifact="${element.surface.artifact.digest}"`,
+      `data-hypit-surface-artifact="${element.surface.artifact.digest}"`,
       `data-start="${context.presentStart}"`,
       `data-duration="${context.presentDuration}"`,
       `data-track-index="${context.stackIndex}"`,
-      `data-narratage-alpha-mode="${element.surface.alphaMode}"`,
-      `data-narratage-color-space="${element.surface.colorSpace}"`,
+      `data-hypit-alpha-mode="${element.surface.alphaMode}"`,
+      `data-hypit-color-space="${element.surface.colorSpace}"`,
       `width="${element.surface.width}"`,
       `height="${element.surface.height}"`,
     ].join(" ");
@@ -424,7 +424,7 @@ function renderVisualPresent(
     programDenominator: denominator,
     stackIndex,
   });
-  return `<div class="clip narratage-visual-present" data-narratage-track-id="${escapeHtml(track.id)}" data-narratage-present-id="${escapeHtml(present.id)}" data-narratage-stack-order="${present.stacking.order}" data-narratage-stack-tie="${escapeHtml(present.stacking.tieBreak)}" data-track-index="${stackIndex}" data-start="${start}" data-duration="${duration}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${contents}</div>`;
+  return `<div class="clip hypit-visual-present" data-hypit-track-id="${escapeHtml(track.id)}" data-hypit-present-id="${escapeHtml(present.id)}" data-hypit-stack-order="${present.stacking.order}" data-hypit-stack-tie="${escapeHtml(present.stacking.tieBreak)}" data-track-index="${stackIndex}" data-start="${start}" data-duration="${duration}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${contents}</div>`;
 }
 
 function renderAnimationRules(track: VisualTrack, present: VisualPresent): string[] {
@@ -576,14 +576,14 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
   const denominator = ${denominator};
   const millisecondsPerFrame = denominator * 1000 / numerator;
   const timelines = [];
-  for (const element of document.querySelectorAll("[data-narratage-frame-animation]")) {
+  for (const element of document.querySelectorAll("[data-hypit-frame-animation]")) {
     void element.getBoundingClientRect();
     const animation = element.getAnimations()[0];
     if (animation === undefined) throw new Error("Visual IR frame animation did not materialize.");
-    const start = Number(element.getAttribute("data-narratage-animation-start-frame"));
-    const duration = Number(element.getAttribute("data-narratage-animation-duration-frames"));
-    const sampleDuration = Number(element.getAttribute("data-narratage-animation-sample-frames"));
-    const properties = String(element.getAttribute("data-narratage-animation-properties") || "")
+    const start = Number(element.getAttribute("data-hypit-animation-start-frame"));
+    const duration = Number(element.getAttribute("data-hypit-animation-duration-frames"));
+    const sampleDuration = Number(element.getAttribute("data-hypit-animation-sample-frames"));
+    const properties = String(element.getAttribute("data-hypit-animation-properties") || "")
       .split(",").filter(Boolean);
     const frames = [];
     for (let frame = 0; frame <= sampleDuration; frame += 1) {
@@ -640,7 +640,7 @@ function emitHtml(composition: Composition, programSpace: ProgramSpace): string 
   </style>
 </head>
 <body>
-  <div data-composition-id="${escapeHtml(composition.id)}" data-start="0" data-no-timeline data-width="${composition.canvas.width}" data-height="${composition.canvas.height}" data-duration="${duration}" data-fps="${fps}" data-narratage-frame-count="${frameCount}">
+  <div data-composition-id="${escapeHtml(composition.id)}" data-start="0" data-no-timeline data-width="${composition.canvas.width}" data-height="${composition.canvas.height}" data-duration="${duration}" data-fps="${fps}" data-hypit-frame-count="${frameCount}">
     ${visualHtml}
   </div>${animationRuntime}${textRuntime}
 </body>

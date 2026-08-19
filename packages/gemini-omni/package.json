@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/gemini-omni",
+  "name": "@hypit/gemini-omni",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,15 +7,15 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/artifact": "workspace:*",
-    "@narratage/generation": "workspace:*",
-    "@narratage/markup": "workspace:*",
-    "@narratage/model-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@hypit/artifact": "workspace:*",
+    "@hypit/generation": "workspace:*",
+    "@hypit/markup": "workspace:*",
+    "@hypit/model-kit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/text": "workspace:*"
   }
 }

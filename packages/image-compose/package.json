@@ -1,18 +1,18 @@
 {
-  "name": "@narratage/image-compose",
+  "name": "@hypit/image-compose",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
   "exports": { ".": "./src/index.ts" },
-  "narratage": { "activation": "./src/activation.ts" },
+  "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@narratage/artifact": "workspace:*",
-    "@narratage/component-kit": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/raster": "workspace:*",
-    "@narratage/spatial": "workspace:*",
-    "@narratage/markup": "workspace:*"
+    "@hypit/artifact": "workspace:*",
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/raster": "workspace:*",
+    "@hypit/spatial": "workspace:*",
+    "@hypit/markup": "workspace:*"
   }
 }

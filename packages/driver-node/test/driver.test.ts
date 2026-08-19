@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { reduce } from "@narratage/core";
+import { reduce } from "@hypit/core";
 import {
   ProducerRegistry,
   MemoryArtifactStore,
   NodeDriver,
   EndpointRegistry,
-} from "@narratage/driver-node";
-import { credentialRef } from "@narratage/runtime";
+} from "@hypit/driver-node";
+import { credentialRef } from "@hypit/runtime";
 
 import { capabilities, createGreetingBuild, producers as greetingProducers, types } from "../../core/test/greeting-fixture.js";
 

@@ -1,7 +1,7 @@
 import { videoContractManifests } from "../../../test/support/video-domain.js";
-import { speechDependency, speechTypes } from "@narratage/speech";
-import { compositionTypes } from "@narratage/composition";
-import { spatialTypes } from "@narratage/spatial";
+import { speechDependency, speechTypes } from "@hypit/speech";
+import { compositionTypes } from "@hypit/composition";
+import { spatialTypes } from "@hypit/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -12,35 +12,35 @@ import {
   sealCompiledGraph,
   sealRecord,
   start,
-} from "@narratage/core";
+} from "@hypit/core";
 import {
   bindAuthorFragment,
   elaborateGraphFragment,
   mergeFragmentContributions,
   sealGraphFragment,
-} from "@narratage/elaborator";
+} from "@hypit/elaborator";
 import type {
   FragmentContribution,
   GraphFragment,
-} from "@narratage/elaborator";
+} from "@hypit/elaborator";
 import type {
   CompiledGraph,
   LinkedProgram,
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import {
   speechBasisManifest,
   speechBasisProducers,
-} from "@narratage/speech-basis";
+} from "@hypit/speech-basis";
 
 const testModule = { name: "example.fragment-speech", version: "0.0.0" } as const;
 const requestType = { module: testModule, name: "Request" } satisfies TypeRef;
 const generateProducer = { module: testModule, name: "generate" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: testModule.name,
   version: testModule.version,
   dependencies: [speechDependency],

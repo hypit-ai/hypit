@@ -1,8 +1,8 @@
-import type { RunFrontend } from "@narratage/run";
+import type { RunFrontend } from "@hypit/run";
 
 import { parseRunDocument } from "./syntax.js";
 
-export const runMarkupFrontendId = "@narratage/run-markup@1";
+export const runMarkupFrontendId = "@hypit/run-markup@1";
 
 export const runMarkupFrontend: RunFrontend = {
   id: runMarkupFrontendId,

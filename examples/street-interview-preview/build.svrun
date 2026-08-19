@@ -1,4 +1,4 @@
-<?svml using="@narratage/run-markup@1"?>
+<?svml using="@hypit/run-markup@1"?>
 
 <svrun version="1">
   <author source="./main.svml"/>
@@ -7,26 +7,26 @@
   <!-- Footage the documentation site already ships. It is 24 fps, which is the
        frame rate this Source declares, so the preview can show it as authored
        rather than normalizing it. -->
-  <file id="scene-hook" type="@narratage/artifact@1#BlobArtifact"
+  <file id="scene-hook" type="@hypit/artifact@1#BlobArtifact"
     from="../../docs/public/street-interview/scene-1.mp4" media-type="video/mp4"/>
-  <file id="scene-price" type="@narratage/artifact@1#BlobArtifact"
+  <file id="scene-price" type="@hypit/artifact@1#BlobArtifact"
     from="../../docs/public/street-interview/scene-2.mp4" media-type="video/mp4"/>
-  <file id="scene-rainbow" type="@narratage/artifact@1#BlobArtifact"
+  <file id="scene-rainbow" type="@hypit/artifact@1#BlobArtifact"
     from="../../docs/public/street-interview/scene-3.mp4" media-type="video/mp4"/>
-  <file id="scene-payment" type="@narratage/artifact@1#BlobArtifact"
+  <file id="scene-payment" type="@hypit/artifact@1#BlobArtifact"
     from="../../docs/public/street-interview/scene-4.mp4" media-type="video/mp4"/>
-  <file id="cut-bags" type="@narratage/artifact@1#BlobArtifact"
+  <file id="cut-bags" type="@hypit/artifact@1#BlobArtifact"
     from="../../docs/public/street-interview/broll-2.mp4" media-type="video/mp4"/>
-  <file id="cut-fee" type="@narratage/artifact@1#BlobArtifact"
+  <file id="cut-fee" type="@hypit/artifact@1#BlobArtifact"
     from="../../docs/public/street-interview/broll-3.mp4" media-type="video/mp4"/>
-  <file id="cut-receipt" type="@narratage/artifact@1#BlobArtifact"
+  <file id="cut-receipt" type="@hypit/artifact@1#BlobArtifact"
     from="../../docs/public/street-interview/broll-4.mp4" media-type="video/mp4"/>
 
   <!-- The recorded transcript, aligned onto this Script's own anchors by
        ./align-transcript.ts. Which timings a Source is read with is an
        authoring decision, so it is made here. -->
-  <value id="aligned-map" type="@narratage/semantic-map@1#CompleteSemanticMap" from="./timing.json"/>
-  <value id="aligned-space" type="@narratage/program-space@1#ProgramSpace" from="./space.json"/>
+  <value id="aligned-map" type="@hypit/semantic-map@1#CompleteSemanticMap" from="./timing.json"/>
+  <value id="aligned-space" type="@hypit/program-space@1#ProgramSpace" from="./space.json"/>
   <satisfy output="timing.map" candidate="aligned-map"/>
   <satisfy output="speech.space" candidate="aligned-space"/>
 

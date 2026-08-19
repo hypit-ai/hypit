@@ -1,5 +1,5 @@
-import type { HostFacet } from "@narratage/host";
-import type { ModuleRef, TypeRef } from "@narratage/protocol";
+import type { HostFacet } from "@hypit/host";
+import type { ModuleRef, TypeRef } from "@hypit/protocol";
 
 import type {
   RawSurfaceHandler,
@@ -10,7 +10,7 @@ import type {
   StructuredSurfaceDeclaration,
 } from "./types.js";
 
-export const markupSurfaceHostFacetAbi = "narratage.markup-surface-host@1";
+export const markupSurfaceHostFacetAbi = "hypit.markup-surface-host@1";
 
 type RawMarkupSurfaceHostFacetOptions =
   | {

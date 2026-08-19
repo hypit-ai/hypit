@@ -1,12 +1,12 @@
-import type { CanonicalValue } from "@narratage/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
 import {
   createRuntimeEndpointAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-kit";
-import type { RuntimeAdapterFactoryContext } from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
+import type { RuntimeAdapterFactoryContext } from "@hypit/runtime-kit";
 
 import { createAwsLambdaHyperframesProvider } from "./provider.js";
 import type {
@@ -83,15 +83,15 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
 }
 
 const awsLambdaHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-hyperframes-aws-lambda",
+  use: "@hypit/provider-hyperframes-aws-lambda",
   activate(context) {
     return { endpoint: createAwsLambdaHyperframesProvider(providerOptions(context)) };
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [awsLambdaHyperframesRuntimeAdapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

@@ -3,7 +3,7 @@ import type {
   CaptionDisplaySequence,
   CaptionDisplayWord,
   CaptionDisplayWordSubset,
-} from "@narratage/narrative";
+} from "@hypit/narrative";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

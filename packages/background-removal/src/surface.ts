@@ -1,5 +1,5 @@
-import { artifactTypes } from "@narratage/artifact";
-import type { StructuredSurfaceHandler, SurfaceResolvedReference, MarkupAttributeValue } from "@narratage/markup";
+import { artifactTypes } from "@hypit/artifact";
+import type { StructuredSurfaceHandler, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
 
 import { backgroundRemovalFragment } from "./fragment.js";
 

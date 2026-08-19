@@ -2,12 +2,12 @@ import { randomUUID } from "node:crypto";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { readFile, stat } from "node:fs/promises";
 
-import type { NodeCompiledSourceClosure } from "@narratage/compiler-node";
-import type { NodeRuntimeHost } from "@narratage/runtime-host-node";
-import { plannedNeeds } from "@narratage/runtime";
-import type { BuildCatalogDescriptor, CapacityReservation, OperationProgress } from "@narratage/runtime";
-import type { BuildState, CapabilityRef, TypeRef } from "@narratage/protocol";
-import { parseSourceHeader } from "@narratage/source";
+import type { NodeCompiledSourceClosure } from "@hypit/compiler-node";
+import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
+import { plannedNeeds } from "@hypit/runtime";
+import type { BuildCatalogDescriptor, CapacityReservation, OperationProgress } from "@hypit/runtime";
+import type { BuildState, CapabilityRef, TypeRef } from "@hypit/protocol";
+import { parseSourceHeader } from "@hypit/source";
 
 import {
   acceptedArchivedOutputs,
@@ -32,7 +32,7 @@ import type {
 } from "./runtime-port.js";
 import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliColorMode, CliIo } from "./output.js";
-import { narratageHostStateRoot, narratageProjectStateRoot } from "./paths.js";
+import { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
 import { loadDiscoveredSourcePackages } from "./source-packages.js";
 import {
   clearRuntimeProfile,
@@ -387,22 +387,22 @@ function assertCommandOptions(args: ParsedArgs): void {
 function usage(): string {
   return [
     "usage:",
-    "  narratage doctor [<runtime-profile>]",
-    "  narratage programs up|down|status [<runtime-profile>] [--max-wait-ms milliseconds]",
-    "  narratage runtime use <runtime-profile>",
-    "  narratage runtime unset",
-    "  narratage runtime up|status|logs|down [<runtime-profile>]",
-    "  narratage queue [--runtime profile.json] [--watch]",
-    "  narratage check <self-described-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
-    "  narratage plan <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
-    "  narratage build <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow] [--no-programs]",
-    "  narratage status <build-id> [--runtime profile.json] [--watch]",
-    "  narratage builds [--runtime profile.json]",
-    "  narratage history [source-output-name] [--runtime profile.json] [--source author.svml]",
-    "  narratage inspect <build-id> [--runtime profile.json]",
-    "  narratage get <build-id> [--runtime profile.json] [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
-    "  narratage cancel <build-id> [--runtime profile.json] [--reason text]",
-    "  narratage auth status|login|logout <endpoint-instance> [--runtime profile.json] [--slot name] [--from secret-file]",
+    "  hypit doctor [<runtime-profile>]",
+    "  hypit programs up|down|status [<runtime-profile>] [--max-wait-ms milliseconds]",
+    "  hypit runtime use <runtime-profile>",
+    "  hypit runtime unset",
+    "  hypit runtime up|status|logs|down [<runtime-profile>]",
+    "  hypit queue [--runtime profile.json] [--watch]",
+    "  hypit check <self-described-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
+    "  hypit plan <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
+    "  hypit build <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow] [--no-programs]",
+    "  hypit status <build-id> [--runtime profile.json] [--watch]",
+    "  hypit builds [--runtime profile.json]",
+    "  hypit history [source-output-name] [--runtime profile.json] [--source author.svml]",
+    "  hypit inspect <build-id> [--runtime profile.json]",
+    "  hypit get <build-id> [--runtime profile.json] [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
+    "  hypit cancel <build-id> [--runtime profile.json] [--reason text]",
+    "  hypit auth status|login|logout <endpoint-instance> [--runtime profile.json] [--slot name] [--from secret-file]",
     "",
     "output:",
     "  --json  --verbose  --color auto|always|never  --no-color  --debug",
@@ -439,7 +439,7 @@ function createCatalogDescriptor(options: {
  *
  * Programs are started and left running: a developer submits several Builds
  * against one warm program, and stopping it between them would pay the model
- * load every time. `narratage programs down` ends them.
+ * load every time. `hypit programs down` ends them.
  */
 async function startDeclaredPrograms(
   controller: CliRuntimeController,
@@ -639,7 +639,7 @@ async function observeBuild(
       if (worker.state !== "running") {
         throw new Error(
           `Runtime Worker is ${worker.state}; Build ${current.id} remains durable. `
-          + `Run narratage runtime up, then run narratage status ${current.id} --watch again`,
+          + `Run hypit runtime up, then run hypit status ${current.id} --watch again`,
         );
       }
     }
@@ -782,7 +782,7 @@ export async function runCli(
     const profile = resolve(args.file);
     const selected = await selectRuntimeProfile(args.workspaceRoot ?? process.cwd(), profile);
     writeOperational({
-      format: "narratage.cli-runtime-selection@1",
+      format: "hypit.cli-runtime-selection@1",
       profile: selected.profile,
       project: selected.projectRoot,
       selectionFile: selected.selectionFile,
@@ -799,7 +799,7 @@ export async function runCli(
     assertCommandOptions(args);
     const cleared = await clearRuntimeProfile(process.cwd());
     writeOperational({
-      format: "narratage.cli-runtime-selection@1",
+      format: "hypit.cli-runtime-selection@1",
       selected: false,
       removed: cleared !== undefined,
       profile: cleared?.profile,
@@ -871,14 +871,14 @@ export async function runCli(
       ? undefined
       : await (await runtimeHost(args.runtime)).resolvePaths();
     const machine = {
-      format: "narratage.cli-paths@1" as const,
+      format: "hypit.cli-paths@1" as const,
       project: projectRoot,
-      projectState: narratageProjectStateRoot(projectRoot),
+      projectState: hypitProjectStateRoot(projectRoot),
       profile: args.runtime,
       runtimeData: runtimePaths?.runtimeDataRoot,
-      hostState: narratageHostStateRoot(),
+      hostState: hypitHostStateRoot(),
     };
-    writeOperational(machine, "Narratage paths", "info", [
+    writeOperational(machine, "Hypit paths", "info", [
       ["Project", machine.project],
       ["Project state", machine.projectState],
       ["Runtime Profile", machine.profile ?? "not selected"],
@@ -893,12 +893,12 @@ export async function runCli(
     }
     const profileInput = args.runtime ?? args.file;
     if (profileInput === undefined) {
-      throw new Error("doctor requires a Runtime Profile; run narratage runtime use <profile> or provide it positionally");
+      throw new Error("doctor requires a Runtime Profile; run hypit runtime use <profile> or provide it positionally");
     }
     const profile = resolve(profileInput);
     const result = await (await runtimeHost(profile)).doctor();
     const machine = {
-      format: "narratage.cli-doctor@1" as const,
+      format: "hypit.cli-doctor@1" as const,
       ok: !result.diagnostics.some((item) => item.severity === "error"),
       dataRoot: result.dataRoot,
       diagnostics: result.diagnostics,
@@ -935,7 +935,7 @@ export async function runCli(
     const ready = result.programs.every((item) => item.state.state === "ready");
     const desiredState = args.action === "down" ? !result.programs.some((item) => item.state.state === "ready") : ready;
     const machine = {
-      format: "narratage.cli-programs-status@1" as const,
+      format: "hypit.cli-programs-status@1" as const,
       // A successful status query is not a failed lifecycle action. `ready` carries readiness.
       ok: args.action === "status" ? true : desiredState,
       ready,
@@ -992,7 +992,7 @@ export async function runCli(
       const lines = logs.text.length === 0 ? [] : logs.text.replace(/\n$/u, "").split("\n");
       const shown = args.verbose ? lines : lines.slice(-100);
       writeOperational({
-        format: "narratage.cli-runtime-logs@1",
+        format: "hypit.cli-runtime-logs@1",
         path: logs.path,
         text: logs.text,
       }, "Runtime logs", "info", [
@@ -1007,7 +1007,7 @@ export async function runCli(
       });
       writeOperational({ ok: true, worker }, "Runtime Worker is down", "success", [
         ["Worker", worker.state],
-      ], ["External programs were left running. Stop them explicitly with narratage programs down."]);
+      ], ["External programs were left running. Stop them explicitly with hypit programs down."]);
       return;
     }
     // These are independent views over one Profile. Load them concurrently without inventing a
@@ -1033,7 +1033,7 @@ export async function runCli(
       const attention = active > 0 && !ready;
       const unavailable = external.programs.filter((item) => item.state.state !== "ready");
       const machine = {
-        format: "narratage.cli-runtime-status@1" as const,
+        format: "hypit.cli-runtime-status@1" as const,
         ok: true,
         ready,
         attention,
@@ -1063,7 +1063,7 @@ export async function runCli(
       throw new Error("auth takes status, login or logout");
     }
     if (args.runtime === undefined) {
-      throw new Error("auth requires a Runtime; run narratage runtime use <profile> or pass --runtime <profile>");
+      throw new Error("auth requires a Runtime; run hypit runtime use <profile> or pass --runtime <profile>");
     }
     if (args.from !== undefined && args.action !== "login") throw new Error("--from applies only to auth login");
     const runtime = await (await runtimeHost(args.runtime)).openCredentials(args.file!);
@@ -1123,7 +1123,7 @@ export async function runCli(
   ) {
     if (args.runtime === undefined) {
       throw new Error(
-        `${args.command} requires a Runtime; run narratage runtime use <profile> or pass --runtime <profile>`,
+        `${args.command} requires a Runtime; run hypit runtime use <profile> or pass --runtime <profile>`,
       );
     }
     const runtime = await loadRuntimeArchive(await runtimeHost(args.runtime), args.command !== "cancel");
@@ -1149,7 +1149,7 @@ export async function runCli(
           if (args.watch && queueView === previous) return;
           previous = queueView;
           const value = {
-            format: "narratage.cli-queue@1",
+            format: "hypit.cli-queue@1",
             at: Date.now(),
             worker,
             dispatches: queue.dispatches,
@@ -1534,7 +1534,7 @@ export async function runCli(
           packageContributions,
         });
         const machine = {
-          format: "narratage.cli-check@1" as const,
+          format: "hypit.cli-check@1" as const,
           sourceKind: "run" as const,
           ok: true,
           run: loaded.source,
@@ -1554,7 +1554,7 @@ export async function runCli(
     {
       const result = await compiler.compileSource(workspace.entry, workspace);
       const machine = {
-        format: "narratage.cli-check@1" as const,
+        format: "hypit.cli-check@1" as const,
           sourceKind: "author" as const,
           ok: true,
           units: result.closure.units.length,
@@ -1573,7 +1573,7 @@ export async function runCli(
   }
   if (args.command === "build") {
     if (args.runtime === undefined) {
-      throw new Error("build requires a Runtime; run narratage runtime use <profile> or pass --runtime <profile>");
+      throw new Error("build requires a Runtime; run hypit runtime use <profile> or pass --runtime <profile>");
     }
     const archive = lazyRuntimeArchive(await runtimeHost(args.runtime));
     let loadedRun;
@@ -1699,11 +1699,11 @@ export async function runCli(
       const terminalLines = targetPresentations.length === 0
         ? [
             ...(built.dispatch.reason === undefined ? [] : [`Reason   ${built.dispatch.reason}`]),
-            `Inspect  narratage inspect ${built.id}${runtimeHint}`,
+            `Inspect  hypit inspect ${built.id}${runtimeHint}`,
           ]
         : [
             ...(built.dispatch.reason === undefined ? [] : [`Reason   ${built.dispatch.reason}`]),
-            `Inspect  narratage inspect ${built.id}${runtimeHint}`,
+            `Inspect  hypit inspect ${built.id}${runtimeHint}`,
             ...targetPresentations
               .filter((item) => item.inline !== undefined)
               .slice(0, args.verbose ? undefined : 8)
@@ -1712,7 +1712,7 @@ export async function runCli(
               .filter((item) => item.inline === undefined)
               .slice(0, args.verbose ? undefined : 4)
               .map((item) =>
-                `Export   narratage get ${built.id}${runtimeHint} --name ${item.alias.name} --to <path>`),
+                `Export   hypit get ${built.id}${runtimeHint} --name ${item.alias.name} --to <path>`),
           ];
       const terminal = built.dispatch.phase === "terminal";
       writeOperational(machine, args.follow
@@ -1725,8 +1725,8 @@ export async function runCli(
           ["Worker", worker.state === "running" ? String(worker.pid) : worker.state],
           ["Goals", String(machine.goals.length)],
         ], terminal ? terminalLines : [
-          `Watch    narratage status ${built.id}${runtimeHint} --watch`,
-          `Cancel   narratage cancel ${built.id}${runtimeHint}`,
+          `Watch    hypit status ${built.id}${runtimeHint} --watch`,
+          `Cancel   hypit cancel ${built.id}${runtimeHint}`,
         ]);
       if (built.status === "failed") io.setExitCode?.(1);
     } finally {
@@ -1753,7 +1753,7 @@ export async function runCli(
     writeCliOutput(io, args, {
       kind: "plan",
       machine: {
-        format: "narratage.cli-plan@1",
+        format: "hypit.cli-plan@1",
         ok: true,
         plan: result.definition.plan,
         ...(preflight === undefined ? {} : { preflight }),

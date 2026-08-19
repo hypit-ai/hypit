@@ -1,5 +1,5 @@
-import { assertSpatialFrame } from "@narratage/spatial";
-import { canonicalize, isDigest } from "@narratage/protocol";
+import { assertSpatialFrame } from "@hypit/spatial";
+import { canonicalize, isDigest } from "@hypit/protocol";
 
 import type {
   ImageComposeLayer,

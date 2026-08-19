@@ -7,10 +7,10 @@ import test from "node:test";
 import {
   diagnoseRuntimeExecutable,
   resolveRuntimeExecutable,
-} from "@narratage/runtime-host-node";
+} from "@hypit/runtime-host-node";
 
 test("configured executable paths are rooted at the Runtime Profile project", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-runtime-host-node-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-host-node-"));
   try {
     const path = join(root, "tools", "fixture");
     await mkdir(join(root, "tools"), { recursive: true });

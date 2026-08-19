@@ -1,4 +1,4 @@
-import { canonicalize, isDigest } from "@narratage/protocol";
+import { canonicalize, isDigest } from "@hypit/protocol";
 
 import type { BackgroundRemovalRequest } from "./types.js";
 

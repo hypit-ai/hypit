@@ -5,20 +5,20 @@ import {
   sealGenerationRequestDraft,
   sealGenerationPortTable,
   verifyPortsAgainstTable,
-} from "@narratage/generation";
+} from "@hypit/generation";
 import type {
   GenerationPortTable,
   GenerationPortValue,
   GenerationRequest,
   GenerationRequestDraft,
-} from "@narratage/generation";
-import { defineExactModelModule } from "@narratage/model-kit";
-import { assertSpeechDurationIdentity, speechDependency, speechTypes } from "@narratage/speech";
-import type { SpeechDuration } from "@narratage/speech";
-import { canonicalize } from "@narratage/protocol";
-import type { Digest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+} from "@hypit/generation";
+import { defineExactModelModule } from "@hypit/model-kit";
+import { assertSpeechDurationIdentity, speechDependency, speechTypes } from "@hypit/speech";
+import type { SpeechDuration } from "@hypit/speech";
+import { canonicalize } from "@hypit/protocol";
+import type { Digest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
-export const seedanceModuleRef = { name: "@narratage/seedance", version: "1" } as const;
+export const seedanceModuleRef = { name: "@hypit/seedance", version: "1" } as const;
 export const seedanceModels = ["seedance-2", "seedance-2-fast", "seedance-2-mini", "seedance-2.5"] as const;
 export type SeedanceModel = typeof seedanceModels[number];
 
@@ -253,7 +253,7 @@ export const seedanceComponent = {
     ...seedanceBaseDefinition.component.producers,
     ...seedanceModels.map((model) => ({
       producer: seedanceDurationCompileProducers[model],
-      handler: ({ inputs }: { readonly inputs: Readonly<Record<string, { readonly value: import("@narratage/protocol").StoredValue }>> }) => ({
+      handler: ({ inputs }: { readonly inputs: Readonly<Record<string, { readonly value: import("@hypit/protocol").StoredValue }>> }) => ({
         outputs: {
           draft: {
             kind: "inline" as const,

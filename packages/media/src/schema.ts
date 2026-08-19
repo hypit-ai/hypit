@@ -1,4 +1,4 @@
-import type { ValueSchema } from "@narratage/protocol";
+import type { ValueSchema } from "@hypit/protocol";
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
 const seconds = { kind: "number", minimum: 0 } as const;

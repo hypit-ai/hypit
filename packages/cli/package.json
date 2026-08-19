@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/cli",
+  "name": "@hypit/cli",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -8,14 +8,14 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@narratage/compiler-node": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/workspace": "workspace:*",
-    "@narratage/package-loader-node": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/run": "workspace:*",
-    "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-host-node": "workspace:*",
-    "@narratage/source": "workspace:*"
+    "@hypit/compiler-node": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/workspace": "workspace:*",
+    "@hypit/package-loader-node": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/run": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/runtime-host-node": "workspace:*",
+    "@hypit/source": "workspace:*"
   }
 }

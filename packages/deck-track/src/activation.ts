@@ -1,4 +1,4 @@
-import { createMarkupSurfaceHostFacet } from "@narratage/markup";
+import { createMarkupSurfaceHostFacet } from "@hypit/markup";
 
 import {
   decodeDepthStackLabelSurface,
@@ -9,8 +9,8 @@ import {
   depthStackMarkupSurfaces,
 } from "./index.js";
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   modules: [{
     manifest: depthStackManifest,
   }],
@@ -29,4 +29,4 @@ export const narratagePackage = {
   ],
 };
 
-export default narratagePackage;
+export default hypitPackage;

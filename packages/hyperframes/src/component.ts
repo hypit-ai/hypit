@@ -1,8 +1,8 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { ProgramSpace } from "@narratage/program-space";
-import type { Composition } from "@narratage/composition";
-import type { CanonicalValue, StoredValue } from "@narratage/protocol";
-import { canonicalize } from "@narratage/protocol";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { ProgramSpace } from "@hypit/program-space";
+import type { Composition } from "@hypit/composition";
+import type { CanonicalValue, StoredValue } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 
 import { compileHyperframesDocument } from "./document.js";
 import { hyperframesProducers } from "./manifest.js";

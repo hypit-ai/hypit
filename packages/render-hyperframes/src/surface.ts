@@ -1,12 +1,12 @@
-import { programSpaceTypes } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { compositionTypes } from "@narratage/composition";
-import type { Composition } from "@narratage/composition";
+import { programSpaceTypes } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { compositionTypes } from "@hypit/composition";
+import type { Composition } from "@hypit/composition";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import { renderHyperframesFragment } from "./fragment.js";
 

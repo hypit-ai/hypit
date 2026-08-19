@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { momentFrames, segmentFrameSpan, selectionFrameSpans } from "@narratage/semantic-map";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+import { momentFrames, segmentFrameSpan, selectionFrameSpans } from "@hypit/semantic-map";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 
 /**
  * Two Segments at 10 fps. Words are one frame wide with a one-frame gap, so a

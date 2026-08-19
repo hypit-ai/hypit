@@ -1,7 +1,7 @@
 import type {
   CanonicalValue,
   StoredValue,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 export type OperationIdentity = {
   readonly id: string;

@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/video-cli",
+  "name": "@hypit/video-cli",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -8,11 +8,11 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@narratage/cli": "workspace:*",
-    "@narratage/compiler-markup-node": "workspace:*",
-    "@narratage/markup": "workspace:*",
-    "@narratage/package-loader-node": "workspace:*",
-    "@narratage/runtime-local": "workspace:*",
-    "@narratage/workspace-fs-node": "workspace:*"
+    "@hypit/cli": "workspace:*",
+    "@hypit/compiler-markup-node": "workspace:*",
+    "@hypit/markup": "workspace:*",
+    "@hypit/package-loader-node": "workspace:*",
+    "@hypit/runtime-local": "workspace:*",
+    "@hypit/workspace-fs-node": "workspace:*"
   }
 }

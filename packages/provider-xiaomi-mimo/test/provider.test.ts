@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { EndpointRegistry, MemoryArtifactStore } from "@narratage/driver-node";
-import { generationTypes } from "@narratage/generation";
-import { mimoTtsEndpoints, sealMimoTtsRequest } from "@narratage/mimo-tts";
-import type { CanonicalValue, Need } from "@narratage/protocol";
-import { createXiaomiMimoProvider } from "@narratage/provider-xiaomi-mimo";
+import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
+import { generationTypes } from "@hypit/generation";
+import { mimoTtsEndpoints, sealMimoTtsRequest } from "@hypit/mimo-tts";
+import type { CanonicalValue, Need } from "@hypit/protocol";
+import { createXiaomiMimoProvider } from "@hypit/provider-xiaomi-mimo";
 
 function need(
   endpoint: (typeof mimoTtsEndpoints)[keyof typeof mimoTtsEndpoints],

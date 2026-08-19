@@ -1,10 +1,10 @@
-# `@narratage/grok-imagine`
+# `@hypit/grok-imagine`
 
 Exact author/compute contracts and package-owned author Surfaces for Grok Imagine video generation.
 
 It exposes the standard and 1.5-preview models as distinct Surfaces. Each request is nominally typed and
 validated before yielding an ordinary video Artifact. The package declares the model
-choice; it does not route to another model or access a Provider. `@narratage/provider-kie` is one
+choice; it does not route to another model or access a Provider. `@hypit/provider-kie` is one
 optional Runtime implementation.
 
 ```xml

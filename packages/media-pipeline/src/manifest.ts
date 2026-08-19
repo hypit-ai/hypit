@@ -1,18 +1,18 @@
-import { artifactDependency } from "@narratage/artifact";
-import { mediaDependency, mediaTypes } from "@narratage/media";
-import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { speechDependency, speechTypes } from "@narratage/speech";
-import { compositionDependency, compositionTypes } from "@narratage/composition";
-import { artifactTypes } from "@narratage/artifact";
+import { artifactDependency } from "@hypit/artifact";
+import { mediaDependency, mediaTypes } from "@hypit/media";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import { speechDependency, speechTypes } from "@hypit/speech";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
+import { artifactTypes } from "@hypit/artifact";
 import type {
   CapabilityRef,
   ModuleManifest,
   ProducerRef,
   TypeRef,
   ValueSchema,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
-export const mediaPipelineModuleRef = { name: "@narratage/media-pipeline", version: "1" } as const;
+export const mediaPipelineModuleRef = { name: "@hypit/media-pipeline", version: "1" } as const;
 export const mediaPipelineTypes = {
   selectionRequest: { module: mediaPipelineModuleRef, name: "MediaSelectionRequest" },
   audioProgramPlan: { module: mediaPipelineModuleRef, name: "AudioProgramPlan" },
@@ -219,7 +219,7 @@ export const mediaPipelineMarkupSurfaces = [
 
 
 export const mediaPipelineManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: mediaPipelineModuleRef.name,
   version: mediaPipelineModuleRef.version,
   dependencies: [

@@ -18,11 +18,11 @@ Script 显示全集 → Caption Program → Planner + Atom 实测时间 → 样�
 ```
 
 ```svml
-<import as="caption" from="@narratage/caption@1"/>
-<import as="caption-fine" from="@narratage/caption-fine@1"/>
-<import as="caption-ai" from="@narratage/caption-gemini@1"/>
-<import as="media" from="@narratage/media@1"/>
-<import as="fonts" from="@narratage/fonts-open@1"/>
+<import as="caption" from="@hypit/caption@1"/>
+<import as="caption-fine" from="@hypit/caption-fine@1"/>
+<import as="caption-ai" from="@hypit/caption-gemini@1"/>
+<import as="media" from="@hypit/media@1"/>
+<import as="fonts" from="@hypit/fonts-open@1"/>
 ```
 
 公共 Caption 只负责 Cue 字数边界、可选的通用逐词字段、完整样式分配、Plan 校验与时间拼接。Fine 是第一种无字段样式族，负责自己的几何、字形/Cue/Pill Paint 与局部动画。
@@ -111,8 +111,8 @@ Dual Text 右侧。
 B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族。一个 Item 可以在语义或绝对窗口内放置图片、生成视频、已规范化含时素材或 Compositable Surface。
 
 ```svml
-<import as="media-track" from="@narratage/media-track@1"/>
-<import as="wording" from="@narratage/text@1"/>
+<import as="media-track" from="@hypit/media-track@1"/>
+<import as="wording" from="@hypit/text@1"/>
 ```
 
 ### media-track:Track 与 media-track:Item
@@ -162,13 +162,13 @@ Operation。需要共享或特殊选流时仍可显式写 `<pipeline:Normalize>`
 
 ## Audio Track
 
-`@narratage/audio-track` 把显式准备好的音频放进与视觉 Track 相同的 ProgramSpace。`Clip`
+`@hypit/audio-track` 把显式准备好的音频放进与视觉 Track 相同的 ProgramSpace。`Clip`
 消费 `SynchronizedMedia`；先规范化已声明或生成的音频 Blob，再选择精确节目窗口与占用方式：
 
 ```svml
-<import as="media" from="@narratage/media@1"/>
-<import as="pipeline" from="@narratage/media-pipeline@1"/>
-<import as="audio" from="@narratage/audio-track@1"/>
+<import as="media" from="@hypit/media@1"/>
+<import as="pipeline" from="@hypit/media-pipeline@1"/>
+<import as="audio" from="@hypit/audio-track@1"/>
 
 <media:Audio id="music" src="./assets/music.wav"/>
 <pipeline:Normalize id="music-media" source={music}
@@ -200,8 +200,8 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.track}` 是普通
 在屏幕上显示的静态或定时文字——标题、标注、下方三分之一字幕条。
 
 ```svml
-<import as="text" from="@narratage/typography-track@1"/>
-<import as="wording" from="@narratage/text@1"/>
+<import as="text" from="@hypit/typography-track@1"/>
+<import as="wording" from="@hypit/text@1"/>
 ```
 
 ### text:Track
@@ -285,7 +285,7 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 | `ranking:TypewriterList` | `ranking:TypewriterItem` | `ranking:TypewriterListStyle` |
 
 ```svml
-<import as="ranking" from="@narratage/ranking@1"/>
+<import as="ranking" from="@hypit/ranking@1"/>
 ```
 
 ### 样式标签
@@ -334,7 +334,7 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 卡片堆按深度排布卡片：一张在最前，其余向后退去，每张新卡在一个 Moment 上发出。Media Item 是把一个镜头放进一个 Frame，而卡片堆是在同一个 Frame 里维持一叠并整体移动它们。
 
 ```svml
-<import as="deck" from="@narratage/deck-track@1"/>
+<import as="deck" from="@hypit/deck-track@1"/>
 ```
 
 ### deck:DepthStack
@@ -373,7 +373,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 覆盖在整个画面之上、而非落在某个 Frame 里的效果：切点上的一次闪白、持续整个 Selection 的暗角、铺满全片的颗粒。一条 Track 承载全部，每个子元素是一个效果加它自己的时间窗。
 
 ```svml
-<import as="screen" from="@narratage/screen-overlay@1"/>
+<import as="screen" from="@hypit/screen-overlay@1"/>
 ```
 
 `screen:Track` 接受 `id`、`canvas` 与 `space`。它的子元素就是各个效果，至少一个，各自为空，都必须带 `z` 决定层叠顺序，并且各有一个时间窗，形式是以下之一：
@@ -403,7 +403,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 放置在 Frame 中的社交风格评论卡：头像、作者、评论正文，以及可选的一行附注。
 
 ```svml
-<import as="comment" from="@narratage/comment-sticker@1"/>
+<import as="comment" from="@hypit/comment-sticker@1"/>
 ```
 
 `comment:Style` 必须为空，接受 `id`、`recipe` 与 `font`，全部必填。Recipe 承载整张卡的外观——背景、描边、圆角、气泡尾、头像、三行文字，以及进入/停留/退出的动效——每个键都有默认值，所以一份 recipe 只需写它要改的部分。
@@ -429,16 +429,16 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 四类 Track 在一个源文件中协同使用：
 
 ```svml
-<import as="caption" from="@narratage/caption@1"/>
-<import as="caption-fine" from="@narratage/caption-fine@1"/>
-<import as="caption-ai" from="@narratage/caption-gemini@1"/>
-<import as="fonts" from="@narratage/fonts-open@1"/>
-<import as="media" from="@narratage/media@1"/>
-<import as="pipeline" from="@narratage/media-pipeline@1"/>
-<import as="media-track" from="@narratage/media-track@1"/>
-<import as="text" from="@narratage/typography-track@1"/>
-<import as="audio" from="@narratage/audio-track@1"/>
-<import as="space" from="@narratage/spatial@1"/>
+<import as="caption" from="@hypit/caption@1"/>
+<import as="caption-fine" from="@hypit/caption-fine@1"/>
+<import as="caption-ai" from="@hypit/caption-gemini@1"/>
+<import as="fonts" from="@hypit/fonts-open@1"/>
+<import as="media" from="@hypit/media@1"/>
+<import as="pipeline" from="@hypit/media-pipeline@1"/>
+<import as="media-track" from="@hypit/media-track@1"/>
+<import as="text" from="@hypit/typography-track@1"/>
+<import as="audio" from="@hypit/audio-track@1"/>
+<import as="space" from="@hypit/spatial@1"/>
 
 <!-- Captions: primary style for all text -->
 <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>

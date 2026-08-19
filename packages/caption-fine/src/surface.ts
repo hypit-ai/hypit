@@ -1,17 +1,17 @@
-import { captionTypes } from "@narratage/caption";
-import { assertFontArtifactRef, assertFontStackRef, mediaTypes } from "@narratage/media";
-import type { FontArtifactRef, FontStackRef } from "@narratage/media";
-import { narrativeTypes } from "@narratage/narrative";
-import { programSpaceTypes } from "@narratage/program-space";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { svsRecipeType } from "@narratage/svs";
-import type { SvsRecipe } from "@narratage/svs";
+import { captionTypes } from "@hypit/caption";
+import { assertFontArtifactRef, assertFontStackRef, mediaTypes } from "@hypit/media";
+import type { FontArtifactRef, FontStackRef } from "@hypit/media";
+import { narrativeTypes } from "@hypit/narrative";
+import { programSpaceTypes } from "@hypit/program-space";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import { svsRecipeType } from "@hypit/svs";
+import type { SvsRecipe } from "@hypit/svs";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import { fineCaptionTrackFragment } from "./fragment.js";
 import { fineCaptionStyle } from "./style.js";

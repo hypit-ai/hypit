@@ -7,7 +7,7 @@ import ts from "typescript";
 const repositoryRoot = new URL("../", import.meta.url);
 const scanRoots = ["docs", "examples", "packages", "services", "test"];
 const rootTextFiles = ["README.md", "package.json", "pnpm-workspace.yaml", "tsconfig.json"];
-const ignoredDirectories = new Set(["node_modules", "dist", "output", ".narratage", ".svml", ".vitepress"]);
+const ignoredDirectories = new Set(["node_modules", "dist", "output", ".hypit", ".svml", ".vitepress"]);
 const textExtensions = new Set([
   ".css", ".html", ".js", ".json", ".jsx", ".md", ".mjs", ".sh", ".svml", ".svrun",
   ".svs", ".ts", ".tsx", ".txt", ".yaml", ".yml",
@@ -58,7 +58,7 @@ test("public repository contains no workstation paths or high-confidence secret 
 });
 
 test("pre-release project-owned major identities remain at one", async () => {
-  const identity = /(?:\bsvml\.[a-z0-9._/-]+|@narratage\/[a-z0-9._/${}-]+)@([0-9]+)(?![.0-9])/giu;
+  const identity = /(?:\bsvml\.[a-z0-9._/-]+|@hypit\/[a-z0-9._/${}-]+)@([0-9]+)(?![.0-9])/giu;
   const failures = [];
   for (const entry of await repositoryEntries()) {
     if (!entry.isFile || !textExtensions.has(extname(entry.path))) continue;
@@ -85,7 +85,7 @@ function projectIdentityObject(node) {
   const owner = properties.get("name") ?? properties.get("module");
   return owner !== undefined
     && ts.isStringLiteralLike(owner)
-    && owner.text.startsWith("@narratage/")
+    && owner.text.startsWith("@hypit/")
     && properties.has("version")
     ? properties.get("version")
     : undefined;
@@ -115,7 +115,7 @@ test("project-owned production Module and Frontend identities use literal versio
 });
 
 function packageImports(source) {
-  const matches = source.matchAll(/(?:\bfrom\s+|\bimport\s*\(|^\s*import\s+)["'](@narratage\/[a-z0-9-]+)(?:\/[^"']*)?["']/gmu);
+  const matches = source.matchAll(/(?:\bfrom\s+|\bimport\s*\(|^\s*import\s+)["'](@hypit\/[a-z0-9-]+)(?:\/[^"']*)?["']/gmu);
   return [...matches].map((match) => match[1]);
 }
 

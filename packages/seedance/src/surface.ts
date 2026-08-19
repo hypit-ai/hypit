@@ -1,25 +1,25 @@
-import { artifactTypes } from "@narratage/artifact";
+import { artifactTypes } from "@hypit/artifact";
 import {
   generationPort,
   sealGenerationMediaBinding,
   sealGenerationRequestDraft,
-} from "@narratage/generation";
+} from "@hypit/generation";
 import type {
   GenerationMediaPort,
   GenerationMediaRole,
   GenerationPortTable,
-} from "@narratage/generation";
-import { exactModelMediaInputNames, exactModelTextInputName } from "@narratage/model-kit";
-import type { ExactModelEndpoint, ExactModelMediaInput } from "@narratage/model-kit";
-import type { CanonicalValue } from "@narratage/protocol";
-import { speechTypes } from "@narratage/speech";
-import { textTypes, verifyText } from "@narratage/text";
+} from "@hypit/generation";
+import { exactModelMediaInputNames, exactModelTextInputName } from "@hypit/model-kit";
+import type { ExactModelEndpoint, ExactModelMediaInput } from "@hypit/model-kit";
+import type { CanonicalValue } from "@hypit/protocol";
+import { speechTypes } from "@hypit/speech";
+import { textTypes, verifyText } from "@hypit/text";
 import type {
   MarkupAttributeValue,
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import {
   createSeedanceAssembledGenerationFragment,
