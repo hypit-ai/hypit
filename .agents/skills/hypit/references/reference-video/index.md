@@ -58,7 +58,11 @@ Before acting on the evidence, read these files completely in order:
    one authored composition, and where a missing picture comes from.
 4. `../playbooks/craft/generated-dependencies.md` — what one generation owes another: the location,
    the split shot, the voice, the first frame, and the stretch too short to be a take.
-5. `vocabulary.md` — existing-package selection, appearance-property resolution, and the route for a
+5. `../playbooks/craft/visual-continuity.md` — recurring anchors as explicit artifacts, one location
+   generated once, and the reverse-view geometry that must hold across takes.
+6. `../playbooks/craft/production-gates.md` — images and takes generate and are reviewed in rounds,
+   and accepted Records are pinned for reuse.
+7. `vocabulary.md` — existing-package selection, appearance-property resolution, and the route for a
    real vocabulary gap.
 
 Two more are required, at the point where they apply rather than now. Reading them here means
