@@ -45,11 +45,21 @@ node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/main.sv
 ```
 
 It reports every track that failed to build, and every track waiting on a Provider it cannot reach,
-and exits non-zero when either exists. A track that cannot be built is not done, and this is not the
+and exits non-zero when either exists. The failures it reports are the Producer's own messages — the
+track name, the Producer, and why it failed, down to the offending value (a schedule frame outside a
+window, a media edge whose artifact is not an image). This is not a guessing problem: the error says
+what is wrong, and you repair that. A track that cannot be built is not done, and this is not the
 loop: the two-attempt ceiling governs how *well* a buildable element is tuned to the reference; it
 does not govern whether the element builds at all. Every failure this check reports must be repaired
 until the check passes — the author should never open the Playground and find that something they
 were delivered cannot be seen. Repair as many times as the failure needs, then re-run the check.
+
+What this check cannot see is equally important: a track that *builds* but looks wrong — a typeface
+that does not match, a colour that is off, a shape that is misplaced — reports no error here, because
+nothing failed. That is the loop's work, under `reconstruction-loop.md`, where Gemini compares the
+rendered element against the reference and names the visible differences. Build failures are
+repaired here until they pass; appearance differences are resolved there, bounded by the two-attempt
+ceiling.
 
 Fix package resolution and package implementation before repairing source use. Continue until all
 three files are accepted. Do not create `check_svml_project` or another wrapper.
