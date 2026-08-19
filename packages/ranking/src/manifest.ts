@@ -31,15 +31,12 @@ export const rankingTypes = {
   tierStyle: { module: rankingModuleRef, name: "TierBoardStyle" },
   columnStyle: { module: rankingModuleRef, name: "ColumnStyle" },
   topThreeStyle: { module: rankingModuleRef, name: "TopThreeStyle" },
-  typewriterStyle: { module: rankingModuleRef, name: "TypewriterListStyle" },
   tierItems: { module: rankingModuleRef, name: "TierBoardItemSet" },
   columnItems: { module: rankingModuleRef, name: "ColumnItemSet" },
   topThreeItems: { module: rankingModuleRef, name: "TopThreeItemSet" },
-  typewriterItems: { module: rankingModuleRef, name: "TypewriterItemSet" },
   tierProgram: { module: rankingModuleRef, name: "TierBoardProgram" },
   columnProgram: { module: rankingModuleRef, name: "ColumnProgram" },
   topThreeProgram: { module: rankingModuleRef, name: "TopThreeProgram" },
-  typewriterProgram: { module: rankingModuleRef, name: "TypewriterListProgram" },
 } satisfies Record<string, TypeRef>;
 
 export const rankingProducers = {
@@ -54,16 +51,12 @@ export const rankingProducers = {
   createTopThreeItems: { module: rankingModuleRef, name: "create-top-three-items" },
   appendTopThreeItem: { module: rankingModuleRef, name: "append-top-three-item" },
   appendTopThreeIconItem: { module: rankingModuleRef, name: "append-top-three-icon-item" },
-  createTypewriterItems: { module: rankingModuleRef, name: "create-typewriter-items" },
-  appendTypewriterItem: { module: rankingModuleRef, name: "append-typewriter-item" },
   tierProgram: { module: rankingModuleRef, name: "build-tier-board-program" },
   columnProgram: { module: rankingModuleRef, name: "build-column-program" },
   topThreeProgram: { module: rankingModuleRef, name: "build-top-three-program" },
-  typewriterProgram: { module: rankingModuleRef, name: "build-typewriter-list-program" },
   tierEvents: { module: rankingModuleRef, name: "build-tier-board-sound-events" },
   columnEvents: { module: rankingModuleRef, name: "build-column-sound-events" },
   topThreeEvents: { module: rankingModuleRef, name: "build-top-three-sound-events" },
-  typewriterEvents: { module: rankingModuleRef, name: "build-typewriter-list-sound-events" },
   createSounds: { module: rankingModuleRef, name: "create-ranking-sounds" },
   appendAppearSound: { module: rankingModuleRef, name: "append-ranking-appear-sound" },
   appendMoveSound: { module: rankingModuleRef, name: "append-ranking-move-sound" },
@@ -71,7 +64,6 @@ export const rankingProducers = {
   renderTier: { module: rankingModuleRef, name: "render-tier-board" },
   renderColumn: { module: rankingModuleRef, name: "render-column" },
   renderTopThree: { module: rankingModuleRef, name: "render-top-three" },
-  renderTypewriter: { module: rankingModuleRef, name: "render-typewriter-list" },
   materializeTextItem: { module: rankingModuleRef, name: "materialize-text-item" },
 } satisfies Record<string, ProducerRef>;
 
@@ -81,7 +73,7 @@ const unsigned = { kind: "number", integer: true, minimum: 0 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>, allowUnknown = false): ValueSchema => ({
   kind: "object", fields, ...(allowUnknown ? { allowUnknown: true } : {}),
 });
-const variants = { kind: "string", enum: ["tier-board", "column", "top-three", "typewriter-list"] } as const;
+const variants = { kind: "string", enum: ["tier-board", "column", "top-three"] } as const;
 const itemBase = {
   id: { schema: string },
   stackingOrder: { schema: integer, optional: true },
@@ -93,18 +85,10 @@ export const rankingItemSpecSchema: ValueSchema = { kind: "oneOf", variants: [
   object({ variant: { schema: { kind: "literal", value: "tier-board" } }, ...itemBase, tier: { schema: string }, entry: { schema: { kind: "string", enum: ["direct", "stage"] } } }),
   object({ variant: { schema: { kind: "literal", value: "column" } }, ...itemBase, label: { schema: string } }),
   object({ variant: { schema: { kind: "literal", value: "top-three" } }, ...itemBase, label: { schema: string } }),
-  object({ variant: { schema: { kind: "literal", value: "typewriter-list" } }, ...itemBase,
-    text: { schema: string }, winner: { schema: { kind: "boolean" } },
-    emphasis: { optional: true, schema: object({ start: { schema: unsigned }, endExclusive: { schema: unsigned } }) },
-  }),
 ] };
 export const rankingTextItemShellSchema: ValueSchema = { kind: "oneOf", variants: [
   object({ variant: { schema: { kind: "literal", value: "column" } }, ...itemBase }),
   object({ variant: { schema: { kind: "literal", value: "top-three" } }, ...itemBase }),
-  object({ variant: { schema: { kind: "literal", value: "typewriter-list" } }, ...itemBase,
-    winner: { schema: { kind: "boolean" } },
-    emphasis: { optional: true, schema: object({ start: { schema: unsigned }, endExclusive: { schema: unsigned } }) },
-  }),
 ] };
 export const rankingItemSpecSetSchema: ValueSchema = object({
 
@@ -137,10 +121,9 @@ export const rankingSoundSetSchema: ValueSchema = object({
   appear: { schema: object({}, true), optional: true }, move: { schema: object({}, true), optional: true },
 });
 const programDefinitions = [
-  ["tier", rankingTypes.tierProgram, rankingTypes.tierStyle, rankingTypes.tierItems, rankingProducers.tierProgram, rankingProducers.tierEvents, rankingProducers.renderTier],
-  ["column", rankingTypes.columnProgram, rankingTypes.columnStyle, rankingTypes.columnItems, rankingProducers.columnProgram, rankingProducers.columnEvents, rankingProducers.renderColumn],
-  ["top-three", rankingTypes.topThreeProgram, rankingTypes.topThreeStyle, rankingTypes.topThreeItems, rankingProducers.topThreeProgram, rankingProducers.topThreeEvents, rankingProducers.renderTopThree],
-  ["typewriter", rankingTypes.typewriterProgram, rankingTypes.typewriterStyle, rankingTypes.typewriterItems, rankingProducers.typewriterProgram, rankingProducers.typewriterEvents, rankingProducers.renderTypewriter],
+  [rankingTypes.tierProgram, rankingTypes.tierStyle, rankingTypes.tierItems, rankingProducers.tierProgram, rankingProducers.tierEvents, rankingProducers.renderTier],
+  [rankingTypes.columnProgram, rankingTypes.columnStyle, rankingTypes.columnItems, rankingProducers.columnProgram, rankingProducers.columnEvents, rankingProducers.renderColumn],
+  [rankingTypes.topThreeProgram, rankingTypes.topThreeStyle, rankingTypes.topThreeItems, rankingProducers.topThreeProgram, rankingProducers.topThreeEvents, rankingProducers.renderTopThree],
 ] as const;
 
 export const rankingMarkupSurfaces = [
@@ -407,93 +390,6 @@ export const rankingMarkupSurfaces = [
           "Every other property is refused by name, except the board Paint and `stage-stack` keys, which a podium accepts and never reads.",
         ],
       } },
-    { name: "typewriter-style", tag: "TypewriterListStyle", mode: "structured", outputs: [rankingTypes.typewriterStyle, rankingTypes.soundStyle],
-      vocabulary: {
-        summary: "Compiles one SVS Recipe and one exact font into the Style a TypewriterList is drawn in, and the private sound Style it connects.",
-        attributes: [
-          { name: "id", kind: "identifier", required: true,
-            summary: "Names this Style so a TypewriterList can reference it." },
-          { name: "recipe", kind: "reference", required: true, accepts: [svsRecipeType],
-            summary: "Chooses the Recipe carrying the title and item type, the emphasis and winner colors, the typing rate, board Paint and motion.",
-            recipe: [
-              { name: "title-font-size", required: false, fallback: "34",
-                summary: "Sets the size in pixels the title is set at." },
-              { name: "title-font-weight", required: false, fallback: "800",
-                summary: "Sets the weight the title is set at." },
-              { name: "title-color", required: false, fallback: "#111827",
-                summary: "Sets the color the title is drawn in." },
-              { name: "title-line-height", required: false, fallback: "1.1",
-                summary: "Sets the line height the title is set on, as a multiple of its size." },
-              { name: "item-font-size", required: false, fallback: "26",
-                summary: "Sets the size in pixels an Item's line is set at." },
-              { name: "item-font-weight", required: false, fallback: "600",
-                summary: "Sets the weight an Item's line is set at." },
-              { name: "item-color", required: false, fallback: "#1f2937",
-                summary: "Sets the color an Item's line is drawn in." },
-              { name: "item-line-height", required: false, fallback: "1.2",
-                summary: "Sets the line height an Item's line is set on, as a multiple of its size." },
-              { name: "emphasis-color", required: false, fallback: "#dc2626",
-                summary: "Sets the color the emphasized span of an Item is drawn in." },
-              { name: "winner-color", required: false, fallback: "#eab308",
-                summary: "Sets the color a winning Item is drawn in." },
-              { name: "board-background", required: false, fallback: "#151821",
-                summary: "Sets the color the paper fills with." },
-              { name: "board-border-color", required: false, fallback: "#ffffff33",
-                summary: "Sets the color of the paper's border." },
-              { name: "board-border-width", required: false, fallback: "1",
-                summary: "Sets the width in pixels of the paper's border." },
-              { name: "board-radius", required: false, fallback: "18",
-                summary: "Sets the corner radius in pixels of the paper." },
-              { name: "board-shadow-x", required: false, fallback: "0",
-                summary: "Offsets the paper's shadow horizontally in pixels." },
-              { name: "board-shadow-y", required: false, fallback: "10",
-                summary: "Offsets the paper's shadow vertically in pixels." },
-              { name: "board-shadow-blur", required: false, fallback: "24",
-                summary: "Sets the blur radius in pixels of the paper's shadow." },
-              { name: "board-shadow-spread", required: false, fallback: "0",
-                summary: "Sets the spread in pixels of the paper's shadow." },
-              { name: "board-shadow-color", required: false, fallback: "#00000066",
-                summary: "Sets the color of the paper's shadow." },
-              { name: "padding", required: false, fallback: "28",
-                summary: "Sets the inset in pixels between the paper's edge and its lines." },
-              { name: "row-gap", required: false, fallback: "16",
-                summary: "Sets the gap in pixels between Item lines." },
-              { name: "title-gap", required: false, fallback: "22",
-                summary: "Sets the gap in pixels between the title and the first Item line." },
-              { name: "rotation", required: false, fallback: "-1.2",
-                summary: "Tilts the whole paper by this many degrees." },
-              { name: "frames-per-grapheme", required: false, fallback: "2",
-                summary: "Sets how many frames each grapheme of an Item takes to type." },
-              { name: "winner-frames", required: false, fallback: "5",
-                summary: "Sets how many frames a winning Item's flourish runs for after it finishes typing." },
-              { name: "board-stack", required: false, fallback: "20",
-                summary: "Sets the draw order the paper itself is placed at." },
-              { name: "item-stack", required: false, fallback: "30",
-                summary: "Sets the draw order every Item line is placed at, unless the Item overrides it." },
-              { name: "appear-gain", required: false, fallback: "1",
-                summary: "Sets the gain the appear sound is played at." },
-              { name: "move-gain", required: false, fallback: "1",
-                summary: "Sets the gain the winner sound is played at." },
-              { name: "sound-fade-frames", required: false, fallback: "0",
-                summary: "Sets how many frames each sound fades in and out over." },
-            ] },
-          { name: "font", kind: "reference", required: true,
-            accepts: [mediaTypes.fontArtifact, mediaTypes.fontStack],
-            summary: "Chooses the exact face, or a whole stack that already carries its own fallbacks, the board copy is set in." },
-        ],
-        ports: [
-          { name: "", type: rankingTypes.typewriterStyle,
-            summary: "The compiled visual Style, addressed by the element's own id." },
-          { name: "sound", type: rankingTypes.soundStyle,
-            summary: "The compiled sound Style, connected only when the board authors a sound." },
-        ],
-        example: `<ranking:TypewriterListStyle id="list-style" recipe={studio.ranking.list} font={ui-font}/>`,
-        notes: [
-          "The element is empty; it accepts no children and no text.",
-          "The Recipe is validated against the variant, so a Recipe holding another board's keys is refused by name.",
-          "Every other property is refused by name, except the unprefixed type, motion and `stage-stack` keys, which a list accepts and never reads.",
-        ],
-      } },
     { name: "tier", tag: "TierBoard", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, rankingTypes.schedule, rankingTypes.tierProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
       vocabulary: {
         summary: "Places ordered Items into tier rows, one on each occurrence of a Moment, and publishes the board and the Tracks it renders to.",
@@ -693,81 +589,6 @@ export const rankingMarkupSurfaces = [
           "Authoring the appear sound also connects the Style's `.sound` output, so `style` must name a TopThreeStyle written in this Source.",
         ],
       } },
-    { name: "typewriter", tag: "TypewriterList", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, rankingTypes.textItemShell, textTypes.text, rankingTypes.schedule, rankingTypes.typewriterProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
-      vocabulary: {
-        summary: "Types a titled list one line at a time, one on each occurrence of a Moment, and publishes the board and the Tracks it renders to.",
-        appearance:
-          "One sheet of paper filling its Frame and tilted a degree or so off square, with rounded corners, a thin border and a soft drop shadow; the title stands left-aligned across its top, and a faint hairline rule is drawn under every line the list will hold, so the empty sheet already shows how many lines are coming. Lines type themselves onto those rules from the top down, one line per trigger occurrence in document order, a grapheme at a time fading in from the left. A run marked for emphasis inside a line types in the emphasis color instead of the line color, and a line marked as the winner grows a star at the right end of its rule, scaling up from nothing once that line has finished typing. Typed lines stay on the paper, unmoved, while the ones below them are written.",
-        preview: previewImage("TypewriterList.png"),
-        attributes: [
-          { name: "id", kind: "identifier", required: true,
-            summary: "Names this board so its Schedule, Program and Tracks can be referenced elsewhere in the Source." },
-          { name: "map", kind: "reference", required: true, accepts: [semanticMapTypes.complete],
-            summary: "Chooses the measured SemanticMap that gives every trigger its frame." },
-          { name: "space", kind: "reference", required: true, accepts: [programSpaceTypes.programSpace],
-            summary: "Chooses the ProgramSpace the board is timed and rendered against." },
-          { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
-            summary: "Chooses the Frame the whole board occupies." },
-          { name: "during", kind: "reference", required: true, accepts: [narrativeTypes.selection],
-            summary: "Chooses the Selection the board is on screen for." },
-          { name: "triggers", kind: "reference", required: true, accepts: [narrativeTypes.moment],
-            summary: "Chooses the Moment whose occurrences type one TypewriterItem each, in document order." },
-          { name: "terminal", kind: "reference", required: true, accepts: [narrativeTypes.moment],
-            summary: "Chooses the Moment the board settles on and ends after." },
-          { name: "style", kind: "reference", required: true, accepts: [rankingTypes.typewriterStyle],
-            summary: "Chooses the TypewriterListStyle this board is drawn in, and only that variant's." },
-          { name: "title", kind: "expression", required: true, accepts: [textTypes.text],
-            summary: "Sets the heading standing above the list, written literally or chosen from an existing Text." },
-          { name: "appear-sound", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
-            summary: "Chooses the Synchronized Medium played as each line is typed." },
-          { name: "move-sound", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
-            summary: "Chooses the Synchronized Medium played as the winner line is marked." },
-        ],
-        children: [
-          { tag: "TypewriterItem", cardinality: "many",
-            summary: "One line of the list, typed at its own trigger occurrence in document order.",
-            attributes: [
-              { name: "id", kind: "identifier", required: false,
-                summary: "Names this line within the board; an omitted id is generated from the line's position." },
-              { name: "text", kind: "expression", required: false, accepts: [textTypes.text],
-                summary: "Sets the line's copy, written literally or chosen from an existing Text." },
-              { name: "winner", kind: "literal", required: false, values: ["true", "false"],
-                summary: "Decides whether the line is marked as the winner once it is typed, and defaults to false." },
-              { name: "emphasis-start", kind: "literal", required: false,
-                summary: "Sets the first grapheme of the emphasized run in the line's copy." },
-              { name: "emphasis-end", kind: "literal", required: false,
-                summary: "Sets the grapheme the emphasized run stops before." },
-              { name: "stack", kind: "literal", required: false,
-                summary: "Overrides the Style's draw order for this line alone." },
-            ],
-            text: "The line's copy, read only when `text` is absent." },
-        ],
-        ports: [
-          { name: "schedule", type: rankingTypes.schedule,
-            summary: "The resolved Schedule: each Item's trigger frame and its staged, cumulative and settled spans." },
-          { name: "program", type: rankingTypes.typewriterProgram,
-            summary: "The resolved board: its title, Frame, Style, Schedule and ordered Items." },
-          { name: "visual", type: compositionTypes.visualTrack,
-            summary: "The rendered board, an ordinary peer VisualTrack." },
-          { name: "audio", type: compositionTypes.audioTrack,
-            summary: "The rendered board sound, published only when a sound is authored." },
-        ],
-        example: `<ranking:TypewriterListStyle id="list-style" recipe={studio.ranking.list} font={ui-font}/>
-<ranking:TypewriterList id="list" map={timing.map} space={speech.space} frame={board-frame}
-  during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
-  style={list-style} title="What survived">
-  <ranking:TypewriterItem id="line-one" text="Deterministic timing"/>
-  <ranking:TypewriterItem id="line-two" text="No hidden runtime choice" winner="true"
-    emphasis-start="3" emphasis-end="9"/>
-</ranking:TypewriterList>`,
-        notes: [
-          "The board requires at least one TypewriterItem, accepts no other child and no text of its own, and Item ids must be unique within it.",
-          "A TypewriterItem takes its copy from `text` or from its own element text; writing both is refused.",
-          "`emphasis-start` and `emphasis-end` are written together or not at all, and the run they mark must be non-empty and inside the line's copy.",
-          "`move-sound` requires at least one TypewriterItem written `winner=\"true\"`; a sound with nothing to sound on is refused.",
-          "Authoring either sound also connects the Style's `.sound` output, so `style` must name a TypewriterListStyle written in this Source.",
-        ],
-      } },
   ] as const;
 
 
@@ -786,15 +607,12 @@ export const rankingManifest: ModuleManifest = {
     { name: rankingTypes.tierStyle.name },
     { name: rankingTypes.columnStyle.name },
     { name: rankingTypes.topThreeStyle.name },
-    { name: rankingTypes.typewriterStyle.name },
     { name: rankingTypes.tierItems.name },
     { name: rankingTypes.columnItems.name },
     { name: rankingTypes.topThreeItems.name },
-    { name: rankingTypes.typewriterItems.name },
     { name: rankingTypes.tierProgram.name },
     { name: rankingTypes.columnProgram.name },
     { name: rankingTypes.topThreeProgram.name },
-    { name: rankingTypes.typewriterProgram.name },
   ],
   capabilities: [],
   producers: [
@@ -810,7 +628,6 @@ export const rankingManifest: ModuleManifest = {
       [rankingProducers.createTierItems, rankingTypes.tierItems],
       [rankingProducers.createColumnItems, rankingTypes.columnItems],
       [rankingProducers.createTopThreeItems, rankingTypes.topThreeItems],
-      [rankingProducers.createTypewriterItems, rankingTypes.typewriterItems],
     ] as const).map(([producer, type]) => ({
       name: producer.name, inputs: [], outputs: [{ name: "set", type }], needs: [],
     })),
@@ -827,11 +644,9 @@ export const rankingManifest: ModuleManifest = {
     ] as const).map(([producer, type]) => ({
       name: producer.name, inputs: [{ name: "set", type }, { name: "spec", type: rankingTypes.itemSpec }, { name: "icon", type: mediaTypes.blobArtifact }], outputs: [{ name: "set", type }], needs: [],
     })),
-    { name: rankingProducers.appendTypewriterItem.name, inputs: [{ name: "set", type: rankingTypes.typewriterItems }, { name: "spec", type: rankingTypes.itemSpec }], outputs: [{ name: "set", type: rankingTypes.typewriterItems }], needs: [] },
-    ...programDefinitions.flatMap(([name, programType, styleType, setType, programProducer, eventProducer, renderProducer]) => [
+    ...programDefinitions.flatMap(([programType, styleType, setType, programProducer, eventProducer, renderProducer]) => [
       { name: programProducer.name, inputs: [
         { name: "header", type: rankingTypes.header },
-        ...(name === "typewriter" ? [{ name: "title", type: textTypes.text }] : []),
         { name: "frame", type: spatialTypes.frame }, { name: "schedule", type: rankingTypes.schedule },
         { name: "style", type: styleType }, { name: "set", type: setType },
       ], outputs: [{ name: "program", type: programType }], needs: [] },

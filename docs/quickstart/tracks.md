@@ -330,15 +330,14 @@ placement, timing, style and motion. Use inline `P`/`Span`/`Break` when the auth
 ## Ranking boards
 
 A board animates an ordered list against the Script: it enters on a Selection, moves on Moments, and
-settles on a Moment that ends it. Four variants share one shape — a container, its own item tag, and
-its own style tag.
+settles on a Moment that ends it. Three variants share one shape — a container, its own item tag,
+and its own style tag.
 
 | Container | Item | Style |
 |---|---|---|
 | `ranking:TierBoard` | `ranking:TierItem` | `ranking:TierBoardStyle` |
 | `ranking:Column` | `ranking:ColumnItem` | `ranking:ColumnStyle` |
 | `ranking:TopThree` | `ranking:TopThreeItem` | `ranking:TopThreeStyle` |
-| `ranking:TypewriterList` | `ranking:TypewriterItem` | `ranking:TypewriterListStyle` |
 
 ```svml
 <import as="ranking" from="@hypit/ranking@1"/>
@@ -361,12 +360,11 @@ against the variant, so a Column recipe on a TierBoard is refused by name.
 | `triggers` | a Moment — rows move on it |
 | `terminal` | a Moment — the board settles on it |
 | `style` | the matching style record, and only that variant's |
-| `title` | `TypewriterList` only, and required there: a string or a Text reference |
 | `appear-sound`, `move-sound` | optional Synchronized Media |
 
 `move-sound` is refused on `TopThree`, which has no move phase. On a `TierBoard` it needs at least
-one item with `entry="stage"`, and on a `TypewriterList` at least one `winner="true"` — a sound with
-nothing to sound on is an authoring mistake, not a silent no-op.
+one item with `entry="stage"` — a sound with nothing to sound on is an authoring mistake, not a
+silent no-op.
 
 ### The item tags
 
@@ -376,9 +374,6 @@ Each variant takes its own, at least one, and ids must be unique within a board.
   `entry="direct" | "stage"` and `stack`. Row labels come from the recipe, not the tag.
 - **`ColumnItem`** and **`TopThreeItem`** — `label` (required: a string or a Text reference), optional
   `icon` and `stack`. `TopThree` takes at most three.
-- **`TypewriterItem`** — copy comes from `text=` or from the element's own text, one or the other;
-  optional `winner="true"`, `stack`, and `emphasis-start` / `emphasis-end`, which are counted in
-  graphemes and must be given together.
 
 ```svml
 <ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>

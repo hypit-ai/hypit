@@ -17,8 +17,8 @@ explain why every item belongs where it is placed.
 1. Build the speech program with accepted speaking or audio-only `speech:Take` inputs, then run
    `whisperx:Alignment` so the Selection and Moments resolve against real audio.
 2. Declare exact font bytes and the variant's package-owned Style.
-3. Choose exactly one primary component: `ranking:TierBoard`, `ranking:Column`,
-   `ranking:TopThree`, or `ranking:TypewriterList`.
+3. Choose exactly one primary component: `ranking:TierBoard`, `ranking:Column`, or
+   `ranking:TopThree`.
 4. Connect `map={timing.map}`, `space={speech.space}`, the outer `during` Selection, repeated
    `triggers` Moment, terminal Moment, explicit frame, Style, and the complete ordered item list.
 5. Add the component's `.visual` output to `film:Film`; add its optional `.audio` output only when

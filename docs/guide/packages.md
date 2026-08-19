@@ -99,7 +99,7 @@ specific Provider deployment.
 @hypit/typography-track      typography overlay Track
 @hypit/audio-track           arbitrary sample-domain Audio Track
 @hypit/deck-track            depth-stack collection Track
-@hypit/ranking               four ranking component families
+@hypit/ranking               three ranking component families
 @hypit/screen-overlay        self-contained full-canvas overlays
 @hypit/film                  Film composition
 @hypit/composition           peer Track composition
