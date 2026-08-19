@@ -52,6 +52,11 @@ Never generate video from a prompt alone. Without a first frame nothing fixes id
 lighting or wardrobe, so the take can be reviewed against nothing and the next take can match
 nothing. Use the shape that takes a first frame, or the shape that takes ordered references.
 
+Generate it on the fast tier — `model="fast"` for a Seedance take — unless the author named a model
+or the delivery genuinely needs a resolution only the top tier offers. Takes are regenerated more
+often than they are kept, so the tier multiplies the whole bill rather than one request.
+`seedance-directing.md` holds the model contracts.
+
 ## A short stretch is not a short take
 
 An authored take stays inside the selected model's declared duration range — read the range from the
