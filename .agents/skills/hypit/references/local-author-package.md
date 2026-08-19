@@ -95,6 +95,15 @@ nothing.
   to prevent.
 - Only pictures that differ between videos are input ports: photographs, screenshots, thumbnails,
   product shots, character images.
+- A media **slot** — a card, a board, a phone screen, a monitor, any box whose content varies — is
+  an input port, not package content. It is declared as an attribute accepting the media type
+  (`image`, `video`, `media`, `surface`), and the content that fills it comes from the document, not
+  from the package. The frame is the component's; the content is not. A slot is a reusable input
+  even though this one reference happens to show a particular picture in it: the same component
+  serves a phone holding a screenshot or a video, a board holding two different inserts, because the
+  slots are inputs and each document fills them. Writing the observed content into the package is
+  the same failure as a missing inner picture, inverted: the frame was seen but the slot was closed.
+  `media-track:Item` and the `icon` port on `@hypit/ranking` are the shape this takes.
 - Never require an input the installing project has no reason to choose. If a Run Source exists only
   to produce the component's own texture, the texture is in the wrong place.
 - A component that cannot render on its own cannot produce the preview image its Surface owes. Treat
