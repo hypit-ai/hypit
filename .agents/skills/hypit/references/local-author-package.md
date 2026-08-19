@@ -135,5 +135,16 @@ pnpm hypit check path/to/studio.svs
 pnpm hypit check path/to/build.svrun
 ```
 
+A package that cannot be *seen* is not done. `hypit check` proves the Source is legal, and nothing
+more; it will not tell you that the track a package produces fails to build when the Playground
+renders it. Run the preview check and repair until it passes with no failures — a build failure is
+not a difference to weigh, it is work that is not finished, and it is not bounded by the loop's
+attempt ceiling:
+
+```bash
+node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/main.svml path/to/build.svrun
+```
+
 Use existing `--workspace` or `--package-root` options only when the project layout requires them.
-Do not continue to final authoring until the package and sources pass the existing checks.
+Do not continue to final authoring until the package and sources pass the existing checks and the
+preview builds every track.
