@@ -12,7 +12,10 @@ Run the CLI from the repository or an installed package:
 
 ```bash
 pnpm hypit-reference-video-tools prepare_reference --video-path ./reference.mp4
+pnpm hypit-reference-video-tools prepare_reference --video-path ./reference.mp4 --redo people
 pnpm hypit-reference-video-tools observe_reference --reference-id <reference-id>
+pnpm hypit-reference-video-tools observe_reference --reference-id <reference-id> --shot-id shot-007
+pnpm hypit-reference-video-tools observe_reference --reference-id <reference-id> --shot-id shot-007 --shot-id shot-008
 pnpm hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/media-track --tag Track
 ```
 
@@ -20,6 +23,16 @@ For automation, every command also accepts `--input '{"...":"..."}'` with the co
 object. This is useful when the calling agent already has a structured request.
 
 `prepare_reference` requires a local video path and stores derived media under the project's
-gitignored `.hypit/reference-video-tools/` directory. Gemini uses the existing Vertex environment
-variables `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`; the location defaults to
-`global` and the model defaults to `gemini-3.1-pro-preview`.
+gitignored `.hypit/reference-video-tools/` directory. Without `--redo`, completed stages are
+reused. Use `--redo media` to rebuild shot media and clear derived observations, or `--redo people`,
+`--redo voices`, or `--redo all` to rerun only the selected full-reference analysis stages.
+
+`observe_reference` without shot IDs observes all unfinished work. Supplying one or more shot IDs
+forces those shots and their adjacent continuity boundaries to run again; supplying three
+continuous shots also requests the three-shot continuity review. The preceding tail frame, audio
+tail and full-reference context are always attached automatically. `--question` adds one narrow
+follow-up for the selected shots.
+
+Gemini uses the existing Vertex environment variables `GOOGLE_CLOUD_PROJECT` and
+`GOOGLE_APPLICATION_CREDENTIALS_JSON`; the location defaults to `global` and the model defaults to
+`gemini-3.1-pro-preview`.

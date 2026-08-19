@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import type { Part } from "@google/genai";
-import { access, stat } from "node:fs/promises";
+import { access, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { loadNodePackageSelection } from "@hypit/package-loader-node";
@@ -18,12 +18,14 @@ import {
 } from "./media.js";
 import type { Observation, PrepareResult, ReferenceState, Shot } from "./types.js";
 
-export type PrepareReferenceInput = { readonly video_path: string; readonly rebuild?: boolean };
+export type PrepareReferenceInput = {
+  readonly video_path: string;
+  readonly redo?: "media" | "people" | "voices" | "all";
+};
 export type ObserveReferenceInput = {
   readonly reference_id: string;
   readonly shot_ids?: readonly string[];
   readonly question?: string;
-  readonly refresh?: boolean;
 };
 export type InspectVocabularyInput = {
   readonly package_names: readonly string[];
@@ -135,13 +137,13 @@ async function pacedMap<T, R>(items: readonly T[], concurrency: number, gapMs: n
 async function runObservationTasks(
   root: string,
   tasks: readonly ObservationTask[],
-  refresh: boolean,
+  forcedKeys: ReadonlySet<string>,
   concurrency: number,
   gapMs: number,
 ): Promise<ReadonlyMap<string, Observation>> {
   const path = join(root, "observations.json");
   const cache = await readJson<Record<string, Observation>>(path) ?? {};
-  const pending = tasks.filter((task) => refresh || cache[task.key]?.status !== "complete");
+  const pending = tasks.filter((task) => forcedKeys.has(task.key) || cache[task.key]?.status !== "complete");
   const completed = await pacedMap(pending, concurrency, gapMs, async (task) => ({ key: task.key, value: await task.run() }));
   for (const item of completed) cache[item.key] = item.value;
   await writeJson(path, cache);
@@ -200,6 +202,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
 
   return {
     async prepare_reference(input): Promise<PrepareResult> {
+      assert(input.redo === undefined || input.redo === "media" || input.redo === "people" || input.redo === "voices" || input.redo === "all", "redo must be one of: media, people, voices, all");
       const videoPath = resolve(input.video_path);
       const file = await stat(videoPath).catch(() => undefined);
       assert(file?.isFile(), `video_path is not a file: ${videoPath}`);
@@ -207,11 +210,14 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const root = stateRoot(workspaceRoot, reference);
       const statePath = join(root, "state.json");
       let existing = await readJson<ReferenceState>(statePath);
-      if (!input.rebuild) {
+      const redoMedia = input.redo === "media" || input.redo === "all";
+      const redoPeople = input.redo === "people" || input.redo === "all";
+      const redoVoices = input.redo === "voices" || input.redo === "all";
+      if (input.redo === undefined) {
         if (existing !== undefined && existing.people_and_product?.status === "complete" && existing.voices?.status === "complete") return publicPrepare(existing);
       }
       await ensureDir(root);
-      const info = existing?.video === undefined ? await probe(videoPath) : {
+      const info = existing?.video === undefined || redoMedia ? await probe(videoPath) : {
         duration: existing.video.duration_seconds,
         width: existing.video.width,
         height: existing.video.height,
@@ -219,7 +225,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       };
       let state: ReferenceState;
       let analysisVideo: string;
-      if (existing !== undefined && !input.rebuild && existing.shots.length > 0) {
+      if (existing !== undefined && !redoMedia && existing.shots.length > 0) {
         state = existing;
         analysisVideo = existing.analysis_video_ref;
       } else {
@@ -233,17 +239,20 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           shots,
           storyboard_ref: media.storyboard,
           analysis_video_ref: media.analysisVideo,
+          ...(existing?.people_and_product === undefined ? {} : { people_and_product: existing.people_and_product }),
+          ...(existing?.voices === undefined ? {} : { voices: existing.voices }),
         };
         analysisVideo = media.analysisVideo;
         await writeJson(statePath, state);
+        await writeFile(join(root, "observations.json"), "{}\n", "utf8");
       }
       const generate = await generator();
       const globalParts: Part[] = [await mediaPart(analysisVideo)];
       const [people, voices] = await Promise.all([
-        state.people_and_product?.status === "complete" && !input.rebuild
+        state.people_and_product?.status === "complete" && !redoPeople
           ? Promise.resolve(state.people_and_product)
           : callSafely(generate, [...globalParts, { text: "Describe the recurring people and the promoted product in this complete reference video. Return natural language only. Identify stable visual traits and distinguish recurring speakers from incidental people in inserts. Describe the product once, comprehensively, for reuse." }], "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
-        state.voices?.status === "complete" && !input.rebuild
+        state.voices?.status === "complete" && !redoVoices
           ? Promise.resolve(state.voices)
           : callSafely(generate, [...globalParts, { text: "Listen to this complete reference video and describe the distinct voices, their order, overlap, off-screen speech, and likely correspondence to visible people. Do not assign a voice merely because a person appears in a B-roll image. Return natural language only." }], "You only listen to a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
       ]);
@@ -293,10 +302,18 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         return await callSafely(generate, parts, "Analyze overlay continuity only. Do not name SVML components or write code.");
       }}));
       const allTasks = [...visualTasks, ...audioTasks, ...sameTakeTasks, ...overlayTasks];
-      const observations = await runObservationTasks(state.root, allTasks, input.refresh === true, concurrency, gapMs);
+      const forcedKeys = input.shot_ids === undefined
+        ? new Set<string>()
+        : new Set(allTasks
+          .filter((task) => selectedIds.has(task.key.split(":")[1]!) || boundaryRights.some((right) => task.key.endsWith(`:${right.shot_id}`)))
+          .map((task) => task.key));
+      const observations = await runObservationTasks(state.root, allTasks, forcedKeys, concurrency, gapMs);
       const unresolved: string[] = [];
       const boundaryText = boundaryRights.map((right) => `${observations.get(`same-take:${right.shot_id}`)?.text ?? ""}\n${observations.get(`overlay:${right.shot_id}`)?.text ?? ""}`).join("\n");
-      const needsThreeShotReview = selected.length >= 3 && /uncertain|unknown|possibly|may be|contin(?:ue|ues)|same take|same shot/iu.test(boundaryText);
+      const needsThreeShotReview = selected.length >= 3 && (
+        input.shot_ids !== undefined ||
+        /uncertain|unknown|possibly|may be|contin(?:ue|ues)|same take|same shot/iu.test(boundaryText)
+      );
       const windows = (needsThreeShotReview
         ? selected.flatMap((_, index) => index + 2 < selected.length ? [selected.slice(index, index + 3)] : [])
         : []).map((items) => items as unknown as readonly [Shot, Shot, Shot]);

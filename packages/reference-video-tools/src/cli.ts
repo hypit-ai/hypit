@@ -6,8 +6,8 @@ type Flags = ReadonlyMap<string, string | readonly string[] | boolean>;
 function usage(): string {
   return [
     "Usage:",
-    "  hypit-reference-video-tools prepare_reference --video-path <path> [--rebuild]",
-    "  hypit-reference-video-tools observe_reference --reference-id <id> [--shot-id <id> ...] [--question <text>] [--refresh]",
+    "  hypit-reference-video-tools prepare_reference --video-path <path> [--redo media|people|voices|all]",
+    "  hypit-reference-video-tools observe_reference --reference-id <id> [--shot-id <id> ...] [--question <text>]",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
     "",
     "Every command prints one JSON result to stdout. Use --input <json> instead of flags when a complete input object is easier to pass.",
@@ -65,23 +65,25 @@ function inputObject(flags: Flags): Record<string, unknown> | undefined {
 
 async function main(): Promise<void> {
   const { command, flags } = parse(process.argv.slice(2));
+  if (flags.has("rebuild") || flags.has("refresh")) {
+    throw new Error("--rebuild and --refresh were removed; use --redo or selected --shot-id values");
+  }
   const tools = createReferenceVideoTools();
   const supplied = inputObject(flags);
   let result: unknown;
   if (command === "prepare_reference") {
     const input = supplied ?? {
       video_path: required(flags, "video-path"),
-      ...(flags.get("rebuild") === true ? { rebuild: true } : {}),
+      ...(one(flags, "redo") === undefined ? {} : { redo: one(flags, "redo") }),
     };
-    result = await tools.prepare_reference(input as { video_path: string; rebuild?: boolean });
+    result = await tools.prepare_reference(input as { video_path: string; redo?: "media" | "people" | "voices" | "all" });
   } else if (command === "observe_reference") {
     const input = supplied ?? {
       reference_id: required(flags, "reference-id"),
       ...(many(flags, "shot-id").length === 0 ? {} : { shot_ids: many(flags, "shot-id") }),
       ...(one(flags, "question") === undefined ? {} : { question: one(flags, "question") }),
-      ...(flags.get("refresh") === true ? { refresh: true } : {}),
     };
-    result = await tools.observe_reference(input as { reference_id: string; shot_ids?: readonly string[]; question?: string; refresh?: boolean });
+    result = await tools.observe_reference(input as { reference_id: string; shot_ids?: readonly string[]; question?: string });
   } else if (command === "inspect_svml_vocabulary") {
     const packages = many(flags, "package");
     const input = supplied ?? {
