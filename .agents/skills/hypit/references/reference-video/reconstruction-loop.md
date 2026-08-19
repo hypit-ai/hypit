@@ -60,7 +60,7 @@ Stop when the returned differences are wording-level — a describer's phrasing 
 change. Passing `pnpm check` and `hypit check` is not convergence; it is the precondition for
 starting the loop.
 
-## The loop is bounded, and stopping is a decision you write down
+## The loop is bounded, and stopping is the end
 
 A comparison that keeps finding something is not always a repair waiting to happen. A typeface the
 generator cannot reproduce, a texture it will not hold, a grain that is simply not available — those
@@ -102,9 +102,8 @@ one against the known frame size gives the number in a single step.
 Do that instead of spending an attempt. An attempt is for differences that have no number — a
 typeface's character, a texture, a rhythm — where the only route is change it and look again.
 
-Stopping is the end. Do not spend one more comparison to report how far the element is from the
-reference: the attempts are spent, another comparison changes nothing and is a paid step only to
-describe the gap. What you already know from the attempts — a difference the comparisons named and
-the repairs did not reach — is written down as an accepted deviation with its reason. A difference
-nobody wrote down reads afterwards as a difference nobody noticed, and the next person pays to
-rediscover it.
+Stopping is the end, and the end carries no final comparison. When the attempts are spent the loop
+stops as it is: the second repair is the last thing the observer saw, and there is no third
+comparison to name what remains. Do not spend one to find out — a comparison that changes nothing
+and exists only to report the gap is a paid step for a report nobody asked for. The element is what
+it is; move on to the next one.
