@@ -12,10 +12,15 @@
   },
   "dependencies": {
     "@google/genai": "1.52.0",
+    "@hypit/driver-node": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/model-kit": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/provider-whisperx-local": "workspace:*",
+    "@hypit/speech": "workspace:*",
+    "@hypit/speech-evidence": "workspace:*",
+    "@hypit/whisperx": "workspace:*",
     "tsx": "4.21.0"
   },
   "devDependencies": {

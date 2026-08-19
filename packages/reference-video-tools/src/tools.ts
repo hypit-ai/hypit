@@ -18,11 +18,12 @@ import {
   referenceId,
   writeJson,
 } from "./media.js";
-import type { Observation, PrepareResult, ReferenceState, Shot } from "./types.js";
+import { prepareTranscript } from "./transcript.js";
+import type { Observation, PrepareResult, ReferenceState, Shot, Transcript } from "./types.js";
 
 export type PrepareReferenceInput = {
   readonly video_path: string;
-  readonly redo?: "media" | "people" | "voices" | "systems" | "places" | "all";
+  readonly redo?: "media" | "transcript" | "people" | "voices" | "systems" | "places" | "all";
 };
 export type ObserveReferenceInput = {
   readonly reference_id: string;
@@ -63,6 +64,7 @@ export type GenerateText = (input: { readonly parts: readonly Part[]; readonly i
 type ObservationTask = { readonly key: string; readonly run: () => Promise<Observation> };
 
 function observation(status: "complete" | "failed", text: string): Observation { return { status, text }; }
+function unavailable(reason: string): Transcript { return { status: "unavailable", transcript_ref: null, word_count: 0, reason }; }
 
 function positiveEnv(name: string): number | undefined {
   const raw = process.env[name]?.trim();
@@ -225,7 +227,8 @@ async function shotFromBound(root: string, index: number, bound: { start: number
 }
 
 function prepared(state: ReferenceState): boolean {
-  return state.people_and_product?.status === "complete"
+  return state.transcript?.status === "complete"
+    && state.people_and_product?.status === "complete"
     && state.voices?.status === "complete"
     && state.persistent_systems?.status === "complete"
     && state.places?.status === "complete";
@@ -238,6 +241,7 @@ function publicPrepare(state: ReferenceState): PrepareResult {
     video: state.video,
     shots: state.shots,
     storyboard_ref: state.storyboard_ref,
+    transcript: state.transcript ?? unavailable("not transcribed"),
     people_and_product: state.people_and_product ?? observation("failed", "not analyzed"),
     voices: state.voices ?? observation("failed", "not analyzed"),
     persistent_systems: state.persistent_systems ?? observation("failed", "not analyzed"),
@@ -313,7 +317,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     },
 
     async prepare_reference(input): Promise<PrepareResult> {
-      assert(input.redo === undefined || input.redo === "media" || input.redo === "people" || input.redo === "voices" || input.redo === "systems" || input.redo === "places" || input.redo === "all", "redo must be one of: media, people, voices, systems, places, all");
+      assert(input.redo === undefined || input.redo === "media" || input.redo === "transcript" || input.redo === "people" || input.redo === "voices" || input.redo === "systems" || input.redo === "places" || input.redo === "all", "redo must be one of: media, transcript, people, voices, systems, places, all");
       const videoPath = resolve(input.video_path);
       const file = await stat(videoPath).catch(() => undefined);
       assert(file?.isFile(), `video_path is not a file: ${videoPath}`);
@@ -322,6 +326,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const statePath = join(root, "state.json");
       let existing = await readJson<ReferenceState>(statePath);
       const redoMedia = input.redo === "media" || input.redo === "all";
+      const redoTranscript = input.redo === "transcript" || input.redo === "all";
       const redoPeople = input.redo === "people" || input.redo === "all";
       const redoVoices = input.redo === "voices" || input.redo === "all";
       const redoSystems = input.redo === "systems" || input.redo === "all";
@@ -350,6 +355,8 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           shots,
           storyboard_ref: media.storyboard,
           analysis_video_ref: media.analysisVideo,
+          // The transcript is measured from the source audio, which rebuilt shot media cannot change.
+          ...(existing?.transcript === undefined ? {} : { transcript: existing.transcript }),
           ...(existing?.people_and_product === undefined ? {} : { people_and_product: existing.people_and_product }),
           ...(existing?.voices === undefined ? {} : { voices: existing.voices }),
           ...(existing?.persistent_systems === undefined ? {} : { persistent_systems: existing.persistent_systems }),
@@ -360,6 +367,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         await writeFile(join(root, "observations.json"), "{}\n", "utf8");
       }
       const generate = await generator();
+      // WhisperX is local and slow and shares nothing with the Gemini requests, so it runs beside
+      // them rather than ahead of them.
+      const transcribing = state.transcript?.status === "complete" && !redoTranscript
+        ? Promise.resolve(state.transcript)
+        : prepareTranscript(reference, videoPath, root, info.hasAudio, redoTranscript);
       const mediaPart = mediaParts();
       const globalParts: Part[] = [await mediaPart(analysisVideo)];
       const [people, voices, systems, places] = await Promise.all([
@@ -376,7 +388,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           ? Promise.resolve(state.places)
           : callSafely(retryDelayMs, generate, [...globalParts, { text: "Describe every distinct place this reference video was shot in, and every distinct camera position within each place. State how many places there are, which parts of the video happen in each, and for each place which camera positions appear and which parts of the video use each one. Two shots are the same camera position when the camera sees the same part of the room from the same side; a reverse angle is a different position of the same place.\n\nDescribe each camera position in enough detail that someone who has never seen this video could draw it from your words alone: what is behind and beside the subject, the shape and depth of the space, where the light comes from and how hard it is, the colours and materials of the surfaces, and the objects a viewer would use to recognise it again. Say what stays identical between positions of one place and what differs.\n\nReturn natural language only." }], "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
       ]);
-      const complete: ReferenceState = { ...state, people_and_product: people, voices, persistent_systems: systems, places };
+      const complete: ReferenceState = { ...state, transcript: await transcribing, people_and_product: people, voices, persistent_systems: systems, places };
       await writeJson(statePath, complete);
       return publicPrepare(complete);
     },

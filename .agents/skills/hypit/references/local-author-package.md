@@ -4,28 +4,14 @@ Use this workflow only after proving that no legal composition of installed pack
 required behavior. A similar-looking tag is insufficient when its declared Types, timing or output
 behavior differs. Never write an unknown tag before its package exists.
 
-## Start from the scaffold
+## Write `package.json` and the activation first
 
-Do not write the package from nothing. One command generates it:
-
-```bash
-hypit new-package @hypit/local-<slug> --to <project>/packages/local-<slug>
-```
-
-It writes `package.json`, the Manifest with a complete vocabulary skeleton, Types, Surface,
-Producers, activation, index, README, `assets/`, `preview/`, and — for a component that draws — a
-still-render entry that produces the preview image its Surface owes. The result compiles and is
-importable with no edits, so run `pnpm install` and `pnpm check` once and start from something that
-already works.
-
-Writing those files by hand costs roughly four hundred lines of boilerplate identical in every
-package, and puts the `package.json` last, which means discovering only at the end that nothing is
-linked. Add `--no-visual` when the component draws nothing.
+Write those two before any implementation, run `pnpm install` once, and only then start on the
+vocabulary. They are short and almost the same in every package, and leaving them until the end means
+discovering at the end that nothing is linked — a failure that looks like broken code and is not.
+Everything after them is specific to this component and cannot be copied from anywhere.
 
 ## Required reading
-
-Read these before editing what the scaffold produced. Reading them after generating means reading
-about files that exist.
 
 1. `docs/guide/component-anatomy.md` — the roles every component package fills, and how to find each
    one in an existing package. Read this first; it is what the rest is measured against.
@@ -44,8 +30,8 @@ worse outcome than understanding its structure — which is what anatomy is for.
 
 ## Package boundary
 
-The scaffold places the package at `<project>/packages/local-<slug>/` named `@hypit/local-<slug>`,
-with physical version `0.0.0-dev` and logical Module version `1`. Only create a new package: do not
+Place the package at `<project>/packages/local-<slug>/`, named `@hypit/local-<slug>`, with physical
+version `0.0.0-dev` and logical Module version `1`. Only create a new package: do not
 edit, extend, delete or overwrite an existing Hypit package to fill the gap.
 
 The package is project-local even when the project is the Hypit checkout. Do not move it into an

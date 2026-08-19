@@ -45,6 +45,30 @@ values with, for example,
 `node .agents/skills/hypit/scripts/check-credentials.mjs KIE_API_KEY MIMO_API_KEY`, then run
 `hypit doctor <profile>`.
 
+## A changed credential does not reach a running Worker
+
+The durable Worker keeps the environment it started with. Correct a key in `.env` or the shell while
+one is running and the next Build still authenticates with the old value, which the Provider reports
+as an ordinary `401 Invalid API Key` — pointing at the key you just fixed, or at the Provider, and
+never at the stale process. Restart it:
+
+```bash
+hypit runtime down
+```
+
+The next Build starts a fresh Worker with the current environment. Do this before concluding that a
+key is wrong; and when a `401` survives the restart, settle it against the API directly, once, rather
+than by editing the key again:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $MIMO_API_KEY" \
+  https://api.xiaomimimo.com/v1/models
+```
+
+`hypit runtime down` stops the Worker for the whole project, so a Build running in another terminal
+stops with it. The Build itself is durable and survives; resume it with
+`hypit status <build-id> --watch`.
+
 An Endpoint whose Runtime Profile points at the read-only `env` CredentialStore must be configured
 by setting its exact environment variable. `hypit auth login` deliberately refuses to prompt in
 that case. For an interactive workstation, select the writable macOS Keychain CredentialStore in

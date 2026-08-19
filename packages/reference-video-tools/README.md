@@ -15,6 +15,7 @@ Run the CLI from the repository or an installed package:
 pnpm hypit-reference-video-tools list_svml_packages
 pnpm hypit-reference-video-tools prepare_reference --video-path ./reference.mp4
 pnpm hypit-reference-video-tools prepare_reference --video-path ./reference.mp4 --redo people
+pnpm hypit-reference-video-tools prepare_reference --video-path ./reference.mp4 --redo transcript
 pnpm hypit-reference-video-tools observe_reference --reference-id <reference-id>
 pnpm hypit-reference-video-tools observe_reference --reference-id <reference-id> --shot-id shot-007
 pnpm hypit-reference-video-tools observe_reference --reference-id <reference-id> --shot-id shot-007 --question "How thick is the outline on the caption words?"
@@ -37,8 +38,20 @@ gitignored `.hypit/reference-video-tools/` directory. It produces four full-refe
 the whole video, each one's lifetime, and whether its appearance ever changes — and `places`: how
 many locations the video was shot in, which camera positions appear in each, which parts of the video
 use each one, and each position described in enough detail to draw from the words alone. Without `--redo`, completed stages are reused. Use `--redo media` to rebuild shot media and
-clear derived observations, or `--redo people`, `--redo voices`, `--redo systems`, `--redo places`, or `--redo all` to
+clear derived observations, `--redo transcript` to measure the words again, or `--redo people`, `--redo voices`, `--redo systems`, `--redo places`, or `--redo all` to
 rerun only the selected full-reference stages.
+
+It also produces `transcript`: the verbatim speech of the whole reference with a start and an end for
+every single word. Placing an on-screen text reveal against the line that triggers it needs the time
+of the word, not of the sentence around it, and that question comes up in every reconstruction. The
+speech audio is extracted to `speech.wav` beside the shot media and measured by the local WhisperX
+Provider in `@hypit/provider-whisperx-local`, which answers a loopback service on
+`http://127.0.0.1:8765`; start it with `uv run --project services/whisperx --frozen hypit-whisperx-service`.
+The result reports `status`, `transcript_ref` and `word_count`, and the words themselves live in
+`transcript.json` as passages, each with a `words` array of `{ text, start_seconds, end_seconds, score }`.
+The transcript is deterministic local evidence rather than an observation: it is never written to the
+observation cache and nothing about it is sent to Gemini. A machine with no WhisperX service running
+reports `status: "unavailable"` with the reason and prepares everything else.
 
 `observe_reference` observes every unfinished shot, or only the shots named by `--shot-id`. Each shot
 produces three observations — `visual` (base picture, covering content, continuity, whether the frame

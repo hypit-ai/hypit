@@ -6,7 +6,8 @@ visual and audio evidence only.
 
 ## What this route delivers, and what it does not
 
-The deliverable is **the components the video needs and the three source files**. Every generation the
+The deliverable is **the components the video needs, the three source files, and the Runtime Profile
+that binds what they demand**. Every generation the
 Source declares is declared, not performed: no Build is submitted for the pictures, and no video
 generation, speech synthesis, alignment or final render is run. Those belong to a later step that the
 author starts deliberately, after reading what was written.
@@ -32,7 +33,21 @@ set -a && source .env && set +a
 
 `../credentials.md` lists which variables each Provider needs.
 
-Before acting, read these files completely in order:
+## Start the evidence before you read
+
+`prepare_reference` and the full `observe_reference` sweep take several minutes and need none of the
+knowledge below: their prompts are fixed, and nothing you are about to read changes what they ask.
+Start them first and read while they run. Reading first and observing afterwards makes the same run
+several minutes longer for nothing.
+
+```bash
+hypit-reference-video-tools prepare_reference --video-path <path>          # about a minute
+hypit-reference-video-tools observe_reference --reference-id <id>          # run in the background
+```
+
+Then read the files below while the sweep is working, and collect its result when you are done.
+
+Before acting on the evidence, read these files completely in order:
 
 1. `workflow.md` — CLI sequence, evidence flow and responsibility boundaries.
 2. `continuity.md` — mandatory shot, overlay, B-roll, speaker, product and persistent-system rules.
