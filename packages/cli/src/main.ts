@@ -16,6 +16,7 @@ import {
   inspectBuild,
   materializeArtifact,
   materializeRecord,
+  pinnedRecords,
   selectArchivedRecord,
   summarizeBuildCatalog,
 } from "./archive.js";
@@ -52,6 +53,8 @@ type ParsedArgs = {
   readonly packageRoot: string | undefined;
   readonly runtime: string | undefined;
   readonly follow: boolean;
+  /** Emit the Run Source markup that reuses these Records instead of listing them. */
+  readonly pin: boolean;
   readonly maxWaitMs: number | undefined;
   readonly record: string | undefined;
   readonly output: string | undefined;
@@ -118,6 +121,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let packageRoot: string | undefined;
   let runtime: string | undefined;
   let follow = false;
+  let pin = false;
   let maxWaitMs: number | undefined;
   let record: string | undefined;
   let output: string | undefined;
@@ -280,6 +284,10 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       follow = true;
       continue;
     }
+    if (item === "--pin") {
+      pin = true;
+      continue;
+    }
     if (item === "--no-programs") {
       noPrograms = true;
       continue;
@@ -340,6 +348,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     packageRoot,
     runtime,
     follow,
+    pin,
     maxWaitMs,
     record,
     output,
@@ -407,7 +416,7 @@ function assertCommandOptions(args: ParsedArgs): void {
     case "history":
     case "inspect":
       add("--runtime");
-      if (args.command === "history") add("--source");
+      if (args.command === "history") add("--source", "--pin");
       break;
     case "check":
     case "plan":
@@ -445,7 +454,7 @@ function usage(): string {
     "  hypit build <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow] [--no-programs]",
     "  hypit status <build-id> [--runtime profile.json] [--watch]",
     "  hypit builds [--runtime profile.json]",
-    "  hypit history [source-output-name] [--runtime profile.json] [--source author.svml]",
+    "  hypit history [source-output-name] [--runtime profile.json] [--source author.svml] [--pin]",
     "  hypit inspect <build-id> [--runtime profile.json]",
     "  hypit get <build-id> [--runtime profile.json] [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
     "  hypit cancel <build-id> [--runtime profile.json] [--reason text]",
@@ -1338,16 +1347,24 @@ export async function runCli(
           ...(args.file === undefined ? {} : { output: args.file }),
           ...(args.source === undefined ? {} : { source: args.source }),
         };
+        const pins = args.pin ? pinnedRecords(entries) : [];
         const shown = entries.slice(0, args.verbose ? undefined : 20);
-        writeOperational({ query, entries }, entries.length === 0 ? "No accepted output history" : "Output history",
+        writeOperational({ query, entries, ...(args.pin ? { pins } : {}) },
+          entries.length === 0 ? "No accepted output history" : args.pin ? "Reuse these Records" : "Output history",
           entries.length === 0 ? "warning" : "info", [
             ...(args.file === undefined ? [] : [["Output", args.file] as const]),
             ...(args.source === undefined ? [] : [["Source", args.source] as const]),
             ["Records", String(entries.length)],
-          ], shown.map((item) => {
-            const created = new Date(item.createdAt).toISOString();
-            return `${item.build}: ${item.output.name} · ${created} · ${item.output.record.id}`;
-          }));
+            ...(args.pin ? [["Outputs pinned", String(pins.length)] as const] : []),
+          ], args.pin
+            ? [
+              "Paste into a Run Source; the newest accepted Record of each output is selected.",
+              ...pins.flatMap((item) => item.markup),
+            ]
+            : shown.map((item) => {
+              const created = new Date(item.createdAt).toISOString();
+              return `${item.build}: ${item.output.name} · ${created} · ${item.output.record.id}`;
+            }));
       } else if (args.command === "status") {
         let status = await runtime.status(args.file!);
         if (args.watch && status.build !== undefined && status.dispatch !== undefined) {

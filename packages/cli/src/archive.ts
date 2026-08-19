@@ -269,3 +269,41 @@ export function summarizeBuildCatalog(catalog: BuildCatalogEntry, state?: BuildS
       .map((alias) => alias.name),
   };
 }
+
+export type PinnedRecord = {
+  readonly output: string;
+  readonly build: string;
+  readonly candidate: string;
+  readonly markup: readonly string[];
+};
+
+/**
+ * The Run Source markup that selects an already accepted Record.
+ *
+ * Reuse is authored, never implied, so these pairs have to exist before a rerun will use what a
+ * previous Build produced. Written by eye from a Build id and an output name, the transcription is
+ * where an accepted Record quietly becomes a second paid generation.
+ *
+ * Entries are expected newest first; the first appearance of each output name wins.
+ */
+export function pinnedRecords(
+  entries: readonly { readonly build: string; readonly output: { readonly name: string } }[],
+): readonly PinnedRecord[] {
+  const seen = new Set<string>();
+  const pinned: PinnedRecord[] = [];
+  for (const entry of entries) {
+    if (seen.has(entry.output.name)) continue;
+    seen.add(entry.output.name);
+    const candidate = `record-${entry.output.name.replace(/[^a-zA-Z0-9]+/gu, "-").replace(/^-|-$/gu, "")}`;
+    pinned.push({
+      output: entry.output.name,
+      build: entry.build,
+      candidate,
+      markup: [
+        `<build-record id="${candidate}" build="${entry.build}" output="${entry.output.name}"/>`,
+        `<satisfy output="${entry.output.name}" candidate="${candidate}"/>`,
+      ],
+    });
+  }
+  return pinned;
+}
