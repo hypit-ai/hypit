@@ -48,8 +48,40 @@ Never bake drawn structure into generated material. A generated picture of text 
 re-read or corrected, and its wording drifts. A card, inset, phone, browser or screenshot element is
 not one picture: its inner picture is material, its frame and entry are structure.
 
+## A component's own surface belongs to the component
+
+Depicted material divides again, and getting this wrong produces a component that cannot draw
+itself.
+
+- **Component-owned surface** is the chrome a composition always shows: its paper, board, panel,
+  ruled lines, grain, texture, default backdrop. It is part of the component's identity. It ships
+  **inside the package as an ordinary file**, exactly as the package's preview image does, and is
+  read with `readFile(new URL("../assets/…", import.meta.url))`.
+- **Source-supplied material** is content that differs between videos: photographs, screenshots,
+  thumbnails, product shots, character images.
+
+The test is one question: **would two different videos using this component show the same picture
+there?** If yes, it belongs to the package. If they would show different pictures, it is an edge the
+source supplies.
+
+Never make a component's own surface a required input. A component whose chrome arrives from the
+graph cannot render on its own, cannot produce the preview image its Surface owes, and forces every
+project that installs it to obtain a picture that was never theirs to choose. If you find yourself
+writing a Run Source whose only purpose is to produce a component's own texture, the texture is in
+the wrong place: generate it once while authoring the package and commit the file.
+
+Produce that file outside the graph — call the image provider's HTTP API directly, or use any
+equivalent tool, and save the bytes into the package. A package asset is authoring input, not the
+output of anybody's video, so it is never a Target and never a Record.
+
+A package is installed vocabulary. `.svml`, `.svs` and `.svrun` are documents that use it. A package
+that needs one of those documents in order to draw itself has inverted that relationship.
+
 ## Missing material must be generated
 
+- Decide first whether the picture is component-owned surface or source-supplied material. A
+  component's own surface is generated once while the package is being authored and committed as a
+  file inside it; the rest of this section is about source-supplied material.
 - Source depicted material in this order: material supplied for the task or already in the project;
   an Artifact the project already produces; otherwise generation.
 - If a required picture does not exist, generating it is mandatory. Do not substitute flat colour, an
