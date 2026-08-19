@@ -202,18 +202,149 @@ export const mediaPipelineMarkupSurfaces = [
     {
       name: "synchronized-media", tag: "Normalize", mode: "structured",
       outputs: [mediaPipelineTypes.selectionRequest, mediaTypes.synchronized],
+      vocabulary: {
+        summary:
+          "Inspects one BlobArtifact, selects its video and audio streams and normalizes them into SynchronizedMedia on one frame domain.",
+        attributes: [
+          { name: "id", kind: "identifier", required: true,
+            summary: "Names the selection Record and the normalized media this element publishes." },
+          { name: "source", kind: "reference", required: true,
+            accepts: [artifactTypes.blob],
+            summary: "Selects the media Artifact this element inspects and normalizes." },
+          { name: "video", kind: "literal", required: true,
+            summary: "Decides which moving-image stream is carried: `primary-moving`, `none`, or `stream:<index>`." },
+          { name: "audio", kind: "literal", required: true,
+            summary: "Decides which audio stream is carried: `default`, `none`, or `stream:<index>`." },
+          { name: "span-authority", kind: "literal", required: true,
+            values: ["video", "audio"],
+            summary: "Decides which selected stream defines the extent the other is trimmed or padded to." },
+          { name: "frame-rate", kind: "literal", required: true,
+            summary: "Decides the exact rational frame rate of the common frame domain, such as `30` or `30000/1001`." },
+        ],
+        ports: [
+          { name: "media", type: mediaTypes.synchronized,
+            summary: "The normalized SynchronizedMedia, addressed as `<id>.media`." },
+        ],
+        example: `<pipeline:Normalize id="music-media" source={music}
+  video="none" audio="default" span-authority="audio" frame-rate="30"/>`,
+        notes: [
+          "All six attributes are required; the element accepts no children and no text content.",
+          "`primary-moving` excludes attached-picture streams, prefers one declared default and fails closed on an ambiguous container; `stream:<index>` is for a container the author genuinely knows.",
+          "Selecting embedded audio is a media fact only and makes no SpeechBasis, speaker or alignment claim.",
+        ],
+      },
     },
     {
       name: "transform-media", tag: "Transform", mode: "structured",
       outputs: [mediaPipelineTypes.selectionRequest, mediaPipelineTypes.transformProgram, artifactTypes.blob],
+      vocabulary: {
+        summary:
+          "Normalizes one BlobArtifact and runs an ordered trim and retime program over it, publishing the transformed video Artifact.",
+        attributes: [
+          { name: "id", kind: "identifier", required: true,
+            summary: "Names the selection Record, the transform program Record and the transformed video this element publishes." },
+          { name: "source", kind: "reference", required: true,
+            accepts: [artifactTypes.blob],
+            summary: "Selects the media Artifact this element transforms." },
+          { name: "video", kind: "literal", required: true,
+            summary: "Decides which moving-image stream is transformed: `primary-moving` or `stream:<index>`." },
+          { name: "audio", kind: "literal", required: true,
+            summary: "Decides which audio stream travels with the transform: `default`, `none`, or `stream:<index>`." },
+          { name: "span-authority", kind: "literal", required: true,
+            values: ["video"],
+            summary: "Decides which selected stream defines the extent, and a transform is always authored against video." },
+          { name: "frame-rate", kind: "literal", required: true,
+            summary: "Decides the exact rational frame rate the transform runs on, such as `30` or `30000/1001`." },
+        ],
+        children: [
+          { tag: "Trim", cardinality: "many",
+            summary: "Removes time from the head or the tail, taking at least one of `start`, `end` or `tail` in seconds.",
+            attributes: [
+              { name: "start", kind: "literal", required: false,
+                summary: "Decides where the kept span begins, as seconds from the current start, such as `0.25s` or `2`." },
+              { name: "end", kind: "literal", required: false,
+                summary: "Decides where the kept span ends, as positive seconds from the current start." },
+              { name: "tail", kind: "literal", required: false,
+                summary: "Decides how many seconds are removed from the current end." },
+            ] },
+          { tag: "Retime", cardinality: "many",
+            summary: "Changes playback speed by `rate` in the range (0, 100] while `pitch` holds the original pitch.",
+            attributes: [
+              { name: "rate", kind: "literal", required: true,
+                summary: "Decides the playback speed multiplier, above `0` and at most `100`." },
+              { name: "pitch", kind: "literal", required: true,
+                values: ["preserve"],
+                summary: "Decides how pitch follows the speed change, and the one spelling keeps the original pitch." },
+            ] },
+        ],
+        ports: [
+          { name: "video", type: artifactTypes.blob,
+            summary: "The transformed media Artifact, addressed as `<id>.video`." },
+        ],
+        example: `<media:Transform id="prepared" source={shot.video}
+  video="primary-moving" audio="default" span-authority="video" frame-rate="30">
+  <media:Trim tail="0.25s"/>
+  <media:Retime rate="1.05" pitch="preserve"/>
+</media:Transform>`,
+        notes: [
+          "At least one `Trim` or `Retime` child is required, and children run in the order they are written.",
+          "`Trim` cannot combine `end` and `tail`, and both children are written empty.",
+          "`video` cannot be `none`, and the operations are author meaning rather than an arbitrary FFmpeg string.",
+        ],
+      },
     },
     {
       name: "extract-audio", tag: "ExtractAudio", mode: "structured",
       outputs: [mediaPipelineTypes.audioExtractionRequest, artifactTypes.blob],
+      vocabulary: {
+        summary:
+          "Extracts one audio stream from a BlobArtifact as a deterministic 48 kHz stereo PCM WAV Artifact.",
+        attributes: [
+          { name: "id", kind: "identifier", required: true,
+            summary: "Names the extraction request Record and the extracted audio this element publishes." },
+          { name: "source", kind: "reference", required: true,
+            accepts: [artifactTypes.blob],
+            summary: "Selects the media Artifact this element extracts audio from." },
+          { name: "audio", kind: "literal", required: true,
+            summary: "Decides which audio stream is extracted: `default` or `stream:<index>`." },
+        ],
+        ports: [
+          { name: "audio", type: artifactTypes.blob,
+            summary: "The extracted WAV Artifact, addressed as `<id>.audio`." },
+        ],
+        example: '<media:ExtractAudio id="voice-reference" source={prepared.video} audio="default"/>',
+        notes: [
+          "The element accepts no children and no text content, and the output container, codec, sample rate and channel count are fixed.",
+          "The result makes no SpeechBasis, speaker or alignment claim, so it can feed a model reference port directly.",
+        ],
+      },
     },
     {
       name: "extract-frame", tag: "ExtractFrame", mode: "structured",
       outputs: [mediaPipelineTypes.frameExtractionRequest, artifactTypes.blob],
+      vocabulary: {
+        summary: "Extracts one still frame from a BlobArtifact as a PNG Artifact.",
+        attributes: [
+          { name: "id", kind: "identifier", required: true,
+            summary: "Names the extraction request Record and the extracted image this element publishes." },
+          { name: "source", kind: "reference", required: true,
+            accepts: [artifactTypes.blob],
+            summary: "Selects the media Artifact this element extracts a frame from." },
+          { name: "video", kind: "literal", required: true,
+            summary: "Decides which moving-image stream the frame is taken from: `primary-moving` or `stream:<index>`." },
+          { name: "at", kind: "literal", required: true,
+            summary: "Decides which frame is taken: `first`, `last`, `frame:<index>` or `time:<seconds>`." },
+        ],
+        ports: [
+          { name: "image", type: artifactTypes.blob,
+            summary: "The extracted PNG Artifact, addressed as `<id>.image`." },
+        ],
+        example: '<media:ExtractFrame id="continuity" source={prepared.video} video="primary-moving" at="last"/>',
+        notes: [
+          "The element accepts no children and no text content, and the output format is fixed to PNG.",
+          "`time:<seconds>` is written as a non-negative number with an optional `s`, such as `time:0.25s`.",
+        ],
+      },
     },
   ] as const;
 
