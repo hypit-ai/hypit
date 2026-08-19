@@ -7,7 +7,7 @@ import { semanticMapTypes } from "@hypit/semantic-map";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
-import { sealText, textTypes } from "@hypit/text";
+import { textTypes } from "@hypit/text";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
@@ -28,7 +28,6 @@ import {
   decodeColumnStyle,
   decodeTierBoardStyle,
   decodeTopThreeStyle,
-  decodeTypewriterListStyle,
 } from "./style.js";
 import type {
   ColumnItemSpec,
@@ -38,7 +37,6 @@ import type {
   RankingVariant,
   TierBoardItemSpec,
   TopThreeItemSpec,
-  TypewriterItemSpec,
 } from "./types.js";
 
 function sameType(left: TypeRef, right: TypeRef): boolean {
@@ -79,14 +77,6 @@ function integer(element: StructuredElement, name: string): number | undefined {
   const value = Number(source);
   if (!Number.isSafeInteger(value)) throw new Error(`${element.name}.${name} must be an integer.`);
   return value;
-}
-
-function boolean(element: StructuredElement, name: string, fallback: boolean): boolean {
-  const source = optionalText(element, name);
-  if (source === undefined) return fallback;
-  if (source === "true") return true;
-  if (source === "false") return false;
-  throw new Error(`${element.name}.${name} must be true or false.`);
 }
 
 function reference(
@@ -142,17 +132,9 @@ function styleSurface<T>(
 export const decodeTierBoardStyleSurface = styleSurface(rankingTypes.tierStyle, decodeTierBoardStyle);
 export const decodeColumnStyleSurface = styleSurface(rankingTypes.columnStyle, decodeColumnStyle);
 export const decodeTopThreeStyleSurface = styleSurface(rankingTypes.topThreeStyle, decodeTopThreeStyle);
-export const decodeTypewriterListStyleSurface = styleSurface(rankingTypes.typewriterStyle, decodeTypewriterListStyle);
 
 function localName(element: StructuredElement): string {
   return element.name.slice(element.name.lastIndexOf(":") + 1);
-}
-
-function plainChildText(element: StructuredElement): string {
-  if (element.children.some((child) => child.kind === "element")) throw new Error(`${element.name} accepts plain text only.`);
-  const value = element.children.map((child) => child.kind === "text" ? child.value : "").join("").trim();
-  if (value.length === 0) throw new Error(`${element.name} text is empty.`);
-  return value;
 }
 
 function textValue(
@@ -186,52 +168,19 @@ function itemSpec(
       variant, id, tier: text(element, "tier"), entry,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     } satisfies TierBoardItemSpec;
-    assertRankingItemSpec(value);
-    return { spec: value };
-  } else if (variant === "column") {
+  } else if (variant === "column" || variant === "top-three") {
     allowed(element, ["id", "label", "icon", "stack"]);
     empty(element);
     const label = textValue(element.attributes.label, `${element.name}.label`, resolve);
-    if (typeof label === "string") value = {
-      variant, id, label,
-      ...(stackingOrder === undefined ? {} : { stackingOrder }),
-    } satisfies ColumnItemSpec;
-    else return { spec: sealRankingTextItemShell({
+    if (typeof label !== "string") return { spec: sealRankingTextItemShell({
       variant, id,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     }), content: label };
-  } else if (variant === "top-three") {
-    allowed(element, ["id", "label", "icon", "stack"]);
-    empty(element);
-    const label = textValue(element.attributes.label, `${element.name}.label`, resolve);
-    if (typeof label === "string") value = {
+    value = {
       variant, id, label,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
-    } satisfies TopThreeItemSpec;
-    else return { spec: sealRankingTextItemShell({
-      variant, id,
-      ...(stackingOrder === undefined ? {} : { stackingOrder }),
-    }), content: label };
-  } else {
-    allowed(element, ["id", "text", "winner", "emphasis-start", "emphasis-end", "stack"]);
-    const raw = element.attributes.text;
-    const content = raw === undefined ? plainChildText(element) : textValue(raw, `${element.name}.text`, resolve);
-    if (raw !== undefined) empty(element);
-    const start = integer(element, "emphasis-start");
-    const endExclusive = integer(element, "emphasis-end");
-    if ((start === undefined) !== (endExclusive === undefined)) throw new Error(`${element.name} emphasis requires both emphasis-start and emphasis-end.`);
-    const rest = {
-      variant, id, winner: boolean(element, "winner", false),
-      ...(start === undefined || endExclusive === undefined ? {} : { emphasis: { start, endExclusive } }),
-      ...(stackingOrder === undefined ? {} : { stackingOrder }),
-    } as const;
-    if (typeof content === "string") value = {
-      ...rest, text: content,
-    } satisfies TypewriterItemSpec;
-    else return { spec: sealRankingTextItemShell({
-      ...rest,
-    }), content };
-  }
+    } satisfies ColumnItemSpec | TopThreeItemSpec;
+  } else throw new Error(`${element.name} belongs to an unknown Ranking variant.`);
   assertRankingItemSpec(value);
   return { spec: value };
 }
@@ -240,13 +189,11 @@ const variantDefinition = {
   "tier-board": { tag: "TierItem", style: rankingTypes.tierStyle },
   column: { tag: "ColumnItem", style: rankingTypes.columnStyle },
   "top-three": { tag: "TopThreeItem", style: rankingTypes.topThreeStyle },
-  "typewriter-list": { tag: "TypewriterItem", style: rankingTypes.typewriterStyle },
 } as const;
 
 function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
   return ({ element, resolveReference }) => {
-    const common = ["id", "map", "space", "frame", "during", "triggers", "terminal", "style", "appear-sound", "move-sound"];
-    allowed(element, variant === "typewriter-list" ? [...common, "title"] : common);
+    allowed(element, ["id", "map", "space", "frame", "during", "triggers", "terminal", "style", "appear-sound", "move-sound"]);
     const id = text(element, "id");
     const selected = variantDefinition[variant];
     const map = reference(element.attributes.map, `${element.name}.map`, semanticMapTypes.complete, resolveReference);
@@ -268,19 +215,10 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       header: { kind: "record", id: headerId }, map: map.ref, space: space.ref, frame: frame.ref,
       outer: outer.ref, triggers: triggers.ref, terminal: terminal.ref, style: style.ref,
     };
-    if (variant === "typewriter-list") {
-      const title = textValue(element.attributes.title, `${element.name}.title`, resolveReference);
-      if (typeof title === "string") {
-        const titleId = `${id}.title`;
-        records.push({ id: titleId, type: textTypes.text, value: { kind: "inline", value: sealText(title) }, range: element.range });
-        inputs.title = { kind: "record", id: titleId };
-      } else inputs.title = title.ref;
-    }
     const items: RankingFragmentItem[] = [];
     const itemIds = new Set<string>();
     let index = 0;
     let hasStage = false;
-    let hasWinner = false;
     for (const child of element.children) {
       if (child.kind === "text") {
         if (child.value.trim().length > 0) throw new Error(`${element.name} accepts ${selected.tag} children only.`);
@@ -294,7 +232,6 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       if (itemIds.has(spec.id)) throw new Error(`${element.name} has duplicate Item id ${spec.id}.`);
       itemIds.add(spec.id);
       hasStage ||= spec.variant === "tier-board" && spec.entry === "stage";
-      hasWinner ||= spec.variant === "typewriter-list" && spec.winner;
       const specId = `${id}.item.${suffix}.spec`;
       const specName = `item-${suffix}-spec`;
       records.push({ id: specId, type: authored.content === undefined ? rankingTypes.itemSpec : rankingTypes.textItemShell, value: { kind: "inline", value: spec as unknown as CanonicalValue }, range: child.range });
@@ -316,7 +253,6 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
     };
     if (sound.moveName !== undefined && variant === "top-three") throw new Error(`${element.name} has no move sound phase.`);
     if (sound.moveName !== undefined && variant === "tier-board" && !hasStage) throw new Error(`${element.name}.move-sound requires one staged TierItem.`);
-    if (sound.moveName !== undefined && variant === "typewriter-list" && !hasWinner) throw new Error(`${element.name}.move-sound requires one winner TypewriterItem.`);
     for (const [attribute, inputName] of [["appear-sound", sound.appearName], ["move-sound", sound.moveName]] as const) {
       if (inputName === undefined) continue;
       inputs[inputName] = reference(element.attributes[attribute], `${element.name}.${attribute}`, mediaTypes.synchronized, resolveReference).ref;
@@ -348,4 +284,3 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
 export const decodeTierBoardSurface = rankingSurface("tier-board");
 export const decodeColumnSurface = rankingSurface("column");
 export const decodeTopThreeSurface = rankingSurface("top-three");
-export const decodeTypewriterListSurface = rankingSurface("typewriter-list");

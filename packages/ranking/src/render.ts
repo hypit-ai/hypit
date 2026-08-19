@@ -11,10 +11,6 @@ import type {
   VisualElement,
   VisualPresent,
   VisualStyleDeclaration,
-  VisualTextDocument,
-  VisualTextFlow,
-  VisualTextPaintLayer,
-  VisualTextTypography,
   VisualTrack,
 } from "@hypit/composition";
 import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@hypit/media";
@@ -31,10 +27,7 @@ import {
   assertRankingSoundStyle,
   assertTierBoardProgram,
   assertTopThreeProgram,
-  assertTypewriterListProgram,
   fitRankingStageMotion,
-  fitTypewriterStage,
-  graphemes,
 } from "./schedule.js";
 import type {
   ColumnItem,
@@ -48,8 +41,6 @@ import type {
   TierBoardProgram,
   TopThreeItem,
   TopThreeProgram,
-  TypewriterItem,
-  TypewriterListProgram,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -514,138 +505,6 @@ export function renderTopThree(space: ProgramSpace, program: TopThreeProgram): V
       elements.push(simpleText({ id: "label", parent: root, order: 3, text: item.label, typography: style.text,
         x: -style.slotGapPx / 2, y: style.iconSizePx + style.labelGapPx,
         width: style.iconSizePx + style.slotGapPx, height: style.text.sizePx * style.text.lineHeight }));
-      return elements;
-    };
-    presents.push(present({
-      id: `${program.id}:item:${item.id}:stage`, start: entry.stage.startFrame, end: entry.stage.endFrameExclusive,
-      stacking: item.stackingOrder ?? style.itemStackingOrder,
-      tieBreak: `${program.id}:item:${String(index).padStart(4, "0")}:${item.id}:stage`, elements: itemElements(true),
-    }));
-    if (entry.settled.endFrameExclusive > entry.settled.startFrame) presents.push(present({
-      id: `${program.id}:item:${item.id}:settled`, start: entry.settled.startFrame, end: entry.settled.endFrameExclusive,
-      stacking: item.stackingOrder ?? style.itemStackingOrder,
-      tieBreak: `${program.id}:item:${String(index).padStart(4, "0")}:${item.id}:settled`, elements: itemElements(false),
-    }));
-  }
-  return sealTrack(space, program.id, presents);
-}
-
-function visualTypography(value: RankingTextStyle): VisualTextTypography {
-  return {
-    fonts: structuredClone(value.fonts), sizePx: value.sizePx, weight: value.weight, style: "normal",
-    axes: [], features: [], synthesis: "none", kerning: "normal", trackingPx: 0, wordSpacingPx: 0,
-    lineHeight: value.lineHeight, direction: "auto", writingMode: "horizontal-tb", baselineShiftPx: 0,
-    tabSize: 4, indentationPx: 0, paragraphBeforePx: 0, paragraphAfterPx: 0, transform: "none",
-    variantCaps: "normal", verticalAlign: "baseline", decorations: [],
-    cjk: { textSpacing: "normal", punctuationTrim: "none" },
-  };
-}
-
-const areaFlow: VisualTextFlow = {
-  form: { kind: "area" }, inlineSize: "fixed", blockSize: "fixed",
-  paddingPx: { inlineStart: 0, inlineEnd: 0, blockStart: 0, blockEnd: 0 },
-  inlineAlign: "start", blockAlign: "center", wrap: "none", overflow: "clip", clipToFrame: true,
-  columns: 1, columnGapPx: 0, metricEdge: "line-box",
-};
-
-function typewriterDocument(item: TypewriterItem, style: TypewriterListProgram["style"]): VisualTextDocument {
-  const parts = graphemes(item.text);
-  if (item.emphasis === undefined) {
-    return { paragraphs: [{ id: `${item.id}-p`, inlines: [{ id: `${item.id}-text`, kind: "text", text: item.text }] }] };
-  }
-  const before = parts.slice(0, item.emphasis.start).join("");
-  const emphasis = parts.slice(item.emphasis.start, item.emphasis.endExclusive).join("");
-  const after = parts.slice(item.emphasis.endExclusive).join("");
-  return { paragraphs: [{
-    id: `${item.id}-p`,
-    inlines: [
-      ...(before.length === 0 ? [] : [{ id: `${item.id}-before`, kind: "text" as const, text: before }]),
-      { id: `${item.id}-emphasis`, kind: "text", text: emphasis,
-        style: { paints: [{ kind: "fill", paint: { kind: "solid", color: style.emphasisColor } }] } },
-      ...(after.length === 0 ? [] : [{ id: `${item.id}-after`, kind: "text" as const, text: after }]),
-    ],
-  }] };
-}
-
-function paperRotation(program: TypewriterListProgram): VisualStyleDeclaration[] {
-  return [
-    { name: "transform", value: `rotate(${program.style.rotationDeg}deg)` },
-    { name: "transform-origin", value: "center center" },
-  ];
-}
-
-export function renderTypewriterList(space: ProgramSpace, program: TypewriterListProgram): VisualTrack {
-  assertProgramSpaceIdentity(space);
-  assertTypewriterListProgram(program);
-  const { frame, style, schedule } = program;
-  const titleHeight = style.title.sizePx * style.title.lineHeight;
-  const rowHeight = style.item.sizePx * style.item.lineHeight;
-  const firstRowY = style.paddingPx + titleHeight + style.titleGapPx;
-  const paperElements: VisualElement[] = [absoluteBox({
-    id: "paper", order: 0, x: frame.xPx, y: frame.yPx, width: frame.widthPx, height: frame.heightPx,
-    style: [...boardStyle(style.paper), ...paperRotation(program)],
-  }), simpleText({
-    id: "title", parent: "paper", order: 1, text: program.title, typography: style.title,
-    x: style.paddingPx, y: style.paddingPx, width: frame.widthPx - style.paddingPx * 2, height: titleHeight, align: "left",
-  })];
-  for (const [index] of program.items.entries()) {
-    const y = firstRowY + index * (rowHeight + style.rowGapPx);
-    assert(y + rowHeight <= frame.heightPx - style.paddingPx,
-      `TypewriterList cannot fit row ${index + 1} inside its Frame.`);
-    paperElements.push(absoluteBox({
-      id: `row-rule-${index + 1}`, parent: "paper", order: paperElements.length,
-      x: style.paddingPx, y: y + rowHeight - 1, width: frame.widthPx - style.paddingPx * 2, height: 1,
-      style: [{ name: "background", value: `${style.item.color}22` }],
-    }));
-  }
-  const presents: VisualPresent[] = [present({
-    id: `${program.id}:paper`, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
-    stacking: style.boardStackingOrder, tieBreak: `${program.id}:0000:paper`, elements: paperElements,
-  })];
-  for (const [index, item] of program.items.entries()) {
-    const entry = schedule.entries[index]!;
-    const duration = entry.stage.endFrameExclusive - entry.triggerFrame;
-    const count = graphemes(item.text).length;
-    const fitted = fitTypewriterStage(duration, count, style.framesPerGrapheme, item.winner ? style.winnerFrames : 0);
-    const root = `typewriter-item-${item.id}`;
-    const y = firstRowY + index * (rowHeight + style.rowGapPx);
-    const paints: VisualTextPaintLayer[] = [{ kind: "fill", paint: { kind: "solid", color: style.item.color } }];
-    const itemElements = (active: boolean): VisualElement[] => {
-      const elements: VisualElement[] = [absoluteBox({
-        id: root, order: 0, x: frame.xPx, y: frame.yPx, width: frame.widthPx, height: frame.heightPx,
-        style: paperRotation(program),
-      }), {
-        id: "row-text", parent: root, order: 1, kind: "text-flow",
-        style: [
-          { name: "height", value: px(rowHeight) }, { name: "left", value: px(style.paddingPx) },
-          { name: "position", value: "absolute" }, { name: "top", value: px(y) },
-          { name: "width", value: px(frame.widthPx - style.paddingPx * 2 - rowHeight) },
-        ],
-        document: typewriterDocument(item, style), typography: visualTypography(style.item), paints,
-        flow: areaFlow,
-        sequences: active && fitted.typingFrames > 0
-          ? Array.from({ length: count }, (_, grapheme) => ({
-              id: `${item.id}-typing-${grapheme + 1}`, unit: "grapheme" as const,
-              range: { start: grapheme, endExclusive: grapheme + 1 }, order: "forward" as const,
-              startFrame: Math.floor(grapheme * fitted.typingFrames / count),
-              unitDurationFrames: 1, staggerFrames: 0, cycles: 1,
-              keyframes: [
-                { atProgress: 0, style: [{ name: "opacity", value: 0 }] },
-                { atProgress: 1, style: [{ name: "opacity", value: 1 }] },
-              ],
-            }))
-          : [],
-      }];
-      if (item.winner) elements.push(simpleText({
-        id: "winner", parent: root, order: 2, text: "★",
-        typography: { ...style.item, color: style.winnerColor },
-        x: frame.widthPx - style.paddingPx - rowHeight, y, width: rowHeight, height: rowHeight,
-        ...(active ? { animation: animation(duration, [
-            { atFrame: 0, style: transformStyle("scale(0.5)", 0) },
-            { atFrame: fitted.typingFrames, style: transformStyle("scale(0.5)", 0), easing: "ease-out" },
-            { atFrame: fitted.typingFrames + fitted.winnerFrames, style: transformStyle("scale(1)", 1) },
-          ]) } : {}),
-      }));
       return elements;
     };
     presents.push(present({

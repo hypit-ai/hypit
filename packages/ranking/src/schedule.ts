@@ -52,11 +52,6 @@ import type {
   TopThreeItemSpec,
   TopThreeProgram,
   TopThreeStyle,
-  TypewriterItem,
-  TypewriterItemSet,
-  TypewriterItemSpec,
-  TypewriterListProgram,
-  TypewriterListStyle,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -104,7 +99,7 @@ function assertBlobImage(value: { readonly digest: string; readonly size: number
 
 export function assertRankingHeader(value: RankingHeader): void {
   identity(value.id, "RankingHeader.id");
-  assert(["tier-board", "column", "top-three", "typewriter-list"].includes(value.variant),
+  assert(["tier-board", "column", "top-three"].includes(value.variant),
     "RankingHeader.variant is invalid.");
 }
 
@@ -218,22 +213,6 @@ export function assertTopThreeStyle(value: TopThreeStyle): void {
   nonNegative(value.labelGapPx, "TopThreeStyle.labelGapPx");
 }
 
-export function assertTypewriterListStyle(value: TypewriterListStyle): void {
-  assertRankingBoardPaint(value.paper, "TypewriterListStyle.paper");
-  assertRankingTextStyle(value.title, "TypewriterListStyle.title");
-  assertRankingTextStyle(value.item, "TypewriterListStyle.item");
-  color(value.emphasisColor, "TypewriterListStyle.emphasisColor");
-  color(value.winnerColor, "TypewriterListStyle.winnerColor");
-  nonNegative(value.paddingPx, "TypewriterListStyle.paddingPx");
-  nonNegative(value.rowGapPx, "TypewriterListStyle.rowGapPx");
-  nonNegative(value.titleGapPx, "TypewriterListStyle.titleGapPx");
-  finite(value.rotationDeg, "TypewriterListStyle.rotationDeg");
-  integer(value.framesPerGrapheme, "TypewriterListStyle.framesPerGrapheme", 1);
-  integer(value.winnerFrames, "TypewriterListStyle.winnerFrames", 1);
-  stacking(value.boardStackingOrder, "TypewriterListStyle.boardStackingOrder");
-  stacking(value.itemStackingOrder, "TypewriterListStyle.itemStackingOrder");
-}
-
 export function assertRankingItemSpec(value: RankingItemSpec): void {
   identity(value.id, "RankingItemSpec.id");
   if (value.variant === "tier-board") {
@@ -241,35 +220,17 @@ export function assertRankingItemSpec(value: RankingItemSpec): void {
     assert(value.entry === "direct" || value.entry === "stage", `TierBoardItemSpec.${value.id}.entry is invalid.`);
   } else if (value.variant === "column") {
     assert(value.label.trim().length > 0, `ColumnItemSpec.${value.id}.label is empty.`);
-  } else if (value.variant === "top-three") {
-    assert(value.label.trim().length > 0, `TopThreeItemSpec.${value.id}.label is empty.`);
   } else {
-    assert(value.variant === "typewriter-list", "TypewriterItemSpec variant is invalid.");
-    assert(value.text.length > 0, `TypewriterItemSpec.${value.id}.text is empty.`);
-    assert(typeof value.winner === "boolean", `TypewriterItemSpec.${value.id}.winner is invalid.`);
-    if (value.emphasis !== undefined) {
-      integer(value.emphasis.start, `TypewriterItemSpec.${value.id}.emphasis.start`);
-      integer(value.emphasis.endExclusive, `TypewriterItemSpec.${value.id}.emphasis.endExclusive`, 1);
-      assert(value.emphasis.endExclusive > value.emphasis.start,
-        `TypewriterItemSpec.${value.id}.emphasis is empty.`);
-    }
+    assert(value.variant === "top-three", "RankingItemSpec variant is invalid.");
+    assert(value.label.trim().length > 0, `TopThreeItemSpec.${value.id}.label is empty.`);
   }
   if (value.stackingOrder !== undefined) stacking(value.stackingOrder, `RankingItemSpec.${value.id}.stackingOrder`);
 }
 
 export function assertRankingTextItemShell(value: RankingTextItemShell): void {
   identity(value.id, "RankingTextItemShell.id");
-  assert(value.variant === "column" || value.variant === "top-three" || value.variant === "typewriter-list",
+  assert(value.variant === "column" || value.variant === "top-three",
     "RankingTextItemShell variant is invalid.");
-  if (value.variant === "typewriter-list") {
-    assert(typeof value.winner === "boolean", `RankingTextItemShell.${value.id}.winner is invalid.`);
-    if (value.emphasis !== undefined) {
-      integer(value.emphasis.start, `RankingTextItemShell.${value.id}.emphasis.start`);
-      integer(value.emphasis.endExclusive, `RankingTextItemShell.${value.id}.emphasis.endExclusive`, 1);
-      assert(value.emphasis.endExclusive > value.emphasis.start,
-        `RankingTextItemShell.${value.id}.emphasis is empty.`);
-    }
-  }
   if (value.stackingOrder !== undefined) stacking(value.stackingOrder, `RankingTextItemShell.${value.id}.stackingOrder`);
 }
 
@@ -283,14 +244,7 @@ export function materializeRankingTextItem(shell: RankingTextItemShell, content:
   assertRankingTextItemShell(shell);
   verifyText(content);
   assert(content.value.trim().length > 0, `Ranking Text Item ${shell.id} content is empty.`);
-  let result: RankingItemSpec;
-  if (shell.variant === "column") {
-    result = { ...shell, label: content.value };
-  } else if (shell.variant === "top-three") {
-    result = { ...shell, label: content.value };
-  } else {
-    result = { ...shell, text: content.value };
-  }
+  const result: RankingItemSpec = { ...shell, label: content.value };
   assertRankingItemSpec(result);
   return canonicalize(result) as unknown as RankingItemSpec;
 }
@@ -301,7 +255,7 @@ export function createRankingItemSpecSet(header: RankingHeader): RankingItemSpec
 }
 
 export function assertRankingItemSpecSet(value: RankingItemSpecSet): void {
-  assert(["tier-board", "column", "top-three", "typewriter-list"].includes(value.variant),
+  assert(["tier-board", "column", "top-three"].includes(value.variant),
     "RankingItemSpecSet.variant is invalid.");
   const ids = new Set<string>();
   for (const item of value.items) {
@@ -373,7 +327,7 @@ export function buildRankingSchedule(input: {
 
 export function assertRankingSchedule(value: RankingSchedule, space?: ProgramSpace): void {
   identity(value.id, "RankingSchedule.id");
-  assert(["tier-board", "column", "top-three", "typewriter-list"].includes(value.variant),
+  assert(["tier-board", "column", "top-three"].includes(value.variant),
     "RankingSchedule.variant is invalid.");
   frame(value.outer.startFrame, "RankingSchedule.outer.startFrame");
   frame(value.outer.endFrameExclusive, "RankingSchedule.outer.endFrameExclusive");
@@ -416,7 +370,6 @@ function emptySet<T extends { readonly items: readonly unknown[] }>(): T {
 export const createTierBoardItemSet = (): TierBoardItemSet => emptySet();
 export const createColumnItemSet = (): ColumnItemSet => emptySet();
 export const createTopThreeItemSet = (): TopThreeItemSet => emptySet();
-export const createTypewriterItemSet = (): TypewriterItemSet => emptySet();
 
 function ensureNew(items: readonly { readonly id: string }[], id: string): void {
   assert(!items.some((item) => item.id === id), `Ranking Item ${id} is duplicated.`);
@@ -446,13 +399,6 @@ export function appendTopThreeItem(set: TopThreeItemSet, spec: TopThreeItemSpec,
   return canonicalize({ ...set, items: [...set.items, { ...structuredClone(spec), ...(icon === undefined ? {} : { icon: structuredClone(icon) }) }] }) as unknown as TopThreeItemSet;
 }
 
-export function appendTypewriterItem(set: TypewriterItemSet, spec: TypewriterItemSpec): TypewriterItemSet {
-  assert(Array.isArray(set.items), "TypewriterItemSet is invalid.");
-  assertRankingItemSpec(spec);
-  ensureNew(set.items, spec.id);
-  return canonicalize({ ...set, items: [...set.items, structuredClone(spec)] }) as unknown as TypewriterItemSet;
-}
-
 function idsEqual(schedule: RankingSchedule, items: readonly { readonly id: string }[]): void {
   assert(schedule.entries.length === items.length, "Ranking Program item count differs from its Schedule.");
   for (const [index, item] of items.entries()) {
@@ -470,20 +416,6 @@ export function fitRankingStageMotion(
   if (!needsMove) return { appearFrames: Math.min(preferredAppearFrames, durationFrames), moveFrames: 0 };
   const moveFrames = Math.min(preferredMoveFrames, durationFrames);
   return { appearFrames: Math.min(preferredAppearFrames, durationFrames - moveFrames), moveFrames };
-}
-
-export function fitTypewriterStage(
-  durationFrames: number,
-  graphemeCount: number,
-  preferredFramesPerGrapheme: number,
-  preferredWinnerFrames: number,
-): { readonly typingFrames: number; readonly winnerFrames: number } {
-  assert(Number.isSafeInteger(durationFrames) && durationFrames > 0, "Typewriter stage duration is invalid.");
-  const winnerFrames = Math.min(preferredWinnerFrames, durationFrames);
-  return {
-    typingFrames: Math.min(graphemeCount * preferredFramesPerGrapheme, durationFrames - winnerFrames),
-    winnerFrames,
-  };
 }
 
 export function buildTierBoardProgram(header: RankingHeader, frameValue: import("@hypit/spatial").SpatialFrame, schedule: RankingSchedule, style: TierBoardStyle, set: TierBoardItemSet): TierBoardProgram {
@@ -519,26 +451,6 @@ export function buildTopThreeProgram(header: RankingHeader, frameValue: import("
   return canonicalize(result) as unknown as TopThreeProgram;
 }
 
-export function graphemes(text: string): string[] {
-  return [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text)].map((value) => value.segment);
-}
-
-export function buildTypewriterListProgram(header: RankingHeader, title: string, frameValue: import("@hypit/spatial").SpatialFrame, schedule: RankingSchedule, style: TypewriterListStyle, set: TypewriterItemSet): TypewriterListProgram {
-  assert(header.variant === "typewriter-list" && schedule.variant === "typewriter-list", "TypewriterList variant is inconsistent.");
-  assert(title.trim().length > 0, "TypewriterList title is empty.");
-  assertSpatialFrame(frameValue);
-  assertTypewriterListStyle(style);
-  idsEqual(schedule, set.items);
-  for (const item of set.items) {
-    const count = graphemes(item.text).length;
-    if (item.emphasis !== undefined) assert(item.emphasis.endExclusive <= count,
-      `Typewriter Item ${item.id} emphasis exceeds its grapheme count.`);
-  }
-  const result: TypewriterListProgram = { id: header.id, title, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
-  assertTypewriterListProgram(result);
-  return canonicalize(result) as unknown as TypewriterListProgram;
-}
-
 export function assertTierBoardProgram(value: TierBoardProgram): void {
   assertRankingSchedule(value.schedule);
   assert(value.schedule.variant === "tier-board", "TierBoardProgram Schedule variant is invalid.");
@@ -565,16 +477,6 @@ export function assertTopThreeProgram(value: TopThreeProgram): void {
   assert(value.items.length <= 3, "TopThreeProgram exceeds three Items.");
   idsEqual(value.schedule, value.items);
   value.items.forEach((item) => { assertRankingItemSpec(item); if (item.icon !== undefined) assertBlobImage(item.icon, `TopThreeItem.${item.id}.icon`); });
-}
-
-export function assertTypewriterListProgram(value: TypewriterListProgram): void {
-  assert(value.title.trim().length > 0, "TypewriterListProgram title is empty.");
-  assertRankingSchedule(value.schedule);
-  assert(value.schedule.variant === "typewriter-list", "TypewriterListProgram Schedule variant is invalid.");
-  assertSpatialFrame(value.frame);
-  assertTypewriterListStyle(value.style);
-  idsEqual(value.schedule, value.items);
-  value.items.forEach(assertRankingItemSpec);
 }
 
 function event(id: string, itemId: string, kind: "appear" | "move", eventFrame: number): RankingSoundEvent {
@@ -621,23 +523,9 @@ export function buildTopThreeSoundEvents(schedule: RankingSchedule, style: TopTh
     schedule.entries.map((entry) => event(schedule.id, entry.itemId, "appear", entry.triggerFrame)));
 }
 
-export function buildTypewriterSoundEvents(schedule: RankingSchedule, style: TypewriterListStyle, specs: RankingItemSpecSet): RankingSoundEventPlan {
-  assert(schedule.variant === "typewriter-list" && specs.variant === "typewriter-list", "Typewriter event inputs disagree.");
-  assertTypewriterListStyle(style);
-  idsEqual(schedule, specs.items);
-  return sealEvents(schedule.id, schedule.variant, schedule.entries.flatMap((entry, index) => {
-    const spec = specs.items[index] as TypewriterItemSpec;
-    const duration = entry.stage.endFrameExclusive - entry.triggerFrame;
-    const fitted = fitTypewriterStage(duration, graphemes(spec.text).length, style.framesPerGrapheme,
-      spec.winner ? style.winnerFrames : 0);
-    return [event(schedule.id, entry.itemId, "appear", entry.triggerFrame),
-      ...(spec.winner ? [event(schedule.id, entry.itemId, "move", entry.triggerFrame + fitted.typingFrames)] : [])];
-  }));
-}
-
 export function assertRankingSoundEventPlan(value: RankingSoundEventPlan): void {
   identity(value.id, "RankingSoundEventPlan.id");
-  assert(["tier-board", "column", "top-three", "typewriter-list"].includes(value.variant),
+  assert(["tier-board", "column", "top-three"].includes(value.variant),
     "RankingSoundEventPlan.variant is invalid.");
   const ids = new Set<string>();
   for (const item of value.events) {

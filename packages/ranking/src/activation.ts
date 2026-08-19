@@ -7,8 +7,6 @@ import {
   decodeTierBoardSurface,
   decodeTopThreeStyleSurface,
   decodeTopThreeSurface,
-  decodeTypewriterListStyleSurface,
-  decodeTypewriterListSurface,
   rankingComponent,
   rankingManifest,
   rankingMarkupSurfaces,
@@ -19,11 +17,9 @@ const facets = [
   ["tier-style", decodeTierBoardStyleSurface],
   ["column-style", decodeColumnStyleSurface],
   ["top-three-style", decodeTopThreeStyleSurface],
-  ["typewriter-style", decodeTypewriterListStyleSurface],
   ["tier", decodeTierBoardSurface],
   ["column", decodeColumnSurface],
   ["top-three", decodeTopThreeSurface],
-  ["typewriter", decodeTypewriterListSurface],
 ] as const;
 
 export const hypitPackage = {
