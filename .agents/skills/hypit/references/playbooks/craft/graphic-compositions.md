@@ -70,9 +70,9 @@ project that installs it to obtain a picture that was never theirs to choose. If
 writing a Run Source whose only purpose is to produce a component's own texture, the texture is in
 the wrong place: generate it once while authoring the package and commit the file.
 
-Produce that file outside the graph — call the image provider's HTTP API directly, or use any
-equivalent tool, and save the bytes into the package. A package asset is authoring input, not the
-output of anybody's video, so it is never a Target and never a Record.
+Produce that file with `hypit image --prompt <text> --to <path>`, which writes a picture and nothing
+else. A package asset is authoring input, not the output of anybody's video, so it is never a Target
+and never a Record.
 
 A package is installed vocabulary. `.svml`, `.svs` and `.svrun` are documents that use it. A package
 that needs one of those documents in order to draw itself has inverted that relationship.

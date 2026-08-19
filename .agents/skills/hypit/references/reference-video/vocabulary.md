@@ -7,8 +7,16 @@ attributes, children, ports, Recipe properties, timing behavior, appearance and 
 First enumerate every system the reference actually contains — base pictures, inserted elements,
 full-screen graphic compositions, persistent overlays, captions, speech, music, sound effects — and
 inspect candidates for each one. A system you never inspected is a system you are about to invent.
-`inspect_svml_vocabulary` does not list what is installed; it reads the packages you name. Discover
-candidate names from `docs/guide/packages.md` and the `packages/` directory before inspecting.
+`inspect_svml_vocabulary` does not list what is installed; it reads the packages you name. Get the
+names from `list_svml_packages`, which reports every installed package that declares an activation
+along with the tags it registers:
+
+```bash
+hypit-reference-video-tools list_svml_packages
+```
+
+Never work from a remembered list of package names, and never conclude a capability is missing
+because you did not think of the package that has it.
 
 Use this decision order:
 
