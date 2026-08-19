@@ -28,6 +28,14 @@ Everything after them is specific to this component and cannot be copied from an
 
 ## Required reading
 
+**Read this whole file first.** The rules that decide what the package is — read the observation
+before shaping it, a media slot is an input port, the package draws its own chrome, the Types are
+frozen before parallel writing — are in this file, and they apply before any other reading. Do not
+jump to the closest package and start copying roles before these rules are in front of you; the
+rules here are the contract, the closest package is only a shape to learn from.
+
+Then read:
+
 1. `docs/guide/component-anatomy.md` — the roles every component package fills, and how to find each
    one in an existing package. Read this first; it is what the rest is measured against.
 2. `docs/guide/author-packages.md`
