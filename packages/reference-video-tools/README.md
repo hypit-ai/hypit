@@ -2,8 +2,8 @@
 
 CLI tools for reconstructing a reference video with Hypit.
 
-The package exposes four CLI subcommands: `prepare_reference`, `observe_reference`,
-`inspect_svml_vocabulary`, and `compare_reconstruction`. Each command prints one JSON result to
+The package exposes five CLI subcommands: `list_svml_packages`, `prepare_reference`,
+`observe_reference`, `inspect_svml_vocabulary`, and `compare_reconstruction`. Each command prints one JSON result to
 stdout. Every command except `inspect_svml_vocabulary` sends narrow natural-language requests to
 Gemini with a fixed temperature of `1.0`; they never receive SVML syntax and never write SVML. The
 final source files are authored by the calling agent and checked with the existing
@@ -12,6 +12,7 @@ final source files are authored by the calling agent and checked with the existi
 Run the CLI from the repository or an installed package:
 
 ```bash
+pnpm hypit-reference-video-tools list_svml_packages
 pnpm hypit-reference-video-tools prepare_reference --video-path ./reference.mp4
 pnpm hypit-reference-video-tools prepare_reference --video-path ./reference.mp4 --redo people
 pnpm hypit-reference-video-tools observe_reference --reference-id <reference-id>
@@ -24,6 +25,11 @@ pnpm hypit-reference-video-tools compare_reconstruction --reference-id <referenc
 
 For automation, every command also accepts `--input '{"...":"..."}'` with the complete JSON input
 object. This is useful when the calling agent already has a structured request.
+
+`list_svml_packages` reports every installed package that declares an activation, with the Surface
+tags it registers. `inspect_svml_vocabulary` reads packages you can already name, and the Build CLI
+is deliberately unable to scan a directory, so this is how a caller finds out what vocabulary exists
+instead of working from memory.
 
 `prepare_reference` requires a local video path and stores derived media under the project's
 gitignored `.hypit/reference-video-tools/` directory. It produces three full-reference observations:

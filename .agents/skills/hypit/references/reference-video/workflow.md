@@ -1,8 +1,9 @@
 # Reference-video workflow
 
-The public interface is exactly four CLI subcommands from `@hypit/reference-video-tools`:
+The public interface is exactly five CLI subcommands from `@hypit/reference-video-tools`:
 
 ```bash
+hypit-reference-video-tools list_svml_packages
 hypit-reference-video-tools prepare_reference --video-path <path>
 hypit-reference-video-tools observe_reference --reference-id <reference-id>
 hypit-reference-video-tools inspect_svml_vocabulary --package <package> --tag <tag>
@@ -12,7 +13,8 @@ hypit-reference-video-tools compare_reconstruction --reference-id <reference-id>
 Defaults are sufficient for normal use. Each also accepts `--input <json>`. Follow this sequence:
 
 ```text
-prepare_reference
+list_svml_packages
+→ prepare_reference
 → observe_reference for all shots
 → narrow observe_reference questions for unresolved appearance and conflicts
 → inspect_svml_vocabulary for candidate packages
@@ -21,6 +23,13 @@ prepare_reference
 → use existing checks and repair until legal
 → render each authored element and close the loop with compare_reconstruction
 ```
+
+## list_svml_packages
+
+Reports every installed package that declares an activation, with the Surface tags it registers.
+This is the only way to know what vocabulary exists: `inspect_svml_vocabulary` reads packages you
+name, and the Build CLI is deliberately unable to scan a directory. Run it before deciding anything
+is missing.
 
 ## prepare_reference
 
