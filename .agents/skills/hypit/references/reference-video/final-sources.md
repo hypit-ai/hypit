@@ -1,7 +1,8 @@
 # Reference-video final sources
 
 After every required package exists and its vocabulary has been read, read
-`../authoring.md` completely and write one complete project:
+`../authoring.md` completely, then read `../playbooks/index.md` and the craft files it names for the
+systems this reference actually contains, and write one complete project:
 
 - `main.svml` describes the whole video in original time order, keeps continuing base/sound intact,
   and represents one continuing overlay as one visual track.
@@ -24,3 +25,6 @@ pnpm hypit check path/to/build.svrun
 
 Fix package resolution and package implementation before repairing source use. Continue until all
 three files are accepted. Do not create `check_svml_project` or another wrapper.
+
+Accepted checks end the structural work, not the reconstruction. Every element you authored still has
+to be rendered and compared against the reference under `reconstruction-loop.md`.
