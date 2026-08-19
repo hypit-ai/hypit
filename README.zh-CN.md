@@ -60,19 +60,19 @@ npm link
 
 ## 使用 Hypit skill
 
-克隆仓库后，编程 Agent 可以直接使用 `/hypit` skill。让 Agent 配置环境并为你创建 Hypit Source：
+克隆仓库后，编程 Agent 可以直接使用 `/hypit` skill。让 Agent 配置环境并为你创建视频：
 
 ```text
-/hypit 把这条爆款视频复刻成 Hypit Author Source 和 Run Source，展示预览，并带我构建多个变体。
+/hypit 把这条爆款视频复刻出来，展示预览，并带我批量生成多个变体。
 ```
 
 也可以不提供参考视频，直接从描述开始：
 
 ```text
-/hypit 根据我的描述创建 .svml Author Source 和 .svrun Run Source，优先使用模板和成本为 $0 的代码渲染画面。
+/hypit 根据我的描述创建视频，优先使用模板和成本为 $0 的代码渲染画面。
 ```
 
-Agent 会检查环境，只索取所选 Runtime Profile 实际需要的凭据，预览 Author Source、规划 Run Source，并提交 Build。
+Agent 会检查环境，只索取视频实际需要的凭据，展示预览并执行构建。
 
 ## 许可证
 
