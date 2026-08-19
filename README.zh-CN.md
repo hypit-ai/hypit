@@ -1,12 +1,7 @@
 <p align="center">
-  <!--
-    Absolute, and pointing at the published site rather than the repository:
-    this repo is private, so a relative path resolves to something the GitHub
-    mobile app cannot authenticate and it draws a broken image instead.
-  -->
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://hypit.ai/logo-line-dark.svg?v=hypit-20260819">
-    <img alt="Hypit" src="https://hypit.ai/logo-line-light.svg?v=hypit-20260819" width="400" height="78">
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/public/hypit-logo-light.png">
+    <img alt="Hypit" src="./docs/public/hypit-logo-dark.png" width="400" height="78">
   </picture>
 </p>
 
