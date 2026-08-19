@@ -35,9 +35,9 @@ that owns the role but cannot express the observed appearance is a gap, exactly 
 at all: `../playbooks/craft/captions.md` works one such case through.
 
 Before accepting either step, name the observed appearance properties and say where each one lands in
-the declared vocabulary. A property with nowhere to land is the finding. Either it makes the gap, or
-it is written down as an accepted deviation with its reason before you continue — the one thing that
-may not happen is quietly authoring something else that resembles it.
+the declared vocabulary. A property with nowhere to land is the finding, and it makes the gap —
+there is no acceptable shortfall. The one thing that may not happen is quietly authoring something
+else that resembles it.
 
 Do not force a similar-looking tag into a role it does not own. Do not invent attributes or write a
 nonexistent tag with the intention of implementing it later. A picture that
@@ -57,8 +57,9 @@ Declared vocabulary tells you which properties exist. Only observation tells you
 - Resolve what remains with a narrow `observe_reference --question` over the one to three shots where
   the element is most legible. Ask about visible attributes, never about components or syntax. A
   question costs one request and does not disturb cached observations.
-- A default value is not an observation. Accepting one is allowed only as a recorded deviation after
-  the evidence came back inconclusive.
+- A default value is not an observation. If the evidence came back inconclusive, ask again with a
+  narrower question rather than accepting a default: a value the observer never saw is not evidence,
+  and there is no state where a guessed value is acceptable.
 - Read a persistent system's appearance from the shots where it is clearest and apply it to the whole
   system, as `continuity.md` requires.
 
