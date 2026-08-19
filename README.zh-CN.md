@@ -40,21 +40,13 @@
 
 Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语言和系统。丢一条视频进来，Agent 把它克隆成一份完备的 workflow：画面、字幕、B-roll、特效，全部挂在词上，不钉在秒上。
 
-**说明一点：** 复刻视频是最快的入口,但不是唯一的入口。你可以直接从我们的模板开始,也可以直接描述你想要的视频,让 Agent 从零写出一份 workflow。生成模型同样不是必需的:字幕、动效、代码渲染的画面,不调用任何模型也能编译成一条成片—— 一条视频的成本可以是0元。
+**说明一点：** 复刻视频是最快的入口，但不是唯一的入口。你可以直接从我们的模板开始，也可以直接描述你想要的视频，让 Agent 从零写出一份 workflow。生成模型同样不是必需的：字幕、动效、代码渲染的画面，不调用任何模型也能编译成一条成片——一条视频的成本可以是 0 元。
 
-## 安装
-
-需要 Node.js 22+ 与 pnpm 10.33.x。
+## 克隆仓库
 
 ```bash
-git clone https://github.com/hypit-ai/hypit.git
-cd hypit
-corepack enable
-pnpm install --frozen-lockfile
-npm link
+git clone https://github.com/hypit-ai/hypit.git && cd hypit
 ```
-
-构建最终视频需要安装 `ffmpeg` 和 `ffprobe`。部分可选 Provider 还可能需要 Python、`uv` 或 API 凭据。
 
 ## 使用 Hypit skill
 
