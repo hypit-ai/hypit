@@ -15,7 +15,8 @@ build or a Run Source supplies measured ones, and an estimated cut point will mo
 heard the audio.
 
 Do this after placing a Selection and before paying for a generation. Startup and arguments are in
-`docs/quickstart/preview.md`; the routine is under "Show the work" in `SKILL.md`.
+`docs/quickstart/preview.md`; for how to see placed items against their real frames, read
+`../../preview.md` and start the SVML Playground.
 
 ## Choose the story beats first
 
