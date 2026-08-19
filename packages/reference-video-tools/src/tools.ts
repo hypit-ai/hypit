@@ -61,6 +61,14 @@ type ObservationTask = { readonly key: string; readonly run: () => Promise<Obser
 
 function observation(status: "complete" | "failed", text: string): Observation { return { status, text }; }
 
+function positiveEnv(name: string): number | undefined {
+  const raw = process.env[name]?.trim();
+  if (raw === undefined || raw.length === 0) return undefined;
+  const value = Number(raw);
+  assert(Number.isSafeInteger(value) && value > 0, `${name} must be a positive integer`);
+  return value;
+}
+
 function stateRoot(workspaceRoot: string, reference: string): string {
   return join(workspaceRoot, ".hypit", "reference-video-tools", reference);
 }
@@ -100,12 +108,24 @@ const MIME_TYPES: Readonly<Record<string, string>> = {
   mp4: "video/mp4",
 };
 
-async function mediaPart(path: string): Promise<Part> {
-  const bytes = await readBytes(path);
-  const extension = path.toLowerCase().split(".").pop() ?? "";
-  const mimeType = MIME_TYPES[extension];
-  assert(mimeType !== undefined, `unsupported media extension for ${path}; supported: ${Object.keys(MIME_TYPES).join(", ")}`);
-  return { inlineData: { mimeType, data: Buffer.from(bytes).toString("base64") } };
+// The Vertex path cannot upload a file and reference it later, so the bytes travel with every
+// request. One shot's clip is asked about by its own picture, type and sound observations and by the
+// boundary on each side, so reading and encoding it once per invocation is worth the memory.
+function mediaParts(): (path: string) => Promise<Part> {
+  const encoded = new Map<string, Promise<Part>>();
+  return (path) => {
+    const held = encoded.get(path);
+    if (held !== undefined) return held;
+    const part = (async (): Promise<Part> => {
+      const bytes = await readBytes(path);
+      const extension = path.toLowerCase().split(".").pop() ?? "";
+      const mimeType = MIME_TYPES[extension];
+      assert(mimeType !== undefined, `unsupported media extension for ${path}; supported: ${Object.keys(MIME_TYPES).join(", ")}`);
+      return { inlineData: { mimeType, data: Buffer.from(bytes).toString("base64") } };
+    })();
+    encoded.set(path, part);
+    return part;
+  };
 }
 
 function message(error: unknown): string {
@@ -224,8 +244,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
   const workspaceRoot = resolve(options.workspaceRoot ?? process.cwd());
   const packageRoot = resolve(options.packageRoot ?? workspaceRoot);
   const model = options.model ?? process.env.GEMINI_MODEL?.trim() ?? "gemini-3.1-pro-preview";
-  const concurrency = options.concurrency ?? 2;
-  const gapMs = options.launchGapMs ?? 6_000;
+  // Pacing is deployment policy, not author intent: it depends on the quota behind the credentials,
+  // which the calling agent has no way to know. It is settable here and through the environment, and
+  // deliberately not through a CLI flag.
+  const concurrency = options.concurrency ?? positiveEnv("HYPIT_REFERENCE_CONCURRENCY") ?? 2;
+  const gapMs = options.launchGapMs ?? positiveEnv("HYPIT_REFERENCE_LAUNCH_GAP_MS") ?? 6_000;
   const retryDelayMs = options.retryDelayMs ?? 2_000;
   let generatorPromise: Promise<GenerateText> | undefined;
   const generator = async (): Promise<GenerateText> => generatorPromise ??= options.generate === undefined ? defaultGenerate(model) : Promise.resolve(options.generate);
@@ -284,6 +307,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         await writeFile(join(root, "observations.json"), "{}\n", "utf8");
       }
       const generate = await generator();
+      const mediaPart = mediaParts();
       const globalParts: Part[] = [await mediaPart(analysisVideo)];
       const [people, voices, systems] = await Promise.all([
         state.people_and_product?.status === "complete" && !redoPeople
@@ -302,6 +326,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     },
 
     async observe_reference(input): Promise<Record<string, unknown>> {
+      const mediaPart = mediaParts();
       const state = await loadState(input.reference_id);
       const selected = input.shot_ids === undefined ? state.shots : state.shots.filter((shot) => input.shot_ids!.includes(shot.shot_id));
       assert(selected.length > 0, "no requested shot ids exist");
@@ -354,24 +379,20 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         parts.push({ text: `${globalContext}\n\nListen to shot ${shot.index}. Decide who is speaking, whether sound continues from the previous shot, whether visible people actually produce the sound, and whether a silent B-roll person only appears to speak. Handle off-screen, alternating, overlapping, and no-person-visible speech. Return natural language evidence only.` });
         return await callSafely(retryDelayMs, generate, parts, "Observe sound only. Do not write markup, SVML, JSON plans, or component names.");
       }}));
-      const sameTakeTasks: ObservationTask[] = boundaryRights.map((right) => ({ key: `same-take:${right.shot_id}`, run: async () => {
+      // Both boundary questions look at exactly the same three files, so they travel together. Asking
+      // them separately uploaded two clips twice to learn two things about one cut.
+      const boundaryTasks: ObservationTask[] = boundaryRights.map((right) => ({ key: `boundary:${right.shot_id}`, run: async () => {
         const left = state.shots.find((shot) => shot.index === right.index - 1)!;
         const parts: Part[] = [await mediaPart(left.clip_ref), await mediaPart(right.clip_ref), await mediaPart(left.tail_frame_ref)];
-        parts.push({ text: `Compare shots ${left.index} and ${right.index}. Answer only whether they are one continuous camera shot. Explain the visual and sound continuity evidence in natural language.` });
-        return await callSafely(retryDelayMs, generate, parts, "Analyze camera continuity only. Do not name SVML components or write code.");
+        parts.push({ text: `Compare shots ${left.index} and ${right.index}, which meet at one cut. Answer two questions separately, each under its own heading.\n\nContinuous camera shot: are these one continuous camera shot, or two? Explain the visual and sound continuity evidence.\n\nOverlay continuity: does the same visible overlay or inserted picture continue across the boundary, change, or end? Explain the evidence.\n\nReturn natural language evidence only.` });
+        return await callSafely(retryDelayMs, generate, parts, "Analyze what happens at one cut. Do not name SVML components or write code.");
       }}));
-      const overlayTasks: ObservationTask[] = boundaryRights.map((right) => ({ key: `overlay:${right.shot_id}`, run: async () => {
-        const left = state.shots.find((shot) => shot.index === right.index - 1)!;
-        const parts: Part[] = [await mediaPart(left.clip_ref), await mediaPart(right.clip_ref), await mediaPart(left.tail_frame_ref)];
-        parts.push({ text: `Compare shots ${left.index} and ${right.index}. Answer only whether the same visible overlay or inserted picture continues across the boundary, changes, or ends. Explain the evidence in natural language.` });
-        return await callSafely(retryDelayMs, generate, parts, "Analyze overlay continuity only. Do not name SVML components or write code.");
-      }}));
-      const allTasks = [...visualTasks, ...typeTasks, ...audioTasks, ...sameTakeTasks, ...overlayTasks];
+      const allTasks = [...visualTasks, ...typeTasks, ...audioTasks, ...boundaryTasks];
       const reobserve = input.reobserve === true;
       const forcedKeys = reobserve ? new Set(allTasks.map((task) => task.key)) : new Set<string>();
       const observations = await runObservationTasks(state.root, allTasks, forcedKeys, concurrency, gapMs);
       const unresolved = [...observations].filter(([, value]) => value.status !== "complete").map(([key]) => key);
-      const boundaryText = boundaryRights.map((right) => `${observations.get(`same-take:${right.shot_id}`)?.text ?? ""}\n${observations.get(`overlay:${right.shot_id}`)?.text ?? ""}`).join("\n");
+      const boundaryText = boundaryRights.map((right) => observations.get(`boundary:${right.shot_id}`)?.text ?? "").join("\n");
       const needsThreeShotReview = selected.length >= 3 && (
         reobserve ||
         /uncertain|unknown|possibly|may be|contin(?:ue|ues)|same take|same shot/iu.test(boundaryText)
@@ -407,8 +428,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           right_shot_id: right.shot_id,
           combined_duration_seconds: Number((right.end_seconds - left.start_seconds).toFixed(3)),
           within_15_seconds: right.end_seconds - left.start_seconds <= 15,
-          same_take: observations.get(`same-take:${right.shot_id}`)!,
-          overlay_continuity: observations.get(`overlay:${right.shot_id}`)!,
+          continuity: observations.get(`boundary:${right.shot_id}`)!,
         };
       });
       return {
@@ -445,6 +465,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     },
 
     async compare_reconstruction(input): Promise<Record<string, unknown>> {
+      const mediaPart = mediaParts();
       const state = await loadState(input.reference_id);
       const shot = state.shots.find((candidate) => candidate.shot_id === input.shot_id);
       assert(shot !== undefined, `shot ${input.shot_id} does not exist in reference ${input.reference_id}`);

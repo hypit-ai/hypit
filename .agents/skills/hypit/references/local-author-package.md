@@ -14,6 +14,14 @@ Read all of these completely before editing:
 4. `packages/component-kit/README.md`
 5. The closest existing package's README, `manifest.ts`, `surface.ts`, `component.ts`, and
    `activation.ts`
+6. For a package that produces a visual output, that same package's `render.ts`, `schedule.ts` and
+   `fragment.ts` as well. The implementation section below requires a renderer, a Fragment and the
+   lowering between them, and none of those live in the five files above — reading only those five
+   means discovering the shapes by failing.
+
+Read item 5's files in full. Read item 6's for their shapes: how a Program becomes elements, where
+timing is resolved, what the Fragment declares. They are long, and copying one package's specifics is
+a worse outcome than understanding its structure.
 
 ## Package boundary
 
@@ -66,6 +74,17 @@ nothing.
   to produce the component's own texture, the texture is in the wrong place.
 - A component that cannot render on its own cannot produce the preview image its Surface owes. Treat
   a missing preview as evidence of this mistake rather than a step to skip.
+
+## Freeze the Types before writing in parallel
+
+The nominal Types and the Manifest are what every other file agrees with, so write them first and
+stop changing them. Once they are frozen, `render.ts`, `style.ts` and `schedule.ts` depend on the
+Types rather than on each other and can be written in any order or at the same time. `surface.ts`,
+`component.ts` and `fragment.ts` follow, because they wire what those three produce.
+
+Do not start that parallel stretch while a Type is still in question. Interface drift mid-flight
+costs more than the ordering saves, and the symptom — a Producer rejecting a value that looks right —
+is expensive to read.
 
 ## Install and validate
 

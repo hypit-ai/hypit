@@ -68,7 +68,18 @@ async function contentBoundaries(path: string, duration: number): Promise<readon
       anchor = frames[index]!;
     }
   }
-  return [...starts, duration].filter((value, index, all) => index === 0 || value - all[index - 1]! > 0.3);
+  // A boundary closer than this to the one before it does not describe a shot: it describes a
+  // flicker, a flash frame or a fast pan. Clips that short are also rejected outright by the model,
+  // so admitting them costs a request and returns nothing.
+  const shortest = 1;
+  const kept = [starts[0]!];
+  for (const value of starts.slice(1)) {
+    if (value - kept.at(-1)! >= shortest) kept.push(value);
+  }
+  // The tail is a boundary too, and a final fragment belongs to the shot before it rather than
+  // becoming a shot of its own.
+  if (duration - kept.at(-1)! < shortest && kept.length > 1) kept.pop();
+  return [...kept, duration];
 }
 
 type Bounds = { readonly start: number; readonly end: number; readonly group: number; readonly part: number; readonly parts: number };
