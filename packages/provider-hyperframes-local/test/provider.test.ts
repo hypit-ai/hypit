@@ -1,22 +1,22 @@
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { mediaTypes, verifyRenderedVisual } from "@narratage/media";
-import type { CompositableSurfaceRef, RenderedVisual } from "@narratage/media";
-import { sealProgramSpace } from "@narratage/program-space";
-import { sealComposition, sealVisualTrack } from "@narratage/composition";
+import { mediaTypes, verifyRenderedVisual } from "@hypit/media";
+import type { CompositableSurfaceRef, RenderedVisual } from "@hypit/media";
+import { sealProgramSpace } from "@hypit/program-space";
+import { sealComposition, sealVisualTrack } from "@hypit/composition";
 import assert from "node:assert/strict";
-import { MemoryArtifactStore, EndpointRegistry } from "@narratage/driver-node";
-import type { EndpointRegistration } from "@narratage/driver-node";
-import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";
-import { compileHyperframesDocument } from "@narratage/hyperframes";
-import { renderHyperframesCapabilities, hyperframesVisualRequest } from "@narratage/render-hyperframes";
-import { canonicalize } from "@narratage/protocol";
-import type { CanonicalValue, Need } from "@narratage/protocol";
+import { MemoryArtifactStore, EndpointRegistry } from "@hypit/driver-node";
+import type { EndpointRegistration } from "@hypit/driver-node";
+import type { ImmediateEndpointHandler } from "@hypit/endpoint-kit";
+import { compileHyperframesDocument } from "@hypit/hyperframes";
+import { renderHyperframesCapabilities, hyperframesVisualRequest } from "@hypit/render-hyperframes";
+import { canonicalize } from "@hypit/protocol";
+import type { CanonicalValue, Need } from "@hypit/protocol";
 
 import { createLocalHyperframesProvider } from "../src/index.js";
 import { localHyperframesBrowserProgram } from "../src/program.js";
 
-const liveEnabled = process.env.NARRATAGE_BROWSER_TESTS === "1";
+const liveEnabled = process.env.HYPIT_BROWSER_TESTS === "1";
 const hasFfprobe = spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
 
 function documentFixture(surface?: CompositableSurfaceRef) {
@@ -25,7 +25,7 @@ function documentFixture(surface?: CompositableSurfaceRef) {
     frameRate: { numerator: 12, denominator: 1 },
   });
   const track = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: "provider-fixture",
     presents: [{
       id: "card",

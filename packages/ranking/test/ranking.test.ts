@@ -3,14 +3,14 @@ import test from "node:test";
 import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { createResolvedClosure } from "@narratage/core";
-import type { FontArtifactRef, SynchronizedMedia } from "@narratage/media";
-import { mediaTypes } from "@narratage/media";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import { sealProgramSpace } from "@narratage/program-space";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import { sealSpatialFrame } from "@narratage/spatial";
-import type { SvsRecipe } from "@narratage/svs";
+import { createResolvedClosure } from "@hypit/core";
+import type { FontArtifactRef, SynchronizedMedia } from "@hypit/media";
+import { mediaTypes } from "@hypit/media";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import { sealProgramSpace } from "@hypit/program-space";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { sealSpatialFrame } from "@hypit/spatial";
+import type { SvsRecipe } from "@hypit/svs";
 
 import {
   appendColumnItem,
@@ -58,7 +58,7 @@ import {
   rankingProducers,
   rankingTypes,
   sealRankingHeader,
-} from "@narratage/ranking";
+} from "@hypit/ranking";
 import type {
   ColumnItemSpec,
   RankingHeader,
@@ -67,19 +67,19 @@ import type {
   TierBoardItemSpec,
   TopThreeItemSpec,
   TypewriterItemSpec,
-} from "@narratage/ranking";
-import { narrativeTypes } from "@narratage/narrative";
-import { programSpaceTypes } from "@narratage/program-space";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { spatialTypes } from "@narratage/spatial";
-import { svsRecipeType } from "@narratage/svs";
-import { sealText, textManifest, textTypes } from "@narratage/text";
+} from "@hypit/ranking";
+import { narrativeTypes } from "@hypit/narrative";
+import { programSpaceTypes } from "@hypit/program-space";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import { spatialTypes } from "@hypit/spatial";
+import { svsRecipeType } from "@hypit/svs";
+import { sealText, textManifest, textTypes } from "@hypit/text";
 import type {
   StructuredElement,
   StructuredNode,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 const space = sealProgramSpace({
   durationSec: 8,

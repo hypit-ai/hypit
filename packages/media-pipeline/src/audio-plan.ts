@@ -1,8 +1,8 @@
-import { programFrameSampleBoundary, programSpaceFrameCount } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { assertCompositionIdentity } from "@narratage/composition";
-import type { Composition } from "@narratage/composition";
-import { canonicalize, isDigest } from "@narratage/protocol";
+import { programFrameSampleBoundary, programSpaceFrameCount } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { assertCompositionIdentity } from "@hypit/composition";
+import type { Composition } from "@hypit/composition";
+import { canonicalize, isDigest } from "@hypit/protocol";
 
 import type { AudioProgramPlan } from "./types.js";
 

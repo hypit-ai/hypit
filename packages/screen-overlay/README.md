@@ -1,4 +1,4 @@
-# `@narratage/screen-overlay`
+# `@hypit/screen-overlay`
 
 Official provider-free self-contained screen-paint package.
 

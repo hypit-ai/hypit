@@ -2,20 +2,20 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
-import { artifactTypes } from "@narratage/artifact";
-import { EndpointRegistry, MemoryArtifactStore } from "@narratage/driver-node";
+import { artifactTypes } from "@hypit/artifact";
+import { EndpointRegistry, MemoryArtifactStore } from "@hypit/driver-node";
 import {
   gptImageDenoiseV1,
   sealImageTransformProgram,
-} from "@narratage/image-transform";
-import type { ImageTransformProgram } from "@narratage/image-transform";
+} from "@hypit/image-transform";
+import type { ImageTransformProgram } from "@hypit/image-transform";
 import {
   createLocalOpenCvImageProvider,
   localOpenCvImageProviderModuleRef,
-} from "@narratage/provider-image-opencv-local";
-import { canonicalize } from "@narratage/protocol";
-import type { BlobRef, Need } from "@narratage/protocol";
-import { rasterCapabilities } from "@narratage/raster";
+} from "@hypit/provider-image-opencv-local";
+import { canonicalize } from "@hypit/protocol";
+import type { BlobRef, Need } from "@hypit/protocol";
+import { rasterCapabilities } from "@hypit/raster";
 
 import { resolveLocalOpenCvDeployment } from "../src/deployment.js";
 import { localOpenCvProgram } from "../src/program.js";
@@ -86,8 +86,8 @@ test("managed and external OpenCV deployments never mix their interpreters", () 
   assert.equal(localOpenCvProgram(externalContext).prepare, undefined);
 });
 
-const liveEnabled = process.env.NARRATAGE_OPENCV_TESTS === "1";
-const openCvPython = process.env.NARRATAGE_OPENCV_PYTHON ?? "python3";
+const liveEnabled = process.env.HYPIT_OPENCV_TESTS === "1";
+const openCvPython = process.env.HYPIT_OPENCV_PYTHON ?? "python3";
 const hasOpenCv = spawnSync(openCvPython, ["-c", "import cv2, numpy"], { stdio: "ignore" }).status === 0;
 
 test("the local Provider returns only a new image BlobArtifact", {

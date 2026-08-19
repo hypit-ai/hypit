@@ -1,4 +1,4 @@
-import type { ModuleRef } from "@narratage/protocol";
+import type { ModuleRef } from "@hypit/protocol";
 
 import type {
   RawSurfaceDeclaration,

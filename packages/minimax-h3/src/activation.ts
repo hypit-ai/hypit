@@ -1,8 +1,8 @@
-import { createMarkupSurfaceHostFacet } from "@narratage/markup";
+import { createMarkupSurfaceHostFacet } from "@hypit/markup";
 import { minimaxH3Component, minimaxH3Manifest, minimaxH3ModuleRef,
   minimaxH3MarkupSurfaces } from "./index.js";
 import { decodeMinimaxFrameVideoSurface, decodeMinimaxReferenceVideoSurface, decodeMinimaxTextVideoSurface } from "./surface.js";
-export const narratagePackage = { format: "narratage.node-package@1" as const, modules: [{ manifest: minimaxH3Manifest }], components: [minimaxH3Component], hostFacets: [
+export const hypitPackage = { format: "hypit.node-package@1" as const, modules: [{ manifest: minimaxH3Manifest }], components: [minimaxH3Component], hostFacets: [
   createMarkupSurfaceHostFacet({ module: minimaxH3ModuleRef,
     declaration: minimaxH3MarkupSurfaces.find((item) => item.name === "text-video")!, handler: decodeMinimaxTextVideoSurface }),
   createMarkupSurfaceHostFacet({ module: minimaxH3ModuleRef,
@@ -10,4 +10,4 @@ export const narratagePackage = { format: "narratage.node-package@1" as const, m
   createMarkupSurfaceHostFacet({ module: minimaxH3ModuleRef,
     declaration: minimaxH3MarkupSurfaces.find((item) => item.name === "reference-video")!, handler: decodeMinimaxReferenceVideoSurface }),
 ] };
-export default narratagePackage;
+export default hypitPackage;

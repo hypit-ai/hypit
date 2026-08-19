@@ -21,7 +21,7 @@ import {
   narrativeSelectionType,
   narrativeType,
 } from "./manifest.js";
-import { textTypes } from "@narratage/text";
+import { textTypes } from "@hypit/text";
 import { parseScript } from "./parser.js";
 import type { ScriptSurfaceInput, ScriptSurfaceOutput } from "./types.js";
 

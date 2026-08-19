@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/provider-hyperframes-local",
+  "name": "@hypit/provider-hyperframes-local",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,24 +7,24 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/hyperframes": "workspace:*",
-    "@narratage/media": "workspace:*",
-    "@narratage/media-execution": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/render-hyperframes": "workspace:*",
-    "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-kit": "workspace:*",
-    "@narratage/runtime-host-node": "workspace:*",
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/hyperframes": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/media-execution": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/render-hyperframes": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*",
+    "@hypit/runtime-host-node": "workspace:*",
     "hyperframes": "0.7.101"
   },
   "devDependencies": {
-    "@narratage/composition": "workspace:*",
-    "@narratage/driver-node": "workspace:*",
-    "@narratage/program-space": "workspace:*"
+    "@hypit/composition": "workspace:*",
+    "@hypit/driver-node": "workspace:*",
+    "@hypit/program-space": "workspace:*"
   }
 }

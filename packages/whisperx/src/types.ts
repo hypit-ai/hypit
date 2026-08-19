@@ -1,4 +1,4 @@
-import type { SpeechEvidenceAudio } from "@narratage/speech";
+import type { SpeechEvidenceAudio } from "@hypit/speech";
 
 export type WhisperXAlignmentRequest = {
   readonly audio: SpeechEvidenceAudio["artifact"];

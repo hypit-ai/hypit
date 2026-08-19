@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/caption-fine",
+  "name": "@hypit/caption-fine",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,23 +7,23 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/caption": "workspace:*",
-    "@narratage/component-kit": "workspace:*",
-    "@narratage/composition": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/media": "workspace:*",
-    "@narratage/narrative": "workspace:*",
-    "@narratage/program-space": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/semantic-map": "workspace:*",
-    "@narratage/svs": "workspace:*",
-    "@narratage/markup": "workspace:*"
+    "@hypit/caption": "workspace:*",
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/composition": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/narrative": "workspace:*",
+    "@hypit/program-space": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/semantic-map": "workspace:*",
+    "@hypit/svs": "workspace:*",
+    "@hypit/markup": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/script": "workspace:*"
+    "@hypit/script": "workspace:*"
   }
 }

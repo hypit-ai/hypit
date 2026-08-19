@@ -10,9 +10,9 @@ and the spoken words must be measured against the actual audio to create a timin
 steps produce the **ProgramSpace** and **SemanticMap** that every downstream component depends on.
 
 ```svml
-<import as="speech" from="@narratage/speech-spine@1"/>
-<import as="whisperx" from="@narratage/whisperx@1"/>
-<import as="space" from="@narratage/spatial@1"/>
+<import as="speech" from="@hypit/speech-spine@1"/>
+<import as="whisperx" from="@hypit/whisperx@1"/>
+<import as="space" from="@hypit/spatial@1"/>
 <import as="studio" source="./studio.svs"/>
 ```
 
@@ -179,9 +179,9 @@ and do not reinterpret how each point was obtained.
 The complete timing stage, from generated takes to map and space:
 
 ```svml
-<import as="speech" from="@narratage/speech-spine@1"/>
-<import as="whisperx" from="@narratage/whisperx@1"/>
-<import as="space" from="@narratage/spatial@1"/>
+<import as="speech" from="@hypit/speech-spine@1"/>
+<import as="whisperx" from="@hypit/whisperx@1"/>
+<import as="space" from="@hypit/spatial@1"/>
 <import as="studio" source="./studio.svs"/>
 
 <!-- Assemble takes in program order -->

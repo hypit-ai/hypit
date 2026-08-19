@@ -1,29 +1,29 @@
 import { readFile, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-import { collectNodePackageComponents, loadNodePackageSelection } from "@narratage/package-loader-node";
-import type { NodePackageSelectionRequest } from "@narratage/package-loader-node";
-import { canonicalize } from "@narratage/protocol";
-import type { CanonicalValue, CapabilityRef } from "@narratage/protocol";
+import { collectNodePackageComponents, loadNodePackageSelection } from "@hypit/package-loader-node";
+import type { NodePackageSelectionRequest } from "@hypit/package-loader-node";
+import { canonicalize } from "@hypit/protocol";
+import type { CanonicalValue, CapabilityRef } from "@hypit/protocol";
 import {
   CompositeCredentialStore,
-} from "@narratage/runtime";
-import type { ArtifactStore, CredentialStore } from "@narratage/runtime";
+} from "@hypit/runtime";
+import type { ArtifactStore, CredentialStore } from "@hypit/runtime";
 import {
   isRuntimeAdapterHostFacet,
   runtimeArtifactStoreAdapterHostAbi,
   runtimeCredentialStoreAdapterHostAbi,
   runtimeEndpointAdapterHostAbi,
   RuntimeAdapterRegistry,
-} from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
 import type {
   ManagedProgram,
   ManagedProgramState,
   RuntimeDoctorDiagnostic,
   RuntimeEndpointActivation,
   RuntimeOpened,
-} from "@narratage/runtime-kit";
-import { SqliteRuntimeState } from "@narratage/store-sqlite";
+} from "@hypit/runtime-kit";
+import { SqliteRuntimeState } from "@hypit/store-sqlite";
 
 import { createLocalRuntime } from "./runtime.js";
 import {
@@ -46,7 +46,7 @@ export type RuntimeConfigEntry = {
 };
 
 export type RuntimeConfigDocument = {
-  readonly format: "narratage.runtime-profile@1";
+  readonly format: "hypit.runtime-profile@1";
   readonly dataRoot: string;
   readonly artifacts: RuntimeConfigEntry;
   readonly credentials: readonly RuntimeConfigEntry[];
@@ -118,12 +118,12 @@ function entries(value: unknown, subject: string, poolAllowed = false): readonly
 export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   const item = object(value, "$runtime");
   exactKeys(item, ["format", "runtime"], "$runtime");
-  if (item.format !== "narratage.runtime-profile@1") {
-    throw new Error("$runtime.format must be narratage.runtime-profile@1");
+  if (item.format !== "hypit.runtime-profile@1") {
+    throw new Error("$runtime.format must be hypit.runtime-profile@1");
   }
   const runtime = object(item.runtime, "$runtime.runtime");
   exactKeys(runtime, ["use", "config"], "$runtime.runtime");
-  if (runtime.use !== "@narratage/runtime-local") {
+  if (runtime.use !== "@hypit/runtime-local") {
     throw new Error(`Local Runtime loader cannot activate ${String(runtime.use)}`);
   }
   const config = object(runtime.config, "$runtime.runtime.config");
@@ -134,7 +134,7 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   const ids = [...credentials, ...endpoints].map((value) => value.instance);
   if (new Set(ids).size !== ids.length) throw new Error("$runtime repeats a Runtime instance id");
   return {
-    format: "narratage.runtime-profile@1",
+    format: "hypit.runtime-profile@1",
     dataRoot: requiredString(config.dataRoot, "$runtime.runtime.config.dataRoot"),
     artifacts,
     credentials,
@@ -388,7 +388,7 @@ export async function doctorRuntimeConfig(
             message: `${slot.label} for Endpoint ${slot.endpoint} is not configured. ${
               slot.ref.store === "env"
                 ? `Set ${slot.ref.key} in this process environment.`
-                : `Configure it with: narratage auth login ${slot.endpoint} --runtime ${absolute}`}`,
+                : `Configure it with: hypit auth login ${slot.endpoint} --runtime ${absolute}`}`,
             subject: `${slot.endpoint}.${slot.slot}`,
           });
         }

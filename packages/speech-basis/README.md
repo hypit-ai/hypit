@@ -1,4 +1,4 @@
-# `@narratage/speech-basis`
+# `@hypit/speech-basis`
 
 Reference Product/Projection package for an atomic speech take.
 
@@ -18,6 +18,6 @@ imports without a Driver or Runtime source change. The component has no Provider
 Artifact access, queue or credentials.
 
 The package intentionally publishes no Type validators: it does not own any of its input or output
-Types. `@narratage/speech`, `@narratage/program-space` and `@narratage/composition` remain the
+Types. `@hypit/speech`, `@hypit/program-space` and `@hypit/composition` remain the
 semantic owners of `SpeechBasis`, `ProgramSpace` and the generic Track Types, and supply any owner
 validators required by those contracts.

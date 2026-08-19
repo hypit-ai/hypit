@@ -2,9 +2,9 @@ import type {
   VisualSamplingRational,
   VisualSamplingSegment,
   VisualTimedSampling,
-} from "@narratage/composition";
-import { assertProgramSpaceIdentity } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
+} from "@hypit/composition";
+import { assertProgramSpaceIdentity } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
 
 import type { MediaVisualOccupancy, MediaVisualTrim } from "./types.js";
 

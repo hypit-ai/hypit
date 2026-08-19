@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { artifactTypes } from "@narratage/artifact";
-import { parseStructuredElement } from "@narratage/markup";
-import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@narratage/markup";
-import { textTypes } from "@narratage/text";
+import { artifactTypes } from "@hypit/artifact";
+import { parseStructuredElement } from "@hypit/markup";
+import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/markup";
+import { textTypes } from "@hypit/text";
 
 import gptImageNodePackage from "../src/activation.js";
 import {
@@ -87,11 +87,11 @@ test("clean GPT Image Surface adds the official denoise as one visible downstrea
 
 test("the physical package carries both independently importable Surface implementations", () => {
   assert.deepEqual([
-    { name: "@narratage/gpt-image", surfaces: gptImageMarkupSurfaces.map((surface) => surface.tag) },
-    { name: "@narratage/gpt-image/clean", surfaces: gptImageCleanMarkupSurfaces.map((surface) => surface.tag) },
+    { name: "@hypit/gpt-image", surfaces: gptImageMarkupSurfaces.map((surface) => surface.tag) },
+    { name: "@hypit/gpt-image/clean", surfaces: gptImageCleanMarkupSurfaces.map((surface) => surface.tag) },
   ], [
-    { name: "@narratage/gpt-image", surfaces: ["Image"] },
-    { name: "@narratage/gpt-image/clean", surfaces: ["Image"] },
+    { name: "@hypit/gpt-image", surfaces: ["Image"] },
+    { name: "@hypit/gpt-image/clean", surfaces: ["Image"] },
   ]);
   assert.equal(gptImageNodePackage.hostFacets.length, 2);
 });

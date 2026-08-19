@@ -1,8 +1,8 @@
-import { artifactTypes } from "@narratage/artifact";
+import { artifactTypes } from "@hypit/artifact";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import { assertFontArtifactRef } from "./render.js";
 import { mediaTypes } from "./manifest.js";

@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/workspace-fs-node",
+  "name": "@hypit/workspace-fs-node",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -8,8 +8,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@narratage/workspace": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/source": "workspace:*"
+    "@hypit/workspace": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/source": "workspace:*"
   }
 }

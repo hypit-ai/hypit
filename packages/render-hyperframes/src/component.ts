@@ -1,5 +1,5 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { StoredValue } from "@narratage/protocol";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { StoredValue } from "@hypit/protocol";
 
 import { hyperframesVisualRequest } from "./product.js";
 import { renderHyperframesProducers } from "./manifest.js";

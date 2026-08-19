@@ -1,15 +1,15 @@
-import { artifactDependency, artifactTypes } from "@narratage/artifact";
-import { compositionDependency, compositionTypes } from "@narratage/composition";
-import { fontArtifactSchema, mediaDependency } from "@narratage/media";
-import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
-import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
-import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
-import { spatialDependency, spatialFrameSchema, spatialTypes } from "@narratage/spatial";
-import { temporalDependency } from "@narratage/temporal";
-import { textDependency, textTypes } from "@narratage/text";
+import { artifactDependency, artifactTypes } from "@hypit/artifact";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
+import { fontArtifactSchema, mediaDependency } from "@hypit/media";
+import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
+import { temporalDependency } from "@hypit/temporal";
+import { textDependency, textTypes } from "@hypit/text";
 
-export const commentStickerModuleRef = { name: "@narratage/comment-sticker", version: "1" } as const;
+export const commentStickerModuleRef = { name: "@hypit/comment-sticker", version: "1" } as const;
 
 export const commentStickerTypes = {
   header: { module: commentStickerModuleRef, name: "CommentStickerHeader" },
@@ -147,7 +147,7 @@ export const commentStickerMarkupSurfaces = [
 
 
 export const commentStickerManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: commentStickerModuleRef.name,
   version: commentStickerModuleRef.version,
   dependencies: [artifactDependency, narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, mediaDependency, compositionDependency, textDependency],

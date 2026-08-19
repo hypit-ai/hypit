@@ -11,11 +11,11 @@ that flow into the timing and track stages downstream.
 Every component shown here must be imported by its package specifier before use:
 
 ```svml
-<import as="media" from="@narratage/media@1"/>
-<import as="mediaop" from="@narratage/media-pipeline@1"/>
-<import as="estimate" from="@narratage/estimate@1"/>
-<import as="text" from="@narratage/text@1"/>
-<import as="seedance" from="@narratage/seedance@1"/>
+<import as="media" from="@hypit/media@1"/>
+<import as="mediaop" from="@hypit/media-pipeline@1"/>
+<import as="estimate" from="@hypit/estimate@1"/>
+<import as="text" from="@hypit/text@1"/>
+<import as="seedance" from="@hypit/seedance@1"/>
 <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 ```
 
@@ -104,7 +104,7 @@ A reusable literal `Text` value. It is model-neutral and can feed Seedance, GPT 
 declared text port.
 
 ```svml
-<import as="text" from="@narratage/text@1"/>
+<import as="text" from="@hypit/text@1"/>
 
 <text:Value id="alice-direction">
   Locked medium close-up. Alice speaks directly to camera in a quiet daylight studio.
@@ -197,24 +197,24 @@ Runtime Endpoints for these exact Needs; neither changes the author graph.
 
 ## Seedance semantic Kits
 
-`@narratage/seedance-kits` contains seven data-only Text Templates. A Kit is not a model wrapper: use
+`@hypit/seedance-kits` contains seven data-only Text Templates. A Kit is not a model wrapper: use
 generic `text:Render` to produce the prompt, then connect that Text and the real media references to
 the low-level Seedance Surface.
 
 Copy only the selected Kit `.svs` files into the video project's `./kits/` directory. Import the
 vendored project copy so the Kit bytes remain inside the Source Closure; do not reach back into a
-Narratage repository checkout from project source.
+Hypit repository checkout from project source.
 
 Read the
-[`@narratage/seedance-kits` guide](https://github.com/hypit-ai/narratage/blob/main/packages/seedance-kits/README.md)
-and the [selected Kit source](https://github.com/hypit-ai/narratage/tree/main/packages/seedance-kits/kits)
+[`@hypit/seedance-kits` guide](https://github.com/hypit-ai/hypit/blob/main/packages/seedance-kits/README.md)
+and the [selected Kit source](https://github.com/hypit-ai/hypit/tree/main/packages/seedance-kits/kits)
 before authoring. Use an official Kit whenever its format matches. Keep generation instructions and
 dynamic prompt slots in English; preserve the authored language only for dialogue that must be
 spoken verbatim. Write a freeform English prompt only when none of the seven Kits applies.
 
 ```svml
-<import as="text" from="@narratage/text@1"/>
-<import as="seedance" from="@narratage/seedance@1"/>
+<import as="text" from="@hypit/text@1"/>
+<import as="seedance" from="@hypit/seedance@1"/>
 <import as="broll-kit" source="./kits/broll-v1.svs"/>
 
 <text:Value id="product-story">
@@ -263,8 +263,8 @@ Select framing, edit, pacing, performance, reaction and gesture through an SVS R
 the authored dialogue and optional per-take action as dynamic Text edges:
 
 ```svml
-<import as="text" from="@narratage/text@1"/>
-<import as="seedance" from="@narratage/seedance@1"/>
+<import as="text" from="@hypit/text@1"/>
+<import as="seedance" from="@hypit/seedance@1"/>
 <import as="interview-kit" source="./kits/street-interview-v1.svs"/>
 
 <text:Value id="interview-action">
@@ -298,8 +298,8 @@ Template, the project's Recipe and the per-take dialogue/action are assembled by
 module. The result enters Seedance through the same explicit `prompt` edge as any other generation.
 
 ```svml
-<import as="text" from="@narratage/text@1"/>
-<import as="seedance" from="@narratage/seedance@1"/>
+<import as="text" from="@hypit/text@1"/>
+<import as="seedance" from="@hypit/seedance@1"/>
 <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 
 <text:Value id="hook-action">
@@ -331,10 +331,10 @@ reference media or generation endpoint.
 A two-take setup with estimated durations feeding explicit Text assembly and Seedance generation:
 
 ```svml
-<import as="media" from="@narratage/media@1"/>
-<import as="estimate" from="@narratage/estimate@1"/>
-<import as="text" from="@narratage/text@1"/>
-<import as="seedance" from="@narratage/seedance@1"/>
+<import as="media" from="@hypit/media@1"/>
+<import as="estimate" from="@hypit/estimate@1"/>
+<import as="text" from="@hypit/text@1"/>
+<import as="seedance" from="@hypit/seedance@1"/>
 <import as="studio" source="./studio.svs"/>
 <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 

@@ -1,4 +1,4 @@
-# `@narratage/video-cli`
+# `@hypit/video-cli`
 
 Official video command application. It selects the Markup compiler Host, but deliberately carries
 no built-in author, Run, Provider or Store package.
@@ -11,22 +11,22 @@ From the repository:
 
 ```bash
 cd path/to/project
-narratage runtime use narratage.runtime.json
-narratage check main.svml
-narratage plan build.svrun
-narratage build build.svrun --follow
-narratage status <build-id> --watch
-narratage builds
-narratage history [source-output-name] [--source ./main.svml]
-narratage inspect <build-id>
-narratage get <build-id> --name final.video --to ./final.mp4
-narratage cancel <build-id>
-narratage doctor
-narratage gc
+hypit runtime use hypit.runtime.json
+hypit check main.svml
+hypit plan build.svrun
+hypit build build.svrun --follow
+hypit status <build-id> --watch
+hypit builds
+hypit history [source-output-name] [--source ./main.svml]
+hypit inspect <build-id>
+hypit get <build-id> --name final.video --to ./final.mp4
+hypit cancel <build-id>
+hypit doctor
+hypit gc
 ```
 
 Link the repository command once with `npm link`. It resolves its own TypeScript loader and CLI, so
-it neither invokes pnpm per command nor requires a separate project to contain Narratage's
+it neither invokes pnpm per command nor requires a separate project to contain Hypit's
 `package.json`.
 
 `--workspace` is only the Source Workspace containment boundary. `--asset-root` may additionally admit
@@ -82,10 +82,10 @@ output. Upstream work behind the selected Candidate is pruned by reverse reachab
 unbound reachable output follows the ordinary graph. This is a new Build identity and never resumes
 or copies the prior Build's outstanding Commands.
 
-`@narratage/package-loader-node` loads explicitly selected installed implementation packages and checks
+`@hypit/package-loader-node` loads explicitly selected installed implementation packages and checks
 their Module, Host-facet, Producer and Validator contributions. Frontends are ordinary
-`narratage.source-frontend@1` Host facets, so the Loader does not
+`hypit.source-frontend@1` Host facets, so the Loader does not
 select a syntax; each Source Header selects among installed Frontends. Run Fragment libraries enter
-only through the `narratage.run-fragment-host@1` facet. Source cannot
+only through the `hypit.run-fragment-host@1` facet. Source cannot
 install a package or activate Provider/Runtime authority. Arbitrary untrusted community execution
 remains absent until an isolated Worker and real permission boundary exist.

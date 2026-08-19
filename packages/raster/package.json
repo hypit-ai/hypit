@@ -1,14 +1,14 @@
 {
-  "name": "@narratage/raster",
+  "name": "@hypit/raster",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
   "exports": { ".": "./src/index.ts" },
-  "narratage": { "activation": "./src/activation.ts" },
+  "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@narratage/artifact": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/spatial": "workspace:*"
+    "@hypit/artifact": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/spatial": "workspace:*"
   }
 }

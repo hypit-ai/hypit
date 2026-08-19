@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { mkdir, open, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { CompositableSurfaceRef } from "@narratage/media";
-import type { BlobRef } from "@narratage/protocol";
+import type { CompositableSurfaceRef } from "@hypit/media";
+import type { BlobRef } from "@hypit/protocol";
 
 import { assertHyperframesDocument, materializeHyperframesHtml } from "./document.js";
 import type { HyperframesDocument } from "./types.js";

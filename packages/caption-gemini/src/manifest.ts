@@ -1,8 +1,8 @@
-import { captionManifest, captionModuleRef, captionTypes } from "@narratage/caption";
-import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
-import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef } from "@narratage/protocol";
+import { captionManifest, captionModuleRef, captionTypes } from "@hypit/caption";
+import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 
-export const captionGeminiModuleRef = { name: "@narratage/caption-gemini", version: "1" } as const;
+export const captionGeminiModuleRef = { name: "@hypit/caption-gemini", version: "1" } as const;
 export const captionGeminiTypes = {
   program: { module: captionGeminiModuleRef, name: "CaptionGeminiProgram" },
   request: { module: captionGeminiModuleRef, name: "CaptionGeminiRequest" },
@@ -24,7 +24,7 @@ export const captionGeminiMarkupSurfaces = [{
 
 
 export const captionGeminiManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: captionGeminiModuleRef.name,
   version: captionGeminiModuleRef.version,
   dependencies: [

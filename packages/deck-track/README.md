@@ -1,4 +1,4 @@
-# `@narratage/deck-track`
+# `@hypit/deck-track`
 
 The official, deliberately narrow depth-stack Deck author package.
 
@@ -7,7 +7,7 @@ relative-depth poses and one deterministic whole-collection reflow. Card pixels 
 Media layer lowerer, but Deck is not a Media mode and exports only an ordinary peer `VisualTrack`.
 
 ```xml
-<import as="copy" from="@narratage/text@1"/>
+<import as="copy" from="@hypit/text@1"/>
 
 <copy:Value id="proof-label">Evidence, not inference</copy:Value>
 <deck:Label id="proof-label-style" content={proof-label}

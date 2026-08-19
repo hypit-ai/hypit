@@ -1,13 +1,13 @@
-import { compositionDependency, compositionTypes } from "@narratage/composition";
-import { mediaDependency, mediaTypes } from "@narratage/media";
-import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
-import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { blobRefObjectSchema } from "@narratage/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
-import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
-import { temporalDependency } from "@narratage/temporal";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
+import { mediaDependency, mediaTypes } from "@hypit/media";
+import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import { blobRefObjectSchema } from "@hypit/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import { temporalDependency } from "@hypit/temporal";
 
-export const audioTrackModuleRef = { name: "@narratage/audio-track", version: "1" } as const;
+export const audioTrackModuleRef = { name: "@hypit/audio-track", version: "1" } as const;
 export const audioTrackTypes = {
   header: { module: audioTrackModuleRef, name: "AudioTrackHeader" },
   clipSpec: { module: audioTrackModuleRef, name: "AudioClipSpec" },
@@ -93,7 +93,7 @@ export const audioTrackMarkupSurfaces = [{
 
 
 export const audioTrackManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: audioTrackModuleRef.name,
   version: audioTrackModuleRef.version,
   dependencies: [mediaDependency, narrativeDependency, semanticMapDependency, programSpaceDependency, temporalDependency, compositionDependency],

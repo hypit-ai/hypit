@@ -1,20 +1,20 @@
-import { mediaTypes } from "@narratage/media";
-import type { FontArtifactRef, FontStackRef } from "@narratage/media";
-import { narrativeTypes } from "@narratage/narrative";
-import { programSpaceTypes } from "@narratage/program-space";
-import type { CanonicalValue, TypeRef } from "@narratage/protocol";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { spatialTypes } from "@narratage/spatial";
-import { svsRecipeType } from "@narratage/svs";
-import type { SvsRecipe } from "@narratage/svs";
-import { sealText, textTypes } from "@narratage/text";
+import { mediaTypes } from "@hypit/media";
+import type { FontArtifactRef, FontStackRef } from "@hypit/media";
+import { narrativeTypes } from "@hypit/narrative";
+import { programSpaceTypes } from "@hypit/program-space";
+import type { CanonicalValue, TypeRef } from "@hypit/protocol";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import { spatialTypes } from "@hypit/spatial";
+import { svsRecipeType } from "@hypit/svs";
+import type { SvsRecipe } from "@hypit/svs";
+import { sealText, textTypes } from "@hypit/text";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import { createRankingFragment } from "./fragment.js";
 import type { RankingFragmentItem, RankingFragmentSound } from "./fragment.js";

@@ -2,16 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { artifactManifest } from "@narratage/artifact";
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
-import { compositionManifest, compositionTypes, sealComposition, sealVisualTrack } from "@narratage/composition";
-import { createResolvedClosure, sealBuildRequest, start } from "@narratage/core";
-import { AuthorFrontendRegistry, compileSourceClosure, resolveCompiledSourceExport } from "@narratage/elaborator";
-import { compileHyperframesDocument } from "@narratage/hyperframes";
-import { mediaManifest } from "@narratage/media";
-import { narrativeManifest } from "@narratage/narrative";
-import { programSpaceDependency, programSpaceManifest, programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
-import type { ModuleManifest } from "@narratage/protocol";
+import { artifactManifest } from "@hypit/artifact";
+import { registerTypeValidatorFacets } from "@hypit/component-kit";
+import { compositionManifest, compositionTypes, sealComposition, sealVisualTrack } from "@hypit/composition";
+import { createResolvedClosure, sealBuildRequest, start } from "@hypit/core";
+import { AuthorFrontendRegistry, compileSourceClosure, resolveCompiledSourceExport } from "@hypit/elaborator";
+import { compileHyperframesDocument } from "@hypit/hyperframes";
+import { mediaManifest } from "@hypit/media";
+import { narrativeManifest } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceManifest, programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
+import type { ModuleManifest } from "@hypit/protocol";
 import {
   appendProgramScreenOverlay,
   createScreenOverlaySet,
@@ -25,16 +25,16 @@ import {
   screenOverlayProducers,
   sealScreenOverlayHeader,
   sealScreenOverlayItemSpec,
-} from "@narratage/screen-overlay";
-import type { ScreenOverlayComponent } from "@narratage/screen-overlay";
-import { semanticMapManifest } from "@narratage/semantic-map";
-import { speechEvidenceManifest } from "@narratage/speech-evidence";
-import { speechManifest } from "@narratage/speech";
-import { sealCanvasSpace, spatialComponent, spatialDependency, spatialManifest, spatialTypes } from "@narratage/spatial";
-import { temporalManifest } from "@narratage/temporal";
-import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@narratage/markup";
-import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
-import { visualIrManifest } from "@narratage/visual-ir";
+} from "@hypit/screen-overlay";
+import type { ScreenOverlayComponent } from "@hypit/screen-overlay";
+import { semanticMapManifest } from "@hypit/semantic-map";
+import { speechEvidenceManifest } from "@hypit/speech-evidence";
+import { speechManifest } from "@hypit/speech";
+import { sealCanvasSpace, spatialComponent, spatialDependency, spatialManifest, spatialTypes } from "@hypit/spatial";
+import { temporalManifest } from "@hypit/temporal";
+import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
+import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
+import { visualIrManifest } from "@hypit/visual-ir";
 
 const canvas = sealCanvasSpace({
   widthPx: 1080, heightPx: 1920,
@@ -101,7 +101,7 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
   const below = trackFor(components[1]!, 20);
   const above = { ...trackFor(components[0]!, 80), id: "screen-above" };
   const middle = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1", id: "middle",
+    visualIr: "hypit.visual-ir@1", id: "middle",
     presents: [{ id: "middle", span: { startFrame: 0, endFrameExclusive: 60 }, stacking: { order: 50, tieBreak: "middle" },
       elements: [{ id: "root", order: 0, kind: "box", style: [{ name: "background-color", value: "#112233" }] }] }],
   });
@@ -109,9 +109,9 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
     id: "stack", canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [above, middle, below],
   }), space);
-  const belowAt = document.html.indexOf('data-narratage-track-id="screen"');
-  const middleAt = document.html.indexOf('data-narratage-track-id="middle"');
-  const aboveAt = document.html.indexOf('data-narratage-track-id="screen-above"');
+  const belowAt = document.html.indexOf('data-hypit-track-id="screen"');
+  const middleAt = document.html.indexOf('data-hypit-track-id="middle"');
+  const aboveAt = document.html.indexOf('data-hypit-track-id="screen-above"');
   assert.ok(belowAt < middleAt && middleAt < aboveAt);
 });
 
@@ -135,7 +135,7 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
     outputs: [spatialTypes.canvas, programSpaceTypes.programSpace],
   } as const;
   const fixtureManifest: ModuleManifest = {
-    format: "narratage.module@1",
+    format: "hypit.module@1",
     name: fixtureModule.name,
     version: fixtureModule.version,
     dependencies: [spatialDependency, programSpaceDependency],
@@ -183,10 +183,10 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
     entry: {
       id: "/project/screen.svml",
       name: "screen.svml",
-      text: `<?svml using="@narratage/markup@1"?>
+      text: `<?svml using="@hypit/markup@1"?>
       <svml>
         <import as="fixture" from="example.screen-inputs@1"/>
-        <import as="screen" from="@narratage/screen-overlay@1"/>
+        <import as="screen" from="@hypit/screen-overlay@1"/>
         <fixture:Inputs/>
         <screen:Track id="screen-fx" canvas={canvas} space={space}>
           <screen:Flash during="program" z="70" color="#ffffff" intensity="0.9" attack="2" hold="3" decay="5"/>

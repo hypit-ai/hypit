@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/provider-media-aws-lambda",
+  "name": "@hypit/provider-media-aws-lambda",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,20 +7,20 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/artifact": "workspace:*",
-    "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/media": "workspace:*",
-    "@narratage/media-pipeline": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/runtime-kit": "workspace:*",
-    "@narratage/speech": "workspace:*",
-    "@narratage/transport-aws-lambda": "workspace:*"
+    "@hypit/artifact": "workspace:*",
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/media-pipeline": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*",
+    "@hypit/speech": "workspace:*",
+    "@hypit/transport-aws-lambda": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/driver-node": "workspace:*"
+    "@hypit/driver-node": "workspace:*"
   }
 }

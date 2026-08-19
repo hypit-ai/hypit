@@ -13,7 +13,7 @@ immutable typed Records that consuming components validate and interpret.
 ## Basic syntax
 
 ```svs
-<?svml using="@narratage/svs@1"?>
+<?svml using="@hypit/svs@1"?>
 
 <sheet version="1" id="studio">
   film.vertical {
@@ -28,7 +28,7 @@ immutable typed Records that consuming components validate and interpret.
 </sheet>
 ```
 
-- The processing instruction `<?svml using="@narratage/svs@1"?>` selects the SVS parser.
+- The processing instruction `<?svml using="@hypit/svs@1"?>` selects the SVS parser.
 - The `<sheet>` element wraps all declarations. The `id` attribute becomes the top-level namespace.
 - Each block is `namespace.name { ... }` with `;`-terminated key-value properties.
 - Comments use `/* ... */`.
@@ -352,7 +352,7 @@ SVS describes typography policy, but it does not choose or open font bytes. For 
 import the private pre-release catalog and select only the faces the Author Graph uses:
 
 ```svml
-<import as="fonts" from="@narratage/fonts-open@1"/>
+<import as="fonts" from="@hypit/fonts-open@1"/>
 
 <fonts:Stack id="caption-fonts" family="inter" weight="600" style="normal" emoji="color">
   <fonts:Fallback family="noto-sans-sc" weight="600" style="normal"/>
@@ -387,7 +387,7 @@ For a symbol with both text and Emoji presentation, write the authored Unicode E
 Brand and custom fonts remain explicit author assets rather than additions to the shared catalog:
 
 ```svml
-<import as="media" from="@narratage/media@1"/>
+<import as="media" from="@hypit/media@1"/>
 <media:Font id="brand" src="./assets/Brand-Semibold.woff2"
   weight="600" style="normal"/>
 ```
@@ -397,7 +397,7 @@ Brand and custom fonts remain explicit author assets rather than additions to th
 A complete `studio.svs` file for a four-take talking-head project:
 
 ```svs
-<?svml using="@narratage/svs@1"?>
+<?svml using="@hypit/svs@1"?>
 
 <sheet version="1" id="studio">
   speech.normal {

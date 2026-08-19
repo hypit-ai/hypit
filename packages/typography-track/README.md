@@ -1,4 +1,4 @@
-# `@narratage/typography-track`
+# `@hypit/typography-track`
 
 Official provider-free Text overlay package. It owns a typed `TypographyTrackProgram` and lowers every
 item into an independently timed and stacked Present in the public VisualTrack contract.
@@ -8,8 +8,8 @@ bounded rich documents, exact font stacks, ordered Paint, frame/content/paragrap
 grapheme boxes, deterministic overflow and Unicode-aware local motion.
 
 An item spanning the complete ProgramSpace is a persistent overlay; a shorter item is timed. They
-are not different Track kinds. Timing is projected through `@narratage/temporal`, and placement is
-an explicit `SpatialFrame` input from `@narratage/spatial`; neither is hidden in the appearance
+are not different Track kinds. Timing is projected through `@hypit/temporal`, and placement is
+an explicit `SpatialFrame` input from `@hypit/spatial`; neither is hidden in the appearance
 Recipe. The package exposes semantic typography rather than a rendering callback, arbitrary CSS or
 cross-Track access.
 
@@ -22,8 +22,8 @@ closed and materialize through an independent package.
 Content has two explicit author forms:
 
 ```svml
-<import as="copy" from="@narratage/text@1"/>
-<import as="typo" from="@narratage/typography-track@1"/>
+<import as="copy" from="@hypit/text@1"/>
+<import as="typo" from="@hypit/typography-track@1"/>
 
 <copy:Value id="headline">Intent, not timelines.</copy:Value>
 

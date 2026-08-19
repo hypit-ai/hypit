@@ -9,9 +9,9 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 
-import { compileSourceClosure, resolveCompiledSourceExport } from "@narratage/elaborator";
-import type { Digest } from "@narratage/protocol";
-import { createRecordAdmitter } from "@narratage/validation";
+import { compileSourceClosure, resolveCompiledSourceExport } from "@hypit/elaborator";
+import type { Digest } from "@hypit/protocol";
+import { createRecordAdmitter } from "@hypit/validation";
 
 import { officialVideoDomain } from "../official-video.js";
 import { createObserver } from "./observe.js";

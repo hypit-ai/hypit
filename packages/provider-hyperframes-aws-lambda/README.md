@@ -1,7 +1,7 @@
-# `@narratage/provider-hyperframes-aws-lambda`
+# `@hypit/provider-hyperframes-aws-lambda`
 
 Asynchronous AWS Step Functions/Lambda implementation of the exact
-`@narratage/render-hyperframes#render-visual` capability.
+`@hypit/render-hyperframes#render-visual` capability.
 
 The Endpoint stages the immutable `HyperframesDocument` with the shared
 `stageHyperframesProject()` layout, uploads that content-addressed site, starts one distributed

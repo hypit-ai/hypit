@@ -1,4 +1,4 @@
-# `@narratage/transport-aws-lambda`
+# `@hypit/transport-aws-lambda`
 
 Low-level synchronous JSON invocation for Endpoint packages that execute work through AWS Lambda.
 It is deliberately not an Endpoint and declares no SVML capability.
@@ -12,7 +12,7 @@ Endpoint-specific code owns:
 - the function name, version/alias and retry semantics included in Endpoint configuration identity.
 
 The transport always uses `RequestResponse`. Lambda `Event` invocation has its own at-least-once
-queue and no immediate result/checkpoint, so treating it as an asynchronous Narratage Endpoint would be
+queue and no immediate result/checkpoint, so treating it as an asynchronous Hypit Endpoint would be
 misleading. An Endpoint may invoke a coordinator Lambda synchronously; that coordinator can submit
 long work and return a checkpoint which the Endpoint later polls through another synchronous call.
 

@@ -1,7 +1,7 @@
 import {
   maskSourceHeader,
   parseSourceHeader,
-} from "@narratage/source";
+} from "@hypit/source";
 
 import type {
   RunDocument,

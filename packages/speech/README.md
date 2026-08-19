@@ -1,4 +1,4 @@
-# `@narratage/speech`
+# `@hypit/speech`
 
 Public contracts for speech duration, assembled bases and alignment audio projections. SpeechBasis
 Segments use exact ProgramSpace frame boundaries. The separate SpeechEvidenceAudio contract carries

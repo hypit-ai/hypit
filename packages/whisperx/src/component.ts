@@ -1,7 +1,7 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { SpeechEvidenceAudio } from "@narratage/speech";
-import type { CanonicalValue, StoredValue } from "@narratage/protocol";
-import { canonicalize } from "@narratage/protocol";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { SpeechEvidenceAudio } from "@hypit/speech";
+import type { CanonicalValue, StoredValue } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 
 import { whisperXRequestForEvidenceAudio } from "./evidence.js";
 import { whisperXProducers } from "./manifest.js";

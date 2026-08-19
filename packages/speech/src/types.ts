@@ -1,6 +1,6 @@
-import type { ProgramSpace } from "@narratage/program-space";
-import type { BlobRef } from "@narratage/protocol";
-import type { ContentFit, IntrinsicExtent, SpatialFrame } from "@narratage/spatial";
+import type { ProgramSpace } from "@hypit/program-space";
+import type { BlobRef } from "@hypit/protocol";
+import type { ContentFit, IntrinsicExtent, SpatialFrame } from "@hypit/spatial";
 /** Positive seconds. The graph port's TypeRef already carries the SpeechDuration identity. */
 export type SpeechDuration = number;
 export type SpeechBasisSegment = {

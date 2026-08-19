@@ -1,4 +1,4 @@
-# `@narratage/endpoint-kit`
+# `@hypit/endpoint-kit`
 
 SDK for packages that fulfill exact external capabilities.
 

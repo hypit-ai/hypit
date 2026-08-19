@@ -4,18 +4,18 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
 import {
   diagnoseRuntimeExecutable,
   resolveRuntimeExecutable,
-} from "@narratage/runtime-host-node";
+} from "@hypit/runtime-host-node";
 
 import { createLocalHyperframesProvider } from "./provider.js";
 import type { HyperframesBrowserGpu, HyperframesQuality, HyperframesWorkers } from "./provider.js";
 import { localHyperframesBrowserProgram } from "./program.js";
 
 const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-hyperframes-local",
+  use: "@hypit/provider-hyperframes-local",
   activate(context) {
     if (context.pool === undefined) throw new Error("local HyperFrames Provider Pool is required");
     const config = runtimeConfigObject(context.config, "local HyperFrames");
@@ -83,9 +83,9 @@ const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [localHyperframesRuntimeAdapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

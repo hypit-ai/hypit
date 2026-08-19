@@ -1,3 +1,3 @@
-# `@narratage/speech-evidence`
+# `@hypit/speech-evidence`
 
 Provider-neutral acoustic and word-alignment observations. Evidence is not the authored semantic truth.

@@ -1,11 +1,11 @@
-import type { ModuleManifest, TypeRef, ValueSchema } from "@narratage/protocol";
+import type { ModuleManifest, TypeRef, ValueSchema } from "@hypit/protocol";
 
 export type ProgramSpace = {
   readonly durationSec: number;
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
 };
 
-export const programSpaceModuleRef = { name: "@narratage/program-space", version: "1" } as const;
+export const programSpaceModuleRef = { name: "@hypit/program-space", version: "1" } as const;
 export const programSpaceTypes = {
   programSpace: { module: programSpaceModuleRef, name: "ProgramSpace" },
 } satisfies Record<string, TypeRef>;
@@ -21,7 +21,7 @@ export const programSpaceSchema: ValueSchema = {
   },
 };
 export const programSpaceManifest: ModuleManifest = {
-  format: "narratage.module@1", name: programSpaceModuleRef.name, version: programSpaceModuleRef.version,
+  format: "hypit.module@1", name: programSpaceModuleRef.name, version: programSpaceModuleRef.version,
   dependencies: [], types: [{
     name: programSpaceTypes.programSpace.name,
   }],

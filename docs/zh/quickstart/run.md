@@ -10,25 +10,25 @@ Author Source 定义视频本身。Run Source 从中挑选要产出哪些公开�
 先为项目选择一次 Runtime：
 
 ```bash
-narratage runtime use narratage.runtime.json
+hypit runtime use hypit.runtime.json
 ```
 
 日常制作只需要这条短路径：
 
 ```bash
-narratage plan build.svrun
-narratage build build.svrun --follow
-narratage get <build-id> --name final.video --to output/final.mp4
+hypit plan build.svrun
+hypit build build.svrun --follow
+hypit get <build-id> --name final.video --to output/final.mp4
 ```
 
-快速开始只需链接一次仓库命令。此后本页所有命令都直接写作 `narratage`，在仓库外的视频项目中也一样。
+快速开始只需链接一次仓库命令。此后本页所有命令都直接写作 `hypit`，在仓库外的视频项目中也一样。
 
 只有 `build` 会真正提交工作。`plan` 是普通预览；`check` 用于编辑源码，`doctor` 用于配置和排查部署。它们都安全，但不是每次 Build 前必须重复的仪式。
 
 ```text
 main.svml          作者意图
 build.svrun        本次 Run 的 Target 与 Candidate 选择
-narratage.runtime.json  执行环境
+hypit.runtime.json  执行环境
 ```
 
 Run Source 与 Runtime Profile 不会悄悄改写视频。创作性的模型选择仍然留在 Author Source，或它显式导入的包里。
@@ -38,13 +38,13 @@ Run Source 与 Runtime Profile 不会悄悄改写视频。创作性的模型选�
 每个 `.svrun` 文件都以其处理指令开头：
 
 ```svml
-<?svml using="@narratage/run-markup@1"?>
+<?svml using="@hypit/run-markup@1"?>
 ```
 
 ### 最简 Run Source
 
 ```svml
-<?svml using="@narratage/run-markup@1"?>
+<?svml using="@hypit/run-markup@1"?>
 
 <svrun version="1">
   <author source="./main.svml"/>
@@ -75,12 +75,12 @@ Target 就是你希望这次 Build 产出的东西。它可以是一张生成的
 
 ## 复用结果
 
-Narratage 没有隐式缓存。复用结果是显式的运行图编写——你将历史 Record 声明为零输入 Candidate，并通过 Satisfaction 边将它们连接起来。
+Hypit 没有隐式缓存。复用结果是显式的运行图编写——你将历史 Record 声明为零输入 Candidate，并通过 Satisfaction 边将它们连接起来。
 
 生成图片或 Take 一经验收，就在下一份 `.svrun` 中用 `build-record` 与 `satisfy` 显式复用，并在启动付费下游工作前检查冻结 plan。Core 没有 Pin 状态或 fidelity 标签。
 
 ```svml
-<?svml using="@narratage/run-markup@1"?>
+<?svml using="@hypit/run-markup@1"?>
 
 <svrun version="1">
   <author source="./main.svml"/>
@@ -107,13 +107,13 @@ Narratage 没有隐式缓存。复用结果是显式的运行图编写——你�
 按照输出在各个历史 Build 冻结 Catalog 中的旧名字查询：
 
 ```bash
-narratage history hook-take.video
+hypit history hook-take.video
 ```
 
 `history` 只列出该 Build 确实产出过的公开 Logical Output。仅仅在源码中声明但没有运行出来的别名，以及不能作为 `build-record` Candidate 的 authored Record 别名，都不会混入结果。如果忘了旧名字，可以按 Catalog 当时记录的精确源码路径列出真正验收过的输出名：
 
 ```bash
-narratage history --source ./main.svml
+hypit history --source ./main.svml
 ```
 
 输出名只是某个不可变历史 Catalog 内供人查找的名字，不是产物身份。真正身份由历史 Core
@@ -126,7 +126,7 @@ Build、Logical Output 和 Record 摘要共同确定。假如当前源码把 `ho
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
-Narratage 永远不会猜测两个名字代表同一份作者意图。每次执行 `build` 都会得到一个新的
+Hypit 永远不会猜测两个名字代表同一份作者意图。每次执行 `build` 都会得到一个新的
 Build id，由 CLI 打印并由 Runtime 归档。源码身份绝不会重新认领旧 Build；后续 Run 只有在
 这里明确写出历史 Build id 时，才会复用它已经接受的结果。
 
@@ -158,7 +158,7 @@ Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本�
 本地文件就是最简单的零输入 Candidate：
 
 ```svml
-<file id="approved-opening" type="@narratage/artifact@1#BlobArtifact" from="./approved-opening.mp4" media-type="video/mp4"/>
+<file id="approved-opening" type="@hypit/artifact@1#BlobArtifact" from="./approved-opening.mp4" media-type="video/mp4"/>
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
@@ -171,11 +171,11 @@ Infrastructure 实例，再把实例暴露的 part 分配给 Runtime role，并�
 容量。Profile 不定义 Source Workspace 或 Author 包选择。
 
 ```bash
-narratage runtime use narratage.runtime.json
-narratage paths
+hypit runtime use hypit.runtime.json
+hypit paths
 ```
 
-`runtime use` 只写入 `.narratage/runtime`，不会启动 Worker、创建 Runtime 数据或修改已安装
+`runtime use` 只写入 `.hypit/runtime`，不会启动 Worker、创建 Runtime 数据或修改已安装
 包。Profile 结构和完整边界见 [Runtime](../guide/runtime.md)。
 ## 配置所选凭据
 
@@ -197,7 +197,7 @@ export KIE_API_KEY
 read -r -s MIMO_API_KEY
 export MIMO_API_KEY
 export GOOGLE_CLOUD_PROJECT="your-project-id"
-export GOOGLE_APPLICATION_CREDENTIALS_JSON="$(<"$HOME/.config/narratage/google-service-account.json")"
+export GOOGLE_APPLICATION_CREDENTIALS_JSON="$(<"$HOME/.config/hypit/google-service-account.json")"
 ```
 
 在 Windows PowerShell 中：
@@ -206,7 +206,7 @@ export GOOGLE_APPLICATION_CREDENTIALS_JSON="$(<"$HOME/.config/narratage/google-s
 $env:KIE_API_KEY = "your-key"
 $env:MIMO_API_KEY = "your-key"
 $env:GOOGLE_CLOUD_PROJECT = "your-project-id"
-$env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\narratage\google-service-account.json"
+$env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\hypit\google-service-account.json"
 ```
 
 不要把凭据写进 Author Source、Run Source、Runtime Profile 源文件或提交内容。`doctor` 会验证所需凭据是否存在，但不会打印秘密值。
@@ -225,29 +225,29 @@ pnpm install
 `runtime up` 会读取所选 Runtime Profile，并准备其中 Endpoint 声明的外部程序。只有 Profile 选择 WhisperX、OpenCV 等本地 Python 程序时，才需要先安装
 [`uv`](https://docs.astral.sh/uv/)；具体锁定环境命令见 Quickstart 首页的 [安装](../quickstart.md#安装)。
 
-`narratage runtime up` 管理后台 Worker 和外部程序；`build` 会确保 Runtime 已运行，但不拥有
+`hypit runtime up` 管理后台 Worker 和外部程序；`build` 会确保 Runtime 已运行，但不拥有
 Worker。
 
-#### 把正式视频项目放在 Narratage 仓库之外
+#### 把正式视频项目放在 Hypit 仓库之外
 
 作者文件不必位于本仓库之下。例如，项目放在 `/work/my-film`，同时复用
-`/opt/narratage` 中已安装的包：
+`/opt/hypit` 中已安装的包：
 
 ```bash
 cd /work/my-film
 
-narratage runtime use narratage.runtime.json
-narratage plan build.svrun
+hypit runtime use hypit.runtime.json
+hypit plan build.svrun
 ```
 
-Workspace 依次取显式 `--workspace`、所选 `.narratage/runtime` 所在项目和入口 Source 目录。
+Workspace 依次取显式 `--workspace`、所选 `.hypit/runtime` 所在项目和入口 Source 目录。
 Runtime Profile 无权改变这条源码边界。`--package-root` 只定位已经安装的
 `node_modules`；`--asset-root` 只额外授权读取素材字节。
 
 外部项目通常应提交如下 `.gitignore`：
 
 ```text
-.narratage/
+.hypit/
 output/
 ```
 
@@ -256,7 +256,7 @@ output/
 共享只读素材库不必复制进项目，也不必放宽 Source 边界：
 
 ```bash
-narratage plan /work/my-film/build.svrun --asset-root /work/shared-media
+hypit plan /work/my-film/build.svrun --asset-root /work/shared-media
 ```
 
 `--asset-root` 可重复使用，只授权读取素材字节，不允许从那里导入 `.svml/.svs` 源码。该 Host
@@ -269,7 +269,7 @@ Runtime Profile 只选择 Runtime 包与该 Runtime 的封闭配置。完整结�
 
 ```bash
 cd examples/talking-head-aroll
-narratage runtime use narratage.runtime.json
+hypit runtime use hypit.runtime.json
 ```
 
 Author/Run Source 通过 import 选择作者包，Runtime Profile 通过 `use` 选择环境包；安装、版本
@@ -278,7 +278,7 @@ Author/Run Source 通过 import 选择作者包，Runtime Profile 通过 `use` �
 ### 2. 诊断环境
 
 ```bash
-narratage doctor
+hypit doctor
 ```
 
 Doctor 校验全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；它不启动 Worker，也不发付费请求。
@@ -290,11 +290,11 @@ Doctor 校验全部显式 Runtime 角色、Endpoint 配置、凭据是否存在�
 ### 3. 检查 Source 与计划
 
 ```bash
-narratage check main.svml
+hypit check main.svml
 ```
 
 ```bash
-narratage plan build.svrun
+hypit plan build.svrun
 ```
 
 在花费资金之前审查冻结的 BuildPlan。该计划展示调度器将发出的每个 Operation 和 Needs；选择
@@ -306,7 +306,7 @@ Runtime 后只预检这次计划真正需要的 Endpoint、凭据和外部程序
 ### 4. 提交 Build
 
 ```bash
-narratage build build.svrun --follow
+hypit build build.svrun --follow
 ```
 
 不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是观察者，并会报告 phase / Operation 数量变化；Ctrl-C 不会取消任务。
@@ -314,7 +314,7 @@ narratage build build.svrun --follow
 任何时候都可以重新接入观察：
 
 ```bash
-narratage status <build-id> --watch
+hypit status <build-id> --watch
 ```
 
 普通的 `status <build-id>` 只打印一次快照。`status --watch` 会在 Build 进入终态时退出；脚本需要限制等待时间时可以加 `--max-wait-ms`。
@@ -334,13 +334,13 @@ narratage status <build-id> --watch
 ### 5. 检查并获取结果
 
 ```bash
-narratage inspect <build-id>
+hypit inspect <build-id>
 ```
 
 `inspect` 会显示耐久 Build 状态、所需输出与已接受的 Record。确认这些事实正确后，再获取所选归档 Artifact：
 
 ```bash
-narratage get <build-id> \
+hypit get <build-id> \
   --name final.video \
   --to examples/talking-head-aroll/output/final.mp4
 ```
@@ -355,14 +355,14 @@ Build 的最终输出会为每个目标别名打印精确的 `get --name …` �
 创建一个引用已完成 Build 的 Record 的新 `.svrun` 文件（参见上文 [复用结果](#复用结果)），然后提交：
 
 ```bash
-narratage build reuse-generated.svrun --follow
+hypit build reuse-generated.svrun --follow
 ```
 
 ### 7. 诊断或停止本地 Runtime
 
 ```bash
-narratage runtime logs
-narratage runtime down
+hypit runtime logs
+hypit runtime down
 ```
 
 `runtime down` 只会让 Worker 停止领取新 Build，并保留外部程序；只有确实要停掉这些程序时

@@ -5,7 +5,7 @@ import type {
   StoredValue,
   TypeRef,
   TypedRecord,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 export type Awaitable<T> = T | Promise<T>;
 

@@ -1,4 +1,4 @@
-# `@narratage/estimate`
+# `@hypit/estimate`
 
 Provider-free deterministic speech-duration planning.
 

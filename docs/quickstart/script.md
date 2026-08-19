@@ -10,7 +10,7 @@ contains no timecodes, no media references, no styling, no generation parameters
 the pipeline reads the Script; the Script reads nothing.
 
 ```svml
-<import from="@narratage/script@1"/>
+<import from="@hypit/script@1"/>
 
 <script id="story">
   <opening>
@@ -19,7 +19,7 @@ the pipeline reads the Script; the Script reads nothing.
 </script>
 ```
 
-The import `@narratage/script@1` activates the Script Surface. The `id` attribute lets other
+The import `@hypit/script@1` activates the Script Surface. The `id` attribute lets other
 components refer to the Script and its parts.
 
 ## Segments

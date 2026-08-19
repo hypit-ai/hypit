@@ -1,9 +1,9 @@
-import { captionProducers, captionTypes } from "@narratage/caption";
-import { compositionTypes } from "@narratage/composition";
-import { sealGraphFragment } from "@narratage/elaborator";
-import { narrativeTypes } from "@narratage/narrative";
-import { programSpaceTypes } from "@narratage/program-space";
-import { semanticMapTypes } from "@narratage/semantic-map";
+import { captionProducers, captionTypes } from "@hypit/caption";
+import { compositionTypes } from "@hypit/composition";
+import { sealGraphFragment } from "@hypit/elaborator";
+import { narrativeTypes } from "@hypit/narrative";
+import { programSpaceTypes } from "@hypit/program-space";
+import { semanticMapTypes } from "@hypit/semantic-map";
 
 import { captionFineProducers } from "./manifest.js";
 

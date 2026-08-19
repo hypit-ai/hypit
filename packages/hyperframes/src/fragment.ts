@@ -1,7 +1,7 @@
-import { programSpaceTypes } from "@narratage/program-space";
-import { compositionTypes } from "@narratage/composition";
-import type { Composition } from "@narratage/composition";
-import { sealGraphFragment } from "@narratage/elaborator";
+import { programSpaceTypes } from "@hypit/program-space";
+import { compositionTypes } from "@hypit/composition";
+import type { Composition } from "@hypit/composition";
+import { sealGraphFragment } from "@hypit/elaborator";
 
 import { hyperframesProducers, hyperframesTypes } from "./manifest.js";
 

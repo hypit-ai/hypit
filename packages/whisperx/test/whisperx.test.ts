@@ -1,20 +1,20 @@
 import {
   registerProducerFacets,
-} from "@narratage/component-kit";
-import type { ProducerRegistrar } from "@narratage/component-kit";
-import { sealProgramSpace } from "@narratage/program-space";
-import { sealSpeechBasis, sealSpeechEvidenceAudio } from "@narratage/speech";
-import type { SpeechBasis, SpeechEvidenceAudio } from "@narratage/speech";
+} from "@hypit/component-kit";
+import type { ProducerRegistrar } from "@hypit/component-kit";
+import { sealProgramSpace } from "@hypit/program-space";
+import { sealSpeechBasis, sealSpeechEvidenceAudio } from "@hypit/speech";
+import type { SpeechBasis, SpeechEvidenceAudio } from "@hypit/speech";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import type { Digest, ProducerRef } from "@narratage/protocol";
+import type { Digest, ProducerRef } from "@hypit/protocol";
 import {
   whisperXComponent,
   whisperXProducers,
   whisperXRequestForEvidenceAudio,
-} from "@narratage/whisperx";
+} from "@hypit/whisperx";
 
 function basis() {
   const programSpace = sealProgramSpace({

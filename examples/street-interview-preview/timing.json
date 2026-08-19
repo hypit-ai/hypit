@@ -1,5 +1,5 @@
 {
-  "contract": "narratage.complete-semantic-map@1",
+  "contract": "hypit.complete-semantic-map@1",
   "tokens": [
     {
       "tokenId": "segment:hook:token:1",

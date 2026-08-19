@@ -1,11 +1,11 @@
 ---
 title: Runtime
-description: The execution boundary outside Narratage source and Core.
+description: The execution boundary outside Hypit source and Core.
 ---
 
 # Runtime
 
-Narratage keeps three decisions separate:
+Hypit keeps three decisions separate:
 
 | Owner | Decides |
 |---|---|
@@ -17,7 +17,7 @@ Core is a domain neutral state machine. It accepts facts, derives Commands and v
 Records. It does not start processes, read credentials, choose Providers or know that a Build makes
 video.
 
-`@narratage/runtime-local` is the default execution environment. It owns one Worker, scheduler, Build
+`@hypit/runtime-local` is the default execution environment. It owns one Worker, scheduler, Build
 queue and SQLite database. Those are one implementation, not user-selectable pseudo-components.
 
 ## Runtime Profile
@@ -26,20 +26,20 @@ The Profile contains only environmental choices that genuinely vary:
 
 ```json
 {
-  "format": "narratage.runtime-profile@1",
+  "format": "hypit.runtime-profile@1",
   "runtime": {
-    "use": "@narratage/runtime-local",
+    "use": "@hypit/runtime-local",
     "config": {
-      "dataRoot": ".narratage/runtimes/local",
+      "dataRoot": ".hypit/runtimes/local",
       "artifacts": {
-        "use": "@narratage/artifact-store-fs",
+        "use": "@hypit/artifact-store-fs",
         "config": { "path": "artifacts" }
       },
       "credentials": {
-        "environment": { "use": "@narratage/credential-store-env" }
+        "environment": { "use": "@hypit/credential-store-env" }
       },
       "endpoints": {
-        "media": { "use": "@narratage/provider-media-local" }
+        "media": { "use": "@hypit/provider-media-local" }
       }
     }
   }
@@ -58,7 +58,7 @@ contains no Workspace, author imports or creative routing.
 Selecting a Profile writes a project pointer. Execution data stays under `dataRoot`:
 
 ```text
-.narratage/
+.hypit/
   runtime
   runtimes/
     local/
@@ -90,9 +90,9 @@ An Endpoint may declare a long-lived helper such as a warm local WhisperX servic
 its probe and optional start command; the local Runtime only supervises it.
 
 ```bash
-narratage programs status
-narratage programs up
-narratage programs down
+hypit programs status
+hypit programs up
+hypit programs down
 ```
 
 Program commands load Endpoint packages only. They do not open SQLite, Artifact Stores or Credential
@@ -101,11 +101,11 @@ Stores.
 ## Lifecycle
 
 ```bash
-narratage runtime use narratage.runtime.json
-narratage runtime up
-narratage runtime status
-narratage runtime logs
-narratage runtime down
+hypit runtime use hypit.runtime.json
+hypit runtime up
+hypit runtime status
+hypit runtime logs
+hypit runtime down
 ```
 
 `runtime up` starts the local Worker. `build` submits work; `status`, `queue` and `cancel` observe or

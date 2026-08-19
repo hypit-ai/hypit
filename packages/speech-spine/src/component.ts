@@ -1,9 +1,9 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { NarrativeExcerpt } from "@narratage/narrative";
-import type { SynchronizedMedia, TimelineAudio } from "@narratage/media";
-import type { StoredValue } from "@narratage/protocol";
-import { canonicalize } from "@narratage/protocol";
-import type { ContentFit, SpatialFrame } from "@narratage/spatial";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { NarrativeExcerpt } from "@hypit/narrative";
+import type { SynchronizedMedia, TimelineAudio } from "@hypit/media";
+import type { StoredValue } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import type { ContentFit, SpatialFrame } from "@hypit/spatial";
 
 import { speechSpineProducers } from "./manifest.js";
 import { appendSpeechSpineAudioTake, appendSpeechSpineVisualTake, assembleSpeechBasis, compileSpeechSpineAudio, createSpeechSpineSet } from "./program.js";

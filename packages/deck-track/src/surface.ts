@@ -1,24 +1,24 @@
-import { artifactTypes } from "@narratage/artifact";
-import { mediaTypes } from "@narratage/media";
-import type { FontStackRef } from "@narratage/media";
-import { mediaTrackTypes } from "@narratage/media-track";
-import { narrativeTypes } from "@narratage/narrative";
-import { programSpaceTypes } from "@narratage/program-space";
-import type { TypeRef } from "@narratage/protocol";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { spatialTypes } from "@narratage/spatial";
-import { svsRecipeType } from "@narratage/svs";
-import type { SvsRecipe } from "@narratage/svs";
-import { sealText, textTypes } from "@narratage/text";
-import { sealGraphFragment } from "@narratage/elaborator";
-import type { AuthorValueRef } from "@narratage/elaborator";
+import { artifactTypes } from "@hypit/artifact";
+import { mediaTypes } from "@hypit/media";
+import type { FontStackRef } from "@hypit/media";
+import { mediaTrackTypes } from "@hypit/media-track";
+import { narrativeTypes } from "@hypit/narrative";
+import { programSpaceTypes } from "@hypit/program-space";
+import type { TypeRef } from "@hypit/protocol";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import { spatialTypes } from "@hypit/spatial";
+import { svsRecipeType } from "@hypit/svs";
+import type { SvsRecipe } from "@hypit/svs";
+import { sealText, textTypes } from "@hypit/text";
+import { sealGraphFragment } from "@hypit/elaborator";
+import type { AuthorValueRef } from "@hypit/elaborator";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import {
   decodeDepthStackCardSpec,

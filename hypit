@@ -3,9 +3,9 @@ set -eu
 
 launcher_path=$(node -e 'process.stdout.write(require("node:fs").realpathSync(process.argv[1]))' "$0")
 launcher_dir=$(CDPATH= cd -- "$(dirname -- "$launcher_path")" && pwd)
-launcher="$launcher_dir/bin/narratage.mjs"
+launcher="$launcher_dir/bin/hypit.mjs"
 if [ ! -f "$launcher" ]; then
-  echo "Narratage dependencies are not installed in $launcher_dir; run: pnpm install --frozen-lockfile" >&2
+  echo "Hypit dependencies are not installed in $launcher_dir; run: pnpm install --frozen-lockfile" >&2
   exit 1
 fi
 exec node "$launcher" "$@"

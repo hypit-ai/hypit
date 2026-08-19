@@ -5,13 +5,13 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-kit";
-import { diagnoseRuntimeEnvironmentCredential } from "@narratage/runtime-host-node";
+} from "@hypit/runtime-kit";
+import { diagnoseRuntimeEnvironmentCredential } from "@hypit/runtime-host-node";
 
 import { createGoogleVertexCaptionProvider } from "./provider.js";
 
 const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-google-vertex",
+  use: "@hypit/provider-google-vertex",
   activate(context) {
     if (context.pool === undefined) throw new Error("Google Vertex Provider Pool is required");
     const config = runtimeConfigObject(context.config, "Google Vertex");
@@ -48,9 +48,9 @@ const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [googleVertexRuntimeAdapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

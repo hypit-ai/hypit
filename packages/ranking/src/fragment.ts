@@ -1,12 +1,12 @@
-import { compositionTypes } from "@narratage/composition";
-import { sealGraphFragment } from "@narratage/elaborator";
-import type { FragmentOperation, GraphFragment } from "@narratage/elaborator";
-import { mediaTypes } from "@narratage/media";
-import { narrativeTypes } from "@narratage/narrative";
-import { programSpaceTypes } from "@narratage/program-space";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { spatialTypes } from "@narratage/spatial";
-import { textTypes } from "@narratage/text";
+import { compositionTypes } from "@hypit/composition";
+import { sealGraphFragment } from "@hypit/elaborator";
+import type { FragmentOperation, GraphFragment } from "@hypit/elaborator";
+import { mediaTypes } from "@hypit/media";
+import { narrativeTypes } from "@hypit/narrative";
+import { programSpaceTypes } from "@hypit/program-space";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import { spatialTypes } from "@hypit/spatial";
+import { textTypes } from "@hypit/text";
 
 import { rankingProducers, rankingTypes } from "./manifest.js";
 import type { RankingVariant } from "./types.js";

@@ -2,12 +2,12 @@ import {
   sealGenerationPortRequest,
   sealGenerationRequestDraft,
   sealGenerationPortTable,
-} from "@narratage/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
-import { defineExactModelModule } from "@narratage/model-kit";
-import { imageTransformModuleRef, imageTransformTypes } from "@narratage/image-transform";
+} from "@hypit/generation";
+import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import { defineExactModelModule } from "@hypit/model-kit";
+import { imageTransformModuleRef, imageTransformTypes } from "@hypit/image-transform";
 
-export const gptImageModuleRef = { name: "@narratage/gpt-image", version: "1" } as const;
+export const gptImageModuleRef = { name: "@hypit/gpt-image", version: "1" } as const;
 
 export const gptImage2Ports: GenerationPortTable = sealGenerationPortTable({
   model: "gpt-image-2",
@@ -73,7 +73,7 @@ export const gptImageDefinition = {
 };
 
 /** Optional authoring submodule; the exact GPT model remains independent of post-processing. */
-export const gptImageCleanModuleRef = { name: "@narratage/gpt-image/clean", version: "1" } as const;
+export const gptImageCleanModuleRef = { name: "@hypit/gpt-image/clean", version: "1" } as const;
 
 export const gptImageCleanMarkupSurfaces = [{
     name: "image",
@@ -87,7 +87,7 @@ export const gptImageCleanMarkupSurfaces = [{
   }] as const;
 
 export const gptImageCleanManifest = {
-  format: "narratage.module@1" as const,
+  format: "hypit.module@1" as const,
   name: gptImageCleanModuleRef.name,
   version: gptImageCleanModuleRef.version,
   dependencies: [

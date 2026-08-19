@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/elaborator",
+  "name": "@hypit/elaborator",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -8,9 +8,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@narratage/core": "workspace:*",
-    "@narratage/host": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/source": "workspace:*"
+    "@hypit/core": "workspace:*",
+    "@hypit/host": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/source": "workspace:*"
   }
 }

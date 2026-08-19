@@ -1,7 +1,7 @@
 import {
   sealRecord,
-} from "@narratage/core";
-import type { AuthorFrontend, AuthorSourceExport } from "@narratage/elaborator";
+} from "@hypit/core";
+import type { AuthorFrontend, AuthorSourceExport } from "@hypit/elaborator";
 
 import { svsFrontendId, svsModuleRef, svsRecipeType } from "./manifest.js";
 import { parseSvs } from "./parser.js";

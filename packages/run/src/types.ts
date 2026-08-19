@@ -1,15 +1,15 @@
 import type {
   CompiledSourceClosure,
   GraphFragment,
-} from "@narratage/elaborator";
+} from "@hypit/elaborator";
 import type {
   Candidate,
   OperationNode,
   Satisfaction,
   StoredValue,
   TypeRef,
-} from "@narratage/protocol";
-import type { SourceHeader, SourceUnit } from "@narratage/source";
+} from "@hypit/protocol";
+import type { SourceHeader, SourceUnit } from "@hypit/source";
 
 export type RunSourceUnit = SourceUnit;
 
@@ -82,7 +82,7 @@ export type RunSatisfaction = {
 };
 
 export type RunDocument = {
-  readonly format: "narratage.run-document@1";
+  readonly format: "hypit.run-document@1";
   readonly author: RunAuthorSourceRequest;
   readonly imports: readonly RunImport[];
   readonly targets: readonly RunTarget[];
@@ -120,7 +120,7 @@ export interface RunFragmentRegistryLike {
 
 /** Complete, mandatory execution-intent graph. Empty alternate Candidate sets are still a Run Graph. */
 export type RunGraph = {
-  readonly format: "narratage.run-graph@1";
+  readonly format: "hypit.run-graph@1";
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
   readonly satisfactions: readonly Satisfaction[];

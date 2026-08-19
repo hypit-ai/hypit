@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/runtime-local",
+  "name": "@hypit/runtime-local",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -11,20 +11,20 @@
     "./worker-process": "./src/worker-process.ts"
   },
   "dependencies": {
-    "@narratage/component-kit": "workspace:*",
-    "@narratage/driver-node": "workspace:*",
-    "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/package-loader-node": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-kit": "workspace:*",
-    "@narratage/runtime-host-node": "workspace:*",
-    "@narratage/store-sqlite": "workspace:*",
-    "@narratage/validation": "workspace:*"
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/driver-node": "workspace:*",
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/package-loader-node": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*",
+    "@hypit/runtime-host-node": "workspace:*",
+    "@hypit/store-sqlite": "workspace:*",
+    "@hypit/validation": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/artifact-store-fs": "workspace:*",
-    "@narratage/credential-store-env": "workspace:*",
-    "@narratage/core": "workspace:*"
+    "@hypit/artifact-store-fs": "workspace:*",
+    "@hypit/credential-store-env": "workspace:*",
+    "@hypit/core": "workspace:*"
   }
 }

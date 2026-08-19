@@ -15,9 +15,9 @@ import type {
   ProducerCompletedEvent,
   StoredValue,
   TypedRecord,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
-import { canonicalize, SvmlError } from "@narratage/protocol";
+import { canonicalize, SvmlError } from "@hypit/protocol";
 import { invariant } from "./error.js";
 import { resolveProducer, verifyRecordStructure } from "./link.js";
 import { compileBuild, producerStep, selectedProvidedRecords } from "./plan.js";
@@ -241,7 +241,7 @@ export function start(
 ): BuildState {
   const plan: BuildPlan = compileBuild(program, graph, request);
   const state: BuildState = {
-    format: "narratage.build@1",
+    format: "hypit.build@1",
     program,
     graph,
     request,
@@ -280,14 +280,14 @@ export function defineBuild(
 ): BuildDefinition {
   const initial = start(program, graph, request);
   return {
-    format: "narratage.build-definition@1",
+    format: "hypit.build-definition@1",
     ...definitionContent(initial),
   };
 }
 
 function initialBuildView(definition: BuildDefinition): BuildState {
   return {
-    format: "narratage.build@1",
+    format: "hypit.build@1",
     program: definition.program,
     graph: definition.graph,
     request: definition.request,
@@ -318,7 +318,7 @@ export function admitBuildResult(
     const command = state.outstanding.find((item) => item.id === event.command);
     invariant(command?.kind === "invoke-producer", "EVENT_COMMAND_MISMATCH", event.command, event.command);
     const content = {
-      format: "narratage.build-fact@1",
+      format: "hypit.build-fact@1",
       kind: "producer-applied",
       command: event.command,
       step: command.step,
@@ -333,7 +333,7 @@ export function admitBuildResult(
     const record = next.records.at(-1);
     invariant(record?.id === command.need.result, "NEED_RECORD_MISSING", command.need.id, command.need.id);
     const content = {
-      format: "narratage.build-fact@1",
+      format: "hypit.build-fact@1",
       kind: "need-applied",
       command: event.command,
       need: command.need.id,
@@ -344,7 +344,7 @@ export function admitBuildResult(
   const diagnostic = next.diagnostics.at(-1);
   invariant(diagnostic?.subject === event.command, "FAILURE_DIAGNOSTIC_MISSING", event.command, event.command);
   const content = {
-    format: "narratage.build-fact@1",
+    format: "hypit.build-fact@1",
     kind: "command-failed",
     command: event.command,
     diagnostic,
@@ -353,7 +353,7 @@ export function admitBuildResult(
 }
 
 function verifyFactShape(fact: BuildFact): void {
-  invariant(fact.format === "narratage.build-fact@1", "UNSUPPORTED_BUILD_FACT", fact.command, fact.command);
+  invariant(fact.format === "hypit.build-fact@1", "UNSUPPORTED_BUILD_FACT", fact.command, fact.command);
 }
 
 /** Reconstruct the materialized view from one immutable Definition and its accepted Facts. */

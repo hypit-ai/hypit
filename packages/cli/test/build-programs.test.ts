@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { createRunFrontendHostFacet } from "@narratage/run";
+import { createRunFrontendHostFacet } from "@hypit/run";
 
 import { runCli } from "../src/main.js";
 import type { CliDistribution } from "../src/distribution.js";
@@ -25,9 +25,9 @@ function distribution(
     bootstrapPackages: [{
       specifier: "@example/run-frontend",
       contribution: {
-        format: "narratage.node-package@1",
+        format: "hypit.node-package@1",
         hostFacets: [createRunFrontendHostFacet({
-        id: "@narratage/run-markup@1",
+        id: "@hypit/run-markup@1",
         discover() { throw new Error("createRuntime is unavailable"); },
         decode() { throw new Error("createRuntime is unavailable"); },
         })],
@@ -35,7 +35,7 @@ function distribution(
     }],
     createCompiler: () => ({
       openFile: async (path: string) => ({
-        entry: { name: path, text: '<?svml using="@narratage/run-markup@1"?>\n<svrun/>\n' },
+        entry: { name: path, text: '<?svml using="@hypit/run-markup@1"?>\n<svrun/>\n' },
       }),
       supportsFrontend: () => false,
     }),
@@ -68,9 +68,9 @@ function distribution(
 }
 
 async function runSource(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "narratage-build-programs-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-build-programs-"));
   const path = join(root, "build.svrun");
-  await writeFile(path, '<?svml using="@narratage/run-markup@1"?>\n<svrun/>\n', "utf8");
+  await writeFile(path, '<?svml using="@hypit/run-markup@1"?>\n<svrun/>\n', "utf8");
   return path;
 }
 
@@ -79,7 +79,7 @@ test("a Build that cannot construct its Runtime starts no declared external prog
   const source = await runSource();
   await assert.rejects(
     async () => await runCli(
-      ["build", source, "--runtime", "/p/narratage.runtime.json"],
+      ["build", source, "--runtime", "/p/hypit.runtime.json"],
       io,
       distribution(calls, [{
         id: "whisperx",
@@ -102,7 +102,7 @@ test("--no-programs leaves the declared programs alone", async () => {
   // never consulted rather than merely tolerated.
   await assert.rejects(
     async () => await runCli(
-      ["build", source, "--runtime", "/p/narratage.runtime.json", "--no-programs"],
+      ["build", source, "--runtime", "/p/hypit.runtime.json", "--no-programs"],
       io,
       distribution(calls, [{
         id: "whisperx",

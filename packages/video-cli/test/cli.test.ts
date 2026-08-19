@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { materializeRecord, runVideoCli, videoCliDistribution } from "@narratage/video-cli";
+import { materializeRecord, runVideoCli, videoCliDistribution } from "@hypit/video-cli";
 
 import { videoTestPackages } from "./packages.js";
 
@@ -15,17 +15,17 @@ const runCli = (
 ) => runVideoCli([...argv, "--json"], io, videoTestPackages);
 
 test("source package selection follows Run and Author imports", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-cli-package-selection-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-cli-package-selection-"));
   try {
-    await writeFile(join(root, "style.svs"), `<?svml using="@narratage/svs@1"?>\n<sheet version="1"/>`, "utf8");
-    await writeFile(join(root, "main.svml"), `<?svml using="@narratage/markup@1"?>
+    await writeFile(join(root, "style.svs"), `<?svml using="@hypit/svs@1"?>\n<sheet version="1"/>`, "utf8");
+    await writeFile(join(root, "main.svml"), `<?svml using="@hypit/markup@1"?>
 <svml>
-  <import from="@narratage/script@1"/>
+  <import from="@hypit/script@1"/>
   <import as="style" source="./style.svs"/>
   <script id="story"><line><HOST>Hello.</line></script>
 </svml>`, "utf8");
     const run = join(root, "build.svrun");
-    await writeFile(run, `<?svml using="@narratage/run-markup@1"?>
+    await writeFile(run, `<?svml using="@hypit/run-markup@1"?>
 <svrun version="1">
   <author source="./main.svml"/>
   <target output="story"/>
@@ -34,7 +34,7 @@ test("source package selection follows Run and Author imports", async () => {
       workspaceRoot: root,
       packages: videoTestPackages,
     });
-    assert.deepEqual(discovered.selected, ["@narratage/run-markup", "@narratage/script", "@narratage/svs"]);
+    assert.deepEqual(discovered.selected, ["@hypit/run-markup", "@hypit/script", "@hypit/svs"]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -61,7 +61,7 @@ test("provider-free example plans from installed Source packages", async () => {
 });
 
 test("materializeRecord copies an archived Artifact without rerunning a Build", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-cli-get-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-cli-get-"));
   try {
     const bytes = Buffer.from("final-video-bytes");
     const artifactDigest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;

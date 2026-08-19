@@ -41,7 +41,7 @@ wheels = [
 ]
 
 [[package]]
-name = "narratage-image-opencv-runtime"
+name = "hypit-image-opencv-runtime"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

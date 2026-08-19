@@ -9,7 +9,7 @@
  */
 import { createHash } from "node:crypto";
 
-import { createProvidedCandidate } from "@narratage/run";
+import { createProvidedCandidate } from "@hypit/run";
 
 import { officialVideoDomain } from "../official-video.js";
 import { compileSource } from "./compile.js";
@@ -97,7 +97,7 @@ function authoredCanvas(compiled: unknown): { width: number; height: number } {
   for (const record of records) {
     if (record.value.kind !== "inline") continue;
     const canvas = record.value.value as { widthPx?: number; heightPx?: number; contract?: string };
-    if (canvas.contract === "narratage.canvas-space@1"
+    if (canvas.contract === "hypit.canvas-space@1"
       && typeof canvas.widthPx === "number" && typeof canvas.heightPx === "number") {
       return { width: canvas.widthPx, height: canvas.heightPx };
     }

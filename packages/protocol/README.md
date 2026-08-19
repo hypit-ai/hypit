@@ -1,4 +1,4 @@
-# `@narratage/protocol`
+# `@hypit/protocol`
 
 Data contracts shared across package boundaries.
 

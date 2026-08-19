@@ -1,10 +1,10 @@
-import type { Narrative } from "@narratage/narrative";
-import { sealMediaStreamSelection, verifyMediaInspection } from "@narratage/media";
-import type { MediaAudioStream, MediaInspection, MediaStreamSelection, MediaVideoStream } from "@narratage/media";
-import type { SpeechBasis } from "@narratage/speech";
+import type { Narrative } from "@hypit/narrative";
+import { sealMediaStreamSelection, verifyMediaInspection } from "@hypit/media";
+import type { MediaAudioStream, MediaInspection, MediaStreamSelection, MediaVideoStream } from "@hypit/media";
+import type { SpeechBasis } from "@hypit/speech";
 import {
   canonicalize,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 import type { MediaSelectionRequest } from "./types.js";
 

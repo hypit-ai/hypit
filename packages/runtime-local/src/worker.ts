@@ -1,4 +1,4 @@
-import type { BuildState } from "@narratage/protocol";
+import type { BuildState } from "@hypit/protocol";
 import type {
   BuildDispatchSnapshot,
   RuntimeCommandExecutor,
@@ -7,14 +7,14 @@ import type {
   RuntimeRunnableCommand,
   ScheduledBuildResult,
   RuntimeWorkerRunOptions,
-} from "@narratage/runtime";
-import { LocalBuildScheduler } from "@narratage/runtime";
+} from "@hypit/runtime";
+import { LocalBuildScheduler } from "@hypit/runtime";
 
 type LocalWorkerOptions = {
   readonly stores: {
-    readonly builds: import("@narratage/runtime").BuildStore;
-    readonly operations: import("@narratage/runtime").OperationStore;
-    readonly dispatch: import("@narratage/runtime").BuildDispatchStore;
+    readonly builds: import("@hypit/runtime").BuildStore;
+    readonly operations: import("@hypit/runtime").OperationStore;
+    readonly dispatch: import("@hypit/runtime").BuildDispatchStore;
   };
   readonly installComponentPackages: (specifiers: readonly string[]) => Promise<void>;
 };
@@ -109,7 +109,7 @@ class CapacityExecutor implements RuntimeCommandExecutor {
 
   async cancelOperation(
     state: BuildState,
-    operation: import("@narratage/runtime").OperationSnapshot,
+    operation: import("@hypit/runtime").OperationSnapshot,
   ) {
     assert(this.#delegate.cancelOperation !== undefined, "selected executor cannot cancel Operations");
     return await this.#delegate.cancelOperation(state, operation);
@@ -189,7 +189,7 @@ class DurableLocalWorker {
 
   async #runClaimed(dispatches: readonly BuildDispatchSnapshot[]): Promise<readonly BuildDispatchSnapshot[]> {
     const finished: BuildDispatchSnapshot[] = [];
-    const runnable: { readonly dispatch: BuildDispatchSnapshot; readonly snapshot: import("@narratage/runtime").BuildSnapshot }[] = [];
+    const runnable: { readonly dispatch: BuildDispatchSnapshot; readonly snapshot: import("@hypit/runtime").BuildSnapshot }[] = [];
     for (const dispatch of dispatches) {
       if (dispatch.cancellation !== undefined) {
         finished.push(await this.#cancel(dispatch));

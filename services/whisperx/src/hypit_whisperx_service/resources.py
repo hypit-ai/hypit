@@ -17,11 +17,11 @@ PUNKT_TAB_URL = (
     f"{PUNKT_TAB_COMMIT}/packages/tokenizers/punkt_tab.zip"
 )
 MAX_ARCHIVE_BYTES = 32 * 1024 * 1024
-MARKER_NAME = ".narratage-resource.json"
+MARKER_NAME = ".hypit-resource.json"
 
 
 def default_nltk_data_root() -> Path:
-    return Path.home() / ".cache" / "narratage" / "whisperx" / "nltk_data"
+    return Path.home() / ".cache" / "hypit" / "whisperx" / "nltk_data"
 
 
 def _marker(root: Path) -> Path:
@@ -34,7 +34,7 @@ def assert_punkt_tab(root: Path) -> None:
         value = json.loads(marker.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise RuntimeError(
-            "locked NLTK punkt_tab data is unavailable; run `narratage-whisperx-prepare`"
+            "locked NLTK punkt_tab data is unavailable; run `hypit-whisperx-prepare`"
         ) from error
     if value != {"commit": PUNKT_TAB_COMMIT, "sha256": PUNKT_TAB_SHA256}:
         raise RuntimeError("installed NLTK punkt_tab identity differs from the service lock")
@@ -90,7 +90,7 @@ def prepare_punkt_tab(root: Path, payload: bytes | None = None) -> Path:
         raise RuntimeError(f"punkt_tab archive digest mismatch: expected {PUNKT_TAB_SHA256}, got {digest}")
 
     target.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="narratage-punkt-tab-", dir=target.parent) as temporary:
+    with tempfile.TemporaryDirectory(prefix="hypit-punkt-tab-", dir=target.parent) as temporary:
         staging = Path(temporary)
         _extract(archive, staging)
         extracted = staging / "punkt_tab"

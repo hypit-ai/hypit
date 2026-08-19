@@ -1,62 +1,62 @@
 /**
  * The official video packages understood by this preview application.
  *
- * This is deliberately application-local composition. Narratage packages do
+ * This is deliberately application-local composition. Hypit packages do
  * not register themselves with a central video catalogue and do not know that
  * the Playground exists. The Playground chooses the packages it previews,
  * then reads the activation each package already publishes for normal Hosts.
  */
-import { registerProducerFacets, registerTypeValidatorFacets } from "@narratage/component-kit";
-import { createResolvedClosure } from "@narratage/core";
-import { ProducerRegistry } from "@narratage/driver-node";
+import { registerProducerFacets, registerTypeValidatorFacets } from "@hypit/component-kit";
+import { createResolvedClosure } from "@hypit/core";
+import { ProducerRegistry } from "@hypit/driver-node";
 import {
   AuthorFrontendRegistry,
   installAuthorFrontendHostFacets,
-} from "@narratage/elaborator";
+} from "@hypit/elaborator";
 import {
   createMarkupAuthorFrontend,
   installMarkupSurfaceHostFacets,
   MarkupSurfaceRegistry,
-} from "@narratage/markup";
-import type { MarkupSurfaceRegistryLike } from "@narratage/markup";
-import { loadNodePackageSelection } from "@narratage/package-loader-node";
-import type { ModuleRef, ResolvedModuleClosure } from "@narratage/protocol";
-import { TypeValidatorRegistry } from "@narratage/validation";
+} from "@hypit/markup";
+import type { MarkupSurfaceRegistryLike } from "@hypit/markup";
+import { loadNodePackageSelection } from "@hypit/package-loader-node";
+import type { ModuleRef, ResolvedModuleClosure } from "@hypit/protocol";
+import { TypeValidatorRegistry } from "@hypit/validation";
 
 const OFFICIAL_VIDEO_PACKAGES = [
-  "@narratage/audio-track",
-  "@narratage/background-removal",
-  "@narratage/caption",
-  "@narratage/caption-fine",
-  "@narratage/caption-gemini",
-  "@narratage/comment-sticker",
-  "@narratage/deck-track",
-  "@narratage/estimate",
-  "@narratage/film",
-  "@narratage/fonts-open",
-  "@narratage/gemini-omni",
-  "@narratage/gpt-image",
-  "@narratage/grok-imagine",
-  "@narratage/image-compose",
-  "@narratage/image-transform",
-  "@narratage/media",
-  "@narratage/media-pipeline",
-  "@narratage/media-track",
-  "@narratage/mimo-tts",
-  "@narratage/minimax-h3",
-  "@narratage/nano-banana",
-  "@narratage/ranking",
-  "@narratage/render-hyperframes",
-  "@narratage/screen-overlay",
-  "@narratage/script",
-  "@narratage/seedance",
-  "@narratage/seedream",
-  "@narratage/spatial",
-  "@narratage/speech-spine",
-  "@narratage/svs",
-  "@narratage/text",
-  "@narratage/typography-track",
-  "@narratage/whisperx",
+  "@hypit/audio-track",
+  "@hypit/background-removal",
+  "@hypit/caption",
+  "@hypit/caption-fine",
+  "@hypit/caption-gemini",
+  "@hypit/comment-sticker",
+  "@hypit/deck-track",
+  "@hypit/estimate",
+  "@hypit/film",
+  "@hypit/fonts-open",
+  "@hypit/gemini-omni",
+  "@hypit/gpt-image",
+  "@hypit/grok-imagine",
+  "@hypit/image-compose",
+  "@hypit/image-transform",
+  "@hypit/media",
+  "@hypit/media-pipeline",
+  "@hypit/media-track",
+  "@hypit/mimo-tts",
+  "@hypit/minimax-h3",
+  "@hypit/nano-banana",
+  "@hypit/ranking",
+  "@hypit/render-hyperframes",
+  "@hypit/screen-overlay",
+  "@hypit/script",
+  "@hypit/seedance",
+  "@hypit/seedream",
+  "@hypit/spatial",
+  "@hypit/speech-spine",
+  "@hypit/svs",
+  "@hypit/text",
+  "@hypit/typography-track",
+  "@hypit/whisperx",
 ] as const;
 
 type OfficialVideoDomain = {

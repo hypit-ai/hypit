@@ -1,10 +1,10 @@
-# `@narratage/provider-xiaomi-mimo`
+# `@hypit/provider-xiaomi-mimo`
 
 Immediate Runtime Endpoint for Xiaomi's official MiMo V2.5 TTS API.
 
 This package owns the `chat/completions` wire shape, `api-key` credential, timeout, response bounds,
 voice-sample data URI conversion and ArtifactStore ingestion. It does not import
-`@narratage/mimo-tts`: capabilities and model port names are bound as versioned data, keeping the
+`@hypit/mimo-tts`: capabilities and model port names are bound as versioned data, keeping the
 three exact model contracts independent from this particular service.
 
 Runtime Profile example:
@@ -13,7 +13,7 @@ Runtime Profile example:
 {
   "endpoints": {
     "mimo.official": {
-      "use": "@narratage/provider-xiaomi-mimo",
+      "use": "@hypit/provider-xiaomi-mimo",
       "pool": "mimo.official",
       "config": {
         "apiKey": { "store": "keychain", "key": "xiaomi-mimo.api-key" },

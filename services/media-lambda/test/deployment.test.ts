@@ -21,7 +21,7 @@ test("the stack owns the complete service without granting media semantics extra
   assert.doesNotMatch(template, /Resource:\s*["']?\*["']?/u);
   assert.match(template, /ReservedConcurrentExecutions: !Ref ReservedConcurrency/u);
   assert.match(template, /UpdateRuntimeOn: FunctionUpdate/u);
-  assert.match(template, /NARRATAGE_FFMPEG_LIBRARY_PATH: \/opt\/lib/u);
+  assert.match(template, /HYPIT_FFMPEG_LIBRARY_PATH: \/opt\/lib/u);
   assert.equal((template.match(/DeletionPolicy: RetainExceptOnCreate/gu) ?? []).length, 3);
   assert.equal((template.match(/UpdateReplacePolicy: Retain/gu) ?? []).length, 3);
   assert.match(template, /FunctionVersionArn:[\s\S]*MediaFunctionVersion/u);

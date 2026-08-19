@@ -1,13 +1,13 @@
 import {
   sealCompiledGraph,
   verifyCompiledGraph,
-} from "@narratage/core";
+} from "@hypit/core";
 import type {
   CompiledGraph,
   GraphValueRef,
   LinkedProgram,
   TypeRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 import {
   bindAuthorFragment,

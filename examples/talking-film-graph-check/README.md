@@ -7,12 +7,12 @@ HyperFrames.
 
 ```bash
 cd examples/talking-film-graph-check
-narratage check main.svml
-narratage check build.svrun
-narratage plan build.svrun
+hypit check main.svml
+hypit check build.svrun
+hypit plan build.svrun
 ```
 
 The Gemini planner receives readable indivisible display atoms and resolved Style runs only. Its
-generic `CaptionPlan` joins the independent `CompleteSemanticMap` in `@narratage/caption`; neither
+generic `CaptionPlan` joins the independent `CompleteSemanticMap` in `@hypit/caption`; neither
 the planner nor the Vertex Provider has text-rewriting or timing authority.
-`@narratage/caption-fine` alone owns Recipe interpretation and the concrete visual renderer.
+`@hypit/caption-fine` alone owns Recipe interpretation and the concrete visual renderer.

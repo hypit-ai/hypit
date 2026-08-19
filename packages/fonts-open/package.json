@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/fonts-open",
+  "name": "@hypit/fonts-open",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,7 +7,7 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
@@ -120,8 +120,8 @@
     "@fontsource/zcool-qingke-huangyou": "5.3.0",
     "@fontsource/zcool-xiaowei": "5.3.0",
     "@infolektuell/noto-color-emoji": "0.2.0",
-    "@narratage/media": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/markup": "workspace:*"
+    "@hypit/media": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/markup": "workspace:*"
   }
 }

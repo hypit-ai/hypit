@@ -1,9 +1,9 @@
-import type { CaptionProgram, TimedCaptionProjection } from "@narratage/caption";
-import { resolveCaptionProgram } from "@narratage/caption";
-import { renderFineCaption } from "@narratage/caption-fine";
-import type { CaptionDisplayAtom, CaptionDisplaySequence } from "@narratage/narrative";
-import type { CanonicalValue, ValueSchema } from "@narratage/protocol";
-import { sealProgramSpace } from "@narratage/program-space";
+import type { CaptionProgram, TimedCaptionProjection } from "@hypit/caption";
+import { resolveCaptionProgram } from "@hypit/caption";
+import { renderFineCaption } from "@hypit/caption-fine";
+import type { CaptionDisplayAtom, CaptionDisplaySequence } from "@hypit/narrative";
+import type { CanonicalValue, ValueSchema } from "@hypit/protocol";
+import { sealProgramSpace } from "@hypit/program-space";
 
 import type {
   CaptionPlaygroundFailure,

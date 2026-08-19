@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/transport-aws-lambda",
+  "name": "@hypit/transport-aws-lambda",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -9,6 +9,6 @@
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.1103.0",
-    "@narratage/protocol": "workspace:*"
+    "@hypit/protocol": "workspace:*"
   }
 }

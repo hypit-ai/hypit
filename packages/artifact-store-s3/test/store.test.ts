@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { S3ArtifactStore } from "@narratage/artifact-store-s3";
-import type { S3ObjectClient } from "@narratage/artifact-store-s3";
-import { isStreamingArtifactStore } from "@narratage/runtime";
+import { S3ArtifactStore } from "@hypit/artifact-store-s3";
+import type { S3ObjectClient } from "@hypit/artifact-store-s3";
+import { isStreamingArtifactStore } from "@hypit/runtime";
 
 class FakeS3 implements S3ObjectClient {
   readonly values = new Map<string, Uint8Array>();

@@ -1,5 +1,5 @@
-import { canonicalize, isDigest } from "@narratage/protocol";
-import { assertCanvasSpace, assertSpatialFrame } from "@narratage/spatial";
+import { canonicalize, isDigest } from "@hypit/protocol";
+import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 
 import type {
   RasterComposeRequest, RasterEncodeOperation, RasterLayer, RasterRequest,

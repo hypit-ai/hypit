@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { modulePackageAbi } from "@narratage/protocol";
+import { modulePackageAbi } from "@hypit/protocol";
 
 import type {
   LoadedPackage,
@@ -14,7 +14,7 @@ import type {
 
 type PackageJson = {
   readonly name: string;
-  readonly narratage?: { readonly activation?: string };
+  readonly hypit?: { readonly activation?: string };
 };
 
 type ResolvedPackage = { readonly root: string; readonly json: PackageJson };
@@ -35,10 +35,10 @@ function text(value: unknown, subject: string): string {
 
 function parsePackageJson(value: unknown, subject: string): PackageJson {
   const item = object(value, subject);
-  const narratage = item.narratage === undefined ? undefined : object(item.narratage, `${subject}.narratage`);
+  const hypit = item.hypit === undefined ? undefined : object(item.hypit, `${subject}.hypit`);
   return {
     name: text(item.name, `${subject}.name`),
-    ...(narratage?.activation === undefined ? {} : { narratage: { activation: text(narratage.activation, `${subject}.narratage.activation`) } }),
+    ...(hypit?.activation === undefined ? {} : { hypit: { activation: text(hypit.activation, `${subject}.hypit.activation`) } }),
   };
 }
 
@@ -67,7 +67,7 @@ async function packageRoot(entry: string, expectedName: string): Promise<Resolve
 }
 
 async function resolvePackage(specifier: string, from: string): Promise<ResolvedPackage> {
-  const resolver = createRequire(join(resolve(from), "__narratage_package_loader__.cjs"));
+  const resolver = createRequire(join(resolve(from), "__hypit_package_loader__.cjs"));
   let entry: string;
   try {
     entry = resolver.resolve(specifier);
@@ -82,8 +82,8 @@ async function resolvePackage(specifier: string, from: string): Promise<Resolved
 }
 
 function activationPath(item: ResolvedPackage): string {
-  const declared = item.json.narratage?.activation;
-  assert(declared !== undefined, `${item.json.name} does not declare narratage.activation`);
+  const declared = item.json.hypit?.activation;
+  assert(declared !== undefined, `${item.json.name} does not declare hypit.activation`);
   assert(!isAbsolute(declared), `${item.json.name} activation must be package-relative`);
   const target = resolve(item.root, declared);
   const relation = relative(item.root, target);
@@ -97,7 +97,7 @@ async function importContribution(item: ResolvedPackage): Promise<NodePackageCon
   const imported = await import(pathToFileURL(target).href) as { readonly default?: unknown };
   assert(imported.default !== null && typeof imported.default === "object", `${item.json.name} activation has no default package export`);
   const contribution = imported.default as Partial<NodePackageContribution>;
-  assert(contribution.format === "narratage.node-package@1", `${item.json.name} activation has an unsupported package format`);
+  assert(contribution.format === "hypit.node-package@1", `${item.json.name} activation has an unsupported package format`);
   return contribution as NodePackageContribution;
 }
 
@@ -136,7 +136,7 @@ export class NodePackageSelectionMissingError extends Error {
 
 /**
  * Load the packages explicitly named by Source discovery or a Runtime Profile.
- * Node's package manager owns installed versions and bytes; Narratage validates only the
+ * Node's package manager owns installed versions and bytes; Hypit validates only the
  * contribution boundary it consumes.
  */
 export async function loadNodePackageSelection(

@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/generation",
+  "name": "@hypit/generation",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,17 +7,17 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/artifact": "workspace:*",
-    "@narratage/component-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@hypit/artifact": "workspace:*",
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/text": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/driver-node": "workspace:*",
-    "@narratage/validation": "workspace:*"
+    "@hypit/driver-node": "workspace:*",
+    "@hypit/validation": "workspace:*"
   }
 }

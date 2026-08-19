@@ -4,34 +4,34 @@ import {
   createResolvedClosure,
   sealBuildRequest,
   start,
-} from "@narratage/core";
+} from "@hypit/core";
 import {
   AuthorFrontendRegistry,
   SourceClosureError,
   compileSourceClosure,
   resolveCompiledSourceExport,
   sealGraphFragment,
-} from "@narratage/elaborator";
-import type { AuthorSourceUnit } from "@narratage/elaborator";
+} from "@hypit/elaborator";
+import type { AuthorSourceUnit } from "@hypit/elaborator";
 import type {
   ModuleManifest,
   ProducerRef,
   TypeRef,
   TypedRecord,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import {
   SvsSyntaxError,
   parseSvs,
   svsFrontend,
   svsManifest,
   svsRecipeType,
-} from "@narratage/svs";
-import type { SvsRecipe } from "@narratage/svs";
+} from "@hypit/svs";
+import type { SvsRecipe } from "@hypit/svs";
 import {
   MarkupSurfaceRegistry,
   createMarkupAuthorFrontend,
-} from "@narratage/markup";
-import type { StructuredElement } from "@narratage/markup";
+} from "@hypit/markup";
+import type { StructuredElement } from "@hypit/markup";
 
 const laboratory = { name: "example.recipe-card", version: "1" } as const;
 const cardType = { module: laboratory, name: "Card" } satisfies TypeRef;
@@ -43,7 +43,7 @@ const cardSurface = {
 } as const;
 
 const manifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [{ module: { name: svsManifest.name, version: svsManifest.version } }],
@@ -153,7 +153,7 @@ function sourceRegistry(): MarkupSurfaceRegistry {
 const closure = createResolvedClosure([svsManifest, manifest]);
 
 function unit(id: string, text: string, frontend?: string): AuthorSourceUnit {
-  const selected = frontend ?? (id.endsWith(".svs") ? "@narratage/svs@1" : "@narratage/markup@1");
+  const selected = frontend ?? (id.endsWith(".svs") ? "@hypit/svs@1" : "@hypit/markup@1");
   return {
     id,
     name: id.split("/").at(-1) ?? id,

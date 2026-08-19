@@ -2,11 +2,11 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { materializeBuild } from "@narratage/core";
+import { materializeBuild } from "@hypit/core";
 import type {
   BuildDefinition,
   BuildFact,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import type {
   BuildDispatchRequest,
   BuildDispatchRelease,
@@ -26,7 +26,7 @@ import type {
   OperationSnapshot,
   OperationStore,
   OperationUpdate,
-} from "@narratage/runtime";
+} from "@hypit/runtime";
 
 export type SqliteRuntimeStateOptions = {
   readonly busyTimeoutMs?: number;
@@ -133,7 +133,7 @@ class SqliteBuildStore implements BuildStore {
   #facts(build: string): Row[] {
     return this.#database.prepare(`
       SELECT fact_json
-      FROM narratage_build_facts
+      FROM hypit_build_facts
       WHERE build_id = ?
       ORDER BY sequence ASC
     `).all(build) as Row[];
@@ -142,7 +142,7 @@ class SqliteBuildStore implements BuildStore {
   async create(build: string, definition: BuildDefinition): Promise<BuildSnapshot> {
     assert(build.trim().length > 0, "build id must not be empty");
     const result = this.#database.prepare(`
-      INSERT OR IGNORE INTO narratage_builds (build_id, definition_json)
+      INSERT OR IGNORE INTO hypit_builds (build_id, definition_json)
       VALUES (?, ?)
     `).run(build, JSON.stringify(definition));
     if (result.changes !== 1) throw new Error(`build ${build} already exists`);
@@ -155,7 +155,7 @@ class SqliteBuildStore implements BuildStore {
   async read(build: string): Promise<BuildSnapshot | undefined> {
     const row = this.#database.prepare(`
       SELECT build_id, definition_json
-      FROM narratage_builds
+      FROM hypit_builds
       WHERE build_id = ?
     `).get(build) as Row | undefined;
     return row === undefined ? undefined : parseBuildSnapshot(row, this.#facts(build));
@@ -163,7 +163,7 @@ class SqliteBuildStore implements BuildStore {
 
   async append(build: string, fact: BuildFact): Promise<void> {
     const result = this.#database.prepare(`
-      INSERT INTO narratage_build_facts (
+      INSERT INTO hypit_build_facts (
         build_id, command_id, fact_json
       ) VALUES (?, ?, ?)
     `).run(build, fact.command, JSON.stringify(fact));
@@ -194,7 +194,7 @@ class SqliteBuildCatalog implements BuildCatalog {
     assert(build.trim().length > 0, "Build Catalog build id must not be empty");
     const now = Date.now();
     this.#database.prepare(`
-      INSERT INTO narratage_build_catalog (
+      INSERT INTO hypit_build_catalog (
         build_id, created_at, descriptor_json
       ) VALUES (?, ?, ?)
     `).run(build, now, JSON.stringify(descriptor));
@@ -204,7 +204,7 @@ class SqliteBuildCatalog implements BuildCatalog {
   async read(build: string): Promise<BuildCatalogEntry | undefined> {
     const row = this.#database.prepare(`
       SELECT build_id, created_at, descriptor_json
-      FROM narratage_build_catalog
+      FROM hypit_build_catalog
       WHERE build_id = ?
     `).get(build) as Row | undefined;
     return row === undefined ? undefined : parseCatalogEntry(row);
@@ -213,7 +213,7 @@ class SqliteBuildCatalog implements BuildCatalog {
   async list(): Promise<readonly BuildCatalogEntry[]> {
     const rows = this.#database.prepare(`
       SELECT build_id, created_at, descriptor_json
-      FROM narratage_build_catalog
+      FROM hypit_build_catalog
       ORDER BY created_at DESC, build_id ASC
     `).all() as Row[];
     return rows.map(parseCatalogEntry);
@@ -239,7 +239,7 @@ class SqliteOperationStore implements OperationStore {
         ? JSON.stringify(operation.completion)
         : operation.status === "failed" ? JSON.stringify(operation.failure) : null;
     const result = this.#database.prepare(`
-      INSERT INTO narratage_operations (
+      INSERT INTO hypit_operations (
         operation_id, build_id, command_id, endpoint_id, pool_id, lane_id, status,
         payload_json
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -253,7 +253,7 @@ class SqliteOperationStore implements OperationStore {
     const row = this.#database.prepare(`
       SELECT operation_id, build_id, command_id, endpoint_id, pool_id, lane_id,
         status, payload_json
-      FROM narratage_operations
+      FROM hypit_operations
       WHERE operation_id = ?
     `).get(id) as Row | undefined;
     return row === undefined ? undefined : parseOperationSnapshot(row);
@@ -274,7 +274,7 @@ class SqliteOperationStore implements OperationStore {
     const rows = this.#database.prepare(`
       SELECT operation_id, build_id, command_id, endpoint_id, pool_id, lane_id,
         status, payload_json
-      FROM narratage_operations
+      FROM hypit_operations
       ${predicates.length === 0 ? "" : `WHERE ${predicates.join(" AND ")}`}
       ORDER BY operation_id ASC
     `).all(...values) as Row[];
@@ -296,7 +296,7 @@ class SqliteOperationStore implements OperationStore {
         ? JSON.stringify(update.completion)
         : update.status === "failed" ? JSON.stringify(update.failure) : null;
     const result = this.#database.prepare(`
-      UPDATE narratage_operations
+      UPDATE hypit_operations
       SET status = ?, payload_json = ?
       WHERE operation_id = ?
     `).run(update.status, payload, id);
@@ -359,7 +359,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     const now = options.now ?? Date.now();
     nonNegativeInteger(now, "Dispatch creation time");
     this.#database.prepare(`
-      INSERT INTO narratage_dispatches (
+      INSERT INTO hypit_dispatches (
         build_id, component_packages_json, created_at, available_at,
         phase, reason, cancel_requested, terminal
       ) VALUES (?, ?, ?, ?, 'queued', NULL, 0, NULL)
@@ -373,13 +373,13 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
   }
 
   async read(build: string): Promise<BuildDispatchSnapshot | undefined> {
-    const row = this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(build) as Row | undefined;
+    const row = this.#database.prepare("SELECT * FROM hypit_dispatches WHERE build_id = ?").get(build) as Row | undefined;
     return row === undefined ? undefined : parseDispatchSnapshot(row);
   }
 
   async list(query: DispatchQuery = {}): Promise<readonly BuildDispatchSnapshot[]> {
     const rows = this.#database.prepare(`
-      SELECT * FROM narratage_dispatches
+      SELECT * FROM hypit_dispatches
       ORDER BY created_at ASC, build_id ASC
     `).all() as Row[];
     return rows.map(parseDispatchSnapshot)
@@ -390,7 +390,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     nonNegativeInteger(now, "Dispatch claim time");
     return transaction(this.#database, () => {
       const row = this.#database.prepare(`
-        SELECT build_id FROM narratage_dispatches
+        SELECT build_id FROM hypit_dispatches
         WHERE phase IN ('queued', 'waiting') AND available_at <= ?
         ORDER BY available_at ASC, created_at ASC, build_id ASC
         LIMIT 1
@@ -398,13 +398,13 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       if (row === undefined) return undefined;
       assert(typeof row.build_id === "string", "SQLite ready Dispatch has no Build id");
       const updated = this.#database.prepare(`
-        UPDATE narratage_dispatches
+        UPDATE hypit_dispatches
         SET phase = 'running'
         WHERE build_id = ? AND phase IN ('queued', 'waiting') AND available_at <= ?
       `).run(row.build_id, now);
       if (updated.changes !== 1) return undefined;
       return parseDispatchSnapshot(
-        this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(row.build_id) as Row,
+        this.#database.prepare("SELECT * FROM hypit_dispatches WHERE build_id = ?").get(row.build_id) as Row,
       );
     });
   }
@@ -412,19 +412,19 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
   async release(build: string, update: BuildDispatchRelease): Promise<BuildDispatchSnapshot> {
     nonNegativeInteger(update.availableAt, "Dispatch release availableAt");
     return transaction(this.#database, () => {
-      const row = this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(build) as Row | undefined;
+      const row = this.#database.prepare("SELECT * FROM hypit_dispatches WHERE build_id = ?").get(build) as Row | undefined;
       if (row === undefined) throw new Error(`Dispatch ${build} does not exist`);
       const current = parseDispatchSnapshot(row);
       if (current.phase === "terminal") return current;
       if (current.cancellation !== undefined) return current;
       assert(current.phase === "running", `Dispatch ${build} is not running`);
       this.#database.prepare(`
-        UPDATE narratage_dispatches
+        UPDATE hypit_dispatches
         SET phase = ?, available_at = ?, reason = ?
         WHERE build_id = ?
       `).run(update.phase, update.availableAt, update.reason ?? null, build);
       return parseDispatchSnapshot(
-        this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(build) as Row,
+        this.#database.prepare("SELECT * FROM hypit_dispatches WHERE build_id = ?").get(build) as Row,
       );
     });
   }
@@ -435,18 +435,18 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     reason?: string,
   ): Promise<BuildDispatchSnapshot> {
     return transaction(this.#database, () => {
-      const row = this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(build) as Row | undefined;
+      const row = this.#database.prepare("SELECT * FROM hypit_dispatches WHERE build_id = ?").get(build) as Row | undefined;
       if (row === undefined) throw new Error(`Dispatch ${build} does not exist`);
       const current = parseDispatchSnapshot(row);
       if (current.phase === "terminal") return current;
       const effective = current.cancellation === undefined ? terminal : "cancelled";
       this.#database.prepare(`
-        UPDATE narratage_dispatches
+        UPDATE hypit_dispatches
         SET phase = 'terminal', terminal = ?, reason = ?
         WHERE build_id = ?
       `).run(effective, reason ?? current.cancellation?.reason ?? null, build);
       return parseDispatchSnapshot(
-        this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(build) as Row,
+        this.#database.prepare("SELECT * FROM hypit_dispatches WHERE build_id = ?").get(build) as Row,
       );
     });
   }
@@ -454,21 +454,21 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
   async requestCancellation(build: string, reason?: string): Promise<BuildDispatchSnapshot> {
     const now = Date.now();
     return transaction(this.#database, () => {
-      const row = this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(build) as Row | undefined;
+      const row = this.#database.prepare("SELECT * FROM hypit_dispatches WHERE build_id = ?").get(build) as Row | undefined;
       if (row === undefined) throw new Error(`Dispatch ${build} does not exist`);
       const current = parseDispatchSnapshot(row);
       if (current.phase === "terminal") return current;
       if (current.cancellation !== undefined) return current;
       if (current.phase === "queued") {
         this.#database.prepare(`
-          UPDATE narratage_dispatches
+          UPDATE hypit_dispatches
           SET phase = 'terminal', terminal = 'cancelled',
               reason = ?, cancel_requested = 1
           WHERE build_id = ?
         `).run(reason ?? "cancelled before execution", build);
       } else {
         this.#database.prepare(`
-          UPDATE narratage_dispatches
+          UPDATE hypit_dispatches
           SET phase = CASE WHEN phase = 'running' THEN phase ELSE 'queued' END,
               available_at = CASE WHEN phase = 'running' THEN available_at ELSE ? END,
               reason = ?, cancel_requested = 1
@@ -476,7 +476,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
         `).run(now, reason ?? "cancellation requested", build);
       }
       return parseDispatchSnapshot(
-        this.#database.prepare("SELECT * FROM narratage_dispatches WHERE build_id = ?").get(build) as Row,
+        this.#database.prepare("SELECT * FROM hypit_dispatches WHERE build_id = ?").get(build) as Row,
       );
     });
   }
@@ -494,7 +494,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     };
     return transaction(this.#database, () => {
       const existing = this.#database.prepare(
-        "SELECT * FROM narratage_capacity WHERE build_id = ? AND command_id = ?",
+        "SELECT * FROM hypit_capacity WHERE build_id = ? AND command_id = ?",
       ).get(reservation.build, reservation.command) as Row | undefined;
       if (existing !== undefined) {
         return { status: "acquired", reservation: parseCapacityReservation(existing) };
@@ -502,7 +502,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       for (const resource of resources) {
         const count = this.#database.prepare(`
           SELECT COUNT(DISTINCT capacity.rowid) AS count
-          FROM narratage_capacity AS capacity, json_each(capacity.resources_json) AS claim
+          FROM hypit_capacity AS capacity, json_each(capacity.resources_json) AS claim
           WHERE json_extract(claim.value, '$.id') = ?
         `).get(resource.id) as Row;
         assert(typeof count.count === "number", `SQLite Capacity count for ${resource.id} is invalid`);
@@ -516,7 +516,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
         }
       }
       this.#database.prepare(`
-        INSERT INTO narratage_capacity (
+        INSERT INTO hypit_capacity (
           build_id, command_id, resources_json, queue_json, created_at
         ) VALUES (?, ?, ?, ?, ?)
       `).run(
@@ -532,17 +532,17 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
 
   async releaseCapacity(build: string, command: string): Promise<void> {
     this.#database.prepare(
-      "DELETE FROM narratage_capacity WHERE build_id = ? AND command_id = ?",
+      "DELETE FROM hypit_capacity WHERE build_id = ? AND command_id = ?",
     ).run(build, command);
   }
 
   async releaseBuildCapacity(build: string): Promise<void> {
-    this.#database.prepare("DELETE FROM narratage_capacity WHERE build_id = ?").run(build);
+    this.#database.prepare("DELETE FROM hypit_capacity WHERE build_id = ?").run(build);
   }
 
   async listCapacity(): Promise<readonly CapacityReservation[]> {
     return (this.#database.prepare(
-      "SELECT * FROM narratage_capacity ORDER BY created_at ASC, build_id ASC, command_id ASC",
+      "SELECT * FROM hypit_capacity ORDER BY created_at ASC, build_id ASC, command_id ASC",
     ).all() as Row[]).map(parseCapacityReservation);
   }
 }
@@ -589,18 +589,18 @@ export class SqliteRuntimeState {
       this.#database.exec("PRAGMA synchronous = NORMAL");
     }
     if (!options.readOnly || emptyReadOnly) this.#database.exec(`
-      CREATE TABLE IF NOT EXISTS narratage_builds (
+      CREATE TABLE IF NOT EXISTS hypit_builds (
         build_id TEXT PRIMARY KEY,
         definition_json TEXT NOT NULL
       ) STRICT;
-      CREATE TABLE IF NOT EXISTS narratage_build_facts (
+      CREATE TABLE IF NOT EXISTS hypit_build_facts (
         sequence INTEGER PRIMARY KEY AUTOINCREMENT,
         build_id TEXT NOT NULL,
         command_id TEXT NOT NULL,
         fact_json TEXT NOT NULL,
         UNIQUE (build_id, command_id)
       ) STRICT;
-      CREATE TABLE IF NOT EXISTS narratage_operations (
+      CREATE TABLE IF NOT EXISTS hypit_operations (
         operation_id TEXT PRIMARY KEY,
         build_id TEXT NOT NULL,
         command_id TEXT NOT NULL,
@@ -610,12 +610,12 @@ export class SqliteRuntimeState {
         status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'failed', 'cancelled')),
         payload_json TEXT
       ) STRICT;
-      CREATE TABLE IF NOT EXISTS narratage_build_catalog (
+      CREATE TABLE IF NOT EXISTS hypit_build_catalog (
         build_id TEXT PRIMARY KEY,
         created_at INTEGER NOT NULL,
         descriptor_json TEXT NOT NULL
       ) STRICT;
-      CREATE TABLE IF NOT EXISTS narratage_dispatches (
+      CREATE TABLE IF NOT EXISTS hypit_dispatches (
         build_id TEXT PRIMARY KEY,
         component_packages_json TEXT NOT NULL,
         created_at INTEGER NOT NULL,
@@ -625,9 +625,9 @@ export class SqliteRuntimeState {
         cancel_requested INTEGER NOT NULL DEFAULT 0 CHECK (cancel_requested IN (0, 1)),
         terminal TEXT CHECK (terminal IS NULL OR terminal IN ('complete', 'failed', 'cancelled'))
       ) STRICT;
-      CREATE INDEX IF NOT EXISTS narratage_dispatch_ready
-        ON narratage_dispatches (phase, available_at);
-      CREATE TABLE IF NOT EXISTS narratage_capacity (
+      CREATE INDEX IF NOT EXISTS hypit_dispatch_ready
+        ON hypit_dispatches (phase, available_at);
+      CREATE TABLE IF NOT EXISTS hypit_capacity (
         build_id TEXT NOT NULL,
         command_id TEXT NOT NULL,
         resources_json TEXT NOT NULL,

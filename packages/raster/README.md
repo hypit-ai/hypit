@@ -1,4 +1,4 @@
-# @narratage/raster
+# @hypit/raster
 
 The closed deterministic raster-execution waist. It owns one `execute-raster` capability and a
 finite `RasterRequest` union. Author packages such as Image Transform and Image Compose lower their

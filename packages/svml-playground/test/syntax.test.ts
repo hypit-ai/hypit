@@ -37,12 +37,12 @@ test("the rendered text reconstructs the source exactly", () => {
 });
 
 test("the Source Header, tags, attributes and references are distinguished", () => {
-  const kinds = kindsOf(`<?svml using="@narratage/markup@1"?>
+  const kinds = kindsOf(`<?svml using="@hypit/markup@1"?>
 <svml>
   <space:Frame id="card-a" within={vertical} left="8%"/>
 </svml>
 `);
-  assert.ok(kinds.includes(`<?svml using="@narratage/markup@1"?>:header`));
+  assert.ok(kinds.includes(`<?svml using="@hypit/markup@1"?>:header`));
   assert.ok(kinds.includes("space:Frame:tag"));
   assert.ok(kinds.includes("id:attr"));
   assert.ok(kinds.includes(`"card-a":string`));

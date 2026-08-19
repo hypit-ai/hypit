@@ -1,50 +1,50 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { videoContractManifests } from "../../../test/support/video-domain.js";
-import { createResolvedClosure } from "@narratage/core";
+import { createResolvedClosure } from "@hypit/core";
 
-import { verifyGraphFragment } from "@narratage/elaborator";
+import { verifyGraphFragment } from "@hypit/elaborator";
 import {
   geminiOmniDefinition,
   geminiOmniManifest,
   sealGeminiOmniRequest,
-} from "@narratage/gemini-omni";
-import { MemoryArtifactStore } from "@narratage/driver-node";
+} from "@hypit/gemini-omni";
+import { MemoryArtifactStore } from "@hypit/driver-node";
 import {
   assertMappingCoversPorts,
   compileWireRequest,
   generationManifest,
-} from "@narratage/generation";
-import type { GenerationPortTable } from "@narratage/generation";
+} from "@hypit/generation";
+import type { GenerationPortTable } from "@hypit/generation";
 import {
   gptImageDefinition,
   gptImageManifest,
   sealGptImage2Request,
-} from "@narratage/gpt-image";
+} from "@hypit/gpt-image";
 import {
   grokImagineDefinition,
   grokImagineManifest,
   sealGrokImagineRequest,
-} from "@narratage/grok-imagine";
+} from "@hypit/grok-imagine";
 import {
   minimaxH3Definition,
   minimaxH3Manifest,
   sealMinimaxH3Request,
-} from "@narratage/minimax-h3";
+} from "@hypit/minimax-h3";
 import {
   nanoBananaDefinition,
   nanoBananaManifest,
   sealNanoBananaRequest,
-} from "@narratage/nano-banana";
-import { kieModelCatalog } from "@narratage/provider-kie";
-import { seedanceDefinition, seedanceManifest, seedancePorts, sealSeedanceRequest } from "@narratage/seedance";
+} from "@hypit/nano-banana";
+import { kieModelCatalog } from "@hypit/provider-kie";
+import { seedanceDefinition, seedanceManifest, seedancePorts, sealSeedanceRequest } from "@hypit/seedance";
 import {
   seedreamDefinition,
   seedreamManifest,
   sealSeedreamRequest,
-} from "@narratage/seedream";
-import type { CapabilityRef, LinkedProgram } from "@narratage/protocol";
-import { textManifest } from "@narratage/text";
+} from "@hypit/seedream";
+import type { CapabilityRef, LinkedProgram } from "@hypit/protocol";
+import { textManifest } from "@hypit/text";
 
 /**
  * Every exact model this repository ships, paired with the Capability it publishes.
@@ -72,13 +72,13 @@ test("the selected KIE release is seven exact model families and no Grok image c
   assert.deepEqual(
     [...new Set(kieModelCatalog.map((item) => item.capability.module.name))].sort(),
     [
-      "@narratage/gemini-omni",
-      "@narratage/gpt-image",
-      "@narratage/grok-imagine",
-      "@narratage/minimax-h3",
-      "@narratage/nano-banana",
-      "@narratage/seedance",
-      "@narratage/seedream",
+      "@hypit/gemini-omni",
+      "@hypit/gpt-image",
+      "@hypit/grok-imagine",
+      "@hypit/minimax-h3",
+      "@hypit/nano-banana",
+      "@hypit/seedance",
+      "@hypit/seedream",
     ],
   );
 });

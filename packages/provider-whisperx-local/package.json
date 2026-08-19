@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/provider-whisperx-local",
+  "name": "@hypit/provider-whisperx-local",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,18 +7,18 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/runtime-kit": "workspace:*",
-    "@narratage/speech-evidence": "workspace:*",
-    "@narratage/whisperx": "workspace:*"
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*",
+    "@hypit/speech-evidence": "workspace:*",
+    "@hypit/whisperx": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/driver-node": "workspace:*",
-    "@narratage/speech": "workspace:*"
+    "@hypit/driver-node": "workspace:*",
+    "@hypit/speech": "workspace:*"
   }
 }

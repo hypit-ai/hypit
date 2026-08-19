@@ -1,23 +1,23 @@
-# `@narratage/runtime-local`
+# `@hypit/runtime-local`
 
-The default local Runtime for Narratage. It owns the Worker, scheduler, SQLite state and Build queue.
+The default local Runtime for Hypit. It owns the Worker, scheduler, SQLite state and Build queue.
 It contains no video, authoring or Provider policy.
 
 A Runtime Profile selects only the environmental parts that genuinely vary:
 
 ```json
 {
-  "format": "narratage.runtime-profile@1",
+  "format": "hypit.runtime-profile@1",
   "runtime": {
-    "use": "@narratage/runtime-local",
+    "use": "@hypit/runtime-local",
     "config": {
-      "dataRoot": ".narratage/runtimes/local",
+      "dataRoot": ".hypit/runtimes/local",
       "artifacts": {
-        "use": "@narratage/artifact-store-fs",
+        "use": "@hypit/artifact-store-fs",
         "config": { "path": "artifacts" }
       },
       "credentials": {
-        "environment": { "use": "@narratage/credential-store-env" }
+        "environment": { "use": "@hypit/credential-store-env" }
       },
       "endpoints": {}
     }

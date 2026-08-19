@@ -1,4 +1,4 @@
-# `@narratage/media-track`
+# `@hypit/media-track`
 
 Official provider-free Media Item and Sequence authoring package.
 
@@ -19,5 +19,5 @@ restricted internal projection.
 
 The automatic lowering is Surface behavior, not a privileged Runtime route: it produces the same
 ordinary Media Pipeline Operations that an author can write explicitly through
-`@narratage/media-pipeline`. The package does not add Media, B-roll or Provider meaning to Core,
+`@hypit/media-pipeline`. The package does not add Media, B-roll or Provider meaning to Core,
 Film, Composition or HyperFrames. “B-roll” is an editorial use of an ordinary Item or Sequence.

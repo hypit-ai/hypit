@@ -1,4 +1,4 @@
-# `@narratage/gemini-omni`
+# `@hypit/gemini-omni`
 
 Exact author/compute contract and package-owned author Surface for Gemini Omni video generation.
 
@@ -6,7 +6,7 @@ It defines one `video` endpoint with duration, aspect ratio, resolution and boun
 audio, video-range and character references. It validates and seals requests, then projects the
 primary result to an ordinary video Artifact.
 
-The package does not call an API. `@narratage/provider-kie` is one separately selected Runtime Endpoint
+The package does not call an API. `@hypit/provider-kie` is one separately selected Runtime Endpoint
 implementation; another Provider can implement the same exact capability without changing Core.
 
 ```xml

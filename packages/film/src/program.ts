@@ -1,9 +1,9 @@
-import { assertProgramSpaceIdentity } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { assertCanvasSpace } from "@narratage/spatial";
-import type { CanvasSpace } from "@narratage/spatial";
-import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualTrackIdentity, sealComposition } from "@narratage/composition";
-import type { AudioTrack, Composition, Track, VisualTrack } from "@narratage/composition";
+import { assertProgramSpaceIdentity } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { assertCanvasSpace } from "@hypit/spatial";
+import type { CanvasSpace } from "@hypit/spatial";
+import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualTrackIdentity, sealComposition } from "@hypit/composition";
+import type { AudioTrack, Composition, Track, VisualTrack } from "@hypit/composition";
 
 import type { FilmProgram, FilmTrackSet } from "./types.js";
 

@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/endpoint-kit",
+  "name": "@hypit/endpoint-kit",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -8,7 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@narratage/protocol": "workspace:*",
-    "@narratage/runtime": "workspace:*"
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime": "workspace:*"
   }
 }

@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
 
-import { probeMediaToolchain } from "@narratage/media-execution";
-import { runtimeConfigObject, runtimeConfigString } from "@narratage/runtime-kit";
-import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@narratage/runtime-kit";
-import { resolveRuntimeExecutable } from "@narratage/runtime-host-node";
+import { probeMediaToolchain } from "@hypit/media-execution";
+import { runtimeConfigObject, runtimeConfigString } from "@hypit/runtime-kit";
+import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@hypit/runtime-kit";
+import { resolveRuntimeExecutable } from "@hypit/runtime-host-node";
 
 import { defaultHyperframesCliPath } from "./provider.js";
 

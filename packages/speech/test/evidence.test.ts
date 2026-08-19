@@ -1,6 +1,6 @@
-import { programSpaceSampleFrames, sealProgramSpace } from "@narratage/program-space";
-import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleBoundary } from "@narratage/speech";
-import type { SpeechEvidenceAudio } from "@narratage/speech";
+import { programSpaceSampleFrames, sealProgramSpace } from "@hypit/program-space";
+import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleBoundary } from "@hypit/speech";
+import type { SpeechEvidenceAudio } from "@hypit/speech";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";

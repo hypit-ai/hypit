@@ -1,6 +1,6 @@
 import { relative, resolve } from "node:path";
 
-import type { BuildPlan, TypeRef } from "@narratage/protocol";
+import type { BuildPlan, TypeRef } from "@hypit/protocol";
 
 export type CliTerminal = {
   readonly isTTY: boolean;
@@ -35,14 +35,14 @@ export type CliDiagnostic = {
 };
 
 export type DoctorOutput = {
-  readonly format: "narratage.cli-doctor@1";
+  readonly format: "hypit.cli-doctor@1";
   readonly ok: boolean;
   readonly dataRoot: string;
   readonly diagnostics: readonly CliDiagnostic[];
 };
 
 export type AuthorCheckOutput = {
-  readonly format: "narratage.cli-check@1";
+  readonly format: "hypit.cli-check@1";
   readonly sourceKind: "author";
   readonly ok: true;
   readonly units: number;
@@ -56,7 +56,7 @@ export type AuthorCheckOutput = {
 };
 
 export type RunCheckOutput = {
-  readonly format: "narratage.cli-check@1";
+  readonly format: "hypit.cli-check@1";
   readonly sourceKind: "run";
   readonly ok: true;
   readonly run: string;
@@ -80,7 +80,7 @@ export type PlanPreflight = {
 };
 
 export type PlanOutput = {
-  readonly format: "narratage.cli-plan@1";
+  readonly format: "hypit.cli-plan@1";
   readonly ok: boolean;
   readonly plan: BuildPlan;
   readonly preflight?: PlanPreflight;
@@ -194,7 +194,7 @@ function heading(status: "success" | "warning" | "error" | "info", text: string,
 function renderDoctor(view: Extract<CliPresentation, { kind: "doctor" }>, io: CliIo, colors: Palette): string {
   const errors = view.machine.diagnostics.filter((item) => item.severity === "error");
   const warnings = view.machine.diagnostics.filter((item) => item.severity === "warning");
-  const lines = [colors.accent(colors.strong("Narratage Doctor")), ""];
+  const lines = [colors.accent(colors.strong("Hypit Doctor")), ""];
   lines.push(...facts([
     ["Profile", shortPath(view.profile)],
     ["Data root", shortPath(view.machine.dataRoot)],
@@ -403,114 +403,114 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
   ];
   const topics: Readonly<Record<string, readonly string[]>> = {
     check: [
-      colors.accent(colors.strong("narratage check")),
+      colors.accent(colors.strong("hypit check")),
       colors.dim("Validate one self-described Author Source or Run Source without executing it."),
       "",
-      "  narratage check <source> [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>]",
+      "  hypit check <source> [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>]",
     ],
     doctor: [
-      colors.accent(colors.strong("narratage doctor")),
+      colors.accent(colors.strong("hypit doctor")),
       colors.dim("Diagnose one complete declarative Runtime Profile without submitting work."),
       "",
-      "  narratage doctor [<runtime-profile>]",
+      "  hypit doctor [<runtime-profile>]",
     ],
     plan: [
-      colors.accent(colors.strong("narratage plan")),
+      colors.accent(colors.strong("hypit plan")),
       colors.dim("Freeze the demanded subgraph and expose explicit Run choices and every external Need."),
       "",
-      "  narratage plan <run-source> [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>]",
+      "  hypit plan <run-source> [--runtime <profile>] [--workspace <workspace>] [--asset-root <directory>]",
       "",
       "With --runtime, plan also preflights only the demanded deployment slice.",
       "Planning never starts external work.",
     ],
     build: [
-      colors.accent(colors.strong("narratage build")),
+      colors.accent(colors.strong("hypit build")),
       colors.dim("Submit one durable Build and ensure its selected Runtime Worker is available."),
       "",
-      "  narratage build <run-source> [--runtime <profile>] [--asset-root <directory>] [--follow] [--no-programs]",
+      "  hypit build <run-source> [--runtime <profile>] [--asset-root <directory>] [--follow] [--no-programs]",
       "",
       "  --follow                   observe the Build; the Worker still owns execution",
       "  --no-programs              do not start declared external programs",
       "  --max-wait-ms <ms>         bound startup or follow waiting",
     ],
     runtime: [
-      colors.accent(colors.strong("narratage runtime")),
+      colors.accent(colors.strong("hypit runtime")),
       colors.dim("Select a project Runtime Profile, then operate its durable Worker."),
       "",
-      "  narratage runtime use <profile>       select the Profile for this project",
-      "  narratage runtime unset               remove only the local selection",
-      "  narratage runtime up [<profile>]      validate the Profile, start programs and Worker",
-      "  narratage runtime status [<profile>]  inspect Worker, queue capacity and declared programs",
-      "  narratage runtime logs [<profile>]    read Worker logs",
-      "  narratage runtime down [<profile>]    stop the Worker; external programs keep running",
+      "  hypit runtime use <profile>       select the Profile for this project",
+      "  hypit runtime unset               remove only the local selection",
+      "  hypit runtime up [<profile>]      validate the Profile, start programs and Worker",
+      "  hypit runtime status [<profile>]  inspect Worker, queue capacity and declared programs",
+      "  hypit runtime logs [<profile>]    read Worker logs",
+      "  hypit runtime down [<profile>]    stop the Worker; external programs keep running",
     ],
     programs: [
-      colors.accent(colors.strong("narratage programs")),
+      colors.accent(colors.strong("hypit programs")),
       colors.dim("Operate only the external programs declared by Endpoints in one Runtime Profile."),
       "",
-      "  narratage programs up [<profile>] [--max-wait-ms <ms>]",
-      "  narratage programs status [<profile>]",
-      "  narratage programs down [<profile>]",
+      "  hypit programs up [<profile>] [--max-wait-ms <ms>]",
+      "  hypit programs status [<profile>]",
+      "  hypit programs down [<profile>]",
     ],
     queue: [
-      colors.accent(colors.strong("narratage queue")),
+      colors.accent(colors.strong("hypit queue")),
       colors.dim("Inspect durable Build dispatch and Provider pool capacity."),
       "",
-      "  narratage queue [--runtime <profile>] [--watch]",
-      "  narratage queue [--runtime <profile>] --watch --jsonl",
+      "  hypit queue [--runtime <profile>] [--watch]",
+      "  hypit queue [--runtime <profile>] --watch --jsonl",
     ],
     paths: [
-      colors.accent(colors.strong("narratage paths")),
+      colors.accent(colors.strong("hypit paths")),
       colors.dim("Show project, Runtime and host state locations without creating them."),
       "",
-      "  narratage paths [--runtime <profile>]",
+      "  hypit paths [--runtime <profile>]",
     ],
     builds: [
-      colors.accent(colors.strong("narratage builds")),
+      colors.accent(colors.strong("hypit builds")),
       colors.dim("List Builds archived by one Runtime Profile."),
       "",
-      "  narratage builds [--runtime <profile>]",
+      "  hypit builds [--runtime <profile>]",
     ],
     status: [
-      colors.accent(colors.strong("narratage status")),
+      colors.accent(colors.strong("hypit status")),
       colors.dim("Show one Build now, or keep watching it without owning execution."),
       "",
-      "  narratage status <build-id> [--runtime <profile>] [--watch]",
+      "  hypit status <build-id> [--runtime <profile>] [--watch]",
       "  --watch                   observe until terminal; the Worker still owns execution",
       "  --max-wait-ms <ms>        stop watching after a bounded wait",
     ],
     inspect: [
-      colors.accent(colors.strong("narratage inspect")),
+      colors.accent(colors.strong("hypit inspect")),
       colors.dim("Inspect one Build's targets and accepted archive."),
       "",
-      "  narratage inspect <build-id> [--runtime <profile>]",
+      "  hypit inspect <build-id> [--runtime <profile>]",
     ],
     get: [
-      colors.accent(colors.strong("narratage get")),
+      colors.accent(colors.strong("hypit get")),
       colors.dim("Read or copy one archived result; copying never reruns work."),
       "",
-      "  narratage get <build-id> [--runtime <profile>] [--name <source-name>|--record <id>|--output <id>|--artifact <digest>] [--to <path>]",
+      "  hypit get <build-id> [--runtime <profile>] [--name <source-name>|--record <id>|--output <id>|--artifact <digest>] [--to <path>]",
     ],
     history: [
-      colors.accent(colors.strong("narratage history")),
+      colors.accent(colors.strong("hypit history")),
       colors.dim("Find accepted historical Logical Outputs without selecting them for a new Run."),
       "",
-      "  narratage history <output-name> [--runtime <profile>] [--source <author-source>]",
-      "  narratage history --source <author-source> [--runtime <profile>]",
+      "  hypit history <output-name> [--runtime <profile>] [--source <author-source>]",
+      "  hypit history --source <author-source> [--runtime <profile>]",
     ],
     cancel: [
-      colors.accent(colors.strong("narratage cancel")),
+      colors.accent(colors.strong("hypit cancel")),
       colors.dim("Withdraw one Build and honestly reconcile work already submitted to Providers."),
       "",
-      "  narratage cancel <build-id> [--runtime <profile>] [--reason <text>]",
+      "  hypit cancel <build-id> [--runtime <profile>] [--reason <text>]",
     ],
     auth: [
-      colors.accent(colors.strong("narratage auth")),
+      colors.accent(colors.strong("hypit auth")),
       colors.dim("Manage credentials required by one declared Endpoint instance."),
       "",
-      "  narratage auth status <endpoint-instance> [--runtime <profile>] [--slot <name>]",
-      "  narratage auth login <endpoint-instance> [--runtime <profile>] [--slot <name>] [--from <secret-file>]",
-      "  narratage auth logout <endpoint-instance> [--runtime <profile>] [--slot <name>]",
+      "  hypit auth status <endpoint-instance> [--runtime <profile>] [--slot <name>]",
+      "  hypit auth login <endpoint-instance> [--runtime <profile>] [--slot <name>] [--from <secret-file>]",
+      "  hypit auth logout <endpoint-instance> [--runtime <profile>] [--slot <name>]",
     ],
   };
   const selected = topics[topic];
@@ -529,7 +529,7 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
     }
   }
   io.write([
-    colors.accent(colors.strong("Narratage")),
+    colors.accent(colors.strong("Hypit")),
     colors.dim('"First, there was narration. Then, there were montages."'),
     "",
     colors.strong("Typical flow"),
@@ -584,7 +584,7 @@ export function renderCliError(error: unknown, options: {
     : "CLI_ERROR";
   if (options.json) {
     return `${JSON.stringify({
-      format: "narratage.cli-error@1",
+      format: "hypit.cli-error@1",
       ok: false,
       error: {
         code,

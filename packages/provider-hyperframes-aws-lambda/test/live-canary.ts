@@ -16,36 +16,36 @@ import {
 import {
   sealComposition,
   sealVisualTrack,
-} from "@narratage/composition";
+} from "@hypit/composition";
 import {
   EndpointRegistry,
   MemoryArtifactStore,
-} from "@narratage/driver-node";
+} from "@hypit/driver-node";
 import type {
   EndpointOutcome,
   AsyncEndpoint,
-} from "@narratage/endpoint-kit";
-import { compileHyperframesDocument } from "@narratage/hyperframes";
-import type { HyperframesDocument } from "@narratage/hyperframes";
+} from "@hypit/endpoint-kit";
+import { compileHyperframesDocument } from "@hypit/hyperframes";
+import type { HyperframesDocument } from "@hypit/hyperframes";
 import {
   mediaTypes,
   verifyRenderedVisual,
-} from "@narratage/media";
-import type { RenderedVisual } from "@narratage/media";
-import { sealProgramSpace } from "@narratage/program-space";
+} from "@hypit/media";
+import type { RenderedVisual } from "@hypit/media";
+import { sealProgramSpace } from "@hypit/program-space";
 import {
   createAwsLambdaHyperframesProvider,
-} from "@narratage/provider-hyperframes-aws-lambda";
+} from "@hypit/provider-hyperframes-aws-lambda";
 import {
-  } from "@narratage/protocol";
+  } from "@hypit/protocol";
 import type {
   CanonicalValue,
   Need,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import {
   hyperframesVisualRequest,
   renderHyperframesCapabilities,
-} from "@narratage/render-hyperframes";
+} from "@hypit/render-hyperframes";
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name];
@@ -53,12 +53,12 @@ function requiredEnvironment(name: string): string {
   return value;
 }
 
-const stateMachineArn = requiredEnvironment("NARRATAGE_HYPERFRAMES_STATE_MACHINE_ARN");
-const bucketName = requiredEnvironment("NARRATAGE_HYPERFRAMES_BUCKET");
+const stateMachineArn = requiredEnvironment("HYPIT_HYPERFRAMES_STATE_MACHINE_ARN");
+const bucketName = requiredEnvironment("HYPIT_HYPERFRAMES_BUCKET");
 const region = requiredEnvironment("AWS_REGION");
 
 const run = promisify(execFile);
-const memorySizeMb = Number.parseInt(process.env.NARRATAGE_HYPERFRAMES_MEMORY_MB ?? "2048", 10);
+const memorySizeMb = Number.parseInt(process.env.HYPIT_HYPERFRAMES_MEMORY_MB ?? "2048", 10);
 assert(Number.isSafeInteger(memorySizeMb) && memorySizeMb >= 2_048, "invalid HyperFrames canary memory size");
 
 function documentFixture(canaryId: string): HyperframesDocument {
@@ -69,7 +69,7 @@ function documentFixture(canaryId: string): HyperframesDocument {
     frameRate,
   });
   const track = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: `hyperframes-aws-canary-${canaryId}`,
     presents: [{
       id: "card",
@@ -149,7 +149,7 @@ async function deletePrefix(s3: S3Client, prefix: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const canaryId = process.env.NARRATAGE_HYPERFRAMES_CANARY_ID ?? randomUUID().slice(0, 16);
+  const canaryId = process.env.HYPIT_HYPERFRAMES_CANARY_ID ?? randomUUID().slice(0, 16);
   const document = documentFixture(canaryId);
   const need = requestNeed(document, canaryId);
   const endpoint = await endpointFor(need);
@@ -164,7 +164,7 @@ async function main(): Promise<void> {
     operation,
   };
   let lastHandle: CanonicalValue | undefined;
-  const work = await mkdtemp(join(tmpdir(), "narratage-hyperframes-canary-"));
+  const work = await mkdtemp(join(tmpdir(), "hypit-hyperframes-canary-"));
   try {
     let outcome: EndpointOutcome = await endpoint.start(context);
     for (let polls = 0; outcome.status === "pending"; polls += 1) {
@@ -186,7 +186,7 @@ async function main(): Promise<void> {
 
     const output = join(work, "visual.mp4");
     await writeFile(output, bytes);
-    const { stdout } = await run(process.env.NARRATAGE_CANARY_FFPROBE ?? "ffprobe", [
+    const { stdout } = await run(process.env.HYPIT_CANARY_FFPROBE ?? "ffprobe", [
       "-v", "error", "-count_frames", "-select_streams", "v:0",
       "-show_entries", "stream=codec_name,nb_read_frames,width,height",
       "-of", "json", output,
@@ -213,7 +213,7 @@ async function main(): Promise<void> {
     }, null, 2)}\n`);
   } finally {
     await rm(work, { recursive: true, force: true });
-    if (process.env.NARRATAGE_HYPERFRAMES_CANARY_KEEP !== "1" && lastHandle !== undefined) {
+    if (process.env.HYPIT_HYPERFRAMES_CANARY_KEEP !== "1" && lastHandle !== undefined) {
       const handle = lastHandle as unknown as { executionName?: string; site?: { siteId?: string } };
       const s3 = new S3Client({ region });
       if (handle.executionName !== undefined) await deletePrefix(s3, `renders/${handle.executionName}/`);

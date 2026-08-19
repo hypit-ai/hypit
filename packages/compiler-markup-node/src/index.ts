@@ -1,20 +1,20 @@
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
+import { registerTypeValidatorFacets } from "@hypit/component-kit";
 import {
   ModulePackageRegistry,
   NodeCompiler,
-} from "@narratage/compiler-node";
-import { AuthorFrontendRegistry, installAuthorFrontendHostFacets } from "@narratage/elaborator";
-import type { Workspace } from "@narratage/workspace";
+} from "@hypit/compiler-node";
+import { AuthorFrontendRegistry, installAuthorFrontendHostFacets } from "@hypit/elaborator";
+import type { Workspace } from "@hypit/workspace";
 import {
   collectNodePackageComponents,
-} from "@narratage/package-loader-node";
-import type { NodePackageContribution } from "@narratage/package-loader-node";
+} from "@hypit/package-loader-node";
+import type { NodePackageContribution } from "@hypit/package-loader-node";
 import {
   createMarkupAuthorFrontend,
   installMarkupSurfaceHostFacets,
   MarkupSurfaceRegistry,
-} from "@narratage/markup";
-import { TypeValidatorRegistry } from "@narratage/validation";
+} from "@hypit/markup";
+import { TypeValidatorRegistry } from "@hypit/validation";
 
 export type CreateMarkupNodeCompilerOptions = {
   readonly workspace: Workspace;

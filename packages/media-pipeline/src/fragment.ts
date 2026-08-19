@@ -1,6 +1,6 @@
-import { mediaTypes } from "@narratage/media";
-import { artifactTypes } from "@narratage/artifact";
-import { sealGraphFragment } from "@narratage/elaborator";
+import { mediaTypes } from "@hypit/media";
+import { artifactTypes } from "@hypit/artifact";
+import { sealGraphFragment } from "@hypit/elaborator";
 
 import {
   mediaPipelineProducers,

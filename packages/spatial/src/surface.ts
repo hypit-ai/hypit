@@ -1,12 +1,12 @@
-import type { AuthorValueRef, GraphFragment } from "@narratage/elaborator";
-import type { CanonicalValue } from "@narratage/protocol";
+import type { AuthorValueRef, GraphFragment } from "@hypit/elaborator";
+import type { CanonicalValue } from "@hypit/protocol";
 import type {
   SurfaceComponentDraft,
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import {
   anchoredFrameFragment,

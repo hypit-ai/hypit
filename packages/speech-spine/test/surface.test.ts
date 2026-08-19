@@ -1,55 +1,55 @@
-import { artifactDependency } from "@narratage/artifact";
+import { artifactDependency } from "@hypit/artifact";
 import { videoContractManifests } from "../../../test/support/video-domain.js";
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
-import { mediaDependency } from "@narratage/media";
-import { compositionTypes } from "@narratage/composition";
-import { artifactTypes } from "@narratage/artifact";
+import { registerTypeValidatorFacets } from "@hypit/component-kit";
+import { mediaDependency } from "@hypit/media";
+import { compositionTypes } from "@hypit/composition";
+import { artifactTypes } from "@hypit/artifact";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { createResolvedClosure, sealBuildRequest, start } from "@narratage/core";
+import { createResolvedClosure, sealBuildRequest, start } from "@hypit/core";
 import {
   AuthorFrontendRegistry,
   compileSourceClosure,
   resolveCompiledSourceExport,
-} from "@narratage/elaborator";
-import type { AuthorSourceUnit } from "@narratage/elaborator";
+} from "@hypit/elaborator";
+import type { AuthorSourceUnit } from "@hypit/elaborator";
 import {
   mediaPipelineComponent,
   mediaPipelineManifest,
   mediaPipelineProducers,
-} from "@narratage/media-pipeline";
-import type { ModuleManifest } from "@narratage/protocol";
+} from "@hypit/media-pipeline";
+import type { ModuleManifest } from "@hypit/protocol";
 import {
   decodeScriptSurface,
   scriptManifest,
   scriptMarkupSurfaces,
   scriptModuleRef,
-} from "@narratage/script";
-import { speechBasisManifest, speechBasisProducers } from "@narratage/speech-basis";
-import { textComponent, textManifest } from "@narratage/text";
-import { mediaTrackManifest } from "@narratage/media-track";
-import { svsManifest, svsModuleRef, svsRecipeType } from "@narratage/svs";
+} from "@hypit/script";
+import { speechBasisManifest, speechBasisProducers } from "@hypit/speech-basis";
+import { textComponent, textManifest } from "@hypit/text";
+import { mediaTrackManifest } from "@hypit/media-track";
+import { svsManifest, svsModuleRef, svsRecipeType } from "@hypit/svs";
 import {
   decodeSpeechSpineSurface,
   speechSpineManifest,
   speechSpineMarkupSurfaces,
   speechSpineModuleRef,
   speechSpineProducers,
-} from "@narratage/speech-spine";
+} from "@hypit/speech-spine";
 import {
   decodeCanvasSurface,
   decodeFrameSurface,
   spatialComponent,
   spatialMarkupSurfaces,
   spatialModuleRef,
-} from "@narratage/spatial";
+} from "@hypit/spatial";
 import {
   MarkupSurfaceRegistry,
   createMarkupAuthorFrontend,
-} from "@narratage/markup";
-import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
+} from "@hypit/markup";
+import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
 
 const fixtureModule = { name: "example.speech-media", version: "1" } as const;
 const fixtureSurfaceDigest = fixtureDigest("example.speech-media/surface@1");
@@ -57,7 +57,7 @@ const fixtureSurface = {
   name: "media", tag: "Media", mode: "structured", outputs: [artifactTypes.blob, svsRecipeType],
 } as const;
 const fixtureManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
   dependencies: [artifactDependency, mediaDependency, { module: svsModuleRef }],
@@ -68,7 +68,7 @@ function source(text: string): AuthorSourceUnit {
   return {
     id: "/project/main.svml",
     name: "main.svml",
-    text: `<?svml using="@narratage/markup@1"?>\n${text}`,
+    text: `<?svml using="@hypit/markup@1"?>\n${text}`,
   };
 }
 
@@ -111,9 +111,9 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
     resolveModule(request) {
-      if (request.from.startsWith("@narratage/script")) return scriptModuleRef;
-      if (request.from.startsWith("@narratage/speech")) return speechSpineModuleRef;
-      if (request.from.startsWith("@narratage/spatial")) return spatialModuleRef;
+      if (request.from.startsWith("@hypit/script")) return scriptModuleRef;
+      if (request.from.startsWith("@hypit/speech")) return speechSpineModuleRef;
+      if (request.from.startsWith("@hypit/spatial")) return spatialModuleRef;
       return fixtureModule;
     },
   }));
@@ -123,10 +123,10 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   registerTypeValidatorFacets(validators, textComponent.validators ?? []);
   const compiled = await compileSourceClosure({
     entry: source(`<svml>
-      <import from="@narratage/script@1"/>
+      <import from="@hypit/script@1"/>
       <import as="fixture" from="example.speech-media@1"/>
-      <import as="speech" from="@narratage/speech-spine@1"/>
-      <import as="space" from="@narratage/spatial@1"/>
+      <import as="speech" from="@hypit/speech-spine@1"/>
+      <import as="space" from="@hypit/spatial@1"/>
       <script id="story">
         <opening><ALICE> Hello from Alice.</opening>
         <answer><BOB> Hello from Bob.</answer>

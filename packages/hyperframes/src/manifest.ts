@@ -1,10 +1,10 @@
-import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { compositionDependency, compositionTypes } from "@narratage/composition";
-import { compositableSurfaceSchema, mediaDependency } from "@narratage/media";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
-import { VISUAL_IR_V1 } from "@narratage/visual-ir";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
+import { compositableSurfaceSchema, mediaDependency } from "@hypit/media";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { VISUAL_IR_V1 } from "@hypit/visual-ir";
 
-export const hyperframesModuleRef = { name: "@narratage/hyperframes", version: "1" } as const;
+export const hyperframesModuleRef = { name: "@hypit/hyperframes", version: "1" } as const;
 export const hyperframesTypes = {
   document: { module: hyperframesModuleRef, name: "HyperframesDocument" },
 } satisfies Record<string, TypeRef>;
@@ -49,7 +49,7 @@ export const hyperframesDocumentSchema: ValueSchema = {
 };
 
 export const hyperframesManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: hyperframesModuleRef.name,
   version: hyperframesModuleRef.version,
   dependencies: [compositionDependency, mediaDependency, programSpaceDependency],

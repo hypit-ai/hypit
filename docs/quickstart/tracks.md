@@ -18,15 +18,15 @@ Script Display → Caption Program → Planner + measured Atom timing → Style-
 ```
 
 ```svml
-<import as="caption" from="@narratage/caption@1"/>
-<import as="caption-fine" from="@narratage/caption-fine@1"/>
-<import as="caption-ai" from="@narratage/caption-gemini@1"/>
-<import as="media" from="@narratage/media@1"/>
-<import as="fonts" from="@narratage/fonts-open@1"/>
+<import as="caption" from="@hypit/caption@1"/>
+<import as="caption-fine" from="@hypit/caption-fine@1"/>
+<import as="caption-ai" from="@hypit/caption-gemini@1"/>
+<import as="media" from="@hypit/media@1"/>
+<import as="fonts" from="@hypit/fonts-open@1"/>
 ```
 
-`@narratage/caption` owns only common Cue bounds, generic optional per-Word fields, total Style
-assignment, Plan validation and the timing join. `@narratage/caption-fine` is one field-free Style
+`@hypit/caption` owns only common Cue bounds, generic optional per-Word fields, total Style
+assignment, Plan validation and the timing join. `@hypit/caption-fine` is one field-free Style
 family: it owns geometry, glyph/Cue/Pill Paint and layered local motion.
 
 ### caption-fine:Style
@@ -154,8 +154,8 @@ place an image, generated video, prepared timed medium or compositable Surface a
 absolute window.
 
 ```svml
-<import as="media-track" from="@narratage/media-track@1"/>
-<import as="wording" from="@narratage/text@1"/>
+<import as="media-track" from="@hypit/media-track@1"/>
+<import as="wording" from="@hypit/text@1"/>
 ```
 
 ### media-track:Track and media-track:Item
@@ -213,14 +213,14 @@ or specially selected media, whose output then connects through `media=`.
 
 ## Audio tracks
 
-`@narratage/audio-track` places explicitly prepared audio on the same ProgramSpace as the visual
+`@hypit/audio-track` places explicitly prepared audio on the same ProgramSpace as the visual
 Tracks. A `Clip` consumes `SynchronizedMedia`; normalize a declared or generated audio Blob first,
 then choose its exact program window and occupancy:
 
 ```svml
-<import as="media" from="@narratage/media@1"/>
-<import as="pipeline" from="@narratage/media-pipeline@1"/>
-<import as="audio" from="@narratage/audio-track@1"/>
+<import as="media" from="@hypit/media@1"/>
+<import as="pipeline" from="@hypit/media-pipeline@1"/>
+<import as="audio" from="@hypit/audio-track@1"/>
 
 <media:Audio id="music" src="./assets/music.wav"/>
 <pipeline:Normalize id="music-media" source={music}
@@ -253,8 +253,8 @@ Clips in one Track and multiple peer Audio Tracks remain independent inputs to F
 Static or timed text displayed on screen — titles, callouts, lower thirds.
 
 ```svml
-<import as="text" from="@narratage/typography-track@1"/>
-<import as="wording" from="@narratage/text@1"/>
+<import as="text" from="@hypit/typography-track@1"/>
+<import as="wording" from="@hypit/text@1"/>
 ```
 
 ### text:Track
@@ -341,7 +341,7 @@ its own style tag.
 | `ranking:TypewriterList` | `ranking:TypewriterItem` | `ranking:TypewriterListStyle` |
 
 ```svml
-<import as="ranking" from="@narratage/ranking@1"/>
+<import as="ranking" from="@hypit/ranking@1"/>
 ```
 
 ### The style tag
@@ -401,7 +401,7 @@ on a Moment. Where a Media Item places one shot in one Frame, a deck keeps a sta
 same Frame and moves the whole stack.
 
 ```svml
-<import as="deck" from="@narratage/deck-track@1"/>
+<import as="deck" from="@hypit/deck-track@1"/>
 ```
 
 ### deck:DepthStack
@@ -446,7 +446,7 @@ for a Selection, grain over the whole programme. One Track carries them all, and
 effect bound to its own window.
 
 ```svml
-<import as="screen" from="@narratage/screen-overlay@1"/>
+<import as="screen" from="@hypit/screen-overlay@1"/>
 ```
 
 `screen:Track` takes `id`, `canvas` and `space`. Its children are the effects, at least one, each
@@ -484,7 +484,7 @@ Social-style comment cards placed in a Frame: an avatar, an author, the comment 
 optional metadata line.
 
 ```svml
-<import as="comment" from="@narratage/comment-sticker@1"/>
+<import as="comment" from="@hypit/comment-sticker@1"/>
 ```
 
 `comment:Style` is empty and takes `id`, `recipe` and `font`, all required. The recipe carries the
@@ -516,16 +516,16 @@ image, and there is no `z`: stacking order comes from the recipe's `stack-order`
 All four track families together in one source file:
 
 ```svml
-<import as="caption" from="@narratage/caption@1"/>
-<import as="caption-fine" from="@narratage/caption-fine@1"/>
-<import as="caption-ai" from="@narratage/caption-gemini@1"/>
-<import as="fonts" from="@narratage/fonts-open@1"/>
-<import as="media" from="@narratage/media@1"/>
-<import as="pipeline" from="@narratage/media-pipeline@1"/>
-<import as="media-track" from="@narratage/media-track@1"/>
-<import as="text" from="@narratage/typography-track@1"/>
-<import as="audio" from="@narratage/audio-track@1"/>
-<import as="space" from="@narratage/spatial@1"/>
+<import as="caption" from="@hypit/caption@1"/>
+<import as="caption-fine" from="@hypit/caption-fine@1"/>
+<import as="caption-ai" from="@hypit/caption-gemini@1"/>
+<import as="fonts" from="@hypit/fonts-open@1"/>
+<import as="media" from="@hypit/media@1"/>
+<import as="pipeline" from="@hypit/media-pipeline@1"/>
+<import as="media-track" from="@hypit/media-track@1"/>
+<import as="text" from="@hypit/typography-track@1"/>
+<import as="audio" from="@hypit/audio-track@1"/>
+<import as="space" from="@hypit/spatial@1"/>
 
 <!-- Captions: primary style for all text -->
 <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>

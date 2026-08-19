@@ -1,12 +1,12 @@
-import type { ComponentPackage, ProducerHandlerContext } from "@narratage/component-kit";
-import type { ProgramSpace } from "@narratage/program-space";
-import { canonicalize } from "@narratage/protocol";
-import type { StoredValue } from "@narratage/protocol";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import type { CanvasSpace, SpatialFrame } from "@narratage/spatial";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import type { MediaLayerSet } from "@narratage/media-track";
-import type { Text } from "@narratage/text";
+import type { ComponentPackage, ProducerHandlerContext } from "@hypit/component-kit";
+import type { ProgramSpace } from "@hypit/program-space";
+import { canonicalize } from "@hypit/protocol";
+import type { StoredValue } from "@hypit/protocol";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import type { MediaLayerSet } from "@hypit/media-track";
+import type { Text } from "@hypit/text";
 
 import { renderDepthStack } from "./lower.js";
 import { depthStackProducers, depthStackTypes } from "./manifest.js";

@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/seedance",
+  "name": "@hypit/seedance",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,17 +7,17 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/artifact": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/generation": "workspace:*",
-    "@narratage/model-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/speech": "workspace:*",
-    "@narratage/text": "workspace:*",
-    "@narratage/markup": "workspace:*"
+    "@hypit/artifact": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/generation": "workspace:*",
+    "@hypit/model-kit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/speech": "workspace:*",
+    "@hypit/text": "workspace:*",
+    "@hypit/markup": "workspace:*"
   }
 }

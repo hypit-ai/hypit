@@ -1,9 +1,9 @@
-import { speechDependency, speechTypes } from "@narratage/speech";
-import { textDependency, textTypes } from "@narratage/text";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
-import { svsManifest, svsRecipeType } from "@narratage/svs";
+import { speechDependency, speechTypes } from "@hypit/speech";
+import { textDependency, textTypes } from "@hypit/text";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { svsManifest, svsRecipeType } from "@hypit/svs";
 
-export const estimateModuleRef = { name: "@narratage/estimate", version: "1" } as const;
+export const estimateModuleRef = { name: "@hypit/estimate", version: "1" } as const;
 export const estimateTypes = {
   speechPolicy: { module: estimateModuleRef, name: "SpeechEstimatePolicy" },
 } satisfies Record<string, TypeRef>;
@@ -34,7 +34,7 @@ export const estimateMarkupSurfaces = [{
 
 
 export const estimateManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: estimateModuleRef.name,
   version: estimateModuleRef.version,
   dependencies: [

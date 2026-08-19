@@ -1,9 +1,9 @@
-import { narrativeTypes } from "@narratage/narrative";
-import { programSpaceTypes } from "@narratage/program-space";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { spatialTypes } from "@narratage/spatial";
-import type { StructuredElement, StructuredSurfaceHandler, SurfaceRecordDraft, SurfaceResolvedReference, MarkupAttributeValue } from "@narratage/markup";
-import type { TemporalDuration, TemporalPointExpression } from "@narratage/temporal";
+import { narrativeTypes } from "@hypit/narrative";
+import { programSpaceTypes } from "@hypit/program-space";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import { spatialTypes } from "@hypit/spatial";
+import type { StructuredElement, StructuredSurfaceHandler, SurfaceRecordDraft, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
+import type { TemporalDuration, TemporalPointExpression } from "@hypit/temporal";
 import { createScreenOverlayFragment } from "./fragment.js";
 import { screenOverlayTypes } from "./manifest.js";
 import { sealScreenOverlayHeader, sealScreenOverlayItemSpec } from "./program.js";

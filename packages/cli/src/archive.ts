@@ -3,9 +3,9 @@ import { mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import type { CliRuntimeArtifactAccess } from "./runtime-port.js";
-import { isDigest } from "@narratage/protocol";
-import type { BuildState, Digest, TypedRecord, TypeRef } from "@narratage/protocol";
-import type { BuildCatalogEntry } from "@narratage/runtime";
+import { isDigest } from "@hypit/protocol";
+import type { BuildState, Digest, TypedRecord, TypeRef } from "@hypit/protocol";
+import type { BuildCatalogEntry } from "@hypit/runtime";
 
 type ArtifactIdentity = {
   readonly digest: Digest;
@@ -68,7 +68,7 @@ export async function materializeArtifact(
   await mkdir(dirname(destination), { recursive: true });
   const source = await runtime.openArtifact(artifact.digest);
   if (source === undefined) throw new Error(`Artifact ${artifact.digest} is absent from the selected ArtifactStore`);
-  const temporary = `${destination}.narratage-${randomUUID()}.part`;
+  const temporary = `${destination}.hypit-${randomUUID()}.part`;
   const output = await open(temporary, "wx");
   let size = 0;
   try {

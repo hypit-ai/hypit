@@ -1,4 +1,4 @@
-# `@narratage/script`
+# `@hypit/script`
 
 Official raw Script Surface for the Markup Frontend. It parses prose-first named Segment blocks,
 newline-independent Role Cues, Dual Text, Selection and Moment syntax, and lowers them to a
@@ -32,7 +32,7 @@ when every Segment closes; a Role can never leak into the following Segment.
 The package exports its Manifest, `parseScript`, semantic/source-map projection helpers, a
 semantic-preserving formatter and the raw `decodeScriptSurface` handler. Source ranges and parser
 state remain private to Script; its authored Narrative Record uses the Frontend-neutral type from
-`@narratage/narrative`, so third-party author surfaces can feed the same WhisperX, locator and caption
+`@hypit/narrative`, so third-party author surfaces can feed the same WhisperX, locator and caption
 components without importing Script internals.
 
 The Surface exports one full Narrative plus narrow, immutable views:

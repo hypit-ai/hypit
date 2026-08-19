@@ -1,12 +1,12 @@
 import {
   createFrontendHostFacet,
   frontendsFromHostFacets,
-} from "@narratage/host";
+} from "@hypit/host";
 import type {
   FrontendHostFacet,
   HostFacet,
-} from "@narratage/host";
-import { sourceFrontendPackageAbi } from "@narratage/source";
+} from "@hypit/host";
+import { sourceFrontendPackageAbi } from "@hypit/source";
 
 import type { RunFrontend } from "./types.js";
 

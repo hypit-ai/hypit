@@ -1,6 +1,6 @@
 ---
 title: Development Guide
-description: Getting started with Narratage development.
+description: Getting started with Hypit development.
 ---
 
 # Development Guide
@@ -37,7 +37,7 @@ See [Testing](./testing.md) for environment-gated tests and test patterns.
 ## Repository layout
 
 ```text
-narratage/
+hypit/
 ├── packages/              workspace packages
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources

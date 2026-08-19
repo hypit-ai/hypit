@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { resolveCaptionProgram } from "@narratage/caption";
-import type { TimedCaptionProjection } from "@narratage/caption";
-import { fineCaptionParameters, fineCaptionStyle, renderFineCaption } from "@narratage/caption-fine";
-import type { FontArtifactRef } from "@narratage/media";
-import { sealProgramSpace } from "@narratage/program-space";
-import { captionDisplaySequence, parseScript } from "@narratage/script";
-import type { SvsRecipe } from "@narratage/svs";
+import { resolveCaptionProgram } from "@hypit/caption";
+import type { TimedCaptionProjection } from "@hypit/caption";
+import { fineCaptionParameters, fineCaptionStyle, renderFineCaption } from "@hypit/caption-fine";
+import type { FontArtifactRef } from "@hypit/media";
+import { sealProgramSpace } from "@hypit/program-space";
+import { captionDisplaySequence, parseScript } from "@hypit/script";
+import type { SvsRecipe } from "@hypit/svs";
 
 const recipe: SvsRecipe = {
 

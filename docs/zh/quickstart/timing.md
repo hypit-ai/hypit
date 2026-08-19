@@ -8,9 +8,9 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 生成完成后，各个片段必须拼接成一个连续的音视频坐标空间，并且需要将语音内容与实际音频进行比对，以创建时序映射。这两个步骤产生 **ProgramSpace** 和 **SemanticMap**，所有下游组件均依赖于它们。
 
 ```svml
-<import as="speech" from="@narratage/speech-spine@1"/>
-<import as="whisperx" from="@narratage/whisperx@1"/>
-<import as="space" from="@narratage/spatial@1"/>
+<import as="speech" from="@hypit/speech-spine@1"/>
+<import as="whisperx" from="@hypit/whisperx@1"/>
+<import as="space" from="@hypit/spatial@1"/>
 <import as="studio" source="./studio.svs"/>
 ```
 
@@ -157,9 +157,9 @@ Map 只包含最终词窗口和语义锚点，不传播“测量、推导、估�
 完整的时序阶段，从生成的片段到映射和空间：
 
 ```svml
-<import as="speech" from="@narratage/speech-spine@1"/>
-<import as="whisperx" from="@narratage/whisperx@1"/>
-<import as="space" from="@narratage/spatial@1"/>
+<import as="speech" from="@hypit/speech-spine@1"/>
+<import as="whisperx" from="@hypit/whisperx@1"/>
+<import as="space" from="@hypit/spatial@1"/>
 <import as="studio" source="./studio.svs"/>
 
 <!-- Assemble takes in program order -->

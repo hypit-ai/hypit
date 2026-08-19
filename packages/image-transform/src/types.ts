@@ -1,4 +1,4 @@
-import type { RasterTransformOperation } from "@narratage/raster";
+import type { RasterTransformOperation } from "@hypit/raster";
 
 export type {
   RasterAlphaOperation as ImageAlphaOperation,
@@ -12,7 +12,7 @@ export type {
   RasterRotateOperation as ImageRotateOperation,
   RasterSharpenOperation as ImageSharpenOperation,
   RasterTransformOperation as ImageTransformOperation,
-} from "@narratage/raster";
+} from "@hypit/raster";
 
 /** Authored transformation intent. Operation order is author meaning. */
 export type ImageTransformProgram = {

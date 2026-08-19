@@ -4,7 +4,7 @@ import type {
   GraphValueRef,
   LinkedProgram,
   ModuleRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 import { sealCompiledGraph } from "./graph.js";
 import { createResolvedClosure, link } from "./link.js";

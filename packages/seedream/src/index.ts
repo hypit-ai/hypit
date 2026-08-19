@@ -1,8 +1,8 @@
-import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
-import { defineExactModelModule } from "@narratage/model-kit";
+import { sealGenerationPortRequest, sealGenerationPortTable } from "@hypit/generation";
+import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import { defineExactModelModule } from "@hypit/model-kit";
 
-export const seedreamModuleRef = { name: "@narratage/seedream", version: "1" } as const;
+export const seedreamModuleRef = { name: "@hypit/seedream", version: "1" } as const;
 
 export const seedream5LitePorts: GenerationPortTable = sealGenerationPortTable({
   model: "seedream-5-lite",

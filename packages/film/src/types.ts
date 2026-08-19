@@ -1,4 +1,4 @@
-import type { Track } from "@narratage/composition";
+import type { Track } from "@hypit/composition";
 
 /** Package-owned authoring value. A future Film Surface may produce this record. */
 export type FilmProgram = {

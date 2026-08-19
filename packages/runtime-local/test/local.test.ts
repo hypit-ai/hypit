@@ -10,21 +10,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { FileArtifactStore } from "@narratage/artifact-store-fs";
-import { EnvironmentCredentialStore } from "@narratage/credential-store-env";
-import { MemoryArtifactStore } from "@narratage/driver-node";
-import { defineEndpointPackage } from "@narratage/endpoint-kit";
-import type { AsyncEndpoint, EndpointPackage } from "@narratage/endpoint-kit";
-import type { ComponentPackage } from "@narratage/component-kit";
-import { createLocalRuntime } from "@narratage/runtime-local";
-import { defineBuild } from "@narratage/core";
+import { FileArtifactStore } from "@hypit/artifact-store-fs";
+import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
+import { MemoryArtifactStore } from "@hypit/driver-node";
+import { defineEndpointPackage } from "@hypit/endpoint-kit";
+import type { AsyncEndpoint, EndpointPackage } from "@hypit/endpoint-kit";
+import type { ComponentPackage } from "@hypit/component-kit";
+import { createLocalRuntime } from "@hypit/runtime-local";
+import { defineBuild } from "@hypit/core";
 import {
   collectNodePackageComponents,
   loadNodePackageSelection,
-} from "@narratage/package-loader-node";
-import { credentialRef } from "@narratage/runtime";
-import type { CredentialValue, WritableCredentialStore } from "@narratage/runtime";
-import { SqliteRuntimeState } from "@narratage/store-sqlite";
+} from "@hypit/package-loader-node";
+import { credentialRef } from "@hypit/runtime";
+import type { CredentialValue, WritableCredentialStore } from "@hypit/runtime";
+import { SqliteRuntimeState } from "@hypit/store-sqlite";
 
 import {
   capabilities,
@@ -41,20 +41,20 @@ function definition(state: ReturnType<typeof createGreetingBuild>) {
 }
 
 function projectRuntimeFixture(directory: string) {
-  const state = new SqliteRuntimeState(join(directory, ".narratage", "runtime.sqlite"));
+  const state = new SqliteRuntimeState(join(directory, ".hypit", "runtime.sqlite"));
   return {
     buildStore: state.builds,
     buildCatalog: state.catalog,
     operationStore: state.operations,
     dispatchStore: state.dispatch,
-    artifactStore: new FileArtifactStore(join(directory, ".narratage", "artifacts")),
+    artifactStore: new FileArtifactStore(join(directory, ".hypit", "artifacts")),
     credentialStore: new EnvironmentCredentialStore(),
     close: () => state.close(),
   } as const;
 }
 
 test("Endpoint-declared credentials use the selected writable Store without a Provider switch", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-local-auth-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-auth-"));
   const values = new Map<string, CredentialValue>();
   const credentialStore: WritableCredentialStore = {
     owns(ref) { return ref.store === "memory"; },
@@ -100,7 +100,7 @@ test("Endpoint-declared credentials use the selected writable Store without a Pr
 });
 
 test("project local runtime queues, polls and cancels work with replaceable packages", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-local-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-"));
   const initial = createGreetingBuild();
   const catalog = {
     source: { path: join(directory, "main.svml") },
@@ -238,7 +238,7 @@ test("project local runtime queues, polls and cancels work with replaceable pack
 });
 
 test("one local Worker admits later Builds while preserving shared Endpoint capacity", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-local-parallel-builds-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-parallel-builds-"));
   let unrestrictedActive = 0;
   let mostUnrestricted = 0;
   let limitedActive = 0;
@@ -336,9 +336,9 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
 });
 
 test("project local runtime accepts components loaded from an installed package", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-local-components-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-components-"));
   const runtimeRoot = join(directory, "external-project");
-  const installedRoot = join(directory, "narratage-install");
+  const installedRoot = join(directory, "hypit-install");
   const packageRoot = join(installedRoot, "node_modules", "example-greeting-components");
   await mkdir(runtimeRoot, { recursive: true });
   await mkdir(packageRoot, { recursive: true });
@@ -347,14 +347,14 @@ test("project local runtime accepts components loaded from an installed package"
     version: "1.0.0",
     type: "module",
     exports: "./activation.mjs",
-    narratage: { activation: "./activation.mjs" },
+    hypit: { activation: "./activation.mjs" },
   }), "utf8");
   await writeFile(join(packageRoot, "activation.mjs"), `
     const manifest = ${JSON.stringify(greetingManifest)};
     const module = { name: manifest.name, version: manifest.version };
     const producer = (name) => ({ module, name });
     export default {
-      format: "narratage.node-package@1",
+      format: "hypit.node-package@1",
       modules: [{ manifest }],
       components: [{
         producers: [
@@ -409,7 +409,7 @@ test("project local runtime accepts components loaded from an installed package"
 });
 
 test("project local runtime accepts an explicitly selected replacement ArtifactStore package", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-local-artifacts-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-local-artifacts-"));
   const artifactStore = new MemoryArtifactStore();
   try {
     const runtime = await createLocalRuntime({

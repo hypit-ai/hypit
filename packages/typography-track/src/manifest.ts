@@ -1,6 +1,6 @@
-import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
-import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
+import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
 import {
   compositionDependency,
   compositionTypes,
@@ -9,20 +9,20 @@ import {
   visualTextPaintSchema,
   visualTextSequenceSchema,
   visualTextTypographySchema,
-} from "@narratage/composition";
+} from "@hypit/composition";
 import {
   spatialDependency,
   spatialFrameSchema,
   spatialPathSchema,
   spatialPointSchema,
   spatialTypes,
-} from "@narratage/spatial";
-import { VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@narratage/visual-ir";
-import { mediaDependency, mediaTypes } from "@narratage/media";
-import { textDependency, textTypes } from "@narratage/text";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+} from "@hypit/spatial";
+import { VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@hypit/visual-ir";
+import { mediaDependency, mediaTypes } from "@hypit/media";
+import { textDependency, textTypes } from "@hypit/text";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
-export const typographyTrackModuleRef = { name: "@narratage/typography-track", version: "1" } as const;
+export const typographyTrackModuleRef = { name: "@hypit/typography-track", version: "1" } as const;
 export const typographyTrackTypes = {
   style: { module: typographyTrackModuleRef, name: "TextStyle" },
   motion: { module: typographyTrackModuleRef, name: "TextMotion" },
@@ -163,7 +163,7 @@ export const typographyTrackMarkupSurfaces = [
 
 
 export const typographyTrackManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: typographyTrackModuleRef.name,
   version: typographyTrackModuleRef.version,
   dependencies: [programSpaceDependency, narrativeDependency, semanticMapDependency, spatialDependency, mediaDependency, compositionDependency, textDependency],

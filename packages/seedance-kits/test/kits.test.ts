@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { parseSvs } from "@narratage/svs";
-import { renderText, sealTextBindings, textTemplateFromSvsRecipes } from "@narratage/text";
+import { parseSvs } from "@hypit/svs";
+import { renderText, sealTextBindings, textTemplateFromSvsRecipes } from "@hypit/text";
 
 const cases = [
   { file: "speaker-v1.svs", id: "speaker-v1", bindings: { dialogue: "HOST: Meaning comes first." }, marker: "@audio1 is the speaker's voice-timbre reference" },

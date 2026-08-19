@@ -1,8 +1,8 @@
-import { programSpaceTypes } from "@narratage/program-space";
-import { speechTypes } from "@narratage/speech";
-import type { SpeechBasis } from "@narratage/speech";
-import { compositionTypes } from "@narratage/composition";
-import { sealGraphFragment } from "@narratage/elaborator";
+import { programSpaceTypes } from "@hypit/program-space";
+import { speechTypes } from "@hypit/speech";
+import type { SpeechBasis } from "@hypit/speech";
+import { compositionTypes } from "@hypit/composition";
+import { sealGraphFragment } from "@hypit/elaborator";
 
 import { speechBasisProducers } from "./manifest.js";
 

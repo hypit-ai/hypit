@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import { programFrameSampleBoundary, programSpaceSampleFrames } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import { programFrameSampleBoundary, programSpaceSampleFrames } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
 
 import {
   assertWindowRelation,

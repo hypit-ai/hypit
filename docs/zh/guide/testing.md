@@ -7,7 +7,7 @@ description: 测试运行器、测试模式与环境门控的测试。
 
 ## 测试运行器
 
-Narratage 使用 Node.js 内置的测试运行器（`node:test`），而不是 Jest、Vitest 或 Mocha。
+Hypit 使用 Node.js 内置的测试运行器（`node:test`），而不是 Jest、Vitest 或 Mocha。
 
 ```bash
 pnpm test          # 包测试 + boundary 测试
@@ -21,7 +21,7 @@ pnpm test          # 包测试 + boundary 测试
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
-import { someFunction } from "@narratage/example";
+import { someFunction } from "@hypit/example";
 
 describe("someFunction", () => {
   test("returns the expected result", () => {
@@ -79,8 +79,8 @@ test("generates a video", async (t) => {
 | 命令 | 测试内容 | 前置条件 |
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX 服务 | Python 3.13、uv、frozen sync |
-| `pnpm test:image-opencv` | OpenCV 图像变换 | `NARRATAGE_OPENCV_TESTS=1`、`NARRATAGE_OPENCV_PYTHON` |
-| `pnpm test:browser-visual` | 真实浏览器中的渲染几何、层叠与裁剪 | HyperFrames CLI 能启动的 Chrome、`ffmpeg`；非 macOS 还需 `NARRATAGE_TEST_FONT_PATH` |
+| `pnpm test:image-opencv` | OpenCV 图像变换 | `HYPIT_OPENCV_TESTS=1`、`HYPIT_OPENCV_PYTHON` |
+| `pnpm test:browser-visual` | 真实浏览器中的渲染几何、层叠与裁剪 | HyperFrames CLI 能启动的 Chrome、`ffmpeg`；非 macOS 还需 `HYPIT_TEST_FONT_PATH` |
 | `pnpm smoke:kie` | 实时付费的 KIE 生成 | `KIE_API_KEY` |
 
 ## 测试 fixtures

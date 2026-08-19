@@ -1,18 +1,18 @@
-import type { NarrativeExcerpt } from "@narratage/narrative";
-import { synchronizedMediaSampleFrames, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
-import type { SynchronizedMedia, TimelineAudio } from "@narratage/media";
-import { assertProgramSpaceIdentity, sealProgramSpace } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { sealSpeechBasis } from "@narratage/speech";
-import type { SpeechBasis } from "@narratage/speech";
+import type { NarrativeExcerpt } from "@hypit/narrative";
+import { synchronizedMediaSampleFrames, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
+import type { SynchronizedMedia, TimelineAudio } from "@hypit/media";
+import { assertProgramSpaceIdentity, sealProgramSpace } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { sealSpeechBasis } from "@hypit/speech";
+import type { SpeechBasis } from "@hypit/speech";
 import {
   sealAudioProgramPlan,
   verifyAudioProgramPlan,
-} from "@narratage/media-pipeline";
-import type { AudioProgramPlan } from "@narratage/media-pipeline";
-import { canonicalize } from "@narratage/protocol";
-import { assertContentFit, assertSpatialFrame } from "@narratage/spatial";
-import type { ContentFit, SpatialFrame } from "@narratage/spatial";
+} from "@hypit/media-pipeline";
+import type { AudioProgramPlan } from "@hypit/media-pipeline";
+import { canonicalize } from "@hypit/protocol";
+import { assertContentFit, assertSpatialFrame } from "@hypit/spatial";
+import type { ContentFit, SpatialFrame } from "@hypit/spatial";
 
 import type {
   SpeechSpineProgram,

@@ -3,8 +3,8 @@ import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/prom
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import type { CapabilityRef } from "@narratage/protocol";
-import type { ManagedProgram, ManagedProgramCommand, ManagedProgramState } from "@narratage/runtime-kit";
+import type { CapabilityRef } from "@hypit/protocol";
+import type { ManagedProgram, ManagedProgramCommand, ManagedProgramState } from "@hypit/runtime-kit";
 
 import { declaredManagedPrograms } from "./config.js";
 import type { LoadRuntimeConfigOptions } from "./config.js";

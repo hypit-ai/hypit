@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/media",
+  "name": "@hypit/media",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,13 +7,13 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/artifact": "workspace:*",
-    "@narratage/component-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/markup": "workspace:*"
+    "@hypit/artifact": "workspace:*",
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/markup": "workspace:*"
   }
 }

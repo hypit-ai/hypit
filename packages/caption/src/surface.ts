@@ -1,11 +1,11 @@
-import { narrativeTypes } from "@narratage/narrative";
-import type { CaptionDisplaySequence, CaptionDisplayWordSubset } from "@narratage/narrative";
+import { narrativeTypes } from "@hypit/narrative";
+import type { CaptionDisplaySequence, CaptionDisplayWordSubset } from "@hypit/narrative";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import { captionTypes } from "./manifest.js";
 import { captionWordsForRole } from "./display.js";

@@ -32,7 +32,7 @@ const EPOCH = new Date("1980-01-01T00:00:00.000Z");
 
 const root = dirname(fileURLToPath(import.meta.url));
 const out = join(root, "build");
-const source = process.env.NARRATAGE_FFMPEG_SOURCE ?? join(out, SOURCE_NAME);
+const source = process.env.HYPIT_FFMPEG_SOURCE ?? join(out, SOURCE_NAME);
 const work = join(out, "ffmpeg-layer-work");
 const extracted = join(work, "source");
 const layer = join(work, "layer");
@@ -52,8 +52,8 @@ async function ensureSource() {
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
-  if (process.env.NARRATAGE_FFMPEG_SOURCE !== undefined) {
-    throw new Error(`NARRATAGE_FFMPEG_SOURCE does not match pinned sha256 ${SOURCE_SHA256}`);
+  if (process.env.HYPIT_FFMPEG_SOURCE !== undefined) {
+    throw new Error(`HYPIT_FFMPEG_SOURCE does not match pinned sha256 ${SOURCE_SHA256}`);
   }
 
   const temporary = `${source}.partial`;
@@ -126,14 +126,14 @@ for (const name of ["bin/ffmpeg", "bin/ffprobe", "lib", "LICENSE.txt"]) {
 }
 
 const provenance = {
-  contract: "narratage.ffmpeg-lambda-layer@1",
+  contract: "hypit.ffmpeg-lambda-layer@1",
   ffmpegVersion: FFmpeg_VERSION,
   architecture: "x86_64",
   upstream: { url: SOURCE_URL, sha256: SOURCE_SHA256 },
   paths: { ffmpeg: "/opt/bin/ffmpeg", ffprobe: "/opt/bin/ffprobe" },
   license: "GPL-3.0-or-later",
 };
-await writeFile(join(layer, "narratage-layer.json"), `${JSON.stringify(provenance, null, 2)}\n`);
+await writeFile(join(layer, "hypit-layer.json"), `${JSON.stringify(provenance, null, 2)}\n`);
 await normalize(layer);
 
 const files = await entriesUnder(layer);

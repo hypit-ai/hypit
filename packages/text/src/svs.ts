@@ -1,4 +1,4 @@
-import type { SvsRecipe } from "@narratage/svs";
+import type { SvsRecipe } from "@hypit/svs";
 
 import { sealTextTemplate } from "./program.js";
 import type {

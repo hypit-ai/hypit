@@ -1,4 +1,4 @@
-# `@narratage/mimo-tts`
+# `@hypit/mimo-tts`
 
 Exact model contracts and author Surfaces for Xiaomi MiMo V2.5 speech synthesis.
 
@@ -9,7 +9,7 @@ The package owns the three distinct model shapes:
 - `mimo-v2.5-tts-voiceclone`: one explicit audio sample.
 
 It contains no API URL, credential, retry, queue or Xiaomi wire encoding. Those belong to a Runtime
-Endpoint such as `@narratage/provider-xiaomi-mimo`. Every model returns the shared
+Endpoint such as `@hypit/provider-xiaomi-mimo`. Every model returns the shared
 `GeneratedAudioSet`; author Surfaces expose its primary member as an ordinary `BlobArtifact`.
 The `speech` attribute is an ordinary `Text` edge attached through the exact model's `text` port at
 execution time; the Frontend never copies Script words into a request draft.
@@ -17,7 +17,7 @@ execution time; the Frontend never copies Script words into a request draft.
 `optimize_text_preview` is intentionally absent: MiMo may not rewrite Script's exact speech truth.
 
 ```xml
-<import as="mimo" from="@narratage/mimo-tts@1"/>
+<import as="mimo" from="@hypit/mimo-tts@1"/>
 
 <mimo:Preset id="narration" speech={story.segment.opening.speech} voice="Chloe">
   Warm, direct and conversational.

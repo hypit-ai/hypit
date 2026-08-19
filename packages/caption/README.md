@@ -1,4 +1,4 @@
-# `@narratage/caption`
+# `@hypit/caption`
 
 Style-family-neutral Caption contracts and deterministic whole-Atom timing.
 

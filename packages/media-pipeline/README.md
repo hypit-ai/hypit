@@ -1,4 +1,4 @@
-# `@narratage/media-pipeline`
+# `@hypit/media-pipeline`
 
 Provider-neutral media execution vocabulary. Ingestion contributes one ordinary finite Fragment:
 

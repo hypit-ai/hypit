@@ -1,6 +1,6 @@
 ---
 title: 开发指南
-description: 开始 Narratage 开发工作。
+description: 开始 Hypit 开发工作。
 ---
 
 # 开发指南
@@ -37,7 +37,7 @@ pnpm test             # 完整测试套件
 ## 仓库结构
 
 ```text
-narratage/
+hypit/
 ├── packages/              workspace packages
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources

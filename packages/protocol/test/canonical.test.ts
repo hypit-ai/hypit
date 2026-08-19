@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { canonicalize, canonicalStringify, isDigest } from "@narratage/protocol";
+import { canonicalize, canonicalStringify, isDigest } from "@hypit/protocol";
 
 test("canonical values have stable key order and preserve array order", () => {
   assert.equal(canonicalStringify({ b: 1, a: 2 }), '{"a":2,"b":1}');

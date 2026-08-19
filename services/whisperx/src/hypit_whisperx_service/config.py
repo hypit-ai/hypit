@@ -35,47 +35,47 @@ class ServiceConfig:
     @classmethod
     def from_environment(cls, environment: Mapping[str, str] | None = None) -> "ServiceConfig":
         env = os.environ if environment is None else environment
-        device = env.get("NARRATAGE_WHISPERX_DEVICE", "cpu").strip()
-        model = env.get("NARRATAGE_WHISPERX_MODEL", "small").strip()
+        device = env.get("HYPIT_WHISPERX_DEVICE", "cpu").strip()
+        model = env.get("HYPIT_WHISPERX_MODEL", "small").strip()
         compute = env.get(
-            "NARRATAGE_WHISPERX_COMPUTE",
+            "HYPIT_WHISPERX_COMPUTE",
             "int8" if device == "cpu" else "float16",
         ).strip()
         if not model:
-            raise ValueError("NARRATAGE_WHISPERX_MODEL must not be empty")
+            raise ValueError("HYPIT_WHISPERX_MODEL must not be empty")
         if not device:
-            raise ValueError("NARRATAGE_WHISPERX_DEVICE must not be empty")
+            raise ValueError("HYPIT_WHISPERX_DEVICE must not be empty")
         if not compute:
-            raise ValueError("NARRATAGE_WHISPERX_COMPUTE must not be empty")
+            raise ValueError("HYPIT_WHISPERX_COMPUTE must not be empty")
 
-        raw_roots = env.get("NARRATAGE_WHISPERX_INPUT_ROOTS", tempfile.gettempdir())
+        raw_roots = env.get("HYPIT_WHISPERX_INPUT_ROOTS", tempfile.gettempdir())
         roots = tuple(
             Path(item).expanduser().resolve()
             for item in raw_roots.split(os.pathsep)
             if item.strip()
         )
         if not roots:
-            raise ValueError("NARRATAGE_WHISPERX_INPUT_ROOTS must contain at least one path")
+            raise ValueError("HYPIT_WHISPERX_INPUT_ROOTS must contain at least one path")
 
         return cls(
-            port=_positive_integer(env.get("NARRATAGE_WHISPERX_PORT", "8765"), "NARRATAGE_WHISPERX_PORT", 65535),
+            port=_positive_integer(env.get("HYPIT_WHISPERX_PORT", "8765"), "HYPIT_WHISPERX_PORT", 65535),
             model=model,
             device=device,
             compute=compute,
             batch_size=_positive_integer(
-                env.get("NARRATAGE_WHISPERX_BATCH_SIZE", "8"),
-                "NARRATAGE_WHISPERX_BATCH_SIZE",
+                env.get("HYPIT_WHISPERX_BATCH_SIZE", "8"),
+                "HYPIT_WHISPERX_BATCH_SIZE",
             ),
             input_roots=roots,
             nltk_data_root=Path(
-                env.get("NARRATAGE_WHISPERX_NLTK_DATA", str(default_nltk_data_root()))
+                env.get("HYPIT_WHISPERX_NLTK_DATA", str(default_nltk_data_root()))
             ).expanduser().resolve(),
             max_request_bytes=_positive_integer(
-                env.get("NARRATAGE_WHISPERX_MAX_REQUEST_BYTES", str(64 * 1024)),
-                "NARRATAGE_WHISPERX_MAX_REQUEST_BYTES",
+                env.get("HYPIT_WHISPERX_MAX_REQUEST_BYTES", str(64 * 1024)),
+                "HYPIT_WHISPERX_MAX_REQUEST_BYTES",
             ),
             max_audio_bytes=_positive_integer(
-                env.get("NARRATAGE_WHISPERX_MAX_AUDIO_BYTES", str(512 * 1024 * 1024)),
-                "NARRATAGE_WHISPERX_MAX_AUDIO_BYTES",
+                env.get("HYPIT_WHISPERX_MAX_AUDIO_BYTES", str(512 * 1024 * 1024)),
+                "HYPIT_WHISPERX_MAX_AUDIO_BYTES",
             ),
         )

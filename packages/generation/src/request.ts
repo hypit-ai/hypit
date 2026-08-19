@@ -1,7 +1,7 @@
-import { canonicalize } from "@narratage/protocol";
-import type { BlobRef, ObjectFieldSchema, ValueSchema } from "@narratage/protocol";
-import { verifyText } from "@narratage/text";
-import type { Text } from "@narratage/text";
+import { canonicalize } from "@hypit/protocol";
+import type { BlobRef, ObjectFieldSchema, ValueSchema } from "@hypit/protocol";
+import { verifyText } from "@hypit/text";
+import type { Text } from "@hypit/text";
 
 import { assertGenerationBlobRef, sealGenerationRequest } from "./identity.js";
 import { generationBlobRefSchema, generationObjectSchema } from "./schema.js";

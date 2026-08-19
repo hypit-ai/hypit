@@ -1,6 +1,6 @@
-import { programSpaceSchema } from "@narratage/program-space";
-import type { ValueSchema } from "@narratage/protocol";
-import { contentFitSchema, intrinsicExtentSchema, spatialFrameSchema } from "@narratage/spatial";
+import { programSpaceSchema } from "@hypit/program-space";
+import type { ValueSchema } from "@hypit/protocol";
+import { contentFitSchema, intrinsicExtentSchema, spatialFrameSchema } from "@hypit/spatial";
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;

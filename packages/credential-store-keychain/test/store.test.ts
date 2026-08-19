@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { credentialRef } from "@narratage/runtime";
+import { credentialRef } from "@hypit/runtime";
 
-import { KeychainCredentialStore } from "@narratage/credential-store-keychain";
+import { KeychainCredentialStore } from "@hypit/credential-store-keychain";
 
 const reader = (entries: Readonly<Record<string, string>>) =>
   async (_service: string, account: string) => entries[account];

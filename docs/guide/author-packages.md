@@ -19,20 +19,20 @@ mkdir -p packages/my-component/src packages/my-component/test
 
 ```json
 {
-  "name": "@narratage/my-component",
+  "name": "@hypit/my-component",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/protocol": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/markup": "workspace:*"
+    "@hypit/protocol": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/markup": "workspace:*"
   }
 }
 ```
@@ -45,15 +45,15 @@ Add only the dependencies your package actually imports. See
 In `src/index.ts`, declare your Module's identity, Types and Producers:
 
 ```typescript
-import type { ModuleManifest, ModuleRef } from "@narratage/protocol";
+import type { ModuleManifest, ModuleRef } from "@hypit/protocol";
 
 export const myComponentModuleRef: ModuleRef = {
-  name: "@narratage/my-component",
+  name: "@hypit/my-component",
   version: "1",
 };
 
 export const myComponentManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: myComponentModuleRef.name,
   version: myComponentModuleRef.version,
   dependencies: [],
@@ -80,7 +80,7 @@ The Surface handler decodes the Markup Frontend's XML elements into typed author
 
 ```typescript
 // src/surface.ts
-import type { StructuredSurfaceHandler } from "@narratage/markup";
+import type { StructuredSurfaceHandler } from "@hypit/markup";
 
 export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element }) => {
   // Read attributes and children from the XML element
@@ -99,7 +99,7 @@ Look at existing Surface implementations for reference:
 
 ```typescript
 // src/activation.ts
-import { createMarkupSurfaceHostFacet } from "@narratage/markup";
+import { createMarkupSurfaceHostFacet } from "@hypit/markup";
 import {
   myComponentManifest,
   myComponentMarkupSurfaces,
@@ -107,8 +107,8 @@ import {
   decodeMyComponentSurface,
 } from "./index.js";
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   modules: [{
     manifest: myComponentManifest,
   }],
@@ -121,11 +121,11 @@ export const narratagePackage = {
   ],
 };
 
-export default narratagePackage;
+export default hypitPackage;
 ```
 
 The Module automatically offers its exact `manifest.name@manifest.version`, so authors import
-`@narratage/my-component@1` without a duplicate alias declaration. Use optional `specifiers` only
+`@hypit/my-component@1` without a duplicate alias declaration. Use optional `specifiers` only
 when the package intentionally owns a genuinely different logical alias. The Surface declaration
 determines the accepted tag (`<mine:Widget>` when imported as `mine`). It is a Markup Host facet,
 not part of the semantic Module Manifest or Core.
@@ -134,7 +134,7 @@ not part of the semantic Module Manifest or Core.
 
 ```json
 "dependencies": {
-  "@narratage/protocol": "workspace:*"
+  "@hypit/protocol": "workspace:*"
 }
 ```
 
@@ -146,16 +146,16 @@ pnpm workspace links resolve the package. No root path registry is involved.
 pnpm install --frozen-lockfile
 ```
 
-The package manager owns installation, versions and integrity. Narratage loads the package when an
+The package manager owns installation, versions and integrity. Hypit loads the package when an
 Author or Run Source imports one of its logical offers. Exact Module dependencies declared by its
 Manifest are loaded from its installed dependencies.
 
 ## 8. Use in Author Source
 
 ```xml
-<?svml using="@narratage/markup@1"?>
+<?svml using="@hypit/markup@1"?>
 <svml>
-  <import as="mine" from="@narratage/my-component@1"/>
+  <import as="mine" from="@hypit/my-component@1"/>
 
   <mine:Widget id="demo" during={story.selection.example}/>
 </svml>

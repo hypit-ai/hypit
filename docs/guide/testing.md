@@ -7,7 +7,7 @@ description: Test runner, patterns and environment-gated tests.
 
 ## Test runner
 
-Narratage uses the Node.js built-in test runner (`node:test`), not Jest, Vitest or Mocha.
+Hypit uses the Node.js built-in test runner (`node:test`), not Jest, Vitest or Mocha.
 
 ```bash
 pnpm test          # package tests + boundary tests
@@ -22,7 +22,7 @@ the glob `packages/*/test/**/*.test.ts`.
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
-import { someFunction } from "@narratage/example";
+import { someFunction } from "@hypit/example";
 
 describe("someFunction", () => {
   test("returns the expected result", () => {
@@ -90,8 +90,8 @@ explicitly opt-in, use no committed secret and fail before spending money unless
 | Command | What it tests | Prerequisites |
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX service | Python 3.13, uv, frozen sync |
-| `pnpm test:image-opencv` | the shared OpenCV Raster interpreter across both request variants | `NARRATAGE_OPENCV_TESTS=1`, `NARRATAGE_OPENCV_PYTHON` |
-| `pnpm test:browser-visual` | rendered geometry, stacking and clipping in a real browser | a Chrome the HyperFrames CLI can start, `ffmpeg`, and `NARRATAGE_TEST_FONT_PATH` off macOS |
+| `pnpm test:image-opencv` | the shared OpenCV Raster interpreter across both request variants | `HYPIT_OPENCV_TESTS=1`, `HYPIT_OPENCV_PYTHON` |
+| `pnpm test:browser-visual` | rendered geometry, stacking and clipping in a real browser | a Chrome the HyperFrames CLI can start, `ffmpeg`, and `HYPIT_TEST_FONT_PATH` off macOS |
 | `pnpm smoke:kie` | Live paid KIE generation | `KIE_API_KEY` |
 
 ## Test fixtures

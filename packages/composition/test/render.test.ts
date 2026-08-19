@@ -5,9 +5,9 @@ import { fixtureDigest } from "../../../test/fixture-digest.js";
 import {
   assertCompositableSurfaceRef,
   assertFontArtifactRef,
-} from "@narratage/media";
-import type { CompositableSurfaceRef, FontArtifactRef } from "@narratage/media";
-import { sealProgramSpace } from "@narratage/program-space";
+} from "@hypit/media";
+import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
+import { sealProgramSpace } from "@hypit/program-space";
 import {
   assertCompositionIdentity,
   sealComposition,
@@ -81,7 +81,7 @@ test("CompositableSurfaceRef distinguishes a typed alpha surface from an ordinar
 
 test("exact fonts own font selection and cannot conflict with raw CSS font facts", () => {
   const invalid = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: "invalid-font-track",
     presents: [{
       id: "title",
@@ -109,7 +109,7 @@ test("exact fonts own font selection and cannot conflict with raw CSS font facts
 
 test("animated materialized Surfaces must exactly share the Present frame domain", () => {
   const valid = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: "surface-track",
     presents: [{
       id: "surface",
@@ -150,7 +150,7 @@ test("animated materialized Surfaces must exactly share the Present frame domain
 
 test("a local mask owns exactly one mask root and one content root inside its Present", () => {
   const track = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: "masked-text",
     presents: [{
       id: "mask",

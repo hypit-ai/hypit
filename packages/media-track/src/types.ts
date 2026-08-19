@@ -1,16 +1,16 @@
-import type { FrameSpan } from "@narratage/composition";
-import type { CompositableSurfaceRef, MediaRational } from "@narratage/media";
-import type { BlobRef } from "@narratage/protocol";
+import type { FrameSpan } from "@hypit/composition";
+import type { CompositableSurfaceRef, MediaRational } from "@hypit/media";
+import type { BlobRef } from "@hypit/protocol";
 import type {
   ContentFit,
   IntrinsicExtent,
   SpatialFrame,
   SpatialPath,
-} from "@narratage/spatial";
+} from "@hypit/spatial";
 import type {
   OccurrenceExpansion,
   TemporalWindowProjection,
-} from "@narratage/temporal";
+} from "@hypit/temporal";
 
 /** Intrinsic visual truth resolved before Media authoring; never a Provider or lineage envelope. */
 export type MediaVisualSource =

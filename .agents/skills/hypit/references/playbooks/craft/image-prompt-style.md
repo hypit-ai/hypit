@@ -2,7 +2,7 @@
 
 ## Author images in SVML
 
-- Put each prompt in a `copy:Value` from `@narratage/text@1`.
+- Put each prompt in a `copy:Value` from `@hypit/text@1`.
 - Generate with an explicit image Surface such as `gpt:Image`, `nano:Image`, `nano:ProImage`,
   `seedream:TextImage`, or `seedream:ReferenceImage`. Use the exact package README for its ports.
 - Connect every identity, product, scene, or UI reference as a visible Artifact edge. For GPT Image,

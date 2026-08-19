@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One bounded raster interpreter for @narratage/provider-image-opencv-local."""
+"""One bounded raster interpreter for @hypit/provider-image-opencv-local."""
 
 import json
 import math

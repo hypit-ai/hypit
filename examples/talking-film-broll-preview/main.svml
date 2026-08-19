@@ -1,15 +1,15 @@
-<?svml using="@narratage/markup@1"?>
+<?svml using="@hypit/markup@1"?>
 
 <svml>
-  <import from="@narratage/script@1"/>
-  <import as="wording" from="@narratage/text@1"/>
-  <import as="seedance" from="@narratage/seedance@1"/>
-  <import as="speech" from="@narratage/speech-spine@1"/>
-  <import as="whisperx" from="@narratage/whisperx@1"/>
-  <import as="media-track" from="@narratage/media-track@1"/>
-  <import as="space" from="@narratage/spatial@1"/>
-  <import as="film" from="@narratage/film@1"/>
-  <import as="render" from="@narratage/render-hyperframes@1"/>
+  <import from="@hypit/script@1"/>
+  <import as="wording" from="@hypit/text@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="speech" from="@hypit/speech-spine@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="media-track" from="@hypit/media-track@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
 
   <script id="story">

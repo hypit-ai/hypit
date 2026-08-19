@@ -1,4 +1,4 @@
-# `@narratage/text`
+# `@hypit/text`
 
 Domain-neutral text values and deterministic text programs.
 
@@ -11,7 +11,7 @@ Its optional Markup vocabulary exposes literal and assembled values without
 hiding the graph:
 
 ```svml
-<import as="text" from="@narratage/text@1"/>
+<import as="text" from="@hypit/text@1"/>
 <import as="ugc" source="./ugc-template.svs"/>
 
 <text:Value id="extra">Keep the product readable.</text:Value>
@@ -33,8 +33,8 @@ template actually declares into its bindings. Template defaults, Recipe values a
 such as model or resolution are ignored by the text program. No prompt-specific package code is
 needed.
 
-`@narratage/markup` is the XML-like authoring Frontend and
-`@narratage/typography-track` renders text into video. They are deliberately
+`@hypit/markup` is the XML-like authoring Frontend and
+`@hypit/typography-track` renders text into video. They are deliberately
 separate packages.
 
 ## Graph consumers
@@ -42,7 +42,7 @@ separate packages.
 `Text` is a small domain-neutral graph value, not a prompt-only type. Current consumers include:
 
 - exact model prompt ports;
-- `@narratage/typography-track` Point, Area and Path content;
+- `@hypit/typography-track` Point, Area and Path content;
 - Ranking Column/TopThree labels and Typewriter title/rows;
 - Comment Sticker comment, author, header and metadata copy;
 - Deck Card labels.

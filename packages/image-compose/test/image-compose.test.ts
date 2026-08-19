@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { artifactTypes } from "@narratage/artifact";
+import { artifactTypes } from "@hypit/artifact";
 import {
   createImageComposeFragment,
   decodeImageComposeSurface,
@@ -11,10 +11,10 @@ import {
   imageComposeTypes,
   sealImageComposeLayerSpec,
   sealImageComposeOptions,
-} from "@narratage/image-compose";
-import { rasterCapabilities } from "@narratage/raster";
-import type { CanonicalValue, StoredValue, TypeRef, TypedRecord } from "@narratage/protocol";
-import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@narratage/spatial";
+} from "@hypit/image-compose";
+import { rasterCapabilities } from "@hypit/raster";
+import type { CanonicalValue, StoredValue, TypeRef, TypedRecord } from "@hypit/protocol";
+import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@hypit/spatial";
 
 const canvas = sealCanvasSpace({
   widthPx: 1080, heightPx: 1920,

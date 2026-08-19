@@ -1,10 +1,10 @@
-import { artifactTypes } from "@narratage/artifact";
-import { generationPort, sealGenerationMediaBinding, sealGenerationRequestDraft } from "@narratage/generation";
-import type { GenerationMediaPort } from "@narratage/generation";
-import { createExactModelPrimaryGenerationFragment, exactModelMediaInputNames, exactModelTextInputName } from "@narratage/model-kit";
-import type { MarkupAttributeValue, StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference } from "@narratage/markup";
-import type { CanonicalValue, TypeRef } from "@narratage/protocol";
-import { textTypes, verifyText } from "@narratage/text";
+import { artifactTypes } from "@hypit/artifact";
+import { generationPort, sealGenerationMediaBinding, sealGenerationRequestDraft } from "@hypit/generation";
+import type { GenerationMediaPort } from "@hypit/generation";
+import { createExactModelPrimaryGenerationFragment, exactModelMediaInputNames, exactModelTextInputName } from "@hypit/model-kit";
+import type { MarkupAttributeValue, StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/markup";
+import type { CanonicalValue, TypeRef } from "@hypit/protocol";
+import { textTypes, verifyText } from "@hypit/text";
 import { seedreamEndpoints } from "./index.js";
 
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }

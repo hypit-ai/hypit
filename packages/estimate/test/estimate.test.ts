@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseStructuredElement } from "@narratage/markup";
-import { sealText, textTypes } from "@narratage/text";
+import { parseStructuredElement } from "@hypit/markup";
+import { sealText, textTypes } from "@hypit/text";
 
 import {
   countSpeechEstimateUnits,
@@ -9,7 +9,7 @@ import {
   estimateSpeechDuration,
   sealSpeechEstimatePolicy,
   speechEstimatePolicyFromRecipe,
-} from "@narratage/estimate";
+} from "@hypit/estimate";
 
 function estimateSurface(source: string) {
   return decodeSpeechEstimateSurface({

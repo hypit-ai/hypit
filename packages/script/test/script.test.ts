@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import type { Narrative } from "@narratage/narrative";
+import type { Narrative } from "@hypit/narrative";
 import {
   ScriptSyntaxError,
   captionCorrespondence,
@@ -13,7 +13,7 @@ import {
   serializeCaption,
   serializeDialogue,
   serializeSpeech,
-} from "@narratage/script";
+} from "@hypit/script";
 
 test("named blocks are Segments and Role Cues do not depend on line breaks", () => {
   const compact = parseScript(

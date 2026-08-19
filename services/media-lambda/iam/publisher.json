@@ -6,8 +6,8 @@
       "Effect": "Allow",
       "Action": ["lambda:PublishLayerVersion", "lambda:GetLayerVersion"],
       "Resource": [
-        "arn:aws:lambda:REGION:ACCOUNT_ID:layer:narratage-ffmpeg-8-0-1",
-        "arn:aws:lambda:REGION:ACCOUNT_ID:layer:narratage-ffmpeg-8-0-1:*"
+        "arn:aws:lambda:REGION:ACCOUNT_ID:layer:hypit-ffmpeg-8-0-1",
+        "arn:aws:lambda:REGION:ACCOUNT_ID:layer:hypit-ffmpeg-8-0-1:*"
       ]
     },
     {
@@ -31,7 +31,7 @@
         "lambda:TagResource",
         "lambda:UntagResource"
       ],
-      "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:narratage-media*"
+      "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:hypit-media*"
     },
     {
       "Sid": "HandTheExecutionRoleToTheFunction",
@@ -46,7 +46,7 @@
         "iam:TagRole",
         "iam:UntagRole"
       ],
-      "Resource": "arn:aws:iam::ACCOUNT_ID:role/NarratageMediaExecution-*"
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/HypitMediaExecution-*"
     },
     {
       "Sid": "ManageTheMediaStack",
@@ -61,7 +61,7 @@
         "cloudformation:ExecuteChangeSet",
         "cloudformation:DeleteChangeSet"
       ],
-      "Resource": "arn:aws:cloudformation:REGION:ACCOUNT_ID:stack/narratage-media-*/*"
+      "Resource": "arn:aws:cloudformation:REGION:ACCOUNT_ID:stack/hypit-media-*/*"
     },
     {
       "Sid": "ManageTheMediaLogGroup",
@@ -71,7 +71,7 @@
         "logs:DeleteLogGroup",
         "logs:PutRetentionPolicy"
       ],
-      "Resource": "arn:aws:logs:REGION:ACCOUNT_ID:log-group:/aws/lambda/narratage-media-*"
+      "Resource": "arn:aws:logs:REGION:ACCOUNT_ID:log-group:/aws/lambda/hypit-media-*"
     },
     {
       "Sid": "TheArtifactStore",
@@ -81,7 +81,7 @@
         "arn:aws:s3:::BUCKET",
         "arn:aws:s3:::BUCKET/*",
         "arn:aws:s3:::DEPLOYMENT_BUCKET",
-        "arn:aws:s3:::DEPLOYMENT_BUCKET/narratage/media-lambda/*"
+        "arn:aws:s3:::DEPLOYMENT_BUCKET/hypit/media-lambda/*"
       ]
     }
   ]

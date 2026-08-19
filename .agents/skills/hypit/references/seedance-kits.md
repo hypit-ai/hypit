@@ -1,6 +1,6 @@
 # Seedance Prompt Kits
 
-Narratage ships seven English Text Templates under `packages/seedance-kits/kits/`. Each Kit owns the
+Hypit ships seven English Text Templates under `packages/seedance-kits/kits/`. Each Kit owns the
 repeatable prompt contract; the project Recipe selects its stable directing axes, and explicit Text
 slots carry shot-specific dialogue or action.
 
@@ -19,7 +19,7 @@ slots carry shot-specific dialogue or action.
 1. Read `packages/seedance-kits/README.md` and the selected Kit file for exact axes and defaults.
 2. Copy only that `.svs` file into the video project's `./kits/` directory; import the vendored copy.
 3. Put stable axis choices in `studio.svs` as a named Recipe.
-4. Import `@narratage/text@1` as `copy`. Use `copy:Render` with the Kit Template and Recipe, then
+4. Import `@hypit/text@1` as `copy`. Use `copy:Render` with the Kit Template and Recipe, then
    connect dynamic slots with `copy:Set`.
 5. Feed the rendered Text to the appropriate low-level Seedance Surface. Keep duration, resolution,
    model, and every image/audio/video reference explicit in the Author Source.

@@ -1,8 +1,8 @@
-import { artifactTypes } from "@narratage/artifact";
-import { compositionTypes } from "@narratage/composition";
-import { sealGraphFragment } from "@narratage/elaborator";
-import { programSpaceTypes } from "@narratage/program-space";
-import { spatialTypes } from "@narratage/spatial";
+import { artifactTypes } from "@hypit/artifact";
+import { compositionTypes } from "@hypit/composition";
+import { sealGraphFragment } from "@hypit/elaborator";
+import { programSpaceTypes } from "@hypit/program-space";
+import { spatialTypes } from "@hypit/spatial";
 
 import { mediaTrackProducers, mediaTrackTypes } from "./manifest.js";
 

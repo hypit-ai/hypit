@@ -6,7 +6,7 @@ import type {
   CaptionPlannedCue,
   CaptionPlannedRun,
   CaptionProgram,
-} from "@narratage/caption";
+} from "@hypit/caption";
 
 export type {
   CaptionFieldAssignment,

@@ -1,18 +1,18 @@
-import { artifactTypes } from "@narratage/artifact";
+import { artifactTypes } from "@hypit/artifact";
 import {
   assertBackgroundRemovalRequest,
   backgroundRemovalCapabilities,
-} from "@narratage/background-removal";
-import type { BackgroundRemovalRequest } from "@narratage/background-removal";
+} from "@hypit/background-removal";
+import type { BackgroundRemovalRequest } from "@hypit/background-removal";
 import {
   compileWireRequest,
   generationTypes,
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
-} from "@narratage/generation";
-import type { GenerationArtifactUrlResolver, GenerationRequest, GenerationWireMapping } from "@narratage/generation";
-import { canonicalize } from "@narratage/protocol";
-import type { BlobRef, CanonicalValue, CapabilityRef, StoredValue, TypeRef } from "@narratage/protocol";
+} from "@hypit/generation";
+import type { GenerationArtifactUrlResolver, GenerationRequest, GenerationWireMapping } from "@hypit/generation";
+import { canonicalize } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue, CapabilityRef, StoredValue, TypeRef } from "@hypit/protocol";
 
 import { kieModelCatalog, verifyKieModelCatalog } from "./mapping.js";
 

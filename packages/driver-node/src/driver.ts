@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import { reduce, resolveProducer } from "@narratage/core";
-import type { ProducerHandlerResult } from "@narratage/component-kit";
-import type { EndpointFulfillment, EndpointOutcome } from "@narratage/endpoint-kit";
+import { reduce, resolveProducer } from "@hypit/core";
+import type { ProducerHandlerResult } from "@hypit/component-kit";
+import type { EndpointFulfillment, EndpointOutcome } from "@hypit/endpoint-kit";
 import type {
   BuildState,
   CommandResult,
@@ -10,12 +10,12 @@ import type {
   FulfillNeedCommand,
   InvokeProducerCommand,
   TypedRecord,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import {
   TypeValidatorRegistry,
   validateValue,
-} from "@narratage/validation";
-import type { TypeValidatorRegistryLike } from "@narratage/validation";
+} from "@hypit/validation";
+import type { TypeValidatorRegistryLike } from "@hypit/validation";
 import type {
   ArtifactStore,
   CredentialStore,
@@ -27,7 +27,7 @@ import type {
   RuntimeExecutionResult,
   RuntimePreparation,
   RuntimeRunnableCommand,
-} from "@narratage/runtime";
+} from "@hypit/runtime";
 
 import { MemoryArtifactStore } from "./artifacts.js";
 import {
@@ -56,14 +56,14 @@ export type NodeDriverOptions = {
 type Executable =
   | {
       readonly command: InvokeProducerCommand;
-      readonly resources: readonly import("@narratage/runtime").RuntimeResourceClaim[];
+      readonly resources: readonly import("@hypit/runtime").RuntimeResourceClaim[];
       readonly run: () => Promise<ProducerHandlerResult>;
     }
   | {
       readonly command: FulfillNeedCommand;
       readonly endpointId: string;
-      readonly resources: readonly import("@narratage/runtime").RuntimeResourceClaim[];
-      readonly queue?: import("@narratage/runtime").RuntimeQueueLane;
+      readonly resources: readonly import("@hypit/runtime").RuntimeResourceClaim[];
+      readonly queue?: import("@hypit/runtime").RuntimeQueueLane;
       readonly registration: EndpointRegistration;
     };
 
