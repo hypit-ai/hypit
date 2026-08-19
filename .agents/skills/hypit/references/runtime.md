@@ -1,4 +1,4 @@
-# Durable Runtime and Build workflow
+# Durable Runtime and Build lifecycle
 
 Read `docs/quickstart/run.md` as the authority for Run Source, Target, Candidate, Runtime Profile,
 Build, retrieval, and reuse syntax. Use this file as the operational checklist.

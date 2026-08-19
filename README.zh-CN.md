@@ -42,7 +42,7 @@
 
 Hypit 为 AI Agent（Claude Code、Codex……）提供一套创作视频的语言与系统。丢进一条视频，Agent 会把它复刻成完整 workflow：画面、字幕、B-roll 和特效，全部锚定在具体文字上，而不是秒数上。
 
-明确一点：复刻视频是最快的上手方式，但不是唯一方式。你可以从模板开始，也可以直接描述想要的视频，让 Agent 从零写出 workflow。生成模型同样可选：workflow 可以在不调用任何生成模型的情况下，把字幕、motion graphics 和代码渲染画面编译成完整视频，因此一条视频的生成成本可以恰好是 $0。
+**明确一点：**复刻视频是最快的上手方式，但不是唯一方式。你可以从模板开始，也可以直接描述想要的视频，让 Agent 从零写出 workflow。生成模型同样可选：workflow 可以在不调用任何生成模型的情况下，把字幕、motion graphics 和代码渲染画面编译成完整视频，因此一条视频的生成成本可以恰好是 $0。
 
 ## 安装
 
@@ -60,19 +60,19 @@ npm link
 
 ## 使用 Hypit skill
 
-克隆仓库后，编程 Agent 可以直接使用 `/hypit` skill。让 Agent 配置环境并为你创建 workflow：
+克隆仓库后，编程 Agent 可以直接使用 `/hypit` skill。让 Agent 配置环境并为你创建 Hypit Source：
 
 ```text
-/hypit 把这条爆款视频复刻成可复用的 workflow，展示预览，并带我批量生成变体。
+/hypit 把这条爆款视频复刻成 Hypit Author Source 和 Run Source，展示预览，并带我构建多个变体。
 ```
 
 也可以不提供参考视频，直接从描述开始：
 
 ```text
-/hypit 根据我的描述创建视频 workflow，优先使用模板和成本为 $0 的代码渲染画面。
+/hypit 根据我的描述创建 .svml Author Source 和 .svrun Run Source，优先使用模板和成本为 $0 的代码渲染画面。
 ```
 
-Agent 会检查环境，只索取当前 workflow 实际需要的凭据，展示预览并执行构建。
+Agent 会检查环境，只索取所选 Runtime Profile 实际需要的凭据，预览 Author Source、规划 Run Source，并提交 Build。
 
 ## 许可证
 

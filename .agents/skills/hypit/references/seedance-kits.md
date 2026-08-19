@@ -14,7 +14,7 @@ slots carry shot-specific dialogue or action.
 | Motion transfer | `motion-reference-v1.svs` | optional `direction` | image 1 = subject, video 1 = motion reference |
 | Camera transfer | `camera-reference-v1.svs` | optional `direction` | image 1 = subject, video 1 = camera reference |
 
-## Required workflow
+## Required procedure
 
 1. Read `packages/seedance-kits/README.md` and the selected Kit file for exact axes and defaults.
 2. Copy only that `.svs` file into the video project's `./kits/` directory; import the vendored copy.
