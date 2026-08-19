@@ -56,3 +56,22 @@ Stop when the returned differences are wording-level — a describer's phrasing 
 change — or when a remaining difference is explicitly recorded as an accepted deviation with its
 reason. Passing `pnpm check` and `hypit check` is not convergence; it is the precondition for
 starting the loop.
+
+## The loop is bounded, and stopping is a decision you write down
+
+A comparison that keeps finding something is not always a repair waiting to happen. A typeface the
+generator cannot reproduce, a texture it will not hold, a grain that is simply not available — those
+return a difference every round for ever. So the loop ends on whichever of these comes first.
+
+- **Every attempt aims at a difference the comparison named.** Changing something the comparison did
+  not mention is not an attempt; it is thrashing, and it does not earn one of the attempts below.
+- **No progress ends it immediately.** If a comparison returns the same difference it returned before
+  the repair, stop. The repair is not reaching the problem, and two more rounds of the same reasoning
+  will not find it. Rendering and comparing cost real time on every round.
+- **Three aimed attempts per element is the ceiling.** The first fixes what is obvious, the second
+  fixes what the first revealed, the third is the last one likely to be aimed rather than hopeful.
+  This is a judgement, not a measurement.
+
+When you stop with a difference still there, record it as an accepted deviation with what it is and
+why it stayed. A difference nobody wrote down reads afterwards as a difference nobody noticed, and
+the next person pays to rediscover it.
