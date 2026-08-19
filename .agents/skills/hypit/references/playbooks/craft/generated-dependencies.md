@@ -7,6 +7,10 @@ produce two different studios. An edge is a constraint.
 Everything below is an instance of that one sentence. Where the rule says "for example `gpt:Image`",
 that is the ordinary choice, not a survey to run: pick it and move on.
 
+Never stop to ask the author which generator to use. Picking between two things that both work is
+your job, and asking costs them an interruption to answer a question the rules already answer. Ask
+only about the video: what it should say, who is in it, what it is for.
+
 ## The location is generated once
 
 - Before any take in a location, generate and accept one image establishing it. Use the background
