@@ -4,7 +4,9 @@ import { access, readdir, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { loadNodePackageSelection } from "@hypit/package-loader-node";
+import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface, SurfaceVocabulary } from "@hypit/markup";
+import { exactModelHostAbi } from "@hypit/model-kit";
 
 import {
   assert,
@@ -275,12 +277,22 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const manifest = await readJson<{ readonly hypit?: { readonly activation?: string }; readonly description?: string }>(
           join(scope, name, "package.json"));
         if (manifest?.hypit?.activation === undefined) continue;
+        // A package publishes several kinds of facet. Reading them all as one kind produced a null
+        // for every facet that is not a Markup Surface, which is what an exact-model package mostly
+        // publishes — the listing said `["TextVideo", "Value", null]` and a Provider said `[null]`.
         const tags: string[] = [];
+        const models: string[] = [];
         let note: string | undefined;
         try {
           for (const pack of await loadNodePackageSelection([specifier], packageRoot)) {
             for (const facet of pack.contribution.hostFacets ?? []) {
-              tags.push((facet.implementation as RegisteredSurface).tag);
+              if (facet.abi === markupSurfaceHostFacetAbi) {
+                tags.push((facet.implementation as RegisteredSurface).tag);
+                continue;
+              }
+              if (facet.abi === exactModelHostAbi) {
+                models.push(...(facet as { readonly offers?: readonly string[] }).offers ?? []);
+              }
             }
           }
         } catch (error) { note = error instanceof Error ? error.message : String(error); }
@@ -288,6 +300,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           package_name: specifier,
           ...(manifest.description === undefined ? {} : { description: manifest.description }),
           tags: [...new Set(tags)].sort(),
+          ...(models.length === 0 ? {} : { models: [...new Set(models)].sort() }),
           ...(note === undefined ? {} : { unreadable: note }),
         });
       }
