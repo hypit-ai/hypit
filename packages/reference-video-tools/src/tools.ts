@@ -96,11 +96,16 @@ async function callSafely(generate: GenerateText, parts: readonly Part[], instru
 async function pacedMap<T, R>(items: readonly T[], concurrency: number, gapMs: number, run: (item: T, index: number) => Promise<R>): Promise<readonly R[]> {
   const result = new Array<R>(items.length);
   let cursor = 0;
-  let lastLaunch = 0;
-  const launch = async (): Promise<void> => {
-    const wait = gapMs - (Date.now() - lastLaunch);
-    if (wait > 0) await new Promise((resolveWait) => setTimeout(resolveWait, wait));
-    lastLaunch = Date.now();
+  let previousLaunch = Promise.resolve();
+  let nextLaunchAt = 0;
+  const launch = (): Promise<void> => {
+    const current = previousLaunch.then(async () => {
+      const wait = nextLaunchAt - Date.now();
+      if (wait > 0) await new Promise((resolveWait) => setTimeout(resolveWait, wait));
+      nextLaunchAt = Date.now() + gapMs;
+    });
+    previousLaunch = current;
+    return current;
   };
   const worker = async (): Promise<void> => {
     while (true) {
@@ -205,6 +210,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const state = await loadState(input.reference_id);
       const selected = input.shot_ids === undefined ? state.shots : state.shots.filter((shot) => input.shot_ids!.includes(shot.shot_id));
       assert(selected.length > 0, "no requested shot ids exist");
+      const selectedIds = new Set(selected.map((shot) => shot.shot_id));
+      const boundaryRights = state.shots.filter((shot) => {
+        const left = state.shots.find((candidate) => candidate.index === shot.index - 1);
+        return left !== undefined && (selectedIds.has(left.shot_id) || selectedIds.has(shot.shot_id));
+      });
       const generate = await generator();
       const visual = await pacedMap(selected, concurrency, gapMs, async (shot) => {
         const previous = state.shots.find((candidate) => candidate.index === shot.index - 1);
@@ -220,15 +230,18 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         parts.push({ text: `Listen to shot ${shot.index}. Decide who is speaking, whether sound continues from the previous shot, whether visible people actually produce the sound, and whether a silent B-roll person only appears to speak. Handle off-screen, alternating, overlapping, and no-person-visible speech. Return natural language evidence only.` });
         return { shot, result: await callSafely(generate, parts, "Observe sound only. Do not write markup, SVML, JSON plans, or component names.") };
       });
-      const boundaries = await pacedMap(selected.slice(1), concurrency, gapMs, async (right) => {
+      const boundaries = await pacedMap(boundaryRights, concurrency, gapMs, async (right) => {
         const left = state.shots.find((shot) => shot.index === right.index - 1)!;
         const parts: Part[] = [await mediaPart(left.clip_ref), await mediaPart(right.clip_ref), await mediaPart(left.tail_frame_ref)];
         parts.push({ text: `Compare shots ${left.index} and ${right.index}. Answer in natural language whether they are one continuous camera shot and whether the same visible overlay or inserted picture continues across the boundary. Do not write markup.` });
         return { left_shot_id: left.shot_id, right_shot_id: right.shot_id, combined_duration_seconds: Number((right.end_seconds - left.start_seconds).toFixed(3)), result: await callSafely(generate, parts, "Analyze continuity only. Do not name SVML components or write code.") };
       });
       const unresolved: string[] = [];
-      const windows = selected.flatMap((_, index) => index + 2 < selected.length ? [selected.slice(index, index + 3)] : [])
-        .map((items) => items as unknown as readonly [Shot, Shot, Shot]);
+      const boundaryText = boundaries.map((item) => item.result.text).join("\n");
+      const needsThreeShotReview = selected.length >= 3 && /uncertain|unknown|possibly|may be|contin(?:ue|ues)|same take|same shot/iu.test(boundaryText);
+      const windows = (needsThreeShotReview
+        ? selected.flatMap((_, index) => index + 2 < selected.length ? [selected.slice(index, index + 3)] : [])
+        : []).map((items) => items as unknown as readonly [Shot, Shot, Shot]);
       const threeShotObservations = await pacedMap(windows, concurrency, gapMs, async (items) => {
         const parts: Part[] = [];
         for (const shot of items) parts.push(await mediaPart(shot.clip_ref));
