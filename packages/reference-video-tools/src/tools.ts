@@ -22,7 +22,7 @@ import type { Observation, PrepareResult, ReferenceState, Shot } from "./types.j
 
 export type PrepareReferenceInput = {
   readonly video_path: string;
-  readonly redo?: "media" | "people" | "voices" | "systems" | "all";
+  readonly redo?: "media" | "people" | "voices" | "systems" | "places" | "all";
 };
 export type ObserveReferenceInput = {
   readonly reference_id: string;
@@ -227,7 +227,8 @@ async function shotFromBound(root: string, index: number, bound: { start: number
 function prepared(state: ReferenceState): boolean {
   return state.people_and_product?.status === "complete"
     && state.voices?.status === "complete"
-    && state.persistent_systems?.status === "complete";
+    && state.persistent_systems?.status === "complete"
+    && state.places?.status === "complete";
 }
 
 function publicPrepare(state: ReferenceState): PrepareResult {
@@ -240,6 +241,7 @@ function publicPrepare(state: ReferenceState): PrepareResult {
     people_and_product: state.people_and_product ?? observation("failed", "not analyzed"),
     voices: state.voices ?? observation("failed", "not analyzed"),
     persistent_systems: state.persistent_systems ?? observation("failed", "not analyzed"),
+    places: state.places ?? observation("failed", "not analyzed"),
   };
 }
 
@@ -308,7 +310,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     },
 
     async prepare_reference(input): Promise<PrepareResult> {
-      assert(input.redo === undefined || input.redo === "media" || input.redo === "people" || input.redo === "voices" || input.redo === "systems" || input.redo === "all", "redo must be one of: media, people, voices, systems, all");
+      assert(input.redo === undefined || input.redo === "media" || input.redo === "people" || input.redo === "voices" || input.redo === "systems" || input.redo === "places" || input.redo === "all", "redo must be one of: media, people, voices, systems, places, all");
       const videoPath = resolve(input.video_path);
       const file = await stat(videoPath).catch(() => undefined);
       assert(file?.isFile(), `video_path is not a file: ${videoPath}`);
@@ -320,6 +322,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const redoPeople = input.redo === "people" || input.redo === "all";
       const redoVoices = input.redo === "voices" || input.redo === "all";
       const redoSystems = input.redo === "systems" || input.redo === "all";
+      const redoPlaces = input.redo === "places" || input.redo === "all";
       if (input.redo === undefined && existing !== undefined && prepared(existing)) return publicPrepare(existing);
       await ensureDir(root);
       const info = existing?.video === undefined || redoMedia ? await probe(videoPath) : {
@@ -347,6 +350,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           ...(existing?.people_and_product === undefined ? {} : { people_and_product: existing.people_and_product }),
           ...(existing?.voices === undefined ? {} : { voices: existing.voices }),
           ...(existing?.persistent_systems === undefined ? {} : { persistent_systems: existing.persistent_systems }),
+          ...(existing?.places === undefined ? {} : { places: existing.places }),
         };
         analysisVideo = media.analysisVideo;
         await writeJson(statePath, state);
@@ -355,7 +359,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const generate = await generator();
       const mediaPart = mediaParts();
       const globalParts: Part[] = [await mediaPart(analysisVideo)];
-      const [people, voices, systems] = await Promise.all([
+      const [people, voices, systems, places] = await Promise.all([
         state.people_and_product?.status === "complete" && !redoPeople
           ? Promise.resolve(state.people_and_product)
           : callSafely(retryDelayMs, generate, [...globalParts, { text: "Describe the recurring people and the promoted product in this complete reference video. Return natural language only. Identify stable visual traits and distinguish recurring speakers from incidental people in inserts. Describe the product once, comprehensively, for reuse." }], "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
@@ -365,8 +369,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         state.persistent_systems?.status === "complete" && !redoSystems
           ? Promise.resolve(state.persistent_systems)
           : callSafely(retryDelayMs, generate, [...globalParts, { text: "Describe the on-screen text and graphic systems that persist or recur across this complete reference video, such as subtitles, running lists, counters, progress indicators, badges, watermarks, lower thirds and repeating full-screen graphic layouts. For each one, state when it first appears and when it stops, whether it is present continuously or intermittently, whether its own appearance stays the same throughout, and describe any point where its appearance actually changes. Report only what stays consistent across the video; ignore one-off elements that appear a single time. Return natural language only." }], "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
+        state.places?.status === "complete" && !redoPlaces
+          ? Promise.resolve(state.places)
+          : callSafely(retryDelayMs, generate, [...globalParts, { text: "Describe every distinct place this reference video was shot in, and every distinct camera position within each place. State how many places there are, which parts of the video happen in each, and for each place which camera positions appear and which parts of the video use each one. Two shots are the same camera position when the camera sees the same part of the room from the same side; a reverse angle is a different position of the same place.\n\nDescribe each camera position in enough detail that someone who has never seen this video could draw it from your words alone: what is behind and beside the subject, the shape and depth of the space, where the light comes from and how hard it is, the colours and materials of the surfaces, and the objects a viewer would use to recognise it again. Say what stays identical between positions of one place and what differs.\n\nReturn natural language only." }], "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
       ]);
-      const complete: ReferenceState = { ...state, people_and_product: people, voices, persistent_systems: systems };
+      const complete: ReferenceState = { ...state, people_and_product: people, voices, persistent_systems: systems, places };
       await writeJson(statePath, complete);
       return publicPrepare(complete);
     },
@@ -410,7 +417,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const previous = state.shots.find((candidate) => candidate.index === shot.index - 1);
         const parts: Part[] = [await mediaPart(shot.clip_ref), await mediaPart(shot.representative_frame_ref)];
         if (previous !== undefined) parts.push(await mediaPart(previous.tail_frame_ref));
-        parts.push({ text: `${globalContext}\n\nObserve shot ${shot.index}. Describe the current base picture, any covering or non-covering visual content, and whether visible content continues from the preceding shot. A full-screen insert is still only a picture observation.\n\nAlso answer these two questions explicitly.\n\nFirst: is the whole frame a depicted scene that has its own camera space, lighting, depth and lens behaviour, or is it a flat designed field whose purpose is to carry drawn elements such as words, rows, panels or cards? Live action and animation are both depicted scenes; a paper sheet, ruled or gridded surface, flat or gradient colour, blurred wallpaper, board or slide backdrop filling the frame is a designed field. State which one it is and the visible evidence for it.\n\nSecond: for every framed element inside the picture, such as a card, phone, browser window, screenshot or inset, describe the picture inside the frame and the frame itself separately. For the inside, describe what it depicts and whether it moves. For the frame, describe its border, corner radius, outline, shadow, size, position and how it enters and leaves.\n\nReturn natural language evidence only.` });
+        parts.push({ text: `${globalContext}\n\nObserve shot ${shot.index}. Describe the current base picture, any covering or non-covering visual content, and whether visible content continues from the preceding shot. A full-screen insert is still only a picture observation.\n\nAlso answer these two questions explicitly.\n\nFirst: is the whole frame a depicted scene that has its own camera space, lighting, depth and lens behaviour, or is it a flat designed field whose purpose is to carry drawn elements such as words, rows, panels or cards? Live action and animation are both depicted scenes; a paper sheet, ruled or gridded surface, flat or gradient colour, blurred wallpaper, board or slide backdrop filling the frame is a designed field. State which one it is and the visible evidence for it.\n\nSecond: for every framed element inside the picture, such as a card, phone, browser window, screenshot or inset, describe the picture inside the frame and the frame itself separately. For the inside, describe what it depicts and whether it moves. For the frame, describe its border, corner radius, outline, shadow, size, position and how it enters and leaves.\n\nThird: does this picture move at all, and how? Separate three things: whether the camera moves, and how; whether anything in the picture moves, and what; and whether the picture is completely still. A held photograph, screenshot or card that only appears and disappears is still, however long it is on screen.\n\nReturn natural language evidence only.` });
         return await callSafely(retryDelayMs, generate, parts, "Observe picture only. Do not choose SVML components, do not write markup, and do not decide final source syntax.");
       }}));
       const typeTasks: ObservationTask[] = selected.map((shot) => ({ key: `type:${shot.shot_id}`, run: async () => {

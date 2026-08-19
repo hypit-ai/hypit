@@ -50,6 +50,7 @@ async function workspace(shotCount: number): Promise<{ readonly root: string; re
     people_and_product: { status: "complete", text: "one recurring host" },
     voices: { status: "complete", text: "one voice" },
     persistent_systems: { status: "complete", text: "one caption system for the whole video" },
+    places: { status: "complete", text: "one room, one camera position" },
   };
   await writeFile(join(stateRoot, "state.json"), `${JSON.stringify(state, null, 2)}\n`, "utf8");
   await writeFile(join(stateRoot, "observations.json"), "{}\n", "utf8");
@@ -112,6 +113,8 @@ test("observation covers picture, drawn type and sound for every shot and caches
   assert.deepEqual(result["unresolved"], []);
 
   const picture = calls.find((call) => call.instruction.startsWith("Observe picture only"))!;
+  assert.match(picture.text, /does this picture move at all/u,
+    "whether a stretch of picture moves decides whether it is generated or held as a still");
   assert.match(picture.text, /depicted scene/u);
   assert.match(picture.text, /flat designed field/u);
   assert.match(picture.text, /the picture inside the frame and the frame itself separately/u);
