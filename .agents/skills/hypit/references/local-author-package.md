@@ -24,27 +24,23 @@ linked. Add `--no-visual` when the component draws nothing.
 
 ## Required reading
 
-Read all of these completely before editing what the scaffold produced. Reading them after
-generating means reading about files that exist.
+Read these before editing what the scaffold produced. Reading them after generating means reading
+about files that exist.
 
-1. `docs/guide/author-packages.md`
-2. `docs/guide/packages.md`
-3. `docs/guide/conventions.md`
+1. `docs/guide/component-anatomy.md` — the roles every component package fills, and how to find each
+   one in an existing package. Read this first; it is what the rest is measured against.
+2. `docs/guide/author-packages.md`
+3. `docs/guide/packages.md` and `docs/guide/conventions.md`
 4. `packages/component-kit/README.md`
-5. The closest existing package's README, `manifest.ts`, `surface.ts`, `component.ts`, and
-   `activation.ts`
-6. `docs/guide/component-anatomy.md`, which names the roles every component package fills and where
-   each one lives. The implementation section below requires a renderer, a Fragment and the lowering
-   between them, and none of those are in the five files above — reading only those five means
-   discovering the shapes by failing.
-7. In the closest existing package, the files filling the roles that anatomy names. Their filenames
-   differ per package — `ranking` calls them `schedule.ts` and `render.ts`, `media-track` calls them
-   `program.ts` and `lower.ts`, `comment-sticker` calls them `program.ts` and `author.ts` — so find
-   them by what they export, not by name.
 
-Read item 5's files in full. Read item 7's for their shapes: how a Program becomes elements, where
-timing is resolved, what the Fragment declares. They are long, and copying one package's specifics is
-a worse outcome than understanding its structure.
+Then open the closest existing package and read **the roles you are about to write**, not the package
+end to end. Anatomy names them; find them by what they export, since the filenames differ — `ranking`
+calls two of them `schedule.ts` and `render.ts`, `media-track` calls them `program.ts` and `lower.ts`,
+`comment-sticker` calls them `program.ts` and `author.ts`.
+
+Read for shape: how a Program becomes elements, where timing is resolved, what the Fragment declares.
+Those files run to a couple of thousand lines between them, and copying one package's specifics is a
+worse outcome than understanding its structure — which is what anatomy is for.
 
 ## Package boundary
 
