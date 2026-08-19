@@ -21,3 +21,30 @@ These invariants override superficial layer order and shot boundaries:
 
 Shot boundaries are observation windows, not authoring units. Never generate independent SVML per
 shot and concatenate it afterward.
+
+## A system that spans shots is authored once
+
+- A visual system that persists across cuts — captions, a running list that keeps its state, a
+  progress indicator, a persistent badge or logo, a recurring lower third — is one system: one
+  Program, one Track and one shared Style over its full observed lifetime, even when the visible
+  words, items or values change.
+- Do not recreate the system per shot, and do not create a second Style because a new shot begins. A
+  new shot is never itself evidence of a change in appearance.
+- Author an observed local difference as a scoped variation inside the one system, on exactly the
+  words, items or interval where it was observed.
+- Whether the system is one Program with per-item timing or separate instances is decided by the
+  declared vocabulary of the chosen package, never by shot count.
+- The `persistent_systems` observation from `prepare_reference` reports these systems for the whole
+  reference, including whether each one's appearance ever changes and where. Use it instead of
+  inferring lifetimes from per-shot prose.
+
+## Base pictures and designed fields
+
+What may be a base picture at all, when a full screen is one graphic composition rather than a
+generated base plus an overlay, and where a missing picture comes from, are decided by
+`../playbooks/craft/graphic-compositions.md`. Read it; the rules there are not restated here and are
+not weakened by any observation, package convenience or check result.
+
+Each shot's `visual` observation states explicitly whether the frame is a depicted scene or a flat
+designed field, and describes each framed element's inner picture separately from its frame. That
+answer is the evidence for this decision.
