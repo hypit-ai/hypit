@@ -19,9 +19,9 @@ list_svml_packages
 → narrow observe_reference questions for unresolved appearance and conflicts
 → inspect_svml_vocabulary for candidate packages
 → develop a project-local package only for a proven vocabulary gap
-→ author complete main.svml, studio.svs, build.svrun
+→ read final-sources.md, then author complete main.svml, studio.svs, build.svrun
 → use existing checks and repair until legal
-→ render each authored element and close the loop with compare_reconstruction
+→ read reconstruction-loop.md, then render each authored element and compare it
 ```
 
 ## list_svml_packages

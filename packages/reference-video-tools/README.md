@@ -55,9 +55,10 @@ completed one again.
 Shots are never shorter than one second: a fragment below that is merged into the shot before it,
 because clips that short carry no evidence and the model rejects them outright.
 
-`HYPIT_REFERENCE_CONCURRENCY` and `HYPIT_REFERENCE_LAUNCH_GAP_MS` set how fast requests are issued.
-They describe the quota behind the credentials rather than anything about the video, so they are
-environment settings and not flags.
+`HYPIT_REFERENCE_CONCURRENCY` and `HYPIT_REFERENCE_LAUNCH_GAP_MS` set how fast requests are issued,
+defaulting to four at a time with a 1.5 second gap. They describe the quota behind the credentials
+rather than anything about the video, so they are environment settings and not flags. Lower them if a
+quota objects; the failure to expect is rate limiting, which backs off on its own before giving up.
 
 `--question` is a separate narrow path: it requires one to three `--shot-id` values, answers only
 that question from those shots' clips and frames in a single request, and neither reads nor writes

@@ -252,8 +252,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
   // Pacing is deployment policy, not author intent: it depends on the quota behind the credentials,
   // which the calling agent has no way to know. It is settable here and through the environment, and
   // deliberately not through a CLI flag.
-  const concurrency = options.concurrency ?? positiveEnv("HYPIT_REFERENCE_CONCURRENCY") ?? 2;
-  const gapMs = options.launchGapMs ?? positiveEnv("HYPIT_REFERENCE_LAUNCH_GAP_MS") ?? 6_000;
+  // Four at a time with a short gap completed a whole reference twice with no rate limiting, and the
+  // binding constraint is per-request latency rather than the launch gap: nine requests at four took
+  // about as long as three waves, not nine. A quota that dislikes it lowers these.
+  const concurrency = options.concurrency ?? positiveEnv("HYPIT_REFERENCE_CONCURRENCY") ?? 4;
+  const gapMs = options.launchGapMs ?? positiveEnv("HYPIT_REFERENCE_LAUNCH_GAP_MS") ?? 1_500;
   const retryDelayMs = options.retryDelayMs ?? 2_000;
   let generatorPromise: Promise<GenerateText> | undefined;
   const generator = async (): Promise<GenerateText> => generatorPromise ??= options.generate === undefined ? defaultGenerate(model) : Promise.resolve(options.generate);
