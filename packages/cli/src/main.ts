@@ -34,6 +34,7 @@ import type {
 import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliColorMode, CliIo } from "./output.js";
 import { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
+import { scaffoldComponentPackage } from "./scaffold.js";
 import { loadDiscoveredSourcePackages } from "./source-packages.js";
 import {
   clearRuntimeProfile,
@@ -67,6 +68,8 @@ type ParsedArgs = {
   readonly model: string | undefined;
   readonly aspectRatio: string | undefined;
   readonly resolution: string | undefined;
+  /** Scaffold a component package that draws nothing, so it needs no preview and no still. */
+  readonly noVisual: boolean;
   /** Leave the declared external programs alone; build against what is running. */
   readonly noPrograms: boolean;
   readonly json: boolean;
@@ -132,6 +135,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let model: string | undefined;
   let aspectRatio: string | undefined;
   let resolution: string | undefined;
+  let noVisual = false;
   let noPrograms = false;
   let json = false;
   let color: CliColorMode = "auto";
@@ -280,6 +284,10 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       index += 1;
       continue;
     }
+    if (item === "--no-visual") {
+      noVisual = true;
+      continue;
+    }
     if (item === "--follow") {
       follow = true;
       continue;
@@ -359,6 +367,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     model,
     aspectRatio,
     resolution,
+    noVisual,
     noPrograms,
     json,
     color,
@@ -404,6 +413,10 @@ function assertCommandOptions(args: ParsedArgs): void {
     case "image":
       // A package asset needs credentials and nothing else; no Runtime Profile applies.
       add("--prompt", "--to", "--model", "--aspect-ratio", "--resolution");
+      break;
+    case "new-package":
+      // Writing files from string templates reads no Source and opens no Runtime.
+      add("--to", "--no-visual");
       break;
     case "cancel":
       add("--runtime", "--reason");
@@ -460,6 +473,7 @@ function usage(): string {
     "  hypit cancel <build-id> [--runtime profile.json] [--reason text]",
     "  hypit auth status|login|logout <endpoint-instance> [--runtime profile.json] [--slot name] [--from secret-file]",
     "  hypit image --prompt <text|text-file> --to <path.png> [--model package] [--aspect-ratio r] [--resolution r]",
+    "  hypit new-package <package-name> [--to directory] [--no-visual]",
     "",
     "output:",
     "  --json  --verbose  --color auto|always|never  --no-color  --debug",
@@ -905,7 +919,7 @@ export async function runCli(
     || args.command === "inspect" || args.command === "get" || args.command === "cancel"
     || args.command === "doctor" || args.command === "programs"
     || args.command === "runtime" || args.command === "queue" || args.command === "paths"
-    || args.command === "image";
+    || args.command === "image" || args.command === "new-package";
   const operational = known || args.command === "auth";
   const fileOptional = args.command === "builds" || args.command === "history" || args.command === "queue"
     || args.command === "paths" || args.command === "image"
@@ -938,6 +952,41 @@ export async function runCli(
       packageRoot,
     });
   };
+  if (args.command === "new-package") {
+    if (args.file === undefined) throw new Error("new-package requires a package name such as @hypit/local-notepad-list");
+    const scaffolded = await scaffoldComponentPackage({
+      name: args.file,
+      visual: !args.noVisual,
+      cwd: process.cwd(),
+      ...(args.to === undefined ? {} : { to: args.to }),
+    });
+    // A path outside the working directory reads better absolute than as a run of `..`.
+    const nested = relative(process.cwd(), scaffolded.root);
+    const shown = nested === "" ? "."
+      : nested.startsWith("..") || isAbsolute(nested) ? scaffolded.root
+      : nested;
+    writeOperational({
+      format: "hypit.cli-new-package@1",
+      name: scaffolded.name,
+      path: scaffolded.root,
+      tag: scaffolded.tag,
+      surface: scaffolded.surface,
+      visual: scaffolded.visual,
+      files: scaffolded.files,
+    }, "Package scaffolded", "success", [
+      ["Package", scaffolded.name],
+      ["Path", shown],
+      ["Element", `<${scaffolded.surface}:${scaffolded.tag}>`],
+      ["Files", String(scaffolded.files.length)],
+    ], [
+      "Run pnpm install so the workspace links it, then pnpm check.",
+      "The Manifest declares no Type and no Producer yet; the Surface validates and publishes nothing.",
+      ...(scaffolded.visual
+        ? [`Write preview/${scaffolded.tag}.png with node --import tsx ${shown}/test/render-still.ts`]
+        : []),
+    ]);
+    return;
+  }
   if (args.command === "image") {
     if (args.prompt === undefined) throw new Error("image requires --prompt with text or a text file path");
     if (args.to === undefined) throw new Error("image requires --to with the file to write");

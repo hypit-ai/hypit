@@ -1,3 +1,7 @@
 packages:
   - packages/*
   - services/media-lambda
+  # A project-local author package lives at <project>/packages/local-<slug>, which for a project
+  # kept in this checkout means examples/<project>/packages/. Without this the convention the
+  # authoring guide documents produces a package pnpm never links.
+  - examples/*/packages/*
