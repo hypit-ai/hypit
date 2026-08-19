@@ -4,6 +4,7 @@ import {
   gptImageCleanManifest,
   gptImageCleanModuleRef,
   gptImageComponent,
+  gptImageDefinition,
   gptImageManifest,
   gptImageMarkupSurfaces,
   gptImageModuleRef,
@@ -22,6 +23,7 @@ export const hypitPackage = {
   }],
   components: [gptImageComponent],
   hostFacets: [
+    gptImageDefinition.hostFacet,
     createMarkupSurfaceHostFacet({
       module: gptImageModuleRef,
     declaration: gptImageMarkupSurfaces.find((item) => item.name === "image")!,

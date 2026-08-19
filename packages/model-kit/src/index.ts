@@ -6,6 +6,7 @@ import type {
 } from "@hypit/component-kit";
 import { artifactDependency, artifactTypes } from "@hypit/artifact";
 import { sealGraphFragment } from "@hypit/elaborator";
+import type { HostFacet } from "@hypit/host";
 import {
   bindGenerationMedia,
   bindGenerationText,
@@ -101,7 +102,53 @@ export type ExactModelModule<Key extends string = string> = {
     readonly validators: readonly TypeValidatorFacet[];
     readonly producers: readonly ProducerFacet[];
   };
+  /** Inert declaration of these exact models for Hosts that address one directly. */
+  readonly hostFacet: ExactModelHostFacet;
 };
+
+export const exactModelHostAbi = "hypit.exact-model-host@1";
+
+/**
+ * What one installed package can generate, named exactly, for a Host that drives a
+ * single model without a Build. It carries no Provider choice and no Runtime state;
+ * the Host still resolves who fulfils the Capability.
+ */
+export type ExactModelHostFacet = HostFacet & {
+  readonly abi: typeof exactModelHostAbi;
+  /** The exact model names this package declares, in declaration order. */
+  readonly offers: readonly string[];
+  readonly implementation: { readonly endpoints: readonly ExactModelEndpoint[] };
+};
+
+function createExactModelHostFacet(endpoints: readonly ExactModelEndpoint[]): ExactModelHostFacet {
+  assert(endpoints.length > 0, "an exact model Host facet declares no endpoint");
+  return {
+    abi: exactModelHostAbi,
+    offers: endpoints.map((item) => item.ports.model),
+    implementation: { endpoints },
+  };
+}
+
+/** Read every exact model declared by one selected package's Host facets. */
+export function exactModelsFromHostFacets(
+  facets: readonly HostFacet[],
+): readonly ExactModelEndpoint[] {
+  const found: ExactModelEndpoint[] = [];
+  for (const facet of facets) {
+    if (facet.abi !== exactModelHostAbi) continue;
+    const implementation = facet.implementation as { readonly endpoints?: unknown } | null;
+    const declared = implementation === null ? undefined : implementation.endpoints;
+    assert(Array.isArray(declared), `${exactModelHostAbi} facet has an invalid implementation`);
+    for (const item of declared as readonly unknown[]) {
+      const endpoint = item as ExactModelEndpoint | null;
+      assert(endpoint !== null && typeof endpoint === "object"
+        && typeof endpoint.key === "string" && typeof endpoint.ports?.model === "string",
+        `${exactModelHostAbi} facet declares an invalid exact model`);
+      found.push(endpoint);
+    }
+  }
+  return found;
+}
 
 export type DefineExactModelModuleOptions<Key extends string = string> = {
   readonly module: ModuleRef;
@@ -282,6 +329,7 @@ export function defineExactModelModule<const Key extends string>(
     module: { ...options.module },
     manifest,
     endpoints: endpoints as Readonly<Record<Key, ExactModelEndpoint>>,
+    hostFacet: createExactModelHostFacet(Object.values(endpoints) as readonly ExactModelEndpoint[]),
     component: {
       validators: endpointData.flatMap((item) => [{
         type: item.requestType,
