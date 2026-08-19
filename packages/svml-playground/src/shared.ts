@@ -127,6 +127,12 @@ export type PlaygroundSnapshot = {
    * placeholder next to a file they know exists reads as a bug otherwise.
    */
   readonly refused: readonly { readonly output: string; readonly reason: string }[];
+  /**
+   * Why a Track has no value. A Producer that failed already said why, and a
+   * plan that produced nothing knows which output it was; without this every
+   * cause reads as the same silent absence.
+   */
+  readonly errors: readonly string[];
 };
 
 export type PlaygroundFailure = {
