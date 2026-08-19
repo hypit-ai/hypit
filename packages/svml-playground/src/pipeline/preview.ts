@@ -373,12 +373,18 @@ export async function preview(
     const selection = out.state.plan.selections.find((item) => item.output === target.ref);
     const record = out.state.records.find((item) => item.id === selection?.record);
     const stored = record?.value as { kind: string; value?: unknown } | undefined;
+    // Why a Track has no value is the first thing anyone asks, so say it rather
+    // than letting every cause collapse into one silent absence.
+    const why = stored?.kind === "inline" ? undefined
+      : selection === undefined ? `${target.name}: the plan selected nothing for this output (driver status ${out.status})`
+        : record === undefined ? `${target.name}: the plan selected record ${String(selection.record)} and the driver never produced it (status ${out.status})`
+          : `${target.name}: the record holds a ${String(stored?.kind)} value rather than an inline one`;
     tracks.push({
       name: target.name,
       type: target.type,
       ...(stored?.kind === "inline" ? { track: stored.value } : {}),
       unserved: out.unserved.map((item) => item.capability),
-      errors: out.errors,
+      errors: why === undefined ? out.errors : [...out.errors, why],
     });
   }
 
