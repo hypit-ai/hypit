@@ -10,8 +10,8 @@ is an image you reference downstream — as a Seedance reference frame, as a Med
 source of another operation.
 
 They all need an endpoint. `image-compose` and `image-transform` ask for the raster capability, which
-`@narratage/provider-image-opencv-local` answers by running OpenCV in a bounded Python process on
-your own machine; `background-removal` asks for its own capability, which `@narratage/provider-kie`
+`@hypit/provider-image-opencv-local` answers by running OpenCV in a bounded Python process on
+your own machine; `background-removal` asks for its own capability, which `@hypit/provider-kie`
 answers remotely. No example in this repository binds either, so add the endpoint to your
 [Runtime Profile](/guide/runtime) before planning a Build that uses one.
 
@@ -20,7 +20,7 @@ answers remotely. No example in this repository binds either, so add the endpoin
 `compose:Image` paints layers onto one canvas, in the order they are written, and hands back a PNG.
 
 ```svml
-<import as="compose" from="@narratage/image-compose@1"/>
+<import as="compose" from="@hypit/image-compose@1"/>
 ```
 
 The element takes `id` and `canvas`, and optionally `background` — which must carry alpha, as
@@ -50,7 +50,7 @@ An `image:Program` is a named list of operations; an `image:Transform` runs one 
 split is deliberate: a program written once is applied to every shot that needs the same treatment.
 
 ```svml
-<import as="image" from="@narratage/image-transform@1"/>
+<import as="image" from="@hypit/image-transform@1"/>
 ```
 
 `image:Program` takes only `id`, and holds its operations as children, applied in the order written:
@@ -88,7 +88,7 @@ naming it in a `Transform` is what runs it.
 ## Removing a background
 
 ```svml
-<import as="remove" from="@narratage/background-removal@1"/>
+<import as="remove" from="@hypit/background-removal@1"/>
 ```
 
 `remove:Background` is empty and takes `id` and `source`. It picks no model, threshold or storage —

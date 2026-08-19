@@ -3,17 +3,17 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, relative, resolve } from "node:path";
 
-import { captionTypes } from "@narratage/caption";
-import { fineCaptionRecipeSchema, FINE_CAPTION_FAMILY } from "@narratage/caption-fine";
-import { openFontFamilies } from "@narratage/fonts-open";
-import type { OpenFontFamily, OpenFontStyle } from "@narratage/fonts-open";
-import { narrativeTypes } from "@narratage/narrative";
-import { loadNodePackageSelection } from "@narratage/package-loader-node";
-import type { LoadedPackage } from "@narratage/package-loader-node";
-import type { ArtifactAttachment } from "@narratage/workspace";
-import type { CanonicalValue, TypedRecord, TypeRef } from "@narratage/protocol";
-import { parseSvs } from "@narratage/svs";
-import { createVideoCompiler, discoverVideoSourcePackages } from "@narratage/video-cli";
+import { captionTypes } from "@hypit/caption";
+import { fineCaptionRecipeSchema, FINE_CAPTION_FAMILY } from "@hypit/caption-fine";
+import { openFontFamilies } from "@hypit/fonts-open";
+import type { OpenFontFamily, OpenFontStyle } from "@hypit/fonts-open";
+import { narrativeTypes } from "@hypit/narrative";
+import { loadNodePackageSelection } from "@hypit/package-loader-node";
+import type { LoadedPackage } from "@hypit/package-loader-node";
+import type { ArtifactAttachment } from "@hypit/workspace";
+import type { CanonicalValue, TypedRecord, TypeRef } from "@hypit/protocol";
+import { parseSvs } from "@hypit/svs";
+import { createVideoCompiler, discoverVideoSourcePackages } from "@hypit/video-cli";
 import type { Plugin, ViteDevServer } from "vite";
 
 import type {
@@ -325,7 +325,7 @@ export function captionPlaygroundPlugin(options: CaptionPlaygroundOptions): Plug
   };
 
   return {
-    name: "narratage-caption-playground",
+    name: "hypit-caption-playground",
     configureServer(value) {
       server = value;
       value.watcher.add([options.source, options.recipeFile, options.fontFile]);

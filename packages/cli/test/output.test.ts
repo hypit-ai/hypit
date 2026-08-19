@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { BuildPlan } from "@narratage/protocol";
+import type { BuildPlan } from "@hypit/protocol";
 
 import { renderCliError, writeCliHelp, writeCliOutput } from "../src/output.js";
 import type { PlanPreflight } from "../src/output.js";
@@ -27,24 +27,24 @@ test("author check renders a compact human summary without dumping identity", ()
   const output = capture(human, {
     kind: "check-author",
     source: "/project/main.svml",
-    frontend: "@narratage/markup@1",
+    frontend: "@hypit/markup@1",
     machine: {
-      format: "narratage.cli-check@1",
+      format: "hypit.cli-check@1",
       sourceKind: "author",
       ok: true,
       units: 2,
       sourceAssets: [{ digest }],
-      modules: ["@narratage/script@1"],
+      modules: ["@hypit/script@1"],
       exports: [{
         name: "story",
-        type: { module: { name: "@narratage/narrative", version: "1" }, name: "Narrative" },
+        type: { module: { name: "@hypit/narrative", version: "1" }, name: "Narrative" },
         kind: "logical-output",
       }],
     },
   });
   assert.match(output, /✓ Source is valid/u);
-  assert.match(output, /Frontend\s+@narratage\/markup@1/u);
-  assert.match(output, /story\s+@narratage\/narrative@1\/Narrative/u);
+  assert.match(output, /Frontend\s+@hypit\/markup@1/u);
+  assert.match(output, /story\s+@hypit\/narrative@1\/Narrative/u);
   assert.doesNotMatch(output, /sha256:/u);
   assert.doesNotMatch(output, /\u001b\[/u);
 });
@@ -60,7 +60,7 @@ test("large author exports are bounded until verbose output is requested", () =>
     source: "/project/main.svml",
     frontend: "example@1",
     machine: {
-      format: "narratage.cli-check@1" as const,
+      format: "hypit.cli-check@1" as const,
       sourceKind: "author" as const,
       ok: true as const,
       units: 1,
@@ -77,7 +77,7 @@ test("large author exports are bounded until verbose output is requested", () =>
 
 test("author check hides generated graph plumbing without deleting machine exports", () => {
   const machine = {
-    format: "narratage.cli-check@1" as const,
+    format: "hypit.cli-check@1" as const,
     sourceKind: "author" as const,
     ok: true as const,
     units: 1,
@@ -112,33 +112,33 @@ test("author check hides generated graph plumbing without deleting machine expor
 
 test("JSON mode is exact machine data with no terminal decoration", () => {
   const machine = {
-    format: "narratage.cli-doctor@1" as const,
+    format: "hypit.cli-doctor@1" as const,
     ok: false,
     dataRoot: "/project",
     diagnostics: [{ severity: "error" as const, code: "MISSING", message: "not found" }],
   };
   const output = capture({ json: true, color: "always", verbose: true }, {
     kind: "doctor",
-    profile: "/project/narratage.runtime.json",
+    profile: "/project/hypit.runtime.json",
     machine,
   }, { isTTY: true, color: true, unicode: true, columns: 100 });
   assert.deepEqual(JSON.parse(output), machine);
-  assert.doesNotMatch(output, /Narratage Doctor/u);
+  assert.doesNotMatch(output, /Hypit Doctor/u);
   assert.doesNotMatch(output, /\u001b\[/u);
 });
 
 test("plan keeps named Run choices visible and leaves graph internals to verbose output", () => {
   const plan: BuildPlan = {
-    format: "narratage.plan@1",
+    format: "hypit.plan@1",
     steps: [{
       id: "step-1",
-      producer: { module: { name: "@narratage/media", version: "1" }, name: "inspect" },
+      producer: { module: { name: "@hypit/media", version: "1" }, name: "inspect" },
       inputs: {},
       outputs: {},
       needs: { generated: { id: "need-1", result: "record-1" } },
     }, {
       id: "step-2",
-      producer: { module: { name: "@narratage/media", version: "1" }, name: "normalize" },
+      producer: { module: { name: "@hypit/media", version: "1" }, name: "normalize" },
       inputs: {},
       outputs: {},
       needs: {},
@@ -152,7 +152,7 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
   };
   const output = capture(human, {
     kind: "plan",
-    machine: { format: "narratage.cli-plan@1", ok: true, plan },
+    machine: { format: "hypit.cli-plan@1", ok: true, plan },
     run: "/project/build.svrun",
     outputNames: { "logical:take": "take.video" },
     satisfactionNames: { "logical:take": "preview" },
@@ -161,27 +161,27 @@ test("plan keeps named Run choices visible and leaves graph internals to verbose
   assert.match(output, /take\.video\s+← preview/u);
   assert.doesNotMatch(output, /Operations/u);
   assert.match(output, /External requests/u);
-  assert.match(output, /1\s+@narratage\/media@1#inspect/u);
+  assert.match(output, /1\s+@hypit\/media@1#inspect/u);
   assert.doesNotMatch(output, /No external work was started\./u);
   assert.match(capture({ ...human, verbose: true }, {
     kind: "plan",
-    machine: { format: "narratage.cli-plan@1", ok: true, plan },
+    machine: { format: "hypit.cli-plan@1", ok: true, plan },
     run: "/project/build.svrun",
     outputNames: { "logical:take": "take.video" },
     satisfactionNames: { "logical:take": "preview" },
-  }), /2\s+@narratage\/media@1/u);
+  }), /2\s+@hypit\/media@1/u);
 });
 
 test("a plan with no Needs stays compact without knowing any Provider names", () => {
   const plan: BuildPlan = {
-    format: "narratage.plan@1",
+    format: "hypit.plan@1",
     steps: [],
     goals: [],
     selections: [],
   };
   const output = capture(human, {
     kind: "plan",
-    machine: { format: "narratage.cli-plan@1", ok: true, plan },
+    machine: { format: "hypit.cli-plan@1", ok: true, plan },
     run: "/project/free.svrun",
   });
   assert.match(output, /External requests\s+0/u);
@@ -190,7 +190,7 @@ test("a plan with no Needs stays compact without knowing any Provider names", ()
 
 test("plan runtime preflight presents only demanded capabilities", () => {
   const plan: BuildPlan = {
-    format: "narratage.plan@1",
+    format: "hypit.plan@1",
     steps: [],
     goals: [],
     selections: [],
@@ -207,7 +207,7 @@ test("plan runtime preflight presents only demanded capabilities", () => {
   };
   const output = capture(human, {
     kind: "plan",
-    machine: { format: "narratage.cli-plan@1", ok: false, plan, preflight },
+    machine: { format: "hypit.cli-plan@1", ok: false, plan, preflight },
     run: "/project/images.svrun",
   });
   assert.match(output, /Runtime preflight/u);
@@ -226,14 +226,14 @@ test("human errors expose stable codes while JSON errors remain parseable", () =
     unicode: true,
     debug: false,
   })) as { readonly format: string; readonly error: { readonly code: string } };
-  assert.equal(machine.format, "narratage.cli-error@1");
+  assert.equal(machine.format, "hypit.cli-error@1");
   assert.equal(machine.error.code, "RUNTIME_CREDENTIAL_MISSING");
 });
 
 test("help is a successful product surface rather than a usage error", () => {
   let output = "";
   writeCliHelp({ write(text) { output += text; } });
-  assert.match(output, /^Narratage\n/u);
+  assert.match(output, /^Hypit\n/u);
   assert.match(output, /Authoring/u);
   assert.match(output, /--json/u);
   assert.doesNotMatch(output, /CLI_ERROR/u);
@@ -242,7 +242,7 @@ test("help is a successful product surface rather than a usage error", () => {
 test("command help explains only the selected shell grammar", () => {
   let output = "";
   writeCliHelp({ write(text) { output += text; } }, "build");
-  assert.match(output, /^narratage build\n/u);
+  assert.match(output, /^hypit build\n/u);
   assert.match(output, /--follow/u);
   assert.doesNotMatch(output, /Authoring/u);
 });
@@ -250,7 +250,7 @@ test("command help explains only the selected shell grammar", () => {
 test("archive commands have their own help instead of falling back to the global screen", () => {
   let output = "";
   writeCliHelp({ write(text) { output += text; } }, "get");
-  assert.match(output, /^narratage get\n/u);
+  assert.match(output, /^hypit get\n/u);
   assert.match(output, /copying never reruns work/u);
   assert.doesNotMatch(output, /Typical flow/u);
 });

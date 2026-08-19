@@ -1,4 +1,4 @@
-# `@narratage/image-transform`
+# `@hypit/image-transform`
 
 An ordinary graph component with two inputs and one result:
 

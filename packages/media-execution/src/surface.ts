@@ -3,8 +3,8 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { assertCompositableSurfaceRef } from "@narratage/media";
-import type { CompositableSurfaceRef } from "@narratage/media";
+import { assertCompositableSurfaceRef } from "@hypit/media";
+import type { CompositableSurfaceRef } from "@hypit/media";
 
 type JsonObject = Record<string, unknown>;
 
@@ -212,7 +212,7 @@ export async function verifyCompositableSurfaceBytes(options: {
   const ffprobePath = options.ffprobePath ?? "ffprobe";
   const timeoutMs = options.processTimeoutMs ?? 120_000;
   const maxOutputBytes = options.maxProbeOutputBytes ?? 8 * 1024 * 1024;
-  const directory = await mkdtemp(join(tmpdir(), "narratage-surface-verify-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-surface-verify-"));
   try {
     const path = join(directory, `surface${suffix(options.surface.artifact.mediaType)}`);
     await writeFile(path, options.bytes);

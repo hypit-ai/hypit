@@ -1,21 +1,21 @@
-import { artifactTypes } from "@narratage/artifact";
-import { mediaTypes } from "@narratage/media";
-import type { FontStackRef } from "@narratage/media";
-import { narrativeTypes } from "@narratage/narrative";
-import { programSpaceTypes } from "@narratage/program-space";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { spatialTypes } from "@narratage/spatial";
-import { svsRecipeType } from "@narratage/svs";
-import type { SvsRecipe } from "@narratage/svs";
-import { sealText, textTypes } from "@narratage/text";
+import { artifactTypes } from "@hypit/artifact";
+import { mediaTypes } from "@hypit/media";
+import type { FontStackRef } from "@hypit/media";
+import { narrativeTypes } from "@hypit/narrative";
+import { programSpaceTypes } from "@hypit/program-space";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import { spatialTypes } from "@hypit/spatial";
+import { svsRecipeType } from "@hypit/svs";
+import type { SvsRecipe } from "@hypit/svs";
+import { sealText, textTypes } from "@hypit/text";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
-import type { TemporalDuration, TemporalPointExpression } from "@narratage/temporal";
+} from "@hypit/markup";
+import type { TemporalDuration, TemporalPointExpression } from "@hypit/temporal";
 
 import { decodeCommentStickerStyle } from "./author.js";
 import { createCommentStickerFragment } from "./fragment.js";

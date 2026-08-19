@@ -1,23 +1,23 @@
-import { assertAudioTrackIdentity, sealAudioTrack } from "@narratage/composition";
-import type { AudioClip, AudioTrack } from "@narratage/composition";
-import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@narratage/media";
-import type { SynchronizedMedia } from "@narratage/media";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+import { assertAudioTrackIdentity, sealAudioTrack } from "@hypit/composition";
+import type { AudioClip, AudioTrack } from "@hypit/composition";
+import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@hypit/media";
+import type { SynchronizedMedia } from "@hypit/media";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import {
   assertProgramSpaceIdentity,
   programFrameSampleBoundary,
   programSpaceSampleFrames,
-} from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { canonicalize, isDigest } from "@narratage/protocol";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
+} from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { canonicalize, isDigest } from "@hypit/protocol";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
 import {
   projectMomentWindows,
   projectProgramWindow,
   projectSelectionWindows,
   temporalDurationInSamples,
-} from "@narratage/temporal";
-import type { ProjectedOccurrence, TemporalDuration } from "@narratage/temporal";
+} from "@hypit/temporal";
+import type { ProjectedOccurrence, TemporalDuration } from "@hypit/temporal";
 
 import type {
   AudioClipSpec,

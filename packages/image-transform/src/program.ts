@@ -1,5 +1,5 @@
-import { canonicalize } from "@narratage/protocol";
-import { assertRasterTransformOperations } from "@narratage/raster";
+import { canonicalize } from "@hypit/protocol";
+import { assertRasterTransformOperations } from "@hypit/raster";
 
 import type { ImageTransformProgram } from "./types.js";
 

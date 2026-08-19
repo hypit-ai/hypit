@@ -12,7 +12,7 @@ function usage(message?: string): never {
   if (message !== undefined) process.stderr.write(`${message}\n\n`);
   process.stderr.write(`Usage:
   pnpm svml:playground -- --source <main.svml> [--run <build.svrun>]
-    [--runtime <narratage.runtime.json>] [--port <number>]
+    [--runtime <hypit.runtime.json>] [--port <number>]
 
 The Playground reads the Source. It never writes to it, and it never runs a
 Provider: with no build present it estimates timings from the Script text.
@@ -49,7 +49,7 @@ const run = runArgument === undefined ? undefined : resolve(invokedFrom, runArgu
 const runtimeArgument = values.get("runtime");
 const runtime = runtimeArgument === undefined ? undefined : resolve(invokedFrom, runtimeArgument);
 // Runtime packages belong to the project that selected them. Pointing into the
-// Narratage monorepo would make the preview work here and fail once installed.
+// Hypit monorepo would make the preview work here and fail once installed.
 const packageRoot = invokedFrom;
 const port = Number(values.get("port") ?? "5179");
 if (!Number.isSafeInteger(port) || port <= 0) usage("--port must be a positive integer");

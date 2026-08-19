@@ -1,14 +1,14 @@
 import { readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 
-import { authorFrontendsFromHostFacets, prepareAuthorSource } from "@narratage/elaborator";
-import type { AuthorFrontend } from "@narratage/elaborator";
-import { physicalPackageName } from "@narratage/package-loader-node";
-import type { LogicalPackageAddress, LoadedPackage } from "@narratage/package-loader-node";
-import { modulePackageAbi } from "@narratage/protocol";
-import { prepareRunSource, runFragmentHostAbi, runFrontendsFromHostFacets } from "@narratage/run";
-import type { RunFrontend } from "@narratage/run";
-import { parseSourceHeader, sourceFrontendPackageAbi } from "@narratage/source";
+import { authorFrontendsFromHostFacets, prepareAuthorSource } from "@hypit/elaborator";
+import type { AuthorFrontend } from "@hypit/elaborator";
+import { physicalPackageName } from "@hypit/package-loader-node";
+import type { LogicalPackageAddress, LoadedPackage } from "@hypit/package-loader-node";
+import { modulePackageAbi } from "@hypit/protocol";
+import { prepareRunSource, runFragmentHostAbi, runFrontendsFromHostFacets } from "@hypit/run";
+import type { RunFrontend } from "@hypit/run";
+import { parseSourceHeader, sourceFrontendPackageAbi } from "@hypit/source";
 
 function isWithin(root: string, path: string): boolean {
   const relation = relative(root, path);

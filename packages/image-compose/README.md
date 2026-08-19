@@ -1,8 +1,8 @@
-# @narratage/image-compose
+# @hypit/image-compose
 
 Deterministic multi-layer raster composition for SVML.
 
-The author graph supplies an explicit Canvas, an ordered list of image Layers, and an explicit Frame for every Layer. The package lowers that meaning to the shared `@narratage/raster` execution contract; an Endpoint such as `@narratage/provider-image-opencv-local` performs the pixels. Core knows nothing about images or compositing.
+The author graph supplies an explicit Canvas, an ordered list of image Layers, and an explicit Frame for every Layer. The package lowers that meaning to the shared `@hypit/raster` execution contract; an Endpoint such as `@hypit/provider-image-opencv-local` performs the pixels. Core knows nothing about images or compositing.
 
 ```xml
 <compose:Image id="card" canvas={portrait} background="#00000000">

@@ -1,16 +1,16 @@
-import { programSpaceTypes } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { spatialTypes } from "@narratage/spatial";
-import { compositionTypes } from "@narratage/composition";
-import type { AudioTrack, Track, VisualTrack } from "@narratage/composition";
-import { svsRecipeType } from "@narratage/svs";
-import type { SvsRecipe } from "@narratage/svs";
+import { programSpaceTypes } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { spatialTypes } from "@hypit/spatial";
+import { compositionTypes } from "@hypit/composition";
+import type { AudioTrack, Track, VisualTrack } from "@hypit/composition";
+import { svsRecipeType } from "@hypit/svs";
+import type { SvsRecipe } from "@hypit/svs";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import { createFilmAssemblyFragment } from "./fragment.js";
 import { filmTypes } from "./manifest.js";
@@ -124,7 +124,7 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
   if (new Set(tracks.map((track) => track.name)).size !== tracks.length) {
     throw new Error(`${element.name} cannot include the same Track more than once`);
   }
-  const fragment = createFilmAssemblyFragment({ name: "@narratage/film/surface-assembly@1", tracks });
+  const fragment = createFilmAssemblyFragment({ name: "@hypit/film/surface-assembly@1", tracks });
 
   return {
     records: [{

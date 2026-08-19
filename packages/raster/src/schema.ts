@@ -1,4 +1,4 @@
-import type { ValueSchema } from "@narratage/protocol";
+import type { ValueSchema } from "@hypit/protocol";
 
 const number = (minimum?: number, maximum?: number): ValueSchema => ({
   kind: "number", ...(minimum === undefined ? {} : { minimum }), ...(maximum === undefined ? {} : { maximum }),

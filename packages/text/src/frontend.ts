@@ -1,13 +1,13 @@
 import {
   sealRecord,
-} from "@narratage/core";
-import type { AuthorFrontend, AuthorSourceExport } from "@narratage/elaborator";
-import { parseSvs } from "@narratage/svs";
+} from "@hypit/core";
+import type { AuthorFrontend, AuthorSourceExport } from "@hypit/elaborator";
+import { parseSvs } from "@hypit/svs";
 
 import { textModuleRef, textTypes } from "./manifest.js";
 import { textTemplateFromSvsRecipes } from "./svs.js";
 
-export const textSvsFrontendId = "@narratage/text/svs@1";
+export const textSvsFrontendId = "@hypit/text/svs@1";
 
 export const textSvsFrontend: AuthorFrontend = {
   id: textSvsFrontendId,
@@ -26,7 +26,7 @@ export const textSvsFrontend: AuthorFrontend = {
     const record = sealRecord({
       id,
       type: textTypes.template,
-      value: { kind: "inline", value: template as unknown as import("@narratage/protocol").CanonicalValue },
+      value: { kind: "inline", value: template as unknown as import("@hypit/protocol").CanonicalValue },
     });
     const exports: AuthorSourceExport[] = [{ name: id, ref: { kind: "record", id }, type: textTypes.template }];
     return {

@@ -1,11 +1,11 @@
-import { artifactTypes } from "@narratage/artifact";
-import { sealGraphFragment } from "@narratage/elaborator";
-import { generationProducers } from "@narratage/generation";
-import { imageTransformProducers, imageTransformTypes } from "@narratage/image-transform";
-import { exactModelMediaInputNames, exactModelTextInputName } from "@narratage/model-kit";
-import type { ExactModelMediaInput, ExactModelTextInput } from "@narratage/model-kit";
-import type { FragmentOperation } from "@narratage/elaborator";
-import { textTypes } from "@narratage/text";
+import { artifactTypes } from "@hypit/artifact";
+import { sealGraphFragment } from "@hypit/elaborator";
+import { generationProducers } from "@hypit/generation";
+import { imageTransformProducers, imageTransformTypes } from "@hypit/image-transform";
+import { exactModelMediaInputNames, exactModelTextInputName } from "@hypit/model-kit";
+import type { ExactModelMediaInput, ExactModelTextInput } from "@hypit/model-kit";
+import type { FragmentOperation } from "@hypit/elaborator";
+import { textTypes } from "@hypit/text";
 
 import { gptImageEndpoints } from "./index.js";
 

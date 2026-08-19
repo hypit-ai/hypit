@@ -1,9 +1,9 @@
-import { programSpaceTypes } from "@narratage/program-space";
-import { spatialTypes } from "@narratage/spatial";
-import { compositionTypes } from "@narratage/composition";
-import type { Track } from "@narratage/composition";
-import { sealGraphFragment } from "@narratage/elaborator";
-import type { FragmentOperation } from "@narratage/elaborator";
+import { programSpaceTypes } from "@hypit/program-space";
+import { spatialTypes } from "@hypit/spatial";
+import { compositionTypes } from "@hypit/composition";
+import type { Track } from "@hypit/composition";
+import { sealGraphFragment } from "@hypit/elaborator";
+import type { FragmentOperation } from "@hypit/elaborator";
 
 import { filmProducers, filmTypes } from "./manifest.js";
 import type { FilmAssemblyFragmentOptions, FilmTrackInput } from "./types.js";

@@ -1,5 +1,5 @@
-import { artifactTypes } from "@narratage/artifact";
-import { sealGraphFragment } from "@narratage/elaborator";
+import { artifactTypes } from "@hypit/artifact";
+import { sealGraphFragment } from "@hypit/elaborator";
 
 import { imageTransformProducers, imageTransformTypes } from "./manifest.js";
 

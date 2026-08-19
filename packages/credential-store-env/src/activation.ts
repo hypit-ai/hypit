@@ -2,12 +2,12 @@ import {
   createRuntimeCredentialStoreAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
-} from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
 
 import { EnvironmentCredentialStore } from "./index.js";
 
 const environmentCredentialStoreAdapter = createRuntimeCredentialStoreAdapterFacet({
-  use: "@narratage/credential-store-env",
+  use: "@hypit/credential-store-env",
   validate(context) {
     const config = runtimeConfigObject(context.config, "environment CredentialStore");
     runtimeConfigExact(config, [], "environment CredentialStore");
@@ -17,9 +17,9 @@ const environmentCredentialStoreAdapter = createRuntimeCredentialStoreAdapterFac
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [environmentCredentialStoreAdapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

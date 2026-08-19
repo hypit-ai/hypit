@@ -1,18 +1,18 @@
 import {
   resolveType,
   verifyRecordStructure,
-} from "@narratage/core";
+} from "@hypit/core";
 import type {
   TypeValidatorHandler,
   TypeValidatorRegistrar,
-} from "@narratage/component-kit";
-import type { ResolvedModuleClosure, StoredValue, TypeRef, TypedRecord } from "@narratage/protocol";
+} from "@hypit/component-kit";
+import type { ResolvedModuleClosure, StoredValue, TypeRef, TypedRecord } from "@hypit/protocol";
 
 function typeKey(type: TypeRef): string {
   return `${type.module.name}@${type.module.version}#${type.name}`;
 }
 
-export type { TypeValidatorContext, TypeValidatorHandler, TypeValidatorRegistrar } from "@narratage/component-kit";
+export type { TypeValidatorContext, TypeValidatorHandler, TypeValidatorRegistrar } from "@hypit/component-kit";
 
 export type TypeValidatorRegistration = {
   readonly handler: TypeValidatorHandler;

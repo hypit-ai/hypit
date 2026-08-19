@@ -1,8 +1,8 @@
-import type { ComponentPackage, ProducerHandlerContext } from "@narratage/component-kit";
-import type { BlobRef, StoredValue } from "@narratage/protocol";
-import { canonicalize } from "@narratage/protocol";
-import { rasterComposeRequest } from "@narratage/raster";
-import type { CanvasSpace, SpatialFrame } from "@narratage/spatial";
+import type { ComponentPackage, ProducerHandlerContext } from "@hypit/component-kit";
+import type { BlobRef, StoredValue } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import { rasterComposeRequest } from "@hypit/raster";
+import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 
 import { imageComposeProducers, imageComposeTypes } from "./manifest.js";
 import {

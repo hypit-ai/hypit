@@ -1,7 +1,7 @@
-import { narrativeTypes } from "@narratage/narrative";
-import { programSpaceTypes } from "@narratage/program-space";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { compositionTypes } from "@narratage/composition";
+import { narrativeTypes } from "@hypit/narrative";
+import { programSpaceTypes } from "@hypit/program-space";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import { compositionTypes } from "@hypit/composition";
 import type {
   VisualColorPaint,
   VisualStyleDeclaration,
@@ -10,32 +10,32 @@ import type {
   VisualTextRunStyle,
   VisualTextSequenceAnimation,
   VisualTextTypography,
-} from "@narratage/composition";
+} from "@hypit/composition";
 import {
   assertFontArtifactRef,
   assertFontStackRef,
   mediaTypes,
-} from "@narratage/media";
-import type { FontArtifactRef, FontStackRef } from "@narratage/media";
-import { spatialTypes } from "@narratage/spatial";
-import { sealGraphFragment } from "@narratage/elaborator";
-import type { AuthorValueRef, FragmentOperation, GraphFragment } from "@narratage/elaborator";
-import { svsRecipeType } from "@narratage/svs";
-import type { SvsRecipe } from "@narratage/svs";
-import { textTypes } from "@narratage/text";
+} from "@hypit/media";
+import type { FontArtifactRef, FontStackRef } from "@hypit/media";
+import { spatialTypes } from "@hypit/spatial";
+import { sealGraphFragment } from "@hypit/elaborator";
+import type { AuthorValueRef, FragmentOperation, GraphFragment } from "@hypit/elaborator";
+import { svsRecipeType } from "@hypit/svs";
+import type { SvsRecipe } from "@hypit/svs";
+import { textTypes } from "@hypit/text";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 import type {
   OccurrenceExpansion,
   TemporalDuration,
   TemporalPointExpression,
   TemporalWindowProjection,
-} from "@narratage/temporal";
+} from "@hypit/temporal";
 
 import { typographyTrackProducers, typographyTrackTypes } from "./manifest.js";
 import {

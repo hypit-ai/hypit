@@ -1,14 +1,14 @@
-import { assertVisualTrackIdentity, sealVisualTrack } from "@narratage/composition";
-import type { VisualAnimation, VisualElement, VisualStyleDeclaration, VisualTrack } from "@narratage/composition";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import { assertProgramSpaceIdentity } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { canonicalize } from "@narratage/protocol";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import { assertCanvasSpace } from "@narratage/spatial";
-import type { CanvasSpace } from "@narratage/spatial";
-import { projectMomentWindows, projectProgramWindow, projectSelectionWindows } from "@narratage/temporal";
-import type { ProjectedOccurrence } from "@narratage/temporal";
+import { assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
+import type { VisualAnimation, VisualElement, VisualStyleDeclaration, VisualTrack } from "@hypit/composition";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import { assertProgramSpaceIdentity } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { canonicalize } from "@hypit/protocol";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { assertCanvasSpace } from "@hypit/spatial";
+import type { CanvasSpace } from "@hypit/spatial";
+import { projectMomentWindows, projectProgramWindow, projectSelectionWindows } from "@hypit/temporal";
+import type { ProjectedOccurrence } from "@hypit/temporal";
 
 import type {
   ScreenOverlayComponent,
@@ -309,7 +309,7 @@ function overlayElements(content: ScreenOverlayComponent, canvas: CanvasSpace, d
 export function renderScreenOverlay(canvas: CanvasSpace, space: ProgramSpace, program: ScreenOverlayProgram): VisualTrack {
   assertCanvasSpace(canvas); assertProgramSpaceIdentity(space); assertScreenOverlayProgram(program);
   const track = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1", id: program.id,
+    visualIr: "hypit.visual-ir@1", id: program.id,
     presents: program.items.map((item) => ({
       id: item.id, span: { ...item.span }, stacking: { ...item.stacking },
       elements: overlayElements(item.content, canvas, item.span.endFrameExclusive - item.span.startFrame),

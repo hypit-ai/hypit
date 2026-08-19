@@ -1,6 +1,6 @@
 import {
   resolveProducer,
-} from "@narratage/core";
+} from "@hypit/core";
 import type {
   Candidate,
   Satisfaction,
@@ -12,7 +12,7 @@ import type {
   OperationNode,
   ProducerRef,
   TypeRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 export type FragmentInputRef = {
   readonly kind: "fragment-input";
@@ -44,7 +44,7 @@ export type FragmentExport = {
 };
 
 export type GraphFragment = {
-  readonly format: "narratage.fragment@1";
+  readonly format: "hypit.fragment@1";
   readonly id: string;
   readonly inputs: readonly { readonly name: string; readonly type: TypeRef }[];
   readonly operations: readonly FragmentOperation[];
@@ -65,7 +65,7 @@ export type ElaboratedFragmentExport = {
 };
 
 export type ElaboratedFragment = {
-  readonly format: "narratage.fragment-instance@1";
+  readonly format: "hypit.fragment-instance@1";
   readonly id: string;
   readonly fragment: string;
   readonly instance: string;
@@ -171,7 +171,7 @@ function normalizeExport(item: FragmentExport): FragmentExport {
 
 function fragmentContent(fragment: Omit<GraphFragment, "id">): Omit<GraphFragment, "id"> {
   return {
-    format: "narratage.fragment@1",
+    format: "hypit.fragment@1",
     inputs: [...fragment.inputs]
       .map((input) => ({ name: input.name, type: input.type }))
       .sort((left, right) => left.name.localeCompare(right.name)),
@@ -183,7 +183,7 @@ function fragmentContent(fragment: Omit<GraphFragment, "id">): Omit<GraphFragmen
 export function sealGraphFragment(
   fragment: Omit<GraphFragment, "format" | "id">,
 ): GraphFragment {
-  const content = fragmentContent({ format: "narratage.fragment@1", ...fragment });
+  const content = fragmentContent({ format: "hypit.fragment@1", ...fragment });
   const producers = content.operations.map((operation) =>
     `${operation.producer.module.name}@${operation.producer.module.version}#${operation.producer.name}:${operation.id}`);
   const exports = content.exports.map((item) => item.name);
@@ -213,7 +213,7 @@ function resultType(program: LinkedProgram, operation: FragmentOperation): TypeR
 }
 
 export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragment): void {
-  assert(fragment.format === "narratage.fragment@1", "UNSUPPORTED_FRAGMENT", "unsupported Graph Fragment format");
+  assert(fragment.format === "hypit.fragment@1", "UNSUPPORTED_FRAGMENT", "unsupported Graph Fragment format");
   assert(fragment.id.trim().length > 0, "INVALID_FRAGMENT_ID", "Graph Fragment id is empty");
   assert(fragment.exports.length > 0, "EMPTY_FRAGMENT_EXPORTS", `${fragment.id} has no exports`);
 
@@ -368,7 +368,7 @@ export function elaborateGraphFragment(
     };
   });
   const content = {
-    format: "narratage.fragment-instance@1" as const,
+    format: "hypit.fragment-instance@1" as const,
     fragment: fragment.id,
     instance: request.id,
     inputs,

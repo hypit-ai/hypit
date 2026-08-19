@@ -5,12 +5,12 @@ import {
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigString,
-} from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
 
 import { FileArtifactStore } from "./store.js";
 
 const fileArtifactStoreAdapter = createRuntimeArtifactStoreAdapterFacet({
-  use: "@narratage/artifact-store-fs",
+  use: "@hypit/artifact-store-fs",
   validate(context) {
     const config = runtimeConfigObject(context.config, "filesystem ArtifactStore");
     runtimeConfigExact(config, ["path"], "filesystem ArtifactStore");
@@ -24,9 +24,9 @@ const fileArtifactStoreAdapter = createRuntimeArtifactStoreAdapterFacet({
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [fileArtifactStoreAdapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

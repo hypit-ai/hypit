@@ -10,7 +10,7 @@ SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。
 ## 基本语法
 
 ```svs
-<?svml using="@narratage/svs@1"?>
+<?svml using="@hypit/svs@1"?>
 
 <sheet version="1" id="studio">
   film.vertical {
@@ -25,7 +25,7 @@ SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。
 </sheet>
 ```
 
-- 处理指令 `<?svml using="@narratage/svs@1"?>` 用于选择 SVS 解析器。
+- 处理指令 `<?svml using="@hypit/svs@1"?>` 用于选择 SVS 解析器。
 - `<sheet>` 元素包裹所有声明。`id` 属性成为顶层命名空间。
 - 每个块的格式为 `namespace.name { ... }`，属性以 `;` 结尾的键值对形式书写。
 - 注释使用 `/* ... */`。
@@ -336,7 +336,7 @@ interview.street {
 SVS 描述字体策略，但不选择或打开字体字节。常用开源字体由私有的预发布字体目录显式导入；只有作者图真正引用的字体会进入本次 Build：
 
 ```svml
-<import as="fonts" from="@narratage/fonts-open@1"/>
+<import as="fonts" from="@hypit/fonts-open@1"/>
 
 <fonts:Stack id="caption-fonts" family="inter" weight="600" style="normal" emoji="color">
   <fonts:Fallback family="noto-sans-sc" weight="600" style="normal"/>
@@ -364,7 +364,7 @@ Caption Recipe 不再重复家族、字重或字形。CJK 与 Emoji 即使由多
 品牌字体与自定义字体仍是显式作者资产，不会被塞进共享目录：
 
 ```svml
-<import as="media" from="@narratage/media@1"/>
+<import as="media" from="@hypit/media@1"/>
 <media:Font id="brand" src="./assets/Brand-Semibold.woff2"
   weight="600" style="normal"/>
 ```
@@ -374,7 +374,7 @@ Caption Recipe 不再重复家族、字重或字形。CJK 与 Emoji 即使由多
 一个完整的 `studio.svs` 文件，用于四段式说话人头像项目：
 
 ```svs
-<?svml using="@narratage/svs@1"?>
+<?svml using="@hypit/svs@1"?>
 
 <sheet version="1" id="studio">
   speech.normal {

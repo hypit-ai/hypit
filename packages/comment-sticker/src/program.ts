@@ -1,7 +1,7 @@
 import {
   assertVisualTrackIdentity,
   sealVisualTrack,
-} from "@narratage/composition";
+} from "@hypit/composition";
 import type {
   VisualAnimation,
   VisualElement,
@@ -9,24 +9,24 @@ import type {
   VisualTextFlow,
   VisualTextTypography,
   VisualTrack,
-} from "@narratage/composition";
-import { assertFontArtifactRef } from "@narratage/media";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import { assertProgramSpaceIdentity } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { canonicalize, isDigest } from "@narratage/protocol";
-import type { BlobRef } from "@narratage/protocol";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import { assertCanvasSpace, assertSpatialFrame } from "@narratage/spatial";
-import type { CanvasSpace, SpatialFrame } from "@narratage/spatial";
+} from "@hypit/composition";
+import { assertFontArtifactRef } from "@hypit/media";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import { assertProgramSpaceIdentity } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { canonicalize, isDigest } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
+import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 import {
   projectMomentWindows,
   projectProgramWindow,
   projectSelectionWindows,
-} from "@narratage/temporal";
-import type { ProjectedOccurrence } from "@narratage/temporal";
-import { verifyText } from "@narratage/text";
-import type { Text } from "@narratage/text";
+} from "@hypit/temporal";
+import type { ProjectedOccurrence } from "@hypit/temporal";
+import { verifyText } from "@hypit/text";
+import type { Text } from "@hypit/text";
 
 import type {
   CommentStickerContent,
@@ -615,7 +615,7 @@ export function renderCommentSticker(canvas: CanvasSpace, space: ProgramSpace, p
   assertProgramSpaceIdentity(space);
   assertCommentStickerProgram(program);
   const track = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: program.id,
     presents: program.items.map((item) => ({
       id: item.id,

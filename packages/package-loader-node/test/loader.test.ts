@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { loadNodePackageSelection } from "@narratage/package-loader-node";
+import { loadNodePackageSelection } from "@hypit/package-loader-node";
 
 async function installedPackage(
   root: string,
@@ -18,16 +18,16 @@ async function installedPackage(
     version: "1.0.0",
     type: "module",
     exports: "./activation.mjs",
-    narratage: { activation: "./activation.mjs" },
+    hypit: { activation: "./activation.mjs" },
   }), "utf8");
   await writeFile(join(directory, "activation.mjs"), `export default ${contribution};\n`, "utf8");
 }
 
 test("loads an explicitly selected installed package", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-package-loader-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-package-loader-"));
   try {
     await installedPackage(root, "example-cards", `{
-      format: "narratage.node-package@1",
+      format: "hypit.node-package@1",
       hostFacets: [{ abi: "example.cards@1", offers: ["cards"] }]
     }`);
     const loaded = await loadNodePackageSelection(["example-cards"], root);
@@ -38,10 +38,10 @@ test("loads an explicitly selected installed package", async () => {
 });
 
 test("resolves a logical request to its conventional installed package", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-package-selection-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-package-selection-"));
   try {
     await installedPackage(root, "example-provider", `{
-      format: "narratage.node-package@1",
+      format: "hypit.node-package@1",
       hostFacets: [{ abi: "example.endpoint@1", offers: ["example-provider"] }]
     }`);
     const loaded = await loadNodePackageSelection({

@@ -2,19 +2,19 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { MemoryArtifactStore } from "@narratage/driver-node";
-import { canonicalize } from "@narratage/protocol";
-import type { CanonicalValue } from "@narratage/protocol";
-import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";
-import type { JsonInvoker } from "@narratage/transport-aws-lambda";
+import { MemoryArtifactStore } from "@hypit/driver-node";
+import { canonicalize } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { ImmediateEndpointHandler } from "@hypit/endpoint-kit";
+import type { JsonInvoker } from "@hypit/transport-aws-lambda";
 
 import {
   createAwsLambdaMediaProvider,
   parseMediaLambdaRequest,
   parseMediaLambdaResponse,
-} from "@narratage/provider-media-aws-lambda";
+} from "@hypit/provider-media-aws-lambda";
 
-const ARN = "arn:aws:lambda:us-east-1:123456789012:function:narratage-media:7";
+const ARN = "arn:aws:lambda:us-east-1:123456789012:function:hypit-media:7";
 
 function recordingInvoker(reply: (request: CanonicalValue) => CanonicalValue) {
   const seen: CanonicalValue[] = [];
@@ -62,7 +62,7 @@ async function endpointFor(invoker: JsonInvoker, options: { bucket?: string; cap
 test("an unqualified function ARN is refused, because two Builds could then run different code", () => {
   assert.throws(
     () => createAwsLambdaMediaProvider({
-      functionArn: "arn:aws:lambda:us-east-1:123456789012:function:narratage-media",
+      functionArn: "arn:aws:lambda:us-east-1:123456789012:function:hypit-media",
       bucket: "team-artifacts",
     }),
     /must name a version or alias/u,
@@ -77,7 +77,7 @@ test("the Provider sends the Need verbatim with the bucket the function should u
   const store = new MemoryArtifactStore();
   const artifact = await store.put(new TextEncoder().encode("out!"), "video/mp4");
   const { invoker, seen } = recordingInvoker(() => canonicalize({
-    contract: "narratage.media-lambda-response@1",
+    contract: "hypit.media-lambda-response@1",
     operation: "inspect",
     ok: true,
     value: { kind: "inline", value: { artifact } },
@@ -126,7 +126,7 @@ test("the remote Provider receives the exact AudioProgramPlan compiled for local
     plan,
   } as unknown as CanonicalValue);
   const { invoker, seen } = recordingInvoker(() => canonicalize({
-    contract: "narratage.media-lambda-response@1",
+    contract: "hypit.media-lambda-response@1",
     operation: "render-audio",
     ok: true,
     value: { kind: "inline", value: {
@@ -144,7 +144,7 @@ test("a Provider aimed at another bucket fails naming the Artifact, not later wi
   const store = new MemoryArtifactStore();
   const stranger = fixtureDigest("an artifact this Build's store never received");
   const { invoker } = recordingInvoker(() => canonicalize({
-    contract: "narratage.media-lambda-response@1",
+    contract: "hypit.media-lambda-response@1",
     operation: "inspect",
     ok: true,
     value: { kind: "inline", value: {
@@ -166,7 +166,7 @@ test("a Provider aimed at another bucket fails naming the Artifact, not later wi
 
 test("a typed failure reaches the Build with its code, since the transport withholds the payload", async () => {
   const { invoker } = recordingInvoker(() => canonicalize({
-    contract: "narratage.media-lambda-response@1",
+    contract: "hypit.media-lambda-response@1",
     operation: "inspect",
     ok: false,
     code: "MEDIA_SOURCE_UNAVAILABLE",
@@ -182,11 +182,11 @@ test("a typed failure reaches the Build with its code, since the transport withh
 });
 
 test("a reply that is not this contract is refused rather than half-read", () => {
-  assert.throws(() => parseMediaLambdaResponse({ contract: "narratage.media-lambda-response@invalid", operation: "inspect" }),
-    /contract must be narratage\.media-lambda-response@1/u);
-  assert.throws(() => parseMediaLambdaResponse({ contract: "narratage.media-lambda-response@1", operation: "transcode" }),
+  assert.throws(() => parseMediaLambdaResponse({ contract: "hypit.media-lambda-response@invalid", operation: "inspect" }),
+    /contract must be hypit\.media-lambda-response@1/u);
+  assert.throws(() => parseMediaLambdaResponse({ contract: "hypit.media-lambda-response@1", operation: "transcode" }),
     /operation must be one of/u);
   assert.throws(() => parseMediaLambdaRequest({
-    contract: "narratage.media-lambda-request@1", operation: "mux", artifacts: {}, constraints: {},
+    contract: "hypit.media-lambda-request@1", operation: "mux", artifacts: {}, constraints: {},
   }), /artifacts\.bucket must be a non-empty string/u);
 });

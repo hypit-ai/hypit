@@ -11,13 +11,13 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-import { NodeRunCompiler } from "@narratage/compiler-node";
-import type { PlannedBuild } from "@narratage/compiler-node";
-import type { Digest, StoredValue } from "@narratage/protocol";
+import { NodeRunCompiler } from "@hypit/compiler-node";
+import type { PlannedBuild } from "@hypit/compiler-node";
+import type { Digest, StoredValue } from "@hypit/protocol";
 import {
   compileRunSource, RunFragmentRegistry, RunFrontendRegistry, resolveRunDocument,
-} from "@narratage/run";
-import { runMarkupFrontend } from "@narratage/run-markup";
+} from "@hypit/run";
+import { runMarkupFrontend } from "@hypit/run-markup";
 
 import { officialVideoDomain } from "../official-video.js";
 import type { Archive } from "./archive.js";

@@ -40,11 +40,11 @@ def read_canonical_audio(
     except OSError as error:
         raise AudioInputError("audio_path does not identify a readable file") from error
     if not _inside(path, roots):
-        raise AudioInputError("audio_path is outside NARRATAGE_WHISPERX_INPUT_ROOTS")
+        raise AudioInputError("audio_path is outside HYPIT_WHISPERX_INPUT_ROOTS")
     if not path.is_file():
         raise AudioInputError("audio_path must identify a regular file")
     if path.stat().st_size > max_audio_bytes:
-        raise AudioInputError("audio input exceeds NARRATAGE_WHISPERX_MAX_AUDIO_BYTES")
+        raise AudioInputError("audio input exceeds HYPIT_WHISPERX_MAX_AUDIO_BYTES")
 
     try:
         with wave.open(str(path), "rb") as source:

@@ -1,6 +1,6 @@
-import { isDigest } from "@narratage/protocol";
-import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
-import { assertContentFit, assertIntrinsicExtent, assertSpatialFrame } from "@narratage/spatial";
+import { isDigest } from "@hypit/protocol";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
+import { assertContentFit, assertIntrinsicExtent, assertSpatialFrame } from "@hypit/spatial";
 import type { SpeechAudioBasis, SpeechBasis, SpeechDuration, SpeechEvidenceAudio } from "./types.js";
 function assertAudioBlob(value: SpeechBasis["audio"], label: string): void {
   if (value.kind !== "blob" || !isDigest(value.digest) || !Number.isSafeInteger(value.size)

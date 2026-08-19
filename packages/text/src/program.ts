@@ -1,4 +1,4 @@
-import { canonicalize } from "@narratage/protocol";
+import { canonicalize } from "@hypit/protocol";
 
 import type {
   Text,

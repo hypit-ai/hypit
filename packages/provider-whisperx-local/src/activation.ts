@@ -4,13 +4,13 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
 
 import { createLocalWhisperXProvider } from "./provider.js";
 import { localWhisperXProgram } from "./program.js";
 
 const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-whisperx-local",
+  use: "@hypit/provider-whisperx-local",
   activate(context) {
     if (context.pool === undefined) throw new Error("WhisperX Provider Pool is required");
     const config = runtimeConfigObject(context.config, "local WhisperX");
@@ -70,9 +70,9 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [localWhisperXRuntimeAdapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

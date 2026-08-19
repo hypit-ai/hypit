@@ -10,7 +10,7 @@ import type { CliRuntimeArchiveControl } from "../src/runtime-port.js";
 import { findRuntimeProfile, selectRuntimeProfile } from "../src/runtime-selection.js";
 
 test("project Runtime selection is a relative local pointer discovered from nested sources", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-runtime-selection-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-selection-"));
   try {
     const nested = join(root, "sources", "chapter");
     const profile = join(root, "runtime", "local.json");
@@ -20,7 +20,7 @@ test("project Runtime selection is a relative local pointer discovered from nest
 
     const selected = await selectRuntimeProfile(root, profile);
     assert.equal(selected.profile, await realpath(profile));
-    assert.equal((await readFile(join(root, ".narratage", "runtime"), "utf8")).trim(), join("runtime", "local.json"));
+    assert.equal((await readFile(join(root, ".hypit", "runtime"), "utf8")).trim(), join("runtime", "local.json"));
 
     const found = await findRuntimeProfile(nested);
     assert.equal(found?.profile, selected.profile);
@@ -31,10 +31,10 @@ test("project Runtime selection is a relative local pointer discovered from nest
 });
 
 test("runtime use lets later CLI commands reuse the selected Profile", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-runtime-cli-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-cli-"));
   const previous = process.cwd();
   try {
-    const profile = join(root, "narratage.runtime.json");
+    const profile = join(root, "hypit.runtime.json");
     const otherProfile = join(root, "other.runtime.json");
     await writeFile(profile, "{}\n", "utf8");
     await writeFile(otherProfile, "{}\n", "utf8");
@@ -75,7 +75,7 @@ test("runtime use lets later CLI commands reuse the selected Profile", async () 
 });
 
 test("runtime status without a selected Profile reports the missing context instead of generic usage", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-runtime-missing-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-missing-"));
   const previous = process.cwd();
   try {
     process.chdir(root);

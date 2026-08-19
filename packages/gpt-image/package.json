@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/gpt-image",
+  "name": "@hypit/gpt-image",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,28 +7,28 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/artifact": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/generation": "workspace:*",
-    "@narratage/image-transform": "workspace:*",
-    "@narratage/markup": "workspace:*",
-    "@narratage/model-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@hypit/artifact": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/generation": "workspace:*",
+    "@hypit/image-transform": "workspace:*",
+    "@hypit/markup": "workspace:*",
+    "@hypit/model-kit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/text": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/core": "workspace:*",
-    "@narratage/media": "workspace:*",
-    "@narratage/narrative": "workspace:*",
-    "@narratage/program-space": "workspace:*",
-    "@narratage/raster": "workspace:*",
-    "@narratage/run": "workspace:*",
-    "@narratage/seedance": "workspace:*",
-    "@narratage/spatial": "workspace:*",
-    "@narratage/speech": "workspace:*"
+    "@hypit/core": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/narrative": "workspace:*",
+    "@hypit/program-space": "workspace:*",
+    "@hypit/raster": "workspace:*",
+    "@hypit/run": "workspace:*",
+    "@hypit/seedance": "workspace:*",
+    "@hypit/spatial": "workspace:*",
+    "@hypit/speech": "workspace:*"
   }
 }

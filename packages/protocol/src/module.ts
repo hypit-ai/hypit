@@ -1,7 +1,7 @@
 import type { CapabilityRef, ModuleRef, ProducerRef, TypeRef } from "./identity.js";
 
 /** Logical package address for immutable semantic Modules. */
-export const modulePackageAbi = "narratage.module@1";
+export const modulePackageAbi = "hypit.module@1";
 
 export type ModuleDependency = {
   readonly module: ModuleRef;
@@ -35,7 +35,7 @@ export type ProducerDeclaration = {
 };
 
 export type ModuleManifest = {
-  readonly format: "narratage.module@1";
+  readonly format: "hypit.module@1";
   readonly name: string;
   readonly version: string;
   readonly dependencies: readonly ModuleDependency[];
@@ -49,7 +49,7 @@ export type ResolvedModule = {
 };
 
 export type ResolvedModuleClosure = {
-  readonly format: "narratage.closure@1";
+  readonly format: "hypit.closure@1";
   readonly modules: readonly ResolvedModule[];
 };
 

@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/media-lambda",
+  "name": "@hypit/media-lambda",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -8,14 +8,14 @@
     ".": "./src/handler.ts"
   },
   "dependencies": {
-    "@narratage/artifact-store-s3": "workspace:*",
-    "@narratage/media": "workspace:*",
-    "@narratage/media-execution": "workspace:*",
-    "@narratage/media-pipeline": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/provider-media-aws-lambda": "workspace:*",
-    "@narratage/speech": "workspace:*",
-    "@narratage/transport-aws-lambda": "workspace:*"
+    "@hypit/artifact-store-s3": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/media-execution": "workspace:*",
+    "@hypit/media-pipeline": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/provider-media-aws-lambda": "workspace:*",
+    "@hypit/speech": "workspace:*",
+    "@hypit/transport-aws-lambda": "workspace:*"
   },
   "scripts": {
     "build": "node build.mjs",

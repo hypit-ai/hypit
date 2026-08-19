@@ -1,4 +1,4 @@
-# `@narratage/core`
+# `@hypit/core`
 
 The domain neutral graph compiler and build state machine.
 

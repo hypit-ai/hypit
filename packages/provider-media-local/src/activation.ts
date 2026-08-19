@@ -4,17 +4,17 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
 import {
   diagnoseRuntimeExecutable,
   resolveRuntimeExecutable,
-} from "@narratage/runtime-host-node";
+} from "@hypit/runtime-host-node";
 
 import { createLocalMediaProvider } from "./provider.js";
 import { localMediaToolchainProgram } from "./program.js";
 
 const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-media-local",
+  use: "@hypit/provider-media-local",
   activate(context) {
     if (context.pool === undefined) throw new Error("local media Provider Pool is required");
     const config = runtimeConfigObject(context.config, "local media");
@@ -57,9 +57,9 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [localMediaRuntimeAdapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

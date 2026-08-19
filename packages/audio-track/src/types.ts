@@ -1,10 +1,10 @@
-import type { FrameSpan } from "@narratage/composition";
-import type { BlobRef } from "@narratage/protocol";
+import type { FrameSpan } from "@hypit/composition";
+import type { BlobRef } from "@hypit/protocol";
 import type {
   OccurrenceExpansion,
   TemporalDuration,
   TemporalWindowProjection,
-} from "@narratage/temporal";
+} from "@hypit/temporal";
 
 export type AudioOccupancy =
   | { readonly mode: "once"; readonly align: "start" | "end" }

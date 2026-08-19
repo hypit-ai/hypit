@@ -10,10 +10,10 @@ import {
   sealCompiledGraph,
   sealRecord,
   start,
-} from "@narratage/core";
-import { sealGraphFragment } from "@narratage/elaborator";
-import type { CompiledSourceClosure } from "@narratage/elaborator";
-import type { CompiledGraph, ModuleManifest, ProducerRef, TypeRef } from "@narratage/protocol";
+} from "@hypit/core";
+import { sealGraphFragment } from "@hypit/elaborator";
+import type { CompiledSourceClosure } from "@hypit/elaborator";
+import type { CompiledGraph, ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 import {
   compileRunSource,
   createRunFragmentHostFacet,
@@ -21,8 +21,8 @@ import {
   resolveRunDocument,
   RunFragmentRegistry,
   RunFrontendRegistry,
-} from "@narratage/run";
-import { parseRunDocument, runMarkupFrontend } from "@narratage/run-markup";
+} from "@hypit/run";
+import { parseRunDocument, runMarkupFrontend } from "@hypit/run-markup";
 
 const moduleRef = { name: "example.run", version: "1" } as const;
 const promptType = { module: moduleRef, name: "Prompt" } satisfies TypeRef;
@@ -31,7 +31,7 @@ const defaultProducer = { module: moduleRef, name: "default" } satisfies Produce
 const previewProducer = { module: moduleRef, name: "preview" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
@@ -116,7 +116,7 @@ async function compileDocument(body: string) {
   return await compileRunSource({
     id: "/project/build.svrun",
     name: "build.svrun",
-    text: `<?svml using="@narratage/run-markup@1"?>\n${body}`,
+    text: `<?svml using="@hypit/run-markup@1"?>\n${body}`,
   }, frontends);
 }
 
@@ -131,7 +131,7 @@ test("Run Markup compilation consumes decode output without repeating package di
   const compiled = await compileRunSource({
     id: "/project/build.svrun",
     name: "build.svrun",
-    text: `<?svml using="@narratage/run-markup@1"?>\n<svrun version="1"><author source="./main.svml"/><target output="left"/></svrun>`,
+    text: `<?svml using="@hypit/run-markup@1"?>\n<svrun version="1"><author source="./main.svml"/><target output="left"/></svrun>`,
   }, frontends);
   assert.equal(compiled.document.targets[0]?.output, "left");
 });
@@ -193,7 +193,7 @@ test("a source file is an ordinary BlobArtifact Candidate", async () => {
   const compiled = await compileDocument(`<svrun version="1">
     <author source="./main.svml"/>
     <target output="left"/>
-    <file id="approved" type="@narratage/artifact@1#BlobArtifact" from="./approved.mp4" media-type="video/mp4"/>
+    <file id="approved" type="@hypit/artifact@1#BlobArtifact" from="./approved.mp4" media-type="video/mp4"/>
     <satisfy output="left" candidate="approved"/>
   </svrun>`);
   const compilation = fixture();
@@ -209,7 +209,7 @@ test("a source file is an ordinary BlobArtifact Candidate", async () => {
     resolveBuildRecord() { throw new Error("not used"); },
   });
   assert.equal(run.graph.candidates.length, 1);
-  assert.equal(run.graph.candidates[0]?.type.module.name, "@narratage/artifact");
+  assert.equal(run.graph.candidates[0]?.type.module.name, "@hypit/artifact");
   assert.equal(run.graph.candidates[0]?.type.name, "BlobArtifact");
 });
 

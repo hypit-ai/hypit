@@ -1,12 +1,12 @@
-import { captionManifest, captionModuleRef, captionTypes } from "@narratage/caption";
-import { compositionDependency, compositionTypes } from "@narratage/composition";
-import { mediaDependency } from "@narratage/media";
-import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
-import { semanticMapDependency } from "@narratage/semantic-map";
-import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
+import { captionManifest, captionModuleRef, captionTypes } from "@hypit/caption";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
+import { mediaDependency } from "@hypit/media";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { semanticMapDependency } from "@hypit/semantic-map";
+import type { ModuleManifest, ProducerRef } from "@hypit/protocol";
 
-export const captionFineModuleRef = { name: "@narratage/caption-fine", version: "1" } as const;
+export const captionFineModuleRef = { name: "@hypit/caption-fine", version: "1" } as const;
 export const captionFineProducers = {
   render: { module: captionFineModuleRef, name: "render-fine-caption" },
 } satisfies Record<string, ProducerRef>;
@@ -22,7 +22,7 @@ export const captionFineMarkupSurfaces = [
 
 
 export const captionFineManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: captionFineModuleRef.name,
   version: captionFineModuleRef.version,
   dependencies: [

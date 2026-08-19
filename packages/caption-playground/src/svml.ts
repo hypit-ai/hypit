@@ -1,11 +1,11 @@
-export { resolveCaptionProgram } from "@narratage/caption";
-export type { CaptionStyleIntent, TimedCaptionProjection } from "@narratage/caption";
-export { renderFineCaption } from "@narratage/caption-fine";
-export type { CaptionDisplaySequence } from "@narratage/narrative";
-export { sealComposition } from "@narratage/composition";
-export type { Composition, Track } from "@narratage/composition";
-export { sealProgramSpace, programSpaceFrameCount } from "@narratage/program-space";
-export type { ProgramSpace } from "@narratage/program-space";
+export { resolveCaptionProgram } from "@hypit/caption";
+export type { CaptionStyleIntent, TimedCaptionProjection } from "@hypit/caption";
+export { renderFineCaption } from "@hypit/caption-fine";
+export type { CaptionDisplaySequence } from "@hypit/narrative";
+export { sealComposition } from "@hypit/composition";
+export type { Composition, Track } from "@hypit/composition";
+export { sealProgramSpace, programSpaceFrameCount } from "@hypit/program-space";
+export type { ProgramSpace } from "@hypit/program-space";
 export {
   compileHyperframesDocument,
   materializeHyperframesHtml,

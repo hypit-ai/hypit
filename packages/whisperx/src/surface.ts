@@ -1,11 +1,11 @@
-import { narrativeTypes } from "@narratage/narrative";
-import { speechTypes } from "@narratage/speech";
+import { narrativeTypes } from "@hypit/narrative";
+import { speechTypes } from "@hypit/speech";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import { whisperXSpeechAlignmentFragment } from "./fragment.js";
 

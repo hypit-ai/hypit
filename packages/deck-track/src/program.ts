@@ -1,27 +1,27 @@
 import {
   assertFontArtifactRef,
-} from "@narratage/media";
+} from "@hypit/media";
 import {
   assertMediaFramePresentation,
   assertMediaLayerSet,
   assertMediaLifecycleMotion,
-} from "@narratage/media-track";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+} from "@hypit/media-track";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import {
   assertProgramSpaceIdentity,
   programSpaceFrameCount,
-} from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { canonicalize } from "@narratage/protocol";
-import { verifyText } from "@narratage/text";
-import type { Text } from "@narratage/text";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import { assertSpatialFrame } from "@narratage/spatial";
-import type { SpatialFrame } from "@narratage/spatial";
+} from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { canonicalize } from "@hypit/protocol";
+import { verifyText } from "@hypit/text";
+import type { Text } from "@hypit/text";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { assertSpatialFrame } from "@hypit/spatial";
+import type { SpatialFrame } from "@hypit/spatial";
 import {
   locateMomentOccurrences,
   locateSelectionOccurrences,
-} from "@narratage/temporal";
+} from "@hypit/temporal";
 
 import type {
   DeckCardTone,

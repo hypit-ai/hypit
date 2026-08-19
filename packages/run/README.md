@@ -1,4 +1,4 @@
-# `@narratage/run`
+# `@hypit/run`
 
 Syntax-neutral Run Source and complete Run Graph compiler.
 
@@ -17,7 +17,7 @@ CLI flags.
 
 `RunSourceClosure` separately binds original source bytes, Frontend id/implementation and decoded
 semantic meaning. `RunFragmentRegistry` accepts trusted Fragment packages only through the
-`narratage.run-fragment-host@1` Host-facet installer. Package loading does not interpret Fragment code.
+`hypit.run-fragment-host@1` Host-facet installer. Package loading does not interpret Fragment code.
 
-The optional official XML-like syntax lives in `@narratage/run-markup`. Another trusted Frontend can emit
+The optional official XML-like syntax lives in `@hypit/run-markup`. Another trusted Frontend can emit
 the same `RunDocument` without changing this package or Core.

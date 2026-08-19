@@ -5,12 +5,12 @@ import {
   ProducerRegistry,
   NodeDriver,
   EndpointRegistry,
-} from "@narratage/driver-node";
-import type { AsyncEndpoint } from "@narratage/endpoint-kit";
+} from "@hypit/driver-node";
+import type { AsyncEndpoint } from "@hypit/endpoint-kit";
 import {
   LocalBuildScheduler,
-} from "@narratage/runtime";
-import type { OperationSnapshot, OperationStore, OperationUpdate } from "@narratage/runtime";
+} from "@hypit/runtime";
+import type { OperationSnapshot, OperationStore, OperationUpdate } from "@hypit/runtime";
 import {
   createResolvedClosure,
   link,
@@ -18,7 +18,7 @@ import {
   sealCompiledGraph,
   sealRecord,
   start,
-} from "@narratage/core";
+} from "@hypit/core";
 
 import { capabilities, createGreetingBuild, manifest, producers as greetingProducers, types } from "../../core/test/greeting-fixture.js";
 

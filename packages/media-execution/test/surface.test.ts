@@ -6,8 +6,8 @@ import { join } from "node:path";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { verifyCompositableSurfaceBytes } from "@narratage/media-execution";
-import type { CompositableSurfaceRef } from "@narratage/media";
+import { verifyCompositableSurfaceBytes } from "@hypit/media-execution";
+import type { CompositableSurfaceRef } from "@hypit/media";
 
 const hasMediaTools = spawnSync("ffmpeg", ["-version"], { stdio: "ignore" }).status === 0
   && spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
@@ -46,7 +46,7 @@ function surface(bytes: Uint8Array, options: {
 test("Surface byte admission accepts matching still/video bytes and rejects contradictions", {
   skip: !hasMediaTools,
 }, async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-surface-test-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-surface-test-"));
   try {
     const opaquePath = join(directory, "opaque.png");
     const alphaPath = join(directory, "alpha.png");

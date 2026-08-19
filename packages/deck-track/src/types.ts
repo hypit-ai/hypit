@@ -4,13 +4,13 @@ import type {
   VisualTextFlow,
   VisualTextPaintLayer,
   VisualTextTypography,
-} from "@narratage/composition";
+} from "@hypit/composition";
 import type {
   MediaFramePresentation,
   MediaLayerSet,
   MediaLifecycleMotion,
-} from "@narratage/media-track";
-import type { SpatialFrame } from "@narratage/spatial";
+} from "@hypit/media-track";
+import type { SpatialFrame } from "@hypit/spatial";
 
 export type DepthStackVisibility = {
   readonly previous: number;

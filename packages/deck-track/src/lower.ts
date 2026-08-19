@@ -1,28 +1,28 @@
 import {
   assertVisualTrackIdentity,
   sealVisualTrack,
-} from "@narratage/composition";
+} from "@hypit/composition";
 import type {
   VisualAnimation,
   VisualElement,
   VisualStyleDeclaration,
   VisualTimedSampling,
   VisualTrack,
-} from "@narratage/composition";
+} from "@hypit/composition";
 import {
   lifecycleAnimationWindow,
   lowerMediaItemElements,
   resolveVisualSampling,
   sustainAnimationWindow,
-} from "@narratage/media-track";
+} from "@hypit/media-track";
 import type {
   MediaItemProgram,
   MediaSampleLayerProgram,
   MediaVisualTrim,
-} from "@narratage/media-track";
-import type { ProgramSpace } from "@narratage/program-space";
-import { assertCanvasSpace } from "@narratage/spatial";
-import type { CanvasSpace, SpatialFrame } from "@narratage/spatial";
+} from "@hypit/media-track";
+import type { ProgramSpace } from "@hypit/program-space";
+import { assertCanvasSpace } from "@hypit/spatial";
+import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 
 import {
   assertDepthStackProgramIdentity,
@@ -358,7 +358,7 @@ export function renderDepthStack(
     }
   }
   const track = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: program.id,
     presents,
   });

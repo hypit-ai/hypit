@@ -1,17 +1,17 @@
-# `@narratage/run-markup`
+# `@hypit/run-markup`
 
-Official human-readable Frontend for `@narratage/run`.
+Official human-readable Frontend for `@hypit/run`.
 
 One Run Source is self-described and names one Author Source explicitly:
 
 ```xml
-<?svml using="@narratage/run-markup@1"?>
+<?svml using="@hypit/run-markup@1"?>
 <svrun version="1">
   <author source="./main.svml"/>
   <target output="final.video"/>
 
   <build-record id="opening" build="prior-build-id" output="opening-take"/>
-  <file id="approved" type="@narratage/artifact@1#BlobArtifact" from="./approved.mp4" media-type="video/mp4"/>
+  <file id="approved" type="@hypit/artifact@1#BlobArtifact" from="./approved.mp4" media-type="video/mp4"/>
   <satisfy output="opening-take" candidate="opening"/>
 </svrun>
 ```

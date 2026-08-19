@@ -11,9 +11,9 @@ import type {
   RecordId,
   TypeRef,
   TypedRecord,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
-import { canonicalStringify } from "@narratage/protocol";
+import { canonicalStringify } from "@hypit/protocol";
 import { invariant } from "./error.js";
 import {
   operationResultRecord,
@@ -101,7 +101,7 @@ function planContent(
   selections: BuildPlan["selections"],
 ): BuildPlan {
   return {
-    format: "narratage.plan@1",
+    format: "hypit.plan@1",
     steps,
     goals,
     selections,
@@ -232,7 +232,7 @@ function validatePlanStructure(
   graph: CompiledGraph,
   plan: BuildPlan,
 ): void {
-  invariant(plan.format === "narratage.plan@1", "UNSUPPORTED_PLAN", "unsupported build plan format");
+  invariant(plan.format === "hypit.plan@1", "UNSUPPORTED_PLAN", "unsupported build plan format");
   invariant(plan.goals.length > 0, "EMPTY_PLAN_GOALS", "build plan has no goals");
 
   const records = new Map<RecordId, ProducedRecord>();

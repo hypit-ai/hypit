@@ -1,10 +1,10 @@
-import { programSpaceSampleFrames } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { assertSpeechBasisIdentity } from "@narratage/speech";
-import type { SpeechAudioBasis, SpeechBasis } from "@narratage/speech";
-import { lowerRestrictedSpeechVisualPresents } from "@narratage/media-track";
-import { sealAudioTrack, sealVisualTrack } from "@narratage/composition";
-import type { AudioTrack, VisualTrack } from "@narratage/composition";
+import { programSpaceSampleFrames } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { assertSpeechBasisIdentity } from "@hypit/speech";
+import type { SpeechAudioBasis, SpeechBasis } from "@hypit/speech";
+import { lowerRestrictedSpeechVisualPresents } from "@hypit/media-track";
+import { sealAudioTrack, sealVisualTrack } from "@hypit/composition";
+import type { AudioTrack, VisualTrack } from "@hypit/composition";
 
 export function projectSpeechProgramSpace(basis: SpeechBasis): ProgramSpace {
   assertSpeechBasisIdentity(basis);
@@ -28,7 +28,7 @@ export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
     endFrameExclusive: segment.endFrameExclusive,
   }]));
   return sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: trackId,
     presents: lowerRestrictedSpeechVisualPresents(
       trackId,

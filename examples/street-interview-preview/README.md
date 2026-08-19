@@ -19,7 +19,7 @@ transcript already exist, and the Run Source says so.
 recording, but a transcript is not a SemanticMap. A map is keyed by *this*
 Script's own anchor identities, and pairing loose words with authored tokens is
 the aligner's job. `align-transcript.ts` runs the real one — `locateSpeechTiming`
-from `@narratage/speech-alignment` — and writes two values:
+from `@hypit/speech-alignment` — and writes two values:
 
 ```bash
 node --import tsx examples/street-interview-preview/align-transcript.ts
@@ -29,7 +29,7 @@ node --import tsx examples/street-interview-preview/align-transcript.ts
 The Run Source then satisfies the two Outputs a timeline needs:
 
 ```xml
-<value id="aligned-map" type="@narratage/semantic-map@1#CompleteSemanticMap" from="./timing.json"/>
+<value id="aligned-map" type="@hypit/semantic-map@1#CompleteSemanticMap" from="./timing.json"/>
 <satisfy output="timing.map" candidate="aligned-map"/>
 ```
 

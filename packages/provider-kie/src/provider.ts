@@ -3,21 +3,21 @@ import type {
   EndpointPollContext,
   EndpointStartContext,
   EndpointOutcome,
-} from "@narratage/endpoint-kit";
+} from "@hypit/endpoint-kit";
 import {
   canonicalize,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import type {
   BlobRef,
   CanonicalValue,
   Digest,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import {
   defineEndpointPackage,
   wakeAfter,
-} from "@narratage/endpoint-kit";
-import { credentialRef, isStreamingArtifactStore } from "@narratage/runtime";
-import type { ArtifactStore, CredentialRef } from "@narratage/runtime";
+} from "@hypit/endpoint-kit";
+import { credentialRef, isStreamingArtifactStore } from "@hypit/runtime";
+import type { ArtifactStore, CredentialRef } from "@hypit/runtime";
 
 import {
   kieRouteForCapability,
@@ -26,7 +26,7 @@ import {
 } from "./routes.js";
 import type { KieTaskRequest } from "./routes.js";
 
-export const kieProviderModuleRef = { name: "@narratage/provider-kie", version: "1" } as const;
+export const kieProviderModuleRef = { name: "@hypit/provider-kie", version: "1" } as const;
 
 type Fetch = typeof globalThis.fetch;
 
@@ -50,7 +50,7 @@ export type CreateKieProviderOptions = {
 };
 
 type KieHandle = {
-  readonly contract: "narratage.kie-operation@1";
+  readonly contract: "hypit.kie-operation@1";
   readonly taskId: string;
   readonly routeKey: string;
   readonly startedAt: number;
@@ -217,7 +217,7 @@ class KieClient {
     }
     const hex = artifact.digest.slice("sha256:".length);
     const fileName = `${hex}.${mediaExtension(artifact.mediaType)}`;
-    const boundary = `narratage-${hex}`;
+    const boundary = `hypit-${hex}`;
     const encode = (value: string) => new TextEncoder().encode(value);
     const fileHead = encode(
       `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${fileName}"\r\n`
@@ -418,7 +418,7 @@ function readHandle(value: CanonicalValue | undefined, context: EndpointPollCont
   }
   const handle = object(value, "KIE handle") as unknown as KieHandle;
   const route = kieRouteForCapability(context.need.capability);
-  if (handle.contract !== "narratage.kie-operation@1"
+  if (handle.contract !== "hypit.kie-operation@1"
     || typeof handle.taskId !== "string"
     || route === undefined
     || handle.routeKey !== route.key
@@ -464,7 +464,7 @@ function endpoint(options: {
         await options.gate.enter();
         const taskId = await options.client.createTask(task, key);
         const handle: KieHandle = {
-          contract: "narratage.kie-operation@1",
+          contract: "hypit.kie-operation@1",
           taskId,
           routeKey: route.key,
           startedAt: options.now(),

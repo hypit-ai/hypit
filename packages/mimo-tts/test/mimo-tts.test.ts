@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { artifactTypes } from "@narratage/artifact";
-import { generationProducers, generationTypes } from "@narratage/generation";
-import { sealText, textTypes } from "@narratage/text";
-import { parseStructuredElement } from "@narratage/markup";
-import type { SurfaceResolvedReference } from "@narratage/markup";
+import { artifactTypes } from "@hypit/artifact";
+import { generationProducers, generationTypes } from "@hypit/generation";
+import { sealText, textTypes } from "@hypit/text";
+import { parseStructuredElement } from "@hypit/markup";
+import type { SurfaceResolvedReference } from "@hypit/markup";
 
 import mimoNodePackage from "../src/activation.js";
 import {
@@ -67,7 +67,7 @@ test("MiMo declares three audio models without Provider facts", () => {
 });
 
 test("one installed author package contributes all three Surfaces without a Runtime Provider", () => {
-  assert.equal(mimoNodePackage.format, "narratage.node-package@1");
+  assert.equal(mimoNodePackage.format, "hypit.node-package@1");
   assert.equal(mimoNodePackage.modules[0]?.manifest.version, "1");
   assert.deepEqual(mimoTtsMarkupSurfaces.map((surface) => surface.name),
     ["preset", "voiceDesign", "voiceClone"]);

@@ -1,5 +1,5 @@
-import type { Awaitable, ComponentPackage } from "@narratage/component-kit";
-import type { EndpointPackage } from "@narratage/endpoint-kit";
+import type { Awaitable, ComponentPackage } from "@hypit/component-kit";
+import type { EndpointPackage } from "@hypit/endpoint-kit";
 import type {
   ArtifactStore,
   BuildCatalog,
@@ -8,21 +8,21 @@ import type {
   BuildDispatchSnapshot,
   CredentialStore,
   OperationStore,
-} from "@narratage/runtime";
+} from "@hypit/runtime";
 import type {
   RuntimeHostArchive,
   RuntimeHostArtifactAccess,
   RuntimeHostBuildSubmission,
   RuntimeHostCredentialControl,
   RuntimeHostExecution,
-} from "@narratage/runtime-host-node";
+} from "@hypit/runtime-host-node";
 
 export type CreateLocalRuntimeOptions = {
   readonly buildStore: BuildStore;
   /** Host presentation metadata only; never part of Core state. */
   readonly buildCatalog?: BuildCatalog;
   readonly operationStore: OperationStore;
-  readonly dispatchStore: import("@narratage/runtime").BuildDispatchStore;
+  readonly dispatchStore: import("@hypit/runtime").BuildDispatchStore;
   readonly artifactStore: ArtifactStore;
   readonly credentialStore: CredentialStore;
   readonly components?: readonly ComponentPackage[];

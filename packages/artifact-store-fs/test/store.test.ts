@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { FileArtifactStore } from "@narratage/artifact-store-fs";
+import { FileArtifactStore } from "@hypit/artifact-store-fs";
 
 test("filesystem artifacts are content-addressed and survive adapter restart", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-artifacts-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-artifacts-"));
   try {
     const bytes = new TextEncoder().encode("one immutable video artifact");
     const first = new FileArtifactStore(directory);
@@ -26,7 +26,7 @@ test("filesystem artifacts are content-addressed and survive adapter restart", a
 });
 
 test("filesystem artifacts stream writes and reads", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "narratage-artifacts-stream-"));
+  const directory = await mkdtemp(join(tmpdir(), "hypit-artifacts-stream-"));
   try {
     const store = new FileArtifactStore(directory);
     const artifact = await store.putStream((async function* () {

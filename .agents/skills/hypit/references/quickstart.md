@@ -9,7 +9,7 @@ The repository docs are authoritative:
 | Media and Seedance | `docs/quickstart/generation.md` |
 | Reusable Seedance Prompt Kits | `packages/seedance-kits/README.md` and the selected file under `packages/seedance-kits/kits/` |
 | Speech Spine and SemanticMap | `docs/quickstart/timing.md` |
-| Caption, Media, Text, Audio Tracks | `docs/quickstart/tracks.md` and the `@narratage/audio-track` package README |
+| Caption, Media, Text, Audio Tracks | `docs/quickstart/tracks.md` and the `@hypit/audio-track` package README |
 | Film and rendering | `docs/quickstart/composition.md` |
 | Run Source, durable Runtime, Builds, retrieval, and reuse | `docs/quickstart/run.md` and `references/runtime.md` |
 

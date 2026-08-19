@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/run-markup",
+  "name": "@hypit/run-markup",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,16 +7,16 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/protocol": "workspace:*",
-    "@narratage/run": "workspace:*",
-    "@narratage/markup": "workspace:*"
+    "@hypit/protocol": "workspace:*",
+    "@hypit/run": "workspace:*",
+    "@hypit/markup": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/core": "workspace:*",
-    "@narratage/elaborator": "workspace:*"
+    "@hypit/core": "workspace:*",
+    "@hypit/elaborator": "workspace:*"
   }
 }

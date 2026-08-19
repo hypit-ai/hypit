@@ -1,8 +1,8 @@
 import {
   canonicalize,
   isDigest,
-} from "@narratage/protocol";
-import type { BlobRef } from "@narratage/protocol";
+} from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 
 import type {
   MediaInspection,

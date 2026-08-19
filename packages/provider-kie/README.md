@@ -1,10 +1,10 @@
-# `@narratage/provider-kie`
+# `@hypit/provider-kie`
 
 Asynchronous KIE Market Provider for the twelve explicitly selected exact models and one generic
 background-removal capability.
 
-This package is deployment code. Author source imports model modules such as `@narratage/seedance` or
-`@narratage/gpt-image`; trusted Runtime configuration installs `createKieProvider()`. The Provider binds
+This package is deployment code. Author source imports model modules such as `@hypit/seedance` or
+`@hypit/gpt-image`; trusted Runtime configuration installs `createKieProvider()`. The Provider binds
 only those exact model capabilities and never interprets a generic image/video request as permission to
 choose another model.
 
@@ -20,14 +20,14 @@ routes rather than extra Capabilities.
 
 | Author module | Exact models | KIE model slugs |
 |---|---|---|
-| `@narratage/seedance` | `seedance-2`, `-fast`, `-mini`, `seedance-2.5` | `bytedance/seedance-2*`, `bytedance/seedance-2-5` |
-| `@narratage/minimax-h3` | `minimax-h3` | `minimax-h3/{text,image,reference}-to-video` |
-| `@narratage/gemini-omni` | `gemini-omni-video` | `gemini-omni-video` |
-| `@narratage/grok-imagine` | `grok-imagine-video`, `-1.5-preview` | Grok Imagine video endpoints |
-| `@narratage/gpt-image` | `gpt-image-2` | `gpt-image-2-{text,image}-to-image` |
-| `@narratage/nano-banana` | `nano-banana-2`, `-pro` | `nano-banana-2`, `nano-banana-pro` |
-| `@narratage/seedream` | `seedream-5-lite` | `seedream/5-lite-{text,image}-to-image` |
-| `@narratage/background-removal` | `remove-background` | `recraft/remove-background` |
+| `@hypit/seedance` | `seedance-2`, `-fast`, `-mini`, `seedance-2.5` | `bytedance/seedance-2*`, `bytedance/seedance-2-5` |
+| `@hypit/minimax-h3` | `minimax-h3` | `minimax-h3/{text,image,reference}-to-video` |
+| `@hypit/gemini-omni` | `gemini-omni-video` | `gemini-omni-video` |
+| `@hypit/grok-imagine` | `grok-imagine-video`, `-1.5-preview` | Grok Imagine video endpoints |
+| `@hypit/gpt-image` | `gpt-image-2` | `gpt-image-2-{text,image}-to-image` |
+| `@hypit/nano-banana` | `nano-banana-2`, `-pro` | `nano-banana-2`, `nano-banana-pro` |
+| `@hypit/seedream` | `seedream-5-lite` | `seedream/5-lite-{text,image}-to-image` |
+| `@hypit/background-removal` | `remove-background` | `recraft/remove-background` |
 
 There is deliberately no Grok image capability and no MiMo capability in this release. Seedream's
 `nsfwCheck` is explicit author request content; KIE cannot silently enable or disable it. A
@@ -40,7 +40,7 @@ Declarative activation names an ordinary CredentialRef, not an environment-speci
 
 ```json
 {
-  "use": "@narratage/provider-kie",
+  "use": "@hypit/provider-kie",
   "instance": "kie.personal",
   "config": {
     "apiKey": { "store": "keychain", "key": "kie.api-key" },
@@ -53,13 +53,13 @@ Declarative activation names an ordinary CredentialRef, not an environment-speci
 }
 ```
 
-The selected writable CredentialStore then enables `narratage auth login kie.personal --runtime
-narratage.runtime.json`; KIE contributes the credential description and the generic CLI contains no KIE
+The selected writable CredentialStore then enables `hypit auth login kie.personal --runtime
+hypit.runtime.json`; KIE contributes the credential description and the generic CLI contains no KIE
 branch.
 
 ```ts
-import { createKieProvider } from "@narratage/provider-kie";
-import { credentialRef } from "@narratage/runtime";
+import { createKieProvider } from "@hypit/provider-kie";
+import { credentialRef } from "@hypit/runtime";
 
 const kie = createKieProvider({
   instance: "kie.personal",
@@ -103,15 +103,15 @@ explicitly and keeps a stable Runtime directory under the operating system tempo
 an interrupted paid task can continue polling from its SQLite checkpoint:
 
 ```sh
-NARRATAGE_KIE_LIVE=1 KIE_API_KEY=... pnpm smoke:kie
+HYPIT_KIE_LIVE=1 KIE_API_KEY=... pnpm smoke:kie
 ```
 
-The default case is `gpt-image-2`. Set `NARRATAGE_KIE_SMOKE_CASES=all` or a comma-separated subset of
+The default case is `gpt-image-2`. Set `HYPIT_KIE_SMOKE_CASES=all` or a comma-separated subset of
 `gpt-image-2,nano-banana-2,seedream-5-lite,seedance-2-mini,minimax-h3,gemini-omni,grok-imagine`.
-Set `NARRATAGE_KIE_SMOKE_REFERENCE` to add the optional `gpt-image-2-edit` upload case; only use an asset
+Set `HYPIT_KIE_SMOKE_REFERENCE` to add the optional `gpt-image-2-edit` upload case; only use an asset
 that is explicitly approved for external upload.
 
-`KIE_BASE_URL` and `NARRATAGE_KIE_SMOKE_ROOT` are optional deployment overrides. The command prints
+`KIE_BASE_URL` and `HYPIT_KIE_SMOKE_ROOT` are optional deployment overrides. The command prints
 credit usage, the content digest and a local inspection copy, but never prints or persists the key.
 A representative run of all seven families and the optional upload case has passed. Generated
 results are deployment evidence and are intentionally not committed as a dated transcript.

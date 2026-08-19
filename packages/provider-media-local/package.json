@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/provider-media-local",
+  "name": "@hypit/provider-media-local",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,22 +7,22 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/artifact": "workspace:*",
-    "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/media": "workspace:*",
-    "@narratage/media-execution": "workspace:*",
-    "@narratage/media-pipeline": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-kit": "workspace:*",
-    "@narratage/runtime-host-node": "workspace:*",
-    "@narratage/speech": "workspace:*"
+    "@hypit/artifact": "workspace:*",
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/media-execution": "workspace:*",
+    "@hypit/media-pipeline": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*",
+    "@hypit/runtime-host-node": "workspace:*",
+    "@hypit/speech": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/driver-node": "workspace:*"
+    "@hypit/driver-node": "workspace:*"
   }
 }

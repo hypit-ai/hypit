@@ -1,4 +1,4 @@
-# `@narratage/caption-fine`
+# `@hypit/caption-fine`
 
 The official field-free fine-grained Caption Style family. It turns one SVS Recipe into a complete
 `CaptionStyle` and lowers timed whole Atoms into one ordinary peer `VisualTrack`.

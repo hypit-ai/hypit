@@ -1,6 +1,6 @@
-import type { NarrativeExcerpt } from "@narratage/narrative";
-import type { SynchronizedMedia } from "@narratage/media";
-import type { ContentFit, SpatialFrame } from "@narratage/spatial";
+import type { NarrativeExcerpt } from "@hypit/narrative";
+import type { SynchronizedMedia } from "@hypit/media";
+import type { ContentFit, SpatialFrame } from "@hypit/spatial";
 
 /** Author-owned policy for one ordered Speech Spine. */
 export type SpeechSpineProgram = {

@@ -8,10 +8,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { createMarkupNodeCompiler } from "@narratage/compiler-markup-node";
-import type { NodePackageContribution } from "@narratage/package-loader-node";
-import { createMarkupSurfaceHostFacet } from "@narratage/markup";
-import { NodeFilesystemWorkspace } from "@narratage/workspace-fs-node";
+import { createMarkupNodeCompiler } from "@hypit/compiler-markup-node";
+import type { NodePackageContribution } from "@hypit/package-loader-node";
+import { createMarkupSurfaceHostFacet } from "@hypit/markup";
+import { NodeFilesystemWorkspace } from "@hypit/workspace-fs-node";
 
 const module = { name: "example.card", version: "1" } as const;
 const resultType = { module, name: "CardResult" } as const;
@@ -23,10 +23,10 @@ const cardSurface = {
 } as const;
 
 const installedPackage: NodePackageContribution = {
-  format: "narratage.node-package@1",
+  format: "hypit.node-package@1",
   modules: [{
     manifest: {
-      format: "narratage.module@1",
+      format: "hypit.module@1",
       name: module.name,
       version: module.version,
       dependencies: [],
@@ -63,10 +63,10 @@ const installedPackage: NodePackageContribution = {
 };
 
 test("Markup compiler alone selects Markup Surface Host facets from a generic package contribution", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-markup-compiler-"));
+  const root = await mkdtemp(join(tmpdir(), "hypit-markup-compiler-"));
   try {
     const source = join(root, "main.svml");
-    await writeFile(source, `<?svml using="@narratage/markup@1"?>
+    await writeFile(source, `<?svml using="@hypit/markup@1"?>
     <svml>
       <import as="example" from="example.card@1"/>
       <example:Card/>

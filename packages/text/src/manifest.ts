@@ -1,6 +1,6 @@
-import type { ModuleManifest, ProducerRef, TypeRef } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 
-export const textModuleRef = { name: "@narratage/text", version: "1" } as const;
+export const textModuleRef = { name: "@hypit/text", version: "1" } as const;
 
 export const textTypes = {
   text: { module: textModuleRef, name: "Text" },
@@ -29,7 +29,7 @@ export const textMarkupSurfaces = [{
 
 
 export const textManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: textModuleRef.name,
   version: textModuleRef.version,
   dependencies: [],

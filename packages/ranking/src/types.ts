@@ -1,10 +1,10 @@
-import type { FrameSpan } from "@narratage/composition";
+import type { FrameSpan } from "@hypit/composition";
 import type {
   FontArtifactRef,
   SynchronizedMedia,
-} from "@narratage/media";
-import type { BlobRef } from "@narratage/protocol";
-import type { SpatialFrame } from "@narratage/spatial";
+} from "@hypit/media";
+import type { BlobRef } from "@hypit/protocol";
+import type { SpatialFrame } from "@hypit/spatial";
 
 export type RankingVariant = "tier-board" | "column" | "top-three" | "typewriter-list";
 

@@ -1,4 +1,4 @@
-import type { ComponentPackage } from "@narratage/component-kit";
+import type { ComponentPackage } from "@hypit/component-kit";
 
 import {
   verifyGeneratedAudioSet,
@@ -15,12 +15,12 @@ function inline(value: { readonly kind: string; readonly value?: unknown }, subj
 function primary(
   value: { readonly kind: string; readonly value?: unknown },
   kind: "audio" | "image" | "video",
-): import("@narratage/protocol").BlobRef {
+): import("@hypit/protocol").BlobRef {
   const label = kind === "audio" ? "Audio" : kind === "image" ? "Image" : "Video";
   const content = inline(value, `Generated${label}Set`) as {
-    readonly images?: readonly import("@narratage/protocol").BlobRef[];
-    readonly videos?: readonly import("@narratage/protocol").BlobRef[];
-    readonly audios?: readonly import("@narratage/protocol").BlobRef[];
+    readonly images?: readonly import("@hypit/protocol").BlobRef[];
+    readonly videos?: readonly import("@hypit/protocol").BlobRef[];
+    readonly audios?: readonly import("@hypit/protocol").BlobRef[];
   };
   const selected = kind === "audio"
     ? content.audios?.[0]

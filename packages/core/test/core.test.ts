@@ -4,14 +4,14 @@ import {
   BuildMachine,
   defineBuild,
   reduce,
-} from "@narratage/core";
+} from "@hypit/core";
 import type {
   CommandResult,
   BuildFact,
   BuildState,
   FulfillNeedCommand,
   InvokeProducerCommand,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 import { createGreetingBuild } from "./greeting-fixture.js";
 

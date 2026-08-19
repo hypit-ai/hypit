@@ -1,7 +1,7 @@
-<?svml using="@narratage/markup@1"?>
+<?svml using="@hypit/markup@1"?>
 
 <svml>
-  <import from="@narratage/script@1"/>
+  <import from="@hypit/script@1"/>
   <import as="studio" source="./studio.svs"/>
 
   <script id="story">

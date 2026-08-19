@@ -1,13 +1,13 @@
-import { artifactDependency, artifactTypes } from "@narratage/artifact";
-import { rasterCapabilities, rasterDependency, rasterTransformOperationSchema } from "@narratage/raster";
+import { artifactDependency, artifactTypes } from "@hypit/artifact";
+import { rasterCapabilities, rasterDependency, rasterTransformOperationSchema } from "@hypit/raster";
 import type {
   ModuleManifest,
   ProducerRef,
   TypeRef,
   ValueSchema,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
-export const imageTransformModuleRef = { name: "@narratage/image-transform", version: "1" } as const;
+export const imageTransformModuleRef = { name: "@hypit/image-transform", version: "1" } as const;
 export const imageTransformTypes = {
   program: { module: imageTransformModuleRef, name: "ImageTransformProgram" },
 } satisfies Record<string, TypeRef>;
@@ -33,7 +33,7 @@ export const imageTransformMarkupSurfaces = [{
 
 
 export const imageTransformManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: imageTransformModuleRef.name,
   version: imageTransformModuleRef.version,
   dependencies: [artifactDependency, rasterDependency],

@@ -5,12 +5,12 @@ import {
   maskSourceHeader,
   parseSourceHeader,
   SourceHeaderError,
-} from "@narratage/source";
+} from "@hypit/source";
 
 test("Source Header explicitly selects one Frontend and masking preserves offsets", () => {
-  const text = '<?svml using="@narratage/markup@1"?>\n\n<svml/>\n';
+  const text = '<?svml using="@hypit/markup@1"?>\n\n<svml/>\n';
   const header = parseSourceHeader("main.svml", text);
-  assert.equal(header.using, "@narratage/markup@1");
+  assert.equal(header.using, "@hypit/markup@1");
   const masked = maskSourceHeader(text, header);
   assert.equal(masked.length, text.length);
   assert.equal(masked.indexOf("<svml/>"), text.indexOf("<svml/>"));
@@ -19,8 +19,8 @@ test("Source Header explicitly selects one Frontend and masking preserves offset
 
 test("Source Header accepts a UTF-8 BOM but no implicit or duplicate Frontend", () => {
   assert.equal(
-    parseSourceHeader("bom.svs", '\ufeff<?svml using="@narratage/svs@1"?>\n<sheet/>').using,
-    "@narratage/svs@1",
+    parseSourceHeader("bom.svs", '\ufeff<?svml using="@hypit/svs@1"?>\n<sheet/>').using,
+    "@hypit/svs@1",
   );
   assert.throws(
     () => parseSourceHeader("missing.svml", "<svml/>"),

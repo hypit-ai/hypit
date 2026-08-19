@@ -10,7 +10,7 @@ pnpm svml:playground -- --source examples/talking-film-broll-preview/main.svml
 Optional arguments:
 
 - `--run <build.svrun>` reads material and timings explicitly selected by a Run Source.
-- `--runtime <narratage.runtime.json>` opens earlier Build records and Artifacts read-only.
+- `--runtime <hypit.runtime.json>` opens earlier Build records and Artifacts read-only.
 - `--port <number>` changes the listening port from `5179`.
 
 The Playground never writes a Source, Recipe, Build or Artifact and never calls
@@ -19,7 +19,7 @@ missing speech timings are visibly estimated.
 
 ## Package boundary
 
-The Playground is an application, not a registry required by Narratage. It
+The Playground is an application, not a registry required by Hypit. It
 explicitly depends on the official video packages it can preview and loads the
 same activation, Frontends, Surfaces, Producers and Validators that a normal
 Host loads. No compiler, Runtime or video package imports the Playground, and

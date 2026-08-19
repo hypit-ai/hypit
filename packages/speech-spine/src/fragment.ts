@@ -1,14 +1,14 @@
-import { narrativeTypes } from "@narratage/narrative";
-import { mediaTypes } from "@narratage/media";
-import { programSpaceTypes } from "@narratage/program-space";
-import { speechTypes } from "@narratage/speech";
-import { compositionTypes } from "@narratage/composition";
-import { sealGraphFragment } from "@narratage/elaborator";
-import type { FragmentOperation } from "@narratage/elaborator";
-import { mediaPipelineProducers } from "@narratage/media-pipeline";
-import { speechBasisProducers } from "@narratage/speech-basis";
-import { spatialTypes } from "@narratage/spatial";
-import type { TypeRef } from "@narratage/protocol";
+import { narrativeTypes } from "@hypit/narrative";
+import { mediaTypes } from "@hypit/media";
+import { programSpaceTypes } from "@hypit/program-space";
+import { speechTypes } from "@hypit/speech";
+import { compositionTypes } from "@hypit/composition";
+import { sealGraphFragment } from "@hypit/elaborator";
+import type { FragmentOperation } from "@hypit/elaborator";
+import { mediaPipelineProducers } from "@hypit/media-pipeline";
+import { speechBasisProducers } from "@hypit/speech-basis";
+import { spatialTypes } from "@hypit/spatial";
+import type { TypeRef } from "@hypit/protocol";
 
 import { speechSpineProducers, speechSpineTypes } from "./manifest.js";
 import type { SpeechSpineFragmentOptions } from "./types.js";

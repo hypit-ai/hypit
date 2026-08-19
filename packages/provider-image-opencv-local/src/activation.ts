@@ -4,17 +4,17 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
 import {
   diagnoseRuntimeExecutable,
-} from "@narratage/runtime-host-node";
+} from "@hypit/runtime-host-node";
 
 import { resolveLocalOpenCvDeployment } from "./deployment.js";
 import { createLocalOpenCvImageProvider } from "./provider.js";
 import { localOpenCvProgram } from "./program.js";
 
 const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-image-opencv-local",
+  use: "@hypit/provider-image-opencv-local",
   activate(context) {
     if (context.pool === undefined) throw new Error("local OpenCV Provider Pool is required");
     const config = runtimeConfigObject(context.config, "local OpenCV image");
@@ -48,9 +48,9 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [localOpenCvRuntimeAdapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

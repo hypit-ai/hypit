@@ -1,25 +1,25 @@
 # Open Source License
 
-Narratage is licensed under a modified version of the Apache License 2.0, with the following additional conditions:
+Hypit is licensed under a modified version of the Apache License 2.0, with the following additional conditions:
 
-1. Narratage may be utilized commercially for your own organization's purposes, including as a rendering or generation backend for applications your organization operates for itself, and as internal tooling within an enterprise. Should any of the conditions below be met, a commercial license must be obtained from the producer:
+1. Hypit may be utilized commercially for your own organization's purposes, including as a rendering or generation backend for applications your organization operates for itself, and as internal tooling within an enterprise. Should any of the conditions below be met, a commercial license must be obtained from the producer:
 
-a. Multi-tenant service: Unless explicitly authorized by Hypit.AI in writing, you may not use the Narratage source code, or any derivative work of it, to operate a multi-tenant environment, or to offer Narratage's functionality to third parties as a hosted, managed, or software-as-a-service offering.
-    - Tenant Definition: Within the context of Narratage, one tenant corresponds to one workspace — the isolated set of projects, artifacts, credentials, and configuration belonging to a single party. Operating an environment in which two or more parties outside your own organization hold separate workspaces constitutes a multi-tenant service, whether or not a fee is charged.
+a. Multi-tenant service: Unless explicitly authorized by Hypit.AI in writing, you may not use the Hypit source code, or any derivative work of it, to operate a multi-tenant environment, or to offer Hypit's functionality to third parties as a hosted, managed, or software-as-a-service offering.
+    - Tenant Definition: Within the context of Hypit, one tenant corresponds to one workspace — the isolated set of projects, artifacts, credentials, and configuration belonging to a single party. Operating an environment in which two or more parties outside your own organization hold separate workspaces constitutes a multi-tenant service, whether or not a fee is charged.
 
-b. Commercial redistribution: Unless explicitly authorized by Hypit.AI in writing, you may not sell, license for a fee, or otherwise supply for commercial gain Narratage or any derivative work of it, whether standalone or as a component of, or bundled with, any product, application, package, or device provided to third parties.
-    - Forking, modifying, and publishing the source code of Narratage or a derivative work is permitted, provided the result is made available under the terms of this same license and is not supplied for commercial gain.
+b. Commercial redistribution: Unless explicitly authorized by Hypit.AI in writing, you may not sell, license for a fee, or otherwise supply for commercial gain Hypit or any derivative work of it, whether standalone or as a component of, or bundled with, any product, application, package, or device provided to third parties.
+    - Forking, modifying, and publishing the source code of Hypit or a derivative work is permitted, provided the result is made available under the terms of this same license and is not supplied for commercial gain.
 
-    - Permitted without a commercial license under clauses (a) and (b): obtaining Narratage and running it yourself on your own infrastructure; using it for your own organization's work, including commercial work and work performed for your clients; and single-tenant deployments operated by and for one organization.
+    - Permitted without a commercial license under clauses (a) and (b): obtaining Hypit and running it yourself on your own infrastructure; using it for your own organization's work, including commercial work and work performed for your clients; and single-tenant deployments operated by and for one organization.
 
-c. LOGO and copyright information: In the process of using Narratage, you may not remove or modify the name, LOGO, or copyright information presented in the Narratage command-line interface, its generated run reports and manifests, or any user-facing surface derived from them. This restriction is inapplicable to uses of Narratage that do not surface these components to a user.
+c. LOGO and copyright information: In the process of using Hypit, you may not remove or modify the name, LOGO, or copyright information presented in the Hypit command-line interface, its generated run reports and manifests, or any user-facing surface derived from them. This restriction is inapplicable to uses of Hypit that do not surface these components to a user.
 
 2. As a contributor, you should agree that:
 
 a. The producer can adjust the open-source agreement to be more strict or relaxed as deemed necessary.
 b. Your contributed code may be used for commercial purposes, including but not limited to its cloud business operations.
 
-3. Ownership of output: The producer claims no rights in the content you create with Narratage. Videos, audio, images, manifests, and any other artifacts produced through your use of Narratage belong to you, and this license imposes no conditions on their use — including commercial use. Note that content generated by way of third-party model or service providers may additionally be subject to the terms of those providers.
+3. Ownership of output: The producer claims no rights in the content you create with Hypit. Videos, audio, images, manifests, and any other artifacts produced through your use of Hypit belong to you, and this license imposes no conditions on their use — including commercial use. Note that content generated by way of third-party model or service providers may additionally be subject to the terms of those providers.
 
 Apart from the specific conditions mentioned above, all other rights and restrictions follow the Apache License 2.0. Detailed information about the Apache License 2.0 can be found at http://www.apache.org/licenses/LICENSE-2.0.
 

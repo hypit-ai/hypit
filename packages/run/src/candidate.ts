@@ -1,11 +1,11 @@
 import {
   canonicalize,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import type {
   Candidate,
   StoredValue,
   TypeRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 export type ProvidedCandidateInput = {
   readonly id: string;

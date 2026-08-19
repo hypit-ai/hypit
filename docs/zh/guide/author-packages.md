@@ -17,20 +17,20 @@ mkdir -p packages/my-component/src packages/my-component/test
 
 ```json
 {
-  "name": "@narratage/my-component",
+  "name": "@hypit/my-component",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/protocol": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/markup": "workspace:*"
+    "@hypit/protocol": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/markup": "workspace:*"
   }
 }
 ```
@@ -42,15 +42,15 @@ mkdir -p packages/my-component/src packages/my-component/test
 在 `src/index.ts` 中声明你的 Module 的身份、Type 和 Producer：
 
 ```typescript
-import type { ModuleManifest, ModuleRef } from "@narratage/protocol";
+import type { ModuleManifest, ModuleRef } from "@hypit/protocol";
 
 export const myComponentModuleRef: ModuleRef = {
-  name: "@narratage/my-component",
+  name: "@hypit/my-component",
   version: "1",
 };
 
 export const myComponentManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: myComponentModuleRef.name,
   version: myComponentModuleRef.version,
   dependencies: [],
@@ -76,7 +76,7 @@ Surface handler 把 Markup Frontend 的 XML 元素解码成带类型的作者声
 
 ```typescript
 // src/surface.ts
-import type { StructuredSurfaceHandler } from "@narratage/markup";
+import type { StructuredSurfaceHandler } from "@hypit/markup";
 
 export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element }) => {
   // Read attributes and children from the XML element
@@ -95,7 +95,7 @@ export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element }) 
 
 ```typescript
 // src/activation.ts
-import { createMarkupSurfaceHostFacet } from "@narratage/markup";
+import { createMarkupSurfaceHostFacet } from "@hypit/markup";
 import {
   myComponentManifest,
   myComponentMarkupSurfaces,
@@ -103,8 +103,8 @@ import {
   decodeMyComponentSurface,
 } from "./index.js";
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   modules: [{
     manifest: myComponentManifest,
   }],
@@ -117,11 +117,11 @@ export const narratagePackage = {
   ],
 };
 
-export default narratagePackage;
+export default hypitPackage;
 ```
 
 Module 会自动提供精确的 `manifest.name@manifest.version`，所以作者直接导入
-`@narratage/my-component@1`，无需再声明一份重复别名。只有包确实拥有另一个逻辑名称时
+`@hypit/my-component@1`，无需再声明一份重复别名。只有包确实拥有另一个逻辑名称时
 才使用可选的 `specifiers`。Surface declaration 决定可接受的标签（以 `mine` 导入时即为
 `<mine:Widget>`）。它属于 Markup Host facet，不属于语义 Module Manifest，更不属于 Core。
 
@@ -129,7 +129,7 @@ Module 会自动提供精确的 `manifest.name@manifest.version`，所以作者�
 
 ```json
 "dependencies": {
-  "@narratage/protocol": "workspace:*"
+  "@hypit/protocol": "workspace:*"
 }
 ```
 
@@ -141,15 +141,15 @@ pnpm 工作区链接负责解析包，不需要根路径注册表。
 pnpm install --frozen-lockfile
 ```
 
-包管理器负责安装、版本与完整性。Author 或 Run Source 导入逻辑能力时，Narratage 才会加载
+包管理器负责安装、版本与完整性。Author 或 Run Source 导入逻辑能力时，Hypit 才会加载
 对应包；Manifest 声明的精确 Module 依赖从该包的已安装依赖中加载。
 
 ## 8. 在 Author Source 中使用
 
 ```xml
-<?svml using="@narratage/markup@1"?>
+<?svml using="@hypit/markup@1"?>
 <svml>
-  <import as="mine" from="@narratage/my-component@1"/>
+  <import as="mine" from="@hypit/my-component@1"/>
 
   <mine:Widget id="demo" during={story.selection.example}/>
 </svml>

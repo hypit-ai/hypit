@@ -1,10 +1,10 @@
-# @narratage/provider-google-vertex
+# @hypit/provider-google-vertex
 
-Google Vertex transport for the exact `@narratage/caption-gemini` capability.
+Google Vertex transport for the exact `@hypit/caption-gemini` capability.
 
 This package does not build prompts, parse SVML, inspect WhisperX, choose a model, or rewrite text.
 It receives the model package's immutable request, calls `GoogleGenAI({ vertexai: true })` with
-structured JSON output, and returns the response only after `@narratage/caption-gemini` validates every
+structured JSON output, and returns the response only after `@hypit/caption-gemini` validates every
 Run, Cue endpoint, atom assignment, field value and per-Cue cardinality.
 
 ```ts

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import type { SynchronizedMedia, TimelineAudio } from "@narratage/media";
-import type { NarrativeExcerpt } from "@narratage/narrative";
+import type { SynchronizedMedia, TimelineAudio } from "@hypit/media";
+import type { NarrativeExcerpt } from "@hypit/narrative";
 import {
   appendSpeechSpineAudioTake,
   appendSpeechSpineVisualTake,
@@ -11,7 +11,7 @@ import {
   createSpeechSpineSet,
   sealSpeechSpineProgram,
   sealSpeechSpineVisualSpec,
-} from "@narratage/speech-spine";
+} from "@hypit/speech-spine";
 
 const frame = { xPx: 40, yPx: 80, widthPx: 640, heightPx: 900 };
 const fit = {

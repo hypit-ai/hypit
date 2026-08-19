@@ -1,20 +1,20 @@
-# `@narratage/elaborator`
+# `@hypit/elaborator`
 
 Parser-independent author linking and static Graph Fragment elaboration outside SVML Core.
 
 The package is the optional compilation layer between authored declarations and the domain-free
-Kernel. A frontend, API or visual editor first emits one sealed `narratage.author-module@1` containing
+Kernel. A frontend, API or visual editor first emits one sealed `hypit.author-module@1` containing
 component calls with symbolic Record/Component-output references. The Elaborator then works in two
 phases:
 
 1. lock every referenced Fragment and predeclare every component export;
 2. resolve references, reject missing values, type mismatches and cycles, hygienically instantiate
-   Fragments, then emit one ordinary `narratage.graph@1` for Core.
+   Fragments, then emit one ordinary `hypit.graph@1` for Core.
 
 Because all exports are collected before any input is resolved, declaration order has no meaning
 and a component may reference a later component. The linker itself does not parse `.svml`, execute
 package code or know any domain vocabulary. The non-video laboratory test demonstrates that the
-same layer works without `@narratage/markup` or audiovisual contracts.
+same layer works without `@hypit/markup` or audiovisual contracts.
 
 The official Markup adapter emits this exact Author Module format. Its separate non-video
 integration fixture proves the complete `source → Surface → AuthorModule → Graph → BuildPlan` path;
@@ -44,10 +44,10 @@ browser upload, repository object or remote content store.
 
 Frontend output passes a Host-owned Record admission hook before linking. The hook is permitted to
 reject a Record but is forbidden to rewrite Record identity, Type, value, digest, or origin.
-`@narratage/compiler-node` wires this to `@narratage/validation` by default, so authored
+`@hypit/compiler-node` wires this to `@hypit/validation` by default, so authored
 values use the same Type-owner gate as Producer, Provider and provided Candidate values.
 
-A `narratage.fragment@1` value may reference only declared Fragment inputs and local Operations. It
+A `hypit.fragment@1` value may reference only declared Fragment inputs and local Operations. It
 contains no JavaScript callback, ambient file lookup, credential access or Runtime endpoint. Before
 expansion the Elaborator verifies producer ports, types, cycles, reachable exports and Semantic
 Input Envelopes.
@@ -62,6 +62,6 @@ edges. The result is ordinary graph data that Core validates again before freezi
 does not name an Author Logical Output. Run frontends keep Candidate declaration and the explicit
 `output -> candidate` Satisfaction edge separate.
 
-`@narratage/elaborator` is not a public `@narratage/author` subsystem. It is a reusable graph-construction
+`@hypit/elaborator` is not a public `@hypit/author` subsystem. It is a reusable graph-construction
 library. A domain normally adds its own contract and component packages; Text remains only one
 optional frontend capable of producing the same Author Module data.

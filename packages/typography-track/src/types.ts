@@ -7,9 +7,9 @@ import type {
   VisualTextPaintLayer,
   VisualTextSequenceAnimation,
   VisualTextTypography,
-} from "@narratage/composition";
-import type { SpatialFrame, SpatialPath, SpatialPoint } from "@narratage/spatial";
-import type { OccurrenceExpansion, TemporalWindowProjection } from "@narratage/temporal";
+} from "@hypit/composition";
+import type { SpatialFrame, SpatialPath, SpatialPoint } from "@hypit/spatial";
+import type { OccurrenceExpansion, TemporalWindowProjection } from "@hypit/temporal";
 
 export type TextDocument = VisualTextDocument;
 export type TextTypography = VisualTextTypography;
@@ -70,7 +70,7 @@ export type TextItemSpec = {
 
 /**
  * Author/runtime-independent part of one plain-text item. The actual copy is
- * supplied by an ordinary @narratage/text Text edge and materialized into a
+ * supplied by an ordinary @hypit/text Text edge and materialized into a
  * TextItemSpec before temporal projection.
  */
 export type PlainTextItemSpec = {

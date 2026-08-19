@@ -1,4 +1,4 @@
-# `@narratage/artifact-store-s3`
+# `@hypit/artifact-store-s3`
 
 S3 implementation of the Runtime `ArtifactStore` port. Objects use:
 

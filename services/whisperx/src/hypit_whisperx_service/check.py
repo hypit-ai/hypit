@@ -22,7 +22,7 @@ def main() -> None:
             raise RuntimeError(f"installed WhisperX is missing required API: {name}")
     versions = {
         name: metadata.version(name)
-        for name in ("narratage-whisperx-service", "whisperx", "faster-whisper", "numpy", "torch")
+        for name in ("hypit-whisperx-service", "whisperx", "faster-whisper", "numpy", "torch")
     }
     if versions["whisperx"] != "3.8.6":
         raise RuntimeError(f"expected whisperx 3.8.6, got {versions['whisperx']}")

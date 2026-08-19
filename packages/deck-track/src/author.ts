@@ -5,13 +5,13 @@ import {
   decodeMediaPresentation,
   decodeMediaSampleSpec,
   mediaAppearanceKeys,
-} from "@narratage/media-track";
+} from "@hypit/media-track";
 import type {
   MediaPaintLayerSpec,
   MediaSampleLayerSpec,
-} from "@narratage/media-track";
-import type { ContentFit } from "@narratage/spatial";
-import type { SvsRecipe } from "@narratage/svs";
+} from "@hypit/media-track";
+import type { ContentFit } from "@hypit/spatial";
+import type { SvsRecipe } from "@hypit/svs";
 
 import {
   sealDepthStackCardSpec,

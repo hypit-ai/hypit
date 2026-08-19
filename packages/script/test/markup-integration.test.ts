@@ -1,23 +1,23 @@
-import { narrativeManifest } from "@narratage/narrative";
-import type { Narrative, NarrativeExcerpt } from "@narratage/narrative";
-import { textManifest } from "@narratage/text";
+import { narrativeManifest } from "@hypit/narrative";
+import type { Narrative, NarrativeExcerpt } from "@hypit/narrative";
+import { textManifest } from "@hypit/text";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createResolvedClosure } from "@narratage/core";
-import type { ModuleManifest } from "@narratage/protocol";
+import { createResolvedClosure } from "@hypit/core";
+import type { ModuleManifest } from "@hypit/protocol";
 import {
   decodeScriptSurface,
   scriptManifest,
   scriptMarkupSurfaces,
   scriptModuleRef,
-} from "@narratage/script";
+} from "@hypit/script";
 import {
   MarkupFrontendError,
   MarkupSurfaceRegistry,
   decodeMarkup,
   parseStructuredElement,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 function scriptContext() {
   const closure = createResolvedClosure([narrativeManifest, textManifest, scriptManifest]);
@@ -39,7 +39,7 @@ test("Script teaches Markup <script> only through its imported Manifest", async 
     {
       name: "talk.svml",
       text: `<svml>
-        <import from="@narratage/script@1"/>
+        <import from="@hypit/script@1"/>
 
         <script id="story">
           <opening>
@@ -71,7 +71,7 @@ test("the same Script meaning has the same authored Record digest across reflow"
   const compact = await decodeMarkup(
     {
       name: "compact.svml",
-      text: `<svml><import from="@narratage/script@1"/><script id="story"><opening><ALICE>Hello.<BOB>Hi.</opening></script></svml>`,
+      text: `<svml><import from="@hypit/script@1"/><script id="story"><opening><ALICE>Hello.<BOB>Hi.</opening></script></svml>`,
     },
     scriptContext(),
   );
@@ -79,7 +79,7 @@ test("the same Script meaning has the same authored Record digest across reflow"
     {
       name: "multiline.svml",
       text: `<svml>
-        <import from="@narratage/script@1"/>
+        <import from="@hypit/script@1"/>
         <script id="story">
           <opening>
             <ALICE>Hello.
@@ -121,7 +121,7 @@ test("a raw Surface cannot consume the Markup document close", async () => {
     decodeMarkup(
       {
         name: "swallowed.svml",
-        text: `<svml><import from="@narratage/script@1"/><script><opening>Hello.</opening></script></svml>`,
+        text: `<svml><import from="@hypit/script@1"/><script><opening>Hello.</opening></script></svml>`,
       },
       { closure, registry, resolveModule: () => scriptModuleRef },
     ),
@@ -135,9 +135,9 @@ test("imports are frozen before body decoding", async () => {
       {
         name: "late.svml",
         text: `<svml>
-          <import from="@narratage/script@1"/>
+          <import from="@hypit/script@1"/>
           <script><opening>Hello.</opening></script>
-          <import from="@narratage/script@1"/>
+          <import from="@hypit/script@1"/>
         </svml>`,
       },
       scriptContext(),
@@ -178,7 +178,7 @@ test("a module can use Markup's generic structured parser without adding another
     outputs: [type],
   } as const;
   const manifest: ModuleManifest = {
-    format: "narratage.module@1",
+    format: "hypit.module@1",
     name: module.name,
     version: module.version,
     dependencies: [],

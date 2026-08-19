@@ -1,4 +1,4 @@
-import type { FontArtifactRef } from "@narratage/media";
+import type { FontArtifactRef } from "@hypit/media";
 import type {
   VisualColorPaint,
   VisualPathTextElement,
@@ -9,8 +9,8 @@ import type {
   VisualTextSequenceAnimation,
   VisualTextTypography,
   VisualVectorPathCommand,
-} from "@narratage/composition";
-import { canonicalStringify } from "@narratage/protocol";
+} from "@hypit/composition";
+import { canonicalStringify } from "@hypit/protocol";
 
 type TerminalTextElement = VisualTextFlowElement | VisualPathTextElement;
 
@@ -259,7 +259,7 @@ function renderGlyphPaint(
   const layers = glyphPaintLayers(paints);
   if (layers.length === 0) return context.escape(value);
   const singleSolidFill = layers.length === 1 && layers[0]?.kind === "fill" && layers[0].paint.kind === "solid";
-  return layers.map((paint, index) => `<span aria-hidden="${index === layers.length - 1 ? "false" : "true"}" data-narratage-text-paint-layer="${index}"${styleAttribute(glyphLayerCss(paint, singleSolidFill, context), context.escape)}>${context.escape(value)}</span>`).join("");
+  return layers.map((paint, index) => `<span aria-hidden="${index === layers.length - 1 ? "false" : "true"}" data-hypit-text-paint-layer="${index}"${styleAttribute(glyphLayerCss(paint, singleSolidFill, context), context.escape)}>${context.escape(value)}</span>`).join("");
 }
 
 function boxLayers(
@@ -333,7 +333,7 @@ function tailHtml(
       : side === "bottom" ? "0 0,100% 0,50% 100%"
         : side === "left" ? "100% 0,0 50%,100% 100%" : "0 0,100% 50%,0 100%";
     const style = `position:absolute;pointer-events:none;width:${number(tail.widthPx)}px;height:${number(tail.heightPx)}px;${position};background:${colorPaintCss(tail.paint)};clip-path:polygon(${polygon});z-index:${index}`;
-    return [`<span aria-hidden="true" data-narratage-text-tail="${side}" style="${context.escape(style)}"></span>`];
+    return [`<span aria-hidden="true" data-hypit-text-tail="${side}" style="${context.escape(style)}"></span>`];
   }).join("");
 }
 
@@ -439,7 +439,7 @@ function renderDocument(
       ...boxCss(paints, "grapheme", "isolated"),
       ...unitAnimationCss(element, "grapheme", graphemeIndex, context),
     ];
-    return `<span data-narratage-text-unit-grapheme="${graphemeIndex}"${styleAttribute(styles, context.escape)}>${tailHtml(paints, "grapheme", context, "isolated")}${renderGlyphPaint(value, paints, context)}</span>`;
+    return `<span data-hypit-text-unit-grapheme="${graphemeIndex}"${styleAttribute(styles, context.escape)}>${tailHtml(paints, "grapheme", context, "isolated")}${renderGlyphPaint(value, paints, context)}</span>`;
   };
   return document.paragraphs.map((paragraph) => {
     const paragraphIndex = indices.paragraph++;
@@ -456,7 +456,7 @@ function renderDocument(
         }
         const wordIndex = indices.word++;
         const wordContent = graphemes(segment.text, inline.language ?? typography.language).map((grapheme) => renderGrapheme(grapheme, paints)).join("");
-        return `<span data-narratage-text-unit-word="${wordIndex}"${styleAttribute([
+        return `<span data-hypit-text-unit-word="${wordIndex}"${styleAttribute([
           "position:relative",
           ...boxCss(paints, "word", "isolated"),
           ...unitAnimationCss(element, "word", wordIndex, context),
@@ -473,7 +473,7 @@ function renderDocument(
         ...boxCss(paints, "grapheme", "joined"),
         ...unitAnimationCss(element, "run", runIndex, context),
       ];
-      return `<span data-narratage-text-run="${context.escape(inline.id)}" data-narratage-text-unit-run="${runIndex}" ${textLanguageAttributes(typography, context.escape, inline.language, inline.direction)}${styleAttribute(runStyle, context.escape)}>${tailHtml(paints, "run", context)}${tailHtml(paints, "word", context, "joined")}${tailHtml(paints, "grapheme", context, "joined")}${runContents}</span>`;
+      return `<span data-hypit-text-run="${context.escape(inline.id)}" data-hypit-text-unit-run="${runIndex}" ${textLanguageAttributes(typography, context.escape, inline.language, inline.direction)}${styleAttribute(runStyle, context.escape)}>${tailHtml(paints, "run", context)}${tailHtml(paints, "word", context, "joined")}${tailHtml(paints, "grapheme", context, "joined")}${runContents}</span>`;
     }).join("");
     const paragraphStyle = [
       "position:relative",
@@ -481,7 +481,7 @@ function renderDocument(
       ...boxCss(paragraphPaints, "paragraph"),
       ...unitAnimationCss(element, "paragraph", paragraphIndex, context),
     ];
-    return `<div data-narratage-text-paragraph="${context.escape(paragraph.id)}" data-narratage-text-unit-paragraph="${paragraphIndex}" ${textLanguageAttributes(paragraphTypography, context.escape)}${styleAttribute(paragraphStyle, context.escape)}>${tailHtml(paragraphPaints, "paragraph", context)}<span data-narratage-text-line-fragments${styleAttribute([
+    return `<div data-hypit-text-paragraph="${context.escape(paragraph.id)}" data-hypit-text-unit-paragraph="${paragraphIndex}" ${textLanguageAttributes(paragraphTypography, context.escape)}${styleAttribute(paragraphStyle, context.escape)}>${tailHtml(paragraphPaints, "paragraph", context)}<span data-hypit-text-line-fragments${styleAttribute([
       "position:relative",
       "box-decoration-break:clone",
       "-webkit-box-decoration-break:clone",
@@ -634,37 +634,37 @@ function renderPathDocument(element: VisualPathTextElement, context: TextRenderC
       const text = segmentRun(inline.text, inline.language ?? typography.language).map((segment) => {
         if (!segment.wordLike) return graphemes(segment.text, inline.language ?? typography.language).map((value) => {
           const index = indices.grapheme++;
-          return `<tspan data-narratage-text-unit-grapheme="${index}"${styleAttribute(unitAnimationCss(element, "grapheme", index, context), context.escape)}>${context.escape(value)}</tspan>`;
+          return `<tspan data-hypit-text-unit-grapheme="${index}"${styleAttribute(unitAnimationCss(element, "grapheme", index, context), context.escape)}>${context.escape(value)}</tspan>`;
         }).join("");
         const word = indices.word++;
         const value = graphemes(segment.text, inline.language ?? typography.language).map((item) => {
           const index = indices.grapheme++;
-          return `<tspan data-narratage-text-unit-grapheme="${index}"${styleAttribute(unitAnimationCss(element, "grapheme", index, context), context.escape)}>${context.escape(item)}</tspan>`;
+          return `<tspan data-hypit-text-unit-grapheme="${index}"${styleAttribute(unitAnimationCss(element, "grapheme", index, context), context.escape)}>${context.escape(item)}</tspan>`;
         }).join("");
-        return `<tspan data-narratage-text-unit-word="${word}"${styleAttribute(unitAnimationCss(element, "word", word, context), context.escape)}>${value}</tspan>`;
+        return `<tspan data-hypit-text-unit-word="${word}"${styleAttribute(unitAnimationCss(element, "word", word, context), context.escape)}>${value}</tspan>`;
       }).join("");
       const style = [...typographyCss(typography, context.exactFontFamily), ...svgGlyphLayerCss(paint, context), ...unitAnimationCss(element, "run", runIndex, context)];
-      return `<tspan data-narratage-text-unit-run="${runIndex}" ${textLanguageAttributes(typography, context.escape, inline.language, inline.direction)}${styleAttribute(style, context.escape)}>${text}</tspan>`;
+      return `<tspan data-hypit-text-unit-run="${runIndex}" ${textLanguageAttributes(typography, context.escape, inline.language, inline.direction)}${styleAttribute(style, context.escape)}>${text}</tspan>`;
     }).join("");
     const separator = paragraphPosition === 0 ? "" : " ";
-    return `${separator}<tspan data-narratage-text-unit-paragraph="${paragraphIndex}"${styleAttribute(unitAnimationCss(element, "paragraph", paragraphIndex, context), context.escape)}>${content}</tspan>`;
+    return `${separator}<tspan data-hypit-text-unit-paragraph="${paragraphIndex}"${styleAttribute(unitAnimationCss(element, "paragraph", paragraphIndex, context), context.escape)}>${content}</tspan>`;
   }).join("");
 }
 
 export function renderTerminalTextElement(element: TerminalTextElement, context: TextRenderContext): string {
   assertTextUnitRanges(element);
-  const clockAttributes = `data-narratage-text-clock data-narratage-text-start-frame="${context.presentStartFrame}" data-narratage-text-frame-numerator="${context.programNumerator}" data-narratage-text-frame-denominator="${context.programDenominator}"`;
-  const sequenceAttributes = element.sequences.length === 0 ? "" : ` data-narratage-text-sequences="${context.escape(JSON.stringify(element.sequences))}" data-narratage-text-duration-frames="${context.durationFrames}"`;
+  const clockAttributes = `data-hypit-text-clock data-hypit-text-start-frame="${context.presentStartFrame}" data-hypit-text-frame-numerator="${context.programNumerator}" data-hypit-text-frame-denominator="${context.programDenominator}"`;
+  const sequenceAttributes = element.sequences.length === 0 ? "" : ` data-hypit-text-sequences="${context.escape(JSON.stringify(element.sequences))}" data-hypit-text-duration-frames="${context.durationFrames}"`;
   if (element.kind === "path-text") {
     const pathId = context.stableId([context.trackId, context.presentId, element.id, "path"]);
     const anchor = element.align === "start" ? "start" : element.align === "end" ? "end" : "middle";
     const offset = element.marginAnimation?.keyframes[0]?.startMarginPx
       ?? (element.align === "start" ? element.startMarginPx : element.align === "end" ? "100%" : "50%");
     const placementData = element.marginAnimation === undefined
-      ? ` data-narratage-text-path-placement="${context.escape(JSON.stringify({
+      ? ` data-hypit-text-path-placement="${context.escape(JSON.stringify({
         align: element.align, startMarginPx: element.startMarginPx, endMarginPx: element.endMarginPx,
       }))}"`
-      : ` data-narratage-text-path-margin="${context.escape(JSON.stringify({
+      : ` data-hypit-text-path-margin="${context.escape(JSON.stringify({
         startFrame: context.presentStartFrame,
         numerator: context.programNumerator,
         denominator: context.programDenominator,
@@ -675,7 +675,7 @@ export function renderTerminalTextElement(element: TerminalTextElement, context:
     const layerCount = pathPaintLayerCount(element);
     const layers = Array.from({ length: layerCount }, (_, layerIndex) => {
       const textCss = [...typographyCss(element.typography, context.exactFontFamily), "fill:transparent", "stroke:none"].join(";");
-      return `<text aria-hidden="${layerIndex === layerCount - 1 ? "false" : "true"}" data-narratage-text-path-paint-layer="${layerIndex}" style="${context.escape(textCss)}" text-anchor="${anchor}" dominant-baseline="central"><textPath href="#${pathId}" startOffset="${typeof offset === "number" ? number(offset) : offset}" side="${element.side}"${placementData}${element.orientation === "upright" ? ' data-narratage-text-path-upright="true"' : ""}>${renderPathDocument(element, context, layerIndex)}</textPath></text>`;
+      return `<text aria-hidden="${layerIndex === layerCount - 1 ? "false" : "true"}" data-hypit-text-path-paint-layer="${layerIndex}" style="${context.escape(textCss)}" text-anchor="${anchor}" dominant-baseline="central"><textPath href="#${pathId}" startOffset="${typeof offset === "number" ? number(offset) : offset}" side="${element.side}"${placementData}${element.orientation === "upright" ? ' data-hypit-text-path-upright="true"' : ""}>${renderPathDocument(element, context, layerIndex)}</textPath></text>`;
     }).join("");
     return `<svg ${context.commonAttributes} ${clockAttributes}${sequenceAttributes} ${textLanguageAttributes(element.typography, context.escape)} width="100%" height="100%" style="${context.escape(`${context.baseStyle};overflow:${element.overflow === "clip" ? "hidden" : "visible"}`)}"><defs><path id="${pathId}" d="${context.escape(pathData(element.reverse ? reversePath(element.path) : element.path))}"/>${svgPaintDefinitions(element, context)}${glyphFilterDefinitions(element, context)}</defs>${layers}</svg>`;
   }
@@ -696,13 +696,13 @@ export function renderTerminalTextElement(element: TerminalTextElement, context:
   ];
   const lineSequences = element.sequences.filter((sequence) => sequence.unit === "line");
   const layoutData = [
-    `data-narratage-text-overflow="${element.flow.overflow}"`,
-    `data-narratage-text-writing-mode="${element.typography.writingMode}"`,
-    ...(element.flow.minimumScale === undefined ? [] : [`data-narratage-text-minimum-scale="${number(element.flow.minimumScale)}"`]),
-    ...(element.flow.maxLines === undefined ? [] : [`data-narratage-text-max-lines="${element.flow.maxLines}"`]),
+    `data-hypit-text-overflow="${element.flow.overflow}"`,
+    `data-hypit-text-writing-mode="${element.typography.writingMode}"`,
+    ...(element.flow.minimumScale === undefined ? [] : [`data-hypit-text-minimum-scale="${number(element.flow.minimumScale)}"`]),
+    ...(element.flow.maxLines === undefined ? [] : [`data-hypit-text-max-lines="${element.flow.maxLines}"`]),
   ].join(" ");
-  const lineData = lineSequences.length === 0 ? "" : ` data-narratage-text-line-sequences="${context.escape(JSON.stringify(lineSequences))}"`;
-  return `<div ${context.commonAttributes} ${clockAttributes}${sequenceAttributes} ${textLanguageAttributes(element.typography, context.escape)} style="${context.escape(rootStyle.join(";"))}">${glyphPaintDefinitions(element, context)}${tailHtml(element.paints, "frame", context)}<div data-narratage-text-flow ${layoutData}${lineData}${styleAttribute(contentStyle, context.escape)}>${tailHtml(element.paints, "content", context)}${renderDocument(element.document, element, context)}</div></div>`;
+  const lineData = lineSequences.length === 0 ? "" : ` data-hypit-text-line-sequences="${context.escape(JSON.stringify(lineSequences))}"`;
+  return `<div ${context.commonAttributes} ${clockAttributes}${sequenceAttributes} ${textLanguageAttributes(element.typography, context.escape)} style="${context.escape(rootStyle.join(";"))}">${glyphPaintDefinitions(element, context)}${tailHtml(element.paints, "frame", context)}<div data-hypit-text-flow ${layoutData}${lineData}${styleAttribute(contentStyle, context.escape)}>${tailHtml(element.paints, "content", context)}${renderDocument(element.document, element, context)}</div></div>`;
 }
 
 export function collectTerminalTextFonts(element: TerminalTextElement): FontArtifactRef[] {
@@ -726,8 +726,8 @@ const svmlTextEase = (name, value) => {
   return value;
 };
 const svmlUpdateUprightTextPaths = () => {
-  for (const path of document.querySelectorAll('[data-narratage-text-path-upright]')) {
-    for (const glyph of path.querySelectorAll('[data-narratage-text-unit-grapheme]')) {
+  for (const path of document.querySelectorAll('[data-hypit-text-path-upright]')) {
+    for (const glyph of path.querySelectorAll('[data-hypit-text-unit-grapheme]')) {
       try {
         glyph.removeAttribute('rotate');
         const pathRotation = glyph.getRotationOfChar(0);
@@ -739,8 +739,8 @@ const svmlUpdateUprightTextPaths = () => {
   }
 };
 const svmlUpdateStaticTextPathPlacements = () => {
-  for (const textPath of document.querySelectorAll('[data-narratage-text-path-placement]')) {
-    const data = JSON.parse(textPath.getAttribute('data-narratage-text-path-placement'));
+  for (const textPath of document.querySelectorAll('[data-hypit-text-path-placement]')) {
+    const data = JSON.parse(textPath.getAttribute('data-hypit-text-path-placement'));
     const href = textPath.getAttribute('href');
     const path = href && document.getElementById(href.slice(1));
     if (!path || typeof path.getTotalLength !== 'function') throw new Error('Path Text cannot resolve its owned vector path.');
@@ -752,8 +752,8 @@ const svmlUpdateStaticTextPathPlacements = () => {
   }
 };
 const svmlUpdateTextPathMargins = (time) => {
-  for (const path of document.querySelectorAll('[data-narratage-text-path-margin]')) {
-    const data = JSON.parse(path.getAttribute('data-narratage-text-path-margin'));
+  for (const path of document.querySelectorAll('[data-hypit-text-path-margin]')) {
+    const data = JSON.parse(path.getAttribute('data-hypit-text-path-margin'));
     const frames = data.keyframes;
     // HyperFrames may reach the same source frame through an incremental seek
     // or a fresh worker seek. Quantize the absolute clock back to the authored
@@ -837,17 +837,17 @@ const svmlTextSequenceProgress = (sequence, clock) => {
   };
 };
 const svmlSeekTextUnitAnimations = (time) => {
-  const unitSelector = '[data-narratage-text-unit-paragraph],[data-narratage-text-unit-run],[data-narratage-text-unit-word],[data-narratage-text-unit-grapheme]';
-  for (const root of document.querySelectorAll('[data-narratage-text-clock][data-narratage-text-sequences]')) {
-    const startFrame = Number(root.getAttribute('data-narratage-text-start-frame'));
-    const numerator = Number(root.getAttribute('data-narratage-text-frame-numerator'));
-    const denominator = Number(root.getAttribute('data-narratage-text-frame-denominator'));
-    const durationFrames = Number(root.getAttribute('data-narratage-text-duration-frames'));
+  const unitSelector = '[data-hypit-text-unit-paragraph],[data-hypit-text-unit-run],[data-hypit-text-unit-word],[data-hypit-text-unit-grapheme]';
+  for (const root of document.querySelectorAll('[data-hypit-text-clock][data-hypit-text-sequences]')) {
+    const startFrame = Number(root.getAttribute('data-hypit-text-start-frame'));
+    const numerator = Number(root.getAttribute('data-hypit-text-frame-numerator'));
+    const denominator = Number(root.getAttribute('data-hypit-text-frame-denominator'));
+    const durationFrames = Number(root.getAttribute('data-hypit-text-duration-frames'));
     if (!Number.isSafeInteger(startFrame) || !Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator)
       || !Number.isSafeInteger(durationFrames) || numerator <= 0 || denominator <= 0 || durationFrames <= 0) {
       throw new Error('Invalid terminal Text animation clock.');
     }
-    const sequences = JSON.parse(root.getAttribute('data-narratage-text-sequences') || '[]');
+    const sequences = JSON.parse(root.getAttribute('data-hypit-text-sequences') || '[]');
     const localFrame = Math.max(0, Math.min(durationFrames, Math.round(time * numerator / denominator - startFrame)));
     for (const unit of root.querySelectorAll(unitSelector)) {
       let base = svmlTextUnitBaseStyles.get(unit);
@@ -860,7 +860,7 @@ const svmlSeekTextUnitAnimations = (time) => {
         else unit.style.removeProperty(name);
       }
       for (const sequence of sequences) {
-        const attribute = sequence.unit === 'line' ? 'data-narratage-text-physical-line' : 'data-narratage-text-unit-' + sequence.unit;
+        const attribute = sequence.unit === 'line' ? 'data-hypit-text-physical-line' : 'data-hypit-text-unit-' + sequence.unit;
         if (!unit.hasAttribute(attribute)) continue;
         const index = Number(unit.getAttribute(attribute));
         const rank = Number.isSafeInteger(index) ? svmlTextSequenceRank(sequence, index) : null;
@@ -927,22 +927,22 @@ const svmlTextLayoutReady = document.fonts.ready.then(() => {
   svmlUpdateUprightTextPaths();
   const physicalLines = (flow) => {
     const values = [];
-    const vertical = flow.getAttribute('data-narratage-text-writing-mode') !== 'horizontal-tb';
-    for (const glyph of flow.querySelectorAll('[data-narratage-text-unit-grapheme]')) {
+    const vertical = flow.getAttribute('data-hypit-text-writing-mode') !== 'horizontal-tb';
+    for (const glyph of flow.querySelectorAll('[data-hypit-text-unit-grapheme]')) {
       const rect = glyph.getBoundingClientRect();
       const axis = vertical ? rect.left : rect.top;
       if (!values.some((value) => Math.abs(value - axis) < 0.5)) values.push(axis);
     }
     return values;
   };
-  for (const flow of document.querySelectorAll('[data-narratage-text-flow][data-narratage-text-overflow="ellipsis"]')) {
-    if (flow.getAttribute('data-narratage-text-max-lines') || getComputedStyle(flow).whiteSpace === 'pre') continue;
+  for (const flow of document.querySelectorAll('[data-hypit-text-flow][data-hypit-text-overflow="ellipsis"]')) {
+    if (flow.getAttribute('data-hypit-text-max-lines') || getComputedStyle(flow).whiteSpace === 'pre') continue;
     const parent = flow.parentElement;
     if (!parent) throw new Error('Ellipsis Text has no placement frame.');
-    const vertical = flow.getAttribute('data-narratage-text-writing-mode') !== 'horizontal-tb';
+    const vertical = flow.getAttribute('data-hypit-text-writing-mode') !== 'horizontal-tb';
     const boundary = parent.getBoundingClientRect();
     const groups = [];
-    for (const glyph of flow.querySelectorAll('[data-narratage-text-unit-grapheme]')) {
+    for (const glyph of flow.querySelectorAll('[data-hypit-text-unit-grapheme]')) {
       const rect = glyph.getBoundingClientRect();
       const axis = vertical ? rect.left : rect.top;
       let group = groups.find((item) => Math.abs(item.axis - axis) < 0.5);
@@ -954,9 +954,9 @@ const svmlTextLayoutReady = document.fonts.ready.then(() => {
       : rect.top >= boundary.top - 0.5 && rect.bottom <= boundary.bottom + 0.5)).length;
     flow.style.webkitLineClamp = String(Math.max(1, visible));
   }
-  for (const flow of document.querySelectorAll('[data-narratage-text-flow][data-narratage-text-overflow="shrink"]')) {
-    const minimum = Number(flow.getAttribute('data-narratage-text-minimum-scale'));
-    const maximumLines = Number(flow.getAttribute('data-narratage-text-max-lines') || '0');
+  for (const flow of document.querySelectorAll('[data-hypit-text-flow][data-hypit-text-overflow="shrink"]')) {
+    const minimum = Number(flow.getAttribute('data-hypit-text-minimum-scale'));
+    const maximumLines = Number(flow.getAttribute('data-hypit-text-max-lines') || '0');
     const parent = flow.parentElement;
     if (!parent || !Number.isFinite(minimum) || minimum <= 0 || minimum > 1) throw new Error('Invalid bounded Text shrink request.');
     const availableWidth = parent.clientWidth;
@@ -975,7 +975,7 @@ const svmlTextLayoutReady = document.fonts.ready.then(() => {
       apply(scale);
       const lines = physicalLines(flow).length;
       const boundary = parent.getBoundingClientRect();
-      const glyphRects = [...flow.querySelectorAll('[data-narratage-text-unit-grapheme]')]
+      const glyphRects = [...flow.querySelectorAll('[data-hypit-text-unit-grapheme]')]
         .map((glyph) => glyph.getBoundingClientRect());
       const left = glyphRects.length === 0 ? boundary.left : Math.min(...glyphRects.map((rect) => rect.left));
       const right = glyphRects.length === 0 ? boundary.left : Math.max(...glyphRects.map((rect) => rect.right));
@@ -1012,12 +1012,12 @@ const svmlTextLayoutReady = document.fonts.ready.then(() => {
       else high = middle;
     }
     apply(low);
-    flow.setAttribute('data-narratage-text-shrink-scale', low.toFixed(8));
+    flow.setAttribute('data-hypit-text-shrink-scale', low.toFixed(8));
   }
-  for (const flow of document.querySelectorAll('[data-narratage-text-flow][data-narratage-text-line-sequences]')) {
-    const sequences = JSON.parse(flow.getAttribute('data-narratage-text-line-sequences') || '[]');
-    const glyphs = [...flow.querySelectorAll('[data-narratage-text-unit-grapheme]')];
-    const vertical = flow.getAttribute('data-narratage-text-writing-mode') !== 'horizontal-tb';
+  for (const flow of document.querySelectorAll('[data-hypit-text-flow][data-hypit-text-line-sequences]')) {
+    const sequences = JSON.parse(flow.getAttribute('data-hypit-text-line-sequences') || '[]');
+    const glyphs = [...flow.querySelectorAll('[data-hypit-text-unit-grapheme]')];
+    const vertical = flow.getAttribute('data-hypit-text-writing-mode') !== 'horizontal-tb';
     const axes = [];
     const lineOf = new Map();
     for (const glyph of glyphs) {
@@ -1040,7 +1040,7 @@ const svmlTextLayoutReady = document.fonts.ready.then(() => {
       for (const [memberIndex, glyph] of members.entries()) {
         const rect = rects[memberIndex];
         glyph.style.transformOrigin = String((left + right) / 2 - rect.left) + 'px ' + String((top + bottom) / 2 - rect.top) + 'px';
-        glyph.setAttribute('data-narratage-text-physical-line', String(line));
+        glyph.setAttribute('data-hypit-text-physical-line', String(line));
       }
     }
   }

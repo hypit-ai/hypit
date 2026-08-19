@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/film",
+  "name": "@hypit/film",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,26 +7,26 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/component-kit": "workspace:*",
-    "@narratage/composition": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/program-space": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/spatial": "workspace:*",
-    "@narratage/svs": "workspace:*",
-    "@narratage/markup": "workspace:*"
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/composition": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/program-space": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/spatial": "workspace:*",
+    "@hypit/svs": "workspace:*",
+    "@hypit/markup": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/core": "workspace:*",
-    "@narratage/driver-node": "workspace:*",
-    "@narratage/hyperframes": "workspace:*",
-    "@narratage/media": "workspace:*",
-    "@narratage/text": "workspace:*",
-    "@narratage/typography-track": "workspace:*",
-    "@narratage/validation": "workspace:*"
+    "@hypit/core": "workspace:*",
+    "@hypit/driver-node": "workspace:*",
+    "@hypit/hyperframes": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/text": "workspace:*",
+    "@hypit/typography-track": "workspace:*",
+    "@hypit/validation": "workspace:*"
   }
 }

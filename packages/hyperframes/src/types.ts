@@ -1,6 +1,6 @@
 
-import type { BlobRef, Digest } from "@narratage/protocol";
-import type { CompositableSurfaceRef } from "@narratage/media";
+import type { BlobRef, Digest } from "@hypit/protocol";
+import type { CompositableSurfaceRef } from "@hypit/media";
 
 export type HyperframesFrameDomain = {
   readonly frameRate: {
@@ -24,7 +24,7 @@ export type HyperframesDocument = HyperframesFrameDomain & {
   readonly artifacts: readonly BlobRef[];
   /** Typed Surface dependencies that a Runtime must verify before rendering. */
   readonly surfaces: readonly CompositableSurfaceRef[];
-  /** Media URLs remain narratage-artifact:// placeholders until a Runtime materializes them. */
+  /** Media URLs remain hypit-artifact:// placeholders until a Runtime materializes them. */
   readonly html: string;
 };
 
@@ -35,4 +35,4 @@ export type HyperframesFrameSpan = {
 };
 
 export type ArtifactUrlResolver = (artifact: BlobRef) => string;
-import { VISUAL_IR_V1 } from "@narratage/visual-ir";
+import { VISUAL_IR_V1 } from "@hypit/visual-ir";

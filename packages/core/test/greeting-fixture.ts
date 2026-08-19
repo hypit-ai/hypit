@@ -5,7 +5,7 @@ import {
   sealCompiledGraph,
   sealRecord,
   start,
-} from "@narratage/core";
+} from "@hypit/core";
 import type {
   BuildState,
   CapabilityRef,
@@ -13,7 +13,7 @@ import type {
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 export const moduleRef = { name: "example.greeting", version: "0.0.0" } as const;
 
 export const types = {
@@ -35,7 +35,7 @@ export const producers = {
 } satisfies Record<string, ProducerRef>;
 
 export const manifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],

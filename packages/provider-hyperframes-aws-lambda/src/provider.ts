@@ -5,33 +5,33 @@ import { join } from "node:path";
 import {
   defineEndpointPackage,
   wakeAfter,
-} from "@narratage/endpoint-kit";
+} from "@hypit/endpoint-kit";
 import type {
   EndpointFulfillment,
   EndpointOutcome,
   EndpointPollContext,
   EndpointStartContext,
   AsyncEndpoint,
-} from "@narratage/endpoint-kit";
+} from "@hypit/endpoint-kit";
 import {
   assertHyperframesDocument,
-} from "@narratage/hyperframes";
-import type { HyperframesDocument } from "@narratage/hyperframes";
-import { stageHyperframesProject } from "@narratage/hyperframes/project";
+} from "@hypit/hyperframes";
+import type { HyperframesDocument } from "@hypit/hyperframes";
+import { stageHyperframesProject } from "@hypit/hyperframes/project";
 import {
   mediaTypes,
   sealRenderedVisual,
-} from "@narratage/media";
-import type { RenderedVisual } from "@narratage/media";
+} from "@hypit/media";
+import type { RenderedVisual } from "@hypit/media";
 import {
   canonicalize,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import type {
   BlobRef,
   CanonicalValue,
-} from "@narratage/protocol";
-import { renderHyperframesCapabilities } from "@narratage/render-hyperframes";
-import { isStreamingArtifactStore } from "@narratage/runtime";
+} from "@hypit/protocol";
+import { renderHyperframesCapabilities } from "@hypit/render-hyperframes";
+import { isStreamingArtifactStore } from "@hypit/runtime";
 
 import {
   createHyperframesAwsLambdaClient,
@@ -45,11 +45,11 @@ import type {
   HyperframesLambdaSite,
 } from "./client.js";
 
-const HANDLE_CONTRACT = "narratage.hyperframes-aws-lambda-operation@1";
+const HANDLE_CONTRACT = "hypit.hyperframes-aws-lambda-operation@1";
 const SUPPORTED_FPS = new Set([24, 30, 60]);
 
 export const awsLambdaHyperframesProviderModuleRef = {
-  name: "@narratage/provider-hyperframes-aws-lambda",
+  name: "@hypit/provider-hyperframes-aws-lambda",
   version: "1",
 } as const;
 export type HyperframesLambdaQuality = "draft" | "standard" | "high";
@@ -146,11 +146,11 @@ function operationName(operationId: string): string {
 }
 
 function executionName(operationId: string): string {
-  return `narratage-${operationName(operationId)}`;
+  return `hypit-${operationName(operationId)}`;
 }
 
 function outputKey(operationId: string): string {
-  return `renders/narratage/${operationName(operationId)}/visual.mp4`;
+  return `renders/hypit/${operationName(operationId)}/visual.mp4`;
 }
 
 function alreadyStopped(error: unknown): boolean {
@@ -383,7 +383,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
       ...(targetChunkFrames === undefined ? {} : { targetChunkFrames }),
     });
     let site: HyperframesLambdaSite;
-    const work = await mkdtemp(join(tmpdir(), "narratage-hyperframes-aws-"));
+    const work = await mkdtemp(join(tmpdir(), "hypit-hyperframes-aws-"));
     try {
       await stageHyperframesProject({
         document,
@@ -487,7 +487,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
         await client.stop({
           executionArn: target,
           region,
-          reason: `Narratage cancelled Operation ${context.operation}`,
+          reason: `Hypit cancelled Operation ${context.operation}`,
         });
       } catch (error) {
         if (!alreadyStopped(error)) throw error;

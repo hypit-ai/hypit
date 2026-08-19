@@ -3,9 +3,9 @@ import test from "node:test";
 import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { compositionDependency, compositionTypes } from "@narratage/composition";
-import type { VisualElement, VisualTimedSampling } from "@narratage/composition";
-import { createResolvedClosure } from "@narratage/core";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
+import type { VisualElement, VisualTimedSampling } from "@hypit/composition";
+import { createResolvedClosure } from "@hypit/core";
 import {
   decodeDepthStackLabelSurface,
   decodeDepthStackSurface,
@@ -25,32 +25,32 @@ import {
   sealDepthStackCardSpec,
   sealDepthStackHeader,
   sealDepthStackSpec,
-} from "@narratage/deck-track";
+} from "@hypit/deck-track";
 import type {
   DepthStackCardLabel,
   DepthStackProgram,
   DepthStackSpec,
-} from "@narratage/deck-track";
-import type { FontArtifactRef } from "@narratage/media";
-import { mediaTypes } from "@narratage/media";
-import { mediaPipelineManifest } from "@narratage/media-pipeline";
-import type { MediaLayerSet } from "@narratage/media-track";
-import { narrativeTypes } from "@narratage/narrative";
-import { programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
-import type { ModuleManifest } from "@narratage/protocol";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@narratage/spatial";
-import { svsRecipeType } from "@narratage/svs";
-import { sealText, textManifest, textTypes } from "@narratage/text";
-import type { SvsRecipe } from "@narratage/svs";
+} from "@hypit/deck-track";
+import type { FontArtifactRef } from "@hypit/media";
+import { mediaTypes } from "@hypit/media";
+import { mediaPipelineManifest } from "@hypit/media-pipeline";
+import type { MediaLayerSet } from "@hypit/media-track";
+import { narrativeTypes } from "@hypit/narrative";
+import { programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
+import type { ModuleManifest } from "@hypit/protocol";
+import { semanticMapTypes } from "@hypit/semantic-map";
+import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@hypit/spatial";
+import { svsRecipeType } from "@hypit/svs";
+import { sealText, textManifest, textTypes } from "@hypit/text";
+import type { SvsRecipe } from "@hypit/svs";
 import type {
   StructuredElement,
   StructuredNode,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
-import { artifactTypes } from "@narratage/artifact";
-import { mediaTrackManifest, mediaTrackTypes } from "@narratage/media-track";
+} from "@hypit/markup";
+import { artifactTypes } from "@hypit/artifact";
+import { mediaTrackManifest, mediaTrackTypes } from "@hypit/media-track";
 
 const space = sealProgramSpace({
   durationSec: 2,
@@ -445,7 +445,7 @@ test("Label Surface compiles explicit exact-font text rather than media metadata
   assert.equal(result.components[0]?.outputs.label, "proof-label");
   assert.equal(result.fragments[0]?.operations[0]?.producer.name, depthStackProducers.bindLabelText.name);
   assert.ok(result.records.some((record) => record.type.name === depthStackTypes.cardLabelStyle.name));
-  assert.ok(result.records.some((record) => record.type.module.name === "@narratage/text" && record.type.name === "Text"));
+  assert.ok(result.records.some((record) => record.type.module.name === "@hypit/text" && record.type.name === "Text"));
 });
 
 test("Label Surface accepts ordinary graph Text without copying it during author compilation", async () => {
@@ -473,7 +473,7 @@ test("Label Surface accepts ordinary graph Text without copying it during author
 
 test("another Deck family can coexist by contributing only the existing VisualTrack waist", () => {
   const other: ModuleManifest = {
-    format: "narratage.module@1" as const,
+    format: "hypit.module@1" as const,
     name: "example.carousel",
     version: "1",
     dependencies: [compositionDependency],
@@ -492,7 +492,7 @@ test("another Deck family can coexist by contributing only the existing VisualTr
     depthStackManifest,
     other,
   ]);
-  assert.ok(closure.modules.some((module) => module.manifest.name === "@narratage/deck-track"));
+  assert.ok(closure.modules.some((module) => module.manifest.name === "@hypit/deck-track"));
   assert.ok(closure.modules.some((module) => module.manifest.name === "example.carousel"));
   assert.deepEqual(other.producers[0]?.outputs[0]?.type, compositionTypes.visualTrack);
 });

@@ -1,6 +1,6 @@
 import {
   isStreamingArtifactStore,
-} from "@narratage/runtime";
+} from "@hypit/runtime";
 
 import type {
   CreateLocalRuntimeArchiveControlOptions,

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseStructuredElement } from "@narratage/markup";
-import type { SurfaceResolvedReference } from "@narratage/markup";
-import { svsRecipeType } from "@narratage/svs";
+import { parseStructuredElement } from "@hypit/markup";
+import type { SurfaceResolvedReference } from "@hypit/markup";
+import { svsRecipeType } from "@hypit/svs";
 
 import {
   bindText,
@@ -16,7 +16,7 @@ import {
   sealTextTemplate,
   textTypes,
   verifyTextTemplate,
-} from "@narratage/text";
+} from "@hypit/text";
 
 test("text programs compose nested templates, choices, lists and transforms", () => {
   const template = sealTextTemplate({

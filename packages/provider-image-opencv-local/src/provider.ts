@@ -4,21 +4,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { artifactTypes } from "@narratage/artifact";
-import { defineEndpointPackage } from "@narratage/endpoint-kit";
-import type { EndpointFulfillment } from "@narratage/endpoint-kit";
-import { canonicalize } from "@narratage/protocol";
-import type { CanonicalValue } from "@narratage/protocol";
+import { artifactTypes } from "@hypit/artifact";
+import { defineEndpointPackage } from "@hypit/endpoint-kit";
+import type { EndpointFulfillment } from "@hypit/endpoint-kit";
+import { canonicalize } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
 import {
   assertRasterRequest,
   rasterCapabilities,
   rasterOutputMediaType,
   rasterSources,
-} from "@narratage/raster";
-import type { RasterRequest } from "@narratage/raster";
+} from "@hypit/raster";
+import type { RasterRequest } from "@hypit/raster";
 
 export const localOpenCvImageProviderModuleRef = {
-  name: "@narratage/provider-image-opencv-local",
+  name: "@hypit/provider-image-opencv-local",
   version: "1",
 } as const;
 
@@ -108,7 +108,7 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
         const sources = [...new Map(rasterSources(need).map((source) => [source.digest, source])).values()];
         const totalInputBytes = sources.reduce((sum, source) => sum + source.size, 0);
         assert(totalInputBytes <= maxInputBytes, "Raster inputs exceed their configured byte limit");
-        const work = await mkdtemp(join(tmpdir(), "narratage-raster-opencv-"));
+        const work = await mkdtemp(join(tmpdir(), "hypit-raster-opencv-"));
         try {
           const paths = new Map<string, string>();
           for (const [index, source] of sources.entries()) {

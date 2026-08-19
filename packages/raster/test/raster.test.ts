@@ -9,7 +9,7 @@ import {
   rasterOutputMediaType,
   rasterSources,
   rasterTransformRequest,
-} from "@narratage/raster";
+} from "@hypit/raster";
 
 const image = { kind: "blob" as const, digest: fixtureDigest("raster-image"), size: 12, mediaType: "image/png" };
 

@@ -1,16 +1,16 @@
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
-} from "@narratage/component-kit";
+} from "@hypit/component-kit";
 import {
   ProducerRegistry,
   NodeDriver,
   EndpointRegistry,
-} from "@narratage/driver-node";
+} from "@hypit/driver-node";
 import {
   isStreamingArtifactStore,
-} from "@narratage/runtime";
-import { TypeValidatorRegistry } from "@narratage/validation";
+} from "@hypit/runtime";
+import { TypeValidatorRegistry } from "@hypit/validation";
 
 import { createLocalRuntimeArchiveControl, createLocalRuntimeArtifactAccess } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";

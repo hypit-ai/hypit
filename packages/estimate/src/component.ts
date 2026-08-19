@@ -1,7 +1,7 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { StoredValue } from "@narratage/protocol";
-import { canonicalize } from "@narratage/protocol";
-import type { Text } from "@narratage/text";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { StoredValue } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import type { Text } from "@hypit/text";
 
 import { estimateProducers } from "./manifest.js";
 import { estimateSpeechDuration } from "./program.js";

@@ -97,7 +97,7 @@ export function createHyperframesAwsLambdaClient(region: string): HyperframesAws
     async stop(input) {
       await sfn.send(new StopExecutionCommand({
         executionArn: input.executionArn,
-        error: "NarratageBuildCancelled",
+        error: "HypitBuildCancelled",
         cause: input.reason,
       }));
     },

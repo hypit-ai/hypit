@@ -1,7 +1,7 @@
-import { compositableSurfaceSchema, fontArtifactSchema, mediaDependency } from "@narratage/media";
-import { programSpaceDependency } from "@narratage/program-space";
-import type { ValueSchema } from "@narratage/protocol";
-import { VISUAL_IR_V1, VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@narratage/visual-ir";
+import { compositableSurfaceSchema, fontArtifactSchema, mediaDependency } from "@hypit/media";
+import { programSpaceDependency } from "@hypit/program-space";
+import type { ValueSchema } from "@hypit/protocol";
+import { VISUAL_IR_V1, VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@hypit/visual-ir";
 export { mediaDependency, programSpaceDependency };
 const string = { kind: "string", minLength: 1 } as const; const number = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const; const signedInteger = { kind: "number", integer: true } as const;

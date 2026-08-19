@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/provider-image-opencv-local",
+  "name": "@hypit/provider-image-opencv-local",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,19 +7,19 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/artifact": "workspace:*",
-    "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/raster": "workspace:*",
-    "@narratage/runtime-kit": "workspace:*",
-    "@narratage/runtime-host-node": "workspace:*"
+    "@hypit/artifact": "workspace:*",
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/raster": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*",
+    "@hypit/runtime-host-node": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/driver-node": "workspace:*",
-    "@narratage/image-transform": "workspace:*"
+    "@hypit/driver-node": "workspace:*",
+    "@hypit/image-transform": "workspace:*"
   }
 }

@@ -8,15 +8,15 @@ import {
   createRuntimeArtifactStoreAdapterFacet,
   createRuntimeEndpointAdapterFacet,
   RuntimeAdapterRegistry,
-} from "@narratage/runtime-kit";
-import { MemoryArtifactStore } from "@narratage/driver-node";
-import { SqliteRuntimeState } from "@narratage/store-sqlite";
+} from "@hypit/runtime-kit";
+import { MemoryArtifactStore } from "@hypit/driver-node";
+import { SqliteRuntimeState } from "@hypit/store-sqlite";
 import {
   createRuntimeArchiveFromConfig,
   createRuntimeArtifactAccessFromConfig,
   doctorRuntimeConfig,
   parseRuntimeConfig,
-} from "@narratage/runtime-local";
+} from "@hypit/runtime-local";
 
 function profile(config: {
   readonly dataRoot?: string;
@@ -25,11 +25,11 @@ function profile(config: {
   readonly endpoints?: Readonly<Record<string, unknown>>;
 } = {}) {
   return {
-    format: "narratage.runtime-profile@1",
+    format: "hypit.runtime-profile@1",
     runtime: {
-      use: "@narratage/runtime-local",
+      use: "@hypit/runtime-local",
       config: {
-        dataRoot: config.dataRoot ?? ".narratage/runtimes/local",
+        dataRoot: config.dataRoot ?? ".hypit/runtimes/local",
         artifacts: config.artifacts ?? { use: "example.artifacts" },
         credentials: config.credentials ?? {},
         endpoints: config.endpoints ?? {},
@@ -43,7 +43,7 @@ test("Runtime Profile names the stores and Endpoints used by one local Runtime",
     credentials: { secrets: { use: "example.credentials" } },
     endpoints: { generation: { use: "example.provider", pool: "shared" } },
   }));
-  assert.equal(parsed.dataRoot, ".narratage/runtimes/local");
+  assert.equal(parsed.dataRoot, ".hypit/runtimes/local");
   assert.deepEqual(parsed.artifacts, { use: "example.artifacts", instance: "artifacts" });
   assert.deepEqual(parsed.credentials, [{ use: "example.credentials", instance: "secrets" }]);
   assert.deepEqual(parsed.endpoints, [{ use: "example.provider", instance: "generation", pool: "shared" }]);
@@ -54,8 +54,8 @@ test("Runtime Profile rejects source ownership fields", () => {
 });
 
 test("archive inspection opens SQLite only; Artifact access opens the selected Store", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-runtime-slice-"));
-  const path = join(root, "narratage.runtime.json");
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-slice-"));
+  const path = join(root, "hypit.runtime.json");
   await writeFile(path, JSON.stringify(profile({ dataRoot: "." })));
   const state = new SqliteRuntimeState(join(root, "runtime.sqlite"));
   state.close();
@@ -83,8 +83,8 @@ test("archive inspection opens SQLite only; Artifact access opens the selected S
 });
 
 test("doctor reports a down Managed Program", async () => {
-  const root = await mkdtemp(join(tmpdir(), "narratage-runtime-program-"));
-  const path = join(root, "narratage.runtime.json");
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-program-"));
+  const path = join(root, "hypit.runtime.json");
   await writeFile(path, JSON.stringify(profile({
     dataRoot: ".",
     endpoints: { speech: { use: "example.speech" } },

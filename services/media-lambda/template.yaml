@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Narratage media execution service: FFmpeg Layer, function, immutable version, role and logs."
+Description: "Hypit media execution service: FFmpeg Layer, function, immutable version, role and logs."
 
 Parameters:
   EnvironmentName:
@@ -60,7 +60,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Ref ExecutionRoleName
-      Description: !Sub "Narratage media execution role for ${EnvironmentName}"
+      Description: !Sub "Hypit media execution role for ${EnvironmentName}"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -69,7 +69,7 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: NarratageMediaArtifactsAndLogs
+        - PolicyName: HypitMediaArtifactsAndLogs
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -107,7 +107,7 @@ Resources:
     DependsOn: MediaLogGroup
     Properties:
       FunctionName: !Ref FunctionName
-      Description: Narratage remote media execution
+      Description: Hypit remote media execution
       Runtime: nodejs22.x
       RuntimeManagementConfig:
         UpdateRuntimeOn: FunctionUpdate
@@ -127,11 +127,11 @@ Resources:
       ReservedConcurrentExecutions: !Ref ReservedConcurrency
       Environment:
         Variables:
-          NARRATAGE_MEDIA_BUNDLE_HASH: !Ref FunctionBundleHash
-          NARRATAGE_FFMPEG_VERSION: "8.0.1"
+          HYPIT_MEDIA_BUNDLE_HASH: !Ref FunctionBundleHash
+          HYPIT_FFMPEG_VERSION: "8.0.1"
           FFMPEG_PATH: /opt/bin/ffmpeg
           FFPROBE_PATH: /opt/bin/ffprobe
-          NARRATAGE_FFMPEG_LIBRARY_PATH: /opt/lib
+          HYPIT_FFMPEG_LIBRARY_PATH: /opt/lib
 
   MediaFunctionVersion:
     Type: AWS::Lambda::Version
@@ -144,7 +144,7 @@ Resources:
 
 Outputs:
   FunctionVersionArn:
-    Description: Immutable function ARN for @narratage/provider-media-aws-lambda.
+    Description: Immutable function ARN for @hypit/provider-media-aws-lambda.
     Value: !Ref MediaFunctionVersion
   LayerVersionArn:
     Description: Immutable FFmpeg Layer version used by the function.
@@ -156,5 +156,5 @@ Outputs:
   RuntimeProfileEndpoint:
     Description: Endpoint entry; parse this output as JSON.
     Value: !Sub
-      - '{"use":"@narratage/provider-media-aws-lambda","instance":"media.aws-lambda.${EnvironmentName}","lane":"media","config":{"functionArn":"${FunctionVersionArn}","bucket":"${ArtifactBucket}","region":"${AWS::Region}","defaultConcurrency":${ReservedConcurrency}}}'
+      - '{"use":"@hypit/provider-media-aws-lambda","instance":"media.aws-lambda.${EnvironmentName}","lane":"media","config":{"functionArn":"${FunctionVersionArn}","bucket":"${ArtifactBucket}","region":"${AWS::Region}","defaultConcurrency":${ReservedConcurrency}}}'
       - FunctionVersionArn: !Ref MediaFunctionVersion

@@ -1,18 +1,18 @@
-import { canonicalStringify, isDigest } from "@narratage/protocol";
-import type { BlobRef } from "@narratage/protocol";
+import { canonicalStringify, isDigest } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 
 import {
   assertVisualStyleV1,
   VISUAL_IR_V1,
-} from "@narratage/visual-ir";
+} from "@hypit/visual-ir";
 import {
   assertProgramSpaceIdentity,
   programSpaceFrameCount,
   programSpaceSampleFrames,
-} from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { assertCompositableSurfaceRef, assertFontArtifactRef } from "@narratage/media";
-import type { CompositableSurfaceRef, FontArtifactRef } from "@narratage/media";
+} from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { assertCompositableSurfaceRef, assertFontArtifactRef } from "@hypit/media";
+import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
 
 export type FrameSpan = {
   readonly startFrame: number;

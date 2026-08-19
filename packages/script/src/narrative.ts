@@ -1,13 +1,13 @@
-import { canonicalize } from "@narratage/protocol";
-import type { CanonicalValue } from "@narratage/protocol";
+import { canonicalize } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
 import type {
   CaptionCorrespondence,
   CaptionDisplayAtom,
   CaptionDisplaySequence,
   CaptionDisplayWord,
   CaptionDisplayWordSubset,
-} from "@narratage/narrative";
-import { sealText } from "@narratage/text";
+} from "@hypit/narrative";
+import { sealText } from "@hypit/text";
 
 import type { ParsedCaptionRegion, ParsedNarrative } from "./types.js";
 

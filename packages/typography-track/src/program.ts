@@ -1,29 +1,29 @@
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
 import {
   assertCompleteSemanticMapIdentity,
   assertNarrativeMomentIdentity,
   assertNarrativeSelectionIdentity,
-} from "@narratage/semantic-map";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
+} from "@hypit/semantic-map";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
 import {
   assertSpatialFrame,
   assertSpatialPath,
   assertSpatialPoint,
-} from "@narratage/spatial";
-import type { SpatialFrame, SpatialPath, SpatialPoint } from "@narratage/spatial";
+} from "@hypit/spatial";
+import type { SpatialFrame, SpatialPath, SpatialPoint } from "@hypit/spatial";
 import {
   assertWindowRelation,
   projectMomentWindows,
   projectProgramWindow,
   projectSelectionWindows,
-} from "@narratage/temporal";
-import type { ProjectedOccurrence } from "@narratage/temporal";
+} from "@hypit/temporal";
+import type { ProjectedOccurrence } from "@hypit/temporal";
 import {
   assertVisualTrackIdentity,
   sealVisualTrack,
-} from "@narratage/composition";
+} from "@hypit/composition";
 import type {
   VisualElement,
   VisualPathTextElement,
@@ -31,12 +31,12 @@ import type {
   VisualTextElement,
   VisualTextFlowElement,
   VisualTrack,
-} from "@narratage/composition";
-import { assertCompositableSurfaceRef } from "@narratage/media";
-import type { CompositableSurfaceRef } from "@narratage/media";
-import { canonicalize } from "@narratage/protocol";
-import { verifyText } from "@narratage/text";
-import type { Text } from "@narratage/text";
+} from "@hypit/composition";
+import { assertCompositableSurfaceRef } from "@hypit/media";
+import type { CompositableSurfaceRef } from "@hypit/media";
+import { canonicalize } from "@hypit/protocol";
+import { verifyText } from "@hypit/text";
+import type { Text } from "@hypit/text";
 
 import type {
   TextGeometry,
@@ -113,7 +113,7 @@ export function assertTextStyle(style: TextStyle): void {
   }
   assertVisualTrackIdentity({
     kind: "visual",
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: "text-style-validation",
     presents: [{
       id: "style",
@@ -613,7 +613,7 @@ function elements(item: TextItem): VisualElement[] {
 export function renderTypographyTrack(space: ProgramSpace, program: TypographyTrackProgram): VisualTrack {
   assertTypographyTrackProgramIdentity(program, space);
   const track = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: program.id,
     presents: program.items.map((item) => ({
       id: item.id,
@@ -639,7 +639,7 @@ export function renderTextMaskTrack(
     throw new Error("Official Text Mask requires one explicit still material Surface; timed materials use an independent package.");
   }
   const track = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: spec.id,
     presents: program.items.map((item) => {
       assertMotionDomain(item);

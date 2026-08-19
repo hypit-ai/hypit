@@ -1,8 +1,8 @@
-import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
-import { defineExactModelModule } from "@narratage/model-kit";
+import { sealGenerationPortRequest, sealGenerationPortTable } from "@hypit/generation";
+import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import { defineExactModelModule } from "@hypit/model-kit";
 
-export const nanoBananaModuleRef = { name: "@narratage/nano-banana", version: "1" } as const;
+export const nanoBananaModuleRef = { name: "@hypit/nano-banana", version: "1" } as const;
 export const nanoBananaModels = ["nano-banana-2", "nano-banana-pro"] as const;
 export type NanoBananaModel = typeof nanoBananaModels[number];
 

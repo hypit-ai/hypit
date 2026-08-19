@@ -11,9 +11,9 @@ import type {
   StoredValue,
   TypeRef,
   TypedRecord,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
-import { canonicalize } from "@narratage/protocol";
+import { canonicalize } from "@hypit/protocol";
 import { invariant } from "./error.js";
 import { resolveProducer, verifyRecordStructure } from "./link.js";
 import { producerKey, sameType, typeKey } from "./reference.js";
@@ -119,7 +119,7 @@ export function sealCompiledGraph(
     operations: [...graph.operations].map(normalizeOperation).sort((a, b) => a.id.localeCompare(b.id)),
   };
   return {
-    format: "narratage.graph@1" as const,
+    format: "hypit.graph@1" as const,
     ...normalized,
   };
 }
@@ -131,7 +131,7 @@ export function sealBuildRequest(
     .map((target) => ({ output: target.output }))
     .sort((a, b) => a.output.localeCompare(b.output));
   return {
-    format: "narratage.build-request@1" as const,
+    format: "hypit.build-request@1" as const,
     targets,
   };
 }
@@ -270,7 +270,7 @@ function verifySatisfaction(
 }
 
 export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph): void {
-  invariant(graph.format === "narratage.graph@1", "UNSUPPORTED_GRAPH", "unsupported compiled graph format");
+  invariant(graph.format === "hypit.graph@1", "UNSUPPORTED_GRAPH", "unsupported compiled graph format");
   const outputIds = new Set<string>();
   const candidateIds = new Set<string>();
   const operationIds = new Set<string>();
@@ -320,7 +320,7 @@ export function verifyBuildRequest(
 ): void {
   verifyCompiledGraph(program, graph);
   invariant(
-    request.format === "narratage.build-request@1",
+    request.format === "hypit.build-request@1",
     "UNSUPPORTED_BUILD_REQUEST",
     "unsupported BuildRequest format",
   );

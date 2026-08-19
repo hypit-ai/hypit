@@ -1,10 +1,10 @@
-# `@narratage/nano-banana`
+# `@hypit/nano-banana`
 
 Exact author/compute contracts and package-owned author Surfaces for Nano Banana 2 and Nano Banana Pro.
 
 The model variants are separate endpoints with exact request validation. Their Surfaces project the
 primary result to an ordinary image Artifact. The package contains no Provider selection, API key or
-network execution; `@narratage/provider-kie` is one optional Runtime implementation.
+network execution; `@hypit/provider-kie` is one optional Runtime implementation.
 
 Import the model variant you mean and connect prompt and references as ordinary graph edges:
 

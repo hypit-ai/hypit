@@ -1,6 +1,6 @@
-import { applyCaptionMute, assertCaptionProgramForDisplay, assertTimedCaptionProjection } from "@narratage/caption";
-import type { CaptionProgram, TimedCaptionProjection } from "@narratage/caption";
-import { assertVisualTrackIdentity, sealVisualTrack } from "@narratage/composition";
+import { applyCaptionMute, assertCaptionProgramForDisplay, assertTimedCaptionProjection } from "@hypit/caption";
+import type { CaptionProgram, TimedCaptionProjection } from "@hypit/caption";
+import { assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
 import type {
   VisualAnimation,
   VisualBoxElement,
@@ -9,10 +9,10 @@ import type {
   VisualStyleDeclaration,
   VisualTextElement,
   VisualTrack,
-} from "@narratage/composition";
-import type { CaptionDisplayAtom, CaptionDisplaySequence } from "@narratage/narrative";
-import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
+} from "@hypit/composition";
+import type { CaptionDisplayAtom, CaptionDisplaySequence } from "@hypit/narrative";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
 
 import { assertFineCaptionParameters, FINE_CAPTION_FAMILY } from "./style.js";
 import type {
@@ -758,7 +758,7 @@ export function renderFineCaption(
     }];
   });
   const track = sealVisualTrack({
-    visualIr: "narratage.visual-ir@1",
+    visualIr: "hypit.visual-ir@1",
     id: program.id,
     presents,
   });

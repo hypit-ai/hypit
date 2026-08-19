@@ -1,9 +1,9 @@
-import type { VisualPresent } from "@narratage/composition";
-import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import type { BlobRef } from "@narratage/protocol";
-import { assertContentFit, assertIntrinsicExtent, assertSpatialFrame } from "@narratage/spatial";
-import type { ContentFit, IntrinsicExtent, SpatialFrame } from "@narratage/spatial";
+import type { VisualPresent } from "@hypit/composition";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import type { BlobRef } from "@hypit/protocol";
+import { assertContentFit, assertIntrinsicExtent, assertSpatialFrame } from "@hypit/spatial";
+import type { ContentFit, IntrinsicExtent, SpatialFrame } from "@hypit/spatial";
 
 import { lowerMediaItemElements } from "./lower.js";
 import type { MediaItemProgram } from "./types.js";

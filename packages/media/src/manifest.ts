@@ -1,7 +1,7 @@
-import { artifactDependency, artifactTypes } from "@narratage/artifact";
-import type { ModuleManifest, TypeRef } from "@narratage/protocol";
+import { artifactDependency, artifactTypes } from "@hypit/artifact";
+import type { ModuleManifest, TypeRef } from "@hypit/protocol";
 import { compositableSurfaceSchema, fontArtifactSchema, fontStackSchema, mediaInspectionSchema, mediaStreamSelectionSchema, muxedMediaSchema, renderedVisualSchema, synchronizedMediaSchema, timelineAudioSchema } from "./schema.js";
-export const mediaModuleRef = { name: "@narratage/media", version: "1" } as const;
+export const mediaModuleRef = { name: "@hypit/media", version: "1" } as const;
 export const mediaTypes = {
   inspection: { module: mediaModuleRef, name: "MediaInspection" },
   streamSelection: { module: mediaModuleRef, name: "MediaStreamSelection" }, synchronized: { module: mediaModuleRef, name: "SynchronizedMedia" },
@@ -18,7 +18,7 @@ export const mediaMarkupSurfaces = [
   ] as const;
 
 export const mediaManifest: ModuleManifest = {
-  format: "narratage.module@1", name: mediaModuleRef.name, version: mediaModuleRef.version, dependencies: [artifactDependency],
+  format: "hypit.module@1", name: mediaModuleRef.name, version: mediaModuleRef.version, dependencies: [artifactDependency],
   types: [
     { name: mediaTypes.inspection.name },
     { name: mediaTypes.streamSelection.name },

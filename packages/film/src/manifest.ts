@@ -1,10 +1,10 @@
-import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@narratage/composition";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
-import { spatialDependency, spatialTypes } from "@narratage/spatial";
-import { svsManifest, svsModuleRef } from "@narratage/svs";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@hypit/composition";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { spatialDependency, spatialTypes } from "@hypit/spatial";
+import { svsManifest, svsModuleRef } from "@hypit/svs";
 
-export const filmModuleRef = { name: "@narratage/film", version: "1" } as const;
+export const filmModuleRef = { name: "@hypit/film", version: "1" } as const;
 export const filmTypes = {
   program: { module: filmModuleRef, name: "FilmProgram" },
   trackSet: { module: filmModuleRef, name: "FilmTrackSet" },
@@ -47,7 +47,7 @@ export const filmMarkupSurfaces = [{
 
 
 export const filmManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: filmModuleRef.name,
   version: filmModuleRef.version,
   dependencies: [

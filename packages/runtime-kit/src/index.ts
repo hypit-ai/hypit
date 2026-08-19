@@ -1,12 +1,12 @@
-import type { EndpointPackage } from "@narratage/endpoint-kit";
-import type { HostFacet } from "@narratage/host";
-import type { CanonicalValue } from "@narratage/protocol";
-import { credentialRef } from "@narratage/runtime";
-import type { ArtifactStore, CredentialRef, CredentialStore } from "@narratage/runtime";
+import type { EndpointPackage } from "@hypit/endpoint-kit";
+import type { HostFacet } from "@hypit/host";
+import type { CanonicalValue } from "@hypit/protocol";
+import { credentialRef } from "@hypit/runtime";
+import type { ArtifactStore, CredentialRef, CredentialStore } from "@hypit/runtime";
 
-export const runtimeEndpointAdapterHostAbi = "narratage.runtime-endpoint-adapter-host@1";
-export const runtimeArtifactStoreAdapterHostAbi = "narratage.runtime-artifact-store-adapter-host@1";
-export const runtimeCredentialStoreAdapterHostAbi = "narratage.runtime-credential-store-adapter-host@1";
+export const runtimeEndpointAdapterHostAbi = "hypit.runtime-endpoint-adapter-host@1";
+export const runtimeArtifactStoreAdapterHostAbi = "hypit.runtime-artifact-store-adapter-host@1";
+export const runtimeCredentialStoreAdapterHostAbi = "hypit.runtime-credential-store-adapter-host@1";
 
 export type RuntimeAdapterKind = "endpoint" | "artifact-store" | "credential-store";
 

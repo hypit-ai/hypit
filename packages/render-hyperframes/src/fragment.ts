@@ -1,9 +1,9 @@
-import { artifactTypes } from "@narratage/artifact";
-import { programSpaceTypes } from "@narratage/program-space";
-import { compositionTypes } from "@narratage/composition";
-import { sealGraphFragment } from "@narratage/elaborator";
-import { hyperframesProducers } from "@narratage/hyperframes";
-import { mediaPipelineProducers } from "@narratage/media-pipeline";
+import { artifactTypes } from "@hypit/artifact";
+import { programSpaceTypes } from "@hypit/program-space";
+import { compositionTypes } from "@hypit/composition";
+import { sealGraphFragment } from "@hypit/elaborator";
+import { hyperframesProducers } from "@hypit/hyperframes";
+import { mediaPipelineProducers } from "@hypit/media-pipeline";
 
 import {
   renderHyperframesProducers,

@@ -10,7 +10,7 @@ import type {
   ResolvedTypeDeclaration,
   TypeRef,
   TypedRecord,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 import { invariant } from "./error.js";
 import { capabilityKey, moduleKey, producerKey, typeKey } from "./reference.js";
@@ -52,7 +52,7 @@ export function createResolvedClosure(
 ): ResolvedModuleClosure {
   const modules = manifests.map((manifest) => ({ manifest: structuredClone(manifest) }));
   return {
-    format: "narratage.closure@1",
+    format: "hypit.closure@1",
     modules,
   };
 }
@@ -67,7 +67,7 @@ function ensureUniqueNames(names: readonly string[], kind: string, owner: string
 }
 
 export function verifyClosure(closure: ResolvedModuleClosure): void {
-  invariant(closure.format === "narratage.closure@1", "UNSUPPORTED_CLOSURE", "unsupported closure format");
+  invariant(closure.format === "hypit.closure@1", "UNSUPPORTED_CLOSURE", "unsupported closure format");
 
   const modules = new Map<string, ResolvedModule>();
   const declaredTypes = new Set<string>();
@@ -77,7 +77,7 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
     const key = moduleKey(ref);
     invariant(ref.name.length > 0, "EMPTY_MODULE_NAME", "module name is empty");
     invariant(ref.version.length > 0, "EMPTY_MODULE_VERSION", `${ref.name} version is empty`);
-    invariant(module.manifest.format === "narratage.module@1", "UNSUPPORTED_MODULE", `${key} format is unsupported`);
+    invariant(module.manifest.format === "hypit.module@1", "UNSUPPORTED_MODULE", `${key} format is unsupported`);
     invariant(!modules.has(key), "DUPLICATE_MODULE", `duplicate module ${key}`, key);
     ensureUniqueNames(module.manifest.types.map((item) => item.name), "type", key);
     ensureUniqueNames(module.manifest.capabilities.map((item) => item.name), "capability", key);

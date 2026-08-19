@@ -14,7 +14,7 @@ def main() -> None:
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     )
     config = ServiceConfig.from_environment()
-    logging.getLogger("narratage.whisperx").info(
+    logging.getLogger("hypit.whisperx").info(
         "loading model=%s device=%s compute=%s batch=%d",
         config.model,
         config.device,

@@ -7,9 +7,9 @@ import { join } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
 
-import { s3ArtifactKey } from "@narratage/artifact-store-s3";
-import type { S3ObjectClient } from "@narratage/artifact-store-s3";
-import type { Digest } from "@narratage/protocol";
+import { s3ArtifactKey } from "@hypit/artifact-store-s3";
+import type { S3ObjectClient } from "@hypit/artifact-store-s3";
+import type { Digest } from "@hypit/protocol";
 
 import { createMediaLambdaHandler } from "../src/handler.js";
 
@@ -43,7 +43,7 @@ async function ffmpegAvailable(): Promise<boolean> {
 test("the function answers a real Need with real media, over a bucket it addresses like the store does",
   { skip: (await ffmpegAvailable()) ? false : "ffmpeg and ffprobe are not on PATH" },
   async () => {
-    const work = await mkdtemp(join(tmpdir(), "narratage-media-lambda-"));
+    const work = await mkdtemp(join(tmpdir(), "hypit-media-lambda-"));
     try {
       // One second of real audio, so ffprobe has something true to report.
       const path = join(work, "source.wav");
@@ -58,7 +58,7 @@ test("the function answers a real Need with real media, over a bucket it address
 
       const handle = createMediaLambdaHandler({ client: bucket, ffmpegPath: "ffmpeg", ffprobePath: "ffprobe" });
       const reply = await handle({
-        contract: "narratage.media-lambda-request@1",
+        contract: "hypit.media-lambda-request@1",
         operation: "inspect",
         artifacts: { bucket: "fixture", prefix: "svml" },
         constraints: {
@@ -83,7 +83,7 @@ test("the function answers a real Need with real media, over a bucket it address
 test("a source the bucket does not hold is a typed failure, never a throw", async () => {
   const handle = createMediaLambdaHandler({ client: new Bucket() });
   const reply = await handle({
-    contract: "narratage.media-lambda-request@1",
+    contract: "hypit.media-lambda-request@1",
     operation: "inspect",
     artifacts: { bucket: "fixture" },
     constraints: {
@@ -97,9 +97,9 @@ test("a source the bucket does not hold is a typed failure, never a throw", asyn
 
 test("an envelope from another contract is refused before any media is touched", async () => {
   const handle = createMediaLambdaHandler({ client: new Bucket() });
-  const reply = await handle({ contract: "narratage.media-lambda-request@invalid" }) as Record<string, unknown>;
+  const reply = await handle({ contract: "hypit.media-lambda-request@invalid" }) as Record<string, unknown>;
   assert.equal(reply.ok, false);
-  assert.match(String(reply.message), /contract must be narratage\.media-lambda-request@1/u);
+  assert.match(String(reply.message), /contract must be hypit\.media-lambda-request@1/u);
 });
 
 test("a Layer that lies about its FFmpeg version fails before reading an Artifact",
@@ -112,7 +112,7 @@ test("a Layer that lies about its FFmpeg version fails before reading an Artifac
       expectedFfmpegVersion: "0.0.0-impossible",
     });
     const reply = await handle({
-      contract: "narratage.media-lambda-request@1",
+      contract: "hypit.media-lambda-request@1",
       operation: "inspect",
       artifacts: { bucket: "fixture" },
       constraints: {

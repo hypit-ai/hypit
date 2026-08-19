@@ -5,14 +5,14 @@ import { fixtureDigest } from "../../../test/fixture-digest.js";
 import {
   MemoryArtifactStore,
   EndpointRegistry,
-} from "@narratage/driver-node";
-import type { EndpointRegistration } from "@narratage/driver-node";
-import type { AsyncEndpoint } from "@narratage/endpoint-kit";
-import { artifactTypes } from "@narratage/artifact";
-import { backgroundRemovalCapabilities, backgroundRemovalRequest } from "@narratage/background-removal";
-import { seedanceEndpoints, sealSeedanceRequest } from "@narratage/seedance";
-import type { CanonicalValue, Need } from "@narratage/protocol";
-import { createKieProvider } from "@narratage/provider-kie";
+} from "@hypit/driver-node";
+import type { EndpointRegistration } from "@hypit/driver-node";
+import type { AsyncEndpoint } from "@hypit/endpoint-kit";
+import { artifactTypes } from "@hypit/artifact";
+import { backgroundRemovalCapabilities, backgroundRemovalRequest } from "@hypit/background-removal";
+import { seedanceEndpoints, sealSeedanceRequest } from "@hypit/seedance";
+import type { CanonicalValue, Need } from "@hypit/protocol";
+import { createKieProvider } from "@hypit/provider-kie";
 
 function need(constraints: CanonicalValue): Need {
   return {

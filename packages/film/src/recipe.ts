@@ -1,4 +1,4 @@
-import type { SvsRecipe } from "@narratage/svs";
+import type { SvsRecipe } from "@hypit/svs";
 
 /**
  * The Film Recipe owns Film appearance only. Canvas geometry and ProgramSpace

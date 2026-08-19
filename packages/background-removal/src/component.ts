@@ -1,5 +1,5 @@
-import type { ComponentPackage, ProducerHandlerContext } from "@narratage/component-kit";
-import type { StoredValue } from "@narratage/protocol";
+import type { ComponentPackage, ProducerHandlerContext } from "@hypit/component-kit";
+import type { StoredValue } from "@hypit/protocol";
 
 import { backgroundRemovalProducers } from "./manifest.js";
 import { backgroundRemovalRequest } from "./program.js";

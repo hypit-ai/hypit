@@ -1,13 +1,13 @@
-import { mediaTypes } from "@narratage/media";
-import { artifactTypes } from "@narratage/artifact";
-import { mediaPipelineCapabilities } from "@narratage/media-pipeline";
-import { canonicalize } from "@narratage/protocol";
-import type { BlobRef, CanonicalValue } from "@narratage/protocol";
-import { speechTypes } from "@narratage/speech";
-import { defineEndpointPackage } from "@narratage/endpoint-kit";
-import type { EndpointFulfillment, EndpointInvocationContext } from "@narratage/endpoint-kit";
-import { AwsLambdaJsonInvoker } from "@narratage/transport-aws-lambda";
-import type { JsonInvoker } from "@narratage/transport-aws-lambda";
+import { mediaTypes } from "@hypit/media";
+import { artifactTypes } from "@hypit/artifact";
+import { mediaPipelineCapabilities } from "@hypit/media-pipeline";
+import { canonicalize } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue } from "@hypit/protocol";
+import { speechTypes } from "@hypit/speech";
+import { defineEndpointPackage } from "@hypit/endpoint-kit";
+import type { EndpointFulfillment, EndpointInvocationContext } from "@hypit/endpoint-kit";
+import { AwsLambdaJsonInvoker } from "@hypit/transport-aws-lambda";
+import type { JsonInvoker } from "@hypit/transport-aws-lambda";
 
 import {
   MEDIA_LAMBDA_REQUEST,
@@ -17,7 +17,7 @@ import {
 import type { MediaLambdaOperation } from "./contract.js";
 
 export const awsLambdaMediaProviderModuleRef = {
-  name: "@narratage/provider-media-aws-lambda",
+  name: "@hypit/provider-media-aws-lambda",
   version: "1",
 } as const;
 

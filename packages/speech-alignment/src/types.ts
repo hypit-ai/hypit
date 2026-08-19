@@ -4,13 +4,13 @@ export type {
   SpeechCharacterEvidence,
   SpeechTranscriptPassage,
   SpeechWordEvidence,
-} from "@narratage/speech-evidence";
+} from "@hypit/speech-evidence";
 export type {
   CompleteSemanticMap,
   SemanticTimePoint,
   TimedSpeechToken,
-} from "@narratage/semantic-map";
-export type { SpeechAudioBasis } from "@narratage/speech";
+} from "@hypit/semantic-map";
+export type { SpeechAudioBasis } from "@hypit/speech";
 
 /** Private vocabulary of the alignment implementation, not part of SemanticMap. */
 export type AlignmentRelation =

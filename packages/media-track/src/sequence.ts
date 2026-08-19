@@ -3,19 +3,19 @@ import type {
   VisualEasing,
   VisualPresent,
   VisualStyleDeclaration,
-} from "@narratage/composition";
-import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
-import { canonicalize } from "@narratage/protocol";
-import { assertCanvasSpace, assertSpatialFrame } from "@narratage/spatial";
-import type { CanvasSpace } from "@narratage/spatial";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
+} from "@hypit/composition";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
+import { canonicalize } from "@hypit/protocol";
+import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
+import type { CanvasSpace } from "@hypit/spatial";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
 import {
   locateMomentOccurrences,
   locateSelectionOccurrences,
   resolveTriggeredSchedule,
-} from "@narratage/temporal";
+} from "@hypit/temporal";
 
 import { assertMediaIdentity, assertMediaLayerSet } from "./layers.js";
 import { lowerMediaItemElements } from "./lower.js";

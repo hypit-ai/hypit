@@ -4,15 +4,15 @@ import test from "node:test";
 import {
   defineEndpointPackage,
   wakeAfter,
-} from "@narratage/endpoint-kit";
+} from "@hypit/endpoint-kit";
 import type {
   EndpointRegistrar,
   EndpointRegistrationOptions,
   ImmediateEndpointHandler,
   AsyncEndpoint,
-} from "@narratage/endpoint-kit";
-import type { CapabilityRef, TypeRef } from "@narratage/protocol";
-import { credentialRef } from "@narratage/runtime";
+} from "@hypit/endpoint-kit";
+import type { CapabilityRef, TypeRef } from "@hypit/protocol";
+import { credentialRef } from "@hypit/runtime";
 
 import { capabilities, types } from "../../core/test/greeting-fixture.js";
 

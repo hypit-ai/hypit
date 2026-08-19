@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/seedance-kits",
+  "name": "@hypit/seedance-kits",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -18,7 +18,7 @@
     "README.md"
   ],
   "devDependencies": {
-    "@narratage/svs": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@hypit/svs": "workspace:*",
+    "@hypit/text": "workspace:*"
   }
 }

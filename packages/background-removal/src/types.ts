@@ -1,4 +1,4 @@
-import type { BlobRef } from "@narratage/protocol";
+import type { BlobRef } from "@hypit/protocol";
 
 export type BackgroundRemovalRequest = {
   readonly source: BlobRef;

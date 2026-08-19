@@ -4,8 +4,8 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@narratage/runtime-kit";
-import type { RuntimeAdapterFactoryContext } from "@narratage/runtime-kit";
+} from "@hypit/runtime-kit";
+import type { RuntimeAdapterFactoryContext } from "@hypit/runtime-kit";
 
 import { createAwsLambdaMediaProvider } from "./provider.js";
 import type { CreateAwsLambdaMediaProviderOptions } from "./provider.js";
@@ -51,7 +51,7 @@ function providerOptions(context: RuntimeAdapterFactoryContext): CreateAwsLambda
 }
 
 const awsLambdaMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@narratage/provider-media-aws-lambda",
+  use: "@hypit/provider-media-aws-lambda",
   activate(context) {
     return { endpoint: createAwsLambdaMediaProvider(providerOptions(context)) };
   },
@@ -60,9 +60,9 @@ const awsLambdaMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   // read-only deployment probe is added.
 });
 
-export const narratagePackage = {
-  format: "narratage.node-package@1" as const,
+export const hypitPackage = {
+  format: "hypit.node-package@1" as const,
   hostFacets: [awsLambdaMediaRuntimeAdapter],
 };
 
-export default narratagePackage;
+export default hypitPackage;

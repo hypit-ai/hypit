@@ -1,8 +1,8 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { CaptionProgram } from "@narratage/caption";
-import type { CaptionDisplaySequence } from "@narratage/narrative";
-import type { StoredValue } from "@narratage/protocol";
-import { canonicalize } from "@narratage/protocol";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { CaptionProgram } from "@hypit/caption";
+import type { CaptionDisplaySequence } from "@hypit/narrative";
+import type { StoredValue } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 
 import { captionGeminiProducers, captionGeminiTypes } from "./manifest.js";
 import { verifyCaptionGeminiProgram } from "./program.js";

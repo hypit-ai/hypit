@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/visual-ir",
+  "name": "@hypit/visual-ir",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,10 +7,10 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/protocol": "workspace:*"
+    "@hypit/protocol": "workspace:*"
   }
 }

@@ -12,19 +12,19 @@ stores and Provider endpoints that execute the resulting plan.
 Select the project Runtime once:
 
 ```bash
-narratage runtime use narratage.runtime.json
+hypit runtime use hypit.runtime.json
 ```
 
 Ordinary work then follows the short path:
 
 ```bash
-narratage plan build.svrun
-narratage build build.svrun --follow
-narratage get <build-id> --name final.video --to output/final.mp4
+hypit plan build.svrun
+hypit build build.svrun --follow
+hypit get <build-id> --name final.video --to output/final.mp4
 ```
 
 The Quickstart links the checkout's command once. Every command on this page then works as
-`narratage`, including from a separate video project.
+`hypit`, including from a separate video project.
 
 Only `build` submits work. `plan` is the normal preview. `check` is an editing aid; `doctor` is a
 deployment diagnostic. They are safe to run, but not mandatory ceremony before every Build.
@@ -32,7 +32,7 @@ deployment diagnostic. They are safe to run, but not mandatory ceremony before e
 ```text
 main.svml          author meaning
 build.svrun        this Run's Targets and Candidate choices
-narratage.runtime.json  execution environment
+hypit.runtime.json  execution environment
 ```
 
 Run Source and Runtime Profile do not silently rewrite the video. Creative model choices remain in
@@ -43,13 +43,13 @@ the Author Source or in packages that it explicitly imports.
 Every `.svrun` file begins with its processing instruction:
 
 ```svml
-<?svml using="@narratage/run-markup@1"?>
+<?svml using="@hypit/run-markup@1"?>
 ```
 
 ### Minimal Run Source
 
 ```svml
-<?svml using="@narratage/run-markup@1"?>
+<?svml using="@hypit/run-markup@1"?>
 
 <svrun version="1">
   <author source="./main.svml"/>
@@ -84,7 +84,7 @@ Source without duplicating it. For example, `images.svrun` may target image outp
 
 ## Reusing results
 
-Narratage has no implicit cache. Reusing a result is explicit Run Graph authoring — you declare
+Hypit has no implicit cache. Reusing a result is explicit Run Graph authoring — you declare
 historical Records as zero-input Candidates and connect them through Satisfaction edges.
 
 As soon as a generated image or take is accepted, reuse it explicitly in the next `.svrun` with
@@ -92,7 +92,7 @@ As soon as a generated image or take is accepted, reuse it explicitly in the nex
 Core has no Pin state or fidelity label.
 
 ```svml
-<?svml using="@narratage/run-markup@1"?>
+<?svml using="@hypit/run-markup@1"?>
 
 <svrun version="1">
   <author source="./main.svml"/>
@@ -119,7 +119,7 @@ Core has no Pin state or fidelity label.
 Query an output name as it appeared in each historical Build's frozen Host Catalog:
 
 ```bash
-narratage history hook-take.video
+hypit history hook-take.video
 ```
 
 `history` reports only public Logical Outputs that the Build actually produced. It
@@ -128,7 +128,7 @@ does not list merely declared-but-unbuilt aliases or authored Record aliases tha
 Catalog recorded an exact source path:
 
 ```bash
-narratage history --source ./main.svml
+hypit history --source ./main.svml
 ```
 
 An output name is a human locator inside one immutable historical Catalog, not its identity. The
@@ -142,7 +142,7 @@ current name on `<satisfy>`:
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
-Narratage never infers that two names mean the same author intent. Every `build` invocation receives
+Hypit never infers that two names mean the same author intent. Every `build` invocation receives
 a fresh Build id, which the CLI prints and the Runtime archives. Source identity never reclaims an
 earlier Build. A later Run reuses an accepted result only by naming that historical Build id here.
 
@@ -179,7 +179,7 @@ A local file is the simplest zero-input Candidate. The Run Source names the byte
 to one current Logical Output:
 
 ```svml
-<file id="approved-opening" type="@narratage/artifact@1#BlobArtifact" from="./approved-opening.mp4" media-type="video/mp4"/>
+<file id="approved-opening" type="@hypit/artifact@1#BlobArtifact" from="./approved-opening.mp4" media-type="video/mp4"/>
 <satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
@@ -195,11 +195,11 @@ configures Provider endpoints and capacity. It never defines the Source Workspac
 selection.
 
 ```bash
-narratage runtime use narratage.runtime.json
-narratage paths
+hypit runtime use hypit.runtime.json
+hypit paths
 ```
 
-`runtime use` writes only `.narratage/runtime`. It does not start a Worker, create Runtime data or
+`runtime use` writes only `.hypit/runtime`. It does not start a Worker, create Runtime data or
 change installed packages. See [Runtime](../guide/runtime.md) for the Profile schema and boundaries.
 
 ## Configure selected credentials
@@ -223,7 +223,7 @@ export KIE_API_KEY
 read -r -s MIMO_API_KEY
 export MIMO_API_KEY
 export GOOGLE_CLOUD_PROJECT="your-project-id"
-export GOOGLE_APPLICATION_CREDENTIALS_JSON="$(<"$HOME/.config/narratage/google-service-account.json")"
+export GOOGLE_APPLICATION_CREDENTIALS_JSON="$(<"$HOME/.config/hypit/google-service-account.json")"
 ```
 
 In Windows PowerShell:
@@ -232,7 +232,7 @@ In Windows PowerShell:
 $env:KIE_API_KEY = "your-key"
 $env:MIMO_API_KEY = "your-key"
 $env:GOOGLE_CLOUD_PROJECT = "your-project-id"
-$env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\narratage\google-service-account.json"
+$env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\hypit\google-service-account.json"
 ```
 
 Keep credentials out of Author Source, Run Source, Runtime Profile source, and committed files.
@@ -244,7 +244,7 @@ Keep credentials, generated media, Runtime data and logs out of commits. A proje
 
 ```bash
 cd /work/my-film
-narratage runtime use narratage.runtime.json
+hypit runtime use hypit.runtime.json
 ```
 
 The Workspace is the selected project or entry Source directory. Override it
@@ -252,7 +252,7 @@ only with `--workspace`. `--package-root` locates installed packages and never w
 `--asset-root` grants read access to additional asset bytes without permitting Source imports there.
 
 ```text
-.narratage/
+.hypit/
 output/
 ```
 
@@ -260,7 +260,7 @@ output/
 
 ```bash
 cd examples/talking-head-aroll
-narratage runtime use narratage.runtime.json
+hypit runtime use hypit.runtime.json
 ```
 
 Author and Run Sources select their packages through imports. The Runtime Profile selects its Host,
@@ -269,7 +269,7 @@ infrastructure and Provider packages through `use`. The installed package manage
 ### 2. Diagnose the environment
 
 ```bash
-narratage doctor
+hypit doctor
 ```
 
 Doctor validates every selected Runtime role, Endpoint configuration, credential
@@ -283,11 +283,11 @@ readiness.
 ### 3. Check source and inspect the plan
 
 ```bash
-narratage check main.svml
+hypit check main.svml
 ```
 
 ```bash
-narratage plan build.svrun
+hypit plan build.svrun
 ```
 
 Review the frozen BuildPlan before spending money. The plan shows every Operation and Needs the
@@ -301,7 +301,7 @@ view for long lived processes declared by Endpoints.
 ### 4. Submit the Build
 
 ```bash
-narratage build build.svrun --follow
+hypit build build.svrun --follow
 ```
 
 Without `--follow`, `build` returns after durable submission. The detached Worker continues. With
@@ -311,7 +311,7 @@ interrupting it leaves the Build running.
 Attach or reattach an observer at any time:
 
 ```bash
-narratage status <build-id> --watch
+hypit status <build-id> --watch
 ```
 
 A plain `status <build-id>` prints one snapshot. `status --watch` exits at terminal state; use
@@ -332,14 +332,14 @@ Records and the same external task checkpoints; it never turns another invocatio
 ### 5. Inspect and retrieve results
 
 ```bash
-narratage inspect <build-id>
+hypit inspect <build-id>
 ```
 
 `inspect` reports durable Build state, demanded outputs, and accepted Records. Retrieve the selected
 archived Artifact only after those facts are correct:
 
 ```bash
-narratage get <build-id> \
+hypit get <build-id> \
   --name final.video \
   --to examples/talking-head-aroll/output/final.mp4
 ```
@@ -358,14 +358,14 @@ Create a new `.svrun` file that references the completed Build's Records (see [R
 above), then submit it:
 
 ```bash
-narratage build reuse-generated.svrun --follow
+hypit build reuse-generated.svrun --follow
 ```
 
 ### 7. Diagnose or stop the local Runtime
 
 ```bash
-narratage runtime logs
-narratage runtime down
+hypit runtime logs
+hypit runtime down
 ```
 
 `runtime down` stops the Worker from claiming more Builds but leaves external programs running.

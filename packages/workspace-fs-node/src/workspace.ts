@@ -7,14 +7,14 @@ import type {
   SourceAssetRequest,
   SourceImportRequest,
   SourceUnit,
-} from "@narratage/source";
+} from "@hypit/source";
 import type {
   ArtifactAttachment,
   Workspace,
   WorkspaceSession,
-} from "@narratage/workspace";
-import { WorkspaceError } from "@narratage/workspace";
-import type { BlobRef } from "@narratage/protocol";
+} from "@hypit/workspace";
+import { WorkspaceError } from "@hypit/workspace";
+import type { BlobRef } from "@hypit/protocol";
 
 function isWithin(root: string, path: string): boolean {
   const relation = relative(root, path);

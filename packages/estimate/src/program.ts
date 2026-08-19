@@ -1,6 +1,6 @@
-import type { Text } from "@narratage/text";
-import { assertSpeechDurationIdentity, sealSpeechDuration } from "@narratage/speech";
-import type { SpeechDuration } from "@narratage/speech";
+import type { Text } from "@hypit/text";
+import { assertSpeechDurationIdentity, sealSpeechDuration } from "@hypit/speech";
+import type { SpeechDuration } from "@hypit/speech";
 import { dictionary as cmuPronouncingDictionary } from "cmu-pronouncing-dictionary";
 
 import type {

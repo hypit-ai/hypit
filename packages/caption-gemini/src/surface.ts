@@ -1,10 +1,10 @@
-import { captionTypes } from "@narratage/caption";
-import { narrativeTypes } from "@narratage/narrative";
+import { captionTypes } from "@hypit/caption";
+import { narrativeTypes } from "@hypit/narrative";
 import type {
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import { captionGeminiPlanningFragment } from "./fragment.js";
 import { captionGeminiTypes } from "./manifest.js";

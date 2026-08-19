@@ -20,7 +20,7 @@ pnpm svml:playground -- --source examples/all-components-preview/main.svml
 | --- | --- |
 | `--source <main.svml>` | The Author Source to read. Required. |
 | `--run <build.svrun>` | A Run Source, read for material and timings it already names. |
-| `--runtime <narratage.runtime.json>` | Where material earlier Builds produced is kept. Only a Source that reuses an accepted shot through `<build-record>` needs one. |
+| `--runtime <hypit.runtime.json>` | Where material earlier Builds produced is kept. Only a Source that reuses an accepted shot through `<build-record>` needs one. |
 | `--port <number>` | Defaults to `5179`. |
 
 Both optional arguments are additive. With neither, the Playground still runs on a directory holding
@@ -48,7 +48,7 @@ layout are computed by the same functions a build calls, from your Source and yo
 card in the wrong part of the frame is wrong here too.
 
 **Timings are estimated** until a build has aligned real audio. Word durations come from
-`@narratage/estimate`, the same syllable model the pipeline uses before generation. An estimated
+`@hypit/estimate`, the same syllable model the pipeline uses before generation. An estimated
 timeline is a proportion, not a prediction — real cut points move once WhisperX has run.
 
 **Missing material stands in**, and each stand-in is announced rather than presented as fact:
@@ -111,7 +111,7 @@ Source is read with is an authoring decision, so it is made in a Run Source — 
 [Run Source & Builds](./run):
 
 ```svml
-<file id="take-1" type="@narratage/artifact@1#BlobArtifact"
+<file id="take-1" type="@hypit/artifact@1#BlobArtifact"
   from="./assets/take-1.mp4" media-type="video/mp4"/>
 <satisfy output="take-opening.video" candidate="take-1"/>
 ```
@@ -122,7 +122,7 @@ it; without one, that shot alone is refused **by name** and everything else stil
 
 ## When an agent is doing the work
 
-If you are working through the [Narratage skill](https://github.com/hypit-ai/narratage/blob/main/.agents/skills/narratage/SKILL.md),
+If you are working through the [Hypit skill](https://github.com/hypit-ai/hypit/blob/main/.agents/skills/hypit/SKILL.md),
 the agent starts the Playground for you and sends you the link after each step that changes the
 Source — a Script edit, a Frame moved, a B-roll placed, a Recipe adjusted.
 

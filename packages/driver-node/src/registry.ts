@@ -4,17 +4,17 @@ import type {
   EndpointScheduling,
   ImmediateEndpointHandler,
   AsyncEndpoint,
-} from "@narratage/endpoint-kit";
+} from "@hypit/endpoint-kit";
 import type {
   ProducerRegistrar,
-} from "@narratage/component-kit";
+} from "@hypit/component-kit";
 import type {
   CapabilityRef,
   Need,
   ProducerRef,
   TypeRef,
-} from "@narratage/protocol";
-import { verifyCredentialRef } from "@narratage/runtime";
+} from "@hypit/protocol";
+import { verifyCredentialRef } from "@hypit/runtime";
 
 import type {
   ProducerHandler,

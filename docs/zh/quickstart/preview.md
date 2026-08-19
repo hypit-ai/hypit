@@ -18,7 +18,7 @@ pnpm svml:playground -- --source examples/all-components-preview/main.svml
 | --- | --- |
 | `--source <main.svml>` | 要读取的 Author Source。必填。 |
 | `--run <build.svrun>` | 一个 Run Source，从中读取它已经指名的素材与时序。 |
-| `--runtime <narratage.runtime.json>` | 早先 Build 产出的素材存放在哪里。只有通过 `<build-record>` 复用已接受镜头的 Source 才需要。 |
+| `--runtime <hypit.runtime.json>` | 早先 Build 产出的素材存放在哪里。只有通过 `<build-record>` 复用已接受镜头的 Source 才需要。 |
 | `--port <number>` | 默认 `5179`。 |
 
 两个可选参数是叠加的。两个都不给时，Playground 依然能在一个只有 `main.svml` 和 `.svs` 样式表的目录上运行，不需要 Runtime Profile 或已有 Build。
@@ -39,7 +39,7 @@ pkill -f svml-playground || true
 
 **所有结构性的东西都是真的。** Placement Frame、padding、堆叠顺序、动效以及 Track 布局，都由构建时调用的同一批函数、从你的 Source 和样式表算出。一张卡片如果在画面里的位置不对，在这里同样是不对的。
 
-**时序是估算的**，直到某次构建对真实音频做过对齐为止。词的时长来自 `@narratage/estimate`——正是流水线在生成之前使用的那套音节模型。估算出的时间线是一种比例，而不是一个预言：等 WhisperX 对齐了真实音频，实际的剪切点会移动。
+**时序是估算的**，直到某次构建对真实音频做过对齐为止。词的时长来自 `@hypit/estimate`——正是流水线在生成之前使用的那套音节模型。估算出的时间线是一种比例，而不是一个预言：等 WhisperX 对齐了真实音频，实际的剪切点会移动。
 
 **缺失的素材会有替身**，而且每个替身都会被明确标注，不会被当作事实呈现：
 
@@ -87,7 +87,7 @@ pkill -f svml-playground || true
 随着素材逐渐积累，同一个预览会越来越接近真实，而 `main.svml` 一个字都不用改。用什么去读一个 Source 是一项创作决策，因此它写在 Run Source 里——见 [Run Source 与 Build](./run)：
 
 ```svml
-<file id="take-1" type="@narratage/artifact@1#BlobArtifact"
+<file id="take-1" type="@hypit/artifact@1#BlobArtifact"
   from="./assets/take-1.mp4" media-type="video/mp4"/>
 <satisfy output="take-opening.video" candidate="take-1"/>
 ```
@@ -96,7 +96,7 @@ pkill -f svml-playground || true
 
 ## 当由 agent 来做这件事时
 
-如果你正在通过 [Narratage skill](https://github.com/hypit-ai/narratage/blob/main/.agents/skills/narratage/SKILL.md)工作，那么每当某个步骤改动了 Source——改了 Script、移了 Frame、放了 B-roll、调了 Recipe——agent 会为你启动 Playground 并把链接发给你。
+如果你正在通过 [Hypit skill](https://github.com/hypit-ai/hypit/blob/main/.agents/skills/hypit/SKILL.md)工作，那么每当某个步骤改动了 Source——改了 Script、移了 Frame、放了 B-roll、调了 Recipe——agent 会为你启动 Playground 并把链接发给你。
 
 读 diff 和亲眼看见空镜落在哪里不是一回事，而此刻正是说出"那张卡片太靠上了"的最便宜的时机——在任何一个 Provider 跑起来之前。
 

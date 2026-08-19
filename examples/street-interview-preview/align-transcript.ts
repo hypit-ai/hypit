@@ -20,12 +20,12 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parseScript } from "@narratage/script";
-import type { AlignedTranscriptEvidence, AlignedTranscriptSegment } from "@narratage/speech-evidence";
-import { locateSpeechTiming } from "@narratage/speech-alignment";
-import type { SpeechAudioBasis } from "@narratage/speech";
-import { programSpaceFrameCount, sealProgramSpace } from "@narratage/program-space";
-import type { ProgramSpace } from "@narratage/program-space";
+import { parseScript } from "@hypit/script";
+import type { AlignedTranscriptEvidence, AlignedTranscriptSegment } from "@hypit/speech-evidence";
+import { locateSpeechTiming } from "@hypit/speech-alignment";
+import type { SpeechAudioBasis } from "@hypit/speech";
+import { programSpaceFrameCount, sealProgramSpace } from "@hypit/program-space";
+import type { ProgramSpace } from "@hypit/program-space";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "../..");
@@ -80,7 +80,7 @@ for (const scene of SCENES) {
 // long as the whole frames its recordings occupy.
 const frameCount = Math.ceil(elapsed * FRAME_RATE.numerator / FRAME_RATE.denominator);
 const space: ProgramSpace = sealProgramSpace({
-  contract: "narratage.program-space@1",
+  contract: "hypit.program-space@1",
   durationSec: frameCount * FRAME_RATE.denominator / FRAME_RATE.numerator,
   frameRate: { ...FRAME_RATE },
 });
@@ -104,7 +104,7 @@ const segments: AlignedTranscriptSegment[] = bounds.map((segment) => ({
 }));
 
 const evidence: AlignedTranscriptEvidence = {
-  contract: "narratage.aligned-transcript-evidence@1",
+  contract: "hypit.aligned-transcript-evidence@1",
   durationSec: space.durationSec,
   segments,
 };
@@ -116,7 +116,7 @@ const evidence: AlignedTranscriptEvidence = {
  * the bytes.
  */
 const basis: SpeechAudioBasis = {
-  contract: "narratage.speech-audio-basis@1",
+  contract: "hypit.speech-audio-basis@1",
   programSpace: space,
   audio: {
     kind: "blob",

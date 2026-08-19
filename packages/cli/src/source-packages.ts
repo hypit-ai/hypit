@@ -1,12 +1,12 @@
 import {
   loadNodePackageSelection,
-} from "@narratage/package-loader-node";
+} from "@hypit/package-loader-node";
 import type {
   LoadedPackage,
   LogicalPackageAddress,
   NodePackageSelectionRequest,
-} from "@narratage/package-loader-node";
-import { modulePackageAbi } from "@narratage/protocol";
+} from "@hypit/package-loader-node";
+import { modulePackageAbi } from "@hypit/protocol";
 
 import type { CliDistribution } from "./distribution.js";
 

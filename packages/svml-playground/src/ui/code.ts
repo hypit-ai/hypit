@@ -41,7 +41,7 @@ type Line = {
 type Caret = { readonly x: number; readonly y: number; readonly height: number };
 
 /**
- * One rounded outline through an arbitrary polygon. Ported from the Narratage
+ * One rounded outline through an arbitrary polygon. Ported from the Hypit
  * demo so a highlight here reads the same as a highlight on the site.
  */
 function roundedRangePath(points: readonly { x: number; y: number }[], radius = 6): string {

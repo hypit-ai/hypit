@@ -2,15 +2,15 @@ import {
   assertCompositableSurfaceRef,
   synchronizedMediaSampleFrames,
   verifySynchronizedMedia,
-} from "@narratage/media";
-import type { CompositableSurfaceRef, SynchronizedMedia } from "@narratage/media";
-import { canonicalize, isDigest } from "@narratage/protocol";
-import type { BlobRef } from "@narratage/protocol";
+} from "@hypit/media";
+import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
+import { canonicalize, isDigest } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 import {
   assertContentFit,
   assertIntrinsicExtent,
-} from "@narratage/spatial";
-import type { ContentFit, IntrinsicExtent } from "@narratage/spatial";
+} from "@hypit/spatial";
+import type { ContentFit, IntrinsicExtent } from "@hypit/spatial";
 
 import type {
   MediaGradientStop,

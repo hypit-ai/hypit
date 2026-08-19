@@ -1,7 +1,7 @@
-import type { CaptionStyleIntent } from "@narratage/caption";
-import type { OpenFontCategory, OpenFontStyle } from "@narratage/fonts-open";
-import type { CaptionDisplaySequence } from "@narratage/narrative";
-import type { CanonicalValue, ValueSchema } from "@narratage/protocol";
+import type { CaptionStyleIntent } from "@hypit/caption";
+import type { OpenFontCategory, OpenFontStyle } from "@hypit/fonts-open";
+import type { CaptionDisplaySequence } from "@hypit/narrative";
+import type { CanonicalValue, ValueSchema } from "@hypit/protocol";
 
 export type CaptionPlaygroundFont = {
   readonly id: string;

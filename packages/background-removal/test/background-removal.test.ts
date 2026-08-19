@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
-import { artifactTypes } from "@narratage/artifact";
+import { artifactTypes } from "@hypit/artifact";
 import {
   backgroundRemovalCapabilities, backgroundRemovalComponent, backgroundRemovalFragment, backgroundRemovalManifest,
-} from "@narratage/background-removal";
+} from "@hypit/background-removal";
 
 test("Background Removal is one image edge to one exact external Need", async () => {
   assert.deepEqual(backgroundRemovalFragment.inputs.map((input) => input.name), ["source"]);

@@ -1,4 +1,4 @@
-# Narratage production playbooks
+# Hypit production playbooks
 
 Use these playbooks to author production decisions directly in `.svml`, `.svs`, and `.svrun`
 sources. Each playbook names the SVML components, timing model, review gates, and reuse behavior
@@ -15,8 +15,8 @@ needed for that craft or format.
 ## Shared SVML contract
 
 - Put narrative truth in one `script` with Segments, Role Cues, Selections, and Moments.
-- Use `copy:Value`/`copy:Render` from `@narratage/text@1` for prompts and reusable copy.
-- Use `typo:Style`/`typo:Track` from `@narratage/typography-track@1` for editorial text.
+- Use `copy:Value`/`copy:Render` from `@hypit/text@1` for prompts and reusable copy.
+- Use `typo:Style`/`typo:Track` from `@hypit/typography-track@1` for editorial text.
   Never use the same import alias for generic Text and typography.
 - Vendor the selected Seedance Kit into the project, choose stable axes in an SVS Recipe, and keep
   dynamic dialogue/action/story in explicit Text edges.
@@ -30,7 +30,7 @@ needed for that craft or format.
 - Assemble peer Tracks with `film:Film`, render with `render:Video`, and demand outputs through a
   `.svrun` Target.
 - Stage expensive work with narrow `.svrun` Targets. Explicitly reuse an accepted Record through
-  `build-record` plus `satisfy`; Narratage has no implicit cache.
+  `build-record` plus `satisfy`; Hypit has no implicit cache.
 - Use only elements and attributes documented by the current Quickstart or package README. Never
   invent a component or attribute to fill in missing syntax.
 

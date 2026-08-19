@@ -1,6 +1,6 @@
-import { verifyMediaInspection } from "@narratage/media";
-import type { MediaAudioStream, MediaInspection, MediaVideoStream } from "@narratage/media";
-import { canonicalize } from "@narratage/protocol";
+import { verifyMediaInspection } from "@hypit/media";
+import type { MediaAudioStream, MediaInspection, MediaVideoStream } from "@hypit/media";
+import { canonicalize } from "@hypit/protocol";
 
 import type {
   AudioExtractionRequest,

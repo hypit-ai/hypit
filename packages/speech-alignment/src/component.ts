@@ -1,9 +1,9 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { Narrative } from "@narratage/narrative";
-import type { SpeechAudioBasis } from "@narratage/speech";
-import type { AlignedTranscriptEvidence } from "@narratage/speech-evidence";
-import type { StoredValue } from "@narratage/protocol";
-import { canonicalize } from "@narratage/protocol";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { Narrative } from "@hypit/narrative";
+import type { SpeechAudioBasis } from "@hypit/speech";
+import type { AlignedTranscriptEvidence } from "@hypit/speech-evidence";
+import type { StoredValue } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 
 import {
   locateSpeechTiming,

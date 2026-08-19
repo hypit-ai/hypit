@@ -1,13 +1,13 @@
 import {
   assertFontArtifactRef,
   assertFontStackRef,
-} from "@narratage/media";
+} from "@hypit/media";
 import type {
   FontArtifactRef,
   FontStackRef,
-} from "@narratage/media";
-import { canonicalize } from "@narratage/protocol";
-import type { SvsRecipe } from "@narratage/svs";
+} from "@hypit/media";
+import { canonicalize } from "@hypit/protocol";
+import type { SvsRecipe } from "@hypit/svs";
 
 import {
   assertColumnStyle,

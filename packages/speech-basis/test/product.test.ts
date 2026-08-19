@@ -2,12 +2,12 @@ import { compositionComponent, spatialComponent, videoContractManifests } from "
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
-} from "@narratage/component-kit";
-import { sealProgramSpace } from "@narratage/program-space";
-import { sealSpeechBasis, speechDependency, speechTypes } from "@narratage/speech";
-import type { SpeechBasis } from "@narratage/speech";
-import { compositionTypes } from "@narratage/composition";
-import { mediaPipelineManifest } from "@narratage/media-pipeline";
+} from "@hypit/component-kit";
+import { sealProgramSpace } from "@hypit/program-space";
+import { sealSpeechBasis, speechDependency, speechTypes } from "@hypit/speech";
+import type { SpeechBasis } from "@hypit/speech";
+import { compositionTypes } from "@hypit/composition";
+import { mediaPipelineManifest } from "@hypit/media-pipeline";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
@@ -19,8 +19,8 @@ import {
   sealCompiledGraph,
   sealRecord,
   start,
-} from "@narratage/core";
-import { ProducerRegistry, NodeDriver } from "@narratage/driver-node";
+} from "@hypit/core";
+import { ProducerRegistry, NodeDriver } from "@hypit/driver-node";
 import type {
   BuildRequest,
   CompiledGraph,
@@ -28,7 +28,7 @@ import type {
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import {
   projectSpeechAudio,
   projectSpeechAudioTrack,
@@ -37,16 +37,16 @@ import {
   speechBasisComponent,
   speechBasisManifest,
   speechBasisProducers,
-} from "@narratage/speech-basis";
-import { TypeValidatorRegistry } from "@narratage/validation";
-import { mediaTrackManifest } from "@narratage/media-track";
+} from "@hypit/speech-basis";
+import { TypeValidatorRegistry } from "@hypit/validation";
+import { mediaTrackManifest } from "@hypit/media-track";
 
 const testModule = { name: "example.speech-basis-product", version: "0.0.0" } as const;
 const requestType = { module: testModule, name: "SpeechRequest" } satisfies TypeRef;
 const generateProducer = { module: testModule, name: "generate-speech-basis" } satisfies ProducerRef;
 
 const testManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: testModule.name,
   version: testModule.version,
   dependencies: [speechDependency],

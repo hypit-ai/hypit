@@ -1,4 +1,4 @@
-import { sealGraphFragment } from "@narratage/elaborator";
+import { sealGraphFragment } from "@hypit/elaborator";
 
 import { spatialProducers, spatialTypes } from "./manifest.js";
 

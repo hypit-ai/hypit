@@ -1,7 +1,7 @@
-import { artifactTypes } from "@narratage/artifact";
-import { sealGraphFragment } from "@narratage/elaborator";
-import type { FragmentOperation } from "@narratage/elaborator";
-import { spatialTypes } from "@narratage/spatial";
+import { artifactTypes } from "@hypit/artifact";
+import { sealGraphFragment } from "@hypit/elaborator";
+import type { FragmentOperation } from "@hypit/elaborator";
+import { spatialTypes } from "@hypit/spatial";
 
 import { imageComposeProducers, imageComposeTypes } from "./manifest.js";
 

@@ -98,7 +98,7 @@ export type Candidate = {
 };
 
 export type CompiledGraph = {
-  readonly format: "narratage.graph@1";
+  readonly format: "hypit.graph@1";
   readonly outputs: readonly LogicalOutput[];
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
@@ -114,7 +114,7 @@ export type Satisfaction = {
 };
 
 export type BuildRequest = {
-  readonly format: "narratage.build-request@1";
+  readonly format: "hypit.build-request@1";
   readonly targets: readonly BuildTarget[];
 };
 
@@ -138,7 +138,7 @@ export type BuildGoal = {
 };
 
 export type BuildPlan = {
-  readonly format: "narratage.plan@1";
+  readonly format: "hypit.plan@1";
   readonly steps: readonly ProducerStep[];
   readonly goals: readonly BuildGoal[];
   readonly selections: readonly BuildSelection[];
@@ -201,7 +201,7 @@ export type BuildDiagnostic = {
 
 /** Immutable finite program selected by one Author Graph plus one Run Graph. */
 export type BuildDefinition = {
-  readonly format: "narratage.build-definition@1";
+  readonly format: "hypit.build-definition@1";
   readonly program: LinkedProgram;
   readonly graph: CompiledGraph;
   readonly request: BuildRequest;
@@ -209,7 +209,7 @@ export type BuildDefinition = {
 };
 
 type BuildFactBase = {
-  readonly format: "narratage.build-fact@1";
+  readonly format: "hypit.build-fact@1";
   readonly command: CommandId;
 };
 
@@ -239,7 +239,7 @@ export type BuildFact = ProducerAppliedFact | NeedAppliedFact | CommandFailedFac
 
 /** Materialized read/execution view. Durable Stores persist Definition + Facts, never this object. */
 export type BuildState = {
-  readonly format: "narratage.build@1";
+  readonly format: "hypit.build@1";
   readonly program: LinkedProgram;
   readonly graph: CompiledGraph;
   readonly request: BuildRequest;

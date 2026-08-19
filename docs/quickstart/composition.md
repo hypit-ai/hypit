@@ -9,9 +9,9 @@ Film is the final assembly stage. It takes all peer Tracks, validates them, and 
 Composition. The renderer then compiles that Composition into an MP4 video.
 
 ```svml
-<import as="space" from="@narratage/spatial@1"/>
-<import as="film" from="@narratage/film@1"/>
-<import as="render" from="@narratage/render-hyperframes@1"/>
+<import as="space" from="@hypit/spatial@1"/>
+<import as="film" from="@hypit/film@1"/>
+<import as="render" from="@hypit/render-hyperframes@1"/>
 ```
 
 ## film:Film
@@ -111,23 +111,23 @@ The complete data flow from Script to rendered video. This example is based on
 ### Author Source (`main.svml`)
 
 ```svml
-<?svml using="@narratage/markup@1"?>
+<?svml using="@hypit/markup@1"?>
 
 <svml>
-  <import from="@narratage/script@1"/>
-  <import as="wording" from="@narratage/text@1"/>
-  <import as="seedance" from="@narratage/seedance@1"/>
-  <import as="speech" from="@narratage/speech-spine@1"/>
-  <import as="whisperx" from="@narratage/whisperx@1"/>
-  <import as="caption" from="@narratage/caption@1"/>
-  <import as="caption-fine" from="@narratage/caption-fine@1"/>
-  <import as="caption-ai" from="@narratage/caption-gemini@1"/>
-  <import as="fonts" from="@narratage/fonts-open@1"/>
-  <import as="media-track" from="@narratage/media-track@1"/>
-  <import as="text" from="@narratage/typography-track@1"/>
-  <import as="space" from="@narratage/spatial@1"/>
-  <import as="film" from="@narratage/film@1"/>
-  <import as="render" from="@narratage/render-hyperframes@1"/>
+  <import from="@hypit/script@1"/>
+  <import as="wording" from="@hypit/text@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="speech" from="@hypit/speech-spine@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="caption-ai" from="@hypit/caption-gemini@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="media-track" from="@hypit/media-track@1"/>
+  <import as="text" from="@hypit/typography-track@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
 
   <!-- 1. Script: the semantic truth -->
@@ -205,7 +205,7 @@ width and is rejected.
 ### Stylesheet (`studio.svs`)
 
 ```svs
-<?svml using="@narratage/svs@1"?>
+<?svml using="@hypit/svs@1"?>
 
 <sheet version="1">
   film.vertical {
@@ -237,7 +237,7 @@ width and is rejected.
 ### Run Source (`build.svrun`)
 
 ```svml
-<?svml using="@narratage/run-markup@1"?>
+<?svml using="@hypit/run-markup@1"?>
 
 <svrun version="1">
   <author source="./main.svml"/>
@@ -248,9 +248,9 @@ width and is rejected.
 ### Compile and verify
 
 ```bash
-narratage check examples/talking-film-graph-check/main.svml
+hypit check examples/talking-film-graph-check/main.svml
 
-narratage plan examples/talking-film-graph-check/build.svrun
+hypit plan examples/talking-film-graph-check/build.svrun
 ```
 
 `check` compiles the Author Graph — validates all imports, types, and graph edges without calling

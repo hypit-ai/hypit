@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { artifactTypes } from "@narratage/artifact";
-import { parseStructuredElement } from "@narratage/markup";
-import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@narratage/markup";
-import { textTypes } from "@narratage/text";
+import { artifactTypes } from "@hypit/artifact";
+import { parseStructuredElement } from "@hypit/markup";
+import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/markup";
+import { textTypes } from "@hypit/text";
 
 import {
   decodeSeedanceFrameVideoSurface,

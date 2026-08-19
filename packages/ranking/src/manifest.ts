@@ -1,15 +1,15 @@
-import { artifactDependency } from "@narratage/artifact";
-import { compositionDependency, compositionTypes } from "@narratage/composition";
-import { mediaDependency, mediaTypes } from "@narratage/media";
-import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
-import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
-import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
-import { spatialDependency, spatialFrameSchema, spatialTypes } from "@narratage/spatial";
-import { temporalDependency } from "@narratage/temporal";
-import { textDependency, textTypes } from "@narratage/text";
+import { artifactDependency } from "@hypit/artifact";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
+import { mediaDependency, mediaTypes } from "@hypit/media";
+import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
+import { temporalDependency } from "@hypit/temporal";
+import { textDependency, textTypes } from "@hypit/text";
 
-export const rankingModuleRef = { name: "@narratage/ranking", version: "1" } as const;
+export const rankingModuleRef = { name: "@hypit/ranking", version: "1" } as const;
 export const rankingTypes = {
   header: { module: rankingModuleRef, name: "RankingHeader" },
   itemSpec: { module: rankingModuleRef, name: "RankingItemSpec" },
@@ -147,7 +147,7 @@ export const rankingMarkupSurfaces = [
 
 
 export const rankingManifest: ModuleManifest = {
-  format: "narratage.module@1", name: rankingModuleRef.name, version: rankingModuleRef.version,
+  format: "hypit.module@1", name: rankingModuleRef.name, version: rankingModuleRef.version,
   dependencies: [artifactDependency, mediaDependency, narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, compositionDependency, textDependency],
   types: [
     { name: rankingTypes.header.name },

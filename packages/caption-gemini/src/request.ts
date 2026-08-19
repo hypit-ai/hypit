@@ -1,6 +1,6 @@
-import { assertCaptionProgramForDisplay } from "@narratage/caption";
-import type { CaptionFieldDeclaration, CaptionProgram } from "@narratage/caption";
-import type { CaptionDisplaySequence } from "@narratage/narrative";
+import { assertCaptionProgramForDisplay } from "@hypit/caption";
+import type { CaptionFieldDeclaration, CaptionProgram } from "@hypit/caption";
+import type { CaptionDisplaySequence } from "@hypit/narrative";
 
 import { verifyCaptionGeminiProgram } from "./program.js";
 import type {

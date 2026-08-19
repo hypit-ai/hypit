@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/provider-kie",
+  "name": "@hypit/provider-kie",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,38 +7,38 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/artifact": "workspace:*",
-    "@narratage/background-removal": "workspace:*",
-    "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/generation": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-kit": "workspace:*"
+    "@hypit/artifact": "workspace:*",
+    "@hypit/background-removal": "workspace:*",
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/generation": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/artifact-store-fs": "workspace:*",
-    "@narratage/component-kit": "workspace:*",
-    "@narratage/core": "workspace:*",
-    "@narratage/credential-store-env": "workspace:*",
-    "@narratage/driver-node": "workspace:*",
-    "@narratage/elaborator": "workspace:*",
-    "@narratage/gemini-omni": "workspace:*",
-    "@narratage/gpt-image": "workspace:*",
-    "@narratage/grok-imagine": "workspace:*",
-    "@narratage/runtime-local": "workspace:*",
-    "@narratage/media": "workspace:*",
-    "@narratage/minimax-h3": "workspace:*",
-    "@narratage/model-kit": "workspace:*",
-    "@narratage/nano-banana": "workspace:*",
-    "@narratage/narrative": "workspace:*",
-    "@narratage/seedance": "workspace:*",
-    "@narratage/seedream": "workspace:*",
-    "@narratage/store-sqlite": "workspace:*",
-    "@narratage/text": "workspace:*",
-    "@narratage/validation": "workspace:*"
+    "@hypit/artifact-store-fs": "workspace:*",
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/core": "workspace:*",
+    "@hypit/credential-store-env": "workspace:*",
+    "@hypit/driver-node": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/gemini-omni": "workspace:*",
+    "@hypit/gpt-image": "workspace:*",
+    "@hypit/grok-imagine": "workspace:*",
+    "@hypit/runtime-local": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/minimax-h3": "workspace:*",
+    "@hypit/model-kit": "workspace:*",
+    "@hypit/nano-banana": "workspace:*",
+    "@hypit/narrative": "workspace:*",
+    "@hypit/seedance": "workspace:*",
+    "@hypit/seedream": "workspace:*",
+    "@hypit/store-sqlite": "workspace:*",
+    "@hypit/text": "workspace:*",
+    "@hypit/validation": "workspace:*"
   }
 }

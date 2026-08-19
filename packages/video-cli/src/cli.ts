@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { renderCliError, writeCliHelp } from "@narratage/cli";
-import type { CliIo } from "@narratage/cli";
+import { renderCliError, writeCliHelp } from "@hypit/cli";
+import type { CliIo } from "@hypit/cli";
 
 const argv = process.argv.slice(2);
 const json = argv.includes("--json");

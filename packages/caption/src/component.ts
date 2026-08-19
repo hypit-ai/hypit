@@ -1,8 +1,8 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { CaptionCorrespondence, CaptionDisplaySequence } from "@narratage/narrative";
-import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import type { StoredValue } from "@narratage/protocol";
-import { canonicalize } from "@narratage/protocol";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { CaptionCorrespondence, CaptionDisplaySequence } from "@hypit/narrative";
+import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { StoredValue } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
 
 import { captionProducers, captionTypes } from "./manifest.js";
 import { assertCaptionPlan } from "./plan.js";

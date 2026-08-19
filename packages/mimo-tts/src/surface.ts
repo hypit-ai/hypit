@@ -1,19 +1,19 @@
-import { artifactTypes } from "@narratage/artifact";
+import { artifactTypes } from "@hypit/artifact";
 import {
   generationPort,
   sealGenerationMediaBinding,
-} from "@narratage/generation";
-import type { GenerationMediaPort, GenerationPortValue } from "@narratage/generation";
-import { exactModelMediaInputNames, exactModelTextInputName } from "@narratage/model-kit";
-import type { ExactModelMediaInput, ExactModelTextInput } from "@narratage/model-kit";
-import type { CanonicalValue } from "@narratage/protocol";
-import { textTypes, verifyText } from "@narratage/text";
+} from "@hypit/generation";
+import type { GenerationMediaPort, GenerationPortValue } from "@hypit/generation";
+import { exactModelMediaInputNames, exactModelTextInputName } from "@hypit/model-kit";
+import type { ExactModelMediaInput, ExactModelTextInput } from "@hypit/model-kit";
+import type { CanonicalValue } from "@hypit/protocol";
+import { textTypes, verifyText } from "@hypit/text";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import { createMimoTtsAudioFragment } from "./fragment.js";
 import {

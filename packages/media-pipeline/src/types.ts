@@ -1,5 +1,5 @@
-import type { BlobRef } from "@narratage/protocol";
-import type { MediaInspection, MediaRational, MediaStreamSelection, RenderedVisual, TimelineAudio } from "@narratage/media";
+import type { BlobRef } from "@hypit/protocol";
+import type { MediaInspection, MediaRational, MediaStreamSelection, RenderedVisual, TimelineAudio } from "@hypit/media";
 
 export type MediaSelectionRequest = {
   readonly video:
@@ -68,7 +68,7 @@ export type FrameExtractionRequest = {
 };
 
 export type TransformMediaNeed = {
-  readonly media: import("@narratage/media").SynchronizedMedia;
+  readonly media: import("@hypit/media").SynchronizedMedia;
   readonly program: MediaTransformProgram;
 };
 

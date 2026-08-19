@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { useData, withBase } from "vitepress";
 
-const REPO = "https://github.com/hypit-ai/narratage";
+const REPO = "https://github.com/hypit-ai/hypit";
 
 const { lang } = useData();
 const isChinese = computed(() => lang.value.toLowerCase().startsWith("zh"));
@@ -47,12 +47,12 @@ const t = (en: string, zh: string) => (isChinese.value ? zh : en);
         <h2>{{ t("Community", "社区") }}</h2>
         <ul>
           <li><a href="https://discord.gg/85hnyQnxpn" target="_blank" rel="noreferrer">Discord</a></li>
-          <li><a href="https://t.me/narratage" target="_blank" rel="noreferrer">Telegram</a></li>
+          <li><a href="https://t.me/hypit" target="_blank" rel="noreferrer">Telegram</a></li>
         </ul>
       </section>
 
       <section class="np-footer-about">
-        <h2>Narratage</h2>
+        <h2>Hypit</h2>
         <p>
           {{
             t(

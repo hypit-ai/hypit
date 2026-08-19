@@ -1,7 +1,7 @@
-import { artifactTypes } from "@narratage/artifact";
-import type { CanonicalValue } from "@narratage/protocol";
-import { spatialTypes } from "@narratage/spatial";
-import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, MarkupAttributeValue } from "@narratage/markup";
+import { artifactTypes } from "@hypit/artifact";
+import type { CanonicalValue } from "@hypit/protocol";
+import { spatialTypes } from "@hypit/spatial";
+import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
 
 import { createImageComposeFragment } from "./fragment.js";
 import { imageComposeTypes } from "./manifest.js";

@@ -6,7 +6,7 @@
  *
  * This is a video contract, not a Core concept and not an author component.
  */
-export const VISUAL_IR_V1 = "narratage.visual-ir@1" as const;
+export const VISUAL_IR_V1 = "hypit.visual-ir@1" as const;
 
 /**
  * Closed CSS-shaped vocabulary for public visual Visual IR v1.

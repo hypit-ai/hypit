@@ -1,10 +1,10 @@
 import { compositionComponent, spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
-import { programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
-import { compositionTypes, sealAudioTrack, sealVisualTrack } from "@narratage/composition";
-import type { Composition, Track } from "@narratage/composition";
-import type { FontArtifactRef } from "@narratage/media";
-import { sealCanvasSpace, spatialTypes } from "@narratage/spatial";
+import { registerTypeValidatorFacets } from "@hypit/component-kit";
+import { programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
+import { compositionTypes, sealAudioTrack, sealVisualTrack } from "@hypit/composition";
+import type { Composition, Track } from "@hypit/composition";
+import type { FontArtifactRef } from "@hypit/media";
+import { sealCanvasSpace, spatialTypes } from "@hypit/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
@@ -16,21 +16,21 @@ import {
   sealCompiledGraph,
   sealRecord,
   start,
-} from "@narratage/core";
-import { ProducerRegistry, NodeDriver } from "@narratage/driver-node";
+} from "@hypit/core";
+import { ProducerRegistry, NodeDriver } from "@hypit/driver-node";
 import {
   bindAuthorFragment,
   elaborateGraphFragment,
   mergeFragmentContributions,
-} from "@narratage/elaborator";
-import { appendFilmAudioTrack, appendFilmVisualTrack, compileFilmComposition, createFilmAssemblyFragment, createFilmTrackSet, filmManifest, filmProducers, filmTypes, sealFilmProgram } from "@narratage/film";
-import { compileHyperframesDocument, hyperframesDocumentFragment, hyperframesManifest, hyperframesProducers, hyperframesTypes } from "@narratage/hyperframes";
-import type { CanonicalValue, CompiledGraph, StoredValue, TypedRecord } from "@narratage/protocol";
-import { svsManifest } from "@narratage/svs";
-import { textManifest } from "@narratage/text";
-import { renderTypographyTrack, sealTypographyTrackProgram, stillTextMotion, typographyTrackFragment, typographyTrackManifest, typographyTrackProducers, typographyTrackTypes } from "@narratage/typography-track";
-import type { TextStyle } from "@narratage/typography-track";
-import { admitRecord, TypeValidatorRegistry } from "@narratage/validation";
+} from "@hypit/elaborator";
+import { appendFilmAudioTrack, appendFilmVisualTrack, compileFilmComposition, createFilmAssemblyFragment, createFilmTrackSet, filmManifest, filmProducers, filmTypes, sealFilmProgram } from "@hypit/film";
+import { compileHyperframesDocument, hyperframesDocumentFragment, hyperframesManifest, hyperframesProducers, hyperframesTypes } from "@hypit/hyperframes";
+import type { CanonicalValue, CompiledGraph, StoredValue, TypedRecord } from "@hypit/protocol";
+import { svsManifest } from "@hypit/svs";
+import { textManifest } from "@hypit/text";
+import { renderTypographyTrack, sealTypographyTrackProgram, stillTextMotion, typographyTrackFragment, typographyTrackManifest, typographyTrackProducers, typographyTrackTypes } from "@hypit/typography-track";
+import type { TextStyle } from "@hypit/typography-track";
+import { admitRecord, TypeValidatorRegistry } from "@hypit/validation";
 
 const space = sealProgramSpace({
   durationSec: 4,
@@ -99,7 +99,7 @@ const textProgram = sealTypographyTrackProgram({
   }],
 });
 const background = sealVisualTrack({
-  visualIr: "narratage.visual-ir@1",
+  visualIr: "hypit.visual-ir@1",
   id: "background-track",
   presents: [{
     id: "background",
@@ -269,7 +269,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
   const documentRecord = result.state.records.find((record) => record.type.module.name === hyperframesTypes.document.module.name);
   assert(documentRecord);
   const document = inline(documentRecord) as { readonly html: string };
-  assert.match(document.html, /data-narratage-text-run="title-text"/u);
+  assert.match(document.html, /data-hypit-text-run="title-text"/u);
   assert.match(document.html, /background-track/u);
   assert.equal(result.state.records.filter((record) => record.type.name === filmTypes.trackSet.name).length, 4);
 });

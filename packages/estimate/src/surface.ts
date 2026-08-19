@@ -1,13 +1,13 @@
-import type { CanonicalValue } from "@narratage/protocol";
-import { svsRecipeType } from "@narratage/svs";
-import type { SvsRecipe } from "@narratage/svs";
-import { textTypes } from "@narratage/text";
+import type { CanonicalValue } from "@hypit/protocol";
+import { svsRecipeType } from "@hypit/svs";
+import type { SvsRecipe } from "@hypit/svs";
+import { textTypes } from "@hypit/text";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   MarkupAttributeValue,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 import { speechEstimateFragment } from "./fragment.js";
 import { estimateTypes } from "./manifest.js";

@@ -1,7 +1,7 @@
-import type { ComponentPackage } from "@narratage/component-kit";
-import type { BlobRef, StoredValue } from "@narratage/protocol";
-import { canonicalize } from "@narratage/protocol";
-import { rasterTransformRequest } from "@narratage/raster";
+import type { ComponentPackage } from "@hypit/component-kit";
+import type { BlobRef, StoredValue } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import { rasterTransformRequest } from "@hypit/raster";
 
 import { imageTransformProducers, imageTransformTypes } from "./manifest.js";
 import { verifyImageTransformProgram } from "./program.js";

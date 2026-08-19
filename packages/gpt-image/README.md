@@ -1,25 +1,25 @@
-# `@narratage/gpt-image`
+# `@hypit/gpt-image`
 
 Exact model/compute contracts for GPT Image 2 requests.
 
 One closed Port Table accepts the supported scalar settings and optional reference images. Runtime-
 produced references remain explicit Blob edges: the model-owned Draft is bound one edge at a time,
 then finalized into the only `GenerationRequest` a Provider can receive. The package owns model
-semantics but no API key, Provider selection, queue or network code. `@narratage/provider-kie` is
+semantics but no API key, Provider selection, queue or network code. `@hypit/provider-kie` is
 one optional Runtime implementation.
 
 The one physical package exposes two independently importable logical modules:
 
-- `@narratage/gpt-image@1`: the raw exact model;
-- `@narratage/gpt-image/clean@1`: generation followed by the existing explicit image-transform
+- `@hypit/gpt-image@1`: the raw exact model;
+- `@hypit/gpt-image/clean@1`: generation followed by the existing explicit image-transform
   Program, exporting one cleaned image while retaining both operations in the graph.
 
 Both modules own an `Image` Markup Surface. They use the same author shape, so choosing the clean
 module changes the visible graph expansion rather than the document structure:
 
 ```svml
-<import as="text" from="@narratage/text@1"/>
-<import as="gpt" from="@narratage/gpt-image/clean@1"/>
+<import as="text" from="@hypit/text@1"/>
+<import as="gpt" from="@hypit/gpt-image/clean@1"/>
 
 <text:Value id="prompt">
   A woman holding the product, editorial photography.

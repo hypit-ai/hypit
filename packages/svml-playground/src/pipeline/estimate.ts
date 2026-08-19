@@ -11,7 +11,7 @@
 import {
   countSpeechEstimateUnits, resolveSpeechEstimateLanguage, resolveSpeechEstimateRate,
   sealSpeechEstimatePolicy,
-} from "@narratage/estimate";
+} from "@hypit/estimate";
 
 /** The Narrative a Script sealed, as the preview reads it. */
 type Narrative = {

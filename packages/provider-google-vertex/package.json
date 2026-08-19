@@ -1,5 +1,5 @@
 {
-  "name": "@narratage/provider-google-vertex",
+  "name": "@hypit/provider-google-vertex",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,21 +7,21 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "narratage": {
+  "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
     "@google/genai": "1.52.0",
-    "@narratage/caption": "workspace:*",
-    "@narratage/caption-gemini": "workspace:*",
-    "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*",
-    "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-kit": "workspace:*",
-    "@narratage/runtime-host-node": "workspace:*"
+    "@hypit/caption": "workspace:*",
+    "@hypit/caption-gemini": "workspace:*",
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/runtime-kit": "workspace:*",
+    "@hypit/runtime-host-node": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/driver-node": "workspace:*",
-    "@narratage/script": "workspace:*"
+    "@hypit/driver-node": "workspace:*",
+    "@hypit/script": "workspace:*"
   }
 }

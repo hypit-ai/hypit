@@ -1,13 +1,13 @@
 import { compositionComponent, videoContractManifests } from "../../../test/support/video-domain.js";
-import { artifactTypes } from "@narratage/artifact";
+import { artifactTypes } from "@hypit/artifact";
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
-} from "@narratage/component-kit";
-import { mediaTypes, sealMuxedMedia, sealRenderedVisual, sealTimelineAudio } from "@narratage/media";
-import { programSpaceDependency, programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
-import { compositionDependency, compositionTypes, sealComposition } from "@narratage/composition";
-import type { Composition } from "@narratage/composition";
+} from "@hypit/component-kit";
+import { mediaTypes, sealMuxedMedia, sealRenderedVisual, sealTimelineAudio } from "@hypit/media";
+import { programSpaceDependency, programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
+import { compositionDependency, compositionTypes, sealComposition } from "@hypit/composition";
+import type { Composition } from "@hypit/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
@@ -19,26 +19,26 @@ import {
   sealCompiledGraph,
   sealRecord,
   start,
-} from "@narratage/core";
+} from "@hypit/core";
 import {
   ProducerRegistry,
   NodeDriver,
   EndpointRegistry,
-} from "@narratage/driver-node";
+} from "@hypit/driver-node";
 import {
   AuthorFrontendRegistry,
   bindAuthorFragment,
   compileSourceClosure,
   elaborateGraphFragment,
   resolveCompiledSourceExport,
-} from "@narratage/elaborator";
-import type { AuthorSourceUnit } from "@narratage/elaborator";
+} from "@hypit/elaborator";
+import type { AuthorSourceUnit } from "@hypit/elaborator";
 import {
   compileHyperframesDocument,
   hyperframesComponent,
   hyperframesManifest,
   hyperframesProducers,
-} from "@narratage/hyperframes";
+} from "@hypit/hyperframes";
 import {
   decodeHyperframesRenderSurface,
   renderHyperframesCapabilities,
@@ -49,7 +49,7 @@ import {
   renderHyperframesModuleRef,
   renderHyperframesProducers,
   hyperframesVisualRequest,
-} from "@narratage/render-hyperframes";
+} from "@hypit/render-hyperframes";
 import {
   compileAudioProgramPlan,
   decodeExtractFrameSurface,
@@ -60,22 +60,22 @@ import {
   mediaPipelineMarkupSurfaces,
   mediaPipelineModuleRef,
   mediaPipelineProducers,
-} from "@narratage/media-pipeline";
+} from "@hypit/media-pipeline";
 import {
   admitRecord,
   createRecordAdmitter,
   TypeValidatorRegistry,
-} from "@narratage/validation";
+} from "@hypit/validation";
 import type {
   CanonicalValue,
   ModuleManifest,
   StoredValue,
   TypedRecord,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 import {
   createMarkupAuthorFrontend,
   MarkupSurfaceRegistry,
-} from "@narratage/markup";
+} from "@hypit/markup";
 
 const space = sealProgramSpace({
   durationSec: 2,
@@ -306,7 +306,7 @@ const fixtureSurface = {
   outputs: [compositionTypes.composition, programSpaceTypes.programSpace],
 } as const;
 const fixtureManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
   dependencies: [compositionDependency, programSpaceDependency],
@@ -319,7 +319,7 @@ function source(text: string): AuthorSourceUnit {
   return {
     id: "/project/main.svml",
     name: "main.svml",
-    text: `<?svml using="@narratage/markup@1"?>\n${text}`,
+    text: `<?svml using="@hypit/markup@1"?>\n${text}`,
   };
 }
 
@@ -354,16 +354,16 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
   frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
     resolveModule(request) {
-      if (request.from.startsWith("@narratage/render-hyperframes")) return renderHyperframesModuleRef;
-      if (request.from.startsWith("@narratage/media-pipeline")) return mediaPipelineModuleRef;
+      if (request.from.startsWith("@hypit/render-hyperframes")) return renderHyperframesModuleRef;
+      if (request.from.startsWith("@hypit/media-pipeline")) return mediaPipelineModuleRef;
       return fixtureModule;
     },
   }));
   const compiled = await compileSourceClosure({
     entry: source(`<svml>
       <import as="fixture" from="example.composition-fixture@1"/>
-      <import as="render" from="@narratage/render-hyperframes@1"/>
-      <import as="media" from="@narratage/media-pipeline@1"/>
+      <import as="render" from="@hypit/render-hyperframes@1"/>
+      <import as="media" from="@hypit/media-pipeline@1"/>
       <fixture:Composition/>
       <render:Video id="final" composition={composition} space={space}/>
       <media:ExtractFrame id="poster" source={final.video} video="primary-moving" at="last"/>

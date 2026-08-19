@@ -5,8 +5,8 @@ import {
 import type {
   LambdaClientConfig,
 } from "@aws-sdk/client-lambda";
-import { canonicalize } from "@narratage/protocol";
-import type { CanonicalValue } from "@narratage/protocol";
+import { canonicalize } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
 
 /** One canonical JSON exchange; callers may inject any structurally compatible transport. */
 export interface JsonInvoker {

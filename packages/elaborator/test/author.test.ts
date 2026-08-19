@@ -7,19 +7,19 @@ import {
   sealBuildRequest,
   sealRecord,
   start,
-} from "@narratage/core";
+} from "@hypit/core";
 import {
   AuthorGraphError,
   elaborateAuthorGraph,
   sealGraphFragment,
-} from "@narratage/elaborator";
-import type { AuthorComponent, GraphFragment } from "@narratage/elaborator";
+} from "@hypit/elaborator";
+import type { AuthorComponent, GraphFragment } from "@hypit/elaborator";
 import type {
   LinkedProgram,
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@narratage/protocol";
+} from "@hypit/protocol";
 
 const laboratory = { name: "example.laboratory", version: "1" } as const;
 const sampleType = { module: laboratory, name: "Sample" } satisfies TypeRef;
@@ -30,7 +30,7 @@ const reportProducer = { module: laboratory, name: "write-report" } satisfies Pr
 const echoProducer = { module: laboratory, name: "echo-sample" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [],

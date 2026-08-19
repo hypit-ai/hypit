@@ -5,24 +5,24 @@ import {
   visualTextFlowSchema,
   visualTextPaintSchema,
   visualTextTypographySchema,
-} from "@narratage/composition";
-import { mediaDependency } from "@narratage/media";
+} from "@hypit/composition";
+import { mediaDependency } from "@hypit/media";
 import {
   mediaFramePresentationSchema,
   mediaLayerSetSchema,
   mediaLifecycleMotionSchema,
   mediaTrackDependency,
   mediaTrackTypes,
-} from "@narratage/media-track";
-import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
-import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
-import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
-import { spatialDependency, spatialFrameSchema, spatialTypes } from "@narratage/spatial";
-import { temporalDependency } from "@narratage/temporal";
-import { textDependency, textTypes } from "@narratage/text";
+} from "@hypit/media-track";
+import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
+import { temporalDependency } from "@hypit/temporal";
+import { textDependency, textTypes } from "@hypit/text";
 
-export const depthStackModuleRef = { name: "@narratage/deck-track", version: "1" } as const;
+export const depthStackModuleRef = { name: "@hypit/deck-track", version: "1" } as const;
 export const depthStackTypes = {
   header: { module: depthStackModuleRef, name: "DepthStackHeader" },
   spec: { module: depthStackModuleRef, name: "DepthStackSpec" },
@@ -124,7 +124,7 @@ export const depthStackMarkupSurfaces = [
 
 
 export const depthStackManifest: ModuleManifest = {
-  format: "narratage.module@1", name: depthStackModuleRef.name, version: depthStackModuleRef.version,
+  format: "hypit.module@1", name: depthStackModuleRef.name, version: depthStackModuleRef.version,
   dependencies: [narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, mediaDependency, mediaTrackDependency, compositionDependency, textDependency],
   types: [
     { name: depthStackTypes.header.name },

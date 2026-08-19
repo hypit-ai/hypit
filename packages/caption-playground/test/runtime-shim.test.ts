@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { sealComposition, sealVisualTrack } from "@narratage/composition";
-import { compileHyperframesDocument } from "@narratage/hyperframes";
-import { sealProgramSpace } from "@narratage/program-space";
+import { sealComposition, sealVisualTrack } from "@hypit/composition";
+import { compileHyperframesDocument } from "@hypit/hyperframes";
+import { sealProgramSpace } from "@hypit/program-space";
 
 import { injectRuntimeShim } from "../src/preview/runtime-shim.js";
 
@@ -17,7 +17,7 @@ function document_() {
     id: "caption-preview",
     canvas: { width: 1080, height: 1920, clearColor: "#09090b" },
     tracks: [sealVisualTrack({
-      visualIr: "narratage.visual-ir@1",
+      visualIr: "hypit.visual-ir@1",
       id: "caption",
       presents: [{
         id: "one", span: { startFrame: 0, endFrameExclusive: 30 },

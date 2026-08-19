@@ -1,4 +1,4 @@
-import { assertSpatialPath } from "@narratage/spatial";
+import { assertSpatialPath } from "@hypit/spatial";
 
 import type { MediaFramePresentation } from "./types.js";
 

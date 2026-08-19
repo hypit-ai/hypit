@@ -1,4 +1,4 @@
-import type { ModuleManifest, ProducerRef, TypeRef } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 import {
   anchoredFrameProgramSchema,
   aspectFrameProgramSchema,
@@ -12,7 +12,7 @@ import {
   spatialPointSchema,
 } from "./schema.js";
 
-export const spatialModuleRef = { name: "@narratage/spatial", version: "1" } as const;
+export const spatialModuleRef = { name: "@hypit/spatial", version: "1" } as const;
 export const spatialTypes = {
   canvas: { module: spatialModuleRef, name: "CanvasSpace" },
   point: { module: spatialModuleRef, name: "SpatialPoint" },
@@ -45,7 +45,7 @@ export const spatialMarkupSurfaces = [
 
 
 export const spatialManifest: ModuleManifest = {
-  format: "narratage.module@1",
+  format: "hypit.module@1",
   name: spatialModuleRef.name,
   version: spatialModuleRef.version,
   dependencies: [],
