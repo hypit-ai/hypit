@@ -59,6 +59,35 @@ const OFFICIAL_VIDEO_PACKAGES = [
   "@hypit/whisperx",
 ] as const;
 
+/**
+ * Packages a previewed Source declares that the official list does not carry,
+ * and the directory they are installed under.
+ *
+ * A Source is free to import a package this application has never heard of —
+ * a project-local component is the normal case, not an exception — so the
+ * preview loads what the Source actually names in addition to the official
+ * list, resolved from the project rather than from this application.
+ */
+let projectPackages: readonly string[] = [];
+let projectRoot: string | undefined;
+
+export function usePreviewPackages(packages: readonly string[], root: string): void {
+  if (loading !== undefined) throw new Error("Preview packages must be chosen before the first Source is compiled.");
+  projectPackages = packages;
+  projectRoot = root;
+}
+
+/** The package specifiers a Source imports, with any logical version suffix removed. */
+export function importedPackages(source: string): readonly string[] {
+  const found = new Set<string>();
+  for (const match of source.matchAll(/<import\b[^>]*\bfrom\s*=\s*"([^"]+)"/gu)) {
+    const specifier = match[1]!;
+    const suffix = specifier.lastIndexOf("@");
+    found.add(suffix > 0 && /^\d+$/u.test(specifier.slice(suffix + 1)) ? specifier.slice(0, suffix) : specifier);
+  }
+  return [...found];
+}
+
 type OfficialVideoDomain = {
   readonly closure: ResolvedModuleClosure;
   readonly surfaces: MarkupSurfaceRegistry;
@@ -71,7 +100,8 @@ type OfficialVideoDomain = {
 let loading: Promise<OfficialVideoDomain> | undefined;
 
 async function loadOfficialVideoDomain(): Promise<OfficialVideoDomain> {
-  const loaded = await loadNodePackageSelection(OFFICIAL_VIDEO_PACKAGES, import.meta.dirname);
+  const selection = [...new Set([...OFFICIAL_VIDEO_PACKAGES, ...projectPackages])];
+  const loaded = await loadNodePackageSelection(selection, projectRoot ?? import.meta.dirname);
   const contributions = loaded.map((item) => item.contribution);
   const manifests = contributions.flatMap((item) =>
     (item.modules ?? []).map((module) => module.manifest));
@@ -114,7 +144,7 @@ async function loadOfficialVideoDomain(): Promise<OfficialVideoDomain> {
         registry,
         resolveModule(request) {
           const found = resolveModule(request.from);
-          if (found === undefined) throw new Error(`No official preview package declares ${request.from}.`);
+          if (found === undefined) throw new Error(`No package installed under the previewed project declares ${request.from}.`);
           return found;
         },
       }));

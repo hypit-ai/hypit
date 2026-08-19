@@ -1,8 +1,10 @@
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createServer } from "vite";
 
+import { importedPackages, usePreviewPackages } from "./src/official-video.js";
 import { svmlPlaygroundPlugin } from "./src/server.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -53,6 +55,15 @@ const runtime = runtimeArgument === undefined ? undefined : resolve(invokedFrom,
 const packageRoot = invokedFrom;
 const port = Number(values.get("port") ?? "5179");
 if (!Number.isSafeInteger(port) || port <= 0) usage("--port must be a positive integer");
+
+// A Source may import a package this application has never heard of, which is
+// exactly what a project-local component is. Load what the Source names, from
+// the project that installed it, alongside the official list.
+usePreviewPackages(
+  [source, ...(run === undefined ? [] : [run])]
+    .flatMap((path) => importedPackages(readFileSync(path, "utf8"))),
+  packageRoot,
+);
 
 const server = await createServer({
   configFile: false,
