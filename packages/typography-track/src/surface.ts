@@ -622,13 +622,34 @@ function runStyle(value: SurfaceResolvedReference): VisualTextRunStyle {
 function paragraph(element: StructuredElement, index: number, resolve: (path: string) => SurfaceResolvedReference | undefined): VisualTextDocument["paragraphs"][number] {
   allowed(element, ["id", "style"]);
   const inlines: VisualTextDocument["paragraphs"][number]["inlines"][number][] = [];
-  let inlineIndex = 0;
+  // Source indentation belongs to the file, not to the words. An item's own direct text is dedented
+  // and a paragraph's was not, so the same copy read differently depending only on whether it was
+  // written inside <P>. Dedent the paragraph as one block, with each nested element standing in as a
+  // zero-width mark: measuring the common indentation line by line needs the runs in their places,
+  // and a Span in the middle of a line would otherwise look like a line of its own.
+  const mark = "\u0000";
+  const merged: (typeof element.children)[number][] = [];
   for (const child of element.children) {
-    inlineIndex += 1;
-    if (child.kind === "text") {
-      if (child.value.length > 0) inlines.push({ kind: "text", id: `run-${inlineIndex}`, text: child.value });
+    const previous = merged.at(-1);
+    if (child.kind === "text" && previous?.kind === "text") {
+      merged[merged.length - 1] = { ...previous, value: `${previous.value}${child.value}` };
       continue;
     }
+    merged.push(child);
+  }
+  const segments = dedent(merged.map((child) => child.kind === "text" ? child.value : mark).join("")).split(mark);
+  // One segment lies before each mark and one after the last, so a text run reads the segment at the
+  // current mark and only a nested element moves on to the next.
+  let segmentIndex = 0;
+  let inlineIndex = 0;
+  for (const child of merged) {
+    inlineIndex += 1;
+    if (child.kind === "text") {
+      const value = segments[segmentIndex] ?? child.value;
+      if (value.length > 0) inlines.push({ kind: "text", id: `run-${inlineIndex}`, text: value });
+      continue;
+    }
+    segmentIndex += 1;
     const name = localName(child.name);
     if (name === "Break") {
       allowed(child, []);
@@ -647,7 +668,7 @@ function paragraph(element: StructuredElement, index: number, resolve: (path: st
       kind: "text", id: optionalText(child, "id") ?? `run-${inlineIndex}`, text: spanText,
       ...(styleRef === undefined ? {} : { style: runStyle(styleRef) }),
       ...(child.attributes.language === undefined ? {} : { language: text(child, "language") }),
-      ...(child.attributes.direction === undefined ? {} : { direction: text(child, "direction") as "auto" | "ltr" | "rtl" }),
+      ...(child.attributes.direction === undefined ? {} : { direction: enumText(child, "direction", ["auto", "ltr", "rtl"] as const) }),
     });
   }
   if (inlines.length === 0) throw new Error(`${element.name} cannot be empty.`);
