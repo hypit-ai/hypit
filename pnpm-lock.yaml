@@ -1613,6 +1613,9 @@ importers:
       '@hypit/generation':
         specifier: workspace:*
         version: link:../generation
+      '@hypit/host':
+        specifier: workspace:*
+        version: link:../host
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2900,12 +2903,33 @@ importers:
       '@hypit/compiler-markup-node':
         specifier: workspace:*
         version: link:../compiler-markup-node
+      '@hypit/credential-store-env':
+        specifier: workspace:*
+        version: link:../credential-store-env
+      '@hypit/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@hypit/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@hypit/generation':
+        specifier: workspace:*
+        version: link:../generation
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
+      '@hypit/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
       '@hypit/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/provider-kie':
+        specifier: workspace:*
+        version: link:../provider-kie
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local

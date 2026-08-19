@@ -1,6 +1,7 @@
 import { createMarkupSurfaceHostFacet } from "@hypit/markup";
 import {
   grokImagineComponent,
+  grokImagineDefinition,
   grokImagineManifest,
   grokImagineModuleRef,
   grokImagineMarkupSurfaces,
@@ -12,6 +13,7 @@ export const hypitPackage = {
   modules: [{ manifest: grokImagineManifest }],
   components: [grokImagineComponent],
   hostFacets: [
+    grokImagineDefinition.hostFacet,
     createMarkupSurfaceHostFacet({
       module: grokImagineModuleRef,
     declaration: grokImagineMarkupSurfaces.find((item) => item.name === "video")!,

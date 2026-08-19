@@ -1,0 +1,32 @@
+{
+  "name": "@hypit/local-notepad-list",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@hypit/artifact": "workspace:*",
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/composition": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/markup": "workspace:*",
+    "@hypit/media": "workspace:*",
+    "@hypit/narrative": "workspace:*",
+    "@hypit/program-space": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/semantic-map": "workspace:*",
+    "@hypit/spatial": "workspace:*",
+    "@hypit/svs": "workspace:*",
+    "@hypit/temporal": "workspace:*",
+    "@hypit/text": "workspace:*"
+  },
+  "devDependencies": {
+    "@hypit/core": "workspace:*"
+  }
+}

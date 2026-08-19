@@ -1,0 +1,344 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="copy" from="@hypit/text@1"/>
+  <import as="estimate" from="@hypit/estimate@1"/>
+  <import as="nano" from="@hypit/nano-banana@1"/>
+  <import as="remove" from="@hypit/background-removal@1"/>
+  <import as="mediaop" from="@hypit/media-pipeline@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="speech" from="@hypit/speech-spine@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="caption-ai" from="@hypit/caption-gemini@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="media-track" from="@hypit/media-track@1"/>
+  <import as="notes" from="@hypit/local-notepad-list@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="studio" source="./studio.svs"/>
+  <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+
+  <!-- One Script for the whole video. The paper list returns five times, so
+       `board` is one Selection with five occurrences and `write` is one Moment
+       with five; `opening` is the sentence the title writes itself over before
+       the paper is ever seen. -->
+  <script id="story">
+    <hook>
+      <HOST> @opening Here are the top five most popular ways to learn AI. @/opening
+        @board Number five is @write!Instagram. @/board
+        @memes It's mostly just viral AI memes, @/memes zero actual education on
+        how to use this stuff for real work.
+    </hook>
+
+    <courses>
+      <HOST> @board Number four, @write!AI courses. @/board Courses can't keep up
+        with how fast AI is progressing. They're all outdated by the time you
+        finish the course.
+    </courses>
+
+    <youtube>
+      <HOST> @board Number three, @write!YouTube. @/board Every video is,
+        @thumbnail this will change everything, @/thumbnail but it's just another
+        sponsorship deal. @board Number two, @write!Twitter. @/board
+    </youtube>
+
+    <twitter>
+      <HOST> Smart people share gold here, but you're gonna end up wasting two
+        plus hours every day scrolling through bots to find what's actually
+        meaningful. And no one has time for that.
+    </twitter>
+
+    <rundown>
+      <HOST> @board Number one is @write!the rundown~@settled!. @/board
+        @news It's a free newsletter. It takes five minutes to read. And it
+        actually teaches you the AI tools that really matter. @/news
+    </rundown>
+
+    <close>
+      <HOST> And this is how two million people at companies like @apple!Apple,
+        @microsoft!Microsoft, and @nasa!NASA, well, they use this to keep up with
+        AI. I added the link to this post if you wanna sign up for free.
+    </close>
+  </script>
+
+  <!-- Depicted material. Every picture the video must show and does not already
+       own is generated once, at the aspect ratio it is used at, carrying only
+       what it depicts. -->
+  <copy:Value id="presenter-look">
+    A realistic podcast video frame of a white man in his early thirties with short dark
+    hair swept back, wearing clear-rimmed round glasses, large black over-ear headphones and
+    a plain black zip-up jacket. He sits at a wooden studio desk behind a large black
+    condenser microphone on a boom arm, turned slightly to his right, mouth open mid-sentence.
+    Behind him a softly out-of-focus room glows magenta and purple, with a bright monitor
+    showing blurred pink and blue blobs over his left shoulder and a warm amber light strip
+    along the desk edge. Waist-up framing, shallow depth of field, natural skin texture,
+    warm key light from the front left.
+  </copy:Value>
+
+  <copy:Value id="paper-look">
+    A flat overhead photograph of a single sheet of warm off-white graph paper, faintly cream
+    coloured, filling the whole picture edge to edge with no edges or background visible. The
+    sheet lies perfectly smooth and flat under soft even light, with no creases, wrinkles, folds
+    or shadows anywhere. A square grid is printed across it in a faint, soft-edged purple-grey,
+    low in contrast and slightly blurred, with about ten large squares across the width and
+    every line the same weight. Photographed a little out of focus. Blank paper only.
+  </copy:Value>
+
+  <copy:Value id="meme-post-look">
+    A screenshot of a social media post on a black background, in portrait shape. At the top,
+    two short lines of small white text: the first reads Me: "Explain it like I'm a five-year old",
+    the second reads ChatGPT:. Below them a photograph fills the rest of the post: a white
+    plastic humanoid robot with a smooth featureless face and glowing eyes, seated indoors at a
+    table in a warmly lit room, shot from the chest up. A tiny grey watermark sits in the
+    bottom-left corner of the photograph.
+  </copy:Value>
+
+  <copy:Value id="thumbnail-look">
+    A widescreen video thumbnail. A dark blue server room recedes into the distance behind rows
+    of glowing racks and cables. On the right side, a young man with dark hair and a black
+    T-shirt leans in with a wide open-mouthed excited expression and points with his index
+    finger back toward the racks. Across the upper left, in very large heavy white condensed
+    capitals with a thin dark outline, two stacked lines read THIS WILL CHANGE and EVERYTHING.
+    Saturated, high-contrast, glossy thumbnail styling.
+  </copy:Value>
+
+  <copy:Value id="newsletter-look">
+    A tall screenshot of an email newsletter web page on a white background, in a very narrow
+    portrait shape, as though the whole page has been captured in one long strip. At the top, a
+    black banner carries a small white trophy mark and the words The Rundown AI, with a tiny
+    line of grey text beneath it. Under the banner, several paragraphs of small dark grey body
+    text with a few words in blue underlined link styling. Then a bold heading line, a bulleted
+    list of five short items, a narrow black bar carrying the words LATEST DEVELOPMENTS in white
+    capitals, a blue underlined article headline, and a small blue and grey bar chart with a
+    caption beneath it. Further down, another black bar reading QUICK HITS, a short bulleted
+    list with tiny coloured icons, and a final blue underlined heading. Clean, dense, readable
+    editorial layout with generous white space.
+  </copy:Value>
+
+  <copy:Value id="apple-look">
+    The Apple logo: one solid white silhouette of an apple with a bite taken from its right side
+    and a small separate leaf angled to the right above it, centred on a plain flat black
+    background with wide empty margins.
+  </copy:Value>
+
+  <copy:Value id="microsoft-look">
+    The Microsoft logo: four equal solid squares arranged in a two by two grid with a thin gap
+    between them, the top-left square orange-red, the top-right square green, the bottom-left
+    square blue and the bottom-right square yellow, centred on a plain flat black background
+    with wide empty margins.
+  </copy:Value>
+
+  <copy:Value id="nasa-look">
+    The NASA insignia: a deep blue circle carrying the white letters NASA across its middle, a
+    swoosh of small white stars behind them and a thin red chevron sweeping across the circle
+    from lower left to upper right, centred on a plain flat black background with wide empty
+    margins.
+  </copy:Value>
+
+  <nano:Image id="presenter" prompt={presenter-look} aspect-ratio="9:16" resolution="2K" output-format="png"/>
+  <nano:Image id="paper" prompt={paper-look} aspect-ratio="9:16" resolution="2K" output-format="png"/>
+  <nano:Image id="meme-post" prompt={meme-post-look} aspect-ratio="3:4" resolution="2K" output-format="png"/>
+  <nano:Image id="thumbnail" prompt={thumbnail-look} aspect-ratio="16:9" resolution="2K" output-format="png"/>
+  <nano:Image id="newsletter" prompt={newsletter-look} aspect-ratio="1:4" resolution="2K" output-format="png"/>
+  <nano:Image id="apple-plate" prompt={apple-look} aspect-ratio="1:1" resolution="1K" output-format="png"/>
+  <nano:Image id="microsoft-plate" prompt={microsoft-look} aspect-ratio="1:1" resolution="1K" output-format="png"/>
+  <nano:Image id="nasa-plate" prompt={nasa-look} aspect-ratio="1:1" resolution="1K" output-format="png"/>
+
+  <!-- The logos sit straight on the picture with nothing behind them, so each
+       generated plate loses its background before it reaches a Frame. -->
+  <remove:Background id="apple" source={apple-plate.image}/>
+  <remove:Background id="microsoft" source={microsoft-plate.image}/>
+  <remove:Background id="nasa" source={nasa-plate.image}/>
+
+  <!-- One speaking performance, cut into six takes at the reference's own jump
+       cuts. Every take keeps the same reference frame, and the takes after the
+       first reuse the first take's voice so the timbre does not drift. -->
+  <estimate:Speech id="hook-duration" source={story.segment.hook.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="courses-duration" source={story.segment.courses.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="youtube-duration" source={story.segment.youtube.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="twitter-duration" source={story.segment.twitter.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="rundown-duration" source={story.segment.rundown.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="close-duration" source={story.segment.close.speech} policy={studio.speech.normal}/>
+
+  <copy:Value id="hook-action">
+    Open with direct eye contact and a small counting gesture, then settle back toward the microphone.
+  </copy:Value>
+  <copy:Value id="courses-action">
+    Lift one open hand on the objection, then let it drop as the sentence lands.
+  </copy:Value>
+  <copy:Value id="youtube-action">
+    Flatten the delivery into dry sarcasm on the quoted line, then shrug it off.
+  </copy:Value>
+  <copy:Value id="twitter-action">
+    Build mild exasperation across the sentence and end on a short, tired half-smile.
+  </copy:Value>
+  <copy:Value id="rundown-action">
+    Brighten on the recommendation and keep the pace quick and warm.
+  </copy:Value>
+  <copy:Value id="close-action">
+    Deliver the names evenly, then finish with a relaxed, inviting close to camera.
+  </copy:Value>
+
+  <copy:Render id="hook-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+    <copy:Set name="dialogue" text={story.segment.hook.dialogue}/>
+    <copy:Set name="action" text={hook-action}/>
+  </copy:Render>
+  <copy:Render id="courses-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+    <copy:Set name="dialogue" text={story.segment.courses.dialogue}/>
+    <copy:Set name="action" text={courses-action}/>
+  </copy:Render>
+  <copy:Render id="youtube-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+    <copy:Set name="dialogue" text={story.segment.youtube.dialogue}/>
+    <copy:Set name="action" text={youtube-action}/>
+  </copy:Render>
+  <copy:Render id="twitter-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+    <copy:Set name="dialogue" text={story.segment.twitter.dialogue}/>
+    <copy:Set name="action" text={twitter-action}/>
+  </copy:Render>
+  <copy:Render id="rundown-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+    <copy:Set name="dialogue" text={story.segment.rundown.dialogue}/>
+    <copy:Set name="action" text={rundown-action}/>
+  </copy:Render>
+  <copy:Render id="close-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+    <copy:Set name="dialogue" text={story.segment.close.dialogue}/>
+    <copy:Set name="action" text={close-action}/>
+  </copy:Render>
+
+  <seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt}
+    duration={hook-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={presenter.image}/>
+  </seedance:ReferenceVideo>
+
+  <mediaop:ExtractAudio id="host-voice" source={hook-take.video} audio="default"/>
+
+  <seedance:ReferenceVideo id="courses-take" model="mini" prompt={courses-prompt}
+    duration={courses-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={presenter.image}/>
+    <seedance:Reference audio={host-voice.audio}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="youtube-take" model="mini" prompt={youtube-prompt}
+    duration={youtube-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={presenter.image}/>
+    <seedance:Reference audio={host-voice.audio}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="twitter-take" model="mini" prompt={twitter-prompt}
+    duration={twitter-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={presenter.image}/>
+    <seedance:Reference audio={host-voice.audio}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="rundown-take" model="mini" prompt={rundown-prompt}
+    duration={rundown-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={presenter.image}/>
+    <seedance:Reference audio={host-voice.audio}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="close-take" model="mini" prompt={close-prompt}
+    duration={close-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={presenter.image}/>
+    <seedance:Reference audio={host-voice.audio}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="full" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
+  <space:Frame id="meme-frame" within={vertical} left="21%" top="43%" right="80%" bottom="85%"/>
+  <space:Frame id="thumbnail-frame" within={vertical} left="8%" top="50%" right="92%" bottom="80%"/>
+  <space:Frame id="newsletter-frame" within={vertical} left="13%" top="14%" right="87%" bottom="86%"/>
+  <space:Frame id="logo-frame" within={vertical} left="37%" top="55%" right="63%" bottom="70%"/>
+
+  <space:Extent id="meme-extent" width="1536" height="2048"/>
+  <space:Extent id="thumbnail-extent" width="2048" height="1152"/>
+  <space:Extent id="newsletter-extent" width="1024" height="4096"/>
+  <space:Extent id="logo-extent" width="1024" height="1024"/>
+
+  <speech:Spine id="speech" frame-rate="30"
+    visual-frame={full} visual-appearance={studio.speech.visual} visual-z="0">
+    <speech:Take video={hook-take.video} segment={story.segment.hook}/>
+    <speech:Take video={courses-take.video} segment={story.segment.courses}/>
+    <speech:Take video={youtube-take.video} segment={story.segment.youtube}/>
+    <speech:Take video={twitter-take.video} segment={story.segment.twitter}/>
+    <speech:Take video={rundown-take.video} segment={story.segment.rundown}/>
+    <speech:Take video={close-take.video} segment={story.segment.close}/>
+  </speech:Spine>
+
+  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+
+  <!-- The paper list is one system with one Style over its whole life: the title
+       writes itself over the speaker first, then the sheet takes over and each
+       item is written in beside its number. -->
+  <fonts:Stack id="title-face" family="playfair-display" weight="600" style="italic"/>
+  <fonts:Stack id="emphasis-face" family="inter" weight="800" style="normal"/>
+  <fonts:Stack id="hand-face" family="patrick-hand" weight="400" style="normal"/>
+
+  <notes:ListStyle id="notepad" recipe={studio.notepad.list}
+    title-font={title-face} emphasis-font={emphasis-face} row-font={hand-face}/>
+
+  <notes:List id="board" map={timing.map} space={speech.space} frame={full}
+    during={story.selection.board} opening={story.selection.opening}
+    triggers={story.moment.write} terminal={story.moment.settled}
+    title="Top 5 Most Popular Ways to " title-emphasis="learn AI" style={notepad}>
+    <notes:Row id="row-instagram" rank="5" label="Instagram"/>
+    <notes:Row id="row-courses" rank="4" label="AI Courses"/>
+    <notes:Row id="row-youtube" rank="3" label="YouTube"/>
+    <notes:Row id="row-twitter" rank="2" label="Twitter/X"/>
+    <notes:Row id="row-rundown" rank="1" label="The Rundown" mark="circle"/>
+  </notes:List>
+
+  <!-- Every inserted picture is a rectangle on the speaking take, so they all
+       share one Media Track. The newsletter is one tall screenshot whose picture
+       scrolls up inside its Frame while the Frame stays where it is. -->
+  <media-track:Track id="inserts" map={timing.map} space={speech.space} canvas={vertical}>
+    <media-track:Item id="meme" image={meme-post.image} extent={meme-extent}
+      frame={meme-frame} during={story.selection.memes}
+      appearance={studio.media.panel} motion={studio.motion.cut}/>
+    <media-track:Item id="thumbnail-card" image={thumbnail.image} extent={thumbnail-extent}
+      frame={thumbnail-frame} during={story.selection.thumbnail}
+      appearance={studio.media.card} motion={studio.motion.cut}/>
+    <media-track:Item id="newsletter-panel" image={newsletter.image} extent={newsletter-extent}
+      frame={newsletter-frame} during={story.selection.news}
+      appearance={studio.media.sheet} motion={studio.motion.cut}>
+      <media-track:Sampling at="start" y="0"/>
+      <media-track:Sampling at="end" y="-2600" easing="linear"/>
+    </media-track:Item>
+    <media-track:Item id="apple-logo" image={apple.image} extent={logo-extent}
+      frame={logo-frame} at={story.moment.apple} for="600ms"
+      appearance={studio.media.logo} motion={studio.motion.cut}/>
+    <media-track:Item id="microsoft-logo" image={microsoft.image} extent={logo-extent}
+      frame={logo-frame} at={story.moment.microsoft} for="600ms"
+      appearance={studio.media.logo} motion={studio.motion.cut}/>
+    <media-track:Item id="nasa-logo" image={nasa.image} extent={logo-extent}
+      frame={logo-frame} at={story.moment.nasa} for="600ms"
+      appearance={studio.media.logo} motion={studio.motion.cut}/>
+  </media-track:Track>
+
+  <!-- One caption system for the whole programme. The words spoken over the
+       newsletter are the only ones that change appearance, so they are one
+       scoped override inside the same Program. -->
+  <fonts:Stack id="caption-face" family="inter" weight="800" style="normal"/>
+  <caption-fine:Style id="plain-caption" recipe={studio.caption.plain} font={caption-face}/>
+  <caption-fine:Style id="boxed-caption" recipe={studio.caption.boxed} font={caption-face}/>
+
+  <caption:Program id="caption-program" display={story.caption} default={plain-caption}>
+    <caption:Use words={story.caption.selection.news} style={boxed-caption}/>
+  </caption:Program>
+
+  <caption-ai:Planner id="caption-plan" display={story.caption}
+    program={caption-program} model="gemini-2.5-flash"/>
+
+  <caption-fine:Track id="captions" display={story.caption}
+    correspondence={story.caption.correspondence}
+    map={timing.map} space={speech.space}
+    program={caption-program} plan={caption-plan.plan}/>
+
+  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audioTrack}/>
+    <film:Track source={inserts.visual}/>
+    <film:Track source={board.visual}/>
+    <film:Track source={captions.track}/>
+  </film:Film>
+
+  <render:Video id="final" composition={main.composition} space={speech.space}/>
+</svml>

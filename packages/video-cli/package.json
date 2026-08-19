@@ -10,8 +10,15 @@
   "dependencies": {
     "@hypit/cli": "workspace:*",
     "@hypit/compiler-markup-node": "workspace:*",
+    "@hypit/credential-store-env": "workspace:*",
+    "@hypit/driver-node": "workspace:*",
+    "@hypit/endpoint-kit": "workspace:*",
+    "@hypit/generation": "workspace:*",
     "@hypit/markup": "workspace:*",
+    "@hypit/model-kit": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/provider-kie": "workspace:*",
     "@hypit/runtime-local": "workspace:*",
     "@hypit/workspace-fs-node": "workspace:*"
   }

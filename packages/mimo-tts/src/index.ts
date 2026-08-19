@@ -196,6 +196,11 @@ export const mimoTtsManifest = {
 
 export const mimoTtsComponent = base.component;
 
+export const mimoTtsDefinition = {
+  ...base,
+  manifest: mimoTtsManifest,
+};
+
 export { createMimoTtsAudioFragment } from "./fragment.js";
 export {
   decodeMimoPresetSurface,

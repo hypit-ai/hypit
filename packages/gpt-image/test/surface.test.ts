@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { artifactTypes } from "@hypit/artifact";
-import { parseStructuredElement } from "@hypit/markup";
+import { markupSurfaceHostFacetAbi, parseStructuredElement } from "@hypit/markup";
 import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/markup";
 import { textTypes } from "@hypit/text";
 
@@ -93,7 +93,8 @@ test("the physical package carries both independently importable Surface impleme
     { name: "@hypit/gpt-image", surfaces: ["Image"] },
     { name: "@hypit/gpt-image/clean", surfaces: ["Image"] },
   ]);
-  assert.equal(gptImageNodePackage.hostFacets.length, 2);
+  assert.equal(gptImageNodePackage.hostFacets
+    .filter((facet) => facet.abi === markupSurfaceHostFacetAbi).length, 2);
 });
 
 test("GPT Image Surface rejects hidden inline prompts and undeclared child shapes", async () => {
