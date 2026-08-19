@@ -97,7 +97,6 @@
     "@hypit/typography-track": "workspace:*",
     "@hypit/visual-ir": "workspace:*",
     "@hypit/whisperx": "workspace:*",
-    "@hypit/local-linerank": "workspace:*",
     "@types/node": "24.10.1",
     "tsx": "4.21.0",
     "typescript": "5.9.3",
