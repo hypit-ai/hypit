@@ -4,7 +4,7 @@ import { useData } from "vitepress";
 import { computed } from "vue";
 import HeroMasthead from "./components/HeroMasthead.vue";
 import LocalePreference from "./components/LocalePreference.vue";
-import HypitLogo from "./components/HypitLogo.vue";
+import NarratageLogo from "./components/NarratageLogo.vue";
 import PaperFooter from "./components/PaperFooter.vue";
 import { useHomeThemeScope } from "./HomeThemeScope";
 
@@ -18,7 +18,7 @@ useHomeThemeScope(isHome);
 
 <template>
   <DefaultLayout>
-    <template #nav-bar-title-before><HypitLogo v-if="isHome" class="nav-hypit-logo" /></template>
+    <template #nav-bar-title-before><NarratageLogo v-if="isHome" class="nav-narratage-logo" /></template>
     <template #layout-top><LocalePreference /></template>
     <template #home-hero-info><HeroMasthead /></template>
     <template #layout-bottom><PaperFooter v-if="isHome" /></template>
