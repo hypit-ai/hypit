@@ -7,16 +7,17 @@ attributes, children, ports, Recipe properties, timing behavior, appearance and 
 First enumerate every system the reference actually contains — base pictures, inserted elements,
 full-screen graphic compositions, persistent overlays, captions, speech, music, sound effects — and
 inspect candidates for each one. A system you never inspected is a system you are about to invent.
-`inspect_svml_vocabulary` does not list what is installed; it reads the packages you name. Get the
-names from `list_svml_packages`, which reports every installed package that declares an activation
-along with the tags it registers:
+`inspect_svml_vocabulary` reads the packages you name, so name the ones you know and inspect them.
+When a system has no package you can think of, `list_svml_packages` reports every installed package
+with the tags it registers and the models it offers:
 
 ```bash
 hypit-reference-video-tools list_svml_packages
 ```
 
-Never work from a remembered list of package names, and never conclude a capability is missing
-because you did not think of the package that has it.
+Run it before concluding that a capability is missing. Do not run it to confirm something you already
+know: a vocabulary gap is proven by inspecting the candidates and finding none that fits, not by
+failing to remember one.
 
 Use this decision order:
 

@@ -10,7 +10,9 @@ secondary feed, or supporting image stays visible.
 - Use `remove:Background` when a still portrait must become a transparent cutout. Place the resulting
   image with `image={cutout.image}` plus an explicit `space:Extent`.
 - Use `compose:Image` with ordered `compose:Layer` children when the PIP should be frozen into one
-  deterministic still before it enters the timeline.
+  deterministic still before it enters the timeline. Cutting out and composing are a chain, not a
+  choice between two: when a cutout is what goes into the composite, the cutout's output is the
+  layer's source. Reaching for `compose:Image` does not replace removing the background first.
 - Use `surface={...}` only when the upstream component already produces an authored compositable
   surface. Keep the source form explicit rather than guessing from a generic Artifact.
 
