@@ -32,18 +32,21 @@ is deliberately unable to scan a directory, so this is how a caller finds out wh
 instead of working from memory.
 
 `prepare_reference` requires a local video path and stores derived media under the project's
-gitignored `.hypit/reference-video-tools/` directory. It produces three full-reference observations:
-`people_and_product`, `voices`, and `persistent_systems` — the on-screen text and graphic systems
-that continue or recur across the whole video, each one's lifetime, and whether its appearance ever
-changes. Without `--redo`, completed stages are reused. Use `--redo media` to rebuild shot media and
-clear derived observations, or `--redo people`, `--redo voices`, `--redo systems`, or `--redo all` to
+gitignored `.hypit/reference-video-tools/` directory. It produces four full-reference observations: `people_and_product`,
+`voices`, `persistent_systems` — the on-screen text and graphic systems that continue or recur across
+the whole video, each one's lifetime, and whether its appearance ever changes — and `places`: how
+many locations the video was shot in, which camera positions appear in each, which parts of the video
+use each one, and each position described in enough detail to draw from the words alone. Without `--redo`, completed stages are reused. Use `--redo media` to rebuild shot media and
+clear derived observations, or `--redo people`, `--redo voices`, `--redo systems`, `--redo places`, or `--redo all` to
 rerun only the selected full-reference stages.
 
 `observe_reference` observes every unfinished shot, or only the shots named by `--shot-id`. Each shot
 produces three observations — `visual` (base picture, covering content, continuity, whether the frame
 is a depicted scene or a flat designed field, and each framed element's inner picture separately from
 its frame), `text_appearance` (typeface, weight, size, spacing, colour, stroke, shadow, glow,
-per-word emphasis, position and entry of drawn text), and `audio`. Each cut adds one `continuity`
+per-word emphasis, position and entry of drawn text), and `audio`. The picture observation also
+states whether the picture moves and how, separating camera movement from movement within it, since a
+held still and a moving shot are reconstructed differently. Each cut adds one `continuity`
 observation covering both whether the two shots are one continuous camera shot and whether an overlay
 continues across the boundary. The preceding tail frame, audio tail and full-reference context are
 attached automatically. Completed observations are reused; `--reobserve` is the only way to run a
