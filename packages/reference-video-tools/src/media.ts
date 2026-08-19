@@ -57,14 +57,22 @@ async function signatures(path: string, sampleRate: number): Promise<readonly Ui
   return result;
 }
 
+// Boundaries are only as precise as this rate, and a clip cut on an imprecise boundary opens on
+// content belonging to the shot before it. At three samples a second that overhang reached a third
+// of a second — long enough for an observer to describe a shot as the picture that precedes it, and
+// to read a list that had been typing all along as one whose letters were being deleted. The whole
+// video is decoded once whatever the rate, so sampling four times as often costs four times as many
+// 32×32 signatures and no additional decoding.
+const SAMPLE_RATE = 12;
+
 async function contentBoundaries(path: string, duration: number): Promise<readonly number[]> {
-  const frames = await signatures(path, 3);
+  const frames = await signatures(path, SAMPLE_RATE);
   if (frames.length < 2) return [0, duration];
   const starts = [0];
   let anchor = frames[0]!;
   for (let index = 1; index < frames.length; index += 1) {
     if (distance(frames[index]!, anchor) > 0.1) {
-      starts.push(round(index / 3));
+      starts.push(round(index / SAMPLE_RATE));
       anchor = frames[index]!;
     }
   }
@@ -114,8 +122,10 @@ export async function prepareMedia(videoPath: string, root: string, duration: nu
   await Promise.all(bounds.map(async (bound, index) => {
     const id = String(index + 1).padStart(3, "0");
     const clip = join(shotDir, `${id}.mp4`);
-    await extract(videoPath, ["-ss", String(bound.start), "-i", videoPath, "-t", String(Math.max(0.1, bound.end - bound.start)), "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart"], clip);
-    await extract(videoPath, ["-ss", String(bound.start + (bound.end - bound.start) / 2), "-i", videoPath, "-frames:v", "1", "-vf", "scale='min(720,iw)':-2", "-q:v", "3"], join(shotDir, `${id}-representative.jpg`));
+    // `-ss` goes after `-i`: seeking the output decodes from the start and lands on the frame asked
+    // for, where seeking the input lands on the keyframe before it.
+    await extract(videoPath, ["-i", videoPath, "-ss", String(bound.start), "-t", String(Math.max(0.1, bound.end - bound.start)), "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart"], clip);
+    await extract(videoPath, ["-i", videoPath, "-ss", String(bound.start + (bound.end - bound.start) / 2), "-frames:v", "1", "-vf", "scale='min(720,iw)':-2", "-q:v", "3"], join(shotDir, `${id}-representative.jpg`));
     await extract(videoPath, ["-sseof", "-0.1", "-i", clip, "-update", "1", "-frames:v", "1", "-vf", "scale='min(720,iw)':-2", "-q:v", "3"], join(shotDir, `${id}-tail.jpg`));
     if (await hasAudio(clip)) await extract(videoPath, ["-sseof", "-3", "-i", clip, "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le"], join(shotDir, `${id}-audio.wav`));
   }));

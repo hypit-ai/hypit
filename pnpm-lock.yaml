@@ -225,70 +225,6 @@ importers:
         specifier: ^1.6.4
         version: 1.6.4(@algolia/client-search@5.56.0)(@types/node@24.10.1)(postcss@8.5.25)(search-insights@2.17.3)(typescript@5.9.3)
 
-  examples/ranking-typewriter-reverse/packages/local-notebook-list:
-    dependencies:
-      '@hypit/artifact':
-        specifier: workspace:*
-        version: link:../../../../packages/artifact
-      '@hypit/component-kit':
-        specifier: workspace:*
-        version: link:../../../../packages/component-kit
-      '@hypit/composition':
-        specifier: workspace:*
-        version: link:../../../../packages/composition
-      '@hypit/elaborator':
-        specifier: workspace:*
-        version: link:../../../../packages/elaborator
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../../../../packages/markup
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../../../../packages/media
-      '@hypit/narrative':
-        specifier: workspace:*
-        version: link:../../../../packages/narrative
-      '@hypit/program-space':
-        specifier: workspace:*
-        version: link:../../../../packages/program-space
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../../../../packages/protocol
-      '@hypit/semantic-map':
-        specifier: workspace:*
-        version: link:../../../../packages/semantic-map
-      '@hypit/spatial':
-        specifier: workspace:*
-        version: link:../../../../packages/spatial
-      '@hypit/svs':
-        specifier: workspace:*
-        version: link:../../../../packages/svs
-      '@hypit/temporal':
-        specifier: workspace:*
-        version: link:../../../../packages/temporal
-      '@hypit/text':
-        specifier: workspace:*
-        version: link:../../../../packages/text
-    devDependencies:
-      '@hypit/core':
-        specifier: workspace:*
-        version: link:../../../../packages/core
-      '@hypit/fonts-open':
-        specifier: workspace:*
-        version: link:../../../../packages/fonts-open
-      '@hypit/hyperframes':
-        specifier: workspace:*
-        version: link:../../../../packages/hyperframes
-      '@hypit/provider-hyperframes-local':
-        specifier: workspace:*
-        version: link:../../../../packages/provider-hyperframes-local
-      '@types/node':
-        specifier: 24.10.1
-        version: 24.10.1
-      tsx:
-        specifier: 4.21.0
-        version: 4.21.0
-
   packages/artifact:
     dependencies:
       '@hypit/protocol':
@@ -2151,6 +2087,9 @@ importers:
       '@google/genai':
         specifier: 1.52.0
         version: 1.52.0(@modelcontextprotocol/sdk@1.30.0(zod@3.25.76))
+      '@hypit/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
@@ -2163,6 +2102,18 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/provider-whisperx-local':
+        specifier: workspace:*
+        version: link:../provider-whisperx-local
+      '@hypit/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@hypit/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
+      '@hypit/whisperx':
+        specifier: workspace:*
+        version: link:../whisperx
       tsx:
         specifier: 4.21.0
         version: 4.21.0

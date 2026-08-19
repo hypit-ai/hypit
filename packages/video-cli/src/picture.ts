@@ -15,7 +15,7 @@ import { createKieProvider } from "@hypit/provider-kie";
  * The exact model family this Distribution reaches for when the author names none.
  * It is a Host default, not a Core preference: `--model` replaces it outright.
  */
-const defaultPictureModel = "@hypit/nano-banana";
+const defaultPictureModel = "@hypit/gpt-image";
 
 /** Options this command exposes, mapped onto the port names models declare for them. */
 const optionPorts = {

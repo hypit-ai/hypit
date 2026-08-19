@@ -6,9 +6,13 @@ something the reference never contained. Close that gap deliberately.
 
 ## The reference side is finished
 
-The reference video does not change. Its observations are cached and authoritative. Re-observing at a
-fixed temperature of `1.0` buys paraphrase drift and another bill, so never re-run a completed
-observation to "check" it. `--reobserve` exists for a shot whose media was rebuilt, not for doubt.
+The reference video does not change, and its observations are cached. Re-observing at a fixed
+temperature of `1.0` buys paraphrase drift and another bill, so never re-run a completed observation
+to "check" it. `--reobserve` exists for a shot whose media was rebuilt, not for doubt.
+
+Cached does not mean correct. The authority on the reference side is the frame, not the prose written
+about it — `workflow.md` says when to go and look, and doubt is settled there, for free, rather than
+by paying for a second description.
 
 Everything in this file happens on the reconstruction side, which changes every time a package,
 Recipe or source edge is edited.
@@ -68,9 +72,21 @@ return a difference every round for ever. So the loop ends on whichever of these
 - **No progress ends it immediately.** If a comparison returns the same difference it returned before
   the repair, stop. The repair is not reaching the problem, and two more rounds of the same reasoning
   will not find it. Rendering and comparing cost real time on every round.
-- **Three aimed attempts per element is the ceiling.** The first fixes what is obvious, the second
-  fixes what the first revealed, the third is the last one likely to be aimed rather than hopeful.
-  This is a judgement, not a measurement.
+- **Two aimed attempts per element is the ceiling.** The first fixes what is obvious, the second
+  fixes what the first revealed. A third round is where guessing starts to overshoot — correcting
+  past the reference rather than towards it — and the run has more elements waiting than any one of
+  them is worth. Time beats fidelity here by explicit choice.
+
+## Measure what can be measured; iterate only on what cannot
+
+Two attempts is not enough to converge by guessing, and it is not meant to be. A difference stated as
+a quantity — a stroke that is too thick, a shape that is too tall, type that is too large, a margin
+that is too wide — is not a guessing problem. Read the value off the reference frame directly:
+the frames are ordinary images in `.hypit/reference-video-tools/<reference-id>/shots/`, and measuring
+one against the known frame size gives the number in a single step.
+
+Do that instead of spending an attempt. An attempt is for differences that have no number — a
+typeface's character, a texture, a rhythm — where the only route is change it and look again.
 
 When you stop with a difference still there, record it as an accepted deviation with what it is and
 why it stayed. A difference nobody wrote down reads afterwards as a difference nobody noticed, and

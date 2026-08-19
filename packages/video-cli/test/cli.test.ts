@@ -81,7 +81,7 @@ test("image writes one picture file with no Source, Build, Record or Runtime Pro
     }
     if (url.includes("/api/v1/jobs/recordInfo")) {
       return Response.json({ code: 200, data: {
-        taskId: "task_image_test", model: "nano-banana-2", state: "success",
+        taskId: "task_image_test", model: "gpt-image-2", state: "success",
         resultJson: JSON.stringify({ resultUrls: ["https://tempfile.aiquickdraw.com/paper.png"] }),
       } });
     }
@@ -106,21 +106,19 @@ test("image writes one picture file with no Source, Build, Record or Runtime Pro
       readonly package: string; readonly model: string;
       readonly mediaType: string; readonly size: number; readonly path: string;
     };
-    assert.equal(machine.package, "@hypit/nano-banana");
-    assert.equal(machine.model, "nano-banana-2");
+    assert.equal(machine.package, "@hypit/gpt-image");
+    assert.equal(machine.model, "gpt-image-2");
     assert.equal(machine.mediaType, "image/png");
     assert.equal(machine.size, pictureBytes.byteLength);
     assert.equal(machine.path, destination);
     assert.deepEqual(Uint8Array.from(await readFile(destination)), pictureBytes);
     // The author gave one option; every other port took the model's own first value.
     assert.deepEqual(requests, [{
-      model: "nano-banana-2",
+      model: "gpt-image-2-text-to-image",
       input: {
         prompt: "A sheet of warm cream laid paper, even lighting, no text.",
-        image_input: [],
         aspect_ratio: "1:1",
         resolution: "1K",
-        output_format: "png",
       },
     }]);
     assert.equal(calls.filter((item) => item.endsWith("/api/v1/jobs/createTask")).length, 1);
