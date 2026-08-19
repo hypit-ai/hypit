@@ -1,4 +1,5 @@
-export { materializeArtifact, materializeRecord } from "./archive.js";
+export { materializeArtifact, materializeRecord, pinnedRecords } from "./archive.js";
+export type { PinnedRecord } from "./archive.js";
 export { runCli } from "./main.js";
 export { discoverSourcePackages } from "./source-discovery.js";
 export { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
