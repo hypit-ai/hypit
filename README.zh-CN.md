@@ -21,11 +21,17 @@
   <a href="./README.md"><strong>English</strong></a>
 </p>
 
-## Hypit 能做什么
+<p align="center">
+  <a href="https://github.com/hypit-ai/hypit/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/hypit-ai/hypit?style=flat-square&color=FFD700&logo=github&logoColor=white&label=Stars"></a>
+  <a href="./package.json"><img alt="Node 22+" src="https://img.shields.io/badge/Node.js-22+-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white"></a>
+  <a href="./package.json"><img alt="pnpm 10.33" src="https://img.shields.io/badge/pnpm-10.33-F69220?style=flat-square&logo=pnpm&logoColor=white"></a>
+  <a href="./package.json"><img alt="TypeScript 5.9" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white"></a>
+  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0%20with%20conditions-E3B341?style=flat-square"></a>
+</p>
+
+## Hypit
 
 让 AI Agent 复刻任何爆款视频。交付的不仅仅是拆解的脚本，而是一份 workflow：可以换脸、换词、换 B-roll，一次跑出 50 个变体，拿下你的 1 亿播放。
-
-## 30 秒介绍
 
 Hypit 为 AI Agent（Claude Code、Codex……）提供一套创作视频的语言与系统。丢进一条视频，Agent 会把它复刻成完整 workflow：画面、字幕、B-roll 和特效，全部锚定在具体文字上，而不是秒数上。
 
