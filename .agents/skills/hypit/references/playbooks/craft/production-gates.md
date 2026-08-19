@@ -13,7 +13,13 @@ Use staged Run Sources so unreviewed expensive outputs cannot silently feed late
 
 ## Gate 1: build and review reference images
 
-1. Create a narrow `.svrun` containing Targets only for the generated reference-image outputs.
+This gate runs once per round, not once. An image generated **from** another image — a second view of
+a location derived from the one that established it — cannot be demanded until the image it derives
+from has been accepted, so establishing images are one round and the views derived from them are the
+next. `generated-dependencies.md` says which images derive from which.
+
+1. Create a narrow `.svrun` containing Targets only for the generated reference-image outputs of this
+   round.
 2. Submit that Build, then use `inspect` and `get` to retrieve every candidate image.
 3. If the Agent can view images, open the actual full-resolution outputs and review every image
    itself. Do not approve from prompts, metadata, filenames, or thumbnails alone.
