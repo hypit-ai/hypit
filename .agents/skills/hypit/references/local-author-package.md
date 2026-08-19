@@ -14,12 +14,16 @@ Read all of these completely before editing:
 4. `packages/component-kit/README.md`
 5. The closest existing package's README, `manifest.ts`, `surface.ts`, `component.ts`, and
    `activation.ts`
-6. For a package that produces a visual output, that same package's `render.ts`, `schedule.ts` and
-   `fragment.ts` as well. The implementation section below requires a renderer, a Fragment and the
-   lowering between them, and none of those live in the five files above — reading only those five
-   means discovering the shapes by failing.
+6. `docs/guide/component-anatomy.md`, which names the roles every component package fills and where
+   each one lives. The implementation section below requires a renderer, a Fragment and the lowering
+   between them, and none of those are in the five files above — reading only those five means
+   discovering the shapes by failing.
+7. In the closest existing package, the files filling the roles that anatomy names. Their filenames
+   differ per package — `ranking` calls them `schedule.ts` and `render.ts`, `media-track` calls them
+   `program.ts` and `lower.ts`, `comment-sticker` calls them `program.ts` and `author.ts` — so find
+   them by what they export, not by name.
 
-Read item 5's files in full. Read item 6's for their shapes: how a Program becomes elements, where
+Read item 5's files in full. Read item 7's for their shapes: how a Program becomes elements, where
 timing is resolved, what the Fragment declares. They are long, and copying one package's specifics is
 a worse outcome than understanding its structure.
 
@@ -78,9 +82,9 @@ nothing.
 ## Freeze the Types before writing in parallel
 
 The nominal Types and the Manifest are what every other file agrees with, so write them first and
-stop changing them. Once they are frozen, `render.ts`, `style.ts` and `schedule.ts` depend on the
-Types rather than on each other and can be written in any order or at the same time. `surface.ts`,
-`component.ts` and `fragment.ts` follow, because they wire what those three produce.
+stop changing them. Once they are frozen, the value layer, the Style decoder and the renderer depend
+on the Types rather than on each other and can be written in any order or at the same time. The
+Surface, the Producer handlers and the Fragment follow, because they wire what those three produce.
 
 Do not start that parallel stretch while a Type is still in question. Interface drift mid-flight
 costs more than the ordering saves, and the symptom — a Producer rejecting a value that looks right —
