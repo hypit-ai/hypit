@@ -194,11 +194,6 @@ export const seedanceEndpointsByModel = {
   "seedance-2.5": seedanceEndpoints.v25!,
 } as const;
 
-/**
- * The three invocation shapes differ only in how media reaches the model, so one description of the
- * shared request settings serves all of them and none can drift into teaching a syntax the handlers
- * would reject.
- */
 const seedanceCommonAttributes: readonly SurfaceAttributeVocabulary[] = [
   {
     name: "id",

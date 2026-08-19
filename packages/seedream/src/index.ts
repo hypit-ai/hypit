@@ -48,10 +48,6 @@ export const seedreamEndpoints = seedreamBaseDefinition.endpoints;
 export const seedreamComponent = seedreamBaseDefinition.component;
 const endpoint = seedreamEndpoints.image!;
 
-/**
- * Both modes are decoded by one handler, so one description of the request shape serves both and
- * neither element can teach a spelling the shared handler would reject.
- */
 const seedreamAttributes: readonly SurfaceAttributeVocabulary[] = [
   {
     name: "id",

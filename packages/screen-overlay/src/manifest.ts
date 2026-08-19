@@ -78,7 +78,6 @@ export const screenOverlaySetSchema: ValueSchema = object({ items: { schema: { k
 export const screenOverlayProgramSchema: ValueSchema = object({ id: { schema: string }, items: { schema: { kind: "array", minItems: 1, items: item } } });
 const appendInputs = [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }, { name: "space", type: programSpaceTypes.programSpace }, { name: "spec", type: screenOverlayTypes.itemSpec }] as const;
 
-/** Every component child carries its own identity, its stacking order and one temporal form. */
 const itemAttributes = [
   { name: "id", kind: "identifier", required: false,
     summary: "Names this item; the overlay numbers the item after its kind when it is omitted." },
