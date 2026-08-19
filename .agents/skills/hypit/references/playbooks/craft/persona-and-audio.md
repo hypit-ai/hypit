@@ -9,6 +9,8 @@ Connect only the references a component actually needs.
   `media:Image`, or reuse an accepted generated image Record through the Run Source.
 - Choose voice from real supplied audio, an explicit preset, a written voice design, or an explicit
   clone sample. Never infer a person's voice, accent, age, or delivery from appearance alone.
+- Choose it once. One accepted sample per person feeds every line they say and every take they appear
+  in, as `generated-dependencies.md` requires; choosing again per take produces a second voice.
 - Keep one persona contract across recurring takes: face, apparent age range, hair, wardrobe logic,
   vocal texture, accent, pace, delivery, and emotional register.
 - Preserve quoted sample dialogue verbatim in its original language. All generation instructions and
