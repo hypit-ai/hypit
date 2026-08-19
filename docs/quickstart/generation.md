@@ -146,6 +146,10 @@ Prompt-only generation. This is the only shape that accepts `web-search`.
 <seedance:TextVideo id="ambient" model="mini"
   prompt={ambient-direction} duration="5" web-search="false"/>
 ```
+Craft requires every take to start from an accepted image, so a first frame or ordered references are
+the shapes to author with. This shape is documented because the model has it, not because a take
+should begin without a picture.
+
 
 ### seedance:FrameVideo
 
