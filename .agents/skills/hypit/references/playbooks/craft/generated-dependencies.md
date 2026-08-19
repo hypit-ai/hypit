@@ -57,6 +57,20 @@ model or the delivery genuinely needs a resolution only the top tier offers. Tak
 more often than they are kept, so the tier multiplies the whole bill rather than one request.
 `seedance-directing.md` holds the model contracts.
 
+## A component's media slots are filled, never left empty
+
+A component that shows media — a card, a board, a frame, an insert — declares its media inputs as
+separate attributes (`image`, `video`, `media`, `surface`), each with its own `accepts` type, and
+`inspect_svml_vocabulary` reads them. Recognising them is the first half; the second is that every
+slot the reference actually shows content in is **filled**. A slot the observation says holds a
+picture is given a generated picture; one that holds video is given a take. A slot left empty where
+the reference showed something is a card with a hole in it — the same failure as a missing inner
+picture, at one level up: the frame was recognised but the content was not generated.
+
+This is why a full-screen board that contains two media boxes is read as *two* media boxes, not as a
+single flat composition. The component owns its surface; the boxes are inputs, and each one is
+filled by generation when the reference shows content in it.
+
 ## A short stretch is not a short take
 
 An authored take stays inside the selected model's declared duration range — read the range from the
