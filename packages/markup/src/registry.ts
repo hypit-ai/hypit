@@ -47,6 +47,9 @@ export class MarkupSurfaceRegistry implements MarkupSurfaceRegistryLike {
       surface: options.declaration.name,
       tag: options.declaration.tag,
       outputs: options.declaration.outputs,
+      ...(options.declaration.vocabulary === undefined
+        ? {}
+        : { vocabulary: options.declaration.vocabulary }),
       mode: "raw",
       handler: options.handler,
     });
@@ -62,6 +65,9 @@ export class MarkupSurfaceRegistry implements MarkupSurfaceRegistryLike {
       surface: options.declaration.name,
       tag: options.declaration.tag,
       outputs: options.declaration.outputs,
+      ...(options.declaration.vocabulary === undefined
+        ? {}
+        : { vocabulary: options.declaration.vocabulary }),
       mode: "structured",
       handler: options.handler,
     });

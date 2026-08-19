@@ -47,6 +47,47 @@ export const imageComposeLayerSetSchema: ValueSchema = object({
 export const imageComposeMarkupSurfaces = [{
     name: "image", tag: "Image", mode: "structured",
     outputs: [imageComposeTypes.options, imageComposeTypes.layerSpec, artifactTypes.blob],
+    vocabulary: {
+      summary: "Paints ordered image Layers onto one Canvas and publishes the composed picture as an image Artifact.",
+      attributes: [
+        { name: "id", kind: "identifier", required: true,
+          summary: "Names this composition so its image can be referenced elsewhere in the Source." },
+        { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas],
+          summary: "Chooses the Canvas every Layer is painted onto." },
+        { name: "background", kind: "literal", required: false,
+          summary: "Sets the color the Canvas is cleared to before the first Layer is painted." },
+      ],
+      children: [
+        { tag: "Layer", cardinality: "many",
+          summary: "One image painted into its own Frame, in document order, and empty of children and text.",
+          attributes: [
+            { name: "source", kind: "reference", required: true, accepts: [artifactTypes.blob],
+              summary: "Chooses the image Artifact this Layer paints." },
+            { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
+              summary: "Chooses the Frame on the Canvas the image is painted into." },
+            { name: "fit", kind: "literal", required: false, values: ["contain", "cover", "stretch"],
+              summary: "Decides how the image is sized to its Frame; defaults to `contain`." },
+            { name: "interpolation", kind: "literal", required: false,
+              values: ["nearest", "linear", "cubic", "area", "lanczos"],
+              summary: "Decides which filter resamples the image while it is scaled; defaults to `lanczos`." },
+            { name: "opacity", kind: "literal", required: false,
+              summary: "Sets how strongly this Layer covers what is beneath it, from 0 to 1; defaults to 1." },
+          ] },
+      ],
+      ports: [
+        { name: "image", type: artifactTypes.blob,
+          summary: "The composed picture, a PNG." },
+      ],
+      example: `<compose:Image id="card" canvas={portrait} background="#00000000">
+  <compose:Layer source={background.image} frame={full} fit="cover"/>
+  <compose:Layer source={product.image} frame={product-frame} fit="contain"/>
+</compose:Image>`,
+      notes: [
+        "`background` is written as `#RRGGBBAA` and defaults to `#00000000`.",
+        "The composition requires at least one Layer and holds at most 64.",
+        "Child order is paint order, and a Frame that extends beyond the Canvas is clipped.",
+      ],
+    },
   }] as const;
 
 

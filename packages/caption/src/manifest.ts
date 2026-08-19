@@ -95,6 +95,54 @@ export const captionProgramSchema: ValueSchema = object({
 
 export const captionMarkupSurfaces = [{
     name: "program", tag: "Program", mode: "structured", outputs: [captionTypes.program],
+    vocabulary: {
+      summary:
+        "Assigns one Caption Style to every display Word of a CaptionDisplaySequence and publishes the resulting CaptionProgram.",
+      attributes: [
+        { name: "id", kind: "identifier", required: true,
+          summary: "Names the CaptionProgram Record this element publishes." },
+        { name: "display", kind: "reference", required: true,
+          accepts: [narrativeTypes.captionDisplay],
+          summary: "Selects the display Word sequence this Program covers." },
+        { name: "default", kind: "reference", required: true,
+          accepts: [captionTypes.style],
+          summary: "Selects the Style every display Word carries before any Use rule applies." },
+      ],
+      children: [
+        { tag: "Use", cardinality: "many",
+          summary: "Replaces the whole Style on one Role or one explicit Word subset, with the last matching rule winning.",
+          attributes: [
+            { name: "style", kind: "reference", required: true,
+              accepts: [captionTypes.style],
+              summary: "Selects the Style the covered display Words carry instead of the default." },
+            { name: "role", kind: "literal", required: false,
+              summary: "Names the Script Role whose display Words the rule covers, as sugar for that Role's Word subset rather than a time range." },
+            { name: "words", kind: "reference", required: false,
+              accepts: [narrativeTypes.captionDisplayWordSubset],
+              summary: "Selects the explicit display Words the rule covers." },
+          ] },
+        { tag: "Mute", cardinality: "many",
+          summary: "Hides the whole Atoms of one Role or one explicit Word subset after Cue planning.",
+          attributes: [
+            { name: "role", kind: "literal", required: false,
+              summary: "Names the Script Role whose display Words the rule hides, as sugar for that Role's Word subset rather than a time range." },
+            { name: "words", kind: "reference", required: false,
+              accepts: [narrativeTypes.captionDisplayWordSubset],
+              summary: "Selects the explicit display Words the rule hides." },
+          ] },
+      ],
+      example: [
+        '<caption:Program id="captions" display={story.caption} default={plain}>',
+        '  <caption:Use role="ALICE" style={impact}/>',
+        "  <caption:Use words={story.caption.selection.special} style={plain}/>",
+        "  <caption:Mute words={story.caption.selection.private}/>",
+        "</caption:Program>",
+      ].join("\n"),
+      notes: [
+        "`Use` and `Mute` each take exactly one of `role` or `words`.",
+        "The CaptionProgram is published under the bare `id`, and the element carries no text content.",
+      ],
+    },
   }] as const;
 
 
