@@ -26,6 +26,19 @@ Use this decision order:
    changing the observed semantics.
 3. Declare a real vocabulary gap only when neither option works.
 
+Step 2 is not a way around step 3. Composition may express an observation with several components; it
+may not move an element out of its role because some other tag happens to draw the same shape. What
+an element **is** decides which vocabulary owns it — words spoken aloud are captions, a full-screen
+designed field carrying content is one composition — and that answer does not change because the
+element is styled beautifully or because the owning vocabulary is missing one property. A package
+that owns the role but cannot express the observed appearance is a gap, exactly as much as no package
+at all: `../playbooks/craft/captions.md` works one such case through.
+
+Before accepting either step, name the observed appearance properties and say where each one lands in
+the declared vocabulary. A property with nowhere to land is the finding. Either it makes the gap, or
+it is written down as an accepted deviation with its reason before you continue — the one thing that
+may not happen is quietly authoring something else that resembles it.
+
 Do not force a similar-looking tag into a role it does not own. Do not invent attributes or write a
 nonexistent tag with the intention of implementing it later. A picture that
 `../playbooks/craft/graphic-compositions.md` defines as one self-contained graphic composition may
