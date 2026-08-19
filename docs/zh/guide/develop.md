@@ -53,7 +53,7 @@ hypit/
 | 指南 | 主题 |
 |---|---|
 | [包架构](./packages.md) | 五个层次、依赖规则、包的构成、facets |
-| [添加 Author 包](./author-packages.md) | 分步说明：新增组件、Surface、activation |
+| [添加 Author 包](./author-packages.md) | 分步说明：新增组件、Surface、词表与预览图、activation |
 | [添加 Provider](./providers.md) | 分步说明：新增 Endpoint 适配器 |
 | [Runtime](./runtime.md) | Profile、Workspace、执行与生命周期边界 |
 | [测试](./testing.md) | 测试运行器、写法、示例、boundary tests |

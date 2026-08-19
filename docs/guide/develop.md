@@ -53,7 +53,7 @@ hypit/
 | Guide | Topic |
 |---|---|
 | [Package architecture](./packages.md) | The five layers, dependency rules, package anatomy, facets |
-| [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, activation |
+| [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, vocabulary and preview, activation |
 | [Adding a Provider](./providers.md) | Step-by-step: new Endpoint adapter |
 | [Runtime](./runtime.md) | Profile, Workspace, execution and lifecycle boundaries |
 | [Testing](./testing.md) | Test runner, patterns, examples, boundary tests |
