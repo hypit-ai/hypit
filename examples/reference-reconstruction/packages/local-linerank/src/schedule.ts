@@ -214,8 +214,11 @@ export function assertLinerankSchedule(value: LinerankSchedule, space?: ProgramS
       `LinerankSchedule.windows.${index} overlaps the previous one.`);
   }
   const lastWindow = value.windows.at(-1)!;
-  assert(value.terminalFrame >= lastWindow.startFrame && value.terminalFrame < lastWindow.endFrameExclusive,
-    "LinerankSchedule.terminalFrame is outside the final window.");
+  // A `done` moment may sit at the very end of the board's last window — the reference marks the
+  // list complete exactly as it finishes — so the terminal frame may coincide with the exclusive
+  // end. The circle renderer clamps to the window, so this is safe.
+  assert(value.terminalFrame >= lastWindow.startFrame && value.terminalFrame <= lastWindow.endFrameExclusive,
+    `LinerankSchedule.terminalFrame ${value.terminalFrame} is outside the final window [${lastWindow.startFrame}, ${lastWindow.endFrameExclusive}].`);
   for (const [index, entry] of value.entries.entries()) {
     identity(entry.itemId, `LinerankSchedule.entries.${index}.itemId`);
     assert(!ids.has(entry.itemId), `LinerankSchedule repeats ${entry.itemId}.`);

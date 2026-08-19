@@ -35,6 +35,19 @@ pnpm hypit check path/to/studio.svs
 pnpm hypit check path/to/build.svrun
 ```
 
+`hypit check` proves a Source is legal; it proves nothing about whether the tracks it declares can
+actually be built. A track that fails the local preview fails the same way the moment the author
+opens the Playground — a new package with a bad schedule, a media edge whose artifact is not an
+image, a reference that does not resolve. Find that now, not on the author's screen:
+
+```bash
+node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/main.svml path/to/build.svrun
+```
+
+It reports every track that failed to build, and every track waiting on a Provider it cannot reach,
+and exits non-zero when either exists. Repair until it passes or until what remains is waiting on a
+capability the machine genuinely lacks — recorded as an accepted deviation, not left silent.
+
 Fix package resolution and package implementation before repairing source use. Continue until all
 three files are accepted. Do not create `check_svml_project` or another wrapper.
 
