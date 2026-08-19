@@ -4,6 +4,12 @@ Structural checks prove that a source is legal. They prove nothing about whether
 reference. A newly written package can resolve, activate, decode and pass every check while drawing
 something the reference never contained. Close that gap deliberately.
 
+This loop is about how an element *looks* against the reference, and it is bounded. Whether an
+element *builds at all* is a different gate with a different rule: `preview-check` (in
+`final-sources.md`) must pass with no failures before this loop is even reached, and its failures are
+repaired until they pass without any attempt ceiling. A build failure is not a difference to weigh;
+it is work that is not done.
+
 ## The reference side is finished
 
 The reference video does not change, and its observations are cached. Re-observing at a fixed
