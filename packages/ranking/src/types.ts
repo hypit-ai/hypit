@@ -6,7 +6,7 @@ import type {
 import type { BlobRef } from "@hypit/protocol";
 import type { SpatialFrame } from "@hypit/spatial";
 
-export type RankingVariant = "tier-board" | "column" | "top-three" | "typewriter-list";
+export type RankingVariant = "tier-board" | "column" | "top-three";
 
 export type RankingHeader = {
   readonly id: string;
@@ -123,22 +123,6 @@ export type TopThreeStyle = {
   readonly itemStackingOrder: number;
 };
 
-export type TypewriterListStyle = {
-  readonly paper: RankingBoardPaint;
-  readonly title: RankingTextStyle;
-  readonly item: RankingTextStyle;
-  readonly emphasisColor: string;
-  readonly winnerColor: string;
-  readonly paddingPx: number;
-  readonly rowGapPx: number;
-  readonly titleGapPx: number;
-  readonly rotationDeg: number;
-  readonly framesPerGrapheme: number;
-  readonly winnerFrames: number;
-  readonly boardStackingOrder: number;
-  readonly itemStackingOrder: number;
-};
-
 export type TierBoardItemSpec = {
   readonly variant: "tier-board";
   readonly id: string;
@@ -161,22 +145,12 @@ export type TopThreeItemSpec = {
   readonly stackingOrder?: number;
 };
 
-export type TypewriterItemSpec = {
-  readonly variant: "typewriter-list";
-  readonly id: string;
-  readonly text: string;
-  readonly emphasis?: { readonly start: number; readonly endExclusive: number };
-  readonly winner: boolean;
-  readonly stackingOrder?: number;
-};
-
-export type RankingItemSpec = TierBoardItemSpec | ColumnItemSpec | TopThreeItemSpec | TypewriterItemSpec;
+export type RankingItemSpec = TierBoardItemSpec | ColumnItemSpec | TopThreeItemSpec;
 
 /** Structural half of an Item whose visible copy arrives on a Text graph edge. */
 export type RankingTextItemShell =
   | Omit<ColumnItemSpec, "label">
-  | Omit<TopThreeItemSpec, "label">
-  | Omit<TypewriterItemSpec, "text">;
+  | Omit<TopThreeItemSpec, "label">;
 
 export type RankingItemSpecSet = {
   readonly variant: RankingVariant;
@@ -186,7 +160,6 @@ export type RankingItemSpecSet = {
 export type TierBoardItem = TierBoardItemSpec & { readonly icon: BlobRef };
 export type ColumnItem = ColumnItemSpec & { readonly icon?: BlobRef };
 export type TopThreeItem = TopThreeItemSpec & { readonly icon?: BlobRef };
-export type TypewriterItem = TypewriterItemSpec;
 
 export type TierBoardItemSet = {
   readonly items: readonly TierBoardItem[];
@@ -196,9 +169,6 @@ export type ColumnItemSet = {
 };
 export type TopThreeItemSet = {
   readonly items: readonly TopThreeItem[];
-};
-export type TypewriterItemSet = {
-  readonly items: readonly TypewriterItem[];
 };
 
 export type TierBoardProgram = {
@@ -222,16 +192,7 @@ export type TopThreeProgram = {
   readonly style: TopThreeStyle;
   readonly items: readonly TopThreeItem[];
 };
-export type TypewriterListProgram = {
-  readonly id: string;
-  readonly title: string;
-  readonly frame: SpatialFrame;
-  readonly schedule: RankingSchedule;
-  readonly style: TypewriterListStyle;
-  readonly items: readonly TypewriterItem[];
-};
-
-export type RankingProgram = TierBoardProgram | ColumnProgram | TopThreeProgram | TypewriterListProgram;
+export type RankingProgram = TierBoardProgram | ColumnProgram | TopThreeProgram;
 
 export type RankingSoundEvent = {
   readonly id: string;

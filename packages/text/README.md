@@ -43,7 +43,7 @@ separate packages.
 
 - exact model prompt ports;
 - `@hypit/typography-track` Point, Area and Path content;
-- Ranking Column/TopThree labels and Typewriter title/rows;
+- Ranking Column/TopThree labels;
 - Comment Sticker comment, author, header and metadata copy;
 - Deck Card labels.
 

@@ -45,12 +45,7 @@ const definition = (variant: RankingVariant) => {
     appendIcon: rankingProducers.appendTopThreeIconItem, build: rankingProducers.topThreeProgram,
     events: rankingProducers.topThreeEvents, render: rankingProducers.renderTopThree,
   } as const;
-  return {
-    style: rankingTypes.typewriterStyle, set: rankingTypes.typewriterItems, program: rankingTypes.typewriterProgram,
-    create: rankingProducers.createTypewriterItems, append: rankingProducers.appendTypewriterItem,
-    appendIcon: rankingProducers.appendTypewriterItem, build: rankingProducers.typewriterProgram,
-    events: rankingProducers.typewriterEvents, render: rankingProducers.renderTypewriter,
-  } as const;
+  throw new Error(`Ranking Fragment has no definition for variant ${variant as string}.`);
 };
 
 export function createRankingFragment(
@@ -70,7 +65,6 @@ export function createRankingFragment(
     { name: "frame", type: spatialTypes.frame },
     { name: "style", type: selected.style },
   ];
-  if (variant === "typewriter-list") inputs.push({ name: "title", type: textTypes.text });
   const operations: FragmentOperation[] = [
     { id: "specs", producer: rankingProducers.createSpecs, inputs: { header: input("header") }, result: { kind: "output", name: "set" } },
     { id: "resolved", producer: selected.create, inputs: {}, result: { kind: "output", name: "set" } },
@@ -124,7 +118,6 @@ export function createRankingFragment(
     producer: selected.build,
     inputs: {
       header: input("header"),
-      ...(variant === "typewriter-list" ? { title: input("title") } : {}),
       frame: input("frame"), schedule: operation("schedule"), style: input("style"), set: resolved,
     },
     result: { kind: "output", name: "program" },

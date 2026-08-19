@@ -1581,14 +1581,14 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
   }
 });
 
-test("all four Ranking components paint frame-pure progressive states under partitioned browser rendering", {
+test("all three Ranking components paint frame-pure progressive states under partitioned browser rendering", {
   skip: !enabled,
   timeout: 120_000,
 }, async () => {
   const temp = await mkdtemp(path.join(os.tmpdir(), "hypit-ranking-visual-"));
   try {
     const width = 480;
-    const height = 720;
+    const height = 512;
     const fps = 12;
     const frames = 24;
     const installed = await installedOpenFont("inter", 700, "normal");
@@ -1696,26 +1696,10 @@ test("all four Ranking components paint frame-pure progressive states under part
       schedule(topHeader, topSpecs), topStyle, topItems,
     ));
 
-    const typeHeader = rankingTrack.sealRankingHeader({ id: "browser-typewriter", variant: "typewriter-list" });
-    const typeSpecs = [
-      { variant: "typewriter-list", id: "typed-one", text: "Fast", winner: false },
-      { variant: "typewriter-list", id: "typed-two", text: "Clear", winner: false, emphasis: { start: 0, endExclusive: 2 } },
-      { variant: "typewriter-list", id: "typed-three", text: "Best", winner: true },
-    ] as const;
-    let typeItems = rankingTrack.createTypewriterItemSet();
-    typeSpecs.forEach((spec) => { typeItems = rankingTrack.appendTypewriterItem(typeItems, spec); });
-    const typeStyle = rankingTrack.decodeTypewriterListStyle(recipe("browser.typewriter", {
-      "title-font-size": 20, "item-font-size": 16, "appear-frames": 2, "move-frames": 2,
-      padding: 12, "row-gap": 4, "title-gap": 5, "frames-per-grapheme": 1, "winner-frames": 1,
-    }), font).style;
-    const typeTrack = rankingTrack.renderTypewriterList(space, rankingTrack.buildTypewriterListProgram(
-      typeHeader, "RANKING", { xPx: 20, yPx: 500, widthPx: 440, heightPx: 195 },
-      schedule(typeHeader, typeSpecs), typeStyle, typeItems,
-    ));
     const document = compileHyperframesDocument(sealComposition({
       id: "ranking-browser-proof",
       canvas: { width, height, clearColor: "#090b12" },
-      tracks: [tierTrack, columnTrack, topTrack, typeTrack],
+      tracks: [tierTrack, columnTrack, topTrack],
     }), space);
     await writeFile(path.join(temp, "index.html"), materializeHyperframesHtml(document, (artifact) => {
       const materialized = paths.get(artifact.digest);
@@ -1774,7 +1758,7 @@ test("all four Ranking components paint frame-pure progressive states under part
     assert.notDeepEqual(sequential[3], sequential[9], "Ranking stages produced no visual state change");
     assert.notDeepEqual(sequential[9], sequential[15], "later Ranking triggers produced no visual state change");
     const settled = sequential[22]!;
-    for (const [name, top, bottom] of [["TierBoard", 20, 160], ["Column", 180, 320], ["TopThree", 340, 480], ["TypewriterList", 500, 695]] as const) {
+    for (const [name, top, bottom] of [["TierBoard", 20, 160], ["Column", 180, 320], ["TopThree", 340, 480]] as const) {
       assert.ok(matchingPixels(settled, width, { left: 20, top, right: 460, bottom }, (red, green, blue) => red + green + blue > 120) > 500,
         `${name} did not paint its settled suffix`);
     }

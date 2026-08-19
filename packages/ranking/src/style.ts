@@ -14,7 +14,6 @@ import {
   assertRankingSoundStyle,
   assertTierBoardStyle,
   assertTopThreeStyle,
-  assertTypewriterListStyle,
 } from "./schedule.js";
 import type {
   ColumnStyle,
@@ -25,7 +24,6 @@ import type {
   TierBoardStyle,
   TierRowStyle,
   TopThreeStyle,
-  TypewriterListStyle,
 } from "./types.js";
 
 const COMMON_KEYS = [
@@ -53,14 +51,6 @@ const TOP_KEYS = [
   ...COMMON_KEYS,
   "slot-colors", "center-x", "baseline-y", "slot-gap", "icon-size", "icon-radius", "icon-fit",
   "ring-width", "label-gap",
-] as const;
-
-const TYPEWRITER_KEYS = [
-  ...COMMON_KEYS,
-  "title-font-size", "title-font-weight", "title-color", "title-line-height",
-  "item-font-size", "item-font-weight", "item-color", "item-line-height",
-  "emphasis-color", "winner-color", "padding", "row-gap", "title-gap", "rotation",
-  "frames-per-grapheme", "winner-frames",
 ] as const;
 
 function fail(recipe: SvsRecipe, message: string): never {
@@ -108,20 +98,13 @@ function exactFonts(value: FontStackRef | FontArtifactRef): FontArtifactRef[] {
   return [structuredClone(value)];
 }
 
-function typography(
-  recipe: SvsRecipe,
-  fonts: readonly FontArtifactRef[],
-  prefix: "" | "title-" | "item-" = "",
-  defaults: { readonly size: number; readonly weight: number; readonly color: string; readonly lineHeight: number } = {
-    size: 28, weight: 700, color: "#ffffff", lineHeight: 1.15,
-  },
-): RankingTextStyle {
+function typography(recipe: SvsRecipe, fonts: readonly FontArtifactRef[]): RankingTextStyle {
   return {
     fonts: structuredClone(fonts),
-    sizePx: number(recipe, `${prefix}font-size`, defaults.size),
-    weight: integer(recipe, `${prefix}font-weight`, defaults.weight),
-    color: text(recipe, `${prefix}${prefix.length === 0 ? "text-color" : "color"}`, defaults.color),
-    lineHeight: number(recipe, `${prefix}line-height`, defaults.lineHeight),
+    sizePx: number(recipe, "font-size", 28),
+    weight: integer(recipe, "font-weight", 700),
+    color: text(recipe, "text-color", "#ffffff"),
+    lineHeight: number(recipe, "line-height", 1.15),
   };
 }
 
@@ -257,30 +240,4 @@ export function decodeTopThreeStyle(
   };
   assertTopThreeStyle(style);
   return { style: canonicalize(style) as unknown as TopThreeStyle, sound: sound(recipe) };
-}
-
-export function decodeTypewriterListStyle(
-  recipe: SvsRecipe,
-  font: FontStackRef | FontArtifactRef,
-): { readonly style: TypewriterListStyle; readonly sound: RankingSoundStyle } {
-  known(recipe, TYPEWRITER_KEYS);
-  const fonts = exactFonts(font);
-  const style: TypewriterListStyle = {
-
-    paper: board(recipe),
-    title: typography(recipe, fonts, "title-", { size: 34, weight: 800, color: "#111827", lineHeight: 1.1 }),
-    item: typography(recipe, fonts, "item-", { size: 26, weight: 600, color: "#1f2937", lineHeight: 1.2 }),
-    emphasisColor: text(recipe, "emphasis-color", "#dc2626"),
-    winnerColor: text(recipe, "winner-color", "#eab308"),
-    paddingPx: number(recipe, "padding", 28),
-    rowGapPx: number(recipe, "row-gap", 16),
-    titleGapPx: number(recipe, "title-gap", 22),
-    rotationDeg: number(recipe, "rotation", -1.2),
-    framesPerGrapheme: integer(recipe, "frames-per-grapheme", 2),
-    winnerFrames: integer(recipe, "winner-frames", 5),
-    boardStackingOrder: integer(recipe, "board-stack", 20),
-    itemStackingOrder: integer(recipe, "item-stack", 30),
-  };
-  assertTypewriterListStyle(style);
-  return { style: canonicalize(style) as unknown as TypewriterListStyle, sound: sound(recipe) };
 }

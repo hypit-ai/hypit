@@ -1,11 +1,10 @@
 # @hypit/ranking
 
-Four independent progressive-ranking author components over one private schedule utility:
+Three independent progressive-ranking author components over one private schedule utility:
 
 - `TierBoard`
 - `Column`
 - `TopThree`
-- `TypewriterList`
 
 The package owns variant-specific Programs and Styles. It consumes explicit Selection/Moment,
 SemanticMap, ProgramSpace, SpatialFrame, font, image and optional sound edges, then lowers to peer
@@ -17,10 +16,10 @@ plus a private named `.sound` Style output. A Ranking component connects both ou
 sound exists; no sound produces no audio branch.
 
 Visible author copy may be literal or an ordinary graph `Text` reference. Column and TopThree use
-`label={copy}`, while Typewriter uses `title={copy}` and `text={copy}`. When a reference is used, the
-graph first materializes the package-owned item shell from that exact Text and then shares the one
-result across schedule, event and render work. Tier row names remain Style configuration because
-they define the board vocabulary rather than dynamic item copy.
+`label={copy}`. When a reference is used, the graph first materializes the package-owned item shell
+from that exact Text and then shares the one result across schedule, event and render work. Tier row
+names remain Style configuration because they define the board vocabulary rather than dynamic item
+copy.
 
 ```svml
 <import as="copy" from="@hypit/text@1"/>

@@ -9,13 +9,12 @@ import type { SpatialFrame } from "@hypit/spatial";
 import type { Text } from "@hypit/text";
 
 import { rankingProducers, rankingTypes } from "./manifest.js";
-import { appendColumnItem, appendRankingItemSpec, appendRankingSound, appendTierBoardItem, appendTopThreeItem, appendTypewriterItem, assertColumnProgram, assertRankingSchedule, assertRankingSoundEventPlan, assertTierBoardProgram, assertTopThreeProgram, assertTypewriterListProgram, buildColumnProgram, buildColumnSoundEvents, buildRankingSchedule, buildTierBoardProgram, buildTierBoardSoundEvents, buildTopThreeProgram, buildTopThreeSoundEvents, buildTypewriterListProgram, buildTypewriterSoundEvents, createColumnItemSet, createRankingItemSpecSet, createRankingSoundSet, createTierBoardItemSet, createTopThreeItemSet, createTypewriterItemSet, materializeRankingTextItem } from "./schedule.js";
+import { appendColumnItem, appendRankingItemSpec, appendRankingSound, appendTierBoardItem, appendTopThreeItem, assertColumnProgram, assertRankingSchedule, assertRankingSoundEventPlan, assertTierBoardProgram, assertTopThreeProgram, buildColumnProgram, buildColumnSoundEvents, buildRankingSchedule, buildTierBoardProgram, buildTierBoardSoundEvents, buildTopThreeProgram, buildTopThreeSoundEvents, createColumnItemSet, createRankingItemSpecSet, createRankingSoundSet, createTierBoardItemSet, createTopThreeItemSet, materializeRankingTextItem } from "./schedule.js";
 import {
   renderColumn,
   renderRankingAudio,
   renderTierBoard,
   renderTopThree,
-  renderTypewriterList,
 } from "./render.js";
 import type {
   ColumnItemSet,
@@ -38,10 +37,6 @@ import type {
   TopThreeItemSpec,
   TopThreeProgram,
   TopThreeStyle,
-  TypewriterItemSet,
-  TypewriterItemSpec,
-  TypewriterListProgram,
-  TypewriterListStyle,
 } from "./types.js";
 
 function inline<T>(value: StoredValue | undefined, label: string): T {
@@ -96,7 +91,6 @@ export const rankingComponent = {
       [rankingProducers.createTierItems, createTierBoardItemSet],
       [rankingProducers.createColumnItems, createColumnItemSet],
       [rankingProducers.createTopThreeItems, createTopThreeItemSet],
-      [rankingProducers.createTypewriterItems, createTypewriterItemSet],
     ] as const).map(([producer, create]) => ({
       producer,
       handler: () => ({ outputs: { set: output(create()) }, needs: {} }),
@@ -132,13 +126,6 @@ export const rankingComponent = {
       )) }, needs: {} }),
     })),
     {
-      producer: rankingProducers.appendTypewriterItem,
-      handler: ({ inputs }) => ({ outputs: { set: output(appendTypewriterItem(
-        inline<TypewriterItemSet>(inputs.set?.value, "TypewriterItemSet"),
-        inline<TypewriterItemSpec>(inputs.spec?.value, "TypewriterItemSpec"),
-      )) }, needs: {} }),
-    },
-    {
       producer: rankingProducers.tierProgram,
       handler: ({ inputs }) => {
         const common = programInputs(inputs);
@@ -162,20 +149,10 @@ export const rankingComponent = {
           inline<TopThreeStyle>(inputs.style?.value, "TopThreeStyle"), inline<TopThreeItemSet>(inputs.set?.value, "TopThreeItemSet"))) }, needs: {} };
       },
     },
-    {
-      producer: rankingProducers.typewriterProgram,
-      handler: ({ inputs }) => {
-        const common = programInputs(inputs);
-        const title = inline<Text>(inputs.title?.value, "Text");
-        return { outputs: { program: output(buildTypewriterListProgram(common.header, title.value, common.frame, common.schedule,
-          inline<TypewriterListStyle>(inputs.style?.value, "TypewriterListStyle"), inline<TypewriterItemSet>(inputs.set?.value, "TypewriterItemSet"))) }, needs: {} };
-      },
-    },
     ...([
       [rankingProducers.tierEvents, buildTierBoardSoundEvents, "TierBoardStyle"],
       [rankingProducers.columnEvents, buildColumnSoundEvents, "ColumnStyle"],
       [rankingProducers.topThreeEvents, buildTopThreeSoundEvents, "TopThreeStyle"],
-      [rankingProducers.typewriterEvents, buildTypewriterSoundEvents, "TypewriterListStyle"],
     ] as const).map(([producer, build, styleLabel]) => ({
       producer,
       handler: ({ inputs }: ProducerHandlerContext) => ({ outputs: { events: output(build(
@@ -211,7 +188,6 @@ export const rankingComponent = {
       [rankingProducers.renderTier, renderTierBoard, "TierBoardProgram"],
       [rankingProducers.renderColumn, renderColumn, "ColumnProgram"],
       [rankingProducers.renderTopThree, renderTopThree, "TopThreeProgram"],
-      [rankingProducers.renderTypewriter, renderTypewriterList, "TypewriterListProgram"],
     ] as const).map(([producer, render, label]) => ({
       producer,
       handler: ({ inputs }: ProducerHandlerContext) => ({ outputs: { track: output(render(
@@ -228,8 +204,6 @@ export const rankingComponent = {
       handler: ({ value }) => assertColumnProgram(inline<ColumnProgram>(value, "ColumnProgram")) },
     { type: rankingTypes.topThreeProgram,
       handler: ({ value }) => assertTopThreeProgram(inline<TopThreeProgram>(value, "TopThreeProgram")) },
-    { type: rankingTypes.typewriterProgram,
-      handler: ({ value }) => assertTypewriterListProgram(inline<TypewriterListProgram>(value, "TypewriterListProgram")) },
     { type: rankingTypes.soundEvents,
       handler: ({ value }) => assertRankingSoundEventPlan(inline<RankingSoundEventPlan>(value, "RankingSoundEventPlan")) },
   ],

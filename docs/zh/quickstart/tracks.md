@@ -275,14 +275,13 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 ## 榜单板
 
-榜单板让一份有序列表跟着 Script 动起来：在某个 Selection 期间出现，在 Moment 上移动，在另一个 Moment 上定格。四个变体共用同一套形状——一个容器、它专属的条目标签、以及它专属的样式标签。
+榜单板让一份有序列表跟着 Script 动起来：在某个 Selection 期间出现，在 Moment 上移动，在另一个 Moment 上定格。三个变体共用同一套形状——一个容器、它专属的条目标签、以及它专属的样式标签。
 
 | 容器 | 条目 | 样式 |
 |---|---|---|
 | `ranking:TierBoard` | `ranking:TierItem` | `ranking:TierBoardStyle` |
 | `ranking:Column` | `ranking:ColumnItem` | `ranking:ColumnStyle` |
 | `ranking:TopThree` | `ranking:TopThreeItem` | `ranking:TopThreeStyle` |
-| `ranking:TypewriterList` | `ranking:TypewriterItem` | `ranking:TypewriterListStyle` |
 
 ```svml
 <import as="ranking" from="@hypit/ranking@1"/>
@@ -303,10 +302,9 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 | `triggers` | 一个 Moment——行在它上面移动 |
 | `terminal` | 一个 Moment——板在它上面定格 |
 | `style` | 对应的样式记录，且只接受本变体的 |
-| `title` | 仅 `TypewriterList` 有，且必填：字符串或 Text 引用 |
 | `appear-sound`、`move-sound` | 可选，Synchronized Media |
 
-`move-sound` 在 `TopThree` 上会被拒绝——它没有移动阶段。在 `TierBoard` 上它要求至少有一个 `entry="stage"` 的条目，在 `TypewriterList` 上要求至少有一个 `winner="true"`：声音没有可响之处是创作错误，而不是静默的空操作。
+`move-sound` 在 `TopThree` 上会被拒绝——它没有移动阶段。在 `TierBoard` 上它要求至少有一个 `entry="stage"` 的条目：声音没有可响之处是创作错误，而不是静默的空操作。
 
 ### 条目标签
 
@@ -314,7 +312,6 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 - **`TierItem`** —— `tier`（必填，须与 recipe 中某一行的 id 对上）、`icon`（必填），可选 `entry="direct" | "stage"` 与 `stack`。行的文字来自 recipe，不写在标签上。
 - **`ColumnItem`** 与 **`TopThreeItem`** —— `label`（必填：字符串或 Text 引用），可选 `icon` 与 `stack`。`TopThree` 最多三条。
-- **`TypewriterItem`** —— 文案来自 `text=` 或元素自身的文字，二者取其一；可选 `winner="true"`、`stack`，以及 `emphasis-start` / `emphasis-end`，二者按字素计数且必须成对出现。
 
 ```svml
 <ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>

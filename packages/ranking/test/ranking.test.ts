@@ -18,7 +18,6 @@ import {
   appendRankingSound,
   appendTierBoardItem,
   appendTopThreeItem,
-  appendTypewriterItem,
   buildColumnProgram,
   buildColumnSoundEvents,
   buildRankingSchedule,
@@ -26,14 +25,11 @@ import {
   buildTierBoardSoundEvents,
   buildTopThreeProgram,
   buildTopThreeSoundEvents,
-  buildTypewriterListProgram,
-  buildTypewriterSoundEvents,
   createColumnItemSet,
   createRankingItemSpecSet,
   createRankingSoundSet,
   createTierBoardItemSet,
   createTopThreeItemSet,
-  createTypewriterItemSet,
   decodeColumnStyle,
   decodeColumnStyleSurface,
   decodeColumnSurface,
@@ -43,15 +39,10 @@ import {
   decodeTopThreeStyle,
   decodeTopThreeStyleSurface,
   decodeTopThreeSurface,
-  decodeTypewriterListStyle,
-  decodeTypewriterListStyleSurface,
-  decodeTypewriterListSurface,
-  graphemes,
   renderColumn,
   renderRankingAudio,
   renderTierBoard,
   renderTopThree,
-  renderTypewriterList,
   rankingComponent,
   rankingManifest,
   rankingMarkupSurfaces,
@@ -66,7 +57,6 @@ import type {
   RankingSchedule,
   TierBoardItemSpec,
   TopThreeItemSpec,
-  TypewriterItemSpec,
 } from "@hypit/ranking";
 import { narrativeTypes } from "@hypit/narrative";
 import { programSpaceTypes } from "@hypit/program-space";
@@ -148,9 +138,6 @@ const columnSpec = (id: string): ColumnItemSpec => ({
 const topSpec = (id: string): TopThreeItemSpec => ({
   variant: "top-three", id, label: id.toUpperCase(),
 });
-const typeSpec = (id: string, text: string, winner = false): TypewriterItemSpec => ({
-  variant: "typewriter-list", id, text, winner,
-});
 
 test("RankingSchedule zips authored item and Moment order and preserves a settled suffix", () => {
   const owner = header("column", "tools");
@@ -189,7 +176,6 @@ test("variant Style decoders reject unknown Recipes and keep exact fonts and ind
   assert.deepEqual([tier.style.boardStackingOrder, tier.style.stageStackingOrder, tier.style.itemStackingOrder], [8, 20, 31]);
   assert.throws(() => decodeColumnStyle(recipe("ranking.column", { "tier-only": 1 }), font), /does not accept/u);
   assert.equal(decodeTopThreeStyle(recipe("ranking.top"), font).style.slotColors.length, 3);
-  assert.equal(decodeTypewriterListStyle(recipe("ranking.typewriter"), font).style.framesPerGrapheme, 2);
 });
 
 test("TierBoard owns cumulative direct/stage placement and rejects invalid schedule boundaries", () => {
@@ -251,38 +237,6 @@ test("TopThree accepts one to three optional-image Items and removes active acce
     schedule(owner, [...semantic, fourth]), style, tooMany), /at most three/u);
 });
 
-test("Typewriter uses Unicode graphemes, explicit emphasis and winner timing without generic Text masquerading", () => {
-  const owner = header("typewriter-list", "list");
-  const first: TypewriterItemSpec = {
-    ...typeSpec("first", "A👩‍💻B", true), emphasis: { start: 1, endExclusive: 2 },
-  };
-  const semantic = [first, typeSpec("second", "Done")];
-  const style = decodeTypewriterListStyle(recipe("ranking.typewriter", {
-    "frames-per-grapheme": 2, "winner-frames": 4,
-  }), font).style;
-  assert.deepEqual(graphemes(first.text), ["A", "👩‍💻", "B"]);
-  let set = createTypewriterItemSet();
-  set = appendTypewriterItem(set, first);
-  set = appendTypewriterItem(set, semantic[1]!);
-  const program = buildTypewriterListProgram(owner, "Tools", frame, schedule(owner, semantic), style, set);
-  const track = renderTypewriterList(space, program);
-  const row = track.presents.find((item) => item.id.endsWith(":item:first:stage"))!;
-  const text = row.elements.find((item) => item.kind === "text-flow");
-  assert.equal(text?.kind, "text-flow");
-  assert.deepEqual(text?.sequences.map((sequence) => sequence.range), [
-    { start: 0, endExclusive: 1 },
-    { start: 1, endExclusive: 2 },
-    { start: 2, endExclusive: 3 },
-  ]);
-  const emphasis = text?.document.paragraphs[0]?.inlines[1];
-  assert.equal(emphasis?.kind, "text");
-  assert.equal(emphasis.kind === "text" ? emphasis.text : undefined, "👩‍💻");
-  assert.ok(row.elements.some((item) => item.kind === "text" && item.text === "★"));
-  assert.doesNotThrow(() => buildTypewriterListProgram(owner, "Tools", frame, schedule(owner, semantic), {
-    ...style, framesPerGrapheme: 20,
-  }, set));
-});
-
 const sound = (id: string): SynchronizedMedia => ({
   timeline: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 3 },
   audio: {
@@ -321,12 +275,6 @@ test("each component owns a distinct event law and repeated lowering is canonica
   const top = decodeTopThreeStyle(recipe("ranking.top"), font).style;
   assert.deepEqual(buildTopThreeSoundEvents(schedule(topOwner, topItems), top, specs(topOwner, topItems)).events.map((item) => item.kind), ["appear"]);
 
-  const typeOwner = header("typewriter-list", "type-events");
-  const typeItems = [typeSpec("winner", "ABC", true)];
-  const type = decodeTypewriterListStyle(recipe("ranking.typewriter"), font).style;
-  assert.deepEqual(buildTypewriterSoundEvents(schedule(typeOwner, typeItems), type, specs(typeOwner, typeItems)).events.map((item) => item.kind),
-    ["appear", "move"]);
-
   const columnOwner = header("column", "deterministic");
   const columnItems = [columnSpec("one")];
   const columnStyle = decodeColumnStyle(recipe("ranking.column"), font).style;
@@ -335,7 +283,7 @@ test("each component owns a distinct event law and repeated lowering is canonica
   assert.deepEqual(renderColumn(space, program), renderColumn(space, program));
 });
 
-test("all four author Surfaces preserve explicit semantic, spatial, font, image and optional sound graph edges", async () => {
+test("all three author Surfaces preserve explicit semantic, spatial, font, image and optional sound graph edges", async () => {
   createResolvedClosure([...videoContractManifests, textManifest, rankingManifest]);
   const range = { source: "ranking.svml", start: 0, end: 1 };
   const ref = (path: string): MarkupAttributeValue => ({ kind: "reference", path });
@@ -363,7 +311,6 @@ test("all four author Surfaces preserve explicit semantic, spatial, font, image 
     ["tier-style", rankingTypes.tierStyle, decodeTierBoardStyleSurface, { rows: "s:S:#ef4444|a:A:#22c55e" }],
     ["column-style", rankingTypes.columnStyle, decodeColumnStyleSurface, {}],
     ["top-style", rankingTypes.topThreeStyle, decodeTopThreeStyleSurface, {}],
-    ["type-style", rankingTypes.typewriterStyle, decodeTypewriterListStyleSurface, {}],
   ] as const;
   for (const [id, type, handler, properties] of styleCases) {
     references.set(`${id}-recipe`, inlineReference(`${id}-recipe`, svsRecipeType, recipe(id, properties)));
@@ -393,10 +340,6 @@ test("all four author Surfaces preserve explicit semantic, spatial, font, image 
       id: "top", map: ref("map"), space: ref("space"), frame: ref("frame"), during: ref("outer"),
       triggers: ref("triggers"), terminal: ref("terminal"), style: ref("top-style"),
     }, [node("ranking:TopThreeItem", { label: "First" }), node("ranking:TopThreeItem", { label: "Second", icon: ref("icon-1") })])],
-    [decodeTypewriterListSurface, node("ranking:TypewriterList", {
-      id: "typed", title: "Proof", map: ref("map"), space: ref("space"), frame: ref("frame"), during: ref("outer"),
-      triggers: ref("triggers"), terminal: ref("terminal"), style: ref("type-style"),
-    }, [node("ranking:TypewriterItem", { winner: "true", "emphasis-start": "1", "emphasis-end": "2" }, [{ kind: "text", value: "A👩‍💻B", range }])])],
   ] as const;
   for (const [handler, element] of cases) {
     const result = await handler({
@@ -424,7 +367,7 @@ test("all four author Surfaces preserve explicit semantic, spatial, font, image 
 });
 
 test("Ranking Surfaces declare their sealed Records and icon Producers consume Blob values", async () => {
-  for (const name of ["tier", "column", "top-three", "typewriter"]) {
+  for (const name of ["tier", "column", "top-three"]) {
     const surface = rankingMarkupSurfaces.find((item) => item.name === name);
     assert.ok(surface?.outputs.some((type) => type.name === rankingTypes.header.name), `${name} header output`);
     assert.ok(surface?.outputs.some((type) => type.name === rankingTypes.itemSpec.name), `${name} item output`);
