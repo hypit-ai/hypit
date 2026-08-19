@@ -87,10 +87,10 @@ that needs one of those documents in order to draw itself has inverted that rela
 - If a required picture does not exist, generating it is mandatory. Do not substitute flat colour, an
   empty frame, a placeholder, a stand-in borrowed from elsewhere, or a silently emptied element. A
   picture inside a card is part of the work, not decoration.
-- Choose the generating package by inspecting what is installed at that moment: read the declared
-  inputs, outputs and Recipe properties of every installed package whose declared output is the
-  required media type, then choose. Never assume a package name from memory or from another project,
-  and never write a tag before its declaration has been read.
+- Generate it with `gpt:Image`, reading that package's README for its ports. Surveying what is
+  installed before doing something you already know how to do costs time and buys nothing; the
+  listing exists for finding a capability you did not know was there, not for confirming a familiar
+  one.
 - Static material is generated as an image. Generate video only when the element is a moving depicted
   scene.
 - Generate one material per depicted thing, at the aspect ratio it will be used at, carrying only

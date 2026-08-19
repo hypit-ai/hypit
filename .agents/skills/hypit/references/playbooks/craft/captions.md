@@ -62,8 +62,9 @@ captions, omit the Caption components entirely.
 - The Planner does not see audio, rewrite text, select Styles, or invent timestamps.
 - `whisperx:Alignment` measures the accepted `speech:Spine` audio and produces the SemanticMap used by
   `caption-fine:Track`.
-- Recheck alignment whenever the speech audio changes. A Style-only change does not prove that a
-  prior visual review is still valid.
+- Recheck alignment whenever the speech audio changes — `production-gates.md` Gate 3 states this for
+  every Track that is timed against it, not only for captions. A Style-only change does not prove that
+  a prior visual review is still valid.
 
 ## Design for readability
 
