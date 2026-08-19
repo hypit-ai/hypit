@@ -19,6 +19,8 @@
   },
   "include": [
     "packages/**/*.ts",
+    "examples/*/packages/*/src/**/*.ts",
+    "examples/*/packages/*/test/**/*.ts",
     "services/media-lambda/src/**/*.ts"
   ],
   "exclude": [
