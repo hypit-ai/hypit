@@ -71,6 +71,25 @@ function tools(root: string, calls: Call[], answer?: string) {
   return createReferenceVideoTools({ workspaceRoot: root, concurrency: 4, launchGapMs: 0, retryDelayMs: 0, generate: recorder(calls, answer) });
 }
 
+test("installed packages can be listed, and one that will not load is reported rather than hidden", async () => {
+  const root = await mkdtemp(join(tmpdir(), "reference-video-tools-scope-"));
+  const scope = join(root, "node_modules", "@hypit");
+  await mkdir(join(scope, "with-activation"), { recursive: true });
+  await mkdir(join(scope, "plain-library"), { recursive: true });
+  await writeFile(join(scope, "with-activation", "package.json"),
+    JSON.stringify({ name: "@hypit/with-activation", description: "declares a Surface", hypit: { activation: "./src/activation.ts" } }), "utf8");
+  await writeFile(join(scope, "plain-library", "package.json"),
+    JSON.stringify({ name: "@hypit/plain-library" }), "utf8");
+
+  const result = await createReferenceVideoTools({ packageRoot: root, generate: async () => "" }).list_svml_packages();
+  const packages = result["packages"] as readonly Record<string, unknown>[];
+  assert.deepEqual(packages.map((item) => item["package_name"]), ["@hypit/with-activation"],
+    "a package without an activation contributes no author vocabulary and is not vocabulary to discover");
+  assert.equal(packages[0]!["description"], "declares a Surface");
+  assert.equal(typeof packages[0]!["unreadable"], "string",
+    "a package that declares an activation it cannot load is named, not silently dropped");
+});
+
 test("observation covers picture, drawn type and sound for every shot and caches every key", async () => {
   const { root, stateRoot } = await workspace(2);
   const calls: Call[] = [];

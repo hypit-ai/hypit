@@ -37,10 +37,18 @@ rerun only the selected full-reference stages.
 produces three observations — `visual` (base picture, covering content, continuity, whether the frame
 is a depicted scene or a flat designed field, and each framed element's inner picture separately from
 its frame), `text_appearance` (typeface, weight, size, spacing, colour, stroke, shadow, glow,
-per-word emphasis, position and entry of drawn text), and `audio` — plus per-boundary continuity
-observations. The preceding tail frame, audio tail and full-reference context are attached
-automatically. Completed observations are reused; `--reobserve` is the only way to run a completed
-one again.
+per-word emphasis, position and entry of drawn text), and `audio`. Each cut adds one `continuity`
+observation covering both whether the two shots are one continuous camera shot and whether an overlay
+continues across the boundary. The preceding tail frame, audio tail and full-reference context are
+attached automatically. Completed observations are reused; `--reobserve` is the only way to run a
+completed one again.
+
+Shots are never shorter than one second: a fragment below that is merged into the shot before it,
+because clips that short carry no evidence and the model rejects them outright.
+
+`HYPIT_REFERENCE_CONCURRENCY` and `HYPIT_REFERENCE_LAUNCH_GAP_MS` set how fast requests are issued.
+They describe the quota behind the credentials rather than anything about the video, so they are
+environment settings and not flags.
 
 `--question` is a separate narrow path: it requires one to three `--shot-id` values, answers only
 that question from those shots' clips and frames in a single request, and neither reads nor writes

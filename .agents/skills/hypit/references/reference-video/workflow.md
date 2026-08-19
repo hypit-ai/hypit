@@ -50,9 +50,14 @@ selected shots. Each shot produces three observations:
   shadow, glow, per-word emphasis, position and entry of text drawn over the picture;
 - `audio` — who is speaking, and what continues from the previous shot.
 
-Boundary pairs additionally produce same-take and overlay-continuity observations, and a window of
-three consecutive shots triggers a three-shot continuity review. The preceding tail frame, audio tail
-and full-reference evidence are attached automatically; do not reconstruct that context by hand.
+Each cut produces one `continuity` observation answering both questions under their own headings —
+whether the two shots are one continuous camera shot, and whether an overlay continues across the
+boundary — and a window of three consecutive shots triggers a three-shot continuity review. The
+preceding tail frame, audio tail and full-reference evidence are attached automatically; do not
+reconstruct that context by hand.
+
+A shot is never shorter than a second. Fragments below that are not shots, and clips that short are
+rejected by the model, so the detector merges them into the shot before them.
 
 Completed observations are reused. Naming a shot does not re-run it. `--reobserve` is the only way to
 run a completed observation again, and it exists for rebuilt media, not for doubt.
