@@ -19,7 +19,7 @@ Source, and the declarative `hypit.runtime.json` Runtime Profile separate.
   `references/playbooks/craft/production-gates.md`, and
   `references/playbooks/craft/visual-continuity.md`, then the relevant craft/format file.
 - Reference-video reconstruction → read `references/reference-vlm.md`; use the three reference-video
-  MCP tools, then author `main.svml`, `studio.svs`, and `build.svrun` yourself.
+  CLI commands, then author `main.svml`, `studio.svs`, and `build.svrun` yourself.
 - Showing an author what they have so far → start the SVML Playground and send them the link.
   See "Show the work" below.
 - Execution, Runtime control, Build inspection, or output retrieval → read
@@ -32,13 +32,13 @@ When the user asks to reproduce, reverse, reconstruct, or analyze a reference vi
 tool-driven task rather than an ordinary hand-authored video task.
 
 1. Read `references/reference-vlm.md` completely.
-2. Call `prepare_reference` with the local video path.
-3. Call `observe_reference` for the full reference. It prepares the previous tail frame, previous
+2. Run the `prepare_reference` CLI command with the local video path.
+3. Run the `observe_reference` CLI command for the full reference. It prepares the previous tail frame, previous
    audio tail, whole-reference people, voice, and product context automatically and observes shots
    in parallel.
-4. Read every failed or unresolved observation. Ask `observe_reference` a narrow follow-up only
+4. Read every failed or unresolved observation. Run `observe_reference` with a narrow follow-up only
    where evidence conflicts or remains uncertain.
-5. Choose the packages needed by the observed video and call `inspect_svml_vocabulary` before
+5. Choose the packages needed by the observed video and run `inspect_svml_vocabulary` before
    writing any component, attribute, child, port, or Recipe.
 6. Write one complete `main.svml`, one `studio.svs`, and one `build.svrun`. Do not write one partial
    SVML fragment per shot and concatenate them.
