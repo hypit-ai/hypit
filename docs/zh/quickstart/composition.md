@@ -112,6 +112,7 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
 <svml>
   <import from="@hypit/script@1"/>
   <import as="wording" from="@hypit/text@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="speech" from="@hypit/speech-spine@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
@@ -135,10 +136,22 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   <wording:Value id="direction">
     Locked medium close-up in a quiet daylight studio. Spoken dialogue — say exactly: Meaning becomes the source.
   </wording:Value>
-  <seedance:TextVideo id="take" model="mini"
-    prompt={direction} duration="5" generate-audio="true"/>
-  <seedance:TextVideo id="motion" model="mini"
-    prompt={direction} duration="5"/>
+  <wording:Value id="scene-look">
+    A photograph with the texture of real iPhone footage. Generate a vertical seated medium
+    close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than
+    glossy, carrying the texture of video and not of a posed photograph. The background stays clearly
+    visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no
+    part of the picture is broken. One presenter at a desk in a quiet daylight studio.
+  </wording:Value>
+  <gpt:Image id="studio-scene" prompt={scene-look} aspect-ratio="9:16" resolution="2K"/>
+  <seedance:ReferenceVideo id="take" model="mini"
+    prompt={direction} duration="5" generate-audio="true">
+    <seedance:Reference image={studio-scene.image}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="motion" model="mini"
+    prompt={direction} duration="5">
+    <seedance:Reference image={studio-scene.image}/>
+  </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
   <space:Frame id="speech-frame" within={vertical}

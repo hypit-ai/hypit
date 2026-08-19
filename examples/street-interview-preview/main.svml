@@ -3,6 +3,7 @@
 <svml>
   <import from="@hypit/script@1"/>
   <import as="wording" from="@hypit/text@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="speech" from="@hypit/speech-spine@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
@@ -54,14 +55,40 @@
   <space:Frame id="full" within={vertical}
     left="0%" top="0%" right="100%" bottom="100%"/>
 
+  <!-- The location is established once and every take references it, so the street stays one street.
+       Prompt-only generation would give each take its own afternoon. -->
+  <wording:Value id="scene-look">
+    A photograph with the texture of real iPhone footage. Generate a vertical wide two-shot, as one
+    frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying
+    the texture of video and not of a posed photograph. The background stays clearly visible, with no
+    depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the
+    picture is broken. An interviewer and a passer-by stand together on a shopping street in late
+    afternoon light, shopfronts and pedestrians behind them.
+  </wording:Value>
+  <gpt:Image id="scene" prompt={scene-look} aspect-ratio="9:16" resolution="2K"/>
+
   <wording:Value id="direction">Handheld street interview, late afternoon, two speakers.</wording:Value>
-  <seedance:TextVideo id="take-hook" model="mini" prompt={direction} duration="5" generate-audio="true"/>
-  <seedance:TextVideo id="take-price" model="mini" prompt={direction} duration="6" generate-audio="true"/>
-  <seedance:TextVideo id="take-rainbow" model="mini" prompt={direction} duration="11" generate-audio="true"/>
-  <seedance:TextVideo id="take-payment" model="mini" prompt={direction} duration="9" generate-audio="true"/>
-  <seedance:TextVideo id="cutaway-bags" model="mini" prompt={direction} duration="4"/>
-  <seedance:TextVideo id="cutaway-fee" model="mini" prompt={direction} duration="4"/>
-  <seedance:TextVideo id="cutaway-receipt" model="mini" prompt={direction} duration="5"/>
+  <seedance:ReferenceVideo id="take-hook" model="mini" prompt={direction} duration="5" generate-audio="true">
+    <seedance:Reference image={scene.image}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="take-price" model="mini" prompt={direction} duration="6" generate-audio="true">
+    <seedance:Reference image={scene.image}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="take-rainbow" model="mini" prompt={direction} duration="11" generate-audio="true">
+    <seedance:Reference image={scene.image}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="take-payment" model="mini" prompt={direction} duration="9" generate-audio="true">
+    <seedance:Reference image={scene.image}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="cutaway-bags" model="mini" prompt={direction} duration="4">
+    <seedance:Reference image={scene.image}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="cutaway-fee" model="mini" prompt={direction} duration="4">
+    <seedance:Reference image={scene.image}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="cutaway-receipt" model="mini" prompt={direction} duration="5">
+    <seedance:Reference image={scene.image}/>
+  </seedance:ReferenceVideo>
 
   <speech:Spine id="speech" frame-rate="24"
     visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
