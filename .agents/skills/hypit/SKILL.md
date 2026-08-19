@@ -40,9 +40,14 @@ tool-driven task rather than an ordinary hand-authored video task.
    where evidence conflicts or remains uncertain.
 5. Choose the packages needed by the observed video and run `inspect_svml_vocabulary` before
    writing any component, attribute, child, port, or Recipe.
-6. Write one complete `main.svml`, one `studio.svs`, and one `build.svrun`. Do not write one partial
+6. Decide whether existing packages can express every observed behavior. Prefer composing existing
+   packages when their declared Types, time behavior and outputs are sufficient. If no legal
+   composition can express an observation, follow "Develop a missing local component" below before
+   writing a tag for it.
+7. Write one complete `main.svml`, one `studio.svs`, and one `build.svrun`. Do not write one partial
    SVML fragment per shot and concatenate them.
-7. Run the existing `pnpm hypit check` command and repair the sources until the project is legal.
+8. Run the existing `pnpm hypit check` command and repair the package or sources until the project
+   is legal.
 
 Gemini is only the eyes and ears. It returns natural-language evidence, never SVML, SVS, SVRun,
 component declarations, prompts containing package syntax, or a final structural decision. The
@@ -62,6 +67,59 @@ The reconstruction invariants are mandatory:
   combined duration is at most 15 seconds. Three-shot continuity requires explicit evidence too.
 - Reuse the full-reference people, voice, and product evidence. Describe a promoted product once;
   do not invent a new product description in every shot.
+
+## Develop a missing local component
+
+This branch is part of reference reconstruction, but it is ordinary Hypit package development, not
+a VLM capability. `reference-video-tools` must remain limited to preparation, observation and
+vocabulary inspection. Do not add a component generator command to it.
+
+Enter this branch only after comparing the observation against the selected packages' README and
+the complete `inspect_svml_vocabulary` result. Prefer a composition of existing components. Do not
+force a similar-looking tag to express behavior its declaration does not own, and do not write an
+unknown tag into `main.svml` before its package exists.
+
+Before creating the package, read these sources completely:
+
+1. `docs/guide/author-packages.md`
+2. `docs/guide/packages.md`
+3. `docs/guide/conventions.md`
+4. `packages/component-kit/README.md`
+5. The README, Manifest, Surface, Component and activation files of the closest existing package
+
+Create one new package under the current project's `packages/local-<slug>/`. The physical and
+logical name is `@hypit/local-<slug>`, the physical version is `0.0.0-dev`, and Module identities
+use logical version `1`. The package is project-local even when the current project is the Hypit
+checkout. Never edit, delete, extend or overwrite an existing package to fill this gap, and never
+ask for permission merely to create this new local package once the gap is established.
+
+The main agent, not Gemini, writes the package. Gemini must not receive or produce TypeScript,
+`package.json`, Manifest, Surface, Producer, Validator, package syntax or implementation code. Use
+its natural-language observation only as evidence for the component's required behavior.
+
+Implement the complete package rather than a syntax stub. Include the package manifest and README,
+Module Manifest and Types, every required Producer and Validator, Markup Surface declaration and
+decoder, activation contribution, and the necessary lowering, Fragment or render implementation.
+Add a preview for a visual Surface. Decide raw versus structured Surface, timing dependencies,
+ProgramSpace, Frame, SemanticMap, Artifact, Recipe and output Types from the observed behavior and
+the closest package architecture; do not copy a fixed template blindly.
+
+Connect the new package through normal Node package resolution:
+
+- Reuse the current project's workspace configuration when it already includes `packages/*`.
+- Otherwise add the smallest `pnpm-workspace.yaml` and package dependency changes that include the
+  new package.
+- Add the local package as a `workspace:*` dependency where the project's package root can resolve
+  it, then run the necessary `pnpm install`.
+- Run `pnpm check`, followed by the existing `pnpm hypit check` for `main.svml`, `studio.svs` and
+  `build.svrun`. Use `--workspace` or `--package-root` only when the project layout requires them.
+- Repair package resolution first, then activation, Manifest/implementation agreement, Surface
+  decoding, Producer/Validator behavior, and finally the three project sources.
+
+The package is complete only after the existing checks accept it. Never create a check wrapper.
+After the reconstruction is accepted, tell the user that the local package can be moved into the
+official Hypit repository as a separate contribution if they want to keep it generally available;
+do not perform that promotion automatically.
 
 ## Read the package README before writing its syntax
 
