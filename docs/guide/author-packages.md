@@ -91,6 +91,9 @@ export const decodeMyComponentSurface: StructuredSurfaceHandler = ({ element }) 
 };
 ```
 
+[Component Anatomy](./component-anatomy.md) names every role a component package fills and where to
+find each one in an existing package, since the filenames differ between packages.
+
 Look at existing Surface implementations for reference:
 - `packages/seedance/src/surface.ts` — Prompt, Speech and Video Surfaces
 - `packages/caption/src/surface.ts` — the common Program Surface; concrete Style/Track Surfaces live in Style-family packages
