@@ -23,6 +23,7 @@ run prepare_reference
 → run observe_reference for all shots
 → run observe_reference with one narrow follow-up for each unresolved conflict
 → run inspect_svml_vocabulary for the packages actually needed
+→ if vocabulary is insufficient, develop and install one complete project-local package
 → main agent writes complete main.svml, studio.svs, build.svrun
 → pnpm hypit check
 → repair source syntax and run pnpm hypit check again
@@ -49,3 +50,49 @@ After observations, read the selected package README as syntax authority as well
 vocabulary returned by the `inspect_svml_vocabulary` CLI. Author one complete dependency graph, not separate
 per-shot source fragments. Use only declared tags, attributes, children, ports, Recipe properties,
 and admitted values. Use the existing `pnpm hypit check`; do not add or invent a check wrapper.
+
+## When the vocabulary has a real gap
+
+First try to express the observation by composing existing packages. A tag that looks similar is
+not sufficient: its declared inputs, outputs, timing behavior and visual result must actually cover
+the observation. Never write a nonexistent tag and plan to implement it later.
+
+If no existing legal composition can express the result, stop authoring the three source files and
+develop a project-local author package. This is main-agent software development; it is not a fourth
+reference-video command and it is not work for Gemini.
+
+Read all of the following before editing:
+
+- `docs/guide/author-packages.md`
+- `docs/guide/packages.md`
+- `docs/guide/conventions.md`
+- `packages/component-kit/README.md`
+- The closest existing package's README, `manifest.ts`, `surface.ts`, `component.ts`, and
+  `activation.ts`
+
+Create only a new `packages/local-<slug>/` package named `@hypit/local-<slug>`. Do not change an
+existing Hypit package. The new package must have a complete Module Manifest, Types, Producers and
+Validators as required, Markup Surface declaration and decoder, activation descriptor, README,
+visual preview when applicable, and the implementation that produces its declared result. A Surface
+or vocabulary declaration without executable implementation is not a component.
+
+Connect the package to the current project's existing pnpm workspace and package root through an
+ordinary `workspace:*` dependency and `pnpm install`. Do not hide it under `.hypit/`, modify the
+package loader, or add a private registry. Then run:
+
+```bash
+pnpm check
+pnpm hypit check main.svml
+pnpm hypit check studio.svs
+pnpm hypit check build.svrun
+```
+
+Use the appropriate source paths and existing `--workspace` or `--package-root` options when the
+project layout needs them. Fix resolution, activation and package implementation errors before
+repairing source usage. Only continue the reconstruction when all existing checks accept the new
+package and final sources.
+
+Gemini must not write the local package or see its TypeScript and package syntax. The observed video
+is evidence for the behavior; the main agent owns all package architecture and code. If the user
+later approves the result, offer to promote the project-local package into the official Hypit
+repository as a separate contribution, but never move it automatically.
