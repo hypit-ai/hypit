@@ -42,8 +42,12 @@ Before acting, read these files completely in order:
    the split shot, the voice, the first frame, and the stretch too short to be a take.
 5. `vocabulary.md` — existing-package selection, appearance-property resolution, and the route for a
    real vocabulary gap.
-6. `reconstruction-loop.md` — rendering what was built and comparing it against the reference.
-7. `final-sources.md` — complete source authoring and check loop.
+
+Two more are required, at the point where they apply rather than now. Reading them here means
+reading them half an hour before they matter, with a dozen other files in between:
+
+- `final-sources.md` when the components exist and the sources are about to be written.
+- `reconstruction-loop.md` when something has been built and is about to be compared.
 
 Paths above are relative to this file's directory. Do not skip a file because the task looks like a
 familiar video format.

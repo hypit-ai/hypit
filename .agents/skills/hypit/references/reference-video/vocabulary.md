@@ -64,8 +64,9 @@ from the graph. Only pictures that differ between videos are edges the source su
 `../playbooks/craft/graphic-compositions.md` draws that line; a component that cannot draw itself
 without a project document is on the wrong side of it.
 
-Installing the package is not the end of the gap route. Continue into `reconstruction-loop.md`: a
-component that loads is not yet a component that looks like the reference.
+Installing the package is not the end of the gap route. Read `final-sources.md` and write the three
+sources, then continue into `reconstruction-loop.md`: a component that loads is not yet a component
+that looks like the reference.
 
 The reference-video CLI remains limited to observation, vocabulary inspection and blind image
 comparison; it does not generate components. Gemini does not write the package.
