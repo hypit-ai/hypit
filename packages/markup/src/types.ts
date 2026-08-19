@@ -118,10 +118,67 @@ export type SurfaceResolvedReference = {
 export type RawSurfaceHandler = (input: RawSurfaceInput) => Awaitable<RawSurfaceOutput>;
 export type StructuredSurfaceHandler = (input: StructuredSurfaceInput) => Awaitable<SurfaceDecodeOutput>;
 
+/** How an attribute's authored value is interpreted. */
+export type SurfaceAttributeKind = "identifier" | "literal" | "reference" | "expression";
+
+/** One property accepted by an SVS Recipe selected by an element attribute. */
+export type SurfaceRecipePropertyVocabulary = {
+  readonly name: string;
+  readonly required: boolean;
+  readonly summary: string;
+  readonly values?: readonly string[];
+  readonly fallback?: string;
+};
+
+export type SurfaceAttributeVocabulary = {
+  readonly name: string;
+  readonly kind: SurfaceAttributeKind;
+  readonly required: boolean;
+  readonly summary: string;
+  readonly values?: readonly string[];
+  readonly accepts?: readonly TypeRef[];
+  readonly recipe?: readonly SurfaceRecipePropertyVocabulary[];
+};
+
+export type SurfaceChildVocabulary = {
+  readonly tag: string;
+  readonly cardinality: "one" | "optional" | "many";
+  readonly summary: string;
+  readonly attributes?: readonly SurfaceAttributeVocabulary[];
+  readonly text?: string;
+};
+
+export type SurfacePortVocabulary = {
+  readonly name: string;
+  readonly type: TypeRef;
+  readonly summary: string;
+};
+
+/** A package-owned rendered still of the visual output produced by an element. */
+export type SurfacePreview = {
+  readonly mediaType: string;
+  readonly path: string;
+  readonly open: () => Promise<Uint8Array>;
+};
+
+/** A package's own declaration of one element's authoring vocabulary. */
+export type SurfaceVocabulary = {
+  readonly summary: string;
+  readonly appearance?: string;
+  readonly preview?: SurfacePreview;
+  readonly attributes: readonly SurfaceAttributeVocabulary[];
+  readonly children?: readonly SurfaceChildVocabulary[];
+  readonly ports?: readonly SurfacePortVocabulary[];
+  readonly text?: string;
+  readonly example: string;
+  readonly notes?: readonly string[];
+};
+
 type MarkupSurfaceDeclarationBase = {
   readonly name: string;
   readonly tag: string;
   readonly outputs: readonly TypeRef[];
+  readonly vocabulary?: SurfaceVocabulary;
 };
 
 export type RawSurfaceDeclaration = MarkupSurfaceDeclarationBase & { readonly mode: "raw" };
@@ -133,6 +190,7 @@ type RegisteredSurfaceBase = {
   readonly surface: string;
   readonly tag: string;
   readonly outputs: readonly TypeRef[];
+  readonly vocabulary?: SurfaceVocabulary;
 };
 
 export type RegisteredRawSurface = RegisteredSurfaceBase & {

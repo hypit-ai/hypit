@@ -1,6 +1,9 @@
+import { artifactTypes } from "@hypit/artifact";
 import { sealGenerationPortRequest, sealGenerationPortTable } from "@hypit/generation";
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import type { SurfaceAttributeVocabulary, SurfaceChildVocabulary } from "@hypit/markup";
 import { defineExactModelModule } from "@hypit/model-kit";
+import { textTypes } from "@hypit/text";
 
 export const nanoBananaModuleRef = { name: "@hypit/nano-banana", version: "1" } as const;
 export const nanoBananaModels = ["nano-banana-2", "nano-banana-pro"] as const;
@@ -54,20 +57,109 @@ const nanoBananaBaseDefinition = defineExactModelModule({
 
 export const nanoBananaEndpoints = nanoBananaBaseDefinition.endpoints;
 export const nanoBananaComponent = nanoBananaBaseDefinition.component;
+/**
+ * Both model variants author the same element through one handler, so one description of the shape
+ * serves both and neither can drift into teaching a syntax the handler would reject.
+ */
+const nanoBananaAttributes: readonly SurfaceAttributeVocabulary[] = [
+  {
+    name: "id",
+    kind: "identifier",
+    required: true,
+    summary: "Names this generation and prefixes the bindings it publishes.",
+  },
+  {
+    name: "prompt",
+    kind: "reference",
+    required: true,
+    summary: "The Text edge describing the picture the model renders.",
+    accepts: [textTypes.text],
+  },
+  {
+    name: "aspect-ratio",
+    kind: "literal",
+    required: true,
+    summary: "The shape of the generated picture.",
+    values: ["auto", "1:1", "2:3", "3:2", "1:4", "4:1", "3:4", "4:3", "4:5",
+      "5:4", "1:8", "8:1", "9:16", "16:9", "21:9"],
+  },
+  {
+    name: "resolution",
+    kind: "literal",
+    required: true,
+    summary: "The size band the model renders at.",
+    values: ["1K", "2K", "4K"],
+  },
+  {
+    name: "output-format",
+    kind: "literal",
+    required: true,
+    summary: "The encoding of the returned image Artifact.",
+    values: ["png", "jpg"],
+  },
+];
+
+const nanoBananaChildren: readonly SurfaceChildVocabulary[] = [
+  { tag: "Reference", cardinality: "many",
+    summary: "Attaches one image Artifact as a reference picture.",
+    attributes: [
+      { name: "image", kind: "reference", required: true, accepts: [artifactTypes.blob],
+        summary: "Selects the image Artifact this reference contributes." },
+    ] },
+];
+
+const nanoBananaNotes: readonly string[] = [
+  "The element accepts at most 14 `Reference` children and no text content.",
+  "Every `Reference` is an ordinary image Artifact edge; the Surface copies no runtime media into request metadata.",
+  "The Surface lowers the element into the package's exact model request and selects no Provider.",
+];
+
 const surface = (
   name: "image" | "pro-image",
   tag: "Image" | "ProImage",
   endpoint: (typeof nanoBananaEndpoints)["v2" | "pro"],
+  summary: string,
+  example: string,
 ) => ({
   name,
   tag,
   mode: "structured" as const,
   outputs: [endpoint!.draftType, endpoint!.mediaBindings.images!.type],
+  vocabulary: {
+    summary,
+    attributes: nanoBananaAttributes,
+    children: nanoBananaChildren,
+    ports: [{
+      name: "image",
+      type: artifactTypes.blob,
+      summary: "The primary generated image, addressed as `<id>.image`.",
+    }],
+    example,
+    notes: nanoBananaNotes,
+  },
 });
 
 export const nanoBananaMarkupSurfaces = [
-    surface("image", "Image", nanoBananaEndpoints.v2!),
-    surface("pro-image", "ProImage", nanoBananaEndpoints.pro!),
+    surface("image", "Image", nanoBananaEndpoints.v2!,
+      "Generates one picture with the exact Nano Banana 2 model from a Text prompt and optional reference images.",
+      `<nano:Image
+  id="draft"
+  prompt={prompt}
+  aspect-ratio="9:16"
+  resolution="2K"
+  output-format="png"
+>
+  <nano:Reference image={person.image}/>
+</nano:Image>`),
+    surface("pro-image", "ProImage", nanoBananaEndpoints.pro!,
+      "Generates one picture with the exact Nano Banana Pro model from a Text prompt and optional reference images.",
+      `<nano:ProImage
+  id="final"
+  prompt={finalPrompt}
+  aspect-ratio="9:16"
+  resolution="4K"
+  output-format="png"
+/>`),
   ] as const;
 
 export const nanoBananaManifest = {

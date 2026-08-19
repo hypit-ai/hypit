@@ -1,6 +1,7 @@
-import { artifactDependency } from "@hypit/artifact";
+import { artifactDependency, artifactTypes } from "@hypit/artifact";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import { compositionDependency } from "@hypit/composition";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
+import { programSpaceTypes } from "@hypit/program-space";
 import {
   hyperframesManifest,
   hyperframesModuleRef,
@@ -28,6 +29,30 @@ export const renderHyperframesMarkupSurfaces = [{
     tag: "Video",
     mode: "structured",
     outputs: [],
+    vocabulary: {
+      summary:
+        "Renders one Composition on one ProgramSpace into a final video, publishing the muxed result as a BlobArtifact.",
+      attributes: [
+        { name: "id", kind: "identifier", required: true,
+          summary: "Names the render component and the final video this element publishes." },
+        { name: "composition", kind: "reference", required: true,
+          accepts: [compositionTypes.composition],
+          summary: "Selects the Composition this element compiles, renders and muxes." },
+        { name: "space", kind: "reference", required: true,
+          accepts: [programSpaceTypes.programSpace],
+          summary: "Selects the ProgramSpace whose duration and frame rate every rendered Product is bound to." },
+      ],
+      ports: [
+        { name: "video", type: artifactTypes.blob,
+          summary: "The final muxed video Artifact, addressed as `<id>.video`." },
+      ],
+      example: '<render:Video id="final" composition={main.composition} space={speech.space}/>',
+      notes: [
+        "All three attributes are required; the element accepts no children and no text content.",
+        "The visual render, the audio render and the mux are three separate Needs, each realized by a Provider this package does not choose.",
+        "The published Artifact carries no duration or lineage metadata, so a consumer that needs stream facts requests explicit media inspection.",
+      ],
+    },
   }] as const;
 
 

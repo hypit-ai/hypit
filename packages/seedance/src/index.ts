@@ -12,9 +12,12 @@ import type {
   GenerationRequest,
   GenerationRequestDraft,
 } from "@hypit/generation";
+import { artifactTypes } from "@hypit/artifact";
+import type { SurfaceAttributeVocabulary, SurfacePortVocabulary } from "@hypit/markup";
 import { defineExactModelModule } from "@hypit/model-kit";
 import { assertSpeechDurationIdentity, speechDependency, speechTypes } from "@hypit/speech";
 import type { SpeechDuration } from "@hypit/speech";
+import { textTypes } from "@hypit/text";
 import { canonicalize } from "@hypit/protocol";
 import type { Digest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 
@@ -191,6 +194,79 @@ export const seedanceEndpointsByModel = {
   "seedance-2.5": seedanceEndpoints.v25!,
 } as const;
 
+/**
+ * The three invocation shapes differ only in how media reaches the model, so one description of the
+ * shared request settings serves all of them and none can drift into teaching a syntax the handlers
+ * would reject.
+ */
+const seedanceCommonAttributes: readonly SurfaceAttributeVocabulary[] = [
+  {
+    name: "id",
+    kind: "identifier",
+    required: true,
+    summary: "Names this generation and prefixes the binding it publishes.",
+  },
+  {
+    name: "model",
+    kind: "literal",
+    required: true,
+    summary: "Chooses the exact Seedance variant that renders the video.",
+    values: [
+      "standard", "seedance-2",
+      "fast", "seedance-2-fast",
+      "mini", "seedance-2-mini",
+      "2.5", "seedance-2.5",
+    ],
+  },
+  {
+    name: "prompt",
+    kind: "reference",
+    required: true,
+    summary: "The Text edge describing the video the model renders.",
+    accepts: [textTypes.text],
+  },
+  {
+    name: "duration",
+    kind: "expression",
+    required: true,
+    summary: "Sets the length of the video in seconds, either written literally or taken from a SpeechDuration edge.",
+    accepts: [speechTypes.duration],
+  },
+  {
+    name: "resolution",
+    kind: "literal",
+    required: false,
+    summary: "Chooses the size band the model renders at.",
+    values: ["480p", "720p", "1080p", "4k"],
+  },
+  {
+    name: "aspect-ratio",
+    kind: "literal",
+    required: false,
+    summary: "Chooses the shape of the generated video.",
+    values: [...ASPECT_RATIOS],
+  },
+  {
+    name: "generate-audio",
+    kind: "literal",
+    required: false,
+    summary: "Decides whether the model generates audio alongside the picture.",
+    values: ["true", "false"],
+  },
+];
+
+const seedanceVideoPort: readonly SurfacePortVocabulary[] = [{
+  name: "video",
+  type: artifactTypes.blob,
+  summary: "The first ordered member of the generated set, addressed as `<id>.video`.",
+}];
+
+const seedanceSettingNotes: readonly string[] = [
+  "`resolution` defaults to `720p`, `aspect-ratio` to `9:16` and `generate-audio` to `false`.",
+  "`1080p` and `4k` are offered by `standard` alone; the other variants render at `480p` or `720p`.",
+  "`duration` is 4 to 15 seconds for `standard`, `fast` and `mini`, and `-1` for automatic or 4 to 30 seconds for `2.5`.",
+];
+
 export const seedanceMarkupSurfaces = [
   {
     name: "text-video",
@@ -203,6 +279,26 @@ export const seedanceMarkupSurfaces = [
         ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
       ]),
     ],
+    vocabulary: {
+      summary: "Generates one video with an exact Seedance model from a Text prompt alone.",
+      attributes: [
+        ...seedanceCommonAttributes,
+        {
+          name: "web-search",
+          kind: "literal",
+          required: false,
+          summary: "Decides whether the model consults Web Search while generating.",
+          values: ["true", "false"],
+        },
+      ],
+      ports: seedanceVideoPort,
+      example: '<seedance:TextVideo id="take-hook" model="mini" prompt={direction} duration="5" generate-audio="true"/>',
+      notes: [
+        ...seedanceSettingNotes,
+        "This is the only invocation shape that exposes Web Search.",
+        "The element accepts no children and no text content.",
+      ],
+    },
   },
   {
     name: "frame-video",
@@ -211,6 +307,33 @@ export const seedanceMarkupSurfaces = [
     outputs: [seedanceTypes.durationProgram, ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
       endpoint.draftType, ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
     ])],
+    vocabulary: {
+      summary: "Generates one video with an exact Seedance model from a Text prompt and the images the video opens and closes on.",
+      attributes: [
+        ...seedanceCommonAttributes,
+        {
+          name: "first-frame",
+          kind: "reference",
+          required: true,
+          summary: "The image Artifact the generated video opens on.",
+          accepts: [artifactTypes.blob],
+        },
+        {
+          name: "last-frame",
+          kind: "reference",
+          required: false,
+          summary: "The image Artifact the generated video closes on.",
+          accepts: [artifactTypes.blob],
+        },
+      ],
+      ports: seedanceVideoPort,
+      example: '<seedance:FrameVideo id="bridge" model="fast" prompt={direction} duration="5" first-frame={first.image} last-frame={last.image}/>',
+      notes: [
+        ...seedanceSettingNotes,
+        "Both frames are ordinary image Artifact edges; the Surface copies no runtime media into request metadata.",
+        "The element accepts no children and no text content.",
+      ],
+    },
   },
   {
     name: "reference-video",
@@ -219,6 +342,56 @@ export const seedanceMarkupSurfaces = [
     outputs: [seedanceTypes.durationProgram, ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
       endpoint.draftType, ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
     ])],
+    vocabulary: {
+      summary: "Generates one video with an exact Seedance model from a Text prompt and one or more image, video or audio references.",
+      attributes: seedanceCommonAttributes,
+      children: [{
+        tag: "Reference",
+        cardinality: "many",
+        summary: "Attaches one Artifact as a reference through exactly one of its `image`, `video` or `audio` references.",
+        attributes: [
+          {
+            name: "image",
+            kind: "reference",
+            required: false,
+            summary: "The image Artifact this reference contributes to the generation.",
+            accepts: [artifactTypes.blob],
+          },
+          {
+            name: "video",
+            kind: "reference",
+            required: false,
+            summary: "The video Artifact this reference contributes to the generation.",
+            accepts: [artifactTypes.blob],
+          },
+          {
+            name: "audio",
+            kind: "reference",
+            required: false,
+            summary: "The audio Artifact this reference contributes to the generation.",
+            accepts: [artifactTypes.blob],
+          },
+        ],
+      }],
+      ports: seedanceVideoPort,
+      example: `<seedance:ReferenceVideo
+  id="hook-take"
+  model="mini"
+  prompt={hook-prompt}
+  duration={hook-duration.duration}
+  resolution="720p"
+  aspect-ratio="9:16"
+  generate-audio="true"
+>
+  <seedance:Reference image={presenter-clean}/>
+  <seedance:Reference audio={presenter-voice}/>
+</seedance:ReferenceVideo>`,
+      notes: [
+        ...seedanceSettingNotes,
+        "The element requires at least one `Reference` child, and the model's port limits cap how many of each role it accepts.",
+        "A `Reference` carries exactly one of `image`, `video` or `audio`, and is empty.",
+      ],
+    },
   },
 ] as const;
 
