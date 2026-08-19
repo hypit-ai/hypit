@@ -7,12 +7,15 @@
 
 <p align="center">
   <strong>Clone any viral video with AI agents.</strong>
-  <br>
-  <em>1 command, 100 variants, 100M views.</em>
+  1 command, 100 variants, 100M views.
 </p>
 
 <p align="center">
   <a href="https://hypit.ai/"><strong>Website</strong></a>
+  &nbsp;&bull;&nbsp;
+  <a href="https://hypit.ai/quickstart"><strong>Quickstart</strong></a>
+  &nbsp;&bull;&nbsp;
+  <a href="https://hypit.ai/guide/develop"><strong>Develop</strong></a>
   &nbsp;&bull;&nbsp;
   <a href="https://narratage.hypit.ai/"><strong>Docs</strong></a>
   &nbsp;&bull;&nbsp;
