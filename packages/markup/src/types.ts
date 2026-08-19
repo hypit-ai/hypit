@@ -118,10 +118,8 @@ export type SurfaceResolvedReference = {
 export type RawSurfaceHandler = (input: RawSurfaceInput) => Awaitable<RawSurfaceOutput>;
 export type StructuredSurfaceHandler = (input: StructuredSurfaceInput) => Awaitable<SurfaceDecodeOutput>;
 
-/** How an attribute's authored value is interpreted. */
 export type SurfaceAttributeKind = "identifier" | "literal" | "reference" | "expression";
 
-/** One property accepted by an SVS Recipe selected by an element attribute. */
 export type SurfaceRecipePropertyVocabulary = {
   readonly name: string;
   readonly required: boolean;
@@ -154,14 +152,12 @@ export type SurfacePortVocabulary = {
   readonly summary: string;
 };
 
-/** A package-owned rendered still of the visual output produced by an element. */
 export type SurfacePreview = {
   readonly mediaType: string;
   readonly path: string;
   readonly open: () => Promise<Uint8Array>;
 };
 
-/** A package's own declaration of one element's authoring vocabulary. */
 export type SurfaceVocabulary = {
   readonly summary: string;
   readonly appearance?: string;

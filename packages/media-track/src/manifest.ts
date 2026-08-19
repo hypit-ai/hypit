@@ -293,10 +293,6 @@ const sequenceInputs = [
   { name: "sounds", type: mediaTrackTypes.soundSet },
 ] as const;
 
-/**
- * Every property an `appearance` Recipe may carry: the shared spatial fit, the sampling of the
- * material behind it, and the Frame the unit is drawn in.
- */
 const appearanceRecipeProperties = [
   { name: "fit", required: false, fallback: "contain",
     values: ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"],
@@ -352,7 +348,6 @@ const appearanceRecipeProperties = [
     summary: "Fills the whole Frame behind every layer with a color, `linear(angle;stops)` or `radial(x,y;stops)`." },
 ] as const;
 
-/** Every property a `motion` Recipe may carry: how a unit enters, how it lives, and how it leaves. */
 const motionRecipeProperties = [
   { name: "enter", required: false, fallback: "none",
     values: ["none", "fade", "slide", "scale", "pop", "bounce", "blur-reveal", "wipe", "flip", "spin"],

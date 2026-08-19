@@ -73,10 +73,6 @@ export const speechSpineVisualSpecSchema: ValueSchema = object({
   stackingOrder: { schema: { kind: "number", integer: true } },
 });
 
-/**
- * The spatial fit vocabulary `decodeContentFitProperties` reads out of a visual Recipe. Both the
- * Spine's base appearance and a Take's override are decoded by that one reader, so both declare it.
- */
 const visualRecipeProperties = [
   { name: "fit", required: false, fallback: "contain",
     values: ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"],

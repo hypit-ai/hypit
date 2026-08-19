@@ -93,7 +93,6 @@ const base = defineExactModelModule({
 
 export const mimoTtsEndpoints = base.endpoints;
 
-/** The three models differ in how the voice is chosen; everything else about the element is shared. */
 const mimoSpokenAttributes: readonly SurfaceAttributeVocabulary[] = [
   {
     name: "id",

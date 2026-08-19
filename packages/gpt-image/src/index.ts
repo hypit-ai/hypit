@@ -58,10 +58,6 @@ const gptImageBaseDefinition = defineExactModelModule({
 
 export const gptImageEndpoints = gptImageBaseDefinition.endpoints;
 export const gptImageComponent = gptImageBaseDefinition.component;
-/**
- * Both modules author the same element, so one description of the shape serves both and neither
- * can drift into teaching a syntax the shared handler would reject.
- */
 const gptImageAttributes: readonly SurfaceAttributeVocabulary[] = [
   {
     name: "id",
