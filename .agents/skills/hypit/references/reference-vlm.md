@@ -1,32 +1,51 @@
-# Reference video VLM to SVML
+# Reference video reconstruction
 
-Write `main.svml`, optional `studio.svs`, and `build.svrun` directly.
+Use this only when the task is to reproduce or reverse a complete reference video into usable
+Hypit sources. The public interface is exactly three MCP tools in
+`@hypit/reference-video-tools`:
 
-- Write all VLM instructions and generated image/video prompts in English. Preserve original language
-  only for verbatim dialogue/transcript/sample lines.
-- Analyze active video clips, not stills alone. Split on RGB content distance, keep clips at or below
-  15 seconds, and share one reference across continuous parts.
-- Keep photographed base and editorial overlays complementary. Treat exact UI/screenshots/charts as
-  provided media; generated live-action PIP/B-roll may be real generated media.
-- Anchor recurring people/products/locations at the clearest shot and reuse references topologically.
-- Listen to audio for voice design. Transcribe speech, not burned-in captions.
-- Before hand-writing a Seedance prompt, select an official vendored Kit when the format matches:
-  `speaker-v1`, `broll-v1`, `podcast-v1`, `call-v1`, `street-interview-v1`,
-  `motion-reference-v1`, or `camera-reference-v1`. Supply only Recipe axes and dynamic slots.
-- Author the transcript as Script; keep reusable prompt copy in `copy:Value`/`copy:Render`; generate
-  media with `seedance:TextVideo`, `seedance:FrameVideo`, or `seedance:ReferenceVideo`; declare
-  supplied assets with `media:Image`/`media:Audio` or place them with `media-track:Item`; establish
-  timing with `speech:Spine` and `whisperx:Alignment`; build captions with an exact font,
-  `caption-fine:Style`, `caption:Program`, `caption-ai:Planner`, and `caption-fine:Track`; put
-  editorial text on `typo:Track`; then assemble with `film:Film`, render with `render:Video`, and
-  demand the desired outputs in `build.svrun`.
-- Route every generated reference image through `playbooks/craft/production-gates.md`. Explicitly reuse
-  each accepted image or take in the next Build with `.svrun` `build-record` and `satisfy`.
+- `prepare_reference({ video_path, rebuild? })` prepares the local video once, splits shots at or
+  below 15 seconds, extracts every clip, representative frame, tail frame, and audio tail, and
+  performs the one whole-reference people/product analysis and one whole-reference voice analysis.
+- `observe_reference({ reference_id, shot_ids?, question?, refresh? })` observes all selected shots in
+  parallel. It automatically supplies the previous shot's tail frame and audio tail, the whole
+  reference people/voice/product evidence, and all neighboring boundaries. It returns natural
+  language picture, sound, camera-continuity, overlay-continuity, and any three-shot or follow-up
+  evidence.
+- `inspect_svml_vocabulary({ package_names, tags?, include_previews? })` reads the selected packages'
+  current declarations and previews. It does not call Gemini and it does not know which component
+  a visual observation should become.
 
-Generated image prompt structure: an English reality contract matching the observed capture medium,
-the exact visible subject/story, camera geometry, and the role of every reference. Keep lighting,
-skin/material texture, focus, and photographic finish consistent with the reference format.
+The fixed loop is:
 
-When no official Kit applies, include this hygiene block in a freeform motion prompt:
+```text
+prepare_reference
+→ observe_reference for all shots
+→ observe_reference with one narrow follow-up for each unresolved conflict
+→ inspect_svml_vocabulary for the packages actually needed
+→ main agent writes complete main.svml, studio.svs, build.svrun
+→ pnpm hypit check
+→ repair source syntax and run pnpm hypit check again
+```
 
-`Do not add subtitles or any on-screen text. Do not add stickers, labels, captions, floating words, or other graphic overlays. Preserve text that is physically printed on the product, device, or screen as part of the filmed content.`
+Never ask Gemini to write SVML, SVS, SVRun, a reference plan, component names, or package syntax.
+Gemini's output is evidence in natural language; the main agent decides the final source structure.
+Do not send vocabulary declarations or previews to Gemini.
+
+The reconstruction must preserve these facts:
+
+- Whoever is speaking is base. Visual layer order and screen area never decide base.
+- Picture and sound ownership are independent. Full-screen B-roll, a media insert, or a ranking
+  typewriter may cover the frame while the previous speaker's base and sound continue.
+- A silent B-roll person who appears to speak cannot become the speaker or base.
+- A continuing voice survives a shot with no visible person.
+- One overlay that continues across a cut stays one visual track. Do not duplicate it in every shot.
+- Combine two or three incorrectly split shots only when the natural-language continuity evidence
+  confirms one shot and the combined duration is no more than 15 seconds.
+- Reuse whole-reference people, voice, and product descriptions. A promoted product is described
+  once and reused consistently.
+
+After observations, read the selected package README as syntax authority as well as the dynamic
+vocabulary returned by `inspect_svml_vocabulary`. Author one complete dependency graph, not separate
+per-shot source fragments. Use only declared tags, attributes, children, ports, Recipe properties,
+and admitted values. Use the existing `pnpm hypit check`; do not add or invent a check wrapper.

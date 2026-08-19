@@ -12,11 +12,9 @@
   },
   "dependencies": {
     "@google/genai": "1.52.0",
-    "@hypit/artifact-store-fs": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/package-loader-node": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/runtime": "workspace:*",
     "@modelcontextprotocol/sdk": "1.30.0",
     "zod": "3.25.76"
   },

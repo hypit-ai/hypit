@@ -206,31 +206,48 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const reference = await referenceId(videoPath);
       const root = stateRoot(workspaceRoot, reference);
       const statePath = join(root, "state.json");
+      let existing = await readJson<ReferenceState>(statePath);
       if (!input.rebuild) {
-        const existing = await readJson<ReferenceState>(statePath);
-        if (existing !== undefined) return publicPrepare(existing);
+        if (existing !== undefined && existing.people_and_product?.status === "complete" && existing.voices?.status === "complete") return publicPrepare(existing);
       }
       await ensureDir(root);
-      const info = await probe(videoPath);
-      const media = await prepareMedia(videoPath, root, info.duration);
-      const shots = await Promise.all(media.bounds.map((bound, index) => shotFromBound(root, index, bound)));
-      const state: ReferenceState = {
-        reference_id: reference,
-        video_path: videoPath,
-        root,
-        video: { duration_seconds: Number(info.duration.toFixed(3)), width: info.width, height: info.height, has_audio: info.hasAudio },
-        shots,
-        storyboard_ref: media.storyboard,
-        analysis_video_ref: media.analysisVideo,
+      const info = existing?.video === undefined ? await probe(videoPath) : {
+        duration: existing.video.duration_seconds,
+        width: existing.video.width,
+        height: existing.video.height,
+        hasAudio: existing.video.has_audio,
       };
-      await writeJson(statePath, state);
+      let state: ReferenceState;
+      let analysisVideo: string;
+      if (existing !== undefined && !input.rebuild && existing.shots.length > 0) {
+        state = existing;
+        analysisVideo = existing.analysis_video_ref;
+      } else {
+        const media = await prepareMedia(videoPath, root, info.duration);
+        const shots = await Promise.all(media.bounds.map((bound, index) => shotFromBound(root, index, bound)));
+        state = {
+          reference_id: reference,
+          video_path: videoPath,
+          root,
+          video: { duration_seconds: Number(info.duration.toFixed(3)), width: info.width, height: info.height, has_audio: info.hasAudio },
+          shots,
+          storyboard_ref: media.storyboard,
+          analysis_video_ref: media.analysisVideo,
+        };
+        analysisVideo = media.analysisVideo;
+        await writeJson(statePath, state);
+      }
       const generate = await generator();
-      const globalParts: Part[] = [await mediaPart(media.analysisVideo)];
+      const globalParts: Part[] = [await mediaPart(analysisVideo)];
       const [people, voices] = await Promise.all([
-        callSafely(generate, [...globalParts, { text: "Describe the recurring people and the promoted product in this complete reference video. Return natural language only. Identify stable visual traits and distinguish recurring speakers from incidental people in inserts. Describe the product once, comprehensively, for reuse." }], "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
-        callSafely(generate, [...globalParts, { text: "Listen to this complete reference video and describe the distinct voices, their order, overlap, off-screen speech, and likely correspondence to visible people. Do not assign a voice merely because a person appears in a B-roll image. Return natural language only." }], "You only listen to a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
+        state.people_and_product?.status === "complete" && !input.rebuild
+          ? Promise.resolve(state.people_and_product)
+          : callSafely(generate, [...globalParts, { text: "Describe the recurring people and the promoted product in this complete reference video. Return natural language only. Identify stable visual traits and distinguish recurring speakers from incidental people in inserts. Describe the product once, comprehensively, for reuse." }], "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
+        state.voices?.status === "complete" && !input.rebuild
+          ? Promise.resolve(state.voices)
+          : callSafely(generate, [...globalParts, { text: "Listen to this complete reference video and describe the distinct voices, their order, overlap, off-screen speech, and likely correspondence to visible people. Do not assign a voice merely because a person appears in a B-roll image. Return natural language only." }], "You only listen to a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
       ]);
-      const complete = { ...state, people_and_product: people, voices };
+      const complete: ReferenceState = { ...state, people_and_product: people, voices };
       await writeJson(statePath, complete);
       return publicPrepare(complete);
     },
@@ -335,13 +352,23 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
             tag: implementation.tag,
             mode: implementation.mode,
             outputs: implementation.outputs,
-            vocabulary: input.include_previews === false ? withoutPreview(implementation.vocabulary) : implementation.vocabulary,
+            vocabulary: vocabularyForResult(input.include_previews === false ? withoutPreview(implementation.vocabulary) : implementation.vocabulary),
             readme_path: readmePath(pack.specifier, packageRoot),
           });
         }
       }
       return { packages: input.package_names, surfaces };
     },
+  };
+}
+
+function vocabularyForResult(value: SurfaceVocabulary | undefined): unknown {
+  if (value === undefined) return undefined;
+  return {
+    ...value,
+    ...(value.preview === undefined ? {} : {
+      preview: { mediaType: value.preview.mediaType, path: value.preview.path },
+    }),
   };
 }
 
@@ -354,7 +381,16 @@ function withoutPreview(value: SurfaceVocabulary | undefined): SurfaceVocabulary
 function readmePath(specifier: string, root: string): string | undefined {
   try {
     const require = createRequire(join(root, "__hypit_reference_tools__.cjs"));
-    const packageJson = require.resolve(`${specifier}/package.json`) as string;
-    return join(dirname(packageJson), "README.md");
+    const entry = require.resolve(specifier) as string;
+    let cursor = dirname(entry);
+    while (cursor !== dirname(cursor)) {
+      try {
+        const candidate = join(cursor, "package.json");
+        const packageJson = require(candidate) as { name?: string };
+        if (packageJson.name === specifier) return join(cursor, "README.md");
+      } catch { /* keep walking */ }
+      cursor = dirname(cursor);
+    }
+    return undefined;
   } catch { return undefined; }
 }
