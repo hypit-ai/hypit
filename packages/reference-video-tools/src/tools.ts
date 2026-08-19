@@ -108,8 +108,18 @@ async function mediaPart(path: string): Promise<Part> {
   return { inlineData: { mimeType, data: Buffer.from(bytes).toString("base64") } };
 }
 
+function message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function rateLimited(error: unknown): boolean {
-  return /\b429\b|resource[ _]exhausted|quota|rate limit/iu.test(error instanceof Error ? error.message : String(error));
+  return /\b429\b|resource[ _]exhausted|quota|rate limit/iu.test(message(error));
+}
+
+// A rejected request is rejected every time. Retrying one only delays the failure the caller has to
+// see, so these end the attempt loop immediately; everything else stays retryable.
+function permanent(error: unknown): boolean {
+  return /invalid[_ ]argument|permission[_ ]denied|unauthenticated|not[_ ]found|failed[_ ]precondition/iu.test(message(error));
 }
 
 async function callSafely(retryDelayMs: number, generate: GenerateText, parts: readonly Part[], instruction: string): Promise<Observation> {
@@ -118,6 +128,7 @@ async function callSafely(retryDelayMs: number, generate: GenerateText, parts: r
     try { return observation("complete", await generate({ parts, instruction })); }
     catch (error) {
       last = error;
+      if (permanent(error)) break;
       if (attempt === 6) break;
       const wait = rateLimited(error) ? Math.min(900_000, 45_000 * 2 ** (attempt - 1)) : retryDelayMs * attempt;
       await new Promise((resolveWait) => setTimeout(resolveWait, wait));
