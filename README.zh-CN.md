@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://hypit.ai/"><strong>官网</strong></a>
+  <a href="https://narratage.hypit.ai/zh/"><strong>官网</strong></a>
   &nbsp;&bull;&nbsp;
   <a href="https://narratage.hypit.ai/zh/"><strong>文档</strong></a>
   &nbsp;&bull;&nbsp;
@@ -30,7 +30,7 @@
 </p>
 
 <p align="center">
-  <a href="https://hypit.ai/zh/"><img alt="Visit our website" src="https://img.shields.io/badge/Visit%20our%20website-000000?style=for-the-badge&logo=googlechrome&logoColor=white"></a>
+  <a href="https://narratage.hypit.ai/zh/"><img alt="Visit our website" src="https://img.shields.io/badge/Visit%20our%20website-000000?style=for-the-badge&logo=googlechrome&logoColor=white"></a>
   <a href="https://discord.gg/85hnyQnxpn"><img alt="Join our Discord" src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
   <a href="https://t.me/hypit"><img alt="Join our Telegram" src="https://img.shields.io/badge/Join%20our%20Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white"></a>
   <a href="https://x.com/hypitai"><img alt="Follow @hypitai on X" src="https://img.shields.io/badge/Follow%20%40hypitai-000000?style=for-the-badge&logo=x&logoColor=white"></a>
