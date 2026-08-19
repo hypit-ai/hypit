@@ -25,6 +25,7 @@ export type ReferenceState = {
   readonly analysis_video_ref: string;
   readonly people_and_product?: Observation;
   readonly voices?: Observation;
+  readonly persistent_systems?: Observation;
 };
 
 export type PrepareResult = {
@@ -35,4 +36,5 @@ export type PrepareResult = {
   readonly storyboard_ref: string;
   readonly people_and_product: Observation;
   readonly voices: Observation;
+  readonly persistent_systems: Observation;
 };
