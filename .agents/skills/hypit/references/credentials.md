@@ -12,6 +12,16 @@ by the selected Runtime Profile:
 
 macOS/Linux session example:
 
+A project that keeps its credentials in a `.env` file does not load them automatically — nothing in
+this repository reads that file for you. Load it into the environment before any command that needs a
+Provider:
+
+```bash
+set -a && source .env && set +a
+```
+
+Otherwise export them for the session:
+
 ```bash
 read -r -s KIE_API_KEY
 export KIE_API_KEY

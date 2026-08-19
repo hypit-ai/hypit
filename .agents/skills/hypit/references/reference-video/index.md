@@ -4,6 +4,34 @@ This route reconstructs a complete reference video as usable `main.svml`, `studi
 `build.svrun`. The main agent owns all decisions and source code; Gemini supplies natural-language
 visual and audio evidence only.
 
+## What this route delivers, and what it does not
+
+The deliverable is **the components the video needs and the three source files**. Every generation the
+Source declares is declared, not performed: no Build is submitted for the pictures, and no video
+generation, speech synthesis, alignment or final render is run. Those belong to a later step that the
+author starts deliberately, after reading what was written.
+
+One exception, because it is not a generation of the video: a component's own surface — the field its
+elements are drawn on, whatever that is — is produced while the package is authored, with
+`hypit image`, and committed inside the package. `../playbooks/craft/generated-dependencies.md` draws
+that line.
+
+Reference observation is part of the work and is expected to cost what it costs.
+
+Write the project into its own directory. If the author named one, use it; otherwise create
+`examples/<something>-reverse/` beside the other examples, which the workspace already covers.
+
+## Before the first command
+
+`prepare_reference` and every observation need Vertex credentials, and a project that keeps them in a
+`.env` file does not load it automatically. Load it into the environment first:
+
+```bash
+set -a && source .env && set +a
+```
+
+`../credentials.md` lists which variables each Provider needs.
+
 Before acting, read these files completely in order:
 
 1. `workflow.md` — CLI sequence, evidence flow and responsibility boundaries.
