@@ -143,6 +143,8 @@ export type SurfaceChildVocabulary = {
   readonly cardinality: "one" | "optional" | "many";
   readonly summary: string;
   readonly attributes?: readonly SurfaceAttributeVocabulary[];
+  /** Elements written inside this child, declared to the same depth the Surface accepts them. */
+  readonly children?: readonly SurfaceChildVocabulary[];
   readonly text?: string;
 };
 

@@ -42,3 +42,10 @@ Content has two explicit author forms:
 one plain document run; the Track still owns placement, timing, appearance and motion. Inline body
 content owns a bounded rich `VisualTextDocument`. Dynamic rich text is intentionally not smuggled
 through generic `Text`; it would require a separate explicit rich-document contract.
+
+`<typo:P>`, `<typo:Span>` and `<typo:Break>` are declared children of every item, so they are
+discoverable from the Surface vocabulary rather than from prose. A `style` on a `<typo:P>` or a
+`<typo:Span>` replaces the whole typography record, not only the paints: that paragraph or run is
+shaped with the referenced Style's own exact font at its own size, weight and slant, so one document
+can mix typefaces. The Style's area, point, path and stacking-order properties are ignored there;
+those stay with the item.

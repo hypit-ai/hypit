@@ -163,6 +163,30 @@ const textMaskSpecSchema = object({
 });
 
 
+/** The document an item owns, written the same way inside a Point, an Area or a Path. */
+const documentChildren = [
+  { tag: "P", cardinality: "many",
+    summary: "One paragraph of the item's document. It holds direct text, Span runs and Break line breaks in the order they are written, and can be drawn in a Style of its own.",
+    attributes: [
+      { name: "id", kind: "identifier", required: false, summary: "Names this paragraph inside the document; an omitted id is generated from the paragraph's position." },
+      { name: "style", kind: "reference", required: false, accepts: [typographyTrackTypes.style], summary: "Redraws the whole paragraph in another compiled Style, whose typography and Paint replace the item's: the paragraph is shaped with that Style's exact font and set at its size, weight and slant, and painted in its fills, outlines, glows, shadows, boxes and decorations. That Style's area, point, path and stacking-order properties are ignored here." },
+    ],
+    text: "Direct text between the nested elements is one run of the paragraph, drawn in the paragraph's own Style.",
+    children: [
+      { tag: "Span", cardinality: "many",
+        summary: "One run of the paragraph set apart from its neighbours, drawn in a Style, shaped under a language or laid out in a writing direction of its own.",
+        attributes: [
+          { name: "id", kind: "identifier", required: false, summary: "Names this run inside the paragraph; an omitted id is generated from the run's position." },
+          { name: "style", kind: "reference", required: false, accepts: [typographyTrackTypes.style], summary: "Redraws this run alone in another compiled Style, whose typography and Paint replace the paragraph's: the run is shaped with that Style's exact font and set at its size, weight and slant, and painted in its fills, outlines, glows, shadows, boxes and decorations. That Style's area, point, path and stacking-order properties are ignored here." },
+          { name: "language", kind: "literal", required: false, summary: "Names the language tag this run alone is shaped under." },
+          { name: "direction", kind: "literal", required: false, values: ["auto", "ltr", "rtl"], summary: "Decides the base writing direction of this run alone." },
+        ],
+        text: "Direct text is the run's whole content; a Span carries no nested elements and cannot be empty." },
+      { tag: "Break", cardinality: "many",
+        summary: "Breaks the line at this point and continues the same paragraph on the next one. It is written empty and takes no attributes." },
+    ] },
+] as const;
+
 export const typographyTrackMarkupSurfaces = [
     { name: "style", tag: "Style", mode: "structured", outputs: [typographyTrackTypes.style],
       vocabulary: {
@@ -444,6 +468,7 @@ export const typographyTrackMarkupSurfaces = [
               { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
               { name: "occurrences", kind: "literal", required: false, values: ["one", "each"], summary: "Decides whether a semantic source contributes one window or every occurrence; defaults to `one`." },
             ],
+            children: documentChildren,
             text: "Direct text is the item's whole document, read as one paragraph." },
           { tag: "Area", cardinality: "many",
             summary: "One text item flowed inside a SpatialFrame. It owns its own document, written as direct text or as P children.",
@@ -462,6 +487,7 @@ export const typographyTrackMarkupSurfaces = [
               { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
               { name: "occurrences", kind: "literal", required: false, values: ["one", "each"], summary: "Decides whether a semantic source contributes one window or every occurrence; defaults to `one`." },
             ],
+            children: documentChildren,
             text: "Direct text is the item's whole document, read as one paragraph." },
           { tag: "Path", cardinality: "many",
             summary: "One text item set along a SpatialPath. It owns its own document, written as direct text or as P children.",
@@ -480,6 +506,7 @@ export const typographyTrackMarkupSurfaces = [
               { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
               { name: "occurrences", kind: "literal", required: false, values: ["one", "each"], summary: "Decides whether a semantic source contributes one window or every occurrence; defaults to `one`." },
             ],
+            children: documentChildren,
             text: "Direct text is the item's whole document, read as one paragraph." },
         ],
         ports: [
@@ -492,14 +519,16 @@ export const typographyTrackMarkupSurfaces = [
   <text:Area id="title" placement={title-frame} style={title-style} during="program">
     EDIT MEANING, NOT TIMELINES
   </text:Area>
+  <text:Area id="standfirst" placement={standfirst-frame} style={body-style} during="program">
+    <text:P>Edit meaning,<text:Break/>not <text:Span style={accent-serif}>timelines</text:Span>.</text:P>
+  </text:Area>
 </text:Track>`,
         notes: [
           "A Track requires at least one `<Point>`, `<Area>` or `<Path>`, accepts no text content of its own, and refuses `map` when no item binds a Selection or a Moment.",
           "An item states exactly one window form: `during`, `at` with `for`, or `start` with `end`; `selection` and `moment` bind a start/end window and cannot be written together.",
           "A point expression is `program.start`, `program.end`, `selection.start`, `selection.end` or `moment.cue`, each optionally offset by `+` or `-` and a duration, or a bare duration read as an absolute position.",
-          "An item written without `content` owns its own document: direct text becomes one paragraph, and `<P>` children carry rich runs instead.",
-          "`<P>` accepts `id` and a `style` reference to a TextStyle, and contains text, `<Span>` and `<Break>` children; a document mixes neither `<P>` children with direct text nor direct text with nested elements.",
-          "`<Span>` accepts `id`, a `style` reference, `language` and `direction`, contains text only, and cannot be empty; `<Break>` is written empty and takes no attributes.",
+          "An item written without `content` owns its own document: direct text becomes one paragraph, and `<P>` children carry rich runs instead; a document mixes neither `<P>` children with direct text nor direct text with nested elements.",
+          "Neither a `<P>` nor a `<Span>` may be empty, and a `style` on either must name a Style Record authored in this Source or imported from another, because its typography and Paint are copied into the document as the item is decoded.",
         ],
       },
     },

@@ -3,6 +3,34 @@
 Captions are one program-wide interpretation of the authoritative Script, measured against the real
 speech program. Do not create separate caption systems for speakers, regions, or styles.
 
+## What is a caption is decided by the words, not by the styling
+
+**Text that arrives with speech and reads exactly what is being said is a caption.** That is the
+whole test, and it is checkable rather than a judgement: the words match the transcript verbatim, and
+they appear as those words are spoken. A reference video's word-level transcript is prepared for
+exactly this comparison.
+
+Nothing about how it is drawn changes the answer. A caption may be set in two typefaces, sit on a
+coloured slab, arrive a word at a time, be enormous, be decorative, or open the video — and it is
+still a caption. Handsome styling is the commonest reason this gets misfiled, and it is not a reason
+at all.
+
+So it is authored with the caption vocabulary, driven by the Script and the alignment map. Never
+reproduce it as `typo:` or `text:` with the words typed in by hand. That looks equivalent on the
+first frame and is not: hand-typed words no longer follow the Script, so re-recording the line leaves
+them stale, they are unreachable by anything that reasons about captions, and the identity that makes
+them checkable is gone.
+
+When the caption vocabulary cannot express the appearance, that is a vocabulary gap and it is
+declared as one. Write a new project-local caption package modelled on the installed caption
+packages — read them as the pattern for Style, Program, planning and alignment — and drive it from
+the same Script and map. Reaching for a typography Track because it already draws the shape is the
+mistake this section exists to prevent.
+
+Text that is *not* a caption keeps its own vocabulary: a title nobody says, a lower third, a label on
+a product, an editorial line that paraphrases rather than transcribes. The distinction is whether the
+words are the spoken words.
+
 ## Author one caption pipeline
 
 Use one pipeline for the program:

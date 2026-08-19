@@ -632,6 +632,8 @@ function paragraph(element: StructuredElement, index: number, resolve: (path: st
     const name = localName(child.name);
     if (name === "Break") {
       allowed(child, []);
+      // A break carries nothing, and text written inside one was being dropped without a word.
+      empty(child);
       inlines.push({ kind: "break", id: `break-${inlineIndex}` });
       continue;
     }
