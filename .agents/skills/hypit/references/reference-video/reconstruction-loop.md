@@ -57,8 +57,7 @@ then source usage. Fixing source usage over a broken implementation hides the de
 ## Converged means the differences are wording
 
 Stop when the returned differences are wording-level — a describer's phrasing rather than a visible
-change — or when a remaining difference is explicitly recorded as an accepted deviation with its
-reason. Passing `pnpm check` and `hypit check` is not convergence; it is the precondition for
+change. Passing `pnpm check` and `hypit check` is not convergence; it is the precondition for
 starting the loop.
 
 ## The loop is bounded, and stopping is a decision you write down
@@ -103,6 +102,9 @@ one against the known frame size gives the number in a single step.
 Do that instead of spending an attempt. An attempt is for differences that have no number — a
 typeface's character, a texture, a rhythm — where the only route is change it and look again.
 
-When you stop with a difference still there, record it as an accepted deviation with what it is and
-why it stayed. A difference nobody wrote down reads afterwards as a difference nobody noticed, and
-the next person pays to rediscover it.
+Stopping is the end. Do not spend one more comparison to report how far the element is from the
+reference: the attempts are spent, another comparison changes nothing and is a paid step only to
+describe the gap. What you already know from the attempts — a difference the comparisons named and
+the repairs did not reach — is written down as an accepted deviation with its reason. A difference
+nobody wrote down reads afterwards as a difference nobody noticed, and the next person pays to
+rediscover it.
