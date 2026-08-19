@@ -4,6 +4,7 @@ import type { ModuleRef, TypeRef } from "@hypit/protocol";
 import type {
   RawSurfaceHandler,
   RegisteredSurface,
+  SurfaceVocabulary,
   StructuredSurfaceHandler,
   MarkupSurfaceRegistryLike,
   RawSurfaceDeclaration,
@@ -18,6 +19,7 @@ type RawMarkupSurfaceHostFacetOptions =
       readonly surface: string;
       readonly tag: string;
       readonly outputs: readonly TypeRef[];
+      readonly vocabulary?: SurfaceVocabulary;
       readonly mode: "raw";
       readonly handler: RawSurfaceHandler;
     }
@@ -33,6 +35,7 @@ type StructuredMarkupSurfaceHostFacetOptions =
       readonly surface: string;
       readonly tag: string;
       readonly outputs: readonly TypeRef[];
+      readonly vocabulary?: SurfaceVocabulary;
       readonly mode: "structured";
       readonly handler: StructuredSurfaceHandler;
     }
@@ -66,6 +69,9 @@ export function createMarkupSurfaceHostFacet(options: MarkupSurfaceHostFacetOpti
         tag: options.declaration.tag,
         outputs: options.declaration.outputs,
         mode: options.declaration.mode,
+        ...(options.declaration.vocabulary === undefined
+          ? {}
+          : { vocabulary: options.declaration.vocabulary }),
       }
     : options;
   assert(options.module.name.trim().length > 0 && options.module.version.trim().length > 0,
@@ -78,6 +84,7 @@ export function createMarkupSurfaceHostFacet(options: MarkupSurfaceHostFacetOpti
         surface: declaration.surface,
         tag: declaration.tag,
         outputs: declaration.outputs,
+        ...(declaration.vocabulary === undefined ? {} : { vocabulary: declaration.vocabulary }),
         mode: "raw",
         handler: options.handler as RawSurfaceHandler,
       }
@@ -86,6 +93,7 @@ export function createMarkupSurfaceHostFacet(options: MarkupSurfaceHostFacetOpti
         surface: declaration.surface,
         tag: declaration.tag,
         outputs: declaration.outputs,
+        ...(declaration.vocabulary === undefined ? {} : { vocabulary: declaration.vocabulary }),
         mode: "structured",
         handler: options.handler as StructuredSurfaceHandler,
       };
