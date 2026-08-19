@@ -5,6 +5,7 @@ import {
   decodeMimoVoiceCloneSurface,
   decodeMimoVoiceDesignSurface,
   mimoTtsComponent,
+  mimoTtsDefinition,
   mimoTtsManifest,
   mimoTtsModuleRef,
   mimoTtsMarkupSurfaces,
@@ -15,6 +16,7 @@ export const hypitPackage = {
   modules: [{ manifest: mimoTtsManifest }],
   components: [mimoTtsComponent],
   hostFacets: [
+    mimoTtsDefinition.hostFacet,
     createMarkupSurfaceHostFacet({
       module: mimoTtsModuleRef,
     declaration: mimoTtsMarkupSurfaces.find((item) => item.name === "preset")!, handler: decodeMimoPresetSurface,

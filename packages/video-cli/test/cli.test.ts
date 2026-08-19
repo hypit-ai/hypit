@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -58,6 +58,78 @@ test("provider-free example plans from installed Source packages", async () => {
   assert.equal(producers.has("compile-composition"), true);
   assert.equal(producers.has("project-muxed-media"), true);
   assert.equal(plan.goals.length, 1);
+});
+
+/**
+ * The command a package author uses for the package's own chrome. Every wire call is
+ * answered locally: this test spends nothing and reaches no network.
+ */
+test("image writes one picture file with no Source, Build, Record or Runtime Profile", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-cli-image-"));
+  const pictureBytes = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  const calls: string[] = [];
+  const requests: Record<string, unknown>[] = [];
+  const realFetch = globalThis.fetch;
+  const realKey = process.env.KIE_API_KEY;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    calls.push(url);
+    if (url.endsWith("/api/v1/jobs/createTask")) {
+      assert.equal((init?.headers as Record<string, string>).authorization, "Bearer test-image-key");
+      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return Response.json({ code: 200, msg: "success", data: { taskId: "task_image_test" } });
+    }
+    if (url.includes("/api/v1/jobs/recordInfo")) {
+      return Response.json({ code: 200, data: {
+        taskId: "task_image_test", model: "nano-banana-2", state: "success",
+        resultJson: JSON.stringify({ resultUrls: ["https://tempfile.aiquickdraw.com/paper.png"] }),
+      } });
+    }
+    if (url.endsWith("/api/v1/common/download-url")) {
+      return Response.json({ code: 200, data: "https://download.kie.test/paper.png" });
+    }
+    if (url === "https://download.kie.test/paper.png") {
+      return new Response(pictureBytes, { status: 200, headers: { "content-type": "image/png" } });
+    }
+    throw new Error(`Unexpected URL ${url}`);
+  }) as typeof globalThis.fetch;
+  process.env.KIE_API_KEY = "test-image-key";
+  try {
+    const promptFile = join(root, "paper.txt");
+    await writeFile(promptFile, "A sheet of warm cream laid paper, even lighting, no text.\n", "utf8");
+    const destination = join(root, "assets", "paper.png");
+    let output = "";
+    await runCli([
+      "image", "--prompt", promptFile, "--to", destination, "--aspect-ratio", "1:1",
+    ], { write: (text) => { output += text; } });
+    const machine = JSON.parse(output) as {
+      readonly package: string; readonly model: string;
+      readonly mediaType: string; readonly size: number; readonly path: string;
+    };
+    assert.equal(machine.package, "@hypit/nano-banana");
+    assert.equal(machine.model, "nano-banana-2");
+    assert.equal(machine.mediaType, "image/png");
+    assert.equal(machine.size, pictureBytes.byteLength);
+    assert.equal(machine.path, destination);
+    assert.deepEqual(Uint8Array.from(await readFile(destination)), pictureBytes);
+    // The author gave one option; every other port took the model's own first value.
+    assert.deepEqual(requests, [{
+      model: "nano-banana-2",
+      input: {
+        prompt: "A sheet of warm cream laid paper, even lighting, no text.",
+        image_input: [],
+        aspect_ratio: "1:1",
+        resolution: "1K",
+        output_format: "png",
+      },
+    }]);
+    assert.equal(calls.filter((item) => item.endsWith("/api/v1/jobs/createTask")).length, 1);
+  } finally {
+    globalThis.fetch = realFetch;
+    if (realKey === undefined) delete process.env.KIE_API_KEY;
+    else process.env.KIE_API_KEY = realKey;
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test("materializeRecord copies an archived Artifact without rerunning a Build", async () => {

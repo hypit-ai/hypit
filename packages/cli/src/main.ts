@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { readFile, stat } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 
 import type { NodeCompiledSourceClosure } from "@hypit/compiler-node";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
@@ -58,6 +58,12 @@ type ParsedArgs = {
   readonly name: string | undefined;
   readonly artifact: string | undefined;
   readonly to: string | undefined;
+  /** Prompt text, or the path of a text file holding it. */
+  readonly prompt: string | undefined;
+  /** Installed package specifier naming the exact model family. */
+  readonly model: string | undefined;
+  readonly aspectRatio: string | undefined;
+  readonly resolution: string | undefined;
   /** Leave the declared external programs alone; build against what is running. */
   readonly noPrograms: boolean;
   readonly json: boolean;
@@ -102,7 +108,8 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   const scoped = command === "programs" || command === "runtime" || command === "auth";
   const action = scoped ? tail[0] : undefined;
   const positional = scoped ? tail.slice(1) : tail;
-  const noFile = command === "builds" || command === "queue" || command === "paths";
+  const noFile = command === "builds" || command === "queue" || command === "paths"
+    || command === "image";
   const hasFile = !noFile && positional[0] !== undefined && !positional[0]!.startsWith("--");
   const file = hasFile ? positional[0] : undefined;
   const rest = noFile || !hasFile ? positional : positional.slice(1);
@@ -117,6 +124,10 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let name: string | undefined;
   let artifact: string | undefined;
   let to: string | undefined;
+  let prompt: string | undefined;
+  let model: string | undefined;
+  let aspectRatio: string | undefined;
+  let resolution: string | undefined;
   let noPrograms = false;
   let json = false;
   let color: CliColorMode = "auto";
@@ -237,6 +248,34 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       index += 1;
       continue;
     }
+    if (item === "--prompt") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--prompt requires text or a text file path");
+      prompt = value;
+      index += 1;
+      continue;
+    }
+    if (item === "--model") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--model requires an installed package specifier");
+      model = value;
+      index += 1;
+      continue;
+    }
+    if (item === "--aspect-ratio") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--aspect-ratio requires a ratio the model accepts");
+      aspectRatio = value;
+      index += 1;
+      continue;
+    }
+    if (item === "--resolution") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--resolution requires a resolution the model accepts");
+      resolution = value;
+      index += 1;
+      continue;
+    }
     if (item === "--follow") {
       follow = true;
       continue;
@@ -307,6 +346,10 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     name,
     artifact,
     to,
+    prompt,
+    model,
+    aspectRatio,
+    resolution,
     noPrograms,
     json,
     color,
@@ -348,6 +391,10 @@ function assertCommandOptions(args: ParsedArgs): void {
       break;
     case "get":
       add("--runtime", "--name", "--record", "--output", "--artifact", "--to");
+      break;
+    case "image":
+      // A package asset needs credentials and nothing else; no Runtime Profile applies.
+      add("--prompt", "--to", "--model", "--aspect-ratio", "--resolution");
       break;
     case "cancel":
       add("--runtime", "--reason");
@@ -403,10 +450,26 @@ function usage(): string {
     "  hypit get <build-id> [--runtime profile.json] [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
     "  hypit cancel <build-id> [--runtime profile.json] [--reason text]",
     "  hypit auth status|login|logout <endpoint-instance> [--runtime profile.json] [--slot name] [--from secret-file]",
+    "  hypit image --prompt <text|text-file> --to <path.png> [--model package] [--aspect-ratio r] [--resolution r]",
     "",
     "output:",
     "  --json  --verbose  --color auto|always|never  --no-color  --debug",
   ].join("\n");
+}
+
+/**
+ * A prompt is either the text itself or a file holding it. A long prompt lives in a file
+ * beside the asset it describes, so it can be edited and reread; a short one does not
+ * deserve a file.
+ */
+async function readPromptText(value: string): Promise<string> {
+  const path = resolve(value);
+  const isFile = await stat(path).then((item) => item.isFile(), () => false);
+  const prompt = (isFile ? await readFile(path, "utf8") : value).trim();
+  if (prompt.length === 0) {
+    throw new Error(isFile ? `prompt file ${path} is empty` : "--prompt is empty");
+  }
+  return prompt;
 }
 
 function createCatalogDescriptor(options: {
@@ -832,10 +895,11 @@ export async function runCli(
     || args.command === "history"
     || args.command === "inspect" || args.command === "get" || args.command === "cancel"
     || args.command === "doctor" || args.command === "programs"
-    || args.command === "runtime" || args.command === "queue" || args.command === "paths";
+    || args.command === "runtime" || args.command === "queue" || args.command === "paths"
+    || args.command === "image";
   const operational = known || args.command === "auth";
   const fileOptional = args.command === "builds" || args.command === "history" || args.command === "queue"
-    || args.command === "paths"
+    || args.command === "paths" || args.command === "image"
     || args.command === "programs" || args.command === "runtime" || args.command === "doctor";
   if (!operational || (!fileOptional && args.file === undefined)) {
     throw new Error(usage());
@@ -865,6 +929,37 @@ export async function runCli(
       packageRoot,
     });
   };
+  if (args.command === "image") {
+    if (args.prompt === undefined) throw new Error("image requires --prompt with text or a text file path");
+    if (args.to === undefined) throw new Error("image requires --to with the file to write");
+    if (distribution.generatePicture === undefined) {
+      throw new Error("this Distribution cannot generate a picture directly");
+    }
+    const picture = await distribution.generatePicture({
+      prompt: await readPromptText(args.prompt),
+      packageRoot: await packageRootForProject(process.cwd()),
+      ...(args.model === undefined ? {} : { model: args.model }),
+      ...(args.aspectRatio === undefined ? {} : { aspectRatio: args.aspectRatio }),
+      ...(args.resolution === undefined ? {} : { resolution: args.resolution }),
+    });
+    await mkdir(dirname(args.to), { recursive: true });
+    await writeFile(args.to, picture.bytes);
+    writeOperational({
+      format: "hypit.cli-image@1",
+      package: picture.package,
+      model: picture.model,
+      mediaType: picture.mediaType,
+      size: picture.bytes.byteLength,
+      path: args.to,
+    }, "Picture written", "success", [
+      ["Model", picture.model],
+      ["Package", picture.package],
+      ["Type", picture.mediaType],
+      ["Bytes", String(picture.bytes.byteLength)],
+      ["Path", args.to],
+    ], ["This picture is authoring input; no Build, Record or Runtime Profile took part."]);
+    return;
+  }
   if (args.command === "paths") {
     const projectRoot = selectedRuntimeProjectRoot ?? process.cwd();
     const runtimePaths = args.runtime === undefined

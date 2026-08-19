@@ -12,6 +12,7 @@
     "@hypit/component-kit": "workspace:*",
     "@hypit/elaborator": "workspace:*",
     "@hypit/generation": "workspace:*",
+    "@hypit/host": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/text": "workspace:*"
   }

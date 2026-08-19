@@ -13,5 +13,7 @@ export type {
 export type {
   CliCompilerOptions,
   CliDistribution,
+  CliPicture,
+  CliPictureRequest,
 } from "./distribution.js";
 export type * from "./runtime-port.js";
