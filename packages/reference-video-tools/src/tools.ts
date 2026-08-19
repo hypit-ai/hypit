@@ -4,7 +4,6 @@ import { access, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { loadNodePackageSelection } from "@hypit/package-loader-node";
-import type { LoadedPackage } from "@hypit/package-loader-node";
 import type { RegisteredSurface, SurfaceVocabulary } from "@hypit/markup";
 
 import {
@@ -47,6 +46,7 @@ type ToolOptions = {
   readonly generate?: GenerateText;
 };
 type GenerateText = (input: { readonly parts: readonly Part[]; readonly instruction: string }) => Promise<string>;
+type ObservationTask = { readonly key: string; readonly run: () => Promise<Observation> };
 
 function observation(status: "complete" | "failed", text: string): Observation { return { status, text }; }
 
@@ -88,9 +88,22 @@ async function mediaPart(path: string): Promise<Part> {
   return { inlineData: { mimeType, data: Buffer.from(bytes).toString("base64") } };
 }
 
+function rateLimited(error: unknown): boolean {
+  return /\b429\b|resource[ _]exhausted|quota|rate limit/iu.test(error instanceof Error ? error.message : String(error));
+}
+
 async function callSafely(generate: GenerateText, parts: readonly Part[], instruction: string): Promise<Observation> {
-  try { return observation("complete", await generate({ parts, instruction })); }
-  catch (error) { return observation("failed", error instanceof Error ? error.message : String(error)); }
+  let last: unknown;
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
+    try { return observation("complete", await generate({ parts, instruction })); }
+    catch (error) {
+      last = error;
+      if (attempt === 6) break;
+      const wait = rateLimited(error) ? Math.min(900_000, 45_000 * 2 ** (attempt - 1)) : 2_000 * attempt;
+      await new Promise((resolveWait) => setTimeout(resolveWait, wait));
+    }
+  }
+  return observation("failed", last instanceof Error ? last.message : String(last));
 }
 
 async function pacedMap<T, R>(items: readonly T[], concurrency: number, gapMs: number, run: (item: T, index: number) => Promise<R>): Promise<readonly R[]> {
@@ -117,6 +130,22 @@ async function pacedMap<T, R>(items: readonly T[], concurrency: number, gapMs: n
   };
   await Promise.all(Array.from({ length: Math.max(1, Math.min(concurrency, items.length || 1)) }, worker));
   return result;
+}
+
+async function runObservationTasks(
+  root: string,
+  tasks: readonly ObservationTask[],
+  refresh: boolean,
+  concurrency: number,
+  gapMs: number,
+): Promise<ReadonlyMap<string, Observation>> {
+  const path = join(root, "observations.json");
+  const cache = await readJson<Record<string, Observation>>(path) ?? {};
+  const pending = tasks.filter((task) => refresh || cache[task.key]?.status !== "complete");
+  const completed = await pacedMap(pending, concurrency, gapMs, async (task) => ({ key: task.key, value: await task.run() }));
+  for (const item of completed) cache[item.key] = item.value;
+  await writeJson(path, cache);
+  return new Map(tasks.map((task) => [task.key, cache[task.key] ?? observation("failed", "not observed")]));
 }
 
 async function shotFromBound(root: string, index: number, bound: { start: number; end: number; group: number; part: number; parts: number }): Promise<Shot> {
@@ -216,28 +245,40 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         return left !== undefined && (selectedIds.has(left.shot_id) || selectedIds.has(shot.shot_id));
       });
       const generate = await generator();
-      const visual = await pacedMap(selected, concurrency, gapMs, async (shot) => {
+      const globalContext = [
+        state.people_and_product?.text === undefined ? "" : `Full-reference people and product evidence:\n${state.people_and_product.text}`,
+        state.voices?.text === undefined ? "" : `Full-reference voice evidence:\n${state.voices.text}`,
+      ].filter((item) => item.length > 0).join("\n\n");
+      const visualTasks: ObservationTask[] = selected.map((shot) => ({ key: `visual:${shot.shot_id}`, run: async () => {
         const previous = state.shots.find((candidate) => candidate.index === shot.index - 1);
         const parts: Part[] = [await mediaPart(shot.clip_ref), await mediaPart(shot.representative_frame_ref)];
         if (previous !== undefined) parts.push(await mediaPart(previous.tail_frame_ref));
-        parts.push({ text: `Observe shot ${shot.index}. Describe the current base picture, any covering or non-covering visual content, and whether visible content continues from the preceding shot. A full-screen insert is still only a picture observation. Return natural language evidence only.` });
-        return { shot, result: await callSafely(generate, parts, "Observe picture only. Do not choose SVML components, do not write markup, and do not decide final source syntax.") };
-      });
-      const audio = await pacedMap(selected, concurrency, gapMs, async (shot) => {
+        parts.push({ text: `${globalContext}\n\nObserve shot ${shot.index}. Describe the current base picture, any covering or non-covering visual content, and whether visible content continues from the preceding shot. A full-screen insert is still only a picture observation. Return natural language evidence only.` });
+        return await callSafely(generate, parts, "Observe picture only. Do not choose SVML components, do not write markup, and do not decide final source syntax.");
+      }}));
+      const audioTasks: ObservationTask[] = selected.map((shot) => ({ key: `audio:${shot.shot_id}`, run: async () => {
         const previous = state.shots.find((candidate) => candidate.index === shot.index - 1);
         const parts: Part[] = [await mediaPart(shot.clip_ref)];
         if (previous?.audio_tail_ref !== null && previous?.audio_tail_ref !== undefined) parts.push(await mediaPart(previous.audio_tail_ref));
-        parts.push({ text: `Listen to shot ${shot.index}. Decide who is speaking, whether sound continues from the previous shot, whether visible people actually produce the sound, and whether a silent B-roll person only appears to speak. Handle off-screen, alternating, overlapping, and no-person-visible speech. Return natural language evidence only.` });
-        return { shot, result: await callSafely(generate, parts, "Observe sound only. Do not write markup, SVML, JSON plans, or component names.") };
-      });
-      const boundaries = await pacedMap(boundaryRights, concurrency, gapMs, async (right) => {
+        parts.push({ text: `${globalContext}\n\nListen to shot ${shot.index}. Decide who is speaking, whether sound continues from the previous shot, whether visible people actually produce the sound, and whether a silent B-roll person only appears to speak. Handle off-screen, alternating, overlapping, and no-person-visible speech. Return natural language evidence only.` });
+        return await callSafely(generate, parts, "Observe sound only. Do not write markup, SVML, JSON plans, or component names.");
+      }}));
+      const sameTakeTasks: ObservationTask[] = boundaryRights.map((right) => ({ key: `same-take:${right.shot_id}`, run: async () => {
         const left = state.shots.find((shot) => shot.index === right.index - 1)!;
         const parts: Part[] = [await mediaPart(left.clip_ref), await mediaPart(right.clip_ref), await mediaPart(left.tail_frame_ref)];
-        parts.push({ text: `Compare shots ${left.index} and ${right.index}. Answer in natural language whether they are one continuous camera shot and whether the same visible overlay or inserted picture continues across the boundary. Do not write markup.` });
-        return { left_shot_id: left.shot_id, right_shot_id: right.shot_id, combined_duration_seconds: Number((right.end_seconds - left.start_seconds).toFixed(3)), result: await callSafely(generate, parts, "Analyze continuity only. Do not name SVML components or write code.") };
-      });
+        parts.push({ text: `Compare shots ${left.index} and ${right.index}. Answer only whether they are one continuous camera shot. Explain the visual and sound continuity evidence in natural language.` });
+        return await callSafely(generate, parts, "Analyze camera continuity only. Do not name SVML components or write code.");
+      }}));
+      const overlayTasks: ObservationTask[] = boundaryRights.map((right) => ({ key: `overlay:${right.shot_id}`, run: async () => {
+        const left = state.shots.find((shot) => shot.index === right.index - 1)!;
+        const parts: Part[] = [await mediaPart(left.clip_ref), await mediaPart(right.clip_ref), await mediaPart(left.tail_frame_ref)];
+        parts.push({ text: `Compare shots ${left.index} and ${right.index}. Answer only whether the same visible overlay or inserted picture continues across the boundary, changes, or ends. Explain the evidence in natural language.` });
+        return await callSafely(generate, parts, "Analyze overlay continuity only. Do not name SVML components or write code.");
+      }}));
+      const allTasks = [...visualTasks, ...audioTasks, ...sameTakeTasks, ...overlayTasks];
+      const observations = await runObservationTasks(state.root, allTasks, input.refresh === true, concurrency, gapMs);
       const unresolved: string[] = [];
-      const boundaryText = boundaries.map((item) => item.result.text).join("\n");
+      const boundaryText = boundaryRights.map((right) => `${observations.get(`same-take:${right.shot_id}`)?.text ?? ""}\n${observations.get(`overlay:${right.shot_id}`)?.text ?? ""}`).join("\n");
       const needsThreeShotReview = selected.length >= 3 && /uncertain|unknown|possibly|may be|contin(?:ue|ues)|same take|same shot/iu.test(boundaryText);
       const windows = (needsThreeShotReview
         ? selected.flatMap((_, index) => index + 2 < selected.length ? [selected.slice(index, index + 3)] : [])
@@ -249,17 +290,29 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const result = await callSafely(generate, parts, "Analyze a three-shot continuity window only. Do not write markup, SVML, JSON plans, or component names.");
         return { shot_ids: items.map((shot) => shot.shot_id), combined_duration_seconds: Number((items[2].end_seconds - items[0].start_seconds).toFixed(3)), result };
       });
+      const shotResults = selected.map((shot) => ({ shot_id: shot.shot_id, visual: observations.get(`visual:${shot.shot_id}`)!, audio: observations.get(`audio:${shot.shot_id}`)! }));
+      const boundaryResults = boundaryRights.map((right) => {
+        const left = state.shots.find((shot) => shot.index === right.index - 1)!;
+        return {
+          left_shot_id: left.shot_id,
+          right_shot_id: right.shot_id,
+          combined_duration_seconds: Number((right.end_seconds - left.start_seconds).toFixed(3)),
+          within_15_seconds: right.end_seconds - left.start_seconds <= 15,
+          same_take: observations.get(`same-take:${right.shot_id}`)!,
+          overlay_continuity: observations.get(`overlay:${right.shot_id}`)!,
+        };
+      });
       if (input.question !== undefined && input.question.trim().length > 0) {
         const parts: Part[] = [];
         for (const shot of selected.slice(0, 3)) parts.push(await mediaPart(shot.clip_ref));
         parts.push({ text: input.question });
         const follow = await callSafely(generate, parts, "Answer only the user's narrow reference-video question in natural language. Do not write code, markup, SVML, or component names.");
-        return { reference_id: state.reference_id, shots: visual.map((item, index) => ({ shot_id: item.shot.shot_id, visual: item.result, audio: audio[index]!.result })), boundaries, three_shot_observations: threeShotObservations, follow_ups: [{ shot_ids: selected.slice(0, 3).map((shot) => shot.shot_id), question: input.question, text: follow.text }], unresolved };
+        return { reference_id: state.reference_id, shots: shotResults, boundaries: boundaryResults, three_shot_observations: threeShotObservations, follow_ups: [{ shot_ids: selected.slice(0, 3).map((shot) => shot.shot_id), question: input.question, text: follow.text }], unresolved };
       }
       return {
         reference_id: state.reference_id,
-        shots: visual.map((item, index) => ({ shot_id: item.shot.shot_id, visual: item.result, audio: audio[index]!.result })),
-        boundaries: boundaries.map((item) => ({ ...item, within_15_seconds: item.combined_duration_seconds <= 15, same_take: item.result })),
+        shots: shotResults,
+        boundaries: boundaryResults,
         three_shot_observations: threeShotObservations,
         follow_ups: [],
         unresolved,
