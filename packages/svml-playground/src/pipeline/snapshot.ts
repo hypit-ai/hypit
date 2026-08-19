@@ -284,6 +284,9 @@ export function snapshot(built: Preview, input: {
       note: note(built),
     },
     refused: built.refused,
+    // A Producer that failed already said why. Dropping the message here left
+    // every such Track reading only "something this preview could not build".
+    errors: [...new Set(built.tracks.flatMap((track) => track.errors))],
   };
 }
 
