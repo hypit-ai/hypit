@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { extname, relative } from "node:path";
 import test from "node:test";
 import ts from "typescript";
@@ -157,4 +157,23 @@ test("production imports belong to each package while the root owns repository t
     }
   }
   assert.deepEqual(failures, [], `undeclared package imports found:\n${failures.join("\n")}`);
+});
+
+test("a declared Surface preview names a picture that exists", async () => {
+  // A component that cannot draw itself cannot produce a preview image. Declaring one and shipping
+  // nothing is how that goes unnoticed: the declaration reads as evidence the component renders.
+  const entries = await repositoryEntries();
+  const failures = [];
+  for (const entry of entries) {
+    const match = /^((?:examples\/[^/]+\/)?packages\/[^/]+)\/src\/.*\.ts$/u.exec(entry.path);
+    if (match === null || !entry.isFile) continue;
+    const source = await readFile(entry.child, "utf8");
+    for (const declared of source.matchAll(/previewImage\(\s*"([^"]+)"\s*\)/gu)) {
+      const file = new URL(`./${match[1]}/preview/${declared[1]}`, repositoryRoot);
+      const size = await stat(file).then((item) => item.size, () => undefined);
+      if (size === undefined) failures.push(`${entry.path} declares preview/${declared[1]}, which does not exist`);
+      else if (size === 0) failures.push(`${entry.path} declares preview/${declared[1]}, which is empty`);
+    }
+  }
+  assert.deepEqual(failures, [], `declared previews without a picture:\n${failures.join("\n")}`);
 });
