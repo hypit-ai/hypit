@@ -57,10 +57,6 @@ const nanoBananaBaseDefinition = defineExactModelModule({
 
 export const nanoBananaEndpoints = nanoBananaBaseDefinition.endpoints;
 export const nanoBananaComponent = nanoBananaBaseDefinition.component;
-/**
- * Both model variants author the same element through one handler, so one description of the shape
- * serves both and neither can drift into teaching a syntax the handler would reject.
- */
 const nanoBananaAttributes: readonly SurfaceAttributeVocabulary[] = [
   {
     name: "id",
