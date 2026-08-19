@@ -110,8 +110,10 @@ export async function prepareMedia(videoPath: string, root: string, duration: nu
   }));
   const inputs = bounds.map((_, index) => `[${index}:v]`).join("");
   const list = bounds.flatMap((_, index) => ["-i", join(shotDir, `${String(index + 1).padStart(3, "0")}-representative.jpg`)]);
+  const columns = Math.min(4, bounds.length);
+  const rows = Math.ceil(bounds.length / columns);
   const storyboard = join(root, "storyboard.jpg");
-  await command("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...list, "-filter_complex", `${inputs}tile=columns=4:padding=8:margin=8`, "-frames:v", "1", storyboard]);
+  await command("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...list, "-filter_complex", `${inputs}concat=n=${bounds.length}:v=1:a=0,tile=layout=${columns}x${rows}:padding=8:margin=8`, "-frames:v", "1", storyboard]);
   return { bounds, storyboard, analysisVideo };
 }
 
