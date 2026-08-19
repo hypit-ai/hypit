@@ -1,9 +1,0 @@
-<?svml using="@hypit/run-markup@1"?>
-
-<!-- The paper is the one picture the notepad composition sits on, so it gets its
-     own narrow Target while the reconstruction loop is still tuning it. -->
-<svrun version="1">
-  <author source="./main.svml"/>
-
-  <target output="paper.image"/>
-</svrun>
