@@ -11,11 +11,11 @@
 </p>
 
 <p align="center">
-  <a href="https://hypit.ai/"><strong>Website</strong></a>
+  <a href="https://narratage.hypit.ai/"><strong>Website</strong></a>
   &nbsp;&bull;&nbsp;
-  <a href="https://hypit.ai/quickstart"><strong>Quickstart</strong></a>
+  <a href="https://narratage.hypit.ai/quickstart"><strong>Quickstart</strong></a>
   &nbsp;&bull;&nbsp;
-  <a href="https://hypit.ai/guide/develop"><strong>Develop</strong></a>
+  <a href="https://narratage.hypit.ai/guide/develop"><strong>Develop</strong></a>
   &nbsp;&bull;&nbsp;
   <a href="./README.zh-CN.md"><strong>简体中文</strong></a>
 </p>
@@ -29,7 +29,7 @@
 </p>
 
 <p align="center">
-  <a href="https://hypit.ai/"><img alt="Visit our website" src="https://img.shields.io/badge/Visit%20our%20website-000000?style=for-the-badge&logo=googlechrome&logoColor=white"></a>
+  <a href="https://narratage.hypit.ai/"><img alt="Visit our website" src="https://img.shields.io/badge/Visit%20our%20website-000000?style=for-the-badge&logo=googlechrome&logoColor=white"></a>
   <a href="https://discord.gg/85hnyQnxpn"><img alt="Join our Discord" src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
   <a href="https://t.me/hypit"><img alt="Join our Telegram" src="https://img.shields.io/badge/Join%20our%20Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white"></a>
   <a href="https://x.com/hypitai"><img alt="Follow @hypitai on X" src="https://img.shields.io/badge/Follow%20%40hypitai-000000?style=for-the-badge&logo=x&logoColor=white"></a>
