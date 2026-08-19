@@ -8,10 +8,12 @@
  * them.
  */
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { dirname } from "node:path";
 
 import { createProvidedCandidate } from "@hypit/run";
 
-import { officialVideoDomain } from "../official-video.js";
+import { importedPackages, officialVideoDomain, usePreviewPackages } from "../official-video.js";
 import { compileSource } from "./compile.js";
 import type { CompiledSource, ServedFile } from "./compile.js";
 import type { Placement } from "./observe.js";
@@ -124,6 +126,11 @@ export async function preview(
   runPath?: string,
   archive?: Archive,
 ): Promise<Preview> {
+  // A Source may import a project-local package this application has never heard of; feed what it
+  // names to the domain loader before the first compile, so `@hypit/local-*` resolves from the
+  // project instead of being reported as uninstalled. (The session already does this, but preview
+  // is also reached directly, and the domain is built once per process.)
+  usePreviewPackages([...new Set(importedPackages(readFileSync(entryPath, "utf8")))], dirname(entryPath));
   const domain = await officialVideoDomain();
   const source = await compileSource(entryPath);
 

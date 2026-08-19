@@ -72,7 +72,11 @@ let projectPackages: readonly string[] = [];
 let projectRoot: string | undefined;
 
 export function usePreviewPackages(packages: readonly string[], root: string): void {
-  if (loading !== undefined) throw new Error("Preview packages must be chosen before the first Source is compiled.");
+  // The domain is built once, and the packages a Source imports are stable across its edits. Once
+  // the domain is loading (or loaded), a later reading of the same Source must not re-specify them:
+  // the first call wins, and later ones are ignored rather than throwing, because a watcher-driven
+  // re-read is the normal path rather than an error.
+  if (loading !== undefined) return;
   projectPackages = packages;
   projectRoot = root;
 }
