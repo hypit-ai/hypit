@@ -79,11 +79,10 @@ test("observation covers picture, drawn type and sound for every shot and caches
   const cache = JSON.parse(await readFile(join(stateRoot, "observations.json"), "utf8")) as Record<string, unknown>;
   assert.deepEqual(Object.keys(cache).sort(), [
     "audio:shot-001", "audio:shot-002",
-    "overlay:shot-002",
-    "same-take:shot-002",
+    "boundary:shot-002",
     "type:shot-001", "type:shot-002",
     "visual:shot-001", "visual:shot-002",
-  ]);
+  ], "one cut is one observation, not a same-take question and an overlay question over the same media");
 
   const shots = result["shots"] as readonly Record<string, unknown>[];
   assert.equal(shots.length, 2);
@@ -106,7 +105,7 @@ test("a second observation reuses the cache and only an explicit reobserve runs 
   const { root } = await workspace(2);
   const first: Call[] = [];
   await tools(root, first).observe_reference({ reference_id: REFERENCE });
-  assert.equal(first.length, 8);
+  assert.equal(first.length, 7, "two shots: picture, type and sound each, plus one shared boundary");
 
   const second: Call[] = [];
   await tools(root, second).observe_reference({ reference_id: REFERENCE });
@@ -118,7 +117,7 @@ test("a second observation reuses the cache and only an explicit reobserve runs 
 
   const forced: Call[] = [];
   await tools(root, forced).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-002"], reobserve: true });
-  assert.equal(forced.length, 5, "reobserve reruns the selected shot's picture, type and sound plus its boundary pair, and nothing else");
+  assert.equal(forced.length, 4, "reobserve reruns the selected shot's picture, type and sound plus its one boundary, and nothing else");
 });
 
 test("a narrow question costs one call, answers from the named shots and never re-runs observations", async () => {
