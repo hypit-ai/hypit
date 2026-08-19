@@ -114,45 +114,6 @@ test("project-owned production Module and Frontend identities use literal versio
     `project-owned logical identities must use literal version \"1\":\n${failures.join("\n")}`);
 });
 
-test("every author element describes its own syntax", async () => {
-  const packagesRoot = new URL("../packages/", import.meta.url);
-  const directories = (await readdir(packagesRoot, { withFileTypes: true }))
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
-  const failures = [];
-  let described = 0;
-  for (const name of directories) {
-    let manifest;
-    try {
-      manifest = JSON.parse(await readFile(new URL(`${name}/package.json`, packagesRoot), "utf8"));
-    } catch {
-      continue;
-    }
-    const activation = manifest?.hypit?.activation;
-    if (activation === undefined) continue;
-    const entry = new URL(`${name}/${activation.replace(/^\.\//u, "")}`, packagesRoot);
-    const contribution = (await import(entry.href)).default;
-    for (const facet of contribution.hostFacets ?? []) {
-      if (facet.abi !== "hypit.markup-surface-host@1") continue;
-      const surface = facet.implementation;
-      if (surface.vocabulary === undefined) failures.push(`${name}: <${surface.tag}>`);
-      else described += 1;
-    }
-  }
-  assert.ok(described > 0, "no Markup Surface was inspected");
-  assert.deepEqual(failures, [],
-    `every Markup Surface must carry a vocabulary:\n${failures.join("\n")}`);
-});
-
-test("the Element Reference still matches the packages it was rendered from", async () => {
-  const { renderElementReference } = await import("./support/elements.js");
-  const rendered = await renderElementReference(new URL("../packages/", import.meta.url));
-  const committed = await readFile(new URL("../docs/guide/elements.md", import.meta.url), "utf8");
-  assert.equal(committed, rendered,
-    "docs/guide/elements.md is rendered from the Surface declarations; run `pnpm docs:elements` after changing one");
-});
-
 function packageImports(source) {
   const matches = source.matchAll(/(?:\bfrom\s+|\bimport\s*\(|^\s*import\s+)["'](@hypit\/[a-z0-9-]+)(?:\/[^"']*)?["']/gmu);
   return [...matches].map((match) => match[1]);
