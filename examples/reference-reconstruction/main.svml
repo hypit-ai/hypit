@@ -1,0 +1,188 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="wording" from="@hypit/text@1"/>
+  <import as="media" from="@hypit/media@1"/>
+  <import as="estimate" from="@hypit/estimate@1"/>
+  <import as="gpt" from="@hypit/gpt-image@1"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="speech" from="@hypit/speech-spine@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="caption" from="@hypit/caption@1"/>
+  <import as="caption-fine" from="@hypit/caption-fine@1"/>
+  <import as="caption-ai" from="@hypit/caption-gemini@1"/>
+  <import as="fonts" from="@hypit/fonts-open@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="media-track" from="@hypit/media-track@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="linerank" from="@hypit/local-linerank@1"/>
+  <import as="studio" source="./studio.svs"/>
+  <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
+
+  <!-- The complete spoken truth of the reference, segmented so every take is at the Seedance floor. -->
+  <script id="story">
+    <hook>
+      <HOST> Here are the top five most popular ways to learn AI. @board @reveal! Number five is Instagram. @/board It's mostly just viral AI memes, zero actual education on how to use this stuff for real work.
+    </hook>
+
+    <courses>
+      <HOST> @board @reveal! Number four, AI courses. @/board Courses can't keep up with how fast AI is progressing. They're all outdated by the time you finish the course.
+    </courses>
+
+    <youtube>
+      <HOST> @board @reveal! Number three, YouTube. @/board Every video is, @thumb this will change everything, @/thumb but it's just another sponsorship deal.
+    </youtube>
+
+    <twitter>
+      <HOST> @board @reveal! Number two, Twitter, @/board smart people share gold here, but you're gonna end up wasting two plus hours every day scrolling through bots to find what's actually meaningful, and no one has time for that.
+    </twitter>
+
+    <rundown>
+      <HOST> @board @reveal! Number one is the rundown, @done! @/board it's a free newsletter, it takes five minutes to read, and @product it actually teaches you the AI tools that really matter, and this is how two million people at companies like Apple, Microsoft, and NASA, well they use this to keep up with AI. @/product I added the link to this post if you wanna sign up for free.
+    </rundown>
+  </script>
+
+  <!-- Author-owned reference material: the single filmed location and the two evidence inserts. -->
+  <wording:Value id="speaker-scene-prompt">
+    A photograph with the texture of real iPhone footage. Generate a vertical seated medium close-up, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. One man in his thirties with short dark hair and clear-framed glasses, wearing a black zip-up jacket and large black over-ear headphones, seated at a desk and turned slightly to his left, speaking into a black microphone on a boom arm. Behind him to the left is a dark muted purplish-brown wall with a softly glowing warm yellowish-orange rectangular light; behind him to the right is a bright computer monitor showing an out-of-focus image of large pink amoeba-like shapes against a bright blue background, with a horizontal streak of warm yellow light below it. Chest-up framing, subject centered.
+  </wording:Value>
+  <wording:Value id="product-ui-prompt">
+    A clean vertical mobile phone screen showing an AI newsletter called "The Rundown": a bold black masthead reading "THE RUNDOWN" at the top, then a section labeled "Latest Developments", a section labeled "Quick Hits", a section labeled "Trending AI Tools", and one step-by-step tutorial card. Black text on a white background, modern editorial layout, clean sans-serif type. No other readable text.
+  </wording:Value>
+  <wording:Value id="thumb-prompt">
+    A YouTube-style clickbait thumbnail in vertical 9:16 crop: a surprised man's face on the left, bold yellow uppercase text "THIS WILL CHANGE EVERYTHING" on the right, a red play-button triangle in the lower center, high contrast saturated colors. No other readable text.
+  </wording:Value>
+
+  <gpt:Image id="speaker-scene" prompt={speaker-scene-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <gpt:Image id="product-ui" prompt={product-ui-prompt} aspect-ratio="9:16" resolution="2K"/>
+  <gpt:Image id="thumb-image" prompt={thumb-prompt} aspect-ratio="9:16" resolution="2K"/>
+
+  <!-- Per-take performance remains ordinary authored Text, separate from spoken words. -->
+  <wording:Value id="hook-action">
+    Open with direct eye contact and a friendly conversational tone, then lean in slightly for the reveal of number five.
+  </wording:Value>
+  <wording:Value id="courses-action">
+    Keep a dry, mildly dismissive tone for courses; use one compact dismissive hand wave.
+  </wording:Value>
+  <wording:Value id="youtube-action">
+    Raise an eyebrow and give a knowing skeptical look at the sponsorship punchline.
+  </wording:Value>
+  <wording:Value id="twitter-action">
+    Gesture to count off hours, then shake your head slightly at the time-wasting cost.
+  </wording:Value>
+  <wording:Value id="rundown-action">
+    Brighten and speak warmly and confidently about the number one pick, then close with a friendly call-to-action.
+  </wording:Value>
+
+  <!-- Duration remains an explicit graph fact derived from the pronunciation projection. -->
+  <estimate:Speech id="hook-duration" source={story.segment.hook.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="courses-duration" source={story.segment.courses.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="youtube-duration" source={story.segment.youtube.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="twitter-duration" source={story.segment.twitter.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="rundown-duration" source={story.segment.rundown.speech} policy={studio.speech.normal}/>
+
+  <!-- Prompt assembly is an ordinary Text subgraph; one speaking take per segment. -->
+  <wording:Render id="hook-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+    <wording:Set name="dialogue" text={story.segment.hook.dialogue}/>
+    <wording:Set name="action" text={hook-action}/>
+  </wording:Render>
+  <wording:Render id="courses-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+    <wording:Set name="dialogue" text={story.segment.courses.dialogue}/>
+    <wording:Set name="action" text={courses-action}/>
+  </wording:Render>
+  <wording:Render id="youtube-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+    <wording:Set name="dialogue" text={story.segment.youtube.dialogue}/>
+    <wording:Set name="action" text={youtube-action}/>
+  </wording:Render>
+  <wording:Render id="twitter-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+    <wording:Set name="dialogue" text={story.segment.twitter.dialogue}/>
+    <wording:Set name="action" text={twitter-action}/>
+  </wording:Render>
+  <wording:Render id="rundown-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+    <wording:Set name="dialogue" text={story.segment.rundown.dialogue}/>
+    <wording:Set name="action" text={rundown-action}/>
+  </wording:Render>
+
+  <!-- Five continuous takes, all referencing the one accepted location image. -->
+  <seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt} duration={hook-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={speaker-scene.image}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="courses-take" model="mini" prompt={courses-prompt} duration={courses-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={speaker-scene.image}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="youtube-take" model="mini" prompt={youtube-prompt} duration={youtube-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={speaker-scene.image}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="twitter-take" model="mini" prompt={twitter-prompt} duration={twitter-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={speaker-scene.image}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="rundown-take" model="mini" prompt={rundown-prompt} duration={rundown-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={speaker-scene.image}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="720" height="1280"/>
+  <space:Frame id="speech-frame" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
+  <space:Frame id="board-frame" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
+  <space:Frame id="product-frame" within={vertical} left="46%" top="18%" right="96%" bottom="82%"/>
+  <space:Frame id="thumb-frame" within={vertical} left="14%" top="30%" right="86%" bottom="74%"/>
+  <space:Extent id="product-extent" width="1080" height="1920"/>
+  <space:Extent id="thumb-extent" width="1920" height="1080"/>
+
+  <!-- Five ordered Takes become one continuous speech coordinate space. -->
+  <speech:Spine id="speech" frame-rate="30"
+    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
+    <speech:Take video={hook-take.video} segment={story.segment.hook}/>
+    <speech:Take video={courses-take.video} segment={story.segment.courses}/>
+    <speech:Take video={youtube-take.video} segment={story.segment.youtube}/>
+    <speech:Take video={twitter-take.video} segment={story.segment.twitter}/>
+    <speech:Take video={rundown-take.video} segment={story.segment.rundown}/>
+  </speech:Spine>
+
+  <!-- One measured evidence pass locates the complete authored Script. -->
+  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+
+  <!-- Captions: one program-wide system driven by the Script and the measured map. -->
+  <fonts:Stack id="caption-font" family="inter" weight="800" style="normal"/>
+  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
+  <caption:Program id="caption-program" display={story.caption} default={primary-caption}/>
+  <caption-ai:Planner id="caption-plan" display={story.caption} program={caption-program} model="gemini-2.5-flash"/>
+  <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
+    space={speech.space} program={caption-program} plan={caption-plan.plan}/>
+
+  <!-- The lined-paper ranking board: one progressive system over its five appearances. -->
+  <fonts:Stack id="board-font" family="shadows-into-light" weight="400" style="normal"/>
+  <linerank:BoardStyle id="paper-style" recipe={studio.linerank.board} font={board-font}/>
+  <linerank:Board id="board" map={timing.map} space={speech.space} frame={board-frame}
+    during={story.selection.board} triggers={story.moment.reveal} terminal={story.moment.done}
+    style={paper-style} title="Top 5 Most Popular Ways to learn AI">
+    <linerank:BoardItem id="item-5" rank="5" label="Instagram"/>
+    <linerank:BoardItem id="item-4" rank="4" label="AI Courses"/>
+    <linerank:BoardItem id="item-3" rank="3" label="YouTube"/>
+    <linerank:BoardItem id="item-2" rank="2" label="Twitter/X"/>
+    <linerank:BoardItem id="item-1" rank="1" label="The Rundown"/>
+  </linerank:Board>
+
+  <!-- Two editorial inserts: the YouTube thumbnail and the product's mobile layout. -->
+  <media-track:Track id="product-broll" map={timing.map} space={speech.space} canvas={vertical}>
+    <media-track:Item image={product-ui.image} extent={product-extent} frame={product-frame}
+      during={story.selection.product} appearance={studio.media.product} motion={studio.motion.product}/>
+  </media-track:Track>
+
+  <media-track:Track id="thumb-broll" map={timing.map} space={speech.space} canvas={vertical}>
+    <media-track:Item image={thumb-image.image} extent={thumb-extent} frame={thumb-frame}
+      during={story.selection.thumb} appearance={studio.media.thumb} motion={studio.motion.thumb}/>
+  </media-track:Track>
+
+  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audioTrack}/>
+    <film:Track source={board.visual}/>
+    <film:Track source={product-broll.visual}/>
+    <film:Track source={thumb-broll.visual}/>
+    <film:Track source={captions.track}/>
+  </film:Film>
+
+  <render:Video id="final" composition={main.composition} space={speech.space}/>
+</svml>
