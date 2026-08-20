@@ -27,6 +27,13 @@ export type TextRenderContext = {
   readonly exactFontFamily: (font: FontArtifactRef) => string;
   readonly baseStyle: string;
   readonly commonAttributes: string;
+  /**
+   * Filter identifiers already written into this document.
+   *
+   * A caption is one element per word, and every word carries the same Paint, so without somewhere
+   * to remember that, each word writes the whole set again.
+   */
+  readonly emittedFilterIds?: Set<string>;
 };
 
 function number(value: number): string {
@@ -167,11 +174,20 @@ function inheritedGlyphColor(paints: readonly VisualTextPaintLayer[]): string[] 
   return fills.length === 1 && fills[0]!.paint.kind === "solid" ? [`color:${fills[0]!.paint.color}`] : [];
 }
 
+/**
+ * Name a filter after the Paint it draws, and after nothing else.
+ *
+ * What the filter contains is decided by the Paint alone, so two Paints that are equal want one
+ * definition between them. Naming the Track and the Present as well made every element that shared
+ * a Paint carry its own copy: a five-word caption with an outline, a glow and a long shadow emitted
+ * eighty definitions of sixteen distinct filters, thirty-six kilobytes of which thirty were the
+ * same bytes repeated. Identifiers are resolved across the document, so one copy answers for all.
+ */
 function glyphFilterId(
   paint: Extract<GlyphPaintLayer, { kind: "stroke" | "shadow" | "glow" }>,
   context: TextRenderContext,
 ): string {
-  return context.stableId([context.trackId, context.presentId, "text-glyph-filter", canonicalStringify(paint)]);
+  return context.stableId(["text-glyph-filter", canonicalStringify(paint)]);
 }
 
 function glyphFilterDefinition(
@@ -282,7 +298,15 @@ export function renderGlyphPaintedString(
   if (layers.length === 0) return context.escape(value);
   const shaped = layers.filter((paint): paint is Extract<GlyphPaintLayer, { kind: "stroke" | "shadow" | "glow" }> =>
     paint.kind !== "fill");
+  const written = context.emittedFilterIds;
   const definitions = [...new Map(shaped.map((paint) => [canonicalStringify(paint), paint])).values()]
+    .filter((paint) => {
+      const id = glyphFilterId(paint, context);
+      if (written === undefined) return true;
+      if (written.has(id)) return false;
+      written.add(id);
+      return true;
+    })
     .map((paint) => glyphFilterDefinition(paint, context)).join("");
   const defs = definitions.length === 0
     ? ""
