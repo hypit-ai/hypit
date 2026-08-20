@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { assertCompositableSurfaceRef } from "@hypit/media";
 import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
 import { programSpaceFrameCount } from "@hypit/program-space";
@@ -197,8 +199,23 @@ function attributes(values: readonly VisualAttribute[] | undefined): string {
   return (values ?? []).map(({ name, value }) => ` ${name}="${escapeHtml(value)}"`).join("");
 }
 
+/**
+ * Name a DOM node after what it is, in a fixed number of characters.
+ *
+ * HyperFrames reads the `<video>` element's id back out of the document and spends it as a
+ * directory name for that video's extracted frames. On Windows those frames live under
+ * `%TEMP%\hf-render-…`, which leaves around 150 characters before the path stops being one. An
+ * identity that carried its parts verbatim did not fit: a Track spanning five takes names all
+ * five, the Present and the layer each repeat the Track's name, and encoding the three of them
+ * multiplied the result again. A single take was already within five characters of the limit.
+ *
+ * A digest is the same identity at a length that does not depend on how much was said. It is
+ * still stable, so the document still renders the same bytes for the same composition and the
+ * frame cache still hits. Nothing reads the parts back: `data-hypit-element-id` and
+ * `data-hypit-track-id` carry them, spelled the way an author wrote them.
+ */
 function stableDomId(parts: readonly string[]): string {
-  return `hypit-${Buffer.from(JSON.stringify(parts)).toString("base64url")}`;
+  return `hypit-${createHash("sha256").update(JSON.stringify(parts)).digest("hex").slice(0, 24)}`;
 }
 
 function exactFontFamily(font: FontArtifactRef): string {
