@@ -1669,6 +1669,7 @@ test("all three Ranking components paint frame-pure progressive states under par
     const columnHeader = rankingTrack.sealRankingHeader({ id: "browser-column", variant: "column" });
     const columnSpecs = ["one", "two", "three"].map((id, index) => ({
       variant: "column" as const, id: `column-${id}`, label: `${index + 1}. ${id}`,
+      rank: index + 1, preset: true,
     }));
     let columnItems = rankingTrack.createColumnItemSet();
     columnSpecs.forEach((spec, index) => { columnItems = rankingTrack.appendColumnItem(columnItems, spec, index === 1 ? icons[index]!.artifact : undefined); });
@@ -1676,9 +1677,21 @@ test("all three Ranking components paint frame-pure progressive states under par
       "font-size": 15, "appear-frames": 2, "move-frames": 2, padding: 6, "row-height": 35,
       "row-gap": 4, "icon-size": 26, "icon-radius": 5, "stage-size": 46,
     }), font).style;
+    let columnSpecSet = rankingTrack.createRankingItemSpecSet(columnHeader);
+    for (const spec of columnSpecs) columnSpecSet = rankingTrack.appendRankingItemSpec(columnSpecSet, spec);
+    const columnSchedule = rankingTrack.buildColumnSchedule({
+      header: columnHeader,
+      items: columnSpecSet,
+      outer: rankingTrack.projectColumnSelectionOuterWindow(map, space, outer),
+      candidates: rankingTrack.createColumnWindowCandidateSet(),
+    });
+    const columnCanvas = sealCanvasSpace({
+      widthPx: width, heightPx: height,
+      origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
+    });
     const columnTrack = rankingTrack.renderColumn(space, rankingTrack.buildColumnProgram(
-      columnHeader, { xPx: 20, yPx: 180, widthPx: 440, heightPx: 140 },
-      schedule(columnHeader, columnSpecs), columnStyle, columnItems,
+      columnHeader, columnCanvas, { xPx: 20, yPx: 180, widthPx: 440, heightPx: 140 },
+      columnSchedule, columnStyle, columnItems,
     ));
 
     const topHeader = rankingTrack.sealRankingHeader({ id: "browser-top", variant: "top-three" });

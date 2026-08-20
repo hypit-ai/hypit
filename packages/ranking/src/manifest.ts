@@ -24,6 +24,8 @@ export const rankingTypes = {
   itemSpec: { module: rankingModuleRef, name: "RankingItemSpec" },
   textItemShell: { module: rankingModuleRef, name: "RankingTextItemShell" },
   itemSpecs: { module: rankingModuleRef, name: "RankingItemSpecSet" },
+  columnOuter: { module: rankingModuleRef, name: "ColumnOuterWindow" },
+  columnCandidates: { module: rankingModuleRef, name: "ColumnWindowCandidateSet" },
   schedule: { module: rankingModuleRef, name: "RankingSchedule" },
   soundStyle: { module: rankingModuleRef, name: "RankingSoundStyle" },
   soundEvents: { module: rankingModuleRef, name: "RankingSoundEventPlan" },
@@ -43,6 +45,11 @@ export const rankingProducers = {
   createSpecs: { module: rankingModuleRef, name: "create-ranking-item-specs" },
   appendSpec: { module: rankingModuleRef, name: "append-ranking-item-spec" },
   schedule: { module: rankingModuleRef, name: "build-ranking-schedule" },
+  projectColumnSelectionOuter: { module: rankingModuleRef, name: "project-column-selection-outer" },
+  projectColumnSegmentOuter: { module: rankingModuleRef, name: "project-column-segment-outer" },
+  createColumnCandidates: { module: rankingModuleRef, name: "create-column-window-candidates" },
+  appendColumnCandidate: { module: rankingModuleRef, name: "append-column-window-candidate" },
+  columnSchedule: { module: rankingModuleRef, name: "build-column-schedule" },
   createTierItems: { module: rankingModuleRef, name: "create-tier-board-items" },
   appendTierItem: { module: rankingModuleRef, name: "append-tier-board-item" },
   createColumnItems: { module: rankingModuleRef, name: "create-column-items" },
@@ -83,11 +90,15 @@ export const rankingHeaderSchema: ValueSchema = object({
 });
 export const rankingItemSpecSchema: ValueSchema = { kind: "oneOf", variants: [
   object({ variant: { schema: { kind: "literal", value: "tier-board" } }, ...itemBase, tier: { schema: string }, entry: { schema: { kind: "string", enum: ["direct", "stage"] } } }),
-  object({ variant: { schema: { kind: "literal", value: "column" } }, ...itemBase, label: { schema: string } }),
+  object({ variant: { schema: { kind: "literal", value: "column" } }, ...itemBase,
+    label: { schema: string }, rank: { schema: { kind: "number", integer: true, minimum: 1 } }, preset: { schema: { kind: "boolean" } },
+  }),
   object({ variant: { schema: { kind: "literal", value: "top-three" } }, ...itemBase, label: { schema: string } }),
 ] };
 export const rankingTextItemShellSchema: ValueSchema = { kind: "oneOf", variants: [
-  object({ variant: { schema: { kind: "literal", value: "column" } }, ...itemBase }),
+  object({ variant: { schema: { kind: "literal", value: "column" } }, ...itemBase,
+    rank: { schema: { kind: "number", integer: true, minimum: 1 } }, preset: { schema: { kind: "boolean" } },
+  }),
   object({ variant: { schema: { kind: "literal", value: "top-three" } }, ...itemBase }),
 ] };
 export const rankingItemSpecSetSchema: ValueSchema = object({
@@ -95,14 +106,31 @@ export const rankingItemSpecSetSchema: ValueSchema = object({
   variant: { schema: variants }, items: { schema: { kind: "array", items: rankingItemSpecSchema } },
 });
 const frameSpan = object({ startFrame: { schema: unsigned }, endFrameExclusive: { schema: unsigned } });
-export const rankingScheduleSchema: ValueSchema = object({
+export const columnOuterWindowSchema: ValueSchema = object({ span: { schema: frameSpan } });
+export const columnWindowCandidateSetSchema: ValueSchema = object({
+  entries: { schema: { kind: "array", items: object({
+    itemId: { schema: string }, occurrenceId: { schema: string }, preferred: { schema: frameSpan },
+  }) } },
+});
+const triggeredScheduleSchema: ValueSchema = object({
   id: { schema: string },
-  variant: { schema: variants }, outer: { schema: frameSpan }, terminalFrame: { schema: unsigned },
+  variant: { schema: { kind: "string", enum: ["tier-board", "top-three"] } },
+  outer: { schema: frameSpan }, terminalFrame: { schema: unsigned },
   entries: { schema: { kind: "array", minItems: 1, items: object({
     itemId: { schema: string }, triggerFrame: { schema: unsigned },
     stage: { schema: frameSpan }, cumulative: { schema: frameSpan }, settled: { schema: frameSpan },
   }) } },
 });
+const columnScheduleSchema: ValueSchema = object({
+  id: { schema: string }, variant: { schema: { kind: "literal", value: "column" } }, outer: { schema: frameSpan },
+  entries: { schema: { kind: "array", minItems: 1, items: { kind: "oneOf", variants: [
+    object({ itemId: { schema: string }, mode: { schema: { kind: "literal", value: "preset" } }, settled: { schema: frameSpan } }),
+    object({ itemId: { schema: string }, mode: { schema: { kind: "literal", value: "reveal" } },
+      preferred: { schema: frameSpan }, active: { schema: frameSpan }, settled: { schema: frameSpan },
+    }),
+  ] } } },
+});
+export const rankingScheduleSchema: ValueSchema = { kind: "oneOf", variants: [triggeredScheduleSchema, columnScheduleSchema] };
 const styleSchema = (): ValueSchema => object({}, true);
 const setSchema = (): ValueSchema => object({
   items: { schema: { kind: "array", items: object({}, true) } },
@@ -459,9 +487,9 @@ export const rankingMarkupSurfaces = [
       } },
     { name: "column", tag: "Column", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, rankingTypes.textItemShell, rankingTypes.schedule, rankingTypes.columnProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
       vocabulary: {
-        summary: "Fills a ranked column one row at a time, one on each occurrence of a Moment, and publishes the board and the Tracks it renders to.",
+        summary: "Places rows by explicit rank, reveals each non-preset row in its own Selection, and publishes the board and the Tracks it renders to.",
         appearance:
-          "One rounded, bordered, shadowed board filling its Frame, carrying an empty slat for every Item from the first frame: a full-width rounded row washed and outlined in that rank's color, with its rank number set at the left end in the same color. The slats sit as one block pushed to the bottom of the board, and a hollow rounded staging square waits near the top of the Frame. Each Item appears inside that square at stage size, then shrinks and slides into its own slat, filling from the top slat downward, one row per trigger occurrence in document order. A filled row reads as its optional icon and then its label, set left-aligned along the slat, and holds there once it settles.",
+          "A narrow vertical rank rail occupies its Frame while a large reveal stage is positioned independently in Canvas space. Preset rows are settled from the first frame. Each other row rises into the stage during its own projected Selection, then shrinks and moves into the content slot beside its numbered rank. Rank, child order and reveal time are independent.",
         preview: previewImage("Column.png"),
         attributes: [
           { name: "id", kind: "identifier", required: true,
@@ -470,14 +498,12 @@ export const rankingMarkupSurfaces = [
             summary: "Chooses the measured SemanticMap that gives every trigger its frame." },
           { name: "space", kind: "reference", required: true, accepts: [programSpaceTypes.programSpace],
             summary: "Chooses the ProgramSpace the board is timed and rendered against." },
+          { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas],
+            summary: "Chooses the Canvas coordinate space used by the independent reveal stage." },
           { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
-            summary: "Chooses the Frame the whole board occupies." },
-          { name: "during", kind: "reference", required: true, accepts: [narrativeTypes.selection],
-            summary: "Chooses the Selection the board is on screen for." },
-          { name: "triggers", kind: "reference", required: true, accepts: [narrativeTypes.moment],
-            summary: "Chooses the Moment whose occurrences place one ColumnItem each, in document order." },
-          { name: "terminal", kind: "reference", required: true, accepts: [narrativeTypes.moment],
-            summary: "Chooses the Moment the board settles on and ends after." },
+            summary: "Chooses the fixed Frame occupied by the vertical rank rail." },
+          { name: "during", kind: "reference", required: true, accepts: [narrativeTypes.selection, narrativeTypes.excerpt],
+            summary: "Chooses the Segment or Selection that contains the complete Column lifetime." },
           { name: "style", kind: "reference", required: true, accepts: [rankingTypes.columnStyle],
             summary: "Chooses the ColumnStyle this board is drawn in, and only that variant's." },
           { name: "appear-sound", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
@@ -487,12 +513,18 @@ export const rankingMarkupSurfaces = [
         ],
         children: [
           { tag: "ColumnItem", cardinality: "many",
-            summary: "One row of the column, placed at its own trigger occurrence in document order; it is empty.",
+            summary: "One explicitly ranked row; it is either preset or owns one reveal Selection.",
             attributes: [
               { name: "id", kind: "identifier", required: false,
                 summary: "Names this row within the board; an omitted id is generated from the row's position." },
               { name: "label", kind: "expression", required: true, accepts: [textTypes.text],
                 summary: "Sets the row's copy, written literally or chosen from an existing Text." },
+              { name: "rank", kind: "literal", required: true,
+                summary: "Sets the positive rank number and final row position independently from reveal order." },
+              { name: "preset", kind: "literal", required: false, values: ["true", "false"],
+                summary: "Settles the row from the start of the outer window; defaults to false." },
+              { name: "during", kind: "reference", required: false, accepts: [narrativeTypes.selection],
+                summary: "Chooses this row's preferred reveal Selection; required unless preset is true." },
               { name: "icon", kind: "reference", required: false, accepts: [mediaTypes.blobArtifact],
                 summary: "Chooses the image drawn beside the row." },
               { name: "stack", kind: "literal", required: false,
@@ -501,7 +533,7 @@ export const rankingMarkupSurfaces = [
         ],
         ports: [
           { name: "schedule", type: rankingTypes.schedule,
-            summary: "The resolved Schedule: each Item's trigger frame and its staged, cumulative and settled spans." },
+            summary: "The resolved Schedule: preset spans and non-overlapping reveal windows inside the outer lifetime." },
           { name: "program", type: rankingTypes.columnProgram,
             summary: "The resolved board: its Frame, Style, Schedule and ordered Items." },
           { name: "visual", type: compositionTypes.visualTrack,
@@ -510,15 +542,17 @@ export const rankingMarkupSurfaces = [
             summary: "The rendered board sound, published only when a sound is authored." },
         ],
         example: `<ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>
-<ranking:Column id="board" map={timing.map} space={speech.space} frame={board-frame}
-  during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
+<ranking:Column id="board" map={timing.map} space={speech.space} canvas={vertical} frame={board-frame}
+  during={story.segment.ranking}
   style={board-style}>
-  <ranking:ColumnItem id="row-regen" label="ReGen" icon={icon-regen}/>
-  <ranking:ColumnItem id="row-chatgpt" label="ChatGPT" icon={icon-chatgpt}/>
-  <ranking:ColumnItem id="row-remini" label="Remini" icon={icon-remini}/>
+  <ranking:ColumnItem id="row-regen" rank="1" label="ReGen" icon={icon-regen} during={story.selection.regen}/>
+  <ranking:ColumnItem id="row-chatgpt" rank="2" label="ChatGPT" icon={icon-chatgpt} during={story.selection.chatgpt}/>
+  <ranking:ColumnItem id="row-remini" rank="5" preset="true" label="Remini" icon={icon-remini}/>
 </ranking:Column>`,
         notes: [
           "The board requires at least one ColumnItem, accepts no other child and no text of its own, and Item ids must be unique within it.",
+          "Ranks must be unique; child order does not determine either final placement or reveal order.",
+          "Non-preset Selection windows are clamped to the outer window and resolved into non-overlapping intervals; preset Items have no child `during`.",
           "A `label` written as a reference materializes the row from that exact Text before the board is scheduled.",
           "Authoring either sound also connects the Style's `.sound` output, so `style` must name a ColumnStyle written in this Source.",
         ],
@@ -600,6 +634,8 @@ export const rankingManifest: ModuleManifest = {
     { name: rankingTypes.itemSpec.name },
     { name: rankingTypes.textItemShell.name },
     { name: rankingTypes.itemSpecs.name },
+    { name: rankingTypes.columnOuter.name },
+    { name: rankingTypes.columnCandidates.name },
     { name: rankingTypes.schedule.name },
     { name: rankingTypes.soundStyle.name },
     { name: rankingTypes.soundEvents.name },
@@ -624,6 +660,26 @@ export const rankingManifest: ModuleManifest = {
       { name: "map", type: semanticMapTypes.complete }, { name: "space", type: programSpaceTypes.programSpace },
       { name: "outer", type: narrativeTypes.selection }, { name: "triggers", type: narrativeTypes.moment }, { name: "terminal", type: narrativeTypes.moment },
     ], outputs: [{ name: "schedule", type: rankingTypes.schedule }], needs: [] },
+    { name: rankingProducers.projectColumnSelectionOuter.name, inputs: [
+      { name: "map", type: semanticMapTypes.complete }, { name: "space", type: programSpaceTypes.programSpace },
+      { name: "selection", type: narrativeTypes.selection },
+    ], outputs: [{ name: "outer", type: rankingTypes.columnOuter }], needs: [] },
+    { name: rankingProducers.projectColumnSegmentOuter.name, inputs: [
+      { name: "map", type: semanticMapTypes.complete }, { name: "space", type: programSpaceTypes.programSpace },
+      { name: "segment", type: narrativeTypes.excerpt },
+    ], outputs: [{ name: "outer", type: rankingTypes.columnOuter }], needs: [] },
+    { name: rankingProducers.createColumnCandidates.name, inputs: [], outputs: [
+      { name: "set", type: rankingTypes.columnCandidates },
+    ], needs: [] },
+    { name: rankingProducers.appendColumnCandidate.name, inputs: [
+      { name: "set", type: rankingTypes.columnCandidates }, { name: "spec", type: rankingTypes.itemSpec },
+      { name: "map", type: semanticMapTypes.complete }, { name: "space", type: programSpaceTypes.programSpace },
+      { name: "selection", type: narrativeTypes.selection },
+    ], outputs: [{ name: "set", type: rankingTypes.columnCandidates }], needs: [] },
+    { name: rankingProducers.columnSchedule.name, inputs: [
+      { name: "header", type: rankingTypes.header }, { name: "items", type: rankingTypes.itemSpecs },
+      { name: "outer", type: rankingTypes.columnOuter }, { name: "candidates", type: rankingTypes.columnCandidates },
+    ], outputs: [{ name: "schedule", type: rankingTypes.schedule }], needs: [] },
     ...([
       [rankingProducers.createTierItems, rankingTypes.tierItems],
       [rankingProducers.createColumnItems, rankingTypes.columnItems],
@@ -647,6 +703,7 @@ export const rankingManifest: ModuleManifest = {
     ...programDefinitions.flatMap(([programType, styleType, setType, programProducer, eventProducer, renderProducer]) => [
       { name: programProducer.name, inputs: [
         { name: "header", type: rankingTypes.header },
+        ...(programType === rankingTypes.columnProgram ? [{ name: "canvas", type: spatialTypes.canvas }] : []),
         { name: "frame", type: spatialTypes.frame }, { name: "schedule", type: rankingTypes.schedule },
         { name: "style", type: styleType }, { name: "set", type: setType },
       ], outputs: [{ name: "program", type: programType }], needs: [] },

@@ -6,7 +6,7 @@ Three independent progressive-ranking author components over one private schedul
 - `Column`
 - `TopThree`
 
-The package owns variant-specific Programs and Styles. It consumes explicit Selection/Moment,
+The package owns variant-specific Programs and Styles. It consumes explicit Segment/Selection/Moment,
 SemanticMap, ProgramSpace, SpatialFrame, font, image and optional sound edges, then lowers to peer
 `VisualTrack` and optional `AudioTrack` values. It adds no Ranking field to Core, Composition or
 Visual IR.
@@ -26,10 +26,22 @@ copy.
 
 <copy:Value id="winner">No hidden runtime choice</copy:Value>
 
-<ranking:Column id="priorities" map={timing.map} space={speech.space}
-  frame={layout.ranking} during={story.selection.ranking}
-  triggers={story.moment.ranking-items} terminal={story.moment.ranking-end}
+<ranking:Column id="priorities" map={speech.semanticMap} space={speech.space} canvas={vertical}
+  frame={layout.ranking} during={story.segment.ranking}
   style={ranking-style}>
-  <ranking:ColumnItem label={winner}/>
+  <ranking:ColumnItem rank="1" label={winner}
+    during={story.selection.winner-reveal}/>
+  <ranking:ColumnItem rank="2" preset="true" label="Already placed"/>
 </ranking:Column>
 ```
+
+Column separates placement from reveal time. `rank` determines the numbered row only. Every
+non-preset Item owns one Selection whose projected window is its preferred reveal interval; the
+Column resolves those sibling candidates into non-overlapping windows inside the container's
+Segment/Selection `during` span. Candidate time, child order and rank may all differ. A preset Item
+has no child `during` and is settled from the beginning of the outer window.
+
+The Column's `frame` is the fixed left ranking rail; `canvas` supplies the independent coordinate
+space for the large reveal stage. `stage-x` and `stage-y` are normalized Canvas coordinates. Each
+normal reveal rises from below the Canvas, holds on that stage, then shrinks and moves into its
+ranked content slot.
