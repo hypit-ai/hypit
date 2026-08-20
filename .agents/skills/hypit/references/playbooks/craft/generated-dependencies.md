@@ -77,6 +77,32 @@ This is why a full-screen board that contains two media boxes is read as *two* m
 single flat composition. The component owns its surface; the boxes are inputs, and each one is
 filled by generation when the reference shows content in it.
 
+## A semantic window covers words, so the silence around it belongs to nobody
+
+`during={story.selection.X}` spans that Selection's first word to its last. The pause between two
+Selections, the breath before a Segment's first word, and the words that fall between two occurrences
+are in none of them. Whatever is scheduled from those windows is absent across the gaps, and what
+shows through instead depends only on what happens to be underneath: the Film's background if nothing
+is, the layer below if something is. Black and a flash of the wrong picture are the same defect
+wearing different clothes, and the second is harder to notice because it does not look like an error.
+
+Decide, for each thing you place, which of two kinds it is:
+
+- **Continuously present** — a sheet the reference holds up, a bed under a voiceover, a badge that
+  stays. Take its window from a Segment, or from the first occurrence's start to the last one's end.
+  Never from a Selection whose occurrences have gaps, however well the occurrences line up with the
+  words: they do not touch.
+- **Genuinely coming and going** — an insert that appears for one phrase and leaves. A Selection is
+  exactly right, and the gap is the point.
+
+The same question decides a component you write yourself. A Program scheduled from occurrences draws
+only inside them unless you give it a span of its own, so a page built from one occurrence per row
+vanishes on the words between two rows. `@hypit/local-notebook-ranking` does that deliberately and
+says so in its own appearance text; a sheet the reference never takes down must not inherit it. When
+a component both persists and changes, its schedule carries two different things — one span for how
+long it is on screen, one window per item for when that item arrives — and conflating them is what
+produces the blink.
+
 ## An audio Take brings no picture, so its Segment is covered or it plays black
 
 A `speech:Take audio={…}` creates program time and speech and contributes no visual at all. For as
