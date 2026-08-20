@@ -89,6 +89,27 @@ does not govern whether the element builds at all. Every failure this check repo
 until the check passes — the author should never open the Playground and find that something they
 were delivered cannot be seen. Repair as many times as the failure needs, then re-run the check.
 
+One failure is not a defect, and it is worth knowing before spending repairs on it. The preview has
+to draw outputs nothing has produced yet, so it substitutes a stand-in — a black video frame as long
+as the shot. **A stand-in is not the kind of thing the real output will be**, so a Producer that
+validates the kind of media it receives can refuse it and be entirely correct at build time. A still
+Media Item is the case that bites: it requires image bytes, the stand-in for an unbuilt `gpt:Image`
+is `video/mp4`, and the preview reports a media edge whose artifact is not an image — the same
+sentence it would use for a genuine wiring mistake.
+
+Tell them apart before repairing. It is a stand-in artifact when the edge points at an output this
+Source generates rather than at supplied material, and the message is about the media *kind* rather
+than a value. Pinning does not settle it either: preview-check reads a Run Source but cannot open
+pinned Records without a Runtime, and the script does not offer one. Everything else it reports is
+still a real failure and still has no attempt ceiling.
+
+Two ways out, in order. In a component you own, decide the element kind from the Artifact's own
+`mediaType` instead of hard-coding it — the component then draws the stand-in as video and the real
+picture as an image, and the preview passes honestly. Against an installed Producer that legitimately
+demands one kind, the check cannot pass until the output exists: say so plainly, and verify that
+track on the real Build instead. Do not report the check as passed, and do not let it stand in for
+the delivery measurements in `../playbooks/craft/production-gates.md`.
+
 What this check cannot see is equally important: a track that *builds* but looks wrong — a typeface
 that does not match, a colour that is off, a shape that is misplaced — reports no error here, because
 nothing failed. That is the loop's work, under `reconstruction-loop.md`, where Gemini compares the
