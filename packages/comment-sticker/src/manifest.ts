@@ -101,7 +101,7 @@ const style = object({
     enter: { schema: object({
       kind: { schema: enumString(["none", "fade", "pop", "slide-pop"]) }, durationFrames: { schema: unsignedInteger },
       offsetYPx: { schema: number }, startScale: { schema: positive }, rotationDeltaDeg: { schema: number },
-      easing: { schema: enumString(["linear", "ease-in", "ease-out", "ease-in-out"]) },
+      easing: { schema: enumString(["linear", "ease-in", "ease-out", "ease-in-out", "out-back"]) },
     }) },
     exit: { schema: object({
       kind: { schema: enumString(["none", "fade", "fade-up"]) }, durationFrames: { schema: unsignedInteger },
