@@ -1,7 +1,7 @@
 import { programSpaceSampleFrames } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
 import { assertSpeechBasisIdentity } from "@hypit/speech";
-import type { SpeechAudioBasis, SpeechBasis } from "@hypit/speech";
+import type { SpeechBasis } from "@hypit/speech";
 import { lowerRestrictedSpeechVisualPresents } from "@hypit/media-track";
 import { sealAudioTrack, sealVisualTrack } from "@hypit/composition";
 import type { AudioTrack, VisualTrack } from "@hypit/composition";
@@ -9,15 +9,6 @@ import type { AudioTrack, VisualTrack } from "@hypit/composition";
 export function projectSpeechProgramSpace(basis: SpeechBasis): ProgramSpace {
   assertSpeechBasisIdentity(basis);
   return basis.programSpace;
-}
-
-export function projectSpeechAudio(basis: SpeechBasis): SpeechAudioBasis {
-  assertSpeechBasisIdentity(basis);
-  return {
-    programSpace: basis.programSpace,
-    audio: basis.audio,
-    segments: basis.segments,
-  };
 }
 
 export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {

@@ -23,6 +23,7 @@
     "@hypit/core": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/media-pipeline": "workspace:*",
+    "@hypit/svs": "workspace:*",
     "@hypit/validation": "workspace:*"
   }
 }

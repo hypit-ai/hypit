@@ -1,4 +1,5 @@
 import { programSpaceSchema } from "@hypit/program-space";
+import { synchronizedMediaSchema } from "@hypit/media";
 import type { ValueSchema } from "@hypit/protocol";
 import { contentFitSchema, intrinsicExtentSchema, spatialFrameSchema } from "@hypit/spatial";
 const string = { kind: "string", minLength: 1 } as const;
@@ -17,6 +18,23 @@ const segment = object({
   startFrame: { schema: integer },
   endFrameExclusive: { schema: integer },
 });
+const semanticTakeToken = object({
+  tokenId: { schema: string },
+  segmentId: { schema: string },
+  text: { schema: string },
+  startAnchorId: { schema: string },
+  endAnchorId: { schema: string },
+  startFrame: { schema: integer },
+  endFrameExclusive: { schema: integer },
+});
+const semanticTakeAnchor = object({ identity: { schema: string }, frame: { schema: integer } });
+const semanticTakeSegment = object({
+  segmentId: { schema: string },
+  startAnchorId: { schema: string },
+  endAnchorId: { schema: string },
+  startFrame: { schema: integer },
+  endFrameExclusive: { schema: integer },
+});
 export const speechDurationSchema: ValueSchema = number;
 export const speechBasisSchema: ValueSchema = object({
   programSpace: { schema: programSpaceSchema }, audio: { schema: audioBlobRef },
@@ -28,9 +46,13 @@ export const speechBasisSchema: ValueSchema = object({
   }) } } }) },
   segments: { schema: { kind: "array", minItems: 1, items: segment } },
 });
-export const speechAudioBasisSchema: ValueSchema = object({
-  programSpace: { schema: programSpaceSchema }, audio: { schema: audioBlobRef }, segments: { schema: { kind: "array", minItems: 1, items: segment } } });
 export const speechEvidenceAudioSchema: ValueSchema = object({
   artifact: { schema: audioBlobRef },
   sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
+});
+export const semanticTakeSchema: ValueSchema = object({
+  media: { schema: synchronizedMediaSchema },
+  segment: { schema: semanticTakeSegment },
+  tokens: { schema: { kind: "array", items: semanticTakeToken } },
+  anchors: { schema: { kind: "array", items: semanticTakeAnchor } },
 });

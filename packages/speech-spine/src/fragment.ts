@@ -1,7 +1,6 @@
-import { narrativeTypes } from "@hypit/narrative";
-import { mediaTypes } from "@hypit/media";
 import { programSpaceTypes } from "@hypit/program-space";
 import { speechTypes } from "@hypit/speech";
+import { semanticMapTypes } from "@hypit/semantic-map";
 import { compositionTypes } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation } from "@hypit/elaborator";
@@ -30,8 +29,7 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
   };
   addInput("program", speechSpineTypes.spineProgram);
   for (const take of options.takes) {
-    addInput(take.mediaName, mediaTypes.synchronized);
-    addInput(take.segmentName, narrativeTypes.excerpt);
+    addInput(take.takeName, speechTypes.semanticTake);
     if (take.visual !== undefined) {
       addInput(take.visual.frameName, spatialTypes.frame);
       addInput(take.visual.fitName, spatialTypes.fit);
@@ -53,8 +51,7 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
       inputs: {
         set: operation(current),
         program: input("program"),
-        media: input(take.mediaName),
-        segment: input(take.segmentName),
+        take: input(take.takeName),
         ...(take.visual === undefined ? {} : {
           frame: input(take.visual.frameName),
           fit: input(take.visual.fitName),
@@ -91,12 +88,6 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
       result: { kind: "output", name: "programSpace" },
     },
     {
-      id: "spine:audio-basis",
-      producer: speechBasisProducers.projectAudio,
-      inputs: { basis: operation("spine:basis") },
-      result: { kind: "output", name: "audio" },
-    },
-    {
       id: "spine:visual-track",
       producer: speechBasisProducers.projectVisual,
       inputs: { basis: operation("spine:basis") },
@@ -109,6 +100,12 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
       result: { kind: "output", name: "track" },
     },
   );
+  operations.push({
+    id: "spine:semantic-map",
+    producer: speechSpineProducers.assembleSemanticMap,
+    inputs: { set: operation(current) },
+    result: { kind: "output", name: "map" },
+  });
   return sealGraphFragment({
     inputs: [...declaredInputs.entries()].map(([name, type]) => ({ name, type })),
     operations,
@@ -118,14 +115,12 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
         name: "space", type: programSpaceTypes.programSpace, root: operation("spine:space"),
       },
       {
-        name: "audio", type: speechTypes.audioBasis, root: operation("spine:audio-basis"),
-      },
-      {
         name: "visual", type: compositionTypes.visualTrack, root: operation("spine:visual-track"),
       },
       {
         name: "audioTrack", type: compositionTypes.audioTrack, root: operation("spine:audio-track"),
       },
+      { name: "semanticMap", type: semanticMapTypes.complete, root: operation("spine:semantic-map") },
     ],
   });
 }

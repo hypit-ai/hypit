@@ -1,12 +1,13 @@
 import type { ComponentPackage } from "@hypit/component-kit";
-import type { NarrativeExcerpt } from "@hypit/narrative";
-import type { SynchronizedMedia, TimelineAudio } from "@hypit/media";
+import type { TimelineAudio } from "@hypit/media";
 import type { StoredValue } from "@hypit/protocol";
 import { canonicalize } from "@hypit/protocol";
+import type { SemanticTake } from "@hypit/speech";
 import type { ContentFit, SpatialFrame } from "@hypit/spatial";
 
 import { speechSpineProducers } from "./manifest.js";
 import { appendSpeechSpineAudioTake, appendSpeechSpineVisualTake, assembleSpeechBasis, compileSpeechSpineAudio, createSpeechSpineSet } from "./program.js";
+import { assembleSemanticTakeMap } from "./semantic.js";
 import type { SpeechSpineProgram, SpeechSpineSet, SpeechSpineVisualSpec } from "./types.js";
 
 function inline<T>(value: StoredValue | undefined, subject: string): T {
@@ -29,8 +30,7 @@ export const speechSpineComponent = {
         outputs: { set: { kind: "inline", value: canonicalize(appendSpeechSpineAudioTake(
           inline<SpeechSpineSet>(inputs.set?.value, "SpeechSpineSet"),
           inline<SpeechSpineProgram>(inputs.program?.value, "SpeechSpineProgram"),
-          inline<SynchronizedMedia>(inputs.media?.value, "SynchronizedMedia"),
-          inline<NarrativeExcerpt>(inputs.segment?.value, "NarrativeExcerpt"),
+          inline<SemanticTake>(inputs.take?.value, "SemanticTake"),
         )) } },
         needs: {},
       }),
@@ -41,8 +41,7 @@ export const speechSpineComponent = {
         outputs: { set: { kind: "inline", value: canonicalize(appendSpeechSpineVisualTake(
           inline<SpeechSpineSet>(inputs.set?.value, "SpeechSpineSet"),
           inline<SpeechSpineProgram>(inputs.program?.value, "SpeechSpineProgram"),
-          inline<SynchronizedMedia>(inputs.media?.value, "SynchronizedMedia"),
-          inline<NarrativeExcerpt>(inputs.segment?.value, "NarrativeExcerpt"),
+          inline<SemanticTake>(inputs.take?.value, "SemanticTake"),
           inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
           inline<ContentFit>(inputs.fit?.value, "ContentFit"),
           inline<SpeechSpineVisualSpec>(inputs.visualSpec?.value, "SpeechSpineVisualSpec"),
@@ -68,6 +67,20 @@ export const speechSpineComponent = {
           inline<SpeechSpineSet>(inputs.set?.value, "SpeechSpineSet"),
           inline<TimelineAudio>(inputs.audio?.value, "TimelineAudio"),
         )) } },
+        needs: {},
+      }),
+    },
+    {
+      producer: speechSpineProducers.assembleSemanticMap,
+      handler: ({ inputs }) => ({
+        outputs: {
+          map: {
+            kind: "inline",
+            value: canonicalize(assembleSemanticTakeMap(
+              inline<SpeechSpineSet>(inputs.set?.value, "SpeechSpineSet").takes.map((take) => take.semantic),
+            )),
+          },
+        },
         needs: {},
       }),
     },

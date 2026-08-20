@@ -1,23 +1,26 @@
+import {
+  assertEmptyElement as empty,
+  assertAttributes as allowed,
+  textAttribute as text,
+  optionalTextAttribute as optionalText,
+  type StructuredElement,
+  type StructuredSurfaceHandler,
+  type SurfaceRecordDraft,
+  type SurfaceResolvedReference,
+  type MarkupAttributeValue,
+} from "@hypit/markup";
+import { sameType, type TypeRef } from "@hypit/protocol";
 import { artifactTypes } from "@hypit/artifact";
 import { compositionTypes } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation } from "@hypit/elaborator";
 import { mediaTypes } from "@hypit/media";
-import { mediaPipelineProducers } from "@hypit/media-pipeline";
 import { narrativeTypes } from "@hypit/narrative";
 import { programSpaceTypes } from "@hypit/program-space";
-import type { TypeRef } from "@hypit/protocol";
 import { semanticMapTypes } from "@hypit/semantic-map";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
-import type {
-  StructuredElement,
-  StructuredSurfaceHandler,
-  SurfaceRecordDraft,
-  SurfaceResolvedReference,
-  MarkupAttributeValue,
-} from "@hypit/markup";
 import type {
   OccurrenceExpansion,
   TemporalDuration,
@@ -51,42 +54,6 @@ import type {
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
-
-function sameType(left: TypeRef, right: TypeRef): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
-}
-
-function allowed(element: StructuredElement, names: readonly string[]): void {
-  const permit = new Set(names);
-  const unknown = Object.keys(element.attributes).filter((name) => !permit.has(name));
-  if (unknown.length > 0) throw new Error(`${element.name} has unsupported attributes ${unknown.join(", ")}.`);
-}
-
-function empty(element: StructuredElement): void {
-  if (element.children.some((child) => child.kind === "element" || child.value.trim().length > 0)) {
-    throw new Error(`${element.name} must be empty.`);
-  }
-}
-
-function text(element: StructuredElement, name: string, fallback?: string): string {
-  const value = element.attributes[name];
-  if (value === undefined && fallback !== undefined) return fallback;
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`${element.name}.${name} must be non-empty text.`);
-  }
-  return value.trim();
-}
-
-function optionalText(element: StructuredElement, name: string): string | undefined {
-  const value = element.attributes[name];
-  if (value === undefined) return undefined;
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`${element.name}.${name} must be non-empty text.`);
-  }
-  return value.trim();
-}
 
 function numberValue(element: StructuredElement, name: string, fallback?: number): number {
   const raw = optionalText(element, name);
@@ -240,7 +207,6 @@ function temporalBinding(
 type FragmentLayer =
   | { readonly kind: "paint"; readonly specName: string }
   | { readonly kind: "still"; readonly sourceName: string; readonly extentName: string; readonly fitName: string; readonly specName: string }
-  | { readonly kind: "video"; readonly sourceName: string; readonly includeAudio: boolean; readonly fitName: string; readonly specName: string }
   | { readonly kind: "timed" | "surface"; readonly sourceName: string; readonly fitName: string; readonly specName: string };
 
 type FragmentSound = { readonly sourceName: string; readonly specName: string };
@@ -288,46 +254,6 @@ function appendLayers(operations: FragmentOperation[], prefix: string, layers: r
       operations.push({ id, producer: mediaTrackProducers.appendStillLayer, inputs: {
         ...common, source: input(layer.sourceName), extent: input(layer.extentName), fit: input(layer.fitName),
       }, result: { kind: "output", name: "layers" } });
-    } else if (layer.kind === "video") {
-      const requestId = `${id}:request`;
-      const inspectId = `${id}:inspect`;
-      const selectId = `${id}:select`;
-      const normalizeId = `${id}:normalize`;
-      operations.push(
-        {
-          id: requestId,
-          producer: layer.includeAudio ? mediaPipelineProducers.bindAvRequest : mediaPipelineProducers.bindVisualRequest,
-          inputs: { space: input("space") },
-          result: { kind: "output", name: "request" },
-        },
-        {
-          id: inspectId,
-          producer: mediaPipelineProducers.inspect,
-          inputs: { source: input(layer.sourceName) },
-          result: { kind: "need", name: "inspection" },
-        },
-        {
-          id: selectId,
-          producer: mediaPipelineProducers.select,
-          inputs: { inspection: operation(inspectId), request: operation(requestId) },
-          result: { kind: "output", name: "selection" },
-        },
-        {
-          id: normalizeId,
-          producer: mediaPipelineProducers.normalize,
-          inputs: {
-            source: input(layer.sourceName), inspection: operation(inspectId),
-            selection: operation(selectId), request: operation(requestId),
-          },
-          result: { kind: "need", name: "media" },
-        },
-        {
-          id,
-          producer: mediaTrackProducers.appendTimedLayer,
-          inputs: { ...common, source: operation(normalizeId), fit: input(layer.fitName) },
-          result: { kind: "output", name: "layers" },
-        },
-      );
     } else {
       operations.push({ id, producer: layer.kind === "timed" ? mediaTrackProducers.appendTimedLayer : mediaTrackProducers.appendSurfaceLayer,
         inputs: { ...common, source: input(layer.sourceName), fit: input(layer.fitName) }, result: { kind: "output", name: "layers" } });
@@ -485,11 +411,10 @@ type SourceLayerContext = {
 
 type DeclaredVisualSource =
   | { readonly kind: "image"; readonly value: SurfaceResolvedReference; readonly extent: SurfaceResolvedReference }
-  | { readonly kind: "video"; readonly value: SurfaceResolvedReference; readonly includeAudio: boolean }
   | { readonly kind: "media"; readonly value: SurfaceResolvedReference }
   | { readonly kind: "surface"; readonly value: SurfaceResolvedReference };
 
-const VISUAL_SOURCE_ATTRIBUTES = ["image", "video", "media", "surface"] as const;
+const VISUAL_SOURCE_ATTRIBUTES = ["image", "media", "surface"] as const;
 
 function declaredVisualSource(
   element: StructuredElement,
@@ -499,14 +424,14 @@ function declaredVisualSource(
   const present = VISUAL_SOURCE_ATTRIBUTES.filter((name) => element.attributes[name] !== undefined);
   if (present.length === 0) {
     if (element.attributes.extent !== undefined) throw new Error(`${element.name}.extent requires image={Artifact}.`);
-    if (element.attributes.audio !== undefined) throw new Error(`${element.name}.audio requires video={Artifact}.`);
-    if (required) throw new Error(`${element.name} requires exactly one of image, video, media or surface.`);
+    if (element.attributes.audio !== undefined) throw new Error(`${element.name}.audio is no longer accepted; normalize the source explicitly and use media={...}.`);
+    if (required) throw new Error(`${element.name} requires exactly one of image, media or surface.`);
     return undefined;
   }
-  if (present.length !== 1) throw new Error(`${element.name} requires exactly one of image, video, media or surface.`);
+  if (present.length !== 1) throw new Error(`${element.name} requires exactly one of image, media or surface.`);
   const kind = present[0]!;
   if (kind === "image") {
-    if (element.attributes.audio !== undefined) throw new Error(`${element.name}.audio is only valid with video={Artifact}.`);
+    if (element.attributes.audio !== undefined) throw new Error(`${element.name}.audio is no longer accepted; normalize the source explicitly and use media={...}.`);
     return {
       kind,
       value: reference(element.attributes.image, `${element.name}.image`, artifactTypes.blob, resolve),
@@ -514,16 +439,7 @@ function declaredVisualSource(
     };
   }
   if (element.attributes.extent !== undefined) throw new Error(`${element.name}.extent is only valid with image={Artifact}.`);
-  if (kind === "video") {
-    const audio = optionalText(element, "audio") ?? "omit";
-    if (audio !== "include" && audio !== "omit") throw new Error(`${element.name}.audio must be include or omit.`);
-    return {
-      kind,
-      value: reference(element.attributes.video, `${element.name}.video`, artifactTypes.blob, resolve),
-      includeAudio: audio === "include",
-    };
-  }
-  if (element.attributes.audio !== undefined) throw new Error(`${element.name}.audio is only valid with video={Artifact}.`);
+  if (element.attributes.audio !== undefined) throw new Error(`${element.name}.audio is no longer accepted; normalize the source explicitly and use media={...}.`);
   return kind === "media"
     ? { kind, value: reference(element.attributes.media, `${element.name}.media`, mediaTypes.synchronized, resolve) }
     : { kind, value: reference(element.attributes.surface, `${element.name}.surface`, mediaTypes.compositableSurface, resolve) };
@@ -589,7 +505,6 @@ function sourceLayer(
     state.addReference(extentName, (source as Extract<DeclaredVisualSource, { readonly kind: "image" }>).extent);
     return { kind: "still", sourceName, extentName, fitName, specName };
   }
-  if (source.kind === "video") return { kind: "video", sourceName, includeAudio: source.includeAudio, fitName, specName };
   return { kind: sourceKind, sourceName, fitName, specName };
 }
 
@@ -642,7 +557,7 @@ function unitLayers(
       layers.push({ kind: "paint", specName: name });
       continue;
     }
-    allowed(child, ["id", "image", "video", "media", "surface", "extent", "audio", "appearance"]);
+    allowed(child, ["id", "image", "media", "surface", "extent", "appearance"]);
     layers.push(sourceLayer(state, {
       trackId: input.trackId, unitSuffix: input.unitSuffix, defaultRecipe: input.appearance, sourceElement: child,
     }, layerIndex, resolve));
@@ -668,13 +583,8 @@ function validateUnitChildren(element: StructuredElement, direct: boolean, allow
 
 function sourceAudio(
   element: StructuredElement,
-  directSource?: DeclaredVisualSource,
 ): MediaSequenceMemberSpec["sourceAudio"] {
   const fromLayer = optionalText(element, "source-audio");
-  if (directSource?.kind === "video" && directSource.includeAudio) {
-    if (fromLayer !== undefined) throw new Error(`${element.name} cannot combine audio=include with source-audio.`);
-    return { fromLayer: "content", gain: numberValue(element, "audio-gain", 1) };
-  }
   if (fromLayer === undefined) {
     if (element.attributes["audio-gain"] !== undefined) throw new Error(`${element.name}.audio-gain requires source-audio.`);
     return undefined;
@@ -740,7 +650,7 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
       itemIndex += 1;
       const itemSuffix = suffix(itemIndex);
       allowed(child, [
-        "id", "image", "video", "media", "surface", "extent", "audio", "frame", "appearance", "motion", "source-audio", "audio-gain",
+        "id", "image", "media", "surface", "extent", "frame", "appearance", "motion", "source-audio", "audio-gain",
         "clip", "during", "at", "for", "start", "end", "selection", "segment", "moment", "occurrences",
       ]);
       const id = optionalText(child, "id") ?? `${trackId}.item.${itemSuffix}`;
@@ -761,7 +671,7 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
       validateUnitChildren(child, directSource !== undefined, true);
       const layers = unitLayers(state, { trackId, unitSuffix: `item-${itemSuffix}`, element: child, appearance,
         ...(directSource === undefined ? {} : { directSource }), allowFramePaint: true }, resolveReference);
-      const selectedAudio = sourceAudio(child, directSource);
+      const selectedAudio = sourceAudio(child);
       const specName = `item-${itemSuffix}-spec`;
       state.addRecord(specName, `${trackId}.item.${itemSuffix}.spec`, mediaTrackTypes.itemSpec,
         decodeMediaItemSpec(appearance, { id, projection: binding.projection, expansion,
@@ -815,7 +725,7 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
     const members: FragmentMember[] = [];
     for (const [index, member] of memberElements.entries()) {
       const memberSuffix = suffix(index + 1);
-      allowed(member, ["id", "image", "video", "media", "surface", "extent", "audio", "appearance", "at", "boundary", "source-audio", "audio-gain"]);
+      allowed(member, ["id", "image", "media", "surface", "extent", "appearance", "at", "boundary", "source-audio", "audio-gain"]);
       const at = oneOfReferences(member.attributes.at, `${member.name}.at`, [narrativeTypes.moment, narrativeTypes.selection], resolveReference);
       usesMap = true;
       const boundary = optionalText(member, "boundary");
@@ -830,7 +740,7 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
       const unitSuffix = `sequence-${sequenceSuffix}-member-${memberSuffix}`;
       const layers = unitLayers(state, { trackId, unitSuffix, element: member, appearance: memberAppearance,
         ...(directSource === undefined ? {} : { directSource }), allowFramePaint: true }, resolveReference);
-      const selectedAudio = sourceAudio(member, directSource);
+      const selectedAudio = sourceAudio(member);
       if (selectedAudio !== undefined) hasAudio = true;
       const specName = `${unitSuffix}-spec`;
       state.addRecord(specName, `${trackId}.${unitSuffix}.spec`, mediaTrackTypes.memberSpec,

@@ -16,7 +16,6 @@
     "@hypit/composition": "workspace:*",
     "@hypit/elaborator": "workspace:*",
     "@hypit/media": "workspace:*",
-    "@hypit/media-pipeline": "workspace:*",
     "@hypit/narrative": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",

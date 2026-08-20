@@ -3,7 +3,7 @@ import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 
 import type { SynchronizedMedia, TimelineAudio } from "@hypit/media";
-import type { NarrativeExcerpt } from "@hypit/narrative";
+import type { SemanticTake } from "@hypit/speech";
 import {
   appendSpeechSpineAudioTake,
   appendSpeechSpineVisualTake,
@@ -22,10 +22,6 @@ const fit = {
   constraint: "bounded" as const,
 };
 
-function segment(id: string, index: number): NarrativeExcerpt {
-  return { kind: "segment", id, tokenStart: index, tokenEndExclusive: index + 1 };
-}
-
 function synchronized(id: string, visual: boolean): SynchronizedMedia {
   return {
     timeline: {
@@ -43,6 +39,35 @@ function synchronized(id: string, visual: boolean): SynchronizedMedia {
   };
 }
 
+function semantic(id: string, visual: boolean): SemanticTake {
+  const media = synchronized(id, visual);
+  return {
+    media,
+    segment: {
+      segmentId: id,
+      startAnchorId: `segment:${id}:start`,
+      endAnchorId: `segment:${id}:end`,
+      startFrame: 0,
+      endFrameExclusive: media.timeline.frameCount,
+    },
+    tokens: [{
+      tokenId: `segment:${id}:token:1`,
+      segmentId: id,
+      text: id,
+      startAnchorId: `segment:${id}:token:1:start`,
+      endAnchorId: `segment:${id}:token:1:end`,
+      startFrame: 0,
+      endFrameExclusive: media.timeline.frameCount,
+    }],
+    anchors: [
+      { identity: `segment:${id}:start`, frame: 0 },
+      { identity: `segment:${id}:end`, frame: media.timeline.frameCount },
+      { identity: `segment:${id}:token:1:start`, frame: 0 },
+      { identity: `segment:${id}:token:1:end`, frame: media.timeline.frameCount },
+    ],
+  };
+}
+
 test("audio Takes lengthen the speech program without inventing a visual clip", () => {
   const program = sealSpeechSpineProgram({
 
@@ -50,12 +75,11 @@ test("audio Takes lengthen the speech program without inventing a visual clip", 
     frameRate: { numerator: 30, denominator: 1 },
   });
   let set = createSpeechSpineSet();
-  set = appendSpeechSpineAudioTake(set, program, synchronized("voice", false), segment("voiceover", 0));
+  set = appendSpeechSpineAudioTake(set, program, semantic("voiceover", false));
   set = appendSpeechSpineVisualTake(
     set,
     program,
-    synchronized("presenter", true),
-    segment("answer", 1),
+    semantic("answer", true),
     frame,
     fit,
     sealSpeechSpineVisualSpec({ stackingOrder: 30 }),
@@ -70,7 +94,7 @@ test("audio Takes lengthen the speech program without inventing a visual clip", 
   assert.equal(basis.visualTrack.clips.length, 1);
   assert.deepEqual(basis.visualTrack.clips[0], {
     segmentId: "answer",
-    artifact: synchronized("presenter", true).visual!.artifact,
+    artifact: synchronized("answer", true).visual!.artifact,
     extent: { widthPx: 720, heightPx: 1280 },
     frame,
     fit,

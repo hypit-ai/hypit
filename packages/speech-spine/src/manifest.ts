@@ -1,10 +1,9 @@
 import { readFile } from "node:fs/promises";
 
 import { artifactDependency, artifactTypes } from "@hypit/artifact";
-import { narrativeDependency, narrativeExcerptSchema, narrativeTypes } from "@hypit/narrative";
-import { mediaDependency, mediaTypes, synchronizedMediaSchema } from "@hypit/media";
+import { mediaDependency, mediaTypes } from "@hypit/media";
 import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
-import { speechDependency, speechTypes } from "@hypit/speech";
+import { semanticTakeSchema, speechDependency, speechTypes } from "@hypit/speech";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import {
   mediaPipelineManifest,
@@ -12,6 +11,7 @@ import {
   mediaPipelineTypes,
 } from "@hypit/media-pipeline";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
 import { speechBasisManifest, speechBasisModuleRef } from "@hypit/speech-basis";
 import {
   contentFitSchema,
@@ -39,6 +39,7 @@ export const speechSpineProducers = {
   appendVisualTake: { module: speechSpineModuleRef, name: "append-spine-visual-take" },
   compileAudio: { module: speechSpineModuleRef, name: "compile-spine-audio" },
   assembleBasis: { module: speechSpineModuleRef, name: "assemble-speech-basis" },
+  assembleSemanticMap: { module: speechSpineModuleRef, name: "assemble-semantic-map" },
 } satisfies Record<string, ProducerRef>;
 
 const string = { kind: "string", minLength: 1 } as const;
@@ -58,8 +59,7 @@ export const speechSpineProgramSchema: ValueSchema = object({
 export const speechSpineSetSchema: ValueSchema = object({
 
   takes: { schema: { kind: "array", items: object({
-    segment: { schema: narrativeExcerptSchema },
-    media: { schema: synchronizedMediaSchema },
+    semantic: { schema: semanticTakeSchema },
     visual: { schema: object({
       frame: { schema: spatialFrameSchema },
       fit: { schema: contentFitSchema },
@@ -98,18 +98,19 @@ export const speechSpineMarkupSurfaces = [{
     tag: "Spine",
     mode: "structured",
     outputs: [speechSpineTypes.spineProgram, speechSpineTypes.visualSpec, spatialTypes.fit,
-      mediaPipelineTypes.selectionRequest,
-      speechTypes.basis, programSpaceTypes.programSpace, speechTypes.audioBasis,
-      compositionTypes.visualTrack, compositionTypes.audioTrack],
+      speechTypes.basis, programSpaceTypes.programSpace,
+      compositionTypes.visualTrack, compositionTypes.audioTrack, semanticMapTypes.complete],
     vocabulary: {
       summary: "Folds ordered speech Takes into one SpeechBasis, and publishes the ProgramSpace every other Track is timed against together with the peer VisualTrack and AudioTrack the speech renders to.",
       appearance: "The speaking picture itself, and the layer every other Track is stacked over. Each Take's own footage fills the Frame the Spine names, fitted by its Recipe, and the Takes run one after another in the order they are written, so the picture cuts from one to the next at each Take boundary with nothing between them. A Take may name its own Frame, so the picture can move or resize at a boundary; otherwise the framing holds. Nothing is drawn on top: titles, captions and cutaways are separate Tracks lying above this one.",
       preview: previewImage("Spine.png"),
       attributes: [
         { name: "id", kind: "identifier", required: true,
-          summary: "Names this Spine and prefixes the Program, the media normalization and every binding it publishes." },
-        { name: "frame-rate", kind: "literal", required: true,
-          summary: "Fixes the frame rate every Take is normalized to and the ProgramSpace is measured in, written as a positive rational such as 30 or 30000/1001." },
+          summary: "Names this Spine and prefixes every projection it publishes." },
+        { name: "clock", kind: "reference", required: false, accepts: [programSpaceTypes.clock],
+          summary: "Selects the authored frame clock shared by the normalized Takes." },
+        { name: "frame-rate", kind: "literal", required: false,
+          summary: "Legacy inline frame rate; write exactly one of clock or frame-rate." },
         { name: "visual-frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
           summary: "Chooses the Frame every visual Take occupies unless the Take names its own." },
         { name: "visual-appearance", kind: "reference", required: true, accepts: [svsRecipeType],
@@ -120,16 +121,10 @@ export const speechSpineMarkupSurfaces = [{
       ],
       children: [
         { tag: "Take", cardinality: "many",
-          summary: "One spoken Segment and the single source that performs it, in document order.",
+          summary: "One self-contained SemanticTake, in document order.",
           attributes: [
-            { name: "segment", kind: "reference", required: true, accepts: [narrativeTypes.excerpt],
-              summary: "Chooses the spoken Segment this Take performs." },
-            { name: "video", kind: "reference", required: false, accepts: [artifactTypes.blob],
-              summary: "Performs the Segment from a raw video the Surface inspects, selects and normalizes before assembly." },
-            { name: "audio", kind: "reference", required: false, accepts: [artifactTypes.blob],
-              summary: "Performs the Segment from a voice recording normalized audio-authoritatively, contributing no visual clip." },
-            { name: "media", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
-              summary: "Performs the Segment from an already prepared timed source, connected directly." },
+            { name: "source", kind: "reference", required: true, accepts: [speechTypes.semanticTake],
+              summary: "Chooses the normalized and locally aligned SemanticTake this Spine assembles." },
             { name: "frame", kind: "reference", required: false, accepts: [spatialTypes.frame],
               summary: "Chooses this Take's own Frame in place of the Spine's `visual-frame`." },
             { name: "appearance", kind: "reference", required: false, accepts: [svsRecipeType],
@@ -144,22 +139,22 @@ export const speechSpineMarkupSurfaces = [{
           summary: "The assembled SpeechBasis: the ordered Takes, their placed audio and their visual clips." },
         { name: "space", type: programSpaceTypes.programSpace,
           summary: "The speech coordinate space, the frame domain every other Track resolves its windows in." },
-        { name: "audio", type: speechTypes.audioBasis,
-          summary: "The rendered speech audio, as the timed basis measurement and captioning read." },
         { name: "visual", type: compositionTypes.visualTrack,
           summary: "The rendered speech picture, an ordinary peer VisualTrack." },
         { name: "audioTrack", type: compositionTypes.audioTrack,
           summary: "The rendered speech sound, an ordinary peer AudioTrack." },
+        { name: "semanticMap", type: semanticMapTypes.complete,
+          summary: "The complete global map assembled by translating each Take's local semantic frames." },
       ],
-      example: `<speech:Spine id="speech" frame-rate="30"
+      example: `<speech:Spine id="speech" clock={clock}
   visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
-  <speech:Take video={take-opening.video} segment={story.segment.opening}/>
-  <speech:Take video={take-closing.video} segment={story.segment.closing}/>
+  <speech:Take source={opening.take}/>
+  <speech:Take source={closing.take}/>
 </speech:Spine>`,
       notes: [
         "A Spine requires at least one Take and accepts no text content.",
         "`visual-appearance` and a Take's `appearance` must each be an authored SVS Recipe declaring only the spatial fit properties listed for them; any other property is refused.",
-        "A Take states exactly one of `video`, `audio` or `media`; an `audio` Take is refused `frame`, `appearance` and `z`.",
+        "Media normalization, acoustic evidence and Segment alignment happen before a Take enters the Spine.",
         "Placement and stacking are the complete visual authority of a Spine; motion, transitions and independent pictures remain ordinary Media Tracks.",
       ],
     },
@@ -172,7 +167,6 @@ export const speechSpineManifest: ModuleManifest = {
   version: speechSpineModuleRef.version,
   dependencies: [
     artifactDependency,
-    narrativeDependency,
     mediaDependency,
     programSpaceDependency,
     speechDependency,
@@ -181,6 +175,7 @@ export const speechSpineManifest: ModuleManifest = {
     { module: svsModuleRef },
     { module: mediaPipelineModuleRef },
     { module: speechBasisModuleRef },
+    semanticMapDependency,
   ],
   types: [
     { name: speechSpineTypes.spineProgram.name },
@@ -200,8 +195,7 @@ export const speechSpineManifest: ModuleManifest = {
       inputs: [
         { name: "set", type: speechSpineTypes.spineSet },
         { name: "program", type: speechSpineTypes.spineProgram },
-        { name: "media", type: mediaTypes.synchronized },
-        { name: "segment", type: narrativeTypes.excerpt },
+        { name: "take", type: speechTypes.semanticTake },
       ],
       outputs: [{ name: "set", type: speechSpineTypes.spineSet }],
       needs: [],
@@ -211,8 +205,7 @@ export const speechSpineManifest: ModuleManifest = {
       inputs: [
         { name: "set", type: speechSpineTypes.spineSet },
         { name: "program", type: speechSpineTypes.spineProgram },
-        { name: "media", type: mediaTypes.synchronized },
-        { name: "segment", type: narrativeTypes.excerpt },
+        { name: "take", type: speechTypes.semanticTake },
         { name: "frame", type: spatialTypes.frame },
         { name: "fit", type: spatialTypes.fit },
         { name: "visualSpec", type: speechSpineTypes.visualSpec },
@@ -237,6 +230,12 @@ export const speechSpineManifest: ModuleManifest = {
         { name: "audio", type: mediaTypes.timelineAudio },
       ],
       outputs: [{ name: "basis", type: speechTypes.basis }],
+      needs: [],
+    },
+    {
+      name: speechSpineProducers.assembleSemanticMap.name,
+      inputs: [{ name: "set", type: speechSpineTypes.spineSet }],
+      outputs: [{ name: "map", type: semanticMapTypes.complete }],
       needs: [],
     },
   ],
