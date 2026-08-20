@@ -88,7 +88,7 @@ test("managed and external OpenCV deployments never mix their interpreters", () 
 
 const liveEnabled = process.env.HYPIT_OPENCV_TESTS === "1";
 const openCvPython = process.env.HYPIT_OPENCV_PYTHON ?? "python3";
-const hasOpenCv = spawnSync(openCvPython, ["-c", "import cv2, numpy"], { stdio: "ignore" }).status === 0;
+const hasOpenCv = spawnSync(openCvPython, ["-c", "import cv2, numpy"], { stdio: "ignore", windowsHide: true }).status === 0;
 
 test("the local Provider returns only a new image BlobArtifact", {
   skip: !liveEnabled || !hasOpenCv,
@@ -158,7 +158,7 @@ test("the local Provider composes ordered Layers into exact Canvas pixels", {
     "import cv2, numpy as np, sys",
     "im=cv2.imdecode(np.frombuffer(sys.stdin.buffer.read(),np.uint8),cv2.IMREAD_UNCHANGED)",
     "print(im.shape[1], im.shape[0], im.shape[2], ','.join(map(str,im[0,0])))",
-  ].join(";")], { input: Buffer.from(output), encoding: "utf8" });
+  ].join(";")], { input: Buffer.from(output), encoding: "utf8", windowsHide: true });
   assert.equal(probe.status, 0, probe.stderr);
   assert.match(probe.stdout.trim(), /^3 2 4 \d+,\d+,\d+,\d+$/u);
 });
