@@ -18,7 +18,7 @@ export const audioAdapters: readonly StudioAdapter[] = [
   { id: "audio-program", role: "realization", output: { type: "AudioTrackProgram", modules: ["@hypit/audio-track"] } },
   {
     id: "audio", role: "track", output: { type: "AudioTrack", surface: "track", modules: ["@hypit/audio-track"] },
-    family: "audio", icon: "graphic_eq", interaction: readonlyInteraction,
+    family: "audio", icon: "waveform", interaction: readonlyInteraction,
     realizationPorts: ["program"], project: projectAudio,
   },
 ];

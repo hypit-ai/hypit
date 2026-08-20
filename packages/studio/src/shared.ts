@@ -9,21 +9,50 @@ export type Range = { readonly start: number; readonly end: number };
 export type CandidateOrigin = "run" | "source" | "none";
 export type CandidateStatus = "resolved" | "unresolved";
 
-export type StudioTrackFamily =
-  | "speech"
-  | "media"
-  | "text"
-  | "caption"
-  | "component"
-  | "audio"
-  | "visual";
+/** Adapter-owned family id. Studio must not make third-party families edit this protocol. */
+export type StudioTrackFamily = string;
 
 export type StudioTimelinePresentation = {
   /** What one selectable box means, never how the renderer happened to split it. */
-  readonly entity: "present" | "audio-clip" | "semantic-take" | "media-item" | "caption-cue" | "ranking" | "ranking-reveal";
-  readonly shape: "block" | "picture" | "waveform" | "words" | "group" | "window";
+  readonly entity: string;
+  readonly shape: string;
   readonly parentId?: string;
   readonly depth: number;
+};
+
+/** One semantic source that an authored component bound its timing to. */
+export type StudioTemporalSource = {
+  readonly kind: "program" | "selection" | "segment" | "moment" | "parent-schedule";
+  readonly id?: string;
+  /** Repeated Selection/Moment occurrences stay distinct when a component expands `each`. */
+  readonly occurrenceId?: string;
+};
+
+/** The exact authored endpoint expressions and the frame window they projected to. */
+export type StudioTemporalProjection = {
+  readonly startExpression: string;
+  readonly endExpression: string;
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+};
+
+export type StudioTemporalPhase = {
+  readonly id: string;
+  readonly label: string;
+  readonly role: "preferred" | "active" | "settled" | "enter" | "body" | "exit";
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+};
+
+/**
+ * Studio's explanation of an entity's time. The Clip span remains the actual
+ * consumption window; this value preserves how author and component arrived
+ * there without pretending every layer is another Track item.
+ */
+export type StudioTemporalLineage = {
+  readonly source: StudioTemporalSource;
+  readonly projection?: StudioTemporalProjection;
+  readonly phases: readonly StudioTemporalPhase[];
 };
 
 export type StudioInteraction = {
@@ -105,6 +134,7 @@ export type Clip = {
   readonly elementRange?: Range;
   readonly stackOrder: number;
   readonly presentation: StudioTimelinePresentation;
+  readonly temporal?: StudioTemporalLineage;
   readonly interaction: StudioInteraction;
   /** Rendering identities implementing this author entity; optional for non-visual entities. */
   readonly renderIds: readonly string[];
@@ -190,6 +220,19 @@ export type SemanticTimeline = {
   readonly anchors: readonly SemanticAnchor[];
   readonly segments: readonly SemanticSegment[];
   readonly tokens: readonly SemanticToken[];
+  readonly selections: readonly {
+    readonly id: string;
+    readonly occurrence: number;
+    readonly occurrenceId: string;
+    readonly startFrame: number;
+    readonly endFrameExclusive: number;
+  }[];
+  readonly moments: readonly {
+    readonly id: string;
+    readonly occurrence: number;
+    readonly occurrenceId: string;
+    readonly frame: number;
+  }[];
   /** The SemanticTrack candidate that supplied these frame anchors. */
   readonly provenance: CandidateProvenance;
 };
@@ -197,6 +240,7 @@ export type SemanticTimeline = {
 export type StudioSnapshot = {
   readonly revision: number;
   readonly source: {
+    /** Workspace-relative presentation path; the server retains the absolute write target. */
     readonly path: string;
     readonly text: string;
   };
@@ -214,7 +258,7 @@ export type StudioSnapshot = {
    * The special Studio lane. This is not another VisualTrack: it is the
    * Narrative's segment/word geometry projected onto the same frame domain.
    */
-  readonly semantic?: SemanticTimeline;
+  readonly semantic: SemanticTimeline;
   /**
    * The picture, ready to mount. Real material is the base layer rather than the
    * whole picture: the Tracks above it have not been rendered into that file, so

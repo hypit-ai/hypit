@@ -471,6 +471,8 @@ export const mediaTrackMarkupSurfaces = [{
           ] },
       ],
       ports: [
+        { name: "program", type: mediaTrackTypes.program,
+          summary: "The resolved Item and Sequence schedule consumed by both rendered facets." },
         { name: "visual", type: compositionTypes.visualTrack,
           summary: "The rendered picture, an ordinary peer VisualTrack." },
         { name: "audio", type: compositionTypes.audioTrack,

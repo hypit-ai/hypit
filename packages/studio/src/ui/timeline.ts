@@ -1,4 +1,5 @@
 import type { SemanticAnchor, SemanticToken, StudioSnapshot } from "../shared.js";
+import { icon, setIcon } from "./icons.js";
 import { markerTones } from "./markers.js";
 import type { State, Store } from "./selection.js";
 import { createZoom } from "./zoom.js";
@@ -24,8 +25,8 @@ function timecode(seconds: number): string {
  * editor would lay them out.
  */
 /** One row of one Track. A Track with overlapping clips is several rows tall. */
-const LANE_HEIGHT = 52;
-const SEMANTIC_HEIGHT = 72;
+const LANE_HEIGHT = 56;
+const SEMANTIC_HEIGHT = 96;
 
 /** Tracks the reader has opened. A Track shows only its front row until then. */
 const opened = new Set<string>();
@@ -46,21 +47,21 @@ export function createTimeline(store: Store): Timeline {
   element.innerHTML = `
     <div class="timeline-toolbar">
       <div class="timeline-title">
-        <span class="material-symbols-rounded">view_timeline</span>
+        ${icon("timeline")}
         <strong>Timeline</strong>
         <span class="timeline-mode"><i></i>Semantic + frame timebase</span>
       </div>
-      <div class="timeline-readout" data-readout></div>
+      <div></div>
       <div class="timeline-view-actions">
         <span class="timeline-hint">⌘ scroll to zoom</span>
         <button type="button" class="icon-button" data-zoom-out aria-label="Zoom out" title="Zoom out">
-          <span class="material-symbols-rounded">remove</span>
+          ${icon("minus")}
         </button>
         <button type="button" class="icon-button" data-zoom-fit aria-label="Fit timeline" title="Fit timeline">
-          <span class="material-symbols-rounded">fit_screen</span>
+          ${icon("fit")}
         </button>
         <button type="button" class="icon-button" data-zoom-in aria-label="Zoom in" title="Zoom in">
-          <span class="material-symbols-rounded">add</span>
+          ${icon("plus")}
         </button>
       </div>
     </div>
@@ -74,7 +75,6 @@ export function createTimeline(store: Store): Timeline {
     </div>
     <div class="timeline-zoom" data-zoom></div>`;
 
-  const readout = element.querySelector<HTMLElement>("[data-readout]")!;
   const labels = element.querySelector<HTMLElement>("[data-labels]")!;
   const lanes = element.querySelector<HTMLElement>("[data-lanes]")!;
   // The whole programme as a bar, with the shown part as a window inside it.
@@ -96,6 +96,7 @@ export function createTimeline(store: Store): Timeline {
   let built = -1;
   let clipNodes: readonly { readonly node: HTMLElement; readonly start: number; readonly end: number; readonly id: string }[] = [];
   let semanticNodes: readonly { readonly node: HTMLElement; readonly start: number; readonly end: number; readonly kind: "segment" | "word" }[] = [];
+  let sourceNodes: readonly { readonly node: HTMLElement; readonly id: string; readonly occurrenceId: string }[] = [];
   let paintFrame = 0;
 
   const fps = (snapshot: StudioSnapshot): number =>
@@ -149,6 +150,17 @@ export function createTimeline(store: Store): Timeline {
       tick.textContent = timecode(seconds);
       ruler.append(tick);
     }
+    for (const segment of snapshot.semantic.segments) {
+      const from = place(segment.startFrame, snapshot.space.frameCount, zoom.window());
+      const to = place(segment.endFrameExclusive, snapshot.space.frameCount, zoom.window());
+      if (to <= 0 || from >= 1) continue;
+      const marker = document.createElement("span");
+      marker.className = "ruler-segment";
+      marker.style.left = `${Math.max(0, from) * 100}%`;
+      marker.style.width = `${Math.max(0, Math.min(1, to) - Math.max(0, from)) * 100}%`;
+      marker.textContent = segment.id;
+      ruler.append(marker);
+    }
   };
 
   const build = (snapshot: StudioSnapshot): void => {
@@ -163,13 +175,14 @@ export function createTimeline(store: Store): Timeline {
     labels.append(corner);
 
     const nextSemanticNodes: { node: HTMLElement; start: number; end: number; kind: "segment" | "word" }[] = [];
+    const nextSourceNodes: { node: HTMLElement; id: string; occurrenceId: string }[] = [];
     const semanticTextNodes: { node: HTMLElement; label: HTMLElement }[] = [];
-    if (snapshot.semantic !== undefined && snapshot.semantic.segments.length > 0) {
+    if (snapshot.semantic.segments.length > 0) {
       const semanticLabel = document.createElement("div");
       semanticLabel.className = "track-label semantic-label track-visual";
       semanticLabel.style.height = `${SEMANTIC_HEIGHT}px`;
       semanticLabel.innerHTML = `
-        <span class="material-symbols-rounded track-icon">timeline</span>
+        <span class="track-icon">${icon("timeline")}</span>
         <span class="track-copy"><strong>Semantic</strong><small></small></span>
         <span class="track-state"></span>`;
       const semanticSource = snapshot.semantic.provenance.candidateId === undefined
@@ -274,6 +287,32 @@ export function createTimeline(store: Store): Timeline {
         }
         semanticLane.append(node);
       }
+      for (const selection of snapshot.semantic.selections) {
+        const from = place(selection.startFrame, snapshot.space.frameCount, zoom.window());
+        const to = place(selection.endFrameExclusive, snapshot.space.frameCount, zoom.window());
+        if (to <= 0 || from >= 1) continue;
+        const node = document.createElement("span");
+        node.className = "semantic-selection-source";
+        node.style.left = `${Math.max(0, from) * 100}%`;
+        node.style.width = `${Math.max(0, Math.min(1, to) - Math.max(0, from)) * 100}%`;
+        node.title = `Selection ${selection.occurrenceId} · ${selection.startFrame}-${selection.endFrameExclusive}f`;
+        const tone = tones.get(selection.id);
+        if (tone !== undefined) node.classList.add(`tone-${tone}`);
+        semanticLane.append(node);
+        nextSourceNodes.push({ node, id: selection.id, occurrenceId: selection.occurrenceId });
+      }
+      for (const moment of snapshot.semantic.moments) {
+        const at = place(moment.frame, snapshot.space.frameCount, zoom.window());
+        if (at < 0 || at > 1) continue;
+        const node = document.createElement("span");
+        node.className = "semantic-moment-source";
+        node.style.left = `${at * 100}%`;
+        node.title = `Moment ${moment.occurrenceId} · ${moment.frame}f`;
+        const tone = tones.get(moment.id);
+        if (tone !== undefined) node.classList.add(`tone-${tone}`);
+        semanticLane.append(node);
+        nextSourceNodes.push({ node, id: moment.id, occurrenceId: moment.occurrenceId });
+      }
       rows.append(semanticLane);
       // Widths are only meaningful after the lane has entered the document.
       // Hide labels that cannot fit in full; a clipped word remains a useful
@@ -294,8 +333,8 @@ export function createTimeline(store: Store): Timeline {
       const kind = track.binding.family;
       const label = document.createElement("div");
       label.className = `track-label track-${kind}`;
-      label.innerHTML = `<span class="material-symbols-rounded track-icon"></span><span class="track-copy"><strong></strong><small></small></span><span class="track-state"></span>`;
-      label.querySelector(".track-icon")!.textContent = track.binding.icon;
+      label.innerHTML = `<span class="track-icon"></span><span class="track-copy"><strong></strong><small></small></span><span class="track-state"></span>`;
+      setIcon(label.querySelector(".track-icon")!, track.binding.icon);
       label.querySelector("strong")!.textContent = track.label;
       label.querySelector("small")!.textContent =
         `${track.clips.length} clip${track.clips.length === 1 ? "" : "s"}`;
@@ -310,6 +349,12 @@ export function createTimeline(store: Store): Timeline {
       const freeFrom: number[] = [];
       const rowOf = new Map<string, number>();
       const roots = track.clips.filter((clip) => clip.presentation.parentId === undefined);
+      const childrenByParent = new Map<string, typeof track.clips>();
+      for (const clip of track.clips) {
+        const parentId = clip.presentation.parentId;
+        if (parentId === undefined) continue;
+        childrenByParent.set(parentId, [...(childrenByParent.get(parentId) ?? []), clip]);
+      }
       const ordered = [...roots].sort((a, b) =>
         b.stackOrder - a.stackOrder || a.startFrame - b.startFrame);
       for (const clip of ordered) {
@@ -362,15 +407,47 @@ export function createTimeline(store: Store): Timeline {
         node.style.left = `${visibleFrom * 100}%`;
         const row = rowOf.get(clip.id) ?? 0;
         if (folded && row > 0) continue;
-        node.style.top = `${row * LANE_HEIGHT}px`;
+        const parentId = clip.presentation.parentId;
+        if (parentId === undefined) {
+          node.style.top = `${row * LANE_HEIGHT}px`;
+        } else {
+          const siblings = childrenByParent.get(parentId) ?? [];
+          const index = Math.max(0, siblings.findIndex((candidate) => candidate.id === clip.id));
+          const slot = 38 / Math.max(1, siblings.length);
+          node.classList.add("clip-nested-child");
+          node.style.top = `${row * LANE_HEIGHT + 8 + index * slot}px`;
+          node.style.height = `${Math.max(3, slot - 2)}px`;
+        }
         node.style.width = `${Math.max(0, visibleTo - visibleFrom) * 100}%`;
         node.title = `${clip.label} (${clip.startFrame}-${clip.endFrameExclusive}f)`;
         node.innerHTML = `
+          <span class="clip-phases"></span>
           ${clip.interaction.trimStart ? '<span class="clip-edge clip-edge-left"></span>' : ""}
-          <span class="material-symbols-rounded clip-icon"></span>
           <span class="clip-copy"><span class="clip-name"></span><span class="clip-meta"></span></span>
           ${clip.interaction.trimEnd ? '<span class="clip-edge clip-edge-right"></span>' : ""}`;
-        node.querySelector(".clip-icon")!.textContent = track.binding.icon;
+        const projection = clip.temporal?.projection;
+        if (projection !== undefined) {
+          const projectionFrom = place(projection.startFrame, snapshot.space.frameCount, zoom.window());
+          const projectionTo = place(projection.endFrameExclusive, snapshot.space.frameCount, zoom.window());
+          if (projectionTo > 0 && projectionFrom < 1) {
+            const line = document.createElement("span");
+            line.className = "projection-line";
+            line.style.left = `${(Math.max(0, projectionFrom) - visibleFrom) / Math.max(1e-6, visibleTo - visibleFrom) * 100}%`;
+            line.style.width = `${(Math.min(1, projectionTo) - Math.max(0, projectionFrom)) / Math.max(1e-6, visibleTo - visibleFrom) * 100}%`;
+            line.title = `${projection.startExpression} → ${projection.endExpression} · ${projection.startFrame}-${projection.endFrameExclusive}f`;
+            node.append(line);
+          }
+        }
+        const phaseLayer = node.querySelector<HTMLElement>(".clip-phases")!;
+        for (const phase of clip.temporal?.phases ?? []) {
+          if (phase.endFrameExclusive <= clip.startFrame || phase.startFrame >= clip.endFrameExclusive) continue;
+          const phaseNode = document.createElement("span");
+          phaseNode.className = `clip-phase clip-phase-${phase.role}`;
+          phaseNode.style.left = `${(phase.startFrame - clip.startFrame) / Math.max(1, clip.endFrameExclusive - clip.startFrame) * 100}%`;
+          phaseNode.style.width = `${(phase.endFrameExclusive - phase.startFrame) / Math.max(1, clip.endFrameExclusive - clip.startFrame) * 100}%`;
+          phaseNode.title = `${phase.label} · ${phase.startFrame}-${phase.endFrameExclusive}f`;
+          phaseLayer.append(phaseNode);
+        }
         node.querySelector(".clip-name")!.textContent = clip.label;
         node.querySelector(".clip-meta")!.textContent =
           `${((clip.endFrameExclusive - clip.startFrame) / fps(snapshot)).toFixed(2)}s`;
@@ -386,11 +463,13 @@ export function createTimeline(store: Store): Timeline {
         });
         nextClipNodes.push({ node, start: clip.startFrame, end: clip.endFrameExclusive, id: clip.id });
         lane.append(node);
+        requestAnimationFrame(() => node.classList.toggle("clip-wide", node.clientWidth >= 120));
       }
       rows.append(lane);
     }
     clipNodes = nextClipNodes;
     semanticNodes = nextSemanticNodes;
+    sourceNodes = nextSourceNodes;
     drawRuler(snapshot);
   };
 
@@ -399,8 +478,6 @@ export function createTimeline(store: Store): Timeline {
     const { snapshot, selection, playhead: head } = state;
     const position = place(head.frame, snapshot.space.frameCount, zoom.window()) * lanes.clientWidth;
     playhead.style.transform = `translate3d(${position}px,0,0)`;
-    readout.textContent =
-      `${timecode(head.frame / fps(snapshot))}:${String(head.frame % Math.round(fps(snapshot))).padStart(2, "0")}  ·  ${head.frame}f`;
     for (const item of clipNodes) {
       item.node.classList.toggle("selected", selection.kind === "clip" && selection.clipId === item.id);
       item.node.setAttribute("aria-pressed", String(selection.kind === "clip" && selection.clipId === item.id));
@@ -409,6 +486,12 @@ export function createTimeline(store: Store): Timeline {
     for (const item of semanticNodes) {
       item.node.classList.toggle("live", item.kind === "segment" && head.frame >= item.start && head.frame < item.end);
       item.node.classList.toggle("current", item.kind === "word" && head.frame >= item.start && head.frame < item.end);
+    }
+    const selectedClip = selection.kind === "clip" ? store.clip(selection.clipId) : undefined;
+    for (const item of sourceNodes) {
+      const source = selectedClip?.temporal?.source;
+      item.node.classList.toggle("linked", source?.id === item.id
+        && (source.occurrenceId === undefined || source.occurrenceId === item.occurrenceId));
     }
   };
 

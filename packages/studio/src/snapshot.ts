@@ -138,6 +138,18 @@ type NarrativeValue = {
     readonly endAnchorId: string;
     readonly text: string;
   }[];
+  readonly selections?: readonly {
+    readonly id: string;
+    readonly occurrences: readonly {
+      readonly occurrence: number;
+      readonly startAnchorId: string;
+      readonly endAnchorId: string;
+    }[];
+  }[];
+  readonly moments?: readonly {
+    readonly id: string;
+    readonly occurrences: readonly { readonly occurrence: number; readonly anchorId: string }[];
+  }[];
   readonly semanticIndex?: {
     readonly anchors?: readonly {
       readonly id: string;
@@ -163,11 +175,11 @@ function inlineRecord(compiled: unknown, id: string): unknown {
  * already using. No frontend timing is invented here: if an anchor is absent
  * from the built SemanticTrack, the corresponding item is simply not drawable yet.
  */
-function semanticTimeline(built: Preview, script: ScriptMap | undefined): SemanticTimeline | undefined {
+function semanticTimeline(built: Preview, script: ScriptMap | undefined): SemanticTimeline {
   const exported = built.source.exports.find((item) => item.type === "Narrative");
-  if (exported === undefined) return undefined;
+  if (exported === undefined) throw new Error("Studio SemanticTrack has no traceable Narrative.");
   const narrative = inlineRecord(built.source.compiled, exported.ref) as NarrativeValue | undefined;
-  if (narrative === undefined) return undefined;
+  if (narrative === undefined) throw new Error("Studio Narrative is not an inline authored value.");
 
   const segmentRanges = new Map((script?.segments ?? []).map((item) => [item.id, item.range]));
   const tokenRanges = new Map((script?.tokens ?? []).map((item) => [item.id, item.range]));
@@ -208,7 +220,30 @@ function semanticTimeline(built: Preview, script: ScriptMap | undefined): Semant
       ...(anchor.tokenId === undefined ? {} : { tokenId: anchor.tokenId }),
     }];
   });
-  if (segments.length === 0 && tokens.length === 0) return undefined;
+  const selections = (narrative.selections ?? []).flatMap((selection) =>
+    selection.occurrences.flatMap((occurrence) => {
+      const startFrame = frame(occurrence.startAnchorId);
+      const endFrameExclusive = frame(occurrence.endAnchorId);
+      if (startFrame === undefined || endFrameExclusive === undefined || endFrameExclusive <= startFrame) return [];
+      return [{
+        id: selection.id,
+        occurrence: occurrence.occurrence,
+        occurrenceId: `${selection.id}#${occurrence.occurrence}`,
+        startFrame,
+        endFrameExclusive,
+      }];
+    }));
+  const moments = (narrative.moments ?? []).flatMap((moment) =>
+    moment.occurrences.flatMap((occurrence) => {
+      const at = frame(occurrence.anchorId);
+      return at === undefined ? [] : [{
+        id: moment.id,
+        occurrence: occurrence.occurrence,
+        occurrenceId: `${moment.id}#${occurrence.occurrence}`,
+        frame: at,
+      }];
+    }));
+  if (segments.length === 0) throw new Error("Studio SemanticTrack resolves no authored Segment anchors.");
   const provenance: CandidateProvenance = {
     output: built.timingOutput?.name ?? "SemanticTrack",
     ...(built.timingOutput?.ref === undefined ? {} : { outputRef: built.timingOutput.ref }),
@@ -221,6 +256,8 @@ function semanticTimeline(built: Preview, script: ScriptMap | undefined): Semant
     anchors: anchors.sort((left, right) => left.frame - right.frame || left.id.localeCompare(right.id)),
     segments: segments.sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
     tokens: tokens.sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
+    selections: selections.sort((left, right) => left.startFrame - right.startFrame || left.occurrenceId.localeCompare(right.occurrenceId)),
+    moments: moments.sort((left, right) => left.frame - right.frame || left.occurrenceId.localeCompare(right.occurrenceId)),
     provenance,
   };
 }
@@ -306,6 +343,7 @@ export function snapshot(built: Preview, input: {
       ...(placement === undefined ? {} : { placement }),
       spans: projectedSpans,
       values: built.values,
+      semantic,
       generic,
     }).map((draft) => sealStudioClip(item.outputRef, draft, binding));
     const provenance: CandidateProvenance = {
@@ -356,7 +394,7 @@ export function snapshot(built: Preview, input: {
       durationSec: frameCount * input.frameRate.denominator / input.frameRate.numerator,
     },
     tracks: rows,
-    ...(semantic === undefined ? {} : { semantic }),
+    semantic,
     preview: input.preview,
     provenance: {
       timing: "measured",
