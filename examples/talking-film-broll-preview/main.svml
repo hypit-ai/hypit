@@ -3,15 +3,16 @@
 <svml>
   <import from="@hypit/script@1"/>
   <import as="wording" from="@hypit/text@1"/>
-  <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="speech" from="@hypit/speech-spine@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="media-track" from="@hypit/media-track@1"/>
   <import as="space" from="@hypit/spatial@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
-  <import as="studio" source="./studio.svs"/>
+  <import as="recipes" source="./recipes.svs"/>
 
   <script id="story">
     <opening><HOST>A @claim shallow preview reads the source directly@/claim, so the
@@ -19,6 +20,7 @@
   </script>
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
+  <program:Clock id="clock" frame-rate="30"/>
   <!-- right and bottom are edge positions, not insets: this Frame is full bleed. -->
   <space:Frame id="speech-frame" within={vertical}
     left="0%" top="0%" right="100%" bottom="100%"/>
@@ -28,43 +30,34 @@
     left="12%" top="52%" right="88%" bottom="78%"/>
 
   <wording:Value id="direction">Locked medium close-up in a quiet daylight studio. Spoken dialogue.</wording:Value>
-  <!-- The studio is established once; every take references that image, so one room stays
-       one room. Prompt-only generation would give each take its own. -->
-  <wording:Value id="studio-look">
-    A photograph with the texture of real iPhone footage. Generate a vertical seated medium close-up,
-    as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy,
-    carrying the texture of video and not of a posed photograph. The background stays clearly visible,
-    with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of
-    the picture is broken. One presenter at a desk in a quiet daylight studio.
-  </wording:Value>
-  <gpt:Image id="studio-scene" prompt={studio-look} aspect-ratio="9:16" resolution="2K"/>
+  <seedance:TextVideo id="take" model="mini" prompt={direction} duration="10" generate-audio="true"/>
+  <seedance:TextVideo id="motion-a" model="mini" prompt={direction} duration="5"/>
+  <seedance:TextVideo id="motion-b" model="mini" prompt={direction} duration="5"/>
 
-  <seedance:ReferenceVideo id="take" model="mini" prompt={direction} duration="10" generate-audio="true">
-    <seedance:Reference image={studio-scene.image}/>
-  </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="motion-a" model="mini" prompt={direction} duration="5">
-    <seedance:Reference image={studio-scene.image}/>
-  </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="motion-b" model="mini" prompt={direction} duration="5">
-    <seedance:Reference image={studio-scene.image}/>
-  </seedance:ReferenceVideo>
+  <pipeline:Normalize id="take-media" source={take.video}
+    recipe={recipes.media.aroll} clock={clock}/>
+  <pipeline:Normalize id="motion-a-media" source={motion-a.video}
+    recipe={recipes.media.broll} clock={clock}/>
+  <pipeline:Normalize id="motion-b-media" source={motion-b.video}
+    recipe={recipes.media.broll} clock={clock}/>
+  <whisperx:SemanticTake id="opening-semantic" narrative={story}
+    segment={story.segment.opening} media={take-media.media}/>
 
-  <speech:Spine id="speech" frame-rate="30"
-    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
-    <speech:Take video={take.video} segment={story.segment.opening}/>
+  <speech:Spine id="speech" clock={clock}
+    visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
+    <speech:Take source={opening-semantic.take}/>
   </speech:Spine>
-  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
   <!-- Two B-roll inserts on one Track. Their Selections do not overlap, so they
        share a single timeline row the way an editor would lay them out. -->
-  <media-track:Track id="broll" map={timing.map} space={speech.space} canvas={vertical}>
-    <media-track:Item id="broll-one" video={motion-a.video} during={story.selection.claim}
-      frame={card-a} appearance={studio.media.card} motion={studio.motion.card}/>
-    <media-track:Item id="broll-two" video={motion-b.video} during={story.selection.proof}
-      frame={card-b} appearance={studio.media.wide} motion={studio.motion.card}/>
+  <media-track:Track id="broll" map={speech.semanticMap} space={speech.space} canvas={vertical}>
+    <media-track:Item id="broll-one" media={motion-a-media.media} during={story.selection.claim}
+      frame={card-a} appearance={recipes.media.card} motion={recipes.motion.card}/>
+    <media-track:Item id="broll-two" media={motion-b-media.media} during={story.selection.proof}
+      frame={card-b} appearance={recipes.media.wide} motion={recipes.motion.card}/>
   </media-track:Track>
 
-  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+  <film:Film id="main" canvas={vertical} space={speech.space} appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audioTrack}/>
     <film:Track source={broll.visual}/>
