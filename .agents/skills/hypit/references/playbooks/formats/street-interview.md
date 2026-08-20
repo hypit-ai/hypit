@@ -53,5 +53,8 @@ Review speaker/voice assignment, lip-sync, microphone position, listener silence
 street continuity, reaction timing, text hygiene, and caption placement. Pin accepted scene images
 and takes with `.svrun` `build-record` and `satisfy` before downstream assembly.
 
-Read `../craft/seedance-directing.md`, `../craft/visual-continuity.md`, `../craft/b-roll.md`, and
-`../craft/captions.md`.
+Read `../craft/seedance-directing.md`, `../craft/persona-and-audio.md`, `../craft/captions.md`,
+and `../craft/b-roll.md`.
+
+That list is complete: `../index.md` does not repeat it, and the craft its required load
+order marks always-read is required regardless of format.

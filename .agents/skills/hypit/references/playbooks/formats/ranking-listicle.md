@@ -44,5 +44,7 @@ Review resolved trigger count/order, terminal timing, item identity, rank/tier, 
 evidence alignment, safe zones, stack order, and optional sounds. Pin accepted generated evidence
 media through `.svrun` before the final ranking Build.
 
-Read `../craft/captions.md`, `../craft/overlays.md`, `../craft/b-roll.md`, and
-`../craft/production-gates.md`.
+Read `../craft/captions.md`, `../craft/overlays.md`, `../craft/b-roll.md`, and `../craft/sfx.md`.
+
+That list is complete: `../index.md` does not repeat it, and the craft its required load
+order marks always-read is required regardless of format.

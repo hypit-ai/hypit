@@ -10,9 +10,16 @@ needed for that craft or format.
    `craft/visual-continuity.md`, `craft/graphic-compositions.md`, and
    `craft/generated-dependencies.md`.
 2. Read `craft/seedance-directing.md` whenever the Author Source invokes Seedance.
-3. Read the selected format file and only the additional craft files it names.
+3. Read the selected format file and only the additional craft files **its own footer** names.
+   That footer is the complete list; this index does not repeat it, and a footer that is wrong is
+   fixed in the footer.
 4. Read `packages/<name>/README.md` for every package whose elements you write, and the relevant
    authoritative Quickstart page for the model behind them.
+
+No document a whole job needs may be reachable only through a conditional file. Craft and format
+files are selected per job; a spine is walked by every job on its route, so anything every job needs
+is named by `../original-authoring/index.md` or `../reconstruction/index.md` rather than by a craft
+file that some jobs never open.
 
 ## Shared SVML contract
 
@@ -34,7 +41,8 @@ needed for that craft or format.
 - Stage expensive work with narrow `.svrun` Targets. Explicitly reuse an accepted Record through
   `build-record` plus `satisfy`; Hypit has no implicit cache.
 - Use only elements and attributes documented by the current Quickstart or package README. Never
-  invent a component or attribute to fill in missing syntax.
+  invent a component or attribute to fill in missing syntax; `../vocabulary.md` says why, and how to
+  find out what exists.
 
 ## Prompt policy
 
@@ -67,14 +75,20 @@ needed for that craft or format.
 
 ## Formats
 
-| Format | Additional craft to read |
+| Format | Choose it when the request is |
 |---|---|
-| `formats/talking-head.md` | `seedance-directing`, `persona-and-audio`, `captions`, `b-roll`, `overlays` |
-| `formats/street-interview.md` | `seedance-directing`, `persona-and-audio`, `captions`, `b-roll` |
-| `formats/two-person-podcast.md` | `seedance-directing`, `persona-and-audio`, `captions`, `b-roll` |
-| `formats/scenario-call.md` | `seedance-directing`, `persona-and-audio`, `captions`, `overlays` |
-| `formats/ranking-listicle.md` | `captions`, `overlays`, `sfx` |
-| `formats/mass-tarot.md` | `b-roll`, `overlays`, `persona-and-audio`, `captions` |
-| `formats/voiceover-desk-demo.md` | `persona-and-audio`, `b-roll`, `screen-demo`, `captions`, `sfx` |
-| `formats/mixcut.md` | `image-prompt-style`, `b-roll`, `overlays`, `sfx` |
-| `formats/asmr.md` | `image-prompt-style`, `seedance-directing`, `persona-and-audio`, `sfx` |
+| `formats/talking-head.md` | one presenter speaking to camera — an explainer, an opinion piece, a piece to camera |
+| `formats/street-interview.md` | a vox pop, passers-by being asked something, an interview on location |
+| `formats/two-person-podcast.md` | a conversation between two people — a podcast clip, an interview at a table |
+| `formats/scenario-call.md` | a video call or screen share, two live tiles, an active speaker that changes |
+| `formats/ranking-listicle.md` | a top-N, a countdown, a tier list, "best X", any ordered set revealed in turn |
+| `formats/mass-tarot.md` | a pick-a-card reading, a pick-a-pile, a several-option reveal |
+| `formats/voiceover-desk-demo.md` | a voiceover over a product, a desk demo, a screen or hands walkthrough |
+| `formats/mixcut.md` | a montage or music-led cut — short shots carrying the argument, nobody to camera |
+| `formats/asmr.md` | close texture and sound, a satisfying micro-film, one physical action per shot |
+
+Each format file's own footer is the single authority for the additional craft that format needs.
+This table routes; it does not require. **An inventory may carry descriptions, and may not carry
+requirements.** A stale description misroutes and the first line of the file it opens corrects it; a
+stale requirement is silently unmet and nothing corrects it, which is what the craft column that used
+to sit here did in seven of these nine rows.
