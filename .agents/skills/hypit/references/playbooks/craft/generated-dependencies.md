@@ -26,17 +26,22 @@ only about the video: what it should say, who is in it, what it is for.
 Images therefore generate in rounds: the establishing image is accepted first, and the views derived
 from it are generated after. `production-gates.md` Gate 1 is one stage per round, not one stage.
 
-## A split shot hands over its last frame
+## A split shot's parts all start from the same image
 
-A continuous shot that exceeds the generator's duration ceiling is split. The second part opens on
-the **last frame of the first part**, extracted from the accepted take and passed as its first frame.
+A continuous shot that exceeds the generator's duration ceiling is split into as many takes as it
+needs. **Every part references the same first-frame image** — the one accepted for that shot — and no
+part references another part.
 
-Every piece of this already exists: a video generation shape that takes a first and last frame, and a
-frame extraction that takes `at="last"`. Only the connection is missing, which is why a split shot
-drifts across its own seam today.
+This is the one place where the "wire what must match" principle does *not* mean chaining. Handing
+part one's last frame to part two would match the seam exactly, and would also make the parts
+strictly sequential: part two cannot start until part one has finished generating and its frame has
+been extracted, so a shot split four ways takes four generations end to end. Pointing every part at
+the same accepted image costs the exact frame match at the seams and buys parallelism: all four
+generate at once, and they still hold the same person, framing, wardrobe and light, because they all
+came from the same picture.
 
-Do not do this across a real cut. A cut is a discontinuity; wiring one would force a match the
-reference never had.
+The seam is a small jump in pose and micro-motion, not a change of scene — the same order of
+difference as a cut between two takes of the same setup, which is what the reference has anyway.
 
 ## A voice is generated once
 
