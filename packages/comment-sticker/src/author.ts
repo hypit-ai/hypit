@@ -129,7 +129,7 @@ export function decodeCommentStickerStyle(recipe: SvsRecipe, fonts: FontStackRef
         offsetYPx: number(recipe, "enter-offset-y", -180),
         startScale: number(recipe, "enter-start-scale", 0.78),
         rotationDeltaDeg: number(recipe, "enter-rotation-delta", -4.5),
-        easing: oneOf(recipe, "enter-easing", ["linear", "ease-in", "ease-out", "ease-in-out"] as const, "ease-out"),
+        easing: oneOf(recipe, "enter-easing", ["linear", "ease-in", "ease-out", "ease-in-out", "out-back"] as const, "ease-out"),
       },
       exit: {
         kind: oneOf(recipe, "exit", ["none", "fade", "fade-up"] as const, "fade-up"),
