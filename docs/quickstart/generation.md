@@ -58,7 +58,7 @@ duration is computed locally from pronunciation units and a delivery-density pol
 ```svml
 <estimate:Speech id="hook-duration"
   source={story.segment.hook.speech}
-  policy={studio.speech.normal}/>
+  policy={recipes.speech.normal}/>
 ```
 
 | Attribute | Required | Description |
@@ -226,7 +226,7 @@ spoken verbatim. Write a freeform English prompt only when none of the seven Kit
 </text:Value>
 <text:Render id="demo-prompt"
   template={broll-kit.broll-v1}
-  recipe={studio.broll.product-demo}>
+  recipe={recipes.broll.product-demo}>
   <text:Set name="story" text={product-story}/>
 </text:Render>
 
@@ -277,7 +277,7 @@ the authored dialogue and optional per-take action as dynamic Text edges:
 
 <text:Render id="interview-prompt"
   template={interview-kit.street-interview-v1}
-  recipe={studio.interview.street}>
+  recipe={recipes.interview.street}>
   <text:Set name="dialogue" text={story.segment.interview.dialogue}/>
   <text:Set name="action" text={interview-action}/>
 </text:Render>
@@ -312,7 +312,7 @@ module. The result enters Seedance through the same explicit `prompt` edge as an
 
 <text:Render id="hook-prompt"
   template={speaker-kit.speaker-v1}
-  recipe={studio.speaker.host}>
+  recipe={recipes.speaker.host}>
   <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
   <text:Set name="action" text={hook-action}/>
 </text:Render>
@@ -326,7 +326,7 @@ module. The result enters Seedance through the same explicit `prompt` edge as an
 </seedance:ReferenceVideo>
 ```
 
-`speaker-v1.svs` selects its own Text Template Frontend. `studio.svs` supplies the named axis values;
+`speaker-v1.svs` selects its own Text Template Frontend. `recipes.svs` supplies the named axis values;
 `dialogue` and `action` remain ordinary graph inputs. Neither the Kit nor Text chooses a model,
 reference media or generation endpoint.
 
@@ -339,7 +339,7 @@ A two-take setup with estimated durations feeding explicit Text assembly and See
 <import as="estimate" from="@hypit/estimate@1"/>
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="studio" source="./studio.svs"/>
+<import as="recipes" source="./recipes.svs"/>
 <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 
 <media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
@@ -347,17 +347,17 @@ A two-take setup with estimated durations feeding explicit Text assembly and See
 <media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>
 
 <estimate:Speech id="hook-duration"
-  source={story.segment.hook.speech} policy={studio.speech.normal}/>
+  source={story.segment.hook.speech} policy={recipes.speech.normal}/>
 <estimate:Speech id="meeting-duration"
-  source={story.segment.meeting.speech} policy={studio.speech.normal}/>
+  source={story.segment.meeting.speech} policy={recipes.speech.normal}/>
 <text:Value id="hook-action">Start urgently, then become quieter.</text:Value>
 <text:Value id="meeting-action">Indicate the product, then return to the lens.</text:Value>
 
-<text:Render id="hook-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+<text:Render id="hook-prompt" template={speaker-kit.speaker-v1} recipe={recipes.speaker.host}>
   <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
   <text:Set name="action" text={hook-action}/>
 </text:Render>
-<text:Render id="meeting-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+<text:Render id="meeting-prompt" template={speaker-kit.speaker-v1} recipe={recipes.speaker.host}>
   <text:Set name="dialogue" text={story.segment.meeting.dialogue}/>
   <text:Set name="action" text={meeting-action}/>
 </text:Render>

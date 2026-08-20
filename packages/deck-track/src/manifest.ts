@@ -391,7 +391,7 @@ export const depthStackMarkupSurfaces = [
   canvas={vertical}
   frame={layout.proof-stack}
   until={story.selection.proof}
-  appearance={studio.deck.proof}
+  appearance={recipes.deck.proof}
 >
   <deck:Card id="proof-1" source={proof1.image} extent={proof1.extent}
     at={story.moment.proof1} label={proof-label-style}/>

@@ -138,11 +138,11 @@ nothing.
   slot as a Fragment input carrying the Artifact type, give the Producer that consumes it a second
   form for the case where the slot is filled, and read it from `inputs` as the Artifact it is —
   a blob input arrives as the `BlobRef` itself rather than wrapped inline like every authored value.
-- **The element kind follows the Artifact, not the slot.** A picture slot holds an image once the
-  document has built one and a stand-in *video* frame before it has, because that is what the
-  Playground substitutes for an output nothing has produced yet. Hard-code `kind: "image"` and the
-  component builds for nobody until the whole graph has run, which is the opposite of what a preview
-  is for. Decide from the Artifact's `mediaType` and the same code serves both.
+- **The element kind follows the Artifact, not the slot.** A picture slot holds an image when the
+  document built one and a video when a Run satisfied it with footage, and which of those arrives is
+  not something the slot's name settles. Hard-code `kind: "image"` and the component builds for
+  whichever half of that the author did not choose. Decide from the Artifact's `mediaType` and the
+  same code serves both.
 - Never require an input the installing project has no reason to choose. If a Run Source exists only
   to produce the component's own texture, the texture is in the wrong place.
 - **A slot that is not filled yet costs its own cell and nothing more.** The component's structure —
@@ -188,12 +188,12 @@ Use only existing checks:
 ```bash
 pnpm check
 pnpm hypit check path/to/main.svml
-pnpm hypit check path/to/studio.svs
+pnpm hypit check path/to/recipes.svs
 pnpm hypit check path/to/build.svrun
 ```
 
 A package that cannot be *seen* is not done. `hypit check` proves the Source is legal, and nothing
-more; it will not tell you that the track a package produces fails to build when the Playground
+more; it will not tell you that the track a package produces fails to build when Studio
 renders it. Run the preview check and repair until it passes with no failures — a build failure is
 not a difference to weigh, it is work that is not finished, and it is not bounded by the loop's
 attempt ceiling:

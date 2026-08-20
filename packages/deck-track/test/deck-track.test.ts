@@ -502,7 +502,7 @@ test("another Deck family can coexist by contributing only the existing VisualTr
 test("SVS decoding exposes all documented depth, frame, motion and playback axes", () => {
   const value = decodeDepthStackSpec({
 
-    path: "studio.deck.proof",
+    path: "recipes.deck.proof",
     properties: {
       "visible-previous": 3, "visible-next": 2, wrap: false,
       "previous-y-step": 24, "previous-scale-step": 0.93, "previous-rotation-mode": "alternate",

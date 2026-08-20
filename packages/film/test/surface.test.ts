@@ -138,10 +138,10 @@ async function compileFilm(options: { readonly styles?: string } = {}) {
       <import as="fixture" from="example.film-fixture@1"/>
       <import as="film" from="@hypit/film@1"/>
       <import as="space" from="@hypit/spatial@1"/>
-      <import as="studio" source="./recipes.svs"/>
+      <import as="recipes" source="./recipes.svs"/>
       <fixture:Inputs/>
       <space:Canvas id="vertical" width="1080" height="1920"/>
-      <film:Film id="main" canvas={vertical} semantic={semantic} appearance={studio.film.vertical}>
+      <film:Film id="main" canvas={vertical} semantic={semantic} appearance={recipes.film.vertical}>
         <film:Track source={visual}/><film:Track source={audio}/>
       </film:Film>
     </svml>`),

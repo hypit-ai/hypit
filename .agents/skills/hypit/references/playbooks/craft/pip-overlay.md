@@ -25,7 +25,7 @@ secondary feed, or supporting image stays visible.
 <media-track:Track id="presenter-overlay" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item image={presenter-cutout.image} extent={presenter-extent}
     frame={presenter-pip} during="program"
-    appearance={studio.media.pip} motion={studio.motion.pip}/>
+    appearance={recipes.media.pip} motion={recipes.motion.pip}/>
 </media-track:Track>
 ```
 

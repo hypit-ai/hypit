@@ -16,7 +16,7 @@ ordinary explicit graph edges:
 <import as="seedance" from="@hypit/seedance@1"/>
 <import as="broll-kit" source="./kits/broll-v1.svs"/>
 
-<text:Render id="broll-prompt" template={broll-kit.broll-v1} recipe={studio.broll}>
+<text:Render id="broll-prompt" template={broll-kit.broll-v1} recipe={recipes.broll}>
   <text:Set name="story" text={copy.broll}/>
 </text:Render>
 
@@ -35,7 +35,7 @@ Speaker uses the same graph vocabulary. The Kit assumes `@image1` is the visible
 
 <text:Render id="hook-prompt"
   template={speaker-kit.speaker-v1}
-  recipe={studio.speaker.host}>
+  recipe={recipes.speaker.host}>
   <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
   <text:Set name="action" text={hook-action}/>
 </text:Render>

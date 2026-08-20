@@ -20,7 +20,7 @@ before it enters the Track.
 <import as="whisperx" from="@hypit/whisperx@1"/>
 <import as="speech" from="@hypit/speech-track@1"/>
 <import as="space" from="@hypit/spatial@1"/>
-<import as="studio" source="./studio.svs"/>
+<import as="recipes" source="./recipes.svs"/>
 ```
 
 ## Normalize each take
@@ -69,7 +69,7 @@ facets from the same items:
 
 <speech:Track id="speech"
   visual-frame={speech-frame}
-  visual-appearance={studio.speech.visual}
+  visual-appearance={recipes.speech.visual}
   visual-z="0">
   <speech:Take source={opening-semantic.take}/>
   <speech:Take source={answer-semantic.take}/>
@@ -96,7 +96,7 @@ deterministic Track:
 <media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item image={card.image} extent={card-extent}
     during={story.selection.demo} frame={card-frame}
-    appearance={studio.media.card} motion={studio.motion.card}/>
+    appearance={recipes.media.card} motion={recipes.motion.card}/>
 </media-track:Track>
 
 <caption-fine:Track id="captions"
@@ -107,7 +107,7 @@ deterministic Track:
   plan={caption-plan.plan}/>
 
 <film:Film id="main" canvas={vertical}
-  semantic={speech.semantic} appearance={studio.film.vertical}>
+  semantic={speech.semantic} appearance={recipes.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={cards.visual}/>

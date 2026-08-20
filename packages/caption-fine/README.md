@@ -13,7 +13,7 @@ declares no planning fields and has no `important`, random sizing or inferred Wo
 <fonts:Stack id="caption-fonts" family="inter" weight="600" style="normal" emoji="color">
   <fonts:Fallback family="noto-sans-sc" weight="600" style="normal"/>
 </fonts:Stack>
-<fine:Style id="primary" recipe={studio.caption.primary} font={caption-fonts}/>
+<fine:Style id="primary" recipe={recipes.caption.primary} font={caption-fonts}/>
 
 <caption:Program id="captions" display={story.caption} default={primary}/>
 

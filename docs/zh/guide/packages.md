@@ -145,7 +145,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 ```text
 @hypit/cli                 generic command engine (requires explicit Distribution)
 @hypit/video-cli           video command application (selects Markup compiler, no built-in author packages)
-@hypit/svml-playground     development preview for a Source, never runs a Provider
+@hypit/studio              development preview for a Run, never runs a Provider
 ```
 
 ## 依赖规则

@@ -122,7 +122,7 @@ export const speechTrackMarkupSurfaces = [{
           summary: "The speech sound clips projected from the SemanticTrack, an ordinary peer AudioTrack." },
       ],
       example: `<speech:Track id="speech"
-  visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
+  visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
   <speech:Take source={opening.take}/>
   <speech:Take source={closing.take}/>
 </speech:Track>`,

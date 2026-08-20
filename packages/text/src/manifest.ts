@@ -108,7 +108,7 @@ export const textMarkupSurfaces = [{
         { name: "", type: textTypes.text,
           summary: "The rendered Text, addressed by the element's own id." },
       ],
-      example: `<text:Render id="prompt" template={ugc.product-shot} recipe={studio.product-shot}>
+      example: `<text:Render id="prompt" template={ugc.product-shot} recipe={recipes.product-shot}>
   <text:Param name="camera" value="handheld"/>
   <text:Param name="strict" value="true" type="boolean"/>
   <text:Set name="dialogue" text={story.segment.hook.dialogue}/>

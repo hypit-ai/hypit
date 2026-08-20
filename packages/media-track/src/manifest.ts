@@ -478,7 +478,7 @@ export const mediaTrackMarkupSurfaces = [{
       ],
       example: `<media-track:Track id="cutaways" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item id="bags" video={cutaway-bags.video} during={story.selection.bags}
-    frame={full} appearance={studio.media.cutaway} motion={studio.motion.cut}/>
+    frame={full} appearance={recipes.media.cutaway} motion={recipes.motion.cut}/>
 </media-track:Track>`,
       notes: [
         "A Track requires at least one Item or Sequence and accepts no text content.",

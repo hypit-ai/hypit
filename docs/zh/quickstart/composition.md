@@ -21,7 +21,7 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={captions.track}/>
@@ -127,7 +127,7 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   <import as="program" from="@hypit/program-space@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
-  <import as="studio" source="./studio.svs"/>
+  <import as="recipes" source="./recipes.svs"/>
 
   <!-- 1. Script: the semantic truth -->
   <script id="story">
@@ -172,14 +172,14 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   <whisperx:SemanticTake id="opening-semantic" narrative={story}
     segment={story.segment.opening} media={take-media.media}/>
   <speech:Track id="speech"
-    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
+    visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
     <speech:Take source={opening-semantic.take}/>
   </speech:Track>
 
   <!-- 4. Tracks: captions, Media, text -->
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
   <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
-  <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+  <caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
   <caption:Program id="caption-program" display={story.caption}
     default={base-caption}/>
   <caption-ai:Planner id="cue-plan" display={story.caption}
@@ -188,9 +188,9 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
 
   <media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
     <media-track:Item media={motion-media.media} during={story.selection.demo}
-      frame={card-frame} appearance={studio.media.card} motion={studio.motion.card}/>
+      frame={card-frame} appearance={recipes.media.card} motion={recipes.motion.card}/>
   </media-track:Track>
-  <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+  <text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
   <text:Track id="titles" semantic={speech.semantic}>
     <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
       MEANING
@@ -199,7 +199,7 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
 
   <!-- 5. Film: compose all tracks -->
   <film:Film id="main" canvas={vertical} semantic={speech.semantic}
-    appearance={studio.film.vertical}>
+    appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audio}/>
     <film:Track source={cards.visual}/>
@@ -215,7 +215,7 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
 
 `right` 与 `bottom` 是绝对的边位置，不是内缩量。一个占父级中间 80% 的 Frame 写作 `left="10%" right="90%"`，而不是 `left="10%" right="10%"`——后者解出的宽度为零，会被拒绝。
 
-### 样式表 (`studio.svs`)
+### 样式表 (`recipes.svs`)
 
 ```svs
 <?svml using="@hypit/svs@1"?>
