@@ -44,6 +44,26 @@ Builds remain archived and neither command cancels remote Provider work.
 - There is no implicit cache or Pin state. Reuse Records through a new `.svrun` containing
   `build-record` and `satisfy`; the Candidate supplies the exact nominal Type required by the
   current Logical Output.
+- **A running Worker holds the package code it loaded.** Edit a package — yours or an installed one —
+  and the Worker that is already up keeps executing the version it started with, so the next Build
+  fails exactly as the last one did. Stop it before resubmitting; the next `build` starts a fresh one
+  that loads the edit:
+
+  ```bash
+  ps -eo pid,command | grep "hypit.mjs _worker" | grep <project>/hypit.runtime.json
+  kill <pid>
+  ```
+
+  Read an identical repeat failure as this until you have ruled it out. Reasoning about why a correct
+  fix did not work is how an afternoon goes, and the fix was never loaded.
+- **Stop the Worker between Builds, never during one.** A remote generation belongs to the Provider,
+  and the Worker is the only thing watching it: take the Worker down mid-flight and the request keeps
+  running with nobody to collect it, passes its operation deadline, and fails — taking the whole Build
+  with it, not merely the requests that were in the air. `runtime status` reports what is queued,
+  running and reserved; wait for it to report nothing before stopping anything. This applies to the
+  Profile as much as the code — raising an Endpoint's `defaultConcurrency` needs the same restart, so
+  a change that costs nothing on an idle Runtime costs the whole Build on a busy one. Nothing is lost
+  by waiting: accepted Records are durable, and the requests still in flight are the expensive ones.
 
 ## Keep project and package boundaries distinct
 

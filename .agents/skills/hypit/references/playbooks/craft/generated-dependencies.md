@@ -77,6 +77,58 @@ This is why a full-screen board that contains two media boxes is read as *two* m
 single flat composition. The component owns its surface; the boxes are inputs, and each one is
 filled by generation when the reference shows content in it.
 
+## A semantic window covers words, so the silence around it belongs to nobody
+
+This is the commonest inherited edge in a speech-led program; `frame-coverage.md` holds the general
+form and the measurements. `during={story.selection.X}` spans that Selection's first word to its last,
+so the pause between two Selections, the breath before a Segment's first word, and the words that fall
+between two occurrences are in none of them.
+
+Decide, for each thing you place, which of two kinds it is:
+
+- **Continuously present** — a sheet the reference holds up, a bed under a voiceover, a badge that
+  stays. Take its window from a Segment, or from the first occurrence's start to the last one's end.
+  Never from a Selection whose occurrences have gaps, however well the occurrences line up with the
+  words: they do not touch.
+- **Genuinely coming and going** — an insert that appears for one phrase and leaves. A Selection is
+  exactly right, and the gap is the point.
+
+The same question decides a component you write yourself. A Program scheduled from occurrences draws
+only inside them unless you give it a span of its own, so a page built from one occurrence per row
+vanishes on the words between two rows. `@hypit/local-notebook-ranking` does that deliberately and
+says so in its own appearance text; a sheet the reference never takes down must not inherit it. When
+a component both persists and changes, its schedule carries two different things — one span for how
+long it is on screen, one window per item for when that item arrives — and conflating them is what
+produces the blink.
+
+## An audio Take brings no picture, so its Segment is covered or it plays black
+
+A `speech:Take audio={…}` creates program time and speech and contributes no visual at all. For as
+long as it runs the picture is whatever the peer Tracks put there, and wherever they put nothing the
+Film's own background shows through. A voiceover Segment is therefore an obligation: every frame of
+it belongs to some Item, and the frames nobody claimed are black in the delivery.
+
+Two different holes open, and both look identical on screen:
+
+- **A stretch inside no Selection.** Mark the ranges the B-roll covers and one sentence between two
+  of them belongs to neither, so nothing draws it. The Selections have to *tile* the Segment — each
+  one picking up where the last left off — rather than merely landing in the right places. A line
+  that introduces what comes next usually belongs to the Selection it introduces.
+- **A take shorter than the window it fills.** An Item whose window outlasts its own material runs
+  out partway and leaves the rest empty. Read the model's duration ceiling before deciding: Seedance
+  `mini` stops at 15 seconds, so a longer stretch needs more than one Item rather than one Item asked
+  for a length the model refuses.
+
+Give a silent take a literal duration at or above its window instead of a `SpeechDuration` edge. The
+estimate predicts the words; the window is decided by the audio that was actually produced, and when
+the estimate falls a second short that second is black.
+
+A bed makes a blend visible, so check the Items' entry and exit while you are here: `enter` and `exit`
+default to `none`, and a Recipe named for a cut that fades for a frame is one of the inherited edges
+`frame-coverage.md` describes.
+
+`production-gates.md` measures the delivery for these before it is reported as finished.
+
 ## A short stretch is not a short take
 
 An authored take stays inside the selected model's declared duration range — read the range from the
