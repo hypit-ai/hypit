@@ -1,20 +1,25 @@
+import {
+  assertEmptyElement as empty,
+  assertAttributes as allowed,
+  localName,
+  textAttribute as text,
+  optionalTextAttribute as optionalText,
+  type StructuredElement,
+  type StructuredSurfaceHandler,
+  type SurfaceRecordDraft,
+  type SurfaceResolvedReference,
+  type MarkupAttributeValue,
+} from "@hypit/markup";
+import { sameType, type CanonicalValue, type TypeRef } from "@hypit/protocol";
 import { mediaTypes } from "@hypit/media";
 import type { FontArtifactRef, FontStackRef } from "@hypit/media";
 import { narrativeTypes } from "@hypit/narrative";
 import { programSpaceTypes } from "@hypit/program-space";
-import type { CanonicalValue, TypeRef } from "@hypit/protocol";
 import { semanticMapTypes } from "@hypit/semantic-map";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
 import { textTypes } from "@hypit/text";
-import type {
-  StructuredElement,
-  StructuredSurfaceHandler,
-  SurfaceRecordDraft,
-  SurfaceResolvedReference,
-  MarkupAttributeValue,
-} from "@hypit/markup";
 
 import { createRankingFragment } from "./fragment.js";
 import type { RankingFragmentItem, RankingFragmentSound } from "./fragment.js";
@@ -39,44 +44,20 @@ import type {
   TopThreeItemSpec,
 } from "./types.js";
 
-function sameType(left: TypeRef, right: TypeRef): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
-}
-
-function allowed(element: StructuredElement, names: readonly string[]): void {
-  const permit = new Set(names);
-  const unknown = Object.keys(element.attributes).filter((name) => !permit.has(name));
-  if (unknown.length > 0) throw new Error(`${element.name} has unsupported attributes ${unknown.join(", ")}.`);
-}
-
-function empty(element: StructuredElement): void {
-  if (element.children.some((child) => child.kind === "element" || child.value.trim().length > 0)) {
-    throw new Error(`${element.name} must be empty.`);
-  }
-}
-
-function text(element: StructuredElement, name: string, fallback?: string): string {
-  const value = element.attributes[name];
-  if (value === undefined && fallback !== undefined) return fallback;
-  if (typeof value !== "string" || value.trim().length === 0) throw new Error(`${element.name}.${name} must be text.`);
-  return value.trim();
-}
-
-function optionalText(element: StructuredElement, name: string): string | undefined {
-  const value = element.attributes[name];
-  if (value === undefined) return undefined;
-  if (typeof value !== "string" || value.trim().length === 0) throw new Error(`${element.name}.${name} must be text.`);
-  return value.trim();
-}
-
 function integer(element: StructuredElement, name: string): number | undefined {
   const source = optionalText(element, name);
   if (source === undefined) return undefined;
   const value = Number(source);
   if (!Number.isSafeInteger(value)) throw new Error(`${element.name}.${name} must be an integer.`);
   return value;
+}
+
+function boolean(element: StructuredElement, name: string, fallback: boolean): boolean {
+  const source = optionalText(element, name);
+  if (source === undefined) return fallback;
+  if (source === "true") return true;
+  if (source === "false") return false;
+  throw new Error(`${element.name}.${name} must be true or false.`);
 }
 
 function reference(
@@ -132,11 +113,6 @@ function styleSurface<T>(
 export const decodeTierBoardStyleSurface = styleSurface(rankingTypes.tierStyle, decodeTierBoardStyle);
 export const decodeColumnStyleSurface = styleSurface(rankingTypes.columnStyle, decodeColumnStyle);
 export const decodeTopThreeStyleSurface = styleSurface(rankingTypes.topThreeStyle, decodeTopThreeStyle);
-
-function localName(element: StructuredElement): string {
-  return element.name.slice(element.name.lastIndexOf(":") + 1);
-}
-
 function textValue(
   raw: MarkupAttributeValue | undefined,
   label: string,
@@ -147,7 +123,7 @@ function textValue(
 }
 
 function itemIdentity(element: StructuredElement, suffix: string): string {
-  return optionalText(element, "id") ?? `${localName(element).replace(/Item$/u, "").toLowerCase()}-${suffix}`;
+  return optionalText(element, "id") ?? `${localName(element.name).replace(/Item$/u, "").toLowerCase()}-${suffix}`;
 }
 
 function itemSpec(
@@ -155,7 +131,7 @@ function itemSpec(
   variant: RankingVariant,
   suffix: string,
   resolve: (path: string) => SurfaceResolvedReference | undefined,
-): { readonly spec: RankingItemSpec | RankingTextItemShell; readonly content?: SurfaceResolvedReference } {
+): { readonly spec: RankingItemSpec | RankingTextItemShell; readonly content?: SurfaceResolvedReference; readonly timing?: SurfaceResolvedReference } {
   const id = itemIdentity(element, suffix);
   const stackingOrder = integer(element, "stack");
   let value: RankingItemSpec;
@@ -168,18 +144,41 @@ function itemSpec(
       variant, id, tier: text(element, "tier"), entry,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     } satisfies TierBoardItemSpec;
-  } else if (variant === "column" || variant === "top-three") {
+    assertRankingItemSpec(value);
+    return { spec: value };
+  } else if (variant === "column") {
+    allowed(element, ["id", "label", "icon", "rank", "preset", "during", "stack"]);
+    empty(element);
+    const rank = integer(element, "rank");
+    if (rank === undefined || rank < 1) throw new Error(`${element.name}.rank must be a positive integer.`);
+    const preset = boolean(element, "preset", false);
+    const timing = element.attributes.during === undefined ? undefined
+      : reference(element.attributes.during, `${element.name}.during`, narrativeTypes.selection, resolve);
+    if (preset && timing !== undefined) throw new Error(`${element.name} cannot combine preset=true with during.`);
+    if (!preset && timing === undefined) throw new Error(`${element.name} requires during unless preset=true.`);
+    const label = textValue(element.attributes.label, `${element.name}.label`, resolve);
+    if (typeof label === "string") value = {
+      variant, id, label, rank, preset,
+      ...(stackingOrder === undefined ? {} : { stackingOrder }),
+    } satisfies ColumnItemSpec;
+    else return { spec: sealRankingTextItemShell({
+      variant, id, rank, preset,
+      ...(stackingOrder === undefined ? {} : { stackingOrder }),
+    }), content: label, ...(timing === undefined ? {} : { timing }) };
+    assertRankingItemSpec(value);
+    return { spec: value, ...(timing === undefined ? {} : { timing }) };
+  } else if (variant === "top-three") {
     allowed(element, ["id", "label", "icon", "stack"]);
     empty(element);
     const label = textValue(element.attributes.label, `${element.name}.label`, resolve);
-    if (typeof label !== "string") return { spec: sealRankingTextItemShell({
+    if (typeof label === "string") value = {
+      variant, id, label,
+      ...(stackingOrder === undefined ? {} : { stackingOrder }),
+    } satisfies TopThreeItemSpec;
+    else return { spec: sealRankingTextItemShell({
       variant, id,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     }), content: label };
-    value = {
-      variant, id, label,
-      ...(stackingOrder === undefined ? {} : { stackingOrder }),
-    } satisfies ColumnItemSpec | TopThreeItemSpec;
   } else throw new Error(`${element.name} belongs to an unknown Ranking variant.`);
   assertRankingItemSpec(value);
   return { spec: value };
@@ -193,15 +192,26 @@ const variantDefinition = {
 
 function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
   return ({ element, resolveReference }) => {
-    allowed(element, ["id", "map", "space", "frame", "during", "triggers", "terminal", "style", "appear-sound", "move-sound"]);
+    const common = ["id", "map", "space", "frame", "during", "triggers", "terminal", "style", "appear-sound", "move-sound"];
+    const attributes = variant === "column"
+      ? [...common.filter((name) => name !== "triggers" && name !== "terminal"), "canvas"]
+      : common;
+    allowed(element, attributes);
     const id = text(element, "id");
     const selected = variantDefinition[variant];
     const map = reference(element.attributes.map, `${element.name}.map`, semanticMapTypes.complete, resolveReference);
     const space = reference(element.attributes.space, `${element.name}.space`, programSpaceTypes.programSpace, resolveReference);
+    const canvas = variant === "column"
+      ? reference(element.attributes.canvas, `${element.name}.canvas`, spatialTypes.canvas, resolveReference)
+      : undefined;
     const frame = reference(element.attributes.frame, `${element.name}.frame`, spatialTypes.frame, resolveReference);
-    const outer = reference(element.attributes.during, `${element.name}.during`, narrativeTypes.selection, resolveReference);
-    const triggers = reference(element.attributes.triggers, `${element.name}.triggers`, narrativeTypes.moment, resolveReference);
-    const terminal = reference(element.attributes.terminal, `${element.name}.terminal`, narrativeTypes.moment, resolveReference);
+    const outer = variant === "column"
+      ? oneOfReference(element.attributes.during, `${element.name}.during`, [narrativeTypes.selection, narrativeTypes.excerpt], resolveReference)
+      : reference(element.attributes.during, `${element.name}.during`, narrativeTypes.selection, resolveReference);
+    const triggers = variant === "column" ? undefined
+      : reference(element.attributes.triggers, `${element.name}.triggers`, narrativeTypes.moment, resolveReference);
+    const terminal = variant === "column" ? undefined
+      : reference(element.attributes.terminal, `${element.name}.terminal`, narrativeTypes.moment, resolveReference);
     const styleRaw = element.attributes.style;
     const style = reference(styleRaw, `${element.name}.style`, selected.style, resolveReference);
     const records: SurfaceRecordDraft[] = [];
@@ -213,7 +223,10 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
     });
     const inputs: Record<string, typeof map.ref> = {
       header: { kind: "record", id: headerId }, map: map.ref, space: space.ref, frame: frame.ref,
-      outer: outer.ref, triggers: triggers.ref, terminal: terminal.ref, style: style.ref,
+      outer: outer.ref, style: style.ref,
+      ...(canvas === undefined ? {} : { canvas: canvas.ref }),
+      ...(triggers === undefined ? {} : { triggers: triggers.ref }),
+      ...(terminal === undefined ? {} : { terminal: terminal.ref }),
     };
     const items: RankingFragmentItem[] = [];
     const itemIds = new Set<string>();
@@ -224,7 +237,7 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
         if (child.value.trim().length > 0) throw new Error(`${element.name} accepts ${selected.tag} children only.`);
         continue;
       }
-      if (localName(child) !== selected.tag) throw new Error(`${element.name} accepts ${selected.tag} children only.`);
+      if (localName(child.name) !== selected.tag) throw new Error(`${element.name} accepts ${selected.tag} children only.`);
       index += 1;
       const suffix = String(index).padStart(4, "0");
       const authored = itemSpec(child, variant, suffix, resolveReference);
@@ -238,13 +251,19 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       inputs[specName] = { kind: "record", id: specId };
       const contentName = authored.content === undefined ? undefined : `item-${suffix}-content`;
       if (authored.content !== undefined) inputs[contentName!] = authored.content.ref;
+      const timingName = authored.timing === undefined ? undefined : `item-${suffix}-timing`;
+      if (authored.timing !== undefined) inputs[timingName!] = authored.timing.ref;
       let iconName: string | undefined;
       if (variant === "tier-board" || child.attributes.icon !== undefined) {
         const icon = reference(child.attributes.icon, `${child.name}.icon`, mediaTypes.blobArtifact, resolveReference);
         iconName = `item-${suffix}-icon`;
         inputs[iconName] = icon.ref;
       }
-      items.push({ suffix, specName, ...(contentName === undefined ? {} : { contentName }), ...(iconName === undefined ? {} : { iconName }) });
+      items.push({ suffix, specName,
+        ...(contentName === undefined ? {} : { contentName }),
+        ...(iconName === undefined ? {} : { iconName }),
+        ...(timingName === undefined ? {} : { timingName }),
+      });
     }
     if (items.length === 0) throw new Error(`${element.name} requires at least one ${selected.tag}.`);
     const sound: RankingFragmentSound = {
@@ -265,7 +284,8 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       }
       inputs["sound-style"] = soundStyle.ref;
     }
-    const fragment = createRankingFragment(variant, items, sound);
+    const outerKind = sameType(outer.type, narrativeTypes.excerpt) ? "segment" : "selection";
+    const fragment = createRankingFragment(variant, items, sound, outerKind);
     return {
       records,
       components: [{

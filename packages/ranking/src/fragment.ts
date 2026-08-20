@@ -19,6 +19,7 @@ export type RankingFragmentItem = {
   readonly specName: string;
   readonly iconName?: string;
   readonly contentName?: string;
+  readonly timingName?: string;
 };
 
 export type RankingFragmentSound = {
@@ -39,19 +40,19 @@ const definition = (variant: RankingVariant) => {
     appendIcon: rankingProducers.appendColumnIconItem, build: rankingProducers.columnProgram,
     events: rankingProducers.columnEvents, render: rankingProducers.renderColumn,
   } as const;
-  if (variant === "top-three") return {
+  return {
     style: rankingTypes.topThreeStyle, set: rankingTypes.topThreeItems, program: rankingTypes.topThreeProgram,
     create: rankingProducers.createTopThreeItems, append: rankingProducers.appendTopThreeItem,
     appendIcon: rankingProducers.appendTopThreeIconItem, build: rankingProducers.topThreeProgram,
     events: rankingProducers.topThreeEvents, render: rankingProducers.renderTopThree,
   } as const;
-  throw new Error(`Ranking Fragment has no definition for variant ${variant as string}.`);
 };
 
 export function createRankingFragment(
   variant: RankingVariant,
   items: readonly RankingFragmentItem[],
   sound: RankingFragmentSound,
+  outerKind: "selection" | "segment" = "selection",
 ) {
   if (items.length === 0) throw new Error("Ranking Fragment requires at least one Item.");
   const selected = definition(variant);
@@ -59,22 +60,28 @@ export function createRankingFragment(
     { name: "header", type: rankingTypes.header },
     { name: "map", type: semanticMapTypes.complete },
     { name: "space", type: programSpaceTypes.programSpace },
-    { name: "outer", type: narrativeTypes.selection },
-    { name: "triggers", type: narrativeTypes.moment },
-    { name: "terminal", type: narrativeTypes.moment },
+    { name: "outer", type: outerKind === "selection" ? narrativeTypes.selection : narrativeTypes.excerpt },
+    ...(variant === "column" ? [] : [
+      { name: "triggers", type: narrativeTypes.moment },
+      { name: "terminal", type: narrativeTypes.moment },
+    ]),
+    ...(variant === "column" ? [{ name: "canvas", type: spatialTypes.canvas }] : []),
     { name: "frame", type: spatialTypes.frame },
     { name: "style", type: selected.style },
   ];
   const operations: FragmentOperation[] = [
     { id: "specs", producer: rankingProducers.createSpecs, inputs: { header: input("header") }, result: { kind: "output", name: "set" } },
     { id: "resolved", producer: selected.create, inputs: {}, result: { kind: "output", name: "set" } },
+    ...(variant === "column" ? [{ id: "candidates", producer: rankingProducers.createColumnCandidates, inputs: {}, result: { kind: "output" as const, name: "set" } }] : []),
   ];
   let specs = operation("specs");
   let resolved = operation("resolved");
+  let candidates = operation("candidates");
   for (const item of items) {
     inputs.push({ name: item.specName, type: item.contentName === undefined ? rankingTypes.itemSpec : rankingTypes.textItemShell });
     if (item.contentName !== undefined) inputs.push({ name: item.contentName, type: textTypes.text });
     if (item.iconName !== undefined) inputs.push({ name: item.iconName, type: mediaTypes.blobArtifact });
+    if (item.timingName !== undefined) inputs.push({ name: item.timingName, type: narrativeTypes.selection });
     const materializedId = `materialize-${item.suffix}`;
     if (item.contentName !== undefined) operations.push({
       id: materializedId,
@@ -103,21 +110,47 @@ export function createRankingFragment(
       result: { kind: "output", name: "set" },
     });
     resolved = operation(visualId);
+    if (item.timingName !== undefined) {
+      const timingId = `timing-${item.suffix}`;
+      operations.push({
+        id: timingId,
+        producer: rankingProducers.appendColumnCandidate,
+        inputs: {
+          set: candidates, spec: resolvedSpec, map: input("map"), space: input("space"), selection: input(item.timingName),
+        },
+        result: { kind: "output", name: "set" },
+      });
+      candidates = operation(timingId);
+    }
   }
-  operations.push({
-    id: "schedule",
-    producer: rankingProducers.schedule,
-    inputs: {
-      header: input("header"), items: specs, map: input("map"), space: input("space"),
-      outer: input("outer"), triggers: input("triggers"), terminal: input("terminal"),
-    },
-    result: { kind: "output", name: "schedule" },
-  });
+  if (variant === "column") {
+    operations.push({
+      id: "outer-window",
+      producer: outerKind === "selection" ? rankingProducers.projectColumnSelectionOuter : rankingProducers.projectColumnSegmentOuter,
+      inputs: { map: input("map"), space: input("space"), [outerKind]: input("outer") },
+      result: { kind: "output", name: "outer" },
+    });
+    operations.push({
+      id: "schedule",
+      producer: rankingProducers.columnSchedule,
+      inputs: { header: input("header"), items: specs, outer: operation("outer-window"), candidates },
+      result: { kind: "output", name: "schedule" },
+    });
+  } else operations.push({
+      id: "schedule",
+      producer: rankingProducers.schedule,
+      inputs: {
+        header: input("header"), items: specs, map: input("map"), space: input("space"),
+        outer: input("outer"), triggers: input("triggers"), terminal: input("terminal"),
+      },
+      result: { kind: "output", name: "schedule" },
+    });
   operations.push({
     id: "program",
     producer: selected.build,
     inputs: {
       header: input("header"),
+      ...(variant === "column" ? { canvas: input("canvas") } : {}),
       frame: input("frame"), schedule: operation("schedule"), style: input("style"), set: resolved,
     },
     result: { kind: "output", name: "program" },

@@ -6,19 +6,21 @@ import { fixtureDigest } from "../../../test/fixture-digest.js";
 import { createResolvedClosure } from "@hypit/core";
 import type { FontArtifactRef, SynchronizedMedia } from "@hypit/media";
 import { mediaTypes } from "@hypit/media";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { sealProgramSpace } from "@hypit/program-space";
 import type { CompleteSemanticMap } from "@hypit/semantic-map";
-import { sealSpatialFrame } from "@hypit/spatial";
+import { sealCanvasSpace, sealSpatialFrame } from "@hypit/spatial";
 import type { SvsRecipe } from "@hypit/svs";
 
 import {
   appendColumnItem,
+  appendColumnWindowCandidate,
   appendRankingItemSpec,
   appendRankingSound,
   appendTierBoardItem,
   appendTopThreeItem,
   buildColumnProgram,
+  buildColumnSchedule,
   buildColumnSoundEvents,
   buildRankingSchedule,
   buildTierBoardProgram,
@@ -26,6 +28,7 @@ import {
   buildTopThreeProgram,
   buildTopThreeSoundEvents,
   createColumnItemSet,
+  createColumnWindowCandidateSet,
   createRankingItemSpecSet,
   createRankingSoundSet,
   createTierBoardItemSet,
@@ -48,13 +51,15 @@ import {
   rankingMarkupSurfaces,
   rankingProducers,
   rankingTypes,
+  projectColumnSegmentOuterWindow,
   sealRankingHeader,
 } from "@hypit/ranking";
 import type {
   ColumnItemSpec,
+  ColumnSchedule,
   RankingHeader,
   RankingItemSpec,
-  RankingSchedule,
+  TriggeredRankingSchedule,
   TierBoardItemSpec,
   TopThreeItemSpec,
 } from "@hypit/ranking";
@@ -75,6 +80,10 @@ const space = sealProgramSpace({
   durationSec: 8,
   frameRate: { numerator: 30, denominator: 1 },
 });
+const canvas = sealCanvasSpace({
+  widthPx: 1080, heightPx: 1920,
+  origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
+});
 const frame = sealSpatialFrame({
   xPx: 40, yPx: 80, widthPx: 720, heightPx: 560,
 });
@@ -82,12 +91,20 @@ const map: CompleteSemanticMap = {
   tokens: [],
   anchors: [
     { identity: "outer-start", frame: 10 },
+    { identity: "segment:ranking:start", frame: 10 },
+    { identity: "early-start", frame: 25 },
     { identity: "one", frame: 30 },
+    { identity: "early-end", frame: 65 },
+    { identity: "overlap-start", frame: 55 },
     { identity: "two", frame: 70 },
+    { identity: "overlap-end", frame: 95 },
     { identity: "three", frame: 110 },
+    { identity: "late-start", frame: 120 },
     { identity: "four", frame: 150 },
+    { identity: "late-end", frame: 160 },
     { identity: "terminal", frame: 190 },
     { identity: "outer-end", frame: 230 },
+    { identity: "segment:ranking:end", frame: 230 },
   ],
 };
 const outer: NarrativeSelectionRef = {
@@ -98,6 +115,13 @@ const terminal: NarrativeMomentRef = {
   id: "ranking-complete",
   occurrences: [{ occurrence: 0, anchorId: "terminal" }],
 };
+const rankingSegment: NarrativeExcerpt = { kind: "segment", id: "ranking", tokenStart: 0, tokenEndExclusive: 1 };
+const selection = (id: string, startAnchorId: string, endAnchorId: string): NarrativeSelectionRef => ({
+  id, occurrences: [{ occurrence: 0, startAnchorId, endAnchorId }],
+});
+const early = selection("early", "early-start", "early-end");
+const overlapping = selection("overlapping", "overlap-start", "overlap-end");
+const late = selection("late", "late-start", "late-end");
 const triggers = (count: number): NarrativeMomentRef => ({
   id: "next-rank",
   occurrences: ["one", "two", "three", "four"].slice(0, count)
@@ -122,7 +146,7 @@ function specs(headerValue: RankingHeader, values: readonly RankingItemSpec[]) {
   return set;
 }
 
-function schedule(headerValue: RankingHeader, values: readonly RankingItemSpec[]): RankingSchedule {
+function schedule(headerValue: RankingHeader, values: readonly RankingItemSpec[]): TriggeredRankingSchedule {
   return buildRankingSchedule({
     header: headerValue, items: specs(headerValue, values), map, space, outer,
     triggers: triggers(values.length), terminal,
@@ -132,16 +156,32 @@ function schedule(headerValue: RankingHeader, values: readonly RankingItemSpec[]
 const tierSpec = (id: string, tier: string, entry: "direct" | "stage" = "direct"): TierBoardItemSpec => ({
   variant: "tier-board", id, tier, entry,
 });
-const columnSpec = (id: string): ColumnItemSpec => ({
-  variant: "column", id, label: id.toUpperCase(),
+const columnSpec = (id: string, rank: number, preset = false): ColumnItemSpec => ({
+  variant: "column", id, label: id.toUpperCase(), rank, preset,
 });
 const topSpec = (id: string): TopThreeItemSpec => ({
   variant: "top-three", id, label: id.toUpperCase(),
 });
 
+function columnSchedule(
+  owner: RankingHeader,
+  values: readonly ColumnItemSpec[],
+  windows: Readonly<Record<string, NarrativeSelectionRef>>,
+  outerWindow = projectColumnSegmentOuterWindow(map, space, rankingSegment),
+): ColumnSchedule {
+  let candidates = createColumnWindowCandidateSet();
+  for (const value of values) {
+    if (value.preset) continue;
+    const timing = windows[value.id];
+    if (timing === undefined) throw new Error(`Missing test Selection for ${value.id}.`);
+    candidates = appendColumnWindowCandidate(candidates, value, map, space, timing);
+  }
+  return buildColumnSchedule({ header: owner, items: specs(owner, values), outer: outerWindow, candidates });
+}
+
 test("RankingSchedule zips authored item and Moment order and preserves a settled suffix", () => {
-  const owner = header("column", "tools");
-  const value = schedule(owner, [columnSpec("fourth"), columnSpec("third"), columnSpec("second")]);
+  const owner = header("top-three", "tools");
+  const value = schedule(owner, [topSpec("fourth"), topSpec("third"), topSpec("second")]);
   assert.deepEqual(value.entries.map((entry) => [entry.itemId, entry.stage, entry.cumulative]), [
     ["fourth", { startFrame: 30, endFrameExclusive: 70 }, { startFrame: 30, endFrameExclusive: 230 }],
     ["third", { startFrame: 70, endFrameExclusive: 110 }, { startFrame: 70, endFrameExclusive: 230 }],
@@ -151,8 +191,8 @@ test("RankingSchedule zips authored item and Moment order and preserves a settle
 });
 
 test("RankingSchedule rejects cardinality, outer/terminal ambiguity and authored physical reversal", () => {
-  const owner = header("column");
-  const values = [columnSpec("a"), columnSpec("b")];
+  const owner = header("tier-board");
+  const values = [tierSpec("a", "s"), tierSpec("b", "a")];
   assert.throws(() => buildRankingSchedule({
     header: owner, items: specs(owner, values), map, space, outer, triggers: triggers(1), terminal,
   }), /cardinality/u);
@@ -197,22 +237,46 @@ test("TierBoard owns cumulative direct/stage placement and rejects invalid sched
   }), /outside|strictly increasing/u);
 });
 
-test("Column has one active stage, cumulative settled rows and truly optional icons", () => {
+test("Column projects a Segment outer, keeps rank independent from reveal time, presets rows and avoids overlaps", () => {
   const owner = header("column", "column");
-  const semantic = [columnSpec("one"), columnSpec("two"), columnSpec("three")];
+  const semantic = [
+    columnSpec("late-rank-one", 1),
+    columnSpec("preset-rank-three", 3, true),
+    columnSpec("early-rank-five", 5),
+    columnSpec("overlap-rank-two", 2),
+  ];
   const style = decodeColumnStyle(recipe("ranking.column", { "appear-frames": 4, "move-frames": 6 }), font).style;
   let set = createColumnItemSet();
   set = appendColumnItem(set, semantic[0]!);
-  set = appendColumnItem(set, semantic[1]!, image("two"));
+  set = appendColumnItem(set, semantic[1]!, image("preset"));
   set = appendColumnItem(set, semantic[2]!);
-  const value = schedule(owner, semantic);
-  const program = buildColumnProgram(owner, frame, value, style, set);
+  set = appendColumnItem(set, semantic[3]!, image("overlap"));
+  const outerWindow = projectColumnSegmentOuterWindow(map, space, rankingSegment);
+  assert.deepEqual(outerWindow.span, { startFrame: 10, endFrameExclusive: 230 });
+  const value = columnSchedule(owner, semantic, {
+    "late-rank-one": late,
+    "early-rank-five": early,
+    "overlap-rank-two": overlapping,
+  }, outerWindow);
+  const program = buildColumnProgram(owner, canvas, frame, value, style, set);
   const track = renderColumn(space, program);
-  const items = track.presents.filter((item) => item.id.includes(":item:") && item.id.endsWith(":stage"));
-  assert.deepEqual(items.map((item) => item.span.startFrame), [30, 70, 110]);
-  assert.equal(items[0]?.elements.some((item) => item.kind === "image"), false);
-  assert.equal(items[1]?.elements.some((item) => item.kind === "image"), true);
-  assert.equal(value.entries.filter((entry) => entry.stage.startFrame <= 80 && 80 < entry.stage.endFrameExclusive).length, 1);
+  assert.deepEqual(program.items.map((item) => [item.id, item.rank]), [
+    ["late-rank-one", 1], ["overlap-rank-two", 2], ["preset-rank-three", 3], ["early-rank-five", 5],
+  ]);
+  const active = value.entries.filter((entry) => entry.mode === "reveal")
+    .map((entry) => [entry.itemId, entry.preferred, entry.active]);
+  assert.deepEqual(active, [
+    ["late-rank-one", { startFrame: 120, endFrameExclusive: 160 }, { startFrame: 120, endFrameExclusive: 160 }],
+    ["overlap-rank-two", { startFrame: 55, endFrameExclusive: 95 }, { startFrame: 65, endFrameExclusive: 95 }],
+    ["early-rank-five", { startFrame: 25, endFrameExclusive: 65 }, { startFrame: 25, endFrameExclusive: 65 }],
+  ]);
+  const preset = value.entries.find((entry) => entry.itemId === "preset-rank-three")!;
+  assert.deepEqual(preset, { itemId: "preset-rank-three", mode: "preset", settled: outerWindow.span });
+  const stages = track.presents.filter((item) => item.id.includes(":item:") && item.id.endsWith(":stage"));
+  assert.deepEqual(stages.map((item) => item.span.startFrame).sort((a, b) => a - b), [25, 65, 120]);
+  assert.equal(stages.find((item) => item.id.includes("overlap-rank-two"))?.elements.some((item) => item.kind === "image"), true);
+  assert.equal(track.presents.some((item) => item.id.endsWith(":item:preset-rank-three:stage")), false);
+  assert.equal(track.presents.find((item) => item.id.endsWith(":item:preset-rank-three:settled"))?.span.startFrame, 10);
 });
 
 test("TopThree accepts one to three optional-image Items and removes active accent in the settled suffix", () => {
@@ -246,20 +310,20 @@ const sound = (id: string): SynchronizedMedia => ({
 
 test("visual and sound event plans share exact phase frames while absent sound stays an independent branch", () => {
   const owner = header("column", "sound-column");
-  const semantic = [columnSpec("one"), columnSpec("two")];
+  const semantic = [columnSpec("one", 7), columnSpec("two", 2)];
   const decoded = decodeColumnStyle(recipe("ranking.column", {
     "appear-frames": 4, "move-frames": 6, "appear-gain": 0.8, "move-gain": 0.6,
   }), font);
-  const value = schedule(owner, semantic);
+  const value = columnSchedule(owner, semantic, { one: early, two: overlapping });
   const events = buildColumnSoundEvents(value, decoded.style, specs(owner, semantic));
   assert.deepEqual(events.events.map((item) => [item.kind, item.frame]), [
-    ["appear", 30], ["move", 64], ["appear", 70], ["move", 184],
+    ["appear", 25], ["move", 59], ["appear", 65], ["move", 89],
   ]);
   let sounds = createRankingSoundSet();
   sounds = appendRankingSound(sounds, "appear", sound("appear"));
   sounds = appendRankingSound(sounds, "move", sound("move"));
   const audio = renderRankingAudio(space, events, decoded.sound, sounds);
-  assert.deepEqual(audio.clips.map((clip) => clip.target.startSample), [48_000, 102_400, 112_000, 294_400]);
+  assert.deepEqual(audio.clips.map((clip) => clip.target.startSample), [40_000, 94_400, 104_000, 142_400]);
   assert.deepEqual(audio.clips.map((clip) => clip.gain), [0.8, 0.6, 0.8, 0.6]);
 });
 
@@ -276,10 +340,10 @@ test("each component owns a distinct event law and repeated lowering is canonica
   assert.deepEqual(buildTopThreeSoundEvents(schedule(topOwner, topItems), top, specs(topOwner, topItems)).events.map((item) => item.kind), ["appear"]);
 
   const columnOwner = header("column", "deterministic");
-  const columnItems = [columnSpec("one")];
+  const columnItems = [columnSpec("one", 3)];
   const columnStyle = decodeColumnStyle(recipe("ranking.column"), font).style;
   let set = appendColumnItem(createColumnItemSet(), columnItems[0]!);
-  const program = buildColumnProgram(columnOwner, frame, schedule(columnOwner, columnItems), columnStyle, set);
+  const program = buildColumnProgram(columnOwner, canvas, frame, columnSchedule(columnOwner, columnItems, { one: early }), columnStyle, set);
   assert.deepEqual(renderColumn(space, program), renderColumn(space, program));
 });
 
@@ -296,8 +360,11 @@ test("all three author Surfaces preserve explicit semantic, spatial, font, image
   const references = new Map<string, SurfaceResolvedReference>([
     ["map", plain("map", semanticMapTypes.complete)],
     ["space", plain("space", programSpaceTypes.programSpace)],
+    ["canvas", plain("canvas", spatialTypes.canvas)],
     ["frame", plain("frame", spatialTypes.frame)],
     ["outer", plain("outer", narrativeTypes.selection)],
+    ["ranking-segment", plain("ranking-segment", narrativeTypes.excerpt)],
+    ["column-reveal", plain("column-reveal", narrativeTypes.selection)],
     ["triggers", plain("triggers", narrativeTypes.moment)],
     ["terminal", plain("terminal", narrativeTypes.moment)],
     ["icon-1", plain("icon-1", mediaTypes.blobArtifact)],
@@ -332,10 +399,13 @@ test("all three author Surfaces preserve explicit semantic, spatial, font, image
       triggers: ref("triggers"), terminal: ref("terminal"), style: ref("tier-style"),
     }, [node("ranking:TierItem", { id: "tier-one", tier: "s", entry: "stage", icon: ref("icon-1") })])],
     [decodeColumnSurface, node("ranking:Column", {
-      id: "column", map: ref("map"), space: ref("space"), frame: ref("frame"), during: ref("outer"),
-      triggers: ref("triggers"), terminal: ref("terminal"), style: ref("column-style"),
+      id: "column", map: ref("map"), space: ref("space"), canvas: ref("canvas"), frame: ref("frame"), during: ref("ranking-segment"),
+      style: ref("column-style"),
       "appear-sound": ref("appear"), "move-sound": ref("move"),
-    }, [node("ranking:ColumnItem", { id: "column-one", label: ref("copy") }), node("ranking:ColumnItem", { id: "column-two", label: "Two", icon: ref("icon-2") })])],
+    }, [
+      node("ranking:ColumnItem", { id: "column-one", rank: "1", label: ref("copy"), during: ref("column-reveal") }),
+      node("ranking:ColumnItem", { id: "column-two", rank: "5", preset: "true", label: "Two", icon: ref("icon-2") }),
+    ])],
     [decodeTopThreeSurface, node("ranking:TopThree", {
       id: "top", map: ref("map"), space: ref("space"), frame: ref("frame"), during: ref("outer"),
       triggers: ref("triggers"), terminal: ref("terminal"), style: ref("top-style"),
