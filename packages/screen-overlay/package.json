@@ -11,9 +11,9 @@
     "@hypit/composition": "workspace:*",
     "@hypit/elaborator": "workspace:*",
     "@hypit/narrative": "workspace:*",
-    "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/semantic-map": "workspace:*",
+    "@hypit/program-space": "workspace:*",
+    "@hypit/semantic-track": "workspace:*",
     "@hypit/spatial": "workspace:*",
     "@hypit/temporal": "workspace:*",
     "@hypit/markup": "workspace:*"

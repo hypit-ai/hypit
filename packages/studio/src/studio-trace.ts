@@ -1,16 +1,13 @@
 import type { CompiledSource } from "./compile.js";
 import type { Placement } from "./observe.js";
+import {
+  classifyStudioOutput,
+  studioRealizationPorts,
+  studioDependencyRole,
+} from "./studio-registry.js";
+import type { StudioProjectionRole } from "./studio-registry.js";
 
-export type StudioProjectionRole =
-  | "semantic-take"
-  | "semantic-map"
-  | "caption-plan"
-  | "speech-visual"
-  | "speech-audio"
-  | "media"
-  | "text"
-  | "caption"
-  | "track";
+export type { StudioProjectionRole } from "./studio-registry.js";
 
 export type StudioTraceDependency = {
   readonly name: string;
@@ -20,6 +17,10 @@ export type StudioTraceDependency = {
 
 export type StudioTrace = {
   readonly placement?: string;
+  readonly surface?: string;
+  readonly module?: string;
+  readonly authoredId?: string;
+  readonly outputPorts: readonly { readonly name: string; readonly ref: string }[];
   readonly references: readonly StudioTraceDependency[];
 };
 
@@ -28,40 +29,6 @@ export type StudioOutput = {
   readonly type: string;
   readonly ref: string;
 };
-
-type StudioOutputRule = {
-  readonly type: string;
-  readonly role: StudioProjectionRole;
-  readonly tag?: string;
-  readonly namespace?: string;
-};
-
-type StudioDependencyRule = {
-  readonly fromRole: StudioProjectionRole;
-  readonly type: string;
-  readonly role: StudioProjectionRole;
-};
-
-/**
- * This table belongs entirely to Studio. It understands public Output types
- * and observed Surface tags without asking domain packages to register UI
- * knowledge.
- */
-const OUTPUT_RULES: readonly StudioOutputRule[] = [
-  { type: "SemanticTake", role: "semantic-take" },
-  { type: "CompleteSemanticMap", role: "semantic-map" },
-  { type: "CaptionPlan", role: "caption-plan" },
-  { type: "VisualTrack", role: "speech-visual", tag: "spine" },
-  { type: "AudioTrack", role: "speech-audio", tag: "spine" },
-  { type: "VisualTrack", role: "media", tag: "track", namespace: "media-track" },
-  { type: "AudioTrack", role: "media", tag: "track", namespace: "media-track" },
-  { type: "VisualTrack", role: "text", tag: "track", namespace: "text" },
-  { type: "VisualTrack", role: "caption", tag: "track", namespace: "caption-fine" },
-];
-
-const DEPENDENCY_RULES: readonly StudioDependencyRule[] = [
-  { fromRole: "caption", type: "CaptionPlan", role: "caption-plan" },
-];
 
 function lastTag(placement: Placement | undefined): string {
   return placement?.tag.split(":").at(-1) ?? "";
@@ -90,18 +57,16 @@ export function roleFor(source: CompiledSource, ref: string): StudioProjectionRo
   const output = outputFor(source, ref);
   if (output === undefined) return undefined;
   const placement = placementFor(source, ref);
-  const tag = lastTag(placement).toLowerCase();
-  const namespace = placement?.tag.split(":")[0]?.toLowerCase();
-  return OUTPUT_RULES.find((rule) =>
-    rule.type === output.type
-    && (rule.tag === undefined || rule.tag === tag)
-    && (rule.namespace === undefined || rule.namespace === namespace)
-  )?.role ?? ((output.type === "VisualTrack" || output.type === "AudioTrack") ? "track" : undefined);
+  const placementTypes = placement?.outputs.flatMap((candidate) => {
+    const found = outputFor(source, candidate);
+    return found === undefined ? [] : [found.type];
+  }) ?? [];
+  return classifyStudioOutput(output.type, placement, placementTypes);
 }
 
 export function traceFor(source: CompiledSource, ref: string): StudioTrace {
   const placement = placementFor(source, ref);
-  if (placement === undefined) return { references: [] };
+  if (placement === undefined) return { outputPorts: [], references: [] };
   const refs = unique([
     ...placement.references,
     ...placement.children.flatMap((child) => child.references),
@@ -111,8 +76,33 @@ export function traceFor(source: CompiledSource, ref: string): StudioTrace {
   });
   return {
     placement: placement.tag,
+    surface: placement.surface,
+    module: placement.module.name,
+    ...(placement.id === undefined ? {} : { authoredId: placement.id }),
+    outputPorts: placement.outputPorts.map((port) => ({
+      name: port.name,
+      ref: outputFor(source, port.ref)?.ref ?? port.ref,
+    })),
     references: refs,
   };
+}
+
+/** Additional same-Surface realizations an adapter needs beyond the terminal Track. */
+export function tracedStudioRealizations(source: CompiledSource, ref: string): readonly string[] {
+  const output = outputFor(source, ref);
+  const placement = placementFor(source, ref);
+  if (output === undefined || placement === undefined) return [];
+  const siblingTypes = placement.outputPorts.flatMap((port) => {
+    const found = outputFor(source, port.ref);
+    return found === undefined ? [] : [found.type];
+  });
+  const ports = new Set(studioRealizationPorts(output.type, placement, siblingTypes));
+  return placement.outputPorts
+    .filter((port) => ports.has(port.name))
+    .flatMap((port) => {
+      const found = outputFor(source, port.ref);
+      return found === undefined ? [] : [found.ref];
+    });
 }
 
 export function tracedRealizations(
@@ -122,8 +112,7 @@ export function tracedRealizations(
   const role = roleFor(source, ref);
   if (role === undefined) return [];
   return traceFor(source, ref).references.flatMap((dependency) => {
-    const rule = DEPENDENCY_RULES.find((item) =>
-      item.fromRole === role && item.type === dependency.type);
-    return rule === undefined ? [] : [{ ref: dependency.ref, role: rule.role }];
+    const dependencyRole = studioDependencyRole(role, dependency.type);
+    return dependencyRole === undefined ? [] : [{ ref: dependency.ref, role: dependencyRole }];
   });
 }

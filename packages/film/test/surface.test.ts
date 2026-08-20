@@ -1,11 +1,13 @@
 import { compositionComponent, spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
 import { registerTypeValidatorFacets } from "@hypit/component-kit";
 import { programSpaceDependency, programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
+import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { compositionDependency, compositionTypes, sealAudioTrack, sealVisualTrack } from "@hypit/composition";
 import type { Track } from "@hypit/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import { createResolvedClosure, sealBuildRequest, start } from "@hypit/core";
 import {
@@ -40,14 +42,14 @@ const fixtureModule = { name: "example.film-fixture", version: "1" } as const;
 const fixtureSurfaceDigest = fixtureDigest("example.film-fixture/inputs-surface@1");
 const fixtureSurface = {
   name: "inputs", tag: "Inputs", mode: "structured",
-  outputs: [programSpaceTypes.programSpace, compositionTypes.visualTrack, compositionTypes.audioTrack],
+  outputs: [semanticTrackTypes.track, compositionTypes.visualTrack, compositionTypes.audioTrack],
 } as const;
 const fixtureManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
   dependencies: [
-    programSpaceDependency,
+    semanticTrackDependency,
     compositionDependency,
   ],
   types: [],
@@ -59,6 +61,7 @@ const space = sealProgramSpace({
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
+const semantic = semanticTrackFixture(space);
 const visual = sealVisualTrack({
   visualIr: "hypit.visual-ir@1",
   id: "visual",
@@ -102,7 +105,7 @@ async function compileFilm(options: { readonly styles?: string } = {}) {
   const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
-      { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
+      { id: "semantic", type: semanticTrackTypes.track, value: { kind: "inline", value: semantic }, range: element.range },
       { id: "visual", type: compositionTypes.visualTrack, value: { kind: "inline", value: visual }, range: element.range },
       { id: "audio", type: compositionTypes.audioTrack, value: { kind: "inline", value: audio }, range: element.range },
     ],
@@ -138,7 +141,7 @@ async function compileFilm(options: { readonly styles?: string } = {}) {
       <import as="studio" source="./recipes.svs"/>
       <fixture:Inputs/>
       <space:Canvas id="vertical" width="1080" height="1920"/>
-      <film:Film id="main" canvas={vertical} space={space} appearance={studio.film.vertical}>
+      <film:Film id="main" canvas={vertical} semantic={semantic} appearance={studio.film.vertical}>
         <film:Track source={visual}/><film:Track source={audio}/>
       </film:Film>
     </svml>`),

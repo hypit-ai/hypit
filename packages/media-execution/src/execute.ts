@@ -845,7 +845,7 @@ export async function executeTransformMedia(
   }
 }
 
-/** Generic model-reference audio: no Narrative, SpeechBasis or alignment claim is introduced. */
+/** Generic model-reference audio: no Narrative, SemanticTake or alignment claim is introduced. */
 export async function executeExtractAudio(
   env: MediaExecutionEnvironment,
   constraints: CanonicalValue,

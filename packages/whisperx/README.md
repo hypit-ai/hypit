@@ -13,7 +13,7 @@ Segment. `@hypit/media-pipeline` projects that Take's 48 kHz audio to canonical 
 `SpeechEvidenceAudio`; WhisperX sees only those bytes. A deterministic local alignment then combines
 the returned evidence with the one Segment and emits one self-contained `SemanticTake`.
 
-There is no whole-program WhisperX pass. Speech Spine only receives already-semantic Takes and later
+There is no whole-program WhisperX pass. Speech Track only receives already-semantic Takes and later
 translates their local frames when assembling the final ProgramSpace and complete semantic map.
 
 `@hypit/provider-whisperx-local` is the first concrete adapter; it validates and stages those bytes

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import type { VisualElement, VisualTimedSampling } from "@hypit/composition";
@@ -36,9 +37,9 @@ import { mediaTypes } from "@hypit/media";
 import { mediaPipelineManifest } from "@hypit/media-pipeline";
 import type { MediaLayerSet } from "@hypit/media-track";
 import { narrativeTypes } from "@hypit/narrative";
-import { programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
+import { sealProgramSpace } from "@hypit/program-space";
 import type { ModuleManifest } from "@hypit/protocol";
-import { semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { sealText, textManifest, textTypes } from "@hypit/text";
@@ -56,6 +57,7 @@ const space = sealProgramSpace({
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
+const semantic = semanticTrackFixture(space);
 const canvas = sealCanvasSpace({
   widthPx: 360,
   heightPx: 640,
@@ -225,7 +227,7 @@ function program(input: {
     frame,
     input.spec ?? baseSpec(),
     input.terminal ?? 60,
-    space,
+    semantic,
   );
 }
 
@@ -259,7 +261,7 @@ test("explicit wrapping never aliases one Card into several relative depths", ()
 test("missing, equal, reversed and terminal-crossing triggers fail in authored order", () => {
   assert.throws(() => finalizeDepthStack(
     createDepthStackCardSet(), sealDepthStackHeader({ id: "empty" }),
-    frame, baseSpec(), 60, space,
+    frame, baseSpec(), 60, semantic,
   ), /at least one Card/u);
   assert.throws(() => program({ triggers: [0, 20, 20] }), /strictly increasing/u);
   assert.throws(() => program({ triggers: [0, 30, 20] }), /strictly increasing/u);
@@ -393,7 +395,7 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
     record: { value: { kind: "inline", value: { path, properties } } } as never,
   });
   const references = new Map<string, SurfaceResolvedReference>([
-    ["map", plain("map", semanticMapTypes.complete)], ["space", plain("space", programSpaceTypes.programSpace)],
+    ["semantic", plain("semantic", semanticTrackTypes.track)],
     ["canvas", plain("canvas", spatialTypes.canvas)], ["frame", plain("frame", spatialTypes.frame)],
     ["first", plain("first", artifactTypes.blob)], ["first-extent", plain("first-extent", spatialTypes.extent)],
     ["second", plain("second", mediaTypes.synchronized)], ["one", plain("one", narrativeTypes.moment)],
@@ -404,7 +406,7 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
   const result = await decodeDepthStackSurface({
     sourceName: "deck.svml",
     element: node("deck:DepthStack", {
-      id: "proof", map: ref("map"), space: ref("space"), canvas: ref("canvas"), frame: ref("frame"),
+      id: "proof", semantic: ref("semantic"), canvas: ref("canvas"), frame: ref("frame"),
       appearance: ref("deck-style"), until: ref("terminal"),
     }, [
       node("deck:Card", { id: "one", source: ref("first"), extent: ref("first-extent"), at: ref("one") }),

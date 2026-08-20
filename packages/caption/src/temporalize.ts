@@ -1,6 +1,6 @@
 import type { CaptionCorrespondence, CaptionDisplaySequence } from "@hypit/narrative";
-import { tokenFrameSpan } from "@hypit/semantic-map";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { tokenFrameSpan } from "@hypit/semantic-track";
+import type { SemanticTrack } from "@hypit/semantic-track";
 
 import { CaptionTimingError } from "./error.js";
 import { assertCaptionCorrespondence, assertCaptionDisplaySequence } from "./display.js";
@@ -47,7 +47,7 @@ export function applyCaptionMute(
 export function temporalizeCaptionPlan(
   display: CaptionDisplaySequence,
   correspondence: CaptionCorrespondence,
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   program: CaptionProgram,
   plan: CaptionPlan,
 ): TimedCaptionProjection {
@@ -64,11 +64,11 @@ export function temporalizeCaptionPlan(
       if (atom === undefined || sourceTokenIds === undefined) {
         throw new CaptionTimingError("CAPTION_ATOM", `Caption Cue ${cue.id} references unknown Atom ${atomId}.`);
       }
-      const window = tokenFrameSpan(map, sourceTokenIds);
+      const window = tokenFrameSpan(semantic, sourceTokenIds);
       if (window === undefined) {
         throw new CaptionTimingError(
           "CAPTION_SPEECH_COVERAGE",
-          `Caption Atom ${atomId} is absent from the complete speech map.`,
+          `Caption Atom ${atomId} is absent from the SemanticTrack.`,
         );
       }
       return {

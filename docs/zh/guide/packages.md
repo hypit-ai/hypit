@@ -81,11 +81,10 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/mimo-tts              三个精确 Xiaomi MiMo TTS 模型及作者 Surface
 @hypit/estimate              duration estimation
 @hypit/speech                shared speech products
-@hypit/speech-basis          generated speech A/V product
 @hypit/speech-evidence       acoustic evidence products
-@hypit/semantic-map          authored-token timing map
 @hypit/speech-alignment      speech alignment
-@hypit/speech-spine          ordered speech-take compilation
+@hypit/semantic-track        continuous semantic program skeleton
+@hypit/speech-track          ordered speech-take compilation
 @hypit/whisperx              WhisperX component
 @hypit/caption               caption planning and timing
 @hypit/caption-gemini        Gemini caption planner

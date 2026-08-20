@@ -1,6 +1,6 @@
-import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@hypit/composition";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
 import { svsManifest, svsModuleRef, svsRecipeType } from "@hypit/svs";
 
@@ -45,7 +45,7 @@ export const filmMarkupSurfaces = [{
     outputs: [filmTypes.program],
     vocabulary: {
       summary:
-        "Assembles any number of peer VisualTrack and AudioTrack references into one Composition against a Canvas and a ProgramSpace.",
+        "Assembles any number of peer VisualTrack and AudioTrack references into one Composition against a Canvas and a SemanticTrack.",
       appearance:
         "One flat fill of the entire Canvas, in the single hexadecimal color the Recipe's `background` carries, lying behind everything else in the Frame. It covers the full Canvas width and height, holds that one color from the first Frame to the last, and never moves, fades or changes. Wherever nothing is painted over it, that color is what the Frame shows; the Film puts no mark of its own on top of it.",
       attributes: [
@@ -54,9 +54,9 @@ export const filmMarkupSurfaces = [{
         { name: "canvas", kind: "reference", required: true,
           accepts: [spatialTypes.canvas],
           summary: "Selects the CanvasSpace that decides the Composition's dimensions." },
-        { name: "space", kind: "reference", required: true,
-          accepts: [programSpaceTypes.programSpace],
-          summary: "Selects the ProgramSpace that decides the Composition's duration and frame rate." },
+        { name: "semantic", kind: "reference", required: true,
+          accepts: [semanticTrackTypes.track],
+          summary: "Selects the SemanticTrack that decides the Composition's duration and frame rate." },
         { name: "appearance", kind: "reference", required: true,
           accepts: [svsRecipeType],
           summary: "Selects the SVS Recipe that decides the clear color behind every Track.",
@@ -79,9 +79,9 @@ export const filmMarkupSurfaces = [{
           summary: "The assembled Composition, addressed as `<id>.composition`." },
       ],
       example: [
-        '<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>',
+        '<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>',
         "  <film:Track source={speech.visual}/>",
-        "  <film:Track source={speech.audioTrack}/>",
+        "  <film:Track source={speech.audio}/>",
         "  <film:Track source={captions.track}/>",
         "</film:Film>",
       ].join("\n"),
@@ -99,7 +99,7 @@ export const filmManifest: ModuleManifest = {
   name: filmModuleRef.name,
   version: filmModuleRef.version,
   dependencies: [
-    programSpaceDependency,
+    semanticTrackDependency,
     spatialDependency,
     compositionDependency,
     { module: svsModuleRef },
@@ -120,7 +120,7 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.appendVisualTrack.name,
       inputs: [
         { name: "set", type: filmTypes.trackSet },
-        { name: "space", type: programSpaceTypes.programSpace },
+        { name: "semantic", type: semanticTrackTypes.track },
         { name: "track", type: compositionTypes.visualTrack },
       ],
       outputs: [{ name: "set", type: filmTypes.trackSet }],
@@ -130,7 +130,7 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.appendAudioTrack.name,
       inputs: [
         { name: "set", type: filmTypes.trackSet },
-        { name: "space", type: programSpaceTypes.programSpace },
+        { name: "semantic", type: semanticTrackTypes.track },
         { name: "track", type: compositionTypes.audioTrack },
       ],
       outputs: [{ name: "set", type: filmTypes.trackSet }],
@@ -141,7 +141,7 @@ export const filmManifest: ModuleManifest = {
       inputs: [
         { name: "program", type: filmTypes.program },
         { name: "canvas", type: spatialTypes.canvas },
-        { name: "space", type: programSpaceTypes.programSpace },
+        { name: "semantic", type: semanticTrackTypes.track },
         { name: "set", type: filmTypes.trackSet },
       ],
       outputs: [{ name: "composition", type: compositionTypes.composition }],

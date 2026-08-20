@@ -63,7 +63,7 @@ Referenced by `film:Film` via the `appearance` attribute:
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>
 ```
 
 ## Caption Fine
@@ -452,5 +452,5 @@ This file is imported once in the `.svml` source and its values are referenced t
 <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
 
 <space:Canvas id="vertical" width="720" height="1280"/>
-<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>
 ```

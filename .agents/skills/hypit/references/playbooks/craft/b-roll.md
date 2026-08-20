@@ -76,11 +76,11 @@ only; narration, music, and effects remain explicit audio contributions.
 
 ## Place B-roll by authored meaning
 
-- Mark the intended spoken range as a Script `Selection`, then use `during={story.selection.NAME}` on
-  the Media Item and pass `{timing.map}` to the Track.
+- Mark the intended spoken range as a Script `Selection`, pass `semantic={speech.semantic}` to the
+  Track, then use `during={story.selection.NAME}` on the Media Item.
 - For a point event, declare a Script `Moment` and use `at={story.moment.NAME}` with an explicit `for`.
-- For silent programs or intentionally absolute edits, use `during="program"` or explicit `start` and
-  `end` expressions in the shared ProgramSpace.
+- For intentionally absolute edits, use `during="program"` or explicit `start` and `end` expressions
+  in the shared SemanticTrack frame domain.
 - For a non-contiguous Selection, choose `occurrences="each"` only when the same insert should appear
   at every occurrence; otherwise author separate Items.
 - Create J-cuts and L-cuts in the Script boundaries: let narration establish a few words before the

@@ -140,8 +140,7 @@ planner cannot rewrite text, select Styles, see audio or invent time. Its output
 ### caption-fine:Track
 
 ```svml
-<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
-  space={speech.space} program={caption-program} plan={caption-plan.plan}/>
+<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} semantic={speech.semantic} program={caption-program} plan={caption-plan.plan}/>
 ```
 
 The common Caption timing step joins the Plan to the independent SemanticMap. Fine then renders all
@@ -176,8 +175,7 @@ Placement is an explicit Spatial Frame edge; appearance and motion remain reusab
 <space:Frame id="product-frame" within={vertical}
   left="8%" top="20%" right="92%" bottom="68%"/>
 
-<media-track:Track id="product-broll" map={timing.map}
-  space={speech.space} canvas={vertical}>
+<media-track:Track id="product-broll" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item video={product-motion.video} frame={product-frame}
     during={story.selection.product-demo}
     appearance={studio.media.product}
@@ -226,7 +224,7 @@ then choose its exact program window and occupancy:
 <pipeline:Normalize id="music-media" source={music}
   video="none" audio="default" span-authority="audio" frame-rate="30"/>
 
-<audio:Track id="music-bed" space={speech.space}>
+<audio:Track id="music-bed" semantic={speech.semantic}>
   <audio:Clip source={music-media.media} during="program"
     playback="loop-end" gain="0.28" fade-in="600ms" fade-out="800ms"/>
 </audio:Track>
@@ -267,7 +265,7 @@ Container for text items.
   left="6%" top="6%" right="94%" bottom="16%"/>
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
 <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
-<text:Track id="titles" space={speech.space}>
+<text:Track id="titles" semantic={speech.semantic}>
   <text:Area id="title" placement={title-frame} style={title-style} during="program">
     EDIT MEANING, NOT TIMELINES
   </text:Area>
@@ -277,7 +275,7 @@ Container for text items.
 | Attribute | Required | Description |
 |---|---|---|
 | `id` | yes | Unique identifier |
-| `space` | yes | ProgramSpace from `speech:Spine` |
+| `space` | yes | ProgramSpace from `speech:Track` |
 | `map` | no | SemanticMap — needed when items use Selection-based timing |
 
 ### text:Point, text:Area and text:Path
@@ -304,7 +302,7 @@ or a Selection reference for semantic timing:
 
 ```svml
 <text:Style id="callout-style" recipe={studio.text.callout} font={title-font}/>
-<text:Track id="callout" space={speech.space} map={timing.map}>
+<text:Track id="callout" semantic={speech.semantic}>
   <text:Area id="callout-copy" placement={callout-frame}
     style={callout-style} during={story.selection.callout}>
     EXACTLY THE RIGHT MOMENT
@@ -316,7 +314,7 @@ Graph-produced copy remains visible as an edge:
 
 ```svml
 <wording:Value id="headline">EXACTLY THE RIGHT MOMENT</wording:Value>
-<text:Track id="callout" space={speech.space}>
+<text:Track id="callout" semantic={speech.semantic}>
   <text:Area id="callout-copy" content={headline}
     placement={callout-frame} style={callout-style} during="program"/>
 </text:Track>
@@ -377,7 +375,7 @@ Each variant takes its own, at least one, and ids must be unique within a board.
 
 ```svml
 <ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>
-<ranking:Column id="board" map={timing.map} space={speech.space} frame={board-frame}
+<ranking:Column id="board" semantic={speech.semantic} frame={board-frame}
   during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
   style={board-style}>
   <ranking:ColumnItem id="row-regen" label="ReGen" icon={icon-regen}/>
@@ -425,7 +423,7 @@ give both and it is refused. `size`, `color`, `align`, `block` and `padding` are
 
 ```svml
 <space:Frame id="deck-frame" within={vertical} left="44%" top="60%" right="98%" bottom="88%"/>
-<deck:DepthStack id="deck" map={timing.map} space={speech.space} canvas={vertical}
+<deck:DepthStack id="deck" semantic={speech.semantic} canvas={vertical}
   frame={deck-frame} appearance={studio.deck.stack} until={story.moment.done}>
   <deck:Card id="card-spatial" source={icon-spatial} extent={square} at={story.moment.deal-one}/>
   <deck:Card id="card-type" source={icon-type} extent={square} at={story.moment.deal-two}/>
@@ -450,8 +448,8 @@ empty, each with a required `z` for stacking order and a window that is one of:
 | Window | Written |
 |---|---|
 | The whole programme | `during="program"` |
-| A Selection | `during={story.selection.x} map={timing.map}` |
-| A Moment, for a length | `at={story.moment.x} for="12f" map={timing.map}` |
+| A Selection | `during={story.selection.x}` on an item whose Track has `semantic={speech.semantic}` |
+| A Moment, for a length | `at={story.moment.x} for="12f"` on an item whose Track has `semantic={speech.semantic}` |
 | An explicit span | `start="…" end="…"`, optionally against a `selection=` or `moment=` |
 
 Anything bound to the Script needs `map`; an explicit span with no Script source must not have one.
@@ -465,8 +463,8 @@ required attributes, such as `color` / `intensity` / `attack` / `hold` / `decay`
 None have defaults: an effect states its whole shape or is refused.
 
 ```svml
-<screen:Track id="effects" space={speech.space} canvas={vertical}>
-  <screen:Flash during={story.selection.overlay} map={timing.map} z="80"
+<screen:Track id="effects" semantic={speech.semantic} canvas={vertical}>
+  <screen:Flash during={story.selection.overlay} z="80"
     color="#ffffff" intensity="0.6" attack="2" hold="2" decay="6"/>
 </screen:Track>
 ```
@@ -496,7 +494,7 @@ image, and there is no `z`: stacking order comes from the recipe's `stack-order`
 
 ```svml
 <comment:Style id="social" recipe={studio.comment} font={ui-font}/>
-<comment:Track id="comments" canvas={vertical} space={speech.space} map={timing.map}>
+<comment:Track id="comments" canvas={vertical} semantic={speech.semantic}>
   <comment:Sticker id="one" frame={comment-frame} style={social} avatar={viewer-avatar}
     author="@viewer" meta="Featured" during={story.selection.reaction}>
     Wait, it pinned the caption to the word, not the second.
@@ -529,8 +527,7 @@ All four track families together in one source file:
 <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
 <caption-ai:Planner id="cue-plan" display={story.caption}
   program={caption-program} model="gemini-2.5-flash"/>
-<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
-  space={speech.space} plan={cue-plan.plan} program={caption-program}/>
+<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} semantic={speech.semantic} plan={cue-plan.plan} program={caption-program}/>
 
 <!-- Shared placement is an explicit edge, separate from Text appearance. -->
 <space:Canvas id="vertical" width="1080" height="1920"/>
@@ -540,14 +537,14 @@ All four track families together in one source file:
   left="10%" top="20%" right="90%" bottom="70%"/>
 
 <!-- Media: one ordinary Item used editorially as B-roll -->
-<media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
+<media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item video={motion.video} frame={card-frame}
     during={story.selection.demo} appearance={studio.media.card} motion={studio.motion.card}/>
 </media-track:Track>
 
 <!-- Text: persistent title overlay -->
 <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
-<text:Track id="titles" space={speech.space}>
+<text:Track id="titles" semantic={speech.semantic}>
   <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
     MEANING
   </text:Area>
@@ -557,15 +554,15 @@ All four track families together in one source file:
 <media:Audio id="music" src="./assets/music.wav"/>
 <pipeline:Normalize id="music-media" source={music}
   video="none" audio="default" span-authority="audio" frame-rate="30"/>
-<audio:Track id="music-bed" space={speech.space}>
+<audio:Track id="music-bed" semantic={speech.semantic}>
   <audio:Clip source={music-media.media} during="program"
     playback="loop-end" gain="0.28" fade-in="600ms" fade-out="800ms"/>
 </audio:Track>
 
 <!-- All peer tracks feed into Film -->
-<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>
   <film:Track source={speech.visual}/>
-  <film:Track source={speech.audioTrack}/>
+  <film:Track source={speech.audio}/>
   <film:Track source={cards.visual}/>
   <film:Track source={captions.track}/>
   <film:Track source={titles.track}/>

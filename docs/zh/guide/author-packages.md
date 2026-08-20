@@ -115,16 +115,16 @@ vocabulary: {
   ],
   children: [ /* 接受的子元素 */ ],
   ports: [ /* 声明的边 */ ],
-  example: "<mine:Widget id=\"first\" space={speech.space}/>",
+  example: "<mine:Widget id=\"first\"/>",
   notes: [ /* 读者不看就只能靠报错发现的规则 */ ],
 }
 ```
 
-凡是读者必须看一眼产出才能理解的 Surface，都要声明 `preview`。这不限于产出 `VisualTrack` 的 Surface：`@hypit/speech-spine` 也为 Spine 声明了预览图，因为它的形态看一眼比读一段描述更快。没有可展示产出的 Surface 可以不声明，例如只负责装配请求的那种。
+凡是读者必须看一眼产出才能理解的 Surface，都要声明 `preview`。这不限于产出 `VisualTrack` 的 Surface：`@hypit/speech-track` 也为 Spine 声明了预览图，因为它的形态看一眼比读一段描述更快。没有可展示产出的 Surface 可以不声明，例如只负责装配请求的那种。
 
 `appearance` 和 `preview` 回答的是两个不同的问题，谁都替代不了谁：`appearance` 说的是这个元素在所有情况下都会画出什么，预览图给出的是其中一个诚实的实例。
 
-完整词表可研究 `packages/media-track/src/manifest.ts`；`preview/` 目录可参考 `packages/typography-track/`、`packages/caption-fine/`、`packages/deck-track/`、`packages/comment-sticker/`、`packages/screen-overlay/`、`packages/ranking/` 和 `packages/speech-spine/`。
+完整词表可研究 `packages/media-track/src/manifest.ts`；`preview/` 目录可参考 `packages/typography-track/`、`packages/caption-fine/`、`packages/deck-track/`、`packages/comment-sticker/`、`packages/screen-overlay/`、`packages/ranking/` 和 `packages/speech-track/`。
 
 ### 预览图怎么产出
 

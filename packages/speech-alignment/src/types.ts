@@ -5,7 +5,7 @@ export type {
   SpeechTranscriptPassage,
   SpeechWordEvidence,
 } from "@hypit/speech-evidence";
-/** Private vocabulary of the alignment implementation, not part of SemanticMap. */
+/** Private vocabulary of the alignment implementation, not part of SemanticTake. */
 export type AlignmentRelation =
   | "exact"
   | "split"

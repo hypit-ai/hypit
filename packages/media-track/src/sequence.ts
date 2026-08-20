@@ -10,7 +10,7 @@ import { canonicalize } from "@hypit/protocol";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace } from "@hypit/spatial";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { SemanticTrack } from "@hypit/semantic-track";
 import {
   locateMomentOccurrences,
   locateSelectionOccurrences,
@@ -121,12 +121,11 @@ export function appendMediaSequenceMomentMember(
   set: MediaSequenceMemberSet,
   layers: MediaLayerSet,
   spec: MediaSequenceMemberSpec,
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   moment: NarrativeMomentRef,
-  space: ProgramSpace,
 ): MediaSequenceMemberSet {
   const frame = exactlyOneFrame(
-    locateMomentOccurrences(map, moment, space).map((occurrence) => occurrence.cue.frame),
+    locateMomentOccurrences(semantic, moment).map((occurrence) => occurrence.cue.frame),
     `Media Sequence member ${spec.id} Moment`,
   );
   return appendMediaSequenceMember(set, layers, spec, frame);
@@ -136,13 +135,12 @@ export function appendMediaSequenceSelectionMember(
   set: MediaSequenceMemberSet,
   layers: MediaLayerSet,
   spec: MediaSequenceMemberSpec,
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   selection: NarrativeSelectionRef,
-  space: ProgramSpace,
   boundary: "start" | "end",
 ): MediaSequenceMemberSet {
   const frame = exactlyOneFrame(
-    locateSelectionOccurrences(map, selection, space).map((occurrence) =>
+    locateSelectionOccurrences(semantic, selection).map((occurrence) =>
       boundary === "start" ? occurrence.start.frame : occurrence.end.frame),
     `Media Sequence member ${spec.id} Selection`,
   );

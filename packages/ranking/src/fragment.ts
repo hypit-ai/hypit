@@ -3,8 +3,7 @@ import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation, GraphFragment } from "@hypit/elaborator";
 import { mediaTypes } from "@hypit/media";
 import { narrativeTypes } from "@hypit/narrative";
-import { programSpaceTypes } from "@hypit/program-space";
-import { semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { textTypes } from "@hypit/text";
 
@@ -58,8 +57,7 @@ export function createRankingFragment(
   const selected = definition(variant);
   const inputs: Array<GraphFragment["inputs"][number]> = [
     { name: "header", type: rankingTypes.header },
-    { name: "map", type: semanticMapTypes.complete },
-    { name: "space", type: programSpaceTypes.programSpace },
+    { name: "semantic", type: semanticTrackTypes.track },
     { name: "outer", type: outerKind === "selection" ? narrativeTypes.selection : narrativeTypes.excerpt },
     ...(variant === "column" ? [] : [
       { name: "triggers", type: narrativeTypes.moment },
@@ -116,7 +114,7 @@ export function createRankingFragment(
         id: timingId,
         producer: rankingProducers.appendColumnCandidate,
         inputs: {
-          set: candidates, spec: resolvedSpec, map: input("map"), space: input("space"), selection: input(item.timingName),
+          set: candidates, spec: resolvedSpec, semantic: input("semantic"), selection: input(item.timingName),
         },
         result: { kind: "output", name: "set" },
       });
@@ -127,7 +125,7 @@ export function createRankingFragment(
     operations.push({
       id: "outer-window",
       producer: outerKind === "selection" ? rankingProducers.projectColumnSelectionOuter : rankingProducers.projectColumnSegmentOuter,
-      inputs: { map: input("map"), space: input("space"), [outerKind]: input("outer") },
+      inputs: { semantic: input("semantic"), [outerKind]: input("outer") },
       result: { kind: "output", name: "outer" },
     });
     operations.push({
@@ -140,7 +138,7 @@ export function createRankingFragment(
       id: "schedule",
       producer: rankingProducers.schedule,
       inputs: {
-        header: input("header"), items: specs, map: input("map"), space: input("space"),
+        header: input("header"), items: specs, semantic: input("semantic"),
         outer: input("outer"), triggers: input("triggers"), terminal: input("terminal"),
       },
       result: { kind: "output", name: "schedule" },
@@ -158,7 +156,7 @@ export function createRankingFragment(
   operations.push({
     id: "visual",
     producer: selected.render,
-    inputs: { space: input("space"), program: operation("program") },
+    inputs: { semantic: input("semantic"), program: operation("program") },
     result: { kind: "output", name: "track" },
   });
   const hasAudio = sound.appearName !== undefined || sound.moveName !== undefined;
@@ -187,7 +185,7 @@ export function createRankingFragment(
     }
     operations.push({
       id: "audio", producer: rankingProducers.renderAudio,
-      inputs: { space: input("space"), events: operation("events"), style: input("sound-style"), sounds },
+      inputs: { semantic: input("semantic"), events: operation("events"), style: input("sound-style"), sounds },
       result: { kind: "output", name: "track" },
     });
   }

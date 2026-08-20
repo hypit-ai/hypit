@@ -53,10 +53,10 @@ export function alignSemanticTake(
     audio: media.audio.artifact,
     segments: [{ segmentId: excerpt.id, startFrame: 0, endFrameExclusive: media.timeline.frameCount }],
   };
-  const map = locateAlignedSegmentTiming(localNarrative, basis, evidence);
+  const timing = locateAlignedSegmentTiming(localNarrative, basis, evidence);
   return materializeSemanticTake(localNarrative, {
     ...excerpt,
     tokenStart: 0,
     tokenEndExclusive: localNarrative.tokens.length,
-  }, media, map);
+  }, media, timing);
 }

@@ -294,12 +294,53 @@ test("locating is total: every Script token carries a window", () => {
   });
   assert.equal(blind.tokens.length, narrative.tokens.length);
   assert.equal(blind.tokens.every((token) => Number.isSafeInteger(token.startFrame)
-    && Number.isSafeInteger(token.endFrameExclusive)), true);
+    && Number.isSafeInteger(token.endFrameExclusive)
+    && token.endFrameExclusive > token.startFrame), true);
 
   // The speaker said something else entirely; the Script is still fully located.
   const diverged = locate(narrative, { words: [{ text: "zzz", startSec: 0.2, endSec: 0.8 }] });
   assert.equal(diverged.tokens.length, narrative.tokens.length);
-  assert.equal(diverged.tokens.every((token) => Number.isSafeInteger(token.startFrame)), true);
+  assert.equal(diverged.tokens.every((token) => token.endFrameExclusive > token.startFrame), true);
+});
+
+test("a collapsed WhisperX word is assigned the available interval between its neighbors", () => {
+  const narrative = parseScript("collapsed.svml", "<line>well a lot</line>");
+  const map = locate(narrative, {
+    durationSec: 1,
+    words: [
+      { text: "well", startSec: 0.1, endSec: 0.4 },
+      { text: "a", startSec: 0.43, endSec: 0.43 },
+      { text: "lot", startSec: 0.5, endSec: 0.8 },
+    ],
+  });
+  assert.deepEqual(map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]), [
+    [100, 400],
+    [400, 500],
+    [500, 800],
+  ]);
+});
+
+test("three Script words may share the two video frames covered by one evidence word", () => {
+  const narrative = parseScript("pigeonhole.svml", "<line>alpha beta gamma</line>");
+  const original = speechBasis(narrative, 1);
+  const programSpace = sealProgramSpace({
+    durationSec: 1,
+    frameRate: { numerator: 32, denominator: 1 },
+  });
+  const basis: AlignmentBasis = {
+    ...original,
+    programSpace,
+    segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 32 }],
+  };
+  const map = locateAlignedSegmentTiming(narrative, basis, evidence({
+    basis,
+    words: [{ text: "alphabetagamma", startSec: 10 / 32, endSec: 12 / 32 }],
+  }));
+  assert.deepEqual(map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]), [
+    [10, 11],
+    [10, 12],
+    [11, 12],
+  ]);
 });
 
 test("Evidence is interpreted only through the explicitly connected alignment clock", () => {
@@ -347,12 +388,7 @@ test("the final map is quantized once into the selected ProgramSpace", () => {
   assert.equal(map.anchors.every((anchor) => Number.isSafeInteger(anchor.frame)), true);
 });
 
-test("a backwards character measurement reaches the map backwards, uncorrected", () => {
-  // WhisperX character times need not be ordered. The locator reports what it
-  // measured; deciding what a backwards window means belongs to whoever renders
-  // it, and silently flattening it here would hide the evidence. Three Script
-  // words merge into one spoken word, so the middle one inherits neither edge of
-  // the group envelope and its own characters decide its window.
+test("a backwards character measurement is treated as missing token timing", () => {
   const narrative = parseScript("backwards.svml", "<line>can not now</line>");
   const map = locate(narrative, {
     endSec: 1,
@@ -365,9 +401,5 @@ test("a backwards character measurement reaches the map backwards, uncorrected",
     ),
   });
   const middle = map.tokens[1]!;
-  assert.equal(
-    middle.startFrame > middle.endFrameExclusive,
-    true,
-    `the inverted measurement survived, got ${middle.startFrame}..${middle.endFrameExclusive}`,
-  );
+  assert.equal(middle.endFrameExclusive > middle.startFrame, true);
 });

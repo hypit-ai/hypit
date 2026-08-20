@@ -374,6 +374,6 @@ A two-take setup with estimated durations feeding explicit Text assembly and See
 </seedance:ReferenceVideo>
 ```
 
-Each `seedance:ReferenceVideo` produces a `{*.video}` output that feeds into `speech:Spine` in the
+Each `seedance:ReferenceVideo` produces a `{*.video}` output that feeds into `speech:Track` in the
 next stage. Different takes can use different reference images while sharing the same voice timbre
 and prompt Recipe.

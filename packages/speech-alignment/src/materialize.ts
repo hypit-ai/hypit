@@ -1,8 +1,9 @@
 import type { Narrative, NarrativeExcerpt } from "@hypit/narrative";
 import type { SynchronizedMedia } from "@hypit/media";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
 import type { SemanticTake } from "@hypit/speech";
 import { assertSemanticTakeIdentity, sealSemanticTake } from "@hypit/speech";
+
+import type { LocalSemanticTiming } from "./locate.js";
 
 function authoredSegment(narrative: Narrative, excerpt: NarrativeExcerpt): Narrative["segments"][number] {
   if (excerpt.kind !== "segment") throw new Error("SemanticTake materialization requires a Segment excerpt.");
@@ -28,11 +29,11 @@ export function materializeSemanticTake(
   narrative: Narrative,
   excerpt: NarrativeExcerpt,
   media: SynchronizedMedia,
-  map: CompleteSemanticMap,
+  timing: LocalSemanticTiming,
 ): SemanticTake {
   const segment = authoredSegment(narrative, excerpt);
   const localFrameCount = media.timeline.frameCount;
-  const timedById = new Map(map.tokens.map((token) => [token.tokenId, token]));
+  const timedById = new Map(timing.tokens.map((token) => [token.tokenId, token]));
   const tokens = narrative.tokens.slice(segment.tokenStart, segment.tokenEndExclusive).map((token) => {
     const timed = timedById.get(token.id);
     if (timed === undefined || timed.segmentId !== segment.id) {
@@ -48,7 +49,7 @@ export function materializeSemanticTake(
       endFrameExclusive: localFrame(timed.endFrameExclusive, localFrameCount, `Token ${token.id}`),
     };
   });
-  const anchorsById = new Map(map.anchors.map((anchor) => [anchor.identity, anchor]));
+  const anchorsById = new Map(timing.anchors.map((anchor) => [anchor.identity, anchor]));
   const anchors = narrative.semanticIndex.anchors
     .filter((anchor) => anchor.segmentId === segment.id)
     .map((anchor) => {

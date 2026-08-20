@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 
 import { openStudioArchive } from "./src/archive.js";
-import { compileSource } from "./src/compile.js";
 import { loadStudioDomain } from "./src/domain.js";
 import { loadStudioRun } from "./src/run.js";
 import { studioPlugin } from "./src/server.js";
@@ -16,7 +15,7 @@ function usage(message?: string): never {
   if (message !== undefined) process.stderr.write(`${message}\n\n`);
   process.stderr.write(`Usage:
   pnpm studio -- --run <build.svrun> [--runtime <hypit.runtime.json>]
-    [--port <number>] [--package-root <directory>]
+    [--port <number>] [--workspace <directory>] [--package-root <directory>]
 
 Studio opens one explicit Run Source, requires a Film/Render target and a
 resolved deterministic semantic projection, and writes only its Author SVML.
@@ -44,7 +43,7 @@ const runArgument = values.get("run");
 if (runArgument === undefined || runArgument.trim().length === 0) usage("Missing --run");
 const runPath = resolve(invokedFrom, runArgument);
 const packageRoot = resolve(values.get("package-root") ?? invokedFrom);
-const workspaceRoot = packageRoot;
+const workspaceRoot = resolve(values.get("workspace") ?? dirname(runPath));
 const runtimeArgument = values.get("runtime");
 const runtimePath = runtimeArgument === undefined ? undefined : resolve(invokedFrom, runtimeArgument);
 const port = Number(values.get("port") ?? "5179");
@@ -65,7 +64,7 @@ try {
 }
 const source = run.authorSource;
 try {
-  inspectStudioRun(await compileSource(source, domain), run);
+  inspectStudioRun(run.source, run);
 } catch (error) {
   await archive?.close();
   throw error;
@@ -81,7 +80,6 @@ const server = await createServer({
     source,
     runPath,
     domain,
-    run,
     ...(archive === undefined ? {} : { archive }),
   })],
 });

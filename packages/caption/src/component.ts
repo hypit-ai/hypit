@@ -1,6 +1,6 @@
 import type { ComponentPackage } from "@hypit/component-kit";
 import type { CaptionCorrespondence, CaptionDisplaySequence } from "@hypit/narrative";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { SemanticTrack } from "@hypit/semantic-track";
 import type { StoredValue } from "@hypit/protocol";
 import { canonicalize } from "@hypit/protocol";
 
@@ -33,7 +33,7 @@ export const captionComponent = {
             value: canonicalize(temporalizeCaptionPlan(
               inline<CaptionDisplaySequence>(inputs.display?.value, "CaptionDisplaySequence"),
               inline<CaptionCorrespondence>(inputs.correspondence?.value, "CaptionCorrespondence"),
-              inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
+              inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
               inline<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
               inline<CaptionPlan>(inputs.plan?.value, "CaptionPlan"),
             )),

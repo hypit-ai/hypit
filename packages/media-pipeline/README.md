@@ -32,7 +32,7 @@ This package is the shared execution vocabulary. Speech authoring makes the boun
 alignment produce one `SemanticTake`. Media Track consumes that prepared value; it never owns an
 implicit visual-only normalization policy.
 
-The frame clock is a separate program fact and can be shared by every Normalize and Speech Spine:
+The frame clock is a separate program fact and can be shared by every Normalize and Speech Track:
 
 ```svml
 <program:Clock id="clock" frame-rate="30"/>
@@ -58,7 +58,7 @@ Three ordinary author operations reuse that same inspection/execution boundary:
 ```
 
 Every result is an ordinary `BlobArtifact`. Audio extraction emits a deterministic 48 kHz stereo PCM
-WAV but makes no `SpeechBasis`, speaker or alignment claim; it can therefore feed a later model
+WAV but makes no `SemanticTake`, speaker or alignment claim; it can therefore feed a later model
 reference port directly. Frame extraction supports `first`, `last`, `frame:<index>` and
 `time:<seconds>`. Transform operations are ordered author meaning and never an arbitrary FFmpeg string.
 

@@ -4,9 +4,8 @@ import { artifactDependency } from "@hypit/artifact";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
-import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
-import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { temporalDependency } from "@hypit/temporal";
@@ -427,10 +426,8 @@ export const rankingMarkupSurfaces = [
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this board so its Schedule, Program and Tracks can be referenced elsewhere in the Source." },
-          { name: "map", kind: "reference", required: true, accepts: [semanticMapTypes.complete],
-            summary: "Chooses the measured SemanticMap that gives every trigger its frame." },
-          { name: "space", kind: "reference", required: true, accepts: [programSpaceTypes.programSpace],
-            summary: "Chooses the ProgramSpace the board is timed and rendered against." },
+          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
+            summary: "Chooses the SemanticTrack that owns the frame domain and gives every trigger its frame." },
           { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
             summary: "Chooses the Frame the whole board occupies." },
           { name: "during", kind: "reference", required: true, accepts: [narrativeTypes.selection],
@@ -473,7 +470,7 @@ export const rankingMarkupSurfaces = [
             summary: "The rendered board sound, published only when a sound is authored." },
         ],
         example: `<ranking:TierBoardStyle id="tier-style" recipe={studio.ranking.tier} font={ui-font}/>
-<ranking:TierBoard id="tiers" map={timing.map} space={speech.space} frame={board-frame}
+<ranking:TierBoard id="tiers" semantic={speech.semantic} frame={board-frame}
   during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
   style={tier-style}>
   <ranking:TierItem id="row-regen" tier="s" icon={icon-regen}/>
@@ -494,10 +491,8 @@ export const rankingMarkupSurfaces = [
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this board so its Schedule, Program and Tracks can be referenced elsewhere in the Source." },
-          { name: "map", kind: "reference", required: true, accepts: [semanticMapTypes.complete],
-            summary: "Chooses the measured SemanticMap that gives every trigger its frame." },
-          { name: "space", kind: "reference", required: true, accepts: [programSpaceTypes.programSpace],
-            summary: "Chooses the ProgramSpace the board is timed and rendered against." },
+          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
+            summary: "Chooses the SemanticTrack that owns the frame domain and resolves every reveal Selection." },
           { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas],
             summary: "Chooses the Canvas coordinate space used by the independent reveal stage." },
           { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
@@ -542,7 +537,7 @@ export const rankingMarkupSurfaces = [
             summary: "The rendered board sound, published only when a sound is authored." },
         ],
         example: `<ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>
-<ranking:Column id="board" map={timing.map} space={speech.space} canvas={vertical} frame={board-frame}
+<ranking:Column id="board" semantic={speech.semantic} canvas={vertical} frame={board-frame}
   during={story.segment.ranking}
   style={board-style}>
   <ranking:ColumnItem id="row-regen" rank="1" label="ReGen" icon={icon-regen} during={story.selection.regen}/>
@@ -566,10 +561,8 @@ export const rankingMarkupSurfaces = [
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this board so its Schedule, Program and Tracks can be referenced elsewhere in the Source." },
-          { name: "map", kind: "reference", required: true, accepts: [semanticMapTypes.complete],
-            summary: "Chooses the measured SemanticMap that gives every trigger its frame." },
-          { name: "space", kind: "reference", required: true, accepts: [programSpaceTypes.programSpace],
-            summary: "Chooses the ProgramSpace the board is timed and rendered against." },
+          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
+            summary: "Chooses the SemanticTrack that owns the frame domain and gives every trigger its frame." },
           { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
             summary: "Chooses the Frame the whole board occupies." },
           { name: "during", kind: "reference", required: true, accepts: [narrativeTypes.selection],
@@ -608,7 +601,7 @@ export const rankingMarkupSurfaces = [
             summary: "The rendered board sound, published only when a sound is authored." },
         ],
         example: `<ranking:TopThreeStyle id="podium-style" recipe={studio.ranking.podium} font={ui-font}/>
-<ranking:TopThree id="podium" map={timing.map} space={speech.space} frame={board-frame}
+<ranking:TopThree id="podium" semantic={speech.semantic} frame={board-frame}
   during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
   style={podium-style}>
   <ranking:TopThreeItem id="slot-gold" label="ReGen" icon={icon-regen}/>
@@ -628,7 +621,7 @@ export const rankingMarkupSurfaces = [
 
 export const rankingManifest: ModuleManifest = {
   format: "hypit.module@1", name: rankingModuleRef.name, version: rankingModuleRef.version,
-  dependencies: [artifactDependency, mediaDependency, narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, compositionDependency, textDependency],
+  dependencies: [artifactDependency, mediaDependency, narrativeDependency, semanticTrackDependency, spatialDependency, temporalDependency, compositionDependency, textDependency],
   types: [
     { name: rankingTypes.header.name },
     { name: rankingTypes.itemSpec.name },
@@ -657,15 +650,15 @@ export const rankingManifest: ModuleManifest = {
     { name: rankingProducers.appendSpec.name, inputs: [{ name: "set", type: rankingTypes.itemSpecs }, { name: "spec", type: rankingTypes.itemSpec }], outputs: [{ name: "set", type: rankingTypes.itemSpecs }], needs: [] },
     { name: rankingProducers.schedule.name, inputs: [
       { name: "header", type: rankingTypes.header }, { name: "items", type: rankingTypes.itemSpecs },
-      { name: "map", type: semanticMapTypes.complete }, { name: "space", type: programSpaceTypes.programSpace },
+      { name: "semantic", type: semanticTrackTypes.track },
       { name: "outer", type: narrativeTypes.selection }, { name: "triggers", type: narrativeTypes.moment }, { name: "terminal", type: narrativeTypes.moment },
     ], outputs: [{ name: "schedule", type: rankingTypes.schedule }], needs: [] },
     { name: rankingProducers.projectColumnSelectionOuter.name, inputs: [
-      { name: "map", type: semanticMapTypes.complete }, { name: "space", type: programSpaceTypes.programSpace },
+      { name: "semantic", type: semanticTrackTypes.track },
       { name: "selection", type: narrativeTypes.selection },
     ], outputs: [{ name: "outer", type: rankingTypes.columnOuter }], needs: [] },
     { name: rankingProducers.projectColumnSegmentOuter.name, inputs: [
-      { name: "map", type: semanticMapTypes.complete }, { name: "space", type: programSpaceTypes.programSpace },
+      { name: "semantic", type: semanticTrackTypes.track },
       { name: "segment", type: narrativeTypes.excerpt },
     ], outputs: [{ name: "outer", type: rankingTypes.columnOuter }], needs: [] },
     { name: rankingProducers.createColumnCandidates.name, inputs: [], outputs: [
@@ -673,7 +666,7 @@ export const rankingManifest: ModuleManifest = {
     ], needs: [] },
     { name: rankingProducers.appendColumnCandidate.name, inputs: [
       { name: "set", type: rankingTypes.columnCandidates }, { name: "spec", type: rankingTypes.itemSpec },
-      { name: "map", type: semanticMapTypes.complete }, { name: "space", type: programSpaceTypes.programSpace },
+      { name: "semantic", type: semanticTrackTypes.track },
       { name: "selection", type: narrativeTypes.selection },
     ], outputs: [{ name: "set", type: rankingTypes.columnCandidates }], needs: [] },
     { name: rankingProducers.columnSchedule.name, inputs: [
@@ -710,7 +703,7 @@ export const rankingManifest: ModuleManifest = {
       { name: eventProducer.name, inputs: [
         { name: "schedule", type: rankingTypes.schedule }, { name: "style", type: styleType }, { name: "specs", type: rankingTypes.itemSpecs },
       ], outputs: [{ name: "events", type: rankingTypes.soundEvents }], needs: [] },
-      { name: renderProducer.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: programType }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+      { name: renderProducer.name, inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: programType }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
     ]),
     { name: rankingProducers.createSounds.name, inputs: [], outputs: [{ name: "sounds", type: rankingTypes.sounds }], needs: [] },
     ...([
@@ -720,7 +713,7 @@ export const rankingManifest: ModuleManifest = {
       name: producer.name, inputs: [{ name: "sounds", type: rankingTypes.sounds }, { name: "media", type: mediaTypes.synchronized }], outputs: [{ name: "sounds", type: rankingTypes.sounds }], needs: [],
     })),
     { name: rankingProducers.renderAudio.name, inputs: [
-      { name: "space", type: programSpaceTypes.programSpace }, { name: "events", type: rankingTypes.soundEvents },
+      { name: "semantic", type: semanticTrackTypes.track }, { name: "events", type: rankingTypes.soundEvents },
       { name: "style", type: rankingTypes.soundStyle }, { name: "sounds", type: rankingTypes.sounds },
     ], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [] },
   ],

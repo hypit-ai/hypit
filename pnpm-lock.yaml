@@ -167,9 +167,9 @@ importers:
       '@hypit/seedream':
         specifier: workspace:*
         version: link:packages/seedream
-      '@hypit/semantic-map':
+      '@hypit/semantic-track':
         specifier: workspace:*
-        version: link:packages/semantic-map
+        version: link:packages/semantic-track
       '@hypit/spatial':
         specifier: workspace:*
         version: link:packages/spatial
@@ -179,15 +179,12 @@ importers:
       '@hypit/speech-alignment':
         specifier: workspace:*
         version: link:packages/speech-alignment
-      '@hypit/speech-basis':
-        specifier: workspace:*
-        version: link:packages/speech-basis
       '@hypit/speech-evidence':
         specifier: workspace:*
         version: link:packages/speech-evidence
-      '@hypit/speech-spine':
+      '@hypit/speech-track':
         specifier: workspace:*
-        version: link:packages/speech-spine
+        version: link:packages/speech-track
       '@hypit/store-sqlite':
         specifier: workspace:*
         version: link:packages/store-sqlite
@@ -284,9 +281,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
+      '@hypit/semantic-track':
         specifier: workspace:*
-        version: link:../semantic-map
+        version: link:../semantic-track
       '@hypit/temporal':
         specifier: workspace:*
         version: link:../temporal
@@ -351,9 +348,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
+      '@hypit/semantic-track':
         specifier: workspace:*
-        version: link:../semantic-map
+        version: link:../semantic-track
     devDependencies:
       '@hypit/program-space':
         specifier: workspace:*
@@ -400,9 +397,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
+      '@hypit/semantic-track':
         specifier: workspace:*
-        version: link:../semantic-map
+        version: link:../semantic-track
       '@hypit/svs':
         specifier: workspace:*
         version: link:../svs
@@ -495,9 +492,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
+      '@hypit/semantic-track':
         specifier: workspace:*
-        version: link:../semantic-map
+        version: link:../semantic-track
       '@hypit/spatial':
         specifier: workspace:*
         version: link:../spatial
@@ -610,9 +607,6 @@ importers:
       '@hypit/narrative':
         specifier: workspace:*
         version: link:../narrative
-      '@hypit/semantic-map':
-        specifier: workspace:*
-        version: link:../semantic-map
       '@hypit/spatial':
         specifier: workspace:*
         version: link:../spatial
@@ -682,9 +676,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
+      '@hypit/semantic-track':
         specifier: workspace:*
-        version: link:../semantic-map
+        version: link:../semantic-track
       '@hypit/spatial':
         specifier: workspace:*
         version: link:../spatial
@@ -797,6 +791,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/semantic-track':
+        specifier: workspace:*
+        version: link:../semantic-track
       '@hypit/spatial':
         specifier: workspace:*
         version: link:../spatial
@@ -1502,9 +1499,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
+      '@hypit/semantic-track':
         specifier: workspace:*
-        version: link:../semantic-map
+        version: link:../semantic-track
       '@hypit/spatial':
         specifier: workspace:*
         version: link:../spatial
@@ -2011,9 +2008,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
+      '@hypit/semantic-track':
         specifier: workspace:*
-        version: link:../semantic-map
+        version: link:../semantic-track
       '@hypit/spatial':
         specifier: workspace:*
         version: link:../spatial
@@ -2115,6 +2112,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/semantic-track':
+        specifier: workspace:*
+        version: link:../semantic-track
     devDependencies:
       '@hypit/core':
         specifier: workspace:*
@@ -2122,6 +2122,9 @@ importers:
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@hypit/svs':
+        specifier: workspace:*
+        version: link:../svs
       '@hypit/validation':
         specifier: workspace:*
         version: link:../validation
@@ -2265,9 +2268,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
+      '@hypit/semantic-track':
         specifier: workspace:*
-        version: link:../semantic-map
+        version: link:../semantic-track
       '@hypit/spatial':
         specifier: workspace:*
         version: link:../spatial
@@ -2373,17 +2376,29 @@ importers:
         specifier: workspace:*
         version: link:../text
 
-  packages/semantic-map:
+  packages/semantic-track:
     dependencies:
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@hypit/media':
+        specifier: workspace:*
+        version: link:../media
       '@hypit/narrative':
         specifier: workspace:*
         version: link:../narrative
+      '@hypit/program-space':
+        specifier: workspace:*
+        version: link:../program-space
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/speech-evidence':
+      '@hypit/speech':
         specifier: workspace:*
-        version: link:../speech-evidence
+        version: link:../speech
 
   packages/source:
     dependencies:
@@ -2418,18 +2433,9 @@ importers:
       '@hypit/media':
         specifier: workspace:*
         version: link:../media
-      '@hypit/program-space':
-        specifier: workspace:*
-        version: link:../program-space
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
-        specifier: workspace:*
-        version: link:../semantic-map
-      '@hypit/spatial':
-        specifier: workspace:*
-        version: link:../spatial
 
   packages/speech-alignment:
     dependencies:
@@ -2448,9 +2454,6 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
-        specifier: workspace:*
-        version: link:../semantic-map
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
@@ -2462,57 +2465,14 @@ importers:
         specifier: workspace:*
         version: link:../script
 
-  packages/speech-basis:
-    dependencies:
-      '@hypit/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@hypit/composition':
-        specifier: workspace:*
-        version: link:../composition
-      '@hypit/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@hypit/media-track':
-        specifier: workspace:*
-        version: link:../media-track
-      '@hypit/program-space':
-        specifier: workspace:*
-        version: link:../program-space
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/speech':
-        specifier: workspace:*
-        version: link:../speech
-    devDependencies:
-      '@hypit/core':
-        specifier: workspace:*
-        version: link:../core
-      '@hypit/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-      '@hypit/media-pipeline':
-        specifier: workspace:*
-        version: link:../media-pipeline
-      '@hypit/svs':
-        specifier: workspace:*
-        version: link:../svs
-      '@hypit/validation':
-        specifier: workspace:*
-        version: link:../validation
-
   packages/speech-evidence:
     dependencies:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
 
-  packages/speech-spine:
+  packages/speech-track:
     dependencies:
-      '@hypit/artifact':
-        specifier: workspace:*
-        version: link:../artifact
       '@hypit/component-kit':
         specifier: workspace:*
         version: link:../component-kit
@@ -2525,30 +2485,21 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
-      '@hypit/media':
+      '@hypit/media-track':
         specifier: workspace:*
-        version: link:../media
-      '@hypit/media-pipeline':
-        specifier: workspace:*
-        version: link:../media-pipeline
-      '@hypit/program-space':
-        specifier: workspace:*
-        version: link:../program-space
+        version: link:../media-track
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
+      '@hypit/semantic-track':
         specifier: workspace:*
-        version: link:../semantic-map
+        version: link:../semantic-track
       '@hypit/spatial':
         specifier: workspace:*
         version: link:../spatial
       '@hypit/speech':
         specifier: workspace:*
         version: link:../speech
-      '@hypit/speech-basis':
-        specifier: workspace:*
-        version: link:../speech-basis
       '@hypit/svs':
         specifier: workspace:*
         version: link:../svs
@@ -2556,9 +2507,6 @@ importers:
       '@hypit/core':
         specifier: workspace:*
         version: link:../core
-      '@hypit/media-track':
-        specifier: workspace:*
-        version: link:../media-track
       '@hypit/script':
         specifier: workspace:*
         version: link:../script
@@ -2631,6 +2579,9 @@ importers:
       '@hypit/script':
         specifier: workspace:*
         version: link:../script
+      '@hypit/semantic-track':
+        specifier: workspace:*
+        version: link:../semantic-track
       '@hypit/validation':
         specifier: workspace:*
         version: link:../validation
@@ -2674,9 +2625,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
+      '@hypit/semantic-track':
         specifier: workspace:*
-        version: link:../semantic-map
+        version: link:../semantic-track
 
   packages/text:
     dependencies:
@@ -2734,9 +2685,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/semantic-map':
+      '@hypit/semantic-track':
         specifier: workspace:*
-        version: link:../semantic-map
+        version: link:../semantic-track
       '@hypit/spatial':
         specifier: workspace:*
         version: link:../spatial

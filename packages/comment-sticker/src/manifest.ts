@@ -4,9 +4,8 @@ import { artifactDependency, artifactTypes } from "@hypit/artifact";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { fontArtifactSchema, mediaDependency, mediaTypes } from "@hypit/media";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
-import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
-import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { temporalDependency } from "@hypit/temporal";
@@ -145,7 +144,7 @@ export const commentStickerProgramSchema: ValueSchema = object({
 const appendInputs = [
   { name: "set", type: commentStickerTypes.set }, { name: "header", type: commentStickerTypes.header },
   { name: "frame", type: spatialTypes.frame }, { name: "style", type: commentStickerTypes.style },
-  { name: "space", type: programSpaceTypes.programSpace }, { name: "spec", type: commentStickerTypes.itemSpec },
+  { name: "semantic", type: semanticTrackTypes.track }, { name: "spec", type: commentStickerTypes.itemSpec },
   { name: "content", type: commentStickerTypes.content },
 ] as const;
 
@@ -286,10 +285,8 @@ export const commentStickerMarkupSurfaces = [
             summary: "Names the Track and prefixes every binding it publishes." },
           { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas],
             summary: "Chooses the Canvas the cards are laid out on." },
-          { name: "space", kind: "reference", required: true, accepts: [programSpaceTypes.programSpace],
-            summary: "Chooses the ProgramSpace whose duration and frame rate every card window is measured against." },
-          { name: "map", kind: "reference", required: false, accepts: [semanticMapTypes.complete],
-            summary: "Supplies the SemanticMap that resolves the Selections and Moments its Stickers bind to." },
+          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
+            summary: "Chooses the SemanticTrack that owns the Program frame domain and resolves every temporal binding." },
         ],
         children: [
           { tag: "Sticker", cardinality: "many",
@@ -338,7 +335,7 @@ export const commentStickerMarkupSurfaces = [
             summary: "That Program rendered as one VisualTrack." },
         ],
         example: `
-<comment:Track id="comments" canvas={vertical} space={speech.space} map={timing.map}>
+<comment:Track id="comments" canvas={vertical} semantic={speech.semantic}>
   <comment:Sticker id="one" frame={comment-frame} style={social} avatar={viewer-avatar}
     author="@viewer" meta="Featured" during={story.selection.reaction}>
     Wait, it pinned the caption to the word, not the second.
@@ -347,7 +344,6 @@ export const commentStickerMarkupSurfaces = [
         `,
         notes: [
           "A Track requires at least one Sticker.",
-          "`map` is refused when no Sticker binds to a Selection or a Moment, rather than ignored.",
           "A Sticker states exactly one temporal form: `during`, `at` with `for`, or `start` with `end`.",
           "With `start` and `end`, `selection` or `moment` binds the point of reference; both together are refused.",
           "A Sticker's copy is either `comment` or the element's own text; stating both is refused, and one of the two is required.",
@@ -362,7 +358,7 @@ export const commentStickerManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: commentStickerModuleRef.name,
   version: commentStickerModuleRef.version,
-  dependencies: [artifactDependency, narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, mediaDependency, compositionDependency, textDependency],
+  dependencies: [artifactDependency, narrativeDependency, semanticTrackDependency, spatialDependency, temporalDependency, mediaDependency, compositionDependency, textDependency],
   types: [
     { name: commentStickerTypes.header.name },
     { name: commentStickerTypes.style.name },
@@ -387,10 +383,10 @@ export const commentStickerManifest: ModuleManifest = {
     ...([
       [commentStickerProducers.appendProgram, []],
       [commentStickerProducers.appendProgramAvatar, [{ name: "avatar", type: artifactTypes.blob }]],
-      [commentStickerProducers.appendSelection, [{ name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }]],
-      [commentStickerProducers.appendSelectionAvatar, [{ name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }, { name: "avatar", type: artifactTypes.blob }]],
-      [commentStickerProducers.appendMoment, [{ name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }]],
-      [commentStickerProducers.appendMomentAvatar, [{ name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }, { name: "avatar", type: artifactTypes.blob }]],
+      [commentStickerProducers.appendSelection, [{ name: "selection", type: narrativeTypes.selection }]],
+      [commentStickerProducers.appendSelectionAvatar, [{ name: "selection", type: narrativeTypes.selection }, { name: "avatar", type: artifactTypes.blob }]],
+      [commentStickerProducers.appendMoment, [{ name: "moment", type: narrativeTypes.moment }]],
+      [commentStickerProducers.appendMomentAvatar, [{ name: "moment", type: narrativeTypes.moment }, { name: "avatar", type: artifactTypes.blob }]],
     ] as const).map(([producer, extra]) => ({
       name: producer.name,
       inputs: [...appendInputs, ...extra],
@@ -398,7 +394,7 @@ export const commentStickerManifest: ModuleManifest = {
       needs: [],
     })),
     { name: commentStickerProducers.finalize.name, inputs: [{ name: "set", type: commentStickerTypes.set }, { name: "header", type: commentStickerTypes.header }], outputs: [{ name: "program", type: commentStickerTypes.program }], needs: [] },
-    { name: commentStickerProducers.render.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }, { name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: commentStickerTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+    { name: commentStickerProducers.render.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }, { name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: commentStickerTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
   ],
 };
 

@@ -1,11 +1,7 @@
-import { readFileSync } from "node:fs";
-
 import type { NodeCompiledSourceClosure } from "@hypit/compiler-node";
 import type { ArtifactAttachment } from "@hypit/workspace";
 
-import type { StudioDomain } from "./domain.js";
 import type { Observations } from "./observe.js";
-import { createObserver } from "./observe.js";
 
 export type ServedFile = {
   readonly mediaType: string;
@@ -20,14 +16,31 @@ export type CompiledSource = {
   readonly exports: readonly { readonly name: string; readonly type: string; readonly ref: string }[];
 };
 
-export class CompileFailure extends Error {
-  readonly range: { readonly start: number; readonly end: number } | undefined;
-
-  constructor(message: string, range?: { readonly start: number; readonly end: number }) {
-    super(message);
-    this.name = "CompileFailure";
-    this.range = range;
+/**
+ * Attach Studio's observations to the exact Author compilation a Run was
+ * resolved against. Keeping this conversion separate lets the Run compiler and
+ * Studio share one Author graph instead of compiling two look-alike graphs.
+ */
+export async function observedCompiledSource(
+  compiled: NodeCompiledSourceClosure,
+  observations: Observations,
+): Promise<CompiledSource> {
+  const served = new Map<string, ServedFile>();
+  for (const attachment of compiled.attachments) {
+    served.set(attachment.artifact.digest, {
+      mediaType: attachment.artifact.mediaType,
+      bytes: await bytesOf(attachment),
+    });
   }
+  return {
+    compiled,
+    observations,
+    served,
+    exports: compiled.exports.flatMap((item) => {
+      if (!("id" in item.ref)) return [];
+      return [{ name: item.name, type: item.type.name, ref: item.ref.id }];
+    }),
+  };
 }
 
 async function bytesOf(attachment: ArtifactAttachment): Promise<Uint8Array> {
@@ -45,45 +58,4 @@ async function bytesOf(attachment: ArtifactAttachment): Promise<Uint8Array> {
     offset += chunk.byteLength;
   }
   return bytes;
-}
-
-/**
- * Compile once through the official Node compiler. The observer wraps the
- * selected Markup Surfaces only to retain source-to-output provenance.
- */
-export async function compileSource(entryPath: string, domain: StudioDomain): Promise<CompiledSource> {
-  const observer = createObserver(domain.surfaces, (request) => {
-    const found = domain.resolveModule(request.from);
-    if (found === undefined) throw new CompileFailure(`No selected Source package satisfies ${request.from}.`);
-    return found;
-  });
-  const compiler = domain.createCompiler(observer.surfaces);
-  let compiled: NodeCompiledSourceClosure;
-  try {
-    compiled = await compiler.compileFile(entryPath);
-  } catch (error) {
-    const held = error as { readonly message?: string; readonly range?: { start: number; end: number } };
-    const last = observer.observations().placements.at(-1);
-    throw new CompileFailure(held.message ?? String(error), held.range ?? last?.range);
-  }
-  const served = new Map<string, ServedFile>();
-  for (const attachment of compiled.attachments) {
-    served.set(attachment.artifact.digest, {
-      mediaType: attachment.artifact.mediaType,
-      bytes: await bytesOf(attachment),
-    });
-  }
-  return {
-    compiled,
-    observations: observer.observations(),
-    served,
-    exports: compiled.exports.flatMap((item) => {
-      if (!("id" in item.ref)) return [];
-      return [{ name: item.name, type: item.type.name, ref: item.ref.id }];
-    }),
-  };
-}
-
-export function sourceText(path: string): string {
-  return readFileSync(path, "utf8");
 }

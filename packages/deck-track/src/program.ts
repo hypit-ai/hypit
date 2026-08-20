@@ -15,7 +15,8 @@ import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize } from "@hypit/protocol";
 import { verifyText } from "@hypit/text";
 import type { Text } from "@hypit/text";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { SemanticTrack } from "@hypit/semantic-track";
+import { projectSemanticProgramSpace } from "@hypit/semantic-track";
 import { assertSpatialFrame } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
 import {
@@ -236,30 +237,28 @@ export function appendDepthStackMomentCard(
   material: DepthStackCardSet["cards"][number]["material"],
   label: DepthStackCardLabel,
   spec: DepthStackCardSpec,
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   moment: NarrativeMomentRef,
-  space: ProgramSpace,
 ): DepthStackCardSet {
-  const occurrences = locateMomentOccurrences(map, moment, space);
+  const occurrences = locateMomentOccurrences(semantic, moment);
   assert(occurrences.length === 1,
     `DepthStack Card ${spec.id} Moment must locate exactly once; received ${occurrences.length}.`);
   return appendDepthStackCard(set, material, label, spec, occurrences[0]!.cue.frame);
 }
 
-function terminalMoment(map: CompleteSemanticMap, moment: NarrativeMomentRef, space: ProgramSpace): number {
-  const occurrences = locateMomentOccurrences(map, moment, space);
+function terminalMoment(semantic: SemanticTrack, moment: NarrativeMomentRef): number {
+  const occurrences = locateMomentOccurrences(semantic, moment);
   assert(occurrences.length === 1,
     `DepthStack terminal Moment must locate exactly once; received ${occurrences.length}.`);
   return occurrences[0]!.cue.frame;
 }
 
 function terminalSelection(
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   selection: NarrativeSelectionRef,
-  space: ProgramSpace,
   boundary: "start" | "end",
 ): number {
-  const occurrences = locateSelectionOccurrences(map, selection, space);
+  const occurrences = locateSelectionOccurrences(semantic, selection);
   assert(occurrences.length === 1,
     `DepthStack terminal Selection must locate exactly once; received ${occurrences.length}.`);
   return boundary === "start" ? occurrences[0]!.start.frame : occurrences[0]!.end.frame;
@@ -271,8 +270,9 @@ export function finalizeDepthStack(
   frame: SpatialFrame,
   spec: DepthStackSpec,
   terminalFrame: number,
-  space: ProgramSpace,
+  semantic: SemanticTrack,
 ): DepthStackProgram {
+  const space = projectSemanticProgramSpace(semantic);
   assertDepthStackCardSet(set);
   assertDepthStackHeader(header);
   assertSpatialFrame(frame);
@@ -298,9 +298,10 @@ export function finalizeDepthStackAtProgramEnd(
   header: DepthStackHeader,
   frame: SpatialFrame,
   spec: DepthStackSpec,
-  space: ProgramSpace,
+  semantic: SemanticTrack,
 ): DepthStackProgram {
-  return finalizeDepthStack(set, header, frame, spec, programSpaceFrameCount(space), space);
+  const space = projectSemanticProgramSpace(semantic);
+  return finalizeDepthStack(set, header, frame, spec, programSpaceFrameCount(space), semantic);
 }
 
 export function finalizeDepthStackUntilMoment(
@@ -308,11 +309,10 @@ export function finalizeDepthStackUntilMoment(
   header: DepthStackHeader,
   frame: SpatialFrame,
   spec: DepthStackSpec,
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   moment: NarrativeMomentRef,
-  space: ProgramSpace,
 ): DepthStackProgram {
-  return finalizeDepthStack(set, header, frame, spec, terminalMoment(map, moment, space), space);
+  return finalizeDepthStack(set, header, frame, spec, terminalMoment(semantic, moment), semantic);
 }
 
 export function finalizeDepthStackUntilSelection(
@@ -320,12 +320,11 @@ export function finalizeDepthStackUntilSelection(
   header: DepthStackHeader,
   frame: SpatialFrame,
   spec: DepthStackSpec,
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   selection: NarrativeSelectionRef,
   boundary: "start" | "end",
-  space: ProgramSpace,
 ): DepthStackProgram {
-  return finalizeDepthStack(set, header, frame, spec, terminalSelection(map, selection, space, boundary), space);
+  return finalizeDepthStack(set, header, frame, spec, terminalSelection(semantic, selection, boundary), semantic);
 }
 
 export function assertDepthStackProgram(program: DepthStackProgram): void {
