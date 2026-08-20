@@ -53,6 +53,7 @@ async function runProcess(args: {
   return await new Promise((resolve, reject) => {
     const child = spawn(args.executable, [...args.argv], {
       shell: false,
+      windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
       env: { PATH: process.env.PATH ?? "" },
     });

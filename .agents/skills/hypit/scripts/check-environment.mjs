@@ -11,7 +11,7 @@ const commands = [
 ];
 for (const [command, versionFlag] of commands) {
   try {
-    const version = execFileSync(command, [versionFlag], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim().split(/\r?\n/, 1)[0];
+    const version = execFileSync(command, [versionFlag], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], windowsHide: true }).trim().split(/\r?\n/, 1)[0];
     console.log(`${command}\tok\t${version}`);
   } catch { console.log(`${command}\tmissing`); }
 }

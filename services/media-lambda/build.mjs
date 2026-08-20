@@ -61,6 +61,7 @@ await chmod(entry, 0o644);
 const epoch = new Date("1980-01-01T00:00:00.000Z");
 await utimes(entry, epoch, epoch);
 await promisify(execFile)("zip", ["-X", "-q", "-j", archive, entry], {
+  windowsHide: true,
   env: { ...process.env, TZ: "UTC" },
 });
 const archiveStat = await stat(archive);

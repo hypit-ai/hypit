@@ -12,7 +12,7 @@ const PROBE_PROGRAM =
 
 function run(executable: string, args: readonly string[]): Promise<{ ok: boolean; output: string }> {
   return new Promise((resolve) => {
-    execFile(executable, [...args], { timeout: 15_000, shell: false }, (error, stdout, stderr) => {
+    execFile(executable, [...args], { timeout: 15_000, shell: false, windowsHide: true }, (error, stdout, stderr) => {
       resolve(error === null
         ? { ok: true, output: stdout.trim() }
         : { ok: false, output: (stderr.trim() || error.message).split("\n").at(-1) ?? "" });
