@@ -1,6 +1,6 @@
 # Hypit source authoring
 
-Read `references/quickstart.md`, then the authoritative page it selects under `docs/quickstart/`.
+Read `quickstart.md`, then the authoritative page it selects under `docs/quickstart/`.
 Keep Author Source, Recipe Source and Run Source complete and internally consistent rather than
 assembling independent per-shot source fragments.
 
@@ -17,3 +17,9 @@ pnpm hypit check path/to/source
 
 Do not create a check wrapper. A successful check establishes legal syntax, references and graph
 structure; it does not prove that an uncertain video observation was semantically correct.
+
+This file is about writing an element correctly, which is a narrower question than making the video
+right. What a Track should contain, when a picture may be generated at all, how long a thing stays on
+screen and what shows through when it does not — those are decided in `playbooks/index.md`, whose
+required load order names the craft every program needs regardless of format. A Source can pass
+`hypit check` with every one of those decisions still unmade.

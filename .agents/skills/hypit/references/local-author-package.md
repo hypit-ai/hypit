@@ -57,6 +57,25 @@ Place the package at `<project>/packages/local-<slug>/`, named `@hypit/local-<sl
 version `0.0.0-dev` and logical Module version `1`. Only create a new package: do not
 edit, extend, delete or overwrite an existing Hypit package to fill the gap.
 
+**Starting that new package from a copy of the closest installed one is allowed, and is usually the
+right way to do it.** The ban is on modifying a package other projects share, not on learning from
+its source: a Style family that differs from `caption-fine` in its timing model, or a board that
+differs from `ranking` in its rows, is most of that package again. Copy it, then make it genuinely
+its own — a new Module ref, a new name for every nominal Type it declares, since a Type belongs to
+the Module that declares it, and new Producer names. Leave the original untouched. The official
+packages are built for exactly this: `caption-fine` states that Common Caption, Composition and Core
+know none of its Recipe fields or layout policy, and `deck-track` that another Deck family can
+install independently and lower to the same terminal `VisualTrack` without changing it. A sibling
+family is the designed extension point, not a workaround.
+
+Read "modelled on the installed packages" that way wherever it appears. Writing two thousand lines
+from scratch to avoid a copy is not more correct, and the ban does not ask for it.
+
+What a copy does cost is upstream: it will not receive the fixes the original gets, and nobody will
+notice it drifted. That is acceptable for a project-local package, which is part of one deliverable
+rather than a library. If the behaviour turns out to be generally useful, that is the promotion this
+section already describes — not a reason to add a parameter to the shared package after all.
+
 The package is project-local even when the project is the Hypit checkout. Do not move it into an
 official package automatically. After the result is accepted, offer promotion as a separate
 contribution.
