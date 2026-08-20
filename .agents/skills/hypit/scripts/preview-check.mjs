@@ -7,8 +7,9 @@
  * the same way when the author opens Studio, so find out now.
  *
  * Usage:  node --import tsx .agents/skills/hypit/scripts/preview-check.mjs <build.svrun> [<hypit.runtime.json>]
- * Exit:   0 when Studio opens and every Track resolved.
- *         1 otherwise, naming what refused and why.
+ * Exit:   0 when the graph is sound — either Studio opened and every Track
+ *           resolved, or the only thing missing is Providers that have not run.
+ *         1 when the graph itself is wrong, naming what refused and why.
  *
  * The argument is the Run Source, not the Author SVML. Studio's unit of work is
  * the Run — it reads the Author SVML back out of it — so a check that took the
@@ -17,6 +18,15 @@
  * Studio does not degrade. It has no stand-ins and no estimated timing: when a
  * projection is missing it refuses to open and names the issue, so preflight
  * throwing is itself the failure report rather than something to inspect around.
+ *
+ * That refusal alone would make this gate unsatisfiable, because a Source that
+ * still declares generation always has unresolved capabilities — which is the
+ * ordinary state of a reconstruction before anybody has paid for a Build. So the
+ * two are separated here: an unresolved *capability* means the graph is sound
+ * and waiting for a Provider, while every other issue means the graph is wrong
+ * and no amount of generation will fix it. Only the second kind fails this
+ * check. `StudioPreflightError` carries `issues` as an array precisely so the
+ * two can be told apart rather than matched out of one joined message.
  *
  * Run it from the repository root. `tsx` is the repository's own dependency, so
  * a working directory outside the repository fails to resolve it before this
@@ -48,8 +58,11 @@ const workspaceRoot = dirname(runPath);
 
 const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
 const archive = await openStudioArchive(runtimePath, packageRoot);
+const AWAITING = "the Studio projection closure requires unresolved capabilities:";
+
 let session;
 let refusal;
+let awaiting;
 try {
   const run = await loadStudioRun({
     run: runPath,
@@ -66,7 +79,12 @@ try {
     revision: 0,
   });
 } catch (error) {
-  refusal = error instanceof Error ? error.message : String(error);
+  const issues = Array.isArray(error?.issues) ? error.issues : undefined;
+  if (issues !== undefined && issues.every((issue) => issue.startsWith(AWAITING))) {
+    awaiting = issues.flatMap((issue) => issue.slice(AWAITING.length).split(",").map((c) => c.trim()));
+  } else {
+    refusal = error instanceof Error ? error.message : String(error);
+  }
 } finally {
   // Close before reporting: `process.exit` in a `try` skips the `finally`, and
   // a runtime archive left open outlives the check.
@@ -76,6 +94,16 @@ try {
 if (refusal !== undefined) {
   console.log(JSON.stringify({ refused: refusal }, null, 2));
   process.exit(1);
+}
+
+if (awaiting !== undefined) {
+  // The graph traced all the way to a Film and a semantic spine; what is left is
+  // work a Provider has to do. That is a pass for this gate, and the delivery
+  // measurements happen on the real Build either way.
+  const noun = awaiting.length === 1 ? "capability" : "capabilities";
+  console.log(`preview-check: the graph is sound, waiting on ${awaiting.length} ${noun}.`);
+  for (const capability of awaiting) console.log(`  - ${capability}`);
+  process.exit(0);
 }
 
 const problems = [];
