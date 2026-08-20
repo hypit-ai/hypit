@@ -427,6 +427,7 @@ test("full Fine Paint and layered motion lower to terminal Visual IR without cha
       ...recipe.properties,
       "text-transform": "uppercase",
       "gradient-from": "#FFFFFF", "gradient-to": "#60A5FA", "gradient-angle": 120,
+      "stroke-color": "#101010", "stroke-width": 3,
       "long-shadow-color": "#172554", "long-shadow-opacity": 0.55,
       "long-shadow-distance": 8, "long-shadow-angle": 45,
       underline: "always", "underline-color": "#A7F3D0", "underline-thickness": 2, "underline-offset": 5,
@@ -462,6 +463,10 @@ test("full Fine Paint and layered motion lower to terminal Visual IR without cha
   assert.ok(base?.style.some(({ name, value }) => name === "text-transform" && value === "uppercase"));
   assert.ok(base?.style.some(({ name }) => name === "text-decoration-thickness"));
   assert.ok(base?.style.some(({ name, value }) => name === "text-shadow" && String(value).split(",").length >= 8));
+  // The outline is only an outline when it is painted behind the body it outlines; the other way
+  // round it eats the letterform it was meant to separate from the picture.
+  assert.ok(base?.style.some(({ name }) => name === "-webkit-text-stroke-width"));
+  assert.ok(base?.style.some(({ name, value }) => name === "paint-order" && value === "stroke fill"));
   const activeGlyph = elements.find((element) => element.id === "atom-1-active-1");
   assert.equal(activeGlyph?.kind, "text");
   assert.ok(activeGlyph?.style.some(({ name }) => name === "background-image"));
