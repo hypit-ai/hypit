@@ -47,9 +47,14 @@ Every visible thing is either depicted material or drawn structure.
 - **Depicted material** is what a picture must show: scenes, people, products, textures, paper and
   backdrop surfaces, artwork, screenshots, and any picture sitting inside a frame, card, device or
   inset.
-- **Drawn structure** is what the composition computes: text content, exact font, size, weight,
-  spacing, alignment, colour, stroke, shadow, glow, frames, borders, corner radius, padding, stack
-  order, placement, reveal order and timing.
+- **Drawn structure** is what the composition computes: text content, exact font, size, weight, line
+  height, spacing, alignment, colour, stroke colour and width, shadow colour, offset, blur and
+  opacity, glow, emphasis or active-item treatment, frame geometry, borders, corner radius, padding,
+  stack order, placement, and reveal or typing rhythm.
+
+  That list is also the checklist for accepting a package: `../../vocabulary.md` requires every one of
+  these that changes what the viewer sees to be resolved before a component is chosen, and a property
+  with nowhere to land in the declared vocabulary is what makes a gap.
 
 Never bake drawn structure into generated material. A generated picture of text cannot be re-timed,
 re-read or corrected, and its wording drifts. A card, inset, phone, browser or screenshot element is
@@ -105,8 +110,8 @@ that needs one of those documents in order to draw itself has inverted that rela
   picture inside a card is part of the work, not decoration.
 - Generate it with `gpt:Image`, reading that package's README for its ports. Surveying what is
   installed before doing something you already know how to do costs time and buys nothing; the
-  listing exists for finding a capability you did not know was there, not for confirming a familiar
-  one.
+  listing `../../vocabulary.md` documents exists for finding a capability you did not know was there,
+  not for confirming a familiar one.
 - Static material is generated as an image. Generate video only when the element is a moving depicted
   scene.
 - Generate one material per depicted thing, at the aspect ratio it will be used at, carrying only

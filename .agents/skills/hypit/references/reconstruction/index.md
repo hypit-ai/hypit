@@ -49,9 +49,7 @@ which packages to use, not where to put the result — those are yours to decide
 is asking the author to do your job. Everything this route needs beyond the video path is
 discoverable:
 
-- **Where you are.** This skill lives inside the Hypit repository; find its root from the skill's own
-  location (the directory containing `package.json` and `packages/`) and work from there. Repository
-  paths in these files — `.agents/skills/hypit/scripts/…`, `examples/…` — are relative to that root.
+- **Where you are, and what is installed.** `../environment.md`.
 - **Where the project goes.** Its own directory: `examples/<something>-reverse/`, named after the
   video, beside the other examples, which the workspace already covers. Use a directory the author
   named only if they named one.
@@ -116,8 +114,14 @@ Before acting on the evidence, read these files completely in order:
      and accepted Records are pinned for reuse.
 
    A file that list names and this one does not is read last, before `vocabulary.md`.
-4. `vocabulary.md` — existing-package selection, appearance-property resolution, and the route for a
-   real vocabulary gap.
+4. `../vocabulary.md` — how a package is chosen for any route: enumerate every system before naming
+   one, what `list_svml_packages` and `inspect_svml_vocabulary` report, reuse before compose before
+   declaring a gap, and what a real gap obliges.
+5. `vocabulary.md` — what the reference evidence adds to that: enumerating from the observations, and
+   measuring an appearance value rather than choosing it.
+6. `../preview.md` — proving the Run traces before a Provider is reached, and rendering one element
+   to a still without paying for it. Both are used later, by `final-sources.md` and
+   `reconstruction-loop.md`; read them here so neither arrives as a surprise.
 
 Two more are required, at the point where they apply rather than now. Reading them here means
 reading them half an hour before they matter, with a dozen other files in between:

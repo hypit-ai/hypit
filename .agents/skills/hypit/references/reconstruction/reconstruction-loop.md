@@ -6,7 +6,7 @@ something the reference never contained. Close that gap deliberately.
 
 This loop is about how an element *looks* against the reference, and it is bounded. Whether an
 element is *wired at all* is a different gate with a different rule: `preview-check` (in
-`final-sources.md`) must pass before this loop is even reached, and its failures are repaired
+`../preview.md`) must pass before this loop is even reached, and its failures are repaired
 without any attempt ceiling. A graph that does not trace is not a difference to weigh; it is work
 that is not done.
 
@@ -64,8 +64,9 @@ repaired. It is not caught by looking at the frame yourself and choosing a font 
 resemble it — that route silently depends on the loop model having vision, and stops working the
 moment it does not.
 
-Hypit Studio in `../preview.md` is a browser preview for a person to look at. It is not a
-source of the image this loop needs.
+Hypit Studio is a browser preview for a person to look at. It is not a source of the image this
+loop needs: that image is the local still render in `../preview.md`, which draws one element without
+a Provider.
 
 Repairing one element never re-runs the others. Do not rebuild the whole video to inspect one piece,
 and do not defer every comparison to a final delivery Build.
@@ -140,3 +141,7 @@ stops as it is: the second repair is the last thing the observer saw, and there 
 comparison to name what remains. Do not spend one to find out — a comparison that changes nothing
 and exists only to report the gap is a paid step for a report nobody asked for. The element is what
 it is; move on to the next one.
+
+When there is no next element the route is over, except for one question. If a project-local package
+was built along the way, decide whether it should outlive this video and put that to the author:
+`../local-author-package.md` says how to judge it and what promoting it actually costs.
