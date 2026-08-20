@@ -114,6 +114,15 @@ nothing.
   `media-track:Item` and the `icon` port on `@hypit/ranking` are the shape this takes.
 - Never require an input the installing project has no reason to choose. If a Run Source exists only
   to produce the component's own texture, the texture is in the wrong place.
+- **A slot that is not filled yet costs its own cell and nothing more.** The component's structure —
+  its rows, bars, frames, labels, the geometry it computes — is drawn whatever the slots turn out to
+  hold. Draw the elements whose material is there, leave the ones whose material is not, and measure
+  every cell either way so nothing moves when the rest arrive. A component that refuses to draw
+  anything because one slot holds material it cannot use has made the whole composition depend on
+  its most incomplete input, and the symptom reads as a dead Track rather than as a missing picture:
+  the Producer refuses, the Track never builds, and the rows nobody was waiting for vanish with it.
+  This is what a Source looks like for the whole stretch between being written and being built, which
+  is most of its life.
 - A component that cannot render on its own cannot produce the preview image its Surface owes. Treat
   a missing preview as evidence of this mistake rather than a step to skip.
 
