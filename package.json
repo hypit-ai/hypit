@@ -20,8 +20,7 @@
     "test:image-opencv": "HYPIT_OPENCV_TESTS=1 HYPIT_OPENCV_PYTHON=services/image-opencv/.venv/bin/python node --import tsx --test packages/provider-image-opencv-local/test/provider.test.ts",
     "smoke:kie": "node --import tsx packages/provider-kie/test/live-smoke.ts",
     "hypit": "node bin/hypit.mjs",
-    "caption:playground": "pnpm --filter @hypit/caption-playground exec node --import tsx start.ts",
-    "svml:playground": "pnpm --filter @hypit/svml-playground exec node --import tsx start.ts",
+    "studio": "pnpm --filter @hypit/studio exec node --import tsx start.ts",
     "build:media-lambda": "pnpm --filter @hypit/media-lambda build",
     "build:media-lambda-layer": "pnpm --filter @hypit/media-lambda build:layer"
   },
