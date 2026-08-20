@@ -55,7 +55,7 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 ```svml
 <estimate:Speech id="hook-duration"
   source={story.segment.hook.speech}
-  policy={studio.speech.normal}/>
+  policy={recipes.speech.normal}/>
 ```
 
 | 属性 | 必填 | 说明 |
@@ -201,7 +201,7 @@ Endpoint，不会改变作者图。
 </text:Value>
 <text:Render id="demo-prompt"
   template={broll-kit.broll-v1}
-  recipe={studio.broll.product-demo}>
+  recipe={recipes.broll.product-demo}>
   <text:Set name="story" text={product-story}/>
 </text:Render>
 
@@ -242,7 +242,7 @@ Endpoint，不会改变作者图。
 
 <text:Render id="interview-prompt"
   template={interview-kit.street-interview-v1}
-  recipe={studio.interview.street}>
+  recipe={recipes.interview.street}>
   <text:Set name="dialogue" text={story.segment.interview.dialogue}/>
   <text:Set name="action" text={interview-action}/>
 </text:Render>
@@ -274,7 +274,7 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 
 <text:Render id="hook-prompt"
   template={speaker-kit.speaker-v1}
-  recipe={studio.speaker.host}>
+  recipe={recipes.speaker.host}>
   <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
   <text:Set name="action" text={hook-action}/>
 </text:Render>
@@ -287,7 +287,7 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 </seedance:ReferenceVideo>
 ```
 
-`speaker-v1.svs` 自己选择 Text Template Frontend。`studio.svs` 提供具名轴值，`dialogue` 与
+`speaker-v1.svs` 自己选择 Text Template Frontend。`recipes.svs` 提供具名轴值，`dialogue` 与
 `action` 保持为普通图输入。Kit 和 Text 都不选择模型、参考素材或 Provider。
 
 ## 组合示例
@@ -299,7 +299,7 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 <import as="estimate" from="@hypit/estimate@1"/>
 <import as="text" from="@hypit/text@1"/>
 <import as="seedance" from="@hypit/seedance@1"/>
-<import as="studio" source="./studio.svs"/>
+<import as="recipes" source="./recipes.svs"/>
 <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 
 <media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
@@ -307,17 +307,17 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 <media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>
 
 <estimate:Speech id="hook-duration"
-  source={story.segment.hook.speech} policy={studio.speech.normal}/>
+  source={story.segment.hook.speech} policy={recipes.speech.normal}/>
 <estimate:Speech id="meeting-duration"
-  source={story.segment.meeting.speech} policy={studio.speech.normal}/>
+  source={story.segment.meeting.speech} policy={recipes.speech.normal}/>
 <text:Value id="hook-action">Start urgently, then become quieter.</text:Value>
 <text:Value id="meeting-action">Indicate the product, then return to the lens.</text:Value>
 
-<text:Render id="hook-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+<text:Render id="hook-prompt" template={speaker-kit.speaker-v1} recipe={recipes.speaker.host}>
   <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
   <text:Set name="action" text={hook-action}/>
 </text:Render>
-<text:Render id="meeting-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+<text:Render id="meeting-prompt" template={speaker-kit.speaker-v1} recipe={recipes.speaker.host}>
   <text:Set name="dialogue" text={story.segment.meeting.dialogue}/>
   <text:Set name="action" text={meeting-action}/>
 </text:Render>
@@ -334,5 +334,5 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 </seedance:ReferenceVideo>
 ```
 
-每个 `seedance:ReferenceVideo` 产出 `{*.video}`，进入下一阶段的 `speech:Spine`。不同 Take
+每个 `seedance:ReferenceVideo` 产出 `{*.video}`，进入下一阶段的 `speech:Track`。不同 Take
 可以使用不同参考图，同时共享相同的音色与 Prompt Recipe。

@@ -1,6 +1,6 @@
 import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { speechDependency, speechTypes } from "@hypit/speech";
-import { compositionTypes } from "@hypit/composition";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { spatialTypes } from "@hypit/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -30,20 +30,18 @@ import type {
   ProducerRef,
   TypeRef,
 } from "@hypit/protocol";
-import {
-  speechBasisManifest,
-  speechBasisProducers,
-} from "@hypit/speech-basis";
 
 const testModule = { name: "example.fragment-speech", version: "0.0.0" } as const;
 const requestType = { module: testModule, name: "Request" } satisfies TypeRef;
 const generateProducer = { module: testModule, name: "generate" } satisfies ProducerRef;
+const projectVisualProducer = { module: testModule, name: "project-visual" } satisfies ProducerRef;
+const projectAudioProducer = { module: testModule, name: "project-audio" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
   format: "hypit.module@1",
   name: testModule.name,
   version: testModule.version,
-  dependencies: [speechDependency],
+  dependencies: [speechDependency, compositionDependency],
   types: [{ name: requestType.name }],
   capabilities: [],
   producers: [{
@@ -52,12 +50,22 @@ const manifest: ModuleManifest = {
       { name: "request", type: requestType },
       { name: "style", type: requestType },
     ],
-    outputs: [{ name: "take", type: speechTypes.basis }],
+    outputs: [{ name: "take", type: speechTypes.semanticTake }],
+    needs: [],
+  }, {
+    name: projectVisualProducer.name,
+    inputs: [{ name: "take", type: speechTypes.semanticTake }],
+    outputs: [{ name: "visual", type: compositionTypes.visualTrack }],
+    needs: [],
+  }, {
+    name: projectAudioProducer.name,
+    inputs: [{ name: "take", type: speechTypes.semanticTake }],
+    outputs: [{ name: "audio", type: compositionTypes.audioTrack }],
     needs: [],
   }],
 };
 
-const closure = createResolvedClosure([...videoContractManifests, speechBasisManifest, manifest]);
+const closure = createResolvedClosure([...videoContractManifests, manifest]);
 
 function program(): LinkedProgram {
   const rawCanvas = sealRecord({
@@ -101,33 +109,33 @@ function speechFragment(): GraphFragment {
         result: { kind: "output", name: "take" },
       },
       {
-        id: "audio",
-        producer: speechBasisProducers.projectAudio,
-        inputs: { basis: operation("generate") },
-        result: { kind: "output", name: "audio" },
+        id: "visual",
+        producer: projectVisualProducer,
+        inputs: { take: operation("generate") },
+        result: { kind: "output", name: "visual" },
       },
       {
-        id: "visual",
-        producer: speechBasisProducers.projectVisual,
-        inputs: { basis: operation("generate") },
-        result: { kind: "output", name: "visual" },
+        id: "audio",
+        producer: projectAudioProducer,
+        inputs: { take: operation("generate") },
+        result: { kind: "output", name: "audio" },
       },
     ],
     exports: [
       {
         name: "take",
-        type: speechTypes.basis,
+        type: speechTypes.semanticTake,
         root: operation("generate"),
-      },
-      {
-        name: "audio",
-        type: speechTypes.audioBasis,
-        root: operation("audio"),
       },
       {
         name: "visual",
         type: compositionTypes.visualTrack,
         root: operation("visual"),
+      },
+      {
+        name: "audio",
+        type: compositionTypes.audioTrack,
+        root: operation("audio"),
       },
     ],
   });
@@ -177,11 +185,11 @@ test("one FragmentInstance shares its generation Operation across all exports", 
   assert.equal(state.plan.steps.length, 3);
   const takeRecord = contribution.operations.find((item) => item.producer.name === "generate")?.result.record;
   assert.equal(
-    state.plan.steps.find((step) => step.producer.name === "project-audio")?.inputs.basis,
+    state.plan.steps.find((step) => step.producer.name === "project-audio")?.inputs.take,
     takeRecord,
   );
   assert.equal(
-    state.plan.steps.find((step) => step.producer.name === "project-visual")?.inputs.basis,
+    state.plan.steps.find((step) => step.producer.name === "project-visual")?.inputs.take,
     takeRecord,
   );
 });

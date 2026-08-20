@@ -1,8 +1,12 @@
 import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
-import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
-import type { ProgramSpace } from "@hypit/program-space";
-import { momentFrames, segmentFrameSpan, selectionFrameSpans } from "@hypit/semantic-map";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { programSpaceFrameCount } from "@hypit/program-space";
+import {
+  momentFrames,
+  projectSemanticProgramSpace,
+  segmentFrameSpan,
+  selectionFrameSpans,
+} from "@hypit/semantic-track";
+import type { SemanticTrack } from "@hypit/semantic-track";
 
 import type {
   LocatedMomentOccurrence,
@@ -27,13 +31,12 @@ function assertLocatedFrame(frame: number, totalFrames: number, label: string): 
 }
 
 export function locateSelectionOccurrences(
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   selection: NarrativeSelectionRef,
-  space: ProgramSpace,
 ): readonly LocatedSelectionOccurrence[] {
-  assertProgramSpaceIdentity(space);
+  const space = projectSemanticProgramSpace(semantic);
   const totalFrames = programSpaceFrameCount(space);
-  const spans = selectionFrameSpans(map, selection);
+  const spans = selectionFrameSpans(semantic, selection);
   if (spans.length !== selection.occurrences.length) {
     throw new Error(`NarrativeSelection ${selection.id} location cardinality changed.`);
   }
@@ -53,13 +56,12 @@ export function locateSelectionOccurrences(
 }
 
 export function locateMomentOccurrences(
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   moment: NarrativeMomentRef,
-  space: ProgramSpace,
 ): readonly LocatedMomentOccurrence[] {
-  assertProgramSpaceIdentity(space);
+  const space = projectSemanticProgramSpace(semantic);
   const totalFrames = programSpaceFrameCount(space);
-  const frames = momentFrames(map, moment);
+  const frames = momentFrames(semantic, moment);
   if (frames.length !== moment.occurrences.length) {
     throw new Error(`NarrativeMoment ${moment.id} location cardinality changed.`);
   }
@@ -76,19 +78,18 @@ export function locateMomentOccurrences(
   });
 }
 
-export function locateProgramOccurrence(space: ProgramSpace): LocatedProgramOccurrence {
-  assertProgramSpaceIdentity(space);
+export function locateProgramOccurrence(semantic: SemanticTrack): LocatedProgramOccurrence {
+  const space = projectSemanticProgramSpace(semantic);
   return { id: "program", start: { frame: 0 }, end: { frame: programSpaceFrameCount(space) } };
 }
 
 export function locateSegmentOccurrence(
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   segment: NarrativeExcerpt,
-  space: ProgramSpace,
 ): LocatedSegmentOccurrence {
-  assertProgramSpaceIdentity(space);
+  const space = projectSemanticProgramSpace(semantic);
   const totalFrames = programSpaceFrameCount(space);
-  const span = segmentFrameSpan(map, segment);
+  const span = segmentFrameSpan(semantic, segment);
   assertLocatedFrame(span.startFrame, totalFrames, `Narrative Segment ${segment.id} start`);
   assertLocatedFrame(span.endFrameExclusive, totalFrames, `Narrative Segment ${segment.id} end`);
   if (span.endFrameExclusive <= span.startFrame) throw new Error(`Narrative Segment ${segment.id} has no positive frame span.`);

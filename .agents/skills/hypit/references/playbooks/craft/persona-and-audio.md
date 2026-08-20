@@ -36,7 +36,7 @@ Connect only the references a component actually needs.
 - When TTS is the sole narration source, choose the voice and generate or measure the real speech
   before locking visual cut lengths.
 - Use `estimate:Speech` only for deterministic pre-generation planning. Final caption and semantic
-  timing comes from accepted audio through `speech:Spine` and `whisperx:Alignment`.
+  timing comes from each accepted normalized Take through `whisperx:SemanticTake`.
 - One continuous voiceover may cover several independently selected visual shots. Do not split TTS
   merely because the picture cuts.
 - For dialogue generated inside speaking Seedance takes, preserve Script Segment order when assembling
@@ -44,13 +44,13 @@ Connect only the references a component actually needs.
 
 ## Choose one path for speech audio
 
-- Put speech-bearing generated or supplied audio in `speech:Spine` as an audio `speech:Take` when it
-  is the program's authoritative narration. This produces ProgramSpace and speech audio for
-  `whisperx:Alignment` without inventing a visual clip.
-- Do not place the same narration on both Speech Spine and an Audio Track. That duplicates speech in
+- Normalize authoritative speech-bearing generated or supplied audio, create its
+  `whisperx:SemanticTake`, then put that value in `speech:Track` as a `speech:Take`. An audio-only
+  Semantic Take contributes timing and speech audio without inventing a visual clip.
+- Do not place the same narration on both Speech Track and an Audio Track. That duplicates speech in
   the final mix and creates competing time authority.
 
-## Put non-spine audio on Tracks
+## Put non-speech audio on Tracks
 
 Generated or supplied audio is a Blob until it is explicitly normalized. Prepare an audio-only source
 as `SynchronizedMedia`, then place it with `audio:Track`:
@@ -60,14 +60,14 @@ as `SynchronizedMedia`, then place it with `audio:Track`:
 <pipeline:Normalize id="music-media" source={music-source}
   video="none" audio="default" span-authority="audio" frame-rate="30"/>
 
-<audio:Track id="music-track" space={speech.space}>
+<audio:Track id="music-track" semantic={speech.semantic}>
   <audio:Clip source={music-media.media} during="program"
     playback="once" gain="0.18" fade-in="6f" fade-out="12f"/>
 </audio:Track>
 ```
 
 - Keep primary speech, music, ambience, and effects as independently inspectable contributions. Add
-  Speech Spine's audio Track and every selected Audio Track to `film:Film`.
+  Speech Track's audio projection and every selected Audio Track to `film:Film`.
 - Raw Media Track video is visual-only unless `audio="include"` is explicitly authored.
 - Dialogue wins the mix. Use explicit gain and fades; do not assume automatic ducking, loudness
   normalization, or mastering.

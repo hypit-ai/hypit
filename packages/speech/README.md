@@ -1,6 +1,7 @@
 # `@hypit/speech`
 
-Public contracts for speech duration, assembled bases and alignment audio projections. SpeechBasis
-Segments use exact ProgramSpace frame boundaries. The separate SpeechEvidenceAudio contract carries
-canonical 16 kHz WAV bytes and their exact sample count; neither contract duplicates floating-point
-Segment seconds.
+Public contracts for speech duration, normalized semantic Takes and provider-neutral evidence audio.
+A `SemanticTake` contains one normalized media product, one authored Segment, its words and local
+frame anchors. Ordered Takes are assembled by `@hypit/speech-track` into a `SemanticTrack`, which is
+the program's continuous semantic skeleton. `SpeechEvidenceAudio` carries canonical 16 kHz WAV bytes
+and their exact sample count; it never carries Script or Segment identity.

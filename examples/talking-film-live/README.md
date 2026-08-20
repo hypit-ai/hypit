@@ -4,7 +4,7 @@ This example deliberately exercises the real path rather than a placeholder path
 
 ```text
 Script -> deterministic Estimate -> two Seedance Mini 480p generations
-       -> media normalization -> Speech Spine -> WhisperX -> SemanticMap
+       -> media normalization -> WhisperX SemanticTakes -> Speech Track SemanticTrack
        -> Vertex Gemini Caption plan -> Caption Track
        -> Selection-located Text Track -> Film -> HyperFrames -> audio mix -> mux
 ```
@@ -71,5 +71,5 @@ Candidates and their explicit Satisfaction edges to another `.svrun`:
 
 The second Run compiles a new Build whose two shot outputs explicitly select historical values.
 It therefore contains no Seedance Operations or KIE Needs. The rebuilt media normalization,
-WhisperX, SemanticMap, Tracks, Film and HyperFrames path consumes those values through ordinary
+WhisperX, SemanticTrack, Tracks, Film and HyperFrames path consumes those values through ordinary
 typed graph edges.

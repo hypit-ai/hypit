@@ -1,11 +1,9 @@
 import { mediaComponent } from "@hypit/media";
 import type { ComponentPackage } from "@hypit/component-kit";
-import { verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
-import type { MediaInspection, MediaStreamSelection, MuxedMedia, RenderedVisual, TimelineAudio } from "@hypit/media";
-import { assertProgramSpaceIdentity, programSpaceSampleFrames } from "@hypit/program-space";
+import { synchronizedMediaSampleFrames, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
+import type { MediaInspection, MediaStreamSelection, MuxedMedia, RenderedVisual, SynchronizedMedia, TimelineAudio } from "@hypit/media";
 import type { ProgramSpace } from "@hypit/program-space";
-import { assertSpeechAudioBasisIdentity, speechEvidenceSampleBoundary } from "@hypit/speech";
-import type { SpeechAudioBasis } from "@hypit/speech";
+import { speechEvidenceSampleBoundary } from "@hypit/speech";
 import type { Composition } from "@hypit/composition";
 import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/protocol";
 import { canonicalize } from "@hypit/protocol";
@@ -16,7 +14,6 @@ import {
 } from "./audio-plan.js";
 import { mediaPipelineProducers, mediaPipelineTypes } from "./manifest.js";
 import {
-  sealMediaSelectionRequest,
   selectMediaStreams,
   verifyMediaSelectionRequest,
 } from "./selection.js";
@@ -49,21 +46,6 @@ function inline(value: StoredValue, subject: string): CanonicalValue {
 function blob(value: StoredValue, subject: string): BlobRef {
   if (value.kind !== "blob") throw new Error(`${subject} must be a BlobArtifact`);
   return value;
-}
-
-function programSpace(value: StoredValue, subject: string): ProgramSpace {
-  const space = inline(value, subject) as unknown as ProgramSpace;
-  assertProgramSpaceIdentity(space);
-  return space;
-}
-
-function requestForProgram(space: ProgramSpace, audio: "default" | "none"): MediaSelectionRequest {
-  return sealMediaSelectionRequest({
-    video: { mode: "primary-moving" },
-    audio: { mode: audio },
-    spanAuthority: "video",
-    frameRate: { ...space.frameRate },
-  });
 }
 
 export const mediaPipelineComponent = {
@@ -100,36 +82,6 @@ export const mediaPipelineComponent = {
     },
   ],
   producers: [
-    {
-      producer: mediaPipelineProducers.bindVisualRequest,
-      handler: ({ inputs }) => ({
-        outputs: {
-          request: {
-            kind: "inline",
-            value: canonicalize(requestForProgram(
-              programSpace(inputs.space!.value, "Visual media ProgramSpace"),
-              "none",
-            )),
-          },
-        },
-        needs: {},
-      }),
-    },
-    {
-      producer: mediaPipelineProducers.bindAvRequest,
-      handler: ({ inputs }) => ({
-        outputs: {
-          request: {
-            kind: "inline",
-            value: canonicalize(requestForProgram(
-              programSpace(inputs.space!.value, "A/V media ProgramSpace"),
-              "default",
-            )),
-          },
-        },
-        needs: {},
-      }),
-    },
     {
       producer: mediaPipelineProducers.inspect,
       handler: ({ inputs }) => {
@@ -230,21 +182,17 @@ export const mediaPipelineComponent = {
     {
       producer: mediaPipelineProducers.projectSpeechEvidenceAudio,
       handler: ({ inputs }) => {
-        const audio = inline(inputs.audio!.value, "SpeechAudioBasis") as unknown as SpeechAudioBasis;
-        assertSpeechAudioBasisIdentity(audio);
-        const sourceSampleFrames = programSpaceSampleFrames(audio.programSpace, 48_000);
+        const media = inline(inputs.media!.value, "SynchronizedMedia") as unknown as SynchronizedMedia;
+        verifySynchronizedMedia(media);
+        if (media.audio === undefined) throw new Error("Speech evidence requires normalized Take audio");
+        const sourceSampleFrames = synchronizedMediaSampleFrames(media);
         const evidenceSampleFrames = speechEvidenceSampleBoundary(sourceSampleFrames);
         if (!Number.isSafeInteger(sourceSampleFrames) || sourceSampleFrames < 1
           || !Number.isSafeInteger(evidenceSampleFrames) || evidenceSampleFrames < 1) {
           throw new Error("Speech evidence audio sample domain is invalid");
         }
         const need: ProjectSpeechEvidenceAudioNeed = {
-          source: {
-            kind: "blob",
-            digest: audio.audio.digest,
-            size: audio.audio.size,
-            mediaType: audio.audio.mediaType,
-          },
+          source: media.audio.artifact,
           sourceSampleFrames,
           evidenceSampleFrames,
         };

@@ -148,6 +148,7 @@ export function assertSpeechEstimatePolicy(value: SpeechEstimatePolicy): void {
     || !Number.isFinite(value.maximumSec)
     || value.maximumSec <= 0
     || value.minimumSec > value.maximumSec
+    || (value.paddingSec !== undefined && (!Number.isFinite(value.paddingSec) || value.paddingSec < 0))
   ) {
     throw new Error("SpeechEstimatePolicy is invalid");
   }
@@ -184,7 +185,7 @@ export function estimateSpeechDuration(
   const language = policy.language === "auto" ? detectSpeechEstimateLanguage(text.value) : policy.language;
   const units = countSpeechEstimateUnits(text.value, language);
   if (units < 1) throw new Error("Speech Text contains no countable speech units");
-  const raw = units / resolveSpeechEstimateRate(policy, language);
+  const raw = units / resolveSpeechEstimateRate(policy, language) + (policy.paddingSec ?? 0);
   const firstClamp = Math.min(policy.maximumSec, Math.max(policy.minimumSec, raw));
   const durationSec = Math.min(policy.maximumSec, Math.max(policy.minimumSec, rounded(firstClamp, policy.rounding)));
   const duration = sealSpeechDuration(durationSec);

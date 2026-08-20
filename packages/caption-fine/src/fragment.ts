@@ -2,8 +2,7 @@ import { captionProducers, captionTypes } from "@hypit/caption";
 import { compositionTypes } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/elaborator";
 import { narrativeTypes } from "@hypit/narrative";
-import { programSpaceTypes } from "@hypit/program-space";
-import { semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 
 import { captionFineProducers } from "./manifest.js";
 
@@ -15,17 +14,16 @@ export const fineCaptionTrackFragment = sealGraphFragment({
   inputs: [
     { name: "display", type: narrativeTypes.captionDisplay },
     { name: "correspondence", type: narrativeTypes.captionCorrespondence },
-    { name: "map", type: semanticMapTypes.complete },
+    { name: "semantic", type: semanticTrackTypes.track },
     { name: "plan", type: captionTypes.plan },
     { name: "program", type: captionTypes.program },
-    { name: "space", type: programSpaceTypes.programSpace },
   ],
   operations: [
     {
       id: "caption:temporalize-plan",
       producer: captionProducers.temporalizePlan,
       inputs: {
-        display: input("display"), correspondence: input("correspondence"), map: input("map"),
+        display: input("display"), correspondence: input("correspondence"), semantic: input("semantic"),
         plan: input("plan"), program: input("program"),
       },
       result: { kind: "output", name: "caption" },
@@ -35,7 +33,7 @@ export const fineCaptionTrackFragment = sealGraphFragment({
       producer: captionFineProducers.render,
       inputs: {
         caption: operation("caption:temporalize-plan"), program: input("program"),
-        display: input("display"), space: input("space"),
+        display: input("display"), semantic: input("semantic"),
       },
       result: { kind: "output", name: "track" },
     },

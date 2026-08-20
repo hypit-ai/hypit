@@ -20,11 +20,13 @@
     "@hypit/media-pipeline": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/semantic-track": "workspace:*",
     "@hypit/markup": "workspace:*"
   },
   "devDependencies": {
     "@hypit/core": "workspace:*",
     "@hypit/driver-node": "workspace:*",
+    "@hypit/svs": "workspace:*",
     "@hypit/validation": "workspace:*"
   }
 }

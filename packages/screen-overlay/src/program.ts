@@ -4,7 +4,7 @@ import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative
 import { assertProgramSpaceIdentity } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize } from "@hypit/protocol";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { SemanticTrack } from "@hypit/semantic-track";
 import { assertCanvasSpace } from "@hypit/spatial";
 import type { CanvasSpace } from "@hypit/spatial";
 import { projectMomentWindows, projectProgramWindow, projectSelectionWindows } from "@hypit/temporal";
@@ -124,15 +124,15 @@ function realized(
   additions.forEach((item) => { assert(!ids.has(item.id), `Screen Overlay already contains Item ${item.id}.`); ids.add(item.id); });
   return { items: [...set.items, ...additions] };
 }
-export function appendProgramScreenOverlay(set: ScreenOverlaySet, header: ScreenOverlayHeader, space: ProgramSpace, spec: ScreenOverlayItemSpec): ScreenOverlaySet {
+export function appendProgramScreenOverlay(set: ScreenOverlaySet, header: ScreenOverlayHeader, semantic: SemanticTrack, spec: ScreenOverlayItemSpec): ScreenOverlaySet {
   assert(spec.expansion.kind === "one", `Program Overlay ${spec.id} must use one occurrence.`);
-  return realized(set, header, spec, [projectProgramWindow({ itemId: spec.id, space, projection: spec.projection })]);
+  return realized(set, header, spec, [projectProgramWindow({ itemId: spec.id, semantic, projection: spec.projection })]);
 }
-export function appendSelectionScreenOverlay(set: ScreenOverlaySet, header: ScreenOverlayHeader, space: ProgramSpace, map: CompleteSemanticMap, selection: NarrativeSelectionRef, spec: ScreenOverlayItemSpec): ScreenOverlaySet {
-  return realized(set, header, spec, projectSelectionWindows({ itemId: spec.id, map, selection, space, expansion: spec.expansion, projection: spec.projection }));
+export function appendSelectionScreenOverlay(set: ScreenOverlaySet, header: ScreenOverlayHeader, semantic: SemanticTrack, selection: NarrativeSelectionRef, spec: ScreenOverlayItemSpec): ScreenOverlaySet {
+  return realized(set, header, spec, projectSelectionWindows({ itemId: spec.id, semantic, selection, expansion: spec.expansion, projection: spec.projection }));
 }
-export function appendMomentScreenOverlay(set: ScreenOverlaySet, header: ScreenOverlayHeader, space: ProgramSpace, map: CompleteSemanticMap, moment: NarrativeMomentRef, spec: ScreenOverlayItemSpec): ScreenOverlaySet {
-  return realized(set, header, spec, projectMomentWindows({ itemId: spec.id, map, moment, space, expansion: spec.expansion, projection: spec.projection }));
+export function appendMomentScreenOverlay(set: ScreenOverlaySet, header: ScreenOverlayHeader, semantic: SemanticTrack, moment: NarrativeMomentRef, spec: ScreenOverlayItemSpec): ScreenOverlaySet {
+  return realized(set, header, spec, projectMomentWindows({ itemId: spec.id, semantic, moment, expansion: spec.expansion, projection: spec.projection }));
 }
 export function sealScreenOverlayProgram(value: ScreenOverlayProgram): ScreenOverlayProgram {
   const normalized = { id: value.id,

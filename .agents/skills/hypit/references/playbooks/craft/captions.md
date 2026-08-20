@@ -38,7 +38,7 @@ Use one pipeline for the program:
 ```text
 exact font → caption-fine:Style → caption:Program → caption-ai:Planner
                                                         +
-                                           whisperx:Alignment map
+                                           speech.semantic
                                                         ↓
                                               caption-fine:Track
 ```
@@ -47,7 +47,7 @@ exact font → caption-fine:Style → caption:Program → caption-ai:Planner
 <fonts:Stack id="caption-font" family="inter" weight="700"
   style="normal" emoji="color"/>
 <caption-fine:Style id="primary-caption"
-  recipe={studio.caption.primary} font={caption-font}/>
+  recipe={recipes.caption.primary} font={caption-font}/>
 
 <caption:Program id="caption-program" display={story.caption}
   default={primary-caption}>
@@ -62,7 +62,7 @@ exact font → caption-fine:Style → caption:Program → caption-ai:Planner
 
 <caption-fine:Track id="captions" display={story.caption}
   correspondence={story.caption.correspondence}
-  map={timing.map} space={speech.space}
+  semantic={speech.semantic}
   program={caption-program} plan={caption-plan.plan}/>
 ```
 
@@ -88,9 +88,9 @@ captions, omit the Caption components entirely.
 - `caption-ai:Planner` receives immutable display Atoms and resolved Style runs. It may place Cue cuts
   only between complete Atoms and attach fields declared by the Style family.
 - The Planner does not see audio, rewrite text, select Styles, or invent timestamps.
-- `whisperx:Alignment` measures the accepted `speech:Spine` audio and produces the SemanticMap used by
-  `caption-fine:Track`.
-- Recheck alignment whenever the speech audio changes — `production-gates.md` Gate 3 states this for
+- Each `whisperx:SemanticTake` measures one accepted normalized Segment take and packages its local
+  timing; `speech:Track` assembles those Takes into the SemanticTrack used by `caption-fine:Track`.
+- Recompute the affected SemanticTake whenever the speech audio changes — `production-gates.md` Gate 3 states this for
   every Track that is timed against it, not only for captions. A Style-only change does not prove that
   a prior visual review is still valid.
 

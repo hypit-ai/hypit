@@ -16,7 +16,7 @@ import { assertProgramSpaceIdentity } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize, isDigest } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { SemanticTrack } from "@hypit/semantic-track";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 import {
@@ -69,6 +69,13 @@ function color(value: string, label: string): void {
   assert(/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(value), `${label} must be a six- or eight-digit hexadecimal color.`);
 }
 
+function background(value: string, label: string): void {
+  assert(
+    /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(value) || /^linear-gradient\(.+\)$/iu.test(value),
+    `${label} must be a hexadecimal color or linear gradient.`,
+  );
+}
+
 function optionalText(value: string | undefined, label: string): void {
   if (value !== undefined) assert(value.trim().length > 0, `${label} cannot be blank.`);
 }
@@ -106,7 +113,7 @@ export function assertCommentStickerStyle(value: CommentStickerStyle): void {
   positive(value.avatar.sizePx, "CommentStickerStyle.avatar.sizePx");
   nonNegative(value.avatar.borderWidthPx, "CommentStickerStyle.avatar.borderWidthPx");
   color(value.avatar.borderColor, "CommentStickerStyle.avatar.borderColor");
-  color(value.avatar.background, "CommentStickerStyle.avatar.background");
+  background(value.avatar.background, "CommentStickerStyle.avatar.background");
   color(value.avatar.textColor, "CommentStickerStyle.avatar.textColor");
   assertTextStyle(value.header, "CommentStickerStyle.header");
   assertTextStyle(value.body, "CommentStickerStyle.body");
@@ -117,7 +124,7 @@ export function assertCommentStickerStyle(value: CommentStickerStyle): void {
   finite(value.motion.enter.offsetYPx, "CommentStickerStyle enter offset");
   positive(value.motion.enter.startScale, "CommentStickerStyle enter scale");
   finite(value.motion.enter.rotationDeltaDeg, "CommentStickerStyle enter rotation");
-  assert(["linear", "ease-in", "ease-out", "ease-in-out"].includes(value.motion.enter.easing), "CommentStickerStyle enter easing is invalid.");
+  assert(["linear", "ease-in", "ease-out", "ease-in-out", "out-back"].includes(value.motion.enter.easing), "CommentStickerStyle enter easing is invalid.");
   assert(["none", "fade", "fade-up"].includes(value.motion.exit.kind), "CommentStickerStyle exit kind is invalid.");
   integer(value.motion.exit.durationFrames, "CommentStickerStyle exit duration");
   finite(value.motion.exit.offsetYPx, "CommentStickerStyle exit offset");
@@ -231,13 +238,13 @@ export function appendProgramCommentSticker(
   header: CommentStickerHeader,
   frame: SpatialFrame,
   style: CommentStickerStyle,
-  space: ProgramSpace,
+  semantic: SemanticTrack,
   spec: CommentStickerItemSpec,
   content: CommentStickerContent,
   avatar?: BlobRef,
 ): CommentStickerSet {
   assert(spec.expansion.kind === "one", `Program Comment Sticker ${spec.id} must use one occurrence.`);
-  return realized(set, header, frame, style, spec, content, [projectProgramWindow({ itemId: spec.id, space, projection: spec.projection })], avatar);
+  return realized(set, header, frame, style, spec, content, [projectProgramWindow({ itemId: spec.id, semantic, projection: spec.projection })], avatar);
 }
 
 export function appendSelectionCommentSticker(
@@ -245,15 +252,14 @@ export function appendSelectionCommentSticker(
   header: CommentStickerHeader,
   frame: SpatialFrame,
   style: CommentStickerStyle,
-  space: ProgramSpace,
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   selection: NarrativeSelectionRef,
   spec: CommentStickerItemSpec,
   content: CommentStickerContent,
   avatar?: BlobRef,
 ): CommentStickerSet {
   return realized(set, header, frame, style, spec, content,
-    projectSelectionWindows({ itemId: spec.id, map, selection, space, expansion: spec.expansion, projection: spec.projection }), avatar);
+    projectSelectionWindows({ itemId: spec.id, semantic, selection, expansion: spec.expansion, projection: spec.projection }), avatar);
 }
 
 export function appendMomentCommentSticker(
@@ -261,15 +267,14 @@ export function appendMomentCommentSticker(
   header: CommentStickerHeader,
   frame: SpatialFrame,
   style: CommentStickerStyle,
-  space: ProgramSpace,
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   moment: NarrativeMomentRef,
   spec: CommentStickerItemSpec,
   content: CommentStickerContent,
   avatar?: BlobRef,
 ): CommentStickerSet {
   return realized(set, header, frame, style, spec, content,
-    projectMomentWindows({ itemId: spec.id, map, moment, space, expansion: spec.expansion, projection: spec.projection }), avatar);
+    projectMomentWindows({ itemId: spec.id, semantic, moment, expansion: spec.expansion, projection: spec.projection }), avatar);
 }
 
 export function assertCommentStickerProgram(value: CommentStickerProgram): void {
@@ -310,11 +315,15 @@ function transform(y: number, rotation: number, scale: number): string {
   return `translate3d(0px,${px(y)},0) rotate(${Number(rotation.toFixed(6))}deg) scale(${Number(scale.toFixed(6))})`;
 }
 
-function motionProgress(value: number, easing: "linear" | "ease-in" | "ease-out" | "ease-in-out"): number {
+function motionProgress(value: number, easing: "linear" | "ease-in" | "ease-out" | "ease-in-out" | "out-back"): number {
   const progress = Math.max(0, Math.min(1, value));
   if (easing === "linear") return progress;
   if (easing === "ease-in") return progress * progress * progress;
   if (easing === "ease-out") return 1 - Math.pow(1 - progress, 3);
+  if (easing === "out-back") {
+    const overshoot = 1.70158;
+    return 1 + (overshoot + 1) * Math.pow(progress - 1, 3) + overshoot * Math.pow(progress - 1, 2);
+  }
   return progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 }
 
@@ -327,7 +336,11 @@ function motionAnimation(style: CommentStickerStyle, duration: number): VisualAn
   return {
     keyframes: Array.from({ length: duration + 1 }, (_, atFrame) => {
       const enter = style.motion.enter;
-      const enterProgress = enterDuration === 0 ? 1 : motionProgress(atFrame / enterDuration, enter.easing);
+      const enterRawProgress = enterDuration === 0 ? 1 : Math.max(0, Math.min(1, atFrame / enterDuration));
+      const enterProgress = motionProgress(enterRawProgress, enter.easing);
+      const enterOpacity = enter.easing === "out-back" && enter.kind !== "fade"
+        ? Math.min(1, enterRawProgress * 1.35)
+        : Math.max(0, Math.min(1, enterProgress));
       const exit = style.motion.exit;
       const exitProgress = exitDuration === 0 ? 0 : motionProgress((atFrame - exitStart) / exitDuration, exit.easing);
       const holdActive = style.motion.hold.kind === "float" && atFrame >= enterDuration && atFrame <= exitStart;
@@ -342,7 +355,7 @@ function motionAnimation(style: CommentStickerStyle, duration: number): VisualAn
         atFrame,
         easing: "linear" as const,
         style: [
-          { name: "opacity", value: enterProgress * (1 - exitProgress) },
+          { name: "opacity", value: enterOpacity * (1 - exitProgress) },
           { name: "transform", value: transform(enterY + holdY + exitY, baseRotation + enterRotation + holdRotation, enterScale) },
         ],
       };
@@ -427,6 +440,7 @@ function bodyElement(input: {
   readonly width: number;
   readonly height: number;
 }): VisualElement {
+  const bodyTypography = typography(input.style);
   const flow: VisualTextFlow = {
     form: { kind: "area" },
     inlineSize: "fixed",
@@ -448,7 +462,7 @@ function bodyElement(input: {
     order: 6,
     kind: "text-flow",
     document: { paragraphs: [{ id: "body-paragraph", inlines: [{ kind: "text", id: "body-copy", text: input.text }] }] },
-    typography: typography(input.style),
+    typography: { ...bodyTypography, trackingPx: input.style.sizePx * -0.02 },
     paints: [{ kind: "fill", paint: { kind: "solid", color: input.style.color } }],
     flow,
     sequences: [],
@@ -572,7 +586,7 @@ function stickerElements(item: CommentStickerItemProgram): readonly VisualElemen
       kind: "box",
       style: [
         { name: "align-items", value: "center" },
-        { name: "background-color", value: style.avatar.background },
+        { name: "background", value: style.avatar.background },
         { name: "border", value: `${px(style.avatar.borderWidthPx)} solid ${style.avatar.borderColor}` },
         { name: "border-radius", value: "50%" },
         { name: "box-sizing", value: "border-box" },

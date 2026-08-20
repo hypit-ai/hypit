@@ -1,5 +1,5 @@
 import { narrativeTypes } from "@hypit/narrative";
-import { semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { sealGraphFragment } from "@hypit/elaborator";
 
 import { captionProducers, captionTypes } from "./manifest.js";
@@ -12,7 +12,7 @@ export const plannedCaptionTimingFragment = sealGraphFragment({
   inputs: [
     { name: "display", type: narrativeTypes.captionDisplay },
     { name: "correspondence", type: narrativeTypes.captionCorrespondence },
-    { name: "map", type: semanticMapTypes.complete },
+    { name: "semantic", type: semanticTrackTypes.track },
     { name: "plan", type: captionTypes.plan },
     { name: "program", type: captionTypes.program },
   ],
@@ -20,7 +20,7 @@ export const plannedCaptionTimingFragment = sealGraphFragment({
     id: "temporalize-caption-plan",
     producer: captionProducers.temporalizePlan,
     inputs: {
-      display: input("display"), correspondence: input("correspondence"), map: input("map"),
+      display: input("display"), correspondence: input("correspondence"), semantic: input("semantic"),
       plan: input("plan"), program: input("program"),
     },
     result: { kind: "output", name: "caption" },

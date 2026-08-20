@@ -56,7 +56,7 @@ export type CommentStickerStyle = {
       readonly offsetYPx: number;
       readonly startScale: number;
       readonly rotationDeltaDeg: number;
-      readonly easing: "linear" | "ease-in" | "ease-out" | "ease-in-out";
+      readonly easing: "linear" | "ease-in" | "ease-out" | "ease-in-out" | "out-back";
     };
     readonly exit: {
       readonly kind: "none" | "fade" | "fade-up";

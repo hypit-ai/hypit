@@ -14,8 +14,8 @@ make the active speaker readable without changing the location or camera topolog
    `reaction`, and `gesture` in an SVS Recipe.
 5. For each Script Segment, use `copy:Render` with dialogue plus an optional English action slot,
    then call `seedance:ReferenceVideo generate-audio="true"` with the scene image and both voices.
-6. Assemble the accepted Segment takes with `speech:Spine`, align the complete Script with
-   `whisperx:Alignment`, then add Caption, Media, Typography, and Audio Tracks as needed.
+6. Normalize each accepted Segment take, produce its `whisperx:SemanticTake`, assemble the results
+   with `speech:Track`, then add Caption, Media, Typography, and Audio Tracks as needed.
 7. Assemble peer Tracks in `film:Film`, render with `render:Video`, and use separate `.svrun`
    Sources with explicit Targets for review and delivery.
 

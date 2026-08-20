@@ -22,10 +22,10 @@ secondary feed, or supporting image stays visible.
 <space:Frame id="presenter-pip" within={vertical}
   left="64%" top="52%" right="4%" bottom="8%"/>
 
-<media-track:Track id="presenter-overlay" space={speech.space} canvas={vertical}>
+<media-track:Track id="presenter-overlay" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item image={presenter-cutout.image} extent={presenter-extent}
     frame={presenter-pip} during="program"
-    appearance={studio.media.pip} motion={studio.motion.pip}/>
+    appearance={recipes.media.pip} motion={recipes.motion.pip}/>
 </media-track:Track>
 ```
 
@@ -54,8 +54,8 @@ secondary feed, or supporting image stays visible.
 
 ## Time and review the PIP
 
-- Enter or exit on a perceptible story event, Script Selection, or Moment. Use semantic timing when a
-  measured speech map exists and explicit ProgramSpace timing otherwise.
+- Enter or exit on a perceptible story event, Script Selection, or Moment. Use the assembled
+  SemanticTrack as the timing authority.
 - Give the audience enough time to recognize both the base evidence and the PIP; avoid rapid toggling
   that makes neither readable.
 - Review edge quality first, then placement on every relevant base shot, then entry/exit motion, audio

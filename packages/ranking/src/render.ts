@@ -27,6 +27,7 @@ import {
   assertRankingSoundStyle,
   assertTierBoardProgram,
   assertTopThreeProgram,
+  fitColumnRevealMotion,
   fitRankingStageMotion,
 } from "./schedule.js";
 import type {
@@ -349,89 +350,184 @@ function rankColor(colors: readonly string[], index: number): string {
   return colors[index % colors.length]!;
 }
 
+function columnCardTransform(input: {
+  readonly finalCenterX: number;
+  readonly finalCenterY: number;
+  readonly centerX: number;
+  readonly centerY: number;
+  readonly size: number;
+  readonly finalSize: number;
+  readonly scale?: number;
+}): string {
+  const translateX = input.centerX - input.finalCenterX;
+  const translateY = input.centerY - input.finalCenterY;
+  const scale = Math.round(input.size / input.finalSize * (input.scale ?? 1) * 1_000_000) / 1_000_000;
+  return `translate(${px(translateX)},${px(translateY)}) scale(${scale})`;
+}
+
+function lerp(from: number, to: number, progress: number): number {
+  return from + (to - from) * progress;
+}
+
+function outBack(progress: number): number {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(progress - 1, 3) + c1 * Math.pow(progress - 1, 2);
+}
+
+function columnRevealAnimation(input: {
+  readonly duration: number;
+  readonly appearFrames: number;
+  readonly moveFrames: number;
+  readonly finalCenterX: number;
+  readonly finalCenterY: number;
+  readonly stageCenterX: number;
+  readonly stageCenterY: number;
+  readonly entryCenterY: number;
+  readonly stageSize: number;
+  readonly finalSize: number;
+  readonly easing: "linear" | "ease-in" | "ease-out" | "ease-in-out";
+}): VisualAnimation {
+  const moveStart = input.duration - input.moveFrames;
+  const moveEnd = Math.max(moveStart, input.duration - 1);
+  const holdFrames = moveStart - input.appearFrames;
+  const stage = (centerX = input.stageCenterX, centerY = input.stageCenterY, scale = 1) => columnCardTransform({
+    finalCenterX: input.finalCenterX,
+    finalCenterY: input.finalCenterY,
+    centerX,
+    centerY,
+    size: input.stageSize,
+    finalSize: input.finalSize,
+    scale,
+  });
+  const overshootFrame = Math.max(1, Math.round(input.appearFrames * 0.72));
+  const overshootProgress = outBack(overshootFrame / input.appearFrames);
+  return animation(input.duration, [
+    { atFrame: 0, style: transformStyle(columnCardTransform({
+      finalCenterX: input.finalCenterX,
+      finalCenterY: input.finalCenterY,
+      centerX: input.stageCenterX,
+      centerY: input.entryCenterY,
+      size: input.stageSize,
+      finalSize: input.finalSize,
+      scale: 0.96,
+    }), 0), easing: "ease-out" },
+    ...(overshootFrame < input.appearFrames ? [{
+      atFrame: overshootFrame,
+      style: transformStyle(stage(input.stageCenterX,
+        lerp(input.entryCenterY, input.stageCenterY, overshootProgress),
+        0.96 + 0.04 * overshootProgress), 1),
+      easing: "ease-in-out" as const,
+    }] : []),
+    { atFrame: input.appearFrames, style: transformStyle(stage(), 1) },
+    ...(holdFrames >= 6 ? [
+      { atFrame: input.appearFrames + Math.floor(holdFrames / 3),
+        style: transformStyle(stage(input.stageCenterX + 0.8, input.stageCenterY - 1.8, 1.007), 1), easing: "ease-in-out" as const },
+      { atFrame: input.appearFrames + Math.floor(holdFrames * 2 / 3),
+        style: transformStyle(stage(input.stageCenterX - 0.4, input.stageCenterY + 1.6, 1.002), 1), easing: "ease-in-out" as const },
+    ] : []),
+    { atFrame: moveStart, style: transformStyle(stage(), 1), easing: input.easing },
+    { atFrame: moveEnd, style: transformStyle(finalTransform(), 1) },
+  ]);
+}
+
 export function renderColumn(space: ProgramSpace, program: ColumnProgram): VisualTrack {
   assertProgramSpaceIdentity(space);
   assertColumnProgram(program);
-  const { frame, style, schedule } = program;
+  const { canvas, frame, style, schedule } = program;
   const presents: VisualPresent[] = [];
+  const entries = new Map(schedule.entries.map((entry) => [entry.itemId, entry]));
+  const cellSize = style.rowHeightPx;
+  const columnGap = Math.max(8, Math.round(cellSize * 0.16));
+  const contentSize = Math.min(cellSize, frame.widthPx - style.paddingPx * 2 - cellSize - columnGap);
+  assert(contentSize > 0, "Column Frame is too narrow for its rank and content cells.");
+  const requiredHeight = style.paddingPx * 2 + program.items.length * cellSize
+    + Math.max(0, program.items.length - 1) * style.rowGapPx;
+  assert(requiredHeight <= frame.heightPx, "Column rows do not fit inside its Frame.");
   const boardElements: VisualElement[] = [absoluteBox({
     id: "column-board", order: 0, x: frame.xPx, y: frame.yPx, width: frame.widthPx, height: frame.heightPx,
     style: boardStyle(style.board),
   })];
-  for (const [index] of program.items.entries()) {
-    const y = rowY(0, frame.heightPx, style.paddingPx, program.items.length, index, style.rowHeightPx, style.rowGapPx);
+  for (const [index, item] of program.items.entries()) {
+    const y = style.paddingPx + index * (cellSize + style.rowGapPx);
+    const color = rankColor(style.rankColors, item.rank - 1);
     boardElements.push(absoluteBox({
-      id: `column-row-${index + 1}`, parent: "column-board", order: boardElements.length,
-      x: style.paddingPx, y, width: frame.widthPx - style.paddingPx * 2, height: style.rowHeightPx,
+      id: `column-rank-cell-${item.rank}`, parent: "column-board", order: boardElements.length,
+      x: style.paddingPx, y, width: cellSize, height: cellSize,
       style: [
-        { name: "background", value: `${rankColor(style.rankColors, index)}22` },
-        { name: "border", value: `${px(1)} solid ${rankColor(style.rankColors, index)}88` },
-        { name: "border-radius", value: px(12) },
+        { name: "background", value: color },
+        { name: "border-radius", value: px(Math.max(4, Math.round(cellSize * 0.075))) },
       ],
     }));
     boardElements.push(simpleText({
-      id: `column-rank-${index + 1}`, parent: `column-row-${index + 1}`, order: boardElements.length,
-      text: String(index + 1), typography: { ...style.text, color: rankColor(style.rankColors, index) },
-      x: 0, y: 0, width: style.rowHeightPx, height: style.rowHeightPx,
+      id: `column-rank-${item.rank}`, parent: `column-rank-cell-${item.rank}`, order: boardElements.length,
+      text: String(item.rank), typography: { ...style.text, color: "#ffffff", sizePx: Math.max(style.text.sizePx, cellSize * 0.48) },
+      x: 0, y: 0, width: cellSize, height: cellSize,
+    }));
+    boardElements.push(absoluteBox({
+      id: `column-content-cell-${item.rank}`, parent: "column-board", order: boardElements.length,
+      x: style.paddingPx + cellSize + columnGap, y, width: contentSize, height: contentSize,
+      style: [
+        { name: "background", value: "#000000b8" },
+        { name: "border", value: `${px(1.5)} solid #ffffff2e` },
+        { name: "border-radius", value: px(Math.min(style.iconRadiusPx, contentSize / 2)) },
+        { name: "box-sizing", value: "border-box" },
+        { name: "overflow", value: "hidden" },
+      ],
     }));
   }
   presents.push(present({ id: `${program.id}:board`, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
     stacking: style.boardStackingOrder, tieBreak: `${program.id}:0000:board`, elements: boardElements }));
-  const stageSize = style.stageSizePx;
-  presents.push(present({
-    id: `${program.id}:stage`, start: schedule.entries[0]!.triggerFrame, end: schedule.terminalFrame,
-    stacking: style.stageStackingOrder, tieBreak: `${program.id}:0001:stage`, elements: [absoluteBox({
-      id: "column-stage", order: 0,
-      x: frame.xPx + frame.widthPx * style.stagePoint.x - stageSize / 2,
-      y: frame.yPx + frame.heightPx * style.stagePoint.y - stageSize / 2,
-      width: stageSize, height: stageSize,
-      style: [{ name: "border", value: `${px(2)} solid ${style.text.color}66` }, { name: "border-radius", value: px(18) }],
-    })],
-  }));
   for (const [index, item] of program.items.entries()) {
-    const entry = schedule.entries[index]!;
-    const x = frame.xPx + style.paddingPx;
-    const y = rowY(frame.yPx, frame.heightPx, style.paddingPx, program.items.length, index, style.rowHeightPx, style.rowGapPx);
-    const width = frame.widthPx - style.paddingPx * 2;
-    const duration = entry.stage.endFrameExclusive - entry.triggerFrame;
-    const fitted = fitRankingStageMotion(duration, style.motion.appearFrames, style.motion.moveFrames, true);
-    const targetStageX = frame.xPx + frame.widthPx * style.stagePoint.x - width / 2;
-    const targetStageY = frame.yPx + frame.heightPx * style.stagePoint.y - style.rowHeightPx / 2;
+    const entry = entries.get(item.id)!;
+    const x = frame.xPx + style.paddingPx + cellSize + columnGap;
+    const y = frame.yPx + style.paddingPx + index * (cellSize + style.rowGapPx);
+    const finalCenterX = x + contentSize / 2;
+    const finalCenterY = y + contentSize / 2;
+    const stageCenterX = Math.round(canvas.widthPx * style.stagePoint.x);
+    const stageCenterY = Math.round(canvas.heightPx * style.stagePoint.y);
+    const entryCenterY = canvas.heightPx + style.stageSizePx * 0.25;
     const root = `column-item-${item.id}`;
-    const rootAnimation = settledItemAnimation({
-      duration,
-      appearFrames: fitted.appearFrames,
-      moveStart: entry.stage.endFrameExclusive - fitted.moveFrames - entry.triggerFrame,
-      moveEnd: entry.stage.endFrameExclusive - entry.triggerFrame,
-      stageTransform: stageTransform(x, y, targetStageX, targetStageY, style.stageSizePx / style.rowHeightPx),
-      easing: style.motion.easing,
-    });
     const itemElements = (animationValue?: VisualAnimation): VisualElement[] => {
+      const iconSize = Math.min(style.iconSizePx, contentSize);
       const elements: VisualElement[] = [absoluteBox({
-        id: root, order: 0, x, y, width, height: style.rowHeightPx,
-        style: [{ name: "border-radius", value: px(12) }],
+        id: root, order: 0, x, y, width: contentSize, height: contentSize,
+        style: [
+          { name: "background", value: "#fffffffa" },
+          { name: "border-radius", value: px(Math.min(style.iconRadiusPx, contentSize / 2)) },
+          { name: "overflow", value: "hidden" },
+          { name: "transform-origin", value: "center center" },
+        ],
         ...(animationValue === undefined ? {} : { animation: animationValue }),
       })];
-      if (item.icon !== undefined) elements.push(iconElement({ id: "icon", parent: root, order: 1, artifact: item.icon,
-        x: style.rowHeightPx, y: (style.rowHeightPx - style.iconSizePx) / 2, size: style.iconSizePx,
+      if (item.icon !== undefined) elements.push(iconElement({ id: "icon", parent: root, order: elements.length, artifact: item.icon,
+        x: (contentSize - iconSize) / 2, y: (contentSize - iconSize) / 2, size: iconSize,
         radius: style.iconRadiusPx, fit: style.iconFit }));
-      elements.push(simpleText({
-        id: "label", parent: root, order: elements.length, text: item.label, typography: style.text,
-        x: style.rowHeightPx + (item.icon === undefined ? 0 : style.iconSizePx + 12), y: 0,
-        width: width - style.rowHeightPx - (item.icon === undefined ? 8 : style.iconSizePx + 20), height: style.rowHeightPx,
-        align: "left",
+      else elements.push(simpleText({
+        id: "label", parent: root, order: elements.length, text: item.label,
+        typography: { ...style.text, color: "#111315", sizePx: Math.max(12, contentSize * 0.16) },
+        x: contentSize * 0.06, y: 0, width: contentSize * 0.88, height: contentSize,
       }));
       return elements;
     };
-    presents.push(present({
-      id: `${program.id}:item:${item.id}:stage`, start: entry.stage.startFrame, end: entry.stage.endFrameExclusive,
-      stacking: item.stackingOrder ?? style.itemStackingOrder,
-      tieBreak: `${program.id}:item:${String(index).padStart(4, "0")}:${item.id}:stage`, elements: itemElements(rootAnimation),
-    }));
+    if (entry.mode === "reveal") {
+      const duration = entry.active.endFrameExclusive - entry.active.startFrame;
+      const fitted = fitColumnRevealMotion(duration, style.motion.appearFrames, style.motion.moveFrames);
+      const rootAnimation = fitted.mode === "direct" ? undefined : columnRevealAnimation({
+        duration, appearFrames: fitted.appearFrames, moveFrames: fitted.moveFrames,
+        finalCenterX, finalCenterY, stageCenterX, stageCenterY, entryCenterY,
+        stageSize: style.stageSizePx, finalSize: contentSize, easing: style.motion.easing,
+      });
+      presents.push(present({
+        id: `${program.id}:item:${item.id}:stage`, start: entry.active.startFrame, end: entry.active.endFrameExclusive,
+        stacking: item.stackingOrder ?? style.stageStackingOrder,
+        tieBreak: `${program.id}:item:${String(item.rank).padStart(4, "0")}:${item.id}:stage`, elements: itemElements(rootAnimation),
+      }));
+    }
     if (entry.settled.endFrameExclusive > entry.settled.startFrame) presents.push(present({
       id: `${program.id}:item:${item.id}:settled`, start: entry.settled.startFrame, end: entry.settled.endFrameExclusive,
       stacking: item.stackingOrder ?? style.itemStackingOrder,
-      tieBreak: `${program.id}:item:${String(index).padStart(4, "0")}:${item.id}:settled`, elements: itemElements(),
+      tieBreak: `${program.id}:item:${String(item.rank).padStart(4, "0")}:${item.id}:settled`, elements: itemElements(),
     }));
   }
   return sealTrack(space, program.id, presents);

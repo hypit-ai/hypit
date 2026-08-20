@@ -177,7 +177,7 @@ async function compileMain(alias: string, root = "/project", styles = styleText)
   frontends.register(svsFrontend);
   const entry = unit(`${root}/main.svml`, `<svml>
     <import as="lab" from="example.recipe-card@1"/>
-    <import as="${alias}" source="./studio.svs"/>
+    <import as="${alias}" source="./recipes.svs"/>
     <lab:Card id="answer" appearance={${alias}.card.answer}/>
   </svml>`);
   return await compileSourceClosure({
@@ -185,8 +185,8 @@ async function compileMain(alias: string, root = "/project", styles = styleText)
     closure,
     frontends,
     async resolveSource(_importer, request) {
-      if (request.from !== "./studio.svs") throw new Error(`unknown source ${request.from}`);
-      return await Promise.resolve(unit(`${root}/studio.svs`, styles));
+      if (request.from !== "./recipes.svs") throw new Error(`unknown source ${request.from}`);
+      return await Promise.resolve(unit(`${root}/recipes.svs`, styles));
     },
   });
 }
@@ -286,7 +286,7 @@ test("Source Closure rejects duplicate aliases and unknown Frontends before deco
       closure,
       frontends,
       resolveSource() {
-        return unit("/project/studio.svs", styleText);
+        return unit("/project/recipes.svs", styleText);
       },
     }),
     (error: unknown) => error instanceof SourceClosureError && error.code === "UNKNOWN_FRONTEND",

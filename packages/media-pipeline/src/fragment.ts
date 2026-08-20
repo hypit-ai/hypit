@@ -49,38 +49,14 @@ export const synchronizedMediaFragment = sealGraphFragment({
 
 export const transformMediaFragment = sealGraphFragment({
   inputs: [
-    { name: "source", type: artifactTypes.blob },
-    { name: "selection", type: mediaPipelineTypes.selectionRequest },
+    { name: "media", type: mediaTypes.synchronized },
     { name: "program", type: mediaPipelineTypes.transformProgram },
   ],
   operations: [
     {
-      id: "inspect",
-      producer: mediaPipelineProducers.inspect,
-      inputs: { source: input("source") },
-      result: { kind: "need", name: "inspection" },
-    },
-    {
-      id: "select",
-      producer: mediaPipelineProducers.select,
-      inputs: { inspection: operation("inspect"), request: input("selection") },
-      result: { kind: "output", name: "selection" },
-    },
-    {
-      id: "normalize",
-      producer: mediaPipelineProducers.normalize,
-      inputs: {
-        source: input("source"),
-        inspection: operation("inspect"),
-        selection: operation("select"),
-        request: input("selection"),
-      },
-      result: { kind: "need", name: "media" },
-    },
-    {
       id: "transform",
       producer: mediaPipelineProducers.transform,
-      inputs: { media: operation("normalize"), program: input("program") },
+      inputs: { media: input("media"), program: input("program") },
       result: { kind: "need", name: "video" },
     },
   ],

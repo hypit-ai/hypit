@@ -1,7 +1,7 @@
 import { artifactDependency, artifactTypes } from "@hypit/artifact";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
-import { programSpaceTypes } from "@hypit/program-space";
+import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import {
   hyperframesManifest,
   hyperframesModuleRef,
@@ -31,22 +31,22 @@ export const renderHyperframesMarkupSurfaces = [{
     outputs: [],
     vocabulary: {
       summary:
-        "Renders one Composition on one ProgramSpace into a final video, publishing the muxed result as a BlobArtifact.",
+        "Renders one Composition on one SemanticTrack into a final video, publishing the muxed result as a BlobArtifact.",
       attributes: [
         { name: "id", kind: "identifier", required: true,
           summary: "Names the render component and the final video this element publishes." },
         { name: "composition", kind: "reference", required: true,
           accepts: [compositionTypes.composition],
           summary: "Selects the Composition this element compiles, renders and muxes." },
-        { name: "space", kind: "reference", required: true,
-          accepts: [programSpaceTypes.programSpace],
-          summary: "Selects the ProgramSpace whose duration and frame rate every rendered Product is bound to." },
+        { name: "semantic", kind: "reference", required: true,
+          accepts: [semanticTrackTypes.track],
+          summary: "Selects the SemanticTrack whose derived duration and frame rate every rendered Product is bound to." },
       ],
       ports: [
         { name: "video", type: artifactTypes.blob,
           summary: "The final muxed video Artifact, addressed as `<id>.video`." },
       ],
-      example: '<render:Video id="final" composition={main.composition} space={speech.space}/>',
+      example: '<render:Video id="final" composition={main.composition} semantic={speech.semantic}/>',
       notes: [
         "All three attributes are required; the element accepts no children and no text content.",
         "The visual render, the audio render and the mux are three separate Needs, each realized by a Provider this package does not choose.",
@@ -64,6 +64,7 @@ export const renderHyperframesManifest: ModuleManifest = {
     artifactDependency,
     mediaDependency,
     compositionDependency,
+    semanticTrackDependency,
     { module: hyperframesModuleRef },
     { module: mediaPipelineModuleRef },
   ],

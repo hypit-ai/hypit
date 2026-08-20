@@ -59,7 +59,7 @@ npm link
 
 ## 2. 编译示例
 
-仓库里的示例包含 Script、两次视频生成需求、Speech Spine、WhisperX 对齐、字幕、Media Track、
+仓库里的示例包含 Script、两次视频生成需求、Speech Track、WhisperX 对齐、字幕、Media Track、
 文字、Film 与最终渲染。
 
 ```bash
@@ -81,7 +81,7 @@ Operations 与外部 Needs。它绝不会启动 Provider。
 现在可以直接打开三份源码阅读：
 
 - [`main.svml`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/main.svml)：视频本身；
-- [`studio.svs`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/studio.svs)：可复用的视觉 Recipe；
+- [`recipes.svs`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/recipes.svs)：可复用的视觉 Recipe；
 - [`build.svrun`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/build.svrun)：这次要求得到的输出。
 
 ## 3. 认识项目里的文件
@@ -91,7 +91,7 @@ Operations 与外部 Needs。它绝不会启动 Provider。
 | 文件 | 回答的问题 |
 |---|---|
 | `main.svml` | 要做的是什么视频？ |
-| `studio.svs` | 使用哪些可复用的 Recipe 值？ |
+| `recipes.svs` | 使用哪些可复用的 Recipe 值？ |
 | `build.svrun` | 这一次 Run 要哪些输出、选择哪些 Candidate？ |
 | `hypit.runtime.json` | 在哪台机器、哪些 Store 和 Provider Endpoint 上执行？ |
 
@@ -187,7 +187,7 @@ Endpoint 配置，但不会执行作者图。
 | [Script](./quickstart/script.md) | Segment、Role Cue、Dual Text、Selection、Moment 与文字投影 |
 | [SVS 样式表](./quickstart/styles.md) | 字幕、Media、文字与 Film 的可复用 Recipe |
 | [媒体与生成](./quickstart/generation.md) | 图片、音频、Prompt Text 与显式模型组件 |
-| [时序与装配](./quickstart/timing.md) | Speech Spine、WhisperX、ProgramSpace 与 SemanticMap |
+| [时序与装配](./quickstart/timing.md) | Speech Track、WhisperX、ProgramSpace 与 SemanticMap |
 | [Tracks](./quickstart/tracks.md) | Caption、Media、Typography 与 Audio Track |
 | [Film 与渲染](./quickstart/composition.md) | 平级 Track 合成与显式渲染 |
 | [Run Source 与 Builds](./quickstart/run.md) | Targets、复用、Runtime Profile、Build 与取回结果 |

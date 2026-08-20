@@ -1,7 +1,8 @@
 import type { CaptionProgram, TimedCaptionProjection } from "@hypit/caption";
 import type { ComponentPackage } from "@hypit/component-kit";
 import type { CaptionDisplaySequence } from "@hypit/narrative";
-import type { ProgramSpace } from "@hypit/program-space";
+import { projectSemanticProgramSpace } from "@hypit/semantic-track";
+import type { SemanticTrack } from "@hypit/semantic-track";
 import type { StoredValue } from "@hypit/protocol";
 import { canonicalize } from "@hypit/protocol";
 
@@ -21,7 +22,7 @@ export const captionFineComponent = {
         inline<TimedCaptionProjection>(inputs.caption?.value, "TimedCaptionProjection"),
         inline<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
         inline<CaptionDisplaySequence>(inputs.display?.value, "CaptionDisplaySequence"),
-        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+        projectSemanticProgramSpace(inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack")),
       )) } },
       needs: {},
     }),

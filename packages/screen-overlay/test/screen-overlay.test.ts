@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import { artifactManifest } from "@hypit/artifact";
 import { registerTypeValidatorFacets } from "@hypit/component-kit";
@@ -10,7 +11,7 @@ import { AuthorFrontendRegistry, compileSourceClosure, resolveCompiledSourceExpo
 import { compileHyperframesDocument } from "@hypit/hyperframes";
 import { mediaManifest } from "@hypit/media";
 import { narrativeManifest } from "@hypit/narrative";
-import { programSpaceDependency, programSpaceManifest, programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
+import { programSpaceManifest, sealProgramSpace } from "@hypit/program-space";
 import type { ModuleManifest } from "@hypit/protocol";
 import {
   appendProgramScreenOverlay,
@@ -27,7 +28,7 @@ import {
   sealScreenOverlayItemSpec,
 } from "@hypit/screen-overlay";
 import type { ScreenOverlayComponent } from "@hypit/screen-overlay";
-import { semanticMapManifest } from "@hypit/semantic-map";
+import { semanticTrackDependency, semanticTrackManifest, semanticTrackTypes } from "@hypit/semantic-track";
 import { speechEvidenceManifest } from "@hypit/speech-evidence";
 import { speechManifest } from "@hypit/speech";
 import { sealCanvasSpace, spatialComponent, spatialDependency, spatialManifest, spatialTypes } from "@hypit/spatial";
@@ -44,6 +45,7 @@ const space = sealProgramSpace({
   durationSec: 2, frameRate: { numerator: 30, denominator: 1 },
 });
 const header = sealScreenOverlayHeader({ id: "screen" });
+const semantic = semanticTrackFixture(space);
 const components: readonly ScreenOverlayComponent[] = [
   { kind: "flash", color: "#ffffff", intensity: 0.9, attackFrames: 2, holdFrames: 3, decayFrames: 5 },
   { kind: "color-wash", color: "#2244ff", opacity: 0.2 },
@@ -65,7 +67,7 @@ function trackFor(content: ScreenOverlayComponent, stackingOrder = 50) {
     expansion: { kind: "one" }, stackingOrder,
   });
   return renderScreenOverlay(canvas, space, finalizeScreenOverlay(
-    appendProgramScreenOverlay(createScreenOverlaySet(), header, space, spec), header,
+    appendProgramScreenOverlay(createScreenOverlaySet(), header, semantic, spec), header,
   ));
 }
 
@@ -117,7 +119,7 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
 
 test("the package has no lower-composite, sibling Track, backdrop-filter or hidden audio port", () => {
   const fragment = createScreenOverlayFragment([{ kind: "program", specName: "spec" }]);
-  assert.deepEqual(fragment.inputs.map((input) => input.name), ["canvas", "header", "space", "spec"]);
+  assert.deepEqual(fragment.inputs.map((input) => input.name), ["canvas", "header", "semantic", "spec"]);
   assert.equal(fragment.exports.some((output) => output.type.name === "AudioTrack"), false);
   assert.throws(() => sealScreenOverlayItemSpec({
     id: "blur",
@@ -132,13 +134,13 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
   const fixtureSurfaceDigest = fixtureDigest("example.screen-inputs/surface@1");
   const fixtureSurface = {
     name: "inputs", tag: "Inputs", mode: "structured",
-    outputs: [spatialTypes.canvas, programSpaceTypes.programSpace],
+    outputs: [spatialTypes.canvas, semanticTrackTypes.track],
   } as const;
   const fixtureManifest: ModuleManifest = {
     format: "hypit.module@1",
     name: fixtureModule.name,
     version: fixtureModule.version,
-    dependencies: [spatialDependency, programSpaceDependency],
+    dependencies: [spatialDependency, semanticTrackDependency],
     types: [],
     capabilities: [],
     producers: [],
@@ -150,7 +152,7 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
     programSpaceManifest,
     speechManifest,
     speechEvidenceManifest,
-    semanticMapManifest,
+    semanticTrackManifest,
     spatialManifest,
     temporalManifest,
     visualIrManifest,
@@ -162,7 +164,7 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
   registry.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
       { id: "canvas", type: spatialTypes.canvas, value: { kind: "inline", value: canvas }, range: element.range },
-      { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
+      { id: "semantic", type: semanticTrackTypes.track, value: { kind: "inline", value: semantic }, range: element.range },
     ],
     components: [],
     fragments: [],
@@ -188,7 +190,7 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
         <import as="fixture" from="example.screen-inputs@1"/>
         <import as="screen" from="@hypit/screen-overlay@1"/>
         <fixture:Inputs/>
-        <screen:Track id="screen-fx" canvas={canvas} space={space}>
+        <screen:Track id="screen-fx" canvas={canvas} semantic={semantic}>
           <screen:Flash during="program" z="70" color="#ffffff" intensity="0.9" attack="2" hold="3" decay="5"/>
         </screen:Track>
       </svml>`,

@@ -1,5 +1,4 @@
-import { programSpaceTypes } from "@hypit/program-space";
-import type { ProgramSpace } from "@hypit/program-space";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { compositionTypes } from "@hypit/composition";
 import type { AudioTrack, Track, VisualTrack } from "@hypit/composition";
@@ -94,15 +93,15 @@ function trackKind(reference: SurfaceResolvedReference): "visual" | "audio" {
 }
 
 export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exactAttributes(element, ["id", "canvas", "space", "appearance"]);
+  exactAttributes(element, ["id", "canvas", "semantic", "appearance"]);
   const id = stringAttribute(element, "id");
   const canvas = requiredReference(element, "canvas", resolveReference);
   if (!sameType(canvas.type, spatialTypes.canvas)) {
     throw new Error(`${element.name}.canvas must reference CanvasSpace`);
   }
-  const space = requiredReference(element, "space", resolveReference);
-  if (!sameType(space.type, programSpaceTypes.programSpace)) {
-    throw new Error(`${element.name}.space must reference ProgramSpace`);
+  const semantic = requiredReference(element, "semantic", resolveReference);
+  if (!sameType(semantic.type, semanticTrackTypes.track)) {
+    throw new Error(`${element.name}.semantic must reference SemanticTrack`);
   }
   const appearanceReference = requiredReference(element, "appearance", resolveReference);
   const appearance = filmAppearanceFromRecipe(
@@ -139,7 +138,7 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
       inputs: {
         program: { kind: "record", id: programId },
         canvas: canvas.ref,
-        space: space.ref,
+        semantic: semantic.ref,
         ...Object.fromEntries(tracks.map((track) => [track.name, track.source.ref])),
       },
       outputs: { composition: `${id}.composition` },

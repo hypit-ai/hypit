@@ -84,7 +84,7 @@ Operations and external Needs that a Build would use. It never starts a Provider
 Open the three source files next:
 
 - [`main.svml`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/main.svml) — the video;
-- [`studio.svs`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/studio.svs) — reusable visual Recipes;
+- [`recipes.svs`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/recipes.svs) — reusable visual Recipes;
 - [`build.svrun`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/build.svrun) — the requested output.
 
 ## 3. Understand the project files
@@ -94,7 +94,7 @@ A working video project normally has four authored or configured inputs:
 | File | Answers |
 |---|---|
 | `main.svml` | What video are you making? |
-| `studio.svs` | Which reusable Recipe values does it use? |
+| `recipes.svs` | Which reusable Recipe values does it use? |
 | `build.svrun` | Which outputs and Candidates does this Run select? |
 | `hypit.runtime.json` | Which machine, stores and Provider endpoints execute it? |
 
@@ -192,7 +192,7 @@ Follow the authoring path in order, or jump directly to the part you are changin
 | [Script](./quickstart/script.md) | Segments, Role Cues, Dual Text, Selections, Moments and text projections |
 | [SVS Stylesheets](./quickstart/styles.md) | Reusable Recipes for captions, media, text and film |
 | [Media & Generation](./quickstart/generation.md) | Images, audio, prompt text and explicit model components |
-| [Timing & Assembly](./quickstart/timing.md) | Speech Spine, WhisperX, ProgramSpace and SemanticMap |
+| [Timing & Assembly](./quickstart/timing.md) | Speech Track, WhisperX, ProgramSpace and SemanticMap |
 | [Tracks](./quickstart/tracks.md) | Caption, Media, Typography and Audio Tracks |
 | [Film & Rendering](./quickstart/composition.md) | Peer Track composition and explicit rendering |
 | [Run Source & Builds](./quickstart/run.md) | Targets, reuse, Runtime Profiles, Builds and retrieval |
