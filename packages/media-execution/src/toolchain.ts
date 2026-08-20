@@ -12,6 +12,7 @@ function run(executable: string, args: readonly string[]): Promise<{ ok: boolean
     execFile(executable, [...args], {
       timeout: 15_000,
       shell: false,
+      windowsHide: true,
       maxBuffer: 4 * 1024 * 1024,
     }, (error, stdout, stderr) => {
       resolve(error === null

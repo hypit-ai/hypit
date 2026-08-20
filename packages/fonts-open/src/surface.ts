@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import { basename as fileName } from "node:path";
 
 import {
   assertFontArtifactRef,
@@ -112,7 +113,11 @@ async function materializeFace(
     : [{ path: oneFile(request.family, request.weight, request.style) }];
   const resolvedSources: FontArtifactRef["sources"] = await Promise.all(files.map(async (file) => {
     const bytes = Uint8Array.from(await readFile(file.path));
-    const basename = file.path.split("/").at(-1)!;
+    // `require.resolve` answers in the platform's own separator, and this name goes into the
+    // asset's provenance. Splitting on "/" left the whole absolute path standing in for the file
+    // name wherever that separator is a backslash, which put a machine's directory layout inside
+    // an identity that is supposed to name a font file and nothing else.
+    const basename = fileName(file.path);
     const resolved = await resolveAsset({
       from: `package:@hypit/fonts-open/${request.familyName}/${basename}`,
       mediaType: "font/woff2",

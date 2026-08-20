@@ -48,6 +48,9 @@ into separate prompts.
   third-party camera owns the shot, do not call it a selfie.
 - Make shot size agree with the story. Do not place essential feet, table-under actions, or lower-body
   props outside a close or waist-up frame.
+- Make shot size agree with the overlays too. A board, band or sheet that covers part of the frame for
+  most of the video decides where the subject can be, so frame for the region that is left rather than
+  for the whole picture; `overlays.md` states the rule and how to write it as geometry.
 - For reverse views, define both background sectors before writing prompts and apply the hard rule in
   `visual-continuity.md`.
 - Make before/after states visibly distinguishable through the authored condition, posture, setting,

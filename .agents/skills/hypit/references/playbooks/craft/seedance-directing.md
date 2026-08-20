@@ -2,7 +2,8 @@
 
 ## Build the prompt inputs
 
-1. Vendor one matching Kit into the project's `./kits/` directory.
+1. Vendor one matching Kit into the project's `./kits/` directory. `../../seedance-kits.md` lists the
+   seven shipped Kits, the dynamic slots each one requires and the ordered references it expects.
 2. Import generic Text as `copy` and the vendored Kit under its own alias.
 3. Put stable creative choices in a named SVS Recipe.
 4. Render the Kit with `copy:Render`; connect only dynamic `dialogue`, `action`, `story`, or

@@ -39,7 +39,7 @@ function macosSecurity(service: string): KeychainReader {
   return async (_service, account) => await new Promise((resolve, reject) => {
     execFile("/usr/bin/security",
       ["find-generic-password", "-s", service, "-a", account, "-w"],
-      { timeout: 10_000, shell: false },
+      { timeout: 10_000, shell: false, windowsHide: true },
       (error, stdout) => {
         if (error === null) {
           resolve(stdout.replace(/\n$/u, ""));
@@ -56,7 +56,7 @@ function macosWriter(service: string): KeychainWriter {
   return async (_service, account, secret) => await new Promise((resolve, reject) => {
     execFile("/usr/bin/security",
       ["add-generic-password", "-U", "-s", service, "-a", account, "-w", secret],
-      { timeout: 10_000, shell: false },
+      { timeout: 10_000, shell: false, windowsHide: true },
       (error) => error === null ? resolve() : reject(new Error(`keychain write for ${account} failed`)));
   });
 }
@@ -65,7 +65,7 @@ function macosDeleter(service: string): KeychainDeleter {
   return async (_service, account) => await new Promise((resolve, reject) => {
     execFile("/usr/bin/security",
       ["delete-generic-password", "-s", service, "-a", account],
-      { timeout: 10_000, shell: false },
+      { timeout: 10_000, shell: false, windowsHide: true },
       (error) => {
         if (error === null) resolve(true);
         else if ((error as { code?: number }).code === 44) resolve(false);

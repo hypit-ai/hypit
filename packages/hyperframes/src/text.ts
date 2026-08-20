@@ -27,6 +27,13 @@ export type TextRenderContext = {
   readonly exactFontFamily: (font: FontArtifactRef) => string;
   readonly baseStyle: string;
   readonly commonAttributes: string;
+  /**
+   * Filter identifiers already written into this document.
+   *
+   * A caption is one element per word, and every word carries the same Paint, so without somewhere
+   * to remember that, each word writes the whole set again.
+   */
+  readonly emittedFilterIds?: Set<string>;
 };
 
 function number(value: number): string {
@@ -167,11 +174,20 @@ function inheritedGlyphColor(paints: readonly VisualTextPaintLayer[]): string[] 
   return fills.length === 1 && fills[0]!.paint.kind === "solid" ? [`color:${fills[0]!.paint.color}`] : [];
 }
 
+/**
+ * Name a filter after the Paint it draws, and after nothing else.
+ *
+ * What the filter contains is decided by the Paint alone, so two Paints that are equal want one
+ * definition between them. Naming the Track and the Present as well made every element that shared
+ * a Paint carry its own copy: a five-word caption with an outline, a glow and a long shadow emitted
+ * eighty definitions of sixteen distinct filters, thirty-six kilobytes of which thirty were the
+ * same bytes repeated. Identifiers are resolved across the document, so one copy answers for all.
+ */
 function glyphFilterId(
   paint: Extract<GlyphPaintLayer, { kind: "stroke" | "shadow" | "glow" }>,
   context: TextRenderContext,
 ): string {
-  return context.stableId([context.trackId, context.presentId, "text-glyph-filter", canonicalStringify(paint)]);
+  return context.stableId(["text-glyph-filter", canonicalStringify(paint)]);
 }
 
 function glyphFilterDefinition(
@@ -247,6 +263,9 @@ function glyphLayerCss(
     ...common,
     "color:#ffffff",
     "-webkit-text-fill-color:#ffffff",
+    // The filter builds its shape out of this layer's own alpha, so anything inherited that also
+    // marks the glyph — a shadow from the element around it — would be dilated along with it.
+    "text-shadow:none",
     `filter:url(#${glyphFilterId(paint, context)})`,
   ];
 }
@@ -260,6 +279,40 @@ function renderGlyphPaint(
   if (layers.length === 0) return context.escape(value);
   const singleSolidFill = layers.length === 1 && layers[0]?.kind === "fill" && layers[0].paint.kind === "solid";
   return layers.map((paint, index) => `<span aria-hidden="${index === layers.length - 1 ? "false" : "true"}" data-hypit-text-paint-layer="${index}"${styleAttribute(glyphLayerCss(paint, singleSolidFill, context), context.escape)}>${context.escape(value)}</span>`).join("");
+}
+
+/**
+ * Render one plain string as ordered glyph Paint, with the filter definitions it needs.
+ *
+ * Text Flow reaches these layers through its document structure, a run at a time. A plain text
+ * element has no structure to walk — its whole content is one string — so it arrives here instead.
+ * Both end up in the same layers, drawn by the same filters, which is the point: an outline placed
+ * outside the letter is one thing, not one thing per element kind.
+ */
+export function renderGlyphPaintedString(
+  value: string,
+  paints: readonly VisualTextPaintLayer[],
+  context: TextRenderContext,
+): string {
+  const layers = glyphPaintLayers(paints);
+  if (layers.length === 0) return context.escape(value);
+  const shaped = layers.filter((paint): paint is Extract<GlyphPaintLayer, { kind: "stroke" | "shadow" | "glow" }> =>
+    paint.kind !== "fill");
+  const written = context.emittedFilterIds;
+  const definitions = [...new Map(shaped.map((paint) => [canonicalStringify(paint), paint])).values()]
+    .filter((paint) => {
+      const id = glyphFilterId(paint, context);
+      if (written === undefined) return true;
+      if (written.has(id)) return false;
+      written.add(id);
+      return true;
+    })
+    .map((paint) => glyphFilterDefinition(paint, context)).join("");
+  const defs = definitions.length === 0
+    ? ""
+    : `<svg aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden"><defs>${definitions}</defs></svg>`;
+  // The layers occupy one grid cell each so they stack in the order they were declared.
+  return `${defs}<span style="position:relative;display:inline-grid">${renderGlyphPaint(value, paints, context)}</span>`;
 }
 
 function boxLayers(

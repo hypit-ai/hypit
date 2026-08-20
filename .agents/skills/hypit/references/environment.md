@@ -42,7 +42,7 @@ hypit runtime status
 
 Use `runtime up` for normal Build preparation: it owns the detached durable Worker and prepares the external
 programs declared by the Runtime Profile. `programs up/status/down` is only the narrow external-
-program view and does not manage the Worker. See `references/runtime.md` for the Build lifecycle.
+program view and does not manage the Worker. See `runtime.md` for the Build lifecycle.
 
 The repository owns skill discovery: `.agents/skills` is canonical, with repository-root
 `.codex/skills` and `.claude/skills` links. This is checkout layout, not a skill setup operation.

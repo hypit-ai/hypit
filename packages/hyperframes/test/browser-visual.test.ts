@@ -164,7 +164,7 @@ async function collectPngs(directory: string): Promise<string[]> {
 function yellowPixelsByColumns(file: string, width: number, height: number, columns: number): number[] {
   const decoded = spawnSync("ffmpeg", [
     "-v", "error", "-i", file, "-f", "rawvideo", "-pix_fmt", "rgba", "pipe:1",
-  ], { encoding: "buffer", timeout: 30_000, maxBuffer: Math.max(16 * 1024 * 1024, width * height * 4 + 1024) });
+  ], { windowsHide: true, encoding: "buffer", timeout: 30_000, maxBuffer: Math.max(16 * 1024 * 1024, width * height * 4 + 1024) });
   assert.equal(decoded.status, 0, decoded.stderr.toString());
   assert.equal(decoded.stdout.byteLength, width * height * 4);
   const counts = Array.from({ length: columns }, () => 0);
@@ -182,7 +182,7 @@ function yellowPixelsByColumns(file: string, width: number, height: number, colu
 function decodedRgba(file: string, width: number, height: number): Buffer {
   const decoded = spawnSync("ffmpeg", [
     "-v", "error", "-i", file, "-f", "rawvideo", "-pix_fmt", "rgba", "pipe:1",
-  ], { encoding: "buffer", timeout: 30_000, maxBuffer: Math.max(16 * 1024 * 1024, width * height * 4 + 1024) });
+  ], { windowsHide: true, encoding: "buffer", timeout: 30_000, maxBuffer: Math.max(16 * 1024 * 1024, width * height * 4 + 1024) });
   assert.equal(decoded.status, 0, decoded.stderr.toString());
   assert.equal(decoded.stdout.byteLength, width * height * 4);
   return decoded.stdout;
@@ -390,7 +390,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       "--no-browser-gpu",
       "--no-best-effort",
       "--quiet",
-    ], { encoding: "utf8", timeout: 110_000 });
+    ], { windowsHide: true, encoding: "utf8", timeout: 110_000 });
     assert.equal(render.status, 0, `${render.stdout}\n${render.stderr}`);
     const renderedFrame = await findPng(output);
     assert(renderedFrame !== undefined, "Hyperframes did not emit a PNG frame.");
@@ -400,7 +400,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       "-f", "rawvideo",
       "-pix_fmt", "rgba",
       "pipe:1",
-    ], { encoding: "buffer", timeout: 30_000 });
+    ], { windowsHide: true, encoding: "buffer", timeout: 30_000 });
     assert.equal(decoded.status, 0, decoded.stderr.toString());
     assert.equal(decoded.stdout.byteLength, 64 * 64 * 4);
     const center = (32 * 64 + 32) * 4;
@@ -499,7 +499,7 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
       hyperframesCli, "render", temp,
       "--format", "png-sequence", "--output", output, "--fps", "10", "--workers", "1",
       "--no-browser-gpu", "--no-best-effort", "--quiet",
-    ], { encoding: "utf8", timeout: 110_000 });
+    ], { windowsHide: true, encoding: "utf8", timeout: 110_000 });
     assert.equal(render.status, 0, `${render.stdout}\n${render.stderr}`);
     const frames = await collectPngs(output);
     assert.equal(frames.length, 40);
@@ -579,7 +579,7 @@ test("Fine Caption joined trail Pill follows real wrapped browser line fragments
       hyperframesCli, "render", temp,
       "--format", "png-sequence", "--output", output, "--fps", "10", "--workers", "1",
       "--no-browser-gpu", "--no-best-effort", "--quiet",
-    ], { encoding: "utf8", timeout: 110_000 });
+    ], { windowsHide: true, encoding: "utf8", timeout: 110_000 });
     assert.equal(render.status, 0, `${render.stdout}\n${render.stderr}`);
     const frames = await collectPngs(output);
     assert.equal(frames.length, 60);
@@ -686,7 +686,7 @@ test("installed open fonts render CJK, emoji and independent stroke, shadow and 
       hyperframesCli, "render", temp,
       "--format", "png-sequence", "--output", output, "--fps", "30", "--workers", "1",
       "--no-browser-gpu", "--no-best-effort", "--quiet",
-    ], { encoding: "utf8", timeout: 110_000 });
+    ], { windowsHide: true, encoding: "utf8", timeout: 110_000 });
     assert.equal(render.status, 0, `${render.stdout}\n${render.stderr}`);
     const frames = await collectPngs(output);
     assert.equal(frames.length, 1);
@@ -922,7 +922,7 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
         hyperframesCli, "render", temp,
         "--format", "png-sequence", "--output", output, "--fps", String(fps), "--workers", String(workers),
         "--no-browser-gpu", "--no-best-effort", "--quiet",
-      ], { encoding: "utf8", timeout: 170_000 });
+      ], { windowsHide: true, encoding: "utf8", timeout: 170_000 });
       assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
       return await collectPngs(output);
     };
@@ -1127,7 +1127,7 @@ test("Text box targets, rich runs and every sequence direction remain stable acr
         hyperframesCli, "render", temp,
         "--format", "png-sequence", "--output", output, "--fps", String(fps), "--workers", String(workers),
         "--no-browser-gpu", "--no-best-effort", "--quiet",
-      ], { encoding: "utf8", timeout: 170_000 });
+      ], { windowsHide: true, encoding: "utf8", timeout: 170_000 });
       assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
       return collectPngs(output);
     };
@@ -1236,7 +1236,7 @@ test("vertical Text paints in its authored direction and bounded shrink fails cl
       hyperframesCli, "render", temp,
       "--format", "png-sequence", "--output", verticalOutput, "--fps", String(fps), "--workers", "1",
       "--no-browser-gpu", "--no-best-effort", "--quiet",
-    ], { encoding: "utf8", timeout: 100_000 });
+    ], { windowsHide: true, encoding: "utf8", timeout: 100_000 });
     assert.equal(verticalResult.status, 0, `${verticalResult.stdout}\n${verticalResult.stderr}`);
     const verticalFrames = await collectPngs(verticalOutput);
     assert.equal(verticalFrames.length, 1);
@@ -1256,7 +1256,7 @@ test("vertical Text paints in its authored direction and bounded shrink fails cl
       hyperframesCli, "render", temp,
       "--format", "png-sequence", "--output", shrinkOutput, "--fps", String(fps), "--workers", "1",
       "--no-browser-gpu", "--no-best-effort", "--quiet",
-    ], { encoding: "utf8", timeout: 100_000 });
+    ], { windowsHide: true, encoding: "utf8", timeout: 100_000 });
     assert.notEqual(shrinkResult.status, 0, "bounded Text shrink silently rendered below its authored minimum");
     assert.match(`${shrinkResult.stdout}\n${shrinkResult.stderr}`, /Text cannot fit at its authored minimum scale/u);
   } finally {
@@ -1379,7 +1379,7 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
         hyperframesCli, "render", temp,
         "--format", "png-sequence", "--output", output, "--fps", "12", "--workers", String(workers),
         "--no-browser-gpu", "--no-best-effort", "--quiet",
-      ], { encoding: "utf8", timeout: 110_000 });
+      ], { windowsHide: true, encoding: "utf8", timeout: 110_000 });
       assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
       return Promise.all((await collectPngs(output)).map(async (file) => decodedRgba(file, width, height)));
     };
@@ -1555,7 +1555,7 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
         hyperframesCli, "render", temp,
         "--format", "png-sequence", "--output", output, "--fps", String(fps), "--workers", String(workers),
         "--no-browser-gpu", "--no-best-effort", "--quiet",
-      ], { encoding: "utf8", timeout: 110_000 });
+      ], { windowsHide: true, encoding: "utf8", timeout: 110_000 });
       assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
       return Promise.all((await collectPngs(output)).map(async (file) => decodedRgba(file, width, height)));
     };
@@ -1726,7 +1726,7 @@ test("all three Ranking components paint frame-pure progressive states under par
         hyperframesCli, "render", temp,
         "--format", "png-sequence", "--output", output, "--fps", String(fps), "--workers", String(workers),
         "--no-browser-gpu", "--no-best-effort", "--quiet",
-      ], { encoding: "utf8", timeout: 110_000 });
+      ], { windowsHide: true, encoding: "utf8", timeout: 110_000 });
       assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
       return Promise.all((await collectPngs(output)).map(async (file) => decodedRgba(file, width, height)));
     };
@@ -1900,7 +1900,7 @@ test("all Spatial fit modes and equal-point alignments reach exact browser pixel
       hyperframesCli, "render", temp,
       "--format", "png-sequence", "--output", output, "--fps", "1", "--workers", "1",
       "--no-browser-gpu", "--no-best-effort", "--quiet",
-    ], { encoding: "utf8", timeout: 110_000 });
+    ], { windowsHide: true, encoding: "utf8", timeout: 110_000 });
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
     const files = await collectPngs(output);
     assert.equal(files.length, 1);
@@ -2024,7 +2024,7 @@ test("every official Screen Overlay survives real sequential and parallel browse
         hyperframesCli, "render", temp,
         "--format", "png-sequence", "--output", output, "--fps", "12", "--workers", String(workers),
         "--no-browser-gpu", "--no-best-effort", "--quiet",
-      ], { encoding: "utf8", timeout: 110_000 });
+      ], { windowsHide: true, encoding: "utf8", timeout: 110_000 });
       assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
       return collectPngs(output);
     };

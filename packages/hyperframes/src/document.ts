@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { assertCompositableSurfaceRef } from "@hypit/media";
 import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
 import { programSpaceFrameCount } from "@hypit/program-space";
@@ -26,6 +28,7 @@ import type {
 } from "./types.js";
 import {
   collectTerminalTextFonts,
+  renderGlyphPaintedString,
   renderTerminalTextElement,
   terminalTextLayoutScript,
 } from "./text.js";
@@ -197,8 +200,23 @@ function attributes(values: readonly VisualAttribute[] | undefined): string {
   return (values ?? []).map(({ name, value }) => ` ${name}="${escapeHtml(value)}"`).join("");
 }
 
+/**
+ * Name a DOM node after what it is, in a fixed number of characters.
+ *
+ * HyperFrames reads the `<video>` element's id back out of the document and spends it as a
+ * directory name for that video's extracted frames. On Windows those frames live under
+ * `%TEMP%\hf-render-…`, which leaves around 150 characters before the path stops being one. An
+ * identity that carried its parts verbatim did not fit: a Track spanning five takes names all
+ * five, the Present and the layer each repeat the Track's name, and encoding the three of them
+ * multiplied the result again. A single take was already within five characters of the limit.
+ *
+ * A digest is the same identity at a length that does not depend on how much was said. It is
+ * still stable, so the document still renders the same bytes for the same composition and the
+ * frame cache still hits. Nothing reads the parts back: `data-hypit-element-id` and
+ * `data-hypit-track-id` carry them, spelled the way an author wrote them.
+ */
 function stableDomId(parts: readonly string[]): string {
-  return `hypit-${Buffer.from(JSON.stringify(parts)).toString("base64url")}`;
+  return `hypit-${createHash("sha256").update(JSON.stringify(parts)).digest("hex").slice(0, 24)}`;
 }
 
 function exactFontFamily(font: FontArtifactRef): string {
@@ -229,6 +247,7 @@ function renderElement(
     readonly programNumerator: number;
     readonly programDenominator: number;
     readonly stackIndex: number;
+    readonly emittedFilterIds: Set<string>;
   },
 ): string {
   const id = stableDomId([context.trackId, context.presentId, element.id]);
@@ -315,22 +334,29 @@ function renderElement(
     .map((child) => renderElement(child, children, context))
     .join("");
   if (element.kind === "box") return `<div ${common}>${descendants}</div>`;
-  if (element.kind === "text") return `<div ${common}>${escapeHtml(element.text)}${descendants}</div>`;
+  const textContext = {
+    trackId: context.trackId,
+    presentId: context.presentId,
+    durationFrames: context.presentDurationFrames,
+    durationSeconds: context.presentDuration,
+    presentStartFrame: context.presentStartFrame,
+    programNumerator: context.programNumerator,
+    programDenominator: context.programDenominator,
+    escape: escapeHtml,
+    stableId: stableDomId,
+    exactFontFamily,
+    baseStyle: inlineStyle,
+    commonAttributes,
+    emittedFilterIds: context.emittedFilterIds,
+  };
+  if (element.kind === "text") {
+    const body = element.paints === undefined
+      ? escapeHtml(element.text)
+      : renderGlyphPaintedString(element.text, element.paints, textContext);
+    return `<div ${common}>${body}${descendants}</div>`;
+  }
   if (element.kind === "text-flow" || element.kind === "path-text") {
-    return renderTerminalTextElement(element, {
-      trackId: context.trackId,
-      presentId: context.presentId,
-      durationFrames: context.presentDurationFrames,
-      durationSeconds: context.presentDuration,
-      presentStartFrame: context.presentStartFrame,
-      programNumerator: context.programNumerator,
-      programDenominator: context.programDenominator,
-      escape: escapeHtml,
-      stableId: stableDomId,
-      exactFontFamily,
-      baseStyle: inlineStyle,
-      commonAttributes,
-    });
+    return renderTerminalTextElement(element, textContext);
   }
   if ((element.kind === "video" || element.kind === "surface") && element.sampling !== undefined) {
     const artifact = element.kind === "surface" ? element.surface.artifact : element.artifact;
@@ -401,6 +427,7 @@ function renderVisualPresent(
   stackIndex: number,
   numerator: number,
   denominator: number,
+  emittedFilterIds: Set<string>,
 ): string {
   const start = frameSeconds(present.span.startFrame, numerator, denominator);
   const duration = frameSeconds(present.span.endFrameExclusive - present.span.startFrame, numerator, denominator);
@@ -423,6 +450,7 @@ function renderVisualPresent(
     programNumerator: numerator,
     programDenominator: denominator,
     stackIndex,
+    emittedFilterIds,
   });
   return `<div class="clip hypit-visual-present" data-hypit-track-id="${escapeHtml(track.id)}" data-hypit-present-id="${escapeHtml(present.id)}" data-hypit-stack-order="${present.stacking.order}" data-hypit-stack-tie="${escapeHtml(present.stacking.tieBreak)}" data-track-index="${stackIndex}" data-start="${start}" data-duration="${duration}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${contents}</div>`;
 }
@@ -614,7 +642,10 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
 function emitHtml(composition: Composition, programSpace: ProgramSpace): string {
   const { numerator, denominator } = programSpace.frameRate;
   const visuals = orderedVisualPresents(composition.tracks);
-  const visualHtml = visuals.map(({ track, present }, index) => renderVisualPresent(track, present, index, numerator, denominator)).join("\n    ");
+  // One document, one set of glyph filter definitions: every Present writes only what is not
+  // already there, and references resolve across the document regardless of where they landed.
+  const emittedFilterIds = new Set<string>();
+  const visualHtml = visuals.map(({ track, present }, index) => renderVisualPresent(track, present, index, numerator, denominator, emittedFilterIds)).join("\n    ");
   const animationCss = visuals.flatMap(({ track, present }) => renderAnimationRules(track, present)).join("\n    ");
   const fontCss = renderFontFaces(composition);
   const duration = frameSeconds(programSpaceFrameCount(programSpace), numerator, denominator);
