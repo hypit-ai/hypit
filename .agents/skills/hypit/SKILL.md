@@ -14,9 +14,12 @@ Keep `.svml` Author Source, `.svs` Recipe Source, `.svrun` Run Source, and
 ## Route
 
 - Reference-video reconstruction, reverse engineering, shot/B-roll/overlay analysis, or recreating
-  a video as Hypit source → read `references/reference-video/index.md`. **A path to a video file,
-  with or without words around it, is this route** — the path is the whole request, and the working
-  directory, the project location and the vocabulary are yours to decide rather than to ask for.
+  a video as Hypit source → read `references/reference-video/index.md`. This is the route whatever
+  the author calls it — reconstruct, reverse-engineer, recreate, replicate, clone, remake, copy,
+  rebuild, or the same idea in any language — and **a path to a video file, with or without words
+  around it, is this route** even when no verb is given at all. The path is the whole request: the
+  working directory, the project location and the vocabulary are yours to decide rather than to ask
+  for.
 - Ordinary SVML/SVS/SVRun authoring or syntax selection → read `references/authoring.md`, then
   `references/quickstart.md` and the linked authoritative docs/package READMEs.
 - Creating a new author component outside reference reconstruction → read
