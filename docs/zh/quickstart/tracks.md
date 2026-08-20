@@ -181,10 +181,9 @@ Operation。需要共享或特殊选流时仍可显式写 `<pipeline:Normalize>`
 | 属性 | 必填 | 描述 |
 |---|---|---|
 | `Track.id` | 是 | 稳定的 Audio Track 身份 |
-| `Track.space` | 是 | 定义精确采样域与帧域的 ProgramSpace |
+| `Track.semantic` | 是 | 定义精确采样域与帧域的 SemanticTrack |
 | `Clip.source` | 是 | 显式选流并规范化后的 `SynchronizedMedia` |
 | `during`、`at`/`for` 或 `start`/`end` | 三种形式选一 | 全节目、Selection、Moment 或显式窗口 |
-| `map` | Selection/Moment 必填 | 用于解析语义时间的 SemanticMap |
 | `playback` | 否 | `once`、`once-end`、`loop`、`loop-end` 或有界 `stretch` |
 | `occurrences` | 否 | 语义来源有多次出现时选择 `one` 或 `each` |
 | `trim-start`、`trim-end` | 否 | 精确源裁切 |
@@ -222,8 +221,7 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.track}` 是普通
 | 属性 | 必填 | 描述 |
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
-| `space` | 是 | 来自 `speech:Track` 的 ProgramSpace |
-| `map` | 否 | SemanticMap——当项目使用基于 Selection 的计时时需要 |
+| `semantic` | 是 | 来自 `speech:Track` 的 SemanticTrack——也用于解析基于 Selection 的项目计时 |
 
 ### text:Point、text:Area 与 text:Path
 
@@ -293,13 +291,12 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 | 属性 | 取值 |
 |---|---|
-| `map` | 安放词语的 Semantic Map |
-| `space` | Program Space |
-| `frame` | 一个 `space:Frame` |
+| `semantic` | 板据以计时的 SemanticTrack |
+| `frame` | 一个 `space:Frame`——对 `Column` 来说是固定的排名轨 |
 | `during` | 一个 Selection——板在此期间留在画面上 |
-| `triggers` | 一个 Moment——行在它上面移动 |
-| `terminal` | 一个 Moment——板在它上面定格 |
 | `style` | 对应的样式记录，且只接受本变体的 |
+| `triggers`、`terminal` | 两个 Moment——行在前者上移动，板在后者上定格。仅 `TierBoard` 与 `TopThree` |
+| `canvas` | 一个 `space:Canvas`——揭示舞台。仅 `Column` |
 | `appear-sound`、`move-sound` | 可选，Synchronized Media |
 
 `move-sound` 在 `TopThree` 上会被拒绝——它没有移动阶段。在 `TierBoard` 上它要求至少有一个 `entry="stage"` 的条目：声音没有可响之处是创作错误，而不是静默的空操作。
@@ -334,7 +331,7 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 ### deck:DepthStack
 
-`id`、`map`、`space`、`canvas`、`frame` 与 `appearance` 全部必填，`until` 同样必填——它说明什么结束这叠卡片：字面量 `"program.end"`、一个 Moment，或一个 Selection。只有在指向 Selection 时才可以再加 `until-boundary="start" | "end"` 来选择用它的哪一端结束，默认是 `end`；在另外两种情况下给出这个属性会被拒绝，而不是被忽略。
+`id`、`semantic`、`canvas`、`frame` 与 `appearance` 全部必填，`until` 同样必填——它说明什么结束这叠卡片：字面量 `"program.end"`、一个 Moment，或一个 Selection。只有在指向 Selection 时才可以再加 `until-boundary="start" | "end"` 来选择用它的哪一端结束，默认是 `end`；在另外两种情况下给出这个属性会被拒绝，而不是被忽略。
 
 ### deck:Card
 
@@ -380,7 +377,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 | 一个 Moment，持续一段时长 | 在带有 `semantic={speech.semantic}` 的 Track 内写 `at={story.moment.x} for="12f"` |
 | 显式区间 | `start="…" end="…"`，可另外指定 `selection=` 或 `moment=` |
 
-凡是绑定到 Script 的都需要 `map`；不带 Script 来源的显式区间则不能给 `map`。时长写作 `12f`、`250ms` 或 `1.5s`，`occurrences="each"` 让效果在标记的每一次出现处重复，而不只是第一次。
+Track 接受 `id`、`canvas` 与 `semantic`。时长写作 `12f`、`250ms` 或 `1.5s`，`occurrences="each"` 让效果在标记的每一次出现处重复，而不只是第一次。
 
 可用的效果有十一种——`Flash`、`ColorWash`、`Vignette`、`ScanLines`、`DirectionalMatte`、`WhipVeil`、`GlitchVeil`、`Grain`、`LightLeak`、`Bokeh` 与 `TVStatic`——每种各有自己的必填属性，例如 `Flash` 的 `color` / `intensity` / `attack` / `hold` / `decay`，或 `Vignette` 的 `center-x` / `center-y` / `radius-x` / `radius-y` / `softness` / `color` / `opacity`。它们都没有默认值：一个效果要么把自己的形状说全，要么被拒绝。
 
@@ -403,7 +400,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 
 `comment:Style` 必须为空，接受 `id`、`recipe` 与 `font`，全部必填。Recipe 承载整张卡的外观——背景、描边、圆角、气泡尾、头像、三行文字，以及进入/停留/退出的动效——每个键都有默认值，所以一份 recipe 只需写它要改的部分。
 
-`comment:Track` 接受 `id`、`canvas` 与 `space`。只有当它的某张贴纸绑定到 Script 时才接受 `map`；没有任何贴纸绑定却给了 `map` 会被拒绝，而不是被忽略。
+`comment:Track` 接受 `id`、`canvas` 与 `semantic`，三者皆为必填。
 
 `comment:Sticker` 必填 `id`、`frame` 与 `style`，时间窗与上面的屏幕叠加层相同。它的文案来自 `comment=` 属性或元素自身的文字，两个都给会被拒绝。可选的 `author`、`header` 与 `meta` 各接受字符串或 Text 引用，`avatar` 接受一张图片；这里没有 `z`，层叠顺序来自 recipe 的 `stack-order`。
 

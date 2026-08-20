@@ -12,9 +12,8 @@ picture are all decided by the Source, not by the footage. Hypit Studio answers 
 generation, provided the Run satisfies the material it places: cut points come from the aligned
 `SemanticTrack`, so where a cutaway falls against the speech is measured rather than guessed.
 
-Studio does not stand anything in. An Item whose material no Candidate supplies makes the Run
-unopenable rather than appearing as a placeholder, so satisfy the B-roll outputs in the Run Source
-with whatever footage you already have before expecting to see the placement.
+Satisfy the B-roll outputs in the Run Source with whatever footage you already have before expecting
+to see the placement: an Item whose material no Candidate supplies makes the whole Run unopenable.
 
 Do this after placing a Selection and before paying for a generation. Startup and arguments are in
 `docs/quickstart/preview.md`; for how to see placed items against their real frames, read

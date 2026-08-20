@@ -14,10 +14,9 @@ submitted for the pictures, and no video generation, speech synthesis, alignment
 run. Those belong to a later step that the author starts deliberately, after reading what was
 written.
 
-Because nothing has been generated, the author cannot open the delivered sources in Studio — Studio
-has no stand-ins and refuses a Source whose shots are still declared. Seeing the reconstruction is
-what the author's first Build is for. What is *not* deferred is that the graph traces, which is the
-part a Build cannot repair.
+Seeing the reconstruction is what the author's first Build is for: Studio opens a Run whose material
+is satisfied, and until that Build runs this one's is not. What is *not* deferred is that the graph
+traces, which is the part a Build cannot repair.
 
 One exception, because it is not a generation of the video: a component's own surface — the field its
 elements are drawn on, whatever that is — is produced while the package is authored, with
