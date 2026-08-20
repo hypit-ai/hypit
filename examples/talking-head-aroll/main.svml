@@ -6,6 +6,7 @@
   <import as="media" from="@hypit/media@1"/>
   <import as="estimate" from="@hypit/estimate@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="speech" from="@hypit/speech-spine@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="caption" from="@hypit/caption@1"/>
@@ -13,9 +14,10 @@
   <import as="caption-ai" from="@hypit/caption-gemini@1"/>
   <import as="fonts" from="@hypit/fonts-open@1"/>
   <import as="space" from="@hypit/spatial@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
-  <import as="studio" source="./studio.svs"/>
+  <import as="recipes" source="./recipes.svs"/>
   <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 
   <script id="story">
@@ -56,16 +58,16 @@
   </wording:Value>
 
   <!-- Duration remains an explicit graph fact derived from the pronunciation projection. -->
-  <estimate:Speech id="hook-duration" source={story.segment.hook.speech} policy={studio.speech.normal}/>
-  <estimate:Speech id="meeting-duration" source={story.segment.meeting.speech} policy={studio.speech.normal}/>
-  <estimate:Speech id="evidence-duration" source={story.segment.evidence.speech} policy={studio.speech.normal}/>
-  <estimate:Speech id="payoff-duration" source={story.segment.payoff.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="hook-duration" source={story.segment.hook.speech} policy={recipes.speech.normal}/>
+  <estimate:Speech id="meeting-duration" source={story.segment.meeting.speech} policy={recipes.speech.normal}/>
+  <estimate:Speech id="evidence-duration" source={story.segment.evidence.speech} policy={recipes.speech.normal}/>
+  <estimate:Speech id="payoff-duration" source={story.segment.payoff.speech} policy={recipes.speech.normal}/>
 
   <!-- Prompt assembly is an ordinary Text subgraph. -->
   <wording:Render
     id="hook-prompt"
     template={speaker-kit.speaker-v1}
-    recipe={studio.speaker.host}
+    recipe={recipes.speaker.host}
   >
     <wording:Set name="dialogue" text={story.segment.hook.dialogue}/>
     <wording:Set name="action" text={hook-action}/>
@@ -74,7 +76,7 @@
   <wording:Render
     id="meeting-prompt"
     template={speaker-kit.speaker-v1}
-    recipe={studio.speaker.host}
+    recipe={recipes.speaker.host}
   >
     <wording:Set name="dialogue" text={story.segment.meeting.dialogue}/>
     <wording:Set name="action" text={meeting-action}/>
@@ -83,7 +85,7 @@
   <wording:Render
     id="evidence-prompt"
     template={speaker-kit.speaker-v1}
-    recipe={studio.speaker.host}
+    recipe={recipes.speaker.host}
   >
     <wording:Set name="dialogue" text={story.segment.evidence.dialogue}/>
     <wording:Set name="action" text={evidence-action}/>
@@ -92,7 +94,7 @@
   <wording:Render
     id="payoff-prompt"
     template={speaker-kit.speaker-v1}
-    recipe={studio.speaker.host}
+    recipe={recipes.speaker.host}
   >
     <wording:Set name="dialogue" text={story.segment.payoff.dialogue}/>
     <wording:Set name="action" text={payoff-action}/>
@@ -152,23 +154,34 @@
   </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="720" height="1280"/>
+  <program:Clock id="clock" frame-rate="30"/>
   <space:Frame id="speech-frame" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
 
   <!-- Four equal Takes become one ordered speech coordinate space and two peer Tracks. -->
-  <speech:Spine id="speech" frame-rate="30"
-    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
-    <speech:Take video={hook-take.video} segment={story.segment.hook}/>
-    <speech:Take video={meeting-take.video} segment={story.segment.meeting}/>
-    <speech:Take video={evidence-take.video} segment={story.segment.evidence}/>
-    <speech:Take video={payoff-take.video} segment={story.segment.payoff}/>
-  </speech:Spine>
+  <pipeline:Normalize id="hook-media" source={hook-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="meeting-media" source={meeting-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="evidence-media" source={evidence-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="payoff-media" source={payoff-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <whisperx:SemanticTake id="hook-semantic" narrative={story} segment={story.segment.hook} media={hook-media.media}/>
+  <whisperx:SemanticTake id="meeting-semantic" narrative={story} segment={story.segment.meeting} media={meeting-media.media}/>
+  <whisperx:SemanticTake id="evidence-semantic" narrative={story} segment={story.segment.evidence} media={evidence-media.media}/>
+  <whisperx:SemanticTake id="payoff-semantic" narrative={story} segment={story.segment.payoff} media={payoff-media.media}/>
 
-  <!-- One measured evidence pass locates the complete authored Script. -->
-  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+  <speech:Spine id="speech" clock={clock}
+    visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
+    <speech:Take source={hook-semantic.take}/>
+    <speech:Take source={meeting-semantic.take}/>
+    <speech:Take source={evidence-semantic.take}/>
+    <speech:Take source={payoff-semantic.take}/>
+  </speech:Spine>
 
   <!-- Gemini sees display words and these requirements, never audio or timing. -->
   <fonts:Stack id="caption-font" family="inter" weight="800" style="normal"/>
-  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
+  <caption-fine:Style id="primary-caption" recipe={recipes.caption.primary} font={caption-font}/>
 
   <caption:Program id="caption-program" display={story.caption} default={primary-caption}/>
   <caption-ai:Planner
@@ -183,13 +196,13 @@
     id="captions"
     display={story.caption}
     correspondence={story.caption.correspondence}
-    map={timing.map}
+    map={speech.semanticMap}
     space={speech.space}
     program={caption-program}
     plan={caption-plan.plan}
   />
 
-  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+  <film:Film id="main" canvas={vertical} space={speech.space} appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audioTrack}/>
     <film:Track source={captions.track}/>

@@ -4,8 +4,11 @@
   film.vertical { background: #09090B; }
   speech.visual { fit: cover; }
 
+  media.aroll { video: primary-moving; audio: default; span-authority: video; }
+  media.broll { video: primary-moving; audio: none; span-authority: video; }
+
   /* Rounded and padded, so the painted content box is visibly inset from the
-     Placement Frame the Playground draws as a guide. */
+     Placement Frame Studio draws as a guide. */
   media.card {
     stack-order: 40; fit: cover; playback: hold-start;
     frame-paint: #16161d; clip: rounded; radius: 24; padding: 12 12;
