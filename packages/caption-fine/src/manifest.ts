@@ -76,7 +76,7 @@ export const captionFineMarkupSurfaces = [
               { name: "stroke-color", required: false, fallback: "#000000",
                 summary: "Paints the outline drawn around each glyph." },
               { name: "stroke-width", required: false, fallback: "0",
-                summary: "Sets the glyph outline thickness in pixels. The outline is drawn behind the glyph body, so it grows outward and leaves the letterform whole. An outline that only has to separate the caption from the picture behind it is thin — around a twentieth of `size`, so roughly 2px at a `size` of 46. It grows quickly: past about a tenth of `size` neighbouring letters meet, the gaps between them close, and the caption reads as a slab rather than as words." },
+                summary: "Sets the glyph outline thickness in pixels. The outline is placed outside the letter, so the whole width shows and the letterform keeps its shape. An outline that only has to separate the caption from the picture behind it is thin — around a twentieth of `size`, so roughly 2px at a `size` of 46. It grows quickly: past about a tenth of `size` neighbouring letters meet, the gaps between them close, and the caption reads as a slab rather than as words." },
               { name: "shadow-color", required: false, fallback: "#000000",
                 summary: "Paints the soft drop shadow behind each glyph." },
               { name: "shadow-opacity", required: false, fallback: "0",

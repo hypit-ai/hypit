@@ -73,6 +73,15 @@ export type VisualTextElement = VisualElementBase & {
   readonly text: string;
   /** Exact ordered fallback faces. Terminal Visual IR never depends on environment fonts. */
   readonly fonts: readonly FontArtifactRef[];
+  /**
+   * Ordered glyph Paint, in the same vocabulary Text Flow uses.
+   *
+   * Style alone can only say `-webkit-text-stroke`, which centres an outline on the glyph edge and
+   * therefore spends half its width inside the letter. An outline that is asked to sit outside the
+   * letter cannot be expressed that way at all. Declaring the Paint instead lets the renderer build
+   * the placement that was asked for, and `stroke` before `fill` orders them.
+   */
+  readonly paints?: readonly VisualTextPaintLayer[];
 };
 
 export type VisualTextDirection = "auto" | "ltr" | "rtl";
@@ -942,10 +951,22 @@ function assertPresent(present: VisualPresent, programSpace: ProgramSpace | unde
       }
     }
     if (element.kind === "text") {
-      assertExactFonts(element.fonts, `${trackId}.${present.id}.${element.id}.fonts`);
+      const label = `${trackId}.${present.id}.${element.id}`;
+      assertExactFonts(element.fonts, `${label}.fonts`);
       const ownedFontStyles = new Set(["font", "font-family", "font-style", "font-synthesis", "font-weight"]);
       if (element.style.some((declaration) => ownedFontStyles.has(declaration.name))) {
-        throw new Error(`${trackId}.${present.id}.${element.id} exact fonts conflict with a raw font style.`);
+        throw new Error(`${label} exact fonts conflict with a raw font style.`);
+      }
+      for (const [index, paint] of (element.paints ?? []).entries()) {
+        assertTextPaint(paint, `${label}.paints.${index}`);
+        // Box Paint decorates a laid-out run, and this element has no layout to decorate.
+        if (paint.kind === "box") throw new Error(`${label}.paints.${index} is Box Paint on a plain text element.`);
+      }
+      // Two ways to say the same thing render twice: the declared Paint draws the glyph, and the
+      // style would draw it again underneath.
+      const paintedStyles = new Set(["-webkit-text-stroke", "-webkit-text-stroke-color", "-webkit-text-stroke-width", "paint-order"]);
+      if (element.paints !== undefined && element.style.some((declaration) => paintedStyles.has(declaration.name))) {
+        throw new Error(`${label} declares glyph Paint beside a raw stroke style.`);
       }
     }
     if (element.kind === "text-flow" || element.kind === "path-text") {
@@ -1110,6 +1131,7 @@ function normalizeElement(element: VisualElement): VisualElement {
           weight: font.weight,
           style: font.style,
         })),
+      ...(element.paints === undefined ? {} : { paints: structuredClone(element.paints) as VisualTextPaintLayer[] }),
     };
   }
   if (element.kind === "text-flow" || element.kind === "path-text") {
