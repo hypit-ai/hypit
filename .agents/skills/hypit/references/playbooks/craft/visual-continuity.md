@@ -5,7 +5,8 @@
 - Declare recurring anchors as explicit `media:Image`/`media:Audio` assets or accepted generated
   outputs. Reuse the same Artifact edges; do not redraw identity from prose for every take.
 - Generate the location once and derive its other views from that image, rather than describing the
-  room again per take; a split shot opens on the previous part's last frame.
+  room again per take; every part of a shot split by the duration ceiling references that same
+  accepted image, so the parts generate in parallel rather than in a chain.
   `generated-dependencies.md` states both, and the reverse-view geometry below is what decides how
   many views a location needs.
 - Keep one authoritative reference set and one stable Recipe for a continuous shot group. Split a
