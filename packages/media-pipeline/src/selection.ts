@@ -1,7 +1,5 @@
-import type { Narrative } from "@hypit/narrative";
 import { sealMediaStreamSelection, verifyMediaInspection } from "@hypit/media";
 import type { MediaAudioStream, MediaInspection, MediaStreamSelection, MediaVideoStream } from "@hypit/media";
-import type { SpeechBasis } from "@hypit/speech";
 import {
   canonicalize,
 } from "@hypit/protocol";

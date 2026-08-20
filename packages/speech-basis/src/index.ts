@@ -5,4 +5,4 @@ export {
   speechBasisModuleRef,
   speechBasisProducers,
 } from "./manifest.js";
-export { projectSpeechAudio, projectSpeechAudioTrack, projectSpeechProgramSpace, projectSpeechVisual } from "./projection.js";
+export { projectSpeechAudioTrack, projectSpeechProgramSpace, projectSpeechVisual } from "./projection.js";

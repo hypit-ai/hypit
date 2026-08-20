@@ -1,8 +1,6 @@
 import type { Narrative } from "@hypit/narrative";
 import { sealProgramSpace } from "@hypit/program-space";
-import type { ProgramSpace } from "@hypit/program-space";
-import { sealSpeechBasis } from "@hypit/speech";
-import type { SpeechAudioBasis, SpeechBasis } from "@hypit/speech";
+import { materializeSemanticTake } from "../src/materialize.js";
 import { sealAlignedTranscriptEvidence } from "@hypit/speech-evidence";
 import type { AlignedTranscriptEvidence, SpeechCharacterEvidence, SpeechWordEvidence } from "@hypit/speech-evidence";
 import assert from "node:assert/strict";
@@ -13,8 +11,9 @@ import { parseScript } from "@hypit/script";
 import {
   SpeechAlignmentError,
   alignWordGroups,
-  locateSpeechTiming,
 } from "@hypit/speech-alignment";
+import { locateAlignedSegmentTiming } from "../src/locate.js";
+import type { AlignmentBasis } from "../src/locate.js";
 
 type WordFixture = {
   readonly text: string;
@@ -49,7 +48,7 @@ function relations(
 }
 
 function evidence(args: {
-  readonly basis: SpeechAudioBasis;
+  readonly basis: AlignmentBasis;
   readonly durationSec?: number;
   readonly startSec?: number;
   readonly endSec?: number;
@@ -76,32 +75,21 @@ function evidence(args: {
 function speechBasis(
   narrative: Narrative,
   durationSec = 2,
-  windows?: readonly { readonly startSec: number; readonly endSec: number }[],
-): SpeechAudioBasis {
+): AlignmentBasis {
+  if (narrative.segments.length !== 1) throw new Error("Test alignment requires one Segment.");
   const programSpace = sealProgramSpace({
     durationSec,
     frameRate: { numerator: 1_000, denominator: 1 },
   });
   const audioDigest = fixtureDigest(`fixture:audio:${narrative.segments.map((segment) => segment.id).join("+")}:${durationSec}`);
-  const segments = narrative.segments.map((segment, index) => ({
-    segmentId: segment.id,
-    startFrame: Math.round((windows?.[index]?.startSec ?? durationSec * index / narrative.segments.length) * 1_000),
-    endFrameExclusive: Math.round((windows?.[index]?.endSec ?? durationSec * (index + 1) / narrative.segments.length) * 1_000),
-  }));
-  const take = sealSpeechBasis({
+  return {
     programSpace,
     audio: { kind: "blob", digest: audioDigest, size: 1, mediaType: "audio/wav" },
-    visualTrack: { clips: [] },
-    segments,
-  });
-  return audioProjection(take);
-}
-
-function audioProjection(basis: SpeechBasis): SpeechAudioBasis {
-  return {
-    programSpace: basis.programSpace,
-    audio: basis.audio,
-    segments: basis.segments,
+    segments: [{
+      segmentId: narrative.segments[0]!.id,
+      startFrame: 0,
+      endFrameExclusive: Math.round(durationSec * 1_000),
+    }],
   };
 }
 
@@ -110,11 +98,8 @@ function locate(
   args: Omit<Parameters<typeof evidence>[0], "basis">,
 ) {
   const durationSec = args.durationSec ?? 2;
-  const basis = speechBasis(narrative, durationSec, [{
-    startSec: args.startSec ?? 0,
-    endSec: args.endSec ?? durationSec,
-  }]);
-  return locateSpeechTiming(narrative, basis, evidence({ ...args, basis }));
+  const basis = speechBasis(narrative, durationSec);
+  return locateAlignedSegmentTiming(narrative, basis, evidence({ ...args, basis }));
 }
 
 function characters(
@@ -151,6 +136,34 @@ test("exact transcript words cover every Script and Segment anchor", () => {
     ],
   );
   assert.equal(new Set(map.anchors.map((anchor) => anchor.identity)).size, map.anchors.length);
+});
+
+test("a measured Segment-local map becomes a self-contained SemanticTake", () => {
+  const narrative = parseScript("materialize.svml", "<line>Hello world.</line>");
+  const basis = speechBasis(narrative, 2);
+  const map = locate(narrative, {
+    words: [
+      { text: "Hello", startSec: 0.1, endSec: 0.4 },
+      { text: "world", startSec: 0.5, endSec: 0.9 },
+    ],
+  });
+  const segment = narrative.segments[0]!;
+  const take = materializeSemanticTake(
+    narrative,
+    { kind: "segment", id: segment.id, tokenStart: segment.tokenStart, tokenEndExclusive: segment.tokenEndExclusive },
+    {
+      timeline: { frameRate: { numerator: 1_000, denominator: 1 }, frameCount: 2_000 },
+      visual: { artifact: { kind: "blob", digest: fixtureDigest("materialize:video"), size: 1, mediaType: "video/mp4" }, width: 720, height: 1280 },
+      audio: { artifact: { kind: "blob", digest: fixtureDigest("materialize:audio"), size: 1, mediaType: "audio/wav" } },
+    },
+    map,
+  );
+  assert.deepEqual(take.tokens.map((token) => [token.text, token.startFrame, token.endFrameExclusive]), [
+    ["Hello", 100, 400],
+    ["world", 500, 900],
+  ]);
+  assert.equal(take.segment.startFrame, 0);
+  assert.equal(take.segment.endFrameExclusive, 2_000);
 });
 
 test("M:1 uses evidence character times instead of dividing a merged word by length", () => {
@@ -258,63 +271,6 @@ test("VAD bounds contain missing tokens when a Script Segment has no recognized 
   );
 });
 
-test("multiple Script Segments stay independent even when evidence records arrive out of order", () => {
-  const narrative = parseScript("segments.svml", "<one>Hello.</one><two>Goodbye.</two>");
-  const basis = speechBasis(narrative, 2, [
-    { startSec: 0, endSec: 1 },
-    { startSec: 1, endSec: 2 },
-  ]);
-  const map = locateSpeechTiming(narrative, basis, sealAlignedTranscriptEvidence({
-    passages: [
-      {
-        words: [wordEvidence({ text: "Goodbye", startSec: 1.2, endSec: 1.6 })],
-        chars: [],
-      },
-      {
-        words: [wordEvidence({ text: "Hello", startSec: 0.2, endSec: 0.55 })],
-        chars: [],
-      },
-    ],
-  }));
-
-  assert.deepEqual(map.tokens.map((token) => [token.segmentId, token.startFrame, token.endFrameExclusive]), [
-    ["one", 200, 550],
-    ["two", 1_200, 1_600],
-  ]);
-});
-
-test("Segment anchors preserve exact frame cuts without a seconds round trip", () => {
-  const narrative = parseScript("frame-cuts.svml", "<one>Alpha.</one><two>Beta.</two>");
-  const take = sealSpeechBasis({
-    programSpace: sealProgramSpace({
-      durationSec: 1,
-      frameRate: { numerator: 24, denominator: 1 },
-    }),
-    audio: { kind: "blob", digest: fixtureDigest("frame-cuts:audio"), size: 1, mediaType: "audio/wav" },
-    visualTrack: { clips: [] },
-    segments: [
-      { segmentId: "one", startFrame: 0, endFrameExclusive: 7 },
-      { segmentId: "two", startFrame: 7, endFrameExclusive: 24 },
-    ],
-  });
-  const map = locateSpeechTiming(narrative, audioProjection(take), sealAlignedTranscriptEvidence({
-    passages: [{
-      startSample: 0,
-      endSampleExclusive: 16_000,
-      words: [
-        { text: "Alpha", startSample: 1_000, endSampleExclusive: 3_000 },
-        { text: "Beta", startSample: 6_000, endSampleExclusive: 10_000 },
-      ],
-      chars: [],
-    }],
-  }));
-  const frameByAnchor = new Map(map.anchors.map((anchor) => [anchor.identity, anchor.frame]));
-  const structuralFrames = narrative.semanticIndex.anchors
-    .filter((anchor) => anchor.kind === "segment-start" || anchor.kind === "segment-end")
-    .map((anchor) => frameByAnchor.get(anchor.id));
-  assert.deepEqual(structuralFrames, [0, 7, 7, 24]);
-});
-
 test("overlapping evidence word windows reach the map overlapping", () => {
   // Two spoken words whose measured windows overlap. Nothing here knows whether
   // that is a real overlap or a wobble, and no consumer of the map is bound to
@@ -346,7 +302,7 @@ test("locating is total: every Script token carries a window", () => {
   assert.equal(diverged.tokens.every((token) => Number.isSafeInteger(token.startFrame)), true);
 });
 
-test("Evidence is interpreted only through the explicitly connected SpeechAudioBasis", () => {
+test("Evidence is interpreted only through the explicitly connected alignment clock", () => {
   const narrative = parseScript("affinity.svml", "<line>Hello world.</line>");
   const basis = speechBasis(narrative, 2);
   const mismatched = evidence({
@@ -357,12 +313,12 @@ test("Evidence is interpreted only through the explicitly connected SpeechAudioB
     durationSec: 2,
     frameRate: { numerator: 30, denominator: 1 },
   });
-  const anotherBasis = {
+  const anotherBasis: AlignmentBasis = {
     ...basis,
     programSpace: anotherSpace,
     segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 60 }],
   };
-  const map = locateSpeechTiming(narrative, anotherBasis, mismatched);
+  const map = locateAlignedSegmentTiming(narrative, anotherBasis, mismatched);
   assert.equal(map.tokens[0]?.startFrame, 3);
 });
 
@@ -373,12 +329,12 @@ test("the final map is quantized once into the selected ProgramSpace", () => {
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
-  const basis: SpeechAudioBasis = {
+  const basis: AlignmentBasis = {
     ...original,
     programSpace,
     segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 30 }],
   };
-  const map = locateSpeechTiming(narrative, basis, evidence({
+  const map = locateAlignedSegmentTiming(narrative, basis, evidence({
     basis,
     durationSec: 1,
     endSec: 1,

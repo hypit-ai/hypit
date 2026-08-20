@@ -1,6 +1,7 @@
 import { artifactDependency } from "@hypit/artifact";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
+import { svsModuleRef, svsRecipeType } from "@hypit/svs";
 import { speechDependency, speechTypes } from "@hypit/speech";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { artifactTypes } from "@hypit/artifact";
@@ -31,8 +32,6 @@ export const mediaPipelineCapabilities = {
   mux: { module: mediaPipelineModuleRef, name: "mux-program-media" },
 } satisfies Record<string, CapabilityRef>;
 export const mediaPipelineProducers = {
-  bindVisualRequest: { module: mediaPipelineModuleRef, name: "bind-visual-media-request-to-program" },
-  bindAvRequest: { module: mediaPipelineModuleRef, name: "bind-av-media-request-to-program" },
   inspect: { module: mediaPipelineModuleRef, name: "request-media-inspection" },
   select: { module: mediaPipelineModuleRef, name: "select-media-streams" },
   normalize: { module: mediaPipelineModuleRef, name: "request-media-normalization" },
@@ -211,24 +210,28 @@ export const mediaPipelineMarkupSurfaces = [
           { name: "source", kind: "reference", required: true,
             accepts: [artifactTypes.blob],
             summary: "Selects the media Artifact this element inspects and normalizes." },
-          { name: "video", kind: "literal", required: true,
+          { name: "recipe", kind: "reference", required: false, accepts: [svsRecipeType],
+            summary: "Selects a Recipe containing video, audio and span-authority stream policy." },
+          { name: "video", kind: "literal", required: false,
             summary: "Decides which moving-image stream is carried: `primary-moving`, `none`, or `stream:<index>`." },
-          { name: "audio", kind: "literal", required: true,
+          { name: "audio", kind: "literal", required: false,
             summary: "Decides which audio stream is carried: `default`, `none`, or `stream:<index>`." },
-          { name: "span-authority", kind: "literal", required: true,
+          { name: "span-authority", kind: "literal", required: false,
             values: ["video", "audio"],
             summary: "Decides which selected stream defines the extent the other is trimmed or padded to." },
-          { name: "frame-rate", kind: "literal", required: true,
-            summary: "Decides the exact rational frame rate of the common frame domain, such as `30` or `30000/1001`." },
+          { name: "clock", kind: "reference", required: false, accepts: [programSpaceTypes.clock],
+            summary: "Selects the authored frame clock shared with the programme." },
+          { name: "frame-rate", kind: "literal", required: false,
+            summary: "Legacy inline frame rate; write exactly one of clock or frame-rate." },
         ],
         ports: [
           { name: "media", type: mediaTypes.synchronized,
             summary: "The normalized SynchronizedMedia, addressed as `<id>.media`." },
         ],
         example: `<pipeline:Normalize id="music-media" source={music}
-  video="none" audio="default" span-authority="audio" frame-rate="30"/>`,
+  recipe={recipes.media.audio} clock={clock}/>`,
         notes: [
-          "All six attributes are required; the element accepts no children and no text content.",
+          "Write exactly one of recipe or the direct video/audio/span-authority attributes, and exactly one of clock or frame-rate.",
           "`primary-moving` excludes attached-picture streams, prefers one declared default and fails closed on an ambiguous container; `stream:<index>` is for a container the author genuinely knows.",
           "Selecting embedded audio is a media fact only and makes no SpeechBasis, speaker or alignment claim.",
         ],
@@ -236,25 +239,16 @@ export const mediaPipelineMarkupSurfaces = [
     },
     {
       name: "transform-media", tag: "Transform", mode: "structured",
-      outputs: [mediaPipelineTypes.selectionRequest, mediaPipelineTypes.transformProgram, artifactTypes.blob],
+      outputs: [mediaPipelineTypes.transformProgram, artifactTypes.blob],
       vocabulary: {
         summary:
-          "Normalizes one BlobArtifact and runs an ordered trim and retime program over it, publishing the transformed video Artifact.",
+          "Runs an ordered trim and retime program over one already normalized SynchronizedMedia value.",
         attributes: [
           { name: "id", kind: "identifier", required: true,
-            summary: "Names the selection Record, the transform program Record and the transformed video this element publishes." },
+            summary: "Names the transform program Record and the transformed video this element publishes." },
           { name: "source", kind: "reference", required: true,
-            accepts: [artifactTypes.blob],
-            summary: "Selects the media Artifact this element transforms." },
-          { name: "video", kind: "literal", required: true,
-            summary: "Decides which moving-image stream is transformed: `primary-moving` or `stream:<index>`." },
-          { name: "audio", kind: "literal", required: true,
-            summary: "Decides which audio stream travels with the transform: `default`, `none`, or `stream:<index>`." },
-          { name: "span-authority", kind: "literal", required: true,
-            values: ["video"],
-            summary: "Decides which selected stream defines the extent, and a transform is always authored against video." },
-          { name: "frame-rate", kind: "literal", required: true,
-            summary: "Decides the exact rational frame rate the transform runs on, such as `30` or `30000/1001`." },
+            accepts: [mediaTypes.synchronized],
+            summary: "Selects the prepared SynchronizedMedia this element transforms." },
         ],
         children: [
           { tag: "Trim", cardinality: "many",
@@ -281,15 +275,14 @@ export const mediaPipelineMarkupSurfaces = [
           { name: "video", type: artifactTypes.blob,
             summary: "The transformed media Artifact, addressed as `<id>.video`." },
         ],
-        example: `<media:Transform id="prepared" source={shot.video}
-  video="primary-moving" audio="default" span-authority="video" frame-rate="30">
+        example: `<media:Transform id="prepared" source={shot-media.media}>
   <media:Trim tail="0.25s"/>
   <media:Retime rate="1.05" pitch="preserve"/>
 </media:Transform>`,
         notes: [
           "At least one `Trim` or `Retime` child is required, and children run in the order they are written.",
           "`Trim` cannot combine `end` and `tail`, and both children are written empty.",
-          "`video` cannot be `none`, and the operations are author meaning rather than an arbitrary FFmpeg string.",
+          "Normalization and stream selection are explicit upstream operations rather than hidden Transform policy.",
         ],
       },
     },
@@ -359,6 +352,7 @@ export const mediaPipelineManifest: ModuleManifest = {
     speechDependency,
     programSpaceDependency,
     compositionDependency,
+    { module: svsModuleRef },
   ],
   types: [
     {
@@ -388,18 +382,6 @@ export const mediaPipelineManifest: ModuleManifest = {
     { name: mediaPipelineCapabilities.mux.name, returns: mediaTypes.muxed },
   ],
   producers: [
-    {
-      name: mediaPipelineProducers.bindVisualRequest.name,
-      inputs: [{ name: "space", type: programSpaceTypes.programSpace }],
-      outputs: [{ name: "request", type: mediaPipelineTypes.selectionRequest }],
-      needs: [],
-    },
-    {
-      name: mediaPipelineProducers.bindAvRequest.name,
-      inputs: [{ name: "space", type: programSpaceTypes.programSpace }],
-      outputs: [{ name: "request", type: mediaPipelineTypes.selectionRequest }],
-      needs: [],
-    },
     {
       name: mediaPipelineProducers.inspect.name,
       inputs: [{ name: "source", type: artifactTypes.blob }],
@@ -480,7 +462,7 @@ export const mediaPipelineManifest: ModuleManifest = {
     },
     {
       name: mediaPipelineProducers.projectSpeechEvidenceAudio.name,
-      inputs: [{ name: "audio", type: speechTypes.audioBasis }],
+      inputs: [{ name: "media", type: mediaTypes.synchronized }],
       outputs: [],
       needs: [{
         name: "evidenceAudio",

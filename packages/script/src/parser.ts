@@ -557,7 +557,7 @@ export function parseScript(
 
   const segmentById = new Map(segments.map((segment) => [segment.id, segment]));
   /**
-   * Resolve one marker to the exact 2M+2N anchor its affinity names. Token and
+   * Resolve one marker to the exact `2m + 2n` anchor its affinity names. Token and
    * Segment cuts are equal citizens: a marker with nothing to its left inside a
    * Segment snaps to that Segment's own start, never across into the previous
    * Segment, whose end may sit at a different time.

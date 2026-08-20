@@ -1,6 +1,6 @@
 import { createMarkupSurfaceHostFacet } from "@hypit/markup";
 import {
-  decodeWhisperXAlignmentSurface, whisperXComponent,
+  decodeWhisperXSemanticTakeSurface, whisperXComponent,
   whisperXManifest, whisperXModuleRef,
   whisperXMarkupSurfaces,
 } from "./index.js";
@@ -11,8 +11,8 @@ export const hypitPackage = {
   components: [whisperXComponent],
   hostFacets: [createMarkupSurfaceHostFacet({
     module: whisperXModuleRef,
-    declaration: whisperXMarkupSurfaces.find((item) => item.name === "alignment")!,
-    handler: decodeWhisperXAlignmentSurface,
+    declaration: whisperXMarkupSurfaces.find((item) => item.name === "semantic-take")!,
+    handler: decodeWhisperXSemanticTakeSurface,
   })],
 };
 export default hypitPackage;

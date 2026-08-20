@@ -26,7 +26,7 @@ export function assertNarrativeMomentIdentity(moment: NarrativeMomentRef): void 
 }
 
 /**
- * Every marker resolved its affinity to one of the map's 2M+2N anchors while the
+ * Every marker resolves its affinity to one of the map's `2m + 2n` anchors while the
  * Script was parsed, where the surrounding structure was known. Locating is a
  * lookup: Token cuts and Segment cuts are equal citizens here.
  */

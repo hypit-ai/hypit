@@ -1,29 +1,16 @@
-import { narrativeTypes } from "@hypit/narrative";
-import { speechTypes } from "@hypit/speech";
-import type {
-  StructuredElement,
-  StructuredSurfaceHandler,
-  SurfaceResolvedReference,
-  MarkupAttributeValue,
+import {
+  assertExactAttributes as exactAttributes,
+  textAttribute as stringAttribute,
+  type StructuredElement,
+  type StructuredSurfaceHandler,
+  type SurfaceResolvedReference,
+  type MarkupAttributeValue,
 } from "@hypit/markup";
+import { sameType } from "@hypit/protocol";
+import { narrativeTypes } from "@hypit/narrative";
+import { mediaTypes } from "@hypit/media";
 
-import { whisperXSpeechAlignmentFragment } from "./fragment.js";
-
-function exactAttributes(element: StructuredElement, names: readonly string[]): void {
-  if (Object.keys(element.attributes).sort().join("\u0000") !== [...names].sort().join("\u0000")) {
-    throw new Error(`${element.name} requires exactly ${names.join(", ")}`);
-  }
-}
-
-function stringAttribute(element: StructuredElement, name: string): string {
-  const value = element.attributes[name];
-  if (typeof value !== "string" || !value.trim()) throw new Error(`${element.name}.${name} must be a non-empty string`);
-  return value.trim();
-}
-
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
+import { whisperXSemanticTakeFragment } from "./fragment.js";
 
 function reference(
   element: StructuredElement,
@@ -39,26 +26,27 @@ function reference(
   return value;
 }
 
-export const decodeWhisperXAlignmentSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exactAttributes(element, ["id", "narrative", "audio"]);
+export const decodeWhisperXSemanticTakeSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  exactAttributes(element, ["id", "narrative", "segment", "media"]);
   if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
     throw new Error(`${element.name} does not accept children`);
   }
   const id = stringAttribute(element, "id");
   const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
-  const audio = reference(element, "audio", speechTypes.audioBasis, resolveReference);
+  const segment = reference(element, "segment", narrativeTypes.excerpt, resolveReference);
+  const media = reference(element, "media", mediaTypes.synchronized, resolveReference);
   return {
     records: [],
     components: [{
       id,
-      fragment: whisperXSpeechAlignmentFragment.id,
-      inputs: { narrative: narrative.ref, audio: audio.ref },
+      fragment: whisperXSemanticTakeFragment.id,
+      inputs: { narrative: narrative.ref, segment: segment.ref, media: media.ref },
       outputs: {
         evidence: `${id}.evidence`,
-        map: `${id}.map`,
+        take: `${id}.take`,
       },
       range: element.range,
     }],
-    fragments: [whisperXSpeechAlignmentFragment],
+    fragments: [whisperXSemanticTakeFragment],
   };
 };

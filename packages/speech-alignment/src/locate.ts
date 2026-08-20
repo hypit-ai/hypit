@@ -1,7 +1,8 @@
 import { isDigest } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 import type { Narrative, NarrativeToken } from "@hypit/narrative";
 import { programFrameSampleBoundary, programSpaceFrameCount } from "@hypit/program-space";
-import type { SpeechAudioBasis } from "@hypit/speech";
+import type { ProgramSpace } from "@hypit/program-space";
 import type {
   AlignedTranscriptEvidence,
   SpeechActivitySpan,
@@ -15,6 +16,17 @@ import { alignWordGroups } from "./align.js";
 import { SpeechAlignmentError } from "./error.js";
 import { alignCharacters, alignmentCharacters } from "./normalize.js";
 import type { AlignmentGroup, TimedSpeechSegment } from "./types.js";
+
+/** Package-private clock used while aligning exactly one normalized Segment Take. */
+export type AlignmentBasis = {
+  readonly programSpace: ProgramSpace;
+  readonly audio: BlobRef;
+  readonly segments: readonly [{
+    readonly segmentId: string;
+    readonly startFrame: 0;
+    readonly endFrameExclusive: number;
+  }];
+};
 
 type MutableTiming = {
   startSample: number;
@@ -63,7 +75,7 @@ function validateSampleWindow(
   }
 }
 
-function evidenceSampleFrames(basis: SpeechAudioBasis): number {
+function evidenceSampleFrames(basis: AlignmentBasis): number {
   return programFrameSampleBoundary(
     basis.programSpace,
     programSpaceFrameCount(basis.programSpace),
@@ -71,7 +83,7 @@ function evidenceSampleFrames(basis: SpeechAudioBasis): number {
   );
 }
 
-function validateBasis(narrative: Narrative, basis: SpeechAudioBasis): void {
+function validateBasis(narrative: Narrative, basis: AlignmentBasis): void {
   const { numerator, denominator } = basis.programSpace.frameRate;
   if (!Number.isSafeInteger(numerator) || numerator <= 0
     || !Number.isSafeInteger(denominator) || denominator <= 0) {
@@ -82,28 +94,28 @@ function validateBasis(narrative: Narrative, basis: SpeechAudioBasis): void {
     || basis.audio.mediaType !== "audio/wav" || !Number.isSafeInteger(basis.audio.size) || basis.audio.size < 0) {
     fail("SPEECH_AUDIO_DIGEST", "SpeechBasis audio BlobRef is invalid.");
   }
-  if (basis.segments.length !== narrative.segments.length) {
-    fail("SPEECH_BASIS_SEGMENTS", "SpeechAudioBasis must cover every Narrative Segment exactly once.");
+  if (narrative.segments.length !== 1 || basis.segments.length !== 1) {
+    fail("SPEECH_BASIS_SEGMENTS", "Speech alignment accepts exactly one normalized Segment Take.");
   }
   let previousEnd = 0;
   for (const [index, segment] of basis.segments.entries()) {
     const expected = narrative.segments[index]!;
     if (segment.segmentId !== expected.id) {
-      fail("SPEECH_BASIS_SEGMENTS", `SpeechAudioBasis Segment ${segment.segmentId} does not match ${expected.id}.`);
+      fail("SPEECH_BASIS_SEGMENTS", `Alignment Segment ${segment.segmentId} does not match ${expected.id}.`);
     }
     if (!Number.isSafeInteger(segment.startFrame) || !Number.isSafeInteger(segment.endFrameExclusive)
       || segment.startFrame !== previousEnd || segment.endFrameExclusive <= segment.startFrame
       || segment.endFrameExclusive > frameCount) {
-      fail("SPEECH_BASIS_SEGMENTS", `SpeechAudioBasis Segment ${segment.segmentId} has an invalid frame window.`);
+      fail("SPEECH_BASIS_SEGMENTS", `Alignment Segment ${segment.segmentId} has an invalid frame window.`);
     }
     previousEnd = segment.endFrameExclusive;
   }
   if (previousEnd !== frameCount) {
-    fail("SPEECH_BASIS_SEGMENTS", "SpeechAudioBasis Segments must cover ProgramSpace exactly.");
+    fail("SPEECH_BASIS_SEGMENTS", "Alignment Segments must cover ProgramSpace exactly.");
   }
 }
 
-function validateEvidence(basis: SpeechAudioBasis, evidence: AlignedTranscriptEvidence): void {
+function validateEvidence(basis: AlignmentBasis, evidence: AlignedTranscriptEvidence): void {
   const limit = evidenceSampleFrames(basis);
   for (const [passageIndex, passage] of evidence.passages.entries()) {
     validateSampleWindow(passage, limit, `Passage ${passageIndex + 1}`);
@@ -134,7 +146,7 @@ function sampleMidpoint(value: {
 
 /** Assign acoustic evidence to authored Segments only where both clocks are explicitly connected. */
 function partitionEvidence(
-  basis: SpeechAudioBasis,
+  basis: AlignmentBasis,
   evidence: AlignedTranscriptEvidence,
 ): readonly SegmentEvidence[] {
   const ranges = basis.segments.map((segment) => ({
@@ -314,9 +326,9 @@ function locatePairedGroup(
 }
 
 function speechBounds(
-  basis: SpeechAudioBasis,
+  basis: AlignmentBasis,
   segment: SegmentEvidence,
-  basisSegment: SpeechAudioBasis["segments"][number],
+  basisSegment: AlignmentBasis["segments"][number],
 ): { readonly start: number; readonly end: number } {
   const spans = segment.speechActivity;
   return spans.length
@@ -361,7 +373,7 @@ function fillMissingTiming(
   return values as MutableTiming[];
 }
 
-function frameForEvidenceSample(basis: SpeechAudioBasis, sample: number): number {
+function frameForEvidenceSample(basis: AlignmentBasis, sample: number): number {
   const numerator = BigInt(sample) * BigInt(basis.programSpace.frameRate.numerator);
   const denominator = 16_000n * BigInt(basis.programSpace.frameRate.denominator);
   const frame = (numerator * 2n + denominator) / (denominator * 2n);
@@ -370,9 +382,9 @@ function frameForEvidenceSample(basis: SpeechAudioBasis, sample: number): number
 }
 
 /** Locate every Script token from one provider-neutral acoustic evidence pass. */
-export function locateSpeechTiming(
+export function locateAlignedSegmentTiming(
   narrative: Narrative,
-  basis: SpeechAudioBasis,
+  basis: AlignmentBasis,
   evidence: AlignedTranscriptEvidence,
 ): CompleteSemanticMap {
   validateBasis(narrative, basis);

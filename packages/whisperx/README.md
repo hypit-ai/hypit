@@ -8,11 +8,13 @@ The package contains no credentials, Python environment or queue. Providers tran
 request directly into provider-neutral `AlignedTranscriptEvidence`. There is no vendor-shaped
 Evidence wrapper or pass-through normalization node in the graph.
 
-The request Producer consumes only canonical `SpeechEvidenceAudio` bytes. `@hypit/media-pipeline`
-first requests the explicit 48 kHz stereo speech-master → 16 kHz mono evidence projection. Authored
-Segment identity never enters the WhisperX Need or Provider. The later Speech Alignment operation
-receives `SpeechAudioBasis` through its own graph edge and assigns acoustic passages to its exact
-Segment frame windows there.
+`<whisperx:SemanticTake>` consumes one normalized `SynchronizedMedia` and exactly one Script
+Segment. `@hypit/media-pipeline` projects that Take's 48 kHz audio to canonical 16 kHz mono
+`SpeechEvidenceAudio`; WhisperX sees only those bytes. A deterministic local alignment then combines
+the returned evidence with the one Segment and emits one self-contained `SemanticTake`.
+
+There is no whole-program WhisperX pass. Speech Spine only receives already-semantic Takes and later
+translates their local frames when assembling the final ProgramSpace and complete semantic map.
 
 `@hypit/provider-whisperx-local` is the first concrete adapter; it validates and stages those bytes
 unchanged for a warm loopback service.

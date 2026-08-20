@@ -1,10 +1,9 @@
-import type { NarrativeExcerpt } from "@hypit/narrative";
-import { synchronizedMediaSampleFrames, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
-import type { SynchronizedMedia, TimelineAudio } from "@hypit/media";
+import { synchronizedMediaSampleFrames, verifyTimelineAudio } from "@hypit/media";
+import type { TimelineAudio } from "@hypit/media";
 import { assertProgramSpaceIdentity, sealProgramSpace } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
-import { sealSpeechBasis } from "@hypit/speech";
-import type { SpeechBasis } from "@hypit/speech";
+import { assertSemanticTakeIdentity, sealSpeechBasis } from "@hypit/speech";
+import type { SemanticTake, SpeechBasis } from "@hypit/speech";
 import {
   sealAudioProgramPlan,
   verifyAudioProgramPlan,
@@ -44,14 +43,6 @@ export function assertSpeechSpineProgram(value: SpeechSpineProgram): void {
   "SpeechSpineProgram frame rate is invalid");
 }
 
-function verifyExcerpt(value: NarrativeExcerpt): void {
-  assert(value.kind === "segment",
-    "Speech Spine Take must reference a Segment NarrativeExcerpt");
-  assert(value.id.length > 0 && Number.isSafeInteger(value.tokenStart)
-    && Number.isSafeInteger(value.tokenEndExclusive) && value.tokenEndExclusive > value.tokenStart,
-  "Speech Spine Segment excerpt is invalid");
-}
-
 function setContent(value: SpeechSpineSet): SpeechSpineSet {
   return canonicalize({
 
@@ -64,19 +55,19 @@ function sealSpeechSpineSet(value: SpeechSpineSet): SpeechSpineSet {
 }
 
 function assertTake(take: SpeechSpineTake, program: SpeechSpineProgram): void {
-  verifyExcerpt(take.segment);
-  verifySynchronizedMedia(take.media);
-  assert(take.media.audio !== undefined, `Speech Segment ${take.segment.id} has no speech audio`);
-  assert(take.media.timeline.frameRate.numerator === program.frameRate.numerator
-    && take.media.timeline.frameRate.denominator === program.frameRate.denominator,
-  `Speech Segment ${take.segment.id} uses another frame rate`);
-  assert((take.media.visual === undefined) === (take.visual === undefined),
-    `Speech Segment ${take.segment.id} visual policy does not match its media`);
+  assertSemanticTakeIdentity(take.semantic);
+  const { media, segment } = take.semantic;
+  assert(media.audio !== undefined, `Speech Segment ${segment.segmentId} has no speech audio`);
+  assert(media.timeline.frameRate.numerator === program.frameRate.numerator
+    && media.timeline.frameRate.denominator === program.frameRate.denominator,
+  `Speech Segment ${segment.segmentId} uses another frame rate`);
+  assert((media.visual === undefined) === (take.visual === undefined),
+    `Speech Segment ${segment.segmentId} visual policy does not match its media`);
   if (take.visual !== undefined) {
     assertSpatialFrame(take.visual.frame);
     assertContentFit(take.visual.fit);
     assert(Number.isSafeInteger(take.visual.stackingOrder),
-      `Speech Segment ${take.segment.id} visual stacking order is invalid`);
+      `Speech Segment ${segment.segmentId} visual stacking order is invalid`);
   }
 }
 
@@ -93,10 +84,10 @@ export function assertSpeechSpineVisualSpec(value: SpeechSpineVisualSpec): void 
 export function assertSpeechSpineSet(value: SpeechSpineSet): void {
   const segments = new Set<string>();
   for (const take of value.takes) {
-    verifyExcerpt(take.segment);
-    verifySynchronizedMedia(take.media);
-    assert(!segments.has(take.segment.id), `Speech Spine repeats Segment ${take.segment.id}`);
-    segments.add(take.segment.id);
+    assertSemanticTakeIdentity(take.semantic);
+    const segmentId = take.semantic.segment.segmentId;
+    assert(!segments.has(segmentId), `Speech Spine repeats Segment ${segmentId}`);
+    segments.add(segmentId);
   }
 }
 
@@ -115,7 +106,8 @@ function appendTake(
   assertSpeechSpineSet(set);
   assertSpeechSpineProgram(program);
   assertTake(take, program);
-  assert(!set.takes.some((item) => item.segment.id === take.segment.id), `Speech Spine repeats Segment ${take.segment.id}`);
+  assert(!set.takes.some((item) => item.semantic.segment.segmentId === take.semantic.segment.segmentId),
+    `Speech Spine repeats Segment ${take.semantic.segment.segmentId}`);
   return sealSpeechSpineSet({
 
     takes: [...set.takes, take],
@@ -125,19 +117,18 @@ function appendTake(
 export function appendSpeechSpineAudioTake(
   set: SpeechSpineSet,
   program: SpeechSpineProgram,
-  media: SynchronizedMedia,
-  segment: NarrativeExcerpt,
+  semantic: SemanticTake,
 ): SpeechSpineSet {
-  verifySynchronizedMedia(media);
-  assert(media.visual === undefined, `Speech Segment ${segment.id} audio Take unexpectedly contains a visual stream`);
-  return appendTake(set, program, { media, segment });
+  assertSemanticTakeIdentity(semantic);
+  assert(semantic.media.visual === undefined,
+    `Speech Segment ${semantic.segment.segmentId} audio Take unexpectedly contains a visual stream`);
+  return appendTake(set, program, { semantic });
 }
 
 export function appendSpeechSpineVisualTake(
   set: SpeechSpineSet,
   program: SpeechSpineProgram,
-  media: SynchronizedMedia,
-  segment: NarrativeExcerpt,
+  semantic: SemanticTake,
   frame: SpatialFrame,
   fit: ContentFit,
   visualSpec: SpeechSpineVisualSpec,
@@ -145,11 +136,10 @@ export function appendSpeechSpineVisualTake(
   assertSpatialFrame(frame);
   assertContentFit(fit);
   assertSpeechSpineVisualSpec(visualSpec);
-  verifySynchronizedMedia(media);
-  assert(media.visual !== undefined, `Speech Segment ${segment.id} visual Take has no visual stream`);
+  assertSemanticTakeIdentity(semantic);
+  assert(semantic.media.visual !== undefined, `Speech Segment ${semantic.segment.segmentId} visual Take has no visual stream`);
   const take = {
-    media,
-    segment,
+    semantic,
     visual: {
       frame: structuredClone(frame),
       fit: structuredClone(fit),
@@ -172,7 +162,7 @@ function programSpace(program: SpeechSpineProgram, set: SpeechSpineSet): Program
   assertSpeechSpineSet(set);
   assert(set.takes.length > 0, "Speech Spine must contain at least one Take");
   for (const take of set.takes) assertTake(take, program);
-  const frameCount = set.takes.reduce((sum, take) => sum + take.media.timeline.frameCount, 0);
+  const frameCount = set.takes.reduce((sum, take) => sum + take.semantic.media.timeline.frameCount, 0);
   const space = sealProgramSpace({
     durationSec: frameCount * program.frameRate.denominator / program.frameRate.numerator,
     frameRate: { ...program.frameRate },
@@ -185,16 +175,17 @@ export function compileSpeechSpineAudio(program: SpeechSpineProgram, set: Speech
   const space = programSpace(program, set);
   let frame = 0;
   const clips = set.takes.map((take, index) => {
-    const audio = take.media.audio!;
+    const { media, segment } = take.semantic;
+    const audio = media.audio!;
     const startFrame = frame;
-    frame += take.media.timeline.frameCount;
+    frame += media.timeline.frameCount;
     const targetStartSample = frameSample(startFrame, program.frameRate);
     const targetEndSampleExclusive = frameSample(frame, program.frameRate);
-    const sourceSampleFrames = synchronizedMediaSampleFrames(take.media);
+    const sourceSampleFrames = synchronizedMediaSampleFrames(media);
     assert(targetEndSampleExclusive - targetStartSample === sourceSampleFrames,
-      `Speech Segment ${take.segment.id} audio does not exactly cover its normalized frame span`);
+      `Speech Segment ${segment.segmentId} audio does not exactly cover its normalized frame span`);
     return {
-      id: `${String(index + 1).padStart(4, "0")}:${take.segment.id}`,
+      id: `${String(index + 1).padStart(4, "0")}:${segment.segmentId}`,
       artifact: audio.artifact,
       targetStartSample,
       targetEndSampleExclusive,
@@ -230,25 +221,26 @@ export function assembleSpeechBasis(
   const space = programSpace(program, set);
   verifyTimelineAudio(audio);
   assert(audio.sampleFrames === frameSample(
-    set.takes.reduce((sum, take) => sum + take.media.timeline.frameCount, 0),
+    set.takes.reduce((sum, take) => sum + take.semantic.media.timeline.frameCount, 0),
     program.frameRate,
   ), "TimelineAudio does not cover this Speech Spine");
   let frame = 0;
   const segments = set.takes.map((take) => {
     const startFrame = frame;
-    frame += take.media.timeline.frameCount;
-    return { segmentId: take.segment.id, startFrame, endFrameExclusive: frame };
+    frame += take.semantic.media.timeline.frameCount;
+    return { segmentId: take.semantic.segment.segmentId, startFrame, endFrameExclusive: frame };
   });
   frame = 0;
   const visualClips = set.takes.flatMap((take) => {
-    frame += take.media.timeline.frameCount;
-    if (take.media.visual === undefined || take.visual === undefined) return [];
+    const { media, segment } = take.semantic;
+    frame += media.timeline.frameCount;
+    if (media.visual === undefined || take.visual === undefined) return [];
     return [{
-      segmentId: take.segment.id,
-      artifact: structuredClone(take.media.visual.artifact),
+      segmentId: segment.segmentId,
+      artifact: structuredClone(media.visual.artifact),
       extent: {
-        widthPx: take.media.visual.width,
-        heightPx: take.media.visual.height,
+        widthPx: media.visual.width,
+        heightPx: media.visual.height,
       },
       frame: structuredClone(take.visual.frame),
       fit: structuredClone(take.visual.fit),
