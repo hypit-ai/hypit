@@ -10,11 +10,16 @@
  * Usage:  node --import tsx .agents/skills/hypit/scripts/preview-check.mjs <main.svml> [<build.svrun>]
  * Exit:   0 when every track built and nothing is waiting on an error.
  *         1 otherwise, listing the failing tracks and their errors.
+ *
+ * Run it from the repository root. `tsx` is the repository's own dependency, so
+ * a working directory outside the repository fails to resolve it before this
+ * script runs at all — the error names `tsx`, not the source being checked.
  */
-import { fileURLToPath } from "node:url";
 // The script lives under `.agents/`; resolve the playground's preview pipeline from the repo root.
-const repoRoot = fileURLToPath(new URL("../../../../", import.meta.url));
-const { preview } = await import(`${repoRoot}packages/svml-playground/src/pipeline/preview.js`);
+// Stay in URL space the whole way: a specifier built from a filesystem path is read as a URL, so
+// on Windows the drive letter becomes a scheme and the import fails before it resolves anything.
+const { preview } = await import(
+  new URL("../../../../packages/svml-playground/src/pipeline/preview.js", import.meta.url).href);
 
 const source = process.argv[2];
 if (source === undefined) {

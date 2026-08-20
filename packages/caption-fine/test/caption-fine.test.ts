@@ -60,16 +60,12 @@ test("one Fine renderer handles uniform Cue appearance as one peer VisualTrack",
   const track = renderFineCaption(projection, program, display, space);
   assert.equal(track.kind, "visual");
   assert.equal(track.presents.length, 1);
-  const wordElements = track.presents[0]!.elements.filter((element) => element.kind === "text-flow"
-    && element.attributes?.some((attribute) => attribute.name === "data-caption-word"));
+  const wordElements = track.presents[0]!.elements.filter((element) => element.kind === "text");
   assert.equal(wordElements.length, 3);
-  assert.deepEqual(wordElements.map((element) => element.kind === "text-flow"
-    ? element.document.paragraphs[0]?.inlines[0]?.kind === "text"
-      ? element.document.paragraphs[0].inlines[0].text : undefined
-    : undefined),
+  assert.deepEqual(wordElements.map((element) => element.kind === "text" ? element.text : undefined),
     ["Meaning", "becomes", "visible."]);
-  assert.equal(wordElements.every((element) => element.kind === "text-flow" && element.paints.some((paint) =>
-    paint.kind === "fill" && paint.paint.kind === "solid" && paint.paint.color === "#FFFFFF")), true);
+  assert.equal(wordElements.every((element) => element.style.some((declaration) =>
+    declaration.name === "color" && declaration.value === "#FFFFFF")), true);
   assert.equal(wordElements.every((element) =>
     element.style.every((declaration) => declaration.name !== "transform")), true);
   assert.equal(fineCaptionParameters(recipe, [exactFont]).activePaint.fill, "#FFD54A");
@@ -114,12 +110,8 @@ test("Fine applies Caption Mute after planning without regrouping Cues", () => {
   assert.equal(track.presents.length, 1);
   assert.deepEqual(track.presents[0]!.span, { startFrame: 0, endFrameExclusive: 60 });
   const renderedWords = track.presents[0]!.elements
-    .filter((element) => element.kind === "text-flow"
-      && element.attributes?.some((attribute) => attribute.name === "data-caption-word"))
-    .map((element) => element.kind === "text-flow"
-      ? element.document.paragraphs[0]?.inlines[0]?.kind === "text"
-        ? element.document.paragraphs[0].inlines[0].text : undefined
-      : undefined);
+    .filter((element) => element.kind === "text")
+    .map((element) => element.kind === "text" ? element.text : undefined);
   assert.deepEqual(renderedWords, ["Keep", "visible."]);
 });
 
@@ -319,7 +311,7 @@ test("karaoke uses one active overlay per whole Atom and never invents Dual Text
   assert.ok(activeLayer?.animation);
   assert.equal(activeLayer.animation.keyframes.some((keyframe) => keyframe.style.some((item) =>
     item.name === "clip-path" && String(item.value).includes("inset"))), true);
-  assert.equal(elements.filter((element) => element.parent === activeLayer.id && element.kind === "text-flow").length, 3);
+  assert.equal(elements.filter((element) => element.parent === activeLayer.id && element.kind === "text").length, 3);
   assert.equal(elements.filter((element) => element.attributes?.some((attribute) =>
     attribute.name === "data-caption-karaoke")).length, display.atoms.length);
 });
@@ -357,11 +349,11 @@ test("an exact Font is explicit Style input and reaches every base and active gl
     durationSec: 1, frameRate: { numerator: 30, denominator: 1 },
   });
   const track = renderFineCaption(projection, program, display, space);
-  const glyphs = track.presents[0]!.elements.filter((element) => element.kind === "text-flow");
+  const glyphs = track.presents[0]!.elements.filter((element) => element.kind === "text");
   assert.ok(glyphs.length > display.words.length);
-  assert.equal(glyphs.every((element) => element.kind === "text-flow" && element.typography.fonts.length === 1), true);
+  assert.equal(glyphs.every((element) => element.kind === "text" && element.fonts?.length === 1), true);
   for (const glyph of glyphs) {
-    if (glyph.kind === "text-flow") assert.deepEqual(glyph.typography.fonts, [exactFont]);
+    if (glyph.kind === "text") assert.deepEqual(glyph.fonts, [exactFont]);
   }
   assert.doesNotThrow(() => fineCaptionStyle("another-exact-face", recipe, [{ ...exactFont, weight: 700 }]));
 });
@@ -466,24 +458,46 @@ test("full Fine Paint and layered motion lower to terminal Visual IR without cha
   });
   const elements = renderFineCaption(projection, program, display, space).presents[0]!.elements;
   const base = elements.find((element) => element.id === "atom-1-base-1");
-  assert.equal(base?.kind, "text-flow");
-  assert.ok(base?.kind === "text-flow" && base.paints.some((paint) => paint.kind === "fill" && paint.paint.kind === "linear-gradient"));
-  assert.ok(base?.kind === "text-flow" && base.typography.transform === "uppercase");
-  assert.ok(base?.kind === "text-flow" && base.typography.decorations.some((decoration) => decoration.line === "underline"));
-  assert.ok(base?.kind === "text-flow" && base.paints.filter((paint) => paint.kind === "shadow").length >= 8);
-  assert.ok(base?.kind === "text-flow" && base.paints.some((paint) =>
-    paint.kind === "stroke" && paint.placement === "outside"));
+  assert.equal(base?.kind, "text");
+  assert.ok(base?.style.some(({ name, value }) => name === "text-transform" && value === "uppercase"));
+  assert.ok(base?.style.some(({ name }) => name === "text-decoration-thickness"));
+  // The outline is declared as Paint placed outside the letter, not as a centred stroke that would
+  // spend half its width inside. A centred stroke is what the style vocabulary can say, so the
+  // absence of one here is as much the point as the presence of the Paint.
+  const paints = base?.paints ?? [];
+  assert.deepEqual(paints.at(-2), {
+    kind: "stroke", placement: "outside", widthPx: 3, paint: { kind: "solid", color: "#101010" },
+  });
+  assert.deepEqual(paints.at(-1), {
+    kind: "fill", paint: { kind: "linear-gradient", angleDeg: 120, stops: [
+      { offset: 0, color: "#FFFFFF", opacity: 1 },
+      { offset: 1, color: "#60A5FA", opacity: 1 },
+    ] },
+  });
+  // The soft effects are declared before the outline, so they are drawn beneath it rather than
+  // cast by the body alone and landing on top of the ring they belong under. The long shadow is
+  // its own discrete steps, which is what a long shadow is.
+  const soft = paints.slice(0, -2);
+  assert.ok(soft.length >= 8, `expected the long shadow steps, found ${soft.length}`);
+  assert.ok(soft.every((paint) => paint.kind === "shadow" || paint.kind === "glow"));
+  assert.ok(!base?.style.some(({ name }) => name.startsWith("-webkit-text-stroke")));
+  // Each of these is now spelled once, in the Paint, so the style does not also draw it.
+  assert.ok(!base?.style.some(({ name }) =>
+    name === "color" || name === "background-clip" || name === "text-shadow"));
   const activeGlyph = elements.find((element) => element.id === "atom-1-active-1");
-  assert.equal(activeGlyph?.kind, "text-flow");
-  assert.ok(activeGlyph?.kind === "text-flow" && activeGlyph.paints.some((paint) =>
-    paint.kind === "fill" && paint.paint.kind === "linear-gradient"));
+  assert.equal(activeGlyph?.kind, "text");
+  // The spoken Word carries its own gradient and its own outline, in the same vocabulary and the
+  // same order: whatever it casts behind it, then the outline, then the body.
+  assert.equal(activeGlyph?.paints?.at(-2)?.kind, "stroke");
+  const activeFill = activeGlyph?.paints?.at(-1);
+  assert.equal(activeFill?.kind, "fill");
+  assert.equal(activeFill?.kind === "fill" ? activeFill.paint.kind : undefined, "linear-gradient");
   const joined = elements.filter((element) => element.attributes?.some((attribute) =>
     attribute.name === "data-caption-active-box" && attribute.value === "joined"));
   assert.equal(joined.length, display.atoms.length);
   const joinedText = elements.find((element) => element.id === `joined-box-${display.atoms.length}-text`);
-  assert.equal(joinedText?.kind, "text-flow");
-  assert.ok(joinedText?.kind === "text-flow" && joinedText.paints.some((paint) =>
-    paint.kind === "box" && paint.target === "word" && paint.continuity === "joined"));
+  assert.equal(joinedText?.kind, "text");
+  assert.ok(joinedText?.style.some(({ name, value }) => name === "box-decoration-break" && value === "clone"));
   assert.ok(elements.find((element) => element.id === "cue-motion")?.animation);
   assert.ok(elements.find((element) => element.id === "atom-1-typewriter")?.animation?.keyframes.some((keyframe) =>
     keyframe.style.some(({ name }) => name === "clip-path")));

@@ -26,17 +26,23 @@ only about the video: what it should say, who is in it, what it is for.
 Images therefore generate in rounds: the establishing image is accepted first, and the views derived
 from it are generated after. `production-gates.md` Gate 1 is one stage per round, not one stage.
 
-## A split shot hands over its last frame
+## A split shot's parts all start from the same image
 
-A continuous shot that exceeds the generator's duration ceiling is split. The second part opens on
-the **last frame of the first part**, extracted from the accepted take and passed as its first frame.
+A continuous shot that exceeds the generator's duration ceiling is split into as many takes as it
+needs. **Every part references the same first-frame image** — the one accepted for that shot — and no
+part references another part.
 
-Every piece of this already exists: a video generation shape that takes a first and last frame, and a
-frame extraction that takes `at="last"`. Only the connection is missing, which is why a split shot
-drifts across its own seam today.
+This is the one place where the "wire what must match" principle does *not* mean chaining. Chaining
+each part to the one before it makes them strictly sequential — part two cannot start until part one
+has finished generating and its frame has been extracted — so a shot split four ways costs four
+generations end to end. Pointing every part at the same accepted image lets all four generate at
+once, and they still hold the same person, framing, wardrobe and light, because they came from the
+same picture.
 
-Do not do this across a real cut. A cut is a discontinuity; wiring one would force a match the
-reference never had.
+The parts do not continue each other frame for frame at the seams. **That is fine and needs no
+handling.** Do not try to close it, do not raise it in a comparison, and do not spend an attempt on
+it: it is a small jump in pose, the seam a viewer reads as an ordinary cut. Split the shot, generate
+the parts, move on.
 
 ## A voice is generated once
 
@@ -71,6 +77,58 @@ This is why a full-screen board that contains two media boxes is read as *two* m
 single flat composition. The component owns its surface; the boxes are inputs, and each one is
 filled by generation when the reference shows content in it.
 
+## A semantic window covers words, so the silence around it belongs to nobody
+
+This is the commonest inherited edge in a speech-led program; `frame-coverage.md` holds the general
+form and the measurements. `during={story.selection.X}` spans that Selection's first word to its last,
+so the pause between two Selections, the breath before a Segment's first word, and the words that fall
+between two occurrences are in none of them.
+
+Decide, for each thing you place, which of two kinds it is:
+
+- **Continuously present** — a sheet the reference holds up, a bed under a voiceover, a badge that
+  stays. Take its window from a Segment, or from the first occurrence's start to the last one's end.
+  Never from a Selection whose occurrences have gaps, however well the occurrences line up with the
+  words: they do not touch.
+- **Genuinely coming and going** — an insert that appears for one phrase and leaves. A Selection is
+  exactly right, and the gap is the point.
+
+The same question decides a component you write yourself. A Program scheduled from occurrences draws
+only inside them unless you give it a span of its own, so a page built from one occurrence per row
+vanishes on the words between two rows. `@hypit/local-notebook-ranking` does that deliberately and
+says so in its own appearance text; a sheet the reference never takes down must not inherit it. When
+a component both persists and changes, its schedule carries two different things — one span for how
+long it is on screen, one window per item for when that item arrives — and conflating them is what
+produces the blink.
+
+## An audio Take brings no picture, so its Segment is covered or it plays black
+
+A `speech:Take audio={…}` creates program time and speech and contributes no visual at all. For as
+long as it runs the picture is whatever the peer Tracks put there, and wherever they put nothing the
+Film's own background shows through. A voiceover Segment is therefore an obligation: every frame of
+it belongs to some Item, and the frames nobody claimed are black in the delivery.
+
+Two different holes open, and both look identical on screen:
+
+- **A stretch inside no Selection.** Mark the ranges the B-roll covers and one sentence between two
+  of them belongs to neither, so nothing draws it. The Selections have to *tile* the Segment — each
+  one picking up where the last left off — rather than merely landing in the right places. A line
+  that introduces what comes next usually belongs to the Selection it introduces.
+- **A take shorter than the window it fills.** An Item whose window outlasts its own material runs
+  out partway and leaves the rest empty. Read the model's duration ceiling before deciding: Seedance
+  `mini` stops at 15 seconds, so a longer stretch needs more than one Item rather than one Item asked
+  for a length the model refuses.
+
+Give a silent take a literal duration at or above its window instead of a `SpeechDuration` edge. The
+estimate predicts the words; the window is decided by the audio that was actually produced, and when
+the estimate falls a second short that second is black.
+
+A bed makes a blend visible, so check the Items' entry and exit while you are here: `enter` and `exit`
+default to `none`, and a Recipe named for a cut that fades for a frame is one of the inherited edges
+`frame-coverage.md` describes.
+
+`production-gates.md` measures the delivery for these before it is reported as finished.
+
 ## A short stretch is not a short take
 
 An authored take stays inside the selected model's declared duration range — read the range from the
@@ -79,9 +137,19 @@ model, since it differs between them and a literal in a document goes stale.
 An observed stretch shorter than that floor is never authored as its own take. Decide by what the
 observation says about the picture:
 
-- **It moves** — fold the consecutive short shots into one take at or above the floor, carrying the
-  ordered references for each beat, and choose an edit language that cuts internally rather than
-  generating each beat separately.
+- **It moves** — fold the consecutive short shots into one take at or above the floor and let the
+  take cut internally, rather than generating each beat separately. How many references that take
+  gets is decided by what the beats *show*:
+  - **The same material** — one place, one person, one object, seen from a couple of angles or at a
+    couple of moments — takes **one** image. The beats are a performance, so they belong in the
+    prompt: say what happens and where it cuts. Handing the model four pictures of one scene is how
+    a continuous space turns into four subtly different rooms, and it costs four generations to make
+    it worse.
+  - **Different material** — a different place, a different object, a different subject in each beat
+    — takes one accepted image per distinct thing, in the order they appear. There is nothing for a
+    single picture to establish here; the cuts are the point.
+
+  The question is not how many beats there are but how many *things* they show.
 - **It is still** — a screenshot, a card, a poster, a held photograph — author stills placed on a
   Media Track and cut at the observed boundaries. More faithful than asking a video model to hold
   something still, fully controlled, and far cheaper.

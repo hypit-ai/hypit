@@ -29,6 +29,13 @@ original authoring and to reconstruction equally.
 - Text drawn over a depicted scene stays an overlay on that scene. Only a picture whose entire field
   is designed becomes a composition of its own. A framed graphic occupying part of a scene is an
   inserted element, and the same ownership rule applies inside its frame.
+- **A designed field is still one composition when it covers only part of the frame.** A ranking
+  down the left third, a leaderboard across the bottom half, a scoreboard band over a live shot —
+  each is a designed field carrying authored content, and each is one component that owns its own
+  surface, its rows and its reveal, sitting on a Frame that is not the whole Canvas. It does not
+  become an overlay because it is small, and it does not need a visible border or card edge to be a
+  field: a slab of colour holding rows is a surface. The question is never how much of the frame it
+  covers, but whether what it covers is designed or depicted.
 - If no installed package owns the composition, that is a real vocabulary gap. Read
   `../../local-author-package.md` and build the package. Do not approximate it with tags that own a
   different role.
@@ -63,6 +70,15 @@ itself.
 The test is one question: **would two different videos using this component show the same picture
 there?** If yes, it belongs to the package. If they would show different pictures, it is an edge the
 source supplies.
+
+The two are also *obtained* differently, and this is where the line is most often crossed. The
+component's surface is generated once while the package is authored, with `hypit image`, and
+committed inside the package — it is authoring input. Source-supplied material is **declared in the
+Source as a generation** — `<gpt:Image prompt={…}/>` fed by a `copy:Value` that holds its
+description — so the picture and the words that produce it live together and can be reread,
+corrected and rebuilt. Generating that material yourself and pointing `media:Image src=` at the file
+throws the description away and leaves a picture nobody can regenerate; `media:Image` is for material
+the author already had.
 
 Never make a component's own surface a required input. A component whose chrome arrives from the
 graph cannot render on its own, cannot produce the preview image its Surface owes, and forces every

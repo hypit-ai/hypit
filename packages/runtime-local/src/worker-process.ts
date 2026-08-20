@@ -155,7 +155,10 @@ export async function ensureRuntimeProcess(
     ...(launch.workerArgs ?? []),
   ], {
     cwd: process.cwd(),
-    detached: true,
+    // See the managed program start in `programs.ts`: on Windows, detaching costs the console and
+    // every console descendant then gets a window of its own.
+    detached: process.platform !== "win32",
+    windowsHide: true,
     stdio: ["ignore", log.fd, log.fd],
     env: process.env,
   });

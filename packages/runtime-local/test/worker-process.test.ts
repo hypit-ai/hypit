@@ -24,8 +24,10 @@ test("one detached Runtime Worker can be started, observed and stopped", async (
     const index = process.argv.indexOf("--ready-file");
     const ready = process.argv[index + 1];
     fs.mkdirSync(path.dirname(ready), { recursive: true });
-    fs.writeFileSync(ready, String(process.pid));
+    // Say it in the log before claiming to be ready. The ready file is what the parent waits on,
+    // so anything written after it is a race the parent can win.
     process.stdout.write("worker-ready\\n");
+    fs.writeFileSync(ready, String(process.pid));
     process.on("SIGTERM", () => process.exit(0));
     setInterval(() => {}, 1000);
   `;

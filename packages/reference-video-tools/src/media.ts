@@ -14,7 +14,7 @@ export async function ensureDir(path: string): Promise<void> { await mkdir(path,
 
 export async function command(executable: string, args: readonly string[], timeoutMs = 120_000): Promise<Buffer> {
   return await new Promise((resolvePromise, reject) => {
-    const child = spawn(executable, [...args], { stdio: ["ignore", "pipe", "pipe"], shell: false });
+    const child = spawn(executable, [...args], { stdio: ["ignore", "pipe", "pipe"], shell: false, windowsHide: true });
     const stdout: Buffer[] = [];
     let stderr = "";
     let settled = false;

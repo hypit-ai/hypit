@@ -9,13 +9,14 @@ import test from "node:test";
 import { verifyCompositableSurfaceBytes } from "@hypit/media-execution";
 import type { CompositableSurfaceRef } from "@hypit/media";
 
-const hasMediaTools = spawnSync("ffmpeg", ["-version"], { stdio: "ignore" }).status === 0
-  && spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
+const hasMediaTools = spawnSync("ffmpeg", ["-version"], { stdio: "ignore", windowsHide: true }).status === 0
+  && spawnSync("ffprobe", ["-version"], { stdio: "ignore", windowsHide: true }).status === 0;
 
 async function ffmpeg(argv: readonly string[]): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = spawn("ffmpeg", ["-hide_banner", "-loglevel", "error", ...argv], {
       shell: false,
+      windowsHide: true,
       stdio: ["ignore", "ignore", "pipe"],
     });
     let stderr = "";

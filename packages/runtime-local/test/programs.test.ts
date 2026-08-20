@@ -6,7 +6,7 @@ import test from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { createRuntimeEndpointAdapterFacet, RuntimeAdapterRegistry } from "@hypit/runtime-kit";
-import type { ManagedProgram } from "@hypit/runtime-kit";
+import type { ManagedProgram, ManagedProgramCommand } from "@hypit/runtime-kit";
 import type { CapabilityRef } from "@hypit/protocol";
 
 import {
@@ -20,6 +20,22 @@ const requiredCapability = {
   module: { name: "example.capabilities", version: "1" },
   name: "Required",
 } as const satisfies CapabilityRef;
+
+/**
+ * A stand-in program, written in the interpreter already running this file.
+ *
+ * These fixtures used to be `sh -c` strings. That cost them a shell twice over: `sh` is not on a
+ * Windows machine by default, and where it is, a temporary path interpolated into the command
+ * string arrives with its backslashes eaten, so the marker file was written somewhere nobody
+ * looked and the wait timed out instead of failing. Node is here by definition, and takes its
+ * arguments as arguments rather than as text to be parsed a second time.
+ */
+function nodeProgram(source: string, ...args: readonly string[]): ManagedProgramCommand {
+  return { command: process.execPath, args: ["-e", source, ...args] };
+}
+
+/** Stay up until something stops us, the way a real service does. */
+const STAY_ALIVE = "setInterval(() => {}, 1000);";
 
 /**
  * A stand-in program: `start` writes a file and sleeps, and the probe reads that
@@ -104,7 +120,7 @@ test("an empty Build capability set loads no Runtime Adapter packages", async ()
 function fileBackedProgram(marker: string): ManagedProgram {
   return {
     id: "example",
-    start: { command: "sh", args: ["-c", `printf ready > ${marker}; while true; do sleep 1; done`] },
+    start: nodeProgram(`require("node:fs").writeFileSync(process.argv[1], "ready"); ${STAY_ALIVE}`, marker),
     async probe() {
       try {
         await readFile(marker, "utf8");
@@ -157,7 +173,7 @@ test("up starts the program once for every Endpoint that drives it, and down sto
 test("a program answering with another identity is never joined by a second copy", async () => {
   const { path, options } = await project(() => ({
     id: "example",
-    start: { command: "sh", args: ["-c", "exit 1"] },
+    start: nodeProgram("process.exit(1);"),
     probe: async () => ({ state: "mismatch", detail: "model is large-v3, expected small" }),
   }));
   const result = await bringManagedProgramsUp(path, options);
@@ -169,7 +185,7 @@ test("a program answering with another identity is never joined by a second copy
 test("down leaves a running program this project did not start", async () => {
   const { path, options } = await project(() => ({
     id: "example",
-    start: { command: "sh", args: ["-c", "sleep 60"] },
+    start: nodeProgram("setTimeout(() => {}, 60_000);"),
     probe: async () => ({ state: "ready" }),
   }));
   const result = await takeManagedProgramsDown(path, options);
@@ -182,7 +198,7 @@ test("a program with nothing to start is prepared, and preparing is the whole jo
   const marker = join(directory, "installed");
   const { path, options } = await project(() => ({
     id: "example",
-    prepare: { command: "sh", args: ["-c", `printf done > ${marker}`] },
+    prepare: nodeProgram('require("node:fs").writeFileSync(process.argv[1], "done");', marker),
     async probe() {
       try {
         await readFile(marker, "utf8");
@@ -233,7 +249,7 @@ test("up creates a fresh Runtime data directory before running commands", async 
       } as never,
       program: {
         id: "example",
-        prepare: { command: "sh", args: ["-c", "printf ready > prepared"] },
+        prepare: nodeProgram('require("node:fs").writeFileSync("prepared", "ready");'),
         async probe() {
           try {
             await readFile(join(dataRoot, "prepared"), "utf8");
@@ -255,20 +271,24 @@ test("up creates a fresh Runtime data directory before running commands", async 
 test("a failing prepare stops before starting anything, and says which command failed", async () => {
   const { path, options } = await project(() => ({
     id: "example",
-    prepare: { command: "sh", args: ["-c", "echo 'no such project' >&2; exit 1"] },
-    start: { command: "sh", args: ["-c", "while true; do sleep 1; done"] },
+    prepare: nodeProgram('process.stderr.write("no such project\\n"); process.exit(1);'),
+    start: nodeProgram(STAY_ALIVE),
     probe: async () => ({ state: "down", detail: "nothing is answering" }),
   }));
   const result = await bringManagedProgramsUp(path, options);
   assert.equal(result.programs[0]!.action, "unchanged");
-  assert.match(result.programs[0]!.detail ?? "", /sh failed: no such project/u);
+  // Naming the command is half of what this test is for, so assert both halves rather than a
+  // spelling of the interpreter that only holds on one platform.
+  const detail = result.programs[0]!.detail ?? "";
+  assert.ok(detail.startsWith(`${process.execPath} failed:`), detail);
+  assert.match(detail, /failed: no such project/u);
   assert.equal(result.programs[0]!.logPath, undefined, "nothing was started, so nothing logged");
 });
 
 test("up stops waiting when a started program exits", async () => {
   const { root, path, options } = await project(() => ({
     id: "example",
-    start: { command: "sh", args: ["-c", "exit 1"] },
+    start: nodeProgram("process.exit(1);"),
     probe: async () => ({ state: "down", detail: "nothing is answering" }),
   }));
   const startedAt = Date.now();
@@ -282,7 +302,7 @@ test("up stops waiting when a started program exits", async () => {
 test("status probes and changes nothing, so it claims no action", async () => {
   const { path, options } = await project(() => ({
     id: "example",
-    start: { command: "sh", args: ["-c", "exit 1"] },
+    start: nodeProgram("process.exit(1);"),
     probe: async () => ({ state: "down", detail: "nothing is answering" }),
   }));
   const result = await reportManagedPrograms(path, options);
