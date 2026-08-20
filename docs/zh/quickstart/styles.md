@@ -59,7 +59,7 @@ film.vertical {
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>
 ```
 
 ## Caption Fine
@@ -429,5 +429,5 @@ Caption Recipe 不再重复家族、字重或字形。CJK 与 Emoji 即使由多
 <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
 
 <space:Canvas id="vertical" width="720" height="1280"/>
-<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>
 ```

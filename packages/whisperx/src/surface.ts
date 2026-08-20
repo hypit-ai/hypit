@@ -41,10 +41,7 @@ export const decodeWhisperXSemanticTakeSurface: StructuredSurfaceHandler = ({ el
       id,
       fragment: whisperXSemanticTakeFragment.id,
       inputs: { narrative: narrative.ref, segment: segment.ref, media: media.ref },
-      outputs: {
-        evidence: `${id}.evidence`,
-        take: `${id}.take`,
-      },
+      outputs: { take: `${id}.take` },
       range: element.range,
     }],
     fragments: [whisperXSemanticTakeFragment],

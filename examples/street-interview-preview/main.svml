@@ -5,7 +5,7 @@
   <import as="wording" from="@hypit/text@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
-  <import as="speech" from="@hypit/speech-spine@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="media-track" from="@hypit/media-track@1"/>
   <import as="caption" from="@hypit/caption@1"/>
@@ -85,13 +85,13 @@
   <whisperx:SemanticTake id="rainbow-semantic" narrative={story} segment={story.segment.rainbow} media={rainbow-media.media}/>
   <whisperx:SemanticTake id="payment-semantic" narrative={story} segment={story.segment.payment} media={payment-media.media}/>
 
-  <speech:Spine id="speech" clock={clock}
+  <speech:Track id="speech"
     visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
     <speech:Take source={hook-semantic.take}/>
     <speech:Take source={price-semantic.take}/>
     <speech:Take source={rainbow-semantic.take}/>
     <speech:Take source={payment-semantic.take}/>
-  </speech:Spine>
+  </speech:Track>
 
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
   <caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
@@ -100,12 +100,12 @@
     model="gemini-2.5-flash"/>
   <caption-fine:Track id="captions" display={story.caption}
     correspondence={story.caption.correspondence}
-    map={speech.semanticMap} space={speech.space}
+    semantic={speech.semantic}
     plan={cue-plan.plan} program={caption-program}/>
 
   <!-- Three cutaways on one Track. Their Selections do not overlap, so they
        share a single timeline row the way an editor would lay them out. -->
-  <media-track:Track id="cutaways" map={speech.semanticMap} space={speech.space} canvas={vertical}>
+  <media-track:Track id="cutaways" semantic={speech.semantic} canvas={vertical}>
     <media-track:Item id="bags" media={cutaway-bags-media.media} during={story.selection.bags}
       frame={full} appearance={recipes.media.cutaway} motion={recipes.motion.cut}/>
     <media-track:Item id="fee" media={cutaway-fee-media.media} during={story.selection.fee}
@@ -114,11 +114,11 @@
       frame={full} appearance={recipes.media.cutaway} motion={recipes.motion.drop}/>
   </media-track:Track>
 
-  <film:Film id="main" canvas={vertical} space={speech.space} appearance={recipes.film.vertical}>
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>
-    <film:Track source={speech.audioTrack}/>
+    <film:Track source={speech.audio}/>
     <film:Track source={cutaways.visual}/>
     <film:Track source={captions.track}/>
   </film:Film>
-  <render:Video id="final" composition={main.composition} space={speech.space}/>
+  <render:Video id="final" composition={main.composition} semantic={speech.semantic}/>
 </svml>

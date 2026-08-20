@@ -2,9 +2,8 @@ import { readFile } from "node:fs/promises";
 
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
-import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
-import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
 import { temporalDependency } from "@hypit/temporal";
 
@@ -76,7 +75,7 @@ export const screenOverlayHeaderSchema: ValueSchema = object({ id: { schema: str
 export const screenOverlayItemSpecSchema: ValueSchema = itemSpec;
 export const screenOverlaySetSchema: ValueSchema = object({ items: { schema: { kind: "array", items: item } } });
 export const screenOverlayProgramSchema: ValueSchema = object({ id: { schema: string }, items: { schema: { kind: "array", minItems: 1, items: item } } });
-const appendInputs = [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }, { name: "space", type: programSpaceTypes.programSpace }, { name: "spec", type: screenOverlayTypes.itemSpec }] as const;
+const appendInputs = [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }, { name: "semantic", type: semanticTrackTypes.track }, { name: "spec", type: screenOverlayTypes.itemSpec }] as const;
 
 const itemAttributes = [
   { name: "id", kind: "identifier", required: false,
@@ -97,8 +96,6 @@ const itemAttributes = [
     summary: "Binds explicit `start` and `end` timing to a Selection." },
   { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment],
     summary: "Binds explicit `start` and `end` timing to a Moment." },
-  { name: "map", kind: "reference", required: false, accepts: [semanticMapTypes.complete],
-    summary: "Chooses the semantic map the bound Selection or Moment is located through." },
   { name: "occurrences", kind: "literal", required: false, values: ["one", "each"],
     summary: "Decides whether the item is painted once or at every occurrence of its Selection or Moment; defaults to `one`." },
 ] as const;
@@ -114,8 +111,8 @@ export const screenOverlayMarkupSurfaces = [
           summary: "Names this overlay so its Program and Track can be referenced elsewhere in the Source." },
         { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas],
           summary: "Chooses the Canvas every item is painted across." },
-        { name: "space", kind: "reference", required: true, accepts: [programSpaceTypes.programSpace],
-          summary: "Chooses the ProgramSpace the overlay is timed against." },
+        { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
+          summary: "Chooses the SemanticTrack that owns the frame domain and resolves temporal bindings." },
       ],
       children: [
         { tag: "Flash", cardinality: "many",
@@ -298,17 +295,17 @@ export const screenOverlayMarkupSurfaces = [
         { name: "track", type: compositionTypes.visualTrack,
           summary: "The rendered overlay, an ordinary peer VisualTrack." },
       ],
-      example: `<screen:Track id="effects" space={speech.space} canvas={vertical}>
-  <screen:Flash during={story.selection.overlay} map={timing.map} z="80"
+      example: `<screen:Track id="effects" semantic={speech.semantic} canvas={vertical}>
+  <screen:Flash during={story.selection.overlay} z="80"
     color="#ffffff" intensity="0.6" attack="2" hold="2" decay="6"/>
 </screen:Track>`,
       notes: [
         "The overlay requires at least one component child, and a component child is empty.",
         "A component child writes exactly one temporal form, `during`, `at`, or `start` with `end`; none of them or more than one is refused.",
-        "`during` takes the literal `program` for the whole programme, or a Selection reference, which also requires `map`.",
-        "`at` requires `map` and `for`.",
+        "`during` takes the literal `program` for the whole programme, or a Selection reference.",
+        "`at` requires `for`.",
         "`start` and `end` each take `program.start`, `program.end`, `selection.start`, `selection.end` or `moment.cue` with an optional `+` or `-` offset, or a bare duration read as an absolute point.",
-        "Explicit `start` and `end` timing binds a Selection through `selection` or a Moment through `moment`, never both, and either one requires `map`; `map` without a temporal source is refused.",
+        "Explicit `start` and `end` timing binds a Selection through `selection` or a Moment through `moment`, never both.",
         "A duration is written as an integral `f` or `ms` count, or as an `s` count that may carry a decimal fraction.",
       ],
     } },
@@ -317,7 +314,7 @@ export const screenOverlayMarkupSurfaces = [
 
 export const screenOverlayManifest: ModuleManifest = {
   format: "hypit.module@1", name: screenOverlayModuleRef.name, version: screenOverlayModuleRef.version,
-  dependencies: [narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, compositionDependency],
+  dependencies: [narrativeDependency, semanticTrackDependency, spatialDependency, temporalDependency, compositionDependency],
   types: [
     { name: screenOverlayTypes.header.name },
     { name: screenOverlayTypes.itemSpec.name },
@@ -327,10 +324,10 @@ export const screenOverlayManifest: ModuleManifest = {
   producers: [
     { name: screenOverlayProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [] },
     { name: screenOverlayProducers.appendProgram.name, inputs: [...appendInputs], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [] },
-    { name: screenOverlayProducers.appendSelection.name, inputs: [...appendInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [] },
-    { name: screenOverlayProducers.appendMoment.name, inputs: [...appendInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [] },
+    { name: screenOverlayProducers.appendSelection.name, inputs: [...appendInputs, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [] },
+    { name: screenOverlayProducers.appendMoment.name, inputs: [...appendInputs, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: screenOverlayTypes.set }], needs: [] },
     { name: screenOverlayProducers.finalize.name, inputs: [{ name: "set", type: screenOverlayTypes.set }, { name: "header", type: screenOverlayTypes.header }], outputs: [{ name: "program", type: screenOverlayTypes.program }], needs: [] },
-    { name: screenOverlayProducers.render.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }, { name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: screenOverlayTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+    { name: screenOverlayProducers.render.name, inputs: [{ name: "canvas", type: spatialTypes.canvas }, { name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: screenOverlayTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
   ],
 };
 export const screenOverlayDependency = { module: screenOverlayModuleRef } as const;

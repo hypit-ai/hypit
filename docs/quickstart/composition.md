@@ -22,9 +22,9 @@ and layers them by stacking order.
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>
   <film:Track source={speech.visual}/>
-  <film:Track source={speech.audioTrack}/>
+  <film:Track source={speech.audio}/>
   <film:Track source={captions.track}/>
   <film:Track source={product-broll.visual}/>
   <film:Track source={titles.track}/>
@@ -35,7 +35,7 @@ and layers them by stacking order.
 |---|---|---|
 | `id` | yes | Unique identifier |
 | `canvas` | yes | Explicit CanvasSpace shared with Track layout |
-| `space` | yes | ProgramSpace from `speech:Spine` — defines duration and frame rate |
+| `space` | yes | ProgramSpace from `speech:Track` — defines duration and frame rate |
 | `appearance` | yes | SVS Film Recipe — the canvas clear color |
 
 ### film:Track
@@ -50,8 +50,8 @@ Common Track sources:
 
 | Source | Type | From |
 |---|---|---|
-| `{speech.visual}` | VisualTrack | `speech:Spine` — sparse same-source speech visuals |
-| `{speech.audioTrack}` | AudioTrack | `speech:Spine` — synchronized audio |
+| `{speech.visual}` | VisualTrack | `speech:Track` — sparse same-source speech visuals |
+| `{speech.audio}` | AudioTrack | `speech:Track` — synchronized audio |
 | `{captions.track}` | VisualTrack | a Caption Style-family Track — timed captions |
 | `{cards.visual}` | VisualTrack | `media-track:Track` — media overlays or B-roll |
 | `{titles.track}` | VisualTrack | `text:Track` — text overlays |
@@ -82,14 +82,14 @@ absolute stacking key, and paints them onto one canvas.
 Compiles the Composition into a finished video via the HyperFrames renderer.
 
 ```svml
-<render:Video id="final" composition={main.composition} space={speech.space}/>
+<render:Video id="final" composition={main.composition} semantic={speech.semantic}/>
 ```
 
 | Attribute | Required | Description |
 |---|---|---|
 | `id` | yes | Unique identifier |
 | `composition` | yes | Composition from `film:Film` |
-| `space` | yes | ProgramSpace from `speech:Spine` |
+| `space` | yes | ProgramSpace from `speech:Track` |
 
 The renderer:
 
@@ -118,7 +118,8 @@ The complete data flow from Script to rendered video. This example is based on
   <import as="wording" from="@hypit/text@1"/>
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
-  <import as="speech" from="@hypit/speech-spine@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="caption" from="@hypit/caption@1"/>
   <import as="caption-fine" from="@hypit/caption-fine@1"/>
@@ -127,6 +128,7 @@ The complete data flow from Script to rendered video. This example is based on
   <import as="media-track" from="@hypit/media-track@1"/>
   <import as="text" from="@hypit/typography-track@1"/>
   <import as="space" from="@hypit/spatial@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
@@ -158,6 +160,7 @@ The complete data flow from Script to rendered video. This example is based on
   </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
+  <program:Clock id="clock" frame-rate="30"/>
   <space:Frame id="speech-frame" within={vertical}
     left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="title-frame" within={vertical}
@@ -165,12 +168,17 @@ The complete data flow from Script to rendered video. This example is based on
   <space:Frame id="card-frame" within={vertical}
     left="10%" top="20%" right="90%" bottom="70%"/>
 
-  <!-- 3. Timing: assemble spine and align words -->
-  <speech:Spine id="speech" frame-rate="30"
+  <!-- 3. Timing: normalize and align the Segment before assembly -->
+  <pipeline:Normalize id="take-media" source={take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="motion-media" source={motion.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <whisperx:SemanticTake id="opening-semantic" narrative={story}
+    segment={story.segment.opening} media={take-media.media}/>
+  <speech:Track id="speech"
     visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
-    <speech:Take video={take.video} segment={story.segment.opening}/>
-  </speech:Spine>
-  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+    <speech:Take source={opening-semantic.take}/>
+  </speech:Track>
 
   <!-- 4. Tracks: captions, Media, text -->
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
@@ -180,26 +188,24 @@ The complete data flow from Script to rendered video. This example is based on
     default={base-caption}/>
   <caption-ai:Planner id="cue-plan" display={story.caption}
     program={caption-program} model="gemini-2.5-flash"/>
-  <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
-    space={speech.space} plan={cue-plan.plan} program={caption-program}/>
+  <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} semantic={speech.semantic} plan={cue-plan.plan} program={caption-program}/>
 
-  <media-track:Track id="cards" map={timing.map}
-    space={speech.space} canvas={vertical}>
-    <media-track:Item video={motion.video} during={story.selection.demo}
+  <media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Item media={motion-media.media} during={story.selection.demo}
       frame={card-frame} appearance={studio.media.card} motion={studio.motion.card}/>
   </media-track:Track>
   <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
-  <text:Track id="titles" space={speech.space}>
+  <text:Track id="titles" semantic={speech.semantic}>
     <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
       MEANING
     </text:Area>
   </text:Track>
 
   <!-- 5. Film: compose all tracks -->
-  <film:Film id="main" canvas={vertical} space={speech.space}
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic}
     appearance={studio.film.vertical}>
     <film:Track source={speech.visual}/>
-    <film:Track source={speech.audioTrack}/>
+    <film:Track source={speech.audio}/>
     <film:Track source={cards.visual}/>
     <film:Track source={captions.track}/>
     <film:Track source={titles.track}/>
@@ -207,7 +213,7 @@ The complete data flow from Script to rendered video. This example is based on
 
   <!-- 6. Render: compile to MP4 -->
   <render:Video id="final" composition={main.composition}
-    space={speech.space}/>
+    semantic={speech.semantic}/>
 </svml>
 ```
 

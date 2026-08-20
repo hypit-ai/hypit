@@ -1,8 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
-import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
-import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import {
   compositionDependency,
   compositionTypes,
@@ -445,10 +444,8 @@ export const typographyTrackMarkupSurfaces = [
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this Track and prefixes the identity of every item spec it seals." },
-          { name: "space", kind: "reference", required: true, accepts: [programSpaceTypes.programSpace],
-            summary: "Fixes the frame domain every item window is projected into." },
-          { name: "map", kind: "reference", required: false, accepts: [semanticMapTypes.complete],
-            summary: "Chooses the SemanticMap that turns the Selection or Moment an item binds into exact time." },
+          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
+            summary: "Chooses the SemanticTrack that owns the frame domain and resolves every item window." },
         ],
         children: [
           { tag: "Point", cardinality: "many",
@@ -515,7 +512,7 @@ export const typographyTrackMarkupSurfaces = [
           { name: "track", type: compositionTypes.visualTrack,
             summary: "The rendered text, an ordinary peer VisualTrack." },
         ],
-        example: `<text:Track id="titles" space={speech.space}>
+        example: `<text:Track id="titles" semantic={speech.semantic}>
   <text:Area id="title" placement={title-frame} style={title-style} during="program">
     EDIT MEANING, NOT TIMELINES
   </text:Area>
@@ -524,7 +521,7 @@ export const typographyTrackMarkupSurfaces = [
   </text:Area>
 </text:Track>`,
         notes: [
-          "A Track requires at least one `<Point>`, `<Area>` or `<Path>`, accepts no text content of its own, and refuses `map` when no item binds a Selection or a Moment.",
+          "A Track requires at least one `<Point>`, `<Area>` or `<Path>` and accepts no text content of its own.",
           "An item states exactly one window form: `during`, `at` with `for`, or `start` with `end`; `selection` and `moment` bind a start/end window and cannot be written together.",
           "A point expression is `program.start`, `program.end`, `selection.start`, `selection.end` or `moment.cue`, each optionally offset by `+` or `-` and a duration, or a bare duration read as an absolute position.",
           "An item written without `content` owns its own document: direct text becomes one paragraph, and `<P>` children carry rich runs instead; a document mixes neither `<P>` children with direct text nor direct text with nested elements.",
@@ -540,8 +537,8 @@ export const typographyTrackMarkupSurfaces = [
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this Mask, under which its VisualTrack is published." },
-          { name: "space", kind: "reference", required: true, accepts: [programSpaceTypes.programSpace],
-            summary: "Fixes the frame domain the masked Track is rendered into." },
+          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
+            summary: "Chooses the SemanticTrack whose frame domain the masked Track is rendered into." },
           { name: "text", kind: "reference", required: true, accepts: [typographyTrackTypes.program],
             summary: "Chooses the authored Text Program whose items give the mask its shape and timing." },
           { name: "material", kind: "reference", required: true, accepts: [mediaTypes.compositableSurface],
@@ -555,7 +552,7 @@ export const typographyTrackMarkupSurfaces = [
           { name: "track", type: compositionTypes.visualTrack,
             summary: "The masked picture, an ordinary peer VisualTrack." },
         ],
-        example: `<text:Mask id="masked-titles" space={speech.space} text={mask-shape.program} material={material}/>`,
+        example: `<text:Mask id="masked-titles" semantic={speech.semantic} text={mask-shape.program} material={material}/>`,
         notes: [
           "A Mask is written empty and accepts no children.",
           "The material must be a still Surface; a timed material is refused and materializes through an independent package.",
@@ -570,7 +567,7 @@ export const typographyTrackManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: typographyTrackModuleRef.name,
   version: typographyTrackModuleRef.version,
-  dependencies: [programSpaceDependency, narrativeDependency, semanticMapDependency, spatialDependency, mediaDependency, compositionDependency, textDependency],
+  dependencies: [narrativeDependency, semanticTrackDependency, spatialDependency, mediaDependency, compositionDependency, textDependency],
   types: [
     { name: typographyTrackTypes.style.name },
     { name: typographyTrackTypes.motion.name },
@@ -589,11 +586,11 @@ export const typographyTrackManifest: ModuleManifest = {
     { name: typographyTrackProducers.bindArea.name, inputs: [{ name: "frame", type: spatialTypes.frame }], outputs: [{ name: "placement", type: typographyTrackTypes.placement }], needs: [] },
     { name: typographyTrackProducers.bindPath.name, inputs: [{ name: "path", type: spatialTypes.path }], outputs: [{ name: "placement", type: typographyTrackTypes.placement }], needs: [] },
     { name: typographyTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
-    { name: typographyTrackProducers.appendProgram.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "space", type: programSpaceTypes.programSpace }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
-    { name: typographyTrackProducers.appendSelection.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }, { name: "space", type: programSpaceTypes.programSpace }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
-    { name: typographyTrackProducers.appendMoment.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }, { name: "space", type: programSpaceTypes.programSpace }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
+    { name: typographyTrackProducers.appendProgram.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "semantic", type: semanticTrackTypes.track }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
+    { name: typographyTrackProducers.appendSelection.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "semantic", type: semanticTrackTypes.track }, { name: "selection", type: narrativeTypes.selection }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
+    { name: typographyTrackProducers.appendMoment.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "semantic", type: semanticTrackTypes.track }, { name: "moment", type: narrativeTypes.moment }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
     { name: typographyTrackProducers.finalize.name, inputs: [{ name: "header", type: typographyTrackTypes.header }, { name: "set", type: typographyTrackTypes.set }], outputs: [{ name: "program", type: typographyTrackTypes.program }], needs: [] },
-    { name: typographyTrackProducers.render.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: typographyTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
-    { name: typographyTrackProducers.renderMask.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: typographyTrackTypes.program }, { name: "material", type: mediaTypes.compositableSurface }, { name: "spec", type: typographyTrackTypes.maskSpec }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+    { name: typographyTrackProducers.render.name, inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: typographyTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+    { name: typographyTrackProducers.renderMask.name, inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: typographyTrackTypes.program }, { name: "material", type: mediaTypes.compositableSurface }, { name: "spec", type: typographyTrackTypes.maskSpec }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
   ],
 };

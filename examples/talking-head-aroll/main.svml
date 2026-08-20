@@ -7,7 +7,7 @@
   <import as="estimate" from="@hypit/estimate@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
-  <import as="speech" from="@hypit/speech-spine@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="caption" from="@hypit/caption@1"/>
   <import as="caption-fine" from="@hypit/caption-fine@1"/>
@@ -171,13 +171,13 @@
   <whisperx:SemanticTake id="evidence-semantic" narrative={story} segment={story.segment.evidence} media={evidence-media.media}/>
   <whisperx:SemanticTake id="payoff-semantic" narrative={story} segment={story.segment.payoff} media={payoff-media.media}/>
 
-  <speech:Spine id="speech" clock={clock}
+  <speech:Track id="speech"
     visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
     <speech:Take source={hook-semantic.take}/>
     <speech:Take source={meeting-semantic.take}/>
     <speech:Take source={evidence-semantic.take}/>
     <speech:Take source={payoff-semantic.take}/>
-  </speech:Spine>
+  </speech:Track>
 
   <!-- Gemini sees display words and these requirements, never audio or timing. -->
   <fonts:Stack id="caption-font" family="inter" weight="800" style="normal"/>
@@ -196,17 +196,16 @@
     id="captions"
     display={story.caption}
     correspondence={story.caption.correspondence}
-    map={speech.semanticMap}
-    space={speech.space}
+    semantic={speech.semantic}
     program={caption-program}
     plan={caption-plan.plan}
   />
 
-  <film:Film id="main" canvas={vertical} space={speech.space} appearance={recipes.film.vertical}>
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>
-    <film:Track source={speech.audioTrack}/>
+    <film:Track source={speech.audio}/>
     <film:Track source={captions.track}/>
   </film:Film>
 
-  <render:Video id="final" composition={main.composition} space={speech.space}/>
+  <render:Video id="final" composition={main.composition} semantic={speech.semantic}/>
 </svml>

@@ -19,7 +19,7 @@
     "@hypit/narrative": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/semantic-map": "workspace:*",
+    "@hypit/semantic-track": "workspace:*",
     "@hypit/svs": "workspace:*",
     "@hypit/markup": "workspace:*"
   },

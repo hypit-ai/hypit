@@ -59,7 +59,7 @@ npm link
 
 ## 2. 编译示例
 
-仓库里的示例包含 Script、两次视频生成需求、Speech Spine、WhisperX 对齐、字幕、Media Track、
+仓库里的示例包含 Script、两次视频生成需求、Speech Track、WhisperX 对齐、字幕、Media Track、
 文字、Film 与最终渲染。
 
 ```bash
@@ -187,7 +187,7 @@ Endpoint 配置，但不会执行作者图。
 | [Script](./quickstart/script.md) | Segment、Role Cue、Dual Text、Selection、Moment 与文字投影 |
 | [SVS 样式表](./quickstart/styles.md) | 字幕、Media、文字与 Film 的可复用 Recipe |
 | [媒体与生成](./quickstart/generation.md) | 图片、音频、Prompt Text 与显式模型组件 |
-| [时序与装配](./quickstart/timing.md) | Speech Spine、WhisperX、ProgramSpace 与 SemanticMap |
+| [时序与装配](./quickstart/timing.md) | Speech Track、WhisperX、ProgramSpace 与 SemanticMap |
 | [Tracks](./quickstart/tracks.md) | Caption、Media、Typography 与 Audio Track |
 | [Film 与渲染](./quickstart/composition.md) | 平级 Track 合成与显式渲染 |
 | [Run Source 与 Builds](./quickstart/run.md) | Targets、复用、Runtime Profile、Build 与取回结果 |

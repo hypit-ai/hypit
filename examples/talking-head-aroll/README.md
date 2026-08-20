@@ -14,9 +14,9 @@ alternate, base.
 The data-only `seedance-kits/speaker` template and project SVS Recipe feed generic Text rendering.
 Each resulting Text output connects to an exact `seedance:ReferenceVideo` beside explicit image,
 audio and duration edges; prompt assembly is therefore part of the graph, not hidden Speaker logic.
-The four generated videos are normalized and concatenated into one Speech Spine. One canonical
-audio projection goes through WhisperX, direct Script alignment produces the complete SemanticMap,
-Gemini plans Cue cuts without seeing timing, and the resulting Caption
+The four generated videos are normalized and independently aligned into SemanticTakes, then
+concatenated by one Speech Track into a continuous SemanticTrack. Gemini plans Cue cuts without
+seeing timing, and the resulting Caption
 VisualTrack joins the peer speech visual/audio Tracks in Film. HyperFrames renders and muxes the
 single `final.video` target.
 

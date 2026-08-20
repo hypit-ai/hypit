@@ -44,7 +44,8 @@ edges are inspected. A PIP is not an ordinary overlay and is not covered by this
 
 ## Bind overlays to story time
 
-- Use `during={story.selection.NAME}` for a semantic range and pass `{timing.map}` to the Track.
+- Pass `semantic={speech.semantic}` to the Track and use `during={story.selection.NAME}` for a
+  semantic range.
 - Use `at={story.moment.NAME}` with an explicit `for` duration for a point event.
 - Use `during="program"` for persistent overlays and explicit `start`/`end` expressions for deliberate
   author-time placement.

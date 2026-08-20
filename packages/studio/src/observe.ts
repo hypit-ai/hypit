@@ -18,22 +18,31 @@ import type { Range } from "./shared.js";
 /** One authored element, where it was written, and what it produced. */
 export type Placement = {
   readonly tag: string;
+  /** Resolved package owner; authored aliases are presentation, not identity. */
+  readonly module: ModuleRef;
+  /** Canonical Surface declaration name, independent of the alias used in Source. */
+  readonly surface: string;
   readonly id?: string;
   readonly range: Range;
   /** Records this element sealed, so a value can be traced back to its tag. */
   readonly records: readonly string[];
   /** Graph outputs this element declared, named as the author would write them. */
   readonly outputs: readonly string[];
+  /** Exact Surface output port to graph-output mapping. */
+  readonly outputPorts: readonly { readonly name: string; readonly ref: string }[];
   /** Children the author wrote inside it, so a Clip can point at its own tag. */
   readonly children: readonly {
     readonly tag: string;
     readonly id?: string;
     readonly range: Range;
+    readonly attributes: Readonly<Record<string, string>>;
     /** What the child itself points at, which is how it is placed. */
     readonly references: readonly string[];
+    readonly referenceAttributes: Readonly<Record<string, string>>;
   }[];
   /** What the author wrote on it: plain text as written, references by path. */
   readonly attributes: Readonly<Record<string, string>>;
+  readonly referenceAttributes: Readonly<Record<string, string>>;
   /** Paths this element and its children reference, in the order written. */
   readonly references: readonly string[];
 };
@@ -68,11 +77,19 @@ function written(element: StructuredElement): Record<string, string> {
 
 /** Every whole-value reference an element points at, in written order. */
 function referenced(element: StructuredElement): string[] {
-  return Object.values(element.attributes)
-    .filter((value): value is { kind: "reference"; path: string } =>
-      typeof value === "object" && value !== null
-      && (value as { kind?: string }).kind === "reference")
-    .map((value) => value.path);
+  return Object.values(referenceAttributes(element));
+}
+
+/** Whole-value references retained by attribute name for reversible interpretation. */
+function referenceAttributes(element: StructuredElement): Record<string, string> {
+  const held: Record<string, string> = {};
+  for (const [name, value] of Object.entries(element.attributes)) {
+    if (typeof value === "object" && value !== null
+      && (value as { kind?: string }).kind === "reference") {
+      held[name] = (value as { path: string }).path;
+    }
+  }
+  return held;
 }
 
 export function createObserver(
@@ -85,7 +102,7 @@ export function createObserver(
   // A Frontend may reach a Surface by name or by walking a module's whole list,
   // so both ways in are wrapped: an unwatched Surface decodes silently and the
   // preview loses the tag that placed the picture.
-  const watch = (found: RegisteredSurface | undefined): RegisteredSurface | undefined => {
+  const watch = (found: RegisteredSurface | undefined, module: ModuleRef): RegisteredSurface | undefined => {
       // A raw Surface parses its own body and reports its own positions, so
       // there is nothing here to recover.
       if (found === undefined) return found;
@@ -108,11 +125,16 @@ export function createObserver(
           const id = input.element.attributes.id;
           placements.push({
             tag: input.element.name,
+            module: { ...module },
+            surface: found.surface,
             ...(typeof id === "string" ? { id } : {}),
             range: { start: input.element.range.start, end: input.element.range.end },
             records: output.records.map((record) => record.id),
             outputs: output.components.flatMap((component) => Object.values(component.outputs)),
+            outputPorts: output.components.flatMap((component) =>
+              Object.entries(component.outputs).map(([name, ref]) => ({ name, ref }))),
             attributes: written(input.element),
+            referenceAttributes: referenceAttributes(input.element),
             references: [
               ...referenced(input.element),
               ...input.element.children
@@ -127,7 +149,9 @@ export function createObserver(
                   tag: child.name,
                   ...(typeof childId === "string" ? { id: childId } : {}),
                   range: { start: child.range.start, end: child.range.end },
+                  attributes: written(child),
                   references: referenced(child),
+                  referenceAttributes: referenceAttributes(child),
                 };
               }),
           });
@@ -138,9 +162,9 @@ export function createObserver(
 
   const watchedSurfaces: MarkupSurfaceRegistryLike = {
     surfaces(module) {
-      return surfaces.surfaces(module).map((found) => watch(found)!) as readonly RegisteredSurface[];
+      return surfaces.surfaces(module).map((found) => watch(found, module)!) as readonly RegisteredSurface[];
     },
-    resolve(module, surface) { return watch(surfaces.resolve(module, surface)); },
+    resolve(module, surface) { return watch(surfaces.resolve(module, surface), module); },
   };
 
   return {

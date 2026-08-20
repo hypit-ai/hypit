@@ -17,7 +17,7 @@ The author surface keeps the three independent concerns visible:
 
 <comment:Style id="social-comment" recipe={styles.comment} font={fonts.ui}/>
 
-<comment:Track id="comments" canvas={video.canvas} space={video.space}>
+<comment:Track id="comments" canvas={video.canvas} semantic={speech.semantic}>
   <comment:Sticker
     id="opening-comment"
     comment={comment-copy}

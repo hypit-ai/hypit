@@ -1,12 +1,13 @@
+import { watch } from "node:fs";
+import type { FSWatcher } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
 
 import type { Plugin, ViteDevServer } from "vite";
 
 import type { StudioArchive } from "./archive.js";
 import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
-import type { RunPlan } from "./run.js";
+import { loadStudioRun } from "./run.js";
 import { readStudioSession } from "./session.js";
 import type { Range, StudioFailure, StudioSnapshot } from "./shared.js";
 
@@ -14,7 +15,6 @@ export type StudioPluginOptions = {
   readonly source: string;
   readonly runPath: string;
   readonly domain: StudioDomain;
-  readonly run: RunPlan;
   readonly archive?: StudioArchive;
 };
 
@@ -44,22 +44,48 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   let revision = 0;
   let server: ViteDevServer | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let requestedRevision = 0;
+  let currentSource = options.source;
+  const watched = new Map<string, FSWatcher>();
 
-  const publish = async (): Promise<void> => {
-    revision += 1;
+  const watchSource = (path: string): void => {
+    if (watched.has(path)) return;
     try {
-      const result = await readStudioSession({
-        source: options.source,
+      watched.set(path, watch(path, () => schedule()));
+    } catch {
+      // Some Hosts may report virtual Source ids. They are still recompiled
+      // whenever a real Source revision is scheduled; they simply emit no file event.
+    }
+  };
+
+  const publish = async (attempt: number): Promise<void> => {
+    try {
+      // SVML and SVRun form one Studio source of truth. Recompile both for
+      // every revision so a new Author graph is never executed through an old
+      // Run plan.
+      const run = await loadStudioRun({
+        run: options.runPath,
         domain: options.domain,
-        run: options.run,
         ...(options.archive === undefined ? {} : { archive: options.archive }),
-        revision,
       });
+      currentSource = run.authorSource;
+      watchSource(options.runPath);
+      for (const unit of run.source.compiled.closure.units) watchSource(unit.id);
+      const result = await readStudioSession({
+        domain: options.domain,
+        run,
+        ...(options.archive === undefined ? {} : { archive: options.archive }),
+        revision: attempt,
+      });
+      if (attempt !== requestedRevision) return;
+      revision = attempt;
       snapshot = result.snapshot;
       material = result.material;
       failure = undefined;
       server?.ws.send({ type: "custom", event: "studio:snapshot", data: snapshot });
     } catch (error) {
+      if (attempt !== requestedRevision) return;
+      revision = attempt;
       const range = rangeOf(error);
       failure = {
         revision,
@@ -71,19 +97,17 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   };
 
   const schedule = (): void => {
+    const attempt = ++requestedRevision;
     if (timer !== undefined) clearTimeout(timer);
-    timer = setTimeout(() => void publish(), 80);
+    timer = setTimeout(() => void publish(attempt), 80);
   };
 
   return {
     name: "hypit-studio",
     configureServer(value) {
       server = value;
-      value.watcher.add([options.source, options.runPath]);
-      value.watcher.on("change", (path) => {
-        const changed = resolve(path);
-        if (changed === options.source || changed === options.runPath || path.endsWith(".svs")) schedule();
-      });
+      watchSource(options.runPath);
+      watchSource(currentSource);
       value.middlewares.use((request, response, next) => {
         const url = new URL(request.url ?? "/", "http://studio.hypit.local");
         if (request.method === "PUT" && url.pathname === "/__studio/source") {
@@ -103,8 +127,8 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
                 json(response, 409, { error: "The Source changed outside Studio." });
                 return;
               }
-              await writeFile(options.source, body.text, "utf8");
-              await publish();
+              await writeFile(currentSource, body.text, "utf8");
+              schedule();
               response.statusCode = 202;
               response.end();
             } catch (error) {
@@ -119,9 +143,17 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         }
         if (url.pathname === "/__studio/session") {
           void (async () => {
-            if (snapshot === undefined && failure === undefined) await publish();
-            if (snapshot !== undefined) json(response, 200, snapshot);
-            else json(response, 500, failure);
+            if (snapshot === undefined && failure === undefined) {
+              const attempt = ++requestedRevision;
+              await publish(attempt);
+            }
+            if (failure !== undefined && (snapshot === undefined || failure.revision > snapshot.revision)) {
+              json(response, 500, failure);
+            } else if (snapshot !== undefined) {
+              json(response, 200, snapshot);
+            } else {
+              json(response, 500, failure);
+            }
           })();
           return;
         }
@@ -144,6 +176,10 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         next();
       });
     },
-    async closeBundle() { await options.archive?.close(); },
+    async closeBundle() {
+      for (const watcher of watched.values()) watcher.close();
+      watched.clear();
+      await options.archive?.close();
+    },
   };
 }

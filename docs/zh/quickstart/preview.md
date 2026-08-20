@@ -110,4 +110,4 @@ Segment 包着 Selection，Selection 还能再包 Selection。每一层有自己
 
 ## 声音
 
-HyperFrames 刻意只渲染无声画面：programme audio 是一条独立的 Track，由 media pipeline 在最后 mux 进去。但把 B-roll 对着语音安放，前提就是能听见那句话，所以走带播放时 Speech Spine 自己的素材允许发声。Cutaway 保持静音——除非显式声明要带音频，这和真实构建里的行为一致。喇叭按钮可以关掉。
+HyperFrames 刻意只渲染无声画面：programme audio 是一条独立的 Track，由 media pipeline 在最后 mux 进去。但把 B-roll 对着语音安放，前提就是能听见那句话，所以走带播放时 Speech Track 自己的素材允许发声。Cutaway 保持静音——除非显式声明要带音频，这和真实构建里的行为一致。喇叭按钮可以关掉。

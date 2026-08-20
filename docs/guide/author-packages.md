@@ -124,13 +124,13 @@ vocabulary: {
   ],
   children: [ /* accepted child elements */ ],
   ports: [ /* declared edges */ ],
-  example: "<mine:Widget id=\"first\" space={speech.space}/>",
+  example: "<mine:Widget id=\"first\"/>",
   notes: [ /* rules a reader would otherwise have to discover by failing */ ],
 }
 ```
 
 Declare a `preview` for every Surface whose result a reader needs to see to understand it. That is
-not only Surfaces producing a `VisualTrack`: `@hypit/speech-spine` declares one for a Spine because
+not only Surfaces producing a `VisualTrack`: `@hypit/speech-track` declares one for a Spine because
 its shape is easier to see than to describe. Skip it for a Surface with nothing to show, such as one
 that only assembles a request.
 
@@ -140,7 +140,7 @@ says what the element draws in every case; the preview shows one honest instance
 Study `packages/media-track/src/manifest.ts` for a complete vocabulary, and
 `packages/typography-track/`, `packages/caption-fine/`, `packages/deck-track/`,
 `packages/comment-sticker/`, `packages/screen-overlay/`, `packages/ranking/` and
-`packages/speech-spine/` for their `preview/` directories.
+`packages/speech-track/` for their `preview/` directories.
 
 ### Producing the preview image
 

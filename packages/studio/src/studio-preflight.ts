@@ -11,6 +11,7 @@ import {
   roleFor,
   traceFor,
   tracedRealizations,
+  tracedStudioRealizations,
   unique,
 } from "./studio-trace.js";
 import type { StudioProjectionRole, StudioTrace } from "./studio-trace.js";
@@ -116,35 +117,39 @@ export function inspectStudioRun(source: CompiledSource, base: RunPlan): StudioI
       ? [output.ref]
       : [];
   });
-  const speechSpines = source.observations.placements.filter((placement) =>
-    placement.tag.split(":").at(-1) === "Spine"
+  const speechTracks = source.observations.placements.filter((placement) =>
+    placement.outputs.some((ref) => outputFor(source, ref)?.type === "SemanticTrack")
     && placement.outputs.some((ref) => {
       const output = outputFor(source, ref);
       return output !== undefined && filmTrackRefs.includes(output.ref);
     })
   );
-  const semanticTakeRefs = unique(speechSpines.flatMap((placement) => [
+  const semanticTakeRefs = unique(speechTracks.flatMap((placement) => [
     ...placement.references,
     ...placement.children.flatMap((child) => child.references),
   ])).flatMap((ref) => outputFor(source, ref)?.type === "SemanticTake"
     ? [outputFor(source, ref)!.ref] : []);
-  const speechProjectionRefs = unique(speechSpines.flatMap((placement) => placement.outputs))
+  const speechProjectionRefs = unique(speechTracks.flatMap((placement) => placement.outputs))
     .flatMap((ref) => {
       const output = outputFor(source, ref);
       return output !== undefined
-        && (output.type === "CompleteSemanticMap" || output.type === "VisualTrack" || output.type === "AudioTrack")
+        && (output.type === "SemanticTrack" || output.type === "VisualTrack" || output.type === "AudioTrack")
         ? [output.ref] : [];
     });
-  if (semanticTakeRefs.length === 0) issues.push("Film has no traceable SemanticTake / Speech Spine chain");
+  if (semanticTakeRefs.length === 0) issues.push("Film has no traceable SemanticTake / Speech Track chain");
 
   const captionPlanRefs = unique(filmTrackRefs.flatMap((ref) =>
     tracedRealizations(source, ref).map((dependency) => dependency.ref)));
+
+  const adapterRealizationRefs = unique(filmTrackRefs.flatMap((ref) =>
+    tracedStudioRealizations(source, ref)));
 
   const projectionRefs = unique([
     ...filmTrackRefs,
     ...speechProjectionRefs,
     ...semanticTakeRefs,
     ...captionPlanRefs,
+    ...adapterRealizationRefs,
   ]);
   const projections: StudioProjection[] = [];
   const derived: Omit<StudioProjection, "candidatePolicy">[] = [];

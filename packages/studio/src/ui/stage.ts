@@ -97,9 +97,9 @@ export function createStage(store: Store): Stage {
   const canvas = element.querySelector<HTMLElement>("[data-canvas]")!;
 
   type SeekWindow = Window & {
-    __hypitSeekFrame?: (frame: number) => void;
-    __hypitPlayFrame?: (frame: number) => void;
-    __hypitSetMuted?: (muted: boolean) => void;
+    __hypitSeekFrame?: (frame: number) => Promise<boolean>;
+    __hypitPlayFrame?: (frame: number) => Promise<boolean>;
+    __hypitSetMuted?: (muted: boolean) => Promise<boolean>;
   };
   let state: State | undefined;
   let mounted = -1;
@@ -112,6 +112,14 @@ export function createStage(store: Store): Stage {
   // carries on from the frame the author asked for.
   let fromFrame = 0;
   let began = 0;
+  let placed = 0;
+
+  const seekPicture = (frame: number): void => {
+    const request = ++placed;
+    void (iframe.contentWindow as SeekWindow | null)?.__hypitSeekFrame?.(frame).then((current) => {
+      if (current && request === placed) overlay.refresh();
+    });
+  };
 
   const fps = (snapshot: StudioSnapshot): number =>
     snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
@@ -143,7 +151,7 @@ export function createStage(store: Store): Stage {
     raf = 0;
     // Settle the picture on the frame the transport stopped at.
     if (wasPlaying && state !== undefined && ready) {
-      (iframe.contentWindow as SeekWindow | null)?.__hypitSeekFrame?.(state.playhead.frame);
+      seekPicture(state.playhead.frame);
     }
   };
 
@@ -183,7 +191,7 @@ export function createStage(store: Store): Stage {
 
   iframe.addEventListener("load", () => {
     ready = true;
-    if (state !== undefined) (iframe.contentWindow as SeekWindow | null)?.__hypitSeekFrame?.(state.playhead.frame);
+    if (state !== undefined) seekPicture(state.playhead.frame);
     applyMuted();
     // The box could not be measured until now.
     overlay.refresh();
@@ -222,10 +230,10 @@ export function createStage(store: Store): Stage {
     if (!ready) return;
     const frame = (iframe.contentWindow as SeekWindow | null);
     if (playing) frame?.__hypitPlayFrame?.(value.playhead.frame);
-    else frame?.__hypitSeekFrame?.(value.playhead.frame);
+    else seekPicture(value.playhead.frame);
     // The overlay subscribed first, so it measured the picture as it was before
     // this seek. Redraw now that the picture has moved.
-    overlay.refresh();
+    if (playing) overlay.refresh();
   });
 
   return { element, toggle };

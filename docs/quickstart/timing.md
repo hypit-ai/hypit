@@ -1,219 +1,135 @@
 ---
 title: Timing & Assembly
-description: Speech Spine assembly and WhisperX alignment — connecting generated takes to a unified timeline.
+description: Per-take normalization and alignment, followed by SemanticTrack assembly.
 ---
 
 # Timing & Assembly
 
-After generation, individual takes must be concatenated into one continuous A/V coordinate space,
-and the spoken words must be measured against the actual audio to create a timing map. These two
-steps produce the **ProgramSpace** and **SemanticMap** that every downstream component depends on.
+Hypit's timing authority is a `SemanticTrack`. Build it in segment-sized pieces:
+
+1. normalize each accepted A/V take into one exact frame domain;
+2. align that normalized media with its authored Script Segment to create a self-contained `SemanticTake`;
+3. assemble the Semantic Takes in program order with `speech:Track`.
+
+There is no whole-program transcription pass after concatenation. Every Take is already semantic
+before it enters the Track.
 
 ```svml
-<import as="speech" from="@hypit/speech-spine@1"/>
+<import as="program" from="@hypit/program-space@1"/>
+<import as="pipeline" from="@hypit/media-pipeline@1"/>
 <import as="whisperx" from="@hypit/whisperx@1"/>
+<import as="speech" from="@hypit/speech-track@1"/>
 <import as="space" from="@hypit/spatial@1"/>
 <import as="studio" source="./studio.svs"/>
 ```
 
-## speech:Spine
+## Normalize each take
 
-Concatenates multiple takes into one ordered audio/visual coordinate space. The Spine defines the
-program order — the final sequence of Segments in the finished video.
+Normalization makes video, audio, duration and frame rate one explicit `SynchronizedMedia` fact.
+The Clock is authored once and shared by every Take that will enter the same SemanticTrack.
+
+```svml
+<program:Clock id="clock" frame-rate="30"/>
+
+<pipeline:Normalize id="opening-media" source={opening-video.video}
+  video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+<pipeline:Normalize id="answer-media" source={answer-video.video}
+  video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+```
+
+Normalization contains no Script meaning and performs no transcription. It only establishes the
+media facts that later semantic alignment can trust.
+
+## Create one SemanticTake per Segment
+
+`whisperx:SemanticTake` measures one normalized Take and aligns the evidence with exactly one
+authored Segment:
+
+```svml
+<whisperx:SemanticTake id="opening-semantic" narrative={story}
+  segment={story.segment.opening} media={opening-media.media}/>
+<whisperx:SemanticTake id="answer-semantic" narrative={story}
+  segment={story.segment.answer} media={answer-media.media}/>
+```
+
+Each output contains the normalized media, the Segment identity, every authored word's local frame
+window, and all of that Segment's structural anchors. There are two anchors for the Segment and two
+for each word. Acoustic evidence is an implementation input to this step; downstream components see
+the completed `SemanticTake`, not a second evidence-shaped timing structure.
+
+## Assemble the SemanticTrack
+
+`speech:Track` concatenates already-semantic Takes in document order and projects three aligned
+facets from the same items:
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<space:Frame id="speech-frame" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
-<speech:Spine id="speech" frame-rate="30"
-  visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
-  <speech:Take video={hook-take.video} segment={story.segment.hook}/>
-  <speech:Take video={meeting-take.video} segment={story.segment.meeting}/>
-  <speech:Take video={evidence-take.video} segment={story.segment.evidence}/>
-  <speech:Take video={payoff-take.video} segment={story.segment.payoff}/>
-</speech:Spine>
+<space:Frame id="speech-frame" within={vertical}
+  left="0%" top="0%" right="100%" bottom="100%"/>
+
+<speech:Track id="speech"
+  visual-frame={speech-frame}
+  visual-appearance={studio.speech.visual}
+  visual-z="0">
+  <speech:Take source={opening-semantic.take}/>
+  <speech:Take source={answer-semantic.take}/>
+</speech:Track>
 ```
 
-| Attribute | Required | Description |
+| Output | Type | Meaning |
 |---|---|---|
-| `id` | yes | Unique identifier |
-| `frame-rate` | yes | Program rate as an integer or rational, such as `30` or `30000/1001` |
-| `visual-frame` | yes | Explicit base SpatialFrame for same-source Take visuals |
-| `visual-appearance` | yes | SVS Recipe containing only spatial fit properties |
-| `visual-z` | yes | Base absolute stacking order for same-source Take visuals |
+| `{speech.semantic}` | SemanticTrack | Global semantic and frame-domain authority |
+| `{speech.visual}` | VisualTrack | Same-source pictures, aligned to the semantic items |
+| `{speech.audio}` | AudioTrack | Same-source sound, aligned to the semantic items |
 
-### speech:Take
+The three facets are projections of the same ordered Takes. They cannot drift independently.
+`SemanticTrack` derives global frames by prefix-summing the local Take lengths, and also supplies the
+program duration and frame domain required by Film and Render.
 
-Each `<speech:Take>` child binds one speech-bearing source to a Script Segment:
+## Consume semantic time
 
-| Attribute | Required | Description |
-|---|---|---|
-| `video` | exactly one | Generated/raw A/V Blob — for example `{take.video}` from Seedance |
-| `audio` | exactly one | Voice-only Blob; contributes time and master speech audio, but no visual |
-| `media` | exactly one | Already prepared `SynchronizedMedia`; bypasses automatic normalization |
-| `segment` | yes | Script Segment this take corresponds to — e.g. `{story.segment.hook}` |
-| `frame` | visual only | Override the Spine's `visual-frame` for this Take |
-| `appearance` | visual only | Override the Spine's `visual-appearance` for this Take |
-| `z` | visual only | Override the Spine's `visual-z` for this Take |
-
-`video`, `audio` and `media` are mutually exclusive. The normal AIGC path is `video={take.video}`. The
-Speech Surface expands that readable declaration into ordinary Media Pipeline Operations:
-inspect the container, select its primary moving video and default audio stream, then normalize
-both to the Spine's declared frame rate. A 30 fps source connected to a 60 fps Spine keeps its
-duration and is deterministically resampled to a 60 fps frame sequence; it is not played twice as
-fast. Use `media=` only when another graph branch has already produced the exact synchronized value
-you intend to assemble.
-
-The base is deliberately explicit rather than a hidden full-screen default. A visual Take inherits
-all three values unless it overrides them. An audio Take cannot declare visual overrides: while it
-is playing, `speech.visual` simply has no Present, so the Film background or peer Tracks remain
-visible.
-
-For voiceover timing, use an audio Take and supply the visuals through peer Media Tracks:
+Selections, Moments and whole Segments remain authored Script identities. A downstream component
+receives the SemanticTrack once and projects those identities into frames only when it builds its
+deterministic Track:
 
 ```svml
-<speech:Spine id="speech" frame-rate="30"
-  visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
-  <speech:Take audio={narration.audio} segment={story.segment.narration}/>
-</speech:Spine>
+<media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
+  <media-track:Item image={card.image} extent={card-extent}
+    during={story.selection.demo} frame={card-frame}
+    appearance={studio.media.card} motion={studio.motion.card}/>
+</media-track:Track>
+
+<caption-fine:Track id="captions"
+  display={story.caption}
+  correspondence={story.caption.correspondence}
+  semantic={speech.semantic}
+  program={caption-program}
+  plan={caption-plan.plan}/>
+
+<film:Film id="main" canvas={vertical}
+  semantic={speech.semantic} appearance={studio.film.vertical}>
+  <film:Track source={speech.visual}/>
+  <film:Track source={speech.audio}/>
+  <film:Track source={cards.visual}/>
+  <film:Track source={captions.track}/>
+</film:Film>
+
+<render:Video id="final"
+  composition={main.composition} semantic={speech.semantic}/>
 ```
 
-The fit Recipe is ordinary compile-time SVS data, for example:
-
-```svs
-speech.visual { fit: cover; }
-```
-
-The order of `<speech:Take>` children **determines the program order**. The first take starts at
-time zero; each subsequent take follows immediately.
-
-### Outputs
-
-The Spine produces four outputs used by downstream components:
-
-| Output | Type | Used by |
-|---|---|---|
-| `{speech.visual}` | VisualTrack | `film:Film` — sparse same-source Take visuals |
-| `{speech.audio}` | Audio | `whisperx:Alignment` — raw audio for word timing |
-| `{speech.audioTrack}` | AudioTrack | `film:Film` — the synchronized audio |
-| `{speech.space}` | ProgramSpace | Everything — the unified duration and frame domain |
-
-## whisperx:Alignment
-
-Measures word-level timing by running WhisperX speech-to-text alignment on the Spine's audio output.
-This produces the **SemanticMap** — the bridge between Script text and physical time.
-
-```svml
-<whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `narrative` | yes | The Script component — e.g. `{story}` |
-| `audio` | yes | Audio from the Speech Spine — `{speech.audio}` |
-
-### Output
-
-| Output | Type | Used by |
-|---|---|---|
-| `{timing.map}` | CompleteSemanticMap | Caption Style-family Tracks, `media-track:Track`, `text:Track` — timed placement |
-
-The SemanticMap maps every authored Script anchor to a time point. It covers all `2M + 2N` identities
-(where M = total speech tokens, N = number of Segments). This is how Selections and Moments declared
-in the Script become real time ranges and points for downstream visual components.
-
-## ProgramSpace
-
-ProgramSpace is not guessed from a global default. It is produced by `speech:Spine` from the
-explicit `frame-rate` and the exact normalized Take durations, then flows to every component that
-needs the total program duration and frame domain.
-
-```svml
-<film:Film id="main" canvas={vertical} space={speech.space} ...>
-<caption-fine:Track id="captions" ... space={speech.space} .../>
-<text:Track id="titles" space={speech.space}>
-<render:Video id="final" composition={main.composition} space={speech.space}/>
-```
-
-ProgramSpace owns:
-
-- **Duration** — the total program length
-- **Frame rate** — rational frame rate (e.g. 30fps)
-- **Frame domain** — exact frame numbers for the entire program
-
-Every component that operates in the time domain takes a `space` attribute pointing to
-`{speech.space}`.
-
-### Speech-free programs
-
-A speech-free film still needs an explicit, verified ProgramSpace. Select a previously accepted
-ProgramSpace Record in the Run Source with `build-record` and `satisfy`, then connect that named
-logical output to Tracks and Film. Use `during="program"` or explicit `start`/`end` windows. Without
-speech there is no measured SemanticMap, so omit WhisperX and Caption components and do not use
-Selection/Moment timing. See [Reusing results](./run.md#reusing-results) for Run Source syntax.
-
-## SemanticMap
-
-The SemanticMap is the typed bridge between Script text and physical time. When you write
-`during={story.selection.demo}` on a Media Item, the component uses the SemanticMap to look up the
-exact frame range that Selection covers. Without a SemanticMap, Selections and Moments have no
-physical meaning.
-
-A whole Segment needs no synthetic Selection. `during={story.segment.answer}` addresses the
-Segment's existing structural start/end anchors directly.
-
-Components that use the map take it via the `map` attribute:
-
-```svml
-<media-track:Track id="cards" map={timing.map} ...>
-<caption-fine:Track id="captions" ... map={timing.map} .../>
-```
-
-The map contains final token windows and semantic anchor points only. It does not propagate
-`measured`, `derived` or `estimated` labels. WhisperX evidence and the deterministic M:N aligner are
-responsible for using the available recording evidence; downstream Tracks receive one complete map
-and do not reinterpret how each point was obtained.
-
-## Combination example
-
-The complete timing stage, from generated takes to map and space:
-
-```svml
-<import as="speech" from="@hypit/speech-spine@1"/>
-<import as="whisperx" from="@hypit/whisperx@1"/>
-<import as="space" from="@hypit/spatial@1"/>
-<import as="studio" source="./studio.svs"/>
-
-<!-- Assemble takes in program order -->
-<space:Canvas id="vertical" width="1080" height="1920"/>
-<space:Frame id="speech-frame" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
-<speech:Spine id="speech" frame-rate="30"
-  visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
-  <speech:Take video={opening-take.video} segment={story.segment.opening}/>
-  <speech:Take video={answer-take.video} segment={story.segment.answer}/>
-</speech:Spine>
-
-<!-- Measure word timing -->
-<whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
-
-<!-- Downstream components now reference: -->
-<!-- {speech.space}  — ProgramSpace for duration/frame domain -->
-<!-- {speech.visual} — sparse same-source speech VisualTrack -->
-<!-- {speech.audioTrack} — AudioTrack for synchronized audio -->
-<!-- {timing.map}    — SemanticMap for Selection/Moment timing -->
-```
-
-The data flow:
+Use `during={story.segment.answer}` for a whole Segment, a Selection for an authored range, a Moment
+for a point event, and `during="program"` for the complete SemanticTrack domain. Components consume
+`semantic={speech.semantic}`; they do not receive separate `map` and `space` values.
 
 ```text
-generated video(s) ─────► speech:Spine ──► whisperx:Alignment
-                              │                    │
-                         .visual              .map (SemanticMap)
-                         .audio                    │
-                         .audioTrack               ▼
-                         .space ──────────► caption-fine:Track
-                              │            media-track:Track
-                              │            text:Track
-                              ▼            film:Film
-                         film:Film         render:Video
+raw take ─► Normalize ─► SynchronizedMedia ─► SemanticTake ─┐
+raw take ─► Normalize ─► SynchronizedMedia ─► SemanticTake ─┤
+                                                            ▼
+                                                       speech:Track
+                                                ┌───────────┼───────────┐
+                                                ▼           ▼           ▼
+                                           .semantic     .visual      .audio
+                                                │           │           │
+                                                └──────► Film / Tracks ◄─┘
 ```

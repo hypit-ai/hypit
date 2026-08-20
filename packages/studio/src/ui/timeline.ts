@@ -18,29 +18,8 @@ function timecode(seconds: number): string {
   return `${String(Math.floor(whole / 60)).padStart(2, "0")}:${String(whole % 60).padStart(2, "0")}`;
 }
 
-function trackKind(label: string, id: string): string {
-  const value = `${label} ${id}`.toLowerCase();
-  if (value.includes("caption") || value.includes("subtitle")) return "caption";
-  if (value.includes("speech") || value.includes("spine") || value.includes("a-roll")) return "speech";
-  if (value.includes("audio") || value.includes("music") || value.includes("sound")) return "audio";
-  if (value.includes("ranking") || value.includes("comment") || value.includes("component")) return "component";
-  if (value.includes("media") || value.includes("b-roll") || value.includes("image") || value.includes("video")) return "media";
-  return "visual";
-}
-
-function trackIcon(kind: string): string {
-  return {
-    caption: "subtitles",
-    speech: "record_voice_over",
-    audio: "graphic_eq",
-    component: "widgets",
-    media: "movie",
-    visual: "layers",
-  }[kind] ?? "layers";
-}
-
 /**
- * A cutting-room timeline read straight from the Source: the Speech Spine on the
+ * A cutting-room timeline read straight from the Source: the Speech Track on the
  * bottom track, every Media Item above it on one shared track, exactly as an
  * editor would lay them out.
  */
@@ -312,11 +291,11 @@ export function createTimeline(store: Store): Timeline {
     }
 
     for (const track of snapshot.tracks) {
-      const kind = trackKind(track.label, track.id);
+      const kind = track.binding.family;
       const label = document.createElement("div");
       label.className = `track-label track-${kind}`;
       label.innerHTML = `<span class="material-symbols-rounded track-icon"></span><span class="track-copy"><strong></strong><small></small></span><span class="track-state"></span>`;
-      label.querySelector(".track-icon")!.textContent = trackIcon(kind);
+      label.querySelector(".track-icon")!.textContent = track.binding.icon;
       label.querySelector("strong")!.textContent = track.label;
       label.querySelector("small")!.textContent =
         `${track.clips.length} clip${track.clips.length === 1 ? "" : "s"}`;
@@ -330,13 +309,21 @@ export function createTimeline(store: Store): Timeline {
       // everything else, so a folded Track shows the picture the viewer sees.
       const freeFrom: number[] = [];
       const rowOf = new Map<string, number>();
-      const ordered = [...track.clips].sort((a, b) =>
+      const roots = track.clips.filter((clip) => clip.presentation.parentId === undefined);
+      const ordered = [...roots].sort((a, b) =>
         b.stackOrder - a.stackOrder || a.startFrame - b.startFrame);
       for (const clip of ordered) {
         let row = freeFrom.findIndex((free) => free <= clip.startFrame);
         if (row < 0) { row = freeFrom.length; freeFrom.push(0); }
         freeFrom[row] = clip.endFrameExclusive;
         rowOf.set(clip.id, row);
+      }
+      // Child entities are drawn inside their registered parent entity. They
+      // describe its internal semantic windows and must not manufacture extra
+      // Track rows merely because their resolved spans overlap the parent.
+      for (const clip of track.clips) {
+        const parentId = clip.presentation.parentId;
+        if (parentId !== undefined) rowOf.set(clip.id, rowOf.get(parentId) ?? 0);
       }
       const depth = Math.max(1, freeFrom.length);
       const folded = depth > 1 && !opened.has(track.id);
@@ -368,7 +355,7 @@ export function createTimeline(store: Store): Timeline {
         if (to <= 0 || from >= 1) continue;
         const node = document.createElement("button");
         node.type = "button";
-        node.className = `clip clip-${kind}`;
+        node.className = `clip clip-${kind} clip-shape-${clip.presentation.shape}`;
         node.dataset.clip = clip.id;
         const visibleFrom = Math.max(0, from);
         const visibleTo = Math.min(1, to);
@@ -379,11 +366,11 @@ export function createTimeline(store: Store): Timeline {
         node.style.width = `${Math.max(0, visibleTo - visibleFrom) * 100}%`;
         node.title = `${clip.label} (${clip.startFrame}-${clip.endFrameExclusive}f)`;
         node.innerHTML = `
-          <span class="clip-edge clip-edge-left"></span>
+          ${clip.interaction.trimStart ? '<span class="clip-edge clip-edge-left"></span>' : ""}
           <span class="material-symbols-rounded clip-icon"></span>
           <span class="clip-copy"><span class="clip-name"></span><span class="clip-meta"></span></span>
-          <span class="clip-edge clip-edge-right"></span>`;
-        node.querySelector(".clip-icon")!.textContent = trackIcon(kind);
+          ${clip.interaction.trimEnd ? '<span class="clip-edge clip-edge-right"></span>' : ""}`;
+        node.querySelector(".clip-icon")!.textContent = track.binding.icon;
         node.querySelector(".clip-name")!.textContent = clip.label;
         node.querySelector(".clip-meta")!.textContent =
           `${((clip.endFrameExclusive - clip.startFrame) / fps(snapshot)).toFixed(2)}s`;
@@ -394,6 +381,7 @@ export function createTimeline(store: Store): Timeline {
         if (tone !== undefined) node.classList.add(`tone-${tone}`);
         node.addEventListener("pointerdown", (event) => {
           event.stopPropagation();
+          if (!clip.interaction.select) return;
           store.focus(frameAt(event.clientX), clip.id, "timeline");
         });
         nextClipNodes.push({ node, start: clip.startFrame, end: clip.endFrameExclusive, id: clip.id });

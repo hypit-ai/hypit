@@ -272,6 +272,13 @@ button:focus-visible, textarea:focus-visible { outline: 1px solid var(--accent);
 .semantic-anchor-segment-start, .semantic-anchor-segment-end { opacity: .86; background: color-mix(in srgb, var(--semantic-tone) 82%, #fff 8%); }
 .semantic-segment.semantic-coarse .semantic-words, .semantic-segment.semantic-coarse .semantic-anchor { display: none; }
 .clip { --tone: var(--track); position: absolute; height: 40px; min-width: 3px; margin-top: 6px; display: flex; align-items: center; gap: 6px; padding: 0 8px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--tone) 36%, var(--line)); border-radius: 5px; background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 18%, #171a20), color-mix(in srgb, var(--tone) 10%, #111419)); color: var(--text); text-align: left; box-shadow: inset 0 1px rgba(255,255,255,.035); transition: border-color 100ms ease, box-shadow 100ms ease, filter 100ms ease, transform 100ms ease; touch-action: none; }
+.clip-shape-group { padding-top: 2px; align-items: flex-start; background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 13%, #171a20), color-mix(in srgb, var(--tone) 7%, #111419)); }
+.clip-shape-group .clip-copy { flex-direction: row; align-items: baseline; gap: 6px; }
+.clip-shape-window { z-index: 2; height: 19px; margin-top: 24px; padding: 0 5px; border-color: color-mix(in srgb, var(--tone) 62%, #fff 8%); border-radius: 3px; background: color-mix(in srgb, var(--tone) 35%, #171a20); }
+.clip-shape-window .clip-icon { display: none; }
+.clip-shape-window .clip-copy { flex-direction: row; align-items: center; gap: 4px; }
+.clip-shape-window .clip-name { font-size: 8px; }
+.clip-shape-window .clip-meta { font-size: 7px; }
 .clip:hover { z-index: 4; border-color: color-mix(in srgb, var(--tone) 66%, #fff 10%); filter: brightness(1.08); }
 .clip:active { cursor: grabbing; transform: translateY(1px); }
 .clip-icon { flex: none; color: color-mix(in srgb, var(--tone) 80%, #fff 15%); font-size: 14px; }

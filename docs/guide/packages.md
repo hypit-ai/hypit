@@ -86,11 +86,10 @@ specific Provider deployment.
 @hypit/mimo-tts              three exact Xiaomi MiMo TTS models + author Surfaces
 @hypit/estimate              duration estimation
 @hypit/speech                shared speech products
-@hypit/speech-basis          generated speech A/V product
 @hypit/speech-evidence       acoustic evidence products
-@hypit/semantic-map          authored-token timing map
 @hypit/speech-alignment      speech alignment
-@hypit/speech-spine          ordered speech-take compilation
+@hypit/semantic-track        continuous semantic program skeleton
+@hypit/speech-track          ordered speech-take compilation
 @hypit/whisperx              WhisperX component
 @hypit/caption               caption planning and timing
 @hypit/caption-gemini        Gemini caption planner

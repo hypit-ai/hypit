@@ -16,7 +16,6 @@
     "@hypit/narrative": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/semantic-map": "workspace:*",
     "@hypit/speech": "workspace:*",
     "@hypit/speech-evidence": "workspace:*"
   },

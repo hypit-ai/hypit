@@ -71,7 +71,19 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
    * motion moves an element across its span, so only what was drawn knows where
    * it ended up. A Present that has not mounted has no box to draw.
    */
-  const drawnBox = (clip: Clip): Box | undefined => measure(clip.id);
+  const drawnBox = (clip: Clip): Box | undefined => {
+    const ids = clip.presentId === undefined ? clip.renderIds : [clip.presentId];
+    const boxes = ids.flatMap((id) => {
+      const found = measure(id);
+      return found === undefined ? [] : [found];
+    });
+    if (boxes.length === 0) return undefined;
+    const left = Math.min(...boxes.map((box) => box.xPx));
+    const top = Math.min(...boxes.map((box) => box.yPx));
+    const right = Math.max(...boxes.map((box) => box.xPx + box.widthPx));
+    const bottom = Math.max(...boxes.map((box) => box.yPx + box.heightPx));
+    return { xPx: left, yPx: top, widthPx: right - left, heightPx: bottom - top };
+  };
 
   const draw = (): void => {
     if (last === undefined) return;

@@ -7,7 +7,7 @@ Three independent progressive-ranking author components over one private schedul
 - `TopThree`
 
 The package owns variant-specific Programs and Styles. It consumes explicit Segment/Selection/Moment,
-SemanticMap, ProgramSpace, SpatialFrame, font, image and optional sound edges, then lowers to peer
+SemanticTrack, SpatialFrame, font, image and optional sound edges, then lowers to peer
 `VisualTrack` and optional `AudioTrack` values. It adds no Ranking field to Core, Composition or
 Visual IR.
 
@@ -26,7 +26,7 @@ copy.
 
 <copy:Value id="winner">No hidden runtime choice</copy:Value>
 
-<ranking:Column id="priorities" map={speech.semanticMap} space={speech.space} canvas={vertical}
+<ranking:Column id="priorities" semantic={speech.semantic} canvas={vertical}
   frame={layout.ranking} during={story.segment.ranking}
   style={ranking-style}>
   <ranking:ColumnItem rank="1" label={winner}

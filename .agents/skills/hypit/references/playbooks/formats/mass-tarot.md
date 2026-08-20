@@ -11,15 +11,19 @@ ordered reveals and interpretations.
   `mimo:Preset`, `mimo:VoiceDesign`, or `mimo:VoiceClone`, then use an audio-only Speech Take:
 
 ```svml
-<speech:Spine id="speech" frame-rate="30"
+<program:Clock id="clock" frame-rate="30"/>
+<pipeline:Normalize id="narration-media" source={narration.audio}
+  video="none" audio="default" span-authority="audio" clock={clock}/>
+<whisperx:SemanticTake id="narration-semantic" narrative={story}
+  segment={story.segment.reading} media={narration-media.media}/>
+<speech:Track id="speech"
   visual-frame={full-frame} visual-appearance={studio.speech.visual} visual-z="0">
-  <speech:Take audio={narration.audio} segment={story.segment.reading}/>
-</speech:Spine>
-<whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+  <speech:Take source={narration-semantic.take}/>
+</speech:Track>
 ```
 
-  Peer Media Tracks provide every card/table visual while `{speech.audioTrack}` carries narration.
-- A visible host may instead use `speaker-v1` speaking takes assembled through the same Spine.
+  Peer Media Tracks provide every card/table visual while `{speech.audio}` carries narration.
+- A visible host may instead use `speaker-v1` speaking Semantic Takes assembled through the same Track.
 
 ## Author the card visuals
 

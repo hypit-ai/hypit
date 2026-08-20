@@ -2,8 +2,7 @@ import { artifactTypes } from "@hypit/artifact";
 import { mediaTypes } from "@hypit/media";
 import type { FontStackRef } from "@hypit/media";
 import { narrativeTypes } from "@hypit/narrative";
-import { programSpaceTypes } from "@hypit/program-space";
-import { semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
@@ -164,10 +163,10 @@ export const decodeCommentStickerStyleSurface: StructuredSurfaceHandler = ({ ele
 };
 
 export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  allowed(element, ["id", "canvas", "space", "map"], ["id", "canvas", "space"]);
+  allowed(element, ["id", "canvas", "semantic"], ["id", "canvas", "semantic"]);
   const id = text(element, "id");
   const canvas = reference(element.attributes.canvas, `${element.name}.canvas`, spatialTypes.canvas, resolveReference);
-  const space = reference(element.attributes.space, `${element.name}.space`, programSpaceTypes.programSpace, resolveReference);
+  const semantic = reference(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference);
   const headerId = `${id}.__header`;
   const records: SurfaceRecordDraft[] = [{
     id: headerId,
@@ -175,9 +174,8 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
     value: { kind: "inline", value: sealCommentStickerHeader({ id }) },
     range: element.range,
   }];
-  const inputs: Record<string, typeof canvas.ref> = { canvas: canvas.ref, header: { kind: "record", id: headerId }, space: space.ref };
+  const inputs: Record<string, typeof canvas.ref> = { canvas: canvas.ref, header: { kind: "record", id: headerId }, semantic: semantic.ref };
   const items: Parameters<typeof createCommentStickerFragment>[0][number][] = [];
-  let usesMap = false;
   for (const child of element.children) {
     if (child.kind === "text") {
       if (child.value.trim()) throw new Error(`${element.name} accepts only Sticker children.`);
@@ -235,15 +233,12 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
     const copy = { commentName, ...(authorName === undefined ? {} : { authorName }), ...(headerTextName === undefined ? {} : { headerTextName }), ...(metaName === undefined ? {} : { metaName }) };
     if (temporal.kind === "program") items.push({ kind: "program", specName, frameName, styleName, ...copy, ...(avatarName === undefined ? {} : { avatarName }) });
     else {
-      usesMap = true;
       const sourceName = `item-${suffix}-${temporal.kind}`;
       inputs[sourceName] = temporal.source!.ref;
-      items.push({ kind: temporal.kind, specName, frameName, styleName, ...copy, sourceName, mapName: "map", ...(avatarName === undefined ? {} : { avatarName }) });
+      items.push({ kind: temporal.kind, specName, frameName, styleName, ...copy, sourceName, ...(avatarName === undefined ? {} : { avatarName }) });
     }
   }
   if (items.length === 0) throw new Error(`${element.name} requires at least one Sticker.`);
-  if (usesMap) inputs.map = reference(element.attributes.map, `${element.name}.map`, semanticMapTypes.complete, resolveReference).ref;
-  else if (element.attributes.map !== undefined) throw new Error(`${element.name}.map is unused.`);
   const fragment = createCommentStickerFragment(items);
   return {
     records,

@@ -5,7 +5,7 @@
   <import as="wording" from="@hypit/text@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
-  <import as="speech" from="@hypit/speech-spine@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="media-track" from="@hypit/media-track@1"/>
   <import as="caption" from="@hypit/caption@1"/>
@@ -43,10 +43,10 @@
   <whisperx:SemanticTake id="opening-semantic" narrative={story}
     segment={story.segment.opening} media={take-media.media}/>
 
-  <speech:Spine id="speech" clock={clock}
+  <speech:Track id="speech"
     visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
     <speech:Take source={opening-semantic.take}/>
-  </speech:Spine>
+  </speech:Track>
 
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
   <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
@@ -54,26 +54,26 @@
   <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
   <caption-ai:Planner id="cue-plan" display={story.caption} program={caption-program} model="gemini-2.5-flash"/>
 
-  <media-track:Track id="cards" map={speech.semanticMap} space={speech.space} canvas={vertical}>
+  <media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
     <media-track:Item media={motion-media.media} during={story.selection.demo}
       frame={card-frame} appearance={recipes.media.card} motion={recipes.motion.card}/>
   </media-track:Track>
   <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence}
-    map={speech.semanticMap} space={speech.space}
+    semantic={speech.semantic}
     plan={cue-plan.plan} program={caption-program}/>
   <text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
-  <text:Track id="titles" space={speech.space}>
+  <text:Track id="titles" semantic={speech.semantic}>
     <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
       MEANING
     </text:Area>
   </text:Track>
 
-  <film:Film id="main" canvas={vertical} space={speech.space} appearance={recipes.film.vertical}>
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>
-    <film:Track source={speech.audioTrack}/>
+    <film:Track source={speech.audio}/>
     <film:Track source={cards.visual}/>
     <film:Track source={captions.track}/>
     <film:Track source={titles.track}/>
   </film:Film>
-  <render:Video id="final" composition={main.composition} space={speech.space}/>
+  <render:Video id="final" composition={main.composition} semantic={speech.semantic}/>
 </svml>

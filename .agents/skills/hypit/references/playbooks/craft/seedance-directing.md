@@ -65,4 +65,4 @@ than relying on an unstated assumption.
   physical labels/UI already attached to referenced objects.
 
 Review every reference image through `production-gates.md` before calling Seedance, then review the
-resulting take before adding it to Speech Spine or Media Track.
+resulting take before normalizing it into a Semantic Take or adding it to a Media Track.
