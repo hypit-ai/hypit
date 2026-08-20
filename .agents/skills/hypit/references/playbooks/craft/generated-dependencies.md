@@ -99,6 +99,13 @@ Give a silent take a literal duration at or above its window instead of a `Speec
 estimate predicts the words; the window is decided by the audio that was actually produced, and when
 the estimate falls a second short that second is black.
 
+Bedding something underneath changes what a blended frame reveals, so check the Items' entry and exit
+while you are here. **A one-frame fade is not a short cut**; it is one frame on which the Item is half
+transparent, and that frame shows whatever is beneath it. Over nothing it reads as a dark blink and
+hides inside the problem above; over a bed it reads as a flash of the wrong picture at every
+boundary. `enter` and `exit` default to `none`, which is the hard cut a reference that cuts actually
+wants — a Recipe named for a cut that fades for a frame is worth distrusting whatever it is called.
+
 `production-gates.md` measures the delivery for these before it is reported as finished.
 
 ## A short stretch is not a short take
