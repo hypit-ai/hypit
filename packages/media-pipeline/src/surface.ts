@@ -1,5 +1,17 @@
+import {
+  assertEmptyElement as empty,
+  localName,
+  textAttribute as text,
+  type StructuredElement,
+  type StructuredSurfaceHandler,
+  type SurfaceResolvedReference,
+  type MarkupAttributeValue,
+} from "@hypit/markup";
+import { sameType, type CanonicalValue } from "@hypit/protocol";
 import { artifactTypes } from "@hypit/artifact";
-import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
+import { mediaTypes } from "@hypit/media";
+import { programSpaceTypes, type ProgramClock } from "@hypit/program-space";
+import { svsRecipeType, type SvsRecipe } from "@hypit/svs";
 
 import {
   extractAudioFragment,
@@ -21,16 +33,6 @@ import type {
   MediaTransformOperation,
 } from "./types.js";
 
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
-
-function text(element: StructuredElement, name: string): string {
-  const value = element.attributes[name];
-  if (typeof value !== "string" || value.trim().length === 0) throw new Error(`${element.name}.${name} must be non-empty text.`);
-  return value.trim();
-}
-
 function ref(
   raw: MarkupAttributeValue | undefined,
   label: string,
@@ -39,6 +41,39 @@ function ref(
   if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${label} must be a reference.`);
   const value = resolve(raw.path);
   if (value === undefined || !sameType(value.type, artifactTypes.blob)) throw new Error(`${label} must resolve to BlobArtifact.`);
+  return value;
+}
+
+function typedReference(
+  raw: MarkupAttributeValue | undefined,
+  label: string,
+  expected: SurfaceResolvedReference["type"],
+  resolve: (path: string) => SurfaceResolvedReference | undefined,
+): SurfaceResolvedReference {
+  if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${label} must be a reference.`);
+  const value = resolve(raw.path);
+  if (value === undefined || !sameType(value.type, expected)) throw new Error(`${label} has the wrong Type.`);
+  return value;
+}
+
+function authoredRecipe(
+  raw: MarkupAttributeValue | undefined,
+  label: string,
+  resolve: (path: string) => SurfaceResolvedReference | undefined,
+): SvsRecipe {
+  const value = typedReference(raw, label, svsRecipeType, resolve);
+  if (value.record?.value.kind !== "inline") throw new Error(`${label} must be an authored SVS Recipe.`);
+  const recipe = value.record.value.value as unknown as SvsRecipe;
+  const unknown = Object.keys(recipe.properties).filter((name) => !["audio", "span-authority", "video"].includes(name));
+  if (unknown.length > 0) throw new Error(`${label} only accepts video, audio and span-authority; found ${unknown.join(", ")}.`);
+  return recipe;
+}
+
+function recipeText(recipe: SvsRecipe, name: string, label: string): string {
+  const value: CanonicalValue | undefined = recipe.properties[name];
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${label} requires string property ${name}.`);
+  }
   return value;
 }
 
@@ -62,10 +97,6 @@ function frameRate(value: string): { readonly numerator: number; readonly denomi
     throw new Error("Normalize.frame-rate is invalid.");
   }
   return { numerator, denominator };
-}
-
-function localName(value: string): string {
-  return value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;
 }
 
 function exactAttributes(element: StructuredElement, required: readonly string[], optional: readonly string[] = []): void {
@@ -99,12 +130,6 @@ function videoSelector(value: string): FrameExtractionRequest["video"] {
   const match = /^stream:(\d+)$/u.exec(value);
   if (match === null) throw new Error("video must be primary-moving or stream:<index>.");
   return { mode: "stream-index", streamIndex: Number(match[1]) };
-}
-
-function empty(element: StructuredElement): void {
-  if (element.children.some((child) => child.kind === "element" || child.value.trim().length > 0)) {
-    throw new Error(`${element.name} must be empty.`);
-  }
 }
 
 function transformOperations(element: StructuredElement): readonly MediaTransformOperation[] {
@@ -151,24 +176,41 @@ function transformOperations(element: StructuredElement): readonly MediaTransfor
 }
 
 export const decodeSynchronizedMediaSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  const expected = ["audio", "frame-rate", "id", "source", "span-authority", "video"];
-  if (Object.keys(element.attributes).sort().join("\0") !== expected.sort().join("\0")) {
-    throw new Error(`${element.name} requires exactly id, source, video, audio, span-authority and frame-rate.`);
+  const required = ["id", "source"];
+  const optional = ["audio", "clock", "frame-rate", "recipe", "span-authority", "video"];
+  exactAttributes(element, required, optional);
+  const hasClock = element.attributes.clock !== undefined;
+  const hasFrameRate = element.attributes["frame-rate"] !== undefined;
+  if (hasClock === hasFrameRate) throw new Error(`${element.name} requires exactly one of clock or frame-rate.`);
+  const hasRecipe = element.attributes.recipe !== undefined;
+  const policyCount = ["video", "audio", "span-authority"].filter((name) => element.attributes[name] !== undefined).length;
+  if ((hasRecipe && policyCount !== 0) || (!hasRecipe && policyCount !== 3)) {
+    throw new Error(`${element.name} requires exactly one of recipe or video/audio/span-authority.`);
   }
   if (element.children.some((child) => child.kind === "element" || child.value.trim().length > 0)) {
     throw new Error(`${element.name} must be empty.`);
   }
   const id = text(element, "id");
   const source = ref(element.attributes.source, `${element.name}.source`, resolveReference);
-  const video = stream(text(element, "video"), "video");
-  const audio = stream(text(element, "audio"), "audio");
-  const spanAuthority = text(element, "span-authority");
+  const clock = hasClock
+    ? typedReference(element.attributes.clock, `${element.name}.clock`, programSpaceTypes.clock, resolveReference)
+    : undefined;
+  const clockValue = clock?.record?.value.kind === "inline"
+    ? clock.record.value.value as unknown as ProgramClock
+    : undefined;
+  if (clock !== undefined && clockValue === undefined) throw new Error(`${element.name}.clock must be an authored Clock record.`);
+  const normalizationRecipe = hasRecipe ? authoredRecipe(element.attributes.recipe, `${element.name}.recipe`, resolveReference) : undefined;
+  const video = stream(normalizationRecipe === undefined ? text(element, "video") : recipeText(normalizationRecipe, "video", `${element.name}.recipe`), "video");
+  const audio = stream(normalizationRecipe === undefined ? text(element, "audio") : recipeText(normalizationRecipe, "audio", `${element.name}.recipe`), "audio");
+  const spanAuthority = normalizationRecipe === undefined
+    ? text(element, "span-authority")
+    : recipeText(normalizationRecipe, "span-authority", `${element.name}.recipe`);
   if (spanAuthority !== "video" && spanAuthority !== "audio") throw new Error(`${element.name}.span-authority must be video or audio.`);
   const request = sealMediaSelectionRequest({
     video,
     audio,
     spanAuthority,
-    frameRate: frameRate(text(element, "frame-rate")),
+    frameRate: clockValue?.frameRate ?? frameRate(text(element, "frame-rate")),
   });
   const requestId = `${id}.request`;
   return {
@@ -185,36 +227,22 @@ export const decodeSynchronizedMediaSurface: StructuredSurfaceHandler = ({ eleme
 };
 
 export const decodeTransformMediaSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exactAttributes(element, ["id", "source", "video", "audio", "span-authority", "frame-rate"]);
+  exactAttributes(element, ["id", "source"]);
   const id = text(element, "id");
-  const source = ref(element.attributes.source, `${element.name}.source`, resolveReference);
-  const video = stream(text(element, "video"), "video");
-  if (video.mode === "none") throw new Error(`${element.name}.video cannot be none.`);
-  const audio = stream(text(element, "audio"), "audio");
-  const spanAuthority = text(element, "span-authority");
-  if (spanAuthority !== "video") throw new Error(`${element.name}.span-authority must be video.`);
-  const selection = sealMediaSelectionRequest({
-    video,
-    audio,
-    spanAuthority,
-    frameRate: frameRate(text(element, "frame-rate")),
-  });
+  const source = typedReference(element.attributes.source, `${element.name}.source`, mediaTypes.synchronized, resolveReference);
   const program = sealMediaTransformProgram({
     operations: transformOperations(element),
   });
-  const selectionId = `${id}.selection`;
   const programId = `${id}.program`;
   return {
     records: [
-      { id: selectionId, type: mediaPipelineTypes.selectionRequest, value: { kind: "inline", value: selection }, range: element.range },
       { id: programId, type: mediaPipelineTypes.transformProgram, value: { kind: "inline", value: program }, range: element.range },
     ],
     components: [{
       id,
       fragment: transformMediaFragment.id,
       inputs: {
-        source: source.ref,
-        selection: { kind: "record", id: selectionId },
+        media: source.ref,
         program: { kind: "record", id: programId },
       },
       outputs: { video: `${id}.video` },

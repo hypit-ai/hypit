@@ -15,12 +15,11 @@ Media layer lowerer, but Deck is not a Media mode and exports only an ordinary p
 
 <deck:DepthStack
   id="proof-stack"
-  map={timing.map}
-  space={speech.space}
+  semantic={speech.semantic}
   canvas={vertical}
   frame={layout.proof-stack}
   until={story.selection.proof}
-  appearance={studio.deck.proof}
+  appearance={recipes.deck.proof}
 >
   <deck:Card id="proof-1" source={proof1.image} extent={proof1.extent}
     at={story.moment.proof1} label={proof-label-style}/>

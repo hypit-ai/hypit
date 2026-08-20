@@ -13,7 +13,7 @@ declares no planning fields and has no `important`, random sizing or inferred Wo
 <fonts:Stack id="caption-fonts" family="inter" weight="600" style="normal" emoji="color">
   <fonts:Fallback family="noto-sans-sc" weight="600" style="normal"/>
 </fonts:Stack>
-<fine:Style id="primary" recipe={studio.caption.primary} font={caption-fonts}/>
+<fine:Style id="primary" recipe={recipes.caption.primary} font={caption-fonts}/>
 
 <caption:Program id="captions" display={story.caption} default={primary}/>
 
@@ -21,10 +21,9 @@ declares no planning fields and has no `important`, random sizing or inferred Wo
   id="captions-track"
   display={story.caption}
   correspondence={story.caption.correspondence}
-  map={timing.map}
+  semantic={speech.semantic}
   program={captions}
   plan={caption-plan.plan}
-  space={speech.space}
 />
 ```
 

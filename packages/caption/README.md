@@ -6,14 +6,14 @@ The package owns:
 
 - total Style assignment over an explicit `CaptionDisplaySequence`;
 - generic `CaptionPlan` validation: Cue boundaries use Atom ids, fields use Word ids;
-- the join of `CaptionCorrespondence` and `CompleteSemanticMap` into timed Cues and Atoms.
+- the join of `CaptionCorrespondence` and `SemanticTrack` into timed Cues and Atoms.
 
 It owns no Script parser, concrete font, box model, field meaning, renderer, LLM, Provider or
 Runtime policy.
 
 ```xml
-<caption-fine:Style id="plain" recipe={studio.caption.plain} font={caption-font}/>
-<caption-fine:Style id="impact" recipe={studio.caption.impact} font={caption-font}/>
+<caption-fine:Style id="plain" recipe={recipes.caption.plain} font={caption-font}/>
+<caption-fine:Style id="impact" recipe={recipes.caption.impact} font={caption-font}/>
 
 <caption:Program id="captions" display={story.caption} default={plain}>
   <caption:Use role="ALICE" style={impact}/>

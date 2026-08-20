@@ -16,6 +16,7 @@
     "@hypit/elaborator": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/semantic-track": "workspace:*",
     "@hypit/spatial": "workspace:*",
     "@hypit/svs": "workspace:*",
     "@hypit/markup": "workspace:*"

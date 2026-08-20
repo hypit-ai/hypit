@@ -18,9 +18,8 @@ import {
   mediaTrackTypes,
 } from "@hypit/media-track";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
-import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
-import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { temporalDependency } from "@hypit/temporal";
@@ -119,7 +118,7 @@ export const depthStackProgramSchema: ValueSchema = object({
 const finalizeInputs = [
   { name: "set", type: depthStackTypes.cardSet }, { name: "header", type: depthStackTypes.header },
   { name: "frame", type: spatialTypes.frame }, { name: "spec", type: depthStackTypes.spec },
-  { name: "space", type: programSpaceTypes.programSpace },
+  { name: "semantic", type: semanticTrackTypes.track },
 ] as const;
 
 export const depthStackMarkupSurfaces = [
@@ -169,10 +168,8 @@ export const depthStackMarkupSurfaces = [
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this deck so its Program and Track can be referenced elsewhere in the Source." },
-          { name: "map", kind: "reference", required: true, accepts: [semanticMapTypes.complete],
-            summary: "Chooses the SemanticMap that places each Card's Moment in the programme." },
-          { name: "space", kind: "reference", required: true, accepts: [programSpaceTypes.programSpace],
-            summary: "Chooses the ProgramSpace the deck is timed against." },
+          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
+            summary: "Chooses the SemanticTrack that owns the frame domain and places each Card's Moment." },
           { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas],
             summary: "Chooses the Canvas the deck is rendered into." },
           { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
@@ -390,12 +387,11 @@ export const depthStackMarkupSurfaces = [
         ],
         example: `<deck:DepthStack
   id="proof-stack"
-  map={timing.map}
-  space={speech.space}
+  semantic={speech.semantic}
   canvas={vertical}
   frame={layout.proof-stack}
   until={story.selection.proof}
-  appearance={studio.deck.proof}
+  appearance={recipes.deck.proof}
 >
   <deck:Card id="proof-1" source={proof1.image} extent={proof1.extent}
     at={story.moment.proof1} label={proof-label-style}/>
@@ -413,7 +409,7 @@ export const depthStackMarkupSurfaces = [
 
 export const depthStackManifest: ModuleManifest = {
   format: "hypit.module@1", name: depthStackModuleRef.name, version: depthStackModuleRef.version,
-  dependencies: [narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, mediaDependency, mediaTrackDependency, compositionDependency, textDependency],
+  dependencies: [narrativeDependency, semanticTrackDependency, spatialDependency, temporalDependency, mediaDependency, mediaTrackDependency, compositionDependency, textDependency],
   types: [
     { name: depthStackTypes.header.name },
     { name: depthStackTypes.spec.name },
@@ -429,8 +425,7 @@ export const depthStackManifest: ModuleManifest = {
     { name: depthStackProducers.appendMomentCard.name, inputs: [
       { name: "set", type: depthStackTypes.cardSet }, { name: "material", type: mediaTrackTypes.layerSet },
       { name: "label", type: depthStackTypes.cardLabel }, { name: "spec", type: depthStackTypes.cardSpec },
-      { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment },
-      { name: "space", type: programSpaceTypes.programSpace },
+      { name: "semantic", type: semanticTrackTypes.track }, { name: "moment", type: narrativeTypes.moment },
     ], outputs: [{ name: "set", type: depthStackTypes.cardSet }], needs: [] },
     { name: depthStackProducers.finalizeProgramEnd.name, inputs: finalizeInputs, outputs: [{ name: "program", type: depthStackTypes.program }], needs: [] },
     ...([
@@ -438,11 +433,11 @@ export const depthStackManifest: ModuleManifest = {
       [depthStackProducers.finalizeUntilSelectionStart, narrativeTypes.selection],
       [depthStackProducers.finalizeUntilSelectionEnd, narrativeTypes.selection],
     ] as const).map(([producer, terminalType]) => ({
-      name: producer.name, inputs: [...finalizeInputs, { name: "map", type: semanticMapTypes.complete }, { name: "terminal", type: terminalType }],
+      name: producer.name, inputs: [...finalizeInputs, { name: "terminal", type: terminalType }],
       outputs: [{ name: "program", type: depthStackTypes.program }], needs: [],
     })),
     { name: depthStackProducers.render.name, inputs: [
-      { name: "canvas", type: spatialTypes.canvas }, { name: "space", type: programSpaceTypes.programSpace },
+      { name: "canvas", type: spatialTypes.canvas }, { name: "semantic", type: semanticTrackTypes.track },
       { name: "program", type: depthStackTypes.program },
     ], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
   ],

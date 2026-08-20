@@ -1,0 +1,31 @@
+{
+  "name": "@hypit/speech-track",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/composition": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/media-track": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/speech": "workspace:*",
+    "@hypit/semantic-track": "workspace:*",
+    "@hypit/spatial": "workspace:*",
+    "@hypit/svs": "workspace:*",
+    "@hypit/markup": "workspace:*"
+  },
+  "devDependencies": {
+    "@hypit/core": "workspace:*",
+    "@hypit/script": "workspace:*",
+    "@hypit/text": "workspace:*",
+    "@hypit/validation": "workspace:*"
+  }
+}

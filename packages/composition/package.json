@@ -21,7 +21,6 @@
     "@hypit/artifact": "workspace:*",
     "@hypit/core": "workspace:*",
     "@hypit/narrative": "workspace:*",
-    "@hypit/semantic-map": "workspace:*",
     "@hypit/spatial": "workspace:*",
     "@hypit/speech": "workspace:*",
     "@hypit/speech-evidence": "workspace:*",

@@ -2,7 +2,7 @@
 
 <svml>
   <import from="@hypit/script@1"/>
-  <import as="studio" source="./studio.svs"/>
+  <import as="recipes" source="./recipes.svs"/>
 
   <script id="story">
     <opening>

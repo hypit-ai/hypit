@@ -1,15 +1,16 @@
 import type { ComponentPackage, ProducerHandlerContext } from "@hypit/component-kit";
 import type { SynchronizedMedia } from "@hypit/media";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, StoredValue } from "@hypit/protocol";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
-import type { SpatialFrame } from "@hypit/spatial";
+import type { SemanticTrack } from "@hypit/semantic-track";
+import { projectSemanticProgramSpace } from "@hypit/semantic-track";
+import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 import type { Text } from "@hypit/text";
 
 import { rankingProducers, rankingTypes } from "./manifest.js";
-import { appendColumnItem, appendRankingItemSpec, appendRankingSound, appendTierBoardItem, appendTopThreeItem, assertColumnProgram, assertRankingSchedule, assertRankingSoundEventPlan, assertTierBoardProgram, assertTopThreeProgram, buildColumnProgram, buildColumnSoundEvents, buildRankingSchedule, buildTierBoardProgram, buildTierBoardSoundEvents, buildTopThreeProgram, buildTopThreeSoundEvents, createColumnItemSet, createRankingItemSpecSet, createRankingSoundSet, createTierBoardItemSet, createTopThreeItemSet, materializeRankingTextItem } from "./schedule.js";
+import { appendColumnItem, appendColumnWindowCandidate, appendRankingItemSpec, appendRankingSound, appendTierBoardItem, appendTopThreeItem, assertColumnProgram, assertRankingSchedule, assertRankingSoundEventPlan, assertTierBoardProgram, assertTopThreeProgram, buildColumnProgram, buildColumnSchedule, buildColumnSoundEvents, buildRankingSchedule, buildTierBoardProgram, buildTierBoardSoundEvents, buildTopThreeProgram, buildTopThreeSoundEvents, createColumnItemSet, createColumnWindowCandidateSet, createRankingItemSpecSet, createRankingSoundSet, createTierBoardItemSet, createTopThreeItemSet, materializeRankingTextItem, projectColumnSegmentOuterWindow, projectColumnSelectionOuterWindow } from "./schedule.js";
 import {
   renderColumn,
   renderRankingAudio,
@@ -19,8 +20,10 @@ import {
 import type {
   ColumnItemSet,
   ColumnItemSpec,
+  ColumnOuterWindow,
   ColumnProgram,
   ColumnStyle,
+  ColumnWindowCandidateSet,
   RankingHeader,
   RankingItemSpec,
   RankingItemSpecSet,
@@ -82,9 +85,45 @@ export const rankingComponent = {
       producer: rankingProducers.schedule,
       handler: ({ inputs }) => ({ outputs: { schedule: output(buildRankingSchedule({
         header: inline(inputs.header?.value, "RankingHeader"), items: inline(inputs.items?.value, "RankingItemSpecSet"),
-        map: inline(inputs.map?.value, "CompleteSemanticMap"), space: inline(inputs.space?.value, "ProgramSpace"),
+        semantic: inline(inputs.semantic?.value, "SemanticTrack"),
         outer: inline(inputs.outer?.value, "NarrativeSelectionRef"), triggers: inline(inputs.triggers?.value, "NarrativeMomentRef"),
         terminal: inline(inputs.terminal?.value, "NarrativeMomentRef"),
+      })) }, needs: {} }),
+    },
+    {
+      producer: rankingProducers.projectColumnSelectionOuter,
+      handler: ({ inputs }) => ({ outputs: { outer: output(projectColumnSelectionOuterWindow(
+        inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
+        inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelectionRef"),
+      )) }, needs: {} }),
+    },
+    {
+      producer: rankingProducers.projectColumnSegmentOuter,
+      handler: ({ inputs }) => ({ outputs: { outer: output(projectColumnSegmentOuterWindow(
+        inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
+        inline<NarrativeExcerpt>(inputs.segment?.value, "NarrativeExcerpt"),
+      )) }, needs: {} }),
+    },
+    {
+      producer: rankingProducers.createColumnCandidates,
+      handler: () => ({ outputs: { set: output(createColumnWindowCandidateSet()) }, needs: {} }),
+    },
+    {
+      producer: rankingProducers.appendColumnCandidate,
+      handler: ({ inputs }) => ({ outputs: { set: output(appendColumnWindowCandidate(
+        inline<ColumnWindowCandidateSet>(inputs.set?.value, "ColumnWindowCandidateSet"),
+        inline<ColumnItemSpec>(inputs.spec?.value, "ColumnItemSpec"),
+        inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
+        inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelectionRef"),
+      )) }, needs: {} }),
+    },
+    {
+      producer: rankingProducers.columnSchedule,
+      handler: ({ inputs }) => ({ outputs: { schedule: output(buildColumnSchedule({
+        header: inline<RankingHeader>(inputs.header?.value, "RankingHeader"),
+        items: inline<RankingItemSpecSet>(inputs.items?.value, "RankingItemSpecSet"),
+        outer: inline<ColumnOuterWindow>(inputs.outer?.value, "ColumnOuterWindow"),
+        candidates: inline<ColumnWindowCandidateSet>(inputs.candidates?.value, "ColumnWindowCandidateSet"),
       })) }, needs: {} }),
     },
     ...([
@@ -137,7 +176,8 @@ export const rankingComponent = {
       producer: rankingProducers.columnProgram,
       handler: ({ inputs }) => {
         const common = programInputs(inputs);
-        return { outputs: { program: output(buildColumnProgram(common.header, common.frame, common.schedule,
+        return { outputs: { program: output(buildColumnProgram(common.header,
+          inline<CanvasSpace>(inputs.canvas?.value, "CanvasSpace"), common.frame, common.schedule,
           inline<ColumnStyle>(inputs.style?.value, "ColumnStyle"), inline<ColumnItemSet>(inputs.set?.value, "ColumnItemSet"))) }, needs: {} };
       },
     },
@@ -178,7 +218,7 @@ export const rankingComponent = {
     {
       producer: rankingProducers.renderAudio,
       handler: ({ inputs }) => ({ outputs: { track: output(renderRankingAudio(
-        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+        projectSemanticProgramSpace(inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack")),
         inline<RankingSoundEventPlan>(inputs.events?.value, "RankingSoundEventPlan"),
         inline<RankingSoundStyle>(inputs.style?.value, "RankingSoundStyle"),
         inline<RankingSoundSet>(inputs.sounds?.value, "RankingSoundSet"),
@@ -191,7 +231,7 @@ export const rankingComponent = {
     ] as const).map(([producer, render, label]) => ({
       producer,
       handler: ({ inputs }: ProducerHandlerContext) => ({ outputs: { track: output(render(
-        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"), inline(inputs.program?.value, label) as never,
+        projectSemanticProgramSpace(inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack")), inline(inputs.program?.value, label) as never,
       )) }, needs: {} }),
     })),
   ],

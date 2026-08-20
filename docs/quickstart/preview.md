@@ -1,114 +1,85 @@
 ---
 title: Live Preview
-description: Read a Source as a timeline before anything has been generated.
+description: Read a Run whose material exists as an editable timeline.
 ---
 
 # Live Preview
 
-Everything up to this point has been declarative: a Script, some Recipes, a request for a generated
-shot. None of it has produced a picture, and a Seedance take costs money and minutes.
+**Hypit Studio** opens a Run, traces its Film or Render target back to the projections it can edit,
+and draws them — the code on the right, the picture top-left, a timeline bottom-left. It never
+writes anything but the Author SVML, and it never calls a Provider.
 
-The **SVML Playground** reads the Source itself and draws it — the code on the right, the picture
-top-left, a timeline bottom-left. It never writes, and it never calls a Provider.
+Studio builds only what it can derive deterministically from Candidates the Run already supplies, so
+it needs a Run whose material is satisfied — every generated output either produced by an accepted
+Build or standing against a file. That is what you point it at.
 
 ```bash
-pnpm svml:playground -- --source examples/all-components-preview/main.svml
+pnpm studio -- --run path/to/build.svrun
 # ➜  http://localhost:5179/
 ```
 
+::: warning The examples in this repository need material first
+Every Run Source under `examples/` still names shots a Provider has to make, or footage under
+`examples/**/assets/`, which is not committed. Satisfy those in a Run of your own before opening it.
+:::
+
 | Argument | Meaning |
 | --- | --- |
-| `--source <main.svml>` | The Author Source to read. Required. |
-| `--run <build.svrun>` | A Run Source, read for material and timings it already names. |
-| `--runtime <hypit.runtime.json>` | Where material earlier Builds produced is kept. Only a Source that reuses an accepted shot through `<build-record>` needs one. |
+| `--run <build.svrun>` | The Run Source to open. Required. Studio reads the Author SVML back out of it. |
+| `--runtime <hypit.runtime.json>` | Where material earlier Builds produced is kept. Only a Run that reuses an accepted shot through `<build-record>` needs one. |
+| `--workspace <directory>` | Defaults to the directory holding the Run. |
 | `--port <number>` | Defaults to `5179`. |
 
-Both optional arguments are additive. With neither, the Playground still runs on a directory holding
-nothing but `main.svml` and its `.svs` style sheet — no Runtime Profile and no Build.
+The unit of work is the Run, not the `.svml`. What a Source is read *with* — which files stand for
+which outputs, which Build records are reused — is an authoring decision, and the Run Source is
+where that decision is written down. See [Run Source & Builds](./run).
 
 ::: tip Stop the previous server before starting another
-A second Playground silently takes another port, and you end up reading a stale preview while
+A second Studio silently takes another port, and you end up reading a stale preview while
 describing a new one. Stop the old one first:
 
 ```bash
-pkill -f svml-playground || true
+pkill -f "@hypit/studio" || true
 ```
 
-Use `--port` when you genuinely want two Sources side by side.
+Use `--port` when you genuinely want two Runs side by side.
 :::
 
-## Why it can draw a video nobody has made
+## What Studio draws
 
-A Track cannot be built without the material it places. Refusing to draw anything until every shot
-exists would make the preview useless for exactly the part of the work it is meant for, so the
-Playground separates what it **knows** from what it **assumes**, and says which is which.
+Studio builds the deterministic closure of the Run and nothing else. Opening it never invokes a
+Provider and never creates a Build, so every projection it draws was either supplied by the Run as
+a Candidate or derived deterministically from one.
 
 **Everything structural is real.** Placement Frames, padding, stacking order, motion and the Track
-layout are computed by the same functions a build calls, from your Source and your style sheet. A
-card in the wrong part of the frame is wrong here too.
+layout are computed by the same functions a build calls, from your Source and your Recipes. A card
+in the wrong part of the frame is wrong here too.
 
-**Timings are estimated** until a build has aligned real audio. Word durations come from
-`@hypit/estimate`, the same syllable model the pipeline uses before generation. An estimated
-timeline is a proportion, not a prediction — real cut points move once WhisperX has run.
+**Every timing is measured.** The timeline comes from the `SemanticTrack` — the aligned Takes
+themselves — so a cut point you see is the cut point a build produces.
 
-**Missing material stands in**, and each stand-in is announced rather than presented as fact:
+When something the closure needs is missing, Studio says so and stops:
 
-| Missing | Shown instead |
-| --- | --- |
-| A generated shot that names a picture | That picture, held for the length the shot declares |
-| A generated shot that names nothing | A black frame of the programme's shape |
-| Caption phrasing nobody has planned | The words cut every few Atoms, in the Program's own runs |
-
-The first row is the one that makes this worth opening early. Take the chain from
-[Media & Generation](./generation):
-
-```svml
-<gpt:Image id="presenter" prompt={look} aspect-ratio="9:16" resolution="2K"/>
-
-<seedance:ReferenceVideo id="take-opening" model="mini" prompt={direction} duration="8">
-  <seedance:Reference image={presenter.image}/>
-</seedance:ReferenceVideo>
+```
+Studio cannot start:
+- the Studio projection closure requires unresolved capabilities: seedance.video
 ```
 
-`take-opening.video` does not exist until Seedance runs. But the Source says what it will be made
-from — `presenter.image` — and how long it will last: `duration="8"`. So the Playground draws the
-reference picture, held for eight seconds, in the Frame the take is placed in.
+What it asks for:
 
-That is not the take. It is the right subject, in the right shape, for the right length, which is
-enough to answer whether the framing works and whether the cutaway lands where the speech needs it —
-**before** the picture flows into video generation, and before you have paid for a take that turns
-out to be cut at the wrong moment.
-
-A declared duration is honoured wherever one exists. Where none does, words are placed at an
-ordinary delivery pace and the remaining time is divided evenly.
-
-This applies to every Track the Source produces, whichever package made it. The Playground asks the
-compiled Source for its exports and builds the ones typed `VisualTrack` or `AudioTrack`, so a
-package that grows a new kind of Track appears here without the Playground being taught about it.
-
-Drawing stand-ins needs `ffmpeg` on your `PATH`. Without it the shots stay unmade and the Tracks say
-so, rather than the preview pretending they were drawn.
-
-## Reading the badges
-
-The header carries two separate claims, because they answer different questions:
-
-| Badge | Meaning |
+| Refusal | What it means |
 | --- | --- |
-| `timing: measured` | Read from a completed build's aligned transcript. |
-| `timing: estimated` | Derived from the Script text at normal delivery pace. |
-| `picture: measured` | Every element shows real material. |
-| `picture: estimated` | Some shots have not been made, and stand in. |
+| `the Run Source has no target; Studio requires Film or Render` | Nothing in the Run names a finished programme to trace back from. |
+| `the Run target is not a Film or Render output from the current SVML` | The target named does not exist in the Source as it stands now. |
+| `Film has no traceable SemanticTake / Speech Track chain` | There is no semantic spine to hang a timeline on. |
+| `the Studio projection closure requires unresolved capabilities: …` | A Track needs a Provider to exist. Satisfy it in the Run, or accept a Build. |
+| `Render target … is an opaque media Candidate; Studio needs the current Film graph` | The Run points at a finished video file. Studio edits the graph, not the output. |
 
-A Source can have all its footage and still have an estimated timeline: where a cut lands is a
-question about speech, not about files. On the timeline itself each Track says whether it was
-`made`, is a `stand-in`, or is a black frame, and selecting a clip names the reason in full.
+The fourth is the one you will meet most, and it is all-or-nothing: one unresolved capability
+anywhere in the closure refuses the whole Run. A programme becomes openable in one step, when the
+last of its generated outputs is satisfied.
 
 ## Supplying material you already have
-
-As material accumulates, the same preview gets more real without any change to `main.svml`. What a
-Source is read with is an authoring decision, so it is made in a Run Source — see
-[Run Source & Builds](./run):
 
 ```svml
 <file id="take-1" type="@hypit/artifact@1#BlobArtifact"
@@ -116,18 +87,23 @@ Source is read with is an authoring decision, so it is made in a Run Source — 
 <satisfy output="take-opening.video" candidate="take-1"/>
 ```
 
-Point the Playground at it with `--run`, and that shot stops standing in. A `<build-record>`
-candidate names something an earlier Build made rather than a path, and needs `--runtime` to find
-it; without one, that shot alone is refused **by name** and everything else still draws.
+A `<build-record>` candidate names something an earlier Build made rather than a path, and needs
+`--runtime` to find it.
+
+## Where a Track came from
+
+Selecting a Track names the Candidate that produced it and where it came from — the Run, the Source,
+or neither. The header carries the same claim for the programme as a whole: `timing: measured` reads
+from the aligned `SemanticTrack`, `picture: measured` that every element shows real material.
 
 ## When an agent is doing the work
 
 If you are working through the [Hypit skill](https://github.com/hypit-ai/hypit/blob/main/.agents/skills/hypit/SKILL.md),
-the agent starts the Playground for you and sends you the link after each step that changes the
-Source — a Script edit, a Frame moved, a B-roll placed, a Recipe adjusted.
+the agent starts Studio for you and sends you the link after a step that changes the Source — a
+Script edit, a Frame moved, a B-roll placed, a Recipe adjusted.
 
 Reading a diff is not the same as seeing where a cutaway lands, and this is the cheapest moment to
-say "that card is too high" — before a single Provider has run.
+say "that card is too high".
 
 ## Moving around it
 
@@ -144,9 +120,22 @@ inside is outlined as it passes, whether or not a Track was hung on it.
 Drag the ruler to scrub. `Space` plays and pauses, `←` and `→` step one frame with `Shift` for ten,
 `Home` and `End` jump to the ends, and `Esc` clears the selection.
 
+## The semantic lane
+
+Above the Tracks is a lane that is not a Track: the `SemanticTrack` itself, drawn as one block per
+Segment. It is the skeleton every other row is positioned against.
+
+At the whole-programme view a Segment is the useful unit, so that is all it draws. Zoom in and once
+a Segment has enough width its words open into a real sub-lane beneath it, the way a pattern opens
+into a piano roll. Double-click a Segment to zoom to it; the toolbar has explicit zoom controls, and
+`Ctrl`-wheel pinches.
+
+Clicking a word moves the playhead to the frame that word starts on, which is the fastest way to
+answer "does this cutaway land on the right sentence".
+
 ## Sound
 
 HyperFrames renders a silent picture on purpose: programme audio is a separate Track the media
 pipeline muxes in at the end. But placing B-roll against speech means hearing the speech, so the
-Speech Spine's own material is allowed to sound while the transport is running. Cutaways stay
+Speech Track's own material is allowed to sound while the transport is running. Cutaways stay
 silent, as they are in a build unless they ask otherwise. The speaker button turns it off.

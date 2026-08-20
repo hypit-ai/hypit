@@ -4,7 +4,7 @@ import type {
   SynchronizedMedia,
 } from "@hypit/media";
 import type { BlobRef } from "@hypit/protocol";
-import type { SpatialFrame } from "@hypit/spatial";
+import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 
 export type RankingVariant = "tier-board" | "column" | "top-three";
 
@@ -13,7 +13,7 @@ export type RankingHeader = {
   readonly variant: RankingVariant;
 };
 
-export type RankingScheduleEntry = {
+export type TriggeredRankingScheduleEntry = {
   readonly itemId: string;
   readonly triggerFrame: number;
   readonly stage: FrameSpan;
@@ -21,13 +21,50 @@ export type RankingScheduleEntry = {
   readonly settled: FrameSpan;
 };
 
-export type RankingSchedule = {
+export type TriggeredRankingSchedule = {
   readonly id: string;
-  readonly variant: RankingVariant;
+  readonly variant: Exclude<RankingVariant, "column">;
   readonly outer: FrameSpan;
   readonly terminalFrame: number;
-  readonly entries: readonly RankingScheduleEntry[];
+  readonly entries: readonly TriggeredRankingScheduleEntry[];
 };
+
+export type ColumnOuterWindow = {
+  readonly span: FrameSpan;
+};
+
+export type ColumnWindowCandidate = {
+  readonly itemId: string;
+  readonly occurrenceId: string;
+  readonly preferred: FrameSpan;
+};
+
+export type ColumnWindowCandidateSet = {
+  readonly entries: readonly ColumnWindowCandidate[];
+};
+
+export type ColumnScheduleEntry =
+  | {
+      readonly itemId: string;
+      readonly mode: "preset";
+      readonly settled: FrameSpan;
+    }
+  | {
+      readonly itemId: string;
+      readonly mode: "reveal";
+      readonly preferred: FrameSpan;
+      readonly active: FrameSpan;
+      readonly settled: FrameSpan;
+    };
+
+export type ColumnSchedule = {
+  readonly id: string;
+  readonly variant: "column";
+  readonly outer: FrameSpan;
+  readonly entries: readonly ColumnScheduleEntry[];
+};
+
+export type RankingSchedule = TriggeredRankingSchedule | ColumnSchedule;
 
 export type RankingTextStyle = {
   readonly fonts: readonly FontArtifactRef[];
@@ -135,6 +172,8 @@ export type ColumnItemSpec = {
   readonly variant: "column";
   readonly id: string;
   readonly label: string;
+  readonly rank: number;
+  readonly preset: boolean;
   readonly stackingOrder?: number;
 };
 
@@ -174,21 +213,22 @@ export type TopThreeItemSet = {
 export type TierBoardProgram = {
   readonly id: string;
   readonly frame: SpatialFrame;
-  readonly schedule: RankingSchedule;
+  readonly schedule: TriggeredRankingSchedule;
   readonly style: TierBoardStyle;
   readonly items: readonly TierBoardItem[];
 };
 export type ColumnProgram = {
   readonly id: string;
+  readonly canvas: CanvasSpace;
   readonly frame: SpatialFrame;
-  readonly schedule: RankingSchedule;
+  readonly schedule: ColumnSchedule;
   readonly style: ColumnStyle;
   readonly items: readonly ColumnItem[];
 };
 export type TopThreeProgram = {
   readonly id: string;
   readonly frame: SpatialFrame;
-  readonly schedule: RankingSchedule;
+  readonly schedule: TriggeredRankingSchedule;
   readonly style: TopThreeStyle;
   readonly items: readonly TopThreeItem[];
 };

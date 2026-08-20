@@ -5,14 +5,7 @@ export type {
   SpeechTranscriptPassage,
   SpeechWordEvidence,
 } from "@hypit/speech-evidence";
-export type {
-  CompleteSemanticMap,
-  SemanticTimePoint,
-  TimedSpeechToken,
-} from "@hypit/semantic-map";
-export type { SpeechAudioBasis } from "@hypit/speech";
-
-/** Private vocabulary of the alignment implementation, not part of SemanticMap. */
+/** Private vocabulary of the alignment implementation, not part of SemanticTake. */
 export type AlignmentRelation =
   | "exact"
   | "split"

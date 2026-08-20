@@ -8,15 +8,16 @@ program audio.
 ## See it before you generate it
 
 Where a cutaway lands, how long it holds, and whether its Frame sits in the right part of the
-picture are all decided by the Source, not by the footage. The SVML Playground answers all three
-without a generation: an Item whose material exists shows real frames, and one whose material does
-not is still placed, still scrubbable, and marked as standing in. Timings are estimated until a
-build or a Run Source supplies measured ones, and an estimated cut point will move once WhisperX has
-heard the audio.
+picture are all decided by the Source, not by the footage. Hypit Studio answers all three without a
+generation, provided the Run satisfies the material it places: cut points come from the aligned
+`SemanticTrack`, so where a cutaway falls against the speech is measured rather than guessed.
+
+Satisfy the B-roll outputs in the Run Source with whatever footage you already have before expecting
+to see the placement: an Item whose material no Candidate supplies makes the whole Run unopenable.
 
 Do this after placing a Selection and before paying for a generation. Startup and arguments are in
 `docs/quickstart/preview.md`; for how to see placed items against their real frames, read
-`../../preview.md` and start the SVML Playground.
+`../../preview.md` and start Studio.
 
 ## Choose the story beats first
 
@@ -47,7 +48,7 @@ Do this after placing a Selection and before paying for a generation. Startup an
 </copy:Value>
 
 <copy:Render id="demo-prompt"
-  template={broll-kit.broll-v1} recipe={studio.broll.screen-demo}>
+  template={broll-kit.broll-v1} recipe={recipes.broll.screen-demo}>
   <copy:Set name="story" text={demo-story}/>
 </copy:Render>
 
@@ -76,11 +77,11 @@ only; narration, music, and effects remain explicit audio contributions.
 
 ## Place B-roll by authored meaning
 
-- Mark the intended spoken range as a Script `Selection`, then use `during={story.selection.NAME}` on
-  the Media Item and pass `{timing.map}` to the Track.
+- Mark the intended spoken range as a Script `Selection`, pass `semantic={speech.semantic}` to the
+  Track, then use `during={story.selection.NAME}` on the Media Item.
 - For a point event, declare a Script `Moment` and use `at={story.moment.NAME}` with an explicit `for`.
-- For silent programs or intentionally absolute edits, use `during="program"` or explicit `start` and
-  `end` expressions in the shared ProgramSpace.
+- For intentionally absolute edits, use `during="program"` or explicit `start` and `end` expressions
+  in the shared SemanticTrack frame domain.
 - For a non-contiguous Selection, choose `occurrences="each"` only when the same insert should appear
   at every occurrence; otherwise author separate Items.
 - Create J-cuts and L-cuts in the Script boundaries: let narration establish a few words before the

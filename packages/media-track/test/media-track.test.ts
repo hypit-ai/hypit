@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import { sealComposition } from "@hypit/composition";
 import type { AudioTrack } from "@hypit/composition";
 import { compileHyperframesDocument } from "@hypit/hyperframes";
 import { mediaTypes } from "@hypit/media";
 import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
-import { mediaPipelineProducers } from "@hypit/media-pipeline";
 import { artifactTypes } from "@hypit/artifact";
 import { narrativeTypes } from "@hypit/narrative";
 import {
@@ -57,8 +57,7 @@ import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative
 import { sealProgramSpace } from "@hypit/program-space";
 import { programSpaceTypes } from "@hypit/program-space";
 import type { BlobRef } from "@hypit/protocol";
-import { semanticMapTypes } from "@hypit/semantic-map";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
@@ -77,6 +76,17 @@ const canvas = {
   pixelAspect: "square" as const,
 };
 const header = sealMediaTrackHeader({ id: "proof" });
+const semantic = semanticTrackFixture(space, {
+  segments: [
+    { id: "opening", frameCount: 30 },
+    { id: "answer", frameCount: 60 },
+    { id: "ending", frameCount: 30 },
+  ],
+  anchors: [
+    { identity: "a", frame: 15 }, { identity: "b", frame: 45 },
+    { identity: "c", frame: 60 }, { identity: "d", frame: 105 },
+  ],
+});
 const source: BlobRef = {
   kind: "blob",
   digest: fixtureDigest("media-track:still"),
@@ -217,7 +227,7 @@ function sequenceSounds() {
 
 test("an Item keeps ordered Paint/sample layers, two-frame fit and frame presentation package-owned", () => {
   const program = finalizeMediaTrack(appendProgramMediaItem(
-    createMediaTrackSet(), header, space, canvas, stillLayers(), frame, itemSpec(), createMediaSoundSet(),
+    createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame, itemSpec(), createMediaSoundSet(),
   ), header, space);
   assert.deepEqual(program.items[0]?.span, { startFrame: 0, endFrameExclusive: 120 });
   assert.deepEqual(program.items[0]?.layers.map((layer) => layer.id), ["backing", "content"]);
@@ -251,7 +261,7 @@ test("an owned clip path is an explicit Media input and lowers only over the Ite
     ],
   });
   const track = projectMediaVisualTrack(space, finalizeMediaTrack(appendProgramMediaItem(
-    createMediaTrackSet(), header, space, canvas, stillLayers(), frame, clipped, createMediaSoundSet(),
+    createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame, clipped, createMediaSoundSet(),
   ), header, space));
   const frameElement = track.presents[0]!.elements.find((element) => element.id.endsWith(":frame"));
   assert.equal(frameElement?.style.find((entry) => entry.name === "clip-path")?.value,
@@ -269,7 +279,7 @@ test("self-blur is two explicit samples of one Artifact and Artifact collection 
     id: "foreground", appearance,
   }));
   const track = projectMediaVisualTrack(space, finalizeMediaTrack(appendProgramMediaItem(
-    createMediaTrackSet(), header, space, canvas, layers, frame, itemSpec(), createMediaSoundSet(),
+    createMediaTrackSet(), header, semantic, canvas, layers, frame, itemSpec(), createMediaSoundSet(),
   ), header, space));
   const document = compileHyperframesDocument(sealComposition({
     id: "media",
@@ -299,7 +309,7 @@ test("timed layer trim/hold, lifecycle and sampling motion remain separate wrapp
       { atProgress: 1, zoom: 1.2, offsetX: 20, offsetY: -10, rotationDeg: 2, easing: "ease-out" },
     ] },
   }));
-  const program = finalizeMediaTrack(appendProgramMediaItem(createMediaTrackSet(), header, space, canvas, layers, frame, itemSpec({
+  const program = finalizeMediaTrack(appendProgramMediaItem(createMediaTrackSet(), header, semantic, canvas, layers, frame, itemSpec({
     motion: {
       enter: { operator: "slide", durationFrames: 12, easing: "ease-out", direction: "down", amount: 120 },
       sustain: [{ operator: "wobble", amount: 2, cycles: 2 }],
@@ -345,7 +355,7 @@ test("source audio and edge SFX project separately from the visual Track", () =>
   sounds = appendMediaSound(sounds, timed("sfx-exit"), sealMediaSoundSpec({
     id: "exit-sound", trigger: { kind: "exit" }, gain: 0.25,
   }));
-  const program = finalizeMediaTrack(appendProgramMediaItem(createMediaTrackSet(), header, space, canvas, layers, frame, itemSpec({
+  const program = finalizeMediaTrack(appendProgramMediaItem(createMediaTrackSet(), header, semantic, canvas, layers, frame, itemSpec({
     sourceAudio: { fromLayer: "video", gain: 0.75 },
     motion: { sustain: [], exit: { operator: "fade", durationFrames: 10, easing: "ease-in" } },
   }), sounds), header, space);
@@ -364,7 +374,7 @@ test("source audio and edge SFX project separately from the visual Track", () =>
   });
   assert.equal(sourceClip?.gain, 0.75);
   assert.throws(() => projectMediaAudioTrack(space, finalizeMediaTrack(appendProgramMediaItem(
-    createMediaTrackSet(), header, space, canvas, stillLayers(), frame, itemSpec(), createMediaSoundSet(),
+    createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame, itemSpec(), createMediaSoundSet(),
   ), header, space)), /no explicitly authored audio/u);
 
   const bgm: AudioTrack = {
@@ -418,7 +428,7 @@ test("still and animated typed Surfaces use the same layer law without browser f
     id: "animated", occupancy: { mode: "loop", align: "start" }, appearance,
   }));
   const elements = projectMediaVisualTrack(space, finalizeMediaTrack(appendProgramMediaItem(
-    createMediaTrackSet(), header, space, canvas, layers, frame, itemSpec(), createMediaSoundSet(),
+    createMediaTrackSet(), header, semantic, canvas, layers, frame, itemSpec(), createMediaSoundSet(),
   ), header, space)).presents[0]!.elements;
   assert.equal(elements.find((element) => element.id === "still")?.kind, "surface");
   const moving = elements.find((element) => element.id === "animated");
@@ -432,15 +442,6 @@ test("still and animated typed Surfaces use the same layer law without browser f
 });
 
 test("Media Items consume the shared one/each temporal algebra without becoming an exclusive lane", () => {
-  const semanticMap: CompleteSemanticMap = {
-    tokens: [],
-    anchors: [
-      { identity: "a", frame: 15 },
-      { identity: "b", frame: 45 },
-      { identity: "c", frame: 60 },
-      { identity: "d", frame: 105 },
-    ],
-  };
   const selection: NarrativeSelectionRef = {
 
     id: "mentions",
@@ -449,8 +450,8 @@ test("Media Items consume the shared one/each temporal algebra without becoming 
       { occurrence: 1, startAnchorId: "c", endAnchorId: "d" },
     ],
   };
-  const repeated = appendSelectionMediaItem(createMediaTrackSet(), header, space, canvas, stillLayers(), frame,
-    semanticMap, selection, itemSpec({
+  const repeated = appendSelectionMediaItem(createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame,
+    selection, itemSpec({
       id: "mention",
       expansion: { kind: "each" },
       projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
@@ -462,8 +463,8 @@ test("Media Items consume the shared one/each temporal algebra without becoming 
   const moment: NarrativeMomentRef = {
     id: "cue", occurrences: [{ occurrence: 0, anchorId: "b" }],
   };
-  const overlapping = appendMomentMediaItem(repeated, header, space, canvas, stillLayers(), frame,
-    semanticMap, moment, itemSpec({
+  const overlapping = appendMomentMediaItem(repeated, header, semantic, canvas, stillLayers(), frame,
+    moment, itemSpec({
       id: "popup",
       projection: { start: { ref: "moment.cue", offset: { unit: "frames", value: -10 } }, end: { ref: "moment.cue", offset: { unit: "frames", value: 20 } } },
       stackingOrder: 41,
@@ -481,8 +482,8 @@ test("Media Items consume the shared one/each temporal algebra without becoming 
     occurrences: [selection.occurrences[0]!],
   };
   const selectedOnce = appendSelectionMediaItem(
-    createMediaTrackSet(), header, space, canvas, stillLayers(), frame,
-    semanticMap, singleSelection, itemSpec({
+    createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame,
+    singleSelection, itemSpec({
       id: "selected-once",
       expansion: { kind: "one" },
       projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
@@ -502,8 +503,8 @@ test("Media Items consume the shared one/each temporal algebra without becoming 
     ],
   };
   const moments = appendMomentMediaItem(
-    createMediaTrackSet(), header, space, canvas, stillLayers(), frame,
-    semanticMap, repeatedMoment, itemSpec({
+    createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame,
+    repeatedMoment, itemSpec({
       id: "moment-each",
       expansion: { kind: "each" },
       projection: {
@@ -518,7 +519,7 @@ test("Media Items consume the shared one/each temporal algebra without becoming 
   ]);
 
   const absolute = appendProgramMediaItem(
-    createMediaTrackSet(), header, space, canvas, stillLayers(), frame,
+    createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame,
     itemSpec({
       id: "absolute",
       projection: {
@@ -531,16 +532,8 @@ test("Media Items consume the shared one/each temporal algebra without becoming 
 });
 
 test("a Media Item can consume one whole Narrative Segment without a synthetic Selection", () => {
-  const semanticMap: CompleteSemanticMap = {
-    tokens: [],
-    anchors: [
-      { identity: "segment:answer:start", frame: 30 },
-      { identity: "segment:answer:end", frame: 90 },
-    ],
-  };
   const result = appendSegmentMediaItem(
-    createMediaTrackSet(), header, space, canvas, stillLayers(), frame,
-    semanticMap,
+    createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame,
     { kind: "segment", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
     itemSpec({
       id: "whole-answer",
@@ -588,7 +581,7 @@ test("every documented Media frame and fit remains one ordinary Item instead of 
       { widthPx: index % 3 === 0 ? 400 : index % 3 === 1 ? 1200 : 800,
         heightPx: index % 3 === 0 ? 1200 : index % 3 === 1 ? 400 : 800 },
       localFit, sealMediaSampleLayerSpec({ id: `sample-${index}`, appearance }));
-    set = appendProgramMediaItem(set, header, space, canvas, layers, frames[index % frames.length]!, itemSpec({
+    set = appendProgramMediaItem(set, header, semantic, canvas, layers, frames[index % frames.length]!, itemSpec({
       id: `fit-${sizing}`, stackingOrder: 100 + index,
       presentation: { clip: { kind: "none" }, padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 }, shadows: [] },
     }), createMediaSoundSet());
@@ -619,7 +612,7 @@ test("transparent, Paint, self-blur and alternate-source backing are only ordere
   layers = appendStillMediaLayer(layers, source, extent, fit,
     sealMediaSampleLayerSpec({ id: "foreground", appearance }));
   const track = projectMediaVisualTrack(space, finalizeMediaTrack(appendProgramMediaItem(
-    createMediaTrackSet(), header, space, canvas, layers, frame, itemSpec(), createMediaSoundSet(),
+    createMediaTrackSet(), header, semantic, canvas, layers, frame, itemSpec(), createMediaSoundSet(),
   ), header, space));
   const document = compileHyperframesDocument(sealComposition({
     id: "layer-matrix", canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [track],
@@ -629,7 +622,7 @@ test("transparent, Paint, self-blur and alternate-source backing are only ordere
   assert.equal(document.artifacts.length, 2, "repeated samples share bytes while the alternate source remains explicit");
 
   const transparent = projectMediaVisualTrack(space, finalizeMediaTrack(appendProgramMediaItem(
-    createMediaTrackSet(), header, space, canvas,
+    createMediaTrackSet(), header, semantic, canvas,
     appendStillMediaLayer(createMediaLayerSet(), source, extent, fit,
       sealMediaSampleLayerSpec({ id: "only", appearance })),
     frame, itemSpec(), createMediaSoundSet(),
@@ -641,12 +634,12 @@ test("transparent, Paint, self-blur and alternate-source backing are only ordere
 test("visual-only normalized video never creates an implicit audio branch", () => {
   const silent = timedLayers("silent", false);
   const program = finalizeMediaTrack(appendProgramMediaItem(
-    createMediaTrackSet(), header, space, canvas, silent, frame, itemSpec(), createMediaSoundSet(),
+    createMediaTrackSet(), header, semantic, canvas, silent, frame, itemSpec(), createMediaSoundSet(),
   ), header, space);
   assert.equal(projectMediaVisualTrack(space, program).presents[0]!.elements.some((element) => element.kind === "video"), true);
   assert.throws(() => projectMediaAudioTrack(space, program), /no explicitly authored audio projection/u);
   assert.throws(() => appendProgramMediaItem(
-    createMediaTrackSet(), header, space, canvas, silent, frame,
+    createMediaTrackSet(), header, semantic, canvas, silent, frame,
     itemSpec({ sourceAudio: { fromLayer: "video", gain: 1 } }), createMediaSoundSet(),
   ), /has no normalized audio/u);
 });
@@ -666,7 +659,7 @@ test("timed visual occupancy resolves every alignment into exact source-frame se
 
 test("the graph keeps every source, extent, fit, frame, time and appearance input explicit", () => {
   assert.deepEqual(stillMediaTrackFragment.inputs.map((input) => input.name), [
-    "canvas", "extent", "fit", "frame", "header", "item-spec", "sample-spec", "source", "space",
+    "canvas", "extent", "fit", "frame", "header", "item-spec", "sample-spec", "semantic", "source",
   ]);
 });
 
@@ -686,13 +679,11 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
     path, ref: { kind: "record", id: path }, type,
   });
   const references = new Map<string, SurfaceResolvedReference>([
-    ["space", plain("space", programSpaceTypes.programSpace)],
     ["canvas", plain("canvas", spatialTypes.canvas)],
-    ["map", plain("map", semanticMapTypes.complete)],
+    ["semantic", plain("semantic", semanticTrackTypes.track)],
     ["frame", plain("frame", spatialTypes.frame)],
     ["clip-path", plain("clip-path", spatialTypes.path)],
     ["still", plain("still", artifactTypes.blob)],
-    ["raw-video", plain("raw-video", artifactTypes.blob)],
     ["extent", plain("extent", spatialTypes.extent)],
     ["video", plain("video", mediaTypes.synchronized)],
     ["surface", plain("surface", mediaTypes.compositableSurface)],
@@ -711,12 +702,12 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
     ["motion", appearance("motion", { enter: "slide", "enter-frames": 12, "enter-easing": "ease-out", "enter-direction": "up", "enter-origin": "outside-canvas" })],
     ["handoff", appearance("handoff", { operator: "crossfade", "duration-frames": 10, "boundary-ratio": 0.5, audio: "cut" })],
   ]);
-  const root = node("media:Track", { id: "editorial", space: ref("space"), canvas: ref("canvas"), map: ref("map") }, [
+  const root = node("media:Track", { id: "editorial", semantic: ref("semantic"), canvas: ref("canvas") }, [
     node("media:Item", { id: "still-card", image: ref("still"), extent: ref("extent"), frame: ref("frame"), clip: ref("clip-path"), appearance: ref("still-style"), during: "program" }),
     node("media:Item", { id: "segment-card", image: ref("still"), extent: ref("extent"), frame: ref("frame"), appearance: ref("still-style"), during: ref("answer-segment") }),
     node("media:Item", { id: "proof", frame: ref("frame"), appearance: ref("card-style"), motion: ref("motion"), during: ref("selection"), "source-audio": "video", "audio-gain": "0.8" }, [
       node("media:Paint", { id: "backing", appearance: ref("paint-style") }),
-      node("media:Layer", { id: "video", video: ref("raw-video"), audio: "include", appearance: ref("video-style") }, [
+      node("media:Layer", { id: "video", media: ref("video"), appearance: ref("video-style") }, [
         node("media:Sampling", { at: "start", zoom: "1" }),
         node("media:Sampling", { at: "end", zoom: "1.1", y: "-10", easing: "ease-out" }),
       ]),
@@ -742,9 +733,6 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
   assert.ok(producers.includes("append-still-media-layer"));
   assert.ok(producers.includes("append-segment-media-item"));
   assert.ok(producers.includes("append-timed-media-layer"));
-  assert.ok(producers.includes(mediaPipelineProducers.bindAvRequest.name));
-  assert.ok(producers.includes(mediaPipelineProducers.inspect.name));
-  assert.ok(producers.includes(mediaPipelineProducers.normalize.name));
   assert.ok(producers.includes("append-surface-media-layer"));
   assert.ok(producers.includes("append-media-paint-layer"));
   assert.ok(producers.includes("bind-media-item-clip-path"));

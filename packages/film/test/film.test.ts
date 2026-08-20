@@ -1,6 +1,8 @@
 import { compositionComponent, spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
 import { registerTypeValidatorFacets } from "@hypit/component-kit";
 import { programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
+import { projectSemanticProgramSpace, semanticTrackTypes } from "@hypit/semantic-track";
+import type { SemanticTrack } from "@hypit/semantic-track";
 import { compositionTypes, sealAudioTrack, sealVisualTrack } from "@hypit/composition";
 import type { Composition, Track } from "@hypit/composition";
 import type { FontArtifactRef } from "@hypit/media";
@@ -8,6 +10,7 @@ import { sealCanvasSpace, spatialTypes } from "@hypit/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import {
   createResolvedClosure,
@@ -36,6 +39,7 @@ const space = sealProgramSpace({
   durationSec: 4,
   frameRate: { numerator: 30, denominator: 1 },
 });
+const semantic = semanticTrackFixture(space);
 
 function validatorRegistry(): TypeValidatorRegistry {
   const registry = new TypeValidatorRegistry();
@@ -133,6 +137,7 @@ const closure = createResolvedClosure([
 ]);
 const records = await Promise.all([
   sealRecord({ id: "space", type: programSpaceTypes.programSpace, value: stored(space) }),
+  sealRecord({ id: "semantic", type: semanticTrackTypes.track, value: stored(semantic) }),
   sealRecord({ id: "canvas", type: spatialTypes.canvas, value: stored(canvas) }),
   sealRecord({ id: "film-program", type: filmTypes.program, value: stored(filmProgram) }),
   sealRecord({ id: "text-program", type: typographyTrackTypes.program, value: stored(textProgram) }),
@@ -145,7 +150,7 @@ const textInstance = elaborateGraphFragment(linked, typographyTrackFragment, {
   id: "title",
   fragment: typographyTrackFragment.id,
   inputs: {
-    space: { kind: "record", id: "space" },
+    semantic: { kind: "record", id: "semantic" },
     program: { kind: "record", id: "text-program" },
   },
 });
@@ -165,7 +170,7 @@ const filmInstance = elaborateGraphFragment(linked, filmFragment, {
   inputs: {
     program: { kind: "record", id: "film-program" },
     canvas: { kind: "record", id: "canvas" },
-    space: { kind: "record", id: "space" },
+    semantic: { kind: "record", id: "semantic" },
     title: { kind: "logical-output", id: "title.track" },
     background: { kind: "record", id: "background" },
     audio: { kind: "record", id: "audio" },
@@ -224,7 +229,10 @@ test("Film stops at Composition and Hyperframes remains an ordinary downstream F
 test("the Driver folds peer Tracks, then independently compiles the Composition", async () => {
   const registry = new ProducerRegistry();
   registry.registerProducer(typographyTrackProducers.render, ({ inputs }) => ({
-    outputs: { track: stored(renderTypographyTrack(inline(inputs.space) as typeof space, inline(inputs.program) as typeof textProgram)) },
+    outputs: { track: stored(renderTypographyTrack(
+      projectSemanticProgramSpace(inline(inputs.semantic) as SemanticTrack),
+      inline(inputs.program) as typeof textProgram,
+    )) },
     needs: {},
   }));
   registry.registerProducer(filmProducers.createTrackSet, () => ({
@@ -234,7 +242,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
   registry.registerProducer(filmProducers.appendVisualTrack, ({ inputs }) => ({
     outputs: { set: stored(appendFilmVisualTrack(
       inline(inputs.set) as never,
-      inline(inputs.space) as typeof space,
+      projectSemanticProgramSpace(inline(inputs.semantic) as SemanticTrack),
       inline(inputs.track) as never,
     )) },
     needs: {},
@@ -242,7 +250,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
   registry.registerProducer(filmProducers.appendAudioTrack, ({ inputs }) => ({
     outputs: { set: stored(appendFilmAudioTrack(
       inline(inputs.set) as never,
-      inline(inputs.space) as typeof space,
+      projectSemanticProgramSpace(inline(inputs.semantic) as SemanticTrack),
       inline(inputs.track) as never,
     )) },
     needs: {},
@@ -251,7 +259,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
     outputs: { composition: stored(compileFilmComposition(
       inline(inputs.program) as never,
       inline(inputs.canvas) as typeof canvas,
-      inline(inputs.space) as typeof space,
+      projectSemanticProgramSpace(inline(inputs.semantic) as SemanticTrack),
       inline(inputs.set) as never,
     )) },
     needs: {},

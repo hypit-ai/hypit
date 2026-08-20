@@ -1,4 +1,4 @@
-import { programSpaceTypes } from "@hypit/program-space";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { compositionTypes } from "@hypit/composition";
 import type { Track } from "@hypit/composition";
@@ -12,7 +12,7 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 function assertTrackInputs(tracks: readonly FilmTrackInput[]): FilmTrackInput[] {
-  const names = new Set(["program", "canvas", "space"]);
+  const names = new Set(["program", "canvas", "semantic"]);
   return [...tracks]
     .map((track) => ({ name: track.name.trim(), kind: track.kind }))
     .sort((left, right) => left.name.localeCompare(right.name))
@@ -43,7 +43,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
     operations.push({
       id,
       producer: track.kind === "visual" ? filmProducers.appendVisualTrack : filmProducers.appendAudioTrack,
-      inputs: { set: operation(current), space: input("space"), track: input(track.name) },
+      inputs: { set: operation(current), semantic: input("semantic"), track: input(track.name) },
       result: { kind: "output" as const, name: "set" },
     });
     current = id;
@@ -54,7 +54,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
     inputs: {
       program: input("program"),
       canvas: input("canvas"),
-      space: input("space"),
+      semantic: input("semantic"),
       set: operation(current),
     },
     result: { kind: "output" as const, name: "composition" },
@@ -63,7 +63,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
     inputs: [
       { name: "program", type: filmTypes.program },
       { name: "canvas", type: spatialTypes.canvas },
-      { name: "space", type: programSpaceTypes.programSpace },
+      { name: "semantic", type: semanticTrackTypes.track },
       ...tracks.map((track) => ({
         name: track.name,
         type: track.kind === "visual" ? compositionTypes.visualTrack : compositionTypes.audioTrack,

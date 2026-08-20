@@ -2,8 +2,7 @@ import { captionTypes } from "@hypit/caption";
 import { assertFontArtifactRef, assertFontStackRef, mediaTypes } from "@hypit/media";
 import type { FontArtifactRef, FontStackRef } from "@hypit/media";
 import { narrativeTypes } from "@hypit/narrative";
-import { programSpaceTypes } from "@hypit/program-space";
-import { semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
 import type {
@@ -114,7 +113,7 @@ export const decodeFineCaptionStyleSurface: StructuredSurfaceHandler = ({ elemen
 };
 
 export const decodeFineCaptionTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "display", "correspondence", "map", "program", "plan", "space"]);
+  attributes(element, ["id", "display", "correspondence", "semantic", "program", "plan"]);
   if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
     throw new Error(`${element.name} does not accept children`);
   }
@@ -126,18 +125,17 @@ export const decodeFineCaptionTrackSurface: StructuredSurfaceHandler = ({ elemen
     narrativeTypes.captionCorrespondence,
     resolveReference,
   );
-  const map = reference(element, "map", semanticMapTypes.complete, resolveReference);
+  const semantic = reference(element, "semantic", semanticTrackTypes.track, resolveReference);
   const program = reference(element, "program", captionTypes.program, resolveReference);
   const plan = reference(element, "plan", captionTypes.plan, resolveReference);
-  const space = reference(element, "space", programSpaceTypes.programSpace, resolveReference);
   return {
     records: [],
     components: [{
       id,
       fragment: fineCaptionTrackFragment.id,
       inputs: {
-        display: display.ref, correspondence: correspondence.ref, map: map.ref,
-        program: program.ref, plan: plan.ref, space: space.ref,
+        display: display.ref, correspondence: correspondence.ref, semantic: semantic.ref,
+        program: program.ref, plan: plan.ref,
       },
       outputs: { track: `${id}.track` },
       range: element.range,

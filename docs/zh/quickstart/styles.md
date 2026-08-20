@@ -35,10 +35,10 @@ SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。
 在 `.svml` 源文件中通过命名空间前缀导入 SVS 文件：
 
 ```svml
-<import as="studio" source="./studio.svs"/>
+<import as="recipes" source="./recipes.svs"/>
 ```
 
-然后通过 `{studio.film.vertical}`、`{studio.caption.primary}` 等方式引用各个 Recipe。前缀来自 `as=` 属性；路径来自样式表中的 `namespace.name`。
+然后通过 `{recipes.film.vertical}`、`{recipes.caption.primary}` 等方式引用各个 Recipe。前缀来自 `as=` 属性；路径来自样式表中的 `namespace.name`。
 
 ## Film
 
@@ -59,7 +59,7 @@ film.vertical {
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
 ```
 
 ## Caption Fine
@@ -103,7 +103,7 @@ Style。字体家族、字重和字形只在这条精确字体边上声明一次
 
 ```svml
 <fonts:Face id="caption-font" family="inter" weight="600" style="normal"/>
-<caption-fine:Style id="primary-caption" recipe={studio.caption.dialogue}
+<caption-fine:Style id="primary-caption" recipe={recipes.caption.dialogue}
   font={caption-font}/>
 ```
 
@@ -137,9 +137,9 @@ caption.bob {
 
 ```svml
 <fonts:Stack id="caption-font" family="inter" weight="600" style="normal"/>
-<caption-fine:Style id="default-caption" recipe={studio.caption.dialogue} font={caption-font}/>
-<caption-fine:Style id="alice-caption" recipe={studio.caption.alice} font={caption-font}/>
-<caption-fine:Style id="bob-caption" recipe={studio.caption.bob} font={caption-font}/>
+<caption-fine:Style id="default-caption" recipe={recipes.caption.dialogue} font={caption-font}/>
+<caption-fine:Style id="alice-caption" recipe={recipes.caption.alice} font={caption-font}/>
+<caption-fine:Style id="bob-caption" recipe={recipes.caption.bob} font={caption-font}/>
 <caption:Program id="caption-program" display={story.caption} default={default-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
@@ -197,7 +197,7 @@ motion.product {
   left="8%" top="20%" right="92%" bottom="68%"/>
 <media-track:Item video={product-motion.video}
   during={story.selection.demo} frame={product-frame}
-  appearance={studio.media.product} motion={studio.motion.product}/>
+  appearance={recipes.media.product} motion={recipes.motion.product}/>
 ```
 
 ## 文本
@@ -228,7 +228,7 @@ text.title {
 
 ```svml
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
-<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+<text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
 <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
   MEANING
 </text:Area>
@@ -264,7 +264,7 @@ speech.normal {
 
 ```svml
 <estimate:Speech id="hook-duration" source={story.segment.hook.speech}
-  policy={studio.speech.normal}/>
+  policy={recipes.speech.normal}/>
 ```
 
 ## Speaker Text Template
@@ -292,7 +292,7 @@ speaker.host {
 
 ```svml
 <text:Render id="hook-prompt"
-  template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+  template={speaker-kit.speaker-v1} recipe={recipes.speaker.host}>
   <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
   <text:Set name="action" text={hook-action}/>
 </text:Render>
@@ -354,7 +354,7 @@ SVS 描述字体策略，但不选择或打开字体字节。常用开源字体�
 也不猜字体：
 
 ```svml
-<caption-fine:Style id="dialogue" recipe={studio.caption.dialogue}
+<caption-fine:Style id="dialogue" recipe={recipes.caption.dialogue}
   font={caption-fonts}/>
 ```
 
@@ -371,7 +371,7 @@ Caption Recipe 不再重复家族、字重或字形。CJK 与 Emoji 即使由多
 
 ## 综合示例
 
-一个完整的 `studio.svs` 文件，用于四段式说话人头像项目：
+一个完整的 `recipes.svs` 文件，用于四段式说话人头像项目：
 
 ```svs
 <?svml using="@hypit/svs@1"?>
@@ -418,16 +418,16 @@ Caption Recipe 不再重复家族、字重或字形。CJK 与 Emoji 即使由多
 该文件在 `.svml` 源文件中导入一次，其值在整个文件中被引用：
 
 ```svml
-<import as="studio" source="./studio.svs"/>
+<import as="recipes" source="./recipes.svs"/>
 
 <estimate:Speech id="hook-duration" source={story.segment.hook.speech}
-  policy={studio.speech.normal}/>
+  policy={recipes.speech.normal}/>
 
 <text:Render id="hook-prompt" template={speaker-kit.speaker-v1}
-  recipe={studio.speaker.host}>...</text:Render>
+  recipe={recipes.speaker.host}>...</text:Render>
 
-<caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
+<caption-fine:Style id="primary-caption" recipe={recipes.caption.primary} font={caption-font}/>
 
 <space:Canvas id="vertical" width="720" height="1280"/>
-<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
 ```

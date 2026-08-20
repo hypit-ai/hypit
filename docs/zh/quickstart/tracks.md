@@ -53,7 +53,7 @@ caption.primary {
 <fonts:Stack id="caption-fonts" family="inter" weight="700" style="normal" emoji="color">
   <fonts:Fallback family="noto-sans-sc" weight="700" style="normal"/>
 </fonts:Stack>
-<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
+<caption-fine:Style id="primary-caption" recipe={recipes.caption.primary}
   font={caption-fonts}/>
 ```
 
@@ -100,8 +100,7 @@ Dual Text 右侧。
 ### caption-fine:Track
 
 ```svml
-<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
-  space={speech.space} program={caption-program} plan={caption-plan.plan}/>
+<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} semantic={speech.semantic} program={caption-program} plan={caption-plan.plan}/>
 ```
 
 公共 Caption 先把 Plan 与独立 SemanticMap 拼接，Fine 再把所有默认/覆盖样式渲染成一个普通的对等 `VisualTrack`：`{captions.track}`。
@@ -133,12 +132,11 @@ B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族�
 <space:Frame id="product-frame" within={vertical}
   left="8%" top="20%" right="92%" bottom="68%"/>
 
-<media-track:Track id="product-broll" map={timing.map}
-  space={speech.space} canvas={vertical}>
+<media-track:Track id="product-broll" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item video={product-motion.video} frame={product-frame}
     during={story.selection.product-demo}
-    appearance={studio.media.product}
-    motion={studio.motion.product}/>
+    appearance={recipes.media.product}
+    motion={recipes.motion.product}/>
 </media-track:Track>
 ```
 
@@ -174,7 +172,7 @@ Operation。需要共享或特殊选流时仍可显式写 `<pipeline:Normalize>`
 <pipeline:Normalize id="music-media" source={music}
   video="none" audio="default" span-authority="audio" frame-rate="30"/>
 
-<audio:Track id="music-bed" space={speech.space}>
+<audio:Track id="music-bed" semantic={speech.semantic}>
   <audio:Clip source={music-media.media} during="program"
     playback="loop-end" gain="0.28" fade-in="600ms" fade-out="800ms"/>
 </audio:Track>
@@ -183,10 +181,9 @@ Operation。需要共享或特殊选流时仍可显式写 `<pipeline:Normalize>`
 | 属性 | 必填 | 描述 |
 |---|---|---|
 | `Track.id` | 是 | 稳定的 Audio Track 身份 |
-| `Track.space` | 是 | 定义精确采样域与帧域的 ProgramSpace |
+| `Track.semantic` | 是 | 定义精确采样域与帧域的 SemanticTrack |
 | `Clip.source` | 是 | 显式选流并规范化后的 `SynchronizedMedia` |
 | `during`、`at`/`for` 或 `start`/`end` | 三种形式选一 | 全节目、Selection、Moment 或显式窗口 |
-| `map` | Selection/Moment 必填 | 用于解析语义时间的 SemanticMap |
 | `playback` | 否 | `once`、`once-end`、`loop`、`loop-end` 或有界 `stretch` |
 | `occurrences` | 否 | 语义来源有多次出现时选择 `one` 或 `each` |
 | `trim-start`、`trim-end` | 否 | 精确源裁切 |
@@ -213,8 +210,8 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.track}` 是普通
 <space:Frame id="title-frame" within={vertical}
   left="6%" top="6%" right="94%" bottom="16%"/>
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
-<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
-<text:Track id="titles" space={speech.space}>
+<text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
+<text:Track id="titles" semantic={speech.semantic}>
   <text:Area id="title" placement={title-frame} style={title-style} during="program">
     EDIT MEANING, NOT TIMELINES
   </text:Area>
@@ -224,8 +221,7 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.track}` 是普通
 | 属性 | 必填 | 描述 |
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
-| `space` | 是 | 来自 `speech:Spine` 的 ProgramSpace |
-| `map` | 否 | SemanticMap——当项目使用基于 Selection 的计时时需要 |
+| `semantic` | 是 | 来自 `speech:Track` 的 SemanticTrack——也用于解析基于 Selection 的项目计时 |
 
 ### text:Point、text:Area 与 text:Path
 
@@ -249,8 +245,8 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.track}` 是普通
 `during` 属性接受字面字符串 `"program"`（表示完整 ProgramSpace），或用于语义计时的 Selection 引用：
 
 ```svml
-<text:Style id="callout-style" recipe={studio.text.callout} font={title-font}/>
-<text:Track id="callout" space={speech.space} map={timing.map}>
+<text:Style id="callout-style" recipe={recipes.text.callout} font={title-font}/>
+<text:Track id="callout" semantic={speech.semantic}>
   <text:Area id="callout-copy" placement={callout-frame}
     style={callout-style} during={story.selection.callout}>
     EXACTLY THE RIGHT MOMENT
@@ -262,7 +258,7 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.track}` 是普通
 
 ```svml
 <wording:Value id="headline">EXACTLY THE RIGHT MOMENT</wording:Value>
-<text:Track id="callout" space={speech.space}>
+<text:Track id="callout" semantic={speech.semantic}>
   <text:Area id="callout-copy" content={headline}
     placement={callout-frame} style={callout-style} during="program"/>
 </text:Track>
@@ -295,13 +291,12 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 | 属性 | 取值 |
 |---|---|
-| `map` | 安放词语的 Semantic Map |
-| `space` | Program Space |
-| `frame` | 一个 `space:Frame` |
+| `semantic` | 板据以计时的 SemanticTrack |
+| `frame` | 一个 `space:Frame`——对 `Column` 来说是固定的排名轨 |
 | `during` | 一个 Selection——板在此期间留在画面上 |
-| `triggers` | 一个 Moment——行在它上面移动 |
-| `terminal` | 一个 Moment——板在它上面定格 |
 | `style` | 对应的样式记录，且只接受本变体的 |
+| `triggers`、`terminal` | 两个 Moment——行在前者上移动，板在后者上定格。仅 `TierBoard` 与 `TopThree` |
+| `canvas` | 一个 `space:Canvas`——揭示舞台。仅 `Column` |
 | `appear-sound`、`move-sound` | 可选，Synchronized Media |
 
 `move-sound` 在 `TopThree` 上会被拒绝——它没有移动阶段。在 `TierBoard` 上它要求至少有一个 `entry="stage"` 的条目：声音没有可响之处是创作错误，而不是静默的空操作。
@@ -314,8 +309,8 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 - **`ColumnItem`** 与 **`TopThreeItem`** —— `label`（必填：字符串或 Text 引用），可选 `icon` 与 `stack`。`TopThree` 最多三条。
 
 ```svml
-<ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>
-<ranking:Column id="board" map={timing.map} space={speech.space} frame={board-frame}
+<ranking:ColumnStyle id="board-style" recipe={recipes.ranking.board} font={ui-font}/>
+<ranking:Column id="board" semantic={speech.semantic} frame={board-frame}
   during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
   style={board-style}>
   <ranking:ColumnItem id="row-regen" label="ReGen" icon={icon-regen}/>
@@ -336,7 +331,7 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 ### deck:DepthStack
 
-`id`、`map`、`space`、`canvas`、`frame` 与 `appearance` 全部必填，`until` 同样必填——它说明什么结束这叠卡片：字面量 `"program.end"`、一个 Moment，或一个 Selection。只有在指向 Selection 时才可以再加 `until-boundary="start" | "end"` 来选择用它的哪一端结束，默认是 `end`；在另外两种情况下给出这个属性会被拒绝，而不是被忽略。
+`id`、`semantic`、`canvas`、`frame` 与 `appearance` 全部必填，`until` 同样必填——它说明什么结束这叠卡片：字面量 `"program.end"`、一个 Moment，或一个 Selection。只有在指向 Selection 时才可以再加 `until-boundary="start" | "end"` 来选择用它的哪一端结束，默认是 `end`；在另外两种情况下给出这个属性会被拒绝，而不是被忽略。
 
 ### deck:Card
 
@@ -356,8 +351,8 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 
 ```svml
 <space:Frame id="deck-frame" within={vertical} left="44%" top="60%" right="98%" bottom="88%"/>
-<deck:DepthStack id="deck" map={timing.map} space={speech.space} canvas={vertical}
-  frame={deck-frame} appearance={studio.deck.stack} until={story.moment.done}>
+<deck:DepthStack id="deck" semantic={speech.semantic} canvas={vertical}
+  frame={deck-frame} appearance={recipes.deck.stack} until={story.moment.done}>
   <deck:Card id="card-spatial" source={icon-spatial} extent={square} at={story.moment.deal-one}/>
   <deck:Card id="card-type" source={icon-type} extent={square} at={story.moment.deal-two}/>
 </deck:DepthStack>
@@ -378,17 +373,17 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 | 时间窗 | 写法 |
 |---|---|
 | 整个节目 | `during="program"` |
-| 一个 Selection | `during={story.selection.x} map={timing.map}` |
-| 一个 Moment，持续一段时长 | `at={story.moment.x} for="12f" map={timing.map}` |
+| 一个 Selection | 在带有 `semantic={speech.semantic}` 的 Track 内写 `during={story.selection.x}` |
+| 一个 Moment，持续一段时长 | 在带有 `semantic={speech.semantic}` 的 Track 内写 `at={story.moment.x} for="12f"` |
 | 显式区间 | `start="…" end="…"`，可另外指定 `selection=` 或 `moment=` |
 
-凡是绑定到 Script 的都需要 `map`；不带 Script 来源的显式区间则不能给 `map`。时长写作 `12f`、`250ms` 或 `1.5s`，`occurrences="each"` 让效果在标记的每一次出现处重复，而不只是第一次。
+Track 接受 `id`、`canvas` 与 `semantic`。时长写作 `12f`、`250ms` 或 `1.5s`，`occurrences="each"` 让效果在标记的每一次出现处重复，而不只是第一次。
 
 可用的效果有十一种——`Flash`、`ColorWash`、`Vignette`、`ScanLines`、`DirectionalMatte`、`WhipVeil`、`GlitchVeil`、`Grain`、`LightLeak`、`Bokeh` 与 `TVStatic`——每种各有自己的必填属性，例如 `Flash` 的 `color` / `intensity` / `attack` / `hold` / `decay`，或 `Vignette` 的 `center-x` / `center-y` / `radius-x` / `radius-y` / `softness` / `color` / `opacity`。它们都没有默认值：一个效果要么把自己的形状说全，要么被拒绝。
 
 ```svml
-<screen:Track id="effects" space={speech.space} canvas={vertical}>
-  <screen:Flash during={story.selection.overlay} map={timing.map} z="80"
+<screen:Track id="effects" semantic={speech.semantic} canvas={vertical}>
+  <screen:Flash during={story.selection.overlay} z="80"
     color="#ffffff" intensity="0.6" attack="2" hold="2" decay="6"/>
 </screen:Track>
 ```
@@ -405,13 +400,13 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 
 `comment:Style` 必须为空，接受 `id`、`recipe` 与 `font`，全部必填。Recipe 承载整张卡的外观——背景、描边、圆角、气泡尾、头像、三行文字，以及进入/停留/退出的动效——每个键都有默认值，所以一份 recipe 只需写它要改的部分。
 
-`comment:Track` 接受 `id`、`canvas` 与 `space`。只有当它的某张贴纸绑定到 Script 时才接受 `map`；没有任何贴纸绑定却给了 `map` 会被拒绝，而不是被忽略。
+`comment:Track` 接受 `id`、`canvas` 与 `semantic`，三者皆为必填。
 
 `comment:Sticker` 必填 `id`、`frame` 与 `style`，时间窗与上面的屏幕叠加层相同。它的文案来自 `comment=` 属性或元素自身的文字，两个都给会被拒绝。可选的 `author`、`header` 与 `meta` 各接受字符串或 Text 引用，`avatar` 接受一张图片；这里没有 `z`，层叠顺序来自 recipe 的 `stack-order`。
 
 ```svml
-<comment:Style id="social" recipe={studio.comment} font={ui-font}/>
-<comment:Track id="comments" canvas={vertical} space={speech.space} map={timing.map}>
+<comment:Style id="social" recipe={recipes.comment} font={ui-font}/>
+<comment:Track id="comments" canvas={vertical} semantic={speech.semantic}>
   <comment:Sticker id="one" frame={comment-frame} style={social} avatar={viewer-avatar}
     author="@viewer" meta="Featured" during={story.selection.reaction}>
     原来它把字幕钉在词上，而不是钉在秒上。
@@ -440,12 +435,11 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 <!-- Captions: primary style for all text -->
 <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
-<caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+<caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
 <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
 <caption-ai:Planner id="cue-plan" display={story.caption}
   program={caption-program} model="gemini-2.5-flash"/>
-<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
-  space={speech.space} plan={cue-plan.plan} program={caption-program}/>
+<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} semantic={speech.semantic} plan={cue-plan.plan} program={caption-program}/>
 
 <!-- 共享位置是显式边，与 Media/Text 外观分开。 -->
 <space:Canvas id="vertical" width="1080" height="1920"/>
@@ -455,14 +449,14 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
   left="10%" top="20%" right="90%" bottom="70%"/>
 
 <!-- Media：Selection 期间显示一个普通 Item -->
-<media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
+<media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item video={motion.video} frame={card-frame}
-    during={story.selection.demo} appearance={studio.media.card} motion={studio.motion.card}/>
+    during={story.selection.demo} appearance={recipes.media.card} motion={recipes.motion.card}/>
 </media-track:Track>
 
 <!-- Text: persistent title overlay -->
-<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
-<text:Track id="titles" space={speech.space}>
+<text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
+<text:Track id="titles" semantic={speech.semantic}>
   <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
     MEANING
   </text:Area>
@@ -472,15 +466,15 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 <media:Audio id="music" src="./assets/music.wav"/>
 <pipeline:Normalize id="music-media" source={music}
   video="none" audio="default" span-authority="audio" frame-rate="30"/>
-<audio:Track id="music-bed" space={speech.space}>
+<audio:Track id="music-bed" semantic={speech.semantic}>
   <audio:Clip source={music-media.media} during="program"
     playback="loop-end" gain="0.28" fade-in="600ms" fade-out="800ms"/>
 </audio:Track>
 
 <!-- 所有对等 Track 都进入 Film -->
-<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
   <film:Track source={speech.visual}/>
-  <film:Track source={speech.audioTrack}/>
+  <film:Track source={speech.audio}/>
   <film:Track source={cards.visual}/>
   <film:Track source={captions.track}/>
   <film:Track source={titles.track}/>

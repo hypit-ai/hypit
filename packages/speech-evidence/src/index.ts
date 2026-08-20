@@ -24,8 +24,8 @@ export type SpeechActivitySpan = {
 
 /**
  * One acoustic passage reported by the evidence provider. It deliberately has
- * no authored Segment identity; assigning evidence to Script Segments belongs
- * to Speech Alignment, where the connected SpeechAudioBasis is available.
+ * no authored Segment identity; assigning evidence to the explicitly connected
+ * Script Segment belongs to the later deterministic Speech Alignment step.
  */
 export type SpeechTranscriptPassage = {
   readonly startSample?: number;

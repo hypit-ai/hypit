@@ -5,6 +5,7 @@ import { copyFile, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promis
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 import { deflateSync } from "node:zlib";
 import { resolveCaptionProgram } from "@hypit/caption";
 import type { TimedCaptionProjection } from "@hypit/caption";
@@ -1300,6 +1301,7 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
     const space = sealProgramSpace({
       durationSec: 1, frameRate: { numerator: 12, denominator: 1 },
     });
+    const semantic = semanticTrackFixture(space);
     const header = mediaTrack.sealMediaTrackHeader({ id: "browser-media" });
     const sampleAppearance = { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } };
     const contentFit = (sizing: "contain" | "cover") => ({
@@ -1321,7 +1323,7 @@ test("Media two-frame sampling, alpha, local motion and handoff survive partitio
       ] },
     }));
     let set = mediaTrack.appendProgramMediaItem(
-      mediaTrack.createMediaTrackSet(), header, space, canvas, itemLayers,
+      mediaTrack.createMediaTrackSet(), header, semantic, canvas, itemLayers,
       { xPx: 0, yPx: 0, widthPx: 80, heightPx: 120 },
       mediaTrack.sealMediaItemSpec({
         id: "two-frame",
@@ -1437,6 +1439,7 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
       durationSec: frames / fps,
       frameRate: { numerator: fps, denominator: 1 },
     });
+    const semantic = semanticTrackFixture(space);
     const canvas = sealCanvasSpace({
       widthPx: width, heightPx: height,
       origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
@@ -1533,7 +1536,7 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
       { xPx: 60, yPx: 45, widthPx: 120, heightPx: 90 },
       spec,
       frames,
-      space,
+      semantic,
     );
     const track = deckTrack.renderDepthStack(canvas, space, program);
     const document = compileHyperframesDocument(sealComposition({
@@ -1617,17 +1620,14 @@ test("all three Ranking components paint frame-pure progressive states under par
       durationSec: frames / fps,
       frameRate: { numerator: fps, denominator: 1 },
     });
-    const map = {
-      tokens: [],
-      anchors: [
+    const semantic = semanticTrackFixture(space, { anchors: [
         { identity: "outer-start", frame: 0 },
         { identity: "rank-1", frame: 2 },
         { identity: "rank-2", frame: 8 },
         { identity: "rank-3", frame: 14 },
         { identity: "terminal", frame: 20 },
         { identity: "outer-end", frame: frames },
-      ],
-    };
+      ] });
     const outer = {
       id: "ranking-window",
       occurrences: [{ occurrence: 0, startAnchorId: "outer-start", endAnchorId: "outer-end" }],
@@ -1643,7 +1643,7 @@ test("all three Ranking components paint frame-pure progressive states under par
     const schedule = (header: rankingTrack.RankingHeader, specs: readonly rankingTrack.RankingItemSpec[]) => {
       let set = rankingTrack.createRankingItemSpecSet(header);
       for (const spec of specs) set = rankingTrack.appendRankingItemSpec(set, spec);
-      return rankingTrack.buildRankingSchedule({ header, items: set, map, space, outer, triggers, terminal });
+      return rankingTrack.buildRankingSchedule({ header, items: set, semantic, outer, triggers, terminal });
     };
     const recipe = (path: string, properties: SvsRecipe["properties"]): SvsRecipe => ({
       path, properties,
@@ -1669,6 +1669,7 @@ test("all three Ranking components paint frame-pure progressive states under par
     const columnHeader = rankingTrack.sealRankingHeader({ id: "browser-column", variant: "column" });
     const columnSpecs = ["one", "two", "three"].map((id, index) => ({
       variant: "column" as const, id: `column-${id}`, label: `${index + 1}. ${id}`,
+      rank: index + 1, preset: true,
     }));
     let columnItems = rankingTrack.createColumnItemSet();
     columnSpecs.forEach((spec, index) => { columnItems = rankingTrack.appendColumnItem(columnItems, spec, index === 1 ? icons[index]!.artifact : undefined); });
@@ -1676,9 +1677,21 @@ test("all three Ranking components paint frame-pure progressive states under par
       "font-size": 15, "appear-frames": 2, "move-frames": 2, padding: 6, "row-height": 35,
       "row-gap": 4, "icon-size": 26, "icon-radius": 5, "stage-size": 46,
     }), font).style;
+    let columnSpecSet = rankingTrack.createRankingItemSpecSet(columnHeader);
+    for (const spec of columnSpecs) columnSpecSet = rankingTrack.appendRankingItemSpec(columnSpecSet, spec);
+    const columnSchedule = rankingTrack.buildColumnSchedule({
+      header: columnHeader,
+      items: columnSpecSet,
+      outer: rankingTrack.projectColumnSelectionOuterWindow(semantic, outer),
+      candidates: rankingTrack.createColumnWindowCandidateSet(),
+    });
+    const columnCanvas = sealCanvasSpace({
+      widthPx: width, heightPx: height,
+      origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
+    });
     const columnTrack = rankingTrack.renderColumn(space, rankingTrack.buildColumnProgram(
-      columnHeader, { xPx: 20, yPx: 180, widthPx: 440, heightPx: 140 },
-      schedule(columnHeader, columnSpecs), columnStyle, columnItems,
+      columnHeader, columnCanvas, { xPx: 20, yPx: 180, widthPx: 440, heightPx: 140 },
+      columnSchedule, columnStyle, columnItems,
     ));
 
     const topHeader = rankingTrack.sealRankingHeader({ id: "browser-top", variant: "top-three" });
@@ -1787,6 +1800,7 @@ test("all Spatial fit modes and equal-point alignments reach exact browser pixel
     const space = sealProgramSpace({
       durationSec: 1, frameRate: { numerator: 1, denominator: 1 },
     });
+    const semantic = semanticTrackFixture(space);
     const header = mediaTrack.sealMediaTrackHeader({ id: "spatial-browser" });
     const extent = { widthPx: 40, heightPx: 20 };
     const appearance = { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } };
@@ -1811,7 +1825,7 @@ test("all Spatial fit modes and equal-point alignments reach exact browser pixel
         }),
       );
       set = mediaTrack.appendProgramMediaItem(
-        set, header, space, canvas, layers, frame,
+        set, header, semantic, canvas, layers, frame,
         mediaTrack.sealMediaItemSpec({
           id,
           projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
@@ -1968,6 +1982,7 @@ test("every official Screen Overlay survives real sequential and parallel browse
       durationSec: 1,
       frameRate: { numerator: 12, denominator: 1 },
     });
+    const semantic = semanticTrackFixture(space);
     const header = sealScreenOverlayHeader({ id: "browser-overlays" });
     const components: readonly ScreenOverlayComponent[] = [
       { kind: "flash", color: "#ffffff", intensity: 0.2, attackFrames: 2, holdFrames: 2, decayFrames: 4 },
@@ -1984,7 +1999,7 @@ test("every official Screen Overlay survives real sequential and parallel browse
     ];
     let set: ScreenOverlaySet = createScreenOverlaySet();
     components.forEach((content, index) => {
-      set = appendProgramScreenOverlay(set, header, space, sealScreenOverlayItemSpec({
+      set = appendProgramScreenOverlay(set, header, semantic, sealScreenOverlayItemSpec({
 
         id: `${content.kind}-${index + 1}`,
         content,

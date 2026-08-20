@@ -21,7 +21,7 @@ export type RestrictedSpeechVisualClip = {
 };
 
 /**
- * Focused reuse point for Speech Spine: one normalized muted take and one
+ * Focused reuse point for Speech Track: one normalized muted take and one
  * explicitly placed foreground layer, without Media Track motion or sequence
  * semantics.
  */

@@ -4,9 +4,8 @@
   <author source="./main.svml"/>
   <target output="final.video"/>
 
-  <!-- Footage the documentation site already ships. It is 24 fps, which is the
-       frame rate this Source declares, so the preview can show it as authored
-       rather than normalizing it. -->
+  <!-- Footage the documentation site already ships. Each Segment is passed
+       through an explicit per-Take Normalize step at the Source's 24 fps. -->
   <file id="scene-hook" type="@hypit/artifact@1#BlobArtifact"
     from="../../docs/public/street-interview/scene-1.mp4" media-type="video/mp4"/>
   <file id="scene-price" type="@hypit/artifact@1#BlobArtifact"
@@ -21,14 +20,6 @@
     from="../../docs/public/street-interview/broll-3.mp4" media-type="video/mp4"/>
   <file id="cut-receipt" type="@hypit/artifact@1#BlobArtifact"
     from="../../docs/public/street-interview/broll-4.mp4" media-type="video/mp4"/>
-
-  <!-- The recorded transcript, aligned onto this Script's own anchors by
-       ./align-transcript.ts. Which timings a Source is read with is an
-       authoring decision, so it is made here. -->
-  <value id="aligned-map" type="@hypit/semantic-map@1#CompleteSemanticMap" from="./timing.json"/>
-  <value id="aligned-space" type="@hypit/program-space@1#ProgramSpace" from="./space.json"/>
-  <satisfy output="timing.map" candidate="aligned-map"/>
-  <satisfy output="speech.space" candidate="aligned-space"/>
 
   <satisfy output="take-hook.video" candidate="scene-hook"/>
   <satisfy output="take-price.video" candidate="scene-price"/>

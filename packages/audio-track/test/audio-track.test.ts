@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import {
   audioTrackManifest,
@@ -31,8 +32,7 @@ import { narrativeManifest } from "@hypit/narrative";
 import { compileAudioProgramPlan } from "@hypit/media-pipeline";
 import { programSpaceDependency, programSpaceManifest, programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
 import type { ModuleManifest } from "@hypit/protocol";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
-import { semanticMapManifest } from "@hypit/semantic-map";
+import { semanticTrackDependency, semanticTrackManifest, semanticTrackTypes } from "@hypit/semantic-track";
 import { speechEvidenceManifest } from "@hypit/speech-evidence";
 import { speechManifest } from "@hypit/speech";
 import { spatialManifest } from "@hypit/spatial";
@@ -46,6 +46,10 @@ const space = sealProgramSpace({
   frameRate: { numerator: 30, denominator: 1 },
 });
 const header = sealAudioTrackHeader({ id: "sound" });
+const semantic = semanticTrackFixture(space, { anchors: [
+  { identity: "a", frame: 30 }, { identity: "b", frame: 60 },
+  { identity: "c", frame: 90 }, { identity: "d", frame: 120 },
+] });
 const zero = { unit: "frames" as const, value: 0 };
 
 function media(id: string, sampleFrames: number): SynchronizedMedia {
@@ -77,7 +81,7 @@ function spec(overrides: Partial<AudioClipSpec> = {}): AudioClipSpec {
 }
 
 function programTrack(source: SynchronizedMedia, clipSpec: AudioClipSpec) {
-  const set = appendProgramAudioItem(createAudioTrackSet(), header, space, source, clipSpec);
+  const set = appendProgramAudioItem(createAudioTrackSet(), header, semantic, source, clipSpec);
   return renderAudioTrack(space, finalizeAudioTrack(set, header));
 }
 
@@ -147,16 +151,6 @@ test("trim and fades quantize once into the same sample domain", () => {
   })), /fade exceeds/u);
 });
 
-const map: CompleteSemanticMap = {
-  tokens: [],
-  anchors: [
-    { identity: "a", frame: 30 },
-    { identity: "b", frame: 60 },
-    { identity: "c", frame: 90 },
-    { identity: "d", frame: 120 },
-  ],
-};
-
 test("Selection and Moment each expansion creates independent overlapping items", () => {
   const selection: NarrativeSelectionRef = {
 
@@ -172,12 +166,12 @@ test("Selection and Moment each expansion creates independent overlapping items"
     occurrences: [{ occurrence: 0, anchorId: "a" }, { occurrence: 1, anchorId: "c" }],
   };
   let set: AudioTrackSet = createAudioTrackSet();
-  set = appendSelectionAudioItem(set, header, space, media("selection", 48_000), map, selection, spec({
+  set = appendSelectionAudioItem(set, header, semantic, media("selection", 48_000), selection, spec({
     id: "selected",
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
     expansion: { kind: "each" },
   }));
-  set = appendMomentAudioItem(set, header, space, media("moment", 48_000), map, moment, spec({
+  set = appendMomentAudioItem(set, header, semantic, media("moment", 48_000), moment, spec({
     id: "hit",
     projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "seconds", numerator: 1, denominator: 1 } } },
     expansion: { kind: "each" },
@@ -220,11 +214,11 @@ test("one Track with overlaps and two peer Tracks compile to the same determinis
 test("dynamic Fragment keeps every material and temporal dependency as an explicit input", () => {
   const fragment = createAudioTrackFragment([
     { kind: "program", mediaName: "music", specName: "music-spec" },
-    { kind: "selection", mediaName: "voice", specName: "voice-spec", mapName: "map", sourceName: "selection" },
-    { kind: "moment", mediaName: "impact", specName: "impact-spec", mapName: "map", sourceName: "moment" },
+    { kind: "selection", mediaName: "voice", specName: "voice-spec", sourceName: "selection" },
+    { kind: "moment", mediaName: "impact", specName: "impact-spec", sourceName: "moment" },
   ]);
   assert.deepEqual(fragment.inputs.map((input) => input.name), [
-    "header", "impact", "impact-spec", "map", "moment", "music", "music-spec", "selection", "space", "voice", "voice-spec",
+    "header", "impact", "impact-spec", "moment", "music", "music-spec", "selection", "semantic", "voice", "voice-spec",
   ]);
   assert.equal(fragment.exports[1]?.name, "track");
 });
@@ -234,13 +228,13 @@ test("the self-described Audio Surface parses into the same finite Producer grap
   const fixtureSurfaceDigest = fixtureDigest("example.audio-inputs/surface@1");
   const fixtureSurface = {
     name: "inputs", tag: "Inputs", mode: "structured",
-    outputs: [mediaTypes.synchronized, programSpaceTypes.programSpace],
+    outputs: [mediaTypes.synchronized, semanticTrackTypes.track],
   } as const;
   const fixtureManifest: ModuleManifest = {
     format: "hypit.module@1",
     name: fixtureModule.name,
     version: fixtureModule.version,
-    dependencies: [mediaDependency, programSpaceDependency],
+    dependencies: [mediaDependency, semanticTrackDependency],
     types: [],
     capabilities: [],
     producers: [],
@@ -253,7 +247,7 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     speechManifest,
     spatialManifest,
     speechEvidenceManifest,
-    semanticMapManifest,
+    semanticTrackManifest,
     temporalManifest,
     visualIrManifest,
     compositionManifest,
@@ -264,7 +258,7 @@ test("the self-described Audio Surface parses into the same finite Producer grap
   registry.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
       { id: "source", type: mediaTypes.synchronized, value: { kind: "inline", value: media("surface", 48_000) }, range: element.range },
-      { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
+      { id: "semantic", type: semanticTrackTypes.track, value: { kind: "inline", value: semantic }, range: element.range },
     ],
     components: [],
     fragments: [],
@@ -290,7 +284,7 @@ test("the self-described Audio Surface parses into the same finite Producer grap
         <import as="fixture" from="example.audio-inputs@1"/>
         <import as="audio" from="@hypit/audio-track@1"/>
         <fixture:Inputs/>
-        <audio:Track id="sound" space={space}>
+        <audio:Track id="sound" semantic={semantic}>
           <audio:Clip source={source} during="program" playback="loop-end" gain="0.5" fade-in="2f" fade-out="3f"/>
         </audio:Track>
       </svml>`,
