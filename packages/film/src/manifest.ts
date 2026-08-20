@@ -79,7 +79,7 @@ export const filmMarkupSurfaces = [{
           summary: "The assembled Composition, addressed as `<id>.composition`." },
       ],
       example: [
-        '<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>',
+        '<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>',
         "  <film:Track source={speech.visual}/>",
         "  <film:Track source={speech.audio}/>",
         "  <film:Track source={captions.track}/>",

@@ -6,7 +6,7 @@ systems this reference actually contains, and write one complete project:
 
 - `main.svml` describes the whole video in original time order, keeps continuing base/sound intact,
   and represents one continuing overlay as one visual track.
-- `studio.svs` contains every Recipe actually referenced by `main.svml`, using only declared
+- `recipes.svs` contains every Recipe actually referenced by `main.svml`, using only declared
   properties and admitted values.
 - `build.svrun` references the Author Source and declares the required Targets with resolvable
   dependencies.
@@ -61,13 +61,13 @@ Use existing checks only:
 ```bash
 pnpm check
 pnpm hypit check path/to/main.svml
-pnpm hypit check path/to/studio.svs
+pnpm hypit check path/to/recipes.svs
 pnpm hypit check path/to/build.svrun
 ```
 
 `hypit check` proves a Source is legal; it proves nothing about whether the tracks it declares can
 actually be built. A track that fails the local preview fails the same way the moment the author
-opens the Playground — a new package with a bad schedule, a media edge whose artifact is not an
+opens Studio — a new package with a bad schedule, a media edge whose artifact is not an
 image, a reference that does not resolve. Find that now, not on the author's screen:
 
 ```bash
@@ -82,7 +82,7 @@ window, a media edge whose artifact is not an image). This is not a guessing pro
 what is wrong, and you repair that. A track that cannot be built is not done, and this is not the
 loop: the two-attempt ceiling governs how *well* a buildable element is tuned to the reference; it
 does not govern whether the element builds at all. Every failure this check reports must be repaired
-until the check passes — the author should never open the Playground and find that something they
+until the check passes — the author should never open Studio and find that something they
 were delivered cannot be seen. Repair as many times as the failure needs, then re-run the check.
 
 One failure is not a defect, and it is worth knowing before spending repairs on it. The preview has

@@ -17,7 +17,7 @@ ordered reveals and interpretations.
 <whisperx:SemanticTake id="narration-semantic" narrative={story}
   segment={story.segment.reading} media={narration-media.media}/>
 <speech:Track id="speech"
-  visual-frame={full-frame} visual-appearance={studio.speech.visual} visual-z="0">
+  visual-frame={full-frame} visual-appearance={recipes.speech.visual} visual-z="0">
   <speech:Take source={narration-semantic.take}/>
 </speech:Track>
 ```

@@ -237,7 +237,7 @@ export const captionFineMarkupSurfaces = [
             ] },
         ],
         example: `<fonts:Stack id="caption-font" family="inter" weight="800" style="normal"/>
-<caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>`,
+<caption-fine:Style id="primary-caption" recipe={recipes.caption.primary} font={caption-font}/>`,
         notes: [
           "Referencing a font stack in `font` and writing `<Fallback>` children are both allowed; the stack's faces come first.",
           "The Style is addressed by its own id, and the element accepts no text.",

@@ -53,7 +53,7 @@ caption.primary {
 <fonts:Stack id="caption-fonts" family="inter" weight="700" style="normal" emoji="color">
   <fonts:Fallback family="noto-sans-sc" weight="700" style="normal"/>
 </fonts:Stack>
-<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
+<caption-fine:Style id="primary-caption" recipe={recipes.caption.primary}
   font={caption-fonts}/>
 ```
 
@@ -135,8 +135,8 @@ B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族�
 <media-track:Track id="product-broll" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item video={product-motion.video} frame={product-frame}
     during={story.selection.product-demo}
-    appearance={studio.media.product}
-    motion={studio.motion.product}/>
+    appearance={recipes.media.product}
+    motion={recipes.motion.product}/>
 </media-track:Track>
 ```
 
@@ -211,7 +211,7 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.track}` 是普通
 <space:Frame id="title-frame" within={vertical}
   left="6%" top="6%" right="94%" bottom="16%"/>
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
-<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+<text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
 <text:Track id="titles" semantic={speech.semantic}>
   <text:Area id="title" placement={title-frame} style={title-style} during="program">
     EDIT MEANING, NOT TIMELINES
@@ -247,7 +247,7 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.track}` 是普通
 `during` 属性接受字面字符串 `"program"`（表示完整 ProgramSpace），或用于语义计时的 Selection 引用：
 
 ```svml
-<text:Style id="callout-style" recipe={studio.text.callout} font={title-font}/>
+<text:Style id="callout-style" recipe={recipes.text.callout} font={title-font}/>
 <text:Track id="callout" semantic={speech.semantic}>
   <text:Area id="callout-copy" placement={callout-frame}
     style={callout-style} during={story.selection.callout}>
@@ -312,7 +312,7 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 - **`ColumnItem`** 与 **`TopThreeItem`** —— `label`（必填：字符串或 Text 引用），可选 `icon` 与 `stack`。`TopThree` 最多三条。
 
 ```svml
-<ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>
+<ranking:ColumnStyle id="board-style" recipe={recipes.ranking.board} font={ui-font}/>
 <ranking:Column id="board" semantic={speech.semantic} frame={board-frame}
   during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
   style={board-style}>
@@ -355,7 +355,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 ```svml
 <space:Frame id="deck-frame" within={vertical} left="44%" top="60%" right="98%" bottom="88%"/>
 <deck:DepthStack id="deck" semantic={speech.semantic} canvas={vertical}
-  frame={deck-frame} appearance={studio.deck.stack} until={story.moment.done}>
+  frame={deck-frame} appearance={recipes.deck.stack} until={story.moment.done}>
   <deck:Card id="card-spatial" source={icon-spatial} extent={square} at={story.moment.deal-one}/>
   <deck:Card id="card-type" source={icon-type} extent={square} at={story.moment.deal-two}/>
 </deck:DepthStack>
@@ -408,7 +408,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 `comment:Sticker` 必填 `id`、`frame` 与 `style`，时间窗与上面的屏幕叠加层相同。它的文案来自 `comment=` 属性或元素自身的文字，两个都给会被拒绝。可选的 `author`、`header` 与 `meta` 各接受字符串或 Text 引用，`avatar` 接受一张图片；这里没有 `z`，层叠顺序来自 recipe 的 `stack-order`。
 
 ```svml
-<comment:Style id="social" recipe={studio.comment} font={ui-font}/>
+<comment:Style id="social" recipe={recipes.comment} font={ui-font}/>
 <comment:Track id="comments" canvas={vertical} semantic={speech.semantic}>
   <comment:Sticker id="one" frame={comment-frame} style={social} avatar={viewer-avatar}
     author="@viewer" meta="Featured" during={story.selection.reaction}>
@@ -438,7 +438,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 <!-- Captions: primary style for all text -->
 <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
-<caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+<caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
 <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
 <caption-ai:Planner id="cue-plan" display={story.caption}
   program={caption-program} model="gemini-2.5-flash"/>
@@ -454,11 +454,11 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 <!-- Media：Selection 期间显示一个普通 Item -->
 <media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item video={motion.video} frame={card-frame}
-    during={story.selection.demo} appearance={studio.media.card} motion={studio.motion.card}/>
+    during={story.selection.demo} appearance={recipes.media.card} motion={recipes.motion.card}/>
 </media-track:Track>
 
 <!-- Text: persistent title overlay -->
-<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+<text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
 <text:Track id="titles" semantic={speech.semantic}>
   <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
     MEANING
@@ -475,7 +475,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 </audio:Track>
 
 <!-- 所有对等 Track 都进入 Film -->
-<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={cards.visual}/>

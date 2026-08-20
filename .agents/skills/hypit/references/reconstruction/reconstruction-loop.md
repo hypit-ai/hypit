@@ -60,7 +60,7 @@ repaired. It is not caught by looking at the frame yourself and choosing a font 
 resemble it — that route silently depends on the loop model having vision, and stops working the
 moment it does not.
 
-The SVML Playground in `../preview.md` is a browser preview for a person to look at. It is not a
+Hypit Studio in `../preview.md` is a browser preview for a person to look at. It is not a
 source of the image this loop needs.
 
 Repairing one element never re-runs the others. Do not rebuild the whole video to inspect one piece,

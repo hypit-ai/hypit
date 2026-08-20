@@ -69,7 +69,7 @@ caption.primary {
 <fonts:Stack id="caption-fonts" family="inter" weight="700" style="normal" emoji="color">
   <fonts:Fallback family="noto-sans-sc" weight="700" style="normal"/>
 </fonts:Stack>
-<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
+<caption-fine:Style id="primary-caption" recipe={recipes.caption.primary}
   font={caption-fonts}/>
 ```
 
@@ -178,8 +178,8 @@ Placement is an explicit Spatial Frame edge; appearance and motion remain reusab
 <media-track:Track id="product-broll" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item video={product-motion.video} frame={product-frame}
     during={story.selection.product-demo}
-    appearance={studio.media.product}
-    motion={studio.motion.product}/>
+    appearance={recipes.media.product}
+    motion={recipes.motion.product}/>
 </media-track:Track>
 ```
 
@@ -264,7 +264,7 @@ Container for text items.
 <space:Frame id="title-frame" within={vertical}
   left="6%" top="6%" right="94%" bottom="16%"/>
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
-<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+<text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
 <text:Track id="titles" semantic={speech.semantic}>
   <text:Area id="title" placement={title-frame} style={title-style} during="program">
     EDIT MEANING, NOT TIMELINES
@@ -301,7 +301,7 @@ The `during` attribute accepts either the literal string `"program"` for the com
 or a Selection reference for semantic timing:
 
 ```svml
-<text:Style id="callout-style" recipe={studio.text.callout} font={title-font}/>
+<text:Style id="callout-style" recipe={recipes.text.callout} font={title-font}/>
 <text:Track id="callout" semantic={speech.semantic}>
   <text:Area id="callout-copy" placement={callout-frame}
     style={callout-style} during={story.selection.callout}>
@@ -374,7 +374,7 @@ Each variant takes its own, at least one, and ids must be unique within a board.
   `icon` and `stack`. `TopThree` takes at most three.
 
 ```svml
-<ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>
+<ranking:ColumnStyle id="board-style" recipe={recipes.ranking.board} font={ui-font}/>
 <ranking:Column id="board" semantic={speech.semantic} frame={board-frame}
   during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
   style={board-style}>
@@ -424,7 +424,7 @@ give both and it is refused. `size`, `color`, `align`, `block` and `padding` are
 ```svml
 <space:Frame id="deck-frame" within={vertical} left="44%" top="60%" right="98%" bottom="88%"/>
 <deck:DepthStack id="deck" semantic={speech.semantic} canvas={vertical}
-  frame={deck-frame} appearance={studio.deck.stack} until={story.moment.done}>
+  frame={deck-frame} appearance={recipes.deck.stack} until={story.moment.done}>
   <deck:Card id="card-spatial" source={icon-spatial} extent={square} at={story.moment.deal-one}/>
   <deck:Card id="card-type" source={icon-type} extent={square} at={story.moment.deal-two}/>
 </deck:DepthStack>
@@ -493,7 +493,7 @@ optional `author`, `header` and `meta` each take a string or a Text reference, `
 image, and there is no `z`: stacking order comes from the recipe's `stack-order`.
 
 ```svml
-<comment:Style id="social" recipe={studio.comment} font={ui-font}/>
+<comment:Style id="social" recipe={recipes.comment} font={ui-font}/>
 <comment:Track id="comments" canvas={vertical} semantic={speech.semantic}>
   <comment:Sticker id="one" frame={comment-frame} style={social} avatar={viewer-avatar}
     author="@viewer" meta="Featured" during={story.selection.reaction}>
@@ -523,7 +523,7 @@ All four track families together in one source file:
 <!-- Captions: primary style for all text -->
 <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
-<caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+<caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
 <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
 <caption-ai:Planner id="cue-plan" display={story.caption}
   program={caption-program} model="gemini-2.5-flash"/>
@@ -539,11 +539,11 @@ All four track families together in one source file:
 <!-- Media: one ordinary Item used editorially as B-roll -->
 <media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item video={motion.video} frame={card-frame}
-    during={story.selection.demo} appearance={studio.media.card} motion={studio.motion.card}/>
+    during={story.selection.demo} appearance={recipes.media.card} motion={recipes.motion.card}/>
 </media-track:Track>
 
 <!-- Text: persistent title overlay -->
-<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+<text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
 <text:Track id="titles" semantic={speech.semantic}>
   <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
     MEANING
@@ -560,7 +560,7 @@ All four track families together in one source file:
 </audio:Track>
 
 <!-- All peer tracks feed into Film -->
-<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={cards.visual}/>
