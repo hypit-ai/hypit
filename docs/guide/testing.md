@@ -90,7 +90,7 @@ explicitly opt-in, use no committed secret and fail before spending money unless
 | Command | What it tests | Prerequisites |
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX service | Python 3.13, uv, frozen sync |
-| `pnpm test:image-opencv` | the shared OpenCV Raster interpreter across both request variants | `HYPIT_OPENCV_TESTS=1`, `HYPIT_OPENCV_PYTHON` |
+| `pnpm test:image-opencv` | the shared OpenCV Raster interpreter across both request variants | the service's own interpreter at `services/image-opencv/.venv`; set `HYPIT_OPENCV_PYTHON` to use another |
 | `pnpm test:browser-visual` | rendered geometry, stacking and clipping in a real browser | a Chrome the HyperFrames CLI can start, `ffmpeg`, and `HYPIT_TEST_FONT_PATH` off macOS |
 | `pnpm smoke:kie` | Live paid KIE generation | `KIE_API_KEY` |
 
