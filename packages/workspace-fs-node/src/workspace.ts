@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { readFile, realpath } from "node:fs/promises";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 
 import type {
   SourceAssetRequest,
@@ -53,7 +53,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     }
     const entry: SourceUnit = {
       id: canonicalEntry,
-      name: relative(root, canonicalEntry) || canonicalEntry.split("/").at(-1) || canonicalEntry,
+      name: relative(root, canonicalEntry) || basename(canonicalEntry) || canonicalEntry,
       text: await readFile(canonicalEntry, "utf8"),
     };
     return new NodeFilesystemWorkspaceSession(root, entry, [root, ...assetRoots]);
@@ -72,7 +72,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     if (cached !== undefined) return cached;
     const unit: SourceUnit = {
       id: canonical,
-      name: relative(this.root, canonical) || canonical.split("/").at(-1) || canonical,
+      name: relative(this.root, canonical) || basename(canonical) || canonical,
       text: await readFile(canonical, "utf8"),
     };
     this.#sourceCache.set(canonical, unit);
