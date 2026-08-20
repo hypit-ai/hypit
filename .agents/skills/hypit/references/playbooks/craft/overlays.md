@@ -16,6 +16,28 @@ stack order.
 - Keep base-generation prompts free of editorial captions, arrows, cards, floating logos, and UI
   callouts. Author those elements separately.
 
+## A covering overlay decides how the base is framed
+
+An overlay that holds a fixed region of the frame for a long stretch — a tier board across the bottom
+half, a leaderboard band, a scoreboard, a full-width lower third, a screenshot filling the top half —
+takes that region away from the picture underneath. The base has to be generated for the frame that
+is left, not for the whole one.
+
+- Work out which region the overlay covers before writing the base prompt, and frame the subject
+  clear of it: a strip owning everything below 51% of the height means the speaker's head, face and
+  shoulders sit **above** the midline, not centred in the whole frame.
+- Say it as positive geometry in the prompt — where the eyes fall, where the shoulders end, what is
+  in the part the overlay will cover. Never name the overlay itself; a generator told about a graphic
+  draws one.
+- The same applies to a persistent overlay at the top: a sheet covering the upper half pushes the
+  subject down, and a base framed for it looks wrong the moment the overlay leaves. If one shot is
+  covered at the top and another at the bottom, those are different framings and therefore different
+  images, not one image used twice.
+- A face, a mouth or a gesturing hand behind an opaque overlay is the failure this prevents, and it
+  survives every structural check: the Source is legal, both tracks build, and the speaker is
+  headless. Check it at the image gate in `production-gates.md`, where overlay clearance is already
+  on the list.
+
 ## Choose the native overlay surface
 
 Use `typo:Track` for editable typography:
