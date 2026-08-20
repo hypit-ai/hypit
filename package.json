@@ -53,7 +53,6 @@
     "@hypit/hyperframes": "workspace:*",
     "@hypit/image-compose": "workspace:*",
     "@hypit/image-transform": "workspace:*",
-    "@hypit/local-notebook-ranking": "workspace:*",
     "@hypit/runtime-local": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/media-track": "workspace:*",
