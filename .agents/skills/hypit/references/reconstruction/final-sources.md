@@ -26,24 +26,20 @@ any Build is submitted, which is the correct place for the author to find out.
 Do not author one source fragment per shot. Do not let check success substitute for unresolved
 semantic evidence; return to a narrow `observe_reference` question when necessary.
 
-## Keep Segment names short
+## A Segment is a stretch the reference actually plays as one
 
-The Spine joins every Segment name into the id its visual Track carries, and the renderer turns that
-id into one filename when it extracts frames. Nine descriptive names — `hook`, `problem`,
-`discovery`, `steps` and the rest — reach that filename three times over and overrun the 255-byte
-limit a path component has, so the Build dies in video extraction with `ENAMETOOLONG` after every
-generation has been paid for. Nothing earlier catches it: the Source is legal, the preview builds,
-and only the delivery render touches the filesystem this way.
+Cut the Script into Segments the way the reference is spoken, not the way its shots are numbered. A
+Segment is what the Spine binds one Take to, so each one is a separate generation and a separate
+seam; splitting a stretch the reference delivers unbroken invents a seam it does not have, and
+inviting a generator to re-establish the room at that seam is how continuity is lost for nothing.
 
-Name Segments in two to four characters. It costs nothing — a Segment name is a handle, and the
-Script's meaning lives in the words it holds — and the ceiling is reached sooner than it looks, since
-the joined list appears once per nesting level.
+Consecutive Segments carrying one unbroken voiceover are one Segment with Selections inside it. The
+pictures over that stretch are placed by those Selections — `../playbooks/craft/frame-coverage.md`
+governs what that costs and what has to cover the silence between them — and the speech stays one
+measured Take.
 
-Reach for it late rather than early: a reconstruction whose Segments are already few and short has no
-problem here. The pressure comes from splitting one continuous stretch into several Segments, and
-that is usually worth undoing on its own merits. Consecutive Segments carrying one unbroken
-voiceover are one Segment with Selections inside it, which is both shorter and closer to what the
-reference does.
+Name Segments for what they hold. Names are handles: the Script's meaning lives in the words, and no
+part of the pipeline reads a Segment name back for anything a reader would see.
 
 ## A take's duration is measured, not estimated
 
