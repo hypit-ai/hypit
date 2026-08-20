@@ -71,12 +71,20 @@ export function temporalizeCaptionPlan(
           `Caption Atom ${atomId} is absent from the complete speech map.`,
         );
       }
+      // The map reports what was measured, including a window that collapses to
+      // one frame boundary or runs backwards: a word shorter than a frame, or
+      // provider character times that are not ordered. Deciding what such a
+      // window means belongs here, where it becomes a Cue that has to be drawn —
+      // it spans the frames between its two edges, and it is on screen for at
+      // least the frame it fell in. An Atom drawn for no frames is not a caption.
+      const startFrame = Math.min(window.startFrame, window.endFrameExclusive);
+      const endFrameExclusive = Math.max(window.startFrame, window.endFrameExclusive, startFrame + 1);
       return {
         atom,
         timing: {
           atomId,
-          startFrame: window.startFrame,
-          endFrameExclusive: window.endFrameExclusive,
+          startFrame,
+          endFrameExclusive,
         },
       };
     });
