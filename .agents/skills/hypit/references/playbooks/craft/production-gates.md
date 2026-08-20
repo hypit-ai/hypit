@@ -38,13 +38,21 @@ and every take that ran before the step that broke, and resubmitting without pin
 same bytes again. Run `--pin` against the failed Build before touching the cause.
 
 **Pin what a Provider was paid to make, and nothing the Source computes.** `--pin` emits a line for
-every accepted output, including the ones the Script's own structure produced: `speech.space`,
-`speech.visual`, `timing.map`, the caption plan. Those are free to rebuild and they are measured
-*against the Script as it was*. Paste them back after editing a Segment — renaming one, merging two —
-and the Build pins a map whose anchors describe a program that no longer exists. It does not fail.
-Every Track times itself against those stale anchors and the delivery is quietly wrong, which is the
-one failure this whole gate sequence exists to prevent. Keep the pictures, the takes and the voices;
-let everything downstream of them recompute.
+every accepted output, including the ones the Script's own structure produced: `speech.semantic`,
+`speech.visual`, `speech.audio`, the caption plan. Those are projections of the Takes — free to
+rebuild, and measured *against the Script as it was*. Paste them back after editing a Segment —
+renaming one, merging two — and the Build pins a skeleton whose anchors describe a program that no
+longer exists. It does not fail. Every Track times itself against those stale anchors and the
+delivery is quietly wrong, which is the one failure this whole gate sequence exists to prevent.
+
+**A `SemanticTake` is both.** Alignment is a served capability, so `<take>-semantic.take` is work
+something was paid for and is worth pinning — but its tokens and anchors are keyed to the Script
+Segment it aligned, so it goes stale on a Segment edit exactly as the projections above do. Pin it
+while the Script is untouched; drop it for the Takes whose Segment you edited, and let those
+re-align. This is the one line where "keep what was paid for" and "drop what the Script invalidated"
+disagree, and the Script wins.
+
+Keep the pictures, the takes and the voices; let everything downstream of them recompute.
 
 **A Build that failed downstream may still hold the good draw from a model that does not repeat
 itself.** The caption Planner is a language model: the same Source gives a valid plan on one run and

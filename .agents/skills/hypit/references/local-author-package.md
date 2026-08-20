@@ -192,17 +192,21 @@ pnpm hypit check path/to/recipes.svs
 pnpm hypit check path/to/build.svrun
 ```
 
-A package that cannot be *seen* is not done. `hypit check` proves the Source is legal, and nothing
-more; it will not tell you that the track a package produces fails to build when Studio
-renders it. Run the preview check and repair until it passes with no failures — a build failure is
-not a difference to weigh, it is work that is not finished, and it is not bounded by the loop's
-attempt ceiling:
+A package that cannot be *wired* is not done. `hypit check` proves the Source is legal, and nothing
+more; it will not tell you that the track a package produces cannot be traced to a Film at all. Run
+the preview check and repair until it passes — a graph failure is not a difference to weigh, it is
+work that is not finished, and it is not bounded by the loop's attempt ceiling:
 
 ```bash
 # from the repository root: tsx is the repository's dependency
-node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/main.svml path/to/build.svrun
+node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/build.svrun
 ```
 
-Use existing `--workspace` or `--package-root` options only when the project layout requires them.
+It takes the Run Source, not the `.svml`. A pass here means the graph reaches a Film and a semantic
+spine; it exits zero while the Providers are still unrun, and says which capabilities it is waiting
+on. See `reconstruction/final-sources.md` for what that does and does not prove — notably, a
+Producer that refuses the media kind it is handed is not caught here, because nothing is handed to
+it until the Build runs.
+
 Do not continue to final authoring until the package and sources pass the existing checks and the
-preview builds every track.
+graph traces.
