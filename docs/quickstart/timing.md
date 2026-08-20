@@ -11,8 +11,7 @@ Hypit's timing authority is a `SemanticTrack`. Build it in segment-sized pieces:
 2. align that normalized media with its authored Script Segment to create a self-contained `SemanticTake`;
 3. assemble the Semantic Takes in program order with `speech:Track`.
 
-There is no whole-program transcription pass after concatenation. Every Take is already semantic
-before it enters the Track.
+Every Take is already semantic before it enters the Track.
 
 ```svml
 <import as="program" from="@hypit/program-space@1"/>
@@ -120,7 +119,7 @@ deterministic Track:
 
 Use `during={story.segment.answer}` for a whole Segment, a Selection for an authored range, a Moment
 for a point event, and `during="program"` for the complete SemanticTrack domain. Components consume
-`semantic={speech.semantic}`; they do not receive separate `map` and `space` values.
+`semantic={speech.semantic}`.
 
 ```text
 raw take ─► Normalize ─► SynchronizedMedia ─► SemanticTake ─┐

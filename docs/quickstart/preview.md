@@ -9,20 +9,18 @@ description: Read a Run whose material exists as an editable timeline.
 and draws them — the code on the right, the picture top-left, a timeline bottom-left. It never
 writes anything but the Author SVML, and it never calls a Provider.
 
-That last clause is the one to read twice. Studio builds only what it can derive deterministically
-from Candidates the Run already supplies, so **a Source that still declares ungenerated shots will
-not open.** Studio is where you inspect and adjust a programme whose material exists; it is not a
-way to look at one before the material does.
+Studio builds only what it can derive deterministically from Candidates the Run already supplies, so
+it needs a Run whose material is satisfied — every generated output either produced by an accepted
+Build or standing against a file. That is what you point it at.
 
 ```bash
 pnpm studio -- --run path/to/build.svrun
 # ➜  http://localhost:5179/
 ```
 
-::: warning No example in this repository currently opens
-Every Run Source under `examples/` is either pre-generation — its shots still need Seedance, GPT
-Image, WhisperX or caption planning — or depends on footage under `examples/**/assets/`, which is
-not committed. Both cases refuse. Point Studio at a Run of your own whose outputs are satisfied.
+::: warning The examples in this repository need material first
+Every Run Source under `examples/` still names shots a Provider has to make, or footage under
+`examples/**/assets/`, which is not committed. Satisfy those in a Run of your own before opening it.
 :::
 
 | Argument | Meaning |
@@ -47,7 +45,7 @@ pkill -f "@hypit/studio" || true
 Use `--port` when you genuinely want two Runs side by side.
 :::
 
-## What Studio will and will not do
+## What Studio draws
 
 Studio builds the deterministic closure of the Run and nothing else. Opening it never invokes a
 Provider and never creates a Build, so every projection it draws was either supplied by the Run as
@@ -57,19 +55,17 @@ a Candidate or derived deterministically from one.
 layout are computed by the same functions a build calls, from your Source and your Recipes. A card
 in the wrong part of the frame is wrong here too.
 
-**Timings are measured, always.** The timeline comes from the `SemanticTrack` — the aligned Takes
-themselves — so a cut point you see is the cut point a build produces. There is no estimated mode.
+**Every timing is measured.** The timeline comes from the `SemanticTrack` — the aligned Takes
+themselves — so a cut point you see is the cut point a build produces.
 
-**Nothing stands in.** Studio has no placeholder pictures, no black frames and no fabricated
-timings. This is the deliberate half of the trade: rather than draw something it cannot justify and
-label it, Studio refuses to open and says what is missing.
+When something the closure needs is missing, Studio says so and stops:
 
 ```
 Studio cannot start:
 - the Studio projection closure requires unresolved capabilities: seedance.video
 ```
 
-The refusals you are likely to meet:
+What it asks for:
 
 | Refusal | What it means |
 | --- | --- |
@@ -80,9 +76,8 @@ The refusals you are likely to meet:
 | `Render target … is an opaque media Candidate; Studio needs the current Film graph` | The Run points at a finished video file. Studio edits the graph, not the output. |
 
 The fourth is the one you will meet most, and it is all-or-nothing: one unresolved capability
-anywhere in the closure refuses the whole Run, rather than that Track alone going dark. So a
-programme becomes openable in one step — when the last of its generated outputs is satisfied — and
-not gradually.
+anywhere in the closure refuses the whole Run. A programme becomes openable in one step, when the
+last of its generated outputs is satisfied.
 
 ## Supplying material you already have
 
@@ -95,29 +90,20 @@ not gradually.
 A `<build-record>` candidate names something an earlier Build made rather than a path, and needs
 `--runtime` to find it.
 
-## Reading the badges
-
-The header carries two claims, and on a Run that opens they are both `measured` — that is what
-opening means. They stay in the interface because they say *what* they are standing for:
-
-| Badge | Meaning |
-| --- | --- |
-| `timing: measured` | Read from the aligned `SemanticTrack`. |
-| `picture: measured` | Every element shows real material. |
+## Where a Track came from
 
 Selecting a Track names the Candidate that produced it and where it came from — the Run, the Source,
-or neither.
+or neither. The header carries the same claim for the programme as a whole: `timing: measured` reads
+from the aligned `SemanticTrack`, `picture: measured` that every element shows real material.
 
 ## When an agent is doing the work
 
 If you are working through the [Hypit skill](https://github.com/hypit-ai/hypit/blob/main/.agents/skills/hypit/SKILL.md),
 the agent starts Studio for you and sends you the link after a step that changes the Source — a
-Script edit, a Frame moved, a B-roll placed, a Recipe adjusted — once the Run it is working against
-opens at all.
+Script edit, a Frame moved, a B-roll placed, a Recipe adjusted.
 
-Reading a diff is not the same as seeing where a cutaway lands. On a Run whose material exists this
-is the cheapest moment to say "that card is too high"; on one whose shots are still declared, the
-agent has nothing to show you and will say so rather than send a link.
+Reading a diff is not the same as seeing where a cutaway lands, and this is the cheapest moment to
+say "that card is too high".
 
 ## Moving around it
 

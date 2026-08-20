@@ -10,9 +10,9 @@ element is *wired at all* is a different gate with a different rule: `preview-ch
 without any attempt ceiling. A graph that does not trace is not a difference to weigh; it is work
 that is not done.
 
-Note what that gate no longer covers. Studio has no stand-ins, so nothing is drawn before a Build
-and `preview-check` proves the graph is wired rather than that every track draws. A Producer that
-refuses the media it is handed surfaces on the real Build, not here.
+Note what that gate covers: `preview-check` proves the graph is wired, not that every track draws.
+Nothing is handed to a Producer until the Build runs, so a Producer that refuses the media it
+receives surfaces there rather than here.
 
 The difference between the two gates is what each reports. `preview-check` names the graph failure —
 the target that does not trace, the chain that is missing — so its repairs are not guessing. This
