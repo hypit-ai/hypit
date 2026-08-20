@@ -20,6 +20,23 @@ elements are drawn on, whatever that is — is produced while the package is aut
 `hypit image`, and committed inside the package. `../playbooks/craft/generated-dependencies.md` draws
 that line.
 
+**That exception covers the component's surface and nothing else.** Every other picture the video
+shows — the inner picture of a card, an inserted screenshot, a thumbnail, a product shot, a logo
+wall, a phone or monitor's content — is the video's content, and content is **declared in
+`main.svml` as a generation**, never produced with `hypit image` into an assets directory and
+referenced as a file:
+
+```svml
+<copy:Value id="meme-look">A screenshot of a vertical social-media post…</copy:Value>
+<gpt:Image id="meme-shot" prompt={meme-look} aspect-ratio="4:5" resolution="2K"/>
+```
+
+Writing `<media:Image src="./assets/meme.png"/>` instead spends money this route is not supposed to
+spend, and loses the thing that mattered: the prompt. A declared generation carries its own
+description in the Source, so it can be reread, corrected and rebuilt; a PNG on disk carries nothing,
+and the next person has to invent the prompt again. `media:Image` is for material the author
+supplied, not for material you generated a moment ago.
+
 Reference observation is part of the work and is expected to cost what it costs.
 
 ## A video path is the whole request
