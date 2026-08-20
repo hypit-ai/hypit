@@ -1,5 +1,6 @@
 import type { StudioFailure, StudioSnapshot } from "../shared.js";
 import { createCodePane } from "./code.js";
+import { icon, setIcon } from "./icons.js";
 import { createHandle } from "./resize.js";
 import type { Highlight } from "./code.js";
 import { liveRanges, markerTones, spanAtOffset } from "./markers.js";
@@ -12,13 +13,16 @@ const app = document.querySelector<HTMLElement>("#app")!;
 app.innerHTML = `
   <header class="topbar">
     <div class="brand">
-      <span class="brand-mark">H</span>
-      <div><strong>Hypit Studio</strong><small>SVML workspace</small></div>
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><path d="M7.6 3.8H14.6L12.6 7.2H5.6L7.6 3.8ZM4.1 10.4H16.6L18.7 7H30.4L27.9 11.1H16.1L14.1 14.2H1.8L4.1 10.4ZM19.1 14.1H23.1L19.3 20.7H15.4L19.1 14.1Z"/></svg>
+      </span>
+      <div><strong>Hypit Studio</strong></div>
     </div>
     <div class="project-title" data-project></div>
-    <div class="meta" data-meta></div>
-    <div class="badges" data-badges></div>
-    <div class="status" data-status><i></i><span>Reading…</span></div>
+    <div class="topbar-right">
+      <div class="meta" data-meta></div>
+      <div class="status" data-status><i></i><span>Reading…</span></div>
+    </div>
   </header>
   <main class="studio-shell">
     <aside class="source-panel" data-code></aside>
@@ -28,7 +32,7 @@ app.innerHTML = `
         <aside class="workspace-panel">
           <div class="pane-heading workspace-heading">
             <div class="pane-title">
-              <span class="material-symbols-rounded pane-icon">tune</span>
+              ${icon("tune", "pane-icon")}
               <div><h2>Inspector</h2><span>Selected item</span></div>
             </div>
           </div>
@@ -83,13 +87,8 @@ workbench.insertBefore(createHandle({
 const inspector = app.querySelector<HTMLElement>("[data-inspector]")!;
 const meta = app.querySelector<HTMLElement>("[data-meta]")!;
 const project = app.querySelector<HTMLElement>("[data-project]")!;
-const badges = app.querySelector<HTMLElement>("[data-badges]")!;
 const status = app.querySelector<HTMLElement>("[data-status]")!;
 const failureView = app.querySelector<HTMLElement>("[data-failure]")!;
-
-function renderBadges(_snapshot: StudioSnapshot): void {
-  badges.replaceChildren();
-}
 
 // Program-level facts never change while a Source is being read, so they live in
 // the header rather than taking a panel that would have to sit over something.
@@ -137,7 +136,7 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
   if (clip === undefined) {
     const empty = document.createElement("div");
     empty.className = "inspector-empty";
-    empty.innerHTML = `<span class="material-symbols-rounded">select</span><strong>Nothing selected</strong><small>Choose a clip, source marker, or object in the preview.</small>`;
+    empty.innerHTML = `<span class="inspector-empty-icon">${icon("select")}</span><strong>Nothing selected</strong><small>Choose a timeline item, source marker, or object in the preview.</small>`;
     inspector.replaceChildren(empty);
     return;
   }
@@ -148,10 +147,10 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
   const hero = document.createElement("div");
   hero.className = "selection-hero";
   hero.innerHTML = `
-    <span class="selection-icon"><span class="material-symbols-rounded"></span></span>
+    <span class="selection-icon" data-selection-icon></span>
     <div class="selection-title"><strong></strong><small></small></div>
     <span class="selection-kind"></span>`;
-  hero.querySelector(".selection-icon .material-symbols-rounded")!.textContent = track?.binding.icon ?? "widgets";
+  setIcon(hero.querySelector("[data-selection-icon]")!, track?.binding.icon ?? "component");
   hero.querySelector(".selection-kind")!.textContent = track === undefined
     ? "Track"
     : `${track.binding.family} · ${track.binding.facet}`;
@@ -163,6 +162,14 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
     property("End", `${clip.endFrameExclusive}f`),
     property("Duration", `${durationFrames}f`),
     property("Seconds", `${(durationFrames / fps).toFixed(2)}s`),
+    ...(clip.temporal?.projection === undefined ? [] : [
+      property("Projection start", clip.temporal.projection.startExpression, "property-wide property-code"),
+      property("Projection end", clip.temporal.projection.endExpression, "property-wide property-code"),
+    ]),
+    ...(clip.temporal === undefined ? [] : [
+      property("Temporal source", `${clip.temporal.source.kind}${clip.temporal.source.id === undefined ? "" : ` · ${clip.temporal.source.id}`}`, "property-wide property-code"),
+      property("Schedule phases", String(clip.temporal.phases.length)),
+    ]),
   ]);
   const identity = group("Binding", [
     property("Authored id", clip.authoredId, "property-wide property-code"),
@@ -330,7 +337,6 @@ function applySnapshot(snapshot: StudioSnapshot): void {
   status.className = "status ok";
   status.innerHTML = `<i></i><span>Live · r${snapshot.revision}</span>`;
   renderMeta(snapshot);
-  renderBadges(snapshot);
   code.show(snapshot);
   store.load(snapshot);
 }

@@ -2,10 +2,12 @@ import type { Placement } from "../observe.js";
 import type { BuiltTrack } from "../programme.js";
 import type {
   Range,
+  SemanticTimeline,
   StudioInteraction,
   StudioInspectorDescription,
   StudioLaneDescription,
   StudioTimelinePresentation,
+  StudioTemporalLineage,
   StudioTrackFamily,
 } from "../shared.js";
 
@@ -41,6 +43,7 @@ export type StudioEntityDraft = {
   readonly renderIds?: readonly string[];
   readonly presentation?: StudioTimelinePresentation;
   readonly interaction?: StudioInteraction;
+  readonly temporal?: StudioTemporalLineage;
 };
 
 export type StudioAdapterContext = {
@@ -48,6 +51,7 @@ export type StudioAdapterContext = {
   readonly placement?: Placement;
   readonly spans: readonly StudioSpan[];
   readonly values: ReadonlyMap<string, unknown>;
+  readonly semantic: SemanticTimeline;
   readonly generic: () => readonly StudioEntityDraft[];
 };
 
@@ -103,15 +107,17 @@ export function childEntities(
   const children = new Map(context.placement?.children.flatMap((child) =>
     child.id === undefined ? [] : [[child.id, child] as const]) ?? []);
   return items.map((item) => {
-    const child = children.get(item.id);
+    const child = children.get(item.id) ?? [...children.entries()]
+      .sort(([left], [right]) => right.length - left.length)
+      .find(([id]) => item.id.startsWith(`${id}::`))?.[1];
     // A dedicated adapter does not reverse-engineer renderer ids. Only an exact
     // public identity is safe; richer renderer correspondence needs its own
     // declared realization rather than another naming convention.
     const render = context.spans.find((span) => span.id === item.id);
     return {
       id: `${context.track.outputRef}:entity:${item.id}`,
-      authoredId: item.id,
-      label: item.id,
+      authoredId: child?.id ?? item.id,
+      label: child?.id ?? item.id,
       startFrame: item.startFrame,
       endFrameExclusive: item.endFrameExclusive,
       stackOrder: item.stackOrder,

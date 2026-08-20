@@ -727,7 +727,7 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
   assert.equal(result.components.length, 1);
-  assert.deepEqual(Object.keys(result.components[0]!.outputs).sort(), ["audio", "visual"]);
+  assert.deepEqual(Object.keys(result.components[0]!.outputs).sort(), ["audio", "program", "visual"]);
   const fragment = result.fragments[0]!;
   const producers = fragment.operations.map((entry) => entry.producer.name);
   assert.ok(producers.includes("append-still-media-layer"));

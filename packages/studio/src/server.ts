@@ -1,6 +1,7 @@
 import { watch } from "node:fs";
 import type { FSWatcher } from "node:fs";
 import { writeFile } from "node:fs/promises";
+import { relative } from "node:path";
 
 import type { Plugin, ViteDevServer } from "vite";
 
@@ -15,6 +16,7 @@ export type StudioPluginOptions = {
   readonly source: string;
   readonly runPath: string;
   readonly domain: StudioDomain;
+  readonly workspaceRoot: string;
   readonly archive?: StudioArchive;
 };
 
@@ -76,6 +78,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         run,
         ...(options.archive === undefined ? {} : { archive: options.archive }),
         revision: attempt,
+        sourcePath: relative(options.workspaceRoot, run.authorSource),
       });
       if (attempt !== requestedRevision) return;
       revision = attempt;

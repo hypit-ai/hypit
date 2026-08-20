@@ -24,6 +24,7 @@ export async function readStudioSession(input: {
   readonly run: RunPlan;
   readonly archive?: StudioArchive;
   readonly revision: number;
+  readonly sourcePath?: string;
 }): Promise<StudioSession> {
   const source = input.run.source;
   const inspection = inspectStudioRun(source, input.run);
@@ -50,7 +51,7 @@ export async function readStudioSession(input: {
   return {
     snapshot: snapshot(built, {
       revision: input.revision,
-      path: input.run.authorSource,
+      path: input.sourcePath ?? input.run.authorSource,
       text,
       canvas: built.canvas,
       frameRate: built.frameRate,

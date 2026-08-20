@@ -1,5 +1,6 @@
 import type { StudioSnapshot } from "../shared.js";
 import { createOverlay } from "./overlay.js";
+import { icon, setIcon } from "./icons.js";
 import type { State, Store } from "./selection.js";
 
 export type Stage = {
@@ -21,7 +22,7 @@ export function createStage(store: Store): Stage {
   element.className = "stage";
   element.innerHTML = `
     <div class="stage-heading">
-      <div class="stage-title"><span class="material-symbols-rounded">smart_display</span><strong>Preview</strong></div>
+      <div class="stage-title">${icon("preview")}<strong>Preview</strong></div>
       <span class="stage-canvas" data-canvas></span>
     </div>
     <div class="stage-viewport">
@@ -32,16 +33,16 @@ export function createStage(store: Store): Stage {
     <div class="stage-bar">
       <span class="stage-time" data-time>00:00:00</span>
       <button type="button" data-previous aria-label="Previous frame" title="Previous frame">
-        <span class="material-symbols-rounded">skip_previous</span>
+        ${icon("previous")}
       </button>
       <button type="button" data-play aria-label="Play">
-        <span class="material-symbols-rounded" data-icon>play_arrow</span>
+        <span data-icon>${icon("play")}</span>
       </button>
       <button type="button" data-next aria-label="Next frame" title="Next frame">
-        <span class="material-symbols-rounded">skip_next</span>
+        ${icon("next")}
       </button>
       <button type="button" data-mute aria-label="Mute" class="stage-mute">
-        <span class="material-symbols-rounded" data-mute-icon>volume_up</span>
+        <span data-mute-icon>${icon("volume")}</span>
       </button>
     </div>`;
 
@@ -90,7 +91,7 @@ export function createStage(store: Store): Stage {
   const play = element.querySelector<HTMLButtonElement>("[data-play]")!;
   const previous = element.querySelector<HTMLButtonElement>("[data-previous]")!;
   const next = element.querySelector<HTMLButtonElement>("[data-next]")!;
-  const icon = element.querySelector<HTMLElement>("[data-icon]")!;
+  const playIcon = element.querySelector<HTMLElement>("[data-icon]")!;
   const mute = element.querySelector<HTMLButtonElement>("[data-mute]")!;
   const muteIcon = element.querySelector<HTMLElement>("[data-mute-icon]")!;
   const time = element.querySelector<HTMLElement>("[data-time]")!;
@@ -131,7 +132,6 @@ export function createStage(store: Store): Stage {
     const scale = Math.min(
       (room.width - 28) / canvasWidth,
       (room.height - 28) / canvasHeight,
-      1,
     );
     // A zero-sized viewport during layout would otherwise produce NaN.
     const valid = Number.isFinite(scale) && scale > 0 ? scale : 1;
@@ -145,7 +145,7 @@ export function createStage(store: Store): Stage {
   const stop = (): void => {
     const wasPlaying = playing;
     playing = false;
-    icon.textContent = "play_arrow";
+    setIcon(playIcon, "play");
     play.setAttribute("aria-label", "Play");
     if (raf !== 0) cancelAnimationFrame(raf);
     raf = 0;
@@ -159,7 +159,7 @@ export function createStage(store: Store): Stage {
     if (state === undefined) return;
     if (playing) { stop(); return; }
     playing = true;
-    icon.textContent = "pause";
+    setIcon(playIcon, "pause");
     play.setAttribute("aria-label", "Pause");
     const total = state.snapshot.space.frameCount;
     const rate = fps(state.snapshot);
@@ -183,7 +183,7 @@ export function createStage(store: Store): Stage {
   });
 
   const applyMuted = (): void => {
-    muteIcon.textContent = muted ? "volume_off" : "volume_up";
+    setIcon(muteIcon, muted ? "muted" : "volume");
     mute.setAttribute("aria-label", muted ? "Unmute" : "Mute");
     (iframe.contentWindow as SeekWindow | null)?.__hypitSetMuted?.(muted);
   };

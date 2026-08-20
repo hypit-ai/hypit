@@ -20,7 +20,7 @@ export type StudioTrace = {
   readonly surface?: string;
   readonly module?: string;
   readonly authoredId?: string;
-  readonly outputPorts: readonly { readonly name: string; readonly ref: string }[];
+  readonly outputPorts: readonly { readonly name: string; readonly ref: string; readonly type?: string }[];
   readonly references: readonly StudioTraceDependency[];
 };
 
@@ -79,10 +79,14 @@ export function traceFor(source: CompiledSource, ref: string): StudioTrace {
     surface: placement.surface,
     module: placement.module.name,
     ...(placement.id === undefined ? {} : { authoredId: placement.id }),
-    outputPorts: placement.outputPorts.map((port) => ({
-      name: port.name,
-      ref: outputFor(source, port.ref)?.ref ?? port.ref,
-    })),
+    outputPorts: placement.outputPorts.map((port) => {
+      const output = outputFor(source, port.ref);
+      return {
+        name: port.name,
+        ref: output?.ref ?? port.ref,
+        ...(output?.type === undefined ? {} : { type: output.type }),
+      };
+    }),
     references: refs,
   };
 }
