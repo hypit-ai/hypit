@@ -204,9 +204,59 @@ node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/build.s
 
 It takes the Run Source, not the `.svml`. A pass here means the graph reaches a Film and a semantic
 spine; it exits zero while the Providers are still unrun, and says which capabilities it is waiting
-on. See `reconstruction/final-sources.md` for what that does and does not prove — notably, a
+on. See `preview.md` for what that does and does not prove — notably, a
 Producer that refuses the media kind it is handed is not caught here, because nothing is handed to
 it until the Build runs.
 
 Do not continue to final authoring until the package and sources pass the existing checks and the
 graph traces.
+
+## When the result is accepted, decide whether the package should leave the project
+
+A delivery that shipped may have produced one or more project-local packages on the way. Before
+moving on, judge each one and put the question to the author. Not automatically, and not before the
+result is accepted — this is an offer, and promoting it is a separate contribution.
+
+**The judgement is one question: would a second, unrelated video want this vocabulary?** A component
+that is *this* video's content shaped as a component is not reusable however well it is written — a
+sheet whose steps are this product's onboarding, a board whose rows are this ranking. What travels is
+a *role* the installed packages do not cover: a Style family that differs from `caption-fine` in its
+timing model, a board that differs from `ranking` in the shape of its rows. If the slots are inputs
+and the chrome is the component's own, it is probably reusable; if the package would have to be
+rewritten for the next video, say so and keep it where it is.
+
+Say which it is either way. A local package nobody flagged is a local package nobody revisits.
+
+### Promotion is not a move
+
+If the author wants it promoted, these are the parts. Say up front that this is a checklist rather
+than a path anyone has walked — no package under `packages/` began under `examples/`, so the first
+person to do it should correct what follows.
+
+- **The name is load-bearing in six places.** `@hypit/local-<slug>` becomes `@hypit/<slug>` in
+  `package.json`; in the Module ref in `src/manifest.ts`, where renaming it **renames every nominal
+  Type and Producer in the Module at once**, because each is built from that one const; in every
+  Author Source that writes `import … from "@hypit/local-<slug>@1"`; in the root `package.json`
+  `devDependencies`; in the package's own test harness; and in **both** package catalogs,
+  `docs/guide/packages.md` and `docs/zh/guide/packages.md`. An English-only catalog entry is a half
+  promotion.
+- **Studio keeps a hand-maintained list.** `packages/studio/src/adapters/generic.ts` enumerates the
+  modules that get the component adapter. A package missing from it still renders, through the visual
+  fallback — second-class in Studio, and invisible as itself in review.
+- **Its own chrome is untracked today.** `examples/**/assets/` is ignored, so the texture the package
+  reads with `readFile(new URL("../assets/…"))` is not in git. Promotion is the first moment those
+  bytes enter the repository, and **no package under `packages/` has a non-`preview/` asset
+  directory**. Promotion establishes that convention rather than following it; decide it deliberately.
+- **It newly owes tests.** The suite globs `packages/*/test/**/*.test.ts`. A local package ships
+  `test/render-preview.ts`, which is a harness, not a suite, so a promoted package contributes zero
+  coverage where every peer has some. Writing one is part of promotion.
+- **It newly owes clean imports.** Repository hygiene requires that anything `src/` imports appears in
+  `dependencies`, not `devDependencies` — a rule examples are exempt from. A package carrying its
+  render-harness dependencies in `devDependencies` fails on the way in.
+- **The workspace already covers both locations.** `pnpm-workspace.yaml` lists `packages/*` and
+  `examples/*/packages/*`, and `tsconfig.json` includes both. No glob needs adding in either
+  direction; adding one is a change that does nothing.
+
+What promotion never means: merging the behaviour into the package it was modelled on. It installs
+beside that package as a sibling family, for the reasons the boundary section above gives.
+

@@ -54,5 +54,8 @@ screen, product, hand, or proof changes.
   clipped narration, or visual proof that arrives before its setup.
 - Pin accepted narration and visuals through `.svrun` `build-record` and `satisfy`.
 
-Read `../craft/screen-demo.md`, `../craft/b-roll.md`, `../craft/persona-and-audio.md`, and
-`../craft/visual-continuity.md`.
+Read `../craft/screen-demo.md`, `../craft/b-roll.md`, `../craft/persona-and-audio.md`,
+`../craft/captions.md`, and `../craft/sfx.md`.
+
+That list is complete: `../index.md` does not repeat it, and the craft its required load
+order marks always-read is required regardless of format.
