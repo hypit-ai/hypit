@@ -79,12 +79,10 @@ filled by generation when the reference shows content in it.
 
 ## A semantic window covers words, so the silence around it belongs to nobody
 
-`during={story.selection.X}` spans that Selection's first word to its last. The pause between two
-Selections, the breath before a Segment's first word, and the words that fall between two occurrences
-are in none of them. Whatever is scheduled from those windows is absent across the gaps, and what
-shows through instead depends only on what happens to be underneath: the Film's background if nothing
-is, the layer below if something is. Black and a flash of the wrong picture are the same defect
-wearing different clothes, and the second is harder to notice because it does not look like an error.
+This is the commonest inherited edge in a speech-led program; `frame-coverage.md` holds the general
+form and the measurements. `during={story.selection.X}` spans that Selection's first word to its last,
+so the pause between two Selections, the breath before a Segment's first word, and the words that fall
+between two occurrences are in none of them.
 
 Decide, for each thing you place, which of two kinds it is:
 
@@ -125,12 +123,9 @@ Give a silent take a literal duration at or above its window instead of a `Speec
 estimate predicts the words; the window is decided by the audio that was actually produced, and when
 the estimate falls a second short that second is black.
 
-Bedding something underneath changes what a blended frame reveals, so check the Items' entry and exit
-while you are here. **A one-frame fade is not a short cut**; it is one frame on which the Item is half
-transparent, and that frame shows whatever is beneath it. Over nothing it reads as a dark blink and
-hides inside the problem above; over a bed it reads as a flash of the wrong picture at every
-boundary. `enter` and `exit` default to `none`, which is the hard cut a reference that cuts actually
-wants — a Recipe named for a cut that fades for a frame is worth distrusting whatever it is called.
+A bed makes a blend visible, so check the Items' entry and exit while you are here: `enter` and `exit`
+default to `none`, and a Recipe named for a cut that fades for a frame is one of the inherited edges
+`frame-coverage.md` describes.
 
 `production-gates.md` measures the delivery for these before it is reported as finished.
 
