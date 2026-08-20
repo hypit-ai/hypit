@@ -47,7 +47,7 @@ function sceneDuration(file: string): number {
   const raw = execFileSync("ffprobe", [
     "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
     join(repoRoot, "docs/public/street-interview", file),
-  ], { encoding: "utf8" });
+  ], { encoding: "utf8", windowsHide: true });
   return Number(raw.trim());
 }
 

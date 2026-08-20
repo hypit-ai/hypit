@@ -55,7 +55,7 @@ async function runProcess(options: {
   readonly maxStderrBytes: number;
 }): Promise<void> {
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(options.executable, [...options.args], { shell: false, stdio: ["ignore", "ignore", "pipe"] });
+    const child = spawn(options.executable, [...options.args], { shell: false, windowsHide: true, stdio: ["ignore", "ignore", "pipe"] });
     let stderrBytes = 0;
     const stderr: Buffer[] = [];
     let failed: Error | undefined;

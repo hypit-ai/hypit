@@ -113,7 +113,7 @@ function signal(pid: number, name: NodeJS.Signals): "sent" | "gone" | "denied" {
 
 function run(root: string, command: ManagedProgramCommand): Promise<{ ok: boolean; detail: string }> {
   return new Promise((resolve) => {
-    const child = spawn(command.command, [...command.args], { cwd: root, shell: false, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(command.command, [...command.args], { cwd: root, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
     let output = "";
     child.stdout.on("data", (chunk: Buffer) => { output += chunk.toString(); });
     child.stderr.on("data", (chunk: Buffer) => { output += chunk.toString(); });
@@ -183,7 +183,14 @@ async function bringUp(
     const child = spawn(program.start.command, [...program.start.args], {
       cwd: root,
       shell: false,
-      detached: true,
+      // Outliving this process is the point, and each platform grants that differently. POSIX
+      // wants its own session. Windows already gives an unreferenced child its own lifetime, and
+      // asking to detach there costs the console: a detached process has none, so every console
+      // grandchild it starts is handed a fresh visible window instead. That is what a transcribing
+      // program looks like when `uv` re-execs Python and Python opens a pool of workers. Taking
+      // the hidden console instead leaves one console for the whole tree, and no window at all.
+      detached: process.platform !== "win32",
+      windowsHide: true,
       stdio: ["ignore", log.fd, log.fd],
     });
     child.unref();

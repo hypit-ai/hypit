@@ -102,6 +102,14 @@ function glyphStyle(
     ...(paint.stroke.widthPx === 0 ? [] : [
       { name: "-webkit-text-stroke-color", value: paint.stroke.color },
       { name: "-webkit-text-stroke-width", value: `${compactNumber(paint.stroke.widthPx)}px` },
+      // A text stroke is centred on the glyph outline, so half of it falls inside the letter. Left
+      // in the default order the browser fills first and strokes over the top, and that inner half
+      // is painted away: every stroke of every letter is separately narrowed, the counters of a, e
+      // and o close, and where two letters kern tightly one letter's outline crosses its
+      // neighbour's face. Putting the stroke first spends the same width the other way — the fill
+      // lands on top of it, and what is left showing is one contour around the outside of the
+      // word, which is what an outline is for.
+      { name: "paint-order", value: "stroke fill" },
     ] as const),
     ...(shadows.length === 0 ? [] : [{ name: "text-shadow", value: shadows.join(",") }] as const),
     ...(underline === undefined ? [] : underlineStyle(underline)),
