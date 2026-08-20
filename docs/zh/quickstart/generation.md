@@ -334,5 +334,5 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 </seedance:ReferenceVideo>
 ```
 
-每个 `seedance:ReferenceVideo` 产出 `{*.video}`，进入下一阶段的 `speech:Spine`。不同 Take
+每个 `seedance:ReferenceVideo` 产出 `{*.video}`，进入下一阶段的 `speech:Track`。不同 Take
 可以使用不同参考图，同时共享相同的音色与 Prompt Recipe。

@@ -1,7 +1,6 @@
 import { narrativeTypes } from "@hypit/narrative";
 import { mediaTypes } from "@hypit/media";
 import { speechTypes } from "@hypit/speech";
-import { speechEvidenceTypes } from "@hypit/speech-evidence";
 import { sealGraphFragment } from "@hypit/elaborator";
 import { mediaPipelineProducers } from "@hypit/media-pipeline";
 import { speechAlignmentProducers } from "@hypit/speech-alignment";
@@ -44,11 +43,6 @@ export const whisperXSemanticTakeFragment = sealGraphFragment({
     },
   ],
   exports: [
-    {
-      name: "evidence",
-      type: speechEvidenceTypes.alignedTranscript,
-      root: operation("request-whisperx"),
-    },
     {
       name: "take",
       type: speechTypes.semanticTake,

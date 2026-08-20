@@ -14,8 +14,7 @@ import { sameType, type CanonicalValue, type TypeRef } from "@hypit/protocol";
 import { mediaTypes } from "@hypit/media";
 import type { FontArtifactRef, FontStackRef } from "@hypit/media";
 import { narrativeTypes } from "@hypit/narrative";
-import { programSpaceTypes } from "@hypit/program-space";
-import { semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
@@ -192,15 +191,14 @@ const variantDefinition = {
 
 function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
   return ({ element, resolveReference }) => {
-    const common = ["id", "map", "space", "frame", "during", "triggers", "terminal", "style", "appear-sound", "move-sound"];
+    const common = ["id", "semantic", "frame", "during", "triggers", "terminal", "style", "appear-sound", "move-sound"];
     const attributes = variant === "column"
       ? [...common.filter((name) => name !== "triggers" && name !== "terminal"), "canvas"]
       : common;
     allowed(element, attributes);
     const id = text(element, "id");
     const selected = variantDefinition[variant];
-    const map = reference(element.attributes.map, `${element.name}.map`, semanticMapTypes.complete, resolveReference);
-    const space = reference(element.attributes.space, `${element.name}.space`, programSpaceTypes.programSpace, resolveReference);
+    const semantic = reference(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference);
     const canvas = variant === "column"
       ? reference(element.attributes.canvas, `${element.name}.canvas`, spatialTypes.canvas, resolveReference)
       : undefined;
@@ -221,8 +219,8 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       value: { kind: "inline", value: sealRankingHeader({ id, variant }) as unknown as CanonicalValue },
       range: element.range,
     });
-    const inputs: Record<string, typeof map.ref> = {
-      header: { kind: "record", id: headerId }, map: map.ref, space: space.ref, frame: frame.ref,
+    const inputs: Record<string, typeof semantic.ref> = {
+      header: { kind: "record", id: headerId }, semantic: semantic.ref, frame: frame.ref,
       outer: outer.ref, style: style.ref,
       ...(canvas === undefined ? {} : { canvas: canvas.ref }),
       ...(triggers === undefined ? {} : { triggers: triggers.ref }),

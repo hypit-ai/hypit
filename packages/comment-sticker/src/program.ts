@@ -16,7 +16,7 @@ import { assertProgramSpaceIdentity } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize, isDigest } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { SemanticTrack } from "@hypit/semantic-track";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 import {
@@ -238,13 +238,13 @@ export function appendProgramCommentSticker(
   header: CommentStickerHeader,
   frame: SpatialFrame,
   style: CommentStickerStyle,
-  space: ProgramSpace,
+  semantic: SemanticTrack,
   spec: CommentStickerItemSpec,
   content: CommentStickerContent,
   avatar?: BlobRef,
 ): CommentStickerSet {
   assert(spec.expansion.kind === "one", `Program Comment Sticker ${spec.id} must use one occurrence.`);
-  return realized(set, header, frame, style, spec, content, [projectProgramWindow({ itemId: spec.id, space, projection: spec.projection })], avatar);
+  return realized(set, header, frame, style, spec, content, [projectProgramWindow({ itemId: spec.id, semantic, projection: spec.projection })], avatar);
 }
 
 export function appendSelectionCommentSticker(
@@ -252,15 +252,14 @@ export function appendSelectionCommentSticker(
   header: CommentStickerHeader,
   frame: SpatialFrame,
   style: CommentStickerStyle,
-  space: ProgramSpace,
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   selection: NarrativeSelectionRef,
   spec: CommentStickerItemSpec,
   content: CommentStickerContent,
   avatar?: BlobRef,
 ): CommentStickerSet {
   return realized(set, header, frame, style, spec, content,
-    projectSelectionWindows({ itemId: spec.id, map, selection, space, expansion: spec.expansion, projection: spec.projection }), avatar);
+    projectSelectionWindows({ itemId: spec.id, semantic, selection, expansion: spec.expansion, projection: spec.projection }), avatar);
 }
 
 export function appendMomentCommentSticker(
@@ -268,15 +267,14 @@ export function appendMomentCommentSticker(
   header: CommentStickerHeader,
   frame: SpatialFrame,
   style: CommentStickerStyle,
-  space: ProgramSpace,
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   moment: NarrativeMomentRef,
   spec: CommentStickerItemSpec,
   content: CommentStickerContent,
   avatar?: BlobRef,
 ): CommentStickerSet {
   return realized(set, header, frame, style, spec, content,
-    projectMomentWindows({ itemId: spec.id, map, moment, space, expansion: spec.expansion, projection: spec.projection }), avatar);
+    projectMomentWindows({ itemId: spec.id, semantic, moment, expansion: spec.expansion, projection: spec.projection }), avatar);
 }
 
 export function assertCommentStickerProgram(value: CommentStickerProgram): void {

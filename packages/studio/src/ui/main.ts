@@ -148,9 +148,13 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
   const hero = document.createElement("div");
   hero.className = "selection-hero";
   hero.innerHTML = `
-    <span class="selection-icon"><span class="material-symbols-rounded">widgets</span></span>
+    <span class="selection-icon"><span class="material-symbols-rounded"></span></span>
     <div class="selection-title"><strong></strong><small></small></div>
-    <span class="selection-kind">Visual</span>`;
+    <span class="selection-kind"></span>`;
+  hero.querySelector(".selection-icon .material-symbols-rounded")!.textContent = track?.binding.icon ?? "widgets";
+  hero.querySelector(".selection-kind")!.textContent = track === undefined
+    ? "Track"
+    : `${track.binding.family} · ${track.binding.facet}`;
   hero.querySelector("strong")!.textContent = clip.label;
   hero.querySelector("small")!.textContent = track?.label ?? "Visual track";
 
@@ -165,12 +169,25 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
     ...(clip.markerId === undefined
       ? []
       : [property("Script marker", clip.markerId, "property-wide property-code")]),
-    property("Present id", clip.id, "property-wide property-code"),
+    property("Entity", clip.presentation.entity, "property-wide property-code"),
+    ...(clip.presentId === undefined
+      ? []
+      : [property("Present id", clip.presentId, "property-wide property-code")]),
   ]);
   const composition = group("Composition", [
     property("Track", track?.label ?? "—", "property-wide"),
+    property("Family", track?.binding.family ?? "—"),
+    property("Facet", track?.binding.facet ?? "—"),
     property("Stack order", String(clip.stackOrder)),
     property("Source", track?.provenance.origin ?? "source"),
+  ]);
+  const authoring = group("Authoring", [
+    property("Group", track?.binding.groupId ?? "—", "property-wide property-code"),
+    property("Surface", track?.binding.authoredTag ?? "—", "property-wide property-code"),
+    property("Adapter", track?.binding.adapter ?? "—", "property-wide property-code"),
+    property("Writeback", clip.interaction.writeback),
+    property("Move / trim", clip.interaction.move || clip.interaction.trimStart || clip.interaction.trimEnd ? "enabled" : "read-only"),
+    property("Inputs", String(track?.binding.references.length ?? 0)),
   ]);
   const run = group("Run provenance", [
     property("Output", track?.provenance.output ?? "—", "property-wide property-code"),
@@ -181,7 +198,19 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
       ? []
       : [property("Error", track.provenance.errors.join(" "), "property-wide property-code")]),
   ]);
-  const sections: HTMLElement[] = [hero, timing, composition, identity, run];
+  const available = {
+    authoring,
+    resolved: timing,
+    material: undefined,
+    composition,
+    identity,
+    run,
+  } as const;
+  const sections: HTMLElement[] = [
+    hero,
+    ...(track?.binding.inspector.sections ?? ["resolved", "composition", "identity", "run"])
+      .flatMap((name) => available[name] === undefined ? [] : [available[name]]),
+  ];
   inspector.replaceChildren(...sections);
 }
 

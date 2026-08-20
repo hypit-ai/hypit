@@ -15,8 +15,8 @@ inset. Both tiles remain live while the active speaker changes.
    direction through `copy:Set`.
 5. Generate each take with `seedance:ReferenceVideo generate-audio="true"`, the two layout images,
    and the two ordered voice references.
-6. Assemble takes with `speech:Spine`, create one `whisperx:Alignment`, then add the exact-font Caption
-   chain, Typography, Media, and Audio Tracks.
+6. Normalize each take, produce its `whisperx:SemanticTake`, assemble the results with
+   `speech:Track`, then add the exact-font Caption chain, Typography, Media, and Audio Tracks.
 7. Assemble in `film:Film`, render with `render:Video`, and stage review/delivery in `.svrun`.
 
 ## Preserve call-state truth

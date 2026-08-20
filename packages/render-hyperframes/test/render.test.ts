@@ -11,6 +11,7 @@ import type { Composition } from "@hypit/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import {
   createResolvedClosure,
@@ -76,11 +77,18 @@ import {
   createMarkupAuthorFrontend,
   MarkupSurfaceRegistry,
 } from "@hypit/markup";
+import {
+  semanticTrackComponent,
+  semanticTrackDependency,
+  semanticTrackTypes,
+} from "@hypit/semantic-track";
+import { svsManifest } from "@hypit/svs";
 
 const space = sealProgramSpace({
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });
+const semantic = semanticTrackFixture(space);
 const composition = sealComposition({
   id: "render-test",
   canvas: { width: 1080, height: 1920, clearColor: "#000000" },
@@ -99,24 +107,25 @@ const closure = createResolvedClosure([
   hyperframesManifest,
   mediaPipelineManifest,
   renderHyperframesManifest,
+  svsManifest,
 ]);
 const compositionRecord = await admitRecord(closure, sealRecord({
   id: "composition",
   type: compositionTypes.composition,
   value: stored(composition),
 }), validatorRegistry());
-const spaceRecord = await admitRecord(closure, sealRecord({
-  id: "space",
-  type: programSpaceTypes.programSpace,
-  value: stored(space),
+const semanticRecord = await admitRecord(closure, sealRecord({
+  id: "semantic",
+  type: semanticTrackTypes.track,
+  value: stored(semantic),
 }), validatorRegistry());
-const linked = link(closure, [compositionRecord, spaceRecord]);
+const linked = link(closure, [compositionRecord, semanticRecord]);
 const instance = elaborateGraphFragment(linked, renderHyperframesFragment, {
   id: "final",
   fragment: renderHyperframesFragment.id,
   inputs: {
     composition: { kind: "record", id: compositionRecord.id },
-    space: { kind: "record", id: spaceRecord.id },
+    semantic: { kind: "record", id: semanticRecord.id },
   },
 });
 const contribution = bindAuthorFragment(instance, { video: "final.video" });
@@ -133,6 +142,7 @@ function producerRegistry(): ProducerRegistry {
   registerProducerFacets(registry, mediaPipelineComponent.producers);
   registerProducerFacets(registry, hyperframesComponent.producers);
   registerProducerFacets(registry, renderHyperframesComponent.producers);
+  registerProducerFacets(registry, semanticTrackComponent.producers);
   return registry;
 }
 
@@ -147,6 +157,7 @@ function validatorRegistry(): TypeValidatorRegistry {
 
 test("HyperFrames rendering is an explicit exact Need after ordinary document compilation", async () => {
   assert.deepEqual(build().plan.steps.map((step) => step.producer.name).sort(), [
+    "project-program-space",
     hyperframesProducers.compile.name,
     renderHyperframesProducers.requestVisual.name,
     mediaPipelineProducers.planAudio.name,
@@ -303,13 +314,13 @@ const fixtureModule = { name: "example.composition-fixture", version: "1" } as c
 const fixtureSurfaceDigest = fixtureDigest("example.composition-fixture/surface@1");
 const fixtureSurface = {
   name: "composition", tag: "Composition", mode: "structured",
-  outputs: [compositionTypes.composition, programSpaceTypes.programSpace],
+  outputs: [compositionTypes.composition, semanticTrackTypes.track],
 } as const;
 const fixtureManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
-  dependencies: [compositionDependency, programSpaceDependency],
+  dependencies: [compositionDependency, semanticTrackDependency],
   types: [],
   capabilities: [],
   producers: [],
@@ -330,12 +341,13 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
     mediaPipelineManifest,
     renderHyperframesManifest,
     fixtureManifest,
+    svsManifest,
   ]);
   const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
       { id: "composition", type: compositionTypes.composition, value: stored(composition), range: element.range },
-      { id: "space", type: programSpaceTypes.programSpace, value: stored(space), range: element.range },
+      { id: "semantic", type: semanticTrackTypes.track, value: stored(semantic), range: element.range },
     ],
     components: [],
     fragments: [],
@@ -365,7 +377,7 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
       <import as="render" from="@hypit/render-hyperframes@1"/>
       <import as="media" from="@hypit/media-pipeline@1"/>
       <fixture:Composition/>
-      <render:Video id="final" composition={composition} space={space}/>
+      <render:Video id="final" composition={composition} semantic={semantic}/>
       <media:ExtractFrame id="poster" source={final.video} video="primary-moving" at="last"/>
     </svml>`),
     closure: sourceClosure,
@@ -381,6 +393,7 @@ test("the final rendered video is an ordinary BlobArtifact that can feed another
     targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
   }));
   assert.deepEqual(state.plan.steps.map((step) => step.producer.name).sort(), [
+    "project-program-space",
     hyperframesProducers.compile.name,
     renderHyperframesProducers.requestVisual.name,
     mediaPipelineProducers.planAudio.name,

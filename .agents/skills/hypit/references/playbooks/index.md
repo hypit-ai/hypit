@@ -24,9 +24,9 @@ needed for that craft or format.
 - Keep model invocation explicit with `seedance:TextVideo`, `seedance:FrameVideo`, or
   `seedance:ReferenceVideo`; keep every media reference, duration, model, resolution, and aspect
   ratio visible in the Author Source.
-- Build speech-led programs with `speech:Spine`, measure them with `whisperx:Alignment`, then add
+- Build speech-led programs from normalized `whisperx:SemanticTake` values with `speech:Track`, then add
   peer Caption, Media, Typography, Ranking, Deck, Comment, Screen, and Audio Tracks.
-- Use `speech:Spine` for speech-bearing video or audio Takes. For speech-free formats, select a
+- Use `speech:Track` for ordered speech-bearing Semantic Takes. For speech-free formats, select a
   verified ProgramSpace Record in `.svrun`, author explicit timing, and omit WhisperX/Caption work.
 - Assemble peer Tracks with `film:Film`, render with `render:Video`, and demand outputs through a
   `.svrun` Target.

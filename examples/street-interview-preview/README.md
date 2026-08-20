@@ -1,43 +1,22 @@
 # street-interview-preview
 
-A four-scene street interview with three cutaways and captions, read by the
-[SVML Playground](../../docs/guide/svml-playground.md) against **real footage and
-real speech timings**.
+A four-scene street interview with three cutaways and captions, opened in Hypit Studio against
+**real footage and real speech timings**.
 
 ```bash
-pnpm svml:playground -- \
-  --source examples/street-interview-preview/main.svml \
-  --run examples/street-interview-preview/build.svrun
+pnpm studio -- --run examples/street-interview-preview/build.svrun
 ```
 
-Both badges read `measured`. Nothing here has been built: the footage and the
-transcript already exist, and the Run Source says so.
+The checked-in Run selects the real footage. Its normalized A-roll passes through one
+`whisperx:SemanticTake` per Segment, and Speech Track assembles those products into the continuous
+`speech.semantic` track used by every timed component.
 
 ## Where the timings come from
 
-`docs/public/street-interview/transcript.json` is a word-level transcript of the
-recording, but a transcript is not a SemanticMap. A map is keyed by *this*
-Script's own anchor identities, and pairing loose words with authored tokens is
-the aligner's job. `align-transcript.ts` runs the real one — `locateSpeechTiming`
-from `@hypit/speech-alignment` — and writes two values:
-
-```bash
-node --import tsx examples/street-interview-preview/align-transcript.ts
-# Aligned 101 transcript words onto 102 Script tokens.
-```
-
-The Run Source then satisfies the two Outputs a timeline needs:
-
-```xml
-<value id="aligned-map" type="@hypit/semantic-map@1#CompleteSemanticMap" from="./timing.json"/>
-<satisfy output="timing.map" candidate="aligned-map"/>
-```
-
-Which timings a Source is read with is an authoring decision, so it is made in
-the Run Source rather than guessed by the tool. Drop the two `<satisfy>` lines
-and the same Source falls back to the syllable estimate, which lands on 26.0s
-against a programme that runs 31.3s — the badge changes to `timing: estimated`
-and the cutaways move.
+Each normalized A-roll video produces acoustic evidence. WhisperX aligns that evidence against the
+corresponding authored Segment and emits a self-contained `SemanticTake`: media, local word windows
+and all local anchors travel together. Speech Track preserves their authored order and adds only
+the prefix offsets needed to form one global `SemanticTrack`.
 
 ## Where the picture comes from
 
@@ -58,7 +37,7 @@ away from the whole frame rather than sitting inside it. `motion.cut` fades them
 in over two frames, which is what a cut looks like; `@receipt` uses `motion.drop`
 instead, so one of the three is visibly doing something else.
 
-**Captions on the same map.** Cue times come from the aligned map, placed by the
+**Captions on the same track.** Cue times come from the SemanticTrack, placed by the
 Script tokens each Atom corresponds to, so the words appear when they are said.
 
 **Three levels of marker.** `<rainbow>` encloses `@fee`, which encloses
@@ -69,9 +48,3 @@ or not a Track was hung on it.
 **Markers that bind nothing.** `@seat` and `@loan` are marked in the Script but
 no Media Item uses them, so they are coloured in the source and absent from the
 timeline. That is a legitimate state, not an error.
-
-## Files
-
-`timing.json` and `space.json` are generated, and committed so the example runs
-without ffprobe. Regenerate them whenever the Script text changes — the map is
-keyed by the Script's tokens, so editing a word invalidates it.

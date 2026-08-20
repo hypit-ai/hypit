@@ -16,7 +16,8 @@ import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize, isDigest } from "@hypit/protocol";
 import { verifyText } from "@hypit/text";
 import type { Text } from "@hypit/text";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { projectSemanticProgramSpace } from "@hypit/semantic-track";
+import type { SemanticTrack } from "@hypit/semantic-track";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace } from "@hypit/spatial";
 import {
@@ -292,8 +293,7 @@ export function appendRankingItemSpec(set: RankingItemSpecSet, spec: RankingItem
 export function buildRankingSchedule(input: {
   readonly header: RankingHeader;
   readonly items: RankingItemSpecSet;
-  readonly map: CompleteSemanticMap;
-  readonly space: ProgramSpace;
+  readonly semantic: SemanticTrack;
   readonly outer: NarrativeSelectionRef;
   readonly triggers: NarrativeMomentRef;
   readonly terminal: NarrativeMomentRef;
@@ -303,12 +303,12 @@ export function buildRankingSchedule(input: {
   assert(input.items.variant === input.header.variant, "Ranking schedule variant disagrees with its item set.");
   assert(input.header.variant !== "column", "Column uses item-owned Selection windows, not the triggered Ranking schedule.");
   assert(input.items.items.length > 0, "Ranking requires at least one Item.");
-  assertProgramSpaceIdentity(input.space);
-  const outer = locateSelectionOccurrences(input.map, input.outer, input.space);
+  const space = projectSemanticProgramSpace(input.semantic);
+  const outer = locateSelectionOccurrences(input.semantic, input.outer);
   assert(outer.length === 1, `Ranking outer Selection requires exactly one occurrence; received ${outer.length}.`);
-  const terminal = locateMomentOccurrences(input.map, input.terminal, input.space);
+  const terminal = locateMomentOccurrences(input.semantic, input.terminal);
   assert(terminal.length === 1, `Ranking terminal Moment requires exactly one occurrence; received ${terminal.length}.`);
-  const triggers = locateMomentOccurrences(input.map, input.triggers, input.space);
+  const triggers = locateMomentOccurrences(input.semantic, input.triggers);
   assert(triggers.length > 0, "Ranking trigger Moment requires at least one occurrence.");
   assert(triggers.length === input.items.items.length,
     `Ranking trigger/item cardinality differs: ${triggers.length} triggers for ${input.items.items.length} Items.`);
@@ -336,29 +336,27 @@ export function buildRankingSchedule(input: {
     terminalFrame: resolved.terminalFrame,
     entries,
   };
-  assertRankingSchedule(result, input.space);
+  assertRankingSchedule(result, space);
   return canonicalize(result) as unknown as TriggeredRankingSchedule;
 }
 
 export function projectColumnSelectionOuterWindow(
-  map: CompleteSemanticMap,
-  space: ProgramSpace,
+  semantic: SemanticTrack,
   selection: NarrativeSelectionRef,
 ): ColumnOuterWindow {
   const occurrence = projectSelectionWindows({
-    itemId: "column-outer", map, selection, space, expansion: { kind: "one" },
+    itemId: "column-outer", semantic, selection, expansion: { kind: "one" },
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
   })[0]!;
   return canonicalize({ span: { ...occurrence.span } }) as unknown as ColumnOuterWindow;
 }
 
 export function projectColumnSegmentOuterWindow(
-  map: CompleteSemanticMap,
-  space: ProgramSpace,
+  semantic: SemanticTrack,
   segment: NarrativeExcerpt,
 ): ColumnOuterWindow {
   const occurrence = projectSegmentWindow({
-    itemId: "column-outer", map, segment, space,
+    itemId: "column-outer", semantic, segment,
     projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
   });
   return canonicalize({ span: { ...occurrence.span } }) as unknown as ColumnOuterWindow;
@@ -386,8 +384,7 @@ export function assertColumnWindowCandidateSet(value: ColumnWindowCandidateSet):
 export function appendColumnWindowCandidate(
   set: ColumnWindowCandidateSet,
   spec: ColumnItemSpec,
-  map: CompleteSemanticMap,
-  space: ProgramSpace,
+  semantic: SemanticTrack,
   selection: NarrativeSelectionRef,
 ): ColumnWindowCandidateSet {
   assertColumnWindowCandidateSet(set);
@@ -395,7 +392,7 @@ export function appendColumnWindowCandidate(
   assert(!spec.preset, `Preset Column Item ${spec.id} cannot consume a Selection window.`);
   assert(!set.entries.some((entry) => entry.itemId === spec.id), `Column Item ${spec.id} already has a Selection window.`);
   const occurrence = projectSelectionWindows({
-    itemId: spec.id, map, selection, space, expansion: { kind: "one" },
+    itemId: spec.id, semantic, selection, expansion: { kind: "one" },
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
   })[0]!;
   const result: ColumnWindowCandidateSet = {

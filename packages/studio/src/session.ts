@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 
 import type { StudioArchive } from "./archive.js";
-import { compileSource } from "./compile.js";
 import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import type { Observations } from "./observe.js";
@@ -21,38 +20,37 @@ export type StudioSession = {
 };
 
 export async function readStudioSession(input: {
-  readonly source: string;
   readonly domain: StudioDomain;
   readonly run: RunPlan;
   readonly archive?: StudioArchive;
   readonly revision: number;
 }): Promise<StudioSession> {
-  const source = await compileSource(input.source, input.domain);
+  const source = input.run.source;
   const inspection = inspectStudioRun(source, input.run);
-  const outputRefs = inspection.projections.map((projection) => projection.ref);
+  const outputRefs = [
+    inspection.filmComposition,
+    ...inspection.projections.map((projection) => projection.ref),
+  ];
   const built = await preview({
     source,
     run: input.run,
     domain: input.domain,
     outputRefs,
+    compositionRef: inspection.filmComposition,
+    projections: inspection.projections,
     ...(input.archive === undefined ? {} : { archive: input.archive }),
   });
-  const tracks = built.tracks
-    .map((track) => track.track)
-    .filter((track): track is object => track !== undefined);
   const rendered = renderPreview({
-    id: "studio-preview",
-    canvas: built.canvas,
+    composition: built.composition,
     space: built.space as never,
-    tracks: tracks as never,
     served: new Set(built.served.keys()),
     ...(audible(built) === undefined ? {} : { audibleTrack: audible(built)! }),
   });
-  const text = readFileSync(input.source, "utf8");
+  const text = readFileSync(input.run.authorSource, "utf8");
   return {
     snapshot: snapshot(built, {
       revision: input.revision,
-      path: input.source,
+      path: input.run.authorSource,
       text,
       canvas: built.canvas,
       frameRate: built.frameRate,

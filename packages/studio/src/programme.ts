@@ -1,14 +1,22 @@
 import type { ArtifactAttachment } from "@hypit/workspace";
-import type { Digest, StoredValue } from "@hypit/protocol";
+import type { BlobRef, Digest, StoredValue } from "@hypit/protocol";
+import type { Composition } from "@hypit/composition";
+import {
+  projectSemanticProgramSpace,
+  semanticTrackSpans,
+} from "@hypit/semantic-track";
+import type { SemanticTrack } from "@hypit/semantic-track";
 
 import type { StudioArchive } from "./archive.js";
 import type { CompiledSource, ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import { executeDeterministic, MemoryArtifactStore } from "./execute.js";
 import type { RunPlan } from "./run.js";
+import type { StudioProjection } from "./studio-preflight.js";
+import type { StudioProjectionRole } from "./studio-registry.js";
 
 const PLAYABLE = new Set(["VisualTrack", "AudioTrack"]);
-const TIMING = "CompleteSemanticMap";
+const TIMING = "SemanticTrack";
 
 export type BuiltTrack = {
   readonly name: string;
@@ -16,12 +24,17 @@ export type BuiltTrack = {
   readonly outputRef: string;
   readonly candidateId?: string;
   readonly candidateOrigin: "run" | "source" | "none";
+  readonly role: StudioProjectionRole;
+  readonly trace: StudioProjection["trace"];
   readonly track: unknown;
 };
 
 export type Preview = {
   readonly source: CompiledSource;
   readonly tracks: readonly BuiltTrack[];
+  /** Resolved adapter realizations keyed by exact graph output ref. */
+  readonly values: ReadonlyMap<string, unknown>;
+  readonly composition: Composition;
   readonly timing: "measured";
   readonly timingOutput?: { readonly name: string; readonly ref: string };
   readonly timingCandidateId?: string;
@@ -37,40 +50,6 @@ export type Preview = {
     readonly endAnchorId: string;
   }[];
 };
-
-function inlineRecord(compiled: unknown, id: string): unknown {
-  const records = (compiled as {
-    readonly program: {
-      readonly records: readonly { readonly id: string; readonly value: StoredValue }[];
-    };
-  }).program.records;
-  const found = records.find((record) => record.id === id);
-  return found?.value.kind === "inline" ? found.value.value : undefined;
-}
-
-function canvasOf(compiled: unknown): { width: number; height: number; clearColor: string } {
-  const records = (compiled as {
-    readonly program: { readonly records: readonly { readonly value: StoredValue }[] };
-  }).program.records;
-  let clearColor = "#000000";
-  let size: { width: number; height: number } | undefined;
-  for (const record of records) {
-    if (record.value.kind !== "inline") continue;
-    const held = record.value.value as {
-      readonly contract?: string;
-      readonly widthPx?: number;
-      readonly heightPx?: number;
-      readonly clearColor?: string;
-      readonly canvas?: { readonly clearColor?: string };
-    };
-    clearColor = held.clearColor ?? held.canvas?.clearColor ?? clearColor;
-    if (held.contract === "hypit.canvas-space@1"
-      && typeof held.widthPx === "number" && typeof held.heightPx === "number") {
-      size = { width: held.widthPx, height: held.heightPx };
-    }
-  }
-  return { ...(size ?? { width: 1080, height: 1920 }), clearColor };
-}
 
 async function bytesOf(attachment: ArtifactAttachment): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
@@ -91,25 +70,36 @@ async function bytesOf(attachment: ArtifactAttachment): Promise<Uint8Array> {
 
 type ExecutionState = Awaited<ReturnType<typeof executeDeterministic>>["state"];
 
-function selectedValue(state: ExecutionState, output: string): StoredValue | undefined {
+function selectedValue(
+  state: ExecutionState,
+  output: string,
+): StoredValue | undefined {
   const selection = state.plan.selections.find((item) => item.output === output);
   if (selection === undefined) return undefined;
-  return state.records.find((item) => item.id === selection.record)?.value
-    ?? state.program.records.find((item) => item.id === selection.record)?.value;
+  const executed = state.records.find((item) => item.id === selection.record)?.value;
+  if (executed !== undefined) return executed;
+  // Inline Source and Run candidates both belong to this freshly recompiled
+  // revision. There is no stale-plan distinction to reconstruct here.
+  return state.program.records.find((item) => item.id === selection.record)?.value;
 }
 
-function programSpace(values: readonly StoredValue[]): unknown {
-  for (const stored of values) {
-    if (stored.kind !== "inline") continue;
-    const value = stored.value as {
-      readonly durationSec?: unknown;
-      readonly frameRate?: { readonly numerator?: unknown; readonly denominator?: unknown };
-    };
-    if (typeof value.durationSec === "number"
-      && typeof value.frameRate?.numerator === "number"
-      && typeof value.frameRate.denominator === "number") return value;
-  }
-  throw new Error("Studio projection produced no ProgramSpace.");
+function compositionArtifacts(composition: Composition): readonly BlobRef[] {
+  const found = new Map<Digest, BlobRef>();
+  const visit = (value: unknown): void => {
+    if (value === null || typeof value !== "object") return;
+    if ((value as { readonly kind?: unknown }).kind === "blob") {
+      const artifact = value as BlobRef;
+      found.set(artifact.digest, artifact);
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item);
+      return;
+    }
+    for (const item of Object.values(value)) visit(item);
+  };
+  visit(composition);
+  return [...found.values()];
 }
 
 /** Build only the Studio-approved deterministic projection of one explicit Run. */
@@ -118,6 +108,8 @@ export async function preview(input: {
   readonly run: RunPlan;
   readonly domain: StudioDomain;
   readonly outputRefs: readonly string[];
+  readonly compositionRef: string;
+  readonly projections: readonly StudioProjection[];
   readonly archive?: StudioArchive;
 }): Promise<Preview> {
   const targets = input.source.exports.filter((item) => input.outputRefs.includes(item.ref));
@@ -163,39 +155,30 @@ export async function preview(input: {
   const satisfactions = new Map(
     input.run.run.graph.satisfactions.map((item) => [item.output, item.candidate]),
   );
-  const values = targets
-    .map((target) => selectedValue(executed.state, target.ref))
-    .filter((value): value is StoredValue => value !== undefined);
   const timingOutput = targets.find((target) => target.type === TIMING);
   const timingValue = timingOutput === undefined
     ? undefined
     : selectedValue(executed.state, timingOutput.ref);
   if (timingOutput === undefined || timingValue?.kind !== "inline") {
-    throw new Error("Studio requires a resolved CompleteSemanticMap projection.");
+    throw new Error("Studio requires a resolved SemanticTrack projection.");
   }
-  const map = timingValue.value as {
-    readonly anchors?: readonly { readonly identity: string; readonly frame: number }[];
-  };
-  const anchors = new Map((map.anchors ?? []).map((anchor) => [anchor.identity, anchor.frame]));
-  const narrative = input.source.exports.find((item) => item.type === "Narrative");
-  const narrativeValue = narrative === undefined ? undefined : inlineRecord(
-    input.source.compiled,
-    narrative.ref,
-  ) as {
-    readonly tokens?: readonly {
-      readonly id: string;
-      readonly startAnchorId: string;
-      readonly endAnchorId: string;
-    }[];
-  } | undefined;
-  const space = programSpace([
-    ...values,
-    ...executed.state.records.map((item) => item.value),
-    ...executed.state.program.records.map((item) => item.value),
-  ]);
-  const rate = (space as {
-    readonly frameRate: { readonly numerator: number; readonly denominator: number };
-  }).frameRate;
+  const semantic = timingValue.value as unknown as SemanticTrack;
+  const spans = semanticTrackSpans(semantic);
+  const anchors = new Map(spans.flatMap(({ item, startFrame }) =>
+    item.take.anchors.map((anchor) => [anchor.identity, startFrame + anchor.frame] as const)));
+  const space = projectSemanticProgramSpace(semantic);
+  const rate = space.frameRate;
+  const compositionValue = selectedValue(executed.state, input.compositionRef);
+  if (compositionValue?.kind !== "inline") {
+    throw new Error("Studio Film composition did not produce an inline Composition.");
+  }
+  const composition = compositionValue.value as unknown as Composition;
+  for (const artifact of compositionArtifacts(composition)) {
+    if (served.has(artifact.digest)) continue;
+    const bytes = await input.archive?.read(artifact.digest);
+    if (bytes !== undefined) served.set(artifact.digest, { mediaType: artifact.mediaType, bytes });
+  }
+  const projectionByRef = new Map(input.projections.map((projection) => [projection.ref, projection]));
   const tracks: BuiltTrack[] = targets.flatMap((target) => {
     if (!PLAYABLE.has(target.type)) return [];
     const stored = selectedValue(executed.state, target.ref);
@@ -203,28 +186,45 @@ export async function preview(input: {
     if (stored?.kind !== "inline") {
       throw new Error(`Studio projection ${target.name} did not produce an inline Track.`);
     }
+    const projection = projectionByRef.get(target.ref);
+    if (projection === undefined) {
+      throw new Error(`Studio projection ${target.name} has no Studio trace.`);
+    }
     return [{
       name: target.name,
       type: target.type,
       outputRef: target.ref,
       ...(candidateId === undefined ? {} : { candidateId }),
       candidateOrigin: candidateId === undefined ? "source" as const : "run" as const,
+      role: projection.role,
+      trace: projection.trace,
       track: stored.value,
     }];
   });
+  const values = new Map<string, unknown>();
+  for (const target of targets) {
+    const stored = selectedValue(executed.state, target.ref);
+    if (stored?.kind === "inline") values.set(target.ref, stored.value);
+  }
   const timingCandidateId = satisfactions.get(timingOutput.ref);
   return {
     source: input.source,
     tracks,
+    values,
+    composition,
     timing: "measured",
     timingOutput: { name: timingOutput.name, ref: timingOutput.ref },
     ...(timingCandidateId === undefined ? {} : { timingCandidateId }),
     timingCandidateOrigin: timingCandidateId === undefined ? "source" : "run",
     served,
-    canvas: canvasOf(input.source.compiled),
+    canvas: composition.canvas,
     frameRate: rate,
     space,
     anchors,
-    tokens: narrativeValue?.tokens ?? [],
+    tokens: spans.flatMap(({ item }) => item.take.tokens.map((token) => ({
+      id: token.tokenId,
+      startAnchorId: token.startAnchorId,
+      endAnchorId: token.endAnchorId,
+    }))),
   };
 }

@@ -233,7 +233,7 @@ export const mediaPipelineMarkupSurfaces = [
         notes: [
           "Write exactly one of recipe or the direct video/audio/span-authority attributes, and exactly one of clock or frame-rate.",
           "`primary-moving` excludes attached-picture streams, prefers one declared default and fails closed on an ambiguous container; `stream:<index>` is for a container the author genuinely knows.",
-          "Selecting embedded audio is a media fact only and makes no SpeechBasis, speaker or alignment claim.",
+          "Selecting embedded audio is a media fact only and makes no SemanticTake, speaker or alignment claim.",
         ],
       },
     },
@@ -308,7 +308,7 @@ export const mediaPipelineMarkupSurfaces = [
         example: '<media:ExtractAudio id="voice-reference" source={prepared.video} audio="default"/>',
         notes: [
           "The element accepts no children and no text content, and the output container, codec, sample rate and channel count are fixed.",
-          "The result makes no SpeechBasis, speaker or alignment claim, so it can feed a model reference port directly.",
+          "The result makes no SemanticTake, speaker or alignment claim, so it can feed a model reference port directly.",
         ],
       },
     },

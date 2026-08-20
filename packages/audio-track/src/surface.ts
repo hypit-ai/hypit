@@ -1,7 +1,6 @@
 import { mediaTypes } from "@hypit/media";
 import { narrativeTypes } from "@hypit/narrative";
-import { programSpaceTypes } from "@hypit/program-space";
-import { semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
@@ -128,7 +127,6 @@ type TemporalBinding = {
   readonly kind: "program" | "selection" | "moment";
   readonly projection: AudioClipSpec["projection"];
   readonly source?: SurfaceResolvedReference;
-  readonly map?: SurfaceResolvedReference;
 };
 
 function temporalBinding(
@@ -141,7 +139,6 @@ function temporalBinding(
   const explicitEnd = optionalText(element, "end");
   const selection = element.attributes.selection;
   const moment = element.attributes.moment;
-  const mapRaw = element.attributes.map;
   const forms = Number(during !== undefined) + Number(at !== undefined) + Number(explicitStart !== undefined || explicitEnd !== undefined);
   if (forms !== 1) throw new Error(`${element.name} requires exactly one of during, at/for, or start/end.`);
   if (during !== undefined) {
@@ -150,14 +147,12 @@ function temporalBinding(
       return { kind: "program", projection: { start: { ref: "program.start" }, end: { ref: "program.end" } } };
     }
     const source = resolved(during, `${element.name}.during`, narrativeTypes.selection, resolve);
-    const map = resolved(mapRaw, `${element.name}.map`, semanticMapTypes.complete, resolve);
-    return { kind: "selection", source, map, projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } } };
+    return { kind: "selection", source, projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } } };
   }
   if (at !== undefined) {
     const source = resolved(at, `${element.name}.at`, narrativeTypes.moment, resolve);
-    const map = resolved(mapRaw, `${element.name}.map`, semanticMapTypes.complete, resolve);
     const forDuration = duration(text(element, "for"), `${element.name}.for`);
-    return { kind: "moment", source, map, projection: {
+    return { kind: "moment", source, projection: {
       start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: forDuration },
     } };
   }
@@ -166,16 +161,13 @@ function temporalBinding(
   if (selection !== undefined) return {
     kind: "selection",
     source: resolved(selection, `${element.name}.selection`, narrativeTypes.selection, resolve),
-    map: resolved(mapRaw, `${element.name}.map`, semanticMapTypes.complete, resolve),
     projection: { start: point(explicitStart, `${element.name}.start`), end: point(explicitEnd, `${element.name}.end`) },
   };
   if (moment !== undefined) return {
     kind: "moment",
     source: resolved(moment, `${element.name}.moment`, narrativeTypes.moment, resolve),
-    map: resolved(mapRaw, `${element.name}.map`, semanticMapTypes.complete, resolve),
     projection: { start: point(explicitStart, `${element.name}.start`), end: point(explicitEnd, `${element.name}.end`) },
   };
-  if (mapRaw !== undefined) throw new Error(`${element.name}.map requires Selection or Moment.`);
   return {
     kind: "program",
     projection: { start: point(explicitStart, `${element.name}.start`), end: point(explicitEnd, `${element.name}.end`) },
@@ -183,9 +175,9 @@ function temporalBinding(
 }
 
 export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  allowed(element, ["id", "space"]);
+  allowed(element, ["id", "semantic"]);
   const id = text(element, "id");
-  const space = resolved(element.attributes.space, `${element.name}.space`, programSpaceTypes.programSpace, resolveReference);
+  const semantic = resolved(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference);
   const headerId = `${id}.header`;
   const records: SurfaceRecordDraft[] = [{
     id: headerId,
@@ -196,7 +188,7 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
   const fragmentItems: Parameters<typeof createAudioTrackFragment>[0][number][] = [];
   const inputs: Record<string, { kind: "record"; id: string } | { kind: "component-output"; component: string; output: string }> = {
     header: { kind: "record", id: headerId },
-    space: space.ref,
+    semantic: semantic.ref,
   };
   let itemIndex = 0;
   for (const child of element.children) {
@@ -207,7 +199,7 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     if (!child.name.endsWith(":Clip") && child.name !== "Clip") throw new Error(`${element.name} accepts only Clip children.`);
     if (child.children.some((node) => node.kind === "element" || node.value.trim())) throw new Error(`${child.name} must be empty.`);
     allowed(child, [
-      "id", "source", "during", "at", "for", "start", "end", "selection", "moment", "map", "occurrences",
+      "id", "source", "during", "at", "for", "start", "end", "selection", "moment", "occurrences",
       "trim-start", "trim-end", "playback", "min-rate", "max-rate", "gain", "fade-in", "fade-out",
     ]);
     itemIndex += 1;
@@ -246,11 +238,9 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     if (binding.kind === "program") {
       fragmentItems.push({ kind: "program", mediaName, specName });
     } else {
-      const mapName = `item-${suffix}-map`;
       const sourceName = `item-${suffix}-${binding.kind}`;
-      inputs[mapName] = binding.map!.ref;
       inputs[sourceName] = binding.source!.ref;
-      fragmentItems.push({ kind: binding.kind, mediaName, specName, mapName, sourceName });
+      fragmentItems.push({ kind: binding.kind, mediaName, specName, sourceName });
     }
   }
   if (fragmentItems.length === 0) throw new Error(`${element.name} requires at least one Clip.`);

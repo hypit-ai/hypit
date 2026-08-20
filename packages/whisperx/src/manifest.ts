@@ -18,7 +18,7 @@ export const whisperXMarkupSurfaces = [{
     name: "semantic-take",
     tag: "SemanticTake",
     mode: "structured",
-    outputs: [speechEvidenceTypes.alignedTranscript, speechTypes.semanticTake],
+    outputs: [speechTypes.semanticTake],
     vocabulary: {
       summary:
         "Measures one normalized Take with WhisperX and aligns one authored Segment into a self-contained SemanticTake.",
@@ -36,8 +36,6 @@ export const whisperXMarkupSurfaces = [{
           summary: "Selects the already normalized SynchronizedMedia measured by WhisperX." },
       ],
       ports: [
-        { name: "evidence", type: speechEvidenceTypes.alignedTranscript,
-          summary: "The provider-neutral aligned transcript WhisperX returned, addressed as `<id>.evidence`." },
         { name: "take", type: speechTypes.semanticTake,
           summary: "The normalized media plus this Segment's authored words and local frame anchors." },
       ],

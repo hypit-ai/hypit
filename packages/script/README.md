@@ -46,7 +46,7 @@ The Surface exports one full Narrative plus narrow, immutable views:
 - `script.caption.selection.<id>` is the display-word subset wholly owned by one Selection;
 - `script.selection.<id>` is a reusable explicit Selection.
 
-Seedance consumes dialogue `Text`, Estimate and TTS consume speech `Text`, Speech Spine consumes the
+Seedance consumes dialogue `Text`, Estimate and TTS consume speech `Text`, Speech Track consumes the
 Segment excerpt, and Caption consumes the explicit display and correspondence edges. None imports
 Script's parser AST. Another authoring package may produce the same ordinary Text and structured
 Narrative contracts.

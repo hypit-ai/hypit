@@ -3,9 +3,8 @@ import { readFile } from "node:fs/promises";
 import { captionManifest, captionModuleRef, captionTypes } from "@hypit/caption";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
-import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { svsRecipeType } from "@hypit/svs";
 import type { ModuleManifest, ProducerRef } from "@hypit/protocol";
 
@@ -251,7 +250,7 @@ export const captionFineMarkupSurfaces = [
     {
       name: "track", tag: "Track", mode: "structured", outputs: [compositionTypes.visualTrack],
       vocabulary: {
-        summary: "Joins a planned Caption against the measured SemanticMap and renders it as one ordinary peer VisualTrack.",
+        summary: "Joins a planned Caption against the SemanticTrack and renders it as one ordinary peer VisualTrack.",
         appearance: "One block of caption text wrapped into lines inside a rounded Cue box, placed at a Recipe-chosen point on the Canvas and spanning a fraction of its width. Cues follow the speech one after another, each arriving and leaving with its own motion, and the Words of a Cue either stand there together from its first Frame or uncover as they are spoken. As the speech advances, the Word being spoken, or every Word up to it, is repainted in the active Paint, snapping at the Word boundary or sweeping across the glyphs, and it may take a rule beneath it, a rounded highlight capsule behind it and a brief pop at the moment it becomes the spoken one. That capsule either stands alone on each Atom or grows as one continuous run over everything already read, following the Words across line breaks.\n\nEvery Word of every Cue is drawn in one typeface, the one its Style names: emphasis varies by Word through the active Paint, never by typeface, and lines exist only where the text wraps, so a line cannot be given a face, colour or weight of its own. A caption whose lines are set in different typefaces is outside what this Track can draw.",
         preview: previewImage("Track.png"),
         attributes: [
@@ -261,14 +260,12 @@ export const captionFineMarkupSurfaces = [
             summary: "Chooses the display Atoms and Words the Cues are drawn from." },
           { name: "correspondence", kind: "reference", required: true, accepts: [narrativeTypes.captionCorrespondence],
             summary: "Chooses the link from display Words back to the spoken Script." },
-          { name: "map", kind: "reference", required: true, accepts: [semanticMapTypes.complete],
-            summary: "Chooses the measured Word windows that give every Cue its time." },
+          { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
+            summary: "Chooses the continuous SemanticTrack whose Word anchors give every Cue its time." },
           { name: "program", kind: "reference", required: true, accepts: [captionTypes.program],
             summary: "Chooses the Style assignment that decides which Style each run is rendered in." },
           { name: "plan", kind: "reference", required: true, accepts: [captionTypes.plan],
             summary: "Chooses the Cue cuts the planner produced for this display." },
-          { name: "space", kind: "reference", required: true, accepts: [programSpaceTypes.programSpace],
-            summary: "Chooses the ProgramSpace the rendered Track is laid out against." },
         ],
         ports: [
           { name: "track", type: compositionTypes.visualTrack,
@@ -278,8 +275,7 @@ export const captionFineMarkupSurfaces = [
   id="captions"
   display={story.caption}
   correspondence={story.caption.correspondence}
-  map={timing.map}
-  space={speech.space}
+  semantic={speech.semantic}
   program={caption-program}
   plan={caption-plan.plan}
 />`,
@@ -301,8 +297,7 @@ export const captionFineManifest: ModuleManifest = {
     compositionDependency,
     mediaDependency,
     narrativeDependency,
-    programSpaceDependency,
-    semanticMapDependency,
+    semanticTrackDependency,
   ],
   types: [],
   capabilities: [],
@@ -312,7 +307,7 @@ export const captionFineManifest: ModuleManifest = {
       { name: "caption", type: captionTypes.timedProjection },
       { name: "program", type: captionTypes.program },
       { name: "display", type: narrativeTypes.captionDisplay },
-      { name: "space", type: programSpaceTypes.programSpace },
+      { name: "semantic", type: semanticTrackTypes.track },
     ],
     outputs: [{ name: "track", type: compositionTypes.visualTrack }],
     needs: [],

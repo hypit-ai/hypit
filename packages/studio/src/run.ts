@@ -10,7 +10,10 @@ import {
 } from "@hypit/run";
 
 import type { StudioArchive } from "./archive.js";
+import { observedCompiledSource } from "./compile.js";
+import type { CompiledSource } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
+import { createObserver } from "./observe.js";
 
 export type RunCompilation = {
   readonly graph: {
@@ -23,6 +26,8 @@ export type RunCompilation = {
 
 export type RunPlan = {
   readonly authorSource: string;
+  /** The observed Author graph used by this exact Run compilation. */
+  readonly source: CompiledSource;
   readonly run: RunCompilation;
   readonly targets: readonly string[];
   readonly attachments: readonly ArtifactAttachment[];
@@ -43,8 +48,13 @@ export async function loadStudioRun(input: {
       frontends.register(frontend);
     }
   }
+  const observer = createObserver(input.domain.surfaces, (request) => {
+    const found = input.domain.resolveModule(request.from);
+    if (found === undefined) throw new Error(`No selected Source package satisfies ${request.from}.`);
+    return found;
+  });
   const compiler = new NodeRunCompiler({
-    authorCompiler: input.domain.compiler,
+    authorCompiler: input.domain.createCompiler(observer.surfaces),
     fragments,
     frontends,
     ...(input.archive === undefined ? {} : {
@@ -52,9 +62,11 @@ export async function loadStudioRun(input: {
     }),
   });
   const compiled = await compiler.compileFile(input.run);
+  const source = await observedCompiledSource(compiled.author, observer.observations());
   const targets = compiled.run.graph.targets.map((target) => target.output);
   return {
     authorSource: compiled.authorSource,
+    source,
     run: compiled.run as RunCompilation,
     targets,
     attachments: compiled.attachments,

@@ -1,8 +1,8 @@
 import type { ComponentPackage, ProducerHandlerContext } from "@hypit/component-kit";
-import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize } from "@hypit/protocol";
 import type { StoredValue } from "@hypit/protocol";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { SemanticTrack } from "@hypit/semantic-track";
+import { projectSemanticProgramSpace } from "@hypit/semantic-track";
 import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import type { MediaLayerSet } from "@hypit/media-track";
@@ -33,7 +33,7 @@ function finalizeInputs(inputs: ProducerHandlerContext["inputs"]) {
     header: inline<DepthStackHeader>(inputs.header?.value, "DepthStackHeader"),
     frame: inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
     spec: inline<DepthStackSpec>(inputs.spec?.value, "DepthStackSpec"),
-    space: inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+    semantic: inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
   };
 }
 
@@ -57,9 +57,8 @@ export const depthStackComponent = {
         inline<MediaLayerSet>(inputs.material?.value, "MediaLayerSet"),
         inline<DepthStackCardLabel>(inputs.label?.value, "DepthStackCardLabel"),
         inline<DepthStackCardSpec>(inputs.spec?.value, "DepthStackCardSpec"),
-        inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
+        inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
         inline<NarrativeMomentRef>(inputs.moment?.value, "NarrativeMomentRef"),
-        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
       )) }, needs: {} }),
     },
     {
@@ -67,7 +66,7 @@ export const depthStackComponent = {
       handler: ({ inputs }) => {
         const value = finalizeInputs(inputs);
         return { outputs: { program: output(finalizeDepthStackAtProgramEnd(
-          value.set, value.header, value.frame, value.spec, value.space,
+          value.set, value.header, value.frame, value.spec, value.semantic,
         )) }, needs: {} };
       },
     },
@@ -77,8 +76,8 @@ export const depthStackComponent = {
         const value = finalizeInputs(inputs);
         return { outputs: { program: output(finalizeDepthStackUntilMoment(
           value.set, value.header, value.frame, value.spec,
-          inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
-          inline<NarrativeMomentRef>(inputs.terminal?.value, "NarrativeMomentRef"), value.space,
+          value.semantic,
+          inline<NarrativeMomentRef>(inputs.terminal?.value, "NarrativeMomentRef"),
         )) }, needs: {} };
       },
     },
@@ -89,9 +88,9 @@ export const depthStackComponent = {
           const value = finalizeInputs(inputs);
           return { outputs: { program: output(finalizeDepthStackUntilSelection(
             value.set, value.header, value.frame, value.spec,
-            inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
+            value.semantic,
             inline<NarrativeSelectionRef>(inputs.terminal?.value, "NarrativeSelectionRef"),
-            index === 0 ? "start" : "end", value.space,
+            index === 0 ? "start" : "end",
           )) }, needs: {} };
         },
       })),
@@ -99,7 +98,7 @@ export const depthStackComponent = {
       producer: depthStackProducers.render,
       handler: ({ inputs }) => ({ outputs: { track: output(renderDepthStack(
         inline<CanvasSpace>(inputs.canvas?.value, "CanvasSpace"),
-        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+        projectSemanticProgramSpace(inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack")),
         inline<DepthStackProgram>(inputs.program?.value, "DepthStackProgram"),
       )) }, needs: {} }),
     },

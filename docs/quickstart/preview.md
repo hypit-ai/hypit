@@ -148,5 +148,5 @@ Drag the ruler to scrub. `Space` plays and pauses, `←` and `→` step one fram
 
 HyperFrames renders a silent picture on purpose: programme audio is a separate Track the media
 pipeline muxes in at the end. But placing B-roll against speech means hearing the speech, so the
-Speech Spine's own material is allowed to sound while the transport is running. Cutaways stay
+Speech Track's own material is allowed to sound while the transport is running. Cutaways stay
 silent, as they are in a build unless they ask otherwise. The speaker button turns it off.

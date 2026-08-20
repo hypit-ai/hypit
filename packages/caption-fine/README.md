@@ -21,10 +21,9 @@ declares no planning fields and has no `important`, random sizing or inferred Wo
   id="captions-track"
   display={story.caption}
   correspondence={story.caption.correspondence}
-  map={timing.map}
+  semantic={speech.semantic}
   program={captions}
   plan={caption-plan.plan}
-  space={speech.space}
 />
 ```
 

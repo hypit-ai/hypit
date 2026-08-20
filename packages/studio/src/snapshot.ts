@@ -17,6 +17,12 @@ import type {
 } from "./shared.js";
 import type { Placement } from "./observe.js";
 import type { Preview } from "./programme.js";
+import {
+  bindStudioTrack,
+  projectStudioTrack,
+  sealStudioClip,
+} from "./studio-registry.js";
+import type { StudioEntityDraft } from "./studio-registry.js";
 
 type Present = {
   readonly id: string;
@@ -155,7 +161,7 @@ function inlineRecord(compiled: unknown, id: string): unknown {
 /**
  * Project the compiled Narrative into the frame domain that the preview is
  * already using. No frontend timing is invented here: if an anchor is absent
- * from the built map, the corresponding item is simply not drawable yet.
+ * from the built SemanticTrack, the corresponding item is simply not drawable yet.
  */
 function semanticTimeline(built: Preview, script: ScriptMap | undefined): SemanticTimeline | undefined {
   const exported = built.source.exports.find((item) => item.type === "Narrative");
@@ -204,7 +210,7 @@ function semanticTimeline(built: Preview, script: ScriptMap | undefined): Semant
   });
   if (segments.length === 0 && tokens.length === 0) return undefined;
   const provenance: CandidateProvenance = {
-    output: built.timingOutput?.name ?? "CompleteSemanticMap",
+    output: built.timingOutput?.name ?? "SemanticTrack",
     ...(built.timingOutput?.ref === undefined ? {} : { outputRef: built.timingOutput.ref }),
     ...(built.timingCandidateId === undefined ? {} : { candidateId: built.timingCandidateId }),
     origin: built.timingCandidateOrigin,
@@ -269,7 +275,13 @@ export function snapshot(built: Preview, input: {
   };
   const tracks: Track[] = [];
   for (const item of built.tracks) {
-    const clips: Clip[] = spans(item.track, input.frameRate).map((span) => {
+    const projectedSpans = spans(item.track, input.frameRate);
+    const binding = bindStudioTrack(item);
+    const placement = built.source.observations.placements.find((candidate) =>
+      candidate.id === item.trace.authoredId
+      && candidate.module.name === item.trace.module
+      && candidate.surface === item.trace.surface);
+    const generic = (): readonly StudioEntityDraft[] => projectedSpans.map((span) => {
       const where = locate(span.id, located);
       const named = [...new Set(span.id.split(/[:#+]/u))].find((part) => markers.has(part));
       const marker = named ?? (where === undefined ? undefined : markerFor(where.id));
@@ -278,7 +290,8 @@ export function snapshot(built: Preview, input: {
       // make them one.
       const identity = where?.id ?? marker ?? item.name;
       return {
-        id: span.id,
+        id: `${item.outputRef}:${span.id}`,
+        ...(item.type === "VisualTrack" ? { presentId: span.id } : {}),
         authoredId: identity,
         ...(marker === undefined ? {} : { markerId: marker }),
         label: where?.id ?? span.id,
@@ -288,6 +301,13 @@ export function snapshot(built: Preview, input: {
         stackOrder: span.stackOrder,
       };
     });
+    const clips: Clip[] = projectStudioTrack({
+      track: item,
+      ...(placement === undefined ? {} : { placement }),
+      spans: projectedSpans,
+      values: built.values,
+      generic,
+    }).map((draft) => sealStudioClip(item.outputRef, draft, binding));
     const provenance: CandidateProvenance = {
       output: item.name,
       outputRef: item.outputRef,
@@ -297,10 +317,11 @@ export function snapshot(built: Preview, input: {
       errors: [],
     };
     tracks.push({
-      id: item.name,
+      id: item.outputRef,
       label: item.name,
       row: 0,
       clips,
+      binding,
       provenance,
     });
   }

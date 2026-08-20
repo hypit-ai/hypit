@@ -62,14 +62,14 @@ visual QA.
 
 ## Gate 3: measure and author Tracks
 
-- Build `speech:Spine` only from accepted speech-bearing video or audio Takes, then run one
-  `whisperx:Alignment` for the authored Narrative.
-- Recompute that alignment whenever the speech audio changes. Every Track timed against it — Caption,
+- Normalize every accepted speech-bearing video or audio Take, create its Segment-local
+  `whisperx:SemanticTake`, then assemble those Takes with `speech:Track`.
+- Recompute the affected SemanticTake whenever its speech audio changes. Every Track timed against it — Caption,
   Media, Typography, Ranking, Deck, Comment, Screen, Audio — is measured against audio that no longer
   exists otherwise, and the drift is invisible in a still frame. A Style-only change does not prove a
   prior review still holds.
 - Review Caption, Media, Typography, Ranking, Deck, Comment, Screen, and Audio Tracks against the
-  real ProgramSpace and SemanticMap. Check timing, safe zones, occlusion, stacking, audio clarity,
+  real SemanticTrack. Check timing, safe zones, occlusion, stacking, audio clarity,
   and whether each Track contributes unique information.
 - Treat `check` and `plan` as structural proofs only. They do not prove visual quality, real speech
   alignment, Provider output quality, or factual correctness.

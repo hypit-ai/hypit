@@ -9,6 +9,66 @@ export type Range = { readonly start: number; readonly end: number };
 export type CandidateOrigin = "run" | "source" | "none";
 export type CandidateStatus = "resolved" | "unresolved";
 
+export type StudioTrackFamily =
+  | "speech"
+  | "media"
+  | "text"
+  | "caption"
+  | "component"
+  | "audio"
+  | "visual";
+
+export type StudioTimelinePresentation = {
+  /** What one selectable box means, never how the renderer happened to split it. */
+  readonly entity: "present" | "audio-clip" | "semantic-take" | "media-item" | "caption-cue" | "ranking" | "ranking-reveal";
+  readonly shape: "block" | "picture" | "waveform" | "words" | "group" | "window";
+  readonly parentId?: string;
+  readonly depth: number;
+};
+
+export type StudioInteraction = {
+  readonly select: boolean;
+  readonly seek: "start" | "pointer" | "none";
+  readonly move: boolean;
+  readonly trimStart: boolean;
+  readonly trimEnd: boolean;
+  readonly canvasTransform: boolean;
+  readonly writeback: "source" | "none";
+};
+
+export type StudioLaneDescription = {
+  readonly layout: "flat" | "nested";
+  readonly boundFacets: boolean;
+};
+
+export type StudioInspectorSection =
+  | "authoring"
+  | "resolved"
+  | "material"
+  | "composition"
+  | "identity"
+  | "run";
+
+export type StudioInspectorDescription = {
+  readonly sections: readonly StudioInspectorSection[];
+};
+
+/** Studio-owned interpretation of a terminal projection. */
+export type StudioTrackBinding = {
+  readonly family: StudioTrackFamily;
+  readonly facet: "visual" | "audio";
+  /** Visual/audio facets from one authored element share this identity. */
+  readonly groupId: string;
+  readonly icon: string;
+  /** Stable Studio-local adapter id; fallback adapters remain explicit too. */
+  readonly adapter: string;
+  readonly lane: StudioLaneDescription;
+  readonly inspector: StudioInspectorDescription;
+  readonly authoredTag?: string;
+  readonly references: readonly { readonly name: string; readonly type: string }[];
+  readonly interaction: StudioInteraction;
+};
+
 /**
  * The graph edge that made a Studio projection exist. This is deliberately
  * small: it identifies the Run output and candidate without pulling the whole
@@ -30,8 +90,10 @@ export type CandidateProvenance = {
  * moves it and only the picture knows where it ended up.
  */
 export type Clip = {
-  /** The Present's own id, identical to the preview's data-hypit-present-id. */
+  /** Studio identity. Output-qualified so sibling Track clips cannot collide. */
   readonly id: string;
+  /** Renderer identity, present only when this clip paints a Visual Present. */
+  readonly presentId?: string;
   /** The authored id this Present is named after, when it names one. */
   readonly authoredId: string;
   /** The Script marker that placed it, when something said put it there. */
@@ -42,14 +104,20 @@ export type Clip = {
   /** Where that authored tag was written. */
   readonly elementRange?: Range;
   readonly stackOrder: number;
+  readonly presentation: StudioTimelinePresentation;
+  readonly interaction: StudioInteraction;
+  /** Rendering identities implementing this author entity; optional for non-visual entities. */
+  readonly renderIds: readonly string[];
 };
 
 export type Track = {
+  /** Exact LogicalOutput ref; labels are not identities. */
   readonly id: string;
   readonly label: string;
   /** Render order in the timeline; 0 is the top row. */
   readonly row: number;
   readonly clips: readonly Clip[];
+  readonly binding: StudioTrackBinding;
   /** Which resolved Run candidate produced this Track, or why it did not. */
   readonly provenance: CandidateProvenance;
 };
@@ -122,7 +190,7 @@ export type SemanticTimeline = {
   readonly anchors: readonly SemanticAnchor[];
   readonly segments: readonly SemanticSegment[];
   readonly tokens: readonly SemanticToken[];
-  /** The CompleteSemanticMap candidate that supplied these frame anchors. */
+  /** The SemanticTrack candidate that supplied these frame anchors. */
   readonly provenance: CandidateProvenance;
 };
 

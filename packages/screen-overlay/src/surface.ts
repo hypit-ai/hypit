@@ -1,6 +1,5 @@
 import { narrativeTypes } from "@hypit/narrative";
-import { programSpaceTypes } from "@hypit/program-space";
-import { semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import type { StructuredElement, StructuredSurfaceHandler, SurfaceRecordDraft, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
 import type { TemporalDuration, TemporalPointExpression } from "@hypit/temporal";
@@ -9,7 +8,7 @@ import { screenOverlayTypes } from "./manifest.js";
 import { sealScreenOverlayHeader, sealScreenOverlayItemSpec } from "./program.js";
 import type { ScreenOverlayComponent, ScreenOverlayItemSpec } from "./types.js";
 
-const TIMING = ["during", "at", "for", "start", "end", "selection", "moment", "map", "occurrences"] as const;
+const TIMING = ["during", "at", "for", "start", "end", "selection", "moment", "occurrences"] as const;
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
   return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
 }
@@ -62,7 +61,7 @@ function colors(element: StructuredElement, name: string): string[] {
   const values = text(element, name).split(",").map((value) => value.trim()).filter(Boolean);
   if (values.length === 0) throw new Error(`${element.name}.${name} requires colors.`); return values;
 }
-type Binding = { readonly kind: "program" | "selection" | "moment"; readonly projection: ScreenOverlayItemSpec["projection"]; readonly source?: SurfaceResolvedReference; readonly map?: SurfaceResolvedReference };
+type Binding = { readonly kind: "program" | "selection" | "moment"; readonly projection: ScreenOverlayItemSpec["projection"]; readonly source?: SurfaceResolvedReference };
 function binding(element: StructuredElement, resolve: (path: string) => SurfaceResolvedReference | undefined): Binding {
   const during = element.attributes.during; const at = element.attributes.at;
   const start = optionalText(element, "start"); const end = optionalText(element, "end");
@@ -74,19 +73,16 @@ function binding(element: StructuredElement, resolve: (path: string) => SurfaceR
       return { kind: "program", projection: { start: { ref: "program.start" }, end: { ref: "program.end" } } };
     }
     return { kind: "selection", source: ref(during, `${element.name}.during`, narrativeTypes.selection, resolve),
-      map: ref(element.attributes.map, `${element.name}.map`, semanticMapTypes.complete, resolve),
       projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } } };
   }
   if (at !== undefined) return { kind: "moment", source: ref(at, `${element.name}.at`, narrativeTypes.moment, resolve),
-    map: ref(element.attributes.map, `${element.name}.map`, semanticMapTypes.complete, resolve),
     projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: duration(text(element, "for"), `${element.name}.for`) } } };
   if (start === undefined || end === undefined) throw new Error(`${element.name} explicit timing requires start and end.`);
   const selection = element.attributes.selection; const moment = element.attributes.moment;
   if (selection !== undefined && moment !== undefined) throw new Error(`${element.name} cannot bind Selection and Moment together.`);
   const projection = { start: point(start, `${element.name}.start`), end: point(end, `${element.name}.end`) };
-  if (selection !== undefined) return { kind: "selection", source: ref(selection, `${element.name}.selection`, narrativeTypes.selection, resolve), map: ref(element.attributes.map, `${element.name}.map`, semanticMapTypes.complete, resolve), projection };
-  if (moment !== undefined) return { kind: "moment", source: ref(moment, `${element.name}.moment`, narrativeTypes.moment, resolve), map: ref(element.attributes.map, `${element.name}.map`, semanticMapTypes.complete, resolve), projection };
-  if (element.attributes.map !== undefined) throw new Error(`${element.name}.map requires a temporal source.`);
+  if (selection !== undefined) return { kind: "selection", source: ref(selection, `${element.name}.selection`, narrativeTypes.selection, resolve), projection };
+  if (moment !== undefined) return { kind: "moment", source: ref(moment, `${element.name}.moment`, narrativeTypes.moment, resolve), projection };
   return { kind: "program", projection };
 }
 
@@ -109,13 +105,13 @@ function content(element: StructuredElement): { readonly value: ScreenOverlayCom
 }
 
 export const decodeScreenOverlaySurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  allowed(element, ["id", "canvas", "space"]); const id = text(element, "id");
+  allowed(element, ["id", "canvas", "semantic"]); const id = text(element, "id");
   const canvas = ref(element.attributes.canvas, `${element.name}.canvas`, spatialTypes.canvas, resolveReference);
-  const space = ref(element.attributes.space, `${element.name}.space`, programSpaceTypes.programSpace, resolveReference);
+  const semantic = ref(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference);
   const headerId = `${id}.header`; const records: SurfaceRecordDraft[] = [{ id: headerId, type: screenOverlayTypes.header,
     value: { kind: "inline", value: sealScreenOverlayHeader({ id }) }, range: element.range }];
   const fragmentItems: Parameters<typeof createScreenOverlayFragment>[0][number][] = [];
-  const inputs: Record<string, typeof canvas.ref> = { canvas: canvas.ref, header: { kind: "record", id: headerId }, space: space.ref };
+  const inputs: Record<string, typeof canvas.ref> = { canvas: canvas.ref, header: { kind: "record", id: headerId }, semantic: semantic.ref };
   let index = 0;
   for (const child of element.children) {
     if (child.kind === "text") { if (child.value.trim()) throw new Error(`${element.name} accepts only component children.`); continue; }
@@ -131,9 +127,9 @@ export const decodeScreenOverlaySurface: StructuredSurfaceHandler = ({ element, 
     inputs[specName] = { kind: "record", id: specId };
     if (temporal.kind === "program") fragmentItems.push({ kind: "program", specName });
     else {
-      const mapName = `item-${suffix}-map`; const sourceName = `item-${suffix}-${temporal.kind}`;
-      inputs[mapName] = temporal.map!.ref; inputs[sourceName] = temporal.source!.ref;
-      fragmentItems.push({ kind: temporal.kind, specName, mapName, sourceName });
+      const sourceName = `item-${suffix}-${temporal.kind}`;
+      inputs[sourceName] = temporal.source!.ref;
+      fragmentItems.push({ kind: temporal.kind, specName, sourceName });
     }
   }
   if (fragmentItems.length === 0) throw new Error(`${element.name} requires at least one component.`);

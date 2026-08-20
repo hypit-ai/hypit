@@ -6,7 +6,7 @@ The package owns:
 
 - total Style assignment over an explicit `CaptionDisplaySequence`;
 - generic `CaptionPlan` validation: Cue boundaries use Atom ids, fields use Word ids;
-- the join of `CaptionCorrespondence` and `CompleteSemanticMap` into timed Cues and Atoms.
+- the join of `CaptionCorrespondence` and `SemanticTrack` into timed Cues and Atoms.
 
 It owns no Script parser, concrete font, box model, field meaning, renderer, LLM, Provider or
 Runtime policy.

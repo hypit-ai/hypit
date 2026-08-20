@@ -19,6 +19,7 @@ import type { StoredValue, TypeRef } from "@hypit/protocol";
 import { sealProgramSpace } from "@hypit/program-space";
 import { locateAlignedSegmentTiming } from "../../speech-alignment/src/locate.js";
 import type { AlignmentBasis } from "../../speech-alignment/src/locate.js";
+import { materializeSemanticTake } from "../../speech-alignment/src/materialize.js";
 import { sealAlignedTranscriptEvidence } from "@hypit/speech-evidence";
 import {
   captionCorrespondence,
@@ -69,7 +70,18 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Tr
       endFrameExclusive: Math.round(durationSec * 30),
     }],
   };
-  return locateAlignedSegmentTiming(narrative, audioBasis, evidence);
+  const timing = locateAlignedSegmentTiming(narrative, audioBasis, evidence);
+  const segment = narrative.segments[0]!;
+  const take = materializeSemanticTake(narrative, {
+    kind: "segment",
+    id: segment.id,
+    tokenStart: segment.tokenStart,
+    tokenEndExclusive: segment.tokenEndExclusive,
+  }, {
+    timeline: { frameRate: space.frameRate, frameCount: Math.round(durationSec * 30) },
+    audio: { artifact: audio },
+  }, timing);
+  return { id: "caption-semantic", items: [{ take }] };
 }
 
 function style(id: string, fields: readonly CaptionFieldDeclaration[] = []): CaptionStyleIntent {

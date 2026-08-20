@@ -192,7 +192,7 @@ Follow the authoring path in order, or jump directly to the part you are changin
 | [Script](./quickstart/script.md) | Segments, Role Cues, Dual Text, Selections, Moments and text projections |
 | [SVS Stylesheets](./quickstart/styles.md) | Reusable Recipes for captions, media, text and film |
 | [Media & Generation](./quickstart/generation.md) | Images, audio, prompt text and explicit model components |
-| [Timing & Assembly](./quickstart/timing.md) | Speech Spine, WhisperX, ProgramSpace and SemanticMap |
+| [Timing & Assembly](./quickstart/timing.md) | Speech Track, WhisperX, ProgramSpace and SemanticMap |
 | [Tracks](./quickstart/tracks.md) | Caption, Media, Typography and Audio Tracks |
 | [Film & Rendering](./quickstart/composition.md) | Peer Track composition and explicit rendering |
 | [Run Source & Builds](./quickstart/run.md) | Targets, reuse, Runtime Profiles, Builds and retrieval |

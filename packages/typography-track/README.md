@@ -27,7 +27,7 @@ Content has two explicit author forms:
 
 <copy:Value id="headline">Intent, not timelines.</copy:Value>
 
-<typo:Track id="titles" space={speech.space}>
+<typo:Track id="titles" semantic={speech.semantic}>
   <typo:Area id="headline" content={headline}
     placement={layout.headline} style={title-style} during="program"/>
 

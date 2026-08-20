@@ -5,7 +5,7 @@
   <import as="wording" from="@hypit/text@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
-  <import as="speech" from="@hypit/speech-spine@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="media-track" from="@hypit/media-track@1"/>
   <import as="space" from="@hypit/spatial@1"/>
@@ -43,24 +43,24 @@
   <whisperx:SemanticTake id="opening-semantic" narrative={story}
     segment={story.segment.opening} media={take-media.media}/>
 
-  <speech:Spine id="speech" clock={clock}
+  <speech:Track id="speech"
     visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
     <speech:Take source={opening-semantic.take}/>
-  </speech:Spine>
+  </speech:Track>
 
   <!-- Two B-roll inserts on one Track. Their Selections do not overlap, so they
        share a single timeline row the way an editor would lay them out. -->
-  <media-track:Track id="broll" map={speech.semanticMap} space={speech.space} canvas={vertical}>
+  <media-track:Track id="broll" semantic={speech.semantic} canvas={vertical}>
     <media-track:Item id="broll-one" media={motion-a-media.media} during={story.selection.claim}
       frame={card-a} appearance={recipes.media.card} motion={recipes.motion.card}/>
     <media-track:Item id="broll-two" media={motion-b-media.media} during={story.selection.proof}
       frame={card-b} appearance={recipes.media.wide} motion={recipes.motion.card}/>
   </media-track:Track>
 
-  <film:Film id="main" canvas={vertical} space={speech.space} appearance={recipes.film.vertical}>
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>
-    <film:Track source={speech.audioTrack}/>
+    <film:Track source={speech.audio}/>
     <film:Track source={broll.visual}/>
   </film:Film>
-  <render:Video id="final" composition={main.composition} space={speech.space}/>
+  <render:Video id="final" composition={main.composition} semantic={speech.semantic}/>
 </svml>

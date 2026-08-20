@@ -16,8 +16,8 @@ captions, B-roll, and editorial typography as peer Tracks.
 5. Generate each take with `seedance:ReferenceVideo generate-audio="true"`, one accepted full
    presenter/scene image, and the intended voice reference. Keep reference order identical across
    the shot group.
-6. Assemble accepted takes in Script order with `speech:Spine`, then create one
-   `whisperx:Alignment` for the complete program.
+6. Normalize each accepted take, create one `whisperx:SemanticTake` from that media and its Script
+   Segment, then assemble those Semantic Takes in Script order with `speech:Track`.
 7. Add the exact-font Caption chain when captions are wanted: `caption-fine:Style` →
    `caption:Program` → `caption-ai:Planner` → `caption-fine:Track`.
 8. Add B-roll through `media-track:Track`, editorial copy through `typo:Track`, then assemble with
