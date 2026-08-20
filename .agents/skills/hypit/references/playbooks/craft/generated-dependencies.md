@@ -32,16 +32,17 @@ A continuous shot that exceeds the generator's duration ceiling is split into as
 needs. **Every part references the same first-frame image** — the one accepted for that shot — and no
 part references another part.
 
-This is the one place where the "wire what must match" principle does *not* mean chaining. Handing
-part one's last frame to part two would match the seam exactly, and would also make the parts
-strictly sequential: part two cannot start until part one has finished generating and its frame has
-been extracted, so a shot split four ways takes four generations end to end. Pointing every part at
-the same accepted image costs the exact frame match at the seams and buys parallelism: all four
-generate at once, and they still hold the same person, framing, wardrobe and light, because they all
-came from the same picture.
+This is the one place where the "wire what must match" principle does *not* mean chaining. Chaining
+each part to the one before it makes them strictly sequential — part two cannot start until part one
+has finished generating and its frame has been extracted — so a shot split four ways costs four
+generations end to end. Pointing every part at the same accepted image lets all four generate at
+once, and they still hold the same person, framing, wardrobe and light, because they came from the
+same picture.
 
-The seam is a small jump in pose and micro-motion, not a change of scene — the same order of
-difference as a cut between two takes of the same setup, which is what the reference has anyway.
+The parts do not continue each other frame for frame at the seams. **That is fine and needs no
+handling.** Do not try to close it, do not raise it in a comparison, and do not spend an attempt on
+it: it is a small jump in pose, the seam a viewer reads as an ordinary cut. Split the shot, generate
+the parts, move on.
 
 ## A voice is generated once
 
