@@ -4,6 +4,7 @@ import {
 } from "@hypit/media";
 import type { SynchronizedMedia } from "@hypit/media";
 import type {
+  NarrativeExcerpt,
   NarrativeMomentRef,
   NarrativeSelectionRef,
 } from "@hypit/narrative";
@@ -16,10 +17,13 @@ import { canonicalize, isDigest } from "@hypit/protocol";
 import { verifyText } from "@hypit/text";
 import type { Text } from "@hypit/text";
 import type { CompleteSemanticMap } from "@hypit/semantic-map";
-import { assertSpatialFrame } from "@hypit/spatial";
+import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
+import type { CanvasSpace } from "@hypit/spatial";
 import {
   locateMomentOccurrences,
   locateSelectionOccurrences,
+  projectSegmentWindow,
+  projectSelectionWindows,
   resolveTriggeredSchedule,
 } from "@hypit/temporal";
 
@@ -27,8 +31,11 @@ import type {
   ColumnItem,
   ColumnItemSet,
   ColumnItemSpec,
+  ColumnOuterWindow,
   ColumnProgram,
+  ColumnSchedule,
   ColumnStyle,
+  ColumnWindowCandidateSet,
   RankingBoardPaint,
   RankingHeader,
   RankingItemSpec,
@@ -42,6 +49,7 @@ import type {
   RankingSoundStyle,
   RankingTextStyle,
   RankingVariant,
+  TriggeredRankingSchedule,
   TierBoardItem,
   TierBoardItemSet,
   TierBoardItemSpec,
@@ -220,8 +228,9 @@ export function assertRankingItemSpec(value: RankingItemSpec): void {
     assert(value.entry === "direct" || value.entry === "stage", `TierBoardItemSpec.${value.id}.entry is invalid.`);
   } else if (value.variant === "column") {
     assert(value.label.trim().length > 0, `ColumnItemSpec.${value.id}.label is empty.`);
+    integer(value.rank, `ColumnItemSpec.${value.id}.rank`, 1);
+    assert(typeof value.preset === "boolean", `ColumnItemSpec.${value.id}.preset is invalid.`);
   } else {
-    assert(value.variant === "top-three", "RankingItemSpec variant is invalid.");
     assert(value.label.trim().length > 0, `TopThreeItemSpec.${value.id}.label is empty.`);
   }
   if (value.stackingOrder !== undefined) stacking(value.stackingOrder, `RankingItemSpec.${value.id}.stackingOrder`);
@@ -258,11 +267,16 @@ export function assertRankingItemSpecSet(value: RankingItemSpecSet): void {
   assert(["tier-board", "column", "top-three"].includes(value.variant),
     "RankingItemSpecSet.variant is invalid.");
   const ids = new Set<string>();
+  const ranks = new Set<number>();
   for (const item of value.items) {
     assertRankingItemSpec(item);
     assert(item.variant === value.variant, "RankingItemSpecSet mixes component variants.");
     assert(!ids.has(item.id), `RankingItemSpecSet repeats ${item.id}.`);
     ids.add(item.id);
+    if (item.variant === "column") {
+      assert(!ranks.has(item.rank), `RankingItemSpecSet repeats Column rank ${item.rank}.`);
+      ranks.add(item.rank);
+    }
   }
 }
 
@@ -283,10 +297,11 @@ export function buildRankingSchedule(input: {
   readonly outer: NarrativeSelectionRef;
   readonly triggers: NarrativeMomentRef;
   readonly terminal: NarrativeMomentRef;
-}): RankingSchedule {
+}): TriggeredRankingSchedule {
   assertRankingHeader(input.header);
   assertRankingItemSpecSet(input.items);
   assert(input.items.variant === input.header.variant, "Ranking schedule variant disagrees with its item set.");
+  assert(input.header.variant !== "column", "Column uses item-owned Selection windows, not the triggered Ranking schedule.");
   assert(input.items.items.length > 0, "Ranking requires at least one Item.");
   assertProgramSpaceIdentity(input.space);
   const outer = locateSelectionOccurrences(input.map, input.outer, input.space);
@@ -313,7 +328,7 @@ export function buildRankingSchedule(input: {
       settled: { startFrame: exclusive.endFrameExclusive, endFrameExclusive: resolved.outer.endFrameExclusive },
     };
   });
-  const result: RankingSchedule = {
+  const result: TriggeredRankingSchedule = {
 
     id: input.header.id,
     variant: input.header.variant,
@@ -322,13 +337,170 @@ export function buildRankingSchedule(input: {
     entries,
   };
   assertRankingSchedule(result, input.space);
-  return canonicalize(result) as unknown as RankingSchedule;
+  return canonicalize(result) as unknown as TriggeredRankingSchedule;
 }
 
-export function assertRankingSchedule(value: RankingSchedule, space?: ProgramSpace): void {
+export function projectColumnSelectionOuterWindow(
+  map: CompleteSemanticMap,
+  space: ProgramSpace,
+  selection: NarrativeSelectionRef,
+): ColumnOuterWindow {
+  const occurrence = projectSelectionWindows({
+    itemId: "column-outer", map, selection, space, expansion: { kind: "one" },
+    projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
+  })[0]!;
+  return canonicalize({ span: { ...occurrence.span } }) as unknown as ColumnOuterWindow;
+}
+
+export function projectColumnSegmentOuterWindow(
+  map: CompleteSemanticMap,
+  space: ProgramSpace,
+  segment: NarrativeExcerpt,
+): ColumnOuterWindow {
+  const occurrence = projectSegmentWindow({
+    itemId: "column-outer", map, segment, space,
+    projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
+  });
+  return canonicalize({ span: { ...occurrence.span } }) as unknown as ColumnOuterWindow;
+}
+
+export function createColumnWindowCandidateSet(): ColumnWindowCandidateSet {
+  return { entries: [] };
+}
+
+export function assertColumnWindowCandidateSet(value: ColumnWindowCandidateSet): void {
+  assert(Array.isArray(value.entries), "ColumnWindowCandidateSet.entries is invalid.");
+  const ids = new Set<string>();
+  for (const [index, entry] of value.entries.entries()) {
+    identity(entry.itemId, `ColumnWindowCandidateSet.entries.${index}.itemId`);
+    identity(entry.occurrenceId, `ColumnWindowCandidateSet.entries.${index}.occurrenceId`);
+    assert(!ids.has(entry.itemId), `ColumnWindowCandidateSet repeats ${entry.itemId}.`);
+    ids.add(entry.itemId);
+    frame(entry.preferred.startFrame, `ColumnWindowCandidateSet.entries.${index}.preferred.startFrame`);
+    frame(entry.preferred.endFrameExclusive, `ColumnWindowCandidateSet.entries.${index}.preferred.endFrameExclusive`);
+    assert(entry.preferred.endFrameExclusive > entry.preferred.startFrame,
+      `ColumnWindowCandidateSet.entries.${index}.preferred is empty.`);
+  }
+}
+
+export function appendColumnWindowCandidate(
+  set: ColumnWindowCandidateSet,
+  spec: ColumnItemSpec,
+  map: CompleteSemanticMap,
+  space: ProgramSpace,
+  selection: NarrativeSelectionRef,
+): ColumnWindowCandidateSet {
+  assertColumnWindowCandidateSet(set);
+  assertRankingItemSpec(spec);
+  assert(!spec.preset, `Preset Column Item ${spec.id} cannot consume a Selection window.`);
+  assert(!set.entries.some((entry) => entry.itemId === spec.id), `Column Item ${spec.id} already has a Selection window.`);
+  const occurrence = projectSelectionWindows({
+    itemId: spec.id, map, selection, space, expansion: { kind: "one" },
+    projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
+  })[0]!;
+  const result: ColumnWindowCandidateSet = {
+    entries: [...set.entries, {
+      itemId: spec.id,
+      occurrenceId: occurrence.id,
+      preferred: { ...occurrence.span },
+    }].sort((left, right) => left.itemId.localeCompare(right.itemId)),
+  };
+  assertColumnWindowCandidateSet(result);
+  return canonicalize(result) as unknown as ColumnWindowCandidateSet;
+}
+
+function clampColumnCandidate(
+  preferred: { readonly startFrame: number; readonly endFrameExclusive: number },
+  outer: { readonly startFrame: number; readonly endFrameExclusive: number },
+): { readonly startFrame: number; readonly endFrameExclusive: number } {
+  const startFrame = Math.max(preferred.startFrame, outer.startFrame);
+  const endFrameExclusive = Math.min(preferred.endFrameExclusive, outer.endFrameExclusive);
+  if (endFrameExclusive > startFrame) return { startFrame, endFrameExclusive };
+  if (preferred.endFrameExclusive <= outer.startFrame) {
+    return { startFrame: outer.startFrame, endFrameExclusive: outer.startFrame + 1 };
+  }
+  return { startFrame: outer.endFrameExclusive - 1, endFrameExclusive: outer.endFrameExclusive };
+}
+
+function resolveColumnActiveWindows(
+  candidates: readonly ColumnWindowCandidateSet["entries"][number][],
+  outer: { readonly startFrame: number; readonly endFrameExclusive: number },
+): ReadonlyMap<string, { readonly startFrame: number; readonly endFrameExclusive: number }> {
+  const capacity = outer.endFrameExclusive - outer.startFrame;
+  assert(capacity >= candidates.length,
+    `Column outer window has ${capacity} frames for ${candidates.length} non-preset Items.`);
+  const ordered = candidates.map((candidate) => ({
+    ...candidate,
+    clamped: clampColumnCandidate(candidate.preferred, outer),
+  })).sort((left, right) =>
+    left.clamped.startFrame - right.clamped.startFrame
+    || left.clamped.endFrameExclusive - right.clamped.endFrameExclusive
+    || left.occurrenceId.localeCompare(right.occurrenceId)
+    || left.itemId.localeCompare(right.itemId));
+  const resolved = new Map<string, { readonly startFrame: number; readonly endFrameExclusive: number }>();
+  let cursor = outer.startFrame;
+  for (const [index, candidate] of ordered.entries()) {
+    const remaining = ordered.length - index - 1;
+    const latestEnd = outer.endFrameExclusive - remaining;
+    const startFrame = Math.min(Math.max(candidate.clamped.startFrame, cursor), latestEnd - 1);
+    const endFrameExclusive = Math.min(Math.max(candidate.clamped.endFrameExclusive, startFrame + 1), latestEnd);
+    resolved.set(candidate.itemId, { startFrame, endFrameExclusive });
+    cursor = endFrameExclusive;
+  }
+  return resolved;
+}
+
+export function buildColumnSchedule(input: {
+  readonly header: RankingHeader;
+  readonly items: RankingItemSpecSet;
+  readonly outer: ColumnOuterWindow;
+  readonly candidates: ColumnWindowCandidateSet;
+}): ColumnSchedule {
+  assertRankingHeader(input.header);
+  assert(input.header.variant === "column", "Column Schedule requires a Column header.");
+  assertRankingItemSpecSet(input.items);
+  assert(input.items.variant === "column", "Column Schedule requires Column Items.");
+  assert(input.items.items.length > 0, "Column requires at least one Item.");
+  assertColumnWindowCandidateSet(input.candidates);
+  frame(input.outer.span.startFrame, "ColumnOuterWindow.span.startFrame");
+  frame(input.outer.span.endFrameExclusive, "ColumnOuterWindow.span.endFrameExclusive");
+  assert(input.outer.span.endFrameExclusive > input.outer.span.startFrame, "ColumnOuterWindow.span is empty.");
+  const items = [...input.items.items as readonly ColumnItemSpec[]]
+    .sort((left, right) => left.rank - right.rank || left.id.localeCompare(right.id));
+  const expected = new Set(items.filter((item) => !item.preset).map((item) => item.id));
+  const received = new Set(input.candidates.entries.map((entry) => entry.itemId));
+  assert(expected.size === received.size && [...expected].every((id) => received.has(id)),
+    "Column non-preset Items and Selection windows differ.");
+  const active = resolveColumnActiveWindows(input.candidates.entries, input.outer.span);
+  const result: ColumnSchedule = {
+    id: input.header.id,
+    variant: "column",
+    outer: { ...input.outer.span },
+    entries: items.map((item) => {
+      if (item.preset) return {
+        itemId: item.id,
+        mode: "preset" as const,
+        settled: { ...input.outer.span },
+      };
+      const candidate = input.candidates.entries.find((entry) => entry.itemId === item.id)!;
+      const window = active.get(item.id)!;
+      return {
+        itemId: item.id,
+        mode: "reveal" as const,
+        preferred: { ...candidate.preferred },
+        active: { ...window },
+        settled: { startFrame: window.endFrameExclusive, endFrameExclusive: input.outer.span.endFrameExclusive },
+      };
+    }),
+  };
+  assertRankingSchedule(result);
+  return canonicalize(result) as unknown as ColumnSchedule;
+}
+
+function assertTriggeredRankingSchedule(value: TriggeredRankingSchedule): void {
   identity(value.id, "RankingSchedule.id");
-  assert(["tier-board", "column", "top-three"].includes(value.variant),
-    "RankingSchedule.variant is invalid.");
+  assert(["tier-board", "top-three"].includes(value.variant),
+    "Triggered RankingSchedule.variant is invalid.");
   frame(value.outer.startFrame, "RankingSchedule.outer.startFrame");
   frame(value.outer.endFrameExclusive, "RankingSchedule.outer.endFrameExclusive");
   assert(value.outer.endFrameExclusive > value.outer.startFrame, "RankingSchedule.outer is empty.");
@@ -357,6 +529,52 @@ export function assertRankingSchedule(value: RankingSchedule, space?: ProgramSpa
   assert(value.entries[0]!.triggerFrame >= value.outer.startFrame, "RankingSchedule starts before its outer window.");
   assert(value.entries.at(-1)!.stage.endFrameExclusive === value.terminalFrame,
     "RankingSchedule final stage does not end at terminal.");
+}
+
+function assertColumnSchedule(value: ColumnSchedule): void {
+  identity(value.id, "ColumnSchedule.id");
+  frame(value.outer.startFrame, "ColumnSchedule.outer.startFrame");
+  frame(value.outer.endFrameExclusive, "ColumnSchedule.outer.endFrameExclusive");
+  assert(value.outer.endFrameExclusive > value.outer.startFrame, "ColumnSchedule.outer is empty.");
+  assert(value.entries.length > 0, "ColumnSchedule.entries is empty.");
+  const ids = new Set<string>();
+  const active: Array<{ readonly itemId: string; readonly startFrame: number; readonly endFrameExclusive: number }> = [];
+  for (const [index, entry] of value.entries.entries()) {
+    identity(entry.itemId, `ColumnSchedule.entries.${index}.itemId`);
+    assert(!ids.has(entry.itemId), `ColumnSchedule repeats ${entry.itemId}.`);
+    ids.add(entry.itemId);
+    if (entry.mode === "preset") {
+      assert(entry.settled.startFrame === value.outer.startFrame
+        && entry.settled.endFrameExclusive === value.outer.endFrameExclusive,
+      `ColumnSchedule preset ${entry.itemId} does not occupy the outer window.`);
+      continue;
+    }
+    frame(entry.preferred.startFrame, `ColumnSchedule.entries.${index}.preferred.startFrame`);
+    frame(entry.preferred.endFrameExclusive, `ColumnSchedule.entries.${index}.preferred.endFrameExclusive`);
+    assert(entry.preferred.endFrameExclusive > entry.preferred.startFrame,
+      `ColumnSchedule.entries.${index}.preferred is empty.`);
+    frame(entry.active.startFrame, `ColumnSchedule.entries.${index}.active.startFrame`);
+    frame(entry.active.endFrameExclusive, `ColumnSchedule.entries.${index}.active.endFrameExclusive`);
+    assert(entry.active.startFrame >= value.outer.startFrame
+      && entry.active.endFrameExclusive <= value.outer.endFrameExclusive
+      && entry.active.endFrameExclusive > entry.active.startFrame,
+    `ColumnSchedule.entries.${index}.active is outside the outer window.`);
+    assert(entry.settled.startFrame === entry.active.endFrameExclusive
+      && entry.settled.endFrameExclusive === value.outer.endFrameExclusive,
+    `ColumnSchedule.entries.${index}.settled is inconsistent.`);
+    active.push({ itemId: entry.itemId, ...entry.active });
+  }
+  active.sort((left, right) => left.startFrame - right.startFrame
+    || left.endFrameExclusive - right.endFrameExclusive || left.itemId.localeCompare(right.itemId));
+  for (let index = 1; index < active.length; index += 1) {
+    assert(active[index]!.startFrame >= active[index - 1]!.endFrameExclusive,
+      `ColumnSchedule active windows ${active[index - 1]!.itemId} and ${active[index]!.itemId} overlap.`);
+  }
+}
+
+export function assertRankingSchedule(value: RankingSchedule, space?: ProgramSpace): void {
+  if (value.variant === "column") assertColumnSchedule(value);
+  else assertTriggeredRankingSchedule(value);
   if (space !== undefined) {
     assertProgramSpaceIdentity(space);
     assert(value.outer.endFrameExclusive <= programSpaceFrameCount(space), "RankingSchedule exceeds ProgramSpace.");
@@ -399,11 +617,18 @@ export function appendTopThreeItem(set: TopThreeItemSet, spec: TopThreeItemSpec,
   return canonicalize({ ...set, items: [...set.items, { ...structuredClone(spec), ...(icon === undefined ? {} : { icon: structuredClone(icon) }) }] }) as unknown as TopThreeItemSet;
 }
 
-function idsEqual(schedule: RankingSchedule, items: readonly { readonly id: string }[]): void {
+function idsEqual(schedule: TriggeredRankingSchedule, items: readonly { readonly id: string }[]): void {
   assert(schedule.entries.length === items.length, "Ranking Program item count differs from its Schedule.");
   for (const [index, item] of items.entries()) {
     assert(schedule.entries[index]?.itemId === item.id, "Ranking Program item order differs from its Schedule.");
   }
+}
+
+function columnIdsEqual(schedule: ColumnSchedule, items: readonly { readonly id: string }[]): void {
+  assert(schedule.entries.length === items.length, "Column Program item count differs from its Schedule.");
+  const scheduled = new Set(schedule.entries.map((entry) => entry.itemId));
+  assert(scheduled.size === items.length && items.every((item) => scheduled.has(item.id)),
+    "Column Program Items differ from its Schedule.");
 }
 
 export function fitRankingStageMotion(
@@ -418,6 +643,24 @@ export function fitRankingStageMotion(
   return { appearFrames: Math.min(preferredAppearFrames, durationFrames - moveFrames), moveFrames };
 }
 
+export function fitColumnRevealMotion(
+  durationFrames: number,
+  preferredAppearFrames: number,
+  preferredMoveFrames: number,
+): { readonly mode: "direct" } | { readonly mode: "stage"; readonly appearFrames: number; readonly moveFrames: number } {
+  assert(Number.isSafeInteger(durationFrames) && durationFrames > 0, "Column reveal duration is invalid.");
+  assert(Number.isSafeInteger(preferredAppearFrames) && preferredAppearFrames > 0, "Column appear duration is invalid.");
+  assert(Number.isSafeInteger(preferredMoveFrames) && preferredMoveFrames > 0, "Column move duration is invalid.");
+  if (durationFrames === 1) return { mode: "direct" };
+  const preferredTotal = preferredAppearFrames + preferredMoveFrames;
+  if (durationFrames >= preferredTotal) {
+    return { mode: "stage", appearFrames: preferredAppearFrames, moveFrames: preferredMoveFrames };
+  }
+  const appearFrames = Math.min(durationFrames - 1,
+    Math.max(1, Math.round(durationFrames * preferredAppearFrames / preferredTotal)));
+  return { mode: "stage", appearFrames, moveFrames: durationFrames - appearFrames };
+}
+
 export function buildTierBoardProgram(header: RankingHeader, frameValue: import("@hypit/spatial").SpatialFrame, schedule: RankingSchedule, style: TierBoardStyle, set: TierBoardItemSet): TierBoardProgram {
   assert(header.variant === "tier-board" && schedule.variant === "tier-board", "TierBoard variant is inconsistent.");
   assertSpatialFrame(frameValue);
@@ -430,12 +673,14 @@ export function buildTierBoardProgram(header: RankingHeader, frameValue: import(
   return canonicalize(result) as unknown as TierBoardProgram;
 }
 
-export function buildColumnProgram(header: RankingHeader, frameValue: import("@hypit/spatial").SpatialFrame, schedule: RankingSchedule, style: ColumnStyle, set: ColumnItemSet): ColumnProgram {
+export function buildColumnProgram(header: RankingHeader, canvasValue: CanvasSpace, frameValue: import("@hypit/spatial").SpatialFrame, schedule: RankingSchedule, style: ColumnStyle, set: ColumnItemSet): ColumnProgram {
   assert(header.variant === "column" && schedule.variant === "column", "Column variant is inconsistent.");
+  assertCanvasSpace(canvasValue);
   assertSpatialFrame(frameValue);
   assertColumnStyle(style);
-  idsEqual(schedule, set.items);
-  const result: ColumnProgram = { id: header.id, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
+  columnIdsEqual(schedule, set.items);
+  const items = [...set.items].map((item) => structuredClone(item)).sort((left, right) => left.rank - right.rank || left.id.localeCompare(right.id));
+  const result: ColumnProgram = { id: header.id, canvas: structuredClone(canvasValue), frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items };
   assertColumnProgram(result);
   return canonicalize(result) as unknown as ColumnProgram;
 }
@@ -463,10 +708,14 @@ export function assertTierBoardProgram(value: TierBoardProgram): void {
 export function assertColumnProgram(value: ColumnProgram): void {
   assertRankingSchedule(value.schedule);
   assert(value.schedule.variant === "column", "ColumnProgram Schedule variant is invalid.");
+  assertCanvasSpace(value.canvas);
   assertSpatialFrame(value.frame);
   assertColumnStyle(value.style);
-  idsEqual(value.schedule, value.items);
+  columnIdsEqual(value.schedule, value.items);
   value.items.forEach((item) => { assertRankingItemSpec(item); if (item.icon !== undefined) assertBlobImage(item.icon, `ColumnItem.${item.id}.icon`); });
+  for (let index = 1; index < value.items.length; index += 1) {
+    assert(value.items[index - 1]!.rank < value.items[index]!.rank, "ColumnProgram Items are not ordered by unique rank.");
+  }
 }
 
 export function assertTopThreeProgram(value: TopThreeProgram): void {
@@ -506,13 +755,16 @@ export function buildTierBoardSoundEvents(schedule: RankingSchedule, style: Tier
 export function buildColumnSoundEvents(schedule: RankingSchedule, style: ColumnStyle, specs: RankingItemSpecSet): RankingSoundEventPlan {
   assert(schedule.variant === "column" && specs.variant === "column", "Column event inputs disagree.");
   assertColumnStyle(style);
-  idsEqual(schedule, specs.items);
-  return sealEvents(schedule.id, schedule.variant, schedule.entries.flatMap((entry) => {
-    const duration = entry.stage.endFrameExclusive - entry.triggerFrame;
-    const fitted = fitRankingStageMotion(duration, style.motion.appearFrames, style.motion.moveFrames, true);
-    return [event(schedule.id, entry.itemId, "appear", entry.triggerFrame),
-      event(schedule.id, entry.itemId, "move", entry.stage.endFrameExclusive - fitted.moveFrames)];
-  }));
+  columnIdsEqual(schedule, specs.items);
+  const events = schedule.entries.flatMap((entry) => {
+    if (entry.mode === "preset") return [];
+    const duration = entry.active.endFrameExclusive - entry.active.startFrame;
+    const fitted = fitColumnRevealMotion(duration, style.motion.appearFrames, style.motion.moveFrames);
+    return [event(schedule.id, entry.itemId, "appear", entry.active.startFrame),
+      ...(fitted.mode === "direct" ? []
+        : [event(schedule.id, entry.itemId, "move", entry.active.endFrameExclusive - fitted.moveFrames)])];
+  }).sort((left, right) => left.frame - right.frame || left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id));
+  return sealEvents(schedule.id, schedule.variant, events);
 }
 
 export function buildTopThreeSoundEvents(schedule: RankingSchedule, style: TopThreeStyle, specs: RankingItemSpecSet): RankingSoundEventPlan {
