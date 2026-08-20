@@ -3,8 +3,8 @@
 <svml>
   <import from="@hypit/script@1"/>
   <import as="wording" from="@hypit/text@1"/>
-  <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="speech" from="@hypit/speech-spine@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="media-track" from="@hypit/media-track@1"/>
@@ -14,15 +14,17 @@
   <import as="fonts" from="@hypit/fonts-open@1"/>
   <import as="text" from="@hypit/typography-track@1"/>
   <import as="space" from="@hypit/spatial@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
-  <import as="studio" source="./studio.svs"/>
+  <import as="recipes" source="./recipes.svs"/>
 
   <script id="story">
     <opening><HOST>Meaning @demo becomes the source @/demo.</opening>
   </script>
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
+  <program:Clock id="clock" frame-rate="30"/>
   <space:Frame id="speech-frame" within={vertical}
     left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="title-frame" within={vertical}
@@ -31,51 +33,42 @@
     left="10%" top="20%" right="90%" bottom="70%"/>
 
   <wording:Value id="direction">Locked medium close-up in a quiet daylight studio. Spoken dialogue — say exactly: Meaning becomes the source.</wording:Value>
-  <!-- The studio is established once; every take references that image, so one room stays
-       one room. Prompt-only generation would give each take its own. -->
-  <wording:Value id="studio-look">
-    A photograph with the texture of real iPhone footage. Generate a vertical seated medium close-up,
-    as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy,
-    carrying the texture of video and not of a posed photograph. The background stays clearly visible,
-    with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of
-    the picture is broken. One presenter at a desk in a quiet daylight studio.
-  </wording:Value>
-  <gpt:Image id="studio-scene" prompt={studio-look} aspect-ratio="9:16" resolution="2K"/>
+  <seedance:TextVideo id="take" model="mini" prompt={direction} duration="5" generate-audio="true"/>
+  <seedance:TextVideo id="motion" model="mini" prompt={direction} duration="5"/>
 
-  <seedance:ReferenceVideo id="take" model="mini" prompt={direction} duration="5" generate-audio="true">
-    <seedance:Reference image={studio-scene.image}/>
-  </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="motion" model="mini" prompt={direction} duration="5">
-    <seedance:Reference image={studio-scene.image}/>
-  </seedance:ReferenceVideo>
+  <pipeline:Normalize id="take-media" source={take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="motion-media" source={motion.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <whisperx:SemanticTake id="opening-semantic" narrative={story}
+    segment={story.segment.opening} media={take-media.media}/>
 
-  <speech:Spine id="speech" frame-rate="30"
-    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
-    <speech:Take video={take.video} segment={story.segment.opening}/>
+  <speech:Spine id="speech" clock={clock}
+    visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
+    <speech:Take source={opening-semantic.take}/>
   </speech:Spine>
-  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
   <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
-  <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+  <caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
   <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
   <caption-ai:Planner id="cue-plan" display={story.caption} program={caption-program} model="gemini-2.5-flash"/>
 
-  <media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
-    <media-track:Item video={motion.video} during={story.selection.demo}
-      frame={card-frame} appearance={studio.media.card} motion={studio.motion.card}/>
+  <media-track:Track id="cards" map={speech.semanticMap} space={speech.space} canvas={vertical}>
+    <media-track:Item media={motion-media.media} during={story.selection.demo}
+      frame={card-frame} appearance={recipes.media.card} motion={recipes.motion.card}/>
   </media-track:Track>
   <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence}
-    map={timing.map} space={speech.space}
+    map={speech.semanticMap} space={speech.space}
     plan={cue-plan.plan} program={caption-program}/>
-  <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+  <text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
   <text:Track id="titles" space={speech.space}>
     <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
       MEANING
     </text:Area>
   </text:Track>
 
-  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+  <film:Film id="main" canvas={vertical} space={speech.space} appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audioTrack}/>
     <film:Track source={cards.visual}/>

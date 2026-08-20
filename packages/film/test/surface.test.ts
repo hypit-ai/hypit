@@ -135,7 +135,7 @@ async function compileFilm(options: { readonly styles?: string } = {}) {
       <import as="fixture" from="example.film-fixture@1"/>
       <import as="film" from="@hypit/film@1"/>
       <import as="space" from="@hypit/spatial@1"/>
-      <import as="studio" source="./studio.svs"/>
+      <import as="studio" source="./recipes.svs"/>
       <fixture:Inputs/>
       <space:Canvas id="vertical" width="1080" height="1920"/>
       <film:Film id="main" canvas={vertical} space={space} appearance={studio.film.vertical}>
@@ -145,7 +145,7 @@ async function compileFilm(options: { readonly styles?: string } = {}) {
     closure,
     frontends,
     resolveSource() {
-      return source("/project/studio.svs", options.styles ?? validStyles);
+      return source("/project/recipes.svs", options.styles ?? validStyles);
     },
     admitRecord: createRecordAdmitter(validatorRegistry()),
   });
