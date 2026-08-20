@@ -8,8 +8,9 @@ Use staged Run Sources so unreviewed expensive outputs cannot silently feed late
   and factual claims before writing prompts.
 - Give every planned shot one job: hook, context, evidence, mechanism, reaction, payoff, transition,
   or CTA. Delete shots with no distinct job.
-- Confirm credentials, Runtime Profile, installed packages, model limits, resolution, and Endpoint prerequisites.
-  Run `doctor`, `check`, and `plan` before the first paid Build.
+- Confirm credentials, Runtime Profile, installed packages, model limits, resolution, and Endpoint
+  prerequisites. `../../runtime.md` says how to author the Profile, and `../../vocabulary.md` how to
+  find out what is installed. Run `doctor`, `check`, and `plan` before the first paid Build.
 
 ## Gate 1: build and review reference images
 
@@ -127,6 +128,9 @@ visual QA.
   Two cuts a quarter of a second apart is a picture nobody authored. Read it against
   `generated-dependencies.md` on windows that do not tile.
 - Preserve accepted Records for deliberate future reuse; never assume a rerun will reuse them.
+- The delivery is accepted, so ask the last question: did this job produce a project-local package,
+  and should it outlive this one video? `../../local-author-package.md` says how to judge that and
+  what promoting it costs.
 
 Use explicit Run Source authoring for every accepted reuse:
 

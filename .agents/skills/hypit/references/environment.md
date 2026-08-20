@@ -1,6 +1,20 @@
 # Cross-platform environment
 
-Requirements: Node.js 22+, pnpm 10.33.x via Corepack, Python 3.10–3.13 only for local
+## Where you are
+
+This skill lives inside the Hypit repository. Find the root from the skill's own location — the
+directory containing `package.json` and `packages/` — and work from there. Repository paths written in
+these files, `.agents/skills/hypit/scripts/…`, `packages/…`, `examples/…`, are relative to that root
+and to nothing else.
+
+Several commands resolve against the **working directory** rather than against the Source they are
+given: `list_svml_packages` reads `node_modules/@hypit` from the cwd and refuses when it is empty, and
+`preview-check.mjs` resolves `tsx` the same way. Running them from the repository root is not a
+convention, it is the condition under which they work.
+
+## Requirements
+
+Node.js 22+, pnpm 10.33.x via Corepack, Python 3.10–3.13 only for local
 WhisperX/OpenCV, `uv` for locked Python environments, and `ffmpeg`/`ffprobe` for local media.
 
 macOS/Linux or Windows PowerShell:
