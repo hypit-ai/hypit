@@ -77,6 +77,30 @@ This is why a full-screen board that contains two media boxes is read as *two* m
 single flat composition. The component owns its surface; the boxes are inputs, and each one is
 filled by generation when the reference shows content in it.
 
+## An audio Take brings no picture, so its Segment is covered or it plays black
+
+A `speech:Take audio={…}` creates program time and speech and contributes no visual at all. For as
+long as it runs the picture is whatever the peer Tracks put there, and wherever they put nothing the
+Film's own background shows through. A voiceover Segment is therefore an obligation: every frame of
+it belongs to some Item, and the frames nobody claimed are black in the delivery.
+
+Two different holes open, and both look identical on screen:
+
+- **A stretch inside no Selection.** Mark the ranges the B-roll covers and one sentence between two
+  of them belongs to neither, so nothing draws it. The Selections have to *tile* the Segment — each
+  one picking up where the last left off — rather than merely landing in the right places. A line
+  that introduces what comes next usually belongs to the Selection it introduces.
+- **A take shorter than the window it fills.** An Item whose window outlasts its own material runs
+  out partway and leaves the rest empty. Read the model's duration ceiling before deciding: Seedance
+  `mini` stops at 15 seconds, so a longer stretch needs more than one Item rather than one Item asked
+  for a length the model refuses.
+
+Give a silent take a literal duration at or above its window instead of a `SpeechDuration` edge. The
+estimate predicts the words; the window is decided by the audio that was actually produced, and when
+the estimate falls a second short that second is black.
+
+`production-gates.md` measures the delivery for these before it is reported as finished.
+
 ## A short stretch is not a short take
 
 An authored take stays inside the selected model's declared duration range — read the range from the

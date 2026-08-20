@@ -84,6 +84,13 @@ selected shots. Each shot produces three observations:
 The picture observation also says whether the picture moves and how, separating camera movement from
 movement inside the frame. A held still and a moving shot are reconstructed differently.
 
+Covering content is whatever changes what reaches the eye, not only the things that sit on top with
+an edge. A wash laid over the whole frame to darken it is covering content and gets reported as such;
+so is anything else the observation happens to describe in terms of the picture being altered rather
+than something being added. Read it for what it says rather than matching it against the kinds of
+element you already expect — the observation is the evidence, and the moment a category is treated as
+a list of known items it stops being able to report the one thing nobody thought to list.
+
 Each cut produces one `continuity` observation answering both questions under their own headings —
 whether the two shots are one continuous camera shot, and whether an overlay continues across the
 boundary — and a window of three consecutive shots triggers a three-shot continuity review. The

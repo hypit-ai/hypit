@@ -37,6 +37,20 @@ ended in an error, so it does not feel like a run that produced anything. It pro
 and every take that ran before the step that broke, and resubmitting without pinning them buys the
 same bytes again. Run `--pin` against the failed Build before touching the cause.
 
+**Pin what a Provider was paid to make, and nothing the Source computes.** `--pin` emits a line for
+every accepted output, including the ones the Script's own structure produced: `speech.space`,
+`speech.visual`, `timing.map`, the caption plan. Those are free to rebuild and they are measured
+*against the Script as it was*. Paste them back after editing a Segment — renaming one, merging two —
+and the Build pins a map whose anchors describe a program that no longer exists. It does not fail.
+Every Track times itself against those stale anchors and the delivery is quietly wrong, which is the
+one failure this whole gate sequence exists to prevent. Keep the pictures, the takes and the voices;
+let everything downstream of them recompute.
+
+**A Build that failed downstream may still hold the good draw from a model that does not repeat
+itself.** The caption Planner is a language model: the same Source gives a valid plan on one run and
+a plan that drops an Atom on the next. When a Build fails after the Planner accepted, that accepted
+plan is the one that worked — pin it rather than resubmitting into another roll.
+
 Apply this checklist to every image:
 
 - identity: correct recurring person/product/location, complete face when required, no drift;
@@ -86,6 +100,12 @@ visual QA.
 - Inspect the durable Build and retrieve the final Artifact with `get`.
 - Watch and listen to the complete delivery, including the first and last second. Verify dialogue,
   captions, overlays, transitions, audio density, claims, and CTA as one program.
+- Measure the delivery for empty picture before reporting it as finished. Watching finds a scene that
+  is wrong; it slides straight past a second of black between two shots, and a program assembled from
+  Selections can hold several. `ffmpeg -i final.mp4 -vf blackdetect=d=0.2:pic_th=0.90 -an -f null -`
+  prints every stretch with its start and duration, and any hit is a hole in the picture rather than
+  an edit — read `generated-dependencies.md` on covering a Segment. Report the delivery only after
+  this comes back empty.
 - Preserve accepted Records for deliberate future reuse; never assume a rerun will reuse them.
 
 Use explicit Run Source authoring for every accepted reuse:
