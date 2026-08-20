@@ -5,13 +5,17 @@ reference. A newly written package can resolve, activate, decode and pass every 
 something the reference never contained. Close that gap deliberately.
 
 This loop is about how an element *looks* against the reference, and it is bounded. Whether an
-element *builds at all* is a different gate with a different rule: `preview-check` (in
-`final-sources.md`) must pass with no failures before this loop is even reached, and its failures are
-repaired until they pass without any attempt ceiling. A build failure is not a difference to weigh;
-it is work that is not done.
+element is *wired at all* is a different gate with a different rule: `preview-check` (in
+`final-sources.md`) must pass before this loop is even reached, and its failures are repaired
+without any attempt ceiling. A graph that does not trace is not a difference to weigh; it is work
+that is not done.
 
-The difference between the two gates is what each reports. `preview-check` names the build failure —
-the Producer and why it failed, down to the offending value — so its repairs are not guessing. This
+Note what that gate no longer covers. Studio has no stand-ins, so nothing is drawn before a Build
+and `preview-check` proves the graph is wired rather than that every track draws. A Producer that
+refuses the media it is handed surfaces on the real Build, not here.
+
+The difference between the two gates is what each reports. `preview-check` names the graph failure —
+the target that does not trace, the chain that is missing — so its repairs are not guessing. This
 loop names the appearance difference: `compare_reconstruction` sends the rendered element and the
 reference frame to Gemini and returns what differs in words, and a repair aims at a difference the
 comparison named. Neither gate expects the agent to guess; each one tells you what is wrong, and you
