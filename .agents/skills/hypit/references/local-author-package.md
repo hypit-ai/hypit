@@ -159,6 +159,7 @@ not a difference to weigh, it is work that is not finished, and it is not bounde
 attempt ceiling:
 
 ```bash
+# from the repository root: tsx is the repository's dependency
 node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/main.svml path/to/build.svrun
 ```
 
