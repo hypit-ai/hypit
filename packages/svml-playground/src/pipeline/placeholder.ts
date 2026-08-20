@@ -42,7 +42,7 @@ export function heldPicture(
       "-vf", `scale=${size.width}:${size.height}:force_original_aspect_ratio=increase,`
         + `crop=${size.width}:${size.height},setsar=1`,
       "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", path,
-    ], { timeout: 120_000 });
+    ], { timeout: 120_000, windowsHide: true });
     return { bytes: readFileSync(path), mediaType: "video/mp4" };
   } catch {
     // Without ffmpeg there is no stand-in of any kind, which the caller already
@@ -76,7 +76,7 @@ export function blackFrames(
       `color=c=black:s=${size.width}x${size.height}:r=${rate}:d=${Math.max(1, seconds)}`,
       "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
       "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", path,
-    ], { timeout: 60_000 });
+    ], { timeout: 60_000, windowsHide: true });
     cache.set(key, { bytes: readFileSync(path), mediaType: "video/mp4" });
   } catch {
     // No ffmpeg, so there is no stand-in either, and the Tracks that needed
