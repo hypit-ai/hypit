@@ -247,6 +247,9 @@ function glyphLayerCss(
     ...common,
     "color:#ffffff",
     "-webkit-text-fill-color:#ffffff",
+    // The filter builds its shape out of this layer's own alpha, so anything inherited that also
+    // marks the glyph — a shadow from the element around it — would be dilated along with it.
+    "text-shadow:none",
     `filter:url(#${glyphFilterId(paint, context)})`,
   ];
 }
@@ -260,6 +263,32 @@ function renderGlyphPaint(
   if (layers.length === 0) return context.escape(value);
   const singleSolidFill = layers.length === 1 && layers[0]?.kind === "fill" && layers[0].paint.kind === "solid";
   return layers.map((paint, index) => `<span aria-hidden="${index === layers.length - 1 ? "false" : "true"}" data-hypit-text-paint-layer="${index}"${styleAttribute(glyphLayerCss(paint, singleSolidFill, context), context.escape)}>${context.escape(value)}</span>`).join("");
+}
+
+/**
+ * Render one plain string as ordered glyph Paint, with the filter definitions it needs.
+ *
+ * Text Flow reaches these layers through its document structure, a run at a time. A plain text
+ * element has no structure to walk — its whole content is one string — so it arrives here instead.
+ * Both end up in the same layers, drawn by the same filters, which is the point: an outline placed
+ * outside the letter is one thing, not one thing per element kind.
+ */
+export function renderGlyphPaintedString(
+  value: string,
+  paints: readonly VisualTextPaintLayer[],
+  context: TextRenderContext,
+): string {
+  const layers = glyphPaintLayers(paints);
+  if (layers.length === 0) return context.escape(value);
+  const shaped = layers.filter((paint): paint is Extract<GlyphPaintLayer, { kind: "stroke" | "shadow" | "glow" }> =>
+    paint.kind !== "fill");
+  const definitions = [...new Map(shaped.map((paint) => [canonicalStringify(paint), paint])).values()]
+    .map((paint) => glyphFilterDefinition(paint, context)).join("");
+  const defs = definitions.length === 0
+    ? ""
+    : `<svg aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden"><defs>${definitions}</defs></svg>`;
+  // The layers occupy one grid cell each so they stack in the order they were declared.
+  return `${defs}<span style="position:relative;display:inline-grid">${renderGlyphPaint(value, paints, context)}</span>`;
 }
 
 function boxLayers(
