@@ -22,8 +22,24 @@ that line.
 
 Reference observation is part of the work and is expected to cost what it costs.
 
-Write the project into its own directory. If the author named one, use it; otherwise create
-`examples/<something>-reverse/` beside the other examples, which the workspace already covers.
+## A video path is the whole request
+
+The author gives one thing: the path to a video. Not a working directory, not a project name, not
+which packages to use, not where to put the result — those are yours to decide, and asking for them
+is asking the author to do your job. Everything this route needs beyond the video path is
+discoverable:
+
+- **Where you are.** This skill lives inside the Hypit repository; find its root from the skill's own
+  location (the directory containing `package.json` and `packages/`) and work from there. Repository
+  paths in these files — `.agents/skills/hypit/scripts/…`, `examples/…` — are relative to that root.
+- **Where the project goes.** Its own directory: `examples/<something>-reverse/`, named after the
+  video, beside the other examples, which the workspace already covers. Use a directory the author
+  named only if they named one.
+- **Credentials.** The repository keeps them in `.env`; load it as shown below. If a variable is
+  missing, say which one and stop — do not ask the author to describe their setup.
+
+Ask the author about the video and nothing else: what it is for, who is in it, what it should say.
+Never interrupt to ask which generator, which package, which directory, or whether to proceed.
 
 ## Before the first command
 
