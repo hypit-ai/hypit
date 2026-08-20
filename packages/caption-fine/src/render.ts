@@ -4,10 +4,12 @@ import { assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
 import type {
   VisualAnimation,
   VisualBoxElement,
+  VisualColorPaint,
   VisualElement,
   VisualKeyframe,
   VisualStyleDeclaration,
   VisualTextElement,
+  VisualTextPaintLayer,
   VisualTrack,
 } from "@hypit/composition";
 import type { CaptionDisplayAtom, CaptionDisplaySequence } from "@hypit/narrative";
@@ -58,6 +60,44 @@ function underlineStyle(underline: FineCaptionUnderline | FineCaptionActiveUnder
   ];
 }
 
+/**
+ * The glyph body and its outline, as ordered Paint.
+ *
+ * An outline belongs outside the letter. `-webkit-text-stroke` cannot put it there: it centres the
+ * stroke on the glyph edge, so half the width is always inside, and the only choice left is which
+ * half gets painted over. Declaring the Paint hands the placement to the renderer, which builds the
+ * ring by dilating the glyph and subtracting it from itself — wholly outside, at the width asked
+ * for rather than half of it.
+ *
+ * A caption with no outline keeps its plain fill, which is one element and one paint rather than
+ * two, and is what most captions are.
+ */
+function glyphPaints(paint: FineCaptionGlyphPaint): VisualTextPaintLayer[] | undefined {
+  if (paint.stroke.widthPx === 0) return undefined;
+  const fill: VisualColorPaint = paint.gradient === undefined
+    ? { kind: "solid", color: paint.fill }
+    : {
+        kind: "linear-gradient",
+        angleDeg: paint.gradient.angleDeg,
+        stops: [
+          { offset: 0, color: paint.gradient.from, opacity: 1 },
+          { offset: 1, color: paint.gradient.to, opacity: 1 },
+        ],
+      };
+  // Outline first: the layers stack in the order they are declared, and the body sits over its own
+  // outline rather than the other way round.
+  return [
+    { kind: "stroke", placement: "outside", widthPx: paint.stroke.widthPx, paint: { kind: "solid", color: paint.stroke.color } },
+    { kind: "fill", paint: fill },
+  ];
+}
+
+/** The Paint fields of a text element, absent rather than empty when there is no outline. */
+function glyphPaintFields(paint: FineCaptionGlyphPaint): { paints?: readonly VisualTextPaintLayer[] } {
+  const paints = glyphPaints(paint);
+  return paints === undefined ? {} : { paints };
+}
+
 function glyphStyle(
   parameters: FineCaptionParameters,
   paint: FineCaptionGlyphPaint,
@@ -88,28 +128,19 @@ function glyphStyle(
       ].join(" "));
     }
   }
+  // An outlined caption carries its body and outline as Paint instead, so the fill is spelled once
+  // — there, not here — and the two cannot disagree.
+  const painted = glyphPaints(paint) !== undefined;
   return [
-    { name: "color", value: paint.fill },
+    ...(painted ? [] : [{ name: "color", value: paint.fill }] as const),
     ...typographyStyle(parameters),
     { name: "opacity", value: paint.opacity },
     { name: "white-space", value: "nowrap" },
-    ...(paint.gradient === undefined ? [] : [
+    ...(painted || paint.gradient === undefined ? [] : [
       { name: "background-image", value: `linear-gradient(${compactNumber(paint.gradient.angleDeg)}deg,${paint.gradient.from},${paint.gradient.to})` },
       { name: "background-clip", value: "text" },
       { name: "-webkit-background-clip", value: "text" },
       { name: "-webkit-text-fill-color", value: "transparent" },
-    ] as const),
-    ...(paint.stroke.widthPx === 0 ? [] : [
-      { name: "-webkit-text-stroke-color", value: paint.stroke.color },
-      { name: "-webkit-text-stroke-width", value: `${compactNumber(paint.stroke.widthPx)}px` },
-      // A text stroke is centred on the glyph outline, so half of it falls inside the letter. Left
-      // in the default order the browser fills first and strokes over the top, and that inner half
-      // is painted away: every stroke of every letter is separately narrowed, the counters of a, e
-      // and o close, and where two letters kern tightly one letter's outline crosses its
-      // neighbour's face. Putting the stroke first spends the same width the other way — the fill
-      // lands on top of it, and what is left showing is one contour around the outside of the
-      // word, which is what an outline is for.
-      { name: "paint-order", value: "stroke fill" },
     ] as const),
     ...(shadows.length === 0 ? [] : [{ name: "text-shadow", value: shadows.join(",") }] as const),
     ...(underline === undefined ? [] : underlineStyle(underline)),
@@ -670,6 +701,7 @@ function cueElements(
         kind: "text",
         text,
         style: glyphStyle(parameters, parameters.basePaint, parameters.underline),
+        ...glyphPaintFields(parameters.basePaint),
         fonts,
         attributes: [{ name: "data-caption-word", value: wordId }],
       });
@@ -707,6 +739,8 @@ function cueElements(
           style: kind === "glyph"
             ? glyphStyle(parameters, parameters.activePaint)
             : transparentGlyphStyle(parameters, parameters.activeUnderline),
+          // The underline layer paints no glyph at all, so it declares no glyph Paint either.
+          ...(kind === "glyph" ? glyphPaintFields(parameters.activePaint) : {}),
           fonts,
           attributes: [{ name: kind === "glyph" ? "data-caption-active-word" : "data-caption-underlined-word", value: wordId }],
         });
