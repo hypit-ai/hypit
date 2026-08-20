@@ -28,6 +28,7 @@ import type {
 } from "./types.js";
 import {
   collectTerminalTextFonts,
+  renderGlyphPaintedString,
   renderTerminalTextElement,
   terminalTextLayoutScript,
 } from "./text.js";
@@ -332,22 +333,28 @@ function renderElement(
     .map((child) => renderElement(child, children, context))
     .join("");
   if (element.kind === "box") return `<div ${common}>${descendants}</div>`;
-  if (element.kind === "text") return `<div ${common}>${escapeHtml(element.text)}${descendants}</div>`;
+  const textContext = {
+    trackId: context.trackId,
+    presentId: context.presentId,
+    durationFrames: context.presentDurationFrames,
+    durationSeconds: context.presentDuration,
+    presentStartFrame: context.presentStartFrame,
+    programNumerator: context.programNumerator,
+    programDenominator: context.programDenominator,
+    escape: escapeHtml,
+    stableId: stableDomId,
+    exactFontFamily,
+    baseStyle: inlineStyle,
+    commonAttributes,
+  };
+  if (element.kind === "text") {
+    const body = element.paints === undefined
+      ? escapeHtml(element.text)
+      : renderGlyphPaintedString(element.text, element.paints, textContext);
+    return `<div ${common}>${body}${descendants}</div>`;
+  }
   if (element.kind === "text-flow" || element.kind === "path-text") {
-    return renderTerminalTextElement(element, {
-      trackId: context.trackId,
-      presentId: context.presentId,
-      durationFrames: context.presentDurationFrames,
-      durationSeconds: context.presentDuration,
-      presentStartFrame: context.presentStartFrame,
-      programNumerator: context.programNumerator,
-      programDenominator: context.programDenominator,
-      escape: escapeHtml,
-      stableId: stableDomId,
-      exactFontFamily,
-      baseStyle: inlineStyle,
-      commonAttributes,
-    });
+    return renderTerminalTextElement(element, textContext);
   }
   if ((element.kind === "video" || element.kind === "surface") && element.sampling !== undefined) {
     const artifact = element.kind === "surface" ? element.surface.artifact : element.artifact;
