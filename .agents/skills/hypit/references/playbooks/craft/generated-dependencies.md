@@ -85,9 +85,19 @@ model, since it differs between them and a literal in a document goes stale.
 An observed stretch shorter than that floor is never authored as its own take. Decide by what the
 observation says about the picture:
 
-- **It moves** — fold the consecutive short shots into one take at or above the floor, carrying the
-  ordered references for each beat, and choose an edit language that cuts internally rather than
-  generating each beat separately.
+- **It moves** — fold the consecutive short shots into one take at or above the floor and let the
+  take cut internally, rather than generating each beat separately. How many references that take
+  gets is decided by what the beats *show*:
+  - **The same material** — one place, one person, one object, seen from a couple of angles or at a
+    couple of moments — takes **one** image. The beats are a performance, so they belong in the
+    prompt: say what happens and where it cuts. Handing the model four pictures of one scene is how
+    a continuous space turns into four subtly different rooms, and it costs four generations to make
+    it worse.
+  - **Different material** — a different place, a different object, a different subject in each beat
+    — takes one accepted image per distinct thing, in the order they appear. There is nothing for a
+    single picture to establish here; the cuts are the point.
+
+  The question is not how many beats there are but how many *things* they show.
 - **It is still** — a screenshot, a card, a poster, a held photograph — author stills placed on a
   Media Track and cut at the observed boundaries. More faithful than asking a video model to hold
   something still, fully controlled, and far cheaper.
