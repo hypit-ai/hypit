@@ -112,6 +112,18 @@ nothing.
   slots are inputs and each document fills them. Writing the observed content into the package is
   the same failure as a missing inner picture, inverted: the frame was seen but the slot was closed.
   `media-track:Item` and the `icon` port on `@hypit/ranking` are the shape this takes.
+- **A slot is a graph edge, not a value the Surface can read.** The package's own texture resolves at
+  author time because it is a file the package ships; a slot holds whatever the document generated,
+  which does not exist until the Build runs. A Surface that reaches for it the way it reaches for its
+  own asset fails with the slot's value refusing to resolve during author compilation. Declare the
+  slot as a Fragment input carrying the Artifact type, give the Producer that consumes it a second
+  form for the case where the slot is filled, and read it from `inputs` as the Artifact it is —
+  a blob input arrives as the `BlobRef` itself rather than wrapped inline like every authored value.
+- **The element kind follows the Artifact, not the slot.** A picture slot holds an image once the
+  document has built one and a stand-in *video* frame before it has, because that is what the
+  Playground substitutes for an output nothing has produced yet. Hard-code `kind: "image"` and the
+  component builds for nobody until the whole graph has run, which is the opposite of what a preview
+  is for. Decide from the Artifact's `mediaType` and the same code serves both.
 - Never require an input the installing project has no reason to choose. If a Run Source exists only
   to produce the component's own texture, the texture is in the wrong place.
 - **A slot that is not filled yet costs its own cell and nothing more.** The component's structure —
