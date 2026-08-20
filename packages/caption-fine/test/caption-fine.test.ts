@@ -461,25 +461,35 @@ test("full Fine Paint and layered motion lower to terminal Visual IR without cha
   assert.equal(base?.kind, "text");
   assert.ok(base?.style.some(({ name, value }) => name === "text-transform" && value === "uppercase"));
   assert.ok(base?.style.some(({ name }) => name === "text-decoration-thickness"));
-  assert.ok(base?.style.some(({ name, value }) => name === "text-shadow" && String(value).split(",").length >= 8));
   // The outline is declared as Paint placed outside the letter, not as a centred stroke that would
   // spend half its width inside. A centred stroke is what the style vocabulary can say, so the
   // absence of one here is as much the point as the presence of the Paint.
-  assert.deepEqual(base?.paints, [
-    { kind: "stroke", placement: "outside", widthPx: 3, paint: { kind: "solid", color: "#101010" } },
-    { kind: "fill", paint: { kind: "linear-gradient", angleDeg: 120, stops: [
+  const paints = base?.paints ?? [];
+  assert.deepEqual(paints.at(-2), {
+    kind: "stroke", placement: "outside", widthPx: 3, paint: { kind: "solid", color: "#101010" },
+  });
+  assert.deepEqual(paints.at(-1), {
+    kind: "fill", paint: { kind: "linear-gradient", angleDeg: 120, stops: [
       { offset: 0, color: "#FFFFFF", opacity: 1 },
       { offset: 1, color: "#60A5FA", opacity: 1 },
-    ] } },
-  ]);
+    ] },
+  });
+  // The soft effects are declared before the outline, so they are drawn beneath it rather than
+  // cast by the body alone and landing on top of the ring they belong under. The long shadow is
+  // its own discrete steps, which is what a long shadow is.
+  const soft = paints.slice(0, -2);
+  assert.ok(soft.length >= 8, `expected the long shadow steps, found ${soft.length}`);
+  assert.ok(soft.every((paint) => paint.kind === "shadow" || paint.kind === "glow"));
   assert.ok(!base?.style.some(({ name }) => name.startsWith("-webkit-text-stroke")));
-  // The body is spelled once, in the Paint, so the style does not also colour it.
-  assert.ok(!base?.style.some(({ name }) => name === "color" || name === "background-clip"));
+  // Each of these is now spelled once, in the Paint, so the style does not also draw it.
+  assert.ok(!base?.style.some(({ name }) =>
+    name === "color" || name === "background-clip" || name === "text-shadow"));
   const activeGlyph = elements.find((element) => element.id === "atom-1-active-1");
   assert.equal(activeGlyph?.kind, "text");
-  // The spoken Word carries its own gradient and its own outline, in the same vocabulary.
-  assert.equal(activeGlyph?.paints?.[0]?.kind, "stroke");
-  const activeFill = activeGlyph?.paints?.[1];
+  // The spoken Word carries its own gradient and its own outline, in the same vocabulary and the
+  // same order: whatever it casts behind it, then the outline, then the body.
+  assert.equal(activeGlyph?.paints?.at(-2)?.kind, "stroke");
+  const activeFill = activeGlyph?.paints?.at(-1);
   assert.equal(activeFill?.kind, "fill");
   assert.equal(activeFill?.kind === "fill" ? activeFill.paint.kind : undefined, "linear-gradient");
   const joined = elements.filter((element) => element.attributes?.some((attribute) =>
