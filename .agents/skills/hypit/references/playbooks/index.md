@@ -6,8 +6,9 @@ needed for that craft or format.
 
 ## Required load order
 
-1. Always read `craft/production-gates.md`, `craft/visual-continuity.md`,
-   `craft/graphic-compositions.md`, and `craft/generated-dependencies.md`.
+1. Always read `craft/production-gates.md`, `craft/frame-coverage.md`,
+   `craft/visual-continuity.md`, `craft/graphic-compositions.md`, and
+   `craft/generated-dependencies.md`.
 2. Read `craft/seedance-directing.md` whenever the Author Source invokes Seedance.
 3. Read the selected format file and only the additional craft files it names.
 4. Read `packages/<name>/README.md` for every package whose elements you write, and the relevant
@@ -51,6 +52,7 @@ needed for that craft or format.
 - `craft/visual-continuity.md` — identity, shot groups, reverse-view geometry, and prop invariants.
 - `craft/graphic-compositions.md` — what counts as a base picture, full-screen graphic compositions,
   and where missing material comes from.
+- `craft/frame-coverage.md` — what is on screen at every instant, and the edges nobody chose.
 - `craft/generated-dependencies.md` — what one generation owes another: the location, the split shot,
   the voice, the first frame, and the take too short to generate.
 - `craft/image-prompt-style.md` — English reference-image prompts and camera geometry.
