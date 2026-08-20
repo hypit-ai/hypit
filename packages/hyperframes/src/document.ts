@@ -247,6 +247,7 @@ function renderElement(
     readonly programNumerator: number;
     readonly programDenominator: number;
     readonly stackIndex: number;
+    readonly emittedFilterIds: Set<string>;
   },
 ): string {
   const id = stableDomId([context.trackId, context.presentId, element.id]);
@@ -346,6 +347,7 @@ function renderElement(
     exactFontFamily,
     baseStyle: inlineStyle,
     commonAttributes,
+    emittedFilterIds: context.emittedFilterIds,
   };
   if (element.kind === "text") {
     const body = element.paints === undefined
@@ -425,6 +427,7 @@ function renderVisualPresent(
   stackIndex: number,
   numerator: number,
   denominator: number,
+  emittedFilterIds: Set<string>,
 ): string {
   const start = frameSeconds(present.span.startFrame, numerator, denominator);
   const duration = frameSeconds(present.span.endFrameExclusive - present.span.startFrame, numerator, denominator);
@@ -447,6 +450,7 @@ function renderVisualPresent(
     programNumerator: numerator,
     programDenominator: denominator,
     stackIndex,
+    emittedFilterIds,
   });
   return `<div class="clip hypit-visual-present" data-hypit-track-id="${escapeHtml(track.id)}" data-hypit-present-id="${escapeHtml(present.id)}" data-hypit-stack-order="${present.stacking.order}" data-hypit-stack-tie="${escapeHtml(present.stacking.tieBreak)}" data-track-index="${stackIndex}" data-start="${start}" data-duration="${duration}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${contents}</div>`;
 }
@@ -638,7 +642,10 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
 function emitHtml(composition: Composition, programSpace: ProgramSpace): string {
   const { numerator, denominator } = programSpace.frameRate;
   const visuals = orderedVisualPresents(composition.tracks);
-  const visualHtml = visuals.map(({ track, present }, index) => renderVisualPresent(track, present, index, numerator, denominator)).join("\n    ");
+  // One document, one set of glyph filter definitions: every Present writes only what is not
+  // already there, and references resolve across the document regardless of where they landed.
+  const emittedFilterIds = new Set<string>();
+  const visualHtml = visuals.map(({ track, present }, index) => renderVisualPresent(track, present, index, numerator, denominator, emittedFilterIds)).join("\n    ");
   const animationCss = visuals.flatMap(({ track, present }) => renderAnimationRules(track, present)).join("\n    ");
   const fontCss = renderFontFaces(composition);
   const duration = frameSeconds(programSpaceFrameCount(programSpace), numerator, denominator);
