@@ -31,6 +31,12 @@ next. `generated-dependencies.md` says which images derive from which.
    accepted Record of each output, ready to paste. Every Record you fail to pin is a generation you
    pay for twice.
 
+Pin as soon as a Build accepts something, not when you next want to build. **A Build that fails still
+accepted everything upstream of the failure**, and that is exactly when pinning is skipped: the run
+ended in an error, so it does not feel like a run that produced anything. It produced every picture
+and every take that ran before the step that broke, and resubmitting without pinning them buys the
+same bytes again. Run `--pin` against the failed Build before touching the cause.
+
 Apply this checklist to every image:
 
 - identity: correct recurring person/product/location, complete face when required, no drift;

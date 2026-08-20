@@ -26,6 +26,21 @@ any Build is submitted, which is the correct place for the author to find out.
 Do not author one source fragment per shot. Do not let check success substitute for unresolved
 semantic evidence; return to a narrow `observe_reference` question when necessary.
 
+## A take's duration is measured, not estimated
+
+`estimate:Speech` predicts how long a line will take to say. In this route that prediction is the
+wrong input, because the reference already contains the answer: `prepare_reference` measured every
+word of it, so each Segment's real duration is the span from its first word's start to its last
+word's end in `transcript_ref`. Write that number on the take.
+
+An estimate is not close enough to skip this. A reconstruction whose Segments are each estimated a
+second long finishes several seconds longer than the reference, and every reveal, cut and overlay
+lands late against a program that no longer matches the thing it reconstructs. The estimate is for
+original authoring, where nobody has said the words yet.
+
+Keep the estimate only where the reference cannot answer: a line the reconstruction adds, or a
+Segment whose speech the reference never contains.
+
 Use existing checks only:
 
 ```bash
