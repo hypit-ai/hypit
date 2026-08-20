@@ -72,6 +72,60 @@ function underlineStyle(underline: FineCaptionUnderline | FineCaptionActiveUnder
  * A caption with no outline keeps its plain fill, which is one element and one paint rather than
  * two, and is what most captions are.
  */
+/**
+ * CSS blur is a radius; a Gaussian blur is a deviation. The radius covers about two deviations, so
+ * the same number means twice the cloud when it moves from one to the other. Authors tuned these
+ * against the radius, and the outline is what moved, not the shadow.
+ */
+function deviationFromBlurRadius(radiusPx: number): number {
+  return radiusPx / 2;
+}
+
+/**
+ * The soft effects, ordered from the back forward.
+ *
+ * `text-shadow` paints its list front to back — the first shadow named is the one on top — while
+ * Paint layers are drawn in the order they are declared. So this reverses: the far end of a long
+ * shadow first, then the glow, then the drop shadow nearest the letter.
+ */
+function softPaints(paint: FineCaptionGlyphPaint): VisualTextPaintLayer[] {
+  const layers: VisualTextPaintLayer[] = [];
+  if (paint.longShadow.opacity > 0 && paint.longShadow.distancePx > 0) {
+    const steps = Math.min(32, Math.max(1, Math.ceil(paint.longShadow.distancePx)));
+    const radians = paint.longShadow.angleDeg * Math.PI / 180;
+    for (let step = steps; step >= 1; step -= 1) {
+      const distance = paint.longShadow.distancePx * step / steps;
+      layers.push({
+        kind: "shadow",
+        paint: { kind: "solid", color: alphaColor(paint.longShadow.color, paint.longShadow.opacity) },
+        offsetX: Math.cos(radians) * distance,
+        offsetY: Math.sin(radians) * distance,
+        blurPx: 0,
+        spreadPx: 0,
+      });
+    }
+  }
+  if (paint.glow.opacity > 0) {
+    layers.push({
+      kind: "glow",
+      paint: { kind: "solid", color: alphaColor(paint.glow.color, paint.glow.opacity) },
+      blurPx: deviationFromBlurRadius(paint.glow.blurPx),
+      spreadPx: 0,
+    });
+  }
+  if (paint.shadow.opacity > 0) {
+    layers.push({
+      kind: "shadow",
+      paint: { kind: "solid", color: alphaColor(paint.shadow.color, paint.shadow.opacity) },
+      offsetX: paint.shadow.offsetXPx,
+      offsetY: paint.shadow.offsetYPx,
+      blurPx: deviationFromBlurRadius(paint.shadow.blurPx),
+      spreadPx: 0,
+    });
+  }
+  return layers;
+}
+
 function glyphPaints(paint: FineCaptionGlyphPaint): VisualTextPaintLayer[] | undefined {
   if (paint.stroke.widthPx === 0) return undefined;
   const fill: VisualColorPaint = paint.gradient === undefined
@@ -84,9 +138,10 @@ function glyphPaints(paint: FineCaptionGlyphPaint): VisualTextPaintLayer[] | und
           { offset: 1, color: paint.gradient.to, opacity: 1 },
         ],
       };
-  // Outline first: the layers stack in the order they are declared, and the body sits over its own
-  // outline rather than the other way round.
+  // Back to front: the soft effects fall behind the outline they are cast from, the outline sits
+  // outside the letter, and the body sits over its own outline.
   return [
+    ...softPaints(paint),
     { kind: "stroke", placement: "outside", widthPx: paint.stroke.widthPx, paint: { kind: "solid", color: paint.stroke.color } },
     { kind: "fill", paint: fill },
   ];
@@ -142,7 +197,9 @@ function glyphStyle(
       { name: "-webkit-background-clip", value: "text" },
       { name: "-webkit-text-fill-color", value: "transparent" },
     ] as const),
-    ...(shadows.length === 0 ? [] : [{ name: "text-shadow", value: shadows.join(",") }] as const),
+    // An outlined caption casts its shadows as Paint, behind the outline. Left here as well they
+    // would be cast by the body alone, and so land on top of the ring they are supposed to be under.
+    ...(painted || shadows.length === 0 ? [] : [{ name: "text-shadow", value: shadows.join(",") }] as const),
     ...(underline === undefined ? [] : underlineStyle(underline)),
   ];
 }
