@@ -4,10 +4,13 @@ import { assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
 import type {
   VisualAnimation,
   VisualBoxElement,
+  VisualColorPaint,
   VisualElement,
   VisualKeyframe,
   VisualStyleDeclaration,
-  VisualTextElement,
+  VisualTextFlowElement,
+  VisualTextPaintLayer,
+  VisualTextTypography,
   VisualTrack,
 } from "@hypit/composition";
 import type { CaptionDisplayAtom, CaptionDisplaySequence } from "@hypit/narrative";
@@ -39,85 +42,210 @@ function alphaColor(hex: string, opacity: number): string {
   return `rgba(${red},${green},${blue},${compactNumber(authoredAlpha * opacity)})`;
 }
 
-function typographyStyle(parameters: FineCaptionParameters): VisualStyleDeclaration[] {
-  return [
-    { name: "font-size", value: `${compactNumber(parameters.typography.fontSizePx)}px` },
-    { name: "letter-spacing", value: `${compactNumber(parameters.layout.letterSpacingPx)}px` },
-    { name: "line-height", value: parameters.layout.lineHeight },
-    { name: "text-transform", value: parameters.typography.textTransform },
-  ];
-}
-
-function underlineStyle(underline: FineCaptionUnderline | FineCaptionActiveUnderline): VisualStyleDeclaration[] {
-  if (underline.mode === "off") return [];
-  return [
-    { name: "text-decoration", value: "underline" },
-    { name: "text-decoration-color", value: underline.color },
-    { name: "text-decoration-thickness", value: `${compactNumber(underline.thicknessPx)}px` },
-    { name: "text-underline-offset", value: `${compactNumber(underline.offsetPx)}px` },
-  ];
-}
-
-function glyphStyle(
+function textTypography(
   parameters: FineCaptionParameters,
-  paint: FineCaptionGlyphPaint,
-  underline?: FineCaptionUnderline,
-): VisualStyleDeclaration[] {
-  const shadows: string[] = [];
-  if (paint.shadow.opacity > 0) {
-    shadows.push([
-      `${compactNumber(paint.shadow.offsetXPx)}px`,
-      `${compactNumber(paint.shadow.offsetYPx)}px`,
-      `${compactNumber(paint.shadow.blurPx)}px`,
-      alphaColor(paint.shadow.color, paint.shadow.opacity),
-    ].join(" "));
-  }
-  if (paint.glow.opacity > 0) {
-    shadows.push(`0 0 ${compactNumber(paint.glow.blurPx)}px ${alphaColor(paint.glow.color, paint.glow.opacity)}`);
-  }
+  underline?: FineCaptionUnderline | FineCaptionActiveUnderline,
+): VisualTextTypography {
+  const primary = parameters.typography.exactFonts[0]!;
+  return {
+    fonts: parameters.typography.exactFonts,
+    sizePx: parameters.typography.fontSizePx,
+    weight: primary.weight,
+    style: primary.style,
+    axes: [],
+    features: [],
+    synthesis: "none",
+    kerning: "normal",
+    trackingPx: parameters.layout.letterSpacingPx,
+    wordSpacingPx: 0,
+    lineHeight: parameters.layout.lineHeight,
+    direction: parameters.layout.direction,
+    writingMode: "horizontal-tb",
+    baselineShiftPx: 0,
+    tabSize: 4,
+    indentationPx: 0,
+    paragraphBeforePx: 0,
+    paragraphAfterPx: 0,
+    transform: parameters.typography.textTransform,
+    variantCaps: "normal",
+    verticalAlign: "baseline",
+    decorations: underline === undefined || underline.mode === "off" ? [] : [{
+      line: "underline",
+      paint: { kind: "solid", color: underline.color },
+      style: "solid",
+      thicknessPx: underline.thicknessPx,
+      offsetPx: underline.offsetPx,
+      skipInk: false,
+    }],
+    cjk: { textSpacing: "normal", punctuationTrim: "none" },
+  };
+}
+
+function glyphPaintLayers(paint: FineCaptionGlyphPaint): VisualTextPaintLayer[] {
+  const layers: VisualTextPaintLayer[] = [];
   if (paint.longShadow.opacity > 0 && paint.longShadow.distancePx > 0) {
     const steps = Math.min(32, Math.max(1, Math.ceil(paint.longShadow.distancePx)));
     const radians = paint.longShadow.angleDeg * Math.PI / 180;
-    for (let step = 1; step <= steps; step += 1) {
+    for (let step = steps; step >= 1; step -= 1) {
       const distance = paint.longShadow.distancePx * step / steps;
-      shadows.push([
-        `${compactNumber(Math.cos(radians) * distance)}px`,
-        `${compactNumber(Math.sin(radians) * distance)}px`,
-        "0",
-        alphaColor(paint.longShadow.color, paint.longShadow.opacity),
-      ].join(" "));
+      layers.push({
+        kind: "shadow",
+        paint: { kind: "solid", color: alphaColor(paint.longShadow.color, paint.longShadow.opacity) },
+        offsetX: Math.cos(radians) * distance,
+        offsetY: Math.sin(radians) * distance,
+        blurPx: 0,
+        spreadPx: 0,
+      });
     }
   }
-  return [
-    { name: "color", value: paint.fill },
-    ...typographyStyle(parameters),
-    { name: "opacity", value: paint.opacity },
-    { name: "white-space", value: "nowrap" },
-    ...(paint.gradient === undefined ? [] : [
-      { name: "background-image", value: `linear-gradient(${compactNumber(paint.gradient.angleDeg)}deg,${paint.gradient.from},${paint.gradient.to})` },
-      { name: "background-clip", value: "text" },
-      { name: "-webkit-background-clip", value: "text" },
-      { name: "-webkit-text-fill-color", value: "transparent" },
-    ] as const),
-    ...(paint.stroke.widthPx === 0 ? [] : [
-      { name: "-webkit-text-stroke-color", value: paint.stroke.color },
-      { name: "-webkit-text-stroke-width", value: `${compactNumber(paint.stroke.widthPx)}px` },
-    ] as const),
-    ...(shadows.length === 0 ? [] : [{ name: "text-shadow", value: shadows.join(",") }] as const),
-    ...(underline === undefined ? [] : underlineStyle(underline)),
-  ];
+  if (paint.shadow.opacity > 0) {
+    layers.push({
+      kind: "shadow",
+      paint: { kind: "solid", color: alphaColor(paint.shadow.color, paint.shadow.opacity) },
+      offsetX: paint.shadow.offsetXPx,
+      offsetY: paint.shadow.offsetYPx,
+      blurPx: paint.shadow.blurPx,
+      spreadPx: 0,
+    });
+  }
+  if (paint.glow.opacity > 0) {
+    layers.push({
+      kind: "glow",
+      paint: { kind: "solid", color: alphaColor(paint.glow.color, paint.glow.opacity) },
+      blurPx: paint.glow.blurPx,
+      spreadPx: 0,
+    });
+  }
+  if (paint.stroke.widthPx > 0) {
+    layers.push({
+      kind: "stroke",
+      paint: { kind: "solid", color: paint.stroke.color },
+      widthPx: paint.stroke.widthPx,
+      placement: "outside",
+    });
+  }
+  const fill: VisualColorPaint = paint.gradient === undefined
+    ? { kind: "solid", color: paint.fill }
+    : {
+        kind: "linear-gradient",
+        angleDeg: paint.gradient.angleDeg,
+        stops: [
+          { offset: 0, color: paint.gradient.from, opacity: 1 },
+          { offset: 1, color: paint.gradient.to, opacity: 1 },
+        ],
+      };
+  layers.push({ kind: "fill", paint: fill });
+  return layers;
 }
 
-function transparentGlyphStyle(
-  parameters: FineCaptionParameters,
-  underline?: FineCaptionUnderline | FineCaptionActiveUnderline,
-): VisualStyleDeclaration[] {
-  return [
-    { name: "color", value: "#00000000" },
-    ...typographyStyle(parameters),
-    { name: "white-space", value: "nowrap" },
-    ...(underline === undefined ? [] : underlineStyle(underline)),
-  ];
+function captionTextElement(input: {
+  readonly id: string;
+  readonly parent: string;
+  readonly text: string;
+  readonly parameters: FineCaptionParameters;
+  readonly paint: FineCaptionGlyphPaint;
+  readonly underline?: FineCaptionUnderline | FineCaptionActiveUnderline;
+  readonly transparent?: boolean;
+  readonly attributes: NonNullable<VisualTextFlowElement["attributes"]>;
+}): Omit<VisualTextFlowElement, "order"> {
+  return {
+    id: input.id,
+    parent: input.parent,
+    kind: "text-flow",
+    document: {
+      paragraphs: [{
+        id: `${input.id}-paragraph`,
+        inlines: [{ kind: "text", id: `${input.id}-run`, text: input.text }],
+      }],
+    },
+    typography: textTypography(input.parameters, input.underline),
+    paints: input.transparent
+      ? [{ kind: "fill", paint: { kind: "solid", color: "#00000000" } }]
+      : glyphPaintLayers(input.paint),
+    flow: {
+      form: { kind: "point", anchorInline: "start", anchorBlock: "start" },
+      inlineSize: "hug",
+      blockSize: "hug",
+      paddingPx: { inlineStart: 0, inlineEnd: 0, blockStart: 0, blockEnd: 0 },
+      inlineAlign: "start",
+      blockAlign: "start",
+      wrap: "none",
+      overflow: "visible",
+      clipToFrame: false,
+      columns: 1,
+      columnGapPx: 0,
+      metricEdge: "line-box",
+    },
+    sequences: [],
+    style: [
+      { name: "opacity", value: input.transparent ? 1 : input.paint.opacity },
+      { name: "position", value: "relative" },
+    ],
+    attributes: input.attributes,
+  };
+}
+
+function joinedBoxTextElement(input: {
+  readonly id: string;
+  readonly parent: string;
+  readonly text: string;
+  readonly parameters: FineCaptionParameters;
+}): Omit<VisualTextFlowElement, "order"> {
+  const box = input.parameters.activeBox;
+  const element = captionTextElement({
+    ...input,
+    paint: input.parameters.basePaint,
+    transparent: true,
+    attributes: [{ name: "data-caption-active-box-text", value: "joined" }],
+  });
+  return {
+    ...element,
+    paints: [
+      {
+        kind: "box",
+        target: "word",
+        continuity: "joined",
+        decoration: {
+          fill: { kind: "solid", color: box.background },
+          ...(box.borderWidthPx === 0 ? {} : {
+            border: {
+              paint: { kind: "solid", color: box.borderColor },
+              widthsPx: {
+                top: box.borderWidthPx,
+                right: box.borderWidthPx,
+                bottom: box.borderWidthPx,
+                left: box.borderWidthPx,
+              },
+              style: "solid" as const,
+            },
+          }),
+          paddingPx: {
+            top: box.paddingYPx,
+            right: box.paddingXPx,
+            bottom: box.paddingYPx,
+            left: box.paddingXPx,
+          },
+          radiiPx: {
+            topLeft: box.radiusPx,
+            topRight: box.radiusPx,
+            bottomRight: box.radiusPx,
+            bottomLeft: box.radiusPx,
+          },
+          shadows: [],
+        },
+      },
+      { kind: "fill", paint: { kind: "solid", color: "#00000000" } },
+    ],
+    flow: {
+      ...element.flow,
+      form: { kind: "area" },
+      inlineSize: "fixed",
+      inlineAlign: input.parameters.layout.textAlign === "left" ? "start"
+        : input.parameters.layout.textAlign === "right" ? "end" : "center",
+      wrap: "word",
+    },
+    style: [{ name: "position", value: "relative" }, { name: "width", value: "100%" }],
+  };
 }
 
 function styleIdentity(style: readonly VisualStyleDeclaration[]): string {
@@ -455,7 +583,9 @@ function cueElements(
   wordText: ReadonlyMap<string, string>,
   durationFrames: number,
 ): VisualElement[] {
-  type UnorderedVisualElement = Omit<VisualBoxElement, "order"> | Omit<VisualTextElement, "order">;
+  type UnorderedVisualElement =
+    | Omit<VisualBoxElement, "order">
+    | Omit<VisualTextFlowElement, "order">;
   const elements: VisualElement[] = [];
   let order = 0;
   const push = (element: UnorderedVisualElement): void => {
@@ -465,7 +595,6 @@ function cueElements(
   const transform = anchorTransform(parameters);
   const cueMotion = cueAnimation(parameters, durationFrames);
   const cueLoop = parameters.motion.loopTarget === "cue" ? loopAnimation(parameters, durationFrames) : undefined;
-  const fonts = parameters.typography.exactFonts;
   push({
     id: "placement",
     kind: "box",
@@ -546,26 +675,12 @@ function cueElements(
         animation: activeBoxAnimation(parameters, timing.start, nextStart, durationFrames, "current"),
         attributes: [{ name: "data-caption-active-box", value: "joined" }],
       });
-      push({
+      push(joinedBoxTextElement({
         id: `${layerId}-text`,
         parent: layerId,
-        kind: "text",
         text: prefixText,
-        style: [
-          ...transparentGlyphStyle(parameters).filter(({ name }) => name !== "white-space"),
-          { name: "-webkit-box-decoration-break", value: "clone" },
-          { name: "background", value: parameters.activeBox.background },
-          { name: "border-color", value: parameters.activeBox.borderColor },
-          { name: "border-radius", value: `${compactNumber(parameters.activeBox.radiusPx)}px` },
-          { name: "border-style", value: "solid" },
-          { name: "border-width", value: `${compactNumber(parameters.activeBox.borderWidthPx)}px` },
-          { name: "box-decoration-break", value: "clone" },
-          { name: "display", value: "inline" },
-          { name: "padding", value: `${compactNumber(parameters.activeBox.paddingYPx)}px ${compactNumber(parameters.activeBox.paddingXPx)}px` },
-          { name: "white-space", value: "normal" },
-        ],
-        fonts,
-      });
+        parameters,
+      }));
     }
   }
 
@@ -656,15 +771,15 @@ function cueElements(
     for (const [wordIndex, wordId] of atom.wordIds.entries()) {
       const text = wordText.get(wordId);
       if (text === undefined) throw new Error(`Fine Caption Atom references unknown word ${wordId}`);
-      push({
+      push(captionTextElement({
         id: `${atomId}-base-${wordIndex + 1}`,
         parent: atomId,
-        kind: "text",
         text,
-        style: glyphStyle(parameters, parameters.basePaint, parameters.underline),
-        fonts,
+        parameters,
+        paint: parameters.basePaint,
+        underline: parameters.underline,
         attributes: [{ name: "data-caption-word", value: wordId }],
-      });
+      }));
     }
     const addActivatedTextLayer = (
       suffix: string,
@@ -692,15 +807,15 @@ function cueElements(
       for (const [wordIndex, wordId] of atom.wordIds.entries()) {
         const text = wordText.get(wordId)!;
         push({
-          id: `${activeId}-${wordIndex + 1}`,
-          parent: activeId,
-          kind: "text",
-          text,
-          style: kind === "glyph"
-            ? glyphStyle(parameters, parameters.activePaint)
-            : transparentGlyphStyle(parameters, parameters.activeUnderline),
-          fonts,
-          attributes: [{ name: kind === "glyph" ? "data-caption-active-word" : "data-caption-underlined-word", value: wordId }],
+          ...captionTextElement({
+            id: `${activeId}-${wordIndex + 1}`,
+            parent: activeId,
+            text,
+            parameters,
+            paint: parameters.activePaint,
+            ...(kind === "glyph" ? {} : { underline: parameters.activeUnderline, transparent: true }),
+            attributes: [{ name: kind === "glyph" ? "data-caption-active-word" : "data-caption-underlined-word", value: wordId }],
+          }),
         });
       }
     };
