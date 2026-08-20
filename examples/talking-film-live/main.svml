@@ -4,9 +4,10 @@
   <import from="@hypit/script@1"/>
   <import as="wording" from="@hypit/text@1"/>
   <import as="media" from="@hypit/media@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="estimate" from="@hypit/estimate@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
-  <import as="speech" from="@hypit/speech-spine@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="caption" from="@hypit/caption@1"/>
   <import as="caption-fine" from="@hypit/caption-fine@1"/>
@@ -14,9 +15,10 @@
   <import as="fonts" from="@hypit/fonts-open@1"/>
   <import as="text" from="@hypit/typography-track@1"/>
   <import as="space" from="@hypit/spatial@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
-  <import as="studio" source="./studio.svs"/>
+  <import as="recipes" source="./recipes.svs"/>
 
   <script id="story">
     <opening>
@@ -86,18 +88,26 @@
   </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="480" height="854"/>
+  <program:Clock id="clock" frame-rate="30"/>
   <space:Frame id="speech-frame" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
 
-  <speech:Spine id="speech" frame-rate="30"
-    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
-    <speech:Take video={opening-take.video} segment={story.segment.opening}/>
-    <speech:Take video={answer-take.video} segment={story.segment.answer}/>
-  </speech:Spine>
+  <pipeline:Normalize id="opening-media" source={opening-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="answer-media" source={answer-take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <whisperx:SemanticTake id="opening-semantic" narrative={story}
+    segment={story.segment.opening} media={opening-media.media}/>
+  <whisperx:SemanticTake id="answer-semantic" narrative={story}
+    segment={story.segment.answer} media={answer-media.media}/>
 
-  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+  <speech:Track id="speech"
+    visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
+    <speech:Take source={opening-semantic.take}/>
+    <speech:Take source={answer-semantic.take}/>
+  </speech:Track>
 
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
-  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
+  <caption-fine:Style id="primary-caption" recipe={recipes.caption.primary} font={caption-font}/>
 
   <caption:Program id="caption-program" display={story.caption} default={primary-caption}/>
   <caption-ai:Planner
@@ -111,8 +121,7 @@
     id="captions"
     display={story.caption}
     correspondence={story.caption.correspondence}
-    map={timing.map}
-    space={speech.space}
+    semantic={speech.semantic}
     program={caption-program}
     plan={caption-plan.plan}
   />
@@ -120,8 +129,8 @@
   <space:Frame id="callout-frame" within={vertical}
     left="8%" top="10%" right="92%" bottom="20%"/>
 
-  <text:Style id="callout-style" recipe={studio.text.callout} font={caption-font}/>
-  <text:Track id="callout" space={speech.space} map={timing.map}>
+  <text:Style id="callout-style" recipe={recipes.text.callout} font={caption-font}/>
+  <text:Track id="callout" semantic={speech.semantic}>
     <text:Area
       id="callout-copy"
       placement={callout-frame}
@@ -132,12 +141,12 @@
     </text:Area>
   </text:Track>
 
-  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>
-    <film:Track source={speech.audioTrack}/>
+    <film:Track source={speech.audio}/>
     <film:Track source={captions.track}/>
     <film:Track source={callout.track}/>
   </film:Film>
 
-  <render:Video id="final" composition={main.composition} space={speech.space}/>
+  <render:Video id="final" composition={main.composition} semantic={speech.semantic}/>
 </svml>

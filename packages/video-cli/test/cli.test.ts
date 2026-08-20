@@ -54,7 +54,7 @@ test("provider-free example plans from installed Source packages", async () => {
     readonly steps: readonly { readonly producer: { readonly name: string } }[];
   } }).plan;
   const producers = new Set(plan.steps.map((step) => step.producer.name));
-  assert.equal(producers.has("assemble-speech-basis"), true);
+  assert.equal(producers.has("assemble-semantic-track"), true);
   assert.equal(producers.has("compile-composition"), true);
   assert.equal(producers.has("project-muxed-media"), true);
   assert.equal(plan.goals.length, 1);

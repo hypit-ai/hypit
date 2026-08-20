@@ -184,7 +184,7 @@ test("Text Render projects only declared SVS Recipe properties and lets explicit
   });
   const element = parseStructuredElement({
     name: "recipe.svml",
-    text: `<text:Render id="prompt" template={kit} recipe={studio.shot}>
+    text: `<text:Render id="prompt" template={kit} recipe={recipes.shot}>
       <text:Param name="energy" value="calm"/>
     </text:Render>`,
   }, 0).element;
@@ -193,11 +193,11 @@ test("Text Render projects only declared SVS Recipe properties and lets explicit
       path: "kit", ref: { kind: "record", id: "kit" }, type: textTypes.template,
       record: { value: { kind: "inline", value: template } } as unknown as NonNullable<SurfaceResolvedReference["record"]>,
     }],
-    ["studio.shot", {
-      path: "studio.shot", ref: { kind: "record", id: "studio.shot" }, type: svsRecipeType,
+    ["recipes.shot", {
+      path: "recipes.shot", ref: { kind: "record", id: "recipes.shot" }, type: svsRecipeType,
       record: { value: { kind: "inline", value: {
 
-        path: "studio.shot",
+        path: "recipes.shot",
         properties: { camera: "handheld", energy: "high", model: "mini" },
       } } } as unknown as NonNullable<SurfaceResolvedReference["record"]>,
     }],

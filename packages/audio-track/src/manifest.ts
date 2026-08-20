@@ -1,10 +1,9 @@
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
-import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import { blobRefObjectSchema } from "@hypit/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
-import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { temporalDependency } from "@hypit/temporal";
 
 export const audioTrackModuleRef = { name: "@hypit/audio-track", version: "1" } as const;
@@ -82,7 +81,7 @@ export const audioTrackProgramSchema: ValueSchema = object({
 
 const baseInputs = [
   { name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header },
-  { name: "space", type: programSpaceTypes.programSpace }, { name: "media", type: mediaTypes.synchronized },
+  { name: "semantic", type: semanticTrackTypes.track }, { name: "media", type: mediaTypes.synchronized },
   { name: "spec", type: audioTrackTypes.clipSpec },
 ] as const;
 
@@ -93,7 +92,7 @@ export const audioTrackMarkupSurfaces = [{
       summary: "One Audio Track: explicitly prepared audio Clips placed on a shared ProgramSpace and lowered to one ordinary peer AudioTrack.",
       attributes: [
         { name: "id", kind: "identifier", required: true, summary: "Names this Audio Track and prefixes the identity of every Clip that does not name itself." },
-        { name: "space", kind: "reference", required: true, accepts: [programSpaceTypes.programSpace], summary: "Fixes the frame and sample domain every Clip window resolves into." },
+        { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track], summary: "Selects the continuous semantic frame domain every Clip window resolves into." },
       ],
       children: [
         { tag: "Clip", cardinality: "many",
@@ -122,9 +121,6 @@ export const audioTrackMarkupSurfaces = [{
             { name: "moment", kind: "reference", required: false,
               accepts: [narrativeTypes.moment],
               summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
-            { name: "map", kind: "reference", required: false,
-              accepts: [semanticMapTypes.complete],
-              summary: "Selects the SemanticMap that turns semantic identity into exact time." },
             { name: "occurrences", kind: "literal", required: false, values: ["one", "each"],
               summary: "Decides whether a semantic source contributes one window or every occurrence; defaults to `one`." },
             { name: "trim-start", kind: "literal", required: false,
@@ -150,7 +146,7 @@ export const audioTrackMarkupSurfaces = [{
         { name: "program", type: audioTrackTypes.program, summary: "The resolved sample-exact item list this Track renders from." },
         { name: "track", type: compositionTypes.audioTrack, summary: "The rendered AudioTrack that Film composes with its peers." },
       ],
-      example: `<audio:Track id="music-bed" space={speech.space}>
+      example: `<audio:Track id="music-bed" semantic={speech.semantic}>
   <audio:Clip source={music-media.media} during="program"
     playback="loop-end" gain="0.28" fade-in="600ms" fade-out="800ms"/>
 </audio:Track>`,
@@ -158,7 +154,7 @@ export const audioTrackMarkupSurfaces = [{
         "A Track requires at least one Clip, and neither a Track nor a Clip accepts text content.",
         "A Clip states exactly one window form: `during`, `at` with `for`, or `start` with `end`.",
         "A point expression is `program.start`, `program.end`, `selection.start`, `selection.end` or `moment.cue`, each optionally offset by `+` or `-` and a duration, or a bare duration read as an absolute position.",
-        "`selection` and `moment` cannot be written together, and `map` is rejected on a start/end window that binds neither.",
+        "`selection` and `moment` cannot be written together.",
         "`min-rate` and `max-rate` are rejected unless `playback` is `stretch`.",
       ],
     },
@@ -169,7 +165,7 @@ export const audioTrackManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: audioTrackModuleRef.name,
   version: audioTrackModuleRef.version,
-  dependencies: [mediaDependency, narrativeDependency, semanticMapDependency, programSpaceDependency, temporalDependency, compositionDependency],
+  dependencies: [mediaDependency, narrativeDependency, semanticTrackDependency, temporalDependency, compositionDependency],
   types: [
     { name: audioTrackTypes.header.name },
     { name: audioTrackTypes.clipSpec.name },
@@ -180,10 +176,10 @@ export const audioTrackManifest: ModuleManifest = {
   producers: [
     { name: audioTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
     { name: audioTrackProducers.appendProgram.name, inputs: [...baseInputs], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
-    { name: audioTrackProducers.appendSelection.name, inputs: [...baseInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
-    { name: audioTrackProducers.appendMoment.name, inputs: [...baseInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
+    { name: audioTrackProducers.appendSelection.name, inputs: [...baseInputs, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
+    { name: audioTrackProducers.appendMoment.name, inputs: [...baseInputs, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
     { name: audioTrackProducers.finalize.name, inputs: [{ name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header }], outputs: [{ name: "program", type: audioTrackTypes.program }], needs: [] },
-    { name: audioTrackProducers.render.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: audioTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [] },
+    { name: audioTrackProducers.render.name, inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: audioTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [] },
   ],
 };
 export const audioTrackDependency = { module: audioTrackModuleRef } as const;

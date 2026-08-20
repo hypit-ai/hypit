@@ -21,9 +21,9 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
   <film:Track source={speech.visual}/>
-  <film:Track source={speech.audioTrack}/>
+  <film:Track source={speech.audio}/>
   <film:Track source={captions.track}/>
   <film:Track source={product-broll.visual}/>
   <film:Track source={titles.track}/>
@@ -34,7 +34,7 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 | `canvas` | 是 | 与 Track 布局共享的显式 CanvasSpace |
-| `space` | 是 | 来自 `speech:Spine` 的 ProgramSpace——定义时长和帧率 |
+| `semantic` | 是 | 来自 `speech:Track` 的 SemanticTrack——定义时长和帧率 |
 | `appearance` | 是 | SVS Film Recipe——画布清除颜色 |
 
 ### film:Track
@@ -49,8 +49,8 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 
 | 来源 | 类型 | 来自 |
 |---|---|---|
-| `{speech.visual}` | VisualTrack | `speech:Spine`——稀疏的同源口播视觉 |
-| `{speech.audioTrack}` | AudioTrack | `speech:Spine`——同步音频 |
+| `{speech.visual}` | VisualTrack | `speech:Track`——稀疏的同源口播视觉 |
+| `{speech.audio}` | AudioTrack | `speech:Track`——同步音频 |
 | `{captions.track}` | VisualTrack | Caption 样式族 Track——定时字幕 |
 | `{cards.visual}` | VisualTrack | `media-track:Track`——Media 叠加层或 B-roll |
 | `{titles.track}` | VisualTrack | `text:Track`——文字叠加层 |
@@ -79,14 +79,14 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 通过 HyperFrames 渲染器将 Composition 编译为最终视频。
 
 ```svml
-<render:Video id="final" composition={main.composition} space={speech.space}/>
+<render:Video id="final" composition={main.composition} semantic={speech.semantic}/>
 ```
 
 | 属性 | 必填 | 说明 |
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 | `composition` | 是 | 来自 `film:Film` 的 Composition |
-| `space` | 是 | 来自 `speech:Spine` 的 ProgramSpace |
+| `semantic` | 是 | 来自 `speech:Track` 的 SemanticTrack |
 
 渲染器：
 
@@ -114,7 +114,8 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   <import as="wording" from="@hypit/text@1"/>
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
-  <import as="speech" from="@hypit/speech-spine@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="caption" from="@hypit/caption@1"/>
   <import as="caption-fine" from="@hypit/caption-fine@1"/>
@@ -123,9 +124,10 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   <import as="media-track" from="@hypit/media-track@1"/>
   <import as="text" from="@hypit/typography-track@1"/>
   <import as="space" from="@hypit/spatial@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
-  <import as="studio" source="./studio.svs"/>
+  <import as="recipes" source="./recipes.svs"/>
 
   <!-- 1. Script: the semantic truth -->
   <script id="story">
@@ -154,6 +156,7 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
+  <program:Clock id="clock" frame-rate="30"/>
   <space:Frame id="speech-frame" within={vertical}
     left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="title-frame" within={vertical}
@@ -161,41 +164,44 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   <space:Frame id="card-frame" within={vertical}
     left="10%" top="20%" right="90%" bottom="70%"/>
 
-  <!-- 3. Timing: assemble spine and align words -->
-  <speech:Spine id="speech" frame-rate="30"
-    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
-    <speech:Take video={take.video} segment={story.segment.opening}/>
-  </speech:Spine>
-  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+  <!-- 3. Timing：先归一化并对齐 Segment，再装配 -->
+  <pipeline:Normalize id="take-media" source={take.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="motion-media" source={motion.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <whisperx:SemanticTake id="opening-semantic" narrative={story}
+    segment={story.segment.opening} media={take-media.media}/>
+  <speech:Track id="speech"
+    visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
+    <speech:Take source={opening-semantic.take}/>
+  </speech:Track>
 
   <!-- 4. Tracks: captions, Media, text -->
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
   <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
-  <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+  <caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
   <caption:Program id="caption-program" display={story.caption}
     default={base-caption}/>
   <caption-ai:Planner id="cue-plan" display={story.caption}
     program={caption-program} model="gemini-2.5-flash"/>
-  <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
-    space={speech.space} plan={cue-plan.plan} program={caption-program}/>
+  <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} semantic={speech.semantic} plan={cue-plan.plan} program={caption-program}/>
 
-  <media-track:Track id="cards" map={timing.map}
-    space={speech.space} canvas={vertical}>
-    <media-track:Item video={motion.video} during={story.selection.demo}
-      frame={card-frame} appearance={studio.media.card} motion={studio.motion.card}/>
+  <media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Item media={motion-media.media} during={story.selection.demo}
+      frame={card-frame} appearance={recipes.media.card} motion={recipes.motion.card}/>
   </media-track:Track>
-  <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
-  <text:Track id="titles" space={speech.space}>
+  <text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
+  <text:Track id="titles" semantic={speech.semantic}>
     <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
       MEANING
     </text:Area>
   </text:Track>
 
   <!-- 5. Film: compose all tracks -->
-  <film:Film id="main" canvas={vertical} space={speech.space}
-    appearance={studio.film.vertical}>
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic}
+    appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>
-    <film:Track source={speech.audioTrack}/>
+    <film:Track source={speech.audio}/>
     <film:Track source={cards.visual}/>
     <film:Track source={captions.track}/>
     <film:Track source={titles.track}/>
@@ -203,13 +209,13 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
 
   <!-- 6. Render: compile to MP4 -->
   <render:Video id="final" composition={main.composition}
-    space={speech.space}/>
+    semantic={speech.semantic}/>
 </svml>
 ```
 
 `right` 与 `bottom` 是绝对的边位置，不是内缩量。一个占父级中间 80% 的 Frame 写作 `left="10%" right="90%"`，而不是 `left="10%" right="10%"`——后者解出的宽度为零，会被拒绝。
 
-### 样式表 (`studio.svs`)
+### 样式表 (`recipes.svs`)
 
 ```svs
 <?svml using="@hypit/svs@1"?>

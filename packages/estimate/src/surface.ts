@@ -24,7 +24,7 @@ function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolved
 
 function attributes(element: StructuredElement): void {
   const required = ["id", "source"];
-  const direct = ["language", "pace", "rate", "min", "max", "rounding"];
+  const direct = ["language", "pace", "rate", "min", "max", "rounding", "padding"];
   const optional = ["policy", ...direct];
   const allowed = new Set([...required, ...optional]);
   if (
@@ -84,7 +84,7 @@ export function speechEstimatePolicyFromRecipe(
   recipe: SvsRecipe,
   subject = `SVS Recipe ${recipe.path}`,
 ) {
-  const allowed = new Set(["language", "pace", "rate", "min", "max", "rounding"]);
+  const allowed = new Set(["language", "pace", "rate", "min", "max", "rounding", "padding"]);
   const unknown = Object.keys(recipe.properties).filter((name) => !allowed.has(name));
   if (unknown.length > 0) throw new Error(`${subject} contains unknown property ${unknown[0]}`);
   const string = (name: string): string => {
@@ -110,11 +110,11 @@ export function speechEstimatePolicyFromRecipe(
     throw new Error(`${subject}.rate must be a finite number`);
   }
   const common = {
-
     language: string("language") as SpeechEstimateLanguage,
     minimumSec: finite("min"),
     maximumSec: finite("max"),
     rounding: string("rounding") as SpeechEstimateRounding,
+    ...(recipe.properties.padding !== undefined ? { paddingSec: finite("padding") } : {}),
   } as const;
   return rate === undefined
     ? sealSpeechEstimatePolicy({ ...common, pace: string("pace") as SpeechEstimatePace })
@@ -164,6 +164,7 @@ export const decodeSpeechEstimateSurface: StructuredSurfaceHandler = ({ element,
         minimumSec: number(element, "min"),
         maximumSec: number(element, "max"),
         rounding: text(element, "rounding") as SpeechEstimateRounding,
+        ...(element.attributes.padding !== undefined ? { paddingSec: number(element, "padding") } : {}),
       })
     : recipePolicy(element, resolveReference);
   const policyId = `${id}.policy`;

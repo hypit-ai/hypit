@@ -6,7 +6,7 @@ systems this reference actually contains, and write one complete project:
 
 - `main.svml` describes the whole video in original time order, keeps continuing base/sound intact,
   and represents one continuing overlay as one visual track.
-- `studio.svs` contains every Recipe actually referenced by `main.svml`, using only declared
+- `recipes.svs` contains every Recipe actually referenced by `main.svml`, using only declared
   properties and admitted values.
 - `build.svrun` references the Author Source and declares the required Targets with resolvable
   dependencies.
@@ -61,50 +61,57 @@ Use existing checks only:
 ```bash
 pnpm check
 pnpm hypit check path/to/main.svml
-pnpm hypit check path/to/studio.svs
+pnpm hypit check path/to/recipes.svs
 pnpm hypit check path/to/build.svrun
 ```
 
 `hypit check` proves a Source is legal; it proves nothing about whether the tracks it declares can
 actually be built. A track that fails the local preview fails the same way the moment the author
-opens the Playground — a new package with a bad schedule, a media edge whose artifact is not an
+opens Studio — a new package with a bad schedule, a media edge whose artifact is not an
 image, a reference that does not resolve. Find that now, not on the author's screen:
 
 ```bash
 # from the repository root: tsx is the repository's dependency
-node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/main.svml path/to/build.svrun
+node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/build.svrun
 ```
 
-It reports every track that failed to build, and every track waiting on a Provider it cannot reach,
-and exits non-zero when either exists. The failures it reports are the Producer's own messages — the
-track name, the Producer, and why it failed, down to the offending value (a schedule frame outside a
-window, a media edge whose artifact is not an image). This is not a guessing problem: the error says
-what is wrong, and you repair that. A track that cannot be built is not done, and this is not the
-loop: the two-attempt ceiling governs how *well* a buildable element is tuned to the reference; it
-does not govern whether the element builds at all. Every failure this check reports must be repaired
-until the check passes — the author should never open the Playground and find that something they
-were delivered cannot be seen. Repair as many times as the failure needs, then re-run the check.
+It takes the Run Source, not the Author SVML — Studio's unit of work is the Run, and it reads the
+`.svml` back out of it.
 
-One failure is not a defect, and it is worth knowing before spending repairs on it. The preview has
-to draw outputs nothing has produced yet, so it substitutes a stand-in — a black video frame as long
-as the shot. **A stand-in is not the kind of thing the real output will be**, so a Producer that
-validates the kind of media it receives can refuse it and be entirely correct at build time. A still
-Media Item is the case that bites: it requires image bytes, the stand-in for an unbuilt `gpt:Image`
-is `video/mp4`, and the preview reports a media edge whose artifact is not an image — the same
-sentence it would use for a genuine wiring mistake.
+It exits non-zero when the graph itself is wrong, and it names what refused — a target that is not a
+Film or Render output of the current SVML, a Film with no traceable composition, a Film with no
+`SemanticTake` / Speech Track chain. This is not a guessing problem: the error says what is wrong,
+and you repair that.
 
-Tell them apart before repairing. It is a stand-in artifact when the edge points at an output this
-Source generates rather than at supplied material, and the message is about the media *kind* rather
-than a value. Pinning does not settle it either: preview-check reads a Run Source but cannot open
-pinned Records without a Runtime, and the script does not offer one. Everything else it reports is
-still a real failure and still has no attempt ceiling.
+A graph that does not trace is not done, and this is not the loop: the two-attempt ceiling governs
+how *well* a wired element is tuned to the reference; it does not govern whether the element is
+wired at all. Every failure this check reports must be repaired until the check passes. Repair as
+many times as the failure needs, then re-run the check.
 
-Two ways out, in order. In a component you own, decide the element kind from the Artifact's own
-`mediaType` instead of hard-coding it — the component then draws the stand-in as video and the real
-picture as an image, and the preview passes honestly. Against an installed Producer that legitimately
-demands one kind, the check cannot pass until the output exists: say so plainly, and verify that
-track on the real Build instead. Do not report the check as passed, and do not let it stand in for
-the delivery measurements in `../playbooks/craft/production-gates.md`.
+**One refusal is a pass, and it is the one you will see most.** A Source that declares its generation
+rather than performing it — which is this route's own rule — leaves the closure waiting on Providers,
+and Studio requires the whole closure before it will open. That is the expected state of a delivery,
+not a defect in it.
+
+So the check separates the two. When every issue is `the Studio projection closure requires
+unresolved capabilities: …`, the graph traced all the way to a Film and a semantic spine and what
+remains is work a Provider has to do — the script prints the waiting capabilities and exits zero:
+
+```
+preview-check: the graph is sound, waiting on 6 capabilities.
+  - @hypit/seedance@1#seedance-2-mini
+  - @hypit/whisperx@1#whisperx-alignment
+  ...
+```
+
+Any other refusal means the graph is wrong and no amount of generation will fix it — no Film or
+Render target, a target that is not an output of the current SVML, no traceable Film composition, no
+`SemanticTake` / Speech Track chain. Those exit non-zero and have no attempt ceiling.
+
+What this gate proves is that the graph is **wired**, not that every track **draws**. A Producer that
+refuses the media kind it is handed is not caught here, because nothing is handed to it until the
+Build runs. Verify those on the real Build, report the check as exactly what it is, and do not let
+it stand in for the delivery measurements in `../playbooks/craft/production-gates.md`.
 
 What this check cannot see is equally important: a track that *builds* but looks wrong — a typeface
 that does not match, a colour that is off, a shape that is misplaced — reports no error here, because

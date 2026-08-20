@@ -1,7 +1,7 @@
 import type { ComponentPackage } from "@hypit/component-kit";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
-import type { ProgramSpace } from "@hypit/program-space";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import type { SemanticTrack } from "@hypit/semantic-track";
+import { projectSemanticProgramSpace } from "@hypit/semantic-track";
 import type { CompositableSurfaceRef } from "@hypit/media";
 import type { SpatialFrame, SpatialPath, SpatialPoint } from "@hypit/spatial";
 import type { StoredValue } from "@hypit/protocol";
@@ -59,7 +59,7 @@ export const typographyTrackComponent = {
       handler: ({ inputs }) => ({ outputs: { set: output(appendProgramTextItem(
         inline<TypographyTrackSet>(inputs.set?.value, "TypographyTrackSet"),
         inline<TypographyTrackHeader>(inputs.header?.value, "TypographyTrackHeader"),
-        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+        inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
         inline<TextPlacement>(inputs.placement?.value, "TextPlacement"),
         inline<TextItemSpec>(inputs.spec?.value, "TextItemSpec"),
         inline<TextStyle>(inputs.style?.value, "TextStyle"),
@@ -71,9 +71,8 @@ export const typographyTrackComponent = {
       handler: ({ inputs }) => ({ outputs: { set: output(appendSelectionTextItem(
         inline<TypographyTrackSet>(inputs.set?.value, "TypographyTrackSet"),
         inline<TypographyTrackHeader>(inputs.header?.value, "TypographyTrackHeader"),
-        inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
+        inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
         inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelection"),
-        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
         inline<TextPlacement>(inputs.placement?.value, "TextPlacement"),
         inline<TextItemSpec>(inputs.spec?.value, "TextItemSpec"),
         inline<TextStyle>(inputs.style?.value, "TextStyle"),
@@ -85,9 +84,8 @@ export const typographyTrackComponent = {
       handler: ({ inputs }) => ({ outputs: { set: output(appendMomentTextItem(
         inline<TypographyTrackSet>(inputs.set?.value, "TypographyTrackSet"),
         inline<TypographyTrackHeader>(inputs.header?.value, "TypographyTrackHeader"),
-        inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
+        inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
         inline<NarrativeMomentRef>(inputs.moment?.value, "NarrativeMoment"),
-        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
         inline<TextPlacement>(inputs.placement?.value, "TextPlacement"),
         inline<TextItemSpec>(inputs.spec?.value, "TextItemSpec"),
         inline<TextStyle>(inputs.style?.value, "TextStyle"),
@@ -104,14 +102,14 @@ export const typographyTrackComponent = {
     {
       producer: typographyTrackProducers.render,
       handler: ({ inputs }) => ({ outputs: { track: output(renderTypographyTrack(
-        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+        projectSemanticProgramSpace(inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack")),
         inline<TypographyTrackProgram>(inputs.program?.value, "TypographyTrackProgram"),
       )) }, needs: {} }),
     },
     {
       producer: typographyTrackProducers.renderMask,
       handler: ({ inputs }) => ({ outputs: { track: output(renderTextMaskTrack(
-        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+        projectSemanticProgramSpace(inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack")),
         inline<TypographyTrackProgram>(inputs.program?.value, "TypographyTrackProgram"),
         inline<CompositableSurfaceRef>(inputs.material?.value, "CompositableSurfaceRef"),
         inline<TextMaskSpec>(inputs.spec?.value, "TextMaskSpec"),

@@ -8,6 +8,7 @@ type SpeechEstimatePolicyBase = {
   readonly minimumSec: number;
   readonly maximumSec: number;
   readonly rounding: SpeechEstimateRounding;
+  readonly paddingSec?: number;
 };
 
 export type SpeechEstimatePolicy = SpeechEstimatePolicyBase & (

@@ -23,15 +23,15 @@ Declare the source, normalize it to audio-only `SynchronizedMedia`, and place it
 <pipeline:Normalize id="reveal-media" source={reveal-source}
   video="none" audio="default" span-authority="audio" frame-rate="30"/>
 
-<audio:Track id="effects" space={speech.space}>
+<audio:Track id="effects" semantic={speech.semantic}>
   <audio:Clip source={reveal-media.media}
-    at={story.moment.reveal} for="600ms" map={timing.map}
+    at={story.moment.reveal} for="600ms"
     playback="once" gain="0.45" fade-in="0f" fade-out="3f"/>
 </audio:Track>
 ```
 
 - Use `during={story.selection.NAME}` for a range, a Script Moment plus `for` for a point event, or
-  explicit `start`/`end` timing in ProgramSpace.
+  explicit `start`/`end` timing in the SemanticTrack frame domain.
 - Use `playback="once"` for a discrete effect, loop only for a genuinely repeating texture, and
   bounded pitch-preserving stretch only when the occupancy must fill an authored range.
 - Use explicit trim, gain, fade-in, and fade-out. The Audio Track preserves source level and does not

@@ -1,7 +1,7 @@
-import { narrativeTypes } from "@hypit/narrative";
 import { speechDependency, speechTypes } from "@hypit/speech";
+import { mediaDependency, mediaTypes } from "@hypit/media";
+import { narrativeTypes } from "@hypit/narrative";
 import { speechEvidenceDependency, speechEvidenceTypes } from "@hypit/speech-evidence";
-import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
 import type { CapabilityRef, ModuleManifest, ProducerRef } from "@hypit/protocol";
 import { mediaPipelineManifest, mediaPipelineModuleRef } from "@hypit/media-pipeline";
 import { speechAlignmentManifest, speechAlignmentModuleRef } from "@hypit/speech-alignment";
@@ -15,30 +15,32 @@ export const whisperXProducers = {
 } satisfies Record<string, ProducerRef>;
 
 export const whisperXMarkupSurfaces = [{
-    name: "alignment",
-    tag: "Alignment",
+    name: "semantic-take",
+    tag: "SemanticTake",
     mode: "structured",
-    outputs: [speechEvidenceTypes.alignedTranscript, semanticMapTypes.complete],
+    outputs: [speechTypes.semanticTake],
     vocabulary: {
       summary:
-        "Runs one WhisperX acoustic pass over the speech audio and locates the authored Narrative in it, publishing the aligned transcript and the SemanticMap that carries word timing.",
+        "Measures one normalized Take with WhisperX and aligns one authored Segment into a self-contained SemanticTake.",
       attributes: [
         { name: "id", kind: "identifier", required: true,
           summary: "Names this alignment and prefixes the bindings it publishes." },
         { name: "narrative", kind: "reference", required: true,
           accepts: [narrativeTypes.narrative],
-          summary: "Selects the authored Narrative whose Segments the measured speech is assigned to." },
-        { name: "audio", kind: "reference", required: true,
-          accepts: [speechTypes.audioBasis],
-          summary: "Selects the speech audio basis this element measures and aligns against." },
+          summary: "Selects the authored Narrative that owns the Segment and Token identities." },
+        { name: "segment", kind: "reference", required: true,
+          accepts: [narrativeTypes.excerpt],
+          summary: "Selects the single authored Segment performed by this Take." },
+        { name: "media", kind: "reference", required: true,
+          accepts: [mediaTypes.synchronized],
+          summary: "Selects the already normalized SynchronizedMedia measured by WhisperX." },
       ],
       ports: [
-        { name: "evidence", type: speechEvidenceTypes.alignedTranscript,
-          summary: "The provider-neutral aligned transcript WhisperX returned, addressed as `<id>.evidence`." },
-        { name: "map", type: semanticMapTypes.complete,
-          summary: "The complete SemanticMap placing every authored word in the frame domain, addressed as `<id>.map`." },
+        { name: "take", type: speechTypes.semanticTake,
+          summary: "The normalized media plus this Segment's authored words and local frame anchors." },
       ],
-      example: `<whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>`,
+      example: `<whisperx:SemanticTake id="opening" narrative={story}
+  segment={story.segment.opening} media={opening-media.media}/>`,
       notes: [
         "All three attributes are required; the element accepts no children and no text content.",
         "Importing this package is what selects the WhisperX model family; the Runtime separately binds the alignment Need to an Endpoint.",
@@ -54,7 +56,7 @@ export const whisperXManifest: ModuleManifest = {
   dependencies: [
     speechDependency,
     speechEvidenceDependency,
-    semanticMapDependency,
+    mediaDependency,
     { module: mediaPipelineModuleRef },
     { module: speechAlignmentModuleRef },
   ],

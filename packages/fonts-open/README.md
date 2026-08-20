@@ -30,7 +30,7 @@ intent into one reusable Author Graph value:
   <fonts:Fallback family="noto-sans-sc" weight="700" style="normal"/>
 </fonts:Stack>
 
-<caption-fine:Style id="caption" recipe={studio.caption.primary}
+<caption-fine:Style id="caption" recipe={recipes.caption.primary}
   font={caption-fonts}/>
 ```
 

@@ -3,9 +3,9 @@
 <svml>
   <import from="@hypit/script@1"/>
   <import as="wording" from="@hypit/text@1"/>
-  <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
-  <import as="speech" from="@hypit/speech-spine@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="speech" from="@hypit/speech-track@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="media-track" from="@hypit/media-track@1"/>
   <import as="caption" from="@hypit/caption@1"/>
@@ -13,9 +13,10 @@
   <import as="caption-ai" from="@hypit/caption-gemini@1"/>
   <import as="fonts" from="@hypit/fonts-open@1"/>
   <import as="space" from="@hypit/spatial@1"/>
+  <import as="program" from="@hypit/program-space@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
-  <import as="studio" source="./studio.svs"/>
+  <import as="recipes" source="./recipes.svs"/>
 
   <!-- The words are the ones actually spoken in the recorded interview, so the
        Script and the picture describe the same programme. -->
@@ -47,6 +48,7 @@
   </script>
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
+  <program:Clock id="clock" frame-rate="24"/>
   <space:Frame id="speech-frame" within={vertical}
     left="0%" top="0%" right="100%" bottom="100%"/>
   <!-- The cutaways are shot 9:16 like the scenes, so they cut away from the
@@ -55,76 +57,68 @@
   <space:Frame id="full" within={vertical}
     left="0%" top="0%" right="100%" bottom="100%"/>
 
-  <!-- The location is established once and every take references it, so the street stays one street.
-       Prompt-only generation would give each take its own afternoon. -->
-  <wording:Value id="scene-look">
-    A photograph with the texture of real iPhone footage. Generate a vertical wide two-shot, as one
-    frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying
-    the texture of video and not of a posed photograph. The background stays clearly visible, with no
-    depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the
-    picture is broken. An interviewer and a passer-by stand together on a shopping street in late
-    afternoon light, shopfronts and pedestrians behind them.
-  </wording:Value>
-  <gpt:Image id="scene" prompt={scene-look} aspect-ratio="9:16" resolution="2K"/>
-
   <wording:Value id="direction">Handheld street interview, late afternoon, two speakers.</wording:Value>
-  <seedance:ReferenceVideo id="take-hook" model="mini" prompt={direction} duration="5" generate-audio="true">
-    <seedance:Reference image={scene.image}/>
-  </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="take-price" model="mini" prompt={direction} duration="6" generate-audio="true">
-    <seedance:Reference image={scene.image}/>
-  </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="take-rainbow" model="mini" prompt={direction} duration="11" generate-audio="true">
-    <seedance:Reference image={scene.image}/>
-  </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="take-payment" model="mini" prompt={direction} duration="9" generate-audio="true">
-    <seedance:Reference image={scene.image}/>
-  </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="cutaway-bags" model="mini" prompt={direction} duration="4">
-    <seedance:Reference image={scene.image}/>
-  </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="cutaway-fee" model="mini" prompt={direction} duration="4">
-    <seedance:Reference image={scene.image}/>
-  </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="cutaway-receipt" model="mini" prompt={direction} duration="5">
-    <seedance:Reference image={scene.image}/>
-  </seedance:ReferenceVideo>
+  <seedance:TextVideo id="take-hook" model="mini" prompt={direction} duration="5" generate-audio="true"/>
+  <seedance:TextVideo id="take-price" model="mini" prompt={direction} duration="6" generate-audio="true"/>
+  <seedance:TextVideo id="take-rainbow" model="mini" prompt={direction} duration="11" generate-audio="true"/>
+  <seedance:TextVideo id="take-payment" model="mini" prompt={direction} duration="9" generate-audio="true"/>
+  <seedance:TextVideo id="cutaway-bags" model="mini" prompt={direction} duration="4"/>
+  <seedance:TextVideo id="cutaway-fee" model="mini" prompt={direction} duration="4"/>
+  <seedance:TextVideo id="cutaway-receipt" model="mini" prompt={direction} duration="5"/>
 
-  <speech:Spine id="speech" frame-rate="24"
-    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
-    <speech:Take video={take-hook.video} segment={story.segment.hook}/>
-    <speech:Take video={take-price.video} segment={story.segment.price}/>
-    <speech:Take video={take-rainbow.video} segment={story.segment.rainbow}/>
-    <speech:Take video={take-payment.video} segment={story.segment.payment}/>
-  </speech:Spine>
-  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+  <pipeline:Normalize id="hook-media" source={take-hook.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="price-media" source={take-price.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="rainbow-media" source={take-rainbow.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="payment-media" source={take-payment.video}
+    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="cutaway-bags-media" source={cutaway-bags.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="cutaway-fee-media" source={cutaway-fee.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <pipeline:Normalize id="cutaway-receipt-media" source={cutaway-receipt.video}
+    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <whisperx:SemanticTake id="hook-semantic" narrative={story} segment={story.segment.hook} media={hook-media.media}/>
+  <whisperx:SemanticTake id="price-semantic" narrative={story} segment={story.segment.price} media={price-media.media}/>
+  <whisperx:SemanticTake id="rainbow-semantic" narrative={story} segment={story.segment.rainbow} media={rainbow-media.media}/>
+  <whisperx:SemanticTake id="payment-semantic" narrative={story} segment={story.segment.payment} media={payment-media.media}/>
+
+  <speech:Track id="speech"
+    visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
+    <speech:Take source={hook-semantic.take}/>
+    <speech:Take source={price-semantic.take}/>
+    <speech:Take source={rainbow-semantic.take}/>
+    <speech:Take source={payment-semantic.take}/>
+  </speech:Track>
 
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
-  <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+  <caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
   <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
   <caption-ai:Planner id="cue-plan" display={story.caption} program={caption-program}
     model="gemini-2.5-flash"/>
   <caption-fine:Track id="captions" display={story.caption}
     correspondence={story.caption.correspondence}
-    map={timing.map} space={speech.space}
+    semantic={speech.semantic}
     plan={cue-plan.plan} program={caption-program}/>
 
   <!-- Three cutaways on one Track. Their Selections do not overlap, so they
        share a single timeline row the way an editor would lay them out. -->
-  <media-track:Track id="cutaways" map={timing.map} space={speech.space} canvas={vertical}>
-    <media-track:Item id="bags" video={cutaway-bags.video} during={story.selection.bags}
-      frame={full} appearance={studio.media.cutaway} motion={studio.motion.cut}/>
-    <media-track:Item id="fee" video={cutaway-fee.video} during={story.selection.fee}
-      frame={full} appearance={studio.media.cutaway} motion={studio.motion.cut}/>
-    <media-track:Item id="receipt" video={cutaway-receipt.video} during={story.selection.receipt}
-      frame={full} appearance={studio.media.cutaway} motion={studio.motion.drop}/>
+  <media-track:Track id="cutaways" semantic={speech.semantic} canvas={vertical}>
+    <media-track:Item id="bags" media={cutaway-bags-media.media} during={story.selection.bags}
+      frame={full} appearance={recipes.media.cutaway} motion={recipes.motion.cut}/>
+    <media-track:Item id="fee" media={cutaway-fee-media.media} during={story.selection.fee}
+      frame={full} appearance={recipes.media.cutaway} motion={recipes.motion.cut}/>
+    <media-track:Item id="receipt" media={cutaway-receipt-media.media} during={story.selection.receipt}
+      frame={full} appearance={recipes.media.cutaway} motion={recipes.motion.drop}/>
   </media-track:Track>
 
-  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
+  <film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>
-    <film:Track source={speech.audioTrack}/>
+    <film:Track source={speech.audio}/>
     <film:Track source={cutaways.visual}/>
     <film:Track source={captions.track}/>
   </film:Film>
-  <render:Video id="final" composition={main.composition} space={speech.space}/>
+  <render:Video id="final" composition={main.composition} semantic={speech.semantic}/>
 </svml>

@@ -1,7 +1,8 @@
 import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { projectSemanticProgramSpace } from "@hypit/semantic-track";
+import type { SemanticTrack } from "@hypit/semantic-track";
 
 import { locateMomentOccurrences, locateProgramOccurrence, locateSegmentOccurrence, locateSelectionOccurrences } from "./location.js";
 import {
@@ -138,15 +139,15 @@ function projectedId(itemId: string, occurrenceId: string): string {
 
 export function projectSelectionWindows(input: {
   readonly itemId: string;
-  readonly map: CompleteSemanticMap;
+  readonly semantic: SemanticTrack;
   readonly selection: NarrativeSelectionRef;
-  readonly space: ProgramSpace;
   readonly expansion: OccurrenceExpansion;
   readonly projection: TemporalWindowProjection;
 }): readonly ProjectedOccurrence[] {
-  const program = locateProgramOccurrence(input.space);
+  const space = projectSemanticProgramSpace(input.semantic);
+  const program = locateProgramOccurrence(input.semantic);
   const occurrences = selectOccurrences(
-    locateSelectionOccurrences(input.map, input.selection, input.space),
+    locateSelectionOccurrences(input.semantic, input.selection),
     input.expansion,
     input.projection,
     "selection",
@@ -154,21 +155,21 @@ export function projectSelectionWindows(input: {
   );
   return occurrences.map((occurrence) => ({
     id: projectedId(input.itemId, occurrence.id),
-    span: projectTemporalWindow(input.projection, { program, selection: occurrence }, input.space),
+    span: projectTemporalWindow(input.projection, { program, selection: occurrence }, space),
   }));
 }
 
 export function projectMomentWindows(input: {
   readonly itemId: string;
-  readonly map: CompleteSemanticMap;
+  readonly semantic: SemanticTrack;
   readonly moment: NarrativeMomentRef;
-  readonly space: ProgramSpace;
   readonly expansion: OccurrenceExpansion;
   readonly projection: TemporalWindowProjection;
 }): readonly ProjectedOccurrence[] {
-  const program = locateProgramOccurrence(input.space);
+  const space = projectSemanticProgramSpace(input.semantic);
+  const program = locateProgramOccurrence(input.semantic);
   const occurrences = selectOccurrences(
-    locateMomentOccurrences(input.map, input.moment, input.space),
+    locateMomentOccurrences(input.semantic, input.moment),
     input.expansion,
     input.projection,
     "moment",
@@ -176,34 +177,35 @@ export function projectMomentWindows(input: {
   );
   return occurrences.map((occurrence) => ({
     id: projectedId(input.itemId, occurrence.id),
-    span: projectTemporalWindow(input.projection, { program, moment: occurrence }, input.space),
+    span: projectTemporalWindow(input.projection, { program, moment: occurrence }, space),
   }));
 }
 
 export function projectProgramWindow(input: {
   readonly itemId: string;
-  readonly space: ProgramSpace;
+  readonly semantic: SemanticTrack;
   readonly projection: TemporalWindowProjection;
 }): ProjectedOccurrence {
-  const program = locateProgramOccurrence(input.space);
+  const space = projectSemanticProgramSpace(input.semantic);
+  const program = locateProgramOccurrence(input.semantic);
   return {
     id: projectedId(input.itemId, program.id),
-    span: projectTemporalWindow(input.projection, { program }, input.space),
+    span: projectTemporalWindow(input.projection, { program }, space),
   };
 }
 
 export function projectSegmentWindow(input: {
   readonly itemId: string;
-  readonly map: CompleteSemanticMap;
+  readonly semantic: SemanticTrack;
   readonly segment: NarrativeExcerpt;
-  readonly space: ProgramSpace;
   readonly projection: TemporalWindowProjection;
 }): ProjectedOccurrence {
-  const program = locateProgramOccurrence(input.space);
-  const segment = locateSegmentOccurrence(input.map, input.segment, input.space);
+  const space = projectSemanticProgramSpace(input.semantic);
+  const program = locateProgramOccurrence(input.semantic);
+  const segment = locateSegmentOccurrence(input.semantic, input.segment);
   return {
     id: projectedId(input.itemId, segment.id),
-    span: projectTemporalWindow(input.projection, { program, segment }, input.space),
+    span: projectTemporalWindow(input.projection, { program, segment }, space),
   };
 }
 

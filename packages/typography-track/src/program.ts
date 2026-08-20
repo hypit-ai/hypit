@@ -2,11 +2,11 @@ import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
 import {
-  assertCompleteSemanticMapIdentity,
+  assertSemanticTrackIdentity,
   assertNarrativeMomentIdentity,
   assertNarrativeSelectionIdentity,
-} from "@hypit/semantic-map";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+} from "@hypit/semantic-track";
+import type { SemanticTrack } from "@hypit/semantic-track";
 import {
   assertSpatialFrame,
   assertSpatialPath,
@@ -318,55 +318,51 @@ function append(
 export function appendProgramTextItem(
   set: TypographyTrackSet,
   header: TypographyTrackHeader,
-  space: ProgramSpace,
+  semantic: SemanticTrack,
   placement: TextPlacement,
   spec: TextItemSpec,
   style: TextStyle,
   motion: TextMotion,
 ): TypographyTrackSet {
-  assertProgramSpaceIdentity(space);
+  assertSemanticTrackIdentity(semantic);
   assertTextPlacement(placement);
   if (spec.expansion.kind !== "one") throw new Error("Program Text uses one occurrence.");
-  return append(set, header, spec, style, motion, placement.geometry, [projectProgramWindow({ itemId: spec.id, space, projection: spec.projection })]);
+  return append(set, header, spec, style, motion, placement.geometry, [projectProgramWindow({ itemId: spec.id, semantic, projection: spec.projection })]);
 }
 
 export function appendSelectionTextItem(
   set: TypographyTrackSet,
   header: TypographyTrackHeader,
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   selection: NarrativeSelectionRef,
-  space: ProgramSpace,
   placement: TextPlacement,
   spec: TextItemSpec,
   style: TextStyle,
   motion: TextMotion,
 ): TypographyTrackSet {
-  assertCompleteSemanticMapIdentity(map);
+  assertSemanticTrackIdentity(semantic);
   assertNarrativeSelectionIdentity(selection);
-  assertProgramSpaceIdentity(space);
   assertTextPlacement(placement);
   return append(set, header, spec, style, motion, placement.geometry, assertWindowRelation(projectSelectionWindows({
-    itemId: spec.id, map, selection, space, projection: spec.projection, expansion: spec.expansion,
+    itemId: spec.id, semantic, selection, projection: spec.projection, expansion: spec.expansion,
   }), "disjoint"));
 }
 
 export function appendMomentTextItem(
   set: TypographyTrackSet,
   header: TypographyTrackHeader,
-  map: CompleteSemanticMap,
+  semantic: SemanticTrack,
   moment: NarrativeMomentRef,
-  space: ProgramSpace,
   placement: TextPlacement,
   spec: TextItemSpec,
   style: TextStyle,
   motion: TextMotion,
 ): TypographyTrackSet {
-  assertCompleteSemanticMapIdentity(map);
+  assertSemanticTrackIdentity(semantic);
   assertNarrativeMomentIdentity(moment);
-  assertProgramSpaceIdentity(space);
   assertTextPlacement(placement);
   return append(set, header, spec, style, motion, placement.geometry, assertWindowRelation(projectMomentWindows({
-    itemId: spec.id, map, moment, space, projection: spec.projection, expansion: spec.expansion,
+    itemId: spec.id, semantic, moment, projection: spec.projection, expansion: spec.expansion,
   }), "disjoint"));
 }
 

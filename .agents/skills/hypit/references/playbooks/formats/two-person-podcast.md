@@ -26,8 +26,8 @@ Draw the room and name camera positions A and B before generating either view.
 4. Render each Segment with `copy:Render`, Script dialogue, and an optional English action direction.
 5. Generate each take with `seedance:ReferenceVideo generate-audio="true"`, both final views, and
    both voice references in the Kit's declared order.
-6. Assemble accepted takes through `speech:Spine`, run `whisperx:Alignment`, then add exact-font
-   Captions, evidence Media, Typography, and optional Audio Tracks.
+6. Normalize each accepted take, produce its `whisperx:SemanticTake`, assemble the results through
+   `speech:Track`, then add exact-font Captions, evidence Media, Typography, and optional Audio Tracks.
 7. Assemble with `film:Film`, render with `render:Video`, and use separate `.svrun` Sources with
    explicit Targets for staged review and delivery.
 

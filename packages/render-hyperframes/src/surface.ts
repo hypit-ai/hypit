@@ -1,5 +1,4 @@
-import { programSpaceTypes } from "@hypit/program-space";
-import type { ProgramSpace } from "@hypit/program-space";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { compositionTypes } from "@hypit/composition";
 import type { Composition } from "@hypit/composition";
 import type {
@@ -26,7 +25,7 @@ function referenceAttribute(element: StructuredElement, name: string): string {
 
 export const decodeHyperframesRenderSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   const names = Object.keys(element.attributes).sort();
-  if (names.join(",") !== "composition,id,space") throw new Error(`${element.name} requires exactly composition, id and space`);
+  if (names.join(",") !== "composition,id,semantic") throw new Error(`${element.name} requires exactly composition, id and semantic`);
   if (element.children.some((child) => child.kind === "element" || child.value.trim().length > 0)) {
     throw new Error(`${element.name} does not accept children`);
   }
@@ -39,20 +38,20 @@ export const decodeHyperframesRenderSurface: StructuredSurfaceHandler = ({ eleme
     || composition.type.name !== compositionTypes.composition.name) {
     throw new Error(`${element.name}.composition must reference Composition`);
   }
-  const spacePath = referenceAttribute(element, "space");
-  const space = resolveReference(spacePath);
-  if (space === undefined
-    || space.type.module.name !== programSpaceTypes.programSpace.module.name
-    || space.type.module.version !== programSpaceTypes.programSpace.module.version
-    || space.type.name !== programSpaceTypes.programSpace.name) {
-    throw new Error(`${element.name}.space must reference ProgramSpace`);
+  const semanticPath = referenceAttribute(element, "semantic");
+  const semantic = resolveReference(semanticPath);
+  if (semantic === undefined
+    || semantic.type.module.name !== semanticTrackTypes.track.module.name
+    || semantic.type.module.version !== semanticTrackTypes.track.module.version
+    || semantic.type.name !== semanticTrackTypes.track.name) {
+    throw new Error(`${element.name}.semantic must reference SemanticTrack`);
   }
   return {
     records: [],
     components: [{
       id,
       fragment: renderHyperframesFragment.id,
-      inputs: { composition: composition.ref, space: space.ref },
+      inputs: { composition: composition.ref, semantic: semantic.ref },
       outputs: { video: `${id}.video` },
       range: element.range,
     }],

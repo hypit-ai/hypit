@@ -1,6 +1,5 @@
 import { narrativeTypes } from "@hypit/narrative";
-import { programSpaceTypes } from "@hypit/program-space";
-import { semanticMapTypes } from "@hypit/semantic-map";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { compositionTypes } from "@hypit/composition";
 import type {
   VisualColorPaint,
@@ -702,7 +701,6 @@ type FragmentItem = {
 };
 
 function createTrackFragment(id: string, items: readonly FragmentItem[]): GraphFragment {
-  const usesMap = items.some((item) => item.binding !== "program");
   const operations: FragmentOperation[] = [{ id: "text:set:empty", producer: typographyTrackProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } }];
   let current = "text:set:empty";
   for (const [index, item] of items.entries()) {
@@ -724,27 +722,26 @@ function createTrackFragment(id: string, items: readonly FragmentItem[]): GraphF
     }
     const append = `text:set:append:${String(index + 1).padStart(4, "0")}`;
     const common = {
-      set: operation(current), header: input("header"), space: input("space"), placement: operation(bind),
+      set: operation(current), header: input("header"), semantic: input("semantic"), placement: operation(bind),
       spec: item.contentName === undefined ? input(item.specName) : operation(materialized),
       style: input(item.styleName), motion: input(item.motionName),
     };
     operations.push(item.binding === "program" ? {
       id: append, producer: typographyTrackProducers.appendProgram, inputs: common, result: { kind: "output", name: "set" },
     } : item.binding === "selection" ? {
-      id: append, producer: typographyTrackProducers.appendSelection, inputs: { ...common, map: input("map"), selection: input(item.sourceName!) }, result: { kind: "output", name: "set" },
+      id: append, producer: typographyTrackProducers.appendSelection, inputs: { ...common, selection: input(item.sourceName!) }, result: { kind: "output", name: "set" },
     } : {
-      id: append, producer: typographyTrackProducers.appendMoment, inputs: { ...common, map: input("map"), moment: input(item.sourceName!) }, result: { kind: "output", name: "set" },
+      id: append, producer: typographyTrackProducers.appendMoment, inputs: { ...common, moment: input(item.sourceName!) }, result: { kind: "output", name: "set" },
     });
     current = append;
   }
   operations.push(
     { id: "text:finalize", producer: typographyTrackProducers.finalize, inputs: { header: input("header"), set: operation(current) }, result: { kind: "output", name: "program" } },
-    { id: "text:render", producer: typographyTrackProducers.render, inputs: { space: input("space"), program: operation("text:finalize") }, result: { kind: "output", name: "track" } },
+    { id: "text:render", producer: typographyTrackProducers.render, inputs: { semantic: input("semantic"), program: operation("text:finalize") }, result: { kind: "output", name: "track" } },
   );
   const inputEntries = [
-    { name: "space", type: programSpaceTypes.programSpace },
+    { name: "semantic", type: semanticTrackTypes.track },
     { name: "header", type: typographyTrackTypes.header },
-    ...(usesMap ? [{ name: "map", type: semanticMapTypes.complete }] : []),
     ...items.flatMap((item) => [
       { name: item.geometryName, type: item.placementKind === "point" ? spatialTypes.point : item.placementKind === "area" ? spatialTypes.frame : spatialTypes.path },
       { name: item.specName, type: item.contentName === undefined ? typographyTrackTypes.itemSpec : typographyTrackTypes.plainItemSpec },
@@ -770,9 +767,9 @@ function createTrackFragment(id: string, items: readonly FragmentItem[]): GraphF
 }
 
 export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  allowed(element, ["id", "space", "map"], ["id", "space"]);
+  allowed(element, ["id", "semantic"], ["id", "semantic"]);
   const id = text(element, "id");
-  const space = reference(element.attributes.space, `${element.name}.space`, programSpaceTypes.programSpace, resolveReference);
+  const semantic = reference(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference);
   const headerId = `${id}.__header`;
   const records: SurfaceRecordDraft[] = [{
     id: headerId, type: typographyTrackTypes.header,
@@ -849,9 +846,6 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
     });
   }
   if (items.length === 0) throw new Error(`${element.name} requires at least one Point, Area or Path.`);
-  const usesMap = items.some((item) => item.binding !== "program");
-  const map = usesMap ? reference(element.attributes.map, `${element.name}.map`, semanticMapTypes.complete, resolveReference) : undefined;
-  if (!usesMap && element.attributes.map !== undefined) throw new Error(`${element.name}.map is unused.`);
   const fragmentItems: FragmentItem[] = items.map(({ suffix, binding, sourceName, placementKind, geometryName, specName, styleName, motionName, contentName }) => ({
     suffix, binding, placementKind, geometryName, specName, styleName, motionName,
     ...(contentName === undefined ? {} : { contentName }), ...(sourceName === undefined ? {} : { sourceName }),
@@ -862,7 +856,7 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
     components: [{
       id, fragment: fragment.id,
       inputs: {
-        space: space.ref, header: { kind: "record", id: headerId }, ...(map === undefined ? {} : { map: map.ref }),
+        semantic: semantic.ref, header: { kind: "record", id: headerId },
         ...Object.fromEntries(items.flatMap((item) => [
           [item.geometryName, item.geometry.ref], [item.specName, { kind: "record" as const, id: item.specId }],
           [item.styleName, item.style.ref], [item.motionName, item.motion],
@@ -879,7 +873,7 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
 
 function createMaskFragment(id: string): GraphFragment {
   const inputs = [
-    { name: "space", type: programSpaceTypes.programSpace },
+    { name: "semantic", type: semanticTrackTypes.track },
     { name: "program", type: typographyTrackTypes.program },
     { name: "material", type: mediaTypes.compositableSurface },
     { name: "spec", type: typographyTrackTypes.maskSpec },
@@ -888,7 +882,7 @@ function createMaskFragment(id: string): GraphFragment {
     inputs,
     operations: [{
       id: "text-mask:render", producer: typographyTrackProducers.renderMask,
-      inputs: { space: input("space"), program: input("program"), material: input("material"), spec: input("spec") },
+      inputs: { semantic: input("semantic"), program: input("program"), material: input("material"), spec: input("spec") },
       result: { kind: "output", name: "track" },
     }],
     exports: [{
@@ -898,10 +892,10 @@ function createMaskFragment(id: string): GraphFragment {
 }
 
 export const decodeTypographyMaskSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  allowed(element, ["id", "space", "text", "material", "mode", "fit"], ["id", "space", "text", "material"]);
+  allowed(element, ["id", "semantic", "text", "material", "mode", "fit"], ["id", "semantic", "text", "material"]);
   empty(element);
   const id = text(element, "id");
-  const space = reference(element.attributes.space, `${element.name}.space`, programSpaceTypes.programSpace, resolveReference);
+  const semantic = reference(element.attributes.semantic, `${element.name}.semantic`, semanticTrackTypes.track, resolveReference);
   const program = reference(element.attributes.text, `${element.name}.text`, typographyTrackTypes.program, resolveReference);
   const material = reference(element.attributes.material, `${element.name}.material`, mediaTypes.compositableSurface, resolveReference);
   const specId = `${id}.__spec`;
@@ -915,7 +909,7 @@ export const decodeTypographyMaskSurface: StructuredSurfaceHandler = ({ element,
     records: [{ id: specId, type: typographyTrackTypes.maskSpec, value: { kind: "inline", value: spec }, range: element.range }],
     components: [{
       id, fragment: fragment.id,
-      inputs: { space: space.ref, program: program.ref, material: material.ref, spec: { kind: "record", id: specId } },
+      inputs: { semantic: semantic.ref, program: program.ref, material: material.ref, spec: { kind: "record", id: specId } },
       outputs: { track: `${id}.track` }, range: element.range,
     }],
     fragments: [fragment],

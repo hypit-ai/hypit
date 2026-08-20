@@ -1,7 +1,5 @@
-import type { Narrative } from "@hypit/narrative";
 import { sealMediaStreamSelection, verifyMediaInspection } from "@hypit/media";
 import type { MediaAudioStream, MediaInspection, MediaStreamSelection, MediaVideoStream } from "@hypit/media";
-import type { SpeechBasis } from "@hypit/speech";
 import {
   canonicalize,
 } from "@hypit/protocol";
@@ -87,7 +85,7 @@ function selectedAudio(inspection: MediaInspection, request: MediaSelectionReque
 
 /**
  * Selects container streams only. Choosing an audio stream never claims that it is narrated speech;
- * SpeechBasis construction remains a separate semantic Producer with an explicit Narrative edge.
+ * SemanticTake construction remains a separate semantic Producer with an explicit Narrative edge.
  */
 export function selectMediaStreams(
   inspection: MediaInspection,

@@ -1,0 +1,30 @@
+{
+  "name": "@hypit/studio",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@hypit/cli": "workspace:*",
+    "@hypit/compiler-node": "workspace:*",
+    "@hypit/component-kit": "workspace:*",
+    "@hypit/composition": "workspace:*",
+    "@hypit/core": "workspace:*",
+    "@hypit/driver-node": "workspace:*",
+    "@hypit/elaborator": "workspace:*",
+    "@hypit/hyperframes": "workspace:*",
+    "@hypit/markup": "workspace:*",
+    "@hypit/package-loader-node": "workspace:*",
+    "@hypit/program-space": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/run": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/runtime-host-node": "workspace:*",
+    "@hypit/script": "workspace:*",
+    "@hypit/semantic-track": "workspace:*",
+    "@hypit/validation": "workspace:*",
+    "@hypit/video-cli": "workspace:*",
+    "@hypit/workspace": "workspace:*",
+    "@hypit/workspace-fs-node": "workspace:*",
+    "vite": "5.4.21"
+  }
+}

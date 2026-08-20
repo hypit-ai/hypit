@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureDigest } from "../../../test/fixture-digest.js";
+import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import { artifactTypes } from "@hypit/artifact";
 import { compileHyperframesDocument } from "@hypit/hyperframes";
 import type { FontArtifactRef, FontStackRef } from "@hypit/media";
 import { mediaTypes } from "@hypit/media";
 import { sealProgramSpace } from "@hypit/program-space";
+import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
@@ -48,6 +50,7 @@ const canvas = { widthPx: 1080, heightPx: 1920,
   origin: "top-left" as const, xDirection: "right" as const, yDirection: "down" as const, pixelAspect: "square" as const };
 const space = sealProgramSpace({ durationSec: 3, frameRate: { numerator: 30, denominator: 1 } });
 const header = sealCommentStickerHeader({ id: "comments" });
+const semantic = semanticTrackFixture(space);
 
 function item(id: string) {
   return sealCommentStickerItemSpec({
@@ -66,7 +69,7 @@ function content(meta?: string) {
 }
 
 function track(meta?: string) {
-  const set = appendProgramCommentSticker(createCommentStickerSet(), header, frame, style, space, item("opening"), content(meta));
+  const set = appendProgramCommentSticker(createCommentStickerSet(), header, frame, style, semantic, item("opening"), content(meta));
   return renderCommentSticker(canvas, space, finalizeCommentSticker(set, header));
 }
 
@@ -114,7 +117,7 @@ test("short Sticker windows compose overlapping enter and exit motion instead of
     },
   }, fonts, "compressed");
   const set = appendProgramCommentSticker(
-    createCommentStickerSet(), header, frame, compressed, space, item("compressed"), content(),
+    createCommentStickerSet(), header, frame, compressed, semantic, item("compressed"), content(),
   );
   const rendered = renderCommentSticker(canvas, space, finalizeCommentSticker(set, header));
   const animation = rendered.presents[0]?.elements.find((element) => element.animation !== undefined)?.animation;
@@ -161,7 +164,7 @@ test("Track Surface lowers mixed program and semantic Stickers to a finite expli
   const blob = { kind: "blob" as const, digest: fixtureDigest("comment-avatar"), size: 128, mediaType: "image/png" };
   const refs = new Map<string, SurfaceResolvedReference>([
     ["video.canvas", authored("video.canvas", spatialTypes.canvas, canvas)],
-    ["video.space", authored("video.space", { module: { name: "@hypit/program-space", version: "1" }, name: "ProgramSpace" }, space)],
+    ["video.semantic", authored("video.semantic", semanticTrackTypes.track, semantic)],
     ["layout.comment", authored("layout.comment", spatialTypes.frame, frame)],
     ["social", authored("social", commentStickerTypes.style, style)],
     ["avatar", authored("avatar", artifactTypes.blob, blob)],
@@ -169,7 +172,7 @@ test("Track Surface lowers mixed program and semantic Stickers to a finite expli
   ]);
   const result = await decodeCommentStickerTrackSurface({
     sourceName: "fixture.svml",
-    element: parsed(`<comment:Track id="comments" canvas={video.canvas} space={video.space}>
+    element: parsed(`<comment:Track id="comments" canvas={video.canvas} semantic={video.semantic}>
       <comment:Sticker id="one" comment={copy} frame={layout.comment} style={social} avatar={avatar} author="@viewer" meta="Featured" during="program"/>
     </comment:Track>`),
     resolveReference: (path) => refs.get(path),

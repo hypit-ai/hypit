@@ -1,4 +1,7 @@
 import { artifactTypes } from "@hypit/artifact";
+import { mediaTypes } from "@hypit/media";
+import { programSpaceTypes } from "@hypit/program-space";
+import { svsRecipeType } from "@hypit/svs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -24,17 +27,21 @@ test("the Normalize Surface makes inspection and normalization an explicit autho
       attributes: {
         id: "motion",
         source: { kind: "reference", path: "generated" },
-        video: "primary-moving",
-        audio: "none",
-        "span-authority": "video",
-        "frame-rate": "30000/1001",
+        clock: { kind: "reference", path: "clock" },
+        recipe: { kind: "reference", path: "policy" },
       },
       children: [],
       range,
     },
     resolveReference: (path) => path === "generated"
       ? { path, ref: { kind: "record", id: path }, type: artifactTypes.blob }
-      : undefined,
+      : path === "clock"
+        ? { path, ref: { kind: "record", id: path }, type: programSpaceTypes.clock,
+          record: { value: { kind: "inline", value: { frameRate: { numerator: 30_000, denominator: 1_001 } } } } as never }
+        : path === "policy"
+          ? { path, ref: { kind: "record", id: path }, type: svsRecipeType,
+            record: { value: { kind: "inline", value: { path, properties: { video: "primary-moving", audio: "none", "span-authority": "video" } } } } as never }
+          : undefined,
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
   assert.equal(result.fragments[0]?.id, synchronizedMediaFragment.id);
@@ -51,9 +58,11 @@ test("the Normalize Surface makes inspection and normalization an explicit autho
 
 test("media operations are ordinary graph branches over BlobArtifact", async () => {
   const range = { source: "operations.svml", start: 0, end: 1 };
-  const resolveReference = (path: string) => path === "generated.video"
-    ? { path, ref: { kind: "record" as const, id: path }, type: artifactTypes.blob }
-    : undefined;
+  const resolveReference = (path: string) => path === "generated.media"
+    ? { path, ref: { kind: "record" as const, id: path }, type: mediaTypes.synchronized }
+    : path === "generated.video"
+      ? { path, ref: { kind: "record" as const, id: path }, type: artifactTypes.blob }
+      : undefined;
   const context = { sourceName: range.source, resolveReference,
     resolveAsset: async () => { throw new Error("no asset resolution expected"); } };
   const transform = await decodeTransformMediaSurface({
@@ -61,8 +70,7 @@ test("media operations are ordinary graph branches over BlobArtifact", async () 
     element: {
       kind: "element", name: "media:Transform", range,
       attributes: {
-        id: "prepared", source: { kind: "reference", path: "generated.video" },
-        video: "primary-moving", audio: "default", "span-authority": "video", "frame-rate": "30",
+        id: "prepared", source: { kind: "reference", path: "generated.media" },
       },
       children: [
         { kind: "element", name: "media:Trim", attributes: { tail: "0.25s" }, children: [], range },

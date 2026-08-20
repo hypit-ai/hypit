@@ -10,7 +10,8 @@ import {
 } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize, isDigest } from "@hypit/protocol";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { projectSemanticProgramSpace } from "@hypit/semantic-track";
+import type { SemanticTrack } from "@hypit/semantic-track";
 import {
   projectMomentWindows,
   projectProgramWindow,
@@ -108,11 +109,12 @@ function sourceFacts(media: SynchronizedMedia): AudioItemProgram["source"] {
 function realizedItems(
   set: AudioTrackSet,
   header: AudioTrackHeader,
-  space: ProgramSpace,
+  semantic: SemanticTrack,
   media: SynchronizedMedia,
   spec: AudioClipSpec,
   occurrences: readonly ProjectedOccurrence[],
 ): AudioTrackSet {
+  const space = projectSemanticProgramSpace(semantic);
   assertAudioTrackSet(set);
   assertAudioTrackHeader(header);
   assertProgramSpaceIdentity(space);
@@ -143,14 +145,14 @@ function realizedItems(
 export function appendProgramAudioItem(
   set: AudioTrackSet,
   header: AudioTrackHeader,
-  space: ProgramSpace,
+  semantic: SemanticTrack,
   media: SynchronizedMedia,
   spec: AudioClipSpec,
 ): AudioTrackSet {
   assert(spec.expansion.kind === "one", `Program Audio Clip ${spec.id} must use one occurrence.`);
-  return realizedItems(set, header, space, media, spec, [projectProgramWindow({
+  return realizedItems(set, header, semantic, media, spec, [projectProgramWindow({
     itemId: spec.id,
-    space,
+    semantic,
     projection: spec.projection,
   })]);
 }
@@ -158,28 +160,26 @@ export function appendProgramAudioItem(
 export function appendSelectionAudioItem(
   set: AudioTrackSet,
   header: AudioTrackHeader,
-  space: ProgramSpace,
+  semantic: SemanticTrack,
   media: SynchronizedMedia,
-  map: CompleteSemanticMap,
   selection: NarrativeSelectionRef,
   spec: AudioClipSpec,
 ): AudioTrackSet {
-  return realizedItems(set, header, space, media, spec, projectSelectionWindows({
-    itemId: spec.id, map, selection, space, expansion: spec.expansion, projection: spec.projection,
+  return realizedItems(set, header, semantic, media, spec, projectSelectionWindows({
+    itemId: spec.id, semantic, selection, expansion: spec.expansion, projection: spec.projection,
   }));
 }
 
 export function appendMomentAudioItem(
   set: AudioTrackSet,
   header: AudioTrackHeader,
-  space: ProgramSpace,
+  semantic: SemanticTrack,
   media: SynchronizedMedia,
-  map: CompleteSemanticMap,
   moment: NarrativeMomentRef,
   spec: AudioClipSpec,
 ): AudioTrackSet {
-  return realizedItems(set, header, space, media, spec, projectMomentWindows({
-    itemId: spec.id, map, moment, space, expansion: spec.expansion, projection: spec.projection,
+  return realizedItems(set, header, semantic, media, spec, projectMomentWindows({
+    itemId: spec.id, semantic, moment, expansion: spec.expansion, projection: spec.projection,
   }));
 }
 

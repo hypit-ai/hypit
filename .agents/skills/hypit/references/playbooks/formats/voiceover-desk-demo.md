@@ -11,15 +11,19 @@ screen, product, hand, or proof changes.
 3. Put the audio directly into an audio-only Speech Take:
 
 ```svml
-<speech:Spine id="speech" frame-rate="30"
-  visual-frame={full-frame} visual-appearance={studio.speech.visual} visual-z="0">
-  <speech:Take audio={narration.audio} segment={story.segment.narration}/>
-</speech:Spine>
-<whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+<program:Clock id="clock" frame-rate="30"/>
+<pipeline:Normalize id="narration-media" source={narration.audio}
+  video="none" audio="default" span-authority="audio" clock={clock}/>
+<whisperx:SemanticTake id="narration-semantic" narrative={story}
+  segment={story.segment.narration} media={narration-media.media}/>
+<speech:Track id="speech"
+  visual-frame={full-frame} visual-appearance={recipes.speech.visual} visual-z="0">
+  <speech:Take source={narration-semantic.take}/>
+</speech:Track>
 ```
 
-4. Use `{speech.space}` for every Media/Typography/Caption/Audio Track and add
-   `{speech.audioTrack}` directly to `film:Film`.
+4. Pass `{speech.semantic}` to every Media/Typography/Caption/Audio Track and add
+   `{speech.audio}` directly to `film:Film`.
 5. Build each visual beat from supplied media or the vendored `broll-v1` Kit. Generated desk/screen
    shots use `seedance:FrameVideo` or `seedance:ReferenceVideo` with `generate-audio="false"`.
 6. Place visuals by the measured Script Selections/Moments. One sentence may span several visual

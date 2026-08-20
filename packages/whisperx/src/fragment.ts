@@ -1,7 +1,6 @@
 import { narrativeTypes } from "@hypit/narrative";
+import { mediaTypes } from "@hypit/media";
 import { speechTypes } from "@hypit/speech";
-import { speechEvidenceTypes } from "@hypit/speech-evidence";
-import { semanticMapTypes } from "@hypit/semantic-map";
 import { sealGraphFragment } from "@hypit/elaborator";
 import { mediaPipelineProducers } from "@hypit/media-pipeline";
 import { speechAlignmentProducers } from "@hypit/speech-alignment";
@@ -11,17 +10,18 @@ import { whisperXProducers } from "./manifest.js";
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
-/** One measured acoustic pass followed by provider-neutral deterministic Script alignment. */
-export const whisperXSpeechAlignmentFragment = sealGraphFragment({
+/** Normalize one Take's audio evidence, measure it, then project one Script Segment locally. */
+export const whisperXSemanticTakeFragment = sealGraphFragment({
   inputs: [
     { name: "narrative", type: narrativeTypes.narrative },
-    { name: "audio", type: speechTypes.audioBasis },
+    { name: "segment", type: narrativeTypes.excerpt },
+    { name: "media", type: mediaTypes.synchronized },
   ],
   operations: [
     {
       id: "prepare-evidence-audio",
       producer: mediaPipelineProducers.projectSpeechEvidenceAudio,
-      inputs: { audio: input("audio") },
+      inputs: { media: input("media") },
       result: { kind: "need", name: "evidenceAudio" },
     },
     {
@@ -31,22 +31,22 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
       result: { kind: "need", name: "alignment" },
     },
     {
-      id: "locate-speech",
-      producer: speechAlignmentProducers.locate,
-      inputs: { narrative: input("narrative"), audio: input("audio"), evidence: operation("request-whisperx") },
-      result: { kind: "output", name: "map" },
+      id: "align-semantic-take",
+      producer: speechAlignmentProducers.alignTake,
+      inputs: {
+        narrative: input("narrative"),
+        segment: input("segment"),
+        media: input("media"),
+        evidence: operation("request-whisperx"),
+      },
+      result: { kind: "output", name: "take" },
     },
   ],
   exports: [
     {
-      name: "evidence",
-      type: speechEvidenceTypes.alignedTranscript,
-      root: operation("request-whisperx"),
-    },
-    {
-      name: "map",
-      type: semanticMapTypes.complete,
-      root: operation("locate-speech"),
+      name: "take",
+      type: speechTypes.semanticTake,
+      root: operation("align-semantic-take"),
     },
   ],
 });

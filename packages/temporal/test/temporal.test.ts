@@ -4,7 +4,7 @@ import test from "node:test";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { programFrameSampleBoundary, programSpaceSampleFrames } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
-import type { CompleteSemanticMap } from "@hypit/semantic-map";
+import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import {
   assertWindowRelation,
@@ -22,8 +22,12 @@ const space: ProgramSpace = {
   frameRate: { numerator: 30, denominator: 1 },
 };
 
-const map: CompleteSemanticMap = {
-  tokens: [],
+const semantic = semanticTrackFixture(space, {
+  segments: [
+    { id: "opening", frameCount: 60 },
+    { id: "answer", frameCount: 60 },
+    { id: "ending", frameCount: 180 },
+  ],
   anchors: [
     { identity: "a", frame: 30 },
     { identity: "b", frame: 60 },
@@ -33,7 +37,7 @@ const map: CompleteSemanticMap = {
     { identity: "segment:answer:start", frame: 60 },
     { identity: "segment:answer:end", frame: 120 },
   ],
-};
+});
 
 const selection = (id: string, occurrences: NarrativeSelectionRef["occurrences"]): NarrativeSelectionRef => ({
   id, occurrences,
@@ -47,9 +51,8 @@ const seconds = (numerator: number, denominator = 1) => ({ unit: "seconds" as co
 test("one Selection projects exact local points and stable occurrence identity", () => {
   const result = projectSelectionWindows({
     itemId: "card",
-    map,
+    semantic,
     selection: selection("proof", [{ occurrence: 7, startAnchorId: "a", endAnchorId: "b" }]),
-    space,
     expansion: { kind: "one" },
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
   });
@@ -62,9 +65,8 @@ test("one Selection projects exact local points and stable occurrence identity",
 test("one Segment projects from its own structural start and end anchors", () => {
   const result = projectSegmentWindow({
     itemId: "answer-card",
-    map,
+    semantic,
     segment: { kind: "segment", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
-    space,
     projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
   });
   assert.deepEqual(result, {
@@ -76,12 +78,11 @@ test("one Segment projects from its own structural start and end anchors", () =>
 test("each preserves source order, even when physical time is reversed between occurrences", () => {
   const result = projectSelectionWindows({
     itemId: "repeat",
-    map,
+    semantic,
     selection: selection("mentions", [
       { occurrence: 4, startAnchorId: "c", endAnchorId: "d" },
       { occurrence: 9, startAnchorId: "a", endAnchorId: "b" },
     ]),
-    space,
     expansion: { kind: "each" },
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
   });
@@ -95,11 +96,11 @@ test("strict cardinality and occurrence-invariant each fail instead of choosing 
     { occurrence: 1, startAnchorId: "c", endAnchorId: "d" },
   ]);
   assert.throws(() => projectSelectionWindows({
-    itemId: "one", map, selection: repeated, space, expansion: { kind: "one" },
+    itemId: "one", semantic, selection: repeated, expansion: { kind: "one" },
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
   }), /exactly one occurrence/u);
   assert.throws(() => projectSelectionWindows({
-    itemId: "each", map, selection: repeated, space, expansion: { kind: "each" },
+    itemId: "each", semantic, selection: repeated, expansion: { kind: "each" },
     projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
   }), /occurrence-invariant/u);
 });
@@ -107,9 +108,8 @@ test("strict cardinality and occurrence-invariant each fail instead of choosing 
 test("negative intermediate points clip before nearest half-later frame quantization", () => {
   const result = projectMomentWindows({
     itemId: "lead",
-    map,
+    semantic,
     moment: moment("cue", [{ occurrence: 0, anchorId: "a" }]),
-    space,
     expansion: { kind: "one" },
     projection: {
       start: { ref: "moment.cue", offset: seconds(-2) },
@@ -126,7 +126,7 @@ test("program and absolute projections use exact rational frame-rate arithmetic"
   };
   const result = projectProgramWindow({
     itemId: "absolute",
-    space: ntsc,
+    semantic: semanticTrackFixture(ntsc),
     projection: {
       start: { ref: "absolute", at: { unit: "milliseconds", value: 500 } },
       end: { ref: "absolute", at: seconds(1) },
@@ -155,30 +155,30 @@ test("frame and authored durations enter one exact sample-boundary rule", () => 
 
 test("crossed source anchors are allowed until a projection actually consumes the reversal", () => {
   const crossed = selection("crossed", [{ occurrence: 0, startAnchorId: "d", endAnchorId: "a" }]);
-  assert.deepEqual(locateSelectionOccurrences(map, crossed, space)[0], {
+  assert.deepEqual(locateSelectionOccurrences(semantic, crossed)[0], {
     id: "crossed#0", occurrence: 0, start: { frame: 120 }, end: { frame: 30 },
   });
   assert.throws(() => projectSelectionWindows({
-    itemId: "identity", map, selection: crossed, space, expansion: { kind: "one" },
+    itemId: "identity", semantic, selection: crossed, expansion: { kind: "one" },
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
   }), /reversed raw window/u);
   assert.deepEqual(projectSelectionWindows({
-    itemId: "persist", map, selection: crossed, space, expansion: { kind: "one" },
+    itemId: "persist", semantic, selection: crossed, expansion: { kind: "one" },
     projection: { start: { ref: "selection.start" }, end: { ref: "program.end" } },
   })[0]?.span, { startFrame: 120, endFrameExclusive: 300 });
 });
 
 test("zero, fully outside and sub-frame windows fail atomically", () => {
   assert.throws(() => projectProgramWindow({
-    itemId: "zero", space,
+    itemId: "zero", semantic,
     projection: { start: { ref: "program.start" }, end: { ref: "program.start" } },
   }), /zero raw window/u);
   assert.throws(() => projectProgramWindow({
-    itemId: "outside", space,
+    itemId: "outside", semantic,
     projection: { start: { ref: "program.end", offset: frames(1) }, end: { ref: "program.end", offset: frames(2) } },
   }), /does not intersect/u);
   assert.throws(() => projectProgramWindow({
-    itemId: "tiny", space,
+    itemId: "tiny", semantic,
     projection: {
       start: { ref: "absolute", at: seconds(1, 100) },
       end: { ref: "absolute", at: seconds(7, 500) },
@@ -188,9 +188,9 @@ test("zero, fully outside and sub-frame windows fail atomically", () => {
 
 test("disjoint validation checks every physical overlap without reordering the result", () => {
   const occurrences = projectMomentWindows({
-    itemId: "popup", map,
+    itemId: "popup", semantic,
     moment: moment("hits", [{ occurrence: 9, anchorId: "c" }, { occurrence: 4, anchorId: "a" }]),
-    space, expansion: { kind: "each" },
+    expansion: { kind: "each" },
     projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: seconds(3) } },
   });
   assert.equal(assertWindowRelation(occurrences, "independent"), occurrences);

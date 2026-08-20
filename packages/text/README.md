@@ -15,7 +15,7 @@ hiding the graph:
 <import as="ugc" source="./ugc-template.svs"/>
 
 <text:Value id="extra">Keep the product readable.</text:Value>
-<text:Render id="prompt" template={ugc.product-shot} recipe={studio.product-shot}>
+<text:Render id="prompt" template={ugc.product-shot} recipe={recipes.product-shot}>
   <text:Param name="camera" value="handheld"/>
   <text:Param name="strict" value="true" type="boolean"/>
   <text:Set name="dialogue" text={story.segment.hook.dialogue}/>

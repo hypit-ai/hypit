@@ -1,15 +1,19 @@
 # Preview current source
 
-After a meaningful Author Source change, start the SVML Playground and give the author the actual
-URL. Kill the previous server first so the user does not inspect a stale composition.
+After a meaningful Author Source change, start Hypit Studio and give the author the actual URL.
+Kill the previous server first so the user does not inspect a stale composition.
 
 ```bash
-pkill -f svml-playground || true
-pnpm svml:playground -- --source path/to/main.svml \
-  --run path/to/build.svrun \
+pkill -f "@hypit/studio" || true
+pnpm studio -- --run path/to/build.svrun \
   --runtime path/to/hypit.runtime.json &
 ```
 
-Read the startup output for the chosen port. Pass `--run` only when the preview needs Run Source
-material or timing, and `--runtime` only when the Author Source reuses accepted Build records.
+Read the startup output for the chosen port. `--run` is required: Studio's unit of work is the Run
+Source, and it reads the Author SVML back out of it. Pass `--runtime` only when the Author Source
+reuses accepted Build records.
+
+Studio opens a Run whose material is satisfied. When a projection is missing it names the issue and
+stops, so a Run that opens is a Run whose Tracks all resolved.
+
 `docs/quickstart/preview.md` is authoritative.

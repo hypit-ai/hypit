@@ -20,11 +20,12 @@ list_svml_packages
 → narrow observe_reference questions for unresolved appearance and conflicts
 → inspect_svml_vocabulary for candidate packages
 → develop a project-local package only for a proven vocabulary gap
-→ read final-sources.md, then author complete main.svml, studio.svs, build.svrun
+→ read final-sources.md, then author complete main.svml, recipes.svs, build.svrun
   and the hypit.runtime.json that binds every capability they demand
 → use existing checks and repair until legal
-→ run preview-check (final-sources.md) and repair until every track builds —
-  this has no attempt ceiling; a track the Playground cannot show is not done
+→ run preview-check (final-sources.md) and repair until the graph traces —
+  this has no attempt ceiling; a target Studio cannot trace is not done.
+  Waiting on unrun Providers is a pass, not a failure
 → read reconstruction-loop.md, then render each authored element and compare it
 ```
 
