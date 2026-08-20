@@ -7,7 +7,7 @@ behavior differs. Never write an unknown tag before its package exists.
 ## Read the observation before deciding the package's shape
 
 The observation is the contract, and it is read before the first line of the package — not assumed,
-not remembered, not rediscovered halfway. In the reference-video route the evidence for the element
+not remembered, not rediscovered halfway. In the reconstruction route the evidence for the element
 this package owns lives in the shot observations (`type:` and `visual:` for its text and picture,
 `persistent_systems` for its whole-reference life) and the word-level transcript. Read them.
 

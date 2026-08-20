@@ -58,6 +58,8 @@ by hand and do not ask a model to transcribe: the transcript is already there.
 `{ text, start_seconds, end_seconds, score }`. A machine with no WhisperX service running reports
 `status: "unavailable"` with a `reason` and prepares everything else; start the service with
 `uv run --project services/whisperx --frozen hypit-whisperx-service` and prepare again.
+`../environment.md` covers diagnosing that service and the rest of the local toolchain when starting
+it is not enough.
 
 When a completed preparation stage must be rerun, use one small `--redo` value:
 
