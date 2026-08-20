@@ -1,12 +1,12 @@
+import { mediaDependency, mediaTypes } from "@hypit/media";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
 import { speechDependency, speechTypes } from "@hypit/speech";
 import { speechEvidenceDependency, speechEvidenceTypes } from "@hypit/speech-evidence";
-import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
 import type { ModuleManifest, ProducerRef } from "@hypit/protocol";
 
 export const speechAlignmentModuleRef = { name: "@hypit/speech-alignment", version: "1" } as const;
 export const speechAlignmentProducers = {
-  locate: { module: speechAlignmentModuleRef, name: "locate-speech" },
+  alignTake: { module: speechAlignmentModuleRef, name: "align-semantic-take" },
 } satisfies Record<string, ProducerRef>;
 
 export const speechAlignmentManifest: ModuleManifest = {
@@ -14,21 +14,24 @@ export const speechAlignmentManifest: ModuleManifest = {
   name: speechAlignmentModuleRef.name,
   version: speechAlignmentModuleRef.version,
   dependencies: [
+    mediaDependency,
     narrativeDependency,
     speechDependency,
     speechEvidenceDependency,
-    semanticMapDependency,
   ],
   types: [],
   capabilities: [],
-  producers: [{
-    name: speechAlignmentProducers.locate.name,
-    inputs: [
-      { name: "narrative", type: narrativeTypes.narrative },
-      { name: "audio", type: speechTypes.audioBasis },
-      { name: "evidence", type: speechEvidenceTypes.alignedTranscript },
-    ],
-    outputs: [{ name: "map", type: semanticMapTypes.complete }],
-    needs: [],
-  }],
+  producers: [
+    {
+      name: speechAlignmentProducers.alignTake.name,
+      inputs: [
+        { name: "narrative", type: narrativeTypes.narrative },
+        { name: "segment", type: narrativeTypes.excerpt },
+        { name: "media", type: mediaTypes.synchronized },
+        { name: "evidence", type: speechEvidenceTypes.alignedTranscript },
+      ],
+      outputs: [{ name: "take", type: speechTypes.semanticTake }],
+      needs: [],
+    },
+  ],
 };

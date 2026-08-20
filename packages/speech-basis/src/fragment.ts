@@ -20,12 +20,6 @@ export const speechBasisProjectionFragment = sealGraphFragment({
       result: { kind: "output", name: "programSpace" },
     },
     {
-      id: "project-audio",
-      producer: speechBasisProducers.projectAudio,
-      inputs: { basis: input("basis") },
-      result: { kind: "output", name: "audio" },
-    },
-    {
       id: "project-visual",
       producer: speechBasisProducers.projectVisual,
       inputs: { basis: input("basis") },
@@ -43,11 +37,6 @@ export const speechBasisProjectionFragment = sealGraphFragment({
       name: "programSpace",
       type: programSpaceTypes.programSpace,
       root: operation("project-program-space"),
-    },
-    {
-      name: "audio",
-      type: speechTypes.audioBasis,
-      root: operation("project-audio"),
     },
     {
       name: "visual",

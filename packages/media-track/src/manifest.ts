@@ -9,7 +9,6 @@ import {
 } from "@hypit/media";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
-import { mediaPipelineManifest, mediaPipelineModuleRef } from "@hypit/media-pipeline";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { semanticMapDependency, semanticMapTypes } from "@hypit/semantic-map";
 import {
@@ -597,7 +596,6 @@ export const mediaTrackManifest: ModuleManifest = {
   dependencies: [
     artifactDependency,
     mediaDependency,
-    { module: mediaPipelineModuleRef },
     narrativeDependency,
     semanticMapDependency,
     programSpaceDependency,

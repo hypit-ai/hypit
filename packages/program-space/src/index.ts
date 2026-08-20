@@ -1,5 +1,9 @@
 import type { ModuleManifest, TypeRef, ValueSchema } from "@hypit/protocol";
 
+export type ProgramClock = {
+  readonly frameRate: { readonly numerator: number; readonly denominator: number };
+};
+
 export type ProgramSpace = {
   readonly durationSec: number;
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
@@ -8,6 +12,7 @@ export type ProgramSpace = {
 export const programSpaceModuleRef = { name: "@hypit/program-space", version: "1" } as const;
 export const programSpaceTypes = {
   programSpace: { module: programSpaceModuleRef, name: "ProgramSpace" },
+  clock: { module: programSpaceModuleRef, name: "ProgramClock" },
 } satisfies Record<string, TypeRef>;
 const number = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
@@ -22,12 +27,29 @@ export const programSpaceSchema: ValueSchema = {
 };
 export const programSpaceManifest: ModuleManifest = {
   format: "hypit.module@1", name: programSpaceModuleRef.name, version: programSpaceModuleRef.version,
-  dependencies: [], types: [{
-    name: programSpaceTypes.programSpace.name,
-  }],
+  dependencies: [], types: [
+    { name: programSpaceTypes.programSpace.name },
+    { name: programSpaceTypes.clock.name },
+  ],
   capabilities: [], producers: [],
 };
 export const programSpaceDependency = { module: programSpaceModuleRef } as const;
+export const programSpaceMarkupSurfaces = [
+  { name: "clock", tag: "Clock", mode: "structured", outputs: [programSpaceTypes.clock] },
+] as const;
+
+export function sealProgramClock(value: ProgramClock): ProgramClock {
+  assertProgramClockIdentity(value);
+  return structuredClone(value);
+}
+
+export function assertProgramClockIdentity(clock: ProgramClock): void {
+  const { numerator, denominator } = clock.frameRate;
+  if (!Number.isSafeInteger(numerator) || numerator <= 0
+    || !Number.isSafeInteger(denominator) || denominator <= 0) {
+    throw new Error("ProgramClock is invalid.");
+  }
+}
 
 export function sealProgramSpace(value: ProgramSpace): ProgramSpace { return structuredClone(value); }
 

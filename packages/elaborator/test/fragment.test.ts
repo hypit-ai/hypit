@@ -101,12 +101,6 @@ function speechFragment(): GraphFragment {
         result: { kind: "output", name: "take" },
       },
       {
-        id: "audio",
-        producer: speechBasisProducers.projectAudio,
-        inputs: { basis: operation("generate") },
-        result: { kind: "output", name: "audio" },
-      },
-      {
         id: "visual",
         producer: speechBasisProducers.projectVisual,
         inputs: { basis: operation("generate") },
@@ -118,11 +112,6 @@ function speechFragment(): GraphFragment {
         name: "take",
         type: speechTypes.basis,
         root: operation("generate"),
-      },
-      {
-        name: "audio",
-        type: speechTypes.audioBasis,
-        root: operation("audio"),
       },
       {
         name: "visual",

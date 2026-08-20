@@ -30,7 +30,6 @@ import type {
   TypeRef,
 } from "@hypit/protocol";
 import {
-  projectSpeechAudio,
   projectSpeechAudioTrack,
   projectSpeechProgramSpace,
   projectSpeechVisual,
@@ -40,6 +39,7 @@ import {
 } from "@hypit/speech-basis";
 import { TypeValidatorRegistry } from "@hypit/validation";
 import { mediaTrackManifest } from "@hypit/media-track";
+import { svsManifest } from "@hypit/svs";
 
 const testModule = { name: "example.speech-basis-product", version: "0.0.0" } as const;
 const requestType = { module: testModule, name: "SpeechRequest" } satisfies TypeRef;
@@ -64,6 +64,7 @@ const closure = createResolvedClosure([
   ...videoContractManifests,
   mediaPipelineManifest,
   mediaTrackManifest,
+  svsManifest,
   speechBasisManifest,
   testManifest,
 ]);
@@ -143,7 +144,7 @@ function createGraph(program: LinkedProgram): CompiledGraph {
       },
       {
         id: "opening.audio",
-        type: speechTypes.audioBasis,
+        type: compositionTypes.audioTrack,
         primary: "opening.audio.project",
       },
       {
@@ -171,7 +172,7 @@ function createGraph(program: LinkedProgram): CompiledGraph {
       },
       {
         id: "opening.audio.project",
-        type: speechTypes.audioBasis,
+        type: compositionTypes.audioTrack,
         root: { kind: "operation", result: operation("project-opening-audio") },
       },
       {
@@ -200,9 +201,9 @@ function createGraph(program: LinkedProgram): CompiledGraph {
       },
       {
         id: "project-opening-audio",
-        producer: speechBasisProducers.projectAudio,
+        producer: speechBasisProducers.projectAudioTrack,
         inputs: { basis: output("opening.take") },
-        result: { kind: "output", name: "audio", record: "audio:opening" },
+        result: { kind: "output", name: "track", record: "audio:opening" },
       },
       {
         id: "project-opening-visual",

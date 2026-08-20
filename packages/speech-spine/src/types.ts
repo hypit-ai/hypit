@@ -1,5 +1,3 @@
-import type { NarrativeExcerpt } from "@hypit/narrative";
-import type { SynchronizedMedia } from "@hypit/media";
 import type { ContentFit, SpatialFrame } from "@hypit/spatial";
 
 /** Author-owned policy for one ordered Speech Spine. */
@@ -12,8 +10,7 @@ export type SpeechSpineProgram = {
 };
 
 export type SpeechSpineTake = {
-  readonly segment: NarrativeExcerpt;
-  readonly media: SynchronizedMedia;
+  readonly semantic: import("@hypit/speech").SemanticTake;
   readonly visual?: {
     readonly frame: SpatialFrame;
     readonly fit: ContentFit;
@@ -34,8 +31,7 @@ export type SpeechSpineSet = {
 };
 
 export type SpeechSpineInput = {
-  readonly mediaName: string;
-  readonly segmentName: string;
+  readonly takeName: string;
   readonly visual?: {
     readonly frameName: string;
     readonly fitName: string;

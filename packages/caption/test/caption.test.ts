@@ -17,9 +17,8 @@ import type { CaptionDisplayWordSubset, Narrative } from "@hypit/narrative";
 import { canonicalize } from "@hypit/protocol";
 import type { StoredValue, TypeRef } from "@hypit/protocol";
 import { sealProgramSpace } from "@hypit/program-space";
-import { sealSpeechBasis } from "@hypit/speech";
-import type { SpeechAudioBasis } from "@hypit/speech";
-import { locateSpeechTiming } from "@hypit/speech-alignment";
+import { locateAlignedSegmentTiming } from "../../speech-alignment/src/locate.js";
+import type { AlignmentBasis } from "../../speech-alignment/src/locate.js";
 import { sealAlignedTranscriptEvidence } from "@hypit/speech-evidence";
 import {
   captionCorrespondence,
@@ -40,22 +39,14 @@ type TranscriptFixture = {
 };
 
 function locate(narrative: Narrative, durationSec: number, segments: readonly TranscriptFixture[]) {
+  if (narrative.segments.length !== 1 || segments.length !== 1) {
+    throw new Error("Caption timing fixture requires one Segment.");
+  }
   const space = sealProgramSpace({
     durationSec,
     frameRate: { numerator: 30, denominator: 1 },
   });
   const audio = { kind: "blob" as const, digest: fixtureDigest("caption:test-audio"), size: 1, mediaType: "audio/wav" };
-  const basisSegments = narrative.segments.map((segment, index) => ({
-    segmentId: segment.id,
-    startFrame: Math.round(durationSec * 30 * index / narrative.segments.length),
-    endFrameExclusive: Math.round(durationSec * 30 * (index + 1) / narrative.segments.length),
-  }));
-  const basis = sealSpeechBasis({
-    programSpace: space,
-    audio,
-    visualTrack: { clips: [] },
-    segments: basisSegments,
-  });
   const evidence = sealAlignedTranscriptEvidence({
     passages: segments.map((segment) => ({
       words: segment.words.map((word) => ({
@@ -69,12 +60,16 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Tr
       chars: [],
     })),
   });
-  const audioBasis: SpeechAudioBasis = {
-    programSpace: basis.programSpace,
-    audio: basis.audio,
-    segments: basis.segments,
+  const audioBasis: AlignmentBasis = {
+    programSpace: space,
+    audio,
+    segments: [{
+      segmentId: narrative.segments[0]!.id,
+      startFrame: 0,
+      endFrameExclusive: Math.round(durationSec * 30),
+    }],
   };
-  return locateSpeechTiming(narrative, audioBasis, evidence);
+  return locateAlignedSegmentTiming(narrative, audioBasis, evidence);
 }
 
 function style(id: string, fields: readonly CaptionFieldDeclaration[] = []): CaptionStyleIntent {

@@ -1,19 +1,16 @@
-import { narrativeTypes } from "@hypit/narrative";
-import { artifactTypes } from "@hypit/artifact";
-import { mediaTypes } from "@hypit/media";
 import {
-  mediaPipelineTypes,
-  sealMediaSelectionRequest,
-  synchronizedMediaFragment,
-} from "@hypit/media-pipeline";
+  localName,
+  textAttribute as stringAttribute,
+  type StructuredElement,
+  type StructuredSurfaceHandler,
+  type SurfaceResolvedReference,
+  type MarkupAttributeValue,
+} from "@hypit/markup";
+import { sameType } from "@hypit/protocol";
+import { speechTypes } from "@hypit/speech";
+import { programSpaceTypes, type ProgramClock } from "@hypit/program-space";
 import type { SvsRecipe } from "@hypit/svs";
 import { svsRecipeType } from "@hypit/svs";
-import type {
-  StructuredElement,
-  StructuredSurfaceHandler,
-  SurfaceResolvedReference,
-  MarkupAttributeValue,
-} from "@hypit/markup";
 
 import { createSpeechSpineFragment } from "./fragment.js";
 import { speechSpineTypes } from "./manifest.js";
@@ -24,16 +21,6 @@ import {
   spatialTypes,
 } from "@hypit/spatial";
 
-function localName(value: string): string {
-  return value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;
-}
-
-function exactAttributes(element: StructuredElement, names: readonly string[]): void {
-  if (Object.keys(element.attributes).sort().join("\u0000") !== [...names].sort().join("\u0000")) {
-    throw new Error(`${element.name} requires exactly ${names.join(", ")}`);
-  }
-}
-
 function allowedAttributes(element: StructuredElement, required: readonly string[], optional: readonly string[]): void {
   const keys = Object.keys(element.attributes);
   const missing = required.filter((name) => !keys.includes(name));
@@ -41,12 +28,6 @@ function allowedAttributes(element: StructuredElement, required: readonly string
   if (missing.length > 0 || unknown.length > 0) {
     throw new Error(`${element.name} requires ${required.join(", ")}${optional.length === 0 ? "" : ` and optionally ${optional.join(", ")}`}`);
   }
-}
-
-function stringAttribute(element: StructuredElement, name: string): string {
-  const value = element.attributes[name];
-  if (typeof value !== "string" || value.trim().length === 0) throw new Error(`${element.name}.${name} must be a non-empty string`);
-  return value.trim();
 }
 
 function frameRate(element: StructuredElement): { readonly numerator: number; readonly denominator: number } {
@@ -74,10 +55,6 @@ function referencePath(element: StructuredElement, name: string): string {
     throw new Error(`${element.name}.${name} must be a whole-value reference`);
   }
   return value.path;
-}
-
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
 }
 
 function resolve(
@@ -120,7 +97,10 @@ function takes(element: StructuredElement): StructuredElement[] {
 }
 
 export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exactAttributes(element, ["id", "frame-rate", "visual-frame", "visual-appearance", "visual-z"]);
+  allowedAttributes(element, ["id", "visual-frame", "visual-appearance", "visual-z"], ["clock", "frame-rate"]);
+  const hasClock = element.attributes.clock !== undefined;
+  const hasFrameRate = element.attributes["frame-rate"] !== undefined;
+  if (hasClock === hasFrameRate) throw new Error(`${element.name} requires exactly one of clock or frame-rate.`);
   const id = stringAttribute(element, "id");
   const baseFrame = resolve(element, "visual-frame", spatialTypes.frame, resolveReference);
   const baseAppearanceReference = resolve(element, "visual-appearance", svsRecipeType, resolveReference);
@@ -129,7 +109,13 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
     `${element.name}.visual-appearance`,
   );
   const baseZ = integerAttribute(element, "visual-z");
-  const rate = frameRate(element);
+  const rate = hasClock
+    ? (() => {
+        const clock = resolve(element, "clock", programSpaceTypes.clock, resolveReference);
+        if (clock.record?.value.kind !== "inline") throw new Error(`${element.name}.clock must be an authored Clock record.`);
+        return (clock.record.value.value as unknown as ProgramClock).frameRate;
+      })()
+    : frameRate(element);
   const frameInputNames = new Map<string, string>();
   const frameInputName = (value: SurfaceResolvedReference, fallback: string): string => {
     const key = JSON.stringify(value.ref);
@@ -154,17 +140,7 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
     return fallback;
   };
   const declaredTakes = takes(element).map((take, index) => {
-    const hasVideo = take.attributes.video !== undefined;
-    const hasAudio = take.attributes.audio !== undefined;
-    const hasMedia = take.attributes.media !== undefined;
-    if (Number(hasVideo) + Number(hasAudio) + Number(hasMedia) !== 1) {
-      throw new Error(`${take.name} requires exactly one of video, audio or media`);
-    }
-    const sourceAttribute = hasVideo ? "video" : hasAudio ? "audio" : "media";
-    allowedAttributes(take, [sourceAttribute, "segment"], ["frame", "appearance", "z"]);
-    if (hasAudio && (take.attributes.frame !== undefined || take.attributes.appearance !== undefined || take.attributes.z !== undefined)) {
-      throw new Error(`${take.name} audio Take cannot declare visual frame, appearance or z`);
-    }
+    allowedAttributes(take, ["source"], ["frame", "appearance", "z"]);
     const suffix = String(index + 1).padStart(4, "0");
     const effectiveFrame = take.attributes.frame === undefined
       ? baseFrame
@@ -176,7 +152,7 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
       ? baseAppearance
       : recipe(effectiveAppearanceReference, `${take.name}.appearance`);
     const effectiveZ = take.attributes.z === undefined ? baseZ : integerAttribute(take, "z");
-    const visual = hasAudio ? undefined : {
+    const visual = {
       frameName: frameInputName(effectiveFrame, take.attributes.frame === undefined ? "visual-base-frame" : `take-${suffix}-frame`),
       fitName: fitInputName(effectiveAppearanceReference, take.attributes.appearance === undefined ? "visual-base-fit" : `take-${suffix}-fit`),
       visualSpecName: visualSpecInputName(effectiveZ, take.attributes.z === undefined ? "visual-base-spec" : `take-${suffix}-visual-spec`),
@@ -186,40 +162,22 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
     };
     return {
       suffix,
-      mediaName: `take-${suffix}-media`,
-      segmentName: `take-${suffix}-segment`,
-      sourceKind: hasVideo ? "video" as const : hasAudio ? "audio" as const : "media" as const,
-      source: resolve(take, sourceAttribute, hasMedia ? mediaTypes.synchronized : artifactTypes.blob, resolveReference),
-      segment: resolve(take, "segment", narrativeTypes.excerpt, resolveReference),
+      takeName: `take-${suffix}`,
+      source: resolve(take, "source", speechTypes.semanticTake, resolveReference),
       visual,
       range: take.range,
     };
   });
   const programId = `${id}.program`;
-  const videoRequestId = `${id}.selection.video`;
-  const audioRequestId = `${id}.selection.audio`;
   const program = sealSpeechSpineProgram({
 
     id,
     frameRate: rate,
   });
-  const videoRequest = sealMediaSelectionRequest({
-    video: { mode: "primary-moving" },
-    audio: { mode: "default" },
-    spanAuthority: "video",
-    frameRate: rate,
-  });
-  const audioRequest = sealMediaSelectionRequest({
-    video: { mode: "none" },
-    audio: { mode: "default" },
-    spanAuthority: "audio",
-    frameRate: rate,
-  });
   const assembly = createSpeechSpineFragment({
     name: `@hypit/speech-spine/surface/${id}@1`,
-    takes: declaredTakes.map(({ mediaName, segmentName, visual }) => ({
-      mediaName,
-      segmentName,
+    takes: declaredTakes.map(({ takeName, visual }) => ({
+      takeName,
       ...(visual === undefined ? {} : { visual: {
         frameName: visual.frameName,
         fitName: visual.fitName,
@@ -227,17 +185,6 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
       } }),
     })),
   });
-  const normalizationComponents = declaredTakes.flatMap((take, index) => take.sourceKind === "media" ? [] : [{
-    id: `${id}.normalize.${String(index + 1).padStart(4, "0")}`,
-    fragment: synchronizedMediaFragment.id,
-    inputs: {
-      source: take.source.ref,
-      request: { kind: "record" as const, id: take.sourceKind === "audio" ? audioRequestId : videoRequestId },
-    },
-    outputs: { media: `${id}.normalized.${String(index + 1).padStart(4, "0")}` },
-    range: take.range,
-  }]);
-  const normalizationByTake = new Map(normalizationComponents.map((component) => [component.id.split(".").at(-1), component]));
   const emittedFits = new Set<string>();
   const emittedSpecs = new Set<string>();
   const visualRecords = declaredTakes.flatMap((take) => {
@@ -269,29 +216,19 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
     }
     return records;
   });
-  const hasVideoNormalization = declaredTakes.some((take) => take.sourceKind === "video");
-  const hasAudioNormalization = declaredTakes.some((take) => take.sourceKind === "audio");
   return {
     records: [
       { id: programId, type: speechSpineTypes.spineProgram, value: { kind: "inline", value: program }, range: element.range },
-      ...(hasVideoNormalization ? [{ id: videoRequestId, type: mediaPipelineTypes.selectionRequest, value: { kind: "inline" as const, value: videoRequest }, range: element.range }] : []),
-      ...(hasAudioNormalization ? [{ id: audioRequestId, type: mediaPipelineTypes.selectionRequest, value: { kind: "inline" as const, value: audioRequest }, range: element.range }] : []),
       ...visualRecords,
     ],
     components: [
-      ...normalizationComponents,
       {
         id,
         fragment: assembly.id,
         inputs: {
           program: { kind: "record", id: programId },
-          ...Object.fromEntries(declaredTakes.flatMap((take, index) => [
-            [take.mediaName, take.sourceKind === "media" ? take.source.ref : {
-              kind: "component-output" as const,
-              component: normalizationByTake.get(String(index + 1).padStart(4, "0"))!.id,
-              output: "media",
-            }],
-            [take.segmentName, take.segment.ref],
+          ...Object.fromEntries(declaredTakes.flatMap((take) => [
+            [take.takeName, take.source.ref],
             ...(take.visual === undefined ? [] : [
               [take.visual.frameName, take.visual.frame.ref],
               [take.visual.fitName, { kind: "record" as const, id: `${id}.${take.visual.fitName}` }],
@@ -302,14 +239,17 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
         outputs: {
           basis: `${id}.basis`,
           space: `${id}.space`,
-          audio: `${id}.audio`,
           visual: `${id}.visual`,
           audioTrack: `${id}.audioTrack`,
+          semanticMap: `${id}.semanticMap`,
         },
         range: element.range,
       },
     ],
-    fragments: [...(normalizationComponents.length === 0 ? [] : [synchronizedMediaFragment]), assembly],
-    exports: [`${id}.basis`, `${id}.space`, `${id}.audio`, `${id}.visual`, `${id}.audioTrack`],
+    fragments: [assembly],
+    exports: [
+      `${id}.basis`, `${id}.space`, `${id}.visual`, `${id}.audioTrack`,
+      `${id}.semanticMap`,
+    ],
   };
 };

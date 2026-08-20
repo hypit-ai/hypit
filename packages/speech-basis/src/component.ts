@@ -6,7 +6,7 @@ import { canonicalize } from "@hypit/protocol";
 import {
   speechBasisProducers,
 } from "./manifest.js";
-import { projectSpeechAudio, projectSpeechAudioTrack, projectSpeechProgramSpace, projectSpeechVisual } from "./projection.js";
+import { projectSpeechAudioTrack, projectSpeechProgramSpace, projectSpeechVisual } from "./projection.js";
 
 function speechBasis(value: StoredValue | undefined): SpeechBasis {
   if (value?.kind !== "inline") throw new Error("SpeechBasis must be inline");
@@ -23,18 +23,6 @@ export const speechBasisComponent = {
           programSpace: {
             kind: "inline",
             value: canonicalize(projectSpeechProgramSpace(speechBasis(inputs.basis?.value))),
-          },
-        },
-        needs: {},
-      }),
-    },
-    {
-      producer: speechBasisProducers.projectAudio,
-      handler: ({ inputs }) => ({
-        outputs: {
-          audio: {
-            kind: "inline",
-            value: canonicalize(projectSpeechAudio(speechBasis(inputs.basis?.value))),
           },
         },
         needs: {},

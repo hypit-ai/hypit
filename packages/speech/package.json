@@ -12,9 +12,9 @@
   },
   "dependencies": {
     "@hypit/media": "workspace:*",
-    "@hypit/narrative": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/semantic-map": "workspace:*",
     "@hypit/spatial": "workspace:*"
   }
 }
