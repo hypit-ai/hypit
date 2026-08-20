@@ -127,6 +127,7 @@ async function assertBinaryVersion(
     encoding: "utf8",
     maxBuffer: 64 * 1024,
     timeout: 10_000,
+    windowsHide: true,
     env: {
       ...process.env,
       ...(sharedLibraryPath === undefined ? {} : { LD_LIBRARY_PATH: sharedLibraryPath }),

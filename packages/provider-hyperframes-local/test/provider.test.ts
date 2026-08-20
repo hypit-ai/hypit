@@ -17,7 +17,7 @@ import { createLocalHyperframesProvider } from "../src/index.js";
 import { localHyperframesBrowserProgram } from "../src/program.js";
 
 const liveEnabled = process.env.HYPIT_BROWSER_TESTS === "1";
-const hasFfprobe = spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
+const hasFfprobe = spawnSync("ffprobe", ["-version"], { stdio: "ignore", windowsHide: true }).status === 0;
 
 function documentFixture(surface?: CompositableSurfaceRef) {
   const programSpace = sealProgramSpace({
