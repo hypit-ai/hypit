@@ -342,3 +342,71 @@ test("exact timed sampling lowers loop boundaries and held frames without zero-r
   assert.equal((document.html.match(/data-playback-rate="1"/gu) ?? []).length, 4);
   assert.doesNotMatch(document.html, /data-playback-rate="0"/u);
 });
+
+test("a Track naming five takes still lowers to DOM identities a Windows path can hold", () => {
+  // HyperFrames spends the video element's id as a directory name for that video's extracted
+  // frames, under `%TEMP%\hf-render-XXXXXX\compiled\__hyperframes_video_frames\<id>\frame_%05d.png`.
+  // That surround is 103 characters of a 260-character budget, so the id is what decides whether
+  // extraction can write at all. These identities are the ones a five-take speech Track produces:
+  // the Track names every take, and the Present and the layer each repeat the Track.
+  const trackId = "speech-visual:opening-monologue-take-1+opening-monologue-take-2"
+    + "+opening-monologue-take-3+opening-monologue-take-4+opening-monologue-take-5";
+  const presentId = `${trackId}:clip-1`;
+  const programSpace = sealProgramSpace({
+    durationSec: 8 / 30,
+    frameRate: { numerator: 30, denominator: 1 },
+  });
+  const track = sealVisualTrack({
+    visualIr: "hypit.visual-ir@1",
+    id: trackId,
+    presents: [{
+      id: presentId,
+      span: { startFrame: 0, endFrameExclusive: 8 },
+      stacking: { order: 1, tieBreak: presentId },
+      elements: [{
+        id: `${presentId}:foreground`,
+        order: 0,
+        kind: "video",
+        artifact: {
+          kind: "blob" as const,
+          digest: fixtureDigest("hyperframes:long-identity-video"),
+          size: 1_000,
+          mediaType: "video/mp4",
+        },
+        muted: true,
+        // Sampling is what splits the element into parts, and each part appends its own suffix.
+        sampling: {
+          sourceFrameRate: { numerator: 30, denominator: 1 },
+          sourceFrameCount: 8,
+          segments: [
+            {
+              target: { startFrame: 0, endFrameExclusive: 4 },
+              sourceFrame: { numerator: 0, denominator: 1 },
+              rate: { numerator: 1, denominator: 1 },
+            },
+            {
+              target: { startFrame: 4, endFrameExclusive: 8 },
+              sourceFrame: { numerator: 4, denominator: 1 },
+              rate: { numerator: 1, denominator: 1 },
+            },
+          ],
+        },
+        style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
+      }],
+    }],
+  });
+  const document = compileHyperframesDocument(sealComposition({
+    id: "long-identity",
+    canvas: { width: 100, height: 100, clearColor: "#000000" },
+    tracks: [track],
+  }), programSpace);
+
+  // The `id` attribute only; `data-hypit-element-id` and friends are meant to stay readable.
+  const identities = [...document.html.matchAll(/\sid="([^"]*)"/gu)].map((match) => match[1]!);
+  assert.ok(identities.length > 0, "the document names something");
+  assert.deepEqual(identities.filter((id) => id.length > 64), [],
+    "a DOM identity does not grow with the number of takes its Track names");
+  // The parts stay readable where a reader looks for them, spelled the way the author wrote them.
+  assert.ok(document.html.includes(`data-hypit-track-id="${trackId}"`));
+  assert.ok(document.html.includes(`data-hypit-element-id="${presentId}:foreground"`));
+});
