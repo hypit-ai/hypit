@@ -108,7 +108,7 @@ await rm(work, { recursive: true, force: true });
 await rm(archive, { force: true });
 await mkdir(extracted, { recursive: true });
 await mkdir(layer, { recursive: true });
-await promisify(execFile)("tar", ["-xf", source, "-C", extracted]);
+await promisify(execFile)("tar", ["-xf", source, "-C", extracted], { windowsHide: true });
 
 const roots = (await readdir(extracted)).sort();
 if (roots.length !== 1) throw new Error(`FFmpeg archive must have one root directory; got ${roots.length}`);
@@ -160,7 +160,7 @@ for (const binary of [join(layer, "bin/ffmpeg"), join(layer, "bin/ffprobe")]) {
 await promisify(execFile)("zip", [
   "-X", "-q", "-y", archive,
   ...files.map((path) => relative(layer, path)),
-], { cwd: layer, env: { ...process.env, TZ: "UTC" } });
+], { cwd: layer, windowsHide: true, env: { ...process.env, TZ: "UTC" } });
 
 let uncompressedBytes = 0;
 for (const file of files) uncompressedBytes += (await lstat(file)).size;

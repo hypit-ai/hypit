@@ -31,7 +31,12 @@ test("an interpreter without cv2 is reported here, not mid-Build", async () => {
   assert.match(state.state === "down" ? state.detail : "", /cannot import cv2 and numpy/u);
 });
 
-test("an interpreter carrying another OpenCV major is a mismatch, not a failure", async () => {
+test("an interpreter carrying another OpenCV major is a mismatch, not a failure", {
+  // The stand-in below is a shell script that answers through its shebang line, and Windows has
+  // no shebang: it would run nothing and report the interpreter down, which is the state this
+  // test exists to distinguish a mismatch from.
+  skip: process.platform === "win32" && "the stand-in interpreter answers through a shebang",
+}, async () => {
   // A stand-in interpreter that answers truthfully about an environment this
   // Provider cannot drive: cv2 3.x predates the APIs it calls.
   const directory = await mkdtemp(join(tmpdir(), "hypit-opencv-probe-"));

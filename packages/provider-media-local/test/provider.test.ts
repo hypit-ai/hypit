@@ -27,8 +27,8 @@ import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@hypit/protoc
 import { createLocalMediaProvider } from "../src/index.js";
 import { localMediaToolchainProgram } from "../src/program.js";
 
-const hasMediaBinaries = spawnSync("ffmpeg", ["-version"], { stdio: "ignore" }).status === 0
-  && spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
+const hasMediaBinaries = spawnSync("ffmpeg", ["-version"], { stdio: "ignore", windowsHide: true }).status === 0
+  && spawnSync("ffprobe", ["-version"], { stdio: "ignore", windowsHide: true }).status === 0;
 
 test("the local media Provider declares its external toolchain without owning a second daemon", async () => {
   const program = localMediaToolchainProgram({ dataRoot: "/project", instance: "media", config: {} });
@@ -47,7 +47,7 @@ const animatedWebp = Buffer.from([
 
 async function run(executable: string, args: readonly string[]): Promise<void> {
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(executable, [...args], { stdio: ["ignore", "ignore", "pipe"] });
+    const child = spawn(executable, [...args], { stdio: ["ignore", "ignore", "pipe"], windowsHide: true });
     let stderr = "";
     child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
     child.on("error", reject);
@@ -272,6 +272,7 @@ test("local media Provider enumerates attached pictures and jointly normalizes 3
     await new Promise<void>((resolve, reject) => {
       const child = spawn("ffprobe", ["-v", "error", "-show_streams", "-of", "json", visualPath], {
         stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
       });
       const chunks: Buffer[] = [];
       let stderr = "";

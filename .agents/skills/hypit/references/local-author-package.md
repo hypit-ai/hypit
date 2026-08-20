@@ -7,7 +7,7 @@ behavior differs. Never write an unknown tag before its package exists.
 ## Read the observation before deciding the package's shape
 
 The observation is the contract, and it is read before the first line of the package — not assumed,
-not remembered, not rediscovered halfway. In the reference-video route the evidence for the element
+not remembered, not rediscovered halfway. In the reconstruction route the evidence for the element
 this package owns lives in the shot observations (`type:` and `visual:` for its text and picture,
 `persistent_systems` for its whole-reference life) and the word-level transcript. Read them.
 
@@ -56,6 +56,25 @@ worse outcome than understanding its structure — which is what anatomy is for.
 Place the package at `<project>/packages/local-<slug>/`, named `@hypit/local-<slug>`, with physical
 version `0.0.0-dev` and logical Module version `1`. Only create a new package: do not
 edit, extend, delete or overwrite an existing Hypit package to fill the gap.
+
+**Starting that new package from a copy of the closest installed one is allowed, and is usually the
+right way to do it.** The ban is on modifying a package other projects share, not on learning from
+its source: a Style family that differs from `caption-fine` in its timing model, or a board that
+differs from `ranking` in its rows, is most of that package again. Copy it, then make it genuinely
+its own — a new Module ref, a new name for every nominal Type it declares, since a Type belongs to
+the Module that declares it, and new Producer names. Leave the original untouched. The official
+packages are built for exactly this: `caption-fine` states that Common Caption, Composition and Core
+know none of its Recipe fields or layout policy, and `deck-track` that another Deck family can
+install independently and lower to the same terminal `VisualTrack` without changing it. A sibling
+family is the designed extension point, not a workaround.
+
+Read "modelled on the installed packages" that way wherever it appears. Writing two thousand lines
+from scratch to avoid a copy is not more correct, and the ban does not ask for it.
+
+What a copy does cost is upstream: it will not receive the fixes the original gets, and nobody will
+notice it drifted. That is acceptable for a project-local package, which is part of one deliverable
+rather than a library. If the behaviour turns out to be generally useful, that is the promotion this
+section already describes — not a reason to add a parameter to the shared package after all.
 
 The package is project-local even when the project is the Hypit checkout. Do not move it into an
 official package automatically. After the result is accepted, offer promotion as a separate
@@ -112,8 +131,29 @@ nothing.
   slots are inputs and each document fills them. Writing the observed content into the package is
   the same failure as a missing inner picture, inverted: the frame was seen but the slot was closed.
   `media-track:Item` and the `icon` port on `@hypit/ranking` are the shape this takes.
+- **A slot is a graph edge, not a value the Surface can read.** The package's own texture resolves at
+  author time because it is a file the package ships; a slot holds whatever the document generated,
+  which does not exist until the Build runs. A Surface that reaches for it the way it reaches for its
+  own asset fails with the slot's value refusing to resolve during author compilation. Declare the
+  slot as a Fragment input carrying the Artifact type, give the Producer that consumes it a second
+  form for the case where the slot is filled, and read it from `inputs` as the Artifact it is —
+  a blob input arrives as the `BlobRef` itself rather than wrapped inline like every authored value.
+- **The element kind follows the Artifact, not the slot.** A picture slot holds an image once the
+  document has built one and a stand-in *video* frame before it has, because that is what the
+  Playground substitutes for an output nothing has produced yet. Hard-code `kind: "image"` and the
+  component builds for nobody until the whole graph has run, which is the opposite of what a preview
+  is for. Decide from the Artifact's `mediaType` and the same code serves both.
 - Never require an input the installing project has no reason to choose. If a Run Source exists only
   to produce the component's own texture, the texture is in the wrong place.
+- **A slot that is not filled yet costs its own cell and nothing more.** The component's structure —
+  its rows, bars, frames, labels, the geometry it computes — is drawn whatever the slots turn out to
+  hold. Draw the elements whose material is there, leave the ones whose material is not, and measure
+  every cell either way so nothing moves when the rest arrive. A component that refuses to draw
+  anything because one slot holds material it cannot use has made the whole composition depend on
+  its most incomplete input, and the symptom reads as a dead Track rather than as a missing picture:
+  the Producer refuses, the Track never builds, and the rows nobody was waiting for vanish with it.
+  This is what a Source looks like for the whole stretch between being written and being built, which
+  is most of its life.
 - A component that cannot render on its own cannot produce the preview image its Surface owes. Treat
   a missing preview as evidence of this mistake rather than a step to skip.
 
@@ -159,6 +199,7 @@ not a difference to weigh, it is work that is not finished, and it is not bounde
 attempt ceiling:
 
 ```bash
+# from the repository root: tsx is the repository's dependency
 node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/main.svml path/to/build.svrun
 ```
 

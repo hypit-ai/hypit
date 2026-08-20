@@ -1,0 +1,9 @@
+# Line endings are content. A Windows checkout that rewrites them changes what the compiler, the
+# repository hygiene scan and every fixture comparison see, so the working tree reads the same on
+# every platform. This file beats core.autocrlf, so it protects a local clone and not just CI.
+* text=auto eol=lf
+
+# text=auto detects these by their NUL bytes anyway, but naming them costs less than trusting that.
+*.mp4 binary
+*.png binary
+*.webp binary
