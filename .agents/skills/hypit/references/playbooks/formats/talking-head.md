@@ -54,5 +54,9 @@ Use supplied UI media whenever exact interface content matters. Keep explanatory
   collisions, and audio clarity.
 - Pin every accepted image and take in the next Build with `.svrun` `build-record` and `satisfy`.
 
-Read `../craft/image-prompt-style.md`, `../craft/seedance-directing.md`, `../craft/captions.md`,
-`../craft/b-roll.md`, and `../craft/overlays.md` for the corresponding gates.
+Read `../craft/image-prompt-style.md`, `../craft/seedance-directing.md`,
+`../craft/persona-and-audio.md`, `../craft/captions.md`, `../craft/b-roll.md`, and
+`../craft/overlays.md`.
+
+That list is complete: `../index.md` does not repeat it, and the craft its required load
+order marks always-read is required regardless of format.

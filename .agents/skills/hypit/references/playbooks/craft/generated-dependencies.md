@@ -44,6 +44,20 @@ handling.** Do not try to close it, do not raise it in a comparison, and do not 
 it: it is a small jump in pose, the seam a viewer reads as an ordinary cut. Split the shot, generate
 the parts, move on.
 
+## A Segment is a generation boundary
+
+A Segment is what the Spine binds one Take to, so each one is a separate generation and a separate
+seam. Cut the Script the way the program is *spoken*, not the way its shots are numbered: splitting a
+stretch that is delivered unbroken invents a seam nobody asked for, and inviting a generator to
+re-establish the room across that seam is how continuity is lost for nothing.
+
+Consecutive Segments carrying one unbroken voiceover are one Segment with Selections inside it. The
+pictures over that stretch are placed by those Selections — `frame-coverage.md` governs what that
+costs and what has to cover the silence between them — and the speech stays one Take.
+
+Name Segments for what they hold. Names are handles: the Script's meaning lives in the words, and no
+part of the pipeline reads a Segment name back for anything a reader would see.
+
 ## A voice is generated once
 
 - One accepted voice sample per person, however it was chosen.
@@ -67,7 +81,8 @@ more often than they are kept, so the tier multiplies the whole bill rather than
 
 A component that shows media — a card, a board, a frame, an insert — declares its media inputs as
 separate attributes (`image`, `video`, `media`, `surface`), each with its own `accepts` type, and
-`inspect_svml_vocabulary` reads them. Recognising them is the first half; the second is that every
+`inspect_svml_vocabulary` reads them — `../../vocabulary.md` names the command. Recognising them is
+the first half; the second is that every
 slot the reference actually shows content in is **filled**. A slot the observation says holds a
 picture is given a generated picture; one that holds video is given a take. A slot left empty where
 the reference showed something is a card with a hole in it — the same failure as a missing inner

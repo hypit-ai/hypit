@@ -44,5 +44,8 @@ label stability, duplicated objects, camera drift, and broken tail frames. Then 
 the visible event, including headphones and ordinary speakers. Pin accepted first frames, takes,
 and audio Records with `.svrun` `build-record` and `satisfy`.
 
-Read `../craft/b-roll.md`, `../craft/sfx.md`, `../craft/persona-and-audio.md`, and
-`../craft/production-gates.md`.
+Read `../craft/image-prompt-style.md`, `../craft/seedance-directing.md`, `../craft/b-roll.md`,
+`../craft/persona-and-audio.md`, and `../craft/sfx.md`.
+
+That list is complete: `../index.md` does not repeat it, and the craft its required load
+order marks always-read is required regardless of format.

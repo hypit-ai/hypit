@@ -39,3 +39,6 @@ live listener reaction, UI stability, and generated text. Pin every accepted lay
 
 Read `../craft/seedance-directing.md`, `../craft/captions.md`, `../craft/overlays.md`, and
 `../craft/persona-and-audio.md`.
+
+That list is complete: `../index.md` does not repeat it, and the craft its required load
+order marks always-read is required regardless of format.
