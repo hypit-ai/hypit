@@ -87,15 +87,33 @@ Before acting on the evidence, read these files completely in order:
 
 1. `workflow.md` — CLI sequence, evidence flow and responsibility boundaries.
 2. `continuity.md` — mandatory shot, overlay, B-roll, speaker, product and persistent-system rules.
-3. `../playbooks/craft/graphic-compositions.md` — what may be a base picture, when a full screen is
-   one authored composition, and where a missing picture comes from.
-4. `../playbooks/craft/generated-dependencies.md` — what one generation owes another: the location,
-   the split shot, the voice, the first frame, and the stretch too short to be a take.
-5. `../playbooks/craft/visual-continuity.md` — recurring anchors as explicit artifacts, one location
-   generated once, and the reverse-view geometry that must hold across takes.
-6. `../playbooks/craft/production-gates.md` — images and takes generate and are reviewed in rounds,
-   and accepted Records are pinned for reuse.
-7. `vocabulary.md` — existing-package selection, appearance-property resolution, and the route for a
+3. **Every craft file listed in the first item of `../playbooks/index.md`'s required load order — the
+   ones it marks always-read.** That list decides *which* files, and it grows: one added there is
+   required here from the moment it is added, whether or not it appears among the notes below.
+   Restating the set in this file is what once left a required craft file reachable from one route
+   and invisible to the other.
+
+   Its paths are written from `../playbooks/`, so a file it names as `craft/<name>.md` is
+   `../playbooks/craft/<name>.md` from here. Only that first item is meant: the same section goes on
+   to name Seedance directing, a format file and package READMEs conditionally, and none of those
+   conditions can even be evaluated before the evidence is in.
+
+   Read them in the order below, which is this route's rather than that list's — a reconstruction
+   needs to know what a picture *is* before what one generation owes another, and needs both long
+   before a Build is staged:
+   - `../playbooks/craft/graphic-compositions.md` — what may be a base picture, when a full screen is
+     one authored composition, and where a missing picture comes from.
+   - `../playbooks/craft/generated-dependencies.md` — what one generation owes another: the location,
+     the split shot, the voice, the first frame, and the stretch too short to be a take.
+   - `../playbooks/craft/frame-coverage.md` — what is on screen at every instant, and the edges
+     nobody chose.
+   - `../playbooks/craft/visual-continuity.md` — recurring anchors as explicit artifacts, one
+     location generated once, and the reverse-view geometry that must hold across takes.
+   - `../playbooks/craft/production-gates.md` — images and takes generate and are reviewed in rounds,
+     and accepted Records are pinned for reuse.
+
+   A file that list names and this one does not is read last, before `vocabulary.md`.
+4. `vocabulary.md` — existing-package selection, appearance-property resolution, and the route for a
    real vocabulary gap.
 
 Two more are required, at the point where they apply rather than now. Reading them here means

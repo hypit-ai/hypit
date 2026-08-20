@@ -1,6 +1,6 @@
 ---
 name: hypit
-description: Author, check, preview, build, inspect, and retrieve Hypit/SVML projects; configure runtimes and credentials; reconstruct reference videos; develop missing project-local author packages; and apply native video production playbooks. Use for the Hypit repository, SVML/SVS/SVRun authoring, reference-video reconstruction, package vocabulary, runtime operations, or video craft decisions.
+description: Author, check, preview, build, inspect, and retrieve Hypit/SVML projects; configure runtimes and credentials; reconstruct reference videos; develop missing project-local author packages; and apply native video production playbooks. Use for the Hypit repository, SVML/SVS/SVRun authoring, reconstruction, package vocabulary, runtime operations, or video craft decisions.
 ---
 
 # Hypit
@@ -14,7 +14,7 @@ Keep `.svml` Author Source, `.svs` Recipe Source, `.svrun` Run Source, and
 ## Route
 
 - Reference-video reconstruction, reverse engineering, shot/B-roll/overlay analysis, or recreating
-  a video as Hypit source → read `references/reference-video/index.md`. This is the route whatever
+  a video as Hypit source → read `references/reconstruction/index.md`. This is the route whatever
   the author calls it — reconstruct, reverse-engineer, recreate, replicate, clone, remake, copy,
   rebuild, or the same idea in any language — and **a path to a video file, with or without words
   around it, is this route** even when no verb is given at all. The path is the whole request: the
