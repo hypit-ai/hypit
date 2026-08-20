@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { join, resolve } from "node:path";
 import test from "node:test";
 
 import { artifactTypes } from "@hypit/artifact";
@@ -69,7 +70,10 @@ test("managed and external OpenCV deployments never mix their interpreters", () 
   const managedContext = { dataRoot: "/project", instance: "opencv", config: {} } as const;
   const managed = resolveLocalOpenCvDeployment(managedContext);
   assert.equal(managed.ownership, "managed");
-  assert.match(managed.pythonExecutable, /services\/image-opencv\/\.venv\/(?:bin\/python|Scripts\/python\.exe)$/u);
+  // The deployment already branches on the platform for the venv layout, so the tail it produces
+  // is joined with the platform's separator too. Spell the separator as either one.
+  assert.match(managed.pythonExecutable,
+    /services[\\/]image-opencv[\\/]\.venv[\\/](?:bin[\\/]python|Scripts[\\/]python\.exe)$/u);
   assert.deepEqual(managed.prepare?.args.slice(-1), ["--frozen"]);
   const managedProgram = localOpenCvProgram(managedContext);
   assert.deepEqual(managedProgram.prepare, managed.prepare);
@@ -81,7 +85,7 @@ test("managed and external OpenCV deployments never mix their interpreters", () 
   } as const;
   const external = resolveLocalOpenCvDeployment(externalContext);
   assert.equal(external.ownership, "external");
-  assert.equal(external.pythonExecutable, "/project/tools/python");
+  assert.equal(external.pythonExecutable, resolve(join("/project", "tools", "python")));
   assert.equal(external.prepare, undefined);
   assert.equal(localOpenCvProgram(externalContext).prepare, undefined);
 });
