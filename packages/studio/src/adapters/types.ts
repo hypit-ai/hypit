@@ -6,6 +6,7 @@ import type {
   StudioInteraction,
   StudioInspectorDescription,
   StudioLaneDescription,
+  StudioMaterialPreview,
   StudioTimelinePresentation,
   StudioTemporalLineage,
   StudioTrackFamily,
@@ -44,6 +45,7 @@ export type StudioEntityDraft = {
   readonly presentation?: StudioTimelinePresentation;
   readonly interaction?: StudioInteraction;
   readonly temporal?: StudioTemporalLineage;
+  readonly preview?: StudioMaterialPreview;
 };
 
 export type StudioAdapterContext = {

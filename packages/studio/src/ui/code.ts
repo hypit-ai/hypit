@@ -79,11 +79,11 @@ export function createCodePane(): CodePane {
   element.className = "code";
   element.innerHTML = `
     <div class="pane-heading code-heading">
-      <div class="pane-title">
-        ${icon("code", "pane-icon")}
-        <div><h2>SVML</h2><span data-path></span></div>
+      <div class="pane-tabs" role="tablist" aria-label="Workspace views">
+        <button type="button" class="pane-tab active" role="tab" aria-selected="true">SVML</button>
       </div>
       <div class="code-actions">
+        <span class="code-location" data-path></span>
         <span class="code-save-state" data-save-state></span>
         <button type="button" class="icon-button code-mode" data-mode aria-label="Edit source" title="Edit source">
           <span data-mode-icon>${icon("edit")}</span>
