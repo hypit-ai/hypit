@@ -49,7 +49,8 @@ reconstructing a location depends on, since reference frames are never fed to ge
 word, measured locally by WhisperX. It is not an observation: no model wrote it, nothing about it is
 sent to Gemini, and it does not go in the observation cache. Read it whenever a decision depends on
 when a word is said — placing each on-screen text reveal against the line that triggers it, timing a
-caption, or checking that a voice observation matches what was actually spoken. Do not run WhisperX
+caption, checking that a voice observation matches what was actually spoken, or setting how long a
+take runs, which `final-sources.md` measures from these words rather than estimating. Do not run WhisperX
 by hand and do not ask a model to transcribe: the transcript is already there.
 
 `transcript` reports `status`, `transcript_ref` and `word_count`. Read the words from
@@ -57,6 +58,8 @@ by hand and do not ask a model to transcribe: the transcript is already there.
 `{ text, start_seconds, end_seconds, score }`. A machine with no WhisperX service running reports
 `status: "unavailable"` with a `reason` and prepares everything else; start the service with
 `uv run --project services/whisperx --frozen hypit-whisperx-service` and prepare again.
+`../environment.md` covers diagnosing that service and the rest of the local toolchain when starting
+it is not enough.
 
 When a completed preparation stage must be rerun, use one small `--redo` value:
 
@@ -82,6 +85,13 @@ selected shots. Each shot produces three observations:
 
 The picture observation also says whether the picture moves and how, separating camera movement from
 movement inside the frame. A held still and a moving shot are reconstructed differently.
+
+Covering content is whatever changes what reaches the eye, not only the things that sit on top with
+an edge. A wash laid over the whole frame to darken it is covering content and gets reported as such;
+so is anything else the observation happens to describe in terms of the picture being altered rather
+than something being added. Read it for what it says rather than matching it against the kinds of
+element you already expect — the observation is the evidence, and the moment a category is treated as
+a list of known items it stops being able to report the one thing nobody thought to list.
 
 Each cut produces one `continuity` observation answering both questions under their own headings —
 whether the two shots are one continuous camera shot, and whether an overlay continues across the
