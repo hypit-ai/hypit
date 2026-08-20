@@ -30,6 +30,5 @@ insets. `card-a` spans `left="8%"` to `right="92%"` — 86.4px to 993.6px of a
 The Source is complete, so it builds like any other example once a Runtime
 Profile and credentials are in place.
 
-There is no Run Source here, and Studio requires one — so this example cannot be
-opened in Studio as it stands. Write a `.svrun` that satisfies its generated
-outputs first; see `docs/quickstart/preview.md`.
+Studio opens a Run, so seeing this one means writing a `.svrun` that satisfies
+its generated outputs; see `docs/quickstart/preview.md`.

@@ -233,10 +233,9 @@ then choose its exact program window and occupancy:
 | Attribute | Required | Description |
 |---|---|---|
 | `Track.id` | yes | Stable Audio Track identity |
-| `Track.space` | yes | ProgramSpace that defines the exact sample and frame domain |
+| `Track.semantic` | yes | SemanticTrack that defines the exact sample and frame domain |
 | `Clip.source` | yes | Explicitly selected and normalized `SynchronizedMedia` |
 | `during`, `at`/`for`, or `start`/`end` | exactly one form | Whole-program, Selection, Moment, or explicit window |
-| `map` | for Selection/Moment | SemanticMap used to resolve semantic timing |
 | `playback` | no | `once`, `once-end`, `loop`, `loop-end`, or bounded `stretch` |
 | `occurrences` | no | `one` or `each` when a semantic source has multiple occurrences |
 | `trim-start`, `trim-end` | no | Exact source trim |
@@ -275,8 +274,7 @@ Container for text items.
 | Attribute | Required | Description |
 |---|---|---|
 | `id` | yes | Unique identifier |
-| `space` | yes | ProgramSpace from `speech:Track` |
-| `map` | no | SemanticMap — needed when items use Selection-based timing |
+| `semantic` | yes | SemanticTrack from `speech:Track` — also resolves Selection-based item timing |
 
 ### text:Point, text:Area and text:Path
 
@@ -351,14 +349,17 @@ against the variant, so a Column recipe on a TierBoard is refused by name.
 
 | Attribute | Takes |
 |---|---|
-| `map` | the Semantic Map that places words |
-| `space` | the Program Space |
-| `frame` | a `space:Frame` |
+| `semantic` | the SemanticTrack the board is timed against |
+| `frame` | a `space:Frame` — for `Column`, the fixed ranking rail |
 | `during` | a Selection — the board is on screen for it |
-| `triggers` | a Moment — rows move on it |
-| `terminal` | a Moment — the board settles on it |
 | `style` | the matching style record, and only that variant's |
 | `appear-sound`, `move-sound` | optional Synchronized Media |
+| `triggers`, `terminal` | Moments — rows move on one, the board settles on the other. `TierBoard` and `TopThree` only |
+| `canvas` | a `space:Canvas` — the reveal stage. `Column` only |
+
+`Column` separates placement from reveal time, so it takes neither `triggers` nor `terminal`: each
+item carries its own reveal window instead, and the Column resolves siblings into non-overlapping
+windows inside the container's `during` span.
 
 `move-sound` is refused on `TopThree`, which has no move phase. On a `TierBoard` it needs at least
 one item with `entry="stage"` — a sound with nothing to sound on is an authoring mistake, not a
@@ -370,17 +371,23 @@ Each variant takes its own, at least one, and ids must be unique within a board.
 
 - **`TierItem`** — `tier` (required, matching a row id in the recipe), `icon` (required), optional
   `entry="direct" | "stage"` and `stack`. Row labels come from the recipe, not the tag.
-- **`ColumnItem`** and **`TopThreeItem`** — `label` (required: a string or a Text reference), optional
-  `icon` and `stack`. `TopThree` takes at most three.
+- **`TopThreeItem`** — `label` (required: a string or a Text reference), optional `icon` and `stack`.
+  At most three.
+- **`ColumnItem`** — `label` (required) and `rank` (required, a positive integer that decides the
+  numbered row and nothing else), optional `icon` and `stack`. Each item also owns its reveal time:
+  `during` names a Selection whose projected window is when it prefers to appear, and
+  `preset="true"` marks a row that starts already placed. Exactly one of the two — an item with
+  neither, or with both, is refused by name.
 
 ```svml
 <ranking:ColumnStyle id="board-style" recipe={recipes.ranking.board} font={ui-font}/>
-<ranking:Column id="board" semantic={speech.semantic} frame={board-frame}
-  during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
-  style={board-style}>
-  <ranking:ColumnItem id="row-regen" label="ReGen" icon={icon-regen}/>
-  <ranking:ColumnItem id="row-chatgpt" label="ChatGPT" icon={icon-chatgpt}/>
-  <ranking:ColumnItem id="row-remini" label="Remini" icon={icon-remini}/>
+<ranking:Column id="board" semantic={speech.semantic} canvas={vertical} frame={board-frame}
+  during={story.selection.board} style={board-style}>
+  <ranking:ColumnItem id="row-regen" rank="1" label="ReGen" icon={icon-regen}
+    during={story.selection.regen-reveal}/>
+  <ranking:ColumnItem id="row-chatgpt" rank="2" label="ChatGPT" icon={icon-chatgpt}
+    during={story.selection.chatgpt-reveal}/>
+  <ranking:ColumnItem id="row-remini" rank="3" preset="true" label="Remini" icon={icon-remini}/>
 </ranking:Column>
 ```
 
@@ -399,7 +406,7 @@ same Frame and moves the whole stack.
 
 ### deck:DepthStack
 
-`id`, `map`, `space`, `canvas`, `frame` and `appearance` are all required, as is `until`, which says
+`id`, `semantic`, `canvas`, `frame` and `appearance` are all required, as is `until`, which says
 what ends the deck: the literal `"program.end"`, a Moment, or a Selection. Only with a Selection may
 you add `until-boundary="start" | "end"` to choose which edge of it ends the deck; the default is
 `end`, and giving the attribute in the other two cases is refused rather than ignored.
@@ -452,7 +459,7 @@ empty, each with a required `z` for stacking order and a window that is one of:
 | A Moment, for a length | `at={story.moment.x} for="12f"` on an item whose Track has `semantic={speech.semantic}` |
 | An explicit span | `start="…" end="…"`, optionally against a `selection=` or `moment=` |
 
-Anything bound to the Script needs `map`; an explicit span with no Script source must not have one.
+The Track takes `id`, `canvas` and `semantic`.
 Lengths are `12f`, `250ms` or `1.5s`, and `occurrences="each"` repeats an effect at every occurrence
 of its marker rather than the first.
 
@@ -484,8 +491,7 @@ optional metadata line.
 card's whole appearance — background, border, radius, tail, avatar, the three text rows, and the
 enter/hold/exit motion — and every key has a default, so a recipe may set only what it changes.
 
-`comment:Track` takes `id`, `canvas` and `space`. It takes `map` only if one of its stickers binds to
-the Script, and giving `map` when none does is refused rather than ignored.
+`comment:Track` takes `id`, `canvas` and `semantic`, all three required.
 
 `comment:Sticker` requires `id`, `frame` and `style`, and takes the same windows as a screen overlay
 above. Its copy is either the `comment=` attribute or the element's own text — both is refused. The

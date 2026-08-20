@@ -15,18 +15,15 @@
  * the Run — it reads the Author SVML back out of it — so a check that took the
  * `.svml` would be checking something Studio never opens.
  *
- * Studio does not degrade. It has no stand-ins and no estimated timing: when a
- * projection is missing it refuses to open and names the issue, so preflight
- * throwing is itself the failure report rather than something to inspect around.
- *
- * That refusal alone would make this gate unsatisfiable, because a Source that
- * still declares generation always has unresolved capabilities — which is the
- * ordinary state of a reconstruction before anybody has paid for a Build. So the
- * two are separated here: an unresolved *capability* means the graph is sound
- * and waiting for a Provider, while every other issue means the graph is wrong
- * and no amount of generation will fix it. Only the second kind fails this
- * check. `StudioPreflightError` carries `issues` as an array precisely so the
- * two can be told apart rather than matched out of one joined message.
+ * Studio names what it cannot resolve and stops, so preflight throwing is itself
+ * the report rather than something to inspect around. Two kinds of issue come
+ * back, and they mean opposite things. An unresolved *capability* means the
+ * graph traced all the way to a Film and a semantic spine, and what remains is
+ * work a Provider has to do — the ordinary state of a Source that declares its
+ * generation rather than performing it. Every other issue means the graph is
+ * wrong and no amount of generation will fix it. Only the second kind fails.
+ * `StudioPreflightError` carries `issues` as an array so the two can be told
+ * apart rather than matched out of one joined message.
  *
  * Run it from the repository root. `tsx` is the repository's own dependency, so
  * a working directory outside the repository fails to resolve it before this

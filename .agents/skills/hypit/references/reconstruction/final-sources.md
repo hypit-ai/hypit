@@ -88,10 +88,10 @@ how *well* a wired element is tuned to the reference; it does not govern whether
 wired at all. Every failure this check reports must be repaired until the check passes. Repair as
 many times as the failure needs, then re-run the check.
 
-**One refusal is a pass, and it is the one you will see most.** Studio does not degrade: it has no
-stand-ins, no black frames and no estimated timing, so a Source that still declares generation
-cannot be opened at all. That is the ordinary state of a reconstruction nobody has paid a Build for,
-and treating it as a failure would make this gate unsatisfiable.
+**One refusal is a pass, and it is the one you will see most.** A Source that declares its generation
+rather than performing it — which is this route's own rule — leaves the closure waiting on Providers,
+and Studio requires the whole closure before it will open. That is the expected state of a delivery,
+not a defect in it.
 
 So the check separates the two. When every issue is `the Studio projection closure requires
 unresolved capabilities: …`, the graph traced all the way to a Film and a semantic spine and what
@@ -108,11 +108,10 @@ Any other refusal means the graph is wrong and no amount of generation will fix 
 Render target, a target that is not an output of the current SVML, no traceable Film composition, no
 `SemanticTake` / Speech Track chain. Those exit non-zero and have no attempt ceiling.
 
-What this gate therefore proves is narrower than it used to be: that the graph is **wired**, not that
-every track **draws**. A Producer that refuses the media kind it is handed will not be caught here,
-because it is never handed anything until the Build runs. Verify those on the real Build, say so
-plainly rather than reporting the check as more than it is, and do not let it stand in for the
-delivery measurements in `../playbooks/craft/production-gates.md`.
+What this gate proves is that the graph is **wired**, not that every track **draws**. A Producer that
+refuses the media kind it is handed is not caught here, because nothing is handed to it until the
+Build runs. Verify those on the real Build, report the check as exactly what it is, and do not let
+it stand in for the delivery measurements in `../playbooks/craft/production-gates.md`.
 
 What this check cannot see is equally important: a track that *builds* but looks wrong — a typeface
 that does not match, a colour that is off, a shape that is misplaced — reports no error here, because

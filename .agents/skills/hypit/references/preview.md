@@ -13,7 +13,7 @@ Read the startup output for the chosen port. `--run` is required: Studio's unit 
 Source, and it reads the Author SVML back out of it. Pass `--runtime` only when the Author Source
 reuses accepted Build records.
 
-Studio does not degrade. It has no stand-ins and no estimated timing — when a projection is missing
-it refuses to open and names the issue, so a Run that opens is a Run whose Tracks all resolved.
+Studio opens a Run whose material is satisfied. When a projection is missing it names the issue and
+stops, so a Run that opens is a Run whose Tracks all resolved.
 
 `docs/quickstart/preview.md` is authoritative.

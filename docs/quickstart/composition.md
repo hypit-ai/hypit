@@ -35,7 +35,7 @@ and layers them by stacking order.
 |---|---|---|
 | `id` | yes | Unique identifier |
 | `canvas` | yes | Explicit CanvasSpace shared with Track layout |
-| `space` | yes | ProgramSpace from `speech:Track` — defines duration and frame rate |
+| `semantic` | yes | SemanticTrack from `speech:Track` — defines duration and frame rate |
 | `appearance` | yes | SVS Film Recipe — the canvas clear color |
 
 ### film:Track
@@ -89,7 +89,7 @@ Compiles the Composition into a finished video via the HyperFrames renderer.
 |---|---|---|
 | `id` | yes | Unique identifier |
 | `composition` | yes | Composition from `film:Film` |
-| `space` | yes | ProgramSpace from `speech:Track` |
+| `semantic` | yes | SemanticTrack from `speech:Track` |
 
 The renderer:
 

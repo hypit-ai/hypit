@@ -34,7 +34,7 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 | `canvas` | 是 | 与 Track 布局共享的显式 CanvasSpace |
-| `space` | 是 | 来自 `speech:Track` 的 ProgramSpace——定义时长和帧率 |
+| `semantic` | 是 | 来自 `speech:Track` 的 SemanticTrack——定义时长和帧率 |
 | `appearance` | 是 | SVS Film Recipe——画布清除颜色 |
 
 ### film:Track
@@ -86,7 +86,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 | `composition` | 是 | 来自 `film:Film` 的 Composition |
-| `space` | 是 | 来自 `speech:Track` 的 ProgramSpace |
+| `semantic` | 是 | 来自 `speech:Track` 的 SemanticTrack |
 
 渲染器：
 

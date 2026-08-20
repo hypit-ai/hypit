@@ -11,7 +11,7 @@ Hypit 的时间真相是 `SemanticTrack`。它按 Segment 粒度构建：
 2. 将归一化媒体与对应的 Script Segment 对齐，得到自包含的 `SemanticTake`；
 3. 用 `speech:Track` 按节目顺序装配这些 Semantic Take。
 
-系统不再先拼接整段节目、再做一次全局转录。每个 Take 在进入 Track 之前就已经具有语义。
+每个 Take 在进入 Track 之前就已经具有语义。
 
 ```svml
 <import as="program" from="@hypit/program-space@1"/>
@@ -111,9 +111,7 @@ SemanticTrack，并在构建确定性 Track 时把这些身份投影成帧：
   composition={main.composition} semantic={speech.semantic}/>
 ```
 
-整段使用 `during={story.segment.answer}`，作者范围使用 Selection，点事件使用 Moment，完整节目
-使用 `during="program"`。组件统一消费 `semantic={speech.semantic}`，不再同时接收分离的 `map`
-和 `space`。
+整段使用 `during={story.segment.answer}`，作者范围使用 Selection，点事件使用 Moment，完整节目使用 `during="program"`。组件统一消费 `semantic={speech.semantic}`。
 
 ```text
 原始 Take ─► Normalize ─► SynchronizedMedia ─► SemanticTake ─┐

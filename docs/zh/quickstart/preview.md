@@ -7,15 +7,15 @@ description: 把一个素材已经存在的 Run 当作可编辑的时间线来�
 
 **Hypit Studio** 打开一个 Run，把它的 Film 或 Render target 回溯到自己能编辑的那些投影，然后画出来——右侧是代码，左上是画面，左下是时间线。除了 Author SVML 之外它不写入任何东西，也从不调用 Provider。
 
-最后这半句值得读两遍。Studio 只构建它能从 Run 已经提供的 Candidate 确定性推导出来的东西，因此**一份仍然声明着未生成镜头的 Source 是打不开的**。Studio 是你检视并调整一个素材已经存在的节目的地方；它不是一个在素材出现之前先看看它的办法。
+Studio 只构建它能从 Run 已经提供的 Candidate 确定性推导出来的东西，因此它需要一个素材已被满足的 Run——每一个生成 output 要么由一次已接受的 Build 产出，要么由一个文件顶上。你指向的就是这样一个 Run。
 
 ```bash
 pnpm studio -- --run path/to/build.svrun
 # ➜  http://localhost:5179/
 ```
 
-::: warning 本仓库当前没有任何示例能打开
-`examples/` 下的每一个 Run Source，要么处于生成之前——它的镜头仍然需要 Seedance、GPT Image、WhisperX 或字幕规划——要么依赖 `examples/**/assets/` 下的素材，而那些素材并未提交。这两种情况都会被拒绝。请把 Studio 指向你自己的、output 已被满足的 Run。
+::: warning 本仓库的示例需要先有素材
+`examples/` 下的每一个 Run Source，都还指名着需要 Provider 去做的镜头，或者 `examples/**/assets/` 下未提交的素材。先在你自己的 Run 里满足它们，再打开。
 :::
 
 | 参数 | 含义 |
@@ -37,22 +37,22 @@ pkill -f "@hypit/studio" || true
 确实想并排看两个 Run 时，再用 `--port`。
 :::
 
-## Studio 会做什么，不会做什么
+## Studio 画什么
 
 Studio 只构建 Run 的确定性闭包，除此之外什么都不做。打开 Studio 从不调用 Provider，也从不创建 Build，因此它画出的每一个投影，要么由 Run 作为 Candidate 提供，要么可以从这样一个 Candidate 确定性地推导出来。
 
 **所有结构性的东西都是真的。** Placement Frame、padding、堆叠顺序、动效以及 Track 布局，都由构建时调用的同一批函数、从你的 Source 和 Recipe 算出。一张卡片如果在画面里的位置不对，在这里同样是不对的。
 
-**时序永远是实测的。** 时间线来自 `SemanticTrack`——也就是已对齐的那些 Take 本身——所以你看到的剪切点就是构建产出的剪切点。这里没有估算模式。
+**每一处时序都是实测的。** 时间线来自 `SemanticTrack`——也就是已对齐的那些 Take 本身——所以你看到的剪切点就是构建产出的剪切点。
 
-**没有任何东西会有替身。** Studio 没有占位图片、没有黑场、也不会伪造时序。这是这笔交易里刻意的那一半：与其画出一个自己无法交代的东西再给它贴个标签，Studio 宁可拒绝打开，并说清楚缺的是什么。
+当闭包需要的某样东西缺失时，Studio 会说明并停下：
 
 ```
 Studio cannot start:
 - the Studio projection closure requires unresolved capabilities: seedance.video
 ```
 
-你比较可能遇到的几种拒绝：
+它要求的是：
 
 | 拒绝 | 含义 |
 | --- | --- |
@@ -62,7 +62,7 @@ Studio cannot start:
 | `the Studio projection closure requires unresolved capabilities: …` | 某条 Track 需要 Provider 才能存在。要么在 Run 里满足它，要么接受一次 Build。 |
 | `Render target … is an opaque media Candidate; Studio needs the current Film graph` | Run 指向的是一个已经渲染好的视频文件。Studio 编辑的是图，不是产物。 |
 
-第四条是你最常遇到的，而且它是全有或全无：闭包里任何一个未解决的 capability 都会拒绝整个 Run，而不是让那一条 Track 单独变黑。所以一个节目是在某一步里整个变得可打开的——当它最后一个生成 output 被满足时——而不是逐步变得可打开。
+第四条是你最常遇到的，而且它是全有或全无：闭包里任何一个未解决的 capability 都会拒绝整个 Run。一个节目是在某一步里整个变得可打开的——当它最后一个生成 output 被满足时。
 
 ## 提供你已经有的素材
 
@@ -74,22 +74,15 @@ Studio cannot start:
 
 `<build-record>` 候选指名的是早先某次 Build 做出的东西而非一个路径，需要 `--runtime` 才能找到。
 
-## 读懂徽章
+## 一条 Track 从哪来
 
-顶部有两个判断；在一个能被打开的 Run 上它们都是 `measured`——能打开本身就意味着如此。它们仍然留在界面里，是因为它们说明了自己代表的是什么：
-
-| 徽章 | 含义 |
-| --- | --- |
-| `timing: measured` | 读自已对齐的 `SemanticTrack`。 |
-| `picture: measured` | 每个元素展示的都是真实素材。 |
-
-选中一条 Track，会说明是哪个 Candidate 产出了它，以及它从哪里来——Run、Source，或者都不是。
+选中一条 Track，会说明是哪个 Candidate 产出了它，以及它从哪里来——Run、Source，或者都不是。顶部对整个节目给出同样的判断：`timing: measured` 读自已对齐的 `SemanticTrack`，`picture: measured` 表示每个元素展示的都是真实素材。
 
 ## 当由 agent 来做这件事时
 
-如果你正在通过 [Hypit skill](https://github.com/hypit-ai/hypit/blob/main/.agents/skills/hypit/SKILL.md)工作，那么当某个步骤改动了 Source——改了 Script、移了 Frame、放了 B-roll、调了 Recipe——只要它所针对的那个 Run 本身能打开，agent 就会为你启动 Studio 并把链接发给你。
+如果你正在通过 [Hypit skill](https://github.com/hypit-ai/hypit/blob/main/.agents/skills/hypit/SKILL.md)工作，那么每当某个步骤改动了 Source——改了 Script、移了 Frame、放了 B-roll、调了 Recipe——agent 会为你启动 Studio 并把链接发给你。
 
-读 diff 和亲眼看见空镜落在哪里不是一回事。在一个素材已经存在的 Run 上，此刻正是说出"那张卡片太靠上了"的最便宜的时机；而在一个镜头仍然只是被声明的 Run 上，agent 没有任何东西可以给你看，它会如实说明，而不是发一个链接过来。
+读 diff 和亲眼看见空镜落在哪里不是一回事，而此刻正是说出"那张卡片太靠上了"的最便宜的时机。
 
 ## 在里面移动
 
