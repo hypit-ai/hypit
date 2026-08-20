@@ -106,6 +106,18 @@ visual QA.
   prints every stretch with its start and duration, and any hit is a hole in the picture rather than
   an edit — read `generated-dependencies.md` on covering a Segment. Report the delivery only after
   this comes back empty.
+- Measure the delivery for anything that flashes, which black detection does not catch once something
+  is bedded underneath. A cut list makes it objective: any state that lives for a fraction of a second
+  between two cuts is a hole showing the layer below, not an edit.
+
+  ```bash
+  ffmpeg -v error -i final.mp4 -vf "select='gt(scene,0.20)',metadata=print:file=-" -an -f null - \
+    | grep -oE 'pts_time:[0-9.]+' | sed 's/pts_time://' \
+    | awk '{if(p!=""&&$1-p<0.7)printf "%.2fs on screen at %.2fs\n",$1-p,p; p=$1}'
+  ```
+
+  Two cuts a quarter of a second apart is a picture nobody authored. Read it against
+  `generated-dependencies.md` on windows that do not tile.
 - Preserve accepted Records for deliberate future reuse; never assume a rerun will reuse them.
 
 Use explicit Run Source authoring for every accepted reuse:
