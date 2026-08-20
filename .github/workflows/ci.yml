@@ -19,49 +19,22 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Type check
-        run: pnpm check
-
-      - name: Test
-        run: pnpm test
-
-      - name: Repository hygiene
-        run: pnpm test:release
-
-  # Nothing here has ever run on Windows, so Windows-only breakage has been reaching authors
-  # instead of this file: a render whose temporary paths ran past the length a Windows path may
-  # be, a transcriber that opened a console window per worker, a script that could not import
-  # itself. Those are fixed, and this job is what keeps the next one from travelling the same way.
-  #
-  # It starts non-blocking on purpose. The first runs are here to report what Windows actually
-  # finds — a list nobody has seen yet should not be blocking every merge while it is read. Drop
-  # continue-on-error once the list is closed, fold both jobs into one os matrix, and update the
-  # required checks: the context name changes from `check` to `check (ubuntu-latest)` and
-  # `check (windows-latest)`, and branch protection stops enforcing silently if it is left behind.
-  #
-  # Neither runner image ships ffmpeg, so the media tests that probe for it skip on both legs
-  # alike. That gap is real and older than this job; closing it means adding ffmpeg to both, not
-  # to one, which would make a red Windows leg ambiguous between the two causes.
-  check-windows:
-    runs-on: windows-latest
-    continue-on-error: true
+    # Windows-only breakage used to reach authors instead of this file — a render whose temporary
+    # paths ran past the length a Windows path may be, a transcriber that opened a console window
+    # per worker, a script that could not import itself, a file name that on one platform was the
+    # whole path. One matrix rather than two jobs, so a step added here cannot be added to only
+    # one of them.
+    #
+    # Neither runner image ships ffmpeg, so the media tests that probe for it skip on both legs
+    # alike. That gap is real and older than this matrix; closing it means adding ffmpeg to both,
+    # not to one, which would leave a red leg ambiguous between the two causes.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Breakage on one platform is a different finding from breakage on the other, and cancelling
+      # the second leg would throw away the half of the answer nobody has yet.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
