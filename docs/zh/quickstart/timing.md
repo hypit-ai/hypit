@@ -19,7 +19,7 @@ Hypit 的时间真相是 `SemanticTrack`。它按 Segment 粒度构建：
 <import as="whisperx" from="@hypit/whisperx@1"/>
 <import as="speech" from="@hypit/speech-track@1"/>
 <import as="space" from="@hypit/spatial@1"/>
-<import as="studio" source="./studio.svs"/>
+<import as="recipes" source="./recipes.svs"/>
 ```
 
 ## 逐 Take 归一化
@@ -64,7 +64,7 @@ SemanticTrack 内的所有 Take 共享作者显式声明的 Clock。
 
 <speech:Track id="speech"
   visual-frame={speech-frame}
-  visual-appearance={studio.speech.visual}
+  visual-appearance={recipes.speech.visual}
   visual-z="0">
   <speech:Take source={opening-semantic.take}/>
   <speech:Take source={answer-semantic.take}/>
@@ -89,7 +89,7 @@ SemanticTrack，并在构建确定性 Track 时把这些身份投影成帧：
 <media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item image={card.image} extent={card-extent}
     during={story.selection.demo} frame={card-frame}
-    appearance={studio.media.card} motion={studio.motion.card}/>
+    appearance={recipes.media.card} motion={recipes.motion.card}/>
 </media-track:Track>
 
 <caption-fine:Track id="captions"
@@ -100,7 +100,7 @@ SemanticTrack，并在构建确定性 Track 时把这些身份投影成帧：
   plan={caption-plan.plan}/>
 
 <film:Film id="main" canvas={vertical}
-  semantic={speech.semantic} appearance={studio.film.vertical}>
+  semantic={speech.semantic} appearance={recipes.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={cards.visual}/>

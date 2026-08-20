@@ -22,7 +22,7 @@ and layers them by stacking order.
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audio}/>
   <film:Track source={captions.track}/>
@@ -131,7 +131,7 @@ The complete data flow from Script to rendered video. This example is based on
   <import as="program" from="@hypit/program-space@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
-  <import as="studio" source="./studio.svs"/>
+  <import as="recipes" source="./recipes.svs"/>
 
   <!-- 1. Script: the semantic truth -->
   <script id="story">
@@ -176,14 +176,14 @@ The complete data flow from Script to rendered video. This example is based on
   <whisperx:SemanticTake id="opening-semantic" narrative={story}
     segment={story.segment.opening} media={take-media.media}/>
   <speech:Track id="speech"
-    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
+    visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
     <speech:Take source={opening-semantic.take}/>
   </speech:Track>
 
   <!-- 4. Tracks: captions, Media, text -->
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
   <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
-  <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+  <caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
   <caption:Program id="caption-program" display={story.caption}
     default={base-caption}/>
   <caption-ai:Planner id="cue-plan" display={story.caption}
@@ -192,9 +192,9 @@ The complete data flow from Script to rendered video. This example is based on
 
   <media-track:Track id="cards" semantic={speech.semantic} canvas={vertical}>
     <media-track:Item media={motion-media.media} during={story.selection.demo}
-      frame={card-frame} appearance={studio.media.card} motion={studio.motion.card}/>
+      frame={card-frame} appearance={recipes.media.card} motion={recipes.motion.card}/>
   </media-track:Track>
-  <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+  <text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
   <text:Track id="titles" semantic={speech.semantic}>
     <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
       MEANING
@@ -203,7 +203,7 @@ The complete data flow from Script to rendered video. This example is based on
 
   <!-- 5. Film: compose all tracks -->
   <film:Film id="main" canvas={vertical} semantic={speech.semantic}
-    appearance={studio.film.vertical}>
+    appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audio}/>
     <film:Track source={cards.visual}/>
@@ -221,7 +221,7 @@ The complete data flow from Script to rendered video. This example is based on
 its parent is `left="10%" right="90%"`, not `left="10%" right="10%"` — the second resolves to zero
 width and is rejected.
 
-### Stylesheet (`studio.svs`)
+### Stylesheet (`recipes.svs`)
 
 ```svs
 <?svml using="@hypit/svs@1"?>

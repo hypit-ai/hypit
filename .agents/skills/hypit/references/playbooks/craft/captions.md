@@ -47,7 +47,7 @@ exact font → caption-fine:Style → caption:Program → caption-ai:Planner
 <fonts:Stack id="caption-font" family="inter" weight="700"
   style="normal" emoji="color"/>
 <caption-fine:Style id="primary-caption"
-  recipe={studio.caption.primary} font={caption-font}/>
+  recipe={recipes.caption.primary} font={caption-font}/>
 
 <caption:Program id="caption-program" display={story.caption}
   default={primary-caption}>

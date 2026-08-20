@@ -81,7 +81,7 @@ Operations 与外部 Needs。它绝不会启动 Provider。
 现在可以直接打开三份源码阅读：
 
 - [`main.svml`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/main.svml)：视频本身；
-- [`studio.svs`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/studio.svs)：可复用的视觉 Recipe；
+- [`recipes.svs`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/recipes.svs)：可复用的视觉 Recipe；
 - [`build.svrun`](https://github.com/hypit-ai/hypit/blob/main/examples/talking-film-graph-check/build.svrun)：这次要求得到的输出。
 
 ## 3. 认识项目里的文件
@@ -91,7 +91,7 @@ Operations 与外部 Needs。它绝不会启动 Provider。
 | 文件 | 回答的问题 |
 |---|---|
 | `main.svml` | 要做的是什么视频？ |
-| `studio.svs` | 使用哪些可复用的 Recipe 值？ |
+| `recipes.svs` | 使用哪些可复用的 Recipe 值？ |
 | `build.svrun` | 这一次 Run 要哪些输出、选择哪些 Candidate？ |
 | `hypit.runtime.json` | 在哪台机器、哪些 Store 和 Provider Endpoint 上执行？ |
 

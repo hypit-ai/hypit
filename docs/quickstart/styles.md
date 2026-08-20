@@ -38,10 +38,10 @@ immutable typed Records that consuming components validate and interpret.
 Import an SVS file in your `.svml` source with a namespace prefix:
 
 ```svml
-<import as="studio" source="./studio.svs"/>
+<import as="recipes" source="./recipes.svs"/>
 ```
 
-Then reference individual Recipes via `{studio.film.vertical}`, `{studio.caption.primary}`, etc.
+Then reference individual Recipes via `{recipes.film.vertical}`, `{recipes.caption.primary}`, etc.
 The prefix comes from the `as=` attribute; the path comes from `namespace.name` in the sheet.
 
 ## Film
@@ -63,7 +63,7 @@ Referenced by `film:Film` via the `appearance` attribute:
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
 ```
 
 ## Caption Fine
@@ -107,7 +107,7 @@ Record to the Fine Style. Family, weight and style have one source of truth on t
 
 ```svml
 <fonts:Face id="caption-font" family="inter" weight="600" style="normal"/>
-<caption-fine:Style id="primary-caption" recipe={studio.caption.dialogue}
+<caption-fine:Style id="primary-caption" recipe={recipes.caption.dialogue}
   font={caption-font}/>
 ```
 
@@ -141,9 +141,9 @@ Then assign them via `caption:Program`:
 
 ```svml
 <fonts:Stack id="caption-font" family="inter" weight="600" style="normal"/>
-<caption-fine:Style id="default-caption" recipe={studio.caption.dialogue} font={caption-font}/>
-<caption-fine:Style id="alice-caption" recipe={studio.caption.alice} font={caption-font}/>
-<caption-fine:Style id="bob-caption" recipe={studio.caption.bob} font={caption-font}/>
+<caption-fine:Style id="default-caption" recipe={recipes.caption.dialogue} font={caption-font}/>
+<caption-fine:Style id="alice-caption" recipe={recipes.caption.alice} font={caption-font}/>
+<caption-fine:Style id="bob-caption" recipe={recipes.caption.bob} font={caption-font}/>
 <caption:Program id="caption-program" display={story.caption} default={default-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
@@ -202,7 +202,7 @@ Position remains an explicit graph edge:
   left="8%" top="20%" right="92%" bottom="68%"/>
 <media-track:Item video={product-motion.video}
   during={story.selection.demo} frame={product-frame}
-  appearance={studio.media.product} motion={studio.motion.product}/>
+  appearance={recipes.media.product} motion={recipes.motion.product}/>
 ```
 
 ## Text
@@ -233,7 +233,7 @@ Compiled with exact font bytes into a `text:Style`, then referenced by a concret
 
 ```svml
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
-<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+<text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
 <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
   MEANING
 </text:Area>
@@ -272,7 +272,7 @@ Referenced by `estimate:Speech` via the `policy` attribute:
 
 ```svml
 <estimate:Speech id="hook-duration" source={story.segment.hook.speech}
-  policy={studio.speech.normal}/>
+  policy={recipes.speech.normal}/>
 ```
 
 ## Speaker Text Template
@@ -302,7 +302,7 @@ Referenced by `text:Render` together with the Kit's Template:
 
 ```svml
 <text:Render id="hook-prompt"
-  template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+  template={speaker-kit.speaker-v1} recipe={recipes.speaker.host}>
   <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
   <text:Set name="action" text={hook-action}/>
 </text:Render>
@@ -373,7 +373,7 @@ bytes into content-addressed font values. It performs no download during a build
 never guesses a font:
 
 ```svml
-<caption-fine:Style id="dialogue" recipe={studio.caption.dialogue}
+<caption-fine:Style id="dialogue" recipe={recipes.caption.dialogue}
   font={caption-fonts}/>
 ```
 
@@ -394,7 +394,7 @@ Brand and custom fonts remain explicit author assets rather than additions to th
 
 ## Combination example
 
-A complete `studio.svs` file for a four-take talking-head project:
+A complete `recipes.svs` file for a four-take talking-head project:
 
 ```svs
 <?svml using="@hypit/svs@1"?>
@@ -441,16 +441,16 @@ A complete `studio.svs` file for a four-take talking-head project:
 This file is imported once in the `.svml` source and its values are referenced throughout:
 
 ```svml
-<import as="studio" source="./studio.svs"/>
+<import as="recipes" source="./recipes.svs"/>
 
 <estimate:Speech id="hook-duration" source={story.segment.hook.speech}
-  policy={studio.speech.normal}/>
+  policy={recipes.speech.normal}/>
 
 <text:Render id="hook-prompt" template={speaker-kit.speaker-v1}
-  recipe={studio.speaker.host}>...</text:Render>
+  recipe={recipes.speaker.host}>...</text:Render>
 
-<caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
+<caption-fine:Style id="primary-caption" recipe={recipes.caption.primary} font={caption-font}/>
 
 <space:Canvas id="vertical" width="720" height="1280"/>
-<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
 ```

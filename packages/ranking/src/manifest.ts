@@ -244,7 +244,7 @@ export const rankingMarkupSurfaces = [
           { name: "sound", type: rankingTypes.soundStyle,
             summary: "The compiled sound Style, connected only when the board authors a sound." },
         ],
-        example: `<ranking:TierBoardStyle id="tier-style" recipe={studio.ranking.tier} font={ui-font}/>`,
+        example: `<ranking:TierBoardStyle id="tier-style" recipe={recipes.ranking.tier} font={ui-font}/>`,
         notes: [
           "The element is empty; it accepts no children and no text.",
           "The Recipe is validated against the variant, so a Recipe holding another board's keys is refused by name.",
@@ -338,7 +338,7 @@ export const rankingMarkupSurfaces = [
           { name: "sound", type: rankingTypes.soundStyle,
             summary: "The compiled sound Style, connected only when the board authors a sound." },
         ],
-        example: `<ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>`,
+        example: `<ranking:ColumnStyle id="board-style" recipe={recipes.ranking.board} font={ui-font}/>`,
         notes: [
           "The element is empty; it accepts no children and no text.",
           "The Recipe is validated against the variant, so a Recipe holding another board's keys is refused by name.",
@@ -409,7 +409,7 @@ export const rankingMarkupSurfaces = [
           { name: "sound", type: rankingTypes.soundStyle,
             summary: "The compiled sound Style, connected only when the board authors a sound." },
         ],
-        example: `<ranking:TopThreeStyle id="podium-style" recipe={studio.ranking.podium} font={ui-font}/>`,
+        example: `<ranking:TopThreeStyle id="podium-style" recipe={recipes.ranking.podium} font={ui-font}/>`,
         notes: [
           "The element is empty; it accepts no children and no text.",
           "The Recipe is validated against the variant, so a Recipe holding another board's keys is refused by name.",
@@ -469,7 +469,7 @@ export const rankingMarkupSurfaces = [
           { name: "audio", type: compositionTypes.audioTrack,
             summary: "The rendered board sound, published only when a sound is authored." },
         ],
-        example: `<ranking:TierBoardStyle id="tier-style" recipe={studio.ranking.tier} font={ui-font}/>
+        example: `<ranking:TierBoardStyle id="tier-style" recipe={recipes.ranking.tier} font={ui-font}/>
 <ranking:TierBoard id="tiers" semantic={speech.semantic} frame={board-frame}
   during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
   style={tier-style}>
@@ -536,7 +536,7 @@ export const rankingMarkupSurfaces = [
           { name: "audio", type: compositionTypes.audioTrack,
             summary: "The rendered board sound, published only when a sound is authored." },
         ],
-        example: `<ranking:ColumnStyle id="board-style" recipe={studio.ranking.board} font={ui-font}/>
+        example: `<ranking:ColumnStyle id="board-style" recipe={recipes.ranking.board} font={ui-font}/>
 <ranking:Column id="board" semantic={speech.semantic} canvas={vertical} frame={board-frame}
   during={story.segment.ranking}
   style={board-style}>
@@ -600,7 +600,7 @@ export const rankingMarkupSurfaces = [
           { name: "audio", type: compositionTypes.audioTrack,
             summary: "The rendered board sound, published only when a sound is authored." },
         ],
-        example: `<ranking:TopThreeStyle id="podium-style" recipe={studio.ranking.podium} font={ui-font}/>
+        example: `<ranking:TopThreeStyle id="podium-style" recipe={recipes.ranking.podium} font={ui-font}/>
 <ranking:TopThree id="podium" semantic={speech.semantic} frame={board-frame}
   during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
   style={podium-style}>

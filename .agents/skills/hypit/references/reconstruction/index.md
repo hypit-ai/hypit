@@ -1,6 +1,6 @@
 # Reference-video reconstruction route
 
-This route reconstructs a complete reference video as usable `main.svml`, `studio.svs`, and
+This route reconstructs a complete reference video as usable `main.svml`, `recipes.svs`, and
 `build.svrun`. The main agent owns all decisions and source code; Gemini supplies natural-language
 visual and audio evidence only.
 
@@ -8,11 +8,11 @@ visual and audio evidence only.
 
 The deliverable is **the components the video needs, the three source files, and the Runtime Profile
 that binds what they demand**, and it must be **visible**: the preview check builds every track the
-sources declare, so the author can open the Playground and see what was reconstructed. Every
+sources declare, so the author can open Studio and see what was reconstructed. Every
 generation the Source declares is declared, not performed: no Build is submitted for the pictures,
 and no video generation, speech synthesis, alignment or final render is run. Those belong to a later
 step that the author starts deliberately, after reading what was written. What is *not* deferred is
-that the declared tracks build — the author should never open the Playground to find that something
+that the declared tracks build — the author should never open Studio to find that something
 delivered cannot be seen.
 
 One exception, because it is not a generation of the video: a component's own surface — the field its

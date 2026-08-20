@@ -8,15 +8,17 @@ program audio.
 ## See it before you generate it
 
 Where a cutaway lands, how long it holds, and whether its Frame sits in the right part of the
-picture are all decided by the Source, not by the footage. The SVML Playground answers all three
-without a generation: an Item whose material exists shows real frames, and one whose material does
-not is still placed, still scrubbable, and marked as standing in. Timings are estimated until a
-build or a Run Source supplies measured ones, and an estimated cut point will move once WhisperX has
-heard the audio.
+picture are all decided by the Source, not by the footage. Hypit Studio answers all three without a
+generation, provided the Run satisfies the material it places: cut points come from the aligned
+`SemanticTrack`, so where a cutaway falls against the speech is measured rather than guessed.
+
+Studio does not stand anything in. An Item whose material no Candidate supplies makes the Run
+unopenable rather than appearing as a placeholder, so satisfy the B-roll outputs in the Run Source
+with whatever footage you already have before expecting to see the placement.
 
 Do this after placing a Selection and before paying for a generation. Startup and arguments are in
 `docs/quickstart/preview.md`; for how to see placed items against their real frames, read
-`../../preview.md` and start the SVML Playground.
+`../../preview.md` and start Studio.
 
 ## Choose the story beats first
 
@@ -47,7 +49,7 @@ Do this after placing a Selection and before paying for a generation. Startup an
 </copy:Value>
 
 <copy:Render id="demo-prompt"
-  template={broll-kit.broll-v1} recipe={studio.broll.screen-demo}>
+  template={broll-kit.broll-v1} recipe={recipes.broll.screen-demo}>
   <copy:Set name="story" text={demo-story}/>
 </copy:Render>
 
