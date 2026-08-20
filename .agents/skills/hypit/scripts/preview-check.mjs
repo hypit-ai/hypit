@@ -10,6 +10,10 @@
  * Usage:  node --import tsx .agents/skills/hypit/scripts/preview-check.mjs <main.svml> [<build.svrun>]
  * Exit:   0 when every track built and nothing is waiting on an error.
  *         1 otherwise, listing the failing tracks and their errors.
+ *
+ * Run it from the repository root. `tsx` is the repository's own dependency, so
+ * a working directory outside the repository fails to resolve it before this
+ * script runs at all — the error names `tsx`, not the source being checked.
  */
 import { fileURLToPath } from "node:url";
 // The script lives under `.agents/`; resolve the playground's preview pipeline from the repo root.

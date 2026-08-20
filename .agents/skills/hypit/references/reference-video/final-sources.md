@@ -41,6 +41,7 @@ opens the Playground — a new package with a bad schedule, a media edge whose a
 image, a reference that does not resolve. Find that now, not on the author's screen:
 
 ```bash
+# from the repository root: tsx is the repository's dependency
 node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/main.svml path/to/build.svrun
 ```
 
