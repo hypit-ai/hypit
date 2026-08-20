@@ -44,6 +44,18 @@ Builds remain archived and neither command cancels remote Provider work.
 - There is no implicit cache or Pin state. Reuse Records through a new `.svrun` containing
   `build-record` and `satisfy`; the Candidate supplies the exact nominal Type required by the
   current Logical Output.
+- **A running Worker holds the package code it loaded.** Edit a package — yours or an installed one —
+  and the Worker that is already up keeps executing the version it started with, so the next Build
+  fails exactly as the last one did. Stop it before resubmitting; the next `build` starts a fresh one
+  that loads the edit:
+
+  ```bash
+  ps -eo pid,command | grep "hypit.mjs _worker" | grep <project>/hypit.runtime.json
+  kill <pid>
+  ```
+
+  Read an identical repeat failure as this until you have ruled it out. Reasoning about why a correct
+  fix did not work is how an afternoon goes, and the fix was never loaded.
 
 ## Keep project and package boundaries distinct
 

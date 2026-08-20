@@ -49,7 +49,8 @@ reconstructing a location depends on, since reference frames are never fed to ge
 word, measured locally by WhisperX. It is not an observation: no model wrote it, nothing about it is
 sent to Gemini, and it does not go in the observation cache. Read it whenever a decision depends on
 when a word is said — placing each on-screen text reveal against the line that triggers it, timing a
-caption, or checking that a voice observation matches what was actually spoken. Do not run WhisperX
+caption, checking that a voice observation matches what was actually spoken, or setting how long a
+take runs, which `final-sources.md` measures from these words rather than estimating. Do not run WhisperX
 by hand and do not ask a model to transcribe: the transcript is already there.
 
 `transcript` reports `status`, `transcript_ref` and `word_count`. Read the words from
