@@ -1,6 +1,6 @@
 import type { StudioFailure, StudioSnapshot } from "../shared.js";
 import { createCodePane } from "./code.js";
-import { icon, setIcon } from "./icons.js";
+import { setIcon } from "./icons.js";
 import { createHandle } from "./resize.js";
 import type { Highlight } from "./code.js";
 import { liveRanges, markerTones, spanAtOffset } from "./markers.js";
@@ -16,35 +16,32 @@ app.innerHTML = `
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 32 32"><path d="M7.6 3.8H14.6L12.6 7.2H5.6L7.6 3.8ZM4.1 10.4H16.6L18.7 7H30.4L27.9 11.1H16.1L14.1 14.2H1.8L4.1 10.4ZM19.1 14.1H23.1L19.3 20.7H15.4L19.1 14.1Z"/></svg>
       </span>
-      <div><strong>Hypit Studio</strong></div>
+      <div><strong>Hypit</strong></div>
     </div>
     <div class="project-title" data-project></div>
     <div class="topbar-right">
       <div class="meta" data-meta></div>
-      <div class="status" data-status><i></i><span>Reading…</span></div>
+      <div class="status" data-status></div>
     </div>
   </header>
   <main class="studio-shell">
-    <aside class="source-panel" data-code></aside>
-    <section class="workbench">
-      <div class="preview-row">
-        <div class="preview-panel" data-stage></div>
-        <aside class="workspace-panel">
-          <div class="pane-heading workspace-heading">
-            <div class="pane-title">
-              ${icon("tune", "pane-icon")}
-              <div><h2>Inspector</h2><span>Selected item</span></div>
-            </div>
+    <section class="upper-shell">
+      <aside class="source-panel" data-code></aside>
+      <div class="preview-panel" data-stage></div>
+      <aside class="workspace-panel">
+        <div class="pane-heading workspace-heading">
+          <div class="pane-tabs" role="tablist" aria-label="Inspector views">
+            <button type="button" class="pane-tab active" role="tab" aria-selected="true">Properties</button>
           </div>
-          <div class="workspace-scroll">
-            <section class="workspace-section">
-              <div class="inspector" data-inspector></div>
-            </section>
-          </div>
-        </aside>
-      </div>
-      <div class="timeline-panel" data-timeline></div>
+        </div>
+        <div class="workspace-scroll">
+          <section class="workspace-section">
+            <div class="inspector" data-inspector></div>
+          </section>
+        </div>
+      </aside>
     </section>
+    <div class="timeline-panel" data-timeline></div>
   </main>
   <pre class="failure" data-failure></pre>`;
 
@@ -59,30 +56,29 @@ app.querySelector<HTMLElement>("[data-stage]")!.append(stage.element);
 // The source, picture, workspace and timeline all need different amounts of
 // room for different jobs, so each boundary is draggable and remembered.
 const shell = app.querySelector<HTMLElement>(".studio-shell")!;
-const workbench = app.querySelector<HTMLElement>(".workbench")!;
-const previewRow = app.querySelector<HTMLElement>(".preview-row")!;
+const upperShell = app.querySelector<HTMLElement>(".upper-shell")!;
 const workspacePanel = app.querySelector<HTMLElement>(".workspace-panel")!;
 const sourceHandle = createHandle({
-  axis: "column", initial: 390, minimum: 280,
-  maximum: () => Math.max(320, shell.clientWidth - 760),
-  apply: (size) => { shell.style.setProperty("--source-width", `${size}px`); },
-  remember: "hypit-studio.source-width",
+  axis: "column", initial: Math.round(window.innerWidth * 0.34), minimum: 280,
+  maximum: () => Math.max(360, upperShell.clientWidth - 720),
+  apply: (size) => { upperShell.style.setProperty("--source-width", `${size}px`); },
+  remember: "hypit-studio.v3.source-width",
 });
 sourceHandle.classList.add("source-handle");
-shell.insertBefore(sourceHandle, workbench);
+upperShell.insertBefore(sourceHandle, app.querySelector<HTMLElement>("[data-stage]")!);
 const workspaceHandle = createHandle({
-  axis: "column", initial: 300, minimum: 240, invert: true,
-  maximum: () => Math.max(260, previewRow.clientWidth - 360),
-  apply: (size) => { previewRow.style.setProperty("--workspace-width", `${size}px`); },
-  remember: "hypit-studio.workspace-width",
+  axis: "column", initial: Math.round(window.innerWidth * 0.22), minimum: 270, invert: true,
+  maximum: () => Math.max(320, upperShell.clientWidth - 680),
+  apply: (size) => { upperShell.style.setProperty("--workspace-width", `${size}px`); },
+  remember: "hypit-studio.v3.workspace-width",
 });
 workspaceHandle.classList.add("workspace-handle");
-previewRow.insertBefore(workspaceHandle, workspacePanel);
-workbench.insertBefore(createHandle({
-  axis: "row", initial: 330, minimum: 176, invert: true,
-  maximum: () => Math.max(220, workbench.clientHeight - 260),
-  apply: (size) => { workbench.style.setProperty("--timeline-height", `${size}px`); },
-  remember: "hypit-studio.timeline-height",
+upperShell.insertBefore(workspaceHandle, workspacePanel);
+shell.insertBefore(createHandle({
+  axis: "row", initial: Math.round(window.innerHeight * 0.45), minimum: 220, invert: true,
+  maximum: () => Math.max(260, shell.clientHeight - 260),
+  apply: (size) => { shell.style.setProperty("--timeline-height", `${size}px`); },
+  remember: "hypit-studio.v3.timeline-height",
 }), app.querySelector<HTMLElement>("[data-timeline]")!);
 const inspector = app.querySelector<HTMLElement>("[data-inspector]")!;
 const meta = app.querySelector<HTMLElement>("[data-meta]")!;
@@ -134,10 +130,7 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
   const clip = clipId === undefined ? undefined : store.clip(clipId);
 
   if (clip === undefined) {
-    const empty = document.createElement("div");
-    empty.className = "inspector-empty";
-    empty.innerHTML = `<span class="inspector-empty-icon">${icon("select")}</span><strong>Nothing selected</strong><small>Choose a timeline item, source marker, or object in the preview.</small>`;
-    inspector.replaceChildren(empty);
+    inspector.replaceChildren();
     return;
   }
 
@@ -162,63 +155,20 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
     property("End", `${clip.endFrameExclusive}f`),
     property("Duration", `${durationFrames}f`),
     property("Seconds", `${(durationFrames / fps).toFixed(2)}s`),
-    ...(clip.temporal?.projection === undefined ? [] : [
-      property("Projection start", clip.temporal.projection.startExpression, "property-wide property-code"),
-      property("Projection end", clip.temporal.projection.endExpression, "property-wide property-code"),
-    ]),
-    ...(clip.temporal === undefined ? [] : [
-      property("Temporal source", `${clip.temporal.source.kind}${clip.temporal.source.id === undefined ? "" : ` · ${clip.temporal.source.id}`}`, "property-wide property-code"),
-      property("Schedule phases", String(clip.temporal.phases.length)),
-    ]),
   ]);
-  const identity = group("Binding", [
-    property("Authored id", clip.authoredId, "property-wide property-code"),
-    ...(clip.markerId === undefined
-      ? []
-      : [property("Script marker", clip.markerId, "property-wide property-code")]),
-    property("Entity", clip.presentation.entity, "property-wide property-code"),
-    ...(clip.presentId === undefined
-      ? []
-      : [property("Present id", clip.presentId, "property-wide property-code")]),
-  ]);
-  const composition = group("Composition", [
+  const placement = group("Placement", [
     property("Track", track?.label ?? "—", "property-wide"),
-    property("Family", track?.binding.family ?? "—"),
-    property("Facet", track?.binding.facet ?? "—"),
-    property("Stack order", String(clip.stackOrder)),
-    property("Source", track?.provenance.origin ?? "source"),
+    property("Type", track === undefined ? clip.presentation.entity : `${track.binding.family} / ${track.binding.facet}`),
+    property("Item", clip.authoredId, "property-wide property-code"),
   ]);
-  const authoring = group("Authoring", [
-    property("Group", track?.binding.groupId ?? "—", "property-wide property-code"),
-    property("Surface", track?.binding.authoredTag ?? "—", "property-wide property-code"),
-    property("Adapter", track?.binding.adapter ?? "—", "property-wide property-code"),
-    property("Writeback", clip.interaction.writeback),
-    property("Move / trim", clip.interaction.move || clip.interaction.trimStart || clip.interaction.trimEnd ? "enabled" : "read-only"),
-    property("Inputs", String(track?.binding.references.length ?? 0)),
+  const source = clip.temporal === undefined ? undefined : group("Binding", [
+    property("Source", `${clip.temporal.source.kind}${clip.temporal.source.id === undefined ? "" : ` · ${clip.temporal.source.id}`}`, "property-wide property-code"),
+    ...(clip.temporal.projection === undefined ? [] : [
+      property("From", clip.temporal.projection.startExpression, "property-wide property-code"),
+      property("To", clip.temporal.projection.endExpression, "property-wide property-code"),
+    ]),
   ]);
-  const run = group("Run provenance", [
-    property("Output", track?.provenance.output ?? "—", "property-wide property-code"),
-    property("Candidate", track?.provenance.candidateId ?? "—", "property-wide property-code"),
-    property("Origin", track?.provenance.origin ?? "none"),
-    property("Status", track?.provenance.status ?? "unresolved"),
-    ...(track === undefined || track.provenance.errors.length === 0
-      ? []
-      : [property("Error", track.provenance.errors.join(" "), "property-wide property-code")]),
-  ]);
-  const available = {
-    authoring,
-    resolved: timing,
-    material: undefined,
-    composition,
-    identity,
-    run,
-  } as const;
-  const sections: HTMLElement[] = [
-    hero,
-    ...(track?.binding.inspector.sections ?? ["resolved", "composition", "identity", "run"])
-      .flatMap((name) => available[name] === undefined ? [] : [available[name]]),
-  ];
-  inspector.replaceChildren(...sections);
+  inspector.replaceChildren(hero, placement, timing, ...(source === undefined ? [] : [source]));
 }
 
 // The word being spoken at the playhead, which is the point of carrying token
@@ -334,8 +284,8 @@ window.addEventListener("keydown", (event) => {
 
 function applySnapshot(snapshot: StudioSnapshot): void {
   failureView.textContent = "";
-  status.className = "status ok";
-  status.innerHTML = `<i></i><span>Live · r${snapshot.revision}</span>`;
+  status.className = "status";
+  status.textContent = "";
   renderMeta(snapshot);
   code.show(snapshot);
   store.load(snapshot);
@@ -343,7 +293,7 @@ function applySnapshot(snapshot: StudioSnapshot): void {
 
 function applyFailure(failure: StudioFailure): void {
   status.className = "status error";
-  status.innerHTML = `<i></i><span>Compile failed · r${failure.revision}</span>`;
+  status.textContent = "Compile failed";
   failureView.textContent = failure.error;
   if (failure.range !== undefined) code.highlight([{ range: failure.range, tone: "element" }], true);
 }

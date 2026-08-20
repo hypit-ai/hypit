@@ -206,6 +206,29 @@ export async function preview(input: {
     const stored = selectedValue(executed.state, target.ref);
     if (stored?.kind === "inline") values.set(target.ref, stored.value);
   }
+  // Author Records are already deterministic inline values from this exact
+  // compilation. Studio adapters may need them to name a resolved projection
+  // (for example Caption cue text); exposing them here avoids recomputing the
+  // domain value or turning a Record into a fake graph target.
+  for (const placement of input.source.observations.placements) {
+    for (const value of placement.values) {
+      const suffixes = [`::record::${value.id}`, `::output::${value.id}`];
+      for (const reference of input.projections.flatMap((projection) => projection.trace.references)) {
+        if (suffixes.some((suffix) => reference.ref.endsWith(suffix))) values.set(reference.ref, value.value);
+      }
+    }
+  }
+  // Script is a raw Surface, so its inline Records are not among the structured
+  // element observations above. They are still ordinary Author values from
+  // the same compilation and are needed to turn Caption atom ids back into the
+  // text the author actually sees.
+  for (const record of input.source.compiled.program.records) {
+    if (record.value.kind !== "inline") continue;
+    if (input.projections.some((projection) => projection.trace.references
+      .some((reference) => reference.ref === record.id))) {
+      values.set(record.id, record.value.value);
+    }
+  }
   const timingCandidateId = satisfactions.get(timingOutput.ref);
   return {
     source: input.source,

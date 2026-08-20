@@ -7,7 +7,32 @@ type TypographyTrackProgram = {
     readonly id: string;
     readonly span: { readonly startFrame: number; readonly endFrameExclusive: number };
     readonly style: { readonly stackingOrder: number };
+    readonly document?: {
+      readonly paragraphs?: readonly {
+        readonly inlines?: readonly ({ readonly kind: "text"; readonly text: string } | { readonly kind: "break" })[];
+      }[];
+    };
   }[];
+};
+
+function textOf(document: NonNullable<NonNullable<TypographyTrackProgram["items"]>[number]["document"]>): string {
+  return (document.paragraphs ?? []).map((paragraph) => (paragraph.inlines ?? [])
+    .map((inline) => inline.kind === "text" ? inline.text : " ")
+    .join(""))
+    .join(" ")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+type CaptionPlanValue = {
+  readonly runs?: readonly {
+    readonly cues?: readonly { readonly id: string; readonly atomIds: readonly string[] }[];
+  }[];
+};
+
+type CaptionDisplayValue = {
+  readonly atoms?: readonly { readonly id: string; readonly wordIds: readonly string[] }[];
+  readonly words?: readonly { readonly id: string; readonly text: string }[];
 };
 
 function projectText(context: StudioAdapterContext): readonly StudioEntityDraft[] {
@@ -22,11 +47,45 @@ function projectText(context: StudioAdapterContext): readonly StudioEntityDraft[
   return childEntities(context, items, "typography-item", "text").map((entity, index) => {
     const item = items[index];
     if (item === undefined) return entity;
+    const document = program.items?.[index]?.document;
+    const label = document === undefined ? "" : textOf(document);
     const temporal = itemTemporalLineage({
       runtimeId: item.id, span: item,
       ...(context.placement === undefined ? {} : { placement: context.placement }),
     });
-    return temporal === undefined ? entity : { ...entity, temporal };
+    const named = label.length === 0 ? entity : { ...entity, label };
+    return temporal === undefined ? named : { ...named, temporal };
+  });
+}
+
+function projectCaption(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+  const planRef = context.track.trace.references.find((reference) => reference.type === "CaptionPlan")?.ref;
+  const displayRef = context.track.trace.references.find((reference) => reference.type === "CaptionDisplaySequence")?.ref;
+  const plan = planRef === undefined ? undefined : context.values.get(planRef) as CaptionPlanValue | undefined;
+  const display = displayRef === undefined ? undefined : context.values.get(displayRef) as CaptionDisplayValue | undefined;
+  if (plan?.runs === undefined || display?.atoms === undefined || display.words === undefined) return context.generic();
+  const atoms = new Map(display.atoms.map((atom) => [atom.id, atom] as const));
+  const words = new Map(display.words.map((word) => [word.id, word.text] as const));
+  const spans = new Map(context.spans.map((span) => [span.id, span] as const));
+  return plan.runs.flatMap((run) => run.cues ?? []).flatMap((cue): readonly StudioEntityDraft[] => {
+    const span = spans.get(cue.id);
+    if (span === undefined) return [];
+    const label = cue.atomIds.flatMap((atomId) => atoms.get(atomId)?.wordIds ?? [])
+      .flatMap((wordId) => words.get(wordId) ?? [])
+      .join(" ");
+    return [{
+      id: `${context.track.outputRef}:entity:${cue.id}`,
+      authoredId: context.placement?.id ?? cue.id,
+      label: label.length === 0 ? cue.id : label,
+      startFrame: span.startFrame,
+      endFrameExclusive: span.endFrameExclusive,
+      stackOrder: span.stackOrder,
+      ...(context.placement === undefined ? {} : { elementRange: context.placement.range }),
+      presentId: span.id,
+      renderIds: [span.id],
+      presentation: { entity: "caption-cue", shape: "text", depth: 0 },
+      interaction: readonlyInteraction,
+    }];
   });
 }
 
@@ -41,11 +100,11 @@ export const genericAdapters: readonly StudioAdapter[] = [
   {
     id: "caption", role: "caption", output: { type: "VisualTrack", surface: "track", modules: ["@hypit/caption-fine"] },
     family: "caption", icon: "captions", interaction: readonlyInteraction,
-    dependencies: [{ type: "CaptionPlan", role: "caption-plan" }],
+    dependencies: [{ type: "CaptionPlan", role: "caption-plan" }], project: projectCaption,
   },
   {
     id: "component", role: "track",
-    output: { type: "VisualTrack", modules: ["@hypit/ranking", "@hypit/comment-sticker", "@hypit/screen-overlay", "@hypit/deck-track"] },
+    output: { type: "VisualTrack", modules: ["@hypit/ranking", "@hypit/comment-sticker", "@hypit/screen-overlay"] },
     family: "component", icon: "component", interaction: readonlyInteraction,
   },
   { id: "audio-fallback", role: "track", output: { type: "AudioTrack" }, family: "audio", icon: "waveform", interaction: readonlyInteraction },

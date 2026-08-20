@@ -1,4 +1,5 @@
 import { audioAdapters } from "./adapters/audio.js";
+import { deckAdapters } from "./adapters/deck.js";
 import { genericAdapters } from "./adapters/generic.js";
 import { mediaAdapters } from "./adapters/media.js";
 import { rankingAdapters } from "./adapters/ranking.js";
@@ -14,6 +15,7 @@ export type { StudioEntityDraft, StudioProjectionRole, StudioSpan } from "./adap
 /** One Studio-local registry. Author packages and Core know nothing about it. */
 const REGISTRY: readonly StudioAdapter[] = [
   ...rankingAdapters,
+  ...deckAdapters,
   ...speechAdapters,
   ...mediaAdapters,
   ...audioAdapters,
@@ -148,6 +150,7 @@ export function sealStudioClip(
       depth: 0,
     },
     ...(draft.temporal === undefined ? {} : { temporal: draft.temporal }),
+    ...(draft.preview === undefined ? {} : { preview: draft.preview }),
     interaction: draft.interaction ?? fallback.interaction,
     renderIds: draft.renderIds ?? (draft.presentId === undefined ? [] : [draft.presentId]),
   };

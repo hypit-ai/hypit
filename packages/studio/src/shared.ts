@@ -65,6 +65,12 @@ export type StudioInteraction = {
   readonly writeback: "source" | "none";
 };
 
+/** Material Studio can show without inventing a proxy or rerunning a Provider. */
+export type StudioMaterialPreview = {
+  readonly kind: "image";
+  readonly url: string;
+};
+
 export type StudioLaneDescription = {
   readonly layout: "flat" | "nested";
   readonly boundFacets: boolean;
@@ -135,6 +141,8 @@ export type Clip = {
   readonly stackOrder: number;
   readonly presentation: StudioTimelinePresentation;
   readonly temporal?: StudioTemporalLineage;
+  /** A real material selected by this Run; absent means Studio draws no fake preview. */
+  readonly preview?: StudioMaterialPreview;
   readonly interaction: StudioInteraction;
   /** Rendering identities implementing this author entity; optional for non-visual entities. */
   readonly renderIds: readonly string[];
