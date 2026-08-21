@@ -1,13 +1,11 @@
-export { appendColumnWindowCandidate, appendRankingItemSpec, appendRankingSound, appendColumnItem, appendTierBoardItem, appendTopThreeItem, assertColumnProgram, assertColumnStyle, assertColumnWindowCandidateSet, assertRankingHeader, assertRankingItemSpec, assertRankingItemSpecSet, assertRankingTextItemShell, assertRankingSchedule, assertRankingSoundEventPlan, assertRankingSoundStyle, assertTierBoardProgram, assertTierBoardStyle, assertTopThreeProgram, assertTopThreeStyle, buildColumnProgram, buildColumnSchedule, buildColumnSoundEvents, buildRankingSchedule, buildTierBoardProgram, buildTierBoardSoundEvents, buildTopThreeProgram, buildTopThreeSoundEvents, createColumnItemSet, createColumnWindowCandidateSet, createRankingItemSpecSet, createRankingSoundSet, createTierBoardItemSet, createTopThreeItemSet, projectColumnSegmentOuterWindow, projectColumnSelectionOuterWindow, sealRankingHeader, sealRankingTextItemShell, materializeRankingTextItem } from "./schedule.js";
+export { appendColumnWindowCandidate, appendRankingItemSpec, appendRankingSound, appendColumnItem, appendTopThreeItem, assertColumnProgram, assertColumnStyle, assertColumnWindowCandidateSet, assertRankingHeader, assertRankingItemSpec, assertRankingItemSpecSet, assertRankingTextItemShell, assertRankingSchedule, assertRankingSoundEventPlan, assertRankingSoundStyle, assertTopThreeProgram, assertTopThreeStyle, buildColumnProgram, buildColumnSchedule, buildColumnSoundEvents, buildRankingSchedule, buildTopThreeProgram, buildTopThreeSoundEvents, createColumnItemSet, createColumnWindowCandidateSet, createRankingItemSpecSet, createRankingSoundSet, createTopThreeItemSet, projectColumnSegmentOuterWindow, projectColumnSelectionOuterWindow, sealRankingHeader, sealRankingTextItemShell, materializeRankingTextItem } from "./schedule.js";
 export {
   decodeColumnStyle,
-  decodeTierBoardStyle,
   decodeTopThreeStyle,
 } from "./style.js";
 export {
   renderColumn,
   renderRankingAudio,
-  renderTierBoard,
   renderTopThree,
 } from "./render.js";
 export { rankingComponent } from "./component.js";
@@ -17,8 +15,6 @@ export { columnOuterWindowSchema, columnWindowCandidateSetSchema, rankingDepende
 export {
   decodeColumnStyleSurface,
   decodeColumnSurface,
-  decodeTierBoardStyleSurface,
-  decodeTierBoardSurface,
   decodeTopThreeStyleSurface,
   decodeTopThreeSurface,
 } from "./surface.js";

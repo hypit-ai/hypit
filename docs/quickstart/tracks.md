@@ -326,12 +326,11 @@ placement, timing, style and motion. Use inline `P`/`Span`/`Break` when the auth
 ## Ranking boards
 
 A board animates an ordered list against the Script: it enters on a Selection, moves on Moments, and
-settles on a Moment that ends it. Three variants share one shape — a container, its own item tag,
+settles on a Moment that ends it. Two variants share one shape — a container, its own item tag,
 and its own style tag.
 
 | Container | Item | Style |
 |---|---|---|
-| `ranking:TierBoard` | `ranking:TierItem` | `ranking:TierBoardStyle` |
 | `ranking:Column` | `ranking:ColumnItem` | `ranking:ColumnStyle` |
 | `ranking:TopThree` | `ranking:TopThreeItem` | `ranking:TopThreeStyle` |
 
@@ -342,8 +341,8 @@ and its own style tag.
 ### The style tag
 
 Empty, and all three attributes required: `id`, `recipe` (an SVS Recipe) and `font` (a Font Stack or
-Font artifact). The recipe carries the board's own keys — rows, colours, motion — and is validated
-against the variant, so a Column recipe on a TierBoard is refused by name.
+Font artifact). The recipe carries the board's own keys — colours, geometry, motion — and is
+validated against the variant, so a Column recipe on a TopThree is refused by name.
 
 ### The container tag
 
@@ -354,23 +353,19 @@ against the variant, so a Column recipe on a TierBoard is refused by name.
 | `during` | a Selection — the board is on screen for it |
 | `style` | the matching style record, and only that variant's |
 | `appear-sound`, `move-sound` | optional Synchronized Media |
-| `triggers`, `terminal` | Moments — rows move on one, the board settles on the other. `TierBoard` and `TopThree` only |
+| `triggers`, `terminal` | Moments — rows move on one, the board settles on the other. `TopThree` only |
 | `canvas` | a `space:Canvas` — the reveal stage. `Column` only |
 
 `Column` separates placement from reveal time, so it takes neither `triggers` nor `terminal`: each
 item carries its own reveal window instead, and the Column resolves siblings into non-overlapping
 windows inside the container's `during` span.
 
-`move-sound` is refused on `TopThree`, which has no move phase. On a `TierBoard` it needs at least
-one item with `entry="stage"` — a sound with nothing to sound on is an authoring mistake, not a
-silent no-op.
+`move-sound` is refused on `TopThree`, which has no move phase.
 
 ### The item tags
 
 Each variant takes its own, at least one, and ids must be unique within a board.
 
-- **`TierItem`** — `tier` (required, matching a row id in the recipe), `icon` (required), optional
-  `entry="direct" | "stage"` and `stack`. Row labels come from the recipe, not the tag.
 - **`TopThreeItem`** — `label` (required: a string or a Text reference), optional `icon` and `stack`.
   At most three.
 - **`ColumnItem`** — `label` (required) and `rank` (required, a positive integer that decides the

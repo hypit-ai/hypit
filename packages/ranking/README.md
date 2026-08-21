@@ -1,8 +1,7 @@
 # @hypit/ranking
 
-Three independent progressive-ranking author components over one private schedule utility:
+Two independent progressive-ranking author components over one private schedule utility:
 
-- `TierBoard`
 - `Column`
 - `TopThree`
 
@@ -15,11 +14,9 @@ Each `*Style` declaration compiles one SVS Recipe and exact font reference into 
 plus a private named `.sound` Style output. A Ranking component connects both outputs when authored
 sound exists; no sound produces no audio branch.
 
-Visible author copy may be literal or an ordinary graph `Text` reference. Column and TopThree use
+Visible author copy may be literal or an ordinary graph `Text` reference. Both components use
 `label={copy}`. When a reference is used, the graph first materializes the package-owned item shell
-from that exact Text and then shares the one result across schedule, event and render work. Tier row
-names remain Style configuration because they define the board vocabulary rather than dynamic item
-copy.
+from that exact Text and then shares the one result across schedule, event and render work.
 
 ```svml
 <import as="copy" from="@hypit/text@1"/>

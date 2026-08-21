@@ -10,11 +10,10 @@ import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 import type { Text } from "@hypit/text";
 
 import { rankingProducers, rankingTypes } from "./manifest.js";
-import { appendColumnItem, appendColumnWindowCandidate, appendRankingItemSpec, appendRankingSound, appendTierBoardItem, appendTopThreeItem, assertColumnProgram, assertRankingSchedule, assertRankingSoundEventPlan, assertTierBoardProgram, assertTopThreeProgram, buildColumnProgram, buildColumnSchedule, buildColumnSoundEvents, buildRankingSchedule, buildTierBoardProgram, buildTierBoardSoundEvents, buildTopThreeProgram, buildTopThreeSoundEvents, createColumnItemSet, createColumnWindowCandidateSet, createRankingItemSpecSet, createRankingSoundSet, createTierBoardItemSet, createTopThreeItemSet, materializeRankingTextItem, projectColumnSegmentOuterWindow, projectColumnSelectionOuterWindow } from "./schedule.js";
+import { appendColumnItem, appendColumnWindowCandidate, appendRankingItemSpec, appendRankingSound, appendTopThreeItem, assertColumnProgram, assertRankingSchedule, assertRankingSoundEventPlan, assertTopThreeProgram, buildColumnProgram, buildColumnSchedule, buildColumnSoundEvents, buildRankingSchedule, buildTopThreeProgram, buildTopThreeSoundEvents, createColumnItemSet, createColumnWindowCandidateSet, createRankingItemSpecSet, createRankingSoundSet, createTopThreeItemSet, materializeRankingTextItem, projectColumnSegmentOuterWindow, projectColumnSelectionOuterWindow } from "./schedule.js";
 import {
   renderColumn,
   renderRankingAudio,
-  renderTierBoard,
   renderTopThree,
 } from "./render.js";
 import type {
@@ -32,10 +31,6 @@ import type {
   RankingSoundEventPlan,
   RankingSoundSet,
   RankingSoundStyle,
-  TierBoardItemSet,
-  TierBoardItemSpec,
-  TierBoardProgram,
-  TierBoardStyle,
   TopThreeItemSet,
   TopThreeItemSpec,
   TopThreeProgram,
@@ -127,21 +122,12 @@ export const rankingComponent = {
       })) }, needs: {} }),
     },
     ...([
-      [rankingProducers.createTierItems, createTierBoardItemSet],
       [rankingProducers.createColumnItems, createColumnItemSet],
       [rankingProducers.createTopThreeItems, createTopThreeItemSet],
     ] as const).map(([producer, create]) => ({
       producer,
       handler: () => ({ outputs: { set: output(create()) }, needs: {} }),
     })),
-    {
-      producer: rankingProducers.appendTierItem,
-      handler: ({ inputs }) => ({ outputs: { set: output(appendTierBoardItem(
-        inline<TierBoardItemSet>(inputs.set?.value, "TierBoardItemSet"),
-        inline<TierBoardItemSpec>(inputs.spec?.value, "TierBoardItemSpec"),
-        blob(inputs.icon?.value, "TierBoard icon"),
-      )) }, needs: {} }),
-    },
     ...([
       [rankingProducers.appendColumnItem, false],
       [rankingProducers.appendColumnIconItem, true],
@@ -165,14 +151,6 @@ export const rankingComponent = {
       )) }, needs: {} }),
     })),
     {
-      producer: rankingProducers.tierProgram,
-      handler: ({ inputs }) => {
-        const common = programInputs(inputs);
-        return { outputs: { program: output(buildTierBoardProgram(common.header, common.frame, common.schedule,
-          inline<TierBoardStyle>(inputs.style?.value, "TierBoardStyle"), inline<TierBoardItemSet>(inputs.set?.value, "TierBoardItemSet"))) }, needs: {} };
-      },
-    },
-    {
       producer: rankingProducers.columnProgram,
       handler: ({ inputs }) => {
         const common = programInputs(inputs);
@@ -190,7 +168,6 @@ export const rankingComponent = {
       },
     },
     ...([
-      [rankingProducers.tierEvents, buildTierBoardSoundEvents, "TierBoardStyle"],
       [rankingProducers.columnEvents, buildColumnSoundEvents, "ColumnStyle"],
       [rankingProducers.topThreeEvents, buildTopThreeSoundEvents, "TopThreeStyle"],
     ] as const).map(([producer, build, styleLabel]) => ({
@@ -225,7 +202,6 @@ export const rankingComponent = {
       )) }, needs: {} }),
     },
     ...([
-      [rankingProducers.renderTier, renderTierBoard, "TierBoardProgram"],
       [rankingProducers.renderColumn, renderColumn, "ColumnProgram"],
       [rankingProducers.renderTopThree, renderTopThree, "TopThreeProgram"],
     ] as const).map(([producer, render, label]) => ({
@@ -238,8 +214,6 @@ export const rankingComponent = {
   validators: [
     { type: rankingTypes.schedule,
       handler: ({ value }) => assertRankingSchedule(inline<RankingSchedule>(value, "RankingSchedule")) },
-    { type: rankingTypes.tierProgram,
-      handler: ({ value }) => assertTierBoardProgram(inline<TierBoardProgram>(value, "TierBoardProgram")) },
     { type: rankingTypes.columnProgram,
       handler: ({ value }) => assertColumnProgram(inline<ColumnProgram>(value, "ColumnProgram")) },
     { type: rankingTypes.topThreeProgram,

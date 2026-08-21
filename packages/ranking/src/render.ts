@@ -14,6 +14,7 @@ import type {
   VisualTrack,
 } from "@hypit/composition";
 import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@hypit/media";
+import type { BlobRef } from "@hypit/protocol";
 import {
   assertProgramSpaceIdentity,
   programFrameSampleBoundary,
@@ -25,10 +26,9 @@ import {
   assertColumnProgram,
   assertRankingSoundEventPlan,
   assertRankingSoundStyle,
-  assertTierBoardProgram,
   assertTopThreeProgram,
   fitColumnRevealMotion,
-  fitRankingStageMotion,
+  fitRankingStageAppearFrames,
 } from "./schedule.js";
 import type {
   ColumnItem,
@@ -38,8 +38,6 @@ import type {
   RankingSoundSet,
   RankingSoundStyle,
   RankingTextStyle,
-  TierBoardItem,
-  TierBoardProgram,
   TopThreeItem,
   TopThreeProgram,
 } from "./types.js";
@@ -147,7 +145,7 @@ function iconElement(input: {
   readonly id: string;
   readonly order: number;
   readonly parent: string;
-  readonly artifact: TierBoardItem["icon"];
+  readonly artifact: BlobRef;
   readonly x: number;
   readonly y: number;
   readonly size: number;
@@ -212,26 +210,6 @@ function finalTransform(): string {
   return "translate(0px,0px) scale(1)";
 }
 
-function stageTransform(finalX: number, finalY: number, stageX: number, stageY: number, scale: number): string {
-  return `translate(${px(stageX - finalX)},${px(stageY - finalY)}) scale(${scale})`;
-}
-
-function settledItemAnimation(input: {
-  readonly duration: number;
-  readonly appearFrames: number;
-  readonly moveStart: number;
-  readonly moveEnd: number;
-  readonly stageTransform: string;
-  readonly easing: "linear" | "ease-in" | "ease-out" | "ease-in-out";
-}): VisualAnimation {
-  return animation(input.duration, [
-    { atFrame: 0, style: transformStyle(`${input.stageTransform} scale(0.82)`, 0), easing: "ease-out" },
-    { atFrame: input.appearFrames, style: transformStyle(input.stageTransform, 1) },
-    { atFrame: input.moveStart, style: transformStyle(input.stageTransform, 1), easing: input.easing },
-    { atFrame: input.moveEnd, style: transformStyle(finalTransform(), 1) },
-  ]);
-}
-
 function directItemAnimation(duration: number, appearFrames: number): VisualAnimation {
   return animation(duration, [
     { atFrame: 0, style: transformStyle("translate(0px,8px) scale(0.82)", 0), easing: "ease-out" },
@@ -243,102 +221,6 @@ function sealTrack(space: ProgramSpace, id: string, presents: readonly VisualPre
   const value = sealVisualTrack({ visualIr: "hypit.visual-ir@1", id, presents });
   assertVisualTrackIdentity(value, space);
   return value;
-}
-
-export function renderTierBoard(space: ProgramSpace, program: TierBoardProgram): VisualTrack {
-  assertProgramSpaceIdentity(space);
-  assertTierBoardProgram(program);
-  const { frame, style, schedule } = program;
-  const presents: VisualPresent[] = [];
-  const boardElements: VisualElement[] = [absoluteBox({
-    id: "tier-board", order: 0, x: frame.xPx, y: frame.yPx, width: frame.widthPx, height: frame.heightPx,
-    style: boardStyle(style.board),
-  })];
-  for (const [index, row] of style.rows.entries()) {
-    const y = style.paddingPx + index * (style.rowHeightPx + style.rowGapPx);
-    boardElements.push(absoluteBox({
-      id: `tier-row-${row.id}`, parent: "tier-board", order: boardElements.length,
-      x: style.paddingPx, y, width: frame.widthPx - style.paddingPx * 2, height: style.rowHeightPx,
-      style: [{ name: "background", value: row.color }, { name: "border-radius", value: px(Math.min(12, style.iconRadiusPx)) }],
-    }));
-    boardElements.push(simpleText({
-      id: `tier-label-${row.id}`, parent: `tier-row-${row.id}`, order: boardElements.length,
-      text: row.label, typography: style.text, x: 0, y: 0, width: style.labelWidthPx, height: style.rowHeightPx,
-    }));
-  }
-  presents.push(present({
-    id: `${program.id}:board`, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
-    stacking: style.boardStackingOrder, tieBreak: `${program.id}:0000:board`, elements: boardElements,
-  }));
-  if (program.items.some((item) => item.entry === "stage")) {
-    const size = style.stageSizePx;
-    presents.push(present({
-      id: `${program.id}:stage`, start: schedule.entries[0]!.triggerFrame, end: schedule.terminalFrame,
-      stacking: style.stageStackingOrder, tieBreak: `${program.id}:0001:stage`, elements: [absoluteBox({
-        id: "tier-stage", order: 0,
-        x: frame.xPx + frame.widthPx * style.stagePoint.x - size / 2,
-        y: frame.yPx + frame.heightPx * style.stagePoint.y - size / 2,
-        width: size, height: size,
-        style: [
-          { name: "border", value: `${px(2)} dashed ${style.text.color}` },
-          { name: "border-radius", value: px(style.iconRadiusPx) },
-          { name: "opacity", value: 0.45 },
-        ],
-      })],
-    }));
-  }
-  const rowCounts = new Map<string, number>();
-  for (const [index, item] of program.items.entries()) {
-    const entry = schedule.entries[index]!;
-    const rowIndex = style.rows.findIndex((row) => row.id === item.tier);
-    const cell = rowCounts.get(item.tier) ?? 0;
-    rowCounts.set(item.tier, cell + 1);
-    const x = frame.xPx + style.paddingPx + style.labelWidthPx + cell * (style.iconSizePx + style.cellGapPx);
-    const y = frame.yPx + style.paddingPx + rowIndex * (style.rowHeightPx + style.rowGapPx)
-      + (style.rowHeightPx - style.iconSizePx) / 2;
-    assert(x + style.iconSizePx <= frame.xPx + frame.widthPx - style.paddingPx,
-      `TierBoard row ${item.tier} cannot fit Item ${item.id}.`);
-    const duration = entry.stage.endFrameExclusive - entry.stage.startFrame;
-    const fitted = fitRankingStageMotion(duration, style.motion.appearFrames, style.motion.moveFrames, item.entry === "stage");
-    const rootAnimation = item.entry === "direct"
-      ? directItemAnimation(duration, fitted.appearFrames)
-      : settledItemAnimation({
-          duration,
-          appearFrames: fitted.appearFrames,
-          moveStart: entry.stage.endFrameExclusive - fitted.moveFrames - entry.triggerFrame,
-          moveEnd: entry.stage.endFrameExclusive - entry.triggerFrame,
-          stageTransform: stageTransform(
-            x, y,
-            frame.xPx + frame.widthPx * style.stagePoint.x - style.iconSizePx / 2,
-            frame.yPx + frame.heightPx * style.stagePoint.y - style.iconSizePx / 2,
-            style.stageSizePx / style.iconSizePx,
-          ),
-          easing: style.motion.easing,
-        });
-    const root = `tier-item-${item.id}`;
-    const itemElements = (animationValue?: VisualAnimation): VisualElement[] => [
-      absoluteBox({ id: root, order: 0, x, y, width: style.iconSizePx, height: style.iconSizePx,
-        ...(animationValue === undefined ? {} : { animation: animationValue }) }),
-      iconElement({ id: "icon", parent: root, order: 1, artifact: item.icon, x: 0, y: 0, size: style.iconSizePx, radius: style.iconRadiusPx, fit: style.iconFit }),
-    ];
-    presents.push(present({
-      id: `${program.id}:item:${item.id}:stage`,
-      start: entry.stage.startFrame,
-      end: entry.stage.endFrameExclusive,
-      stacking: item.stackingOrder ?? style.itemStackingOrder,
-      tieBreak: `${program.id}:item:${String(index).padStart(4, "0")}:${item.id}:stage`,
-      elements: itemElements(rootAnimation),
-    }));
-    if (entry.settled.endFrameExclusive > entry.settled.startFrame) presents.push(present({
-      id: `${program.id}:item:${item.id}:settled`,
-      start: entry.settled.startFrame,
-      end: entry.settled.endFrameExclusive,
-      stacking: item.stackingOrder ?? style.itemStackingOrder,
-      tieBreak: `${program.id}:item:${String(index).padStart(4, "0")}:${item.id}:settled`,
-      elements: itemElements(),
-    }));
-  }
-  return sealTrack(space, program.id, presents);
 }
 
 function rowY(frameY: number, frameHeight: number, padding: number, count: number, index: number, height: number, gap: number): number {
@@ -585,7 +467,7 @@ export function renderTopThree(space: ProgramSpace, program: TopThreeProgram): V
         id: root, order: 0, x, y, width: style.iconSizePx,
         height: style.iconSizePx + style.labelGapPx + style.text.sizePx * style.text.lineHeight,
         ...(active ? { animation: directItemAnimation(duration,
-          fitRankingStageMotion(duration, style.motion.appearFrames, style.motion.moveFrames, false).appearFrames) } : {}),
+          fitRankingStageAppearFrames(duration, style.motion.appearFrames)) } : {}),
       })];
       if (active) elements.push(absoluteBox({ id: accent, parent: root, order: 1, x: 0, y: 0, width: style.iconSizePx, height: style.iconSizePx,
         style: [
