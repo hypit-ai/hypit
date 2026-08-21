@@ -62,11 +62,13 @@ very bias it claims to correct: it sees the reconstruction, knows what was built
 expects. This is why a font that is wrong is caught — the comparison names it, and the package is
 repaired, rather than a font being chosen because it resembles what you remember.
 
-**On the `agent` observer, that observer is you**, and the command returns the two images and the
-question instead of an answer. The bias above is then real and unavoidable, so `observers.md` states
-the discipline that replaces blindness: write the differences down before naming a cause, count only
-repairs aimed at a difference you wrote down, and read a quantity off the frame rather than spending
-an attempt guessing at it.
+**On the `agent` observer the command returns the two images and the question instead of an answer,
+and who looks at them is up to the harness.** Give them to a subagent when you can: one handed two
+unlabelled images and the question knows neither which is the reference nor what was built, which is
+the same blindness this section rests on. Answer it yourself only when there are no subagents, and
+then the bias above is real, so `observers.md` states the discipline that stands in for blindness —
+write the differences down before naming a cause, count only repairs aimed at a difference you wrote
+down, and read a quantity off the frame rather than spending an attempt guessing at it.
 
 Hypit Studio is a browser preview for a person to look at. It is not a source of the image this
 loop needs: that image is the local still render in `../preview.md`, which draws one element without
