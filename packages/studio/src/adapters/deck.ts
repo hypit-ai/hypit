@@ -1,5 +1,5 @@
 import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft } from "./types.js";
-import { readonlyInteraction, sameSurfaceValue } from "./types.js";
+import { laneHeights, readonlyInteraction, sameSurfaceValue } from "./types.js";
 
 type DepthStackProgram = {
   readonly terminalFrame: number;
@@ -53,5 +53,6 @@ export const deckAdapters: readonly StudioAdapter[] = [
     output: { type: "VisualTrack", surface: "track", modules: ["@hypit/deck-track"] },
     family: "component", icon: "layers", realizationPorts: ["program"],
     interaction: readonlyInteraction, project: projectDeck,
+    lane: { layout: "flat", height: laneHeights.component },
   },
 ];

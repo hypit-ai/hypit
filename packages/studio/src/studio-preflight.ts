@@ -108,34 +108,30 @@ export function inspectStudioRun(source: CompiledSource, base: RunPlan): StudioI
     }
   }
 
-  const filmTrackRefs = unique([
-    ...chosen.placement.references,
-    ...chosen.placement.children.flatMap((child) => child.references),
-  ]).flatMap((ref) => {
+  // Only authored <film:Track source={...}/> children define Film membership
+  // and Studio lane order. Film's canvas, semantic and appearance references
+  // are not Tracks, and sibling outputs of those references are not implied.
+  const filmTrackRefs = unique(chosen.placement.children.flatMap((child) => {
+    const source = child.referenceAttributes.source;
+    return source === undefined ? [] : [source];
+  })).flatMap((ref) => {
     const output = outputFor(source, ref);
     return output !== undefined && (output.type === "VisualTrack" || output.type === "AudioTrack")
       ? [output.ref]
       : [];
   });
-  const speechTracks = source.observations.placements.filter((placement) =>
-    placement.outputs.some((ref) => outputFor(source, ref)?.type === "SemanticTrack")
-    && placement.outputs.some((ref) => {
-      const output = outputFor(source, ref);
-      return output !== undefined && filmTrackRefs.includes(output.ref);
-    })
-  );
-  const semanticTakeRefs = unique(speechTracks.flatMap((placement) => [
-    ...placement.references,
-    ...placement.children.flatMap((child) => child.references),
-  ])).flatMap((ref) => outputFor(source, ref)?.type === "SemanticTake"
+  const semanticOutput = outputFor(source, chosen.placement.referenceAttributes.semantic ?? "");
+  if (semanticOutput?.type !== "SemanticTrack") {
+    issues.push("Film has no traceable SemanticTrack reference");
+  }
+  const semanticPlacement = semanticOutput === undefined
+    ? undefined
+    : placementFor(source, semanticOutput.ref);
+  const semanticTakeRefs = unique(semanticPlacement === undefined ? [] : [
+    ...semanticPlacement.references,
+    ...semanticPlacement.children.flatMap((child) => child.references),
+  ]).flatMap((ref) => outputFor(source, ref)?.type === "SemanticTake"
     ? [outputFor(source, ref)!.ref] : []);
-  const speechProjectionRefs = unique(speechTracks.flatMap((placement) => placement.outputs))
-    .flatMap((ref) => {
-      const output = outputFor(source, ref);
-      return output !== undefined
-        && (output.type === "SemanticTrack" || output.type === "VisualTrack" || output.type === "AudioTrack")
-        ? [output.ref] : [];
-    });
   if (semanticTakeRefs.length === 0) issues.push("Film has no traceable SemanticTake / Speech Track chain");
 
   const captionPlanRefs = unique(filmTrackRefs.flatMap((ref) =>
@@ -146,7 +142,7 @@ export function inspectStudioRun(source: CompiledSource, base: RunPlan): StudioI
 
   const projectionRefs = unique([
     ...filmTrackRefs,
-    ...speechProjectionRefs,
+    ...(semanticOutput?.type === "SemanticTrack" ? [semanticOutput.ref] : []),
     ...semanticTakeRefs,
     ...captionPlanRefs,
     ...adapterRealizationRefs,

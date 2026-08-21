@@ -80,7 +80,11 @@ const server = await createServer({
   root: here,
   server: {
     port,
-    fs: { allow: [workspaceRoot, here] },
+    // Vite resolves package assets through pnpm's real paths. The package root
+    // must therefore be readable for self-hosted fonts and other declared
+    // Studio dependencies, while the author workspace remains separately
+    // available for Source and material previews.
+    fs: { allow: [workspaceRoot, packageRoot, here] },
   },
   plugins: [studioPlugin({
     source,

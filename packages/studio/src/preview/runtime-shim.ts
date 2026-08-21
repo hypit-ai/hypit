@@ -5,11 +5,10 @@
  * an absolute Program frame, places every timed Present/material at that
  * instant, and waits until a discrete media seek is actually decoded.
  */
-function shim(audibleTrack: string | undefined): string {
+function shim(): string {
   return String.raw`
 <script>
 (function () {
-  var audible = ${JSON.stringify(audibleTrack ?? null)};
   var muted = false;
   var root = document.querySelector('[data-composition-id]');
   var fpsAttr = (root && root.getAttribute('data-fps')) || '30';
@@ -46,8 +45,21 @@ function shim(audibleTrack: string | undefined): string {
       start: parseFloat(ownStart || (present && present.getAttribute('data-start')) || '0') || 0,
       duration: parseFloat(ownDuration || (present && present.getAttribute('data-duration')) || '0') || 0,
       mediaStart: parseFloat(element.getAttribute('data-media-start') || '0') || 0,
+      rate: parseFloat(element.getAttribute('data-playback-rate') || '1') || 1
+    });
+  }
+  var programmeAudio = [];
+  for (var element of document.querySelectorAll('.hypit-studio-audio')) {
+    programmeAudio.push({
+      element: element,
+      start: parseFloat(element.getAttribute('data-start') || '0') || 0,
+      duration: parseFloat(element.getAttribute('data-duration') || '0') || 0,
+      mediaStart: parseFloat(element.getAttribute('data-media-start') || '0') || 0,
+      mediaEnd: parseFloat(element.getAttribute('data-media-end') || '0') || 0,
+      loop: element.getAttribute('data-loop') === 'true',
+      phase: parseFloat(element.getAttribute('data-phase') || '0') || 0,
       rate: parseFloat(element.getAttribute('data-playback-rate') || '1') || 1,
-      track: present && present.getAttribute('data-hypit-track-id')
+      gain: parseFloat(element.getAttribute('data-gain') || '1') || 1
     });
   }
 
@@ -96,7 +108,9 @@ function shim(audibleTrack: string | undefined): string {
       var inside = local >= 0 && local < record.duration;
       var element = record.element;
       element.style.visibility = inside ? 'visible' : 'hidden';
-      element.muted = muted || scrubbing || audible === null || record.track !== audible;
+      // Normalized picture Artifacts are deliberately silent. Programme sound
+      // comes from the exact AudioTrack below rather than from a video sidecar.
+      element.muted = true;
       if (!inside) { element.pause(); continue; }
       var target = record.mediaStart + (local + frameSeconds / 2) * record.rate;
       if (Number.isFinite(element.duration) && element.duration > 0) {
@@ -111,6 +125,30 @@ function shim(audibleTrack: string | undefined): string {
         // previously froze the preview between frames.
         if (Math.abs(element.currentTime - target) > 0.08) element.currentTime = target;
         element.playbackRate = record.rate;
+        if (element.paused) {
+          var started = element.play();
+          if (started) started.catch(function () {});
+        }
+      }
+    }
+    for (var record of programmeAudio) {
+      var local = currentSeconds - record.start;
+      var inside = local >= 0 && local < record.duration;
+      var element = record.element;
+      element.muted = muted || scrubbing;
+      if (!inside) { element.pause(); continue; }
+      var interval = Math.max(0, record.mediaEnd - record.mediaStart);
+      var advanced = (local + frameSeconds / 2) * record.rate;
+      var target = record.mediaStart + advanced;
+      if (record.loop && interval > 0) target = record.mediaStart + ((record.phase + advanced) % interval);
+      else target = Math.min(target, Math.max(record.mediaStart, record.mediaEnd - 0.000001));
+      if (scrubbing || local >= record.duration - frameSeconds - 0.000001) {
+        element.pause();
+        waits.push(seekDecoded(element, target));
+      } else {
+        if (Math.abs(element.currentTime - target) > 0.08) element.currentTime = target;
+        element.playbackRate = record.rate;
+        element.volume = Math.max(0, Math.min(1, record.gain));
         if (element.paused) {
           var started = element.play();
           if (started) started.catch(function () {});
@@ -139,8 +177,8 @@ function shim(audibleTrack: string | undefined): string {
 </script>`;
 }
 
-export function injectRuntimeShim(html: string, audibleTrack?: string): string {
-  const script = shim(audibleTrack);
+export function injectRuntimeShim(html: string, audio = ""): string {
+  const script = audio + shim();
   const at = html.lastIndexOf("</body>");
   return at < 0 ? html + script : html.slice(0, at) + script + html.slice(at);
 }
