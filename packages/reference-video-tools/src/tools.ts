@@ -534,6 +534,16 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           pending_observations: pending,
         };
       }
+      // Every shot observation is asked with the four whole-reference observations quoted into it. The
+      // observer that answers in band has them the moment prepare_reference returns; the one that
+      // answers out of band has not written them yet, and a sweep run first would ask every shot its
+      // question with that context missing and cache the answers.
+      if (observer === "agent") {
+        const owed = WHOLE_REFERENCE_KEYS.filter((key) => state[key]?.status !== "complete");
+        assert(owed.length === 0,
+          `answer the whole-reference observations first, with record_observation: ${owed.join(", ")}. `
+          + "Every shot observation quotes them, so a sweep run before they exist asks each shot with less than it should have.");
+      }
       const selectedIds = new Set(selected.map((shot) => shot.shot_id));
       const boundaryRights = state.shots.filter((shot) => {
         const left = state.shots.find((candidate) => candidate.index === shot.index - 1);

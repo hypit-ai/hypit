@@ -135,7 +135,15 @@ hypit-reference-video-tools observe_reference --reference-id <id>
 ```
 
 Both return `pending_observations`: a list of tasks, each with its `key`, its `instruction`, its
-`prompt` and the `image_refs` to read. Answer one, then record it:
+`prompt` and the `image_refs` to read.
+
+**Answer `prepare_reference`'s four before running `observe_reference`.** Every shot observation quotes
+the whole-reference evidence into its own question, so a sweep run before those four exist asks each
+shot with less than it should have and caches the answer. `observe_reference` refuses until they are
+recorded and names the ones it is waiting for; a narrow `--question` is exempt, being a follow-up
+rather than the sweep.
+
+Answer one, then record it:
 
 ```text
 hypit-reference-video-tools record_observation --reference-id <id> --key visual:shot-002 \
