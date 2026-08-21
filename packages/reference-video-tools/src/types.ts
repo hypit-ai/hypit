@@ -45,8 +45,11 @@ export type Shot = {
   readonly clip_ref: string;
   readonly representative_frame_ref: string;
   readonly tail_frame_ref: string;
-  /** The shot's frames sampled evenly and tiled into one picture, in reading order. */
-  readonly frames_tile_ref: string;
+  /**
+    * The shot's frames sampled evenly and tiled into one picture, in reading order. Built for the
+    * `agent` observer, which reads it in place of the clip, and null for the observer that reads video.
+    */
+  readonly frames_tile_ref: string | null;
   readonly audio_tail_ref: string | null;
 };
 
