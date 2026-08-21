@@ -22,16 +22,31 @@ the other path's does.
 
 ## Choosing
 
-Ask the author once, before `prepare_reference`, and say what each one costs them. Report what this
-machine actually holds rather than asking them to recall it:
+Ask the author once, before `prepare_reference`. Report what this machine actually holds rather than
+asking them to recall it:
 
 ```text
 node .agents/skills/hypit/scripts/check-credentials.mjs GOOGLE_CLOUD_PROJECT GOOGLE_APPLICATION_CREDENTIALS_JSON
 ```
 
-Both variables `set` means `gemini` is available and the author chooses. Either one `missing` means
-`agent` is the path that can run today, and the author decides whether to run it or to configure
-Vertex first — `../credentials.md` says what those two variables are.
+Both variables `set` means `gemini` is available and the author chooses between the two. Either one
+`missing` means `agent` is the path that can run today; say so, say what it costs, and let the author
+decide whether to run it or to configure Vertex first. `../credentials.md` says what those two
+variables are.
+
+Say that `agent` reads the reference a little less closely — a shot arrives as sampled frames rather
+than continuous video, so continuity across it is read rather than watched, and there is no sound, so
+a voice is attributed rather than heard. The reconstruction it produces is a working one. Say it once,
+take the answer, and run.
+
+## Say which path is running
+
+Once the answer is in, tell the author which observer is reading the reference, before the evidence
+starts. One line is enough, and it names the observer and the reason: the credentials are there and
+they chose it, or the credentials are absent and this is the path that runs.
+
+The author reads the observations, the sources and eventually the video. Which observer produced the
+evidence changes what those are worth, and it is not visible in any of them.
 
 This is the one question this route asks about how it runs. Everything else it decides:
 `index.md` still owns the working directory, the project location, the vocabulary and the generators.
