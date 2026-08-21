@@ -80,6 +80,11 @@ The package is project-local even when the project is the Hypit checkout. Do not
 official package automatically. After the result is accepted, offer promotion as a separate
 contribution.
 
+Expect it to draw as a generic block in Studio until then. `packages/studio/src/studio-registry.ts`
+picks an adapter by the module that placed the Track, and no adapter names a `@hypit/local-…` module,
+so the component reaches the `visual-fallback` adapter: it renders, without its own family colour,
+icon or inspector. Registering it means editing a shared package, which is what promotion is for.
+
 ## Complete implementation
 
 The main agent writes all code. Gemini must not receive or produce TypeScript, `package.json`,
@@ -241,9 +246,12 @@ person to do it should correct what follows.
   `devDependencies`; in the package's own test harness; and in **both** package catalogs,
   `docs/guide/packages.md` and `docs/zh/guide/packages.md`. An English-only catalog entry is a half
   promotion.
-- **Studio keeps a hand-maintained list.** `packages/studio/src/adapters/generic.ts` enumerates the
-  modules that get the component adapter. A package missing from it still renders, through the visual
-  fallback — second-class in Studio, and invisible as itself in review.
+- **Studio keeps a hand-maintained registry.** `packages/studio/src/studio-registry.ts` composes the
+  adapter sets under `packages/studio/src/adapters/`, and each adapter names the modules it claims. A
+  family joins an existing set's `modules` list or brings its own adapter file, the way `deck.ts`
+  does. A package named by none of them still renders, through the `visual-fallback` and
+  `audio-fallback` adapters in `generic.ts` — second-class in Studio, and invisible as itself in
+  review.
 - **Its own chrome is untracked today.** Git ignores `projects/`, so the texture the package
   reads with `readFile(new URL("../assets/…"))` is not in git. Promotion is the first moment those
   bytes enter the repository, and **no package under `packages/` has a non-`preview/` asset
