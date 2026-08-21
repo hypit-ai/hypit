@@ -142,6 +142,12 @@ comparison to name what remains. Do not spend one to find out — a comparison t
 and exists only to report the gap is a paid step for a report nobody asked for. The element is what
 it is; move on to the next one.
 
-When there is no next element the route is over, except for one question. If a project-local package
-was built along the way, decide whether it should outlive this video and put that to the author:
-`../local-author-package.md` says how to judge it and what promoting it actually costs.
+When there is no next element the reconstruction is complete, and two things follow it.
+
+If the author wants the result to differ from the reference — their presenter, their product, their
+brand — read the sources you wrote and change them to what they asked for. `index.md` says why that
+happens here rather than earlier.
+
+If a project-local package was built along the way, decide whether it should outlive this video and
+put that to the author: `../local-author-package.md` says how to judge it and what promoting it
+actually costs.
