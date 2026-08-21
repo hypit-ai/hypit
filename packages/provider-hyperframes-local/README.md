@@ -16,6 +16,11 @@ The Provider owns both controls because they are deployment policy, not author i
 renders program audio; `@hypit/provider-media-local` separately prepares `TimelineAudio` and muxes
 the final media.
 
+`browserGpu` picks Chrome's rasterizer and defaults to `hardware`, so composited frames are drawn by
+the GPU. The cost of the alternative is large rather than marginal: on `software` the same
+1080×1920 render falls to SwiftShader on the CPU and takes tens of minutes where the GPU takes a few.
+Set `software` on a machine with no usable GPU, or `auto` to let the HyperFrames CLI decide.
+
 The Runtime Adapter also declares one managed browser program. `programs up` invokes the pinned
 HyperFrames CLI's `browser ensure`; its probe resolves and starts that browser and checks
 ffprobe before a Build.
