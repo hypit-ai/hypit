@@ -39,11 +39,15 @@ This is the one question this route asks about how it runs. Everything else it d
 ## What the `agent` observer reads
 
 Each shot arrives as one picture: its frames sampled evenly across its duration and tiled in reading
-order, left to right then top to bottom. Read the grid as time passing. The whole reference arrives as
-the storyboard of representative frames. A task that carries a single picture carries one moment.
+order, left to right then top to bottom. Read the grid as time passing. A task that carries a single
+picture carries one moment. The number of frames follows the shot's length, from four for a short one
+to nine for a long one, so a cell stays wide enough to read detail in.
 
-The number of frames follows the shot's length, from four for a short one to nine for a long one, so
-a cell stays wide enough to read detail in.
+A whole-reference task carries the storyboard — every shot's representative frame in one picture, for
+reading the video at a glance — followed by every shot's tile, so the question sees every frame the
+shot observations see. On a long reference that is a lot of pictures, and it is the whole evidence:
+answer from all of them rather than from the storyboard alone, which shows one moment per shot and
+therefore answers neither what moves nor what recurs.
 
 ## How sound is answered on the `agent` observer
 
