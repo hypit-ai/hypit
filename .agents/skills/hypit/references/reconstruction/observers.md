@@ -51,6 +51,45 @@ evidence changes what those are worth, and it is not visible in any of them.
 This is the one question this route asks about how it runs. Everything else it decides:
 `index.md` still owns the working directory, the project location, the vocabulary and the generators.
 
+## The protocol is one loop
+
+The tool asks, you answer, you record, you ask again. It ends when the tool asks for nothing.
+
+```text
+hypit-reference-video-tools prepare_reference --video-path <path> --observer agent
+hypit-reference-video-tools observe_reference --reference-id <id>
+hypit-reference-video-tools record_observation --reference-id <id> --key <key> --text-file <path>
+```
+
+The first two return `pending_observations`: tasks, each with its `key`, its `instruction`, its
+`prompt` and the `image_refs` to read. `--text-file` is how a long answer arrives whole; `--text`
+suits a short one.
+
+Everything else about running this observer follows from one fact — **the answer comes back out of
+band, so the tool cannot ask and be answered inside one call.** What follows is that fact seen from
+four sides, not four rules to remember separately:
+
+- **`pending` is a task handed out, not an answer received.** It is never cached, so an observation you
+  have not answered is asked again rather than read as finished. `unresolved` lists it, and here that
+  is a question outstanding rather than a question that failed.
+- **The tool only hands out a task whose inputs exist.** The four whole-reference observations are
+  quoted into every shot's question, so `observe_reference` refuses the sweep until they are recorded,
+  and names the ones it is waiting for. A narrow `--question` is exempt, being a follow-up rather than
+  the sweep.
+- **A task whose input is another answer appears on a later pass.** The three-shot continuity review is
+  decided from what the boundary observations say, so it cannot be handed out by the pass that asks for
+  them. It appears on the next one and is complete on the one after.
+- **Empty `pending_observations` ends the sweep**, and empty `unresolved` says the same from the other
+  side. Answering everything one call listed is not the end of it.
+
+The observer that answers in band walks all of this inside a single call, which is why the loop is easy
+to leave out. Leaving it out stops before the three-shot review exists: `continuity.md` then has no
+evidence for whether three clips are one continuous camera shot, and a stretch the reference plays
+unbroken is authored as three, with two seams it does not have.
+
+`--redo all --observer <other>` is how a reference changes observer, and it re-prepares everything,
+because the observations it holds were read from the other kind of evidence.
+
 ## What the `agent` observer reads
 
 Each shot arrives as one picture: its frames sampled evenly across its duration and tiled in reading
@@ -87,15 +126,13 @@ read off pictures and word timings, and that is what a later reader should take 
 
 ## Answer each task in its own subagent when you can
 
-Every task the tool returns is self-contained: a `key`, an `instruction`, a `prompt` that already
-carries the whole-reference context, and absolute `image_refs`. No task refers to another task's
-answer. So if the harness you are running in can spawn subagents — Claude Code and Codex can, and
-some cannot — give each task to its own, and run them together.
+Every task is self-contained, and no task refers to another task's answer. So if the harness you are
+running in can spawn subagents — Claude Code and Codex can, and some cannot — give each task in a pass
+to its own, and run the pass together.
 
 Hand the subagent the `instruction`, the `prompt` verbatim and the `image_refs`, and nothing else.
 Not what you built, not which component drew anything, not what you expect it to find, and not another
-observation's answer. Take the returned text and write it with `record_observation` yourself, so one
-writer owns the cache.
+observation's answer. Take the returned text and record it yourself, so one writer owns the cache.
 
 Two things follow from one task per subagent, and both of them are properties the `gemini` observer
 has for free:
@@ -126,44 +163,3 @@ discipline that keeps it useful has to be explicit:
 
 The same three hold when a subagent compares, and they cost nothing there; what a subagent adds is
 that the comparer is not the builder.
-
-## Running it
-
-```text
-hypit-reference-video-tools prepare_reference --video-path <path> --observer agent
-hypit-reference-video-tools observe_reference --reference-id <id>
-```
-
-Both return `pending_observations`: a list of tasks, each with its `key`, its `instruction`, its
-`prompt` and the `image_refs` to read.
-
-**Answer `prepare_reference`'s four before running `observe_reference`.** Every shot observation quotes
-the whole-reference evidence into its own question, so a sweep run before those four exist asks each
-shot with less than it should have and caches the answer. `observe_reference` refuses until they are
-recorded and names the ones it is waiting for; a narrow `--question` is exempt, being a follow-up
-rather than the sweep.
-
-Answer one, then record it:
-
-```text
-hypit-reference-video-tools record_observation --reference-id <id> --key visual:shot-002 \
-  --text-file <path to your answer>
-```
-
-`--text-file` is how a long answer arrives whole; `--text` suits a short one. An observation you have
-not answered reports as `pending`, which `unresolved` lists and which is not a failure.
-
-**Re-run `observe_reference` until it hands out nothing.** Answering everything it listed once is not
-the end of the sweep: some observations only exist once the ones they read have been answered. The
-three-shot continuity review is decided from what the boundary observations say, so it cannot be
-handed out in the same pass that asks for them — it appears on the next one, and the pass after that
-reports it complete. The observer that answers in band reaches this in a single call, and stopping at
-one call here loses the review entirely: `continuity.md` then has no evidence for whether three clips
-are one continuous camera shot, and a stretch the reference plays unbroken is authored as three, with
-two seams it does not have.
-
-Empty `pending_observations` is the signal the sweep is over. `unresolved` empty is the same statement
-from the other side.
-
-`--redo all --observer <other>` is how a reference changes observer, and it re-prepares everything,
-because the observations it holds were read from the other kind of evidence.
