@@ -19,17 +19,23 @@ import {
   writeJson,
 } from "./media.js";
 import { prepareTranscript } from "./transcript.js";
-import type { Observation, PrepareResult, ReferenceState, Shot, Transcript } from "./types.js";
+import type { Observation, ObservationTaskRequest, Observer, PrepareResult, ReferenceState, Shot, Transcript } from "./types.js";
 
 export type PrepareReferenceInput = {
   readonly video_path: string;
   readonly redo?: "media" | "transcript" | "people" | "voices" | "systems" | "places" | "all";
+  readonly observer?: Observer;
 };
 export type ObserveReferenceInput = {
   readonly reference_id: string;
   readonly shot_ids?: readonly string[];
   readonly question?: string;
   readonly reobserve?: boolean;
+};
+export type RecordObservationInput = {
+  readonly reference_id: string;
+  readonly key: string;
+  readonly text: string;
 };
 export type InspectVocabularyInput = {
   readonly package_names: readonly string[];
@@ -49,6 +55,7 @@ export type ReferenceVideoTools = {
   observe_reference(input: ObserveReferenceInput): Promise<Record<string, unknown>>;
   inspect_svml_vocabulary(input: InspectVocabularyInput): Promise<Record<string, unknown>>;
   compare_reconstruction(input: CompareReconstructionInput): Promise<Record<string, unknown>>;
+  record_observation(input: RecordObservationInput): Promise<Record<string, unknown>>;
 };
 
 type ToolOptions = {
@@ -61,9 +68,9 @@ type ToolOptions = {
   readonly generate?: GenerateText;
 };
 export type GenerateText = (input: { readonly parts: readonly Part[]; readonly instruction: string }) => Promise<string>;
-type ObservationTask = { readonly key: string; readonly run: () => Promise<Observation> };
+type ObservationTask = { readonly key: string; readonly request: Request };
 
-function observation(status: "complete" | "failed", text: string): Observation { return { status, text }; }
+function observation(status: Observation["status"], text: string): Observation { return { status, text }; }
 function unavailable(reason: string): Transcript { return { status: "unavailable", transcript_ref: null, word_count: 0, reason }; }
 
 function positiveEnv(name: string): number | undefined {
@@ -162,6 +169,41 @@ async function callSafely(retryDelayMs: number, generate: GenerateText, parts: r
   return observation("failed", last instanceof Error ? last.message : String(last));
 }
 
+// The agent observer reads pictures, so each piece of evidence a request would have uploaded becomes
+// one it can look at: a shot's clip becomes that shot's frame tile, the whole video becomes the
+// storyboard of representative frames, and audio has no picture to become. What each observation asks
+// is identical on both paths; only the shape of the evidence differs.
+function asPictures(media: readonly string[], state: ReferenceState): readonly string[] {
+  const tiles = new Map(state.shots.map((shot) => [shot.clip_ref, shot.frames_tile_ref]));
+  const pictures: string[] = [];
+  for (const path of media) {
+    const tile = tiles.get(path);
+    if (tile !== undefined) pictures.push(tile);
+    else if (path === state.analysis_video_ref) pictures.push(state.storyboard_ref);
+    else if (!path.toLowerCase().endsWith(".wav")) pictures.push(path);
+  }
+  return [...new Set(pictures)];
+}
+
+// What the pictures are has to be said, because a tile of frames is not what the prompt was written
+// for. The prompt itself is unchanged on both paths: only this preamble is added, and only here.
+const TILE_PREAMBLE = "Each supplied picture that shows a grid of frames is one shot, sampled evenly"
+  + " across its duration and laid out in reading order: left to right, then top to bottom. Read the"
+  + " grid as time passing. A single picture that is not a grid is one moment.";
+const NO_SOUND = "You are reading pictures and cannot hear this reference. Answer what the pictures and"
+  + " the measured transcript support, and say plainly which parts of the question need sound you do"
+  + " not have rather than inferring them from appearance.";
+
+/** Declares one observation: what it asks, and the evidence it asks over. The observer decides how. */
+type Request = {
+  readonly media: readonly string[];
+  readonly prompt: string;
+  readonly instruction: string;
+  /** True when answering needs sound. The `agent` observer has none and is told to say so. */
+  readonly sound?: boolean;
+};
+type Asker = (key: string, request: Request) => Promise<Observation>;
+
 async function pacedMap<T, R>(items: readonly T[], concurrency: number, gapMs: number, run: (item: T, index: number) => Promise<R>): Promise<readonly R[]> {
   const result = new Array<R>(items.length);
   let cursor = 0;
@@ -194,14 +236,18 @@ async function runObservationTasks(
   forcedKeys: ReadonlySet<string>,
   concurrency: number,
   gapMs: number,
+  ask: Asker,
 ): Promise<ReadonlyMap<string, Observation>> {
   const path = join(root, "observations.json");
   const cache = await readJson<Record<string, Observation>>(path) ?? {};
-  const pending = tasks.filter((task) => forcedKeys.has(task.key) || cache[task.key]?.status !== "complete");
-  const completed = await pacedMap(pending, concurrency, gapMs, async (task) => ({ key: task.key, value: await task.run() }));
-  for (const item of completed) cache[item.key] = item.value;
+  const outstanding = tasks.filter((task) => forcedKeys.has(task.key) || cache[task.key]?.status !== "complete");
+  const completed = await pacedMap(outstanding, concurrency, gapMs, async (task) => ({ key: task.key, value: await ask(task.key, task.request) }));
+  const answers = new Map(completed.map((item) => [item.key, item.value]));
+  // A pending answer is a task handed out, not an answer received. Caching it would make the next run
+  // read the placeholder as complete and never ask again.
+  for (const item of completed) if (item.value.status !== "pending") cache[item.key] = item.value;
   await writeJson(path, cache);
-  return new Map(tasks.map((task) => [task.key, cache[task.key] ?? observation("failed", "not observed")]));
+  return new Map(tasks.map((task) => [task.key, cache[task.key] ?? answers.get(task.key) ?? observation("failed", "not observed")]));
 }
 
 async function shotFromBound(root: string, index: number, bound: { start: number; end: number; group: number; part: number; parts: number }): Promise<Shot> {
@@ -222,6 +268,7 @@ async function shotFromBound(root: string, index: number, bound: { start: number
     clip_ref: join(dir, `${id}.mp4`),
     representative_frame_ref: join(dir, `${id}-representative.jpg`),
     tail_frame_ref: join(dir, `${id}-tail.jpg`),
+    frames_tile_ref: join(dir, `${id}-frames.jpg`),
     audio_tail_ref,
   };
 }
@@ -270,6 +317,37 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     const state = await readJson<ReferenceState>(path);
     assert(state !== undefined, `reference ${reference} was not prepared in ${workspaceRoot}`);
     return state;
+  };
+
+  // One reference is read by one observer throughout. Mixing them inside a single reference would
+  // leave observations of two different kinds of evidence under the same keys, with nothing on the
+  // record saying which is which, so the choice is made once at prepare and carried in the state.
+  const askerFor = async (
+    observer: Observer,
+    state: ReferenceState,
+  ): Promise<{ readonly ask: Asker; readonly pending: readonly ObservationTaskRequest[] }> => {
+    if (observer === "agent") {
+      const pending: ObservationTaskRequest[] = [];
+      return {
+        pending,
+        ask: async (key, { media, prompt, instruction, sound }) => {
+          const preamble = sound === true ? `${TILE_PREAMBLE}\n\n${NO_SOUND}` : TILE_PREAMBLE;
+          pending.push({ key, instruction, prompt: `${preamble}\n\n${prompt}`, image_refs: asPictures(media, state) });
+          return observation("pending", "awaiting the agent observer");
+        },
+      };
+    }
+    const generate = await generator();
+    const mediaPart = mediaParts();
+    return {
+      pending: [],
+      ask: async (_key, { media, prompt, instruction }) => {
+        const parts: Part[] = [];
+        for (const path of media) parts.push(await mediaPart(path));
+        parts.push({ text: prompt });
+        return await callSafely(retryDelayMs, generate, parts, instruction);
+      },
+    };
   };
 
   return {
@@ -331,7 +409,13 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const redoVoices = input.redo === "voices" || input.redo === "all";
       const redoSystems = input.redo === "systems" || input.redo === "all";
       const redoPlaces = input.redo === "places" || input.redo === "all";
-      if (input.redo === undefined && existing !== undefined && prepared(existing)) return publicPrepare(existing);
+      // A reference keeps the observer it was prepared with. Asking for the other one on a reference
+      // that already holds observations would read the second half of it through different evidence
+      // from the first, so the mismatch is refused rather than silently mixed.
+      const observer: Observer = input.observer ?? existing?.observer ?? "gemini";
+      assert(input.redo === "all" || existing?.observer === undefined || existing.observer === observer,
+        `reference ${reference} was prepared for the ${existing?.observer} observer; --redo all re-prepares it for the other one`);
+      if (input.redo === undefined && existing !== undefined && prepared(existing)) return { ...publicPrepare(existing), observer, pending_observations: [] };
       await ensureDir(root);
       const info = existing?.video === undefined || redoMedia ? await probe(videoPath) : {
         duration: existing.video.duration_seconds,
@@ -366,56 +450,74 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         await writeJson(statePath, state);
         await writeFile(join(root, "observations.json"), "{}\n", "utf8");
       }
-      const generate = await generator();
-      // WhisperX is local and slow and shares nothing with the Gemini requests, so it runs beside
+      // WhisperX is local and slow and shares nothing with the observation requests, so it runs beside
       // them rather than ahead of them.
       const transcribing = state.transcript?.status === "complete" && !redoTranscript
         ? Promise.resolve(state.transcript)
         : prepareTranscript(reference, videoPath, root, info.hasAudio, redoTranscript);
-      const mediaPart = mediaParts();
-      const globalParts: Part[] = [await mediaPart(analysisVideo)];
+      const { ask, pending } = await askerFor(observer, state);
+      const whole = [analysisVideo];
       const [people, voices, systems, places] = await Promise.all([
         state.people_and_product?.status === "complete" && !redoPeople
           ? Promise.resolve(state.people_and_product)
-          : callSafely(retryDelayMs, generate, [...globalParts, { text: "Describe the recurring people and the promoted product in this complete reference video. Return natural language only. Identify stable visual traits and distinguish recurring speakers from incidental people in inserts. Describe the product once, comprehensively, for reuse." }], "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
+          : ask("people_and_product", { media: whole, prompt: "Describe the recurring people and the promoted product in this complete reference video. Return natural language only. Identify stable visual traits and distinguish recurring speakers from incidental people in inserts. Describe the product once, comprehensively, for reuse.", instruction: "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names." }),
         state.voices?.status === "complete" && !redoVoices
           ? Promise.resolve(state.voices)
-          : callSafely(retryDelayMs, generate, [...globalParts, { text: "Listen to this complete reference video and describe the distinct voices, their order, overlap, off-screen speech, and likely correspondence to visible people. Do not assign a voice merely because a person appears in a B-roll image. Return natural language only." }], "You only listen to a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
+          : ask("voices", { media: whole, sound: true, prompt: "Listen to this complete reference video and describe the distinct voices, their order, overlap, off-screen speech, and likely correspondence to visible people. Do not assign a voice merely because a person appears in a B-roll image. Return natural language only.", instruction: "You only listen to a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names." }),
         state.persistent_systems?.status === "complete" && !redoSystems
           ? Promise.resolve(state.persistent_systems)
-          : callSafely(retryDelayMs, generate, [...globalParts, { text: "Describe the on-screen text and graphic systems that persist or recur across this complete reference video, such as subtitles, running lists, counters, progress indicators, badges, watermarks, lower thirds and repeating full-screen graphic layouts. For each one, state when it first appears and when it stops, whether it is present continuously or intermittently, whether its own appearance stays the same throughout, and describe any point where its appearance actually changes. Report only what stays consistent across the video; ignore one-off elements that appear a single time. Return natural language only." }], "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
+          : ask("persistent_systems", { media: whole, prompt: "Describe the on-screen text and graphic systems that persist or recur across this complete reference video, such as subtitles, running lists, counters, progress indicators, badges, watermarks, lower thirds and repeating full-screen graphic layouts. For each one, state when it first appears and when it stops, whether it is present continuously or intermittently, whether its own appearance stays the same throughout, and describe any point where its appearance actually changes. Report only what stays consistent across the video; ignore one-off elements that appear a single time. Return natural language only.", instruction: "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names." }),
         state.places?.status === "complete" && !redoPlaces
           ? Promise.resolve(state.places)
-          : callSafely(retryDelayMs, generate, [...globalParts, { text: "Describe every distinct place this reference video was shot in, and every distinct camera position within each place. State how many places there are, which parts of the video happen in each, and for each place which camera positions appear and which parts of the video use each one. Two shots are the same camera position when the camera sees the same part of the room from the same side; a reverse angle is a different position of the same place.\n\nDescribe each camera position in enough detail that someone who has never seen this video could draw it from your words alone: what is behind and beside the subject, the shape and depth of the space, where the light comes from and how hard it is, the colours and materials of the surfaces, and the objects a viewer would use to recognise it again. Say what stays identical between positions of one place and what differs.\n\nReturn natural language only." }], "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names."),
+          : ask("places", { media: whole, prompt: "Describe every distinct place this reference video was shot in, and every distinct camera position within each place. State how many places there are, which parts of the video happen in each, and for each place which camera positions appear and which parts of the video use each one. Two shots are the same camera position when the camera sees the same part of the room from the same side; a reverse angle is a different position of the same place.\n\nDescribe each camera position in enough detail that someone who has never seen this video could draw it from your words alone: what is behind and beside the subject, the shape and depth of the space, where the light comes from and how hard it is, the colours and materials of the surfaces, and the objects a viewer would use to recognise it again. Say what stays identical between positions of one place and what differs.\n\nReturn natural language only.", instruction: "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names." }),
       ]);
-      const complete: ReferenceState = { ...state, transcript: await transcribing, people_and_product: people, voices, persistent_systems: systems, places };
+      // A pending whole-reference observation is a task the agent still owes, so it is reported rather
+      // than written: writing it would make the next run treat the placeholder as an answer.
+      const answered = <T extends Observation>(value: T): T | undefined => value.status === "pending" ? undefined : value;
+      const complete: ReferenceState = {
+        ...state,
+        observer,
+        transcript: await transcribing,
+        ...(answered(people) === undefined ? {} : { people_and_product: people }),
+        ...(answered(voices) === undefined ? {} : { voices }),
+        ...(answered(systems) === undefined ? {} : { persistent_systems: systems }),
+        ...(answered(places) === undefined ? {} : { places }),
+      };
       await writeJson(statePath, complete);
-      return publicPrepare(complete);
+      return {
+        ...publicPrepare(complete),
+        people_and_product: people,
+        voices,
+        persistent_systems: systems,
+        places,
+        observer,
+        pending_observations: pending,
+      };
     },
 
     async observe_reference(input): Promise<Record<string, unknown>> {
-      const mediaPart = mediaParts();
       const state = await loadState(input.reference_id);
       const selected = input.shot_ids === undefined ? state.shots : state.shots.filter((shot) => input.shot_ids!.includes(shot.shot_id));
       assert(selected.length > 0, "no requested shot ids exist");
-      const generate = await generator();
+      const observer: Observer = state.observer ?? "gemini";
+      const { ask, pending } = await askerFor(observer, state);
       const question = input.question?.trim() ?? "";
       if (question.length > 0) {
         assert(input.shot_ids !== undefined && input.shot_ids.length > 0, "question requires at least one shot id, so that it is answered from the shots it is about");
         assert(selected.length <= 3, "question accepts at most three shots");
-        const parts: Part[] = [];
-        for (const shot of selected) {
-          parts.push(await mediaPart(shot.clip_ref));
-          parts.push(await mediaPart(shot.representative_frame_ref));
-        }
-        parts.push({ text: question });
-        const answer = await callSafely(retryDelayMs, generate, parts, "Answer only the narrow reference-video question in natural language. Do not write code, markup, SVML, or component names.");
+        const answer = await ask("question", {
+          media: selected.flatMap((shot) => [shot.clip_ref, shot.representative_frame_ref]),
+          prompt: question,
+          instruction: "Answer only the narrow reference-video question in natural language. Do not write code, markup, SVML, or component names.",
+        });
         return {
           reference_id: state.reference_id,
+          observer,
           shot_ids: selected.map((shot) => shot.shot_id),
           question,
           answer,
           unresolved: answer.status === "complete" ? [] : ["question"],
+          pending_observations: pending,
         };
       }
       const selectedIds = new Set(selected.map((shot) => shot.shot_id));
@@ -428,37 +530,43 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         state.voices?.text === undefined ? "" : `Full-reference voice evidence:\n${state.voices.text}`,
         state.persistent_systems?.text === undefined ? "" : `Full-reference persistent on-screen system evidence:\n${state.persistent_systems.text}`,
       ].filter((item) => item.length > 0).join("\n\n");
-      const visualTasks: ObservationTask[] = selected.map((shot) => ({ key: `visual:${shot.shot_id}`, run: async () => {
+      const visualTasks: ObservationTask[] = selected.map((shot) => {
         const previous = state.shots.find((candidate) => candidate.index === shot.index - 1);
-        const parts: Part[] = [await mediaPart(shot.clip_ref), await mediaPart(shot.representative_frame_ref)];
-        if (previous !== undefined) parts.push(await mediaPart(previous.tail_frame_ref));
-        parts.push({ text: `${globalContext}\n\nObserve shot ${shot.index}. Describe the current base picture, any covering or non-covering visual content, and whether visible content continues from the preceding shot. A full-screen insert is still only a picture observation.\n\nAlso answer these two questions explicitly.\n\nFirst: is the whole frame a depicted scene that has its own camera space, lighting, depth and lens behaviour, or is it a flat designed field whose purpose is to carry drawn elements such as words, rows, panels or cards? Live action and animation are both depicted scenes; a paper sheet, ruled or gridded surface, flat or gradient colour, blurred wallpaper, board or slide backdrop filling the frame is a designed field. State which one it is and the visible evidence for it.\n\nThen, whichever it is, say whether any *region* of the frame is itself a flat designed field carrying drawn content — a list, a ranking, a leaderboard, a scoreboard, a chart, a panel, a slab of colour holding rows or labels — even when the rest of the frame is a depicted scene, and even when the region has no visible border, card edge or drop shadow around it. Report each such region separately from the scene behind it: roughly where it sits and how much of the frame it covers, given as fractions of the frame width and height; what its own surface is; and what is drawn on it. A designed field occupying half the frame, one side of it, or a band across it is easy to describe as "text over the picture" and is not that: the field itself is the thing to report.\n\nSecond: for every framed element inside the picture, such as a card, phone, browser window, screenshot or inset, describe the picture inside the frame and the frame itself separately. For the inside, describe what it depicts and whether it moves. For the frame, describe its border, corner radius, outline, shadow, size, position and how it enters and leaves.\n\nThird: does this picture move at all, and how? Separate three things: whether the camera moves, and how; whether anything in the picture moves, and what; and whether the picture is completely still. A held photograph, screenshot or card that only appears and disappears is still, however long it is on screen.\n\nReturn natural language evidence only.` });
-        return await callSafely(retryDelayMs, generate, parts, "Observe picture only. Do not choose SVML components, do not write markup, and do not decide final source syntax.");
-      }}));
-      const typeTasks: ObservationTask[] = selected.map((shot) => ({ key: `type:${shot.shot_id}`, run: async () => {
-        const parts: Part[] = [await mediaPart(shot.representative_frame_ref), await mediaPart(shot.clip_ref)];
-        parts.push({ text: `Observe the on-screen text in shot ${shot.index}. Report only text that is drawn over or composed into the picture; ignore text belonging to a photographed object such as a device screen, sign, label or document. If the shot shows no drawn text, say exactly that and stop.\n\nFor each distinct text element describe: the typeface character (serif, sans-serif, handwritten, monospaced or display), the weight, the cap height as a fraction of the frame height, letter spacing and line spacing, alignment, letter case, fill colour, any outline or stroke with its colour and thickness relative to the stroke width of the letters, any drop shadow with its direction, distance and softness, any glow or blur, any emphasis applied to individual words or characters and how it differs from the rest, the position within the frame and the distance from the nearest edges, and how the text enters, changes and leaves during the shot.\n\nReturn natural language evidence only.` });
-        return await callSafely(retryDelayMs, generate, parts, "Observe the appearance of on-screen text only. Do not name SVML components, do not write markup, and do not name font files or style properties from any software.");
-      }}));
-      const audioTasks: ObservationTask[] = selected.map((shot) => ({ key: `audio:${shot.shot_id}`, run: async () => {
+        return { key: `visual:${shot.shot_id}`, request: {
+          media: [shot.clip_ref, shot.representative_frame_ref, ...(previous === undefined ? [] : [previous.tail_frame_ref])],
+          prompt: `${globalContext}\n\nObserve shot ${shot.index}. Describe the current base picture, any covering or non-covering visual content, and whether visible content continues from the preceding shot. A full-screen insert is still only a picture observation.\n\nAlso answer these two questions explicitly.\n\nFirst: is the whole frame a depicted scene that has its own camera space, lighting, depth and lens behaviour, or is it a flat designed field whose purpose is to carry drawn elements such as words, rows, panels or cards? Live action and animation are both depicted scenes; a paper sheet, ruled or gridded surface, flat or gradient colour, blurred wallpaper, board or slide backdrop filling the frame is a designed field. State which one it is and the visible evidence for it.\n\nThen, whichever it is, say whether any *region* of the frame is itself a flat designed field carrying drawn content — a list, a ranking, a leaderboard, a scoreboard, a chart, a panel, a slab of colour holding rows or labels — even when the rest of the frame is a depicted scene, and even when the region has no visible border, card edge or drop shadow around it. Report each such region separately from the scene behind it: roughly where it sits and how much of the frame it covers, given as fractions of the frame width and height; what its own surface is; and what is drawn on it. A designed field occupying half the frame, one side of it, or a band across it is easy to describe as "text over the picture" and is not that: the field itself is the thing to report.\n\nSecond: for every framed element inside the picture, such as a card, phone, browser window, screenshot or inset, describe the picture inside the frame and the frame itself separately. For the inside, describe what it depicts and whether it moves. For the frame, describe its border, corner radius, outline, shadow, size, position and how it enters and leaves.\n\nThird: does this picture move at all, and how? Separate three things: whether the camera moves, and how; whether anything in the picture moves, and what; and whether the picture is completely still. A held photograph, screenshot or card that only appears and disappears is still, however long it is on screen.\n\nReturn natural language evidence only.`,
+          instruction: "Observe picture only. Do not choose SVML components, do not write markup, and do not decide final source syntax.",
+        } };
+      });
+      const typeTasks: ObservationTask[] = selected.map((shot) => ({ key: `type:${shot.shot_id}`, request: {
+        media: [shot.representative_frame_ref, shot.clip_ref],
+        prompt: `Observe the on-screen text in shot ${shot.index}. Report only text that is drawn over or composed into the picture; ignore text belonging to a photographed object such as a device screen, sign, label or document. If the shot shows no drawn text, say exactly that and stop.\n\nFor each distinct text element describe: the typeface character (serif, sans-serif, handwritten, monospaced or display), the weight, the cap height as a fraction of the frame height, letter spacing and line spacing, alignment, letter case, fill colour, any outline or stroke with its colour and thickness relative to the stroke width of the letters, any drop shadow with its direction, distance and softness, any glow or blur, any emphasis applied to individual words or characters and how it differs from the rest, the position within the frame and the distance from the nearest edges, and how the text enters, changes and leaves during the shot.\n\nReturn natural language evidence only.`,
+        instruction: "Observe the appearance of on-screen text only. Do not name SVML components, do not write markup, and do not name font files or style properties from any software.",
+      } }));
+      const audioTasks: ObservationTask[] = selected.map((shot) => {
         const previous = state.shots.find((candidate) => candidate.index === shot.index - 1);
-        const parts: Part[] = [await mediaPart(shot.clip_ref)];
-        if (previous?.audio_tail_ref !== null && previous?.audio_tail_ref !== undefined) parts.push(await mediaPart(previous.audio_tail_ref));
-        parts.push({ text: `${globalContext}\n\nListen to shot ${shot.index}. Decide who is speaking, whether sound continues from the previous shot, whether visible people actually produce the sound, and whether a silent B-roll person only appears to speak. Handle off-screen, alternating, overlapping, and no-person-visible speech. Return natural language evidence only.` });
-        return await callSafely(retryDelayMs, generate, parts, "Observe sound only. Do not write markup, SVML, JSON plans, or component names.");
-      }}));
+        return { key: `audio:${shot.shot_id}`, request: {
+          media: [shot.clip_ref, ...(previous?.audio_tail_ref == null ? [] : [previous.audio_tail_ref])],
+          sound: true,
+          prompt: `${globalContext}\n\nListen to shot ${shot.index}. Decide who is speaking, whether sound continues from the previous shot, whether visible people actually produce the sound, and whether a silent B-roll person only appears to speak. Handle off-screen, alternating, overlapping, and no-person-visible speech. Return natural language evidence only.`,
+          instruction: "Observe sound only. Do not write markup, SVML, JSON plans, or component names.",
+        } };
+      });
       // Both boundary questions look at exactly the same three files, so they travel together. Asking
       // them separately uploaded two clips twice to learn two things about one cut.
-      const boundaryTasks: ObservationTask[] = boundaryRights.map((right) => ({ key: `boundary:${right.shot_id}`, run: async () => {
+      const boundaryTasks: ObservationTask[] = boundaryRights.map((right) => {
         const left = state.shots.find((shot) => shot.index === right.index - 1)!;
-        const parts: Part[] = [await mediaPart(left.clip_ref), await mediaPart(right.clip_ref), await mediaPart(left.tail_frame_ref)];
-        parts.push({ text: `Compare shots ${left.index} and ${right.index}, which meet at one cut. Answer two questions separately, each under its own heading.\n\nContinuous camera shot: are these one continuous camera shot, or two? Explain the visual and sound continuity evidence.\n\nOverlay continuity: does the same visible overlay or inserted picture continue across the boundary, change, or end? Explain the evidence.\n\nReturn natural language evidence only.` });
-        return await callSafely(retryDelayMs, generate, parts, "Analyze what happens at one cut. Do not name SVML components or write code.");
-      }}));
+        return { key: `boundary:${right.shot_id}`, request: {
+          media: [left.clip_ref, right.clip_ref, left.tail_frame_ref],
+          sound: true,
+          prompt: `Compare shots ${left.index} and ${right.index}, which meet at one cut. Answer two questions separately, each under its own heading.\n\nContinuous camera shot: are these one continuous camera shot, or two? Explain the visual and sound continuity evidence.\n\nOverlay continuity: does the same visible overlay or inserted picture continue across the boundary, change, or end? Explain the evidence.\n\nReturn natural language evidence only.`,
+          instruction: "Analyze what happens at one cut. Do not name SVML components or write code.",
+        } };
+      });
       const allTasks = [...visualTasks, ...typeTasks, ...audioTasks, ...boundaryTasks];
       const reobserve = input.reobserve === true;
       const forcedKeys = reobserve ? new Set(allTasks.map((task) => task.key)) : new Set<string>();
-      const observations = await runObservationTasks(state.root, allTasks, forcedKeys, concurrency, gapMs);
+      const observations = await runObservationTasks(state.root, allTasks, forcedKeys, concurrency, gapMs, ask);
       const unresolved = [...observations].filter(([, value]) => value.status !== "complete").map(([key]) => key);
       const boundaryText = boundaryRights.map((right) => observations.get(`boundary:${right.shot_id}`)?.text ?? "").join("\n");
       const needsThreeShotReview = selected.length >= 3 && (
@@ -474,10 +582,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           })
         : []).map((items) => items as unknown as readonly [Shot, Shot, Shot]);
       const threeShotObservations = await pacedMap(windows, concurrency, gapMs, async (items) => {
-        const parts: Part[] = [];
-        for (const shot of items) parts.push(await mediaPart(shot.clip_ref));
-        parts.push({ text: `Compare shots ${items[0].index}, ${items[1].index}, and ${items[2].index}. Decide whether the three clips are one continuous camera shot and whether one visual overlay or insert persists through both boundaries. Explain the evidence in natural language only.` });
-        const result = await callSafely(retryDelayMs, generate, parts, "Analyze a three-shot continuity window only. Do not write markup, SVML, JSON plans, or component names.");
+        const result = await ask(`window:${items[0].shot_id}`, {
+          media: items.map((shot) => shot.clip_ref),
+          prompt: `Compare shots ${items[0].index}, ${items[1].index}, and ${items[2].index}. Decide whether the three clips are one continuous camera shot and whether one visual overlay or insert persists through both boundaries. Explain the evidence in natural language only.`,
+          instruction: "Analyze a three-shot continuity window only. Do not write markup, SVML, JSON plans, or component names.",
+        });
         return { shot_ids: items.map((shot) => shot.shot_id), combined_duration_seconds: Number((items[2].end_seconds - items[0].start_seconds).toFixed(3)), result };
       });
       for (const window of threeShotObservations) {
@@ -501,10 +610,12 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       });
       return {
         reference_id: state.reference_id,
+        observer,
         shots: shotResults,
         boundaries: boundaryResults,
         three_shot_observations: threeShotObservations,
         unresolved,
+        pending_observations: pending,
       };
     },
 
@@ -533,7 +644,6 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     },
 
     async compare_reconstruction(input): Promise<Record<string, unknown>> {
-      const mediaPart = mediaParts();
       const state = await loadState(input.reference_id);
       const shot = state.shots.find((candidate) => candidate.shot_id === input.shot_id);
       assert(shot !== undefined, `shot ${input.shot_id} does not exist in reference ${input.reference_id}`);
@@ -541,21 +651,53 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const file = await stat(imagePath).catch(() => undefined);
       assert(file?.isFile(), `image_path is not a file: ${imagePath}`);
       const scope = input.question?.trim() ?? "";
-      const generate = await generator();
-      const parts: Part[] = [await mediaPart(shot.representative_frame_ref), await mediaPart(imagePath)];
-      parts.push({ text: `Two still images are supplied in order: image one, then image two.${scope.length === 0 ? "" : `\n\nLimit the comparison to this part of the picture: ${scope}`}\n\nDescribe every visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one image and absent from the other. State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either image was produced, which one is a source, or which one is a copy. Return natural language only.` });
-      const differences = await callSafely(retryDelayMs, generate, parts, "You compare two supplied still images and describe their visible differences in natural language only. You are not told how either image was made. Do not write code, markup, SVML, component names, or production advice.");
+      const observer: Observer = state.observer ?? "gemini";
+      const { ask, pending } = await askerFor(observer, state);
+      const differences = await ask("comparison", {
+        media: [shot.representative_frame_ref, imagePath],
+        instruction: "You compare two supplied still images and describe their visible differences in natural language only. You are not told how either image was made. Do not write code, markup, SVML, component names, or production advice.",
+        prompt: `Two still images are supplied in order: image one, then image two.${scope.length === 0 ? "" : `\n\nLimit the comparison to this part of the picture: ${scope}`}\n\nDescribe every visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one image and absent from the other. State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either image was produced, which one is a source, or which one is a copy. Return natural language only.`,
+      });
       return {
         reference_id: state.reference_id,
+        observer,
         shot_id: shot.shot_id,
         reference_frame_ref: shot.representative_frame_ref,
         image_path: imagePath,
         differences,
         unresolved: differences.status === "complete" ? [] : ["differences"],
+        pending_observations: pending,
       };
+    },
+
+    // The `agent` observer answers in its own context, so the answer comes back through here rather
+    // than through a return value. The four whole-reference observations live in the state and the
+    // rest in the observation cache, which is where each one was already read from.
+    async record_observation(input): Promise<Record<string, unknown>> {
+      const state = await loadState(input.reference_id);
+      assert(state.observer === "agent", `reference ${input.reference_id} is read by the ${state.observer ?? "gemini"} observer, which records its own answers`);
+      const key = input.key.trim();
+      assert(key.length > 0, "key is required");
+      const text = input.text.trim();
+      assert(text.length > 0, "text is required; an observation that saw nothing says so in words");
+      const root = stateRoot(workspaceRoot, input.reference_id);
+      if (WHOLE_REFERENCE_KEYS.includes(key as typeof WHOLE_REFERENCE_KEYS[number])) {
+        const field = key as typeof WHOLE_REFERENCE_KEYS[number];
+        await writeJson(join(root, "state.json"), { ...state, [field]: observation("complete", text) });
+        return { reference_id: state.reference_id, key, stored_in: "state" };
+      }
+      const shotKeys = new Set(state.shots.flatMap((shot) => [`visual:${shot.shot_id}`, `type:${shot.shot_id}`, `audio:${shot.shot_id}`, `boundary:${shot.shot_id}`, `window:${shot.shot_id}`]));
+      assert(shotKeys.has(key), `key ${key} is not an observation of reference ${input.reference_id}`);
+      const path = join(root, "observations.json");
+      const cache = await readJson<Record<string, Observation>>(path) ?? {};
+      cache[key] = observation("complete", text);
+      await writeJson(path, cache);
+      return { reference_id: state.reference_id, key, stored_in: "observations" };
     },
   };
 }
+
+const WHOLE_REFERENCE_KEYS = ["people_and_product", "voices", "persistent_systems", "places"] as const;
 
 function vocabularyForResult(value: SurfaceVocabulary | undefined): unknown {
   if (value === undefined) return undefined;

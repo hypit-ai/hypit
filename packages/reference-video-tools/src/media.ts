@@ -108,6 +108,25 @@ async function extract(path: string, args: readonly string[], target: string): P
   return target;
 }
 
+// An observer that reads images rather than video sees a shot as this many frames, sampled evenly
+// across it and tiled into one picture in reading order. Four is enough for a one-second shot to
+// show what moves; nine keeps a fifteen-second one legible at a cell width a reader can still resolve
+// detail in. The clip is decoded once, and the sampling and the tiling happen in that one pass.
+const TILE_COLUMNS = 3;
+function tileFrames(duration: number): number { return clamp(Math.round(duration * 1.5), 4, 9); }
+
+async function shotTile(clip: string, duration: number, target: string): Promise<string> {
+  const frames = tileFrames(duration);
+  const rows = Math.ceil(frames / TILE_COLUMNS);
+  const rate = round(frames / Math.max(duration, 0.1));
+  await command("ffmpeg", [
+    "-hide_banner", "-loglevel", "error", "-y", "-i", clip,
+    "-vf", `fps=${rate},scale=480:-2,tile=layout=${TILE_COLUMNS}x${rows}:padding=8:margin=8:color=black`,
+    "-frames:v", "1", "-q:v", "3", target,
+  ], 300_000);
+  return target;
+}
+
 export async function prepareMedia(videoPath: string, root: string, duration: number): Promise<{
   readonly bounds: readonly Bounds[];
   readonly storyboard: string;
@@ -127,6 +146,7 @@ export async function prepareMedia(videoPath: string, root: string, duration: nu
     await extract(videoPath, ["-i", videoPath, "-ss", String(bound.start), "-t", String(Math.max(0.1, bound.end - bound.start)), "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart"], clip);
     await extract(videoPath, ["-i", videoPath, "-ss", String(bound.start + (bound.end - bound.start) / 2), "-frames:v", "1", "-vf", "scale='min(720,iw)':-2", "-q:v", "3"], join(shotDir, `${id}-representative.jpg`));
     await extract(videoPath, ["-sseof", "-0.1", "-i", clip, "-update", "1", "-frames:v", "1", "-vf", "scale='min(720,iw)':-2", "-q:v", "3"], join(shotDir, `${id}-tail.jpg`));
+    await shotTile(clip, bound.end - bound.start, join(shotDir, `${id}-frames.jpg`));
     if (await hasAudio(clip)) await extract(videoPath, ["-sseof", "-3", "-i", clip, "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le"], join(shotDir, `${id}-audio.wav`));
   }));
   const inputs = bounds.map((_, index) => `[${index}:v]`).join("");
