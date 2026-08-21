@@ -6,17 +6,15 @@
 </p>
 
 <p align="center">
-  <strong>让 AI Agent 复刻任何爆款视频。</strong>
-  <br>
-  <em>一条命令，100 个变体，1 亿播放量。</em>
+  <strong>让 AI Agent 复刻任何爆款视频。</strong>一条命令，100 个变体，1 亿播放量。
 </p>
 
 <p align="center">
   <a href="https://narratage.hypit.ai/zh/"><strong>官网</strong></a>
   &nbsp;&bull;&nbsp;
-  <a href="https://narratage.hypit.ai/zh/"><strong>文档</strong></a>
+  <a href="https://narratage.hypit.ai/zh/quickstart"><strong>快速开始</strong></a>
   &nbsp;&bull;&nbsp;
-  <a href="https://discord.gg/85hnyQnxpn"><strong>Discord</strong></a>
+  <a href="https://narratage.hypit.ai/zh/guide/develop"><strong>开发指南</strong></a>
   &nbsp;&bull;&nbsp;
   <a href="./README.md"><strong>English</strong></a>
 </p>
