@@ -2,12 +2,22 @@
 
 CLI tools for reconstructing a reference video with Hypit.
 
-The package exposes five CLI subcommands: `list_svml_packages`, `prepare_reference`,
-`observe_reference`, `inspect_svml_vocabulary`, and `compare_reconstruction`. Each command prints one JSON result to
-stdout. Every command except `inspect_svml_vocabulary` sends narrow natural-language requests to
-Gemini with a fixed temperature of `1.0`; they never receive SVML syntax and never write SVML. The
-final source files are authored by the calling agent and checked with the existing
-`pnpm hypit check` command.
+The package exposes six CLI subcommands: `list_svml_packages`, `prepare_reference`,
+`observe_reference`, `record_observation`, `inspect_svml_vocabulary`, and `compare_reconstruction`.
+Each command prints one JSON result to stdout. The final source files are authored by the calling
+agent and checked with the existing `pnpm hypit check` command.
+
+`--observer` on `prepare_reference` chooses who reads the reference, once per reference:
+
+- `gemini` uploads the shot clips and the whole video to Vertex at a fixed temperature of `1.0`. It
+  needs `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`, and it is the default.
+- `agent` reaches no Provider. `prepare_reference` and `observe_reference` return each observation as
+  a task carrying its prompt and the pictures to answer it from — one tile of evenly sampled frames
+  per shot, the storyboard for the whole reference — and the calling agent answers them with
+  `record_observation`.
+
+Both observers produce the same observation keys in the same cache, so everything downstream reads one
+shape. Neither receives SVML syntax, and neither writes SVML.
 
 Run the CLI from the repository or an installed package:
 

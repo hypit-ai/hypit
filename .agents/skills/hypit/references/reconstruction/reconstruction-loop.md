@@ -48,21 +48,25 @@ card:
    `.hypit/reference-video-tools/<reference-id>/shots/NNN-representative.jpg`.
 3. Repair, then render again.
 
-### The reference is seen by Gemini, never by you
+### One observer reads the reference, and it is the one the reference was prepared with
 
-The reference frame is looked at exactly one way: through `compare_reconstruction`, which sends it
-and the rendered image to Gemini as an unlabelled pair and returns the differences in words. You do
-not open the reference frame yourself and look at it. Whatever visual ability you have — the model
-running this loop may be able to read images directly — is not to be used on the reference or on the
-rendered reconstruction. There is one observer of the reference, the same VLM that wrote the
-observations, and it reports through `compare_reconstruction`. A second observer is a second opinion
-that is paid for with the very bias it claims to correct: it sees the reconstruction, knows what was
-built, and confirms what it expects.
+`compare_reconstruction` is how the reference frame is looked at, and `observers.md` says who looks.
+The reference has one observer for its whole life, and the comparison goes through the same one that
+wrote its observations.
 
-This is why a font that is wrong is caught: `compare_reconstruction` names it, and the package is
-repaired. It is not caught by looking at the frame yourself and choosing a font that happens to
-resemble it — that route silently depends on the loop model having vision, and stops working the
-moment it does not.
+**On the `gemini` observer, that observer is not you.** The command sends the reference frame and the
+rendered image as an unlabelled pair and returns the differences in words. Do not open the reference
+frame yourself and look at it, whatever visual ability the model running this loop has, and do not
+look at the rendered reconstruction either. A second observer is a second opinion paid for with the
+very bias it claims to correct: it sees the reconstruction, knows what was built, and confirms what it
+expects. This is why a font that is wrong is caught — the comparison names it, and the package is
+repaired, rather than a font being chosen because it resembles what you remember.
+
+**On the `agent` observer, that observer is you**, and the command returns the two images and the
+question instead of an answer. The bias above is then real and unavoidable, so `observers.md` states
+the discipline that replaces blindness: write the differences down before naming a cause, count only
+repairs aimed at a difference you wrote down, and read a quantity off the frame rather than spending
+an attempt guessing at it.
 
 Hypit Studio is a browser preview for a person to look at. It is not a source of the image this
 loop needs: that image is the local still render in `../preview.md`, which draws one element without
@@ -128,10 +132,9 @@ return a difference every round for ever. So the loop ends on whichever of these
 
 Two attempts per loop is not enough to converge by guessing, and it is not meant to be. A difference
 stated as a quantity — a stroke that is too thick, a shape that is too tall, type that is too large,
-a margin that is too wide — is not a guessing problem. Ask Gemini for the number: a
+a margin that is too wide — is not a guessing problem. Ask for the number: a
 `compare_reconstruction --question "how tall is the oval relative to the frame?"` over the shot that
-shows it most clearly returns a measurement in one step. The reference is seen by Gemini, never by
-you, and this is how a quantity is measured without ever opening the frame yourself.
+shows it most clearly returns a measurement in one step, from whichever observer the reference holds.
 
 Do that instead of spending an attempt. An attempt is for differences that have no number — a
 typeface's character, a texture, a rhythm — where the only route is change it and look again.

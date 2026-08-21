@@ -23,7 +23,8 @@ async function workspace(shotCount: number): Promise<{ readonly root: string; re
     const clip = join(shots, `${id}.mp4`);
     const representative = join(shots, `${id}-representative.jpg`);
     const tail = join(shots, `${id}-tail.jpg`);
-    for (const path of [clip, representative, tail]) await writeFile(path, `bytes-${id}`, "utf8");
+    const framesTile = join(shots, `${id}-frames.jpg`);
+    for (const path of [clip, representative, tail, framesTile]) await writeFile(path, `bytes-${id}`, "utf8");
     media.push({
       shot_id: `shot-${id}`,
       index: index + 1,
@@ -36,6 +37,7 @@ async function workspace(shotCount: number): Promise<{ readonly root: string; re
       clip_ref: clip,
       representative_frame_ref: representative,
       tail_frame_ref: tail,
+      frames_tile_ref: framesTile,
       audio_tail_ref: null,
     });
   }
@@ -55,6 +57,17 @@ async function workspace(shotCount: number): Promise<{ readonly root: string; re
   await writeFile(join(stateRoot, "state.json"), `${JSON.stringify(state, null, 2)}\n`, "utf8");
   await writeFile(join(stateRoot, "observations.json"), "{}\n", "utf8");
   return { root, stateRoot };
+}
+
+async function agentWorkspace(shotCount: number): Promise<{ readonly root: string; readonly stateRoot: string }> {
+  const made = await workspace(shotCount);
+  const path = join(made.stateRoot, "state.json");
+  const state = JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>;
+  // The four whole-reference observations are what the agent observer still owes at this point, so
+  // the fixture drops them rather than starting from a reference that was already read.
+  for (const key of ["people_and_product", "voices", "persistent_systems", "places"]) delete state[key];
+  await writeFile(path, `${JSON.stringify({ ...state, observer: "agent" }, null, 2)}\n`, "utf8");
+  return made;
 }
 
 function recorder(calls: Call[], answer = "observed"): GenerateText {
@@ -229,4 +242,72 @@ test("a failed observation is reported as unresolved instead of an empty list", 
   });
   const result = await failing.observe_reference({ reference_id: REFERENCE });
   assert.deepEqual(result["unresolved"], ["type:shot-001"]);
+});
+
+test("the agent observer hands every observation out as a task, with pictures, and calls no model", async () => {
+  const { root, stateRoot } = await agentWorkspace(3);
+  const calls: Call[] = [];
+  const result = await tools(root, calls).observe_reference({ reference_id: REFERENCE });
+
+  assert.equal(calls.length, 0, "the agent observer is the model; nothing may be generated on its behalf");
+  assert.equal(result["observer"], "agent");
+  const pending = result["pending_observations"] as readonly { key: string; prompt: string; image_refs: readonly string[] }[];
+  assert.deepEqual(pending.map((task) => task.key).sort(), [
+    "audio:shot-001", "audio:shot-002", "audio:shot-003",
+    "boundary:shot-002", "boundary:shot-003",
+    "type:shot-001", "type:shot-002", "type:shot-003",
+    "visual:shot-001", "visual:shot-002", "visual:shot-003",
+  ], "the same keys the Gemini observer answers, so everything downstream reads one shape");
+
+  const visual = pending.find((task) => task.key === "visual:shot-002")!;
+  assert.deepEqual(visual.image_refs.map((path) => path.split(/[\\/]/).at(-1)), ["002-frames.jpg", "002-representative.jpg", "001-tail.jpg"],
+    "the shot's clip is replaced by the tile of its frames; the still evidence is unchanged");
+  assert.equal(visual.image_refs.some((path) => path.endsWith(".mp4")), false, "an observer that reads pictures is never handed video");
+  assert.match(visual.prompt, /grid of frames is one shot/u, "the tile has to be described, or a grid reads as one picture");
+  assert.doesNotMatch(visual.prompt, /cannot hear/u, "a picture question carries no note about sound it never asked for");
+
+  const audio = pending.find((task) => task.key === "audio:shot-002")!;
+  assert.match(audio.prompt, /cannot hear this reference/u, "a question that needs sound says the sound is missing rather than inviting a guess");
+  assert.equal(audio.image_refs.some((path) => path.endsWith(".wav")), false, "audio has no picture to become");
+
+  const cached = JSON.parse(await readFile(join(stateRoot, "observations.json"), "utf8")) as Record<string, unknown>;
+  assert.deepEqual(cached, {}, "a task handed out is not an answer received, so nothing is cached yet");
+});
+
+test("a recorded observation completes its key, and the whole-reference ones land in the state", async () => {
+  const { root, stateRoot } = await agentWorkspace(3);
+  const calls: Call[] = [];
+  const kit = tools(root, calls);
+
+  const shot = await kit.record_observation({ reference_id: REFERENCE, key: "visual:shot-002", text: "a flat designed field of colour columns" });
+  assert.equal(shot["stored_in"], "observations");
+  const whole = await kit.record_observation({ reference_id: REFERENCE, key: "places", text: "one room, one camera position" });
+  assert.equal(whole["stored_in"], "state");
+
+  const again = await kit.observe_reference({ reference_id: REFERENCE });
+  const pending = (again["pending_observations"] as readonly { key: string }[]).map((task) => task.key);
+  assert.equal(pending.includes("visual:shot-002"), false, "an answered observation is not handed out a second time");
+  assert.equal(pending.includes("visual:shot-001"), true, "the rest are still owed");
+  const observed = (again["shots"] as readonly Record<string, { status: string; text: string }>[])
+    .find((entry) => (entry["shot_id"] as unknown as string) === "shot-002")!;
+  assert.equal(observed["visual"]!.status, "complete");
+  assert.equal(observed["visual"]!.text, "a flat designed field of colour columns");
+  assert.equal(observed["audio"]!.status, "pending", "an unanswered observation is pending, which is not a failure");
+
+  const state = JSON.parse(await readFile(join(stateRoot, "state.json"), "utf8")) as Record<string, { text: string }>;
+  assert.equal(state["places"]!.text, "one room, one camera position");
+  assert.equal(calls.length, 0);
+});
+
+test("a reference keeps the observer it was prepared with", async () => {
+  const { root } = await agentWorkspace(2);
+  const calls: Call[] = [];
+  await assert.rejects(
+    () => tools(root, calls).record_observation({ reference_id: REFERENCE, key: "visual:shot-001", text: "x" })
+      .then(async () => {
+        const gemini = await workspace(2);
+        return await tools(gemini.root, calls).record_observation({ reference_id: REFERENCE, key: "visual:shot-001", text: "x" });
+      }),
+    /read by the gemini observer/u,
+    "recording an answer against a reference Gemini is reading would mix two kinds of evidence under one key");
 });

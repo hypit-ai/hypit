@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { readFile } from "node:fs/promises";
+
 import { createReferenceVideoTools } from "./tools.js";
 
 type Flags = ReadonlyMap<string, string | readonly string[] | boolean>;
@@ -7,11 +9,17 @@ function usage(): string {
   return [
     "Usage:",
     "  hypit-reference-video-tools list_svml_packages",
-    "  hypit-reference-video-tools prepare_reference --video-path <path> [--redo media|transcript|people|voices|systems|places|all]",
+    "  hypit-reference-video-tools prepare_reference --video-path <path> [--observer gemini|agent] [--redo media|transcript|people|voices|systems|places|all]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> [--shot-id <id> ...] [--reobserve]",
     "  hypit-reference-video-tools observe_reference --reference-id <id> --shot-id <id> [--shot-id <id> ...] --question <text>",
+    "  hypit-reference-video-tools record_observation --reference-id <id> --key <key> --text <text>|--text-file <path>",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --image <path> [--question <scope>]",
+    "",
+    "--observer picks who reads the reference, once per reference. `gemini` uploads video to Vertex and",
+    "needs GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS_JSON. `agent` needs no credentials: it",
+    "returns each observation as a task carrying its prompt and one tiled picture per shot, which the",
+    "calling agent answers with record_observation.",
     "",
     "Every command prints one JSON result to stdout. Use --input <json> instead of flags when a complete input object is easier to pass.",
   ].join("\n");
@@ -83,11 +91,14 @@ async function main(): Promise<void> {
   if (command === "list_svml_packages") {
     result = await tools.list_svml_packages();
   } else if (command === "prepare_reference") {
+    const observer = one(flags, "observer");
+    if (observer !== undefined && observer !== "gemini" && observer !== "agent") throw new Error("--observer must be gemini or agent");
     const input = supplied ?? {
       video_path: required(flags, "video-path"),
+      ...(observer === undefined ? {} : { observer }),
       ...(one(flags, "redo") === undefined ? {} : { redo: one(flags, "redo") }),
     };
-    result = await tools.prepare_reference(input as { video_path: string; redo?: "media" | "transcript" | "people" | "voices" | "systems" | "places" | "all" });
+    result = await tools.prepare_reference(input as { video_path: string; observer?: "gemini" | "agent"; redo?: "media" | "transcript" | "people" | "voices" | "systems" | "places" | "all" });
   } else if (command === "observe_reference") {
     const input = supplied ?? {
       reference_id: required(flags, "reference-id"),
@@ -96,6 +107,16 @@ async function main(): Promise<void> {
       ...(flags.get("reobserve") === true ? { reobserve: true } : {}),
     };
     result = await tools.observe_reference(input as { reference_id: string; shot_ids?: readonly string[]; question?: string; reobserve?: boolean });
+  } else if (command === "record_observation") {
+    // An observation is paragraphs of prose. --text keeps a short one on the command line; --text-file
+    // is how a long one arrives without the shell deciding where it ends.
+    const textFile = one(flags, "text-file");
+    const input = supplied ?? {
+      reference_id: required(flags, "reference-id"),
+      key: required(flags, "key"),
+      text: textFile === undefined ? required(flags, "text") : await readFile(textFile, "utf8"),
+    };
+    result = await tools.record_observation(input as { reference_id: string; key: string; text: string });
   } else if (command === "compare_reconstruction") {
     const input = supplied ?? {
       reference_id: required(flags, "reference-id"),

@@ -1,8 +1,10 @@
 # Reference-video reconstruction route
 
 This route reconstructs a complete reference video as usable `main.svml`, `recipes.svs`, and
-`build.svrun`. The main agent owns all decisions and source code; Gemini supplies natural-language
-visual and audio evidence only.
+`build.svrun`. The main agent owns all decisions and source code. Observation is a separate job with a
+separate output: natural-language evidence about what the reference shows, written before and apart
+from any decision about what to build. `observers.md` says who does that job — Gemini, or you reading
+pictures — and the boundary holds either way.
 
 ## What this route delivers, and what it does not
 
@@ -70,8 +72,9 @@ discoverable:
 - **Where the project goes.** Its own directory in the checkout: `projects/<something>-reverse/`,
   named after the video — `../runtime.md` says what that directory is and what the workspace does
   with it. Use a directory the author named only if they named one.
-- **Credentials.** The repository keeps them in `.env`; load it as shown below. If a variable is
-  missing, say which one and stop — do not ask the author to describe their setup.
+- **Credentials.** The repository keeps them in `.env`; load it as shown below. A variable a Provider
+  needs and this machine does not hold is named, and the route stops there — with one exception, the
+  Vertex pair, which selects an observer rather than blocking one. `observers.md` owns that.
 
 Ask the author about the video and nothing else: what it is for, who is in it, what it should say.
 Those answers describe the result they want rather than the reconstruction; record them and apply
@@ -80,8 +83,18 @@ which directory, or whether to proceed.
 
 ## Before the first command
 
-`prepare_reference` and every observation need Vertex credentials, and a project that keeps them in a
-`.env` file does not load it automatically. Load it into the environment first:
+Ask the author which observer reads the reference, and ask it before anything runs. `gemini` uploads
+the video to Vertex and hears it; `agent` hands each observation to you as a picture to read and needs
+no credentials. Read `observers.md` first: it says what each one costs, how to report what this
+machine holds rather than asking the author to recall it, and what the `agent` observer can and cannot
+answer. The answer is passed once, as `--observer`, and the reference keeps it.
+
+This is the only question this route asks about how it runs, and it is asked once, before the evidence
+starts.
+
+A project that keeps its credentials in a `.env` file does not load it automatically. Load it into the
+environment first — the `gemini` observer needs the Vertex pair, and either observer may still need
+credentials for the generation the author starts later:
 
 ```bash
 set -a && source .env && set +a
@@ -97,24 +110,30 @@ Start them first and read while they run. Reading first and observing afterwards
 several minutes longer for nothing.
 
 ```bash
-hypit-reference-video-tools prepare_reference --video-path <path>          # about a minute
-hypit-reference-video-tools observe_reference --reference-id <id>          # run in the background
+hypit-reference-video-tools prepare_reference --video-path <path> --observer <chosen>   # about a minute
+hypit-reference-video-tools observe_reference --reference-id <id>                       # run in the background
 ```
+
+On the `agent` observer both commands return immediately with the observations they owe, and reading
+the files below is what you do between answering them.
 
 Then read the files below while the sweep is working, and collect its result when you are done.
 
 Before acting on the evidence, read these files completely in order:
 
-1. `workflow.md` — CLI sequence, evidence flow and responsibility boundaries.
-2. `continuity.md` — mandatory shot, overlay, B-roll, speaker, product and persistent-system rules.
-3. **Every craft file listed in the first item of `../playbooks/index.md`'s required load order — the
+1. `observers.md` — which observer is reading, what it is handed, and what it cannot answer. It is
+   first because the answer to its question was needed before any of this ran, and because every file
+   below describes evidence it shapes.
+2. `workflow.md` — CLI sequence, evidence flow and responsibility boundaries.
+3. `continuity.md` — mandatory shot, overlay, B-roll, speaker, product and persistent-system rules.
+4. **Every craft file listed in the first item of `../playbooks/index.md`'s required load order — the
    ones it marks always-read.** That list decides *which* files, and it grows: one added there is
    required here from the moment it is added, whether or not it appears among the notes below.
    Restating the set in this file is what once left a required craft file reachable from one route
    and invisible to the other.
 
    Its paths are written from `../playbooks/`, so a file it names as `craft/<name>.md` is
-   `../playbooks/craft/<name>.md` from here. Only that first item is meant: the same section goes on
+   `../playbooks/craft/<name>.md` from here. Only that list's first item is meant: the same section goes on
    to name Seedance directing, a format file and package READMEs conditionally, and none of those
    conditions can even be evaluated before the evidence is in.
 
@@ -133,12 +152,12 @@ Before acting on the evidence, read these files completely in order:
      and accepted Records are pinned for reuse.
 
    A file that list names and this one does not is read last, before `vocabulary.md`.
-4. `../vocabulary.md` — how a package is chosen for any route: enumerate every system before naming
+5. `../vocabulary.md` — how a package is chosen for any route: enumerate every system before naming
    one, what `list_svml_packages` and `inspect_svml_vocabulary` report, reuse before compose before
    declaring a gap, and what a real gap obliges.
-5. `vocabulary.md` — what the reference evidence adds to that: enumerating from the observations, and
+6. `vocabulary.md` — what the reference evidence adds to that: enumerating from the observations, and
    measuring an appearance value rather than choosing it.
-6. `../preview.md` — proving the Run traces before a Provider is reached, and rendering one element
+7. `../preview.md` — proving the Run traces before a Provider is reached, and rendering one element
    to a still without paying for it. Both are used later, by `final-sources.md` and
    `reconstruction-loop.md`; read them here so neither arrives as a surprise.
 
