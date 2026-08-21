@@ -27,12 +27,6 @@ export type RankingFragmentSound = {
 };
 
 const definition = (variant: RankingVariant) => {
-  if (variant === "tier-board") return {
-    style: rankingTypes.tierStyle, set: rankingTypes.tierItems, program: rankingTypes.tierProgram,
-    create: rankingProducers.createTierItems, append: rankingProducers.appendTierItem,
-    appendIcon: rankingProducers.appendTierItem, build: rankingProducers.tierProgram,
-    events: rankingProducers.tierEvents, render: rankingProducers.renderTier,
-  } as const;
   if (variant === "column") return {
     style: rankingTypes.columnStyle, set: rankingTypes.columnItems, program: rankingTypes.columnProgram,
     create: rankingProducers.createColumnItems, append: rankingProducers.appendColumnItem,

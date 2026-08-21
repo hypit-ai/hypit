@@ -51,11 +51,6 @@ import type {
   RankingTextStyle,
   RankingVariant,
   TriggeredRankingSchedule,
-  TierBoardItem,
-  TierBoardItemSet,
-  TierBoardItemSpec,
-  TierBoardProgram,
-  TierBoardStyle,
   TopThreeItem,
   TopThreeItemSet,
   TopThreeItemSpec,
@@ -108,7 +103,7 @@ function assertBlobImage(value: { readonly digest: string; readonly size: number
 
 export function assertRankingHeader(value: RankingHeader): void {
   identity(value.id, "RankingHeader.id");
-  assert(["tier-board", "column", "top-three"].includes(value.variant),
+  assert(["column", "top-three"].includes(value.variant),
     "RankingHeader.variant is invalid.");
 }
 
@@ -171,30 +166,6 @@ function assertCommonStyle(input: {
   stacking(input.itemStackingOrder, `${label}.itemStackingOrder`);
 }
 
-export function assertTierBoardStyle(value: TierBoardStyle): void {
-  assertCommonStyle(value, "TierBoardStyle");
-  assertRankingBoardPaint(value.board, "TierBoardStyle.board");
-  assert(value.rows.length > 0, "TierBoardStyle.rows is empty.");
-  const rows = new Set<string>();
-  for (const [index, row] of value.rows.entries()) {
-    identity(row.id, `TierBoardStyle.rows.${index}.id`);
-    assert(!rows.has(row.id), `TierBoardStyle repeats row ${row.id}.`);
-    rows.add(row.id);
-    assert(row.label.trim().length > 0, `TierBoardStyle.rows.${index}.label is empty.`);
-    color(row.color, `TierBoardStyle.rows.${index}.color`);
-  }
-  for (const [name, numberValue] of Object.entries({
-    labelWidthPx: value.labelWidthPx, paddingPx: value.paddingPx, rowHeightPx: value.rowHeightPx,
-    rowGapPx: value.rowGapPx, cellGapPx: value.cellGapPx, stageSizePx: value.stageSizePx,
-  })) nonNegative(numberValue, `TierBoardStyle.${name}`);
-  assert(value.labelWidthPx > 0 && value.rowHeightPx > 0 && value.stageSizePx > 0,
-    "TierBoardStyle positive geometry is invalid.");
-  for (const [name, coordinate] of Object.entries(value.stagePoint)) {
-    assert(Number.isFinite(coordinate) && coordinate >= 0 && coordinate <= 1, `TierBoardStyle.stagePoint.${name} is invalid.`);
-  }
-  stacking(value.stageStackingOrder, "TierBoardStyle.stageStackingOrder");
-}
-
 export function assertColumnStyle(value: ColumnStyle): void {
   assertCommonStyle(value, "ColumnStyle");
   assertRankingBoardPaint(value.board, "ColumnStyle.board");
@@ -224,10 +195,7 @@ export function assertTopThreeStyle(value: TopThreeStyle): void {
 
 export function assertRankingItemSpec(value: RankingItemSpec): void {
   identity(value.id, "RankingItemSpec.id");
-  if (value.variant === "tier-board") {
-    identity(value.tier, `TierBoardItemSpec.${value.id}.tier`);
-    assert(value.entry === "direct" || value.entry === "stage", `TierBoardItemSpec.${value.id}.entry is invalid.`);
-  } else if (value.variant === "column") {
+  if (value.variant === "column") {
     assert(value.label.trim().length > 0, `ColumnItemSpec.${value.id}.label is empty.`);
     integer(value.rank, `ColumnItemSpec.${value.id}.rank`, 1);
     assert(typeof value.preset === "boolean", `ColumnItemSpec.${value.id}.preset is invalid.`);
@@ -265,7 +233,7 @@ export function createRankingItemSpecSet(header: RankingHeader): RankingItemSpec
 }
 
 export function assertRankingItemSpecSet(value: RankingItemSpecSet): void {
-  assert(["tier-board", "column", "top-three"].includes(value.variant),
+  assert(["column", "top-three"].includes(value.variant),
     "RankingItemSpecSet.variant is invalid.");
   const ids = new Set<string>();
   const ranks = new Set<number>();
@@ -496,8 +464,7 @@ export function buildColumnSchedule(input: {
 
 function assertTriggeredRankingSchedule(value: TriggeredRankingSchedule): void {
   identity(value.id, "RankingSchedule.id");
-  assert(["tier-board", "top-three"].includes(value.variant),
-    "Triggered RankingSchedule.variant is invalid.");
+  assert(value.variant === "top-three", "Triggered RankingSchedule.variant is invalid.");
   frame(value.outer.startFrame, "RankingSchedule.outer.startFrame");
   frame(value.outer.endFrameExclusive, "RankingSchedule.outer.endFrameExclusive");
   assert(value.outer.endFrameExclusive > value.outer.startFrame, "RankingSchedule.outer is empty.");
@@ -582,20 +549,11 @@ function emptySet<T extends { readonly items: readonly unknown[] }>(): T {
   return { items: [] } as unknown as T;
 }
 
-export const createTierBoardItemSet = (): TierBoardItemSet => emptySet();
 export const createColumnItemSet = (): ColumnItemSet => emptySet();
 export const createTopThreeItemSet = (): TopThreeItemSet => emptySet();
 
 function ensureNew(items: readonly { readonly id: string }[], id: string): void {
   assert(!items.some((item) => item.id === id), `Ranking Item ${id} is duplicated.`);
-}
-
-export function appendTierBoardItem(set: TierBoardItemSet, spec: TierBoardItemSpec, icon: TierBoardItem["icon"]): TierBoardItemSet {
-  assert(Array.isArray(set.items), "TierBoardItemSet is invalid.");
-  assertRankingItemSpec(spec);
-  assertBlobImage(icon, `TierBoardItem.${spec.id}.icon`);
-  ensureNew(set.items, spec.id);
-  return canonicalize({ ...set, items: [...set.items, { ...structuredClone(spec), icon: structuredClone(icon) }] }) as unknown as TierBoardItemSet;
 }
 
 export function appendColumnItem(set: ColumnItemSet, spec: ColumnItemSpec, icon?: ColumnItem["icon"]): ColumnItemSet {
@@ -628,16 +586,9 @@ function columnIdsEqual(schedule: ColumnSchedule, items: readonly { readonly id:
     "Column Program Items differ from its Schedule.");
 }
 
-export function fitRankingStageMotion(
-  durationFrames: number,
-  preferredAppearFrames: number,
-  preferredMoveFrames: number,
-  needsMove: boolean,
-): { readonly appearFrames: number; readonly moveFrames: number } {
+export function fitRankingStageAppearFrames(durationFrames: number, preferredAppearFrames: number): number {
   assert(Number.isSafeInteger(durationFrames) && durationFrames > 0, "Ranking stage duration is invalid.");
-  if (!needsMove) return { appearFrames: Math.min(preferredAppearFrames, durationFrames), moveFrames: 0 };
-  const moveFrames = Math.min(preferredMoveFrames, durationFrames);
-  return { appearFrames: Math.min(preferredAppearFrames, durationFrames - moveFrames), moveFrames };
+  return Math.min(preferredAppearFrames, durationFrames);
 }
 
 export function fitColumnRevealMotion(
@@ -656,18 +607,6 @@ export function fitColumnRevealMotion(
   const appearFrames = Math.min(durationFrames - 1,
     Math.max(1, Math.round(durationFrames * preferredAppearFrames / preferredTotal)));
   return { mode: "stage", appearFrames, moveFrames: durationFrames - appearFrames };
-}
-
-export function buildTierBoardProgram(header: RankingHeader, frameValue: import("@hypit/spatial").SpatialFrame, schedule: RankingSchedule, style: TierBoardStyle, set: TierBoardItemSet): TierBoardProgram {
-  assert(header.variant === "tier-board" && schedule.variant === "tier-board", "TierBoard variant is inconsistent.");
-  assertSpatialFrame(frameValue);
-  assertTierBoardStyle(style);
-  idsEqual(schedule, set.items);
-  const rows = new Set(style.rows.map((row) => row.id));
-  for (const item of set.items) assert(rows.has(item.tier), `TierBoard Item ${item.id} references unknown tier ${item.tier}.`);
-  const result: TierBoardProgram = { id: header.id, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
-  assertTierBoardProgram(result);
-  return canonicalize(result) as unknown as TierBoardProgram;
 }
 
 export function buildColumnProgram(header: RankingHeader, canvasValue: CanvasSpace, frameValue: import("@hypit/spatial").SpatialFrame, schedule: RankingSchedule, style: ColumnStyle, set: ColumnItemSet): ColumnProgram {
@@ -691,15 +630,6 @@ export function buildTopThreeProgram(header: RankingHeader, frameValue: import("
   const result: TopThreeProgram = { id: header.id, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
   assertTopThreeProgram(result);
   return canonicalize(result) as unknown as TopThreeProgram;
-}
-
-export function assertTierBoardProgram(value: TierBoardProgram): void {
-  assertRankingSchedule(value.schedule);
-  assert(value.schedule.variant === "tier-board", "TierBoardProgram Schedule variant is invalid.");
-  assertSpatialFrame(value.frame);
-  assertTierBoardStyle(value.style);
-  idsEqual(value.schedule, value.items);
-  value.items.forEach((item) => { assertRankingItemSpec(item); assertBlobImage(item.icon, `TierBoardItem.${item.id}.icon`); });
 }
 
 export function assertColumnProgram(value: ColumnProgram): void {
@@ -735,20 +665,6 @@ function sealEvents(id: string, variant: RankingVariant, events: readonly Rankin
   return canonicalize(value) as unknown as RankingSoundEventPlan;
 }
 
-export function buildTierBoardSoundEvents(schedule: RankingSchedule, style: TierBoardStyle, specs: RankingItemSpecSet): RankingSoundEventPlan {
-  assert(schedule.variant === "tier-board" && specs.variant === "tier-board", "TierBoard event inputs disagree.");
-  assertTierBoardStyle(style);
-  idsEqual(schedule, specs.items);
-  const events = schedule.entries.flatMap((entry, index) => {
-    const spec = specs.items[index] as TierBoardItemSpec;
-    const duration = entry.stage.endFrameExclusive - entry.triggerFrame;
-    const fitted = fitRankingStageMotion(duration, style.motion.appearFrames, style.motion.moveFrames, spec.entry === "stage");
-    return [event(schedule.id, entry.itemId, "appear", entry.triggerFrame),
-      ...(spec.entry === "stage" ? [event(schedule.id, entry.itemId, "move", entry.stage.endFrameExclusive - fitted.moveFrames)] : [])];
-  });
-  return sealEvents(schedule.id, schedule.variant, events);
-}
-
 export function buildColumnSoundEvents(schedule: RankingSchedule, style: ColumnStyle, specs: RankingItemSpecSet): RankingSoundEventPlan {
   assert(schedule.variant === "column" && specs.variant === "column", "Column event inputs disagree.");
   assertColumnStyle(style);
@@ -774,7 +690,7 @@ export function buildTopThreeSoundEvents(schedule: RankingSchedule, style: TopTh
 
 export function assertRankingSoundEventPlan(value: RankingSoundEventPlan): void {
   identity(value.id, "RankingSoundEventPlan.id");
-  assert(["tier-board", "column", "top-three"].includes(value.variant),
+  assert(["column", "top-three"].includes(value.variant),
     "RankingSoundEventPlan.variant is invalid.");
   const ids = new Set<string>();
   for (const item of value.events) {

@@ -3,8 +3,6 @@ import { createMarkupSurfaceHostFacet } from "@hypit/markup";
 import {
   decodeColumnStyleSurface,
   decodeColumnSurface,
-  decodeTierBoardStyleSurface,
-  decodeTierBoardSurface,
   decodeTopThreeStyleSurface,
   decodeTopThreeSurface,
   rankingComponent,
@@ -14,10 +12,8 @@ import {
 } from "./index.js";
 
 const facets = [
-  ["tier-style", decodeTierBoardStyleSurface],
   ["column-style", decodeColumnStyleSurface],
   ["top-three-style", decodeTopThreeStyleSurface],
-  ["tier", decodeTierBoardSurface],
   ["column", decodeColumnSurface],
   ["top-three", decodeTopThreeSurface],
 ] as const;

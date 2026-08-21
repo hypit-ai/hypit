@@ -30,7 +30,6 @@ import {
 } from "./schedule.js";
 import {
   decodeColumnStyle,
-  decodeTierBoardStyle,
   decodeTopThreeStyle,
 } from "./style.js";
 import type {
@@ -39,7 +38,6 @@ import type {
   RankingSoundStyle,
   RankingTextItemShell,
   RankingVariant,
-  TierBoardItemSpec,
   TopThreeItemSpec,
 } from "./types.js";
 
@@ -109,7 +107,6 @@ function styleSurface<T>(
   };
 }
 
-export const decodeTierBoardStyleSurface = styleSurface(rankingTypes.tierStyle, decodeTierBoardStyle);
 export const decodeColumnStyleSurface = styleSurface(rankingTypes.columnStyle, decodeColumnStyle);
 export const decodeTopThreeStyleSurface = styleSurface(rankingTypes.topThreeStyle, decodeTopThreeStyle);
 function textValue(
@@ -134,18 +131,7 @@ function itemSpec(
   const id = itemIdentity(element, suffix);
   const stackingOrder = integer(element, "stack");
   let value: RankingItemSpec;
-  if (variant === "tier-board") {
-    allowed(element, ["id", "tier", "entry", "icon", "stack"]);
-    empty(element);
-    const entry = text(element, "entry", "direct");
-    if (entry !== "direct" && entry !== "stage") throw new Error(`${element.name}.entry must be direct or stage.`);
-    value = {
-      variant, id, tier: text(element, "tier"), entry,
-      ...(stackingOrder === undefined ? {} : { stackingOrder }),
-    } satisfies TierBoardItemSpec;
-    assertRankingItemSpec(value);
-    return { spec: value };
-  } else if (variant === "column") {
+  if (variant === "column") {
     allowed(element, ["id", "label", "icon", "rank", "preset", "during", "stack"]);
     empty(element);
     const rank = integer(element, "rank");
@@ -184,7 +170,6 @@ function itemSpec(
 }
 
 const variantDefinition = {
-  "tier-board": { tag: "TierItem", style: rankingTypes.tierStyle },
   column: { tag: "ColumnItem", style: rankingTypes.columnStyle },
   "top-three": { tag: "TopThreeItem", style: rankingTypes.topThreeStyle },
 } as const;
@@ -229,7 +214,6 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
     const items: RankingFragmentItem[] = [];
     const itemIds = new Set<string>();
     let index = 0;
-    let hasStage = false;
     for (const child of element.children) {
       if (child.kind === "text") {
         if (child.value.trim().length > 0) throw new Error(`${element.name} accepts ${selected.tag} children only.`);
@@ -242,7 +226,6 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       const spec = authored.spec;
       if (itemIds.has(spec.id)) throw new Error(`${element.name} has duplicate Item id ${spec.id}.`);
       itemIds.add(spec.id);
-      hasStage ||= spec.variant === "tier-board" && spec.entry === "stage";
       const specId = `${id}.item.${suffix}.spec`;
       const specName = `item-${suffix}-spec`;
       records.push({ id: specId, type: authored.content === undefined ? rankingTypes.itemSpec : rankingTypes.textItemShell, value: { kind: "inline", value: spec as unknown as CanonicalValue }, range: child.range });
@@ -252,7 +235,7 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       const timingName = authored.timing === undefined ? undefined : `item-${suffix}-timing`;
       if (authored.timing !== undefined) inputs[timingName!] = authored.timing.ref;
       let iconName: string | undefined;
-      if (variant === "tier-board" || child.attributes.icon !== undefined) {
+      if (child.attributes.icon !== undefined) {
         const icon = reference(child.attributes.icon, `${child.name}.icon`, mediaTypes.blobArtifact, resolveReference);
         iconName = `item-${suffix}-icon`;
         inputs[iconName] = icon.ref;
@@ -269,7 +252,6 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       ...(element.attributes["move-sound"] === undefined ? {} : { moveName: "move-sound" }),
     };
     if (sound.moveName !== undefined && variant === "top-three") throw new Error(`${element.name} has no move sound phase.`);
-    if (sound.moveName !== undefined && variant === "tier-board" && !hasStage) throw new Error(`${element.name}.move-sound requires one staged TierItem.`);
     for (const [attribute, inputName] of [["appear-sound", sound.appearName], ["move-sound", sound.moveName]] as const) {
       if (inputName === undefined) continue;
       inputs[inputName] = reference(element.attributes[attribute], `${element.name}.${attribute}`, mediaTypes.synchronized, resolveReference).ref;
@@ -299,6 +281,5 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
   };
 }
 
-export const decodeTierBoardSurface = rankingSurface("tier-board");
 export const decodeColumnSurface = rankingSurface("column");
 export const decodeTopThreeSurface = rankingSurface("top-three");

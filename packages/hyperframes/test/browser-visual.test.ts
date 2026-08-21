@@ -1584,14 +1584,14 @@ test("DepthStack Deck reflow, exact labels and old-system layout survive partiti
   }
 });
 
-test("all three Ranking components paint frame-pure progressive states under partitioned browser rendering", {
+test("both Ranking components paint frame-pure progressive states under partitioned browser rendering", {
   skip: !enabled,
   timeout: 120_000,
 }, async () => {
   const temp = await mkdtemp(path.join(os.tmpdir(), "hypit-ranking-visual-"));
   try {
     const width = 480;
-    const height = 512;
+    const height = 352;
     const fps = 12;
     const frames = 24;
     const installed = await installedOpenFont("inter", 700, "normal");
@@ -1648,24 +1648,6 @@ test("all three Ranking components paint frame-pure progressive states under par
     const recipe = (path: string, properties: SvsRecipe["properties"]): SvsRecipe => ({
       path, properties,
     });
-    const tierHeader = rankingTrack.sealRankingHeader({ id: "browser-tier", variant: "tier-board" });
-    const tierSpecs = [
-      { variant: "tier-board", id: "tier-one", tier: "s", entry: "stage" },
-      { variant: "tier-board", id: "tier-two", tier: "a", entry: "direct" },
-      { variant: "tier-board", id: "tier-three", tier: "s", entry: "direct" },
-    ] as const;
-    let tierItems = rankingTrack.createTierBoardItemSet();
-    tierSpecs.forEach((spec, index) => { tierItems = rankingTrack.appendTierBoardItem(tierItems, spec, icons[index]!.artifact); });
-    const tierStyle = rankingTrack.decodeTierBoardStyle(recipe("browser.tier", {
-      rows: "s:S:#ef4444|a:A:#22c55e", "font-size": 15, "appear-frames": 2, "move-frames": 2,
-      padding: 6, "label-width": 36, "row-height": 54, "row-gap": 4, "cell-gap": 5,
-      "icon-size": 42, "icon-radius": 7, "stage-size": 56,
-    }), font).style;
-    const tierTrack = rankingTrack.renderTierBoard(space, rankingTrack.buildTierBoardProgram(
-      tierHeader, { xPx: 20, yPx: 20, widthPx: 440, heightPx: 140 },
-      schedule(tierHeader, tierSpecs), tierStyle, tierItems,
-    ));
-
     const columnHeader = rankingTrack.sealRankingHeader({ id: "browser-column", variant: "column" });
     const columnSpecs = ["one", "two", "three"].map((id, index) => ({
       variant: "column" as const, id: `column-${id}`, label: `${index + 1}. ${id}`,
@@ -1690,7 +1672,7 @@ test("all three Ranking components paint frame-pure progressive states under par
       origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
     });
     const columnTrack = rankingTrack.renderColumn(space, rankingTrack.buildColumnProgram(
-      columnHeader, columnCanvas, { xPx: 20, yPx: 180, widthPx: 440, heightPx: 140 },
+      columnHeader, columnCanvas, { xPx: 20, yPx: 20, widthPx: 440, heightPx: 140 },
       columnSchedule, columnStyle, columnItems,
     ));
 
@@ -1705,14 +1687,14 @@ test("all three Ranking components paint frame-pure progressive states under par
       "slot-gap": 30, "ring-width": 3, "label-gap": 5, "baseline-y": 0.45,
     }), font).style;
     const topTrack = rankingTrack.renderTopThree(space, rankingTrack.buildTopThreeProgram(
-      topHeader, { xPx: 20, yPx: 340, widthPx: 440, heightPx: 140 },
+      topHeader, { xPx: 20, yPx: 180, widthPx: 440, heightPx: 140 },
       schedule(topHeader, topSpecs), topStyle, topItems,
     ));
 
     const document = compileHyperframesDocument(sealComposition({
       id: "ranking-browser-proof",
       canvas: { width, height, clearColor: "#090b12" },
-      tracks: [tierTrack, columnTrack, topTrack],
+      tracks: [columnTrack, topTrack],
     }), space);
     await writeFile(path.join(temp, "index.html"), materializeHyperframesHtml(document, (artifact) => {
       const materialized = paths.get(artifact.digest);
@@ -1771,7 +1753,7 @@ test("all three Ranking components paint frame-pure progressive states under par
     assert.notDeepEqual(sequential[3], sequential[9], "Ranking stages produced no visual state change");
     assert.notDeepEqual(sequential[9], sequential[15], "later Ranking triggers produced no visual state change");
     const settled = sequential[22]!;
-    for (const [name, top, bottom] of [["TierBoard", 20, 160], ["Column", 180, 320], ["TopThree", 340, 480]] as const) {
+    for (const [name, top, bottom] of [["Column", 20, 160], ["TopThree", 180, 320]] as const) {
       assert.ok(matchingPixels(settled, width, { left: 20, top, right: 460, bottom }, (red, green, blue) => red + green + blue > 120) > 500,
         `${name} did not paint its settled suffix`);
     }

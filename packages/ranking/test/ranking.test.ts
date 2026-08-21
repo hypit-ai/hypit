@@ -17,34 +17,26 @@ import {
   appendColumnWindowCandidate,
   appendRankingItemSpec,
   appendRankingSound,
-  appendTierBoardItem,
   appendTopThreeItem,
   buildColumnProgram,
   buildColumnSchedule,
   buildColumnSoundEvents,
   buildRankingSchedule,
-  buildTierBoardProgram,
-  buildTierBoardSoundEvents,
   buildTopThreeProgram,
   buildTopThreeSoundEvents,
   createColumnItemSet,
   createColumnWindowCandidateSet,
   createRankingItemSpecSet,
   createRankingSoundSet,
-  createTierBoardItemSet,
   createTopThreeItemSet,
   decodeColumnStyle,
   decodeColumnStyleSurface,
   decodeColumnSurface,
-  decodeTierBoardStyle,
-  decodeTierBoardStyleSurface,
-  decodeTierBoardSurface,
   decodeTopThreeStyle,
   decodeTopThreeStyleSurface,
   decodeTopThreeSurface,
   renderColumn,
   renderRankingAudio,
-  renderTierBoard,
   renderTopThree,
   rankingComponent,
   rankingManifest,
@@ -60,7 +52,6 @@ import type {
   RankingHeader,
   RankingItemSpec,
   TriggeredRankingSchedule,
-  TierBoardItemSpec,
   TopThreeItemSpec,
 } from "@hypit/ranking";
 import { narrativeTypes } from "@hypit/narrative";
@@ -154,9 +145,6 @@ function schedule(headerValue: RankingHeader, values: readonly RankingItemSpec[]
   });
 }
 
-const tierSpec = (id: string, tier: string, entry: "direct" | "stage" = "direct"): TierBoardItemSpec => ({
-  variant: "tier-board", id, tier, entry,
-});
 const columnSpec = (id: string, rank: number, preset = false): ColumnItemSpec => ({
   variant: "column", id, label: id.toUpperCase(), rank, preset,
 });
@@ -192,8 +180,8 @@ test("RankingSchedule zips authored item and Moment order and preserves a settle
 });
 
 test("RankingSchedule rejects cardinality, outer/terminal ambiguity and authored physical reversal", () => {
-  const owner = header("tier-board");
-  const values = [tierSpec("a", "s"), tierSpec("b", "a")];
+  const owner = header("top-three", "cardinality");
+  const values = [topSpec("a"), topSpec("b")];
   assert.throws(() => buildRankingSchedule({
     header: owner, items: specs(owner, values), semantic: semanticTrack, outer, triggers: triggers(1), terminal,
   }), /cardinality/u);
@@ -209,33 +197,14 @@ test("RankingSchedule rejects cardinality, outer/terminal ambiguity and authored
 });
 
 test("variant Style decoders reject unknown Recipes and keep exact fonts and independent stacks", () => {
-  const tier = decodeTierBoardStyle(recipe("ranking.tier", {
-    rows: "s:S:#ef4444|a:A:#22c55e", "board-stack": 8, "stage-stack": 20, "item-stack": 31,
+  const column = decodeColumnStyle(recipe("ranking.column", {
+    "rank-colors": "#ef4444|#22c55e", "board-stack": 8, "stage-stack": 20, "item-stack": 31,
   }), font);
-  assert.deepEqual(tier.style.rows.map((row) => row.id), ["s", "a"]);
-  assert.equal(tier.style.text.fonts[0]?.sources[0]?.artifact.digest, font.sources[0]!.artifact.digest);
-  assert.deepEqual([tier.style.boardStackingOrder, tier.style.stageStackingOrder, tier.style.itemStackingOrder], [8, 20, 31]);
-  assert.throws(() => decodeColumnStyle(recipe("ranking.column", { "tier-only": 1 }), font), /does not accept/u);
+  assert.deepEqual(column.style.rankColors, ["#ef4444", "#22c55e"]);
+  assert.equal(column.style.text.fonts[0]?.sources[0]?.artifact.digest, font.sources[0]!.artifact.digest);
+  assert.deepEqual([column.style.boardStackingOrder, column.style.stageStackingOrder, column.style.itemStackingOrder], [8, 20, 31]);
+  assert.throws(() => decodeColumnStyle(recipe("ranking.column", { "podium-only": 1 }), font), /does not accept/u);
   assert.equal(decodeTopThreeStyle(recipe("ranking.top"), font).style.slotColors.length, 3);
-});
-
-test("TierBoard owns cumulative direct/stage placement and rejects invalid schedule boundaries", () => {
-  const owner = header("tier-board", "tiers");
-  const semantic = [tierSpec("alpha", "s", "stage"), tierSpec("beta", "a")];
-  const style = decodeTierBoardStyle(recipe("ranking.tier", {
-    rows: "s:S:#ef4444|a:A:#22c55e", "appear-frames": 5, "move-frames": 8,
-  }), font).style;
-  let set = createTierBoardItemSet();
-  set = appendTierBoardItem(set, semantic[0]!, image("alpha"));
-  set = appendTierBoardItem(set, semantic[1]!, image("beta"));
-  const program = buildTierBoardProgram(owner, frame, schedule(owner, semantic), style, set);
-  const track = renderTierBoard(space, program);
-  assert.deepEqual(track.presents.map((item) => item.stacking.order).sort((a, b) => a - b), [20, 25, 30, 30, 30, 30]);
-  assert.equal(track.presents.find((item) => item.id.endsWith(":item:alpha:settled"))?.span.endFrameExclusive, 230);
-  const tightTerminal = { ...terminal, occurrences: [{ occurrence: 0, anchorId: "two" }] };
-  assert.throws(() => buildRankingSchedule({
-    header: owner, items: specs(owner, semantic), semantic: semanticTrack, outer, triggers: triggers(2), terminal: tightTerminal,
-  }), /outside|strictly increasing/u);
 });
 
 test("Column projects a Segment outer, keeps rank independent from reveal time, presets rows and avoids overlaps", () => {
@@ -329,12 +298,6 @@ test("visual and sound event plans share exact phase frames while absent sound s
 });
 
 test("each component owns a distinct event law and repeated lowering is canonical", () => {
-  const tierOwner = header("tier-board", "tier-events");
-  const tierItems = [tierSpec("direct", "s"), tierSpec("stage", "a", "stage")];
-  const tier = decodeTierBoardStyle(recipe("ranking.tier", { rows: "s:S:#ef4444|a:A:#22c55e" }), font).style;
-  assert.deepEqual(buildTierBoardSoundEvents(schedule(tierOwner, tierItems), tier, specs(tierOwner, tierItems)).events.map((item) => item.kind),
-    ["appear", "appear", "move"]);
-
   const topOwner = header("top-three", "top-events");
   const topItems = [topSpec("one")];
   const top = decodeTopThreeStyle(recipe("ranking.top"), font).style;
@@ -348,7 +311,7 @@ test("each component owns a distinct event law and repeated lowering is canonica
   assert.deepEqual(renderColumn(space, program), renderColumn(space, program));
 });
 
-test("all three author Surfaces preserve explicit semantic, spatial, font, image and optional sound graph edges", async () => {
+test("both author Surfaces preserve explicit semantic, spatial, font, image and optional sound graph edges", async () => {
   createResolvedClosure([...videoContractManifests, textManifest, rankingManifest]);
   const range = { source: "ranking.svml", start: 0, end: 1 };
   const ref = (path: string): MarkupAttributeValue => ({ kind: "reference", path });
@@ -375,7 +338,6 @@ test("all three author Surfaces preserve explicit semantic, spatial, font, image
     ["copy", inlineReference("copy", textTypes.text, sealText("Dynamic ranking copy"))],
   ]);
   const styleCases = [
-    ["tier-style", rankingTypes.tierStyle, decodeTierBoardStyleSurface, { rows: "s:S:#ef4444|a:A:#22c55e" }],
     ["column-style", rankingTypes.columnStyle, decodeColumnStyleSurface, {}],
     ["top-style", rankingTypes.topThreeStyle, decodeTopThreeStyleSurface, {}],
   ] as const;
@@ -394,10 +356,6 @@ test("all three author Surfaces preserve explicit semantic, spatial, font, image
     references.set(`${id}.sound`, { path: `${id}.sound`, ref: { kind: "record", id: `${id}.sound` }, type: rankingTypes.soundStyle, record: soundRecord as never });
   }
   const cases = [
-    [decodeTierBoardSurface, node("ranking:TierBoard", {
-      id: "tier", semantic: ref("semantic"), frame: ref("frame"), during: ref("outer"),
-      triggers: ref("triggers"), terminal: ref("terminal"), style: ref("tier-style"),
-    }, [node("ranking:TierItem", { id: "tier-one", tier: "s", entry: "stage", icon: ref("icon-1") })])],
     [decodeColumnSurface, node("ranking:Column", {
       id: "column", semantic: ref("semantic"), canvas: ref("canvas"), frame: ref("frame"), during: ref("ranking-segment"),
       style: ref("column-style"),
@@ -426,7 +384,7 @@ test("all three author Surfaces preserve explicit semantic, spatial, font, image
     assert.ok(fragment.inputs.some((input) => input.name === "frame"));
   }
   const column = await decodeColumnSurface({
-    sourceName: "ranking.svml", element: cases[1][1],
+    sourceName: "ranking.svml", element: cases[0][1],
     resolveReference: (path) => references.get(path),
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
@@ -437,20 +395,20 @@ test("all three author Surfaces preserve explicit semantic, spatial, font, image
 });
 
 test("Ranking Surfaces declare their sealed Records and icon Producers consume Blob values", async () => {
-  for (const name of ["tier", "column", "top-three"]) {
+  for (const name of ["column", "top-three"]) {
     const surface = rankingMarkupSurfaces.find((item) => item.name === name);
     assert.ok(surface?.outputs.some((type) => type.name === rankingTypes.header.name), `${name} header output`);
     assert.ok(surface?.outputs.some((type) => type.name === rankingTypes.itemSpec.name), `${name} item output`);
   }
 
   const producer = rankingComponent.producers.find((item) =>
-    item.producer.name === rankingProducers.appendTierItem.name);
+    item.producer.name === rankingProducers.appendColumnIconItem.name);
   assert.ok(producer !== undefined);
   const icon = image("producer");
   const result = await producer.handler({
     inputs: {
-      set: { value: { kind: "inline", value: createTierBoardItemSet() } },
-      spec: { value: { kind: "inline", value: tierSpec("one", "s") } },
+      set: { value: { kind: "inline", value: createColumnItemSet() } },
+      spec: { value: { kind: "inline", value: columnSpec("one", 1) } },
       icon: { value: icon },
     },
   } as never);
@@ -467,7 +425,7 @@ test("Ranking author Surfaces fail closed on impossible image and sound combinat
     ["semantic", plain("semantic", semanticTrackTypes.track)],
     ["frame", plain("frame", spatialTypes.frame)], ["outer", plain("outer", narrativeTypes.selection)],
     ["triggers", plain("triggers", narrativeTypes.moment)], ["terminal", plain("terminal", narrativeTypes.moment)],
-    ["style", plain("style", rankingTypes.tierStyle)], ["style.sound", plain("style.sound", rankingTypes.soundStyle)],
+    ["style", plain("style", rankingTypes.topThreeStyle)], ["style.sound", plain("style.sound", rankingTypes.soundStyle)],
     ["move", plain("move", mediaTypes.synchronized)],
   ]);
   const common = { id: "bad", semantic: ref("semantic"), frame: ref("frame"), during: ref("outer"), triggers: ref("triggers"), terminal: ref("terminal"), style: ref("style") };
@@ -475,12 +433,12 @@ test("Ranking author Surfaces fail closed on impossible image and sound combinat
     sourceName: "ranking.svml", element, resolveReference: (path: string) => references.get(path),
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
-  assert.throws(() => decodeTierBoardSurface(context({
-    kind: "element", name: "ranking:TierBoard", attributes: common,
-    children: [{ kind: "element", name: "ranking:TierItem", attributes: { tier: "s" }, children: [], range }], range,
+  assert.throws(() => decodeTopThreeSurface(context({
+    kind: "element", name: "ranking:TopThree", attributes: common,
+    children: [{ kind: "element", name: "ranking:TopThreeItem", attributes: { label: "One", icon: ref("missing") }, children: [], range }], range,
   })), /icon/u);
-  assert.throws(() => decodeTierBoardSurface(context({
-    kind: "element", name: "ranking:TierBoard", attributes: { ...common, "move-sound": ref("move") },
-    children: [{ kind: "element", name: "ranking:TierItem", attributes: { tier: "s", icon: ref("missing") }, children: [], range }], range,
-  })), /wrong Type|move-sound/u);
+  assert.throws(() => decodeTopThreeSurface(context({
+    kind: "element", name: "ranking:TopThree", attributes: { ...common, "move-sound": ref("move") },
+    children: [{ kind: "element", name: "ranking:TopThreeItem", attributes: { label: "One" }, children: [], range }], range,
+  })), /move sound phase/u);
 });

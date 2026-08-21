@@ -271,11 +271,10 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 ## 榜单板
 
-榜单板让一份有序列表跟着 Script 动起来：在某个 Selection 期间出现，在 Moment 上移动，在另一个 Moment 上定格。三个变体共用同一套形状——一个容器、它专属的条目标签、以及它专属的样式标签。
+榜单板让一份有序列表跟着 Script 动起来：在某个 Selection 期间出现，在 Moment 上移动，在另一个 Moment 上定格。两个变体共用同一套形状——一个容器、它专属的条目标签、以及它专属的样式标签。
 
 | 容器 | 条目 | 样式 |
 |---|---|---|
-| `ranking:TierBoard` | `ranking:TierItem` | `ranking:TierBoardStyle` |
 | `ranking:Column` | `ranking:ColumnItem` | `ranking:ColumnStyle` |
 | `ranking:TopThree` | `ranking:TopThreeItem` | `ranking:TopThreeStyle` |
 
@@ -285,7 +284,7 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 ### 样式标签
 
-标签必须为空，三个属性全部必填：`id`、`recipe`（一份 SVS Recipe）与 `font`（Font Stack 或字体产物）。Recipe 承载这块板自己的键——行、配色、动效——并且会按变体校验，把 Column 的 recipe 给 TierBoard 会被指名拒绝。
+标签必须为空，三个属性全部必填：`id`、`recipe`（一份 SVS Recipe）与 `font`（Font Stack 或字体产物）。Recipe 承载这块板自己的键——配色、几何、动效——并且会按变体校验，把 Column 的 recipe 给 TopThree 会被指名拒绝。
 
 ### 容器标签
 
@@ -295,17 +294,16 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 | `frame` | 一个 `space:Frame`——对 `Column` 来说是固定的排名轨 |
 | `during` | 一个 Selection——板在此期间留在画面上 |
 | `style` | 对应的样式记录，且只接受本变体的 |
-| `triggers`、`terminal` | 两个 Moment——行在前者上移动，板在后者上定格。仅 `TierBoard` 与 `TopThree` |
+| `triggers`、`terminal` | 两个 Moment——行在前者上移动，板在后者上定格。仅 `TopThree` |
 | `canvas` | 一个 `space:Canvas`——揭示舞台。仅 `Column` |
 | `appear-sound`、`move-sound` | 可选，Synchronized Media |
 
-`move-sound` 在 `TopThree` 上会被拒绝——它没有移动阶段。在 `TierBoard` 上它要求至少有一个 `entry="stage"` 的条目：声音没有可响之处是创作错误，而不是静默的空操作。
+`move-sound` 在 `TopThree` 上会被拒绝——它没有移动阶段。
 
 ### 条目标签
 
 每个变体只接受自己的那一种，至少一个，且 id 在同一块板内不可重复。
 
-- **`TierItem`** —— `tier`（必填，须与 recipe 中某一行的 id 对上）、`icon`（必填），可选 `entry="direct" | "stage"` 与 `stack`。行的文字来自 recipe，不写在标签上。
 - **`ColumnItem`** 与 **`TopThreeItem`** —— `label`（必填：字符串或 Text 引用），可选 `icon` 与 `stack`。`TopThree` 最多三条。
 
 ```svml
