@@ -130,8 +130,8 @@ vocabulary: {
 ```
 
 Declare a `preview` for every Surface whose result a reader needs to see to understand it. That is
-not only Surfaces producing a `VisualTrack`: `@hypit/speech-track` declares one for a Spine because
-its shape is easier to see than to describe. Skip it for a Surface with nothing to show, such as one
+not only Surfaces producing a `VisualTrack`: `@hypit/speech-track` declares one for its SemanticTrack
+because its shape is easier to see than to describe. Skip it for a Surface with nothing to show, such as one
 that only assembles a request.
 
 `appearance` and `preview` answer different questions and neither replaces the other. `appearance`

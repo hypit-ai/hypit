@@ -46,8 +46,8 @@ the parts, move on.
 
 ## A Segment is a generation boundary
 
-A Segment is what the Spine binds one Take to, so each one is a separate generation and a separate
-seam. Cut the Script the way the program is *spoken*, not the way its shots are numbered: splitting a
+A Segment is what one `whisperx:SemanticTake` aligns one Take to, so each one is a separate
+generation and a separate seam. Cut the Script the way the program is *spoken*, not the way its shots are numbered: splitting a
 stretch that is delivered unbroken invents a seam nobody asked for, and inviting a generator to
 re-establish the room across that seam is how continuity is lost for nothing.
 
@@ -118,7 +118,9 @@ produces the blink.
 
 ## An audio Take brings no picture, so its Segment is covered or it plays black
 
-A `speech:Take audio={…}` creates program time and speech and contributes no visual at all. For as
+An audio-only Take — media normalized with `video="none"`, aligned by `whisperx:SemanticTake`, and
+assembled by `speech:Take source={…}` — creates program time and speech and contributes no visual at
+all. For as
 long as it runs the picture is whatever the peer Tracks put there, and wherever they put nothing the
 Film's own background shows through. A voiceover Segment is therefore an obligation: every frame of
 it belongs to some Item, and the frames nobody claimed are black in the delivery.

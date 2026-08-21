@@ -53,8 +53,8 @@ Everything else this route needs is discoverable:
 ## Write the Script, then the sources
 
 `../authoring.md` is the syntax authority and names the checks. The Script comes first and the shots
-come out of it, not the other way round: a Segment is what the Spine binds one Take to, so how the
-Script is cut decides how many generations there are and where the seams fall —
+come out of it, not the other way round: a Segment is what one `whisperx:SemanticTake` aligns one
+Take to, so how the Script is cut decides how many generations there are and where the seams fall —
 `../playbooks/craft/generated-dependencies.md` says why over-splitting manufactures seams nobody
 asked for.
 

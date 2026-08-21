@@ -20,7 +20,7 @@ secondary feed, or supporting image stays visible.
 <remove:Background id="presenter-cutout" source={presenter.image}/>
 <space:Extent id="presenter-extent" width="1200" height="1600"/>
 <space:Frame id="presenter-pip" within={vertical}
-  left="64%" top="52%" right="4%" bottom="8%"/>
+  left="64%" top="52%" right="96%" bottom="92%"/>
 
 <media-track:Track id="presenter-overlay" semantic={speech.semantic} canvas={vertical}>
   <media-track:Item image={presenter-cutout.image} extent={presenter-extent}

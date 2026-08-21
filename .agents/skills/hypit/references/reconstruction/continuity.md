@@ -14,8 +14,8 @@ These invariants override superficial layer order and shot boundaries:
 - One overlay that continues across a cut remains one visual track spanning its full observed
   lifetime. Do not recreate it once per shot.
 - Merge two or three incorrectly split clips only when continuity evidence confirms one camera shot
-  and the combined duration is at most 15 seconds. If the duration exceeds 15 seconds, preserve the
-  continuous-group relationship without creating an overlong shot.
+  and the combined duration stays inside the duration ceiling of the model that will generate it. Past
+  that ceiling, preserve the continuous-group relationship without creating an overlong shot.
 - Reuse whole-reference people, voice and product evidence. Describe the promoted product once and
   do not replace it with conflicting per-shot descriptions.
 

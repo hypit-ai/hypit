@@ -8,24 +8,26 @@ The repository docs are authoritative:
 | SVS Recipes | `docs/quickstart/styles.md` |
 | Media and Seedance | `docs/quickstart/generation.md` |
 | Reusable Seedance Prompt Kits | `packages/seedance-kits/README.md` and the selected file under `packages/seedance-kits/kits/` |
-| Speech Spine and SemanticMap | `docs/quickstart/timing.md` |
+| Normalization, alignment and SemanticTrack assembly | `docs/quickstart/timing.md` |
 | Caption, Media, Text, Audio Tracks | `docs/quickstart/tracks.md` and the `@hypit/audio-track` package README |
 | Film and rendering | `docs/quickstart/composition.md` |
 | Run Source, durable Runtime, Builds, retrieval, and reuse | `docs/quickstart/run.md` and `runtime.md` |
 
 Canonical path:
 
-`Script → estimate:Speech/text → Seedance or supplied media → Speech Spine → WhisperX SemanticMap → peer Caption/Media/Typography/Audio Tracks → Film → render:Video`.
+`Script → estimate:Speech/text → Seedance or supplied media → pipeline:Normalize → whisperx:SemanticTake → speech:Track → peer Caption/Media/Typography/Audio Tracks → Film → render:Video`.
 
-Use explicit imports, exact fonts, Canvas/Frames, ProgramSpace, Targets, and Runtime
+Use explicit imports, exact fonts, Canvas/Frames, the SemanticTrack, Targets, and Runtime
 authority. There is no implicit cache; reuse is explicit with `build-record` + `satisfy`.
 
-Use `speech:Take video={...}` for a speech-bearing A/V take and `speech:Take audio={...}` for
-voiceover. An audio Take creates program time and speech audio while peer Media Tracks provide the
-visuals.
+`speech:Take source={...}` assembles one aligned `whisperx:SemanticTake` into the Track, in program
+order. A take whose media normalizes with `video="none"` creates program time and speech audio while
+peer Media Tracks provide the visuals.
 
-For a speech-free program, select a verified ProgramSpace Record through `.svrun` `build-record`
-and `satisfy`, use explicit Track windows, and omit WhisperX and Caption components.
+For a program with no spoken words, keep the `whisperx:SemanticTake` and `speech:Track` declarations —
+the SemanticTrack is the frame domain every `start`/`end` window resolves into — satisfy
+`<track>.semantic` through `.svrun` `build-record` and `satisfy`, keep `<track>.visual` and
+`<track>.audio` out of the Film so the alignment goes unreached, and omit the Caption components.
 
 For execution, preserve the full lifecycle: diagnose the Profile, start or reuse the durable
 Runtime, inspect the frozen plan, submit a named Build, inspect its accepted Records, retrieve

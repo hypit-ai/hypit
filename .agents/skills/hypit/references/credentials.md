@@ -66,8 +66,9 @@ curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $MIMO_API_KEY
 ```
 
 `hypit runtime down` stops the Worker for the whole project, so a Build running in another terminal
-stops with it. The Build itself is durable and survives; resume it with
-`hypit status <build-id> --watch`.
+stops with it. The Build itself is durable and survives; bring the Worker back with `hypit runtime
+up`, then reattach with `hypit status <build-id> --watch`. Observing requires a running Worker: with
+none, `status --watch` reports the Worker's state and tells you to start it.
 
 An Endpoint whose Runtime Profile points at the read-only `env` CredentialStore must be configured
 by setting its exact environment variable. `hypit auth login` deliberately refuses to prompt in
