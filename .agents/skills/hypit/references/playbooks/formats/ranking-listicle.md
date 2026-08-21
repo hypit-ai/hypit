@@ -5,12 +5,16 @@ explain why every item belongs where it is placed.
 
 ## Author the Script schedule
 
-- Write one outer Script Selection covering the complete ranking window.
-- Declare one repeated Script Moment for item reveals and one terminal Moment for the completed board.
-- The outer Selection must resolve exactly once. The terminal Moment must resolve exactly once.
-- Repeat the same reveal Moment id once per item. Ranking applies strict `each` semantics; the
-  occurrence count must equal the number of authored items, and trigger frames must increase.
-- Give every item a stable id, order, label, icon/image, rank or tier, and one evidence beat.
+- Write one outer Script Selection covering the complete ranking window. It must resolve exactly once.
+- `ranking:TierBoard` and `ranking:TopThree` are driven by Moments: declare one repeated Script
+  Moment for item reveals and one terminal Moment for the completed board, which must resolve exactly
+  once. Repeat the same reveal Moment id once per item — both apply strict `each` semantics, so the
+  occurrence count must equal the number of authored items and trigger frames must increase.
+- `ranking:Column` is driven by its items: give each item that is not `preset` its own Script
+  Selection, and declare no Moments for it.
+- Give every item a stable id, its rank or tier, its icon or image, and one evidence beat. Copy
+  belongs to the item only where the component carries it: `ColumnItem` and `TopThreeItem` require a
+  `label`, while a `TierItem` requires an `icon` and carries no copy of its own.
 
 ## Author the SVML program
 
@@ -19,8 +23,10 @@ explain why every item belongs where it is placed.
 2. Declare exact font bytes and the variant's package-owned Style.
 3. Choose exactly one primary component: `ranking:TierBoard`, `ranking:Column`, or
    `ranking:TopThree`.
-4. Connect `semantic={speech.semantic}`, the outer `during` Selection, repeated
-   `triggers` Moment, terminal Moment, explicit frame, Style, and the complete ordered item list.
+4. Connect `semantic={speech.semantic}`, the outer `during`, an explicit `frame`, the Style, and the
+   complete ordered item list. `TierBoard` and `TopThree` also take the repeated `triggers` Moment
+   and the `terminal` Moment; `Column` takes a required `canvas` instead and reads its timing from
+   each item's own `during`.
 5. Add the component's `.visual` output to `film:Film`; add its optional `.audio` output only when
    authored sound is present.
 6. Put screenshots, demonstrations, or proof clips on a separate `media-track:Track`. Use
@@ -40,7 +46,8 @@ explain why every item belongs where it is placed.
 
 ## Review and reuse
 
-Review resolved trigger count/order, terminal timing, item identity, rank/tier, labels, icon assets,
+Review the resolved trigger count and order and the terminal timing where the component uses them,
+item identity, rank/tier, labels, icon assets,
 evidence alignment, safe zones, stack order, and optional sounds. Pin accepted generated evidence
 media through `.svrun` before the final ranking Build.
 

@@ -31,10 +31,11 @@ A crop of the same image is not a new beat.
 
 ## Author timing, text, and sound
 
-- Lock the delivery ProgramSpace before laying out Items. For a voice-led cut, an audio-only
-  `speech:Take` supplies program time and semantic anchors. For a music-only cut, select a verified
-  ProgramSpace Record in `.svrun` with `build-record` and `satisfy`, then author explicit
-  `start`/`end` windows. Do not treat music as speech evidence.
+- Lock the delivery SemanticTrack before laying out Items. For a voice-led cut, an audio-only Take
+  supplies program time and semantic anchors. For a music-only cut, keep the `whisperx:SemanticTake`
+  and `speech:Track` declarations and satisfy `<track>.semantic` in `.svrun` with `build-record` and
+  `satisfy`, then author explicit `start`/`end` windows against it — `../index.md` says why the
+  declarations stay. Do not treat music as speech evidence.
 - Omit Caption components when there is no spoken Script. Use `typo:Track` for title, benefit, and CTA
   copy.
 - Keep no more than one or two text groups on screen at once. Align text handoffs to the final trimmed
@@ -53,7 +54,7 @@ A crop of the same image is not a new beat.
 
 Review first frames, motion continuity, object/label stability, effective clip lengths, text handoffs,
 audio start/end, claim accuracy, and the first/last second of the complete Film. Pin every accepted
-image, clip, audio source, and ProgramSpace with `.svrun` `build-record` and `satisfy`; regenerate
+image, clip, audio source, and the SemanticTrack with `.svrun` `build-record` and `satisfy`; regenerate
 only failed beats.
 
 Read `../craft/image-prompt-style.md`, `../craft/b-roll.md`, `../craft/overlays.md`,
