@@ -179,7 +179,11 @@ function asPictures(media: readonly string[], state: ReferenceState): readonly s
   for (const path of media) {
     const tile = tiles.get(path);
     if (tile !== undefined) pictures.push(tile);
-    else if (path === state.analysis_video_ref) pictures.push(state.storyboard_ref);
+    // A whole-reference question is asked over the whole reference. The storyboard puts every shot in
+    // one picture and is how the video is read at a glance, but one frame per shot answers neither
+    // what moves nor what recurs, so the shot tiles come with it and the question sees every frame
+    // the shot observations see.
+    else if (path === state.analysis_video_ref) pictures.push(state.storyboard_ref, ...state.shots.map((shot) => shot.frames_tile_ref));
     else if (!path.toLowerCase().endsWith(".wav")) pictures.push(path);
   }
   return [...new Set(pictures)];
