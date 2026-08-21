@@ -135,16 +135,35 @@ hypit-reference-video-tools observe_reference --reference-id <id>
 ```
 
 Both return `pending_observations`: a list of tasks, each with its `key`, its `instruction`, its
-`prompt` and the `image_refs` to read. Answer one, then record it:
+`prompt` and the `image_refs` to read.
+
+**Answer `prepare_reference`'s four before running `observe_reference`.** Every shot observation quotes
+the whole-reference evidence into its own question, so a sweep run before those four exist asks each
+shot with less than it should have and caches the answer. `observe_reference` refuses until they are
+recorded and names the ones it is waiting for; a narrow `--question` is exempt, being a follow-up
+rather than the sweep.
+
+Answer one, then record it:
 
 ```text
 hypit-reference-video-tools record_observation --reference-id <id> --key visual:shot-002 \
   --text-file <path to your answer>
 ```
 
-`--text-file` is how a long answer arrives whole; `--text` suits a short one. Re-run
-`observe_reference` to see what is still owed. An observation you have not answered reports as
-`pending`, which `unresolved` lists and which is not a failure.
+`--text-file` is how a long answer arrives whole; `--text` suits a short one. An observation you have
+not answered reports as `pending`, which `unresolved` lists and which is not a failure.
+
+**Re-run `observe_reference` until it hands out nothing.** Answering everything it listed once is not
+the end of the sweep: some observations only exist once the ones they read have been answered. The
+three-shot continuity review is decided from what the boundary observations say, so it cannot be
+handed out in the same pass that asks for them — it appears on the next one, and the pass after that
+reports it complete. The observer that answers in band reaches this in a single call, and stopping at
+one call here loses the review entirely: `continuity.md` then has no evidence for whether three clips
+are one continuous camera shot, and a stretch the reference plays unbroken is authored as three, with
+two seams it does not have.
+
+Empty `pending_observations` is the signal the sweep is over. `unresolved` empty is the same statement
+from the other side.
 
 `--redo all --observer <other>` is how a reference changes observer, and it re-prepares everything,
 because the observations it holds were read from the other kind of evidence.

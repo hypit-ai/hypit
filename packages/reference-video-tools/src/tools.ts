@@ -534,6 +534,16 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           pending_observations: pending,
         };
       }
+      // Every shot observation is asked with the four whole-reference observations quoted into it. The
+      // observer that answers in band has them the moment prepare_reference returns; the one that
+      // answers out of band has not written them yet, and a sweep run first would ask every shot its
+      // question with that context missing and cache the answers.
+      if (observer === "agent") {
+        const owed = WHOLE_REFERENCE_KEYS.filter((key) => state[key]?.status !== "complete");
+        assert(owed.length === 0,
+          `answer the whole-reference observations first, with record_observation: ${owed.join(", ")}. `
+          + "Every shot observation quotes them, so a sweep run before they exist asks each shot with less than it should have.");
+      }
       const selectedIds = new Set(selected.map((shot) => shot.shot_id));
       const boundaryRights = state.shots.filter((shot) => {
         const left = state.shots.find((candidate) => candidate.index === shot.index - 1);
@@ -595,14 +605,27 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
               : [];
           })
         : []).map((items) => items as unknown as readonly [Shot, Shot, Shot]);
-      const threeShotObservations = await pacedMap(windows, concurrency, gapMs, async (items) => {
-        const result = await ask(`window:${items[0].shot_id}`, {
+      // A three-shot review is an observation like any other, so it is cached like any other. Asking
+      // for it directly meant an answer recorded against its key was never read back, which left the
+      // review unanswerable for an observer that answers out of band.
+      const windowTasks: ObservationTask[] = windows.map((items) => ({
+        key: `window:${items[0].shot_id}`,
+        request: {
           media: items.map((shot) => shot.clip_ref),
           prompt: `Compare shots ${items[0].index}, ${items[1].index}, and ${items[2].index}. Decide whether the three clips are one continuous camera shot and whether one visual overlay or insert persists through both boundaries. Explain the evidence in natural language only.`,
           instruction: "Analyze a three-shot continuity window only. Do not write markup, SVML, JSON plans, or component names.",
-        });
-        return { shot_ids: items.map((shot) => shot.shot_id), combined_duration_seconds: Number((items[2].end_seconds - items[0].start_seconds).toFixed(3)), result };
-      });
+        },
+      }));
+      const windowObservations = await runObservationTasks(
+        state.root, windowTasks,
+        reobserve ? new Set(windowTasks.map((task) => task.key)) : new Set<string>(),
+        concurrency, gapMs, ask,
+      );
+      const threeShotObservations = windows.map((items) => ({
+        shot_ids: items.map((shot) => shot.shot_id),
+        combined_duration_seconds: Number((items[2].end_seconds - items[0].start_seconds).toFixed(3)),
+        result: windowObservations.get(`window:${items[0].shot_id}`)!,
+      }));
       for (const window of threeShotObservations) {
         if (window.result.status !== "complete") unresolved.push(`three-shot:${window.shot_ids.join("+")}`);
       }

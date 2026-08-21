@@ -122,7 +122,8 @@ hypit-reference-video-tools observe_reference --reference-id <id>               
 ```
 
 On the `agent` observer both commands return immediately with the observations they owe, and reading
-the files below is what you do between answering them.
+the files below is what you do between answering them. Answer `prepare_reference`'s four first:
+`observe_reference` quotes them into every shot's question and refuses to run until they exist.
 
 Then read the files below while the sweep is working, and collect its result when you are done.
 
