@@ -267,7 +267,9 @@ test("the agent observer hands every observation out as a task, with pictures, a
   assert.doesNotMatch(visual.prompt, /cannot hear/u, "a picture question carries no note about sound it never asked for");
 
   const audio = pending.find((task) => task.key === "audio:shot-002")!;
-  assert.match(audio.prompt, /cannot hear this reference/u, "a question that needs sound says the sound is missing rather than inviting a guess");
+  assert.match(audio.prompt, /cannot hear this reference/u, "a question that needs sound says so");
+  assert.match(audio.prompt, /transcript places there/u,
+    "and says how to answer it anyway, since there is no second source of sound to defer to");
   assert.equal(audio.image_refs.some((path) => path.endsWith(".wav")), false, "audio has no picture to become");
 
   const cached = JSON.parse(await readFile(join(stateRoot, "observations.json"), "utf8")) as Record<string, unknown>;
