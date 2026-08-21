@@ -80,10 +80,13 @@ The package is project-local even when the project is the Hypit checkout. Do not
 official package automatically. After the result is accepted, offer promotion as a separate
 contribution.
 
-Expect it to draw as a generic block in Studio until then. `packages/studio/src/studio-registry.ts`
-picks an adapter by the module that placed the Track, and no adapter names a `@hypit/local-…` module,
-so the component reaches the `visual-fallback` adapter: it renders, without its own family colour,
-icon or inspector. Registering it means editing a shared package, which is what promotion is for.
+Expect it to draw as a generic block in Studio until then, and leave it that way.
+`packages/studio/src/studio-registry.ts` picks an adapter by the module that placed the Track, and no
+adapter names a `@hypit/local-…` module, so the component reaches the `visual-fallback` adapter: it
+renders, without its own family colour, icon or inspector. That is the correct state for a package
+one project owns. Registering it edits `packages/studio`, which every project shares, so it happens
+only after the author has agreed the package moves into `packages/`. It is one item of the promotion
+checklist below, not a repair for what Studio shows during the work.
 
 ## Complete implementation
 
