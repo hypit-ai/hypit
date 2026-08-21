@@ -58,6 +58,9 @@ services/media-lambda/build/
 .DS_Store
 examples/**/.svml/
 
+# Authored projects: real output, but not the repository
+/projects/
+
 # Reverse-engineering scratch projects: real output, but not the repository
 /examples/*-reverse/
 /examples/reference-reconstruction/

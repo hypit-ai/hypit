@@ -50,9 +50,9 @@ is asking the author to do your job. Everything this route needs beyond the vide
 discoverable:
 
 - **Where you are, and what is installed.** `../environment.md`.
-- **Where the project goes.** Its own directory: `examples/<something>-reverse/`, named after the
-  video, beside the other examples, which the workspace already covers. Use a directory the author
-  named only if they named one.
+- **Where the project goes.** Its own directory in the checkout: `projects/<something>-reverse/`,
+  named after the video — `../runtime.md` says what that directory is and what the workspace does
+  with it. Use a directory the author named only if they named one.
 - **Credentials.** The repository keeps them in `.env`; load it as shown below. If a variable is
   missing, say which one and stop — do not ask the author to describe their setup.
 
