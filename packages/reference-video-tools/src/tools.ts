@@ -178,12 +178,17 @@ function asPictures(media: readonly string[], state: ReferenceState): readonly s
   const pictures: string[] = [];
   for (const path of media) {
     const tile = tiles.get(path);
-    if (tile !== undefined) pictures.push(tile);
+    if (tile !== undefined) {
+      // Every shot of a reference prepared for this observer has a tile. One without means the media
+      // was prepared for the observer that reads video, which `prepare_reference` refuses to mix.
+      assert(tile !== null, `shot media for ${path} has no frame tile; re-prepare the reference with --redo all --observer agent`);
+      pictures.push(tile);
+    }
     // A whole-reference question is asked over the whole reference. The storyboard puts every shot in
     // one picture and is how the video is read at a glance, but one frame per shot answers neither
     // what moves nor what recurs, so the shot tiles come with it and the question sees every frame
     // the shot observations see.
-    else if (path === state.analysis_video_ref) pictures.push(state.storyboard_ref, ...state.shots.map((shot) => shot.frames_tile_ref));
+    else if (path === state.analysis_video_ref) pictures.push(state.storyboard_ref, ...state.shots.flatMap((shot) => shot.frames_tile_ref === null ? [] : [shot.frames_tile_ref]));
     else if (!path.toLowerCase().endsWith(".wav")) pictures.push(path);
   }
   return [...new Set(pictures)];
@@ -259,7 +264,7 @@ async function runObservationTasks(
   return new Map(tasks.map((task) => [task.key, cache[task.key] ?? answers.get(task.key) ?? observation("failed", "not observed")]));
 }
 
-async function shotFromBound(root: string, index: number, bound: { start: number; end: number; group: number; part: number; parts: number }): Promise<Shot> {
+async function shotFromBound(root: string, index: number, bound: { start: number; end: number; group: number; part: number; parts: number }, tiles: boolean): Promise<Shot> {
   const id = String(index + 1).padStart(3, "0");
   const dir = join(root, "shots");
   const audioPath = join(dir, `${id}-audio.wav`);
@@ -277,7 +282,7 @@ async function shotFromBound(root: string, index: number, bound: { start: number
     clip_ref: join(dir, `${id}.mp4`),
     representative_frame_ref: join(dir, `${id}-representative.jpg`),
     tail_frame_ref: join(dir, `${id}-tail.jpg`),
-    frames_tile_ref: join(dir, `${id}-frames.jpg`),
+    frames_tile_ref: tiles ? join(dir, `${id}-frames.jpg`) : null,
     audio_tail_ref,
   };
 }
@@ -438,8 +443,8 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         state = existing;
         analysisVideo = existing.analysis_video_ref;
       } else {
-        const media = await prepareMedia(videoPath, root, info.duration);
-        const shots = await Promise.all(media.bounds.map((bound, index) => shotFromBound(root, index, bound)));
+        const media = await prepareMedia(videoPath, root, info.duration, observer === "agent");
+        const shots = await Promise.all(media.bounds.map((bound, index) => shotFromBound(root, index, bound, observer === "agent")));
         state = {
           reference_id: reference,
           video_path: videoPath,
