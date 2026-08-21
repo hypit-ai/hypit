@@ -5,9 +5,8 @@
   </picture>
 </p>
 
-<h2 align="center" style="border-bottom: none">让 AI Agent 复刻任何爆款视频</h2>
-
-<h3 align="center">一条命令，100 个变体，1 亿播放量</h3>
+<h3 align="center">让 AI Agent 复刻任何爆款视频</h3>
+<p align="center">一条命令，100 个变体，1 亿播放量。</p>
 
 <p align="center">
   <a href="https://narratage.hypit.ai/zh/"><strong>官网</strong></a>
