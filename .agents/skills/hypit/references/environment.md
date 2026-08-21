@@ -2,10 +2,32 @@
 
 ## Where you are
 
-This skill lives inside the Hypit repository. Find the root from the skill's own location — the
-directory containing `package.json` and `packages/` — and work from there. Repository paths written in
-these files, `.agents/skills/hypit/scripts/…`, `packages/…`, `examples/…`, are relative to that root
-and to nothing else.
+Every route runs against a Hypit checkout: the `hypit` binary loads the repository's own sources and
+every `@hypit/…` package is unpublished, so the checkout is what supplies both. Find it before the
+first command of any route, from this skill's own directory — the one holding the `SKILL.md` you are
+reading:
+
+```text
+node scripts/locate-repository.mjs
+```
+
+It prints the checkout, and clones one into the home directory when this machine has none:
+
+```text
+repository	/Users/you/hypit
+source	cwd
+installed	yes
+```
+
+`source` says where that path came from: `cwd` for a working directory already inside a checkout,
+`skill` for a skill installed inside one, `home` for the clone it keeps, `cloned` when it made that
+clone just now, `env` for a `HYPIT_REPOSITORY` the author set. `installed no` means the workspace
+install below still has to run there.
+
+Every repository path written in these files — `.agents/skills/hypit/scripts/…`, `packages/…`,
+`docs/…`, `examples/…` — is relative to the printed `repository` and to nothing else. That includes
+the other scripts: run the checkout's copies. `preview-check.mjs` reaches Studio's sources through
+its own position in the checkout, so that copy is the one that resolves them.
 
 Several commands resolve against the **working directory** rather than against the Source they are
 given: `list_svml_packages` reads `node_modules/@hypit` from the cwd and refuses when it is empty, and
@@ -30,7 +52,7 @@ a compatible release from either shell:
 npm install --global corepack@0.34.5
 ```
 
-Then install and validate the workspace:
+Then install and validate the workspace, which is what `installed no` asks for:
 
 ```text
 corepack enable

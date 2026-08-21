@@ -170,9 +170,9 @@ is expensive to read.
 
 ## Install and validate
 
-Reuse an existing workspace when it already includes `packages/*`; otherwise make only the minimal
-workspace/package changes required. Add the package as a normal `workspace:*` dependency and run
-`pnpm install`. Do not hide it under `.hypit/`, modify the package loader or invent a registry.
+The checkout's workspace already covers `projects/*/packages/*`, so a package placed there needs no
+glob of its own. Add it as a normal `workspace:*` dependency and run `pnpm install`. Do not hide it
+under `.hypit/`, modify the package loader or invent a registry.
 
 Repair in this order:
 
@@ -230,7 +230,7 @@ Say which it is either way. A local package nobody flagged is a local package no
 ### Promotion is not a move
 
 If the author wants it promoted, these are the parts. Say up front that this is a checklist rather
-than a path anyone has walked — no package under `packages/` began under `examples/`, so the first
+than a path anyone has walked — no package under `packages/` began inside a project, so the first
 person to do it should correct what follows.
 
 - **The name is load-bearing in six places.** `@hypit/local-<slug>` becomes `@hypit/<slug>` in
@@ -243,7 +243,7 @@ person to do it should correct what follows.
 - **Studio keeps a hand-maintained list.** `packages/studio/src/adapters/generic.ts` enumerates the
   modules that get the component adapter. A package missing from it still renders, through the visual
   fallback — second-class in Studio, and invisible as itself in review.
-- **Its own chrome is untracked today.** `examples/**/assets/` is ignored, so the texture the package
+- **Its own chrome is untracked today.** Git ignores `projects/`, so the texture the package
   reads with `readFile(new URL("../assets/…"))` is not in git. Promotion is the first moment those
   bytes enter the repository, and **no package under `packages/` has a non-`preview/` asset
   directory**. Promotion establishes that convention rather than following it; decide it deliberately.
@@ -251,11 +251,11 @@ person to do it should correct what follows.
   `test/render-preview.ts`, which is a harness, not a suite, so a promoted package contributes zero
   coverage where every peer has some. Writing one is part of promotion.
 - **It newly owes clean imports.** Repository hygiene requires that anything `src/` imports appears in
-  `dependencies`, not `devDependencies` — a rule examples are exempt from. A package carrying its
-  render-harness dependencies in `devDependencies` fails on the way in.
-- **The workspace already covers both locations.** `pnpm-workspace.yaml` lists `packages/*` and
-  `examples/*/packages/*`, and `tsconfig.json` includes both. No glob needs adding in either
-  direction; adding one is a change that does nothing.
+  `dependencies`, not `devDependencies` — a rule examples and projects are exempt from. A package
+  carrying its render-harness dependencies in `devDependencies` fails on the way in.
+- **The workspace already covers both locations.** `pnpm-workspace.yaml` lists `packages/*`,
+  `projects/*/packages/*` and `examples/*/packages/*`, and `tsconfig.json` includes them. No glob
+  needs adding in either direction; adding one is a change that does nothing.
 
 What promotion never means: merging the behaviour into the package it was modelled on. It installs
 beside that package as a sibling family, for the reasons the boundary section above gives.
