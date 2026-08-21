@@ -9,7 +9,7 @@
 <p align="center">一条命令，100 个变体，1 亿播放量。</p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/zh/"><strong>官网</strong></a>
+  <a href="https://narratage.hypit.ai/zh/"><strong>Demo</strong></a>
   &nbsp;&bull;&nbsp;
   <a href="https://narratage.hypit.ai/zh/quickstart"><strong>快速开始</strong></a>
   &nbsp;&bull;&nbsp;
