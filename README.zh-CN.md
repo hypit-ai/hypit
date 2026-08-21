@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./docs/public/hypit-logo-light.png">
-    <img alt="Hypit" src="./docs/public/hypit-logo-dark.png" width="400" height="78">
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/public/hypit-logo-light.svg">
+    <img alt="Hypit" src="./docs/public/hypit-logo-dark.svg" width="400" height="122">
   </picture>
 </p>
 
