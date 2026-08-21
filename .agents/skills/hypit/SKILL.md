@@ -21,9 +21,10 @@ the first command of any route.
   a video as Hypit source → read `references/reconstruction/index.md`. This is the route whatever
   the author calls it — reconstruct, reverse-engineer, recreate, replicate, clone, remake, copy,
   rebuild, or the same idea in any language — and **a path to a video file, with or without words
-  around it, is this route** even when no verb is given at all. The path is the whole request: the
-  working directory, the project location and the vocabulary are yours to decide rather than to ask
-  for.
+  around it, is this route** even when no verb is given at all. A video path with a change attached —
+  this one but with our presenter, our product, our brand — is this route too, and the change is made
+  on the finished reconstruction. The path is the whole request: the working directory, the project
+  location and the vocabulary are yours to decide rather than to ask for.
 - Making a video from a description, brief, topic, script or format name, with nothing to copy →
   read `references/original-authoring/index.md`. This is the route whatever shape the request takes —
   "make me a 45-second ranking video", "a talking-head explainer about X", an ad for a product, a
