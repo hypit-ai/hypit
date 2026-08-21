@@ -82,8 +82,15 @@ Builds remain archived and neither command cancels remote Provider work.
 
 ## Keep project and package boundaries distinct
 
-Prefer production projects outside the Hypit checkout. Relative Author Sources and assets stay
-inside the independently resolved Source Workspace.
+A project lives at `projects/<name>/` in the checkout — its own directory, holding the four Sources,
+its assets and any project-local package. `pnpm-workspace.yaml` covers `projects/*/packages/*` and
+Git ignores `projects/`, so a project is installed and type-checked like the examples while staying
+out of the repository's history.
+
+`examples/` is the published example set. Read it for the nearest Runtime Profile and the closest
+source shape, and write under `projects/`.
+
+Relative Author Sources and assets stay inside the independently resolved Source Workspace.
 
 - `--workspace` explicitly selects the Source Workspace boundary.
 - `--package-root` only changes where the Host locates installed packages. It does not widen Source

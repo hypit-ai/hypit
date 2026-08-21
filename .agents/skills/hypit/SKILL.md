@@ -11,6 +11,10 @@ that reference names required child references, read those completely in the sta
 Keep `.svml` Author Source, `.svs` Recipe Source, `.svrun` Run Source, and
 `hypit.runtime.json` Runtime Profile as separate languages and responsibilities.
 
+Every route runs against a Hypit checkout. `references/environment.md` finds one, clones it when this
+machine has none, and names the directory every path in these files is relative to. Read it before
+the first command of any route.
+
 ## Route
 
 - Reference-video reconstruction, reverse engineering, shot/B-roll/overlay analysis, or recreating
