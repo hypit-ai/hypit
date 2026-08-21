@@ -46,8 +46,10 @@ than relying on an unstated assumption.
   Invalid values fail closed.
 - Never generate from a prompt alone, and never author a take shorter than the floor.
   `generated-dependencies.md` says what to do with a stretch too short to be a take.
-- Respect the ReferenceVideo caps: at most 9 images, 3 videos, 3 audio clips, and 12 total files.
-  Reference audio requires at least one visual reference.
+- Respect the ReferenceVideo caps, which the selected model declares along with its duration range.
+  `mini`, `fast` and `standard` take at most 9 images, 3 videos, 3 audio clips and 12 files in total,
+  and their reference audio requires at least one visual reference; `2.5` takes more of each and
+  imposes neither of those two constraints.
 - Use `estimate:Speech` for speech-driven duration planning; it estimates pronunciation length but
   does not create measured timing.
 

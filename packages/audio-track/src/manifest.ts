@@ -89,7 +89,7 @@ export const audioTrackMarkupSurfaces = [{
     name: "track", tag: "Track", mode: "structured",
     outputs: [audioTrackTypes.header, audioTrackTypes.clipSpec, audioTrackTypes.program, compositionTypes.audioTrack],
     vocabulary: {
-      summary: "One Audio Track: explicitly prepared audio Clips placed on a shared ProgramSpace and lowered to one ordinary peer AudioTrack.",
+      summary: "One Audio Track: explicitly prepared audio Clips placed on a shared SemanticTrack and lowered to one ordinary peer AudioTrack.",
       attributes: [
         { name: "id", kind: "identifier", required: true, summary: "Names this Audio Track and prefixes the identity of every Clip that does not name itself." },
         { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track], summary: "Selects the continuous semantic frame domain every Clip window resolves into." },

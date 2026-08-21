@@ -92,15 +92,18 @@ a list of known items it stops being able to report the one thing nobody thought
 
 Each cut produces one `continuity` observation answering both questions under their own headings —
 whether the two shots are one continuous camera shot, and whether an overlay continues across the
-boundary — and a window of three consecutive shots triggers a three-shot continuity review. The
+boundary — and a window of three consecutive shots gets a three-shot continuity review when a
+boundary observation reports continuity or uncertainty, or when `--reobserve` was passed. The
 preceding tail frame, audio tail and full-reference evidence are attached automatically; do not
 reconstruct that context by hand.
 
 A shot is never shorter than a second. Fragments below that are not shots, and clips that short are
 rejected by the model, so the detector merges them into the shot before them.
 
-Completed observations are reused. Naming a shot does not re-run it. `--reobserve` is the only way to
-run a completed observation again, and it exists for rebuilt media, not for doubt.
+Completed observations are reused. Naming a shot does not re-run it. `--reobserve` re-runs a completed
+observation without rebuilding its media, and it exists for rebuilt media, not for doubt. `--redo
+media` clears every observation as a side effect of rebuilding the shots, so the next
+`observe_reference` runs all of them again.
 
 `unresolved` lists the keys of observations that failed outright. It is not a judgement about
 evidence quality: a complete observation that says "unclear" is still complete, and that is what a

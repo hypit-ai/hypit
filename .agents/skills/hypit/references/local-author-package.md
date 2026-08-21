@@ -95,7 +95,7 @@ Implement the parts required by the behavior, including:
 - lowering, Fragment or renderer implementation needed to produce the declared output;
 - README and a preview for each visual Surface.
 
-Choose raw versus structured Surface, timing dependencies, ProgramSpace, Frame, SemanticMap,
+Choose raw versus structured Surface, timing dependencies, ProgramSpace, Frame, SemanticTrack,
 Artifact, Recipe and output Types from the observed behavior and closest package architecture. A
 declaration-only or Surface-only package is incomplete.
 
@@ -113,7 +113,8 @@ nothing.
 - Produce that file with `hypit image`:
 
   ```bash
-  hypit image --prompt "the surface this component draws on" --to packages/local-<slug>/assets/paper.png
+  hypit image --prompt "the surface this component draws on" \
+    --to <project>/packages/local-<slug>/assets/paper.png
   ```
 
   It writes a picture and nothing else — no Source, no Build, no Record, no Runtime Profile. A
