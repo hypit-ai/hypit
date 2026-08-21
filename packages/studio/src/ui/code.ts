@@ -1,4 +1,5 @@
 import type { Range, StudioSnapshot } from "../shared.js";
+import { icon, setIcon } from "./icons.js";
 import { markerTones } from "./markers.js";
 import { tokenizeSvml } from "./syntax.js";
 import type { Token } from "./syntax.js";
@@ -78,14 +79,14 @@ export function createCodePane(): CodePane {
   element.className = "code";
   element.innerHTML = `
     <div class="pane-heading code-heading">
-      <div class="pane-title">
-        <span class="material-symbols-rounded pane-icon">code</span>
-        <div><h2>SVML</h2><span data-path></span></div>
+      <div class="pane-tabs" role="tablist" aria-label="Workspace views">
+        <button type="button" class="pane-tab active" role="tab" aria-selected="true">SVML</button>
       </div>
       <div class="code-actions">
+        <span class="code-location" data-path></span>
         <span class="code-save-state" data-save-state></span>
         <button type="button" class="icon-button code-mode" data-mode aria-label="Edit source" title="Edit source">
-          <span class="material-symbols-rounded">edit</span>
+          <span data-mode-icon>${icon("edit")}</span>
         </button>
       </div>
     </div>
@@ -96,7 +97,7 @@ export function createCodePane(): CodePane {
   const canvas = element.querySelector<SVGSVGElement>(".range-canvas")!;
   const editor = element.querySelector<HTMLTextAreaElement>("[data-editor]")!;
   const mode = element.querySelector<HTMLButtonElement>("[data-mode]")!;
-  const modeIcon = mode.querySelector<HTMLElement>(".material-symbols-rounded")!;
+  const modeIcon = mode.querySelector<HTMLElement>("[data-mode-icon]")!;
   const saveState = element.querySelector<HTMLElement>("[data-save-state]")!;
 
   let lines: Line[] = [];
@@ -112,7 +113,7 @@ export function createCodePane(): CodePane {
   const setEditing = (value: boolean): void => {
     editing = value;
     element.classList.toggle("is-editing", editing);
-    modeIcon.textContent = editing ? "visibility" : "edit";
+    setIcon(modeIcon, editing ? "eye" : "edit");
     mode.setAttribute("aria-label", editing ? "Read source" : "Edit source");
     mode.title = editing ? "Read source" : "Edit source";
     if (editing) {
@@ -174,9 +175,8 @@ export function createCodePane(): CodePane {
     lines.find((line) => offset >= line.start && offset <= line.end);
 
   /**
-   * Measure one absolute offset. Text is wrapped, so a collapsed DOM range at a
-   * wrap boundary can report no rectangles at all: measure a real character and
-   * take the edge that faces the offset instead.
+   * Measure one absolute offset from a real source character. Using a character
+   * rectangle also keeps punctuation and token boundaries exact.
    */
   const caret = (offset: number, edge: "start" | "end"): Caret | undefined => {
     const line = lineAt(offset);
@@ -215,7 +215,7 @@ export function createCodePane(): CodePane {
   };
 
   const draw = (): void => {
-    const width = scroll.clientWidth;
+    const width = Math.max(scroll.clientWidth, scroll.scrollWidth);
     const last = lines.at(-1)?.element;
     const height = Math.max(scroll.clientHeight, last === undefined ? 0 : last.offsetTop + last.offsetHeight);
     canvas.setAttribute("width", String(width));
@@ -237,8 +237,7 @@ export function createCodePane(): CodePane {
       const endX = Math.max(left, end.x + 3);
       const top = start.y - lineHeight / 2;
       const bottom = end.y + lineHeight / 2;
-      // Wrapping means "same line" is a question about rendered rows, not about
-      // source lines: compare the measured baselines.
+      // Compare measured baselines so multi-line source ranges use one outline.
       const sameRow = Math.abs(start.y - end.y) < lineHeight / 2;
       // A multi-row range becomes one flag rather than a stack of boxes, so the
       // whole region reads as a single selection.
@@ -421,8 +420,7 @@ export function createCodePane(): CodePane {
         ? undefined
         : lines.find((item) => item.element === row);
       if (line === undefined) return undefined;
-      // Pick the character whose rendered box contains the pointer. Wrapping
-      // makes this a two-dimensional question, so the row has to match too.
+      // Pick the character whose rendered box is nearest to the pointer.
       const range = document.createRange();
       let best = line.start;
       let bestDistance = Number.POSITIVE_INFINITY;

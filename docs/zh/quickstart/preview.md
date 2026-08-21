@@ -10,12 +10,12 @@ description: 把一个素材已经存在的 Run 当作可编辑的时间线来�
 Studio 只构建它能从 Run 已经提供的 Candidate 确定性推导出来的东西，因此它需要一个素材已被满足的 Run——每一个生成 output 要么由一次已接受的 Build 产出，要么由一个文件顶上。你指向的就是这样一个 Run。
 
 ```bash
-pnpm studio -- --run path/to/build.svrun
+pnpm studio -- --run examples/all-components-preview/studio.svrun --workspace .
 # ➜  http://localhost:5179/
 ```
 
 ::: warning 本仓库的示例需要先有素材
-`examples/` 下的每一个 Run Source，都还指名着需要 Provider 去做的镜头，或者 `examples/**/assets/` 下未提交的素材。先在你自己的 Run 里满足它们，再打开。
+`examples/all-components-preview/studio.svrun` 可以直接打开：它显式提供了 Semantic Take 和字幕计划。其他示例 Run 仍可能指名需要 Provider 去做的镜头，或 `examples/**/assets/` 下未提交的素材。先在你自己的 Run 里满足它们，再打开。
 :::
 
 | 参数 | 含义 |
@@ -99,6 +99,12 @@ Track 之上有一条并不是 Track 的泳道：`SemanticTrack` 本身，每个
 在整片视图下，Segment 就是有用的单位，所以它只画到这一层。放大之后，一旦某个 Segment 有了足够的宽度，它的词就会在它下方展开成一条真正的子泳道，就像一个 pattern 展开成钢琴卷帘那样。双击一个 Segment 可以缩放到它；工具栏上有显式的缩放控件，`Ctrl` + 滚轮可以捏合缩放。
 
 点击一个词，播放头会移到那个词开始的帧——这是回答"这个空镜是不是落在正确的那句话上"最快的方式。
+
+## 选择、投影与消费
+
+时间线上的块不会被默认当成作者写下的 Selection。Studio 分开保留三个事实：具名的语义来源、组件对该来源的投影，以及组件最终消费的帧窗口。Selection 区间和 Moment 时点保留在语义泳道上；item 的投影线把该来源连到实际窗口。像 Ranking Column 这样含子调度的组件，会分开显示总窗口和各揭示阶段。
+
+当前投影视图只读。它的数据契约与尚未确定的回写问题记录在 [Studio 时间窗口](../guide/studio-temporal-windows.md)。
 
 ## 声音
 

@@ -8,12 +8,18 @@
  * keep what passes through.
  */
 import type {
-  MarkupSurfaceRegistryLike, RegisteredSurface, StructuredElement, SurfaceDecodeOutput,
+  MarkupSurfaceRegistryLike, RegisteredSurface, StructuredElement, StructuredSurfaceInput, SurfaceDecodeOutput,
 } from "@hypit/markup";
 import type { ModuleRef } from "@hypit/protocol";
 import { parseScript } from "@hypit/script";
 
 import type { Range } from "./shared.js";
+
+export type ObservedValue = {
+  readonly id: string;
+  readonly type: { readonly module: ModuleRef; readonly name: string };
+  readonly value: unknown;
+};
 
 /** One authored element, where it was written, and what it produced. */
 export type Placement = {
@@ -26,6 +32,8 @@ export type Placement = {
   readonly range: Range;
   /** Records this element sealed, so a value can be traced back to its tag. */
   readonly records: readonly string[];
+  /** Inline author values sealed for this exact element. */
+  readonly values: readonly ObservedValue[];
   /** Graph outputs this element declared, named as the author would write them. */
   readonly outputs: readonly string[];
   /** Exact Surface output port to graph-output mapping. */
@@ -39,10 +47,14 @@ export type Placement = {
     /** What the child itself points at, which is how it is placed. */
     readonly references: readonly string[];
     readonly referenceAttributes: Readonly<Record<string, string>>;
+    readonly referenceTypes: Readonly<Record<string, string>>;
+    /** Inline author values sealed for this exact child. */
+    readonly values: readonly ObservedValue[];
   }[];
   /** What the author wrote on it: plain text as written, references by path. */
   readonly attributes: Readonly<Record<string, string>>;
   readonly referenceAttributes: Readonly<Record<string, string>>;
+  readonly referenceTypes: Readonly<Record<string, string>>;
   /** Paths this element and its children reference, in the order written. */
   readonly references: readonly string[];
 };
@@ -117,12 +129,26 @@ export function createObserver(
           },
         } as RegisteredSurface;
       }
-      const handler = found.handler as (input: { element: StructuredElement }) => unknown;
+      const handler = found.handler as (input: StructuredSurfaceInput) => unknown;
       return {
         ...found,
-        async handler(input: { element: StructuredElement }) {
+        async handler(input: StructuredSurfaceInput) {
           const output = await handler(input) as SurfaceDecodeOutput;
           const id = input.element.attributes.id;
+          const observed = output.records.flatMap((record): ObservedValue[] => record.value.kind === "inline" ? [{
+            id: record.id,
+            type: { module: { ...record.type.module }, name: record.type.name },
+            value: structuredClone(record.value.value),
+          }] : []);
+          const valuesFor = (range: { readonly start: number; readonly end: number }): readonly ObservedValue[] =>
+            observed.filter((value) => output.records.some((record) =>
+              record.id === value.id && record.range.start === range.start && record.range.end === range.end));
+          const referenceTypes = (element: StructuredElement): Readonly<Record<string, string>> => Object.fromEntries(
+            Object.entries(referenceAttributes(element)).flatMap(([name, path]) => {
+              const resolved = input.resolveReference(path);
+              return resolved === undefined ? [] : [[name, resolved.type.name]];
+            }),
+          );
           placements.push({
             tag: input.element.name,
             module: { ...module },
@@ -130,11 +156,13 @@ export function createObserver(
             ...(typeof id === "string" ? { id } : {}),
             range: { start: input.element.range.start, end: input.element.range.end },
             records: output.records.map((record) => record.id),
+            values: valuesFor(input.element.range),
             outputs: output.components.flatMap((component) => Object.values(component.outputs)),
             outputPorts: output.components.flatMap((component) =>
               Object.entries(component.outputs).map(([name, ref]) => ({ name, ref }))),
             attributes: written(input.element),
             referenceAttributes: referenceAttributes(input.element),
+            referenceTypes: referenceTypes(input.element),
             references: [
               ...referenced(input.element),
               ...input.element.children
@@ -152,6 +180,8 @@ export function createObserver(
                   attributes: written(child),
                   references: referenced(child),
                   referenceAttributes: referenceAttributes(child),
+                  referenceTypes: referenceTypes(child),
+                  values: valuesFor(child.range),
                 };
               }),
           });
