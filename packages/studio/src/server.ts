@@ -11,6 +11,9 @@ import type { StudioDomain } from "./domain.js";
 import { loadStudioRun } from "./run.js";
 import { readStudioSession } from "./session.js";
 import type { Range, StudioFailure, StudioSnapshot } from "./shared.js";
+import { createStudioStoryboard } from "./storyboard.js";
+import type { StudioStoryboard } from "./storyboard.js";
+import { findSurfacePreview } from "./surface-preview.js";
 
 export type StudioPluginOptions = {
   readonly source: string;
@@ -49,6 +52,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   let requestedRevision = 0;
   let currentSource = options.source;
   const watched = new Map<string, FSWatcher>();
+  const storyboards = new Map<string, Promise<StudioStoryboard>>();
 
   const watchSource = (path: string): void => {
     if (watched.has(path)) return;
@@ -156,6 +160,64 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               json(response, 200, snapshot);
             } else {
               json(response, 500, failure);
+            }
+          })();
+          return;
+        }
+        if (url.pathname === "/__studio/surface-preview") {
+          void (async () => {
+            const module = url.searchParams.get("module");
+            const version = url.searchParams.get("version");
+            const surface = url.searchParams.get("surface");
+            const preview = module === null || version === null || surface === null
+              ? undefined
+              : findSurfacePreview(options.domain, { name: module, version }, surface);
+            if (preview === undefined) {
+              response.statusCode = 404;
+              response.end();
+              return;
+            }
+            const bytes = await preview.open();
+            response.statusCode = 200;
+            response.setHeader("content-type", preview.mediaType);
+            response.setHeader("cache-control", "no-store");
+            if (request.method === "HEAD") response.end();
+            else response.end(Buffer.from(bytes));
+          })().catch((error) => {
+            json(response, 500, { error: error instanceof Error ? error.message : String(error) });
+          });
+          return;
+        }
+        const storyboardDigest = /^\/__studio\/storyboard\/(sha256:[a-f0-9]{64})$/u.exec(url.pathname)?.[1];
+        if (storyboardDigest !== undefined) {
+          void (async () => {
+            const file = material.get(storyboardDigest);
+            if (file === undefined || !file.mediaType.startsWith("video/")) {
+              response.statusCode = 404;
+              response.end();
+              return;
+            }
+            try {
+              let pending = storyboards.get(storyboardDigest);
+              if (pending === undefined) {
+                pending = createStudioStoryboard(file);
+                storyboards.set(storyboardDigest, pending);
+              }
+              const storyboard = await pending;
+              response.statusCode = 200;
+              response.setHeader("content-type", "image/png");
+              response.setHeader("cache-control", "public, max-age=31536000, immutable");
+              response.setHeader("x-hypit-storyboard-count", String(storyboard.count));
+              response.setHeader("x-hypit-storyboard-columns", String(storyboard.columns));
+              response.setHeader("x-hypit-storyboard-rows", String(storyboard.rows));
+              response.setHeader("x-hypit-storyboard-tile-width", String(storyboard.tileWidth));
+              response.setHeader("x-hypit-storyboard-tile-height", String(storyboard.tileHeight));
+              response.setHeader("x-hypit-storyboard-sample-fps", String(storyboard.sampleFps));
+              if (request.method === "HEAD") response.end();
+              else response.end(Buffer.from(storyboard.bytes));
+            } catch (error) {
+              storyboards.delete(storyboardDigest);
+              json(response, 500, { error: error instanceof Error ? error.message : String(error) });
             }
           })();
           return;

@@ -45,7 +45,6 @@ export async function readStudioSession(input: {
     composition: built.composition,
     space: built.space as never,
     served: new Set(built.served.keys()),
-    ...(audible(built) === undefined ? {} : { audibleTrack: audible(built)! }),
   });
   const text = readFileSync(input.run.authorSource, "utf8");
   return {
@@ -61,9 +60,4 @@ export async function readStudioSession(input: {
     observations: source.observations,
     projections: inspection.projections,
   };
-}
-
-function audible(built: Awaited<ReturnType<typeof preview>>): string | undefined {
-  const found = built.tracks.find((track) => track.type === "AudioTrack" && track.track !== undefined);
-  return found === undefined ? undefined : (found.track as { readonly id?: string }).id;
 }

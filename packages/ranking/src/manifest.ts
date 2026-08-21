@@ -11,8 +11,8 @@ import { svsRecipeType } from "@hypit/svs";
 import { temporalDependency } from "@hypit/temporal";
 import { textDependency, textTypes } from "@hypit/text";
 
-const previewImage = (file: string) => ({
-  mediaType: "image/png",
+const previewImage = (file: string, mediaType = "image/png") => ({
+  mediaType,
   path: `preview/${file}`,
   open: async () => Uint8Array.from(await readFile(new URL(`../preview/${file}`, import.meta.url))),
 });
@@ -487,7 +487,7 @@ export const rankingMarkupSurfaces = [
         summary: "Places rows by explicit rank, reveals each non-preset row in its own Selection, and publishes the board and the Tracks it renders to.",
         appearance:
           "A narrow vertical rank rail occupies its Frame while a large reveal stage is positioned independently in Canvas space. Preset rows are settled from the first frame. Each other row rises into the stage during its own projected Selection, then shrinks and moves into the content slot beside its numbered rank. Rank, child order and reveal time are independent.",
-        preview: previewImage("Column.png"),
+        preview: previewImage("Column.svg", "image/svg+xml"),
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this board so its Schedule, Program and Tracks can be referenced elsewhere in the Source." },

@@ -13,10 +13,10 @@ export type CandidateStatus = "resolved" | "unresolved";
 export type StudioTrackFamily = string;
 
 export type StudioTimelinePresentation = {
-  /** What one selectable box means, never how the renderer happened to split it. */
+  /** What one selectable box means, never CSS such as radius, hover or selection chrome. */
   readonly entity: string;
+  /** Content grammar selected by the adapter; Studio owns the visual treatment of each shape. */
   readonly shape: string;
-  readonly parentId?: string;
   readonly depth: number;
 };
 
@@ -66,14 +66,25 @@ export type StudioInteraction = {
 };
 
 /** Material Studio can show without inventing a proxy or rerunning a Provider. */
-export type StudioMaterialPreview = {
-  readonly kind: "image";
-  readonly url: string;
-};
+export type StudioMaterialPreview =
+  | { readonly kind: "image"; readonly url: string }
+  | { readonly kind: "video"; readonly url: string }
+  | { readonly kind: "audio"; readonly url: string };
 
 export type StudioLaneDescription = {
-  readonly layout: "flat" | "nested";
-  readonly boundFacets: boolean;
+  /** Structural lane composition. Visual chrome remains a Studio-wide concern. */
+  readonly layout: "flat";
+  /** The adapter selects a supported range; Studio owns the current height within it. */
+  readonly height: {
+    readonly minPx: number;
+    readonly preferredPx: number;
+    readonly maxPx: number;
+  };
+  /** Optional local attachment group. Attached lanes render beside their root lane. */
+  readonly groupId?: string;
+  readonly attachedTo?: string;
+  readonly order?: number;
+  readonly expandedByDefault?: boolean;
 };
 
 export type StudioInspectorSection =
@@ -91,12 +102,16 @@ export type StudioInspectorDescription = {
 /** Studio-owned interpretation of a terminal projection. */
 export type StudioTrackBinding = {
   readonly family: StudioTrackFamily;
+  /** Studio-local lane name. This is presentation, not an authored identity. */
+  readonly label?: string;
   readonly facet: "visual" | "audio";
   /** Visual/audio facets from one authored element share this identity. */
   readonly groupId: string;
   readonly icon: string;
   /** Stable Studio-local adapter id; fallback adapters remain explicit too. */
   readonly adapter: string;
+  /** Studio-local partition key for an attached projection. */
+  readonly attachmentId?: string;
   readonly lane: StudioLaneDescription;
   readonly inspector: StudioInspectorDescription;
   readonly authoredTag?: string;
@@ -225,6 +240,13 @@ export type SemanticToken = {
 
 /** The semantic timebase projected from the compiled Narrative and its anchors. */
 export type SemanticTimeline = {
+  /** Studio-only presentation owned by the SemanticTrack adapter. */
+  readonly presentation: {
+    readonly family: StudioTrackFamily;
+    readonly label?: string;
+    readonly icon: string;
+    readonly lane: StudioLaneDescription;
+  };
   readonly anchors: readonly SemanticAnchor[];
   readonly segments: readonly SemanticSegment[];
   readonly tokens: readonly SemanticToken[];
