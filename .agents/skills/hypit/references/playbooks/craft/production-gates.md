@@ -81,6 +81,21 @@ visual QA.
 ## Gate 2: generate and review video takes
 
 - Demand only the takes whose reference images have passed Gate 1.
+- **Before demanding any take with `generate-audio="true"`, trace its prompt back to the words it is
+  supposed to say.** Follow the edge from the take's `prompt=` to the `copy:Render` that produced it,
+  and confirm one of its `copy:Set` slots carries that Segment's `dialogue`. A prompt bound straight
+  to a `copy:Value` holding a performance direction is the defect this catches: the model receives no
+  words, invents its own, and the take sounds fluent and says nothing from the Script.
+
+  It survives every structural check. `hypit check`, `preview-check` and `plan` all pass, because the
+  graph is legal and complete — the prompt is a Text and the take consumes it. `whisperx:SemanticTake`
+  then fits the Segment's words onto whatever audio arrived rather than reporting that they differ, so
+  the Caption Track renders the Script over speech that shares none of it, and every downstream
+  measurement stays clean.
+
+  Two minutes of reading the Source here is the difference between finding it now and finding it in a
+  delivery whose every take has been paid for. `seedance-directing.md` and `../../seedance-kits.md`
+  name the slot the words travel through.
 - Keep Seedance duration inside the selected model's declared range, read from that model rather than
   from memory: the models differ and one accepts far longer takes. Invalid values fail validation rather
   than being silently clamped.
@@ -109,6 +124,25 @@ visual QA.
 - Inspect the durable Build and retrieve the final Artifact with `get`.
 - Watch and listen to the complete delivery, including the first and last second. Verify dialogue,
   captions, overlays, transitions, audio density, claims, and CTA as one program.
+- **Measure the delivery's own speech against the Script.** An agent reads pictures and cannot hear,
+  so "listen and verify dialogue" above resolves to nothing on its own, and a take whose spoken words
+  came from somewhere other than the Script passes `check`, `plan`, `preview-check` and both
+  measurements below without a mark. Transcribe what was delivered and read it against the words the
+  Script holds:
+
+  ```bash
+  hypit-reference-video-tools prepare_reference --video-path output/final.mp4 --observer agent
+  ```
+
+  Its `transcript` is measured locally by WhisperX from the delivery's own audio, so it is what the
+  video says rather than what the Source intended. Compare it line by line with the Script's
+  Segments. They correspond, or a take was generated from a prompt that did not carry its dialogue —
+  read `seedance-directing.md` and the Kit contract in `../../seedance-kits.md`, which name the slot
+  the words travel through.
+
+  The symptom this catches is total rather than subtle: the captions render the Script while the
+  voice says unrelated sentences, and alignment hides it by fitting the Script's words onto whatever
+  audio arrived. Run it before reporting any delivery that contains speech.
 - Measure the delivery for empty picture before reporting it as finished. Watching finds a scene that
   is wrong; it slides straight past a second of black between two shots, and a program assembled from
   Selections can hold several. `ffmpeg -i final.mp4 -vf blackdetect=d=0.2:pic_th=0.90 -an -f null -`

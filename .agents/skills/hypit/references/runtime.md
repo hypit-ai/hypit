@@ -18,6 +18,36 @@ through the store rather than writing any secret into the file.
 A capability whose credential this machine does not hold is still declared. Preflight names it before
 any Build is submitted, which is the correct place for the author to find out.
 
+### Give the picture and video models room to run
+
+The generation models are what a Build waits on, and they are the one place concurrency is worth
+setting deliberately. Give Seedance and the image model **10 each**.
+
+On a Provider with per-model lanes — `@hypit/provider-kie` is the usual one — that is a lane apiece
+inside a pool wide enough to hold both, so neither starves the other:
+
+```json
+"kie.<project>": {
+  "use": "@hypit/provider-kie",
+  "config": {
+    "apiKey": { "store": "env", "key": "KIE_API_KEY" },
+    "defaultConcurrency": 20,
+    "laneConcurrency": { "seedance-2-mini": 10, "gpt-image-2": 10 }
+  }
+}
+```
+
+`defaultConcurrency` is the total pool shared by every lane, so it has to be at least the sum of the
+lanes or the lane numbers are a ceiling nothing reaches. Name the lane by the exact capability the
+Source reaches — `seedance-2-mini` and `gpt-image-2` above — since a lane key that matches no
+capability is silently inert. Read the Provider's README for the lane names it admits.
+
+The local Providers stay small: `media`, `whisperx` and `hyperframes` are bounded by this machine's
+cores rather than by a remote queue, and raising them buys contention.
+
+Set this while writing the Profile. Changing it later needs a Worker restart, and the restart rule
+below makes that costly once a Build is in flight.
+
 ## Execute the lifecycle
 
 ```bash

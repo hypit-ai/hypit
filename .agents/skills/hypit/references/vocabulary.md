@@ -51,10 +51,17 @@ will actually accept, which is what a mistaken attribute is checked against.
 
 Use this decision order:
 
-1. Reuse one existing component when it fully expresses the requirement.
-2. Compose multiple existing components when their declared outputs and timing express it without
-   changing what the element is.
-3. Declare a real vocabulary gap only when neither option works.
+1. Reuse one existing component when its declared vocabulary expresses the element exactly — every
+   property that changes what the viewer sees lands somewhere the package declares.
+2. Compose multiple existing components when their declared outputs and timing express it to that
+   same standard, without changing what the element is.
+3. Declare a real vocabulary gap when neither option works.
+
+**Resemblance does not qualify a package.** A tag that draws the same kind of thing, or that carries
+every property except one, leaves that element unexpressed, and an element the installed vocabulary
+cannot express as stated is a gap. Steps 1 and 2 apply where the declared vocabulary already carries
+the element as the evidence states it; step 3 is the ordinary outcome everywhere else, and
+`local-author-package.md` is the route for it.
 
 Step 2 is not a way around step 3. Composition may express one element with several components; it
 may not move an element out of its role because some other tag happens to draw the same shape. What
