@@ -150,9 +150,20 @@ hypit-reference-video-tools record_observation --reference-id <id> --key visual:
   --text-file <path to your answer>
 ```
 
-`--text-file` is how a long answer arrives whole; `--text` suits a short one. Re-run
-`observe_reference` to see what is still owed. An observation you have not answered reports as
-`pending`, which `unresolved` lists and which is not a failure.
+`--text-file` is how a long answer arrives whole; `--text` suits a short one. An observation you have
+not answered reports as `pending`, which `unresolved` lists and which is not a failure.
+
+**Re-run `observe_reference` until it hands out nothing.** Answering everything it listed once is not
+the end of the sweep: some observations only exist once the ones they read have been answered. The
+three-shot continuity review is decided from what the boundary observations say, so it cannot be
+handed out in the same pass that asks for them — it appears on the next one, and the pass after that
+reports it complete. The observer that answers in band reaches this in a single call, and stopping at
+one call here loses the review entirely: `continuity.md` then has no evidence for whether three clips
+are one continuous camera shot, and a stretch the reference plays unbroken is authored as three, with
+two seams it does not have.
+
+Empty `pending_observations` is the signal the sweep is over. `unresolved` empty is the same statement
+from the other side.
 
 `--redo all --observer <other>` is how a reference changes observer, and it re-prepares everything,
 because the observations it holds were read from the other kind of evidence.
