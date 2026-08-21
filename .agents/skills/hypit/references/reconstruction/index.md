@@ -85,9 +85,14 @@ which directory, or whether to proceed.
 
 Ask the author which observer reads the reference, and ask it before anything runs. `gemini` uploads
 the video to Vertex and hears it; `agent` hands each observation to you as a picture to read and needs
-no credentials. Read `observers.md` first: it says what each one costs, how to report what this
-machine holds rather than asking the author to recall it, and what the `agent` observer can and cannot
-answer. The answer is passed once, as `--observer`, and the reference keeps it.
+no credentials. Read `observers.md` first: it says what each one costs in the terms the author needs
+to choose between them, how to report what this machine holds rather than asking them to recall it,
+and what the `agent` observer can and cannot answer. The answer is passed once, as `--observer`, and
+the reference keeps it.
+
+When the Vertex credentials are absent, `agent` is what can run — say that, say that it reads the
+reference a little less closely, and take the author's answer. Then say which observer is reading,
+before the evidence starts. Both are in `observers.md`.
 
 This is the only question this route asks about how it runs, and it is asked once, before the evidence
 starts.
