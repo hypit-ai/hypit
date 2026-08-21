@@ -45,21 +45,26 @@ the storyboard of representative frames. A task that carries a single picture ca
 The number of frames follows the shot's length, from four for a short one to nine for a long one, so
 a cell stays wide enough to read detail in.
 
-## What sound costs on the `agent` observer
+## How sound is answered on the `agent` observer
 
-You cannot hear the reference. Three things follow, and each is a condition to work inside rather than
-a step to skip:
+You cannot hear the reference, and there is no second source of sound to fall back to, so the sound
+observations are answered from the two things you do have. Answer them fully; do not leave them short
+and do not put the gap to the author.
 
-- `transcript` is unaffected. WhisperX measures every word locally on both paths, so the words and
-  their timings are exact, and `final-sources.md` takes Segment durations from `transcript_ref` as it
-  always does.
-- A task that needs sound says so in its own prompt. Answer it from what the pictures and the
-  transcript support — who is visibly speaking, what is on screen when a passage runs — and state
-  plainly which parts you could not determine. An observation that says what it could not see is
-  complete; one that infers a voice from an appearance is wrong, and
-  `continuity.md` depends on that distinction.
-- `voices` and the sound half of each `boundary` are the observations this affects. Read what they
-  return as what a viewer with the sound off would know.
+- **The transcript says when.** WhisperX measures every word locally on both paths, so the words and
+  their timings are exact whichever observer reads the pictures. That settles whether anyone is
+  speaking at a given moment, and `final-sources.md` still takes Segment durations from
+  `transcript_ref` as it always does.
+- **The pictures say who.** Attribute speech to the person the frames show speaking during the words
+  the transcript places there. A task that needs sound says so in its own prompt and asks for exactly
+  this reading.
+- **The two together are the evidence.** `continuity.md` asks for audio evidence over visible-person
+  presence because a mouth moving in silent B-roll misleads. On this observer the transcript is what
+  keeps that from happening: a person whose mouth moves during a stretch the transcript places no
+  words in is not the speaker, however much they look like one.
+
+`voices` and the sound half of each `boundary` are the observations this shapes. They are attributions
+read off pictures and word timings, and that is what a later reader should take them for.
 
 ## The comparison in the loop is yours too
 

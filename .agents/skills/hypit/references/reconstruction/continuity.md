@@ -10,7 +10,9 @@ These invariants override superficial layer order and shot boundaries:
   move.
 - A shot with no visible person can carry continuing off-screen speech. Do not clear sound or base.
 - For alternating, overlapping or simultaneous speech, use audio evidence rather than visible-person
-  presence.
+  presence. The `agent` observer has no audio evidence and reads these from the frames and the word
+  timings instead, which `observers.md` describes: the transcript is what decides whether anyone is
+  speaking at all, so it is what keeps a moving mouth in B-roll from becoming a speaker.
 - One overlay that continues across a cut remains one visual track spanning its full observed
   lifetime. Do not recreate it once per shot.
 - Merge two or three incorrectly split clips only when continuity evidence confirms one camera shot

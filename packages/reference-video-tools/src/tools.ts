@@ -190,9 +190,14 @@ function asPictures(media: readonly string[], state: ReferenceState): readonly s
 const TILE_PREAMBLE = "Each supplied picture that shows a grid of frames is one shot, sampled evenly"
   + " across its duration and laid out in reading order: left to right, then top to bottom. Read the"
   + " grid as time passing. A single picture that is not a grid is one moment.";
-const NO_SOUND = "You are reading pictures and cannot hear this reference. Answer what the pictures and"
-  + " the measured transcript support, and say plainly which parts of the question need sound you do"
-  + " not have rather than inferring them from appearance.";
+// There is no second source of sound to fall back to, so this says how to answer from what there is
+// rather than leaving the observation short. The transcript settles when speech happens; the picture
+// settles who is on screen while it does. Read together they carry the question far enough to answer.
+const NO_SOUND = "You are reading pictures and cannot hear this reference. Answer from the pictures and"
+  + " the measured transcript together: the transcript says exactly when words are spoken, and the"
+  + " pictures say who is on screen and whose mouth is moving while they are. Attribute speech to the"
+  + " person the pictures show speaking during the words the transcript places there, and answer the"
+  + " question in full rather than deferring the parts that would be easier with sound.";
 
 /** Declares one observation: what it asks, and the evidence it asks over. The observer decides how. */
 type Request = {
