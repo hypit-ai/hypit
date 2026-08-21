@@ -1,4 +1,8 @@
-export type Observation = { readonly status: "complete" | "failed"; readonly text: string };
+/**
+ * `pending` is not a failure: it is an observation the `agent` observer has been handed and has not
+ * answered yet. It is never cached, so the work survives the process that reported it.
+ */
+export type Observation = { readonly status: "complete" | "failed" | "pending"; readonly text: string };
 
 export type TranscriptWord = {
   readonly text: string;
@@ -41,13 +45,30 @@ export type Shot = {
   readonly clip_ref: string;
   readonly representative_frame_ref: string;
   readonly tail_frame_ref: string;
+  /** The shot's frames sampled evenly and tiled into one picture, in reading order. */
+  readonly frames_tile_ref: string;
   readonly audio_tail_ref: string | null;
+};
+
+/**
+ * Who reads the reference. `gemini` uploads video to Vertex; `agent` hands the main agent one tiled
+ * picture per shot and takes the answer back. The two produce the same observation keys.
+ */
+export type Observer = "gemini" | "agent";
+
+/** One observation the `agent` observer still owes, carrying everything needed to answer it. */
+export type ObservationTaskRequest = {
+  readonly key: string;
+  readonly instruction: string;
+  readonly prompt: string;
+  readonly image_refs: readonly string[];
 };
 
 export type ReferenceState = {
   readonly reference_id: string;
   readonly video_path: string;
   readonly root: string;
+  readonly observer?: Observer;
   readonly video: { readonly duration_seconds: number; readonly width: number; readonly height: number; readonly has_audio: boolean };
   readonly shots: readonly Shot[];
   readonly storyboard_ref: string;
@@ -62,6 +83,9 @@ export type ReferenceState = {
 export type PrepareResult = {
   readonly reference_id: string;
   readonly status: "ready" | "partial";
+  readonly observer?: Observer;
+  /** Observations the `agent` observer still owes. Empty on the `gemini` observer. */
+  readonly pending_observations?: readonly ObservationTaskRequest[];
   readonly video: ReferenceState["video"];
   readonly shots: readonly Shot[];
   readonly storyboard_ref: string;

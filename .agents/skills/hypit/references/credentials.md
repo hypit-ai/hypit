@@ -65,6 +65,10 @@ curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $MIMO_API_KEY
   https://api.xiaomimimo.com/v1/models
 ```
 
+`GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON` are also what the reference-video
+route's `gemini` observer needs. Without them that route runs its `agent` observer instead, which
+reaches no Provider — `reconstruction/observers.md` says how the author chooses between them.
+
 `hypit runtime down` stops the Worker for the whole project, so a Build running in another terminal
 stops with it. The Build itself is durable and survives; bring the Worker back with `hypit runtime
 up`, then reattach with `hypit status <build-id> --watch`. Observing requires a running Worker: with
