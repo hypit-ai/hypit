@@ -17,8 +17,6 @@ export type StudioProjectionRole =
   | "semantic-track"
   | "caption-plan"
   | "realization"
-  | "speech-visual"
-  | "speech-audio"
   | "media"
   | "text"
   | "caption"
@@ -46,11 +44,15 @@ export type StudioEntityDraft = {
   readonly interaction?: StudioInteraction;
   readonly temporal?: StudioTemporalLineage;
   readonly preview?: StudioMaterialPreview;
+  /** Studio-local lane partition; omitted means the root lane. */
+  readonly lane?: string;
 };
 
 export type StudioAdapterContext = {
   readonly track: BuiltTrack;
   readonly placement?: Placement;
+  /** Package-owned Surface preview resolved by Studio from the selected domain. */
+  readonly surfacePreview?: StudioMaterialPreview;
   readonly spans: readonly StudioSpan[];
   readonly values: ReadonlyMap<string, unknown>;
   readonly semantic: SemanticTimeline;
@@ -67,7 +69,11 @@ export type StudioAdapter = {
     readonly siblingType?: string;
   };
   readonly family?: StudioTrackFamily;
+  readonly label?: string;
   readonly icon?: string;
+  /** Opts root timeline entities into the component's package-owned Surface preview. */
+  readonly poster?: { readonly source: "surface-preview" };
+  readonly attachments?: readonly StudioLaneAttachment[];
   readonly realizationPorts?: readonly string[];
   readonly dependencies?: readonly {
     readonly type: string;
@@ -77,6 +83,17 @@ export type StudioAdapter = {
   readonly lane?: StudioLaneDescription;
   readonly inspector?: StudioInspectorDescription;
   readonly project?: (context: StudioAdapterContext) => readonly StudioEntityDraft[];
+};
+
+export type StudioLaneAttachment = {
+  readonly id: string;
+  readonly family: StudioTrackFamily;
+  readonly label?: string;
+  readonly icon: string;
+  readonly facet: "visual" | "audio";
+  readonly lane: StudioLaneDescription;
+  readonly interaction?: StudioInteraction;
+  readonly inspector?: StudioInspectorDescription;
 };
 
 export const readonlyInteraction: StudioInteraction = {
@@ -89,7 +106,22 @@ export const readonlyInteraction: StudioInteraction = {
   writeback: "none",
 };
 
-export const flatLane: StudioLaneDescription = { layout: "flat", boundFacets: false };
+export const laneHeights = {
+  // Speech is a compact two-row item: a short name bar and a full-height
+  // semantic content row. The row itself, not outer padding, carries the
+  // word timing blocks.
+  semantic: { minPx: 44, preferredPx: 48, maxPx: 72 },
+  picture: { minPx: 60, preferredPx: 76, maxPx: 128 },
+  audio: { minPx: 40, preferredPx: 48, maxPx: 88 },
+  text: { minPx: 42, preferredPx: 48, maxPx: 72 },
+  component: { minPx: 44, preferredPx: 52, maxPx: 96 },
+  fallback: { minPx: 44, preferredPx: 52, maxPx: 96 },
+} as const;
+
+export const flatLane: StudioLaneDescription = {
+  layout: "flat",
+  height: laneHeights.fallback,
+};
 
 export const standardInspector: StudioInspectorDescription = {
   sections: ["authoring", "resolved", "composition", "identity", "run"],

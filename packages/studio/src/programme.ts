@@ -14,6 +14,7 @@ import { executeDeterministic, MemoryArtifactStore } from "./execute.js";
 import type { RunPlan } from "./run.js";
 import type { StudioProjection } from "./studio-preflight.js";
 import type { StudioProjectionRole } from "./studio-registry.js";
+import { studioSurfacePreview } from "./surface-preview.js";
 
 const PLAYABLE = new Set(["VisualTrack", "AudioTrack"]);
 const TIMING = "SemanticTrack";
@@ -26,6 +27,7 @@ export type BuiltTrack = {
   readonly candidateOrigin: "run" | "source" | "none";
   readonly role: StudioProjectionRole;
   readonly trace: StudioProjection["trace"];
+  readonly surfacePreview?: import("./shared.js").StudioMaterialPreview;
   readonly track: unknown;
 };
 
@@ -112,7 +114,11 @@ export async function preview(input: {
   readonly projections: readonly StudioProjection[];
   readonly archive?: StudioArchive;
 }): Promise<Preview> {
-  const targets = input.source.exports.filter((item) => input.outputRefs.includes(item.ref));
+  const exportsByRef = new Map(input.source.exports.map((item) => [item.ref, item] as const));
+  const targets = input.outputRefs.flatMap((ref) => {
+    const found = exportsByRef.get(ref);
+    return found === undefined ? [] : [found];
+  });
   const store = new MemoryArtifactStore();
   const served = new Map(input.source.served);
   for (const attachment of input.run.attachments) {
@@ -190,6 +196,9 @@ export async function preview(input: {
     if (projection === undefined) {
       throw new Error(`Studio projection ${target.name} has no Studio trace.`);
     }
+    const surfacePreview = projection.trace.module === undefined || projection.trace.surface === undefined
+      ? undefined
+      : studioSurfacePreview(input.domain, projection.trace.module, projection.trace.surface);
     return [{
       name: target.name,
       type: target.type,
@@ -198,6 +207,7 @@ export async function preview(input: {
       candidateOrigin: candidateId === undefined ? "source" as const : "run" as const,
       role: projection.role,
       trace: projection.trace,
+      ...(surfacePreview === undefined ? {} : { surfacePreview }),
       track: stored.value,
     }];
   });

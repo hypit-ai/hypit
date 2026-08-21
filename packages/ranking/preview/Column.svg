@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="274" height="392" viewBox="0 0 274 392" fill="none">
+  <!-- A lightweight SVG approximation of three settled Column rows.
+       Geometry follows the real Column recipe: 112px cells, 18px column gap,
+       12px row gap, 16px outer padding, 8px rank radius and 18px icon radius. -->
+  <g transform="translate(16 16)">
+    <rect width="112" height="112" rx="8" fill="#FF3F56"/>
+    <path d="M125 0L125 618L226 522L5 522L5 700L361 700L361 0Z" fill="#FFFFFF" transform="translate(44.714 74.9) scale(.054 -.054)"/>
+    <rect x="130" width="112" height="112" rx="18" fill="#5B65C9"/>
+    <circle cx="186" cy="56" r="27" fill="none" stroke="#FFFFFF" stroke-width="10"/>
+    <circle cx="186" cy="56" r="7" fill="#FFFFFF"/>
+    <circle cx="215" cy="28" r="7" fill="#FFFFFF"/>
+  </g>
+
+  <g transform="translate(16 140)">
+    <rect width="112" height="112" rx="8" fill="#FFA72D"/>
+    <path d="M28 0L28 145L281 379Q305 402 316.5 419Q328 436 332 449.5Q336 463 336 475Q336 501 319 515.5Q302 530 268 530Q237 530 209 513.5Q181 497 165 465L-13 554Q25 626 101 671Q177 716 290 716Q373 716 437 689Q501 662 537 613Q573 564 573 497Q573 463 564.5 429Q556 395 530 357.5Q504 320 453 274L263 101L226 183L589 183L589 0Z" fill="#FFFFFF" transform="translate(39.584 75.332) scale(.054 -.054)"/>
+    <rect x="130" width="112" height="112" rx="18" fill="#279CA8"/>
+    <path d="M160 36h52v12h-52zM160 53h38v12h-38zM160 70h52v12h-52z" fill="#FFFFFF"/>
+    <path d="m202 53 17 6-17 6V53Z" fill="#FFFFFF"/>
+  </g>
+
+  <g transform="translate(16 264)">
+    <rect width="112" height="112" rx="8" fill="#EADC2A"/>
+    <path d="M270 -16Q198 -16 124 0Q50 16 -6 47L74 221Q119 195 168.5 182.5Q218 170 262 170Q302 170 327.5 183.5Q353 197 353 224Q353 247 334 259.5Q315 272 270 272L177 272L177 417L358 601L379 522L30 522L30 700L552 700L552 555L371 371L258 435L320 435Q452 435 521 376Q590 317 590 224Q590 164 556.5 109Q523 54 452.5 19Q382 -16 270 -16Z" fill="#FFFFFF" transform="translate(39.422 74.9) scale(.054 -.054)"/>
+    <rect x="130" width="112" height="112" rx="18" fill="#C96254"/>
+    <circle cx="174" cy="56" r="22" fill="none" stroke="#FFFFFF" stroke-width="10"/>
+    <circle cx="202" cy="56" r="22" fill="none" stroke="#FFFFFF" stroke-width="10"/>
+  </g>
+</svg>

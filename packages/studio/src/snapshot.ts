@@ -21,6 +21,8 @@ import {
   bindStudioTrack,
   projectStudioTrack,
   sealStudioClip,
+  semanticTimelinePresentation,
+  studioTrackAttachments,
 } from "./studio-registry.js";
 import type { StudioEntityDraft } from "./studio-registry.js";
 
@@ -252,7 +254,12 @@ function semanticTimeline(built: Preview, script: ScriptMap | undefined): Semant
     status: "resolved",
     errors: [],
   };
+  const semanticPlacement = built.source.observations.placements.find((placement) =>
+    built.timingOutput !== undefined
+    && (placement.outputs.includes(built.timingOutput.ref)
+      || placement.outputs.includes(built.timingOutput.name)));
   return {
+    presentation: semanticTimelinePresentation(semanticPlacement?.id),
     anchors: anchors.sort((left, right) => left.frame - right.frame || left.id.localeCompare(right.id)),
     segments: segments.sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
     tokens: tokens.sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
@@ -338,14 +345,18 @@ export function snapshot(built: Preview, input: {
         stackOrder: span.stackOrder,
       };
     });
-    const clips: Clip[] = projectStudioTrack({
+    const drafts = projectStudioTrack({
       track: item,
       ...(placement === undefined ? {} : { placement }),
+      ...(item.surfacePreview === undefined ? {} : { surfacePreview: item.surfacePreview }),
       spans: projectedSpans,
       values: built.values,
       semantic,
       generic,
-    }).map((draft) => sealStudioClip(item.outputRef, draft, binding));
+    });
+    const clips: Clip[] = drafts
+      .filter((draft) => draft.lane === undefined)
+      .map((draft) => sealStudioClip(item.outputRef, draft, binding));
     const provenance: CandidateProvenance = {
       output: item.name,
       outputRef: item.outputRef,
@@ -362,13 +373,24 @@ export function snapshot(built: Preview, input: {
       binding,
       provenance,
     });
+    for (const attachment of studioTrackAttachments(item)) {
+      const attachedDrafts = drafts.filter((draft) => draft.lane === attachment.attachmentId);
+      if (attachedDrafts.length === 0) continue;
+      tracks.push({
+        id: `${item.outputRef}::studio::${attachment.attachmentId}`,
+        label: attachment.label ?? attachment.attachmentId ?? item.name,
+        row: 0,
+        clips: attachedDrafts.map((draft) => sealStudioClip(item.outputRef, draft, attachment)),
+        binding: attachment,
+        provenance,
+      });
+    }
   }
-  // The lowest Present sits at the bottom of the timeline, as it does in the
-  // picture. A Track nobody could build keeps its place rather than vanishing.
-  const depth = (track: Track): number =>
-    track.clips.length === 0 ? Number.MAX_SAFE_INTEGER : Math.min(...track.clips.map((clip) => clip.stackOrder));
-  const ordered = [...tracks].sort((left, right) => depth(right) - depth(left));
-  const rows = ordered.map((track, row) => ({ ...track, row }));
+  // Root lanes retain Film's authored organizational order. A Present's z is
+  // local compositing data and cannot define the order of a Track containing
+  // independently stacked items. Studio-only detail lanes stay beside the
+  // root that produced them in this list.
+  const rows = tracks.map((track, row) => ({ ...track, row }));
 
   const declared = (built.space as { durationSec?: number; frameRate?: { numerator: number; denominator: number } })
     ?.durationSec;

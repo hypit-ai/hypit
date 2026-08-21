@@ -15,6 +15,31 @@ type RankingSchedule = {
 
 type Span = { readonly startFrame: number; readonly endFrameExclusive: number };
 
+type RankingVisualElement = {
+  readonly kind?: string;
+  readonly artifact?: { readonly digest?: string; readonly mediaType?: string };
+};
+
+type RankingVisualTrack = {
+  readonly presents?: readonly {
+    readonly id: string;
+    readonly elements?: readonly RankingVisualElement[];
+  }[];
+};
+
+function itemPreview(
+  context: StudioAdapterContext,
+  itemId: string,
+): StudioEntityDraft["preview"] | undefined {
+  const track = context.track.track as RankingVisualTrack;
+  const present = track.presents?.find((candidate) => candidate.id.includes(`:item:${itemId}:`));
+  const artifact = present?.elements?.find((element) => element.kind === "image")?.artifact;
+  if (artifact?.digest === undefined) return undefined;
+  return artifact.mediaType?.startsWith("video/") === true
+    ? { kind: "video", url: `/__studio/material/${artifact.digest}` }
+    : { kind: "image", url: `/__studio/material/${artifact.digest}` };
+}
+
 /** Column entities come from the public resolved Schedule, never renderer id conventions. */
 function projectRanking(context: StudioAdapterContext): readonly StudioEntityDraft[] {
   const placement = context.placement;
@@ -51,41 +76,36 @@ function projectRanking(context: StudioAdapterContext): readonly StudioEntityDra
   };
   const children = new Map(placement.children.flatMap((child) =>
     child.id === undefined ? [] : [[child.id, child] as const]));
-  const entries = (schedule.entries ?? []).map((entry): StudioEntityDraft => {
+  const reveals = (schedule.entries ?? []).flatMap((entry): readonly StudioEntityDraft[] => {
+    if (entry.mode !== "reveal") return [];
     const child = children.get(entry.itemId);
     const markerId = child?.referenceAttributes.during?.split(".").at(-1);
-    const span = entry.mode === "preset"
-      ? entry.settled
-      : { startFrame: entry.active.startFrame, endFrameExclusive: entry.settled.endFrameExclusive };
-    return {
+    const preview = itemPreview(context, entry.itemId);
+    return [{
       id: `${context.track.outputRef}:entity:${entry.itemId}`,
       authoredId: entry.itemId,
       ...(markerId === undefined ? {} : { markerId }),
       label: child?.attributes.label ?? entry.itemId,
-      startFrame: span.startFrame,
-      endFrameExclusive: span.endFrameExclusive,
+      startFrame: entry.active.startFrame,
+      endFrameExclusive: entry.active.endFrameExclusive,
       stackOrder: group.stackOrder + 1,
       ...(child === undefined ? {} : { elementRange: child.range }),
-      presentation: { entity: "ranking-item", shape: "window", parentId: parent, depth: 1 },
-      temporal: entry.mode === "preset" ? {
-        source: { kind: "parent-schedule" },
-        phases: [{ id: `${entry.itemId}:settled`, label: "Settled", role: "settled", ...entry.settled }],
-      } : {
+      ...(preview === undefined ? {} : { preview }),
+      lane: "reveal",
+      presentation: { entity: "ranking-reveal", shape: "picture", depth: 0 },
+      temporal: {
         source: { kind: "selection", ...(markerId === undefined ? {} : { id: markerId }) },
         projection: {
           startExpression: "selection.start",
           endExpression: "selection.end",
           ...entry.preferred,
         },
-        phases: [
-          { id: `${entry.itemId}:active`, label: "Reveal", role: "active", ...entry.active },
-          { id: `${entry.itemId}:settled`, label: "Settled", role: "settled", ...entry.settled },
-        ],
+        phases: [],
       },
       interaction: readonlyInteraction,
-    };
-  });
-  return [group, ...entries];
+    }];
+  }).sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id));
+  return [group, ...reveals];
 }
 
 export const rankingAdapters: readonly StudioAdapter[] = [
@@ -93,8 +113,25 @@ export const rankingAdapters: readonly StudioAdapter[] = [
   {
     id: "ranking-column", role: "track",
     output: { type: "VisualTrack", surface: "column", modules: ["@hypit/ranking"] },
-    family: "component", icon: "ranking", realizationPorts: ["schedule"],
-    lane: { layout: "nested", boundFacets: false },
+    family: "component", label: "Ranking", icon: "ranking", realizationPorts: ["schedule"],
+    poster: { source: "surface-preview" },
+    lane: {
+      layout: "flat",
+      height: { minPx: 64, preferredPx: 80, maxPx: 112 },
+      groupId: "ranking-reveals",
+    },
+    attachments: [{
+      id: "reveal",
+      family: "ranking-reveal",
+      label: "Reveals",
+      icon: "ranking",
+      facet: "visual",
+      lane: {
+        layout: "flat",
+        height: { minPx: 34, preferredPx: 40, maxPx: 56 },
+        expandedByDefault: true,
+      },
+    }],
     interaction: readonlyInteraction, project: projectRanking,
   },
 ];

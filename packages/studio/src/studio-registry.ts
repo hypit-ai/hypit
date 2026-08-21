@@ -4,7 +4,7 @@ import { genericAdapters } from "./adapters/generic.js";
 import { mediaAdapters } from "./adapters/media.js";
 import { rankingAdapters } from "./adapters/ranking.js";
 import { speechAdapters } from "./adapters/speech.js";
-import type { StudioAdapter, StudioEntityDraft, StudioProjectionRole, StudioSpan } from "./adapters/types.js";
+import type { StudioAdapter, StudioEntityDraft, StudioLaneAttachment, StudioProjectionRole, StudioSpan } from "./adapters/types.js";
 import { flatLane, readonlyInteraction, standardInspector } from "./adapters/types.js";
 import type { Placement } from "./observe.js";
 import type { BuiltTrack } from "./programme.js";
@@ -86,6 +86,24 @@ export function studioRealizationPorts(
   return adapterFor(type, placement, siblingTypes)?.realizationPorts ?? [];
 }
 
+/** Presentation for the special semantic timebase lane, still owned by its Studio adapter. */
+export function semanticTimelinePresentation(authoredLabel?: string): {
+  readonly family: StudioTrackBinding["family"];
+  readonly label?: string;
+  readonly icon: string;
+  readonly lane: StudioTrackBinding["lane"];
+} {
+  const adapter = adapterFor("SemanticTrack", undefined, []);
+  return {
+    family: adapter?.family ?? "speech",
+    ...(authoredLabel === undefined
+      ? (adapter?.label === undefined ? {} : { label: adapter.label })
+      : { label: authoredLabel }),
+    icon: adapter?.icon ?? "speech",
+    lane: adapter?.lane ?? flatLane,
+  };
+}
+
 function trackAdapter(track: BuiltTrack): StudioAdapter & { readonly family: StudioTrackBinding["family"] } {
   const placement = track.trace.surface === undefined || track.trace.module === undefined
     ? undefined
@@ -102,10 +120,33 @@ function trackAdapter(track: BuiltTrack): StudioAdapter & { readonly family: Stu
   return { ...adapter, family };
 }
 
+export function studioTrackAttachments(track: BuiltTrack): readonly StudioTrackBinding[] {
+  const root = bindStudioTrack(track);
+  const adapter = trackAdapter(track);
+  return (adapter.attachments ?? []).map((attachment: StudioLaneAttachment) => ({
+    family: attachment.family,
+    ...(attachment.label === undefined ? {} : { label: attachment.label }),
+    facet: attachment.facet,
+    groupId: root.groupId,
+    icon: attachment.icon,
+    adapter: `${adapter.id}:${attachment.id}`,
+    attachmentId: attachment.id,
+    lane: {
+      ...attachment.lane,
+      attachedTo: attachment.lane.attachedTo ?? root.lane.groupId ?? root.groupId,
+    },
+    inspector: attachment.inspector ?? adapter.inspector ?? standardInspector,
+    references: root.references,
+    interaction: attachment.interaction ?? adapter.interaction ?? readonlyInteraction,
+  }));
+}
+
 export function bindStudioTrack(track: BuiltTrack): StudioTrackBinding {
   const adapter = trackAdapter(track);
+  const label = track.trace.authoredId ?? adapter.label;
   return {
     family: adapter.family,
+    ...(label === undefined ? {} : { label }),
     facet: track.type === "AudioTrack" ? "audio" : "visual",
     groupId: track.trace.authoredId ?? track.outputRef,
     icon: adapter.icon ?? (track.type === "AudioTrack" ? "waveform" : "layers"),
@@ -121,12 +162,19 @@ export function bindStudioTrack(track: BuiltTrack): StudioTrackBinding {
 export function projectStudioTrack(input: {
   readonly track: BuiltTrack;
   readonly placement?: Placement;
+  readonly surfacePreview?: import("./shared.js").StudioMaterialPreview;
   readonly spans: readonly StudioSpan[];
   readonly values: ReadonlyMap<string, unknown>;
   readonly semantic: import("./shared.js").SemanticTimeline;
   readonly generic: () => readonly StudioEntityDraft[];
 }): readonly StudioEntityDraft[] {
-  return trackAdapter(input.track).project?.(input) ?? input.generic();
+  const adapter = trackAdapter(input.track);
+  const drafts = adapter.project?.(input) ?? input.generic();
+  const preview = input.surfacePreview;
+  if (adapter.poster?.source !== "surface-preview" || preview === undefined) return drafts;
+  return drafts.map((draft) => draft.lane !== undefined || draft.preview !== undefined
+    ? draft
+    : { ...draft, preview });
 }
 
 export function sealStudioClip(

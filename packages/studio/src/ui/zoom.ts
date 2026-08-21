@@ -26,7 +26,11 @@ export type Zoom = {
 };
 
 /** Nothing smaller than this is readable, and nothing larger than all of it exists. */
-const NARROWEST = 0.01;
+// Keep a small amount of surrounding context even at maximum magnification.
+// For the short-form projects Studio targets this is roughly a few hundred
+// milliseconds, enough to read individual frames without turning the ruler
+// into an unbounded microscope.
+const NARROWEST = 0.02;
 
 export function createZoom(): Zoom {
   const element = document.createElement("div");
