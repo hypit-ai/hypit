@@ -10,9 +10,16 @@ import { createZoom } from "./zoom.js";
 
 export type Timeline = { readonly element: HTMLElement };
 
-const LANE_HEIGHT = 52;
+const SEMANTIC_LANE_HEIGHT = 52;
 const opened = new Set<string>();
 let speechExpanded = false;
+
+function trackLaneHeight(track: StudioSnapshot["tracks"][number]): number {
+  if (track.binding.facet === "audio") return 44;
+  if (track.binding.family === "media" || track.binding.family === "speech") return 56;
+  if (track.binding.family === "caption") return 46;
+  return 48;
+}
 
 function tickSeconds(durationSec: number, widthPx: number): number {
   for (const step of [1, 2, 5, 10, 15, 30, 60]) {
@@ -184,7 +191,7 @@ export function createTimeline(store: Store): Timeline {
     kind: string,
     iconName: string,
     detail: string,
-    height = LANE_HEIGHT,
+    height = SEMANTIC_LANE_HEIGHT,
   ): HTMLElement => {
     const label = document.createElement("div");
     label.className = `track-label track-${kind}`;
@@ -227,7 +234,7 @@ export function createTimeline(store: Store): Timeline {
 
     const lane = document.createElement("div");
     lane.className = "lane semantic-lane track-speech";
-    lane.style.height = `${LANE_HEIGHT}px`;
+    lane.style.height = `${SEMANTIC_LANE_HEIGHT}px`;
     semanticLane = lane;
     const tokensBySegment = new Map<string, SemanticToken[]>();
     for (const token of snapshot.semantic.tokens) {
@@ -358,6 +365,7 @@ export function createTimeline(store: Store): Timeline {
     const depth = Math.max(1, freeFrom.length);
     const folded = depth > 1 && !opened.has(track.id);
     const shownRows = folded ? 1 : depth;
+    const laneHeight = trackLaneHeight(track);
     const nestedItems = track.clips.filter((clip) => clip.presentation.parentId !== undefined).length;
     const displayedItems = nestedItems > 0 ? nestedItems : track.clips.length;
     const label = createTrackLabel(
@@ -365,7 +373,7 @@ export function createTimeline(store: Store): Timeline {
       kind,
       track.binding.icon,
       `${displayedItems} item${displayedItems === 1 ? "" : "s"}`,
-      shownRows * LANE_HEIGHT,
+      shownRows * laneHeight,
     );
     label.classList.add(`track-facet-${track.binding.facet}`);
     if (depth > 1) {
@@ -388,7 +396,8 @@ export function createTimeline(store: Store): Timeline {
 
     const lane = document.createElement("div");
     lane.className = `lane track-${kind} track-facet-${track.binding.facet}`;
-    lane.style.height = `${shownRows * LANE_HEIGHT}px`;
+    lane.style.height = `${shownRows * laneHeight}px`;
+    lane.style.setProperty("--lane-height", `${laneHeight}px`);
     for (const clip of track.clips) {
       const from = place(clip.startFrame, snapshot.space.frameCount, zoom.window());
       const to = place(clip.endFrameExclusive, snapshot.space.frameCount, zoom.window());
@@ -402,22 +411,23 @@ export function createTimeline(store: Store): Timeline {
       node.className = `clip clip-${kind} clip-facet-${track.binding.facet} clip-shape-${clip.presentation.shape}`;
       node.dataset.clip = clip.id;
       node.style.left = `${visibleFrom * 100}%`;
-      node.style.width = `${Math.max(0, visibleTo - visibleFrom) * 100}%`;
+      node.style.width = `max(2px, calc(${Math.max(0, visibleTo - visibleFrom) * 100}% - 2px))`;
       const parentId = clip.presentation.parentId;
       if (parentId === undefined) {
-        node.style.top = `${row * LANE_HEIGHT}px`;
+        node.style.top = `${row * laneHeight}px`;
       } else {
         const siblings = childrenByParent.get(parentId) ?? [];
         const index = Math.max(0, siblings.findIndex((candidate) => candidate.id === clip.id));
-        const slot = 34 / Math.max(1, siblings.length);
+        const slot = (laneHeight - 18) / Math.max(1, siblings.length);
         node.classList.add("clip-nested-child");
-        node.style.top = `${row * LANE_HEIGHT + 9 + index * slot}px`;
+        node.style.top = `${row * laneHeight + 9 + index * slot}px`;
         node.style.height = `${Math.max(3, slot - 2)}px`;
       }
       node.title = `${clip.label} · ${clip.startFrame}-${clip.endFrameExclusive}f`;
       node.innerHTML = `<span class="clip-material" aria-hidden="true"></span><span class="clip-phases"></span><span class="clip-copy"><span class="clip-name"></span><span class="clip-meta"></span></span>`;
       const material = node.querySelector<HTMLElement>(".clip-material")!;
       if (clip.preview?.kind === "image") {
+        node.classList.add("clip-has-material");
         material.classList.add("clip-material-image");
         material.style.backgroundImage = `url(${JSON.stringify(clip.preview.url)})`;
       }
@@ -438,7 +448,10 @@ export function createTimeline(store: Store): Timeline {
       });
       nextClipNodes.push({ node, start: clip.startFrame, end: clip.endFrameExclusive, id: clip.id });
       lane.append(node);
-      requestAnimationFrame(() => node.classList.toggle("clip-wide", node.clientWidth >= 110));
+      requestAnimationFrame(() => {
+        node.classList.toggle("clip-wide", node.clientWidth >= 110);
+        node.classList.toggle("clip-preview-wide", node.clientWidth >= 92);
+      });
     }
     rows.append(lane);
   };
