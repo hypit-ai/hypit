@@ -1,13 +1,18 @@
 # Reference-video workflow
 
-`@hypit/reference-video-tools` ships five CLI subcommands. Three of them are the reference evidence
+`@hypit/reference-video-tools` ships six CLI subcommands. Four of them are the reference evidence
 and belong to this route:
 
 ```bash
-hypit-reference-video-tools prepare_reference --video-path <path>
+hypit-reference-video-tools prepare_reference --video-path <path> --observer gemini|agent
 hypit-reference-video-tools observe_reference --reference-id <reference-id>
+hypit-reference-video-tools record_observation --reference-id <reference-id> --key <key> --text-file <path>
 hypit-reference-video-tools compare_reconstruction --reference-id <reference-id> --shot-id <shot-id> --image <path>
 ```
+
+`--observer` is answered once, before anything runs, and `observers.md` owns that question.
+`record_observation` is how the `agent` observer returns an answer; on the `gemini` observer the tool
+writes its own and the command is unused.
 
 The other two — `list_svml_packages` and `inspect_svml_vocabulary` — read installed vocabulary and
 have nothing to do with a reference video. This route runs both, at the step the sequence names;
@@ -43,8 +48,9 @@ each one, and each position described in enough detail to draw from the words al
 reconstructing a location depends on, since reference frames are never fed to generation.
 
 `transcript` is the verbatim speech of the whole reference with a start and an end for every single
-word, measured locally by WhisperX. It is not an observation: no model wrote it, nothing about it is
-sent to Gemini, and it does not go in the observation cache. Read it whenever a decision depends on
+word, measured locally by WhisperX. It is not an observation: no model wrote it, nothing about it
+reaches an observer, and it does not go in the observation cache. It is identical on both observers,
+and on the `agent` observer it is the only exact record of the sound. Read it whenever a decision depends on
 when a word is said — placing each on-screen text reveal against the line that triggers it, timing a
 caption, checking that a voice observation matches what was actually spoken, or setting how long a
 take runs, which `final-sources.md` measures from these words rather than estimating. Do not run WhisperX
@@ -119,17 +125,18 @@ reported letters being *deleted* from the screen where the text was only typing 
 The frames are already on disk at
 `.hypit/reference-video-tools/<reference-id>/shots/NNN-representative.jpg`, and the shot clips beside
 them. When evidence disagrees — one shot against the next, a shot against a whole-reference pass, or
-an observation against what the video plainly is — settle it by asking Gemini to look, through a
-narrow `observe_reference --question` over that shot, not by opening the frame yourself. You do not
-view the reference; `reconstruction-loop.md` says this is a rule, not a preference. Do not re-observe
+an observation against what the video plainly is — settle it with a narrow
+`observe_reference --question` over that shot, which puts the question to the reference's own
+observer. On the `gemini` observer that means you do not open the frame yourself;
+`reconstruction-loop.md` says which rule binds on which path. Do not re-observe
 the full shot: that is paid, and at temperature `1.0` it returns a paraphrase rather than a
 correction.
 
 Be most suspicious of anything an observation asserts about change over time — something appearing,
 vanishing, being removed, being drawn in a single frame. A describer working from one pass infers
 those rather than seeing them, and infers them wrongly. A `compare_reconstruction` against a rendered
-probe, or a narrow question over the stretch, is how such a claim is checked — not by extracting
-frames and reading the sequence yourself.
+probe, or a narrow question over the stretch, is how such a claim is checked, rather than by
+believing the single pass that asserted it.
 
 ## Narrow questions
 
@@ -151,19 +158,20 @@ and returns a description of their visible differences. It is never told which i
 was built, or how; `--question` may narrow it to one region of the picture and nothing else. Results
 are not cached. `reconstruction-loop.md` governs when and how to use it.
 
-This is the only way the reference is ever seen. Do not open the reference frame yourself and look
-at it, even if the model running this route can read images — the reference has one observer, the
-same Gemini that wrote the observations, and it reports through this command. `reconstruction-loop.md`
-states this as a rule, not a preference.
+The reference has one observer for its whole life, and this command goes through the same one that
+wrote its observations. On the `gemini` observer that observer is not you, and opening the reference
+frame yourself is what `reconstruction-loop.md` forbids; on the `agent` observer it is you, and that
+file names the discipline that takes the place of blindness.
 
 ## Boundaries
 
-Gemini returns natural language only. Never send it SVML syntax, package declarations, vocabulary,
-previews or implementation code. Never ask it to write SVML, SVS, SVRun, a structured reference plan,
-component names or TypeScript. Never tell it what you built or what you expect it to find. It is
-evidence, not the final decision maker.
+An observation is natural language and nothing else. Never send an observer SVML syntax, package
+declarations, vocabulary, previews or implementation code. Never ask for SVML, SVS, SVRun, a structured
+reference plan, component names or TypeScript in an observation. Never state what you built or what you
+expect to be found. An observation is evidence, not the final decision maker — which is a rule about
+what an observation may contain, so it binds when you are the one writing it.
 
 Inspect every failed or unresolved result. Follow up with one narrow question over one to three
 relevant shots rather than repeating the entire analysis. Preserve successful cached observations
 unless the selected shot or preparation stage must be refreshed. Do not pass model, concurrency,
-rate-limit or temperature settings; temperature is fixed at `1.0`.
+rate-limit or temperature settings; on the `gemini` observer temperature is fixed at `1.0`.
