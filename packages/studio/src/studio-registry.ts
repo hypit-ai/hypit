@@ -1,4 +1,5 @@
 import { audioAdapters } from "./adapters/audio.js";
+import { deckAdapters } from "./adapters/deck.js";
 import { genericAdapters } from "./adapters/generic.js";
 import { mediaAdapters } from "./adapters/media.js";
 import { rankingAdapters } from "./adapters/ranking.js";
@@ -14,6 +15,7 @@ export type { StudioEntityDraft, StudioProjectionRole, StudioSpan } from "./adap
 /** One Studio-local registry. Author packages and Core know nothing about it. */
 const REGISTRY: readonly StudioAdapter[] = [
   ...rankingAdapters,
+  ...deckAdapters,
   ...speechAdapters,
   ...mediaAdapters,
   ...audioAdapters,
@@ -23,7 +25,7 @@ const REGISTRY: readonly StudioAdapter[] = [
 function matches(
   adapter: StudioAdapter,
   type: string,
-  placement: Placement | undefined,
+  placement: Pick<Placement, "surface" | "module"> | undefined,
   siblingTypes: readonly string[],
 ): boolean {
   const rule = adapter.output;
@@ -33,12 +35,29 @@ function matches(
     && (rule.siblingType === undefined || siblingTypes.includes(rule.siblingType));
 }
 
+function specificity(adapter: StudioAdapter): number {
+  const rule = adapter.output;
+  return (rule.surface === undefined ? 0 : 8)
+    + (rule.siblingType === undefined ? 0 : 4)
+    + (rule.modules === undefined ? 0 : 2);
+}
+
 function adapterFor(
   type: string,
-  placement: Placement | undefined,
+  placement: Pick<Placement, "surface" | "module"> | undefined,
   siblingTypes: readonly string[],
 ): StudioAdapter | undefined {
-  return REGISTRY.find((adapter) => matches(adapter, type, placement, siblingTypes));
+  const candidates = REGISTRY
+    .filter((adapter) => matches(adapter, type, placement, siblingTypes))
+    .map((adapter) => ({ adapter, score: specificity(adapter) }))
+    .sort((left, right) => right.score - left.score || left.adapter.id.localeCompare(right.adapter.id));
+  const best = candidates[0];
+  if (best === undefined) return undefined;
+  const tied = candidates.filter((candidate) => candidate.score === best.score);
+  if (tied.length > 1) {
+    throw new Error(`Studio adapters are ambiguous for ${type}: ${tied.map((candidate) => candidate.adapter.id).join(", ")}`);
+  }
+  return best.adapter;
 }
 
 export function classifyStudioOutput(
@@ -67,23 +86,29 @@ export function studioRealizationPorts(
   return adapterFor(type, placement, siblingTypes)?.realizationPorts ?? [];
 }
 
-function trackAdapter(track: BuiltTrack): StudioAdapter {
-  return REGISTRY.find((adapter) =>
-    adapter.family !== undefined
-    && adapter.role === track.role
-    && adapter.output.type === track.type
-    && (adapter.output.surface === undefined || adapter.output.surface === track.trace.surface)
-    && (adapter.output.modules === undefined
-      || (track.trace.module !== undefined && adapter.output.modules.includes(track.trace.module))))!;
+function trackAdapter(track: BuiltTrack): StudioAdapter & { readonly family: StudioTrackBinding["family"] } {
+  const placement = track.trace.surface === undefined || track.trace.module === undefined
+    ? undefined
+    : {
+        surface: track.trace.surface,
+        module: { name: track.trace.module, version: "" },
+      };
+  const siblingTypes = track.trace.outputPorts.flatMap((item) => item.type === undefined ? [] : [item.type]);
+  const adapter = adapterFor(track.type, placement, siblingTypes);
+  const family = adapter?.family;
+  if (adapter === undefined || family === undefined) {
+    throw new Error(`Studio has no timeline adapter for ${track.type} (${track.name}).`);
+  }
+  return { ...adapter, family };
 }
 
 export function bindStudioTrack(track: BuiltTrack): StudioTrackBinding {
   const adapter = trackAdapter(track);
   return {
-    family: adapter.family!,
+    family: adapter.family,
     facet: track.type === "AudioTrack" ? "audio" : "visual",
     groupId: track.trace.authoredId ?? track.outputRef,
-    icon: adapter.icon!,
+    icon: adapter.icon ?? (track.type === "AudioTrack" ? "waveform" : "layers"),
     adapter: adapter.id,
     lane: adapter.lane ?? flatLane,
     inspector: adapter.inspector ?? standardInspector,
@@ -98,6 +123,7 @@ export function projectStudioTrack(input: {
   readonly placement?: Placement;
   readonly spans: readonly StudioSpan[];
   readonly values: ReadonlyMap<string, unknown>;
+  readonly semantic: import("./shared.js").SemanticTimeline;
   readonly generic: () => readonly StudioEntityDraft[];
 }): readonly StudioEntityDraft[] {
   return trackAdapter(input.track).project?.(input) ?? input.generic();
@@ -123,6 +149,8 @@ export function sealStudioClip(
       shape: fallback.facet === "audio" ? "waveform" : "block",
       depth: 0,
     },
+    ...(draft.temporal === undefined ? {} : { temporal: draft.temporal }),
+    ...(draft.preview === undefined ? {} : { preview: draft.preview }),
     interaction: draft.interaction ?? fallback.interaction,
     renderIds: draft.renderIds ?? (draft.presentId === undefined ? [] : [draft.presentId]),
   };

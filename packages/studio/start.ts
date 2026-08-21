@@ -42,8 +42,14 @@ const invokedFrom = process.env.INIT_CWD ?? process.cwd();
 const runArgument = values.get("run");
 if (runArgument === undefined || runArgument.trim().length === 0) usage("Missing --run");
 const runPath = resolve(invokedFrom, runArgument);
-const packageRoot = resolve(values.get("package-root") ?? invokedFrom);
-const workspaceRoot = resolve(values.get("workspace") ?? dirname(runPath));
+const packageRootArgument = values.get("package-root");
+const workspaceArgument = values.get("workspace");
+const packageRoot = packageRootArgument === undefined
+  ? invokedFrom
+  : resolve(invokedFrom, packageRootArgument);
+const workspaceRoot = workspaceArgument === undefined
+  ? dirname(runPath)
+  : resolve(invokedFrom, workspaceArgument);
 const runtimeArgument = values.get("runtime");
 const runtimePath = runtimeArgument === undefined ? undefined : resolve(invokedFrom, runtimeArgument);
 const port = Number(values.get("port") ?? "5179");
@@ -79,6 +85,7 @@ const server = await createServer({
   plugins: [studioPlugin({
     source,
     runPath,
+    workspaceRoot,
     domain,
     ...(archive === undefined ? {} : { archive }),
   })],

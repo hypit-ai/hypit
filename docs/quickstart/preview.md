@@ -14,13 +14,15 @@ it needs a Run whose material is satisfied — every generated output either pro
 Build or standing against a file. That is what you point it at.
 
 ```bash
-pnpm studio -- --run path/to/build.svrun
+pnpm studio -- --run examples/all-components-preview/studio.svrun --workspace .
 # ➜  http://localhost:5179/
 ```
 
 ::: warning The examples in this repository need material first
-Every Run Source under `examples/` still names shots a Provider has to make, or footage under
-`examples/**/assets/`, which is not committed. Satisfy those in a Run of your own before opening it.
+`examples/all-components-preview/studio.svrun` is ready to open: it explicitly supplies its
+Semantic Takes and caption plan. Other example Runs may still name shots a Provider has to make, or
+footage under `examples/**/assets/` that is not committed. Satisfy those in a Run of your own before
+opening them.
 :::
 
 | Argument | Meaning |
@@ -132,6 +134,17 @@ into a piano roll. Double-click a Segment to zoom to it; the toolbar has explici
 
 Clicking a word moves the playhead to the frame that word starts on, which is the fastest way to
 answer "does this cutaway land on the right sentence".
+
+## Selection, projection and consumption
+
+A timeline block is not assumed to be the authored Selection. Studio keeps three facts separate:
+the named semantic source, the component's projection from that source, and the frame windows the
+component finally consumes. Selection ranges and Moment points remain visible on the semantic lane;
+an item's projection line connects that source to its realized window. Components with nested
+schedules, such as a Ranking Column, expose the total window and their reveal phases separately.
+
+The current projection view is read-only. Its data contract and the remaining write-back questions
+are recorded in [Studio Temporal Windows](../guide/studio-temporal-windows.md).
 
 ## Sound
 

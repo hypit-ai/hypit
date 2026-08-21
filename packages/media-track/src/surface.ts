@@ -356,6 +356,7 @@ function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: s
     inputs: inputTypes,
     operations,
     exports: [
+      { name: "program", type: mediaTrackTypes.program, root: operation("track:finalize") },
       { name: "visual", type: compositionTypes.visualTrack, root: operation("track:visual") },
       ...(audio ? [{ name: "audio" as const, type: compositionTypes.audioTrack, root: operation("track:audio") }] : []),
     ],
@@ -787,8 +788,8 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
   return {
     records: state.records,
     components: [{ id: trackId, fragment: fragment.id, inputs: state.inputs,
-      outputs: { visual: `${trackId}.visual`, ...(hasAudio ? { audio: `${trackId}.audio` } : {}) }, range: element.range }],
+      outputs: { program: `${trackId}.program`, visual: `${trackId}.visual`, ...(hasAudio ? { audio: `${trackId}.audio` } : {}) }, range: element.range }],
     fragments: [fragment],
-    exports: [`${trackId}.visual`, ...(hasAudio ? [`${trackId}.audio`] : [])],
+    exports: [`${trackId}.program`, `${trackId}.visual`, ...(hasAudio ? [`${trackId}.audio`] : [])],
   };
 };

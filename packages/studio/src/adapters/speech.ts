@@ -27,14 +27,14 @@ export const speechAdapters: readonly StudioAdapter[] = [
   {
     id: "speech-visual", role: "speech-visual",
     output: { type: "VisualTrack", surface: "track", modules: ["@hypit/speech-track"], siblingType: "SemanticTrack" },
-    family: "speech", icon: "record_voice_over", interaction: readonlyInteraction,
+    family: "speech", icon: "speech", interaction: readonlyInteraction,
     realizationPorts: ["semantic"], project: projectSpeech,
     lane: { layout: "flat", boundFacets: true },
   },
   {
     id: "speech-audio", role: "speech-audio",
     output: { type: "AudioTrack", surface: "track", modules: ["@hypit/speech-track"], siblingType: "SemanticTrack" },
-    family: "speech", icon: "graphic_eq", interaction: readonlyInteraction,
+    family: "speech", icon: "waveform", interaction: readonlyInteraction,
     realizationPorts: ["semantic"], project: projectSpeech,
     lane: { layout: "flat", boundFacets: true },
   },
