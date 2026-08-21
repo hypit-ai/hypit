@@ -42,6 +42,23 @@ supplied, not for material you generated a moment ago.
 
 Reference observation is part of the work and is expected to cost what it costs.
 
+## A requested change is made after the reconstruction is complete
+
+The author often wants the result to differ from the reference: their presenter rather than the one
+in the video, their product rather than the promoted one, their brand. Reconstruct the reference as
+it is anyway, all of it, and then read what you wrote and change it to what they asked for.
+
+The reason is that the reconstruction is checkable only while it claims to reproduce the video that
+was observed. The observations describe the reference and are cached, and `compare_reconstruction`
+judges a rendered element against a reference frame. Author the change into the sources early and the
+evidence describes one video while the sources describe another, which leaves the reconstruction with
+nothing to be checked against while it is still being written.
+
+Afterwards the sources are yours to change. You wrote every one of them, and the identity of each
+recurring person and product is already a single anchor in them, because
+`../playbooks/craft/persona-and-audio.md` and `../playbooks/craft/visual-continuity.md` required that
+while you were writing.
+
 ## A video path is the whole request
 
 The author gives one thing: the path to a video. Not a working directory, not a project name, not
@@ -57,7 +74,9 @@ discoverable:
   missing, say which one and stop — do not ask the author to describe their setup.
 
 Ask the author about the video and nothing else: what it is for, who is in it, what it should say.
-Never interrupt to ask which generator, which package, which directory, or whether to proceed.
+Those answers describe the result they want rather than the reconstruction; record them and apply
+them once the reconstruction is complete. Never interrupt to ask which generator, which package,
+which directory, or whether to proceed.
 
 ## Before the first command
 
