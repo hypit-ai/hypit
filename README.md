@@ -9,7 +9,7 @@
 <p align="center">1 command, 100 variants, 100M views.</p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/"><strong>Website</strong></a>
+  <a href="https://narratage.hypit.ai/"><strong>Demo</strong></a>
   &nbsp;&bull;&nbsp;
   <a href="https://narratage.hypit.ai/quickstart"><strong>Quickstart</strong></a>
   &nbsp;&bull;&nbsp;
