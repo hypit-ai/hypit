@@ -35,6 +35,10 @@
   <a href="https://x.com/hypitai"><img alt="Follow @hypitai on X" src="https://img.shields.io/badge/Follow%20%40hypitai-000000?style=for-the-badge&logo=x&logoColor=white"></a>
 </p>
 
+<p align="center">
+  ⭐ <em>Help more people find Hypit and grow the community. Star this repo!</em>
+</p>
+
 ## Hypit
 
 Hypit gives AI agents (Claude Code, Codex...) a language and system to create video. Drop in a video, and your agent clones it as a complete workflow: footage, captions, B-roll and effects, all anchored to words instead of seconds.

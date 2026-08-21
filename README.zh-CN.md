@@ -36,6 +36,10 @@
   <a href="https://x.com/hypitai"><img alt="Follow @hypitai on X" src="https://img.shields.io/badge/Follow%20%40hypitai-000000?style=for-the-badge&logo=x&logoColor=white"></a>
 </p>
 
+<p align="center">
+  ⭐ <em>让更多人发现 Hypit，一起壮大社区。给仓库点个 Star！</em>
+</p>
+
 ## Hypit
 
 Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语言和系统。丢一条视频进来，Agent 把它克隆成一份完备的 workflow：画面、字幕、B-roll、特效，全部挂在词上，不钉在秒上。
