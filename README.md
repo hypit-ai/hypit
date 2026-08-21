@@ -5,10 +5,9 @@
   </picture>
 </p>
 
-<p align="center">
-  <strong>Clone any viral video with AI agents.</strong>
-  1 command, 100 variants, 100M views.
-</p>
+<h2 align="center" style="border-bottom: none">Clone any viral video with AI agents.</h2>
+
+<h3 align="center">1 command, 100 variants, 100M views.</h3>
 
 <p align="center">
   <a href="https://narratage.hypit.ai/"><strong>Website</strong></a>
