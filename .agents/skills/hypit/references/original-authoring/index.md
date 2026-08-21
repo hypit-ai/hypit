@@ -34,7 +34,8 @@ Everything else this route needs is discoverable:
 
 - **Where you are, and what is installed.** `../environment.md`.
 - **Credentials.** `../credentials.md` lists which variables each Provider needs.
-- **Where the project goes.** `../runtime.md` keeps the project and package boundaries distinct.
+- **Where the project goes.** Its own directory in the checkout: `projects/<name>/`, named after the
+  video. `../runtime.md` keeps the project and package boundaries distinct.
 
 ## Before deciding anything
 

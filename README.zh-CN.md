@@ -42,15 +42,15 @@ Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语�
 
 **说明一点：** 复刻视频是最快的入口，但不是唯一的入口。你可以直接从我们的模板开始，也可以直接描述你想要的视频，让 Agent 从零写出一份 workflow。生成模型同样不是必需的：字幕、动效、代码渲染的画面，不调用任何模型也能编译成一条成片——一条视频的成本可以是 0 元。
 
-## 克隆仓库
+## 安装 Hypit skill
 
 ```bash
-git clone https://github.com/hypit-ai/hypit.git && cd hypit
+npx skills add hypit-ai/hypit
 ```
 
 ## 使用 Hypit skill
 
-克隆仓库后，编程 Agent 可以直接使用 `/hypit` skill。让 Agent 配置环境并为你创建视频：
+编程 Agent 可以直接使用 `/hypit` skill，首次使用时 Agent 会自行获取所需的仓库。让 Agent 配置环境并为你创建视频：
 
 ```text
 /hypit 把这条爆款视频复刻出来，展示预览，并带我批量生成多个变体。
