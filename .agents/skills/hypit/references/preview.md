@@ -68,10 +68,35 @@ pnpm studio -- --run path/to/build.svrun \
 
 Read the startup output for the chosen port. `--run` is required: Studio's unit of work is the Run
 Source, and it reads the Author SVML back out of it. Pass `--runtime` only when the Author Source
-reuses accepted Build records.
+reuses accepted Build records. `--workspace` selects the Source Workspace and defaults to the Run's
+own directory, so pass it when the Run's relative Sources resolve against a different root.
 
 Studio opens a Run whose material is satisfied. When a projection is missing it names the issue and
 stops, so a Run that opens is a Run whose Tracks all resolved.
+
+One Run in the repository is satisfied already, so Studio can be seen without spending anything:
+
+```bash
+pnpm studio -- --run examples/all-components-preview/studio.svrun --workspace .
+```
+
+It supplies its own Semantic Takes and caption plan from committed fixtures. Every other Run under
+`examples/` still names shots a Provider has to make, or footage that is not committed.
+
+## A timeline block is not the authored Selection
+
+Studio keeps three stages of an item's time apart, and reading one for another misreads the program:
+
+- the **semantic source** the author named — a Selection, Segment, Moment or Program, with its
+  occurrence identity and its anchors on the Semantic Track;
+- the **projection** of that source into frame space, after occurrence expansion, offset evaluation,
+  clipping and frame quantization. One authored binding can project to zero, one or several windows;
+- the **consumption** window the realized Track actually uses, which the projection does not have to
+  equal — a source-audio trim reads different samples than its target window, and a Ranking exposes
+  one outer window alongside its reveal phases.
+
+A projection line connects a source to its realized window, and the projection view is read-only.
+`docs/guide/studio-temporal-windows.md` is authoritative for what each stage carries.
 
 Studio is a browser preview **for a person to look at**. It is not a source of images for an
 automated comparison — that is what the local still render above is for.
