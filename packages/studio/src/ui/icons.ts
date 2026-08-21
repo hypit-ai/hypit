@@ -15,7 +15,10 @@ const paths: Readonly<Record<string, string>> = {
   pause: '<path d="M8 5v14M16 5v14"/>',
   volume: '<path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M16 9c1.5 1.7 1.5 4.3 0 6M19 6.5c3 3 3 8 0 11"/>',
   muted: '<path d="M4 10v4h4l5 4V6l-5 4H4ZM17 10l4 4M21 10l-4 4"/>',
-  speech: '<path d="M7 17H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-4l-4 3v-3Z"/><path d="M7 9h6M7 12h4"/>',
+  // The speech bubble's geometric path is left-heavy because of its tail.
+  // Shift it two view-box units so its optical centre shares the same column
+  // as the symmetric video, waveform, text and caption glyphs.
+  speech: '<g transform="translate(2 0)"><path d="M7 17H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-4l-4 3v-3Z"/><path d="M7 9h6M7 12h4"/></g>',
   waveform: '<path d="M3 12h2l1.5-6 3 12 3-14 3 16 2-8H21"/>',
   video: '<rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2v-4Z"/>',
   text: '<path d="M5 5h14M12 5v14M8 19h8"/>',

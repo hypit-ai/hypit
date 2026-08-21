@@ -1,5 +1,5 @@
 import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft } from "./types.js";
-import { childEntities, readonlyInteraction, sameSurfaceValue } from "./types.js";
+import { childEntities, laneHeights, readonlyInteraction, sameSurfaceValue } from "./types.js";
 import { itemTemporalLineage } from "./temporal.js";
 
 type TypographyTrackProgram = {
@@ -34,6 +34,60 @@ type CaptionDisplayValue = {
   readonly atoms?: readonly { readonly id: string; readonly wordIds: readonly string[] }[];
   readonly words?: readonly { readonly id: string; readonly text: string }[];
 };
+
+type TerminalVisualTrack = {
+  readonly presents?: readonly {
+    readonly id: string;
+    readonly elements?: readonly {
+      readonly kind?: string;
+      readonly artifact?: { readonly digest?: string };
+    }[];
+  }[];
+};
+
+type TerminalAudioTrack = {
+  readonly clips?: readonly {
+    readonly id: string;
+    readonly artifact?: { readonly digest?: string };
+  }[];
+};
+
+/** Terminal media has one Studio treatment regardless of which package authored it. */
+function projectTerminalVisual(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+  const presents = new Map(((context.track.track as TerminalVisualTrack).presents ?? [])
+    .map((present) => [present.id, present] as const));
+  return context.generic().map((entity) => {
+    const present = entity.presentId === undefined ? undefined : presents.get(entity.presentId);
+    const material = present?.elements?.find((element) =>
+      (element.kind === "image" || element.kind === "video") && element.artifact?.digest !== undefined);
+    const digest = material?.artifact?.digest;
+    return {
+      ...entity,
+      presentation: { entity: "media-item", shape: "picture", depth: 0 },
+      ...(digest === undefined ? {} : {
+        preview: {
+          kind: material?.kind === "image" ? "image" as const : "video" as const,
+          url: `/__studio/material/${digest}`,
+        },
+      }),
+    };
+  });
+}
+
+function projectTerminalAudio(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+  const clips = new Map(((context.track.track as TerminalAudioTrack).clips ?? [])
+    .map((clip) => [clip.id, clip] as const));
+  return context.generic().map((entity, index) => {
+    const digest = clips.get(context.spans[index]?.id ?? "")?.artifact?.digest;
+    return {
+      ...entity,
+      presentation: { entity: "audio-clip", shape: "waveform", depth: 0 },
+      ...(digest === undefined ? {} : {
+        preview: { kind: "audio" as const, url: `/__studio/material/${digest}` },
+      }),
+    };
+  });
+}
 
 function projectText(context: StudioAdapterContext): readonly StudioEntityDraft[] {
   const program = sameSurfaceValue(context, "program") as TypographyTrackProgram | undefined;
@@ -96,17 +150,22 @@ export const genericAdapters: readonly StudioAdapter[] = [
     id: "text", role: "text", output: { type: "VisualTrack", surface: "track", modules: ["@hypit/typography-track"] },
     family: "text", icon: "text", interaction: readonlyInteraction,
     realizationPorts: ["program"], project: projectText,
+    lane: { layout: "flat", height: laneHeights.text },
   },
   {
     id: "caption", role: "caption", output: { type: "VisualTrack", surface: "track", modules: ["@hypit/caption-fine"] },
     family: "caption", icon: "captions", interaction: readonlyInteraction,
     dependencies: [{ type: "CaptionPlan", role: "caption-plan" }], project: projectCaption,
+    lane: { layout: "flat", height: laneHeights.text },
   },
   {
     id: "component", role: "track",
     output: { type: "VisualTrack", modules: ["@hypit/ranking", "@hypit/comment-sticker", "@hypit/screen-overlay"] },
     family: "component", icon: "component", interaction: readonlyInteraction,
+    lane: { layout: "flat", height: laneHeights.component },
   },
-  { id: "audio-fallback", role: "track", output: { type: "AudioTrack" }, family: "audio", icon: "waveform", interaction: readonlyInteraction },
-  { id: "visual-fallback", role: "track", output: { type: "VisualTrack" }, family: "visual", icon: "layers", interaction: readonlyInteraction },
+  { id: "audio-track", role: "track", output: { type: "AudioTrack" }, family: "audio", icon: "waveform", interaction: readonlyInteraction,
+    project: projectTerminalAudio, lane: { layout: "flat", height: laneHeights.audio } },
+  { id: "visual-track", role: "track", output: { type: "VisualTrack" }, family: "media", icon: "video", interaction: readonlyInteraction,
+    project: projectTerminalVisual, lane: { layout: "flat", height: laneHeights.picture } },
 ];

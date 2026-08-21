@@ -1,4 +1,4 @@
-import type { Composition } from "@hypit/composition";
+import type { AudioTrack, Composition } from "@hypit/composition";
 import { compileHyperframesDocument, materializeHyperframesHtml } from "@hypit/hyperframes";
 import type { ProgramSpace } from "@hypit/program-space";
 
@@ -9,8 +9,6 @@ export type RenderInput = {
   readonly space: ProgramSpace;
   /** Digests Studio can serve for material selected by the Run. */
   readonly served?: ReadonlySet<string>;
-  /** The Track whose material carries the programme's speech. */
-  readonly audibleTrack?: string;
 };
 
 /**
@@ -31,5 +29,23 @@ export function renderPreview(input: RenderInput): string {
     }
     return `/__studio/material/${artifact.digest}`;
   });
-  return injectRuntimeShim(html, input.audibleTrack);
+  const audio = input.composition.tracks
+    .filter((track): track is AudioTrack => track.kind === "audio")
+    .flatMap((track) => track.clips)
+    .map((clip) => {
+      if (input.served?.has(clip.artifact.digest) !== true) {
+        throw new Error(`Preview audio references Artifact ${clip.artifact.digest}, which it cannot serve.`);
+      }
+      return `<audio class="hypit-studio-audio" preload="auto"
+      src="/__studio/material/${clip.artifact.digest}"
+      data-start="${clip.target.startSample / 48_000}"
+      data-duration="${(clip.target.endSampleExclusive - clip.target.startSample) / 48_000}"
+      data-media-start="${clip.source.startSample / 48_000}"
+      data-media-end="${clip.source.endSampleExclusive / 48_000}"
+      data-loop="${clip.source.loop}"
+      data-phase="${clip.source.phaseSample / 48_000}"
+      data-playback-rate="${clip.playbackRate}"
+      data-gain="${clip.gain}"></audio>`;
+    }).join("");
+  return injectRuntimeShim(html, audio);
 }

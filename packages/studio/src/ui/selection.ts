@@ -9,7 +9,8 @@ export type Origin = "timeline" | "code" | "video";
 
 export type Selection =
   | { readonly kind: "none" }
-  | { readonly kind: "clip"; readonly clipId: string; readonly origin: Origin };
+  | { readonly kind: "clip"; readonly clipId: string; readonly origin: Origin }
+  | { readonly kind: "semantic-segment"; readonly segmentId: string; readonly origin: Origin };
 
 export type Playhead = { readonly frame: number; readonly origin: Origin | "play" };
 
@@ -26,6 +27,11 @@ export type Store = {
   /** Clips covering a frame, topmost track first. */
   clipsAt(frame: number): readonly Clip[];
   load(snapshot: StudioSnapshot): void;
+  /** Select without moving the playhead; timeline inspection must not destroy position. */
+  select(clipId: string, origin: Origin): void;
+  /** Select one authored SemanticTake without moving the playhead. */
+  selectSemanticSegment(segmentId: string, origin: Origin): void;
+  /** Select and seek to the clip start, used by source navigation. */
   selectClip(clipId: string, origin: Origin): void;
   /**
    * Look at one instant, optionally selecting a clip there. Used when the thing
@@ -98,15 +104,28 @@ export function createStore(): Store {
       if (held.kind === "clip" && !clips().some((clip) => clip.id === held.clipId)) {
         selection = { kind: "none" };
       }
+      if (held.kind === "semantic-segment"
+        && !snapshot.semantic.segments.some((segment) => segment.id === held.segmentId)) {
+        selection = { kind: "none" };
+      }
       playhead = { frame: clamp(playhead.frame), origin: playhead.origin };
+      emit();
+    },
+    select(clipId, origin) {
+      const clip = clips().find((item) => item.id === clipId);
+      if (clip === undefined) return;
+      selection = { kind: "clip", clipId, origin };
+      emit();
+    },
+    selectSemanticSegment(segmentId, origin) {
+      if (snapshot?.semantic.segments.some((segment) => segment.id === segmentId) !== true) return;
+      selection = { kind: "semantic-segment", segmentId, origin };
       emit();
     },
     selectClip(clipId, origin) {
       const clip = clips().find((item) => item.id === clipId);
       if (clip === undefined) return;
       selection = { kind: "clip", clipId, origin };
-      // Selecting is also a seek: "show me this B-roll" means showing the frame
-      // it starts on, not wherever the playhead happened to be.
       playhead = { frame: clamp(clip.startFrame), origin };
       emit();
     },

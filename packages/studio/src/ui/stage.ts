@@ -23,7 +23,6 @@ export function createStage(store: Store): Stage {
   element.innerHTML = `
     <div class="stage-heading">
       <div class="stage-title">${icon("preview")}<strong>Preview</strong></div>
-      <span class="stage-canvas" data-canvas></span>
     </div>
     <div class="stage-viewport">
       <div class="stage-scaler">
@@ -31,7 +30,6 @@ export function createStage(store: Store): Stage {
       </div>
     </div>
     <div class="stage-bar">
-      <span class="stage-time" data-time>00:00:00</span>
       <button type="button" data-previous aria-label="Previous frame" title="Previous frame">
         ${icon("previous")}
       </button>
@@ -81,7 +79,7 @@ export function createStage(store: Store): Stage {
   // the third way into the same selection.
   scaler.addEventListener("click", (event) => {
     const clip = overlay.hitTest(event.clientX, event.clientY);
-    if (clip !== undefined) store.selectClip(clip.id, "video");
+    if (clip !== undefined) store.select(clip.id, "video");
     else store.clearSelection();
   });
   // The room around the picture is empty in the plainest sense.
@@ -94,8 +92,6 @@ export function createStage(store: Store): Stage {
   const playIcon = element.querySelector<HTMLElement>("[data-icon]")!;
   const mute = element.querySelector<HTMLButtonElement>("[data-mute]")!;
   const muteIcon = element.querySelector<HTMLElement>("[data-mute-icon]")!;
-  const time = element.querySelector<HTMLElement>("[data-time]")!;
-  const canvas = element.querySelector<HTMLElement>("[data-canvas]")!;
 
   type SeekWindow = Window & {
     __hypitSeekFrame?: (frame: number) => Promise<boolean>;
@@ -202,11 +198,6 @@ export function createStage(store: Store): Stage {
   store.subscribe((value) => {
     const first = state === undefined;
     state = value;
-    const frameRate = fps(value.snapshot);
-    const seconds = value.playhead.frame / frameRate;
-    const whole = Math.floor(seconds);
-    time.textContent = `${String(Math.floor(whole / 60)).padStart(2, "0")}:${String(whole % 60).padStart(2, "0")}:${String(value.playhead.frame % Math.round(frameRate)).padStart(2, "0")}`;
-    canvas.textContent = `${value.snapshot.space.canvasWidth} × ${value.snapshot.space.canvasHeight}`;
     if (value.snapshot.revision !== mounted) {
       mounted = value.snapshot.revision;
       stop();
