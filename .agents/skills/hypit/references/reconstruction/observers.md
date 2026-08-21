@@ -85,13 +85,35 @@ and do not put the gap to the author.
 `voices` and the sound half of each `boundary` are the observations this shapes. They are attributions
 read off pictures and word timings, and that is what a later reader should take them for.
 
-## The comparison in the loop is yours too
+## Answer each task in its own subagent when you can
 
-`compare_reconstruction` on the `agent` observer returns the two images and the same question rather
-than an answer. You look at the reference frame and your render and describe the differences yourself.
+Every task the tool returns is self-contained: a `key`, an `instruction`, a `prompt` that already
+carries the whole-reference context, and absolute `image_refs`. No task refers to another task's
+answer. So if the harness you are running in can spawn subagents — Claude Code and Codex can, and
+some cannot — give each task to its own, and run them together.
 
-That makes the report yours, and you know what you built, so the discipline that keeps it useful is
-explicit:
+Hand the subagent the `instruction`, the `prompt` verbatim and the `image_refs`, and nothing else.
+Not what you built, not which component drew anything, not what you expect it to find, and not another
+observation's answer. Take the returned text and write it with `record_observation` yourself, so one
+writer owns the cache.
+
+Two things follow from one task per subagent, and both of them are properties the `gemini` observer
+has for free:
+
+- **The observations are independent again.** Each one is answered by a reader that saw only its own
+  pictures and its own question, which is what a separate request to Gemini is. Two observations
+  agreeing is evidence again rather than one reader being consistent with itself.
+- **The comparison closes blind.** A subagent handed two unlabelled images and the comparison question
+  does not know which is the reference, what was built or what you hoped to see. That is the same
+  unlabelled pair the other observer gets.
+
+Answer the tasks in order yourself when the harness has no subagents. It is slower, and it is the
+fallback rather than the shape to aim for.
+
+## Comparing without subagents
+
+Answering the comparison yourself makes the report yours, and you know what you built, so the
+discipline that keeps it useful has to be explicit:
 
 - **Write the differences down before naming a cause.** List what is visibly different, in the words
   you would use if you had never seen the source. Deciding what went wrong first, then looking, finds
@@ -101,6 +123,9 @@ explicit:
 - **Measure rather than iterate.** A stroke that is too thick, a shape that is too tall, a margin that
   is too wide — read the number off the frame against the frame's own width and height, and change the
   value once. `reconstruction-loop.md` says why an attempt is for differences that have no number.
+
+The same three hold when a subagent compares, and they cost nothing there; what a subagent adds is
+that the comparer is not the builder.
 
 ## Running it
 

@@ -92,7 +92,9 @@ the reference keeps it.
 
 When the Vertex credentials are absent, `agent` is what can run — say that, say that it reads the
 reference a little less closely, and take the author's answer. Then say which observer is reading,
-before the evidence starts. Both are in `observers.md`.
+before the evidence starts. Both are in `observers.md`, which also says to give each observation to
+its own subagent where the harness has them: that is what makes the sweep parallel rather than serial,
+and what keeps the observations independent of one another.
 
 This is the only question this route asks about how it runs, and it is asked once, before the evidence
 starts.
