@@ -37,6 +37,11 @@ export type CreateLocalHyperframesProviderOptions = {
   /** Parallel Chrome workers inside one render. This is separate from Provider request concurrency. */
   readonly workers?: HyperframesWorkers;
   readonly quality?: HyperframesQuality;
+  /**
+   * Chrome's rasterizer. Defaults to `hardware`: a composited frame is drawn by the GPU rather
+   * than by SwiftShader on the CPU, which is the difference between minutes and half an hour on a
+   * full-length vertical render. Set `software` on a machine with no usable GPU.
+   */
   readonly browserGpu?: HyperframesBrowserGpu;
   /** Number of whole documents allowed to render at once on this configured instance. */
   readonly defaultConcurrency?: number;
@@ -229,7 +234,7 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
     "workers must be auto or an integer in [1, 64]");
   const quality = config.quality ?? "standard";
   assert(["draft", "standard", "high"].includes(quality), "HyperFrames quality is invalid");
-  const browserGpu = config.browserGpu ?? "software";
+  const browserGpu = config.browserGpu ?? "hardware";
   assert(["auto", "software", "hardware"].includes(browserGpu), "HyperFrames browserGpu is invalid");
   const processTimeoutMs = positiveInteger(config.processTimeoutMs ?? 30 * 60_000, "processTimeoutMs");
   const maxProcessOutputBytes = positiveInteger(config.maxProcessOutputBytes ?? 4 * 1024 * 1024,
