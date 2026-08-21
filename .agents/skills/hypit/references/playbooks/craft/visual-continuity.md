@@ -10,7 +10,7 @@
   `generated-dependencies.md` states both, and the reverse-view geometry below is what decides how
   many views a location needs.
 - Keep one authoritative reference set and one stable Recipe for a continuous shot group. Split a
-  group only for a genuine edit or the 15-second Seedance ceiling; preserve camera, room, wardrobe,
+  group only for a genuine edit or the selected model's duration ceiling; preserve camera, room, wardrobe,
   light, props, action state, and reference order across its parts.
 - Put each stable physical fact in both the reference image and the relevant prompt contract. Prefer
   simple, symmetric props when a distinctive feature repeatedly duplicates or mutates.

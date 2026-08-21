@@ -34,8 +34,13 @@ file that some jobs never open.
   ratio visible in the Author Source.
 - Build speech-led programs from normalized `whisperx:SemanticTake` values with `speech:Track`, then add
   peer Caption, Media, Typography, Ranking, Deck, Comment, Screen, and Audio Tracks.
-- Use `speech:Track` for ordered speech-bearing Semantic Takes. For speech-free formats, select a
-  verified ProgramSpace Record in `.svrun`, author explicit timing, and omit WhisperX/Caption work.
+- Use `speech:Track` for ordered speech-bearing Semantic Takes. A program with no spoken words still
+  has a SemanticTrack, because it is the frame domain every `start`/`end` window resolves into: keep
+  the `whisperx:SemanticTake` and `speech:Track` declarations, which are what declares the
+  `<track>.semantic` output, and satisfy that output in `.svrun` with a `build-record` Candidate from
+  a Build that already produced one. Keep `<track>.visual` and `<track>.audio` out of the Film and the
+  alignment goes unreached — `hypit plan` lists it under `Declared but not reached`. Time every Item
+  and Clip with `start`/`end`, and omit the Caption components.
 - Assemble peer Tracks with `film:Film`, render with `render:Video`, and demand outputs through a
   `.svrun` Target.
 - Stage expensive work with narrow `.svrun` Targets. Explicitly reuse an accepted Record through

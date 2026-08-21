@@ -21,7 +21,7 @@ Declare the source, normalize it to audio-only `SynchronizedMedia`, and place it
 ```svml
 <media:Audio id="reveal-source" src="./assets/reveal.wav"/>
 <pipeline:Normalize id="reveal-media" source={reveal-source}
-  video="none" audio="default" span-authority="audio" frame-rate="30"/>
+  video="none" audio="default" span-authority="audio" clock={clock}/>
 
 <audio:Track id="effects" semantic={speech.semantic}>
   <audio:Clip source={reveal-media.media}

@@ -36,8 +36,9 @@ convention, it is the condition under which they work.
 
 ## Requirements
 
-Node.js 22+, pnpm 10.33.x via Corepack, Python 3.10–3.13 only for local
-WhisperX/OpenCV, `uv` for locked Python environments, and `ffmpeg`/`ffprobe` for local media.
+Node.js 22+, pnpm 10.33.x via Corepack, Python only for the local services — 3.10–3.13 for WhisperX
+and 3.13 for OpenCV, which `uv python install 3.13` satisfies for both — `uv` for locked Python
+environments, and `ffmpeg`/`ffprobe` for local media.
 
 macOS/Linux or Windows PowerShell:
 

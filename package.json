@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "bin": {
-    "hypit": "./bin/hypit.mjs"
+    "hypit": "./bin/hypit.mjs",
+    "hypit-reference-video-tools": "./packages/reference-video-tools/bin/reference-video-tools.mjs"
   },
   "packageManager": "pnpm@10.33.0",
   "scripts": {

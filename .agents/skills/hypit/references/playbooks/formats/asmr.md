@@ -19,23 +19,24 @@ texture sound to create a calm, satisfying micro-film.
    reviewing the generated take.
 
 Avoid rapid edits, large camera moves, busy backgrounds, multiple simultaneous actions, or motion
-that hides the contact point. Use `standard` for 1080p/4k detail; `fast` and `mini` are limited to
-480p/720p.
+that hides the contact point. Use `standard` for 1080p/4k detail; `fast`, `mini` and `2.5` render at
+480p or 720p.
 
 ## Author the sound
 
 - Use supplied or generated texture sound, ambience, and optional music as explicit sources.
-- Normalize every Blob with `pipeline:Normalize`, then place it through `audio:Track` and
-  `audio:Clip` on the delivery ProgramSpace.
+- Normalize every Blob with `pipeline:Normalize`, then place it through `audio:Track
+  semantic={…}` and `audio:Clip`.
 - Align impacts and texture changes to the audience-perceived contact event with explicit timing.
 - Use one sound for one function. Do not cover a delicate material sound with unnecessary impacts,
   whooshes, or dense music.
 - Set trim, playback, gain, fade-in, and fade-out explicitly. Do not assume automatic looping,
   ducking, or loudness normalization.
 
-For a speech-free ASMR edit, omit WhisperX and Caption components. Select a verified ProgramSpace
-Record in `.svrun` with `build-record` and `satisfy`, then author explicit windows against that
-ProgramSpace. The selected Record is the delivery time contract.
+For a speech-free ASMR edit, keep the `whisperx:SemanticTake` and `speech:Track` declarations and
+satisfy `<track>.semantic` in `.svrun` with `build-record` and `satisfy`. That Record is the delivery
+time contract, and every window is an explicit `start`/`end` against it. Omit the Caption components.
+`../index.md` says why the declarations stay.
 
 ## Review and reuse
 

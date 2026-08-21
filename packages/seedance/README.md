@@ -13,6 +13,6 @@ All three preserve the remote result as one atomic `GeneratedVideoSet`, then exp
 member as an ordinary `BlobArtifact`. Their prompt ports consume ordinary `Text`, so a Script projection,
 generic Text Template or third-party author module can feed them without becoming part of Seedance.
 
-`standard`, `fast` and `mini` select model variants independently of the invocation shape. Duration is
+`standard`, `fast`, `mini` and `2.5` select model variants independently of the invocation shape. Duration is
 either literal or supplied by an explicit `SpeechDuration` edge; the generic internal `DurationProgram`
 only delays that scalar binding and does not introduce a Speaker/Speech usage into the model interface.

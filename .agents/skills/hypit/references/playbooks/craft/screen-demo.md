@@ -54,7 +54,7 @@ for both views is insufficient. Apply the complete gate in `visual-continuity.md
 - Place screenshots, recordings, and generated demonstrations with `media-track:Track`; define an
   explicit Frame, appearance Recipe, motion Recipe, timing window, and stack order.
 - Use `during={story.selection.NAME}` for a spoken demonstration range, a Moment plus `for` for an
-  event, or explicit ProgramSpace timing for a silent demo.
+  event, or explicit `start`/`end` timing in the SemanticTrack frame domain for a silent demo.
 - Inspect legibility at delivery size, not only full-resolution source size. Reject changed text,
   unreadable controls, moire, impossible perspective, screen reflections that hide evidence,
   same-background reverse views, or a hand interaction that does not match the UI state.
