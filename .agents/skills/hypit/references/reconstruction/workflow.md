@@ -7,7 +7,7 @@ and belong to this route:
 hypit-reference-video-tools prepare_reference --video-path <path> --observer gemini|agent
 hypit-reference-video-tools observe_reference --reference-id <reference-id>
 hypit-reference-video-tools record_observation --reference-id <reference-id> --key <key> --text-file <path>
-hypit-reference-video-tools compare_reconstruction --reference-id <reference-id> --shot-id <shot-id> --image <path>
+hypit-reference-video-tools compare_reconstruction --reference-id <reference-id> --shot-id <shot-id> --image <path> [--element <id>]
 ```
 
 `--observer` is answered once, before anything runs, and `observers.md` owns that question.
@@ -35,6 +35,8 @@ list_svml_packages
   this has no attempt ceiling; a target Studio cannot trace is not done.
   Waiting on unrun Providers is a pass, not a failure
 → read reconstruction-loop.md, then render each authored element and compare it
+→ run reconstruction-check (index.md) and keep going until it passes; it names
+  every locally-drawn element that has never been compared
 ```
 
 ## prepare_reference
@@ -157,6 +159,11 @@ Ask about visible attributes. Never ask which component to use.
 and returns a description of their visible differences. It is never told which image is which, what
 was built, or how; `--question` may narrow it to one region of the picture and nothing else. Results
 are not cached. `reconstruction-loop.md` governs when and how to use it.
+
+`--element` names the reconstructed element the image draws. It never reaches the observer — the
+comparison stays as blind as it is without it — and is written to the reference's `comparisons.jsonl`
+so `reconstruction-check` can tell an element that was looked at from one that never was. A
+comparison run without it is not credited to any element.
 
 The reference has one observer for its whole life, and this command goes through the same one that
 wrote its observations. On the `gemini` observer that observer is not you, and opening the reference

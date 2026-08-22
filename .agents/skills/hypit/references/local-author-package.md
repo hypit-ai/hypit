@@ -103,6 +103,14 @@ Implement the parts required by the behavior, including:
 - lowering, Fragment or renderer implementation needed to produce the declared output;
 - README and a preview for each visual Surface.
 
+The README opens with the gap this package exists to fill, in one sentence naming the installed
+package that came closest, the property it does not carry, and what the reference needs instead —
+"`media-track` clips a Frame square or rounded, and the reference's player is a circle." The
+enumeration `../vocabulary.md` requires happened before the first line of code was written; without
+that sentence it survives nowhere, and the next reader cannot tell a proven gap from an assumed one.
+A package whose README cannot state its gap that concretely is usually a package that did not need to
+exist.
+
 Choose raw versus structured Surface, timing dependencies, ProgramSpace, Frame, SemanticTrack,
 Artifact, Recipe and output Types from the observed behavior and closest package architecture. A
 declaration-only or Surface-only package is incomplete.
@@ -165,6 +173,13 @@ nothing.
   is most of its life.
 - A component that cannot render on its own cannot produce the preview image its Surface owes. Treat
   a missing preview as evidence of this mistake rather than a step to skip.
+- **The render harness takes its state as arguments.** The Surface preview is one picture: every
+  feature on, at whatever moment shows the component best. `reconstruction-loop.md` needs a different
+  picture for every reference shot — the state that shot happens to show, at a matching moment — and
+  a component appears across several. A harness with its state and frame written into it produces the
+  catalogue picture and nothing else, and the next agent reuses that picture for a comparison it does
+  not fit. Give it `--out`, the frame, and whichever of the component's own switches the reference
+  varies; the preview then becomes one invocation of it rather than its only purpose.
 
 ## Freeze the Types before writing in parallel
 
