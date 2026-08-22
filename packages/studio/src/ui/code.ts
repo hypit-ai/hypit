@@ -1,6 +1,6 @@
 import type { Range, StudioSnapshot } from "../shared.js";
 import { icon, setIcon } from "./icons.js";
-import { markerTones } from "./markers.js";
+import { intentTones } from "./markers.js";
 import { tokenizeSvml } from "./syntax.js";
 import type { Token } from "./syntax.js";
 
@@ -9,7 +9,7 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 export type Highlight = {
   readonly range: Range;
   /**
-   * `element` outlines the authored tag, `binding` the Script marker, and
+   * `element` outlines the authored tag, `binding` the author's intent, and
    * `onscreen` a tag that is merely drawn at this frame rather than chosen.
    */
   readonly tone: "element" | "binding" | "onscreen";
@@ -64,15 +64,8 @@ function roundedRangePath(points: readonly { x: number; y: number }[], radius = 
   }).join(" ")} Z`;
 }
 
-/**
- * The gutter holds one bar per nesting level. `GUTTER_LEFT` is where the
- * outermost bar starts, past the right edge of a three-digit line number.
- */
-const GUTTER_LEFT = 27;
-const GUTTER_STEP = 3;
-const GUTTER_LEVELS = 4;
-/** Where a range outline may begin: clear of every bar the gutter can hold. */
-const GUTTER_TEXT = GUTTER_LEFT + GUTTER_STEP * GUTTER_LEVELS + 2;
+/** Keep source-range outlines clear of the line-number column. */
+const RANGE_LEFT = 41;
 
 export function createCodePane(): CodePane {
   const element = document.createElement("section");
@@ -229,9 +222,8 @@ export function createCodePane(): CodePane {
       const end = caret(item.range.end, "end");
       if (start === undefined || end === undefined) continue;
       const lineHeight = start.height || Number.parseFloat(getComputedStyle(scroll).lineHeight) || 20;
-      // The outline's left edge sits clear of the gutter bars rather than over
-      // the first characters of the code.
-      const left = GUTTER_TEXT;
+      // The outline starts at the code column rather than over the line number.
+      const left = RANGE_LEFT;
       const right = width - 10;
       const startX = Math.max(left, start.x - 3);
       const endX = Math.max(left, end.x + 3);
@@ -272,7 +264,7 @@ export function createCodePane(): CodePane {
         editingRevision = snapshot.revision;
       }
       const tokens: readonly Token[] = tokenizeSvml(source);
-      const tones = markerTones(snapshot);
+      const tones = intentTones(snapshot);
       lines = [];
       const fragment = document.createDocumentFragment();
       let offset = 0;
@@ -328,57 +320,6 @@ export function createCodePane(): CodePane {
         fragment.append(row);
         lines.push({ element: row, code, start: lineStart, end: lineEnd, pieces });
         offset = lineEnd + 1;
-      }
-
-      // Mark every line that can be clicked, at the level it belongs to. Only a
-      // small part of a Source binds to anything, so what is clickable has to be
-      // visible standing still rather than discovered by sweeping the pointer
-      // over it — and a Script range is as clickable as an authored element.
-      const clickable: { range: Range; tone: number | undefined }[] = [];
-      for (const segment of snapshot.script?.segments ?? []) {
-        clickable.push({ range: segment.range, tone: tones.get(segment.id) });
-      }
-      for (const selection of snapshot.script?.selections ?? []) {
-        clickable.push({
-          range: { start: selection.open.start, end: selection.close.end },
-          tone: tones.get(selection.id),
-        });
-      }
-      for (const track of snapshot.tracks) {
-        for (const clip of track.clips) {
-          if (clip.elementRange === undefined) continue;
-          clickable.push({ range: clip.elementRange, tone: tones.get(clip.authoredId) });
-        }
-      }
-      for (const line of lines) {
-        // Widest first: a bar per level the line sits inside, laid left to
-        // right so the enclosing pair stays visible beside the nested one
-        // instead of being covered by it.
-        // Several clips can be drawn from one tag - a Caption Track is one tag
-        // and a dozen cues - and a bar per clip would say the line is nested a
-        // dozen deep. One bar per distinct range is what nesting means.
-        const distinct = new Map<string, { range: Range; tone: number | undefined }>();
-        for (const item of clickable) {
-          if (line.end < item.range.start || line.start > item.range.end) continue;
-          const key = `${item.range.start}:${item.range.end}`;
-          if (!distinct.has(key)) distinct.set(key, item);
-        }
-        const covering = [...distinct.values()]
-          .sort((left, right) =>
-            (right.range.end - right.range.start) - (left.range.end - left.range.start))
-          .slice(0, GUTTER_LEVELS);
-        if (covering.length === 0) continue;
-        line.element.classList.add("bound");
-        // The tightest range is what the line means, so the line-number hover
-        // colour still follows the innermost level.
-        const innermost = covering[covering.length - 1]!;
-        if (innermost.tone !== undefined) line.element.classList.add(`tone-${innermost.tone}`);
-        for (const [level, item] of covering.entries()) {
-          const bar = document.createElement("span");
-          bar.className = item.tone === undefined ? "gutter-bar" : `gutter-bar tone-${item.tone}`;
-          bar.style.left = `${GUTTER_LEFT + level * GUTTER_STEP}px`;
-          line.element.append(bar);
-        }
       }
 
       scroll.replaceChildren(canvas, fragment);

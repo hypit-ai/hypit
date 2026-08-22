@@ -3,7 +3,7 @@ import { createCodePane } from "./code.js";
 import { setIcon } from "./icons.js";
 import { createHandle } from "./resize.js";
 import type { Highlight } from "./code.js";
-import { liveRanges, markerTones, spanAtOffset } from "./markers.js";
+import { intentAtOffset, intentTones, liveRanges, spanAtOffset } from "./markers.js";
 import { clipAtOffset, createStore } from "./selection.js";
 import { createStage } from "./stage.js";
 import { createTimeline } from "./timeline.js";
@@ -201,6 +201,59 @@ function renderSemanticInspector(snapshot: StudioSnapshot, segmentId: string): v
   ]));
 }
 
+function renderSemanticSelectionInspector(snapshot: StudioSnapshot, selectionId: string): void {
+  const selection = snapshot.semantic.selections.find((item) => item.id === selectionId);
+  if (selection === undefined) { inspector.replaceChildren(); return; }
+  const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
+  const durationFrames = selection.endFrameExclusive - selection.startFrame;
+  const source = snapshot.script?.selections.find((item) => item.id === selectionId);
+  const hero = document.createElement("div");
+  hero.className = "selection-hero";
+  hero.innerHTML = `
+    <span class="selection-icon" data-selection-icon></span>
+    <div class="selection-title"><strong></strong><small></small></div>
+    <span class="selection-kind">Selection</span>`;
+  setIcon(hero.querySelector("[data-selection-icon]")!, "link");
+  hero.querySelector("strong")!.textContent = selection.id;
+  hero.querySelector("small")!.textContent = "Author intent";
+  inspector.replaceChildren(hero,
+    group("Timing", [
+      property("Start", `${selection.startFrame}f`, "property-number"),
+      property("End", `${selection.endFrameExclusive}f`, "property-number"),
+      property("Duration", `${durationFrames}f`, "property-number"),
+      property("Seconds", `${(durationFrames / fps).toFixed(2)}s`, "property-number"),
+    ]),
+    ...(source === undefined ? [] : [group("Source", [
+      property("Range", `${source.open.start}–${source.close.end}`, "property-wide property-code"),
+    ])]),
+  );
+}
+
+function renderSemanticMomentInspector(snapshot: StudioSnapshot, momentId: string): void {
+  const moment = snapshot.semantic.moments.find((item) => item.id === momentId);
+  if (moment === undefined) { inspector.replaceChildren(); return; }
+  const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
+  const source = snapshot.script?.moments.find((item) => item.id === momentId);
+  const hero = document.createElement("div");
+  hero.className = "selection-hero";
+  hero.innerHTML = `
+    <span class="selection-icon" data-selection-icon></span>
+    <div class="selection-title"><strong></strong><small></small></div>
+    <span class="selection-kind">Moment</span>`;
+  setIcon(hero.querySelector("[data-selection-icon]")!, "moment");
+  hero.querySelector("strong")!.textContent = moment.id;
+  hero.querySelector("small")!.textContent = "Author intent";
+  inspector.replaceChildren(hero,
+    group("Timing", [
+      property("Frame", `${moment.frame}f`, "property-number"),
+      property("Seconds", `${(moment.frame / fps).toFixed(2)}s`, "property-number"),
+    ]),
+    ...(source === undefined ? [] : [group("Source", [
+      property("Range", `${source.range.start}–${source.range.end}`, "property-wide property-code"),
+    ])]),
+  );
+}
+
 // The word being spoken at the playhead, which is the point of carrying token
 // timings at all: it ties the Script text to the frame on screen.
 store.subscribe(({ snapshot, playhead }) => {
@@ -218,19 +271,27 @@ store.subscribe(({ snapshot, selection, playhead }) => {
   const chosenSegment = selection.kind === "semantic-segment"
     ? snapshot.semantic.segments.find((item) => item.id === selection.segmentId)
     : undefined;
+  const chosenSelection = selection.kind === "semantic-selection"
+    ? snapshot.semantic.selections.find((item) => item.id === selection.selectionId)
+    : undefined;
+  const chosenMoment = selection.kind === "semantic-moment"
+    ? snapshot.semantic.moments.find((item) => item.id === selection.momentId)
+    : undefined;
   // Rebuilding this every frame of playback would be DOM churn for no change.
-  const describes = `${snapshot.revision}:${chosen?.id ?? chosenSegment?.id ?? ""}`;
+  const describes = `${snapshot.revision}:${selection.kind}:${chosen?.id ?? chosenSegment?.id ?? chosenSelection?.id ?? chosenMoment?.id ?? ""}`;
   if (describes !== described) {
     described = describes;
     if (chosenSegment !== undefined) renderSemanticInspector(snapshot, chosenSegment.id);
+    else if (chosenSelection !== undefined) renderSemanticSelectionInspector(snapshot, chosenSelection.id);
+    else if (chosenMoment !== undefined) renderSemanticMomentInspector(snapshot, chosenMoment.id);
     else renderInspector(snapshot, chosen?.id);
   }
 
   // Every Selection the playhead is inside is outlined, not only what was
   // clicked, and not only what has a clip. A Selection inside another Selection
   // is still inside it, so the enclosing pair stays outlined while the inner one
-  // is — that nesting is the whole point of the markers.
-  const tones = markerTones(snapshot);
+  // is — that nesting is the whole point of the authored intents.
+  const tones = intentTones(snapshot);
   const live = store.clipsAt(playhead.frame);
   const highlights: Highlight[] = liveRanges(snapshot, playhead.frame).map((selection) => ({
     range: selection.range,
@@ -248,21 +309,32 @@ store.subscribe(({ snapshot, selection, playhead }) => {
   if (chosenSegment?.range !== undefined) {
     highlights.push({ range: chosenSegment.range, tone: "element" });
   }
+  const sourceSelection = chosenSelection === undefined
+    ? undefined
+    : snapshot.script?.selections.find((item) => item.id === chosenSelection.id);
+  const sourceMoment = chosenMoment === undefined
+    ? undefined
+    : snapshot.script?.moments.find((item) => item.id === chosenMoment.id);
+  const chosenIntentRange = sourceSelection === undefined
+    ? sourceMoment?.range
+    : { start: sourceSelection.open.start, end: sourceSelection.close.end };
+  if (chosenIntentRange !== undefined) highlights.push({ range: chosenIntentRange, tone: "binding" });
 
   // Scroll only when the selection actually moved, and never toward the pane
   // the author is pointing at: following the playhead every frame would drag
   // the source out from under whoever is reading it.
   const focused = chosen === undefined && chosenSegment === undefined
+    && chosenSelection === undefined && chosenMoment === undefined
     ? ""
-    : `${snapshot.revision}:${chosen?.id ?? chosenSegment?.id}`;
+    : `${snapshot.revision}:${selection.kind}:${chosen?.id ?? chosenSegment?.id ?? chosenSelection?.id ?? chosenMoment?.id}`;
   const moved = focused.length > 0 && focused !== scrolledTo;
   scrolledTo = focused;
   code.highlight(highlights, moved && origin !== "code");
 });
 
 // Clicking a marked region in the source selects what it binds and looks at the
-// instant it covers. The lines that bind something carry a coloured gutter bar,
-// so what is clickable is visible standing still.
+// instant it covers. The source token and range overlay carry that relationship;
+// the line-number gutter stays quiet.
 code.element.addEventListener("click", (event) => {
   if ((event.target as HTMLElement | null)?.closest("button, textarea") !== null) return;
   const state = store.current();
@@ -271,6 +343,15 @@ code.element.addEventListener("click", (event) => {
   // Below the last line, or in the heading: nothing is being pointed at.
   if (offset === undefined) {
     store.clearSelection();
+    return;
+  }
+  const intent = intentAtOffset(state.snapshot, offset);
+  if (intent?.kind === "selection") {
+    store.selectSemanticSelection(intent.id, "code");
+    return;
+  }
+  if (intent?.kind === "moment") {
+    store.selectSemanticMoment(intent.id, "code");
     return;
   }
   const clip = clipAtOffset(state.snapshot, offset);

@@ -195,7 +195,13 @@ export function createTimeline(store: Store): Timeline {
     ) !== null;
     pointerDownX = event.clientX;
     pointerArmed = true;
-    try { lanes.setPointerCapture(event.pointerId); } catch { /* pointer remains local */ }
+    // Let semantic children receive their native click. Capturing every
+    // pointer here retargets the later click to `.lanes`, which made segment
+    // and selection buttons appear to be dead zones. Blank-space scrubbing
+    // still uses capture so it can continue outside the lane.
+    if (!pointerDownOnItem) {
+      try { lanes.setPointerCapture(event.pointerId); } catch { /* pointer remains local */ }
+    }
     if (!pointerDownOnItem) {
       store.clearSelection();
       store.seek(frameAt(event.clientX), "timeline");
@@ -402,7 +408,7 @@ export function createTimeline(store: Store): Timeline {
       kind: "segment" | "word" | "selection" | "moment";
     }[] = [];
 
-    const bands = ["segment", "word", "marker"] as const;
+    const bands = ["segment", "word", "intent"] as const;
     for (const [index, kind] of bands.entries()) {
       const band = document.createElement("div");
       band.className = `semantic-band semantic-band-${kind}`;
@@ -411,7 +417,7 @@ export function createTimeline(store: Store): Timeline {
     }
     const segmentBand = lane.querySelector<HTMLElement>(".semantic-band-segment")!;
     const wordBand = lane.querySelector<HTMLElement>(".semantic-band-word")!;
-    const markerBand = lane.querySelector<HTMLElement>(".semantic-band-marker")!;
+    const intentBand = lane.querySelector<HTMLElement>(".semantic-band-intent")!;
 
     for (const segment of snapshot.semantic.segments) {
       const from = place(segment.startFrame, snapshot.space.frameCount, zoom.window());
@@ -441,9 +447,11 @@ export function createTimeline(store: Store): Timeline {
       segmentDuration.textContent = `${segment.endFrameExclusive - segment.startFrame}f`;
       head.append(segmentLabel, segmentDuration);
       node.append(head);
-      node.addEventListener("pointerdown", (event) => {
+      node.addEventListener("click", (event) => {
+        event.stopPropagation();
         if ((event.target as Element).closest(".semantic-word") !== null) return;
         store.selectSemanticSegment(segment.id, "timeline");
+        store.seek(segment.startFrame, "timeline");
       });
       node.addEventListener("dblclick", (event) => {
         event.stopPropagation();
@@ -464,8 +472,7 @@ export function createTimeline(store: Store): Timeline {
       const wordFrom = place(token.startFrame, snapshot.space.frameCount, zoom.window());
       const wordTo = place(token.endFrameExclusive, snapshot.space.frameCount, zoom.window());
       if (wordTo <= 0 || wordFrom >= 1) continue;
-      const word = document.createElement("button");
-      word.type = "button";
+      const word = document.createElement("span");
       word.className = "semantic-cell semantic-word";
       word.dataset.semanticToken = token.id;
       word.style.left = `${wordFrom * 100}%`;
@@ -478,8 +485,8 @@ export function createTimeline(store: Store): Timeline {
       const widthPx = Math.max(0, wordTo - wordFrom) * laneWidth;
       word.classList.toggle("label-hidden",
         measuredText(token.text, "500 11px -apple-system, system-ui, Segoe UI, sans-serif") + 18 > widthPx);
-      word.addEventListener("pointerdown", () => {
-        store.selectSemanticSegment(token.segmentId, "timeline");
+      word.addEventListener("click", (event) => {
+        event.stopPropagation();
         store.seek(token.startFrame, "timeline");
       });
       nextSemanticNodes.push({ node: word, id: token.id, start: token.startFrame, end: token.endFrameExclusive, kind: "word" });
@@ -489,8 +496,11 @@ export function createTimeline(store: Store): Timeline {
       const from = place(selection.startFrame, snapshot.space.frameCount, zoom.window());
       const to = place(selection.endFrameExclusive, snapshot.space.frameCount, zoom.window());
       if (to <= 0 || from >= 1) continue;
-      const node = document.createElement("span");
+      const node = document.createElement("button");
+      node.type = "button";
       node.className = "semantic-cell semantic-selection";
+      node.tabIndex = 0;
+      node.setAttribute("aria-label", `Selection ${selection.id}`);
       node.style.left = `${from * 100}%`;
       node.style.width = `max(2px, calc(${Math.max(0, to - from) * 100}% - ${itemMetrics.gapPx}px))`;
       node.title = `${selection.id} · ${selection.startFrame}-${selection.endFrameExclusive}f`;
@@ -504,17 +514,29 @@ export function createTimeline(store: Store): Timeline {
       const selectionWidthPx = Math.max(0, to - from) * laneWidth;
       node.classList.toggle("label-hidden",
         measuredText(selection.id, "500 11px -apple-system, system-ui, Segoe UI, sans-serif") + 18 > selectionWidthPx);
-      markerBand.append(node);
+      node.addEventListener("click", (event) => {
+        event.stopPropagation();
+        store.selectSemanticSelection(selection.id, "timeline");
+        store.seek(selection.startFrame, "timeline");
+      });
+      intentBand.append(node);
       nextSemanticNodes.push({ node, id: selection.id, start: selection.startFrame, end: selection.endFrameExclusive, kind: "selection" });
     }
     for (const moment of snapshot.semantic.moments) {
       const at = place(moment.frame, snapshot.space.frameCount, zoom.window());
       if (at < 0 || at > 1) continue;
-      const node = document.createElement("span");
+      const node = document.createElement("button");
+      node.type = "button";
       node.className = "semantic-moment";
+      node.tabIndex = 0;
+      node.setAttribute("aria-label", `Moment ${moment.id}`);
       node.style.left = `${at * 100}%`;
       node.title = `${moment.id} · ${moment.frame}f`;
-      markerBand.append(node);
+      node.addEventListener("click", (event) => {
+        event.stopPropagation();
+        store.selectSemanticMoment(moment.id, "timeline");
+      });
+      intentBand.append(node);
       nextSemanticNodes.push({ node, id: moment.id, start: moment.frame, end: moment.frame + 1, kind: "moment" });
     }
     rows.append(lane);
@@ -680,10 +702,18 @@ export function createTimeline(store: Store): Timeline {
       item.node.classList.toggle("live", head.frame >= item.start && head.frame < item.end);
     }
     for (const item of semanticNodes) {
-      item.node.classList.toggle("live", item.kind === "segment" && head.frame >= item.start && head.frame < item.end);
+      item.node.classList.toggle("live",
+        (item.kind === "segment" || item.kind === "selection")
+        && head.frame >= item.start && head.frame < item.end);
       item.node.classList.toggle("current", item.kind === "word" && head.frame >= item.start && head.frame < item.end);
-      item.node.classList.toggle("selected", item.kind === "segment"
-        && selection.kind === "semantic-segment" && selection.segmentId === item.id);
+      const selected = (item.kind === "segment"
+        && selection.kind === "semantic-segment" && selection.segmentId === item.id)
+        || (item.kind === "selection"
+          && selection.kind === "semantic-selection" && selection.selectionId === item.id)
+        || (item.kind === "moment"
+          && selection.kind === "semantic-moment" && selection.momentId === item.id);
+      item.node.classList.toggle("selected", selected);
+      if (item.kind !== "word") item.node.setAttribute("aria-pressed", String(selected));
     }
   };
 
