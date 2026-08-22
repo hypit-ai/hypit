@@ -32,7 +32,8 @@ import { loadStudioRun } from "@hypit/studio/src/run.js";
 import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
 import type { SvsRecipe } from "@hypit/svs";
 
-import { assert } from "./media.js";
+import { assert, round } from "./media.js";
+import type { TranscriptFile } from "./types.js";
 
 /** A frame range of the stand-in program, half-open in the Script's own order. */
 export type AuthoringWindow = {
@@ -56,10 +57,27 @@ export type StandInTake = {
   readonly take: StandInTakeValue;
 };
 
+/**
+ * What timed one Segment's stand-in, and how long that clock said it runs.
+ *
+ * `seconds` is the clock's own answer. `frames` is what the Segment occupies in the program, which is
+ * shorter for a Segment outside the window being drawn.
+ */
+export type StandInTiming = {
+  readonly segment: string;
+  readonly basis: "reference" | "estimate";
+  readonly seconds: number;
+  readonly frames: number;
+  readonly tokens: number;
+  /** Script words the reference's transcript matched. Zero on the estimate basis. */
+  readonly matched: number;
+};
+
 export type StandInTakes = {
   readonly takes: readonly StandInTake[];
   readonly selections: ReadonlyMap<string, AuthoringWindow>;
   readonly frameCount: number;
+  readonly timing: readonly StandInTiming[];
 };
 
 /** Which Segment the render is looking at, named directly or through a Selection's words. */
@@ -177,25 +195,32 @@ function policiesBySegment(svml: string, sheets: ReadonlyMap<string, SvsRecipe>)
 const SILENT_AUDIO: BlobRef = { kind: "blob", digest: `sha256:${"0".repeat(64)}` as Digest, size: 1, mediaType: "audio/wav" };
 
 /**
- * Build a stand-in SemanticTake for every Segment a Source declares, from the Source alone.
+ * Build a stand-in SemanticTake for every Segment a Source declares.
  *
  * A Track timed against speech cannot be projected before the speech exists, and on this route it
- * does not exist: the Build has not run. What the Source does hold is the words themselves and the
- * estimator it already trusts to size its own generations — `estimate:Speech` with a policy Recipe.
- * Running that estimator here produces the same numbers the Source used to order its takes, so this
- * introduces no second clock; it reads the one already written down.
+ * does not exist: the Build has not run. Two clocks can stand in for it, and each Segment is sized by
+ * whichever one can speak for it.
  *
- * What the result is good for: which elements are on screen together, where each sits, at what size
- * and colour. Those follow from word ranges and Recipe values and are exact. What it is not good for
- * is real timing — the delivered speech is not the estimate, and anything measured in seconds waits
- * for `production-gates.md` Gate 3.
+ * **The reference's own words.** For a reconstruction, the words have already been spoken once and
+ * timed: the Script was transcribed from the reference video, and `prepare_reference` wrote the
+ * seconds of every word of it. A Segment timed this way runs for exactly as long as the reference
+ * spends on those words, and every window inside it does too, which is what a progressive reveal, a
+ * typewriter, a staggered row or an enter animation is compared on.
  *
- * Tokens are laid across the Segment in proportion to the same syllable count the estimator uses, so
- * a long word occupies more of the window than a short one and the ordering is the Script's.
+ * **`estimate:Speech` with a policy Recipe.** The estimator the Source already trusts to size its own
+ * generations. Running it here produces the same numbers the Source used to order its takes, so it
+ * introduces no third clock; it reads one already written down. This is what sizes a Segment the
+ * reference has nothing to say about, and what sizes every Segment when no reference is given.
+ *
+ * Word ranges and Recipe values are exact on either clock, so which elements are on screen together,
+ * where each sits, at what size and colour follow from the Source itself. Alignment against the
+ * speech a Build synthesizes waits for `production-gates.md` Gate 3.
  *
  * @param svmlPath  the Author SVML this Source is written in
  * @param frameRate the Program's frame rate, as a whole number of frames per second
- * @returns one `{ segmentId, take }` per Segment, in Script order
+ * @param focus     which Segment the render is looking at
+ * @param reference the reference's per-word times, from `referenceWords`
+ * @returns one `{ segmentId, take }` per Segment in Script order, and what timed each of them
  */
 /** The Segment a Selection is marked in, so a window named by Selection can still name the cut. */
 function segmentOfSelection(svml: string, selection: string | undefined): string | undefined {
@@ -216,7 +241,257 @@ function segmentOfSelection(svml: string, selection: string | undefined): string
   return found;
 }
 
-export async function standInTakes(svmlPath: string, frameRate: number, focus: StandInFocus = {}): Promise<StandInTakes> {
+/**
+ * The Author SVML a Run declares, both as it is written and as a path.
+ *
+ * Studio's unit of work is the Run, so everything on this route is handed one and reads the Source
+ * back out of it. `declared` is what the Run wrote, which a derived Run has to repoint.
+ */
+export async function authorSource(runPath: string): Promise<{ readonly path: string; readonly declared: string }> {
+  const runSource = await readFile(runPath, "utf8").catch(() => undefined);
+  assert(runSource !== undefined, `cannot read ${runPath}`);
+  const declared = /<author\s+source="([^"]+)"/u.exec(runSource)?.[1];
+  assert(declared !== undefined, `${runPath} declares no <author source="…"/>`);
+  return { path: resolve(dirname(runPath), declared), declared };
+}
+
+/** One word of a reference's transcript, at the seconds the reference speaks it. */
+export type ReferenceWord = {
+  readonly text: string;
+  readonly startSeconds: number;
+  readonly endSeconds: number;
+};
+
+/** Where `prepare_reference` writes a reference's per-word times. */
+export function referenceRoot(): string {
+  return join(repositoryRoot(), ".hypit", "reference-video-tools");
+}
+
+/**
+ * The per-word times a prepared reference was transcribed to, in the order it speaks them.
+ *
+ * Words the aligner left untimed are dropped: a word with no seconds against it cannot anchor
+ * anything, and carrying it would shift every index after it away from the clock.
+ */
+export async function referenceWords(reference: string): Promise<readonly ReferenceWord[]> {
+  const path = join(referenceRoot(), reference, "transcript.json");
+  const text = await readFile(path, "utf8").catch(() => undefined);
+  assert(text !== undefined, `reference ${reference} has no transcript at ${path}; run prepare_reference first`);
+  const file = JSON.parse(text) as TranscriptFile;
+  const words = file.passages.flatMap((passage) => passage.words).flatMap((word) =>
+    word.start_seconds === undefined || word.end_seconds === undefined
+      ? []
+      : [{ text: word.text, startSeconds: word.start_seconds, endSeconds: word.end_seconds }]);
+  assert(words.length > 0, `reference ${reference} has a transcript with no timed words`);
+  return words;
+}
+
+/** Lowercase letters and digits only, so `AI,` and `ai` are the same word and `11 labs` is two. */
+function normalizeWord(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/gu, "");
+}
+
+type MatchingBlock = { readonly left: number; readonly right: number; readonly size: number };
+
+/**
+ * The longest run of words that appears in both sequences, within the given ranges.
+ *
+ * `lengths` carries, for each position in the right sequence, how long a run ends there against the
+ * word just read from the left. Reading one left word at a time turns the whole search into two
+ * passes rather than a comparison of every pair.
+ */
+function longestRun(
+  left: readonly string[], right: readonly string[],
+  leftFrom: number, leftTo: number, rightFrom: number, rightTo: number,
+  positions: ReadonlyMap<string, readonly number[]>,
+): MatchingBlock {
+  let bestLeft = leftFrom;
+  let bestRight = rightFrom;
+  let bestSize = 0;
+  let lengths = new Map<number, number>();
+  for (let index = leftFrom; index < leftTo; index += 1) {
+    const next = new Map<number, number>();
+    for (const at of positions.get(left[index]!) ?? []) {
+      if (at < rightFrom) continue;
+      if (at >= rightTo) break;
+      const run = (lengths.get(at - 1) ?? 0) + 1;
+      next.set(at, run);
+      if (run > bestSize) {
+        bestSize = run;
+        bestLeft = index - run + 1;
+        bestRight = at - run + 1;
+      }
+    }
+    lengths = next;
+  }
+  return { left: bestLeft, right: bestRight, size: bestSize };
+}
+
+/**
+ * Which Script word is which transcript word, as runs that appear in both in the same order.
+ *
+ * The two sequences say the same thing and are not the same list. A transcriber writes `11 labs`
+ * where the Script writes `elevenlabs`, splits a word in two, or hears one that is not there, and a
+ * single insertion is enough to put a positional pairing a word out for the whole rest of the
+ * reference — on this project it drops the pairing from 96% of words to 41%. So the two are aligned:
+ * the longest run common to both is taken as fixed, and the stretches on either side of it are
+ * aligned the same way, down to the words that do not appear on both sides. Anchoring on runs rather
+ * than on single words is what keeps a common word like `the` from pairing with a `the` elsewhere in
+ * the reference.
+ */
+function alignWords(script: readonly string[], reference: readonly string[]): ReadonlyMap<number, number> {
+  const positions = new Map<string, number[]>();
+  for (const [index, word] of reference.entries()) {
+    const seen = positions.get(word);
+    if (seen === undefined) positions.set(word, [index]);
+    else seen.push(index);
+  }
+  const pairs = new Map<number, number>();
+  const pending: (readonly [number, number, number, number])[] = [[0, script.length, 0, reference.length]];
+  while (pending.length > 0) {
+    const [leftFrom, leftTo, rightFrom, rightTo] = pending.pop()!;
+    const block = longestRun(script, reference, leftFrom, leftTo, rightFrom, rightTo, positions);
+    if (block.size === 0) continue;
+    for (let step = 0; step < block.size; step += 1) pairs.set(block.left + step, block.right + step);
+    if (leftFrom < block.left && rightFrom < block.right) pending.push([leftFrom, block.left, rightFrom, block.right]);
+    const leftEnd = block.left + block.size;
+    const rightEnd = block.right + block.size;
+    if (leftEnd < leftTo && rightEnd < rightTo) pending.push([leftEnd, leftTo, rightEnd, rightTo]);
+  }
+  return pairs;
+}
+
+type WordSpan = { readonly start: number; readonly end: number };
+
+/**
+ * A time for every Script word, from the ones that matched.
+ *
+ * A matched word takes the seconds the reference speaks it at. A run of unmatched words is spread
+ * evenly across the stretch between the matched words on either side of it — the reference was
+ * saying something there, and what it was saying is the run. A run at either end of the Script has a
+ * matched word on one side only, so it takes the reference words immediately outside that one, at a
+ * word apiece.
+ */
+function wordSpans(count: number, pairs: ReadonlyMap<number, number>, reference: readonly ReferenceWord[]): readonly WordSpan[] {
+  const anchors = [...pairs.keys()].sort((left, right) => left - right);
+  const spans: WordSpan[] = new Array(count) as WordSpan[];
+  for (const index of anchors) {
+    const word = reference[pairs.get(index)!]!;
+    spans[index] = { start: word.startSeconds, end: word.endSeconds };
+  }
+  for (let position = 0; position <= anchors.length; position += 1) {
+    const before = position === 0 ? undefined : anchors[position - 1]!;
+    const after = position === anchors.length ? undefined : anchors[position]!;
+    const from = before === undefined ? 0 : before + 1;
+    const to = after === undefined ? count : after;
+    if (from >= to) continue;
+    const run = to - from;
+    let start: number;
+    let end: number;
+    if (before !== undefined && after !== undefined) {
+      start = reference[pairs.get(before)!]!.endSeconds;
+      end = reference[pairs.get(after)!]!.startSeconds;
+    } else if (after !== undefined) {
+      const at = pairs.get(after)!;
+      start = reference[Math.max(0, at - run)]!.startSeconds;
+      end = reference[at]!.startSeconds;
+    } else {
+      const at = pairs.get(before!)!;
+      start = reference[at]!.endSeconds;
+      end = reference[Math.min(reference.length - 1, at + run)]!.endSeconds;
+    }
+    const step = (end - start) / run;
+    for (let offset = 0; offset < run; offset += 1) {
+      spans[from + offset] = { start: start + step * offset, end: start + step * (offset + 1) };
+    }
+  }
+  return spans;
+}
+
+/**
+ * The stretch of a reference that speaks one Segment's or one Selection's words.
+ *
+ * A render covers a word range; a shot is a cut in the picture. The two are unrelated stretches of
+ * the same video, and a Segment routinely runs across five of them. So a comparison against the
+ * reference finds its stretch the way every other window on this route is found — the Script's own
+ * tokens, aligned against the transcript — and reads the seconds off the words it lands on.
+ *
+ * `first` and `last` carry the end words' own spans, which is what an end can be moved inside of
+ * without the range gaining or losing a whole word.
+ */
+export type SpokenRange = {
+  readonly startSeconds: number;
+  readonly endSeconds: number;
+  readonly first: ReferenceWord;
+  readonly last: ReferenceWord;
+  readonly words: number;
+  /** How many of those words the transcript carries. The rest take their seconds from `wordSpans`. */
+  readonly matched: number;
+};
+
+export async function spokenRange(
+  svmlPath: string,
+  focus: StandInFocus,
+  reference: readonly ReferenceWord[],
+): Promise<SpokenRange> {
+  const svml = await readFile(svmlPath, "utf8");
+  const body = scriptBody(svml);
+  const parsed = parseScript(svmlPath, body.text, body.offset);
+
+  // Which Script words the range covers. A Selection is unioned over its occurrences, the same way
+  // its frame window is, since one id can be marked in several places.
+  let from: number | undefined;
+  let to: number | undefined;
+  if (focus.selection !== undefined) {
+    const selection = parsed.selections.find((item) => item.id === focus.selection);
+    assert(selection !== undefined, `the Script marks no Selection ${focus.selection}`);
+    for (const occurrence of selection.occurrences) {
+      from = Math.min(from ?? Infinity, occurrence.open.boundary.tokenIndex);
+      to = Math.max(to ?? 0, occurrence.close.boundary.tokenIndex);
+    }
+  } else {
+    assert(focus.segment !== undefined, "name a Segment or a Selection to read a word range from");
+    const segment = parsed.segments.find((item) => item.id === focus.segment);
+    assert(segment !== undefined, `the Script has no Segment ${focus.segment}`);
+    from = segment.tokenStart;
+    to = segment.tokenEndExclusive;
+  }
+  const start = from ?? 0;
+  const end = to ?? 0;
+  assert(start < end, `${focus.selection ?? focus.segment} covers no words`);
+
+  const pairs = alignWords(
+    parsed.tokens.map((token) => normalizeWord(token.text)),
+    reference.map((word) => normalizeWord(word.text)));
+  let matched = 0;
+  for (let index = start; index < end; index += 1) if (pairs.has(index)) matched += 1;
+  // Without a matched word inside the range, its seconds are an interpolation between whatever the
+  // reference was saying on either side of it, which is a stretch of the video nobody asked for.
+  assert(matched > 0,
+    `the reference's transcript carries none of the words of ${focus.selection ?? focus.segment}, so the seconds it spoke them at are unknown`);
+
+  const spans = wordSpans(parsed.tokens.length, pairs, reference);
+  const word = (index: number): ReferenceWord => ({
+    text: parsed.tokens[index]!.text,
+    startSeconds: spans[index]!.start,
+    endSeconds: spans[index]!.end,
+  });
+  return {
+    startSeconds: spans[start]!.start,
+    endSeconds: spans[end - 1]!.end,
+    first: word(start),
+    last: word(end - 1),
+    words: end - start,
+    matched,
+  };
+}
+
+export async function standInTakes(
+  svmlPath: string,
+  frameRate: number,
+  focus: StandInFocus = {},
+  reference: readonly ReferenceWord[] = [],
+): Promise<StandInTakes> {
   const svml = await readFile(svmlPath, "utf8");
   const body = scriptBody(svml);
   const parsed = parseScript(svmlPath, body.text, body.offset);
@@ -237,29 +512,74 @@ export async function standInTakes(svmlPath: string, frameRate: number, focus: S
       : parsed.segments.find((segment) => token >= segment.tokenStart && token < segment.tokenEndExclusive)?.id;
   }
 
+  // Which Script word the reference speaks when. The Script was transcribed from that video, so the
+  // words are the same words in the same order, and a stand-in timed from them runs at the pace the
+  // reconstruction is being compared against.
+  const words = reference.length === 0
+    ? undefined
+    : (() => {
+      const pairs = alignWords(parsed.tokens.map((token) => normalizeWord(token.text)), reference.map((word) => normalizeWord(word.text)));
+      return pairs.size === 0 ? undefined : { pairs, spans: wordSpans(parsed.tokens.length, pairs, reference) };
+    })();
+
   const takes: StandInTake[] = [];
+  const timing: StandInTiming[] = [];
   // Global frame span of every word, in Script order, so a Selection can be turned into a frame
   // range without going near a clock. This is the correspondence the route uses everywhere else:
   // a stretch of the reference is found by its words, and its words are where the Script says.
   const frameOfToken: { readonly frame: number; readonly end: number }[] = [];
   let frameCursor = 0;
   for (const segment of parsed.segments) {
-    const policy = policies.get(segment.id) ?? shared;
-    if (policy === undefined) {
-      throw new Error(`Segment ${segment.id} names no estimate:Speech policy, and the Source uses ${policyCount} policies, so there is no single one to fall back to`);
-    }
     const tokens = parsed.tokens.slice(segment.tokenStart, segment.tokenEndExclusive);
     const text = tokens.map((token) => token.text).join(" ");
-    const seconds = estimateSpeechDuration({ value: text }, policy);
+
+    // A Segment is timed from the reference when the reference was heard saying some of its words.
+    // The decision is made per Segment: an ordinary transcription difference costs one Segment its
+    // reference clock and leaves the rest of the Script on it.
+    let matched = 0;
+    if (words !== undefined) {
+      for (let index = segment.tokenStart; index < segment.tokenEndExclusive; index += 1) if (words.pairs.has(index)) matched += 1;
+    }
+    const spoken = words === undefined || matched === 0
+      ? undefined
+      : words.spans.slice(segment.tokenStart, segment.tokenEndExclusive);
+
+    // How long the Segment runs. The reference's own words when it was heard saying them, the
+    // estimator the Source already trusts when it was not.
+    let seconds: number;
+    let basis: StandInTiming["basis"];
+    let weights: readonly number[] | undefined;
+    if (spoken !== undefined) {
+      seconds = Math.max(0, spoken.at(-1)!.end - spoken[0]!.start);
+      basis = "reference";
+    } else {
+      const policy = policies.get(segment.id) ?? shared;
+      if (policy === undefined) {
+        throw new Error(`Segment ${segment.id} names no estimate:Speech policy, and the Source uses ${policyCount} policies, so there is no single one to fall back to`);
+      }
+      seconds = estimateSpeechDuration({ value: text }, policy);
+      basis = "estimate";
+      const language = resolveSpeechEstimateLanguage(text, policy.language);
+      weights = tokens.map((token) => Math.max(1, countSpeechEstimateUnits(token.text, language)));
+    }
+
     const frameCount = focused !== undefined && segment.id !== focused
       ? Math.max(1, tokens.length)
       : Math.max(tokens.length, Math.round(seconds * frameRate));
+    timing.push({ segment: segment.id, basis, seconds: round(seconds), frames: frameCount, tokens: tokens.length, matched });
 
-    // Share the Segment's frames out by the estimator's own unit count, so the word order and the
-    // relative widths both come from the same place the duration did.
-    const language = resolveSpeechEstimateLanguage(text, policy.language);
-    const weights = tokens.map((token) => Math.max(1, countSpeechEstimateUnits(token.text, language)));
-    const total = weights.reduce((sum, weight) => sum + weight, 0);
+    // Where each word ends. On the reference clock a word holds the screen until the next one starts
+    // and the last holds until the reference stops saying it, so the small gaps the reference leaves
+    // between words go to the word before them and the Take covers its Segment without holes. On the
+    // estimate the share is the estimator's own unit count, so the word order and the relative widths
+    // both come from the same place the duration did.
+    const total = weights?.reduce((sum, weight) => sum + weight, 0) ?? 0;
+    const edge = spoken !== undefined
+      ? (index: number, start: number): number =>
+        Math.max(start + 1, Math.round((spoken[index + 1]!.start - spoken[0]!.start) * frameRate))
+      : (index: number, start: number): number =>
+        start + Math.max(1, Math.round(frameCount * weights![index]! / total));
+
     const anchors: { readonly identity: string; readonly frame: number }[] = [
       { identity: `segment:${segment.id}:start`, frame: 0 },
       { identity: `segment:${segment.id}:end`, frame: frameCount },
@@ -268,10 +588,11 @@ export async function standInTakes(svmlPath: string, frameRate: number, focus: S
     let used = 0;
     for (const [index, token] of tokens.entries()) {
       const start = used;
-      // The last token closes the Segment exactly, so rounding never leaves a frame unclaimed.
+      // The last token closes the Segment exactly, so rounding never leaves a frame unclaimed, and
+      // every earlier one is held back far enough that the ones after it still get a frame each.
       used = index === tokens.length - 1
         ? frameCount
-        : Math.min(frameCount - (tokens.length - 1 - index), start + Math.max(1, Math.round(frameCount * weights[index]! / total)));
+        : Math.min(frameCount - (tokens.length - 1 - index), edge(index, start));
       const id = `segment:${segment.id}:token:${index + 1}`;
       placed.push({
         tokenId: id, segmentId: segment.id, text: token.text,
@@ -319,7 +640,7 @@ export async function standInTakes(svmlPath: string, frameRate: number, focus: S
     }
     if (start < end) selections.set(selection.id, { startFrame: start, endFrameExclusive: end });
   }
-  return { takes, selections, frameCount: frameCursor };
+  return { takes, selections, frameCount: frameCursor, timing };
 }
 
 function blobRef(bytes: Uint8Array, mediaType: string): BlobRef {
@@ -351,7 +672,49 @@ export type RenderElementInput = {
   readonly out: string;
   readonly segment?: string;
   readonly selection?: string;
+  /**
+   * A prepared reference to time the stand-in from. Its transcript holds the seconds each word was
+   * spoken at, and the Script was transcribed from that video, so the stand-in runs at the pace the
+   * render is compared against. Without one the Source's own `estimate:Speech` sizes each Segment.
+   */
+  readonly reference_id?: string;
 };
+
+/** What timed the stand-in behind one render, per Segment. */
+export type StandInTimingReport = {
+  readonly reference_id: string | null;
+  /** `mixed` when some Segments were timed from the reference and others fell back to the estimate. */
+  readonly basis: "reference" | "estimate" | "mixed";
+  readonly segments: readonly StandInTiming[];
+};
+
+/**
+ * The record `render_element` leaves beside its output.
+ *
+ * A comparison is made from a file, and the file alone says nothing about what timed the picture in
+ * it. Writing that beside the output means `compare_reconstruction` can copy it into the comparison
+ * log from the path it was handed, and the gate can report which comparisons were made at the
+ * reference's pace without re-deriving anything.
+ */
+export type StandInSidecar = {
+  readonly element: string;
+  readonly window: AuthoringWindow;
+  readonly timing: StandInTimingReport;
+};
+
+/** Where `render_element` writes the record of what timed a render. */
+export function standInSidecarPath(outPath: string): string {
+  return `${outPath}.stand-in.json`;
+}
+
+function timingReport(reference: string | undefined, segments: readonly StandInTiming[]): StandInTimingReport {
+  const bases = new Set(segments.map((item) => item.basis));
+  return {
+    reference_id: reference ?? null,
+    basis: bases.size > 1 ? "mixed" : segments.some((item) => item.basis === "reference") ? "reference" : "estimate",
+    segments,
+  };
+}
 
 /**
  * Render one element of a Source the way that Source configures it, without a Build and without a
@@ -368,17 +731,21 @@ export type RenderElementInput = {
  *
  *   Canvas and Frames, Recipe values, bindings   the Source
  *   which elements share a window, in what order  the Script's words, through their Selections
- *   how long each Segment runs                    the Source's own `estimate:Speech`
+ *   how long each Segment runs                    the reference's own words, or `estimate:Speech`
  *   the layers a Build has not made               `make-placeholder`, sized from the Canvas
  *
  * The one thing missing before a Build is real speech, and `standInTakes` supplies a Segment
- * skeleton from the estimator the Source already trusts — the same numbers it ordered its takes
- * with, not a second clock. Those takes enter through `<value>` and `<satisfy>`, the mechanism
- * `examples/all-components-preview` uses to open in Studio without spending anything, so nothing
- * here is a private back door into the graph.
+ * skeleton for it. Given `reference_id` it reads the seconds out of that reference's transcript, so
+ * every window is as long as the reference spends on the words inside it; without one it reads the
+ * estimator the Source already trusts, the same numbers it ordered its takes with. Those takes enter
+ * through `<value>` and `<satisfy>`, the mechanism `examples/all-components-preview` uses to open in
+ * Studio without spending anything, so nothing here is a private back door into the graph.
  *
  * What this settles: which elements are on screen together, where each sits, at what size, weight and
- * colour. What it does not: real timing, which waits for `playbooks/craft/production-gates.md` Gate 3.
+ * colour, and — on a reference-timed stand-in — how long each of them has to arrive in. What it does
+ * not: alignment against the speech a Build synthesizes, which waits for
+ * `playbooks/craft/production-gates.md` Gate 3. `timing` in the result, and the sidecar written
+ * beside the output, name which of the two clocks sized each Segment.
  */
 export async function renderElement(input: RenderElementInput): Promise<Record<string, unknown>> {
   const element = input.element;
@@ -457,10 +824,15 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
     svml = repointed;
   }
 
-  const { takes, selections, frameCount: programFrames } = await standInTakes(sourcePath, frameRate, focus);
+  // The reference's per-word times, when one was named. Read after the cut so a transcript that is
+  // missing is reported before a minute of rendering rather than after it.
+  const reference = input.reference_id?.trim();
+  const spoken = reference === undefined || reference.length === 0 ? [] : await referenceWords(reference);
+
+  const { takes, selections, frameCount: programFrames, timing } = await standInTakes(sourcePath, frameRate, focus, spoken);
   const framesBySegment = new Map(takes.map((item) => [item.segmentId, item.take.segment.endFrameExclusive]));
   // A Selection's window in frames, summed over the stand-in tokens it covers. This is the same word
-  // span the Source binds to, carried into frames by the same estimate that sized the Segment.
+  // span the Source binds to, carried into frames by the same clock that sized the Segment.
   const framesBySelection = new Map<string, number>();
   for (const { segmentId, take } of takes) {
     for (const token of take.tokens) framesBySelection.set(token.tokenId, token.endFrameExclusive - token.startFrame);
@@ -486,7 +858,15 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
       if (media === undefined || windows.has(media)) continue;
       const segment = /\bduring=\{story\.segment\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
       if (segment !== undefined) { windows.set(media, framesBySegment.get(segment) ?? frameRate); continue; }
-      windows.set(media, frameRate * 2);
+      // A cutaway's window is the Selection it is bound to, which the stand-in already measured in
+      // frames. A mock shorter than its window runs out inside it, and with `playback` at its default
+      // the frames after that draw nothing — a gap the Source never wrote, appearing only in the
+      // comparison, in exactly the shape of the defect the comparison is looking for.
+      const selection = /\bduring=\{story\.selection\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
+      const window = selection === undefined ? undefined : selections.get(selection);
+      windows.set(media, window === undefined
+        ? frameRate
+        : window.endFrameExclusive - window.startFrame);
     }
     const carries = new Map<string, { readonly frames: number; readonly picture: boolean }>();
     for (const match of svml.matchAll(/<pipeline:Normalize\b([^>]*?)\/?>/gsu)) {
@@ -703,6 +1083,13 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   ], { encoding: "utf8", windowsHide: true, timeout: 600_000 });
   assert(encoded.status === 0, `ffmpeg refused: ${(encoded.stderr ?? "").trim().slice(-2000)}`);
 
+  // What timed this picture, written where the picture is. `compare_reconstruction` is handed a path
+  // and nothing else, so this is how the comparison log comes to say whether the stretch it looked at
+  // ran at the reference's pace or at an estimate of it.
+  const report = timingReport(reference, timing);
+  const sidecar: StandInSidecar = { element, window, timing: report };
+  await writeFile(standInSidecarPath(outPath), `${JSON.stringify(sidecar, null, 2)}\n`, "utf8");
+
   return {
     element,
     out: outPath,
@@ -711,6 +1098,8 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
     frame_rate: frameRate,
     window,
     program_frames: programFrames,
+    timing: report,
+    stand_in_ref: standInSidecarPath(outPath),
     mocked: { media: mockedMedia().size, images: imageIds.length },
   };
 }
@@ -785,6 +1174,9 @@ export async function renderPreviews(input: RenderPreviewsInput): Promise<Record
       } catch (error) {
         throw new Error(`${directory} could not draw ${picture}: ${error instanceof Error ? error.message : String(error)}`);
       }
+      // A catalogue picture is compared against nothing, so the record of what timed it is dropped
+      // rather than committed beside the package's own pictures.
+      await rm(standInSidecarPath(out), { force: true });
       pictures.push({ package_dir: directory, picture, drawn: true, tag, element, out });
       written += 1;
     }
