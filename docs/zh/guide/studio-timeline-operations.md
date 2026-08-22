@@ -5,8 +5,8 @@ description: 时间线中的每一种操作如何映射到 Studio 会话、SVML�
 
 # Studio 时间线操作与写回边界
 
-> 状态：设计审计。当前时间线仍以只读检查和导航为主。本文决定未来操作协议的边界，
-> 不代表这些写回操作已经实现。
+> 状态：第一版写回已落地。时间线的结构性拖动仍按本文边界保持禁用；右侧参数面板已支持
+> 适配器明确声明的 SVML 字面量和已解析的 SVS Recipe 属性，并通过带 preimage 的多文件事务回写。
 
 ## 结论
 
@@ -78,15 +78,37 @@ Record 和 HyperFrames DOM 都不是第五种作者源。它们是计算结果�
 - 调整时间线高度、各上方面板大小和可见窗口。
 - 吸附预览：当前 seek 会吸附 Semantic Anchor 与 Clip 边缘，但吸附本身不写源。
 
-当前源码编辑器可以写回完整 Author Source，服务端用 snapshot revision 拒绝过期保存，然后
-重新编译 SVML 与 SVRun。它不是时间线手势的写回协议，也还不能原子修改 SVS、SVRun 和多个
-Source 文件。
+当前源码编辑器和右侧参数面板都走同一个 Source transaction：服务端先检查 snapshot revision、
+工作区内允许的 Source 文件、精确 range 和 preimage，再把一组修改写入临时文件并替换，随后
+重新编译 SVML 与 SVRun。面板显示每个值的真实语言（SVML/SVS/SVRun）和源码位置；引用关系
+本身保持只读，避免把 `during={selection}` 偷换成另一种语义。当前 Run 参数仍以只读候选事实展示，
+不会在打开 Studio 时调用 Provider 或猜测新的 Candidate。
+
+## 右侧参数面板的注册规则
+
+参数不是 Studio 按属性名字猜出来的。每个 Studio Adapter 在自己的注册项里声明允许暴露的
+属性（`name`、控件类型、单位和是否可写）；Markup 只提供这些属性在源码中的精确 value range。
+因此一个参数最终至少包含：
+
+```text
+adapter declaration
+  -> source language (SVML / SVS / SVRun)
+  -> source path + exact range + preimage
+  -> writable / disabled reason
+```
+
+SVML 的引用（例如 `during={story.selection.claim}` 或 `appearance={recipes.media.card}`）本身
+不会被面板换成另一条引用。Studio 会把引用显示为只读来源；如果它指向作者闭包中的 SVS Recipe，
+则解析该 Recipe 的属性并把每个 SVS property 的 `valueRange` 作为独立参数。这样改 `radius`、
+`fit` 或 `enter-frames` 写回的是 SVS，改 `z` 或显式 SVML 字面量写回的是 SVML，二者不会复制
+成第二份真相。
 
 ### 当前没有实现的操作
 
-当前 `StudioInteraction` 只有 `move`、`trimStart`、`trimEnd`、`canvasTransform` 与一个粗粒度
-`writeback` 布尔语义；官方 Adapter 全部使用只读配置。现在没有任何合法的时间线 move、trim、
-split、delete、keyframe 或画布拖动写回。
+`StudioInteraction` 仍然只描述是否允许时间线手势；新增的 `StudioEditHandle` 为未来的每个
+操作保留明确的 source 写回位置和 disabled reason。官方 Adapter 当前仍把 move/trim/split/
+delete/keyframe/画布拖动保持只读，因为这些操作还没有唯一的 SVML/SVS 映射；这不是 UI 猜测，
+而是显式的禁用状态。参数面板的单值修改已经是第一种可逆、可验证的作者写回。
 
 ## 成熟 NLE 给出的操作词汇
 

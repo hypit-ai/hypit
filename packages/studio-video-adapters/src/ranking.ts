@@ -114,6 +114,15 @@ export const rankingAdapters: readonly StudioAdapter[] = [
     id: "ranking-column", role: "track",
     output: { type: "VisualTrack", surface: "column", modules: ["@hypit/ranking"] },
     family: "component", label: "Ranking", icon: "ranking", realizationPorts: ["schedule"],
+    parameters: [
+      { name: "style", label: "Style", writable: false },
+      { name: "during", label: "During", writable: false },
+      { name: "start", label: "Start", writable: true },
+      { name: "end", label: "End", writable: true },
+      { name: "at", label: "At", writable: false },
+      { name: "for", label: "For", writable: true },
+      { name: "frame", label: "Frame", writable: false },
+    ],
     poster: { source: "surface-preview" },
     lane: {
       layout: "flat",
@@ -131,6 +140,11 @@ export const rankingAdapters: readonly StudioAdapter[] = [
         height: { minPx: 34, preferredPx: 40, maxPx: 56 },
         expandedByDefault: true,
       },
+      parameters: [
+        { name: "during", label: "During", writable: false },
+        { name: "at", label: "At", writable: false },
+        { name: "stack", label: "Stack", control: "number", writable: true },
+      ],
     }],
     interaction: readonlyInteraction, project: projectRanking,
   },

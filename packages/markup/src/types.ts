@@ -52,6 +52,8 @@ export type StructuredElement = {
   readonly kind: "element";
   readonly name: string;
   readonly attributes: Readonly<Record<string, MarkupAttributeValue>>;
+  /** Exact ranges of literal/reference values in the opening tag. */
+  readonly attributeValueRanges?: Readonly<Record<string, SourceRange>>;
   readonly children: readonly StructuredNode[];
   readonly range: SourceRange;
 };

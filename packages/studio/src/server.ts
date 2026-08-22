@@ -1,7 +1,8 @@
 import { watch } from "node:fs";
 import type { FSWatcher } from "node:fs";
-import { writeFile } from "node:fs/promises";
-import { relative } from "node:path";
+import { existsSync } from "node:fs";
+import { readFile, rename, writeFile, unlink } from "node:fs/promises";
+import { isAbsolute, relative, resolve, dirname, join } from "node:path";
 
 import type { Plugin, ViteDevServer } from "vite";
 
@@ -53,6 +54,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let requestedRevision = 0;
   let currentSource = options.source;
+  let allowedSourceFiles = new Set<string>();
   const watched = new Map<string, FSWatcher>();
   const storyboards = new Map<string, Promise<StudioStoryboard>>();
 
@@ -79,6 +81,11 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       currentSource = run.authorSource;
       watchSource(options.runPath);
       for (const unit of run.source.compiled.closure.units) watchSource(unit.id);
+      allowedSourceFiles = new Set([
+        options.runPath,
+        run.authorSource,
+        ...run.source.compiled.closure.units.map((unit) => unit.id).filter((path) => existsSync(path)),
+      ].map((path) => resolve(path)));
       const result = await readStudioSession({
         domain: options.domain,
         registry: options.registry,
@@ -86,6 +93,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         ...(options.archive === undefined ? {} : { archive: options.archive }),
         revision: attempt,
         sourcePath: relative(options.workspaceRoot, run.authorSource),
+        workspaceRoot: options.workspaceRoot,
       });
       if (attempt !== requestedRevision) return;
       revision = attempt;
@@ -110,6 +118,70 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     const attempt = ++requestedRevision;
     if (timer !== undefined) clearTimeout(timer);
     timer = setTimeout(() => void publish(attempt), 80);
+  };
+
+  type Patch = {
+    readonly path: string;
+    readonly range: Range;
+    readonly replacement: string;
+    readonly preimage: string;
+  };
+
+  const applyTransaction = async (patches: readonly Patch[], expectedRevision: number): Promise<void> => {
+    if (snapshot !== undefined && expectedRevision !== snapshot.revision) {
+      throw new Error("The Source changed outside Studio.");
+    }
+    const grouped = new Map<string, Patch[]>();
+    for (const patch of patches) {
+      if (isAbsolute(patch.path)) throw new Error("Studio patches must use workspace-relative paths.");
+      const absolute = resolve(options.workspaceRoot, patch.path);
+      const rel = relative(options.workspaceRoot, absolute);
+      if (rel.startsWith("..") || isAbsolute(rel) || !allowedSourceFiles.has(absolute)) {
+        throw new Error(`Studio cannot write source file ${patch.path}.`);
+      }
+      if (!Number.isInteger(patch.range.start) || !Number.isInteger(patch.range.end)
+        || patch.range.start < 0 || patch.range.end < patch.range.start) {
+        throw new Error(`Invalid source range for ${patch.path}.`);
+      }
+      const held = grouped.get(absolute) ?? [];
+      held.push(patch);
+      grouped.set(absolute, held);
+    }
+    const nextFiles = new Map<string, string>();
+    for (const [absolute, filePatches] of grouped) {
+      const text = await readFile(absolute, "utf8");
+      const ordered = [...filePatches].sort((left, right) => left.range.start - right.range.start);
+      for (let index = 1; index < ordered.length; index += 1) {
+        const previous = ordered[index - 1]!;
+        const current = ordered[index]!;
+        if (current.range.start < previous.range.end) {
+          throw new Error(`Overlapping source patches are not allowed: ${relative(options.workspaceRoot, absolute)}.`);
+        }
+      }
+      let next = text;
+      for (const patch of [...filePatches].sort((left, right) => right.range.start - left.range.start)) {
+        if (patch.range.end > text.length) throw new Error(`Source range exceeds file: ${patch.path}.`);
+        const current = next.slice(patch.range.start, patch.range.end);
+        if (current !== patch.preimage) throw new Error(`Source changed outside Studio: ${patch.path}.`);
+        next = `${next.slice(0, patch.range.start)}${patch.replacement}${next.slice(patch.range.end)}`;
+      }
+      nextFiles.set(absolute, next);
+    }
+    // Validate every file before touching any file. Temp files make a single
+    // multi-file write observable as one Studio transaction in normal hosts.
+    const temporaries: { readonly path: string; readonly temporary: string }[] = [];
+    try {
+      for (const [absolute, text] of nextFiles) {
+        const temporary = join(dirname(absolute), `.${absolute.split("/").at(-1) ?? "source"}.hypit-studio.tmp`);
+        await writeFile(temporary, text, "utf8");
+        temporaries.push({ path: absolute, temporary });
+      }
+      for (const item of temporaries) await rename(item.temporary, item.path);
+    } finally {
+      for (const item of temporaries) {
+        try { await unlink(item.temporary); } catch { /* already renamed */ }
+      }
+    }
   };
 
   return {
@@ -137,12 +209,49 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
                 json(response, 409, { error: "The Source changed outside Studio." });
                 return;
               }
-              await writeFile(currentSource, body.text, "utf8");
+              const current = await readFile(currentSource, "utf8");
+              await applyTransaction([{
+                path: relative(options.workspaceRoot, currentSource),
+                range: { start: 0, end: current.length },
+                replacement: body.text,
+                preimage: current,
+              }], body.revision);
               schedule();
               response.statusCode = 202;
               response.end();
             } catch (error) {
               json(response, 500, { error: error instanceof Error ? error.message : String(error) });
+            }
+          })();
+          return;
+        }
+        if (request.method === "POST" && url.pathname === "/__studio/transaction") {
+          void (async () => {
+            try {
+              const chunks: Buffer[] = [];
+              for await (const chunk of request) chunks.push(Buffer.from(chunk));
+              const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as {
+                readonly revision?: unknown;
+                readonly patches?: unknown;
+              };
+              if (typeof body.revision !== "number" || !Array.isArray(body.patches)) {
+                json(response, 400, { error: "Expected a revision and source patches." });
+                return;
+              }
+              const patches = body.patches as Patch[];
+              if (patches.some((patch) => typeof patch.path !== "string"
+                || typeof patch.replacement !== "string"
+                || typeof patch.preimage !== "string"
+                || typeof patch.range !== "object" || patch.range === null)) {
+                json(response, 400, { error: "Invalid source patch." });
+                return;
+              }
+              await applyTransaction(patches, body.revision);
+              schedule();
+              json(response, 202, { revision: body.revision });
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              json(response, message.includes("changed outside") ? 409 : 500, { error: message });
             }
           })();
           return;

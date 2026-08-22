@@ -187,6 +187,18 @@ export class StudioAdapterRegistry {
       ? draft
       : { ...draft, preview });
   }
+
+  parameterDeclarations(
+    track: StudioResolvedTrack,
+    placement: Placement | undefined,
+    lane?: string,
+  ) {
+    const adapter = this.#trackAdapter(track);
+    if (lane !== undefined) {
+      return adapter.attachments?.find((attachment) => attachment.id === lane)?.parameters ?? [];
+    }
+    return adapter.parameters ?? [];
+  }
 }
 
 export function sealStudioClip(
@@ -211,6 +223,8 @@ export function sealStudioClip(
     },
     ...(draft.temporal === undefined ? {} : { temporal: draft.temporal }),
     ...(draft.preview === undefined ? {} : { preview: draft.preview }),
+    parameters: draft.parameters ?? [],
+    editHandles: draft.editHandles ?? [],
     interaction: draft.interaction ?? fallback.interaction,
     renderIds: draft.renderIds ?? (draft.presentId === undefined ? [] : [draft.presentId]),
   };

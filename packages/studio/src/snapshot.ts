@@ -22,6 +22,8 @@ import {
 } from "./studio-registry.js";
 import type { StudioAdapterRegistry } from "./studio-registry.js";
 import type { StudioEntityDraft } from "./studio-registry.js";
+import { parametersForDraft } from "./parameters.js";
+import type { StudioSourceFile } from "./parameters.js";
 
 type Present = {
   readonly id: string;
@@ -273,6 +275,8 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
   readonly canvas: { readonly width: number; readonly height: number; readonly clearColor: string };
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
   readonly preview: StudioSnapshot["preview"];
+  readonly workspaceRoot: string;
+  readonly sourceFiles: readonly StudioSourceFile[];
 }): StudioSnapshot {
   const located = authored(built.source.observations.placements);
   const script = scriptMap(built.source.observations.sourceMaps, built);
@@ -333,6 +337,16 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
       values: built.values,
       semantic,
       generic,
+    }).map((draft) => {
+      const parameters = parametersForDraft({
+        root: input.workspaceRoot,
+        files: input.sourceFiles,
+        placement,
+        draft,
+        declarations: registry.parameterDeclarations(item, placement, draft.lane),
+        placements: built.source.observations.placements,
+      });
+      return parameters.length === 0 ? draft : { ...draft, parameters };
     });
     const clips: Clip[] = drafts
       .filter((draft) => draft.lane === undefined)
