@@ -4,11 +4,15 @@ Read `quickstart.md`, then the authoritative page it selects under `docs/quickst
 Keep Author Source, Recipe Source and Run Source complete and internally consistent rather than
 assembling independent per-shot source fragments.
 
-Before writing an element, read the owning package README and inspect what its Surface actually
-declares — `vocabulary.md` names the command and decides which package owns an element in the first
-place. For `@hypit/<name>@1`, the repository README is `packages/<name>/README.md`. Never invent a
-component, attribute, child, port, Recipe property or literal value. Do not infer one package's
-syntax from a neighboring package.
+Before writing an element, inspect what its Surface actually declares and read the owning package
+README as its example — `vocabulary.md` names the command and decides which package owns an element
+in the first place. The inspect output lists every attribute and every Recipe property with its
+description and admitted values; that is the parameter reference. The README is the example, not the
+reference — a thin README is a thin example next to a complete declaration. For `@hypit/<name>@1`,
+the repository README is `packages/<name>/README.md`. Never invent a component, attribute, child,
+port, Recipe property or literal value, and do not read a package's source code to learn its
+syntax: the source is implementation, the declaration is the contract the loader checks against. Do
+not infer one package's syntax from a neighboring package.
 
 Install dependencies after package selections change. Validate with the existing commands, run from
 the repository root:
