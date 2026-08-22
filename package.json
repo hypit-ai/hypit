@@ -11,6 +11,7 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "check": "tsc -p tsconfig.json --noEmit",
+    "lockfile:refresh": "node test/lockfile-refresh.mjs",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
