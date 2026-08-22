@@ -1,7 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
 import type { Part } from "@google/genai";
-import { access, appendFile, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { access, appendFile, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
+import { deflateSync } from "node:zlib";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { loadNodePackageSelection } from "@hypit/package-loader-node";
@@ -56,6 +58,17 @@ export type CompareReconstructionInput = {
   readonly element?: string;
 };
 
+export type MakePlaceholderInput = {
+  readonly out: string;
+  readonly width: number;
+  readonly height: number;
+  readonly color?: string;
+  /** Produce a video placeholder for a slot that only accepts video, instead of a PNG. */
+  readonly video?: boolean;
+  /** Video placeholder duration in seconds; defaults to 1. Ignored for a PNG. */
+  readonly seconds?: number;
+};
+
 export type ReferenceVideoTools = {
   list_svml_packages(): Promise<Record<string, unknown>>;
   prepare_reference(input: PrepareReferenceInput): Promise<PrepareResult>;
@@ -63,6 +76,7 @@ export type ReferenceVideoTools = {
   inspect_svml_vocabulary(input: InspectVocabularyInput): Promise<Record<string, unknown>>;
   compare_reconstruction(input: CompareReconstructionInput): Promise<Record<string, unknown>>;
   record_observation(input: RecordObservationInput): Promise<Record<string, unknown>>;
+  make_placeholder(input: MakePlaceholderInput): Promise<Record<string, unknown>>;
 };
 
 type ToolOptions = {
@@ -110,6 +124,72 @@ async function fileDigest(path: string): Promise<string> {
 
 async function appendComparison(root: string, record: ComparisonRecord): Promise<void> {
   await appendFile(join(root, "comparisons.jsonl"), `${JSON.stringify(record)}\n`, "utf8");
+}
+
+function crc32(bytes: Uint8Array): number {
+  let crc = 0xFFFFFFFF;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function pngChunk(type: string, data: Uint8Array): Uint8Array {
+  const body = new Uint8Array(type.length + data.length);
+  for (let i = 0; i < type.length; i += 1) body[i] = type.charCodeAt(i);
+  body.set(data, type.length);
+  const out = new Uint8Array(8 + body.length);
+  const view = new DataView(out.buffer);
+  view.setUint32(0, data.length);
+  out.set(body, 4);
+  view.setUint32(4 + body.length, crc32(body));
+  return out;
+}
+
+/**
+ * A correctly-sized placeholder image for a media slot the Source declares as a generation and a
+ * Build has not filled. The comparison loop needs a still; the slot must be mocked, and the mock is
+ * this tool's output — deterministic, Provider-free, never a real generation and never a hand-rolled
+ * script. A grey field with an inset frame reads as a slot waiting for content rather than a broken
+ * image, so the observer can bypass the region instead of reporting it every round.
+ */
+function placeholderPng(width: number, height: number, color: string): Uint8Array {
+  const fill = (hex: string): [number, number, number] => [
+    parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16),
+  ];
+  const base = fill(color);
+  const inset = fill("#9AA0A6");
+  const raw = Buffer.alloc(height * (1 + width * 3));
+  const margin = Math.max(2, Math.round(Math.min(width, height) * 0.05));
+  for (let y = 0; y < height; y += 1) {
+    raw[y * (1 + width * 3)] = 0;
+    for (let x = 0; x < width; x += 1) {
+      const c = (x < margin || y < margin || x >= width - margin || y >= height - margin) ? inset : base;
+      const i = y * (1 + width * 3) + 1 + x * 3;
+      raw[i] = c[0]; raw[i + 1] = c[1]; raw[i + 2] = c[2];
+    }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  return Uint8Array.from(Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk("IHDR", ihdr),
+    pngChunk("IDAT", deflateSync(raw)),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]));
+}
+
+function hexColor(value: string, label: string): string {
+  assert(/^#[0-9a-f]{6}$/iu.test(value), `${label} must be a six-digit hexadecimal color like #E0E0E0.`);
+  return value;
+}
+
+function positiveInt(value: number, label: string): number {
+  assert(Number.isSafeInteger(value) && value > 0, `${label} must be a positive integer.`);
+  return value;
 }
 
 async function defaultGenerate(model: string): Promise<GenerateText> {
@@ -585,7 +665,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const previous = state.shots.find((candidate) => candidate.index === shot.index - 1);
         return { key: `visual:${shot.shot_id}`, request: {
           media: [shot.clip_ref, shot.representative_frame_ref, ...(previous === undefined ? [] : [previous.tail_frame_ref])],
-          prompt: `${globalContext}\n\nObserve shot ${shot.index}. Describe the current base picture, any covering or non-covering visual content, and whether visible content continues from the preceding shot. A full-screen insert is still only a picture observation.\n\nAlso answer these two questions explicitly.\n\nFirst: is the whole frame a depicted scene that has its own camera space, lighting, depth and lens behaviour, or is it a flat designed field whose purpose is to carry drawn elements such as words, rows, panels or cards? Live action and animation are both depicted scenes; a paper sheet, ruled or gridded surface, flat or gradient colour, blurred wallpaper, board or slide backdrop filling the frame is a designed field. State which one it is and the visible evidence for it.\n\nThen, whichever it is, say whether any *region* of the frame is itself a flat designed field carrying drawn content — a list, a ranking, a leaderboard, a scoreboard, a chart, a panel, a slab of colour holding rows or labels — even when the rest of the frame is a depicted scene, and even when the region has no visible border, card edge or drop shadow around it. Report each such region separately from the scene behind it: roughly where it sits and how much of the frame it covers, given as fractions of the frame width and height; what its own surface is; and what is drawn on it. A designed field occupying half the frame, one side of it, or a band across it is easy to describe as "text over the picture" and is not that: the field itself is the thing to report.\n\nSecond: for every framed element inside the picture, such as a card, phone, browser window, screenshot or inset, describe the picture inside the frame and the frame itself separately. For the inside, describe what it depicts and whether it moves. For the frame, describe its border, corner radius, outline, shadow, size, position and how it enters and leaves.\n\nThird: does this picture move at all, and how? Separate three things: whether the camera moves, and how; whether anything in the picture moves, and what; and whether the picture is completely still. A held photograph, screenshot or card that only appears and disappears is still, however long it is on screen.\n\nReturn natural language evidence only.`,
+          prompt: `${globalContext}\n\nObserve shot ${shot.index}. Describe the current base picture, any covering or non-covering visual content, and whether visible content continues from the preceding shot. A full-screen insert is still only a picture observation. Covering content is whatever changes what reaches the eye, not only things that sit on top with an edge: a wash, darkening, gradient or semi-transparent layer laid over the whole frame or a region of it is covering content and must be reported as such, including what the base shows through it.\n\nAlso answer these two questions explicitly.\n\nFirst: is the whole frame a depicted scene that has its own camera space, lighting, depth and lens behaviour, or is it a flat designed field whose purpose is to carry drawn elements such as words, rows, panels or cards? Live action and animation are both depicted scenes; a paper sheet, ruled or gridded surface, flat or gradient colour, blurred wallpaper, board or slide backdrop filling the frame is a designed field. State which one it is and the visible evidence for it.\n\nThen, whichever it is, say whether any *region* of the frame is itself a flat designed field carrying drawn content — a list, a ranking, a leaderboard, a scoreboard, a chart, a panel, a slab of colour holding rows or labels — even when the rest of the frame is a depicted scene, and even when the region has no visible border, card edge or drop shadow around it. Report each such region separately from the scene behind it: roughly where it sits and how much of the frame it covers, given as fractions of the frame width and height; what its own surface is; and what is drawn on it. A designed field occupying half the frame, one side of it, or a band across it is easy to describe as "text over the picture" and is not that: the field itself is the thing to report.\n\nSecond: for every framed element inside the picture, such as a card, phone, browser window, screenshot or inset, describe the picture inside the frame and the frame itself separately. For the inside, describe what it depicts and whether it moves. For the frame, describe its border, corner radius, outline, shadow, size, position and how it enters and leaves.\n\nThird: does this picture move at all, and how? Separate three things: whether the camera moves, and how; whether anything in the picture moves, and what; and whether the picture is completely still. A held photograph, screenshot or card that only appears and disappears is still, however long it is on screen.\n\nReturn natural language evidence only.`,
           instruction: "Observe picture only. Do not choose SVML components, do not write markup, and do not decide final source syntax.",
         } };
       });
@@ -771,6 +851,37 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       cache[key] = observation("complete", text);
       await writeJson(path, cache);
       return { reference_id: state.reference_id, key, stored_in: "observations" };
+    },
+
+    // A media slot that is declared as a generation is not fillable by this route, which never
+    // Builds. The comparison loop still needs a still to compare, so the slot is mocked with a
+    // fixed, correctly-sized placeholder — the same tool on every run, never a real generation and
+    // never a script the agent writes by hand.
+    async make_placeholder(input): Promise<Record<string, unknown>> {
+      const width = positiveInt(Number(input.width), "width");
+      const height = positiveInt(Number(input.height), "height");
+      const color = input.color === undefined ? "#E8EAED" : hexColor(String(input.color), "color");
+      const out = resolve(String(input.out));
+      await mkdir(dirname(out), { recursive: true });
+      if (input.video === true) {
+        // A slot that only accepts video needs a real video artifact; a short solid-colour clip is
+        // the mock. ffmpeg is part of the required local toolchain.
+        const seconds = input.seconds === undefined ? 1 : positiveInt(Number(input.seconds), "seconds");
+        const filter = `color=c=${color.slice(1)}:s=${width}x${height}:r=24:d=${seconds}`;
+        const result = await new Promise<{ status: number | null; error?: Error }>((done) => {
+          const child = spawn("ffmpeg", [
+            "-y", "-f", "lavfi", "-i", filter, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-t", String(seconds), out,
+          ]);
+          child.on("close", (status) => done({ status }));
+          child.on("error", (error) => done({ status: null, error }));
+        });
+        if (result.status !== 0) {
+          throw new Error(`ffmpeg failed to write a placeholder video (${result.error?.message ?? `exit ${result.status}`}); ffmpeg is part of the required local toolchain`);
+        }
+        return { out, width, height, color, video: true, seconds };
+      }
+      await writeFile(out, placeholderPng(width, height, color));
+      return { out, width, height, color, video: false };
     },
   };
 }

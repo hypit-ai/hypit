@@ -15,6 +15,18 @@ function usage(): string {
     "  hypit-reference-video-tools record_observation --reference-id <id> --key <key> --text <text>|--text-file <path>",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --image <path> [--question <scope>] [--element <id>]",
+    "  hypit-reference-video-tools make-placeholder --out <path> --width <w> --height <h> [--color #RRGGBB] [--video] [--seconds <s>]",
+    "",
+    "--element names the reconstructed element the image draws. It is written to the reference's",
+    "comparison log and never sent to the observer, so the comparison stays blind while a later gate can",
+    "still tell which elements have been compared.",
+    "",
+    "make-placeholder writes a correctly-sized placeholder for a media slot the Source declares as a",
+    "generation and a Build has not filled. It is deterministic and Provider-free: the comparison loop",
+    "uses its output to mock an empty slot, and the observer is told the slot is a placeholder so it is",
+    "bypassed rather than reported every round. A plain call writes a PNG; `--video` writes a short",
+    "solid-colour MP4 via ffmpeg for a slot that only accepts video, with `--seconds` choosing its",
+    "length (default 1). Never produce the mock with `hypit image` or a script written by hand.",
     "",
     "--element names the reconstructed element the image draws. It is written to the reference's",
     "comparison log and never sent to the observer, so the comparison stays blind while a later gate can",
@@ -138,6 +150,16 @@ async function main(): Promise<void> {
       ...(flags.get("without-previews") === true ? { include_previews: false } : {}),
     };
     result = await tools.inspect_svml_vocabulary(input as { package_names: readonly string[]; tags?: readonly string[]; include_previews?: boolean });
+  } else if (command === "make-placeholder") {
+    const input = supplied ?? {
+      out: required(flags, "out"),
+      width: Number(required(flags, "width")),
+      height: Number(required(flags, "height")),
+      ...(one(flags, "color") === undefined ? {} : { color: one(flags, "color") }),
+      ...(flags.get("video") === true ? { video: true } : {}),
+      ...(one(flags, "seconds") === undefined ? {} : { seconds: Number(one(flags, "seconds")) }),
+    };
+    result = await tools.make_placeholder(input as { out: string; width: number; height: number; color?: string; video?: boolean; seconds?: number });
   } else {
     throw new Error(`unknown command ${command}\n\n${usage()}`);
   }

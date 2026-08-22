@@ -180,6 +180,11 @@ nothing.
   catalogue picture and nothing else, and the next agent reuses that picture for a comparison it does
   not fit. Give it `--out`, the frame, and whichever of the component's own switches the reference
   varies; the preview then becomes one invocation of it rather than its only purpose.
+- **The harness does not invent media for slots a Build has not filled.** A slot declared as a
+  generation is mockable but not fillable on this route, and the mock is the route's fixed
+  `make-placeholder` tool, not code the harness ships: the harness reads a placeholder path from its
+  arguments and passes it into the slot. No placeholder-drawing code inside the harness, no generated
+  picture committed just to have something in the slot.
 
 ## Freeze the Types before writing in parallel
 

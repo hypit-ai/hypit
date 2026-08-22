@@ -579,7 +579,7 @@ export function createKieProvider(config: CreateKieProviderOptions) {
     pool: config.pool ?? config.instance ?? "kie.default",
     credentials: { apiKey: config.apiKey ?? credentialRef("env", "KIE_API_KEY") },
     credentialInputs: { apiKey: { label: "KIE API key" } },
-    defaultConcurrency: config.defaultConcurrency ?? 2,
+    defaultConcurrency: config.defaultConcurrency ?? 10,
     capabilities: kieRoutes.map((route) => ({
       capability: route.capability,
       returns: route.returns,

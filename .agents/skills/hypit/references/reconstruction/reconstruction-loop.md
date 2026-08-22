@@ -123,6 +123,15 @@ return a difference every round for ever. So the loop ends on whichever of these
   round — an empty card where the reference shows a screenshot. Do not aim an attempt at it, and do
   not read its reappearance as the no-progress rule below firing: that rule is about the difference
   the repair was aimed at, not about every line the comparison returns.
+
+  Mock the slot instead of leaving it empty or generating a real picture. Use the route's fixed
+  placeholder tool — `hypit-reference-video-tools make-placeholder --out slot.png --width <w>
+  --height <h>` for an image slot, and `--video [--seconds <s>]` for one that only accepts video —
+  never `hypit image` (that pays for a real generation the video will not reuse) and never a script
+  written by hand. Then scope the comparison with `--question` so the observer bypasses the slot:
+  name the region as an intentional placeholder for a declared-but-unbuilt generation, and compare
+  only what the component draws itself. The empty slot then stops being reported every round, and
+  the loop spends its attempts on the differences that can actually be repaired.
 - **No progress ends it immediately.** If a comparison returns the same difference it returned before
   the repair, stop. The repair is not reaching the problem, and two more rounds of the same reasoning
   will not find it. Rendering and comparing cost real time on every round.
