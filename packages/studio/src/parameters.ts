@@ -5,6 +5,7 @@ import type {
   StudioParameterDeclaration,
   StudioEntityDraft,
   StudioPlacement,
+  StudioEditHandle,
 } from "@hypit/studio-adapter";
 import { parseSvs } from "@hypit/svs";
 
@@ -196,4 +197,33 @@ export function parametersForDraft(input: {
     });
   });
   return [...direct, ...recipes];
+}
+
+const ABSOLUTE_DURATION = /^\s*\d+(?:\.\d+)?(?:f|ms|s)\s*$/u;
+
+/**
+ * Timing handles are deliberately narrower than timing parameters. A literal
+ * absolute start/end can be rewritten as frames without changing its semantic
+ * source; a Selection/Moment expression cannot be moved from a downstream
+ * rectangle. `at + for` has one legal edge: changing `for` changes only its end.
+ */
+export function timingEditHandles(parameters: readonly StudioParameter[]): readonly StudioEditHandle[] {
+  const byName = new Map(parameters.map((parameter) => [parameter.id.slice(parameter.id.lastIndexOf(":") + 1), parameter]));
+  const start = byName.get("start");
+  const end = byName.get("end");
+  const at = byName.get("at");
+  const duration = byName.get("for");
+  const absolute = (parameter: StudioParameter | undefined): parameter is StudioParameter =>
+    parameter !== undefined && parameter.writable && ABSOLUTE_DURATION.test(parameter.value);
+  if (absolute(start) && absolute(end)) {
+    return [
+      { id: "move", operation: "move", enabled: true, sources: [start.source, end.source] },
+      { id: "trim-start", operation: "trim-start", enabled: true, sources: [start.source] },
+      { id: "trim-end", operation: "trim-end", enabled: true, sources: [end.source] },
+    ];
+  }
+  if (at !== undefined && !at.writable && absolute(duration)) {
+    return [{ id: "trim-end", operation: "trim-end", enabled: true, sources: [duration.source] }];
+  }
+  return [];
 }

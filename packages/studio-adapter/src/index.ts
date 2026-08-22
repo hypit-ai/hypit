@@ -95,7 +95,7 @@ export type StudioEditHandle = {
   readonly id: string;
   readonly operation: StudioEditOperation;
   readonly enabled: boolean;
-  readonly source?: StudioParameter["source"];
+  readonly sources?: readonly StudioParameter["source"][];
   readonly disabledReason?: string;
 };
 

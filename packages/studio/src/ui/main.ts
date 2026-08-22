@@ -6,6 +6,7 @@ import type { Highlight } from "./code.js";
 import { intentAtOffset, intentTones, liveRanges, spanAtOffset } from "./markers.js";
 import { clipAtOffset, createStore } from "./selection.js";
 import { createStage } from "./stage.js";
+import { writeSourceTransaction } from "./writeback.js";
 import { createTimeline } from "./timeline.js";
 import "../style.css";
 
@@ -97,6 +98,12 @@ const project = app.querySelector<HTMLElement>("[data-project]")!;
 const status = app.querySelector<HTMLElement>("[data-status]")!;
 const failureView = app.querySelector<HTMLElement>("[data-failure]")!;
 
+timeline.element.addEventListener("studio:write", (event) => {
+  const state = (event as CustomEvent<{ readonly state?: string }>).detail.state;
+  status.className = state === "error" ? "status error" : state === "saved" ? "status saved" : "status saving";
+  status.textContent = state === "error" ? "Save failed" : state === "saved" ? "Saved" : "Saving";
+});
+
 // Program-level facts never change while a Source is being read, so they live in
 // the header rather than taking a panel that would have to sit over something.
 function renderMeta(snapshot: StudioSnapshot): void {
@@ -187,20 +194,12 @@ async function writeParameter(parameter: Clip["parameters"][number], replacement
   status.textContent = parameterWriteState;
   status.className = "status saving";
   try {
-    const response = await fetch("/__studio/transaction", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        revision: state.snapshot.revision,
-        patches: [{
-          path: parameter.source.path,
-          range: parameter.source.range,
-          replacement,
-          preimage: parameter.source.preimage,
-        }],
-      }),
-    });
-    if (!response.ok) throw new Error(await response.text());
+    await writeSourceTransaction(state.snapshot.revision, [{
+      path: parameter.source.path,
+      range: parameter.source.range,
+      replacement,
+      preimage: parameter.source.preimage,
+    }]);
     parameterWriteState = "Saved";
     status.textContent = parameterWriteState;
     status.className = "status saved";

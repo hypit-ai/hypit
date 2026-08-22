@@ -771,6 +771,7 @@ button:focus-visible, textarea:focus-visible {
   box-shadow: none;
   color: #fff;
 }
+.clip.editing { box-shadow: 0 0 0 1px #fff; }
 .clip:focus-visible { outline: 0; }
 .clip-selection {
   position: absolute;

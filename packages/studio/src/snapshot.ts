@@ -22,7 +22,7 @@ import {
 } from "./studio-registry.js";
 import type { StudioAdapterRegistry } from "./studio-registry.js";
 import type { StudioEntityDraft } from "./studio-registry.js";
-import { parametersForDraft } from "./parameters.js";
+import { parametersForDraft, timingEditHandles } from "./parameters.js";
 import type { StudioSourceFile } from "./parameters.js";
 
 type Present = {
@@ -346,7 +346,10 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
         declarations: registry.parameterDeclarations(item, placement, draft.lane),
         placements: built.source.observations.placements,
       });
-      return parameters.length === 0 ? draft : { ...draft, parameters };
+      const editHandles = timingEditHandles(parameters);
+      return parameters.length === 0 && editHandles.length === 0
+        ? draft
+        : { ...draft, parameters, ...(editHandles.length === 0 ? {} : { editHandles }) };
     });
     const clips: Clip[] = drafts
       .filter((draft) => draft.lane === undefined)
