@@ -173,7 +173,23 @@ Two more are required, at the point where they apply rather than now. Reading th
 reading them half an hour before they matter, with a dozen other files in between:
 
 - `final-sources.md` when the components exist and the sources are about to be written.
-- `reconstruction-loop.md` when something has been built and is about to be compared.
+- `reconstruction-loop.md` **the first time any element is rendered to a still** — including the
+  preview a new package owes its Surface. No Build is submitted on this route, so a trigger worded
+  around one never fires: the picture that gets compared is a local render, and the moment one
+  exists the loop applies.
+
+This route ends on a command rather than on a judgement that the work looks done. Every element a
+project-local package draws must have been compared against the reference at least once, and that is
+checkable:
+
+```text
+node --import tsx .agents/skills/hypit/scripts/reconstruction-check.mjs projects/<name>/build.svrun
+```
+
+It names each element that has never been compared and the command that compares it, and exits
+non-zero until none are left. It asks for participation rather than convergence — `reconstruction-loop.md`
+is deliberately bounded and may stop with visible differences remaining — so an element compared once
+and stopped at its ceiling passes, and an element nobody looked at does not.
 
 Paths above are relative to this file's directory. Do not skip a file because the task looks like a
 familiar video format.

@@ -108,6 +108,12 @@ return a difference every round for ever. So the loop ends on whichever of these
 
 - **Every attempt aims at a difference the comparison named.** Changing something the comparison did
   not mention is not an attempt; it is thrashing, and it does not earn one of the attempts below.
+- **A difference caused by an input that does not exist yet is not a repair target.** This route
+  declares its generation rather than performing it, so a component's media slots are empty for the
+  whole stretch between being written and being built. The comparison sees that and names it every
+  round — an empty card where the reference shows a screenshot. Do not aim an attempt at it, and do
+  not read its reappearance as the no-progress rule below firing: that rule is about the difference
+  the repair was aimed at, not about every line the comparison returns.
 - **No progress ends it immediately.** If a comparison returns the same difference it returned before
   the repair, stop. The repair is not reaching the problem, and two more rounds of the same reasoning
   will not find it. Rendering and comparing cost real time on every round.
@@ -147,7 +153,29 @@ comparison to name what remains. Do not spend one to find out — a comparison t
 and exists only to report the gap is a paid step for a report nobody asked for. The element is what
 it is; move on to the next one.
 
-When there is no next element the reconstruction is complete, and two things follow it.
+When there is no next element the reconstruction is complete, and three things follow it.
+
+## Say what this route did not verify
+
+"Complete" here means every element was compared and every loop stopped. It does not mean the video
+was watched, because on this route no video exists: the Build has not run. Report the difference
+rather than letting the word carry it.
+
+State plainly, in the completion report, that the following are unverified and name the gate each one
+waits for in `../playbooks/craft/production-gates.md`:
+
+- **every generated picture and take** — the images and the shots a Provider has still to make, at
+  Gate 1 and Gate 2;
+- **the authored values on installed vocabulary** — a caption Style's size, colour and placement, a
+  Media Item's frame, a Typography Track's copy, at Gate 3 against the real SemanticTrack;
+- **whether the picture is continuous** — the black stretches and the frames nobody authored that
+  `frame-coverage.md` is about, at Gate 4, which measures them on the delivery;
+- **whether the delivery says the Script's words** — measured at Gate 4 by transcribing the finished
+  video, since a take generated from a prompt that lost its dialogue passes every gate before it.
+
+`reconstruction-check` is the mechanical half of this: it names the elements that were never compared
+and refuses to pass while any remain. It cannot name what a Build has not produced yet, which is why
+this list is stated rather than computed.
 
 If the author wants the result to differ from the reference — their presenter, their product, their
 brand — read the sources you wrote and change them to what they asked for. `index.md` says why that
