@@ -186,6 +186,22 @@ function parameterControl(parameter: Clip["parameters"][number]): HTMLElement {
   return row;
 }
 
+function parameterGroups(parameters: readonly Clip["parameters"][number][]): readonly HTMLElement[] {
+  type StudioParameterValue = Clip["parameters"][number];
+  const groups = new Map<string, StudioParameterValue[]>();
+  for (const parameter of parameters) {
+    const key = `${parameter.language}:${parameter.source.path}`;
+    const held = groups.get(key) ?? [];
+    held.push(parameter);
+    groups.set(key, held);
+  }
+  return [...groups].map(([key, values]) => {
+    const [language, ...path] = key.split(":");
+    const title = path.length === 0 ? language!.toUpperCase() : `${language!.toUpperCase()} · ${path.join(":")}`;
+    return group(title, values.map(parameterControl), "parameter-group");
+  });
+}
+
 let parameterWriteState: "" | "Saving" | "Saved" | "Failed" = "";
 async function writeParameter(parameter: Clip["parameters"][number], replacement: string): Promise<void> {
   const state = store.current();
@@ -265,8 +281,8 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
     property("Status", track.provenance.status),
     property("Writeback", "Read-only"),
   ]);
-  const parameters = clip.parameters.length === 0 ? undefined : group("Parameters", clip.parameters.map(parameterControl), "parameter-group");
-  inspector.replaceChildren(hero, placement, timing, ...(parameters === undefined ? [] : [parameters]), ...(source === undefined ? [] : [source]), ...(run === undefined ? [] : [run]));
+  const parameters = parameterGroups(clip.parameters);
+  inspector.replaceChildren(hero, placement, timing, ...parameters, ...(source === undefined ? [] : [source]), ...(run === undefined ? [] : [run]));
 }
 
 function renderSemanticInspector(snapshot: StudioSnapshot, segmentId: string): void {

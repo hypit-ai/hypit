@@ -759,12 +759,17 @@ button:focus-visible, textarea:focus-visible {
   top: 0;
   bottom: 0;
   width: 6px;
-  pointer-events: auto;
+  pointer-events: none;
   background: transparent;
-  cursor: ew-resize !important;
+  cursor: default !important;
 }
 #app .clip::before { left: 0; }
 #app .clip::after { right: 0; }
+#app .clip-editable::before,
+#app .clip-editable::after {
+  pointer-events: auto;
+  cursor: ew-resize !important;
+}
 .clip.selected {
   z-index: 4;
   overflow: visible;
