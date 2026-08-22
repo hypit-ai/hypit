@@ -83,12 +83,26 @@ const SILENT_AUDIO = { kind: "blob", digest: `sha256:${"0".repeat(64)}`, size: 1
  * @param frameRate the Program's frame rate, as a whole number of frames per second
  * @returns one `{ segmentId, take }` per Segment, in Script order
  */
-export async function standInTakes(svmlPath, frameRate) {
+export async function standInTakes(svmlPath, frameRate, focus = {}) {
   const svml = await readFile(svmlPath, "utf8");
   const body = scriptBody(svml);
   const parsed = parseScript(svmlPath, body.text, body.offset);
   const sheets = await recipeSheets(svml, svmlPath);
   const { policies, shared, policyCount } = policiesBySegment(svml, sheets);
+
+  // Which Segment the render is actually looking at. Every other Segment still has to exist — a
+  // Speech Track assembles one Take per Segment and an unsatisfied one refuses the whole projection —
+  // but nothing needs it at its estimated length. Held to one frame per word it stays legal, keeps
+  // its anchors, and stops the renderer drawing a minute of program to show six seconds of it.
+  let focused;
+  if (focus.segment !== undefined) focused = focus.segment;
+  else if (focus.selection !== undefined) {
+    const selection = parsed.selections.find((item) => item.id === focus.selection);
+    const token = selection?.occurrences[0]?.open.boundary.tokenIndex;
+    focused = token === undefined
+      ? undefined
+      : parsed.segments.find((segment) => token >= segment.tokenStart && token < segment.tokenEndExclusive)?.id;
+  }
 
   const takes = [];
   // Global frame span of every word, in Script order, so a Selection can be turned into a frame
@@ -104,7 +118,9 @@ export async function standInTakes(svmlPath, frameRate) {
     const tokens = parsed.tokens.slice(segment.tokenStart, segment.tokenEndExclusive);
     const text = tokens.map((token) => token.text).join(" ");
     const seconds = estimateSpeechDuration({ value: text }, policy);
-    const frameCount = Math.max(1, Math.round(seconds * frameRate));
+    const frameCount = focused !== undefined && segment.id !== focused
+      ? Math.max(1, tokens.length)
+      : Math.max(tokens.length, Math.round(seconds * frameRate));
 
     // Share the Segment's frames out by the estimator's own unit count, so the word order and the
     // relative widths both come from the same place the duration did.
