@@ -114,6 +114,7 @@ export const rankingAdapters: readonly StudioAdapter[] = [
     id: "ranking-column", role: "track",
     output: { type: "VisualTrack", surface: "column", modules: ["@hypit/ranking"] },
     family: "component", label: "Ranking", icon: "ranking", realizationPorts: ["schedule"],
+    editOperations: ["move", "trim-start", "trim-end"],
     parameters: [
       { name: "style", label: "Style", writable: false },
       { name: "during", label: "During", writable: false },

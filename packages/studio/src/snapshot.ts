@@ -272,6 +272,7 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
   readonly revision: number;
   readonly path: string;
   readonly text: string;
+  readonly run: StudioSnapshot["run"];
   readonly canvas: { readonly width: number; readonly height: number; readonly clearColor: string };
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
   readonly preview: StudioSnapshot["preview"];
@@ -346,7 +347,7 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
         declarations: registry.parameterDeclarations(item, placement, draft.lane),
         placements: built.source.observations.placements,
       });
-      const editHandles = timingEditHandles(parameters);
+      const editHandles = timingEditHandles(parameters, registry.editOperations(item, placement, draft.lane));
       return parameters.length === 0 && editHandles.length === 0
         ? draft
         : { ...draft, parameters, ...(editHandles.length === 0 ? {} : { editHandles }) };
@@ -403,6 +404,7 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
   return {
     revision: input.revision,
     source: { path: input.path, text: input.text },
+    run: input.run,
     ...(script === undefined ? {} : { script }),
     space: {
       canvasWidth: input.canvas.width,

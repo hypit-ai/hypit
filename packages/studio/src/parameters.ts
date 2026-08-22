@@ -118,6 +118,7 @@ function recipeParameters(input: {
       : /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/u.test(raw) ? "number" as const : "text" as const;
     return {
       id: `${input.draft.id}:${input.referenceName}:${property.name}`,
+      name: property.name,
       label: `${input.referenceName} · ${property.name}`,
       control,
       value: raw,
@@ -165,6 +166,7 @@ export function parametersForDraft(input: {
     const writable = declaration.writable === true && !isReference;
     return [{
       id: `${input.draft.id}:${name}`,
+      name,
       label: declaration.label ?? name,
       control: declaration.control ?? "text",
       value,
@@ -207,23 +209,60 @@ const ABSOLUTE_DURATION = /^\s*\d+(?:\.\d+)?(?:f|ms|s)\s*$/u;
  * source; a Selection/Moment expression cannot be moved from a downstream
  * rectangle. `at + for` has one legal edge: changing `for` changes only its end.
  */
-export function timingEditHandles(parameters: readonly StudioParameter[]): readonly StudioEditHandle[] {
-  const byName = new Map(parameters.map((parameter) => [parameter.id.slice(parameter.id.lastIndexOf(":") + 1), parameter]));
+export function timingEditHandles(
+  parameters: readonly StudioParameter[],
+  declared: readonly import("@hypit/studio-adapter").StudioEditOperation[] = ["move", "trim-start", "trim-end"],
+): readonly StudioEditHandle[] {
+  const byName = new Map<string, StudioParameter>();
+  for (const parameter of parameters) {
+    // Timing source attributes live in SVML. A nested Recipe may legitimately
+    // also have a property named `start`; it must never shadow the author
+    // window when a clip is being dragged.
+    if (parameter.language === "svml" && !byName.has(parameter.name)) byName.set(parameter.name, parameter);
+  }
   const start = byName.get("start");
   const end = byName.get("end");
   const at = byName.get("at");
   const duration = byName.get("for");
   const absolute = (parameter: StudioParameter | undefined): parameter is StudioParameter =>
     parameter !== undefined && parameter.writable && ABSOLUTE_DURATION.test(parameter.value);
+  const allowed = new Set(declared);
+  const disabled = (id: string, operation: StudioEditHandle["operation"], reason: string): StudioEditHandle => ({
+    id, operation, enabled: false, disabledReason: reason,
+  });
+  const handles: StudioEditHandle[] = [];
   if (absolute(start) && absolute(end)) {
-    return [
-      { id: "move", operation: "move", enabled: true, sources: [start.source, end.source] },
-      { id: "trim-start", operation: "trim-start", enabled: true, sources: [start.source] },
-      { id: "trim-end", operation: "trim-end", enabled: true, sources: [end.source] },
-    ];
+    if (allowed.has("move")) handles.push({
+      id: "move", operation: "move", enabled: true, coordinate: "program-frame",
+      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [start.source, end.source],
+    });
+    if (allowed.has("trim-start")) handles.push({
+      id: "trim-start", operation: "trim-start", enabled: true, coordinate: "program-frame",
+      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [start.source],
+    });
+    if (allowed.has("trim-end")) handles.push({
+      id: "trim-end", operation: "trim-end", enabled: true, coordinate: "program-frame",
+      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [end.source],
+    });
+  } else if (at !== undefined && !at.writable && absolute(duration)) {
+    if (allowed.has("move")) handles.push(disabled("move", "move", "起点由 At 引用决定，不能独立移动。"));
+    if (allowed.has("trim-start")) handles.push(disabled("trim-start", "trim-start", "起点由 At 引用决定，不能独立裁剪。"));
+    if (allowed.has("trim-end")) handles.push({
+      id: "trim-end", operation: "trim-end", enabled: true, coordinate: "program-frame",
+      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [duration.source],
+    });
+  } else {
+    const reason = parameters.some((parameter) => parameter.name === "during" && !parameter.writable)
+      ? "时间窗由 Selection、Segment、Moment 或 Program 投影提供。请修改来源或投影，不拖动消费结果。"
+      : "没有可逆的绝对时间端点源码范围。";
+    if (allowed.has("move")) handles.push(disabled("move", "move", reason));
+    if (allowed.has("trim-start")) handles.push(disabled("trim-start", "trim-start", reason));
+    if (allowed.has("trim-end")) handles.push(disabled("trim-end", "trim-end", reason));
   }
-  if (at !== undefined && !at.writable && absolute(duration)) {
-    return [{ id: "trim-end", operation: "trim-end", enabled: true, sources: [duration.source] }];
-  }
-  return [];
+  if (allowed.has("slip")) handles.push(disabled("slip", "slip", "素材内部时间尚未声明为可回写的作者参数。"));
+  if (allowed.has("split")) handles.push(disabled("split", "split", "切分会创建新的作者实体，当前没有唯一的 SVML 写回方案。"));
+  if (allowed.has("delete")) handles.push(disabled("delete", "delete", "删除需要同时处理作者元素与全部引用，当前保持只读。"));
+  if (allowed.has("duplicate")) handles.push(disabled("duplicate", "duplicate", "复制需要生成新的作者身份和引用，当前保持只读。"));
+  if (allowed.has("canvas-transform")) handles.push(disabled("canvas-transform", "canvas-transform", "画布几何由 Frame/Point 作者值控制，当前没有唯一可写范围。"));
+  return handles;
 }
