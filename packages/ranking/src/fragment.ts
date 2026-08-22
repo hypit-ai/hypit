@@ -135,7 +135,7 @@ export function createRankingFragment(
           ? rankingProducers.appendColumnCandidate
           : rankingProducers.appendTriggeredCandidate,
         inputs: {
-          set: candidates, spec: resolvedSpec, semantic: input("semantic"),
+          set: candidates, spec: resolvedSpec,
           window: operation(windowId),
         },
         result: { kind: "output", name: "set" },

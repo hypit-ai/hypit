@@ -23,6 +23,8 @@ const paths: Readonly<Record<string, string>> = {
   video: '<rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2v-4Z"/>',
   text: '<path d="M5 5h14M12 5v14M8 19h8"/>',
   captions: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 11h4M13 11h4M7 15h3M12 15h5"/>',
+  link: '<path d="m9 15 6-6"/><path d="M7.5 17.5h-1a4 4 0 0 1 0-8h3"/><path d="M16.5 6.5h1a4 4 0 0 1 0 8h-3"/>',
+  moment: '<path d="m12 3 3 9-3 9-3-9 3-9Z"/>',
   component: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
   layers: '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/>',
   ranking: '<path d="M5 19V9h4v10M10 19V5h4v14M15 19v-7h4v7M3 19h18"/>',
