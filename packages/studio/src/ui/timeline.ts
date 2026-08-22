@@ -657,6 +657,7 @@ export function createTimeline(store: Store): Timeline {
       const node = document.createElement("button");
       node.type = "button";
       node.className = `clip clip-${kind} clip-facet-${track.binding.facet} clip-shape-${clip.presentation.shape}`;
+      node.classList.toggle("clip-editable", clip.editHandles.some((handle) => handle.enabled));
       node.dataset.clip = clip.id;
       node.style.left = `${from * 100}%`;
       node.style.width = `max(2px, calc(${Math.max(0, to - from) * 100}% - ${itemMetrics.gapPx}px))`;
