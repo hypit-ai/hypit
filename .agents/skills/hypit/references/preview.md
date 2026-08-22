@@ -1,7 +1,7 @@
 # See what you authored, without paying
 
 Three ways to look at a Source before a Provider is ever reached: prove the graph traces, render one
-element to a still, and open the whole Run for a person. They answer different questions, and none of
+element locally, and open the whole Run for a person. They answer different questions, and none of
 them costs a generation.
 
 ## The graph traces before anybody opens it
@@ -45,36 +45,48 @@ What this proves is that the graph is **wired**, not that every track **draws**.
 refuses the media kind it is handed is not caught here, because nothing is handed to it until the
 Build runs.
 
-## Render one element to a still, locally
+## Render one element locally
 
-One element — a new component, one caption system, one inserted card — can be rendered to an image
-without a paid Provider. A new package's visual Surface needs a preview image anyway. The repository's
-own visual test `packages/hyperframes/test/browser-visual.test.ts` shows the path end to end: build
-the Track, compile the HyperFrames document, and render it through the local HyperFrames Runtime.
+One element — a new component, one caption system, one inserted card — can be rendered without a paid
+Provider. The repository's own visual test `packages/hyperframes/test/browser-visual.test.ts` shows
+the path end to end: build the Track, compile the HyperFrames document, and render it through the
+local HyperFrames Runtime.
 
-There is no one command for the still: a package's `test/render-preview.ts` harness is what renders
-it, and `local-author-package.md` requires that harness to take its state, frame and output path as
-arguments. That requirement exists because the still has two distinct jobs that must not collapse
-into one picture:
+There is no one command: a package's `test/render-preview.ts` harness is what renders it, and
+`local-author-package.md` requires that harness to take its inputs and its output path as arguments.
+That requirement exists because two different pictures come out of it, and they must not collapse
+into one:
 
-- the **Surface preview** — one catalogue image, every feature on, whatever moment shows the
-  component best, for Studio and the package README;
-- the **comparison still** — for `reconstruction-loop.md`, one picture per reference shot, showing
-  the element in the state that shot happens to show at a matching moment.
+- the **catalogue preview** — one image for Studio and the package README, drawn from sample copy and
+  a sample Recipe the harness supplies itself, chosen to show the Surface's range;
+- the **comparison render** — for `reconstruction-loop.md`, drawn from the Recipe values a Source
+  actually passes, the Script text that Source actually feeds the element, and mocks for the layers a
+  Build has not made. One per reference shot the element appears in.
 
-A harness whose state is written into it produces the first and nothing else; the route then reuses
-that catalogue picture for a comparison it does not fit. So the still render is one invocation of a
-parameterised harness, not the whole of it.
+The inputs are what separates them, and it is the whole separation. A Source can pass values that
+collide — lines that overlap, type too large for the plate it sits on — while the catalogue preview,
+drawn from different values, stays perfect. A harness whose inputs are written into it can only
+produce the first picture, and a route that compares that picture is answering a question about the
+catalogue.
 
-One case to handle rather than avoid: an element whose appearance depends on a media slot a Build
-has not filled. The slot is mocked with the route's fixed `make-placeholder` tool (a PNG, or `--video`
-for a slot that only accepts video), the comparison is scoped with `--question` to bypass the slot
-as an intentional placeholder, and `reconstruction-loop.md` says the empty-slot difference is not a
-repair target — so the still renders what the component draws itself with the mock in the slot, and
-the round is spent on the differences that can actually be repaired.
+Two things are mocked rather than left out. **The layers beneath**: a component that draws over a
+base take renders over black without one, and black is not neutral — text legible on it can be
+illegible on the picture that replaces it. **Media slots the Source declares as generations**: empty
+for the whole stretch between being written and being built. Both use the route's fixed
+`make-placeholder` tool — `--video --seconds <s>` for a stretch, a PNG for a slot, `--color` so the
+mock stays visible against what the element draws — sized from the Source's `space:Canvas` rather
+than from the reference video, and the comparison is scoped with `--question` so the observer skips
+those regions. `reconstruction-loop.md` gives the sizing rule and says why a reported mock is not a
+repair target.
 
-This is the image to reach for whenever one element has to be looked at rather than the whole
-program. Rendering the delivery to inspect a single piece is the waste it exists to prevent.
+The render can be a clip as well as a still, and a clip is the default. `compare_reconstruction
+--video` compares the whole shot, which removes the problem of choosing a frame to represent a shot
+that holds several states. A still is for the one case `reconstruction-loop.md` names: the shot's own
+visual observation says in words that the element is completely still. That judgement comes from the
+reference's observation, never from watching your own render.
+
+This is what to reach for whenever one element has to be looked at rather than the whole program.
+Rendering the delivery to inspect a single piece is the waste it exists to prevent.
 
 ## Open the whole Run for a person
 
@@ -119,7 +131,7 @@ Studio keeps three stages of an item's time apart, and reading one for another m
 A projection line connects a source to its realized window, and the projection view is read-only.
 `docs/guide/studio-temporal-windows.md` is authoritative for what each stage carries.
 
-Studio is a browser preview **for a person to look at**. It is not a source of images for an
-automated comparison — that is what the local still render above is for.
+Studio is a browser preview **for a person to look at**. It is not a source of pictures for an
+automated comparison — that is what the local render above is for.
 
 `docs/quickstart/preview.md` is authoritative.

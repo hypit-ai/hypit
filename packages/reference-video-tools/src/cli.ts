@@ -14,12 +14,18 @@ function usage(): string {
     "  hypit-reference-video-tools observe_reference --reference-id <id> --shot-id <id> [--shot-id <id> ...] --question <text>",
     "  hypit-reference-video-tools record_observation --reference-id <id> --key <key> --text <text>|--text-file <path>",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
-    "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --image <path> [--question <scope>] [--element <id>]",
+    "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
     "  hypit-reference-video-tools make-placeholder --out <path> --width <w> --height <h> [--color light|mid|dark|white|black|#RRGGBB] [--video] [--seconds <s>]",
     "",
     "--element names the reconstructed element the image draws. It is written to the reference's",
     "comparison log and never sent to the observer, so the comparison stays blind while a later gate can",
     "still tell which elements have been compared.",
+    "",
+    "--video compares the whole shot instead of one frame of it, which is what removes the problem of",
+    "choosing a characteristic frame for an element that animates in, leaves, or is replaced within one",
+    "shot. The `gemini` observer receives the two clips; the `agent` observer receives two frame tiles,",
+    "the rendered clip tiled against the reference shot's own duration so both grids sample alike. Use",
+    "--image only when the shot's own visual observation states the element is completely still.",
     "",
     "make-placeholder writes a correctly-sized placeholder for a media slot the Source declares as a",
     "generation and a Build has not filled. It is deterministic and Provider-free: the comparison loop",
@@ -137,14 +143,15 @@ async function main(): Promise<void> {
     };
     result = await tools.record_observation(input as { reference_id: string; key: string; text: string });
   } else if (command === "compare_reconstruction") {
+    const video = one(flags, "video");
     const input = supplied ?? {
       reference_id: required(flags, "reference-id"),
       shot_id: required(flags, "shot-id"),
-      image_path: required(flags, "image"),
+      ...(video === undefined ? { image_path: required(flags, "image") } : { video_path: video }),
       ...(one(flags, "question") === undefined ? {} : { question: one(flags, "question") }),
       ...(one(flags, "element") === undefined ? {} : { element: one(flags, "element") }),
     };
-    result = await tools.compare_reconstruction(input as { reference_id: string; shot_id: string; image_path: string; question?: string; element?: string });
+    result = await tools.compare_reconstruction(input as { reference_id: string; shot_id: string; image_path?: string; video_path?: string; question?: string; element?: string });
   } else if (command === "inspect_svml_vocabulary") {
     const packages = many(flags, "package");
     const input = supplied ?? {

@@ -178,11 +178,11 @@ test("reconstruction comparison sends an unlabelled pair and accepts rendered PN
 
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0]!.mimeTypes, ["image/jpeg", "image/png"]);
-  assert.match(calls[0]!.text, /image one, then image two/u);
+  assert.match(calls[0]!.text, /supplied in order: one, then two/u);
   assert.match(calls[0]!.text, /only the full-screen list area/u);
   assert.doesNotMatch(calls[0]!.text, /reconstruction|rendered|generated|authored|component|SVML/iu,
     "the comparison must never say which image was built or how");
-  assert.match(calls[0]!.instruction, /You are not told how either image was made/u);
+  assert.match(calls[0]!.instruction, /You are not told how either was made/u);
   assert.deepEqual(result["differences"], { status: "complete", text: "the list starts lower in one image" });
 
   await assert.rejects(
