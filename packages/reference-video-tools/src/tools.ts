@@ -147,25 +147,55 @@ function pngChunk(type: string, data: Uint8Array): Uint8Array {
   return out;
 }
 
+const PLACEHOLDER_COLORS = {
+  light: "#E8EAED",   // default — visible on a dark base
+  mid: "#9AA0A6",
+  dark: "#5F6368",    // visible on a light base
+  white: "#FFFFFF",
+  black: "#202124",
+} as const;
+
+type PlaceholderPalette = {
+  readonly base: [number, number, number];
+  readonly border: [number, number, number];
+  readonly hex: string;
+};
+
+/**
+ * Resolve the mock's colour: one of the named presets, or a six-digit hex. The inset border is the
+ * contrast of the base — a dark border on a light fill, a light border on a dark fill — so the
+ * placeholder stays visible whichever base it sits on, which is the point of choosing at all: a mock
+ * the same shade as its surroundings is one the observer reads as a hole rather than a slot.
+ */
+function resolvePlaceholderColor(value: string | undefined): PlaceholderPalette {
+  const named = value === undefined ? PLACEHOLDER_COLORS.light
+    : (PLACEHOLDER_COLORS as Record<string, string>)[value];
+  const hex = named ?? value ?? PLACEHOLDER_COLORS.light;
+  assert(named !== undefined || /^#[0-9a-f]{6}$/iu.test(value!),
+    `color must be one of ${Object.keys(PLACEHOLDER_COLORS).join(", ")} or a six-digit hex like #E0E0E0.`);
+  const base: [number, number, number] = [
+    parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16),
+  ];
+  const luminance = 0.299 * base[0] + 0.587 * base[1] + 0.114 * base[2];
+  const border: [number, number, number] = luminance > 128 ? [32, 33, 36] : [232, 234, 237];
+  return { base, border, hex };
+}
+
 /**
  * A correctly-sized placeholder image for a media slot the Source declares as a generation and a
  * Build has not filled. The comparison loop needs a still; the slot must be mocked, and the mock is
  * this tool's output — deterministic, Provider-free, never a real generation and never a hand-rolled
- * script. A grey field with an inset frame reads as a slot waiting for content rather than a broken
+ * script. A field with an inset frame reads as a slot waiting for content rather than a broken
  * image, so the observer can bypass the region instead of reporting it every round.
  */
-function placeholderPng(width: number, height: number, color: string): Uint8Array {
-  const fill = (hex: string): [number, number, number] => [
-    parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16),
-  ];
-  const base = fill(color);
-  const inset = fill("#9AA0A6");
+function placeholderPng(width: number, height: number, palette: PlaceholderPalette): Uint8Array {
+  const { base, border } = palette;
   const raw = Buffer.alloc(height * (1 + width * 3));
   const margin = Math.max(2, Math.round(Math.min(width, height) * 0.05));
   for (let y = 0; y < height; y += 1) {
     raw[y * (1 + width * 3)] = 0;
     for (let x = 0; x < width; x += 1) {
-      const c = (x < margin || y < margin || x >= width - margin || y >= height - margin) ? inset : base;
+      const c = (x < margin || y < margin || x >= width - margin || y >= height - margin) ? border : base;
       const i = y * (1 + width * 3) + 1 + x * 3;
       raw[i] = c[0]; raw[i + 1] = c[1]; raw[i + 2] = c[2];
     }
@@ -180,11 +210,6 @@ function placeholderPng(width: number, height: number, color: string): Uint8Arra
     pngChunk("IDAT", deflateSync(raw)),
     pngChunk("IEND", Buffer.alloc(0)),
   ]));
-}
-
-function hexColor(value: string, label: string): string {
-  assert(/^#[0-9a-f]{6}$/iu.test(value), `${label} must be a six-digit hexadecimal color like #E0E0E0.`);
-  return value;
 }
 
 function positiveInt(value: number, label: string): number {
@@ -860,14 +885,14 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     async make_placeholder(input): Promise<Record<string, unknown>> {
       const width = positiveInt(Number(input.width), "width");
       const height = positiveInt(Number(input.height), "height");
-      const color = input.color === undefined ? "#E8EAED" : hexColor(String(input.color), "color");
+      const palette = resolvePlaceholderColor(input.color === undefined ? undefined : String(input.color));
       const out = resolve(String(input.out));
       await mkdir(dirname(out), { recursive: true });
       if (input.video === true) {
         // A slot that only accepts video needs a real video artifact; a short solid-colour clip is
         // the mock. ffmpeg is part of the required local toolchain.
         const seconds = input.seconds === undefined ? 1 : positiveInt(Number(input.seconds), "seconds");
-        const filter = `color=c=${color.slice(1)}:s=${width}x${height}:r=24:d=${seconds}`;
+        const filter = `color=c=${palette.hex.slice(1)}:s=${width}x${height}:r=24:d=${seconds}`;
         const result = await new Promise<{ status: number | null; error?: Error }>((done) => {
           const child = spawn("ffmpeg", [
             "-y", "-f", "lavfi", "-i", filter, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-t", String(seconds), out,
@@ -878,10 +903,10 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         if (result.status !== 0) {
           throw new Error(`ffmpeg failed to write a placeholder video (${result.error?.message ?? `exit ${result.status}`}); ffmpeg is part of the required local toolchain`);
         }
-        return { out, width, height, color, video: true, seconds };
+        return { out, width, height, color: palette.hex, video: true, seconds };
       }
-      await writeFile(out, placeholderPng(width, height, color));
-      return { out, width, height, color, video: false };
+      await writeFile(out, placeholderPng(width, height, palette));
+      return { out, width, height, color: palette.hex, video: false };
     },
   };
 }
