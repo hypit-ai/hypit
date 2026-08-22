@@ -51,9 +51,21 @@ every one of those parameters with values that collide while the preview stays p
 preview answers a question nobody asked. `../preview.md` renders both, from the same harness, with
 different arguments; this loop uses the Source-configured one.
 
-The render is local and takes no paid Provider. `packages/hyperframes/test/browser-visual.test.ts`
-shows the path end to end: build the Track, compile the HyperFrames document, render it through the
-local HyperFrames Runtime.
+One command produces it, and it is not written per package:
+
+```
+node --import tsx .agents/skills/hypit/scripts/render-element.mjs projects/<name>/build.svrun \
+  --element <id> --segment <id>|--selection <id> --out <path>.mp4
+```
+
+It reads the Canvas, the Recipe values and the Script text out of the Source, stands in for the
+speech with the Source's own `estimate:Speech`, mocks every layer a Build has not made, and drives
+the package's Producer. Nothing is transcribed by hand, so nothing is transcribed one line at a time
+— which is what made a caption system look correct while its lines collided.
+
+The window is named in words. `--segment` and `--selection` take a Script name, not a timestamp: a
+shot of the reference is found by the words spoken over it, and those words are where the Script
+says they are. No reference clock is read across.
 
 ### Mock the layers a Build has not made
 
@@ -62,24 +74,17 @@ it may be media slots the Source declares as generations. Render them as mocks r
 them out: a missing base is not a neutral background, it is black, and text that is legible on black
 can be illegible on the picture that will replace it.
 
-Use the route's fixed placeholder tool for both — `hypit-reference-video-tools make-placeholder --out
-base.mp4 --width <w> --height <h> --video --seconds <s>` for the base stretch, `--out slot.png` for an
-image slot — with `--color` chosen so the mock is visible against what the element draws. Never
-`hypit image`, which pays for a generation the video will not reuse, and never a script written by
-hand.
+`render-element.mjs` does this itself. It finds every generation the Source declares — the takes, the
+stills, the slot contents — calls `make-placeholder` for each at the Canvas's own size, and declares
+them in a derived Run under the project's `.hypit/`. Never `hypit image`, which pays for a generation
+the video will not reuse, and never a placeholder drawn by a script written for the occasion.
 
-**The sizes come from the Source's own `space:Canvas`, not from the reference video.** The mock is
-composed inside the render, and the render's geometry is the Canvas. A base mock is the Canvas
-exactly — `<space:Canvas width="1080" height="1920"/>` means `--width 1080 --height 1920` — and a slot
-mock is that slot's `space:Frame` fractions multiplied by the Canvas, so a Frame from 16% to 84%
-across and 30% to 78% down is `--width 734 --height 922`. A mock built to the wrong box is resized by
-the `fit` before the observer ever sees it, which moves edges the comparison is there to read.
-
-The reference's own pixel dimensions are a different number and are usually smaller — the prepared
-reference stores them in `state.json` under `video`. They do not size the mock, but their **aspect**
-has to match the Canvas's. When it does not, every comparison in this loop is putting two
-differently-shaped pictures side by side, and the observer will report proportion differences that
-belong to the Canvas rather than to the element. Fix the Canvas before comparing anything.
+The sizes come from the Source's `space:Canvas`, not from the reference video, because the mock is
+composed inside the render and the render's geometry is the Canvas. The reference's own pixel
+dimensions are a different and usually smaller number, stored under `video` in its `state.json`. They
+do not size anything here, but their **aspect** has to match the Canvas's: when it does not, every
+comparison puts two differently-shaped pictures side by side and the observer reports proportion
+differences that belong to the Canvas rather than to the element. Fix the Canvas before comparing.
 
 Then tell the observer, through `--question`, that those regions are placeholders standing in for
 declared-but-unbuilt generations, and to compare only what the element itself draws. Said plainly it
