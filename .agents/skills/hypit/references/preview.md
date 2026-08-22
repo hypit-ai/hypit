@@ -66,9 +66,12 @@ A harness whose state is written into it produces the first and nothing else; th
 that catalogue picture for a comparison it does not fit. So the still render is one invocation of a
 parameterised harness, not the whole of it.
 
-One case where a still render is the wrong tool: an element whose appearance depends on a media slot
-a Build has not filled — the comparison would report the empty slot every round, which
-`reconstruction-loop.md` says is not a repair target. Render only the parts the element draws itself.
+One case to handle rather than avoid: an element whose appearance depends on a media slot a Build
+has not filled. The slot is mocked with the route's fixed `make-placeholder` tool (a PNG, or `--video`
+for a slot that only accepts video), the comparison is scoped with `--question` to bypass the slot
+as an intentional placeholder, and `reconstruction-loop.md` says the empty-slot difference is not a
+repair target — so the still renders what the component draws itself with the mock in the slot, and
+the round is spent on the differences that can actually be repaired.
 
 This is the image to reach for whenever one element has to be looked at rather than the whole
 program. Rendering the delivery to inspect a single piece is the waste it exists to prevent.
