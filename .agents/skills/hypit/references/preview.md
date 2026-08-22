@@ -52,38 +52,37 @@ Provider. The repository's own visual test `packages/hyperframes/test/browser-vi
 the path end to end: build the Track, compile the HyperFrames document, and render it through the
 local HyperFrames Runtime.
 
-There is no one command: a package's `test/render-preview.ts` harness is what renders it, and
-`local-author-package.md` requires that harness to take its inputs and its output path as arguments.
-That requirement exists because two different pictures come out of it, and they must not collapse
-into one:
+Two different pictures come out of this, and they must not collapse into one:
 
 - the **catalogue preview** — one image for Studio and the package README, drawn from sample copy and
-  a sample Recipe the harness supplies itself, chosen to show the Surface's range;
+  a sample Recipe the package supplies itself, chosen to show the Surface's range. It is the package's
+  own, like its README, and `local-author-package.md` says the package owes it;
 - the **comparison render** — for `reconstruction-loop.md`, drawn from the Recipe values a Source
   actually passes, the Script text that Source actually feeds the element, and mocks for the layers a
-  Build has not made. One per reference shot the element appears in.
+  Build has not made.
 
-The inputs are what separates them, and it is the whole separation. A Source can pass values that
+The values are what separates them, and it is the whole separation. A Source can pass values that
 collide — lines that overlap, type too large for the plate it sits on — while the catalogue preview,
-drawn from different values, stays perfect. A harness whose inputs are written into it can only
-produce the first picture, and a route that compares that picture is answering a question about the
-catalogue.
+drawn from different values, stays perfect. A route that compares the catalogue picture is answering
+a question about the catalogue.
 
-Two things are mocked rather than left out. **The layers beneath**: a component that draws over a
-base take renders over black without one, and black is not neutral — text legible on it can be
-illegible on the picture that replaces it. **Media slots the Source declares as generations**: empty
-for the whole stretch between being written and being built. Both use the route's fixed
-`make-placeholder` tool — `--video --seconds <s>` for a stretch, a PNG for a slot, `--color` so the
-mock stays visible against what the element draws — sized from the Source's `space:Canvas` rather
-than from the reference video, and the comparison is scoped with `--question` so the observer skips
-those regions. `reconstruction-loop.md` gives the sizing rule and says why a reported mock is not a
-repair target.
+The comparison render has one command, shared by every package:
 
-The render can be a clip as well as a still, and a clip is the default. `compare_reconstruction
---video` compares the whole shot, which removes the problem of choosing a frame to represent a shot
-that holds several states. A still is for the one case `reconstruction-loop.md` names: the shot's own
-visual observation says in words that the element is completely still. That judgement comes from the
-reference's observation, never from watching your own render.
+```bash
+node --import tsx .agents/skills/hypit/scripts/render-element.mjs projects/<name>/build.svrun \
+  --element <id> --segment <id>|--selection <id> --out <path>.mp4
+```
+
+It reads the Canvas, the Recipes, the Script and the bindings out of the Source; stands in for the
+speech the Build has yet to synthesize using the Source's own `estimate:Speech`, so the window
+lengths are the ones the Source already ordered its generations with; mocks every declared generation
+with `make-placeholder` at the Canvas's size; and drives each package's Producer through the same
+Studio projection `preview-check` traces, with no Provider installed. The mocks and the stand-in takes
+live in a derived Run under the project's `.hypit/`, never in the Source.
+
+Name the window in words. `--segment` and `--selection` take a Script name rather than a timestamp,
+because a shot of the reference is found by the words spoken over it. Write `.mp4` to `--out` for a
+clip and `.png` for the middle still; `reconstruction-loop.md` says which to use when.
 
 This is what to reach for whenever one element has to be looked at rather than the whole program.
 Rendering the delivery to inspect a single piece is the waste it exists to prevent.
