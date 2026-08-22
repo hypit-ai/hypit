@@ -38,9 +38,10 @@ than relying on an unstated assumption.
   of them are regenerated more than once, so the tier multiplies the whole bill for a difference that
   costs more to find than it is worth. Take an instruction to use a particular model literally when
   one is given, and otherwise never raise the tier and never stop to ask which to use.
-- The other values are `fast`, `standard` and `2.5`. `mini` and `fast` support only 480p/720p;
-  `standard` also supports 1080p/4k, which is the one reason to name it — a delivery that genuinely
-  requires 1080p, recorded as the deliberate choice it is.
+- The other values are `fast`, `standard` and `2.5`. `mini`, `fast` and `2.5` all render at 480p or
+  720p only; `standard` alone also supports 1080p/4k, which is the one reason to name it — a delivery
+  that genuinely requires 1080p, recorded as the deliberate choice it is. What `2.5` buys is
+  duration and reference capacity, not resolution.
 - Keep duration an integer inside the selected model's declared range, and read that range from the
   model rather than from memory: they differ, and one accepts far longer takes than the others.
   Invalid values fail closed.

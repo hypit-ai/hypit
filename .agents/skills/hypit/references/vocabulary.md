@@ -10,7 +10,7 @@ First enumerate every system the program actually contains — base pictures, in
 full-screen graphic compositions, persistent overlays, captions, speech, music, sound effects — and
 inspect candidates for each one. **A system you never inspected is a system you are about to invent.**
 
-Then, for each: select candidate packages and run `inspect_svml_vocabulary`. Read each selected
+Then, for each: select candidate packages and run `hypit-reference-video-tools inspect_svml_vocabulary`. Read each selected
 package README as syntax authority. Compare what the element must be against declared inputs,
 outputs, attributes, children, ports, Recipe properties, timing behavior, appearance and examples.
 
@@ -46,6 +46,13 @@ hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/<name> [--p
 `--package` may be repeated. `--tag` is optional and repeatable: omit it and every Surface in the
 named packages is returned. The README remains the syntax authority; this reports what the loader
 will actually accept, which is what a mistaken attribute is checked against.
+
+Both commands print one JSON object to stdout. `list_svml_packages` is an array of
+`{ package_name, tags, models }`; `inspect_svml_vocabulary` returns `{ packages, surfaces }` where
+each Surface carries `tag`, `mode`, `outputs`, `vocabulary` (its `attributes`, `children`, `ports`,
+`recipe` properties and `preview`) and `readme_path`. Read the `accepts` lists on attributes — that
+is the declared Type an element must satisfy, and a property with nowhere to land in those lists is
+the finding that makes a gap.
 
 ## Reuse, compose, or declare a gap
 
@@ -99,7 +106,7 @@ it deliberately and writes it down.
 ## A real gap
 
 For a real gap, stop authoring sources and read `local-author-package.md` completely. Implement and
-install the new project-local package, then run `inspect_svml_vocabulary` against it before using its
+install the new project-local package, then run `hypit-reference-video-tools inspect_svml_vocabulary` against it before using its
 tag. That call is not redundant with having just written the package: it proves the specifier
 resolves, the activation contribution is wired, and the loader can decode the Surface. `pnpm check`
 proves none of those, because activation lookups fail at runtime rather than at compile time.
