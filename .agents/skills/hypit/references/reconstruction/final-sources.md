@@ -52,8 +52,8 @@ loop's two-attempt ceiling: a graph that does not trace is not a difference to w
 is not done.
 
 One thing to expect here rather than to debug: a route that declares its generation instead of
-performing it leaves the closure waiting on Providers, so `preview-check` reporting only
-`unresolved capabilities` and exiting zero **is the pass**, and is the state every reconstruction is
+performing it leaves the closure waiting on Providers, so `preview_check` reporting only
+`unresolved capabilities` and staying sound **is the pass**, and is the state every reconstruction is
 in when its sources are first written.
 
 Fix package resolution and package implementation before repairing source use. Continue until all
@@ -61,6 +61,6 @@ three files are accepted. Do not create `check_svml_project` or another wrapper.
 
 Accepted checks end the structural work, not the reconstruction. Every element you authored still has
 to be rendered and compared against the reference under `reconstruction-loop.md`, and that work ends
-on `reconstruction-check` (`index.md` holds the command), which refuses to pass while any
-locally-drawn element has never been compared. It needs a prepared reference; when several are
-prepared it takes `--reference-id <id>`.
+on `reconstruction_check` (`index.md` holds the command), which refuses to pass while any drawing
+element has never been compared. It needs a prepared reference; when several are prepared it takes
+`--reference-id <id>`.

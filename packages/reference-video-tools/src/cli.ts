@@ -16,6 +16,34 @@ function usage(): string {
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
     "  hypit-reference-video-tools make-placeholder --out <path> --width <w> --height <h> [--color light|mid|dark|white|black|#RRGGBB] [--video] [--seconds <s>]",
+    "  hypit-reference-video-tools render_element <build.svrun> --element <id> --out <path.png|path.mp4> [--segment <id>] [--selection <id>]",
+    "  hypit-reference-video-tools render_previews <package-dir> [...]",
+    "  hypit-reference-video-tools preview_check <build.svrun> [<hypit.runtime.json>]",
+    "  hypit-reference-video-tools reconstruction_check <build.svrun> [--reference-id <id>]",
+    "",
+    "preview_check opens the Run the way Studio does and reports whether the graph traces. `sound` is",
+    "true when every Track resolved, and also when the only thing missing is capabilities a Provider has",
+    "still to serve — those are listed under `awaiting`. It takes the Run Source, not the Author SVML:",
+    "Studio's unit of work is the Run, and it reads the .svml back out of it.",
+    "",
+    "reconstruction_check reports what the route can settle before a Build: which drawing elements have",
+    "never been compared against the reference, and which timed pictures are configured to stop before",
+    "their window ends. It asks for participation rather than convergence, so an element compared once",
+    "passes. With one prepared reference it uses that one; with several it requires --reference-id.",
+    "",
+    "render_element draws one element of a Source the way that Source configures it, without a Build",
+    "and without a Provider: the Canvas, frame rate, Recipe values and bindings are read from the",
+    "Source, the Segment skeleton comes from its own estimate:Speech, and the layers a Build has not",
+    "made are mocked with make-placeholder at the Canvas's size. Name the stretch in words —",
+    "--segment or --selection — so no reference timestamp is ever read across; without either, the",
+    "whole program is drawn. An --out ending .mp4, .mov or .webm writes the stretch as a clip, and any",
+    "other extension writes one still from the middle of it.",
+    "",
+    "render_previews draws a package's catalogue pictures from the package's own preview Source in",
+    "preview/preview.svml, preview/recipes.svs and preview/build.svrun. Which element draws which file",
+    "comes from the Manifest's own naming: a Surface tagged Track declares preview/Track.png, so",
+    "Track.png is drawn from whichever element in the preview Source carries that tag. An .svg the",
+    "Manifest promises is drawn by hand and left alone.",
     "",
     "--element names the reconstructed element the image draws. It is written to the reference's",
     "comparison log and never sent to the observer, so the comparison stays blind while a later gate can",
@@ -50,13 +78,24 @@ function usage(): string {
   ].join("\n");
 }
 
-function parse(argv: readonly string[]): { readonly command: string; readonly flags: Flags } {
+// The authoring and check commands name what they act on positionally — a Run for `render_element`,
+// `preview_check` and `reconstruction_check`, one or more package directories for `render_previews` —
+// so a token that is not a flag is collected rather than refused. Every other command still refuses
+// one, which is why the check is made per command rather than dropped here.
+const COMMANDS_WITH_OPERANDS = new Set(["render_element", "render_previews", "preview_check", "reconstruction_check"]);
+
+function parse(argv: readonly string[]): { readonly command: string; readonly operands: readonly string[]; readonly flags: Flags } {
   const command = argv[0];
   if (command === undefined || command === "--help" || command === "-h") throw new Error(usage());
   const values = new Map<string, string | string[] | boolean>();
+  const operands: string[] = [];
   for (let index = 1; index < argv.length; index += 1) {
     const token = argv[index]!;
-    if (!token.startsWith("--")) throw new Error(`unexpected argument ${token}\n\n${usage()}`);
+    if (!token.startsWith("--")) {
+      if (!COMMANDS_WITH_OPERANDS.has(command)) throw new Error(`unexpected argument ${token}\n\n${usage()}`);
+      operands.push(token);
+      continue;
+    }
     const name = token.slice(2);
     if (name.length === 0) throw new Error("empty option name");
     const next = argv[index + 1];
@@ -69,7 +108,7 @@ function parse(argv: readonly string[]): { readonly command: string; readonly fl
     if (current === undefined) values.set(name, next);
     else values.set(name, [...(Array.isArray(current) ? current : [String(current)]), next]);
   }
-  return { command, flags: values };
+  return { command, operands, flags: values };
 }
 
 function one(flags: Flags, name: string): string | undefined {
@@ -106,7 +145,7 @@ process.stdout.write = ((chunk: string | Uint8Array, ...rest: readonly unknown[]
   (process.stderr.write as (...args: readonly unknown[]) => boolean)(chunk, ...rest)) as typeof process.stdout.write;
 
 async function main(): Promise<void> {
-  const { command, flags } = parse(process.argv.slice(2));
+  const { command, operands, flags } = parse(process.argv.slice(2));
   if (flags.has("rebuild") || flags.has("refresh")) {
     throw new Error("--rebuild and --refresh were removed; use --redo on prepare_reference or --reobserve on observe_reference");
   }
@@ -170,6 +209,39 @@ async function main(): Promise<void> {
       ...(one(flags, "seconds") === undefined ? {} : { seconds: Number(one(flags, "seconds")) }),
     };
     result = await tools.make_placeholder(input as { out: string; width: number; height: number; color?: string; video?: boolean; seconds?: number });
+  } else if (command === "render_element") {
+    const run = operands[0];
+    if (supplied === undefined && run === undefined) throw new Error(`a <build.svrun> is required\n\n${usage()}`);
+    const input = supplied ?? {
+      run,
+      element: required(flags, "element"),
+      out: required(flags, "out"),
+      ...(one(flags, "segment") === undefined ? {} : { segment: one(flags, "segment") }),
+      ...(one(flags, "selection") === undefined ? {} : { selection: one(flags, "selection") }),
+    };
+    result = await tools.render_element(input as { run: string; element: string; out: string; segment?: string; selection?: string });
+  } else if (command === "render_previews") {
+    if (supplied === undefined && operands.length === 0) throw new Error(`a <package-dir> is required\n\n${usage()}`);
+    const input = supplied ?? { package_dirs: operands };
+    result = await tools.render_previews(input as { package_dirs: readonly string[] });
+  } else if (command === "preview_check") {
+    // The runtime archive is the second operand rather than a flag, the way the Run itself is: both
+    // name a file this command opens, and the pair reads as one argument list.
+    const run = operands[0];
+    if (supplied === undefined && run === undefined) throw new Error(`a <build.svrun> is required\n\n${usage()}`);
+    const input = supplied ?? {
+      run,
+      ...(operands[1] === undefined ? {} : { runtime: operands[1] }),
+    };
+    result = await tools.preview_check(input as { run: string; runtime?: string });
+  } else if (command === "reconstruction_check") {
+    const run = operands[0];
+    if (supplied === undefined && run === undefined) throw new Error(`a <build.svrun> is required\n\n${usage()}`);
+    const input = supplied ?? {
+      run,
+      ...(one(flags, "reference-id") === undefined ? {} : { reference_id: one(flags, "reference-id") }),
+    };
+    result = await tools.reconstruction_check(input as { run: string; reference_id?: string });
   } else {
     throw new Error(`unknown command ${command}\n\n${usage()}`);
   }

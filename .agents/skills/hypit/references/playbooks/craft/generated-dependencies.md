@@ -148,7 +148,7 @@ three separate numbers that will not agree. Lengthening the material moves the m
 removing it; `playback` decides what the window shows once the material is spent, which is the part
 that stays true whichever way the three numbers fall.
 
-`reconstruction-check` reads this before a Build and refuses a Recipe that leaves `playback` at its
+`reconstruction_check` reads this before a Build and refuses a Recipe that leaves `playback` at its
 default on generated material.
 
 A bed makes a blend visible, so check the Items' entry and exit while you are here: `enter` and `exit`
