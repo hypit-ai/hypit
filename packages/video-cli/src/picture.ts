@@ -34,8 +34,11 @@ function assert(condition: unknown, message: string): asserts condition {
 async function selectImageModel(
   specifier: string,
   packageRoot: string,
+  distributionPackageRoot?: string,
 ): Promise<ExactModelEndpoint> {
-  const loaded = await loadNodePackageSelection([specifier], packageRoot);
+  const loaded = await loadNodePackageSelection([specifier], packageRoot, {
+    ...(distributionPackageRoot === undefined ? {} : { fallbackRoots: [distributionPackageRoot] }),
+  });
   const selected = loaded.find((item) => item.specifier === specifier);
   assert(selected !== undefined, `installed package ${specifier} contributed nothing`);
   const declared = exactModelsFromHostFacets(selected.contribution.hostFacets ?? []);
@@ -131,7 +134,7 @@ async function readPicture(
  */
 export async function generateVideoCliPicture(request: CliPictureRequest): Promise<CliPicture> {
   const specifier = request.model ?? defaultPictureModel;
-  const model = await selectImageModel(specifier, request.packageRoot);
+  const model = await selectImageModel(specifier, request.packageRoot, request.distributionPackageRoot);
   const need: Need = {
     id: "need:hypit-image",
     capability: model.capability,

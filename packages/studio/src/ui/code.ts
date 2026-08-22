@@ -339,12 +339,10 @@ export function createCodePane(): CodePane {
         clickable.push({ range: segment.range, tone: tones.get(segment.id) });
       }
       for (const selection of snapshot.script?.selections ?? []) {
-        for (const occurrence of selection.occurrences) {
-          clickable.push({
-            range: { start: occurrence.open.start, end: occurrence.close.end },
-            tone: tones.get(selection.id),
-          });
-        }
+        clickable.push({
+          range: { start: selection.open.start, end: selection.close.end },
+          tone: tones.get(selection.id),
+        });
       }
       for (const track of snapshot.tracks) {
         for (const clip of track.clips) {

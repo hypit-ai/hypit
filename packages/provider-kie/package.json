@@ -26,7 +26,6 @@
     "@hypit/credential-store-env": "workspace:*",
     "@hypit/driver-node": "workspace:*",
     "@hypit/elaborator": "workspace:*",
-    "@hypit/gemini-omni": "workspace:*",
     "@hypit/gpt-image": "workspace:*",
     "@hypit/grok-imagine": "workspace:*",
     "@hypit/runtime-local": "workspace:*",

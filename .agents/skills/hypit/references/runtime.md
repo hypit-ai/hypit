@@ -80,20 +80,24 @@ Builds remain archived and neither command cancels remote Provider work.
   a change that costs nothing on an idle Runtime costs the whole Build on a busy one. Nothing is lost
   by waiting: accepted Records are durable, and the requests still in flight are the expensive ones.
 
-## Keep project and package boundaries distinct
+## Keep the tool checkout and every project physically separate
 
-A project lives at `projects/<name>/` in the checkout — its own directory, holding the four Sources,
-its assets and any project-local package. `pnpm-workspace.yaml` covers `projects/*/packages/*` and
-Git ignores `projects/`, so a project is installed and type-checked like the examples while staying
-out of the repository's history.
+The printed Hypit repository is a replaceable tool checkout. Never create an authored project,
+project-local package, generated asset or Build output inside it. A project is a sibling or otherwise
+external directory such as `<home>/<name>/`, holding its Sources, assets and `packages/` directory in
+its own Git/workspace boundary. `examples/` is only the published fixture set: read it for the nearest
+Runtime Profile and source shape, but never turn an example or a hidden checkout directory into the
+author's project.
 
-`examples/` is the published example set. Read it for the nearest Runtime Profile and the closest
-source shape, and write under `projects/`.
+Studio and the CLI resolve explicit project packages from the project root, then fall back to the
+read-only Hypit Distribution. The `@hypit/*` namespace is reserved for the active Distribution and
+is resolved there first; project packages use their own scope. This bridge is Host configuration;
+it does not add the project to Hypit's pnpm workspace or modify either repository's lockfile.
 
 Relative Author Sources and assets stay inside the independently resolved Source Workspace.
 
 - `--workspace` explicitly selects the Source Workspace boundary.
 - `--package-root` only changes where the Host locates installed packages. It does not widen Source
   access.
-- Do not symlink an external project into the repository to bypass containment; canonical-path
-  checks reject that escape.
+- Do not symlink an external project into the repository. The external directory is the intended
+  workspace, not an escape from one.

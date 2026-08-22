@@ -1,28 +1,19 @@
 import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { programSpaceFrameCount } from "@hypit/program-space";
 import {
-  momentFrames,
+  momentFrame,
   projectSemanticProgramSpace,
   segmentFrameSpan,
-  selectionFrameSpans,
+  selectionFrameSpan,
 } from "@hypit/semantic-track";
 import type { SemanticTrack } from "@hypit/semantic-track";
 
 import type {
-  LocatedMomentOccurrence,
-  LocatedProgramOccurrence,
-  LocatedSegmentOccurrence,
-  LocatedSelectionOccurrence,
+  LocatedMoment,
+  LocatedProgram,
+  LocatedSegment,
+  LocatedSelection,
 } from "./types.js";
-
-function occurrenceIdentity(owner: string, occurrence: number, seen: Set<number>): string {
-  if (!Number.isSafeInteger(occurrence) || occurrence < 0) {
-    throw new Error(`${owner} contains an invalid occurrence identity.`);
-  }
-  if (seen.has(occurrence)) throw new Error(`${owner} contains duplicate occurrence ${occurrence}.`);
-  seen.add(occurrence);
-  return `${owner}#${occurrence}`;
-}
 
 function assertLocatedFrame(frame: number, totalFrames: number, label: string): void {
   if (!Number.isSafeInteger(frame) || frame < 0 || frame > totalFrames) {
@@ -30,63 +21,38 @@ function assertLocatedFrame(frame: number, totalFrames: number, label: string): 
   }
 }
 
-export function locateSelectionOccurrences(
+export function locateSelection(
   semantic: SemanticTrack,
   selection: NarrativeSelectionRef,
-): readonly LocatedSelectionOccurrence[] {
+): LocatedSelection {
   const space = projectSemanticProgramSpace(semantic);
   const totalFrames = programSpaceFrameCount(space);
-  const spans = selectionFrameSpans(semantic, selection);
-  if (spans.length !== selection.occurrences.length) {
-    throw new Error(`NarrativeSelection ${selection.id} location cardinality changed.`);
-  }
-  const seen = new Set<number>();
-  return spans.map((span, index) => {
-    const occurrence = selection.occurrences[index];
-    if (occurrence === undefined) throw new Error(`NarrativeSelection ${selection.id} occurrence is missing.`);
-    assertLocatedFrame(span.startFrame, totalFrames, `NarrativeSelection ${selection.id} start`);
-    assertLocatedFrame(span.endFrameExclusive, totalFrames, `NarrativeSelection ${selection.id} end`);
-    return {
-      id: occurrenceIdentity(selection.id, occurrence.occurrence, seen),
-      occurrence: occurrence.occurrence,
-      start: { frame: span.startFrame },
-      end: { frame: span.endFrameExclusive },
-    };
-  });
+  const span = selectionFrameSpan(semantic, selection);
+  assertLocatedFrame(span.startFrame, totalFrames, `NarrativeSelection ${selection.id} start`);
+  assertLocatedFrame(span.endFrameExclusive, totalFrames, `NarrativeSelection ${selection.id} end`);
+  return { id: selection.id, start: { frame: span.startFrame }, end: { frame: span.endFrameExclusive } };
 }
 
-export function locateMomentOccurrences(
+export function locateMoment(
   semantic: SemanticTrack,
   moment: NarrativeMomentRef,
-): readonly LocatedMomentOccurrence[] {
+): LocatedMoment {
   const space = projectSemanticProgramSpace(semantic);
   const totalFrames = programSpaceFrameCount(space);
-  const frames = momentFrames(semantic, moment);
-  if (frames.length !== moment.occurrences.length) {
-    throw new Error(`NarrativeMoment ${moment.id} location cardinality changed.`);
-  }
-  const seen = new Set<number>();
-  return frames.map((frame, index) => {
-    const occurrence = moment.occurrences[index];
-    if (occurrence === undefined) throw new Error(`NarrativeMoment ${moment.id} occurrence is missing.`);
-    assertLocatedFrame(frame, totalFrames, `NarrativeMoment ${moment.id} cue`);
-    return {
-      id: occurrenceIdentity(moment.id, occurrence.occurrence, seen),
-      occurrence: occurrence.occurrence,
-      cue: { frame },
-    };
-  });
+  const frame = momentFrame(semantic, moment);
+  assertLocatedFrame(frame, totalFrames, `NarrativeMoment ${moment.id} cue`);
+  return { id: moment.id, cue: { frame } };
 }
 
-export function locateProgramOccurrence(semantic: SemanticTrack): LocatedProgramOccurrence {
+export function locateProgram(semantic: SemanticTrack): LocatedProgram {
   const space = projectSemanticProgramSpace(semantic);
   return { id: "program", start: { frame: 0 }, end: { frame: programSpaceFrameCount(space) } };
 }
 
-export function locateSegmentOccurrence(
+export function locateSegment(
   semantic: SemanticTrack,
   segment: NarrativeExcerpt,
-): LocatedSegmentOccurrence {
+): LocatedSegment {
   const space = projectSemanticProgramSpace(semantic);
   const totalFrames = programSpaceFrameCount(space);
   const span = segmentFrameSpan(semantic, segment);

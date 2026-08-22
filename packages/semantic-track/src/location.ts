@@ -4,11 +4,11 @@ import { assertSemanticTrackIdentity, semanticTrackSpans } from "./identity.js";
 import type { LocatedFrameSpan, SemanticTrack } from "./types.js";
 
 export function assertNarrativeSelectionIdentity(selection: NarrativeSelectionRef): void {
-  if (!selection.id || selection.occurrences.length === 0) throw new Error("NarrativeSelection is invalid");
+  if (!selection.id || !selection.startAnchorId || !selection.endAnchorId) throw new Error("NarrativeSelection is invalid");
 }
 
 export function assertNarrativeMomentIdentity(moment: NarrativeMomentRef): void {
-  if (!moment.id || moment.occurrences.length === 0) throw new Error("NarrativeMoment is invalid");
+  if (!moment.id || !moment.anchorId) throw new Error("NarrativeMoment is invalid");
 }
 
 function anchorFrames(track: SemanticTrack): ReadonlyMap<string, number> {
@@ -22,17 +22,17 @@ function frameFor(frames: ReadonlyMap<string, number>, anchorId: string, owner: 
   return frame;
 }
 
-export function selectionFrameSpans(
+export function selectionFrameSpan(
   track: SemanticTrack,
   selection: NarrativeSelectionRef,
-): readonly LocatedFrameSpan[] {
+): LocatedFrameSpan {
   assertSemanticTrackIdentity(track);
   assertNarrativeSelectionIdentity(selection);
   const frames = anchorFrames(track);
-  return selection.occurrences.map((occurrence) => ({
-    startFrame: frameFor(frames, occurrence.startAnchorId, `NarrativeSelection ${selection.id}`),
-    endFrameExclusive: frameFor(frames, occurrence.endAnchorId, `NarrativeSelection ${selection.id}`),
-  }));
+  return {
+    startFrame: frameFor(frames, selection.startAnchorId, `NarrativeSelection ${selection.id}`),
+    endFrameExclusive: frameFor(frames, selection.endAnchorId, `NarrativeSelection ${selection.id}`),
+  };
 }
 
 export function segmentFrameSpan(track: SemanticTrack, segment: NarrativeExcerpt): LocatedFrameSpan {
@@ -59,10 +59,9 @@ export function tokenFrameSpan(track: SemanticTrack, tokenIds: readonly string[]
   };
 }
 
-export function momentFrames(track: SemanticTrack, moment: NarrativeMomentRef): readonly number[] {
+export function momentFrame(track: SemanticTrack, moment: NarrativeMomentRef): number {
   assertSemanticTrackIdentity(track);
   assertNarrativeMomentIdentity(moment);
   const frames = anchorFrames(track);
-  return moment.occurrences.map((occurrence) =>
-    frameFor(frames, occurrence.anchorId, `NarrativeMoment ${moment.id}`));
+  return frameFor(frames, moment.anchorId, `NarrativeMoment ${moment.id}`);
 }

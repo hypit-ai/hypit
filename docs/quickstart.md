@@ -169,7 +169,7 @@ Install only what your selected Runtime Profile needs:
 | `ffmpeg` / `ffprobe` | using local media inspection, normalization or muxing |
 | Python 3.10–3.13 and `uv` | using local WhisperX or OpenCV |
 | Chromium | managed automatically by local HyperFrames rendering |
-| API credentials | selecting remote KIE, Vertex, Xiaomi or AWS endpoints |
+| API credentials | selecting remote KIE, Xiaomi or AWS endpoints |
 
 For local Python programs:
 

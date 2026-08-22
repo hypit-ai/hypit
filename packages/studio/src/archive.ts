@@ -18,9 +18,13 @@ export type StudioArchive = {
 export async function openStudioArchive(
   profile: string | undefined,
   packageRoot: string,
+  distributionPackageRoot?: string,
 ): Promise<StudioArchive | undefined> {
   if (profile === undefined) return undefined;
-  const host = await videoCliDistribution.openRuntimeHost(profile, { packageRoot });
+  const host = await videoCliDistribution.openRuntimeHost(profile, {
+    packageRoot,
+    ...(distributionPackageRoot === undefined ? {} : { distributionPackageRoot }),
+  });
   const runtime = await host.openArchive({ readOnly: true });
   const artifacts = await host.openArtifacts();
   const cache = new Map<string, Awaited<ReturnType<typeof runtime.status>>>();

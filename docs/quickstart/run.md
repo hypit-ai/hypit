@@ -211,8 +211,6 @@ Profile:
 | Variable | Provider/use |
 |---|---|
 | `KIE_API_KEY` | KIE models, including Seedance and GPT Image |
-| `GOOGLE_CLOUD_PROJECT` | Google Cloud project with Vertex AI enabled |
-| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Complete Vertex credential JSON contents, not a file path |
 | `MIMO_API_KEY` | Xiaomi MiMo TTS, only when that Endpoint is selected |
 
 Run only the lines for the Endpoints in your Profile. In macOS/Linux shells:
@@ -222,8 +220,6 @@ read -r -s KIE_API_KEY
 export KIE_API_KEY
 read -r -s MIMO_API_KEY
 export MIMO_API_KEY
-export GOOGLE_CLOUD_PROJECT="your-project-id"
-export GOOGLE_APPLICATION_CREDENTIALS_JSON="$(<"$HOME/.config/hypit/google-service-account.json")"
 ```
 
 In Windows PowerShell:
@@ -231,8 +227,6 @@ In Windows PowerShell:
 ```powershell
 $env:KIE_API_KEY = "your-key"
 $env:MIMO_API_KEY = "your-key"
-$env:GOOGLE_CLOUD_PROJECT = "your-project-id"
-$env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\hypit\google-service-account.json"
 ```
 
 Keep credentials out of Author Source, Run Source, Runtime Profile source, and committed files.

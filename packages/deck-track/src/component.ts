@@ -4,13 +4,13 @@ import type { StoredValue } from "@hypit/protocol";
 import type { SemanticTrack } from "@hypit/semantic-track";
 import { projectSemanticProgramSpace } from "@hypit/semantic-track";
 import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
+import type { TemporalWindow } from "@hypit/temporal";
 import type { MediaLayerSet } from "@hypit/media-track";
 import type { Text } from "@hypit/text";
 
 import { renderDepthStack } from "./lower.js";
 import { depthStackProducers, depthStackTypes } from "./manifest.js";
-import { appendDepthStackMomentCard, assertDepthStackProgram, createDepthStackCardSet, finalizeDepthStackAtProgramEnd, finalizeDepthStackUntilMoment, finalizeDepthStackUntilSelection, bindDepthStackCardLabelText } from "./program.js";
+import { appendDepthStackProjectedCard, assertDepthStackProgram, createDepthStackCardSet, finalizeDepthStackAtWindow, bindDepthStackCardLabelText } from "./program.js";
 import type {
   DepthStackCardLabel,
   DepthStackCardLabelStyle,
@@ -51,22 +51,22 @@ export const depthStackComponent = {
       handler: () => ({ outputs: { set: output(createDepthStackCardSet()) }, needs: {} }),
     },
     {
-      producer: depthStackProducers.appendMomentCard,
-      handler: ({ inputs }) => ({ outputs: { set: output(appendDepthStackMomentCard(
+      producer: depthStackProducers.appendCard,
+        handler: ({ inputs }) => ({ outputs: { set: output(appendDepthStackProjectedCard(
         inline<DepthStackCardSet>(inputs.set?.value, "DepthStackCardSet"),
         inline<MediaLayerSet>(inputs.material?.value, "MediaLayerSet"),
         inline<DepthStackCardLabel>(inputs.label?.value, "DepthStackCardLabel"),
         inline<DepthStackCardSpec>(inputs.spec?.value, "DepthStackCardSpec"),
-        inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
-        inline<NarrativeMomentRef>(inputs.moment?.value, "NarrativeMomentRef"),
+        inline<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
       )) }, needs: {} }),
     },
     {
       producer: depthStackProducers.finalizeProgramEnd,
       handler: ({ inputs }) => {
         const value = finalizeInputs(inputs);
-        return { outputs: { program: output(finalizeDepthStackAtProgramEnd(
-          value.set, value.header, value.frame, value.spec, value.semantic,
+        return { outputs: { program: output(finalizeDepthStackAtWindow(
+          value.set, value.header, value.frame, value.spec,
+          inline<TemporalWindow>(inputs.terminal?.value, "TemporalWindow"), value.semantic, "end",
         )) }, needs: {} };
       },
     },
@@ -74,23 +74,20 @@ export const depthStackComponent = {
       producer: depthStackProducers.finalizeUntilMoment,
       handler: ({ inputs }) => {
         const value = finalizeInputs(inputs);
-        return { outputs: { program: output(finalizeDepthStackUntilMoment(
+        return { outputs: { program: output(finalizeDepthStackAtWindow(
           value.set, value.header, value.frame, value.spec,
-          value.semantic,
-          inline<NarrativeMomentRef>(inputs.terminal?.value, "NarrativeMomentRef"),
+          inline<TemporalWindow>(inputs.terminal?.value, "TemporalWindow"), value.semantic, "start",
         )) }, needs: {} };
       },
     },
     ...([depthStackProducers.finalizeUntilSelectionStart, depthStackProducers.finalizeUntilSelectionEnd] as const)
-      .map((producer, index) => ({
+      .map((producer) => ({
         producer,
         handler: ({ inputs }: ProducerHandlerContext) => {
           const value = finalizeInputs(inputs);
-          return { outputs: { program: output(finalizeDepthStackUntilSelection(
+            return { outputs: { program: output(finalizeDepthStackAtWindow(
             value.set, value.header, value.frame, value.spec,
-            value.semantic,
-            inline<NarrativeSelectionRef>(inputs.terminal?.value, "NarrativeSelectionRef"),
-            index === 0 ? "start" : "end",
+            inline<TemporalWindow>(inputs.terminal?.value, "TemporalWindow"), value.semantic, "start",
           )) }, needs: {} };
         },
       })),

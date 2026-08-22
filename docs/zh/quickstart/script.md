@@ -70,7 +70,10 @@ Role Cue 会产生不同的文本投影：
 | **speech** | `What time is it?`<br>`It's 8:30.` |
 | **caption** | `What time is it?`<br>`It's 8:30.` |
 
-dialogue `Text` 包含 Role Cue 前缀，speech `Text` 和 caption 投影会去除前缀。给 `seedance:ReferenceVideo` 提供输入的 Prompt Program 可以使用 `{story.segment.dialogue.dialogue}`（带标签）。Script 还会显式输出 `{story.caption}` 作为有序的显示 Atom/Word 全集，并以 `{story.caption.correspondence}` 单独提供 Atom 到口播 token 的对应；只有定时汇合处需要后者。
+dialogue `Text` 包含 Role Cue 前缀，speech `Text` 和 CaptionDocument 会去除前缀。给
+`seedance:ReferenceVideo` 提供输入的 Prompt Program 可以使用 `{story.segment.dialogue.dialogue}`
+（带标签）。Script 输出一份 `{story.caption}` CaptionDocument，里面有显示词、N:M 对齐单元
+和作者写出的 Cue 分界；里面没有秒数或帧数。
 
 ## Dual Text
 
@@ -95,11 +98,43 @@ dialogue `Text` 包含 Role Cue 前缀，speech `Text` 和 caption 投影会去�
 <HOST> I was < | um> saying that this works.
 ```
 
-这意味着 "um" 会被说出但永远不会显示为字幕。两侧可以有不同的单词数量——这是一种 N:M 文本映射，而非 1:1 替换。
+这意味着 "um" 会被说出但永远不会显示为字幕。两侧可以有不同的单词数量——这是一种 N:M
+对齐单元，而非 1:1 替换；Selection 不能切开这个单元。
+
+标记只能出现在 Dual Text 的 spoken side。display side 是字面文本，未转义的 `@` 会报错；
+如果确实要显示 at-sign，请写成 `\@`。
+
+`||` 是 **Caption Cue Break** 语法，只能位于完整对齐单元之间，不能写进 Dual Text 或切开
+N:M 单元。字幕稍后才把 CaptionDocument 与 SemanticTrack 汇合得到帧时间。
+
+### 扁平词属性
+
+显示词可以带一个扁平的属性块。属性写在词后面，不嵌套，也不表达时间：
+
+```svml
+<HOST> This is really{emphasis,keyword} important{brand}.</HOST>
+```
+
+不写 `=` 的属性值默认为 `true`，也可以写成 `name=value`。Caption 包负责把属性名映射为
+局部词样式；Selection 仍然负责整段 Alignment Unit 的基础样式。属性不能切开或包住 Dual
+对齐单元。
+
+### CaptionDocument 的组成
+
+`CaptionDocument` 是 Script 拥有的字幕真相，包含三种明确的语法对象：
+
+- **Display Word（显示词）**：一个用于渲染的词面，包含应该显示的标点；
+- **Alignment Unit（对齐单元）**：最小的显示-口播对应关系，Dual Text 的 N:M 映射也保持为一个单元；
+- **Cue Break（Cue 分界）**：作者写出的 `||`，只能放在完整对齐单元之后。
+
+标点不是口播 token，也不会获得独立时间窗。Dual Text 后面的句号会吸附到前一个显示词：
+`<test | now>. here` 显示为 `test. here`，口播投影仍是 `now. here`。英文按词拆分；汉字、
+平假名和片假名按字符级 lexical unit 拆分，因此中文不会被当成一个巨大的词。
 
 ## Selection
 
-Selection 是内联声明的具名时间**范围**：
+Selection 是内联声明的具名语义**范围**。每个名字只能有一对打开/关闭标记；它的值是两个
+语义锚点，而不是帧区间：
 
 ```svml
 <script id="story">
@@ -126,19 +161,9 @@ Selection 是内联声明的具名时间**范围**：
 
 `~` 后缀/前缀控制边界是吸附到左边还是右边。默认的打开标记为右吸附；默认的关闭标记为左吸附。
 
-### 非连续 Selection
+### 多个具名 Selection
 
-同一个 id 可以多次出现，以创建带有间隔的 Selection：
-
-```svml
-<demo>
-  <HOST> @beat First point. @/beat Then something else. @beat Third point. @/beat
-</demo>
-```
-
-`{story.selection.beat}` 现在覆盖两个不相邻的范围。
-
-### 交叉 Selection
+不同名字可以重叠或交叉，但每个名字仍然只有一个区间：
 
 Selection 不要求像 XML 标签那样嵌套，它们可以互相交叉：
 
@@ -148,7 +173,9 @@ Selection 不要求像 XML 标签那样嵌套，它们可以互相交叉：
 </demo>
 ```
 
-Selection 标记是零宽度的，不会出现在任何文本投影中。它们编译为包含 `Range[]` 的 `SelectionSet` 值。Script 本身不包含秒数或帧号——时间信息来自 WhisperX 对齐。
+Selection 标记是零宽度的，不会出现在任何文本投影中。它们编译为带有
+`startAnchorId`/`endAnchorId` 的 `NarrativeSelection`。Script 本身不包含秒数或帧号——时间
+信息来自 SemanticTrack 对齐。
 
 其他组件通过 `{story.selection.problem}` 引用 Selection，将视觉内容绑定到叙事中的语义时刻。
 
@@ -168,7 +195,8 @@ Moment 是具名的时间**点**（不是范围）：
 | `@id!` | 右吸附（时间点位于下一个单词的起始处） |
 | `~@id!` | 左吸附（时间点位于前一个单词的末尾） |
 
-Moment 编译为包含 `Point[]` 的 `MomentSet` 值。Selection 和 Moment 共享同一命名空间——同一个 id 不能同时用于两者。
+每个 Moment 名字只出现一次，编译为带有 `anchorId` 的 `NarrativeMoment`。Selection 和 Moment
+共享同一命名空间——同一个 id 不能同时用于两者。
 
 其他组件通过 `{story.moment.ranking}` 引用 Moment。
 
@@ -189,8 +217,11 @@ Moment 编译为包含 `Point[]` 的 `MomentSet` 值。Selection 和 Moment 共�
 | `\@` | 字面量 `@` |
 | `\<` | 字面量 `<` |
 | `\\` | 字面量 `\` |
+| `\|` | 字面量 `|`（两个竖线写成 `\|\|`） |
 
-在 Dual Text 内部，还需转义 `\|` 和 `\>`。
+普通文本中的单个 `|` 本身就是字面量；未转义的 `||` 才是 Caption Cue Break。
+在 Dual Text 内部，第一个未转义的 `|` 分隔 display 和 spoken 两侧；display 侧的竖线必须
+写成 `\|`，需要字面量右尖括号时写成 `\>`。
 
 ## 综合示例
 

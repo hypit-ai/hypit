@@ -75,7 +75,8 @@ function alignmentRequest(value: CanonicalValue): WhisperXAlignmentRequest {
   assert(item.audio?.kind === "blob"
     && item.audio.mediaType === "audio/wav"
     && Number.isSafeInteger(item.sampleFrames)
-    && item.sampleFrames > 0,
+    && item.sampleFrames > 0
+    && (item.language === "en" || item.language === "zh"),
   "WhisperX alignment request is invalid");
   return item;
 }
@@ -285,7 +286,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
               audio_path: audioPath,
-              ...(request.language === undefined ? {} : { language: request.language }),
+              language: request.language,
             }),
             signal,
           });

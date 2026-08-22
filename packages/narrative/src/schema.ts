@@ -21,14 +21,10 @@ export const narrativeSchema: ValueSchema = object({
     tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer },
   }) } },
   selections: { schema: { kind: "array", items: object({
-    id: { schema: string }, occurrences: { schema: { kind: "array", minItems: 1, items: object({
-      occurrence: { schema: integer }, startAnchorId: { schema: string }, endAnchorId: { schema: string },
-    }) } },
+    id: { schema: string }, startAnchorId: { schema: string }, endAnchorId: { schema: string },
   }) } },
   moments: { schema: { kind: "array", items: object({
-    id: { schema: string }, occurrences: { schema: { kind: "array", minItems: 1, items: object({
-      occurrence: { schema: integer }, anchorId: { schema: string },
-    }) } },
+    id: { schema: string }, anchorId: { schema: string },
   }) } },
   semanticIndex: { schema: object({
 
@@ -46,41 +42,32 @@ export const narrativeExcerptSchema: ValueSchema = object({
   tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer },
 });
 const captionDisplayWord = object({
-  id: { schema: string }, atomId: { schema: string }, segmentId: { schema: string },
+  id: { schema: string }, unitId: { schema: string }, segmentId: { schema: string },
   turnId: { schema: string }, role: { schema: string, optional: true }, text: { schema: string },
+  attributes: { schema: { kind: "array", items: object({
+    name: { schema: string },
+    value: { schema: { kind: "oneOf", variants: [string, { kind: "number" }, { kind: "boolean" }] } },
+  }) } },
 });
-const captionDisplayAtom = object({
+const captionAlignmentUnit = object({
   id: { schema: string }, segmentId: { schema: string },
   turnId: { schema: string }, role: { schema: string, optional: true },
   wordIds: { schema: { kind: "array", minItems: 1, items: string } },
+  sourceTokenIds: { schema: { kind: "array", minItems: 1, items: string } },
 });
-export const captionDisplaySequenceSchema: ValueSchema = object({
+const captionCueBreak = object({ afterUnitId: { schema: string } });
+export const captionDocumentSchema: ValueSchema = object({
 
   id: { schema: string },
-  atoms: { schema: { kind: "array", minItems: 1, items: captionDisplayAtom } },
+  units: { schema: { kind: "array", minItems: 1, items: captionAlignmentUnit } },
   words: { schema: { kind: "array", minItems: 1, items: captionDisplayWord } },
-});
-export const captionCorrespondenceSchema: ValueSchema = object({
-
-  displaySequenceId: { schema: string },
-  atoms: { schema: { kind: "array", minItems: 1, items: object({
-    atomId: { schema: string }, sourceTokenIds: { schema: { kind: "array", minItems: 1, items: string } },
-  }) } },
-});
-export const captionDisplayWordSubsetSchema: ValueSchema = object({
-
-  id: { schema: string }, sequenceId: { schema: string },
-  wordIds: { schema: { kind: "array", items: string } },
+  cueBreaks: { schema: { kind: "array", items: captionCueBreak } },
 });
 export const narrativeMomentSchema: ValueSchema = object({
   id: { schema: string },
-  occurrences: { schema: { kind: "array", minItems: 1, items: object({
-    occurrence: { schema: integer }, anchorId: { schema: string },
-  }) } },
+  anchorId: { schema: string },
 });
 export const narrativeSelectionSchema: ValueSchema = object({
   id: { schema: string },
-  occurrences: { schema: { kind: "array", minItems: 1, items: object({
-    occurrence: { schema: integer }, startAnchorId: { schema: string }, endAnchorId: { schema: string },
-  }) } },
+  startAnchorId: { schema: string }, endAnchorId: { schema: string },
 });

@@ -10,7 +10,7 @@ description: 把一个素材已经存在的 Run 当作可编辑的时间线来�
 Studio 只构建它能从 Run 已经提供的 Candidate 确定性推导出来的东西，因此它需要一个素材已被满足的 Run——每一个生成 output 要么由一次已接受的 Build 产出，要么由一个文件顶上。你指向的就是这样一个 Run。
 
 ```bash
-pnpm studio -- --run examples/all-components-preview/studio.svrun --workspace .
+hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
 # ➜  http://localhost:5179/
 ```
 
@@ -31,7 +31,7 @@ pnpm studio -- --run examples/all-components-preview/studio.svrun --workspace .
 第二个 Studio 会悄悄占用另一个端口，于是你一边读着过期的预览，一边描述着新的改动。先把旧的停掉：
 
 ```bash
-pkill -f "@hypit/studio" || true
+pkill -f "hypit-studio" || true
 ```
 
 确实想并排看两个 Run 时，再用 `--port`。

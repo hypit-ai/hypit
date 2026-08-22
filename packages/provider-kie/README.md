@@ -1,6 +1,6 @@
 # `@hypit/provider-kie`
 
-Asynchronous KIE Market Provider for the twelve explicitly selected exact models and one generic
+Asynchronous KIE Market Provider for the eleven explicitly selected exact models and one generic
 background-removal capability.
 
 This package is deployment code. Author source imports model modules such as `@hypit/seedance` or
@@ -11,7 +11,7 @@ choose another model.
 It imports no exact-model package. Every supported Capability contributes one `KieRoute`: exact
 Capability, return Type, request compiler, media/count limits and result packer. All Routes share one
 upload, admission, paid submission, checkpoint, polling and download state machine. Model mappings
-generate twelve Routes; Background Removal contributes the thirteenth.
+generate eleven Routes; Background Removal contributes the twelfth.
 
 ## Supported catalog
 
@@ -22,7 +22,6 @@ routes rather than extra Capabilities.
 |---|---|---|
 | `@hypit/seedance` | `seedance-2`, `-fast`, `-mini`, `seedance-2.5` | `bytedance/seedance-2*`, `bytedance/seedance-2-5` |
 | `@hypit/minimax-h3` | `minimax-h3` | `minimax-h3/{text,image,reference}-to-video` |
-| `@hypit/gemini-omni` | `gemini-omni-video` | `gemini-omni-video` |
 | `@hypit/grok-imagine` | `grok-imagine-video`, `-1.5-preview` | Grok Imagine video endpoints |
 | `@hypit/gpt-image` | `gpt-image-2` | `gpt-image-2-{text,image}-to-image` |
 | `@hypit/nano-banana` | `nano-banana-2`, `-pro` | `nano-banana-2`, `nano-banana-pro` |
@@ -107,11 +106,11 @@ HYPIT_KIE_LIVE=1 KIE_API_KEY=... pnpm smoke:kie
 ```
 
 The default case is `gpt-image-2`. Set `HYPIT_KIE_SMOKE_CASES=all` or a comma-separated subset of
-`gpt-image-2,nano-banana-2,seedream-5-lite,seedance-2-mini,minimax-h3,gemini-omni,grok-imagine`.
+`gpt-image-2,nano-banana-2,seedream-5-lite,seedance-2-mini,minimax-h3,grok-imagine`.
 Set `HYPIT_KIE_SMOKE_REFERENCE` to add the optional `gpt-image-2-edit` upload case; only use an asset
 that is explicitly approved for external upload.
 
 `KIE_BASE_URL` and `HYPIT_KIE_SMOKE_ROOT` are optional deployment overrides. The command prints
 credit usage, the content digest and a local inspection copy, but never prints or persists the key.
-A representative run of all seven families and the optional upload case has passed. Generated
+A representative run of all six families and the optional upload case has passed. Generated
 results are deployment evidence and are intentionally not committed as a dated transcript.

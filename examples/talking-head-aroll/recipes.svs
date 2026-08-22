@@ -24,8 +24,6 @@
   speech.visual { fit: cover; }
 
   caption.primary {
-    cue-min-words: 2;
-    cue-max-words: 7;
     stack-order: 70;
     x: 0.08;
     y: 0.74;

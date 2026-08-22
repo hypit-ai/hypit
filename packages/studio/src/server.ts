@@ -8,6 +8,7 @@ import type { Plugin, ViteDevServer } from "vite";
 import type { StudioArchive } from "./archive.js";
 import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
+import type { StudioAdapterRegistry } from "./studio-registry.js";
 import { loadStudioRun } from "./run.js";
 import { readStudioSession } from "./session.js";
 import type { Range, StudioFailure, StudioSnapshot } from "./shared.js";
@@ -19,6 +20,7 @@ export type StudioPluginOptions = {
   readonly source: string;
   readonly runPath: string;
   readonly domain: StudioDomain;
+  readonly registry: StudioAdapterRegistry;
   readonly workspaceRoot: string;
   readonly archive?: StudioArchive;
 };
@@ -79,6 +81,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       for (const unit of run.source.compiled.closure.units) watchSource(unit.id);
       const result = await readStudioSession({
         domain: options.domain,
+        registry: options.registry,
         run,
         ...(options.archive === undefined ? {} : { archive: options.archive }),
         revision: attempt,

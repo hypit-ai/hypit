@@ -13,12 +13,9 @@ import { narrativeTypes } from "@hypit/narrative";
 import {
   appendMediaPaintLayer,
   appendMediaSound,
-  appendMediaSequence,
-  appendMediaSequenceMember,
-  appendMomentMediaItem,
-  appendProgramMediaItem,
-  appendSegmentMediaItem,
-  appendSelectionMediaItem,
+  appendMediaSequenceAtWindow,
+  appendMediaSequenceProjectedMember,
+  appendProjectedMediaItem,
   appendStillMediaLayer,
   appendSurfaceMediaLayer,
   appendTimedMediaLayer,
@@ -62,6 +59,8 @@ import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
 import type { StructuredElement, StructuredNode, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
+import { projectMomentWindow, projectProgramWindow, projectSegmentWindow, projectSelectionWindow } from "@hypit/temporal";
+import type { TemporalWindow, TemporalWindowProjection } from "@hypit/temporal";
 
 const space = sealProgramSpace({
   durationSec: 4,
@@ -107,12 +106,17 @@ const appearance = {
   filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 },
 };
 
-function itemSpec(overrides: Partial<MediaItemSpec> = {}): MediaItemSpec {
-  return sealMediaItemSpec({
+type TestMediaItemSpec = MediaItemSpec & { readonly projection: TemporalWindowProjection };
+const defaultItemProjection: TemporalWindowProjection = {
+  start: { ref: "program.start" }, end: { ref: "program.end" },
+};
+
+function itemSpec(overrides: Partial<TestMediaItemSpec> = {}): TestMediaItemSpec {
+  const { projection = defaultItemProjection, ...itemOverrides } = overrides;
+  return {
+    ...sealMediaItemSpec({
 
     id: "product",
-    projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
-    expansion: { kind: "one" },
     presentation: {
       clip: { kind: "rounded", radiusPx: 20 },
       padding: { topPx: 10, rightPx: 10, bottomPx: 10, leftPx: 10 },
@@ -121,8 +125,51 @@ function itemSpec(overrides: Partial<MediaItemSpec> = {}): MediaItemSpec {
     },
     motion: { sustain: [] },
     stackingOrder: 40,
-    ...overrides,
-  });
+    ...itemOverrides,
+    }),
+    projection,
+  };
+}
+
+function appendProgramMediaItem(
+  set: ReturnType<typeof createMediaTrackSet>, trackHeader: typeof header, semanticTrack: typeof semantic,
+  canvasSpace: typeof canvas, layers: MediaLayerSet, frameValue: typeof frame, authored: MediaItemSpec | TestMediaItemSpec,
+  sounds: ReturnType<typeof createMediaSoundSet>,
+) {
+  const projection = "projection" in authored ? authored.projection : defaultItemProjection;
+  const { projection: _ignored, ...spec } = authored as TestMediaItemSpec;
+  return appendProjectedMediaItem(set, trackHeader, semanticTrack, canvasSpace, layers, frameValue, spec, sounds,
+    projectProgramWindow({ itemId: spec.id, semantic: semanticTrack, projection }));
+}
+
+function appendSelectionMediaItem(
+  set: ReturnType<typeof createMediaTrackSet>, trackHeader: typeof header, semanticTrack: typeof semantic,
+  canvasSpace: typeof canvas, layers: MediaLayerSet, frameValue: typeof frame, selection: NarrativeSelectionRef,
+  authored: TestMediaItemSpec, sounds: ReturnType<typeof createMediaSoundSet>,
+) {
+  const { projection, ...spec } = authored;
+  return appendProjectedMediaItem(set, trackHeader, semanticTrack, canvasSpace, layers, frameValue, spec, sounds,
+    projectSelectionWindow({ itemId: spec.id, semantic: semanticTrack, selection, projection }));
+}
+
+function appendSegmentMediaItem(
+  set: ReturnType<typeof createMediaTrackSet>, trackHeader: typeof header, semanticTrack: typeof semantic,
+  canvasSpace: typeof canvas, layers: MediaLayerSet, frameValue: typeof frame, segment: { kind: "segment"; id: string; tokenStart: number; tokenEndExclusive: number },
+  authored: TestMediaItemSpec, sounds: ReturnType<typeof createMediaSoundSet>,
+) {
+  const { projection, ...spec } = authored;
+  return appendProjectedMediaItem(set, trackHeader, semanticTrack, canvasSpace, layers, frameValue, spec, sounds,
+    projectSegmentWindow({ itemId: spec.id, semantic: semanticTrack, segment, projection }));
+}
+
+function appendMomentMediaItem(
+  set: ReturnType<typeof createMediaTrackSet>, trackHeader: typeof header, semanticTrack: typeof semantic,
+  canvasSpace: typeof canvas, layers: MediaLayerSet, frameValue: typeof frame, moment: NarrativeMomentRef,
+  authored: TestMediaItemSpec, sounds: ReturnType<typeof createMediaSoundSet>,
+) {
+  const { projection, ...spec } = authored;
+  return appendProjectedMediaItem(set, trackHeader, semanticTrack, canvasSpace, layers, frameValue, spec, sounds,
+    projectMomentWindow({ itemId: spec.id, semantic: semanticTrack, moment, projection }));
 }
 
 function stillLayers(): MediaLayerSet {
@@ -176,13 +223,48 @@ function sequenceMembers(
 ) {
   let members = createMediaSequenceMemberSet();
   for (const [index, activationFrame] of activations.entries()) {
-    members = appendMediaSequenceMember(members, layerFactory(index), sealMediaSequenceMemberSpec({
+    const spec = sealMediaSequenceMemberSpec({
 
       id: `member-${index + 1}`,
       sourceAudio: { fromLayer: "video", gain: 1 - (index * 0.1) },
-    }), activationFrame);
+    });
+    members = appendMediaSequenceProjectedMember(members, layerFactory(index), spec, {
+      id: `${spec.id}::test`,
+      source: { kind: "program", id: "program" },
+      projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
+      span: { startFrame: activationFrame, endFrameExclusive: activationFrame + 1 },
+    });
   }
   return members;
+}
+
+function testProgramWindow(endFrameExclusive: number): TemporalWindow {
+  return {
+    id: "program::test",
+    source: { kind: "program", id: "program" },
+    projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
+    span: { startFrame: 0, endFrameExclusive },
+  };
+}
+
+function appendMediaSequence(
+  set: ReturnType<typeof createMediaTrackSet>, trackHeader: typeof header, _space: typeof space, _canvas: typeof canvas,
+  members: ReturnType<typeof createMediaSequenceMemberSet>, frameValue: typeof frame, spec: MediaSequenceSpec,
+  sounds: ReturnType<typeof createMediaSoundSet>, terminalFrame: number,
+) {
+  return appendMediaSequenceAtWindow(set, trackHeader, semantic, canvas, members, frameValue, spec, sounds,
+    testProgramWindow(terminalFrame));
+}
+
+function appendMediaSequenceMember(
+  set: ReturnType<typeof createMediaSequenceMemberSet>, layers: MediaLayerSet, spec: ReturnType<typeof sealMediaSequenceMemberSpec>, activationFrame: number,
+) {
+  return appendMediaSequenceProjectedMember(set, layers, spec, {
+    id: `${spec.id}::test`,
+    source: { kind: "program", id: "program" },
+    projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
+    span: { startFrame: activationFrame, endFrameExclusive: activationFrame + 1 },
+  });
 }
 
 function sequenceSpec(overrides: Partial<MediaSequenceSpec> = {}): MediaSequenceSpec {
@@ -441,82 +523,30 @@ test("still and animated typed Surfaces use the same layer law without browser f
     { mode: "once", align: "start" });
 });
 
-test("Media Items consume the shared one/each temporal algebra without becoming an exclusive lane", () => {
+test("Media Items consume singular Selection and Moment sources without becoming an exclusive lane", () => {
   const selection: NarrativeSelectionRef = {
-
     id: "mentions",
-    occurrences: [
-      { occurrence: 0, startAnchorId: "a", endAnchorId: "b" },
-      { occurrence: 1, startAnchorId: "c", endAnchorId: "d" },
-    ],
+    startAnchorId: "a",
+    endAnchorId: "b",
   };
-  const repeated = appendSelectionMediaItem(createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame,
+  const selected = appendSelectionMediaItem(createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame,
     selection, itemSpec({
       id: "mention",
-      expansion: { kind: "each" },
       projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
     }), createMediaSoundSet());
-  assert.deepEqual(repeated.items.map((item) => item.span), [
-    { startFrame: 15, endFrameExclusive: 45 },
-    { startFrame: 60, endFrameExclusive: 105 },
-  ]);
+  assert.deepEqual(selected.items.map((item) => item.span), [{ startFrame: 15, endFrameExclusive: 45 }]);
   const moment: NarrativeMomentRef = {
-    id: "cue", occurrences: [{ occurrence: 0, anchorId: "b" }],
+    id: "cue", anchorId: "b",
   };
-  const overlapping = appendMomentMediaItem(repeated, header, semantic, canvas, stillLayers(), frame,
+  const overlapping = appendMomentMediaItem(selected, header, semantic, canvas, stillLayers(), frame,
     moment, itemSpec({
       id: "popup",
       projection: { start: { ref: "moment.cue", offset: { unit: "frames", value: -10 } }, end: { ref: "moment.cue", offset: { unit: "frames", value: 20 } } },
       stackingOrder: 41,
     }), createMediaSoundSet());
-  assert.deepEqual(overlapping.items[2]?.span, { startFrame: 35, endFrameExclusive: 65 });
+  assert.deepEqual(overlapping.items[1]?.span, { startFrame: 35, endFrameExclusive: 65 });
   const track = projectMediaVisualTrack(space, finalizeMediaTrack(overlapping, header, space));
-  // Terminal Presents are canonically ordered by their resolved start frame. The
-  // overlapping Moment remains an independent absolute layer; it does not turn
-  // the two Selection occurrences into an exclusive lane.
-  assert.deepEqual(track.presents.map((present) => present.stacking.order), [40, 41, 40]);
-
-  const singleSelection: NarrativeSelectionRef = {
-    ...selection,
-    id: "single-mention",
-    occurrences: [selection.occurrences[0]!],
-  };
-  const selectedOnce = appendSelectionMediaItem(
-    createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame,
-    singleSelection, itemSpec({
-      id: "selected-once",
-      expansion: { kind: "one" },
-      projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
-    }),
-    createMediaSoundSet(),
-  );
-  assert.deepEqual(selectedOnce.items.map((item) => item.span), [
-    { startFrame: 15, endFrameExclusive: 45 },
-  ]);
-
-  const repeatedMoment: NarrativeMomentRef = {
-
-    id: "cues",
-    occurrences: [
-      { occurrence: 0, anchorId: "b" },
-      { occurrence: 1, anchorId: "d" },
-    ],
-  };
-  const moments = appendMomentMediaItem(
-    createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame,
-    repeatedMoment, itemSpec({
-      id: "moment-each",
-      expansion: { kind: "each" },
-      projection: {
-        start: { ref: "moment.cue" },
-        end: { ref: "moment.cue", offset: { unit: "frames", value: 5 } },
-      },
-    }), createMediaSoundSet(),
-  );
-  assert.deepEqual(moments.items.map((item) => item.span), [
-    { startFrame: 45, endFrameExclusive: 50 },
-    { startFrame: 105, endFrameExclusive: 110 },
-  ]);
+  assert.deepEqual(track.presents.map((present) => present.stacking.order), [40, 41]);
 
   const absolute = appendProgramMediaItem(
     createMediaTrackSet(), header, semantic, canvas, stillLayers(), frame,
@@ -659,7 +689,7 @@ test("timed visual occupancy resolves every alignment into exact source-frame se
 
 test("the graph keeps every source, extent, fit, frame, time and appearance input explicit", () => {
   assert.deepEqual(stillMediaTrackFragment.inputs.map((input) => input.name), [
-    "canvas", "extent", "fit", "frame", "header", "item-spec", "sample-spec", "semantic", "source",
+    "canvas", "extent", "fit", "frame", "header", "item-spec", "sample-spec", "semantic", "source", "window-spec",
   ]);
 });
 
@@ -731,13 +761,12 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
   const fragment = result.fragments[0]!;
   const producers = fragment.operations.map((entry) => entry.producer.name);
   assert.ok(producers.includes("append-still-media-layer"));
-  assert.ok(producers.includes("append-segment-media-item"));
+  assert.ok(producers.includes("append-media-item"));
   assert.ok(producers.includes("append-timed-media-layer"));
   assert.ok(producers.includes("append-surface-media-layer"));
   assert.ok(producers.includes("append-media-paint-layer"));
   assert.ok(producers.includes("bind-media-item-clip-path"));
-  assert.ok(producers.includes("append-selection-media-item"));
-  assert.ok(producers.includes("append-moment-media-sequence-member"));
+  assert.ok(producers.includes("append-media-sequence-member"));
   assert.ok(producers.includes("append-media-sequence-until-selection-end"));
   assert.ok(producers.includes("append-media-sound"));
   assert.ok(fragment.inputs.some((entry) => entry.type.name === artifactTypes.blob.name));

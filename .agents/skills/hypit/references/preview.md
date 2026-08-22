@@ -12,8 +12,8 @@ a new package with a bad schedule, a target that is not an output, a Film with n
 composition. Find that now, not on the author's screen:
 
 ```bash
-# from the repository root: tsx is the repository's dependency
-node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/build.svrun
+# invoke the script from the tool checkout; the Run may live anywhere
+node --import tsx .agents/skills/hypit/scripts/preview-check.mjs /path/to/project/build.svrun
 ```
 
 It takes the Run Source, not the Author SVML — Studio's unit of work is the Run, and it reads the
@@ -61,9 +61,9 @@ After a meaningful Author Source change, start Hypit Studio and give the author 
 Kill the previous server first so the user does not inspect a stale composition.
 
 ```bash
-pkill -f "@hypit/studio" || true
-pnpm studio -- --run path/to/build.svrun \
-  --runtime path/to/hypit.runtime.json &
+pkill -f "hypit-studio" || true
+cd /path/to/project
+hypit-studio --run build.svrun --runtime hypit.runtime.json &
 ```
 
 Read the startup output for the chosen port. `--run` is required: Studio's unit of work is the Run
@@ -77,10 +77,11 @@ stops, so a Run that opens is a Run whose Tracks all resolved.
 One Run in the repository is satisfied already, so Studio can be seen without spending anything:
 
 ```bash
-pnpm studio -- --run examples/all-components-preview/studio.svrun --workspace .
+cd /path/to/hypit
+hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
 ```
 
-It supplies its own Semantic Takes and caption plan from committed fixtures. Every other Run under
+It supplies its own Semantic Takes and Script-owned CaptionDocument from committed fixtures. Every other Run under
 `examples/` still names shots a Provider has to make, or footage that is not committed.
 
 ## A timeline block is not the authored Selection
@@ -88,9 +89,9 @@ It supplies its own Semantic Takes and caption plan from committed fixtures. Eve
 Studio keeps three stages of an item's time apart, and reading one for another misreads the program:
 
 - the **semantic source** the author named — a Selection, Segment, Moment or Program, with its
-  occurrence identity and its anchors on the Semantic Track;
-- the **projection** of that source into frame space, after occurrence expansion, offset evaluation,
-  clipping and frame quantization. One authored binding can project to zero, one or several windows;
+  identity and anchors on the Semantic Track;
+- the **projection** of that source into frame space, after offset evaluation, clipping and frame
+  quantization. One resolved authored binding projects to one window;
 - the **consumption** window the realized Track actually uses, which the projection does not have to
   equal — a source-audio trim reads different samples than its target window, and a Ranking exposes
   one outer window alongside its reveal phases.

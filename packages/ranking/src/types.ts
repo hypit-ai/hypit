@@ -5,6 +5,7 @@ import type {
 } from "@hypit/media";
 import type { BlobRef } from "@hypit/protocol";
 import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
+import type { TemporalWindow } from "@hypit/temporal";
 
 export type RankingVariant = "tier-board" | "column" | "top-three";
 
@@ -29,14 +30,18 @@ export type TriggeredRankingSchedule = {
   readonly entries: readonly TriggeredRankingScheduleEntry[];
 };
 
-export type ColumnOuterWindow = {
-  readonly span: FrameSpan;
+export type TriggeredRankingCandidate = {
+  readonly itemId: string;
+  readonly window: TemporalWindow;
+};
+
+export type TriggeredRankingCandidateSet = {
+  readonly entries: readonly TriggeredRankingCandidate[];
 };
 
 export type ColumnWindowCandidate = {
   readonly itemId: string;
-  readonly occurrenceId: string;
-  readonly preferred: FrameSpan;
+  readonly window: TemporalWindow;
 };
 
 export type ColumnWindowCandidateSet = {

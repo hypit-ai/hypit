@@ -29,10 +29,12 @@ Every repository path written in these files â€” `.agents/skills/hypit/scripts/â
 the other scripts: run the checkout's copies. `preview-check.mjs` reaches Studio's sources through
 its own position in the checkout, so that copy is the one that resolves them.
 
-Several commands resolve against the **working directory** rather than against the Source they are
-given: `list_svml_packages` reads `node_modules/@hypit` from the cwd and refuses when it is empty, and
-`preview-check.mjs` resolves `tsx` the same way. Running them from the repository root is not a
-convention, it is the condition under which they work.
+Repository maintenance commands still run from the printed checkout because they consume its own
+dependencies. Authoring commands run from the external project. The `hypit` and `hypit-studio`
+launchers retain that project as the workspace/package root and use the printed checkout only as the
+read-only Distribution for official `@hypit/*` packages. The reference-video inspection tools read
+the installed Distribution vocabulary, so invoke them from the checkout as their reference pages
+show rather than moving the project there.
 
 ## Requirements
 
@@ -63,6 +65,9 @@ npm link
 pnpm check
 pnpm test
 ```
+
+`npm link` exposes both `hypit` and `hypit-studio`; it links the replaceable tool checkout, never an
+author project into the checkout.
 
 For managed local programs:
 

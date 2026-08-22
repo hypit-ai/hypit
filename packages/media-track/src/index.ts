@@ -43,15 +43,13 @@ export {
   createMediaSoundSet,
   sealMediaSoundSpec,
 } from "./sounds.js";
-export { appendMomentMediaItem, appendMediaSequence, appendMediaSequenceUntilMoment, appendMediaSequenceUntilProgramEnd, appendMediaSequenceUntilSelection, appendProgramMediaItem, appendSegmentMediaItem, appendSelectionMediaItem, bindMediaItemClipPath, bindMediaSequenceClipPath, assertMediaItemSpec, assertMediaTrackHeader, assertMediaTrackProgram, assertMediaTrackProgramIdentity, assertMediaTrackSet, createMediaTrackSet, finalizeMediaTrack, projectMediaAudioTrack, projectMediaVisualTrack, sealMediaItemSpec, sealMediaTrackHeader, sealMediaTrackProgram } from "./program.js";
+export { appendMediaSequenceAtWindow, appendProjectedMediaItem, bindMediaItemClipPath, bindMediaSequenceClipPath, assertMediaItemSpec, assertMediaTrackHeader, assertMediaTrackProgram, assertMediaTrackProgramIdentity, assertMediaTrackSet, createMediaTrackSet, finalizeMediaTrack, projectMediaAudioTrack, projectMediaVisualTrack, sealMediaItemSpec, sealMediaTrackHeader, sealMediaTrackProgram } from "./program.js";
 export { resolveVisualSampling } from "./sampling.js";
 export { lowerRestrictedSpeechVisualPresents } from "./restricted-speech.js";
 export type { RestrictedSpeechVisualClip } from "./restricted-speech.js";
 export { decodeMediaTrackSurface } from "./surface.js";
 export {
-  appendMediaSequenceMember,
-  appendMediaSequenceMomentMember,
-  appendMediaSequenceSelectionMember,
+  appendMediaSequenceProjectedMember,
   assertMediaHandoffSpec,
   assertMediaSequenceMemberSet,
   assertMediaSequenceMemberSpec,

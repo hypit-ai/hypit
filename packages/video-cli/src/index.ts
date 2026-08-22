@@ -4,6 +4,7 @@ import {
   runCli,
 } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
+import { installDistributionPackageResolution } from "@hypit/package-loader-node";
 import type { LoadedPackage } from "@hypit/package-loader-node";
 
 import { videoCliDistribution } from "./distribution.js";
@@ -20,6 +21,9 @@ export function runVideoCli(
   io: CliIo,
   packages: readonly LoadedPackage[] = [],
 ): Promise<void> {
+  installDistributionPackageResolution(videoCliDistribution.packageRoot === undefined
+    ? []
+    : [videoCliDistribution.packageRoot]);
   return runCli(argv, io, {
     ...videoCliDistribution,
     bootstrapPackages: packages,

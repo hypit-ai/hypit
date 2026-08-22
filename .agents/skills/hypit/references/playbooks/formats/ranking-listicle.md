@@ -5,11 +5,10 @@ explain why every item belongs where it is placed.
 
 ## Author the Script schedule
 
-- Write one outer Script Selection covering the complete ranking window. It must resolve exactly once.
-- `ranking:TierBoard` and `ranking:TopThree` are driven by Moments: declare one repeated Script
-  Moment for item reveals and one terminal Moment for the completed board, which must resolve exactly
-  once. Repeat the same reveal Moment id once per item — both apply strict `each` semantics, so the
-  occurrence count must equal the number of authored items and trigger frames must increase.
+- Write one outer Script Selection covering the complete ranking window.
+- `ranking:TierBoard` and `ranking:TopThree` are driven by item-owned Moments: give every item its own
+  `at={story.moment.NAME}` and declare one terminal Moment for the completed board. Reveal order comes
+  from the Moments' real frame order, not from a repeated marker id.
 - `ranking:Column` is driven by its items: give each item that is not `preset` its own Script
   Selection, and declare no Moments for it.
 - Give every item a stable id, its rank or tier, its icon or image, and one evidence beat. Copy

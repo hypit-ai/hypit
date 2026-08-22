@@ -1,0 +1,362 @@
+import type { HostFacet } from "@hypit/host";
+
+export const studioAdapterHostAbi = "hypit.studio-adapter@1";
+
+/** UTF-16 offsets into the exact author source. */
+export type Range = { readonly start: number; readonly end: number };
+
+export type StudioTrackFamily = string;
+
+export type StudioTimelinePresentation = {
+  readonly entity: string;
+  readonly shape: string;
+  readonly depth: number;
+};
+
+export type StudioTemporalSource = {
+  readonly kind: "program" | "selection" | "segment" | "moment" | "parent-schedule";
+  readonly id?: string;
+};
+
+export type StudioTemporalProjection = {
+  readonly startExpression: string;
+  readonly endExpression: string;
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+};
+
+export type StudioTemporalPhase = {
+  readonly id: string;
+  readonly label: string;
+  readonly role: "preferred" | "active" | "settled" | "enter" | "body" | "exit";
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+};
+
+export type StudioTemporalLineage = {
+  readonly source: StudioTemporalSource;
+  readonly projection?: StudioTemporalProjection;
+  readonly phases: readonly StudioTemporalPhase[];
+};
+
+export type StudioInteraction = {
+  readonly select: boolean;
+  readonly seek: "start" | "pointer" | "none";
+  readonly move: boolean;
+  readonly trimStart: boolean;
+  readonly trimEnd: boolean;
+  readonly canvasTransform: boolean;
+  readonly writeback: "source" | "none";
+};
+
+export type StudioMaterialPreview =
+  | { readonly kind: "image"; readonly url: string }
+  | { readonly kind: "video"; readonly url: string }
+  | { readonly kind: "audio"; readonly url: string };
+
+export type StudioLaneDescription = {
+  readonly layout: "flat";
+  readonly height: {
+    readonly minPx: number;
+    readonly preferredPx: number;
+    readonly maxPx: number;
+  };
+  readonly groupId?: string;
+  readonly attachedTo?: string;
+  readonly order?: number;
+  readonly expandedByDefault?: boolean;
+};
+
+export type StudioInspectorSection =
+  | "authoring"
+  | "resolved"
+  | "material"
+  | "composition"
+  | "identity"
+  | "run";
+
+export type StudioInspectorDescription = {
+  readonly sections: readonly StudioInspectorSection[];
+};
+
+export type StudioCandidateProvenance = {
+  readonly output: string;
+  readonly outputRef?: string;
+  readonly candidateId?: string;
+  readonly origin: "run" | "source" | "none";
+  readonly status: "resolved" | "unresolved";
+  readonly errors: readonly string[];
+};
+
+export type StudioSemanticAnchor = {
+  readonly id: string;
+  readonly kind: "segment-start" | "segment-end" | "token-start" | "token-end";
+  readonly frame: number;
+  readonly segmentId: string;
+  readonly tokenId?: string;
+};
+
+export type StudioSemanticSegment = {
+  readonly id: string;
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+  readonly range?: Range;
+};
+
+export type StudioSemanticToken = {
+  readonly id: string;
+  readonly segmentId: string;
+  readonly text: string;
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+  readonly range?: Range;
+};
+
+export type StudioSemanticTimeline = {
+  readonly presentation: {
+    readonly family: StudioTrackFamily;
+    readonly label?: string;
+    readonly icon: string;
+    readonly lane: StudioLaneDescription;
+  };
+  readonly anchors: readonly StudioSemanticAnchor[];
+  readonly segments: readonly StudioSemanticSegment[];
+  readonly tokens: readonly StudioSemanticToken[];
+  readonly selections: readonly {
+    readonly id: string;
+    readonly startFrame: number;
+    readonly endFrameExclusive: number;
+  }[];
+  readonly moments: readonly {
+    readonly id: string;
+    readonly frame: number;
+  }[];
+  readonly provenance: StudioCandidateProvenance;
+};
+
+export type StudioObservedValue = {
+  readonly id: string;
+  readonly type: { readonly module: { readonly name: string; readonly version: string }; readonly name: string };
+  readonly value: unknown;
+};
+
+export type StudioPlacementChild = {
+  readonly tag: string;
+  readonly id?: string;
+  readonly range: Range;
+  readonly attributes: Readonly<Record<string, string>>;
+  readonly references: readonly string[];
+  readonly referenceAttributes: Readonly<Record<string, string>>;
+  readonly referenceTypes: Readonly<Record<string, string>>;
+  readonly values: readonly StudioObservedValue[];
+};
+
+export type StudioPlacement = {
+  readonly tag: string;
+  readonly module: { readonly name: string; readonly version: string };
+  readonly surface: string;
+  readonly id?: string;
+  readonly range: Range;
+  readonly records: readonly string[];
+  readonly values: readonly StudioObservedValue[];
+  readonly outputs: readonly string[];
+  readonly outputPorts: readonly { readonly name: string; readonly ref: string }[];
+  readonly children: readonly StudioPlacementChild[];
+  readonly attributes: Readonly<Record<string, string>>;
+  readonly referenceAttributes: Readonly<Record<string, string>>;
+  readonly referenceTypes: Readonly<Record<string, string>>;
+  readonly references: readonly string[];
+};
+
+export type StudioTrackTrace = {
+  readonly placement?: string;
+  readonly surface?: string;
+  readonly module?: string;
+  readonly authoredId?: string;
+  readonly outputPorts: readonly { readonly name: string; readonly ref: string; readonly type?: string }[];
+  readonly references: readonly { readonly name: string; readonly ref: string; readonly type: string }[];
+};
+
+/** Stable data view supplied to adapters; no Studio implementation object crosses the ABI. */
+export type StudioResolvedTrack = {
+  readonly name: string;
+  readonly type: string;
+  readonly outputRef: string;
+  readonly candidateId?: string;
+  readonly candidateOrigin: "run" | "source" | "none";
+  readonly role: StudioProjectionRole;
+  readonly trace: StudioTrackTrace;
+  readonly surfacePreview?: StudioMaterialPreview;
+  readonly value: unknown;
+};
+
+export type StudioProjectionRole =
+  | "semantic-take"
+  | "semantic-track"
+  | "realization"
+  | "media"
+  | "text"
+  | "caption"
+  | "track";
+
+export type StudioSpan = {
+  readonly id: string;
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+  readonly stackOrder: number;
+};
+
+export type StudioEntityDraft = {
+  readonly id: string;
+  readonly authoredId: string;
+  readonly label: string;
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+  readonly stackOrder: number;
+  readonly elementRange?: Range;
+  readonly markerId?: string;
+  readonly presentId?: string;
+  readonly renderIds?: readonly string[];
+  readonly presentation?: StudioTimelinePresentation;
+  readonly interaction?: StudioInteraction;
+  readonly temporal?: StudioTemporalLineage;
+  readonly preview?: StudioMaterialPreview;
+  /** Studio-local lane partition; omitted means the root lane. */
+  readonly lane?: string;
+};
+
+export type StudioAdapterContext = {
+  readonly track: StudioResolvedTrack;
+  readonly placement?: StudioPlacement;
+  /** Package-owned Surface preview resolved by Studio from the selected domain. */
+  readonly surfacePreview?: StudioMaterialPreview;
+  readonly spans: readonly StudioSpan[];
+  readonly values: ReadonlyMap<string, unknown>;
+  readonly semantic: StudioSemanticTimeline;
+  readonly generic: () => readonly StudioEntityDraft[];
+};
+
+export type StudioAdapter = {
+  readonly id: string;
+  readonly role: StudioProjectionRole;
+  readonly output: {
+    readonly type: string;
+    readonly surface?: string;
+    readonly modules?: readonly string[];
+    readonly siblingType?: string;
+  };
+  readonly family?: StudioTrackFamily;
+  readonly label?: string;
+  readonly icon?: string;
+  /** Opts root timeline entities into the component's package-owned Surface preview. */
+  readonly poster?: { readonly source: "surface-preview" };
+  readonly attachments?: readonly StudioLaneAttachment[];
+  readonly realizationPorts?: readonly string[];
+  readonly dependencies?: readonly {
+    readonly type: string;
+    readonly role: StudioProjectionRole;
+  }[];
+  readonly interaction?: StudioInteraction;
+  readonly lane?: StudioLaneDescription;
+  readonly inspector?: StudioInspectorDescription;
+  readonly project?: (context: StudioAdapterContext) => readonly StudioEntityDraft[];
+};
+
+export type StudioAdapterContribution = {
+  readonly format: "hypit.studio-adapters@1";
+  readonly adapters: readonly StudioAdapter[];
+};
+
+export type StudioAdapterHostFacet = HostFacet & {
+  readonly abi: typeof studioAdapterHostAbi;
+  readonly implementation: StudioAdapterContribution;
+};
+
+export function createStudioAdapterHostFacet(adapters: readonly StudioAdapter[]): StudioAdapterHostFacet {
+  return {
+    abi: studioAdapterHostAbi,
+    implementation: { format: "hypit.studio-adapters@1", adapters },
+  };
+}
+
+/**
+ * Qualify package-local adapter names with identity established by the package loader.
+ * The executable facet cannot choose or impersonate its physical owner.
+ */
+export function studioAdaptersFromPackage(
+  owner: string,
+  facets: readonly HostFacet[],
+): readonly StudioAdapter[] {
+  if (owner.length === 0 || owner.includes("#")) throw new Error(`Invalid Studio adapter package identity: ${owner}`);
+  return facets.flatMap((facet) => {
+    if (facet.abi !== studioAdapterHostAbi) return [];
+    const contribution = facet.implementation as Partial<StudioAdapterContribution>;
+    if (contribution.format !== "hypit.studio-adapters@1" || !Array.isArray(contribution.adapters)) {
+      throw new Error(`Studio adapter facet from ${owner} has an invalid contribution`);
+    }
+    return contribution.adapters.map((adapter) => {
+      if (adapter.id.length === 0 || adapter.id.includes("#")) {
+        throw new Error(`Studio adapter ids are package-local names without '#': ${owner}#${adapter.id}`);
+      }
+      // The Host, not executable package code, establishes the global identity.
+      return { ...adapter, id: `${owner}#${adapter.id}` };
+    });
+  });
+}
+
+export type StudioLaneAttachment = {
+  readonly id: string;
+  readonly family: StudioTrackFamily;
+  readonly label?: string;
+  readonly icon: string;
+  readonly facet: "visual" | "audio";
+  readonly lane: StudioLaneDescription;
+  readonly interaction?: StudioInteraction;
+  readonly inspector?: StudioInspectorDescription;
+};
+
+export const readonlyInteraction: StudioInteraction = {
+  select: true,
+  seek: "pointer",
+  move: false,
+  trimStart: false,
+  trimEnd: false,
+  canvasTransform: false,
+  writeback: "none",
+};
+
+export function sameSurfaceValue(context: StudioAdapterContext, port: string): unknown {
+  const ref = context.track.trace.outputPorts.find((candidate) => candidate.name === port)?.ref;
+  return ref === undefined ? undefined : context.values.get(ref);
+}
+
+export function childEntities(
+  context: StudioAdapterContext,
+  items: readonly { readonly id: string; readonly startFrame: number; readonly endFrameExclusive: number; readonly stackOrder: number }[],
+  entity: StudioTimelinePresentation["entity"],
+  shape: StudioTimelinePresentation["shape"],
+): readonly StudioEntityDraft[] {
+  const children = new Map(context.placement?.children.flatMap((child) =>
+    child.id === undefined ? [] : [[child.id, child] as const]) ?? []);
+  return items.map((item) => {
+    const child = children.get(item.id) ?? [...children.entries()]
+      .sort(([left], [right]) => right.length - left.length)
+      .find(([id]) => item.id.startsWith(`${id}::`))?.[1];
+    // A dedicated adapter does not reverse-engineer renderer ids. Only an exact
+    // public identity is safe; richer renderer correspondence needs its own
+    // declared realization rather than another naming convention.
+    const render = context.spans.find((span) => span.id === item.id);
+    return {
+      id: `${context.track.outputRef}:entity:${item.id}`,
+      authoredId: child?.id ?? item.id,
+      label: child?.id ?? item.id,
+      startFrame: item.startFrame,
+      endFrameExclusive: item.endFrameExclusive,
+      stackOrder: item.stackOrder,
+      ...(child === undefined ? {} : { elementRange: child.range }),
+      ...(render === undefined ? {} : { presentId: render.id, renderIds: [render.id] }),
+      presentation: { entity, shape, depth: 0 },
+      interaction: readonlyInteraction,
+    };
+  });
+}

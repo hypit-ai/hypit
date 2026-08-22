@@ -29,9 +29,6 @@ importers:
       '@hypit/caption-fine':
         specifier: workspace:*
         version: link:packages/caption-fine
-      '@hypit/caption-gemini':
-        specifier: workspace:*
-        version: link:packages/caption-gemini
       '@hypit/comment-sticker':
         specifier: workspace:*
         version: link:packages/comment-sticker
@@ -56,9 +53,6 @@ importers:
       '@hypit/fonts-open':
         specifier: workspace:*
         version: link:packages/fonts-open
-      '@hypit/gemini-omni':
-        specifier: workspace:*
-        version: link:packages/gemini-omni
       '@hypit/generation':
         specifier: workspace:*
         version: link:packages/generation
@@ -104,9 +98,6 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:packages/protocol
-      '@hypit/provider-google-vertex':
-        specifier: workspace:*
-        version: link:packages/provider-google-vertex
       '@hypit/provider-hyperframes-aws-lambda':
         specifier: workspace:*
         version: link:packages/provider-hyperframes-aws-lambda
@@ -188,6 +179,12 @@ importers:
       '@hypit/store-sqlite':
         specifier: workspace:*
         version: link:packages/store-sqlite
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:packages/studio-adapter
+      '@hypit/studio-video-adapters':
+        specifier: workspace:*
+        version: link:packages/studio-video-adapters
       '@hypit/svs':
         specifier: workspace:*
         version: link:packages/svs
@@ -403,31 +400,6 @@ importers:
       '@hypit/svs':
         specifier: workspace:*
         version: link:../svs
-    devDependencies:
-      '@hypit/script':
-        specifier: workspace:*
-        version: link:../script
-
-  packages/caption-gemini:
-    dependencies:
-      '@hypit/caption':
-        specifier: workspace:*
-        version: link:../caption
-      '@hypit/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@hypit/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/narrative':
-        specifier: workspace:*
-        version: link:../narrative
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
     devDependencies:
       '@hypit/script':
         specifier: workspace:*
@@ -1162,27 +1134,6 @@ importers:
         specifier: 0.2.0
         version: 0.2.0
 
-  packages/gemini-omni:
-    dependencies:
-      '@hypit/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@hypit/generation':
-        specifier: workspace:*
-        version: link:../generation
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/model-kit':
-        specifier: workspace:*
-        version: link:../model-kit
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/text':
-        specifier: workspace:*
-        version: link:../text
-
   packages/generation:
     dependencies:
       '@hypit/artifact':
@@ -1628,40 +1579,6 @@ importers:
 
   packages/protocol: {}
 
-  packages/provider-google-vertex:
-    dependencies:
-      '@google/genai':
-        specifier: 1.52.0
-        version: 1.52.0
-      '@hypit/caption':
-        specifier: workspace:*
-        version: link:../caption
-      '@hypit/caption-gemini':
-        specifier: workspace:*
-        version: link:../caption-gemini
-      '@hypit/endpoint-kit':
-        specifier: workspace:*
-        version: link:../endpoint-kit
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@hypit/runtime-host-node':
-        specifier: workspace:*
-        version: link:../runtime-host-node
-      '@hypit/runtime-kit':
-        specifier: workspace:*
-        version: link:../runtime-kit
-    devDependencies:
-      '@hypit/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-      '@hypit/script':
-        specifier: workspace:*
-        version: link:../script
-
   packages/provider-hyperframes-aws-lambda:
     dependencies:
       '@aws-sdk/client-s3':
@@ -1818,9 +1735,6 @@ importers:
       '@hypit/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@hypit/gemini-omni':
-        specifier: workspace:*
-        version: link:../gemini-omni
       '@hypit/gpt-image':
         specifier: workspace:*
         version: link:../gpt-image
@@ -2582,6 +2496,12 @@ importers:
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:../semantic-track
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
+      '@hypit/studio-video-adapters':
+        specifier: workspace:*
+        version: link:../studio-video-adapters
       '@hypit/validation':
         specifier: workspace:*
         version: link:../validation
@@ -2597,6 +2517,18 @@ importers:
       vite:
         specifier: 5.4.21
         version: 5.4.21(@types/node@24.10.1)
+
+  packages/studio-adapter:
+    dependencies:
+      '@hypit/host':
+        specifier: workspace:*
+        version: link:../host
+
+  packages/studio-video-adapters:
+    dependencies:
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
 
   packages/svs:
     dependencies:

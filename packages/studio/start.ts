@@ -2,8 +2,10 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createServer } from "vite";
+import { videoCliDistribution } from "@hypit/video-cli";
 
 import { openStudioArchive } from "./src/archive.js";
+import { loadStudioAdapterRegistry } from "./src/adapter-profile.js";
 import { loadStudioDomain } from "./src/domain.js";
 import { loadStudioRun } from "./src/run.js";
 import { studioPlugin } from "./src/server.js";
@@ -14,8 +16,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 function usage(message?: string): never {
   if (message !== undefined) process.stderr.write(`${message}\n\n`);
   process.stderr.write(`Usage:
-  pnpm studio -- --run <build.svrun> [--runtime <hypit.runtime.json>]
+  hypit-studio --run <build.svrun> [--runtime <hypit.runtime.json>]
     [--port <number>] [--workspace <directory>] [--package-root <directory>]
+    [--studio-profile <hypit.studio.json>]
 
 Studio opens one explicit Run Source, requires a Film/Render target and a
 resolved deterministic semantic projection, and writes only its Author SVML.
@@ -44,19 +47,28 @@ if (runArgument === undefined || runArgument.trim().length === 0) usage("Missing
 const runPath = resolve(invokedFrom, runArgument);
 const packageRootArgument = values.get("package-root");
 const workspaceArgument = values.get("workspace");
-const packageRoot = packageRootArgument === undefined
-  ? invokedFrom
-  : resolve(invokedFrom, packageRootArgument);
 const workspaceRoot = workspaceArgument === undefined
   ? dirname(runPath)
   : resolve(invokedFrom, workspaceArgument);
+const packageRoot = packageRootArgument === undefined
+  ? workspaceRoot
+  : resolve(invokedFrom, packageRootArgument);
 const runtimeArgument = values.get("runtime");
 const runtimePath = runtimeArgument === undefined ? undefined : resolve(invokedFrom, runtimeArgument);
+const studioProfileArgument = values.get("studio-profile");
+const studioProfilePath = studioProfileArgument === undefined ? undefined : resolve(invokedFrom, studioProfileArgument);
 const port = Number(values.get("port") ?? "5179");
 if (!Number.isSafeInteger(port) || port <= 0) usage("--port must be a positive integer");
 
+const distributionPackageRoot = videoCliDistribution.packageRoot ?? resolve(here, "../..");
+const registry = await loadStudioAdapterRegistry({
+  workspaceRoot,
+  packageRoot,
+  distributionPackageRoot,
+  ...(studioProfilePath === undefined ? {} : { profile: studioProfilePath }),
+});
 const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
-const archive = await openStudioArchive(runtimePath, packageRoot);
+const archive = await openStudioArchive(runtimePath, packageRoot, distributionPackageRoot);
 let run;
 try {
   run = await loadStudioRun({
@@ -70,7 +82,7 @@ try {
 }
 const source = run.authorSource;
 try {
-  inspectStudioRun(run.source, run);
+  inspectStudioRun(registry, run.source, run);
 } catch (error) {
   await archive?.close();
   throw error;
@@ -84,13 +96,14 @@ const server = await createServer({
     // must therefore be readable for self-hosted fonts and other declared
     // Studio dependencies, while the author workspace remains separately
     // available for Source and material previews.
-    fs: { allow: [workspaceRoot, packageRoot, here] },
+    fs: { allow: [workspaceRoot, packageRoot, distributionPackageRoot, here] },
   },
   plugins: [studioPlugin({
     source,
     runPath,
     workspaceRoot,
     domain,
+    registry,
     ...(archive === undefined ? {} : { archive }),
   })],
 });

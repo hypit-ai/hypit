@@ -14,13 +14,13 @@ it needs a Run whose material is satisfied — every generated output either pro
 Build or standing against a file. That is what you point it at.
 
 ```bash
-pnpm studio -- --run examples/all-components-preview/studio.svrun --workspace .
+hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
 # ➜  http://localhost:5179/
 ```
 
 ::: warning The examples in this repository need material first
 `examples/all-components-preview/studio.svrun` is ready to open: it explicitly supplies its
-Semantic Takes and caption plan. Other example Runs may still name shots a Provider has to make, or
+Semantic Takes and the deterministic Script-owned CaptionDocument. Other example Runs may still name shots a Provider has to make, or
 footage under `examples/**/assets/` that is not committed. Satisfy those in a Run of your own before
 opening them.
 :::
@@ -41,7 +41,7 @@ A second Studio silently takes another port, and you end up reading a stale prev
 describing a new one. Stop the old one first:
 
 ```bash
-pkill -f "@hypit/studio" || true
+pkill -f "hypit-studio" || true
 ```
 
 Use `--port` when you genuinely want two Runs side by side.

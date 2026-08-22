@@ -44,10 +44,13 @@ SemanticTrack 内的所有 Take 共享作者显式声明的 Clock。
 
 ```svml
 <whisperx:SemanticTake id="opening-semantic" narrative={story}
-  segment={story.segment.opening} media={opening-media.media}/>
+  segment={story.segment.opening} media={opening-media.media} language="en"/>
 <whisperx:SemanticTake id="answer-semantic" narrative={story}
-  segment={story.segment.answer} media={answer-media.media}/>
+  segment={story.segment.answer} media={answer-media.media} language="en"/>
 ```
+
+每次对齐都必须显式填写 `language`，目前只接受 `en` 或 `zh`。该值会原样传给 WhisperX；
+Hypit 不会根据 Script 文本或音频自动检测、分流语言。
 
 每个输出都自带归一化媒体、Segment 身份、每个作者词语的局部帧窗口以及该 Segment 的全部
 结构锚点：Segment 有两个锚点，每个词也有两个锚点。声学证据只是这一步的实现输入；下游
@@ -93,11 +96,9 @@ SemanticTrack，并在构建确定性 Track 时把这些身份投影成帧：
 </media-track:Track>
 
 <caption-fine:Track id="captions"
-  display={story.caption}
-  correspondence={story.caption.correspondence}
+  document={story.caption}
   semantic={speech.semantic}
-  program={caption-program}
-  plan={caption-plan.plan}/>
+  program={caption-program}/>
 
 <film:Film id="main" canvas={vertical}
   semantic={speech.semantic} appearance={recipes.film.vertical}>

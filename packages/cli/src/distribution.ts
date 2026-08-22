@@ -23,8 +23,10 @@ export type CliPictureRequest = {
   readonly prompt: string;
   readonly aspectRatio?: string;
   readonly resolution?: string;
-  /** Host directory whose node_modules contains the selected model package. */
+  /** Project package root; the Distribution remains a separate read-only resolution root. */
   readonly packageRoot: string;
+  /** Read-only packages shipped by the active Distribution. */
+  readonly distributionPackageRoot?: string;
 };
 
 export type CliPicture = {
@@ -64,7 +66,10 @@ export type CliDistribution = {
     readonly logical?: readonly import("@hypit/package-loader-node").LogicalPackageAddress[];
   }>;
   /** Open the Runtime Profile with this application's Runtime implementation. */
-  openRuntimeHost(path: string, options: { readonly packageRoot: string }): Promise<NodeRuntimeHost>;
+  openRuntimeHost(path: string, options: {
+    readonly packageRoot: string;
+    readonly distributionPackageRoot?: string;
+  }): Promise<NodeRuntimeHost>;
   /**
    * Generate one picture for a package asset.
    *

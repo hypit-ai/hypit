@@ -2,7 +2,6 @@ import { assertAudioTrackIdentity, sealAudioTrack } from "@hypit/composition";
 import type { AudioClip, AudioTrack } from "@hypit/composition";
 import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@hypit/media";
 import type { SynchronizedMedia } from "@hypit/media";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import {
   assertProgramSpaceIdentity,
   programFrameSampleBoundary,
@@ -12,13 +11,8 @@ import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize, isDigest } from "@hypit/protocol";
 import { projectSemanticProgramSpace } from "@hypit/semantic-track";
 import type { SemanticTrack } from "@hypit/semantic-track";
-import {
-  projectMomentWindows,
-  projectProgramWindow,
-  projectSelectionWindows,
-  temporalDurationInSamples,
-} from "@hypit/temporal";
-import type { ProjectedOccurrence, TemporalDuration } from "@hypit/temporal";
+import { temporalDurationInSamples } from "@hypit/temporal";
+import type { ProjectedWindow, TemporalDuration } from "@hypit/temporal";
 
 import type {
   AudioClipSpec,
@@ -73,13 +67,6 @@ export function sealAudioClipSpec(value: AudioClipSpec): AudioClipSpec {
 
 export function assertAudioClipSpec(value: AudioClipSpec): void {
   assertIdentity(value.id, "AudioClipSpec.id");
-  assert(value.expansion.kind === "one" || value.expansion.kind === "each", "AudioClipSpec expansion is invalid.");
-  for (const point of [value.projection.start, value.projection.end]) {
-    assert(["program.start", "program.end", "selection.start", "selection.end", "moment.cue", "absolute"].includes(point.ref),
-      "AudioClipSpec projection point is invalid.");
-    if (point.ref === "absolute") assertDuration(point.at, "AudioClipSpec absolute point");
-    else if (point.offset !== undefined) assertDuration(point.offset, "AudioClipSpec point offset", true);
-  }
   if (value.trim.start !== undefined) assertDuration(value.trim.start, "AudioClipSpec trim start");
   if (value.trim.end !== undefined) assertDuration(value.trim.end, "AudioClipSpec trim end");
   assertOccupancy(value.occupancy, "AudioClipSpec occupancy");
@@ -112,7 +99,7 @@ function realizedItems(
   semantic: SemanticTrack,
   media: SynchronizedMedia,
   spec: AudioClipSpec,
-  occurrences: readonly ProjectedOccurrence[],
+  window: ProjectedWindow,
 ): AudioTrackSet {
   const space = projectSemanticProgramSpace(semantic);
   assertAudioTrackSet(set);
@@ -126,61 +113,29 @@ function realizedItems(
   assert(trimEnd > trimStart && trimEnd <= source.sampleFrames, `Audio Clip ${spec.id} trim end is outside its source.`);
   const fadeInSamples = temporalDurationInSamples(spec.mix.fadeIn, space);
   const fadeOutSamples = temporalDurationInSamples(spec.mix.fadeOut, space);
-  const additions = occurrences.map((occurrence) => ({
-    id: occurrence.id,
-    window: { ...occurrence.span },
+  const addition = {
+    id: window.id,
+    window: { ...window.span },
     source: structuredClone(source),
     trim: { startSample: trimStart, endSampleExclusive: trimEnd },
     occupancy: structuredClone(spec.occupancy),
     mix: { gain: spec.mix.gain, fadeInSamples, fadeOutSamples },
-  } satisfies AudioItemProgram));
+  } satisfies AudioItemProgram;
   const ids = new Set(set.items.map((item) => item.id));
-  for (const item of additions) {
-    assert(!ids.has(item.id), `Audio Track ${header.id} already contains Item ${item.id}.`);
-    ids.add(item.id);
-  }
-  return { items: [...set.items, ...additions] };
+  assert(!ids.has(addition.id), `Audio Track ${header.id} already contains Item ${addition.id}.`);
+  return { items: [...set.items, addition] };
 }
 
-export function appendProgramAudioItem(
+/** Component entry point: the Temporal module has already resolved the target window. */
+export function appendProjectedAudioItem(
   set: AudioTrackSet,
   header: AudioTrackHeader,
   semantic: SemanticTrack,
   media: SynchronizedMedia,
   spec: AudioClipSpec,
+  window: ProjectedWindow,
 ): AudioTrackSet {
-  assert(spec.expansion.kind === "one", `Program Audio Clip ${spec.id} must use one occurrence.`);
-  return realizedItems(set, header, semantic, media, spec, [projectProgramWindow({
-    itemId: spec.id,
-    semantic,
-    projection: spec.projection,
-  })]);
-}
-
-export function appendSelectionAudioItem(
-  set: AudioTrackSet,
-  header: AudioTrackHeader,
-  semantic: SemanticTrack,
-  media: SynchronizedMedia,
-  selection: NarrativeSelectionRef,
-  spec: AudioClipSpec,
-): AudioTrackSet {
-  return realizedItems(set, header, semantic, media, spec, projectSelectionWindows({
-    itemId: spec.id, semantic, selection, expansion: spec.expansion, projection: spec.projection,
-  }));
-}
-
-export function appendMomentAudioItem(
-  set: AudioTrackSet,
-  header: AudioTrackHeader,
-  semantic: SemanticTrack,
-  media: SynchronizedMedia,
-  moment: NarrativeMomentRef,
-  spec: AudioClipSpec,
-): AudioTrackSet {
-  return realizedItems(set, header, semantic, media, spec, projectMomentWindows({
-    itemId: spec.id, semantic, moment, expansion: spec.expansion, projection: spec.projection,
-  }));
+  return realizedItems(set, header, semantic, media, spec, window);
 }
 
 function normalizeProgram(value: AudioTrackProgram): AudioTrackProgram {

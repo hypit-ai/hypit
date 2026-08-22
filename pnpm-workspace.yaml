@@ -1,8 +1,6 @@
 packages:
   - packages/*
   - services/media-lambda
-  # A project-local author package lives at <project>/packages/local-<slug>. Authored projects sit
-  # under projects/ and the shipped examples under examples/; without these globs the convention the
-  # authoring guide documents produces a package pnpm never links.
-  - projects/*/packages/*
+  # Shipped examples are repository fixtures. Real authored projects always live outside this
+  # tool checkout and resolve their own project-local packages through the Host's project root.
   - examples/*/packages/*

@@ -21,6 +21,8 @@
     "@hypit/runtime-host-node": "workspace:*",
     "@hypit/script": "workspace:*",
     "@hypit/semantic-track": "workspace:*",
+    "@hypit/studio-adapter": "workspace:*",
+    "@hypit/studio-video-adapters": "workspace:*",
     "@hypit/validation": "workspace:*",
     "@hypit/video-cli": "workspace:*",
     "@hypit/workspace": "workspace:*",

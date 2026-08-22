@@ -8,7 +8,7 @@ import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/p
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
-import { temporalDependency } from "@hypit/temporal";
+import { temporalDependency, temporalTypes } from "@hypit/temporal";
 import { textDependency, textTypes } from "@hypit/text";
 
 const previewImage = (file: string, mediaType = "image/png") => ({
@@ -23,7 +23,7 @@ export const rankingTypes = {
   itemSpec: { module: rankingModuleRef, name: "RankingItemSpec" },
   textItemShell: { module: rankingModuleRef, name: "RankingTextItemShell" },
   itemSpecs: { module: rankingModuleRef, name: "RankingItemSpecSet" },
-  columnOuter: { module: rankingModuleRef, name: "ColumnOuterWindow" },
+  triggeredCandidates: { module: rankingModuleRef, name: "TriggeredRankingCandidateSet" },
   columnCandidates: { module: rankingModuleRef, name: "ColumnWindowCandidateSet" },
   schedule: { module: rankingModuleRef, name: "RankingSchedule" },
   soundStyle: { module: rankingModuleRef, name: "RankingSoundStyle" },
@@ -43,9 +43,9 @@ export const rankingTypes = {
 export const rankingProducers = {
   createSpecs: { module: rankingModuleRef, name: "create-ranking-item-specs" },
   appendSpec: { module: rankingModuleRef, name: "append-ranking-item-spec" },
+  createTriggeredCandidates: { module: rankingModuleRef, name: "create-triggered-ranking-candidates" },
+  appendTriggeredCandidate: { module: rankingModuleRef, name: "append-triggered-ranking-candidate" },
   schedule: { module: rankingModuleRef, name: "build-ranking-schedule" },
-  projectColumnSelectionOuter: { module: rankingModuleRef, name: "project-column-selection-outer" },
-  projectColumnSegmentOuter: { module: rankingModuleRef, name: "project-column-segment-outer" },
   createColumnCandidates: { module: rankingModuleRef, name: "create-column-window-candidates" },
   appendColumnCandidate: { module: rankingModuleRef, name: "append-column-window-candidate" },
   columnSchedule: { module: rankingModuleRef, name: "build-column-schedule" },
@@ -105,10 +105,22 @@ export const rankingItemSpecSetSchema: ValueSchema = object({
   variant: { schema: variants }, items: { schema: { kind: "array", items: rankingItemSpecSchema } },
 });
 const frameSpan = object({ startFrame: { schema: unsigned }, endFrameExclusive: { schema: unsigned } });
-export const columnOuterWindowSchema: ValueSchema = object({ span: { schema: frameSpan } });
+export const triggeredRankingCandidateSetSchema: ValueSchema = object({
+  entries: { schema: { kind: "array", items: object({
+    itemId: { schema: string }, window: { schema: object({
+      id: { schema: string }, source: { schema: object({ kind: { schema: string }, id: { schema: string } }) },
+      projection: { schema: object({ start: { schema: object({}, true) }, end: { schema: object({}, true) } }) },
+      span: { schema: frameSpan },
+    }) },
+  }) } },
+});
 export const columnWindowCandidateSetSchema: ValueSchema = object({
   entries: { schema: { kind: "array", items: object({
-    itemId: { schema: string }, occurrenceId: { schema: string }, preferred: { schema: frameSpan },
+    itemId: { schema: string }, window: { schema: object({
+      id: { schema: string }, source: { schema: object({ kind: { schema: string }, id: { schema: string } }) },
+      projection: { schema: object({ start: { schema: object({}, true) }, end: { schema: object({}, true) } }) },
+      span: { schema: frameSpan },
+    }) },
   }) } },
 });
 const triggeredScheduleSchema: ValueSchema = object({
@@ -417,23 +429,21 @@ export const rankingMarkupSurfaces = [
           "Every other property is refused by name, except the board Paint and `stage-stack` keys, which a podium accepts and never reads.",
         ],
       } },
-    { name: "tier", tag: "TierBoard", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, rankingTypes.schedule, rankingTypes.tierProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
+    { name: "tier", tag: "TierBoard", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, temporalTypes.windowSpec, rankingTypes.schedule, rankingTypes.tierProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
       vocabulary: {
-        summary: "Places ordered Items into tier rows, one on each occurrence of a Moment, and publishes the board and the Tracks it renders to.",
+        summary: "Places ordered Items into tier rows at the Moment owned by each Item, and publishes the board and the Tracks it renders to.",
         appearance:
-          "One rounded, bordered, shadowed board filling its Frame, with the Style's tier rows stacked down it from the top: each row is a full-width bar in that tier's own color, its short label set in a fixed-width column at the row's left edge. Items are square rounded icon tiles with no copy of their own; each lands in the row its `tier` names and packs left to right after the label column, one tile per trigger occurrence in document order. A tile written `direct` fades and rises into its cell over the appear frames; a tile written `stage` appears first inside a dashed square floating near the top of the Frame, holds there at stage size, then shrinks and travels into its cell. Every tile already placed stays exactly where it landed while the later ones arrive.",
+          "One rounded, bordered, shadowed board filling its Frame, with the Style's tier rows stacked down it from the top: each row is a full-width bar in that tier's own color, its short label set in a fixed-width column at the row's left edge. Items are square rounded icon tiles with no copy of their own; each lands in the row its `tier` names and packs left to right after the label column in chronological order of the Items' Moments. A tile written `direct` fades and rises into its cell over the appear frames; a tile written `stage` appears first inside a dashed square floating near the top of the Frame, holds there at stage size, then shrinks and travels into its cell. Every tile already placed stays exactly where it landed while the later ones arrive.",
         preview: previewImage("TierBoard.png"),
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this board so its Schedule, Program and Tracks can be referenced elsewhere in the Source." },
           { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
-            summary: "Chooses the SemanticTrack that owns the frame domain and gives every trigger its frame." },
+            summary: "Chooses the SemanticTrack that owns the frame domain and resolves every Item Moment." },
           { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
             summary: "Chooses the Frame the whole board occupies." },
           { name: "during", kind: "reference", required: true, accepts: [narrativeTypes.selection],
             summary: "Chooses the Selection the board is on screen for." },
-          { name: "triggers", kind: "reference", required: true, accepts: [narrativeTypes.moment],
-            summary: "Chooses the Moment whose occurrences place one TierItem each, in document order." },
           { name: "terminal", kind: "reference", required: true, accepts: [narrativeTypes.moment],
             summary: "Chooses the Moment the board settles on and ends after." },
           { name: "style", kind: "reference", required: true, accepts: [rankingTypes.tierStyle],
@@ -445,7 +455,7 @@ export const rankingMarkupSurfaces = [
         ],
         children: [
           { tag: "TierItem", cardinality: "many",
-            summary: "One Item of the board, placed at its own trigger occurrence in document order; it is empty.",
+            summary: "One Item of the board, placed at its own Moment; it is empty.",
             attributes: [
               { name: "id", kind: "identifier", required: false,
                 summary: "Names this Item within the board; an omitted id is generated from the Item's position." },
@@ -455,6 +465,8 @@ export const rankingMarkupSurfaces = [
                 summary: "Decides whether the Item lands in its row directly or stages first and moves in, and defaults to direct." },
               { name: "icon", kind: "reference", required: true, accepts: [mediaTypes.blobArtifact],
                 summary: "Chooses the image drawn beside the Item." },
+              { name: "at", kind: "reference", required: true, accepts: [narrativeTypes.moment],
+                summary: "Chooses the Moment when this Item appears; chronological order is derived from these item-owned Moments." },
               { name: "stack", kind: "literal", required: false,
                 summary: "Overrides the Style's draw order for this Item alone." },
             ] },
@@ -471,10 +483,10 @@ export const rankingMarkupSurfaces = [
         ],
         example: `<ranking:TierBoardStyle id="tier-style" recipe={recipes.ranking.tier} font={ui-font}/>
 <ranking:TierBoard id="tiers" semantic={speech.semantic} frame={board-frame}
-  during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
+  during={story.selection.board} terminal={story.moment.done}
   style={tier-style}>
-  <ranking:TierItem id="row-regen" tier="s" icon={icon-regen}/>
-  <ranking:TierItem id="row-remini" tier="a" entry="stage" icon={icon-remini}/>
+  <ranking:TierItem id="row-regen" tier="s" icon={icon-regen} at={story.moment.regen}/>
+  <ranking:TierItem id="row-remini" tier="a" entry="stage" icon={icon-remini} at={story.moment.remini}/>
 </ranking:TierBoard>`,
         notes: [
           "The board requires at least one TierItem, accepts no other child and no text of its own, and Item ids must be unique within it.",
@@ -482,7 +494,7 @@ export const rankingMarkupSurfaces = [
           "Authoring either sound also connects the Style's `.sound` output, so `style` must name a TierBoardStyle written in this Source.",
         ],
       } },
-    { name: "column", tag: "Column", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, rankingTypes.textItemShell, rankingTypes.schedule, rankingTypes.columnProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
+    { name: "column", tag: "Column", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, rankingTypes.textItemShell, temporalTypes.windowSpec, rankingTypes.schedule, rankingTypes.columnProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
       vocabulary: {
         summary: "Places rows by explicit rank, reveals each non-preset row in its own Selection, and publishes the board and the Tracks it renders to.",
         appearance:
@@ -552,23 +564,21 @@ export const rankingMarkupSurfaces = [
           "Authoring either sound also connects the Style's `.sound` output, so `style` must name a ColumnStyle written in this Source.",
         ],
       } },
-    { name: "top-three", tag: "TopThree", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, rankingTypes.textItemShell, rankingTypes.schedule, rankingTypes.topThreeProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
+    { name: "top-three", tag: "TopThree", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, rankingTypes.textItemShell, temporalTypes.windowSpec, rankingTypes.schedule, rankingTypes.topThreeProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
       vocabulary: {
-        summary: "Fills a podium one slot at a time, one on each occurrence of a Moment, and publishes the board and the Tracks it renders to.",
+        summary: "Fills a podium one slot at a time at the Moment owned by each Item, and publishes the board and the Tracks it renders to.",
         appearance:
-          "No board, no fill and no shadow: at most three empty rings — circles at the Style's default corner radius — sit side by side in one row, centered on the Style's center point and standing on a shared baseline across the Frame, each outlined faintly in its own slot color. As its trigger occurs, a slot fades and rises into place, its ring brightening to the full slot color and swelling once slightly larger before settling back; the Item's icon fills the ring, or its rank number is set inside the ring in the slot color when no icon is written. The Item's label appears centered on its own line directly beneath the ring. Slots fill in document order and never move afterwards, so the row only gains brightness and copy as it goes.",
+          "No board, no fill and no shadow: at most three empty rings — circles at the Style's default corner radius — sit side by side in one row, centered on the Style's center point and standing on a shared baseline across the Frame, each outlined faintly in its own slot color. At each Item's Moment, its slot fades and rises into place, its ring brightening to the full slot color and swelling once slightly larger before settling back; the Item's icon fills the ring, or its rank number is set inside the ring in the slot color when no icon is written. The Item's label appears centered on its own line directly beneath the ring. Slots fill in chronological Moment order and never move afterwards, so the row only gains brightness and copy as it goes.",
         preview: previewImage("TopThree.png"),
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this board so its Schedule, Program and Tracks can be referenced elsewhere in the Source." },
           { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
-            summary: "Chooses the SemanticTrack that owns the frame domain and gives every trigger its frame." },
+            summary: "Chooses the SemanticTrack that owns the frame domain and resolves every Item Moment." },
           { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
             summary: "Chooses the Frame the whole board occupies." },
           { name: "during", kind: "reference", required: true, accepts: [narrativeTypes.selection],
             summary: "Chooses the Selection the board is on screen for." },
-          { name: "triggers", kind: "reference", required: true, accepts: [narrativeTypes.moment],
-            summary: "Chooses the Moment whose occurrences place one TopThreeItem each, in document order." },
           { name: "terminal", kind: "reference", required: true, accepts: [narrativeTypes.moment],
             summary: "Chooses the Moment the board settles on and ends after." },
           { name: "style", kind: "reference", required: true, accepts: [rankingTypes.topThreeStyle],
@@ -578,7 +588,7 @@ export const rankingMarkupSurfaces = [
         ],
         children: [
           { tag: "TopThreeItem", cardinality: "many",
-            summary: "One slot of the podium, placed at its own trigger occurrence in document order; it is empty.",
+            summary: "One slot of the podium, placed at its own Moment; it is empty.",
             attributes: [
               { name: "id", kind: "identifier", required: false,
                 summary: "Names this slot within the board; an omitted id is generated from the slot's position." },
@@ -586,6 +596,8 @@ export const rankingMarkupSurfaces = [
                 summary: "Sets the slot's copy, written literally or chosen from an existing Text." },
               { name: "icon", kind: "reference", required: false, accepts: [mediaTypes.blobArtifact],
                 summary: "Chooses the image drawn beside the slot." },
+              { name: "at", kind: "reference", required: true, accepts: [narrativeTypes.moment],
+                summary: "Chooses the Moment when this slot appears; chronological order is derived from these item-owned Moments." },
               { name: "stack", kind: "literal", required: false,
                 summary: "Overrides the Style's draw order for this slot alone." },
             ] },
@@ -602,11 +614,11 @@ export const rankingMarkupSurfaces = [
         ],
         example: `<ranking:TopThreeStyle id="podium-style" recipe={recipes.ranking.podium} font={ui-font}/>
 <ranking:TopThree id="podium" semantic={speech.semantic} frame={board-frame}
-  during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
+  during={story.selection.board} terminal={story.moment.done}
   style={podium-style}>
-  <ranking:TopThreeItem id="slot-gold" label="ReGen" icon={icon-regen}/>
-  <ranking:TopThreeItem id="slot-silver" label="ChatGPT"/>
-  <ranking:TopThreeItem id="slot-bronze" label="Remini"/>
+  <ranking:TopThreeItem id="slot-gold" label="ReGen" icon={icon-regen} at={story.moment.regen}/>
+  <ranking:TopThreeItem id="slot-silver" label="ChatGPT" at={story.moment.chatgpt}/>
+  <ranking:TopThreeItem id="slot-bronze" label="Remini" at={story.moment.remini}/>
 </ranking:TopThree>`,
         notes: [
           "The board requires at least one TopThreeItem, accepts no other child and no text of its own, and Item ids must be unique within it.",
@@ -627,7 +639,7 @@ export const rankingManifest: ModuleManifest = {
     { name: rankingTypes.itemSpec.name },
     { name: rankingTypes.textItemShell.name },
     { name: rankingTypes.itemSpecs.name },
-    { name: rankingTypes.columnOuter.name },
+    { name: rankingTypes.triggeredCandidates.name },
     { name: rankingTypes.columnCandidates.name },
     { name: rankingTypes.schedule.name },
     { name: rankingTypes.soundStyle.name },
@@ -648,30 +660,29 @@ export const rankingManifest: ModuleManifest = {
     { name: rankingProducers.materializeTextItem.name, inputs: [{ name: "shell", type: rankingTypes.textItemShell }, { name: "content", type: textTypes.text }], outputs: [{ name: "spec", type: rankingTypes.itemSpec }], needs: [] },
     { name: rankingProducers.createSpecs.name, inputs: [{ name: "header", type: rankingTypes.header }], outputs: [{ name: "set", type: rankingTypes.itemSpecs }], needs: [] },
     { name: rankingProducers.appendSpec.name, inputs: [{ name: "set", type: rankingTypes.itemSpecs }, { name: "spec", type: rankingTypes.itemSpec }], outputs: [{ name: "set", type: rankingTypes.itemSpecs }], needs: [] },
+    { name: rankingProducers.createTriggeredCandidates.name, inputs: [], outputs: [
+      { name: "set", type: rankingTypes.triggeredCandidates },
+    ], needs: [] },
+    { name: rankingProducers.appendTriggeredCandidate.name, inputs: [
+      { name: "set", type: rankingTypes.triggeredCandidates }, { name: "spec", type: rankingTypes.itemSpec },
+      { name: "window", type: temporalTypes.window },
+    ], outputs: [{ name: "set", type: rankingTypes.triggeredCandidates }], needs: [] },
     { name: rankingProducers.schedule.name, inputs: [
       { name: "header", type: rankingTypes.header }, { name: "items", type: rankingTypes.itemSpecs },
       { name: "semantic", type: semanticTrackTypes.track },
-      { name: "outer", type: narrativeTypes.selection }, { name: "triggers", type: narrativeTypes.moment }, { name: "terminal", type: narrativeTypes.moment },
+      { name: "outer", type: temporalTypes.window }, { name: "candidates", type: rankingTypes.triggeredCandidates },
+      { name: "terminal", type: temporalTypes.window },
     ], outputs: [{ name: "schedule", type: rankingTypes.schedule }], needs: [] },
-    { name: rankingProducers.projectColumnSelectionOuter.name, inputs: [
-      { name: "semantic", type: semanticTrackTypes.track },
-      { name: "selection", type: narrativeTypes.selection },
-    ], outputs: [{ name: "outer", type: rankingTypes.columnOuter }], needs: [] },
-    { name: rankingProducers.projectColumnSegmentOuter.name, inputs: [
-      { name: "semantic", type: semanticTrackTypes.track },
-      { name: "segment", type: narrativeTypes.excerpt },
-    ], outputs: [{ name: "outer", type: rankingTypes.columnOuter }], needs: [] },
     { name: rankingProducers.createColumnCandidates.name, inputs: [], outputs: [
       { name: "set", type: rankingTypes.columnCandidates },
     ], needs: [] },
     { name: rankingProducers.appendColumnCandidate.name, inputs: [
       { name: "set", type: rankingTypes.columnCandidates }, { name: "spec", type: rankingTypes.itemSpec },
-      { name: "semantic", type: semanticTrackTypes.track },
-      { name: "selection", type: narrativeTypes.selection },
+      { name: "window", type: temporalTypes.window },
     ], outputs: [{ name: "set", type: rankingTypes.columnCandidates }], needs: [] },
     { name: rankingProducers.columnSchedule.name, inputs: [
       { name: "header", type: rankingTypes.header }, { name: "items", type: rankingTypes.itemSpecs },
-      { name: "outer", type: rankingTypes.columnOuter }, { name: "candidates", type: rankingTypes.columnCandidates },
+      { name: "outer", type: temporalTypes.window }, { name: "candidates", type: rankingTypes.columnCandidates },
     ], outputs: [{ name: "schedule", type: rankingTypes.schedule }], needs: [] },
     ...([
       [rankingProducers.createTierItems, rankingTypes.tierItems],

@@ -8,8 +8,10 @@ The package contains no credentials, Python environment or queue. Providers tran
 request directly into provider-neutral `AlignedTranscriptEvidence`. There is no vendor-shaped
 Evidence wrapper or pass-through normalization node in the graph.
 
-`<whisperx:SemanticTake>` consumes one normalized `SynchronizedMedia` and exactly one Script
-Segment. `@hypit/media-pipeline` projects that Take's 48 kHz audio to canonical 16 kHz mono
+`<whisperx:SemanticTake>` consumes one normalized `SynchronizedMedia`, exactly one Script Segment,
+and a required `language="en"` or `language="zh"`. The language is passed directly to WhisperX;
+Script text and audio are never inspected to choose it implicitly. `@hypit/media-pipeline` projects
+that Take's 48 kHz audio to canonical 16 kHz mono
 `SpeechEvidenceAudio`; WhisperX sees only those bytes. A deterministic local alignment then combines
 the returned evidence with the one Segment and emits one self-contained `SemanticTake`.
 

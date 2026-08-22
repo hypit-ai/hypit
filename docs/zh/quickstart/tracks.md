@@ -11,30 +11,28 @@ Track 的作者语法。
 
 ## 字幕系统
 
-字幕由一套很小的公共语言与可替换的样式族组成：
+字幕由 Script 产生的单一文档与可替换的样式族组成：
 
 ```text
-Script 显示全集 → Caption Program → Planner + Atom 实测时间 → 样式族 Track
+Script CaptionDocument → Caption Program → SemanticTrack 定时 → 样式族 Track
 ```
 
 ```svml
 <import as="caption" from="@hypit/caption@1"/>
 <import as="caption-fine" from="@hypit/caption-fine@1"/>
-<import as="caption-ai" from="@hypit/caption-gemini@1"/>
 <import as="media" from="@hypit/media@1"/>
 <import as="fonts" from="@hypit/fonts-open@1"/>
 ```
 
-公共 Caption 只负责 Cue 字数边界、可选的通用逐词字段、完整样式分配、Plan 校验与时间拼接。Fine 是第一种无字段样式族，负责自己的几何、字形/Cue/Pill Paint 与局部动画。
+公共 Caption 负责 CaptionDocument、完整 Alignment Unit 的 Selection/Role 投影、样式分配与
+SemanticTrack 时间拼接。Fine 是一种样式族，负责自己的几何、字形/Cue/Pill Paint 与局部动画。
 
 ### caption-fine:Style
 
-一个 Style 是不可拆分的“规划要求 + 渲染参数”。Fine 从一个包自有的 SVS Recipe
-同时解析两者：
+一个 Style 是从包自有 SVS Recipe 解析出的渲染意图：
 
 ```svs
 caption.primary {
-  cue-min-words: 2; cue-max-words: 7;
   stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
   anchor-x: center; anchor-y: bottom;
   size: 58; line-height: 1; align: center;
@@ -59,51 +57,46 @@ caption.primary {
 
 必填的 `font=` 边携带一个按字节复现的 `FontStackRef`。字体家族、字重和字形只在这条边上声明一次；每个 Fallback 保留自己的真实字体信息。省略字体栈会在编译时失败，不会退回当前机器上的同名字体。
 
-Recipe 同时包含 `cue-min-words`、`cue-max-words` 和完整字号/外观/框参数。Fine 不声明任何逐词字段；其他字幕包可以定义完全不同的字段和渲染方式，无需修改公共 Caption。
+Cue 边界由 Script 的 Segment、Role、样式变化和作者写出的 `||` 决定。Fine 不声明任何
+逐词规划字段；其他字幕包可以定义完全不同的渲染方式，无需修改公共 Caption。
 
 Fine 不是一组互斥预设。基础/激活渐变、描边、阴影、长阴影、外发光、下划线、Pill
 和动画均为正交维度。文字、下划线和 Pill 各自选择 `off | current | trail`；因此可以直接表达“文字保留已读色，但 Pill 只跟随当前词”。`active-box-continuity: joined` 会把已读前缀在每个真实换行片段内连成一个背景，而不是给每个词分别套胶囊。
 
-Fine 只在完整 Atom 之间自然换行，永不裁掉作者文字，因此有意不提供 `max-lines`。需要控制行数时，应调整 Cue 字数边界、Track 宽度与字号。
+Fine 只在完整 Alignment Unit 之间自然换行，永不裁掉作者文字。需要控制行数时，应调整
+Track 宽度与字号；Cue 分界由 Script 的结构和 `||` 决定。
 
 CJK 口播可以直接书写。若一个只负责显示的 emoji 仍需跟随语音计时，应显式写出对应，例如 `<🌐 | globe>`；系统不会替裸符号虚构一个口播词。
 
 ### caption:Program
 
-Program 消费 Script 显式输出的完整有序显示词全集。一个必填的默认 Style 自动覆盖所有词，不需要作者制造 `@whole` 或补集。`Use` 按源码顺序替换整个 Style，后命中者获胜。
+Program 消费 Script 显式输出的完整有序 CaptionDocument。一个必填的默认 Style 自动覆盖
+所有 Alignment Unit。`Use` 按源码顺序替换整个 Style，后命中者获胜。
 
 ```svml
-<caption:Program id="caption-program" display={story.caption}
+<caption:Program id="caption-program" document={story.caption} narrative={story}
   default={primary-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
-  <caption:Use words={story.caption.selection.product-demo}
+  <caption:Use selection={story.selection.product-demo}
     style={dialogue-caption}/>
-  <caption:Mute words={story.caption.selection.private}/>
+  <caption:Mute selection={story.selection.private}/>
 </caption:Program>
 ```
 
-`role=` 是词子集查询的作者语法，不是时间条件。`words=` 接收 Selection 的字幕专用词投影；通用 Selection 的公开值仍只有语义首尾锚点。
-`Mute` 消费同一份精确词投影，不进入 Gemini；它在 Cue 规划完成后隐藏这些完整 Atom，既不重新分 Cue，也不把字幕可见性变成 Core 的通用时间遮罩。
-
-### caption-ai:Planner
-
-```svml
-<caption-ai:Planner id="caption-plan" display={story.caption}
-  program={caption-program} model="gemini-2.5-flash"/>
-```
-
-Planner 只接收不可改写的显示 Atom/Word 与已解析好的 Style runs。它只能在完整 Atom
-之间分 Cue，并给 Word id 附上样式声明的字段；Fine 没有字段。它看不到音频、时间或
-Dual Text 右侧。
+`role=` 是词子集查询，不是时间条件。`selection=` 把公开的语义 Selection 投影为完整的
+Caption Alignment Unit；如果切到 N:M Dual Text 的中间，会直接拒绝。`Mute` 消费同一份投影，
+不会重新分 Cue。
 
 ### caption-fine:Track
 
 ```svml
-<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} semantic={speech.semantic} program={caption-program} plan={caption-plan.plan}/>
+<caption-fine:Track id="captions" document={story.caption}
+  semantic={speech.semantic} program={caption-program}/>
 ```
 
-公共 Caption 先把 Plan 与独立 SemanticMap 拼接，Fine 再把所有默认/覆盖样式渲染成一个普通的对等 `VisualTrack`：`{captions.track}`。
+Caption 把每个完整 unit 与独立 SemanticTrack 对齐，Fine 再把默认/覆盖样式渲染成普通的对等
+`VisualTrack`：`{captions.track}`。
 
 ## Media 叠加层与 B-roll
 
@@ -185,7 +178,6 @@ Operation。需要共享或特殊选流时仍可显式写 `<pipeline:Normalize>`
 | `Clip.source` | 是 | 显式选流并规范化后的 `SynchronizedMedia` |
 | `during`、`at`/`for` 或 `start`/`end` | 三种形式选一 | 全节目、Selection、Moment 或显式窗口 |
 | `playback` | 否 | `once`、`once-end`、`loop`、`loop-end` 或有界 `stretch` |
-| `occurrences` | 否 | 语义来源有多次出现时选择 `one` 或 `each` |
 | `trim-start`、`trim-end` | 否 | 精确源裁切 |
 | `gain`、`fade-in`、`fade-out` | 否 | 显式的单 Clip 混音值 |
 
@@ -295,7 +287,7 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 | `frame` | 一个 `space:Frame`——对 `Column` 来说是固定的排名轨 |
 | `during` | 一个 Selection——板在此期间留在画面上 |
 | `style` | 对应的样式记录，且只接受本变体的 |
-| `triggers`、`terminal` | 两个 Moment——行在前者上移动，板在后者上定格。仅 `TierBoard` 与 `TopThree` |
+| `terminal` | 完整板定格的 Moment。仅 `TierBoard` 与 `TopThree` |
 | `canvas` | 一个 `space:Canvas`——揭示舞台。仅 `Column` |
 | `appear-sound`、`move-sound` | 可选，Synchronized Media |
 
@@ -305,17 +297,19 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 每个变体只接受自己的那一种，至少一个，且 id 在同一块板内不可重复。
 
-- **`TierItem`** —— `tier`（必填，须与 recipe 中某一行的 id 对上）、`icon`（必填），可选 `entry="direct" | "stage"` 与 `stack`。行的文字来自 recipe，不写在标签上。
-- **`ColumnItem`** 与 **`TopThreeItem`** —— `label`（必填：字符串或 Text 引用），可选 `icon` 与 `stack`。`TopThree` 最多三条。
+- **`TierItem`** —— `tier`、`icon` 与 item 自己的 `at={story.moment...}` 必填，可选 `entry="direct" | "stage"` 与 `stack`。行的文字来自 recipe，不写在标签上。
+- **`TopThreeItem`** —— `label` 与 item 自己的 `at={story.moment...}` 必填，可选 `icon` 与 `stack`，最多三条。TierBoard 与 TopThree 的揭示顺序由这些 Moment 的真实帧顺序决定。
+- **`ColumnItem`** —— `label` 与 `rank` 必填，可选 `icon` 与 `stack`。非 preset item 用自己的 `during` Selection；`preset="true"` 的 item 开场已在位且不写 `during`。
 
 ```svml
 <ranking:ColumnStyle id="board-style" recipe={recipes.ranking.board} font={ui-font}/>
-<ranking:Column id="board" semantic={speech.semantic} frame={board-frame}
-  during={story.selection.board} triggers={story.moment.place} terminal={story.moment.done}
-  style={board-style}>
-  <ranking:ColumnItem id="row-regen" label="ReGen" icon={icon-regen}/>
-  <ranking:ColumnItem id="row-chatgpt" label="ChatGPT" icon={icon-chatgpt}/>
-  <ranking:ColumnItem id="row-remini" label="Remini" icon={icon-remini}/>
+<ranking:Column id="board" semantic={speech.semantic} canvas={vertical} frame={board-frame}
+  during={story.selection.board} style={board-style}>
+  <ranking:ColumnItem id="row-regen" rank="1" label="ReGen" icon={icon-regen}
+    during={story.selection.regen-reveal}/>
+  <ranking:ColumnItem id="row-chatgpt" rank="2" label="ChatGPT" icon={icon-chatgpt}
+    during={story.selection.chatgpt-reveal}/>
+  <ranking:ColumnItem id="row-remini" rank="3" preset="true" label="Remini" icon={icon-remini}/>
 </ranking:Column>
 ```
 
@@ -377,7 +371,8 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 | 一个 Moment，持续一段时长 | 在带有 `semantic={speech.semantic}` 的 Track 内写 `at={story.moment.x} for="12f"` |
 | 显式区间 | `start="…" end="…"`，可另外指定 `selection=` 或 `moment=` |
 
-Track 接受 `id`、`canvas` 与 `semantic`。时长写作 `12f`、`250ms` 或 `1.5s`，`occurrences="each"` 让效果在标记的每一次出现处重复，而不只是第一次。
+Track 接受 `id`、`canvas` 与 `semantic`。时长写作 `12f`、`250ms` 或 `1.5s`。一个 Selection
+只表示一个连续区间，一个 Moment 只表示一个点；同一效果需要再次出现时，应再写一个 item。
 
 可用的效果有十一种——`Flash`、`ColorWash`、`Vignette`、`ScanLines`、`DirectionalMatte`、`WhipVeil`、`GlitchVeil`、`Grain`、`LightLeak`、`Bokeh` 与 `TVStatic`——每种各有自己的必填属性，例如 `Flash` 的 `color` / `intensity` / `attack` / `hold` / `decay`，或 `Vignette` 的 `center-x` / `center-y` / `radius-x` / `radius-y` / `softness` / `color` / `opacity`。它们都没有默认值：一个效果要么把自己的形状说全，要么被拒绝。
 
@@ -423,7 +418,6 @@ Track 接受 `id`、`canvas` 与 `semantic`。时长写作 `12f`、`250ms` 或 `
 ```svml
 <import as="caption" from="@hypit/caption@1"/>
 <import as="caption-fine" from="@hypit/caption-fine@1"/>
-<import as="caption-ai" from="@hypit/caption-gemini@1"/>
 <import as="fonts" from="@hypit/fonts-open@1"/>
 <import as="media" from="@hypit/media@1"/>
 <import as="pipeline" from="@hypit/media-pipeline@1"/>
@@ -436,10 +430,9 @@ Track 接受 `id`、`canvas` 与 `semantic`。时长写作 `12f`、`250ms` 或 `
 <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
 <caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
-<caption:Program id="caption-program" display={story.caption} default={base-caption}/>
-<caption-ai:Planner id="cue-plan" display={story.caption}
-  program={caption-program} model="gemini-2.5-flash"/>
-<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} semantic={speech.semantic} plan={cue-plan.plan} program={caption-program}/>
+<caption:Program id="caption-program" document={story.caption} narrative={story} default={base-caption}/>
+<caption-fine:Track id="captions" document={story.caption}
+  semantic={speech.semantic} program={caption-program}/>
 
 <!-- 共享位置是显式边，与 Media/Text 外观分开。 -->
 <space:Canvas id="vertical" width="1080" height="1920"/>

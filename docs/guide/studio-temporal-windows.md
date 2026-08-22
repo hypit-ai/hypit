@@ -20,24 +20,23 @@ must preserve those three stages instead of flattening them into one anonymous r
 The selection window is the semantic source chosen by the author. It retains:
 
 - the source kind: Selection, Segment, Moment or Program;
-- the canonical source identity and occurrence identity;
+- the canonical source identity;
 - its anchors on the selected Semantic Track;
 - the source range of the author expression that refers to it.
 
-For a Moment this may be a point rather than a duration. A repeated Selection may produce several
-occurrences. Equal frame coordinates do not make two semantic sources identical.
+For a Moment this is a point rather than a duration. A Selection is exactly one contiguous interval,
+and a Moment is exactly one point. Equal frame coordinates do not make two semantic sources identical.
 
 ### 2. Projection window
 
-The projection window is the result of applying the Track's temporal expression to one source
-occurrence. For example, an item may use the complete Selection, begin three frames before a
-Moment, or run from `segment.start + 2s` to `segment.end`. Projection includes occurrence expansion,
-offset evaluation, clipping to Program Space and frame quantization.
+The projection window is the result of applying the Track's temporal expression to one source. For
+example, an item may use the complete Selection, begin three frames before a Moment, or run from
+`segment.start + 2s` to `segment.end`. Projection includes offset evaluation, clipping to Program
+Space and frame quantization.
 
-One authored binding can therefore produce zero, one or several projected windows. A component can
-also apply a relation between its projected windows, such as requiring or computing disjoint
-reveal intervals. That relation belongs to the component's public programme or schedule, not to a
-Studio guess.
+One authored binding produces one projected window when it resolves. A component can combine the
+projected windows of several authored children, such as computing disjoint reveal intervals. That
+relation belongs to the component's public programme or schedule, not to a Studio guess.
 
 ### 3. Consumption window
 
@@ -59,8 +58,8 @@ Studio eventually needs a lossless chain with explicit identities:
 
 ```text
 author element
-  -> semantic binding (kind, source id, occurrence, author range)
-  -> projection expression and projected window(s)
+  -> semantic binding (kind, source id, author range)
+  -> projection expression and projected window
   -> consumed entity and consumed window(s)
   -> terminal visual/audio realization
 ```
@@ -81,13 +80,12 @@ Before any drag or trim writeback is enabled, the product design must decide:
 1. Whether the three windows appear as nested geometry in one lane, separate linked sub-lanes, or
    an overlay revealed when an item is selected.
 2. How a point-like Moment and its duration-like projection are distinguished visually.
-3. How repeated Selection occurrences and `one` versus `each` expansion are shown.
-4. How a shared Selection communicates the blast radius across all consuming Tracks.
-5. Whether the playhead/inspector selects the semantic source, projected occurrence, consumed
+3. How a shared Selection communicates the blast radius across all consuming Tracks.
+4. Whether the playhead/inspector selects the semantic source, projected window, consumed
    entity or terminal realization, and how the user moves between those levels.
-6. How component-internal schedules such as Ranking reveals expand without making the primary
+5. How component-internal schedules such as Ranking reveals expand without making the primary
    timeline noisy.
-7. Which drag gesture owns which level. Moving a semantic source, changing a projection offset and
+6. Which drag gesture owns which level. Moving a semantic source, changing a projection offset and
    trimming a consumption window are different edits and must never be silently substituted.
 
 Until these questions are answered, timeline entities remain selectable and seekable but read-only.

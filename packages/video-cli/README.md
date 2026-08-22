@@ -39,7 +39,7 @@ contain either Workspace or package-installation overrides.
 
 `check` is usable for an Author Source or a complete Run Source. `plan` and `build` require a Run
 Source because an Author Graph without execution intent is not a Build. The live example executes
-the explicit Vertex Gemini Caption package and real local/remote Endpoints; the CLI never
+the Script-owned deterministic CaptionDocument alongside real local/remote Endpoints; the CLI never
 fabricates a Target, Candidate or missing fact.
 
 `build` compiles one immutable Build Definition and passes it to the selected Runtime Profile with a fresh,

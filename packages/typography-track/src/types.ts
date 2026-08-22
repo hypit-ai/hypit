@@ -9,7 +9,6 @@ import type {
   VisualTextTypography,
 } from "@hypit/composition";
 import type { SpatialFrame, SpatialPath, SpatialPoint } from "@hypit/spatial";
-import type { OccurrenceExpansion, TemporalWindowProjection } from "@hypit/temporal";
 
 export type TextDocument = VisualTextDocument;
 export type TextTypography = VisualTextTypography;
@@ -64,8 +63,6 @@ export type TextPlacement = {
 export type TextItemSpec = {
   readonly id: string;
   readonly document: TextDocument;
-  readonly projection: TemporalWindowProjection;
-  readonly expansion: OccurrenceExpansion;
 };
 
 /**
@@ -75,8 +72,6 @@ export type TextItemSpec = {
  */
 export type PlainTextItemSpec = {
   readonly id: string;
-  readonly projection: TemporalWindowProjection;
-  readonly expansion: OccurrenceExpansion;
 };
 
 export type TextItem = {

@@ -12,7 +12,6 @@
     exit: fade; exit-frames: 4; exit-easing: ease-in;
   }
   caption.base {
-    cue-min-words: 1; cue-max-words: 5;
     stack-order: 70; x: 0.5; y: 0.88; width: 0.84; anchor-x: center; anchor-y: bottom;
     size: 58; line-height: 1; align: center;
     fill: #FFFFFF; stroke-color: #09090B; stroke-width: 2;

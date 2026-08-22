@@ -120,7 +120,6 @@ export function createTimeline(store: Store): Timeline {
   let built = -1;
   let paintFrame = 0;
   let rebuildFrame = 0;
-  let semanticLane: HTMLElement | undefined;
   let clipNodes: readonly {
     readonly node: HTMLElement;
     readonly start: number;
@@ -132,7 +131,7 @@ export function createTimeline(store: Store): Timeline {
     readonly id: string;
     readonly start: number;
     readonly end: number;
-    readonly kind: "segment" | "word";
+    readonly kind: "segment" | "word" | "selection" | "moment";
   }[] = [];
 
   const playheadFraction = (): number => {
@@ -191,7 +190,9 @@ export function createTimeline(store: Store): Timeline {
   let pointerDownX = 0;
   let pointerDownOnItem = false;
   lanes.addEventListener("pointerdown", (event) => {
-    pointerDownOnItem = (event.target as HTMLElement).closest(".clip, .semantic-segment, .semantic-word") !== null;
+    pointerDownOnItem = (event.target as HTMLElement).closest(
+      ".clip, .semantic-segment, .semantic-word, .semantic-selection, .semantic-moment",
+    ) !== null;
     pointerDownX = event.clientX;
     pointerArmed = true;
     try { lanes.setPointerCapture(event.pointerId); } catch { /* pointer remains local */ }
@@ -366,11 +367,14 @@ export function createTimeline(store: Store): Timeline {
 
   const buildSemanticLane = (snapshot: StudioSnapshot): void => {
     if (snapshot.semantic.segments.length === 0) {
-      semanticLane = undefined;
       return;
     }
     const presentation = snapshot.semantic.presentation;
+    // This is one semantic ruler group, not a regular Film lane. Its three
+    // bands share the same inner inset as ordinary items, so the first pixel
+    // of the semantic content aligns with the first pixel of the label card.
     const laneHeight = presentation.lane.height.preferredPx;
+    const bandHeight = Math.max(1, (laneHeight - itemMetrics.insetYPx * 2) / 3);
     const label = createTrackLabel(
       presentation.label ?? "Speech",
       presentation.family,
@@ -378,6 +382,7 @@ export function createTimeline(store: Store): Timeline {
       `${snapshot.semantic.segments.length} take${snapshot.semantic.segments.length === 1 ? "" : "s"}`,
       laneHeight,
     );
+    label.classList.add("track-label-semantic");
     const groupId = presentation.lane.groupId;
     const attachmentKey = groupId === undefined ? undefined : `semantic:${groupId}`;
     const facets = groupId === undefined ? [] : attachedTracks(snapshot, groupId);
@@ -387,43 +392,50 @@ export function createTimeline(store: Store): Timeline {
     const lane = document.createElement("div");
     lane.className = `lane semantic-lane track-${presentation.family}`;
     lane.style.height = `${laneHeight}px`;
-    lane.style.setProperty("--lane-min-height", `${presentation.lane.height.minPx}px`);
-    lane.style.setProperty("--lane-max-height", `${presentation.lane.height.maxPx}px`);
-    semanticLane = lane;
+    lane.style.setProperty("--semantic-band-height", `${bandHeight}px`);
     const laneWidth = lanes.clientWidth;
-    const tokensBySegment = new Map<string, SemanticToken[]>();
-    for (const token of snapshot.semantic.tokens) {
-      const held = tokensBySegment.get(token.segmentId);
-      if (held === undefined) tokensBySegment.set(token.segmentId, [token]);
-      else held.push(token);
+    const nextSemanticNodes: {
+      node: HTMLElement;
+      id: string;
+      start: number;
+      end: number;
+      kind: "segment" | "word" | "selection" | "moment";
+    }[] = [];
+
+    const bands = ["segment", "word", "marker"] as const;
+    for (const [index, kind] of bands.entries()) {
+      const band = document.createElement("div");
+      band.className = `semantic-band semantic-band-${kind}`;
+      band.style.top = `${itemMetrics.insetYPx + index * bandHeight}px`;
+      lane.append(band);
     }
-    const nextSemanticNodes: { node: HTMLElement; id: string; start: number; end: number; kind: "segment" | "word" }[] = [];
+    const segmentBand = lane.querySelector<HTMLElement>(".semantic-band-segment")!;
+    const wordBand = lane.querySelector<HTMLElement>(".semantic-band-word")!;
+    const markerBand = lane.querySelector<HTMLElement>(".semantic-band-marker")!;
 
     for (const segment of snapshot.semantic.segments) {
       const from = place(segment.startFrame, snapshot.space.frameCount, zoom.window());
       const to = place(segment.endFrameExclusive, snapshot.space.frameCount, zoom.window());
       if (to <= 0 || from >= 1) continue;
-      const visibleFrom = Math.max(0, from);
-      const visibleTo = Math.min(1, to);
-      const node = document.createElement("div");
-      node.className = "semantic-segment";
+      const node = document.createElement("button");
+      node.type = "button";
+      node.className = "semantic-cell semantic-segment";
       node.tabIndex = 0;
       node.setAttribute("role", "button");
       node.dataset.semanticSegment = segment.id;
-      node.style.left = `${visibleFrom * 100}%`;
-      const segmentWidth = Math.max(0, visibleTo - visibleFrom) * 100;
+      node.style.left = `${from * 100}%`;
+      const segmentWidth = Math.max(0, to - from) * 100;
       node.style.width = `max(2px, calc(${segmentWidth}% - ${itemMetrics.gapPx}px))`;
       node.title = `${segment.id} · ${segment.startFrame}-${segment.endFrameExclusive}f`;
       const segmentLabel = document.createElement("span");
       segmentLabel.className = "semantic-segment-label";
       segmentLabel.textContent = segment.id;
-      const visibleWidthPx = Math.max(0, visibleTo - visibleFrom) * laneWidth;
-      node.classList.toggle("semantic-coarse", visibleWidthPx < 92);
+      const visibleWidthPx = Math.max(0, to - from) * laneWidth;
       node.classList.toggle("semantic-wide", visibleWidthPx >= 140);
       node.classList.toggle("label-hidden",
         measuredText(segment.id, "500 11px -apple-system, system-ui, Segoe UI, sans-serif") + 18 > visibleWidthPx);
       const head = document.createElement("div");
-      head.className = "semantic-segment-head";
+      head.className = "semantic-cell-content";
       const segmentDuration = document.createElement("span");
       segmentDuration.className = "semantic-segment-duration";
       segmentDuration.textContent = `${segment.endFrameExclusive - segment.startFrame}f`;
@@ -446,43 +458,64 @@ export function createTimeline(store: Store): Timeline {
         store.selectSemanticSegment(segment.id, "timeline");
       });
       nextSemanticNodes.push({ node, id: segment.id, start: segment.startFrame, end: segment.endFrameExclusive, kind: "segment" });
-
-      const words = document.createElement("div");
-      words.className = "semantic-words";
-      for (const token of tokensBySegment.get(segment.id) ?? []) {
-        const wordFrom = place(token.startFrame, snapshot.space.frameCount, zoom.window());
-        const wordTo = place(token.endFrameExclusive, snapshot.space.frameCount, zoom.window());
-        if (wordTo <= 0 || wordFrom >= 1) continue;
-        const word = document.createElement("button");
-        word.type = "button";
-        word.className = "semantic-word";
-        word.dataset.semanticToken = token.id;
-        const span = Math.max(1e-6, visibleTo - visibleFrom);
-        const clippedFrom = Math.max(visibleFrom, wordFrom);
-        const clippedTo = Math.min(visibleTo, wordTo);
-        word.style.left = `${Math.max(0, clippedFrom - visibleFrom) / span * 100}%`;
-        word.style.width = `max(1px, calc(${Math.max(0, clippedTo - clippedFrom) / span * 100}% - 1px))`;
-        word.title = `${token.text} · ${token.startFrame}-${token.endFrameExclusive}f`;
-        const text = document.createElement("span");
-        text.className = "semantic-word-label";
-        text.textContent = token.text;
-        word.append(text);
-        const widthPx = Math.max(0, clippedTo - clippedFrom) / span * visibleWidthPx;
-        word.classList.toggle("label-hidden",
-          measuredText(token.text, "500 11px -apple-system, system-ui, Segoe UI, sans-serif") + 18 > widthPx);
-        word.addEventListener("pointerdown", () => {
-          store.selectSemanticSegment(segment.id, "timeline");
-          store.seek(token.startFrame, "timeline");
-        });
-        nextSemanticNodes.push({ node: word, id: segment.id, start: token.startFrame, end: token.endFrameExclusive, kind: "word" });
-        words.append(word);
-      }
-      node.append(words);
-      const selection = document.createElement("span");
-      selection.className = "clip-selection";
-      selection.setAttribute("aria-hidden", "true");
-      node.append(selection);
-      lane.append(node);
+      segmentBand.append(node);
+    }
+    for (const token of snapshot.semantic.tokens) {
+      const wordFrom = place(token.startFrame, snapshot.space.frameCount, zoom.window());
+      const wordTo = place(token.endFrameExclusive, snapshot.space.frameCount, zoom.window());
+      if (wordTo <= 0 || wordFrom >= 1) continue;
+      const word = document.createElement("button");
+      word.type = "button";
+      word.className = "semantic-cell semantic-word";
+      word.dataset.semanticToken = token.id;
+      word.style.left = `${wordFrom * 100}%`;
+      word.style.width = `max(1px, calc(${Math.max(0, wordTo - wordFrom) * 100}% - 1px))`;
+      word.title = `${token.text} · ${token.startFrame}-${token.endFrameExclusive}f`;
+      const text = document.createElement("span");
+      text.className = "semantic-word-label";
+      text.textContent = token.text;
+      word.append(text);
+      const widthPx = Math.max(0, wordTo - wordFrom) * laneWidth;
+      word.classList.toggle("label-hidden",
+        measuredText(token.text, "500 11px -apple-system, system-ui, Segoe UI, sans-serif") + 18 > widthPx);
+      word.addEventListener("pointerdown", () => {
+        store.selectSemanticSegment(token.segmentId, "timeline");
+        store.seek(token.startFrame, "timeline");
+      });
+      nextSemanticNodes.push({ node: word, id: token.id, start: token.startFrame, end: token.endFrameExclusive, kind: "word" });
+      wordBand.append(word);
+    }
+    for (const selection of snapshot.semantic.selections) {
+      const from = place(selection.startFrame, snapshot.space.frameCount, zoom.window());
+      const to = place(selection.endFrameExclusive, snapshot.space.frameCount, zoom.window());
+      if (to <= 0 || from >= 1) continue;
+      const node = document.createElement("span");
+      node.className = "semantic-cell semantic-selection";
+      node.style.left = `${from * 100}%`;
+      node.style.width = `max(2px, calc(${Math.max(0, to - from) * 100}% - ${itemMetrics.gapPx}px))`;
+      node.title = `${selection.id} · ${selection.startFrame}-${selection.endFrameExclusive}f`;
+      const selectionLabel = document.createElement("span");
+      selectionLabel.className = "semantic-selection-label";
+      selectionLabel.textContent = selection.id;
+      const selectionContent = document.createElement("div");
+      selectionContent.className = "semantic-cell-content";
+      selectionContent.append(selectionLabel);
+      node.append(selectionContent);
+      const selectionWidthPx = Math.max(0, to - from) * laneWidth;
+      node.classList.toggle("label-hidden",
+        measuredText(selection.id, "500 11px -apple-system, system-ui, Segoe UI, sans-serif") + 18 > selectionWidthPx);
+      markerBand.append(node);
+      nextSemanticNodes.push({ node, id: selection.id, start: selection.startFrame, end: selection.endFrameExclusive, kind: "selection" });
+    }
+    for (const moment of snapshot.semantic.moments) {
+      const at = place(moment.frame, snapshot.space.frameCount, zoom.window());
+      if (at < 0 || at > 1) continue;
+      const node = document.createElement("span");
+      node.className = "semantic-moment";
+      node.style.left = `${at * 100}%`;
+      node.title = `${moment.id} · ${moment.frame}f`;
+      markerBand.append(node);
+      nextSemanticNodes.push({ node, id: moment.id, start: moment.frame, end: moment.frame + 1, kind: "moment" });
     }
     rows.append(lane);
     semanticNodes = nextSemanticNodes;

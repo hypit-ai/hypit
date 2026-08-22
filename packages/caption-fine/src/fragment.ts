@@ -12,19 +12,16 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 /** One timing join plus one Style-family render operation, regardless of how many Styles are used. */
 export const fineCaptionTrackFragment = sealGraphFragment({
   inputs: [
-    { name: "display", type: narrativeTypes.captionDisplay },
-    { name: "correspondence", type: narrativeTypes.captionCorrespondence },
+    { name: "document", type: narrativeTypes.captionDocument },
     { name: "semantic", type: semanticTrackTypes.track },
-    { name: "plan", type: captionTypes.plan },
     { name: "program", type: captionTypes.program },
   ],
   operations: [
     {
-      id: "caption:temporalize-plan",
-      producer: captionProducers.temporalizePlan,
+      id: "caption:temporalize-document",
+      producer: captionProducers.temporalizeDocument,
       inputs: {
-        display: input("display"), correspondence: input("correspondence"), semantic: input("semantic"),
-        plan: input("plan"), program: input("program"),
+        document: input("document"), semantic: input("semantic"), program: input("program"),
       },
       result: { kind: "output", name: "caption" },
     },
@@ -32,8 +29,8 @@ export const fineCaptionTrackFragment = sealGraphFragment({
       id: "caption-fine:render",
       producer: captionFineProducers.render,
       inputs: {
-        caption: operation("caption:temporalize-plan"), program: input("program"),
-        display: input("display"), semantic: input("semantic"),
+        caption: operation("caption:temporalize-document"), program: input("program"),
+        document: input("document"), semantic: input("semantic"),
       },
       result: { kind: "output", name: "track" },
     },

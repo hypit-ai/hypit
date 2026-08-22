@@ -1,8 +1,6 @@
 import type { ModuleManifest, TypeRef } from "@hypit/protocol";
 import {
-  captionCorrespondenceSchema,
-  captionDisplaySequenceSchema,
-  captionDisplayWordSubsetSchema,
+  captionDocumentSchema,
   narrativeExcerptSchema,
   narrativeSchema,
   narrativeMomentSchema,
@@ -15,9 +13,7 @@ export const narrativeTypes = {
   excerpt: { module: narrativeModuleRef, name: "NarrativeExcerpt" },
   selection: { module: narrativeModuleRef, name: "NarrativeSelection" },
   moment: { module: narrativeModuleRef, name: "NarrativeMoment" },
-  captionDisplay: { module: narrativeModuleRef, name: "CaptionDisplaySequence" },
-  captionCorrespondence: { module: narrativeModuleRef, name: "CaptionCorrespondence" },
-  captionDisplayWordSubset: { module: narrativeModuleRef, name: "CaptionDisplayWordSubset" },
+  captionDocument: { module: narrativeModuleRef, name: "CaptionDocument" },
 } satisfies Record<string, TypeRef>;
 export const narrativeManifest: ModuleManifest = {
   format: "hypit.module@1", name: narrativeModuleRef.name, version: narrativeModuleRef.version,
@@ -27,9 +23,7 @@ export const narrativeManifest: ModuleManifest = {
     { name: narrativeTypes.excerpt.name },
     { name: narrativeTypes.selection.name },
     { name: narrativeTypes.moment.name },
-    { name: narrativeTypes.captionDisplay.name },
-    { name: narrativeTypes.captionCorrespondence.name },
-    { name: narrativeTypes.captionDisplayWordSubset.name },
+    { name: narrativeTypes.captionDocument.name },
   ],
   capabilities: [], producers: [],
 };

@@ -19,6 +19,7 @@ import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
 import { textTypes } from "@hypit/text";
+import { temporalTypes } from "@hypit/temporal";
 
 import { createRankingFragment } from "./fragment.js";
 import type { RankingFragmentItem, RankingFragmentSound } from "./fragment.js";
@@ -135,16 +136,17 @@ function itemSpec(
   const stackingOrder = integer(element, "stack");
   let value: RankingItemSpec;
   if (variant === "tier-board") {
-    allowed(element, ["id", "tier", "entry", "icon", "stack"]);
+    allowed(element, ["id", "tier", "entry", "icon", "at", "stack"]);
     empty(element);
     const entry = text(element, "entry", "direct");
     if (entry !== "direct" && entry !== "stage") throw new Error(`${element.name}.entry must be direct or stage.`);
+    const timing = reference(element.attributes.at, `${element.name}.at`, narrativeTypes.moment, resolve);
     value = {
       variant, id, tier: text(element, "tier"), entry,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     } satisfies TierBoardItemSpec;
     assertRankingItemSpec(value);
-    return { spec: value };
+    return { spec: value, timing };
   } else if (variant === "column") {
     allowed(element, ["id", "label", "icon", "rank", "preset", "during", "stack"]);
     empty(element);
@@ -167,8 +169,9 @@ function itemSpec(
     assertRankingItemSpec(value);
     return { spec: value, ...(timing === undefined ? {} : { timing }) };
   } else if (variant === "top-three") {
-    allowed(element, ["id", "label", "icon", "stack"]);
+    allowed(element, ["id", "label", "icon", "at", "stack"]);
     empty(element);
+    const timing = reference(element.attributes.at, `${element.name}.at`, narrativeTypes.moment, resolve);
     const label = textValue(element.attributes.label, `${element.name}.label`, resolve);
     if (typeof label === "string") value = {
       variant, id, label,
@@ -177,10 +180,11 @@ function itemSpec(
     else return { spec: sealRankingTextItemShell({
       variant, id,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
-    }), content: label };
-  } else throw new Error(`${element.name} belongs to an unknown Ranking variant.`);
-  assertRankingItemSpec(value);
-  return { spec: value };
+    }), content: label, timing };
+    assertRankingItemSpec(value);
+    return { spec: value, timing };
+  }
+  throw new Error(`${element.name} belongs to an unknown Ranking variant.`);
 }
 
 const variantDefinition = {
@@ -191,9 +195,9 @@ const variantDefinition = {
 
 function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
   return ({ element, resolveReference }) => {
-    const common = ["id", "semantic", "frame", "during", "triggers", "terminal", "style", "appear-sound", "move-sound"];
+    const common = ["id", "semantic", "frame", "during", "terminal", "style", "appear-sound", "move-sound"];
     const attributes = variant === "column"
-      ? [...common.filter((name) => name !== "triggers" && name !== "terminal"), "canvas"]
+      ? [...common.filter((name) => name !== "terminal"), "canvas"]
       : common;
     allowed(element, attributes);
     const id = text(element, "id");
@@ -206,8 +210,7 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
     const outer = variant === "column"
       ? oneOfReference(element.attributes.during, `${element.name}.during`, [narrativeTypes.selection, narrativeTypes.excerpt], resolveReference)
       : reference(element.attributes.during, `${element.name}.during`, narrativeTypes.selection, resolveReference);
-    const triggers = variant === "column" ? undefined
-      : reference(element.attributes.triggers, `${element.name}.triggers`, narrativeTypes.moment, resolveReference);
+    const outerKind = sameType(outer.type, narrativeTypes.excerpt) ? "segment" : "selection";
     const terminal = variant === "column" ? undefined
       : reference(element.attributes.terminal, `${element.name}.terminal`, narrativeTypes.moment, resolveReference);
     const styleRaw = element.attributes.style;
@@ -219,12 +222,34 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       value: { kind: "inline", value: sealRankingHeader({ id, variant }) as unknown as CanonicalValue },
       range: element.range,
     });
+    const outerSpecId = `${id}.outer.window`;
+    const outerSpecName = "outer-spec";
+    records.push({
+      id: outerSpecId,
+      type: temporalTypes.windowSpec,
+      value: { kind: "inline", value: {
+        id: `${id}.outer`,
+        projection: outerKind === "selection"
+          ? { start: { ref: "selection.start" }, end: { ref: "selection.end" } }
+          : { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
+      } as unknown as CanonicalValue },
+      range: element.range,
+    });
+    const terminalSpecId = `${id}.terminal.window`;
+    if (terminal !== undefined) records.push({
+      id: terminalSpecId,
+      type: temporalTypes.windowSpec,
+      value: { kind: "inline", value: {
+        id: `${id}.terminal`,
+        projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } },
+      } as unknown as CanonicalValue },
+      range: element.range,
+    });
     const inputs: Record<string, typeof semantic.ref> = {
       header: { kind: "record", id: headerId }, semantic: semantic.ref, frame: frame.ref,
-      outer: outer.ref, style: style.ref,
+      outer: outer.ref, [outerSpecName]: { kind: "record", id: outerSpecId }, style: style.ref,
       ...(canvas === undefined ? {} : { canvas: canvas.ref }),
-      ...(triggers === undefined ? {} : { triggers: triggers.ref }),
-      ...(terminal === undefined ? {} : { terminal: terminal.ref }),
+      ...(terminal === undefined ? {} : { terminal: terminal.ref, "terminal-spec": { kind: "record", id: terminalSpecId } }),
     };
     const items: RankingFragmentItem[] = [];
     const itemIds = new Set<string>();
@@ -251,6 +276,22 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       if (authored.content !== undefined) inputs[contentName!] = authored.content.ref;
       const timingName = authored.timing === undefined ? undefined : `item-${suffix}-timing`;
       if (authored.timing !== undefined) inputs[timingName!] = authored.timing.ref;
+      const timingSpecName = authored.timing === undefined ? undefined : `item-${suffix}-window-spec`;
+      if (authored.timing !== undefined) {
+        const timingSpecId = `${id}.item.${suffix}.window`;
+        records.push({
+          id: timingSpecId,
+          type: temporalTypes.windowSpec,
+          value: { kind: "inline", value: {
+            id: `${id}.item.${suffix}`,
+            projection: variant === "column"
+              ? { start: { ref: "selection.start" }, end: { ref: "selection.end" } }
+              : { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } },
+          } as unknown as CanonicalValue },
+          range: child.range,
+        });
+        inputs[timingSpecName!] = { kind: "record", id: timingSpecId };
+      }
       let iconName: string | undefined;
       if (variant === "tier-board" || child.attributes.icon !== undefined) {
         const icon = reference(child.attributes.icon, `${child.name}.icon`, mediaTypes.blobArtifact, resolveReference);
@@ -261,6 +302,7 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
         ...(contentName === undefined ? {} : { contentName }),
         ...(iconName === undefined ? {} : { iconName }),
         ...(timingName === undefined ? {} : { timingName }),
+        ...(timingSpecName === undefined ? {} : { timingSpecName }),
       });
     }
     if (items.length === 0) throw new Error(`${element.name} requires at least one ${selected.tag}.`);
@@ -282,7 +324,6 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       }
       inputs["sound-style"] = soundStyle.ref;
     }
-    const outerKind = sameType(outer.type, narrativeTypes.excerpt) ? "segment" : "selection";
     const fragment = createRankingFragment(variant, items, sound, outerKind);
     return {
       records,
