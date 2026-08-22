@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import type { Part } from "@google/genai";
-import { access, readdir, stat, writeFile } from "node:fs/promises";
+import { access, appendFile, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { loadNodePackageSelection } from "@hypit/package-loader-node";
@@ -47,6 +48,12 @@ export type CompareReconstructionInput = {
   readonly shot_id: string;
   readonly image_path: string;
   readonly question?: string;
+  /**
+   * Names the reconstructed element this image draws, for the comparison log only. It is never sent
+   * to the observer: the comparison stays blind, and this is what lets a later gate tell which
+   * elements have been compared and which have never been looked at.
+   */
+  readonly element?: string;
 };
 
 export type ReferenceVideoTools = {
@@ -83,6 +90,26 @@ function positiveEnv(name: string): number | undefined {
 
 function stateRoot(workspaceRoot: string, reference: string): string {
   return join(workspaceRoot, ".hypit", "reference-video-tools", reference);
+}
+
+/** One line per comparison performed, appended so a stopped loop still leaves its trail. */
+export type ComparisonRecord = {
+  readonly at: string;
+  readonly shot_id: string;
+  readonly element?: string;
+  readonly image_path: string;
+  readonly image_digest: string;
+  readonly observer: Observer;
+  readonly status: Observation["status"];
+  readonly scoped: boolean;
+};
+
+async function fileDigest(path: string): Promise<string> {
+  return `sha256:${createHash("sha256").update(await readFile(path)).digest("hex")}`;
+}
+
+async function appendComparison(root: string, record: ComparisonRecord): Promise<void> {
+  await appendFile(join(root, "comparisons.jsonl"), `${JSON.stringify(record)}\n`, "utf8");
 }
 
 async function defaultGenerate(model: string): Promise<GenerateText> {
@@ -694,6 +721,20 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         media: [shot.representative_frame_ref, imagePath],
         instruction: "You compare two supplied still images and describe their visible differences in natural language only. You are not told how either image was made. Do not write code, markup, SVML, component names, or production advice.",
         prompt: `Two still images are supplied in order: image one, then image two.${scope.length === 0 ? "" : `\n\nLimit the comparison to this part of the picture: ${scope}`}\n\nDescribe every visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one image and absent from the other. State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either image was produced, which one is a source, or which one is a copy. Return natural language only.`,
+      });
+      // The answer is deliberately not cached — every iteration is a fresh comparison. What is
+      // recorded is that a comparison happened, so a gate can tell an element that was looked at
+      // from one that never was. The loop is allowed to stop with differences remaining, so this
+      // records participation rather than convergence.
+      await appendComparison(stateRoot(workspaceRoot, state.reference_id), {
+        at: new Date().toISOString(),
+        shot_id: shot.shot_id,
+        ...(input.element === undefined ? {} : { element: input.element.trim() }),
+        image_path: imagePath,
+        image_digest: await fileDigest(imagePath),
+        observer,
+        status: differences.status,
+        scoped: scope.length > 0,
       });
       return {
         reference_id: state.reference_id,
