@@ -33,14 +33,22 @@ export async function command(executable: string, args: readonly string[], timeo
   });
 }
 
-export async function probe(path: string): Promise<{ duration: number; width: number; height: number; hasAudio: boolean }> {
-  const raw = await command("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type,width,height", "-of", "json", path]);
-  const parsed = JSON.parse(raw.toString("utf8")) as { format?: { duration?: string }; streams?: readonly { codec_type?: string; width?: number; height?: number }[] };
+export async function probe(path: string): Promise<{ duration: number; width: number; height: number; frameRate: number; hasAudio: boolean }> {
+  const raw = await command("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type,width,height,r_frame_rate", "-of", "json", path]);
+  const parsed = JSON.parse(raw.toString("utf8")) as { format?: { duration?: string }; streams?: readonly { codec_type?: string; width?: number; height?: number; r_frame_rate?: string }[] };
   const video = parsed.streams?.find((item) => item.codec_type === "video");
   const duration = Number(parsed.format?.duration);
   assert(Number.isFinite(duration) && duration > 0, "video duration is unavailable");
   assert(video?.width !== undefined && video.height !== undefined, "video dimensions are unavailable");
-  return { duration, width: video.width, height: video.height, hasAudio: parsed.streams?.some((item) => item.codec_type === "audio") ?? false };
+  // ffprobe reports the rate as a ratio, so it is divided rather than parsed as a number. A still
+  // image has no rate to report and a caller that needs one asks for it from a clip.
+  const ratio = (video.r_frame_rate ?? "").split("/");
+  const rate = Number(ratio[0]) / Number(ratio[1] ?? 1);
+  return {
+    duration, width: video.width, height: video.height,
+    frameRate: Number.isFinite(rate) && rate > 0 ? rate : 0,
+    hasAudio: parsed.streams?.some((item) => item.codec_type === "audio") ?? false,
+  };
 }
 
 function distance(left: Uint8Array, right: Uint8Array): number {
@@ -114,6 +122,26 @@ async function extract(path: string, args: readonly string[], target: string): P
 // detail in. The clip is decoded once, and the sampling and the tiling happen in that one pass.
 const TILE_COLUMNS = 3;
 export function tileFrames(duration: number): number { return clamp(Math.round(duration * 1.5), 4, 9); }
+
+/**
+ * One stretch of a video, as a clip of its own.
+ *
+ * `-ss` goes after `-i` for the same reason it does when a shot is cut: seeking the output decodes
+ * from the start and lands on the frame asked for, where seeking the input lands on the keyframe
+ * before it. Both sides of a comparison are cut this way, so a difference between them is a
+ * difference in the pictures rather than in how far each one overshot its start.
+ */
+export async function cutClip(source: string, start: number, seconds: number, target: string): Promise<string> {
+  return await extract(source, [
+    "-i", source, "-ss", String(round(start)), "-t", String(Math.max(0.1, round(seconds))),
+    "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart",
+  ], target);
+}
+
+/** One frame of a video, at the second asked for. */
+export async function cutFrame(source: string, at: number, target: string): Promise<string> {
+  return await extract(source, ["-i", source, "-ss", String(round(at)), "-frames:v", "1", "-q:v", "3"], target);
+}
 
 export async function shotTile(clip: string, duration: number, target: string): Promise<string> {
   const frames = tileFrames(duration);
