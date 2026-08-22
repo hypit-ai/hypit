@@ -36,7 +36,7 @@ looked at, since opening it yourself is what the blindness rule below forbids.
 Everything in this file happens on the reconstruction side, which changes every time a package,
 Recipe or source edge is edited.
 
-## The loop unit is one element, across every shot that shows it
+## The loop unit is one element, across every stretch it is drawn over
 
 Loop over one reconstructed element at a time — the new component, one caption system, one inserted
 card.
@@ -63,17 +63,11 @@ speech with the Source's own `estimate:Speech`, mocks every layer a Build has no
 the package's Producer. Nothing is transcribed by hand, so nothing is transcribed one line at a time
 — which is what made a caption system look correct while its lines collided.
 
-The window is named in words. `--segment` and `--selection` take a Script name, never a timestamp,
-and the way to find the right name for a given shot is:
-
-1. take the shot's `start_seconds` and `end_seconds` from the reference's `state.json`;
-2. read the words spoken over that stretch out of the reference's `transcript.json`, which carries
-   one entry per word with its own timings;
-3. find those words in the Script you wrote, and name the Selection or Segment that encloses them.
-
-The reference clock is read exactly once, at step 1, and only to index a table. Everything after it
-is words. The reconstruction's own frames come from estimated take lengths, so its clock and the
-reference's do not correspond and matching them would put the window in the wrong place.
+The window is named in words. `--segment` and `--selection` take a Script name, never a timestamp:
+name the Segment or the Selection the element is drawn over, and give the same name to the
+comparison, so both sides cover the same words. A word range and a shot are different divisions of
+the same video — one Segment routinely runs across five shots — and what a render and the reference
+have in common is the words, which is why the name travels between them rather than a number.
 
 ### Mock the layers a Build has not made
 
@@ -102,30 +96,40 @@ A mock lives only in this render. It is never written into the Source, and no ga
 `playback` check in `reconstruction_check` reads the Source's Recipes, so a mock cannot be mistaken
 for coverage.
 
-### Compare the whole shot, against every shot that shows the element
+### Compare the whole stretch, against every stretch the element is drawn over
 
 Compare clips, not chosen frames:
 
 ```
-hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> \
+hypit-reference-video-tools compare_reconstruction --reference-id <id> \
+  --run projects/<name>/build.svrun --segment <id>|--selection <id> \
   --video <rendered>.mp4 --element <id>
 ```
 
+The word range is the one the render was drawn over, and the reference is cut from its own analysis
+video at the seconds it speaks those words, so the two sides hold the same words for the same length
+of time. Each end moves onto a shot boundary when one lies inside its own end word, and the rendered
+clip is trimmed by the same seconds, so the pair opens and closes where the picture changes while
+still covering exactly the words asked for. An end with no boundary inside its word leaves the pair
+part-way through a shot, and the prompt then says how many seconds of it to read as an incomplete
+shot and to report no differences from. `--shot-id <id>` compares one cut of the picture as the whole
+shot it already is.
+
 An element that animates in, leaves, and is replaced by another within one static board does not
-produce a cut, so a shot can hold several states and no single frame represents it. Choosing one is
-the failure this replaces: a caption system compared against the shot with the shortest line looks
+produce a cut, so a stretch can hold several states and no single frame represents it. Choosing one is
+the failure this replaces: a caption system compared against the stretch with the shortest line looks
 correct, because one line has nothing to collide with.
 
-Compare it against **every shot the reference shows the element in**, not the clearest one. That is
-the coverage round, and it comes before any repair — collect the whole difference set first, then
+Compare it against **every stretch the element is drawn over**, not the clearest one. That is the
+coverage round, and it comes before any repair — collect the whole difference set first, then
 repair against it. Doing it the other way makes the comparison after a repair look like a third
-attempt at a shot that was never examined.
+attempt at a stretch that was never examined.
 
-`--image` against `NNN-representative.jpg` is available for one case only: the shot's own `visual:`
-observation states in words that the element is completely still. The judgement comes from the
-reference's observation, never from looking at your own render and concluding it does not move —
-deciding that from the reconstruction is how the wrong frame got chosen in the first place. Where the
-observation does not say still, compare the clip.
+`--image` is available for one case only: the reference's own `visual:` observation states in words
+that the element is completely still. The judgement comes from the reference's observation, never
+from looking at your own render and concluding it does not move — deciding that from the
+reconstruction is how the wrong frame got chosen in the first place. Where the observation does not
+say still, compare the clip.
 
 Pass `--element <id>` every time so the gate credits the comparison to that element.
 
@@ -145,8 +149,8 @@ rather than a font being chosen because it resembles what you remember.
 
 **On the `agent` observer the command returns two pictures and the question instead of an answer, and
 who looks at them is up to the harness.** That observer reads pictures rather than video, so a clip
-comparison arrives as two frame tiles: the reference shot's own tile, and one the command builds from
-your render against that shot's duration, so both grids sample at the same rate and the same layout.
+comparison arrives as two frame tiles, both built against the compared stretch's own duration, so the
+two grids sample at the same rate and the same layout.
 What is compared is the same stretch either way.
 
 Give the pair to a subagent when you can: one handed two unlabelled pictures and the question knows
@@ -183,12 +187,12 @@ When the difference is structural rather than cosmetic, repair in the order give
 Producer, Type and Validator agreement, Surface vocabulary and decoding, implementation behaviour,
 then source usage. Fixing source usage over a broken implementation hides the defect one layer down.
 
-## Converged means the differences are wording, in every shot
+## Converged means the differences are wording, in every stretch
 
 Stop when the returned differences are wording-level — a describer's phrasing rather than a visible
-change — across **all** the shots the element was compared in. One shot reading clean while another
-still shows lines colliding is an element mid-repair, and the shot that reads clean is usually the
-easiest one. Passing `pnpm check` and `hypit check` is not convergence; it is the precondition for
+change — across **all** the stretches the element was compared in. One stretch reading clean while
+another still shows lines colliding is an element mid-repair, and the stretch that reads clean is
+usually the easiest one. Passing `pnpm check` and `hypit check` is not convergence; it is the precondition for
 starting the loop.
 
 ## The loop is bounded, and stopping is the end
@@ -207,8 +211,8 @@ return a difference every round for ever. So the loop ends on whichever of these
   comparison returns.
 - **No progress ends it immediately.** If the comparisons return the same difference they returned
   before the repair, stop. The repair is not reaching the problem, and two more rounds of the same
-  reasoning will not find it. Judge this over the same set of shots before and after — a repair that
-  clears three shots and leaves one is progress, and re-comparing a different shot than last round
+  reasoning will not find it. Judge this over the same set of stretches before and after — a repair
+  that clears three and leaves one is progress, and re-comparing a different stretch than last round
   measures nothing. Rendering and comparing cost real time on every round.
 - **There are two loops, each with its own two-attempt ceiling.** The first loop is over the
   *package*: render what it draws and compare it; a difference that the package cannot express is a
@@ -229,11 +233,11 @@ return a difference every round for ever. So the loop ends on whichever of these
   Beyond each ceiling, guesses start to overshoot — correcting past the reference rather than
   towards it. Time beats fidelity here by explicit choice.
 
-  **Each ceiling is two attempts for the element, spread over all its shots.** Comparing an element
-  in five shots does not buy ten attempts; it buys a fuller picture of what one attempt has to fix.
-  Coverage and attempts measure different things — how much was looked at, and how many times the
-  element was changed — and one repair aimed at a difference several shots agree on is one attempt
-  however many shots reported it.
+  **Each ceiling is two attempts for the element, spread over all its stretches.** Comparing an
+  element in five stretches does not buy ten attempts; it buys a fuller picture of what one attempt
+  has to fix. Coverage and attempts measure different things — how much was looked at, and how many
+  times the element was changed — and one repair aimed at a difference several stretches agree on is
+  one attempt however many of them reported it.
 
 ## Measure what can be measured; iterate only on what cannot
 
@@ -241,9 +245,9 @@ Two attempts per loop is not enough to converge by guessing, and it is not meant
 stated as a quantity — a stroke that is too thick, a shape that is too tall, type that is too large,
 a margin that is too wide — is not a guessing problem. Ask for the number: a
 `compare_reconstruction --question "how tall is the oval relative to the frame?"` returns a
-measurement in one step, from whichever observer the reference holds. Ask it over whichever shot
+measurement in one step, from whichever observer the reference holds. Ask it over whichever stretch
 renders the quantity most legibly — this is one reading of one number, not the coverage round, and
-reading it off a shot where the thing is small buys a worse number for the same price.
+reading it off one where the thing is small buys a worse number for the same price.
 
 Do that instead of spending an attempt. An attempt is for differences that have no number — a
 typeface's character, a texture, a rhythm — where the only route is change it and look again.

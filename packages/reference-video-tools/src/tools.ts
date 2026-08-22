@@ -11,19 +11,22 @@ import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface, SurfaceVocabulary } from "@hypit/markup";
 import { exactModelHostAbi } from "@hypit/model-kit";
 
-import { renderElement, renderPreviews } from "./authoring.js";
-import type { RenderElementInput, RenderPreviewsInput } from "./authoring.js";
+import { authorSource, invokedFrom, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath } from "./authoring.js";
+import type { RenderElementInput, RenderPreviewsInput, SpokenRange, StandInFocus, StandInSidecar } from "./authoring.js";
 import { writePlaceholder } from "./placeholder.js";
 import { previewCheck, reconstructionCheck } from "./checks.js";
 import type { PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
 import {
   assert,
+  cutClip,
+  cutFrame,
   ensureDir,
   prepareMedia,
   probe,
   readJson,
   readBytes,
   referenceId,
+  round,
   shotTile,
   writeJson,
 } from "./media.js";
@@ -53,7 +56,18 @@ export type InspectVocabularyInput = {
 };
 export type CompareReconstructionInput = {
   readonly reference_id: string;
-  readonly shot_id: string;
+  /**
+   * A stretch of the reference to compare against, named one of two ways. Exactly one is given.
+   *
+   * `shot_id` is a cut in the picture. `segment` and `selection` are word ranges, which is what a
+   * render covers: a render is drawn over the words the Script marks, so the reference beside it is
+   * the stretch that speaks those same words.
+   */
+  readonly shot_id?: string;
+  readonly segment?: string;
+  readonly selection?: string;
+  /** The Run whose Author SVML the words are read from. Required with `segment` or `selection`. */
+  readonly run?: string;
   /** A rendered still. Exactly one of `image_path` and `video_path` is given. */
   readonly image_path?: string;
   /**
@@ -127,10 +141,31 @@ function stateRoot(workspaceRoot: string, reference: string): string {
   return join(workspaceRoot, ".hypit", "reference-video-tools", reference);
 }
 
+/**
+ * The stretch a word-range comparison covered: the words it was asked for, and the seconds it cut.
+ *
+ * The two differ by however far each end was moved onto a shot boundary lying inside its own end
+ * word. `head_snapped` and `tail_snapped` say whether that end landed on a cut, which is what
+ * decides whether the pair opens and closes on a whole shot or part-way through one.
+ */
+export type ComparedRange = {
+  readonly segment?: string;
+  readonly selection?: string;
+  readonly words: string;
+  readonly words_start_seconds: number;
+  readonly words_end_seconds: number;
+  readonly cut_start_seconds: number;
+  readonly cut_end_seconds: number;
+  readonly head_snapped: boolean;
+  readonly tail_snapped: boolean;
+};
+
 /** One line per comparison performed, appended so a stopped loop still leaves its trail. */
 export type ComparisonRecord = {
   readonly at: string;
-  readonly shot_id: string;
+  /** Which stretch was compared. A comparison names its shot or its word range, never both. */
+  readonly shot_id?: string;
+  readonly range?: ComparedRange;
   readonly element?: string;
   readonly image_path: string;
   readonly image_digest: string;
@@ -139,10 +174,28 @@ export type ComparisonRecord = {
   readonly scoped: boolean;
   /** Whether the whole shot was compared as a clip, or one frame of it as a still. */
   readonly clip?: boolean;
+  /**
+   * What timed the stand-in the picture was drawn over, from the sidecar `render_element` writes
+   * beside its output. Present when the picture came from `render_element`.
+   */
+  readonly stand_in?: StandInSidecar;
 };
 
 async function fileDigest(path: string): Promise<string> {
   return `sha256:${createHash("sha256").update(await readFile(path)).digest("hex")}`;
+}
+
+/**
+ * What timed the stand-in behind a rendered picture, read from beside the picture itself.
+ *
+ * A comparison is handed a path. Whether the stretch in it ran at the reference's pace or at an
+ * estimate of it is not in the pixels, and a picture from anywhere else has no sidecar at all, so a
+ * missing one is an absence to record rather than a refusal.
+ */
+async function standInBeside(renderedPath: string): Promise<StandInSidecar | undefined> {
+  const text = await readFile(standInSidecarPath(renderedPath), "utf8").catch(() => undefined);
+  if (text === undefined) return undefined;
+  try { return JSON.parse(text) as StandInSidecar; } catch { return undefined; }
 }
 
 async function appendComparison(root: string, record: ComparisonRecord): Promise<void> {
@@ -359,6 +412,139 @@ async function shotFromBound(root: string, index: number, bound: { start: number
     tail_frame_ref: join(dir, `${id}-tail.jpg`),
     frames_tile_ref: tiles ? join(dir, `${id}-frames.jpg`) : null,
     audio_tail_ref,
+  };
+}
+
+/** One stretch of the reference cut to a word range, with the rendered clip trimmed to match it. */
+type RangeCut = {
+  readonly record: ComparedRange;
+  readonly reference: string;
+  readonly rendered: string;
+  readonly referenceTile: string;
+  readonly renderedTile: string;
+  /** How long the cut runs, which is the duration both frame grids are sampled against. */
+  readonly seconds: number;
+  readonly referenceSeconds: number;
+  readonly renderedSeconds: number;
+  /** What the observer is told about an end that lands part-way through a shot. Empty when neither does. */
+  readonly incomplete: string;
+};
+
+/**
+ * Every cut in the reference, in seconds.
+ *
+ * A stretch longer than fifteen seconds is divided into parts so each clip stays short enough to
+ * observe, and the divisions between those parts are not cuts: the picture runs straight through
+ * them. Only the first part of a group begins where the picture changes.
+ */
+function referenceCuts(state: ReferenceState): readonly number[] {
+  return [...state.shots.filter((shot) => shot.part === 1).map((shot) => shot.start_seconds), state.shots.at(-1)!.end_seconds];
+}
+
+/**
+ * Cut the reference to the stretch that speaks a range of words, and trim the render to match.
+ *
+ * Each end is moved onto a shot boundary when one lies inside its own end word. A boundary inside
+ * the first word cannot add or drop a whole word — the word is still spoken across the cut either
+ * way — so the pair then opens and closes on the picture changing rather than part-way through a
+ * shot, and still covers exactly the words asked for. An end with no boundary inside its word stays
+ * where the word puts it.
+ *
+ * The render is trimmed by the seconds each end moved. Its frames come from the same word timings,
+ * so a second of reference at the head is a second of render at the head, and taking it off both
+ * keeps the two stretches showing the same word at the same offset.
+ */
+async function cutWordRange(
+  state: ReferenceState,
+  root: string,
+  focus: StandInFocus,
+  range: SpokenRange,
+  renderedPath: string,
+  clip: boolean,
+): Promise<RangeCut> {
+  const cuts = referenceCuts(state);
+  const head = cuts.find((at) => at >= range.first.startSeconds && at < range.first.endSeconds);
+  const tail = [...cuts].reverse().find((at) => at > range.last.startSeconds && at <= range.last.endSeconds);
+  const start = head ?? range.startSeconds;
+  const end = tail ?? range.endSeconds;
+  const seconds = end - start;
+  assert(seconds > 0, `${focus.selection ?? focus.segment} spans no time in the reference`);
+
+  const dir = join(root, "ranges");
+  await ensureDir(dir);
+  const label = focus.selection === undefined ? `segment-${focus.segment}` : `selection-${focus.selection}`;
+  const reference = join(dir, `${label}-reference.${clip ? "mp4" : "jpg"}`);
+  // The reference's own analysis video, which is the whole reference at the size every other
+  // observation reads it at. A shot clip covers a cut in the picture and would cover the wrong words.
+  if (clip) await cutClip(state.analysis_video_ref, start, seconds, reference);
+  else await cutFrame(state.analysis_video_ref, start + seconds / 2, reference);
+
+  let rendered = renderedPath;
+  let referenceSeconds = 0;
+  let renderedSeconds = 0;
+  if (clip) {
+    const drawn = await probe(renderedPath);
+    assert(drawn.frameRate > 0, `${renderedPath} reports no frame rate, so it cannot be trimmed to the cut`);
+    // Frames are the only unit the file has, so the seconds each end moved are converted at the
+    // render's own rate and taken off as whole frames.
+    const headFrames = Math.round((start - range.startSeconds) * drawn.frameRate);
+    const tailFrames = Math.round((range.endSeconds - end) * drawn.frameRate);
+    rendered = join(dir, `${label}-rendered.mp4`);
+    await cutClip(renderedPath, headFrames / drawn.frameRate, drawn.duration - (headFrames + tailFrames) / drawn.frameRate, rendered);
+    referenceSeconds = (await probe(reference)).duration;
+    renderedSeconds = (await probe(rendered)).duration;
+    // Two stretches of different lengths cannot be read side by side: whatever is at a given offset
+    // in one is at a different word in the other, which is the defect this cut exists to remove.
+    // Each side lands on its own frame grid, so they agree to within a frame rather than exactly.
+    assert(Math.abs(referenceSeconds - renderedSeconds) <= 2 / drawn.frameRate,
+      `the cut reference runs ${round(referenceSeconds)}s and the trimmed render ${round(renderedSeconds)}s; they must cover the same stretch`);
+  }
+
+  // An end that could not be moved onto a cut opens or closes part-way through a shot. How much of
+  // the stretch that is, is measurable here, and saying it is what keeps the incomplete shot from
+  // being read as a difference.
+  const enclosing = (at: number): { readonly start: number; readonly end: number } => {
+    let index = 0;
+    for (let candidate = 0; candidate + 1 < cuts.length; candidate += 1) if (cuts[candidate]! <= at) index = candidate;
+    return { start: cuts[index]!, end: cuts[index + 1]! };
+  };
+  const opening = enclosing(start);
+  const closing = enclosing(end);
+  const lead = head === undefined ? Math.min(opening.end, end) - start : 0;
+  const trail = tail === undefined ? end - Math.max(closing.start, start) : 0;
+  const ends = !clip
+    ? []
+    // A range short enough to sit inside one shot has both its ends in that shot, and naming them
+    // separately describes the same seconds twice.
+    : head === undefined && tail === undefined && opening.start === closing.start
+      ? [`All ${seconds.toFixed(2)} seconds fall inside a single shot that begins before this stretch does and ends after it.`]
+      : [
+        ...(lead > 0 ? [`The first ${lead.toFixed(2)} seconds fall inside a shot that begins before this stretch does.`] : []),
+        ...(trail > 0 ? [`The last ${trail.toFixed(2)} seconds fall inside a shot that ends after this stretch does.`] : []),
+      ];
+
+  return {
+    record: {
+      ...(focus.segment === undefined ? {} : { segment: focus.segment }),
+      ...(focus.selection === undefined ? {} : { selection: focus.selection }),
+      words: `${range.first.text} … ${range.last.text}`,
+      words_start_seconds: round(range.startSeconds),
+      words_end_seconds: round(range.endSeconds),
+      cut_start_seconds: round(start),
+      cut_end_seconds: round(end),
+      head_snapped: head !== undefined,
+      tail_snapped: tail !== undefined,
+    },
+    reference,
+    rendered,
+    referenceTile: join(dir, `${label}-reference-tile.jpg`),
+    renderedTile: join(dir, `${label}-rendered-tile.jpg`),
+    seconds,
+    referenceSeconds: round(referenceSeconds),
+    renderedSeconds: round(renderedSeconds),
+    incomplete: ends.length === 0
+      ? ""
+      : `\n\n${ends.join(" ")} Read ${ends.length === 1 ? "that stretch as an incomplete shot" : "those stretches as incomplete shots"} and report no differences from ${ends.length === 1 ? "it" : "them"}.`,
   };
 }
 
@@ -757,8 +943,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
 
     async compare_reconstruction(input): Promise<Record<string, unknown>> {
       const state = await loadState(input.reference_id);
-      const shot = state.shots.find((candidate) => candidate.shot_id === input.shot_id);
-      assert(shot !== undefined, `shot ${input.shot_id} does not exist in reference ${input.reference_id}`);
+      const root = stateRoot(workspaceRoot, state.reference_id);
+      const named = [input.shot_id, input.segment, input.selection].filter((value) => value !== undefined);
+      assert(named.length === 1, "name exactly one of shot_id, segment and selection");
       const supplied = [input.image_path, input.video_path].filter((value) => value !== undefined);
       assert(supplied.length === 1, "supply exactly one of image_path and video_path");
       const clip = input.video_path !== undefined;
@@ -766,23 +953,55 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const file = await stat(renderedPath).catch(() => undefined);
       assert(file?.isFile(), `${clip ? "video_path" : "image_path"} is not a file: ${renderedPath}`);
       const scope = input.question?.trim() ?? "";
+      const standIn = await standInBeside(renderedPath);
       const observer: Observer = state.observer ?? "gemini";
       const { ask, pending } = await askerFor(observer, state);
 
+      // Which stretch of the reference the render is put beside. A render covers the words a Segment
+      // or a Selection marks, so that is what the reference is cut to; a shot is a cut in the picture
+      // and is compared as the whole shot it already is.
+      let shot: Shot | undefined;
+      let cut: RangeCut | undefined;
+      let referenceMedia: string;
+      let renderedMedia = renderedPath;
+      let stretchSeconds: number;
+      if (input.shot_id !== undefined) {
+        shot = state.shots.find((candidate) => candidate.shot_id === input.shot_id);
+        assert(shot !== undefined, `shot ${input.shot_id} does not exist in reference ${input.reference_id}`);
+        referenceMedia = clip ? shot.clip_ref : shot.representative_frame_ref;
+        stretchSeconds = shot.duration_seconds;
+      } else {
+        assert(input.run !== undefined,
+          "run is required with segment or selection: the words are read from the Run's Author SVML");
+        const { path: svmlPath } = await authorSource(resolve(invokedFrom(), input.run));
+        const focus: StandInFocus = {
+          ...(input.segment === undefined ? {} : { segment: input.segment }),
+          ...(input.selection === undefined ? {} : { selection: input.selection }),
+        };
+        const range = await spokenRange(svmlPath, focus, await referenceWords(state.reference_id));
+        cut = await cutWordRange(state, root, focus, range, renderedPath, clip);
+        referenceMedia = cut.reference;
+        renderedMedia = cut.rendered;
+        stretchSeconds = cut.seconds;
+      }
+
       // A clip comparison reads the whole stretch on both sides. The observer that reads video is
       // given the two clips; the observer that reads pictures is given two frame tiles, which is the
-      // same degradation `prepare_reference` already applies to a shot. Tiling the rendered clip
-      // against the reference shot's own duration makes `tileFrames` choose the same frame count and
-      // layout for both, so the two grids are read side by side rather than as different samplings.
-      let referenceMedia = clip ? shot.clip_ref : shot.representative_frame_ref;
-      let renderedMedia = renderedPath;
+      // same degradation `prepare_reference` already applies to a shot. Tiling both against the same
+      // duration makes `tileFrames` choose the same frame count and layout for each, so the two grids
+      // are read side by side rather than as different samplings.
       if (clip && observer === "agent") {
-        assert(shot.frames_tile_ref !== null,
-          `shot ${shot.shot_id} has no frame tile; re-prepare the reference with --redo all --observer agent`);
-        const tile = join(stateRoot(workspaceRoot, state.reference_id), "shots", `${shot.shot_id}-reconstruction.jpg`);
-        await shotTile(renderedPath, shot.duration_seconds, tile);
-        referenceMedia = shot.frames_tile_ref;
-        renderedMedia = tile;
+        if (shot !== undefined) {
+          assert(shot.frames_tile_ref !== null,
+            `shot ${shot.shot_id} has no frame tile; re-prepare the reference with --redo all --observer agent`);
+          referenceMedia = shot.frames_tile_ref;
+          renderedMedia = await shotTile(renderedPath, stretchSeconds, join(root, "shots", `${shot.shot_id}-reconstruction.jpg`));
+        } else {
+          // A word range is cut when it is asked for, so neither side has a prepared tile and both
+          // are built here, from the two cuts.
+          referenceMedia = await shotTile(cut!.reference, stretchSeconds, cut!.referenceTile);
+          renderedMedia = await shotTile(cut!.rendered, stretchSeconds, cut!.renderedTile);
+        }
       }
 
       const unit = clip && observer !== "agent" ? "video clips" : "still images";
@@ -794,15 +1013,16 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const differences = await ask("comparison", {
         media: [referenceMedia, renderedMedia],
         instruction: `You compare two supplied ${unit} and describe their visible differences in natural language only. You are not told how either was made. Do not write code, markup, SVML, component names, or production advice.`,
-        prompt: `Two ${unit} are supplied in order: one, then two.${reading}${scope.length === 0 ? "" : `\n\nLimit the comparison to this: ${scope}`}\n\nDescribe every visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one and absent from the other.${clip ? " Also describe differences in what changes over the stretch: what appears, what leaves, in what order, and how anything moves." : ""} State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either was produced, which one is a source, or which one is a copy. Return natural language only.`,
+        prompt: `Two ${unit} are supplied in order: one, then two.${reading}${cut?.incomplete ?? ""}${scope.length === 0 ? "" : `\n\nLimit the comparison to this: ${scope}`}\n\nDescribe every visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one and absent from the other.${clip ? " Also describe differences in what changes over the stretch: what appears, what leaves, in what order, and how anything moves." : ""} State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either was produced, which one is a source, or which one is a copy. Return natural language only.`,
       });
       // The answer is deliberately not cached — every iteration is a fresh comparison. What is
       // recorded is that a comparison happened, so a gate can tell an element that was looked at
       // from one that never was. The loop is allowed to stop with differences remaining, so this
       // records participation rather than convergence.
-      await appendComparison(stateRoot(workspaceRoot, state.reference_id), {
+      await appendComparison(root, {
         at: new Date().toISOString(),
-        shot_id: shot.shot_id,
+        ...(shot === undefined ? {} : { shot_id: shot.shot_id }),
+        ...(cut === undefined ? {} : { range: cut.record }),
         ...(input.element === undefined ? {} : { element: input.element.trim() }),
         image_path: renderedPath,
         image_digest: await fileDigest(renderedPath),
@@ -810,14 +1030,21 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         status: differences.status,
         scoped: scope.length > 0,
         clip,
+        ...(standIn === undefined ? {} : { stand_in: standIn }),
       });
       return {
         reference_id: state.reference_id,
         observer,
-        shot_id: shot.shot_id,
+        ...(shot === undefined ? {} : { shot_id: shot.shot_id }),
+        ...(cut === undefined ? {} : {
+          range: cut.record,
+          ...(clip ? { reference_seconds: cut.referenceSeconds, rendered_seconds: cut.renderedSeconds } : {}),
+          ...(cut.incomplete.length === 0 ? {} : { incomplete_ends: cut.incomplete.trim() }),
+        }),
         compared: clip ? "clip" : "still",
         reference_ref: referenceMedia,
         rendered_ref: renderedMedia,
+        ...(standIn === undefined ? {} : { stand_in: standIn }),
         differences,
         unresolved: differences.status === "complete" ? [] : ["differences"],
         pending_observations: pending,
