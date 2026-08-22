@@ -132,13 +132,24 @@ Two different holes open, and both look identical on screen:
   one picking up where the last left off — rather than merely landing in the right places. A line
   that introduces what comes next usually belongs to the Selection it introduces.
 - **A take shorter than the window it fills.** An Item whose window outlasts its own material runs
-  out partway and leaves the rest empty. Read the model's duration ceiling before deciding: Seedance
-  `mini` stops at 15 seconds, so a longer stretch needs more than one Item rather than one Item asked
-  for a length the model refuses.
+  out partway, and what happens for the remainder is decided by the `playback` key on its appearance
+  Recipe. The default is `once-start`, which draws the material once and then draws nothing at all —
+  no sampling segment is emitted for those frames, so they fall through to whatever is beneath, and
+  beneath a full-frame base that is the Film background. `hold-start` pins the last frame for the
+  rest of the window, `loop-start` repeats, `stretch` retimes to fit.
 
-Give a silent take a literal duration at or above its window instead of a `SpeechDuration` edge. The
-estimate predicts the words; the window is decided by the audio that was actually produced, and when
-the estimate falls a second short that second is black.
+  Read the model's duration ceiling too: Seedance `mini` stops at 15 seconds, so a longer stretch
+  needs more than one Item rather than one Item asked for a length the model refuses.
+
+Set `playback` on every timed picture whose window comes from speech, and treat the material's length
+as unknown. A generation is ordered in whole seconds, the estimate that sizes the order predicts the
+words rather than measuring them, and the window is decided by the audio that was actually produced —
+three separate numbers that will not agree. Lengthening the material moves the mismatch without
+removing it; `playback` decides what the window shows once the material is spent, which is the part
+that stays true whichever way the three numbers fall.
+
+`reconstruction-check` reads this before a Build and refuses a Recipe that leaves `playback` at its
+default on generated material.
 
 A bed makes a blend visible, so check the Items' entry and exit while you are here: `enter` and `exit`
 default to `none`, and a Recipe named for a cut that fades for a frame is one of the inherited edges

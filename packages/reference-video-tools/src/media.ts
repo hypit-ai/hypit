@@ -113,9 +113,9 @@ async function extract(path: string, args: readonly string[], target: string): P
 // show what moves; nine keeps a fifteen-second one legible at a cell width a reader can still resolve
 // detail in. The clip is decoded once, and the sampling and the tiling happen in that one pass.
 const TILE_COLUMNS = 3;
-function tileFrames(duration: number): number { return clamp(Math.round(duration * 1.5), 4, 9); }
+export function tileFrames(duration: number): number { return clamp(Math.round(duration * 1.5), 4, 9); }
 
-async function shotTile(clip: string, duration: number, target: string): Promise<string> {
+export async function shotTile(clip: string, duration: number, target: string): Promise<string> {
   const frames = tileFrames(duration);
   const rows = Math.ceil(frames / TILE_COLUMNS);
   const rate = round(frames / Math.max(duration, 0.1));
