@@ -60,8 +60,9 @@ word, measured locally by WhisperX. It is not an observation: no model wrote it,
 reaches an observer, and it does not go in the observation cache. It is identical on both observers,
 and on the `agent` observer it is the only exact record of the sound. Read it whenever a decision depends on
 when a word is said — placing each on-screen text reveal against the line that triggers it, timing a
-caption, checking that a voice observation matches what was actually spoken, or setting how long a
-take runs, which `final-sources.md` measures from these words rather than estimating. Do not run WhisperX
+caption, checking that a voice observation matches what was actually spoken, or judging a Segment's
+natural boundary. It does not set a take's duration: the take is generated and its length comes from
+`estimate:Speech`, as `final-sources.md` requires. Do not run WhisperX
 by hand and do not ask a model to transcribe: the transcript is already there.
 
 `transcript` reports `status`, `transcript_ref` and `word_count`. Read the words from
