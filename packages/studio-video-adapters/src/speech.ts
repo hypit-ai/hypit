@@ -37,6 +37,11 @@ export const speechAdapters: readonly StudioAdapter[] = [
     output: { type: "VisualTrack", surface: "track", modules: ["@hypit/speech-track"] },
     family: "media", label: "Speech Visual", icon: "video",
     interaction: readonlyInteraction,
+    parameters: [
+      { name: "visual-frame", label: "Frame", writable: false },
+      { name: "visual-appearance", label: "Appearance", writable: false },
+      { name: "visual-z", label: "Z", control: "number", writable: true },
+    ],
     project: projectSpeechVisual,
     lane: { layout: "flat", height: videoLaneHeights.picture },
   },
@@ -45,6 +50,9 @@ export const speechAdapters: readonly StudioAdapter[] = [
     output: { type: "AudioTrack", surface: "track", modules: ["@hypit/speech-track"] },
     family: "audio", label: "Speech Audio", icon: "waveform",
     interaction: readonlyInteraction,
+    parameters: [
+      { name: "z", label: "Z", control: "number", writable: true },
+    ],
     project: projectSpeechAudio,
     lane: { layout: "flat", height: videoLaneHeights.audio },
   },

@@ -6,9 +6,11 @@
 import type {
   Range,
   StudioInteraction,
+  StudioEditHandle,
   StudioInspectorDescription,
   StudioLaneDescription,
   StudioMaterialPreview,
+  StudioParameter,
   StudioSemanticAnchor,
   StudioSemanticSegment,
   StudioSemanticTimeline,
@@ -24,9 +26,11 @@ import type {
 export type {
   Range,
   StudioInteraction,
+  StudioEditHandle,
   StudioInspectorDescription,
   StudioLaneDescription,
   StudioMaterialPreview,
+  StudioParameter,
   StudioTemporalLineage,
   StudioTemporalPhase,
   StudioTemporalProjection,
@@ -101,6 +105,8 @@ export type Clip = {
   readonly interaction: StudioInteraction;
   /** Rendering identities implementing this author entity; optional for non-visual entities. */
   readonly renderIds: readonly string[];
+  readonly parameters: readonly StudioParameter[];
+  readonly editHandles: readonly StudioEditHandle[];
 };
 
 export type Track = {

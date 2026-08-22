@@ -49,6 +49,56 @@ export type StudioInteraction = {
   readonly writeback: "source" | "none";
 };
 
+export type StudioParameterControl = "text" | "number" | "boolean" | "select";
+export type StudioParameterLanguage = "svml" | "svs" | "svrun";
+
+/** A real source value that an Inspector may display or edit. */
+export type StudioParameter = {
+  readonly id: string;
+  readonly label: string;
+  readonly control: StudioParameterControl;
+  readonly value: string;
+  readonly language: StudioParameterLanguage;
+  readonly writable: boolean;
+  readonly options?: readonly string[];
+  readonly unit?: string;
+  readonly source: {
+    readonly path: string;
+    readonly range: Range;
+    readonly preimage: string;
+  };
+  readonly disabledReason?: string;
+};
+
+/** Adapter-owned allowlist for source parameters exposed by Studio. */
+export type StudioParameterDeclaration = {
+  readonly name: string;
+  readonly label?: string;
+  readonly control?: StudioParameterControl;
+  readonly writable?: boolean;
+  readonly options?: readonly string[];
+  readonly unit?: string;
+};
+
+export type StudioEditOperation =
+  | "move"
+  | "trim-start"
+  | "trim-end"
+  | "slip"
+  | "split"
+  | "delete"
+  | "duplicate"
+  | "canvas-transform";
+
+/** A timeline affordance is present only when its source write is explicit. */
+export type StudioEditHandle = {
+  readonly id: string;
+  readonly operation: StudioEditOperation;
+  readonly enabled: boolean;
+  readonly source?: StudioParameter["source"];
+  readonly disabledReason?: string;
+};
+
 export type StudioMaterialPreview =
   | { readonly kind: "image"; readonly url: string }
   | { readonly kind: "video"; readonly url: string }
@@ -141,10 +191,12 @@ export type StudioObservedValue = {
 };
 
 export type StudioPlacementChild = {
+  readonly sourcePath: string;
   readonly tag: string;
   readonly id?: string;
   readonly range: Range;
   readonly attributes: Readonly<Record<string, string>>;
+  readonly attributeValueRanges: Readonly<Record<string, Range>>;
   readonly references: readonly string[];
   readonly referenceAttributes: Readonly<Record<string, string>>;
   readonly referenceTypes: Readonly<Record<string, string>>;
@@ -152,6 +204,7 @@ export type StudioPlacementChild = {
 };
 
 export type StudioPlacement = {
+  readonly sourcePath: string;
   readonly tag: string;
   readonly module: { readonly name: string; readonly version: string };
   readonly surface: string;
@@ -163,6 +216,7 @@ export type StudioPlacement = {
   readonly outputPorts: readonly { readonly name: string; readonly ref: string }[];
   readonly children: readonly StudioPlacementChild[];
   readonly attributes: Readonly<Record<string, string>>;
+  readonly attributeValueRanges: Readonly<Record<string, Range>>;
   readonly referenceAttributes: Readonly<Record<string, string>>;
   readonly referenceTypes: Readonly<Record<string, string>>;
   readonly references: readonly string[];
@@ -223,6 +277,8 @@ export type StudioEntityDraft = {
   readonly preview?: StudioMaterialPreview;
   /** Studio-local lane partition; omitted means the root lane. */
   readonly lane?: string;
+  readonly parameters?: readonly StudioParameter[];
+  readonly editHandles?: readonly StudioEditHandle[];
 };
 
 export type StudioAdapterContext = {
@@ -259,6 +315,7 @@ export type StudioAdapter = {
   readonly interaction?: StudioInteraction;
   readonly lane?: StudioLaneDescription;
   readonly inspector?: StudioInspectorDescription;
+  readonly parameters?: readonly StudioParameterDeclaration[];
   readonly project?: (context: StudioAdapterContext) => readonly StudioEntityDraft[];
 };
 
@@ -313,6 +370,7 @@ export type StudioLaneAttachment = {
   readonly lane: StudioLaneDescription;
   readonly interaction?: StudioInteraction;
   readonly inspector?: StudioInspectorDescription;
+  readonly parameters?: readonly StudioParameterDeclaration[];
 };
 
 export const readonlyInteraction: StudioInteraction = {

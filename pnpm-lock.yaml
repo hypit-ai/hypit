@@ -2496,6 +2496,9 @@ importers:
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:../semantic-track
+      '@hypit/svs':
+        specifier: workspace:*
+        version: link:../svs
       '@hypit/studio-adapter':
         specifier: workspace:*
         version: link:../studio-adapter

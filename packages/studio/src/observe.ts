@@ -114,6 +114,8 @@ export function createObserver(
           placements.push({
             tag: input.element.name,
             module: { ...module },
+            sourcePath: input.sourceName,
+            attributeValueRanges: input.element.attributeValueRanges ?? {},
             surface: found.surface,
             ...(typeof id === "string" ? { id } : {}),
             range: { start: input.element.range.start, end: input.element.range.end },
@@ -137,6 +139,8 @@ export function createObserver(
                 const childId = child.attributes.id;
                 return {
                   tag: child.name,
+                  sourcePath: input.sourceName,
+                  attributeValueRanges: child.attributeValueRanges ?? {},
                   ...(typeof childId === "string" ? { id: childId } : {}),
                   range: { start: child.range.start, end: child.range.end },
                   attributes: written(child),

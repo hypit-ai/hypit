@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import type { StudioArchive } from "./archive.js";
 import type { ServedFile } from "./compile.js";
@@ -12,6 +12,26 @@ import type { StudioAdapterRegistry } from "./studio-registry.js";
 import { snapshot } from "./snapshot.js";
 import { inspectStudioRun } from "./studio-preflight.js";
 import type { StudioProjection } from "./studio-preflight.js";
+import type { StudioSourceFile } from "./parameters.js";
+
+function sourceFiles(run: RunPlan): readonly StudioSourceFile[] {
+  const paths = [run.authorSource, ...run.source.compiled.closure.units.map((unit) => unit.id)];
+  return [...new Set(paths)].flatMap((path): StudioSourceFile[] => {
+    if (!existsSync(path)) return [];
+    try {
+      const language = path.endsWith(".svs") ? "svs" : path.endsWith(".svrun") ? "svrun" : "svml";
+      const unit = run.source.compiled.closure.units.find((candidate) => candidate.id === path);
+      return [{
+        path,
+        text: readFileSync(path, "utf8"),
+        language,
+        ...(unit === undefined ? {} : { imports: unit.imports }),
+      }];
+    } catch {
+      return [];
+    }
+  });
+}
 
 export type StudioSession = {
   readonly snapshot: StudioSnapshot;
@@ -27,6 +47,7 @@ export async function readStudioSession(input: {
   readonly archive?: StudioArchive;
   readonly revision: number;
   readonly sourcePath?: string;
+  readonly workspaceRoot: string;
 }): Promise<StudioSession> {
   const source = input.run.source;
   const inspection = inspectStudioRun(input.registry, source, input.run);
@@ -49,6 +70,7 @@ export async function readStudioSession(input: {
     served: new Set(built.served.keys()),
   });
   const text = readFileSync(input.run.authorSource, "utf8");
+  const files = sourceFiles(input.run);
   return {
     snapshot: snapshot(input.registry, built, {
       revision: input.revision,
@@ -57,6 +79,8 @@ export async function readStudioSession(input: {
       canvas: built.canvas,
       frameRate: built.frameRate,
       preview: { kind: "hyperframes", srcdoc: rendered },
+      workspaceRoot: input.workspaceRoot,
+      sourceFiles: files,
     }),
     material: built.served,
     observations: source.observations,

@@ -1,4 +1,5 @@
 import { MarkupFrontendError } from "./error.js";
+import type { SourceRange } from "@hypit/protocol";
 import type {
   MarkupSource,
   StructuredElement,
@@ -15,6 +16,7 @@ const REFERENCE = /^[A-Za-z_][A-Za-z0-9_.:-]*(?:\.[A-Za-z_][A-Za-z0-9_.:-]*)*$/u
 type OpeningTag = {
   readonly name: string;
   readonly attributes: Readonly<Record<string, MarkupAttributeValue>>;
+  readonly attributeValueRanges: Readonly<Record<string, SourceRange>>;
   readonly start: number;
   readonly end: number;
   readonly selfClosing: boolean;
@@ -67,7 +69,7 @@ function parseName(source: MarkupSource, start: number): { readonly value: strin
 function parseAttributeValue(
   source: MarkupSource,
   start: number,
-): { readonly value: MarkupAttributeValue; readonly end: number } {
+): { readonly value: MarkupAttributeValue; readonly end: number; readonly valueStart: number; readonly valueEnd: number } {
   const quote = source.text[start];
   if (quote === "\"" || quote === "'") {
     const close = source.text.indexOf(quote, start + 1);
@@ -75,6 +77,8 @@ function parseAttributeValue(
     return {
       value: decodeEntities(source.text.slice(start + 1, close), source, start),
       end: close + 1,
+      valueStart: start + 1,
+      valueEnd: close,
     };
   }
   if (quote === "{") {
@@ -82,7 +86,7 @@ function parseAttributeValue(
     if (close < 0) fail(source, "MARKUP_REFERENCE", "Unclosed reference attribute.", start);
     const path = source.text.slice(start + 1, close).trim();
     if (!REFERENCE.test(path)) fail(source, "MARKUP_REFERENCE", `Invalid reference "${path}".`, start);
-    return { value: { kind: "reference", path }, end: close + 1 };
+    return { value: { kind: "reference", path }, end: close + 1, valueStart: start, valueEnd: close + 1 };
   }
   fail(source, "MARKUP_ATTRIBUTE", "Attribute values must be quoted strings or whole-value references.", start);
 }
@@ -94,13 +98,18 @@ export function parseOpeningTag(source: MarkupSource, start: number): OpeningTag
   const parsedName = parseName(source, start + 1);
   let cursor = parsedName.end;
   const attributes: Record<string, MarkupAttributeValue> = {};
+  const attributeValueRanges: Record<string, SourceRange> = {};
   while (cursor < source.text.length) {
     cursor = skipSpace(source.text, cursor);
     if (source.text.startsWith("/>", cursor)) {
-      return { name: parsedName.value, attributes, start, end: cursor + 2, selfClosing: true };
+      return {
+        name: parsedName.value, attributes, attributeValueRanges, start, end: cursor + 2, selfClosing: true,
+      };
     }
     if (source.text[cursor] === ">") {
-      return { name: parsedName.value, attributes, start, end: cursor + 1, selfClosing: false };
+      return {
+        name: parsedName.value, attributes, attributeValueRanges, start, end: cursor + 1, selfClosing: false,
+      };
     }
     const attribute = parseName(source, cursor);
     if (Object.hasOwn(attributes, attribute.value)) {
@@ -116,6 +125,7 @@ export function parseOpeningTag(source: MarkupSource, start: number): OpeningTag
       configurable: true,
       writable: true,
     });
+    attributeValueRanges[attribute.value] = { start: value.valueStart, end: value.valueEnd };
     cursor = value.end;
   }
   fail(source, "MARKUP_OPEN", `Opening tag <${parsedName.value}> is not closed.`, start);
@@ -140,6 +150,7 @@ export function parseStructuredElement(
         kind: "element",
         name: opening.name,
         attributes: opening.attributes,
+        attributeValueRanges: opening.attributeValueRanges,
         children: [],
         range: { start, end: opening.end },
       },
@@ -165,6 +176,7 @@ export function parseStructuredElement(
           kind: "element",
           name: opening.name,
           attributes: opening.attributes,
+          attributeValueRanges: opening.attributeValueRanges,
           children,
           range: { start, end: close.end },
         },

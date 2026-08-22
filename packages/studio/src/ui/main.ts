@@ -1,4 +1,4 @@
-import type { StudioFailure, StudioSnapshot } from "../shared.js";
+import type { Clip, StudioFailure, StudioSnapshot } from "../shared.js";
 import { createCodePane } from "./code.js";
 import { setIcon } from "./icons.js";
 import { createHandle } from "./resize.js";
@@ -129,6 +129,88 @@ function group(label: string, items: readonly HTMLElement[], className = ""): HT
   return node;
 }
 
+function parameterControl(parameter: Clip["parameters"][number]): HTMLElement {
+  const row = document.createElement("label");
+  row.className = `parameter-row${parameter.writable ? " parameter-editable" : " parameter-readonly"}`;
+  const name = document.createElement("span");
+  name.className = "parameter-label";
+  name.textContent = parameter.label;
+  const source = document.createElement("small");
+  source.className = "parameter-source";
+  source.textContent = `${parameter.language.toUpperCase()} · ${parameter.source.path}:${parameter.source.range.start}`;
+  source.title = parameter.disabledReason ?? parameter.source.preimage;
+  const value = parameter.writable
+    ? document.createElement(parameter.control === "select" ? "select" : "input")
+    : document.createElement("strong");
+  value.className = "parameter-value";
+  if (value instanceof HTMLInputElement) {
+    value.type = parameter.control === "number" ? "number" : parameter.control === "boolean" ? "checkbox" : "text";
+    if (value.type === "checkbox") value.checked = parameter.value === "true";
+    else value.value = parameter.value;
+    value.dataset.parameterId = parameter.id;
+    value.title = parameter.source.preimage;
+    value.addEventListener("change", () => {
+      void writeParameter(parameter, value.type === "checkbox" ? String(value.checked) : value.value);
+    });
+  } else if (value instanceof HTMLSelectElement) {
+    for (const option of parameter.options ?? []) {
+      const item = document.createElement("option");
+      item.value = option;
+      item.textContent = option;
+      item.selected = option === parameter.value;
+      value.append(item);
+    }
+    value.addEventListener("change", () => void writeParameter(parameter, value.value));
+  } else {
+    value.textContent = parameter.value;
+    value.title = parameter.disabledReason ?? parameter.source.preimage;
+  }
+  const suffix = parameter.unit === undefined ? "" : ` ${parameter.unit}`;
+  const right = document.createElement("span");
+  right.className = "parameter-right";
+  right.append(value);
+  if (suffix.length > 0) {
+    const unit = document.createElement("small");
+    unit.textContent = suffix;
+    right.append(unit);
+  }
+  row.append(name, right, source);
+  if (!parameter.writable) row.title = parameter.disabledReason ?? "Read-only source parameter";
+  return row;
+}
+
+let parameterWriteState: "" | "Saving" | "Saved" | "Failed" = "";
+async function writeParameter(parameter: Clip["parameters"][number], replacement: string): Promise<void> {
+  const state = store.current();
+  if (state === undefined || !parameter.writable) return;
+  parameterWriteState = "Saving";
+  status.textContent = parameterWriteState;
+  status.className = "status saving";
+  try {
+    const response = await fetch("/__studio/transaction", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        revision: state.snapshot.revision,
+        patches: [{
+          path: parameter.source.path,
+          range: parameter.source.range,
+          replacement,
+          preimage: parameter.source.preimage,
+        }],
+      }),
+    });
+    if (!response.ok) throw new Error(await response.text());
+    parameterWriteState = "Saved";
+    status.textContent = parameterWriteState;
+    status.className = "status saved";
+  } catch (error) {
+    parameterWriteState = "Failed";
+    status.textContent = error instanceof Error ? "Save failed" : parameterWriteState;
+    status.className = "status error";
+  }
+}
+
 /**
  * A single strip between the picture and the timeline. It is a row of the
  * layout rather than a floating card, so it can never cover the frame being
@@ -176,7 +258,16 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
       property("To", clip.temporal.projection.endExpression, "property-wide property-code"),
     ]),
   ]);
-  inspector.replaceChildren(hero, placement, timing, ...(source === undefined ? [] : [source]));
+  const run = track === undefined ? undefined : group("Run", [
+    property("Output", track.provenance.output, "property-wide property-code"),
+    ...(track.provenance.candidateId === undefined ? [] : [
+      property("Candidate", track.provenance.candidateId, "property-wide property-code"),
+    ]),
+    property("Status", track.provenance.status),
+    property("Writeback", "Read-only"),
+  ]);
+  const parameters = clip.parameters.length === 0 ? undefined : group("Parameters", clip.parameters.map(parameterControl), "parameter-group");
+  inspector.replaceChildren(hero, placement, timing, ...(parameters === undefined ? [] : [parameters]), ...(source === undefined ? [] : [source]), ...(run === undefined ? [] : [run]));
 }
 
 function renderSemanticInspector(snapshot: StudioSnapshot, segmentId: string): void {
