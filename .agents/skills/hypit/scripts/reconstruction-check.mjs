@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * Report which reconstructed elements have never been compared against the reference.
+ * Report what the route can still settle after the Source is written and before a Build runs: which
+ * reconstructed elements have never been compared against the reference, and which timed pictures are
+ * configured to stop before their window ends.
  *
  * `preview-check` proves the graph is wired. It proves nothing about whether what the graph draws
  * resembles the reference video, and a Source can pass every structural check while a
@@ -98,7 +100,77 @@ for (const { alias, specifier, local } of imports) {
 // Build without a fixture SemanticTrack, so it is reported rather than demanded.
 const elements = drawn.filter((item) => item.local);
 const deferred = drawn.filter((item) => !item.local);
-if (elements.length === 0) {
+
+// ---- Timed pictures that stop before their window ends ----
+//
+// A generated take is asked for a whole number of seconds, and the window it has to fill comes from
+// speech the same Build synthesizes. The two lengths are arrived at separately and do not meet: the
+// estimate rounds, and the voice that finally speaks is not the voice the estimate predicted. So the
+// material is routinely shorter than the window it was made for, by anything from a rounding
+// remainder to a couple of seconds.
+//
+// What happens then is decided by one Recipe key. `playback` defaults to `once-start`, which draws
+// the material once and then draws nothing at all — `sampling.ts` emits no segment for the remainder,
+// so those frames fall through to whatever is beneath. Under a full-frame base that is the Film
+// background, which is black. `hold-start` pins the last frame for the rest of the window instead,
+// `loop-start` repeats, and `stretch` retimes to fit; any of the three fills it.
+//
+// This is `frame-coverage.md`'s inherited edge — "a generated take, which ends where its material
+// ends rather than where the shot should" — in the one form the route can settle before a Build, from
+// the Source and its Recipe sheets alone.
+async function playbackReport() {
+  // Every Recipe body the Source can name, by the alias its sheet was imported under.
+  const sheets = new Map();
+  for (const [, alias, source] of svml.matchAll(/<import\s+as="([^"]+)"\s+source="([^"]+\.svs)"/gu)) {
+    const text = await readFile(resolve(dirname(svmlPath), source), "utf8").catch(() => undefined);
+    if (text === undefined) continue;
+    const recipes = new Map();
+    for (const [, name, body] of text.matchAll(/([A-Za-z0-9_.-]+)\s*\{([^}]*)\}/gu)) recipes.set(name, body);
+    sheets.set(alias, recipes);
+  }
+
+  // Which Normalize ids carry a picture. A take normalized with `video="none"` is a voice and has no
+  // window to fill.
+  const moving = new Set();
+  for (const [, attributes] of svml.matchAll(/<pipeline:Normalize\b([^>]*?)\/?>/gsu)) {
+    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
+    const video = /\bvideo="([^"]+)"/u.exec(attributes)?.[1];
+    if (id !== undefined && video !== undefined && video !== "none") moving.add(id);
+  }
+
+  // Which aliases belong to a package that draws. Plenty of elements consume a normalized media
+  // without placing it — `whisperx:SemanticTake` reads one to align speech against it and puts no
+  // picture on the Canvas, so it has no window to fill and no occupancy to choose. Requiring the
+  // alias to come from a package with a Track that outputs a VisualTrack keeps those out, and keeps
+  // the Items and Sequences written inside such a Track in, without this needing to know their tags.
+  const draws = new Set(imports
+    .filter(({ specifier }) => [...drawingTags.keys()].some((key) => key.startsWith(`${specifier}#`)))
+    .map(({ alias }) => alias));
+
+  // Every element that places one of those pictures, and what its Recipe says to do with a window the
+  // material does not fill.
+  const running = [];
+  for (const [, tag, attributes] of svml.matchAll(/<([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*)\b([^>]*?)\/?>/gsu)) {
+    if (!draws.has(tag.slice(0, tag.indexOf(":")))) continue;
+    const media = /\bmedia=\{([A-Za-z0-9_-]+)\.media\}/u.exec(attributes)?.[1];
+    if (media === undefined || !moving.has(media)) continue;
+    const appearance = /\bappearance=\{([A-Za-z0-9_-]+)\.([A-Za-z0-9_.-]+)\}/u.exec(attributes);
+    const body = appearance === null ? undefined : sheets.get(appearance[1])?.get(appearance[2]);
+    const playback = body === undefined ? undefined : /\bplayback\s*:\s*([A-Za-z-]+)/u.exec(body)?.[1];
+    if (playback !== undefined && playback !== "once-start" && playback !== "once-end") continue;
+    running.push({
+      id: /\bid="([^"]+)"/u.exec(attributes)?.[1] ?? tag,
+      tag,
+      recipe: appearance === null ? "no appearance Recipe" : `${appearance[1]}.${appearance[2]}`,
+      playback: playback ?? "once-start, by default",
+    });
+  }
+  return running;
+}
+
+const running = await playbackReport();
+
+if (elements.length === 0 && running.length === 0) {
   console.log("reconstruction-check: no locally-drawn element is placed in the Source; nothing to require.");
   if (deferred.length > 0) reportDeferred();
   process.exit(0);
@@ -177,21 +249,43 @@ if (unlabelled > 0) {
 }
 if (deferred.length > 0) reportDeferred();
 
-if (never.length === 0) {
+if (running.length > 0) {
   console.log("");
-  console.log(`reconstruction-check: every locally-drawn element has been compared (${elements.length}).`);
+  console.log(`  ${running.length} timed picture${running.length === 1 ? " draws" : "s draw"} nothing once the material ends:`);
+  for (const item of running) console.log(`      ${item.tag} id=${item.id} — ${item.recipe}, playback ${item.playback}`);
+}
+
+if (never.length === 0 && running.length === 0) {
+  console.log("");
+  console.log(`reconstruction-check: every locally-drawn element has been compared (${elements.length}), and every timed picture fills its window.`);
   process.exit(0);
 }
 
 console.log("");
-console.log(`reconstruction-check: ${never.length} of ${elements.length} elements have never been compared.`);
-console.log("");
-console.log("Read .claude/skills/hypit/references/reconstruction/reconstruction-loop.md, then for each:");
-console.log("render the element to a still in the state the reference shot shows, and compare it blind.");
-console.log("");
-for (const element of never) {
-  console.log(`  hypit-reference-video-tools compare_reconstruction --reference-id ${reference} \\`);
-  console.log(`    --shot-id <the shot that shows ${element.id} most clearly> \\`);
-  console.log(`    --image <rendered still>.png --element ${element.id}`);
+if (never.length > 0) {
+  console.log(`reconstruction-check: ${never.length} of ${elements.length} elements have never been compared.`);
+  console.log("");
+  console.log("Read .claude/skills/hypit/references/reconstruction/reconstruction-loop.md, then for each:");
+  console.log("render the element as the Source configures it, mock the layers a Build has not made,");
+  console.log("and compare the whole shot blind — one comparison per shot the reference shows it in.");
+  console.log("");
+  for (const element of never) {
+    console.log(`  hypit-reference-video-tools compare_reconstruction --reference-id ${reference} \\`);
+    console.log(`    --shot-id <each shot that shows ${element.id}> \\`);
+    console.log(`    --video <rendered clip>.mp4 --element ${element.id}`);
+  }
+}
+if (running.length > 0) {
+  if (never.length > 0) console.log("");
+  console.log(`reconstruction-check: ${running.length} window${running.length === 1 ? "" : "s"} will empty before ${running.length === 1 ? "it ends" : "they end"}.`);
+  console.log("");
+  console.log("A generated take is ordered in whole seconds and its window is measured from speech the");
+  console.log("Build has yet to synthesize, so the material is shorter than the window it fills more");
+  console.log("often than not. Under a full-frame picture the remainder is the Film background, which");
+  console.log("reads as a black gap; under a cutaway it is the layer beneath blinking through.");
+  console.log("");
+  console.log("Give each Recipe above a playback: hold-start to pin the last frame for the rest of the");
+  console.log("window, loop-start to repeat, or stretch to retime. Read playbooks/craft/frame-coverage.md");
+  console.log("on inherited edges before choosing — lengthening the material instead leaves the same edge.");
 }
 process.exit(1);

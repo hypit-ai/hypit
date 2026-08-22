@@ -171,20 +171,38 @@ nothing.
   the Producer refuses, the Track never builds, and the rows nobody was waiting for vanish with it.
   This is what a Source looks like for the whole stretch between being written and being built, which
   is most of its life.
-- A component that cannot render on its own cannot produce the preview image its Surface owes. Treat
-  a missing preview as evidence of this mistake rather than a step to skip.
-- **The render harness takes its state as arguments.** The Surface preview is one picture: every
-  feature on, at whatever moment shows the component best. `reconstruction-loop.md` needs a different
-  picture for every reference shot — the state that shot happens to show, at a matching moment — and
-  a component appears across several. A harness with its state and frame written into it produces the
-  catalogue picture and nothing else, and the next agent reuses that picture for a comparison it does
-  not fit. Give it `--out`, the frame, and whichever of the component's own switches the reference
-  varies; the preview then becomes one invocation of it rather than its only purpose.
-- **The harness does not invent media for slots a Build has not filled.** A slot declared as a
-  generation is mockable but not fillable on this route, and the mock is the route's fixed
-  `make-placeholder` tool, not code the harness ships: the harness reads a placeholder path from its
-  arguments and passes it into the slot. No placeholder-drawing code inside the harness, no generated
-  picture committed just to have something in the slot.
+- A component that cannot render on its own cannot produce the catalogue preview its Surface owes.
+  Treat a missing preview as evidence of this mistake rather than a step to skip. The preview proves
+  the component draws; what it draws is compared against the reference from a separate render, below.
+- **The render harness takes its inputs as arguments.** The catalogue preview is one picture: sample
+  copy, a sample Recipe, every feature on, at whatever moment shows the component best.
+  `reconstruction-loop.md` needs a different picture — the component drawn from the Recipe values a
+  Source actually passes and the Script text that Source actually feeds it — for every reference shot
+  the component appears in. The values are the difference, and they are the whole difference: a Source
+  can pass copy and sizes that collide while the sample values stay perfect, so a picture drawn from
+  the samples cannot report it.
+
+  Give the harness these arguments, and let the catalogue preview be one invocation of it rather than
+  its only purpose:
+
+  - the path to the Recipe sheet the Source uses, and which Recipe in it;
+  - the text the Source feeds the component, as the Source feeds it;
+  - a path per media slot, and a path for the layer beneath;
+  - the Canvas the Source declares, so the render composes at the geometry the mocks were built to;
+  - `--out`, and whether to write a still or a clip covering a stretch.
+
+  A harness with its inputs written into it produces the catalogue picture and nothing else, and the
+  next agent reuses that picture for a comparison it does not fit.
+- **The harness does not invent media, for slots or for the layer beneath.** A slot declared as a
+  generation is mockable but not fillable on this route, and neither is the base take a component
+  draws over. Both mocks come from the route's fixed `make-placeholder` tool, not from code the
+  harness ships: the harness reads the paths from its arguments and passes them in. No
+  placeholder-drawing code inside the harness, no generated picture committed just to have something
+  in a slot.
+
+  This is a rendering argument and never a Source edit. The Source keeps declaring the generation;
+  what the harness receives is a path that exists for one render. The gates that decide coverage read
+  the Source's Recipes and bindings, so a mock cannot be counted as the thing it stands in for.
 
 ## Freeze the Types before writing in parallel
 

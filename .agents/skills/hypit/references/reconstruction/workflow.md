@@ -1,13 +1,13 @@
 # Reference-video workflow
 
-`@hypit/reference-video-tools` ships six CLI subcommands. Four of them are the reference evidence
+`@hypit/reference-video-tools` ships seven CLI subcommands. Four of them are the reference evidence
 and belong to this route:
 
 ```bash
 hypit-reference-video-tools prepare_reference --video-path <path> --observer gemini|agent
 hypit-reference-video-tools observe_reference --reference-id <reference-id>
 hypit-reference-video-tools record_observation --reference-id <reference-id> --key <key> --text-file <path>
-hypit-reference-video-tools compare_reconstruction --reference-id <reference-id> --shot-id <shot-id> --image <path> [--element <id>]
+hypit-reference-video-tools compare_reconstruction --reference-id <reference-id> --shot-id <shot-id> --video <path>|--image <path> [--question <scope>] [--element <id>]
 ```
 
 `--observer` is answered once, before anything runs, and `observers.md` owns that question.
@@ -15,8 +15,10 @@ hypit-reference-video-tools compare_reconstruction --reference-id <reference-id>
 writes its own and the command is unused. A long answer arrives whole with `--text-file <path>`;
 `--text <text>` suits a short one.
 
-The other two — `list_svml_packages` and `inspect_svml_vocabulary` — read installed vocabulary and
-have nothing to do with a reference video. This route runs both, at the step the sequence names;
+`make-placeholder` writes the mocks the comparison render needs for a base take or a media slot a
+Build has not filled; `reconstruction-loop.md` says when. The remaining two — `list_svml_packages`
+and `inspect_svml_vocabulary` — read installed vocabulary and have nothing to do with a reference
+video. This route runs both, at the step the sequence names;
 `../vocabulary.md` documents them and decides how a package is chosen. `list_svml_packages` reads
 `node_modules/@hypit` relative to the working directory and refuses when it is empty, so run it from
 the repository root.
@@ -39,9 +41,13 @@ list_svml_packages
 → run preview-check (final-sources.md) and repair until the graph traces —
   this has no attempt ceiling; a target Studio cannot trace is not done.
   Waiting on unrun Providers is a pass, not a failure
-→ read reconstruction-loop.md, then render each authored element and compare it
+→ read reconstruction-loop.md, then for each authored element: render it as the
+  sources configure it, mocking the layers a Build has not made, and compare it
+  against every shot the reference shows it in before repairing anything
+→ repair against the differences that round returned, within the ceilings
 → run reconstruction-check (index.md) and keep going until it passes; it names
-  every locally-drawn element that has never been compared. When more than one
+  every locally-drawn element that has never been compared, and every timed
+  picture whose Recipe leaves playback at its default. When more than one
   reference is prepared it needs --reference-id <id>
 ```
 
@@ -143,9 +149,11 @@ correction.
 
 Be most suspicious of anything an observation asserts about change over time — something appearing,
 vanishing, being removed, being drawn in a single frame. A describer working from one pass infers
-those rather than seeing them, and infers them wrongly. A `compare_reconstruction` against a rendered
-probe, or a narrow question over the stretch, is how such a claim is checked, rather than by
-believing the single pass that asserted it.
+those rather than seeing them, and infers them wrongly. A narrow question over the stretch is how
+such a claim is checked, rather than by believing the single pass that asserted it. A
+`compare_reconstruction` against a quick rendered probe works too, and is a probe rather than the
+element comparison `reconstruction-loop.md` runs — that one is rendered from the Source's own values
+and is credited with `--element`.
 
 ## Narrow questions
 
@@ -162,12 +170,19 @@ Ask about visible attributes. Never ask which component to use.
 
 ## compare_reconstruction
 
-`compare_reconstruction` sends the shot's reference frame and a rendered image as an unlabelled pair
-and returns a description of their visible differences. It is never told which image is which, what
-was built, or how; `--question` may narrow it to one region of the picture and nothing else. Results
-are not cached. `reconstruction-loop.md` governs when and how to use it.
+`compare_reconstruction` sends the reference and the reconstruction as an unlabelled pair and returns
+a description of their visible differences. It is never told which is which, what was built, or how;
+`--question` carries what to look at — which region to read, which regions hold a placeholder to
+skip, or one visible quantity to measure — and never what to conclude. Results are not cached. `reconstruction-loop.md` governs when and how to use it.
 
-`--element` names the reconstructed element the image draws. It never reaches the observer — the
+`--video <rendered.mp4>` compares the whole shot and is the default choice, since a shot can hold
+several states of an element without a cut and no single frame stands for it. `--image` is for the
+one case where the shot's own `visual:` observation says the element is completely still. Which
+pictures the pair is made of follows the observer: `gemini` receives the reference clip and the
+rendered clip; `agent` receives the reference shot's frame tile and one built from the render against
+that shot's duration, so both grids sample alike.
+
+`--element` names the reconstructed element the render draws. It never reaches the observer — the
 comparison stays as blind as it is without it — and is written to the reference's `comparisons.jsonl`
 so `reconstruction-check` can tell an element that was looked at from one that never was. A
 comparison run without it is not credited to any element.
