@@ -37,6 +37,7 @@ import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
+import { cpus } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -128,7 +129,15 @@ if (takeOutputs.size === 0) fail("the Source declares no whisperx:SemanticTake t
 const alreadySatisfied = new Set([...runSource.matchAll(/<satisfy\s+output="([^"]+)"/gu)].map(([, output]) => output));
 const carried = [...runSource.matchAll(/^[ \t]*<(?:file|value|satisfy)\b[^>]*\/>[ \t]*$/gmu)].map(([line]) => line.trim());
 
-const { takes, selections, frameCount: programFrames } = await standInTakes(svmlPath, frameRate);
+// The window is resolved before the stand-ins are built, so the program is only as long as the
+// stretch being looked at. Rendering the whole program to crop six seconds out of it is the
+// difference between a few seconds and a few minutes.
+const segmentArgument = flag("segment");
+const selectionArgument = flag("selection");
+const { takes, selections, frameCount: programFrames } = await standInTakes(svmlPath, frameRate, {
+  ...(segmentArgument === undefined ? {} : { segment: segmentArgument }),
+  ...(selectionArgument === undefined ? {} : { selection: selectionArgument }),
+});
 const framesBySegment = new Map(takes.map((item) => [item.segmentId, item.take.segment.endFrameExclusive]));
 // A Selection's window in frames, summed over the stand-in tokens it covers. This is the same word
 // span the Source binds to, carried into frames by the same estimate that sized the Segment.
@@ -198,13 +207,15 @@ for (const { segmentId, take } of takes) {
 // and nowhere else.
 const placeholderCli = new URL("../../../../packages/reference-video-tools/src/cli.ts", import.meta.url);
 for (const [id, { frames, picture }] of mockedMedia()) {
-  const seconds = Math.max(0.1, frames / frameRate);
+  // make-placeholder takes whole seconds, and a mock longer than its window costs nothing: the
+  // SynchronizedMedia declares the frame count, the file only has to reach it.
+  const seconds = Math.max(1, Math.ceil(frames / frameRate));
   const file = join(compareRoot, `${id}.mp4`);
   if (picture) {
     const made = spawnSync(process.execPath, [
       "--import", "tsx", fileURLToPath(placeholderCli), "make-placeholder",
       "--out", file, "--width", String(canvas.width), "--height", String(canvas.height),
-      "--video", "--seconds", seconds.toFixed(3), "--color", "mid",
+      "--video", "--seconds", String(seconds), "--color", "mid",
     ], { encoding: "utf8", windowsHide: true, timeout: 120_000 });
     if (made.status !== 0) fail(`make-placeholder failed for ${id}: ${made.stderr?.trim()}`);
   }
@@ -303,8 +314,6 @@ if (placed === undefined) {
 
 // The window to render, named in words. A shot of the reference is found by the words spoken over it
 // and those words are a Segment or a Selection here, so no reference timestamp is ever read across.
-const segmentArgument = flag("segment");
-const selectionArgument = flag("selection");
 let window = { startFrame: 0, endFrameExclusive: programFrames };
 if (selectionArgument !== undefined) {
   window = selections.get(selectionArgument)
@@ -343,7 +352,7 @@ const hyperframesCli = createRequire(join(packageRoot, "packages/provider-hyperf
 const drawn = spawnSync(process.execPath, [
   hyperframesCli, "render", stage,
   "--format", "png-sequence", "--output", frames, "--fps", String(frameRate),
-  "--workers", "1", "--no-browser-gpu", "--no-best-effort", "--quiet",
+  "--workers", String(Math.max(1, cpus().length - 2)), "--no-best-effort", "--quiet",
 ], { encoding: "utf8", windowsHide: true, timeout: 600_000 });
 if (drawn.status !== 0) fail(`the HyperFrames runtime refused: ${(drawn.stderr ?? "").trim().slice(-2000)}`, 1);
 
