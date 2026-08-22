@@ -54,6 +54,15 @@ each Surface carries `tag`, `mode`, `outputs`, `vocabulary` (its `attributes`, `
 is the declared Type an element must satisfy, and a property with nowhere to land in those lists is
 the finding that makes a gap.
 
+**That output is the complete authoring contract. Author from it, and do not read a package's source
+code to learn an element's syntax.** Every recipe property carries its own `summary` and its admitted
+`values` — the parameter reference is in the inspect output, not in the package. The README is the
+example, and it is not a parameter reference: some READMEs are a single illustrative recipe, and a
+thin one is not missing documentation, it is a thin example next to a complete declaration. The
+source is implementation, and the loader refuses a mistaken attribute against the declaration, not
+against the source — so reading it neither teaches the contract nor matches how the element is
+validated.
+
 ## Reuse, compose, or declare a gap
 
 Use this decision order:
