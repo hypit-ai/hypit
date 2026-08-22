@@ -117,6 +117,8 @@ export const rankingAdapters: readonly StudioAdapter[] = [
     family: "component", label: "Ranking", icon: "ranking", realizationPorts: ["schedule"],
     editOperations: ["move", "trim-start", "trim-end"],
     parameters: [
+      { name: "semantic", label: "Semantic", writable: false },
+      { name: "canvas", label: "Canvas", writable: false },
       { name: "style", label: "Style", writable: false },
       { name: "during", label: "During", writable: false },
       { name: "start", label: "Start", writable: true },
@@ -124,6 +126,13 @@ export const rankingAdapters: readonly StudioAdapter[] = [
       { name: "at", label: "At", writable: false },
       { name: "for", label: "For", writable: true },
       { name: "frame", label: "Frame", writable: false, referenced: frameParameters },
+      { name: "appear-sound", label: "Appear sound", writable: false },
+      { name: "move-sound", label: "Move sound", writable: false },
+      { name: "label", label: "Label", writable: true },
+      { name: "rank", label: "Rank", control: "number", writable: true },
+      { name: "preset", label: "Preset", control: "boolean", writable: true },
+      { name: "icon", label: "Icon", writable: false },
+      { name: "stack", label: "Stack", control: "number", writable: true },
     ],
     poster: { source: "surface-preview" },
     lane: {
@@ -144,8 +153,6 @@ export const rankingAdapters: readonly StudioAdapter[] = [
       },
       parameters: [
         { name: "during", label: "During", writable: false },
-        { name: "at", label: "At", writable: false },
-        { name: "stack", label: "Stack", control: "number", writable: true },
       ],
     }],
     interaction: readonlyInteraction, project: projectRanking,

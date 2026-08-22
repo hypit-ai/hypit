@@ -102,6 +102,13 @@ export type StudioEditCoordinate =
 
 export type StudioSnapTarget = "frame" | "semantic-anchor" | "item-edge";
 
+export type StudioEditSourceRole = "start" | "end" | "duration" | "frame" | "x" | "y";
+
+export type StudioEditSource = {
+  readonly role: StudioEditSourceRole;
+  readonly source: StudioParameter["source"];
+};
+
 /** A timeline affordance is present only when its source write is explicit. */
 export type StudioEditHandle = {
   readonly id: string;
@@ -111,7 +118,7 @@ export type StudioEditHandle = {
   readonly coordinate?: StudioEditCoordinate;
   /** Snap policy is data, not a timeline-wide guess. */
   readonly snapTo?: readonly StudioSnapTarget[];
-  readonly sources?: readonly StudioParameter["source"][];
+  readonly sources?: readonly StudioEditSource[];
   readonly disabledReason?: string;
 };
 

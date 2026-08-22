@@ -2,6 +2,7 @@ import type {
   SemanticToken,
   StudioSnapshot,
 } from "../shared.js";
+import type { StudioEditSource } from "@hypit/studio-adapter";
 import { icon, setIcon } from "./icons.js";
 import { mountMaterialPreview } from "./material-preview.js";
 import type { State, Store } from "./selection.js";
@@ -193,7 +194,7 @@ export function createTimeline(store: Store): Timeline {
   let activeEdit: {
     readonly clip: StudioSnapshot["tracks"][number]["clips"][number];
     readonly operation: "move" | "trim-start" | "trim-end";
-    readonly sources: readonly StudioSnapshot["tracks"][number]["clips"][number]["parameters"][number]["source"][];
+    readonly sources: readonly StudioEditSource[];
     readonly startFrame: number;
     readonly pointerId: number;
     readonly node: HTMLElement;
@@ -241,14 +242,25 @@ export function createTimeline(store: Store): Timeline {
       Math.min(state.snapshot.space.frameCount - edit.clip.endFrameExclusive, rawDelta),
     );
     const replacement = (frame: number): string => `${Math.max(0, Math.round(frame))}f`;
+    const startSource = edit.sources.find((item) => item.role === "start");
+    const endSource = edit.sources.find((item) => item.role === "end");
+    const durationSource = edit.sources.find((item) => item.role === "duration");
     const patches = edit.operation === "move"
-      ? [
-        { ...edit.sources[0]!, replacement: replacement(edit.clip.startFrame + delta) },
-        { ...edit.sources[1]!, replacement: replacement(edit.clip.endFrameExclusive + delta) },
-      ]
+      ? startSource === undefined || endSource === undefined
+        ? []
+        : [
+          { ...startSource.source, replacement: replacement(edit.clip.startFrame + delta) },
+          { ...endSource.source, replacement: replacement(edit.clip.endFrameExclusive + delta) },
+        ]
       : edit.operation === "trim-start"
-        ? [{ ...edit.sources[0]!, replacement: replacement(Math.min(edit.clip.endFrameExclusive - 1, nextFrame)) }]
-        : [{ ...edit.sources[0]!, replacement: replacement(Math.max(edit.clip.startFrame + 1, nextFrame)) }];
+        ? startSource === undefined
+          ? []
+          : [{ ...startSource.source, replacement: replacement(Math.min(edit.clip.endFrameExclusive - 1, nextFrame)) }]
+        : durationSource !== undefined
+          ? [{ ...durationSource.source, replacement: replacement(Math.max(1, nextFrame - edit.clip.startFrame)) }]
+          : endSource === undefined
+            ? []
+            : [{ ...endSource.source, replacement: replacement(Math.max(edit.clip.startFrame + 1, nextFrame)) }];
     if (patches.every((patch) => patch.replacement === patch.preimage)) return;
     element.dispatchEvent(new CustomEvent("studio:write", { detail: { state: "saving" } }));
     void writeSourceTransaction(state.snapshot.revision, patches).then(() => {
