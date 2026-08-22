@@ -26,13 +26,12 @@ install below still has to run there.
 
 Every repository path written in these files — `.agents/skills/hypit/scripts/…`, `packages/…`,
 `docs/…`, `examples/…` — is relative to the printed `repository` and to nothing else. That includes
-the other scripts: run the checkout's copies. `preview-check.mjs` reaches Studio's sources through
-its own position in the checkout, so that copy is the one that resolves them.
+the other scripts: run the checkout's copies.
 
 Several commands resolve against the **working directory** rather than against the Source they are
 given: `list_svml_packages` reads `node_modules/@hypit` from the cwd and refuses when it is empty, and
-`preview-check.mjs` resolves `tsx` the same way. Running them from the repository root is not a
-convention, it is the condition under which they work.
+`preview_check` and `reconstruction_check` read the installed packages from there too. Running them
+from the repository root is not a convention, it is the condition under which they work.
 
 ## Requirements
 
@@ -66,7 +65,8 @@ pnpm test
 
 `npm link` links the `hypit` binary. The route also calls `hypit-reference-video-tools`
 (`prepare_reference`, `observe_reference`, `compare_reconstruction`, `list_svml_packages`,
-`inspect_svml_vocabulary`) — a separate bin that the repository links on `pnpm install`, so it is
+`inspect_svml_vocabulary`, `render_element`, `render_previews`, `preview_check`,
+`reconstruction_check`) — a separate bin that the repository links on `pnpm install`, so it is
 present once the workspace install above has run. If `hypit-reference-video-tools` is not on `PATH`
 after installing, re-run `pnpm install` from the repository root; the bin resolves from
 `packages/reference-video-tools/bin/`.

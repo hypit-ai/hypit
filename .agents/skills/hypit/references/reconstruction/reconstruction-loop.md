@@ -5,16 +5,16 @@ reference. A newly written package can resolve, activate, decode and pass every 
 something the reference never contained. Close that gap deliberately.
 
 This loop is about how an element *looks* against the reference, and it is bounded. Whether an
-element is *wired at all* is a different gate with a different rule: `preview-check` (in
+element is *wired at all* is a different gate with a different rule: `preview_check` (in
 `../preview.md`) must pass before this loop is even reached, and its failures are repaired
 without any attempt ceiling. A graph that does not trace is not a difference to weigh; it is work
 that is not done.
 
-Note what that gate covers: `preview-check` proves the graph is wired, not that every track draws.
+Note what that gate covers: `preview_check` proves the graph is wired, not that every track draws.
 Nothing is handed to a Producer until the Build runs, so a Producer that refuses the media it
 receives surfaces there rather than here.
 
-The difference between the two gates is what each reports. `preview-check` names the graph failure —
+The difference between the two gates is what each reports. `preview_check` names the graph failure —
 the target that does not trace, the chain that is missing — so its repairs are not guessing. This
 loop names the appearance difference: `compare_reconstruction` sends the rendered element and the
 matching stretch of the reference to an observer and returns what differs in words, and a repair aims
@@ -54,7 +54,7 @@ draws which.
 One command produces it, and it is not written per package:
 
 ```
-node --import tsx .agents/skills/hypit/scripts/render-element.mjs projects/<name>/build.svrun \
+hypit-reference-video-tools render_element projects/<name>/build.svrun \
   --element <id> --segment <id>|--selection <id> --out <path>.mp4
 ```
 
@@ -82,7 +82,7 @@ it may be media slots the Source declares as generations. Render them as mocks r
 them out: a missing base is not a neutral background, it is black, and text that is legible on black
 can be illegible on the picture that will replace it.
 
-`render-element.mjs` does this itself. It finds every generation the Source declares — the takes, the
+`render_element` does this itself. It finds every generation the Source declares — the takes, the
 stills, the slot contents — calls `make-placeholder` for each at the Canvas's own size, and declares
 them in a derived Run under the project's `.hypit/`. Never `hypit image`, which pays for a generation
 the video will not reuse, and never a placeholder drawn by a script written for the occasion.
@@ -99,7 +99,7 @@ declared-but-unbuilt generations, and to compare only what the element itself dr
 costs one clause and saves the mock being reported as a difference every round.
 
 A mock lives only in this render. It is never written into the Source, and no gate reads it: the
-`playback` check in `reconstruction-check` reads the Source's Recipes, so a mock cannot be mistaken
+`playback` check in `reconstruction_check` reads the Source's Recipes, so a mock cannot be mistaken
 for coverage.
 
 ### Compare the whole shot, against every shot that shows the element
@@ -273,18 +273,19 @@ waits for in `../playbooks/craft/production-gates.md`:
 
 - **every generated picture and take** — the images and the shots a Provider has still to make, at
   Gate 1 and Gate 2;
-- **the authored values on installed vocabulary** — a caption Style's size, colour and placement, a
-  Media Item's frame, a Typography Track's copy, at Gate 3 against the real SemanticTrack;
+- **the timing of every Track** — this route compares each one against a stand-in SemanticTake, so
+  how a Caption, Media or Typography Track sits against the speech that is finally delivered is
+  measured at Gate 3, against the real SemanticTrack;
 - **whether the picture is continuous** — the frames nobody authored that `frame-coverage.md` is
   about, at Gate 4, which measures them on the delivery. One inherited edge is settled before then:
-  `reconstruction-check` reads each Recipe's `playback` and refuses a timed picture configured to
+  `reconstruction_check` reads each Recipe's `playback` and refuses a timed picture configured to
   stop when its material runs out, which is the edge a generated take produces every time. The rest
   of them — a window that starts late, a blend whose frames are half-covered, a schedule inside a
   component that stops between activations — are measured on the delivery;
 - **whether the delivery says the Script's words** — measured at Gate 4 by transcribing the finished
   video, since a take generated from a prompt that lost its dialogue passes every gate before it.
 
-`reconstruction-check` is the mechanical half of this: it names the elements that were never compared
+`reconstruction_check` is the mechanical half of this: it names the elements that were never compared
 and the timed pictures configured to empty their windows, and refuses to pass while either remains.
 It cannot name what a Build has not produced yet, which is why
 this list is stated rather than computed.
