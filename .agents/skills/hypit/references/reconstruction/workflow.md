@@ -41,9 +41,10 @@ list_svml_packages
 → run preview-check (final-sources.md) and repair until the graph traces —
   this has no attempt ceiling; a target Studio cannot trace is not done.
   Waiting on unrun Providers is a pass, not a failure
-→ read reconstruction-loop.md, then for each authored element: render it as the
-  sources configure it, mocking the layers a Build has not made, and compare it
-  against every shot the reference shows it in before repairing anything
+→ read reconstruction-loop.md, then for each authored element: render it with
+  render-element.mjs, which reads the sources and mocks the layers a Build has
+  not made, and compare it against every shot the reference shows it in before
+  repairing anything
 → repair against the differences that round returned, within the ceilings
 → run reconstruction-check (index.md) and keep going until it passes; it names
   every locally-drawn element that has never been compared, and every timed

@@ -174,35 +174,20 @@ nothing.
 - A component that cannot render on its own cannot produce the catalogue preview its Surface owes.
   Treat a missing preview as evidence of this mistake rather than a step to skip. The preview proves
   the component draws; what it draws is compared against the reference from a separate render, below.
-- **The render harness takes its inputs as arguments.** The catalogue preview is one picture: sample
-  copy, a sample Recipe, every feature on, at whatever moment shows the component best.
-  `reconstruction-loop.md` needs a different picture — the component drawn from the Recipe values a
-  Source actually passes and the Script text that Source actually feeds it — for every reference shot
-  the component appears in. The values are the difference, and they are the whole difference: a Source
-  can pass copy and sizes that collide while the sample values stay perfect, so a picture drawn from
-  the samples cannot report it.
+- **The package owes a catalogue preview and nothing else.** That picture is drawn from sample copy
+  and a sample Recipe the package chooses, to show a reader the Surface's range, and it belongs to the
+  package the way its README does.
 
-  Give the harness these arguments, and let the catalogue preview be one invocation of it rather than
-  its only purpose:
+  The picture `reconstruction-loop.md` compares is a different one and the package does not produce
+  it. `scripts/render-element.mjs` reads the Source — the Canvas, the Recipe values, the Script text,
+  the bindings — and drives the package's own Producer to draw the component the way this video places
+  it. All the package has to be is a working Producer, which the Manifest already requires.
 
-  - the path to the Recipe sheet the Source uses, and which Recipe in it;
-  - the text the Source feeds the component, as the Source feeds it;
-  - a path per media slot, and a path for the layer beneath;
-  - the Canvas the Source declares, so the render composes at the geometry the mocks were built to;
-  - `--out`, and whether to write a still or a clip covering a stretch.
-
-  A harness with its inputs written into it produces the catalogue picture and nothing else, and the
-  next agent reuses that picture for a comparison it does not fit.
-- **The harness does not invent media, for slots or for the layer beneath.** A slot declared as a
-  generation is mockable but not fillable on this route, and neither is the base take a component
-  draws over. Both mocks come from the route's fixed `make-placeholder` tool, not from code the
-  harness ships: the harness reads the paths from its arguments and passes them in. No
-  placeholder-drawing code inside the harness, no generated picture committed just to have something
-  in a slot.
-
-  This is a rendering argument and never a Source edit. The Source keeps declaring the generation;
-  what the harness receives is a path that exists for one render. The gates that decide coverage read
-  the Source's Recipes and bindings, so a mock cannot be counted as the thing it stands in for.
+  Do not write a per-package harness for the comparison. One that takes its values as arguments still
+  gets them by hand, one line at a time, which draws one line and lets a collision between several go
+  unseen; one with its values written in draws the catalogue picture and cannot report the Source at
+  all. Both also decide their own canvas, and a canvas that is not the Source's puts every proportion
+  in the comparison slightly wrong.
 
 ## Freeze the Types before writing in parallel
 
