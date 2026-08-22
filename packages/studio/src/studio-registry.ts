@@ -2,6 +2,7 @@ import type {
   StudioAdapter,
   StudioAdapterContext,
   StudioEntityDraft,
+  StudioEditOperation,
   StudioLaneAttachment,
   StudioProjectionRole,
   StudioResolvedTrack,
@@ -198,6 +199,18 @@ export class StudioAdapterRegistry {
       return adapter.attachments?.find((attachment) => attachment.id === lane)?.parameters ?? [];
     }
     return adapter.parameters ?? [];
+  }
+
+  editOperations(
+    track: StudioResolvedTrack,
+    placement: Placement | undefined,
+    lane?: string,
+  ): readonly StudioEditOperation[] {
+    const adapter = this.#trackAdapter(track);
+    if (lane !== undefined) {
+      return adapter.attachments?.find((attachment) => attachment.id === lane)?.editOperations ?? [];
+    }
+    return adapter.editOperations ?? [];
   }
 }
 

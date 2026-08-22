@@ -55,6 +55,8 @@ export type StudioParameterLanguage = "svml" | "svs" | "svrun";
 /** A real source value that an Inspector may display or edit. */
 export type StudioParameter = {
   readonly id: string;
+  /** Adapter vocabulary name; unlike id this is stable across source files. */
+  readonly name: string;
   readonly label: string;
   readonly control: StudioParameterControl;
   readonly value: string;
@@ -90,11 +92,23 @@ export type StudioEditOperation =
   | "duplicate"
   | "canvas-transform";
 
+export type StudioEditCoordinate =
+  | "program-frame"
+  | "source-frame"
+  | "canvas-pixel"
+  | "normalized-progress";
+
+export type StudioSnapTarget = "frame" | "semantic-anchor" | "item-edge";
+
 /** A timeline affordance is present only when its source write is explicit. */
 export type StudioEditHandle = {
   readonly id: string;
   readonly operation: StudioEditOperation;
   readonly enabled: boolean;
+  /** Coordinate space in which the central gesture resolver measures intent. */
+  readonly coordinate?: StudioEditCoordinate;
+  /** Snap policy is data, not a timeline-wide guess. */
+  readonly snapTo?: readonly StudioSnapTarget[];
   readonly sources?: readonly StudioParameter["source"][];
   readonly disabledReason?: string;
 };
@@ -316,6 +330,8 @@ export type StudioAdapter = {
   readonly lane?: StudioLaneDescription;
   readonly inspector?: StudioInspectorDescription;
   readonly parameters?: readonly StudioParameterDeclaration[];
+  /** Operations this adapter explicitly understands for its entities. */
+  readonly editOperations?: readonly StudioEditOperation[];
   readonly project?: (context: StudioAdapterContext) => readonly StudioEntityDraft[];
 };
 
@@ -371,6 +387,7 @@ export type StudioLaneAttachment = {
   readonly interaction?: StudioInteraction;
   readonly inspector?: StudioInspectorDescription;
   readonly parameters?: readonly StudioParameterDeclaration[];
+  readonly editOperations?: readonly StudioEditOperation[];
 };
 
 export const readonlyInteraction: StudioInteraction = {

@@ -173,6 +173,12 @@ export type StudioSnapshot = {
     readonly path: string;
     readonly text: string;
   };
+  /** Visible Run provenance; Studio never invents a second execution source. */
+  readonly run: {
+    readonly path: string;
+    readonly targets: readonly string[];
+    readonly satisfactions: readonly { readonly output: string; readonly candidate: string }[];
+  };
   readonly script?: ScriptMap;
   readonly space: {
     readonly canvasWidth: number;

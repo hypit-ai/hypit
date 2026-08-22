@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { relative } from "node:path";
 
 import type { StudioArchive } from "./archive.js";
 import type { ServedFile } from "./compile.js";
@@ -76,6 +77,14 @@ export async function readStudioSession(input: {
       revision: input.revision,
       path: input.sourcePath ?? input.run.authorSource,
       text,
+      run: {
+        path: relative(input.workspaceRoot, input.run.runPath),
+        targets: input.run.targets,
+        satisfactions: input.run.run.graph.satisfactions.map((item) => ({
+          output: item.output,
+          candidate: item.candidate,
+        })),
+      },
       canvas: built.canvas,
       frameRate: built.frameRate,
       preview: { kind: "hyperframes", srcdoc: rendered },

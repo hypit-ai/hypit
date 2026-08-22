@@ -45,6 +45,10 @@ function rangeOf(error: unknown): Range | undefined {
     : undefined;
 }
 
+function conflict(error: unknown): boolean {
+  return error instanceof Error && /changed outside Studio|Source changed outside Studio/u.test(error.message);
+}
+
 export function studioPlugin(options: StudioPluginOptions): Plugin {
   let snapshot: StudioSnapshot | undefined;
   let failure: StudioFailure | undefined;
@@ -220,7 +224,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               response.statusCode = 202;
               response.end();
             } catch (error) {
-              json(response, 500, { error: error instanceof Error ? error.message : String(error) });
+              json(response, conflict(error) ? 409 : 500, { error: error instanceof Error ? error.message : String(error) });
             }
           })();
           return;
@@ -251,7 +255,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               json(response, 202, { revision: body.revision });
             } catch (error) {
               const message = error instanceof Error ? error.message : String(error);
-              json(response, message.includes("changed outside") ? 409 : 500, { error: message });
+              json(response, conflict(error) ? 409 : 500, { error: message });
             }
           })();
           return;

@@ -3,7 +3,7 @@ import { createCodePane } from "./code.js";
 import { setIcon } from "./icons.js";
 import { createHandle } from "./resize.js";
 import type { Highlight } from "./code.js";
-import { intentAtOffset, intentTones, liveRanges, spanAtOffset } from "./markers.js";
+import { intentAtOffset, spanAtOffset } from "./markers.js";
 import { clipAtOffset, createStore } from "./selection.js";
 import { createStage } from "./stage.js";
 import { writeSourceTransaction } from "./writeback.js";
@@ -190,16 +190,45 @@ function parameterGroups(parameters: readonly Clip["parameters"][number][]): rea
   type StudioParameterValue = Clip["parameters"][number];
   const groups = new Map<string, StudioParameterValue[]>();
   for (const parameter of parameters) {
-    const key = `${parameter.language}:${parameter.source.path}`;
+    const key = `${parameter.language}\u0000${parameter.source.path}`;
     const held = groups.get(key) ?? [];
     held.push(parameter);
     groups.set(key, held);
   }
   return [...groups].map(([key, values]) => {
-    const [language, ...path] = key.split(":");
-    const title = path.length === 0 ? language!.toUpperCase() : `${language!.toUpperCase()} · ${path.join(":")}`;
+    const [language, path = ""] = key.split("\u0000");
+    const title = path.length === 0 ? language!.toUpperCase() : `${language!.toUpperCase()} · ${path}`;
     return group(title, values.map(parameterControl), "parameter-group");
   });
+}
+
+const operationLabels: Readonly<Record<Clip["editHandles"][number]["operation"], string>> = {
+  move: "Move",
+  "trim-start": "Trim start",
+  "trim-end": "Trim end",
+  slip: "Slip",
+  split: "Split",
+  delete: "Delete",
+  duplicate: "Duplicate",
+  "canvas-transform": "Canvas transform",
+};
+
+function operationGroups(handles: readonly Clip["editHandles"][number][]): readonly HTMLElement[] {
+  if (handles.length === 0) return [];
+  return [group("Timeline operations", handles.map((handle) => {
+    const node = document.createElement("div");
+    node.className = `operation-row${handle.enabled ? " operation-enabled" : " operation-disabled"}`;
+    const label = document.createElement("span");
+    label.className = "operation-label";
+    label.textContent = operationLabels[handle.operation];
+    const state = document.createElement("strong");
+    state.className = "operation-state";
+    state.textContent = handle.enabled ? "Timeline" : "—";
+    node.title = handle.disabledReason
+      ?? (handle.enabled ? "按时间线把手操作，成功后会回写源文件。" : "当前实体没有可逆的 Studio 写回。" );
+    node.append(label, state);
+    return node;
+  }), "operation-group")];
 }
 
 let parameterWriteState: "" | "Saving" | "Saved" | "Failed" = "";
@@ -274,15 +303,19 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
     ]),
   ]);
   const run = track === undefined ? undefined : group("Run", [
+    property("Run", snapshot.run.path, "property-wide property-code"),
+    property("Target", snapshot.run.targets.join(", "), "property-wide property-code"),
     property("Output", track.provenance.output, "property-wide property-code"),
     ...(track.provenance.candidateId === undefined ? [] : [
       property("Candidate", track.provenance.candidateId, "property-wide property-code"),
     ]),
     property("Status", track.provenance.status),
-    property("Writeback", "Read-only"),
+    property("Writeback", "Run source · read-only"),
   ]);
+  const operations = operationGroups(clip.editHandles);
   const parameters = parameterGroups(clip.parameters);
-  inspector.replaceChildren(hero, placement, timing, ...parameters, ...(source === undefined ? [] : [source]), ...(run === undefined ? [] : [run]));
+  inspector.replaceChildren(hero, placement, timing, ...operations, ...parameters,
+    ...(source === undefined ? [] : [source]), ...(run === undefined ? [] : [run]));
 }
 
 function renderSemanticInspector(snapshot: StudioSnapshot, segmentId: string): void {
@@ -393,17 +426,10 @@ store.subscribe(({ snapshot, selection, playhead }) => {
     else renderInspector(snapshot, chosen?.id);
   }
 
-  // Every Selection the playhead is inside is outlined, not only what was
-  // clicked, and not only what has a clip. A Selection inside another Selection
-  // is still inside it, so the enclosing pair stays outlined while the inner one
-  // is — that nesting is the whole point of the authored intents.
-  const tones = intentTones(snapshot);
-  const live = store.clipsAt(playhead.frame);
-  const highlights: Highlight[] = liveRanges(snapshot, playhead.frame).map((selection) => ({
-    range: selection.range,
-    tone: "binding" as const,
-    depth: tones.get(selection.id) ?? 0,
-  }));
+  // Source outlines are selection affordances, not a second always-on syntax
+  // layer. Keeping every live Selection outlined made the code pane fill with
+  // yellow polygons while the author was merely playing the film.
+  const highlights: Highlight[] = [];
   // The element that placed what is on screen is outlined too. Knowing a cutaway
   // is running is half the answer; the other half is which line put it there.
   // Only what was chosen is outlined. What is merely drawn at this frame is
@@ -538,6 +564,16 @@ function applyFailure(failure: StudioFailure): void {
   status.textContent = "Compile failed";
   failureView.textContent = failure.error;
   if (failure.range !== undefined) code.highlight([{ range: failure.range, tone: "element" }], true);
+  // A parameter control changes immediately in the browser, but the source
+  // remains the only truth. If recompilation rejects the transaction, rebuild
+  // the Inspector from the last accepted snapshot instead of leaving a false
+  // value visible in the field.
+  const current = store.current();
+  if (current === undefined) return;
+  if (current.selection.kind === "clip") renderInspector(current.snapshot, current.selection.clipId);
+  else if (current.selection.kind === "semantic-segment") renderSemanticInspector(current.snapshot, current.selection.segmentId);
+  else if (current.selection.kind === "semantic-selection") renderSemanticSelectionInspector(current.snapshot, current.selection.selectionId);
+  else if (current.selection.kind === "semantic-moment") renderSemanticMomentInspector(current.snapshot, current.selection.momentId);
 }
 
 const response = await fetch("/__studio/session");

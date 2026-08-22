@@ -25,6 +25,7 @@ export type RunCompilation = {
 };
 
 export type RunPlan = {
+  readonly runPath: string;
   readonly authorSource: string;
   /** The observed Author graph used by this exact Run compilation. */
   readonly source: CompiledSource;
@@ -65,6 +66,7 @@ export async function loadStudioRun(input: {
   const source = await observedCompiledSource(compiled.author, observer.observations());
   const targets = compiled.run.graph.targets.map((target) => target.output);
   return {
+    runPath: input.run,
     authorSource: compiled.authorSource,
     source,
     run: compiled.run as RunCompilation,
