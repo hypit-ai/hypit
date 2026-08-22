@@ -5,7 +5,6 @@ import {
   sealVisualTrack,
 } from "@hypit/composition";
 import type { AudioClip, AudioTrack, VisualTrack } from "@hypit/composition";
-import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import {
   assertProgramSpaceIdentity,
   programFrameSampleBoundary,
@@ -20,15 +19,7 @@ import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace } from "@hypit/spatial";
 import { assertSpatialPath } from "@hypit/spatial";
 import type { SpatialPath } from "@hypit/spatial";
-import {
-  locateMomentOccurrences,
-  locateSelectionOccurrences,
-  projectMomentWindows,
-  projectProgramWindow,
-  projectSegmentWindow,
-  projectSelectionWindows,
-} from "@hypit/temporal";
-import type { ProjectedOccurrence, TemporalDuration, TemporalPointExpression } from "@hypit/temporal";
+import type { ProjectedWindow } from "@hypit/temporal";
 
 import {
   assertMediaIdentity,
@@ -91,22 +82,6 @@ function finite(value: number, label: string): void {
   assert(Number.isFinite(value), `${label} must be finite.`);
 }
 
-function assertDuration(value: TemporalDuration, label: string, signed: boolean): void {
-  if (value.unit === "seconds") {
-    assert(Number.isSafeInteger(value.numerator) && (signed || value.numerator >= 0)
-      && Number.isSafeInteger(value.denominator) && value.denominator > 0, `${label} is invalid.`);
-  } else {
-    assert(Number.isSafeInteger(value.value) && (signed || value.value >= 0), `${label} is invalid.`);
-  }
-}
-
-function assertPoint(value: TemporalPointExpression, label: string): void {
-  assert(["program.start", "program.end", "selection.start", "selection.end", "segment.start", "segment.end", "moment.cue", "absolute"].includes(value.ref),
-    `${label}.ref is invalid.`);
-  if (value.ref === "absolute") assertDuration(value.at, `${label}.at`, false);
-  else if (value.offset !== undefined) assertDuration(value.offset, `${label}.offset`, true);
-}
-
 function assertSound(value: MediaSoundSource, label: string): void {
   assert(value.artifact.kind === "blob" && isDigest(value.artifact.digest)
     && value.artifact.mediaType.startsWith("audio/")
@@ -116,9 +91,6 @@ function assertSound(value: MediaSoundSource, label: string): void {
 
 export function assertMediaItemSpec(value: MediaItemSpec): void {
   assertMediaIdentity(value.id, "MediaItemSpec.id");
-  assertPoint(value.projection.start, "MediaItemSpec.projection.start");
-  assertPoint(value.projection.end, "MediaItemSpec.projection.end");
-  assert(value.expansion.kind === "one" || value.expansion.kind === "each", "MediaItemSpec.expansion is invalid.");
   assertMediaFramePresentation(value.presentation, "MediaItemSpec.presentation");
   assert(Number.isSafeInteger(value.stackingOrder), "MediaItemSpec.stackingOrder must be an integer.");
   if (value.sourceAudio !== undefined) {
@@ -160,7 +132,7 @@ function realizedItems(
   frame: MediaItemProgram["frame"],
   spec: MediaItemSpec,
   sounds: MediaSoundSet,
-  occurrences: readonly ProjectedOccurrence[],
+  window: ProjectedWindow,
 ): MediaTrackSet {
   assertMediaTrackSet(set);
   assertMediaTrackHeader(header);
@@ -181,31 +153,27 @@ function realizedItems(
     assert(selected?.kind === "sample" && selected.source.kind === "timed" && selected.source.audio !== undefined,
       `Media Item ${spec.id} source-audio layer is absent or has no normalized audio.`);
   }
-  const additions = occurrences.map((occurrence) => {
-    const duration = occurrence.span.endFrameExclusive - occurrence.span.startFrame;
-    assertMediaLifecycleMotion(spec.motion, duration, `Media Item ${spec.id} motion`);
-    const motion = resolveMediaLifecycleMotion(spec.motion, frame, canvas);
-    return {
-      id: occurrence.id,
-      span: { ...occurrence.span },
+  const duration = window.span.endFrameExclusive - window.span.startFrame;
+  assertMediaLifecycleMotion(spec.motion, duration, `Media Item ${spec.id} motion`);
+  const motion = resolveMediaLifecycleMotion(spec.motion, frame, canvas);
+  const addition = {
+      id: window.id,
+      span: { ...window.span },
       frame: { ...frame },
       presentation: structuredClone(spec.presentation),
       layers: structuredClone(layers.layers),
       motion,
-      stacking: { order: spec.stackingOrder, tieBreak: `${header.id}:${occurrence.id}` },
+      stacking: { order: spec.stackingOrder, tieBreak: `${header.id}:${window.id}` },
       ...(spec.sourceAudio === undefined ? {} : { sourceAudio: { ...spec.sourceAudio } }),
       sounds: structuredClone(sounds.sounds),
     } satisfies MediaItemProgram;
-  });
   const ids = new Set([...set.items.map((item) => item.id), ...set.sequences.map((item) => item.id)]);
-  for (const item of additions) {
-    assert(!ids.has(item.id), `Media Track ${header.id} already contains ${item.id}.`);
-    ids.add(item.id);
-  }
-  return { ...set, items: [...set.items, ...additions] };
+  assert(!ids.has(addition.id), `Media Track ${header.id} already contains ${addition.id}.`);
+  return { ...set, items: [...set.items, addition] };
 }
 
-export function appendProgramMediaItem(
+/** Component entry point: timing has already been projected by @hypit/temporal. */
+export function appendProjectedMediaItem(
   set: MediaTrackSet,
   header: MediaTrackHeader,
   semantic: SemanticTrack,
@@ -214,66 +182,10 @@ export function appendProgramMediaItem(
   frame: MediaItemProgram["frame"],
   spec: MediaItemSpec,
   sounds: MediaSoundSet,
+  window: ProjectedWindow,
 ): MediaTrackSet {
   const space = projectSemanticProgramSpace(semantic);
-  assert(spec.expansion.kind === "one", `Program Media Item ${spec.id} must use one occurrence.`);
-  return realizedItems(set, header, space, canvas, layers, frame, spec, sounds, [projectProgramWindow({
-    itemId: spec.id,
-    semantic,
-    projection: spec.projection,
-  })]);
-}
-
-export function appendSelectionMediaItem(
-  set: MediaTrackSet,
-  header: MediaTrackHeader,
-  semantic: SemanticTrack,
-  canvas: CanvasSpace,
-  layers: MediaLayerSet,
-  frame: MediaItemProgram["frame"],
-  selection: NarrativeSelectionRef,
-  spec: MediaItemSpec,
-  sounds: MediaSoundSet,
-): MediaTrackSet {
-  const space = projectSemanticProgramSpace(semantic);
-  return realizedItems(set, header, space, canvas, layers, frame, spec, sounds, projectSelectionWindows({
-    itemId: spec.id, semantic, selection, expansion: spec.expansion, projection: spec.projection,
-  }));
-}
-
-export function appendSegmentMediaItem(
-  set: MediaTrackSet,
-  header: MediaTrackHeader,
-  semantic: SemanticTrack,
-  canvas: CanvasSpace,
-  layers: MediaLayerSet,
-  frame: MediaItemProgram["frame"],
-  segment: NarrativeExcerpt,
-  spec: MediaItemSpec,
-  sounds: MediaSoundSet,
-): MediaTrackSet {
-  const space = projectSemanticProgramSpace(semantic);
-  assert(spec.expansion.kind === "one", `Segment Media Item ${spec.id} must use one occurrence.`);
-  return realizedItems(set, header, space, canvas, layers, frame, spec, sounds, [projectSegmentWindow({
-    itemId: spec.id, semantic, segment, projection: spec.projection,
-  })]);
-}
-
-export function appendMomentMediaItem(
-  set: MediaTrackSet,
-  header: MediaTrackHeader,
-  semantic: SemanticTrack,
-  canvas: CanvasSpace,
-  layers: MediaLayerSet,
-  frame: MediaItemProgram["frame"],
-  moment: NarrativeMomentRef,
-  spec: MediaItemSpec,
-  sounds: MediaSoundSet,
-): MediaTrackSet {
-  const space = projectSemanticProgramSpace(semantic);
-  return realizedItems(set, header, space, canvas, layers, frame, spec, sounds, projectMomentWindows({
-    itemId: spec.id, semantic, moment, expansion: spec.expansion, projection: spec.projection,
-  }));
+  return realizedItems(set, header, space, canvas, layers, frame, spec, sounds, window);
 }
 
 function assertSampleLayerForSpace(layer: MediaSampleLayerProgram, space: ProgramSpace, label: string): void {
@@ -314,7 +226,7 @@ function assertItem(item: MediaItemProgram, space: ProgramSpace, label: string):
   assert(!item.sounds.some((sound) => sound.trigger.kind === "handoff"), `${label} owns a Handoff sound.`);
 }
 
-export function appendMediaSequence(
+function appendMediaSequenceAtFrame(
   set: MediaTrackSet,
   header: MediaTrackHeader,
   space: ProgramSpace,
@@ -335,12 +247,7 @@ export function appendMediaSequence(
   return { ...set, sequences: [...set.sequences, sequence] };
 }
 
-function exactlyOneTerminalFrame(values: readonly number[], label: string): number {
-  assert(values.length === 1, `${label} requires exactly one occurrence; received ${values.length}.`);
-  return values[0]!;
-}
-
-export function appendMediaSequenceUntilProgramEnd(
+export function appendMediaSequenceAtWindow(
   set: MediaTrackSet,
   header: MediaTrackHeader,
   semantic: SemanticTrack,
@@ -349,49 +256,12 @@ export function appendMediaSequenceUntilProgramEnd(
   frame: MediaSequenceProgram["frame"],
   spec: MediaSequenceSpec,
   sounds: MediaSoundSet,
+  window: ProjectedWindow,
+  boundary: "start" | "end" = "end",
 ): MediaTrackSet {
   const space = projectSemanticProgramSpace(semantic);
-  return appendMediaSequence(set, header, space, canvas, members, frame, spec, sounds, programSpaceFrameCount(space));
-}
-
-export function appendMediaSequenceUntilMoment(
-  set: MediaTrackSet,
-  header: MediaTrackHeader,
-  semantic: SemanticTrack,
-  canvas: CanvasSpace,
-  members: MediaSequenceMemberSet,
-  frame: MediaSequenceProgram["frame"],
-  spec: MediaSequenceSpec,
-  sounds: MediaSoundSet,
-  moment: NarrativeMomentRef,
-): MediaTrackSet {
-  const space = projectSemanticProgramSpace(semantic);
-  const terminalFrame = exactlyOneTerminalFrame(
-    locateMomentOccurrences(semantic, moment).map((occurrence) => occurrence.cue.frame),
-    `Media Sequence ${spec.id} terminal Moment`,
-  );
-  return appendMediaSequence(set, header, space, canvas, members, frame, spec, sounds, terminalFrame);
-}
-
-export function appendMediaSequenceUntilSelection(
-  set: MediaTrackSet,
-  header: MediaTrackHeader,
-  semantic: SemanticTrack,
-  canvas: CanvasSpace,
-  members: MediaSequenceMemberSet,
-  frame: MediaSequenceProgram["frame"],
-  spec: MediaSequenceSpec,
-  sounds: MediaSoundSet,
-  selection: NarrativeSelectionRef,
-  boundary: "start" | "end",
-): MediaTrackSet {
-  const space = projectSemanticProgramSpace(semantic);
-  const terminalFrame = exactlyOneTerminalFrame(
-    locateSelectionOccurrences(semantic, selection).map((occurrence) =>
-      boundary === "start" ? occurrence.start.frame : occurrence.end.frame),
-    `Media Sequence ${spec.id} terminal Selection`,
-  );
-  return appendMediaSequence(set, header, space, canvas, members, frame, spec, sounds, terminalFrame);
+  const terminalFrame = boundary === "start" ? window.span.startFrame : window.span.endFrameExclusive;
+  return appendMediaSequenceAtFrame(set, header, space, canvas, members, frame, spec, sounds, terminalFrame);
 }
 
 function assertSequence(sequence: MediaSequenceProgram, space: ProgramSpace, label: string): void {

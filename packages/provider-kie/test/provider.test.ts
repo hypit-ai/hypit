@@ -62,7 +62,7 @@ test("all KIE capabilities share one asynchronous task engine and differ only by
     defaultConcurrency: 8,
     laneConcurrency: { "seedance-2-mini": 4 },
   });
-  assert.equal(provider.offers.length, 13);
+  assert.equal(provider.offers.length, 12);
   const registry = new EndpointRegistry();
   await provider.install(registry);
   const seed = need(sealSeedanceRequest("seedance-2-mini", {

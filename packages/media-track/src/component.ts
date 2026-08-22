@@ -1,11 +1,11 @@
 import type { ComponentPackage, ProducerHandlerContext } from "@hypit/component-kit";
 import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
-import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef, StoredValue } from "@hypit/protocol";
 import { projectSemanticProgramSpace } from "@hypit/semantic-track";
 import type { SemanticTrack } from "@hypit/semantic-track";
 import type { CanvasSpace, ContentFit, IntrinsicExtent, SpatialFrame, SpatialPath } from "@hypit/spatial";
+import type { TemporalWindow } from "@hypit/temporal";
 
 import {
   appendMediaPaintLayer,
@@ -15,10 +15,9 @@ import {
   createMediaLayerSet,
 } from "./layers.js";
 import { mediaTrackProducers, mediaTrackTypes } from "./manifest.js";
-import { appendMediaSequenceUntilMoment, appendMediaSequenceUntilProgramEnd, appendMediaSequenceUntilSelection, appendMomentMediaItem, appendProgramMediaItem, appendSegmentMediaItem, appendSelectionMediaItem, bindMediaItemClipPath, bindMediaSequenceClipPath, assertMediaTrackProgram, createMediaTrackSet, finalizeMediaTrack, projectMediaAudioTrack, projectMediaVisualTrack } from "./program.js";
+import { appendMediaSequenceAtWindow, appendProjectedMediaItem, bindMediaItemClipPath, bindMediaSequenceClipPath, assertMediaTrackProgram, createMediaTrackSet, finalizeMediaTrack, projectMediaAudioTrack, projectMediaVisualTrack } from "./program.js";
 import {
-  appendMediaSequenceMomentMember,
-  appendMediaSequenceSelectionMember,
+  appendMediaSequenceProjectedMember,
   createMediaSequenceMemberSet,
 } from "./sequence.js";
 import {
@@ -60,6 +59,7 @@ function itemInputs(inputs: ProducerHandlerContext["inputs"]) {
     frame: inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
     spec: inline<MediaItemSpec>(inputs.spec?.value, "MediaItemSpec"),
     sounds: inline<MediaSoundSet>(inputs.sounds?.value, "MediaSoundSet"),
+    window: inline<import("@hypit/temporal").TemporalWindow>(inputs.window?.value, "TemporalWindow"),
   };
 }
 
@@ -68,7 +68,7 @@ function memberInputs(inputs: ProducerHandlerContext["inputs"]) {
     members: inline<MediaSequenceMemberSet>(inputs.members?.value, "MediaSequenceMemberSet"),
     layers: inline<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"),
     spec: inline<MediaSequenceMemberSpec>(inputs.spec?.value, "MediaSequenceMemberSpec"),
-    semantic: inline<SemanticTrack>(inputs.semantic?.value, "SemanticTrack"),
+    window: inline<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
   };
 }
 
@@ -82,6 +82,7 @@ function sequenceInputs(inputs: ProducerHandlerContext["inputs"]) {
     frame: inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
     spec: inline<MediaSequenceSpec>(inputs.spec?.value, "MediaSequenceSpec"),
     sounds: inline<MediaSoundSet>(inputs.sounds?.value, "MediaSoundSet"),
+    window: inline<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
   };
 }
 
@@ -112,24 +113,9 @@ export const mediaTrackComponent = {
       inline<MediaSoundSpec>(inputs.spec?.value, "MediaSoundSpec"),
     )) }, needs: {} }) },
     { producer: mediaTrackProducers.createSet, handler: () => ({ outputs: { set: output(createMediaTrackSet()) }, needs: {} }) },
-    { producer: mediaTrackProducers.appendProgramItem, handler: ({ inputs }) => {
+    { producer: mediaTrackProducers.appendItem, handler: ({ inputs }) => {
       const value = itemInputs(inputs);
-      return { outputs: { set: output(appendProgramMediaItem(value.set, value.header, value.semantic, value.canvas, value.layers, value.frame, value.spec, value.sounds)) }, needs: {} };
-    } },
-    { producer: mediaTrackProducers.appendSelectionItem, handler: ({ inputs }) => {
-      const value = itemInputs(inputs);
-      return { outputs: { set: output(appendSelectionMediaItem(value.set, value.header, value.semantic, value.canvas, value.layers, value.frame,
-        inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelectionRef"), value.spec, value.sounds)) }, needs: {} };
-    } },
-    { producer: mediaTrackProducers.appendSegmentItem, handler: ({ inputs }) => {
-      const value = itemInputs(inputs);
-      return { outputs: { set: output(appendSegmentMediaItem(value.set, value.header, value.semantic, value.canvas, value.layers, value.frame,
-        inline<NarrativeExcerpt>(inputs.segment?.value, "NarrativeExcerpt"), value.spec, value.sounds)) }, needs: {} };
-    } },
-    { producer: mediaTrackProducers.appendMomentItem, handler: ({ inputs }) => {
-      const value = itemInputs(inputs);
-      return { outputs: { set: output(appendMomentMediaItem(value.set, value.header, value.semantic, value.canvas, value.layers, value.frame,
-        inline<NarrativeMomentRef>(inputs.moment?.value, "NarrativeMomentRef"), value.spec, value.sounds)) }, needs: {} };
+      return { outputs: { set: output(appendProjectedMediaItem(value.set, value.header, value.semantic, value.canvas, value.layers, value.frame, value.spec, value.sounds, value.window)) }, needs: {} };
     } },
     { producer: mediaTrackProducers.bindItemClipPath, handler: ({ inputs }) => ({ outputs: { spec: output(bindMediaItemClipPath(
       inline<MediaItemSpec>(inputs.spec?.value, "MediaItemSpec"),
@@ -140,52 +126,34 @@ export const mediaTrackComponent = {
       inline<SpatialPath>(inputs.path?.value, "SpatialPath"),
     )) }, needs: {} }) },
     { producer: mediaTrackProducers.createMembers, handler: () => ({ outputs: { members: output(createMediaSequenceMemberSet()) }, needs: {} }) },
-    { producer: mediaTrackProducers.appendMomentMember, handler: ({ inputs }) => {
+    { producer: mediaTrackProducers.appendMember, handler: ({ inputs }) => {
       const value = memberInputs(inputs);
-      return { outputs: { members: output(appendMediaSequenceMomentMember(
-        value.members, value.layers, value.spec, value.semantic,
-        inline<NarrativeMomentRef>(inputs.moment?.value, "NarrativeMomentRef"),
-      )) }, needs: {} };
-    } },
-    { producer: mediaTrackProducers.appendSelectionStartMember, handler: ({ inputs }) => {
-      const value = memberInputs(inputs);
-      return { outputs: { members: output(appendMediaSequenceSelectionMember(
-        value.members, value.layers, value.spec, value.semantic,
-        inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelectionRef"), "start",
-      )) }, needs: {} };
-    } },
-    { producer: mediaTrackProducers.appendSelectionEndMember, handler: ({ inputs }) => {
-      const value = memberInputs(inputs);
-      return { outputs: { members: output(appendMediaSequenceSelectionMember(
-        value.members, value.layers, value.spec, value.semantic,
-        inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelectionRef"), "end",
+      return { outputs: { members: output(appendMediaSequenceProjectedMember(
+        value.members, value.layers, value.spec, value.window,
       )) }, needs: {} };
     } },
     { producer: mediaTrackProducers.appendSequenceProgramEnd, handler: ({ inputs }) => {
       const value = sequenceInputs(inputs);
-      return { outputs: { set: output(appendMediaSequenceUntilProgramEnd(
-        value.set, value.header, value.semantic, value.canvas, value.members, value.frame, value.spec, value.sounds,
+      return { outputs: { set: output(appendMediaSequenceAtWindow(
+        value.set, value.header, value.semantic, value.canvas, value.members, value.frame, value.spec, value.sounds, value.window,
       )) }, needs: {} };
     } },
     { producer: mediaTrackProducers.appendSequenceUntilMoment, handler: ({ inputs }) => {
       const value = sequenceInputs(inputs);
-      return { outputs: { set: output(appendMediaSequenceUntilMoment(
-        value.set, value.header, value.semantic, value.canvas, value.members, value.frame, value.spec, value.sounds,
-        inline<NarrativeMomentRef>(inputs.moment?.value, "NarrativeMomentRef"),
+      return { outputs: { set: output(appendMediaSequenceAtWindow(
+        value.set, value.header, value.semantic, value.canvas, value.members, value.frame, value.spec, value.sounds, value.window, "start",
       )) }, needs: {} };
     } },
     { producer: mediaTrackProducers.appendSequenceUntilSelectionStart, handler: ({ inputs }) => {
       const value = sequenceInputs(inputs);
-      return { outputs: { set: output(appendMediaSequenceUntilSelection(
-        value.set, value.header, value.semantic, value.canvas, value.members, value.frame, value.spec, value.sounds,
-        inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelectionRef"), "start",
+      return { outputs: { set: output(appendMediaSequenceAtWindow(
+        value.set, value.header, value.semantic, value.canvas, value.members, value.frame, value.spec, value.sounds, value.window, "start",
       )) }, needs: {} };
     } },
     { producer: mediaTrackProducers.appendSequenceUntilSelectionEnd, handler: ({ inputs }) => {
       const value = sequenceInputs(inputs);
-      return { outputs: { set: output(appendMediaSequenceUntilSelection(
-        value.set, value.header, value.semantic, value.canvas, value.members, value.frame, value.spec, value.sounds,
-        inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelectionRef"), "end",
+      return { outputs: { set: output(appendMediaSequenceAtWindow(
+        value.set, value.header, value.semantic, value.canvas, value.members, value.frame, value.spec, value.sounds, value.window, "start",
       )) }, needs: {} };
     } },
     { producer: mediaTrackProducers.finalize, handler: ({ inputs }) => ({ outputs: { program: output(finalizeMediaTrack(

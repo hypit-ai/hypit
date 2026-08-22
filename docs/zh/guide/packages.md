@@ -73,7 +73,6 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/seedance              Seedance model family + author Surface
 @hypit/seedance-kits         数据化的 Seedance 语义 Text Template
 @hypit/minimax-h3            MiniMax H3 model family
-@hypit/gemini-omni           Gemini Omni model family
 @hypit/grok-imagine          Grok Imagine model family
 @hypit/gpt-image             GPT Image model family
 @hypit/nano-banana           Nano Banana model family
@@ -86,8 +85,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/semantic-track        continuous semantic program skeleton
 @hypit/speech-track          ordered speech-take compilation
 @hypit/whisperx              WhisperX component
-@hypit/caption               caption planning and timing
-@hypit/caption-gemini        Gemini caption planner
+@hypit/caption               Script-owned CaptionDocument、Selection 投影与定时
 @hypit/caption-fine          无字段细粒度字幕 Track family
 @hypit/media-track           统一的 Media Item/Sequence Track
 @hypit/typography-track      typography overlay Track
@@ -113,7 +111,6 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/provider-kie                  KIE 生成与去背景
 @hypit/provider-media-local          local ffprobe/ffmpeg
 @hypit/provider-whisperx-local       local WhisperX service
-@hypit/provider-google-vertex        Vertex Gemini caption planning
 @hypit/provider-hyperframes-local    local Chrome rendering
 @hypit/provider-hyperframes-aws-lambda asynchronous distributed rendering
 @hypit/provider-image-opencv-local   本地 OpenCV 光栅执行
@@ -145,6 +142,8 @@ Frontend；不存在一个认识全部语法的中央解析器。
 ```text
 @hypit/cli                 generic command engine (requires explicit Distribution)
 @hypit/video-cli           video command application (selects Markup compiler, no built-in author packages)
+@hypit/studio-adapter      stable Studio companion ABI and presentation DTOs
+@hypit/studio-video-adapters official video-domain Studio interpretation
 @hypit/studio              development preview for a Run, never runs a Provider
 ```
 
@@ -201,7 +200,7 @@ packages/example/
 
 每个可安装的包都会导出一个被动的 contribution 描述符 —— 它是对自身所提供内容的清单，而不是一份权限授予。具体示例参见 [添加作者包](./author-packages.md) 和 [添加 Provider](./providers.md)。
 
-## 五种包 facet
+## 包 facet
 
 一个物理包可以暴露多个可独立 activate 的 facet：
 
@@ -212,6 +211,7 @@ packages/example/
 | `compute` | 确定性 Producer、Type Validator | 纯计算 | 编译器 Host |
 | `endpoint` | 具备特权的外部能力 | 网络、文件系统、进程、凭据 | Runtime Profile |
 | `infrastructure` | Scheduler、Worker 与 Store 实现 | 持久化、调度 | Runtime Profile |
+| `application` | Studio adapter 等特定应用解释 | 仅该应用的 UI/操作 | 显式应用 profile |
 
 源码中的 `<import>` 只会 activate author facet。它绝不授予网络、文件系统、进程、凭据或队列权限。
 
@@ -224,6 +224,7 @@ Hypit 不维护中央包注册表，也不维护自定义包锁。npm 或 pnpm �
 |---|---|
 | Source import | Frontend、Surface、Producer、Validator |
 | Runtime Profile 的 `use` | Runtime Host、基础设施与 Provider Endpoint |
+| Studio Profile 的 `adapterPackages` | 当前 Studio 会话显式选择的项目 companion adapter |
 
 Source import 绝不授予网络、文件系统、进程、凭据或队列权限；这些权限只属于 Runtime
 Profile 显式选择的包。
@@ -250,3 +251,7 @@ Infrastructure Adapter 也不会互相冲突。
 
 加载器不会下载包，也不会扫描无关依赖来寻找插件。它只加载 Source 或 Runtime Profile
 明确选择的包，以及这些包 Manifest 精确声明的 Module 依赖。
+
+作者项目拥有独立目录以及自己的 Git/workspace 边界。它的显式项目包从项目自己的
+`packages/` 或安装结果解析；当前工具 Distribution 独占并提供 `@hypit/*` 命名空间。项目
+companion 包使用项目自己的 npm scope，项目及其 package glob 都不会加入 Hypit workspace。

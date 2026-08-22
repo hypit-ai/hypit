@@ -4,6 +4,7 @@ import type { Candidate } from "@hypit/protocol";
 import type { CompiledSource } from "./compile.js";
 import type { Placement } from "./observe.js";
 import type { RunPlan } from "./run.js";
+import type { StudioAdapterRegistry } from "./studio-registry.js";
 import {
   lastPlacementTag,
   outputFor,
@@ -81,7 +82,11 @@ function filmForTarget(source: CompiledSource, targetRef: string): {
  * Video-domain policy is centralized here, inside Studio. Core still only
  * supplies the compiled graph and its exact BuildPlan/Need closure.
  */
-export function inspectStudioRun(source: CompiledSource, base: RunPlan): StudioInspection {
+export function inspectStudioRun(
+  registry: StudioAdapterRegistry,
+  source: CompiledSource,
+  base: RunPlan,
+): StudioInspection {
   const issues: string[] = [];
   if (base.targets.length === 0) issues.push("the Run Source has no target; Studio requires Film or Render");
 
@@ -134,24 +139,24 @@ export function inspectStudioRun(source: CompiledSource, base: RunPlan): StudioI
     ? [outputFor(source, ref)!.ref] : []);
   if (semanticTakeRefs.length === 0) issues.push("Film has no traceable SemanticTake / Speech Track chain");
 
-  const captionPlanRefs = unique(filmTrackRefs.flatMap((ref) =>
-    tracedRealizations(source, ref).map((dependency) => dependency.ref)));
+  const realizationRefs = unique(filmTrackRefs.flatMap((ref) =>
+    tracedRealizations(registry, source, ref).map((dependency) => dependency.ref)));
 
   const adapterRealizationRefs = unique(filmTrackRefs.flatMap((ref) =>
-    tracedStudioRealizations(source, ref)));
+    tracedStudioRealizations(registry, source, ref)));
 
   const projectionRefs = unique([
     ...filmTrackRefs,
     ...(semanticOutput?.type === "SemanticTrack" ? [semanticOutput.ref] : []),
     ...semanticTakeRefs,
-    ...captionPlanRefs,
+    ...realizationRefs,
     ...adapterRealizationRefs,
   ]);
   const projections: StudioProjection[] = [];
   const derived: Omit<StudioProjection, "candidatePolicy">[] = [];
   for (const ref of projectionRefs) {
     const output = outputFor(source, ref);
-    const role = roleFor(source, ref);
+    const role = roleFor(registry, source, ref);
     if (output === undefined || role === undefined) continue;
     const candidateId = satisfactions.get(ref);
     const candidate = candidateId === undefined ? undefined : candidates.get(candidateId);

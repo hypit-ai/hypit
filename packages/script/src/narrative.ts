@@ -1,53 +1,10 @@
 import { canonicalize } from "@hypit/protocol";
 import type { CanonicalValue } from "@hypit/protocol";
-import type {
-  CaptionCorrespondence,
-  CaptionDisplayAtom,
-  CaptionDisplaySequence,
-  CaptionDisplayWord,
-  CaptionDisplayWordSubset,
-} from "@hypit/narrative";
+import type { CaptionAlignmentUnit, CaptionDocument, CaptionDisplayWord } from "@hypit/narrative";
 import { sealText } from "@hypit/text";
 
 import type { ParsedCaptionRegion, ParsedNarrative } from "./types.js";
-
-const LEXICAL_WORD =
-  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]\p{M}*|[\p{L}\p{M}\p{N}]+(?:['’.-][\p{L}\p{M}\p{N}]+)*/gu;
-const DISPLAY_SURFACE = /\S+/gu;
-
-function lexicalCount(value: string): number {
-  LEXICAL_WORD.lastIndex = 0;
-  let count = 0;
-  while (LEXICAL_WORD.exec(value)) count += 1;
-  return count;
-}
-
-/**
- * The official Script reader is English-first: authored whitespace is the primary display-word
- * boundary and punctuation inside a surface is preserved. A punctuation-only surface is attached
- * to its left neighbour; a leading one is attached to the first following word. This is lexical
- * ownership, not semantic interpretation.
- */
-function displayWords(value: string): string[] {
-  const chunks: string[] = [];
-  DISPLAY_SURFACE.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = DISPLAY_SURFACE.exec(value))) chunks.push(match[0]);
-  const result: string[] = [];
-  let leading = "";
-  for (const chunk of chunks) {
-    if (lexicalCount(chunk) > 0) {
-      result.push(leading ? `${leading} ${chunk}` : chunk);
-      leading = "";
-    } else if (result.length > 0) {
-      result[result.length - 1] = `${result.at(-1)!} ${chunk}`;
-    } else {
-      leading = leading ? `${leading} ${chunk}` : chunk;
-    }
-  }
-  if (leading) result.push(leading);
-  return result;
-}
+import { cleanProjection, displayWordSurfaces, joinProjection, lexicalCount } from "./lexical.js";
 
 function turnForRegion(parsed: ParsedNarrative, region: ParsedCaptionRegion): ParsedNarrative["turns"][number] {
   const turn = parsed.turns.find((candidate) =>
@@ -58,158 +15,105 @@ function turnForRegion(parsed: ParsedNarrative, region: ParsedCaptionRegion): Pa
   return turn;
 }
 
-function projectCaption(
-  parsed: ParsedNarrative,
-  id: string,
-): { readonly display: CaptionDisplaySequence; readonly correspondence: CaptionCorrespondence } {
-  const atoms: CaptionDisplayAtom[] = [];
+function projectCaption(parsed: ParsedNarrative, id: string): CaptionDocument {
+  const units: CaptionAlignmentUnit[] = [];
   const words: CaptionDisplayWord[] = [];
-  const correspondence: Array<{ atomId: string; sourceTokenIds: string[] }> = [];
   for (const region of parsed.captionProjection.regions) {
     if (region.kind === "hidden") continue;
     const turn = turnForRegion(parsed, region);
-    const surfaces = displayWords(region.display);
+    const surfaces = displayWordSurfaces(region.display);
     if (surfaces.length === 0) throw new Error(`Caption region ${region.id} contains no visible display surface`);
-    const groups = region.kind === "alias" ? [surfaces] : surfaces.map((surface) => [surface]);
+    // A Dual Text alias is one indivisible N:M correspondence unit. Ordinary prose gives one
+    // unit per display surface so the author can place cue/style boundaries between words.
+    const groups = region.kind === "alias"
+      ? [{ surfaces, indices: surfaces.map((_, index) => index) }]
+      : surfaces.map((surface, index) => ({ surfaces: [surface], indices: [index] }));
+    for (const mark of region.marks) {
+      if (!Number.isSafeInteger(mark.displayIndex) || mark.displayIndex < 0 || mark.displayIndex >= surfaces.length) {
+        throw new Error(`Caption region ${region.id} contains an attribute outside its display words`);
+      }
+    }
     let sourceCursor = region.startToken;
     for (const group of groups) {
-      const atomId = `${id}:atom:${atoms.length + 1}`;
-      const atomWordIds = group.map((surface, groupIndex) => {
-        const wordId = `${atomId}:word:${groupIndex + 1}`;
+      const unitId = `${id}:unit:${units.length + 1}`;
+      const unitWordIds = group.surfaces.map((surface, groupIndex) => {
+        const wordId = `${unitId}:word:${groupIndex + 1}`;
+        const attributes = region.marks.find((mark) => mark.displayIndex === group.indices[groupIndex])?.attributes ?? [];
         words.push({
           id: wordId,
-          atomId,
+          unitId,
           segmentId: region.segmentId,
           turnId: turn.id,
           ...(turn.role === undefined ? {} : { role: turn.role }),
           text: surface,
+          attributes,
         });
         return wordId;
       });
-      atoms.push({
-        id: atomId,
+      const sourceEnd = region.kind === "alias"
+        ? region.endTokenExclusive
+        : sourceCursor + group.surfaces.reduce((count, surface) => count + lexicalCount(surface), 0);
+      const sourceTokenIds = parsed.tokens.slice(sourceCursor, sourceEnd).map((token) => token.id);
+      if (sourceTokenIds.length === 0) throw new Error(`Caption Unit ${unitId} has no authored speech correspondence`);
+      units.push({
+        id: unitId,
         segmentId: region.segmentId,
         turnId: turn.id,
         ...(turn.role === undefined ? {} : { role: turn.role }),
-        wordIds: atomWordIds,
+        wordIds: unitWordIds,
+        sourceTokenIds,
       });
-      const sourceEnd = region.kind === "alias"
-        ? region.endTokenExclusive
-        : sourceCursor + group.reduce((count, surface) => count + lexicalCount(surface), 0);
-      const sourceTokenIds = parsed.tokens.slice(sourceCursor, sourceEnd).map((token) => token.id);
-      if (sourceTokenIds.length === 0) throw new Error(`Caption Atom ${atomId} has no authored speech correspondence`);
-      correspondence.push({ atomId, sourceTokenIds });
       sourceCursor = sourceEnd;
     }
     if (sourceCursor !== region.endTokenExclusive) {
       throw new Error(`Caption identity region ${region.id} does not structurally partition its authored speech`);
     }
   }
-  if (atoms.length === 0 || words.length === 0) throw new Error("Caption display contains no visible words");
-  return {
-    display: {
+  if (units.length === 0 || words.length === 0) throw new Error("Caption document contains no visible words");
 
-      id,
-      atoms,
-      words,
-    },
-    correspondence: {
-
-      displaySequenceId: id,
-      atoms: correspondence,
-    },
-  };
-}
-
-export function captionDisplaySequence(parsed: ParsedNarrative, id: string): CaptionDisplaySequence {
-  return projectCaption(parsed, id).display;
-}
-
-export function captionCorrespondence(parsed: ParsedNarrative, id: string): CaptionCorrespondence {
-  return projectCaption(parsed, id).correspondence;
-}
-
-/** Project one authored Selection into whole visible Atoms before public values lose source positions. */
-export function captionSelectionWordSubset(
-  parsed: ParsedNarrative,
-  sequence: CaptionDisplaySequence,
-  correspondence: CaptionCorrespondence,
-  selection: ParsedNarrative["selections"][number],
-): CaptionDisplayWordSubset {
-  const ranges = selection.occurrences.map((occurrence) => ({
-    start: occurrence.open.boundary.tokenIndex,
-    endExclusive: occurrence.close.boundary.tokenIndex,
-  }));
   const tokenIndex = new Map(parsed.tokens.map((token) => [token.id, token.index]));
-  const atomById = new Map(sequence.atoms.map((atom) => [atom.id, atom]));
-  const wordIds: string[] = [];
-  for (const mapping of correspondence.atoms) {
-    const indexes = mapping.sourceTokenIds.map((id) => tokenIndex.get(id));
-    if (indexes.some((index) => index === undefined)) throw new Error(`Caption Atom ${mapping.atomId} references an unknown speech token`);
-    const start = Math.min(...indexes as number[]);
-    const endExclusive = Math.max(...indexes as number[]) + 1;
-    const intersects = ranges.some((range) =>
-      start < range.endExclusive && endExclusive > range.start);
-    const contained = ranges.some((range) =>
-      start >= range.start && endExclusive <= range.endExclusive);
-    if (intersects && !contained) {
-      throw new Error(`Selection ${selection.id} owns only part of Caption Atom ${mapping.atomId}`);
+  const cueBreaks = parsed.captionProjection.breaks.map((breakPoint) => {
+    const next = units.findIndex((unit) => {
+      const indexes = unit.sourceTokenIds.map((tokenId) => tokenIndex.get(tokenId));
+      return indexes.every((index): index is number => index !== undefined)
+        && Math.min(...indexes) >= breakPoint.tokenIndex;
+    });
+    if (next <= 0 || next === -1) {
+      throw new Error("Caption Cue break must lie between two complete Alignment Units");
     }
-    if (contained) {
-      const atom = atomById.get(mapping.atomId);
-      if (atom === undefined) throw new Error(`Caption correspondence references unknown Atom ${mapping.atomId}`);
-      wordIds.push(...atom.wordIds);
+    const previous = units[next - 1]!;
+    const previousIndexes = previous.sourceTokenIds.map((tokenId) => tokenIndex.get(tokenId));
+    if (previousIndexes.some((index) => index === undefined)
+      || Math.max(...previousIndexes as number[]) + 1 !== breakPoint.tokenIndex) {
+      throw new Error("Caption Cue break cannot split an Alignment Unit");
     }
-  }
-  return {
-
-    id: selection.id,
-    sequenceId: sequence.id,
-    wordIds,
-  };
+    return { afterUnitId: previous.id };
+  });
+  return { id, units, words, cueBreaks };
 }
 
-export function captionDisplaySequenceValue(parsed: ParsedNarrative, id: string): CanonicalValue {
-  return canonicalize(captionDisplaySequence(parsed, id));
+export function captionDocument(parsed: ParsedNarrative, id: string): CaptionDocument {
+  return projectCaption(parsed, id);
 }
 
-export function captionCorrespondenceValue(parsed: ParsedNarrative, id: string): CanonicalValue {
-  return canonicalize(captionCorrespondence(parsed, id));
-}
-
-export function captionSelectionWordSubsetValue(
-  parsed: ParsedNarrative,
-  sequence: CaptionDisplaySequence,
-  correspondence: CaptionCorrespondence,
-  selection: ParsedNarrative["selections"][number],
-): CanonicalValue {
-  return canonicalize(captionSelectionWordSubset(parsed, sequence, correspondence, selection));
-}
-
-function cleanProjection(value: string): string {
-  return value
-    .replace(/\s+/gu, " ")
-    .replace(/\s+([,.;:!?])/gu, "$1")
-    .replace(/([([{])\s+/gu, "$1")
-    .replace(/\s+([)\]}])/gu, "$1")
-    .trim();
-}
-
-function joinProjection(parts: readonly string[]): string {
-  return cleanProjection(parts.filter((part) => part.trim()).join(" "));
+export function captionDocumentValue(parsed: ParsedNarrative, id: string): CanonicalValue {
+  return canonicalize(captionDocument(parsed, id));
 }
 
 function segmentSerializations(segment: ParsedNarrative["segments"][number]): {
   readonly dialogue: string;
   readonly speech: string;
 } {
-  const speechParts: string[] = [];
+  const speechTurns: string[] = [];
   const dialogue: string[] = [];
   let role: string | undefined;
   let turn: string[] = [];
   const flush = (): void => {
     const body = joinProjection(turn);
-    if (body) dialogue.push(role === undefined ? body : `${role}: ${body}`);
+    if (body) {
+      dialogue.push(role === undefined ? body : `${role}: ${body}`);
+      speechTurns.push(body);
+    }
     turn = [];
   };
   for (const atom of segment.atoms) {
@@ -218,67 +122,46 @@ function segmentSerializations(segment: ParsedNarrative["segments"][number]): {
       role = atom.label;
       continue;
     }
-    speechParts.push(atom.speech);
     turn.push(atom.speech);
   }
   flush();
-  return { dialogue: dialogue.join("\n"), speech: joinProjection(speechParts) };
+  return { dialogue: dialogue.join("\n"), speech: cleanProjection(speechTurns.join(" ")) };
 }
 
 export function narrativeSegmentExcerptValue(
   parsed: ParsedNarrative,
   segment: ParsedNarrative["segments"][number],
 ): CanonicalValue {
-  const content = {
-
+  return canonicalize({
     kind: "segment",
     id: segment.id,
     tokenStart: segment.tokenStart,
     tokenEndExclusive: segment.tokenEndExclusive,
-  } as const;
-  return canonicalize(content);
+  });
 }
 
-export function narrativeDialogueTextValue(
-  segment: ParsedNarrative["segments"][number],
-): CanonicalValue {
+export function narrativeDialogueTextValue(segment: ParsedNarrative["segments"][number]): CanonicalValue {
   return sealText(segmentSerializations(segment).dialogue) as unknown as CanonicalValue;
 }
 
-export function narrativeSpeechTextValue(
-  segment: ParsedNarrative["segments"][number],
-): CanonicalValue {
+export function narrativeSpeechTextValue(segment: ParsedNarrative["segments"][number]): CanonicalValue {
   return sealText(segmentSerializations(segment).speech) as unknown as CanonicalValue;
 }
 
 export function narrativeSelectionValue(selection: ParsedNarrative["selections"][number]): CanonicalValue {
-  const content = {
-
+  return canonicalize({
     id: selection.id,
-    occurrences: selection.occurrences.map((occurrence) => ({
-      occurrence: occurrence.occurrence,
-      startAnchorId: occurrence.open.boundary.anchorId,
-      endAnchorId: occurrence.close.boundary.anchorId,
-    })),
-  } as const;
-  return canonicalize(content);
+    startAnchorId: selection.open.boundary.anchorId,
+    endAnchorId: selection.close.boundary.anchorId,
+  });
 }
 
 export function narrativeMomentValue(moment: ParsedNarrative["moments"][number]): CanonicalValue {
-  const content = {
-
-    id: moment.id,
-    occurrences: moment.occurrences.map((occurrence) => ({
-      occurrence: occurrence.occurrence,
-      anchorId: occurrence.boundary.anchorId,
-    })),
-  } as const;
-  return canonicalize(content);
+  return canonicalize({ id: moment.id, anchorId: moment.boundary.anchorId });
 }
 
 export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
   return canonicalize({
-
     segments: parsed.segments.map((segment) => ({
       id: segment.id,
       startAnchorId: segment.startAnchorId,
@@ -303,21 +186,11 @@ export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
     })),
     selections: parsed.selections.map((selection) => ({
       id: selection.id,
-      occurrences: selection.occurrences.map((occurrence) => ({
-        occurrence: occurrence.occurrence,
-        startAnchorId: occurrence.open.boundary.anchorId,
-        endAnchorId: occurrence.close.boundary.anchorId,
-      })),
+      startAnchorId: selection.open.boundary.anchorId,
+      endAnchorId: selection.close.boundary.anchorId,
     })),
-    moments: parsed.moments.map((moment) => ({
-      id: moment.id,
-      occurrences: moment.occurrences.map((occurrence) => ({
-        occurrence: occurrence.occurrence,
-        anchorId: occurrence.boundary.anchorId,
-      })),
-    })),
+    moments: parsed.moments.map((moment) => ({ id: moment.id, anchorId: moment.boundary.anchorId })),
     semanticIndex: {
-
       anchors: parsed.semanticIndex.anchors.map((anchor) => ({
         id: anchor.id,
         kind: anchor.kind,

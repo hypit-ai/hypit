@@ -1,4 +1,4 @@
-import { applyCaptionMute, assertCaptionProgramForDisplay, assertTimedCaptionProjection } from "@hypit/caption";
+import { applyCaptionMute, assertCaptionProgramForDocument, assertTimedCaptionProjection } from "@hypit/caption";
 import type { CaptionProgram, TimedCaptionProjection } from "@hypit/caption";
 import { assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
 import type {
@@ -12,7 +12,7 @@ import type {
   VisualTextPaintLayer,
   VisualTrack,
 } from "@hypit/composition";
-import type { CaptionDisplayAtom, CaptionDisplaySequence } from "@hypit/narrative";
+import type { CaptionAlignmentUnit, CaptionDocument } from "@hypit/narrative";
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
 
@@ -545,10 +545,11 @@ function anchorTransform(parameters: FineCaptionParameters): string | undefined 
 }
 
 function cueElements(
-  atoms: readonly CaptionDisplayAtom[],
+  atoms: readonly CaptionAlignmentUnit[],
   atomFrames: ReadonlyMap<string, { readonly start: number; readonly end: number }>,
   parameters: FineCaptionParameters,
   wordText: ReadonlyMap<string, string>,
+  wordParameters: ReadonlyMap<string, FineCaptionParameters>,
   durationFrames: number,
 ): VisualElement[] {
   type UnorderedVisualElement = Omit<VisualBoxElement, "order"> | Omit<VisualTextElement, "order">;
@@ -752,13 +753,14 @@ function cueElements(
     for (const [wordIndex, wordId] of atom.wordIds.entries()) {
       const text = wordText.get(wordId);
       if (text === undefined) throw new Error(`Fine Caption Atom references unknown word ${wordId}`);
+      const wordStyle = wordParameters.get(wordId) ?? parameters;
       push({
         id: `${atomId}-base-${wordIndex + 1}`,
         parent: atomId,
         kind: "text",
         text,
-        style: glyphStyle(parameters, parameters.basePaint, parameters.underline),
-        ...glyphPaintFields(parameters.basePaint),
+        style: glyphStyle(wordStyle, wordStyle.basePaint, wordStyle.underline),
+        ...glyphPaintFields(wordStyle.basePaint),
         fonts,
         attributes: [{ name: "data-caption-word", value: wordId }],
       });
@@ -814,17 +816,25 @@ function cueElements(
 export function renderFineCaption(
   projection: TimedCaptionProjection,
   program: CaptionProgram,
-  display: CaptionDisplaySequence,
+  document: CaptionDocument,
   space: ProgramSpace,
 ): VisualTrack {
   assertTimedCaptionProjection(projection);
-  assertCaptionProgramForDisplay(program, display);
-  if (projection.displaySequenceId !== display.id) throw new Error("Fine Caption received another display sequence");
-  const visibleProjection = applyCaptionMute(projection, program, display);
+  assertCaptionProgramForDocument(program, document);
+  if (projection.documentId !== document.id) throw new Error("Fine Caption received another CaptionDocument");
+  const visibleProjection = applyCaptionMute(projection, program, document);
   assertProgramSpaceIdentity(space);
   const styles = new Map(program.styles.map((style) => [style.id, style]));
-  const wordText = new Map(display.words.map((word) => [word.id, word.text]));
-  const atomById = new Map(display.atoms.map((atom) => [atom.id, atom]));
+  const wordText = new Map(document.words.map((word) => [word.id, word.text]));
+  const wordParameters = new Map<string, FineCaptionParameters>();
+  for (const run of program.wordRuns) {
+    const style = styles.get(run.styleId);
+    if (style === undefined) throw new Error(`Fine Caption word run ${run.id} references unknown Style ${run.styleId}`);
+    const parameters = style.rendering.parameters as unknown as FineCaptionParameters;
+    assertFineCaptionParameters(parameters);
+    for (const wordId of run.wordIds) wordParameters.set(wordId, parameters);
+  }
+  const atomById = new Map(document.units.map((atom) => [atom.id, atom]));
   for (const style of styles.values()) {
     if (style.rendering.family !== FINE_CAPTION_FAMILY) {
       throw new Error(`Fine Caption cannot render Style family ${style.rendering.family}`);
@@ -833,19 +843,18 @@ export function renderFineCaption(
   }
   const totalFrames = programSpaceFrameCount(space);
   const presents = visibleProjection.cues.flatMap((cue) => {
-    const atoms = cue.atoms.map((timing) => atomById.get(timing.atomId));
+    const atoms = cue.units.map((timing) => atomById.get(timing.unitId));
     if (atoms.some((atom) => atom === undefined)) throw new Error(`Fine Caption Cue ${cue.id} references unknown Atom`);
     const resolvedAtoms = atoms.map((atom) => atom!);
     const style = styles.get(cue.styleId);
     if (style === undefined) throw new Error(`Fine Caption Cue ${cue.id} references unknown Style ${cue.styleId}`);
     const parameters = style.rendering.parameters as unknown as FineCaptionParameters;
-    if (cue.fields.length > 0) throw new Error(`Fine Caption Cue ${cue.id} contains unsupported fields`);
     const startFrame = Math.max(0, cue.startFrame);
     const measuredEnd = Math.min(totalFrames, cue.endFrameExclusive);
     const endFrameExclusive = Math.min(totalFrames, Math.max(startFrame + 1, measuredEnd));
     if (startFrame >= totalFrames || endFrameExclusive <= startFrame) return [];
     const durationFrames = endFrameExclusive - startFrame;
-    const atomFrames = new Map(cue.atoms.map((atom) => [atom.atomId, {
+    const atomFrames = new Map(cue.units.map((atom) => [atom.unitId, {
       start: clamp(atom.startFrame - startFrame, 0, durationFrames),
       end: clamp(Math.max(atom.endFrameExclusive - startFrame, atom.startFrame - startFrame + 1), 0, durationFrames),
     }]));
@@ -853,7 +862,7 @@ export function renderFineCaption(
       id: cue.id,
       span: { startFrame, endFrameExclusive },
       stacking: { order: parameters.stackingOrder, tieBreak: `${program.id}:${cue.id}` },
-      elements: cueElements(resolvedAtoms, atomFrames, parameters, wordText, durationFrames),
+      elements: cueElements(resolvedAtoms, atomFrames, parameters, wordText, wordParameters, durationFrames),
     }];
   });
   const track = sealVisualTrack({

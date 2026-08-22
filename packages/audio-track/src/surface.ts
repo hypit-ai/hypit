@@ -8,12 +8,13 @@ import type {
   SurfaceResolvedReference,
   MarkupAttributeValue,
 } from "@hypit/markup";
-import type { TemporalDuration, TemporalPointExpression } from "@hypit/temporal";
+import type { TemporalDuration, TemporalPointExpression, TemporalWindowProjection } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal";
 
 import { createAudioTrackFragment } from "./fragment.js";
 import { audioTrackTypes } from "./manifest.js";
 import { sealAudioClipSpec, sealAudioTrackHeader } from "./program.js";
-import type { AudioClipSpec, AudioOccupancy } from "./types.js";
+import type { AudioOccupancy } from "./types.js";
 
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
   return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
@@ -125,7 +126,7 @@ function occupancy(element: StructuredElement): AudioOccupancy {
 
 type TemporalBinding = {
   readonly kind: "program" | "selection" | "moment";
-  readonly projection: AudioClipSpec["projection"];
+  readonly projection: TemporalWindowProjection;
   readonly source?: SurfaceResolvedReference;
 };
 
@@ -199,7 +200,7 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     if (!child.name.endsWith(":Clip") && child.name !== "Clip") throw new Error(`${element.name} accepts only Clip children.`);
     if (child.children.some((node) => node.kind === "element" || node.value.trim())) throw new Error(`${child.name} must be empty.`);
     allowed(child, [
-      "id", "source", "during", "at", "for", "start", "end", "selection", "moment", "occurrences",
+      "id", "source", "during", "at", "for", "start", "end", "selection", "moment",
       "trim-start", "trim-end", "playback", "min-rate", "max-rate", "gain", "fade-in", "fade-out",
     ]);
     itemIndex += 1;
@@ -211,13 +212,9 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     if (playback.mode !== "stretch" && (child.attributes["min-rate"] !== undefined || child.attributes["max-rate"] !== undefined)) {
       throw new Error(`${child.name} rate bounds require stretch playback.`);
     }
-    const expansion = text(child, "occurrences", "one");
-    if (expansion !== "one" && expansion !== "each") throw new Error(`${child.name}.occurrences must be one or each.`);
     const clipSpec = sealAudioClipSpec({
 
       id: clipId,
-      projection: binding.projection,
-      expansion: { kind: expansion },
       trim: {
         ...(optionalText(child, "trim-start") === undefined ? {} : { start: duration(optionalText(child, "trim-start")!, `${child.name}.trim-start`) }),
         ...(optionalText(child, "trim-end") === undefined ? {} : { end: duration(optionalText(child, "trim-end")!, `${child.name}.trim-end`) }),
@@ -229,6 +226,10 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
         fadeOut: duration(text(child, "fade-out", "0f"), `${child.name}.fade-out`),
       },
     });
+    const windowSpecName = `item-${suffix}-window-spec`;
+    records.push({ id: `${id}.clip.${suffix}.window`, type: temporalTypes.windowSpec,
+      value: { kind: "inline", value: { id: clipId, projection: binding.projection } }, range: child.range });
+    inputs[windowSpecName] = { kind: "record", id: `${id}.clip.${suffix}.window` };
     const mediaName = `item-${suffix}-media`;
     const specName = `item-${suffix}-spec`;
     const specId = `${id}.clip.${suffix}.spec`;
@@ -236,11 +237,11 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     inputs[mediaName] = source.ref;
     inputs[specName] = { kind: "record", id: specId };
     if (binding.kind === "program") {
-      fragmentItems.push({ kind: "program", mediaName, specName });
+      fragmentItems.push({ kind: "program", mediaName, specName, windowSpecName });
     } else {
       const sourceName = `item-${suffix}-${binding.kind}`;
       inputs[sourceName] = binding.source!.ref;
-      fragmentItems.push({ kind: binding.kind, mediaName, specName, sourceName });
+      fragmentItems.push({ kind: binding.kind, mediaName, specName, sourceName, windowSpecName });
     }
   }
   if (fragmentItems.length === 0) throw new Error(`${element.name} requires at least one Clip.`);

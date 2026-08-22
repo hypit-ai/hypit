@@ -4,11 +4,6 @@ import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { createResolvedClosure } from "@hypit/core";
 
 import { verifyGraphFragment } from "@hypit/elaborator";
-import {
-  geminiOmniDefinition,
-  geminiOmniManifest,
-  sealGeminiOmniRequest,
-} from "@hypit/gemini-omni";
 import { MemoryArtifactStore } from "@hypit/driver-node";
 import {
   assertMappingCoversPorts,
@@ -52,7 +47,7 @@ import { textManifest } from "@hypit/text";
  * version fails here rather than at submission time.
  */
 const modelCapabilities: readonly { readonly ports: GenerationPortTable; readonly capability: CapabilityRef }[] = [
-  seedanceDefinition, minimaxH3Definition, geminiOmniDefinition, grokImagineDefinition,
+  seedanceDefinition, minimaxH3Definition, grokImagineDefinition,
   gptImageDefinition, nanoBananaDefinition, seedreamDefinition,
 ].flatMap((definition) => Object.values(definition.endpoints)
   .map((endpoint) => ({ ports: endpoint.ports, capability: endpoint.capability })));
@@ -63,8 +58,8 @@ function capabilityKey(ref: CapabilityRef): string {
 
 const upload = async (artifact: { readonly digest: string }) => `https://upload.test/${artifact.digest}`;
 
-test("the selected KIE release is seven exact model families and no Grok image capability", () => {
-  assert.equal(kieModelCatalog.length, 12);
+test("the selected KIE release is six exact model families and no Grok image capability", () => {
+  assert.equal(kieModelCatalog.length, 11);
   assert.equal(
     kieModelCatalog.some((item) => item.capability.name.startsWith("grok-") && item.result === "image"),
     false,
@@ -72,7 +67,6 @@ test("the selected KIE release is seven exact model families and no Grok image c
   assert.deepEqual(
     [...new Set(kieModelCatalog.map((item) => item.capability.module.name))].sort(),
     [
-      "@hypit/gemini-omni",
       "@hypit/gpt-image",
       "@hypit/grok-imagine",
       "@hypit/minimax-h3",
@@ -113,7 +107,6 @@ test("all model manifests close over the shared generation contract and every Fr
   const definitions = [
     seedanceDefinition,
     minimaxH3Definition,
-    geminiOmniDefinition,
     grokImagineDefinition,
     gptImageDefinition,
     nanoBananaDefinition,
@@ -125,7 +118,6 @@ test("all model manifests close over the shared generation contract and every Fr
     generationManifest,
     seedanceManifest,
     minimaxH3Manifest,
-    geminiOmniManifest,
     grokImagineManifest,
     gptImageManifest,
     nanoBananaManifest,
@@ -137,45 +129,6 @@ test("all model manifests close over the shared generation contract and every Fr
   };
   definitions.forEach((definition) => {
     Object.values(definition.endpoints).forEach((endpoint) => verifyGraphFragment(program, endpoint.fragment));
-  });
-});
-
-test("Gemini Omni enforces the weighted seven-unit reference quota", async () => {
-  const artifacts = new MemoryArtifactStore();
-  const image = await artifacts.put(new Uint8Array([1]), "image/png");
-  const video = await artifacts.put(new Uint8Array([2]), "video/mp4");
-  assert.throws(() => sealGeminiOmniRequest({
-    prompt: ["Use every reference."],
-    duration: [4],
-    aspectRatio: ["16:9"],
-    resolution: ["720p"],
-    images: [
-      { role: "image", artifact: image },
-      { role: "image", artifact: image },
-      { role: "image", artifact: image },
-    ],
-    excerpts: [{ role: "video", artifact: video, fields: { startSec: 0, endSec: 1 } }],
-    characterIds: ["a", "b", "c"],
-  }), /uses 8 of its 7 shared/u);
-});
-
-test("Gemini Omni binds its documented output controls into the KIE request", async () => {
-  const request = sealGeminiOmniRequest({
-    prompt: ["A glass sphere rolls across a blue floor."],
-    duration: [4],
-    aspectRatio: ["16:9"],
-    resolution: ["720p"],
-    seed: [42],
-  });
-  const mapping = kieModelCatalog.find((item) => item.capability.name === "gemini-omni-video");
-  assert.ok(mapping);
-  const task = await compileWireRequest(mapping, request, upload);
-  assert.deepEqual(task.input, {
-    prompt: "A glass sphere rolls across a blue floor.",
-    duration: "4",
-    aspect_ratio: "16:9",
-    resolution: "720p",
-    seed: 42,
   });
 });
 
@@ -192,7 +145,7 @@ test("Seedream safety policy remains explicit author content", () => {
   assert.deepEqual(checked.ports.nsfwCheck, [true]);
 });
 
-test("all twelve exact capabilities route to their documented KIE model slug", async () => {
+test("all eleven exact capabilities route to their documented KIE model slug", async () => {
   const store = new MemoryArtifactStore();
   const image = await store.put(new Uint8Array([1]), "image/png");
   const video = await store.put(new Uint8Array([2]), "video/mp4");
@@ -240,13 +193,6 @@ test("all twelve exact capabilities route to their documented KIE model slug", a
       referenceVideo: [{ role: "video", artifact: video }],
       referenceAudio: [{ role: "audio", artifact: audio }],
     }), "minimax-h3/reference-to-video"],
-    ["gemini-omni-video", sealGeminiOmniRequest({
-      prompt: ["A studio shot."],
-      duration: [4],
-      aspectRatio: ["16:9"],
-      resolution: ["720p"],
-      images: [{ role: "image", artifact: image }],
-    }), "gemini-omni-video"],
     ["grok-imagine-video", sealGrokImagineRequest("grok-imagine-video", commonGrok), "grok-imagine/text-to-video"],
     ["grok-imagine-video", sealGrokImagineRequest("grok-imagine-video", {
       ...commonGrok,

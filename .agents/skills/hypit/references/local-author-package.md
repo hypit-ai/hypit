@@ -53,7 +53,8 @@ worse outcome than understanding its structure — which is what anatomy is for.
 
 ## Package boundary
 
-Place the package at `<project>/packages/local-<slug>/`, named `@hypit/local-<slug>`, with physical
+Place the package at `<project>/packages/local-<slug>/`, named in the project's own scope such as
+`@my-project/local-<slug>`, with physical
 version `0.0.0-dev` and logical Module version `1`. Only create a new package: do not
 edit, extend, delete or overwrite an existing Hypit package to fill the gap.
 
@@ -76,17 +77,14 @@ notice it drifted. That is acceptable for a project-local package, which is part
 rather than a library. If the behaviour turns out to be generally useful, that is the promotion this
 section already describes — not a reason to add a parameter to the shared package after all.
 
-The package is project-local even when the project is the Hypit checkout. Do not move it into an
-official package automatically. After the result is accepted, offer promotion as a separate
-contribution.
+The project is never the Hypit checkout. Do not move a local package into an official package
+automatically. After the result is accepted, offer promotion as a separate contribution.
 
-Expect it to draw as a generic block in Studio until then, and leave it that way.
-`packages/studio/src/studio-registry.ts` picks an adapter by the module that placed the Track, and no
-adapter names a `@hypit/local-…` module, so the component reaches the `visual-fallback` adapter: it
-renders, without its own family colour, icon or inspector. That is the correct state for a package
-one project owns. Registering it edits `packages/studio`, which every project shares, so it happens
-only after the author has agreed the package moves into `packages/`. It is one item of the promotion
-checklist below, not a repair for what Studio shows during the work.
+The component reaches Studio's generic Track fallback until its project adds a companion package,
+for example `@my-project/local-<slug>-studio`, to the project's `hypit.studio.json`. That companion owns
+only Studio interpretation and operations through `hypit.studio-adapter@1`; it never edits
+`packages/studio`, and the author package never imports Studio. A generic block is valid while no
+special interpretation is needed.
 
 ## Complete implementation
 
@@ -179,9 +177,14 @@ is expensive to read.
 
 ## Install and validate
 
-The checkout's workspace already covers `projects/*/packages/*`, so a package placed there needs no
-glob of its own. Add it as a normal `workspace:*` dependency and run `pnpm install`. Do not hide it
-under `.hypit/`, modify the package loader or invent a registry.
+The Host resolves the explicitly selected physical package name directly at
+`<project>/packages/<package-basename>/` and supplies official `@hypit/*` imports from the read-only
+tool Distribution. The `@hypit/*` namespace is reserved for that active Distribution; a project uses
+its own npm scope and cannot shadow official ABI packages with a same-named dependency. A project
+does not join Hypit's workspace and needs no npm link merely to expose
+one of its own packages. Use the project's own package manager only when its package genuinely adds
+third-party npm dependencies. Do not modify the Hypit checkout, hide packages under `.hypit/` or
+invent another loader.
 
 Repair in this order:
 
@@ -242,33 +245,27 @@ If the author wants it promoted, these are the parts. Say up front that this is 
 than a path anyone has walked — no package under `packages/` began inside a project, so the first
 person to do it should correct what follows.
 
-- **The name is load-bearing in six places.** `@hypit/local-<slug>` becomes `@hypit/<slug>` in
+- **The name is load-bearing in six places.** `@my-project/local-<slug>` becomes `@hypit/<slug>` in
   `package.json`; in the Module ref in `src/manifest.ts`, where renaming it **renames every nominal
   Type and Producer in the Module at once**, because each is built from that one const; in every
-  Author Source that writes `import … from "@hypit/local-<slug>@1"`; in the root `package.json`
+  Author Source that writes `import … from "@my-project/local-<slug>@1"`; in the root `package.json`
   `devDependencies`; in the package's own test harness; and in **both** package catalogs,
   `docs/guide/packages.md` and `docs/zh/guide/packages.md`. An English-only catalog entry is a half
   promotion.
-- **Studio keeps a hand-maintained registry.** `packages/studio/src/studio-registry.ts` composes the
-  adapter sets under `packages/studio/src/adapters/`, and each adapter names the modules it claims. A
-  family joins an existing set's `modules` list or brings its own adapter file, the way `deck.ts`
-  does. A package named by none of them still renders, through the `visual-fallback` and
-  `audio-fallback` adapters in `generic.ts` — second-class in Studio, and invisible as itself in
-  review.
-- **Its own chrome is untracked today.** Git ignores `projects/`, so the texture the package
-  reads with `readFile(new URL("../assets/…"))` is not in git. Promotion is the first moment those
-  bytes enter the repository, and **no package under `packages/` has a non-`preview/` asset
-  directory**. Promotion establishes that convention rather than following it; decide it deliberately.
+- **Studio support is a companion.** A project-owned `@my-project/local-<slug>-studio` may already provide
+  rich interpretation. Promotion moves that companion into an official Studio adapter package; it
+  never copies its code into `@hypit/studio` and never teaches the domain package about Studio.
+- **Its own chrome becomes repository content.** Project package assets already belong to the
+  project's Git history. Promotion makes those accepted bytes official package content and must
+  deliberately choose their permanent location.
 - **It newly owes tests.** The suite globs `packages/*/test/**/*.test.ts`. A local package ships
   `test/render-preview.ts`, which is a harness, not a suite, so a promoted package contributes zero
   coverage where every peer has some. Writing one is part of promotion.
 - **It newly owes clean imports.** Repository hygiene requires that anything `src/` imports appears in
   `dependencies`, not `devDependencies` — a rule examples and projects are exempt from. A package
   carrying its render-harness dependencies in `devDependencies` fails on the way in.
-- **The workspace already covers both locations.** `pnpm-workspace.yaml` lists `packages/*`,
-  `projects/*/packages/*` and `examples/*/packages/*`, and `tsconfig.json` includes them. No glob
-  needs adding in either direction; adding one is a change that does nothing.
+- **The workspaces stay separate.** Promotion adds the package to Hypit's `packages/*` and root
+  catalog; it never adds the external project or a project glob to Hypit's workspace.
 
 What promotion never means: merging the behaviour into the package it was modelled on. It installs
 beside that package as a sibling family, for the reasons the boundary section above gives.
-

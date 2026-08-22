@@ -10,7 +10,6 @@
   <import as="media-track" from="@hypit/media-track@1"/>
   <import as="caption" from="@hypit/caption@1"/>
   <import as="caption-fine" from="@hypit/caption-fine@1"/>
-  <import as="caption-ai" from="@hypit/caption-gemini@1"/>
   <import as="fonts" from="@hypit/fonts-open@1"/>
   <import as="space" from="@hypit/spatial@1"/>
   <import as="program" from="@hypit/program-space@1"/>
@@ -80,10 +79,10 @@
     video="primary-moving" audio="none" span-authority="video" clock={clock}/>
   <pipeline:Normalize id="cutaway-receipt-media" source={cutaway-receipt.video}
     video="primary-moving" audio="none" span-authority="video" clock={clock}/>
-  <whisperx:SemanticTake id="hook-semantic" narrative={story} segment={story.segment.hook} media={hook-media.media}/>
-  <whisperx:SemanticTake id="price-semantic" narrative={story} segment={story.segment.price} media={price-media.media}/>
-  <whisperx:SemanticTake id="rainbow-semantic" narrative={story} segment={story.segment.rainbow} media={rainbow-media.media}/>
-  <whisperx:SemanticTake id="payment-semantic" narrative={story} segment={story.segment.payment} media={payment-media.media}/>
+  <whisperx:SemanticTake id="hook-semantic" narrative={story} segment={story.segment.hook} media={hook-media.media} language="en"/>
+  <whisperx:SemanticTake id="price-semantic" narrative={story} segment={story.segment.price} media={price-media.media} language="en"/>
+  <whisperx:SemanticTake id="rainbow-semantic" narrative={story} segment={story.segment.rainbow} media={rainbow-media.media} language="en"/>
+  <whisperx:SemanticTake id="payment-semantic" narrative={story} segment={story.segment.payment} media={payment-media.media} language="en"/>
 
   <speech:Track id="speech"
     visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
@@ -95,13 +94,8 @@
 
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
   <caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
-  <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
-  <caption-ai:Planner id="cue-plan" display={story.caption} program={caption-program}
-    model="gemini-2.5-flash"/>
-  <caption-fine:Track id="captions" display={story.caption}
-    correspondence={story.caption.correspondence}
-    semantic={speech.semantic}
-    plan={cue-plan.plan} program={caption-program}/>
+  <caption:Program id="caption-program" document={story.caption} narrative={story} default={base-caption}/>
+  <caption-fine:Track id="captions" document={story.caption} semantic={speech.semantic} program={caption-program}/>
 
   <!-- Three cutaways on one Track. Their Selections do not overlap, so they
        share a single timeline row the way an editor would lay them out. -->

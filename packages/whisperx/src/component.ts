@@ -5,6 +5,7 @@ import { canonicalize } from "@hypit/protocol";
 
 import { whisperXRequestForEvidenceAudio } from "./evidence.js";
 import { whisperXProducers } from "./manifest.js";
+import type { WhisperXLanguage } from "./types.js";
 
 function inline(value: StoredValue, subject: string): CanonicalValue {
   if (value.kind !== "inline") throw new Error(`${subject} must be inline`);
@@ -17,9 +18,11 @@ export const whisperXComponent = {
       producer: whisperXProducers.request,
       handler: ({ inputs }) => {
         const evidence = inline(inputs.evidence!.value, "SpeechEvidenceAudio") as unknown as SpeechEvidenceAudio;
+        const language = inline(inputs.language!.value, "WhisperXLanguage") as unknown as WhisperXLanguage;
+        if (language !== "en" && language !== "zh") throw new Error("WhisperXLanguage must be en or zh");
         return {
           outputs: {},
-          needs: { alignment: canonicalize(whisperXRequestForEvidenceAudio(evidence)) },
+          needs: { alignment: canonicalize(whisperXRequestForEvidenceAudio(evidence, { language })) },
         };
       },
     },

@@ -56,6 +56,7 @@ export type RuntimeConfigDocument = {
 export type LoadRuntimeConfigOptions = {
   readonly registry?: RuntimeAdapterRegistry;
   readonly packageRoot?: string;
+  readonly distributionPackageRoot?: string;
 };
 
 export type RuntimeConfigDoctorResult = {
@@ -176,6 +177,7 @@ async function installRuntimeAdapters(
   registry: RuntimeAdapterRegistry,
   packageRoot: string,
   selection: NodePackageSelectionRequest,
+  distributionPackageRoot?: string,
 ): Promise<void> {
   const logical = selection.logical?.filter((address) => {
     if (address.abi === runtimeEndpointAdapterHostAbi) return !registry.has(address.name, "endpoint");
@@ -184,7 +186,9 @@ async function installRuntimeAdapters(
     return true;
   }) ?? [];
   if (selection.selected.length === 0 && logical.length === 0) return;
-  const loaded = await loadNodePackageSelection({ selected: selection.selected, logical }, packageRoot);
+  const loaded = await loadNodePackageSelection({ selected: selection.selected, logical }, packageRoot, {
+    ...(distributionPackageRoot === undefined ? {} : { fallbackRoots: [distributionPackageRoot] }),
+  });
   for (const item of loaded) {
     for (const facet of item.contribution.hostFacets ?? []) {
       if (isRuntimeAdapterHostFacet(facet)) registry.registerFacet(facet);
@@ -227,7 +231,7 @@ export async function declaredManagedPrograms(
   const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   if (options.capabilities?.length === 0) return { dataRoot: root, programs: [] };
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installRuntimeAdapters(registry, packageRoot, endpointPackageSelection(document));
+  await installRuntimeAdapters(registry, packageRoot, endpointPackageSelection(document), options.distributionPackageRoot);
   const requested = options.capabilities === undefined
     ? undefined
     : new Set(options.capabilities.map(capabilityKey));
@@ -306,7 +310,7 @@ export async function doctorRuntimeConfig(
   }
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   try {
-    await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document));
+    await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
   } catch (error) {
     return { dataRoot: root, diagnostics: [diagnostic(error, "RUNTIME_PACKAGE_SELECTION_INVALID")] };
   }
@@ -408,7 +412,7 @@ export async function createRuntimeFromConfig(
 ): Promise<LocalRuntime> {
   const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document));
+  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
   const state = new SqliteRuntimeState(statePath(root));
   let artifacts: RuntimeOpened<ArtifactStore> | undefined;
   let credentials: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
@@ -429,7 +433,11 @@ export async function createRuntimeFromConfig(
       artifactStore: artifacts.value,
       credentialStore: credentials.store,
       loadComponentPackages: async (specifiers) => {
-        const loaded = await loadNodePackageSelection(specifiers, packageRoot);
+        const loaded = await loadNodePackageSelection(specifiers, packageRoot, {
+          ...(options.distributionPackageRoot === undefined
+            ? {}
+            : { fallbackRoots: [options.distributionPackageRoot] }),
+        });
         return collectNodePackageComponents(loaded.map((item) => item.contribution));
       },
       endpoints,
@@ -470,7 +478,7 @@ export async function createRuntimeArtifactAccessFromConfig(
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   await installRuntimeAdapters(registry, packageRoot, {
     selected: [], logical: [{ abi: runtimeArtifactStoreAdapterHostAbi, name: document.artifacts.use }],
-  });
+  }, options.distributionPackageRoot);
   const opened = await openArtifactStore(document, root, registry);
   return createLocalRuntimeArtifactAccess({
     artifactStore: opened.value,
@@ -487,7 +495,7 @@ export async function createRuntimeCredentialsFromConfig(
   const endpoint = document.endpoints.find((item) => item.instance === endpointInstance);
   if (endpoint === undefined) throw new Error(`Runtime Profile has no Endpoint instance ${endpointInstance}`);
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document));
+  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
   const credentials = await openCredentialStores(document, root, registry);
   try {
     const endpointPackage = await registry.createEndpoint(endpoint.use, {

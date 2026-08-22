@@ -32,10 +32,6 @@ export const captionFineMarkupSurfaces = [
           { name: "recipe", kind: "reference", required: true, accepts: [svsRecipeType],
             summary: "Chooses the Recipe that carries Cue geometry, Paint and local motion.",
             recipe: [
-              { name: "cue-min-words", required: true,
-                summary: "Sets the fewest display Words the planner may leave in one Cue." },
-              { name: "cue-max-words", required: true,
-                summary: "Sets the most display Words one Cue may carry, which an indivisible Atom may still exceed." },
               { name: "stack-order", required: true,
                 summary: "Places this Style's Cues in the Track's drawing order, low behind high." },
               { name: "x", required: true,
@@ -250,35 +246,24 @@ export const captionFineMarkupSurfaces = [
     {
       name: "track", tag: "Track", mode: "structured", outputs: [compositionTypes.visualTrack],
       vocabulary: {
-        summary: "Joins a planned Caption against the SemanticTrack and renders it as one ordinary peer VisualTrack.",
+        summary: "Joins the authored CaptionDocument against the SemanticTrack and renders it as one ordinary peer VisualTrack.",
         appearance: "One block of caption text wrapped into lines inside a rounded Cue box, placed at a Recipe-chosen point on the Canvas and spanning a fraction of its width. Cues follow the speech one after another, each arriving and leaving with its own motion, and the Words of a Cue either stand there together from its first Frame or uncover as they are spoken. As the speech advances, the Word being spoken, or every Word up to it, is repainted in the active Paint, snapping at the Word boundary or sweeping across the glyphs, and it may take a rule beneath it, a rounded highlight capsule behind it and a brief pop at the moment it becomes the spoken one. That capsule either stands alone on each Atom or grows as one continuous run over everything already read, following the Words across line breaks.\n\nEvery Word of every Cue is drawn in one typeface, the one its Style names: emphasis varies by Word through the active Paint, never by typeface, and lines exist only where the text wraps, so a line cannot be given a face, colour or weight of its own. A caption whose lines are set in different typefaces is outside what this Track can draw.",
         preview: previewImage("Track.png"),
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this Track so its rendered output can be placed in a Film." },
-          { name: "display", kind: "reference", required: true, accepts: [narrativeTypes.captionDisplay],
-            summary: "Chooses the display Atoms and Words the Cues are drawn from." },
-          { name: "correspondence", kind: "reference", required: true, accepts: [narrativeTypes.captionCorrespondence],
-            summary: "Chooses the link from display Words back to the spoken Script." },
+          { name: "document", kind: "reference", required: true, accepts: [narrativeTypes.captionDocument],
+            summary: "Chooses the Script-owned CaptionDocument." },
           { name: "semantic", kind: "reference", required: true, accepts: [semanticTrackTypes.track],
             summary: "Chooses the continuous SemanticTrack whose Word anchors give every Cue its time." },
           { name: "program", kind: "reference", required: true, accepts: [captionTypes.program],
             summary: "Chooses the Style assignment that decides which Style each run is rendered in." },
-          { name: "plan", kind: "reference", required: true, accepts: [captionTypes.plan],
-            summary: "Chooses the Cue cuts the planner produced for this display." },
         ],
         ports: [
           { name: "track", type: compositionTypes.visualTrack,
             summary: "The rendered Caption as one self-contained VisualTrack." },
         ],
-        example: `<caption-fine:Track
-  id="captions"
-  display={story.caption}
-  correspondence={story.caption.correspondence}
-  semantic={speech.semantic}
-  program={caption-program}
-  plan={caption-plan.plan}
-/>`,
+        example: `<caption-fine:Track id="captions" document={story.caption} semantic={speech.semantic} program={caption-program}/>`,
         notes: [
           "The element is empty; it accepts no children and no text.",
           "One Track renders the Program's default Style and every ordered replacement together.",
@@ -306,7 +291,7 @@ export const captionFineManifest: ModuleManifest = {
     inputs: [
       { name: "caption", type: captionTypes.timedProjection },
       { name: "program", type: captionTypes.program },
-      { name: "display", type: narrativeTypes.captionDisplay },
+      { name: "document", type: narrativeTypes.captionDocument },
       { name: "semantic", type: semanticTrackTypes.track },
     ],
     outputs: [{ name: "track", type: compositionTypes.visualTrack }],

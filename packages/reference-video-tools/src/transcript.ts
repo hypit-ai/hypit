@@ -7,6 +7,7 @@ import { sealSpeechEvidenceAudio } from "@hypit/speech";
 import { speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { AlignedTranscriptEvidence } from "@hypit/speech-evidence";
 import { whisperXCapabilities, whisperXRequestForEvidenceAudio } from "@hypit/whisperx";
+import type { WhisperXLanguage } from "@hypit/whisperx";
 
 import { assert, command, readBytes, round, writeJson } from "./media.js";
 import type { Transcript, TranscriptFile, TranscriptPassage, TranscriptWord } from "./types.js";
@@ -45,7 +46,10 @@ function reason(error: unknown): string {
 }
 
 /** Ask the local WhisperX Provider for the word times of one canonical evidence WAV. */
-export async function transcribeSpeechAudio(audioPath: string): Promise<readonly TranscriptPassage[]> {
+export async function transcribeSpeechAudio(
+  audioPath: string,
+  language: WhisperXLanguage,
+): Promise<readonly TranscriptPassage[]> {
   const bytes = await readBytes(audioPath);
   const artifacts = new MemoryArtifactStore();
   const artifact = await artifacts.put(bytes, "audio/wav");
@@ -54,7 +58,7 @@ export async function transcribeSpeechAudio(audioPath: string): Promise<readonly
     id: "need:reference-video-transcript",
     capability: whisperXCapabilities.alignment,
     returns: speechEvidenceTypes.alignedTranscript,
-    constraints: whisperXRequestForEvidenceAudio(evidence),
+    constraints: whisperXRequestForEvidenceAudio(evidence, { language }),
     result: "record:reference-video-transcript",
   };
   const registry = new EndpointRegistry();
@@ -97,13 +101,20 @@ export async function transcribeSpeechAudio(audioPath: string): Promise<readonly
  * cached with the Gemini answers and never sent to Gemini. A machine that is not running WhisperX
  * still prepares everything else, and is told what did not answer instead of losing the preparation.
  */
-export async function prepareTranscript(reference: string, videoPath: string, root: string, hasAudio: boolean, redo: boolean): Promise<Transcript> {
+export async function prepareTranscript(
+  reference: string,
+  videoPath: string,
+  root: string,
+  hasAudio: boolean,
+  language: WhisperXLanguage,
+  redo: boolean,
+): Promise<Transcript> {
   if (!hasAudio) return { status: "unavailable", transcript_ref: null, word_count: 0, reason: "the reference video has no audio track" };
   try {
     const audioPath = join(root, "speech.wav");
     if (redo || await access(audioPath).then(() => false, () => true)) await extractSpeechAudio(videoPath, audioPath);
     // A refused connection says only "fetch failed"; the reader still has to learn what to start.
-    const passages = await transcribeSpeechAudio(audioPath)
+    const passages = await transcribeSpeechAudio(audioPath, language)
       .catch((error: unknown) => { throw new Error(`local WhisperX did not answer: ${reason(error)}`); });
     const transcriptPath = join(root, "transcript.json");
     const file: TranscriptFile = { reference_id: reference, audio_ref: audioPath, passages };

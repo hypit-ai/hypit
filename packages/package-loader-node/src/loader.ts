@@ -1,6 +1,6 @@
 import { readFile, realpath, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { modulePackageAbi } from "@hypit/protocol";
@@ -8,6 +8,7 @@ import { modulePackageAbi } from "@hypit/protocol";
 import type {
   LoadedPackage,
   LogicalPackageAddress,
+  NodePackageLoadOptions,
   NodePackageContribution,
   NodePackageSelectionRequest,
 } from "./types.js";
@@ -66,19 +67,43 @@ async function packageRoot(entry: string, expectedName: string): Promise<Resolve
   }
 }
 
-async function resolvePackage(specifier: string, from: string): Promise<ResolvedPackage> {
-  const resolver = createRequire(join(resolve(from), "__hypit_package_loader__.cjs"));
-  let entry: string;
-  try {
-    entry = resolver.resolve(specifier);
-  } catch (entryError) {
+async function resolvePackage(specifier: string, roots: readonly string[]): Promise<ResolvedPackage> {
+  let failure: unknown;
+  for (const from of roots) {
+    const resolver = createRequire(join(resolve(from), "__hypit_package_loader__.cjs"));
+    let entry: string;
     try {
-      entry = resolver.resolve(`${specifier}/package.json`);
-    } catch {
-      throw new Error(`cannot resolve installed package ${specifier} from ${from}: ${entryError instanceof Error ? entryError.message : String(entryError)}`);
+      entry = resolver.resolve(specifier);
+    } catch (entryError) {
+      try {
+        entry = resolver.resolve(`${specifier}/package.json`);
+      } catch {
+        const local = join(resolve(from), "packages", basename(specifier));
+        try {
+          const json = await packageJson(local);
+          if (json.name === specifier) return { root: local, json };
+        } catch (localError) {
+          if (!missingFile(localError)) throw localError;
+        }
+        failure = entryError;
+        continue;
+      }
     }
+    return await packageRoot(entry, specifier);
   }
-  return await packageRoot(entry, specifier);
+  throw new Error(`cannot resolve installed package ${specifier} from ${roots.join(", ")}: ${failure instanceof Error ? failure.message : String(failure)}`);
+}
+
+function resolutionRoots(
+  specifier: string,
+  projectRoots: readonly string[],
+  distributionRoots: readonly string[],
+): readonly string[] {
+  // @hypit is the active Distribution's namespace. A project dependency with
+  // the same spelling must never silently replace the tool ABI it is using.
+  return specifier.startsWith("@hypit/") && distributionRoots.length > 0
+    ? distributionRoots
+    : [...projectRoots, ...distributionRoots];
 }
 
 function activationPath(item: ResolvedPackage): string {
@@ -142,6 +167,7 @@ export class NodePackageSelectionMissingError extends Error {
 export async function loadNodePackageSelection(
   request: readonly string[] | NodePackageSelectionRequest,
   root: string,
+  options: NodePackageLoadOptions = {},
 ): Promise<readonly LoadedPackage[]> {
   const normalized: NodePackageSelectionRequest = Array.isArray(request)
     ? { selected: request }
@@ -150,7 +176,11 @@ export async function loadNodePackageSelection(
   for (const address of normalized.logical ?? []) selected.add(physicalPackageName(address.name));
   if (selected.size === 0) return [];
 
-  const roots = await Promise.all([...selected].sort().map(async (name) => await resolvePackage(name, root)));
+  const projectRoots = [root];
+  const distributionRoots = (options.fallbackRoots ?? [])
+    .filter((candidate) => resolve(candidate) !== resolve(root));
+  const roots = await Promise.all([...selected].sort().map(async (name) =>
+    await resolvePackage(name, resolutionRoots(name, projectRoots, distributionRoots))));
   type ActivatedPackage = { readonly physical: ResolvedPackage; readonly contribution: NodePackageContribution };
   const activated = new Map<string, ActivatedPackage>();
   const providedModules = new Set<string>();
@@ -181,7 +211,10 @@ export async function loadNodePackageSelection(
     if (providedModules.has(requirement.key)) continue;
     const providerPackage = physicalPackageName(requirement.key);
     assert(!activated.has(providerPackage), `selected package ${providerPackage} provides the wrong ${requirement.key}`);
-    const physical = await resolvePackage(providerPackage, requirement.from);
+    const physical = await resolvePackage(
+      providerPackage,
+      resolutionRoots(providerPackage, [requirement.from, root], distributionRoots),
+    );
     const provider = { physical, contribution: await importContribution(physical) };
     add(provider);
     assert(providedModules.has(requirement.key), `${providerPackage} does not provide the required ${requirement.key}`);

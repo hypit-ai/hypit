@@ -1,14 +1,11 @@
 import { assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
 import type { VisualAnimation, VisualElement, VisualStyleDeclaration, VisualTrack } from "@hypit/composition";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { assertProgramSpaceIdentity } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize } from "@hypit/protocol";
-import type { SemanticTrack } from "@hypit/semantic-track";
 import { assertCanvasSpace } from "@hypit/spatial";
 import type { CanvasSpace } from "@hypit/spatial";
-import { projectMomentWindows, projectProgramWindow, projectSelectionWindows } from "@hypit/temporal";
-import type { ProjectedOccurrence } from "@hypit/temporal";
+import type { ProjectedWindow } from "@hypit/temporal";
 
 import type {
   ScreenOverlayComponent,
@@ -101,7 +98,6 @@ export function sealScreenOverlayItemSpec(value: ScreenOverlayItemSpec): ScreenO
 }
 export function assertScreenOverlayItemSpec(value: ScreenOverlayItemSpec): void {
   identity(value.id, "ScreenOverlayItemSpec.id"); assertScreenOverlayComponent(value.content);
-  assert(value.expansion.kind === "one" || value.expansion.kind === "each", "ScreenOverlay expansion is invalid.");
   assert(Number.isSafeInteger(value.stackingOrder), "ScreenOverlay stacking order must be an integer.");
 }
 export function createScreenOverlaySet(): ScreenOverlaySet { return { items: [] }; }
@@ -111,28 +107,28 @@ export function assertScreenOverlaySet(value: ScreenOverlaySet): void {
 
 function realized(
   set: ScreenOverlaySet, header: ScreenOverlayHeader, spec: ScreenOverlayItemSpec,
-  occurrences: readonly ProjectedOccurrence[],
+  window: ProjectedWindow,
 ): ScreenOverlaySet {
   assertScreenOverlaySet(set); assertScreenOverlayHeader(header); assertScreenOverlayItemSpec(spec);
-  const additions = occurrences.map((occurrence, index) => ({
-    id: occurrence.id,
-    span: { ...occurrence.span },
+  const addition = {
+    id: window.id,
+    span: { ...window.span },
     content: structuredClone(spec.content),
-    stacking: { order: spec.stackingOrder, tieBreak: `${header.id}:${spec.id}:${index + 1}` },
-  } satisfies ScreenOverlayItemProgram));
+    stacking: { order: spec.stackingOrder, tieBreak: `${header.id}:${spec.id}` },
+  } satisfies ScreenOverlayItemProgram;
   const ids = new Set(set.items.map((item) => item.id));
-  additions.forEach((item) => { assert(!ids.has(item.id), `Screen Overlay already contains Item ${item.id}.`); ids.add(item.id); });
-  return { items: [...set.items, ...additions] };
+  assert(!ids.has(addition.id), `Screen Overlay already contains Item ${addition.id}.`);
+  return { items: [...set.items, addition] };
 }
-export function appendProgramScreenOverlay(set: ScreenOverlaySet, header: ScreenOverlayHeader, semantic: SemanticTrack, spec: ScreenOverlayItemSpec): ScreenOverlaySet {
-  assert(spec.expansion.kind === "one", `Program Overlay ${spec.id} must use one occurrence.`);
-  return realized(set, header, spec, [projectProgramWindow({ itemId: spec.id, semantic, projection: spec.projection })]);
-}
-export function appendSelectionScreenOverlay(set: ScreenOverlaySet, header: ScreenOverlayHeader, semantic: SemanticTrack, selection: NarrativeSelectionRef, spec: ScreenOverlayItemSpec): ScreenOverlaySet {
-  return realized(set, header, spec, projectSelectionWindows({ itemId: spec.id, semantic, selection, expansion: spec.expansion, projection: spec.projection }));
-}
-export function appendMomentScreenOverlay(set: ScreenOverlaySet, header: ScreenOverlayHeader, semantic: SemanticTrack, moment: NarrativeMomentRef, spec: ScreenOverlayItemSpec): ScreenOverlaySet {
-  return realized(set, header, spec, projectMomentWindows({ itemId: spec.id, semantic, moment, expansion: spec.expansion, projection: spec.projection }));
+
+/** Component entry point: timing has already been resolved into a TemporalWindow. */
+export function appendProjectedScreenOverlay(
+  set: ScreenOverlaySet,
+  header: ScreenOverlayHeader,
+  spec: ScreenOverlayItemSpec,
+  window: ProjectedWindow,
+): ScreenOverlaySet {
+  return realized(set, header, spec, window);
 }
 export function sealScreenOverlayProgram(value: ScreenOverlayProgram): ScreenOverlayProgram {
   const normalized = { id: value.id,

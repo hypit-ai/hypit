@@ -7,6 +7,7 @@ import { mediaTrackProducers, mediaTrackTypes } from "@hypit/media-track";
 import { narrativeTypes } from "@hypit/narrative";
 import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
+import { temporalProducers, temporalTypes } from "@hypit/temporal";
 
 import { depthStackProducers, depthStackTypes } from "./manifest.js";
 
@@ -24,11 +25,12 @@ export type DepthStackFragmentCard = {
   readonly labelName: string;
   readonly cardSpecName: string;
   readonly momentName: string;
+  readonly windowSpecName: string;
 };
 
 export type DepthStackFragmentTerminal =
   | { readonly kind: "program-end" }
-  | { readonly kind: "moment" | "selection-start" | "selection-end"; readonly inputName: string };
+  | { readonly kind: "moment" | "selection-start" | "selection-end"; readonly inputName: string; readonly specName: string };
 
 function sourceInput(card: DepthStackFragmentCard): GraphFragment["inputs"][number] {
   const type = card.sourceKind === "still"
@@ -65,6 +67,7 @@ export function createDepthStackFragment(
       { name: card.labelName, type: depthStackTypes.cardLabel },
       { name: card.cardSpecName, type: depthStackTypes.cardSpec },
       { name: card.momentName, type: narrativeTypes.moment },
+      { name: card.windowSpecName, type: temporalTypes.windowSpec },
     );
     if (card.framePaintSpecName !== undefined) {
       inputs.push({ name: card.framePaintSpecName, type: mediaTrackTypes.paintLayerSpec });
@@ -104,16 +107,22 @@ export function createDepthStackFragment(
       result: { kind: "output", name: "layers" },
     });
     const appendId = `append-${card.suffix}`;
+    const windowId = `window-${card.suffix}`;
+    operations.push({
+      id: windowId,
+      producer: temporalProducers.projectMoment,
+      inputs: { semantic: input("semantic"), moment: input(card.momentName), spec: input(card.windowSpecName) },
+      result: { kind: "output", name: "window" },
+    });
     operations.push({
       id: appendId,
-      producer: depthStackProducers.appendMomentCard,
+      producer: depthStackProducers.appendCard,
       inputs: {
         set: cardSet,
         material: operation(sampleId),
         label: input(card.labelName),
         spec: input(card.cardSpecName),
-        semantic: input("semantic"),
-        moment: input(card.momentName),
+        window: operation(windowId),
       },
       result: { kind: "output", name: "set" },
     });
@@ -129,6 +138,20 @@ export function createDepthStackFragment(
       name: terminal.inputName,
       type: terminal.kind === "moment" ? narrativeTypes.moment : narrativeTypes.selection,
     });
+    inputs.push({ name: terminal.specName, type: temporalTypes.windowSpec });
+  }
+  const terminalWindow = terminal.kind === "program-end" ? "program-window" : "terminal-window";
+  if (terminal.kind === "program-end") {
+    inputs.push({ name: "program-spec", type: temporalTypes.windowSpec });
+    operations.push({ id: terminalWindow, producer: temporalProducers.projectProgram,
+      inputs: { semantic: input("semantic"), spec: input("program-spec") }, result: { kind: "output", name: "window" } });
+  } else {
+    operations.push({ id: terminalWindow,
+      producer: terminal.kind === "moment" ? temporalProducers.projectMoment : temporalProducers.projectSelection,
+      inputs: {
+        semantic: input("semantic"), spec: input(terminal.specName),
+        [terminal.kind === "moment" ? "moment" : "selection"]: input(terminal.inputName),
+      }, result: { kind: "output", name: "window" } });
   }
   operations.push({
     id: "program",
@@ -139,9 +162,7 @@ export function createDepthStackFragment(
       frame: input("frame"),
       spec: input("spec"),
       semantic: input("semantic"),
-      ...(terminal.kind === "program-end" ? {} : {
-        terminal: input(terminal.inputName),
-      }),
+      terminal: operation(terminalWindow),
     },
     result: { kind: "output", name: "program" },
   });

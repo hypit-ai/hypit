@@ -6,6 +6,7 @@ import {
   semanticTrackSpans,
 } from "@hypit/semantic-track";
 import type { SemanticTrack } from "@hypit/semantic-track";
+import type { StudioResolvedTrack } from "@hypit/studio-adapter";
 
 import type { StudioArchive } from "./archive.js";
 import type { CompiledSource, ServedFile } from "./compile.js";
@@ -13,23 +14,12 @@ import type { StudioDomain } from "./domain.js";
 import { executeDeterministic, MemoryArtifactStore } from "./execute.js";
 import type { RunPlan } from "./run.js";
 import type { StudioProjection } from "./studio-preflight.js";
-import type { StudioProjectionRole } from "./studio-registry.js";
 import { studioSurfacePreview } from "./surface-preview.js";
 
 const PLAYABLE = new Set(["VisualTrack", "AudioTrack"]);
 const TIMING = "SemanticTrack";
 
-export type BuiltTrack = {
-  readonly name: string;
-  readonly type: string;
-  readonly outputRef: string;
-  readonly candidateId?: string;
-  readonly candidateOrigin: "run" | "source" | "none";
-  readonly role: StudioProjectionRole;
-  readonly trace: StudioProjection["trace"];
-  readonly surfacePreview?: import("./shared.js").StudioMaterialPreview;
-  readonly track: unknown;
-};
+export type BuiltTrack = StudioResolvedTrack;
 
 export type Preview = {
   readonly source: CompiledSource;
@@ -208,7 +198,7 @@ export async function preview(input: {
       role: projection.role,
       trace: projection.trace,
       ...(surfacePreview === undefined ? {} : { surfacePreview }),
-      track: stored.value,
+      value: stored.value,
     }];
   });
   const values = new Map<string, unknown>();

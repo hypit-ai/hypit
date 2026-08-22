@@ -10,14 +10,14 @@ import { createResolvedClosure } from "@hypit/core";
 import {
   decodeDepthStackLabelSurface,
   decodeDepthStackSurface,
-  appendDepthStackCard,
+  appendDepthStackProjectedCard,
   createDepthStackCardSet,
   decodeDepthStackSpec,
   depthStackManifest,
   depthStackMarkupSurfaces,
   depthStackProducers,
   depthStackTypes,
-  finalizeDepthStack,
+  finalizeDepthStackAtWindow,
   noDepthStackCardLabel,
   renderDepthStack,
   resolveDepthStackPose,
@@ -40,6 +40,7 @@ import { narrativeTypes } from "@hypit/narrative";
 import { sealProgramSpace } from "@hypit/program-space";
 import type { ModuleManifest } from "@hypit/protocol";
 import { semanticTrackTypes } from "@hypit/semantic-track";
+import type { TemporalWindow } from "@hypit/temporal";
 import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { sealText, textManifest, textTypes } from "@hypit/text";
@@ -201,6 +202,24 @@ function cardSpec(id: string, past: "hold-tail" | "continue" | "hide" = "hold-ta
   });
 }
 
+function momentWindow(id: string, frameValue: number): TemporalWindow {
+  return {
+    id: `${id}::moment`,
+    source: { kind: "moment", id },
+    projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } },
+    span: { startFrame: frameValue, endFrameExclusive: frameValue + 1 },
+  };
+}
+
+function programWindow(endFrame: number): TemporalWindow {
+  return {
+    id: "program::program",
+    source: { kind: "program", id: "program" },
+    projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
+    span: { startFrame: 0, endFrameExclusive: endFrame },
+  };
+}
+
 function program(input: {
   readonly spec?: DepthStackSpec;
   readonly materials?: readonly MediaLayerSet[];
@@ -213,20 +232,20 @@ function program(input: {
   let set = createDepthStackCardSet();
   for (const [index, trigger] of triggers.entries()) {
     const id = `card-${index + 1}`;
-    set = appendDepthStackCard(
+    set = appendDepthStackProjectedCard(
       set,
       input.materials?.[index] ?? stillMaterial(id),
       input.labels?.[index] ?? noDepthStackCardLabel(),
       input.playbacks?.[index] ?? cardSpec(id),
-      trigger,
+      momentWindow(id, trigger),
     );
   }
-  return finalizeDepthStack(
+  return finalizeDepthStackAtWindow(
     set,
     sealDepthStackHeader({ id: "proof-stack" }),
     frame,
     input.spec ?? baseSpec(),
-    input.terminal ?? 60,
+    programWindow(input.terminal ?? 60),
     semantic,
   );
 }
@@ -259,9 +278,9 @@ test("explicit wrapping never aliases one Card into several relative depths", ()
 });
 
 test("missing, equal, reversed and terminal-crossing triggers fail in authored order", () => {
-  assert.throws(() => finalizeDepthStack(
+  assert.throws(() => finalizeDepthStackAtWindow(
     createDepthStackCardSet(), sealDepthStackHeader({ id: "empty" }),
-    frame, baseSpec(), 60, semantic,
+    frame, baseSpec(), programWindow(60), semantic,
   ), /at least one Card/u);
   assert.throws(() => program({ triggers: [0, 20, 20] }), /strictly increasing/u);
   assert.throws(() => program({ triggers: [0, 30, 20] }), /strictly increasing/u);
@@ -420,7 +439,7 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
   const fragment = result.fragments[0]!;
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-still-media-layer"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-timed-media-layer"));
-  assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-depth-stack-moment-card"));
+  assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-depth-stack-card"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "finalize-depth-stack-until-selection-end"));
   assert.equal(fragment.inputs.filter((input) => input.type.name === narrativeTypes.moment.name).length, 2);
   assert.ok(fragment.inputs.some((input) => input.name === "frame"));

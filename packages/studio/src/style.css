@@ -31,6 +31,12 @@
   --audio-rail: #75d079;
   --speech: #008882;
   --speech-rail: #00d5cd;
+  --speech-deep: #071f1d;
+  /* Semantic ruler: a restrained teal depth ramp, not the bright family rail. */
+  --semantic-segment: #355f5a;
+  --semantic-word: #2a504c;
+  --semantic-marker: #21423f;
+  --semantic-current: #43847b;
   --media: #007bb2;
   --media-rail: #38c5ff;
   --text-track: #5c69bc;
@@ -201,7 +207,7 @@ button:focus-visible, textarea:focus-visible {
   place-items: center;
   padding: 0;
   border: 0;
-  border-radius: var(--timeline-item-radius);
+  border-radius: 0;
   background: transparent;
   color: var(--text-3);
 }
@@ -565,105 +571,99 @@ button:focus-visible, textarea:focus-visible {
 .tick-last { padding-right: 4px; padding-left: 0; border-right: 1px solid #45484e; border-left: 0; transform: translateX(-100%); }
 .lanes { min-height: 0; cursor: default; }
 .lane { position: relative; min-height: 0; overflow: hidden; border-bottom: 1px solid #191b1f; background: var(--lane); }
-.semantic-lane { min-height: 0; background: #0a0c0e; }
+.semantic-lane { min-height: 0; background: var(--speech-deep); }
+.semantic-band {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: var(--semantic-band-height);
+  overflow: hidden;
+  background: var(--speech-deep);
+}
+.semantic-band-marker { border-bottom: 0; }
 .lane-attached {
   border-left: 0;
   background: var(--lane);
 }
 .timeline-labels > .track-label:last-child,
 .lanes > .lane:last-child { border-bottom: 0; }
-.semantic-segment {
-  /* The header names the take; the second row carries its actual time cells.
-     They must not collapse into one flat colour. */
-  --item-head: color-mix(in srgb, var(--track) 22%, var(--lane));
-  --item-body: color-mix(in srgb, var(--track) 10%, var(--lane));
-  --item-cell: color-mix(in srgb, var(--track) 46%, var(--lane));
+.semantic-cell {
+  --semantic-cell: color-mix(in srgb, var(--speech) 54%, var(--lane));
   position: absolute;
-  top: var(--timeline-item-inset-y);
-  bottom: var(--timeline-item-inset-y);
+  top: 0;
+  height: var(--semantic-band-height);
   min-width: 2px;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding: 0 5px;
   border: 0;
-  border-radius: var(--timeline-item-radius);
-  background: var(--item-body);
+  border-radius: 0;
+  background: var(--semantic-cell);
   box-shadow: none;
   color: var(--text);
   text-align: left;
   cursor: default;
 }
-.semantic-segment.selected { z-index: 4; overflow: visible; }
-.semantic-segment.selected > .clip-selection { display: block; }
-.semantic-segment.live { box-shadow: none; }
+.semantic-cell:focus-visible { outline: 0; }
+.semantic-segment {
+  --semantic-cell: var(--semantic-segment);
+}
+.semantic-word {
+  --semantic-cell: var(--semantic-word);
+}
+.semantic-selection {
+  --semantic-cell: var(--semantic-marker);
+  box-shadow: none;
+}
+.semantic-segment.selected { z-index: 4; box-shadow: 0 0 0 var(--timeline-selection-stroke) var(--timeline-selection-color); }
+.semantic-segment.live { filter: brightness(1.08); }
 .semantic-segment-label {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding-left: 5px;
   color: #eef0f3;
   font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
 }
-.semantic-segment-head {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: var(--timeline-item-header-height);
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.semantic-selection-label {
+  display: block;
   overflow: hidden;
-  background: var(--item-head);
-  border-bottom: 1px solid rgba(255, 255, 255, .13);
-  border-radius: var(--timeline-item-radius) var(--timeline-item-radius) 0 0;
+  text-overflow: ellipsis;
+  color: #eef0f3;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 .semantic-segment-duration {
   flex: 0 0 auto;
-  padding-right: 5px;
   color: rgba(255, 255, 255, .75);
   font: 500 11px/1 var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 .semantic-segment:not(.semantic-wide) .semantic-segment-duration { display: none; }
-.semantic-words {
-  position: absolute;
-  top: var(--timeline-item-header-height);
-  right: 0;
-  bottom: 0;
-  left: 0;
-  overflow: hidden;
-  background: var(--item-body);
-  border-radius: 0 0 var(--timeline-item-radius) var(--timeline-item-radius);
-}
-.semantic-word {
-  position: absolute;
-  top: 50%;
-  height: var(--timeline-content-cell-height);
-  transform: translateY(-50%);
-  min-width: 1px;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  padding: 0 3px;
-  border: 0;
-  background: var(--item-cell);
-  box-shadow: none;
-  color: #eef0f3;
-  text-align: left;
-  cursor: default;
-}
-.semantic-word.current { background: var(--speech); color: #fff; }
+.semantic-word.current { background: var(--semantic-current); color: #fff; }
 .semantic-word-label { display: block; overflow: hidden; font-size: 11px; font-weight: 500; line-height: 1; white-space: nowrap; }
-/* At overview scale keep the semantic content row visible. Only its labels
-   disappear; the coloured cells still communicate the timing structure. */
-.semantic-coarse .semantic-words { display: block; }
-.semantic-coarse .semantic-segment-head {
-  height: var(--timeline-item-header-height);
-  border-bottom: 1px solid rgba(255, 255, 255, .13);
+.semantic-cell-content { min-width: 0; width: 100%; display: flex; align-items: center; gap: 6px; overflow: hidden; }
+.semantic-moment {
+  position: absolute;
+  top: 4px;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-7px) rotate(45deg);
+  border-radius: 0;
+  background: var(--semantic-current);
+  box-shadow: none;
 }
-.label-hidden .semantic-word-label, .label-hidden .semantic-segment-label { display: none; }
+.track-label-semantic::before {
+  border-radius: 0;
+  background: var(--speech-deep);
+}
+.label-hidden .semantic-word-label,
+.label-hidden .semantic-segment-label,
+.label-hidden .semantic-selection-label { display: none; }
 .track-fold {
   min-width: 17px;
   height: 17px;

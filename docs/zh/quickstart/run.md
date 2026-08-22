@@ -185,8 +185,6 @@ hypit paths
 | 变量 | Provider / 用途 |
 |---|---|
 | `KIE_API_KEY` | KIE 模型，包括 Seedance 与 GPT Image |
-| `GOOGLE_CLOUD_PROJECT` | 已启用 Vertex AI 的 Google Cloud project |
-| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | 完整的 Vertex 凭据 JSON 内容，而不是文件路径 |
 | `MIMO_API_KEY` | Xiaomi MiMo TTS；只有选择该 Endpoint 时才需要 |
 
 只执行 Profile 中所选 Endpoint 对应的行。在 macOS/Linux Shell 中：
@@ -196,8 +194,6 @@ read -r -s KIE_API_KEY
 export KIE_API_KEY
 read -r -s MIMO_API_KEY
 export MIMO_API_KEY
-export GOOGLE_CLOUD_PROJECT="your-project-id"
-export GOOGLE_APPLICATION_CREDENTIALS_JSON="$(<"$HOME/.config/hypit/google-service-account.json")"
 ```
 
 在 Windows PowerShell 中：
@@ -205,8 +201,6 @@ export GOOGLE_APPLICATION_CREDENTIALS_JSON="$(<"$HOME/.config/hypit/google-servi
 ```powershell
 $env:KIE_API_KEY = "your-key"
 $env:MIMO_API_KEY = "your-key"
-$env:GOOGLE_CLOUD_PROJECT = "your-project-id"
-$env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\hypit\google-service-account.json"
 ```
 
 不要把凭据写进 Author Source、Run Source、Runtime Profile 源文件或提交内容。`doctor` 会验证所需凭据是否存在，但不会打印秘密值。

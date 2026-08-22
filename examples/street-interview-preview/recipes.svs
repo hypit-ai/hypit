@@ -27,7 +27,6 @@
   }
 
   caption.base {
-    cue-min-words: 1; cue-max-words: 5;
     stack-order: 70; x: 0.5; y: 0.84; width: 0.86; anchor-x: center; anchor-y: bottom;
     size: 56; line-height: 1.05; align: center;
     fill: #FFFFFF; stroke-color: #08080A; stroke-width: 2;

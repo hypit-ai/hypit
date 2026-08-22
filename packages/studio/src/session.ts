@@ -8,6 +8,7 @@ import { preview } from "./programme.js";
 import { renderPreview } from "./preview/render.js";
 import type { RunPlan } from "./run.js";
 import type { StudioSnapshot } from "./shared.js";
+import type { StudioAdapterRegistry } from "./studio-registry.js";
 import { snapshot } from "./snapshot.js";
 import { inspectStudioRun } from "./studio-preflight.js";
 import type { StudioProjection } from "./studio-preflight.js";
@@ -21,13 +22,14 @@ export type StudioSession = {
 
 export async function readStudioSession(input: {
   readonly domain: StudioDomain;
+  readonly registry: StudioAdapterRegistry;
   readonly run: RunPlan;
   readonly archive?: StudioArchive;
   readonly revision: number;
   readonly sourcePath?: string;
 }): Promise<StudioSession> {
   const source = input.run.source;
-  const inspection = inspectStudioRun(source, input.run);
+  const inspection = inspectStudioRun(input.registry, source, input.run);
   const outputRefs = [
     inspection.filmComposition,
     ...inspection.projections.map((projection) => projection.ref),
@@ -48,7 +50,7 @@ export async function readStudioSession(input: {
   });
   const text = readFileSync(input.run.authorSource, "utf8");
   return {
-    snapshot: snapshot(built, {
+    snapshot: snapshot(input.registry, built, {
       revision: input.revision,
       path: input.sourcePath ?? input.run.authorSource,
       text,

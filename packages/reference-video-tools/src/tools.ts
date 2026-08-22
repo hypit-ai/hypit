@@ -468,7 +468,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       // them rather than ahead of them.
       const transcribing = state.transcript?.status === "complete" && !redoTranscript
         ? Promise.resolve(state.transcript)
-        : prepareTranscript(reference, videoPath, root, info.hasAudio, redoTranscript);
+        : prepareTranscript(reference, videoPath, root, info.hasAudio, "en", redoTranscript);
       const { ask, pending } = await askerFor(observer, state);
       const whole = [analysisVideo];
       const [people, voices, systems, places] = await Promise.all([

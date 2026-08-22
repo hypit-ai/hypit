@@ -100,11 +100,10 @@ async function nearestProjectPackageRoot(start: string): Promise<string | undefi
   }
 }
 
-async function resolvePackageRoot(
-  projectStart: string,
-  distributionRoot: string | undefined,
-): Promise<string> {
-  return await nearestProjectPackageRoot(projectStart) ?? distributionRoot ?? resolve(projectStart);
+async function resolvePackageRoot(projectStart: string): Promise<string> {
+  // The Distribution is a separate read-only fallback. Package discovery must
+  // retain the project root even when this lightweight project has no package.json.
+  return await nearestProjectPackageRoot(projectStart) ?? resolve(projectStart);
 }
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
@@ -804,7 +803,7 @@ export async function runCli(
       ? dirname(resolve(args.file))
       : process.cwd());
   const packageRootForProject = async (projectRoot = commandProjectRoot()): Promise<string> =>
-    args.packageRoot ?? await resolvePackageRoot(projectRoot, distribution.packageRoot);
+    args.packageRoot ?? await resolvePackageRoot(projectRoot);
   const writeOperational = (
     machine: unknown,
     title: string,
@@ -836,7 +835,12 @@ export async function runCli(
     const key = `${profile}\u0000${packageRoot}`;
     let opened = runtimeHosts.get(key);
     if (opened === undefined) {
-      opened = distribution.openRuntimeHost(profile, { packageRoot });
+      opened = distribution.openRuntimeHost(profile, {
+        packageRoot,
+        ...(distribution.packageRoot === undefined
+          ? {}
+          : { distributionPackageRoot: distribution.packageRoot }),
+      });
       runtimeHosts.set(key, opened);
     }
     return await opened;
@@ -948,6 +952,9 @@ export async function runCli(
     const picture = await distribution.generatePicture({
       prompt: await readPromptText(args.prompt),
       packageRoot: await packageRootForProject(process.cwd()),
+      ...(distribution.packageRoot === undefined
+        ? {}
+        : { distributionPackageRoot: distribution.packageRoot }),
       ...(args.model === undefined ? {} : { model: args.model }),
       ...(args.aspectRatio === undefined ? {} : { aspectRatio: args.aspectRatio }),
       ...(args.resolution === undefined ? {} : { resolution: args.resolution }),
@@ -1609,13 +1616,16 @@ export async function runCli(
     ?? selectedRuntimeProjectRoot
     ?? dirname(resolve(args.file!));
   const sourcePackageRoot = effectivePackageRoot
-    ?? await resolvePackageRoot(effectiveWorkspaceRoot, distribution.packageRoot);
+    ?? await resolvePackageRoot(effectiveWorkspaceRoot);
   const loadedPackageSet = distribution.discoverSourcePackages === undefined
     ? undefined
     : await loadDiscoveredSourcePackages(distribution, {
           source: args.file!,
           ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
           packageRoot: sourcePackageRoot,
+          ...(distribution.packageRoot === undefined
+            ? {}
+            : { distributionPackageRoot: distribution.packageRoot }),
         });
   const packageContributions = (loadedPackageSet ?? distribution.bootstrapPackages)
     .map((item) => item.contribution);

@@ -11,33 +11,29 @@ covers Caption, Media, Typography and Audio Track authoring.
 
 ## Caption system
 
-Caption uses a small common language and a replaceable Style family:
+Caption uses a Script-owned document and a replaceable Style family:
 
 ```text
-Script Display → Caption Program → Planner + measured Atom timing → Style-family Track
+Script CaptionDocument → Caption Program → SemanticTrack timing → Style-family Track
 ```
 
 ```svml
 <import as="caption" from="@hypit/caption@1"/>
 <import as="caption-fine" from="@hypit/caption-fine@1"/>
-<import as="caption-ai" from="@hypit/caption-gemini@1"/>
 <import as="media" from="@hypit/media@1"/>
 <import as="fonts" from="@hypit/fonts-open@1"/>
 ```
 
-`@hypit/caption` owns only common Cue bounds, generic optional per-Word fields, total Style
-assignment, Plan validation and the timing join. `@hypit/caption-fine` is one field-free Style
-family: it owns geometry, glyph/Cue/Pill Paint and layered local motion.
+`@hypit/caption` owns the common CaptionDocument contract, complete-unit Selection/Role projection,
+Style assignment and the timing join. `@hypit/caption-fine` is one Style family: it owns geometry,
+glyph/Cue/Pill Paint and layered local motion.
 
 ### caption-fine:Style
 
-A Style is one indivisible pair of planning requirements and rendering parameters. Fine resolves
-both from one package-owned SVS Recipe:
+A Style is a rendering intent resolved from one package-owned SVS Recipe:
 
 ```svs
 caption.primary {
-  cue-min-words: 2;
-  cue-max-words: 7;
   stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
   anchor-x: center; anchor-y: bottom;
   size: 58;
@@ -77,26 +73,28 @@ The required `font=` edge carries one byte-reproducible `FontStackRef`. Family, 
 exist only on that edge; each fallback retains its own exact face metadata. Fine rejects a Style
 without that stack instead of falling back to machine fonts.
 
-Another Caption package may define completely different planning fields and visual parameters
-without changing the common package.
+Another Caption package may define a different rendering family without changing the common
+CaptionDocument contract.
 
-Fine's properties are orthogonal: Cue planning; normalized placement and anchor; layout and
+Fine's properties are orthogonal: normalized placement and anchor; layout and
 typography; base/active solid or gradient glyph Paint; stroke, shadow, directional long shadow,
 glow and underline; Cue/Pill Paint; three independent glyph/Pill/underline activation channels;
-and layered Cue, Atom, active-response and loop motion. Missing optional dimensions resolve
+and layered Cue, Alignment-Unit, active-response and loop motion. Missing optional dimensions resolve
 deterministically to no decoration or motion. Unknown properties are rejected.
 
 `karaoke` is `off`, `current` or `trail`; `karaoke-transition` is `step` or `wipe`. Timing is always
-whole-Atom timing already proven by Caption. A normal one-word Atom therefore highlights per word,
-while a Dual Text Atom remains one indivisible visible unit. Fine never guesses internal time.
+whole-Alignment-Unit timing already proven by Caption. A normal one-word unit therefore highlights
+per word, while a Dual Text unit remains one indivisible visible unit. Fine never guesses internal
+time.
 
 `active-box` is independently `off`, `current` or `trail`. `active-box-continuity: isolated` paints
-one capsule per activated Atom; `joined` turns a trail into one ordered prefix whose background is
+one capsule per activated Alignment Unit; `joined` turns a trail into one ordered prefix whose background is
 continuous on each real browser line. Thus trail-colored text with a current-only Pill is one
 Recipe—not a second renderer.
 
-Fine wraps only between complete Atoms and never clips author text. It intentionally has no
-`max-lines`; use Cue bounds, Track width and font size to control density.
+Fine wraps only between complete Alignment Units and never clips author text. Cue boundaries come
+from Script segments, turns, Style changes and authored `||`; use Track width and font size to
+control density.
 
 CJK dialogue can be written directly. For a display-only emoji that still follows speech timing,
 author the correspondence explicitly, such as `<🌐 | globe>`; the system will not invent a spoken
@@ -104,47 +102,35 @@ word for a bare symbol.
 
 ### caption:Program
 
-The Program starts from the complete ordered display-word universe emitted by Script. One explicit
-default Style covers every word; no `@whole` Selection or complement is required. Ordered `Use`
-rules replace the whole Style on a Role or explicit Caption word subset, with the last match winning.
+The Program starts from the complete ordered CaptionDocument emitted by Script. One explicit default
+Style covers every Alignment Unit. Ordered `Use` rules replace the Style on a Role or a semantic
+Selection, with the last match winning.
 
 ```svml
-<caption:Program id="caption-program" display={story.caption}
+<caption:Program id="caption-program" document={story.caption} narrative={story}
   default={primary-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
-  <caption:Use words={story.caption.selection.product-demo}
+  <caption:Use selection={story.selection.product-demo}
     style={dialogue-caption}/>
-  <caption:Mute words={story.caption.selection.private}/>
+  <caption:Mute selection={story.selection.private}/>
 </caption:Program>
 ```
 
-`role=` is convenient author syntax for a word subset, not a temporal condition. `words=` consumes
-the Caption-specific projection of a Script Selection; the public time Selection remains only a
-pair of semantic anchors. Partial ownership of an indivisible Dual Text display word is rejected.
-`Mute` uses that same exact word projection, stays out of Gemini, and hides those complete Atoms
-after Cue planning without regrouping the Cue.
-
-### caption-ai:Planner
-
-```svml
-<caption-ai:Planner id="caption-plan" display={story.caption}
-  program={caption-program} model="gemini-2.5-flash"/>
-```
-
-The planner receives immutable display Atoms/Words and already-resolved Style runs. It may only cut
-each run between whole Atoms and attach declared fields to Word ids. Fine declares no fields. The
-planner cannot rewrite text, select Styles, see audio or invent time. Its output is
-`{caption-plan.plan}`.
+`role=` is a convenient query for a word subset, not a temporal condition. `selection=` projects
+the public semantic Selection to complete Caption Alignment Units before timing. Partial ownership
+of an indivisible N:M Dual Text unit is rejected. `Mute` uses the same projection and does not
+regroup authored Cues.
 
 ### caption-fine:Track
 
 ```svml
-<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} semantic={speech.semantic} program={caption-program} plan={caption-plan.plan}/>
+<caption-fine:Track id="captions" document={story.caption}
+  semantic={speech.semantic} program={caption-program}/>
 ```
 
-The common Caption timing step joins the Plan to the independent SemanticMap. Fine then renders all
-default and override Styles into one ordinary peer `VisualTrack`: `{captions.track}`.
+Caption joins each complete unit to the independent SemanticTrack. Fine then renders all default
+and override Styles into one ordinary peer `VisualTrack`: `{captions.track}`.
 
 ## Media overlays and B-roll
 
@@ -237,7 +223,6 @@ then choose its exact program window and occupancy:
 | `Clip.source` | yes | Explicitly selected and normalized `SynchronizedMedia` |
 | `during`, `at`/`for`, or `start`/`end` | exactly one form | Whole-program, Selection, Moment, or explicit window |
 | `playback` | no | `once`, `once-end`, `loop`, `loop-end`, or bounded `stretch` |
-| `occurrences` | no | `one` or `each` when a semantic source has multiple occurrences |
 | `trim-start`, `trim-end` | no | Exact source trim |
 | `gain`, `fade-in`, `fade-out` | no | Explicit per-clip mix values |
 
@@ -354,10 +339,10 @@ against the variant, so a Column recipe on a TierBoard is refused by name.
 | `during` | a Selection — the board is on screen for it |
 | `style` | the matching style record, and only that variant's |
 | `appear-sound`, `move-sound` | optional Synchronized Media |
-| `triggers`, `terminal` | Moments — rows move on one, the board settles on the other. `TierBoard` and `TopThree` only |
+| `terminal` | the Moment where the completed board settles. `TierBoard` and `TopThree` only |
 | `canvas` | a `space:Canvas` — the reveal stage. `Column` only |
 
-`Column` separates placement from reveal time, so it takes neither `triggers` nor `terminal`: each
+`Column` separates placement from reveal time, so it takes no `terminal`: each
 item carries its own reveal window instead, and the Column resolves siblings into non-overlapping
 windows inside the container's `during` span.
 
@@ -369,10 +354,10 @@ silent no-op.
 
 Each variant takes its own, at least one, and ids must be unique within a board.
 
-- **`TierItem`** — `tier` (required, matching a row id in the recipe), `icon` (required), optional
-  `entry="direct" | "stage"` and `stack`. Row labels come from the recipe, not the tag.
-- **`TopThreeItem`** — `label` (required: a string or a Text reference), optional `icon` and `stack`.
-  At most three.
+- **`TierItem`** — `tier`, `icon` and item-owned Moment `at` are required; `entry="direct" | "stage"`
+  and `stack` are optional. Row labels come from the recipe, not the tag.
+- **`TopThreeItem`** — `label` and item-owned Moment `at` are required; `icon` and `stack` are optional.
+  At most three. TierBoard and TopThree reveal order comes from these Moments' actual frame order.
 - **`ColumnItem`** — `label` (required) and `rank` (required, a positive integer that decides the
   numbered row and nothing else), optional `icon` and `stack`. Each item also owns its reveal time:
   `during` names a Selection whose projected window is when it prefers to appear, and
@@ -459,9 +444,9 @@ empty, each with a required `z` for stacking order and a window that is one of:
 | A Moment, for a length | `at={story.moment.x} for="12f"` on an item whose Track has `semantic={speech.semantic}` |
 | An explicit span | `start="…" end="…"`, optionally against a `selection=` or `moment=` |
 
-The Track takes `id`, `canvas` and `semantic`.
-Lengths are `12f`, `250ms` or `1.5s`, and `occurrences="each"` repeats an effect at every occurrence
-of its marker rather than the first.
+The Track takes `id`, `canvas` and `semantic`. Lengths are `12f`, `250ms` or `1.5s`. A Selection
+names one contiguous interval and a Moment names one point; author another item when an effect should
+appear again.
 
 Eleven effects are available — `Flash`, `ColorWash`, `Vignette`, `ScanLines`, `DirectionalMatte`,
 `WhipVeil`, `GlitchVeil`, `Grain`, `LightLeak`, `Bokeh` and `TVStatic` — and each carries its own
@@ -517,7 +502,6 @@ All four track families together in one source file:
 ```svml
 <import as="caption" from="@hypit/caption@1"/>
 <import as="caption-fine" from="@hypit/caption-fine@1"/>
-<import as="caption-ai" from="@hypit/caption-gemini@1"/>
 <import as="fonts" from="@hypit/fonts-open@1"/>
 <import as="media" from="@hypit/media@1"/>
 <import as="pipeline" from="@hypit/media-pipeline@1"/>
@@ -530,10 +514,10 @@ All four track families together in one source file:
 <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
 <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
 <caption-fine:Style id="base-caption" recipe={recipes.caption.base} font={caption-font}/>
-<caption:Program id="caption-program" display={story.caption} default={base-caption}/>
-<caption-ai:Planner id="cue-plan" display={story.caption}
-  program={caption-program} model="gemini-2.5-flash"/>
-<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} semantic={speech.semantic} plan={cue-plan.plan} program={caption-program}/>
+<caption:Program id="caption-program" document={story.caption} narrative={story}
+  default={base-caption}/>
+<caption-fine:Track id="captions" document={story.caption}
+  semantic={speech.semantic} program={caption-program}/>
 
 <!-- Shared placement is an explicit edge, separate from Text appearance. -->
 <space:Canvas id="vertical" width="1080" height="1920"/>

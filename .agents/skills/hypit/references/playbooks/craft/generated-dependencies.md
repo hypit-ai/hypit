@@ -96,22 +96,19 @@ filled by generation when the reference shows content in it.
 
 This is the commonest inherited edge in a speech-led program; `frame-coverage.md` holds the general
 form and the measurements. `during={story.selection.X}` spans that Selection's first word to its last,
-so the pause between two Selections, the breath before a Segment's first word, and the words that fall
-between two occurrences are in none of them.
+so the pause between two Selections and the breath before a Segment's first word are in neither.
 
 Decide, for each thing you place, which of two kinds it is:
 
 - **Continuously present** — a sheet the reference holds up, a bed under a voiceover, a badge that
-  stays. Take its window from a Segment, or from the first occurrence's start to the last one's end.
-  Never from a Selection whose occurrences have gaps, however well the occurrences line up with the
-  words: they do not touch.
+  stays. Take its window from a Segment or one continuous Selection that includes the intended gaps.
 - **Genuinely coming and going** — an insert that appears for one phrase and leaves. A Selection is
   exactly right, and the gap is the point.
 
-The same question decides a component you write yourself. A Program scheduled from occurrences draws
-only inside them unless you give it a span of its own, so a page built from one occurrence per row
-vanishes on the words between two rows. `@hypit/local-notebook-ranking` does that deliberately and
-says so in its own appearance text; a sheet the reference never takes down must not inherit it. When
+The same question decides a component you write yourself. A Program built only from item arrival
+windows draws only inside them unless you give it an outer span of its own, so a page built from one
+window per row vanishes between rows. A project-local notebook-ranking package may do that deliberately
+and say so in its own appearance text; a sheet the reference never takes down must not inherit it. When
 a component both persists and changes, its schedule carries two different things — one span for how
 long it is on screen, one window per item for when that item arrives — and conflating them is what
 produces the blink.

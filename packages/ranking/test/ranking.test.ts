@@ -14,15 +14,16 @@ import type { SvsRecipe } from "@hypit/svs";
 
 import {
   appendColumnItem,
-  appendColumnWindowCandidate,
+  appendColumnWindowCandidateWindow,
   appendRankingItemSpec,
   appendRankingSound,
   appendTierBoardItem,
   appendTopThreeItem,
+  appendTriggeredRankingCandidateWindow,
   buildColumnProgram,
   buildColumnSchedule,
   buildColumnSoundEvents,
-  buildRankingSchedule,
+  buildRankingScheduleFromWindows,
   buildTierBoardProgram,
   buildTierBoardSoundEvents,
   buildTopThreeProgram,
@@ -33,6 +34,7 @@ import {
   createRankingSoundSet,
   createTierBoardItemSet,
   createTopThreeItemSet,
+  createTriggeredRankingCandidateSet,
   decodeColumnStyle,
   decodeColumnStyleSurface,
   decodeColumnSurface,
@@ -51,7 +53,6 @@ import {
   rankingMarkupSurfaces,
   rankingProducers,
   rankingTypes,
-  projectColumnSegmentOuterWindow,
   sealRankingHeader,
 } from "@hypit/ranking";
 import type {
@@ -59,7 +60,9 @@ import type {
   ColumnSchedule,
   RankingHeader,
   RankingItemSpec,
+  RankingItemSpecSet,
   TriggeredRankingSchedule,
+  TriggeredRankingCandidateSet,
   TierBoardItemSpec,
   TopThreeItemSpec,
 } from "@hypit/ranking";
@@ -68,6 +71,8 @@ import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { sealText, textManifest, textTypes } from "@hypit/text";
+import { projectMomentWindow, projectSegmentWindow, projectSelectionWindow } from "@hypit/temporal";
+import type { TemporalWindow } from "@hypit/temporal";
 import type {
   StructuredElement,
   StructuredNode,
@@ -110,24 +115,21 @@ const semanticTrack = semanticTrackFixture(space, {
 });
 const outer: NarrativeSelectionRef = {
   id: "ranking-window",
-  occurrences: [{ occurrence: 0, startAnchorId: "outer-start", endAnchorId: "outer-end" }],
+  startAnchorId: "outer-start",
+  endAnchorId: "outer-end",
 };
 const terminal: NarrativeMomentRef = {
   id: "ranking-complete",
-  occurrences: [{ occurrence: 0, anchorId: "terminal" }],
+  anchorId: "terminal",
 };
 const rankingSegment: NarrativeExcerpt = { kind: "segment", id: "ranking", tokenStart: 0, tokenEndExclusive: 1 };
 const selection = (id: string, startAnchorId: string, endAnchorId: string): NarrativeSelectionRef => ({
-  id, occurrences: [{ occurrence: 0, startAnchorId, endAnchorId }],
+  id, startAnchorId, endAnchorId,
 });
 const early = selection("early", "early-start", "early-end");
 const overlapping = selection("overlapping", "overlap-start", "overlap-end");
 const late = selection("late", "late-start", "late-end");
-const triggers = (count: number): NarrativeMomentRef => ({
-  id: "next-rank",
-  occurrences: ["one", "two", "three", "four"].slice(0, count)
-    .map((anchorId, occurrence) => ({ occurrence, anchorId })),
-});
+const triggerAnchors = ["one", "two", "three", "four"] as const;
 const font: FontArtifactRef = {
   sources: [{ artifact: { kind: "blob", digest: fixtureDigest("ranking-font"), size: 32, mediaType: "font/woff2" } }],
   weight: 700,
@@ -147,10 +149,69 @@ function specs(headerValue: RankingHeader, values: readonly RankingItemSpec[]) {
   return set;
 }
 
-function schedule(headerValue: RankingHeader, values: readonly RankingItemSpec[]): TriggeredRankingSchedule {
-  return buildRankingSchedule({
-    header: headerValue, items: specs(headerValue, values), semantic: semanticTrack, outer,
-    triggers: triggers(values.length), terminal,
+function schedule(
+  headerValue: RankingHeader,
+  values: readonly RankingItemSpec[],
+  anchors: readonly string[] = triggerAnchors,
+): TriggeredRankingSchedule {
+  let candidates = createTriggeredRankingCandidateSet();
+  for (const [index, value] of values.entries()) {
+    candidates = appendTriggeredRankingCandidate(candidates, value, semanticTrack, {
+      id: `${value.id}-moment`,
+      anchorId: anchors[index]!,
+    });
+  }
+  return buildRankingSchedule({ header: headerValue, items: specs(headerValue, values), semantic: semanticTrack, outer, candidates, terminal });
+}
+
+function appendTriggeredRankingCandidate(
+  set: ReturnType<typeof createTriggeredRankingCandidateSet>, spec: RankingItemSpec,
+  semantic: typeof semanticTrack, moment: NarrativeMomentRef,
+) {
+  return appendTriggeredRankingCandidateWindow(set, spec, projectMomentWindow({
+    itemId: spec.id, semantic, moment,
+    projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } },
+  }));
+}
+
+function buildRankingSchedule(input: {
+  readonly header: RankingHeader;
+  readonly items: RankingItemSpecSet;
+  readonly semantic: typeof semanticTrack;
+  readonly outer: NarrativeSelectionRef;
+  readonly candidates: TriggeredRankingCandidateSet;
+  readonly terminal: NarrativeMomentRef;
+}): TriggeredRankingSchedule {
+  return buildRankingScheduleFromWindows({
+    header: input.header,
+    items: input.items,
+    semantic: input.semantic,
+    outer: projectSelectionWindow({
+      itemId: input.outer.id, semantic: input.semantic, selection: input.outer,
+      projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
+    }),
+    candidates: input.candidates,
+    terminal: projectMomentWindow({
+      itemId: input.terminal.id, semantic: input.semantic, moment: input.terminal,
+      projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } },
+    }),
+  });
+}
+
+function appendColumnWindowCandidate(
+  set: ReturnType<typeof createColumnWindowCandidateSet>, spec: ColumnItemSpec,
+  semantic: typeof semanticTrack, selection: NarrativeSelectionRef,
+) {
+  return appendColumnWindowCandidateWindow(set, spec, projectSelectionWindow({
+    itemId: spec.id, semantic, selection,
+    projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
+  }));
+}
+
+function projectColumnSegmentOuterWindow(semantic: typeof semanticTrack, segment: NarrativeExcerpt): TemporalWindow {
+  return projectSegmentWindow({
+    itemId: `${segment.id}:outer`, semantic, segment,
+    projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
   });
 }
 
@@ -180,7 +241,7 @@ function columnSchedule(
   return buildColumnSchedule({ header: owner, items: specs(owner, values), outer: outerWindow, candidates });
 }
 
-test("RankingSchedule zips authored item and Moment order and preserves a settled suffix", () => {
+test("RankingSchedule derives chronological Item order from item-owned Moments and preserves a settled suffix", () => {
   const owner = header("top-three", "tools");
   const value = schedule(owner, [topSpec("fourth"), topSpec("third"), topSpec("second")]);
   assert.deepEqual(value.entries.map((entry) => [entry.itemId, entry.stage, entry.cumulative]), [
@@ -191,21 +252,15 @@ test("RankingSchedule zips authored item and Moment order and preserves a settle
   assert.deepEqual(value.entries.at(-1)?.settled, { startFrame: 190, endFrameExclusive: 230 });
 });
 
-test("RankingSchedule rejects cardinality, outer/terminal ambiguity and authored physical reversal", () => {
+test("RankingSchedule requires one item-owned Moment per Item and distinct chronological frames", () => {
   const owner = header("tier-board");
   const values = [tierSpec("a", "s"), tierSpec("b", "a")];
+  let missing = createTriggeredRankingCandidateSet();
+  missing = appendTriggeredRankingCandidate(missing, values[0]!, semanticTrack, { id: "a-at", anchorId: "one" });
   assert.throws(() => buildRankingSchedule({
-    header: owner, items: specs(owner, values), semantic: semanticTrack, outer, triggers: triggers(1), terminal,
-  }), /cardinality/u);
-  assert.throws(() => buildRankingSchedule({
-    header: owner, items: specs(owner, values), semantic: semanticTrack,
-    outer: { ...outer, occurrences: [...outer.occurrences, { ...outer.occurrences[0]!, occurrence: 1 }] },
-    triggers: triggers(2), terminal,
-  }), /exactly one/u);
-  assert.throws(() => buildRankingSchedule({
-    header: owner, items: specs(owner, values), semantic: semanticTrack, outer,
-    triggers: { ...triggers(2), occurrences: [triggers(2).occurrences[1]!, triggers(2).occurrences[0]!] }, terminal,
-  }), /strictly increasing/u);
+    header: owner, items: specs(owner, values), semantic: semanticTrack, outer, candidates: missing, terminal,
+  }), /item-owned Moments differ/u);
+  assert.throws(() => schedule(owner, values, ["one", "one"]), /strictly increasing/u);
 });
 
 test("variant Style decoders reject unknown Recipes and keep exact fonts and independent stacks", () => {
@@ -232,9 +287,13 @@ test("TierBoard owns cumulative direct/stage placement and rejects invalid sched
   const track = renderTierBoard(space, program);
   assert.deepEqual(track.presents.map((item) => item.stacking.order).sort((a, b) => a - b), [20, 25, 30, 30, 30, 30]);
   assert.equal(track.presents.find((item) => item.id.endsWith(":item:alpha:settled"))?.span.endFrameExclusive, 230);
-  const tightTerminal = { ...terminal, occurrences: [{ occurrence: 0, anchorId: "two" }] };
+  const tightTerminal = { ...terminal, anchorId: "two" };
+  let candidates = createTriggeredRankingCandidateSet();
+  for (const [index, item] of semantic.entries()) {
+    candidates = appendTriggeredRankingCandidate(candidates, item, semanticTrack, { id: `${item.id}-at`, anchorId: triggerAnchors[index]! });
+  }
   assert.throws(() => buildRankingSchedule({
-    header: owner, items: specs(owner, semantic), semantic: semanticTrack, outer, triggers: triggers(2), terminal: tightTerminal,
+    header: owner, items: specs(owner, semantic), semantic: semanticTrack, outer, candidates, terminal: tightTerminal,
   }), /outside|strictly increasing/u);
 });
 
@@ -365,7 +424,8 @@ test("all three author Surfaces preserve explicit semantic, spatial, font, image
     ["outer", plain("outer", narrativeTypes.selection)],
     ["ranking-segment", plain("ranking-segment", narrativeTypes.excerpt)],
     ["column-reveal", plain("column-reveal", narrativeTypes.selection)],
-    ["triggers", plain("triggers", narrativeTypes.moment)],
+    ["moment-one", plain("moment-one", narrativeTypes.moment)],
+    ["moment-two", plain("moment-two", narrativeTypes.moment)],
     ["terminal", plain("terminal", narrativeTypes.moment)],
     ["icon-1", plain("icon-1", mediaTypes.blobArtifact)],
     ["icon-2", plain("icon-2", mediaTypes.blobArtifact)],
@@ -396,8 +456,8 @@ test("all three author Surfaces preserve explicit semantic, spatial, font, image
   const cases = [
     [decodeTierBoardSurface, node("ranking:TierBoard", {
       id: "tier", semantic: ref("semantic"), frame: ref("frame"), during: ref("outer"),
-      triggers: ref("triggers"), terminal: ref("terminal"), style: ref("tier-style"),
-    }, [node("ranking:TierItem", { id: "tier-one", tier: "s", entry: "stage", icon: ref("icon-1") })])],
+      terminal: ref("terminal"), style: ref("tier-style"),
+    }, [node("ranking:TierItem", { id: "tier-one", tier: "s", entry: "stage", icon: ref("icon-1"), at: ref("moment-one") })])],
     [decodeColumnSurface, node("ranking:Column", {
       id: "column", semantic: ref("semantic"), canvas: ref("canvas"), frame: ref("frame"), during: ref("ranking-segment"),
       style: ref("column-style"),
@@ -408,8 +468,8 @@ test("all three author Surfaces preserve explicit semantic, spatial, font, image
     ])],
     [decodeTopThreeSurface, node("ranking:TopThree", {
       id: "top", semantic: ref("semantic"), frame: ref("frame"), during: ref("outer"),
-      triggers: ref("triggers"), terminal: ref("terminal"), style: ref("top-style"),
-    }, [node("ranking:TopThreeItem", { label: "First" }), node("ranking:TopThreeItem", { label: "Second", icon: ref("icon-1") })])],
+      terminal: ref("terminal"), style: ref("top-style"),
+    }, [node("ranking:TopThreeItem", { label: "First", at: ref("moment-one") }), node("ranking:TopThreeItem", { label: "Second", icon: ref("icon-1"), at: ref("moment-two") })])],
   ] as const;
   for (const [handler, element] of cases) {
     const result = await handler({
@@ -466,21 +526,21 @@ test("Ranking author Surfaces fail closed on impossible image and sound combinat
   const references = new Map<string, SurfaceResolvedReference>([
     ["semantic", plain("semantic", semanticTrackTypes.track)],
     ["frame", plain("frame", spatialTypes.frame)], ["outer", plain("outer", narrativeTypes.selection)],
-    ["triggers", plain("triggers", narrativeTypes.moment)], ["terminal", plain("terminal", narrativeTypes.moment)],
+    ["moment", plain("moment", narrativeTypes.moment)], ["terminal", plain("terminal", narrativeTypes.moment)],
     ["style", plain("style", rankingTypes.tierStyle)], ["style.sound", plain("style.sound", rankingTypes.soundStyle)],
     ["move", plain("move", mediaTypes.synchronized)],
   ]);
-  const common = { id: "bad", semantic: ref("semantic"), frame: ref("frame"), during: ref("outer"), triggers: ref("triggers"), terminal: ref("terminal"), style: ref("style") };
+  const common = { id: "bad", semantic: ref("semantic"), frame: ref("frame"), during: ref("outer"), terminal: ref("terminal"), style: ref("style") };
   const context = (element: StructuredElement) => ({
     sourceName: "ranking.svml", element, resolveReference: (path: string) => references.get(path),
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
   assert.throws(() => decodeTierBoardSurface(context({
     kind: "element", name: "ranking:TierBoard", attributes: common,
-    children: [{ kind: "element", name: "ranking:TierItem", attributes: { tier: "s" }, children: [], range }], range,
+    children: [{ kind: "element", name: "ranking:TierItem", attributes: { tier: "s", at: ref("moment") }, children: [], range }], range,
   })), /icon/u);
   assert.throws(() => decodeTierBoardSurface(context({
     kind: "element", name: "ranking:TierBoard", attributes: { ...common, "move-sound": ref("move") },
-    children: [{ kind: "element", name: "ranking:TierItem", attributes: { tier: "s", icon: ref("missing") }, children: [], range }], range,
+    children: [{ kind: "element", name: "ranking:TierItem", attributes: { tier: "s", icon: ref("missing"), at: ref("moment") }, children: [], range }], range,
   })), /wrong Type|move-sound/u);
 });

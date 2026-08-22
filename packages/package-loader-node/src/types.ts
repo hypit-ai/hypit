@@ -39,3 +39,11 @@ export type NodePackageSelectionRequest = {
   /** Logical capabilities that the selected packages must provide. */
   readonly logical?: readonly LogicalPackageAddress[];
 };
+
+export type NodePackageLoadOptions = {
+  /**
+   * Additional read-only Distribution roots. They are fallbacks for project-scoped packages;
+   * the reserved @hypit namespace resolves only from these roots when they are present.
+   */
+  readonly fallbackRoots?: readonly string[];
+};

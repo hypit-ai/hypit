@@ -312,22 +312,8 @@ export function fineCaptionStyle(
   recipe: SvsRecipe,
   exactFonts: readonly FontArtifactRef[],
 ): CaptionStyleIntent {
-  const minimumWords = integer(recipe, "cue-min-words");
-  const maximumWords = integer(recipe, "cue-max-words");
-  if (minimumWords <= 0 || maximumWords < minimumWords) {
-    throw new Error("Fine Caption Recipe Cue word bounds are invalid");
-  }
   return sealCaptionStyle({
-
     id,
-    planning: {
-      cue: {
-        minimumWords,
-        maximumWords,
-        instruction: `Split into complete semantic phrases of ${minimumWords} to ${maximumWords} display words. Never cut inside an Atom and avoid crossing punctuation. An indivisible Atom may exceed the requested maximum.`,
-      },
-      fields: [],
-    },
     rendering: {
       family: FINE_CAPTION_FAMILY,
       parameters: fineCaptionParameters(recipe, exactFonts),

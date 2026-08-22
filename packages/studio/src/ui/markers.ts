@@ -79,12 +79,11 @@ export function scriptSpans(snapshot: StudioSnapshot): readonly ScriptSpan[] {
     ...(snapshot.script?.segments ?? []).map((segment) => ({
       id: segment.id, depth: segment.depth, range: segment.range,
     })),
-    ...(snapshot.script?.selections ?? []).flatMap((selection) =>
-      selection.occurrences.map((occurrence) => ({
-        id: selection.id,
-        depth: selection.depth,
-        range: { start: occurrence.open.start, end: occurrence.close.end },
-      }))),
+    ...(snapshot.script?.selections ?? []).map((selection) => ({
+      id: selection.id,
+      depth: selection.depth,
+      range: { start: selection.open.start, end: selection.close.end },
+    })),
   ];
   for (const { id, depth, range } of spans) {
     const within = tokens.filter((token) =>

@@ -78,7 +78,6 @@ specific Provider deployment.
 @hypit/seedance              Seedance model family + author Surface
 @hypit/seedance-kits         data-only Seedance semantic Text Templates
 @hypit/minimax-h3            MiniMax H3 model family
-@hypit/gemini-omni           Gemini Omni model family
 @hypit/grok-imagine          Grok Imagine model family
 @hypit/gpt-image             GPT Image model family
 @hypit/nano-banana           Nano Banana model family
@@ -91,8 +90,7 @@ specific Provider deployment.
 @hypit/semantic-track        continuous semantic program skeleton
 @hypit/speech-track          ordered speech-take compilation
 @hypit/whisperx              WhisperX component
-@hypit/caption               caption planning and timing
-@hypit/caption-gemini        Gemini caption planner
+@hypit/caption               Script-owned caption document, selection projection and timing
 @hypit/caption-fine          field-free fine caption Track family
 @hypit/media-track           unified Media Item/Sequence Track
 @hypit/typography-track      typography overlay Track
@@ -119,7 +117,6 @@ never on exact-model packages or the CLI.
 @hypit/provider-kie                  KIE generation plus background removal
 @hypit/provider-media-local          local ffprobe/ffmpeg
 @hypit/provider-whisperx-local       local WhisperX service
-@hypit/provider-google-vertex        Vertex Gemini caption planning
 @hypit/provider-hyperframes-local    local Chrome rendering
 @hypit/provider-hyperframes-aws-lambda asynchronous distributed rendering
 @hypit/provider-image-opencv-local   local OpenCV Raster execution
@@ -151,6 +148,8 @@ queues, stores, credentials and process lifecycle; they never define author synt
 ```text
 @hypit/cli                 generic command engine (requires explicit Distribution)
 @hypit/video-cli           video command application (selects Markup compiler, no built-in author packages)
+@hypit/studio-adapter      stable Studio companion ABI and presentation DTOs
+@hypit/studio-video-adapters official video-domain Studio interpretation
 @hypit/studio              development preview for a Run, never runs a Provider
 ```
 
@@ -217,7 +216,7 @@ Every installable package exports a passive contribution descriptor — an inven
 offers, not an authority grant. See [Adding an author package](./author-packages.md) and
 [Adding a Provider](./providers.md) for concrete examples.
 
-## Five package facets
+## Package facets
 
 A physical package may expose independently activated facets:
 
@@ -228,6 +227,7 @@ A physical package may expose independently activated facets:
 | `compute` | deterministic Producer, Type Validator | pure computation | compiler Host |
 | `endpoint` | privileged external capability | network, filesystem, process, credentials | Runtime Profile |
 | `infrastructure` | Scheduler, Worker and Store implementation | persistence, scheduling | Runtime Profile |
+| `application` | Host-specific interpretation such as a Studio adapter | only that application's UI/operations | explicit application profile |
 
 A source `<import>` activates only author facets. It never grants network, filesystem, process,
 credential or queue authority.
@@ -241,6 +241,7 @@ installs packages and owns their versions and integrity. Hypit has two explicit 
 |---|---|
 | Source imports | Frontends, Surfaces, Producers and Validators |
 | Runtime Profile `use` | Runtime Hosts, infrastructure and Provider Endpoints |
+| Studio Profile `adapterPackages` | project companion adapters selected for that Studio session |
 
 A Source import never grants network, filesystem, process, credential or queue authority. Those
 remain available only to packages explicitly selected by the Runtime Profile.
@@ -271,3 +272,8 @@ a logical spelling without colliding.
 The loader never downloads packages and never scans unrelated installed dependencies for plugins.
 It loads only packages selected by Source discovery or the Runtime Profile, plus exact Module
 dependencies declared by those packages.
+
+An authored project is a separate directory and Git/workspace boundary. Its explicit packages are
+resolved from its own `packages/` or installation; the active tool Distribution supplies the
+reserved `@hypit/*` namespace. Project companion packages use their own npm scope, and neither a
+project nor its package globs are added to the Hypit workspace.

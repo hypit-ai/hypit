@@ -164,7 +164,7 @@ Runtime 会归档所有已经接受的中间 Record 和媒体。`get` 只负责�
 | `ffmpeg` / `ffprobe` | 使用本地媒体检查、归一化或 mux 时 |
 | Python 3.10–3.13 与 `uv` | 使用本地 WhisperX 或 OpenCV 时 |
 | Chromium | 本地 HyperFrames 渲染时由 Adapter 管理 |
-| API 凭据 | 选择 KIE、Vertex、Xiaomi 或 AWS Endpoint 时 |
+| API 凭据 | 选择 KIE、Xiaomi 或 AWS Endpoint 时 |
 
 准备本地 Python 程序：
 

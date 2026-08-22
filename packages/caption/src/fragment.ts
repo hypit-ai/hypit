@@ -7,27 +7,20 @@ import { captionProducers, captionTypes } from "./manifest.js";
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
-/** Cue and field facts meet only proven whole-Atom speech time here. */
-export const plannedCaptionTimingFragment = sealGraphFragment({
+export const captionTimingFragment = sealGraphFragment({
   inputs: [
-    { name: "display", type: narrativeTypes.captionDisplay },
-    { name: "correspondence", type: narrativeTypes.captionCorrespondence },
+    { name: "document", type: narrativeTypes.captionDocument },
     { name: "semantic", type: semanticTrackTypes.track },
-    { name: "plan", type: captionTypes.plan },
     { name: "program", type: captionTypes.program },
   ],
   operations: [{
-    id: "temporalize-caption-plan",
-    producer: captionProducers.temporalizePlan,
-    inputs: {
-      display: input("display"), correspondence: input("correspondence"), semantic: input("semantic"),
-      plan: input("plan"), program: input("program"),
-    },
+    id: "temporalize-caption-document",
+    producer: captionProducers.temporalizeDocument,
+    inputs: { document: input("document"), semantic: input("semantic"), program: input("program") },
     result: { kind: "output", name: "caption" },
   }],
-  exports: [{
-    name: "caption",
-    type: captionTypes.timedProjection,
-    root: operation("temporalize-caption-plan"),
-  }],
+  exports: [{ name: "caption", type: captionTypes.timedProjection, root: operation("temporalize-caption-document") }],
 });
+
+/** Kept as the fragment's public name for callers that only know the old export. */
+export const plannedCaptionTimingFragment = captionTimingFragment;

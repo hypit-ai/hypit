@@ -71,8 +71,7 @@ edges are inspected. A PIP is not an ordinary overlay and is not covered by this
 - Use `at={story.moment.NAME}` with an explicit `for` duration for a point event.
 - Use `during="program"` for persistent overlays and explicit `start`/`end` expressions for deliberate
   author-time placement.
-- Use `occurrences="each"` only when one authored item should repeat at every non-contiguous Selection
-  occurrence.
+- Author another named Selection and overlay item when the same effect should repeat later.
 - Let an overlay appear when the information is actually spoken or visible, and leave enough time to
   read it. Do not place important copy only in the final instant of a shot.
 

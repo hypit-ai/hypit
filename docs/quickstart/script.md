@@ -77,10 +77,10 @@ Role Cues produce different text projections:
 | **speech** | `What time is it?`<br>`It's 8:30.` |
 | **caption** | `What time is it?`<br>`It's 8:30.` |
 
-The dialogue `Text` includes Role Cue prefixes. Speech `Text` and caption projection strip them.
-Prompt programs feeding `seedance:ReferenceVideo` may use `{story.segment.dialogue.dialogue}` (with labels). Script also
-emits `{story.caption}` as the ordered display Atom/Word universe and
-`{story.caption.correspondence}` as the separate Atom-to-speech edge used only when timing joins.
+The dialogue `Text` includes Role Cue prefixes. Speech `Text` and the CaptionDocument strip them.
+Prompt programs feeding `seedance:ReferenceVideo` may use `{story.segment.dialogue.dialogue}` (with labels).
+Script emits `{story.caption}` as one CaptionDocument containing Display Words, N:M Alignment Units
+and authored Cue Breaks. It contains no seconds or frames.
 
 ## Dual Text
 
@@ -106,11 +106,45 @@ An empty left side is legal:
 ```
 
 This means "um" is spoken but never displayed as a caption. The two sides can have different word
-counts — this is an N:M text mapping, not a 1:1 substitution.
+counts — this is an N:M Alignment Unit, not a 1:1 substitution. A Selection cannot split that unit.
+
+Markers belong to the spoken side of Dual Text. The display side is literal; an unescaped `@` there
+is rejected. Escape it as `\@` when the at-sign should be shown.
+
+`||` is the **Caption Cue Break** syntax. It records a boundary between complete Alignment Units;
+it cannot appear inside Dual Text or split an N:M unit. Cue timing is still obtained later by
+joining the CaptionDocument to the SemanticTrack.
+
+### Flat token attributes
+
+A display word may carry one flat attribute block. The block is postfix, never nested, and has no
+timing meaning:
+
+```svml
+<HOST> This is really{emphasis,keyword} important{brand}.</HOST>
+```
+
+An entry without `=` has the value `true`; scalar values may be written as `name=value`. Caption
+maps attribute names to local word Styles, while a Selection still supplies the surrounding Unit
+Style. Attributes cannot split or wrap a Dual Alignment Unit.
+
+### CaptionDocument vocabulary
+
+`CaptionDocument` is the Script-owned caption truth. Its named parts are:
+
+- **Display Word** — one rendered lexical surface, including display punctuation;
+- **Alignment Unit** — the smallest display-to-speech correspondence, including N:M Dual Text;
+- **Cue Break** — an authored boundary after a complete Alignment Unit, written `||`.
+
+Punctuation is not a speech token and never receives its own timing window. Closing punctuation after
+a Dual Text attaches to the preceding Display Word (`<test | now>. here` displays as `test. here`),
+while the spoken projection remains `now. here`. English words are lexical units; Han, Hiragana and
+Katakana text is split into character-level lexical units so Chinese does not become one giant word.
 
 ## Selections
 
-Selections are named time **ranges** declared inline:
+Selections are named semantic **ranges** declared inline. Each name has one opening and one closing
+marker; the value is a pair of semantic anchors, not a frame span:
 
 ```svml
 <script id="story">
@@ -138,19 +172,9 @@ Selections are named time **ranges** declared inline:
 The `~` suffix/prefix controls whether the boundary snaps to the left or right. Default open is
 right-absorbing; default close is left-absorbing.
 
-### Non-contiguous Selections
+### Multiple named Selections
 
-The same id can appear multiple times to create a Selection with gaps:
-
-```svml
-<demo>
-  <HOST> @beat First point. @/beat Then something else. @beat Third point. @/beat
-</demo>
-```
-
-`{story.selection.beat}` now covers two disjoint ranges.
-
-### Crossing Selections
+Different names may overlap or cross. Each name still has exactly one interval:
 
 Selections are not required to nest like XML tags. They can cross each other:
 
@@ -160,9 +184,9 @@ Selections are not required to nest like XML tags. They can cross each other:
 </demo>
 ```
 
-Selection markers are zero-width and never appear in any text projection. They compile into
-`SelectionSet` values containing `Range[]`. Script itself contains no seconds or frame numbers —
-timing comes from WhisperX alignment.
+Selection markers are zero-width and never appear in any text projection. They compile into one
+`NarrativeSelection` with `startAnchorId` and `endAnchorId`. Script itself contains no seconds or
+frame numbers — timing comes from SemanticTrack alignment.
 
 Other components reference Selections via `{story.selection.problem}` to bind visual content to
 semantic moments in the narrative.
@@ -183,8 +207,8 @@ Moments are named time **points** (not ranges):
 | `@id!` | Right-absorbing (point at the next word's start) |
 | `~@id!` | Left-absorbing (point at the previous word's end) |
 
-Moments compile into `MomentSet` values containing `Point[]`. Selection and Moment share the same
-name namespace — the same id cannot be used for both.
+Each Moment name occurs once and compiles into one `NarrativeMoment` with an `anchorId`. Selection
+and Moment share the same name namespace — the same id cannot be used for both.
 
 Other components reference Moments via `{story.moment.ranking}`.
 
@@ -205,8 +229,10 @@ Reserved syntax starters must be escaped:
 | `\@` | literal `@` |
 | `\<` | literal `<` |
 | `\\` | literal `\` |
+| `\|` | literal `|` (use `\|\|` for two literal pipes) |
 
-Inside Dual Text, also escape `\|` and `\>`.
+Inside Dual Text, the first unescaped `|` separates display from speech; escape display-side
+pipes as `\|`. Escape `\>` when a literal closing angle is needed.
 
 ## Combination example
 

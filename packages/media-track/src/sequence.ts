@@ -9,13 +9,8 @@ import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize } from "@hypit/protocol";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace } from "@hypit/spatial";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
-import type { SemanticTrack } from "@hypit/semantic-track";
-import {
-  locateMomentOccurrences,
-  locateSelectionOccurrences,
-  resolveTriggeredSchedule,
-} from "@hypit/temporal";
+import { resolveTriggeredSchedule } from "@hypit/temporal";
+import type { TemporalWindow } from "@hypit/temporal";
 
 import { assertMediaIdentity, assertMediaLayerSet } from "./layers.js";
 import { lowerMediaItemElements } from "./lower.js";
@@ -83,7 +78,7 @@ export function assertMediaSequenceMemberSet(value: MediaSequenceMemberSet): voi
   }
 }
 
-export function appendMediaSequenceMember(
+function appendMediaSequenceMemberAtFrame(
   set: MediaSequenceMemberSet,
   layers: MediaLayerSet,
   spec: MediaSequenceMemberSpec,
@@ -112,39 +107,13 @@ export function appendMediaSequenceMember(
   }) as unknown as MediaSequenceMemberSet;
 }
 
-function exactlyOneFrame(values: readonly number[], label: string): number {
-  assert(values.length === 1, `${label} requires exactly one occurrence; received ${values.length}.`);
-  return values[0]!;
-}
-
-export function appendMediaSequenceMomentMember(
+export function appendMediaSequenceProjectedMember(
   set: MediaSequenceMemberSet,
   layers: MediaLayerSet,
   spec: MediaSequenceMemberSpec,
-  semantic: SemanticTrack,
-  moment: NarrativeMomentRef,
+  window: TemporalWindow,
 ): MediaSequenceMemberSet {
-  const frame = exactlyOneFrame(
-    locateMomentOccurrences(semantic, moment).map((occurrence) => occurrence.cue.frame),
-    `Media Sequence member ${spec.id} Moment`,
-  );
-  return appendMediaSequenceMember(set, layers, spec, frame);
-}
-
-export function appendMediaSequenceSelectionMember(
-  set: MediaSequenceMemberSet,
-  layers: MediaLayerSet,
-  spec: MediaSequenceMemberSpec,
-  semantic: SemanticTrack,
-  selection: NarrativeSelectionRef,
-  boundary: "start" | "end",
-): MediaSequenceMemberSet {
-  const frame = exactlyOneFrame(
-    locateSelectionOccurrences(semantic, selection).map((occurrence) =>
-      boundary === "start" ? occurrence.start.frame : occurrence.end.frame),
-    `Media Sequence member ${spec.id} Selection`,
-  );
-  return appendMediaSequenceMember(set, layers, spec, frame);
+  return appendMediaSequenceMemberAtFrame(set, layers, spec, window.span.startFrame);
 }
 
 export function assertMediaHandoffSpec(value: MediaHandoffSpec): void {

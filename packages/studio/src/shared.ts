@@ -3,101 +3,41 @@
  * declares types alone so the browser never pulls a Node dependency through it.
  */
 
-/** UTF-16 offsets into the exact source text carried by the snapshot. */
-export type Range = { readonly start: number; readonly end: number };
+import type {
+  Range,
+  StudioInteraction,
+  StudioInspectorDescription,
+  StudioLaneDescription,
+  StudioMaterialPreview,
+  StudioSemanticAnchor,
+  StudioSemanticSegment,
+  StudioSemanticTimeline,
+  StudioSemanticToken,
+  StudioTemporalLineage,
+  StudioTemporalPhase,
+  StudioTemporalProjection,
+  StudioTemporalSource,
+  StudioTimelinePresentation,
+  StudioTrackFamily,
+} from "@hypit/studio-adapter";
+
+export type {
+  Range,
+  StudioInteraction,
+  StudioInspectorDescription,
+  StudioLaneDescription,
+  StudioMaterialPreview,
+  StudioTemporalLineage,
+  StudioTemporalPhase,
+  StudioTemporalProjection,
+  StudioTemporalSource,
+  StudioTimelinePresentation,
+  StudioTrackFamily,
+} from "@hypit/studio-adapter";
 
 export type CandidateOrigin = "run" | "source" | "none";
 export type CandidateStatus = "resolved" | "unresolved";
 
-/** Adapter-owned family id. Studio must not make third-party families edit this protocol. */
-export type StudioTrackFamily = string;
-
-export type StudioTimelinePresentation = {
-  /** What one selectable box means, never CSS such as radius, hover or selection chrome. */
-  readonly entity: string;
-  /** Content grammar selected by the adapter; Studio owns the visual treatment of each shape. */
-  readonly shape: string;
-  readonly depth: number;
-};
-
-/** One semantic source that an authored component bound its timing to. */
-export type StudioTemporalSource = {
-  readonly kind: "program" | "selection" | "segment" | "moment" | "parent-schedule";
-  readonly id?: string;
-  /** Repeated Selection/Moment occurrences stay distinct when a component expands `each`. */
-  readonly occurrenceId?: string;
-};
-
-/** The exact authored endpoint expressions and the frame window they projected to. */
-export type StudioTemporalProjection = {
-  readonly startExpression: string;
-  readonly endExpression: string;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
-};
-
-export type StudioTemporalPhase = {
-  readonly id: string;
-  readonly label: string;
-  readonly role: "preferred" | "active" | "settled" | "enter" | "body" | "exit";
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
-};
-
-/**
- * Studio's explanation of an entity's time. The Clip span remains the actual
- * consumption window; this value preserves how author and component arrived
- * there without pretending every layer is another Track item.
- */
-export type StudioTemporalLineage = {
-  readonly source: StudioTemporalSource;
-  readonly projection?: StudioTemporalProjection;
-  readonly phases: readonly StudioTemporalPhase[];
-};
-
-export type StudioInteraction = {
-  readonly select: boolean;
-  readonly seek: "start" | "pointer" | "none";
-  readonly move: boolean;
-  readonly trimStart: boolean;
-  readonly trimEnd: boolean;
-  readonly canvasTransform: boolean;
-  readonly writeback: "source" | "none";
-};
-
-/** Material Studio can show without inventing a proxy or rerunning a Provider. */
-export type StudioMaterialPreview =
-  | { readonly kind: "image"; readonly url: string }
-  | { readonly kind: "video"; readonly url: string }
-  | { readonly kind: "audio"; readonly url: string };
-
-export type StudioLaneDescription = {
-  /** Structural lane composition. Visual chrome remains a Studio-wide concern. */
-  readonly layout: "flat";
-  /** The adapter selects a supported range; Studio owns the current height within it. */
-  readonly height: {
-    readonly minPx: number;
-    readonly preferredPx: number;
-    readonly maxPx: number;
-  };
-  /** Optional local attachment group. Attached lanes render beside their root lane. */
-  readonly groupId?: string;
-  readonly attachedTo?: string;
-  readonly order?: number;
-  readonly expandedByDefault?: boolean;
-};
-
-export type StudioInspectorSection =
-  | "authoring"
-  | "resolved"
-  | "material"
-  | "composition"
-  | "identity"
-  | "run";
-
-export type StudioInspectorDescription = {
-  readonly sections: readonly StudioInspectorSection[];
-};
 
 /** Studio-owned interpretation of a terminal projection. */
 export type StudioTrackBinding = {
@@ -182,11 +122,8 @@ export type ScriptMap = {
     readonly id: string;
     /** How many Selections enclose this one. Nesting is what depth means. */
     readonly depth: number;
-    readonly occurrences: readonly {
-      readonly occurrence: number;
-      readonly open: Range;
-      readonly close: Range;
-    }[];
+    readonly open: Range;
+    readonly close: Range;
   }[];
   readonly segments: readonly {
     readonly id: string;
@@ -196,7 +133,7 @@ export type ScriptMap = {
   }[];
   readonly moments: readonly {
     readonly id: string;
-    readonly occurrences: readonly { readonly occurrence: number; readonly range: Range }[];
+    readonly range: Range;
   }[];
   /** Spoken words placed on the timeline by the selected semantic Candidate. */
   readonly tokens: readonly {
@@ -214,58 +151,14 @@ export type SemanticAnchorKind =
   | "token-start"
   | "token-end";
 
-export type SemanticAnchor = {
-  readonly id: string;
-  readonly kind: SemanticAnchorKind;
-  readonly frame: number;
-  readonly segmentId: string;
-  readonly tokenId?: string;
-};
+export type SemanticAnchor = StudioSemanticAnchor;
 
-export type SemanticSegment = {
-  readonly id: string;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
-  readonly range?: Range;
-};
+export type SemanticSegment = StudioSemanticSegment;
 
-export type SemanticToken = {
-  readonly id: string;
-  readonly segmentId: string;
-  readonly text: string;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
-  readonly range?: Range;
-};
+export type SemanticToken = StudioSemanticToken;
 
 /** The semantic timebase projected from the compiled Narrative and its anchors. */
-export type SemanticTimeline = {
-  /** Studio-only presentation owned by the SemanticTrack adapter. */
-  readonly presentation: {
-    readonly family: StudioTrackFamily;
-    readonly label?: string;
-    readonly icon: string;
-    readonly lane: StudioLaneDescription;
-  };
-  readonly anchors: readonly SemanticAnchor[];
-  readonly segments: readonly SemanticSegment[];
-  readonly tokens: readonly SemanticToken[];
-  readonly selections: readonly {
-    readonly id: string;
-    readonly occurrence: number;
-    readonly occurrenceId: string;
-    readonly startFrame: number;
-    readonly endFrameExclusive: number;
-  }[];
-  readonly moments: readonly {
-    readonly id: string;
-    readonly occurrence: number;
-    readonly occurrenceId: string;
-    readonly frame: number;
-  }[];
-  /** The SemanticTrack candidate that supplied these frame anchors. */
-  readonly provenance: CandidateProvenance;
-};
+export type SemanticTimeline = StudioSemanticTimeline;
 
 export type StudioSnapshot = {
   readonly revision: number;

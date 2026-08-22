@@ -82,8 +82,8 @@ only; narration, music, and effects remain explicit audio contributions.
 - For a point event, declare a Script `Moment` and use `at={story.moment.NAME}` with an explicit `for`.
 - For intentionally absolute edits, use `during="program"` or explicit `start` and `end` expressions
   in the shared SemanticTrack frame domain.
-- For a non-contiguous Selection, choose `occurrences="each"` only when the same insert should appear
-  at every occurrence; otherwise author separate Items.
+- A Selection is one contiguous range. Author separate named Selections and Media Items when the same
+  insert should appear again later.
 - Create J-cuts and L-cuts in the Script boundaries: let narration establish a few words before the
   B-roll opens, and let speech continue before or after the picture returns. Do not make every visual
   cut start and end exactly with a complete spoken sentence.

@@ -30,16 +30,19 @@
  * script runs at all — the error names `tsx`, not the source being checked.
  */
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // The script lives under `.agents/`; resolve Studio from the repo root.
 // Stay in URL space the whole way: a specifier built from a filesystem path is read as a URL, so
 // on Windows the drive letter becomes a scheme and the import fails before it resolves anything.
 const studio = (name) => new URL(`../../../../packages/studio/src/${name}`, import.meta.url).href;
 const { openStudioArchive } = await import(studio("archive.js"));
+const { loadStudioAdapterRegistry } = await import(studio("adapter-profile.js"));
 const { loadStudioDomain } = await import(studio("domain.js"));
 const { loadStudioRun } = await import(studio("run.js"));
 const { readStudioSession } = await import(studio("session.js"));
 const { inspectStudioRun } = await import(studio("studio-preflight.js"));
+const { videoCliDistribution } = await import(new URL("../../../../packages/video-cli/src/index.js", import.meta.url).href);
 
 const runArgument = process.argv[2];
 if (runArgument === undefined) {
@@ -50,11 +53,14 @@ const invokedFrom = process.env.INIT_CWD ?? process.cwd();
 const runPath = resolve(invokedFrom, runArgument);
 const runtimeArgument = process.argv[3];
 const runtimePath = runtimeArgument === undefined ? undefined : resolve(invokedFrom, runtimeArgument);
-const packageRoot = resolve(invokedFrom);
 const workspaceRoot = dirname(runPath);
+const packageRoot = workspaceRoot;
+const distributionPackageRoot = videoCliDistribution.packageRoot
+  ?? fileURLToPath(new URL("../../../..", import.meta.url));
 
+const registry = await loadStudioAdapterRegistry({ workspaceRoot, packageRoot, distributionPackageRoot });
 const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
-const archive = await openStudioArchive(runtimePath, packageRoot);
+const archive = await openStudioArchive(runtimePath, packageRoot, distributionPackageRoot);
 const AWAITING = "the Studio projection closure requires unresolved capabilities:";
 
 let session;
@@ -68,9 +74,10 @@ try {
   });
   // Preflight first, so an unopenable Run is reported as the refusal it is
   // rather than as whatever the build happens to fail on afterwards.
-  inspectStudioRun(run.source, run);
+  inspectStudioRun(registry, run.source, run);
   session = await readStudioSession({
     domain,
+    registry,
     run,
     ...(archive === undefined ? {} : { archive }),
     revision: 0,
