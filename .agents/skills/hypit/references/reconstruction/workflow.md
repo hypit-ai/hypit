@@ -12,11 +12,14 @@ hypit-reference-video-tools compare_reconstruction --reference-id <reference-id>
 
 `--observer` is answered once, before anything runs, and `observers.md` owns that question.
 `record_observation` is how the `agent` observer returns an answer; on the `gemini` observer the tool
-writes its own and the command is unused.
+writes its own and the command is unused. A long answer arrives whole with `--text-file <path>`;
+`--text <text>` suits a short one.
 
 The other two — `list_svml_packages` and `inspect_svml_vocabulary` — read installed vocabulary and
 have nothing to do with a reference video. This route runs both, at the step the sequence names;
-`../vocabulary.md` documents them and decides how a package is chosen.
+`../vocabulary.md` documents them and decides how a package is chosen. `list_svml_packages` reads
+`node_modules/@hypit` relative to the working directory and refuses when it is empty, so run it from
+the repository root.
 
 Defaults are sufficient for normal use. Each also accepts `--input <json>`. Follow this sequence:
 
@@ -24,7 +27,9 @@ Defaults are sufficient for normal use. Each also accepts `--input <json>`. Foll
 list_svml_packages
 → prepare_reference
 → observe_reference for all shots, in the background — read the route's required
-  files while it runs, since its prompts do not depend on anything you read
+  files while it runs, since its prompts do not depend on anything you read.
+  `index.md`'s "start the evidence before you read" is this line, not the whole
+  order: `list_svml_packages` is instant and may run before or during the sweep
 → narrow observe_reference questions for unresolved appearance and conflicts
 → inspect_svml_vocabulary for candidate packages
 → develop a project-local package only for a proven vocabulary gap
@@ -36,7 +41,8 @@ list_svml_packages
   Waiting on unrun Providers is a pass, not a failure
 → read reconstruction-loop.md, then render each authored element and compare it
 → run reconstruction-check (index.md) and keep going until it passes; it names
-  every locally-drawn element that has never been compared
+  every locally-drawn element that has never been compared. When more than one
+  reference is prepared it needs --reference-id <id>
 ```
 
 ## prepare_reference
