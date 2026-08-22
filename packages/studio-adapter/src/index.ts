@@ -80,6 +80,8 @@ export type StudioParameterDeclaration = {
   readonly writable?: boolean;
   readonly options?: readonly string[];
   readonly unit?: string;
+  /** Optional declaration for the authored element named by a reference. */
+  readonly referenced?: readonly StudioParameterDeclaration[];
 };
 
 export type StudioEditOperation =

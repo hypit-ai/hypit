@@ -2,6 +2,7 @@ import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft } from "@hy
 import { childEntities, readonlyInteraction, sameSurfaceValue } from "@hypit/studio-adapter";
 import { videoLaneHeights } from "./presentation.js";
 import { itemTemporalLineage } from "./temporal.js";
+import { extentParameters, frameParameters } from "./geometry.js";
 
 type MediaTrackProgramValue = {
   readonly items?: readonly {
@@ -99,14 +100,14 @@ export const mediaAdapters: readonly StudioAdapter[] = [
       { name: "for", label: "For", writable: true },
       { name: "source", label: "Source", writable: false },
       { name: "source-audio", label: "Source audio", writable: false },
-      { name: "extent", label: "Extent", writable: false },
+      { name: "extent", label: "Extent", writable: false, referenced: extentParameters },
       { name: "fit", label: "Fit", writable: false },
       { name: "sample-spec", label: "Sample spec", writable: false },
       { name: "item-spec", label: "Item spec", writable: false },
       { name: "window-spec", label: "Window spec", writable: false },
       { name: "audio", label: "Audio", writable: true },
       { name: "gain", label: "Gain", control: "number", writable: true },
-      { name: "frame", label: "Frame", writable: false },
+      { name: "frame", label: "Frame", writable: false, referenced: frameParameters },
       { name: "appearance", label: "Appearance", writable: false },
       { name: "motion", label: "Motion", writable: false },
       { name: "z", label: "Z", control: "number", writable: true },

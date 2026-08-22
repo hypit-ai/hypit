@@ -6,7 +6,7 @@ description: 时间线中的每一种操作如何映射到 Studio 会话、SVML�
 # Studio 时间线操作与写回边界
 
 > 状态：第一版写回已落地。时间线的结构性拖动仍按本文边界保持禁用；右侧参数面板已支持
-> 适配器明确声明的 SVML 字面量和已解析的 SVS Recipe 属性，并通过带 preimage 的多文件事务回写。
+> 适配器明确声明的 SVML 字面量、被引用的 Frame/Extent 字段和已解析的 SVS Recipe 属性，并通过带 preimage 的多文件事务回写。
 
 ## 结论
 
@@ -103,6 +103,11 @@ SVML 的引用（例如 `during={story.selection.claim}` 或 `appearance={recipe
 `fit` 或 `enter-frames` 写回的是 SVS，改 `z` 或显式 SVML 字面量写回的是 SVML，二者不会复制
 成第二份真相。
 
+同样，`frame={card-frame}`、`placement={title-frame}` 这类引用不会被替换成匿名的 Studio
+矩形；Adapter 可以声明该引用展开哪些字段，面板会直接定位到被引用的 `<space:Frame>` 或
+`<space:Extent>` 的原始属性范围。改 `left/top/right/bottom` 仍然是改 SVML 中那个 Frame，
+所有共享它的消费者会在重新编译后一起反馈。
+
 当前第一种时间线写回是显式绝对窗口：当一个实体同时声明了可解析的绝对 `start`/`end`
 字面量时，Studio 才提供 move、trim-start、trim-end；拖动会把两端作为同一事务改成帧单位，
 不会改成另一种 `during` 绑定。`at={moment} for="…"` 只有右端 trim，左端仍由 Moment 决定。
@@ -111,10 +116,11 @@ Selection、Segment、Moment 投影和任何组件内部计算出来的窗口没
 
 ### 当前没有实现的操作
 
-`StudioInteraction` 仍然只描述是否允许时间线手势；新增的 `StudioEditHandle` 为未来的每个
-操作保留明确的 source 写回位置和 disabled reason。官方 Adapter 当前仍把 move/trim/split/
-delete/keyframe/画布拖动保持只读，因为这些操作还没有唯一的 SVML/SVS 映射；这不是 UI 猜测，
-而是显式的禁用状态。参数面板的单值修改已经是第一种可逆、可验证的作者写回。
+`StudioInteraction` 仍然只描述基础选择行为；`StudioEditHandle` 现在由 Adapter 的
+`editOperations` 声明和源码参数共同生成，包含坐标域、吸附策略、源码范围和 disabled reason。
+因此同一个 Media Track 中，绝对 `start/end` 可以有 move/trim 把手，而 `during={selection}`
+的同形矩形只会得到明确的禁用原因。参数面板的单值修改和被引用 Frame/SVS 字段修改都走同一
+个可逆、可验证的作者写回。
 
 ## 成熟 NLE 给出的操作词汇
 

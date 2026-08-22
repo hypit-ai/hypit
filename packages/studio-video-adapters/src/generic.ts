@@ -2,6 +2,7 @@ import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft } from "@hy
 import { childEntities, readonlyInteraction, sameSurfaceValue } from "@hypit/studio-adapter";
 import { videoLaneHeights } from "./presentation.js";
 import { itemTemporalLineage } from "./temporal.js";
+import { frameParameters } from "./geometry.js";
 
 type TypographyTrackProgram = {
   readonly items?: readonly {
@@ -157,7 +158,8 @@ export const genericAdapters: readonly StudioAdapter[] = [
       { name: "for", label: "For", writable: true },
       { name: "until", label: "Until", writable: false },
       { name: "z", label: "Z", control: "number", writable: true },
-      { name: "frame", label: "Frame", writable: false },
+      { name: "frame", label: "Frame", writable: false, referenced: frameParameters },
+      { name: "placement", label: "Placement", writable: false, referenced: frameParameters },
       { name: "appearance", label: "Appearance", writable: false },
       { name: "motion", label: "Motion", writable: false },
       { name: "style", label: "Style", writable: false },

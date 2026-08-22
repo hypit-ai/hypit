@@ -1,5 +1,6 @@
 import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft } from "@hypit/studio-adapter";
 import { readonlyInteraction } from "@hypit/studio-adapter";
+import { frameParameters } from "./geometry.js";
 
 type RankingSchedule = {
   readonly variant?: string;
@@ -122,7 +123,7 @@ export const rankingAdapters: readonly StudioAdapter[] = [
       { name: "end", label: "End", writable: true },
       { name: "at", label: "At", writable: false },
       { name: "for", label: "For", writable: true },
-      { name: "frame", label: "Frame", writable: false },
+      { name: "frame", label: "Frame", writable: false, referenced: frameParameters },
     ],
     poster: { source: "surface-preview" },
     lane: {

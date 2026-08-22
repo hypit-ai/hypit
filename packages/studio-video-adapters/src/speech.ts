@@ -2,6 +2,7 @@ import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft } from "@hy
 import { readonlyInteraction } from "@hypit/studio-adapter";
 import { projectTerminalAudio, projectTerminalVisual } from "./generic.js";
 import { videoLaneHeights } from "./presentation.js";
+import { frameParameters } from "./geometry.js";
 
 function renameSpeechSegments(
   context: StudioAdapterContext,
@@ -38,10 +39,10 @@ export const speechAdapters: readonly StudioAdapter[] = [
     family: "media", label: "Speech Visual", icon: "video",
     interaction: readonlyInteraction,
     parameters: [
-      { name: "visual-frame", label: "Frame", writable: false },
+      { name: "visual-frame", label: "Frame", writable: false, referenced: frameParameters },
       { name: "visual-appearance", label: "Appearance", writable: false },
       { name: "visual-z", label: "Z", control: "number", writable: true },
-      { name: "frame", label: "Frame", writable: false },
+      { name: "frame", label: "Frame", writable: false, referenced: frameParameters },
       { name: "appearance", label: "Appearance", writable: false },
       { name: "z", label: "Z", control: "number", writable: true },
     ],
