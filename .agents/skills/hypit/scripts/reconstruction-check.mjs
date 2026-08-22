@@ -20,6 +20,16 @@
  *
  * Only elements drawn by a `@hypit/local-*` package are required. Installed vocabulary is already
  * reviewed; a package written for this one video is the thing with no other reader.
+ *
+ * A comparison counts whether its answer came back in-band (`complete`, the gemini observer) or was
+ * handed out to be answered by looking (`pending`, the agent observer); only `failed` is not a
+ * comparison. The gate cannot judge whether the shot an element was compared against actually showed
+ * it, so the shots are printed for a reader, and a lone comparison is called out rather than assumed
+ * meaningful.
+ *
+ * A project that places no locally-drawn element passes with nothing to require — installed-vocabulary
+ * Tracks are listed as deferred rather than demanded, since none renders before a Build without a
+ * fixture SemanticTrack.
  */
 import { readFile, readdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -111,7 +121,10 @@ const logPath = join(referenceRoot, reference, "comparisons.jsonl");
 const log = (await readFile(logPath, "utf8").catch(() => ""))
   .split("\n").filter((line) => line.trim().length > 0)
   .map((line) => { try { return JSON.parse(line); } catch { return undefined; } })
-  .filter((entry) => entry !== undefined && entry.status === "complete");
+  // A comparison counts when it was performed. On the gemini observer the answer comes back in-band
+  // as `complete`; on the agent observer it is handed out as `pending` and answered by looking at the
+  // images, which is participation too. Only `failed` means nothing was compared.
+  .filter((entry) => entry !== undefined && (entry.status === "complete" || entry.status === "pending"));
 
 // Which shots each element was compared against, in order. The gate cannot judge whether a shot was
 // the right one to compare against — it does not know what the element draws — so it prints them and
@@ -137,6 +150,11 @@ for (const element of elements) {
     ? "never compared"
     : `${shots.length} comparison${shots.length === 1 ? "" : "s"} against ${[...new Set(shots)].join(", ")}`;
   console.log(`  ${element.alias}:${element.tag} id=${element.id}\n      ${state}`);
+  // The gate cannot judge whether the shot chosen actually showed the element, so a lone comparison
+  // is called out for a reader to confirm rather than silently accepted.
+  if (shots.length === 1) {
+    console.log("      (single comparison — confirm this shot shows the element, not a look-alike)");
+  }
 }
 
 function reportDeferred() {

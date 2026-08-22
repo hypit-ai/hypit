@@ -52,6 +52,24 @@ without a paid Provider. A new package's visual Surface needs a preview image an
 own visual test `packages/hyperframes/test/browser-visual.test.ts` shows the path end to end: build
 the Track, compile the HyperFrames document, and render it through the local HyperFrames Runtime.
 
+There is no one command for the still: a package's `test/render-preview.ts` harness is what renders
+it, and `local-author-package.md` requires that harness to take its state, frame and output path as
+arguments. That requirement exists because the still has two distinct jobs that must not collapse
+into one picture:
+
+- the **Surface preview** — one catalogue image, every feature on, whatever moment shows the
+  component best, for Studio and the package README;
+- the **comparison still** — for `reconstruction-loop.md`, one picture per reference shot, showing
+  the element in the state that shot happens to show at a matching moment.
+
+A harness whose state is written into it produces the first and nothing else; the route then reuses
+that catalogue picture for a comparison it does not fit. So the still render is one invocation of a
+parameterised harness, not the whole of it.
+
+One case where a still render is the wrong tool: an element whose appearance depends on a media slot
+a Build has not filled — the comparison would report the empty slot every round, which
+`reconstruction-loop.md` says is not a repair target. Render only the parts the element draws itself.
+
 This is the image to reach for whenever one element has to be looked at rather than the whole
 program. Rendering the delivery to inspect a single piece is the waste it exists to prevent.
 

@@ -114,7 +114,10 @@ set -a && source .env && set +a
 `prepare_reference` and the full `observe_reference` sweep take several minutes and need none of the
 knowledge below: their prompts are fixed, and nothing you are about to read changes what they ask.
 Start them first and read while they run. Reading first and observing afterwards makes the same run
-several minutes longer for nothing.
+several minutes longer for nothing. This is not the whole command order — `workflow.md` names the
+sequence — it is specifically that the observation sweep must not wait on the reading. `list_svml_packages`
+is an instant directory read that runs independently at the step the sequence names; it neither
+delays the sweep nor is delayed by it.
 
 ```bash
 hypit-reference-video-tools prepare_reference --video-path <path> --observer <chosen>   # about a minute
@@ -190,6 +193,18 @@ It names each element that has never been compared and the command that compares
 non-zero until none are left. It asks for participation rather than convergence — `reconstruction-loop.md`
 is deliberately bounded and may stop with visible differences remaining — so an element compared once
 and stopped at its ceiling passes, and an element nobody looked at does not.
+
+The script uses a prepared reference, and how it picks which one is worth knowing before it is run:
+
+- exactly one reference is prepared → it uses that one;
+- several are prepared → it demands `--reference-id <id>`, and without it exits 2;
+- none → it exits 2 telling you to run `prepare_reference` first.
+
+A comparison run without `--element` is not credited to any element, and a misspelled `--element`
+credits nothing either — the script reports logged element names that do not exist in the Source. A
+project that places no `@hypit/local-*` element passes with nothing to require: the Tracks that
+installed vocabulary draws carry authored values this gate does not demand (none renders before a
+Build), and they are listed as deferred rather than required, to be checked at the delivery gates.
 
 Paths above are relative to this file's directory. Do not skip a file because the task looks like a
 familiar video format.

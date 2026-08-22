@@ -43,9 +43,18 @@ card:
    Surface needs a preview image anyway, as `../local-author-package.md` requires. The repository's
    own visual test `packages/hyperframes/test/browser-visual.test.ts` shows the local path end to
    end: build the Track, compile the HyperFrames document, and render it through the local
-   HyperFrames Runtime.
+   HyperFrames Runtime. The still must show the element in the state the shot below shows, which is
+   what `local-author-package.md`'s "the render harness takes its state as arguments" exists for:
+   the catalogue preview is one invocation of it, not the whole of it.
 2. Compare it against the reference frame that shows it most clearly:
-   `.hypit/reference-video-tools/<reference-id>/shots/NNN-representative.jpg`.
+   `.hypit/reference-video-tools/<reference-id>/shots/NNN-representative.jpg`. The shot is a choice,
+   and the wrong one is invisible to the comparison gate, which only records that a comparison
+   happened. Pick the shot where the element is the clearest thing on screen — a caption system
+   against a frame that shows the caption, a card against a frame that shows the card — and pass
+   `--element <id>` so the gate credits it to that element. When a shot shows the element in
+   different states across several frames, pick the one that matches the state you rendered; when
+   the reference's own observation of that shot describes the element, use that description to
+   confirm the choice.
 3. Repair, then render again.
 
 ### One observer reads the reference, and it is the one the reference was prepared with
@@ -146,6 +155,12 @@ shows it most clearly returns a measurement in one step, from whichever observer
 
 Do that instead of spending an attempt. An attempt is for differences that have no number — a
 typeface's character, a texture, a rhythm — where the only route is change it and look again.
+
+Measure against the frame, not against the screen it is viewed on. A quantity read off a rendered
+still means what it means relative to that still's own width and height — a stroke that is "one
+percent of the frame height", a shape "a third of the frame width" — which is the same basis the
+Recipe's fractions use. Saying "a little too tall" and changing it on feel spends the attempt the
+measurement exists to save.
 
 Stopping is the end, and the end carries no final comparison. When the attempts are spent the loop
 stops as it is: the second repair is the last thing the observer saw, and there is no third

@@ -64,6 +64,13 @@ pnpm check
 pnpm test
 ```
 
+`npm link` links the `hypit` binary. The route also calls `hypit-reference-video-tools`
+(`prepare_reference`, `observe_reference`, `compare_reconstruction`, `list_svml_packages`,
+`inspect_svml_vocabulary`) — a separate bin that the repository links on `pnpm install`, so it is
+present once the workspace install above has run. If `hypit-reference-video-tools` is not on `PATH`
+after installing, re-run `pnpm install` from the repository root; the bin resolves from
+`packages/reference-video-tools/bin/`.
+
 For managed local programs:
 
 ```text
