@@ -20,11 +20,31 @@ export type StudioSourceFile = {
 };
 
 type AuthorElement = {
+  readonly id?: string;
   readonly sourcePath: string;
   readonly attributes: Readonly<Record<string, string>>;
   readonly references: Readonly<Record<string, string>>;
   readonly attributeValueRanges: Readonly<Record<string, Range>>;
 };
+
+function authoredElements(placements: readonly Placement[]): readonly AuthorElement[] {
+  return placements.flatMap((placement) => [
+    {
+      ...(placement.id === undefined ? {} : { id: placement.id }),
+      sourcePath: placement.sourcePath,
+      attributes: placement.attributes,
+      references: placement.referenceAttributes,
+      attributeValueRanges: placement.attributeValueRanges,
+    },
+    ...placement.children.map((child) => ({
+      ...(child.id === undefined ? {} : { id: child.id }),
+      sourcePath: child.sourcePath,
+      attributes: child.attributes,
+      references: child.referenceAttributes,
+      attributeValueRanges: child.attributeValueRanges,
+    })),
+  ]);
+}
 
 function sameRange(left: Range | undefined, right: Range | undefined): boolean {
   return left !== undefined && right !== undefined && left.start === right.start && left.end === right.end;
@@ -133,6 +153,50 @@ function recipeParameters(input: {
   });
 }
 
+function referencedParameters(input: {
+  readonly root: string;
+  readonly files: readonly StudioSourceFile[];
+  readonly draft: StudioEntityDraft;
+  readonly referenceName: string;
+  readonly referencePath: string;
+  readonly declarations: readonly StudioParameterDeclaration[];
+  readonly placements: readonly Placement[];
+}): readonly StudioParameter[] {
+  const targetId = input.referencePath.split(".").at(-1);
+  if (targetId === undefined) return [];
+  const target = authoredElements(input.placements).find((candidate) => candidate.id === targetId);
+  if (target === undefined) return [];
+  const file = sourceFor(input.root, target.sourcePath, input.files);
+  if (file === undefined) return [];
+  return input.declarations.flatMap((declaration) => {
+    const range = target.attributeValueRanges[declaration.name];
+    if (range === undefined) return [];
+    const preimage = file.text.slice(range.start, range.end);
+    const reference = target.references[declaration.name];
+    const value = reference === undefined ? (target.attributes[declaration.name] ?? preimage) : reference;
+    const writable = declaration.writable === true && reference === undefined;
+    return [{
+      id: `${input.draft.id}:${input.referenceName}:${targetId}:${declaration.name}`,
+      name: declaration.name,
+      label: `${input.referenceName} · ${declaration.label ?? declaration.name}`,
+      control: declaration.control ?? "text",
+      value,
+      language: languageOf(target.sourcePath),
+      writable,
+      ...(declaration.options === undefined ? {} : { options: declaration.options }),
+      ...(declaration.unit === undefined ? {} : { unit: declaration.unit }),
+      source: {
+        path: relative(input.root, resolve(target.sourcePath)),
+        range,
+        preimage,
+      },
+      ...(!writable
+        ? { disabledReason: reference === undefined ? "该几何值由组件声明为只读。" : "引用由作者在 SVML 中绑定，面板不替换引用关系。" }
+        : {}),
+    } satisfies StudioParameter];
+  });
+}
+
 /**
  * Expose only attributes a package explicitly registered. The source range is
  * still discovered by the generic markup frontend, while the meaning and
@@ -186,17 +250,30 @@ export function parametersForDraft(input: {
   });
   const recipes = input.declarations.flatMap((declaration) => {
     const referencePath = element.references[declaration.name];
-    if (referencePath === undefined
-      || !["appearance", "visual-appearance", "motion", "style", "recipe", "program", "default"].includes(declaration.name)) return [];
-    return recipeParameters({
-      root: input.root,
-      files: input.files,
-      current: file,
-      draft: input.draft,
-      referenceName: declaration.label ?? declaration.name,
-      referencePath,
-      placements: input.placements ?? [],
-    });
+    if (referencePath === undefined) return [];
+    const reference = declaration.referenced === undefined
+      ? []
+      : referencedParameters({
+        root: input.root,
+        files: input.files,
+        draft: input.draft,
+        referenceName: declaration.label ?? declaration.name,
+        referencePath,
+        declarations: declaration.referenced,
+        placements: input.placements ?? [],
+      });
+    const recipe = ["appearance", "visual-appearance", "motion", "style", "recipe", "program", "default"].includes(declaration.name)
+      ? recipeParameters({
+        root: input.root,
+        files: input.files,
+        current: file,
+        draft: input.draft,
+        referenceName: declaration.label ?? declaration.name,
+        referencePath,
+        placements: input.placements ?? [],
+      })
+      : [];
+    return [...reference, ...recipe];
   });
   return [...direct, ...recipes];
 }
