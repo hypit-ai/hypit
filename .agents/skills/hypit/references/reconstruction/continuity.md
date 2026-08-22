@@ -24,6 +24,27 @@ These invariants override superficial layer order and shot boundaries:
 Shot boundaries are observation windows, not authoring units. Never generate independent SVML per
 shot and concatenate it afterward.
 
+## Their seconds are not authoring units either
+
+The shot list arrives as a table of `start_seconds` and `end_seconds`, and copying those numbers into
+the Source as `start="3.25s" end="7.42s"` is the shortest path from the evidence to a placement. It
+produces a reconstruction that is wrong the moment it is built.
+
+Those seconds describe the reference's own clock, and nothing in the reconstruction runs on that
+clock. Every take is generated, comes back at whatever length the model returned, and the
+SemanticTrack is built from the words WhisperX finds inside it. An Item bound to 3.25 seconds points
+at whichever word happens to land there, which is not the word the number was copied from. One take
+returning half a second long moves every window after it.
+
+Bind covering content to a Script Selection over the words it covers — mark the range in the Script,
+pass `semantic={speech.semantic}` to the Track, and use `during={story.selection.NAME}` — and let the
+projection resolve the frames. The reference's seconds then decide *which words* a Selection spans,
+which is what they can honestly tell you, rather than which frame an Item starts on.
+
+Explicit `start`/`end` is for a program with no speech to anchor to. `../playbooks/craft/b-roll.md`
+states the same rule from the authoring side, and reads it as a deliberate choice rather than a
+transcription.
+
 ## A system that spans shots is authored once
 
 - A visual system that persists across cuts — captions, a running list that keeps its state, a

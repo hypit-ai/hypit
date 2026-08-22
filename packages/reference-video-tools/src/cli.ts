@@ -14,7 +14,11 @@ function usage(): string {
     "  hypit-reference-video-tools observe_reference --reference-id <id> --shot-id <id> [--shot-id <id> ...] --question <text>",
     "  hypit-reference-video-tools record_observation --reference-id <id> --key <key> --text <text>|--text-file <path>",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
-    "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --image <path> [--question <scope>]",
+    "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --image <path> [--question <scope>] [--element <id>]",
+    "",
+    "--element names the reconstructed element the image draws. It is written to the reference's",
+    "comparison log and never sent to the observer, so the comparison stays blind while a later gate can",
+    "still tell which elements have been compared.",
     "",
     "--observer picks who reads the reference, once per reference. `gemini` uploads video to Vertex and",
     "needs GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS_JSON. `agent` needs no credentials: it",
@@ -123,8 +127,9 @@ async function main(): Promise<void> {
       shot_id: required(flags, "shot-id"),
       image_path: required(flags, "image"),
       ...(one(flags, "question") === undefined ? {} : { question: one(flags, "question") }),
+      ...(one(flags, "element") === undefined ? {} : { element: one(flags, "element") }),
     };
-    result = await tools.compare_reconstruction(input as { reference_id: string; shot_id: string; image_path: string; question?: string });
+    result = await tools.compare_reconstruction(input as { reference_id: string; shot_id: string; image_path: string; question?: string; element?: string });
   } else if (command === "inspect_svml_vocabulary") {
     const packages = many(flags, "package");
     const input = supplied ?? {
