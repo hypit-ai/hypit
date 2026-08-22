@@ -45,11 +45,11 @@ card.
 
 The thing compared is the element **as this video places it**: the Recipe values the Source actually
 passes, the Script text the Source actually feeds it, and the windows the Source actually binds. A
-package's catalogue preview is a different picture with different inputs — the harness supplies its
-own sample copy and its own Recipe so a reader can see the Surface's range — and a Source can fill
+package's catalogue preview is a different picture drawn from different values — the package's own
+sample copy and sample Recipe, chosen to show a reader the Surface's range — and a Source can fill
 every one of those parameters with values that collide while the preview stays perfect. Comparing the
-preview answers a question nobody asked. `../preview.md` renders both, from the same harness, with
-different arguments; this loop uses the Source-configured one.
+preview answers a question nobody asked. `../preview.md` keeps the two apart and says which command
+draws which.
 
 One command produces it, and it is not written per package:
 
@@ -63,9 +63,17 @@ speech with the Source's own `estimate:Speech`, mocks every layer a Build has no
 the package's Producer. Nothing is transcribed by hand, so nothing is transcribed one line at a time
 — which is what made a caption system look correct while its lines collided.
 
-The window is named in words. `--segment` and `--selection` take a Script name, not a timestamp: a
-shot of the reference is found by the words spoken over it, and those words are where the Script
-says they are. No reference clock is read across.
+The window is named in words. `--segment` and `--selection` take a Script name, never a timestamp,
+and the way to find the right name for a given shot is:
+
+1. take the shot's `start_seconds` and `end_seconds` from the reference's `state.json`;
+2. read the words spoken over that stretch out of the reference's `transcript.json`, which carries
+   one entry per word with its own timings;
+3. find those words in the Script you wrote, and name the Selection or Segment that encloses them.
+
+The reference clock is read exactly once, at step 1, and only to index a table. Everything after it
+is words. The reconstruction's own frames come from estimated take lengths, so its clock and the
+reference's do not correspond and matching them would put the window in the wrong place.
 
 ### Mock the layers a Build has not made
 
