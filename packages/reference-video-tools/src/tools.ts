@@ -11,6 +11,11 @@ import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface, SurfaceVocabulary } from "@hypit/markup";
 import { exactModelHostAbi } from "@hypit/model-kit";
 
+import { renderElement, renderPreviews } from "./authoring.js";
+import type { RenderElementInput, RenderPreviewsInput } from "./authoring.js";
+import { writePlaceholder } from "./placeholder.js";
+import { previewCheck, reconstructionCheck } from "./checks.js";
+import type { PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
 import {
   assert,
   ensureDir,
@@ -78,6 +83,9 @@ export type MakePlaceholderInput = {
   readonly seconds?: number;
 };
 
+export type { RenderElementInput, RenderPreviewsInput } from "./authoring.js";
+export type { PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
+
 export type ReferenceVideoTools = {
   list_svml_packages(): Promise<Record<string, unknown>>;
   prepare_reference(input: PrepareReferenceInput): Promise<PrepareResult>;
@@ -86,6 +94,10 @@ export type ReferenceVideoTools = {
   compare_reconstruction(input: CompareReconstructionInput): Promise<Record<string, unknown>>;
   record_observation(input: RecordObservationInput): Promise<Record<string, unknown>>;
   make_placeholder(input: MakePlaceholderInput): Promise<Record<string, unknown>>;
+  render_element(input: RenderElementInput): Promise<Record<string, unknown>>;
+  render_previews(input: RenderPreviewsInput): Promise<Record<string, unknown>>;
+  preview_check(input: PreviewCheckInput): Promise<Record<string, unknown>>;
+  reconstruction_check(input: ReconstructionCheckInput): Promise<Record<string, unknown>>;
 };
 
 type ToolOptions = {
@@ -137,91 +149,7 @@ async function appendComparison(root: string, record: ComparisonRecord): Promise
   await appendFile(join(root, "comparisons.jsonl"), `${JSON.stringify(record)}\n`, "utf8");
 }
 
-function crc32(bytes: Uint8Array): number {
-  let crc = 0xFFFFFFFF;
-  for (const byte of bytes) {
-    crc ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
-  }
-  return (crc ^ 0xFFFFFFFF) >>> 0;
-}
 
-function pngChunk(type: string, data: Uint8Array): Uint8Array {
-  const body = new Uint8Array(type.length + data.length);
-  for (let i = 0; i < type.length; i += 1) body[i] = type.charCodeAt(i);
-  body.set(data, type.length);
-  const out = new Uint8Array(8 + body.length);
-  const view = new DataView(out.buffer);
-  view.setUint32(0, data.length);
-  out.set(body, 4);
-  view.setUint32(4 + body.length, crc32(body));
-  return out;
-}
-
-const PLACEHOLDER_COLORS = {
-  light: "#E8EAED",   // default — visible on a dark base
-  mid: "#9AA0A6",
-  dark: "#5F6368",    // visible on a light base
-  white: "#FFFFFF",
-  black: "#202124",
-} as const;
-
-type PlaceholderPalette = {
-  readonly base: [number, number, number];
-  readonly border: [number, number, number];
-  readonly hex: string;
-};
-
-/**
- * Resolve the mock's colour: one of the named presets, or a six-digit hex. The inset border is the
- * contrast of the base — a dark border on a light fill, a light border on a dark fill — so the
- * placeholder stays visible whichever base it sits on, which is the point of choosing at all: a mock
- * the same shade as its surroundings is one the observer reads as a hole rather than a slot.
- */
-function resolvePlaceholderColor(value: string | undefined): PlaceholderPalette {
-  const named = value === undefined ? PLACEHOLDER_COLORS.light
-    : (PLACEHOLDER_COLORS as Record<string, string>)[value];
-  const hex = named ?? value ?? PLACEHOLDER_COLORS.light;
-  assert(named !== undefined || /^#[0-9a-f]{6}$/iu.test(value!),
-    `color must be one of ${Object.keys(PLACEHOLDER_COLORS).join(", ")} or a six-digit hex like #E0E0E0.`);
-  const base: [number, number, number] = [
-    parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16),
-  ];
-  const luminance = 0.299 * base[0] + 0.587 * base[1] + 0.114 * base[2];
-  const border: [number, number, number] = luminance > 128 ? [32, 33, 36] : [232, 234, 237];
-  return { base, border, hex };
-}
-
-/**
- * A correctly-sized placeholder image for a media slot the Source declares as a generation and a
- * Build has not filled. The comparison loop needs a still; the slot must be mocked, and the mock is
- * this tool's output — deterministic, Provider-free, never a real generation and never a hand-rolled
- * script. A field with an inset frame reads as a slot waiting for content rather than a broken
- * image, so the observer can bypass the region instead of reporting it every round.
- */
-function placeholderPng(width: number, height: number, palette: PlaceholderPalette): Uint8Array {
-  const { base, border } = palette;
-  const raw = Buffer.alloc(height * (1 + width * 3));
-  const margin = Math.max(2, Math.round(Math.min(width, height) * 0.05));
-  for (let y = 0; y < height; y += 1) {
-    raw[y * (1 + width * 3)] = 0;
-    for (let x = 0; x < width; x += 1) {
-      const c = (x < margin || y < margin || x >= width - margin || y >= height - margin) ? border : base;
-      const i = y * (1 + width * 3) + 1 + x * 3;
-      raw[i] = c[0]; raw[i + 1] = c[1]; raw[i + 2] = c[2];
-    }
-  }
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
-  return Uint8Array.from(Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    pngChunk("IHDR", ihdr),
-    pngChunk("IDAT", deflateSync(raw)),
-    pngChunk("IEND", Buffer.alloc(0)),
-  ]));
-}
 
 function positiveInt(value: number, label: string): number {
   assert(Number.isSafeInteger(value) && value > 0, `${label} must be a positive integer.`);
@@ -926,30 +854,30 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     // fixed, correctly-sized placeholder — the same tool on every run, never a real generation and
     // never a script the agent writes by hand.
     async make_placeholder(input): Promise<Record<string, unknown>> {
-      const width = positiveInt(Number(input.width), "width");
-      const height = positiveInt(Number(input.height), "height");
-      const palette = resolvePlaceholderColor(input.color === undefined ? undefined : String(input.color));
-      const out = resolve(String(input.out));
-      await mkdir(dirname(out), { recursive: true });
-      if (input.video === true) {
-        // A slot that only accepts video needs a real video artifact; a short solid-colour clip is
-        // the mock. ffmpeg is part of the required local toolchain.
-        const seconds = input.seconds === undefined ? 1 : positiveInt(Number(input.seconds), "seconds");
-        const filter = `color=c=${palette.hex.slice(1)}:s=${width}x${height}:r=24:d=${seconds}`;
-        const result = await new Promise<{ status: number | null; error?: Error }>((done) => {
-          const child = spawn("ffmpeg", [
-            "-y", "-f", "lavfi", "-i", filter, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-t", String(seconds), out,
-          ]);
-          child.on("close", (status) => done({ status }));
-          child.on("error", (error) => done({ status: null, error }));
-        });
-        if (result.status !== 0) {
-          throw new Error(`ffmpeg failed to write a placeholder video (${result.error?.message ?? `exit ${result.status}`}); ffmpeg is part of the required local toolchain`);
-        }
-        return { out, width, height, color: palette.hex, video: true, seconds };
-      }
-      await writeFile(out, placeholderPng(width, height, palette));
-      return { out, width, height, color: palette.hex, video: false };
+      return await writePlaceholder({
+        out: String(input.out),
+        width: positiveInt(Number(input.width), "width"),
+        height: positiveInt(Number(input.height), "height"),
+        ...(input.color === undefined ? {} : { color: String(input.color) }),
+        ...(input.video === true ? { video: true } : {}),
+        ...(input.seconds === undefined ? {} : { seconds: positiveInt(Number(input.seconds), "seconds") }),
+      });
+    },
+
+    async render_element(input): Promise<Record<string, unknown>> {
+      return await renderElement(input);
+    },
+
+    async render_previews(input): Promise<Record<string, unknown>> {
+      return await renderPreviews(input);
+    },
+
+    async preview_check(input): Promise<Record<string, unknown>> {
+      return await previewCheck(input, { packageRoot });
+    },
+
+    async reconstruction_check(input): Promise<Record<string, unknown>> {
+      return await reconstructionCheck(input, { workspaceRoot, packageRoot });
     },
   };
 }

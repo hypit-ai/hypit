@@ -38,16 +38,16 @@ list_svml_packages
 → read final-sources.md, then author complete main.svml, recipes.svs, build.svrun
   and the hypit.runtime.json that binds every capability they demand
 → use existing checks and repair until legal
-→ run preview-check (final-sources.md) and repair until the graph traces —
+→ run preview_check (final-sources.md) and repair until the graph traces —
   this has no attempt ceiling; a target Studio cannot trace is not done.
   Waiting on unrun Providers is a pass, not a failure
 → read reconstruction-loop.md, then for each authored element: render it with
-  render-element.mjs, which reads the sources and mocks the layers a Build has
+  render_element, which reads the sources and mocks the layers a Build has
   not made, and compare it against every shot the reference shows it in before
   repairing anything
 → repair against the differences that round returned, within the ceilings
-→ run reconstruction-check (index.md) and keep going until it passes; it names
-  every locally-drawn element that has never been compared, and every timed
+→ run reconstruction_check (index.md) and keep going until it passes; it names
+  every drawing element that has never been compared, and every timed
   picture whose Recipe leaves playback at its default. When more than one
   reference is prepared it needs --reference-id <id>
 ```
@@ -185,7 +185,7 @@ that shot's duration, so both grids sample alike.
 
 `--element` names the reconstructed element the render draws. It never reaches the observer — the
 comparison stays as blind as it is without it — and is written to the reference's `comparisons.jsonl`
-so `reconstruction-check` can tell an element that was looked at from one that never was. A
+so `reconstruction_check` can tell an element that was looked at from one that never was. A
 comparison run without it is not credited to any element.
 
 The reference has one observer for its whole life, and this command goes through the same one that

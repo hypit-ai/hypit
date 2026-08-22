@@ -182,18 +182,18 @@ reading them half an hour before they matter, with a dozen other files in betwee
   trigger worded around a package's catalogue preview fires too early, before any Source exists to
   read values from.
 
-This route ends on a command rather than on a judgement that the work looks done. Every element a
-project-local package draws must have been compared against the reference at least once, and that is
-checkable:
+This route ends on a command rather than on a judgement that the work looks done. Every element the
+Source places that draws a Track must have been compared against the reference at least once, and
+that is checkable:
 
 ```text
-node --import tsx .agents/skills/hypit/scripts/reconstruction-check.mjs projects/<name>/build.svrun
+hypit-reference-video-tools reconstruction_check projects/<name>/build.svrun
 ```
 
-It names each element that has never been compared and the command that compares it, and exits
-non-zero until none are left. It asks for participation rather than convergence — `reconstruction-loop.md`
-is deliberately bounded and may stop with visible differences remaining — so an element compared once
-and stopped at its ceiling passes, and an element nobody looked at does not.
+It names each element that has never been compared and the command that compares it, and reports
+`"passed": false` until none are left. It asks for participation rather than convergence —
+`reconstruction-loop.md` is deliberately bounded and may stop with visible differences remaining — so
+an element compared once and stopped at its ceiling passes, and an element nobody looked at does not.
 
 The same command settles one thing about the picture that a Build would otherwise be the first to
 show: it reads each timed picture's appearance Recipe and refuses a `playback` left at its default,
@@ -201,18 +201,18 @@ which draws generated material once and then draws nothing for the rest of the w
 `../playbooks/craft/generated-dependencies.md` says what to set and why the material's length cannot
 be relied on.
 
-The script uses a prepared reference, and how it picks which one is worth knowing before it is run:
+It uses a prepared reference, and how it picks which one is worth knowing before it is run:
 
 - exactly one reference is prepared → it uses that one;
-- several are prepared → it demands `--reference-id <id>`, and without it exits 2;
-- none → it exits 2 telling you to run `prepare_reference` first.
+- several are prepared → it demands `--reference-id <id>`, and refuses without it;
+- none → it refuses, telling you to run `prepare_reference` first.
 
 A comparison run without `--element` is not credited to any element, and a misspelled `--element`
-credits nothing either — the script reports logged element names that do not exist in the Source. A
-project that places no `@hypit/local-*` element passes with nothing to require: the Tracks that
-installed vocabulary draws carry authored values this gate does not demand — timed against the real
-SemanticTrack none of them renders before a Build — and they are listed as deferred rather than
-required, to be checked at the delivery gates.
+credits nothing either — it reports logged element names that do not exist in the Source. Which
+package draws an element makes no difference to the requirement: a Track from installed vocabulary
+carries authored values exactly as a project-local one does — a caption Style's size, colour and
+placement — and `render_element` stands in for the speech, so it renders before a Build like any
+other. A project that places no drawing element passes with nothing to require.
 
 Paths above are relative to this file's directory. Do not skip a file because the task looks like a
 familiar video format.

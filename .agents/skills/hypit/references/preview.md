@@ -12,17 +12,17 @@ a new package with a bad schedule, a target that is not an output, a Film with n
 composition. Find that now, not on the author's screen:
 
 ```bash
-# from the repository root: tsx is the repository's dependency
-node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/build.svrun
+# from the repository root: it reads the installed packages from the working directory
+hypit-reference-video-tools preview_check path/to/build.svrun
 ```
 
 It takes the Run Source, not the Author SVML — Studio's unit of work is the Run, and it reads the
 `.svml` back out of it.
 
-It exits non-zero when the graph itself is wrong, and it names what refused — a target that is not a
-Film or Render output of the current SVML, a Film with no traceable composition, a Film with no
-`SemanticTake` / Speech Track chain. This is not a guessing problem: the error says what is wrong, and
-you repair that. A graph that does not trace is not done, and **every failure it reports must be
+It reports `"sound": false` when the graph itself is wrong, and it names what refused — a target that
+is not a Film or Render output of the current SVML, a Film with no traceable composition, a Film with
+no `SemanticTake` / Speech Track chain. This is not a guessing problem: the error says what is wrong,
+and you repair that. A graph that does not trace is not done, and **every failure it reports must be
 repaired until the check passes**, however many attempts that takes.
 
 **One refusal is a pass, and it is the one you will see most.** A Source that declares its generation
@@ -30,13 +30,14 @@ rather than performing it leaves the closure waiting on Providers, and Studio re
 closure before it will open. That is the expected state of a Source nobody has built yet, not a defect
 in it. When every issue is `the Studio projection closure requires unresolved capabilities: …`, the
 graph traced all the way to a Film and a semantic spine, and what remains is work a Provider has to
-do — the script prints the waiting capabilities and exits zero:
+do — the check stays sound and lists the waiting capabilities:
 
-```
-preview-check: the graph is sound, waiting on 6 capabilities.
-  - @hypit/seedance@1#seedance-2-mini
-  - @hypit/whisperx@1#whisperx-alignment
-  ...
+```json
+{
+  "sound": true,
+  "summary": "the graph is sound, waiting on 6 capabilities.",
+  "awaiting": ["@hypit/seedance@1#seedance-2-mini", "@hypit/whisperx@1#whisperx-alignment"]
+}
 ```
 
 Any other refusal means the graph is wrong and no amount of generation will fix it.
@@ -73,7 +74,7 @@ Each has its own command, and both are shared by every package.
 own Canvas:
 
 ```bash
-node --import tsx .agents/skills/hypit/scripts/render-previews.mjs packages/<name>
+hypit-reference-video-tools render_previews packages/<name>
 ```
 
 Which element draws which file comes from the Manifest's naming: a Surface tagged `Track` declares
@@ -86,7 +87,7 @@ component holding a picture rather than a placeholder.
 **The comparison render** has one command too:
 
 ```bash
-node --import tsx .agents/skills/hypit/scripts/render-element.mjs projects/<name>/build.svrun \
+hypit-reference-video-tools render_element projects/<name>/build.svrun \
   --element <id> --segment <id>|--selection <id> --out <path>.mp4
 ```
 
@@ -94,7 +95,7 @@ It reads the Canvas, the Recipes, the Script and the bindings out of the Source;
 speech the Build has yet to synthesize using the Source's own `estimate:Speech`, so the window
 lengths are the ones the Source already ordered its generations with; mocks every declared generation
 with `make-placeholder` at the Canvas's size; and drives each package's Producer through the same
-Studio projection `preview-check` traces, with no Provider installed. The mocks and the stand-in takes
+Studio projection `preview_check` traces, with no Provider installed. The mocks and the stand-in takes
 live in a derived Run under the project's `.hypit/`, never in the Source.
 
 Name the window in words. `--segment` and `--selection` take a Script name rather than a timestamp,
