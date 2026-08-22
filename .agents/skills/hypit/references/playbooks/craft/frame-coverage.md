@@ -17,7 +17,11 @@ an interval inherits its edges whenever its length comes from something other th
 
 - a window derived from speech, which starts and stops with words and therefore excludes the silence
   around and between them;
-- a generated take, which ends where its material ends rather than where the shot should;
+- a generated take, which ends where its material ends rather than where the shot should — and then
+  draws nothing for the rest of its window, because `playback` defaults to `once-start`. This is the
+  one edge on the list a machine can find before a Build: `reconstruction-check` reads each Recipe
+  and refuses the default on timed generated material. `generated-dependencies.md` says what to set
+  instead;
 - a blend, whose frames are edges of partial coverage — a one-frame fade is one frame on which the
   layer beneath is half visible, and naming the Recipe for a cut does not make it one;
 - a schedule inside a component, which draws only where its own Program says to and stops between.
@@ -36,6 +40,11 @@ interval should have to claim.
 This matters most right after a fix: closing a black gap by bedding a layer under it converts a
 symptom everyone can see into one that reads as an edit, and the reconstruction looks finished while
 the same edges are still wrong.
+
+The placeholders the comparison loop renders under an element are not beds and cannot become one.
+They exist in that render and nowhere else — the Source never names them, and the checks that decide
+coverage read the Source's Recipes and bindings rather than any picture. A mock cannot quiet a hole
+it is structurally unable to reach.
 
 ## Measure it; the eye is the wrong instrument
 

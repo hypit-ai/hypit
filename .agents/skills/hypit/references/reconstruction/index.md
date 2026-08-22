@@ -52,7 +52,7 @@ it is anyway, all of it, and then read what you wrote and change it to what they
 
 The reason is that the reconstruction is checkable only while it claims to reproduce the video that
 was observed. The observations describe the reference and are cached, and `compare_reconstruction`
-judges a rendered element against a reference frame. Author the change into the sources early and the
+judges a rendered element against the reference. Author the change into the sources early and the
 evidence describes one video while the sources describe another, which leaves the reconstruction with
 nothing to be checked against while it is still being written.
 
@@ -169,17 +169,18 @@ Before acting on the evidence, read these files completely in order:
 6. `vocabulary.md` — what the reference evidence adds to that: enumerating from the observations, and
    measuring an appearance value rather than choosing it.
 7. `../preview.md` — proving the Run traces before a Provider is reached, and rendering one element
-   to a still without paying for it. Both are used later, by `final-sources.md` and
+   without paying for it. Both are used later, by `final-sources.md` and
    `reconstruction-loop.md`; read them here so neither arrives as a surprise.
 
 Two more are required, at the point where they apply rather than now. Reading them here means
 reading them half an hour before they matter, with a dozen other files in between:
 
 - `final-sources.md` when the components exist and the sources are about to be written.
-- `reconstruction-loop.md` **the first time any element is rendered to a still** — including the
-  preview a new package owes its Surface. No Build is submitted on this route, so a trigger worded
-  around one never fires: the picture that gets compared is a local render, and the moment one
-  exists the loop applies.
+- `reconstruction-loop.md` **as soon as the sources place an element** — that is the first moment the
+  loop has something to render, since what it compares is the element configured the way this video
+  configures it. No Build is submitted on this route, so a trigger worded around one never fires; a
+  trigger worded around a package's catalogue preview fires too early, before any Source exists to
+  read values from.
 
 This route ends on a command rather than on a judgement that the work looks done. Every element a
 project-local package draws must have been compared against the reference at least once, and that is
@@ -194,6 +195,12 @@ non-zero until none are left. It asks for participation rather than convergence 
 is deliberately bounded and may stop with visible differences remaining — so an element compared once
 and stopped at its ceiling passes, and an element nobody looked at does not.
 
+The same command settles one thing about the picture that a Build would otherwise be the first to
+show: it reads each timed picture's appearance Recipe and refuses a `playback` left at its default,
+which draws generated material once and then draws nothing for the rest of the window.
+`../playbooks/craft/generated-dependencies.md` says what to set and why the material's length cannot
+be relied on.
+
 The script uses a prepared reference, and how it picks which one is worth knowing before it is run:
 
 - exactly one reference is prepared → it uses that one;
@@ -203,8 +210,9 @@ The script uses a prepared reference, and how it picks which one is worth knowin
 A comparison run without `--element` is not credited to any element, and a misspelled `--element`
 credits nothing either — the script reports logged element names that do not exist in the Source. A
 project that places no `@hypit/local-*` element passes with nothing to require: the Tracks that
-installed vocabulary draws carry authored values this gate does not demand (none renders before a
-Build), and they are listed as deferred rather than required, to be checked at the delivery gates.
+installed vocabulary draws carry authored values this gate does not demand — timed against the real
+SemanticTrack none of them renders before a Build — and they are listed as deferred rather than
+required, to be checked at the delivery gates.
 
 Paths above are relative to this file's directory. Do not skip a file because the task looks like a
 familiar video format.

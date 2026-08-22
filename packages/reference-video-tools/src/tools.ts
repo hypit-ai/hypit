@@ -19,6 +19,7 @@ import {
   readJson,
   readBytes,
   referenceId,
+  shotTile,
   writeJson,
 } from "./media.js";
 import { prepareTranscript } from "./transcript.js";
@@ -48,7 +49,15 @@ export type InspectVocabularyInput = {
 export type CompareReconstructionInput = {
   readonly reference_id: string;
   readonly shot_id: string;
-  readonly image_path: string;
+  /** A rendered still. Exactly one of `image_path` and `video_path` is given. */
+  readonly image_path?: string;
+  /**
+   * A rendered clip covering the shot. Comparing the whole stretch rather than one frame is what
+   * removes the frame-choosing problem: an element that animates in, leaves and is replaced within
+   * one shot has no single characteristic frame, and an observation asserting when it changed is the
+   * least reliable evidence there is.
+   */
+  readonly video_path?: string;
   readonly question?: string;
   /**
    * Names the reconstructed element this image draws, for the comparison log only. It is never sent
@@ -116,6 +125,8 @@ export type ComparisonRecord = {
   readonly observer: Observer;
   readonly status: Observation["status"];
   readonly scoped: boolean;
+  /** Whether the whole shot was compared as a clip, or one frame of it as a still. */
+  readonly clip?: boolean;
 };
 
 async function fileDigest(path: string): Promise<string> {
@@ -321,6 +332,10 @@ function asPictures(media: readonly string[], state: ReferenceState): readonly s
     // what moves nor what recurs, so the shot tiles come with it and the question sees every frame
     // the shot observations see.
     else if (path === state.analysis_video_ref) pictures.push(state.storyboard_ref, ...state.shots.flatMap((shot) => shot.frames_tile_ref === null ? [] : [shot.frames_tile_ref]));
+    // This observer reads pictures. Video that is not a prepared shot has no tile to stand in for it,
+    // and handing the file through would give the agent something it cannot open — a comparison clip
+    // is tiled by its caller before it arrives here.
+    else if (/\.(mp4|mov|webm|mkv)$/iu.test(path)) assert(false, `${path} is video; tile it before asking the agent observer to read it`);
     else if (!path.toLowerCase().endsWith(".wav")) pictures.push(path);
   }
   return [...new Set(pictures)];
@@ -816,16 +831,42 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const state = await loadState(input.reference_id);
       const shot = state.shots.find((candidate) => candidate.shot_id === input.shot_id);
       assert(shot !== undefined, `shot ${input.shot_id} does not exist in reference ${input.reference_id}`);
-      const imagePath = resolve(input.image_path);
-      const file = await stat(imagePath).catch(() => undefined);
-      assert(file?.isFile(), `image_path is not a file: ${imagePath}`);
+      const supplied = [input.image_path, input.video_path].filter((value) => value !== undefined);
+      assert(supplied.length === 1, "supply exactly one of image_path and video_path");
+      const clip = input.video_path !== undefined;
+      const renderedPath = resolve(String(supplied[0]));
+      const file = await stat(renderedPath).catch(() => undefined);
+      assert(file?.isFile(), `${clip ? "video_path" : "image_path"} is not a file: ${renderedPath}`);
       const scope = input.question?.trim() ?? "";
       const observer: Observer = state.observer ?? "gemini";
       const { ask, pending } = await askerFor(observer, state);
+
+      // A clip comparison reads the whole stretch on both sides. The observer that reads video is
+      // given the two clips; the observer that reads pictures is given two frame tiles, which is the
+      // same degradation `prepare_reference` already applies to a shot. Tiling the rendered clip
+      // against the reference shot's own duration makes `tileFrames` choose the same frame count and
+      // layout for both, so the two grids are read side by side rather than as different samplings.
+      let referenceMedia = clip ? shot.clip_ref : shot.representative_frame_ref;
+      let renderedMedia = renderedPath;
+      if (clip && observer === "agent") {
+        assert(shot.frames_tile_ref !== null,
+          `shot ${shot.shot_id} has no frame tile; re-prepare the reference with --redo all --observer agent`);
+        const tile = join(stateRoot(workspaceRoot, state.reference_id), "shots", `${shot.shot_id}-reconstruction.jpg`);
+        await shotTile(renderedPath, shot.duration_seconds, tile);
+        referenceMedia = shot.frames_tile_ref;
+        renderedMedia = tile;
+      }
+
+      const unit = clip && observer !== "agent" ? "video clips" : "still images";
+      // TILE_PREAMBLE already tells the agent observer how to read a grid, so this adds only what is
+      // new about a pair of them: both are stretches, and they are compared as sequences.
+      const reading = clip && observer === "agent"
+        ? "\n\nBoth are grids, so compare them as sequences rather than as single moments."
+        : "";
       const differences = await ask("comparison", {
-        media: [shot.representative_frame_ref, imagePath],
-        instruction: "You compare two supplied still images and describe their visible differences in natural language only. You are not told how either image was made. Do not write code, markup, SVML, component names, or production advice.",
-        prompt: `Two still images are supplied in order: image one, then image two.${scope.length === 0 ? "" : `\n\nLimit the comparison to this part of the picture: ${scope}`}\n\nDescribe every visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one image and absent from the other. State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either image was produced, which one is a source, or which one is a copy. Return natural language only.`,
+        media: [referenceMedia, renderedMedia],
+        instruction: `You compare two supplied ${unit} and describe their visible differences in natural language only. You are not told how either was made. Do not write code, markup, SVML, component names, or production advice.`,
+        prompt: `Two ${unit} are supplied in order: one, then two.${reading}${scope.length === 0 ? "" : `\n\nLimit the comparison to this: ${scope}`}\n\nDescribe every visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one and absent from the other.${clip ? " Also describe differences in what changes over the stretch: what appears, what leaves, in what order, and how anything moves." : ""} State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either was produced, which one is a source, or which one is a copy. Return natural language only.`,
       });
       // The answer is deliberately not cached — every iteration is a fresh comparison. What is
       // recorded is that a comparison happened, so a gate can tell an element that was looked at
@@ -835,18 +876,20 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         at: new Date().toISOString(),
         shot_id: shot.shot_id,
         ...(input.element === undefined ? {} : { element: input.element.trim() }),
-        image_path: imagePath,
-        image_digest: await fileDigest(imagePath),
+        image_path: renderedPath,
+        image_digest: await fileDigest(renderedPath),
         observer,
         status: differences.status,
         scoped: scope.length > 0,
+        clip,
       });
       return {
         reference_id: state.reference_id,
         observer,
         shot_id: shot.shot_id,
-        reference_frame_ref: shot.representative_frame_ref,
-        image_path: imagePath,
+        compared: clip ? "clip" : "still",
+        reference_ref: referenceMedia,
+        rendered_ref: renderedMedia,
         differences,
         unresolved: differences.status === "complete" ? [] : ["differences"],
         pending_observations: pending,

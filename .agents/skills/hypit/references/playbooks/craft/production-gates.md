@@ -117,6 +117,11 @@ visual QA.
   and whether each Track contributes unique information.
 - Treat `check` and `plan` as structural proofs only. They do not prove visual quality, real speech
   alignment, Provider output quality, or factual correctness.
+- A reconstruction route may have compared these Tracks against a reference before this gate. That
+  comparison runs on renders made from the Source's values with no SemanticTrack behind them, so it
+  settles how a Track looks and leaves everything this gate is about — timing against real speech,
+  drift after a recompute, occlusion between Tracks that were rendered separately — still to be
+  measured here. Review them against the real SemanticTrack whatever was compared earlier.
 
 ## Gate 4: delivery Build
 
