@@ -119,6 +119,12 @@ for (const [, attributes] of svml.matchAll(/<whisperx:SemanticTake\b([^>]*?)\/?>
 }
 if (takeOutputs.size === 0) fail("the Source declares no whisperx:SemanticTake to stand in for");
 
+// What the Run already brings. A project Run declares nothing and everything is mocked; a package's
+// preview Run ships its own sample pictures, and those are carried across untouched so the catalogue
+// picture shows the component holding something rather than a placeholder.
+const alreadySatisfied = new Set([...runSource.matchAll(/<satisfy\s+output="([^"]+)"/gu)].map(([, output]) => output));
+const carried = [...runSource.matchAll(/^[ \t]*<(?:file|value|satisfy)\b[^>]*\/>[ \t]*$/gmu)].map(([line]) => line.trim());
+
 const { takes, selections, frameCount: programFrames } = await standInTakes(svmlPath, frameRate);
 const framesBySegment = new Map(takes.map((item) => [item.segmentId, item.take.segment.endFrameExclusive]));
 // A Selection's window in frames, summed over the stand-in tokens it covers. This is the same word
@@ -153,6 +159,9 @@ function mockedMedia() {
     const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
     const video = /\bvideo="([^"]+)"/u.exec(attributes)?.[1];
     if (id === undefined || !windows.has(id)) continue;
+    // A Run that already satisfies this output brought its own material — a package's preview Source
+    // supplies sample pictures this way — and a mock over the top would hide what it came to show.
+    if (alreadySatisfied.has(`${id}.media`)) continue;
     carries.set(id, { frames: windows.get(id), picture: video !== "none" });
   }
   return carries;
@@ -220,7 +229,8 @@ for (const [id, { frames, picture }] of mockedMedia()) {
 
 // Still images the Source declares as generations. Same treatment, same tool, at the Canvas's size:
 // a picture slot that is empty in the render is black, and black is not what will be there.
-const imageIds = [...new Set([...svml.matchAll(/\{([a-z0-9-]+)\.image\}/gu)].map(([, id]) => id))];
+const imageIds = [...new Set([...svml.matchAll(/\{([a-z0-9-]+)\.image\}/gu)].map(([, id]) => id))]
+  .filter((id) => !alreadySatisfied.has(`${id}.image`));
 for (const id of imageIds) {
   const file = join(compareRoot, `${id}.png`);
   const made = spawnSync(process.execPath, [
@@ -238,6 +248,9 @@ await writeFile(derivedRun, [
   ``,
   `<svrun version="1">`,
   `  <author source="../../${authorMatch[1].replace(/^\.\//u, "")}"/>`,
+  // Whatever the Run brought, repointed: the derived Run sits two directories deeper than the one
+  // that declared these paths.
+  ...carried.map((line) => `  ${line.replace(/from="\.\//gu, 'from="../../')}`),
   // Targeting the element's own output rather than the Film prunes the closure to what this one
   // Track needs. Asking for the whole delivery would pull in every generation the Source declares
   // and report each as unresolved, which is true and useless: none of them is what is being looked at.
@@ -335,17 +348,24 @@ const written = (await readdir(frames)).filter((name) => name.endsWith(".png")).
 if (written.length === 0) fail("the HyperFrames runtime wrote no frames", 1);
 const first = Math.min(window.startFrame, written.length - 1);
 const last = Math.min(window.endFrameExclusive, written.length);
-if (clip) {
-  const encoded = spawnSync("ffmpeg", [
-    "-hide_banner", "-loglevel", "error", "-y", "-framerate", String(frameRate),
-    "-start_number", String(first), "-i", join(frames, "frame_%06d.png"),
-    "-frames:v", String(Math.max(1, last - first)),
-    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", outPath,
-  ], { encoding: "utf8", windowsHide: true, timeout: 600_000 });
-  if (encoded.status !== 0) fail(`ffmpeg refused: ${(encoded.stderr ?? "").trim().slice(-2000)}`, 1);
-} else {
-  await writeFile(outPath, await readFile(join(frames, written[Math.min(first + Math.floor((last - first) / 2), written.length - 1)])));
-}
+// The runtime draws with an alpha channel and leaves unpainted area transparent. What a viewer is
+// under is the Film's own clear colour, so it is composited in here rather than left to whatever
+// opens the file: a reference clip is opaque, and an observer handed a transparent counterpart reads
+// the difference as design when it came from the encoding.
+const clear = built.canvas?.clearColor ?? "#000000";
+const background = `color=c=${clear.replace("#", "0x")}:s=${canvas.width}x${canvas.height}:r=${frameRate}`;
+const count = Math.max(1, clip ? last - first : 1);
+const encoded = spawnSync("ffmpeg", [
+  "-hide_banner", "-loglevel", "error", "-y",
+  "-f", "lavfi", "-i", background,
+  "-framerate", String(frameRate), "-start_number", String(clip ? first : Math.min(first + Math.floor((last - first) / 2), written.length - 1)),
+  "-i", join(frames, "frame_%06d.png"),
+  "-filter_complex", "[0][1]overlay=shortest=1[v]", "-map", "[v]",
+  "-frames:v", String(count),
+  ...(clip ? ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20"] : []),
+  outPath,
+], { encoding: "utf8", windowsHide: true, timeout: 600_000 });
+if (encoded.status !== 0) fail(`ffmpeg refused: ${(encoded.stderr ?? "").trim().slice(-2000)}`, 1);
 
 console.log(JSON.stringify({
   element,
