@@ -311,22 +311,25 @@ export function timingEditHandles(
   if (absolute(start) && absolute(end)) {
     if (allowed.has("move")) handles.push({
       id: "move", operation: "move", enabled: true, coordinate: "program-frame",
-      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [start.source, end.source],
+      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [
+        { role: "start", source: start.source },
+        { role: "end", source: end.source },
+      ],
     });
     if (allowed.has("trim-start")) handles.push({
       id: "trim-start", operation: "trim-start", enabled: true, coordinate: "program-frame",
-      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [start.source],
+      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [{ role: "start", source: start.source }],
     });
     if (allowed.has("trim-end")) handles.push({
       id: "trim-end", operation: "trim-end", enabled: true, coordinate: "program-frame",
-      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [end.source],
+      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [{ role: "end", source: end.source }],
     });
   } else if (at !== undefined && !at.writable && absolute(duration)) {
     if (allowed.has("move")) handles.push(disabled("move", "move", "起点由 At 引用决定，不能独立移动。"));
     if (allowed.has("trim-start")) handles.push(disabled("trim-start", "trim-start", "起点由 At 引用决定，不能独立裁剪。"));
     if (allowed.has("trim-end")) handles.push({
       id: "trim-end", operation: "trim-end", enabled: true, coordinate: "program-frame",
-      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [duration.source],
+      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [{ role: "duration", source: duration.source }],
     });
   } else {
     const reason = parameters.some((parameter) => parameter.name === "during" && !parameter.writable)

@@ -213,20 +213,40 @@ const operationLabels: Readonly<Record<Clip["editHandles"][number]["operation"],
   "canvas-transform": "Canvas transform",
 };
 
+const operationCoordinateLabels: Readonly<Record<NonNullable<Clip["editHandles"][number]["coordinate"]>, string>> = {
+  "program-frame": "program frames",
+  "source-frame": "source frames",
+  "canvas-pixel": "canvas pixels",
+  "normalized-progress": "normalized progress",
+};
+
 function operationGroups(handles: readonly Clip["editHandles"][number][]): readonly HTMLElement[] {
   if (handles.length === 0) return [];
   return [group("Timeline operations", handles.map((handle) => {
     const node = document.createElement("div");
     node.className = `operation-row${handle.enabled ? " operation-enabled" : " operation-disabled"}`;
-    const label = document.createElement("span");
+    const copy = document.createElement("span");
+    copy.className = "operation-copy";
+    const label = document.createElement("strong");
     label.className = "operation-label";
     label.textContent = operationLabels[handle.operation];
+    const detail = document.createElement("small");
+    detail.className = "operation-detail";
+    const coordinate = handle.coordinate === undefined ? "" : operationCoordinateLabels[handle.coordinate];
+    const snap = handle.snapTo === undefined || handle.snapTo.length === 0
+      ? ""
+      : `snap ${handle.snapTo.join(" · ")}`;
+    const source = handle.sources === undefined || handle.sources.length === 0
+      ? ""
+      : handle.sources.map((item) => `${item.role} → ${item.source.path}:${item.source.range.start}`).join(" · ");
+    detail.textContent = [coordinate, snap, source].filter((value) => value.length > 0).join(" · ");
+    copy.append(label, detail);
     const state = document.createElement("strong");
     state.className = "operation-state";
     state.textContent = handle.enabled ? "Timeline" : "—";
     node.title = handle.disabledReason
       ?? (handle.enabled ? "按时间线把手操作，成功后会回写源文件。" : "当前实体没有可逆的 Studio 写回。" );
-    node.append(label, state);
+    node.append(copy, state);
     return node;
   }), "operation-group")];
 }

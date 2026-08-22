@@ -452,7 +452,9 @@ button:focus-visible, textarea:focus-visible {
   border-bottom: 1px solid rgba(255,255,255,.035);
 }
 .operation-row:last-child { border-bottom: 0; }
+.operation-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .operation-label { color: var(--text-2); font-size: 11px; }
+.operation-detail { min-width: 0; overflow: hidden; color: var(--text-3); font: 9px/1.2 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .operation-state { color: var(--text-3); font-size: 10px; font-weight: 500; }
 .operation-enabled .operation-state { color: var(--text); }
 .status.saving { color: var(--text-2); }

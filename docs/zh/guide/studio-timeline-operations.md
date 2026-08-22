@@ -114,6 +114,16 @@ SVML 的引用（例如 `during={story.selection.claim}` 或 `appearance={recipe
 Selection、Segment、Moment 投影和任何组件内部计算出来的窗口没有时间线拖把手；它们只能在
 来源参数或源码中修改。这样“有把手”本身就是一条可审计的 source mapping，而不是 CSS 假象。
 
+每个把手的源码绑定带有角色，而不是靠数组位置猜测：`start`、`end` 和 `duration` 分别指向
+具体的 SVML value range。Move 必须同时拿到 `start + end`，trim-start 只能拿到 `start`，
+`at + for` 的 trim-end 只能拿到 `duration`。右侧面板会同时显示坐标域、吸附目标和这些源码位置；
+因此操作完成后可以核对它到底回写了哪一段 SVML。
+
+当前适配器已把基础 Audio、Media、Text、Caption、Ranking 和 Speech Visual 的领域属性接入
+参数面板：存在于作者源码的 SVML 字面量可写；引用的 Frame/Extent 字段直接展开到它们自己的
+SVML 定义；引用的 SVS Recipe 属性直接写回 `.svs`。没有实际出现的属性不会凭空出现在面板中，
+SVRun 的 target/Candidate 只作为本次运行事实展示，不在 Studio 打开时被改写或重新请求 Provider。
+
 ### 当前没有实现的操作
 
 `StudioInteraction` 仍然只描述基础选择行为；`StudioEditHandle` 现在由 Adapter 的
