@@ -176,12 +176,18 @@ a description of their visible differences. It is never told which is which, wha
 `--question` carries what to look at — which region to read, which regions hold a placeholder to
 skip, or one visible quantity to measure — and never what to conclude. Results are not cached. `reconstruction-loop.md` governs when and how to use it.
 
-`--video <rendered.mp4>` compares the whole shot and is the default choice, since a shot can hold
-several states of an element without a cut and no single frame stands for it. `--image` is for the
-one case where the shot's own `visual:` observation says the element is completely still. Which
-pictures the pair is made of follows the observer: `gemini` receives the reference clip and the
-rendered clip; `agent` receives the reference shot's frame tile and one built from the render against
-that shot's duration, so both grids sample alike.
+Which stretch of the reference the pair is cut from is named one of two ways. `--segment` and
+`--selection`, with the Run as `--run`, name a word range: the reference is cut from its own analysis
+video at the seconds it speaks those words, which is the stretch a render covers, and the rendered
+clip is trimmed by however far each end moved onto a shot boundary so both sides show the same word
+at the same offset. `--shot-id` names a cut in the picture and compares that whole shot.
+
+`--video <rendered.mp4>` compares the whole stretch and is the default choice, since a stretch can
+hold several states of an element without a cut and no single frame stands for it. `--image` is for
+the one case where the reference's own `visual:` observation says the element is completely still.
+Which pictures the pair is made of follows the observer: `gemini` receives the two clips; `agent`
+receives two frame tiles built against the compared stretch's own duration, so both grids sample
+alike.
 
 `--element` names the reconstructed element the render draws. It never reaches the observer — the
 comparison stays as blind as it is without it — and is written to the reference's `comparisons.jsonl`

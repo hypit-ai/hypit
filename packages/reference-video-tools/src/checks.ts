@@ -119,14 +119,26 @@ export type ReconstructionCheckInput = {
   readonly reference_id?: string;
 };
 
+/**
+ * Which clock timed the stand-ins an element's comparisons were made over.
+ *
+ * `reference` is every recorded comparison drawn at the pace the reference speaks those words;
+ * `estimate` is every one drawn at the pace `estimate:Speech` predicts; `mixed` is both among them.
+ * `not recorded` is a comparison whose picture carried no `render_element` sidecar, so what timed it
+ * is unknown.
+ */
+type TimingBasis = "reference" | "estimate" | "mixed" | "not recorded";
+
 /** One element that draws a Track, and the comparisons recorded against its id. */
 type ElementReport = {
   readonly element: string;
   readonly id: string;
   readonly package_name: string;
   readonly comparisons: number;
-  readonly shots: readonly string[];
+  /** The stretches it was compared against: a shot, or the words a Segment or Selection marks. */
+  readonly compared_against: readonly string[];
   readonly state: string;
+  readonly timing_basis: TimingBasis;
   readonly note?: string;
 };
 
@@ -164,6 +176,12 @@ type PlaybackReport = {
  * comparison. The gate cannot judge whether the shot an element was compared against actually showed
  * it, so the shots are reported for a reader, and a lone comparison is called out rather than assumed
  * meaningful.
+ *
+ * Each element also carries what timed the stand-ins it was compared over, read from the sidecar
+ * `render_element` writes beside its output and carried into the log by `compare_reconstruction`.
+ * That is reported rather than required: participation is the rule here, and an estimate-timed
+ * comparison is a comparison. What it says is which elements have had their behaviour over their
+ * window looked at and which have only had their layout looked at.
  *
  * A project that places no drawing element passes with nothing to require.
  */
@@ -320,7 +338,20 @@ export async function reconstructionCheck(
   }
   assert(prepared.includes(reference), `reference ${reference} is not prepared under ${referenceRoot}`);
 
-  type LoggedComparison = { readonly element?: string; readonly shot_id: string; readonly status: string };
+  type LoggedComparison = {
+    readonly element?: string;
+    readonly shot_id?: string;
+    readonly range?: { readonly segment?: string; readonly selection?: string };
+    readonly status: string;
+    readonly stand_in?: { readonly timing?: { readonly basis?: string } };
+  };
+  // What the comparison was made against, as a reader would name it: a shot, or the words a Segment
+  // or Selection marks.
+  const against = (entry: LoggedComparison): string =>
+    entry.shot_id
+    ?? (entry.range?.segment === undefined ? undefined : `segment ${entry.range.segment}`)
+    ?? (entry.range?.selection === undefined ? undefined : `selection ${entry.range.selection}`)
+    ?? "an unnamed stretch";
   const logPath = join(referenceRoot, reference, "comparisons.jsonl");
   const log = (await readFile(logPath, "utf8").catch(() => ""))
     .split("\n").filter((line) => line.trim().length > 0)
@@ -330,16 +361,30 @@ export async function reconstructionCheck(
     // images, which is participation too. Only `failed` means nothing was compared.
     .filter((entry) => entry.status === "complete" || entry.status === "pending");
 
-  // Which shots each element was compared against, in order. The gate cannot judge whether a shot was
-  // the right one to compare against — it does not know what the element draws — so it reports them and
-  // lets a reader notice a component compared against a shot that never showed it.
+  // Which stretches each element was compared against, in order. The gate cannot judge whether a
+  // stretch was the right one to compare against — it does not know what the element draws — so it
+  // reports them and lets a reader notice a component compared against one that never showed it.
   const rounds = new Map<string, string[]>();
+  // What timed each comparison's stand-in. A picture drawn at the estimator's pace holds every
+  // element in the right place for the wrong length of time, so an element compared only that way has
+  // had its layout settled and its behaviour over the window left alone.
+  const bases = new Map<string, TimingBasis[]>();
   for (const entry of log) {
     if (entry.element === undefined) continue;
     const seen = rounds.get(entry.element) ?? [];
-    seen.push(entry.shot_id);
+    seen.push(against(entry));
     rounds.set(entry.element, seen);
+    const recorded = entry.stand_in?.timing?.basis;
+    const basis: TimingBasis = recorded === "reference" || recorded === "estimate" || recorded === "mixed" ? recorded : "not recorded";
+    bases.set(entry.element, [...(bases.get(entry.element) ?? []), basis]);
   }
+  // One answer per element, over every comparison it has. Agreement carries through; disagreement is
+  // `mixed`, which is the honest answer for an element compared once each way.
+  const timingBasis = (id: string): TimingBasis => {
+    const recorded = new Set(bases.get(id) ?? []);
+    if (recorded.size === 0) return "not recorded";
+    return recorded.size === 1 ? [...recorded][0]! : "mixed";
+  };
 
   const never = drawn.filter((element) => (rounds.get(element.id) ?? []).length === 0);
   const unlabelled = log.filter((entry) => entry.element === undefined).length;
@@ -349,22 +394,27 @@ export async function reconstructionCheck(
   const unknown = [...new Set([...rounds.keys()].filter((id) => !known.has(id)))];
 
   const elements: ElementReport[] = drawn.map((element) => {
-    const shots = rounds.get(element.id) ?? [];
-    const state = shots.length === 0
+    const stretches = rounds.get(element.id) ?? [];
+    const state = stretches.length === 0
       ? "never compared"
-      : `${shots.length} comparison${shots.length === 1 ? "" : "s"} against ${[...new Set(shots)].join(", ")}`;
+      : `${stretches.length} comparison${stretches.length === 1 ? "" : "s"} against ${[...new Set(stretches)].join(", ")}`;
     return {
       element: `${element.alias}:${element.tag}`,
       id: element.id,
       package_name: element.specifier,
-      comparisons: shots.length,
-      shots: [...new Set(shots)],
+      comparisons: stretches.length,
+      compared_against: [...new Set(stretches)],
       state,
-      // The gate cannot judge whether the shot chosen actually showed the element, so a lone comparison
-      // is called out for a reader to confirm rather than silently accepted.
-      ...(shots.length === 1 ? { note: "single comparison — confirm this shot shows the element, not a look-alike" } : {}),
+      timing_basis: timingBasis(element.id),
+      // The gate cannot judge whether the stretch chosen actually showed the element, so a lone
+      // comparison is called out for a reader to confirm rather than silently accepted.
+      ...(stretches.length === 1 ? { note: "single comparison — confirm this stretch shows the element, not a look-alike" } : {}),
     };
   });
+
+  // Elements whose comparisons say nothing about how they behave over their window: every recorded
+  // comparison was drawn at the estimator's pace, or its picture carried no record of what timed it.
+  const untimed = elements.filter((element) => element.comparisons > 0 && element.timing_basis !== "reference");
 
   const summary: string[] = [];
   if (never.length === 0 && running.length === 0) {
@@ -373,6 +423,12 @@ export async function reconstructionCheck(
   if (never.length > 0) summary.push(`${never.length} of ${elements.length} elements have never been compared.`);
   if (running.length > 0) {
     summary.push(`${running.length} window${running.length === 1 ? "" : "s"} will empty before ${running.length === 1 ? "it ends" : "they end"}.`);
+  }
+  const compared = elements.filter((element) => element.comparisons > 0).length;
+  if (compared > 0) {
+    summary.push(untimed.length === 0
+      ? `every compared element was looked at over a reference-timed stand-in (${compared}).`
+      : `${untimed.length} of ${compared} compared elements have comparisons over a stand-in that was not reference-timed.`);
   }
 
   return {
@@ -386,10 +442,10 @@ export async function reconstructionCheck(
         ids: never.map((element) => element.id),
         next: "Read .claude/skills/hypit/references/reconstruction/reconstruction-loop.md, then for each: "
           + "render the element as the Source configures it, mock the layers a Build has not made, "
-          + "and compare the whole shot blind — one comparison per shot the reference shows it in.",
+          + "and compare the whole stretch blind — one comparison per Segment or Selection it is drawn over.",
         commands: never.map((element) =>
-          `hypit-reference-video-tools compare_reconstruction --reference-id ${reference} `
-          + `--shot-id <each shot that shows ${element.id}> `
+          `hypit-reference-video-tools compare_reconstruction --reference-id ${reference} --run ${runPath} `
+          + `--segment <each Segment ${element.id} is drawn over> `
           + `--video <rendered clip>.mp4 --element ${element.id}`),
       },
     }),
@@ -404,6 +460,25 @@ export async function reconstructionCheck(
       unlabelled_comparisons: {
         count: unlabelled,
         note: `${unlabelled} comparison${unlabelled === 1 ? " was" : "s were"} recorded without --element and cannot be credited to one.`,
+      },
+    }),
+    ...(untimed.length === 0 ? {} : {
+      timing_next: {
+        ids: untimed.map((element) => element.id),
+        note: "A stand-in sized by estimate:Speech puts every element where the Source puts it and gives it "
+          + "the wrong length of time to be there. Anything whose appearance is a function of elapsed time "
+          + "inside its window — a progressive reveal, a typewriter, staggered rows at a fixed rate, an "
+          + "enter animation scaled to the window — was therefore compared at a speed the reference never "
+          + "ran at, and is unverified. A comparison with no recorded basis says the same thing, because "
+          + "nothing on the record says otherwise.\n\n"
+          + "Re-render each of these with render_element --reference-id "
+          + `${reference} and compare again: the reference's own transcript times every Segment whose words `
+          + "it carries, so each window runs for as long as the reference spends on it. What is left after "
+          + "that is alignment against the speech the Build synthesizes, which is measured at "
+          + "playbooks/craft/production-gates.md Gate 3.",
+        commands: untimed.map((element) =>
+          `hypit-reference-video-tools render_element ${runPath} --element ${element.id} `
+          + `--reference-id ${reference} --segment <the Segment the shot covers> --out <rendered clip>.mp4`),
       },
     }),
     playback: running,

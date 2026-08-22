@@ -14,9 +14,10 @@ function usage(): string {
     "  hypit-reference-video-tools observe_reference --reference-id <id> --shot-id <id> [--shot-id <id> ...] --question <text>",
     "  hypit-reference-video-tools record_observation --reference-id <id> --key <key> --text <text>|--text-file <path>",
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
+    "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <build.svrun> --segment <id>|--selection <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
     "  hypit-reference-video-tools make-placeholder --out <path> --width <w> --height <h> [--color light|mid|dark|white|black|#RRGGBB] [--video] [--seconds <s>]",
-    "  hypit-reference-video-tools render_element <build.svrun> --element <id> --out <path.png|path.mp4> [--segment <id>] [--selection <id>]",
+    "  hypit-reference-video-tools render_element <build.svrun> --element <id> --out <path.png|path.mp4> [--segment <id>] [--selection <id>] [--reference-id <id>]",
     "  hypit-reference-video-tools render_previews <package-dir> [...]",
     "  hypit-reference-video-tools preview_check <build.svrun> [<hypit.runtime.json>]",
     "  hypit-reference-video-tools reconstruction_check <build.svrun> [--reference-id <id>]",
@@ -30,14 +31,25 @@ function usage(): string {
     "never been compared against the reference, and which timed pictures are configured to stop before",
     "their window ends. It asks for participation rather than convergence, so an element compared once",
     "passes. With one prepared reference it uses that one; with several it requires --reference-id.",
+    "Each element also carries the basis its comparisons were made on — reference, estimate, mixed, or",
+    "not recorded — which says whether anything that changes with elapsed time inside its window has",
+    "been looked at, or only its layout.",
     "",
     "render_element draws one element of a Source the way that Source configures it, without a Build",
     "and without a Provider: the Canvas, frame rate, Recipe values and bindings are read from the",
-    "Source, the Segment skeleton comes from its own estimate:Speech, and the layers a Build has not",
-    "made are mocked with make-placeholder at the Canvas's size. Name the stretch in words —",
-    "--segment or --selection — so no reference timestamp is ever read across; without either, the",
-    "whole program is drawn. An --out ending .mp4, .mov or .webm writes the stretch as a clip, and any",
-    "other extension writes one still from the middle of it.",
+    "Source, and the layers a Build has not made are mocked with make-placeholder at the Canvas's size.",
+    "Name the stretch in words — --segment or --selection — so no reference timestamp is ever read",
+    "across; without either, the whole program is drawn. An --out ending .mp4, .mov or .webm writes the",
+    "stretch as a clip, and any other extension writes one still from the middle of it.",
+    "",
+    "--reference-id times the Segment skeleton from that reference's transcript. The Script was",
+    "transcribed from the reference video, so its words are matched against the transcript's and each",
+    "Segment runs for as long as the reference spends on them; anything whose appearance is a function",
+    "of elapsed time inside its window is then compared at the pace it will be seen at. A Segment whose",
+    "words the transcript does not carry is sized by the Source's own estimate:Speech, which is also",
+    "what sizes every Segment when no reference is named. The result's `timing` says which of the two",
+    "sized each Segment, and the same object is written to <out>.stand-in.json for",
+    "compare_reconstruction to carry into the comparison log.",
     "",
     "render_previews draws a package's catalogue pictures from the package's own preview Source in",
     "preview/preview.svml, preview/recipes.svs and preview/build.svrun. Which element draws which file",
@@ -49,11 +61,22 @@ function usage(): string {
     "comparison log and never sent to the observer, so the comparison stays blind while a later gate can",
     "still tell which elements have been compared.",
     "",
-    "--video compares the whole shot instead of one frame of it, which is what removes the problem of",
-    "choosing a characteristic frame for an element that animates in, leaves, or is replaced within one",
-    "shot. The `gemini` observer receives the two clips; the `agent` observer receives two frame tiles,",
-    "the rendered clip tiled against the reference shot's own duration so both grids sample alike. Use",
-    "--image only when the shot's own visual observation states the element is completely still.",
+    "compare_reconstruction takes the stretch of the reference two ways. --segment and --selection name",
+    "a word range: the words come from the Author SVML of the Run given as --run, they are aligned",
+    "against the reference's transcript, and the reference is cut from its own analysis video at the",
+    "seconds it speaks them. That is the stretch a render covers, since a render is drawn over those",
+    "same words, and one Segment routinely runs across several shots. Each end moves onto a shot",
+    "boundary when one lies inside its own end word, so the pair opens and closes where the picture",
+    "changes while still covering exactly the words asked for, and the rendered clip is trimmed by the",
+    "seconds each end moved so both sides show the same word at the same offset. An end with no boundary",
+    "inside its word leaves the pair part-way through a shot, and the prompt says how many seconds of it",
+    "to read as an incomplete shot. --shot-id names a cut in the picture and compares that whole shot.",
+    "",
+    "--video compares the whole stretch instead of one frame of it, which is what removes the problem of",
+    "choosing a characteristic frame for an element that animates in, leaves, or is replaced without a",
+    "cut. The `gemini` observer receives the two clips; the `agent` observer receives two frame tiles,",
+    "both tiled against the compared stretch's own duration so the grids sample alike. Use --image only",
+    "when the reference's own visual observation states the element is completely still.",
     "",
     "make-placeholder writes a correctly-sized placeholder for a media slot the Source declares as a",
     "generation and a Build has not filled. It is deterministic and Provider-free: the comparison loop",
@@ -183,14 +206,23 @@ async function main(): Promise<void> {
     result = await tools.record_observation(input as { reference_id: string; key: string; text: string });
   } else if (command === "compare_reconstruction") {
     const video = one(flags, "video");
+    const segment = one(flags, "segment");
+    const selection = one(flags, "selection");
+    const range = segment !== undefined || selection !== undefined;
     const input = supplied ?? {
       reference_id: required(flags, "reference-id"),
-      shot_id: required(flags, "shot-id"),
+      ...(range
+        ? {
+          run: required(flags, "run"),
+          ...(segment === undefined ? {} : { segment }),
+          ...(selection === undefined ? {} : { selection }),
+        }
+        : { shot_id: required(flags, "shot-id") }),
       ...(video === undefined ? { image_path: required(flags, "image") } : { video_path: video }),
       ...(one(flags, "question") === undefined ? {} : { question: one(flags, "question") }),
       ...(one(flags, "element") === undefined ? {} : { element: one(flags, "element") }),
     };
-    result = await tools.compare_reconstruction(input as { reference_id: string; shot_id: string; image_path?: string; video_path?: string; question?: string; element?: string });
+    result = await tools.compare_reconstruction(input as { reference_id: string; shot_id?: string; segment?: string; selection?: string; run?: string; image_path?: string; video_path?: string; question?: string; element?: string });
   } else if (command === "inspect_svml_vocabulary") {
     const packages = many(flags, "package");
     const input = supplied ?? {
@@ -218,8 +250,9 @@ async function main(): Promise<void> {
       out: required(flags, "out"),
       ...(one(flags, "segment") === undefined ? {} : { segment: one(flags, "segment") }),
       ...(one(flags, "selection") === undefined ? {} : { selection: one(flags, "selection") }),
+      ...(one(flags, "reference-id") === undefined ? {} : { reference_id: one(flags, "reference-id") }),
     };
-    result = await tools.render_element(input as { run: string; element: string; out: string; segment?: string; selection?: string });
+    result = await tools.render_element(input as { run: string; element: string; out: string; segment?: string; selection?: string; reference_id?: string });
   } else if (command === "render_previews") {
     if (supplied === undefined && operands.length === 0) throw new Error(`a <package-dir> is required\n\n${usage()}`);
     const input = supplied ?? { package_dirs: operands };
