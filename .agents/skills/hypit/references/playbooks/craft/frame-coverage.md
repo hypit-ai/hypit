@@ -19,7 +19,7 @@ an interval inherits its edges whenever its length comes from something other th
   around and between them;
 - a generated take, which ends where its material ends rather than where the shot should — and then
   draws nothing for the rest of its window, because `playback` defaults to `once-start`. This is the
-  one edge on the list a machine can find before a Build: `reconstruction-check` reads each Recipe
+  one edge on the list a machine can find before a Build: `reconstruction_check` reads each Recipe
   and refuses the default on timed generated material. `generated-dependencies.md` says what to set
   instead;
 - a blend, whose frames are edges of partial coverage — a one-frame fade is one frame on which the

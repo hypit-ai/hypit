@@ -87,7 +87,7 @@ visual QA.
   to a `copy:Value` holding a performance direction is the defect this catches: the model receives no
   words, invents its own, and the take sounds fluent and says nothing from the Script.
 
-  It survives every structural check. `hypit check`, `preview-check` and `plan` all pass, because the
+  It survives every structural check. `hypit check`, `preview_check` and `plan` all pass, because the
   graph is legal and complete — the prompt is a Text and the take consumes it. `whisperx:SemanticTake`
   then fits the Segment's words onto whatever audio arrived rather than reporting that they differ, so
   the Caption Track renders the Script over speech that shares none of it, and every downstream
@@ -117,8 +117,8 @@ visual QA.
   and whether each Track contributes unique information.
 - Treat `check` and `plan` as structural proofs only. They do not prove visual quality, real speech
   alignment, Provider output quality, or factual correctness.
-- A reconstruction route may have compared these Tracks against a reference before this gate. That
-  comparison runs on renders made from the Source's values with no SemanticTrack behind them, so it
+- A reconstruction route has compared these Tracks against a reference before this gate. That
+  comparison runs on renders made from the Source's values over a stand-in SemanticTake, so it
   settles how a Track looks and leaves everything this gate is about — timing against real speech,
   drift after a recompute, occlusion between Tracks that were rendered separately — still to be
   measured here. Review them against the real SemanticTrack whatever was compared earlier.
@@ -131,7 +131,7 @@ visual QA.
   captions, overlays, transitions, audio density, claims, and CTA as one program.
 - **Measure the delivery's own speech against the Script.** An agent reads pictures and cannot hear,
   so "listen and verify dialogue" above resolves to nothing on its own, and a take whose spoken words
-  came from somewhere other than the Script passes `check`, `plan`, `preview-check` and both
+  came from somewhere other than the Script passes `check`, `plan`, `preview_check` and both
   measurements below without a mark. Transcribe what was delivered and read it against the words the
   Script holds:
 

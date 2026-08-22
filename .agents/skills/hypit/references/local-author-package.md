@@ -179,7 +179,7 @@ nothing.
   package the way its README does.
 
   The picture `reconstruction-loop.md` compares is a different one and the package does not produce
-  it. `scripts/render-element.mjs` reads the Source — the Canvas, the Recipe values, the Script text,
+  it. `render_element` reads the Source — the Canvas, the Recipe values, the Script text,
   the bindings — and drives the package's own Producer to draw the component the way this video places
   it. All the package has to be is a working Producer, which the Manifest already requires.
 
@@ -230,12 +230,12 @@ the preview check and repair until it passes — a graph failure is not a differ
 work that is not finished, and it is not bounded by the loop's attempt ceiling:
 
 ```bash
-# from the repository root: tsx is the repository's dependency
-node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/build.svrun
+# from the repository root: it reads the installed packages from the working directory
+hypit-reference-video-tools preview_check path/to/build.svrun
 ```
 
 It takes the Run Source, not the `.svml`. A pass here means the graph reaches a Film and a semantic
-spine; it exits zero while the Providers are still unrun, and says which capabilities it is waiting
+spine; it stays sound while the Providers are still unrun, and says which capabilities it is waiting
 on. See `preview.md` for what that does and does not prove — notably, a
 Producer that refuses the media kind it is handed is not caught here, because nothing is handed to
 it until the Build runs.
