@@ -111,8 +111,8 @@ and do not put the gap to the author.
 
 - **The transcript says when.** WhisperX measures every word locally on both paths, so the words and
   their timings are exact whichever observer reads the pictures. That settles whether anyone is
-  speaking at a given moment, and `final-sources.md` still takes Segment durations from
-  `transcript_ref` as it always does.
+  speaking at a given moment, and where a word sits. It does not set a take's duration: the take is
+  generated and its length comes from `estimate:Speech`, as `final-sources.md` requires.
 - **The pictures say who.** Attribute speech to the person the frames show speaking during the words
   the transcript places there. A task that needs sound says so in its own prompt and asks for exactly
   this reading.
