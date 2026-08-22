@@ -6,6 +6,7 @@ import { icon, setIcon } from "./icons.js";
 import { mountMaterialPreview } from "./material-preview.js";
 import type { State, Store } from "./selection.js";
 import { createZoom } from "./zoom.js";
+import { writeSourceTransaction } from "./writeback.js";
 
 export type Timeline = {
   readonly element: HTMLElement;
@@ -189,6 +190,14 @@ export function createTimeline(store: Store): Timeline {
   let pointerArmed = false;
   let pointerDownX = 0;
   let pointerDownOnItem = false;
+  let activeEdit: {
+    readonly clip: StudioSnapshot["tracks"][number]["clips"][number];
+    readonly operation: "move" | "trim-start" | "trim-end";
+    readonly sources: readonly StudioSnapshot["tracks"][number]["clips"][number]["parameters"][number]["source"][];
+    readonly startFrame: number;
+    readonly pointerId: number;
+    readonly node: HTMLElement;
+  } | undefined;
   lanes.addEventListener("pointerdown", (event) => {
     pointerDownOnItem = (event.target as HTMLElement).closest(
       ".clip, .semantic-segment, .semantic-word, .semantic-selection, .semantic-moment",
@@ -213,13 +222,43 @@ export function createTimeline(store: Store): Timeline {
     hover.style.transform = `translate3d(${at}px,0,0)`;
     hoverTime.textContent = state === undefined ? "" : frameTimecode(state.snapshot, frame);
     hover.classList.add("visible");
+    if (activeEdit !== undefined) return;
     if (!pointerArmed || event.buttons !== 1) return;
     if (pointerDownOnItem && Math.abs(event.clientX - pointerDownX) < 3) return;
     store.seek(frame, "timeline");
   });
   const finishPointer = (event: PointerEvent): void => {
+    const edit = activeEdit;
+    activeEdit = undefined;
+    edit?.node.classList.remove("editing");
     pointerArmed = false;
     try { lanes.releasePointerCapture(event.pointerId); } catch { /* already released */ }
+    if (edit === undefined || state === undefined || event.type === "pointercancel") return;
+    const nextFrame = frameAt(event.clientX);
+    const rawDelta = nextFrame - edit.startFrame;
+    const delta = Math.max(
+      -edit.clip.startFrame,
+      Math.min(state.snapshot.space.frameCount - edit.clip.endFrameExclusive, rawDelta),
+    );
+    const replacement = (frame: number): string => `${Math.max(0, Math.round(frame))}f`;
+    const patches = edit.operation === "move"
+      ? [
+        { ...edit.sources[0]!, replacement: replacement(edit.clip.startFrame + delta) },
+        { ...edit.sources[1]!, replacement: replacement(edit.clip.endFrameExclusive + delta) },
+      ]
+      : edit.operation === "trim-start"
+        ? [{ ...edit.sources[0]!, replacement: replacement(Math.min(edit.clip.endFrameExclusive - 1, nextFrame)) }]
+        : [{ ...edit.sources[0]!, replacement: replacement(Math.max(edit.clip.startFrame + 1, nextFrame)) }];
+    if (patches.every((patch) => patch.replacement === patch.preimage)) return;
+    element.dispatchEvent(new CustomEvent("studio:write", { detail: { state: "saving" } }));
+    void writeSourceTransaction(state.snapshot.revision, patches).then(() => {
+      element.dispatchEvent(new CustomEvent("studio:write", { detail: { state: "saved" } }));
+    }).catch((error: unknown) => {
+      // The next snapshot/error event is the source of truth; a failed gesture
+      // must never be represented by a local optimistic rectangle.
+      console.error(error);
+      element.dispatchEvent(new CustomEvent("studio:write", { detail: { state: "error" } }));
+    });
   };
   lanes.addEventListener("pointerup", finishPointer);
   lanes.addEventListener("pointercancel", finishPointer);
@@ -644,7 +683,32 @@ export function createTimeline(store: Store): Timeline {
       node.querySelector(".clip-name")!.textContent = clipHeaderLabel(clip);
       node.querySelector(".clip-meta")!.textContent = `${((clip.endFrameExclusive - clip.startFrame) / fps(snapshot)).toFixed(2)}s`;
       node.querySelector(".clip-content-text")!.textContent = clipBodyLabel(clip);
-      node.addEventListener("pointerdown", () => {
+      node.addEventListener("pointerdown", (event) => {
+        const rect = node.getBoundingClientRect();
+        const edge = Math.min(8, Math.max(4, rect.width / 3));
+        const nearStart = event.clientX - rect.left <= edge;
+        const nearEnd = rect.right - event.clientX <= edge;
+        const handle = clip.editHandles.find((candidate) =>
+          candidate.enabled
+          && ((candidate.operation === "trim-start" && nearStart)
+            || (candidate.operation === "trim-end" && nearEnd)
+            || (candidate.operation === "move" && !nearStart && !nearEnd)));
+        if (handle !== undefined && handle.sources !== undefined
+          && (handle.operation === "move" || handle.operation === "trim-start" || handle.operation === "trim-end")) {
+          event.stopPropagation();
+          activeEdit = {
+            clip,
+            operation: handle.operation,
+            sources: handle.sources,
+            startFrame: frameAt(event.clientX),
+            pointerId: event.pointerId,
+            node,
+          };
+          node.classList.add("editing");
+          try { lanes.setPointerCapture(event.pointerId); } catch { /* local pointer */ }
+          store.select(clip.id, "timeline");
+          return;
+        }
         if (clip.interaction.select) store.select(clip.id, "timeline");
       });
       node.addEventListener("dblclick", () => store.seek(clip.startFrame, "timeline"));

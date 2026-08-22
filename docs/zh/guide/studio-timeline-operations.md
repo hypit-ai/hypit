@@ -103,6 +103,12 @@ SVML 的引用（例如 `during={story.selection.claim}` 或 `appearance={recipe
 `fit` 或 `enter-frames` 写回的是 SVS，改 `z` 或显式 SVML 字面量写回的是 SVML，二者不会复制
 成第二份真相。
 
+当前第一种时间线写回是显式绝对窗口：当一个实体同时声明了可解析的绝对 `start`/`end`
+字面量时，Studio 才提供 move、trim-start、trim-end；拖动会把两端作为同一事务改成帧单位，
+不会改成另一种 `during` 绑定。`at={moment} for="…"` 只有右端 trim，左端仍由 Moment 决定。
+Selection、Segment、Moment 投影和任何组件内部计算出来的窗口没有时间线拖把手；它们只能在
+来源参数或源码中修改。这样“有把手”本身就是一条可审计的 source mapping，而不是 CSS 假象。
+
 ### 当前没有实现的操作
 
 `StudioInteraction` 仍然只描述是否允许时间线手势；新增的 `StudioEditHandle` 为未来的每个
