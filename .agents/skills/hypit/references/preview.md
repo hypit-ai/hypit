@@ -66,7 +66,24 @@ collide — lines that overlap, type too large for the plate it sits on — whil
 drawn from different values, stays perfect. A route that compares the catalogue picture is answering
 a question about the catalogue.
 
-The comparison render has one command, shared by every package:
+Each has its own command, and both are shared by every package.
+
+**The catalogue preview** is drawn from a Source the package ships — `preview/preview.svml`,
+`preview/recipes.svs` and `preview/build.svrun`, holding its own copy, its own Recipe values and its
+own Canvas:
+
+```bash
+node --import tsx .agents/skills/hypit/scripts/render-previews.mjs packages/<name>
+```
+
+Which element draws which file comes from the Manifest's naming: a Surface tagged `Track` declares
+`preview/Track.png`, so that picture is drawn from the element carrying that tag under the package's
+own import alias. It **overwrites the picture in place**, so run it when the package's drawing has
+changed and look at what came out before committing it. Anything the preview Run satisfies with a
+`<file>` of its own is carried through and never mocked over, which is how a preview shows the
+component holding a picture rather than a placeholder.
+
+**The comparison render** has one command too:
 
 ```bash
 node --import tsx .agents/skills/hypit/scripts/render-element.mjs projects/<name>/build.svrun \

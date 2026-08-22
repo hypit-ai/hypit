@@ -91,7 +91,10 @@ const out = flag("out") ?? fail("--out is required");
 
 const invokedFrom = process.env.INIT_CWD ?? process.cwd();
 const runPath = resolve(invokedFrom, runArgument);
-const packageRoot = resolve(invokedFrom);
+// The repository, found from this file rather than from wherever it was called. Deriving it from the
+// working directory means the command works from the root and crashes anywhere else, on a missing
+// module rather than on anything a reader could act on.
+const packageRoot = fileURLToPath(new URL("../../../../", import.meta.url));
 const projectRoot = dirname(runPath);
 const outPath = resolve(invokedFrom, out);
 
