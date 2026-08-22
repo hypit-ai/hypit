@@ -1,6 +1,8 @@
 # Quickstart map
 
-The repository docs are authoritative:
+The repository docs are authoritative. Imports pin the physical version: an element is written as
+`<import as="tag" from="@hypit/<name>@1"/>`, and the `@1` is the Module version, not a range to
+loosen. The repository docs and package READMEs describe the `@1` vocabulary.
 
 | Need | Read |
 |---|---|

@@ -57,4 +57,7 @@ Fix package resolution and package implementation before repairing source use. C
 three files are accepted. Do not create `check_svml_project` or another wrapper.
 
 Accepted checks end the structural work, not the reconstruction. Every element you authored still has
-to be rendered and compared against the reference under `reconstruction-loop.md`.
+to be rendered and compared against the reference under `reconstruction-loop.md`, and that work ends
+on `reconstruction-check` (`index.md` holds the command), which refuses to pass while any
+locally-drawn element has never been compared. It needs a prepared reference; when several are
+prepared it takes `--reference-id <id>`.
