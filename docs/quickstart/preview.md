@@ -1,87 +1,40 @@
 ---
-title: Live Preview
-description: Read a Run whose material exists as an editable timeline.
+title: Hypit Studio
+description: Open a satisfied Run, inspect its picture and timeline, and edit real author Sources.
 ---
 
-# Live Preview
+# Hypit Studio
 
-**Hypit Studio** opens a Run, traces its Film or Render target back to the projections it can edit,
-and draws them — the code on the right, the picture top-left, a timeline bottom-left. It never
-writes anything but the Author SVML, and it never calls a Provider.
+Hypit Studio opens one `.svrun`, traces its Film or Render target back to explainable Semantic and Track projections, and presents four regions: Source at the upper left, Preview in the center, Inspector at the upper right, and Timeline below.
 
-Studio builds only what it can derive deterministically from Candidates the Run already supplies, so
-it needs a Run whose material is satisfied — every generated output either produced by an accepted
-Build or standing against a file. That is what you point it at.
+Studio never invokes a Provider or creates a Build. Generated material must already be selected by the Run as a real Candidate, either from a project file or from a Record accepted by an earlier Build and referenced through `<build-record>`. The display closure may contain no unresolved Need. Missing facts fail explicitly; Studio does not guess material or create placeholders.
 
 ```bash
 hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
 # ➜  http://localhost:5179/
 ```
 
-::: warning The examples in this repository need material first
-`examples/all-components-preview/studio.svrun` is ready to open: it explicitly supplies its
-Semantic Takes and the deterministic Script-owned CaptionDocument. Other example Runs may still name shots a Provider has to make, or
-footage under `examples/**/assets/` that is not committed. Satisfy those in a Run of your own before
-opening them.
-:::
-
 | Argument | Meaning |
 | --- | --- |
-| `--run <build.svrun>` | The Run Source to open. Required. Studio reads the Author SVML back out of it. |
-| `--runtime <hypit.runtime.json>` | Where material earlier Builds produced is kept. Only a Run that reuses an accepted shot through `<build-record>` needs one. |
-| `--workspace <directory>` | Defaults to the directory holding the Run. |
-| `--port <number>` | Defaults to `5179`. |
+| `--run <build.svrun>` | Run Source to open. Required. |
+| `--runtime <hypit.runtime.json>` | Runtime Profile containing earlier Builds and Artifacts; required for `<build-record>`. |
+| `--workspace <directory>` | Source access and writeback boundary; defaults to the Run directory. |
+| `--port <number>` | HTTP port; defaults to `5179`. |
 
-The unit of work is the Run, not the `.svml`. What a Source is read *with* — which files stand for
-which outputs, which Build records are reused — is an authoring decision, and the Run Source is
-where that decision is written down. See [Run Source & Builds](./run).
+The unit of work is the Run, not an isolated `.svml`. The Run chooses the Author Source, targets and Candidates. Every Studio recompile continues to use that same Run instead of selecting another set of material in the background.
 
-::: tip Stop the previous server before starting another
-A second Studio silently takes another port, and you end up reading a stale preview while
-describing a new one. Stop the old one first:
+## Which Runs can open
 
-```bash
-pkill -f "hypit-studio" || true
-```
+Studio requires:
 
-Use `--port` when you genuinely want two Runs side by side.
-:::
+- a real Film or Render target;
+- a traceable Semantic Track and display Tracks;
+- satisfied material Candidates;
+- a display closure completed by deterministic Producers.
 
-## What Studio draws
+Studio refuses a Run that supplies only an opaque finished movie or whose display graph still requires external generation. It edits the current author graph and Tracks; it does not reconstruct a project from final pixels.
 
-Studio builds the deterministic closure of the Run and nothing else. Opening it never invokes a
-Provider and never creates a Build, so every projection it draws was either supplied by the Run as
-a Candidate or derived deterministically from one.
-
-**Everything structural is real.** Placement Frames, padding, stacking order, motion and the Track
-layout are computed by the same functions a build calls, from your Source and your Recipes. A card
-in the wrong part of the frame is wrong here too.
-
-**Every timing is measured.** The timeline comes from the `SemanticTrack` — the aligned Takes
-themselves — so a cut point you see is the cut point a build produces.
-
-When something the closure needs is missing, Studio says so and stops:
-
-```
-Studio cannot start:
-- the Studio projection closure requires unresolved capabilities: seedance.video
-```
-
-What it asks for:
-
-| Refusal | What it means |
-| --- | --- |
-| `the Run Source has no target; Studio requires Film or Render` | Nothing in the Run names a finished programme to trace back from. |
-| `the Run target is not a Film or Render output from the current SVML` | The target named does not exist in the Source as it stands now. |
-| `Film has no traceable SemanticTake / Speech Track chain` | There is no semantic spine to hang a timeline on. |
-| `the Studio projection closure requires unresolved capabilities: …` | A Track needs a Provider to exist. Satisfy it in the Run, or accept a Build. |
-| `Render target … is an opaque media Candidate; Studio needs the current Film graph` | The Run points at a finished video file. Studio edits the graph, not the output. |
-
-The fourth is the one you will meet most, and it is all-or-nothing: one unresolved capability
-anywhere in the closure refuses the whole Run. A programme becomes openable in one step, when the
-last of its generated outputs is satisfied.
-
-## Supplying material you already have
+A project file can satisfy an output directly. A result from an earlier Build can be reused through `<build-record>`:
 
 ```svml
 <file id="take-1" type="@hypit/artifact@1#BlobArtifact"
@@ -89,66 +42,35 @@ last of its generated outputs is satisfied.
 <satisfy output="take-opening.video" candidate="take-1"/>
 ```
 
-A `<build-record>` candidate names something an earlier Build made rather than a path, and needs
-`--runtime` to find it.
+## The four regions
 
-## Where a Track came from
+### Source
 
-Selecting a Track names the Candidate that produced it and where it came from — the Run, the Source,
-or neither. The header carries the same claim for the programme as a whole: `timing: measured` reads
-from the aligned `SemanticTrack`, `picture: measured` that every element shows real material.
+The upper-left pane shows the current Author SVML with line numbers, highlighting, synchronized selection and text editing. It is not yet a complete Source workspace; browsing related SVS, SVRun, tasks and artifacts remains under separate design review.
 
-## When an agent is doing the work
+### Preview
 
-If you are working through the [Hypit skill](https://github.com/hypit-ai/hypit/blob/main/.agents/skills/hypit/SKILL.md),
-the agent starts Studio for you and sends you the link after a step that changes the Source — a
-Script edit, a Frame moved, a B-roll placed, a Recipe adjusted.
+The center pane uses real material and a HyperFrames picture. Structure, Frames, padding, stacking, motion and Track layout come from the same domain programs used by a Build, not from a Studio approximation.
 
-Reading a diff is not the same as seeing where a cutaway lands, and this is the cheapest moment to
-say "that card is too high".
+### Inspector
 
-## Moving around it
+The upper-right pane shows the current entity's origin, timing, operations and adapter-exposed author parameters. Writable fields carry exact Source ranges. Values without one unambiguous write target remain read-only.
 
-The timeline, the source and the picture are three views of the same thing, so selecting in any of
-them selects in all three. Click a clip and the playhead moves to its first frame, the picture
-outlines it, and the source scrolls to the tag that placed it. Click a marked line in the source, or
-whatever is drawn under the pointer, and the same happens.
+### Timeline
 
-A Segment encloses a Selection, which can enclose another Selection. Each level is drawn in its own
-colour — in the source, on the timeline and on the picture — and an enclosing range stays outlined
-while an inner one is, because the nesting is what the markers are for. Everything the playhead is
-inside is outlined as it passes, whether or not a Track was hung on it.
+The lower pane places Semantic Segments, Words, Selections, Moments and component Tracks in one frame domain. Clicking selects and seeks; transport, frame stepping, zoom and scrolling are available. Move and trim are enabled only when an adapter declares the gesture and Studio resolves one author target.
 
-Drag the ruler to scrub. `Space` plays and pauses, `←` and `→` step one frame with `Shift` for ten,
-`Home` and `End` jump to the ends, and `Esc` clears the selection.
+## How edits return to Source
 
-## The semantic lane
+Studio exposes two structured author mutations:
 
-Above the Tracks is a lane that is not a Track: the `SemanticTrack` itself, drawn as one block per
-Segment. It is the skeleton every other row is positioned against.
+- timeline gestures submit `timeline.adjust`;
+- Inspector fields submit `parameter.adjust`.
 
-At the whole-programme view a Segment is the useful unit, so that is all it draws. Zoom in and once
-a Segment has enough width its words open into a real sub-lane beneath it, the way a pattern opens
-into a piano roll. Double-click a Segment to zoom to it; the toolbar has explicit zoom controls, and
-`Ctrl`-wheel pinches.
+They follow the executed lineage selected by the Run to a real SVML or SVS preimage. Studio recompiles with the same Run after a change. It publishes the new picture only on success; on failure it restores the files and reports the domain error. It creates no hidden Build, invokes no Provider, and never turns a Selection into an anonymous frame span.
 
-Clicking a word moves the playhead to the frame that word starts on, which is the fastest way to
-answer "does this cutaway land on the right sentence".
-
-## Selection, projection and consumption
-
-A timeline block is not assumed to be the authored Selection. Studio keeps three facts separate:
-the named semantic source, the component's projection from that source, and the frame windows the
-component finally consumes. Selection ranges and Moment points remain visible on the semantic lane;
-an item's projection line connects that source to its realized window. Components with nested
-schedules, such as a Ranking Column, expose the total window and their reveal phases separately.
-
-The current projection view is read-only. Its data contract and the remaining write-back questions
-are recorded in [Studio Temporal Windows](../guide/studio-temporal-windows.md).
+The complete selection, projection, consumption and writeback model is documented in [Studio Temporal Lineage](../guide/studio-temporal-windows.md).
 
 ## Sound
 
-HyperFrames renders a silent picture on purpose: programme audio is a separate Track the media
-pipeline muxes in at the end. But placing B-roll against speech means hearing the speech, so the
-Speech Track's own material is allowed to sound while the transport is running. Cutaways stay
-silent, as they are in a build unless they ask otherwise. The speaker button turns it off.
+HyperFrames owns the picture; the media pipeline assembles programme audio at the end. Studio may play the real Speech Track audio while previewing so B-roll can be judged against speech. Visual material without explicit audio is not given sound automatically.
