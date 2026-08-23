@@ -67,11 +67,13 @@ Point 和 Window 在 ABI 与 Inspector 中保持不同：Point 显示 `At`，Win
 
 ## 写回边界
 
-修改语义来源、修改投影表达式、修改消费参数是三种不同操作，不能互相替代。当前规则是：
+修改语义来源、修改绝对投影端点、修改消费参数仍是不同的作者目标，但 UI 只公开
+`timeline.adjust` 与 `parameter.adjust` 两种顶层操作。`timeline.adjust` 根据实体真实记录的 lineage
+选择唯一目标：
 
-- 作者直接写下、且 Studio 持有唯一源码范围的绝对 `start/end` 可以移动或裁切；
-- `at + for` 只允许修改明确的 duration；
-- Selection/Moment 引用产生的下游矩形不能自动反推并移动语义来源；
-- 修改共享语义来源必须作为独立的语义层操作展示影响范围，不能伪装成普通 clip drag。
+- 来源是 Selection：move/trim 修改 Script 中该 Selection 的 Anchor markers，全部消费者一起更新；
+- 来源是 Moment：move 修改该 Moment marker，显式 `for` 仍可单独 trim-end；
+- 来源是绝对 `start/end`：修改精确的 Window 端点；
+- Segment、Program、Schedule 派生阶段或链路缺失：保持只读。
 
-可以暂时只读，不能隐式猜测。
+这是沿公开身份做逆变换，不是按矩形帧数反推。不能隐式猜测。

@@ -76,7 +76,7 @@ stops, so a Run that opens is a Run whose Tracks all resolved.
 Contributor fixtures may provide a satisfied demonstration Run, but an ordinary installed
 Distribution does not use its package directory as an author workspace.
 
-## A timeline block is not the authored Selection
+## A timeline block retains its authored Selection
 
 Studio keeps three stages of an item's time apart, and reading one for another misreads the program:
 
@@ -90,6 +90,12 @@ Studio keeps three stages of an item's time apart, and reading one for another m
 
 A projection line connects a source to its realized window, and the projection view is read-only.
 `https://narratage.hypit.ai/guide/studio-temporal-windows` is authoritative for what each stage carries.
+
+When the executed lineage names a Selection or Moment, dragging the realized block may issue
+`timeline.adjust` against that shared semantic identity. Script owns the inverse from semantic Anchor
+identity back to markers, so every consumer follows the edit. This does not turn the block into a
+Selection or infer a source from matching frames. Derived schedule phases and missing lineage remain
+read-only.
 
 Studio is a browser preview **for a person to look at**. It is not a source of images for an
 automated comparison — that is what the local still render above is for.

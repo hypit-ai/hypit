@@ -5,7 +5,8 @@ description: 单语义来源与组件入口前投影的当前实现、目标边�
 
 # Selection、Moment 与 Projection 重构状态
 
-> 状态：Selection/Moment 单值化、Point/Window 投影运行图和 Studio 只读谱系追踪已经完成；跨层回写仍保持显式、保守。
+> 状态：Selection/Moment 单值化、Point/Window 投影运行图和 Studio 谱系追踪已经完成；Studio
+> 只在执行谱系给出唯一作者身份时沿 Anchor 写回共享 Selection/Moment。
 
 ## 已完成
 
@@ -62,6 +63,7 @@ Selection 当前保存的是作者明确写下的一对有方向 Anchor；暂不
 
 1. Studio 已从本次 Run 的执行闭包读取真实 Temporal 记录、投影 Spec 和直接消费边；不得退回
    属性名、Spec 类型名、运行时 id 前缀或相同 span 推断。
-2. Timeline 修改必须明确选择语义来源、投影表达式或消费参数中的一层。当前只对有唯一源码
-   逆像的绝对端点和 duration 开放写回；Selection/Moment 引用不会从下游矩形自动反推。
+2. Timeline 只提交 `timeline.adjust`；Studio 再沿实体真实 lineage 选择唯一作者目标。Selection
+   矩形写回共享 Selection 的两个 Anchor markers，Moment 实体写回 Moment marker；绝对端点和
+   duration 仍写回自己的源码范围。Segment、Program 和派生 Schedule 没有唯一逆像时保持只读。
 3. 继续清理仍教授非连通 Selection、MomentSet/SelectionSet 或旧 Ranking triggers 的文档。
