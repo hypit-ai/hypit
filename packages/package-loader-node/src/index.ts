@@ -5,6 +5,10 @@ export {
   loadNodePackageSelection,
   NodePackageSelectionMissingError,
   physicalPackageName,
+  distributionExternalPackageRequirements,
 } from "./loader.js";
-export { installDistributionPackageResolution } from "./distribution-resolution.js";
+export {
+  installDistributionPackageResolution,
+  installExternalPackageResolution,
+} from "./distribution-resolution.js";
 export type * from "./types.js";

@@ -3,7 +3,9 @@
 This is the locked Python environment used by `@hypit/provider-image-opencv-local`. It is deployment
 state, not an author-importable SVML package, a queue, a service daemon or part of Core.
 
-Install it once:
+For an ordinary installed Distribution, select the Provider and let `hypit runtime up` create and
+reuse this environment in the machine Program Home. The commands below are only for a contributor
+or operator deliberately managing a custom interpreter:
 
 ```bash
 uv python install 3.13

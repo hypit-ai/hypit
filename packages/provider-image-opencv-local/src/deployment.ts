@@ -1,31 +1,30 @@
 import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { runtimeConfigObject, runtimeConfigString } from "@hypit/runtime-kit";
 import type { RuntimeAdapterFactoryContext, ManagedProgramCommand } from "@hypit/runtime-kit";
-import { resolveRuntimeExecutable } from "@hypit/runtime-host-node";
+import {
+  pythonEnvironmentExecutable,
+  resolveRuntimeExecutable,
+} from "@hypit/runtime-host-node";
 
 /**
- * Repository deployment bundled beside this Provider during development. A
- * published package must ship the same project as package data; it must never
- * silently fall back to an unrelated system Python.
+ * The locked Python project is its own package asset. Repository workspaces and
+ * installed npm distributions therefore resolve the same immutable input.
  */
-export const localOpenCvManagedProject = fileURLToPath(
-  new URL("../../../services/image-opencv", import.meta.url),
+const require = createRequire(import.meta.url);
+export const localOpenCvManagedProject = join(
+  require.resolve("@hypit/image-opencv-runtime/pyproject.toml"),
+  "..",
 );
 
 export type LocalOpenCvDeployment = {
   readonly pythonExecutable: string;
-  readonly prepare?: ManagedProgramCommand;
+  readonly stateRoot?: string;
+  readonly installCommands?: readonly ManagedProgramCommand[];
   readonly ownership: "managed" | "external";
 };
-
-function managedPython(project: string): string {
-  return process.platform === "win32"
-    ? join(project, ".venv", "Scripts", "python.exe")
-    : join(project, ".venv", "bin", "python");
-}
 
 /**
  * One resolution function is shared by Endpoint construction, doctor and the
@@ -49,12 +48,16 @@ export function resolveLocalOpenCvDeployment(
       "local OpenCV has no bundled managed runtime; configure pythonExecutable explicitly",
     );
   }
+  const stateRoot = join(context.hostStateRoot, "programs", "image-opencv");
+  const environment = join(stateRoot, ".venv");
   return {
-    pythonExecutable: managedPython(localOpenCvManagedProject),
-    prepare: {
+    pythonExecutable: pythonEnvironmentExecutable(environment),
+    stateRoot,
+    installCommands: [{
       command: "uv",
       args: ["sync", "--project", localOpenCvManagedProject, "--frozen"],
-    },
+      env: { UV_PROJECT_ENVIRONMENT: environment },
+    }],
     ownership: "managed",
   };
 }

@@ -11,7 +11,7 @@ hypit-studio --run build.svrun
 ```
 
 Studio is an application boundary. Core and domain packages do not import it or
-register UI metadata. The tool checkout supplies the official Studio Adapter
+register UI metadata. The installed Distribution supplies the official Studio Adapter
 distribution. An external project may explicitly add companion Adapter packages
 through `hypit.studio.json`; the application assembles one immutable registry for
 that project session.
@@ -24,7 +24,7 @@ that project session.
 ```
 
 Project packages live at `<project>/packages/<package-basename>/`. Neither the
-project nor its packages are added to the Hypit checkout or its pnpm workspace.
+project nor its packages are added to the Hypit Distribution or contributor workspace.
 The Host resolves selected project packages from the project first and official
 `@hypit/*` imports from the read-only tool Distribution. The `@hypit/*`
 namespace is Distribution-owned and cannot be shadowed by a project install.
@@ -38,6 +38,12 @@ Studio owns session-wide behavior and chrome: adapter selection, collision and
 replacement rules, fallback defaults, selection treatment, playback, zoom,
 scrolling and source mutation transport. A companion cannot ship arbitrary DOM
 or CSS into the application.
+
+Temporal lineage comes from the exact executed graph selected by the Run. Studio indexes the
+`TemporalPoint` and `TemporalWindow` records in each Track's dependency closure together with their
+projection Spec and direct consumer edge, then passes that stable data view to adapters. Adapters
+never infer a semantic source from SVML attribute names, Spec type names, runtime id prefixes or
+coincident frame spans. Point and Window remain distinct in the inspector.
 
 Opening Studio never invokes a Provider and never creates a Build. Every
 projection needed for display must already be supplied by the Run or be

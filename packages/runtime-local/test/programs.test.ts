@@ -149,7 +149,7 @@ test("up starts the program once for every Endpoint that drives it, and down sto
   assert.deepEqual(progress, ["example:checking", "example:starting", "example:waiting", "example:ready"]);
 
   const pid = started.programs[0]!.pid!;
-  assert.equal(await readFile(join(root, "programs", "example.pid"), "utf8"), `${pid}\n`);
+  assert.equal(await readFile(join(root, "programs", "example", "process.pid"), "utf8"), `${pid}\n`);
 
   // Asking again changes nothing: a healthy program is left alone.
   const again = await bringManagedProgramsUp(path, { ...options, maxWaitMs: 20_000 });
@@ -158,7 +158,7 @@ test("up starts the program once for every Endpoint that drives it, and down sto
 
   const status = await reportManagedPrograms(path, options);
   assert.equal(status.programs[0]!.pid, pid);
-  assert.equal(status.programs[0]!.logPath, join(root, "programs", "example.log"));
+  assert.equal(status.programs[0]!.logPath, join(root, "programs", "example", "program.log"));
 
   await rm(marker, { force: true });
   const stopped = await takeManagedProgramsDown(path, options);
@@ -166,7 +166,7 @@ test("up starts the program once for every Endpoint that drives it, and down sto
   assert.equal(stopped.programs[0]!.pid, pid);
   await sleep(100);
   assert.throws(() => process.kill(pid, 0), "the detached program is gone");
-  await assert.rejects(async () => await readFile(join(root, "programs", "example.pid"), "utf8"));
+  await assert.rejects(async () => await readFile(join(root, "programs", "example", "process.pid"), "utf8"));
   await rm(root, { recursive: true, force: true });
 });
 
@@ -182,7 +182,7 @@ test("a program answering with another identity is never joined by a second copy
   assert.equal(result.programs[0]!.pid, undefined, "nothing was started beside it");
 });
 
-test("down leaves a running program this project did not start", async () => {
+test("down leaves a running program without a Hypit process record", async () => {
   const { path, options } = await project(() => ({
     id: "example",
     start: nodeProgram("setTimeout(() => {}, 60_000);"),
@@ -190,26 +190,32 @@ test("down leaves a running program this project did not start", async () => {
   }));
   const result = await takeManagedProgramsDown(path, options);
   assert.equal(result.programs[0]!.action, "not-ours");
-  assert.match(result.programs[0]!.detail ?? "", /this project did not start it/u);
+  assert.match(result.programs[0]!.detail ?? "", /without a Hypit process record/u);
 });
 
-test("a program with nothing to start is prepared, and preparing is the whole job", async () => {
+test("a program with nothing to start is installed once, and installation is the whole job", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-prepare-"));
   const marker = join(directory, "installed");
-  const { path, options } = await project(() => ({
-    id: "example",
-    prepare: nodeProgram('require("node:fs").writeFileSync(process.argv[1], "done");', marker),
-    async probe() {
+  const { path, options } = await project(() => {
+    const probe = async () => {
       try {
         await readFile(marker, "utf8");
-        return { state: "ready" };
+        return { state: "ready" as const };
       } catch {
-        return { state: "down", detail: "not installed" };
+        return { state: "down" as const, detail: "not installed" };
       }
-    },
-  }));
+    };
+    return {
+      id: "example",
+      installation: {
+        commands: [nodeProgram('require("node:fs").writeFileSync(process.argv[1], "done");', marker)],
+        probe,
+      },
+      probe,
+    };
+  });
   const result = await bringManagedProgramsUp(path, options);
-  assert.equal(result.programs[0]!.action, "prepared");
+  assert.equal(result.programs[0]!.action, "installed");
   assert.deepEqual(result.programs[0]!.state, { state: "ready" });
   assert.equal(result.programs[0]!.pid, undefined, "there is no daemon to hold a pid");
   await rm(directory, { recursive: true, force: true });
@@ -232,6 +238,14 @@ test("up creates a fresh Runtime data directory before running commands", async 
     },
   }));
   const registry = new RuntimeAdapterRegistry();
+  const probe = async () => {
+    try {
+      await readFile(join(dataRoot, "installed"), "utf8");
+      return { state: "ready" as const };
+    } catch {
+      return { state: "down" as const, detail: "not installed" };
+    }
+  };
   registry.registerFacet(createRuntimeEndpointAdapterFacet({
     use: "example.program",
     activate: () => ({
@@ -249,29 +263,28 @@ test("up creates a fresh Runtime data directory before running commands", async 
       } as never,
       program: {
         id: "example",
-        prepare: nodeProgram('require("node:fs").writeFileSync("prepared", "ready");'),
-        async probe() {
-          try {
-            await readFile(join(dataRoot, "prepared"), "utf8");
-            return { state: "ready" as const };
-          } catch {
-            return { state: "down" as const, detail: "not prepared" };
-          }
+        installation: {
+          commands: [nodeProgram('require("node:fs").writeFileSync("installed", "ready");')],
+          probe,
         },
+        probe,
       },
     }),
   }));
 
   const result = await bringManagedProgramsUp(path, { registry });
-  assert.equal(result.programs[0]!.action, "prepared");
-  assert.equal(await readFile(join(dataRoot, "prepared"), "utf8"), "ready");
+  assert.equal(result.programs[0]!.action, "installed");
+  assert.equal(await readFile(join(dataRoot, "installed"), "utf8"), "ready");
   await rm(projectRoot, { recursive: true, force: true });
 });
 
-test("a failing prepare stops before starting anything, and says which command failed", async () => {
+test("a failing install stops before starting anything, and says which command failed", async () => {
   const { path, options } = await project(() => ({
     id: "example",
-    prepare: nodeProgram('process.stderr.write("no such project\\n"); process.exit(1);'),
+    installation: {
+      commands: [nodeProgram('process.stderr.write("no such project\\n"); process.exit(1);')],
+      probe: async () => ({ state: "down", detail: "not installed" }),
+    },
     start: nodeProgram(STAY_ALIVE),
     probe: async () => ({ state: "down", detail: "nothing is answering" }),
   }));
@@ -296,7 +309,7 @@ test("up stops waiting when a started program exits", async () => {
   assert.ok(Date.now() - startedAt < 5_000, "a dead program must not consume the readiness timeout");
   assert.equal(result.programs[0]!.action, "unchanged");
   assert.match(result.programs[0]!.detail ?? "", /process exited; see/u);
-  await assert.rejects(async () => await readFile(join(root, "programs", "example.pid"), "utf8"));
+  await assert.rejects(async () => await readFile(join(root, "programs", "example", "process.pid"), "utf8"));
 });
 
 test("status probes and changes nothing, so it claims no action", async () => {

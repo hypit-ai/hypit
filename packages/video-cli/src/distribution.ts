@@ -8,7 +8,7 @@ import {
 
 // The Distribution root is the replaceable Hypit tool checkout, not this
 // package's source directory and never the author's project.
-const packageRoot = resolve(import.meta.dirname, "../../..");
+const packageRoot = resolve(process.env.HYPIT_DISTRIBUTION_ROOT ?? resolve(import.meta.dirname, "../../.."));
 const installedLauncher = process.env.HYPIT_CLI_LAUNCHER;
 
 /** Official video authoring assembly for the generic CLI engine. */

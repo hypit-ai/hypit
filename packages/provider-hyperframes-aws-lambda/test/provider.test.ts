@@ -246,6 +246,7 @@ test("the Runtime adapter refuses a hardware-GPU deployment wish instead of igno
   const facet = awsLambdaActivation.hostFacets[0]!;
   const implementation = facet.implementation as RuntimeEndpointAdapterImplementation;
   assert.throws(() => implementation.activate({
+    hostStateRoot: "/host",
     dataRoot: "/tmp",
     instance: "hyperframes.lambda.test",
     pool: "hyperframes.lambda.test",

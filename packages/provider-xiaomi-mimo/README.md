@@ -16,7 +16,7 @@ Runtime Profile example:
       "use": "@hypit/provider-xiaomi-mimo",
       "pool": "mimo.official",
       "config": {
-        "apiKey": { "store": "keychain", "key": "xiaomi-mimo.api-key" },
+        "apiKey": { "store": "os", "key": "xiaomi-mimo.api-key" },
         "defaultConcurrency": 2
       }
     }

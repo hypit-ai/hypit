@@ -3,6 +3,7 @@ import type {
   RuntimeController,
   RuntimeWorkerLaunch,
 } from "@hypit/runtime-host-node";
+import { hypitHostStateRoot } from "@hypit/runtime-host-node";
 import { resolve } from "node:path";
 
 import {
@@ -11,6 +12,8 @@ import {
   createRuntimeCredentialsFromConfig,
   createRuntimeFromConfig,
   doctorRuntimeConfig,
+  prepareRuntimeConfigPackages,
+  preflightRuntimeConfig,
   resolveRuntimeConfigPaths,
 } from "./config.js";
 import {
@@ -31,14 +34,18 @@ export async function openLocalRuntimeHost(
   hostOptions: {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;
+    readonly hostStateRoot?: string;
     readonly workerLaunch: RuntimeWorkerLaunch;
   },
 ): Promise<NodeRuntimeHost> {
   const profile = resolve(path);
   const basePackageRoot = resolve(hostOptions.packageRoot);
-  const distribution = hostOptions.distributionPackageRoot === undefined
-    ? {}
-    : { distributionPackageRoot: hostOptions.distributionPackageRoot };
+  const distribution = {
+    hostStateRoot: resolve(hostOptions.hostStateRoot ?? hypitHostStateRoot()),
+    ...(hostOptions.distributionPackageRoot === undefined
+      ? {}
+      : { distributionPackageRoot: hostOptions.distributionPackageRoot }),
+  };
   const controller = async (controllerOptions: {
     readonly packageRoot?: string;
   } = {}): Promise<RuntimeController> => {
@@ -106,6 +113,16 @@ export async function openLocalRuntimeHost(
       endpoint,
       { packageRoot: basePackageRoot, ...distribution },
     ),
+    prepare: async (options) => await prepareRuntimeConfigPackages(profile, {
+      packageRoot: basePackageRoot,
+      ...distribution,
+      ...(options?.onProgress === undefined ? {} : { onProgress: options.onProgress }),
+    }),
+    preflight: async (options) => await preflightRuntimeConfig(profile, {
+      packageRoot: basePackageRoot,
+      ...distribution,
+      ...(options?.capabilities === undefined ? {} : { capabilities: options.capabilities }),
+    }),
     doctor: async (options) => await doctorRuntimeConfig(profile, {
       packageRoot: basePackageRoot,
       ...distribution,

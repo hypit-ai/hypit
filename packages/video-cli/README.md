@@ -7,7 +7,7 @@ Every Frontend, Surface, deterministic Producer and Validator is activated from 
 Installing a new author package therefore does not require a video CLI or Core release. Source
 imports never grant network, credential or process authority.
 
-From the repository:
+From any project:
 
 ```bash
 cd path/to/project
@@ -25,16 +25,15 @@ hypit doctor
 hypit gc
 ```
 
-Link the repository command once with `npm link`. It resolves its own TypeScript loader and CLI, so
-it neither invokes pnpm per command nor requires a separate project to contain Hypit's
-`package.json`.
+Install the `hypit` Distribution globally once. It resolves its own TypeScript loader and CLI, so it
+neither invokes npm per command nor requires a project to contain Hypit's `package.json`.
 
 `--workspace` is only the Source Workspace containment boundary. `--asset-root` may additionally admit
 explicit asset bytes without widening Source imports. `--package-root` is only the Host
 override used to resolve installed packages. By default, a project with
 `package.json` owns package resolution; a plain creative folder falls back to this Distribution's
-installation. Keeping that separate from Source containment lets a video project live outside this
-checkout without weakening canonical-path source and asset boundaries. Runtime Profiles do not
+installation. Keeping that separate from Source containment lets a video project live outside the
+Distribution without weakening canonical-path source and asset boundaries. Runtime Profiles do not
 contain either Workspace or package-installation overrides.
 
 `check` is usable for an Author Source or a complete Run Source. `plan` and `build` require a Run

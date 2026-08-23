@@ -9,7 +9,7 @@ const repositoryRoot = new URL("../", import.meta.url);
 const repositoryRootPath = fileURLToPath(repositoryRoot);
 const scanRoots = ["docs", "examples", "packages", "services", "test"];
 const rootTextFiles = ["README.md", "package.json", "pnpm-workspace.yaml", "tsconfig.json"];
-const ignoredDirectories = new Set(["node_modules", "dist", "output", ".hypit", ".svml", ".vitepress"]);
+const ignoredDirectories = new Set(["node_modules", "build", "dist", "output", ".hypit", ".svml", ".vitepress"]);
 const textExtensions = new Set([
   ".css", ".html", ".js", ".json", ".jsx", ".md", ".mjs", ".sh", ".svml", ".svrun",
   ".svs", ".ts", ".tsx", ".txt", ".yaml", ".yml",

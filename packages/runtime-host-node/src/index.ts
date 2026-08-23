@@ -1,6 +1,7 @@
 import { access } from "node:fs/promises";
 import { constants } from "node:fs";
-import { delimiter, isAbsolute, resolve } from "node:path";
+import { homedir } from "node:os";
+import { delimiter, isAbsolute, join, resolve } from "node:path";
 import type { ArtifactAttachment } from "@hypit/workspace";
 import type { BuildDefinition, BuildState, CapabilityRef, Digest } from "@hypit/protocol";
 import type {
@@ -94,13 +95,13 @@ export type RuntimeHostDoctorResult = {
 
 export type ManagedProgramProgress = {
   readonly id: string;
-  readonly phase: "checking" | "preparing" | "starting" | "waiting" | "ready";
+  readonly phase: "checking" | "installing" | "starting" | "waiting" | "ready";
 };
 
 export type ManagedProgramReport = {
   readonly id: string;
   readonly instances: readonly string[];
-  readonly action?: "already-running" | "prepared" | "started" | "stopped" | "not-ours" | "nothing-to-stop" | "unchanged";
+  readonly action?: "already-running" | "installed" | "started" | "stopped" | "not-ours" | "nothing-to-stop" | "unchanged";
   readonly state:
     | { readonly state: "ready" }
     | { readonly state: "down"; readonly detail: string }
@@ -156,11 +157,56 @@ export type NodeRuntimeHost = {
   openArchive(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostArchive>;
   openArtifacts(): Promise<RuntimeHostArtifactAccess>;
   openCredentials(endpoint: string): Promise<RuntimeHostCredentialControl>;
+  /** Explicitly prepare upstream packages selected by this Runtime Profile. */
+  prepare(options?: {
+    readonly onProgress?: (event: import("./packages.js").HostPackageProgress) => void;
+  }): Promise<readonly import("./packages.js").HostPackageReport[]>;
+  /**
+   * Read-only, bounded deployment validation for one demanded Build slice.
+   * It may inspect local files, credentials and loopback program state, but it
+   * never installs, starts or contacts a remote Provider or Artifact Store.
+   */
+  preflight(options?: {
+    readonly capabilities?: readonly CapabilityRef[];
+  }): Promise<RuntimeHostDoctorResult>;
+  /** Active deployment diagnosis. Unlike preflight, adapters may contact their configured services. */
   doctor(options?: {
     readonly capabilities?: readonly CapabilityRef[];
   }): Promise<RuntimeHostDoctorResult>;
   runWorker(readyFile: string): Promise<void>;
 };
+
+/**
+ * Persistent state owned by the installed Hypit Host, never by an author project
+ * or a replaceable source checkout.
+ */
+export function hypitHostStateRoot(options: {
+  readonly env?: NodeJS.ProcessEnv;
+  readonly platform?: NodeJS.Platform;
+  readonly home?: string;
+} = {}): string {
+  const env = options.env ?? process.env;
+  const override = env.HYPIT_STATE_HOME;
+  if (override !== undefined && override.trim().length > 0) return resolve(override);
+  const platform = options.platform ?? process.platform;
+  const home = options.home ?? homedir();
+  if (platform === "darwin") return join(home, "Library", "Application Support", "Hypit");
+  if (platform === "win32") {
+    const local = env.LOCALAPPDATA;
+    return join(local === undefined || local.trim().length === 0
+      ? join(home, "AppData", "Local")
+      : local, "Hypit");
+  }
+  const state = env.XDG_STATE_HOME;
+  return join(state === undefined || state.trim().length === 0
+    ? join(home, ".local", "state")
+    : state, "hypit");
+}
+
+/** Upstream npm packages shared by every Hypit project and future session on this machine. */
+export function hypitHostPackageRoot(hostStateRoot = hypitHostStateRoot()): string {
+  return join(resolve(hostStateRoot), "packages");
+}
 
 function pathLike(value: string): boolean {
   return isAbsolute(value) || value.includes("/") || value.includes("\\");
@@ -174,21 +220,26 @@ export function resolveRuntimeExecutable(root: string, value: string): string {
 async function executableExists(value: string): Promise<boolean> {
   const unavailable = (error: unknown) => error instanceof Error && "code" in error
     && ["ENOENT", "ENOTDIR", "EACCES"].includes(String(error.code));
-  if (pathLike(value)) {
+  const suffixes = process.platform === "win32" && !/\.[^\\/]+$/u.test(value)
+    ? (process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean)
+    : [""];
+  const candidates = (base: string) => suffixes.map((suffix) => `${base}${suffix}`);
+  const available = async (candidate: string): Promise<boolean> => {
     try {
-      await access(value, constants.X_OK);
+      await access(candidate, process.platform === "win32" ? constants.F_OK : constants.X_OK);
       return true;
     } catch (error) {
       if (unavailable(error)) return false;
       throw error;
     }
+  };
+  if (pathLike(value)) {
+    for (const candidate of candidates(value)) if (await available(candidate)) return true;
+    return false;
   }
   for (const directory of (process.env.PATH ?? "").split(delimiter).filter(Boolean)) {
-    try {
-      await access(resolve(directory, value), constants.X_OK);
-      return true;
-    } catch (error) {
-      if (!unavailable(error)) throw error;
+    for (const candidate of candidates(resolve(directory, value))) {
+      if (await available(candidate)) return true;
     }
   }
   return false;
@@ -222,3 +273,28 @@ export function diagnoseRuntimeEnvironmentCredential(
       subject: variable,
     }];
 }
+
+/** Executables inside a Python virtual environment have one platform-defined layout. */
+export function pythonEnvironmentExecutable(environment: string): string {
+  return process.platform === "win32"
+    ? resolve(environment, "Scripts", "python.exe")
+    : resolve(environment, "bin", "python");
+}
+
+/** Console scripts installed by Python use an executable shim on Windows. */
+export function pythonEnvironmentCommand(environment: string, name: string): string {
+  return process.platform === "win32"
+    ? resolve(environment, "Scripts", `${name}.exe`)
+    : resolve(environment, "bin", name);
+}
+
+export {
+  inspectHostPackage,
+  parseRegistryPackageSpec,
+  prepareHostPackages,
+} from "./packages.js";
+export type {
+  HostPackageProgress,
+  HostPackageReport,
+  RegistryPackageSpec,
+} from "./packages.js";

@@ -42,7 +42,7 @@ Declarative activation names an ordinary CredentialRef, not an environment-speci
   "use": "@hypit/provider-kie",
   "instance": "kie.personal",
   "config": {
-    "apiKey": { "store": "keychain", "key": "kie.api-key" },
+    "apiKey": { "store": "os", "key": "kie.api-key" },
     "defaultConcurrency": 8,
     "laneConcurrency": {
       "seedance-2.5": 4,
