@@ -19,6 +19,7 @@ import type {
   StudioTemporalPhase,
   StudioTemporalProjection,
   StudioTemporalSource,
+  StudioTimelineGesture,
   StudioTimelinePresentation,
   StudioTrackFamily,
 } from "@hypit/studio-adapter";
@@ -123,9 +124,13 @@ export type Track = {
 
 export type ScriptMap = {
   readonly recordId: string;
+  readonly sourcePath: string;
   readonly range: Range;
+  readonly content: Range;
   readonly selections: readonly {
     readonly id: string;
+    readonly startAnchorId: string;
+    readonly endAnchorId: string;
     /** How many Selections enclose this one. Nesting is what depth means. */
     readonly depth: number;
     readonly open: Range;
@@ -139,6 +144,7 @@ export type ScriptMap = {
   }[];
   readonly moments: readonly {
     readonly id: string;
+    readonly anchorId: string;
     readonly range: Range;
   }[];
   /** Spoken words placed on the timeline by the selected semantic Candidate. */
@@ -209,6 +215,37 @@ export type StudioSnapshot = {
     readonly note: string;
   };
 };
+
+/** The complete author mutation vocabulary exposed by Studio. */
+export type StudioMutation =
+  | {
+      readonly type: "timeline.adjust";
+      readonly revision: number;
+      readonly entityId: string;
+      readonly gesture: StudioTimelineGesture;
+      readonly target:
+        | {
+            readonly kind: "selection";
+            readonly startAnchorId: string;
+            readonly endAnchorId: string;
+          }
+        | {
+            readonly kind: "moment";
+            readonly anchorId: string;
+          }
+        | {
+            readonly kind: "window";
+            readonly startFrame: number;
+            readonly endFrameExclusive: number;
+          };
+    }
+  | {
+      readonly type: "parameter.adjust";
+      readonly revision: number;
+      readonly entityId: string;
+      readonly parameterId: string;
+      readonly value: string;
+    };
 
 export type StudioFailure = {
   readonly revision: number;

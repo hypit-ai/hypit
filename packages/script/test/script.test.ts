@@ -3,6 +3,8 @@ import test from "node:test";
 
 import {
   ScriptSyntaxError,
+  adjustScriptMoment,
+  adjustScriptSelection,
   captionDocument,
   narrativeValue,
   parseScript,
@@ -10,6 +12,54 @@ import {
   serializeDialogue,
   serializeSpeech,
 } from "@hypit/script";
+
+test("Selection source edits relocate markers by 2M + 2N Anchor identity", () => {
+  const source = "<one><HOST>@focus alpha beta @/focus gamma</one>\r\n<two><HOST>delta epsilon</two>";
+  const parsed = parseScript("selection-adjust.svml", source);
+  const movedWords = adjustScriptSelection({
+    sourceName: "selection-adjust.svml",
+    source,
+    parsed,
+    adjustment: {
+      id: "focus",
+      startAnchorId: "segment:one:token:2:start",
+      endAnchorId: "segment:one:token:3:end",
+    },
+  });
+  const wordSelection = parseScript("selection-adjust.svml", movedWords).selections[0]!;
+  assert.deepEqual([wordSelection.startAnchorId, wordSelection.endAnchorId], [
+    "segment:one:token:2:start", "segment:one:token:3:end",
+  ]);
+
+  const movedSegment = adjustScriptSelection({
+    sourceName: "selection-adjust.svml",
+    source: movedWords,
+    parsed: parseScript("selection-adjust.svml", movedWords),
+    adjustment: {
+      id: "focus",
+      startAnchorId: "segment:two:start",
+      endAnchorId: "segment:two:end",
+    },
+  });
+  const reparsed = parseScript("selection-adjust.svml", movedSegment);
+  assert.deepEqual(reparsed.tokens.map((token) => token.text), ["alpha", "beta", "gamma", "delta", "epsilon"]);
+  assert.deepEqual([reparsed.selections[0]!.startAnchorId, reparsed.selections[0]!.endAnchorId], [
+    "segment:two:start", "segment:two:end",
+  ]);
+});
+
+test("Moment source edits relocate one marker to an exact semantic Anchor", () => {
+  const source = "<one><HOST>alpha @cue! beta</one><two><HOST>gamma</two>";
+  const moved = adjustScriptMoment({
+    sourceName: "moment-adjust.svml",
+    source,
+    parsed: parseScript("moment-adjust.svml", source),
+    adjustment: { id: "cue", anchorId: "segment:two:end" },
+  });
+  const parsed = parseScript("moment-adjust.svml", moved);
+  assert.equal(parsed.moments[0]!.anchorId, "segment:two:end");
+  assert.deepEqual(parsed.tokens.map((token) => token.text), ["alpha", "beta", "gamma"]);
+});
 
 test("Script keeps speech, dialogue and CaptionDocument as separate projections", () => {
   const parsed = parseScript("rich.svml", "<answer><BOB>I <laughed | laughed my ass off> there.</answer>");

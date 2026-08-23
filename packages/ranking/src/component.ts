@@ -8,7 +8,7 @@ import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
 import type { Text } from "@hypit/text";
 
 import { rankingProducers, rankingTypes } from "./manifest.js";
-import { appendColumnItem, appendColumnWindowCandidateWindow, appendRankingItemSpec, appendRankingSound, appendTierBoardItem, appendTopThreeItem, appendTriggeredRankingCandidate, assertColumnProgram, assertRankingSchedule, assertRankingSoundEventPlan, assertTierBoardProgram, assertTopThreeProgram, buildColumnProgram, buildColumnSchedule, buildColumnSoundEvents, buildTriggeredRankingSchedule, buildTierBoardProgram, buildTierBoardSoundEvents, buildTopThreeProgram, buildTopThreeSoundEvents, createColumnItemSet, createColumnWindowCandidateSet, createRankingItemSpecSet, createRankingSoundSet, createTierBoardItemSet, createTopThreeItemSet, createTriggeredRankingCandidateSet, materializeRankingTextItem } from "./schedule.js";
+import { appendColumnItem, appendColumnWindow, appendRankingItemSpec, appendRankingSound, appendTierBoardItem, appendTopThreeItem, appendTriggeredRankingCandidate, assertColumnProgram, assertRankingSchedule, assertRankingSoundEventPlan, assertTierBoardProgram, assertTopThreeProgram, buildColumnProgram, buildColumnSchedule, buildColumnSoundEvents, buildTriggeredRankingSchedule, buildTierBoardProgram, buildTierBoardSoundEvents, buildTopThreeProgram, buildTopThreeSoundEvents, createColumnItemSet, createColumnWindowSet, createRankingItemSpecSet, createRankingSoundSet, createTierBoardItemSet, createTopThreeItemSet, createTriggeredRankingCandidateSet, materializeRankingTextItem } from "./schedule.js";
 import {
   renderColumn,
   renderRankingAudio,
@@ -20,7 +20,7 @@ import type {
   ColumnItemSpec,
   ColumnProgram,
   ColumnStyle,
-  ColumnWindowCandidateSet,
+  ColumnWindowSet,
   RankingHeader,
   RankingItemSpec,
   RankingItemSpecSet,
@@ -102,13 +102,13 @@ export const rankingComponent = {
       })) }, needs: {} }),
     },
     {
-      producer: rankingProducers.createColumnCandidates,
-      handler: () => ({ outputs: { set: output(createColumnWindowCandidateSet()) }, needs: {} }),
+      producer: rankingProducers.createColumnWindows,
+      handler: () => ({ outputs: { set: output(createColumnWindowSet()) }, needs: {} }),
     },
     {
-      producer: rankingProducers.appendColumnCandidate,
-      handler: ({ inputs }) => ({ outputs: { set: output(appendColumnWindowCandidateWindow(
-        inline<ColumnWindowCandidateSet>(inputs.set?.value, "ColumnWindowCandidateSet"),
+      producer: rankingProducers.appendColumnWindow,
+      handler: ({ inputs }) => ({ outputs: { set: output(appendColumnWindow(
+        inline<ColumnWindowSet>(inputs.set?.value, "ColumnWindowSet"),
         inline<ColumnItemSpec>(inputs.spec?.value, "ColumnItemSpec"),
         inline<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
       )) }, needs: {} }),
@@ -119,7 +119,7 @@ export const rankingComponent = {
         header: inline<RankingHeader>(inputs.header?.value, "RankingHeader"),
         items: inline<RankingItemSpecSet>(inputs.items?.value, "RankingItemSpecSet"),
         outer: inline<TemporalWindow>(inputs.outer?.value, "TemporalWindow"),
-        candidates: inline<ColumnWindowCandidateSet>(inputs.candidates?.value, "ColumnWindowCandidateSet"),
+        windows: inline<ColumnWindowSet>(inputs.windows?.value, "ColumnWindowSet"),
       })) }, needs: {} }),
     },
     ...([

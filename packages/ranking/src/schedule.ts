@@ -23,7 +23,7 @@ import type {
   ColumnProgram,
   ColumnSchedule,
   ColumnStyle,
-  ColumnWindowCandidateSet,
+  ColumnWindowSet,
   RankingBoardPaint,
   RankingHeader,
   RankingItemSpec,
@@ -356,103 +356,77 @@ export function buildTriggeredRankingSchedule(input: {
   return canonicalize(result) as unknown as TriggeredRankingSchedule;
 }
 
-export function createColumnWindowCandidateSet(): ColumnWindowCandidateSet {
+export function createColumnWindowSet(): ColumnWindowSet {
   return { entries: [] };
 }
 
-export function assertColumnWindowCandidateSet(value: ColumnWindowCandidateSet): void {
-  assert(Array.isArray(value.entries), "ColumnWindowCandidateSet.entries is invalid.");
+export function assertColumnWindowSet(value: ColumnWindowSet): void {
+  assert(Array.isArray(value.entries), "ColumnWindowSet.entries is invalid.");
   const ids = new Set<string>();
   for (const [index, entry] of value.entries.entries()) {
-    identity(entry.itemId, `ColumnWindowCandidateSet.entries.${index}.itemId`);
-    assert(!ids.has(entry.itemId), `ColumnWindowCandidateSet repeats ${entry.itemId}.`);
+    identity(entry.itemId, `ColumnWindowSet.entries.${index}.itemId`);
+    assert(!ids.has(entry.itemId), `ColumnWindowSet repeats ${entry.itemId}.`);
     ids.add(entry.itemId);
-    frame(entry.window.span.startFrame, `ColumnWindowCandidateSet.entries.${index}.window.span.startFrame`);
-    frame(entry.window.span.endFrameExclusive, `ColumnWindowCandidateSet.entries.${index}.window.span.endFrameExclusive`);
+    frame(entry.window.span.startFrame, `ColumnWindowSet.entries.${index}.window.span.startFrame`);
+    frame(entry.window.span.endFrameExclusive, `ColumnWindowSet.entries.${index}.window.span.endFrameExclusive`);
     assert(entry.window.span.endFrameExclusive > entry.window.span.startFrame,
-      `ColumnWindowCandidateSet.entries.${index}.window is empty.`);
+      `ColumnWindowSet.entries.${index}.window is empty.`);
   }
 }
 
-export function appendColumnWindowCandidateWindow(
-  set: ColumnWindowCandidateSet,
+export function appendColumnWindow(
+  set: ColumnWindowSet,
   spec: ColumnItemSpec,
   window: TemporalWindow,
-): ColumnWindowCandidateSet {
-  assertColumnWindowCandidateSet(set);
+): ColumnWindowSet {
+  assertColumnWindowSet(set);
   assertRankingItemSpec(spec);
   assert(!spec.preset, `Preset Column Item ${spec.id} cannot consume a Selection window.`);
   assert(!set.entries.some((entry) => entry.itemId === spec.id), `Column Item ${spec.id} already has a Selection window.`);
-  const result: ColumnWindowCandidateSet = {
+  const result: ColumnWindowSet = {
     entries: [...set.entries, { itemId: spec.id, window: structuredClone(window) }]
       .sort((left, right) => left.itemId.localeCompare(right.itemId)),
   };
-  assertColumnWindowCandidateSet(result);
-  return canonicalize(result) as unknown as ColumnWindowCandidateSet;
-}
-
-function clampColumnCandidate(
-  preferred: { readonly startFrame: number; readonly endFrameExclusive: number },
-  outer: { readonly startFrame: number; readonly endFrameExclusive: number },
-): { readonly startFrame: number; readonly endFrameExclusive: number } {
-  const startFrame = Math.max(preferred.startFrame, outer.startFrame);
-  const endFrameExclusive = Math.min(preferred.endFrameExclusive, outer.endFrameExclusive);
-  if (endFrameExclusive > startFrame) return { startFrame, endFrameExclusive };
-  if (preferred.endFrameExclusive <= outer.startFrame) {
-    return { startFrame: outer.startFrame, endFrameExclusive: outer.startFrame + 1 };
-  }
-  return { startFrame: outer.endFrameExclusive - 1, endFrameExclusive: outer.endFrameExclusive };
-}
-
-function resolveColumnActiveWindows(
-  candidates: readonly ColumnWindowCandidateSet["entries"][number][],
-  outer: { readonly startFrame: number; readonly endFrameExclusive: number },
-): ReadonlyMap<string, { readonly startFrame: number; readonly endFrameExclusive: number }> {
-  const capacity = outer.endFrameExclusive - outer.startFrame;
-  assert(capacity >= candidates.length,
-    `Column outer window has ${capacity} frames for ${candidates.length} non-preset Items.`);
-  const ordered = candidates.map((candidate) => ({
-    ...candidate,
-    clamped: clampColumnCandidate(candidate.window.span, outer),
-  })).sort((left, right) =>
-    left.clamped.startFrame - right.clamped.startFrame
-    || left.clamped.endFrameExclusive - right.clamped.endFrameExclusive
-    || left.itemId.localeCompare(right.itemId));
-  const resolved = new Map<string, { readonly startFrame: number; readonly endFrameExclusive: number }>();
-  let cursor = outer.startFrame;
-  for (const [index, candidate] of ordered.entries()) {
-    const remaining = ordered.length - index - 1;
-    const latestEnd = outer.endFrameExclusive - remaining;
-    const startFrame = Math.min(Math.max(candidate.clamped.startFrame, cursor), latestEnd - 1);
-    const endFrameExclusive = Math.min(Math.max(candidate.clamped.endFrameExclusive, startFrame + 1), latestEnd);
-    resolved.set(candidate.itemId, { startFrame, endFrameExclusive });
-    cursor = endFrameExclusive;
-  }
-  return resolved;
+  assertColumnWindowSet(result);
+  return canonicalize(result) as unknown as ColumnWindowSet;
 }
 
 export function buildColumnSchedule(input: {
   readonly header: RankingHeader;
   readonly items: RankingItemSpecSet;
   readonly outer: TemporalWindow;
-  readonly candidates: ColumnWindowCandidateSet;
+  readonly windows: ColumnWindowSet;
 }): ColumnSchedule {
   assertRankingHeader(input.header);
   assert(input.header.variant === "column", "Column Schedule requires a Column header.");
   assertRankingItemSpecSet(input.items);
   assert(input.items.variant === "column", "Column Schedule requires Column Items.");
   assert(input.items.items.length > 0, "Column requires at least one Item.");
-  assertColumnWindowCandidateSet(input.candidates);
+  assertColumnWindowSet(input.windows);
   frame(input.outer.span.startFrame, "Column outer window start");
   frame(input.outer.span.endFrameExclusive, "Column outer window end");
   assert(input.outer.span.endFrameExclusive > input.outer.span.startFrame, "Column outer window is empty.");
   const items = [...input.items.items as readonly ColumnItemSpec[]]
     .sort((left, right) => left.rank - right.rank || left.id.localeCompare(right.id));
   const expected = new Set(items.filter((item) => !item.preset).map((item) => item.id));
-  const received = new Set(input.candidates.entries.map((entry) => entry.itemId));
+  const received = new Set(input.windows.entries.map((entry) => entry.itemId));
   assert(expected.size === received.size && [...expected].every((id) => received.has(id)),
     "Column non-preset Items and Selection windows differ.");
-  const active = resolveColumnActiveWindows(input.candidates.entries, input.outer.span);
+  const orderedWindows = [...input.windows.entries].sort((left, right) =>
+    left.window.span.startFrame - right.window.span.startFrame
+    || left.window.span.endFrameExclusive - right.window.span.endFrameExclusive
+    || left.itemId.localeCompare(right.itemId));
+  for (const entry of orderedWindows) {
+    assert(entry.window.span.startFrame >= input.outer.span.startFrame
+      && entry.window.span.endFrameExclusive <= input.outer.span.endFrameExclusive,
+    `Column Item ${entry.itemId} window is outside the outer window.`);
+  }
+  for (let index = 1; index < orderedWindows.length; index += 1) {
+    const previous = orderedWindows[index - 1]!;
+    const current = orderedWindows[index]!;
+    assert(current.window.span.startFrame >= previous.window.span.endFrameExclusive,
+      `Column Item windows ${previous.itemId} and ${current.itemId} overlap.`);
+  }
   const result: ColumnSchedule = {
     id: input.header.id,
     variant: "column",
@@ -463,13 +437,11 @@ export function buildColumnSchedule(input: {
         mode: "preset" as const,
         settled: { ...input.outer.span },
       };
-      const candidate = input.candidates.entries.find((entry) => entry.itemId === item.id)!;
-      const window = active.get(item.id)!;
+      const window = input.windows.entries.find((entry) => entry.itemId === item.id)!.window.span;
       return {
         itemId: item.id,
         mode: "reveal" as const,
-        preferred: { ...candidate.window.span },
-        active: { ...window },
+        window: { ...window },
         settled: { startFrame: window.endFrameExclusive, endFrameExclusive: input.outer.span.endFrameExclusive },
       };
     }),
@@ -519,7 +491,7 @@ function assertColumnSchedule(value: ColumnSchedule): void {
   assert(value.outer.endFrameExclusive > value.outer.startFrame, "ColumnSchedule.outer is empty.");
   assert(value.entries.length > 0, "ColumnSchedule.entries is empty.");
   const ids = new Set<string>();
-  const active: Array<{ readonly itemId: string; readonly startFrame: number; readonly endFrameExclusive: number }> = [];
+  const windows: Array<{ readonly itemId: string; readonly startFrame: number; readonly endFrameExclusive: number }> = [];
   for (const [index, entry] of value.entries.entries()) {
     identity(entry.itemId, `ColumnSchedule.entries.${index}.itemId`);
     assert(!ids.has(entry.itemId), `ColumnSchedule repeats ${entry.itemId}.`);
@@ -530,26 +502,22 @@ function assertColumnSchedule(value: ColumnSchedule): void {
       `ColumnSchedule preset ${entry.itemId} does not occupy the outer window.`);
       continue;
     }
-    frame(entry.preferred.startFrame, `ColumnSchedule.entries.${index}.preferred.startFrame`);
-    frame(entry.preferred.endFrameExclusive, `ColumnSchedule.entries.${index}.preferred.endFrameExclusive`);
-    assert(entry.preferred.endFrameExclusive > entry.preferred.startFrame,
-      `ColumnSchedule.entries.${index}.preferred is empty.`);
-    frame(entry.active.startFrame, `ColumnSchedule.entries.${index}.active.startFrame`);
-    frame(entry.active.endFrameExclusive, `ColumnSchedule.entries.${index}.active.endFrameExclusive`);
-    assert(entry.active.startFrame >= value.outer.startFrame
-      && entry.active.endFrameExclusive <= value.outer.endFrameExclusive
-      && entry.active.endFrameExclusive > entry.active.startFrame,
-    `ColumnSchedule.entries.${index}.active is outside the outer window.`);
-    assert(entry.settled.startFrame === entry.active.endFrameExclusive
+    frame(entry.window.startFrame, `ColumnSchedule.entries.${index}.window.startFrame`);
+    frame(entry.window.endFrameExclusive, `ColumnSchedule.entries.${index}.window.endFrameExclusive`);
+    assert(entry.window.startFrame >= value.outer.startFrame
+      && entry.window.endFrameExclusive <= value.outer.endFrameExclusive
+      && entry.window.endFrameExclusive > entry.window.startFrame,
+    `ColumnSchedule.entries.${index}.window is outside the outer window.`);
+    assert(entry.settled.startFrame === entry.window.endFrameExclusive
       && entry.settled.endFrameExclusive === value.outer.endFrameExclusive,
     `ColumnSchedule.entries.${index}.settled is inconsistent.`);
-    active.push({ itemId: entry.itemId, ...entry.active });
+    windows.push({ itemId: entry.itemId, ...entry.window });
   }
-  active.sort((left, right) => left.startFrame - right.startFrame
+  windows.sort((left, right) => left.startFrame - right.startFrame
     || left.endFrameExclusive - right.endFrameExclusive || left.itemId.localeCompare(right.itemId));
-  for (let index = 1; index < active.length; index += 1) {
-    assert(active[index]!.startFrame >= active[index - 1]!.endFrameExclusive,
-      `ColumnSchedule active windows ${active[index - 1]!.itemId} and ${active[index]!.itemId} overlap.`);
+  for (let index = 1; index < windows.length; index += 1) {
+    assert(windows[index]!.startFrame >= windows[index - 1]!.endFrameExclusive,
+      `ColumnSchedule windows ${windows[index - 1]!.itemId} and ${windows[index]!.itemId} overlap.`);
   }
 }
 
@@ -753,11 +721,11 @@ export function buildColumnSoundEvents(schedule: RankingSchedule, style: ColumnS
   columnIdsEqual(schedule, specs.items);
   const events = schedule.entries.flatMap((entry) => {
     if (entry.mode === "preset") return [];
-    const duration = entry.active.endFrameExclusive - entry.active.startFrame;
+    const duration = entry.window.endFrameExclusive - entry.window.startFrame;
     const fitted = fitColumnRevealMotion(duration, style.motion.appearFrames, style.motion.moveFrames);
-    return [event(schedule.id, entry.itemId, "appear", entry.active.startFrame),
+    return [event(schedule.id, entry.itemId, "appear", entry.window.startFrame),
       ...(fitted.mode === "direct" ? []
-        : [event(schedule.id, entry.itemId, "move", entry.active.endFrameExclusive - fitted.moveFrames)])];
+        : [event(schedule.id, entry.itemId, "move", entry.window.endFrameExclusive - fitted.moveFrames)])];
   }).sort((left, right) => left.frame - right.frame || left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id));
   return sealEvents(schedule.id, schedule.variant, events);
 }

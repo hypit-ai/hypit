@@ -6,7 +6,7 @@ import type { Highlight } from "./code.js";
 import { intentAtOffset, spanAtOffset } from "./markers.js";
 import { clipAtOffset, createStore } from "./selection.js";
 import { createStage } from "./stage.js";
-import { writeSourceTransaction } from "./writeback.js";
+import { applyStudioMutation } from "./writeback.js";
 import { createTimeline } from "./timeline.js";
 import "../style.css";
 
@@ -136,7 +136,7 @@ function group(label: string, items: readonly HTMLElement[], className = ""): HT
   return node;
 }
 
-function parameterControl(parameter: Clip["parameters"][number]): HTMLElement {
+function parameterControl(entityId: string, parameter: Clip["parameters"][number]): HTMLElement {
   const row = document.createElement("label");
   row.className = `parameter-row${parameter.writable ? " parameter-editable" : " parameter-readonly"}`;
   const name = document.createElement("span");
@@ -157,7 +157,7 @@ function parameterControl(parameter: Clip["parameters"][number]): HTMLElement {
     value.dataset.parameterId = parameter.id;
     value.title = parameter.source.preimage;
     value.addEventListener("change", () => {
-      void writeParameter(parameter, value.type === "checkbox" ? String(value.checked) : value.value);
+      void writeParameter(entityId, parameter, value.type === "checkbox" ? String(value.checked) : value.value);
     });
   } else if (value instanceof HTMLSelectElement) {
     for (const option of parameter.options ?? []) {
@@ -167,7 +167,7 @@ function parameterControl(parameter: Clip["parameters"][number]): HTMLElement {
       item.selected = option === parameter.value;
       value.append(item);
     }
-    value.addEventListener("change", () => void writeParameter(parameter, value.value));
+    value.addEventListener("change", () => void writeParameter(entityId, parameter, value.value));
   } else {
     value.textContent = parameter.value;
     value.title = parameter.disabledReason ?? parameter.source.preimage;
@@ -186,7 +186,7 @@ function parameterControl(parameter: Clip["parameters"][number]): HTMLElement {
   return row;
 }
 
-function parameterGroups(parameters: readonly Clip["parameters"][number][]): readonly HTMLElement[] {
+function parameterGroups(entityId: string, parameters: readonly Clip["parameters"][number][]): readonly HTMLElement[] {
   type StudioParameterValue = Clip["parameters"][number];
   const groups = new Map<string, StudioParameterValue[]>();
   for (const parameter of parameters) {
@@ -198,23 +198,19 @@ function parameterGroups(parameters: readonly Clip["parameters"][number][]): rea
   return [...groups].map(([key, values]) => {
     const [language, path = ""] = key.split("\u0000");
     const title = path.length === 0 ? language!.toUpperCase() : `${language!.toUpperCase()} · ${path}`;
-    return group(title, values.map(parameterControl), "parameter-group");
+    return group(title, values.map((parameter) => parameterControl(entityId, parameter)), "parameter-group");
   });
 }
 
-const operationLabels: Readonly<Record<Clip["editHandles"][number]["operation"], string>> = {
+const operationLabels: Readonly<Record<Clip["editHandles"][number]["gesture"], string>> = {
   move: "Move",
   "trim-start": "Trim start",
   "trim-end": "Trim end",
-  slip: "Slip",
-  split: "Split",
-  delete: "Delete",
-  duplicate: "Duplicate",
-  "canvas-transform": "Canvas transform",
 };
 
 const operationCoordinateLabels: Readonly<Record<NonNullable<Clip["editHandles"][number]["coordinate"]>, string>> = {
   "program-frame": "program frames",
+  "semantic-anchor": "semantic anchors",
   "source-frame": "source frames",
   "canvas-pixel": "canvas pixels",
   "normalized-progress": "normalized progress",
@@ -229,7 +225,7 @@ function operationGroups(handles: readonly Clip["editHandles"][number][]): reado
     copy.className = "operation-copy";
     const label = document.createElement("strong");
     label.className = "operation-label";
-    label.textContent = operationLabels[handle.operation];
+    label.textContent = operationLabels[handle.gesture];
     const detail = document.createElement("small");
     detail.className = "operation-detail";
     const coordinate = handle.coordinate === undefined ? "" : operationCoordinateLabels[handle.coordinate];
@@ -252,19 +248,20 @@ function operationGroups(handles: readonly Clip["editHandles"][number][]): reado
 }
 
 let parameterWriteState: "" | "Saving" | "Saved" | "Failed" = "";
-async function writeParameter(parameter: Clip["parameters"][number], replacement: string): Promise<void> {
+async function writeParameter(entityId: string, parameter: Clip["parameters"][number], replacement: string): Promise<void> {
   const state = store.current();
   if (state === undefined || !parameter.writable) return;
   parameterWriteState = "Saving";
   status.textContent = parameterWriteState;
   status.className = "status saving";
   try {
-    await writeSourceTransaction(state.snapshot.revision, [{
-      path: parameter.source.path,
-      range: parameter.source.range,
-      replacement,
-      preimage: parameter.source.preimage,
-    }]);
+    await applyStudioMutation({
+      type: "parameter.adjust",
+      revision: state.snapshot.revision,
+      entityId,
+      parameterId: parameter.id,
+      value: replacement,
+    });
     parameterWriteState = "Saved";
     status.textContent = parameterWriteState;
     status.className = "status saved";
@@ -336,7 +333,7 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
     property("Writeback", "Run source · read-only"),
   ]);
   const operations = operationGroups(clip.editHandles);
-  const parameters = parameterGroups(clip.parameters);
+  const parameters = parameterGroups(clip.id, clip.parameters);
   inspector.replaceChildren(hero, placement, timing, ...operations, ...parameters,
     ...(source === undefined ? [] : [source]), ...(run === undefined ? [] : [run]));
 }

@@ -35,6 +35,8 @@ export type ParsedSegment = NarrativeSegment & {
   readonly index: number;
   readonly atoms: readonly ParsedAtom[];
   readonly range: SourceRange;
+  /** Exact body range between the Segment tags, used only for source-preserving marker edits. */
+  readonly contentRange: SourceRange;
   readonly selfClosing: boolean;
 };
 

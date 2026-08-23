@@ -1,0 +1,109 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import type { StudioSemanticTimeline, StudioTemporalLineage } from "@hypit/studio-adapter";
+
+import { parametersForDraft, timelineAdjustHandles } from "../src/parameters.js";
+
+const semantic: StudioSemanticTimeline = {
+  presentation: {
+    family: "speech",
+    icon: "speech",
+    lane: { layout: "flat", height: { minPx: 44, preferredPx: 52, maxPx: 96 } },
+  },
+  anchors: [
+    { id: "segment:a:start", kind: "segment-start", frame: 0, segmentId: "a" },
+    { id: "segment:a:token:1:start", kind: "token-start", frame: 0, segmentId: "a", tokenId: "segment:a:token:1" },
+    { id: "segment:a:token:1:end", kind: "token-end", frame: 12, segmentId: "a", tokenId: "segment:a:token:1" },
+    { id: "segment:a:end", kind: "segment-end", frame: 12, segmentId: "a" },
+  ],
+  segments: [{ id: "a", startFrame: 0, endFrameExclusive: 12 }],
+  tokens: [{ id: "segment:a:token:1", segmentId: "a", text: "hello", startFrame: 0, endFrameExclusive: 12 }],
+  selections: [{
+    id: "claim",
+    startAnchorId: "segment:a:token:1:start",
+    endAnchorId: "segment:a:token:1:end",
+    startFrame: 0,
+    endFrameExclusive: 12,
+  }],
+  moments: [],
+  provenance: { output: "speech", origin: "run", status: "resolved", errors: [] },
+};
+
+test("timeline gestures resolve through the shared Selection identity", () => {
+  const temporal: StudioTemporalLineage = {
+    source: { kind: "selection", id: "claim" },
+    projection: {
+      kind: "window",
+      startExpression: "selection.claim.start",
+      endExpression: "selection.claim.end",
+      startFrame: 0,
+      endFrameExclusive: 12,
+    },
+    phases: [],
+  };
+  const handles = timelineAdjustHandles([], ["move", "trim-start", "trim-end"], temporal, semantic);
+
+  assert.deepEqual(handles.map((handle) => [handle.operation, handle.gesture, handle.coordinate, handle.enabled]), [
+    ["timeline.adjust", "move", "semantic-anchor", true],
+    ["timeline.adjust", "trim-start", "semantic-anchor", true],
+    ["timeline.adjust", "trim-end", "semantic-anchor", true],
+  ]);
+  assert.deepEqual(handles.map((handle) => handle.semantic), Array.from({ length: 3 }, () => ({
+    kind: "selection",
+    id: "claim",
+    startAnchorId: "segment:a:token:1:start",
+    endAnchorId: "segment:a:token:1:end",
+  })));
+});
+
+test("moving a Moment projection resolves to the shared Moment identity", () => {
+  const handles = timelineAdjustHandles([], ["move", "trim-start", "trim-end"], {
+    source: { kind: "moment", id: "beat" },
+    projection: { kind: "point", expression: "moment.beat", frame: 12 },
+    phases: [],
+  }, {
+    ...semantic,
+    moments: [{ id: "beat", anchorId: "segment:a:token:1:end", frame: 12 }],
+  });
+
+  assert.deepEqual(handles.map((handle) => [handle.gesture, handle.enabled]), [
+    ["move", true],
+    ["trim-start", false],
+    ["trim-end", false],
+  ]);
+  assert.deepEqual(handles[0]!.semantic, {
+    kind: "moment",
+    id: "beat",
+    anchorId: "segment:a:token:1:end",
+  });
+});
+
+test("parameter Source paths stay relative to the author workspace", () => {
+  const text = "start=\"1f\"";
+  const parameters = parametersForDraft({
+    root: "/workspace",
+    files: [{ path: "/workspace/main.svml", text, language: "svml" }],
+    placement: {
+      sourcePath: "main.svml",
+      tag: "Item",
+      module: { name: "example", version: "1" },
+      surface: "track",
+      id: "item",
+      range: { start: 0, end: text.length },
+      records: [], values: [], outputs: [], outputPorts: [], children: [],
+      attributes: { start: "1f" },
+      attributeValueRanges: { start: { start: 7, end: 9 } },
+      referenceAttributes: {}, referenceTypes: {}, references: [],
+    },
+    draft: {
+      id: "entity:item", authoredId: "item", label: "item",
+      startFrame: 1, endFrameExclusive: 2, stackOrder: 0,
+      elementRange: { start: 0, end: text.length },
+    },
+    declarations: [{ name: "start", writable: true }],
+  });
+
+  assert.equal(parameters[0]!.source.path, "main.svml");
+  assert.equal(parameters[0]!.source.preimage, "1f");
+});

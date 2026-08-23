@@ -44,6 +44,7 @@ export const deckAdapters: readonly StudioAdapter[] = [
     id: "deck", role: "track",
     output: { type: "VisualTrack", surface: "track", modules: ["@hypit/deck-track"] },
     family: "component", icon: "layers", realizationPorts: ["program"],
+    timelineGestures: ["move", "trim-start", "trim-end"],
     parameters: [
       { name: "frame", label: "Frame", writable: false },
       { name: "appearance", label: "Appearance", writable: false },

@@ -6,6 +6,9 @@ import type {
   StudioEntityDraft,
   StudioPlacement,
   StudioEditHandle,
+  StudioSemanticTimeline,
+  StudioTemporalLineage,
+  StudioTimelineGesture,
 } from "@hypit/studio-adapter";
 import { parseSvs } from "@hypit/svs";
 
@@ -85,11 +88,15 @@ function sourceFor(
   files: readonly StudioSourceFile[],
   base?: string,
 ): StudioSourceFile | undefined {
-  const absolute = isAbsolute(path)
-    ? resolve(path)
-    : resolve(base === undefined ? root : dirname(base), path);
-  return files.find((file) => resolve(file.path) === absolute)
+  const absolute = sourceAbsolute(root, path, base);
+  return files.find((file) => sourceAbsolute(root, file.path) === absolute)
     ?? files.find((file) => file.path === relative(root, absolute));
+}
+
+function sourceAbsolute(root: string, path: string, base?: string): string {
+  if (isAbsolute(path)) return resolve(path);
+  const directory = base === undefined ? root : dirname(sourceAbsolute(root, base));
+  return resolve(directory, path);
 }
 
 function svsText(source: string): string {
@@ -145,7 +152,7 @@ function recipeParameters(input: {
       language: "svs" as const,
       writable: true,
       source: {
-        path: relative(input.root, resolve(source.path)),
+        path: relative(input.root, sourceAbsolute(input.root, source.path)),
         range: property.valueRange,
         preimage,
       },
@@ -186,7 +193,7 @@ function referencedParameters(input: {
       ...(declaration.options === undefined ? {} : { options: declaration.options }),
       ...(declaration.unit === undefined ? {} : { unit: declaration.unit }),
       source: {
-        path: relative(input.root, resolve(target.sourcePath)),
+        path: relative(input.root, sourceAbsolute(input.root, target.sourcePath)),
         range,
         preimage,
       },
@@ -239,7 +246,7 @@ export function parametersForDraft(input: {
       ...(declaration.options === undefined ? {} : { options: declaration.options }),
       ...(declaration.unit === undefined ? {} : { unit: declaration.unit }),
       source: {
-        path: relative(input.root, resolve(element.sourcePath)),
+        path: relative(input.root, sourceAbsolute(input.root, element.sourcePath)),
         range,
         preimage,
       },
@@ -281,14 +288,17 @@ export function parametersForDraft(input: {
 const ABSOLUTE_DURATION = /^\s*\d+(?:\.\d+)?(?:f|ms|s)\s*$/u;
 
 /**
- * Timing handles are deliberately narrower than timing parameters. A literal
- * absolute start/end can be rewritten as frames without changing its semantic
- * source; a Selection/Moment expression cannot be moved from a downstream
- * rectangle. `at + for` has one legal edge: changing `for` changes only its end.
+ * Resolve an adapter-declared gesture through the entity's actual temporal
+ * lineage. A Selection is the writable author identity, so every rectangle
+ * projected from it edits the same Script markers. Literal absolute Windows
+ * remain directly writable. Other projections stay visible but read-only
+ * until their package declares an unambiguous inverse.
  */
-export function timingEditHandles(
+export function timelineAdjustHandles(
   parameters: readonly StudioParameter[],
-  declared: readonly import("@hypit/studio-adapter").StudioEditOperation[] = ["move", "trim-start", "trim-end"],
+  declared: readonly StudioTimelineGesture[] = ["move", "trim-start", "trim-end"],
+  temporal?: StudioTemporalLineage,
+  semantic?: StudioSemanticTimeline,
 ): readonly StudioEditHandle[] {
   const byName = new Map<string, StudioParameter>();
   for (const parameter of parameters) {
@@ -304,45 +314,98 @@ export function timingEditHandles(
   const absolute = (parameter: StudioParameter | undefined): parameter is StudioParameter =>
     parameter !== undefined && parameter.writable && ABSOLUTE_DURATION.test(parameter.value);
   const allowed = new Set(declared);
-  const disabled = (id: string, operation: StudioEditHandle["operation"], reason: string): StudioEditHandle => ({
-    id, operation, enabled: false, disabledReason: reason,
+  const disabled = (gesture: StudioTimelineGesture, reason: string): StudioEditHandle => ({
+    id: `timeline.adjust:${gesture}`,
+    operation: "timeline.adjust",
+    gesture,
+    enabled: false,
+    disabledReason: reason,
   });
   const handles: StudioEditHandle[] = [];
-  if (absolute(start) && absolute(end)) {
+  const selectionId = temporal?.source.kind === "selection" ? temporal.source.id : undefined;
+  const selection = selectionId === undefined
+    ? undefined
+    : semantic?.selections.find((candidate) => candidate.id === selectionId);
+  const momentId = temporal?.source.kind === "moment" ? temporal.source.id : undefined;
+  const moment = momentId === undefined
+    ? undefined
+    : semantic?.moments.find((candidate) => candidate.id === momentId);
+  if (selection !== undefined) {
+    const target = {
+      kind: "selection" as const,
+      id: selection.id,
+      startAnchorId: selection.startAnchorId,
+      endAnchorId: selection.endAnchorId,
+    };
+    for (const gesture of ["move", "trim-start", "trim-end"] as const) {
+      if (!allowed.has(gesture)) continue;
+      handles.push({
+        id: `timeline.adjust:${gesture}`,
+        operation: "timeline.adjust",
+        gesture,
+        enabled: true,
+        coordinate: "semantic-anchor",
+        snapTo: ["semantic-anchor"],
+        semantic: target,
+      });
+    }
+  } else if (moment !== undefined) {
     if (allowed.has("move")) handles.push({
-      id: "move", operation: "move", enabled: true, coordinate: "program-frame",
+      id: "timeline.adjust:move",
+      operation: "timeline.adjust",
+      gesture: "move",
+      enabled: true,
+      coordinate: "semantic-anchor",
+      snapTo: ["semantic-anchor"],
+      semantic: { kind: "moment", id: moment.id, anchorId: moment.anchorId },
+    });
+    if (allowed.has("trim-start")) {
+      handles.push(disabled("trim-start", "起点由 Moment 决定；拖动实体会移动 Moment，不能单独裁起点。"));
+    }
+    if (allowed.has("trim-end")) {
+      if (absolute(duration)) handles.push({
+        id: "timeline.adjust:trim-end",
+        operation: "timeline.adjust",
+        gesture: "trim-end",
+        enabled: true,
+        coordinate: "program-frame",
+        snapTo: ["frame", "semantic-anchor", "item-edge"],
+        sources: [{ role: "duration", source: duration.source }],
+      });
+      else handles.push(disabled("trim-end", "该 Moment 消费没有独立可写的 duration。"));
+    }
+  } else if (absolute(start) && absolute(end)) {
+    if (allowed.has("move")) handles.push({
+      id: "timeline.adjust:move", operation: "timeline.adjust", gesture: "move", enabled: true, coordinate: "program-frame",
       snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [
         { role: "start", source: start.source },
         { role: "end", source: end.source },
       ],
     });
     if (allowed.has("trim-start")) handles.push({
-      id: "trim-start", operation: "trim-start", enabled: true, coordinate: "program-frame",
+      id: "timeline.adjust:trim-start", operation: "timeline.adjust", gesture: "trim-start", enabled: true, coordinate: "program-frame",
       snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [{ role: "start", source: start.source }],
     });
     if (allowed.has("trim-end")) handles.push({
-      id: "trim-end", operation: "trim-end", enabled: true, coordinate: "program-frame",
+      id: "timeline.adjust:trim-end", operation: "timeline.adjust", gesture: "trim-end", enabled: true, coordinate: "program-frame",
       snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [{ role: "end", source: end.source }],
     });
   } else if (at !== undefined && !at.writable && absolute(duration)) {
-    if (allowed.has("move")) handles.push(disabled("move", "move", "起点由 At 引用决定，不能独立移动。"));
-    if (allowed.has("trim-start")) handles.push(disabled("trim-start", "trim-start", "起点由 At 引用决定，不能独立裁剪。"));
+    if (allowed.has("move")) handles.push(disabled("move", "起点由 At 引用决定，不能独立移动。"));
+    if (allowed.has("trim-start")) handles.push(disabled("trim-start", "起点由 At 引用决定，不能独立裁剪。"));
     if (allowed.has("trim-end")) handles.push({
-      id: "trim-end", operation: "trim-end", enabled: true, coordinate: "program-frame",
+      id: "timeline.adjust:trim-end", operation: "timeline.adjust", gesture: "trim-end", enabled: true, coordinate: "program-frame",
       snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [{ role: "duration", source: duration.source }],
     });
   } else {
-    const reason = parameters.some((parameter) => parameter.name === "during" && !parameter.writable)
-      ? "时间窗由 Selection、Segment、Moment 或 Program 投影提供。请修改来源或投影，不拖动消费结果。"
+    const reason = selectionId !== undefined
+      ? `Selection ${selectionId} 没有出现在当前语义 Candidate 中。`
+      : parameters.some((parameter) => parameter.name === "during" && !parameter.writable)
+      ? "该投影尚未声明唯一的作者语义逆变换。"
       : "没有可逆的绝对时间端点源码范围。";
-    if (allowed.has("move")) handles.push(disabled("move", "move", reason));
-    if (allowed.has("trim-start")) handles.push(disabled("trim-start", "trim-start", reason));
-    if (allowed.has("trim-end")) handles.push(disabled("trim-end", "trim-end", reason));
+    if (allowed.has("move")) handles.push(disabled("move", reason));
+    if (allowed.has("trim-start")) handles.push(disabled("trim-start", reason));
+    if (allowed.has("trim-end")) handles.push(disabled("trim-end", reason));
   }
-  if (allowed.has("slip")) handles.push(disabled("slip", "slip", "素材内部时间尚未声明为可回写的作者参数。"));
-  if (allowed.has("split")) handles.push(disabled("split", "split", "切分会创建新的作者实体，当前没有唯一的 SVML 写回方案。"));
-  if (allowed.has("delete")) handles.push(disabled("delete", "delete", "删除需要同时处理作者元素与全部引用，当前保持只读。"));
-  if (allowed.has("duplicate")) handles.push(disabled("duplicate", "duplicate", "复制需要生成新的作者身份和引用，当前保持只读。"));
-  if (allowed.has("canvas-transform")) handles.push(disabled("canvas-transform", "canvas-transform", "画布几何由 Frame/Point 作者值控制，当前没有唯一可写范围。"));
   return handles;
 }

@@ -25,7 +25,7 @@ export const rankingTypes = {
   textItemShell: { module: rankingModuleRef, name: "RankingTextItemShell" },
   itemSpecs: { module: rankingModuleRef, name: "RankingItemSpecSet" },
   triggeredCandidates: { module: rankingModuleRef, name: "TriggeredRankingCandidateSet" },
-  columnCandidates: { module: rankingModuleRef, name: "ColumnWindowCandidateSet" },
+  columnWindows: { module: rankingModuleRef, name: "ColumnWindowSet" },
   schedule: { module: rankingModuleRef, name: "RankingSchedule" },
   soundStyle: { module: rankingModuleRef, name: "RankingSoundStyle" },
   soundEvents: { module: rankingModuleRef, name: "RankingSoundEventPlan" },
@@ -47,8 +47,8 @@ export const rankingProducers = {
   createTriggeredCandidates: { module: rankingModuleRef, name: "create-triggered-ranking-candidates" },
   appendTriggeredCandidate: { module: rankingModuleRef, name: "append-triggered-ranking-candidate" },
   schedule: { module: rankingModuleRef, name: "build-ranking-schedule" },
-  createColumnCandidates: { module: rankingModuleRef, name: "create-column-window-candidates" },
-  appendColumnCandidate: { module: rankingModuleRef, name: "append-column-window-candidate" },
+  createColumnWindows: { module: rankingModuleRef, name: "create-column-windows" },
+  appendColumnWindow: { module: rankingModuleRef, name: "append-column-window" },
   columnSchedule: { module: rankingModuleRef, name: "build-column-schedule" },
   createTierItems: { module: rankingModuleRef, name: "create-tier-board-items" },
   appendTierItem: { module: rankingModuleRef, name: "append-tier-board-item" },
@@ -114,7 +114,7 @@ export const triggeredRankingCandidateSetSchema: ValueSchema = object({
     }) },
   }) } },
 });
-export const columnWindowCandidateSetSchema: ValueSchema = object({
+export const columnWindowSetSchema: ValueSchema = object({
   entries: { schema: { kind: "array", items: object({
     itemId: { schema: string }, window: { schema: object({
       id: { schema: string }, source: { schema: object({ kind: { schema: string }, id: { schema: string } }) },
@@ -137,7 +137,7 @@ const columnScheduleSchema: ValueSchema = object({
   entries: { schema: { kind: "array", minItems: 1, items: { kind: "oneOf", variants: [
     object({ itemId: { schema: string }, mode: { schema: { kind: "literal", value: "preset" } }, settled: { schema: frameSpan } }),
     object({ itemId: { schema: string }, mode: { schema: { kind: "literal", value: "reveal" } },
-      preferred: { schema: frameSpan }, active: { schema: frameSpan }, settled: { schema: frameSpan },
+      window: { schema: frameSpan }, settled: { schema: frameSpan },
     }),
   ] } } },
 });
@@ -531,7 +531,7 @@ export const rankingMarkupSurfaces = [
               { name: "preset", kind: "literal", required: false, values: ["true", "false"],
                 summary: "Settles the row from the start of the outer window; defaults to false." },
               { name: "during", kind: "reference", required: false, accepts: [narrativeTypes.selection],
-                summary: "Chooses this row's preferred reveal Selection; required unless preset is true." },
+                summary: "Chooses this row's reveal Selection; required unless preset is true." },
               { name: "icon", kind: "reference", required: false, accepts: [mediaTypes.blobArtifact],
                 summary: "Chooses the image drawn beside the row." },
               { name: "stack", kind: "literal", required: false,
@@ -559,7 +559,7 @@ export const rankingMarkupSurfaces = [
         notes: [
           "The board requires at least one ColumnItem, accepts no other child and no text of its own, and Item ids must be unique within it.",
           "Ranks must be unique; child order does not determine either final placement or reveal order.",
-          "Non-preset Selection windows are clamped to the outer window and resolved into non-overlapping intervals; preset Items have no child `during`.",
+          "Every non-preset Selection window must already lie inside the outer window and be disjoint from every sibling; invalid input is refused, never repaired.",
           "A `label` written as a reference materializes the row from that exact Text before the board is scheduled.",
           "Authoring either sound also connects the Style's `.sound` output, so `style` must name a ColumnStyle written in this Source.",
         ],
@@ -640,7 +640,7 @@ export const rankingManifest: ModuleManifest = {
     { name: rankingTypes.textItemShell.name },
     { name: rankingTypes.itemSpecs.name },
     { name: rankingTypes.triggeredCandidates.name },
-    { name: rankingTypes.columnCandidates.name },
+    { name: rankingTypes.columnWindows.name },
     { name: rankingTypes.schedule.name },
     { name: rankingTypes.soundStyle.name },
     { name: rankingTypes.soundEvents.name },
@@ -673,16 +673,16 @@ export const rankingManifest: ModuleManifest = {
       { name: "outer", type: temporalTypes.window }, { name: "candidates", type: rankingTypes.triggeredCandidates },
       { name: "terminal", type: temporalTypes.point },
     ], outputs: [{ name: "schedule", type: rankingTypes.schedule }], needs: [] },
-    { name: rankingProducers.createColumnCandidates.name, inputs: [], outputs: [
-      { name: "set", type: rankingTypes.columnCandidates },
+    { name: rankingProducers.createColumnWindows.name, inputs: [], outputs: [
+      { name: "set", type: rankingTypes.columnWindows },
     ], needs: [] },
-    { name: rankingProducers.appendColumnCandidate.name, inputs: [
-      { name: "set", type: rankingTypes.columnCandidates }, { name: "spec", type: rankingTypes.itemSpec },
+    { name: rankingProducers.appendColumnWindow.name, inputs: [
+      { name: "set", type: rankingTypes.columnWindows }, { name: "spec", type: rankingTypes.itemSpec },
       { name: "window", type: temporalTypes.window },
-    ], outputs: [{ name: "set", type: rankingTypes.columnCandidates }], needs: [] },
+    ], outputs: [{ name: "set", type: rankingTypes.columnWindows }], needs: [] },
     { name: rankingProducers.columnSchedule.name, inputs: [
       { name: "header", type: rankingTypes.header }, { name: "items", type: rankingTypes.itemSpecs },
-      { name: "outer", type: temporalTypes.window }, { name: "candidates", type: rankingTypes.columnCandidates },
+      { name: "outer", type: temporalTypes.window }, { name: "windows", type: rankingTypes.columnWindows },
     ], outputs: [{ name: "schedule", type: rankingTypes.schedule }], needs: [] },
     ...([
       [rankingProducers.createTierItems, rankingTypes.tierItems],

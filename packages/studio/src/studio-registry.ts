@@ -2,11 +2,11 @@ import type {
   StudioAdapter,
   StudioAdapterContext,
   StudioEntityDraft,
-  StudioEditOperation,
   StudioLaneAttachment,
   StudioProjectionRole,
   StudioResolvedTrack,
   StudioSpan,
+  StudioTimelineGesture,
 } from "@hypit/studio-adapter";
 import { readonlyInteraction } from "@hypit/studio-adapter";
 
@@ -201,16 +201,16 @@ export class StudioAdapterRegistry {
     return adapter.parameters ?? [];
   }
 
-  editOperations(
+  timelineGestures(
     track: StudioResolvedTrack,
     placement: Placement | undefined,
     lane?: string,
-  ): readonly StudioEditOperation[] {
+  ): readonly StudioTimelineGesture[] {
     const adapter = this.#trackAdapter(track);
     if (lane !== undefined) {
-      return adapter.attachments?.find((attachment) => attachment.id === lane)?.editOperations ?? [];
+      return adapter.attachments?.find((attachment) => attachment.id === lane)?.timelineGestures ?? [];
     }
-    return adapter.editOperations ?? [];
+    return adapter.timelineGestures ?? [];
   }
 }
 

@@ -118,18 +118,14 @@ export type StudioParameterDeclaration = {
   readonly referenced?: readonly StudioParameterDeclaration[];
 };
 
-export type StudioEditOperation =
+export type StudioTimelineGesture =
   | "move"
   | "trim-start"
-  | "trim-end"
-  | "slip"
-  | "split"
-  | "delete"
-  | "duplicate"
-  | "canvas-transform";
+  | "trim-end";
 
 export type StudioEditCoordinate =
   | "program-frame"
+  | "semantic-anchor"
   | "source-frame"
   | "canvas-pixel"
   | "normalized-progress";
@@ -143,16 +139,32 @@ export type StudioEditSource = {
   readonly source: StudioParameter["source"];
 };
 
+export type StudioSemanticEditTarget =
+  | {
+      readonly kind: "selection";
+      readonly id: string;
+      readonly startAnchorId: string;
+      readonly endAnchorId: string;
+    }
+  | {
+      readonly kind: "moment";
+      readonly id: string;
+      readonly anchorId: string;
+    };
+
 /** A timeline affordance is present only when its source write is explicit. */
 export type StudioEditHandle = {
   readonly id: string;
-  readonly operation: StudioEditOperation;
+  readonly operation: "timeline.adjust";
+  readonly gesture: StudioTimelineGesture;
   readonly enabled: boolean;
   /** Coordinate space in which the central gesture resolver measures intent. */
   readonly coordinate?: StudioEditCoordinate;
   /** Snap policy is data, not a timeline-wide guess. */
   readonly snapTo?: readonly StudioSnapTarget[];
   readonly sources?: readonly StudioEditSource[];
+  /** Shared Script identity adjusted by this rectangle; every consumer follows it. */
+  readonly semantic?: StudioSemanticEditTarget;
   readonly disabledReason?: string;
 };
 
@@ -230,11 +242,14 @@ export type StudioSemanticTimeline = {
   readonly tokens: readonly StudioSemanticToken[];
   readonly selections: readonly {
     readonly id: string;
+    readonly startAnchorId: string;
+    readonly endAnchorId: string;
     readonly startFrame: number;
     readonly endFrameExclusive: number;
   }[];
   readonly moments: readonly {
     readonly id: string;
+    readonly anchorId: string;
     readonly frame: number;
   }[];
   readonly provenance: StudioCandidateProvenance;
@@ -375,7 +390,7 @@ export type StudioAdapter = {
   readonly inspector?: StudioInspectorDescription;
   readonly parameters?: readonly StudioParameterDeclaration[];
   /** Operations this adapter explicitly understands for its entities. */
-  readonly editOperations?: readonly StudioEditOperation[];
+  readonly timelineGestures?: readonly StudioTimelineGesture[];
   readonly project?: (context: StudioAdapterContext) => readonly StudioEntityDraft[];
 };
 
@@ -431,7 +446,7 @@ export type StudioLaneAttachment = {
   readonly interaction?: StudioInteraction;
   readonly inspector?: StudioInspectorDescription;
   readonly parameters?: readonly StudioParameterDeclaration[];
-  readonly editOperations?: readonly StudioEditOperation[];
+  readonly timelineGestures?: readonly StudioTimelineGesture[];
 };
 
 export const readonlyInteraction: StudioInteraction = {

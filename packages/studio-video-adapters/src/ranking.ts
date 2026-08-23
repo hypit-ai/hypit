@@ -9,8 +9,7 @@ type RankingSchedule = {
   readonly entries?: readonly ({ readonly itemId: string; readonly mode: "preset"; readonly settled: Span } | {
     readonly itemId: string;
     readonly mode: "reveal";
-    readonly preferred: Span;
-    readonly active: Span;
+    readonly window: Span;
     readonly settled: Span;
   } | {
     readonly itemId: string;
@@ -80,7 +79,7 @@ function projectRanking(context: StudioAdapterContext): readonly StudioEntityDra
     const temporal = temporalLineageFor(context, entry.itemId, "mode" in entry ? "window" : "activation");
     const markerId = temporal?.source.id;
     const preview = itemPreview(context, entry.itemId);
-    const visible = "mode" in entry ? entry.active : entry.cumulative;
+    const visible = "mode" in entry ? entry.window : entry.cumulative;
     return [{
       id: `${context.track.outputRef}:entity:${entry.itemId}`,
       authoredId: entry.itemId,
@@ -106,7 +105,7 @@ export const rankingAdapters: readonly StudioAdapter[] = [
     id: "ranking-column", role: "track",
     output: { type: "VisualTrack", surface: "column", modules: ["@hypit/ranking"] },
     family: "component", label: "Ranking", icon: "ranking", realizationPorts: ["schedule"],
-    editOperations: ["move", "trim-start", "trim-end"],
+    timelineGestures: ["move", "trim-start", "trim-end"],
     parameters: [
       { name: "semantic", label: "Semantic", writable: false },
       { name: "canvas", label: "Canvas", writable: false },
@@ -144,6 +143,7 @@ export const rankingAdapters: readonly StudioAdapter[] = [
       parameters: [
         { name: "during", label: "During", writable: false },
       ],
+      timelineGestures: ["move", "trim-start", "trim-end"],
     }],
     interaction: readonlyInteraction, project: projectRanking,
   },
@@ -155,6 +155,7 @@ export const rankingAdapters: readonly StudioAdapter[] = [
     id, role: "track",
     output: { type: "VisualTrack", surface, modules: ["@hypit/ranking"] },
     family: "component", label, icon: "ranking", realizationPorts: ["schedule"],
+    timelineGestures: ["move", "trim-start", "trim-end"],
     parameters: [
       { name: "semantic", label: "Semantic", writable: false },
       { name: "style", label: "Style", writable: false },
@@ -171,6 +172,7 @@ export const rankingAdapters: readonly StudioAdapter[] = [
       id: "activation", family: "ranking-reveal", label: "Activations", icon: "ranking", facet: "visual",
       lane: { layout: "flat", height: { minPx: 34, preferredPx: 40, maxPx: 56 } },
       parameters: [{ name: "at", label: "At", writable: false }],
+      timelineGestures: ["move", "trim-start", "trim-end"],
     }],
     interaction: readonlyInteraction,
     project: projectRanking,
