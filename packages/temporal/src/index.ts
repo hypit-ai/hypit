@@ -37,10 +37,16 @@ export type * from "./types.js";
 
 export const temporalModuleRef = { name: "@hypit/temporal", version: "1" } as const;
 export const temporalTypes = {
+  pointSpec: { module: temporalModuleRef, name: "TemporalPointSpec" },
+  point: { module: temporalModuleRef, name: "TemporalPoint" },
   windowSpec: { module: temporalModuleRef, name: "TemporalWindowSpec" },
   window: { module: temporalModuleRef, name: "TemporalWindow" },
 } satisfies Record<string, TypeRef>;
 export const temporalProducers = {
+  projectProgramPoint: { module: temporalModuleRef, name: "project-program-point" },
+  projectSelectionPoint: { module: temporalModuleRef, name: "project-selection-point" },
+  projectSegmentPoint: { module: temporalModuleRef, name: "project-segment-point" },
+  projectMomentPoint: { module: temporalModuleRef, name: "project-moment-point" },
   projectProgram: { module: temporalModuleRef, name: "project-program-window" },
   projectSelection: { module: temporalModuleRef, name: "project-selection-window" },
   projectSegment: { module: temporalModuleRef, name: "project-segment-window" },
@@ -52,11 +58,25 @@ export const temporalManifest: ModuleManifest = {
   version: temporalModuleRef.version,
   dependencies: [narrativeDependency, programSpaceDependency, semanticTrackDependency],
   types: [
+    { name: temporalTypes.pointSpec.name },
+    { name: temporalTypes.point.name },
     { name: temporalTypes.windowSpec.name },
     { name: temporalTypes.window.name },
   ],
   capabilities: [],
   producers: [
+    { name: temporalProducers.projectProgramPoint.name,
+      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "spec", type: temporalTypes.pointSpec }],
+      outputs: [{ name: "point", type: temporalTypes.point }], needs: [] },
+    { name: temporalProducers.projectSelectionPoint.name,
+      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "selection", type: narrativeTypes.selection }, { name: "spec", type: temporalTypes.pointSpec }],
+      outputs: [{ name: "point", type: temporalTypes.point }], needs: [] },
+    { name: temporalProducers.projectSegmentPoint.name,
+      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "segment", type: narrativeTypes.excerpt }, { name: "spec", type: temporalTypes.pointSpec }],
+      outputs: [{ name: "point", type: temporalTypes.point }], needs: [] },
+    { name: temporalProducers.projectMomentPoint.name,
+      inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "moment", type: narrativeTypes.moment }, { name: "spec", type: temporalTypes.pointSpec }],
+      outputs: [{ name: "point", type: temporalTypes.point }], needs: [] },
     { name: temporalProducers.projectProgram.name,
       inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "spec", type: temporalTypes.windowSpec }],
       outputs: [{ name: "window", type: temporalTypes.window }], needs: [] },
@@ -73,6 +93,12 @@ export const temporalManifest: ModuleManifest = {
 };
 export const temporalDependency = { module: temporalModuleRef } as const;
 
+export const temporalPointSpecSchema: ValueSchema = object({
+  id: { schema: string }, projection: { schema: point },
+});
+export const temporalPointSchema: ValueSchema = object({
+  id: { schema: string }, source: { schema: sourceSchema }, projection: { schema: point }, frame: { schema: unsignedInteger },
+});
 export const temporalWindowSpecSchema: ValueSchema = object({
   id: { schema: string }, projection: { schema: projectionSchema },
 });

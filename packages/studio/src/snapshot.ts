@@ -336,6 +336,7 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
       ...(item.surfacePreview === undefined ? {} : { surfacePreview: item.surfacePreview }),
       spans: projectedSpans,
       values: built.values,
+      temporalBindings: built.temporalBindings.get(item.outputRef) ?? [],
       semantic,
       generic,
     }).map((draft) => {

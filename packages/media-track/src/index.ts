@@ -43,13 +43,13 @@ export {
   createMediaSoundSet,
   sealMediaSoundSpec,
 } from "./sounds.js";
-export { appendMediaSequenceAtWindow, appendProjectedMediaItem, bindMediaItemClipPath, bindMediaSequenceClipPath, assertMediaItemSpec, assertMediaTrackHeader, assertMediaTrackProgram, assertMediaTrackProgramIdentity, assertMediaTrackSet, createMediaTrackSet, finalizeMediaTrack, projectMediaAudioTrack, projectMediaVisualTrack, sealMediaItemSpec, sealMediaTrackHeader, sealMediaTrackProgram } from "./program.js";
+export { appendMediaItem, appendMediaSequence, bindMediaItemClipPath, bindMediaSequenceClipPath, assertMediaItemSpec, assertMediaTrackHeader, assertMediaTrackProgram, assertMediaTrackProgramIdentity, assertMediaTrackSet, createMediaTrackSet, finalizeMediaTrack, projectMediaAudioTrack, projectMediaVisualTrack, sealMediaItemSpec, sealMediaTrackHeader, sealMediaTrackProgram } from "./program.js";
 export { resolveVisualSampling } from "./sampling.js";
 export { lowerRestrictedSpeechVisualPresents } from "./restricted-speech.js";
 export type { RestrictedSpeechVisualClip } from "./restricted-speech.js";
 export { decodeMediaTrackSurface } from "./surface.js";
 export {
-  appendMediaSequenceProjectedMember,
+  appendMediaSequenceMember,
   assertMediaHandoffSpec,
   assertMediaSequenceMemberSet,
   assertMediaSequenceMemberSpec,

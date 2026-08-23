@@ -235,13 +235,13 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       } as unknown as CanonicalValue },
       range: element.range,
     });
-    const terminalSpecId = `${id}.terminal.window`;
+    const terminalSpecId = `${id}.terminal.point`;
     if (terminal !== undefined) records.push({
       id: terminalSpecId,
-      type: temporalTypes.windowSpec,
+      type: temporalTypes.pointSpec,
       value: { kind: "inline", value: {
         id: `${id}.terminal`,
-        projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } },
+        projection: { ref: "moment.cue" },
       } as unknown as CanonicalValue },
       range: element.range,
     });
@@ -276,17 +276,18 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       if (authored.content !== undefined) inputs[contentName!] = authored.content.ref;
       const timingName = authored.timing === undefined ? undefined : `item-${suffix}-timing`;
       if (authored.timing !== undefined) inputs[timingName!] = authored.timing.ref;
-      const timingSpecName = authored.timing === undefined ? undefined : `item-${suffix}-window-spec`;
+      const timingSpecName = authored.timing === undefined ? undefined
+        : `item-${suffix}-${variant === "column" ? "window" : "point"}-spec`;
       if (authored.timing !== undefined) {
-        const timingSpecId = `${id}.item.${suffix}.window`;
+        const timingSpecId = `${id}.item.${suffix}.${variant === "column" ? "window" : "point"}`;
         records.push({
           id: timingSpecId,
-          type: temporalTypes.windowSpec,
+          type: variant === "column" ? temporalTypes.windowSpec : temporalTypes.pointSpec,
           value: { kind: "inline", value: {
             id: `${id}.item.${suffix}`,
             projection: variant === "column"
               ? { start: { ref: "selection.start" }, end: { ref: "selection.end" } }
-              : { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } },
+              : { ref: "moment.cue" },
           } as unknown as CanonicalValue },
           range: child.range,
         });

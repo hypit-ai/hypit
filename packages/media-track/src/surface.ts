@@ -16,7 +16,7 @@ import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation } from "@hypit/elaborator";
 import { mediaTypes } from "@hypit/media";
 import { narrativeTypes } from "@hypit/narrative";
-import { semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import type { SvsRecipe } from "@hypit/svs";
@@ -226,7 +226,7 @@ type FragmentMember = {
   readonly suffix: string;
   readonly binding: "moment" | "selection-start" | "selection-end";
   readonly sourceName: string;
-  readonly windowSpecName: string;
+  readonly pointSpecName: string;
   readonly specName: string;
   readonly layers: readonly FragmentLayer[];
 };
@@ -280,7 +280,10 @@ function appendSounds(operations: FragmentOperation[], prefix: string, sounds: r
 }
 
 function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: string; readonly type: TypeRef }[], items: readonly FragmentItem[], sequences: readonly FragmentSequence[], audio: boolean) {
-  const operations: FragmentOperation[] = [{ id: "track:set:empty", producer: mediaTrackProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } }];
+  const operations: FragmentOperation[] = [
+    { id: "track:space", producer: semanticTrackProducers.projectProgramSpace, inputs: { track: input("semantic") }, result: { kind: "output", name: "space" } },
+    { id: "track:set:empty", producer: mediaTrackProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } },
+  ];
   let set = "track:set:empty";
   for (const item of items) {
     const prefix = `item:${item.suffix}`;
@@ -304,7 +307,7 @@ function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: s
       spec = operation(bindId);
     }
     const common = {
-      set: operation(set), header: input("header"), semantic: input("semantic"), canvas: input("canvas"),
+      set: operation(set), header: input("header"), space: operation("track:space"), canvas: input("canvas"),
       layers: operation(layers), frame: input(item.frameName), spec, sounds: operation(sounds), window: operation(windowId),
     };
     operations.push({ id: appendId, producer: mediaTrackProducers.appendItem, inputs: common, result: { kind: "output", name: "set" } });
@@ -319,14 +322,14 @@ function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: s
       const memberPrefix = `${prefix}:member:${member.suffix}`;
       const layers = appendLayers(operations, memberPrefix, member.layers);
       const appendId = `${memberPrefix}:append`;
-      const windowId = `${memberPrefix}:window`;
-      const windowProducer = member.binding === "moment" ? temporalProducers.projectMoment : temporalProducers.projectSelection;
-      operations.push({ id: windowId, producer: windowProducer, inputs: {
-        semantic: input("semantic"), spec: input(member.windowSpecName),
+      const pointId = `${memberPrefix}:point`;
+      const pointProducer = member.binding === "moment" ? temporalProducers.projectMomentPoint : temporalProducers.projectSelectionPoint;
+      operations.push({ id: pointId, producer: pointProducer, inputs: {
+        semantic: input("semantic"), spec: input(member.pointSpecName),
         [member.binding === "moment" ? "moment" : "selection"]: input(member.sourceName),
-      }, result: { kind: "output", name: "window" } });
+      }, result: { kind: "output", name: "point" } });
       operations.push({ id: appendId, producer: mediaTrackProducers.appendMember, inputs: {
-        members: operation(members), layers: operation(layers), spec: input(member.specName), window: operation(windowId),
+        members: operation(members), layers: operation(layers), spec: input(member.specName), activation: operation(pointId),
       }, result: { kind: "output", name: "members" } });
       members = appendId;
     }
@@ -341,30 +344,27 @@ function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: s
       spec = operation(bindId);
     }
     const common = {
-      set: operation(set), header: input("header"), semantic: input("semantic"), canvas: input("canvas"),
+      set: operation(set), header: input("header"), space: operation("track:space"), canvas: input("canvas"),
       members: operation(members), frame: input(sequence.frameName), spec, sounds: operation(sounds),
     };
-    const terminalWindowId = `${prefix}:window`;
-    const terminalProducer = sequence.terminal === "program-end" ? temporalProducers.projectProgram
-      : sequence.terminal === "moment" ? temporalProducers.projectMoment : temporalProducers.projectSelection;
-    operations.push({ id: terminalWindowId, producer: terminalProducer, inputs: {
+    const terminalPointId = `${prefix}:terminal`;
+    const terminalProducer = sequence.terminal === "program-end" ? temporalProducers.projectProgramPoint
+      : sequence.terminal === "moment" ? temporalProducers.projectMomentPoint : temporalProducers.projectSelectionPoint;
+    operations.push({ id: terminalPointId, producer: terminalProducer, inputs: {
       semantic: input("semantic"), spec: input(sequence.terminalSpecName),
       ...(sequence.terminal === "program-end" ? {} : {
         [sequence.terminal === "moment" ? "moment" : "selection"]: input(sequence.terminalSourceName!),
       }),
-    }, result: { kind: "output", name: "window" } });
-    const producer = sequence.terminal === "program-end" ? mediaTrackProducers.appendSequenceProgramEnd
-      : sequence.terminal === "moment" ? mediaTrackProducers.appendSequenceUntilMoment
-        : sequence.terminal === "selection-start" ? mediaTrackProducers.appendSequenceUntilSelectionStart
-          : mediaTrackProducers.appendSequenceUntilSelectionEnd;
-    operations.push({ id: appendId, producer, inputs: { ...common, window: operation(terminalWindowId) }, result: { kind: "output", name: "set" } });
+    }, result: { kind: "output", name: "point" } });
+    operations.push({ id: appendId, producer: mediaTrackProducers.appendSequence,
+      inputs: { ...common, terminal: operation(terminalPointId) }, result: { kind: "output", name: "set" } });
     set = appendId;
   }
   operations.push(
-    { id: "track:finalize", producer: mediaTrackProducers.finalize, inputs: { set: operation(set), header: input("header"), semantic: input("semantic") }, result: { kind: "output", name: "program" } },
-    { id: "track:visual", producer: mediaTrackProducers.projectVisual, inputs: { semantic: input("semantic"), program: operation("track:finalize") }, result: { kind: "output", name: "track" } },
+    { id: "track:finalize", producer: mediaTrackProducers.finalize, inputs: { set: operation(set), header: input("header"), space: operation("track:space") }, result: { kind: "output", name: "program" } },
+    { id: "track:visual", producer: mediaTrackProducers.projectVisual, inputs: { space: operation("track:space"), program: operation("track:finalize") }, result: { kind: "output", name: "track" } },
   );
-  if (audio) operations.push({ id: "track:audio", producer: mediaTrackProducers.projectAudio, inputs: { semantic: input("semantic"), program: operation("track:finalize") }, result: { kind: "output", name: "track" } });
+  if (audio) operations.push({ id: "track:audio", producer: mediaTrackProducers.projectAudio, inputs: { space: operation("track:space"), program: operation("track:finalize") }, result: { kind: "output", name: "track" } });
   return sealGraphFragment({
     inputs: inputTypes,
     operations,
@@ -751,21 +751,21 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
       const selectedAudio = sourceAudio(member);
       if (selectedAudio !== undefined) hasAudio = true;
       const specName = `${unitSuffix}-spec`;
-      const windowSpecName = `${unitSuffix}-window-spec`;
+      const pointSpecName = `${unitSuffix}-point-spec`;
       state.addRecord(specName, `${trackId}.${unitSuffix}.spec`, mediaTrackTypes.memberSpec,
         sealMediaSequenceMemberSpec({ id: memberIds[index]!,
           ...(selectedAudio === undefined ? {} : { sourceAudio: selectedAudio }) }), member.range);
-      state.addRecord(windowSpecName, `${trackId}.${unitSuffix}.window`, temporalTypes.windowSpec, {
+      state.addRecord(pointSpecName, `${trackId}.${unitSuffix}.point`, temporalTypes.pointSpec, {
         id: `${id}.${memberIds[index]}`,
         projection: binding === "moment"
-          ? { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } }
+          ? { ref: "moment.cue" }
           : boundary === "start"
-            ? { start: { ref: "selection.start" }, end: { ref: "selection.start", offset: { unit: "frames", value: 1 } } }
-            : { start: { ref: "selection.end" }, end: { ref: "selection.end", offset: { unit: "frames", value: 1 } } },
+            ? { ref: "selection.start" }
+            : { ref: "selection.end" },
       }, member.range);
       const sourceName = `${unitSuffix}-${binding === "moment" ? "moment" : "selection"}`;
       state.addReference(sourceName, at);
-      members.push({ suffix: memberSuffix, binding, sourceName, specName, windowSpecName, layers });
+      members.push({ suffix: memberSuffix, binding, sourceName, specName, pointSpecName, layers });
     }
     const sequenceSounds: FragmentSound[] = [];
     for (const soundChild of child.children) {
@@ -802,16 +802,16 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
       decodeMediaSequenceSpec(appearance, id, decodeMediaMotion(motionRecipe), handoffs), child.range);
     const terminalSourceName = terminalReference === undefined ? undefined : `sequence-${sequenceSuffix}-terminal`;
     if (terminalReference !== undefined) state.addReference(terminalSourceName!, terminalReference);
-    const terminalSpecName = `sequence-${sequenceSuffix}-terminal-window-spec`;
-    state.addRecord(terminalSpecName, `${trackId}.sequence.${sequenceSuffix}.terminal-window`, temporalTypes.windowSpec, {
+    const terminalSpecName = `sequence-${sequenceSuffix}-terminal-point-spec`;
+    state.addRecord(terminalSpecName, `${trackId}.sequence.${sequenceSuffix}.terminal-point`, temporalTypes.pointSpec, {
       id: `${id}.terminal`,
       projection: terminal === "program-end"
-        ? { start: { ref: "program.end", offset: { unit: "frames", value: -1 } }, end: { ref: "program.end" } }
+        ? { ref: "program.end" }
         : terminal === "moment"
-          ? { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } }
+          ? { ref: "moment.cue" }
           : terminal === "selection-start"
-            ? { start: { ref: "selection.start" }, end: { ref: "selection.start", offset: { unit: "frames", value: 1 } } }
-            : { start: { ref: "selection.end" }, end: { ref: "selection.end", offset: { unit: "frames", value: 1 } } },
+            ? { ref: "selection.start" }
+            : { ref: "selection.end" },
     }, child.range);
     sequences.push({ suffix: sequenceSuffix, terminal, ...(terminalSourceName === undefined ? {} : { terminalSourceName }), terminalSpecName, frameName, specName,
       ...(clipPathName === undefined ? {} : { clipPathName }), members, sounds: sequenceSounds });

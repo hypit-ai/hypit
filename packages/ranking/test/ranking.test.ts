@@ -19,11 +19,11 @@ import {
   appendRankingSound,
   appendTierBoardItem,
   appendTopThreeItem,
-  appendTriggeredRankingCandidateWindow,
+  appendTriggeredRankingCandidate as appendProjectedTriggeredRankingCandidate,
   buildColumnProgram,
   buildColumnSchedule,
   buildColumnSoundEvents,
-  buildRankingScheduleFromWindows,
+  buildTriggeredRankingSchedule,
   buildTierBoardProgram,
   buildTierBoardSoundEvents,
   buildTopThreeProgram,
@@ -71,7 +71,7 @@ import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { sealText, textManifest, textTypes } from "@hypit/text";
-import { projectMomentWindow, projectSegmentWindow, projectSelectionWindow } from "@hypit/temporal";
+import { projectMomentPoint, projectSegmentWindow, projectSelectionWindow } from "@hypit/temporal";
 import type { TemporalWindow } from "@hypit/temporal";
 import type {
   StructuredElement,
@@ -168,9 +168,9 @@ function appendTriggeredRankingCandidate(
   set: ReturnType<typeof createTriggeredRankingCandidateSet>, spec: RankingItemSpec,
   semantic: typeof semanticTrack, moment: NarrativeMomentRef,
 ) {
-  return appendTriggeredRankingCandidateWindow(set, spec, projectMomentWindow({
+  return appendProjectedTriggeredRankingCandidate(set, spec, projectMomentPoint({
     itemId: spec.id, semantic, moment,
-    projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } },
+    projection: { ref: "moment.cue" },
   }));
 }
 
@@ -182,18 +182,18 @@ function buildRankingSchedule(input: {
   readonly candidates: TriggeredRankingCandidateSet;
   readonly terminal: NarrativeMomentRef;
 }): TriggeredRankingSchedule {
-  return buildRankingScheduleFromWindows({
+  return buildTriggeredRankingSchedule({
     header: input.header,
     items: input.items,
-    semantic: input.semantic,
+    space,
     outer: projectSelectionWindow({
       itemId: input.outer.id, semantic: input.semantic, selection: input.outer,
       projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
     }),
     candidates: input.candidates,
-    terminal: projectMomentWindow({
+    terminal: projectMomentPoint({
       itemId: input.terminal.id, semantic: input.semantic, moment: input.terminal,
-      projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } },
+      projection: { ref: "moment.cue" },
     }),
   });
 }

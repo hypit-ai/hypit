@@ -107,7 +107,7 @@ timeline.element.addEventListener("studio:write", (event) => {
 // Program-level facts never change while a Source is being read, so they live in
 // the header rather than taking a panel that would have to sit over something.
 function renderMeta(snapshot: StudioSnapshot): void {
-  project.textContent = snapshot.source.path.split("/").at(-1) ?? snapshot.source.path;
+  project.textContent = snapshot.source.path.split(/[\\/]/u).at(-1) ?? snapshot.source.path;
   project.title = snapshot.source.path;
   // Sequence facts belong to the project/inspector, not the application chrome.
   // The timeline transport is the single persistent time readout.
@@ -317,10 +317,13 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
   ]);
   const source = clip.temporal === undefined ? undefined : group("Binding", [
     property("Source", `${clip.temporal.source.kind}${clip.temporal.source.id === undefined ? "" : ` · ${clip.temporal.source.id}`}`, "property-wide property-code"),
-    ...(clip.temporal.projection === undefined ? [] : [
-      property("From", clip.temporal.projection.startExpression, "property-wide property-code"),
-      property("To", clip.temporal.projection.endExpression, "property-wide property-code"),
-    ]),
+    ...(clip.temporal.projection === undefined ? []
+      : clip.temporal.projection.kind === "point"
+        ? [property("At", clip.temporal.projection.expression, "property-wide property-code")]
+        : [
+            property("From", clip.temporal.projection.startExpression, "property-wide property-code"),
+            property("To", clip.temporal.projection.endExpression, "property-wide property-code"),
+          ]),
   ]);
   const run = track === undefined ? undefined : group("Run", [
     property("Run", snapshot.run.path, "property-wide property-code"),

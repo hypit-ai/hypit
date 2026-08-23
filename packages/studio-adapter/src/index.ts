@@ -18,12 +18,21 @@ export type StudioTemporalSource = {
   readonly id?: string;
 };
 
-export type StudioTemporalProjection = {
+export type StudioTemporalPointProjection = {
+  readonly kind: "point";
+  readonly expression: string;
+  readonly frame: number;
+};
+
+export type StudioTemporalWindowProjection = {
+  readonly kind: "window";
   readonly startExpression: string;
   readonly endExpression: string;
   readonly startFrame: number;
   readonly endFrameExclusive: number;
 };
+
+export type StudioTemporalProjection = StudioTemporalPointProjection | StudioTemporalWindowProjection;
 
 export type StudioTemporalPhase = {
   readonly id: string;
@@ -37,6 +46,31 @@ export type StudioTemporalLineage = {
   readonly source: StudioTemporalSource;
   readonly projection?: StudioTemporalProjection;
   readonly phases: readonly StudioTemporalPhase[];
+};
+
+export type StudioTemporalConsumerInput = {
+  readonly name: string;
+  readonly record: string;
+  readonly type: { readonly module: { readonly name: string; readonly version: string }; readonly name: string };
+  readonly value?: unknown;
+};
+
+export type StudioTemporalConsumer = {
+  readonly step: string;
+  readonly producer: { readonly module: { readonly name: string; readonly version: string }; readonly name: string };
+  readonly input: string;
+  readonly inputs: readonly StudioTemporalConsumerInput[];
+};
+
+/** One executed Point/Window and the graph edges that consumed that exact record. */
+export type StudioTemporalBinding = {
+  readonly record: string;
+  readonly specRecord?: string;
+  readonly specId?: string;
+  readonly id: string;
+  readonly source: StudioTemporalSource;
+  readonly projection: StudioTemporalProjection;
+  readonly consumers: readonly StudioTemporalConsumer[];
 };
 
 export type StudioInteraction = {
@@ -310,6 +344,8 @@ export type StudioAdapterContext = {
   readonly surfacePreview?: StudioMaterialPreview;
   readonly spans: readonly StudioSpan[];
   readonly values: ReadonlyMap<string, unknown>;
+  /** Temporal values in this Track's actual executed dependency closure. */
+  readonly temporalBindings: readonly StudioTemporalBinding[];
   readonly semantic: StudioSemanticTimeline;
   readonly generic: () => readonly StudioEntityDraft[];
 };
@@ -411,6 +447,35 @@ export const readonlyInteraction: StudioInteraction = {
 export function sameSurfaceValue(context: StudioAdapterContext, port: string): unknown {
   const ref = context.track.trace.outputPorts.find((candidate) => candidate.name === port)?.ref;
   return ref === undefined ? undefined : context.values.get(ref);
+}
+
+function carriesIdentity(value: unknown, id: string): boolean {
+  return value !== null && typeof value === "object"
+    && !Array.isArray(value) && (value as { readonly id?: unknown }).id === id;
+}
+
+/** Find executed projections directly consumed beside a domain value with this identity. */
+export function temporalBindingsFor(
+  context: StudioAdapterContext,
+  subjectId: string,
+  input?: string,
+): readonly StudioTemporalBinding[] {
+  return context.temporalBindings.filter((binding) => binding.consumers.some((consumer) =>
+    (input === undefined || consumer.input === input)
+    && consumer.inputs.some((candidate) => carriesIdentity(candidate.value, subjectId))));
+}
+
+export function temporalLineageFor(
+  context: StudioAdapterContext,
+  subjectId: string,
+  input?: string,
+): StudioTemporalLineage | undefined {
+  const found = temporalBindingsFor(context, subjectId, input)[0];
+  return found === undefined ? undefined : {
+    source: found.source,
+    projection: found.projection,
+    phases: [],
+  };
 }
 
 export function childEntities(

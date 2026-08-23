@@ -4,6 +4,7 @@ import { artifactDependency } from "@hypit/artifact";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@hypit/program-space";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
@@ -107,10 +108,9 @@ export const rankingItemSpecSetSchema: ValueSchema = object({
 const frameSpan = object({ startFrame: { schema: unsigned }, endFrameExclusive: { schema: unsigned } });
 export const triggeredRankingCandidateSetSchema: ValueSchema = object({
   entries: { schema: { kind: "array", items: object({
-    itemId: { schema: string }, window: { schema: object({
+    itemId: { schema: string }, activation: { schema: object({
       id: { schema: string }, source: { schema: object({ kind: { schema: string }, id: { schema: string } }) },
-      projection: { schema: object({ start: { schema: object({}, true) }, end: { schema: object({}, true) } }) },
-      span: { schema: frameSpan },
+      projection: { schema: object({}, true) }, frame: { schema: unsigned },
     }) },
   }) } },
 });
@@ -429,7 +429,7 @@ export const rankingMarkupSurfaces = [
           "Every other property is refused by name, except the board Paint and `stage-stack` keys, which a podium accepts and never reads.",
         ],
       } },
-    { name: "tier", tag: "TierBoard", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, temporalTypes.windowSpec, rankingTypes.schedule, rankingTypes.tierProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
+    { name: "tier", tag: "TierBoard", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, temporalTypes.pointSpec, temporalTypes.windowSpec, rankingTypes.schedule, rankingTypes.tierProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
       vocabulary: {
         summary: "Places ordered Items into tier rows at the Moment owned by each Item, and publishes the board and the Tracks it renders to.",
         appearance:
@@ -564,7 +564,7 @@ export const rankingMarkupSurfaces = [
           "Authoring either sound also connects the Style's `.sound` output, so `style` must name a ColumnStyle written in this Source.",
         ],
       } },
-    { name: "top-three", tag: "TopThree", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, rankingTypes.textItemShell, temporalTypes.windowSpec, rankingTypes.schedule, rankingTypes.topThreeProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
+    { name: "top-three", tag: "TopThree", mode: "structured", outputs: [rankingTypes.header, rankingTypes.itemSpec, rankingTypes.textItemShell, temporalTypes.pointSpec, temporalTypes.windowSpec, rankingTypes.schedule, rankingTypes.topThreeProgram, compositionTypes.visualTrack, compositionTypes.audioTrack],
       vocabulary: {
         summary: "Fills a podium one slot at a time at the Moment owned by each Item, and publishes the board and the Tracks it renders to.",
         appearance:
@@ -633,7 +633,7 @@ export const rankingMarkupSurfaces = [
 
 export const rankingManifest: ModuleManifest = {
   format: "hypit.module@1", name: rankingModuleRef.name, version: rankingModuleRef.version,
-  dependencies: [artifactDependency, mediaDependency, narrativeDependency, semanticTrackDependency, spatialDependency, temporalDependency, compositionDependency, textDependency],
+  dependencies: [artifactDependency, mediaDependency, narrativeDependency, programSpaceDependency, semanticTrackDependency, spatialDependency, temporalDependency, compositionDependency, textDependency],
   types: [
     { name: rankingTypes.header.name },
     { name: rankingTypes.itemSpec.name },
@@ -665,13 +665,13 @@ export const rankingManifest: ModuleManifest = {
     ], needs: [] },
     { name: rankingProducers.appendTriggeredCandidate.name, inputs: [
       { name: "set", type: rankingTypes.triggeredCandidates }, { name: "spec", type: rankingTypes.itemSpec },
-      { name: "window", type: temporalTypes.window },
+      { name: "activation", type: temporalTypes.point },
     ], outputs: [{ name: "set", type: rankingTypes.triggeredCandidates }], needs: [] },
     { name: rankingProducers.schedule.name, inputs: [
       { name: "header", type: rankingTypes.header }, { name: "items", type: rankingTypes.itemSpecs },
-      { name: "semantic", type: semanticTrackTypes.track },
+      { name: "space", type: programSpaceTypes.programSpace },
       { name: "outer", type: temporalTypes.window }, { name: "candidates", type: rankingTypes.triggeredCandidates },
-      { name: "terminal", type: temporalTypes.window },
+      { name: "terminal", type: temporalTypes.point },
     ], outputs: [{ name: "schedule", type: rankingTypes.schedule }], needs: [] },
     { name: rankingProducers.createColumnCandidates.name, inputs: [], outputs: [
       { name: "set", type: rankingTypes.columnCandidates },
@@ -714,7 +714,7 @@ export const rankingManifest: ModuleManifest = {
       { name: eventProducer.name, inputs: [
         { name: "schedule", type: rankingTypes.schedule }, { name: "style", type: styleType }, { name: "specs", type: rankingTypes.itemSpecs },
       ], outputs: [{ name: "events", type: rankingTypes.soundEvents }], needs: [] },
-      { name: renderProducer.name, inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: programType }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+      { name: renderProducer.name, inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: programType }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
     ]),
     { name: rankingProducers.createSounds.name, inputs: [], outputs: [{ name: "sounds", type: rankingTypes.sounds }], needs: [] },
     ...([
@@ -724,7 +724,7 @@ export const rankingManifest: ModuleManifest = {
       name: producer.name, inputs: [{ name: "sounds", type: rankingTypes.sounds }, { name: "media", type: mediaTypes.synchronized }], outputs: [{ name: "sounds", type: rankingTypes.sounds }], needs: [],
     })),
     { name: rankingProducers.renderAudio.name, inputs: [
-      { name: "semantic", type: semanticTrackTypes.track }, { name: "events", type: rankingTypes.soundEvents },
+      { name: "space", type: programSpaceTypes.programSpace }, { name: "events", type: rankingTypes.soundEvents },
       { name: "style", type: rankingTypes.soundStyle }, { name: "sounds", type: rankingTypes.sounds },
     ], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [] },
   ],

@@ -11,12 +11,10 @@ import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize, isDigest } from "@hypit/protocol";
 import { verifyText } from "@hypit/text";
 import type { Text } from "@hypit/text";
-import { projectSemanticProgramSpace } from "@hypit/semantic-track";
-import type { SemanticTrack } from "@hypit/semantic-track";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace } from "@hypit/spatial";
 import { resolveTriggeredSchedule } from "@hypit/temporal";
-import type { TemporalWindow } from "@hypit/temporal";
+import type { TemporalPoint, TemporalWindow } from "@hypit/temporal";
 
 import type {
   ColumnItem,
@@ -291,38 +289,33 @@ export function assertTriggeredRankingCandidateSet(value: TriggeredRankingCandid
     identity(entry.itemId, `TriggeredRankingCandidateSet.entries.${index}.itemId`);
     assert(!itemIds.has(entry.itemId), `TriggeredRankingCandidateSet repeats ${entry.itemId}.`);
     itemIds.add(entry.itemId);
-    assert(entry.window.source.kind === "moment", `TriggeredRankingCandidateSet.entries.${index}.window must come from a Moment.`);
-    frame(entry.window.span.startFrame, `TriggeredRankingCandidateSet.entries.${index}.window.span.startFrame`);
-    frame(entry.window.span.endFrameExclusive, `TriggeredRankingCandidateSet.entries.${index}.window.span.endFrameExclusive`);
-    assert(entry.window.span.endFrameExclusive > entry.window.span.startFrame,
-      `TriggeredRankingCandidateSet.entries.${index}.window is empty.`);
+    frame(entry.activation.frame, `TriggeredRankingCandidateSet.entries.${index}.activation.frame`);
   }
 }
 
-export function appendTriggeredRankingCandidateWindow(
+export function appendTriggeredRankingCandidate(
   set: TriggeredRankingCandidateSet,
   spec: RankingItemSpec,
-  window: TemporalWindow,
+  activation: TemporalPoint,
 ): TriggeredRankingCandidateSet {
   assertTriggeredRankingCandidateSet(set);
   assertRankingItemSpec(spec);
   assert(spec.variant !== "column", `Column Item ${spec.id} consumes a Selection window, not a Moment.`);
-  assert(window.source.kind === "moment", `Ranking Item ${spec.id} requires a Moment-projected window.`);
   assert(!set.entries.some((entry) => entry.itemId === spec.id), `Ranking Item ${spec.id} already has a Moment.`);
   const result: TriggeredRankingCandidateSet = {
-    entries: [...set.entries, { itemId: spec.id, window: structuredClone(window) }],
+    entries: [...set.entries, { itemId: spec.id, activation: structuredClone(activation) }],
   };
   assertTriggeredRankingCandidateSet(result);
   return canonicalize(result) as unknown as TriggeredRankingCandidateSet;
 }
 
-function buildRankingScheduleFromWindows(input: {
+export function buildTriggeredRankingSchedule(input: {
   readonly header: RankingHeader;
   readonly items: RankingItemSpecSet;
-  readonly semantic: SemanticTrack;
+  readonly space: ProgramSpace;
   readonly outer: TemporalWindow;
   readonly candidates: TriggeredRankingCandidateSet;
-  readonly terminal: TemporalWindow;
+  readonly terminal: TemporalPoint;
 }): TriggeredRankingSchedule {
   assertRankingHeader(input.header);
   assertRankingItemSpecSet(input.items);
@@ -330,19 +323,16 @@ function buildRankingScheduleFromWindows(input: {
   assert(input.header.variant !== "column", "Column uses item-owned Selection windows, not the triggered Ranking schedule.");
   assert(input.items.items.length > 0, "Ranking requires at least one Item.");
   assertTriggeredRankingCandidateSet(input.candidates);
-  assert(input.outer.source.kind === "selection", "Triggered Ranking outer window must come from a Selection.");
-  assert(input.terminal.source.kind === "moment", "Triggered Ranking terminal window must come from a Moment.");
-  const space = projectSemanticProgramSpace(input.semantic);
   const expected = new Set(input.items.items.map((item) => item.id));
   const received = new Set(input.candidates.entries.map((entry) => entry.itemId));
   assert(expected.size === received.size && [...expected].every((id) => received.has(id)),
     "Ranking Items and item-owned Moments differ.");
   const ordered = [...input.candidates.entries].sort((left, right) =>
-    left.window.span.startFrame - right.window.span.startFrame || left.itemId.localeCompare(right.itemId));
+    left.activation.frame - right.activation.frame || left.itemId.localeCompare(right.itemId));
   const resolved = resolveTriggeredSchedule({
     outer: { ...input.outer.span },
-    terminalFrame: input.terminal.span.startFrame,
-    triggers: ordered.map((item) => ({ id: item.itemId, frame: item.window.span.startFrame })),
+    terminalFrame: input.terminal.frame,
+    triggers: ordered.map((item) => ({ id: item.itemId, frame: item.activation.frame })),
   });
   const entries = ordered.map((candidate, index) => {
     const exclusive = resolved.exclusive[index]!;
@@ -362,12 +352,9 @@ function buildRankingScheduleFromWindows(input: {
     terminalFrame: resolved.terminalFrame,
     entries,
   };
-  assertRankingSchedule(result, space);
+  assertRankingSchedule(result, input.space);
   return canonicalize(result) as unknown as TriggeredRankingSchedule;
 }
-
-export { buildRankingScheduleFromWindows };
-
 
 export function createColumnWindowCandidateSet(): ColumnWindowCandidateSet {
   return { entries: [] };
@@ -380,7 +367,6 @@ export function assertColumnWindowCandidateSet(value: ColumnWindowCandidateSet):
     identity(entry.itemId, `ColumnWindowCandidateSet.entries.${index}.itemId`);
     assert(!ids.has(entry.itemId), `ColumnWindowCandidateSet repeats ${entry.itemId}.`);
     ids.add(entry.itemId);
-    assert(entry.window.source.kind === "selection", `ColumnWindowCandidateSet.entries.${index}.window must come from a Selection.`);
     frame(entry.window.span.startFrame, `ColumnWindowCandidateSet.entries.${index}.window.span.startFrame`);
     frame(entry.window.span.endFrameExclusive, `ColumnWindowCandidateSet.entries.${index}.window.span.endFrameExclusive`);
     assert(entry.window.span.endFrameExclusive > entry.window.span.startFrame,
@@ -396,7 +382,6 @@ export function appendColumnWindowCandidateWindow(
   assertColumnWindowCandidateSet(set);
   assertRankingItemSpec(spec);
   assert(!spec.preset, `Preset Column Item ${spec.id} cannot consume a Selection window.`);
-  assert(window.source.kind === "selection", `Column Item ${spec.id} requires a Selection-projected window.`);
   assert(!set.entries.some((entry) => entry.itemId === spec.id), `Column Item ${spec.id} already has a Selection window.`);
   const result: ColumnWindowCandidateSet = {
     entries: [...set.entries, { itemId: spec.id, window: structuredClone(window) }]
@@ -432,7 +417,6 @@ function resolveColumnActiveWindows(
   })).sort((left, right) =>
     left.clamped.startFrame - right.clamped.startFrame
     || left.clamped.endFrameExclusive - right.clamped.endFrameExclusive
-    || left.window.source.id.localeCompare(right.window.source.id)
     || left.itemId.localeCompare(right.itemId));
   const resolved = new Map<string, { readonly startFrame: number; readonly endFrameExclusive: number }>();
   let cursor = outer.startFrame;
@@ -459,8 +443,6 @@ export function buildColumnSchedule(input: {
   assert(input.items.variant === "column", "Column Schedule requires Column Items.");
   assert(input.items.items.length > 0, "Column requires at least one Item.");
   assertColumnWindowCandidateSet(input.candidates);
-  assert(input.outer.source.kind === "selection" || input.outer.source.kind === "segment",
-    "Column outer window must come from a Selection or Segment.");
   frame(input.outer.span.startFrame, "Column outer window start");
   frame(input.outer.span.endFrameExclusive, "Column outer window end");
   assert(input.outer.span.endFrameExclusive > input.outer.span.startFrame, "Column outer window is empty.");

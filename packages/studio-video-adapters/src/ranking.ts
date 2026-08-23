@@ -1,15 +1,22 @@
 import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft } from "@hypit/studio-adapter";
-import { readonlyInteraction } from "@hypit/studio-adapter";
+import { readonlyInteraction, temporalLineageFor } from "@hypit/studio-adapter";
 import { frameParameters } from "./geometry.js";
 
 type RankingSchedule = {
   readonly variant?: string;
   readonly outer?: { readonly startFrame: number; readonly endFrameExclusive: number };
+  readonly terminalFrame?: number;
   readonly entries?: readonly ({ readonly itemId: string; readonly mode: "preset"; readonly settled: Span } | {
     readonly itemId: string;
     readonly mode: "reveal";
     readonly preferred: Span;
     readonly active: Span;
+    readonly settled: Span;
+  } | {
+    readonly itemId: string;
+    readonly triggerFrame: number;
+    readonly stage: Span;
+    readonly cumulative: Span;
     readonly settled: Span;
   })[];
 };
@@ -46,17 +53,15 @@ function projectRanking(context: StudioAdapterContext): readonly StudioEntityDra
   const placement = context.placement;
   const scheduleRef = context.track.trace.outputPorts.find((port) => port.name === "schedule")?.ref;
   const schedule = scheduleRef === undefined ? undefined : context.values.get(scheduleRef) as RankingSchedule | undefined;
-  if (placement === undefined || schedule?.outer === undefined || schedule.variant !== "column") return context.generic();
+  if (placement === undefined || schedule?.outer === undefined) return context.generic();
   const boardId = placement.id ?? context.track.outputRef;
   const parent = `${context.track.outputRef}:entity:${boardId}`;
-  const outerMarkerId = placement.referenceAttributes.during?.split(".").at(-1);
-  const outerSourceType = placement.referenceTypes.during;
-  const outerSourceKind = outerSourceType === "NarrativeExcerpt" ? "segment" as const : "selection" as const;
-  const outerStartExpression = outerSourceKind === "segment" ? "segment.start" : "selection.start";
-  const outerEndExpression = outerSourceKind === "segment" ? "segment.end" : "selection.end";
+  const outerTemporal = temporalLineageFor(context, boardId, "outer");
+  const outerMarkerId = outerTemporal?.source.id;
   const group: StudioEntityDraft = {
     id: parent,
     authoredId: boardId,
+    ...(outerMarkerId === undefined ? {} : { markerId: outerMarkerId }),
     label: boardId,
     startFrame: schedule.outer.startFrame,
     endFrameExclusive: schedule.outer.endFrameExclusive,
@@ -64,45 +69,31 @@ function projectRanking(context: StudioAdapterContext): readonly StudioEntityDra
     elementRange: placement.range,
     renderIds: context.spans.map((span) => span.id),
     presentation: { entity: "ranking", shape: "group", depth: 0 },
-    temporal: {
-      source: { kind: outerSourceKind, ...(outerMarkerId === undefined ? {} : { id: outerMarkerId }) },
-      projection: {
-        startExpression: outerStartExpression,
-        endExpression: outerEndExpression,
-        ...schedule.outer,
-      },
-      phases: [],
-    },
+    ...(outerTemporal === undefined ? {} : { temporal: outerTemporal }),
     interaction: readonlyInteraction,
   };
   const children = new Map(placement.children.flatMap((child) =>
     child.id === undefined ? [] : [[child.id, child] as const]));
   const reveals = (schedule.entries ?? []).flatMap((entry): readonly StudioEntityDraft[] => {
-    if (entry.mode !== "reveal") return [];
+    if ("mode" in entry && entry.mode !== "reveal") return [];
     const child = children.get(entry.itemId);
-    const markerId = child?.referenceAttributes.during?.split(".").at(-1);
+    const temporal = temporalLineageFor(context, entry.itemId, "mode" in entry ? "window" : "activation");
+    const markerId = temporal?.source.id;
     const preview = itemPreview(context, entry.itemId);
+    const visible = "mode" in entry ? entry.active : entry.cumulative;
     return [{
       id: `${context.track.outputRef}:entity:${entry.itemId}`,
       authoredId: entry.itemId,
       ...(markerId === undefined ? {} : { markerId }),
       label: child?.attributes.label ?? entry.itemId,
-      startFrame: entry.active.startFrame,
-      endFrameExclusive: entry.active.endFrameExclusive,
+      startFrame: visible.startFrame,
+      endFrameExclusive: visible.endFrameExclusive,
       stackOrder: group.stackOrder + 1,
       ...(child === undefined ? {} : { elementRange: child.range }),
       ...(preview === undefined ? {} : { preview }),
-      lane: "reveal",
+      lane: "mode" in entry ? "reveal" : "activation",
       presentation: { entity: "ranking-reveal", shape: "picture", depth: 0 },
-      temporal: {
-        source: { kind: "selection", ...(markerId === undefined ? {} : { id: markerId }) },
-        projection: {
-          startExpression: "selection.start",
-          endExpression: "selection.end",
-          ...entry.preferred,
-        },
-        phases: [],
-      },
+      ...(temporal === undefined ? {} : { temporal }),
       interaction: readonlyInteraction,
     }];
   }).sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id));
@@ -156,4 +147,32 @@ export const rankingAdapters: readonly StudioAdapter[] = [
     }],
     interaction: readonlyInteraction, project: projectRanking,
   },
+  ...([[
+    "ranking-tier", "tier", "Tier Board",
+  ], [
+    "ranking-top-three", "top-three", "Top Three",
+  ]] as const).map(([id, surface, label]): StudioAdapter => ({
+    id, role: "track",
+    output: { type: "VisualTrack", surface, modules: ["@hypit/ranking"] },
+    family: "component", label, icon: "ranking", realizationPorts: ["schedule"],
+    parameters: [
+      { name: "semantic", label: "Semantic", writable: false },
+      { name: "style", label: "Style", writable: false },
+      { name: "during", label: "During", writable: false },
+      { name: "terminal", label: "Terminal", writable: false },
+      { name: "at", label: "At", writable: false },
+      { name: "frame", label: "Frame", writable: false, referenced: frameParameters },
+      { name: "label", label: "Label", writable: true },
+      { name: "icon", label: "Icon", writable: false },
+    ],
+    poster: { source: "surface-preview" },
+    lane: { layout: "flat", height: { minPx: 64, preferredPx: 80, maxPx: 112 }, groupId: `${id}-activations` },
+    attachments: [{
+      id: "activation", family: "ranking-reveal", label: "Activations", icon: "ranking", facet: "visual",
+      lane: { layout: "flat", height: { minPx: 34, preferredPx: 40, maxPx: 56 } },
+      parameters: [{ name: "at", label: "At", writable: false }],
+    }],
+    interaction: readonlyInteraction,
+    project: projectRanking,
+  })),
 ];

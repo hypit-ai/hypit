@@ -14,11 +14,9 @@ import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize } from "@hypit/protocol";
 import { verifyText } from "@hypit/text";
 import type { Text } from "@hypit/text";
-import type { SemanticTrack } from "@hypit/semantic-track";
-import { projectSemanticProgramSpace } from "@hypit/semantic-track";
 import { assertSpatialFrame } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
-import type { TemporalWindow } from "@hypit/temporal";
+import type { TemporalPoint } from "@hypit/temporal";
 
 import type {
   DeckCardTone,
@@ -228,15 +226,14 @@ function appendDepthStackCardAtFrame(
   return canonicalize(result) as unknown as DepthStackCardSet;
 }
 
-export function appendDepthStackProjectedCard(
+export function appendDepthStackCard(
   set: DepthStackCardSet,
   material: DepthStackCardSet["cards"][number]["material"],
   label: DepthStackCardLabel,
   spec: DepthStackCardSpec,
-  window: TemporalWindow,
+  activation: TemporalPoint,
 ): DepthStackCardSet {
-  assert(window.source.kind === "moment", `DepthStack Card ${spec.id} requires a Moment window.`);
-  return appendDepthStackCardAtFrame(set, material, label, spec, window.span.startFrame);
+  return appendDepthStackCardAtFrame(set, material, label, spec, activation.frame);
 }
 
 function finalizeDepthStackAtFrame(
@@ -245,9 +242,8 @@ function finalizeDepthStackAtFrame(
   frame: SpatialFrame,
   spec: DepthStackSpec,
   terminalFrame: number,
-  semantic: SemanticTrack,
+  space: ProgramSpace,
 ): DepthStackProgram {
-  const space = projectSemanticProgramSpace(semantic);
   assertDepthStackCardSet(set);
   assertDepthStackHeader(header);
   assertSpatialFrame(frame);
@@ -268,17 +264,15 @@ function finalizeDepthStackAtFrame(
   return canonicalize(program) as unknown as DepthStackProgram;
 }
 
-export function finalizeDepthStackAtWindow(
+export function finalizeDepthStack(
   set: DepthStackCardSet,
   header: DepthStackHeader,
   frame: SpatialFrame,
   spec: DepthStackSpec,
-  window: TemporalWindow,
-  semantic: SemanticTrack,
-  boundary: "start" | "end" = "end",
+  terminal: TemporalPoint,
+  space: ProgramSpace,
 ): DepthStackProgram {
-  return finalizeDepthStackAtFrame(set, header, frame, spec,
-    boundary === "start" ? window.span.startFrame : window.span.endFrameExclusive, semantic);
+  return finalizeDepthStackAtFrame(set, header, frame, spec, terminal.frame, space);
 }
 
 export function assertDepthStackProgram(program: DepthStackProgram): void {
