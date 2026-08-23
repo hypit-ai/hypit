@@ -50,7 +50,7 @@
   --caption-rail: #ea93e8;
   --visual: #6a737c;
   --visual-rail: #aeb9c4;
-  --timeline-label-width: 152px;
+  --timeline-label-width: 188px;
   --source-width: 350px;
   --workspace-width: 300px;
   --timeline-height: 390px;
@@ -58,7 +58,8 @@
   --timeline-selection-stroke: 1px;
   --timeline-selection-edge: 3px;
   --timeline-selection-radius: 3px;
-  --timeline-selection-color: rgba(228, 231, 236, .68);
+  /* Original selection geometry; only the highlight is intentionally brighter. */
+  --timeline-selection-color: rgba(255, 255, 255, .92);
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", "PingFang SC", "Microsoft YaHei", "微软雅黑", "Noto Sans CJK SC", sans-serif;
   /* Keep the monospace family before CJK fallbacks so Latin timing/code glyphs
      cannot be claimed by PingFang or Microsoft YaHei. Missing CJK glyphs then
@@ -485,7 +486,7 @@ button:focus-visible, textarea:focus-visible {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: var(--timeline-label-width) minmax(0, 1fr);
+  grid-template-columns: var(--timeline-label-width) 8px minmax(0, 1fr);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -519,10 +520,11 @@ button:focus-visible, textarea:focus-visible {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) 18px;
+  grid-template-columns: 18px minmax(0, 1fr);
   align-items: center;
   gap: 7px;
   padding: 0 15px;
+  text-align: left;
   border-bottom: 0;
   background: transparent;
   isolation: isolate;
@@ -539,14 +541,44 @@ button:focus-visible, textarea:focus-visible {
 .track-icon { width: 18px; height: 18px; display: grid; place-items: center; align-self: center; color: #858a93; }
 .track-icon .icon { display: block; width: 14px; height: 14px; }
 .track-copy { min-width: 0; }
+.track-copy { text-align: left; justify-self: stretch; }
 .track-copy strong {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: left;
 }
 .track-copy strong { color: #cfd2d8; font-size: 11px; font-weight: 500; line-height: 18px; }
+.track-label-has-state { grid-template-columns: 18px minmax(0, 1fr) 18px; }
 .track-state { display: grid; place-items: center; }
+.track-attachment-mark {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  justify-self: center;
+}
+.track-attachment-mark::before,
+.track-attachment-mark::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  background: #737985;
+  border-radius: 999px;
+}
+.track-attachment-mark::before {
+  top: 1px;
+  bottom: 50%;
+  left: 7px;
+  width: 1.5px;
+}
+.track-attachment-mark::after {
+  top: 50%;
+  left: 7px;
+  width: 6px;
+  height: 1.5px;
+  transform: translateY(-50%);
+}
 .track-media { --track: var(--media); --rail: var(--media-rail); }
 .track-speech { --track: var(--speech); --rail: var(--speech-rail); }
 .track-caption { --track: var(--caption); --rail: var(--caption-rail); }
@@ -717,32 +749,12 @@ button:focus-visible, textarea:focus-visible {
   line-height: 17px;
 }
 .track-label-attached {
+  /* The branch marker occupies the same 18px prefix as a root icon;
+     attached and root labels therefore share one exact text column. */
   padding: 0 15px;
   background: transparent;
 }
 .track-label-attached::before { inset: var(--timeline-item-inset-y) 6px; background: #181a1f; }
-.attachment-fold {
-  position: relative;
-  width: 17px;
-  min-width: 17px;
-  height: 17px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-.attachment-fold::before {
-  content: "";
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  width: 5px;
-  height: 5px;
-  border-right: 1px solid #81858d;
-  border-bottom: 1px solid #81858d;
-  transform: rotate(-45deg);
-  transition: transform 100ms ease;
-}
-.attachment-fold.expanded::before { transform: rotate(45deg) translate(-1px, -1px); }
 .clip {
   --track: var(--visual);
   --item-head: color-mix(in srgb, var(--track) 58%, var(--lane));

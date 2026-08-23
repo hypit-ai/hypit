@@ -149,7 +149,6 @@ export const rankingAdapters: readonly StudioAdapter[] = [
       lane: {
         layout: "flat",
         height: { minPx: 34, preferredPx: 40, maxPx: 56 },
-        expandedByDefault: true,
       },
       parameters: [
         { name: "during", label: "During", writable: false },
