@@ -1,22 +1,22 @@
 # Hypit source authoring
 
-Read `quickstart.md`, then the authoritative page it selects under `docs/quickstart/`.
+Read `quickstart.md`, then the authoritative published page it selects.
 Keep Author Source, Recipe Source and Run Source complete and internally consistent rather than
 assembling independent per-shot source fragments.
 
 Before writing an element, read the owning package README and inspect what its Surface actually
 declares — `vocabulary.md` names the command and decides which package owns an element in the first
-place. For `@hypit/<name>@1`, the repository README is `packages/<name>/README.md`. Never invent a
+place. For `@hypit/<name>@1`, inspect its installed declaration and README with the vocabulary tool.
+Never invent a
 component, attribute, child, port, Recipe property or literal value. Do not infer one package's
 syntax from a neighboring package.
 
 Install dependencies after package selections change. Validate with the existing commands:
 
 ```bash
-pnpm check
-pnpm hypit check path/to/main.svml
-pnpm hypit check path/to/recipes.svs
-pnpm hypit check path/to/build.svrun
+hypit check path/to/main.svml
+hypit check path/to/recipes.svs
+hypit check path/to/build.svrun
 ```
 
 Check all of them, not only the Author Source: a Recipe the Author Source references and a Target the

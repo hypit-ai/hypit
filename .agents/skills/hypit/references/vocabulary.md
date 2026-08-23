@@ -25,9 +25,9 @@ deciding anything is missing.
 hypit-reference-video-tools list_svml_packages
 ```
 
-It takes no arguments, needs no reference and no credentials — the binary is named for reconstruction,
-this command is not. It does read `node_modules/@hypit` **relative to the working directory** and
-refuses when that directory is empty, so run it from the repository root.
+It takes no arguments, needs no reference and no credentials — the binary is named for
+reconstruction, this command is not. It reads official vocabulary from the installed Distribution
+and project packages from the current project, so run it from the project directory.
 
 Run it before concluding that a capability is missing. Do not run it to confirm something you already
 know: a vocabulary gap is proven by inspecting the candidates and finding none that fits, not by

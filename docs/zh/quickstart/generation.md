@@ -185,7 +185,7 @@ Endpoint，不会改变作者图。
 `@hypit/seedance-kits` 包含七个纯数据 Text Template。Kit 不是模型包装器：先用通用
 `text:Render` 生成 prompt，再把该 Text 与真实媒体引用显式接入低层 Seedance Surface。
 
-只把项目实际选择的 Kit `.svs` 文件复制进视频项目的 `./kits/` 目录，并导入这份项目内副本，使 Kit 字节保持在 Source Closure 内；项目源码不要反向引用 Hypit 仓库 checkout。
+只把项目实际选择的 Kit `.svs` 文件复制进视频项目的 `./kits/` 目录，并导入这份项目内副本，使 Kit 字节保持在 Source Closure 内；项目源码不要反向引用已安装的 Hypit Distribution。
 
 创作前阅读
 [`@hypit/seedance-kits` 指南](https://github.com/hypit-ai/hypit/blob/main/packages/seedance-kits/README.md)

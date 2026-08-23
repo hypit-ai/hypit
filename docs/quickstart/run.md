@@ -23,8 +23,8 @@ hypit build build.svrun --follow
 hypit get <build-id> --name final.video --to output/final.mp4
 ```
 
-The Quickstart links the checkout's command once. Every command on this page then works as
-`hypit`, including from a separate video project.
+The Quickstart installs the Distribution once. Every command on this page then works as `hypit`
+from any independent video project.
 
 Only `build` submits work. `plan` is the normal preview. `check` is an editing aid; `doctor` is a
 deployment diagnostic. They are safe to run, but not mandatory ceremony before every Build.
@@ -204,9 +204,10 @@ change installed packages. See [Runtime](../guide/runtime.md) for the Profile sc
 
 ## Configure selected credentials
 
-`check` and `plan` do not make live Provider requests and do not need API keys. Before `doctor` or a
-paid/external `build`, configure only the environment variables referenced by the selected Runtime
-Profile:
+`check` and `plan` never make live Provider requests. A graph-only `plan` without a selected Runtime
+needs no deployment credentials; with a selected Runtime, its cheap preflight checks that demanded
+credential references are present. Before `doctor` or a paid/external `build`, configure only the
+variables referenced by the selected Runtime Profile:
 
 | Variable | Provider/use |
 |---|---|
@@ -270,9 +271,9 @@ Doctor validates every selected Runtime role, Endpoint configuration, credential
 presence and bounded environment probes. It never starts the Worker or performs a paid request.
 
 Doctor is intentionally a **full profile audit**. For the environment required by one Run, use
-`plan`: it checks only capabilities demanded by that finite plan. A valid plan remains a
-successful command even when `preflight.ok` is false; `doctor` or `build` enforces deployment
-readiness.
+`plan`: it checks only capabilities demanded by that finite plan. Missing readiness is returned in
+`preflight` and gives the command a non-zero exit status, while the frozen plan remains available in
+JSON for inspection.
 
 ### 3. Check source and inspect the plan
 
@@ -288,9 +289,14 @@ Review the frozen BuildPlan before spending money. The plan shows every Operatio
 Scheduler would issue. With a selected Runtime, it also reports only the relevant Endpoint, credential and
 external-program diagnostics. It never starts external work.
 
-`build` starts or reuses the selected Runtime automatically. Use `runtime up` to prepare it before
-submission and `runtime status` to observe it. `programs up|status|down` is the narrower lifecycle
-view for long lived processes declared by Endpoints.
+`plan` may run without a Runtime at all. Both `plan` and `build` may omit `--runtime` after
+`hypit runtime use`; `build` requires either that selection or an explicit Profile.
+
+Use `runtime up` to install selected upstream packages, prepare Managed Programs and start the
+Worker before submission. `build` repeats only the cheap read-only preflight and refuses before
+submission when anything is missing; it never provisions dependencies. `runtime status` observes
+the deployment, while `programs up|status|down` is the narrower lifecycle view for long-lived
+processes declared by Endpoints.
 
 ### 4. Submit the Build
 

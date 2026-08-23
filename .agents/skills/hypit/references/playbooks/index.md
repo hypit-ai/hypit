@@ -13,7 +13,7 @@ needed for that craft or format.
 3. Read the selected format file and only the additional craft files **its own footer** names.
    That footer is the complete list; this index does not repeat it, and a footer that is wrong is
    fixed in the footer.
-4. Read `packages/<name>/README.md` for every package whose elements you write, and the relevant
+4. Read the installed `packages/<name>/README.md` for every package whose elements you write, and the relevant
    authoritative Quickstart page for the model behind them.
 
 No document a whole job needs may be reachable only through a conditional file. Craft and format

@@ -5,8 +5,14 @@ description: 七个分层、依赖边界、包的结构与 facet。
 
 # 包架构
 
-`packages/` 下的工作区包被组织成七个架构分层。每个包自行声明依赖。根工作区会安装完整源码树，让 Package
-Loader 能解析任意被显式选择的包；但 TypeScript 不维护会掩盖漏依赖的中央路径别名。
+`packages/` 下的内部模块被组织成七个架构分层。每个模块自行声明依赖。发布的 `hypit` Distribution
+包含完整官方模块树，让 Package Loader 能解析任意被显式选择的包；但 TypeScript 不维护会掩盖漏依赖的中央路径别名。
+
+这里的完整官方树指首方源码/代码，并不意味着首次安装就下载全部上游依赖。基础 npm 安装只带
+启动器必需依赖；显式 `runtime up` 才会把所选 Runtime Adapter 的普通 npm 依赖准备到机器共享
+目录。Fontsource 等作者侧可选素材由编译器给出精确的 `hypit packages install` 命令。npm 的标准
+`package.json` 是唯一包集合依据；Hypit 不再造第二份 lock、receipt 或哈希库存。项目自己的第三方
+组件及依赖仍由项目包管理器负责。
 
 ## 七个分层
 
@@ -134,7 +140,7 @@ Frontend；不存在一个认识全部语法的中央解析器。
 @hypit/artifact-store-fs     文件系统 Artifact
 @hypit/artifact-store-s3     S3 Artifact
 @hypit/credential-store-env  环境变量凭据
-@hypit/credential-store-keychain macOS Keychain 凭据
+@hypit/credential-store-os      macOS 钥匙串或 Windows 凭据锁
 ```
 
 ### Layer 7：Applications

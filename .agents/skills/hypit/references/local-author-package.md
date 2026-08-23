@@ -21,10 +21,10 @@ package that draws one font, and the loop cannot repair what the package cannot 
 
 ## Write `package.json` and the activation first
 
-Write those two before any implementation, run `pnpm install` once, and only then start on the
-vocabulary. They are short and almost the same in every package, and leaving them until the end means
-discovering at the end that nothing is linked — a failure that looks like broken code and is not.
-Everything after them is specific to this component and cannot be copied from anywhere.
+Write those two before any implementation. If the package has third-party npm dependencies, use the
+project's package manager once; otherwise no install step is needed. Leaving activation until the end
+means discovering at the end that nothing is selected — a failure that looks like broken code and is
+not. Everything after them is specific to this component and cannot be copied from anywhere.
 
 ## Required reading
 
@@ -36,13 +36,14 @@ rules here are the contract, the closest package is only a shape to learn from.
 
 Then read:
 
-1. `docs/guide/component-anatomy.md` — the roles every component package fills, and how to find each
+1. `https://narratage.hypit.ai/guide/component-anatomy` — the roles every component package fills, and how to find each
    one in an existing package. Read this first; it is what the rest is measured against.
-2. `docs/guide/author-packages.md`
-3. `docs/guide/packages.md` and `docs/guide/conventions.md`
-4. `packages/component-kit/README.md`
+2. `https://narratage.hypit.ai/guide/author-packages`
+3. `https://narratage.hypit.ai/guide/packages` and `https://narratage.hypit.ai/guide/conventions`
+4. the installed `@hypit/component-kit` README
 
-Then open the closest existing package and read **the roles you are about to write**, not the package
+Use `hypit paths --json` to locate the installed Distribution. Then open the closest existing
+package there and read **the roles you are about to write**, not the package
 end to end. Anatomy names them; find them by what they export, since the filenames differ — `ranking`
 calls two of them `schedule.ts` and `render.ts`, `media-track` calls them `program.ts` and `lower.ts`,
 `comment-sticker` calls them `program.ts` and `author.ts`.
@@ -77,7 +78,7 @@ notice it drifted. That is acceptable for a project-local package, which is part
 rather than a library. If the behaviour turns out to be generally useful, that is the promotion this
 section already describes — not a reason to add a parameter to the shared package after all.
 
-The project is never the Hypit checkout. Do not move a local package into an official package
+The project is never the Hypit Distribution. Do not move a local package into an official package
 automatically. After the result is accepted, offer promotion as a separate contribution.
 
 The component reaches Studio's generic Track fallback until its project adds a companion package,
@@ -183,7 +184,7 @@ tool Distribution. The `@hypit/*` namespace is reserved for that active Distribu
 its own npm scope and cannot shadow official ABI packages with a same-named dependency. A project
 does not join Hypit's workspace and needs no npm link merely to expose
 one of its own packages. Use the project's own package manager only when its package genuinely adds
-third-party npm dependencies. Do not modify the Hypit checkout, hide packages under `.hypit/` or
+third-party npm dependencies. Do not modify the Hypit Distribution, hide packages under `.hypit/` or
 invent another loader.
 
 Repair in this order:
@@ -195,13 +196,12 @@ Repair in this order:
 5. implementation behavior;
 6. source usage.
 
-Use only existing checks:
+Use the installed checks:
 
 ```bash
-pnpm check
-pnpm hypit check path/to/main.svml
-pnpm hypit check path/to/recipes.svs
-pnpm hypit check path/to/build.svrun
+hypit check path/to/main.svml
+hypit check path/to/recipes.svs
+hypit check path/to/build.svrun
 ```
 
 A package that cannot be *wired* is not done. `hypit check` proves the Source is legal, and nothing
@@ -210,8 +210,7 @@ the preview check and repair until it passes — a graph failure is not a differ
 work that is not finished, and it is not bounded by the loop's attempt ceiling:
 
 ```bash
-# from the repository root: tsx is the repository's dependency
-node --import tsx .agents/skills/hypit/scripts/preview-check.mjs path/to/build.svrun
+hypit-preview-check path/to/build.svrun
 ```
 
 It takes the Run Source, not the `.svml`. A pass here means the graph reaches a Film and a semantic
