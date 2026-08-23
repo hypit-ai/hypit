@@ -14,7 +14,7 @@ import type { SvsRecipe } from "@hypit/svs";
 
 import {
   appendColumnItem,
-  appendColumnWindowCandidateWindow,
+  appendColumnWindow,
   appendRankingItemSpec,
   appendRankingSound,
   appendTierBoardItem,
@@ -29,7 +29,7 @@ import {
   buildTopThreeProgram,
   buildTopThreeSoundEvents,
   createColumnItemSet,
-  createColumnWindowCandidateSet,
+  createColumnWindowSet,
   createRankingItemSpecSet,
   createRankingSoundSet,
   createTierBoardItemSet,
@@ -128,6 +128,7 @@ const selection = (id: string, startAnchorId: string, endAnchorId: string): Narr
 });
 const early = selection("early", "early-start", "early-end");
 const overlapping = selection("overlapping", "overlap-start", "overlap-end");
+const middle = selection("middle", "early-end", "overlap-end");
 const late = selection("late", "late-start", "late-end");
 const triggerAnchors = ["one", "two", "three", "four"] as const;
 const font: FontArtifactRef = {
@@ -198,11 +199,11 @@ function buildRankingSchedule(input: {
   });
 }
 
-function appendColumnWindowCandidate(
-  set: ReturnType<typeof createColumnWindowCandidateSet>, spec: ColumnItemSpec,
+function appendProjectedColumnWindow(
+  set: ReturnType<typeof createColumnWindowSet>, spec: ColumnItemSpec,
   semantic: typeof semanticTrack, selection: NarrativeSelectionRef,
 ) {
-  return appendColumnWindowCandidateWindow(set, spec, projectSelectionWindow({
+  return appendColumnWindow(set, spec, projectSelectionWindow({
     itemId: spec.id, semantic, selection,
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
   }));
@@ -231,14 +232,14 @@ function columnSchedule(
   windows: Readonly<Record<string, NarrativeSelectionRef>>,
   outerWindow = projectColumnSegmentOuterWindow(semanticTrack, rankingSegment),
 ): ColumnSchedule {
-  let candidates = createColumnWindowCandidateSet();
+  let set = createColumnWindowSet();
   for (const value of values) {
     if (value.preset) continue;
     const timing = windows[value.id];
     if (timing === undefined) throw new Error(`Missing test Selection for ${value.id}.`);
-    candidates = appendColumnWindowCandidate(candidates, value, semanticTrack, timing);
+    set = appendProjectedColumnWindow(set, value, semanticTrack, timing);
   }
-  return buildColumnSchedule({ header: owner, items: specs(owner, values), outer: outerWindow, candidates });
+  return buildColumnSchedule({ header: owner, items: specs(owner, values), outer: outerWindow, windows: set });
 }
 
 test("RankingSchedule derives chronological Item order from item-owned Moments and preserves a settled suffix", () => {
@@ -297,7 +298,7 @@ test("TierBoard owns cumulative direct/stage placement and rejects invalid sched
   }), /outside|strictly increasing/u);
 });
 
-test("Column projects a Segment outer, keeps rank independent from reveal time, presets rows and avoids overlaps", () => {
+test("Column consumes explicit disjoint reveal windows without changing them", () => {
   const owner = header("column", "column");
   const semantic = [
     columnSpec("late-rank-one", 1),
@@ -316,19 +317,19 @@ test("Column projects a Segment outer, keeps rank independent from reveal time, 
   const value = columnSchedule(owner, semantic, {
     "late-rank-one": late,
     "early-rank-five": early,
-    "overlap-rank-two": overlapping,
+    "overlap-rank-two": middle,
   }, outerWindow);
   const program = buildColumnProgram(owner, canvas, frame, value, style, set);
   const track = renderColumn(space, program);
   assert.deepEqual(program.items.map((item) => [item.id, item.rank]), [
     ["late-rank-one", 1], ["overlap-rank-two", 2], ["preset-rank-three", 3], ["early-rank-five", 5],
   ]);
-  const active = value.entries.filter((entry) => entry.mode === "reveal")
-    .map((entry) => [entry.itemId, entry.preferred, entry.active]);
-  assert.deepEqual(active, [
-    ["late-rank-one", { startFrame: 120, endFrameExclusive: 160 }, { startFrame: 120, endFrameExclusive: 160 }],
-    ["overlap-rank-two", { startFrame: 55, endFrameExclusive: 95 }, { startFrame: 65, endFrameExclusive: 95 }],
-    ["early-rank-five", { startFrame: 25, endFrameExclusive: 65 }, { startFrame: 25, endFrameExclusive: 65 }],
+  const windows = value.entries.filter((entry) => entry.mode === "reveal")
+    .map((entry) => [entry.itemId, entry.window]);
+  assert.deepEqual(windows, [
+    ["late-rank-one", { startFrame: 120, endFrameExclusive: 160 }],
+    ["overlap-rank-two", { startFrame: 65, endFrameExclusive: 95 }],
+    ["early-rank-five", { startFrame: 25, endFrameExclusive: 65 }],
   ]);
   const preset = value.entries.find((entry) => entry.itemId === "preset-rank-three")!;
   assert.deepEqual(preset, { itemId: "preset-rank-three", mode: "preset", settled: outerWindow.span });
@@ -337,6 +338,27 @@ test("Column projects a Segment outer, keeps rank independent from reveal time, 
   assert.equal(stages.find((item) => item.id.includes("overlap-rank-two"))?.elements.some((item) => item.kind === "image"), true);
   assert.equal(track.presents.some((item) => item.id.endsWith(":item:preset-rank-three:stage")), false);
   assert.equal(track.presents.find((item) => item.id.endsWith(":item:preset-rank-three:settled"))?.span.startFrame, 10);
+});
+
+test("Column rejects overlapping or out-of-bounds reveal windows", () => {
+  const owner = header("column", "strict-column");
+  const values = [columnSpec("one", 1), columnSpec("two", 2)];
+  assert.throws(() => columnSchedule(owner, values, { one: early, two: overlapping }),
+    /windows one and two overlap/u);
+
+  const outerWindow = projectColumnSegmentOuterWindow(semanticTrack, rankingSegment);
+  let windows = createColumnWindowSet();
+  const projected = projectSelectionWindow({
+    itemId: "one", semantic: semanticTrack, selection: early,
+    projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
+  });
+  windows = appendColumnWindow(windows, values[0]!, {
+    ...projected,
+    span: { startFrame: outerWindow.span.startFrame - 1, endFrameExclusive: projected.span.endFrameExclusive },
+  });
+  assert.throws(() => buildColumnSchedule({
+    header: owner, items: specs(owner, [values[0]!]), outer: outerWindow, windows,
+  }), /one window is outside/u);
 });
 
 test("TopThree accepts one to three optional-image Items and removes active accent in the settled suffix", () => {
@@ -374,7 +396,7 @@ test("visual and sound event plans share exact phase frames while absent sound s
   const decoded = decodeColumnStyle(recipe("ranking.column", {
     "appear-frames": 4, "move-frames": 6, "appear-gain": 0.8, "move-gain": 0.6,
   }), font);
-  const value = columnSchedule(owner, semantic, { one: early, two: overlapping });
+  const value = columnSchedule(owner, semantic, { one: early, two: middle });
   const events = buildColumnSoundEvents(value, decoded.style, specs(owner, semantic));
   assert.deepEqual(events.events.map((item) => [item.kind, item.frame]), [
     ["appear", 25], ["move", 59], ["appear", 65], ["move", 89],

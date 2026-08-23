@@ -76,7 +76,7 @@ export function createRankingFragment(
     { id: "specs", producer: rankingProducers.createSpecs, inputs: { header: input("header") }, result: { kind: "output", name: "set" } },
     { id: "resolved", producer: selected.create, inputs: {}, result: { kind: "output", name: "set" } },
     { id: "candidates", producer: variant === "column"
-      ? rankingProducers.createColumnCandidates
+      ? rankingProducers.createColumnWindows
       : rankingProducers.createTriggeredCandidates, inputs: {}, result: { kind: "output" as const, name: "set" } },
   ];
   let specs = operation("specs");
@@ -135,7 +135,7 @@ export function createRankingFragment(
       operations.push({
         id: timingId,
         producer: variant === "column"
-          ? rankingProducers.appendColumnCandidate
+          ? rankingProducers.appendColumnWindow
           : rankingProducers.appendTriggeredCandidate,
         inputs: {
           set: candidates, spec: resolvedSpec,
@@ -159,7 +159,7 @@ export function createRankingFragment(
     operations.push({
       id: "schedule",
       producer: rankingProducers.columnSchedule,
-      inputs: { header: input("header"), items: specs, outer: operation("outer-window"), candidates },
+      inputs: { header: input("header"), items: specs, outer: operation("outer-window"), windows: candidates },
       result: { kind: "output", name: "schedule" },
     });
   } else {

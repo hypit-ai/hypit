@@ -39,13 +39,13 @@ export type TriggeredRankingCandidateSet = {
   readonly entries: readonly TriggeredRankingCandidate[];
 };
 
-export type ColumnWindowCandidate = {
+export type ColumnWindowInput = {
   readonly itemId: string;
   readonly window: TemporalWindow;
 };
 
-export type ColumnWindowCandidateSet = {
-  readonly entries: readonly ColumnWindowCandidate[];
+export type ColumnWindowSet = {
+  readonly entries: readonly ColumnWindowInput[];
 };
 
 export type ColumnScheduleEntry =
@@ -57,8 +57,7 @@ export type ColumnScheduleEntry =
   | {
       readonly itemId: string;
       readonly mode: "reveal";
-      readonly preferred: FrameSpan;
-      readonly active: FrameSpan;
+      readonly window: FrameSpan;
       readonly settled: FrameSpan;
     };
 

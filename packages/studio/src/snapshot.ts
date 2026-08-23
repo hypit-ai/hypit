@@ -22,7 +22,7 @@ import {
 } from "./studio-registry.js";
 import type { StudioAdapterRegistry } from "./studio-registry.js";
 import type { StudioEntityDraft } from "./studio-registry.js";
-import { parametersForDraft, timingEditHandles } from "./parameters.js";
+import { parametersForDraft, timelineAdjustHandles } from "./parameters.js";
 import type { StudioSourceFile } from "./parameters.js";
 
 type Present = {
@@ -106,7 +106,9 @@ function scriptMap(
   const moments = (found.moments ?? []) as ScriptMap["moments"];
   return {
     recordId: String(found.record ?? ""),
+    sourcePath: String(found.sourcePath ?? ""),
     range: (found.range ?? { start: 0, end: 0 }) as Range,
+    content: (found.content ?? { start: 0, end: 0 }) as Range,
     // A Segment is the outermost range a Script declares; a Selection written
     // inside one is a level down, and one inside that another.
     segments: segments.map((segment) => ({ ...segment, depth: 0 })),
@@ -226,11 +228,17 @@ function semanticTimeline(
     const startFrame = frame(selection.startAnchorId);
     const endFrameExclusive = frame(selection.endAnchorId);
     if (startFrame === undefined || endFrameExclusive === undefined || endFrameExclusive <= startFrame) return [];
-    return [{ id: selection.id, startFrame, endFrameExclusive }];
+    return [{
+      id: selection.id,
+      startAnchorId: selection.startAnchorId,
+      endAnchorId: selection.endAnchorId,
+      startFrame,
+      endFrameExclusive,
+    }];
   });
   const moments = (narrative.moments ?? []).flatMap((moment) => {
     const at = frame(moment.anchorId);
-    return at === undefined ? [] : [{ id: moment.id, frame: at }];
+    return at === undefined ? [] : [{ id: moment.id, anchorId: moment.anchorId, frame: at }];
   });
   if (segments.length === 0) throw new Error("Studio SemanticTrack resolves no authored Segment anchors.");
   const provenance: CandidateProvenance = {
@@ -246,7 +254,9 @@ function semanticTimeline(
     // the authored Speech Track id into this label: it is the timebase, not a
     // second Speech output.
     presentation: registry.semanticTimelinePresentation(),
-    anchors: anchors.sort((left, right) => left.frame - right.frame || left.id.localeCompare(right.id)),
+    // Narrative order is the semantic ruler. Frame ties are common and must
+    // not erase the discrete 2M+2N anchor ordering used by writeback.
+    anchors,
     segments: segments.sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
     tokens: tokens.sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
     selections: selections.sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
@@ -348,7 +358,12 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
         declarations: registry.parameterDeclarations(item, placement, draft.lane),
         placements: built.source.observations.placements,
       });
-      const editHandles = timingEditHandles(parameters, registry.editOperations(item, placement, draft.lane));
+      const editHandles = timelineAdjustHandles(
+        parameters,
+        registry.timelineGestures(item, placement, draft.lane),
+        draft.temporal,
+        semantic,
+      );
       return parameters.length === 0 && editHandles.length === 0
         ? draft
         : { ...draft, parameters, ...(editHandles.length === 0 ? {} : { editHandles }) };

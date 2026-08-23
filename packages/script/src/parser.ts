@@ -35,6 +35,7 @@ type MutableSegment = {
   readonly atoms: ParsedAtom[];
   readonly tokenStart: number;
   readonly sourceStart: number;
+  readonly contentStart: number;
   lexicalRun: string;
   readonly lexicalMarkers: Array<{ readonly position: number; readonly offset: number }>;
 };
@@ -131,7 +132,9 @@ export function parseScript(
   input: string,
   sourceOffset = 0,
 ): ParsedNarrative {
-  const source = input.replace(/\r\n?/gu, "\n").normalize("NFC");
+  // Source ranges are a public inverse used by Studio and diagnostics. Parse
+  // the exact UTF-16 text so CRLF and decomposed Unicode never shift an edit.
+  const source = input;
   const fail = (code: string, message: string, offset?: number): never => {
     throw new ScriptSyntaxError(code, message, sourceName, offset === undefined ? undefined : sourceOffset + offset);
   };
@@ -520,7 +523,7 @@ export function parseScript(
     }
   };
 
-  const closeCurrent = (end: number, selfClosing: boolean): void => {
+  const closeCurrent = (end: number, selfClosing: boolean, contentEnd = end): void => {
     const segment = current
       ?? fail("SCRIPT_SEGMENT_CLOSE", "Segment close has no matching open.", end);
     finishLexicalRun();
@@ -533,6 +536,7 @@ export function parseScript(
       tokenEndExclusive: tokens.length,
       atoms: segment.atoms,
       range: { start: segment.sourceStart, end: sourceOffset + end },
+      contentRange: { start: segment.contentStart, end: sourceOffset + contentEnd },
       selfClosing,
     });
     current = undefined;
@@ -559,16 +563,18 @@ export function parseScript(
         if (segments.some((segment) => segment.id === id)) {
           fail("SCRIPT_SEGMENT_DUPLICATE", `Duplicate Segment id "${id}".`, offset);
         }
+        const contentStart = offset + open[0].length;
         current = {
           id,
           index: segments.length,
           atoms: [],
           tokenStart: tokens.length,
           sourceStart: sourceOffset + offset,
+          contentStart: sourceOffset + contentStart,
           lexicalRun: "",
           lexicalMarkers: [],
         };
-        offset += open[0].length;
+        offset = contentStart;
         if (self) closeCurrent(offset, true);
         continue;
       }
@@ -587,8 +593,9 @@ export function parseScript(
       if (close[1] !== current.id) {
         fail("SCRIPT_SEGMENT_MISMATCH", `Segment "${current.id}" was closed by "${close[1]}".`, offset);
       }
+      const contentEnd = offset;
       offset += close[0].length;
-      closeCurrent(offset, false);
+      closeCurrent(offset, false, contentEnd);
       continue;
     }
 

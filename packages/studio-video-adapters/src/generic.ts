@@ -43,6 +43,28 @@ type TerminalAudioTrack = {
   }[];
 };
 
+function withTemporalLineage(
+  context: StudioAdapterContext,
+  entity: StudioEntityDraft,
+): StudioEntityDraft {
+  const identities = [
+    entity.authoredId,
+    entity.markerId,
+    entity.presentId,
+    ...(entity.renderIds ?? []),
+  ].filter((value): value is string => value !== undefined);
+  const temporal = identities.map((identity) => itemTemporalLineage(context, identity))
+    .find((candidate) => candidate !== undefined);
+  if (temporal === undefined) return entity;
+  return {
+    ...entity,
+    ...(temporal.source.kind === "program" || temporal.source.id === undefined
+      ? {}
+      : { markerId: temporal.source.id }),
+    temporal,
+  };
+}
+
 /** Terminal media has one Studio treatment regardless of which package authored it. */
 export function projectTerminalVisual(context: StudioAdapterContext): readonly StudioEntityDraft[] {
   const presents = new Map(((context.track.value as TerminalVisualTrack).presents ?? [])
@@ -52,7 +74,7 @@ export function projectTerminalVisual(context: StudioAdapterContext): readonly S
     const material = present?.elements?.find((element) =>
       (element.kind === "image" || element.kind === "video") && element.artifact?.digest !== undefined);
     const digest = material?.artifact?.digest;
-    return {
+    return withTemporalLineage(context, {
       ...entity,
       presentation: { entity: "media-item", shape: "picture", depth: 0 },
       ...(digest === undefined ? {} : {
@@ -61,7 +83,7 @@ export function projectTerminalVisual(context: StudioAdapterContext): readonly S
           url: `/__studio/material/${digest}`,
         },
       }),
-    };
+    });
   });
 }
 
@@ -70,13 +92,13 @@ export function projectTerminalAudio(context: StudioAdapterContext): readonly St
     .map((clip) => [clip.id, clip] as const));
   return context.generic().map((entity, index) => {
     const digest = clips.get(context.spans[index]?.id ?? "")?.artifact?.digest;
-    return {
+    return withTemporalLineage(context, {
       ...entity,
       presentation: { entity: "audio-clip", shape: "waveform", depth: 0 },
       ...(digest === undefined ? {} : {
         preview: { kind: "audio" as const, url: `/__studio/material/${digest}` },
       }),
-    };
+    });
   });
 }
 
@@ -105,11 +127,15 @@ function projectText(context: StudioAdapterContext): readonly StudioEntityDraft[
 }
 
 function projectCaption(context: StudioAdapterContext): readonly StudioEntityDraft[] {
-  return context.generic().map((entity) => ({
+  return context.generic().map((entity) => withTemporalLineage(context, {
     ...entity,
     presentation: { entity: "caption-cue", shape: "text", depth: 0 },
     interaction: readonlyInteraction,
   }));
+}
+
+function projectGenericComponent(context: StudioAdapterContext): readonly StudioEntityDraft[] {
+  return context.generic().map((entity) => withTemporalLineage(context, entity));
 }
 
 export const genericAdapters: readonly StudioAdapter[] = [
@@ -117,7 +143,7 @@ export const genericAdapters: readonly StudioAdapter[] = [
   {
     id: "text", role: "text", output: { type: "VisualTrack", surface: "track", modules: ["@hypit/typography-track"] },
     family: "text", icon: "text", interaction: readonlyInteraction,
-    editOperations: ["move", "trim-start", "trim-end"],
+    timelineGestures: ["move", "trim-start", "trim-end"],
     parameters: [
       { name: "semantic", label: "Semantic", writable: false },
       { name: "placement", label: "Placement", writable: false },
@@ -138,7 +164,7 @@ export const genericAdapters: readonly StudioAdapter[] = [
   {
     id: "caption", role: "caption", output: { type: "VisualTrack", surface: "track", modules: ["@hypit/caption-fine"] },
     family: "caption", icon: "captions", interaction: readonlyInteraction,
-    editOperations: ["move", "trim-start", "trim-end"],
+    timelineGestures: ["move", "trim-start", "trim-end"],
     parameters: [
       { name: "document", label: "Document", writable: false },
       { name: "semantic", label: "Semantic", writable: false },
@@ -157,7 +183,7 @@ export const genericAdapters: readonly StudioAdapter[] = [
     id: "component", role: "track",
     output: { type: "VisualTrack", modules: ["@hypit/ranking", "@hypit/comment-sticker", "@hypit/screen-overlay"] },
     family: "component", icon: "component", interaction: readonlyInteraction,
-    editOperations: ["move", "trim-start", "trim-end"],
+    timelineGestures: ["move", "trim-start", "trim-end"],
     parameters: [
       { name: "canvas", label: "Canvas", writable: false },
       { name: "semantic", label: "Semantic", writable: false },
@@ -202,10 +228,11 @@ export const genericAdapters: readonly StudioAdapter[] = [
       { name: "scan-line-opacity", label: "Scan-line opacity", control: "number", writable: true },
       { name: "motion-rate", label: "Motion rate", control: "number", writable: true },
     ],
+    project: projectGenericComponent,
     lane: { layout: "flat", height: videoLaneHeights.component },
   },
   { id: "audio-track", role: "track", output: { type: "AudioTrack" }, family: "audio", icon: "waveform", interaction: readonlyInteraction,
-    editOperations: ["move", "trim-start", "trim-end"],
+    timelineGestures: ["move", "trim-start", "trim-end"],
     parameters: [
       { name: "semantic", label: "Semantic", writable: false },
       { name: "during", label: "During", writable: false },
@@ -227,7 +254,7 @@ export const genericAdapters: readonly StudioAdapter[] = [
     ],
     project: projectTerminalAudio, lane: { layout: "flat", height: videoLaneHeights.audio } },
   { id: "visual-track", role: "track", output: { type: "VisualTrack" }, family: "media", icon: "video", interaction: readonlyInteraction,
-    editOperations: ["move", "trim-start", "trim-end"],
+    timelineGestures: ["move", "trim-start", "trim-end"],
     parameters: [
       { name: "during", label: "During", writable: false },
       { name: "start", label: "Start", writable: true },

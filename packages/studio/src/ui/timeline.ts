@@ -2,13 +2,13 @@ import type {
   SemanticToken,
   StudioSnapshot,
 } from "../shared.js";
-import type { StudioEditSource } from "@hypit/studio-adapter";
+import type { StudioEditHandle } from "@hypit/studio-adapter";
 import { icon, setIcon } from "./icons.js";
 import { mountMaterialPreview } from "./material-preview.js";
 import type { State, Store } from "./selection.js";
 import { createHandle } from "./resize.js";
 import { createZoom } from "./zoom.js";
-import { writeSourceTransaction } from "./writeback.js";
+import { applyStudioMutation } from "./writeback.js";
 
 export type Timeline = {
   readonly element: HTMLElement;
@@ -192,15 +192,16 @@ export function createTimeline(store: Store): Timeline {
     return distance <= threshold ? nearest : frame;
   };
 
-  const frameAt = (clientX: number): number => {
+  const rawFrameAt = (clientX: number): number => {
     const box = lanes.getBoundingClientRect();
     if (box.width === 0 || state === undefined) return 0;
     const across = Math.max(0, Math.min(1, (clientX - box.left) / box.width));
     const shown = zoom.window();
-    return snapFrame(Math.floor(
+    return Math.floor(
       (shown.start + across * (shown.end - shown.start)) * state.snapshot.space.frameCount,
-    ));
+    );
   };
+  const frameAt = (clientX: number): number => snapFrame(rawFrameAt(clientX));
 
   const frameTimecode = (snapshot: StudioSnapshot, frame: number): string => {
     const rate = Math.max(1, Math.round(fps(snapshot)));
@@ -213,12 +214,146 @@ export function createTimeline(store: Store): Timeline {
   let pointerDownOnItem = false;
   let activeEdit: {
     readonly clip: StudioSnapshot["tracks"][number]["clips"][number];
-    readonly operation: "move" | "trim-start" | "trim-end";
-    readonly sources: readonly StudioEditSource[];
+    readonly handle: StudioEditHandle;
     readonly startFrame: number;
+    readonly pointerAnchorIndex?: number;
     readonly pointerId: number;
     readonly node: HTMLElement;
+    readonly originalLeft: string;
+    readonly originalWidth: string;
   } | undefined;
+
+  const nearestAnchorIndex = (
+    frame: number,
+    indices: readonly number[],
+    preferredIndex?: number,
+  ): number | undefined => {
+    if (state === undefined) return undefined;
+    const anchors = state.snapshot.semantic.anchors;
+    const preferredKind = preferredIndex === undefined ? undefined : anchors[preferredIndex]?.kind;
+    return [...indices].sort((left, right) => {
+      const leftAnchor = anchors[left]!;
+      const rightAnchor = anchors[right]!;
+      return Math.abs(leftAnchor.frame - frame) - Math.abs(rightAnchor.frame - frame)
+        || Number(leftAnchor.kind !== preferredKind) - Number(rightAnchor.kind !== preferredKind)
+        || Math.abs(left - (preferredIndex ?? left)) - Math.abs(right - (preferredIndex ?? right))
+        || left - right;
+    })[0];
+  };
+
+  const semanticTarget = (
+    edit: NonNullable<typeof activeEdit>,
+    nextFrame: number,
+  ): { readonly kind: "selection"; readonly startAnchorId: string; readonly endAnchorId: string }
+    | { readonly kind: "moment"; readonly anchorId: string }
+    | undefined => {
+    if (state === undefined || edit.handle.semantic === undefined) return undefined;
+    const semantic = edit.handle.semantic;
+    const anchors = state.snapshot.semantic.anchors;
+    if (semantic.kind === "moment") {
+      if (edit.handle.gesture !== "move") return undefined;
+      const currentIndex = anchors.findIndex((anchor) => anchor.id === semantic.anchorId);
+      const anchorIndex = nearestAnchorIndex(
+        nextFrame,
+        anchors.map((_, index) => index),
+        currentIndex < 0 ? undefined : currentIndex,
+      );
+      return anchorIndex === undefined ? undefined : { kind: "moment", anchorId: anchors[anchorIndex]!.id };
+    }
+    const startIndex = anchors.findIndex((anchor) => anchor.id === semantic.startAnchorId);
+    const endIndex = anchors.findIndex((anchor) => anchor.id === semantic.endAnchorId);
+    if (startIndex < 0 || endIndex < 0 || startIndex >= endIndex) return undefined;
+    let nextStart = startIndex;
+    let nextEnd = endIndex;
+    if (edit.handle.gesture === "trim-start") {
+      const allowed = anchors.flatMap((anchor, index) =>
+        index < endIndex && anchor.frame < anchors[endIndex]!.frame ? [index] : []);
+      nextStart = nearestAnchorIndex(nextFrame, allowed, startIndex) ?? startIndex;
+    } else if (edit.handle.gesture === "trim-end") {
+      const allowed = anchors.flatMap((anchor, index) =>
+        index > startIndex && anchor.frame > anchors[startIndex]!.frame ? [index] : []);
+      nextEnd = nearestAnchorIndex(nextFrame, allowed, endIndex) ?? endIndex;
+    } else if (edit.handle.gesture === "move") {
+      const pointerIndex = edit.pointerAnchorIndex ?? startIndex;
+      const deltas = anchors.flatMap((_, index) => {
+        const delta = index - pointerIndex;
+        const movedStart = startIndex + delta;
+        const movedEnd = endIndex + delta;
+        return movedStart >= 0 && movedEnd < anchors.length
+          && anchors[movedStart]!.frame < anchors[movedEnd]!.frame
+          ? [delta]
+          : [];
+      });
+      const targetPointer = nearestAnchorIndex(
+        nextFrame,
+        deltas.map((delta) => pointerIndex + delta),
+        pointerIndex,
+      );
+      const delta = targetPointer === undefined ? 0 : targetPointer - pointerIndex;
+      nextStart += delta;
+      nextEnd += delta;
+    } else {
+      return undefined;
+    }
+    return {
+      kind: "selection",
+      startAnchorId: anchors[nextStart]!.id,
+      endAnchorId: anchors[nextEnd]!.id,
+    };
+  };
+
+  const absoluteWindowTarget = (
+    edit: NonNullable<typeof activeEdit>,
+    nextFrame: number,
+  ): { readonly startFrame: number; readonly endFrameExclusive: number } => {
+    if (state === undefined) return {
+      startFrame: edit.clip.startFrame,
+      endFrameExclusive: edit.clip.endFrameExclusive,
+    };
+    const rawDelta = nextFrame - edit.startFrame;
+    const delta = Math.max(-edit.clip.startFrame,
+      Math.min(state.snapshot.space.frameCount - edit.clip.endFrameExclusive, rawDelta));
+    if (edit.handle.gesture === "move") return {
+      startFrame: edit.clip.startFrame + delta,
+      endFrameExclusive: edit.clip.endFrameExclusive + delta,
+    };
+    if (edit.handle.gesture === "trim-start") return {
+      startFrame: Math.min(edit.clip.endFrameExclusive - 1, nextFrame),
+      endFrameExclusive: edit.clip.endFrameExclusive,
+    };
+    return {
+      startFrame: edit.clip.startFrame,
+      endFrameExclusive: Math.max(edit.clip.startFrame + 1, nextFrame),
+    };
+  };
+
+  const previewWindow = (
+    edit: NonNullable<typeof activeEdit>,
+    nextFrame: number,
+  ): { readonly startFrame: number; readonly endFrameExclusive: number } | undefined => {
+    if (state === undefined) return undefined;
+    const target = semanticTarget(edit, nextFrame);
+    if (target?.kind === "selection" && edit.handle.semantic?.kind === "selection") {
+      const current = state.snapshot.semantic.selections.find((selection) => selection.id === edit.handle.semantic!.id);
+      const nextStart = state.snapshot.semantic.anchors.find((anchor) => anchor.id === target.startAnchorId)?.frame;
+      const nextEnd = state.snapshot.semantic.anchors.find((anchor) => anchor.id === target.endAnchorId)?.frame;
+      if (current === undefined || nextStart === undefined || nextEnd === undefined) return undefined;
+      return {
+        startFrame: nextStart + edit.clip.startFrame - current.startFrame,
+        endFrameExclusive: nextEnd + edit.clip.endFrameExclusive - current.endFrameExclusive,
+      };
+    }
+    if (target?.kind === "moment" && edit.handle.semantic?.kind === "moment") {
+      const current = state.snapshot.semantic.moments.find((moment) => moment.id === edit.handle.semantic!.id);
+      const next = state.snapshot.semantic.anchors.find((anchor) => anchor.id === target.anchorId)?.frame;
+      if (current === undefined || next === undefined) return undefined;
+      const delta = next - current.frame;
+      return edit.clip.temporal?.projection?.kind === "point"
+        ? { startFrame: edit.clip.startFrame + delta, endFrameExclusive: edit.clip.endFrameExclusive }
+        : { startFrame: edit.clip.startFrame + delta, endFrameExclusive: edit.clip.endFrameExclusive + delta };
+    }
+    return edit.handle.sources === undefined ? undefined : absoluteWindowTarget(edit, nextFrame);
+  };
   lanes.addEventListener("pointerdown", (event) => {
     pointerDownOnItem = (event.target as HTMLElement).closest(
       ".clip, .semantic-segment, .semantic-word, .semantic-selection, .semantic-moment",
@@ -243,7 +378,19 @@ export function createTimeline(store: Store): Timeline {
     hover.style.transform = `translate3d(${at}px,0,0)`;
     hoverTime.textContent = state === undefined ? "" : frameTimecode(state.snapshot, frame);
     hover.classList.add("visible");
-    if (activeEdit !== undefined) return;
+    if (activeEdit !== undefined && state !== undefined) {
+      const nextFrame = activeEdit.handle.coordinate === "semantic-anchor"
+        ? rawFrameAt(event.clientX)
+        : frameAt(event.clientX);
+      const preview = previewWindow(activeEdit, nextFrame);
+      if (preview !== undefined) {
+        const from = place(preview.startFrame, state.snapshot.space.frameCount, zoom.window());
+        const to = place(preview.endFrameExclusive, state.snapshot.space.frameCount, zoom.window());
+        activeEdit.node.style.left = `${from * 100}%`;
+        activeEdit.node.style.width = `max(2px, calc(${Math.max(0, to - from) * 100}% - ${itemMetrics.gapPx}px))`;
+      }
+      return;
+    }
     if (!pointerArmed || event.buttons !== 1) return;
     if (pointerDownOnItem && Math.abs(event.clientX - pointerDownX) < 3) return;
     store.seek(frame, "timeline");
@@ -252,38 +399,38 @@ export function createTimeline(store: Store): Timeline {
     const edit = activeEdit;
     activeEdit = undefined;
     edit?.node.classList.remove("editing");
+    if (edit !== undefined) {
+      edit.node.style.left = edit.originalLeft;
+      edit.node.style.width = edit.originalWidth;
+    }
     pointerArmed = false;
     try { lanes.releasePointerCapture(event.pointerId); } catch { /* already released */ }
     if (edit === undefined || state === undefined || event.type === "pointercancel") return;
-    const nextFrame = frameAt(event.clientX);
-    const rawDelta = nextFrame - edit.startFrame;
-    const delta = Math.max(
-      -edit.clip.startFrame,
-      Math.min(state.snapshot.space.frameCount - edit.clip.endFrameExclusive, rawDelta),
-    );
-    const replacement = (frame: number): string => `${Math.max(0, Math.round(frame))}f`;
-    const startSource = edit.sources.find((item) => item.role === "start");
-    const endSource = edit.sources.find((item) => item.role === "end");
-    const durationSource = edit.sources.find((item) => item.role === "duration");
-    const patches = edit.operation === "move"
-      ? startSource === undefined || endSource === undefined
-        ? []
-        : [
-          { ...startSource.source, replacement: replacement(edit.clip.startFrame + delta) },
-          { ...endSource.source, replacement: replacement(edit.clip.endFrameExclusive + delta) },
-        ]
-      : edit.operation === "trim-start"
-        ? startSource === undefined
-          ? []
-          : [{ ...startSource.source, replacement: replacement(Math.min(edit.clip.endFrameExclusive - 1, nextFrame)) }]
-        : durationSource !== undefined
-          ? [{ ...durationSource.source, replacement: replacement(Math.max(1, nextFrame - edit.clip.startFrame)) }]
-          : endSource === undefined
-            ? []
-            : [{ ...endSource.source, replacement: replacement(Math.max(edit.clip.startFrame + 1, nextFrame)) }];
-    if (patches.every((patch) => patch.replacement === patch.preimage)) return;
+    const nextFrame = edit.handle.coordinate === "semantic-anchor"
+      ? rawFrameAt(event.clientX)
+      : frameAt(event.clientX);
+    const resolvedSemanticTarget = semanticTarget(edit, nextFrame);
+    const windowTarget = { kind: "window" as const, ...absoluteWindowTarget(edit, nextFrame) };
+    const target = resolvedSemanticTarget ?? (edit.handle.sources === undefined ? undefined : windowTarget);
+    if (target === undefined) return;
+    if (target.kind === "selection"
+      && edit.handle.semantic?.kind === "selection"
+      && target.startAnchorId === edit.handle.semantic.startAnchorId
+      && target.endAnchorId === edit.handle.semantic.endAnchorId) return;
+    if (target.kind === "moment"
+      && edit.handle.semantic?.kind === "moment"
+      && target.anchorId === edit.handle.semantic.anchorId) return;
+    if (target.kind === "window"
+      && target.startFrame === edit.clip.startFrame
+      && target.endFrameExclusive === edit.clip.endFrameExclusive) return;
     element.dispatchEvent(new CustomEvent("studio:write", { detail: { state: "saving" } }));
-    void writeSourceTransaction(state.snapshot.revision, patches).then(() => {
+    void applyStudioMutation({
+      type: "timeline.adjust",
+      revision: state.snapshot.revision,
+      entityId: edit.clip.id,
+      gesture: edit.handle.gesture,
+      target,
+    }).then(() => {
       element.dispatchEvent(new CustomEvent("studio:write", { detail: { state: "saved" } }));
     }).catch((error: unknown) => {
       // The next snapshot/error event is the source of truth; a failed gesture
@@ -673,19 +820,30 @@ export function createTimeline(store: Store): Timeline {
         const nearEnd = rect.right - event.clientX <= edge;
         const handle = clip.editHandles.find((candidate) =>
           candidate.enabled
-          && ((candidate.operation === "trim-start" && nearStart)
-            || (candidate.operation === "trim-end" && nearEnd)
-            || (candidate.operation === "move" && !nearStart && !nearEnd)));
-        if (handle !== undefined && handle.sources !== undefined
-          && (handle.operation === "move" || handle.operation === "trim-start" || handle.operation === "trim-end")) {
+          && ((candidate.gesture === "trim-start" && nearStart)
+            || (candidate.gesture === "trim-end" && nearEnd)
+            || (candidate.gesture === "move" && !nearStart && !nearEnd)));
+        if (handle !== undefined
+          && (handle.gesture === "move" || handle.gesture === "trim-start" || handle.gesture === "trim-end")) {
           event.stopPropagation();
+          const pointerFrame = handle.coordinate === "semantic-anchor"
+            ? rawFrameAt(event.clientX)
+            : frameAt(event.clientX);
+          const pointerAnchorIndex = handle.semantic !== undefined
+            ? nearestAnchorIndex(
+                pointerFrame,
+                state?.snapshot.semantic.anchors.map((_, index) => index) ?? [],
+              )
+            : undefined;
           activeEdit = {
             clip,
-            operation: handle.operation,
-            sources: handle.sources,
-            startFrame: frameAt(event.clientX),
+            handle,
+            startFrame: pointerFrame,
+            ...(pointerAnchorIndex === undefined ? {} : { pointerAnchorIndex }),
             pointerId: event.pointerId,
             node,
+            originalLeft: node.style.left,
+            originalWidth: node.style.width,
           };
           node.classList.add("editing");
           try { lanes.setPointerCapture(event.pointerId); } catch { /* local pointer */ }

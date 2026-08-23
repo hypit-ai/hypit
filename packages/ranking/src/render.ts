@@ -511,7 +511,7 @@ export function renderColumn(space: ProgramSpace, program: ColumnProgram): Visua
       return elements;
     };
     if (entry.mode === "reveal") {
-      const duration = entry.active.endFrameExclusive - entry.active.startFrame;
+      const duration = entry.window.endFrameExclusive - entry.window.startFrame;
       const fitted = fitColumnRevealMotion(duration, style.motion.appearFrames, style.motion.moveFrames);
       const rootAnimation = fitted.mode === "direct" ? undefined : columnRevealAnimation({
         duration, appearFrames: fitted.appearFrames, moveFrames: fitted.moveFrames,
@@ -519,7 +519,7 @@ export function renderColumn(space: ProgramSpace, program: ColumnProgram): Visua
         stageSize: style.stageSizePx, finalSize: contentSize, easing: style.motion.easing,
       });
       presents.push(present({
-        id: `${program.id}:item:${item.id}:stage`, start: entry.active.startFrame, end: entry.active.endFrameExclusive,
+        id: `${program.id}:item:${item.id}:stage`, start: entry.window.startFrame, end: entry.window.endFrameExclusive,
         stacking: item.stackingOrder ?? style.stageStackingOrder,
         tieBreak: `${program.id}:item:${String(item.rank).padStart(4, "0")}:${item.id}:stage`, elements: itemElements(rootAnimation),
       }));

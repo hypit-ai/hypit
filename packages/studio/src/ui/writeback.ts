@@ -1,17 +1,10 @@
-import type { Range } from "../shared.js";
+import type { StudioMutation } from "../shared.js";
 
-export type SourcePatch = {
-  readonly path: string;
-  readonly range: Range;
-  readonly replacement: string;
-  readonly preimage: string;
-};
-
-export async function writeSourceTransaction(revision: number, patches: readonly SourcePatch[]): Promise<void> {
-  const response = await fetch("/__studio/transaction", {
+export async function applyStudioMutation(mutation: StudioMutation): Promise<void> {
+  const response = await fetch("/__studio/mutation", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ revision, patches }),
+    body: JSON.stringify(mutation),
   });
   if (!response.ok) throw new Error(await response.text());
 }

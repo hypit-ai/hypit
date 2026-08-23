@@ -217,15 +217,20 @@ function harvestScript(input: RawInput, into: Record<string, unknown>[]): void {
     into.push({
       format: "hypit.script-source-map@1",
       record: id,
+      sourcePath: input.sourceName,
       range: { start: input.openingStart, end: end + closing.length },
+      content: { start: input.contentStart, end },
       segments: parsed.segments.map((segment) => ({ id: segment.id, range: segment.range })),
       selections: parsed.selections.map((selection) => ({
         id: selection.id,
+        startAnchorId: selection.startAnchorId,
+        endAnchorId: selection.endAnchorId,
         open: selection.open.range,
         close: selection.close.range,
       })),
       moments: parsed.moments.map((moment) => ({
         id: moment.id,
+        anchorId: moment.anchorId,
         range: moment.range,
       })),
       tokens: parsed.tokens.map((token) => ({ id: token.id, range: token.range })),

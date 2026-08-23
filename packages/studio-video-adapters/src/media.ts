@@ -91,7 +91,7 @@ export const mediaAdapters: readonly StudioAdapter[] = [
     id: "media-visual", role: "media",
     output: { type: "VisualTrack", surface: "track", modules: ["@hypit/media-track"] },
     family: "media", icon: "video", interaction: readonlyInteraction,
-    editOperations: ["move", "trim-start", "trim-end"],
+    timelineGestures: ["move", "trim-start", "trim-end"],
     parameters: [
       { name: "semantic", label: "Semantic", writable: false },
       { name: "canvas", label: "Canvas", writable: false },
@@ -133,7 +133,7 @@ export const mediaAdapters: readonly StudioAdapter[] = [
     id: "media-audio", role: "media",
     output: { type: "AudioTrack", surface: "track", modules: ["@hypit/media-track"] },
     family: "media", icon: "waveform", interaction: readonlyInteraction,
-    editOperations: ["move", "trim-start", "trim-end"],
+    timelineGestures: ["move", "trim-start", "trim-end"],
     parameters: [
       { name: "semantic", label: "Semantic", writable: false },
       { name: "canvas", label: "Canvas", writable: false },
