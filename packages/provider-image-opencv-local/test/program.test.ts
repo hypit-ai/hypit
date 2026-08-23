@@ -8,6 +8,7 @@ import test from "node:test";
 import { localOpenCvProgram } from "../src/program.js";
 
 const context = (config: Record<string, unknown> = {}) => ({
+  hostStateRoot: join(tmpdir(), "hypit-opencv-host"),
   dataRoot: process.cwd(), instance: "opencv.test", config: config as never,
 });
 
@@ -17,11 +18,12 @@ test("OpenCV declares how to install its interpreter and nothing to keep running
   assert.equal(program.start, undefined, "OpenCV runs per Need; there is no daemon to start");
   // Absolute: a Runtime root is wherever the Profile lives, not where the
   // pinned uv project lives.
-  assert.equal(program.prepare?.command, "uv");
-  assert.equal(program.prepare?.args.at(-1), "--frozen");
-  const project = program.prepare?.args.at(-2) ?? "";
+  assert.equal(program.installation?.commands[0]?.command, "uv");
+  assert.equal(program.installation?.commands[0]?.args.at(-1), "--frozen");
+  const project = program.installation?.commands[0]?.args.at(-2) ?? "";
   assert.ok(isAbsolute(project), `${project} must be absolute`);
   assert.ok(existsSync(join(project, "pyproject.toml")), `${project} must be the pinned uv project`);
+  assert.equal(program.stateRoot, join(context().hostStateRoot, "programs", "image-opencv"));
 });
 
 test("an interpreter without cv2 is reported here, not mid-Build", async () => {
@@ -51,8 +53,10 @@ test("an interpreter carrying another OpenCV major is a mismatch, not a failure"
   }
 });
 
-test("the major versions the probe demands are the ones the locked project installs", async () => {
-  const pyproject = await readFile(new URL("../../../services/image-opencv/pyproject.toml", import.meta.url), "utf8");
+test("the major versions the probe demands are the ones the packaged project installs", async () => {
+  const project = localOpenCvProgram(context()).installation?.commands[0]?.args.at(-2);
+  assert.ok(project);
+  const pyproject = await readFile(join(project, "pyproject.toml"), "utf8");
   assert.match(pyproject, /"opencv-python-headless>=4\./u, "probe expects cv2 4.x");
   assert.match(pyproject, /"numpy>=2\./u, "probe expects numpy 2.x");
 });

@@ -87,7 +87,6 @@ test("local Provider stages canonical evidence bytes unchanged and returns seale
           device: "cpu",
           compute: "int8",
           batchSize: 8,
-          punktTabDigest: "e57f64187974277726a3417ca6f181ec5403676c717672eef6a748a7b20e0106",
       }), { headers: { "content-type": "application/json" } });
     }
     assert.ok(url.endsWith("/transcribe"));

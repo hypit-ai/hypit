@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { loadNodePackageSelection } from "@hypit/package-loader-node";
+import {
+  distributionExternalPackageRequirements,
+  loadNodePackageSelection,
+} from "@hypit/package-loader-node";
 
 async function installedPackage(
   root: string,
@@ -27,6 +30,7 @@ async function projectPackage(
   root: string,
   name: string,
   contribution: string,
+  dependencies: Readonly<Record<string, string>> = {},
 ): Promise<void> {
   const directory = join(root, "packages", name.split("/").at(-1)!);
   await mkdir(directory, { recursive: true });
@@ -35,6 +39,7 @@ async function projectPackage(
     version: "0.0.0-dev",
     type: "module",
     hypit: { activation: "./activation.mjs" },
+    dependencies,
   }), "utf8");
   await writeFile(join(directory, "activation.mjs"), `export default ${contribution};\n`, "utf8");
 }
@@ -48,6 +53,31 @@ test("loads an explicitly selected installed package", async () => {
     }`);
     const loaded = await loadNodePackageSelection(["example-cards"], root);
     assert.deepEqual(loaded.map((item) => item.specifier), ["example-cards"]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("Distribution requirements follow internal packages and return only exact upstream npm packages", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-distribution-requirements-"));
+  try {
+    await projectPackage(root, "@hypit/provider-example", `{
+      format: "hypit.node-package@1"
+    }`, {
+      "@hypit/transport-example": "workspace:*",
+      "example-sdk": "2.3.4",
+    });
+    await projectPackage(root, "@hypit/transport-example", `{
+      format: "hypit.node-package@1"
+    }`, {
+      "example-transport": "1.2.3",
+    });
+    assert.deepEqual(await distributionExternalPackageRequirements(
+      ["@hypit/provider-example"], root,
+    ), [
+      { name: "example-sdk", version: "2.3.4", specifier: "example-sdk@2.3.4" },
+      { name: "example-transport", version: "1.2.3", specifier: "example-transport@1.2.3" },
+    ]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

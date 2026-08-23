@@ -2,7 +2,7 @@ import { watch } from "node:fs";
 import type { FSWatcher } from "node:fs";
 import { existsSync } from "node:fs";
 import { readFile, rename, writeFile, unlink } from "node:fs/promises";
-import { isAbsolute, relative, resolve, dirname, join } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import type { Plugin, ViteDevServer } from "vite";
 
@@ -176,7 +176,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     const temporaries: { readonly path: string; readonly temporary: string }[] = [];
     try {
       for (const [absolute, text] of nextFiles) {
-        const temporary = join(dirname(absolute), `.${absolute.split("/").at(-1) ?? "source"}.hypit-studio.tmp`);
+        const temporary = join(dirname(absolute), `.${basename(absolute)}.hypit-studio.tmp`);
         await writeFile(temporary, text, "utf8");
         temporaries.push({ path: absolute, temporary });
       }

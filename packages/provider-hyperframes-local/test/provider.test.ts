@@ -107,11 +107,13 @@ test("local HyperFrames Provider exposes one exact visual capability and two sep
     "Runtime request admission must remain separate from HyperFrames frame workers");
 });
 
-test("the selected HyperFrames Provider owns one idempotent browser preparation", () => {
-  const program = localHyperframesBrowserProgram({ dataRoot: "/project", instance: "hyperframes", config: {} });
+test("the selected HyperFrames Provider owns one idempotent browser installation", () => {
+  const program = localHyperframesBrowserProgram({
+    hostStateRoot: "/host", dataRoot: "/project", instance: "hyperframes", config: {},
+  });
   assert.equal(program.id, "hyperframes-browser");
   assert.equal(program.start, undefined);
-  assert.deepEqual(program.prepare?.args.slice(-2), ["browser", "ensure"]);
+  assert.deepEqual(program.installation?.commands[0]?.args.slice(-2), ["browser", "ensure"]);
 });
 
 test("local HyperFrames Provider really renders a silent frame-exact MP4 with parallel workers", {

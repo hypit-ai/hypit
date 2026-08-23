@@ -5,7 +5,7 @@ CLI tools for reconstructing a reference video with Hypit.
 The package exposes six CLI subcommands: `list_svml_packages`, `prepare_reference`,
 `observe_reference`, `record_observation`, `inspect_svml_vocabulary`, and `compare_reconstruction`.
 Each command prints one JSON result to stdout. The final source files are authored by the calling
-agent and checked with the existing `pnpm hypit check` command.
+agent and checked with the installed `hypit check` command.
 
 `--observer` on `prepare_reference` chooses who reads the reference, once per reference:
 
@@ -22,16 +22,16 @@ shape. Neither receives SVML syntax, and neither writes SVML.
 Run the CLI from the repository or an installed package:
 
 ```bash
-pnpm hypit-reference-video-tools list_svml_packages
-pnpm hypit-reference-video-tools prepare_reference --video-path ./reference.mp4
-pnpm hypit-reference-video-tools prepare_reference --video-path ./reference.mp4 --redo people
-pnpm hypit-reference-video-tools prepare_reference --video-path ./reference.mp4 --redo transcript
-pnpm hypit-reference-video-tools observe_reference --reference-id <reference-id>
-pnpm hypit-reference-video-tools observe_reference --reference-id <reference-id> --shot-id shot-007
-pnpm hypit-reference-video-tools observe_reference --reference-id <reference-id> --shot-id shot-007 --question "How thick is the outline on the caption words?"
-pnpm hypit-reference-video-tools observe_reference --reference-id <reference-id> --shot-id shot-007 --reobserve
-pnpm hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/media-track --tag Track
-pnpm hypit-reference-video-tools compare_reconstruction --reference-id <reference-id> --shot-id shot-007 --image ./rendered.png
+hypit-reference-video-tools list_svml_packages
+hypit-reference-video-tools prepare_reference --video-path ./reference.mp4
+hypit-reference-video-tools prepare_reference --video-path ./reference.mp4 --redo people
+hypit-reference-video-tools prepare_reference --video-path ./reference.mp4 --redo transcript
+hypit-reference-video-tools observe_reference --reference-id <reference-id>
+hypit-reference-video-tools observe_reference --reference-id <reference-id> --shot-id shot-007
+hypit-reference-video-tools observe_reference --reference-id <reference-id> --shot-id shot-007 --question "How thick is the outline on the caption words?"
+hypit-reference-video-tools observe_reference --reference-id <reference-id> --shot-id shot-007 --reobserve
+hypit-reference-video-tools inspect_svml_vocabulary --package @hypit/media-track --tag Track
+hypit-reference-video-tools compare_reconstruction --reference-id <reference-id> --shot-id shot-007 --image ./rendered.png
 ```
 
 For automation, every command also accepts `--input '{"...":"..."}'` with the complete JSON input
@@ -56,7 +56,7 @@ every single word. Placing an on-screen text reveal against the line that trigge
 of the word, not of the sentence around it, and that question comes up in every reconstruction. The
 speech audio is extracted to `speech.wav` beside the shot media and measured by the local WhisperX
 Provider in `@hypit/provider-whisperx-local`, which answers a loopback service on
-`http://127.0.0.1:8765`; start it with `uv run --project services/whisperx --frozen hypit-whisperx-service`.
+`http://127.0.0.1:8765`; start the selected managed service with `hypit runtime up`.
 The result reports `status`, `transcript_ref` and `word_count`, and the words themselves live in
 `transcript.json` as passages, each with a `words` array of `{ text, start_seconds, end_seconds, score }`.
 The transcript is deterministic local evidence rather than an observation: it is never written to the

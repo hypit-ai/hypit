@@ -14,6 +14,8 @@ export {
   createRuntimeCredentialsFromConfig,
   declaredManagedPrograms,
   doctorRuntimeConfig,
+  prepareRuntimeConfigPackages,
+  preflightRuntimeConfig,
   parseRuntimeConfig,
   resolveRuntimeConfigPaths,
 } from "./config.js";

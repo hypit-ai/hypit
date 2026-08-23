@@ -44,7 +44,6 @@ async function serving(response: unknown, run: () => Promise<void>): Promise<voi
         device: "cpu",
         compute: "int8",
         batchSize: 8,
-        punktTabDigest: "e57f64187974277726a3417ca6f181ec5403676c717672eef6a748a7b20e0106",
       }
     : response), { headers: { "content-type": "application/json" } })) as typeof fetch;
   try { await run(); } finally { globalThis.fetch = original; }

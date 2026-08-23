@@ -16,6 +16,7 @@ import {
   createRuntimeArtifactAccessFromConfig,
   doctorRuntimeConfig,
   parseRuntimeConfig,
+  preflightRuntimeConfig,
 } from "@hypit/runtime-local";
 
 function profile(config: {
@@ -114,6 +115,32 @@ test("doctor reports a down Managed Program", async () => {
   try {
     const result = await doctorRuntimeConfig(path, { registry });
     assert.equal(result.diagnostics.some((item) => item.code === "MANAGED_PROGRAM_DOWN"), true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("preflight validates stores without running their active doctor", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-preflight-"));
+  const path = join(root, "hypit.runtime.json");
+  await writeFile(path, JSON.stringify(profile({ dataRoot: "." })));
+  let activeChecks = 0;
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeArtifactStoreAdapterFacet({
+    use: "example.artifacts",
+    validate() {},
+    open: () => ({ value: new MemoryArtifactStore() }),
+    doctor: async () => {
+      activeChecks += 1;
+      return [];
+    },
+  }));
+  try {
+    const preflight = await preflightRuntimeConfig(path, { registry });
+    assert.deepEqual(preflight.diagnostics, []);
+    assert.equal(activeChecks, 0);
+    await doctorRuntimeConfig(path, { registry });
+    assert.equal(activeChecks, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

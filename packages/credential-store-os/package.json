@@ -1,5 +1,5 @@
 {
-  "name": "@hypit/credential-store-keychain",
+  "name": "@hypit/credential-store-os",
   "version": "0.0.0-dev",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -7,6 +7,11 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "src",
+    "runtime",
+    "README.md"
+  ],
   "hypit": {
     "activation": "./src/activation.ts"
   },

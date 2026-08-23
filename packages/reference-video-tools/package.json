@@ -8,7 +8,8 @@
     "hypit-reference-video-tools": "./bin/reference-video-tools.mjs"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts"
   },
   "dependencies": {
     "@google/genai": "1.52.0",
