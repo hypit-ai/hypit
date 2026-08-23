@@ -77,22 +77,19 @@ passes that stable view to the adapter registry. Domain packages remain unaware 
 required link that is absent stays unresolved; adapters do not infer it from attribute names, Spec
 type names, runtime id prefixes, labels or equal spans.
 
-## Timeline questions that remain deliberately open
+## Timeline writeback
 
-Before any drag or trim writeback is enabled, the product design must decide:
+Studio exposes two author mutations: `timeline.adjust` and `parameter.adjust`. Move and trim are
+gesture payloads of the former, not additional top-level operations. The concrete write target is
+resolved from the entity's executed lineage:
 
-1. Whether the three windows appear as nested geometry in one lane, separate linked sub-lanes, or
-   an overlay revealed when an item is selected.
-2. How a point-like Moment and its duration-like projection are distinguished visually.
-3. How a shared Selection communicates the blast radius across all consuming Tracks.
-4. Whether the playhead/inspector selects the semantic source, projected window, consumed
-   entity or terminal realization, and how the user moves between those levels.
-5. How component-internal schedules such as Ranking reveals expand without making the primary
-   timeline noisy.
-6. Which drag gesture owns which level. Moving a semantic source, changing a projection offset and
-   trimming a consumption window are different edits and must never be silently substituted.
+- a Selection-backed rectangle moves or trims that shared Selection at Script's ordered semantic
+  Anchors, and every consumer follows it;
+- a Moment-backed entity moves the shared Moment point, while an independently authored duration
+  may still own its right edge;
+- direct absolute endpoints rewrite their exact Source ranges;
+- Segment, Program and component-derived schedule phases remain read-only without a declared inverse.
 
-Direct absolute endpoints and authored durations may be rewritten when their exact source range is
-known. Selection/Moment bindings remain read-only from the downstream rectangle: editing a semantic
-source, changing a projection expression and changing a consumption parameter are distinct
-operations. The rule is simple: difficulty is acceptable; implicit guessing is not.
+This is an inverse over public identities, never an inference from equal frame spans. Component
+details such as Ranking reveals use attached lanes only when their Point/Window inputs were explicitly
+externalized. Invalid domain input is refused and the author mutation is rolled back.

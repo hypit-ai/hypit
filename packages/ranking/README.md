@@ -36,14 +36,14 @@ copy.
 ```
 
 Column separates placement from reveal time. `rank` determines the numbered row only. Every
-non-preset Item owns one Selection whose projected window is its preferred reveal interval; the
-Column resolves those sibling candidates into non-overlapping windows inside the container's
-Segment/Selection `during` span. Candidate time, child order and rank may all differ. A preset Item
+non-preset Item owns one Selection whose projected window is its reveal interval. Every sibling
+window must already be disjoint and contained by the container's Segment/Selection `during` span;
+invalid input is refused instead of clamped or rearranged. Reveal time, child order and rank may all differ. A preset Item
 has no child `during` and is settled from the beginning of the outer window.
 
 TierBoard and TopThree triggers and terminals are explicit `TemporalPoint` values. Column outer and
-reveal candidates remain `TemporalWindow` values. Ranking consumes those projections plus
-ProgramSpace and owns only the subsequent chronological or non-overlap schedule; it does not locate
+reveal inputs remain `TemporalWindow` values. Ranking consumes those projections plus
+ProgramSpace and owns only the subsequent visual schedule; it does not locate
 Moment/Selection frames internally.
 
 The Column's `frame` is the fixed left ranking rail; `canvas` supplies the independent coordinate
