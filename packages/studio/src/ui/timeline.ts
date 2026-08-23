@@ -6,6 +6,7 @@ import type { StudioEditSource } from "@hypit/studio-adapter";
 import { icon, setIcon } from "./icons.js";
 import { mountMaterialPreview } from "./material-preview.js";
 import type { State, Store } from "./selection.js";
+import { createHandle } from "./resize.js";
 import { createZoom } from "./zoom.js";
 import { writeSourceTransaction } from "./writeback.js";
 
@@ -17,8 +18,6 @@ export type Timeline = {
 };
 
 const opened = new Set<string>();
-const expandedAttachmentGroups = new Set<string>();
-const collapsedAttachmentGroups = new Set<string>();
 const itemMetrics = {
   // Ordinary items fill their rows. Only the semantic lane owns compact word cells.
   insetYPx: 1,
@@ -107,6 +106,7 @@ export function createTimeline(store: Store): Timeline {
     <div class="timeline-zoom" data-zoom></div>`;
 
   const labels = element.querySelector<HTMLElement>("[data-labels]")!;
+  const body = element.querySelector<HTMLElement>("[data-timeline-body]")!;
   const lanes = element.querySelector<HTMLElement>("[data-lanes]")!;
   const ruler = element.querySelector<HTMLElement>("[data-ruler]")!;
   const rows = element.querySelector<HTMLElement>("[data-rows]")!;
@@ -117,6 +117,26 @@ export function createTimeline(store: Store): Timeline {
   const timelineTime = element.querySelector<HTMLElement>("[data-timeline-time]")!;
   const zoom = createZoom();
   element.querySelector<HTMLElement>("[data-zoom]")!.append(zoom.element);
+
+  // The label column is part of the timeline's reading surface, not a fixed
+  // application chrome width.  Keep enough room for the longest built-in
+  // facet name while leaving a usable canvas, and remember the author's choice.
+  const labelHandle = createHandle({
+    axis: "column",
+    initial: 188,
+    minimum: 156,
+    // createTimeline is constructed before it is attached to the document, so
+    // clientWidth is initially zero. Keep the preferred default valid during
+    // that first pass; on a real viewport the canvas-aware ceiling applies,
+    // with 260px as the hard visual cap on a wide timeline.
+    maximum: () => Math.min(260, Math.max(188, body.clientWidth - 360)),
+    apply: (size) => { element.style.setProperty("--timeline-label-width", `${size}px`); },
+    remember: "hypit-studio.v4.timeline-label-width",
+  });
+  labelHandle.classList.add("timeline-label-handle");
+  labelHandle.setAttribute("aria-label", "Resize timeline track labels");
+  labelHandle.title = "Resize track labels";
+  body.insertBefore(labelHandle, lanes);
 
   let state: State | undefined;
   let built = -1;
@@ -357,14 +377,19 @@ export function createTimeline(store: Store): Timeline {
     detail: string,
     height: number,
     attached = false,
+    hasState = false,
   ): HTMLElement => {
     const label = document.createElement("div");
-    label.className = `track-label track-${kind}`;
+    label.className = `track-label track-${kind}${hasState ? " track-label-has-state" : ""}`;
     if (attached) label.classList.add("track-label-attached");
     label.style.height = `${height}px`;
     label.title = `${name} · ${detail}`;
-    label.innerHTML = `<span class="track-icon"></span><span class="track-copy"><strong></strong></span><span class="track-state"></span>`;
-    setIcon(label.querySelector(".track-icon")!, iconName);
+    label.innerHTML = `${attached
+      ? '<span class="track-attachment-mark" aria-hidden="true"></span>'
+      : '<span class="track-icon"></span>'}<span class="track-copy"><strong></strong></span>${hasState
+        ? '<span class="track-state"></span>'
+        : ""}`;
+    if (!attached) setIcon(label.querySelector(".track-icon")!, iconName);
     label.querySelector("strong")!.textContent = name;
     return label;
   };
@@ -377,50 +402,6 @@ export function createTimeline(store: Store): Timeline {
     .filter((track) => track.binding.lane.attachedTo === slot
       && (groupId === undefined || track.binding.groupId === groupId))
     .sort((left, right) => (left.binding.lane.order ?? 0) - (right.binding.lane.order ?? 0));
-
-  const attachmentExpanded = (
-    key: string,
-    attachments: readonly StudioSnapshot["tracks"][number][],
-  ): boolean => !collapsedAttachmentGroups.has(key)
-    && (expandedAttachmentGroups.has(key)
-      || attachments.some((track) => track.binding.lane.expandedByDefault === true));
-
-  const addAttachmentToggle = (
-    label: HTMLElement,
-    key: string,
-    count: number,
-    snapshot: StudioSnapshot,
-  ): void => {
-    if (count === 0) return;
-    const fold = document.createElement("button");
-    fold.type = "button";
-    fold.className = "track-fold attachment-fold";
-    const expanded = !collapsedAttachmentGroups.has(key)
-      && (expandedAttachmentGroups.has(key)
-        || snapshot.tracks.some((track) => {
-          const slot = track.binding.lane.attachedTo;
-          return slot !== undefined
-            && `track:${track.binding.groupId}:${slot}` === key
-            && track.binding.lane.expandedByDefault === true;
-        }));
-    fold.classList.toggle("expanded", expanded);
-    fold.textContent = "";
-    fold.title = expanded ? "Hide attached facets" : "Show attached facets";
-    fold.setAttribute("aria-expanded", String(expanded));
-    fold.addEventListener("click", (event) => {
-      event.stopPropagation();
-      if (expanded) {
-        collapsedAttachmentGroups.add(key);
-        expandedAttachmentGroups.delete(key);
-      } else {
-        collapsedAttachmentGroups.delete(key);
-        expandedAttachmentGroups.add(key);
-      }
-      build(snapshot);
-      paint();
-    });
-    label.querySelector(".track-state")!.append(fold);
-  };
 
   const buildSemanticLane = (snapshot: StudioSnapshot): void => {
     if (snapshot.semantic.segments.length === 0) {
@@ -440,10 +421,6 @@ export function createTimeline(store: Store): Timeline {
       laneHeight,
     );
     label.classList.add("track-label-semantic");
-    const groupId = presentation.lane.groupId;
-    const attachmentKey = groupId === undefined ? undefined : `semantic:${groupId}`;
-    const facets = groupId === undefined ? [] : attachedTracks(snapshot, groupId);
-    if (attachmentKey !== undefined) addAttachmentToggle(label, attachmentKey, facets.length, snapshot);
     labels.append(label);
 
     const lane = document.createElement("div");
@@ -621,16 +598,9 @@ export function createTimeline(store: Store): Timeline {
       `${displayedItems} item${displayedItems === 1 ? "" : "s"}`,
       shownRows * laneHeight,
       attached,
+      depth > 1,
     );
     label.classList.add(`track-facet-${track.binding.facet}`);
-    const attachmentSlot = track.binding.lane.groupId;
-    const attachmentKey = attachmentSlot === undefined
-      ? undefined
-      : `track:${track.binding.groupId}:${attachmentSlot}`;
-    const attachments = attachmentSlot === undefined
-      ? []
-      : attachedTracks(snapshot, attachmentSlot, track.binding.groupId);
-    if (attachmentKey !== undefined) addAttachmentToggle(label, attachmentKey, attachments.length, snapshot);
     if (depth > 1) {
       const fold = document.createElement("button");
       fold.type = "button";
@@ -747,10 +717,8 @@ export function createTimeline(store: Store): Timeline {
       if (attachedTo !== undefined) continue;
       buildTrack(snapshot, track, nextClipNodes);
       const slot = track.binding.lane.groupId;
-      const key = slot === undefined ? undefined : `track:${track.binding.groupId}:${slot}`;
-      if (slot === undefined || key === undefined) continue;
+      if (slot === undefined) continue;
       const attachments = attachedTracks(snapshot, slot, track.binding.groupId);
-      if (!attachmentExpanded(key, attachments)) continue;
       for (const attachment of attachments) {
         buildTrack(snapshot, attachment, nextClipNodes, true);
       }
@@ -836,9 +804,11 @@ export function createTimeline(store: Store): Timeline {
     }
     schedulePaint();
   });
-  new ResizeObserver(() => {
+  const resizeObserver = new ResizeObserver(() => {
     if (state !== undefined) scheduleBuild();
-  }).observe(element);
+  });
+  resizeObserver.observe(element);
+  resizeObserver.observe(lanes);
 
   return { element, zoomIn, zoomOut, fit };
 }

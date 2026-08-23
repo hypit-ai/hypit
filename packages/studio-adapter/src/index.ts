@@ -137,7 +137,6 @@ export type StudioLaneDescription = {
   readonly groupId?: string;
   readonly attachedTo?: string;
   readonly order?: number;
-  readonly expandedByDefault?: boolean;
 };
 
 export type StudioInspectorSection =
