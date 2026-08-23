@@ -164,10 +164,11 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 ```
 
-`hypit runtime up` 会准备、启动并探测 Managed Program，然后启动耐久 Worker。`build` 只启动
-本次 Plan 所需 Capability 对应的 Program。只调用远程 API 的 Provider 不返回 `program`。
+`hypit runtime up` 会准备、启动并探测 Managed Program，然后启动耐久 Worker。`build` 只预检
+本次 Plan 所需 Capability 对应的 Program；未就绪时在提交前失败，绝不安装或启动它。只调用
+远程 API 的 Provider 不返回 `program`。
 
-## 6. 注册并锁定
+## 6. 声明依赖
 
 在 Provider 自己的 `package.json` 中声明所有导入包：
 
@@ -188,7 +189,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
       "use": "@hypit/provider-my-service",
       "pool": "my-service.account",
       "config": {
-        "apiKey": { "store": "keychain", "key": "my-service.api-key" },
+        "apiKey": { "store": "os", "key": "my-service.api-key" },
         "defaultConcurrency": 2
       }
     }

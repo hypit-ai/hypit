@@ -95,8 +95,8 @@ hypit programs up
 hypit programs down
 ```
 
-Program commands load Endpoint packages only. They do not open SQLite, Artifact Stores or Credential
-Stores.
+`programs up` first prepares the selected Endpoint packages' upstream npm dependencies, then operates
+their declared programs. The commands do not open SQLite, Artifact Stores or Credential Stores.
 
 ## Lifecycle
 
@@ -108,9 +108,13 @@ hypit runtime logs
 hypit runtime down
 ```
 
-`runtime up` starts the local Worker. `build` submits work; `status`, `queue` and `cancel` observe or
-control it. A terminal Build is not resumed. Reusing an earlier result is an explicit Candidate in a
-new `.svrun`, not hidden Runtime behavior.
+`runtime up` asks npm to prepare the selected adapters' exact upstream packages in the shared
+machine home, prepares declared Managed Programs, then starts the local Worker. `build` performs no
+provisioning: it runs cheap read-only preflight, submits work only when ready, and ensures the Worker
+is available. `status`, `queue` and `cancel` observe or control durable work. A terminal Build is not
+resumed. Reusing an earlier result is an explicit Candidate in a new `.svrun`, not hidden Runtime
+behavior.
 
-Runtime packages are trusted local deployment code. npm or pnpm owns their installed versions; the
-Runtime does not implement another package manager or claim that metadata is a sandbox.
+Runtime packages are trusted local deployment code. npm or pnpm owns their installed versions;
+Hypit only selects exact requirements and invokes npm at the explicit `runtime up`/`packages install`
+boundary. It has no second package lock and does not claim that metadata is a sandbox.

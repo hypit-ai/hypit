@@ -1,17 +1,17 @@
 # Quickstart map
 
-The repository docs are authoritative:
+Published docs and installed package declarations are authoritative:
 
 | Need | Read |
 |---|---|
-| Script semantics | `docs/quickstart/script.md` |
-| SVS Recipes | `docs/quickstart/styles.md` |
-| Media and Seedance | `docs/quickstart/generation.md` |
-| Reusable Seedance Prompt Kits | `packages/seedance-kits/README.md` and the selected file under `packages/seedance-kits/kits/` |
-| Normalization, alignment and SemanticTrack assembly | `docs/quickstart/timing.md` |
-| Caption, Media, Text, Audio Tracks | `docs/quickstart/tracks.md` and the `@hypit/audio-track` package README |
-| Film and rendering | `docs/quickstart/composition.md` |
-| Run Source, durable Runtime, Builds, retrieval, and reuse | `docs/quickstart/run.md` and `runtime.md` |
+| Script semantics | `https://narratage.hypit.ai/quickstart/script` |
+| SVS Recipes | `https://narratage.hypit.ai/quickstart/styles` |
+| Media and Seedance | `https://narratage.hypit.ai/quickstart/generation` |
+| Reusable Seedance Prompt Kits | the installed `@hypit/seedance-kits` README and selected Kit |
+| Normalization, alignment and SemanticTrack assembly | `https://narratage.hypit.ai/quickstart/timing` |
+| Caption, Media, Text, Audio Tracks | `https://narratage.hypit.ai/quickstart/tracks` and installed package READMEs |
+| Film and rendering | `https://narratage.hypit.ai/quickstart/composition` |
+| Run Source, durable Runtime, Builds, retrieval, and reuse | `https://narratage.hypit.ai/quickstart/run` and `runtime.md` |
 
 Canonical path:
 
@@ -29,6 +29,6 @@ the SemanticTrack is the frame domain every `start`/`end` window resolves into â
 `<track>.semantic` through `.svrun` `build-record` and `satisfy`, keep `<track>.visual` and
 `<track>.audio` out of the Film so the alignment goes unreached, and omit the Caption components.
 
-For execution, preserve the full lifecycle: diagnose the Profile, start or reuse the durable
-Runtime, inspect the frozen plan, submit a named Build, inspect its accepted Records, retrieve
-Artifacts, and declare any reuse explicitly in a new Run Source.
+For execution, preserve the full lifecycle: select the Profile, inspect the frozen plan, run
+`runtime up` when preflight is not ready, submit a fresh automatically identified Build, inspect its
+accepted Records, retrieve Artifacts, and declare any reuse explicitly in a new Run Source.

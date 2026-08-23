@@ -171,8 +171,9 @@ const adapter = createRuntimeEndpointAdapterFacet({
 ```
 
 `hypit runtime up` prepares, starts and probes declared Managed Programs before starting the
-durable Worker. `build` starts only Programs backing capabilities demanded by its plan. Providers
-that call only remote APIs omit `program` entirely.
+durable Worker. `build` only preflights Programs backing capabilities demanded by its plan and
+fails before submission when one is not ready; it never installs or starts one. Providers that call
+only remote APIs omit `program` entirely.
 
 ## 6. Install
 
@@ -196,7 +197,7 @@ explicitly selects its `use` id.
       "use": "@hypit/provider-my-service",
       "pool": "my-service.account",
       "config": {
-        "apiKey": { "store": "keychain", "key": "my-service.api-key" },
+        "apiKey": { "store": "os", "key": "my-service.api-key" },
         "defaultConcurrency": 2
       }
     }

@@ -43,15 +43,21 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
 
 **To be clear:** cloning a video is the fastest way in, not the only one. You can start from our templates, or just describe the video you want and your agent writes the workflow from scratch. Generation models are optional too: a workflow can compile captions, motion graphics and code-rendered visuals into a finished video without calling a single model, so a video can cost exactly $0.
 
-## Install the Hypit skill
+## Install once
 
 ```bash
-npx skills add hypit-ai/hypit
+npm install --global hypit
+npx skills add hypit-ai/hypit --global
 ```
+
+The npm package is the Hypit Distribution: CLI, Studio, official components and managed-service
+source. The global skill is discoverable by later agent sessions in any project. Neither command
+clones an authoring repository into your project.
 
 ## Use the Hypit skill
 
-The `/hypit` skill is available to coding agents. Your agent fetches the repository it needs on first use. Ask it to set up the environment and create videos for you:
+The `/hypit` skill is available to coding agents. Start a session in any empty or existing project
+directory and ask it to create videos for you:
 
 ```text
 /hypit Clone this viral video, show me a preview, and guide me through producing variants.
@@ -64,6 +70,17 @@ Or start without a reference video:
 ```
 
 Your agent can check the environment, request only the credentials the video needs, preview the result, and build it.
+
+Projects, generated files and project-local components stay in that project directory. Machine
+programs such as WhisperX are installed on demand into the Hypit Program Home and reused by every
+project. Upstream npm packages such as one Fontsource family or HyperFrames are likewise installed
+only when selected, into a separate shared machine package home. Opening a new session does not
+install either again. Check with `hypit --version` and
+`npm outdated --global hypit`; update deliberately with `npm update --global hypit` and
+`npx skills update --global`.
+
+The supported desktop baseline is macOS 13+ or Windows 10/11 x64 with Node.js 22+. Repository cloning,
+pnpm and Corepack are contributor-only concerns.
 
 ## License
 

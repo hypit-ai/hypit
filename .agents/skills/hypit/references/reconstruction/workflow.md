@@ -59,8 +59,8 @@ by hand and do not ask a model to transcribe: the transcript is already there.
 `transcript` reports `status`, `transcript_ref` and `word_count`. Read the words from
 `transcript_ref`, a JSON file of passages, each with its own `words` array of
 `{ text, start_seconds, end_seconds, score }`. A machine with no WhisperX service running reports
-`status: "unavailable"` with a `reason` and prepares everything else; start the service with
-`uv run --project services/whisperx --frozen hypit-whisperx-service` and prepare again.
+`status: "unavailable"` with a `reason` and prepares everything else; run `hypit runtime up` for the
+project's selected Profile and prepare again.
 `../environment.md` covers diagnosing that service and the rest of the local toolchain when starting
 it is not enough.
 

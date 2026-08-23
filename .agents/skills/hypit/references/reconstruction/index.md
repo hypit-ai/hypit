@@ -69,10 +69,10 @@ is asking the author to do your job. Everything this route needs beyond the vide
 discoverable:
 
 - **Where you are, and what is installed.** `../environment.md`.
-- **Where the project goes.** Its own directory outside the tool checkout, normally a sibling or
+- **Where the project goes.** Its own directory outside the installed Distribution, normally
   `<home>/<something>-reverse/`, named after the video. `../runtime.md` defines the hard boundary.
   Use a directory the author named only if they named one.
-- **Credentials.** The repository keeps them in `.env`; load it as shown below. A variable a Provider
+- **Credentials.** A project may keep them in an uncommitted `.env`; load it as shown below. A variable a Provider
   needs and this machine does not hold is named, and the route stops there — with one exception, the
   Vertex pair, which selects an observer rather than blocking one. `observers.md` owns that.
 

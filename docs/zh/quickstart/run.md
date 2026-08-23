@@ -21,7 +21,7 @@ hypit build build.svrun --follow
 hypit get <build-id> --name final.video --to output/final.mp4
 ```
 
-快速开始只需链接一次仓库命令。此后本页所有命令都直接写作 `hypit`，在仓库外的视频项目中也一样。
+快速开始只需全局安装一次 Distribution。此后本页所有命令都直接写作 `hypit`，在任何独立视频项目中都一样。
 
 只有 `build` 会真正提交工作。`plan` 是普通预览；`check` 用于编辑源码，`doctor` 用于配置和排查部署。它们都安全，但不是每次 Build 前必须重复的仪式。
 
@@ -179,8 +179,9 @@ hypit paths
 包。Profile 结构和完整边界见 [Runtime](../guide/runtime.md)。
 ## 配置所选凭据
 
-`check` 与 `plan` 不会请求在线 Provider，因此不需要 API key。在运行 `doctor` 或付费/外部
-`build` 之前，只配置当前 Runtime Profile 实际引用的环境变量：
+`check` 与 `plan` 不会请求在线 Provider。没有所选 Runtime 的 `plan` 只看图，不需要部署
+凭据；有 Runtime 时，便宜预检会检查本次 Plan 所需凭据是否存在。在运行 `doctor` 或付费/
+外部 `build` 之前，只配置当前 Runtime Profile 实际引用的环境变量：
 
 | 变量 | Provider / 用途 |
 |---|---|
@@ -209,18 +210,19 @@ $env:MIMO_API_KEY = "your-key"
 
 不要提交凭据、生成媒体、Runtime 状态/数据库或日志。
 
-### 0. 安装
+### 0. 准备按需依赖
+
+普通用户不运行 `pnpm install`。`runtime up` 会读取所选 Runtime Profile，把其 Adapter
+声明的上游 npm 包安装到机器共享目录，并准备外部程序。只有 Profile 选择 WhisperX、OpenCV
+等本地 Python 程序时，才需要先安装 [`uv`](https://docs.astral.sh/uv/)。
+
+作者侧缺少 Fontsource 等上游包时，`check`/`plan` 会给出精确命令，例如：
 
 ```bash
-pnpm install
+hypit packages install @fontsource-variable/inter@5.3.0
 ```
 
-这条命令只安装 JavaScript 工作区，不会下载 Python 模型，也不会准备仓库内的所有 Provider。
-`runtime up` 会读取所选 Runtime Profile，并准备其中 Endpoint 声明的外部程序。只有 Profile 选择 WhisperX、OpenCV 等本地 Python 程序时，才需要先安装
-[`uv`](https://docs.astral.sh/uv/)；具体锁定环境命令见 Quickstart 首页的 [安装](../quickstart.md#安装)。
-
-`hypit runtime up` 管理后台 Worker 和外部程序；`build` 会确保 Runtime 已运行，但不拥有
-Worker。
+`hypit runtime up` 管理依赖、后台 Worker 和外部程序；`build` 不做部署准备。
 
 #### 把正式视频项目放在 Hypit 仓库之外
 
@@ -278,8 +280,8 @@ hypit doctor
 Doctor 校验全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；它不启动 Worker，也不发付费请求。
 
 `doctor` 有意检查完整 Runtime Profile。若只想检查某次 Run 真正需要的环境，请使用带
-所选 Runtime 下的 `plan`。只要计划本身有效，命令就成功；凭据或服务未就绪会写在
-`preflight.ok` 中，由 `doctor` 或 `build` 在部署阶段严格处理。
+所选 Runtime 的 `plan`。未就绪会写入 `preflight` 并令命令非零退出，但 JSON 中仍保留
+冻结计划供检查。
 
 ### 3. 检查 Source 与计划
 
@@ -294,8 +296,12 @@ hypit plan build.svrun
 在花费资金之前审查冻结的 BuildPlan。该计划展示调度器将发出的每个 Operation 和 Needs；选择
 Runtime 后只预检这次计划真正需要的 Endpoint、凭据和外部程序，不启动任何外部工作。
 
-`build` 会自动启动或复用后台 Runtime。只有希望提交前预热时才需要显式执行 `runtime up`；
-`runtime status` 用于观察。范围更窄的 `programs up|status|down` 只管理外部程序，不负责 Worker。
+`plan` 可以完全不带 Runtime；执行过 `hypit runtime use` 后，`plan` 和 `build` 都不必再写
+`--runtime`。`build` 必须能找到所选或显式 Profile。
+
+提交前用 `runtime up` 安装所选上游依赖、准备 Managed Program 并启动 Worker。`build` 只重跑
+便宜的只读预检；任何依赖未就绪都会在提交前失败，绝不在 Build 中安装或启动它。`runtime
+status` 用于观察，`programs up|status|down` 只管理外部程序。
 
 ### 4. 提交 Build
 

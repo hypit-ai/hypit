@@ -34,7 +34,7 @@ Everything else this route needs is discoverable:
 
 - **Where you are, and what is installed.** `../environment.md`.
 - **Credentials.** `../credentials.md` lists which variables each Provider needs.
-- **Where the project goes.** Its own directory outside the tool checkout, normally a sibling or
+- **Where the project goes.** Its own directory outside the installed Distribution, normally
   `<home>/<name>/`, named after the video. `../runtime.md` defines the hard boundary.
 
 ## Before deciding anything

@@ -12,8 +12,7 @@ a new package with a bad schedule, a target that is not an output, a Film with n
 composition. Find that now, not on the author's screen:
 
 ```bash
-# invoke the script from the tool checkout; the Run may live anywhere
-node --import tsx .agents/skills/hypit/scripts/preview-check.mjs /path/to/project/build.svrun
+hypit-preview-check /path/to/project/build.svrun
 ```
 
 It takes the Run Source, not the Author SVML — Studio's unit of work is the Run, and it reads the
@@ -74,15 +73,8 @@ own directory, so pass it when the Run's relative Sources resolve against a diff
 Studio opens a Run whose material is satisfied. When a projection is missing it names the issue and
 stops, so a Run that opens is a Run whose Tracks all resolved.
 
-One Run in the repository is satisfied already, so Studio can be seen without spending anything:
-
-```bash
-cd /path/to/hypit
-hypit-studio --run examples/all-components-preview/studio.svrun --workspace .
-```
-
-It supplies its own Semantic Takes and Script-owned CaptionDocument from committed fixtures. Every other Run under
-`examples/` still names shots a Provider has to make, or footage that is not committed.
+Contributor fixtures may provide a satisfied demonstration Run, but an ordinary installed
+Distribution does not use its package directory as an author workspace.
 
 ## A timeline block is not the authored Selection
 
@@ -97,9 +89,9 @@ Studio keeps three stages of an item's time apart, and reading one for another m
   one outer window alongside its reveal phases.
 
 A projection line connects a source to its realized window, and the projection view is read-only.
-`docs/guide/studio-temporal-windows.md` is authoritative for what each stage carries.
+`https://narratage.hypit.ai/guide/studio-temporal-windows` is authoritative for what each stage carries.
 
 Studio is a browser preview **for a person to look at**. It is not a source of images for an
 automated comparison — that is what the local still render above is for.
 
-`docs/quickstart/preview.md` is authoritative.
+`https://narratage.hypit.ai/quickstart/preview` is authoritative.

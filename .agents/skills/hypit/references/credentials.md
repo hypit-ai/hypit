@@ -1,7 +1,8 @@
 # API keys and credentials
 
-`check` and `plan` do not need live keys. Before paid/external `build`, configure only variables used
-by the selected Runtime Profile:
+`check` and graph-only `plan` do not need live keys. A `plan` with a selected Runtime does not contact
+Providers, but its cheap preflight requires the demanded credential references to be present. Before
+paid/external `build`, configure only variables used by the selected Runtime Profile:
 
 | Variable | Provider/use |
 |---|---|
@@ -76,6 +77,7 @@ none, `status --watch` reports the Worker's state and tells you to start it.
 
 An Endpoint whose Runtime Profile points at the read-only `env` CredentialStore must be configured
 by setting its exact environment variable. `hypit auth login` deliberately refuses to prompt in
-that case. For an interactive workstation, select the writable macOS Keychain CredentialStore in
-the Runtime Profile; after `runtime use`, `hypit auth login <endpoint>` can store the secret.
-This is an explicit deployment choice, not a Provider-specific CLI branch.
+that case. For an interactive workstation, select the writable `os` CredentialStore in the Runtime
+Profile; after `runtime use`, `hypit auth login <endpoint>` stores the secret in macOS Keychain or
+Windows Credential Locker. The same `{ "store": "os", "key": "…" }` reference works on both
+supported systems. This is an explicit deployment choice, not a Provider-specific CLI branch.

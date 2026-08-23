@@ -92,7 +92,8 @@ hypit programs up
 hypit programs down
 ```
 
-这些命令只加载 Endpoint 包，不打开 SQLite、Artifact Store 或 Credential Store。
+`programs up` 会先准备所选 Endpoint 包的上游 npm 依赖，再操作其声明的程序。这些命令不打开
+SQLite、Artifact Store 或 Credential Store。
 
 ## 生命周期
 
@@ -104,8 +105,10 @@ hypit runtime logs
 hypit runtime down
 ```
 
-`runtime up` 启动本地 Worker。`build` 提交任务，`status`、`queue`、`cancel` 用来观察和控制。
-终态 Build 不恢复；复用以前的结果必须在新的 `.svrun` 中显式写 Candidate。
+`runtime up` 先让 npm 把所选 Adapter 的精确上游包准备到机器共享目录，再准备 Managed
+Program 并启动本地 Worker。`build` 不做部署：它执行便宜只读预检，只在就绪后提交，并确保
+Worker 可用。`status`、`queue`、`cancel` 用来观察和控制耐久工作。终态 Build 不恢复；复用
+以前的结果必须在新的 `.svrun` 中显式写 Candidate。
 
-Runtime 包是本地可信部署代码，其安装版本由 npm 或 pnpm 管理。Runtime 不再实现另一套包管理器，
-也不会把元数据冒充成沙箱。
+Runtime 包是本地可信部署代码，其安装版本由 npm 或 pnpm 管理。Hypit 只在显式 `runtime up` /
+`packages install` 边界选择精确依赖并调用 npm，不维护第二份包锁，也不会把元数据冒充成沙箱。

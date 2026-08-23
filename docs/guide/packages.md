@@ -5,10 +5,18 @@ description: The seven layers, dependency boundaries, package anatomy and facets
 
 # Package Architecture
 
-Workspace packages under `packages/` are organized into seven architectural layers. Dependencies are
-declared by each package itself. The root installs the complete source checkout so the Package
-Loader can resolve any explicitly selected package, but TypeScript has no central path alias that can
-hide a package's undeclared import.
+Internal modules under `packages/` are organized into seven architectural layers. Dependencies are
+declared by each module itself. The published `hypit` Distribution includes the complete official
+module tree so the Package Loader can resolve any explicitly selected package, while TypeScript has
+no central path alias that can hide an undeclared import.
+
+The complete official tree is source/code, not an eager download of every upstream dependency.
+The base npm install contains only the launcher dependency. Selected Runtime adapters prepare their
+ordinary npm dependencies in the shared machine package home during explicit `runtime up`; optional
+author assets such as Fontsource families are installed with the exact `hypit packages install`
+command reported by compilation. npm's package manifest remains the authority—Hypit adds no second
+lock, receipt or hash inventory. Project-scoped third-party components and their dependencies remain
+owned by that project's package manager.
 
 ## The seven layers
 
@@ -140,7 +148,7 @@ queues, stores, credentials and process lifecycle; they never define author synt
 @hypit/artifact-store-fs     filesystem Artifacts
 @hypit/artifact-store-s3     S3 Artifacts
 @hypit/credential-store-env  environment credentials
-@hypit/credential-store-keychain macOS Keychain credentials
+@hypit/credential-store-os      macOS Keychain or Windows Credential Locker
 ```
 
 ### Layer 7: Applications
