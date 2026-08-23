@@ -222,17 +222,17 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
     canvas: canvas.ref, frame: frame.ref, header: { kind: "record", id: headerId }, semantic: semantic.ref,
     spec: { kind: "record", id: specId },
   };
-  const terminalSpecId = `${id}.terminal.window`;
+  const terminalSpecId = `${id}.terminal.point`;
   const terminalSpecName = terminalValue.terminal.kind === "program-end" ? "program-spec" : terminalValue.terminal.specName;
-  records.push({ id: terminalSpecId, type: temporalTypes.windowSpec, value: { kind: "inline", value: {
+  records.push({ id: terminalSpecId, type: temporalTypes.pointSpec, value: { kind: "inline", value: {
     id: `${id}.terminal`,
     projection: terminalValue.terminal.kind === "program-end"
-      ? { start: { ref: "program.end", offset: { unit: "frames", value: -1 } }, end: { ref: "program.end" } }
+      ? { ref: "program.end" }
       : terminalValue.terminal.kind === "moment"
-        ? { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } }
+        ? { ref: "moment.cue" }
         : terminalValue.terminal.kind === "selection-start"
-          ? { start: { ref: "selection.start" }, end: { ref: "selection.start", offset: { unit: "frames", value: 1 } } }
-          : { start: { ref: "selection.end" }, end: { ref: "selection.end", offset: { unit: "frames", value: 1 } } },
+          ? { ref: "selection.start" }
+          : { ref: "selection.end" },
   } }, range: element.range });
   if (terminalValue.reference !== undefined) inputs.terminal = terminalValue.reference.ref;
   inputs[terminalSpecName] = { kind: "record", id: terminalSpecId };
@@ -273,19 +273,19 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
     const sampleSpecName = `card-${suffix}-sample-spec`;
     const cardSpecName = `card-${suffix}-spec`;
     const momentName = `card-${suffix}-moment`;
-    const windowSpecName = `card-${suffix}-window-spec`;
+    const pointSpecName = `card-${suffix}-point-spec`;
     const labelName = `card-${suffix}-label`;
     inputs[sourceName] = source.ref;
     inputs[fitName] = { kind: "record", id: fitId };
     inputs[sampleSpecName] = { kind: "record", id: sampleId };
     inputs[cardSpecName] = { kind: "record", id: cardSpecId };
     inputs[momentName] = moment.ref;
-    const windowSpecId = `${id}.card.${suffix}.window`;
-    records.push({ id: windowSpecId, type: temporalTypes.windowSpec, value: { kind: "inline", value: {
+    const pointSpecId = `${id}.card.${suffix}.point`;
+    records.push({ id: pointSpecId, type: temporalTypes.pointSpec, value: { kind: "inline", value: {
       id: `${id}.${cardId}`,
-      projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } },
+      projection: { ref: "moment.cue" },
     } }, range: child.range });
-    inputs[windowSpecName] = { kind: "record", id: windowSpecId };
+    inputs[pointSpecName] = { kind: "record", id: pointSpecId };
     let labelRef: typeof semantic.ref;
     if (child.attributes.label === undefined) {
       const labelId = `${id}.card.${suffix}.label-none`;
@@ -309,7 +309,7 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
     }
     cards.push({
       suffix, sourceKind, sourceName, ...(extentName === undefined ? {} : { extentName }), fitName, sampleSpecName,
-      ...(framePaintSpecName === undefined ? {} : { framePaintSpecName }), labelName, cardSpecName, momentName, windowSpecName,
+      ...(framePaintSpecName === undefined ? {} : { framePaintSpecName }), labelName, cardSpecName, momentName, pointSpecName,
     });
   }
   if (cards.length === 0) throw new Error(`${element.name} requires at least one Card.`);

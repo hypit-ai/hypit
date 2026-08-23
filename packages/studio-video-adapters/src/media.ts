@@ -62,23 +62,23 @@ function projectMedia(context: StudioAdapterContext): readonly StudioEntityDraft
     ...(program.items ?? []).map((item) => ({
       id: item.id, startFrame: item.span.startFrame, endFrameExclusive: item.span.endFrameExclusive,
       stackOrder: item.stacking.order, preview: materialPreview(item.layers, facet, item.sourceAudio?.fromLayer),
+      temporalInput: "window",
     })),
     ...(program.sequences ?? []).map((item) => ({
       id: item.id, startFrame: item.span.startFrame, endFrameExclusive: item.span.endFrameExclusive,
       stackOrder: item.stacking.order,
       preview: materialPreview(item.members?.[0]?.layers, facet, item.members?.[0]?.sourceAudio?.fromLayer),
+      temporalInput: "terminal",
     })),
   ];
   return childEntities(context, items, "media-item",
     context.track.type === "AudioTrack" ? "waveform" : "picture").map((entity, index) => {
     const item = items[index];
     if (item === undefined) return entity;
-    const temporal = itemTemporalLineage({
-      runtimeId: item.id, span: item,
-      ...(context.placement === undefined ? {} : { placement: context.placement }),
-    });
+    const temporal = itemTemporalLineage(context, item.id, item.temporalInput);
     return {
       ...entity,
+      ...(temporal?.source.kind === "program" || temporal?.source.id === undefined ? {} : { markerId: temporal.source.id }),
       ...(item.preview === undefined ? {} : { preview: item.preview }),
       ...(temporal === undefined ? {} : { temporal }),
     };

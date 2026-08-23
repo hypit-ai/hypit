@@ -58,6 +58,12 @@ export type TemporalWindowSpec = {
   readonly projection: TemporalWindowProjection;
 };
 
+/** Input value for a Temporal point projection producer. */
+export type TemporalPointSpec = {
+  readonly id: string;
+  readonly projection: TemporalPointExpression;
+};
+
 export type FrameSpan = {
   readonly startFrame: number;
   readonly endFrameExclusive: number;
@@ -70,8 +76,18 @@ export type ProjectedWindow = {
   readonly span: FrameSpan;
 };
 
+export type ProjectedPoint = {
+  readonly id: string;
+  readonly source: TemporalSource;
+  readonly projection: TemporalPointExpression;
+  readonly frame: number;
+};
+
 /** Public protocol name for the resolved window consumed by domain programs. */
 export type TemporalWindow = ProjectedWindow;
+
+/** Public protocol name for the resolved boundary consumed by domain programs. */
+export type TemporalPoint = ProjectedPoint;
 
 export type WindowRelation = "independent" | "disjoint";
 

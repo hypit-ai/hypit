@@ -10,14 +10,14 @@ import { createResolvedClosure } from "@hypit/core";
 import {
   decodeDepthStackLabelSurface,
   decodeDepthStackSurface,
-  appendDepthStackProjectedCard,
+  appendDepthStackCard,
   createDepthStackCardSet,
   decodeDepthStackSpec,
   depthStackManifest,
   depthStackMarkupSurfaces,
   depthStackProducers,
   depthStackTypes,
-  finalizeDepthStackAtWindow,
+  finalizeDepthStack,
   noDepthStackCardLabel,
   renderDepthStack,
   resolveDepthStackPose,
@@ -40,7 +40,8 @@ import { narrativeTypes } from "@hypit/narrative";
 import { sealProgramSpace } from "@hypit/program-space";
 import type { ModuleManifest } from "@hypit/protocol";
 import { semanticTrackTypes } from "@hypit/semantic-track";
-import type { TemporalWindow } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal";
+import type { TemporalPoint } from "@hypit/temporal";
 import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@hypit/spatial";
 import { svsRecipeType } from "@hypit/svs";
 import { sealText, textManifest, textTypes } from "@hypit/text";
@@ -101,6 +102,7 @@ test("DepthStack Surface declares every sealed Record it may emit", () => {
     depthStackTypes.cardLabel,
     depthStackTypes.cardLabelStyle,
     textTypes.text,
+    temporalTypes.pointSpec,
     depthStackTypes.program,
     compositionTypes.visualTrack,
   ]) {
@@ -202,21 +204,21 @@ function cardSpec(id: string, past: "hold-tail" | "continue" | "hide" = "hold-ta
   });
 }
 
-function momentWindow(id: string, frameValue: number): TemporalWindow {
+function momentPoint(id: string, frameValue: number): TemporalPoint {
   return {
     id: `${id}::moment`,
     source: { kind: "moment", id },
-    projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "frames", value: 1 } } },
-    span: { startFrame: frameValue, endFrameExclusive: frameValue + 1 },
+    projection: { ref: "moment.cue" },
+    frame: frameValue,
   };
 }
 
-function programWindow(endFrame: number): TemporalWindow {
+function programPoint(endFrame: number): TemporalPoint {
   return {
     id: "program::program",
     source: { kind: "program", id: "program" },
-    projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
-    span: { startFrame: 0, endFrameExclusive: endFrame },
+    projection: { ref: "program.end" },
+    frame: endFrame,
   };
 }
 
@@ -232,21 +234,21 @@ function program(input: {
   let set = createDepthStackCardSet();
   for (const [index, trigger] of triggers.entries()) {
     const id = `card-${index + 1}`;
-    set = appendDepthStackProjectedCard(
+    set = appendDepthStackCard(
       set,
       input.materials?.[index] ?? stillMaterial(id),
       input.labels?.[index] ?? noDepthStackCardLabel(),
       input.playbacks?.[index] ?? cardSpec(id),
-      momentWindow(id, trigger),
+      momentPoint(id, trigger),
     );
   }
-  return finalizeDepthStackAtWindow(
+  return finalizeDepthStack(
     set,
     sealDepthStackHeader({ id: "proof-stack" }),
     frame,
     input.spec ?? baseSpec(),
-    programWindow(input.terminal ?? 60),
-    semantic,
+    programPoint(input.terminal ?? 60),
+    space,
   );
 }
 
@@ -278,9 +280,9 @@ test("explicit wrapping never aliases one Card into several relative depths", ()
 });
 
 test("missing, equal, reversed and terminal-crossing triggers fail in authored order", () => {
-  assert.throws(() => finalizeDepthStackAtWindow(
+  assert.throws(() => finalizeDepthStack(
     createDepthStackCardSet(), sealDepthStackHeader({ id: "empty" }),
-    frame, baseSpec(), programWindow(60), semantic,
+    frame, baseSpec(), programPoint(60), space,
   ), /at least one Card/u);
   assert.throws(() => program({ triggers: [0, 20, 20] }), /strictly increasing/u);
   assert.throws(() => program({ triggers: [0, 30, 20] }), /strictly increasing/u);
@@ -440,7 +442,8 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-still-media-layer"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-timed-media-layer"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-depth-stack-card"));
-  assert.ok(fragment.operations.some((operation) => operation.producer.name === "finalize-depth-stack-until-selection-end"));
+  assert.ok(fragment.operations.some((operation) => operation.producer.name === "finalize-depth-stack"));
+  assert.ok(fragment.operations.some((operation) => operation.producer.name === "project-selection-point"));
   assert.equal(fragment.inputs.filter((input) => input.type.name === narrativeTypes.moment.name).length, 2);
   assert.ok(fragment.inputs.some((input) => input.name === "frame"));
   assert.ok(fragment.inputs.some((input) => input.name === "terminal"));

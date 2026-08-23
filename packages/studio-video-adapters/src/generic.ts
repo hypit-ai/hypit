@@ -94,11 +94,12 @@ function projectText(context: StudioAdapterContext): readonly StudioEntityDraft[
     if (item === undefined) return entity;
     const document = program.items?.[index]?.document;
     const label = document === undefined ? "" : textOf(document);
-    const temporal = itemTemporalLineage({
-      runtimeId: item.id, span: item,
-      ...(context.placement === undefined ? {} : { placement: context.placement }),
-    });
-    const named = label.length === 0 ? entity : { ...entity, label };
+    const temporal = itemTemporalLineage(context, item.id);
+    const named = {
+      ...entity,
+      ...(label.length === 0 ? {} : { label }),
+      ...(temporal?.source.kind === "program" || temporal?.source.id === undefined ? {} : { markerId: temporal.source.id }),
+    };
     return temporal === undefined ? named : { ...named, temporal };
   });
 }

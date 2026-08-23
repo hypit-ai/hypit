@@ -9,8 +9,11 @@ import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 import {
   assertWindowRelation,
   locateSelection,
+  projectMomentPoint,
   projectMomentWindow,
+  projectProgramPoint,
   projectProgramWindow,
+  projectSelectionPoint,
   projectSegmentWindow,
   projectSelectionWindow,
   resolveTriggeredSchedule,
@@ -34,6 +37,7 @@ const semantic = semanticTrackFixture(space, {
     { identity: "c", frame: 90 },
     { identity: "d", frame: 120 },
     { identity: "late", frame: 240 },
+    { identity: "end", frame: 300 },
     { identity: "segment:answer:start", frame: 60 },
     { identity: "segment:answer:end", frame: 120 },
   ],
@@ -59,6 +63,58 @@ test("one Selection projects exact local points and stable source identity", () 
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
     span: { startFrame: 30, endFrameExclusive: 60 },
   });
+});
+
+test("points preserve source identity and admit both ProgramSpace boundaries", () => {
+  assert.deepEqual(projectProgramPoint({
+    itemId: "terminal",
+    semantic,
+    projection: { ref: "program.end" },
+  }), {
+    id: "terminal::program",
+    source: { kind: "program", id: "program" },
+    projection: { ref: "program.end" },
+    frame: 300,
+  });
+  assert.deepEqual(projectMomentPoint({
+    itemId: "terminal",
+    semantic,
+    moment: moment("done", "end"),
+    projection: { ref: "moment.cue" },
+  }), {
+    id: "terminal::done",
+    source: { kind: "moment", id: "done" },
+    projection: { ref: "moment.cue" },
+    frame: 300,
+  });
+  assert.equal(projectProgramPoint({
+    itemId: "start",
+    semantic,
+    projection: { ref: "program.start" },
+  }).frame, 0);
+});
+
+test("a point may consume one boundary of a crossed Selection", () => {
+  const crossed = selection("crossed", "d", "a");
+  assert.equal(projectSelectionPoint({
+    itemId: "boundary",
+    semantic,
+    selection: crossed,
+    projection: { ref: "selection.end" },
+  }).frame, 30);
+});
+
+test("points reject exact coordinates outside ProgramSpace", () => {
+  assert.throws(() => projectProgramPoint({
+    itemId: "before",
+    semantic,
+    projection: { ref: "program.start", offset: frames(-1) },
+  }), /falls outside ProgramSpace/u);
+  assert.throws(() => projectProgramPoint({
+    itemId: "after",
+    semantic,
+    projection: { ref: "program.end", offset: frames(1) },
+  }), /falls outside ProgramSpace/u);
 });
 
 test("one Segment projects from its own structural start and end anchors", () => {

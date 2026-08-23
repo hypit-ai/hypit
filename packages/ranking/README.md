@@ -41,6 +41,11 @@ Column resolves those sibling candidates into non-overlapping windows inside the
 Segment/Selection `during` span. Candidate time, child order and rank may all differ. A preset Item
 has no child `during` and is settled from the beginning of the outer window.
 
+TierBoard and TopThree triggers and terminals are explicit `TemporalPoint` values. Column outer and
+reveal candidates remain `TemporalWindow` values. Ranking consumes those projections plus
+ProgramSpace and owns only the subsequent chronological or non-overlap schedule; it does not locate
+Moment/Selection frames internally.
+
 The Column's `frame` is the fixed left ranking rail; `canvas` supplies the independent coordinate
 space for the large reveal stage. `stage-x` and `stage-y` are normalized Canvas coordinates. Each
 normal reveal rises from below the Canvas, holds on that stage, then shrinks and moves into its

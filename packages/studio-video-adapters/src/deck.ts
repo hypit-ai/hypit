@@ -1,5 +1,5 @@
 import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft } from "@hypit/studio-adapter";
-import { readonlyInteraction, sameSurfaceValue } from "@hypit/studio-adapter";
+import { readonlyInteraction, sameSurfaceValue, temporalLineageFor } from "@hypit/studio-adapter";
 import { videoLaneHeights } from "./presentation.js";
 
 type DepthStackProgram = {
@@ -16,8 +16,8 @@ function projectDeck(context: StudioAdapterContext): readonly StudioEntityDraft[
     child.id === undefined ? [] : [[child.id, child] as const]));
   return cards.map((card, index): StudioEntityDraft => {
     const child = children.get(card.id);
-    const markerId = child?.referenceAttributes.at?.split(".").at(-1)
-      ?? child?.referenceAttributes.moment?.split(".").at(-1);
+    const temporal = temporalLineageFor(context, card.id, "activation");
+    const markerId = temporal?.source.id;
     const endFrameExclusive = cards[index + 1]?.activationFrame ?? program.terminalFrame;
     const render = context.spans.find((span) => span.id === card.id
       || span.id.startsWith(`${card.id}:`) || span.id.startsWith(`${card.id}#`));
@@ -32,16 +32,7 @@ function projectDeck(context: StudioAdapterContext): readonly StudioEntityDraft[
       ...(child === undefined ? {} : { elementRange: child.range }),
       ...(render === undefined ? {} : { presentId: render.id, renderIds: [render.id] }),
       presentation: { entity: "deck-card", shape: "picture", depth: 0 },
-      temporal: {
-        source: { kind: "moment", ...(markerId === undefined ? {} : { id: markerId }) },
-        projection: {
-          startExpression: "moment.cue",
-          endExpression: "next moment / terminal",
-          startFrame: card.activationFrame,
-          endFrameExclusive,
-        },
-        phases: [],
-      },
+      ...(temporal === undefined ? {} : { temporal }),
       interaction: readonlyInteraction,
     };
   });

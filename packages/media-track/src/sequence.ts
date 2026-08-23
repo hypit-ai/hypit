@@ -10,7 +10,7 @@ import { canonicalize } from "@hypit/protocol";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace } from "@hypit/spatial";
 import { resolveTriggeredSchedule } from "@hypit/temporal";
-import type { TemporalWindow } from "@hypit/temporal";
+import type { TemporalPoint } from "@hypit/temporal";
 
 import { assertMediaIdentity, assertMediaLayerSet } from "./layers.js";
 import { lowerMediaItemElements } from "./lower.js";
@@ -107,13 +107,13 @@ function appendMediaSequenceMemberAtFrame(
   }) as unknown as MediaSequenceMemberSet;
 }
 
-export function appendMediaSequenceProjectedMember(
+export function appendMediaSequenceMember(
   set: MediaSequenceMemberSet,
   layers: MediaLayerSet,
   spec: MediaSequenceMemberSpec,
-  window: TemporalWindow,
+  activation: TemporalPoint,
 ): MediaSequenceMemberSet {
-  return appendMediaSequenceMemberAtFrame(set, layers, spec, window.span.startFrame);
+  return appendMediaSequenceMemberAtFrame(set, layers, spec, activation.frame);
 }
 
 export function assertMediaHandoffSpec(value: MediaHandoffSpec): void {

@@ -21,8 +21,10 @@ import type {
   LocatedProgram,
   LocatedSegment,
   LocatedSelection,
+  ProjectedPoint,
   ProjectedWindow,
   TemporalSource,
+  TemporalPointSpec,
   TemporalWindowSpec,
   TemporalPointExpression,
   TemporalWindowProjection,
@@ -103,6 +105,26 @@ export function projectTemporalWindow(
   return { startFrame, endFrameExclusive };
 }
 
+export function projectTemporalPoint(
+  projection: TemporalPointExpression,
+  environment: PointEnvironment,
+  space: ProgramSpace,
+): number {
+  assertProgramSpaceIdentity(space);
+  const totalFrames = programSpaceFrameCount(space);
+  const raw = evaluatePoint(projection, environment, space);
+  const lower = rational(0n);
+  const upper = rational(BigInt(totalFrames));
+  if (compare(raw, lower) < 0 || compare(raw, upper) > 0) {
+    throw new Error("Temporal point projection falls outside ProgramSpace.");
+  }
+  const frame = quantizeBoundary(raw);
+  if (frame < 0 || frame > totalFrames) {
+    throw new Error("Temporal point projection quantizes outside ProgramSpace.");
+  }
+  return frame;
+}
+
 function projectedId(itemId: string, sourceId: string): string {
   if (itemId.length === 0) throw new Error("Projected item id must not be empty.");
   return `${itemId}::${sourceId}`;
@@ -119,6 +141,81 @@ function projectedWindow(
     projection: structuredClone(spec.projection),
     span: { ...span },
   };
+}
+
+function projectedPoint(
+  spec: TemporalPointSpec,
+  source: TemporalSource,
+  frame: number,
+): ProjectedPoint {
+  return {
+    id: projectedId(spec.id, source.id),
+    source: { ...source },
+    projection: structuredClone(spec.projection),
+    frame,
+  };
+}
+
+export function projectSelectionPoint(input: {
+  readonly itemId: string;
+  readonly semantic: SemanticTrack;
+  readonly selection: NarrativeSelectionRef;
+  readonly projection: TemporalPointExpression;
+}): ProjectedPoint {
+  const space = projectSemanticProgramSpace(input.semantic);
+  const program = locateProgram(input.semantic);
+  const selection = locateSelection(input.semantic, input.selection);
+  return projectedPoint(
+    { id: input.itemId, projection: input.projection },
+    { kind: "selection", id: selection.id },
+    projectTemporalPoint(input.projection, { program, selection }, space),
+  );
+}
+
+export function projectMomentPoint(input: {
+  readonly itemId: string;
+  readonly semantic: SemanticTrack;
+  readonly moment: NarrativeMomentRef;
+  readonly projection: TemporalPointExpression;
+}): ProjectedPoint {
+  const space = projectSemanticProgramSpace(input.semantic);
+  const program = locateProgram(input.semantic);
+  const moment = locateMoment(input.semantic, input.moment);
+  return projectedPoint(
+    { id: input.itemId, projection: input.projection },
+    { kind: "moment", id: moment.id },
+    projectTemporalPoint(input.projection, { program, moment }, space),
+  );
+}
+
+export function projectProgramPoint(input: {
+  readonly itemId: string;
+  readonly semantic: SemanticTrack;
+  readonly projection: TemporalPointExpression;
+}): ProjectedPoint {
+  const space = projectSemanticProgramSpace(input.semantic);
+  const program = locateProgram(input.semantic);
+  return projectedPoint(
+    { id: input.itemId, projection: input.projection },
+    { kind: "program", id: program.id },
+    projectTemporalPoint(input.projection, { program }, space),
+  );
+}
+
+export function projectSegmentPoint(input: {
+  readonly itemId: string;
+  readonly semantic: SemanticTrack;
+  readonly segment: NarrativeExcerpt;
+  readonly projection: TemporalPointExpression;
+}): ProjectedPoint {
+  const space = projectSemanticProgramSpace(input.semantic);
+  const program = locateProgram(input.semantic);
+  const segment = locateSegment(input.semantic, input.segment);
+  return projectedPoint(
+    { id: input.itemId, projection: input.projection },
+    { kind: "segment", id: segment.id },
+    projectTemporalPoint(input.projection, { program, segment }, space),
+  );
 }
 
 export function projectSelectionWindow(input: {

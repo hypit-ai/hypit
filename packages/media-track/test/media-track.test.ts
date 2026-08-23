@@ -13,9 +13,9 @@ import { narrativeTypes } from "@hypit/narrative";
 import {
   appendMediaPaintLayer,
   appendMediaSound,
-  appendMediaSequenceAtWindow,
-  appendMediaSequenceProjectedMember,
-  appendProjectedMediaItem,
+  appendMediaItem,
+  appendMediaSequence as appendProjectedMediaSequence,
+  appendMediaSequenceMember as appendProjectedMediaSequenceMember,
   appendStillMediaLayer,
   appendSurfaceMediaLayer,
   appendTimedMediaLayer,
@@ -138,7 +138,7 @@ function appendProgramMediaItem(
 ) {
   const projection = "projection" in authored ? authored.projection : defaultItemProjection;
   const { projection: _ignored, ...spec } = authored as TestMediaItemSpec;
-  return appendProjectedMediaItem(set, trackHeader, semanticTrack, canvasSpace, layers, frameValue, spec, sounds,
+  return appendMediaItem(set, trackHeader, space, canvasSpace, layers, frameValue, spec, sounds,
     projectProgramWindow({ itemId: spec.id, semantic: semanticTrack, projection }));
 }
 
@@ -148,7 +148,7 @@ function appendSelectionMediaItem(
   authored: TestMediaItemSpec, sounds: ReturnType<typeof createMediaSoundSet>,
 ) {
   const { projection, ...spec } = authored;
-  return appendProjectedMediaItem(set, trackHeader, semanticTrack, canvasSpace, layers, frameValue, spec, sounds,
+  return appendMediaItem(set, trackHeader, space, canvasSpace, layers, frameValue, spec, sounds,
     projectSelectionWindow({ itemId: spec.id, semantic: semanticTrack, selection, projection }));
 }
 
@@ -158,7 +158,7 @@ function appendSegmentMediaItem(
   authored: TestMediaItemSpec, sounds: ReturnType<typeof createMediaSoundSet>,
 ) {
   const { projection, ...spec } = authored;
-  return appendProjectedMediaItem(set, trackHeader, semanticTrack, canvasSpace, layers, frameValue, spec, sounds,
+  return appendMediaItem(set, trackHeader, space, canvasSpace, layers, frameValue, spec, sounds,
     projectSegmentWindow({ itemId: spec.id, semantic: semanticTrack, segment, projection }));
 }
 
@@ -168,7 +168,7 @@ function appendMomentMediaItem(
   authored: TestMediaItemSpec, sounds: ReturnType<typeof createMediaSoundSet>,
 ) {
   const { projection, ...spec } = authored;
-  return appendProjectedMediaItem(set, trackHeader, semanticTrack, canvasSpace, layers, frameValue, spec, sounds,
+  return appendMediaItem(set, trackHeader, space, canvasSpace, layers, frameValue, spec, sounds,
     projectMomentWindow({ itemId: spec.id, semantic: semanticTrack, moment, projection }));
 }
 
@@ -228,11 +228,11 @@ function sequenceMembers(
       id: `member-${index + 1}`,
       sourceAudio: { fromLayer: "video", gain: 1 - (index * 0.1) },
     });
-    members = appendMediaSequenceProjectedMember(members, layerFactory(index), spec, {
+    members = appendProjectedMediaSequenceMember(members, layerFactory(index), spec, {
       id: `${spec.id}::test`,
       source: { kind: "program", id: "program" },
-      projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
-      span: { startFrame: activationFrame, endFrameExclusive: activationFrame + 1 },
+      projection: { ref: "program.start" },
+      frame: activationFrame,
     });
   }
   return members;
@@ -248,22 +248,24 @@ function testProgramWindow(endFrameExclusive: number): TemporalWindow {
 }
 
 function appendMediaSequence(
-  set: ReturnType<typeof createMediaTrackSet>, trackHeader: typeof header, _space: typeof space, _canvas: typeof canvas,
+  set: ReturnType<typeof createMediaTrackSet>, trackHeader: typeof header, spaceValue: typeof space, canvasValue: typeof canvas,
   members: ReturnType<typeof createMediaSequenceMemberSet>, frameValue: typeof frame, spec: MediaSequenceSpec,
   sounds: ReturnType<typeof createMediaSoundSet>, terminalFrame: number,
 ) {
-  return appendMediaSequenceAtWindow(set, trackHeader, semantic, canvas, members, frameValue, spec, sounds,
-    testProgramWindow(terminalFrame));
+  return appendProjectedMediaSequence(set, trackHeader, spaceValue, canvasValue, members, frameValue, spec, sounds, {
+    id: `${spec.id}::terminal`, source: { kind: "program", id: "program" },
+    projection: { ref: "program.end" }, frame: terminalFrame,
+  });
 }
 
 function appendMediaSequenceMember(
   set: ReturnType<typeof createMediaSequenceMemberSet>, layers: MediaLayerSet, spec: ReturnType<typeof sealMediaSequenceMemberSpec>, activationFrame: number,
 ) {
-  return appendMediaSequenceProjectedMember(set, layers, spec, {
+  return appendProjectedMediaSequenceMember(set, layers, spec, {
     id: `${spec.id}::test`,
     source: { kind: "program", id: "program" },
-    projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
-    span: { startFrame: activationFrame, endFrameExclusive: activationFrame + 1 },
+    projection: { ref: "program.start" },
+    frame: activationFrame,
   });
 }
 
@@ -767,7 +769,8 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
   assert.ok(producers.includes("append-media-paint-layer"));
   assert.ok(producers.includes("bind-media-item-clip-path"));
   assert.ok(producers.includes("append-media-sequence-member"));
-  assert.ok(producers.includes("append-media-sequence-until-selection-end"));
+  assert.ok(producers.includes("append-media-sequence"));
+  assert.ok(producers.includes("project-selection-point"));
   assert.ok(producers.includes("append-media-sound"));
   assert.ok(fragment.inputs.some((entry) => entry.type.name === artifactTypes.blob.name));
   assert.ok(fragment.inputs.some((entry) => entry.type.name === mediaTypes.synchronized.name));

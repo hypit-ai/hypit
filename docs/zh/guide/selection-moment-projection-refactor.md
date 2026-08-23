@@ -5,7 +5,7 @@ description: 单语义来源与组件入口前投影的当前实现、目标边�
 
 # Selection、Moment 与 Projection 重构状态
 
-> 状态：Selection/Moment 单值化与组件入口前的 Projection 运行图已经完成；Studio 侧的时间线回写仍未开始。
+> 状态：Selection/Moment 单值化、Point/Window 投影运行图和 Studio 只读谱系追踪已经完成；跨层回写仍保持显式、保守。
 
 ## 已完成
 
@@ -20,25 +20,27 @@ description: 单语义来源与组件入口前投影的当前实现、目标边�
 ## 当前运行图
 
 SVML 仍然显式写出 `during`、`at/for`、`start/end` 及其 Selection、Segment、Moment 来源，
-但这些语法只在 Surface lowering 阶段生成 `TemporalWindowSpec`。运行图随后先执行唯一的
-Temporal Projection Producer，领域组件入口只收到已经解析好的 `TemporalWindow`：
+Surface lowering 会按语义生成 `TemporalPointSpec` 或 `TemporalWindowSpec`。运行图随后执行
+对应的 Temporal Projection Producer，领域组件入口只收到已经解析好的 `TemporalPoint` 或
+`TemporalWindow`：
 
 ```text
-SemanticTrack + Selection/Segment/Moment + TemporalWindowProjection
+SemanticTrack + Program/Selection/Segment/Moment + Temporal Point/Window Spec
 ```
 
 ```text
 SVML 时间语法糖
-  -> TemporalWindowSpec（作者投影表达式）
-  -> Temporal Projection Producer
-  -> TemporalWindow（来源、表达式、帧区间）
+  -> TemporalPointSpec / TemporalWindowSpec（作者投影表达式）
+  -> Temporal Point / Window Projection Producer
+  -> TemporalPoint（来源、表达式、边界帧）
+     或 TemporalWindow（来源、表达式、半开帧区间）
   -> 领域组件入口
   -> 组件内部消费逻辑
 ```
 
 Media、Audio、Typography、Comment、Overlay、Ranking、Deck 的领域 ItemSpec 不再保存
-`projection`；唯一的投影表达式位于 `TemporalWindowSpec`，唯一的解析帧区间位于
-`TemporalWindow`。领域组件只接收已经投影完毕的窗口或点，继续拥有真正的领域消费逻辑，例如 Ranking
+`projection`；唯一的投影表达式位于 Temporal Spec，唯一的解析坐标位于 Temporal Point/Window。
+领域组件只接收已经投影完毕的窗口或点，继续拥有真正的领域消费逻辑，例如 Ranking
 的避让与非重叠 schedule、Media Sequence 的 handoff、Audio 的 trim/loop/stretch、动画的
 enter/body/exit。组件不再负责把 Selection、Segment 或 Moment 解释成帧。
 
@@ -58,7 +60,8 @@ Selection 当前保存的是作者明确写下的一对有方向 Anchor；暂不
 
 ## 后续工作
 
-1. Media Sequence、Depth Stack 的边界继续使用显式 `TemporalWindow`；必要时统一 producer 的
-   命名，但不得重新把来源投影塞回领域组件。
-2. Studio 追踪真实 Temporal 图边，不再按属性名、Spec 类型或运行时 id 猜测三窗口谱系。
-3. 清理仍教授非连通 Selection、MomentSet/SelectionSet 或旧 Ranking triggers 的文档。
+1. Studio 已从本次 Run 的执行闭包读取真实 Temporal 记录、投影 Spec 和直接消费边；不得退回
+   属性名、Spec 类型名、运行时 id 前缀或相同 span 推断。
+2. Timeline 修改必须明确选择语义来源、投影表达式或消费参数中的一层。当前只对有唯一源码
+   逆像的绝对端点和 duration 开放写回；Selection/Moment 引用不会从下游矩形自动反推。
+3. 继续清理仍教授非连通 Selection、MomentSet/SelectionSet 或旧 Ranking triggers 的文档。
