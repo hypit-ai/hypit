@@ -1,15 +1,15 @@
 ---
-title: Studio 当前状态与左右面板边界
-description: 记录 Studio 当前可用链路、时间线实现、启动方式，以及左上 Workspace 和右上 Inspector 的下一阶段边界。
+title: Studio 当前架构边界
+description: Studio 的启动单元、四区职责、作者写回、时间谱系与包边界。
 ---
 
-# Studio 当前状态与左右面板边界
+# Studio 当前架构边界
 
-> 本文是当前实现的收口记录，不是新的交互规格。未定案的功能明确标为“待设计”，不在界面里偷偷猜测。
+> 本文只记录当前实现和稳定职责。左上 Workspace、右上 Inspector、任务/产物浏览与数据依赖可见性的下一阶段问题，见 [Studio Workspace 与 Inspector 信息架构审计](./studio-workspace-inspector-audit.md)。那份审计不是实施规格。
 
-## 一、Studio 如何启动
+## 启动单元是 Run
 
-Studio 不是独立构建器，也不会在打开时调用 Provider、创建 Build 或访问 Gemini。它复用一次已经明确配置好的 `.svrun` 作为启动输入：
+Studio 打开一份明确的 `.svrun`，而不是单独打开 `.svml`：
 
 ```text
 hypit-studio --run <project>/build.svrun
@@ -17,81 +17,66 @@ hypit-studio --run <project>/build.svrun
               [--runtime <project>/hypit.runtime.json]
 ```
 
-启动前会做 Studio 专属 preflight。当前第一版要求 Run 明确声明 Film/Render 目标，并且能从真实 Candidate 或确定性结果反追溯出 Studio 要展示的实体。只有一个最终视频文件、没有可追溯的 Track/Candidate 时，不允许 Studio 静默猜出时间线。
+Run 决定读取哪份 Author Source、选择哪些 Candidate，以及哪些已接受 Build Record 被复用。Studio preflight 要求 Film/Render 目标及其显示闭包都能从已满足 Candidate 或确定性 Producer 得到。打开 Studio 不调用 Provider、不创建 Build，也不为未解决的 Need 猜测素材或放置占位。
 
-打开过程只读取 Run 的 snapshot、source 文件、Candidate 满足结果和已有 preview。Studio 的修改目标是 SVML/SVS/SVRun 的作者源文件；Provider 和外部生成不属于打开 Studio 的副作用。
-
-## 二、当前四区
+## 当前四区
 
 ### 左上：Source
 
-当前显示真实 SVML 源码，带行号、滚动和源码选择联动。它仍然是一个源码面板，不是一个完整的项目浏览器。
-
-下一阶段可以把它提升为 Workspace，但必须以真实启动上下文为来源：
-
-- **Source**：当前 SVML、导入的 SVS/SVRun 源码；
-- **Runs / Tasks**：当前 workspace 中已发现的 `.svrun` 及其状态，状态只能来自 Run/preflight，不凭 UI 自造；
-- **Artifacts**：当前 Run 已声明或已满足的输出，来源是 Candidate/Artifact 引用，不扫描目录后冒充结果；
-- **Files**：当前 workspace 中被 source closure 实际读取的文件。
-
-这些视图属于 Studio 会话层。它们不注册回 Core，也不把项目文件复制进 `packages/studio`。第一版仍以 Source 为默认视图，不用假按钮占位。
+当前显示一份真实 Author SVML，支持源码高亮、选择联动和完整文本编辑。服务端同时监视当前 Run 与编译 Source closure，但浏览器还没有用于切换相关 SVML、SVS 和 SVRun 的 Workspace。
 
 ### 中上：Preview
 
-Preview 使用 Run 已有的 Film/Render 输出和 HyperFrames snapshot。它负责播放、seek、缩放和画面查看，不负责从最终画面反推作者语义。没有明确 preview candidate 时，启动失败或显示明确失败原因，不做静默降级。
+Preview 使用当前 Run 的真实素材和同一套领域程序生成 HyperFrames 画面。它负责播放、seek、缩放和画面选择，不从最终像素反推作者语义。
 
 ### 右上：Inspector
 
-当前未选中实体时，Inspector 保持安静，只显示少量真实的 Run/画布/时基元信息；不显示教程文案、AI 状态词或重复的分辨率/帧率信息。
+选择时间线实体后，Inspector 显示实体身份、时间、来源、写回能力和 adapter 明确公开的作者参数。当前呈现仍是一条扁平属性流，参数分组和未选择时的会话元信息尚未形成最终信息架构。
 
-当前选中实体后，Inspector 的数据顺序固定为：
+### 下方：Timeline
+
+时间线显示 Semantic Segment、Word、Selection、Moment，以及 adapter 从真实 Track 投影出的媒体、音频、文字、字幕和组件实体。lane、附属关系、family、内容 shape 与允许手势由 adapter 声明；选择、播放、缩放、吸附、滚动和统一视觉由 Studio 负责。
+
+## 作者写回
+
+Studio 对结构化编辑只公开两类作者操作：
+
+- `timeline.adjust`：沿实体真实时间谱系调整共享 Selection/Moment Anchor 或显式 Window 端点；
+- `parameter.adjust`：修改 adapter 明确公开且带精确 Source range 的 SVML/SVS 参数。
+
+左上源码编辑器可以替换当前 Author SVML 全文。组件 Inspector 不修改 SVRun Candidate 或 Provider 事实，也不把引用偷偷替换成匿名字面量。
+
+每次结构化操作都携带当前 Snapshot revision。服务端重新解析操作目标、生成最小 Source 修改，再用同一 Run 重新编译预览；成功才发布新 Snapshot，失败则恢复 Source。完整边界见 [Studio 作者操作](./studio-timeline-operations.md)。
+
+## 时间谱系
+
+Studio 保留三层不同事实：
 
 ```text
-实体标签（family / facet / 名称）
-  -> 来源标签（SVML / SVS / SVRun / Candidate）
-  -> 可见领域属性
-  -> 时间与空间属性
-  -> 写回能力与禁用原因
-  -> 运行来源
+作者选择（Program / Selection / Segment / Moment）
+  -> 投影（TemporalPoint / TemporalWindow）
+  -> 组件消费与最终 Track 实体
 ```
 
-“上 tag、内部 tag、逐项列表”只是视觉分组，不意味着复制三份真相。每一项必须带有 source range、来源文件、作者值/计算值、是否可写和明确写回目标。没有精确回写映射的操作继续只读。
+谱系来自本次 Run 实际执行闭包中的 Record、Spec 和消费者边，不根据属性名、运行时 id、renderer id 或相同帧区间猜测。缺失的链路保持 unresolved。详见 [Studio 时间谱系](./studio-temporal-windows.md)。
 
-## 三、当前时间线
+## 包边界
 
-当前可见的基础实体包括：
+- `packages/studio`：会话、preflight、snapshot、统一 UI、操作事务和 Source transport；
+- `packages/studio-adapter`：第三方 companion package 使用的稳定数据 ABI；
+- `packages/studio-video-adapters`：官方视频领域的 Track 匹配、实体投影、lane 与参数声明；
+- 领域包：继续只发布运行语义和确定性值，不依赖 Studio。
 
-- Speech 的语义 Segment/Word，以及同源的 Picture、Voice facet；
-- 普通 Media、Audio、Text、Caption；
-- Ranking 根轨和其已声明的附属 Reveals 轨。
+Adapter 不能向应用注入任意 DOM、CSS 或前端状态。删除 Studio 后，Core、SVML、SVS、SVRun 和 Runtime 仍可独立工作。
 
-Speech 的 Picture/Voice 使用普通 Media/Audio 的内容外观，附属关系只由 adapter 声明，Studio 负责邻接、缩进和统一表头。附属轨不再依赖末尾堆叠或可折叠状态。
+## 尚未定案
 
-本轮已完成的时间线收口：
+当前明确仍需调研：
 
-- 表头列改为可拖动、有限范围的宽度，并与右侧 lane 使用同一纵向几何；
-- 文字统一左对齐；普通轨显示 family 图标，附属轨显示中性的分支标记；
-- 删除了旧的附属轨折叠状态和 `expandedByDefault` 协议字段；
-- 选中框恢复为统一的外部细描边与端帽，只提高亮度，不在内容内部叠加额外 keyline；
-- 尺寸、圆角、颜色、交互反馈仍由 Studio 中心层统一，adapter 只声明 family、shape、附属关系、实体和写回能力。
+- 左上怎样浏览本次 Run 涉及的 Source、任务和真实产物；
+- 右上怎样由组件声明能力大类、可选子页、参数组和控件；
+- 未选择实体时哪些会话元信息应集中出现；
+- 怎样恢复 prompt、参考素材、Producer、Provider、Artifact 与 Track 之间的可读依赖关系；
+- Runtime 历史怎样分页读取而不新增中心 Project 数据库或拖慢 Build。
 
-当前仍明确未完成：
-
-- 左上 Workspace 的 Source/Files/Runs/Artifacts 正式切换界面；
-- 右上 Inspector 的最终剪映式标签层级和未选中元信息布局；
-- 时间线中 Selection/Moment 的独立可视化与投影线；
-- move/trim 等时间线手势的完整写回。没有唯一 SVML/SVS/SVRun 映射的操作必须保持禁用。
-
-## 四、包边界
-
-`packages/studio` 只拥有会话、反追溯注册、snapshot、Inspector 和统一 UI 语法。领域包只发布自己的真实输出、实体和确定性值；它们不认识 Studio，也不注册 UI。
-
-`packages/studio-adapter` 是 Studio 与外部作者包之间的开放 ABI。它描述“如何找到、反追溯、显示和写回”，不携带 CSS 色值，也不把一方组件名枚举进 Core 协议。
-
-`packages/studio-video-adapters` 只提供视频领域的实体投影和 lane family；Studio 删除后，Core、SVML、SVS 和 SVRun 仍可独立运行。
-
-## 五、清理结论
-
-本次审计没有发现可安全删除的 Studio 文档或测试：现有 Studio 文档分别记录视觉基线、时间线操作边界、Selection/Moment 重构和三窗口架构；Studio 包没有独立死测试。官网侧仍有被入口引用的旧 Playground/品牌组件，属于官网迁移范围，不能在本次 Studio 收口中孤立删除。
-
-以后新增设计应先补充本记录或对应专题文档，再进入代码；不把未定案的任务列表、产物列表、标签层级或投影表现偷偷硬编码进时间线。
+这些问题统一记录在 [Workspace 与 Inspector 信息架构审计](./studio-workspace-inspector-audit.md)，在调研完成前不固化为 ABI 或存储格式。

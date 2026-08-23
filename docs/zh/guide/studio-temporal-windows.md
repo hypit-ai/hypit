@@ -23,6 +23,11 @@ Moment，再把它投影进帧空间，最后由领域组件消费。Studio 保�
 不表示身份相同。SVML 的 `during`、`at`、`until` 等属性只负责声明作者选择，不直接变成
 领域组件中的找帧逻辑。
 
+Selection 保存作者明确写下的一对有方向 Anchor，不在 Script 层排序、交换或 clamp。端点方向与
+最终投影是否合法是两件事：Temporal Projection 对表达式计算后的 raw window 负责，拒绝反向或
+零宽窗口；与 ProgramSpace 相交后不足一帧也拒绝。这样只消费一个边界的 Point 仍可保留原始作者
+身份，而持续内容不会收到非法 Window。
+
 ## 投影层
 
 Surface lowering 生成 `TemporalPointSpec` 或 `TemporalWindowSpec`，再连接正式 Temporal

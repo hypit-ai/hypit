@@ -28,6 +28,12 @@ The selection window is the semantic source chosen by the author. It retains:
 For a Moment this is a point rather than a duration. A Selection is exactly one contiguous interval,
 and a Moment is exactly one point. Equal frame coordinates do not make two semantic sources identical.
 
+A Selection preserves the author's directed pair of Anchors. Script does not sort, swap or clamp
+them. Anchor direction and the validity of a projected window are separate concerns: Temporal
+Projection rejects a reversed or zero-width raw window, then rejects an intersection with
+ProgramSpace that quantizes below one frame. A consumer of one Point can therefore retain the
+original author identity while duration consumers never receive an invalid Window.
+
 ### 2. Projection point or window
 
 The projection window is the result of applying the Track's temporal expression to one source. For
