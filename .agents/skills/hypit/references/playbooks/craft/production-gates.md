@@ -106,8 +106,9 @@ visual QA.
 
 ## Gate 3: measure and author Tracks
 
-- Normalize every accepted speech-bearing video or audio Take, create its Segment-local
-  `whisperx:SemanticTake`, then assemble those Takes with `speech:Track`.
+- Normalize every accepted speaking take, create its Segment-local `whisperx:SemanticTake`, then
+  assemble those Takes with `speech:Track`. That take carries the Segment's picture as well as its
+  speech, so one accepted generation settles both.
 - Recompute the affected SemanticTake whenever its speech audio changes. Every Track timed against it — Caption,
   Media, Typography, Ranking, Deck, Comment, Screen, Audio — is measured against audio that no longer
   exists otherwise, and the drift is invisible in a still frame. A Style-only change does not prove a
@@ -129,11 +130,14 @@ visual QA.
 - Inspect the durable Build and retrieve the final Artifact with `get`.
 - Watch and listen to the complete delivery, including the first and last second. Verify dialogue,
   captions, overlays, transitions, audio density, claims, and CTA as one program.
-- **Measure the delivery's own speech against the Script.** An agent reads pictures and cannot hear,
-  so "listen and verify dialogue" above resolves to nothing on its own, and a take whose spoken words
-  came from somewhere other than the Script passes `check`, `plan`, `preview_check` and both
-  measurements below without a mark. Transcribe what was delivered and read it against the words the
-  Script holds:
+- **Measure the delivery's own speech against the Script. This is the gate the whole program's words
+  rest on.** The take that speaks a Segment generates that speech from its prompt, so what is said is
+  decided by a video generator rather than handed to a synthesizer as text — it can drop a clause,
+  reorder one, or say something adjacent. Nothing upstream reads it back: an agent reads pictures and
+  cannot hear, so "listen and verify dialogue" above resolves to nothing on its own, and a take whose
+  spoken words came from somewhere other than the Script passes `check`, `plan`, `preview_check` and
+  both measurements below without a mark. Transcribe what was delivered and read it against the words
+  the Script holds:
 
   ```bash
   hypit-reference-video-tools prepare_reference --video-path output/final.mp4 --observer agent

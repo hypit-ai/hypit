@@ -125,6 +125,15 @@ coverage round, and it comes before any repair — collect the whole difference 
 repair against it. Doing it the other way makes the comparison after a repair look like a third
 attempt at a stretch that was never examined.
 
+**Render every stretch first, then send them all at once.** No comparison's question depends on
+another's answer, so nothing is gained by waiting: rendering one and comparing it before rendering the
+next makes the round as long as the sum of its parts. Render the whole set, then issue the
+comparisons together — concurrent requests on the `gemini` observer, one subagent each on the `agent`
+observer, and one after another only where the harness has no subagents.
+
+That is a change in how long the round takes, not in what it costs. The ceilings below count repairs,
+and a round is one look however many stretches it covers.
+
 `--image` is available for one case only: the reference's own `visual:` observation states in words
 that the element is completely still. The judgement comes from the reference's observation, never
 from looking at your own render and concluding it does not move — deciding that from the
@@ -282,8 +291,8 @@ waits for in `../playbooks/craft/production-gates.md`:
   measured at Gate 3, against the real SemanticTrack;
 - **whether the picture is continuous** — the frames nobody authored that `frame-coverage.md` is
   about, at Gate 4, which measures them on the delivery. One inherited edge is settled before then:
-  `reconstruction_check` reads each Recipe's `playback` and refuses a timed picture configured to
-  stop when its material runs out, which is the edge a generated take produces every time. The rest
+  `reconstruction_check` reads each Recipe's `playback` and refuses an insert configured to stop
+  when its material runs out. The rest
   of them — a window that starts late, a blend whose frames are half-covered, a schedule inside a
   component that stops between activations — are measured on the delivery;
 - **whether the delivery says the Script's words** — measured at Gate 4 by transcribing the finished

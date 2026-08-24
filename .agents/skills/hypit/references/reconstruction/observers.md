@@ -147,16 +147,19 @@ has for free:
 Answer the tasks in order yourself when the harness has no subagents. It is slower, and it is the
 fallback rather than the shape to aim for.
 
-The comparison loop arrives here in batches. One element is compared against every shot the reference
-shows it in before any repair, so a single element produces several comparisons at once, and each is
-self-contained in the same way an observation task is. Dispatch one subagent per comparison and run
-them together. Where there are no subagents, answer them one after another rather than folding them
-into a single look: what the round is for is the set of differences across shots, and a shot answered
-in the light of the previous shot's answer stops being independent evidence of anything.
+The comparison loop arrives here in batches. One element is compared against every stretch it is drawn
+over before any repair, and `reconstruction-loop.md` has the renders all made before the first
+comparison is sent, so they arrive together. Each is self-contained in the same way an observation
+task is: no comparison's question depends on another's answer.
 
-A clip comparison reaches this observer as two frame tiles — the reference shot's own, and one built
-from the render against that shot's duration. Read them as a pair of grids sampling the same stretch
-at the same rate.
+Dispatch one subagent per comparison and run them together. Where there are no subagents, answer them
+one after another rather than folding them into a single look — what the round is for is the set of
+differences across stretches, and one answered in the light of the previous answer stops being
+independent evidence of anything.
+
+A clip comparison reaches this observer as two frame tiles — the reference's own cut, and one built
+from the render against the same duration. Read them as a pair of grids sampling the same stretch at
+the same rate.
 
 ## Comparing without subagents
 
