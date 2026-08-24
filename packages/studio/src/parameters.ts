@@ -10,6 +10,7 @@ import type {
   StudioTemporalLineage,
   StudioTimelineGesture,
 } from "@hypit/studio-adapter";
+import type { MarkupSurfaceRegistryLike, SurfaceRecipePropertyVocabulary } from "@hypit/markup";
 import { parseSvs } from "@hypit/svs";
 
 import type { Range } from "./shared.js";
@@ -19,6 +20,7 @@ export type StudioSourceFile = {
   readonly path: string;
   readonly text: string;
   readonly language: "svml" | "svs" | "svrun";
+  readonly role?: "run" | "author" | "dependency";
   readonly imports?: readonly { readonly alias: string; readonly source: string }[];
 };
 
@@ -113,17 +115,26 @@ function recipeParameters(input: {
   readonly referenceName: string;
   readonly referencePath: string;
   readonly placements: readonly Placement[];
+  readonly surfaces?: MarkupSurfaceRegistryLike;
+  readonly vocabulary?: readonly SurfaceRecipePropertyVocabulary[];
 }): readonly StudioParameter[] {
   const local = input.placements.find((candidate) => candidate.id === input.referencePath);
   if (local !== undefined) {
     const next = ["recipe", "default", "style", "appearance", "motion", "program"]
-      .map((name) => local.referenceAttributes[name])
-      .find((value) => value !== undefined);
-    if (next !== undefined && next !== input.referencePath) {
+      .map((name) => ({ name, path: local.referenceAttributes[name] }))
+      .find((value): value is { name: string; path: string } => value.path !== undefined);
+    if (next !== undefined && next.path !== input.referencePath) {
+      const vocabulary = input.surfaces
+        ?.resolve(local.module, local.surface)
+        ?.vocabulary?.attributes
+        .find((attribute) => attribute.name === next.name)
+        ?.recipe;
+      const selectedVocabulary = vocabulary ?? input.vocabulary;
       return recipeParameters({
         ...input,
         current: sourceFor(input.root, local.sourcePath, input.files) ?? input.current,
-        referencePath: next,
+        referencePath: next.path,
+        ...(selectedVocabulary === undefined ? {} : { vocabulary: selectedVocabulary }),
       });
     }
   }
@@ -138,19 +149,26 @@ function recipeParameters(input: {
   const recipe = parsed.recipes.find((item) => item.value.path === recipePath);
   if (recipe === undefined) return [];
   return recipe.properties.map((property) => {
+    const declaration = input.vocabulary?.find((candidate) => candidate.name === property.name);
     const preimage = source.text.slice(property.valueRange.start, property.valueRange.end);
     const raw = preimage.trim();
-    const control = raw === "true" || raw === "false"
+    const control = declaration?.values !== undefined
+      ? "select" as const
+      : raw === "true" || raw === "false"
       ? "boolean" as const
       : /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/u.test(raw) ? "number" as const : "text" as const;
     return {
       id: `${input.draft.id}:${input.referenceName}:${property.name}`,
       name: property.name,
-      label: `${input.referenceName} · ${property.name}`,
+      label: declaration === undefined ? `${input.referenceName} · ${property.name}` : property.name,
+      ...(declaration?.group === undefined ? {} : { group: declaration.group }),
+      ...(declaration?.section === undefined ? {} : { section: declaration.section }),
+      ...(declaration?.summary === undefined ? {} : { summary: declaration.summary }),
       control,
       value: raw,
       language: "svs" as const,
       writable: true,
+      ...(declaration?.values === undefined ? {} : { options: declaration.values }),
       source: {
         path: relative(input.root, sourceAbsolute(input.root, source.path)),
         range: property.valueRange,
@@ -216,6 +234,7 @@ export function parametersForDraft(input: {
   readonly draft: StudioEntityDraft;
   readonly declarations: readonly StudioParameterDeclaration[];
   readonly placements?: readonly Placement[];
+  readonly surfaces?: MarkupSurfaceRegistryLike;
 }): readonly StudioParameter[] {
   const placement = input.placement;
   if (placement === undefined || input.declarations.length === 0) return [];
@@ -256,7 +275,8 @@ export function parametersForDraft(input: {
     } satisfies StudioParameter];
   });
   const recipes = input.declarations.flatMap((declaration) => {
-    const referencePath = element.references[declaration.name];
+    const referencePath = input.draft.parameterReferences?.[declaration.name]
+      ?? element.references[declaration.name];
     if (referencePath === undefined) return [];
     const reference = declaration.referenced === undefined
       ? []
@@ -278,6 +298,7 @@ export function parametersForDraft(input: {
         referenceName: declaration.label ?? declaration.name,
         referencePath,
         placements: input.placements ?? [],
+        ...(input.surfaces === undefined ? {} : { surfaces: input.surfaces }),
       })
       : [];
     return [...reference, ...recipe];

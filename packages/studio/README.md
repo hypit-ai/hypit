@@ -10,6 +10,18 @@ cd /path/to/external-video-project
 hypit-studio --run build.svrun
 ```
 
+When `--runtime` is omitted, Studio uses the nearest Runtime selection made by
+`hypit runtime use`. That selection's directory is the default environment
+boundary. The upper-left library is intentionally not a filesystem browser:
+
+- Source is the exact Run + Author closure and writes back only the selected file;
+- Tasks are read-only Build Catalog/Archive/Dispatch/Operation views;
+- Artifacts are ArtifactStore objects referenced by accepted Records.
+
+No project manifest, Studio database, output-directory scan or inferred campaign
+folder structure is involved. With no selected Runtime, Source and Preview still
+work while Tasks and Artifacts stay explicitly unavailable.
+
 Studio is an application boundary. Core and domain packages do not import it or
 register UI metadata. The installed Distribution supplies the official Studio Adapter
 distribution. An external project may explicitly add companion Adapter packages

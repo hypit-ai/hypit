@@ -6,6 +6,10 @@
  * timeline is assembled without knowing what made any of it, and a package that
  * grows a new Track shows up without this file changing.
  */
+import { relative } from "node:path";
+
+import type { MarkupSurfaceRegistryLike } from "@hypit/markup";
+
 import type {
   CandidateProvenance,
   Clip,
@@ -288,6 +292,7 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
   readonly preview: StudioSnapshot["preview"];
   readonly workspaceRoot: string;
   readonly sourceFiles: readonly StudioSourceFile[];
+  readonly surfaces: MarkupSurfaceRegistryLike;
 }): StudioSnapshot {
   const located = authored(built.source.observations.placements);
   const script = scriptMap(built.source.observations.sourceMaps, built);
@@ -357,6 +362,7 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
         draft,
         declarations: registry.parameterDeclarations(item, placement, draft.lane),
         placements: built.source.observations.placements,
+        surfaces: input.surfaces,
       });
       const editHandles = timelineAdjustHandles(
         parameters,
@@ -419,7 +425,17 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
   );
   return {
     revision: input.revision,
-    source: { path: input.path, text: input.text },
+    source: {
+      path: input.path,
+      text: input.text,
+      files: input.sourceFiles.map((file) => ({
+        path: relative(input.workspaceRoot, file.path),
+        text: file.text,
+        language: file.language,
+        role: file.role ?? "dependency",
+        imports: (file.imports ?? []).map((item) => item.source),
+      })),
+    },
     run: input.run,
     ...(script === undefined ? {} : { script }),
     space: {

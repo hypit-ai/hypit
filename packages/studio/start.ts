@@ -2,6 +2,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createServer } from "vite";
+import { findRuntimeProfile } from "@hypit/cli";
 import { videoCliDistribution } from "@hypit/video-cli";
 
 import { openStudioArchive } from "./src/archive.js";
@@ -21,7 +22,8 @@ function usage(message?: string): never {
     [--studio-profile <hypit.studio.json>]
 
 Studio opens one explicit Run Source, requires a Film/Render target and a
-resolved deterministic semantic projection, and writes only its Author SVML.
+resolved deterministic semantic projection, and writes only the selected file
+inside that exact Run and Author Source closure.
 `);
   process.exit(1);
 }
@@ -47,14 +49,20 @@ if (runArgument === undefined || runArgument.trim().length === 0) usage("Missing
 const runPath = resolve(invokedFrom, runArgument);
 const packageRootArgument = values.get("package-root");
 const workspaceArgument = values.get("workspace");
-const workspaceRoot = workspaceArgument === undefined
-  ? dirname(runPath)
+const requestedWorkspaceRoot = workspaceArgument === undefined
+  ? undefined
   : resolve(invokedFrom, workspaceArgument);
+const selectedRuntime = await findRuntimeProfile(requestedWorkspaceRoot ?? dirname(runPath));
+const workspaceRoot = workspaceArgument === undefined
+  ? selectedRuntime?.projectRoot ?? dirname(runPath)
+  : requestedWorkspaceRoot!;
 const packageRoot = packageRootArgument === undefined
   ? workspaceRoot
   : resolve(invokedFrom, packageRootArgument);
 const runtimeArgument = values.get("runtime");
-const runtimePath = runtimeArgument === undefined ? undefined : resolve(invokedFrom, runtimeArgument);
+const runtimePath = runtimeArgument === undefined
+  ? selectedRuntime?.profile
+  : resolve(invokedFrom, runtimeArgument);
 const studioProfileArgument = values.get("studio-profile");
 const studioProfilePath = studioProfileArgument === undefined ? undefined : resolve(invokedFrom, studioProfileArgument);
 const port = Number(values.get("port") ?? "5179");
@@ -68,7 +76,7 @@ const registry = await loadStudioAdapterRegistry({
   ...(studioProfilePath === undefined ? {} : { profile: studioProfilePath }),
 });
 const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
-const archive = await openStudioArchive(runtimePath, packageRoot, distributionPackageRoot);
+const archive = await openStudioArchive(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
 let run;
 try {
   run = await loadStudioRun({

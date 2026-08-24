@@ -26,7 +26,7 @@ if (runArgument === undefined) {
 
   const registry = await loadStudioAdapterRegistry({ workspaceRoot, packageRoot, distributionPackageRoot });
   const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
-  const archive = await openStudioArchive(runtimePath, packageRoot, distributionPackageRoot);
+  const archive = await openStudioArchive(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
   const awaitingPrefix = "the Studio projection closure requires unresolved capabilities:";
 
   let session: Awaited<ReturnType<typeof readStudioSession>> | undefined;

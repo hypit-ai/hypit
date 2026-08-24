@@ -43,6 +43,29 @@ type TerminalAudioTrack = {
   }[];
 };
 
+type CaptionVisualTrack = {
+  readonly presents?: readonly {
+    readonly id: string;
+    readonly elements?: readonly {
+      readonly kind?: string;
+      readonly text?: string;
+      readonly attributes?: readonly { readonly name: string; readonly value: string }[];
+    }[];
+  }[];
+};
+
+function captionCueText(present: NonNullable<CaptionVisualTrack["presents"]>[number]): string {
+  return (present.elements ?? []).flatMap((element) =>
+    element.kind === "text"
+      && element.text !== undefined
+      && element.attributes?.some((attribute) => attribute.name === "data-caption-word") === true
+      ? [element.text]
+      : [])
+    .join(" ")
+    .replace(/([\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}])\s+(?=[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}])/gu, "$1")
+    .trim();
+}
+
 function withTemporalLineage(
   context: StudioAdapterContext,
   entity: StudioEntityDraft,
@@ -127,11 +150,24 @@ function projectText(context: StudioAdapterContext): readonly StudioEntityDraft[
 }
 
 function projectCaption(context: StudioAdapterContext): readonly StudioEntityDraft[] {
-  return context.generic().map((entity) => withTemporalLineage(context, {
-    ...entity,
-    presentation: { entity: "caption-cue", shape: "text", depth: 0 },
-    interaction: readonlyInteraction,
-  }));
+  const cues = new Map(((context.track.value as CaptionVisualTrack).presents ?? []).map((present) => [
+    present.id,
+    {
+      label: captionCueText(present),
+      style: present.elements?.flatMap((element) => element.attributes ?? [])
+        .find((attribute) => attribute.name === "data-caption-style")?.value,
+    },
+  ] as const));
+  return context.generic().map((entity) => {
+    const cue = entity.presentId === undefined ? undefined : cues.get(entity.presentId);
+    return withTemporalLineage(context, {
+      ...entity,
+      ...(cue?.label === undefined || cue.label.length === 0 ? {} : { label: cue.label }),
+      presentation: { entity: "caption-cue", shape: "text", depth: 0 },
+      interaction: readonlyInteraction,
+      ...(cue?.style === undefined ? {} : { parameterReferences: { program: cue.style } }),
+    });
+  });
 }
 
 function projectGenericComponent(context: StudioAdapterContext): readonly StudioEntityDraft[] {
