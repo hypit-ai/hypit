@@ -66,7 +66,7 @@ file that some jobs never open.
 - `craft/graphic-compositions.md` — what counts as a base picture, full-screen graphic compositions,
   and where missing material comes from.
 - `craft/frame-coverage.md` — what is on screen at every instant, and the edges nobody chose.
-- `craft/generated-dependencies.md` — what one generation owes another: the location, the split shot,
+- `craft/generated-dependencies.md` — what one generation owes another: the location, the split picture,
   the voice, the first frame, and the take too short to generate.
 - `craft/image-prompt-style.md` — English reference-image prompts and camera geometry.
 - `craft/seedance-directing.md` — Kit selection, Recipe axes, references, and motion direction.
