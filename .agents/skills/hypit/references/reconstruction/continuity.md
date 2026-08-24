@@ -13,6 +13,11 @@ These invariants override superficial layer order and shot boundaries:
   presence. The `agent` observer has no audio evidence and reads these from the frames and the word
   timings instead, which `observers.md` describes: the transcript is what decides whether anyone is
   speaking at all, so it is what keeps a moving mouth in B-roll from becoming a speaker.
+- The same evidence decides which picture is the Segment's base: whichever one shows a person saying
+  the words the transcript carries there, however small it is and whatever is on screen over it. A
+  full-frame board with the speaker inset in a corner is a base the size of the corner, covered by
+  most of a board. `../playbooks/craft/generated-dependencies.md` holds the rule and what follows
+  from it for stack order.
 - One overlay that continues across a cut remains one visual track spanning its full observed
   lifetime. Do not recreate it once per shot.
 - Merge two or three incorrectly split clips only when continuity evidence confirms one camera shot
