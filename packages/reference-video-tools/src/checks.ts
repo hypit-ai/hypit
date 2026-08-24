@@ -200,30 +200,75 @@ type OutOfBoundsFrame = {
 type Box = { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number };
 
 /**
- * Every Frame that reaches past the Canvas it is measured inside.
+ * Whether some rectangles, together, leave no part of a Canvas unpainted.
  *
- * A Frame places its four edges against a Canvas, and an edge outside 0%–100% puts that much of
- * whatever is drawn into it off the picture. This is arithmetic on the Source: no threshold, no
- * measurement of a rendered frame, no observer.
+ * One picture filling the frame is the ordinary case and the cheap one. What this exists for is the
+ * case where no single picture does: a split screen, a stacked pair, a grid of panels. Those cover the
+ * delivery completely while every one of them is, on its own, an insert.
  *
- * It is the one thing on this route a comparison cannot see. An element authored mostly below the
- * bottom edge is drawn at the Canvas the Source declares, and so is the stand-in it is compared
- * against, so the render and the reference both put it in the same place off the edge and agree with
- * each other. Both are wrong the same way, which reads as correct.
- *
- * Reaching past the edge is also how a great deal of correct authoring works: an element that slides
- * in from off-screen is outside at the start of its window, and a full-bleed picture is routinely
- * declared past the edge so a `fit` crops it rather than letterboxing it. The arithmetic is the same
- * either way, so what this produces is a list of candidates for a reader to answer one at a time. It
- * never decides `passed`: the Source cannot tell an intended overhang from an unintended one, and a
- * gate that ruled on it would be ruling on something it cannot see.
+ * The test is exact rather than an area sum, because rectangles overlap and overlapping ones add up to
+ * more area than they cover. Cutting the Canvas at every edge any rectangle contributes leaves a grid
+ * of cells, each of which is wholly inside a rectangle or wholly outside all of them; the Canvas is
+ * covered when no cell is outside all of them. Rectangles are grouped by the Canvas they are rooted
+ * in, since two rooted in different Canvases never meet.
+ */
+function fillsACanvas(
+  placed: readonly { readonly canvas: string; readonly box: Box }[],
+  canvases: ReadonlyMap<string, Box>,
+): boolean {
+  const byCanvas = new Map<string, Box[]>();
+  for (const item of placed) byCanvas.set(item.canvas, [...(byCanvas.get(item.canvas) ?? []), item.box]);
+  for (const [id, boxes] of byCanvas) {
+    const canvas = canvases.get(id);
+    if (canvas === undefined) continue;
+    // Clipped to the Canvas: a Frame declared past the edge covers only the part of the picture that
+    // exists, and counting the rest would let an overhang stand in for coverage it never provides.
+    const clipped = boxes
+      .map((box) => ({
+        left: Math.max(box.left, canvas.left), top: Math.max(box.top, canvas.top),
+        right: Math.min(box.right, canvas.right), bottom: Math.min(box.bottom, canvas.bottom),
+      }))
+      .filter((box) => box.right > box.left && box.bottom > box.top);
+    if (clipped.length === 0) continue;
+    const xs = [...new Set([canvas.left, canvas.right, ...clipped.flatMap((box) => [box.left, box.right])])]
+      .filter((value) => value >= canvas.left && value <= canvas.right).sort((a, b) => a - b);
+    const ys = [...new Set([canvas.top, canvas.bottom, ...clipped.flatMap((box) => [box.top, box.bottom])])]
+      .filter((value) => value >= canvas.top && value <= canvas.bottom).sort((a, b) => a - b);
+    let whole = true;
+    for (let column = 0; whole && column + 1 < xs.length; column += 1) {
+      for (let row = 0; whole && row + 1 < ys.length; row += 1) {
+        const x = (xs[column]! + xs[column + 1]!) / 2;
+        const y = (ys[row]! + ys[row + 1]!) / 2;
+        whole = clipped.some((box) => x > box.left && x < box.right && y > box.top && y < box.bottom);
+      }
+    }
+    if (whole) return true;
+  }
+  return false;
+}
+
+type FrameDeclaration ={ readonly within: string; readonly edges: Readonly<Record<Edge, string>> };
+type FrameGeometry = {
+  readonly canvases: ReadonlyMap<string, Box>;
+  readonly declared: ReadonlyMap<string, FrameDeclaration>;
+  /** The rectangle a Frame or Canvas finally occupies, in the pixels of the Canvas it is rooted in. */
+  readonly resolve: (id: string) => Box | undefined;
+  /** Which Canvas a Frame is finally measured inside, found by following `within` up to one. */
+  readonly canvasOf: (id: string) => string | undefined;
+};
+
+/**
+ * Where every Canvas and Frame the Source declares actually sits.
  *
  * `within` names a Canvas or a parent Frame, and a length is a number followed by `px` or `%`, a
  * percentage resolving against the parent's width on the x axis and its height on the y axis. So a
  * Frame is resolved by resolving whatever it is written inside and measuring its own edges against
  * that rectangle, however deep the chain runs.
+ *
+ * Two readings need this: whether a Frame reaches outside its Canvas, and whether the Frames drawn
+ * over a word add up to the whole picture.
  */
-function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
+function frameGeometry(svml: string): FrameGeometry {
   const canvases = new Map<string, Box>();
   for (const match of svml.matchAll(/<space:Canvas\b([^>]*?)\/?>/gsu)) {
     const attributes = match[1] ?? "";
@@ -235,7 +280,7 @@ function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
     }
   }
 
-  const declared = new Map<string, { readonly within: string; readonly edges: Readonly<Record<Edge, string>> }>();
+  const declared = new Map<string, FrameDeclaration>();
   for (const match of svml.matchAll(/<space:Frame\b([^>]*?)\/?>/gsu)) {
     const attributes = match[1] ?? "";
     const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
@@ -286,7 +331,6 @@ function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
     return box;
   };
 
-  // Which Canvas each Frame is finally measured inside, found by following `within` up to one.
   const canvasOf = (id: string): string | undefined => {
     const seen = new Set<string>();
     let at: string | undefined = id;
@@ -297,6 +341,31 @@ function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
     }
     return at;
   };
+
+  return { canvases, declared, resolve, canvasOf };
+}
+
+/**
+ * Every Frame that reaches past the Canvas it is measured inside.
+ *
+ * A Frame places its four edges against a Canvas, and an edge outside 0%–100% puts that much of
+ * whatever is drawn into it off the picture. This is arithmetic on the Source: no threshold, no
+ * measurement of a rendered frame, no observer.
+ *
+ * It is the one thing on this route a comparison cannot see. An element authored mostly below the
+ * bottom edge is drawn at the Canvas the Source declares, and so is the stand-in it is compared
+ * against, so the render and the reference both put it in the same place off the edge and agree with
+ * each other. Both are wrong the same way, which reads as correct.
+ *
+ * Reaching past the edge is also how a great deal of correct authoring works: an element that slides
+ * in from off-screen is outside at the start of its window, and a full-bleed picture is routinely
+ * declared past the edge so a `fit` crops it rather than letterboxing it. The arithmetic is the same
+ * either way, so what this produces is a list of candidates for a reader to answer one at a time. It
+ * never decides `passed`: the Source cannot tell an intended overhang from an unintended one, and a
+ * gate that ruled on it would be ruling on something it cannot see.
+ */
+function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
+  const { canvases, declared, resolve, canvasOf } = frameGeometry(svml);
 
   // Which elements draw into each Frame. A Track names it `frame=`, and a speech Track names the Frame
   // it draws each Take into `visual-frame=`, so any attribute whose name ends in `frame` counts.
@@ -562,47 +631,67 @@ export async function reconstructionCheck(
     const body = scriptBody(svml);
     const parsed = parseScript(svmlPath, body.text, body.offset);
 
-    // The Frames that fill the Canvas, and the Canvas itself. A Frame with any other extent is an
-    // insert: it draws over its own part of the picture and leaves the rest as it was.
-    const fullFrames = new Set<string>();
-    for (const match of svml.matchAll(/<space:Frame\b([^>]*?)\/?>/gsu)) {
-      const attributes = match[1] ?? "";
-      const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
-      const edge = (name: string): string | undefined => new RegExp(`\\b${name}="([^"]+)"`, "u").exec(attributes)?.[1];
-      if (id !== undefined && edge("left") === "0%" && edge("top") === "0%" && edge("right") === "100%" && edge("bottom") === "100%") {
-        fullFrames.add(id);
+    // Where every Frame and Canvas the Source declares actually sits, so a word can be asked whether
+    // the pictures drawn over it add up to the whole one rather than whether any single one does.
+    //
+    // A split screen is why. Two people on a podcast, one above the other, each half the height: the
+    // one speaking owns the Segment and the one listening covers the rest, and neither Frame is the
+    // whole picture. Read one Frame at a time, both are inserts and every word of the program is
+    // uncovered — which is the opposite of what the delivery shows.
+    const geometry = frameGeometry(svml);
+
+    // What each word has drawn over it, as rectangles in the pixels of the Canvas they are rooted in.
+    const claims: { readonly canvas: string; readonly box: Box }[][] = Array.from(
+      { length: parsed.tokens.length }, () => []);
+    const claimSpan = (from: number, to: number, canvas: string, box: Box): void => {
+      for (let index = Math.max(0, from); index < Math.min(to, claims.length); index += 1) {
+        claims[index]!.push({ canvas, box });
       }
-    }
-    const canvases = new Set([...svml.matchAll(/<space:Canvas\b[^>]*?\bid="([^"]+)"/gu)].map((match) => match[1] ?? ""));
-
-    const covered = new Array<boolean>(parsed.tokens.length).fill(false);
-    const coverSegment = (id: string): void => {
+    };
+    const claimSegment = (id: string, canvas: string, box: Box, stops = Infinity): void => {
       const segment = parsed.segments.find((item) => item.id === id);
-      if (segment === undefined) return;
-      for (let index = segment.tokenStart; index < segment.tokenEndExclusive; index += 1) covered[index] = true;
+      if (segment !== undefined) claimSpan(segment.tokenStart, Math.min(segment.tokenEndExclusive, stops), canvas, box);
     };
-    const coverSelection = (id: string): void => {
+    const claimSelection = (id: string, canvas: string, box: Box, stops = Infinity): void => {
       const selection = parsed.selections.find((item) => item.id === id);
-      if (selection === undefined) return;
-      for (let index = selection.open.boundary.tokenIndex; index < selection.close.boundary.tokenIndex; index += 1) covered[index] = true;
+      if (selection !== undefined) {
+        claimSpan(selection.open.boundary.tokenIndex, Math.min(selection.close.boundary.tokenIndex, stops), canvas, box);
+      }
+    };
+    // A Frame drawn into, resolved to where it sits. Naming the Canvas directly is the whole of it.
+    const placement = (frame: string | undefined, canvas: string | undefined): { readonly canvas: string; readonly box: Box } | undefined => {
+      const named = frame ?? canvas;
+      if (named === undefined) return undefined;
+      const rooted = geometry.canvasOf(named);
+      const box = geometry.resolve(named);
+      if (rooted === undefined || box === undefined) return undefined;
+      return { canvas: rooted, box };
     };
 
-    // Every element bound to the whole picture, and the words its own `during=` claims. `program` is
-    // the whole Script; a Segment or a Selection is the words it marks.
+    // Every element that draws a picture, and the words its own `during=` claims. `program` is the
+    // whole Script; a Segment or a Selection is the words it marks.
     for (const match of svml.matchAll(/<[a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*\b([^>]*?)\/?>/gsu)) {
       const attributes = match[1] ?? "";
-      const frame = /\bframe=\{([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
-      const canvas = /\bcanvas=\{([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
-      if (!(frame !== undefined && fullFrames.has(frame)) && !(canvas !== undefined && canvases.has(canvas))) continue;
-      if (/\bduring="program"/u.test(attributes)) covered.fill(true);
+      const where = placement(
+        /\bframe=\{([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1],
+        /\bcanvas=\{([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1]);
+      if (where === undefined) continue;
+      // A Moment in `until=` cuts the span short, so the words after it have this picture over them in
+      // the Source and not in the delivery. Reading `during=` alone would let an element that leaves
+      // half way through the program answer for the whole of it.
+      const until = /\buntil=\{story\.moment\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
+      const stops = until === undefined
+        ? claims.length
+        : parsed.moments.find((item) => item.id === until)?.boundary.tokenIndex ?? claims.length;
+      if (/\bduring="program"/u.test(attributes)) claimSpan(0, stops, where.canvas, where.box);
       const bound = /\bduring=\{story\.(segment|selection)\.([A-Za-z0-9_-]+)\}/u.exec(attributes);
-      if (bound?.[1] === "segment") coverSegment(bound[2] ?? "");
-      if (bound?.[1] === "selection") coverSelection(bound[2] ?? "");
+      if (bound?.[1] === "segment") claimSegment(bound[2] ?? "", where.canvas, where.box, stops);
+      if (bound?.[1] === "selection") claimSelection(bound[2] ?? "", where.canvas, where.box, stops);
     }
 
-    // A speech Track draws each Take it assembles into its own `visual-frame`, so a full-frame one
-    // covers the Segments whose Takes carry a picture. A Take fed by a Normalize with `video="none"`
-    // is a voice and puts nothing there, so its Segment is spoken over whatever is already on screen.
+    // A speech Track draws each Take it assembles into its own `visual-frame`, so that Frame is what
+    // the Take's Segment has over it. A Take fed by a Normalize with `video="none"` is a voice and
+    // puts nothing there, so its Segment is spoken over whatever is already on screen.
     const takes = new Map<string, { readonly segment: string; readonly picture: boolean }>();
     for (const match of svml.matchAll(/<whisperx:SemanticTake\b([^>]*?)\/?>/gsu)) {
       const attributes = match[1] ?? "";
@@ -613,13 +702,15 @@ export async function reconstructionCheck(
       takes.set(id, { segment, picture: media !== undefined && moving.has(media) });
     }
     for (const track of svml.matchAll(/<speech:Track\b([^>]*?)>(.*?)<\/speech:Track>/gsu)) {
-      const frame = /\bvisual-frame=\{([A-Za-z0-9_-]+)\}/u.exec(track[1] ?? "")?.[1];
-      if (frame === undefined || !fullFrames.has(frame)) continue;
+      const where = placement(/\bvisual-frame=\{([A-Za-z0-9_-]+)\}/u.exec(track[1] ?? "")?.[1], undefined);
+      if (where === undefined) continue;
       for (const take of (track[2] ?? "").matchAll(/<speech:Take\b[^>]*?\bsource=\{([A-Za-z0-9_-]+)\.take\}/gu)) {
         const named = takes.get(take[1] ?? "");
-        if (named?.picture === true) coverSegment(named.segment);
+        if (named?.picture === true) claimSegment(named.segment, where.canvas, where.box);
       }
     }
+
+    const covered = claims.map((placed) => placed.length > 0 && fillsACanvas(placed, geometry.canvases));
 
     // The uncovered words as runs, cut at Segment boundaries so each run is named by the Segment a
     // reader would look in to find it.

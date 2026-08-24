@@ -96,6 +96,23 @@ Check it against the words rather than the layout. A person whose mouth moves ov
 theirs is B-roll — `../../reconstruction/continuity.md` is what keeps a moving mouth from becoming a
 speaker — and a small inset saying the transcript's words is the base.
 
+#### A split screen, and what a turn of speech costs
+
+Two people stacked in one frame, each half the height, is this rule at its plainest. Whichever half is
+speaking is that Segment's base: it carries `generate-audio="true"`, its `whisperx:SemanticTake`
+aligns it, and it is drawn into the half it occupies. The other half is a second generation over the
+same Segment, bound `during={story.segment.X}`, and it is B-roll however continuously that person is
+on screen.
+
+**When the speaker changes, that is the next Segment.** A Segment has one Take and a Take has one
+Segment, so a turn of speech cannot be shared: cut the Script where the speaking changes hands, and
+each turn becomes its own Segment with its own base in whichever half is talking. The layout does not
+move — the two halves stay where they are — and what changes is which one the Segment is built from.
+
+Neither half fills the frame, and the pair still covers it. `frame-coverage.md` reads the pictures
+over each word together, so a Segment whose two halves tile the Canvas is covered; one where the
+listening half is left out is not, and the words are named.
+
 ### Stack order is authored per Segment, never once for "the base"
 
 A picture is the base *of a Segment*. The same Track can hold the base for one Segment and something
