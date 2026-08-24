@@ -5,9 +5,15 @@ description: 记录左上资源工作区、右上组件工作台、Runtime 历�
 
 # Studio Workspace 与 Inspector 信息架构审计
 
-> 状态：调研记录，尚未形成实施规格。
+> 状态：调研记录。左上 Source / Tasks / Artifacts 与未选择时的 Inspector 概览已完成第一阶段实现；右上组件声明和数据依赖解释仍未形成实施规格。
 >
 > 本文记录 2026 年 8 月针对 Studio 左上 Workspace 与右上 Inspector 的一次信息架构审计。它固定已经确认的问题、系统边界和必须继续回答的问题，不固定最终标签名称、页面数量、协议字段、数据库迁移或实施顺序。后续调研可以推翻本文中的暂定方向，但不应绕过其中已经确认的职责边界。
+>
+> 空间、字幕、时间消费、Speech/A-roll、Surface Transform 及参数可达性的领域旧账，另见
+> [视频领域协议迁移与基建审计](./video-protocol-foundation-audit.md)。本文不重复定义这些领域协议。
+>
+> 领域组件包、独立 Hypit Studio Companion 与 Studio 外观/操作全集的目标边界，见
+> [Studio Companion Adapter 目标架构](./studio-companion-adapter-architecture.md)。本文中的“组件声明”均指 Companion 声明，不要求领域组件依赖 Studio。
 
 ## 一、为什么需要单独审计
 
@@ -52,16 +58,16 @@ Studio 已经拥有实时画面和时间线，开始能够承担“先把一个�
 
 ## 三、当前 Studio 的已确认事实
 
-### 3.1 左上目前只有一份 Author Source
+### 3.1 左上第一阶段已落地真实引用闭包
 
-浏览器 Snapshot 目前只公开当前 Author Source 的路径和正文。Studio 服务端实际上已经知道更多内容：
+浏览器 Snapshot 现在公开当前 Run 的真实 Source closure：
 
 - 当前 `.svrun`；
 - 当前 Author `.svml`；
 - 编译闭包里真实存在的 `.svml` / `.svs` 单元；
 - 哪些文件处于本次 Studio 会话允许访问和写回的集合中。
 
-因此“显示本次 Run 涉及的 Source”不需要扫描整个项目文件夹。缺少的是一个面向 UI 的 Source workspace 投影，而不是一个通用文件管理器。
+左上可以切换和完整编辑这些精确文件，但仍不扫描整个项目文件夹。它是引用闭包的 UI 投影，不是通用文件管理器。
 
 ### 3.2 右上目前没有足够的声明能力
 
@@ -76,9 +82,13 @@ Studio 已经拥有实时画面和时间线，开始能够承担“先把一个�
 
 当前 UI 因此按“语言 + 文件路径”给参数分组，并在每个参数下重复 Source 路径。这是现有协议不足造成的，不是单独调整 CSS 可以解决的问题。
 
-### 3.3 未选择实体时缺少会话级信息落点
+后续领域审计进一步确认：当前解析只展示 SVS 中已经写出的属性；Caption 派生 Cue 不能从 Track 直接追到
+Program/Style/Recipe；Media Layer、Sampling Keyframe、Sequence Member/Handoff 等嵌套作者对象也没有完整的
+Inspector 上下文。因此右上重构必须同时解决参数声明与作者引用可达性，不能只增加两行标签。
 
-当前未选择实体时右上为空。与此同时，选择实体后又反复展示 Run、Target、Output、Candidate、Source 和 Writeback 等元信息。
+### 3.3 会话级信息已有唯一落点
+
+未选择实体时，右上现在集中显示 Canvas、Author、Run、closure 与 Build intent。选择实体后，重复的 Run、Target 与 Writeback 已移除，只保留当前对象自己的 Provenance 和参数。
 
 这说明 Studio 尚未区分：
 
@@ -87,13 +97,13 @@ Studio 已经拥有实时画面和时间线，开始能够承担“先把一个�
 - 可调整的作者参数；
 - 只读的执行与来源关系。
 
-“不重复元信息”不是简单删除信息，而是先为每类信息找到唯一位置。
+后续仍需决定更完整的 Inspector 标签体系，但“不重复元信息”的基础边界已经落实。
 
 ### 3.4 Runtime 已经拥有任务和产物所需的主要事实
 
 Runtime Host 已经能读取 Build Catalog、Build 状态、Operation、Dispatch、Queue 和 Artifact。Build Catalog 已记录 Source、可选 Run、公共别名、Build 与创建时间；Build Definition、Facts 和物化 State 保存执行图、选择、输入输出 Record、Need 与诊断。
 
-当前 Studio Archive 只使用其中很小的一部分来解析当前 Run 引用的 `build-record` 和读取 Artifact。任务列表与产物历史主要缺少只读查询和 UI 投影，并不天然要求一套新的 Studio 数据库。
+Studio Archive 现在会把当前环境边界内的 Build Catalog、Build 状态、Dispatch、Operation 与 accepted Record Artifact 投影到 Tasks / Artifacts；仍不创建 Studio 数据库。当前查询仍是全量 Catalog 后逐 Build 读取状态，长期历史的分页接口仍待解决。
 
 ### 3.5 精确的数据依赖并未从底层消失
 
@@ -176,15 +186,15 @@ twinit 的完整 DAG 主要服务于编辑 workspace。Hypit 已由 Source 和 R
 
 下面只是当前看来合理的方向，不能直接当作字段和页面规格实现。
 
-### 6.1 左上可能按三类资源组织
+### 6.1 左上已按三类权威组织
 
-目前最自然的三个领域是：
+第一阶段已经确定为：
 
 - Source：当前 Run 涉及的 Author、Recipe 与 Run Source；
-- Execution：当前 Run / Source 相关的 Build 和活动状态；
-- Results：真实公共输出、生成素材和必要的中间 Record。
+- Tasks：当前环境 Runtime 中由 Catalog 证明属于该边界的 Build 和活动状态；
+- Artifacts：这些 Build 的 accepted Record 所引用的 ArtifactStore 对象。
 
-它们是否最终叫“源码 / 任务 / 产物”，是否都使用一级标签，第二级如何组织，尚未确定。尤其需要用真实项目验证左栏宽度、Source 编辑器与资源卡片是否适合共享同一个容器。
+三者共用一级标签。Source 内按精确文件切换；Tasks 与 Artifacts 保持只读。这个决定不引入业务目录语义，也不阻止后续为大量历史增加分页或筛选。
 
 ### 6.2 右上可能需要多层声明
 
