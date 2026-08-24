@@ -132,6 +132,25 @@ function repositoryRoot(): string {
   return found;
 }
 
+/**
+ * Where installed packages are resolved from, found the way `hypit check` finds it: the nearest
+ * directory at or above the project that holds a `package.json`.
+ *
+ * A project's own `packages/local-*` are installed against the project, so a root taken from
+ * anywhere else resolves none of them. This is the same walk `packages/cli/src/main.ts` performs,
+ * and the reason a project is given a `package.json` of its own — without one the walk passes
+ * through it and lands on the tree.
+ */
+function nearestPackageRoot(start: string): string | undefined {
+  let directory = resolve(start);
+  while (true) {
+    if (existsSync(join(directory, "package.json"))) return directory;
+    const parent = dirname(directory);
+    if (parent === directory) return undefined;
+    directory = parent;
+  }
+}
+
 /** Where a relative path on the command line is measured from. */
 export function invokedFrom(): string {
   return process.env.INIT_CWD ?? process.cwd();
@@ -750,8 +769,11 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const element = input.element;
   const cwd = invokedFrom();
   const runPath = resolve(cwd, input.run);
-  const packageRoot = repositoryRoot();
   const projectRoot = dirname(runPath);
+  // Where installed packages are found, which is not where the Hypit tree is. A project carries its
+  // own `packages/local-*`, so the search starts at the project and walks up the way the CLI's does —
+  // resolving against the tree instead would miss every package the project installed for itself.
+  const packageRoot = nearestPackageRoot(projectRoot) ?? repositoryRoot();
   const outPath = resolve(cwd, input.out);
 
   const runSource = await readFile(runPath, "utf8").catch(() => undefined);
@@ -1057,7 +1079,9 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const frames = join(compareRoot, "frames");
   await rm(frames, { recursive: true, force: true });
   await mkdir(frames, { recursive: true });
-  const hyperframesCli = createRequire(join(packageRoot, "packages/provider-hyperframes-local/package.json"))
+  // The runtime ships with the tree, not with the project. Resolving it against the package root
+  // finds nothing whenever those two differ, which is every project that installs packages of its own.
+  const hyperframesCli = createRequire(join(repositoryRoot(), "packages/provider-hyperframes-local/package.json"))
     .resolve("hyperframes/bin/hyperframes.mjs");
   const drawn = spawnSync(process.execPath, [
     hyperframesCli, "render", stage,
