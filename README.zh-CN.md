@@ -48,9 +48,9 @@ Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语�
 <table>
   <tr>
     <th>参考视频</th>
-    <td colspan="3" align="center">
-      <table><tr><td width="263"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td></tr></table>
-    </td>
+    <td></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td></td>
   </tr>
   <tr>
     <th>复刻视频</th>
@@ -65,9 +65,9 @@ Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语�
 <table>
   <tr>
     <th>参考视频</th>
-    <td colspan="3" align="center">
-      <table><tr><td width="263"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td></tr></table>
-    </td>
+    <td></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
+    <td></td>
   </tr>
   <tr>
     <th>复刻视频</th>
