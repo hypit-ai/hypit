@@ -61,3 +61,6 @@ examples/**/.svml/
 # Reverse-engineering scratch projects: real output, but not the repository
 /examples/*-reverse/
 /examples/reference-reconstruction/
+
+# Reverse-engineering scratch projects live outside the repository too
+/projects/
