@@ -1,6 +1,6 @@
-import { readFile, realpath, stat } from "node:fs/promises";
+import { readFile, readdir, realpath, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { modulePackageAbi } from "@hypit/protocol";
@@ -8,13 +8,16 @@ import { modulePackageAbi } from "@hypit/protocol";
 import type {
   LoadedPackage,
   LogicalPackageAddress,
+  NodePackageLoadOptions,
   NodePackageContribution,
   NodePackageSelectionRequest,
 } from "./types.js";
 
 type PackageJson = {
   readonly name: string;
+  readonly version?: string;
   readonly hypit?: { readonly activation?: string };
+  readonly dependencies: Readonly<Record<string, string>>;
 };
 
 type ResolvedPackage = { readonly root: string; readonly json: PackageJson };
@@ -36,9 +39,15 @@ function text(value: unknown, subject: string): string {
 function parsePackageJson(value: unknown, subject: string): PackageJson {
   const item = object(value, subject);
   const hypit = item.hypit === undefined ? undefined : object(item.hypit, `${subject}.hypit`);
+  const dependencies = item.dependencies === undefined ? {} : object(item.dependencies, `${subject}.dependencies`);
   return {
     name: text(item.name, `${subject}.name`),
+    ...(item.version === undefined ? {} : { version: text(item.version, `${subject}.version`) }),
     ...(hypit?.activation === undefined ? {} : { hypit: { activation: text(hypit.activation, `${subject}.hypit.activation`) } }),
+    dependencies: Object.fromEntries(Object.entries(dependencies).map(([name, version]) => [
+      name,
+      text(version, `${subject}.dependencies.${name}`),
+    ])),
   };
 }
 
@@ -66,19 +75,54 @@ async function packageRoot(entry: string, expectedName: string): Promise<Resolve
   }
 }
 
-async function resolvePackage(specifier: string, from: string): Promise<ResolvedPackage> {
-  const resolver = createRequire(join(resolve(from), "__hypit_package_loader__.cjs"));
-  let entry: string;
-  try {
-    entry = resolver.resolve(specifier);
-  } catch (entryError) {
+async function resolvePackage(specifier: string, roots: readonly string[]): Promise<ResolvedPackage> {
+  let failure: unknown;
+  for (const from of roots) {
+    const resolver = createRequire(join(resolve(from), "__hypit_package_loader__.cjs"));
+    let entry: string;
     try {
-      entry = resolver.resolve(`${specifier}/package.json`);
-    } catch {
-      throw new Error(`cannot resolve installed package ${specifier} from ${from}: ${entryError instanceof Error ? entryError.message : String(entryError)}`);
+      entry = resolver.resolve(specifier);
+    } catch (entryError) {
+      try {
+        entry = resolver.resolve(`${specifier}/package.json`);
+      } catch {
+        const root = resolve(from);
+        const local = join(root, "packages", basename(specifier));
+        const candidates = [local];
+        try {
+          for (const service of await readdir(join(root, "services"), { withFileTypes: true })) {
+            if (service.isDirectory()) candidates.push(join(root, "services", service.name));
+          }
+        } catch (servicesError) {
+          if (!missingFile(servicesError)) throw servicesError;
+        }
+        for (const candidate of candidates) {
+          try {
+            const json = await packageJson(candidate);
+            if (json.name === specifier) return { root: candidate, json };
+          } catch (localError) {
+            if (!missingFile(localError)) throw localError;
+          }
+        }
+        failure = entryError;
+        continue;
+      }
     }
+    return await packageRoot(entry, specifier);
   }
-  return await packageRoot(entry, specifier);
+  throw new Error(`cannot resolve installed package ${specifier} from ${roots.join(", ")}: ${failure instanceof Error ? failure.message : String(failure)}`);
+}
+
+function resolutionRoots(
+  specifier: string,
+  projectRoots: readonly string[],
+  distributionRoots: readonly string[],
+): readonly string[] {
+  // @hypit is the active Distribution's namespace. A project dependency with
+  // the same spelling must never silently replace the tool ABI it is using.
+  return specifier.startsWith("@hypit/") && distributionRoots.length > 0
+    ? distributionRoots
+    : [...projectRoots, ...distributionRoots];
 }
 
 function activationPath(item: ResolvedPackage): string {
@@ -99,6 +143,34 @@ async function importContribution(item: ResolvedPackage): Promise<NodePackageCon
   const contribution = imported.default as Partial<NodePackageContribution>;
   assert(contribution.format === "hypit.node-package@1", `${item.json.name} activation has an unsupported package format`);
   return contribution as NodePackageContribution;
+}
+
+function within(root: string, candidate: string): boolean {
+  const relation = relative(resolve(root), resolve(candidate));
+  return relation === "" || (relation !== ".." && !relation.startsWith(`..${sep}`) && !isAbsolute(relation));
+}
+
+async function assertExternalDependencies(
+  item: ResolvedPackage,
+  distributionRoots: readonly string[],
+): Promise<void> {
+  const resolver = createRequire(join(item.root, "__hypit_package_dependencies__.cjs"));
+  const distributionOwned = distributionRoots.some((root) => within(root, item.root));
+  for (const [name, required] of Object.entries(item.json.dependencies)) {
+    if (name.startsWith("@hypit/") || required.startsWith("workspace:")) continue;
+    try {
+      const resolved = await packageRoot(resolver.resolve(name), name);
+      if (/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/u.test(required)
+        && resolved.json.version !== required) {
+        throw new Error(`installed version is ${resolved.json.version ?? "unknown"}`);
+      }
+    } catch (error) {
+      const repair = distributionOwned
+        ? `Install it once with: hypit packages install ${name}@${required}`
+        : `Install it with the project package manager that owns ${item.root}`;
+      throw new Error(`${item.json.name} requires ${name}@${required}. ${repair}`, { cause: error });
+    }
+  }
 }
 
 function addressKey(value: LogicalPackageAddress): string {
@@ -135,6 +207,41 @@ export class NodePackageSelectionMissingError extends Error {
 }
 
 /**
+ * Resolve the ordinary upstream npm dependencies of Distribution packages.
+ * Internal @hypit dependencies are followed to their manifests; no project
+ * package is copied into the machine dependency home.
+ */
+export async function distributionExternalPackageRequirements(
+  specifiers: readonly string[],
+  distributionRoot: string,
+): Promise<readonly { readonly name: string; readonly version: string; readonly specifier: string }[]> {
+  const root = resolve(distributionRoot);
+  const queue = [...new Set(specifiers)].sort();
+  const visited = new Set<string>();
+  const external = new Map<string, string>();
+  while (queue.length > 0) {
+    const name = queue.shift()!;
+    if (visited.has(name)) continue;
+    visited.add(name);
+    const physical = await resolvePackage(name, [root]);
+    for (const [dependency, version] of Object.entries(physical.json.dependencies)) {
+      if (dependency.startsWith("@hypit/")) {
+        queue.push(dependency);
+        continue;
+      }
+      const previous = external.get(dependency);
+      if (previous !== undefined && previous !== version) {
+        throw new Error(`${dependency} is required at both ${previous} and ${version} by the selected Distribution packages`);
+      }
+      external.set(dependency, version);
+    }
+  }
+  return [...external.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, version]) => ({ name, version, specifier: `${name}@${version}` }));
+}
+
+/**
  * Load the packages explicitly named by Source discovery or a Runtime Profile.
  * Node's package manager owns installed versions and bytes; Hypit validates only the
  * contribution boundary it consumes.
@@ -142,6 +249,7 @@ export class NodePackageSelectionMissingError extends Error {
 export async function loadNodePackageSelection(
   request: readonly string[] | NodePackageSelectionRequest,
   root: string,
+  options: NodePackageLoadOptions = {},
 ): Promise<readonly LoadedPackage[]> {
   const normalized: NodePackageSelectionRequest = Array.isArray(request)
     ? { selected: request }
@@ -150,7 +258,11 @@ export async function loadNodePackageSelection(
   for (const address of normalized.logical ?? []) selected.add(physicalPackageName(address.name));
   if (selected.size === 0) return [];
 
-  const roots = await Promise.all([...selected].sort().map(async (name) => await resolvePackage(name, root)));
+  const projectRoots = [root];
+  const distributionRoots = (options.fallbackRoots ?? [])
+    .filter((candidate) => resolve(candidate) !== resolve(root));
+  const roots = await Promise.all([...selected].sort().map(async (name) =>
+    await resolvePackage(name, resolutionRoots(name, projectRoots, distributionRoots))));
   type ActivatedPackage = { readonly physical: ResolvedPackage; readonly contribution: NodePackageContribution };
   const activated = new Map<string, ActivatedPackage>();
   const providedModules = new Set<string>();
@@ -173,7 +285,10 @@ export async function loadNodePackageSelection(
   };
   for (const item of await Promise.all(roots.map(async (physical) => ({
     physical,
-    contribution: await importContribution(physical),
+    contribution: await (async () => {
+      await assertExternalDependencies(physical, distributionRoots);
+      return await importContribution(physical);
+    })(),
   })))) add(item);
 
   for (let cursor = 0; cursor < requirements.length; cursor += 1) {
@@ -181,7 +296,11 @@ export async function loadNodePackageSelection(
     if (providedModules.has(requirement.key)) continue;
     const providerPackage = physicalPackageName(requirement.key);
     assert(!activated.has(providerPackage), `selected package ${providerPackage} provides the wrong ${requirement.key}`);
-    const physical = await resolvePackage(providerPackage, requirement.from);
+    const physical = await resolvePackage(
+      providerPackage,
+      resolutionRoots(providerPackage, [requirement.from, root], distributionRoots),
+    );
+    await assertExternalDependencies(physical, distributionRoots);
     const provider = { physical, contribution: await importContribution(physical) };
     add(provider);
     assert(providedModules.has(requirement.key), `${providerPackage} does not provide the required ${requirement.key}`);

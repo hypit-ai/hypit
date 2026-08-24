@@ -29,10 +29,11 @@ function evidenceAudio(): SpeechEvidenceAudio {
 
 test("WhisperX receives normalized bytes without authored Segment truth", () => {
   const valid = evidenceAudio();
-  const request = whisperXRequestForEvidenceAudio(valid);
+  const request = whisperXRequestForEvidenceAudio(valid, { language: "zh" });
   assert.equal(request.audio.digest, valid.artifact.digest);
   assert.equal("segments" in request, false);
   assert.equal(request.sampleFrames, 16_000);
+  assert.equal(request.language, "zh");
 });
 
 test("WhisperX installs into the host-neutral compute port without a Node Driver", () => {

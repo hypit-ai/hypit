@@ -1,5 +1,5 @@
-import { applyCaptionMute, assertCaptionProgramForDisplay, assertTimedCaptionProjection } from "@hypit/caption";
-import type { CaptionProgram, TimedCaptionProjection } from "@hypit/caption";
+import { assertCaptionProgramForDocument } from "@hypit/caption";
+import type { CaptionProgram } from "@hypit/caption";
 import { assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
 import type {
   VisualAnimation,
@@ -12,16 +12,18 @@ import type {
   VisualTextPaintLayer,
   VisualTrack,
 } from "@hypit/composition";
-import type { CaptionDisplayAtom, CaptionDisplaySequence } from "@hypit/narrative";
+import type { CaptionAlignmentUnit, CaptionDocument } from "@hypit/narrative";
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
 
 import { assertFineCaptionParameters, FINE_CAPTION_FAMILY } from "./style.js";
+import { assertFineCaptionSchedule } from "./schedule.js";
 import type {
   FineCaptionActiveUnderline,
   FineCaptionGlyphPaint,
   FineCaptionOneShotMotion,
   FineCaptionParameters,
+  FineCaptionSchedule,
   FineCaptionUnderline,
 } from "./types.js";
 
@@ -44,6 +46,8 @@ function alphaColor(hex: string, opacity: number): string {
 function typographyStyle(parameters: FineCaptionParameters): VisualStyleDeclaration[] {
   return [
     { name: "font-size", value: `${compactNumber(parameters.typography.fontSizePx)}px` },
+    { name: "font-kerning", value: parameters.typography.kerning },
+    { name: "font-variant-caps", value: parameters.typography.variantCaps },
     { name: "letter-spacing", value: `${compactNumber(parameters.layout.letterSpacingPx)}px` },
     { name: "line-height", value: parameters.layout.lineHeight },
     { name: "text-transform", value: parameters.typography.textTransform },
@@ -110,7 +114,7 @@ function softPaints(paint: FineCaptionGlyphPaint): VisualTextPaintLayer[] {
       kind: "glow",
       paint: { kind: "solid", color: alphaColor(paint.glow.color, paint.glow.opacity) },
       blurPx: deviationFromBlurRadius(paint.glow.blurPx),
-      spreadPx: 0,
+      spreadPx: paint.glow.spreadPx,
     });
   }
   if (paint.shadow.opacity > 0) {
@@ -120,14 +124,14 @@ function softPaints(paint: FineCaptionGlyphPaint): VisualTextPaintLayer[] {
       offsetX: paint.shadow.offsetXPx,
       offsetY: paint.shadow.offsetYPx,
       blurPx: deviationFromBlurRadius(paint.shadow.blurPx),
-      spreadPx: 0,
+      spreadPx: paint.shadow.spreadPx,
     });
   }
   return layers;
 }
 
 function glyphPaints(paint: FineCaptionGlyphPaint): VisualTextPaintLayer[] | undefined {
-  if (paint.stroke.widthPx === 0) return undefined;
+  if (paint.stroke.widthPx === 0 && paint.shadow.spreadPx === 0 && paint.glow.spreadPx === 0) return undefined;
   const fill: VisualColorPaint = paint.gradient === undefined
     ? { kind: "solid", color: paint.fill }
     : {
@@ -142,7 +146,12 @@ function glyphPaints(paint: FineCaptionGlyphPaint): VisualTextPaintLayer[] | und
   // outside the letter, and the body sits over its own outline.
   return [
     ...softPaints(paint),
-    { kind: "stroke", placement: "outside", widthPx: paint.stroke.widthPx, paint: { kind: "solid", color: paint.stroke.color } },
+    ...(paint.stroke.widthPx === 0 ? [] : [{
+      kind: "stroke" as const,
+      placement: "outside" as const,
+      widthPx: paint.stroke.widthPx,
+      paint: { kind: "solid" as const, color: paint.stroke.color },
+    }]),
     { kind: "fill", paint: fill },
   ];
 }
@@ -189,8 +198,9 @@ function glyphStyle(
   return [
     ...(painted ? [] : [{ name: "color", value: paint.fill }] as const),
     ...typographyStyle(parameters),
+    { name: "min-width", value: "0" },
     { name: "opacity", value: paint.opacity },
-    { name: "white-space", value: "nowrap" },
+    { name: "white-space", value: "normal" },
     ...(painted || paint.gradient === undefined ? [] : [
       { name: "background-image", value: `linear-gradient(${compactNumber(paint.gradient.angleDeg)}deg,${paint.gradient.from},${paint.gradient.to})` },
       { name: "background-clip", value: "text" },
@@ -211,7 +221,8 @@ function transparentGlyphStyle(
   return [
     { name: "color", value: "#00000000" },
     ...typographyStyle(parameters),
-    { name: "white-space", value: "nowrap" },
+    { name: "min-width", value: "0" },
+    { name: "white-space", value: "normal" },
     ...(underline === undefined ? [] : underlineStyle(underline)),
   ];
 }
@@ -545,11 +556,12 @@ function anchorTransform(parameters: FineCaptionParameters): string | undefined 
 }
 
 function cueElements(
-  atoms: readonly CaptionDisplayAtom[],
+  atoms: readonly CaptionAlignmentUnit[],
   atomFrames: ReadonlyMap<string, { readonly start: number; readonly end: number }>,
   parameters: FineCaptionParameters,
   wordText: ReadonlyMap<string, string>,
   durationFrames: number,
+  styleId: string,
 ): VisualElement[] {
   type UnorderedVisualElement = Omit<VisualBoxElement, "order"> | Omit<VisualTextElement, "order">;
   const elements: VisualElement[] = [];
@@ -566,13 +578,17 @@ function cueElements(
     id: "placement",
     kind: "box",
     style: [
-      { name: "align-items", value: "center" },
+      { name: "align-items", value: parameters.layout.blockAlign === "start" ? "flex-start"
+        : parameters.layout.blockAlign === "end" ? "flex-end" : "center" },
       { name: "display", value: "flex" },
       { name: "justify-content", value: parameters.layout.textAlign === "left" ? "flex-start"
         : parameters.layout.textAlign === "right" ? "flex-end" : "center" },
       { name: "left", value: `${compactNumber(parameters.placement.x * 100)}%` },
       { name: "position", value: "absolute" },
       { name: "top", value: `${compactNumber(parameters.placement.y * 100)}%` },
+      ...(parameters.placement.height === undefined ? [] : [
+        { name: "height", value: `${compactNumber(parameters.placement.height * 100)}%` },
+      ] as const),
       ...(transform === undefined ? [] : [{ name: "transform", value: transform }] as const),
       { name: "width", value: `${compactNumber(parameters.placement.width * 100)}%` },
     ],
@@ -597,6 +613,11 @@ function cueElements(
     kind: "box",
     style: [
       { name: "background", value: parameters.cueBox.background },
+      ...(parameters.cueBox.shadow.opacity === 0 ? [] : [{
+        name: "box-shadow",
+        value: `${compactNumber(parameters.cueBox.shadow.offsetXPx)}px ${compactNumber(parameters.cueBox.shadow.offsetYPx)}px ${compactNumber(parameters.cueBox.shadow.blurPx)}px ${compactNumber(parameters.cueBox.shadow.spreadPx)}px ${alphaColor(parameters.cueBox.shadow.color, parameters.cueBox.shadow.opacity)}`,
+      }] as const),
+      { name: "box-sizing", value: "border-box" },
       { name: "border-color", value: parameters.cueBox.borderColor },
       { name: "border-radius", value: `${compactNumber(parameters.cueBox.radiusPx)}px` },
       { name: "border-style", value: "solid" },
@@ -607,10 +628,18 @@ function cueElements(
       { name: "flex-wrap", value: "wrap" },
       { name: "justify-content", value: parameters.layout.textAlign === "left" ? "flex-start"
         : parameters.layout.textAlign === "right" ? "flex-end" : "center" },
+      { name: "max-width", value: "100%" },
+      ...(parameters.layout.maxLines === undefined ? [] : [{
+        name: "max-height",
+        value: `${compactNumber(parameters.typography.fontSizePx * parameters.layout.lineHeight * parameters.layout.maxLines + parameters.cueBox.paddingYPx * 2)}px`,
+      }] as const),
+      { name: "overflow", value: parameters.layout.overflow === "clip" ? "hidden" : "visible" },
       { name: "padding", value: `${compactNumber(parameters.cueBox.paddingYPx)}px ${compactNumber(parameters.cueBox.paddingXPx)}px` },
       { name: "position", value: "relative" },
       { name: "text-align", value: parameters.layout.textAlign },
+      { name: "width", value: parameters.layout.inlineSize === "fixed" ? "100%" : "max-content" },
     ],
+    attributes: [{ name: "data-caption-style", value: styleId }],
   });
 
   if (parameters.activeBox.mode === "trail" && parameters.activeBox.continuity === "joined") {
@@ -665,6 +694,7 @@ function cueElements(
     }
   }
 
+  let wordsOnLine = 0;
   for (const [atomIndex, atom] of atoms.entries()) {
     const timing = atomFrames.get(atom.id);
     if (timing === undefined) throw new Error(`Fine Caption is missing timing for Atom ${atom.id}`);
@@ -674,6 +704,17 @@ function cueElements(
     const typewriterId = `${atomId}-typewriter`;
     const loopId = `${atomId}-loop`;
     const responseId = `${atomId}-response`;
+    if (parameters.layout.maxWordsPerLine !== undefined
+      && wordsOnLine > 0
+      && wordsOnLine + atom.wordIds.length > parameters.layout.maxWordsPerLine) {
+      push({
+        id: `line-break-${atomIndex}`,
+        parent: "cue",
+        kind: "box",
+        style: [{ name: "flex-basis", value: "100%" }, { name: "height", value: "0" }],
+      });
+      wordsOnLine = 0;
+    }
     const entryAnimation = atomLifecycleAnimation(parameters, timing.start, timing.end, durationFrames);
     const writerAnimation = typewriterAnimation(atomText, parameters, timing.start, timing.end, durationFrames);
     const atomLoop = parameters.motion.loopTarget === "active-atom"
@@ -685,6 +726,7 @@ function cueElements(
       kind: "box",
       style: [
         { name: "display", value: "inline-flex" },
+        { name: "min-width", value: "0" },
         { name: "transform-origin", value: "center center" },
       ],
       ...(entryAnimation === undefined ? {} : { animation: entryAnimation }),
@@ -695,6 +737,7 @@ function cueElements(
       kind: "box",
       style: [
         { name: "display", value: "inline-flex" },
+        { name: "min-width", value: "0" },
         { name: "transform-origin", value: parameters.layout.direction === "rtl" ? "right center" : "left center" },
       ],
       ...(writerAnimation === undefined ? {} : { animation: writerAnimation }),
@@ -703,14 +746,22 @@ function cueElements(
       id: loopId,
       parent: typewriterId,
       kind: "box",
-      style: [{ name: "display", value: "inline-flex" }, { name: "transform-origin", value: "center center" }],
+      style: [
+        { name: "display", value: "inline-flex" },
+        { name: "min-width", value: "0" },
+        { name: "transform-origin", value: "center center" },
+      ],
       ...(atomLoop === undefined ? {} : { animation: atomLoop }),
     });
     push({
       id: responseId,
       parent: loopId,
       kind: "box",
-      style: [{ name: "display", value: "inline-flex" }, { name: "transform-origin", value: "center center" }],
+      style: [
+        { name: "display", value: "inline-flex" },
+        { name: "min-width", value: "0" },
+        { name: "transform-origin", value: "center center" },
+      ],
       ...(responseAnimation === undefined ? {} : { animation: responseAnimation }),
     });
     push({
@@ -720,8 +771,11 @@ function cueElements(
       style: [
         { name: "column-gap", value: `${compactNumber(parameters.layout.wordGapPx)}px` },
         { name: "display", value: "inline-flex" },
+        { name: "min-width", value: "0" },
+        { name: "overflow-wrap", value: "anywhere" },
         { name: "position", value: "relative" },
-        { name: "white-space", value: "nowrap" },
+        { name: "white-space", value: "normal" },
+        { name: "word-break", value: parameters.layout.wrap === "grapheme" ? "break-all" : "normal" },
       ],
       attributes: [{ name: "data-caption-atom", value: atom.id }],
     });
@@ -807,24 +861,27 @@ function cueElements(
     if (parameters.activeUnderline.mode !== "off") {
       addActivatedTextLayer("underline", parameters.activeUnderline.mode, "underline");
     }
+    wordsOnLine += atom.wordIds.length;
   }
   return elements;
 }
 
 export function renderFineCaption(
-  projection: TimedCaptionProjection,
+  schedule: FineCaptionSchedule,
   program: CaptionProgram,
-  display: CaptionDisplaySequence,
+  document: CaptionDocument,
   space: ProgramSpace,
 ): VisualTrack {
-  assertTimedCaptionProjection(projection);
-  assertCaptionProgramForDisplay(program, display);
-  if (projection.displaySequenceId !== display.id) throw new Error("Fine Caption received another display sequence");
-  const visibleProjection = applyCaptionMute(projection, program, display);
+  assertFineCaptionSchedule(schedule);
+  assertCaptionProgramForDocument(program, document);
+  if (schedule.documentId !== document.id) throw new Error("Fine Caption received another CaptionDocument");
+  if (program.wordRuns.length !== 0) {
+    throw new Error("Fine Caption accepts one uniform token rule and cannot consume word-specific Style runs");
+  }
   assertProgramSpaceIdentity(space);
   const styles = new Map(program.styles.map((style) => [style.id, style]));
-  const wordText = new Map(display.words.map((word) => [word.id, word.text]));
-  const atomById = new Map(display.atoms.map((atom) => [atom.id, atom]));
+  const wordText = new Map(document.words.map((word) => [word.id, word.text]));
+  const atomById = new Map(document.units.map((atom) => [atom.id, atom]));
   for (const style of styles.values()) {
     if (style.rendering.family !== FINE_CAPTION_FAMILY) {
       throw new Error(`Fine Caption cannot render Style family ${style.rendering.family}`);
@@ -832,20 +889,19 @@ export function renderFineCaption(
     assertFineCaptionParameters(style.rendering.parameters as unknown as FineCaptionParameters);
   }
   const totalFrames = programSpaceFrameCount(space);
-  const presents = visibleProjection.cues.flatMap((cue) => {
-    const atoms = cue.atoms.map((timing) => atomById.get(timing.atomId));
+  const presents = schedule.cues.flatMap((cue) => {
+    const atoms = cue.units.map((timing) => atomById.get(timing.unitId));
     if (atoms.some((atom) => atom === undefined)) throw new Error(`Fine Caption Cue ${cue.id} references unknown Atom`);
     const resolvedAtoms = atoms.map((atom) => atom!);
     const style = styles.get(cue.styleId);
     if (style === undefined) throw new Error(`Fine Caption Cue ${cue.id} references unknown Style ${cue.styleId}`);
     const parameters = style.rendering.parameters as unknown as FineCaptionParameters;
-    if (cue.fields.length > 0) throw new Error(`Fine Caption Cue ${cue.id} contains unsupported fields`);
-    const startFrame = Math.max(0, cue.startFrame);
-    const measuredEnd = Math.min(totalFrames, cue.endFrameExclusive);
+    const startFrame = Math.max(0, cue.visibleStartFrame);
+    const measuredEnd = Math.min(totalFrames, cue.visibleEndFrameExclusive);
     const endFrameExclusive = Math.min(totalFrames, Math.max(startFrame + 1, measuredEnd));
     if (startFrame >= totalFrames || endFrameExclusive <= startFrame) return [];
     const durationFrames = endFrameExclusive - startFrame;
-    const atomFrames = new Map(cue.atoms.map((atom) => [atom.atomId, {
+    const atomFrames = new Map(cue.units.map((atom) => [atom.unitId, {
       start: clamp(atom.startFrame - startFrame, 0, durationFrames),
       end: clamp(Math.max(atom.endFrameExclusive - startFrame, atom.startFrame - startFrame + 1), 0, durationFrames),
     }]));
@@ -853,7 +909,7 @@ export function renderFineCaption(
       id: cue.id,
       span: { startFrame, endFrameExclusive },
       stacking: { order: parameters.stackingOrder, tieBreak: `${program.id}:${cue.id}` },
-      elements: cueElements(resolvedAtoms, atomFrames, parameters, wordText, durationFrames),
+      elements: cueElements(resolvedAtoms, atomFrames, parameters, wordText, durationFrames, cue.styleId),
     }];
   });
   const track = sealVisualTrack({

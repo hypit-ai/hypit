@@ -24,6 +24,8 @@ import type { ProgramSpace } from "@hypit/program-space";
 import type { BlobRef, Digest } from "@hypit/protocol";
 import { parseScript } from "@hypit/script";
 import type { SemanticTake, SemanticTakeToken } from "@hypit/speech";
+import { videoCliDistribution } from "@hypit/video-cli";
+import { loadStudioAdapterRegistry } from "@hypit/studio/src/adapter-profile.js";
 import { openStudioArchive } from "@hypit/studio/src/archive.js";
 import { loadStudioDomain } from "@hypit/studio/src/domain.js";
 import type { Preview } from "@hypit/studio/src/programme.js";
@@ -438,17 +440,15 @@ export async function spokenRange(
   const body = scriptBody(svml);
   const parsed = parseScript(svmlPath, body.text, body.offset);
 
-  // Which Script words the range covers. A Selection is unioned over its occurrences, the same way
-  // its frame window is, since one id can be marked in several places.
+  // Which Script words the range covers. A Selection is marked once, so its word range is the
+  // tokens between the anchors its open and close markers name.
   let from: number | undefined;
   let to: number | undefined;
   if (focus.selection !== undefined) {
     const selection = parsed.selections.find((item) => item.id === focus.selection);
     assert(selection !== undefined, `the Script marks no Selection ${focus.selection}`);
-    for (const occurrence of selection.occurrences) {
-      from = Math.min(from ?? Infinity, occurrence.open.boundary.tokenIndex);
-      to = Math.max(to ?? 0, occurrence.close.boundary.tokenIndex);
-    }
+    from = selection.open.boundary.tokenIndex;
+    to = selection.close.boundary.tokenIndex;
   } else {
     assert(focus.segment !== undefined, "name a Segment or a Selection to read a word range from");
     const segment = parsed.segments.find((item) => item.id === focus.segment);
@@ -506,7 +506,7 @@ export async function standInTakes(
   if (focus.segment !== undefined) focused = focus.segment;
   else if (focus.selection !== undefined) {
     const selection = parsed.selections.find((item) => item.id === focus.selection);
-    const token = selection?.occurrences[0]?.open.boundary.tokenIndex;
+    const token = selection?.open.boundary.tokenIndex;
     focused = token === undefined
       ? undefined
       : parsed.segments.find((segment) => token >= segment.tokenStart && token < segment.tokenEndExclusive)?.id;
@@ -625,20 +625,14 @@ export async function standInTakes(
     frameCursor += frameCount;
   }
 
-  // Every Selection the Script marks, as the frames its words occupy. Occurrences are unioned, since
-  // one Selection id can be marked in several places and they nest freely.
+  // Every Selection the Script marks, as the frames its words occupy. Selections nest freely, so a
+  // window runs from the frame of its open anchor's word to the end of the word before its close.
   const selections = new Map<string, AuthoringWindow>();
   for (const selection of parsed.selections) {
-    let start = Infinity;
-    let end = 0;
-    for (const occurrence of selection.occurrences) {
-      const first = frameOfToken[occurrence.open.boundary.tokenIndex];
-      const last = frameOfToken[occurrence.close.boundary.tokenIndex - 1];
-      if (first === undefined || last === undefined) continue;
-      start = Math.min(start, first.frame);
-      end = Math.max(end, last.end);
-    }
-    if (start < end) selections.set(selection.id, { startFrame: start, endFrameExclusive: end });
+    const first = frameOfToken[selection.open.boundary.tokenIndex];
+    const last = frameOfToken[selection.close.boundary.tokenIndex - 1];
+    if (first === undefined || last === undefined) continue;
+    if (first.frame < last.end) selections.set(selection.id, { startFrame: first.frame, endFrameExclusive: last.end });
   }
   return { takes, selections, frameCount: frameCursor, timing };
 }
@@ -977,12 +971,16 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
     ``,
   ].join("\n"), "utf8");
 
+  const distributionPackageRoot = videoCliDistribution.packageRoot;
+  if (distributionPackageRoot === undefined) throw new Error("active Hypit Distribution has no package root");
+
+  const registry = await loadStudioAdapterRegistry({ workspaceRoot: projectRoot, packageRoot, distributionPackageRoot });
   const domain = await loadStudioDomain({ run: derivedRun, workspaceRoot: projectRoot, packageRoot });
-  const archive = await openStudioArchive(undefined, packageRoot);
+  const archive = await openStudioArchive(undefined, packageRoot, projectRoot, distributionPackageRoot);
   let built: Preview;
   try {
     const run = await loadStudioRun({ run: derivedRun, domain, ...(archive === undefined ? {} : { archive }) });
-    const inspection = inspectStudioRun(run.source, run);
+    const inspection = inspectStudioRun(registry, run.source, run);
     // Every Track, not only the one being looked at: the element is compared where it sits, over the
     // mocked base rather than on its own, because text that is legible on black may not be on a picture.
     built = await preview({

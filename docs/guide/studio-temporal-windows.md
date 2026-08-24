@@ -1,43 +1,51 @@
 ---
-title: Studio Temporal Windows
-description: Open design note for displaying authored, projected and consumed time in Hypit Studio.
+title: Studio Temporal Lineage
+description: How Hypit Studio reads authored, projected and consumed time without reconstructing it.
 ---
 
-# Studio Temporal Windows
+# Studio Temporal Lineage
 
-> Status: the read-only presentation is decided and being implemented. Timeline writeback remains
-> open. This does not define a new Core protocol.
+> Status: executed Point/Window lineage is implemented. Writeback is enabled only when a gesture
+> has one explicit source preimage; cross-layer back-propagation remains forbidden. This does not
+> define a new Core protocol.
 
 A timeline item does not merely "have a start and end frame". Most authored Tracks begin with a
 named semantic source such as a Selection, Segment or Moment, project that source into frame space,
 and then consume the projected result as picture, sound, animation or an internal schedule. Studio
 must preserve those three stages instead of flattening them into one anonymous rectangle.
 
-## The three windows
+## The three layers
 
 ### 1. Selection window
 
 The selection window is the semantic source chosen by the author. It retains:
 
 - the source kind: Selection, Segment, Moment or Program;
-- the canonical source identity and occurrence identity;
+- the canonical source identity;
 - its anchors on the selected Semantic Track;
 - the source range of the author expression that refers to it.
 
-For a Moment this may be a point rather than a duration. A repeated Selection may produce several
-occurrences. Equal frame coordinates do not make two semantic sources identical.
+For a Moment this is a point rather than a duration. A Selection is exactly one contiguous interval,
+and a Moment is exactly one point. Equal frame coordinates do not make two semantic sources identical.
 
-### 2. Projection window
+A Selection preserves the author's directed pair of Anchors. Script does not sort, swap or clamp
+them. Anchor direction and the validity of a projected window are separate concerns: Temporal
+Projection rejects a reversed or zero-width raw window, then rejects an intersection with
+ProgramSpace that quantizes below one frame. A consumer of one Point can therefore retain the
+original author identity while duration consumers never receive an invalid Window.
 
-The projection window is the result of applying the Track's temporal expression to one source
-occurrence. For example, an item may use the complete Selection, begin three frames before a
-Moment, or run from `segment.start + 2s` to `segment.end`. Projection includes occurrence expansion,
-offset evaluation, clipping to Program Space and frame quantization.
+### 2. Projection point or window
 
-One authored binding can therefore produce zero, one or several projected windows. A component can
-also apply a relation between its projected windows, such as requiring or computing disjoint
-reveal intervals. That relation belongs to the component's public programme or schedule, not to a
-Studio guess.
+The projection window is the result of applying the Track's temporal expression to one source. For
+example, an item may use the complete Selection, begin three frames before a Moment, or run from
+`segment.start + 2s` to `segment.end`. Projection includes offset evaluation, clipping to Program
+Space and frame quantization.
+
+One authored binding produces one `TemporalPoint` or `TemporalWindow` when it resolves. Activation
+and terminal boundaries remain Points, including the exact `program.end` boundary; they are never
+encoded as one-frame Windows. A component can combine several projected values, such as computing
+disjoint reveal intervals. That relation belongs to the component's public programme or schedule,
+not to a Studio guess.
 
 ### 3. Consumption window
 
@@ -59,8 +67,8 @@ Studio eventually needs a lossless chain with explicit identities:
 
 ```text
 author element
-  -> semantic binding (kind, source id, occurrence, author range)
-  -> projection expression and projected window(s)
+  -> semantic binding (kind, source id, author range)
+  -> projection expression and projected Point/Window
   -> consumed entity and consumed window(s)
   -> terminal visual/audio realization
 ```
@@ -69,26 +77,25 @@ The links matter more than coincident frame numbers. Several Tracks may consume 
 one projected window may feed several visual and audio facets; one component may expand one outer
 window into many internal windows. These are shared bindings and projections, not duplicate clips.
 
-The current Studio adapter registry is the right local place to interpret this chain. Domain
-packages remain unaware of Studio. Adapters should reuse author observations and the public values
-already emitted by Narrative, Temporal and each Track family. If a required link is not observable,
-Studio should call it unresolved rather than infer it from ids, labels or equal spans.
+Studio builds this chain from the exact executed dependency closure of each selected Track. It
+indexes each Temporal record, its projection Spec, source identity and direct consumer edge, then
+passes that stable view to the adapter registry. Domain packages remain unaware of Studio. A
+required link that is absent stays unresolved; adapters do not infer it from attribute names, Spec
+type names, runtime id prefixes, labels or equal spans.
 
-## Timeline questions that remain deliberately open
+## Timeline writeback
 
-Before any drag or trim writeback is enabled, the product design must decide:
+Studio exposes two author mutations: `timeline.adjust` and `parameter.adjust`. Move and trim are
+gesture payloads of the former, not additional top-level operations. The concrete write target is
+resolved from the entity's executed lineage:
 
-1. Whether the three windows appear as nested geometry in one lane, separate linked sub-lanes, or
-   an overlay revealed when an item is selected.
-2. How a point-like Moment and its duration-like projection are distinguished visually.
-3. How repeated Selection occurrences and `one` versus `each` expansion are shown.
-4. How a shared Selection communicates the blast radius across all consuming Tracks.
-5. Whether the playhead/inspector selects the semantic source, projected occurrence, consumed
-   entity or terminal realization, and how the user moves between those levels.
-6. How component-internal schedules such as Ranking reveals expand without making the primary
-   timeline noisy.
-7. Which drag gesture owns which level. Moving a semantic source, changing a projection offset and
-   trimming a consumption window are different edits and must never be silently substituted.
+- a Selection-backed rectangle moves or trims that shared Selection at Script's ordered semantic
+  Anchors, and every consumer follows it;
+- a Moment-backed entity moves the shared Moment point, while an independently authored duration
+  may still own its right edge;
+- direct absolute endpoints rewrite their exact Source ranges;
+- Segment, Program and component-derived schedule phases remain read-only without a declared inverse.
 
-Until these questions are answered, timeline entities remain selectable and seekable but read-only.
-The rule is simple: difficulty is acceptable; implicit guessing is not.
+This is an inverse over public identities, never an inference from equal frame spans. Component
+details such as Ranking reveals use attached lanes only when their Point/Window inputs were explicitly
+externalized. Invalid domain input is refused and the author mutation is rolled back.

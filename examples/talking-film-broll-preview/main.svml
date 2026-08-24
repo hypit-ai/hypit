@@ -41,7 +41,7 @@
   <pipeline:Normalize id="motion-b-media" source={motion-b.video}
     recipe={recipes.media.broll} clock={clock}/>
   <whisperx:SemanticTake id="opening-semantic" narrative={story}
-    segment={story.segment.opening} media={take-media.media}/>
+    segment={story.segment.opening} media={take-media.media} language="en"/>
 
   <speech:Track id="speech"
     visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">

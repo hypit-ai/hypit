@@ -8,7 +8,8 @@
     "hypit-reference-video-tools": "./bin/reference-video-tools.mjs"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts"
   },
   "dependencies": {
     "@google/genai": "1.52.0",
@@ -27,6 +28,7 @@
     "@hypit/speech-evidence": "workspace:*",
     "@hypit/studio": "workspace:*",
     "@hypit/svs": "workspace:*",
+    "@hypit/video-cli": "workspace:*",
     "@hypit/whisperx": "workspace:*",
     "tsx": "4.21.0"
   },

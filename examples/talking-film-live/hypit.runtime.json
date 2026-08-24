@@ -24,14 +24,6 @@
           "use": "@hypit/provider-whisperx-local",
           "config": { "defaultConcurrency": 1 }
         },
-        "vertex.talking-film": {
-          "use": "@hypit/provider-google-vertex",
-          "config": {
-            "projectEnv": "GOOGLE_CLOUD_PROJECT",
-            "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
-            "defaultConcurrency": 1
-          }
-        },
         "hyperframes.talking-film": {
           "use": "@hypit/provider-hyperframes-local",
           "config": { "workers": 2, "quality": "standard", "defaultConcurrency": 1 }

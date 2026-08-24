@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
     devDependencies:
       '@hypit/artifact':
         specifier: workspace:*
@@ -29,9 +33,6 @@ importers:
       '@hypit/caption-fine':
         specifier: workspace:*
         version: link:packages/caption-fine
-      '@hypit/caption-gemini':
-        specifier: workspace:*
-        version: link:packages/caption-gemini
       '@hypit/comment-sticker':
         specifier: workspace:*
         version: link:packages/comment-sticker
@@ -41,9 +42,9 @@ importers:
       '@hypit/credential-store-env':
         specifier: workspace:*
         version: link:packages/credential-store-env
-      '@hypit/credential-store-keychain':
+      '@hypit/credential-store-os':
         specifier: workspace:*
-        version: link:packages/credential-store-keychain
+        version: link:packages/credential-store-os
       '@hypit/deck-track':
         specifier: workspace:*
         version: link:packages/deck-track
@@ -56,9 +57,6 @@ importers:
       '@hypit/fonts-open':
         specifier: workspace:*
         version: link:packages/fonts-open
-      '@hypit/gemini-omni':
-        specifier: workspace:*
-        version: link:packages/gemini-omni
       '@hypit/generation':
         specifier: workspace:*
         version: link:packages/generation
@@ -104,9 +102,6 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:packages/protocol
-      '@hypit/provider-google-vertex':
-        specifier: workspace:*
-        version: link:packages/provider-google-vertex
       '@hypit/provider-hyperframes-aws-lambda':
         specifier: workspace:*
         version: link:packages/provider-hyperframes-aws-lambda
@@ -188,6 +183,12 @@ importers:
       '@hypit/store-sqlite':
         specifier: workspace:*
         version: link:packages/store-sqlite
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:packages/studio-adapter
+      '@hypit/studio-video-adapters':
+        specifier: workspace:*
+        version: link:packages/studio-video-adapters
       '@hypit/svs':
         specifier: workspace:*
         version: link:packages/svs
@@ -209,15 +210,9 @@ importers:
       '@types/node':
         specifier: 24.10.1
         version: 24.10.1
-      tsx:
-        specifier: 4.21.0
-        version: 4.21.0
       typescript:
         specifier: 5.9.3
         version: 5.9.3
-      vite:
-        specifier: 5.4.21
-        version: 5.4.21(@types/node@24.10.1)
       vitepress:
         specifier: ^1.6.4
         version: 1.6.4(@algolia/client-search@5.56.0)(@types/node@24.10.1)(postcss@8.5.25)(search-insights@2.17.3)(typescript@5.9.3)
@@ -243,7 +238,7 @@ importers:
   packages/artifact-store-s3:
     dependencies:
       '@aws-sdk/client-s3':
-        specifier: ^3.1103.0
+        specifier: 3.1103.0
         version: 3.1103.0
       '@hypit/protocol':
         specifier: workspace:*
@@ -403,31 +398,6 @@ importers:
       '@hypit/svs':
         specifier: workspace:*
         version: link:../svs
-    devDependencies:
-      '@hypit/script':
-        specifier: workspace:*
-        version: link:../script
-
-  packages/caption-gemini:
-    dependencies:
-      '@hypit/caption':
-        specifier: workspace:*
-        version: link:../caption
-      '@hypit/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@hypit/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/narrative':
-        specifier: workspace:*
-        version: link:../narrative
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
     devDependencies:
       '@hypit/script':
         specifier: workspace:*
@@ -635,7 +605,7 @@ importers:
         specifier: workspace:*
         version: link:../runtime-kit
 
-  packages/credential-store-keychain:
+  packages/credential-store-os:
     dependencies:
       '@hypit/runtime':
         specifier: workspace:*
@@ -825,6 +795,16 @@ importers:
 
   packages/fonts-open:
     dependencies:
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/media':
+        specifier: workspace:*
+        version: link:../media
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    optionalDependencies:
       '@fontsource-variable/archivo':
         specifier: 5.3.0
         version: 5.3.0
@@ -1149,39 +1129,9 @@ importers:
       '@fontsource/zcool-xiaowei':
         specifier: 5.3.0
         version: 5.3.0
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../media
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
       '@infolektuell/noto-color-emoji':
         specifier: 0.2.0
         version: 0.2.0
-
-  packages/gemini-omni:
-    dependencies:
-      '@hypit/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@hypit/generation':
-        specifier: workspace:*
-        version: link:../generation
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/model-kit':
-        specifier: workspace:*
-        version: link:../model-kit
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/text':
-        specifier: workspace:*
-        version: link:../text
 
   packages/generation:
     dependencies:
@@ -1628,48 +1578,14 @@ importers:
 
   packages/protocol: {}
 
-  packages/provider-google-vertex:
-    dependencies:
-      '@google/genai':
-        specifier: 1.52.0
-        version: 1.52.0
-      '@hypit/caption':
-        specifier: workspace:*
-        version: link:../caption
-      '@hypit/caption-gemini':
-        specifier: workspace:*
-        version: link:../caption-gemini
-      '@hypit/endpoint-kit':
-        specifier: workspace:*
-        version: link:../endpoint-kit
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@hypit/runtime-host-node':
-        specifier: workspace:*
-        version: link:../runtime-host-node
-      '@hypit/runtime-kit':
-        specifier: workspace:*
-        version: link:../runtime-kit
-    devDependencies:
-      '@hypit/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-      '@hypit/script':
-        specifier: workspace:*
-        version: link:../script
-
   packages/provider-hyperframes-aws-lambda:
     dependencies:
       '@aws-sdk/client-s3':
-        specifier: ^3.700.0
+        specifier: 3.1103.0
         version: 3.1103.0
       '@aws-sdk/client-sfn':
-        specifier: ^3.700.0
-        version: 3.1106.0
+        specifier: 3.1103.0
+        version: 3.1103.0
       '@hyperframes/aws-lambda':
         specifier: 0.7.101
         version: 0.7.101
@@ -1756,6 +1672,9 @@ importers:
       '@hypit/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
+      '@hypit/image-opencv-runtime':
+        specifier: workspace:*
+        version: link:../../services/image-opencv
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1818,9 +1737,6 @@ importers:
       '@hypit/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@hypit/gemini-omni':
-        specifier: workspace:*
-        version: link:../gemini-omni
       '@hypit/gpt-image':
         specifier: workspace:*
         version: link:../gpt-image
@@ -1937,6 +1853,9 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@hypit/runtime-host-node':
+        specifier: workspace:*
+        version: link:../runtime-host-node
       '@hypit/runtime-kit':
         specifier: workspace:*
         version: link:../runtime-kit
@@ -1946,6 +1865,9 @@ importers:
       '@hypit/whisperx':
         specifier: workspace:*
         version: link:../whisperx
+      '@hypit/whisperx-service-runtime':
+        specifier: workspace:*
+        version: link:../../services/whisperx
     devDependencies:
       '@hypit/driver-node':
         specifier: workspace:*
@@ -2090,6 +2012,9 @@ importers:
       '@hypit/svs':
         specifier: workspace:*
         version: link:../svs
+      '@hypit/video-cli':
+        specifier: workspace:*
+        version: link:../video-cli
       '@hypit/whisperx':
         specifier: workspace:*
         version: link:../whisperx
@@ -2603,6 +2528,15 @@ importers:
       '@hypit/semantic-track':
         specifier: workspace:*
         version: link:../semantic-track
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
+      '@hypit/studio-video-adapters':
+        specifier: workspace:*
+        version: link:../studio-video-adapters
+      '@hypit/svs':
+        specifier: workspace:*
+        version: link:../svs
       '@hypit/validation':
         specifier: workspace:*
         version: link:../validation
@@ -2618,6 +2552,18 @@ importers:
       vite:
         specifier: 5.4.21
         version: 5.4.21(@types/node@24.10.1)
+
+  packages/studio-adapter:
+    dependencies:
+      '@hypit/host':
+        specifier: workspace:*
+        version: link:../host
+
+  packages/studio-video-adapters:
+    dependencies:
+      '@hypit/studio-adapter':
+        specifier: workspace:*
+        version: link:../studio-adapter
 
   packages/svs:
     dependencies:
@@ -2637,6 +2583,9 @@ importers:
 
   packages/temporal:
     dependencies:
+      '@hypit/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@hypit/narrative':
         specifier: workspace:*
         version: link:../narrative
@@ -2674,7 +2623,7 @@ importers:
   packages/transport-aws-lambda:
     dependencies:
       '@aws-sdk/client-lambda':
-        specifier: ^3.1103.0
+        specifier: 3.1103.0
         version: 3.1103.0
       '@hypit/protocol':
         specifier: workspace:*
@@ -2755,6 +2704,9 @@ importers:
       '@hypit/credential-store-env':
         specifier: workspace:*
         version: link:../credential-store-env
+      '@hypit/credential-store-os':
+        specifier: workspace:*
+        version: link:../credential-store-os
       '@hypit/driver-node':
         specifier: workspace:*
         version: link:../driver-node
@@ -2779,6 +2731,9 @@ importers:
       '@hypit/provider-kie':
         specifier: workspace:*
         version: link:../provider-kie
+      '@hypit/runtime-host-node':
+        specifier: workspace:*
+        version: link:../runtime-host-node
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local
@@ -2850,6 +2805,8 @@ importers:
         specifier: workspace:*
         version: link:../workspace
 
+  services/image-opencv: {}
+
   services/media-lambda:
     dependencies:
       '@hypit/artifact-store-s3':
@@ -2880,6 +2837,8 @@ importers:
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12
+
+  services/whisperx: {}
 
 packages:
 
@@ -2971,8 +2930,8 @@ packages:
     resolution: {integrity: sha512-FO7SB2vLhZRN3lBHVhMhRm3YKSHK8e917qjB8LMEEhU69cQ0Ahd/OMyezu+KqNANqEtyxfSnFVvYt81x6ZKGZA==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-sfn@3.1106.0':
-    resolution: {integrity: sha512-lU6A0y5jghCTXXOFOEKTBWRRBVvarowKAXOMhvG5vmaYj3GKwlK7j16mHIyuzhInnvuQO9AntFDJT/yQFSEyIA==}
+  '@aws-sdk/client-sfn@3.1103.0':
+    resolution: {integrity: sha512-QVA5lMtidoIZL2LAUs2lppS44YzGvxHw+qrdNZP33ulqtp8/ttgk8gf44Ttpzi8nlYF5lbpbsuFeuJXcbDOG/g==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/core@3.977.6':
@@ -5603,7 +5562,7 @@ snapshots:
       '@smithy/types': 4.16.1
       tslib: 2.8.1
 
-  '@aws-sdk/client-sfn@3.1106.0':
+  '@aws-sdk/client-sfn@3.1103.0':
     dependencies:
       '@aws-sdk/core': 3.977.6
       '@aws-sdk/credential-provider-node': 3.972.78
@@ -6034,203 +5993,296 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
-  '@fontsource-variable/archivo@5.3.0': {}
+  '@fontsource-variable/archivo@5.3.0':
+    optional: true
 
-  '@fontsource-variable/bodoni-moda@5.3.0': {}
+  '@fontsource-variable/bodoni-moda@5.3.0':
+    optional: true
 
-  '@fontsource-variable/cabin@5.3.0': {}
+  '@fontsource-variable/cabin@5.3.0':
+    optional: true
 
-  '@fontsource-variable/caveat@5.3.0': {}
+  '@fontsource-variable/caveat@5.3.0':
+    optional: true
 
-  '@fontsource-variable/cinzel@5.3.0': {}
+  '@fontsource-variable/cinzel@5.3.0':
+    optional: true
 
-  '@fontsource-variable/cormorant-garamond@5.3.0': {}
+  '@fontsource-variable/cormorant-garamond@5.3.0':
+    optional: true
 
-  '@fontsource-variable/crimson-pro@5.3.0': {}
+  '@fontsource-variable/crimson-pro@5.3.0':
+    optional: true
 
-  '@fontsource-variable/dm-sans@5.3.0': {}
+  '@fontsource-variable/dm-sans@5.3.0':
+    optional: true
 
-  '@fontsource-variable/eb-garamond@5.3.0': {}
+  '@fontsource-variable/eb-garamond@5.3.0':
+    optional: true
 
-  '@fontsource-variable/figtree@5.3.0': {}
+  '@fontsource-variable/figtree@5.3.0':
+    optional: true
 
-  '@fontsource-variable/fira-code@5.3.0': {}
+  '@fontsource-variable/fira-code@5.3.0':
+    optional: true
 
-  '@fontsource-variable/fraunces@5.3.0': {}
+  '@fontsource-variable/fraunces@5.3.0':
+    optional: true
 
-  '@fontsource-variable/fredoka@5.3.0': {}
+  '@fontsource-variable/fredoka@5.3.0':
+    optional: true
 
-  '@fontsource-variable/geist-mono@5.3.0': {}
+  '@fontsource-variable/geist-mono@5.3.0':
+    optional: true
 
-  '@fontsource-variable/geist@5.3.0': {}
+  '@fontsource-variable/geist@5.3.0':
+    optional: true
 
-  '@fontsource-variable/instrument-sans@5.3.0': {}
+  '@fontsource-variable/instrument-sans@5.3.0':
+    optional: true
 
-  '@fontsource-variable/inter@5.3.0': {}
+  '@fontsource-variable/inter@5.3.0':
+    optional: true
 
-  '@fontsource-variable/jetbrains-mono@5.3.0': {}
+  '@fontsource-variable/jetbrains-mono@5.3.0':
+    optional: true
 
-  '@fontsource-variable/josefin-sans@5.3.0': {}
+  '@fontsource-variable/josefin-sans@5.3.0':
+    optional: true
 
-  '@fontsource-variable/jost@5.3.0': {}
+  '@fontsource-variable/jost@5.3.0':
+    optional: true
 
-  '@fontsource-variable/league-spartan@5.3.0': {}
+  '@fontsource-variable/league-spartan@5.3.0':
+    optional: true
 
-  '@fontsource-variable/lexend@5.3.0': {}
+  '@fontsource-variable/lexend@5.3.0':
+    optional: true
 
-  '@fontsource-variable/libre-baskerville@5.3.0': {}
+  '@fontsource-variable/libre-baskerville@5.3.0':
+    optional: true
 
-  '@fontsource-variable/lora@5.3.0': {}
+  '@fontsource-variable/lora@5.3.0':
+    optional: true
 
-  '@fontsource-variable/manrope@5.3.0': {}
+  '@fontsource-variable/manrope@5.3.0':
+    optional: true
 
-  '@fontsource-variable/merriweather@5.3.0': {}
+  '@fontsource-variable/merriweather@5.3.0':
+    optional: true
 
-  '@fontsource-variable/montserrat@5.3.0': {}
+  '@fontsource-variable/montserrat@5.3.0':
+    optional: true
 
-  '@fontsource-variable/mulish@5.3.0': {}
+  '@fontsource-variable/mulish@5.3.0':
+    optional: true
 
-  '@fontsource-variable/newsreader@5.3.0': {}
+  '@fontsource-variable/newsreader@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-emoji@5.3.0': {}
+  '@fontsource-variable/noto-emoji@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-naskh-arabic@5.3.0': {}
+  '@fontsource-variable/noto-naskh-arabic@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-sans-arabic@5.3.0': {}
+  '@fontsource-variable/noto-sans-arabic@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-sans-devanagari@5.3.0': {}
+  '@fontsource-variable/noto-sans-devanagari@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-sans-hebrew@5.3.0': {}
+  '@fontsource-variable/noto-sans-hebrew@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-sans-hk@5.3.0': {}
+  '@fontsource-variable/noto-sans-hk@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-sans-jp@5.3.0': {}
+  '@fontsource-variable/noto-sans-jp@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-sans-kr@5.3.0': {}
+  '@fontsource-variable/noto-sans-kr@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-sans-sc@5.3.0': {}
+  '@fontsource-variable/noto-sans-sc@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-sans-tc@5.3.0': {}
+  '@fontsource-variable/noto-sans-tc@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-sans-thai@5.3.0': {}
+  '@fontsource-variable/noto-sans-thai@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-sans@5.3.0': {}
+  '@fontsource-variable/noto-sans@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-serif-jp@5.3.0': {}
+  '@fontsource-variable/noto-serif-jp@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-serif-kr@5.3.0': {}
+  '@fontsource-variable/noto-serif-kr@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-serif-sc@5.3.0': {}
+  '@fontsource-variable/noto-serif-sc@5.3.0':
+    optional: true
 
-  '@fontsource-variable/noto-serif-tc@5.3.0': {}
+  '@fontsource-variable/noto-serif-tc@5.3.0':
+    optional: true
 
-  '@fontsource-variable/nunito-sans@5.3.0': {}
+  '@fontsource-variable/nunito-sans@5.3.0':
+    optional: true
 
-  '@fontsource-variable/onest@5.3.0': {}
+  '@fontsource-variable/onest@5.3.0':
+    optional: true
 
-  '@fontsource-variable/open-sans@5.3.0': {}
+  '@fontsource-variable/open-sans@5.3.0':
+    optional: true
 
-  '@fontsource-variable/oswald@5.3.0': {}
+  '@fontsource-variable/oswald@5.3.0':
+    optional: true
 
-  '@fontsource-variable/outfit@5.3.0': {}
+  '@fontsource-variable/outfit@5.3.0':
+    optional: true
 
-  '@fontsource-variable/playfair-display@5.3.0': {}
+  '@fontsource-variable/playfair-display@5.3.0':
+    optional: true
 
-  '@fontsource-variable/playpen-sans@5.3.0': {}
+  '@fontsource-variable/playpen-sans@5.3.0':
+    optional: true
 
-  '@fontsource-variable/plus-jakarta-sans@5.3.0': {}
+  '@fontsource-variable/plus-jakarta-sans@5.3.0':
+    optional: true
 
-  '@fontsource-variable/quicksand@5.3.0': {}
+  '@fontsource-variable/quicksand@5.3.0':
+    optional: true
 
-  '@fontsource-variable/raleway@5.3.0': {}
+  '@fontsource-variable/raleway@5.3.0':
+    optional: true
 
-  '@fontsource-variable/rethink-sans@5.3.0': {}
+  '@fontsource-variable/rethink-sans@5.3.0':
+    optional: true
 
-  '@fontsource-variable/roboto-condensed@5.3.0': {}
+  '@fontsource-variable/roboto-condensed@5.3.0':
+    optional: true
 
-  '@fontsource-variable/roboto-mono@5.3.0': {}
+  '@fontsource-variable/roboto-mono@5.3.0':
+    optional: true
 
-  '@fontsource-variable/roboto-slab@5.3.0': {}
+  '@fontsource-variable/roboto-slab@5.3.0':
+    optional: true
 
-  '@fontsource-variable/roboto@5.3.0': {}
+  '@fontsource-variable/roboto@5.3.0':
+    optional: true
 
-  '@fontsource-variable/rubik@5.3.0': {}
+  '@fontsource-variable/rubik@5.3.0':
+    optional: true
 
-  '@fontsource-variable/shantell-sans@5.3.0': {}
+  '@fontsource-variable/shantell-sans@5.3.0':
+    optional: true
 
-  '@fontsource-variable/sora@5.3.0': {}
+  '@fontsource-variable/sora@5.3.0':
+    optional: true
 
-  '@fontsource-variable/source-serif-4@5.3.0': {}
+  '@fontsource-variable/source-serif-4@5.3.0':
+    optional: true
 
-  '@fontsource-variable/space-grotesk@5.3.0': {}
+  '@fontsource-variable/space-grotesk@5.3.0':
+    optional: true
 
-  '@fontsource-variable/unbounded@5.3.0': {}
+  '@fontsource-variable/unbounded@5.3.0':
+    optional: true
 
-  '@fontsource-variable/urbanist@5.3.0': {}
+  '@fontsource-variable/urbanist@5.3.0':
+    optional: true
 
-  '@fontsource-variable/vollkorn@5.3.0': {}
+  '@fontsource-variable/vollkorn@5.3.0':
+    optional: true
 
-  '@fontsource-variable/work-sans@5.3.0': {}
+  '@fontsource-variable/work-sans@5.3.0':
+    optional: true
 
-  '@fontsource/abril-fatface@5.3.0': {}
+  '@fontsource/abril-fatface@5.3.0':
+    optional: true
 
-  '@fontsource/alfa-slab-one@5.3.0': {}
+  '@fontsource/alfa-slab-one@5.3.0':
+    optional: true
 
-  '@fontsource/anton@5.3.0': {}
+  '@fontsource/anton@5.3.0':
+    optional: true
 
-  '@fontsource/architects-daughter@5.3.0': {}
+  '@fontsource/architects-daughter@5.3.0':
+    optional: true
 
   '@fontsource/archivo-black@5.3.0': {}
 
-  '@fontsource/bangers@5.3.0': {}
+  '@fontsource/bangers@5.3.0':
+    optional: true
 
-  '@fontsource/barlow-condensed@5.3.0': {}
+  '@fontsource/barlow-condensed@5.3.0':
+    optional: true
 
-  '@fontsource/barlow@5.3.0': {}
+  '@fontsource/barlow@5.3.0':
+    optional: true
 
-  '@fontsource/bebas-neue@5.3.0': {}
+  '@fontsource/bebas-neue@5.3.0':
+    optional: true
 
-  '@fontsource/black-ops-one@5.3.0': {}
+  '@fontsource/black-ops-one@5.3.0':
+    optional: true
 
-  '@fontsource/bungee@5.3.0': {}
+  '@fontsource/bungee@5.3.0':
+    optional: true
 
-  '@fontsource/coming-soon@5.3.0': {}
+  '@fontsource/coming-soon@5.3.0':
+    optional: true
 
-  '@fontsource/dm-serif-display@5.3.0': {}
+  '@fontsource/dm-serif-display@5.3.0':
+    optional: true
 
   '@fontsource/eb-garamond@5.3.0': {}
 
-  '@fontsource/fira-sans-condensed@5.3.0': {}
+  '@fontsource/fira-sans-condensed@5.3.0':
+    optional: true
 
-  '@fontsource/gloock@5.3.0': {}
+  '@fontsource/gloock@5.3.0':
+    optional: true
 
-  '@fontsource/handlee@5.3.0': {}
+  '@fontsource/handlee@5.3.0':
+    optional: true
 
   '@fontsource/ibm-plex-mono@5.3.0': {}
 
-  '@fontsource/instrument-serif@5.3.0': {}
+  '@fontsource/instrument-serif@5.3.0':
+    optional: true
 
   '@fontsource/inter@5.3.0': {}
 
   '@fontsource/jetbrains-mono@5.3.0': {}
 
-  '@fontsource/kalam@5.3.0': {}
+  '@fontsource/kalam@5.3.0':
+    optional: true
 
-  '@fontsource/kanit@5.3.0': {}
+  '@fontsource/kanit@5.3.0':
+    optional: true
 
-  '@fontsource/lato@5.3.0': {}
+  '@fontsource/lato@5.3.0':
+    optional: true
 
   '@fontsource/league-gothic@5.3.0': {}
 
-  '@fontsource/lilita-one@5.3.0': {}
+  '@fontsource/lilita-one@5.3.0':
+    optional: true
 
-  '@fontsource/liu-jian-mao-cao@5.3.0': {}
+  '@fontsource/liu-jian-mao-cao@5.3.0':
+    optional: true
 
-  '@fontsource/long-cang@5.3.0': {}
+  '@fontsource/long-cang@5.3.0':
+    optional: true
 
-  '@fontsource/luckiest-guy@5.3.0': {}
+  '@fontsource/luckiest-guy@5.3.0':
+    optional: true
 
-  '@fontsource/ma-shan-zheng@5.3.0': {}
+  '@fontsource/ma-shan-zheng@5.3.0':
+    optional: true
 
   '@fontsource/montserrat@5.3.0': {}
 
@@ -6240,31 +6292,43 @@ snapshots:
 
   '@fontsource/outfit@5.3.0': {}
 
-  '@fontsource/pacifico@5.3.0': {}
+  '@fontsource/pacifico@5.3.0':
+    optional: true
 
-  '@fontsource/patrick-hand@5.3.0': {}
+  '@fontsource/patrick-hand@5.3.0':
+    optional: true
 
-  '@fontsource/permanent-marker@5.3.0': {}
+  '@fontsource/permanent-marker@5.3.0':
+    optional: true
 
-  '@fontsource/pinyon-script@5.3.0': {}
+  '@fontsource/pinyon-script@5.3.0':
+    optional: true
 
-  '@fontsource/poppins@5.3.0': {}
+  '@fontsource/poppins@5.3.0':
+    optional: true
 
-  '@fontsource/righteous@5.3.0': {}
+  '@fontsource/righteous@5.3.0':
+    optional: true
 
-  '@fontsource/satisfy@5.3.0': {}
+  '@fontsource/satisfy@5.3.0':
+    optional: true
 
-  '@fontsource/shadows-into-light@5.3.0': {}
+  '@fontsource/shadows-into-light@5.3.0':
+    optional: true
 
-  '@fontsource/short-stack@5.3.0': {}
+  '@fontsource/short-stack@5.3.0':
+    optional: true
 
   '@fontsource/space-mono@5.3.0': {}
 
-  '@fontsource/zcool-kuaile@5.3.0': {}
+  '@fontsource/zcool-kuaile@5.3.0':
+    optional: true
 
-  '@fontsource/zcool-qingke-huangyou@5.3.0': {}
+  '@fontsource/zcool-qingke-huangyou@5.3.0':
+    optional: true
 
-  '@fontsource/zcool-xiaowei@5.3.0': {}
+  '@fontsource/zcool-xiaowei@5.3.0':
+    optional: true
 
   '@google/genai@1.52.0':
     dependencies:
@@ -6284,7 +6348,7 @@ snapshots:
   '@hyperframes/aws-lambda@0.7.101':
     dependencies:
       '@aws-sdk/client-s3': 3.1103.0
-      '@aws-sdk/client-sfn': 3.1106.0
+      '@aws-sdk/client-sfn': 3.1103.0
       '@hyperframes/producer': 0.7.101
       '@sparticuz/chromium': 148.0.0
       ffmpeg-static: 5.3.0
@@ -6508,7 +6572,8 @@ snapshots:
   '@img/sharp-win32-x64@0.35.3':
     optional: true
 
-  '@infolektuell/noto-color-emoji@0.2.0': {}
+  '@infolektuell/noto-color-emoji@0.2.0':
+    optional: true
 
   '@isaacs/fs-minipass@4.0.1':
     dependencies:

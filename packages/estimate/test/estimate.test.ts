@@ -146,6 +146,6 @@ test("an SVS Recipe configures one reusable estimate policy without becoming exe
   assert.throws(() => speechEstimatePolicyFromRecipe({
 
     path: "speech.invalid",
-    properties: { provider: "gemini" },
+    properties: { provider: "unknown-provider" },
   }), /unknown property provider/u);
 });

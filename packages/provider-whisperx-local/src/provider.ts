@@ -16,9 +16,6 @@ export const localWhisperXProviderModuleRef = {
   name: "@hypit/provider-whisperx-local",
   version: "1",
 } as const;
-export const localWhisperXPunktTabDigest =
-  "e57f64187974277726a3417ca6f181ec5403676c717672eef6a748a7b20e0106";
-
 export type CreateLocalWhisperXProviderOptions = {
   readonly instance?: string;
   readonly pool?: string;
@@ -30,7 +27,6 @@ export type CreateLocalWhisperXProviderOptions = {
   readonly expectedBatchSize?: number;
   readonly expectedServiceVersion?: string;
   readonly expectedWhisperXVersion?: string;
-  readonly expectedPunktTabDigest?: string;
   readonly defaultConcurrency?: number;
   readonly requestTimeoutMs?: number;
   readonly maxResponseBytes?: number;
@@ -75,7 +71,8 @@ function alignmentRequest(value: CanonicalValue): WhisperXAlignmentRequest {
   assert(item.audio?.kind === "blob"
     && item.audio.mediaType === "audio/wav"
     && Number.isSafeInteger(item.sampleFrames)
-    && item.sampleFrames > 0,
+    && item.sampleFrames > 0
+    && (item.language === "en" || item.language === "zh"),
   "WhisperX alignment request is invalid");
   return item;
 }
@@ -224,13 +221,11 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
   const expectedBatchSize = positiveInteger(config.expectedBatchSize ?? 8, "expectedBatchSize");
   const expectedServiceVersion = config.expectedServiceVersion ?? "0.1.0";
   const expectedWhisperXVersion = config.expectedWhisperXVersion ?? "3.8.6";
-  const expectedPunktTabDigest = config.expectedPunktTabDigest ?? localWhisperXPunktTabDigest;
   assert(expectedModel.trim().length > 0, "expectedModel is empty");
   assert(expectedDevice.trim().length > 0, "expectedDevice is empty");
   assert(expectedCompute.trim().length > 0, "expectedCompute is empty");
   assert(expectedServiceVersion.trim().length > 0, "expectedServiceVersion is empty");
   assert(expectedWhisperXVersion.trim().length > 0, "expectedWhisperXVersion is empty");
-  assert(/^[0-9a-f]{64}$/u.test(expectedPunktTabDigest), "expectedPunktTabDigest is invalid");
   const requestTimeoutMs = positiveInteger(config.requestTimeoutMs ?? 10 * 60_000, "requestTimeoutMs");
   const maxResponseBytes = positiveInteger(config.maxResponseBytes ?? 64 * 1024 * 1024, "maxResponseBytes");
 
@@ -268,7 +263,6 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
             readonly device?: unknown;
             readonly compute?: unknown;
             readonly batchSize?: unknown;
-            readonly punktTabDigest?: unknown;
           };
           assert(healthValue.ok === true
             && healthValue.protocol === "hypit.whisperx-service@1"
@@ -277,15 +271,14 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
             && healthValue.model === expectedModel
             && healthValue.device === expectedDevice
             && healthValue.compute === expectedCompute
-            && healthValue.batchSize === expectedBatchSize
-            && healthValue.punktTabDigest === expectedPunktTabDigest,
+            && healthValue.batchSize === expectedBatchSize,
           "WhisperX service runtime identity differs from the configured Provider");
           const transcriptionResponse = await fetch(`${normalizedBaseUrl}/transcribe`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
               audio_path: audioPath,
-              ...(request.language === undefined ? {} : { language: request.language }),
+              language: request.language,
             }),
             signal,
           });

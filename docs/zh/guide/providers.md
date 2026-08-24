@@ -5,7 +5,9 @@ description: 添加新 Endpoint 适配器的分步指南。
 
 # 添加 Provider
 
-一个 Provider 包实现一项受控的外部能力——视频生成、媒体处理、对齐、字幕规划、渲染。它通过 Runtime Profile 激活，而不是通过 Author Source 里的 `<import>`。
+一个 Provider 包实现一项受控的外部能力——视频生成、媒体处理、对齐或渲染。字幕作者语义
+和 Cue 分组由 Script 自己负责，不需要 Provider。Provider 通过 Runtime Profile 激活，而不是
+通过 Author Source 里的 `<import>`。
 
 不需要改动 Core、CLI 或任何作者包。
 
@@ -162,10 +164,11 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 ```
 
-`hypit runtime up` 会准备、启动并探测 Managed Program，然后启动耐久 Worker。`build` 只启动
-本次 Plan 所需 Capability 对应的 Program。只调用远程 API 的 Provider 不返回 `program`。
+`hypit runtime up` 会准备、启动并探测 Managed Program，然后启动耐久 Worker。`build` 只预检
+本次 Plan 所需 Capability 对应的 Program；未就绪时在提交前失败，绝不安装或启动它。只调用
+远程 API 的 Provider 不返回 `program`。
 
-## 6. 注册并锁定
+## 6. 声明依赖
 
 在 Provider 自己的 `package.json` 中声明所有导入包：
 
@@ -186,7 +189,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
       "use": "@hypit/provider-my-service",
       "pool": "my-service.account",
       "config": {
-        "apiKey": { "store": "keychain", "key": "my-service.api-key" },
+        "apiKey": { "store": "os", "key": "my-service.api-key" },
         "defaultConcurrency": 2
       }
     }
@@ -207,7 +210,6 @@ hypit doctor hypit.runtime.json
 | `provider-kie` | 远程 API：上传、付费提交、带检查点的轮询、有界下载、即时 ArtifactStore 持久化 |
 | `provider-media-local` | 本地进程：不经 shell 的 ffprobe/ffmpeg，执行有界 |
 | `provider-whisperx-local` | 本地 HTTP 服务：带热模型，单次准入并发 |
-| `provider-google-vertex` | 云 API：带 project/credentials 配置的 Vertex AI |
 | `provider-hyperframes-local` | 本地进程：Chrome 渲染，带 worker 并行与输出探测校验 |
 | `provider-hyperframes-aws-lambda` | 远程可恢复任务：确定性 Step Functions 提交、轮询与 S3 流式落库 |
 | `provider-image-opencv-local` | 本地 Python：有界的 OpenCV/NumPy，配合锁定的 Python 环境 |

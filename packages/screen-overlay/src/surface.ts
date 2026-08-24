@@ -2,13 +2,14 @@ import { narrativeTypes } from "@hypit/narrative";
 import { semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import type { StructuredElement, StructuredSurfaceHandler, SurfaceRecordDraft, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
-import type { TemporalDuration, TemporalPointExpression } from "@hypit/temporal";
+import type { TemporalDuration, TemporalPointExpression, TemporalWindowProjection } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal";
 import { createScreenOverlayFragment } from "./fragment.js";
 import { screenOverlayTypes } from "./manifest.js";
 import { sealScreenOverlayHeader, sealScreenOverlayItemSpec } from "./program.js";
-import type { ScreenOverlayComponent, ScreenOverlayItemSpec } from "./types.js";
+import type { ScreenOverlayComponent } from "./types.js";
 
-const TIMING = ["during", "at", "for", "start", "end", "selection", "moment", "occurrences"] as const;
+const TIMING = ["during", "at", "for", "start", "end", "selection", "moment"] as const;
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
   return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
 }
@@ -61,7 +62,7 @@ function colors(element: StructuredElement, name: string): string[] {
   const values = text(element, name).split(",").map((value) => value.trim()).filter(Boolean);
   if (values.length === 0) throw new Error(`${element.name}.${name} requires colors.`); return values;
 }
-type Binding = { readonly kind: "program" | "selection" | "moment"; readonly projection: ScreenOverlayItemSpec["projection"]; readonly source?: SurfaceResolvedReference };
+type Binding = { readonly kind: "program" | "selection" | "moment"; readonly projection: TemporalWindowProjection; readonly source?: SurfaceResolvedReference };
 function binding(element: StructuredElement, resolve: (path: string) => SurfaceResolvedReference | undefined): Binding {
   const during = element.attributes.during; const at = element.attributes.at;
   const start = optionalText(element, "start"); const end = optionalText(element, "end");
@@ -118,18 +119,20 @@ export const decodeScreenOverlaySurface: StructuredSurfaceHandler = ({ element, 
     if (child.children.some((node) => node.kind === "element" || node.value.trim())) throw new Error(`${child.name} must be empty.`);
     index += 1; const suffix = String(index).padStart(4, "0"); const decoded = content(child);
     allowed(child, ["id", "z", ...TIMING, ...decoded.attributes]); const temporal = binding(child, resolveReference);
-    const occurrences = text(child, "occurrences", "one"); if (occurrences !== "one" && occurrences !== "each") throw new Error(`${child.name}.occurrences is invalid.`);
     const itemSpec = sealScreenOverlayItemSpec({
       id: optionalText(child, "id") ?? `${id}.${decoded.value.kind}.${suffix}`, content: decoded.value,
-      projection: temporal.projection, expansion: { kind: occurrences }, stackingOrder: integer(child, "z") });
+      stackingOrder: integer(child, "z") });
     const specId = `${id}.item.${suffix}.spec`; const specName = `item-${suffix}-spec`;
+    const windowSpecId = `${id}.item.${suffix}.window`; const windowSpecName = `item-${suffix}-window-spec`;
+    records.push({ id: windowSpecId, type: temporalTypes.windowSpec,
+      value: { kind: "inline", value: { id: itemSpec.id, projection: temporal.projection } }, range: child.range });
     records.push({ id: specId, type: screenOverlayTypes.itemSpec, value: { kind: "inline", value: itemSpec }, range: child.range });
-    inputs[specName] = { kind: "record", id: specId };
-    if (temporal.kind === "program") fragmentItems.push({ kind: "program", specName });
+    inputs[specName] = { kind: "record", id: specId }; inputs[windowSpecName] = { kind: "record", id: windowSpecId };
+    if (temporal.kind === "program") fragmentItems.push({ kind: "program", specName, windowSpecName });
     else {
       const sourceName = `item-${suffix}-${temporal.kind}`;
       inputs[sourceName] = temporal.source!.ref;
-      fragmentItems.push({ kind: temporal.kind, specName, sourceName });
+      fragmentItems.push({ kind: temporal.kind, specName, sourceName, windowSpecName });
     }
   }
   if (fragmentItems.length === 0) throw new Error(`${element.name} requires at least one component.`);

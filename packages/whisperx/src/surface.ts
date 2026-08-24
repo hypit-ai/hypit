@@ -11,6 +11,8 @@ import { narrativeTypes } from "@hypit/narrative";
 import { mediaTypes } from "@hypit/media";
 
 import { whisperXSemanticTakeFragment } from "./fragment.js";
+import { whisperXTypes } from "./manifest.js";
+import type { WhisperXLanguage } from "./types.js";
 
 function reference(
   element: StructuredElement,
@@ -27,7 +29,7 @@ function reference(
 }
 
 export const decodeWhisperXSemanticTakeSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exactAttributes(element, ["id", "narrative", "segment", "media"]);
+  exactAttributes(element, ["id", "narrative", "segment", "media", "language"]);
   if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
     throw new Error(`${element.name} does not accept children`);
   }
@@ -35,12 +37,27 @@ export const decodeWhisperXSemanticTakeSurface: StructuredSurfaceHandler = ({ el
   const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
   const segment = reference(element, "segment", narrativeTypes.excerpt, resolveReference);
   const media = reference(element, "media", mediaTypes.synchronized, resolveReference);
+  const language = stringAttribute(element, "language");
+  if (language !== "en" && language !== "zh") {
+    throw new Error(`${element.name}.language must be en or zh`);
+  }
+  const languageId = `${id}.language`;
   return {
-    records: [],
+    records: [{
+      id: languageId,
+      type: whisperXTypes.language,
+      value: { kind: "inline", value: language as WhisperXLanguage },
+      range: element.range,
+    }],
     components: [{
       id,
       fragment: whisperXSemanticTakeFragment.id,
-      inputs: { narrative: narrative.ref, segment: segment.ref, media: media.ref },
+      inputs: {
+        narrative: narrative.ref,
+        segment: segment.ref,
+        media: media.ref,
+        language: { kind: "record", id: languageId },
+      },
       outputs: { take: `${id}.take` },
       range: element.range,
     }],

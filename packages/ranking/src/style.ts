@@ -12,6 +12,7 @@ import type { SvsRecipe } from "@hypit/svs";
 import {
   assertColumnStyle,
   assertRankingSoundStyle,
+  assertTierBoardStyle,
   assertTopThreeStyle,
 } from "./schedule.js";
 import type {
@@ -20,6 +21,8 @@ import type {
   RankingMotionStyle,
   RankingSoundStyle,
   RankingTextStyle,
+  TierBoardStyle,
+  TierRowStyle,
   TopThreeStyle,
 } from "./types.js";
 
@@ -30,6 +33,12 @@ const COMMON_KEYS = [
   "board-shadow-x", "board-shadow-y", "board-shadow-blur", "board-shadow-spread", "board-shadow-color",
   "board-stack", "item-stack", "stage-stack",
   "appear-gain", "move-gain", "sound-fade-frames",
+] as const;
+
+const TIER_KEYS = [
+  ...COMMON_KEYS,
+  "rows", "label-width", "padding", "row-height", "row-gap", "cell-gap",
+  "icon-size", "icon-radius", "icon-fit", "stage-x", "stage-y", "stage-size",
 ] as const;
 
 const COLUMN_KEYS = [
@@ -134,10 +143,49 @@ function sound(recipe: SvsRecipe): RankingSoundStyle {
   return canonicalize(value) as unknown as RankingSoundStyle;
 }
 
+function rowList(recipe: SvsRecipe): TierRowStyle[] {
+  const raw = text(recipe, "rows", "s:S:#ef4444|a:A:#f59e0b|b:B:#22c55e|c:C:#3b82f6");
+  return raw.split("|").map((item, index) => {
+    const [id, label, color] = item.split(":").map((part) => part.trim());
+    if (!id || !label || !color) fail(recipe, `rows entry ${index + 1} must be id:label:color.`);
+    return { id, label, color };
+  });
+}
+
 function colorList(recipe: SvsRecipe, name: string, fallback: string): string[] {
   const result = text(recipe, name, fallback).split("|").map((value) => value.trim()).filter(Boolean);
   if (result.length === 0) fail(recipe, `${name} is empty.`);
   return result;
+}
+
+export function decodeTierBoardStyle(
+  recipe: SvsRecipe,
+  font: FontStackRef | FontArtifactRef,
+): { readonly style: TierBoardStyle; readonly sound: RankingSoundStyle } {
+  known(recipe, TIER_KEYS);
+  const fonts = exactFonts(font);
+  const style: TierBoardStyle = {
+
+    rows: rowList(recipe),
+    board: board(recipe),
+    text: typography(recipe, fonts),
+    labelWidthPx: number(recipe, "label-width", 72),
+    paddingPx: number(recipe, "padding", 18),
+    rowHeightPx: number(recipe, "row-height", 92),
+    rowGapPx: number(recipe, "row-gap", 10),
+    cellGapPx: number(recipe, "cell-gap", 12),
+    iconSizePx: number(recipe, "icon-size", 72),
+    iconRadiusPx: number(recipe, "icon-radius", 12),
+    iconFit: oneOf(recipe, "icon-fit", ["contain", "cover"] as const, "cover"),
+    stagePoint: { x: number(recipe, "stage-x", 0.5), y: number(recipe, "stage-y", 0.23) },
+    stageSizePx: number(recipe, "stage-size", 108),
+    motion: motion(recipe),
+    boardStackingOrder: integer(recipe, "board-stack", 20),
+    stageStackingOrder: integer(recipe, "stage-stack", 25),
+    itemStackingOrder: integer(recipe, "item-stack", 30),
+  };
+  assertTierBoardStyle(style);
+  return { style: canonicalize(style) as unknown as TierBoardStyle, sound: sound(recipe) };
 }
 
 export function decodeColumnStyle(

@@ -10,7 +10,9 @@ export type Origin = "timeline" | "code" | "video";
 export type Selection =
   | { readonly kind: "none" }
   | { readonly kind: "clip"; readonly clipId: string; readonly origin: Origin }
-  | { readonly kind: "semantic-segment"; readonly segmentId: string; readonly origin: Origin };
+  | { readonly kind: "semantic-segment"; readonly segmentId: string; readonly origin: Origin }
+  | { readonly kind: "semantic-selection"; readonly selectionId: string; readonly origin: Origin }
+  | { readonly kind: "semantic-moment"; readonly momentId: string; readonly origin: Origin };
 
 export type Playhead = { readonly frame: number; readonly origin: Origin | "play" };
 
@@ -31,6 +33,10 @@ export type Store = {
   select(clipId: string, origin: Origin): void;
   /** Select one authored SemanticTake without moving the playhead. */
   selectSemanticSegment(segmentId: string, origin: Origin): void;
+  /** Select one authored Selection marker without moving the playhead. */
+  selectSemanticSelection(selectionId: string, origin: Origin): void;
+  /** Select one authored Moment marker without moving the playhead. */
+  selectSemanticMoment(momentId: string, origin: Origin): void;
   /** Select and seek to the clip start, used by source navigation. */
   selectClip(clipId: string, origin: Origin): void;
   /**
@@ -47,7 +53,7 @@ export type Store = {
 /**
  * The clip an author is pointing at in the source text.
  *
- * A Script marker wins over the element that binds it: `@claim … @/claim` sits
+ * A Script intent wins over the element that binds it: `@claim … @/claim` sits
  * inside the `<script>` element, so without that preference every click in the
  * prose would select the Speech Take instead of the B-roll. Ties break toward
  * the tightest range, which is the most specific thing under the cursor.
@@ -108,6 +114,14 @@ export function createStore(): Store {
         && !snapshot.semantic.segments.some((segment) => segment.id === held.segmentId)) {
         selection = { kind: "none" };
       }
+      if (held.kind === "semantic-selection"
+        && !snapshot.semantic.selections.some((item) => item.id === held.selectionId)) {
+        selection = { kind: "none" };
+      }
+      if (held.kind === "semantic-moment"
+        && !snapshot.semantic.moments.some((item) => item.id === held.momentId)) {
+        selection = { kind: "none" };
+      }
       playhead = { frame: clamp(playhead.frame), origin: playhead.origin };
       emit();
     },
@@ -120,6 +134,16 @@ export function createStore(): Store {
     selectSemanticSegment(segmentId, origin) {
       if (snapshot?.semantic.segments.some((segment) => segment.id === segmentId) !== true) return;
       selection = { kind: "semantic-segment", segmentId, origin };
+      emit();
+    },
+    selectSemanticSelection(selectionId, origin) {
+      if (snapshot?.semantic.selections.some((item) => item.id === selectionId) !== true) return;
+      selection = { kind: "semantic-selection", selectionId, origin };
+      emit();
+    },
+    selectSemanticMoment(momentId, origin) {
+      if (snapshot?.semantic.moments.some((item) => item.id === momentId) !== true) return;
+      selection = { kind: "semantic-moment", momentId, origin };
       emit();
     },
     selectClip(clipId, origin) {

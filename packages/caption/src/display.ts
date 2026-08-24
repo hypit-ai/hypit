@@ -1,108 +1,109 @@
-import type {
-  CaptionCorrespondence,
-  CaptionDisplaySequence,
-  CaptionDisplayWord,
-  CaptionDisplayWordSubset,
-} from "@hypit/narrative";
+import type { CaptionDocument, Narrative, NarrativeSelection } from "@hypit/narrative";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-export function assertCaptionDisplaySequence(value: CaptionDisplaySequence): void {
-  assert(value.id.length > 0,
-    "CaptionDisplaySequence identity is invalid");
-  assert(value.atoms.length > 0 && value.words.length > 0,
-    "CaptionDisplaySequence is empty");
-  const words = new Map<string, CaptionDisplayWord>();
-  value.words.forEach((word) => {
-    assert(word.id.length > 0 && !words.has(word.id),
-      "Caption display-word identity is invalid or repeated");
-    assert(word.atomId.length > 0 && word.segmentId.length > 0 && word.turnId.length > 0 && word.text.length > 0,
-      `Caption display word ${word.id} context is invalid`);
-    words.set(word.id, word);
-  });
-  const planned: string[] = [];
-  const atomIds = new Set<string>();
-  value.atoms.forEach((atom) => {
-    assert(atom.id.length > 0 && !atomIds.has(atom.id),
-      "Caption Atom identity is invalid or repeated");
-    atomIds.add(atom.id);
-    assert(atom.segmentId.length > 0 && atom.turnId.length > 0 && atom.wordIds.length > 0,
-      `Caption Atom ${atom.id} context is invalid`);
-    for (const wordId of atom.wordIds) {
+export function assertCaptionDocument(value: CaptionDocument): void {
+  assert(value.id.length > 0, "CaptionDocument identity is invalid");
+  assert(value.units.length > 0 && value.words.length > 0, "CaptionDocument is empty");
+  const words = new Map(value.words.map((word) => [word.id, word]));
+  assert(words.size === value.words.length, "CaptionDocument word ids are repeated");
+  const units = new Set<string>();
+  const orderedWordIds: string[] = [];
+  for (const unit of value.units) {
+    assert(unit.id.length > 0 && !units.has(unit.id), "CaptionDocument unit ids are repeated");
+    units.add(unit.id);
+    assert(unit.wordIds.length > 0 && unit.sourceTokenIds.length > 0, `Caption unit ${unit.id} is empty`);
+    for (const wordId of unit.wordIds) {
       const word = words.get(wordId);
-      assert(word !== undefined && word.atomId === atom.id,
-        `Caption Atom ${atom.id} references a foreign display word`);
-      assert(word.segmentId === atom.segmentId && word.turnId === atom.turnId && word.role === atom.role,
-        `Caption Atom ${atom.id} disagrees with its display-word context`);
-      planned.push(wordId);
+      assert(word !== undefined && word.unitId === unit.id, `Caption unit ${unit.id} references a foreign word`);
+      assert(word.segmentId === unit.segmentId && word.turnId === unit.turnId && word.role === unit.role,
+        `Caption unit ${unit.id} disagrees with its word context`);
+      orderedWordIds.push(wordId);
     }
-  });
-  assert(planned.join("\0") === value.words.map((word) => word.id).join("\0"),
-    "Caption Atoms do not partition their display words exactly once and in order");
-}
-
-export function assertCaptionCorrespondence(
-  value: CaptionCorrespondence,
-  sequence: CaptionDisplaySequence,
-): void {
-  assertCaptionDisplaySequence(sequence);
-  assert(value.displaySequenceId === sequence.id,
-  "CaptionCorrespondence belongs to another display sequence");
-  assert(value.atoms.length === sequence.atoms.length,
-    "CaptionCorrespondence does not cover the exact Atom sequence");
-  const sourceIds = new Set<string>();
-  value.atoms.forEach((mapping, index) => {
-    assert(mapping.atomId === sequence.atoms[index]!.id && mapping.sourceTokenIds.length > 0,
-      "CaptionCorrespondence changes Atom order or contains an empty speech range");
-    for (const tokenId of mapping.sourceTokenIds) {
-      assert(tokenId.length > 0 && !sourceIds.has(tokenId),
-        `CaptionCorrespondence repeats speech token ${tokenId}`);
-      sourceIds.add(tokenId);
-    }
-  });
-}
-
-export function assertCaptionDisplayWordSubset(
-  value: CaptionDisplayWordSubset,
-  sequence: CaptionDisplaySequence,
-): void {
-  assertCaptionDisplaySequence(sequence);
-  assert(value.id.length > 0,
-    "CaptionDisplayWordSubset identity is invalid");
-  assert(value.sequenceId === sequence.id,
-    `CaptionDisplayWordSubset ${value.id} belongs to another display sequence`);
-  const positions = new Map(sequence.words.map((word, index) => [word.id, index]));
-  let previous = -1;
-  const seen = new Set<string>();
-  for (const id of value.wordIds) {
-    const position = positions.get(id);
-    assert(position !== undefined && position > previous && !seen.has(id),
-      `CaptionDisplayWordSubset ${value.id} is not an ordered subset of ${sequence.id}`);
-    previous = position;
-    seen.add(id);
   }
-  const selected = new Set(value.wordIds);
-  for (const atom of sequence.atoms) {
-    const count = atom.wordIds.filter((id) => selected.has(id)).length;
-    assert(count === 0 || count === atom.wordIds.length,
-      `CaptionDisplayWordSubset ${value.id} splits indivisible Atom ${atom.id}`);
+  assert(orderedWordIds.join("\0") === value.words.map((word) => word.id).join("\0"),
+    "CaptionDocument words must be partitioned by units in order");
+  const breakIds = new Set<string>();
+  for (const cueBreak of value.cueBreaks) {
+    assert(units.has(cueBreak.afterUnitId) && !breakIds.has(cueBreak.afterUnitId),
+      "CaptionDocument cue break names an unknown or repeated unit");
+    breakIds.add(cueBreak.afterUnitId);
   }
 }
 
-/** Author-surface sugar for Role selection. The Program itself receives only the resolved subset. */
-export function captionWordsForRole(
-  sequence: CaptionDisplaySequence,
-  role: string,
-): CaptionDisplayWordSubset {
-  assertCaptionDisplaySequence(sequence);
-  const normalized = role.trim();
-  assert(normalized.length > 0, "Caption Role is empty");
-  return {
+export type CaptionUnitSubset = {
+  readonly documentId: string;
+  readonly unitIds: readonly string[];
+};
 
-    id: `role:${normalized}`,
-    sequenceId: sequence.id,
-    wordIds: sequence.words.filter((word) => word.role === normalized).map((word) => word.id),
-  };
+function tokenBoundary(narrative: Narrative, anchorId: string, owner: string): number {
+  const anchor = narrative.semanticIndex.anchors.find((candidate) => candidate.id === anchorId);
+  if (anchor === undefined) throw new Error(`${owner} names unknown semantic anchor ${anchorId}`);
+  const segment = narrative.segments.find((candidate) => candidate.id === anchor.segmentId);
+  if (segment === undefined) throw new Error(`${owner} names an anchor outside its Segment`);
+  if (anchor.kind === "segment-start") return segment.tokenStart;
+  if (anchor.kind === "segment-end") return segment.tokenEndExclusive;
+  const tokenIndex = narrative.tokens.findIndex((token) => token.id === anchor.tokenId);
+  if (tokenIndex < 0) throw new Error(`${owner} names an anchor without a Narrative token`);
+  return anchor.kind === "token-start" ? tokenIndex : tokenIndex + 1;
+}
+
+/** Project a semantic Selection to complete authored N:M Caption units. */
+export function captionUnitsForSelection(
+  document: CaptionDocument,
+  narrative: Narrative,
+  selection: NarrativeSelection,
+): CaptionUnitSubset {
+  assertCaptionDocument(document);
+  const start = tokenBoundary(narrative, selection.startAnchorId, `Selection ${selection.id}`);
+  const end = tokenBoundary(narrative, selection.endAnchorId, `Selection ${selection.id}`);
+  assert(end >= start, `Selection ${selection.id} is backwards`);
+  const tokenPositions = new Map(narrative.tokens.map((token, index) => [token.id, index]));
+  const unitIds: string[] = [];
+  for (const unit of document.units) {
+    const positions = unit.sourceTokenIds.map((tokenId) => tokenPositions.get(tokenId));
+    assert(positions.every((position): position is number => position !== undefined),
+      `Caption unit ${unit.id} references a token outside Narrative`);
+    const unitStart = Math.min(...positions as number[]);
+    const unitEnd = Math.max(...positions as number[]) + 1;
+    if (unitStart >= end || unitEnd <= start) continue;
+    if (unitStart < start || unitEnd > end) {
+      throw new Error(`Caption Selection ${selection.id} partially selects Alignment Unit ${unit.id}`);
+    }
+    unitIds.push(unit.id);
+  }
+  if (unitIds.length === 0) throw new Error(`Caption Selection ${selection.id} selects no complete display unit`);
+  return { documentId: document.id, unitIds };
+}
+
+export function captionUnitsForRole(document: CaptionDocument, role: string): CaptionUnitSubset {
+  assertCaptionDocument(document);
+  const unitIds = document.units.filter((unit) => unit.role === role).map((unit) => unit.id);
+  if (unitIds.length === 0) throw new Error(`Caption Role ${role} selects no display unit`);
+  return { documentId: document.id, unitIds };
+}
+
+export function captionWordsForAttribute(document: CaptionDocument, attribute: string): readonly string[] {
+  assertCaptionDocument(document);
+  const name = attribute.trim();
+  if (!name) throw new Error("Caption attribute name is empty");
+  const wordIds = document.words
+    .filter((word) => word.attributes.some((item) => item.name === name))
+    .map((word) => word.id);
+  if (wordIds.length === 0) throw new Error(`Caption attribute ${name} selects no display word`);
+  return wordIds;
+}
+
+export function assertCaptionUnitSubset(value: CaptionUnitSubset, document: CaptionDocument): void {
+  assertCaptionDocument(document);
+  assert(value.documentId === document.id, "Caption unit subset belongs to another document");
+  const known = new Set(document.units.map((unit) => unit.id));
+  assert(value.unitIds.length > 0 && value.unitIds.every((id) => known.has(id)),
+    "Caption unit subset contains an unknown unit");
+  const order = new Map(document.units.map((unit, index) => [unit.id, index]));
+  const indices = value.unitIds.map((id) => order.get(id)!);
+  assert(indices.every((index, position) => position === 0 || index === indices[position - 1]! + 1),
+    "Caption unit subset must be an ordered contiguous range");
 }

@@ -4,7 +4,7 @@ import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
 import { blobRefObjectSchema } from "@hypit/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
-import { temporalDependency } from "@hypit/temporal";
+import { temporalDependency, temporalTypes } from "@hypit/temporal";
 
 export const audioTrackModuleRef = { name: "@hypit/audio-track", version: "1" } as const;
 export const audioTrackTypes = {
@@ -15,9 +15,7 @@ export const audioTrackTypes = {
 } satisfies Record<string, TypeRef>;
 export const audioTrackProducers = {
   createSet: { module: audioTrackModuleRef, name: "create-audio-track-set" },
-  appendProgram: { module: audioTrackModuleRef, name: "append-program-audio-item" },
-  appendSelection: { module: audioTrackModuleRef, name: "append-selection-audio-item" },
-  appendMoment: { module: audioTrackModuleRef, name: "append-moment-audio-item" },
+  appendItem: { module: audioTrackModuleRef, name: "append-audio-item" },
   finalize: { module: audioTrackModuleRef, name: "finalize-audio-track" },
   render: { module: audioTrackModuleRef, name: "render-audio-track" },
 } satisfies Record<string, ProducerRef>;
@@ -32,18 +30,6 @@ const duration: ValueSchema = { kind: "oneOf", variants: [
   object({ unit: { schema: { kind: "literal", value: "milliseconds" } }, value: { schema: integer } }),
   object({ unit: { schema: { kind: "literal", value: "seconds" } }, numerator: { schema: integer }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } } }),
 ] };
-const signedDuration: ValueSchema = { kind: "oneOf", variants: [
-  object({ unit: { schema: { kind: "literal", value: "frames" } }, value: { schema: signedInteger } }),
-  object({ unit: { schema: { kind: "literal", value: "milliseconds" } }, value: { schema: signedInteger } }),
-  object({ unit: { schema: { kind: "literal", value: "seconds" } }, numerator: { schema: signedInteger }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } } }),
-] };
-const point: ValueSchema = { kind: "oneOf", variants: [
-  ...["program.start", "program.end", "selection.start", "selection.end", "moment.cue"].map((ref) => object({
-    ref: { schema: { kind: "literal", value: ref } }, offset: { schema: signedDuration, optional: true },
-  })),
-  object({ ref: { schema: { kind: "literal", value: "absolute" } }, at: { schema: duration } }),
-] };
-const projection = object({ start: { schema: point }, end: { schema: point } });
 const occupancy: ValueSchema = { kind: "oneOf", variants: [
   object({ mode: { schema: { kind: "literal", value: "once" } }, align: { schema: { kind: "string", enum: ["start", "end"] } } }),
   object({ mode: { schema: { kind: "literal", value: "loop" } }, align: { schema: { kind: "string", enum: ["start", "end"] } } }),
@@ -52,8 +38,6 @@ const occupancy: ValueSchema = { kind: "oneOf", variants: [
 const clipSpec = object({
 
   id: { schema: string },
-  projection: { schema: projection },
-  expansion: { schema: object({ kind: { schema: { kind: "string", enum: ["one", "each"] } } }) },
   trim: { schema: object({ start: { schema: duration, optional: true }, end: { schema: duration, optional: true } }) },
   occupancy: { schema: occupancy },
   mix: { schema: object({ gain: { schema: number }, fadeIn: { schema: duration }, fadeOut: { schema: duration } }) },
@@ -82,12 +66,12 @@ export const audioTrackProgramSchema: ValueSchema = object({
 const baseInputs = [
   { name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header },
   { name: "semantic", type: semanticTrackTypes.track }, { name: "media", type: mediaTypes.synchronized },
-  { name: "spec", type: audioTrackTypes.clipSpec },
+  { name: "spec", type: audioTrackTypes.clipSpec }, { name: "window", type: temporalTypes.window },
 ] as const;
 
 export const audioTrackMarkupSurfaces = [{
     name: "track", tag: "Track", mode: "structured",
-    outputs: [audioTrackTypes.header, audioTrackTypes.clipSpec, audioTrackTypes.program, compositionTypes.audioTrack],
+    outputs: [audioTrackTypes.header, audioTrackTypes.clipSpec, temporalTypes.windowSpec, audioTrackTypes.program, compositionTypes.audioTrack],
     vocabulary: {
       summary: "One Audio Track: explicitly prepared audio Clips placed on a shared SemanticTrack and lowered to one ordinary peer AudioTrack.",
       attributes: [
@@ -121,8 +105,6 @@ export const audioTrackMarkupSurfaces = [{
             { name: "moment", kind: "reference", required: false,
               accepts: [narrativeTypes.moment],
               summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
-            { name: "occurrences", kind: "literal", required: false, values: ["one", "each"],
-              summary: "Decides whether a semantic source contributes one window or every occurrence; defaults to `one`." },
             { name: "trim-start", kind: "literal", required: false,
               summary: "Removes an exact duration from the head of the source." },
             { name: "trim-end", kind: "literal", required: false,
@@ -175,9 +157,7 @@ export const audioTrackManifest: ModuleManifest = {
   capabilities: [],
   producers: [
     { name: audioTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
-    { name: audioTrackProducers.appendProgram.name, inputs: [...baseInputs], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
-    { name: audioTrackProducers.appendSelection.name, inputs: [...baseInputs, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
-    { name: audioTrackProducers.appendMoment.name, inputs: [...baseInputs, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
+    { name: audioTrackProducers.appendItem.name, inputs: [...baseInputs], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
     { name: audioTrackProducers.finalize.name, inputs: [{ name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header }], outputs: [{ name: "program", type: audioTrackTypes.program }], needs: [] },
     { name: audioTrackProducers.render.name, inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: audioTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [] },
   ],

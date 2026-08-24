@@ -11,7 +11,7 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1103.0",
+    "@aws-sdk/client-s3": "3.1103.0",
     "@hypit/protocol": "workspace:*",
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-kit": "workspace:*"

@@ -1,5 +1,4 @@
 import artifact from "../../artifact/src/activation.js";
-import captionGemini from "../../caption-gemini/src/activation.js";
 import captionFine from "../../caption-fine/src/activation.js";
 import caption from "../../caption/src/activation.js";
 import composition from "../../composition/src/activation.js";
@@ -56,7 +55,6 @@ export const videoTestPackages = [
   bind("@hypit/seedance", seedance),
   bind("@hypit/caption", caption),
   bind("@hypit/caption-fine", captionFine),
-  bind("@hypit/caption-gemini", captionGemini),
   bind("@hypit/speech-alignment", speechAlignment),
   bind("@hypit/speech-track", speechTrack),
   bind("@hypit/whisperx", whisperX),

@@ -17,16 +17,19 @@ Hypit 把这份源码编译成一张可见的执行图。在任何模型或外�
 选择一次 Run，并看清这次 Build 究竟需要执行什么。本页先带你得到第一份安全的 Plan：不需要 API Key，
 也不会产生任何付费请求。
 
-## 克隆仓库
+## 安装 Hypit
 
 ```bash
-git clone https://github.com/hypit-ai/hypit.git
-cd hypit
+npm install --global hypit
+npx skills add hypit-ai/hypit --global
 ```
+
+第一条命令安装可复用的 Distribution；第二条把 skill 全局安装，使以后任何项目里的新 Agent
+会话都能找到它。普通创作不需要克隆仓库。
 
 ## 使用 Hypit skill
 
-在这个工作目录下就可以直接使用 `/hypit`。发送给你的 Agent：
+在任何项目目录下都可以直接使用 `/hypit`。发送给你的 Agent：
 
 ```text
 /hypit 配置我的环境，只向我索取当前 Runtime Profile 实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
@@ -34,36 +37,24 @@ cd hypit
 
 它会走下面同样的五个步骤，并且只向你索取 Runtime Profile 实际需要的东西。不想用 Agent 的话，也可以自己依次完成这五步。
 
-## 1. 安装源码工作区
+## 1. 检查已安装的 Distribution
 
-需要 Node.js 22+，并通过 Corepack 使用 pnpm 10.33.x。
-
-```bash
-corepack enable
-pnpm install --frozen-lockfile
-npm link
-```
-
-如果系统没有 `corepack`：
+需要 Node.js 22+，桌面系统为 macOS 13+ 或 Windows 10/11 x64。
 
 ```bash
-npm install --global corepack@0.34.5
-corepack enable
-corepack prepare pnpm@10.33.0 --activate
-pnpm install --frozen-lockfile
-npm link
+hypit paths --json
 ```
 
-`pnpm check` 和 `pnpm test` 是修改 Hypit 本身时使用的整仓检查。第一次使用 CLI
-不需要先跑完整测试。
+结果会分别给出当前项目、项目 `.hypit` 状态、机器 Program Home 与 npm Distribution。
+pnpm、Corepack 和 `npm link` 只属于贡献者工作流。
 
 ## 2. 编译示例
 
-仓库里的示例包含 Script、两次视频生成需求、Speech Track、WhisperX 对齐、字幕、Media Track、
+链接中的示例包含 Script、两次视频生成需求、Speech Track、WhisperX 对齐、字幕、Media Track、
 文字、Film 与最终渲染。
 
 ```bash
-cd examples/talking-film-graph-check
+cd /path/to/copied-talking-film-graph-check
 hypit check main.svml
 ```
 
@@ -108,7 +99,7 @@ Runtime Profile 说明在哪里做。
 
 ## 4. 建立自己的项目
 
-把视频项目和生成产物放在 Hypit 仓库之外。完成上面的链接后，可以在独立项目目录里直接使用
+把视频项目和生成产物放在已安装的 Hypit Distribution 之外。全局命令可以在独立项目目录里直接使用
 `hypit`：
 
 ```bash
@@ -119,8 +110,8 @@ hypit runtime use hypit.runtime.json
 hypit plan build.svrun
 ```
 
-含有 `package.json` 的项目负责自己的能力包安装；普通创作文件夹不需要成为 Node 项目，直接使用
-链接仓库里的包。Source 与导出的文件留在项目里，Runtime 状态与 Artifact 位于所选 Profile 的
+含有 `package.json` 的项目负责自己的第三方包；普通创作文件夹不需要成为 Node 项目，直接使用
+Distribution 里的官方包。Source 与导出的文件留在项目里，Runtime 状态与 Artifact 位于所选 Profile 的
 `dataRoot`。`runtime use` 只在 `.hypit/runtime` 保存一个本地指针。Source import 选择作者包，
 Profile 则通过 `use` 独立选择 Runtime 包。
 
@@ -136,8 +127,9 @@ Profile 则通过 `use` 独立选择 Runtime 包。
 hypit build build.svrun --follow
 ```
 
-`build` 会自动分配并打印一个新的 Build id、持久化这次 Build、确保对应 Worker 可用，并只启动
-所选 Endpoint 声明的外部程序。`--follow` 只是观察器；关掉它不会停止 Build。
+`build` 会先重复同一套便宜的本地预检，再分配新的 Build id、持久化 Build 并确保 Worker
+可用。它不会安装包，也不会启动 Managed Program；部署未就绪时应显式运行
+`hypit runtime up`。`--follow` 只是观察器；关掉它不会停止 Build。
 
 编辑源码时使用 `check`；配置或排查部署时使用 `doctor`。它们都不会提交工作，但也不是每次
 Build 前必须重复的仪式。
@@ -164,16 +156,18 @@ Runtime 会归档所有已经接受的中间 Record 和媒体。`get` 只负责�
 | `ffmpeg` / `ffprobe` | 使用本地媒体检查、归一化或 mux 时 |
 | Python 3.10–3.13 与 `uv` | 使用本地 WhisperX 或 OpenCV 时 |
 | Chromium | 本地 HyperFrames 渲染时由 Adapter 管理 |
-| API 凭据 | 选择 KIE、Vertex、Xiaomi 或 AWS Endpoint 时 |
+| API 凭据 | 选择 KIE、Xiaomi 或 AWS Endpoint 时 |
 
 准备本地 Python 程序：
 
 ```bash
 uv python install 3.13
-uv sync --project services/whisperx --frozen
-uv sync --project services/image-opencv --frozen
-uv run --project services/whisperx --frozen hypit-whisperx-prepare
+hypit runtime use hypit.runtime.json
+hypit runtime up
 ```
+
+Runtime 只会在机器 Program Home 中缺少托管环境时创建它，随后被所有项目和会话复用。不要在
+创作项目里手动执行服务的 `uv sync`。
 
 修改 Runtime Profile 后运行 `hypit doctor hypit.runtime.json`。它会报告缺少的工具、凭据和
 Endpoint 配置，但不会执行作者图。

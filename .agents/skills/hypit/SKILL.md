@@ -11,9 +11,9 @@ that reference names required child references, read those completely in the sta
 Keep `.svml` Author Source, `.svs` Recipe Source, `.svrun` Run Source, and
 `hypit.runtime.json` Runtime Profile as separate languages and responsibilities.
 
-Every route runs against a Hypit checkout. `references/environment.md` finds one, clones it when this
-machine has none, and names the directory every path in these files is relative to. Read it before
-the first command of any route.
+Every route uses the machine-wide Hypit Distribution and an independent author project.
+`references/environment.md` establishes that boundary and installs the Distribution only when the
+`hypit` command is genuinely absent. Read it before the first command of any route.
 
 ## Route
 
@@ -51,4 +51,5 @@ the first command of any route.
   subset here is how it goes stale.
 
 Preserve unrelated changes. Keep credentials, generated media, runtime state, and logs out of
-commits. Repository docs and package-owned declarations remain authoritative.
+commits. Installed package declarations and published docs remain authoritative; repository
+maintenance instructions apply only to contributors who deliberately cloned the repository.

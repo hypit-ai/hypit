@@ -52,6 +52,8 @@ export type StructuredElement = {
   readonly kind: "element";
   readonly name: string;
   readonly attributes: Readonly<Record<string, MarkupAttributeValue>>;
+  /** Exact ranges of literal/reference values in the opening tag. */
+  readonly attributeValueRanges?: Readonly<Record<string, SourceRange>>;
   readonly children: readonly StructuredNode[];
   readonly range: SourceRange;
 };
@@ -124,6 +126,10 @@ export type SurfaceRecipePropertyVocabulary = {
   readonly name: string;
   readonly required: boolean;
   readonly summary: string;
+  /** Stable Inspector page owned by the component package. */
+  readonly group?: "where" | "how" | "when" | string;
+  /** Optional package-owned subsection inside the page. */
+  readonly section?: string;
   readonly values?: readonly string[];
   readonly fallback?: string;
 };

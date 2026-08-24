@@ -8,7 +8,7 @@ from typing import Any, Mapping
 
 from .audio import CanonicalAudio
 from .config import ServiceConfig
-from .resources import PUNKT_TAB_SHA256, assert_punkt_tab
+from .resources import assert_punkt_tab
 
 
 class InferenceInputError(ValueError):
@@ -118,7 +118,6 @@ class WhisperXEngine:
             "compute": self._config.compute,
             "batchSize": self._config.batch_size,
             "whisperxVersion": self._whisperx_version,
-            "punktTabDigest": PUNKT_TAB_SHA256,
         }
 
     def _alignment_model(self, language: str) -> tuple[object, object]:

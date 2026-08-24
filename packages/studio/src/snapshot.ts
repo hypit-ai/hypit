@@ -6,6 +6,10 @@
  * timeline is assembled without knowing what made any of it, and a package that
  * grows a new Track shows up without this file changing.
  */
+import { relative } from "node:path";
+
+import type { MarkupSurfaceRegistryLike } from "@hypit/markup";
+
 import type {
   CandidateProvenance,
   Clip,
@@ -18,13 +22,12 @@ import type {
 import type { Placement } from "./observe.js";
 import type { Preview } from "./programme.js";
 import {
-  bindStudioTrack,
-  projectStudioTrack,
   sealStudioClip,
-  semanticTimelinePresentation,
-  studioTrackAttachments,
 } from "./studio-registry.js";
+import type { StudioAdapterRegistry } from "./studio-registry.js";
 import type { StudioEntityDraft } from "./studio-registry.js";
+import { parametersForDraft, timelineAdjustHandles } from "./parameters.js";
+import type { StudioSourceFile } from "./parameters.js";
 
 type Present = {
   readonly id: string;
@@ -107,7 +110,9 @@ function scriptMap(
   const moments = (found.moments ?? []) as ScriptMap["moments"];
   return {
     recordId: String(found.record ?? ""),
+    sourcePath: String(found.sourcePath ?? ""),
     range: (found.range ?? { start: 0, end: 0 }) as Range,
+    content: (found.content ?? { start: 0, end: 0 }) as Range,
     // A Segment is the outermost range a Script declares; a Selection written
     // inside one is a level down, and one inside that another.
     segments: segments.map((segment) => ({ ...segment, depth: 0 })),
@@ -142,15 +147,12 @@ type NarrativeValue = {
   }[];
   readonly selections?: readonly {
     readonly id: string;
-    readonly occurrences: readonly {
-      readonly occurrence: number;
-      readonly startAnchorId: string;
-      readonly endAnchorId: string;
-    }[];
+    readonly startAnchorId: string;
+    readonly endAnchorId: string;
   }[];
   readonly moments?: readonly {
     readonly id: string;
-    readonly occurrences: readonly { readonly occurrence: number; readonly anchorId: string }[];
+    readonly anchorId: string;
   }[];
   readonly semanticIndex?: {
     readonly anchors?: readonly {
@@ -177,7 +179,11 @@ function inlineRecord(compiled: unknown, id: string): unknown {
  * already using. No frontend timing is invented here: if an anchor is absent
  * from the built SemanticTrack, the corresponding item is simply not drawable yet.
  */
-function semanticTimeline(built: Preview, script: ScriptMap | undefined): SemanticTimeline {
+function semanticTimeline(
+  registry: StudioAdapterRegistry,
+  built: Preview,
+  script: ScriptMap | undefined,
+): SemanticTimeline {
   const exported = built.source.exports.find((item) => item.type === "Narrative");
   if (exported === undefined) throw new Error("Studio SemanticTrack has no traceable Narrative.");
   const narrative = inlineRecord(built.source.compiled, exported.ref) as NarrativeValue | undefined;
@@ -222,29 +228,22 @@ function semanticTimeline(built: Preview, script: ScriptMap | undefined): Semant
       ...(anchor.tokenId === undefined ? {} : { tokenId: anchor.tokenId }),
     }];
   });
-  const selections = (narrative.selections ?? []).flatMap((selection) =>
-    selection.occurrences.flatMap((occurrence) => {
-      const startFrame = frame(occurrence.startAnchorId);
-      const endFrameExclusive = frame(occurrence.endAnchorId);
-      if (startFrame === undefined || endFrameExclusive === undefined || endFrameExclusive <= startFrame) return [];
-      return [{
-        id: selection.id,
-        occurrence: occurrence.occurrence,
-        occurrenceId: `${selection.id}#${occurrence.occurrence}`,
-        startFrame,
-        endFrameExclusive,
-      }];
-    }));
-  const moments = (narrative.moments ?? []).flatMap((moment) =>
-    moment.occurrences.flatMap((occurrence) => {
-      const at = frame(occurrence.anchorId);
-      return at === undefined ? [] : [{
-        id: moment.id,
-        occurrence: occurrence.occurrence,
-        occurrenceId: `${moment.id}#${occurrence.occurrence}`,
-        frame: at,
-      }];
-    }));
+  const selections = (narrative.selections ?? []).flatMap((selection) => {
+    const startFrame = frame(selection.startAnchorId);
+    const endFrameExclusive = frame(selection.endAnchorId);
+    if (startFrame === undefined || endFrameExclusive === undefined || endFrameExclusive <= startFrame) return [];
+    return [{
+      id: selection.id,
+      startAnchorId: selection.startAnchorId,
+      endAnchorId: selection.endAnchorId,
+      startFrame,
+      endFrameExclusive,
+    }];
+  });
+  const moments = (narrative.moments ?? []).flatMap((moment) => {
+    const at = frame(moment.anchorId);
+    return at === undefined ? [] : [{ id: moment.id, anchorId: moment.anchorId, frame: at }];
+  });
   if (segments.length === 0) throw new Error("Studio SemanticTrack resolves no authored Segment anchors.");
   const provenance: CandidateProvenance = {
     output: built.timingOutput?.name ?? "SemanticTrack",
@@ -254,17 +253,18 @@ function semanticTimeline(built: Preview, script: ScriptMap | undefined): Semant
     status: "resolved",
     errors: [],
   };
-  const semanticPlacement = built.source.observations.placements.find((placement) =>
-    built.timingOutput !== undefined
-    && (placement.outputs.includes(built.timingOutput.ref)
-      || placement.outputs.includes(built.timingOutput.name)));
   return {
-    presentation: semanticTimelinePresentation(semanticPlacement?.id),
-    anchors: anchors.sort((left, right) => left.frame - right.frame || left.id.localeCompare(right.id)),
+    // Semantic is a Studio lane with its own registered meaning. Do not copy
+    // the authored Speech Track id into this label: it is the timebase, not a
+    // second Speech output.
+    presentation: registry.semanticTimelinePresentation(),
+    // Narrative order is the semantic ruler. Frame ties are common and must
+    // not erase the discrete 2M+2N anchor ordering used by writeback.
+    anchors,
     segments: segments.sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
     tokens: tokens.sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
-    selections: selections.sort((left, right) => left.startFrame - right.startFrame || left.occurrenceId.localeCompare(right.occurrenceId)),
-    moments: moments.sort((left, right) => left.frame - right.frame || left.occurrenceId.localeCompare(right.occurrenceId)),
+    selections: selections.sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
+    moments: moments.sort((left, right) => left.frame - right.frame || left.id.localeCompare(right.id)),
     provenance,
   };
 }
@@ -274,29 +274,29 @@ function depthOf(
   selection: ScriptMap["selections"][number],
   all: readonly ScriptMap["selections"][number][],
 ): number {
-  const own = selection.occurrences[0];
-  if (own === undefined) return 1;
   let depth = 1;
   for (const other of all) {
     if (other.id === selection.id) continue;
-    for (const occurrence of other.occurrences) {
-      if (occurrence.open.start < own.open.start && occurrence.close.end > own.close.end) depth += 1;
-    }
+    if (other.open.start < selection.open.start && other.close.end > selection.close.end) depth += 1;
   }
   return depth;
 }
 
-export function snapshot(built: Preview, input: {
+export function snapshot(registry: StudioAdapterRegistry, built: Preview, input: {
   readonly revision: number;
   readonly path: string;
   readonly text: string;
+  readonly run: StudioSnapshot["run"];
   readonly canvas: { readonly width: number; readonly height: number; readonly clearColor: string };
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
   readonly preview: StudioSnapshot["preview"];
+  readonly workspaceRoot: string;
+  readonly sourceFiles: readonly StudioSourceFile[];
+  readonly surfaces: MarkupSurfaceRegistryLike;
 }): StudioSnapshot {
   const located = authored(built.source.observations.placements);
   const script = scriptMap(built.source.observations.sourceMaps, built);
-  const semantic = semanticTimeline(built, script);
+  const semantic = semanticTimeline(registry, built, script);
   // A clip is coloured by the marker that placed it, not by the tag that drew
   // it, so a cutaway and the words that call for it read as the same thing.
   const markers = new Set([
@@ -319,8 +319,8 @@ export function snapshot(built: Preview, input: {
   };
   const tracks: Track[] = [];
   for (const item of built.tracks) {
-    const projectedSpans = spans(item.track, input.frameRate);
-    const binding = bindStudioTrack(item);
+    const projectedSpans = spans(item.value, input.frameRate);
+    const binding = registry.bindTrack(item);
     const placement = built.source.observations.placements.find((candidate) =>
       candidate.id === item.trace.authoredId
       && candidate.module.name === item.trace.module
@@ -345,14 +345,34 @@ export function snapshot(built: Preview, input: {
         stackOrder: span.stackOrder,
       };
     });
-    const drafts = projectStudioTrack({
+    const drafts = registry.projectTrack({
       track: item,
       ...(placement === undefined ? {} : { placement }),
       ...(item.surfacePreview === undefined ? {} : { surfacePreview: item.surfacePreview }),
       spans: projectedSpans,
       values: built.values,
+      temporalBindings: built.temporalBindings.get(item.outputRef) ?? [],
       semantic,
       generic,
+    }).map((draft) => {
+      const parameters = parametersForDraft({
+        root: input.workspaceRoot,
+        files: input.sourceFiles,
+        placement,
+        draft,
+        declarations: registry.parameterDeclarations(item, placement, draft.lane),
+        placements: built.source.observations.placements,
+        surfaces: input.surfaces,
+      });
+      const editHandles = timelineAdjustHandles(
+        parameters,
+        registry.timelineGestures(item, placement, draft.lane),
+        draft.temporal,
+        semantic,
+      );
+      return parameters.length === 0 && editHandles.length === 0
+        ? draft
+        : { ...draft, parameters, ...(editHandles.length === 0 ? {} : { editHandles }) };
     });
     const clips: Clip[] = drafts
       .filter((draft) => draft.lane === undefined)
@@ -373,7 +393,7 @@ export function snapshot(built: Preview, input: {
       binding,
       provenance,
     });
-    for (const attachment of studioTrackAttachments(item)) {
+    for (const attachment of registry.trackAttachments(item)) {
       const attachedDrafts = drafts.filter((draft) => draft.lane === attachment.attachmentId);
       if (attachedDrafts.length === 0) continue;
       tracks.push({
@@ -405,7 +425,18 @@ export function snapshot(built: Preview, input: {
   );
   return {
     revision: input.revision,
-    source: { path: input.path, text: input.text },
+    source: {
+      path: input.path,
+      text: input.text,
+      files: input.sourceFiles.map((file) => ({
+        path: relative(input.workspaceRoot, file.path),
+        text: file.text,
+        language: file.language,
+        role: file.role ?? "dependency",
+        imports: (file.imports ?? []).map((item) => item.source),
+      })),
+    },
+    run: input.run,
     ...(script === undefined ? {} : { script }),
     space: {
       canvasWidth: input.canvas.width,

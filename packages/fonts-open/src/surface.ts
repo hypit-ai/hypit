@@ -23,6 +23,18 @@ import type {
 
 const require = createRequire(import.meta.url);
 
+function resolveFontPackageFile(packageName: string, path: string): string {
+  try {
+    return require.resolve(`${packageName}/${path}`);
+  } catch (error) {
+    const version = packageName === "@infolektuell/noto-color-emoji" ? "0.2.0" : "5.3.0";
+    throw new Error(
+      `${packageName} is needed by this authored font. Install it once with: hypit packages install ${packageName}@${version}`,
+      { cause: error },
+    );
+  }
+}
+
 function attributes(
   element: StructuredElement,
   required: readonly string[],
@@ -76,7 +88,7 @@ function oneFile(
   const filename = family.kind === "static"
     ? `${family.fileStem}-${weight}-${style}.woff2`
     : `${family.fileStem}-${style}.woff2`;
-  return require.resolve(`${family.packageName}/files/${filename}`);
+  return resolveFontPackageFile(family.packageName, `files/${filename}`);
 }
 
 function splitFiles(
@@ -89,7 +101,7 @@ function splitFiles(
     : family.kind === "external-split"
       ? family.css
       : `${weight}${style === "italic" ? "-italic" : ""}.css`;
-  const cssPath = require.resolve(`${family.packageName}/${css}`);
+  const cssPath = resolveFontPackageFile(family.packageName, css);
   const contents = readFileSync(cssPath, "utf8");
   return [...contents.matchAll(/@font-face\s*\{([\s\S]*?)\}/gu)].map((match) => {
     const body = match[1]!;
@@ -98,7 +110,7 @@ function splitFiles(
     if (file === undefined || unicodeRange === undefined) {
       throw new Error(`${family.packageName}/${css} contains an unsupported @font-face`);
     }
-    return { path: require.resolve(`${family.packageName}/files/${file}`), unicodeRange };
+    return { path: resolveFontPackageFile(family.packageName, `files/${file}`), unicodeRange };
   });
 }
 

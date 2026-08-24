@@ -6,6 +6,7 @@ import {
   semanticTrackSpans,
 } from "@hypit/semantic-track";
 import type { SemanticTrack } from "@hypit/semantic-track";
+import type { StudioResolvedTrack, StudioTemporalBinding } from "@hypit/studio-adapter";
 
 import type { StudioArchive } from "./archive.js";
 import type { CompiledSource, ServedFile } from "./compile.js";
@@ -13,29 +14,20 @@ import type { StudioDomain } from "./domain.js";
 import { executeDeterministic, MemoryArtifactStore } from "./execute.js";
 import type { RunPlan } from "./run.js";
 import type { StudioProjection } from "./studio-preflight.js";
-import type { StudioProjectionRole } from "./studio-registry.js";
 import { studioSurfacePreview } from "./surface-preview.js";
+import { executedTemporalBindings } from "./temporal-graph.js";
 
 const PLAYABLE = new Set(["VisualTrack", "AudioTrack"]);
 const TIMING = "SemanticTrack";
 
-export type BuiltTrack = {
-  readonly name: string;
-  readonly type: string;
-  readonly outputRef: string;
-  readonly candidateId?: string;
-  readonly candidateOrigin: "run" | "source" | "none";
-  readonly role: StudioProjectionRole;
-  readonly trace: StudioProjection["trace"];
-  readonly surfacePreview?: import("./shared.js").StudioMaterialPreview;
-  readonly track: unknown;
-};
+export type BuiltTrack = StudioResolvedTrack;
 
 export type Preview = {
   readonly source: CompiledSource;
   readonly tracks: readonly BuiltTrack[];
   /** Resolved adapter realizations keyed by exact graph output ref. */
   readonly values: ReadonlyMap<string, unknown>;
+  readonly temporalBindings: ReadonlyMap<string, readonly StudioTemporalBinding[]>;
   readonly composition: Composition;
   readonly timing: "measured";
   readonly timingOutput?: { readonly name: string; readonly ref: string };
@@ -208,9 +200,13 @@ export async function preview(input: {
       role: projection.role,
       trace: projection.trace,
       ...(surfacePreview === undefined ? {} : { surfacePreview }),
-      track: stored.value,
+      value: stored.value,
     }];
   });
+  const temporalBindings = new Map(tracks.map((track) => [
+    track.outputRef,
+    executedTemporalBindings(executed.state, track.outputRef),
+  ] as const));
   const values = new Map<string, unknown>();
   for (const target of targets) {
     const stored = selectedValue(executed.state, target.ref);
@@ -244,6 +240,7 @@ export async function preview(input: {
     source: input.source,
     tracks,
     values,
+    temporalBindings,
     composition,
     timing: "measured",
     timingOutput: { name: timingOutput.name, ref: timingOutput.ref },

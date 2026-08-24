@@ -13,9 +13,11 @@
   "dependencies": {
     "@hypit/endpoint-kit": "workspace:*",
     "@hypit/protocol": "workspace:*",
+    "@hypit/runtime-host-node": "workspace:*",
     "@hypit/runtime-kit": "workspace:*",
     "@hypit/speech-evidence": "workspace:*",
-    "@hypit/whisperx": "workspace:*"
+    "@hypit/whisperx": "workspace:*",
+    "@hypit/whisperx-service-runtime": "workspace:*"
   },
   "devDependencies": {
     "@hypit/driver-node": "workspace:*",

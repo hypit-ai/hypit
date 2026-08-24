@@ -14,7 +14,7 @@ import { narrativeManifest } from "@hypit/narrative";
 import { programSpaceManifest, sealProgramSpace } from "@hypit/program-space";
 import type { ModuleManifest } from "@hypit/protocol";
 import {
-  appendProgramScreenOverlay,
+  appendProjectedScreenOverlay,
   createScreenOverlaySet,
   createScreenOverlayFragment,
   decodeScreenOverlaySurface,
@@ -32,7 +32,7 @@ import { semanticTrackDependency, semanticTrackManifest, semanticTrackTypes } fr
 import { speechEvidenceManifest } from "@hypit/speech-evidence";
 import { speechManifest } from "@hypit/speech";
 import { sealCanvasSpace, spatialComponent, spatialDependency, spatialManifest, spatialTypes } from "@hypit/spatial";
-import { temporalManifest } from "@hypit/temporal";
+import { projectProgramWindow, temporalManifest, temporalProducers } from "@hypit/temporal";
 import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/validation";
 import { visualIrManifest } from "@hypit/visual-ir";
@@ -63,11 +63,15 @@ const components: readonly ScreenOverlayComponent[] = [
 function trackFor(content: ScreenOverlayComponent, stackingOrder = 50) {
   const spec = sealScreenOverlayItemSpec({
     id: content.kind,
-    content, projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
-    expansion: { kind: "one" }, stackingOrder,
+    content,
+    stackingOrder,
+  });
+  const window = projectProgramWindow({
+    itemId: spec.id, semantic,
+    projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
   });
   return renderScreenOverlay(canvas, space, finalizeScreenOverlay(
-    appendProgramScreenOverlay(createScreenOverlaySet(), header, semantic, spec), header,
+    appendProjectedScreenOverlay(createScreenOverlaySet(), header, spec, window), header,
   ));
 }
 
@@ -118,14 +122,13 @@ test("overlay Tracks interleave with peer Tracks only through absolute stacking"
 });
 
 test("the package has no lower-composite, sibling Track, backdrop-filter or hidden audio port", () => {
-  const fragment = createScreenOverlayFragment([{ kind: "program", specName: "spec" }]);
-  assert.deepEqual(fragment.inputs.map((input) => input.name), ["canvas", "header", "semantic", "spec"]);
+  const fragment = createScreenOverlayFragment([{ kind: "program", specName: "spec", windowSpecName: "window-spec" }]);
+  assert.deepEqual(fragment.inputs.map((input) => input.name), ["canvas", "header", "semantic", "spec", "window-spec"]);
   assert.equal(fragment.exports.some((output) => output.type.name === "AudioTrack"), false);
   assert.throws(() => sealScreenOverlayItemSpec({
     id: "blur",
     content: { kind: "gaussian-blur" } as unknown as ScreenOverlayComponent,
-    projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
-    expansion: { kind: "one" }, stackingOrder: 1,
+    stackingOrder: 1,
   }), /unsupported|undefined|kind/iu);
 });
 
@@ -207,8 +210,9 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [
     screenOverlayProducers.createSet.name,
-    screenOverlayProducers.appendProgram.name,
+    screenOverlayProducers.appendItem.name,
     screenOverlayProducers.finalize.name,
+    temporalProducers.projectProgram.name,
     screenOverlayProducers.render.name,
   ].sort());
 });

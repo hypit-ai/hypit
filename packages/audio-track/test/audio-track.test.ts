@@ -8,9 +8,7 @@ import {
   audioTrackMarkupSurfaces,
   audioTrackModuleRef,
   audioTrackProducers,
-  appendMomentAudioItem,
-  appendProgramAudioItem,
-  appendSelectionAudioItem,
+  appendProjectedAudioItem,
   createAudioTrackSet,
   createAudioTrackFragment,
   finalizeAudioTrack,
@@ -33,6 +31,8 @@ import { compileAudioProgramPlan } from "@hypit/media-pipeline";
 import { programSpaceDependency, programSpaceManifest, programSpaceTypes, sealProgramSpace } from "@hypit/program-space";
 import type { ModuleManifest } from "@hypit/protocol";
 import { semanticTrackDependency, semanticTrackManifest, semanticTrackTypes } from "@hypit/semantic-track";
+import { projectMomentWindow, projectProgramWindow, projectSelectionWindow, temporalProducers } from "@hypit/temporal";
+import type { TemporalWindowProjection } from "@hypit/temporal";
 import { speechEvidenceManifest } from "@hypit/speech-evidence";
 import { speechManifest } from "@hypit/speech";
 import { spatialManifest } from "@hypit/spatial";
@@ -64,23 +64,58 @@ function media(id: string, sampleFrames: number): SynchronizedMedia {
   };
 }
 
-function spec(overrides: Partial<AudioClipSpec> = {}): AudioClipSpec {
-  return sealAudioClipSpec({
+type TestAudioClipSpec = AudioClipSpec & { readonly projection: TemporalWindowProjection };
+const defaultProjection: TemporalWindowProjection = {
+  start: { ref: "program.start" },
+  end: { ref: "absolute", at: { unit: "seconds", numerator: 2, denominator: 1 } },
+};
+
+function spec(overrides: Partial<TestAudioClipSpec> = {}): TestAudioClipSpec {
+  const { projection = defaultProjection, ...clipOverrides } = overrides;
+  return {
+    ...sealAudioClipSpec({
 
     id: "clip",
-    projection: {
-      start: { ref: "program.start" },
-      end: { ref: "absolute", at: { unit: "seconds", numerator: 2, denominator: 1 } },
-    },
-    expansion: { kind: "one" },
     trim: {},
     occupancy: { mode: "once", align: "start" },
     mix: { gain: 1, fadeIn: zero, fadeOut: zero },
-    ...overrides,
-  });
+    ...clipOverrides,
+    }),
+    projection,
+  };
 }
 
-function programTrack(source: SynchronizedMedia, clipSpec: AudioClipSpec) {
+function appendProgramAudioItem(
+  set: AudioTrackSet, trackHeader: typeof header, semanticTrack: typeof semantic,
+  source: SynchronizedMedia, authored: TestAudioClipSpec,
+): AudioTrackSet {
+  const { projection, ...clip } = authored;
+  return appendProjectedAudioItem(set, trackHeader, semanticTrack, source, clip, projectProgramWindow({
+    itemId: clip.id, semantic: semanticTrack, projection,
+  }));
+}
+
+function appendSelectionAudioItem(
+  set: AudioTrackSet, trackHeader: typeof header, semanticTrack: typeof semantic,
+  source: SynchronizedMedia, selection: NarrativeSelectionRef, authored: TestAudioClipSpec,
+): AudioTrackSet {
+  const { projection, ...clip } = authored;
+  return appendProjectedAudioItem(set, trackHeader, semanticTrack, source, clip, projectSelectionWindow({
+    itemId: clip.id, semantic: semanticTrack, selection, projection,
+  }));
+}
+
+function appendMomentAudioItem(
+  set: AudioTrackSet, trackHeader: typeof header, semanticTrack: typeof semantic,
+  source: SynchronizedMedia, moment: NarrativeMomentRef, authored: TestAudioClipSpec,
+): AudioTrackSet {
+  const { projection, ...clip } = authored;
+  return appendProjectedAudioItem(set, trackHeader, semanticTrack, source, clip, projectMomentWindow({
+    itemId: clip.id, semantic: semanticTrack, moment, projection,
+  }));
+}
+
+function programTrack(source: SynchronizedMedia, clipSpec: TestAudioClipSpec) {
   const set = appendProgramAudioItem(createAudioTrackSet(), header, semantic, source, clipSpec);
   return renderAudioTrack(space, finalizeAudioTrack(set, header));
 }
@@ -151,34 +186,28 @@ test("trim and fades quantize once into the same sample domain", () => {
   })), /fade exceeds/u);
 });
 
-test("Selection and Moment each expansion creates independent overlapping items", () => {
+test("Selection and Moment each place one independent item", () => {
   const selection: NarrativeSelectionRef = {
-
     id: "mentions",
-    occurrences: [
-      { occurrence: 0, startAnchorId: "a", endAnchorId: "b" },
-      { occurrence: 1, startAnchorId: "c", endAnchorId: "d" },
-    ],
+    startAnchorId: "a",
+    endAnchorId: "b",
   };
   const moment: NarrativeMomentRef = {
-
     id: "hits",
-    occurrences: [{ occurrence: 0, anchorId: "a" }, { occurrence: 1, anchorId: "c" }],
+    anchorId: "c",
   };
   let set: AudioTrackSet = createAudioTrackSet();
   set = appendSelectionAudioItem(set, header, semantic, media("selection", 48_000), selection, spec({
     id: "selected",
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
-    expansion: { kind: "each" },
   }));
   set = appendMomentAudioItem(set, header, semantic, media("moment", 48_000), moment, spec({
     id: "hit",
     projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: { unit: "seconds", numerator: 1, denominator: 1 } } },
-    expansion: { kind: "each" },
   }));
   const track = renderAudioTrack(space, finalizeAudioTrack(set, header));
-  assert.equal(track.clips.length, 4);
-  assert.deepEqual(track.clips.map((clip) => clip.target.startSample), [48_000, 48_000, 144_000, 144_000]);
+  assert.equal(track.clips.length, 2);
+  assert.deepEqual(track.clips.map((clip) => clip.target.startSample), [48_000, 144_000]);
 });
 
 test("one Track with overlaps and two peer Tracks compile to the same deterministic mix facts", () => {
@@ -213,12 +242,12 @@ test("one Track with overlaps and two peer Tracks compile to the same determinis
 
 test("dynamic Fragment keeps every material and temporal dependency as an explicit input", () => {
   const fragment = createAudioTrackFragment([
-    { kind: "program", mediaName: "music", specName: "music-spec" },
-    { kind: "selection", mediaName: "voice", specName: "voice-spec", sourceName: "selection" },
-    { kind: "moment", mediaName: "impact", specName: "impact-spec", sourceName: "moment" },
+    { kind: "program", mediaName: "music", specName: "music-spec", windowSpecName: "music-window-spec" },
+    { kind: "selection", mediaName: "voice", specName: "voice-spec", sourceName: "selection", windowSpecName: "voice-window-spec" },
+    { kind: "moment", mediaName: "impact", specName: "impact-spec", sourceName: "moment", windowSpecName: "impact-window-spec" },
   ]);
   assert.deepEqual(fragment.inputs.map((input) => input.name), [
-    "header", "impact", "impact-spec", "moment", "music", "music-spec", "selection", "semantic", "voice", "voice-spec",
+    "header", "impact", "impact-spec", "impact-window-spec", "moment", "music", "music-spec", "music-window-spec", "selection", "semantic", "voice", "voice-spec", "voice-window-spec",
   ]);
   assert.equal(fragment.exports[1]?.name, "track");
 });
@@ -301,8 +330,9 @@ test("the self-described Audio Surface parses into the same finite Producer grap
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [
     audioTrackProducers.createSet.name,
-    audioTrackProducers.appendProgram.name,
+    audioTrackProducers.appendItem.name,
     audioTrackProducers.finalize.name,
+    temporalProducers.projectProgram.name,
     audioTrackProducers.render.name,
   ].sort());
 });

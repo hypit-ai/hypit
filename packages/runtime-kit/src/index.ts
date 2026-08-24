@@ -16,6 +16,9 @@ type RuntimeAdapterAddress = {
 };
 
 export type RuntimeAdapterFactoryContext = {
+  /** Persistent machine/user state supplied by the Host, outside every author project. */
+  readonly hostStateRoot: string;
+  /** Runtime/Profile state belonging to this project. */
   readonly dataRoot: string;
   readonly instance: string;
   readonly pool?: string;
@@ -32,6 +35,15 @@ export type RuntimeDoctorDiagnostic = {
 export type ManagedProgramCommand = {
   readonly command: string;
   readonly args: readonly string[];
+  readonly cwd?: string;
+  readonly env?: Readonly<Record<string, string>>;
+};
+
+export type ManagedProgramInstallation = {
+  /** Truthful inspection of the installed program; no installer-owned receipt. */
+  probe(): Promise<ManagedProgramState>;
+  /** Commands run only when the installation probe is not ready. */
+  readonly commands: readonly ManagedProgramCommand[];
 };
 
 export type ManagedProgramState =
@@ -41,8 +53,11 @@ export type ManagedProgramState =
 
 export type ManagedProgram = {
   readonly id: string;
+  /** Shared lifecycle files live here; absent means this Runtime owns them. */
+  readonly stateRoot?: string;
+  /** Installation and runtime readiness are deliberately separate states. */
+  readonly installation?: ManagedProgramInstallation;
   probe(): Promise<ManagedProgramState>;
-  readonly prepare?: ManagedProgramCommand;
   readonly start?: ManagedProgramCommand;
 };
 

@@ -2,26 +2,24 @@ export type FramePoint = {
   readonly frame: number;
 };
 
-export type LocatedSelectionOccurrence = {
+export type LocatedSelection = {
   readonly id: string;
-  readonly occurrence: number;
   readonly start: FramePoint;
   readonly end: FramePoint;
 };
 
-export type LocatedMomentOccurrence = {
+export type LocatedMoment = {
   readonly id: string;
-  readonly occurrence: number;
   readonly cue: FramePoint;
 };
 
-export type LocatedProgramOccurrence = {
+export type LocatedProgram = {
   readonly id: "program";
   readonly start: FramePoint;
   readonly end: FramePoint;
 };
 
-export type LocatedSegmentOccurrence = {
+export type LocatedSegment = {
   readonly id: string;
   readonly start: FramePoint;
   readonly end: FramePoint;
@@ -48,19 +46,48 @@ export type TemporalWindowProjection = {
   readonly end: TemporalPointExpression;
 };
 
-export type OccurrenceExpansion =
-  | { readonly kind: "one" }
-  | { readonly kind: "each" };
+/** Authored semantic source used by a temporal projection. */
+export type TemporalSource = {
+  readonly kind: "program" | "selection" | "segment" | "moment";
+  readonly id: string;
+};
+
+/** Input value for the Temporal projection producer. */
+export type TemporalWindowSpec = {
+  readonly id: string;
+  readonly projection: TemporalWindowProjection;
+};
+
+/** Input value for a Temporal point projection producer. */
+export type TemporalPointSpec = {
+  readonly id: string;
+  readonly projection: TemporalPointExpression;
+};
 
 export type FrameSpan = {
   readonly startFrame: number;
   readonly endFrameExclusive: number;
 };
 
-export type ProjectedOccurrence = {
+export type ProjectedWindow = {
   readonly id: string;
+  readonly source: TemporalSource;
+  readonly projection: TemporalWindowProjection;
   readonly span: FrameSpan;
 };
+
+export type ProjectedPoint = {
+  readonly id: string;
+  readonly source: TemporalSource;
+  readonly projection: TemporalPointExpression;
+  readonly frame: number;
+};
+
+/** Public protocol name for the resolved window consumed by domain programs. */
+export type TemporalWindow = ProjectedWindow;
+
+/** Public protocol name for the resolved boundary consumed by domain programs. */
+export type TemporalPoint = ProjectedPoint;
 
 export type WindowRelation = "independent" | "disjoint";
 

@@ -32,20 +32,28 @@ export function localHyperframesBrowserProgram(
   const node = resolveRuntimeExecutable(context.dataRoot, configuredNode ?? process.execPath);
   const cli = resolveRuntimeExecutable(context.dataRoot, configuredCli ?? defaultHyperframesCliPath());
   const ffprobe = resolveRuntimeExecutable(context.dataRoot, configuredFfprobe ?? "ffprobe");
+  const probeBrowser = async (): Promise<ManagedProgramState> => {
+    const located = await run(node, [cli, "browser", "path"]);
+    if (!located.ok) return { state: "down", detail: `HyperFrames browser is unavailable: ${located.output}` };
+    const path = located.output.trim();
+    if (path.length === 0 || path.includes("\n") || path.includes("\r")) {
+      return { state: "mismatch", detail: "HyperFrames returned an invalid browser path" };
+    }
+    const version = await run(path, ["--version"]);
+    if (!version.ok || version.output.length === 0) {
+      return { state: "mismatch", detail: `HyperFrames browser cannot start: ${version.output}` };
+    }
+    return { state: "ready" };
+  };
   return {
     id: "hyperframes-browser",
-    prepare: { command: node, args: [cli, "browser", "ensure"] },
+    installation: {
+      probe: probeBrowser,
+      commands: [{ command: node, args: [cli, "browser", "ensure"] }],
+    },
     async probe(): Promise<ManagedProgramState> {
-      const located = await run(node, [cli, "browser", "path"]);
-      if (!located.ok) return { state: "down", detail: `HyperFrames browser is unavailable: ${located.output}` };
-      const path = located.output.trim();
-      if (path.length === 0 || path.includes("\n") || path.includes("\r")) {
-        return { state: "mismatch", detail: "HyperFrames returned an invalid browser path" };
-      }
-      const version = await run(path, ["--version"]);
-      if (!version.ok || version.output.length === 0) {
-        return { state: "mismatch", detail: `HyperFrames browser cannot start: ${version.output}` };
-      }
+      const browser = await probeBrowser();
+      if (browser.state !== "ready") return browser;
       const media = await probeMediaToolchain({ ffprobePath: ffprobe });
       return media.state === "ready"
         ? { state: "ready" }

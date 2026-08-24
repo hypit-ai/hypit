@@ -5,7 +5,7 @@ import { sealGraphFragment } from "@hypit/elaborator";
 import { mediaPipelineProducers } from "@hypit/media-pipeline";
 import { speechAlignmentProducers } from "@hypit/speech-alignment";
 
-import { whisperXProducers } from "./manifest.js";
+import { whisperXProducers, whisperXTypes } from "./manifest.js";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
@@ -16,6 +16,7 @@ export const whisperXSemanticTakeFragment = sealGraphFragment({
     { name: "narrative", type: narrativeTypes.narrative },
     { name: "segment", type: narrativeTypes.excerpt },
     { name: "media", type: mediaTypes.synchronized },
+    { name: "language", type: whisperXTypes.language },
   ],
   operations: [
     {
@@ -27,7 +28,10 @@ export const whisperXSemanticTakeFragment = sealGraphFragment({
     {
       id: "request-whisperx",
       producer: whisperXProducers.request,
-      inputs: { evidence: operation("prepare-evidence-audio") },
+      inputs: {
+        evidence: operation("prepare-evidence-audio"),
+        language: input("language"),
+      },
       result: { kind: "need", name: "alignment" },
     },
     {
