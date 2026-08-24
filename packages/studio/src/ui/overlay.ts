@@ -1,5 +1,5 @@
 import type { Clip, StudioSnapshot } from "../shared.js";
-import { markerTones } from "./markers.js";
+import { intentTones } from "./markers.js";
 import type { Store } from "./selection.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -95,7 +95,7 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
     live = store.clipsAt(frame);
 
     if (selected === undefined) return;
-    const tones = markerTones(snapshot);
+    const tones = intentTones(snapshot);
     const tone = tones.get(selected.authoredId);
     const onScreen = frame >= selected.startFrame && frame < selected.endFrameExclusive;
     const box = drawnBox(selected);

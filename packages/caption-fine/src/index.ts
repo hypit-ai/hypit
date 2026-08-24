@@ -1,7 +1,8 @@
 export { captionFineComponent } from "./component.js";
 export { fineCaptionTrackFragment } from "./fragment.js";
-export { captionFineManifest, captionFineMarkupSurfaces, captionFineModuleRef, captionFineProducers } from "./manifest.js";
+export { captionFineManifest, captionFineMarkupSurfaces, captionFineModuleRef, captionFineProducers, captionFineTypes } from "./manifest.js";
 export { renderFineCaption } from "./render.js";
+export { assertFineCaptionSchedule, scheduleFineCaption } from "./schedule.js";
 export {
   fineCaptionOneShotMotions,
   fineCaptionOptionalRecipeProperties,

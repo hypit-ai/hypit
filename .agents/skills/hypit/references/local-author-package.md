@@ -21,10 +21,10 @@ package that draws one font, and the loop cannot repair what the package cannot 
 
 ## Write `package.json` and the activation first
 
-Write those two before any implementation, run `pnpm install` once, and only then start on the
-vocabulary. They are short and almost the same in every package, and leaving them until the end means
-discovering at the end that nothing is linked — a failure that looks like broken code and is not.
-Everything after them is specific to this component and cannot be copied from anywhere.
+Write those two before any implementation. If the package has third-party npm dependencies, use the
+project's package manager once; otherwise no install step is needed. Leaving activation until the end
+means discovering at the end that nothing is selected — a failure that looks like broken code and is
+not. Everything after them is specific to this component and cannot be copied from anywhere.
 
 ## Required reading
 
@@ -36,13 +36,14 @@ rules here are the contract, the closest package is only a shape to learn from.
 
 Then read:
 
-1. `docs/guide/component-anatomy.md` — the roles every component package fills, and how to find each
+1. `https://narratage.hypit.ai/guide/component-anatomy` — the roles every component package fills, and how to find each
    one in an existing package. Read this first; it is what the rest is measured against.
-2. `docs/guide/author-packages.md`
-3. `docs/guide/packages.md` and `docs/guide/conventions.md`
-4. `packages/component-kit/README.md`
+2. `https://narratage.hypit.ai/guide/author-packages`
+3. `https://narratage.hypit.ai/guide/packages` and `https://narratage.hypit.ai/guide/conventions`
+4. the installed `@hypit/component-kit` README
 
-Then open the closest existing package and read **the roles you are about to write**, not the package
+Use `hypit paths --json` to locate the installed Distribution. Then open the closest existing
+package there and read **the roles you are about to write**, not the package
 end to end. Anatomy names them; find them by what they export, since the filenames differ — `ranking`
 calls two of them `schedule.ts` and `render.ts`, `media-track` calls them `program.ts` and `lower.ts`,
 `comment-sticker` calls them `program.ts` and `author.ts`.
@@ -53,7 +54,8 @@ worse outcome than understanding its structure — which is what anatomy is for.
 
 ## Package boundary
 
-Place the package at `<project>/packages/local-<slug>/`, named `@hypit/local-<slug>`, with physical
+Place the package at `<project>/packages/local-<slug>/`, named in the project's own scope such as
+`@my-project/local-<slug>`, with physical
 version `0.0.0-dev` and logical Module version `1`. Only create a new package: do not
 edit, extend, delete or overwrite an existing Hypit package to fill the gap.
 
@@ -76,17 +78,14 @@ notice it drifted. That is acceptable for a project-local package, which is part
 rather than a library. If the behaviour turns out to be generally useful, that is the promotion this
 section already describes — not a reason to add a parameter to the shared package after all.
 
-The package is project-local even when the project is the Hypit checkout. Do not move it into an
-official package automatically. After the result is accepted, offer promotion as a separate
-contribution.
+The project is never the Hypit Distribution. Do not move a local package into an official package
+automatically. After the result is accepted, offer promotion as a separate contribution.
 
-Expect it to draw as a generic block in Studio until then, and leave it that way.
-`packages/studio/src/studio-registry.ts` picks an adapter by the module that placed the Track, and no
-adapter names a `@hypit/local-…` module, so the component reaches the `visual-fallback` adapter: it
-renders, without its own family colour, icon or inspector. That is the correct state for a package
-one project owns. Registering it edits `packages/studio`, which every project shares, so it happens
-only after the author has agreed the package moves into `packages/`. It is one item of the promotion
-checklist below, not a repair for what Studio shows during the work.
+The component reaches Studio's generic Track fallback until its project adds a companion package,
+for example `@my-project/local-<slug>-studio`, to the project's `hypit.studio.json`. That companion owns
+only Studio interpretation and operations through `hypit.studio-adapter@1`; it never edits
+`packages/studio`, and the author package never imports Studio. A generic block is valid while no
+special interpretation is needed.
 
 ## Complete implementation
 
@@ -102,14 +101,6 @@ Implement the parts required by the behavior, including:
 - activation contribution;
 - lowering, Fragment or renderer implementation needed to produce the declared output;
 - README and a preview for each visual Surface.
-
-The README opens with the gap this package exists to fill, in one sentence naming the installed
-package that came closest, the property it does not carry, and what the reference needs instead —
-"`media-track` clips a Frame square or rounded, and the reference's player is a circle." The
-enumeration `../vocabulary.md` requires happened before the first line of code was written; without
-that sentence it survives nowhere, and the next reader cannot tell a proven gap from an assumed one.
-A package whose README cannot state its gap that concretely is usually a package that did not need to
-exist.
 
 Choose raw versus structured Surface, timing dependencies, ProgramSpace, Frame, SemanticTrack,
 Artifact, Recipe and output Types from the observed behavior and closest package architecture. A
@@ -171,23 +162,8 @@ nothing.
   the Producer refuses, the Track never builds, and the rows nobody was waiting for vanish with it.
   This is what a Source looks like for the whole stretch between being written and being built, which
   is most of its life.
-- A component that cannot render on its own cannot produce the catalogue preview its Surface owes.
-  Treat a missing preview as evidence of this mistake rather than a step to skip. The preview proves
-  the component draws; what it draws is compared against the reference from a separate render, below.
-- **The package owes a catalogue preview and nothing else.** That picture is drawn from sample copy
-  and a sample Recipe the package chooses, to show a reader the Surface's range, and it belongs to the
-  package the way its README does.
-
-  The picture `reconstruction-loop.md` compares is a different one and the package does not produce
-  it. `render_element` reads the Source — the Canvas, the Recipe values, the Script text,
-  the bindings — and drives the package's own Producer to draw the component the way this video places
-  it. All the package has to be is a working Producer, which the Manifest already requires.
-
-  Do not write a per-package harness for the comparison. One that takes its values as arguments still
-  gets them by hand, one line at a time, which draws one line and lets a collision between several go
-  unseen; one with its values written in draws the catalogue picture and cannot report the Source at
-  all. Both also decide their own canvas, and a canvas that is not the Source's puts every proportion
-  in the comparison slightly wrong.
+- A component that cannot render on its own cannot produce the preview image its Surface owes. Treat
+  a missing preview as evidence of this mistake rather than a step to skip.
 
 ## Freeze the Types before writing in parallel
 
@@ -202,9 +178,14 @@ is expensive to read.
 
 ## Install and validate
 
-The checkout's workspace already covers `projects/*/packages/*`, so a package placed there needs no
-glob of its own. Add it as a normal `workspace:*` dependency and run `pnpm install`. Do not hide it
-under `.hypit/`, modify the package loader or invent a registry.
+The Host resolves the explicitly selected physical package name directly at
+`<project>/packages/<package-basename>/` and supplies official `@hypit/*` imports from the read-only
+tool Distribution. The `@hypit/*` namespace is reserved for that active Distribution; a project uses
+its own npm scope and cannot shadow official ABI packages with a same-named dependency. A project
+does not join Hypit's workspace and needs no npm link merely to expose
+one of its own packages. Use the project's own package manager only when its package genuinely adds
+third-party npm dependencies. Do not modify the Hypit Distribution, hide packages under `.hypit/` or
+invent another loader.
 
 Repair in this order:
 
@@ -215,13 +196,12 @@ Repair in this order:
 5. implementation behavior;
 6. source usage.
 
-Use only existing checks:
+Use the installed checks:
 
 ```bash
-pnpm check
-pnpm hypit check path/to/main.svml
-pnpm hypit check path/to/recipes.svs
-pnpm hypit check path/to/build.svrun
+hypit check path/to/main.svml
+hypit check path/to/recipes.svs
+hypit check path/to/build.svrun
 ```
 
 A package that cannot be *wired* is not done. `hypit check` proves the Source is legal, and nothing
@@ -230,12 +210,11 @@ the preview check and repair until it passes — a graph failure is not a differ
 work that is not finished, and it is not bounded by the loop's attempt ceiling:
 
 ```bash
-# from the repository root: it reads the installed packages from the working directory
-hypit-reference-video-tools preview_check path/to/build.svrun
+hypit-preview-check path/to/build.svrun
 ```
 
 It takes the Run Source, not the `.svml`. A pass here means the graph reaches a Film and a semantic
-spine; it stays sound while the Providers are still unrun, and says which capabilities it is waiting
+spine; it exits zero while the Providers are still unrun, and says which capabilities it is waiting
 on. See `preview.md` for what that does and does not prove — notably, a
 Producer that refuses the media kind it is handed is not caught here, because nothing is handed to
 it until the Build runs.
@@ -265,33 +244,27 @@ If the author wants it promoted, these are the parts. Say up front that this is 
 than a path anyone has walked — no package under `packages/` began inside a project, so the first
 person to do it should correct what follows.
 
-- **The name is load-bearing in six places.** `@hypit/local-<slug>` becomes `@hypit/<slug>` in
+- **The name is load-bearing in six places.** `@my-project/local-<slug>` becomes `@hypit/<slug>` in
   `package.json`; in the Module ref in `src/manifest.ts`, where renaming it **renames every nominal
   Type and Producer in the Module at once**, because each is built from that one const; in every
-  Author Source that writes `import … from "@hypit/local-<slug>@1"`; in the root `package.json`
+  Author Source that writes `import … from "@my-project/local-<slug>@1"`; in the root `package.json`
   `devDependencies`; in the package's own test harness; and in **both** package catalogs,
   `docs/guide/packages.md` and `docs/zh/guide/packages.md`. An English-only catalog entry is a half
   promotion.
-- **Studio keeps a hand-maintained registry.** `packages/studio/src/studio-registry.ts` composes the
-  adapter sets under `packages/studio/src/adapters/`, and each adapter names the modules it claims. A
-  family joins an existing set's `modules` list or brings its own adapter file, the way `deck.ts`
-  does. A package named by none of them still renders, through the `visual-fallback` and
-  `audio-fallback` adapters in `generic.ts` — second-class in Studio, and invisible as itself in
-  review.
-- **Its own chrome is untracked today.** Git ignores `projects/`, so the texture the package
-  reads with `readFile(new URL("../assets/…"))` is not in git. Promotion is the first moment those
-  bytes enter the repository, and **no package under `packages/` has a non-`preview/` asset
-  directory**. Promotion establishes that convention rather than following it; decide it deliberately.
+- **Studio support is a companion.** A project-owned `@my-project/local-<slug>-studio` may already provide
+  rich interpretation. Promotion moves that companion into an official Studio adapter package; it
+  never copies its code into `@hypit/studio` and never teaches the domain package about Studio.
+- **Its own chrome becomes repository content.** Project package assets already belong to the
+  project's Git history. Promotion makes those accepted bytes official package content and must
+  deliberately choose their permanent location.
 - **It newly owes tests.** The suite globs `packages/*/test/**/*.test.ts`. A local package ships
   `test/render-preview.ts`, which is a harness, not a suite, so a promoted package contributes zero
   coverage where every peer has some. Writing one is part of promotion.
 - **It newly owes clean imports.** Repository hygiene requires that anything `src/` imports appears in
   `dependencies`, not `devDependencies` — a rule examples and projects are exempt from. A package
   carrying its render-harness dependencies in `devDependencies` fails on the way in.
-- **The workspace already covers both locations.** `pnpm-workspace.yaml` lists `packages/*`,
-  `projects/*/packages/*` and `examples/*/packages/*`, and `tsconfig.json` includes them. No glob
-  needs adding in either direction; adding one is a change that does nothing.
+- **The workspaces stay separate.** Promotion adds the package to Hypit's `packages/*` and root
+  catalog; it never adds the external project or a project glob to Hypit's workspace.
 
 What promotion never means: merging the behaviour into the package it was modelled on. It installs
 beside that package as a sibling family, for the reasons the boundary section above gives.
-

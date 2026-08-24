@@ -1,6 +1,6 @@
-import type { Range, StudioSnapshot } from "../shared.js";
+import type { Range, StudioSnapshot, StudioSourceView } from "../shared.js";
 import { icon, setIcon } from "./icons.js";
-import { markerTones } from "./markers.js";
+import { intentTones } from "./markers.js";
 import { tokenizeSvml } from "./syntax.js";
 import type { Token } from "./syntax.js";
 
@@ -9,7 +9,7 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 export type Highlight = {
   readonly range: Range;
   /**
-   * `element` outlines the authored tag, `binding` the Script marker, and
+   * `element` outlines the authored tag, `binding` the author's intent, and
    * `onscreen` a tag that is merely drawn at this frame rather than chosen.
    */
   readonly tone: "element" | "binding" | "onscreen";
@@ -19,7 +19,9 @@ export type Highlight = {
 
 export type CodePane = {
   readonly element: HTMLElement;
-  show(snapshot: StudioSnapshot): void;
+  /** Returns false only while an unsaved file is being saved before a switch. */
+  show(snapshot: StudioSnapshot, source?: StudioSourceView): boolean;
+  activePath(): string | undefined;
   highlight(values: readonly Highlight[], scrollIntoView: boolean): void;
   /** Mark the word being spoken at the playhead, or nothing outside speech. */
   speak(range: Range | undefined): void;
@@ -64,15 +66,8 @@ function roundedRangePath(points: readonly { x: number; y: number }[], radius = 
   }).join(" ")} Z`;
 }
 
-/**
- * The gutter holds one bar per nesting level. `GUTTER_LEFT` is where the
- * outermost bar starts, past the right edge of a three-digit line number.
- */
-const GUTTER_LEFT = 27;
-const GUTTER_STEP = 3;
-const GUTTER_LEVELS = 4;
-/** Where a range outline may begin: clear of every bar the gutter can hold. */
-const GUTTER_TEXT = GUTTER_LEFT + GUTTER_STEP * GUTTER_LEVELS + 2;
+/** Keep source-range outlines clear of the line-number column. */
+const RANGE_LEFT = 41;
 
 export function createCodePane(): CodePane {
   const element = document.createElement("section");
@@ -80,7 +75,7 @@ export function createCodePane(): CodePane {
   element.innerHTML = `
     <div class="pane-heading code-heading">
       <div class="pane-tabs" role="tablist" aria-label="Workspace views">
-        <button type="button" class="pane-tab active" role="tab" aria-selected="true">SVML</button>
+        <button type="button" class="pane-tab active source-language" role="tab" aria-selected="true" data-language>SVML</button>
       </div>
       <div class="code-actions">
         <span class="code-location" data-path></span>
@@ -93,6 +88,7 @@ export function createCodePane(): CodePane {
     <div class="code-scroll"><svg class="range-canvas" aria-hidden="true"></svg></div>
     <textarea class="code-editor" data-editor spellcheck="false" aria-label="SVML source"></textarea>`;
   const path = element.querySelector<HTMLElement>("[data-path]")!;
+  const language = element.querySelector<HTMLElement>("[data-language]")!;
   const scroll = element.querySelector<HTMLElement>(".code-scroll")!;
   const canvas = element.querySelector<SVGSVGElement>(".range-canvas")!;
   const editor = element.querySelector<HTMLTextAreaElement>("[data-editor]")!;
@@ -106,8 +102,11 @@ export function createCodePane(): CodePane {
   let snapshotRevision = 0;
   let editingRevision = 0;
   let sourceText = "";
+  let activeSource: StudioSourceView | undefined;
+  let authorPath = "";
   let editing = false;
   let dirty = false;
+  let saveInFlight = false;
   let saveTimer: number | undefined;
 
   const setEditing = (value: boolean): void => {
@@ -124,21 +123,30 @@ export function createCodePane(): CodePane {
   };
 
   const save = async (): Promise<void> => {
-    if (!editing || !dirty) return;
+    if (!editing || !dirty || saveInFlight) return;
+    const savingPath = activeSource?.path;
+    const savingText = editor.value;
+    const savingRevision = editingRevision;
+    if (savingPath === undefined) return;
+    saveInFlight = true;
+    let accepted = false;
     saveState.textContent = "Saving";
     saveState.className = "code-save-state saving";
     try {
       const response = await fetch("/__studio/source", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: editor.value, revision: editingRevision }),
+        body: JSON.stringify({ path: savingPath, text: savingText, revision: savingRevision }),
       });
       if (!response.ok) {
         const reason = await response.text();
         throw new Error(reason || `Save failed (${response.status})`);
       }
-      sourceText = editor.value;
-      dirty = false;
+      accepted = true;
+      if (activeSource?.path === savingPath && editor.value === savingText) {
+        sourceText = savingText;
+        dirty = false;
+      }
       saveState.textContent = "Saved";
       saveState.className = "code-save-state saved";
       window.setTimeout(() => {
@@ -149,6 +157,12 @@ export function createCodePane(): CodePane {
         ? "Changed outside Studio"
         : "Save failed";
       saveState.className = "code-save-state error";
+    } finally {
+      saveInFlight = false;
+      if (accepted && dirty && activeSource?.path === savingPath) {
+        if (saveTimer !== undefined) window.clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(() => void save(), 240);
+      }
     }
   };
 
@@ -229,9 +243,8 @@ export function createCodePane(): CodePane {
       const end = caret(item.range.end, "end");
       if (start === undefined || end === undefined) continue;
       const lineHeight = start.height || Number.parseFloat(getComputedStyle(scroll).lineHeight) || 20;
-      // The outline's left edge sits clear of the gutter bars rather than over
-      // the first characters of the code.
-      const left = GUTTER_TEXT;
+      // The outline starts at the code column rather than over the line number.
+      const left = RANGE_LEFT;
       const right = width - 10;
       const startX = Math.max(left, start.x - 3);
       const endX = Math.max(left, end.x + 3);
@@ -262,9 +275,29 @@ export function createCodePane(): CodePane {
 
   return {
     element,
-    show(snapshot) {
-      path.textContent = snapshot.source.path;
-      const source = snapshot.source.text;
+    show(snapshot, selected) {
+      const sourceFile = selected
+        ?? snapshot.source.files.find((file) => file.path === snapshot.source.path)
+        ?? {
+          path: snapshot.source.path,
+          text: snapshot.source.text,
+          language: "svml" as const,
+          role: "author" as const,
+          imports: [],
+        };
+      if (activeSource !== undefined && activeSource.path !== sourceFile.path && dirty) {
+        saveState.textContent = "Saving before switch";
+        saveState.className = "code-save-state saving";
+        void save();
+        return false;
+      }
+      if (activeSource !== undefined && activeSource.path !== sourceFile.path && editing) setEditing(false);
+      activeSource = sourceFile;
+      authorPath = snapshot.source.path;
+      path.textContent = sourceFile.path;
+      path.title = sourceFile.path;
+      language.textContent = sourceFile.language.toUpperCase();
+      const source = sourceFile.text;
       snapshotRevision = snapshot.revision;
       sourceText = source;
       if (!editing || !dirty) {
@@ -272,7 +305,7 @@ export function createCodePane(): CodePane {
         editingRevision = snapshot.revision;
       }
       const tokens: readonly Token[] = tokenizeSvml(source);
-      const tones = markerTones(snapshot);
+      const tones = intentTones(snapshot);
       lines = [];
       const fragment = document.createDocumentFragment();
       let offset = 0;
@@ -330,66 +363,15 @@ export function createCodePane(): CodePane {
         offset = lineEnd + 1;
       }
 
-      // Mark every line that can be clicked, at the level it belongs to. Only a
-      // small part of a Source binds to anything, so what is clickable has to be
-      // visible standing still rather than discovered by sweeping the pointer
-      // over it — and a Script range is as clickable as an authored element.
-      const clickable: { range: Range; tone: number | undefined }[] = [];
-      for (const segment of snapshot.script?.segments ?? []) {
-        clickable.push({ range: segment.range, tone: tones.get(segment.id) });
-      }
-      for (const selection of snapshot.script?.selections ?? []) {
-        for (const occurrence of selection.occurrences) {
-          clickable.push({
-            range: { start: occurrence.open.start, end: occurrence.close.end },
-            tone: tones.get(selection.id),
-          });
-        }
-      }
-      for (const track of snapshot.tracks) {
-        for (const clip of track.clips) {
-          if (clip.elementRange === undefined) continue;
-          clickable.push({ range: clip.elementRange, tone: tones.get(clip.authoredId) });
-        }
-      }
-      for (const line of lines) {
-        // Widest first: a bar per level the line sits inside, laid left to
-        // right so the enclosing pair stays visible beside the nested one
-        // instead of being covered by it.
-        // Several clips can be drawn from one tag - a Caption Track is one tag
-        // and a dozen cues - and a bar per clip would say the line is nested a
-        // dozen deep. One bar per distinct range is what nesting means.
-        const distinct = new Map<string, { range: Range; tone: number | undefined }>();
-        for (const item of clickable) {
-          if (line.end < item.range.start || line.start > item.range.end) continue;
-          const key = `${item.range.start}:${item.range.end}`;
-          if (!distinct.has(key)) distinct.set(key, item);
-        }
-        const covering = [...distinct.values()]
-          .sort((left, right) =>
-            (right.range.end - right.range.start) - (left.range.end - left.range.start))
-          .slice(0, GUTTER_LEVELS);
-        if (covering.length === 0) continue;
-        line.element.classList.add("bound");
-        // The tightest range is what the line means, so the line-number hover
-        // colour still follows the innermost level.
-        const innermost = covering[covering.length - 1]!;
-        if (innermost.tone !== undefined) line.element.classList.add(`tone-${innermost.tone}`);
-        for (const [level, item] of covering.entries()) {
-          const bar = document.createElement("span");
-          bar.className = item.tone === undefined ? "gutter-bar" : `gutter-bar tone-${item.tone}`;
-          bar.style.left = `${GUTTER_LEFT + level * GUTTER_STEP}px`;
-          line.element.append(bar);
-        }
-      }
-
       scroll.replaceChildren(canvas, fragment);
       draw();
+      return true;
     },
+    activePath() { return activeSource?.path; },
     speak(range) {
       spoken?.remove();
       spoken = undefined;
-      if (range === undefined) return;
+      if (range === undefined || activeSource?.path !== authorPath) return;
       const line = lineAt(range.start);
       const piece = line?.pieces.find((item) => range.start >= item.start && range.start < item.end);
       // A word is highlighted by drawing over it rather than by rewriting the
@@ -408,9 +390,9 @@ export function createCodePane(): CodePane {
       spoken = mark;
     },
     highlight(values, scrollIntoView) {
-      current = values;
+      current = activeSource?.path === authorPath ? values : [];
       draw();
-      const first = values[0];
+      const first = current[0];
       if (!scrollIntoView || first === undefined) return;
       lineAt(first.range.start)?.element.scrollIntoView({ behavior: "smooth", block: "center" });
     },

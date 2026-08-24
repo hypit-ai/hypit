@@ -14,15 +14,15 @@ import type {
   SurfaceResolvedReference,
   MarkupAttributeValue,
 } from "@hypit/markup";
-import type { TemporalDuration, TemporalPointExpression } from "@hypit/temporal";
+import type { TemporalDuration, TemporalPointExpression, TemporalWindowProjection } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal";
 
 import { decodeCommentStickerStyle } from "./author.js";
 import { createCommentStickerFragment } from "./fragment.js";
 import { commentStickerTypes } from "./manifest.js";
 import { sealCommentStickerHeader, sealCommentStickerItemSpec } from "./program.js";
-import type { CommentStickerItemSpec } from "./types.js";
 
-const TIMING = ["during", "at", "for", "start", "end", "selection", "moment", "occurrences"] as const;
+const TIMING = ["during", "at", "for", "start", "end", "selection", "moment"] as const;
 
 function localName(name: string): string { return name.slice(name.lastIndexOf(":") + 1); }
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
@@ -98,7 +98,7 @@ function point(value: string, label: string): TemporalPointExpression {
 
 type Binding = {
   readonly kind: "program" | "selection" | "moment";
-  readonly projection: CommentStickerItemSpec["projection"];
+  readonly projection: TemporalWindowProjection;
   readonly source?: SurfaceResolvedReference;
 };
 
@@ -185,8 +185,6 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
     if (child.children.some((node) => node.kind === "element")) throw new Error(`${child.name} accepts plain comment text only.`);
     allowed(child, ["id", "comment", "frame", "style", "avatar", "author", "header", "meta", ...TIMING], ["id", "frame", "style"]);
     const temporal = binding(child, resolveReference);
-    const occurrences = text(child, "occurrences", "one");
-    if (occurrences !== "one" && occurrences !== "each") throw new Error(`${child.name}.occurrences must be one or each.`);
     const suffix = String(items.length + 1).padStart(4, "0");
     const frame = reference(child.attributes.frame, `${child.name}.frame`, spatialTypes.frame, resolveReference);
     const style = reference(child.attributes.style, `${child.name}.style`, commentStickerTypes.style, resolveReference);
@@ -202,19 +200,22 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
     const displayHeader = child.attributes.header === undefined ? undefined : graphText(child.attributes.header, `${child.name}.header`, resolveReference);
     const meta = child.attributes.meta === undefined ? undefined : graphText(child.attributes.meta, `${child.name}.meta`, resolveReference);
     const specId = `${id}.item.${suffix}.spec`;
+    const windowSpecId = `${id}.item.${suffix}.window`;
+    const windowSpecName = `item-${suffix}-window-spec`;
     records.push({
       id: specId,
       type: commentStickerTypes.itemSpec,
       value: { kind: "inline", value: sealCommentStickerItemSpec({
 
         id: text(child, "id"),
-        projection: temporal.projection,
-        expansion: { kind: occurrences },
       }) },
       range: child.range,
     });
+    records.push({ id: windowSpecId, type: temporalTypes.windowSpec,
+      value: { kind: "inline", value: { id: text(child, "id"), projection: temporal.projection } }, range: child.range });
     const specName = `item-${suffix}-spec`; const frameName = `item-${suffix}-frame`; const styleName = `item-${suffix}-style`;
-    inputs[specName] = { kind: "record", id: specId }; inputs[frameName] = frame.ref; inputs[styleName] = style.ref;
+    inputs[specName] = { kind: "record", id: specId }; inputs[windowSpecName] = { kind: "record", id: windowSpecId };
+    inputs[frameName] = frame.ref; inputs[styleName] = style.ref;
     const attachText = (field: string, value: string | SurfaceResolvedReference): string => {
       const name = `item-${suffix}-${field}`;
       if (typeof value === "string") {
@@ -231,11 +232,11 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
     const avatarName = avatar === undefined ? undefined : `item-${suffix}-avatar`;
     if (avatar !== undefined) inputs[avatarName!] = avatar.ref;
     const copy = { commentName, ...(authorName === undefined ? {} : { authorName }), ...(headerTextName === undefined ? {} : { headerTextName }), ...(metaName === undefined ? {} : { metaName }) };
-    if (temporal.kind === "program") items.push({ kind: "program", specName, frameName, styleName, ...copy, ...(avatarName === undefined ? {} : { avatarName }) });
+    if (temporal.kind === "program") items.push({ kind: "program", windowSpecName, specName, frameName, styleName, ...copy, ...(avatarName === undefined ? {} : { avatarName }) });
     else {
       const sourceName = `item-${suffix}-${temporal.kind}`;
       inputs[sourceName] = temporal.source!.ref;
-      items.push({ kind: temporal.kind, specName, frameName, styleName, ...copy, sourceName, ...(avatarName === undefined ? {} : { avatarName }) });
+      items.push({ kind: temporal.kind, windowSpecName, specName, frameName, styleName, ...copy, sourceName, ...(avatarName === undefined ? {} : { avatarName }) });
     }
   }
   if (items.length === 0) throw new Error(`${element.name} requires at least one Sticker.`);

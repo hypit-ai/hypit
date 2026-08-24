@@ -173,7 +173,11 @@ async function main(): Promise<void> {
   if (flags.has("rebuild") || flags.has("refresh")) {
     throw new Error("--rebuild and --refresh were removed; use --redo on prepare_reference or --reobserve on observe_reference");
   }
-  const tools = createReferenceVideoTools();
+  const tools = createReferenceVideoTools({
+    ...(process.env.HYPIT_DISTRIBUTION_ROOT === undefined
+      ? {}
+      : { packageRoot: process.env.HYPIT_DISTRIBUTION_ROOT }),
+  });
   const supplied = inputObject(flags);
   let result: unknown;
   if (command === "list_svml_packages") {

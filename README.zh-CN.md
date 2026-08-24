@@ -43,15 +43,20 @@ Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语�
 
 **说明一点：** 复刻视频是最快的入口，但不是唯一的入口。你可以直接从我们的模板开始，也可以直接描述你想要的视频，让 Agent 从零写出一份 workflow。生成模型同样不是必需的：字幕、动效、代码渲染的画面，不调用任何模型也能编译成一条成片——一条视频的成本可以是 0 元。
 
-## 安装 Hypit skill
+## 只安装一次
 
 ```bash
-npx skills add hypit-ai/hypit
+npm install --global hypit
+npx skills add hypit-ai/hypit --global
 ```
+
+npm 包是 Hypit Distribution，包含 CLI、Studio、官方组件和托管服务源码；全局 skill 能被以后
+任何项目里的 Agent 会话发现。这两个命令都不会把创作仓库克隆进项目目录。
 
 ## 使用 Hypit skill
 
-编程 Agent 可以直接使用 `/hypit` skill，首次使用时 Agent 会自行获取所需的仓库。让 Agent 配置环境并为你创建视频：
+编程 Agent 可以直接使用 `/hypit` skill。在任何空目录或现有项目目录里开启会话，让 Agent
+为你创建视频：
 
 ```text
 /hypit 把这条爆款视频复刻出来，展示预览，并带我批量生成多个变体。
@@ -64,6 +69,15 @@ npx skills add hypit-ai/hypit
 ```
 
 Agent 会检查环境，只索取视频实际需要的凭据，展示预览并执行构建。
+
+项目源码、生成文件和项目私有组件始终留在项目目录里。WhisperX 等机器程序按需安装到
+Hypit Program Home；Fontsource 单个字体、HyperFrames 等上游 npm 包也只在实际选择后安装
+到独立的机器共享目录。两者都会被所有项目复用，新开会话不会再装一遍。用 `hypit --version` 和
+`npm outdated --global hypit` 检查版本，需要更新时显式执行 `npm update --global hypit` 和
+`npx skills update --global`。
+
+桌面支持基线是 macOS 13+ 或 Windows 10/11 x64，以及 Node.js 22+。克隆仓库、pnpm 和
+Corepack 只属于贡献者工作流。
 
 ## 许可证
 

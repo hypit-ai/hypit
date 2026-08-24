@@ -1,7 +1,11 @@
 import { readFile, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-import { collectNodePackageComponents, loadNodePackageSelection } from "@hypit/package-loader-node";
+import {
+  collectNodePackageComponents,
+  distributionExternalPackageRequirements,
+  loadNodePackageSelection,
+} from "@hypit/package-loader-node";
 import type { NodePackageSelectionRequest } from "@hypit/package-loader-node";
 import { canonicalize } from "@hypit/protocol";
 import type { CanonicalValue, CapabilityRef } from "@hypit/protocol";
@@ -19,10 +23,17 @@ import {
 import type {
   ManagedProgram,
   ManagedProgramState,
+  RuntimeAdapterFactoryContext,
   RuntimeDoctorDiagnostic,
   RuntimeEndpointActivation,
   RuntimeOpened,
 } from "@hypit/runtime-kit";
+import {
+  hypitHostPackageRoot,
+  hypitHostStateRoot,
+  prepareHostPackages,
+} from "@hypit/runtime-host-node";
+import type { HostPackageProgress, HostPackageReport } from "@hypit/runtime-host-node";
 import { SqliteRuntimeState } from "@hypit/store-sqlite";
 
 import { createLocalRuntime } from "./runtime.js";
@@ -56,11 +67,19 @@ export type RuntimeConfigDocument = {
 export type LoadRuntimeConfigOptions = {
   readonly registry?: RuntimeAdapterRegistry;
   readonly packageRoot?: string;
+  readonly distributionPackageRoot?: string;
+  /** Persistent machine/user state. Defaults to the platform Hypit state root. */
+  readonly hostStateRoot?: string;
 };
 
 export type RuntimeConfigDoctorResult = {
   readonly dataRoot: string;
   readonly diagnostics: readonly RuntimeDoctorDiagnostic[];
+};
+
+type RuntimeInspectionOptions = LoadRuntimeConfigOptions & {
+  readonly capabilities?: readonly CapabilityRef[];
+  readonly active: boolean;
 };
 
 export type ResolvedRuntimeConfigPaths = {
@@ -176,6 +195,7 @@ async function installRuntimeAdapters(
   registry: RuntimeAdapterRegistry,
   packageRoot: string,
   selection: NodePackageSelectionRequest,
+  distributionPackageRoot?: string,
 ): Promise<void> {
   const logical = selection.logical?.filter((address) => {
     if (address.abi === runtimeEndpointAdapterHostAbi) return !registry.has(address.name, "endpoint");
@@ -184,7 +204,9 @@ async function installRuntimeAdapters(
     return true;
   }) ?? [];
   if (selection.selected.length === 0 && logical.length === 0) return;
-  const loaded = await loadNodePackageSelection({ selected: selection.selected, logical }, packageRoot);
+  const loaded = await loadNodePackageSelection({ selected: selection.selected, logical }, packageRoot, {
+    ...(distributionPackageRoot === undefined ? {} : { fallbackRoots: [distributionPackageRoot] }),
+  });
   for (const item of loaded) {
     for (const facet of item.contribution.hostFacets ?? []) {
       if (isRuntimeAdapterHostFacet(facet)) registry.registerFacet(facet);
@@ -200,23 +222,56 @@ export async function resolveRuntimeConfigPaths(
   return { packageRoot: opened.packageRoot, dataRoot: opened.root };
 }
 
+/** Explicit provisioning step used by runtime/programs up, never by plan or build. */
+export async function prepareRuntimeConfigPackages(
+  path: string,
+  options: LoadRuntimeConfigOptions & {
+    readonly onProgress?: (event: HostPackageProgress) => void;
+  } = {},
+): Promise<readonly HostPackageReport[]> {
+  if (options.distributionPackageRoot === undefined) return [];
+  const { document } = await openRuntimeConfig(path, options.packageRoot);
+  const requirements = await distributionExternalPackageRequirements([
+    document.artifacts.use,
+    ...document.credentials.map((item) => item.use),
+    ...document.endpoints.map((item) => item.use),
+  ], options.distributionPackageRoot);
+  return await prepareHostPackages(requirements.map((item) => item.specifier), {
+    root: hypitHostPackageRoot(options.hostStateRoot),
+    ...(options.onProgress === undefined ? {} : { onProgress: options.onProgress }),
+  });
+}
+
 function capabilityKey(capability: CapabilityRef): string {
   return `${capability.module.name}@${capability.module.version}#${capability.name}`;
+}
+
+function adapterContext(
+  root: string,
+  hostStateRoot: string,
+  item: RuntimeConfigEntry,
+): RuntimeAdapterFactoryContext {
+  return {
+    hostStateRoot,
+    dataRoot: root,
+    instance: item.instance,
+    ...(item.pool === undefined ? {} : { pool: item.pool }),
+    config: item.config ?? {},
+  };
 }
 
 async function activatedEndpoints(
   document: RuntimeConfigDocument,
   root: string,
+  hostStateRoot: string,
   registry: RuntimeAdapterRegistry,
 ): Promise<readonly { readonly entry: RuntimeConfigEntry; readonly activation: RuntimeEndpointActivation }[]> {
   return await Promise.all(document.endpoints.map(async (item) => ({
     entry: item,
-    activation: await registry.activateEndpoint(item.use, {
-      dataRoot: root,
-      instance: item.instance,
+    activation: await registry.activateEndpoint(item.use, adapterContext(root, hostStateRoot, {
+      ...item,
       pool: item.pool ?? item.instance,
-      config: item.config ?? {},
-    }),
+    })),
   })));
 }
 
@@ -226,13 +281,14 @@ export async function declaredManagedPrograms(
 ): Promise<{ readonly dataRoot: string; readonly programs: readonly DeclaredManagedProgram[] }> {
   const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
   if (options.capabilities?.length === 0) return { dataRoot: root, programs: [] };
+  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installRuntimeAdapters(registry, packageRoot, endpointPackageSelection(document));
+  await installRuntimeAdapters(registry, packageRoot, endpointPackageSelection(document), options.distributionPackageRoot);
   const requested = options.capabilities === undefined
     ? undefined
     : new Set(options.capabilities.map(capabilityKey));
   const programs: DeclaredManagedProgram[] = [];
-  for (const { entry, activation } of await activatedEndpoints(document, root, registry)) {
+  for (const { entry, activation } of await activatedEndpoints(document, root, hostStateRoot, registry)) {
     if (requested !== undefined && !activation.endpoint.offers.some((offer) => requested.has(capabilityKey(offer.capability)))) continue;
     if (activation.program !== undefined) programs.push({ instance: entry.instance, program: activation.program });
   }
@@ -251,16 +307,13 @@ function diagnostic(error: unknown, code: string, subject?: string): RuntimeDoct
 async function openCredentialStores(
   document: RuntimeConfigDocument,
   root: string,
+  hostStateRoot: string,
   registry: RuntimeAdapterRegistry,
 ): Promise<{ readonly store: CredentialStore; close(): Promise<void> }> {
   const opened: RuntimeOpened<CredentialStore>[] = [];
   try {
     for (const item of document.credentials) {
-      opened.push(await registry.openCredentialStore(item.use, {
-        dataRoot: root,
-        instance: item.instance,
-        config: item.config ?? {},
-      }));
+      opened.push(await registry.openCredentialStore(item.use, adapterContext(root, hostStateRoot, item)));
     }
     return {
       store: new CompositeCredentialStore(opened.map((item) => item.value)),
@@ -277,25 +330,23 @@ async function openCredentialStores(
 async function openArtifactStore(
   document: RuntimeConfigDocument,
   root: string,
+  hostStateRoot: string,
   registry: RuntimeAdapterRegistry,
 ): Promise<RuntimeOpened<ArtifactStore>> {
   const item = document.artifacts;
-  return await registry.openArtifactStore(item.use, {
-    dataRoot: root,
-    instance: item.instance,
-    config: item.config ?? {},
-  });
+  return await registry.openArtifactStore(item.use, adapterContext(root, hostStateRoot, item));
 }
 
 function statePath(root: string): string {
   return resolve(root, "runtime.sqlite");
 }
 
-export async function doctorRuntimeConfig(
+async function inspectRuntimeConfig(
   path: string,
-  options: LoadRuntimeConfigOptions & { readonly capabilities?: readonly CapabilityRef[] } = {},
+  options: RuntimeInspectionOptions,
 ): Promise<RuntimeConfigDoctorResult> {
   const { absolute, document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
   const diagnostics: RuntimeDoctorDiagnostic[] = [];
   try {
     if (!(await stat(root)).isDirectory()) throw new Error(`Runtime root ${root} is not a directory`);
@@ -306,7 +357,7 @@ export async function doctorRuntimeConfig(
   }
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   try {
-    await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document));
+    await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
   } catch (error) {
     return { dataRoot: root, diagnostics: [diagnostic(error, "RUNTIME_PACKAGE_SELECTION_INVALID")] };
   }
@@ -315,10 +366,12 @@ export async function doctorRuntimeConfig(
     ...document.credentials.map((item) => ({ item, kind: "credential-store" as const })),
   ];
   for (const selection of storeSelections) {
-    const context = { dataRoot: root, instance: selection.item.instance, config: selection.item.config ?? {} };
+    const context = adapterContext(root, hostStateRoot, selection.item);
     try {
       diagnostics.push(...registry.validate(selection.item.use, selection.kind, context));
-      diagnostics.push(...await registry.doctor(selection.item.use, selection.kind, context));
+      if (options.active) {
+        diagnostics.push(...await registry.doctor(selection.item.use, selection.kind, context));
+      }
     } catch (error) {
       diagnostics.push(diagnostic(error, "RUNTIME_COMPONENT_CONFIG_INVALID", selection.item.instance));
     }
@@ -331,12 +384,10 @@ export async function doctorRuntimeConfig(
   for (const item of document.endpoints) {
     let activation: RuntimeEndpointActivation;
     try {
-      activation = await registry.activateEndpoint(item.use, {
-        dataRoot: root,
-        instance: item.instance,
+      activation = await registry.activateEndpoint(item.use, adapterContext(root, hostStateRoot, {
+        ...item,
         pool: item.pool ?? item.instance,
-        config: item.config ?? {},
-      });
+      }));
     } catch (error) {
       diagnostics.push(diagnostic(error, "RUNTIME_ENDPOINT_CONFIG_INVALID", item.instance));
       continue;
@@ -378,7 +429,7 @@ export async function doctorRuntimeConfig(
   if (credentialEndpoints.some((item) => item.endpoint.credentials.length > 0)) {
     let stores: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
     try {
-      stores = await openCredentialStores(document, root, registry);
+      stores = await openCredentialStores(document, root, hostStateRoot, registry);
       for (const activation of credentialEndpoints) {
         for (const slot of activation.endpoint.credentials) {
           if (await stores.store.resolve(slot.ref) !== undefined) continue;
@@ -402,25 +453,44 @@ export async function doctorRuntimeConfig(
   return { dataRoot: root, diagnostics };
 }
 
+/**
+ * Cheap Build preflight. This intentionally stops at local configuration,
+ * package, credential, executable and Managed Program readiness. Remote
+ * connectivity belongs to doctor, and installation belongs to runtime up.
+ */
+export async function preflightRuntimeConfig(
+  path: string,
+  options: LoadRuntimeConfigOptions & { readonly capabilities?: readonly CapabilityRef[] } = {},
+): Promise<RuntimeConfigDoctorResult> {
+  return await inspectRuntimeConfig(path, { ...options, active: false });
+}
+
+/** Active diagnosis may ask selected stores and adapters to verify their configured services. */
+export async function doctorRuntimeConfig(
+  path: string,
+  options: LoadRuntimeConfigOptions & { readonly capabilities?: readonly CapabilityRef[] } = {},
+): Promise<RuntimeConfigDoctorResult> {
+  return await inspectRuntimeConfig(path, { ...options, active: true });
+}
+
 export async function createRuntimeFromConfig(
   path: string,
   options: LoadRuntimeConfigOptions = {},
 ): Promise<LocalRuntime> {
   const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document));
+  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
   const state = new SqliteRuntimeState(statePath(root));
   let artifacts: RuntimeOpened<ArtifactStore> | undefined;
   let credentials: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
   try {
-    artifacts = await openArtifactStore(document, root, registry);
-    credentials = await openCredentialStores(document, root, registry);
-    const endpoints = await Promise.all(document.endpoints.map(async (item) => await registry.createEndpoint(item.use, {
-      dataRoot: root,
-      instance: item.instance,
-      pool: item.pool ?? item.instance,
-      config: item.config ?? {},
-    })));
+    artifacts = await openArtifactStore(document, root, hostStateRoot, registry);
+    credentials = await openCredentialStores(document, root, hostStateRoot, registry);
+    const endpoints = await Promise.all(document.endpoints.map(async (item) => await registry.createEndpoint(
+      item.use,
+      adapterContext(root, hostStateRoot, { ...item, pool: item.pool ?? item.instance }),
+    )));
     return await createLocalRuntime({
       buildStore: state.builds,
       buildCatalog: state.catalog,
@@ -429,7 +499,11 @@ export async function createRuntimeFromConfig(
       artifactStore: artifacts.value,
       credentialStore: credentials.store,
       loadComponentPackages: async (specifiers) => {
-        const loaded = await loadNodePackageSelection(specifiers, packageRoot);
+        const loaded = await loadNodePackageSelection(specifiers, packageRoot, {
+          ...(options.distributionPackageRoot === undefined
+            ? {}
+            : { fallbackRoots: [options.distributionPackageRoot] }),
+        });
         return collectNodePackageComponents(loaded.map((item) => item.contribution));
       },
       endpoints,
@@ -467,11 +541,12 @@ export async function createRuntimeArtifactAccessFromConfig(
   options: LoadRuntimeConfigOptions = {},
 ): Promise<LocalRuntimeArtifactAccess> {
   const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   await installRuntimeAdapters(registry, packageRoot, {
     selected: [], logical: [{ abi: runtimeArtifactStoreAdapterHostAbi, name: document.artifacts.use }],
-  });
-  const opened = await openArtifactStore(document, root, registry);
+  }, options.distributionPackageRoot);
+  const opened = await openArtifactStore(document, root, hostStateRoot, registry);
   return createLocalRuntimeArtifactAccess({
     artifactStore: opened.value,
     ...(opened.close === undefined ? {} : { close: opened.close }),
@@ -484,18 +559,17 @@ export async function createRuntimeCredentialsFromConfig(
   options: LoadRuntimeConfigOptions = {},
 ): Promise<LocalCredentialControl> {
   const { document, root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
+  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
   const endpoint = document.endpoints.find((item) => item.instance === endpointInstance);
   if (endpoint === undefined) throw new Error(`Runtime Profile has no Endpoint instance ${endpointInstance}`);
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document));
-  const credentials = await openCredentialStores(document, root, registry);
+  await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection(document), options.distributionPackageRoot);
+  const credentials = await openCredentialStores(document, root, hostStateRoot, registry);
   try {
-    const endpointPackage = await registry.createEndpoint(endpoint.use, {
-      dataRoot: root,
-      instance: endpoint.instance,
+    const endpointPackage = await registry.createEndpoint(endpoint.use, adapterContext(root, hostStateRoot, {
+      ...endpoint,
       pool: endpoint.pool ?? endpoint.instance,
-      config: endpoint.config ?? {},
-    });
+    }));
     return createLocalCredentialControl({
       credentialStore: credentials.store,
       endpoints: [endpointPackage],

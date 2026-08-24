@@ -1,133 +1,103 @@
-import type { CaptionCorrespondence, CaptionDisplaySequence } from "@hypit/narrative";
+import type { CaptionDocument } from "@hypit/narrative";
 import { tokenFrameSpan } from "@hypit/semantic-track";
 import type { SemanticTrack } from "@hypit/semantic-track";
 
 import { CaptionTimingError } from "./error.js";
-import { assertCaptionCorrespondence, assertCaptionDisplaySequence } from "./display.js";
-import { assertCaptionPlanForProgram } from "./plan.js";
-import { assertCaptionProgramForDisplay } from "./style.js";
-import type { CaptionPlan, CaptionProgram, TimedCaptionProjection } from "./types.js";
+import { assertCaptionDocument } from "./display.js";
+import { assertCaptionProgramForDocument } from "./style.js";
+import type { CaptionProgram, TimedCaptionProjection, TimedCaptionCue, TimedCaptionUnit } from "./types.js";
 
-/**
- * Apply Caption-owned post-planning visibility without changing Cue identity, timing or grouping.
- * Style-family renderers may apply the operation directly.
- */
-export function applyCaptionMute(
-  projection: TimedCaptionProjection,
+export function temporalizeCaptionDocument(
+  document: CaptionDocument,
+  semantic: SemanticTrack,
   program: CaptionProgram,
-  display: CaptionDisplaySequence,
 ): TimedCaptionProjection {
-  assertTimedCaptionProjection(projection);
-  assertCaptionProgramForDisplay(program, display);
-  if (projection.displaySequenceId !== display.id) {
-    throw new Error("Caption Mute received another display sequence");
+  assertCaptionDocument(document);
+  assertCaptionProgramForDocument(program, document);
+  const styleByUnit = new Map(program.runs.flatMap((run) => run.unitIds.map((unitId) => [unitId, run.styleId] as const)));
+  const muted = new Set(program.mutedUnitIds);
+  const breaks = new Set(document.cueBreaks.map((cueBreak) => cueBreak.afterUnitId));
+  const timed: Array<{ unit: CaptionDocument["units"][number]; styleId: string; timing: TimedCaptionUnit }> = [];
+  for (const unit of document.units) {
+    if (muted.has(unit.id)) continue;
+    const styleId = styleByUnit.get(unit.id);
+    if (styleId === undefined) throw new CaptionTimingError("CAPTION_UNIT", `Caption unit ${unit.id} has no Style.`);
+    const window = tokenFrameSpan(semantic, unit.sourceTokenIds);
+    if (window === undefined) throw new CaptionTimingError("CAPTION_SPEECH_COVERAGE", `Caption unit ${unit.id} is absent from the SemanticTrack.`);
+    const startFrame = Math.min(window.startFrame, window.endFrameExclusive);
+    const endFrameExclusive = Math.max(startFrame + 1, window.startFrame, window.endFrameExclusive);
+    timed.push({ unit, styleId, timing: { unitId: unit.id, startFrame, endFrameExclusive } });
   }
-  const mutedWords = new Set(program.mutedWordIds);
-  const mutedAtoms = new Set(display.atoms
-    .filter((atom) => atom.wordIds.every((wordId) => mutedWords.has(wordId)))
-    .map((atom) => atom.id));
-  const result: TimedCaptionProjection = {
-
-    displaySequenceId: projection.displaySequenceId,
-    cues: projection.cues.flatMap((cue) => {
-      const atoms = cue.atoms.filter((atom) => !mutedAtoms.has(atom.atomId));
-      if (atoms.length === 0) return [];
-      return [{
-        ...cue,
-        atoms,
-        fields: cue.fields.filter((field) => !mutedWords.has(field.wordId)),
-      }];
-    }),
+  const cues: TimedCaptionCue[] = [];
+  let current: { styleId: string; units: TimedCaptionUnit[]; segmentId: string; turnId: string } | undefined;
+  const flush = (): void => {
+    if (current === undefined || current.units.length === 0) return;
+    cues.push({
+      id: `${program.id}:cue:${cues.length + 1}`,
+      styleId: current.styleId,
+      startFrame: current.units[0]!.startFrame,
+      endFrameExclusive: current.units.at(-1)!.endFrameExclusive,
+      units: current.units,
+    });
+    current = undefined;
   };
+  for (const [index, entry] of timed.entries()) {
+    const previousDocumentUnit = index === 0 ? undefined : timed[index - 1]!.unit;
+    const mustBreak = current !== undefined && (
+      current.styleId !== entry.styleId
+      || current.segmentId !== entry.unit.segmentId
+      || current.turnId !== entry.unit.turnId
+      || (previousDocumentUnit !== undefined && breaks.has(previousDocumentUnit.id))
+    );
+    if (mustBreak) flush();
+    if (current === undefined) current = {
+      styleId: entry.styleId,
+      units: [],
+      segmentId: entry.unit.segmentId,
+      turnId: entry.unit.turnId,
+    };
+    current.units.push(entry.timing);
+  }
+  flush();
+  const result: TimedCaptionProjection = { documentId: document.id, cues };
   assertTimedCaptionProjection(result);
   return result;
 }
 
-/** Join whole authored Caption Atoms to measured speech time. No display-word time is invented. */
-export function temporalizeCaptionPlan(
-  display: CaptionDisplaySequence,
-  correspondence: CaptionCorrespondence,
-  semantic: SemanticTrack,
+export function applyCaptionMute(
+  projection: TimedCaptionProjection,
   program: CaptionProgram,
-  plan: CaptionPlan,
+  document: CaptionDocument,
 ): TimedCaptionProjection {
-  assertCaptionDisplaySequence(display);
-  assertCaptionCorrespondence(correspondence, display);
-  assertCaptionProgramForDisplay(program, display);
-  assertCaptionPlanForProgram(plan, program, display);
-  const atomById = new Map(display.atoms.map((atom) => [atom.id, atom]));
-  const sourceByAtom = new Map(correspondence.atoms.map((item) => [item.atomId, item.sourceTokenIds]));
-  const cues = plan.runs.flatMap((run) => run.cues.map((cue) => {
-    const atoms = cue.atomIds.map((atomId) => {
-      const atom = atomById.get(atomId);
-      const sourceTokenIds = sourceByAtom.get(atomId);
-      if (atom === undefined || sourceTokenIds === undefined) {
-        throw new CaptionTimingError("CAPTION_ATOM", `Caption Cue ${cue.id} references unknown Atom ${atomId}.`);
-      }
-      const window = tokenFrameSpan(semantic, sourceTokenIds);
-      if (window === undefined) {
-        throw new CaptionTimingError(
-          "CAPTION_SPEECH_COVERAGE",
-          `Caption Atom ${atomId} is absent from the SemanticTrack.`,
-        );
-      }
-      // The map reports what was measured, including a window that collapses to
-      // one frame boundary or runs backwards: a word shorter than a frame, or
-      // provider character times that are not ordered. Deciding what such a
-      // window means belongs here, where it becomes a Cue that has to be drawn —
-      // it spans the frames between its two edges, and it is on screen for at
-      // least the frame it fell in. An Atom drawn for no frames is not a caption.
-      const startFrame = Math.min(window.startFrame, window.endFrameExclusive);
-      const endFrameExclusive = Math.max(window.startFrame, window.endFrameExclusive, startFrame + 1);
-      return {
-        atom,
-        timing: {
-          atomId,
-          startFrame,
-          endFrameExclusive,
-        },
-      };
-    });
-    if (new Set(atoms.map((item) => item.atom.segmentId)).size !== 1) {
-      throw new CaptionTimingError("CAPTION_PLAN_SEGMENT", `Caption Cue ${cue.id} crosses a Script Segment.`);
-    }
-    return {
-      id: cue.id,
-      styleId: run.styleId,
-      startFrame: atoms[0]!.timing.startFrame,
-      endFrameExclusive: atoms.at(-1)!.timing.endFrameExclusive,
-      atoms: atoms.map((item) => item.timing),
-      fields: cue.fields.map((field) => ({ ...field })),
-    };
-  }));
-  const result = applyCaptionMute({
-
-    displaySequenceId: display.id,
-    cues,
-  }, program, display);
+  assertCaptionDocument(document);
+  assertCaptionProgramForDocument(program, document);
+  if (projection.documentId !== document.id) throw new Error("Caption Mute received another CaptionDocument");
+  const muted = new Set(program.mutedUnitIds);
+  const cues = projection.cues.flatMap((cue) => {
+    const units = cue.units.filter((unit) => !muted.has(unit.unitId));
+    if (units.length === 0) return [];
+    return [{ ...cue, units, startFrame: units[0]!.startFrame, endFrameExclusive: units.at(-1)!.endFrameExclusive }];
+  });
+  const result = { documentId: projection.documentId, cues };
+  assertTimedCaptionProjection(result);
   return result;
 }
 
 export function assertTimedCaptionProjection(projection: TimedCaptionProjection): void {
-  if (projection.displaySequenceId.length === 0) {
-    throw new Error("TimedCaptionProjection display sequence is invalid.");
-  }
+  if (projection.documentId.length === 0) throw new Error("TimedCaptionProjection document identity is invalid");
   const cueIds = new Set<string>();
-  const atomIds = new Set<string>();
+  const unitIds = new Set<string>();
   for (const cue of projection.cues) {
-    if (cue.id.length === 0 || cueIds.has(cue.id) || cue.styleId.length === 0 || cue.atoms.length === 0
+    if (cue.id.length === 0 || cueIds.has(cue.id) || cue.styleId.length === 0 || cue.units.length === 0
       || !Number.isSafeInteger(cue.startFrame) || !Number.isSafeInteger(cue.endFrameExclusive)
-      || cue.startFrame < 0 || cue.endFrameExclusive <= cue.startFrame) {
-      throw new Error("TimedCaptionProjection contains an invalid Cue");
-    }
+      || cue.startFrame < 0 || cue.endFrameExclusive <= cue.startFrame) throw new Error("TimedCaptionProjection contains an invalid Cue");
     cueIds.add(cue.id);
-    for (const atom of cue.atoms) {
-      if (atom.atomId.length === 0 || atomIds.has(atom.atomId)
-        || !Number.isSafeInteger(atom.startFrame) || !Number.isSafeInteger(atom.endFrameExclusive)
-        || atom.startFrame < 0 || atom.endFrameExclusive <= atom.startFrame) {
-        throw new Error("TimedCaptionProjection contains an invalid or repeated Atom timing");
+    for (const unit of cue.units) {
+      if (unit.unitId.length === 0 || unitIds.has(unit.unitId) || !Number.isSafeInteger(unit.startFrame)
+        || !Number.isSafeInteger(unit.endFrameExclusive) || unit.startFrame < 0 || unit.endFrameExclusive <= unit.startFrame) {
+        throw new Error("TimedCaptionProjection contains an invalid or repeated unit timing");
       }
-      atomIds.add(atom.atomId);
+      unitIds.add(unit.unitId);
     }
   }
 }

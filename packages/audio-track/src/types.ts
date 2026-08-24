@@ -1,9 +1,7 @@
 import type { FrameSpan } from "@hypit/composition";
 import type { BlobRef } from "@hypit/protocol";
 import type {
-  OccurrenceExpansion,
   TemporalDuration,
-  TemporalWindowProjection,
 } from "@hypit/temporal";
 
 export type AudioOccupancy =
@@ -24,8 +22,6 @@ export type AudioItemMix = {
 
 export type AudioClipSpec = {
   readonly id: string;
-  readonly projection: TemporalWindowProjection;
-  readonly expansion: OccurrenceExpansion;
   readonly trim: AudioSourceTrim;
   readonly occupancy: AudioOccupancy;
   readonly mix: AudioItemMix;

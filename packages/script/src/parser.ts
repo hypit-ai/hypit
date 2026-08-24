@@ -1,16 +1,22 @@
 
 import { ScriptSyntaxError } from "./error.js";
+import {
+  cleanProjection,
+  displayWordSurfaces,
+  joinProjection,
+  lexicalUnits,
+  splitLeadingClosingPunctuation,
+} from "./lexical.js";
 import type {
+  CaptionWordAttribute,
   Affinity,
   MarkerBoundary,
   ParsedAtom,
   ParsedCaptionRegion,
   ParsedMoment,
-  ParsedMomentOccurrence,
   ParsedNarrative,
   ParsedSegment,
   ParsedSelection,
-  ParsedSelectionOccurrence,
   ParsedToken,
   ParsedTurn,
   SemanticAnchor,
@@ -29,44 +35,32 @@ type MutableSegment = {
   readonly atoms: ParsedAtom[];
   readonly tokenStart: number;
   readonly sourceStart: number;
+  readonly contentStart: number;
   lexicalRun: string;
   readonly lexicalMarkers: Array<{ readonly position: number; readonly offset: number }>;
 };
 
-const WORD =
-  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]\p{M}*|[\p{L}\p{M}\p{N}]+(?:['’.-][\p{L}\p{M}\p{N}]+)*/gu;
 const SEGMENT_ID = /^[a-z][a-z0-9_-]{0,63}$/u;
 const TEMPORAL_ID = /^[a-z][a-z0-9_-]{0,63}$/u;
 const ROLE_LABEL = /^[\p{L}\p{M}\p{N}_](?:[\p{L}\p{M}\p{N}_. -]{0,30}[\p{L}\p{M}\p{N}_.-])?$/u;
 const RESERVED_SEGMENT_IDS = new Set(["script"]);
+const ATTRIBUTE_NAME = /^[a-z][a-z0-9_-]{0,63}$/u;
+const ATTRIBUTE_VALUE = /^[A-Za-z0-9_.:-]+$/u;
 
 /** A marker's structural position before its affinity picks one anchor. */
 type RawMarkerBoundary = Omit<MarkerBoundary, "anchorId">;
 type RawEdge<T> = Omit<T, "boundary"> & { readonly boundary: RawMarkerBoundary };
-type RawSelectionOccurrence = Omit<ParsedSelectionOccurrence, "startAnchorId" | "endAnchorId" | "open" | "close"> & {
-  readonly open: RawEdge<ParsedSelectionOccurrence["open"]>;
-  readonly close: RawEdge<ParsedSelectionOccurrence["close"]>;
+type RawSelection = Omit<ParsedSelection, "startAnchorId" | "endAnchorId" | "open" | "close"> & {
+  readonly open: RawEdge<ParsedSelection["open"]>;
+  readonly close: RawEdge<ParsedSelection["close"]>;
 };
-type RawMomentOccurrence = Omit<ParsedMomentOccurrence, "anchorId" | "boundary"> & { readonly boundary: RawMarkerBoundary };
+type RawMoment = Omit<ParsedMoment, "anchorId" | "boundary"> & { readonly boundary: RawMarkerBoundary };
 
 function normalizeWord(value: string): string {
   return value
     .normalize("NFKC")
     .toLocaleLowerCase("en")
     .replace(/[^\p{L}\p{M}\p{N}]+/gu, "");
-}
-
-function cleanProjection(value: string): string {
-  return value
-    .replace(/\s+/gu, " ")
-    .replace(/\s+([,.;:!?])/gu, "$1")
-    .replace(/([([{])\s+/gu, "$1")
-    .replace(/\s+([)\]}])/gu, "$1")
-    .trim();
-}
-
-function joinProjection(parts: readonly string[]): string {
-  return cleanProjection(parts.filter((part) => part.trim()).join(" "));
 }
 
 function parseMarker(source: string, offset: number): Marker | undefined {
@@ -121,12 +115,26 @@ function findUnescaped(value: string, character: string, from = 0): number {
   return -1;
 }
 
+type ParsedAttributeBlock = {
+  readonly attributes: readonly CaptionWordAttribute[];
+  readonly length: number;
+};
+
+function parseAttributeValue(raw: string): string | number | boolean {
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  if (/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/u.test(raw)) return Number(raw);
+  return raw;
+}
+
 export function parseScript(
   sourceName: string,
   input: string,
   sourceOffset = 0,
 ): ParsedNarrative {
-  const source = input.replace(/\r\n?/gu, "\n").normalize("NFC");
+  // Source ranges are a public inverse used by Studio and diagnostics. Parse
+  // the exact UTF-16 text so CRLF and decomposed Unicode never shift an edit.
+  const source = input;
   const fail = (code: string, message: string, offset?: number): never => {
     throw new ScriptSyntaxError(code, message, sourceName, offset === undefined ? undefined : sourceOffset + offset);
   };
@@ -134,8 +142,9 @@ export function parseScript(
   const segments: ParsedSegment[] = [];
   const tokens: ParsedToken[] = [];
   const captionRegions: ParsedCaptionRegion[] = [];
-  const selections = new Map<string, RawSelectionOccurrence[]>();
-  const moments = new Map<string, RawMomentOccurrence[]>();
+  const selections = new Map<string, RawSelection>();
+  const moments = new Map<string, RawMoment>();
+  const captionBreaks: Array<{ readonly tokenIndex: number; readonly range: { readonly start: number; readonly end: number } }> = [];
   const openSelections = new Map<string, {
     readonly affinity: Affinity;
     readonly boundary: RawMarkerBoundary;
@@ -154,11 +163,9 @@ export function parseScript(
 
   const finishLexicalRun = (): void => {
     if (!current) return;
-    WORD.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = WORD.exec(current.lexicalRun))) {
+    for (const match of lexicalUnits(current.lexicalRun)) {
       const start = match.index;
-      const end = start + match[0].length;
+      const end = start + match.text.length;
       const split = current.lexicalMarkers.find((marker) => start < marker.position && marker.position < end);
       if (split) {
         fail(
@@ -179,14 +186,15 @@ export function parseScript(
       if (openSelections.has(marker.id) || selections.has(marker.id)) {
         fail("SCRIPT_TEMPORAL_TYPE", `Temporal name "${marker.id}" cannot be both Selection and Moment.`, start);
       }
-      const values = moments.get(marker.id) ?? [];
-      values.push({
-        occurrence: values.length,
+      if (moments.has(marker.id)) {
+        fail("SCRIPT_MOMENT_DUPLICATE", `Moment "${marker.id}" is declared more than once.`, start);
+      }
+      moments.set(marker.id, {
+        id: marker.id,
         affinity: marker.affinity,
         boundary: boundary(),
         range: { start: sourceOffset + start, end: sourceOffset + start + marker.length },
       });
-      moments.set(marker.id, values);
       return;
     }
     if (marker.kind === "open") {
@@ -195,6 +203,9 @@ export function parseScript(
       }
       if (openSelections.has(marker.id)) {
         fail("SCRIPT_SELECTION_REOPENED", `Selection "${marker.id}" is reopened before it closes.`, start);
+      }
+      if (selections.has(marker.id)) {
+        fail("SCRIPT_SELECTION_DUPLICATE", `Selection "${marker.id}" is declared more than once.`, start);
       }
       openSelections.set(marker.id, {
         affinity: marker.affinity,
@@ -207,9 +218,8 @@ export function parseScript(
     const open = openSelections.get(marker.id)
       ?? fail("SCRIPT_SELECTION_CLOSE", `Selection "${marker.id}" closes without an open.`, start);
     openSelections.delete(marker.id);
-    const values = selections.get(marker.id) ?? [];
-    values.push({
-      occurrence: values.length,
+    selections.set(marker.id, {
+      id: marker.id,
       open: {
         affinity: open.affinity,
         boundary: open.boundary,
@@ -221,7 +231,6 @@ export function parseScript(
         range: { start: sourceOffset + start, end: sourceOffset + start + marker.length },
       },
     });
-    selections.set(marker.id, values);
   };
 
   const literalPieces = (
@@ -239,7 +248,7 @@ export function parseScript(
     };
     for (let index = 0; index < raw.length;) {
       if (raw[index] === "\\") {
-        const known = ["@", "<", "\\", ...(dual ? ["|", ">"] : [])].includes(raw[index + 1] ?? "")
+        const known = ["@", "<", "\\", "|", "{", "}", ...(dual ? [">"] : [])].includes(raw[index + 1] ?? "")
           ? { value: raw[index + 1]!, length: 2 }
           : undefined;
         const escape = known
@@ -258,6 +267,157 @@ export function parseScript(
   const literalString = (raw: string, start: number, dual = false): string =>
     literalPieces(raw, start, dual).map((piece) => piece.value).join("");
 
+  const parseAttributeBlock = (raw: string, absoluteStart: number): ParsedAttributeBlock => {
+    const close = findUnescaped(raw, "}", 1);
+    if (close < 0) fail("SCRIPT_ATTRIBUTE", "Unclosed token attribute block.", absoluteStart);
+    if (raw.slice(1, close).includes("{")) {
+      fail("SCRIPT_ATTRIBUTE_NESTED", "Token attributes cannot be nested.", absoluteStart + 1);
+    }
+    const body = raw.slice(1, close).trim();
+    if (!body) fail("SCRIPT_ATTRIBUTE_EMPTY", "Token attribute block must name at least one attribute.", absoluteStart);
+    const attributes: CaptionWordAttribute[] = [];
+    for (const part of body.split(",")) {
+      const entry = part.trim();
+      if (!entry) fail("SCRIPT_ATTRIBUTE", "Token attribute list contains an empty entry.", absoluteStart + 1);
+      const equal = entry.indexOf("=");
+      const name = (equal < 0 ? entry : entry.slice(0, equal)).trim();
+      const valueRaw = equal < 0 ? undefined : entry.slice(equal + 1).trim();
+      if (!ATTRIBUTE_NAME.test(name)) {
+        fail("SCRIPT_ATTRIBUTE_NAME", `Invalid token attribute name "${name}".`, absoluteStart + 1);
+      }
+      if (valueRaw !== undefined && (!valueRaw || !ATTRIBUTE_VALUE.test(valueRaw))) {
+        fail("SCRIPT_ATTRIBUTE_VALUE", `Invalid value for token attribute "${name}".`, absoluteStart + 1);
+      }
+      if (attributes.some((attribute) => attribute.name === name)) {
+        fail("SCRIPT_ATTRIBUTE_DUPLICATE", `Token attribute "${name}" is repeated.`, absoluteStart + 1);
+      }
+      attributes.push({ name, value: valueRaw === undefined ? true : parseAttributeValue(valueRaw) });
+    }
+    return { attributes, length: close + 1 };
+  };
+
+  const parseMarkedDisplay = (
+    raw: string,
+    absoluteStart: number,
+  ): { readonly display: string; readonly marks: readonly ParsedCaptionRegion["marks"][number][] } => {
+    const parts: string[] = [];
+    const marks: ParsedCaptionRegion["marks"][number][] = [];
+    let cursor = 0;
+    for (let index = 0; index < raw.length; index += 1) {
+      if (raw[index] === "\\") {
+        index += 1;
+        continue;
+      }
+      if (raw[index] !== "{") continue;
+      const block = parseAttributeBlock(raw.slice(index), absoluteStart + index);
+      const before = raw.slice(0, index);
+      if (!before || /\s$/u.test(before)) {
+        fail("SCRIPT_ATTRIBUTE_TARGET", "A token attribute must immediately follow a display token.", absoluteStart + index);
+      }
+      const cleanBefore = literalString(before, absoluteStart, true);
+      const displayIndex = displayWordSurfaces(cleanBefore).length - 1;
+      if (displayIndex < 0) {
+        fail("SCRIPT_ATTRIBUTE_TARGET", "A token attribute must follow a visible display token.", absoluteStart + index);
+      }
+      if (marks.some((mark) => mark.displayIndex === displayIndex)) {
+        fail("SCRIPT_ATTRIBUTE_OVERLAP", "A display token cannot receive two separate attribute blocks.", absoluteStart + index);
+      }
+      parts.push(literalString(raw.slice(cursor, index), absoluteStart + cursor, true));
+      marks.push({ displayIndex, attributes: block.attributes });
+      cursor = index + block.length;
+      index += block.length - 1;
+    }
+    parts.push(literalString(raw.slice(cursor), absoluteStart + cursor, true));
+    return { display: parts.join(""), marks };
+  };
+
+  const assertDualDisplayLiteral = (raw: string, absoluteStart: number): void => {
+    for (let index = 0; index < raw.length; index += 1) {
+      if (raw[index] === "\\") {
+        index += 1;
+        continue;
+      }
+      if (raw[index] === "@") {
+        fail("SCRIPT_DUAL_DISPLAY_MARKER", "Selection and Moment markers belong to spoken text, not the Dual display side; escape @ as \\@.", absoluteStart + index);
+      }
+      if (raw.startsWith("||", index)) {
+        fail("SCRIPT_CAPTION_BREAK_DUAL", "Caption Cue break cannot occur inside Dual Text; split the Dual Text into separate units.", absoluteStart + index);
+      }
+    }
+  };
+
+  const addCaptionRegion = (
+    displayValue: string,
+    segmentId: string,
+    tokenStart: number,
+    tokenEndExclusive: number,
+    kind: ParsedCaptionRegion["kind"],
+    range: ParsedCaptionRegion["range"],
+    marks: ParsedCaptionRegion["marks"] = [],
+  ): void => {
+    if (kind === "hidden") {
+      if (tokenEndExclusive > tokenStart) {
+        captionRegions.push({
+          id: `caption-region:${captionRegions.length + 1}`,
+          display: "",
+          segmentId,
+          startToken: tokenStart,
+          endTokenExclusive: tokenEndExclusive,
+          kind,
+          marks: [],
+          range,
+        });
+      }
+      return;
+    }
+    const split = splitLeadingClosingPunctuation(displayValue);
+    const previous = captionRegions.at(-1);
+    const canAttachPrevious = previous !== undefined && previous.segmentId === segmentId;
+    if (split.previous && canAttachPrevious) {
+      captionRegions[captionRegions.length - 1] = {
+        ...previous,
+        display: cleanProjection(`${previous.display}${split.previous}`),
+        range: { start: previous.range.start, end: range.end },
+      };
+    }
+    const display = canAttachPrevious ? split.current : `${split.previous}${split.current}`;
+    if (!display || tokenEndExclusive <= tokenStart) return;
+    captionRegions.push({
+      id: `caption-region:${captionRegions.length + 1}`,
+      display,
+      segmentId,
+      startToken: tokenStart,
+      endTokenExclusive: tokenEndExclusive,
+      kind,
+      marks,
+      range,
+    });
+  };
+
+  const markLastCaptionSurface = (
+    attributes: readonly CaptionWordAttribute[],
+    offset: number,
+  ): void => {
+    const previous = captionRegions.at(-1);
+    if (previous === undefined || previous.kind === "hidden") {
+      fail("SCRIPT_ATTRIBUTE_TARGET", "A token attribute must follow a visible display token.", offset);
+    }
+    const target = previous!;
+    if (target.kind === "alias") {
+      fail("SCRIPT_ATTRIBUTE_DUAL", "Annotate a Dual display word before the pipe; a mark cannot wrap a Dual Text.", offset);
+    }
+    const displayIndex = displayWordSurfaces(target.display).length - 1;
+    if (displayIndex < 0) fail("SCRIPT_ATTRIBUTE_TARGET", "A token attribute must follow a visible display token.", offset);
+    const existing = target.marks.find((mark) => mark.displayIndex === displayIndex);
+    if (existing !== undefined) {
+      fail("SCRIPT_ATTRIBUTE_OVERLAP", "A display token cannot receive two separate attribute blocks.", offset);
+    }
+    captionRegions[captionRegions.length - 1] = {
+      ...target,
+      marks: [...target.marks, { displayIndex, attributes }],
+    };
+  };
+
   const addText = (
     speech: string,
     caption: string,
@@ -273,10 +433,8 @@ export function parseScript(
     }
     current.lexicalRun += speech;
     const tokenStart = tokens.length;
-    WORD.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = WORD.exec(speech))) {
-      const normalized = normalizeWord(match[0]);
+    for (const match of lexicalUnits(speech)) {
+      const normalized = normalizeWord(match.text);
       if (!normalized) continue;
       const index = tokens.length;
       const segmentTokenIndex = index - current.tokenStart;
@@ -288,11 +446,11 @@ export function parseScript(
         segmentTokenIndex,
         startAnchorId: tokenAnchorId(current.id, segmentTokenIndex, "start"),
         endAnchorId: tokenAnchorId(current.id, segmentTokenIndex, "end"),
-        text: match[0],
+        text: match.text,
         normalized,
         range: {
           start: sourceOffset + start + match.index,
-          end: sourceOffset + start + match.index + match[0].length,
+          end: sourceOffset + start + match.index + match.text.length,
         },
       });
     }
@@ -304,22 +462,24 @@ export function parseScript(
       tokenEndExclusive: tokens.length,
       range: { start: sourceOffset + start, end: sourceOffset + end },
     });
-    const display = cleanProjection(caption);
-    if (captureCaptionRegion && display && tokens.length > tokenStart) {
-      const id = `caption-region:${captionRegions.length + 1}`;
-      captionRegions.push({
-        id,
-        display,
-        segmentId: current.id,
-        startToken: tokenStart,
-        endTokenExclusive: tokens.length,
-        kind: "identity",
-        range: { start: sourceOffset + start, end: sourceOffset + end },
-      });
+    if (captureCaptionRegion && cleanProjection(caption)) {
+      addCaptionRegion(
+        caption,
+        current.id,
+        tokenStart,
+        tokens.length,
+        "identity",
+        { start: sourceOffset + start, end: sourceOffset + end },
+      );
     }
   };
 
-  const consumeSpeechSide = (raw: string, absoluteStart: number, caption: string): void => {
+  const consumeSpeechSide = (
+    raw: string,
+    absoluteStart: number,
+    caption: string,
+    marks: ParsedCaptionRegion["marks"] = [],
+  ): void => {
     const startToken = tokens.length;
     let partStart = 0;
     let index = 0;
@@ -335,6 +495,9 @@ export function parseScript(
         index += 2;
         continue;
       }
+      if (raw.startsWith("||", index)) {
+        fail("SCRIPT_CAPTION_BREAK_DUAL", "Caption Cue break cannot occur inside Dual Text; split the Dual Text into separate units.", absoluteStart + index);
+      }
       const marker = parseMarker(raw, index);
       if (!marker) {
         if (raw[index] === "@") fail("SCRIPT_MARKER", "Unescaped @ must begin a valid marker.", absoluteStart + index);
@@ -348,21 +511,19 @@ export function parseScript(
     }
     addLiteral(raw.slice(partStart), absoluteStart + partStart);
     if (tokens.length > startToken) {
-      const display = cleanProjection(caption);
-      const id = `caption-region:${captionRegions.length + 1}`;
-      captionRegions.push({
-        id,
-        display,
-        segmentId: current!.id,
+      addCaptionRegion(
+        caption,
+        current!.id,
         startToken,
-        endTokenExclusive: tokens.length,
-        kind: display ? "alias" : "hidden",
-        range: { start: sourceOffset + absoluteStart, end: sourceOffset + absoluteStart + raw.length },
-      });
+        tokens.length,
+        cleanProjection(caption) ? "alias" : "hidden",
+        { start: sourceOffset + absoluteStart, end: sourceOffset + absoluteStart + raw.length },
+        marks,
+      );
     }
   };
 
-  const closeCurrent = (end: number, selfClosing: boolean): void => {
+  const closeCurrent = (end: number, selfClosing: boolean, contentEnd = end): void => {
     const segment = current
       ?? fail("SCRIPT_SEGMENT_CLOSE", "Segment close has no matching open.", end);
     finishLexicalRun();
@@ -375,6 +536,7 @@ export function parseScript(
       tokenEndExclusive: tokens.length,
       atoms: segment.atoms,
       range: { start: segment.sourceStart, end: sourceOffset + end },
+      contentRange: { start: segment.contentStart, end: sourceOffset + contentEnd },
       selfClosing,
     });
     current = undefined;
@@ -401,16 +563,18 @@ export function parseScript(
         if (segments.some((segment) => segment.id === id)) {
           fail("SCRIPT_SEGMENT_DUPLICATE", `Duplicate Segment id "${id}".`, offset);
         }
+        const contentStart = offset + open[0].length;
         current = {
           id,
           index: segments.length,
           atoms: [],
           tokenStart: tokens.length,
           sourceStart: sourceOffset + offset,
+          contentStart: sourceOffset + contentStart,
           lexicalRun: "",
           lexicalMarkers: [],
         };
-        offset += open[0].length;
+        offset = contentStart;
         if (self) closeCurrent(offset, true);
         continue;
       }
@@ -429,8 +593,9 @@ export function parseScript(
       if (close[1] !== current.id) {
         fail("SCRIPT_SEGMENT_MISMATCH", `Segment "${current.id}" was closed by "${close[1]}".`, offset);
       }
+      const contentEnd = offset;
       offset += close[0].length;
-      closeCurrent(offset, false);
+      closeCurrent(offset, false, contentEnd);
       continue;
     }
 
@@ -449,12 +614,14 @@ export function parseScript(
       const pipe = findUnescaped(inside, "|");
       if (pipe >= 0) {
         finishLexicalRun();
-        const display = literalString(inside.slice(0, pipe), offset + 1, true);
+        assertDualDisplayLiteral(inside.slice(0, pipe), offset + 1);
+        const markedDisplay = parseMarkedDisplay(inside.slice(0, pipe), offset + 1);
+        const display = markedDisplay.display;
         const speech = inside.slice(pipe + 1);
         if (!speech.replace(/~?@\/?[A-Za-z_][A-Za-z0-9_.-]*!?~?/gu, "").trim()) {
           fail("SCRIPT_DUAL_EMPTY", "Dual Text speech side must not be empty.", offset);
         }
-        consumeSpeechSide(speech, offset + pipe + 2, display);
+        consumeSpeechSide(speech, offset + pipe + 2, display, markedDisplay.marks);
         finishLexicalRun();
         offset = end + 1;
         continue;
@@ -477,6 +644,8 @@ export function parseScript(
         || parseMarker(source, offset)
         || source[offset] === "<"
         || source[offset] === "@"
+        || source[offset] === "{"
+        || source.startsWith("||", offset)
       ) break;
       if (source[offset] === "\\") {
         offset += Math.min(2, source.length - offset);
@@ -486,6 +655,25 @@ export function parseScript(
     }
     const raw = source.slice(textStart, offset);
     for (const piece of literalPieces(raw, textStart)) addText(piece.value, piece.value, piece.start, piece.end);
+    if (source[offset] === "{") {
+      const block = parseAttributeBlock(source.slice(offset), offset);
+      if (!raw || /\s$/u.test(raw)) {
+        fail("SCRIPT_ATTRIBUTE_TARGET", "A token attribute must immediately follow a display token.", offset);
+      }
+      markLastCaptionSurface(block.attributes, offset);
+      offset += block.length;
+      continue;
+    }
+    if (source.startsWith("||", offset)) {
+      if (!current || tokens.length === current.tokenStart) {
+        fail("SCRIPT_CAPTION_BREAK_EMPTY", "Caption Cue break must follow visible Script text.", offset);
+      }
+      captionBreaks.push({
+        tokenIndex: tokens.length,
+        range: { start: sourceOffset + offset, end: sourceOffset + offset + 2 },
+      });
+      offset += 2;
+    }
   }
 
   if (current) fail("SCRIPT_SEGMENT_UNCLOSED", `Segment "${current.id}" is not closed.`);
@@ -498,12 +686,13 @@ export function parseScript(
   const dialogueTurns: string[] = [];
   const turns: ParsedTurn[] = [];
   for (const segment of segments) {
-    const speechParts: string[] = [];
-    const captionParts: string[] = [];
+    const speechTurnBodies: string[] = [];
+    const captionTurnBodies: string[] = [];
     let activeRole: { readonly label: string; readonly start: number } | undefined;
     let sawRole = false;
     let unownedSpeech = "";
     let turnParts: string[] = [];
+    let captionTurnParts: string[] = [];
     let turnTokenStart: number | undefined;
     let turnTokenEndExclusive: number | undefined;
     let turnEnd = segment.range.end;
@@ -512,7 +701,12 @@ export function parseScript(
       if (activeRole && !body) {
         fail("SCRIPT_ROLE_EMPTY", `Role Cue <${activeRole.label}> is not followed by spoken content.`, activeRole.start - sourceOffset);
       }
-      if (body) dialogueTurns.push(activeRole ? `${activeRole.label}: ${body}` : body);
+      if (body) {
+        dialogueTurns.push(activeRole ? `${activeRole.label}: ${body}` : body);
+        speechTurnBodies.push(body);
+      }
+      const captionBody = joinProjection(captionTurnParts);
+      if (captionBody) captionTurnBodies.push(captionBody);
       if (turnTokenStart !== undefined && turnTokenEndExclusive !== undefined) {
         const ordinal = turns.filter((turn) => turn.segmentId === segment.id).length + 1;
         turns.push({
@@ -525,6 +719,7 @@ export function parseScript(
         });
       }
       turnParts = [];
+      captionTurnParts = [];
       turnTokenStart = undefined;
       turnTokenEndExclusive = undefined;
     };
@@ -538,10 +733,9 @@ export function parseScript(
         sawRole = true;
         continue;
       }
-      speechParts.push(atom.speech);
-      captionParts.push(atom.caption);
       if (!sawRole) unownedSpeech += atom.speech;
       turnParts.push(atom.speech);
+      captionTurnParts.push(atom.caption);
       if (atom.tokenEndExclusive > atom.tokenStart) {
         turnTokenStart ??= atom.tokenStart;
         turnTokenEndExclusive = atom.tokenEndExclusive;
@@ -549,8 +743,8 @@ export function parseScript(
       }
     }
     flushTurn();
-    const speech = joinProjection(speechParts);
-    const caption = joinProjection(captionParts);
+    const speech = cleanProjection(speechTurnBodies.join(" "));
+    const caption = cleanProjection(captionTurnBodies.join(" "));
     if (speech) speechSegments.push(speech);
     if (caption) captionSegments.push(caption);
   }
@@ -618,30 +812,25 @@ export function parseScript(
     segments,
     tokens,
     turns,
-    selections: [...selections].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({
-      id,
-      occurrences: occurrences.map((occurrence) => {
-        const open = anchored(occurrence.open);
-        const close = anchored(occurrence.close);
-        return {
-          ...occurrence,
-          startAnchorId: open.boundary.anchorId,
-          endAnchorId: close.boundary.anchorId,
-          open,
-          close,
-        };
-      }),
-    })),
-    moments: [...moments].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({
-      id,
-      occurrences: occurrences.map((occurrence) => {
-        const value = anchored(occurrence);
-        return { ...value, anchorId: value.boundary.anchorId };
-      }),
-    })),
+    selections: [...selections].sort(([left], [right]) => left.localeCompare(right)).map(([, selection]) => {
+      const open = anchored(selection.open);
+      const close = anchored(selection.close);
+      return {
+        ...selection,
+        startAnchorId: open.boundary.anchorId,
+        endAnchorId: close.boundary.anchorId,
+        open,
+        close,
+      };
+    }),
+    moments: [...moments].sort(([left], [right]) => left.localeCompare(right)).map(([, moment]) => {
+      const value = anchored(moment);
+      return { ...value, anchorId: value.boundary.anchorId };
+    }),
     captionProjection: {
       text: captionSegments.join("\n"),
       regions: captionRegions,
+      breaks: captionBreaks,
     },
     semanticIndex: {
 

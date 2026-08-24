@@ -14,6 +14,7 @@ type DiscoveryOptions = {
   readonly source: string;
   readonly workspaceRoot?: string;
   readonly packageRoot: string;
+  readonly distributionPackageRoot?: string;
 };
 
 function mergePackages(
@@ -72,7 +73,11 @@ export async function loadDiscoveredSourcePackages(
   while (true) {
     const selection = await discover(distribution, options, packages);
     if (selectionSatisfied(selection, packages)) return packages;
-    const loaded = await loadNodePackageSelection(selection, options.packageRoot);
+    const loaded = await loadNodePackageSelection(selection, options.packageRoot, {
+      ...(options.distributionPackageRoot === undefined
+        ? {}
+        : { fallbackRoots: [options.distributionPackageRoot] }),
+    });
     const next = mergePackages(distribution.bootstrapPackages, loaded);
     if (next.map((item) => item.specifier).join("\u0000") === packages.map((item) => item.specifier).join("\u0000")) {
       throw new Error("Source package discovery did not satisfy its logical package requirements");

@@ -5,8 +5,9 @@ import type { FragmentOperation, GraphFragment } from "@hypit/elaborator";
 import { mediaTypes } from "@hypit/media";
 import { mediaTrackProducers, mediaTrackTypes } from "@hypit/media-track";
 import { narrativeTypes } from "@hypit/narrative";
-import { semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
+import { temporalProducers, temporalTypes } from "@hypit/temporal";
 
 import { depthStackProducers, depthStackTypes } from "./manifest.js";
 
@@ -24,11 +25,12 @@ export type DepthStackFragmentCard = {
   readonly labelName: string;
   readonly cardSpecName: string;
   readonly momentName: string;
+  readonly pointSpecName: string;
 };
 
 export type DepthStackFragmentTerminal =
   | { readonly kind: "program-end" }
-  | { readonly kind: "moment" | "selection-start" | "selection-end"; readonly inputName: string };
+  | { readonly kind: "moment" | "selection-start" | "selection-end"; readonly inputName: string; readonly specName: string };
 
 function sourceInput(card: DepthStackFragmentCard): GraphFragment["inputs"][number] {
   const type = card.sourceKind === "still"
@@ -65,6 +67,7 @@ export function createDepthStackFragment(
       { name: card.labelName, type: depthStackTypes.cardLabel },
       { name: card.cardSpecName, type: depthStackTypes.cardSpec },
       { name: card.momentName, type: narrativeTypes.moment },
+      { name: card.pointSpecName, type: temporalTypes.pointSpec },
     );
     if (card.framePaintSpecName !== undefined) {
       inputs.push({ name: card.framePaintSpecName, type: mediaTrackTypes.paintLayerSpec });
@@ -104,51 +107,70 @@ export function createDepthStackFragment(
       result: { kind: "output", name: "layers" },
     });
     const appendId = `append-${card.suffix}`;
+    const pointId = `point-${card.suffix}`;
+    operations.push({
+      id: pointId,
+      producer: temporalProducers.projectMomentPoint,
+      inputs: { semantic: input("semantic"), moment: input(card.momentName), spec: input(card.pointSpecName) },
+      result: { kind: "output", name: "point" },
+    });
     operations.push({
       id: appendId,
-      producer: depthStackProducers.appendMomentCard,
+      producer: depthStackProducers.appendCard,
       inputs: {
         set: cardSet,
         material: operation(sampleId),
         label: input(card.labelName),
         spec: input(card.cardSpecName),
-        semantic: input("semantic"),
-        moment: input(card.momentName),
+        activation: operation(pointId),
       },
       result: { kind: "output", name: "set" },
     });
     cardSet = operation(appendId);
   }
-  const terminalProducer = terminal.kind === "program-end"
-    ? depthStackProducers.finalizeProgramEnd
-    : terminal.kind === "moment" ? depthStackProducers.finalizeUntilMoment
-      : terminal.kind === "selection-start" ? depthStackProducers.finalizeUntilSelectionStart
-        : depthStackProducers.finalizeUntilSelectionEnd;
   if (terminal.kind !== "program-end") {
     inputs.push({
       name: terminal.inputName,
       type: terminal.kind === "moment" ? narrativeTypes.moment : narrativeTypes.selection,
     });
+    inputs.push({ name: terminal.specName, type: temporalTypes.pointSpec });
+  }
+  const terminalPoint = terminal.kind === "program-end" ? "program-point" : "terminal-point";
+  if (terminal.kind === "program-end") {
+    inputs.push({ name: "program-spec", type: temporalTypes.pointSpec });
+    operations.push({ id: terminalPoint, producer: temporalProducers.projectProgramPoint,
+      inputs: { semantic: input("semantic"), spec: input("program-spec") }, result: { kind: "output", name: "point" } });
+  } else {
+    operations.push({ id: terminalPoint,
+      producer: terminal.kind === "moment" ? temporalProducers.projectMomentPoint : temporalProducers.projectSelectionPoint,
+      inputs: {
+        semantic: input("semantic"), spec: input(terminal.specName),
+        [terminal.kind === "moment" ? "moment" : "selection"]: input(terminal.inputName),
+      }, result: { kind: "output", name: "point" } });
   }
   operations.push({
+    id: "space",
+    producer: semanticTrackProducers.projectProgramSpace,
+    inputs: { track: input("semantic") },
+    result: { kind: "output", name: "space" },
+  });
+  operations.push({
     id: "program",
-    producer: terminalProducer,
+    producer: depthStackProducers.finalize,
     inputs: {
       set: cardSet,
       header: input("header"),
       frame: input("frame"),
       spec: input("spec"),
-      semantic: input("semantic"),
-      ...(terminal.kind === "program-end" ? {} : {
-        terminal: input(terminal.inputName),
-      }),
+      space: operation("space"),
+      terminal: operation(terminalPoint),
     },
     result: { kind: "output", name: "program" },
   });
   operations.push({
     id: "track",
     producer: depthStackProducers.render,
-    inputs: { canvas: input("canvas"), semantic: input("semantic"), program: operation("program") },
+    inputs: { canvas: input("canvas"), space: operation("space"), program: operation("program") },
     result: { kind: "output", name: "track" },
   });
   return sealGraphFragment({

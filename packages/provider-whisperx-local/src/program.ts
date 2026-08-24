@@ -1,10 +1,16 @@
+import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import { join } from "node:path";
 
 import { runtimeConfigObject, runtimeConfigString } from "@hypit/runtime-kit";
-import type { RuntimeAdapterFactoryContext, ManagedProgram, ManagedProgramState } from "@hypit/runtime-kit";
-
-import { localWhisperXPunktTabDigest } from "./provider.js";
+import type {
+  ManagedProgram,
+  ManagedProgramCommand,
+  ManagedProgramState,
+  RuntimeAdapterFactoryContext,
+} from "@hypit/runtime-kit";
+import { pythonEnvironmentCommand } from "@hypit/runtime-host-node";
 
 /**
  * WhisperX loads multi-gigabyte weights before it can answer, so it is a warm
@@ -12,18 +18,15 @@ import { localWhisperXPunktTabDigest } from "./provider.js";
  * Provider declares how to bring it up; the Runtime Profile may override the
  * command for an environment that installs WhisperX differently.
  *
- * The default names the pinned uv project shipped beside this package in the
- * Hypit repository, by absolute path — a Runtime root is wherever the
- * operator keeps their Profile, and it is not where that project lives. An
- * installation that obtained this package on its own has no such directory and
- * must say what to run instead; `serviceCommand` is that.
+ * The locked project is a package asset. Its environment lives in the Host's
+ * program home, while this read-only project remains replaceable Distribution
+ * input. A custom service command transfers process ownership to that deployment.
  */
-const WORKSPACE_PROJECT = fileURLToPath(new URL("../../../services/whisperx", import.meta.url));
-
-function workspaceCommand(entry: string): { command: string; args: readonly string[] } | undefined {
-  if (!existsSync(WORKSPACE_PROJECT)) return undefined;
-  return { command: "uv", args: ["run", "--project", WORKSPACE_PROJECT, "--frozen", entry] };
-}
+const require = createRequire(import.meta.url);
+export const localWhisperXManagedProject = join(
+  require.resolve("@hypit/whisperx-service-runtime/pyproject.toml"),
+  "..",
+);
 
 function configuredCommand(value: unknown, key: string) {
   if (value === undefined) return undefined;
@@ -33,32 +36,104 @@ function configuredCommand(value: unknown, key: string) {
   return { command: value[0] as string, args: (value as string[]).slice(1) };
 }
 
+function run(command: ManagedProgramCommand): Promise<{ readonly ok: boolean; readonly output: string }> {
+  return new Promise((resolve) => {
+    execFile(command.command, [...command.args], {
+      cwd: command.cwd,
+      env: { ...process.env, ...command.env },
+      timeout: 60_000,
+      shell: false,
+      windowsHide: true,
+    }, (error, stdout, stderr) => {
+      resolve(error === null
+        ? { ok: true, output: stdout.trim() }
+        : { ok: false, output: (stderr.trim() || error.message).split(/\r?\n/u).at(-1) ?? "" });
+    });
+  });
+}
+
 export function localWhisperXProgram(context: RuntimeAdapterFactoryContext): ManagedProgram {
   const config = runtimeConfigObject(context.config, "local WhisperX");
   const baseUrl = (runtimeConfigString(config.baseUrl, "WhisperX baseUrl") ?? "http://127.0.0.1:8765")
     .replace(/\/+$/u, "");
+  const serviceUrl = new URL(baseUrl);
+  const expectedDevice = runtimeConfigString(config.expectedDevice, "WhisperX expectedDevice") ?? "cpu";
   const expected = {
     protocol: "hypit.whisperx-service@1",
     serviceVersion: runtimeConfigString(config.expectedServiceVersion, "WhisperX expectedServiceVersion") ?? "0.1.0",
     whisperxVersion: runtimeConfigString(config.expectedWhisperXVersion, "WhisperX expectedWhisperXVersion") ?? "3.8.6",
     model: runtimeConfigString(config.expectedModel, "WhisperX expectedModel") ?? "small",
-    device: runtimeConfigString(config.expectedDevice, "WhisperX expectedDevice") ?? "cpu",
-    punktTabDigest: runtimeConfigString(config.expectedPunktTabDigest, "WhisperX expectedPunktTabDigest")
-      ?? localWhisperXPunktTabDigest,
+    device: expectedDevice,
+    compute: runtimeConfigString(config.expectedCompute, "WhisperX expectedCompute")
+      ?? (expectedDevice === "cpu" ? "int8" : "float16"),
+    batchSize: typeof config.expectedBatchSize === "number" ? config.expectedBatchSize : 8,
   };
   const customStart = configuredCommand(config.serviceCommand, "serviceCommand");
-  const customPrepare = configuredCommand(config.servicePrepareCommand, "servicePrepareCommand");
-  // Any lifecycle override transfers ownership to the deployment. This avoids
-  // preparing the repository uv project before starting an unrelated conda,
-  // systemd or container command. With no override the bundled project is the
-  // managed default; when it is not present this becomes probe-only.
-  const managed = customStart === undefined && customPrepare === undefined;
-  const prepare = customPrepare ?? (managed ? workspaceCommand("hypit-whisperx-prepare") : undefined);
-  const start = customStart ?? (managed ? workspaceCommand("hypit-whisperx-service") : undefined);
+  const managed = customStart === undefined;
+  if (managed && !existsSync(localWhisperXManagedProject)) {
+    throw new Error("local WhisperX has no packaged managed runtime; configure serviceCommand explicitly");
+  }
+  const stateRoot = join(context.hostStateRoot, "programs", "whisperx");
+  const environment = join(stateRoot, ".venv");
+  const nltkData = join(stateRoot, "nltk_data");
+  const serviceEnvironment = {
+    HYPIT_WHISPERX_PORT: serviceUrl.port || "80",
+    HYPIT_WHISPERX_MODEL: expected.model,
+    HYPIT_WHISPERX_DEVICE: expected.device,
+    HYPIT_WHISPERX_COMPUTE: expected.compute,
+    HYPIT_WHISPERX_BATCH_SIZE: String(expected.batchSize),
+    HYPIT_WHISPERX_NLTK_DATA: nltkData,
+  };
+  const check: ManagedProgramCommand = {
+    command: pythonEnvironmentCommand(environment, "hypit-whisperx-check"),
+    args: [],
+    env: { HYPIT_WHISPERX_NLTK_DATA: nltkData },
+  };
+  const managedStart: ManagedProgramCommand = {
+    command: pythonEnvironmentCommand(environment, "hypit-whisperx-service"),
+    args: [],
+    env: serviceEnvironment,
+  };
+  const installationProbe = async (): Promise<ManagedProgramState> => {
+    const result = await run(check);
+    if (!result.ok) return { state: "down", detail: `${check.command} is not ready: ${result.output}` };
+    let report: {
+      readonly protocol?: unknown;
+      readonly serviceVersion?: unknown;
+      readonly packages?: Record<string, unknown>;
+    };
+    try {
+      report = JSON.parse(result.output) as typeof report;
+    } catch {
+      return { state: "mismatch", detail: `${check.command} returned an invalid installation report` };
+    }
+    const differs = [
+      report.protocol === expected.protocol ? undefined : `protocol is ${String(report.protocol)}`,
+      report.serviceVersion === expected.serviceVersion ? undefined : `serviceVersion is ${String(report.serviceVersion)}`,
+      report.packages?.whisperx === expected.whisperxVersion ? undefined : `whisperx is ${String(report.packages?.whisperx)}`,
+    ].filter((item): item is string => item !== undefined);
+    return differs.length === 0
+      ? { state: "ready" }
+      : { state: "mismatch", detail: differs.join("; ") };
+  };
   return {
     id: "whisperx",
-    ...(prepare === undefined ? {} : { prepare }),
-    ...(start === undefined ? {} : { start }),
+    ...(managed ? {
+      stateRoot,
+      installation: {
+        probe: installationProbe,
+        commands: [{
+          command: "uv",
+          args: ["sync", "--project", localWhisperXManagedProject, "--frozen", "--no-editable"],
+          env: { UV_PROJECT_ENVIRONMENT: environment },
+        }, {
+          command: pythonEnvironmentCommand(environment, "hypit-whisperx-prepare"),
+          args: ["--nltk-data", nltkData],
+          env: { HYPIT_WHISPERX_NLTK_DATA: nltkData },
+        }],
+      },
+    } : {}),
+    start: customStart ?? managedStart,
     async probe(): Promise<ManagedProgramState> {
       let health: Record<string, unknown>;
       try {

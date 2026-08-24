@@ -7,7 +7,8 @@ It exists to exercise the vocabulary: every Track kind declared once, in one
 Source, so a change that breaks one of them breaks something a reader can see.
 `hypit check` proves it is legal, and the graph-shape tests read it.
 
-`studio.svrun` supplies two materialized Semantic Takes and one caption plan, so
+`studio.svrun` supplies two materialized Semantic Takes and the deterministic Script-owned caption
+document, so
 every Studio projection is explicit and opening it invokes no Provider:
 
 ```bash

@@ -12,52 +12,14 @@ import type {
 } from "@hypit/markup";
 import type { ModuleRef } from "@hypit/protocol";
 import { parseScript } from "@hypit/script";
+import type { StudioObservedValue, StudioPlacement } from "@hypit/studio-adapter";
 
 import type { Range } from "./shared.js";
 
-export type ObservedValue = {
-  readonly id: string;
-  readonly type: { readonly module: ModuleRef; readonly name: string };
-  readonly value: unknown;
-};
+export type ObservedValue = StudioObservedValue;
 
 /** One authored element, where it was written, and what it produced. */
-export type Placement = {
-  readonly tag: string;
-  /** Resolved package owner; authored aliases are presentation, not identity. */
-  readonly module: ModuleRef;
-  /** Canonical Surface declaration name, independent of the alias used in Source. */
-  readonly surface: string;
-  readonly id?: string;
-  readonly range: Range;
-  /** Records this element sealed, so a value can be traced back to its tag. */
-  readonly records: readonly string[];
-  /** Inline author values sealed for this exact element. */
-  readonly values: readonly ObservedValue[];
-  /** Graph outputs this element declared, named as the author would write them. */
-  readonly outputs: readonly string[];
-  /** Exact Surface output port to graph-output mapping. */
-  readonly outputPorts: readonly { readonly name: string; readonly ref: string }[];
-  /** Children the author wrote inside it, so a Clip can point at its own tag. */
-  readonly children: readonly {
-    readonly tag: string;
-    readonly id?: string;
-    readonly range: Range;
-    readonly attributes: Readonly<Record<string, string>>;
-    /** What the child itself points at, which is how it is placed. */
-    readonly references: readonly string[];
-    readonly referenceAttributes: Readonly<Record<string, string>>;
-    readonly referenceTypes: Readonly<Record<string, string>>;
-    /** Inline author values sealed for this exact child. */
-    readonly values: readonly ObservedValue[];
-  }[];
-  /** What the author wrote on it: plain text as written, references by path. */
-  readonly attributes: Readonly<Record<string, string>>;
-  readonly referenceAttributes: Readonly<Record<string, string>>;
-  readonly referenceTypes: Readonly<Record<string, string>>;
-  /** Paths this element and its children reference, in the order written. */
-  readonly references: readonly string[];
-};
+export type Placement = StudioPlacement;
 
 export type Observations = {
   readonly placements: readonly Placement[];
@@ -152,6 +114,8 @@ export function createObserver(
           placements.push({
             tag: input.element.name,
             module: { ...module },
+            sourcePath: input.sourceName,
+            attributeValueRanges: input.element.attributeValueRanges ?? {},
             surface: found.surface,
             ...(typeof id === "string" ? { id } : {}),
             range: { start: input.element.range.start, end: input.element.range.end },
@@ -175,6 +139,8 @@ export function createObserver(
                 const childId = child.attributes.id;
                 return {
                   tag: child.name,
+                  sourcePath: input.sourceName,
+                  attributeValueRanges: child.attributeValueRanges ?? {},
                   ...(typeof childId === "string" ? { id: childId } : {}),
                   range: { start: child.range.start, end: child.range.end },
                   attributes: written(child),
@@ -251,19 +217,21 @@ function harvestScript(input: RawInput, into: Record<string, unknown>[]): void {
     into.push({
       format: "hypit.script-source-map@1",
       record: id,
+      sourcePath: input.sourceName,
       range: { start: input.openingStart, end: end + closing.length },
+      content: { start: input.contentStart, end },
       segments: parsed.segments.map((segment) => ({ id: segment.id, range: segment.range })),
       selections: parsed.selections.map((selection) => ({
         id: selection.id,
-        occurrences: selection.occurrences.map((held) => ({
-          occurrence: held.occurrence, open: held.open.range, close: held.close.range,
-        })),
+        startAnchorId: selection.startAnchorId,
+        endAnchorId: selection.endAnchorId,
+        open: selection.open.range,
+        close: selection.close.range,
       })),
       moments: parsed.moments.map((moment) => ({
         id: moment.id,
-        occurrences: moment.occurrences.map((held) => ({
-          occurrence: held.occurrence, range: held.range,
-        })),
+        anchorId: moment.anchorId,
+        range: moment.range,
       })),
       tokens: parsed.tokens.map((token) => ({ id: token.id, range: token.range })),
     });

@@ -39,6 +39,7 @@ function distribution(calls: string[], reports: readonly CliManagedProgramReport
     bootstrapPackages: [],
     openRuntimeHost: async (path: string) => ({
       profile: path,
+      prepare: async () => [],
       controller: async () => controller(path, calls, reports),
     }),
   } as unknown as CliDistribution;
@@ -95,6 +96,7 @@ test("runtime up validates the Runtime before it starts Programs", async () => {
     ...base,
     openRuntimeHost: async (path: string) => ({
       profile: path,
+      prepare: async () => [],
       controller: async () => controller(path, calls),
       createRuntime: async () => { throw new Error("Runtime Profile conflict"); },
     }),

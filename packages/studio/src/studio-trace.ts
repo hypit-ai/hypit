@@ -1,13 +1,9 @@
 import type { CompiledSource } from "./compile.js";
 import type { Placement } from "./observe.js";
-import {
-  classifyStudioOutput,
-  studioRealizationPorts,
-  studioDependencyRole,
-} from "./studio-registry.js";
-import type { StudioProjectionRole } from "./studio-registry.js";
+import type { StudioAdapterRegistry } from "./studio-registry.js";
+import type { StudioProjectionRole, StudioTrackTrace } from "@hypit/studio-adapter";
 
-export type { StudioProjectionRole } from "./studio-registry.js";
+export type { StudioProjectionRole } from "@hypit/studio-adapter";
 
 export type StudioTraceDependency = {
   readonly name: string;
@@ -15,14 +11,7 @@ export type StudioTraceDependency = {
   readonly type: string;
 };
 
-export type StudioTrace = {
-  readonly placement?: string;
-  readonly surface?: string;
-  readonly module?: string;
-  readonly authoredId?: string;
-  readonly outputPorts: readonly { readonly name: string; readonly ref: string; readonly type?: string }[];
-  readonly references: readonly StudioTraceDependency[];
-};
+export type StudioTrace = StudioTrackTrace;
 
 export type StudioOutput = {
   readonly name: string;
@@ -53,7 +42,11 @@ export function lastPlacementTag(source: CompiledSource, ref: string): string {
   return lastTag(placementFor(source, ref));
 }
 
-export function roleFor(source: CompiledSource, ref: string): StudioProjectionRole | undefined {
+export function roleFor(
+  registry: StudioAdapterRegistry,
+  source: CompiledSource,
+  ref: string,
+): StudioProjectionRole | undefined {
   const output = outputFor(source, ref);
   if (output === undefined) return undefined;
   const placement = placementFor(source, ref);
@@ -61,7 +54,7 @@ export function roleFor(source: CompiledSource, ref: string): StudioProjectionRo
     const found = outputFor(source, candidate);
     return found === undefined ? [] : [found.type];
   }) ?? [];
-  return classifyStudioOutput(output.type, placement, placementTypes);
+  return registry.classifyOutput(output.type, placement, placementTypes);
 }
 
 export function traceFor(source: CompiledSource, ref: string): StudioTrace {
@@ -92,7 +85,11 @@ export function traceFor(source: CompiledSource, ref: string): StudioTrace {
 }
 
 /** Additional same-Surface realizations an adapter needs beyond the terminal Track. */
-export function tracedStudioRealizations(source: CompiledSource, ref: string): readonly string[] {
+export function tracedStudioRealizations(
+  registry: StudioAdapterRegistry,
+  source: CompiledSource,
+  ref: string,
+): readonly string[] {
   const output = outputFor(source, ref);
   const placement = placementFor(source, ref);
   if (output === undefined || placement === undefined) return [];
@@ -100,7 +97,7 @@ export function tracedStudioRealizations(source: CompiledSource, ref: string): r
     const found = outputFor(source, port.ref);
     return found === undefined ? [] : [found.type];
   });
-  const ports = new Set(studioRealizationPorts(output.type, placement, siblingTypes));
+  const ports = new Set(registry.realizationPorts(output.type, placement, siblingTypes));
   return placement.outputPorts
     .filter((port) => ports.has(port.name))
     .flatMap((port) => {
@@ -110,13 +107,14 @@ export function tracedStudioRealizations(source: CompiledSource, ref: string): r
 }
 
 export function tracedRealizations(
+  registry: StudioAdapterRegistry,
   source: CompiledSource,
   ref: string,
 ): readonly { ref: string; role: StudioProjectionRole }[] {
-  const role = roleFor(source, ref);
+  const role = roleFor(registry, source, ref);
   if (role === undefined) return [];
   return traceFor(source, ref).references.flatMap((dependency) => {
-    const dependencyRole = studioDependencyRole(role, dependency.type);
+    const dependencyRole = registry.dependencyRole(role, dependency.type);
     return dependencyRole === undefined ? [] : [{ ref: dependency.ref, role: dependencyRole }];
   });
 }

@@ -8,10 +8,11 @@ import type { ManagedProgram, ManagedProgramCommand, ManagedProgramState } from 
 
 import { declaredManagedPrograms } from "./config.js";
 import type { LoadRuntimeConfigOptions } from "./config.js";
+import { processAlive, stopProcessTree } from "./process-control.js";
 
 export type ManagedProgramAction =
   | "already-running"
-  | "prepared"
+  | "installed"
   | "started"
   | "stopped"
   | "not-ours"
@@ -33,7 +34,7 @@ export type ManagedProgramReport = {
 
 export type ManagedProgramProgress = {
   readonly id: string;
-  readonly phase: "checking" | "preparing" | "starting" | "waiting" | "ready";
+  readonly phase: "checking" | "installing" | "starting" | "waiting" | "ready";
 };
 
 export type ManagedProgramOptions = LoadRuntimeConfigOptions & {
@@ -56,8 +57,8 @@ function distinct(programs: readonly { instance: string; program: ManagedProgram
   return [...unique.values()];
 }
 
-function directory(root: string): string {
-  return join(root, "programs");
+function directory(root: string, program: ManagedProgram): string {
+  return program.stateRoot ?? join(root, "programs", program.id);
 }
 
 const LOG_ROTATE_BYTES = 10 * 1024 * 1024;
@@ -79,11 +80,11 @@ async function rotateLog(path: string): Promise<void> {
   await rename(path, previous);
 }
 
-async function readPid(root: string, id: string): Promise<number | undefined> {
+async function readPid(root: string, program: ManagedProgram): Promise<number | undefined> {
   try {
-    const text = await readFile(join(directory(root), `${id}.pid`), "utf8");
+    const text = await readFile(join(directory(root, program), "process.pid"), "utf8");
     const pid = Number.parseInt(text.trim(), 10);
-    if (!Number.isSafeInteger(pid) || pid < 1) throw new Error(`External program ${id} pid file is invalid`);
+    if (!Number.isSafeInteger(pid) || pid < 1) throw new Error(`External program ${program.id} pid file is invalid`);
     return pid;
   } catch (error) {
     if (nodeError(error, "ENOENT")) return undefined;
@@ -91,29 +92,15 @@ async function readPid(root: string, id: string): Promise<number | undefined> {
   }
 }
 
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return error instanceof Error && "code" in error && error.code === "EPERM";
-  }
-}
-
-function signal(pid: number, name: NodeJS.Signals): "sent" | "gone" | "denied" {
-  try {
-    process.kill(pid, name);
-    return "sent";
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ESRCH") return "gone";
-    if (error instanceof Error && "code" in error && error.code === "EPERM") return "denied";
-    throw error;
-  }
-}
-
 function run(root: string, command: ManagedProgramCommand): Promise<{ ok: boolean; detail: string }> {
   return new Promise((resolve) => {
-    const child = spawn(command.command, [...command.args], { cwd: root, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(command.command, [...command.args], {
+      cwd: command.cwd ?? root,
+      env: { ...process.env, ...command.env },
+      shell: false,
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     let output = "";
     child.stdout.on("data", (chunk: Buffer) => { output += chunk.toString(); });
     child.stderr.on("data", (chunk: Buffer) => { output += chunk.toString(); });
@@ -133,7 +120,7 @@ function run(root: string, command: ManagedProgramCommand): Promise<{ ok: boolea
 async function waitForReady(program: ManagedProgram, pid: number, maxWaitMs: number): Promise<ManagedProgramState> {
   const deadline = Date.now() + maxWaitMs;
   let state = await program.probe();
-  while (state.state === "down" && alive(pid) && Date.now() < deadline) {
+  while (state.state === "down" && processAlive(pid) && Date.now() < deadline) {
     await sleep(1000);
     state = await program.probe();
   }
@@ -159,29 +146,41 @@ async function bringUp(
     return { ...base, action: "unchanged", state: initial };
   }
 
-  if (program.prepare !== undefined) {
-    onProgress?.({ id: program.id, phase: "preparing" });
-    const prepared = await run(root, program.prepare);
-    if (!prepared.ok) {
-      return { ...base, action: "unchanged", state: initial, detail: `${program.prepare.command} failed: ${prepared.detail}` };
+  let installed = false;
+  if (program.installation !== undefined) {
+    const installation = await program.installation.probe();
+    if (installation.state !== "ready") {
+      onProgress?.({ id: program.id, phase: "installing" });
+      await mkdir(directory(root, program), { recursive: true });
+      for (const command of program.installation.commands) {
+        const result = await run(root, command);
+        if (!result.ok) {
+          return { ...base, action: "unchanged", state: initial, detail: `${command.command} failed: ${result.detail}` };
+        }
+      }
+      const after = await program.installation.probe();
+      if (after.state !== "ready") {
+        return { ...base, action: "unchanged", state: initial, detail: `installation is ${after.state}: ${after.detail}` };
+      }
+      installed = true;
     }
   }
   if (program.start === undefined) {
-    // Nothing to keep running: preparing was the whole job, and the probe says
-    // whether it worked.
+    // Nothing to keep running: installation was the whole job.
     const state = await program.probe();
     if (state.state === "ready") onProgress?.({ id: program.id, phase: "ready" });
-    return { ...base, action: state.state === "ready" ? "prepared" : "unchanged", state };
+    return { ...base, action: state.state === "ready" && installed ? "installed" : "unchanged", state };
   }
 
   onProgress?.({ id: program.id, phase: "starting" });
-  await mkdir(directory(root), { recursive: true });
-  const logPath = join(directory(root), `${program.id}.log`);
+  await mkdir(directory(root, program), { recursive: true });
+  const logPath = join(directory(root, program), "program.log");
   await rotateLog(logPath);
   const log = await open(logPath, "a");
   try {
     const child = spawn(program.start.command, [...program.start.args], {
-      cwd: root,
+      cwd: program.start.cwd ?? root,
+      env: { ...process.env, ...program.start.env },
       shell: false,
       // Outliving this process is the point, and each platform grants that differently. POSIX
       // wants its own session. Windows already gives an unreferenced child its own lifetime, and
@@ -197,20 +196,19 @@ async function bringUp(
     if (child.pid === undefined) {
       return { ...base, action: "unchanged", state: initial, detail: `${program.start.command} did not start`, logPath };
     }
-    await writeFile(join(directory(root), `${program.id}.pid`), `${child.pid}\n`);
     onProgress?.({ id: program.id, phase: "waiting" });
     const state = await waitForReady(program, child.pid, maxWaitMs);
     if (state.state === "ready") onProgress?.({ id: program.id, phase: "ready" });
-    const exited = state.state === "down" && !alive(child.pid);
-    if (exited) await rm(join(directory(root), `${program.id}.pid`), { force: true });
+    const alive = processAlive(child.pid);
+    if (alive) await writeFile(join(directory(root, program), "process.pid"), `${child.pid}\n`);
     return {
       ...base,
-      action: state.state === "ready" ? "started" : "unchanged",
+      action: state.state === "ready" ? (alive ? "started" : "already-running") : "unchanged",
       state,
-      pid: child.pid,
+      ...(alive ? { pid: child.pid } : {}),
       logPath,
       ...(state.state === "ready" ? {} : {
-        detail: exited ? `process exited; see ${logPath}` : `see ${logPath}`,
+        detail: alive ? `see ${logPath}` : `process exited; see ${logPath}`,
       }),
     };
   } finally {
@@ -218,21 +216,21 @@ async function bringUp(
   }
 }
 
-/** Prepare and start every external program the Runtime Profile implies. */
+/** Install when needed and start every external program the Runtime Profile implies. */
 export async function bringManagedProgramsUp(
   path: string,
   options: ManagedProgramOptions = {},
 ): Promise<{ readonly dataRoot: string; readonly programs: readonly ManagedProgramReport[] }> {
   const { dataRoot, programs } = await declaredManagedPrograms(path, options);
-  // A fresh Runtime has no data directory yet. Managed commands use it as
-  // their working directory, so create it before the first prepare/start.
+  // A fresh Runtime has no data directory yet. External commands may use it as
+  // their working directory, so create it before the first install/start.
   await mkdir(dataRoot, { recursive: true });
   const reports = await Promise.all(distinct(programs).map(async ({ program, instances }) =>
     await bringUp(dataRoot, program, instances, options.maxWaitMs ?? 300_000, options.onProgress)));
   return { dataRoot, programs: reports };
 }
 
-/** Stop the programs this project started. A program it did not start is left alone. */
+/** Stop programs whose machine-level process records say Hypit started them. */
 export async function takeManagedProgramsDown(
   path: string,
   options: ManagedProgramOptions = {},
@@ -240,17 +238,17 @@ export async function takeManagedProgramsDown(
   const { dataRoot, programs } = await declaredManagedPrograms(path, options);
   const reports = await Promise.all(distinct(programs).map(async ({ program, instances }): Promise<ManagedProgramReport> => {
     const base = { id: program.id, instances };
-    const pid = await readPid(dataRoot, program.id);
-    if (pid === undefined || !alive(pid)) {
-      if (pid !== undefined) await rm(join(directory(dataRoot), `${program.id}.pid`), { force: true });
+    const pid = await readPid(dataRoot, program);
+    if (pid === undefined || !processAlive(pid)) {
+      if (pid !== undefined) await rm(join(directory(dataRoot, program), "process.pid"), { force: true });
       const state = await program.probe();
       return state.state === "down"
         ? { ...base, action: "nothing-to-stop", state }
         // Someone else's process, or one started by hand. Killing it is not this
         // command's business; saying so is.
-        : { ...base, action: "not-ours", state, detail: `${program.id} is running but this project did not start it` };
+        : { ...base, action: "not-ours", state, detail: `${program.id} is running without a Hypit process record` };
     }
-    const term = signal(pid, "SIGTERM");
+    const term = await stopProcessTree(pid);
     if (term === "denied") {
       return {
         ...base,
@@ -261,24 +259,37 @@ export async function takeManagedProgramsDown(
       };
     }
     if (term === "gone") {
-      await rm(join(directory(dataRoot), `${program.id}.pid`), { force: true });
+      await rm(join(directory(dataRoot, program), "process.pid"), { force: true });
       const state = await program.probe();
       return state.state === "down"
         ? { ...base, action: "nothing-to-stop", state }
         : { ...base, action: "not-ours", state, detail: `${program.id} is now served by another process` };
     }
     const deadline = Date.now() + 15_000;
-    while (alive(pid) && Date.now() < deadline) await sleep(200);
-    if (alive(pid) && signal(pid, "SIGKILL") === "denied") {
-      return {
-        ...base,
-        action: "unchanged",
-        state: await program.probe(),
-        pid,
-        detail: `process ${pid} ignored SIGTERM and this environment cannot force-stop it`,
-      };
+    while (processAlive(pid) && Date.now() < deadline) await sleep(200);
+    if (processAlive(pid)) {
+      if (await stopProcessTree(pid, true) === "denied") {
+        return {
+          ...base,
+          action: "unchanged",
+          state: await program.probe(),
+          pid,
+          detail: `process ${pid} ignored graceful termination and cannot be force-stopped`,
+        };
+      }
+      const forceDeadline = Date.now() + 2_000;
+      while (processAlive(pid) && Date.now() < forceDeadline) await sleep(50);
+      if (processAlive(pid)) {
+        return {
+          ...base,
+          action: "unchanged",
+          state: await program.probe(),
+          pid,
+          detail: `process ${pid} remained alive after forced termination`,
+        };
+      }
     }
-    await rm(join(directory(dataRoot), `${program.id}.pid`), { force: true });
+    await rm(join(directory(dataRoot, program), "process.pid"), { force: true });
     return { ...base, action: "stopped", state: await program.probe(), pid };
     }));
   return { dataRoot, programs: reports };
@@ -292,8 +303,8 @@ export async function reportManagedPrograms(
   const { dataRoot, programs } = await declaredManagedPrograms(path, options);
   const reports = await Promise.all(distinct(programs).map(async ({ program, instances }): Promise<ManagedProgramReport> => {
     const state = await program.probe();
-    const pid = await readPid(dataRoot, program.id);
-    const logPath = join(directory(dataRoot), `${program.id}.log`);
+    const pid = await readPid(dataRoot, program);
+    const logPath = join(directory(dataRoot, program), "program.log");
     let hasLog = false;
     try {
       await stat(logPath);
@@ -305,7 +316,7 @@ export async function reportManagedPrograms(
       id: program.id,
       instances,
       state,
-      ...(pid !== undefined && alive(pid) ? { pid } : {}),
+      ...(pid !== undefined && processAlive(pid) ? { pid } : {}),
       ...(hasLog ? { logPath } : {}),
     };
   }));

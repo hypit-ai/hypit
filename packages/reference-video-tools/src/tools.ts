@@ -1,4 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
 import type { Part } from "@google/genai";
 import { access, appendFile, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
@@ -217,6 +216,15 @@ async function defaultGenerate(model: string): Promise<GenerateText> {
   let parsed: unknown;
   try { parsed = JSON.parse(credentials); } catch { throw new Error("GOOGLE_APPLICATION_CREDENTIALS_JSON is not valid JSON"); }
   assert(parsed !== null && typeof parsed === "object" && !Array.isArray(parsed), "Google credentials must be an object");
+  let GoogleGenAI: typeof import("@google/genai")["GoogleGenAI"];
+  try {
+    ({ GoogleGenAI } = await import("@google/genai"));
+  } catch (error) {
+    throw new Error(
+      "Gemini observation requires @google/genai. Install it once with: hypit packages install @google/genai@1.52.0",
+      { cause: error },
+    );
+  }
   const client = new GoogleGenAI({
     vertexai: true,
     project,
@@ -729,7 +737,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       // them rather than ahead of them.
       const transcribing = state.transcript?.status === "complete" && !redoTranscript
         ? Promise.resolve(state.transcript)
-        : prepareTranscript(reference, videoPath, root, info.hasAudio, redoTranscript);
+        : prepareTranscript(reference, videoPath, root, info.hasAudio, "en", redoTranscript);
       const { ask, pending } = await askerFor(observer, state);
       const whole = [analysisVideo];
       const [people, voices, systems, places] = await Promise.all([

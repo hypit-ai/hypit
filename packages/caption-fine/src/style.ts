@@ -115,6 +115,7 @@ function glyphPaint(recipe: SvsRecipe, prefix: "" | "active-", base?: FineCaptio
       offsetXPx: number(recipe, `${prefix}shadow-x`, baseShadow?.offsetXPx ?? 0),
       offsetYPx: number(recipe, `${prefix}shadow-y`, baseShadow?.offsetYPx ?? 0),
       blurPx: number(recipe, `${prefix}shadow-blur`, baseShadow?.blurPx ?? 0),
+      spreadPx: number(recipe, `${prefix}shadow-spread`, baseShadow?.spreadPx ?? 0),
     },
     longShadow: {
       color: color(recipe, `${prefix}long-shadow-color`, baseLongShadow?.color ?? "#000000"),
@@ -126,6 +127,7 @@ function glyphPaint(recipe: SvsRecipe, prefix: "" | "active-", base?: FineCaptio
       color: color(recipe, `${prefix}glow-color`, baseGlow?.color ?? "#FFFFFF"),
       opacity: number(recipe, `${prefix}glow-opacity`, baseGlow?.opacity ?? 0),
       blurPx: number(recipe, `${prefix}glow-blur`, baseGlow?.blurPx ?? 0),
+      spreadPx: number(recipe, `${prefix}glow-spread`, baseGlow?.spreadPx ?? 0),
     },
   };
 }
@@ -151,10 +153,12 @@ function assertPaint(value: FineCaptionGlyphPaint, label: string): void {
   for (const [name, metric] of [
     ["stroke width", value.stroke.widthPx], ["shadow blur", value.shadow.blurPx],
     ["long shadow distance", value.longShadow.distancePx], ["glow blur", value.glow.blurPx],
+    ["glow spread", value.glow.spreadPx],
   ] as const) {
     if (!Number.isFinite(metric) || metric < 0) throw new Error(`${label} ${name} is invalid`);
   }
-  if (!Number.isFinite(value.shadow.offsetXPx) || !Number.isFinite(value.shadow.offsetYPx)) {
+  if (!Number.isFinite(value.shadow.offsetXPx) || !Number.isFinite(value.shadow.offsetYPx)
+    || !Number.isFinite(value.shadow.spreadPx)) {
     throw new Error(`${label} shadow offset is invalid`);
   }
   if (!Number.isFinite(value.longShadow.angleDeg)) throw new Error(`${label} long shadow angle is invalid`);
@@ -184,19 +188,29 @@ export function fineCaptionParameters(
       x: number(recipe, "x"),
       y: number(recipe, "y"),
       width: number(recipe, "width"),
+      ...(Object.hasOwn(recipe.properties, "height") ? { height: number(recipe, "height") } : {}),
       anchorX: choice(recipe, "anchor-x", ["left", "center", "right"] as const, "left"),
       anchorY: choice(recipe, "anchor-y", ["top", "center", "bottom"] as const, "top"),
     },
     layout: {
       textAlign: choice(recipe, "align", ["left", "center", "right"] as const),
+      blockAlign: choice(recipe, "block-align", ["start", "center", "end"] as const, "center"),
       direction: choice(recipe, "direction", ["ltr", "rtl"] as const, "ltr"),
+      inlineSize: choice(recipe, "inline-size", ["hug", "fixed"] as const, "hug"),
+      wrap: choice(recipe, "wrap", ["word", "grapheme"] as const, "word"),
+      overflow: choice(recipe, "overflow", ["visible", "clip"] as const, "visible"),
+      ...(Object.hasOwn(recipe.properties, "max-lines") ? { maxLines: integer(recipe, "max-lines") } : {}),
+      ...(Object.hasOwn(recipe.properties, "max-words-per-line")
+        ? { maxWordsPerLine: integer(recipe, "max-words-per-line") } : {}),
       lineHeight: number(recipe, "line-height"),
       letterSpacingPx: number(recipe, "letter-spacing", 0),
       wordGapPx: number(recipe, "word-gap", fontSizePx * 0.25),
     },
     typography: {
       fontSizePx,
-      textTransform: choice(recipe, "text-transform", ["none", "uppercase", "lowercase"] as const, "none"),
+      kerning: choice(recipe, "kerning", ["auto", "normal", "none"] as const, "auto"),
+      variantCaps: choice(recipe, "caps", ["normal", "small-caps", "all-small-caps"] as const, "normal"),
+      textTransform: choice(recipe, "text-transform", ["none", "uppercase", "lowercase", "capitalize"] as const, "none"),
       exactFonts: [...exactFonts],
     },
     basePaint,
@@ -220,6 +234,14 @@ export function fineCaptionParameters(
       paddingXPx: pad.x,
       paddingYPx: pad.y,
       radiusPx: number(recipe, "radius"),
+      shadow: {
+        color: color(recipe, "cue-shadow-color", "#000000"),
+        opacity: number(recipe, "cue-shadow-opacity", 0),
+        offsetXPx: number(recipe, "cue-shadow-x", 0),
+        offsetYPx: number(recipe, "cue-shadow-y", 0),
+        blurPx: number(recipe, "cue-shadow-blur", 0),
+        spreadPx: number(recipe, "cue-shadow-spread", 0),
+      },
     },
     karaoke: {
       mode: choice(recipe, "karaoke", ["off", "current", "trail"] as const, "off"),
@@ -257,6 +279,11 @@ export function fineCaptionParameters(
       loopPeriodFrames: integer(recipe, "loop-period-frames", 12),
       loopIntensity: number(recipe, "loop-intensity", 1),
     },
+    timing: {
+      leadFrames: integer(recipe, "lead-frames", 0),
+      tailFrames: integer(recipe, "tail-frames", 0),
+      handoff: choice(recipe, "handoff", ["cut", "overlap"] as const, "cut"),
+    },
   };
   assertFineCaptionParameters(parameters);
   return parameters;
@@ -276,15 +303,21 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
     value.motion.cueEnterFrames, value.motion.cueExitFrames, value.motion.atomEnterFrames, value.motion.atomExitFrames,
     value.motion.activeResponseFrames,
     value.motion.slideDistancePx, value.motion.loopPeriodFrames, value.motion.loopIntensity,
+    value.timing.leadFrames, value.timing.tailFrames,
+    value.cueBox.shadow.blurPx,
   ];
   if (nonNegative.some((item) => !Number.isFinite(item) || item < 0)
     || value.placement.x > 1 || value.placement.y > 1 || value.placement.width <= 0 || value.placement.width > 1
+    || (value.placement.height !== undefined && (!Number.isFinite(value.placement.height) || value.placement.height <= 0 || value.placement.height > 1))
     || value.typography.fontSizePx <= 0 || value.layout.lineHeight <= 0
     || !Number.isSafeInteger(value.motion.cueEnterFrames) || !Number.isSafeInteger(value.motion.cueExitFrames)
     || !Number.isSafeInteger(value.motion.atomEnterFrames) || !Number.isSafeInteger(value.motion.atomExitFrames)
     || !Number.isSafeInteger(value.motion.loopPeriodFrames)
     || !Number.isSafeInteger(value.motion.activeResponseFrames)
     || !Number.isSafeInteger(value.activeBox.transitionFrames) || value.motion.loopPeriodFrames <= 0
+    || !Number.isSafeInteger(value.timing.leadFrames) || !Number.isSafeInteger(value.timing.tailFrames)
+    || (value.layout.maxLines !== undefined && (!Number.isSafeInteger(value.layout.maxLines) || value.layout.maxLines <= 0))
+    || (value.layout.maxWordsPerLine !== undefined && (!Number.isSafeInteger(value.layout.maxWordsPerLine) || value.layout.maxWordsPerLine <= 0))
     || value.motion.activeScale <= 0
     || !Number.isFinite(value.motion.activeScale) || !Number.isFinite(value.layout.letterSpacingPx)) {
     throw new Error("Fine Caption parameters contain invalid numeric bounds");
@@ -297,8 +330,15 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
     if (faces.has(identity)) throw new Error("Fine Caption exact Font stack contains a duplicate face");
     faces.add(identity);
   }
+  if (value.layout.maxLines !== undefined && value.layout.overflow !== "clip") {
+    throw new Error("Fine Caption max-lines requires overflow: clip");
+  }
   assertColor(value.cueBox.background, "Fine Caption background");
   assertColor(value.cueBox.borderColor, "Fine Caption border color");
+  assertColor(value.cueBox.shadow.color, "Fine Caption Cue shadow color");
+  assertOpacity(value.cueBox.shadow.opacity, "Fine Caption Cue shadow opacity");
+  if (![value.cueBox.shadow.offsetXPx, value.cueBox.shadow.offsetYPx, value.cueBox.shadow.spreadPx]
+    .every(Number.isFinite)) throw new Error("Fine Caption Cue shadow contains an invalid metric");
   assertColor(value.underline.color, "Fine Caption underline color");
   assertColor(value.activeUnderline.color, "Fine Caption active underline color");
   assertColor(value.activeBox.background, "Fine Caption active box background");
@@ -312,22 +352,8 @@ export function fineCaptionStyle(
   recipe: SvsRecipe,
   exactFonts: readonly FontArtifactRef[],
 ): CaptionStyleIntent {
-  const minimumWords = integer(recipe, "cue-min-words");
-  const maximumWords = integer(recipe, "cue-max-words");
-  if (minimumWords <= 0 || maximumWords < minimumWords) {
-    throw new Error("Fine Caption Recipe Cue word bounds are invalid");
-  }
   return sealCaptionStyle({
-
     id,
-    planning: {
-      cue: {
-        minimumWords,
-        maximumWords,
-        instruction: `Split into complete semantic phrases of ${minimumWords} to ${maximumWords} display words. Never cut inside an Atom and avoid crossing punctuation. An indivisible Atom may exceed the requested maximum.`,
-      },
-      fields: [],
-    },
     rendering: {
       family: FINE_CAPTION_FAMILY,
       parameters: fineCaptionParameters(recipe, exactFonts),

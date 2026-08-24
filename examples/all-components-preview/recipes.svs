@@ -50,7 +50,6 @@
   }
 
   caption.base {
-    cue-min-words: 1; cue-max-words: 3;
     stack-order: 70; x: 0.68; y: 0.56; width: 0.6; anchor-x: center; anchor-y: top;
     size: 50; line-height: 1.05; align: center;
     fill: #FFFFFF; stroke-color: #05060A; stroke-width: 2;
