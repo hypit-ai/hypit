@@ -1,3 +1,4 @@
+import type { TimedCaptionUnit } from "@hypit/caption";
 import type { FontArtifactRef } from "@hypit/media";
 
 export type FineCaptionGlyphPaint = {
@@ -18,6 +19,7 @@ export type FineCaptionGlyphPaint = {
     readonly offsetXPx: number;
     readonly offsetYPx: number;
     readonly blurPx: number;
+    readonly spreadPx: number;
   };
   readonly longShadow: {
     readonly color: string;
@@ -29,6 +31,7 @@ export type FineCaptionGlyphPaint = {
     readonly color: string;
     readonly opacity: number;
     readonly blurPx: number;
+    readonly spreadPx: number;
   };
 };
 
@@ -89,19 +92,28 @@ export type FineCaptionParameters = {
     readonly x: number;
     readonly y: number;
     readonly width: number;
+    readonly height?: number;
     readonly anchorX: "left" | "center" | "right";
     readonly anchorY: "top" | "center" | "bottom";
   };
   readonly layout: {
     readonly textAlign: "left" | "center" | "right";
+    readonly blockAlign: "start" | "center" | "end";
     readonly direction: "ltr" | "rtl";
+    readonly inlineSize: "hug" | "fixed";
+    readonly wrap: "word" | "grapheme";
+    readonly overflow: "visible" | "clip";
+    readonly maxLines?: number;
+    readonly maxWordsPerLine?: number;
     readonly lineHeight: number;
     readonly letterSpacingPx: number;
     readonly wordGapPx: number;
   };
   readonly typography: {
     readonly fontSizePx: number;
-    readonly textTransform: "none" | "uppercase" | "lowercase";
+    readonly kerning: "auto" | "normal" | "none";
+    readonly variantCaps: "normal" | "small-caps" | "all-small-caps";
+    readonly textTransform: "none" | "uppercase" | "lowercase" | "capitalize";
     readonly exactFonts: readonly FontArtifactRef[];
   };
   readonly basePaint: FineCaptionGlyphPaint;
@@ -115,6 +127,14 @@ export type FineCaptionParameters = {
     readonly paddingXPx: number;
     readonly paddingYPx: number;
     readonly radiusPx: number;
+    readonly shadow: {
+      readonly color: string;
+      readonly opacity: number;
+      readonly offsetXPx: number;
+      readonly offsetYPx: number;
+      readonly blurPx: number;
+      readonly spreadPx: number;
+    };
   };
   readonly karaoke: {
     readonly mode: "off" | "current" | "trail";
@@ -140,4 +160,30 @@ export type FineCaptionParameters = {
     readonly loopPeriodFrames: number;
     readonly loopIntensity: number;
   };
+  /**
+   * Public rules for projecting semantic Cue time into its visible envelope.
+   * The renderer never expands a Cue on its own; the package's schedule
+   * Producer resolves these rules before rendering.
+   */
+  readonly timing: {
+    readonly leadFrames: number;
+    readonly tailFrames: number;
+    readonly handoff: "cut" | "overlap";
+  };
+};
+
+export type FineCaptionScheduledCue = {
+  readonly id: string;
+  readonly styleId: string;
+  readonly semanticStartFrame: number;
+  readonly semanticEndFrameExclusive: number;
+  readonly visibleStartFrame: number;
+  readonly visibleEndFrameExclusive: number;
+  readonly units: readonly TimedCaptionUnit[];
+};
+
+/** Explicit projection consumed by the Fine renderer. */
+export type FineCaptionSchedule = {
+  readonly documentId: string;
+  readonly cues: readonly FineCaptionScheduledCue[];
 };
