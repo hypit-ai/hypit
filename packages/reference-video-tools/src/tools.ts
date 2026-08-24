@@ -10,13 +10,14 @@ import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface, SurfaceVocabulary } from "@hypit/markup";
 import { exactModelHostAbi } from "@hypit/model-kit";
 
-import { authorSource, invokedFrom, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath } from "./authoring.js";
+import { authorSource, invokedFrom, referenceRoot, referenceWords, renderElement, renderPreviews, spokenRange, standInSidecarPath } from "./authoring.js";
 import type { RenderElementInput, RenderPreviewsInput, SpokenRange, StandInFocus, StandInSidecar } from "./authoring.js";
 import { writePlaceholder } from "./placeholder.js";
 import { previewCheck, reconstructionCheck } from "./checks.js";
 import type { PreviewCheckInput, ReconstructionCheckInput } from "./checks.js";
 import {
   assert,
+  completelyStill,
   cutClip,
   cutFrame,
   ensureDir,
@@ -114,7 +115,6 @@ export type ReferenceVideoTools = {
 };
 
 type ToolOptions = {
-  readonly workspaceRoot?: string;
   readonly packageRoot?: string;
   readonly model?: string;
   readonly concurrency?: number;
@@ -136,8 +136,15 @@ function positiveEnv(name: string): number | undefined {
   return value;
 }
 
-function stateRoot(workspaceRoot: string, reference: string): string {
-  return join(workspaceRoot, ".hypit", "reference-video-tools", reference);
+/**
+ * Where one reference's prepared state lives.
+ *
+ * `referenceRoot` finds the Hypit tree from this module's own location, so the directory
+ * `prepare_reference` writes to is the directory every other command reads from, whichever directory
+ * the command was run in.
+ */
+function stateRoot(reference: string): string {
+  return join(referenceRoot(), reference);
 }
 
 /**
@@ -430,6 +437,9 @@ type RangeCut = {
   readonly rendered: string;
   readonly referenceTile: string;
   readonly renderedTile: string;
+  /** Where each side's single frame goes, for a stretch that turns out to hold one picture. */
+  readonly referenceStill: string;
+  readonly renderedStill: string;
   /** How long the cut runs, which is the duration both frame grids are sampled against. */
   readonly seconds: number;
   readonly referenceSeconds: number;
@@ -547,6 +557,8 @@ async function cutWordRange(
     rendered,
     referenceTile: join(dir, `${label}-reference-tile.jpg`),
     renderedTile: join(dir, `${label}-rendered-tile.jpg`),
+    referenceStill: join(dir, `${label}-reference-still.jpg`),
+    renderedStill: join(dir, `${label}-rendered-still.jpg`),
     seconds,
     referenceSeconds: round(referenceSeconds),
     renderedSeconds: round(renderedSeconds),
@@ -580,8 +592,7 @@ function publicPrepare(state: ReferenceState): PrepareResult {
 }
 
 export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceVideoTools {
-  const workspaceRoot = resolve(options.workspaceRoot ?? process.cwd());
-  const packageRoot = resolve(options.packageRoot ?? workspaceRoot);
+  const packageRoot = resolve(options.packageRoot ?? process.cwd());
   const model = options.model ?? process.env.GEMINI_MODEL?.trim() ?? "gemini-3.1-pro-preview";
   // Pacing is deployment policy, not author intent: it depends on the quota behind the credentials,
   // which the calling agent has no way to know. It is settable here and through the environment, and
@@ -596,9 +607,8 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
   const generator = async (): Promise<GenerateText> => generatorPromise ??= options.generate === undefined ? defaultGenerate(model) : Promise.resolve(options.generate);
 
   const loadState = async (reference: string): Promise<ReferenceState> => {
-    const path = join(stateRoot(workspaceRoot, reference), "state.json");
-    const state = await readJson<ReferenceState>(path);
-    assert(state !== undefined, `reference ${reference} was not prepared in ${workspaceRoot}`);
+    const state = await readJson<ReferenceState>(join(stateRoot(reference), "state.json"));
+    assert(state !== undefined, `reference ${reference} is not prepared under ${referenceRoot()}; run prepare_reference first`);
     return state;
   };
 
@@ -683,7 +693,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const file = await stat(videoPath).catch(() => undefined);
       assert(file?.isFile(), `video_path is not a file: ${videoPath}`);
       const reference = await referenceId(videoPath);
-      const root = stateRoot(workspaceRoot, reference);
+      const root = stateRoot(reference);
       const statePath = join(root, "state.json");
       let existing = await readJson<ReferenceState>(statePath);
       const redoMedia = input.redo === "media" || input.redo === "all";
@@ -951,7 +961,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
 
     async compare_reconstruction(input): Promise<Record<string, unknown>> {
       const state = await loadState(input.reference_id);
-      const root = stateRoot(workspaceRoot, state.reference_id);
+      const root = stateRoot(state.reference_id);
       const named = [input.shot_id, input.segment, input.selection].filter((value) => value !== undefined);
       assert(named.length === 1, "name exactly one of shot_id, segment and selection");
       const supplied = [input.image_path, input.video_path].filter((value) => value !== undefined);
@@ -993,12 +1003,32 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         stretchSeconds = cut.seconds;
       }
 
+      // A stretch that holds one picture on both sides has one picture to compare, and a clip or a
+      // grid of the same frame repeated says nothing the frame alone does not.
+      //
+      // Both sides are measured, and both have to be still. The render's base is a flat placeholder
+      // and is therefore still whatever it covers, so a render measured on its own would carry every
+      // pair down to a frame — including the pairs whose reference moves, where the difference
+      // between a mock base and a real one would be doing the deciding.
+      let bothStill = false;
+      if (clip) {
+        bothStill = await completelyStill(referenceMedia) && await completelyStill(renderedMedia);
+        if (bothStill) {
+          referenceMedia = shot === undefined
+            ? await cutFrame(cut!.reference, stretchSeconds / 2, cut!.referenceStill)
+            : shot.representative_frame_ref;
+          renderedMedia = await cutFrame(renderedMedia, stretchSeconds / 2,
+            shot === undefined ? cut!.renderedStill : join(root, "shots", `${shot.shot_id}-reconstruction-still.jpg`));
+        }
+      }
+      const asClip = clip && !bothStill;
+
       // A clip comparison reads the whole stretch on both sides. The observer that reads video is
       // given the two clips; the observer that reads pictures is given two frame tiles, which is the
       // same degradation `prepare_reference` already applies to a shot. Tiling both against the same
       // duration makes `tileFrames` choose the same frame count and layout for each, so the two grids
       // are read side by side rather than as different samplings.
-      if (clip && observer === "agent") {
+      if (asClip && observer === "agent") {
         if (shot !== undefined) {
           assert(shot.frames_tile_ref !== null,
             `shot ${shot.shot_id} has no frame tile; re-prepare the reference with --redo all --observer agent`);
@@ -1012,16 +1042,16 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         }
       }
 
-      const unit = clip && observer !== "agent" ? "video clips" : "still images";
+      const unit = asClip && observer !== "agent" ? "video clips" : "still images";
       // TILE_PREAMBLE already tells the agent observer how to read a grid, so this adds only what is
       // new about a pair of them: both are stretches, and they are compared as sequences.
-      const reading = clip && observer === "agent"
+      const reading = asClip && observer === "agent"
         ? "\n\nBoth are grids, so compare them as sequences rather than as single moments."
         : "";
       const differences = await ask("comparison", {
         media: [referenceMedia, renderedMedia],
         instruction: `You compare two supplied ${unit} and describe their visible differences in natural language only. You are not told how either was made. Do not write code, markup, SVML, component names, or production advice.`,
-        prompt: `Two ${unit} are supplied in order: one, then two.${reading}${cut?.incomplete ?? ""}${scope.length === 0 ? "" : `\n\nLimit the comparison to this: ${scope}`}\n\nDescribe every visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one and absent from the other.${clip ? " Also describe differences in what changes over the stretch: what appears, what leaves, in what order, and how anything moves." : ""} State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either was produced, which one is a source, or which one is a copy. Return natural language only.`,
+        prompt: `Two ${unit} are supplied in order: one, then two.${reading}${asClip ? cut?.incomplete ?? "" : ""}${scope.length === 0 ? "" : `\n\nLimit the comparison to this: ${scope}`}\n\nDescribe every visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one and absent from the other.${asClip ? " Also describe differences in what changes over the stretch: what appears, what leaves, in what order, and how anything moves." : ""} State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either was produced, which one is a source, or which one is a copy. Return natural language only.`,
       });
       // The answer is deliberately not cached — every iteration is a fresh comparison. What is
       // recorded is that a comparison happened, so a gate can tell an element that was looked at
@@ -1037,7 +1067,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         observer,
         status: differences.status,
         scoped: scope.length > 0,
-        clip,
+        clip: asClip,
         ...(standIn === undefined ? {} : { stand_in: standIn }),
       });
       return {
@@ -1047,9 +1077,10 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         ...(cut === undefined ? {} : {
           range: cut.record,
           ...(clip ? { reference_seconds: cut.referenceSeconds, rendered_seconds: cut.renderedSeconds } : {}),
-          ...(cut.incomplete.length === 0 ? {} : { incomplete_ends: cut.incomplete.trim() }),
+          ...(asClip && cut.incomplete.length > 0 ? { incomplete_ends: cut.incomplete.trim() } : {}),
         }),
-        compared: clip ? "clip" : "still",
+        compared: asClip ? "clip" : "still",
+        ...(bothStill ? { both_sides_still: true } : {}),
         reference_ref: referenceMedia,
         rendered_ref: renderedMedia,
         ...(standIn === undefined ? {} : { stand_in: standIn }),
@@ -1069,7 +1100,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       assert(key.length > 0, "key is required");
       const text = input.text.trim();
       assert(text.length > 0, "text is required; an observation that saw nothing says so in words");
-      const root = stateRoot(workspaceRoot, input.reference_id);
+      const root = stateRoot(input.reference_id);
       if (WHOLE_REFERENCE_KEYS.includes(key as typeof WHOLE_REFERENCE_KEYS[number])) {
         const field = key as typeof WHOLE_REFERENCE_KEYS[number];
         await writeJson(join(root, "state.json"), { ...state, [field]: observation("complete", text) });
@@ -1112,7 +1143,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     },
 
     async reconstruction_check(input): Promise<Record<string, unknown>> {
-      return await reconstructionCheck(input, { workspaceRoot, packageRoot });
+      return await reconstructionCheck(input, { packageRoot });
     },
   };
 }

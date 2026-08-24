@@ -14,6 +14,9 @@ const REFERENCE = "ref-fixture";
 
 async function workspace(shotCount: number): Promise<{ readonly root: string; readonly stateRoot: string }> {
   const root = await mkdtemp(join(tmpdir(), "reference-video-tools-"));
+  // Prepared state is read from the Hypit tree, which HYPIT_REPOSITORY names. A fixture puts the tree
+  // in a directory of its own so the state it writes is the state the tools read.
+  process.env["HYPIT_REPOSITORY"] = root;
   const stateRoot = join(root, ".hypit", "reference-video-tools", REFERENCE);
   const shots = join(stateRoot, "shots");
   await mkdir(shots, { recursive: true });
@@ -70,8 +73,8 @@ function recorder(calls: Call[], answer = "observed"): GenerateText {
   };
 }
 
-function tools(root: string, calls: Call[], answer?: string) {
-  return createReferenceVideoTools({ workspaceRoot: root, concurrency: 4, launchGapMs: 0, retryDelayMs: 0, generate: recorder(calls, answer) });
+function tools(calls: Call[], answer?: string) {
+  return createReferenceVideoTools({ concurrency: 4, launchGapMs: 0, retryDelayMs: 0, generate: recorder(calls, answer) });
 }
 
 test("installed packages can be listed, and one that will not load is reported rather than hidden", async () => {
@@ -97,9 +100,9 @@ test("installed packages can be listed, and one that will not load is reported r
 });
 
 test("observation covers picture, drawn type and sound for every shot and caches every key", async () => {
-  const { root, stateRoot } = await workspace(2);
+  const { stateRoot } = await workspace(2);
   const calls: Call[] = [];
-  const result = await tools(root, calls).observe_reference({ reference_id: REFERENCE });
+  const result = await tools(calls).observe_reference({ reference_id: REFERENCE });
 
   const cache = JSON.parse(await readFile(join(stateRoot, "observations.json"), "utf8")) as Record<string, unknown>;
   assert.deepEqual(Object.keys(cache).sort(), [
@@ -129,28 +132,28 @@ test("observation covers picture, drawn type and sound for every shot and caches
 });
 
 test("a second observation reuses the cache and only an explicit reobserve runs the model again", async () => {
-  const { root } = await workspace(2);
+  await workspace(2);
   const first: Call[] = [];
-  await tools(root, first).observe_reference({ reference_id: REFERENCE });
+  await tools(first).observe_reference({ reference_id: REFERENCE });
   assert.equal(first.length, 7, "two shots: picture, type and sound each, plus one shared boundary");
 
   const second: Call[] = [];
-  await tools(root, second).observe_reference({ reference_id: REFERENCE });
+  await tools(second).observe_reference({ reference_id: REFERENCE });
   assert.deepEqual(second, []);
 
   const selected: Call[] = [];
-  await tools(root, selected).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-002"] });
+  await tools(selected).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-002"] });
   assert.deepEqual(selected, [], "naming a shot must not silently re-run its cached observations");
 
   const forced: Call[] = [];
-  await tools(root, forced).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-002"], reobserve: true });
+  await tools(forced).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-002"], reobserve: true });
   assert.equal(forced.length, 4, "reobserve reruns the selected shot's picture, type and sound plus its one boundary, and nothing else");
 });
 
 test("a narrow question costs one call, answers from the named shots and never re-runs observations", async () => {
-  const { root, stateRoot } = await workspace(4);
+  const { stateRoot } = await workspace(4);
   const calls: Call[] = [];
-  const result = await tools(root, calls, "the caption sits above the lower edge")
+  const result = await tools(calls, "the caption sits above the lower edge")
     .observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-003"], question: "How thick is the caption outline?" });
 
   assert.equal(calls.length, 1);
@@ -161,10 +164,10 @@ test("a narrow question costs one call, answers from the named shots and never r
   assert.equal(await readFile(join(stateRoot, "observations.json"), "utf8"), "{}\n");
 
   await assert.rejects(
-    tools(root, []).observe_reference({ reference_id: REFERENCE, question: "which shot?" }),
+    tools([]).observe_reference({ reference_id: REFERENCE, question: "which shot?" }),
     /question requires at least one shot id/u);
   await assert.rejects(
-    tools(root, []).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-001", "shot-002", "shot-003", "shot-004"], question: "which shot?" }),
+    tools([]).observe_reference({ reference_id: REFERENCE, shot_ids: ["shot-001", "shot-002", "shot-003", "shot-004"], question: "which shot?" }),
     /at most three shots/u);
 });
 
@@ -173,7 +176,7 @@ test("reconstruction comparison sends an unlabelled pair and accepts rendered PN
   const rendered = join(root, "rendered.png");
   await writeFile(rendered, "rendered-bytes", "utf8");
   const calls: Call[] = [];
-  const result = await tools(root, calls, "the list starts lower in one image")
+  const result = await tools(calls, "the list starts lower in one image")
     .compare_reconstruction({ reference_id: REFERENCE, shot_id: "shot-001", image_path: rendered, question: "only the full-screen list area" });
 
   assert.equal(calls.length, 1);
@@ -186,7 +189,7 @@ test("reconstruction comparison sends an unlabelled pair and accepts rendered PN
   assert.deepEqual(result["differences"], { status: "complete", text: "the list starts lower in one image" });
 
   await assert.rejects(
-    tools(root, []).compare_reconstruction({ reference_id: REFERENCE, shot_id: "shot-009", image_path: rendered }),
+    tools([]).compare_reconstruction({ reference_id: REFERENCE, shot_id: "shot-009", image_path: rendered }),
     /shot shot-009 does not exist/u);
 });
 
@@ -195,15 +198,14 @@ test("an unsupported media extension fails loudly instead of being sent as opaqu
   const rendered = join(root, "rendered.tiff");
   await writeFile(rendered, "rendered-bytes", "utf8");
   await assert.rejects(
-    tools(root, []).compare_reconstruction({ reference_id: REFERENCE, shot_id: "shot-001", image_path: rendered }),
+    tools([]).compare_reconstruction({ reference_id: REFERENCE, shot_id: "shot-001", image_path: rendered }),
     /unsupported media extension/u);
 });
 
 test("a rejected request fails once instead of being retried until the loop gives up", async () => {
-  const { root } = await workspace(1);
+  await workspace(1);
   let attempts = 0;
   const rejecting = createReferenceVideoTools({
-    workspaceRoot: root,
     concurrency: 4,
     launchGapMs: 0,
     retryDelayMs: 0,
@@ -218,9 +220,8 @@ test("a rejected request fails once instead of being retried until the loop give
 });
 
 test("a failed observation is reported as unresolved instead of an empty list", async () => {
-  const { root } = await workspace(1);
+  await workspace(1);
   const failing = createReferenceVideoTools({
-    workspaceRoot: root,
     concurrency: 4,
     launchGapMs: 0,
     retryDelayMs: 0,

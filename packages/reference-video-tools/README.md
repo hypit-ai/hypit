@@ -42,8 +42,9 @@ tags it registers. `inspect_svml_vocabulary` reads packages you can already name
 is deliberately unable to scan a directory, so this is how a caller finds out what vocabulary exists
 instead of working from memory.
 
-`prepare_reference` requires a local video path and stores derived media under the project's
-gitignored `.hypit/reference-video-tools/` directory. It produces four full-reference observations: `people_and_product`,
+`prepare_reference` requires a local video path and stores derived media under the checkout's
+gitignored `.hypit/reference-video-tools/` directory, which is where every other command reads it
+from whichever directory it is run in. It produces four full-reference observations: `people_and_product`,
 `voices`, `persistent_systems` — the on-screen text and graphic systems that continue or recur across
 the whole video, each one's lifetime, and whether its appearance ever changes — and `places`: how
 many locations the video was shot in, which camera positions appear in each, which parts of the video
