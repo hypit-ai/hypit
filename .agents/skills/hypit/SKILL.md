@@ -11,9 +11,11 @@ that reference names required child references, read those completely in the sta
 Keep `.svml` Author Source, `.svs` Recipe Source, `.svrun` Run Source, and
 `hypit.runtime.json` Runtime Profile as separate languages and responsibilities.
 
-Every route uses the machine-wide Hypit Distribution and an independent author project.
-`references/environment.md` establishes that boundary and installs the Distribution only when the
-`hypit` command is genuinely absent. Read it before the first command of any route.
+Every route uses a Hypit Distribution and an independent author project. Prefer an installed
+machine-wide CLI; when the task is running from a Hypit contributor checkout, use that checkout's
+Node entrypoints instead. The npm package is not currently published, so absence of the `hypit`
+command is not permission to install it from the registry. `references/environment.md` establishes
+the boundary and launcher selection. Read it before the first command of any route.
 
 ## Route
 
