@@ -27,6 +27,11 @@ consecutive Segments carrying one unbroken voiceover are one Segment with Select
 `../playbooks/craft/generated-dependencies.md` says why — a Segment is a generation boundary, and
 splitting a stretch the reference delivers unbroken invents a seam it does not have.
 
+One thing does force a seam. The take that speaks a Segment generates that speech, so a Segment can
+be no longer than one generation. Where an unbroken passage runs past what the model will produce in
+one take, it becomes two Segments — and then the seam is yours to place rather than the ceiling's.
+Put it where the speaker would draw breath: at a sentence end, never mid-clause.
+
 ## A take's duration is estimated, not read off the reference
 
 Every take is generated, and the generated speech plays at its own pace, not the reference's. So

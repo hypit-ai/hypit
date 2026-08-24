@@ -23,8 +23,8 @@ Use explicit imports, exact fonts, Canvas/Frames, the SemanticTrack, Targets, an
 authority. There is no implicit cache; reuse is explicit with `build-record` + `satisfy`.
 
 `speech:Take source={...}` assembles one aligned `whisperx:SemanticTake` into the Track, in program
-order. A take whose media normalizes with `video="none"` creates program time and speech audio while
-peer Media Tracks provide the visuals.
+order. The take that speaks a Segment is the take that draws it, so that one value carries the
+program time, the speech and the picture together; peer Media Tracks put inserts over it.
 
 For a program with no spoken words, keep the `whisperx:SemanticTake` and `speech:Track` declarations —
 the SemanticTrack is the frame domain every `start`/`end` window resolves into — satisfy
