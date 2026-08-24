@@ -129,7 +129,7 @@ export const decodeFineCaptionTrackSurface: StructuredSurfaceHandler = ({ elemen
       inputs: {
         document: document.ref, semantic: semantic.ref, program: program.ref,
       },
-      outputs: { track: `${id}.track` },
+      outputs: { schedule: `${id}.schedule`, track: `${id}.track` },
       range: element.range,
     }],
     fragments: [fineCaptionTrackFragment],

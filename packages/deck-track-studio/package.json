@@ -1,0 +1,13 @@
+{
+  "name": "@hypit/deck-track-studio",
+  "version": "0.0.0-dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "hypit": { "activation": "./src/activation.ts" },
+  "dependencies": {
+    "@hypit/deck-track": "workspace:*",
+    "@hypit/studio-adapter": "workspace:*"
+  }
+}

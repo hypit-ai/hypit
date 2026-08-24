@@ -639,7 +639,6 @@ function cueElements(
       { name: "text-align", value: parameters.layout.textAlign },
       { name: "width", value: parameters.layout.inlineSize === "fixed" ? "100%" : "max-content" },
     ],
-    attributes: [{ name: "data-caption-style", value: styleId }],
   });
 
   if (parameters.activeBox.mode === "trail" && parameters.activeBox.continuity === "joined") {
@@ -814,7 +813,6 @@ function cueElements(
         style: glyphStyle(parameters, parameters.basePaint, parameters.underline),
         ...glyphPaintFields(parameters.basePaint),
         fonts,
-        attributes: [{ name: "data-caption-word", value: wordId }],
       });
     }
     const addActivatedTextLayer = (

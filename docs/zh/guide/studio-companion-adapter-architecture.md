@@ -1,11 +1,11 @@
 ---
-title: Studio Companion Adapter 目标架构
-description: 领域组件、Studio 适配包与 Studio 应用之间的三层边界、选择机制和迁移约束。
+title: Studio Companion Adapter 架构
+description: 领域组件、Studio Companion 与 Studio 应用之间的三层边界、显式选择机制和实现约束。
 ---
 
-# Studio Companion Adapter 目标架构
+# Studio Companion Adapter 架构
 
-> 状态：已确认的目标架构，尚未实施。本文固定职责边界和验收原则，不把当前中央适配包描述成目标，也不提前锁死包管理命令、最终 ABI 字段名或迁移批次。
+> 状态：已实施。本文记录当前稳定的职责边界、显式选择方式与验收原则；具体 Inspector token 和操作能力仍可在 ABI 内继续演进。
 
 ## 决策
 
@@ -51,7 +51,7 @@ Companion 是独立安装、独立选择的适配包。它面向一个领域模�
 
 - Track、Surface、输出 Type 的精确匹配；
 - 公共 Program/Schedule 到 Studio entity 的投影；
-- entity 的稳定身份、标题、正文、时间、预览和父子关系；
+- entity 的稳定身份、标题、正文层、素材层、时间几何和父子关系；
 - root lane、附属 lane、Inspector 信息架构和参数 allowlist；
 - 可用时间线手势、参数操作及其禁用原因；
 - 领域对象与执行时间谱系之间的显式连接。
@@ -76,18 +76,22 @@ Studio 提供受控的编辑器语言，而不是领域组件目录。它拥有�
 - 通用终端 Track 兜底和 Semantic 时间标尺；
 - 统一外观、Inspector 控件和操作执行器。
 
-Studio ABI 应提供有限、稳定、可组合的外观全集：
+Studio ABI 提供有限、稳定、可组合的外观全集：
 
-- 内容形状，例如 picture、text、waveform、block、group；
-- 视觉 tone 与图标 token；
-- lane、附属 lane、标题/正文和素材预览；
+- `presentation.chrome` 只选择 `standard / group / point` 这类 Studio 外壳，不决定标题、时间或正文是否存在；
+- `display.title` 是第一行标题，时间由 Studio 根据 Window/Point 统一计算并紧随标题显示；
+- `display.layers` 是有序的正文层，可组合 `text` 与 `preview`，并区分 `decoration / content`；
+- preview 只携带 Artifact digest 或 Surface 身份，布局只能选择 `repeat-x / cover / contain / storyboard / waveform`；
+- 视觉 tone、图标 token、lane 与附属 lane；
 - Inspector 大类、可选子页、参数组和标准控件；
-- select、seek、move、trim、canvas transform 等交互能力；
+- 带精确逆变换声明的时间线手势；选择、seek 等基础交互由 Studio 对所有实体统一提供；
 - `timeline.adjust`、`parameter.adjust` 等标准作者操作。
 
 语义 family 与视觉 tone 必须分离。新 Companion 可以声明新的领域 family，但只能选择 Studio 提供的视觉 token，不能依靠 `.track-caption`、`.track-ranking` 一类组件名 CSS 获得外观。
 
-外观全集的精确字段和 token 可以随 ABI 设计继续收敛；不变的是 Studio 控制渲染语法、Companion 只作声明。
+Pattern 和 material 可以复合：前者通常来自组件 Surface Preview，后者来自本次 Run 的真实 Artifact；两者即使同为 SVG，也以来源和角色区分，而不是以 MIME 猜语义。Companion 不拼接 `/__studio/*` URL，Studio 才把来源描述符转换为本应用的 HTTP transport、storyboard 或 waveform。
+
+外观全集可以在 ABI 内继续收敛；不变的是 Studio 控制渲染语法、Companion 只作声明。Studio 不得再用 `shape === text`、`shape === group` 一类条件决定标题、正文或时间。
 
 ## 选择与安装
 
@@ -123,6 +127,7 @@ Companion 必须消费组件公开的领域真相，而不是反向解析最终�
 ```text
 Author Source
   -> 公共 Program / Schedule / Temporal projection
+  -> Companion 声明所需的同 Surface value ports
   -> Companion 投影 Studio entity
   -> Studio 统一显示和执行操作
 ```
@@ -145,6 +150,10 @@ Cue 正文不应从 VisualIR 的 `data-caption-word` 抓取，身份也不应由
 
 这些公共值不是 Studio metadata；任何诊断工具、另一种 Studio 或批量系统都可以消费它们。
 
+Companion 通过 `requiredValues` 声明投影 Track 所必需的同 Surface 输出，例如 Ranking 的 `schedule` 与 `program`。Studio preflight 必须把这些值纳入便宜、确定性的 projection closure；端口缺失、无法解析或值没有进入本次执行结果时直接拒绝打开，不允许专用 Companion 静默退回 generic。一个 Program 不需要为了被 Companion 读取而注册伪造的 `role: realization` Adapter。
+
+当公共 Program item 或终端 `VisualPresent` / `AudioClip` 实现某个作者领域对象时，可以携带通用 `subjectId`。投影对象的 `id` 回答“本次消费/渲染对象是谁”，`subjectId` 回答“它实现哪个作者对象”；这是 renderer provenance，不是 Hypit Studio metadata。Media、Audio、Comment Sticker、Screen Overlay 和 Speech 都用这条公开关系保留作者归属，其他 Studio 和诊断工具同样可以使用。没有 `subjectId` 的第三方终端 Track 仍然合法，Studio 不用 id 前缀或同帧区间补猜。
+
 ## 操作边界
 
 Companion 声明操作，Studio 执行操作：
@@ -164,19 +173,11 @@ Studio
 
 Companion 不获得文件写权限。没有唯一可逆 Source 映射的操作必须禁用，不能只因为画面上看起来可拖就生成写回。
 
-## 当前实现偏差
+时间线声明不是 `move: true` 之类的布尔能力。Companion 的每个 `timelineEdits` 项必须同时声明 gesture 与按真实来源选择的 inverse target：Selection/Moment 指向 Semantic 作者身份，绝对 Window 指向组件自己的准确参数名，不能修改的来源给出禁用原因。Studio 再把这些声明与当前实体的真实 temporal lineage、Source range 合并成可执行 handle。Recipe 参数同理：Companion 必须声明准确的引用路径 `through` 和属性 allowlist，Studio 不尝试依次猜 `recipe / style / appearance / motion / program`。
 
-当前实现尚未符合本文：
+## 当前官方 Companion
 
-- `@hypit/studio-video-adapters` 集中实现 Speech、Media、Audio、Typography、Caption、Ranking、Deck 等无关模块；
-- Studio 固定加载这个中央包，再叠加项目 Profile；
-- `generic` Adapter 为多个组件维护一个巨大的可能参数全集；
-- Studio CSS 把领域 family 名直接当视觉主题；
-- 部分 Adapter 仍从 renderer id、VisualIR attribute 或相同帧区间恢复领域身份。
-
-这些都是待迁移的当前事实，不是稳定目标。当前中央包不能因为物理上位于 `packages/studio` 之外，就被视为已经去中心化。
-
-目标中的官方 Companion 至少包括：
+官方 Distribution 显式选择以下独立 Companion：
 
 - `caption-fine-studio`；
 - `typography-track-studio`；
@@ -188,7 +189,9 @@ Companion 不获得文件写权限。没有唯一可逆 Source 映射的操作�
 - `comment-sticker-studio`；
 - `screen-overlay-studio`。
 
-精确 npm 名称在实施时决定；列表表达的是所有权拆分，不是要求 Studio 根据后缀自动发现。
+每个包只解释对应领域模块。Studio 中的官方列表是 Distribution 的显式选择，不是根据 `-studio` 后缀自动发现；项目 Profile 仍可显式增加项目 Companion 或 replacement。
+
+Studio 核心只保留跨领域终端协议的通用 VisualTrack、AudioTrack 兜底和 Semantic 标尺。它不包含上述模块名、Surface 名或模块参数表。Caption Companion 已直接消费公开 `FineCaptionSchedule` 与 `CaptionDocument`，Ranking、Media、Audio、Typography、Speech 和 Deck Companion 也分别消费本领域公开值，不再由一个中央包从最终画面统一反推。
 
 ## 历史偏差
 
@@ -198,27 +201,26 @@ Companion 不获得文件写权限。没有唯一可逆 Source 映射的操作�
 
 ## 验收原则
 
-未来实施完成时必须同时满足：
+当前实现和后续修改必须同时满足：
 
 1. 领域组件包的依赖和源码中不存在 Studio ABI 或 UI 语义；
 2. 一个官方 Companion 不适配多个互不相关的领域模块；
 3. Studio 核心与通用兜底不枚举官方组件名、Surface 名或组件参数；
-4. Companion 只使用公共 Program、Schedule、身份与时间谱系；
+4. Companion 只使用公共 Program、Schedule、终端 `subjectId` 与时间谱系；
 5. Adapter 包通过显式 Distribution/Profile 选择，不扫描、不猜名、不静默安装；
 6. 删除 Companion 只损失丰富编辑能力，不影响检查、构建、复用和渲染；
 7. 删除 Studio 不影响领域组件及其用户项目；
 8. 另一个 Studio 可以为同一组件发布另一套 Adapter，无需 fork 组件；
 9. Studio 的统一写回、失败处理和防抖不下沉到 Companion；
 10. 不为迁移增加自造 lock、哈希、摘要、缓存数据库或固定项目目录结构。
+11. 标题、时间与内容层是独立字段；任一 chrome 或素材层都不能隐式隐藏另外两者；
+12. Companion 不知道 Studio HTTP 路由，所需同 Surface 值必须经 `requiredValues` 进入 preflight closure。
 
 ## 非目标
 
 本文不决定：
 
-- 是否以及何时发布这些 npm 包；
-- 最终包名和版本号；
-- 每个 ABI token 的精确字面量；
-- 一次迁完还是按模块分批迁移；
+- npm 发布批次和版本号；
 - 为其他 Studio 设计通用行业标准；
 - 让 Hypit Studio 成为完备 NLE。
 

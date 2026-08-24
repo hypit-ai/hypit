@@ -111,7 +111,7 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
     label.setAttribute("x", String(box.xPx + 10));
     label.setAttribute("y", String(Math.max(28, box.yPx - 12)));
     label.setAttribute("class", "box-label");
-    label.textContent = onScreen ? selected.label : `${selected.label} (not at this frame)`;
+    label.textContent = onScreen ? selected.display.title : `${selected.display.title} (not at this frame)`;
     group.append(label);
     element.append(group);
   };

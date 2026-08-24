@@ -23,8 +23,8 @@ folder structure is involved. With no selected Runtime, Source and Preview still
 work while Tasks and Artifacts stay explicitly unavailable.
 
 Studio is an application boundary. Core and domain packages do not import it or
-register UI metadata. The installed Distribution supplies the official Studio Adapter
-distribution. An external project may explicitly add companion Adapter packages
+register UI metadata. The installed Distribution explicitly selects one independent
+Studio Companion per supported official domain. An external project may add companion Adapter packages
 through `hypit.studio.json`; the application assembles one immutable registry for
 that project session.
 
@@ -44,8 +44,12 @@ Companion manifests may declare `@hypit/studio-adapter` as a peer dependency for
 editor/package-manager clarity; the active tool Distribution supplies that ABI at
 runtime, so the project does not install or lock another copy.
 
-The companion owns what its Track means: matching, entities, lane range,
-material projection, inspector sections and declared interaction/writeback.
+The companion owns what its Track means: matching, required same-Surface values,
+entities, lane range, finite chrome, title and ordered text/material layers,
+Inspector parameter grouping and exact timeline inverses. Material layers carry an
+Artifact digest or Surface identity, never a Studio HTTP URL. Studio always owns
+time formatting and transport resolution, so chrome and material cannot hide a
+title or its time.
 Studio owns session-wide behavior and chrome: adapter selection, collision and
 replacement rules, fallback defaults, selection treatment, playback, zoom,
 scrolling and source mutation transport. A companion cannot ship arbitrary DOM

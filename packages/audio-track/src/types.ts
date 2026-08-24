@@ -33,6 +33,8 @@ export type AudioTrackHeader = {
 
 export type AudioItemProgram = {
   readonly id: string;
+  /** Author-owned Item realized by this externally projected window. */
+  readonly subjectId: string;
   readonly window: FrameSpan;
   readonly source: {
     readonly artifact: BlobRef;

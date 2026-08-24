@@ -6,11 +6,30 @@ export const studioAdapterHostAbi = "hypit.studio-adapter@1";
 export type Range = { readonly start: number; readonly end: number };
 
 export type StudioTrackFamily = string;
+export type StudioIcon =
+  | "captions"
+  | "component"
+  | "layers"
+  | "ranking"
+  | "text"
+  | "timeline"
+  | "video"
+  | "waveform";
+/** Studio-owned visual palette. Domain families never become CSS selectors. */
+export type StudioTimelineTone =
+  | "blue"
+  | "green"
+  | "teal"
+  | "violet"
+  | "magenta"
+  | "orange"
+  | "orange-muted"
+  | "neutral";
 
 export type StudioTimelinePresentation = {
   readonly entity: string;
-  readonly shape: string;
-  readonly depth: number;
+  /** Studio-owned shell. It never decides whether title, time or body exists. */
+  readonly chrome: "standard" | "group" | "point";
 };
 
 export type StudioTemporalSource = {
@@ -73,16 +92,6 @@ export type StudioTemporalBinding = {
   readonly consumers: readonly StudioTemporalConsumer[];
 };
 
-export type StudioInteraction = {
-  readonly select: boolean;
-  readonly seek: "start" | "pointer" | "none";
-  readonly move: boolean;
-  readonly trimStart: boolean;
-  readonly trimEnd: boolean;
-  readonly canvasTransform: boolean;
-  readonly writeback: "source" | "none";
-};
-
 export type StudioParameterControl = "text" | "number" | "boolean" | "select";
 export type StudioParameterLanguage = "svml" | "svs" | "svrun";
 
@@ -121,6 +130,32 @@ export type StudioParameterDeclaration = {
   readonly unit?: string;
   /** Optional declaration for the authored element named by a reference. */
   readonly referenced?: readonly StudioParameterDeclaration[];
+  /**
+   * Companion-owned presentation and allowlist for the SVS Recipe reached
+   * through this reference. Domain manifests still own property semantics;
+   * they do not own an editor's pages or grouping.
+   */
+  readonly recipe?: StudioRecipeReferenceDeclaration;
+};
+
+/** An explicit reference path from an Inspector input to one SVS Recipe. */
+export type StudioRecipeReferenceDeclaration = {
+  /** Reference-valued attributes followed on local authored elements, in order. */
+  readonly through?: readonly string[];
+  /** Package-owned allowlist and presentation for properties of the reached Recipe. */
+  readonly parameters: readonly StudioRecipeParameterDeclaration[];
+};
+
+export type StudioRecipeParameterDeclaration = {
+  readonly name: string;
+  readonly label?: string;
+  readonly group: string;
+  readonly section?: string;
+  readonly summary?: string;
+  readonly control?: StudioParameterControl;
+  readonly writable?: boolean;
+  readonly options?: readonly string[];
+  readonly unit?: string;
 };
 
 export type StudioTimelineGesture =
@@ -165,6 +200,8 @@ export type StudioEditHandle = {
   readonly enabled: boolean;
   /** Coordinate space in which the central gesture resolver measures intent. */
   readonly coordinate?: StudioEditCoordinate;
+  /** How moving a semantic Point changes the visible entity before recompilation. */
+  readonly moveEffect?: "translate-window" | "move-start";
   /** Snap policy is data, not a timeline-wide guess. */
   readonly snapTo?: readonly StudioSnapTarget[];
   readonly sources?: readonly StudioEditSource[];
@@ -173,33 +210,82 @@ export type StudioEditHandle = {
   readonly disabledReason?: string;
 };
 
-export type StudioMaterialPreview =
-  | { readonly kind: "image"; readonly url: string }
-  | { readonly kind: "video"; readonly url: string }
-  | { readonly kind: "audio"; readonly url: string };
+export type StudioTimelineEditParameter = {
+  readonly role: Extract<StudioEditSourceRole, "start" | "end" | "duration">;
+  /** Exact Companion-declared parameter vocabulary name. */
+  readonly parameter: string;
+};
+
+export type StudioTimelineEditTargetDeclaration =
+  | {
+      readonly kind: "semantic-source";
+      readonly source: "selection" | "moment";
+      readonly moveEffect?: "translate-window" | "move-start";
+    }
+  | {
+      readonly kind: "source-parameters";
+      readonly when: {
+        readonly source: StudioTemporalSource["kind"];
+        readonly projection?: StudioTemporalProjection["kind"];
+      };
+      readonly parameters: readonly StudioTimelineEditParameter[];
+    }
+  | {
+      readonly kind: "disabled";
+      readonly when: {
+        readonly source: StudioTemporalSource["kind"];
+        readonly projection?: StudioTemporalProjection["kind"];
+      };
+      readonly reason: string;
+    };
+
+/** Companion-owned inverse choices for one Studio timeline gesture. */
+export type StudioTimelineEditDeclaration = {
+  readonly gesture: StudioTimelineGesture;
+  readonly targets: readonly StudioTimelineEditTargetDeclaration[];
+};
+
+/** A source descriptor; Companion packages never depend on Studio's HTTP routes. */
+export type StudioPreviewSource =
+  | { readonly kind: "artifact"; readonly digest: string }
+  | {
+      readonly kind: "surface-preview";
+      readonly module: string;
+      readonly version: string;
+      readonly surface: string;
+    };
+
+export type StudioMaterialPreview = {
+  readonly kind: "image" | "video" | "audio";
+  readonly source: StudioPreviewSource;
+};
+
+/** Finite, composable timeline body vocabulary owned by Studio. */
+export type StudioDisplayLayer =
+  | {
+      readonly kind: "text";
+      readonly role: "content";
+      readonly text: string;
+    }
+  | {
+      readonly kind: "preview";
+      readonly role: "decoration" | "content";
+      readonly preview: StudioMaterialPreview;
+      readonly layout: "repeat-x" | "cover" | "contain" | "storyboard" | "waveform";
+    };
+
+export type StudioEntityDisplay = {
+  /** First row. Studio always places computed time immediately after it. */
+  readonly title: string;
+  /** Ordered back-to-front body layers. */
+  readonly layers: readonly StudioDisplayLayer[];
+};
 
 export type StudioLaneDescription = {
-  readonly layout: "flat";
-  readonly height: {
-    readonly minPx: number;
-    readonly preferredPx: number;
-    readonly maxPx: number;
-  };
+  readonly heightPx: number;
   readonly groupId?: string;
   readonly attachedTo?: string;
   readonly order?: number;
-};
-
-export type StudioInspectorSection =
-  | "authoring"
-  | "resolved"
-  | "material"
-  | "composition"
-  | "identity"
-  | "run";
-
-export type StudioInspectorDescription = {
-  readonly sections: readonly StudioInspectorSection[];
 };
 
 export type StudioCandidateProvenance = {
@@ -238,8 +324,9 @@ export type StudioSemanticToken = {
 export type StudioSemanticTimeline = {
   readonly presentation: {
     readonly family: StudioTrackFamily;
+    readonly tone: StudioTimelineTone;
     readonly label?: string;
-    readonly icon: string;
+    readonly icon: StudioIcon;
     readonly lane: StudioLaneDescription;
   };
   readonly anchors: readonly StudioSemanticAnchor[];
@@ -324,13 +411,12 @@ export type StudioProjectionRole =
   | "semantic-take"
   | "semantic-track"
   | "realization"
-  | "media"
-  | "text"
-  | "caption"
   | "track";
 
 export type StudioSpan = {
   readonly id: string;
+  /** Exact public terminal provenance; never inferred from id syntax. */
+  readonly subjectId?: string;
   readonly startFrame: number;
   readonly endFrameExclusive: number;
   readonly stackOrder: number;
@@ -339,7 +425,7 @@ export type StudioSpan = {
 export type StudioEntityDraft = {
   readonly id: string;
   readonly authoredId: string;
-  readonly label: string;
+  readonly display: StudioEntityDisplay;
   readonly startFrame: number;
   readonly endFrameExclusive: number;
   readonly stackOrder: number;
@@ -350,13 +436,12 @@ export type StudioEntityDraft = {
   /** Resolved author references that differ per derived entity, such as one Cue's actual Style. */
   readonly parameterReferences?: Readonly<Record<string, string>>;
   readonly presentation?: StudioTimelinePresentation;
-  readonly interaction?: StudioInteraction;
   readonly temporal?: StudioTemporalLineage;
-  readonly preview?: StudioMaterialPreview;
   /** Studio-local lane partition; omitted means the root lane. */
   readonly lane?: string;
   readonly parameters?: readonly StudioParameter[];
-  readonly editHandles?: readonly StudioEditHandle[];
+  /** Optional per-entity override of the owning lane's declared inverses. */
+  readonly timelineEdits?: readonly StudioTimelineEditDeclaration[];
 };
 
 export type StudioAdapterContext = {
@@ -382,22 +467,19 @@ export type StudioAdapter = {
     readonly siblingType?: string;
   };
   readonly family?: StudioTrackFamily;
+  /** Visual token selected from Studio's finite palette. */
+  readonly tone?: StudioTimelineTone;
   readonly label?: string;
-  readonly icon?: string;
+  readonly icon?: StudioIcon;
   /** Opts root timeline entities into the component's package-owned Surface preview. */
   readonly poster?: { readonly source: "surface-preview" };
   readonly attachments?: readonly StudioLaneAttachment[];
-  readonly realizationPorts?: readonly string[];
-  readonly dependencies?: readonly {
-    readonly type: string;
-    readonly role: StudioProjectionRole;
-  }[];
-  readonly interaction?: StudioInteraction;
+  /** Same-Surface output values required to project this Track for Studio. */
+  readonly requiredValues?: readonly string[];
   readonly lane?: StudioLaneDescription;
-  readonly inspector?: StudioInspectorDescription;
   readonly parameters?: readonly StudioParameterDeclaration[];
-  /** Operations this adapter explicitly understands for its entities. */
-  readonly timelineGestures?: readonly StudioTimelineGesture[];
+  /** Exact inverse choices this adapter understands for its entities. */
+  readonly timelineEdits?: readonly StudioTimelineEditDeclaration[];
   readonly project?: (context: StudioAdapterContext) => readonly StudioEntityDraft[];
 };
 
@@ -446,29 +528,119 @@ export function studioAdaptersFromPackage(
 export type StudioLaneAttachment = {
   readonly id: string;
   readonly family: StudioTrackFamily;
+  readonly tone?: StudioTimelineTone;
   readonly label?: string;
-  readonly icon: string;
+  readonly icon: StudioIcon;
   readonly facet: "visual" | "audio";
   readonly lane: StudioLaneDescription;
-  readonly interaction?: StudioInteraction;
-  readonly inspector?: StudioInspectorDescription;
   readonly parameters?: readonly StudioParameterDeclaration[];
-  readonly timelineGestures?: readonly StudioTimelineGesture[];
+  readonly timelineEdits?: readonly StudioTimelineEditDeclaration[];
 };
 
-export const readonlyInteraction: StudioInteraction = {
-  select: true,
-  seek: "pointer",
-  move: false,
-  trimStart: false,
-  trimEnd: false,
-  canvasTransform: false,
-  writeback: "none",
-};
+/**
+ * Reusable declaration for a component that consumes an externalized Window.
+ * The Companion still binds the component's exact author parameter names.
+ */
+export function projectedWindowTimelineEdits(input: {
+  readonly start: string;
+  readonly end: string;
+  readonly duration?: string;
+}): readonly StudioTimelineEditDeclaration[] {
+  const programWindow = { source: "program" as const };
+  const momentWindow = { source: "moment" as const };
+  return [
+    {
+      gesture: "move",
+      targets: [
+        { kind: "semantic-source", source: "selection", moveEffect: "translate-window" },
+        { kind: "semantic-source", source: "moment", moveEffect: "translate-window" },
+        {
+          kind: "source-parameters", when: programWindow,
+          parameters: [{ role: "start", parameter: input.start }, { role: "end", parameter: input.end }],
+        },
+      ],
+    },
+    {
+      gesture: "trim-start",
+      targets: [
+        { kind: "semantic-source", source: "selection" },
+        { kind: "disabled", when: momentWindow, reason: "起点由 Moment 决定；移动实体可以改 Moment，但不能单独裁起点。" },
+        {
+          kind: "source-parameters", when: programWindow,
+          parameters: [{ role: "start", parameter: input.start }],
+        },
+      ],
+    },
+    {
+      gesture: "trim-end",
+      targets: [
+        { kind: "semantic-source", source: "selection" },
+        ...(input.duration === undefined ? [{
+          kind: "disabled" as const, when: momentWindow,
+          reason: "该 Moment 消费没有声明独立的 duration 参数。",
+        }] : [{
+          kind: "source-parameters" as const, when: momentWindow,
+          parameters: [{ role: "duration" as const, parameter: input.duration }],
+        }]),
+        {
+          kind: "source-parameters", when: programWindow,
+          parameters: [{ role: "end", parameter: input.end }],
+        },
+        ...(input.duration === undefined ? [] : [{
+          kind: "source-parameters" as const, when: programWindow,
+          parameters: [{ role: "duration" as const, parameter: input.duration }],
+        }]),
+      ],
+    },
+  ];
+}
+
+/** Reusable declaration for a component entity activated by an externalized Point. */
+export function projectedPointTimelineEdits(): readonly StudioTimelineEditDeclaration[] {
+  return [{
+    gesture: "move",
+    targets: [{ kind: "semantic-source", source: "moment", moveEffect: "move-start" }],
+  }];
+}
+
+/** A Window whose only reversible author source is an external Selection. */
+export function selectionWindowTimelineEdits(): readonly StudioTimelineEditDeclaration[] {
+  return (["move", "trim-start", "trim-end"] as const).map((gesture) => ({
+    gesture,
+    targets: [{ kind: "semantic-source", source: "selection" }],
+  }));
+}
 
 export function sameSurfaceValue(context: StudioAdapterContext, port: string): unknown {
   const ref = context.track.trace.outputPorts.find((candidate) => candidate.name === port)?.ref;
   return ref === undefined ? undefined : context.values.get(ref);
+}
+
+export function requiredSurfaceValue(context: StudioAdapterContext, port: string): unknown {
+  const value = sameSurfaceValue(context, port);
+  if (value === undefined) {
+    throw new Error(`Studio Companion ${context.track.type} requires same-Surface value port ${port}`);
+  }
+  return value;
+}
+
+export function artifactPreview(
+  kind: StudioMaterialPreview["kind"],
+  digest: string,
+): StudioMaterialPreview {
+  return { kind, source: { kind: "artifact", digest } };
+}
+
+export function previewLayer(
+  preview: StudioMaterialPreview,
+  layout: Extract<StudioDisplayLayer, { readonly kind: "preview" }>["layout"],
+  role: Extract<StudioDisplayLayer, { readonly kind: "preview" }>["role"] = "content",
+): StudioDisplayLayer {
+  return { kind: "preview", role, preview, layout };
+}
+
+export function textLayer(text: string): StudioDisplayLayer {
+  return { kind: "text", role: "content", text };
 }
 
 function carriesIdentity(value: unknown, id: string): boolean {
@@ -502,31 +674,38 @@ export function temporalLineageFor(
 
 export function childEntities(
   context: StudioAdapterContext,
-  items: readonly { readonly id: string; readonly startFrame: number; readonly endFrameExclusive: number; readonly stackOrder: number }[],
+  items: readonly {
+    /** Exact identity of the projected domain item consumed by Temporal/renderer bindings. */
+    readonly id: string;
+    /** Exact author-owned entity realized by this projected item, when the identities differ. */
+    readonly subjectId?: string;
+    readonly startFrame: number;
+    readonly endFrameExclusive: number;
+    readonly stackOrder: number;
+  }[],
   entity: StudioTimelinePresentation["entity"],
-  shape: StudioTimelinePresentation["shape"],
+  chrome: StudioTimelinePresentation["chrome"],
 ): readonly StudioEntityDraft[] {
   const children = new Map(context.placement?.children.flatMap((child) =>
     child.id === undefined ? [] : [[child.id, child] as const]) ?? []);
   return items.map((item) => {
-    const child = children.get(item.id) ?? [...children.entries()]
-      .sort(([left], [right]) => right.length - left.length)
-      .find(([id]) => item.id.startsWith(`${id}::`))?.[1];
-    // A dedicated adapter does not reverse-engineer renderer ids. Only an exact
-    // public identity is safe; richer renderer correspondence needs its own
-    // declared realization rather than another naming convention.
-    const render = context.spans.find((span) => span.id === item.id);
+    const authoredId = item.subjectId ?? item.id;
+    const child = children.get(authoredId);
+    // Both correspondences are exact public facts: the Program item identity
+    // and the renderer's declared subject. No renderer naming convention is
+    // interpreted here.
+    const renders = context.spans.filter((span) => span.id === item.id || span.subjectId === authoredId);
+    const render = renders[0];
     return {
       id: `${context.track.outputRef}:entity:${item.id}`,
-      authoredId: child?.id ?? item.id,
-      label: child?.id ?? item.id,
+      authoredId,
+      display: { title: authoredId, layers: [] },
       startFrame: item.startFrame,
       endFrameExclusive: item.endFrameExclusive,
       stackOrder: item.stackOrder,
       ...(child === undefined ? {} : { elementRange: child.range }),
-      ...(render === undefined ? {} : { presentId: render.id, renderIds: [render.id] }),
-      presentation: { entity, shape, depth: 0 },
-      interaction: readonlyInteraction,
+      ...(render === undefined ? {} : { presentId: render.id, renderIds: renders.map((span) => span.id) }),
+      presentation: { entity, chrome },
     };
   });
 }

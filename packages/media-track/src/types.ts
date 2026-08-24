@@ -221,6 +221,8 @@ export type MediaItemSpec = {
 
 export type MediaItemProgram = {
   readonly id: string;
+  /** Author-owned Item realized by this externally projected window. */
+  readonly subjectId: string;
   readonly span: FrameSpan;
   readonly frame: SpatialFrame;
   readonly presentation: MediaFramePresentation;

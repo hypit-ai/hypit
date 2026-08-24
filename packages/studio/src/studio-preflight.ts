@@ -11,8 +11,7 @@ import {
   placementFor,
   roleFor,
   traceFor,
-  tracedRealizations,
-  tracedStudioRealizations,
+  tracedStudioValues,
   unique,
 } from "./studio-trace.js";
 import type { StudioProjectionRole, StudioTrace } from "./studio-trace.js";
@@ -137,26 +136,28 @@ export function inspectStudioRun(
     ...semanticPlacement.children.flatMap((child) => child.references),
   ]).flatMap((ref) => outputFor(source, ref)?.type === "SemanticTake"
     ? [outputFor(source, ref)!.ref] : []);
-  if (semanticTakeRefs.length === 0) issues.push("Film has no traceable SemanticTake / Speech Track chain");
+  if (semanticTakeRefs.length === 0) issues.push("Film has no traceable SemanticTake chain");
 
-  const realizationRefs = unique(filmTrackRefs.flatMap((ref) =>
-    tracedRealizations(registry, source, ref).map((dependency) => dependency.ref)));
-
-  const adapterRealizationRefs = unique(filmTrackRefs.flatMap((ref) =>
-    tracedStudioRealizations(registry, source, ref)));
+  let adapterValueRefs: readonly string[] = [];
+  try {
+    adapterValueRefs = unique(filmTrackRefs.flatMap((ref) =>
+      tracedStudioValues(registry, source, ref)));
+  } catch (error) {
+    issues.push(error instanceof Error ? error.message : String(error));
+  }
+  const adapterValueSet = new Set(adapterValueRefs);
 
   const projectionRefs = unique([
     ...filmTrackRefs,
     ...(semanticOutput?.type === "SemanticTrack" ? [semanticOutput.ref] : []),
     ...semanticTakeRefs,
-    ...realizationRefs,
-    ...adapterRealizationRefs,
+    ...adapterValueRefs,
   ]);
   const projections: StudioProjection[] = [];
   const derived: Omit<StudioProjection, "candidatePolicy">[] = [];
   for (const ref of projectionRefs) {
     const output = outputFor(source, ref);
-    const role = roleFor(registry, source, ref);
+    const role = roleFor(registry, source, ref) ?? (adapterValueSet.has(ref) ? "realization" : undefined);
     if (output === undefined || role === undefined) continue;
     const candidateId = satisfactions.get(ref);
     const candidate = candidateId === undefined ? undefined : candidates.get(candidateId);

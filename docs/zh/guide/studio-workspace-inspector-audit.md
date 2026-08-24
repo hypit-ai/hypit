@@ -13,7 +13,7 @@ description: 记录左上资源工作区、右上组件工作台、Runtime 历�
 > [视频领域协议迁移与基建审计](./video-protocol-foundation-audit.md)。本文不重复定义这些领域协议。
 >
 > 领域组件包、独立 Hypit Studio Companion 与 Studio 外观/操作全集的目标边界，见
-> [Studio Companion Adapter 目标架构](./studio-companion-adapter-architecture.md)。本文中的“组件声明”均指 Companion 声明，不要求领域组件依赖 Studio。
+> [Studio Companion Adapter 架构](./studio-companion-adapter-architecture.md)。本文中的“组件声明”均指 Companion 声明，不要求领域组件依赖 Studio。
 
 ## 一、为什么需要单独审计
 

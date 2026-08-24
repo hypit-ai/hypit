@@ -5,9 +5,9 @@
 
 import type {
   Range,
-  StudioInteraction,
+  StudioEntityDisplay,
+  StudioIcon,
   StudioEditHandle,
-  StudioInspectorDescription,
   StudioLaneDescription,
   StudioMaterialPreview,
   StudioParameter,
@@ -21,14 +21,15 @@ import type {
   StudioTemporalSource,
   StudioTimelineGesture,
   StudioTimelinePresentation,
+  StudioTimelineTone,
   StudioTrackFamily,
 } from "@hypit/studio-adapter";
 
 export type {
   Range,
-  StudioInteraction,
+  StudioEntityDisplay,
+  StudioIcon,
   StudioEditHandle,
-  StudioInspectorDescription,
   StudioLaneDescription,
   StudioMaterialPreview,
   StudioParameter,
@@ -37,6 +38,7 @@ export type {
   StudioTemporalProjection,
   StudioTemporalSource,
   StudioTimelinePresentation,
+  StudioTimelineTone,
   StudioTrackFamily,
 } from "@hypit/studio-adapter";
 
@@ -47,21 +49,20 @@ export type CandidateStatus = "resolved" | "unresolved";
 /** Studio-owned interpretation of a terminal projection. */
 export type StudioTrackBinding = {
   readonly family: StudioTrackFamily;
+  readonly tone: StudioTimelineTone;
   /** Studio-local lane name. This is presentation, not an authored identity. */
   readonly label?: string;
   readonly facet: "visual" | "audio";
   /** Visual/audio facets from one authored element share this identity. */
   readonly groupId: string;
-  readonly icon: string;
+  readonly icon: StudioIcon;
   /** Stable Studio-local adapter id; fallback adapters remain explicit too. */
   readonly adapter: string;
   /** Studio-local partition key for an attached projection. */
   readonly attachmentId?: string;
   readonly lane: StudioLaneDescription;
-  readonly inspector: StudioInspectorDescription;
   readonly authoredTag?: string;
   readonly references: readonly { readonly name: string; readonly type: string }[];
-  readonly interaction: StudioInteraction;
 };
 
 /**
@@ -93,7 +94,7 @@ export type Clip = {
   readonly authoredId: string;
   /** The Script marker that placed it, when something said put it there. */
   readonly markerId?: string;
-  readonly label: string;
+  readonly display: StudioEntityDisplay;
   readonly startFrame: number;
   readonly endFrameExclusive: number;
   /** Where that authored tag was written. */
@@ -101,9 +102,6 @@ export type Clip = {
   readonly stackOrder: number;
   readonly presentation: StudioTimelinePresentation;
   readonly temporal?: StudioTemporalLineage;
-  /** A real material selected by this Run; absent means Studio draws no fake preview. */
-  readonly preview?: StudioMaterialPreview;
-  readonly interaction: StudioInteraction;
   /** Rendering identities implementing this author entity; optional for non-visual entities. */
   readonly renderIds: readonly string[];
   readonly parameters: readonly StudioParameter[];

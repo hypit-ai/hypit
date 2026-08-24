@@ -156,6 +156,7 @@ function realizedItems(
   const motion = resolveMediaLifecycleMotion(spec.motion, frame, canvas);
   const addition = {
       id: window.id,
+      subjectId: spec.id,
       span: { ...window.span },
       frame: { ...frame },
       presentation: structuredClone(spec.presentation),
@@ -201,6 +202,7 @@ function assertSampleLayerForSpace(layer: MediaSampleLayerProgram, space: Progra
 
 function assertItem(item: MediaItemProgram, space: ProgramSpace, label: string): void {
   assertMediaIdentity(item.id, `${label}.id`);
+  assertMediaIdentity(item.subjectId, `${label}.subjectId`);
   assert(Number.isSafeInteger(item.span.startFrame) && Number.isSafeInteger(item.span.endFrameExclusive)
     && item.span.startFrame >= 0 && item.span.endFrameExclusive > item.span.startFrame
     && item.span.endFrameExclusive <= programSpaceFrameCount(space), `${label}.span is invalid.`);
@@ -366,6 +368,7 @@ export function projectMediaVisualTrack(space: ProgramSpace, program: MediaTrack
     presents: [
       ...program.items.map((item) => ({
       id: item.id,
+      subjectId: item.subjectId,
       span: { ...item.span },
       stacking: { ...item.stacking },
       elements: lowerMediaItemElements(item, space),
@@ -386,7 +389,7 @@ function sourceSampleBoundary(frame: number, frameCount: number, sampleFrames: n
 }
 
 function sourceAudioClip(
-  value: Pick<MediaItemProgram, "id" | "span" | "layers" | "sourceAudio">,
+  value: Pick<MediaItemProgram, "id" | "subjectId" | "span" | "layers" | "sourceAudio">,
   space: ProgramSpace,
   fades: { readonly inSamples: number; readonly outSamples: number } = { inSamples: 0, outSamples: 0 },
 ): AudioClip | undefined {
@@ -435,6 +438,7 @@ function sourceAudioClip(
     `Media projection ${value.id} source audio is too short for its authored crossfade.`);
   return {
     id: `${value.id}:source-audio`,
+    subjectId: value.subjectId,
     artifact: structuredClone(audio.artifact),
     target: { startSample: targetStart, endSampleExclusive: targetEnd },
     source: {
@@ -515,6 +519,7 @@ function sequenceAudioClips(sequence: MediaSequenceProgram, space: ProgramSpace)
       : 0;
     const clip = sourceAudioClip({
       id: `${sequence.id}:${member.id}`,
+      subjectId: sequence.id,
       span,
       layers: member.layers,
       sourceAudio: member.sourceAudio,

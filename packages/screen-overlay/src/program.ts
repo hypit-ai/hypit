@@ -112,6 +112,7 @@ function realized(
   assertScreenOverlaySet(set); assertScreenOverlayHeader(header); assertScreenOverlayItemSpec(spec);
   const addition = {
     id: window.id,
+    subjectId: spec.id,
     span: { ...window.span },
     content: structuredClone(spec.content),
     stacking: { order: spec.stackingOrder, tieBreak: `${header.id}:${spec.id}` },
@@ -143,7 +144,8 @@ export function assertScreenOverlayProgram(value: ScreenOverlayProgram): void {
   identity(value.id, "ScreenOverlayProgram.id"); assert(value.items.length > 0, "ScreenOverlayProgram requires Items.");
   const ids = new Set<string>();
   for (const item of value.items) {
-    identity(item.id, "ScreenOverlayItemProgram.id"); assert(!ids.has(item.id), `Duplicate Screen Overlay Item ${item.id}.`); ids.add(item.id);
+    identity(item.id, "ScreenOverlayItemProgram.id"); identity(item.subjectId, "ScreenOverlayItemProgram.subjectId");
+    assert(!ids.has(item.id), `Duplicate Screen Overlay Item ${item.id}.`); ids.add(item.id);
     assert(item.span.startFrame >= 0 && item.span.endFrameExclusive > item.span.startFrame,
       `Screen Overlay Item ${item.id} timing is invalid.`);
     assertScreenOverlayComponent(item.content); assert(Number.isSafeInteger(item.stacking.order) && item.stacking.tieBreak.length > 0,
@@ -307,7 +309,7 @@ export function renderScreenOverlay(canvas: CanvasSpace, space: ProgramSpace, pr
   const track = sealVisualTrack({
     visualIr: "hypit.visual-ir@1", id: program.id,
     presents: program.items.map((item) => ({
-      id: item.id, span: { ...item.span }, stacking: { ...item.stacking },
+      id: item.id, subjectId: item.subjectId, span: { ...item.span }, stacking: { ...item.stacking },
       elements: overlayElements(item.content, canvas, item.span.endFrameExclusive - item.span.startFrame),
     })),
   });

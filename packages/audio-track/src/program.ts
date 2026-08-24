@@ -115,6 +115,7 @@ function realizedItems(
   const fadeOutSamples = temporalDurationInSamples(spec.mix.fadeOut, space);
   const addition = {
     id: window.id,
+    subjectId: spec.id,
     window: { ...window.span },
     source: structuredClone(source),
     trim: { startSample: trimStart, endSampleExclusive: trimEnd },
@@ -165,6 +166,7 @@ export function assertAudioTrackProgram(value: AudioTrackProgram): void {
   const ids = new Set<string>();
   for (const item of value.items) {
     assertIdentity(item.id, "AudioItemProgram.id");
+    assertIdentity(item.subjectId, "AudioItemProgram.subjectId");
     assert(!ids.has(item.id), `AudioTrackProgram contains duplicate Item ${item.id}.`);
     ids.add(item.id);
     assert(Number.isSafeInteger(item.window.startFrame) && item.window.startFrame >= 0
@@ -219,6 +221,7 @@ function terminalClip(item: AudioItemProgram, space: ProgramSpace): AudioClip {
     `Audio Item ${item.id} fade exceeds its audible interval.`);
   return {
     id: item.id,
+    subjectId: item.subjectId,
     artifact: structuredClone(item.source.artifact),
     target: { startSample: targetStart, endSampleExclusive: targetEnd },
     source: {

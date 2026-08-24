@@ -26,11 +26,12 @@ import {
 } from "./studio-registry.js";
 import type { StudioAdapterRegistry } from "./studio-registry.js";
 import type { StudioEntityDraft } from "./studio-registry.js";
-import { parametersForDraft, timelineAdjustHandles } from "./parameters.js";
+import { parametersForDraft, resolveTimelineEditHandles } from "./parameters.js";
 import type { StudioSourceFile } from "./parameters.js";
 
 type Present = {
   readonly id: string;
+  readonly subjectId?: string;
   readonly span: { readonly startFrame: number; readonly endFrameExclusive: number };
   readonly stacking: { readonly order: number };
 };
@@ -40,6 +41,7 @@ const SAMPLE_RATE = 48_000;
 
 type AudioClip = {
   readonly id: string;
+  readonly subjectId?: string;
   readonly target: { readonly startSample: number; readonly endSampleExclusive: number };
 };
 
@@ -51,11 +53,12 @@ type AudioClip = {
 function spans(
   track: unknown,
   frameRate: { readonly numerator: number; readonly denominator: number },
-): readonly { id: string; startFrame: number; endFrameExclusive: number; stackOrder: number }[] {
+): readonly { id: string; subjectId?: string; startFrame: number; endFrameExclusive: number; stackOrder: number }[] {
   const held = track as { presents?: readonly Present[]; clips?: readonly AudioClip[] } | undefined;
   if (held?.presents !== undefined) {
     return held.presents.map((present) => ({
       id: present.id,
+      ...(present.subjectId === undefined ? {} : { subjectId: present.subjectId }),
       startFrame: present.span.startFrame,
       endFrameExclusive: present.span.endFrameExclusive,
       stackOrder: present.stacking.order,
@@ -64,6 +67,7 @@ function spans(
   const perSecond = frameRate.numerator / frameRate.denominator;
   return (held?.clips ?? []).map((clip) => ({
     id: clip.id,
+    ...(clip.subjectId === undefined ? {} : { subjectId: clip.subjectId }),
     startFrame: Math.floor(clip.target.startSample / SAMPLE_RATE * perSecond),
     endFrameExclusive: Math.max(
       Math.floor(clip.target.startSample / SAMPLE_RATE * perSecond) + 1,
@@ -85,18 +89,7 @@ function authored(placements: readonly Placement[]): readonly Located[] {
       if (child.id !== undefined) found.push({ id: child.id, range: child.range });
     }
   }
-  // Longest first, so `handsome-1` wins over `handsome`.
-  return found.sort((left, right) => right.id.length - left.id.length);
-}
-
-/**
- * A Present is named after the things that produced it, so the authored id it
- * mentions is the tag to point at. Matching on whole delimited parts keeps
- * `bags` from matching inside `bagsful`.
- */
-function locate(presentId: string, located: readonly Located[]): Located | undefined {
-  const parts = new Set(presentId.split(/[:#+]/u).filter(Boolean));
-  return located.find((item) => parts.has(item.id));
+  return found;
 }
 
 function scriptMap(
@@ -297,26 +290,6 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
   const located = authored(built.source.observations.placements);
   const script = scriptMap(built.source.observations.sourceMaps, built);
   const semantic = semanticTimeline(registry, built, script);
-  // A clip is coloured by the marker that placed it, not by the tag that drew
-  // it, so a cutaway and the words that call for it read as the same thing.
-  const markers = new Set([
-    ...(script?.selections ?? []).map((item) => item.id),
-    ...(script?.segments ?? []).map((item) => item.id),
-    ...(script?.moments ?? []).map((item) => item.id),
-  ]);
-  const markerFor = (elementId: string): string | undefined => {
-    // The tag may be the element itself or one written inside it; either way
-    // what places it is something it points at.
-    for (const placement of built.source.observations.placements) {
-      const child = placement.children.find((item) => item.id === elementId);
-      const paths = placement.id === elementId ? placement.references : child?.references;
-      for (const path of paths ?? []) {
-        const named = path.slice(path.lastIndexOf(".") + 1);
-        if (markers.has(named)) return named;
-      }
-    }
-    return undefined;
-  };
   const tracks: Track[] = [];
   for (const item of built.tracks) {
     const projectedSpans = spans(item.value, input.frameRate);
@@ -326,19 +299,13 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
       && candidate.module.name === item.trace.module
       && candidate.surface === item.trace.surface);
     const generic = (): readonly StudioEntityDraft[] => projectedSpans.map((span) => {
-      const where = locate(span.id, located);
-      const named = [...new Set(span.id.split(/[:#+]/u))].find((part) => markers.has(part));
-      const marker = named ?? (where === undefined ? undefined : markerFor(where.id));
-      // A clip is itself before it is what placed it: four rows of one board
-      // are four things, and collapsing them onto the marker they share would
-      // make them one.
-      const identity = where?.id ?? marker ?? item.name;
+      const identity = span.subjectId ?? span.id;
+      const where = located.find((candidate) => candidate.id === identity);
       return {
         id: `${item.outputRef}:${span.id}`,
         ...(item.type === "VisualTrack" ? { presentId: span.id } : {}),
         authoredId: identity,
-        ...(marker === undefined ? {} : { markerId: marker }),
-        label: where?.id ?? span.id,
+        display: { title: identity, layers: [] },
         startFrame: span.startFrame,
         endFrameExclusive: span.endFrameExclusive,
         ...(where === undefined ? {} : { elementRange: where.range }),
@@ -364,19 +331,20 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
         placements: built.source.observations.placements,
         surfaces: input.surfaces,
       });
-      const editHandles = timelineAdjustHandles(
+      const editHandles = resolveTimelineEditHandles(
         parameters,
-        registry.timelineGestures(item, placement, draft.lane),
+        draft.timelineEdits ?? registry.timelineEdits(item, placement, draft.lane),
         draft.temporal,
         semantic,
       );
-      return parameters.length === 0 && editHandles.length === 0
-        ? draft
-        : { ...draft, parameters, ...(editHandles.length === 0 ? {} : { editHandles }) };
+      return {
+        draft: parameters.length === 0 ? draft : { ...draft, parameters },
+        editHandles,
+      };
     });
     const clips: Clip[] = drafts
-      .filter((draft) => draft.lane === undefined)
-      .map((draft) => sealStudioClip(item.outputRef, draft, binding));
+      .filter(({ draft }) => draft.lane === undefined)
+      .map(({ draft, editHandles }) => sealStudioClip(item.outputRef, draft, binding, editHandles));
     const provenance: CandidateProvenance = {
       output: item.name,
       outputRef: item.outputRef,
@@ -394,13 +362,14 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
       provenance,
     });
     for (const attachment of registry.trackAttachments(item)) {
-      const attachedDrafts = drafts.filter((draft) => draft.lane === attachment.attachmentId);
+      const attachedDrafts = drafts.filter(({ draft }) => draft.lane === attachment.attachmentId);
       if (attachedDrafts.length === 0) continue;
       tracks.push({
         id: `${item.outputRef}::studio::${attachment.attachmentId}`,
         label: attachment.label ?? attachment.attachmentId ?? item.name,
         row: 0,
-        clips: attachedDrafts.map((draft) => sealStudioClip(item.outputRef, draft, attachment)),
+        clips: attachedDrafts.map(({ draft, editHandles }) =>
+          sealStudioClip(item.outputRef, draft, attachment, editHandles)),
         binding: attachment,
         provenance,
       });

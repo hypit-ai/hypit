@@ -14,6 +14,16 @@ const resolvedAudio = new Map<string, string | undefined>();
 const storyboards = new Map<string, Promise<Storyboard | undefined>>();
 const resolvedStoryboards = new Map<string, Storyboard | undefined>();
 
+function previewUrl(preview: StudioMaterialPreview): string {
+  if (preview.source.kind === "artifact") return `/__studio/material/${preview.source.digest}`;
+  const query = new URLSearchParams({
+    module: preview.source.module,
+    version: preview.source.version,
+    surface: preview.source.surface,
+  });
+  return `/__studio/surface-preview?${query.toString()}`;
+}
+
 function positiveHeader(response: Response, name: string): number | undefined {
   const value = Number(response.headers.get(name));
   return Number.isFinite(value) && value > 0 ? value : undefined;
@@ -132,34 +142,35 @@ function audioPreview(url: string): Promise<string | undefined> {
 
 /** Mount only a real selected artifact; failed decoding deliberately leaves the item plain. */
 export function mountMaterialPreview(target: HTMLElement, preview: StudioMaterialPreview): void {
+  const url = previewUrl(preview);
   target.classList.add(`clip-material-${preview.kind}`);
   if (preview.kind === "video") {
-    if (resolvedStoryboards.has(preview.url)) {
-      const storyboard = resolvedStoryboards.get(preview.url);
+    if (resolvedStoryboards.has(url)) {
+      const storyboard = resolvedStoryboards.get(url);
       if (storyboard !== undefined) renderStoryboard(target, storyboard);
       return;
     }
-    void storyboardFor(preview.url).then((storyboard) => {
+    void storyboardFor(url).then((storyboard) => {
       if (storyboard !== undefined) renderStoryboard(target, storyboard);
     });
     return;
   }
   if (preview.kind === "image") {
-    target.style.backgroundImage = `url(${JSON.stringify(preview.url)})`;
+    target.style.backgroundImage = `url(${JSON.stringify(url)})`;
     target.classList.add("ready");
     return;
   }
-  if (resolvedAudio.has(preview.url)) {
-    const url = resolvedAudio.get(preview.url);
-    if (url !== undefined) {
-      target.style.backgroundImage = `url(${JSON.stringify(url)})`;
+  if (resolvedAudio.has(url)) {
+    const waveform = resolvedAudio.get(url);
+    if (waveform !== undefined) {
+      target.style.backgroundImage = `url(${JSON.stringify(waveform)})`;
       target.classList.add("ready");
     }
     return;
   }
-  void audioPreview(preview.url).then((url) => {
-    if (url === undefined || !target.isConnected) return;
-    target.style.backgroundImage = `url(${JSON.stringify(url)})`;
+  void audioPreview(url).then((waveform) => {
+    if (waveform === undefined || !target.isConnected) return;
+    target.style.backgroundImage = `url(${JSON.stringify(waveform)})`;
     target.classList.add("ready");
   });
 }

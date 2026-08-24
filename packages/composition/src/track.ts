@@ -345,6 +345,8 @@ export type VisualElement = VisualBoxElement | VisualMaskElement | VisualTextEle
 
 export type VisualPresent = {
   readonly id: string;
+  /** Optional domain entity implemented by this renderer Present. */
+  readonly subjectId?: string;
   readonly span: FrameSpan;
   /** Absolute paint position for this Present, not for its authoring Track. */
   readonly stacking: {
@@ -365,6 +367,8 @@ export type VisualTrack = {
 
 export type AudioClip = {
   readonly id: string;
+  /** Optional domain entity implemented by this renderer Clip. */
+  readonly subjectId?: string;
   /** Bytes only. Exact duration belongs to source.sampleFrames, not duplicated floating metadata. */
   readonly artifact: BlobRef;
   /** Exact audible placement in the canonical 48 kHz ProgramSpace sample domain. */
@@ -909,6 +913,7 @@ function assertAnimation(animation: VisualAnimation | undefined, _durationFrames
 function assertPresent(present: VisualPresent, programSpace: ProgramSpace | undefined, trackId: string): void {
   const totalFrames = programSpace === undefined ? Number.MAX_SAFE_INTEGER : programSpaceFrameCount(programSpace);
   assertNonEmpty(present.id, `${trackId} Present id`);
+  if (present.subjectId !== undefined) assertNonEmpty(present.subjectId, `${trackId}.${present.id} subjectId`);
   assertFrameSpan(present.span, totalFrames, `${trackId}.${present.id}.span`);
   assertNonEmpty(present.stacking.tieBreak, `${trackId}.${present.id} stacking tieBreak`);
   if (!Number.isSafeInteger(present.stacking.order)) {
@@ -1195,6 +1200,7 @@ function visualTrackContent(value: Omit<VisualTrack, "kind">): VisualTrack {
     presents: [...value.presents]
       .map((present) => ({
         id: present.id,
+        ...(present.subjectId === undefined ? {} : { subjectId: present.subjectId }),
         span: { ...present.span },
         stacking: { ...present.stacking },
         elements: [...present.elements].map(normalizeElement).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id)),
@@ -1213,6 +1219,7 @@ function audioTrackContent(value: Omit<AudioTrack, "kind">): AudioTrack {
     clips: [...value.clips]
       .map((clip) => ({
         id: clip.id,
+        ...(clip.subjectId === undefined ? {} : { subjectId: clip.subjectId }),
         artifact: { ...clip.artifact },
         target: { ...clip.target },
         source: { ...clip.source },
@@ -1259,6 +1266,7 @@ export function assertAudioTrackIdentity(track: AudioTrack, programSpace?: Progr
     if (clipIds.has(clip.id)) throw new Error(`${track.id} has duplicate clip ${clip.id}.`);
     clipIds.add(clip.id);
     assertNonEmpty(clip.id, `${track.id} clip id`);
+    if (clip.subjectId !== undefined) assertNonEmpty(clip.subjectId, `${track.id}.${clip.id} subjectId`);
     assertAudioArtifact(clip.artifact, `${track.id}.${clip.id}.artifact`);
     if (!Number.isSafeInteger(clip.target.startSample) || clip.target.startSample < 0
       || !Number.isSafeInteger(clip.target.endSampleExclusive)

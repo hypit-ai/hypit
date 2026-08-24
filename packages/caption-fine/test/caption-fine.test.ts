@@ -9,7 +9,6 @@ import type { SvsRecipe } from "@hypit/svs";
 
 import { fixtureDigest } from "../../../test/fixture-digest.js";
 import {
-  captionFineMarkupSurfaces,
   fineCaptionParameters,
   fineCaptionStyle,
   renderFineCaption,
@@ -111,14 +110,6 @@ test("Fine Caption freezes complete Where, How and visible-envelope parameters",
   assert.equal(parameters.basePaint.shadow.spreadPx, 1);
   assert.deepEqual(parameters.timing, { leadFrames: 4, tailFrames: 6, handoff: "cut" });
 
-  const vocabulary = captionFineMarkupSurfaces.find((surface) => surface.name === "style")!
-    .vocabulary.attributes.find((attribute) => attribute.name === "recipe")!.recipe!;
-  const declared = (name: string) => vocabulary.find((property) => property.name === name);
-  assert.equal(declared("x")?.group, "where");
-  assert.equal(declared("cue-shadow-blur")?.group, "how");
-  assert.equal(declared("active-box-background")?.group, "how");
-  assert.equal(declared("active-box-enter")?.group, "when");
-  assert.equal(declared("cue-enter")?.group, "when");
 });
 
 test("Fine Caption schedules visibility outside semantic Word timing and cuts only the handoff", () => {

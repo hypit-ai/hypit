@@ -3,12 +3,13 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import type {
   StudioParameter,
   StudioParameterDeclaration,
+  StudioRecipeReferenceDeclaration,
   StudioEntityDraft,
   StudioPlacement,
   StudioEditHandle,
   StudioSemanticTimeline,
   StudioTemporalLineage,
-  StudioTimelineGesture,
+  StudioTimelineEditDeclaration,
 } from "@hypit/studio-adapter";
 import type { MarkupSurfaceRegistryLike, SurfaceRecipePropertyVocabulary } from "@hypit/markup";
 import { parseSvs } from "@hypit/svs";
@@ -117,26 +118,28 @@ function recipeParameters(input: {
   readonly placements: readonly Placement[];
   readonly surfaces?: MarkupSurfaceRegistryLike;
   readonly vocabulary?: readonly SurfaceRecipePropertyVocabulary[];
+  readonly recipe: StudioRecipeReferenceDeclaration;
+  readonly through: readonly string[];
 }): readonly StudioParameter[] {
-  const local = input.placements.find((candidate) => candidate.id === input.referencePath);
-  if (local !== undefined) {
-    const next = ["recipe", "default", "style", "appearance", "motion", "program"]
-      .map((name) => ({ name, path: local.referenceAttributes[name] }))
-      .find((value): value is { name: string; path: string } => value.path !== undefined);
-    if (next !== undefined && next.path !== input.referencePath) {
-      const vocabulary = input.surfaces
-        ?.resolve(local.module, local.surface)
-        ?.vocabulary?.attributes
-        .find((attribute) => attribute.name === next.name)
-        ?.recipe;
-      const selectedVocabulary = vocabulary ?? input.vocabulary;
-      return recipeParameters({
-        ...input,
-        current: sourceFor(input.root, local.sourcePath, input.files) ?? input.current,
-        referencePath: next.path,
-        ...(selectedVocabulary === undefined ? {} : { vocabulary: selectedVocabulary }),
-      });
-    }
+  const [attribute, ...remaining] = input.through;
+  if (attribute !== undefined) {
+    const local = input.placements.find((candidate) => candidate.id === input.referencePath);
+    if (local === undefined) return [];
+    const referencePath = local.referenceAttributes[attribute];
+    if (referencePath === undefined || referencePath === input.referencePath) return [];
+    const vocabulary = input.surfaces
+      ?.resolve(local.module, local.surface)
+      ?.vocabulary?.attributes
+      .find((candidate) => candidate.name === attribute)
+      ?.recipe;
+    const selectedVocabulary = vocabulary ?? input.vocabulary;
+    return recipeParameters({
+      ...input,
+      current: sourceFor(input.root, local.sourcePath, input.files) ?? input.current,
+      referencePath,
+      through: remaining,
+      ...(selectedVocabulary === undefined ? {} : { vocabulary: selectedVocabulary }),
+    });
   }
   const [alias, ...parts] = input.referencePath.split(".");
   if (alias === undefined || parts.length === 0) return [];
@@ -148,33 +151,38 @@ function recipeParameters(input: {
   const parsed = parseSvs(source.path, svsText(source.text));
   const recipe = parsed.recipes.find((item) => item.value.path === recipePath);
   if (recipe === undefined) return [];
-  return recipe.properties.map((property) => {
+  return recipe.properties.flatMap((property): readonly StudioParameter[] => {
+    const presentation = input.recipe.parameters.find((candidate) => candidate.name === property.name);
+    if (presentation === undefined) return [];
     const declaration = input.vocabulary?.find((candidate) => candidate.name === property.name);
     const preimage = source.text.slice(property.valueRange.start, property.valueRange.end);
     const raw = preimage.trim();
-    const control = declaration?.values !== undefined
+    const options = presentation?.options ?? declaration?.values;
+    const summary = presentation?.summary ?? declaration?.summary;
+    const control = presentation?.control ?? (options !== undefined
       ? "select" as const
       : raw === "true" || raw === "false"
       ? "boolean" as const
-      : /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/u.test(raw) ? "number" as const : "text" as const;
-    return {
+      : /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/u.test(raw) ? "number" as const : "text" as const);
+    return [{
       id: `${input.draft.id}:${input.referenceName}:${property.name}`,
       name: property.name,
-      label: declaration === undefined ? `${input.referenceName} · ${property.name}` : property.name,
-      ...(declaration?.group === undefined ? {} : { group: declaration.group }),
-      ...(declaration?.section === undefined ? {} : { section: declaration.section }),
-      ...(declaration?.summary === undefined ? {} : { summary: declaration.summary }),
+      label: presentation?.label ?? (declaration === undefined ? `${input.referenceName} · ${property.name}` : property.name),
+      ...(presentation?.group === undefined ? {} : { group: presentation.group }),
+      ...(presentation?.section === undefined ? {} : { section: presentation.section }),
+      ...(summary === undefined ? {} : { summary }),
       control,
       value: raw,
       language: "svs" as const,
-      writable: true,
-      ...(declaration?.values === undefined ? {} : { options: declaration.values }),
+      writable: presentation?.writable ?? true,
+      ...(options === undefined ? {} : { options }),
+      ...(presentation?.unit === undefined ? {} : { unit: presentation.unit }),
       source: {
         path: relative(input.root, sourceAbsolute(input.root, source.path)),
         range: property.valueRange,
         preimage,
       },
-    } satisfies StudioParameter;
+    } satisfies StudioParameter];
   });
 }
 
@@ -187,8 +195,7 @@ function referencedParameters(input: {
   readonly declarations: readonly StudioParameterDeclaration[];
   readonly placements: readonly Placement[];
 }): readonly StudioParameter[] {
-  const targetId = input.referencePath.split(".").at(-1);
-  if (targetId === undefined) return [];
+  const targetId = input.referencePath;
   const target = authoredElements(input.placements).find((candidate) => candidate.id === targetId);
   if (target === undefined) return [];
   const file = sourceFor(input.root, target.sourcePath, input.files);
@@ -289,8 +296,9 @@ export function parametersForDraft(input: {
         declarations: declaration.referenced,
         placements: input.placements ?? [],
       });
-    const recipe = ["appearance", "visual-appearance", "motion", "style", "recipe", "program", "default"].includes(declaration.name)
-      ? recipeParameters({
+    const recipe = declaration.recipe === undefined
+      ? []
+      : recipeParameters({
         root: input.root,
         files: input.files,
         current: file,
@@ -299,8 +307,9 @@ export function parametersForDraft(input: {
         referencePath,
         placements: input.placements ?? [],
         ...(input.surfaces === undefined ? {} : { surfaces: input.surfaces }),
-      })
-      : [];
+        recipe: declaration.recipe,
+        through: declaration.recipe.through ?? [],
+      });
     return [...reference, ...recipe];
   });
   return [...direct, ...recipes];
@@ -315,9 +324,9 @@ const ABSOLUTE_DURATION = /^\s*\d+(?:\.\d+)?(?:f|ms|s)\s*$/u;
  * remain directly writable. Other projections stay visible but read-only
  * until their package declares an unambiguous inverse.
  */
-export function timelineAdjustHandles(
+export function resolveTimelineEditHandles(
   parameters: readonly StudioParameter[],
-  declared: readonly StudioTimelineGesture[] = ["move", "trim-start", "trim-end"],
+  declarations: readonly StudioTimelineEditDeclaration[],
   temporal?: StudioTemporalLineage,
   semantic?: StudioSemanticTimeline,
 ): readonly StudioEditHandle[] {
@@ -328,14 +337,9 @@ export function timelineAdjustHandles(
     // window when a clip is being dragged.
     if (parameter.language === "svml" && !byName.has(parameter.name)) byName.set(parameter.name, parameter);
   }
-  const start = byName.get("start");
-  const end = byName.get("end");
-  const at = byName.get("at");
-  const duration = byName.get("for");
   const absolute = (parameter: StudioParameter | undefined): parameter is StudioParameter =>
     parameter !== undefined && parameter.writable && ABSOLUTE_DURATION.test(parameter.value);
-  const allowed = new Set(declared);
-  const disabled = (gesture: StudioTimelineGesture, reason: string): StudioEditHandle => ({
+  const disabled = (gesture: StudioTimelineEditDeclaration["gesture"], reason: string): StudioEditHandle => ({
     id: `timeline.adjust:${gesture}`,
     operation: "timeline.adjust",
     gesture,
@@ -343,90 +347,88 @@ export function timelineAdjustHandles(
     disabledReason: reason,
   });
   const handles: StudioEditHandle[] = [];
-  const selectionId = temporal?.source.kind === "selection" ? temporal.source.id : undefined;
-  const selection = selectionId === undefined
-    ? undefined
-    : semantic?.selections.find((candidate) => candidate.id === selectionId);
-  const momentId = temporal?.source.kind === "moment" ? temporal.source.id : undefined;
-  const moment = momentId === undefined
-    ? undefined
-    : semantic?.moments.find((candidate) => candidate.id === momentId);
-  if (selection !== undefined) {
-    const target = {
-      kind: "selection" as const,
-      id: selection.id,
-      startAnchorId: selection.startAnchorId,
-      endAnchorId: selection.endAnchorId,
-    };
-    for (const gesture of ["move", "trim-start", "trim-end"] as const) {
-      if (!allowed.has(gesture)) continue;
+  if (temporal === undefined) return handles;
+  const matches = (when: { readonly source: string; readonly projection?: string }): boolean =>
+    temporal.source.kind === when.source
+    && (when.projection === undefined || temporal.projection?.kind === when.projection);
+  for (const declaration of declarations) {
+    const before = handles.length;
+    let relevant = false;
+    let unavailable: string | undefined;
+    for (const target of declaration.targets) {
+      if (target.kind === "semantic-source") {
+        if (temporal.source.kind !== target.source) continue;
+        relevant = true;
+        const id = temporal.source.id;
+        if (id === undefined) {
+          unavailable = `该 ${target.source} 投影没有公共作者身份。`;
+          continue;
+        }
+        if (target.source === "selection") {
+          const selection = semantic?.selections.find((candidate) => candidate.id === id);
+          if (selection === undefined) {
+            unavailable = `Selection ${id} 没有出现在当前语义 Candidate 中。`;
+            continue;
+          }
+          handles.push({
+            id: `timeline.adjust:${declaration.gesture}`,
+            operation: "timeline.adjust",
+            gesture: declaration.gesture,
+            enabled: true,
+            coordinate: "semantic-anchor",
+            ...(target.moveEffect === undefined ? {} : { moveEffect: target.moveEffect }),
+            snapTo: ["semantic-anchor"],
+            semantic: {
+              kind: "selection",
+              id: selection.id,
+              startAnchorId: selection.startAnchorId,
+              endAnchorId: selection.endAnchorId,
+            },
+          });
+        } else {
+          const moment = semantic?.moments.find((candidate) => candidate.id === id);
+          if (moment === undefined) {
+            unavailable = `Moment ${id} 没有出现在当前语义 Candidate 中。`;
+            continue;
+          }
+          handles.push({
+            id: `timeline.adjust:${declaration.gesture}`,
+            operation: "timeline.adjust",
+            gesture: declaration.gesture,
+            enabled: true,
+            coordinate: "semantic-anchor",
+            ...(target.moveEffect === undefined ? {} : { moveEffect: target.moveEffect }),
+            snapTo: ["semantic-anchor"],
+            semantic: { kind: "moment", id: moment.id, anchorId: moment.anchorId },
+          });
+        }
+        break;
+      }
+      if (!matches(target.when)) continue;
+      relevant = true;
+      if (target.kind === "disabled") {
+        handles.push(disabled(declaration.gesture, target.reason));
+        break;
+      }
+      const resolved = target.parameters.map(({ role, parameter }) => ({ role, parameter: byName.get(parameter) }));
+      if (resolved.some((item) => !absolute(item.parameter))) {
+        unavailable = `Companion 声明的源码参数不可用：${target.parameters.map((item) => item.parameter).join(", ")}。`;
+        continue;
+      }
       handles.push({
-        id: `timeline.adjust:${gesture}`,
+        id: `timeline.adjust:${declaration.gesture}`,
         operation: "timeline.adjust",
-        gesture,
-        enabled: true,
-        coordinate: "semantic-anchor",
-        snapTo: ["semantic-anchor"],
-        semantic: target,
-      });
-    }
-  } else if (moment !== undefined) {
-    if (allowed.has("move")) handles.push({
-      id: "timeline.adjust:move",
-      operation: "timeline.adjust",
-      gesture: "move",
-      enabled: true,
-      coordinate: "semantic-anchor",
-      snapTo: ["semantic-anchor"],
-      semantic: { kind: "moment", id: moment.id, anchorId: moment.anchorId },
-    });
-    if (allowed.has("trim-start")) {
-      handles.push(disabled("trim-start", "起点由 Moment 决定；拖动实体会移动 Moment，不能单独裁起点。"));
-    }
-    if (allowed.has("trim-end")) {
-      if (absolute(duration)) handles.push({
-        id: "timeline.adjust:trim-end",
-        operation: "timeline.adjust",
-        gesture: "trim-end",
+        gesture: declaration.gesture,
         enabled: true,
         coordinate: "program-frame",
         snapTo: ["frame", "semantic-anchor", "item-edge"],
-        sources: [{ role: "duration", source: duration.source }],
+        sources: resolved.map((item) => ({ role: item.role, source: item.parameter!.source })),
       });
-      else handles.push(disabled("trim-end", "该 Moment 消费没有独立可写的 duration。"));
+      break;
     }
-  } else if (absolute(start) && absolute(end)) {
-    if (allowed.has("move")) handles.push({
-      id: "timeline.adjust:move", operation: "timeline.adjust", gesture: "move", enabled: true, coordinate: "program-frame",
-      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [
-        { role: "start", source: start.source },
-        { role: "end", source: end.source },
-      ],
-    });
-    if (allowed.has("trim-start")) handles.push({
-      id: "timeline.adjust:trim-start", operation: "timeline.adjust", gesture: "trim-start", enabled: true, coordinate: "program-frame",
-      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [{ role: "start", source: start.source }],
-    });
-    if (allowed.has("trim-end")) handles.push({
-      id: "timeline.adjust:trim-end", operation: "timeline.adjust", gesture: "trim-end", enabled: true, coordinate: "program-frame",
-      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [{ role: "end", source: end.source }],
-    });
-  } else if (at !== undefined && !at.writable && absolute(duration)) {
-    if (allowed.has("move")) handles.push(disabled("move", "起点由 At 引用决定，不能独立移动。"));
-    if (allowed.has("trim-start")) handles.push(disabled("trim-start", "起点由 At 引用决定，不能独立裁剪。"));
-    if (allowed.has("trim-end")) handles.push({
-      id: "timeline.adjust:trim-end", operation: "timeline.adjust", gesture: "trim-end", enabled: true, coordinate: "program-frame",
-      snapTo: ["frame", "semantic-anchor", "item-edge"], sources: [{ role: "duration", source: duration.source }],
-    });
-  } else {
-    const reason = selectionId !== undefined
-      ? `Selection ${selectionId} 没有出现在当前语义 Candidate 中。`
-      : parameters.some((parameter) => parameter.name === "during" && !parameter.writable)
-      ? "该投影尚未声明唯一的作者语义逆变换。"
-      : "没有可逆的绝对时间端点源码范围。";
-    if (allowed.has("move")) handles.push(disabled("move", reason));
-    if (allowed.has("trim-start")) handles.push(disabled("trim-start", reason));
-    if (allowed.has("trim-end")) handles.push(disabled("trim-end", reason));
+    if (relevant && handles.length === before) {
+      handles.push(disabled(declaration.gesture, unavailable ?? "Companion 声明的作者逆变换在当前实体上不可用。"));
+    }
   }
   return handles;
 }

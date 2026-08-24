@@ -30,12 +30,12 @@ Studio 对作者源只公开两个顶层操作：
 
 一次手势按以下顺序解析：
 
-1. 组件 Adapter 声明这个 lane 的实体理解哪些时间线手势。
+1. 组件 Companion 为每个手势声明按时间来源选择的准确逆变换：Semantic 身份、源码参数名或明确禁用。
 2. Studio 读取该实体实际记录的 temporal lineage。
 3. 来源是 Selection 时，矩形拖动直接修改这一个共享 Selection 的 Script markers。
 4. 来源是 Moment 时，整体移动修改这一个共享 Moment marker；若实体另有显式 duration，右端仍可单独修改 duration。
 5. 来源是显式绝对 Window 时，移动或裁边修改其准确的 `start`、`end` 或 `for` 源码端点。
-6. Segment、Program、组件派生阶段或缺少唯一逆变换的实体保持只读。
+6. Segment、不可逆的 Program 派生阶段或缺少唯一逆变换的实体保持只读。
 
 浏览器只提交实体身份、手势和目标锚点/窗口，不提交任意源码补丁。服务端根据当前 Snapshot 上的 handle 再次解析唯一写回目标。
 
@@ -88,6 +88,8 @@ gesture / inspector change
 ```
 
 这里没有长期文件锁、额外 lock.json、内容哈希或隐藏 Build。Studio 重编译不会调用 Provider、创建 Candidate 或启动外部生成；它只验证现有满意 Run 能否消费修改后的作者源。revision 不一致时操作直接拒绝，要求从新 Snapshot 重新规划。
+
+时间线拖动时浏览器只做本地几何预览，`pointermove` 不写 Source；松手后只提交一次。参数控件只在 `change` 时提交，不在每个键入事件上重编译。服务端同一时间只接受一个作者事务，因此当前不需要额外 debounce、队列、后台恢复或高频写入协议。
 
 ## 当前明确不做
 

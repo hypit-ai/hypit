@@ -5,7 +5,7 @@ description: Studio 的启动单元、四区职责、作者写回、时间谱系
 
 # Studio 当前架构边界
 
-> 本文只记录当前实现和稳定职责。领域组件、独立 Hypit Studio Companion 与 Studio 应用的目标三层边界，见 [Studio Companion Adapter 目标架构](./studio-companion-adapter-architecture.md)；当前中央 `studio-video-adapters` 是待迁移事实，不是目标。右上 Inspector 与数据依赖可见性的下一阶段问题，见 [Studio Workspace 与 Inspector 信息架构审计](./studio-workspace-inspector-audit.md)；空间、字幕、时间消费和参数可达性所依赖的视频领域基础，见 [视频领域协议迁移与基建审计](./video-protocol-foundation-audit.md)。审计文档不是实施规格。
+> 本文只记录当前实现和稳定职责。领域组件、独立 Hypit Studio Companion 与 Studio 应用的三层边界，见 [Studio Companion Adapter 架构](./studio-companion-adapter-architecture.md)。右上 Inspector 与数据依赖可见性的下一阶段问题，见 [Studio Workspace 与 Inspector 信息架构审计](./studio-workspace-inspector-audit.md)；空间、字幕、时间消费和参数可达性所依赖的视频领域基础，见 [视频领域协议迁移与基建审计](./video-protocol-foundation-audit.md)。审计文档不是实施规格。
 
 ## 启动单元是 Run
 
@@ -39,11 +39,11 @@ Preview 使用当前 Run 的真实素材和同一套领域程序生成 HyperFram
 
 ### 右上：Inspector
 
-未选择实体时，Inspector 集中显示 Canvas、Author、Run、Source closure 与 Build intent。选择时间线实体后，只显示实体身份、时间谱系、来源和 adapter 明确公开的作者参数，不再重复整份 Run/Target 元信息。组件自声明的大类/子页/参数组仍未形成最终信息架构。
+未选择实体时，Inspector 集中显示 Canvas、Author、Run、Source closure 与 Build intent。选择时间线实体后，只显示实体身份、时间谱系、来源和 Companion 明确公开的作者参数，不再重复整份 Run/Target 元信息。大类、可选子页和参数顺序由 Companion 的 Recipe allowlist 声明；领域组件 Manifest 不承担 Studio 页面语义。
 
 ### 下方：Timeline
 
-时间线显示 Semantic Segment、Word、Selection、Moment，以及 adapter 从真实 Track 投影出的媒体、音频、文字、字幕和组件实体。lane、附属关系、family、内容 shape 与允许手势由 adapter 声明；选择、播放、缩放、吸附、滚动和统一视觉由 Studio 负责。
+时间线显示 Semantic Segment、Word、Selection、Moment，以及 Companion 从真实 Track 投影出的媒体、音频、文字、字幕和组件实体。lane、附属关系、family、有限 chrome、标题与有序内容层由 Companion 声明；时间文本、选择、播放、缩放、吸附、滚动和统一渲染由 Studio 负责。作者对象与投影/渲染对象身份不同时由公共 `subjectId` 明示，Studio 不拆 renderer id。Companion 只传 Artifact digest 或 Surface 身份，不知道 Studio 的 HTTP 路由。
 
 ## 作者写回
 
@@ -70,11 +70,11 @@ Studio 保留三层不同事实：
 
 ## 包边界
 
-以下列表描述当前代码，并不取代 [Companion Adapter 目标架构](./studio-companion-adapter-architecture.md)：
+以下列表描述当前代码，并不取代 [Companion Adapter 架构](./studio-companion-adapter-architecture.md)：
 
 - `packages/studio`：会话、preflight、snapshot、统一 UI、操作事务和 Source transport；
-- `packages/studio-adapter`：第三方 companion package 使用的稳定数据 ABI；
-- `packages/studio-video-adapters`：官方视频领域的 Track 匹配、实体投影、lane 与参数声明；
+- `packages/studio-adapter`：官方和第三方 Companion 使用的稳定数据 ABI；
+- `packages/*-studio`：各官方领域分别拥有的 Track 匹配、实体投影、lane 与参数声明；
 - 领域包：继续只发布运行语义和确定性值，不依赖 Studio。
 
 Adapter 不能向应用注入任意 DOM、CSS 或前端状态。删除 Studio 后，Core、SVML、SVS、SVRun 和 Runtime 仍可独立工作。
@@ -83,7 +83,7 @@ Adapter 不能向应用注入任意 DOM、CSS 或前端状态。删除 Studio �
 
 当前明确仍需调研：
 
-- 右上怎样由组件声明能力大类、可选子页、参数组和控件；
+- 右上现有 Companion Recipe 声明怎样继续扩展为更完整的控件与操作能力；
 - 怎样恢复 prompt、参考素材、Producer、Provider、Artifact 与 Track 之间的可读依赖关系；
 - Runtime 历史怎样分页读取，避免长期积累后逐个读取全部 Build 状态，同时不新增中心 Project 数据库或拖慢 Build；
 - Artifacts 的视频海报、详情与复用动作应如何惰性提供而不污染 Build truth。
