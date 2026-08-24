@@ -14,7 +14,7 @@ import { readStudioSession } from "@hypit/studio/src/session.js";
 import type { StudioSession } from "@hypit/studio/src/session.js";
 import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
 
-import { invokedFrom, referenceRoot, scriptBody } from "./authoring.js";
+import { aliasPattern, invokedFrom, referenceRoot, scriptBody } from "./authoring.js";
 import { assert, round } from "./media.js";
 
 export type PreviewCheckInput = {
@@ -269,8 +269,9 @@ type FrameGeometry = {
  * over a word add up to the whole picture.
  */
 function frameGeometry(svml: string): FrameGeometry {
+  const space = aliasPattern(svml, "@hypit/spatial", "space");
   const canvases = new Map<string, Box>();
-  for (const match of svml.matchAll(/<space:Canvas\b([^>]*?)\/?>/gsu)) {
+  for (const match of svml.matchAll(new RegExp(`<(?:${space}):Canvas\\b([^>]*?)/?>`, "gsu"))) {
     const attributes = match[1] ?? "";
     const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
     const width = Number(/\bwidth="(\d+)"/u.exec(attributes)?.[1]);
@@ -281,7 +282,7 @@ function frameGeometry(svml: string): FrameGeometry {
   }
 
   const declared = new Map<string, FrameDeclaration>();
-  for (const match of svml.matchAll(/<space:Frame\b([^>]*?)\/?>/gsu)) {
+  for (const match of svml.matchAll(new RegExp(`<(?:${space}):Frame\\b([^>]*?)/?>`, "gsu"))) {
     const attributes = match[1] ?? "";
     const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
     const within = /\bwithin=\{([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
@@ -548,7 +549,8 @@ export async function reconstructionCheck(
   // Which Normalize ids carry a picture. A take normalized with `video="none"` is a voice: it has no
   // window to fill, and nothing it feeds puts anything on the Canvas.
   const moving = new Set<string>();
-  for (const match of svml.matchAll(/<pipeline:Normalize\b([^>]*?)\/?>/gsu)) {
+  const pipeline = aliasPattern(svml, "@hypit/media-pipeline", "pipeline");
+  for (const match of svml.matchAll(new RegExp(`<(?:${pipeline}):Normalize\\b([^>]*?)/?>`, "gsu"))) {
     const attributes = match[1] ?? "";
     const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
     const video = /\bvideo="([^"]+)"/u.exec(attributes)?.[1];
@@ -693,7 +695,9 @@ export async function reconstructionCheck(
     // the Take's Segment has over it. A Take fed by a Normalize with `video="none"` is a voice and
     // puts nothing there, so its Segment is spoken over whatever is already on screen.
     const takes = new Map<string, { readonly segment: string; readonly picture: boolean }>();
-    for (const match of svml.matchAll(/<whisperx:SemanticTake\b([^>]*?)\/?>/gsu)) {
+    const whisperx = aliasPattern(svml, "@hypit/whisperx", "whisperx");
+    const speech = aliasPattern(svml, "@hypit/speech-track", "speech");
+    for (const match of svml.matchAll(new RegExp(`<(?:${whisperx}):SemanticTake\\b([^>]*?)/?>`, "gsu"))) {
       const attributes = match[1] ?? "";
       const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
       const segment = /\bsegment=\{story\.segment\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
@@ -701,10 +705,10 @@ export async function reconstructionCheck(
       if (id === undefined || segment === undefined) continue;
       takes.set(id, { segment, picture: media !== undefined && moving.has(media) });
     }
-    for (const track of svml.matchAll(/<speech:Track\b([^>]*?)>(.*?)<\/speech:Track>/gsu)) {
+    for (const track of svml.matchAll(new RegExp(`<(?:${speech}):Track\\b([^>]*?)>(.*?)</(?:${speech}):Track>`, "gsu"))) {
       const where = placement(/\bvisual-frame=\{([A-Za-z0-9_-]+)\}/u.exec(track[1] ?? "")?.[1], undefined);
       if (where === undefined) continue;
-      for (const take of (track[2] ?? "").matchAll(/<speech:Take\b[^>]*?\bsource=\{([A-Za-z0-9_-]+)\.take\}/gu)) {
+      for (const take of (track[2] ?? "").matchAll(new RegExp(`<(?:${speech}):Take\\b[^>]*?\\bsource=\\{([A-Za-z0-9_-]+)\\.take\\}`, "gu"))) {
         const named = takes.get(take[1] ?? "");
         if (named?.picture === true) claimSegment(named.segment, where.canvas, where.box);
       }

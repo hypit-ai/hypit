@@ -169,6 +169,31 @@ function glyphPaintLayers(paints: readonly VisualTextPaintLayer[]): GlyphPaintLa
   return paints.filter((paint): paint is GlyphPaintLayer => paint.kind !== "box");
 }
 
+/**
+ * How far outside the glyph advance an outline reaches, in pixels.
+ *
+ * The ring is a filter — `feMorphology` dilating the glyph's own alpha — so it draws outside the
+ * element and contributes nothing to layout. Everything that measures the text therefore measures the
+ * letterform alone: the width a `max-content` box takes, where a line wraps, where a background sits,
+ * the gap between two words, and where an anchored line is placed. The outline lands past all of them.
+ *
+ * The placement decides the reach, and it is decided here — `outside` puts the whole width beyond the
+ * edge, `center` half of it, `inside` none — so the reserve is computed here rather than by whoever
+ * declared the Paint.
+ *
+ * A shadow and a glow are not part of the letterform and have never affected layout; reserving for
+ * them would re-flow a line for a soft edge. Only the outline counts.
+ */
+function strokeReserve(layers: readonly GlyphPaintLayer[]): number {
+  let reserve = 0;
+  for (const paint of layers) {
+    if (paint.kind !== "stroke") continue;
+    const reach = paint.placement === "outside" ? paint.widthPx : paint.placement === "center" ? paint.widthPx / 2 : 0;
+    reserve = Math.max(reserve, reach);
+  }
+  return reserve;
+}
+
 function inheritedGlyphColor(paints: readonly VisualTextPaintLayer[]): string[] {
   const fills = glyphPaintLayers(paints).filter((paint): paint is Extract<GlyphPaintLayer, { kind: "fill" }> => paint.kind === "fill");
   return fills.length === 1 && fills[0]!.paint.kind === "solid" ? [`color:${fills[0]!.paint.color}`] : [];
@@ -311,8 +336,13 @@ export function renderGlyphPaintedString(
   const defs = definitions.length === 0
     ? ""
     : `<svg aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden"><defs>${definitions}</defs></svg>`;
-  // The layers occupy one grid cell each so they stack in the order they were declared.
-  return `${defs}<span style="position:relative;display:inline-grid">${renderGlyphPaint(value, paints, context)}</span>`;
+  // The layers occupy one grid cell each so they stack in the order they were declared, and the
+  // wrapper carries the room the outline needs. Padding one layer would move its copy of the text
+  // away from the others and separate the body from its own ring; padding the wrapper moves all of
+  // them together and is what the box around them measures.
+  const reserve = strokeReserve(layers);
+  const box = reserve === 0 ? "" : `;padding:${number(reserve)}px`;
+  return `${defs}<span style="position:relative;display:inline-grid${box}">${renderGlyphPaint(value, paints, context)}</span>`;
 }
 
 function boxLayers(

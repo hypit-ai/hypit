@@ -166,6 +166,34 @@ export function scriptBody(svml: string): { readonly text: string; readonly offs
   return { text: svml.slice(start, end), offset: start };
 }
 
+/**
+ * What a Source calls each package it imports.
+ *
+ * These tools find elements by tag — `SemanticTake`, `Normalize`, `Canvas` — and a tag is written
+ * behind whatever alias the Source chose in `<import as="…" from="…"/>`. The alias is the author's,
+ * not the package's: two Sources importing one package under two names are the same Source as far as
+ * anything downstream is concerned.
+ *
+ * Assuming the conventional alias is therefore a reading that is right until somebody writes
+ * `as="speech-track"`, at which point the element is invisible and whatever depended on finding it
+ * reports the Source as missing something it plainly has. So the alias is read from the Source, and
+ * the conventional one is the fallback for a Source that imports without naming one.
+ */
+export function aliasPattern(svml: string, specifier: string, conventional: string): string {
+  const found = new Set<string>();
+  for (const match of svml.matchAll(/<import\s+([^>]*?)\/?>/gu)) {
+    const attributes = match[1] ?? "";
+    // The scope's own `@` is part of the name, so only the last one separates it from the version.
+    const from = /\bfrom="(.+)@\d+"/u.exec(attributes)?.[1];
+    if (from !== specifier) continue;
+    found.add(/\bas="([^"]+)"/u.exec(attributes)?.[1] ?? conventional);
+  }
+  if (found.size === 0) found.add(conventional);
+  // Longest first, so `speech-track` is not matched as `speech` followed by a stray `-track`.
+  return [...found].sort((left, right) => right.length - left.length)
+    .map((alias) => alias.replace(/[.*+?^${}()|[\]\\-]/gu, "\\$&")).join("|");
+}
+
 /** Every Recipe body in every sheet the Source imports, keyed `alias.path`. */
 async function recipeSheets(svml: string, svmlPath: string): Promise<ReadonlyMap<string, SvsRecipe>> {
   const sheets = new Map<string, SvsRecipe>();
@@ -201,7 +229,8 @@ function policiesBySegment(svml: string, sheets: ReadonlyMap<string, SvsRecipe>)
 } {
   const policies = new Map<string, SpeechEstimatePolicy>();
   const named = new Set<string>();
-  for (const match of svml.matchAll(/<estimate:Speech\b([^>]*?)\/?>/gsu)) {
+  const estimate = aliasPattern(svml, "@hypit/estimate", "estimate");
+  for (const match of svml.matchAll(new RegExp(`<(?:${estimate}):Speech\\b([^>]*?)/?>`, "gsu"))) {
     const attributes = match[1] ?? "";
     const segment = /\bsource=\{story\.segment\.([A-Za-z0-9_-]+)\.speech\}/u.exec(attributes)?.[1];
     const recipe = /\bpolicy=\{([A-Za-z0-9_.-]+)\}/u.exec(attributes)?.[1];
@@ -821,19 +850,21 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const clock = /<[a-z-]*:?Clock\b[^>]*?\bframe-rate="(\d+)"/su.exec(svml)?.[1]
     ?? /<time:Clock\b[^>]*?\bfps="(\d+)"/su.exec(svml)?.[1];
   const frameRate = Number(clock ?? 30);
-  const canvasMatch = /<space:Canvas\b[^>]*?\bwidth="(\d+)"[^>]*?\bheight="(\d+)"/su.exec(svml);
-  assert(canvasMatch !== null, "the Source declares no <space:Canvas width= height=/>");
+  const space = aliasPattern(svml, "@hypit/spatial", "space");
+  const canvasMatch = new RegExp(`<(?:${space}):Canvas\\b[^>]*?\\bwidth="(\\d+)"[^>]*?\\bheight="(\\d+)"`, "su").exec(svml);
+  assert(canvasMatch !== null, `the Source declares no <${space.split("|")[0]}:Canvas width= height=/>`);
   const canvas = { width: Number(canvasMatch[1]), height: Number(canvasMatch[2]) };
 
   // Which SemanticTake output belongs to which Segment, so each stand-in lands on the right one.
+  const whisperx = aliasPattern(svml, "@hypit/whisperx", "whisperx");
   const takeOutputs = new Map<string, string>();
-  for (const match of svml.matchAll(/<whisperx:SemanticTake\b([^>]*?)\/?>/gsu)) {
+  for (const match of svml.matchAll(new RegExp(`<(?:${whisperx}):SemanticTake\\b([^>]*?)/?>`, "gsu"))) {
     const attributes = match[1] ?? "";
     const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
     const segment = /\bsegment=\{story\.segment\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
     if (id !== undefined && segment !== undefined) takeOutputs.set(segment, id);
   }
-  assert(takeOutputs.size > 0, "the Source declares no whisperx:SemanticTake to stand in for");
+  assert(takeOutputs.size > 0, `the Source declares no ${whisperx.split("|")[0]}:SemanticTake to stand in for`);
 
   // What the Run already brings. A project Run declares nothing and everything is mocked; a package's
   // preview Run ships its own sample pictures, and those are carried across untouched so the catalogue
@@ -899,7 +930,7 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
    */
   const mockedMedia = (): ReadonlyMap<string, { readonly frames: number; readonly picture: boolean }> => {
     const windows = new Map<string, number>();
-    for (const match of svml.matchAll(/<whisperx:SemanticTake\b([^>]*?)\/?>/gsu)) {
+    for (const match of svml.matchAll(new RegExp(`<(?:${whisperx}):SemanticTake\\b([^>]*?)/?>`, "gsu"))) {
       const attributes = match[1] ?? "";
       const media = /\bmedia=\{([A-Za-z0-9_-]+)\.media\}/u.exec(attributes)?.[1];
       const segment = /\bsegment=\{story\.segment\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
@@ -922,7 +953,8 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
         : window.endFrameExclusive - window.startFrame);
     }
     const carries = new Map<string, { readonly frames: number; readonly picture: boolean }>();
-    for (const match of svml.matchAll(/<pipeline:Normalize\b([^>]*?)\/?>/gsu)) {
+    const pipeline = aliasPattern(svml, "@hypit/media-pipeline", "pipeline");
+    for (const match of svml.matchAll(new RegExp(`<(?:${pipeline}):Normalize\\b([^>]*?)/?>`, "gsu"))) {
       const attributes = match[1] ?? "";
       const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
       const video = /\bvideo="([^"]+)"/u.exec(attributes)?.[1];
