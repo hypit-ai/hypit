@@ -1008,9 +1008,16 @@ export async function renderElement(input: RenderElementInput): Promise<Record<s
   const placed = built.tracks.find((track) => String(track.outputRef ?? "").endsWith(`::output::${element}.track`)
     || String(track.outputRef ?? "").includes(`::output::${element}.`));
   if (placed === undefined) {
+    // An output is named `<id>.<output>`, and --element takes the id on its own. Listing the outputs
+    // would hand the reader a name that fails the same way the one they passed did, so the last part
+    // is dropped and one element placed twice is named once.
+    const ids = [...new Set(built.tracks.map((track) => {
+      const output = String(track.outputRef ?? "").split("::output::")[1];
+      return output === undefined ? track.name : output.replace(/\.[^.]*$/u, "");
+    }))];
     throw new Error([
-      `the Source places no element named ${element}. It places:`,
-      ...built.tracks.map((track) => `  ${String(track.outputRef ?? "").split("::output::")[1] ?? track.name}`),
+      `the Source places no element named ${element}. --element takes the bare id, and these are placed:`,
+      ...ids.map((id) => `  ${id}`),
     ].join("\n"));
   }
 

@@ -14,7 +14,7 @@ import { readStudioSession } from "@hypit/studio/src/session.js";
 import type { StudioSession } from "@hypit/studio/src/session.js";
 import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
 
-import { invokedFrom, scriptBody } from "./authoring.js";
+import { invokedFrom, referenceRoot, scriptBody } from "./authoring.js";
 import { assert } from "./media.js";
 
 export type PreviewCheckInput = {
@@ -217,7 +217,7 @@ type CoverageReport = {
  */
 export async function reconstructionCheck(
   input: ReconstructionCheckInput,
-  roots: { readonly workspaceRoot: string; readonly packageRoot: string },
+  roots: { readonly packageRoot: string },
 ): Promise<Record<string, unknown>> {
   const cwd = invokedFrom();
   const runPath = resolve(cwd, input.run);
@@ -454,16 +454,16 @@ export async function reconstructionCheck(
 
   // The Source does not name the reference it reconstructs, so a single prepared reference is used
   // when there is exactly one and named explicitly when there is more than one.
-  const referenceRoot = join(roots.workspaceRoot, ".hypit", "reference-video-tools");
-  const prepared = (await readdir(referenceRoot, { withFileTypes: true }).catch(() => []))
+  const preparedRoot = referenceRoot();
+  const prepared = (await readdir(preparedRoot, { withFileTypes: true }).catch(() => []))
     .filter((entry) => entry.isDirectory()).map((entry) => entry.name);
   let reference = input.reference_id;
   if (reference === undefined) {
-    assert(prepared.length > 0, `no prepared reference under ${referenceRoot}; run prepare_reference first`);
+    assert(prepared.length > 0, `no prepared reference under ${preparedRoot}; run prepare_reference first`);
     assert(prepared.length === 1, `${prepared.length} prepared references; pass --reference-id (${prepared.join(", ")})`);
     reference = prepared[0]!;
   }
-  assert(prepared.includes(reference), `reference ${reference} is not prepared under ${referenceRoot}`);
+  assert(prepared.includes(reference), `reference ${reference} is not prepared under ${preparedRoot}`);
 
   type LoggedComparison = {
     readonly element?: string;
@@ -479,7 +479,7 @@ export async function reconstructionCheck(
     ?? (entry.range?.segment === undefined ? undefined : `segment ${entry.range.segment}`)
     ?? (entry.range?.selection === undefined ? undefined : `selection ${entry.range.selection}`)
     ?? "an unnamed stretch";
-  const logPath = join(referenceRoot, reference, "comparisons.jsonl");
+  const logPath = join(preparedRoot, reference, "comparisons.jsonl");
   const log = (await readFile(logPath, "utf8").catch(() => ""))
     .split("\n").filter((line) => line.trim().length > 0)
     .flatMap((line) => { try { return [JSON.parse(line) as LoggedComparison]; } catch { return []; } })
