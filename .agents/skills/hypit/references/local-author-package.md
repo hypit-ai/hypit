@@ -56,6 +56,19 @@ A call read out of any source that is not the installed Distribution — an olde
 checkout, a snippet in an issue, something you remember — is a name that may no longer exist, and
 what it costs is a compile error at the end of a package rather than at the line that borrowed it.
 
+Four are needed by every component that draws and are stated nowhere in the guides, so they are here.
+Read the rest from source; these are the ones that stop a package before it starts:
+
+| From | Signature |
+|---|---|
+| `@hypit/elaborator` | `sealGraphFragment(fragment: Omit<GraphFragment, "format" \| "id">): GraphFragment` |
+| `@hypit/composition` | `sealVisualTrack(value: Omit<VisualTrack, "kind">): VisualTrack` |
+| `@hypit/component-kit` | `ProducerHandlerContext` — `{ command: InvokeProducerCommand; producer: ProducerRef; inputs: Readonly<Record<string, TypedRecord>> }` |
+
+The fourth is the shape of a filled media slot, which the boundary rules below describe in words: a
+blob input arrives in `inputs` as the `BlobRef` itself, not wrapped inline the way an authored value
+is, so read its `mediaType` off the Artifact rather than assuming what the slot's name suggests.
+
 ## Package boundary
 
 Place the package at `<project>/packages/local-<slug>/`, named in the project's own scope such as

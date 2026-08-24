@@ -15,7 +15,7 @@ import type { StudioSession } from "@hypit/studio/src/session.js";
 import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
 
 import { invokedFrom, referenceRoot, scriptBody } from "./authoring.js";
-import { assert } from "./media.js";
+import { assert, round } from "./media.js";
 
 export type PreviewCheckInput = {
   readonly run: string;
@@ -173,6 +173,185 @@ type CoverageReport = {
   readonly gaps: readonly CoverageGap[];
 };
 
+type Edge = "left" | "top" | "right" | "bottom";
+
+/** One edge of a Frame that lands outside the Canvas, and how far past it reaches. */
+type FrameEdge = {
+  readonly edge: Edge;
+  /** The value as the Source writes it. */
+  readonly declared: string;
+  /** How far past the Canvas edge it sits, as a share of the Canvas and in Canvas pixels. */
+  readonly outside_percent: number;
+  readonly outside_pixels: number;
+};
+
+/** One Frame that does not sit wholly inside its Canvas, and the elements drawn into it. */
+type OutOfBoundsFrame = {
+  readonly frame: string;
+  readonly canvas: string;
+  /** Every element that names this Frame, by its own id. */
+  readonly elements: readonly string[];
+  readonly edges: readonly FrameEdge[];
+  /** How much of the Frame's area lands off the Canvas, from 0 to 1. */
+  readonly outside_fraction: number;
+};
+
+/** A rectangle in Canvas pixels. The origin is top-left and y increases downward. */
+type Box = { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number };
+
+/**
+ * Every Frame that reaches past the Canvas it is measured inside.
+ *
+ * A Frame places its four edges against a Canvas, and an edge outside 0%–100% puts that much of
+ * whatever is drawn into it off the picture. This is arithmetic on the Source: no threshold, no
+ * measurement of a rendered frame, no observer.
+ *
+ * It is the one thing on this route a comparison cannot see. An element authored mostly below the
+ * bottom edge is drawn at the Canvas the Source declares, and so is the stand-in it is compared
+ * against, so the render and the reference both put it in the same place off the edge and agree with
+ * each other. Both are wrong the same way, which reads as correct.
+ *
+ * Reaching past the edge is also how a great deal of correct authoring works: an element that slides
+ * in from off-screen is outside at the start of its window, and a full-bleed picture is routinely
+ * declared past the edge so a `fit` crops it rather than letterboxing it. The arithmetic is the same
+ * either way, so what this produces is a list of candidates for a reader to answer one at a time. It
+ * never decides `passed`: the Source cannot tell an intended overhang from an unintended one, and a
+ * gate that ruled on it would be ruling on something it cannot see.
+ *
+ * `within` names a Canvas or a parent Frame, and a length is a number followed by `px` or `%`, a
+ * percentage resolving against the parent's width on the x axis and its height on the y axis. So a
+ * Frame is resolved by resolving whatever it is written inside and measuring its own edges against
+ * that rectangle, however deep the chain runs.
+ */
+function framesPastTheCanvas(svml: string): readonly OutOfBoundsFrame[] {
+  const canvases = new Map<string, Box>();
+  for (const match of svml.matchAll(/<space:Canvas\b([^>]*?)\/?>/gsu)) {
+    const attributes = match[1] ?? "";
+    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
+    const width = Number(/\bwidth="(\d+)"/u.exec(attributes)?.[1]);
+    const height = Number(/\bheight="(\d+)"/u.exec(attributes)?.[1]);
+    if (id !== undefined && Number.isFinite(width) && Number.isFinite(height)) {
+      canvases.set(id, { left: 0, top: 0, right: width, bottom: height });
+    }
+  }
+
+  const declared = new Map<string, { readonly within: string; readonly edges: Readonly<Record<Edge, string>> }>();
+  for (const match of svml.matchAll(/<space:Frame\b([^>]*?)\/?>/gsu)) {
+    const attributes = match[1] ?? "";
+    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
+    const within = /\bwithin=\{([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
+    const written = (name: Edge): string | undefined => new RegExp(`\\b${name}="([^"]+)"`, "u").exec(attributes)?.[1];
+    const left = written("left");
+    const top = written("top");
+    const right = written("right");
+    const bottom = written("bottom");
+    if (id === undefined || within === undefined) continue;
+    if (left === undefined || top === undefined || right === undefined || bottom === undefined) continue;
+    declared.set(id, { within, edges: { left, top, right, bottom } });
+  }
+
+  const measure = (value: string, span: number, origin: number): number | undefined => {
+    const parsed = /^\s*(-?\d+(?:\.\d+)?)\s*(%|px)\s*$/u.exec(value);
+    if (parsed === null) return undefined;
+    const number = Number(parsed[1]);
+    return parsed[2] === "%" ? origin + span * number / 100 : origin + number;
+  };
+
+  const resolving = new Set<string>();
+  const resolved = new Map<string, Box | undefined>();
+  const resolve = (id: string): Box | undefined => {
+    const canvas = canvases.get(id);
+    if (canvas !== undefined) return canvas;
+    if (resolved.has(id)) return resolved.get(id);
+    // A Frame written inside itself is refused by `hypit check`; this keeps the walk finite anyway.
+    if (resolving.has(id)) return undefined;
+    const frame = declared.get(id);
+    if (frame === undefined) return undefined;
+    resolving.add(id);
+    const parent = resolve(frame.within);
+    resolving.delete(id);
+    let box: Box | undefined;
+    if (parent !== undefined) {
+      const width = parent.right - parent.left;
+      const height = parent.bottom - parent.top;
+      const left = measure(frame.edges.left, width, parent.left);
+      const top = measure(frame.edges.top, height, parent.top);
+      const right = measure(frame.edges.right, width, parent.left);
+      const bottom = measure(frame.edges.bottom, height, parent.top);
+      if (left !== undefined && top !== undefined && right !== undefined && bottom !== undefined) {
+        box = { left, top, right, bottom };
+      }
+    }
+    resolved.set(id, box);
+    return box;
+  };
+
+  // Which Canvas each Frame is finally measured inside, found by following `within` up to one.
+  const canvasOf = (id: string): string | undefined => {
+    const seen = new Set<string>();
+    let at: string | undefined = id;
+    while (at !== undefined && !canvases.has(at)) {
+      if (seen.has(at)) return undefined;
+      seen.add(at);
+      at = declared.get(at)?.within;
+    }
+    return at;
+  };
+
+  // Which elements draw into each Frame. A Track names it `frame=`, and a speech Track names the Frame
+  // it draws each Take into `visual-frame=`, so any attribute whose name ends in `frame` counts.
+  const bound = new Map<string, string[]>();
+  for (const match of svml.matchAll(/<([a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*)\b([^>]*?)\/?>/gsu)) {
+    const tag = match[1] ?? "";
+    const attributes = match[2] ?? "";
+    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1] ?? tag;
+    for (const reference of attributes.matchAll(/\b[a-z-]*frame=\{([A-Za-z0-9_-]+)\}/gu)) {
+      const frame = reference[1] ?? "";
+      const named = bound.get(frame) ?? [];
+      if (!named.includes(id)) named.push(id);
+      bound.set(frame, named);
+    }
+  }
+
+  const report: OutOfBoundsFrame[] = [];
+  for (const [id, frame] of declared) {
+    const box = resolve(id);
+    const canvasId = canvasOf(id);
+    const canvas = canvasId === undefined ? undefined : canvases.get(canvasId);
+    if (box === undefined || canvas === undefined || canvasId === undefined) continue;
+    const width = canvas.right - canvas.left;
+    const height = canvas.bottom - canvas.top;
+    // An edge is outside when it is outside the Canvas at all, on either side. A Frame parked wholly
+    // off the left has both its x edges past the left edge, and naming only the one on its own side
+    // would report half of where it sits.
+    const outside = (value: number, low: number, high: number): number => Math.max(low - value, value - high, 0);
+    const past: readonly { readonly edge: Edge; readonly outside: number; readonly span: number }[] = [
+      { edge: "left", outside: outside(box.left, canvas.left, canvas.right), span: width },
+      { edge: "top", outside: outside(box.top, canvas.top, canvas.bottom), span: height },
+      { edge: "right", outside: outside(box.right, canvas.left, canvas.right), span: width },
+      { edge: "bottom", outside: outside(box.bottom, canvas.top, canvas.bottom), span: height },
+    ];
+    const edges = past.filter((item) => item.outside > 0).map((item) => ({
+      edge: item.edge,
+      declared: frame.edges[item.edge],
+      outside_percent: round(item.outside / item.span * 100),
+      outside_pixels: round(item.outside),
+    }));
+    if (edges.length === 0) continue;
+    const area = Math.max(0, box.right - box.left) * Math.max(0, box.bottom - box.top);
+    const inside = Math.max(0, Math.min(box.right, canvas.right) - Math.max(box.left, canvas.left))
+      * Math.max(0, Math.min(box.bottom, canvas.bottom) - Math.max(box.top, canvas.top));
+    report.push({
+      frame: id,
+      canvas: canvasId,
+      elements: bound.get(id) ?? [],
+      edges,
+      outside_fraction: round(area === 0 ? 1 : 1 - inside / area),
+    });
+  }
+  return report;
+}
+
 /**
  * Report what the route can still settle after the Source is written and before a Build runs: which
  * reconstructed elements have never been compared against the reference, which words of the Script
@@ -207,6 +386,13 @@ type CoverageReport = {
  * comparison is a comparison. What it says is which elements have had their behaviour over their
  * window looked at and which have only had their layout looked at.
  *
+ * Where each Frame sits is decided from the Source alone and is reported rather than required. A
+ * Frame with an edge outside 0%–100% of its Canvas puts that much of whatever is drawn into it off
+ * the picture, and a comparison cannot see it: the render and the stand-in are drawn at the same
+ * Canvas, so both put the element in the same place off the edge and agree. Reaching past the edge is
+ * also how an element slides in from off-screen and how a full-bleed picture is cropped by a `fit`,
+ * which look identical here, so `passed` does not depend on it.
+ *
  * Frame coverage is decided from the Source alone and is required: a word is either drawn over by
  * something bound to the whole picture or it is not. What covers is read from an element's own
  * opening tag — a full-bleed `frame=`, the `canvas=`, or a speech Track's full-frame `visual-frame=`
@@ -231,8 +417,13 @@ export async function reconstructionCheck(
   const svml = await readFile(svmlPath, "utf8").catch(() => undefined);
   assert(svml !== undefined, `cannot read ${svmlPath}`);
 
-  // Every package this Source imports.
-  const imports = [...svml.matchAll(/<import\s+as="([^"]+)"\s+from="(@hypit\/[^"@]+)@\d+"/gu)]
+  // Read from the Source alone, so every answer below carries it, including the ones that stop early.
+  const overhang = framesPastTheCanvas(svml);
+
+  // Every package this Source imports. The scope is whatever the Source wrote: a project that declares
+  // a vocabulary gap and fills it publishes under its own scope, and those elements draw exactly as an
+  // installed one does.
+  const imports = [...svml.matchAll(/<import\s+as="([^"]+)"\s+from="(@[^"@/]+\/[^"@]+)@\d+"/gu)]
     .map((match) => ({ alias: match[1] ?? "", specifier: match[2] ?? "" }));
   if (imports.length === 0) {
     return {
@@ -242,13 +433,26 @@ export async function reconstructionCheck(
       elements: [],
       playback: [],
       uncovered: [],
+      out_of_bounds: overhang,
     };
   }
 
   // Which of their Surfaces draw a Track. A Style Surface publishes a Style and draws nothing, so
   // requiring a comparison of it would be asking for a picture that does not exist.
   const specifiers = [...new Set(imports.map((item) => item.specifier))];
-  const loaded = await loadNodePackageSelection(specifiers, packageRoot).catch(() => []);
+  // One unresolvable package used to take the rest with it: the whole selection loads or none of it
+  // does, and a swallowed failure left `drawingTags` empty, so every element in the Source read as
+  // drawing nothing and the check passed on an empty answer. Fall back to loading them one at a time so
+  // the ones that resolve still count, and keep the names of the ones that did not.
+  const unresolved: string[] = [];
+  const loaded = await loadNodePackageSelection(specifiers, packageRoot).catch(async () => {
+    const each = await Promise.all(specifiers.map(async (specifier) =>
+      await loadNodePackageSelection([specifier], packageRoot).catch(() => {
+        unresolved.push(specifier);
+        return [];
+      })));
+    return each.flat();
+  });
   const drawingTags = new Set<string>();
   for (const pack of loaded) {
     for (const facet of pack.contribution.hostFacets ?? []) {
@@ -446,6 +650,7 @@ export async function reconstructionCheck(
       elements: [],
       playback: [],
       uncovered: [],
+      out_of_bounds: overhang,
     };
   }
 
@@ -554,17 +759,25 @@ export async function reconstructionCheck(
   summary.push(uncoveredWords === 0
     ? `every word of the Script is drawn over by something that fills the frame (${coverage.words}).`
     : `${uncoveredWords} of ${coverage.words} words are drawn over by nothing that fills the frame.`);
+  if (overhang.length > 0) {
+    summary.push(`${overhang.length} Frame${overhang.length === 1 ? "" : "s"} `
+      + `${overhang.length === 1 ? "reaches" : "reach"} past the Canvas; read each one against the reference.`);
+  }
   const compared = elements.filter((element) => element.comparisons > 0).length;
   if (compared > 0) {
     summary.push(untimed.length === 0
       ? `every compared element was looked at over a reference-timed stand-in (${compared}).`
       : `${untimed.length} of ${compared} compared elements have comparisons over a stand-in that was not reference-timed.`);
   }
+  if (unresolved.length > 0) {
+    summary.push(`${unresolved.length} imported package${unresolved.length === 1 ? "" : "s"} could not be resolved, `
+      + "so nothing is known about what they draw.");
+  }
 
   return {
     run: runPath,
     reference_id: reference,
-    passed: never.length === 0 && running.length === 0 && coverage.gaps.length === 0,
+    passed: never.length === 0 && running.length === 0 && coverage.gaps.length === 0 && unresolved.length === 0,
     summary,
     elements,
     ...(never.length === 0 ? {} : {
@@ -579,11 +792,25 @@ export async function reconstructionCheck(
           + `--video <rendered clip>.mp4 --element ${element.id}`),
       },
     }),
+    ...(unresolved.length === 0 ? {} : {
+      unresolved_packages: {
+        names: unresolved,
+        package_root: packageRoot,
+        note: `${unresolved.length} package${unresolved.length === 1 ? "" : "s"} the Source imports could not be `
+          + `resolved from ${packageRoot}. Whatever they draw is invisible here, so no element of theirs is asked `
+          + "for a comparison and this check cannot say the reconstruction is covered.\n\n"
+          + "A project that publishes its own packages resolves them from the project root, where "
+          + "`packages/<name>/package.json` carries the scoped name. Run the command from that directory, or "
+          + "pass --package-root <project directory>.",
+      },
+    }),
     ...(unknown.length === 0 ? {} : {
       unknown_elements: {
         names: unknown,
-        note: `${unknown.length} logged element name${unknown.length === 1 ? " does" : "s do"} not exist in the Source. `
-          + "A misspelled --element credits nothing; the element it was meant for is still at zero.",
+        note: `${unknown.length} logged element name${unknown.length === 1 ? " does" : "s do"} not name a drawing `
+          + "element in the Source — either the id is not there at all, or it belongs to something that puts no "
+          + "picture on the Canvas. Either way the comparison credits nothing, and the element it was meant for "
+          + "is still at zero.",
       },
     }),
     ...(unlabelled === 0 ? {} : {
@@ -619,6 +846,24 @@ export async function reconstructionCheck(
         + "there: an element bound to the full Frame or to the Canvas, drawn over those words. Placing "
         + "something beneath the stretch instead changes which wrong picture appears and leaves the stretch "
         + "unclaimed.",
+    }),
+    out_of_bounds: overhang,
+    ...(overhang.length === 0 ? {} : {
+      out_of_bounds_note: "Each Frame here places part of what is drawn into it off the picture, by the amount "
+        + "beside each edge. `outside_fraction` is how much of the Frame's own area lands off the Canvas. This "
+        + "is read from the Source's own `space:Canvas` and `space:Frame` arithmetic — no rendered frame is "
+        + "measured and no observer is asked.\n\n"
+        + "Answer each one: is this overhang intended? Two shapes of it are, and both are visible in the "
+        + "Source. An element that travels in from off-screen is outside for part of its window, so its "
+        + "Recipe carries the movement — an `enter`, a fly-from origin, an animated offset — and the Frame is "
+        + "where it starts rather than where it stays. A full-bleed picture is declared past the edge on "
+        + "purpose so a `fit` crops it instead of letterboxing it, so its Recipe carries that `fit`. A Frame "
+        + "with neither, holding something the reference shows whole, is placed wrong: the part past the edge "
+        + "is the part nobody will see.\n\n"
+        + "This decides nothing on its own, because the Source cannot tell the two apart. It is here because "
+        + "comparison cannot see it at all: an element authored mostly off the picture is drawn at the Canvas "
+        + "the Source declares, and the stand-in it is compared against is drawn at that same Canvas, so both "
+        + "put it in the same place off the edge and agree with each other.",
     }),
     playback: running,
     ...(running.length === 0 ? {} : {

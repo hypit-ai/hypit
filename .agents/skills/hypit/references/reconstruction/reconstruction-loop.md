@@ -146,11 +146,50 @@ coverage round, and it comes before any repair — collect the whole difference 
 repair against it. Doing it the other way makes the comparison after a repair look like a third
 attempt at a stretch that was never examined.
 
+### A caption Style is compared once, where it first appears
+
+Captions are the one element where the stretches are not different questions. A caption system is one
+Style applied to whatever words fall under it, so two stretches drawn in the same Style differ only in
+which words they hold — the typeface, size, weight, box, padding and placement are the same
+declaration in both, and reading the second one returns the answer the first already gave.
+
+So compare **one stretch per distinct Style**, at the first occurrence of that Style. A program with
+one default Style and a `caption:Use` override for one Selection is two comparisons, wherever those
+two first appear, not one per Segment. This is the same reading `continuity.md` applies to every other
+system that spans cuts: the system is authored once, so it is read once.
+
+What is not covered by that is anything a Style does not decide. A Cue that overflows the frame is a
+Segment nobody broke with `||` rather than a Style at the wrong width — `../playbooks/craft/captions.md`
+says so — and it belongs to the stretch whose words are long, not to the Style. Where the reference
+shows a caption behaving differently somewhere, that is a stretch worth its own comparison; where it
+shows the same design drawn over different words, it is not.
+
 **Render every stretch first, then send them all at once.** No comparison's question depends on
 another's answer, so nothing is gained by waiting: rendering one and comparing it before rendering the
 next makes the round as long as the sum of its parts. Render the whole set, then issue the
 comparisons together — concurrent requests on the `gemini` observer, one subagent each on the `agent`
 observer, and one after another only where the harness has no subagents.
+
+On the `gemini` observer the whole round is one call. Write the comparisons to a JSON file — the same
+objects the flags produce, minus `reference_id` — and hand the file over:
+
+```json
+[
+  {"run": "projects/<name>/build.svrun", "segment": "pro",
+   "video_path": "projects/<name>/renders/board-pro.mp4", "element": "board"},
+  {"run": "projects/<name>/build.svrun", "selection": "wait",
+   "video_path": "projects/<name>/renders/marks-wait.mp4", "element": "marks"}
+]
+```
+
+```
+hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch round-1.json
+```
+
+It paces the requests itself, keeps each comparison's derived cuts apart, and returns them under
+`comparisons`. One that fails arrives under `failures` beside the input that produced it and takes
+only itself down. Do not write a shell script to fan these out: the pacing, the per-comparison result
+and the isolation are what the batch is for, and a hand-rolled loop has none of them.
 
 That is a change in how long the round takes, not in what it costs. The ceilings below count repairs,
 and a round is one look however many stretches it covers.

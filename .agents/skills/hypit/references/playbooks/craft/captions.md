@@ -77,6 +77,12 @@ design that wants no Cue box reads as having nothing to say about them. Write th
 invisible box is `background="#00000000"` with `padding` and `radius` at `0`, which is a value, not
 an omission.
 
+**`padding` is a string; `radius` and `size` are numbers.** `padding: 0` is refused with *Fine Caption
+Recipe padding must be a string* while `radius: 0` beside it is correct, and the same holds for
+`active-box-padding`. The reason is that padding admits a pair — `padding: "8 12"` is eight vertical
+and twelve horizontal — which no JSON number can carry, so it travels as text and is split on the
+space. A single value is still written as one: `padding: "0"`.
+
 `cue-min-words` and `cue-max-words` are not read. `docs/quickstart/styles.md` and
 `docs/quickstart/composition.md` still show them; a Recipe carrying either is refused as an unknown
 property, since the Style admits exactly the required keys plus the documented optional ones.
