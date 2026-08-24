@@ -1,5 +1,5 @@
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 import { writePlaceholder } from "./placeholder.js";
@@ -89,26 +89,28 @@ export type StandInFocus = {
 };
 
 /**
- * The Hypit checkout this package is installed into.
+ * The Hypit tree this package is installed into.
  *
  * Studio's domain and the HyperFrames runtime are both found from it, and neither can be found from
  * the working directory: a command run from a project directory would resolve no packages, and one
- * that assumed the root would work there and crash anywhere else, on a missing module rather than on
- * anything a reader could act on. Walking up from this module reaches the checkout from wherever the
- * package was installed. `HYPIT_REPOSITORY` names one explicitly, the same override
- * `locate-repository.mjs` reads.
+ * that assumed the root would work there and crash anywhere else. Walking up from this module reaches
+ * the tree from wherever the package was installed.
+ *
+ * What identifies it is holding the packages this module imports. A name in `package.json` does not:
+ * a checkout and an installed Distribution carry different ones, so a check against either name
+ * refuses the other, and the refusal reads as "this is not a Hypit checkout" while standing inside
+ * one.
  */
-function isCheckout(directory: string): boolean {
-  try {
-    const manifest = JSON.parse(readFileSync(join(directory, "package.json"), "utf8")) as { readonly name?: string };
-    return manifest.name === "@hypit/repository";
-  } catch { return false; }
+const NEEDED = ["studio", "hyperframes", "script", "estimate"] as const;
+
+function isHypitTree(directory: string): boolean {
+  return NEEDED.every((name) => existsSync(join(directory, "packages", name, "package.json")));
 }
 
-function nearestCheckout(start: string): string | undefined {
+function nearestTree(start: string): string | undefined {
   let directory = resolve(start);
   while (true) {
-    if (isCheckout(directory)) return directory;
+    if (isHypitTree(directory)) return directory;
     const parent = dirname(directory);
     if (parent === directory) return undefined;
     directory = parent;
@@ -116,14 +118,17 @@ function nearestCheckout(start: string): string | undefined {
 }
 
 function repositoryRoot(): string {
+  // An explicit override is taken as given. Re-deriving it would refuse a layout the caller can see
+  // and this cannot, which leaves no way out of a wrong guess.
   const override = process.env.HYPIT_REPOSITORY?.trim();
   if (override !== undefined && override.length > 0) {
     const directory = resolve(override);
-    assert(isCheckout(directory), `HYPIT_REPOSITORY is not a Hypit checkout: ${directory}`);
+    assert(existsSync(directory), `HYPIT_REPOSITORY names no directory: ${directory}`);
     return directory;
   }
-  const found = nearestCheckout(dirname(fileURLToPath(import.meta.url))) ?? nearestCheckout(process.cwd());
-  assert(found !== undefined, "no Hypit checkout above this package or the working directory; set HYPIT_REPOSITORY");
+  const found = nearestTree(dirname(fileURLToPath(import.meta.url))) ?? nearestTree(process.cwd());
+  assert(found !== undefined,
+    `no Hypit tree above ${dirname(fileURLToPath(import.meta.url))} or ${process.cwd()} — one holding packages/${NEEDED.join(", packages/")}. Set HYPIT_REPOSITORY to name it.`);
   return found;
 }
 
