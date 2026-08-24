@@ -144,18 +144,34 @@ function sound(recipe: SvsRecipe): RankingSoundStyle {
 }
 
 function rowList(recipe: SvsRecipe): TierRowStyle[] {
-  const raw = text(recipe, "rows", "s:S:#ef4444|a:A:#f59e0b|b:B:#22c55e|c:C:#3b82f6");
-  return raw.split("|").map((item, index) => {
-    const [id, label, color] = item.split(":").map((part) => part.trim());
-    if (!id || !label || !color) fail(recipe, `rows entry ${index + 1} must be id:label:color.`);
-    return { id, label, color };
+  const value = recipe.properties.rows ?? [
+    { id: "s", label: "S", color: "#ef4444" },
+    { id: "a", label: "A", color: "#f59e0b" },
+    { id: "b", label: "B", color: "#22c55e" },
+    { id: "c", label: "C", color: "#3b82f6" },
+  ];
+  if (!Array.isArray(value) || value.length === 0) fail(recipe, "rows must be a non-empty array.");
+  return value.map((item, index) => {
+    if (item === null || Array.isArray(item) || typeof item !== "object") {
+      fail(recipe, `rows entry ${index + 1} must be an object.`);
+    }
+    const { id, label, color } = item;
+    if (typeof id !== "string" || id.trim().length === 0
+      || typeof label !== "string" || label.trim().length === 0
+      || typeof color !== "string" || color.trim().length === 0) {
+      fail(recipe, `rows entry ${index + 1} requires text id, label and color fields.`);
+    }
+    return { id: id.trim(), label: label.trim(), color: color.trim() };
   });
 }
 
-function colorList(recipe: SvsRecipe, name: string, fallback: string): string[] {
-  const result = text(recipe, name, fallback).split("|").map((value) => value.trim()).filter(Boolean);
-  if (result.length === 0) fail(recipe, `${name} is empty.`);
-  return result;
+function colorList(recipe: SvsRecipe, name: string, fallback: readonly string[]): string[] {
+  const value = recipe.properties[name] ?? fallback;
+  if (!Array.isArray(value) || value.length === 0) fail(recipe, `${name} must be a non-empty color array.`);
+  return value.map((item, index) => {
+    if (typeof item !== "string" || item.trim().length === 0) fail(recipe, `${name} entry ${index + 1} must be a color.`);
+    return item.trim();
+  });
 }
 
 export function decodeTierBoardStyle(
@@ -198,7 +214,7 @@ export function decodeColumnStyle(
 
     board: board(recipe),
     text: typography(recipe, fonts),
-    rankColors: colorList(recipe, "rank-colors", "#facc15|#d1d5db|#fb923c|#60a5fa|#a78bfa"),
+    rankColors: colorList(recipe, "rank-colors", ["#facc15", "#d1d5db", "#fb923c", "#60a5fa", "#a78bfa"]),
     paddingPx: number(recipe, "padding", 18),
     rowHeightPx: number(recipe, "row-height", 74),
     rowGapPx: number(recipe, "row-gap", 10),
@@ -225,7 +241,7 @@ export function decodeTopThreeStyle(
   const style: TopThreeStyle = {
 
     text: typography(recipe, fonts),
-    slotColors: colorList(recipe, "slot-colors", "#facc15|#d1d5db|#fb923c"),
+    slotColors: colorList(recipe, "slot-colors", ["#facc15", "#d1d5db", "#fb923c"]),
     centerX: number(recipe, "center-x", 0.5),
     baselineY: number(recipe, "baseline-y", 0.55),
     slotGapPx: number(recipe, "slot-gap", 24),

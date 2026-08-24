@@ -2657,6 +2657,9 @@ importers:
       '@hypit/host':
         specifier: workspace:*
         version: link:../host
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/svs:
     dependencies:

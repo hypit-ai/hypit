@@ -26,7 +26,7 @@ import {
 } from "./studio-registry.js";
 import type { StudioAdapterRegistry } from "./studio-registry.js";
 import type { StudioEntityDraft } from "./studio-registry.js";
-import { parametersForDraft, resolveTimelineEditHandles } from "./parameters.js";
+import { inspectorFieldsForBindings, resolveTimelineEditHandles, sourceBindingsForDraft } from "./parameters.js";
 import type { StudioSourceFile } from "./parameters.js";
 
 type Present = {
@@ -322,29 +322,34 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
       semantic,
       generic,
     }).map((draft) => {
-      const parameters = parametersForDraft({
+      const bindings = sourceBindingsForDraft({
         root: input.workspaceRoot,
         files: input.sourceFiles,
         placement,
         draft,
-        declarations: registry.parameterDeclarations(item, placement, draft.lane),
+        declarations: registry.bindingDeclarations(item, placement, draft.lane),
         placements: built.source.observations.placements,
-        surfaces: input.surfaces,
       });
+      const inspector = inspectorFieldsForBindings(
+        draft,
+        bindings,
+        registry.inspectorDeclarations(item, placement, draft.lane),
+      );
       const editHandles = resolveTimelineEditHandles(
-        parameters,
+        bindings,
         draft.timelineEdits ?? registry.timelineEdits(item, placement, draft.lane),
         draft.temporal,
         semantic,
       );
       return {
-        draft: parameters.length === 0 ? draft : { ...draft, parameters },
+        draft,
+        inspector,
         editHandles,
       };
     });
     const clips: Clip[] = drafts
       .filter(({ draft }) => draft.lane === undefined)
-      .map(({ draft, editHandles }) => sealStudioClip(item.outputRef, draft, binding, editHandles));
+      .map(({ draft, inspector, editHandles }) => sealStudioClip(item.outputRef, draft, binding, editHandles, inspector));
     const provenance: CandidateProvenance = {
       output: item.name,
       outputRef: item.outputRef,
@@ -368,8 +373,8 @@ export function snapshot(registry: StudioAdapterRegistry, built: Preview, input:
         id: `${item.outputRef}::studio::${attachment.attachmentId}`,
         label: attachment.label ?? attachment.attachmentId ?? item.name,
         row: 0,
-        clips: attachedDrafts.map(({ draft, editHandles }) =>
-          sealStudioClip(item.outputRef, draft, attachment, editHandles)),
+        clips: attachedDrafts.map(({ draft, inspector, editHandles }) =>
+          sealStudioClip(item.outputRef, draft, attachment, editHandles, inspector)),
         binding: attachment,
         provenance,
       });

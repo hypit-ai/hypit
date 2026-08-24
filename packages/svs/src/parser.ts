@@ -73,6 +73,7 @@ function withoutComments(sourceName: string, text: string): string {
 function closingBrace(text: string, start: number, limit: number): number {
   let quote: "\"" | "'" | undefined;
   let escaped = false;
+  let nested = 0;
   for (let cursor = start; cursor < limit; cursor += 1) {
     const character = text[cursor];
     if (escaped) {
@@ -91,7 +92,14 @@ function closingBrace(text: string, start: number, limit: number): number {
       quote = character;
       continue;
     }
-    if (character === "}") return cursor;
+    if (character === "{") {
+      nested += 1;
+      continue;
+    }
+    if (character === "}") {
+      if (nested === 0) return cursor;
+      nested -= 1;
+    }
   }
   return -1;
 }
@@ -137,9 +145,17 @@ function parseAttributes(
 function parseValue(sourceName: string, text: string, offset: number): CanonicalValue {
   const value = text.trim();
   if (value.length === 0) fail(sourceName, "SVS_VALUE_EMPTY", "Recipe property value is empty.", offset);
+  if (value === "null") return null;
   if (value === "true") return true;
   if (value === "false") return false;
   if (/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/u.test(value)) return Number(value);
+  if (value.startsWith("[") || value.startsWith("{")) {
+    try {
+      return JSON.parse(value) as CanonicalValue;
+    } catch {
+      fail(sourceName, "SVS_VALUE_STRUCTURED", "Structured Recipe values must use JSON array/object syntax.", offset);
+    }
+  }
   if (
     (value.startsWith('"') && value.endsWith('"'))
     || (value.startsWith("'") && value.endsWith("'"))

@@ -6,6 +6,7 @@ import type {
   StudioLaneAttachment,
   StudioProjectionRole,
   StudioResolvedTrack,
+  StudioSourceBindingDeclaration,
   StudioSpan,
   StudioTimelineEditDeclaration,
 } from "@hypit/studio-adapter";
@@ -20,9 +21,46 @@ const flatLane = {
 };
 
 const tones = new Set(["blue", "green", "teal", "violet", "magenta", "orange", "orange-muted", "neutral"]);
-const icons = new Set(["captions", "component", "layers", "ranking", "text", "timeline", "video", "waveform"]);
+const icons = new Set(["brand", "captions", "component", "layers", "ranking", "text", "timeline", "video", "waveform"]);
 const chromes = new Set(["standard", "group", "point"]);
 const layouts = new Set(["repeat-x", "cover", "contain", "storyboard", "waveform"]);
+const inspectorDomains = new Set(["where", "how", "when"]);
+const inspectorControls = new Set(["text", "number", "boolean", "select", "color"]);
+
+function bindingPaths(declarations: readonly StudioSourceBindingDeclaration[], prefix = ""): Set<string> {
+  const paths = new Set<string>();
+  for (const declaration of declarations) {
+    const path = prefix.length === 0 ? declaration.name : `${prefix}.${declaration.name}`;
+    paths.add(path);
+    for (const nested of bindingPaths(declaration.referenced ?? [], path)) paths.add(nested);
+    for (const recipe of declaration.recipe?.bindings ?? []) paths.add(`${path}.${recipe.name}`);
+  }
+  return paths;
+}
+
+function validateInspector(
+  subject: string,
+  bindings: readonly StudioSourceBindingDeclaration[] | undefined,
+  fields: StudioAdapter["inspector"],
+): void {
+  const paths = bindingPaths(bindings ?? []);
+  const seen = new Set<string>();
+  for (const field of fields ?? []) {
+    if (seen.has(field.binding)) throw new Error(`${subject} repeats Inspector field ${field.binding}`);
+    seen.add(field.binding);
+    if (!paths.has(field.binding)) throw new Error(`${subject} Inspector field ${field.binding} has no source binding`);
+    if (!inspectorDomains.has(field.domain)) throw new Error(`${subject} selects unsupported Inspector domain ${field.domain}`);
+    if (field.control !== undefined && !inspectorControls.has(field.control)) {
+      throw new Error(`${subject} selects unsupported Inspector control ${field.control}`);
+    }
+    if (field.label.trim().length === 0 || field.section.id.length === 0 || field.section.label.trim().length === 0) {
+      throw new Error(`${subject} Inspector field ${field.binding} has incomplete presentation`);
+    }
+    if (field.control === "select" && (field.options === undefined || field.options.length === 0)) {
+      throw new Error(`${subject} Inspector field ${field.binding} has no select options`);
+    }
+  }
+}
 
 function validateTimelineEdits(subject: string, edits: readonly StudioTimelineEditDeclaration[] | undefined): void {
   const gestures = new Set<string>();
@@ -53,6 +91,7 @@ function validateAdapterVocabulary(adapter: StudioAdapter): void {
   if (adapter.icon !== undefined && !icons.has(adapter.icon)) {
     throw new Error(`Studio adapter ${adapter.id} selects unsupported icon ${adapter.icon}`);
   }
+  validateInspector(`Studio adapter ${adapter.id}`, adapter.bindings, adapter.inspector);
   validateTimelineEdits(`Studio adapter ${adapter.id}`, adapter.timelineEdits);
   for (const attachment of adapter.attachments ?? []) {
     if (attachment.tone !== undefined && !tones.has(attachment.tone)) {
@@ -61,6 +100,7 @@ function validateAdapterVocabulary(adapter: StudioAdapter): void {
     if (!icons.has(attachment.icon)) {
       throw new Error(`Studio adapter ${adapter.id} attachment ${attachment.id} selects unsupported icon ${attachment.icon}`);
     }
+    validateInspector(`Studio adapter ${adapter.id} attachment ${attachment.id}`, attachment.bindings, attachment.inspector);
     validateTimelineEdits(`Studio adapter ${adapter.id} attachment ${attachment.id}`, attachment.timelineEdits);
   }
 }
@@ -191,7 +231,7 @@ export class StudioAdapterRegistry {
       ...(authoredLabel === undefined
         ? (adapter?.label === undefined ? {} : { label: adapter.label })
         : { label: authoredLabel }),
-      icon: adapter?.icon ?? "timeline",
+      icon: adapter?.icon ?? "brand",
       lane: adapter?.lane ?? flatLane,
     };
   }
@@ -271,16 +311,28 @@ export class StudioAdapterRegistry {
     return projected;
   }
 
-  parameterDeclarations(
+  bindingDeclarations(
     track: StudioResolvedTrack,
     placement: Placement | undefined,
     lane?: string,
   ) {
     const adapter = this.#trackAdapter(track);
     if (lane !== undefined) {
-      return adapter.attachments?.find((attachment) => attachment.id === lane)?.parameters ?? [];
+      return adapter.attachments?.find((attachment) => attachment.id === lane)?.bindings ?? [];
     }
-    return adapter.parameters ?? [];
+    return adapter.bindings ?? [];
+  }
+
+  inspectorDeclarations(
+    track: StudioResolvedTrack,
+    placement: Placement | undefined,
+    lane?: string,
+  ) {
+    const adapter = this.#trackAdapter(track);
+    if (lane !== undefined) {
+      return adapter.attachments?.find((attachment) => attachment.id === lane)?.inspector ?? [];
+    }
+    return adapter.inspector ?? [];
   }
 
   timelineEdits(
@@ -301,6 +353,7 @@ export function sealStudioClip(
   draft: StudioEntityDraft,
   fallback: StudioTrackBinding,
   editHandles: readonly StudioEditHandle[] = [],
+  inspector: Clip["inspector"] = [],
 ): Clip {
   return {
     id: draft.id.startsWith(`${outputRef}:`) ? draft.id : `${outputRef}:${draft.id}`,
@@ -317,7 +370,7 @@ export function sealStudioClip(
       chrome: "standard",
     },
     ...(draft.temporal === undefined ? {} : { temporal: draft.temporal }),
-    parameters: draft.parameters ?? [],
+    inspector,
     editHandles,
     renderIds: draft.renderIds ?? (draft.presentId === undefined ? [] : [draft.presentId]),
   };

@@ -1,4 +1,5 @@
 import type { HostFacet } from "@hypit/host";
+import type { CanonicalValue, ValueSchema } from "@hypit/protocol";
 
 export const studioAdapterHostAbi = "hypit.studio-adapter@1";
 
@@ -7,6 +8,7 @@ export type Range = { readonly start: number; readonly end: number };
 
 export type StudioTrackFamily = string;
 export type StudioIcon =
+  | "brand"
   | "captions"
   | "component"
   | "layers"
@@ -92,70 +94,98 @@ export type StudioTemporalBinding = {
   readonly consumers: readonly StudioTemporalConsumer[];
 };
 
-export type StudioParameterControl = "text" | "number" | "boolean" | "select";
+export type StudioParameterControl = "text" | "number" | "boolean" | "select" | "color" | "list" | "record";
 export type StudioParameterLanguage = "svml" | "svs" | "svrun";
 
-/** A real source value that an Inspector may display or edit. */
-export type StudioParameter = {
+/** A real author endpoint. Its existence never implies Inspector visibility. */
+export type StudioSourceBinding = {
   readonly id: string;
-  /** Adapter vocabulary name; unlike id this is stable across source files. */
+  /** Companion-owned path, stable across source files and projected entities. */
+  readonly binding: string;
+  /** Author vocabulary name at the terminal source element. */
   readonly name: string;
-  readonly label: string;
-  /** Package-owned Inspector page, for example Where / How / When. */
-  readonly group?: string;
-  /** Package-owned subsection inside the page. */
-  readonly section?: string;
-  readonly summary?: string;
-  readonly control: StudioParameterControl;
-  readonly value: string;
+  readonly value: CanonicalValue;
+  /** Public author value structure; absent only for legacy scalar bindings. */
+  readonly schema?: ValueSchema;
   readonly language: StudioParameterLanguage;
   readonly writable: boolean;
-  readonly options?: readonly string[];
-  readonly unit?: string;
   readonly source: {
     readonly path: string;
     readonly range: Range;
     readonly preimage: string;
+    /** Generic syntax framing used only when an absent author property is first materialized. */
+    readonly prefix?: string;
+    readonly suffix?: string;
   };
   readonly disabledReason?: string;
 };
 
-/** Adapter-owned allowlist for source parameters exposed by Studio. */
-export type StudioParameterDeclaration = {
-  readonly name: string;
-  readonly label?: string;
-  readonly control?: StudioParameterControl;
-  readonly writable?: boolean;
-  readonly options?: readonly string[];
-  readonly unit?: string;
-  /** Optional declaration for the authored element named by a reference. */
-  readonly referenced?: readonly StudioParameterDeclaration[];
-  /**
-   * Companion-owned presentation and allowlist for the SVS Recipe reached
-   * through this reference. Domain manifests still own property semantics;
-   * they do not own an editor's pages or grouping.
-   */
-  readonly recipe?: StudioRecipeReferenceDeclaration;
+export type StudioInspectorDomain = "where" | "how" | "when";
+
+export type StudioInspectorPageDeclaration = {
+  readonly id: string;
+  readonly label: string;
 };
 
-/** An explicit reference path from an Inspector input to one SVS Recipe. */
-export type StudioRecipeReferenceDeclaration = {
+export type StudioInspectorSectionDeclaration = {
+  readonly id: string;
+  readonly label: string;
+};
+
+/** One visible, writable field selected from a Companion's source bindings. */
+export type StudioInspectorFieldDeclaration = {
+  readonly binding: string;
+  readonly label: string;
+  readonly domain: StudioInspectorDomain;
+  /** Omit for a domain with one unlabelled page. */
+  readonly page?: StudioInspectorPageDeclaration;
+  readonly section: StudioInspectorSectionDeclaration;
+  readonly summary?: string;
+  /** Omit when the binding's public schema selects the finite Studio control. */
+  readonly control?: StudioParameterControl;
+  readonly options?: readonly string[];
+  readonly unit?: string;
+};
+
+/** Resolved Inspector DTO. Studio renders it and executes its exact source write. */
+export type StudioInspectorField = Omit<StudioInspectorFieldDeclaration, "control"> & {
+  readonly id: string;
+  readonly control: StudioParameterControl;
+  readonly value: CanonicalValue;
+  readonly schema?: ValueSchema;
+  readonly language: StudioParameterLanguage;
+  readonly source: StudioSourceBinding["source"];
+};
+
+/** Adapter-owned source allowlist. It contains no editor presentation. */
+export type StudioSourceBindingDeclaration = {
+  readonly name: string;
+  readonly writable?: boolean;
+  readonly schema?: ValueSchema;
+  /** Optional declaration for the authored element named by a reference. */
+  readonly referenced?: readonly StudioSourceBindingDeclaration[];
+  /**
+   * Companion-owned source allowlist for the SVS Recipe reached through this
+   * reference. Inspector presentation is declared separately.
+   */
+  readonly recipe?: StudioRecipeReferenceBindingDeclaration;
+};
+
+/** An explicit reference path from one author input to one SVS Recipe. */
+export type StudioRecipeReferenceBindingDeclaration = {
   /** Reference-valued attributes followed on local authored elements, in order. */
   readonly through?: readonly string[];
-  /** Package-owned allowlist and presentation for properties of the reached Recipe. */
-  readonly parameters: readonly StudioRecipeParameterDeclaration[];
+  /** Package-owned source allowlist for properties of the reached Recipe. */
+  readonly bindings: readonly StudioRecipeBindingDeclaration[];
 };
 
-export type StudioRecipeParameterDeclaration = {
+export type StudioRecipeBindingDeclaration = {
   readonly name: string;
-  readonly label?: string;
-  readonly group: string;
-  readonly section?: string;
-  readonly summary?: string;
-  readonly control?: StudioParameterControl;
   readonly writable?: boolean;
-  readonly options?: readonly string[];
-  readonly unit?: string;
+  /** Domain-owned public Recipe value structure, never editor presentation. */
+  readonly schema?: ValueSchema;
+  /** Typed public fallback; Studio writes the property only after the author changes it. */
+  readonly fallback?: CanonicalValue;
 };
 
 export type StudioTimelineGesture =
@@ -176,7 +206,7 @@ export type StudioEditSourceRole = "start" | "end" | "duration" | "frame" | "x" 
 
 export type StudioEditSource = {
   readonly role: StudioEditSourceRole;
-  readonly source: StudioParameter["source"];
+  readonly source: StudioSourceBinding["source"];
 };
 
 export type StudioSemanticEditTarget =
@@ -439,7 +469,6 @@ export type StudioEntityDraft = {
   readonly temporal?: StudioTemporalLineage;
   /** Studio-local lane partition; omitted means the root lane. */
   readonly lane?: string;
-  readonly parameters?: readonly StudioParameter[];
   /** Optional per-entity override of the owning lane's declared inverses. */
   readonly timelineEdits?: readonly StudioTimelineEditDeclaration[];
 };
@@ -477,7 +506,10 @@ export type StudioAdapter = {
   /** Same-Surface output values required to project this Track for Studio. */
   readonly requiredValues?: readonly string[];
   readonly lane?: StudioLaneDescription;
-  readonly parameters?: readonly StudioParameterDeclaration[];
+  /** Exact author endpoints required by Inspector fields or timeline inverses. */
+  readonly bindings?: readonly StudioSourceBindingDeclaration[];
+  /** Visible field table. Undeclared bindings remain invisible. */
+  readonly inspector?: readonly StudioInspectorFieldDeclaration[];
   /** Exact inverse choices this adapter understands for its entities. */
   readonly timelineEdits?: readonly StudioTimelineEditDeclaration[];
   readonly project?: (context: StudioAdapterContext) => readonly StudioEntityDraft[];
@@ -533,7 +565,8 @@ export type StudioLaneAttachment = {
   readonly icon: StudioIcon;
   readonly facet: "visual" | "audio";
   readonly lane: StudioLaneDescription;
-  readonly parameters?: readonly StudioParameterDeclaration[];
+  readonly bindings?: readonly StudioSourceBindingDeclaration[];
+  readonly inspector?: readonly StudioInspectorFieldDeclaration[];
   readonly timelineEdits?: readonly StudioTimelineEditDeclaration[];
 };
 

@@ -1,10 +1,12 @@
 import type {
+  CanonicalValue,
   ModuleRef,
   ResolvedModuleClosure,
   SourceRange,
   StoredValue,
   TypeRef,
   TypedRecord,
+  ValueSchema,
 } from "@hypit/protocol";
 import type {
   AuthorComponent,
@@ -126,8 +128,10 @@ export type SurfaceRecipePropertyVocabulary = {
   readonly name: string;
   readonly required: boolean;
   readonly summary: string;
+  /** The author value's public structure; it contains no editor presentation. */
+  readonly schema?: ValueSchema;
   readonly values?: readonly string[];
-  readonly fallback?: string;
+  readonly fallback?: CanonicalValue;
 };
 
 export type SurfaceAttributeVocabulary = {

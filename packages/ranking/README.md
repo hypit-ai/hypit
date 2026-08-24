@@ -15,6 +15,13 @@ Each `*Style` declaration compiles one SVS Recipe and exact font reference into 
 plus a private named `.sound` Style output. A Ranking component connects both outputs when authored
 sound exists; no sound produces no audio branch.
 
+Ranking Recipe vocabulary is typed at the domain boundary. `rank-colors` and
+the exactly-three `slot-colors` are color lists; Tier `rows` is a list of
+`{ id, label, color }` records. SVS therefore preserves those values directly
+instead of hiding them in `|`- or `:`-delimited strings. Studio may render the
+same schema as a palette/list through `ranking-studio`, while other editors and
+diagnostic tools can consume it without depending on Studio.
+
 Visible author copy may be literal or an ordinary graph `Text` reference. Column and TopThree use
 `label={copy}`. When a reference is used, the graph first materializes the package-owned item shell
 from that exact Text and then shares the one result across schedule, event and render work. Tier row

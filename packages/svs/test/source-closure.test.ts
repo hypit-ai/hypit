@@ -20,6 +20,7 @@ import type {
   TypedRecord,
 } from "@hypit/protocol";
 import {
+  formatSvsValue,
   SvsSyntaxError,
   parseSvs,
   svsFrontend,
@@ -310,6 +311,19 @@ test("quoted Recipe values may contain Prompt punctuation without changing SVS s
     '<sheet version="1">demo.prompt { text: "first; second } /* literal */"; }</sheet>',
   );
   assert.equal(sheet.recipes[0]?.value.properties.text, "first; second } /* literal */");
+});
+
+test("SVS parses and serializes canonical arrays and objects as one Recipe value", () => {
+  const source = `<sheet version="1">
+  ranking.column {
+    colors: ["#FF3F56", "#FFA72D"];
+    rows: [{"id":"s","label":"S","color":"#EF4444"}];
+  }
+</sheet>`;
+  const recipe = parseSvs("structured.svs", source).recipes[0]!;
+  assert.deepEqual(recipe.value.properties.colors, ["#FF3F56", "#FFA72D"]);
+  assert.deepEqual(recipe.value.properties.rows, [{ id: "s", label: "S", color: "#EF4444" }]);
+  assert.equal(formatSvsValue(recipe.value.properties.colors!), '["#FF3F56","#FFA72D"]');
 });
 
 test("SVS exposes exact property and value spans without inventing editor metadata", () => {

@@ -11,7 +11,7 @@
     board-border-color: #FFFFFF2E; board-border-width: 1; board-radius: 6;
     board-shadow-x: 0; board-shadow-y: 6; board-shadow-blur: 18; board-shadow-spread: 0;
     board-shadow-color: #00000059;
-    rank-colors: #ff3f56|#ffa72d|#eadc2a|#84c654|#31add0;
+    rank-colors: ["#ff3f56", "#ffa72d", "#eadc2a", "#84c654", "#31add0"];
     padding: 18; row-height: 74; row-gap: 10;
     icon-size: 58; icon-radius: 13; icon-fit: contain;
     stage-x: 0.5; stage-y: 0.5; stage-size: 96;

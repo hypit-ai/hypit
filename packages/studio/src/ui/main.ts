@@ -1,6 +1,8 @@
-import type { Clip, StudioFailure, StudioSnapshot } from "../shared.js";
+import type { Clip, StudioFailure, StudioInspectorDomain, StudioSnapshot } from "../shared.js";
+import type { CanonicalValue, ValueSchema } from "@hypit/protocol";
+import { validateParameterValue } from "../parameter-values.js";
 import { createCodePane } from "./code.js";
-import { setIcon } from "./icons.js";
+import { icon } from "./icons.js";
 import { createLibraryPane } from "./library.js";
 import { createHandle } from "./resize.js";
 import type { Highlight } from "./code.js";
@@ -42,10 +44,8 @@ app.innerHTML = `
       <aside class="source-panel" data-library></aside>
       <div class="preview-panel" data-stage></div>
       <aside class="workspace-panel">
-        <div class="pane-heading workspace-heading">
-          <div class="pane-tabs" role="tablist" aria-label="Inspector views">
-            <button type="button" class="pane-tab active" role="tab" aria-selected="true">Properties</button>
-          </div>
+        <div class="pane-heading workspace-heading" data-workspace-heading>
+          <div class="pane-title">${icon("tune")}<h2>Properties</h2></div>
         </div>
         <div class="workspace-scroll">
           <section class="workspace-section">
@@ -95,6 +95,7 @@ shell.insertBefore(createHandle({
   remember: "hypit-studio.v3.timeline-height",
 }), app.querySelector<HTMLElement>("[data-timeline]")!);
 const inspector = app.querySelector<HTMLElement>("[data-inspector]")!;
+const workspaceHeading = app.querySelector<HTMLElement>("[data-workspace-heading]")!;
 const meta = app.querySelector<HTMLElement>("[data-meta]")!;
 const project = app.querySelector<HTMLElement>("[data-project]")!;
 const status = app.querySelector<HTMLElement>("[data-status]")!;
@@ -138,128 +139,537 @@ function group(label: string, items: readonly HTMLElement[], className = ""): HT
   return node;
 }
 
-function parameterControl(entityId: string, parameter: Clip["parameters"][number]): HTMLElement {
-  const row = document.createElement("label");
-  row.className = `parameter-row${parameter.writable ? " parameter-editable" : " parameter-readonly"}${parameter.group === undefined ? "" : " parameter-declared"}`;
+function aspectRatio(width: number, height: number): string {
+  let a = width;
+  let b = height;
+  while (b !== 0) [a, b] = [b, a % b];
+  return `${width / a}:${height / a}`;
+}
+
+const domainPresentation: Readonly<Record<StudioInspectorDomain, { readonly label: string; readonly icon: string }>> = {
+  where: { label: "Where", icon: "where" },
+  how: { label: "How", icon: "how" },
+  when: { label: "When", icon: "when" },
+};
+const domainOrder: readonly StudioInspectorDomain[] = ["where", "how", "when"];
+const inspectorDomainByEntity = new Map<string, StudioInspectorDomain>();
+const inspectorPageByEntity = new Map<string, string>();
+
+function defaultWorkspaceHeading(): void {
+  workspaceHeading.className = "pane-heading workspace-heading";
+  workspaceHeading.innerHTML = `<div class="pane-title">${icon("tune")}<h2>Properties</h2></div>`;
+}
+
+function inspectorHeading(
+  entityId: string,
+  domains: readonly StudioInspectorDomain[],
+  active: StudioInspectorDomain,
+  select: (domain: StudioInspectorDomain) => void,
+): void {
+  workspaceHeading.className = "pane-heading workspace-heading inspector-domain-tabs";
+  workspaceHeading.replaceChildren(...domains.map((domain) => {
+    const presentation = domainPresentation[domain];
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `inspector-domain-tab${domain === active ? " active" : ""}`;
+    button.dataset.domain = domain;
+    button.innerHTML = `${icon(presentation.icon)}<strong>${presentation.label}</strong>`;
+    button.setAttribute("aria-pressed", String(domain === active));
+    button.addEventListener("click", () => {
+      inspectorDomainByEntity.set(entityId, domain);
+      select(domain);
+    });
+    return button;
+  }));
+}
+
+function sameValue(left: CanonicalValue, right: CanonicalValue): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function textValue(value: CanonicalValue): string {
+  return typeof value === "string" ? value : value === null ? "" : String(value);
+}
+
+function commitControl(entityId: string, parameter: Clip["inspector"][number], replacement: CanonicalValue): void {
+  if (sameValue(replacement, parameter.value)) return;
+  void writeParameter(entityId, parameter, replacement);
+}
+
+let openColorPicker: {
+  readonly root: HTMLElement;
+  readonly close: () => void;
+} | undefined;
+
+document.addEventListener("click", (event) => {
+  if (openColorPicker === undefined || !(event.target instanceof Node)) return;
+  if (!openColorPicker.root.contains(event.target)) openColorPicker.close();
+}, true);
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || openColorPicker === undefined) return;
+  event.preventDefault();
+  event.stopPropagation();
+  openColorPicker.close();
+}, true);
+
+function selectControl(
+  entityId: string,
+  parameter: Clip["inspector"][number],
+): HTMLElement {
+  const control = document.createElement("div");
+  control.className = "parameter-select parameter-control";
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "parameter-select-trigger";
+  trigger.setAttribute("aria-label", parameter.label);
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  const selected = document.createElement("span");
+  selected.className = "parameter-select-value";
+  const current = textValue(parameter.value);
+  selected.textContent = current;
+  const chevron = document.createElement("span");
+  chevron.className = "parameter-select-chevron";
+  chevron.innerHTML = icon("chevron");
+  trigger.append(selected, chevron);
+
+  const menu = document.createElement("div");
+  menu.className = "parameter-select-menu";
+  menu.id = `${parameter.id}:options`;
+  menu.setAttribute("role", "listbox");
+  menu.setAttribute("aria-label", parameter.label);
+  menu.hidden = true;
+  trigger.setAttribute("aria-controls", menu.id);
+
+  const options = (parameter.options ?? []).map((option) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = `parameter-select-option${option === current ? " active" : ""}`;
+    item.textContent = option;
+    item.setAttribute("role", "option");
+    item.setAttribute("aria-selected", String(option === current));
+    item.addEventListener("click", () => {
+      selected.textContent = option;
+      for (const sibling of options) {
+        sibling.classList.toggle("active", sibling === item);
+        sibling.setAttribute("aria-selected", String(sibling === item));
+      }
+      close(false);
+      trigger.focus();
+      commitControl(entityId, parameter, option);
+    });
+    return item;
+  });
+  menu.append(...options);
+
+  const close = (restoreFocus: boolean): void => {
+    control.classList.remove("open", "open-up");
+    trigger.setAttribute("aria-expanded", "false");
+    menu.hidden = true;
+    if (restoreFocus) trigger.focus();
+  };
+  const open = (focus: "selected" | "first" | "last" = "selected"): void => {
+    control.classList.add("open");
+    trigger.setAttribute("aria-expanded", "true");
+    menu.hidden = false;
+    control.classList.remove("open-up");
+    const scroll = control.closest<HTMLElement>(".workspace-scroll");
+    if (scroll !== null) {
+      const menuBox = menu.getBoundingClientRect();
+      const scrollBox = scroll.getBoundingClientRect();
+      if (menuBox.bottom > scrollBox.bottom && trigger.getBoundingClientRect().top - menuBox.height >= scrollBox.top) {
+        control.classList.add("open-up");
+      }
+    }
+    const target = focus === "first" ? options[0]
+      : focus === "last" ? options.at(-1)
+      : options.find((option) => option.classList.contains("active")) ?? options[0];
+    target?.focus();
+  };
+  const moveOptionFocus = (offset: number): void => {
+    const current = options.indexOf(document.activeElement as HTMLButtonElement);
+    const next = current < 0 ? 0 : (current + offset + options.length) % options.length;
+    options[next]?.focus();
+  };
+
+  trigger.addEventListener("click", () => {
+    if (control.classList.contains("open")) close(false);
+    else open();
+  });
+  trigger.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      event.stopPropagation();
+      open(event.key === "ArrowDown" ? "first" : "last");
+    } else if (event.key === "Escape" && control.classList.contains("open")) {
+      event.preventDefault();
+      event.stopPropagation();
+      close(false);
+    }
+  });
+  menu.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      event.stopPropagation();
+      moveOptionFocus(event.key === "ArrowDown" ? 1 : -1);
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      event.stopPropagation();
+      options[event.key === "Home" ? 0 : options.length - 1]?.focus();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      close(true);
+    }
+  });
+  control.addEventListener("focusout", (event) => {
+    if (event.relatedTarget instanceof Node && control.contains(event.relatedTarget)) return;
+    close(false);
+  });
+  control.append(trigger, menu);
+  return control;
+}
+
+function colorValueControl(
+  label: string,
+  initial: string,
+  change: (value: string) => void,
+  draft = false,
+): HTMLElement {
+  const field = document.createElement("span");
+  field.className = "parameter-color-field";
+  const colorControl = document.createElement("span");
+  colorControl.className = "parameter-color";
+  colorControl.dataset.open = "false";
+  const swatch = document.createElement("span");
+  swatch.className = "parameter-color-swatch";
+  const picker = document.createElement("input");
+  picker.type = "color";
+  picker.className = "parameter-color-native";
+  picker.setAttribute("aria-label", `${label} picker`);
+  picker.title = label;
+  const exact = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(initial);
+  picker.value = exact ? initial.slice(0, 7) : "#000000";
+  swatch.style.background = exact ? initial : "transparent";
+  const value = document.createElement("input");
+  value.type = "text";
+  value.className = "parameter-value parameter-color-value";
+  value.value = initial;
+  value.setAttribute("aria-label", label);
+  value.spellcheck = false;
+  const alpha = exact && initial.length === 9 ? initial.slice(7) : "";
+  const replacement = (): string => `${picker.value.toUpperCase()}${alpha}`;
+  const close = (): void => {
+    if (openColorPicker?.root === colorControl) openColorPicker = undefined;
+    colorControl.dataset.open = "false";
+    picker.blur();
+  };
+  picker.addEventListener("click", (event) => {
+    if (openColorPicker?.root === colorControl) {
+      event.preventDefault();
+      close();
+      return;
+    }
+    openColorPicker?.close();
+    openColorPicker = { root: colorControl, close };
+    colorControl.dataset.open = "true";
+  });
+  picker.addEventListener("input", () => {
+    swatch.style.background = picker.value;
+    value.value = replacement();
+    if (draft) change(replacement());
+  });
+  picker.addEventListener("change", () => {
+    const next = replacement();
+    swatch.style.background = picker.value;
+    value.value = next;
+    close();
+    change(next);
+  });
+  value.addEventListener(draft ? "input" : "change", () => {
+    const next = value.value.trim();
+    swatch.style.background = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(next) ? next : "transparent";
+    change(next);
+  });
+  colorControl.append(swatch, picker);
+  field.append(colorControl, value);
+  return field;
+}
+
+function fieldLabel(name: string): string {
+  return name.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
+}
+
+function blankValue(schema: ValueSchema): CanonicalValue {
+  if (schema.kind === "string") return "";
+  if (schema.kind === "number" || schema.kind === "null" || schema.kind === "literal" || schema.kind === "oneOf") return null;
+  if (schema.kind === "boolean") return false;
+  if (schema.kind === "array") return [];
+  if (schema.kind === "object") return Object.fromEntries(Object.entries(schema.fields)
+    .filter(([, field]) => field.optional !== true)
+    .map(([name, field]) => [name, blankValue(field.schema)]));
+  return null;
+}
+
+function scalarDraftControl(
+  label: string,
+  schema: ValueSchema,
+  held: CanonicalValue | undefined,
+  change: (value: CanonicalValue) => void,
+): HTMLElement {
+  if (schema.kind === "string" && schema.format === "color") {
+    return colorValueControl(label, typeof held === "string" ? held : "", change, true);
+  }
+  const input = document.createElement("input");
+  input.className = "parameter-value parameter-structured-value";
+  input.setAttribute("aria-label", label);
+  input.spellcheck = false;
+  if (schema.kind === "boolean") {
+    input.type = "checkbox";
+    input.checked = held === true;
+    input.addEventListener("change", () => change(input.checked));
+    return input;
+  }
+  input.type = "text";
+  if (schema.kind === "number") input.inputMode = "decimal";
+  input.value = held === undefined || held === null ? "" : textValue(held);
+  input.addEventListener("input", () => {
+    if (schema.kind === "number") {
+      const number = Number(input.value);
+      change(input.value.trim().length === 0 || !Number.isFinite(number) ? null : number);
+    } else {
+      change(input.value);
+    }
+  });
+  return input;
+}
+
+function recordDraftControl(
+  schema: Extract<ValueSchema, { readonly kind: "object" }>,
+  held: CanonicalValue,
+  change: (value: CanonicalValue) => void,
+): HTMLElement {
+  let record = (held !== null && !Array.isArray(held) && typeof held === "object"
+    ? held
+    : {}) as Readonly<Record<string, CanonicalValue>>;
+  const fields = document.createElement("div");
+  fields.className = "parameter-record-fields";
+  for (const [name, field] of Object.entries(schema.fields)) {
+    const row = document.createElement("label");
+    row.className = "parameter-record-field";
+    const copy = document.createElement("span");
+    copy.textContent = fieldLabel(name);
+    row.append(copy, scalarDraftControl(fieldLabel(name), field.schema, record[name], (next) => {
+      record = { ...record, [name]: next };
+      change(record);
+    }));
+    fields.append(row);
+  }
+  return fields;
+}
+
+function structuredControl(entityId: string, parameter: Clip["inspector"][number]): HTMLElement {
+  const schema = parameter.schema;
+  const shell = document.createElement("div");
+  shell.className = "parameter-structured";
+  if (schema === undefined || (schema.kind !== "array" && schema.kind !== "object")) return shell;
+  let draft = structuredClone(parameter.value);
+  let refreshDecisions = (): void => {};
+
+  const valid = (): boolean => {
+    try {
+      validateParameterValue(draft, schema, parameter.label);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const render = (): void => {
+    shell.replaceChildren();
+    const summary = document.createElement("div");
+    summary.className = "parameter-structured-summary";
+    const count = document.createElement("span");
+    count.textContent = schema.kind === "array" && Array.isArray(draft)
+      ? `${draft.length} ${draft.length === 1 ? "item" : "items"}`
+      : "Structured value";
+    summary.append(count);
+    shell.append(summary);
+
+    if (schema.kind === "array") {
+      const list = Array.isArray(draft) ? draft : [];
+      const items = document.createElement("div");
+      items.className = "parameter-list-items";
+      list.forEach((item, index) => {
+        const row = document.createElement("div");
+        row.className = `parameter-list-item${schema.items.kind === "object" ? " record" : ""}`;
+        const editor = schema.items.kind === "object"
+          ? recordDraftControl(schema.items, item, (next) => {
+              const current = Array.isArray(draft) ? draft : [];
+              draft = current.map((candidate, heldIndex) => heldIndex === index ? next : candidate);
+              refreshDecisions();
+            })
+          : scalarDraftControl(`${parameter.label} ${index + 1}`, schema.items, item, (next) => {
+              const current = Array.isArray(draft) ? draft : [];
+              draft = current.map((candidate, heldIndex) => heldIndex === index ? next : candidate);
+              refreshDecisions();
+            });
+        const actions = document.createElement("span");
+        actions.className = "parameter-list-actions";
+        const move = (offset: number): void => {
+          const reordered = [...(Array.isArray(draft) ? draft : [])];
+          const [moving] = reordered.splice(index, 1);
+          reordered.splice(index + offset, 0, moving!);
+          draft = reordered;
+          render();
+        };
+        const up = document.createElement("button");
+        up.type = "button";
+        up.textContent = "↑";
+        up.title = "Move up";
+        up.disabled = index === 0;
+        up.addEventListener("click", () => move(-1));
+        const down = document.createElement("button");
+        down.type = "button";
+        down.textContent = "↓";
+        down.title = "Move down";
+        down.disabled = index === list.length - 1;
+        down.addEventListener("click", () => move(1));
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.innerHTML = icon("minus");
+        remove.title = "Remove item";
+        remove.disabled = schema.minItems !== undefined && list.length <= schema.minItems;
+        remove.addEventListener("click", () => {
+          const current = Array.isArray(draft) ? draft : [];
+          draft = current.filter((_, heldIndex) => heldIndex !== index);
+          render();
+        });
+        actions.append(up, down, remove);
+        row.append(editor, actions);
+        items.append(row);
+      });
+      shell.append(items);
+    } else {
+      shell.append(recordDraftControl(schema, draft, (next) => {
+        draft = next;
+        refreshDecisions();
+      }));
+    }
+
+    const footer = document.createElement("div");
+    footer.className = "parameter-structured-footer";
+    if (schema.kind === "array") {
+      const list = Array.isArray(draft) ? draft : [];
+      const add = document.createElement("button");
+      add.type = "button";
+      add.className = "parameter-structured-add";
+      add.innerHTML = `${icon("plus")}<span>Add ${schema.items.kind === "string" && schema.items.format === "color" ? "color" : "item"}</span>`;
+      add.disabled = schema.maxItems !== undefined && list.length >= schema.maxItems;
+      add.addEventListener("click", () => {
+        const current = Array.isArray(draft) ? draft : [];
+        draft = [...current, blankValue(schema.items)];
+        render();
+      });
+      footer.append(add);
+    }
+    const decisions = document.createElement("span");
+    decisions.className = "parameter-structured-decisions";
+    const reset = document.createElement("button");
+    reset.type = "button";
+    reset.textContent = "Reset";
+    reset.disabled = sameValue(draft, parameter.value);
+    reset.addEventListener("click", () => {
+      draft = structuredClone(parameter.value);
+      render();
+    });
+    const apply = document.createElement("button");
+    apply.type = "button";
+    apply.className = "primary";
+    apply.textContent = "Apply";
+    apply.addEventListener("click", () => commitControl(entityId, parameter, draft));
+    refreshDecisions = () => {
+      reset.disabled = sameValue(draft, parameter.value);
+      apply.disabled = reset.disabled || !valid();
+    };
+    refreshDecisions();
+    decisions.append(reset, apply);
+    footer.append(decisions);
+    shell.append(footer);
+  };
+  render();
+  return shell;
+}
+
+function parameterControl(entityId: string, parameter: Clip["inspector"][number]): HTMLElement {
+  const row = document.createElement("div");
+  row.className = `parameter-row parameter-editable control-${parameter.control}`;
   const name = document.createElement("span");
   name.className = "parameter-label";
   name.textContent = parameter.label;
   name.title = parameter.summary ?? parameter.label;
-  const source = document.createElement("small");
-  source.className = "parameter-source";
-  source.textContent = `${parameter.language.toUpperCase()} · ${parameter.source.path}:${parameter.source.range.start}`;
-  source.title = parameter.disabledReason ?? parameter.source.preimage;
-  const value = parameter.writable
-    ? document.createElement(parameter.control === "select" ? "select" : "input")
-    : document.createElement("strong");
-  value.className = "parameter-value";
-  if (value instanceof HTMLInputElement) {
-    value.type = parameter.control === "number" ? "number" : parameter.control === "boolean" ? "checkbox" : "text";
-    if (value.type === "checkbox") value.checked = parameter.value === "true";
-    else value.value = parameter.value;
-    value.dataset.parameterId = parameter.id;
-    value.title = parameter.source.preimage;
-    value.addEventListener("change", () => {
-      void writeParameter(entityId, parameter, value.type === "checkbox" ? String(value.checked) : value.value);
-    });
-  } else if (value instanceof HTMLSelectElement) {
-    for (const option of parameter.options ?? []) {
-      const item = document.createElement("option");
-      item.value = option;
-      item.textContent = option;
-      item.selected = option === parameter.value;
-      value.append(item);
-    }
-    value.addEventListener("change", () => void writeParameter(entityId, parameter, value.value));
-  } else {
-    value.textContent = parameter.value;
-    value.title = parameter.disabledReason ?? parameter.source.preimage;
-  }
-  const suffix = parameter.unit === undefined ? "" : ` ${parameter.unit}`;
   const right = document.createElement("span");
-  right.className = "parameter-right";
-  right.append(value);
-  if (suffix.length > 0) {
+  right.className = "parameter-right parameter-control";
+  if (parameter.control === "select") {
+    right.append(selectControl(entityId, parameter));
+  } else if (parameter.control === "color") {
+    right.append(colorValueControl(parameter.label, textValue(parameter.value), (next) => {
+      commitControl(entityId, parameter, next);
+    }));
+  } else if (parameter.control === "list" || parameter.control === "record") {
+    right.append(structuredControl(entityId, parameter));
+  } else {
+    const value = document.createElement("input");
+    value.type = parameter.control === "boolean" ? "checkbox" : "text";
+    if (parameter.control === "number") value.inputMode = "decimal";
+    value.className = "parameter-value";
+    value.setAttribute("aria-label", parameter.label);
+    value.spellcheck = false;
+    if (value.type === "checkbox") value.checked = parameter.value === true || parameter.value === "true";
+    else value.value = textValue(parameter.value);
+    value.dataset.parameterId = parameter.id;
+    value.title = parameter.summary ?? parameter.label;
+    value.addEventListener("change", () => {
+      if (value.type === "checkbox") {
+        commitControl(entityId, parameter, value.checked);
+      } else if (parameter.control === "number") {
+        const number = Number(value.value);
+        if (Number.isFinite(number)) commitControl(entityId, parameter, number);
+      } else {
+        commitControl(entityId, parameter, value.value);
+      }
+    });
+    right.append(value);
+  }
+  if (parameter.unit !== undefined) {
     const unit = document.createElement("small");
-    unit.textContent = suffix;
+    unit.textContent = parameter.unit;
     right.append(unit);
   }
   row.append(name, right);
-  if (parameter.group === undefined) row.append(source);
-  else row.title = `${parameter.summary ?? parameter.label}\n${source.textContent}`;
-  if (!parameter.writable) row.title = parameter.disabledReason ?? "Read-only source parameter";
+  row.title = parameter.summary ?? parameter.label;
   return row;
 }
 
-function parameterGroups(entityId: string, parameters: readonly Clip["parameters"][number][]): readonly HTMLElement[] {
-  type StudioParameterValue = Clip["parameters"][number];
-  const groups = new Map<string, StudioParameterValue[]>();
-  for (const parameter of parameters) {
-    const key = parameter.group === undefined
-      ? `source\u0000${parameter.language}\u0000${parameter.source.path}`
-      : `recipe\u0000${parameter.group}\u0000${parameter.section ?? "parameters"}`;
+function parameterGroups(entityId: string, fields: readonly Clip["inspector"][number][]): readonly HTMLElement[] {
+  const groups = new Map<string, Clip["inspector"][number][]>();
+  for (const field of fields) {
+    const key = `${field.section.id}\u0000${field.section.label}`;
     const held = groups.get(key) ?? [];
-    held.push(parameter);
+    held.push(field);
     groups.set(key, held);
   }
   return [...groups].map(([key, values]) => {
-    const [kind, first = "", second = ""] = key.split("\u0000");
-    const title = kind === "recipe"
-      ? `${first.slice(0, 1).toUpperCase()}${first.slice(1)} · ${second.replaceAll("-", " ")}`
-      : second.length === 0 ? first.toUpperCase() : `${first.toUpperCase()} · ${second}`;
-    return group(title, values.map((parameter) => parameterControl(entityId, parameter)), "parameter-group");
+    const [, label = ""] = key.split("\u0000");
+    return group(label, values.map((parameter) => parameterControl(entityId, parameter)), "parameter-group inspector-field-group");
   });
 }
 
-const operationLabels: Readonly<Record<Clip["editHandles"][number]["gesture"], string>> = {
-  move: "Move",
-  "trim-start": "Trim start",
-  "trim-end": "Trim end",
-};
-
-const operationCoordinateLabels: Readonly<Record<NonNullable<Clip["editHandles"][number]["coordinate"]>, string>> = {
-  "program-frame": "program frames",
-  "semantic-anchor": "semantic anchors",
-  "source-frame": "source frames",
-  "canvas-pixel": "canvas pixels",
-  "normalized-progress": "normalized progress",
-};
-
-function operationGroups(handles: readonly Clip["editHandles"][number][]): readonly HTMLElement[] {
-  if (handles.length === 0) return [];
-  return [group("Timeline operations", handles.map((handle) => {
-    const node = document.createElement("div");
-    node.className = `operation-row${handle.enabled ? " operation-enabled" : " operation-disabled"}`;
-    const copy = document.createElement("span");
-    copy.className = "operation-copy";
-    const label = document.createElement("strong");
-    label.className = "operation-label";
-    label.textContent = operationLabels[handle.gesture];
-    const detail = document.createElement("small");
-    detail.className = "operation-detail";
-    const coordinate = handle.coordinate === undefined ? "" : operationCoordinateLabels[handle.coordinate];
-    const snap = handle.snapTo === undefined || handle.snapTo.length === 0
-      ? ""
-      : `snap ${handle.snapTo.join(" · ")}`;
-    const source = handle.sources === undefined || handle.sources.length === 0
-      ? ""
-      : handle.sources.map((item) => `${item.role} → ${item.source.path}:${item.source.range.start}`).join(" · ");
-    detail.textContent = [coordinate, snap, source].filter((value) => value.length > 0).join(" · ");
-    copy.append(label, detail);
-    const state = document.createElement("strong");
-    state.className = "operation-state";
-    state.textContent = handle.enabled ? "Timeline" : "—";
-    node.title = handle.disabledReason
-      ?? (handle.enabled ? "按时间线把手操作，成功后会回写源文件。" : "当前实体没有可逆的 Studio 写回。" );
-    node.append(copy, state);
-    return node;
-  }), "operation-group")];
-}
-
 let parameterWriteState: "" | "Saving" | "Saved" | "Failed" = "";
-async function writeParameter(entityId: string, parameter: Clip["parameters"][number], replacement: string): Promise<void> {
+async function writeParameter(entityId: string, parameter: Clip["inspector"][number], replacement: CanonicalValue): Promise<void> {
   const state = store.current();
-  if (state === undefined || !parameter.writable) return;
+  if (state === undefined) return;
   parameterWriteState = "Saving";
   status.textContent = parameterWriteState;
   status.className = "status saving";
@@ -290,162 +700,108 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
   const clip = clipId === undefined ? undefined : store.clip(clipId);
 
   if (clip === undefined) {
+    defaultWorkspaceHeading();
     const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
-    const hero = document.createElement("div");
-    hero.className = "selection-hero overview-hero";
-    hero.innerHTML = `
-      <span class="selection-icon" data-selection-icon></span>
-      <div class="selection-title"><strong></strong><small></small></div>
-      <span class="selection-kind">Project</span>`;
-    setIcon(hero.querySelector("[data-selection-icon]")!, "preview");
-    hero.querySelector("strong")!.textContent = snapshot.source.path.split(/[\\/]/u).at(-1) ?? snapshot.source.path;
-    hero.querySelector("small")!.textContent = `${snapshot.tracks.length} tracks · ${snapshot.source.files.length} source files`;
-    inspector.replaceChildren(hero,
+    inspector.replaceChildren(
+      group("Project", [
+        property("Author", snapshot.source.path, "property-code"),
+        property("Run", snapshot.run.path, "property-code"),
+        property("Sources", `${snapshot.source.files.length} referenced files`),
+        property("Tracks", String(snapshot.tracks.length), "property-number"),
+      ]),
       group("Canvas", [
-        property("Size", `${snapshot.space.canvasWidth} × ${snapshot.space.canvasHeight}`, "property-number"),
+        property("Resolution", `${snapshot.space.canvasWidth} × ${snapshot.space.canvasHeight}`, "property-number"),
+        property("Aspect ratio", aspectRatio(snapshot.space.canvasWidth, snapshot.space.canvasHeight), "property-number"),
+      ]),
+      group("Timeline", [
+        property("Duration", `${snapshot.space.durationSec.toFixed(2)} s`, "property-number"),
         property("Frame rate", `${fps.toFixed(Number.isInteger(fps) ? 0 : 2)} fps`, "property-number"),
-        property("Duration", `${snapshot.space.durationSec.toFixed(2)}s`, "property-number"),
         property("Frames", String(snapshot.space.frameCount), "property-number"),
       ]),
-      group("Source", [
-        property("Author", snapshot.source.path, "property-wide property-code"),
-        property("Run", snapshot.run.path, "property-wide property-code"),
-        property("Closure", `${snapshot.source.files.length} referenced files`),
-      ]),
-      group("Build intent", [
+      group("Build", [
         property("Targets", snapshot.run.targets
           .map((target) => target.split("::output::").at(-1) ?? target)
-          .join(", ") || "—", "property-wide property-code"),
+          .join(", ") || "—", "property-code"),
         property("Candidates", String(snapshot.run.satisfactions.length), "property-number"),
       ]),
     );
     return;
   }
+  const domains = domainOrder.filter((domain) => clip.inspector.some((field) => field.domain === domain));
+  if (domains.length === 0) {
+    defaultWorkspaceHeading();
+    const empty = document.createElement("div");
+    empty.className = "inspector-empty";
+    empty.textContent = "No adjustable parameters";
+    inspector.replaceChildren(empty);
+    return;
+  }
+  const remembered = inspectorDomainByEntity.get(clip.id);
+  const activeDomain = remembered !== undefined && domains.includes(remembered) ? remembered : domains[0]!;
+  inspectorDomainByEntity.set(clip.id, activeDomain);
+  inspectorHeading(clip.id, domains, activeDomain, () => renderInspector(snapshot, clip.id));
 
-  const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
-  const durationFrames = clip.endFrameExclusive - clip.startFrame;
-  const track = snapshot.tracks.find((item) => item.clips.some((candidate) => candidate.id === clip.id));
-  const hero = document.createElement("div");
-  hero.className = "selection-hero";
-  hero.innerHTML = `
-    <span class="selection-icon" data-selection-icon></span>
-    <div class="selection-title"><strong></strong><small></small></div>
-    <span class="selection-kind"></span>`;
-  setIcon(hero.querySelector("[data-selection-icon]")!, track?.binding.icon ?? "component");
-  hero.querySelector(".selection-kind")!.textContent = track === undefined
-    ? "Track"
-    : `${track.binding.family} · ${track.binding.facet}`;
-  hero.querySelector("strong")!.textContent = clip.display.title;
-  hero.querySelector("small")!.textContent = track?.label ?? "Visual track";
-
-  const timing = group("Timing", [
-    property("Start", `${clip.startFrame}f`, "property-number"),
-    property("End", `${clip.endFrameExclusive}f`, "property-number"),
-    property("Duration", `${durationFrames}f`, "property-number"),
-    property("Seconds", `${(durationFrames / fps).toFixed(2)}s`, "property-number"),
-  ]);
-  const placement = group("Placement", [
-    property("Track", track?.label ?? "—", "property-wide"),
-    property("Type", track === undefined ? clip.presentation.entity : `${track.binding.family} / ${track.binding.facet}`),
-    property("Item", clip.authoredId, "property-wide property-code"),
-  ]);
-  const source = clip.temporal === undefined ? undefined : group("Binding", [
-    property("Source", `${clip.temporal.source.kind}${clip.temporal.source.id === undefined ? "" : ` · ${clip.temporal.source.id}`}`, "property-wide property-code"),
-    ...(clip.temporal.projection === undefined ? []
-      : clip.temporal.projection.kind === "point"
-        ? [property("At", clip.temporal.projection.expression, "property-wide property-code")]
-        : [
-            property("From", clip.temporal.projection.startExpression, "property-wide property-code"),
-            property("To", clip.temporal.projection.endExpression, "property-wide property-code"),
-          ]),
-  ]);
-  const provenance = track === undefined ? undefined : group("Provenance", [
-    property("Output", track.provenance.output, "property-wide property-code"),
-    ...(track.provenance.candidateId === undefined ? [] : [
-      property("Candidate", track.provenance.candidateId, "property-wide property-code"),
-    ]),
-    property("Status", track.provenance.status),
-  ]);
-  const operations = operationGroups(clip.editHandles);
-  const parameters = parameterGroups(clip.id, clip.parameters);
-  inspector.replaceChildren(hero, placement, timing, ...operations, ...parameters,
-    ...(source === undefined ? [] : [source]), ...(provenance === undefined ? [] : [provenance]));
+  const domainFields = clip.inspector.filter((field) => field.domain === activeDomain);
+  const pages = new Map<string, { readonly label: string; readonly fields: typeof domainFields }>();
+  for (const field of domainFields) {
+    const id = field.page?.id ?? "default";
+    const page = pages.get(id) ?? { label: field.page?.label ?? "", fields: [] };
+    pages.set(id, { ...page, fields: [...page.fields, field] });
+  }
+  const pageIds = [...pages.keys()];
+  const memoryKey = `${clip.id}:${activeDomain}`;
+  const rememberedPage = inspectorPageByEntity.get(memoryKey);
+  const activePage = rememberedPage !== undefined && pages.has(rememberedPage) ? rememberedPage : pageIds[0]!;
+  inspectorPageByEntity.set(memoryKey, activePage);
+  const page = pages.get(activePage)!;
+  const subtabs = document.createElement("div");
+  subtabs.className = "inspector-subtabs";
+  if (pageIds.length > 1) {
+    subtabs.append(...pageIds.map((id) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `inspector-subtab${id === activePage ? " active" : ""}`;
+      const label = document.createElement("span");
+      label.textContent = pages.get(id)?.label ?? id;
+      button.append(label);
+      button.addEventListener("click", () => {
+        inspectorPageByEntity.set(memoryKey, id);
+        renderInspector(snapshot, clip.id);
+      });
+      return button;
+    }));
+  }
+  inspector.replaceChildren(...(pageIds.length > 1 ? [subtabs] : []), ...parameterGroups(clip.id, page.fields));
 }
 
 function renderSemanticInspector(snapshot: StudioSnapshot, segmentId: string): void {
   const segment = snapshot.semantic.segments.find((item) => item.id === segmentId);
   if (segment === undefined) { inspector.replaceChildren(); return; }
-  const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
-  const durationFrames = segment.endFrameExclusive - segment.startFrame;
-  const hero = document.createElement("div");
-  hero.className = "selection-hero";
-  hero.innerHTML = `
-    <span class="selection-icon" data-selection-icon></span>
-    <div class="selection-title"><strong></strong><small></small></div>
-    <span class="selection-kind"></span>`;
-  setIcon(hero.querySelector("[data-selection-icon]")!, snapshot.semantic.presentation.icon);
-  hero.querySelector("strong")!.textContent = segment.id;
-  hero.querySelector("small")!.textContent = "Semantic take";
-  hero.querySelector(".selection-kind")!.textContent = snapshot.semantic.presentation.label ?? "Semantic";
-  inspector.replaceChildren(hero, group("Timing", [
-    property("Start", `${segment.startFrame}f`, "property-number"),
-    property("End", `${segment.endFrameExclusive}f`, "property-number"),
-    property("Duration", `${durationFrames}f`, "property-number"),
-    property("Seconds", `${(durationFrames / fps).toFixed(2)}s`, "property-number"),
-  ]));
+  defaultWorkspaceHeading();
+  const empty = document.createElement("div");
+  empty.className = "inspector-empty";
+  empty.textContent = "No adjustable parameters";
+  inspector.replaceChildren(empty);
 }
 
 function renderSemanticSelectionInspector(snapshot: StudioSnapshot, selectionId: string): void {
   const selection = snapshot.semantic.selections.find((item) => item.id === selectionId);
   if (selection === undefined) { inspector.replaceChildren(); return; }
-  const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
-  const durationFrames = selection.endFrameExclusive - selection.startFrame;
-  const source = snapshot.script?.selections.find((item) => item.id === selectionId);
-  const hero = document.createElement("div");
-  hero.className = "selection-hero";
-  hero.innerHTML = `
-    <span class="selection-icon" data-selection-icon></span>
-    <div class="selection-title"><strong></strong><small></small></div>
-    <span class="selection-kind">Selection</span>`;
-  setIcon(hero.querySelector("[data-selection-icon]")!, "link");
-  hero.querySelector("strong")!.textContent = selection.id;
-  hero.querySelector("small")!.textContent = "Author intent";
-  inspector.replaceChildren(hero,
-    group("Timing", [
-      property("Start", `${selection.startFrame}f`, "property-number"),
-      property("End", `${selection.endFrameExclusive}f`, "property-number"),
-      property("Duration", `${durationFrames}f`, "property-number"),
-      property("Seconds", `${(durationFrames / fps).toFixed(2)}s`, "property-number"),
-    ]),
-    ...(source === undefined ? [] : [group("Source", [
-      property("Range", `${source.open.start}–${source.close.end}`, "property-wide property-code"),
-    ])]),
-  );
+  defaultWorkspaceHeading();
+  const empty = document.createElement("div");
+  empty.className = "inspector-empty";
+  empty.textContent = "Adjust on the timeline";
+  inspector.replaceChildren(empty);
 }
 
 function renderSemanticMomentInspector(snapshot: StudioSnapshot, momentId: string): void {
   const moment = snapshot.semantic.moments.find((item) => item.id === momentId);
   if (moment === undefined) { inspector.replaceChildren(); return; }
-  const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
-  const source = snapshot.script?.moments.find((item) => item.id === momentId);
-  const hero = document.createElement("div");
-  hero.className = "selection-hero";
-  hero.innerHTML = `
-    <span class="selection-icon" data-selection-icon></span>
-    <div class="selection-title"><strong></strong><small></small></div>
-    <span class="selection-kind">Moment</span>`;
-  setIcon(hero.querySelector("[data-selection-icon]")!, "moment");
-  hero.querySelector("strong")!.textContent = moment.id;
-  hero.querySelector("small")!.textContent = "Author intent";
-  inspector.replaceChildren(hero,
-    group("Timing", [
-      property("Frame", `${moment.frame}f`, "property-number"),
-      property("Seconds", `${(moment.frame / fps).toFixed(2)}s`, "property-number"),
-    ]),
-    ...(source === undefined ? [] : [group("Source", [
-      property("Range", `${source.range.start}–${source.range.end}`, "property-wide property-code"),
-    ])]),
-  );
+  defaultWorkspaceHeading();
+  const empty = document.createElement("div");
+  empty.className = "inspector-empty";
+  empty.textContent = "Adjust on the timeline";
+  inspector.replaceChildren(empty);
 }
 
 // The word being spoken at the playhead, which is the point of carrying token
@@ -575,23 +931,24 @@ window.addEventListener("keydown", (event) => {
   if (state === undefined || event.metaKey || event.ctrlKey || event.altKey) return;
   // Space is the transport everywhere else; typing in a field is not transport.
   const target = event.target instanceof Element ? event.target : undefined;
-  const editing = target?.closest("input, textarea, select") !== null && target !== undefined;
-  if (event.key === " " && !editing) {
+  const editing = target?.closest("input, textarea, select, [contenteditable=true], .parameter-control") !== null && target !== undefined;
+  if (editing) return;
+  if (event.key === " ") {
     stage.toggle();
     event.preventDefault();
     return;
   }
-  if (!editing && (event.key === "-" || event.key === "_")) {
+  if (event.key === "-" || event.key === "_") {
     timeline.zoomOut();
     event.preventDefault();
     return;
   }
-  if (!editing && (event.key === "=" || event.key === "+")) {
+  if (event.key === "=" || event.key === "+") {
     timeline.zoomIn();
     event.preventDefault();
     return;
   }
-  if (!editing && (event.key === "\\" || event.key.toLowerCase() === "f")) {
+  if (event.key === "\\" || event.key.toLowerCase() === "f") {
     timeline.fit();
     event.preventDefault();
     return;

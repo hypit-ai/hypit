@@ -1,38 +1,97 @@
 import { rankingMarkupSurfaces } from "@hypit/ranking";
 import type { RankingProgram, RankingSchedule } from "@hypit/ranking";
-import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft, StudioParameterDeclaration, StudioRecipeParameterDeclaration } from "@hypit/studio-adapter";
+import type { StudioAdapter, StudioAdapterContext, StudioEntityDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration } from "@hypit/studio-adapter";
 import { artifactPreview, previewLayer, projectedPointTimelineEdits, requiredSurfaceValue, selectionWindowTimelineEdits, temporalLineageFor } from "@hypit/studio-adapter";
 
-const frameParameters: readonly StudioParameterDeclaration[] = [
-  { name: "within", label: "Within", writable: false },
-  { name: "left", label: "Left", writable: true },
-  { name: "top", label: "Top", writable: true },
-  { name: "right", label: "Right", writable: true },
-  { name: "bottom", label: "Bottom", writable: true },
-  { name: "x", label: "X", writable: true },
-  { name: "y", label: "Y", writable: true },
-  { name: "width", label: "Width", writable: true },
-  { name: "height", label: "Height", writable: true },
+const frameParameters: readonly StudioSourceBindingDeclaration[] = [
+  { name: "within" },
+  ...["left", "top", "right", "bottom", "x", "y", "width", "height"].map((name) => ({ name, writable: true })),
 ];
 
-function rankingRecipe(surface: "column-style" | "tier-style" | "top-three-style"): readonly StudioRecipeParameterDeclaration[] {
-  const properties = rankingMarkupSurfaces.find((candidate) => candidate.name === surface)
+function rankingProperties(surface: "column-style" | "tier-style" | "top-three-style") {
+  return rankingMarkupSurfaces.find((candidate) => candidate.name === surface)
     ?.vocabulary.attributes.find((attribute) => attribute.name === "recipe")?.recipe ?? [];
-  return properties.map((property) => {
-    const when = property.name.includes("frames") || property.name.includes("easing") || property.name.includes("fade");
-    const where = /(?:^|[-])(x|y|width|height|size|gap|padding|stack|rows|radius)(?:$|[-])/u.test(property.name);
+}
+
+function title(name: string): string {
+  return name.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
+}
+
+type RankingInspectorPlacement = Pick<StudioInspectorFieldDeclaration, "domain" | "page" | "section">;
+
+function place(domain: "where" | "how" | "when", page: string, section: string): RankingInspectorPlacement {
+  return {
+    domain,
+    page: { id: page.toLowerCase().replaceAll(" ", "-"), label: page },
+    section: { id: section.toLowerCase().replaceAll(" ", "-"), label: section },
+  };
+}
+
+const rankingInspectorPlacement = {
+  rows: place("how", "Board", "Tier Rows"),
+  "rank-colors": place("how", "Board", "Rank Badges"),
+  "slot-colors": place("how", "Board", "Podium Slots"),
+  "font-size": place("how", "Text", "Typography"),
+  "font-weight": place("how", "Text", "Typography"),
+  "text-color": place("how", "Text", "Typography"),
+  "line-height": place("how", "Text", "Typography"),
+  "board-background": place("how", "Board", "Board Paint"),
+  "board-border-color": place("how", "Board", "Board Paint"),
+  "board-border-width": place("how", "Board", "Board Paint"),
+  "board-radius": place("how", "Board", "Board Paint"),
+  "board-shadow-x": place("how", "Board", "Board Shadow"),
+  "board-shadow-y": place("how", "Board", "Board Shadow"),
+  "board-shadow-blur": place("how", "Board", "Board Shadow"),
+  "board-shadow-spread": place("how", "Board", "Board Shadow"),
+  "board-shadow-color": place("how", "Board", "Board Shadow"),
+  "appear-frames": place("when", "Motion", "Entrance"),
+  "move-frames": place("when", "Motion", "Movement"),
+  "motion-easing": place("when", "Motion", "Movement"),
+  "label-width": place("where", "Layout", "Rows"),
+  padding: place("where", "Layout", "Board"),
+  "row-height": place("where", "Layout", "Rows"),
+  "row-gap": place("where", "Layout", "Rows"),
+  "cell-gap": place("where", "Layout", "Rows"),
+  "icon-size": place("where", "Layout", "Items"),
+  "icon-radius": place("how", "Board", "Items"),
+  "icon-fit": place("how", "Board", "Items"),
+  "stage-x": place("where", "Stage", "Position"),
+  "stage-y": place("where", "Stage", "Position"),
+  "stage-size": place("where", "Stage", "Size"),
+  "center-x": place("where", "Layout", "Podium"),
+  "baseline-y": place("where", "Layout", "Podium"),
+  "slot-gap": place("where", "Layout", "Podium"),
+  "ring-width": place("how", "Board", "Podium Slots"),
+  "label-gap": place("where", "Layout", "Podium"),
+  "board-stack": place("where", "Stacking", "Layers"),
+  "stage-stack": place("where", "Stacking", "Layers"),
+  "item-stack": place("where", "Stacking", "Layers"),
+  "appear-gain": place("how", "Sound", "Levels"),
+  "move-gain": place("how", "Sound", "Levels"),
+  "sound-fade-frames": place("when", "Sound", "Envelope"),
+} as const satisfies Readonly<Record<string, RankingInspectorPlacement>>;
+
+function rankingInspector(surface: "column-style" | "tier-style" | "top-three-style"): readonly StudioInspectorFieldDeclaration[] {
+  return rankingProperties(surface).map((property) => {
+    const placement = rankingInspectorPlacement[property.name as keyof typeof rankingInspectorPlacement];
+    if (placement === undefined) throw new Error(`Ranking Studio has no explicit placement for ${property.name}.`);
     return {
-      name: property.name,
-      group: when ? "when" : where ? "where" : "how",
-      section: when ? "motion" : where ? "layout" : "appearance",
+      binding: `style.${property.name}`,
+      label: title(property.name),
+      ...placement,
+      ...(property.summary === undefined ? {} : { summary: property.summary }),
     };
   });
 }
 
-function rankingStyle(surface: "column-style" | "tier-style" | "top-three-style"): StudioParameterDeclaration {
+function rankingStyle(surface: "column-style" | "tier-style" | "top-three-style"): StudioSourceBindingDeclaration {
   return {
-    name: "style", label: "Style", writable: false,
-    recipe: { through: ["recipe"], parameters: rankingRecipe(surface) },
+    name: "style",
+    recipe: { through: ["recipe"], bindings: rankingProperties(surface).map(({ name, schema, fallback }) => ({
+      name,
+      schema,
+      ...(fallback === undefined ? {} : { fallback }),
+    })) },
   };
 }
 
@@ -87,11 +146,18 @@ function projectRanking(context: StudioAdapterContext): readonly StudioEntityDra
   return [group, ...reveals];
 }
 
-const commonParameters: readonly StudioParameterDeclaration[] = [
-  { name: "frame", label: "Frame", writable: false, referenced: frameParameters },
-  { name: "appear-sound", label: "Appear sound", writable: false },
-  { name: "move-sound", label: "Move sound", writable: false },
+const commonBindings: readonly StudioSourceBindingDeclaration[] = [
+  { name: "frame", referenced: frameParameters },
+  { name: "appear-sound" },
+  { name: "move-sound" },
 ];
+
+const frameInspector: readonly StudioInspectorFieldDeclaration[] = frameParameters
+  .filter(({ writable }) => writable === true)
+  .map(({ name }) => ({
+    binding: `frame.${name}`, label: title(name), domain: "where",
+    page: { id: "frame", label: "Frame" }, section: { id: "frame", label: "Frame" }, control: "text",
+  }));
 
 export const rankingStudioAdapters: readonly StudioAdapter[] = [
   {
@@ -99,10 +165,11 @@ export const rankingStudioAdapters: readonly StudioAdapter[] = [
     output: { type: "VisualTrack", surface: "column", modules: ["@hypit/ranking"] },
     family: "ranking", tone: "orange", label: "Ranking", icon: "ranking", requiredValues: ["schedule", "program"],
     timelineEdits: selectionWindowTimelineEdits(),
-    parameters: [
-      ...commonParameters,
+    bindings: [
+      ...commonBindings,
       rankingStyle("column-style"),
     ],
+    inspector: [...frameInspector, ...rankingInspector("column-style")],
     poster: { source: "surface-preview" },
     lane: {
       heightPx: 80, groupId: "ranking-reveals",
@@ -110,12 +177,18 @@ export const rankingStudioAdapters: readonly StudioAdapter[] = [
     attachments: [{
       id: "reveal", family: "ranking-reveal", tone: "orange-muted", label: "Reveals", icon: "ranking", facet: "visual",
       lane: { heightPx: 40 },
-      parameters: [
-        { name: "label", label: "Label", writable: true },
-        { name: "icon", label: "Icon", writable: false },
-        { name: "rank", label: "Rank", control: "number", writable: true },
-        { name: "preset", label: "Preset", control: "boolean", writable: true },
-        { name: "stack", label: "Stack", control: "number", writable: true },
+      bindings: [
+        { name: "label", writable: true },
+        { name: "icon" },
+        { name: "rank", writable: true },
+        { name: "preset", writable: true },
+        { name: "stack", writable: true },
+      ],
+      inspector: [
+        { binding: "label", label: "Label", domain: "how", page: { id: "item", label: "Item" }, section: { id: "item", label: "Item" }, control: "text" },
+        { binding: "rank", label: "Rank", domain: "how", page: { id: "item", label: "Item" }, section: { id: "item", label: "Item" }, control: "number" },
+        { binding: "preset", label: "Preset", domain: "how", page: { id: "item", label: "Item" }, section: { id: "item", label: "Item" }, control: "boolean" },
+        { binding: "stack", label: "Stack", domain: "where", page: { id: "stacking", label: "Stacking" }, section: { id: "stacking", label: "Stacking" }, control: "number" },
       ],
       timelineEdits: selectionWindowTimelineEdits(),
     }],
@@ -130,25 +203,37 @@ export const rankingStudioAdapters: readonly StudioAdapter[] = [
     output: { type: "VisualTrack", surface, modules: ["@hypit/ranking"] },
     family: "ranking", tone: "orange", label, icon: "ranking", requiredValues: ["schedule", "program"],
     timelineEdits: selectionWindowTimelineEdits(),
-    parameters: [
-      ...commonParameters,
+    bindings: [
+      ...commonBindings,
       rankingStyle(surface === "tier" ? "tier-style" : "top-three-style"),
-      { name: "terminal", label: "Terminal", writable: false },
+      { name: "terminal" },
+    ],
+    inspector: [
+      ...frameInspector,
+      ...rankingInspector(surface === "tier" ? "tier-style" : "top-three-style"),
     ],
     poster: { source: "surface-preview" },
     lane: { heightPx: 80, groupId: `${id}-activations` },
     attachments: [{
       id: "activation", family: "ranking-reveal", tone: "orange-muted", label: "Activations", icon: "ranking", facet: "visual",
       lane: { heightPx: 40 },
-      parameters: id === "tier" ? [
-        { name: "tier", label: "Tier", writable: true },
-        { name: "entry", label: "Entry", control: "select", writable: true, options: ["direct", "stage"] },
-        { name: "icon", label: "Icon", writable: false },
-        { name: "stack", label: "Stack", control: "number", writable: true },
+      bindings: id === "tier" ? [
+        { name: "tier", writable: true },
+        { name: "entry", writable: true },
+        { name: "icon" },
+        { name: "stack", writable: true },
       ] : [
-        { name: "label", label: "Label", writable: true },
-        { name: "icon", label: "Icon", writable: false },
-        { name: "stack", label: "Stack", control: "number", writable: true },
+        { name: "label", writable: true },
+        { name: "icon" },
+        { name: "stack", writable: true },
+      ],
+      inspector: id === "tier" ? [
+        { binding: "tier", label: "Tier", domain: "how", page: { id: "item", label: "Item" }, section: { id: "item", label: "Item" }, control: "text" },
+        { binding: "entry", label: "Entry", domain: "when", page: { id: "activation", label: "Activation" }, section: { id: "activation", label: "Activation" }, control: "select", options: ["direct", "stage"] },
+        { binding: "stack", label: "Stack", domain: "where", page: { id: "stacking", label: "Stacking" }, section: { id: "stacking", label: "Stacking" }, control: "number" },
+      ] : [
+        { binding: "label", label: "Label", domain: "how", page: { id: "item", label: "Item" }, section: { id: "item", label: "Item" }, control: "text" },
+        { binding: "stack", label: "Stack", domain: "where", page: { id: "stacking", label: "Stacking" }, section: { id: "stacking", label: "Stacking" }, control: "number" },
       ],
       timelineEdits: projectedPointTimelineEdits(),
     }],

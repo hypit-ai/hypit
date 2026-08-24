@@ -20,6 +20,12 @@ function leaf(path: string): string {
   return path.split(/[\\/]/u).filter(Boolean).at(-1) ?? path;
 }
 
+function stem(path: string): string {
+  const name = leaf(path);
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(0, dot) : name;
+}
+
 function compactId(value: string): string {
   return value.length <= 18 ? value : `${value.slice(0, 9)}…${value.slice(-6)}`;
 }
@@ -89,7 +95,7 @@ function taskCard(task: StudioTaskView): HTMLElement {
 
 function artifactKind(mediaType: string): { readonly label: string; readonly icon: string } {
   if (mediaType.startsWith("video/")) return { label: "Video", icon: "video" };
-  if (mediaType.startsWith("image/")) return { label: "Image", icon: "preview" };
+  if (mediaType.startsWith("image/")) return { label: "Image", icon: "image" };
   if (mediaType.startsWith("audio/")) return { label: "Audio", icon: "waveform" };
   return { label: "Data", icon: "code" };
 }
@@ -134,18 +140,18 @@ export function createLibraryPane(code: CodePane): LibraryPane {
         <span>${icon("code")}</span><strong>Source</strong>
       </button>
       <button type="button" class="library-tab" data-library-tab="tasks" role="tab" aria-selected="false">
-        <span>${icon("timeline")}</span><strong>Tasks</strong><small data-task-badge></small>
+        <span>${icon("tasks")}</span><strong>Tasks</strong>
       </button>
       <button type="button" class="library-tab" data-library-tab="artifacts" role="tab" aria-selected="false">
-        <span>${icon("layers")}</span><strong>Artifacts</strong><small data-artifact-badge></small>
+        <span>${icon("archive")}</span><strong>Artifacts</strong>
       </button>
     </div>
     <section class="library-view active" data-library-view="source">
-      <div class="library-toolbar">
-        <div><strong>Live closure</strong><small data-source-count></small></div>
-        <span class="library-context">Run → Author</span>
-      </div>
-      <div class="source-browser">
+      <div class="source-workspace" data-source-workspace>
+        <div class="source-sidebar-heading">
+          <span class="source-sidebar-mark" aria-hidden="true">${icon("sidebarCollapse")}</span>
+        </div>
+        <div class="source-code-heading" data-source-toolbar></div>
         <nav class="source-files" aria-label="Referenced source files" data-source-files></nav>
         <div class="source-code" data-source-code></div>
       </div>
@@ -167,14 +173,13 @@ export function createLibraryPane(code: CodePane): LibraryPane {
       <div class="artifact-grid" data-artifact-grid></div>
     </section>`;
 
+  element.querySelector<HTMLElement>("[data-source-toolbar]")!.append(code.toolbar);
   element.querySelector<HTMLElement>("[data-source-code]")!.append(code.element);
   const sourceList = element.querySelector<HTMLElement>("[data-source-files]")!;
   const taskList = element.querySelector<HTMLElement>("[data-task-list]")!;
   const artifactGrid = element.querySelector<HTMLElement>("[data-artifact-grid]")!;
   const artifactFilters = element.querySelector<HTMLElement>("[data-artifact-filters]")!;
   const runtimeContext = element.querySelector<HTMLElement>("[data-runtime-context]")!;
-  const taskBadge = element.querySelector<HTMLElement>("[data-task-badge]")!;
-  const artifactBadge = element.querySelector<HTMLElement>("[data-artifact-badge]")!;
   let snapshot: StudioSnapshot | undefined;
   let selectedSource = "";
   let active: LibrarySection = "source";
@@ -196,10 +201,8 @@ export function createLibraryPane(code: CodePane): LibraryPane {
       const button = document.createElement("button");
       button.type = "button";
       button.className = `source-file${file.path === selectedSource ? " active" : ""}`;
-      button.innerHTML = `<span class="source-file-icon">${icon(file.language === "svrun" ? "timeline" : file.language === "svs" ? "tune" : "code")}</span><span class="source-file-copy"><strong></strong><small></small></span><em></em>`;
-      button.querySelector("strong")!.textContent = leaf(file.path);
-      button.querySelector("small")!.textContent = file.path;
-      button.querySelector("em")!.textContent = file.role === "dependency" ? file.language : file.role;
+      button.innerHTML = `<span class="source-file-icon">${icon(file.language === "svrun" ? "run" : file.language === "svs" ? "tune" : "code")}</span>`;
+      button.setAttribute("aria-label", `${stem(file.path)} ${file.language.toUpperCase()}`);
       button.title = `${file.role} · ${file.path}${file.imports.length === 0 ? "" : `\nimports ${file.imports.join(", ")}`}`;
       button.addEventListener("click", () => {
         selectedSource = file.path;
@@ -207,14 +210,11 @@ export function createLibraryPane(code: CodePane): LibraryPane {
       });
       return button;
     }));
-    element.querySelector<HTMLElement>("[data-source-count]")!.textContent = `${files.length} referenced file${files.length === 1 ? "" : "s"}`;
   };
 
   const renderTasks = (): void => {
     const tasks = library?.tasks ?? [];
     const runtime = library?.runtime;
-    taskBadge.textContent = tasks.length === 0 ? "" : String(tasks.filter((task) =>
-      ["queued", "running", "waiting", "active"].includes(task.status)).length || tasks.length);
     element.querySelector<HTMLElement>("[data-task-count]")!.textContent = `${tasks.length} build${tasks.length === 1 ? "" : "s"}`;
     runtimeContext.replaceChildren();
     const context = document.createElement("span");
@@ -225,7 +225,7 @@ export function createLibraryPane(code: CodePane): LibraryPane {
     context.title = runtime === undefined ? "No Runtime selected for this environment" : `${library!.environment}\n${runtime}`;
     runtimeContext.append(context);
     if (tasks.length === 0) {
-      taskList.replaceChildren(emptyState("timeline",
+      taskList.replaceChildren(emptyState("tasks",
         runtime === undefined ? "No Runtime selected" : "No builds yet",
         runtime === undefined
           ? "Select one with hypit runtime use, then reopen Studio."
@@ -237,7 +237,6 @@ export function createLibraryPane(code: CodePane): LibraryPane {
 
   const renderArtifacts = (): void => {
     const artifacts = library?.artifacts ?? [];
-    artifactBadge.textContent = artifacts.length === 0 ? "" : String(artifacts.length);
     element.querySelector<HTMLElement>("[data-artifact-count]")!.textContent = `${artifacts.length} stored object${artifacts.length === 1 ? "" : "s"}`;
     const filters = [
       ["all", "All"],
@@ -257,7 +256,7 @@ export function createLibraryPane(code: CodePane): LibraryPane {
       ? artifacts
       : artifacts.filter((artifact) => artifact.mediaType.startsWith(`${artifactFilter}/`));
     if (shown.length === 0) {
-      artifactGrid.replaceChildren(emptyState("layers",
+      artifactGrid.replaceChildren(emptyState("archive",
         artifacts.length === 0 ? "No accepted artifacts" : `No ${artifactFilter} artifacts`,
         library?.runtime === undefined
           ? "Artifacts appear only from a selected Runtime archive."
@@ -297,8 +296,8 @@ export function createLibraryPane(code: CodePane): LibraryPane {
       renderArtifacts();
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      if (active === "tasks") taskList.replaceChildren(emptyState("timeline", "Archive unavailable", detail));
-      if (active === "artifacts") artifactGrid.replaceChildren(emptyState("layers", "ArtifactStore unavailable", detail));
+      if (active === "tasks") taskList.replaceChildren(emptyState("tasks", "Archive unavailable", detail));
+      if (active === "artifacts") artifactGrid.replaceChildren(emptyState("archive", "ArtifactStore unavailable", detail));
     } finally {
       refreshing = false;
       element.classList.remove("is-refreshing");

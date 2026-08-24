@@ -5,53 +5,94 @@ import type {
   StudioAdapter,
   StudioAdapterContext,
   StudioEntityDraft,
-  StudioRecipeParameterDeclaration,
+  StudioInspectorFieldDeclaration,
 } from "@hypit/studio-adapter";
 import { requiredSurfaceValue, temporalLineageFor, textLayer } from "@hypit/studio-adapter";
-
-const WHERE_PROPERTIES = new Set([
-  "stack-order", "x", "y", "width", "height", "anchor-x", "anchor-y", "align", "block-align",
-  "inline-size", "wrap", "overflow", "max-lines", "max-words-per-line", "direction", "line-height",
-  "letter-spacing", "word-gap",
-]);
-
-const TIMED_ACTIVE_BOX_PROPERTIES = new Set([
-  "active-box", "active-box-continuity", "active-box-enter", "active-box-exit", "active-box-transition-frames",
-]);
-
-function groupFor(name: string): "where" | "how" | "when" {
-  if (WHERE_PROPERTIES.has(name)) return "where";
-  if (name === "lead-frames" || name === "tail-frames" || name === "handoff"
-    || name === "karaoke" || name === "karaoke-transition" || name === "active-underline"
-    || name.startsWith("cue-enter") || name.startsWith("cue-exit") || name.startsWith("atom-")
-    || name.startsWith("active-response") || name.startsWith("loop")
-    || name === "slide-distance" || name === "active-scale" || TIMED_ACTIVE_BOX_PROPERTIES.has(name)) return "when";
-  return "how";
-}
-
-function sectionFor(name: string, group: "where" | "how" | "when"): string {
-  if (group === "where") return ["x", "y", "width", "height", "anchor-x", "anchor-y", "stack-order"].includes(name)
-    ? "region" : "flow";
-  if (group === "when") {
-    if (["lead-frames", "tail-frames", "handoff"].includes(name)) return "envelope";
-    if (name.startsWith("cue-")) return "cue";
-    if (name.startsWith("loop")) return "loop";
-    return "token";
-  }
-  if (["size", "kerning", "caps", "text-transform"].includes(name)) return "typography";
-  if (name === "background" || name === "border-color" || name === "border-width" || name === "padding"
-    || name === "radius" || name.startsWith("cue-shadow")) return "cue-box";
-  if (name.startsWith("active-box") || name.includes("underline")) return "decoration";
-  return name.startsWith("active-") ? "active-paint" : "base-paint";
-}
 
 const styleSurface = captionFineMarkupSurfaces.find((surface) => surface.name === "style");
 const recipeVocabulary = styleSurface?.vocabulary.attributes
   .find((attribute) => attribute.name === "recipe")?.recipe ?? [];
 
-export const captionFineRecipeParameters: readonly StudioRecipeParameterDeclaration[] = recipeVocabulary.map((property) => {
-  const group = groupFor(property.name);
-  return { name: property.name, group, section: sectionFor(property.name, group) };
+function title(name: string): string {
+  return name.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
+}
+
+function valuesFor(property: typeof recipeVocabulary[number]): readonly string[] | undefined {
+  return "values" in property ? property.values : undefined;
+}
+
+type CaptionPlacement = Pick<StudioInspectorFieldDeclaration, "domain" | "page" | "section">;
+
+function captionPlace(domain: "where" | "how" | "when", page: string, section: string): CaptionPlacement {
+  return {
+    domain,
+    page: { id: page, label: title(page) },
+    section: { id: section, label: title(section) },
+  };
+}
+
+const captionPlacement = new Map<string, CaptionPlacement>();
+function placeCaption(names: readonly string[], domain: "where" | "how" | "when", page: string, section: string): void {
+  for (const name of names) captionPlacement.set(name, captionPlace(domain, page, section));
+}
+
+placeCaption(["stack-order", "x", "y", "width", "height", "anchor-x", "anchor-y"], "where", "placement", "region");
+placeCaption([
+  "align", "block-align", "inline-size", "wrap", "overflow", "max-lines", "max-words-per-line", "direction",
+  "line-height", "letter-spacing", "word-gap",
+], "where", "flow", "flow");
+placeCaption(["size", "kerning", "caps", "text-transform"], "how", "text", "typography");
+placeCaption([
+  "fill", "opacity", "gradient-from", "gradient-to", "gradient-angle", "stroke-color", "stroke-width", "shadow-color",
+  "shadow-opacity", "shadow-x", "shadow-y", "shadow-blur", "shadow-spread", "long-shadow-color", "long-shadow-opacity",
+  "long-shadow-distance", "long-shadow-angle", "glow-color", "glow-opacity", "glow-blur", "glow-spread",
+], "how", "paint", "base-paint");
+placeCaption([
+  "active-fill", "active-opacity", "active-gradient-from", "active-gradient-to", "active-gradient-angle",
+  "active-stroke-color", "active-stroke-width", "active-shadow-color", "active-shadow-opacity", "active-shadow-x",
+  "active-shadow-y", "active-shadow-blur", "active-shadow-spread", "active-long-shadow-color",
+  "active-long-shadow-opacity", "active-long-shadow-distance", "active-long-shadow-angle", "active-glow-color",
+  "active-glow-opacity", "active-glow-blur", "active-glow-spread",
+], "how", "paint", "active-paint");
+placeCaption([
+  "background", "border-color", "border-width", "padding", "radius", "cue-shadow-color", "cue-shadow-opacity",
+  "cue-shadow-x", "cue-shadow-y", "cue-shadow-blur", "cue-shadow-spread",
+], "how", "cue-box", "cue-box");
+placeCaption([
+  "underline", "underline-color", "underline-thickness", "underline-offset", "active-underline-color",
+  "active-underline-thickness", "active-underline-offset", "active-box-background", "active-box-border-color",
+  "active-box-border-width", "active-box-padding", "active-box-radius",
+], "how", "decoration", "decoration");
+placeCaption(["lead-frames", "tail-frames", "handoff"], "when", "cue", "envelope");
+placeCaption(["cue-enter", "cue-enter-frames", "cue-exit", "cue-exit-frames"], "when", "cue", "cue");
+placeCaption([
+  "karaoke", "karaoke-transition", "active-underline", "active-box", "active-box-continuity", "active-box-enter",
+  "active-box-exit", "active-box-transition-frames", "atom-enter", "atom-enter-frames", "atom-exit", "atom-exit-frames",
+  "atom-reveal", "active-response", "active-response-frames", "active-scale", "slide-distance",
+], "when", "token", "token");
+placeCaption(["loop", "loop-target", "loop-period-frames", "loop-intensity"], "when", "loop", "loop");
+
+const captionColorProperties = new Set([
+  "fill", "gradient-from", "gradient-to", "stroke-color", "shadow-color", "long-shadow-color", "glow-color",
+  "active-fill", "active-gradient-from", "active-gradient-to", "active-stroke-color", "active-shadow-color",
+  "active-long-shadow-color", "active-glow-color", "background", "border-color", "cue-shadow-color", "underline-color",
+  "active-underline-color", "active-box-background", "active-box-border-color",
+]);
+const captionTextProperties = new Set(["loop"]);
+
+export const captionFineInspectorFields: readonly StudioInspectorFieldDeclaration[] = recipeVocabulary.map((property) => {
+  const placement = captionPlacement.get(property.name);
+  if (placement === undefined) throw new Error(`Caption Studio has no explicit Inspector declaration for ${property.name}.`);
+  const options = valuesFor(property);
+  return {
+    binding: `program.${property.name}`,
+    label: title(property.name),
+    ...placement,
+    summary: property.summary,
+    control: options !== undefined ? "select" : captionColorProperties.has(property.name) ? "color"
+      : captionTextProperties.has(property.name) ? "text" : "number",
+    ...(options === undefined ? {} : { options }),
+  };
 });
 
 function captionDocument(context: StudioAdapterContext, id: string): CaptionDocument | undefined {
@@ -117,12 +158,13 @@ export const captionFineStudioAdapters: readonly StudioAdapter[] = [
     id: "track", role: "track",
     output: { type: "VisualTrack", surface: "track", modules: ["@hypit/caption-fine"] },
     family: "caption", tone: "magenta", icon: "captions",
-    parameters: [
+    bindings: [
       {
-        name: "program", label: "Program", writable: false,
-        recipe: { through: ["recipe"], parameters: captionFineRecipeParameters },
+        name: "program",
+        recipe: { through: ["recipe"], bindings: recipeVocabulary.map(({ name }) => ({ name })) },
       },
     ],
+    inspector: captionFineInspectorFields,
     requiredValues: ["schedule"], project: projectCaption,
     lane: { heightPx: 48 },
   },

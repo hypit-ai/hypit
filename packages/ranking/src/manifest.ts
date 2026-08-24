@@ -80,6 +80,75 @@ const unsigned = { kind: "number", integer: true, minimum: 0 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>, allowUnknown = false): ValueSchema => ({
   kind: "object", fields, ...(allowUnknown ? { allowUnknown: true } : {}),
 });
+const recipeColor = { kind: "string", format: "color", minLength: 7, maxLength: 9 } as const satisfies ValueSchema;
+const rankingRecipeSchemas = {
+  rows: { kind: "array", minItems: 1, items: object({
+    id: { schema: { kind: "string", minLength: 1 } },
+    label: { schema: { kind: "string", minLength: 1 } },
+    color: { schema: recipeColor },
+  }) },
+  "rank-colors": { kind: "array", minItems: 1, items: recipeColor },
+  "slot-colors": { kind: "array", minItems: 3, maxItems: 3, items: recipeColor },
+  "font-size": { kind: "number", minimum: 0 },
+  "font-weight": { kind: "number", integer: true, minimum: 1 },
+  "text-color": recipeColor,
+  "line-height": { kind: "number", minimum: 0 },
+  "board-background": recipeColor,
+  "board-border-color": recipeColor,
+  "board-border-width": { kind: "number", minimum: 0 },
+  "board-radius": { kind: "number", minimum: 0 },
+  "board-shadow-x": { kind: "number" },
+  "board-shadow-y": { kind: "number" },
+  "board-shadow-blur": { kind: "number", minimum: 0 },
+  "board-shadow-spread": { kind: "number" },
+  "board-shadow-color": recipeColor,
+  "appear-frames": { kind: "number", integer: true, minimum: 0 },
+  "move-frames": { kind: "number", integer: true, minimum: 0 },
+  "motion-easing": { kind: "string", enum: ["linear", "ease-in", "ease-out", "ease-in-out"] },
+  "label-width": { kind: "number", minimum: 0 },
+  padding: { kind: "number", minimum: 0 },
+  "row-height": { kind: "number", minimum: 0 },
+  "row-gap": { kind: "number", minimum: 0 },
+  "cell-gap": { kind: "number", minimum: 0 },
+  "icon-size": { kind: "number", minimum: 0 },
+  "icon-radius": { kind: "number", minimum: 0 },
+  "icon-fit": { kind: "string", enum: ["contain", "cover"] },
+  "stage-x": { kind: "number" },
+  "stage-y": { kind: "number" },
+  "stage-size": { kind: "number", minimum: 0 },
+  "center-x": { kind: "number" },
+  "baseline-y": { kind: "number" },
+  "slot-gap": { kind: "number", minimum: 0 },
+  "ring-width": { kind: "number", minimum: 0 },
+  "label-gap": { kind: "number", minimum: 0 },
+  "board-stack": { kind: "number", integer: true },
+  "stage-stack": { kind: "number", integer: true },
+  "item-stack": { kind: "number", integer: true },
+  "appear-gain": { kind: "number", minimum: 0 },
+  "move-gain": { kind: "number", minimum: 0 },
+  "sound-fade-frames": { kind: "number", integer: true, minimum: 0 },
+} as const satisfies Readonly<Record<string, ValueSchema>>;
+
+function typedRecipeProperties<const T extends readonly {
+  readonly name: string;
+  readonly required: boolean;
+  readonly summary: string;
+  readonly values?: readonly string[];
+  readonly fallback?: import("@hypit/protocol").CanonicalValue;
+}[]>(properties: T) {
+  return properties.map((property) => {
+    const schema = rankingRecipeSchemas[property.name as keyof typeof rankingRecipeSchemas];
+    if (schema === undefined) throw new Error(`Ranking Recipe property ${property.name} has no public schema.`);
+    const fallback = schema.kind === "number" && typeof property.fallback === "string"
+      ? Number(property.fallback)
+      : property.fallback;
+    return {
+      ...property,
+      schema,
+      ...(fallback === undefined ? {} : { fallback }),
+    };
+  });
+}
 const variants = { kind: "string", enum: ["tier-board", "column", "top-three"] } as const;
 const itemBase = {
   id: { schema: string },
@@ -174,9 +243,13 @@ export const rankingMarkupSurfaces = [
             summary: "Names this Style so a TierBoard can reference it." },
           { name: "recipe", kind: "reference", required: true, accepts: [svsRecipeType],
             summary: "Chooses the Recipe carrying the tier rows, board Paint, row and cell geometry, icon treatment, staging pose and motion.",
-            recipe: [
-              { name: "rows", required: false, fallback: "s:S:#ef4444|a:A:#f59e0b|b:B:#22c55e|c:C:#3b82f6",
-                summary: "Defines the tier rows the board draws, each written `id:label:color` and separated by `|`." },
+            recipe: typedRecipeProperties([
+              { name: "rows", required: false, fallback: [
+                { id: "s", label: "S", color: "#ef4444" },
+                { id: "a", label: "A", color: "#f59e0b" },
+                { id: "b", label: "B", color: "#22c55e" },
+                { id: "c", label: "C", color: "#3b82f6" },
+              ], summary: "Defines the ordered tier rows the board draws, each with an id, label and color." },
               { name: "font-size", required: false, fallback: "28",
                 summary: "Sets the size in pixels the Item copy is set at." },
               { name: "font-weight", required: false, fallback: "700",
@@ -245,7 +318,7 @@ export const rankingMarkupSurfaces = [
                 summary: "Sets the gain the move sound is played at." },
               { name: "sound-fade-frames", required: false, fallback: "0",
                 summary: "Sets how many frames each sound fades in and out over." },
-            ] },
+            ]) },
           { name: "font", kind: "reference", required: true,
             accepts: [mediaTypes.fontArtifact, mediaTypes.fontStack],
             summary: "Chooses the exact face, or a whole stack that already carries its own fallbacks, the board copy is set in." },
@@ -272,9 +345,9 @@ export const rankingMarkupSurfaces = [
             summary: "Names this Style so a Column can reference it." },
           { name: "recipe", kind: "reference", required: true, accepts: [svsRecipeType],
             summary: "Chooses the Recipe carrying the rank colors, board Paint, row geometry, icon treatment, staging pose and motion.",
-            recipe: [
-              { name: "rank-colors", required: false, fallback: "#facc15|#d1d5db|#fb923c|#60a5fa|#a78bfa",
-                summary: "Defines the color each rank badge is drawn in, separated by `|` and reused in order past the last one." },
+            recipe: typedRecipeProperties([
+              { name: "rank-colors", required: false, fallback: ["#facc15", "#d1d5db", "#fb923c", "#60a5fa", "#a78bfa"],
+                summary: "Defines the ordered colors rank badges use, cycling after the last color." },
               { name: "font-size", required: false, fallback: "28",
                 summary: "Sets the size in pixels the row copy is set at." },
               { name: "font-weight", required: false, fallback: "700",
@@ -339,7 +412,7 @@ export const rankingMarkupSurfaces = [
                 summary: "Sets the gain the move sound is played at." },
               { name: "sound-fade-frames", required: false, fallback: "0",
                 summary: "Sets how many frames each sound fades in and out over." },
-            ] },
+            ]) },
           { name: "font", kind: "reference", required: true,
             accepts: [mediaTypes.fontArtifact, mediaTypes.fontStack],
             summary: "Chooses the exact face, or a whole stack that already carries its own fallbacks, the board copy is set in." },
@@ -365,9 +438,9 @@ export const rankingMarkupSurfaces = [
             summary: "Names this Style so a TopThree can reference it." },
           { name: "recipe", kind: "reference", required: true, accepts: [svsRecipeType],
             summary: "Chooses the Recipe carrying the slot colors, podium geometry, ring and label spacing, board Paint and motion.",
-            recipe: [
-              { name: "slot-colors", required: false, fallback: "#facc15|#d1d5db|#fb923c",
-                summary: "Defines the color each podium slot is drawn in, separated by `|`, and at least three are required." },
+            recipe: typedRecipeProperties([
+              { name: "slot-colors", required: false, fallback: ["#facc15", "#d1d5db", "#fb923c"],
+                summary: "Defines the three ordered colors used by the three podium slots." },
               { name: "font-size", required: false, fallback: "28",
                 summary: "Sets the size in pixels the slot copy is set at." },
               { name: "font-weight", required: false, fallback: "700",
@@ -410,7 +483,7 @@ export const rankingMarkupSurfaces = [
                 summary: "Sets the gain a move sound would be played at, though a podium authors none." },
               { name: "sound-fade-frames", required: false, fallback: "0",
                 summary: "Sets how many frames each sound fades in and out over." },
-            ] },
+            ]) },
           { name: "font", kind: "reference", required: true,
             accepts: [mediaTypes.fontArtifact, mediaTypes.fontStack],
             summary: "Chooses the exact face, or a whole stack that already carries its own fallbacks, the board copy is set in." },
