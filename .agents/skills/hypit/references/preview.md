@@ -12,13 +12,25 @@ a new package with a bad schedule, a target that is not an output, a Film with n
 composition. Find that now, not on the author's screen:
 
 ```bash
-hypit-preview-check /path/to/project/build.svrun
+hypit-reference-video-tools preview_check /path/to/project/build.svrun
 ```
 
 It takes the Run Source, not the Author SVML — Studio's unit of work is the Run, and it reads the
 `.svml` back out of it.
 
-It exits non-zero when the graph itself is wrong, and it names what refused — a target that is not a
+The same check is also a bin of its own:
+
+```bash
+hypit-preview-check /path/to/project/build.svrun
+```
+
+Prefer the subcommand. It honours `--package-root`, so it reaches a project's own
+`packages/local-<slug>/` from wherever you are standing, and it is a subcommand of the bin the
+reconstruction route already runs. The bare bin fixes the package root to the Run file's own
+directory and takes no flags, so reach for it when the Run sits at the project root and you want the
+prose summary rather than a JSON result.
+
+Either one refuses when the graph itself is wrong, and names what refused — a target that is not a
 Film or Render output of the current SVML, a Film with no traceable composition, a Film with no
 `SemanticTake` / Speech Track chain. This is not a guessing problem: the error says what is wrong, and
 you repair that. A graph that does not trace is not done, and **every failure it reports must be
@@ -29,7 +41,8 @@ rather than performing it leaves the closure waiting on Providers, and Studio re
 closure before it will open. That is the expected state of a Source nobody has built yet, not a defect
 in it. When every issue is `the Studio projection closure requires unresolved capabilities: …`, the
 graph traced all the way to a Film and a semantic spine, and what remains is work a Provider has to
-do — the script prints the waiting capabilities and exits zero:
+do. The subcommand returns `"sound": true` with the capabilities under `awaiting`; the bin prints
+them and exits zero:
 
 ```
 preview-check: the graph is sound, waiting on 6 capabilities.
