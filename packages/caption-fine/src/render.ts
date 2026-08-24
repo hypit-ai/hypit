@@ -282,6 +282,22 @@ function easeOutElastic(value: number): number {
 
 const neutralMotion: MotionSnapshot = { opacity: 1, transform: "none", filter: "none", clipPath: "inset(0% 0% 0% 0%)" };
 
+/**
+ * Whether a motion needs `clip-path` at all.
+ *
+ * `inset(0% 0% 0% 0%)` reads as a no-op and is not one: it clips the element and everything inside it
+ * to its border box. These boxes carry no padding, so their border box is exactly the glyph advance —
+ * and an outline is painted outside that, by a filter that contributes nothing to layout. Emitted as
+ * the resting value of every motion, it cut the outline off on all four sides, along with the glow,
+ * the drop shadow and the long shadow, which reach further still.
+ *
+ * A wipe is the only motion that has anything to clip. Every keyframe of one animation has to declare
+ * the same properties, so this is decided once per animation rather than per frame.
+ */
+function wipes(kind: FineCaptionOneShotMotion): boolean {
+  return kind === "wipe-left" || kind === "wipe-right" || kind === "wipe-up" || kind === "wipe-down";
+}
+
 function motionSnapshot(kind: FineCaptionOneShotMotion, progress: number, distancePx: number): MotionSnapshot {
   const value = clamp(progress, 0, 1);
   const eased = easeOut(value);
@@ -319,12 +335,12 @@ function motionSnapshot(kind: FineCaptionOneShotMotion, progress: number, distan
   return state(eased, transform);
 }
 
-function snapshotStyle(snapshot: MotionSnapshot): VisualStyleDeclaration[] {
+function snapshotStyle(snapshot: MotionSnapshot, clipped = true): VisualStyleDeclaration[] {
   return [
     { name: "opacity", value: snapshot.opacity },
     { name: "transform", value: snapshot.transform },
     { name: "filter", value: snapshot.filter },
-    { name: "clip-path", value: snapshot.clipPath },
+    ...(clipped ? [{ name: "clip-path", value: snapshot.clipPath }] : []),
   ];
 }
 
@@ -343,12 +359,13 @@ function cueAnimation(parameters: FineCaptionParameters, durationFrames: number)
     ...transitionOffsets(0, enterFrames, parameters.motion.cueEnter),
     ...transitionOffsets(durationFrames - exitFrames, exitFrames, parameters.motion.cueExit),
   ];
+  const clipped = wipes(parameters.motion.cueEnter) || wipes(parameters.motion.cueExit);
   return animationFrom(durationFrames, offsets, (frame) => {
     const enterProgress = enterFrames === 0 ? 1 : clamp(frame / enterFrames, 0, 1);
     const exitProgress = exitFrames === 0 ? 1 : clamp((durationFrames - frame) / exitFrames, 0, 1);
     const enter = motionSnapshot(parameters.motion.cueEnter, enterProgress, parameters.motion.slideDistancePx);
     const exit = motionSnapshot(parameters.motion.cueExit, exitProgress, parameters.motion.slideDistancePx);
-    return snapshotStyle(enterProgress < 1 ? enter : exit);
+    return snapshotStyle(enterProgress < 1 ? enter : exit, clipped);
   });
 }
 
@@ -369,15 +386,16 @@ function atomLifecycleAnimation(
     ...transitionOffsets(endFrame - exitFrames, exitFrames, parameters.motion.atomExit),
     ...stepOffsets(endFrame),
   ];
+  const clipped = wipes(parameters.motion.atomEnter) || wipes(parameters.motion.atomExit);
   return animationFrom(durationFrames, offsets, (frame) => {
-    if (frame < startFrame) return shouldWait ? [{ name: "opacity", value: 0 }] : snapshotStyle(neutralMotion);
+    if (frame < startFrame) return shouldWait ? [{ name: "opacity", value: 0 }] : snapshotStyle(neutralMotion, clipped);
     if (frame >= endFrame && parameters.motion.atomExit !== "none") {
-      return snapshotStyle(motionSnapshot(parameters.motion.atomExit, 0, parameters.motion.slideDistancePx));
+      return snapshotStyle(motionSnapshot(parameters.motion.atomExit, 0, parameters.motion.slideDistancePx), clipped);
     }
     const enterProgress = enterFrames === 0 ? 1 : clamp((frame - startFrame) / enterFrames, 0, 1);
     const exitProgress = exitFrames === 0 ? 1 : clamp((endFrame - frame) / exitFrames, 0, 1);
-    if (enterProgress < 1) return snapshotStyle(motionSnapshot(parameters.motion.atomEnter, enterProgress, parameters.motion.slideDistancePx));
-    return snapshotStyle(motionSnapshot(parameters.motion.atomExit, exitProgress, parameters.motion.slideDistancePx));
+    if (enterProgress < 1) return snapshotStyle(motionSnapshot(parameters.motion.atomEnter, enterProgress, parameters.motion.slideDistancePx), clipped);
+    return snapshotStyle(motionSnapshot(parameters.motion.atomExit, exitProgress, parameters.motion.slideDistancePx), clipped);
   });
 }
 
@@ -460,8 +478,9 @@ function activeResponseAnimation(
     });
   }
   const frames = Math.min(parameters.motion.activeResponseFrames, Math.max(1, endFrame - startFrame));
+  const clipped = wipes(response);
   return animationFrom(durationFrames, transitionOffsets(startFrame, frames, response), (frame) => {
-    if (frame < startFrame || frame > startFrame + frames) return snapshotStyle(neutralMotion);
+    if (frame < startFrame || frame > startFrame + frames) return snapshotStyle(neutralMotion, clipped);
     const progress = clamp((frame - startFrame) / frames, 0, 1);
     if (response === "pop" || response === "spring") {
       const amplitude = parameters.motion.activeScale - 1;
@@ -470,7 +489,7 @@ function activeResponseAnimation(
         : 1 + amplitude * Math.exp(-4 * progress) * Math.sin(12 * progress);
       return [{ name: "transform", value: `scale(${compactNumber(responseScale)})` }];
     }
-    return snapshotStyle(motionSnapshot(response, progress, parameters.motion.slideDistancePx));
+    return snapshotStyle(motionSnapshot(response, progress, parameters.motion.slideDistancePx), clipped);
   });
 }
 
@@ -542,7 +561,8 @@ function activeBoxAnimation(
     const enterProgress = enterFrames === 0 ? 1 : clamp((frame - startFrame) / enterFrames, 0, 1);
     const exitProgress = exitFrames === 0 ? 1 : clamp((logicalEnd - frame) / exitFrames, 0, 1);
     const kind = enterProgress < 1 ? box.enter : box.exit;
-    return snapshotStyle(motionSnapshot(kind, Math.min(enterProgress, exitProgress), parameters.motion.slideDistancePx));
+    return snapshotStyle(motionSnapshot(kind, Math.min(enterProgress, exitProgress), parameters.motion.slideDistancePx),
+      wipes(box.enter) || wipes(box.exit));
   }) ?? { keyframes: [
     { atFrame: 0, style: [{ name: "opacity", value: 1 }] },
     { atFrame: durationFrames, style: [{ name: "opacity", value: 1 }] },
@@ -831,8 +851,9 @@ function cueElements(
           { name: "column-gap", value: `${compactNumber(parameters.layout.wordGapPx)}px` },
           { name: "display", value: "inline-flex" },
           { name: "inset", value: "0" },
-          ...(kind === "glyph" && parameters.karaoke.transition === "wipe"
-            ? [{ name: "overflow", value: "hidden" }] as const : []),
+          // The wipe's own `clip-path` is what reveals this layer a word at a time, and it clips to the
+          // same border box, so an `overflow` here adds nothing — except at full reveal, where the
+          // clip has opened and this was still cutting the outline off at the glyph advance.
           { name: "position", value: "absolute" },
         ],
         animation: kind === "glyph" && parameters.karaoke.transition === "wipe"
