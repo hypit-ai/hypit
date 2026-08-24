@@ -14,7 +14,7 @@ import { readStudioSession } from "@hypit/studio/src/session.js";
 import type { StudioSession } from "@hypit/studio/src/session.js";
 import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
 
-import { aliasPattern, invokedFrom, referenceRoot, scriptBody } from "./authoring.js";
+import { aliasPattern, invokedFrom, nearestPackageRoot, referenceRoot, scriptBody } from "./authoring.js";
 import { assert, round } from "./media.js";
 
 export type PreviewCheckInput = {
@@ -52,7 +52,7 @@ export async function previewCheck(
   const cwd = invokedFrom();
   const runPath = resolve(cwd, input.run);
   const runtimePath = input.runtime === undefined ? undefined : resolve(cwd, input.runtime);
-  const packageRoot = roots.packageRoot;
+  const packageRoot = nearestPackageRoot(dirname(runPath)) ?? roots.packageRoot;
   const workspaceRoot = dirname(runPath);
 
   const distributionPackageRoot = videoCliDistribution.packageRoot;
@@ -477,7 +477,12 @@ export async function reconstructionCheck(
 ): Promise<Record<string, unknown>> {
   const cwd = invokedFrom();
   const runPath = resolve(cwd, input.run);
-  const packageRoot = roots.packageRoot;
+  // Where the Source's imports resolve from. A project's own packages are installed against the
+  // project, so the Run names its own root: the nearest directory at or above it holding a
+  // `package.json`, which is the same walk `hypit check` makes. Taking it from the working directory
+  // instead meant a Run named by a path resolved its packages somewhere else entirely, and the
+  // project's own elements read as packages that do not exist.
+  const packageRoot = nearestPackageRoot(dirname(runPath)) ?? roots.packageRoot;
 
   const runSource = await readFile(runPath, "utf8").catch(() => undefined);
   assert(runSource !== undefined, `cannot read ${runPath}`);

@@ -161,6 +161,10 @@ A clip comparison reaches this observer as two frame tiles — the reference's o
 from the render against the same duration, both drawn at the same cell width. Read them as a pair of
 grids sampling the same stretch at the same rate.
 
+The pair is always sent in one order: **one is the reference, two is the render.** The observer is not
+told that and must not be; you need it, because a difference reported "in one" is a difference in the
+reference and one "in two" is something to repair. Read the answer with that in hand.
+
 ### Record the differences against the comparison that asked for them
 
 `compare_reconstruction` returns a `comparison_id`, and the answer goes back under it:

@@ -72,8 +72,6 @@ The first official Caption Style family keeps planning and rendering parameters 
 
 ```svs
 caption.dialogue {
-  cue-min-words: 2;
-  cue-max-words: 7;
   stack-order: 70;
   x: 0.08;
   y: 0.76;
@@ -90,7 +88,6 @@ caption.dialogue {
 
 | Property | Description |
 |---|---|
-| `cue-min-words`, `cue-max-words` | Common Cue word-count bounds |
 | `stack-order` | Z-stacking order among all Tracks (higher = on top) |
 | `x`, `y` | Position as fraction of canvas (0–1) |
 | `width` | Width as fraction of canvas |
@@ -117,7 +114,6 @@ Define multiple caption Recipes for different speakers:
 
 ```svs
 caption.alice {
-  cue-min-words: 2; cue-max-words: 5;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   size: 58;
@@ -127,7 +123,6 @@ caption.alice {
 }
 
 caption.bob {
-  cue-min-words: 2; cue-max-words: 5;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   size: 58;
@@ -144,7 +139,7 @@ Then assign them via `caption:Program`:
 <caption-fine:Style id="default-caption" recipe={recipes.caption.dialogue} font={caption-font}/>
 <caption-fine:Style id="alice-caption" recipe={recipes.caption.alice} font={caption-font}/>
 <caption-fine:Style id="bob-caption" recipe={recipes.caption.bob} font={caption-font}/>
-<caption:Program id="caption-program" display={story.caption} default={default-caption}>
+<caption:Program id="caption-program" document={story.caption} default={default-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
 </caption:Program>
@@ -421,8 +416,6 @@ A complete `recipes.svs` file for a four-take talking-head project:
   }
 
   caption.primary {
-    cue-min-words: 2;
-    cue-max-words: 5;
     stack-order: 70;
     x: 0.08;
     y: 0.74;

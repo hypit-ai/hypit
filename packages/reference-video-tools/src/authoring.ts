@@ -141,7 +141,7 @@ function repositoryRoot(): string {
  * and the reason a project is given a `package.json` of its own — without one the walk passes
  * through it and lands on the tree.
  */
-function nearestPackageRoot(start: string): string | undefined {
+export function nearestPackageRoot(start: string): string | undefined {
   let directory = resolve(start);
   while (true) {
     if (existsSync(join(directory, "package.json"))) return directory;

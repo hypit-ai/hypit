@@ -397,7 +397,7 @@ export const mediaTrackMarkupSurfaces = [{
             { name: "surface", kind: "reference", required: false, accepts: [mediaTypes.compositableSurface],
               summary: "Shows an alpha-aware still or timed Surface." },
             { name: "extent", kind: "reference", required: false, accepts: [spatialTypes.extent],
-              summary: "Gives the still image its authored pixel Extent." },
+              summary: "Gives the still image its authored pixel Extent. The `fit` scales this Extent into the Frame, so what it decides is the shape: its width-to-height ratio has to be the picture's, and the pixel numbers themselves only have to hold that ratio. A generated picture's own size is the generator's to choose and is not knowable when the Source is written, so write the ratio you asked that generator for." },
             { name: "audio", kind: "literal", required: false, values: ["include", "omit"],
               summary: "Decides whether a raw `video` source contributes its own audio; defaults to `omit`." },
             { name: "source-audio", kind: "literal", required: false,

@@ -80,7 +80,12 @@ function resolvePlaceholderColor(value: string | undefined): PlaceholderPalette 
 function placeholderPng(width: number, height: number, palette: PlaceholderPalette): Uint8Array {
   const { base, border } = palette;
   const raw = Buffer.alloc(height * (1 + width * 3));
-  const margin = Math.max(2, Math.round(Math.min(width, height) * 0.05));
+  // A hairline, not a band. At a twentieth of the shorter side the frame was fifty pixels thick on a
+  // full-frame mock, and an observer measuring what the element covers read that as the element
+  // stopping short of the edge — "does not span the full width", reported every round, about the
+  // mock rather than about anything the Source says. It has to be visible enough to read as a slot
+  // and thin enough to measure as nothing.
+  const margin = Math.max(1, Math.round(Math.min(width, height) * 0.004));
   for (let y = 0; y < height; y += 1) {
     raw[y * (1 + width * 3)] = 0;
     for (let x = 0; x < width; x += 1) {
