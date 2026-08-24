@@ -49,10 +49,13 @@ will actually accept, which is what a mistaken attribute is checked against.
 
 Both commands print one JSON object to stdout. `list_svml_packages` is an array of
 `{ package_name, tags, models }`; `inspect_svml_vocabulary` returns `{ packages, surfaces }` where
-each Surface carries `tag`, `mode`, `outputs`, `vocabulary` (its `attributes`, `children`, `ports`,
-`recipe` properties and `preview`) and `readme_path`. Read the `accepts` lists on attributes — that
-is the declared Type an element must satisfy, and a property with nowhere to land in those lists is
-the finding that makes a gap.
+each Surface carries `package_name`, `module`, `surface`, `tag`, `mode`, `outputs`, `readme_path` and
+`vocabulary` — whose own keys are `summary`, `attributes`, `children`, `example` and `notes`. **The
+Recipe properties are inside the `recipe` attribute**, at `vocabulary.attributes[name=recipe].recipe`,
+one entry per property; there is no `recipe` key beside `attributes`. A Surface re-exported from
+another package carries no `vocabulary` at all — follow its `module` to the one that declares it. Read
+the `accepts` lists on attributes: that is the declared Type an element must satisfy, and a property
+with nowhere to land in those lists is the finding that makes a gap.
 
 **That output is the complete authoring contract. Author from it, and do not read a package's source
 code to learn an element's syntax.** Every recipe property carries its own `summary` and its admitted
