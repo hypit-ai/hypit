@@ -295,6 +295,10 @@ observation says about the picture:
 - **It is still** — a screenshot, a card, a poster, a held photograph — author stills placed on a
   Media Track and cut at the observed boundaries. More faithful than asking a video model to hold
   something still, fully controlled, and far cheaper.
+- **Only its contents move** — a phone screen being scrolled, a browser page running past, a document
+  paged through. The frame is fixed and a still of the page goes inside it, which is the previous case
+  with the movement accounted for. `graphic-compositions.md` holds the reading and the evidence that
+  settles it; the trap is authoring the frame as the thing that travels.
 
 Never pad a take to reach the floor. If the beat is two seconds long, it is two seconds of a longer
 take or it is a still; it is not a four-second generation trimmed by two.
