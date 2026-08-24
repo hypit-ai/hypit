@@ -148,6 +148,15 @@ Decide, for each thing you place, which of three kinds it is:
 - **Genuinely coming and going** — an insert that appears for one phrase and leaves. A plain Selection
   is exactly right, and the gap is the point.
 
+**Where the base is meant to stay hidden, the covering Selections tile the Segment.** A voiceover-led
+stretch still has a speaking take under it — that is where the speech comes from — and the reference
+never shows it, so every word of that Segment is inside one covering Selection or the next, with the
+markers above joining them. A gap does not read as black there; it reads as a presenter appearing for
+half a second in a program that has none.
+
+This is settled in the Script rather than by looking: mark the covering ranges, read them back, and
+confirm the Segment's first word opens one and its last word closes one with nothing between.
+
 The same question decides a component you write yourself. A Program scheduled from occurrences draws
 only inside them unless you give it a span of its own, so a page built from one occurrence per row
 vanishes on the words between two rows. `@hypit/local-notebook-ranking` does that deliberately and
