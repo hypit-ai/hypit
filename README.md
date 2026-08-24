@@ -48,9 +48,9 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
 <table>
   <tr>
     <th>Reference</th>
-    <td></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td></td>
+    <td colspan="3" align="center">
+      <table><tr><td width="251"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td></tr></table>
+    </td>
   </tr>
   <tr>
     <th>Clones</th>
@@ -65,9 +65,9 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
 <table>
   <tr>
     <th>Reference</th>
-    <td></td>
-    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td>
-    <td></td>
+    <td colspan="3" align="center">
+      <table><tr><td width="251"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" controls muted></video></td></tr></table>
+    </td>
   </tr>
   <tr>
     <th>Clones</th>
