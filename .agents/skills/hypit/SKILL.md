@@ -11,6 +11,9 @@ that reference names required child references, read those completely in the sta
 Keep `.svml` Author Source, `.svs` Recipe Source, `.svrun` Run Source, and
 `hypit.runtime.json` Runtime Profile as separate languages and responsibilities.
 
+Do not create or hand-author SVG images anywhere in an author project or project-local package.
+This includes `.svg` assets, inline `<svg>` markup, and SVG data URLs.
+
 Every route uses a Hypit Distribution and an independent author project. Prefer an installed
 machine-wide CLI; when the task is running from a Hypit contributor checkout, use that checkout's
 Node entrypoints instead. The npm package is not currently published, so absence of the `hypit`
