@@ -146,6 +146,8 @@ async function extract(path: string, args: readonly string[], target: string): P
 // show what moves; nine keeps a fifteen-second one legible at a cell width a reader can still resolve
 // detail in. The clip is decoded once, and the sampling and the tiling happen in that one pass.
 const TILE_COLUMNS = 3;
+/** How wide one frame is drawn in a grid, when the caller has no reference width to match. */
+const TILE_CELL_WIDTH = 480;
 export function tileFrames(duration: number): number { return clamp(Math.round(duration * 1.5), 4, 9); }
 
 /**
@@ -168,13 +170,22 @@ export async function cutFrame(source: string, at: number, target: string): Prom
   return await extract(source, ["-i", source, "-ss", String(round(at)), "-frames:v", "1", "-q:v", "3"], target);
 }
 
-export async function shotTile(clip: string, duration: number, target: string): Promise<string> {
+/**
+ * A grid of frames sampled evenly across a clip, for an observer that reads pictures.
+ *
+ * `cellWidth` is the width each frame is drawn at. Both sides of a comparison are asked for the same
+ * one, because a pair drawn at two widths is read as a difference in the thing being compared: a
+ * reference stretched up and a render squeezed down disagree about stroke weight and letter spacing
+ * before anyone looks at them. The caller picks the width the reference can actually supply, so
+ * `min` here keeps a small source from being enlarged into the same number of pixels carrying less.
+ */
+export async function shotTile(clip: string, duration: number, target: string, cellWidth = TILE_CELL_WIDTH): Promise<string> {
   const frames = tileFrames(duration);
   const rows = Math.ceil(frames / TILE_COLUMNS);
   const rate = round(frames / Math.max(duration, 0.1));
   await command("ffmpeg", [
     "-hide_banner", "-loglevel", "error", "-y", "-i", clip,
-    "-vf", `fps=${rate},scale=480:-2,tile=layout=${TILE_COLUMNS}x${rows}:padding=8:margin=8:color=black`,
+    "-vf", `fps=${rate},scale='min(${Math.round(cellWidth)},iw)':-2,tile=layout=${TILE_COLUMNS}x${rows}:padding=8:margin=8:color=black`,
     "-frames:v", "1", "-q:v", "3", target,
   ], 300_000);
   return target;

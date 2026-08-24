@@ -113,6 +113,13 @@ Neither half fills the frame, and the pair still covers it. `frame-coverage.md` 
 over each word together, so a Segment whose two halves tile the Canvas is covered; one where the
 listening half is left out is not, and the words are named.
 
+Generate each half's first frame at `aspect-ratio="1:1"` and let the half crop it. Half of a 9:16
+Canvas is close to square — 1080×960 on a 1080×1920 delivery — and no ratio the model offers is that
+shape, so something is cropped whichever one is asked for. Ask for the square: the subject sits in the
+middle of it, the crop comes off the top and bottom where a head-and-shoulders framing has room to
+lose it, and 1:1 is the ratio the model holds most reliably. Asking for `9:16` here and letting the
+half take a slice out of the middle is what produces two halves whose people are different sizes.
+
 ### Stack order is authored per Segment, never once for "the base"
 
 A picture is the base *of a Segment*. The same Track can hold the base for one Segment and something

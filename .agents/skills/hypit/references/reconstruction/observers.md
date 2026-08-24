@@ -158,8 +158,22 @@ differences across stretches, and one answered in the light of the previous answ
 independent evidence of anything.
 
 A clip comparison reaches this observer as two frame tiles — the reference's own cut, and one built
-from the render against the same duration. Read them as a pair of grids sampling the same stretch at
-the same rate.
+from the render against the same duration, both drawn at the same cell width. Read them as a pair of
+grids sampling the same stretch at the same rate.
+
+### Record the differences against the comparison that asked for them
+
+`compare_reconstruction` returns a `comparison_id`, and the answer goes back under it:
+
+```bash
+hypit-reference-video-tools record_observation --reference-id <id> \
+  --key comparison:<comparison_id> --text-file <the differences>
+```
+
+Until that lands, the comparison is a pair that was drawn, cut and handed over with nobody having said
+what it shows, and `reconstruction_check` lists it under `awaiting_answer` and credits the element
+nothing. The differences are what the round is for, so record every one — including the ones that read
+as equivalent, in the words the observer used.
 
 ## Comparing without subagents
 
