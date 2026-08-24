@@ -3,7 +3,7 @@ import { access, appendFile, mkdir, readdir, readFile, stat, writeFile } from "n
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { deflateSync } from "node:zlib";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { loadNodePackageSelection } from "@hypit/package-loader-node";
 import { markupSurfaceHostFacetAbi } from "@hypit/markup";
@@ -84,6 +84,12 @@ export type CompareReconstructionInput = {
    * elements have been compared and which have never been looked at.
    */
   readonly element?: string;
+  /**
+   * A whole round of comparisons, run together. Each entry names its own stretch, render and element
+   * exactly as a single call does, and inherits `reference_id` from the outer input. The route renders
+   * every element before it compares any of them, so a round is a list by the time it starts.
+   */
+  readonly comparisons?: readonly Omit<CompareReconstructionInput, "reference_id" | "comparisons">[];
 };
 
 export type MakePlaceholderInput = {
@@ -479,6 +485,7 @@ async function cutWordRange(
   range: SpokenRange,
   renderedPath: string,
   clip: boolean,
+  slot: string,
 ): Promise<RangeCut> {
   const cuts = referenceCuts(state);
   const head = cuts.find((at) => at >= range.first.startSeconds && at < range.first.endSeconds);
@@ -488,10 +495,14 @@ async function cutWordRange(
   const seconds = end - start;
   assert(seconds > 0, `${focus.selection ?? focus.segment} spans no time in the reference`);
 
-  const dir = join(root, "ranges");
-  await ensureDir(dir);
   const label = focus.selection === undefined ? `segment-${focus.segment}` : `selection-${focus.selection}`;
-  const reference = join(dir, `${label}-reference.${clip ? "mp4" : "jpg"}`);
+  // One directory per call. Several elements are drawn over one Segment, so several comparisons name
+  // the same word range, and the route runs them at once once every render is finished. Named from the
+  // range alone they would write the same six files, and each would be reading the cut another was
+  // still writing.
+  const dir = join(root, "comparisons", label, slot);
+  await ensureDir(dir);
+  const reference = join(dir, `reference.${clip ? "mp4" : "jpg"}`);
   // The reference's own analysis video, which is the whole reference at the size every other
   // observation reads it at. A shot clip covers a cut in the picture and would cover the wrong words.
   if (clip) await cutClip(state.analysis_video_ref, start, seconds, reference);
@@ -507,15 +518,22 @@ async function cutWordRange(
     // render's own rate and taken off as whole frames.
     const headFrames = Math.round((start - range.startSeconds) * drawn.frameRate);
     const tailFrames = Math.round((range.endSeconds - end) * drawn.frameRate);
-    rendered = join(dir, `${label}-rendered.mp4`);
+    rendered = join(dir, "rendered.mp4");
     await cutClip(renderedPath, headFrames / drawn.frameRate, drawn.duration - (headFrames + tailFrames) / drawn.frameRate, rendered);
     referenceSeconds = (await probe(reference)).duration;
     renderedSeconds = (await probe(rendered)).duration;
     // Two stretches of different lengths cannot be read side by side: whatever is at a given offset
     // in one is at a different word in the other, which is the defect this cut exists to remove.
-    // Each side lands on its own frame grid, so they agree to within a frame rather than exactly.
-    assert(Math.abs(referenceSeconds - renderedSeconds) <= 2 / drawn.frameRate,
-      `the cut reference runs ${round(referenceSeconds)}s and the trimmed render ${round(renderedSeconds)}s; they must cover the same stretch`);
+    //
+    // What they can differ by is set by the containers rather than by the cut. Each side lands on its
+    // own frame grid, which is two frames between them, and a file carrying AAC reports a duration
+    // rounded up to a whole audio frame — 1024 samples, so 21ms at 48kHz — which neither side's frame
+    // grid divides. Three frames covers both; anything larger is the cut disagreeing with the render
+    // about which words the stretch holds.
+    const slack = 3 / drawn.frameRate;
+    assert(Math.abs(referenceSeconds - renderedSeconds) <= slack,
+      `the cut reference runs ${round(referenceSeconds)}s and the trimmed render ${round(renderedSeconds)}s, `
+      + `which is more than ${round(slack)}s apart; they must cover the same stretch`);
   }
 
   // An end that could not be moved onto a cut opens or closes part-way through a shot. How much of
@@ -555,10 +573,10 @@ async function cutWordRange(
     },
     reference,
     rendered,
-    referenceTile: join(dir, `${label}-reference-tile.jpg`),
-    renderedTile: join(dir, `${label}-rendered-tile.jpg`),
-    referenceStill: join(dir, `${label}-reference-still.jpg`),
-    renderedStill: join(dir, `${label}-rendered-still.jpg`),
+    referenceTile: join(dir, "reference-tile.jpg"),
+    renderedTile: join(dir, "rendered-tile.jpg"),
+    referenceStill: join(dir, "reference-still.jpg"),
+    renderedStill: join(dir, "rendered-still.jpg"),
     seconds,
     referenceSeconds: round(referenceSeconds),
     renderedSeconds: round(renderedSeconds),
@@ -643,7 +661,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     };
   };
 
-  return {
+  const tools: ReferenceVideoTools = {
     // Which packages exist is the first question of every reconstruction, and until now the only
     // answer was to read a guide and a directory listing by hand. The Build CLI deliberately never
     // scans a directory; this is a development tool, so it may.
@@ -960,6 +978,32 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
     },
 
     async compare_reconstruction(input): Promise<Record<string, unknown>> {
+      // Every render is finished before any comparison starts, so the comparisons are independent of
+      // each other and there is nothing to gain by running them one at a time. Handing the whole list
+      // over means the pacing, the per-comparison result and the failure of any one of them are the
+      // tool's business rather than a shell script's.
+      if (input.comparisons !== undefined) {
+        const batch = input.comparisons;
+        assert(batch.length > 0, "comparisons is empty");
+        const results = await pacedMap(batch, concurrency, gapMs, async (one) => {
+          const merged = { reference_id: input.reference_id, ...one };
+          // One comparison that throws — an unreadable render, a Selection the Script does not mark —
+          // takes only itself down. The rest of the list is what the caller came for.
+          try { return { ok: true as const, value: await tools.compare_reconstruction(merged) }; }
+          catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : String(error), input: merged }; }
+        });
+        const done = results.filter((item) => item.ok).map((item) => item.value!);
+        const failed = results.filter((item) => !item.ok);
+        return {
+          reference_id: input.reference_id,
+          compared: done.length,
+          failed: failed.length,
+          comparisons: done,
+          ...(failed.length === 0 ? {} : {
+            failures: failed.map((item) => ({ error: item.error, input: item.input })),
+          }),
+        };
+      }
       const state = await loadState(input.reference_id);
       const root = stateRoot(state.reference_id);
       const named = [input.shot_id, input.segment, input.selection].filter((value) => value !== undefined);
@@ -971,6 +1015,11 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const file = await stat(renderedPath).catch(() => undefined);
       assert(file?.isFile(), `${clip ? "video_path" : "image_path"} is not a file: ${renderedPath}`);
       const scope = input.question?.trim() ?? "";
+      // Everything this call derives is written under this name, so two comparisons of one stretch —
+      // two elements drawn over the same Segment, or one element read twice — never write each other's
+      // files. The render is what distinguishes them, so the render names the slot.
+      const slot = `${basename(renderedPath).replace(/\.[^.]*$/u, "")}-`
+        + createHash("sha256").update(renderedPath).digest("hex").slice(0, 8);
       const standIn = await standInBeside(renderedPath);
       const observer: Observer = state.observer ?? "gemini";
       const { ask, pending } = await askerFor(observer, state);
@@ -997,7 +1046,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           ...(input.selection === undefined ? {} : { selection: input.selection }),
         };
         const range = await spokenRange(svmlPath, focus, await referenceWords(state.reference_id));
-        cut = await cutWordRange(state, root, focus, range, renderedPath, clip);
+        cut = await cutWordRange(state, root, focus, range, renderedPath, clip, slot);
         referenceMedia = cut.reference;
         renderedMedia = cut.rendered;
         stretchSeconds = cut.seconds;
@@ -1017,8 +1066,12 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           referenceMedia = shot === undefined
             ? await cutFrame(cut!.reference, stretchSeconds / 2, cut!.referenceStill)
             : shot.representative_frame_ref;
-          renderedMedia = await cutFrame(renderedMedia, stretchSeconds / 2,
-            shot === undefined ? cut!.renderedStill : join(root, "shots", `${shot.shot_id}-reconstruction-still.jpg`));
+          let stillTarget = cut?.renderedStill ?? "";
+          if (shot !== undefined) {
+            stillTarget = join(root, "comparisons", `shot-${shot.shot_id}`, slot, "reconstruction-still.jpg");
+            await ensureDir(dirname(stillTarget));
+          }
+          renderedMedia = await cutFrame(renderedMedia, stretchSeconds / 2, stillTarget);
         }
       }
       const asClip = clip && !bothStill;
@@ -1033,7 +1086,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           assert(shot.frames_tile_ref !== null,
             `shot ${shot.shot_id} has no frame tile; re-prepare the reference with --redo all --observer agent`);
           referenceMedia = shot.frames_tile_ref;
-          renderedMedia = await shotTile(renderedPath, stretchSeconds, join(root, "shots", `${shot.shot_id}-reconstruction.jpg`));
+          const tileTarget = join(root, "comparisons", `shot-${shot.shot_id}`, slot, "reconstruction.jpg");
+          await ensureDir(dirname(tileTarget));
+          renderedMedia = await shotTile(renderedPath, stretchSeconds, tileTarget);
         } else {
           // A word range is cut when it is asked for, so neither side has a prepared tile and both
           // are built here, from the two cuts.
@@ -1146,6 +1201,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       return await reconstructionCheck(input, { packageRoot });
     },
   };
+  return tools;
 }
 
 const WHOLE_REFERENCE_KEYS = ["people_and_product", "voices", "persistent_systems", "places"] as const;

@@ -2,6 +2,7 @@
 import { readFile } from "node:fs/promises";
 
 import { createReferenceVideoTools } from "./tools.js";
+import type { CompareReconstructionInput } from "./tools.js";
 
 type Flags = ReadonlyMap<string, string | readonly string[] | boolean>;
 
@@ -16,6 +17,7 @@ function usage(): string {
     "  hypit-reference-video-tools inspect_svml_vocabulary --package <name> [--package <name> ...] [--tag <tag> ...] [--without-previews]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --run <build.svrun> --segment <id>|--selection <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
     "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --shot-id <id> --video <path>|--image <path> [--question <scope>] [--element <id>]",
+    "  hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch <comparisons.json>",
     "  hypit-reference-video-tools make-placeholder --out <path> --width <w> --height <h> [--color light|mid|dark|white|black|#RRGGBB] [--video] [--seconds <s>]",
     "  hypit-reference-video-tools render_element <build.svrun> --element <id> --out <path.png|path.mp4> [--segment <id>] [--selection <id>] [--reference-id <id>]",
     "  hypit-reference-video-tools render_previews <package-dir> [...]",
@@ -35,6 +37,12 @@ function usage(): string {
     "Each element also carries the basis its comparisons were made on — reference, estimate, mixed, or",
     "not recorded — which says whether anything that changes with elapsed time inside its window has",
     "been looked at, or only its layout.",
+    "",
+    "It also reports every Frame with an edge outside 0%-100% of its Canvas, which places part of what",
+    "is drawn into it off the picture. That is reported rather than required: an overhang is how an",
+    "element slides in from off-screen and how a full-bleed picture is cropped by a fit, and a mistake",
+    "looks the same. A comparison cannot answer it either way, because the render and the stand-in are",
+    "drawn at the same Canvas and put the element in the same place off the edge.",
     "",
     "render_element draws one element of a Source the way that Source configures it, without a Build",
     "and without a Provider: the Canvas, frame rate, Recipe values and bindings are read from the",
@@ -73,6 +81,14 @@ function usage(): string {
     "inside its word leaves the pair part-way through a shot, and the prompt says how many seconds of it",
     "to read as an incomplete shot. --shot-id names a cut in the picture and compares that whole shot.",
     "",
+    "--batch runs a whole round at once. The file holds a JSON array — or an object with a `comparisons`",
+    "array — of the same objects a single call takes, minus reference_id, which comes from the flag:",
+    "`[{\"run\": \"main.svrun\", \"segment\": \"pro\", \"video_path\": \"renders/board-pro.mp4\", \"element\": \"board\"}, …]`.",
+    "Every render is finished before any comparison starts, so a round has no order to it; they are",
+    "paced by HYPIT_REFERENCE_CONCURRENCY and each one's derived cuts are kept apart, so nothing in the",
+    "round reads a file another is still writing. One comparison that fails takes only itself down and",
+    "arrives under `failures` with the input that produced it; the rest are under `comparisons`.",
+    "",
     "--video compares the whole stretch instead of one frame of it, which is what removes the problem of",
     "choosing a characteristic frame for an element that animates in, leaves, or is replaced without a",
     "cut. The `gemini` observer receives the two clips; the `agent` observer receives two frame tiles,",
@@ -102,6 +118,13 @@ function usage(): string {
     "needs GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS_JSON. `agent` needs no credentials: it",
     "returns each observation as a task carrying its prompt and one tiled picture per shot, which the",
     "calling agent answers with record_observation.",
+    "",
+    "--package-root <dir> is where the packages a Source imports are resolved from, and it is accepted by",
+    "every command. It defaults to the working directory. A project that declares a vocabulary gap and",
+    "fills it publishes those packages under its own scope and installs them against the project root, so",
+    "run these commands from the project directory or name it here: resolved from anywhere else, the",
+    "project's own packages are not found, and reconstruction_check reports them under",
+    "`unresolved_packages` rather than asking for a comparison of what they draw.",
     "",
     "Every command prints one JSON result to stdout. Use --input <json> instead of flags when a complete input object is easier to pass.",
   ].join("\n");
@@ -178,10 +201,13 @@ async function main(): Promise<void> {
   if (flags.has("rebuild") || flags.has("refresh")) {
     throw new Error("--rebuild and --refresh were removed; use --redo on prepare_reference or --reobserve on observe_reference");
   }
+  // Where the Source's imports are resolved from. A project publishing its own packages installs them
+  // against the project root, so a root taken from anywhere else resolves none of them: --package-root
+  // is how a command run from elsewhere reaches them. HYPIT_DISTRIBUTION_ROOT names an installed
+  // Distribution and is the fallback for the installed packages a project does not carry.
+  const resolveFrom = one(flags, "package-root") ?? process.env.HYPIT_DISTRIBUTION_ROOT;
   const tools = createReferenceVideoTools({
-    ...(process.env.HYPIT_DISTRIBUTION_ROOT === undefined
-      ? {}
-      : { packageRoot: process.env.HYPIT_DISTRIBUTION_ROOT }),
+    ...(resolveFrom === undefined ? {} : { packageRoot: resolveFrom }),
   });
   const supplied = inputObject(flags);
   let result: unknown;
@@ -215,6 +241,20 @@ async function main(): Promise<void> {
     };
     result = await tools.record_observation(input as { reference_id: string; key: string; text: string });
   } else if (command === "compare_reconstruction") {
+    // A round is a list of comparisons, and a list is too long for flags. --batch names a JSON file
+    // holding it, which is also how it survives being written by one step and read by another.
+    const batchFile = one(flags, "batch");
+    if (batchFile !== undefined) {
+      const parsed: unknown = JSON.parse(await readFile(batchFile, "utf8"));
+      const list = Array.isArray(parsed) ? parsed : (parsed as { comparisons?: unknown }).comparisons;
+      if (!Array.isArray(list)) throw new Error(`${batchFile} must hold a JSON array of comparisons, or an object with a "comparisons" array`);
+      result = await tools.compare_reconstruction({
+        reference_id: required(flags, "reference-id"),
+        comparisons: list as CompareReconstructionInput["comparisons"] & object,
+      });
+      report(`${JSON.stringify(result, null, 2)}\n`);
+      return;
+    }
     const video = one(flags, "video");
     const segment = one(flags, "segment");
     const selection = one(flags, "selection");
