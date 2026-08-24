@@ -46,14 +46,29 @@ runtime, so the project does not install or lock another copy.
 
 The companion owns what its Track means: matching, required same-Surface values,
 entities, lane range, finite chrome, title and ordered text/material layers,
-Inspector parameter grouping and exact timeline inverses. Material layers carry an
+source bindings, Inspector fields and exact timeline inverses. Inspector fields
+select real writable bindings and organize them under the Studio-owned
+`Where / How / When` domains, optional companion-owned pages and sections. A
+source binding is never shown merely because Studio can reach it. Material layers carry an
 Artifact digest or Surface identity, never a Studio HTTP URL. Studio always owns
 time formatting and transport resolution, so chrome and material cannot hide a
 title or its time.
 Studio owns session-wide behavior and chrome: adapter selection, collision and
 replacement rules, fallback defaults, selection treatment, playback, zoom,
-scrolling and source mutation transport. A companion cannot ship arbitrary DOM
-or CSS into the application.
+scrolling, the finite Inspector control set and source mutation transport. A
+companion cannot ship arbitrary DOM or CSS into the application.
+
+The finite control set includes scalar controls plus generic `list` and flat
+`record` composition. Structured values are validated against the domain-owned
+canonical schema, edited as a local draft, and written atomically through the
+same revisioned `parameter.adjust` operation. Studio contains no Ranking,
+Caption or Media list codec.
+
+Inspector controls are Studio behavior, not browser defaults supplied by a
+companion. Focused controls suspend transport shortcuts; numeric values use
+non-spinning text entry so wheel scrolling cannot mutate Source; selects use
+the Studio menu and keyboard navigation. Values still commit only on an
+explicit change through the normal revisioned mutation path.
 
 Temporal lineage comes from the exact executed graph selected by the Run. Studio indexes the
 `TemporalPoint` and `TemporalWindow` records in each Track's dependency closure together with their

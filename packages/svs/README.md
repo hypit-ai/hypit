@@ -8,6 +8,17 @@ The SVS Frontend reads a `<sheet version="1">` containing named rule blocks and 
 not implement CSS selectors, cascade or inheritance. A consuming package validates a Recipe's
 properties and lowers it into its own typed Program Record.
 
+Recipe values use the shared canonical value model: `null`, booleans, finite
+numbers and strings remain compact scalar values; lists and records use strict
+JSON array/object syntax. SVS only parses and serializes those shapes. The
+consuming domain package owns their schema and meaning.
+
+```svs
+ranking.column {
+  rank-colors: ["#ff3f56", "#ffa72d", "#eadc2a"];
+}
+```
+
 Source import aliases are owned by Source Closure compilation. A rule `caption.alice` remains that
 relative public export; importing it as `studio` exposes `studio.caption.alice` without changing the
 Recipe Record identity.

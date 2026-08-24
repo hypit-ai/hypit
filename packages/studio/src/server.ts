@@ -12,6 +12,7 @@ import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import type { StudioAdapterRegistry } from "./studio-registry.js";
 import { loadStudioRun } from "./run.js";
+import { serializeParameterValue, validateParameterValue } from "./parameter-values.js";
 import { readStudioSession } from "./session.js";
 import type { Range, StudioFailure, StudioLibraryView, StudioMutation, StudioSnapshot } from "./shared.js";
 import { createStudioStoryboard } from "./storyboard.js";
@@ -314,22 +315,28 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   const mutationPatches = async (mutation: StudioMutation): Promise<readonly Patch[]> => {
     if (mutation.type === "timeline.adjust") return timelinePatches(mutation);
     const clip = currentClip(mutation.entityId);
-    const parameter = clip.parameters.find((candidate) => candidate.id === mutation.parameterId);
-    if (parameter === undefined || !parameter.writable) {
+    const parameter = clip.inspector.find((candidate) => candidate.id === mutation.parameterId);
+    if (parameter === undefined) {
       throw new Error(`Entity ${mutation.entityId} has no writable parameter ${mutation.parameterId}.`);
     }
-    if (parameter.control === "boolean" && mutation.value !== "true" && mutation.value !== "false") {
+    if (parameter.schema !== undefined) {
+      validateParameterValue(mutation.value, parameter.schema, parameter.label);
+    } else if (parameter.control === "boolean" && typeof mutation.value !== "boolean") {
       throw new Error(`${parameter.label} expects true or false.`);
-    }
-    if (parameter.control === "number" && !Number.isFinite(Number(mutation.value))) {
+    } else if (parameter.control === "number" && (typeof mutation.value !== "number" || !Number.isFinite(mutation.value))) {
       throw new Error(`${parameter.label} expects a number.`);
+    } else if ((parameter.control === "text" || parameter.control === "color" || parameter.control === "select")
+      && typeof mutation.value !== "string") {
+      throw new Error(`${parameter.label} expects text.`);
     }
-    if (parameter.options !== undefined && !parameter.options.includes(mutation.value)) {
+    if (parameter.options !== undefined && (typeof mutation.value !== "string" || !parameter.options.includes(mutation.value))) {
       throw new Error(`${parameter.label} does not accept ${mutation.value}.`);
     }
-    return mutation.value === parameter.source.preimage ? [] : [{
+    const encoded = serializeParameterValue(mutation.value, parameter.language);
+    const replacement = `${parameter.source.prefix ?? ""}${encoded}${parameter.source.suffix ?? ""}`;
+    return replacement === parameter.source.preimage ? [] : [{
       ...parameter.source,
-      replacement: mutation.value,
+      replacement,
     }];
   };
 
@@ -430,7 +437,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
                 return;
               }
               if (body.type === "parameter.adjust"
-                && (typeof body.parameterId !== "string" || typeof body.value !== "string")) {
+                && (typeof body.parameterId !== "string" || body.value === undefined)) {
                 json(response, 400, { error: "Expected a parameter identity and value." });
                 return;
               }

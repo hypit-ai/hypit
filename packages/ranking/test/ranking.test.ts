@@ -266,20 +266,23 @@ test("RankingSchedule requires one item-owned Moment per Item and distinct chron
 
 test("variant Style decoders reject unknown Recipes and keep exact fonts and independent stacks", () => {
   const tier = decodeTierBoardStyle(recipe("ranking.tier", {
-    rows: "s:S:#ef4444|a:A:#22c55e", "board-stack": 8, "stage-stack": 20, "item-stack": 31,
+    rows: [{ id: "s", label: "S", color: "#ef4444" }, { id: "a", label: "A", color: "#22c55e" }], "board-stack": 8, "stage-stack": 20, "item-stack": 31,
   }), font);
   assert.deepEqual(tier.style.rows.map((row) => row.id), ["s", "a"]);
   assert.equal(tier.style.text.fonts[0]?.sources[0]?.artifact.digest, font.sources[0]!.artifact.digest);
   assert.deepEqual([tier.style.boardStackingOrder, tier.style.stageStackingOrder, tier.style.itemStackingOrder], [8, 20, 31]);
   assert.throws(() => decodeColumnStyle(recipe("ranking.column", { "tier-only": 1 }), font), /does not accept/u);
   assert.equal(decodeTopThreeStyle(recipe("ranking.top"), font).style.slotColors.length, 3);
+  assert.throws(() => decodeTopThreeStyle(recipe("ranking.top", {
+    "slot-colors": ["#111111", "#222222", "#333333", "#444444"],
+  }), font), /exactly three/u);
 });
 
 test("TierBoard owns cumulative direct/stage placement and rejects invalid schedule boundaries", () => {
   const owner = header("tier-board", "tiers");
   const semantic = [tierSpec("alpha", "s", "stage"), tierSpec("beta", "a")];
   const style = decodeTierBoardStyle(recipe("ranking.tier", {
-    rows: "s:S:#ef4444|a:A:#22c55e", "appear-frames": 5, "move-frames": 8,
+    rows: [{ id: "s", label: "S", color: "#ef4444" }, { id: "a", label: "A", color: "#22c55e" }], "appear-frames": 5, "move-frames": 8,
   }), font).style;
   let set = createTierBoardItemSet();
   set = appendTierBoardItem(set, semantic[0]!, image("alpha"));
@@ -412,7 +415,7 @@ test("visual and sound event plans share exact phase frames while absent sound s
 test("each component owns a distinct event law and repeated lowering is canonical", () => {
   const tierOwner = header("tier-board", "tier-events");
   const tierItems = [tierSpec("direct", "s"), tierSpec("stage", "a", "stage")];
-  const tier = decodeTierBoardStyle(recipe("ranking.tier", { rows: "s:S:#ef4444|a:A:#22c55e" }), font).style;
+  const tier = decodeTierBoardStyle(recipe("ranking.tier", { rows: [{ id: "s", label: "S", color: "#ef4444" }, { id: "a", label: "A", color: "#22c55e" }] }), font).style;
   assert.deepEqual(buildTierBoardSoundEvents(schedule(tierOwner, tierItems), tier, specs(tierOwner, tierItems)).events.map((item) => item.kind),
     ["appear", "appear", "move"]);
 
@@ -457,7 +460,7 @@ test("all three author Surfaces preserve explicit semantic, spatial, font, image
     ["copy", inlineReference("copy", textTypes.text, sealText("Dynamic ranking copy"))],
   ]);
   const styleCases = [
-    ["tier-style", rankingTypes.tierStyle, decodeTierBoardStyleSurface, { rows: "s:S:#ef4444|a:A:#22c55e" }],
+    ["tier-style", rankingTypes.tierStyle, decodeTierBoardStyleSurface, { rows: [{ id: "s", label: "S", color: "#ef4444" }, { id: "a", label: "A", color: "#22c55e" }] }],
     ["column-style", rankingTypes.columnStyle, decodeColumnStyleSurface, {}],
     ["top-style", rankingTypes.topThreeStyle, decodeTopThreeStyleSurface, {}],
   ] as const;

@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@hypit/host": "workspace:*"
+    "@hypit/host": "workspace:*",
+    "@hypit/protocol": "workspace:*"
   }
 }

@@ -10,7 +10,8 @@ import type {
   StudioEditHandle,
   StudioLaneDescription,
   StudioMaterialPreview,
-  StudioParameter,
+  StudioInspectorField,
+  StudioInspectorDomain,
   StudioSemanticAnchor,
   StudioSemanticSegment,
   StudioSemanticTimeline,
@@ -24,6 +25,7 @@ import type {
   StudioTimelineTone,
   StudioTrackFamily,
 } from "@hypit/studio-adapter";
+import type { CanonicalValue } from "@hypit/protocol";
 
 export type {
   Range,
@@ -32,7 +34,8 @@ export type {
   StudioEditHandle,
   StudioLaneDescription,
   StudioMaterialPreview,
-  StudioParameter,
+  StudioInspectorField,
+  StudioInspectorDomain,
   StudioTemporalLineage,
   StudioTemporalPhase,
   StudioTemporalProjection,
@@ -104,7 +107,8 @@ export type Clip = {
   readonly temporal?: StudioTemporalLineage;
   /** Rendering identities implementing this author entity; optional for non-visual entities. */
   readonly renderIds: readonly string[];
-  readonly parameters: readonly StudioParameter[];
+  /** Companion-selected writable fields; hidden source bindings never cross into this surface. */
+  readonly inspector: readonly StudioInspectorField[];
   readonly editHandles: readonly StudioEditHandle[];
 };
 
@@ -294,7 +298,7 @@ export type StudioMutation =
       readonly revision: number;
       readonly entityId: string;
       readonly parameterId: string;
-      readonly value: string;
+      readonly value: CanonicalValue;
     };
 
 export type StudioFailure = {

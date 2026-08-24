@@ -18,6 +18,7 @@ export type Highlight = {
 };
 
 export type CodePane = {
+  readonly toolbar: HTMLElement;
   readonly element: HTMLElement;
   /** Returns false only while an unsaved file is being saved before a switch. */
   show(snapshot: StudioSnapshot, source?: StudioSourceView): boolean;
@@ -70,31 +71,32 @@ function roundedRangePath(points: readonly { x: number; y: number }[], radius = 
 const RANGE_LEFT = 41;
 
 export function createCodePane(): CodePane {
+  const toolbar = document.createElement("div");
+  toolbar.className = "code-toolbar";
+  toolbar.innerHTML = `
+    <strong class="code-location" data-path></strong>
+    <div class="code-actions">
+      <span class="code-save-state" data-save-state></span>
+      <button type="button" class="icon-button code-wrap" data-wrap aria-label="Wrap lines" aria-pressed="false" title="Wrap lines">
+        ${icon("wrap")}
+      </button>
+      <button type="button" class="icon-button code-mode" data-mode aria-label="Edit source" title="Edit source">
+        <span data-mode-icon>${icon("edit")}</span>
+      </button>
+    </div>`;
   const element = document.createElement("section");
   element.className = "code";
   element.innerHTML = `
-    <div class="pane-heading code-heading">
-      <div class="pane-tabs" role="tablist" aria-label="Workspace views">
-        <button type="button" class="pane-tab active source-language" role="tab" aria-selected="true" data-language>SVML</button>
-      </div>
-      <div class="code-actions">
-        <span class="code-location" data-path></span>
-        <span class="code-save-state" data-save-state></span>
-        <button type="button" class="icon-button code-mode" data-mode aria-label="Edit source" title="Edit source">
-          <span data-mode-icon>${icon("edit")}</span>
-        </button>
-      </div>
-    </div>
     <div class="code-scroll"><svg class="range-canvas" aria-hidden="true"></svg></div>
     <textarea class="code-editor" data-editor spellcheck="false" aria-label="SVML source"></textarea>`;
-  const path = element.querySelector<HTMLElement>("[data-path]")!;
-  const language = element.querySelector<HTMLElement>("[data-language]")!;
+  const path = toolbar.querySelector<HTMLElement>("[data-path]")!;
   const scroll = element.querySelector<HTMLElement>(".code-scroll")!;
   const canvas = element.querySelector<SVGSVGElement>(".range-canvas")!;
   const editor = element.querySelector<HTMLTextAreaElement>("[data-editor]")!;
-  const mode = element.querySelector<HTMLButtonElement>("[data-mode]")!;
+  const wrap = toolbar.querySelector<HTMLButtonElement>("[data-wrap]")!;
+  const mode = toolbar.querySelector<HTMLButtonElement>("[data-mode]")!;
   const modeIcon = mode.querySelector<HTMLElement>("[data-mode-icon]")!;
-  const saveState = element.querySelector<HTMLElement>("[data-save-state]")!;
+  const saveState = toolbar.querySelector<HTMLElement>("[data-save-state]")!;
 
   let lines: Line[] = [];
   let current: readonly Highlight[] = [];
@@ -108,6 +110,16 @@ export function createCodePane(): CodePane {
   let dirty = false;
   let saveInFlight = false;
   let saveTimer: number | undefined;
+  let wrapped = false;
+
+  const setWrapped = (value: boolean): void => {
+    wrapped = value;
+    element.classList.toggle("is-wrapped", wrapped);
+    wrap.setAttribute("aria-pressed", String(wrapped));
+    wrap.setAttribute("aria-label", wrapped ? "Keep lines unwrapped" : "Wrap lines");
+    wrap.title = wrapped ? "Keep lines unwrapped" : "Wrap lines";
+    window.requestAnimationFrame(draw);
+  };
 
   const setEditing = (value: boolean): void => {
     editing = value;
@@ -170,6 +182,7 @@ export function createCodePane(): CodePane {
     if (editing && dirty) void save();
     setEditing(!editing);
   });
+  wrap.addEventListener("click", () => setWrapped(!wrapped));
   editor.addEventListener("input", () => {
     dirty = true;
     saveState.textContent = "Unsaved";
@@ -229,7 +242,10 @@ export function createCodePane(): CodePane {
   };
 
   const draw = (): void => {
-    const width = Math.max(scroll.clientWidth, scroll.scrollWidth);
+    // In wrapped mode the viewport is the content width. Reusing scrollWidth
+    // here would let the previous wide SVG keep itself wide forever after a
+    // mode switch, because that absolute canvas also contributes to scrollWidth.
+    const width = wrapped ? scroll.clientWidth : Math.max(scroll.clientWidth, scroll.scrollWidth);
     const last = lines.at(-1)?.element;
     const height = Math.max(scroll.clientHeight, last === undefined ? 0 : last.offsetTop + last.offsetHeight);
     canvas.setAttribute("width", String(width));
@@ -245,7 +261,8 @@ export function createCodePane(): CodePane {
       const lineHeight = start.height || Number.parseFloat(getComputedStyle(scroll).lineHeight) || 20;
       // The outline starts at the code column rather than over the line number.
       const left = RANGE_LEFT;
-      const right = width - 10;
+      const rightInset = Number.parseFloat(getComputedStyle(element).getPropertyValue("--code-inline-end")) || 12;
+      const right = width - rightInset;
       const startX = Math.max(left, start.x - 3);
       const endX = Math.max(left, end.x + 3);
       const top = start.y - lineHeight / 2;
@@ -274,6 +291,7 @@ export function createCodePane(): CodePane {
   new ResizeObserver(draw).observe(scroll);
 
   return {
+    toolbar,
     element,
     show(snapshot, selected) {
       const sourceFile = selected
@@ -294,9 +312,8 @@ export function createCodePane(): CodePane {
       if (activeSource !== undefined && activeSource.path !== sourceFile.path && editing) setEditing(false);
       activeSource = sourceFile;
       authorPath = snapshot.source.path;
-      path.textContent = sourceFile.path;
+      path.textContent = sourceFile.path.split(/[\\/]/u).filter(Boolean).at(-1) ?? sourceFile.path;
       path.title = sourceFile.path;
-      language.textContent = sourceFile.language.toUpperCase();
       const source = sourceFile.text;
       snapshotRevision = snapshot.revision;
       sourceText = source;

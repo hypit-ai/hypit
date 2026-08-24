@@ -200,7 +200,7 @@ export function assertColumnStyle(value: ColumnStyle): void {
 
 export function assertTopThreeStyle(value: TopThreeStyle): void {
   assertCommonStyle(value, "TopThreeStyle");
-  assert(value.slotColors.length >= 3, "TopThreeStyle requires three slot colors.");
+  assert(value.slotColors.length === 3, "TopThreeStyle requires exactly three slot colors.");
   value.slotColors.forEach((item, index) => color(item, `TopThreeStyle.slotColors.${index}`));
   for (const [name, coordinate] of [["centerX", value.centerX], ["baselineY", value.baselineY]] as const) {
     assert(Number.isFinite(coordinate) && coordinate >= 0 && coordinate <= 1, `TopThreeStyle.${name} is invalid.`);

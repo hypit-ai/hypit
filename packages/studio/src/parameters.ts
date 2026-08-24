@@ -1,9 +1,12 @@
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 import type {
-  StudioParameter,
-  StudioParameterDeclaration,
-  StudioRecipeReferenceDeclaration,
+  StudioInspectorField,
+  StudioInspectorFieldDeclaration,
+  StudioSourceBinding,
+  StudioSourceBindingDeclaration,
+  StudioParameterControl,
+  StudioRecipeReferenceBindingDeclaration,
   StudioEntityDraft,
   StudioPlacement,
   StudioEditHandle,
@@ -11,7 +14,6 @@ import type {
   StudioTemporalLineage,
   StudioTimelineEditDeclaration,
 } from "@hypit/studio-adapter";
-import type { MarkupSurfaceRegistryLike, SurfaceRecipePropertyVocabulary } from "@hypit/markup";
 import { parseSvs } from "@hypit/svs";
 
 import type { Range } from "./shared.js";
@@ -116,29 +118,20 @@ function recipeParameters(input: {
   readonly referenceName: string;
   readonly referencePath: string;
   readonly placements: readonly Placement[];
-  readonly surfaces?: MarkupSurfaceRegistryLike;
-  readonly vocabulary?: readonly SurfaceRecipePropertyVocabulary[];
-  readonly recipe: StudioRecipeReferenceDeclaration;
+  readonly recipe: StudioRecipeReferenceBindingDeclaration;
   readonly through: readonly string[];
-}): readonly StudioParameter[] {
+}): readonly StudioSourceBinding[] {
   const [attribute, ...remaining] = input.through;
   if (attribute !== undefined) {
     const local = input.placements.find((candidate) => candidate.id === input.referencePath);
     if (local === undefined) return [];
     const referencePath = local.referenceAttributes[attribute];
     if (referencePath === undefined || referencePath === input.referencePath) return [];
-    const vocabulary = input.surfaces
-      ?.resolve(local.module, local.surface)
-      ?.vocabulary?.attributes
-      .find((candidate) => candidate.name === attribute)
-      ?.recipe;
-    const selectedVocabulary = vocabulary ?? input.vocabulary;
     return recipeParameters({
       ...input,
       current: sourceFor(input.root, local.sourcePath, input.files) ?? input.current,
       referencePath,
       through: remaining,
-      ...(selectedVocabulary === undefined ? {} : { vocabulary: selectedVocabulary }),
     });
   }
   const [alias, ...parts] = input.referencePath.split(".");
@@ -151,38 +144,51 @@ function recipeParameters(input: {
   const parsed = parseSvs(source.path, svsText(source.text));
   const recipe = parsed.recipes.find((item) => item.value.path === recipePath);
   if (recipe === undefined) return [];
-  return recipe.properties.flatMap((property): readonly StudioParameter[] => {
-    const presentation = input.recipe.parameters.find((candidate) => candidate.name === property.name);
-    if (presentation === undefined) return [];
-    const declaration = input.vocabulary?.find((candidate) => candidate.name === property.name);
+  return input.recipe.bindings.flatMap((declaration): readonly StudioSourceBinding[] => {
+    const property = recipe.properties.find((candidate) => candidate.name === declaration.name);
+    if (property === undefined) {
+      if (declaration.fallback === undefined) return [];
+      const close = recipe.range.end - 1;
+      const lineStart = Math.max(source.text.lastIndexOf("\n", close - 1), source.text.lastIndexOf("\r", close - 1)) + 1;
+      const closeIndent = source.text.slice(lineStart, close);
+      const multiline = closeIndent.trim().length === 0;
+      const first = recipe.properties[0];
+      const propertyIndent = first === undefined ? `${closeIndent}  ` : (() => {
+        const start = Math.max(source.text.lastIndexOf("\n", first.range.start - 1), source.text.lastIndexOf("\r", first.range.start - 1)) + 1;
+        return /^\s*/u.exec(source.text.slice(start, first.range.start))?.[0] ?? `${closeIndent}  `;
+      })();
+      return [{
+        id: `${input.draft.id}:${input.referenceName}:${declaration.name}`,
+        binding: `${input.referenceName}.${declaration.name}`,
+        name: declaration.name,
+        value: declaration.fallback,
+        ...(declaration.schema === undefined ? {} : { schema: declaration.schema }),
+        language: "svs" as const,
+        writable: declaration.writable ?? true,
+        source: {
+          path: relative(input.root, sourceAbsolute(input.root, source.path)),
+          range: { start: multiline ? lineStart : close, end: multiline ? lineStart : close },
+          preimage: "",
+          prefix: multiline ? `${propertyIndent}${declaration.name}: ` : ` ${declaration.name}: `,
+          suffix: multiline ? ";\n" : "; ",
+        },
+      } satisfies StudioSourceBinding];
+    }
     const preimage = source.text.slice(property.valueRange.start, property.valueRange.end);
-    const raw = preimage.trim();
-    const options = presentation?.options ?? declaration?.values;
-    const summary = presentation?.summary ?? declaration?.summary;
-    const control = presentation?.control ?? (options !== undefined
-      ? "select" as const
-      : raw === "true" || raw === "false"
-      ? "boolean" as const
-      : /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/u.test(raw) ? "number" as const : "text" as const);
     return [{
-      id: `${input.draft.id}:${input.referenceName}:${property.name}`,
-      name: property.name,
-      label: presentation?.label ?? (declaration === undefined ? `${input.referenceName} · ${property.name}` : property.name),
-      ...(presentation?.group === undefined ? {} : { group: presentation.group }),
-      ...(presentation?.section === undefined ? {} : { section: presentation.section }),
-      ...(summary === undefined ? {} : { summary }),
-      control,
-      value: raw,
+      id: `${input.draft.id}:${input.referenceName}:${declaration.name}`,
+      binding: `${input.referenceName}.${declaration.name}`,
+      name: declaration.name,
+      value: recipe.value.properties[declaration.name] ?? preimage.trim(),
+      ...(declaration.schema === undefined ? {} : { schema: declaration.schema }),
       language: "svs" as const,
-      writable: presentation?.writable ?? true,
-      ...(options === undefined ? {} : { options }),
-      ...(presentation?.unit === undefined ? {} : { unit: presentation.unit }),
+      writable: declaration.writable ?? true,
       source: {
         path: relative(input.root, sourceAbsolute(input.root, source.path)),
         range: property.valueRange,
         preimage,
       },
-    } satisfies StudioParameter];
+    } satisfies StudioSourceBinding];
   });
 }
 
@@ -192,9 +198,9 @@ function referencedParameters(input: {
   readonly draft: StudioEntityDraft;
   readonly referenceName: string;
   readonly referencePath: string;
-  readonly declarations: readonly StudioParameterDeclaration[];
+  readonly declarations: readonly StudioSourceBindingDeclaration[];
   readonly placements: readonly Placement[];
-}): readonly StudioParameter[] {
+}): readonly StudioSourceBinding[] {
   const targetId = input.referencePath;
   const target = authoredElements(input.placements).find((candidate) => candidate.id === targetId);
   if (target === undefined) return [];
@@ -209,14 +215,12 @@ function referencedParameters(input: {
     const writable = declaration.writable === true && reference === undefined;
     return [{
       id: `${input.draft.id}:${input.referenceName}:${targetId}:${declaration.name}`,
+      binding: `${input.referenceName}.${declaration.name}`,
       name: declaration.name,
-      label: `${input.referenceName} · ${declaration.label ?? declaration.name}`,
-      control: declaration.control ?? "text",
       value,
+      ...(declaration.schema === undefined ? {} : { schema: declaration.schema }),
       language: languageOf(target.sourcePath),
       writable,
-      ...(declaration.options === undefined ? {} : { options: declaration.options }),
-      ...(declaration.unit === undefined ? {} : { unit: declaration.unit }),
       source: {
         path: relative(input.root, sourceAbsolute(input.root, target.sourcePath)),
         range,
@@ -225,7 +229,7 @@ function referencedParameters(input: {
       ...(!writable
         ? { disabledReason: reference === undefined ? "该几何值由组件声明为只读。" : "引用由作者在 SVML 中绑定，面板不替换引用关系。" }
         : {}),
-    } satisfies StudioParameter];
+    } satisfies StudioSourceBinding];
   });
 }
 
@@ -234,15 +238,14 @@ function referencedParameters(input: {
  * still discovered by the generic markup frontend, while the meaning and
  * editability remain package-owned Studio ABI data.
  */
-export function parametersForDraft(input: {
+export function sourceBindingsForDraft(input: {
   readonly root: string;
   readonly files: readonly StudioSourceFile[];
   readonly placement: StudioPlacement | undefined;
   readonly draft: StudioEntityDraft;
-  readonly declarations: readonly StudioParameterDeclaration[];
+  readonly declarations: readonly StudioSourceBindingDeclaration[];
   readonly placements?: readonly Placement[];
-  readonly surfaces?: MarkupSurfaceRegistryLike;
-}): readonly StudioParameter[] {
+}): readonly StudioSourceBinding[] {
   const placement = input.placement;
   if (placement === undefined || input.declarations.length === 0) return [];
   const element = elementFor(placement, input.draft);
@@ -263,14 +266,12 @@ export function parametersForDraft(input: {
     const writable = declaration.writable === true && !isReference;
     return [{
       id: `${input.draft.id}:${name}`,
+      binding: name,
       name,
-      label: declaration.label ?? name,
-      control: declaration.control ?? "text",
       value,
+      ...(declaration.schema === undefined ? {} : { schema: declaration.schema }),
       language: languageOf(element.sourcePath),
       writable,
-      ...(declaration.options === undefined ? {} : { options: declaration.options }),
-      ...(declaration.unit === undefined ? {} : { unit: declaration.unit }),
       source: {
         path: relative(input.root, sourceAbsolute(input.root, element.sourcePath)),
         range,
@@ -279,7 +280,7 @@ export function parametersForDraft(input: {
       ...(!writable
         ? { disabledReason: isReference ? "引用由作者在 SVML 中绑定，面板不替换引用关系。" : "该参数由组件声明为只读。" }
         : {}),
-    } satisfies StudioParameter];
+    } satisfies StudioSourceBinding];
   });
   const recipes = input.declarations.flatMap((declaration) => {
     const referencePath = input.draft.parameterReferences?.[declaration.name]
@@ -291,7 +292,7 @@ export function parametersForDraft(input: {
         root: input.root,
         files: input.files,
         draft: input.draft,
-        referenceName: declaration.label ?? declaration.name,
+        referenceName: declaration.name,
         referencePath,
         declarations: declaration.referenced,
         placements: input.placements ?? [],
@@ -303,16 +304,57 @@ export function parametersForDraft(input: {
         files: input.files,
         current: file,
         draft: input.draft,
-        referenceName: declaration.label ?? declaration.name,
+        referenceName: declaration.name,
         referencePath,
         placements: input.placements ?? [],
-        ...(input.surfaces === undefined ? {} : { surfaces: input.surfaces }),
         recipe: declaration.recipe,
         through: declaration.recipe.through ?? [],
       });
     return [...reference, ...recipe];
   });
   return [...direct, ...recipes];
+}
+
+function controlForSchema(schema: StudioSourceBinding["schema"]): StudioParameterControl | undefined {
+  if (schema === undefined) return undefined;
+  if (schema.kind === "boolean") return "boolean";
+  if (schema.kind === "number") return "number";
+  if (schema.kind === "string") return schema.enum === undefined
+    ? schema.format === "color" ? "color" : "text"
+    : "select";
+  if (schema.kind === "array") return "list";
+  if (schema.kind === "object") return "record";
+  return undefined;
+}
+
+/** Resolve the Companion's visible field table against real writable bindings. */
+export function inspectorFieldsForBindings(
+  draft: StudioEntityDraft,
+  bindings: readonly StudioSourceBinding[],
+  declarations: readonly StudioInspectorFieldDeclaration[],
+): readonly StudioInspectorField[] {
+  const byBinding = new Map(bindings.map((binding) => [binding.binding, binding] as const));
+  return declarations.flatMap((declaration): readonly StudioInspectorField[] => {
+    const binding = byBinding.get(declaration.binding);
+    if (binding === undefined || !binding.writable) return [];
+    const control = declaration.control ?? controlForSchema(binding.schema);
+    if (control === undefined) {
+      throw new Error(`Studio Inspector binding ${declaration.binding} has neither a control nor a supported public schema.`);
+    }
+    const schemaOptions = binding.schema?.kind === "string" ? binding.schema.enum : undefined;
+    return [{
+      ...declaration,
+      id: `${draft.id}:inspector:${declaration.binding}`,
+      control,
+      value: binding.value,
+      ...(binding.schema === undefined ? {} : { schema: binding.schema }),
+      ...(declaration.options !== undefined || schemaOptions === undefined
+        ? {}
+        : { options: schemaOptions }),
+      language: binding.language,
+      source: binding.source,
+    }];
+  });
 }
 
 const ABSOLUTE_DURATION = /^\s*\d+(?:\.\d+)?(?:f|ms|s)\s*$/u;
@@ -325,20 +367,20 @@ const ABSOLUTE_DURATION = /^\s*\d+(?:\.\d+)?(?:f|ms|s)\s*$/u;
  * until their package declares an unambiguous inverse.
  */
 export function resolveTimelineEditHandles(
-  parameters: readonly StudioParameter[],
+  bindings: readonly StudioSourceBinding[],
   declarations: readonly StudioTimelineEditDeclaration[],
   temporal?: StudioTemporalLineage,
   semantic?: StudioSemanticTimeline,
 ): readonly StudioEditHandle[] {
-  const byName = new Map<string, StudioParameter>();
-  for (const parameter of parameters) {
+  const byName = new Map<string, StudioSourceBinding>();
+  for (const binding of bindings) {
     // Timing source attributes live in SVML. A nested Recipe may legitimately
     // also have a property named `start`; it must never shadow the author
     // window when a clip is being dragged.
-    if (parameter.language === "svml" && !byName.has(parameter.name)) byName.set(parameter.name, parameter);
+    if (binding.language === "svml" && !byName.has(binding.binding)) byName.set(binding.binding, binding);
   }
-  const absolute = (parameter: StudioParameter | undefined): parameter is StudioParameter =>
-    parameter !== undefined && parameter.writable && ABSOLUTE_DURATION.test(parameter.value);
+  const absolute = (binding: StudioSourceBinding | undefined): binding is StudioSourceBinding =>
+    binding !== undefined && binding.writable && typeof binding.value === "string" && ABSOLUTE_DURATION.test(binding.value);
   const disabled = (gesture: StudioTimelineEditDeclaration["gesture"], reason: string): StudioEditHandle => ({
     id: `timeline.adjust:${gesture}`,
     operation: "timeline.adjust",

@@ -9,7 +9,8 @@ import type {
 import { projectedWindowTimelineEdits } from "@hypit/studio-adapter";
 import type { MarkupSurfaceRegistryLike, RegisteredSurface } from "@hypit/markup";
 
-import { parametersForDraft, resolveTimelineEditHandles } from "../src/parameters.js";
+import { inspectorFieldsForBindings, resolveTimelineEditHandles, sourceBindingsForDraft } from "../src/parameters.js";
+import { serializeParameterValue, validateParameterValue } from "../src/parameter-values.js";
 
 const semantic: StudioSemanticTimeline = {
   presentation: {
@@ -36,6 +37,13 @@ const semantic: StudioSemanticTimeline = {
   moments: [],
   provenance: { output: "speech", origin: "run", status: "resolved", errors: [] },
 };
+
+test("structured parameter values validate and serialize through the generic SVS path", () => {
+  const schema = { kind: "array", minItems: 1, items: { kind: "string", format: "color" } } as const;
+  assert.doesNotThrow(() => validateParameterValue(["#FF3F56", "#FFA72D"], schema, "Colors"));
+  assert.throws(() => validateParameterValue([], schema, "Colors"), /at least 1/u);
+  assert.equal(serializeParameterValue(["#FF3F56", "#FFA72D"], "svs"), '["#FF3F56","#FFA72D"]');
+});
 
 test("timeline gestures resolve through the shared Selection identity", () => {
   const temporal: StudioTemporalLineage = {
@@ -98,11 +106,11 @@ test("absolute Window edits use only the Companion's exact parameter vocabulary"
   });
   const parameters = [
     {
-      id: "from", name: "from", label: "From", control: "text" as const,
+      id: "from", binding: "from", name: "from",
       value: "1f", language: "svml" as const, writable: true, source: source(0, 2),
     },
     {
-      id: "until", name: "until", label: "Until", control: "text" as const,
+      id: "until", binding: "until", name: "until",
       value: "20f", language: "svml" as const, writable: true, source: source(3, 6),
     },
   ];
@@ -134,7 +142,7 @@ test("absolute Window edits use only the Companion's exact parameter vocabulary"
 
 test("parameter Source paths stay relative to the author workspace", () => {
   const text = "start=\"1f\"";
-  const parameters = parametersForDraft({
+  const parameters = sourceBindingsForDraft({
     root: "/workspace",
     files: [{ path: "/workspace/main.svml", text, language: "svml" }],
     placement: {
@@ -164,8 +172,9 @@ test("parameter Source paths stay relative to the author workspace", () => {
 test("a derived entity follows its actual Style and Companion-owned Recipe presentation", () => {
   const main = "<caption-fine:Track id=\"captions\" program={caption-program}/>";
   const sheet = `<sheet version="1">
-  caption.alt { x: 0.4; handoff: overlap; }
+  caption.alt { x: 0.4; handoff: overlap; colors: ["#FF3F56", "#FFA72D"]; }
 </sheet>`;
+  const colors = { kind: "array", minItems: 1, items: { kind: "string", format: "color" } } as const;
   const placement = (input: {
     id: string;
     module: string;
@@ -198,6 +207,7 @@ test("a derived entity follows its actual Style and Companion-owned Recipe prese
       recipe: [
         { name: "x", required: true, summary: "Horizontal position" },
         { name: "handoff", required: false, summary: "Cue handoff", values: ["cut", "overlap"] },
+        { name: "colors", required: false, summary: "Ordered colors", schema: colors },
       ],
     }] },
     handler: () => ({ records: [], components: [], fragments: [], exports: [] }),
@@ -209,7 +219,13 @@ test("a derived entity follows its actual Style and Companion-owned Recipe prese
     surfaces() { return [surface]; },
   };
 
-  const parameters = parametersForDraft({
+  const draft = {
+    id: "captions:cue:2", authoredId: "captions", presentId: "cue:2", display: { title: "cue:2", layers: [] },
+    startFrame: 0, endFrameExclusive: 10, stackOrder: 70,
+    elementRange: track.range,
+    parameterReferences: { program: "alternate-caption" },
+  } as const;
+  const parameters = sourceBindingsForDraft({
     root: "/workspace",
     files: [
       { path: "main.svml", text: main, language: "svml", imports: [{ alias: "recipes", source: "./recipes.svs" }] },
@@ -217,30 +233,50 @@ test("a derived entity follows its actual Style and Companion-owned Recipe prese
     ],
     placement: track,
     placements: [track, style],
-    draft: {
-      id: "captions:cue:2", authoredId: "captions", presentId: "cue:2", display: { title: "cue:2", layers: [] },
-      startFrame: 0, endFrameExclusive: 10, stackOrder: 70,
-      elementRange: track.range,
-      parameterReferences: { program: "alternate-caption" },
-    },
+    draft,
     declarations: [{
-      name: "program", label: "Program", writable: false,
+      name: "program",
       recipe: {
         through: ["recipe"],
-        parameters: [
-          { name: "x", group: "where", section: "region" },
-          { name: "handoff", group: "when", section: "envelope" },
+        bindings: [
+          { name: "x" },
+          { name: "handoff" },
+          { name: "colors", schema: colors },
+          { name: "fallback-colors", schema: colors, fallback: ["#000000"] },
         ],
       },
     }],
-    surfaces,
   });
-
-  assert.deepEqual(parameters.map(({ name, group, section, control, options }) => ({
-    name, group, section, control, options,
-  })), [
-    { name: "x", group: "where", section: "region", control: "number", options: undefined },
-    { name: "handoff", group: "when", section: "envelope", control: "select", options: ["cut", "overlap"] },
+  const inspector = inspectorFieldsForBindings(draft, parameters, [
+    {
+      binding: "program.x", label: "X", domain: "where", page: { id: "placement", label: "Placement" },
+      section: { id: "region", label: "Region" }, control: "number",
+    },
+    {
+      binding: "program.handoff", label: "Handoff", domain: "when", page: { id: "cue", label: "Cue" },
+      section: { id: "envelope", label: "Envelope" }, control: "select", options: ["cut", "overlap"],
+    },
+    {
+      binding: "program.colors", label: "Colors", domain: "how", page: { id: "paint", label: "Paint" },
+      section: { id: "palette", label: "Palette" },
+    },
+    {
+      binding: "program.fallback-colors", label: "Fallback Colors", domain: "how", page: { id: "paint", label: "Paint" },
+      section: { id: "palette", label: "Palette" },
+    },
   ]);
+
+  assert.deepEqual(inspector.map(({ binding, domain, section, control, options }) => ({
+    binding, domain, section: section.id, control, options,
+  })), [
+    { binding: "program.x", domain: "where", section: "region", control: "number", options: undefined },
+    { binding: "program.handoff", domain: "when", section: "envelope", control: "select", options: ["cut", "overlap"] },
+    { binding: "program.colors", domain: "how", section: "palette", control: "list", options: undefined },
+    { binding: "program.fallback-colors", domain: "how", section: "palette", control: "list", options: undefined },
+  ]);
+  assert.deepEqual(inspector[2]?.value, ["#FF3F56", "#FFA72D"]);
+  assert.deepEqual(inspector[3]?.value, ["#000000"]);
+  assert.equal(inspector[3]?.source.preimage, "");
+  assert.match(inspector[3]?.source.prefix ?? "", /fallback-colors/u);
   assert.ok(parameters.every((parameter) => parameter.source.path === "recipes.svs"));
 });

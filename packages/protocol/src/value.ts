@@ -36,6 +36,8 @@ export type ValueSchema =
       readonly enum?: readonly string[];
       readonly minLength?: number;
       readonly maxLength?: number;
+      /** UI-neutral semantic format shared by authoring, validation and tools. */
+      readonly format?: "color";
     }
   | {
       readonly kind: "literal";

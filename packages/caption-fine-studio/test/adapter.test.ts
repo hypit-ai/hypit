@@ -5,15 +5,15 @@ import type { FineCaptionSchedule } from "@hypit/caption-fine";
 import type { CaptionDocument } from "@hypit/narrative";
 import type { StudioAdapterContext, StudioEntityDraft } from "@hypit/studio-adapter";
 
-import { captionFineRecipeParameters, captionFineStudioAdapters } from "../src/index.js";
+import { captionFineInspectorFields, captionFineStudioAdapters } from "../src/index.js";
 
 test("Caption Companion owns Inspector grouping", () => {
-  const declared = (name: string) => captionFineRecipeParameters.find((property) => property.name === name);
-  assert.equal(declared("x")?.group, "where");
-  assert.equal(declared("x")?.section, "region");
-  assert.equal(declared("cue-shadow-blur")?.group, "how");
-  assert.equal(declared("active-box-enter")?.group, "when");
-  assert.equal(declared("lead-frames")?.section, "envelope");
+  const declared = (name: string) => captionFineInspectorFields.find((field) => field.binding === `program.${name}`);
+  assert.equal(declared("x")?.domain, "where");
+  assert.equal(declared("x")?.section.id, "region");
+  assert.equal(declared("cue-shadow-blur")?.domain, "how");
+  assert.equal(declared("active-box-enter")?.domain, "when");
+  assert.equal(declared("lead-frames")?.section.id, "envelope");
 });
 
 test("Caption Companion projects Cue text and Style from public domain values", () => {
