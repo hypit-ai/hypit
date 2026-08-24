@@ -43,7 +43,7 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
 
 **To be clear:** cloning a video is the fastest way in, not the only one. You can start from our templates, or just describe the video you want and your agent writes the workflow from scratch. Generation models are optional too: a workflow can compile captions, motion graphics and code-rendered visuals into a finished video without calling a single model, so a video can cost exactly $0.
 
-## Street interview
+### Street interview
 
 <table>
   <tr>
@@ -56,7 +56,7 @@ Hypit gives AI agents (Claude Code, Codex...) a language and system to create vi
   </tr>
 </table>
 
-## Podcast
+### Podcast
 
 <table>
   <tr>
