@@ -18,8 +18,8 @@ an interval inherits its edges whenever its length comes from something other th
 - a window derived from speech, which starts and stops with words and therefore excludes the silence
   around and between them;
 - an insert, whose material ends where the generator stopped rather than where its window does — and
-  then draws nothing for the rest of it, because `playback` defaults to `once-start`, so the base
-  returns mid-phrase. This is the one edge on the list a machine can find before a Build:
+  then draws nothing for the rest of it, because `playback` defaults to `once-start`, so whatever it
+  was covering is alone again mid-phrase. This is the one edge on the list a machine can find before a Build:
   `reconstruction_check` reads each Recipe and refuses the default on generated material.
   `generated-dependencies.md` says what to set instead. The Segment's own picture has no such edge —
   the take that speaks it is the take that draws it, so the two lengths are one number;

@@ -78,7 +78,33 @@ One generation carries both, and that is what makes the Segment's length and its
 same number. Generating the speech separately makes them two numbers arrived at independently — the
 Segment as long as whatever a voice generator produced, the picture as long as whatever a video
 generator was asked for — and two numbers arrived at independently do not agree. Where they disagree,
-the picture ends first and nothing is under it.
+the picture ends first and there is nothing to take its place.
+
+### The base of a Segment is whichever picture speaks it
+
+**Speech decides which picture is the base, and depth has nothing to say about it.** Read the
+reference this way: the picture showing a person saying the words the transcript carries for that
+stretch is that Segment's base, wherever it sits in the frame and whatever else is on screen with it.
+
+This is the reading that goes wrong most often. A reference cuts to a full-frame board with the
+speaker inset in a corner, and the board is the larger, lower, more obviously "background" thing —
+so the board is authored as the base and the speaker as an insert over it. It is the other way
+round: the inset speaks, so the inset is the base, and the board is what covers most of it. Nothing
+about being large, or full-frame, or visually underneath makes a picture a base.
+
+Check it against the words rather than the layout. A person whose mouth moves over speech that is not
+theirs is B-roll — `../../reconstruction/continuity.md` is what keeps a moving mouth from becoming a
+speaker — and a small inset saying the transcript's words is the base.
+
+### Stack order is authored per Segment, never once for "the base"
+
+A picture is the base *of a Segment*. The same Track can hold the base for one Segment and something
+almost entirely covered in the next, and those two are different stack orders decided separately.
+
+So do not fix a Track's `stack-order` because of what it is: give each unit the order its own stretch
+needs, from what the reference shows over it there. A `stack-order: 0` written once because "this is
+the base" is what leaves a Segment's speaker under a panel that was only meant to cover the Segment
+before it.
 
 ### A Segment fits one generation
 
@@ -150,8 +176,8 @@ Decide, for each thing you place, which of three kinds it is:
   is exactly right, and the gap is the point.
 
 **Where the base is meant to stay hidden, the covering Selections tile the Segment.** A voiceover-led
-stretch still has a speaking take under it — that is where the speech comes from — and the reference
-never shows it, so every word of that Segment is inside one covering Selection or the next, with the
+stretch still has a speaking take — that is where the speech comes from, so it is the base — and the
+reference never shows it, so every word of that Segment is inside one covering Selection or the next, with the
 markers above joining them. A gap does not read as black there; it reads as a presenter appearing for
 half a second in a program that has none.
 
@@ -175,8 +201,8 @@ its window are two numbers arrived at separately. Where the material is the shor
 whatever is beneath. `hold-start` pins the last frame for the rest of the window, `loop-start`
 repeats, `stretch` retimes to fit.
 
-What appears is the base — the insert leaves early and the shot beneath returns mid-phrase. Read it
-as an insert with the wrong length rather than as an edit, and give the Recipe a `playback` that says
+What appears is the Segment's base — the insert leaves early and the picture that speaks the stretch
+is alone again mid-phrase. Read it as an insert with the wrong length rather than as an edit, and give the Recipe a `playback` that says
 what should happen there. `reconstruction_check` reads the Recipe before a Build and refuses the
 default on generated material.
 
