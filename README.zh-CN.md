@@ -47,12 +47,12 @@ Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语�
 
 <table>
   <tr>
-    <td colspan="3"><video src="./docs/public/ad-test.mp4" controls muted loop></video></td>
+    <td colspan="3"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" width="100%" controls muted loop></video></td>
   </tr>
   <tr>
-    <td><video src="./docs/public/ad-test.mp4" controls muted loop></video></td>
-    <td><video src="./docs/public/ad-test.mp4" controls muted loop></video></td>
-    <td><video src="./docs/public/ad-test.mp4" controls muted loop></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" width="100%" controls muted loop></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" width="100%" controls muted loop></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" width="100%" controls muted loop></video></td>
   </tr>
 </table>
 
@@ -60,12 +60,12 @@ Hypit 给 AI Agents (Claude Code、Codex……) 打造了一门做视频的语�
 
 <table>
   <tr>
-    <td colspan="3"><video src="./docs/public/ad-test.mp4" controls muted loop></video></td>
+    <td colspan="3"><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" width="100%" controls muted loop></video></td>
   </tr>
   <tr>
-    <td><video src="./docs/public/ad-test.mp4" controls muted loop></video></td>
-    <td><video src="./docs/public/ad-test.mp4" controls muted loop></video></td>
-    <td><video src="./docs/public/ad-test.mp4" controls muted loop></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" width="100%" controls muted loop></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" width="100%" controls muted loop></video></td>
+    <td><video src="https://github.com/user-attachments/assets/45ae9d58-6da4-495f-914b-aa6d2b60f1f9" width="100%" controls muted loop></video></td>
   </tr>
 </table>
 
