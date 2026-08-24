@@ -92,6 +92,11 @@ export type StudioParameter = {
   /** Adapter vocabulary name; unlike id this is stable across source files. */
   readonly name: string;
   readonly label: string;
+  /** Package-owned Inspector page, for example Where / How / When. */
+  readonly group?: string;
+  /** Package-owned subsection inside the page. */
+  readonly section?: string;
+  readonly summary?: string;
   readonly control: StudioParameterControl;
   readonly value: string;
   readonly language: StudioParameterLanguage;
@@ -342,6 +347,8 @@ export type StudioEntityDraft = {
   readonly markerId?: string;
   readonly presentId?: string;
   readonly renderIds?: readonly string[];
+  /** Resolved author references that differ per derived entity, such as one Cue's actual Style. */
+  readonly parameterReferences?: Readonly<Record<string, string>>;
   readonly presentation?: StudioTimelinePresentation;
   readonly interaction?: StudioInteraction;
   readonly temporal?: StudioTemporalLineage;

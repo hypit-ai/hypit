@@ -26,20 +26,42 @@ const itemMetrics = {
   gapPx: 1,
 } as const;
 
-const measuredText = (() => {
-  const context = document.createElement("canvas").getContext("2d");
-  const cache = new Map<string, number>();
-  return (value: string, font: string): number => {
-    const key = `${font}\u0000${value}`;
-    const existing = cache.get(key);
-    if (existing !== undefined) return existing;
-    if (context === null) return value.length * 7;
-    context.font = font;
-    const width = context.measureText(value).width;
-    cache.set(key, width);
-    return width;
-  };
-})();
+const labelFont = '500 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+const monoLabelFont = '500 11px "SF Mono", "SFMono-Regular", ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace';
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+const textMeasure = document.createElement("canvas").getContext("2d");
+const textWidths = new Map<string, number>();
+
+function measuredText(value: string, font = labelFont): number {
+  const key = `${font}\u0000${value}`;
+  const cached = textWidths.get(key);
+  if (cached !== undefined) return cached;
+  if (textMeasure === null) return [...graphemes.segment(value)].length * 7;
+  textMeasure.font = font;
+  const width = textMeasure.measureText(value).width;
+  textWidths.set(key, width);
+  return width;
+}
+
+/** Return the longest prefix whose final grapheme is wholly visible. */
+function fittedText(value: string, width: number): string {
+  const available = Math.max(0, width - 1);
+  if (measuredText(value) <= available) return value;
+  const parts = [...graphemes.segment(value)].map((part) => part.segment);
+  let low = 0;
+  let high = parts.length;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (measuredText(parts.slice(0, middle).join("")) <= available) low = middle;
+    else high = middle - 1;
+  }
+  return parts.slice(0, low).join("");
+}
+
+function fitLabel(node: HTMLElement, value: string, width: number): void {
+  node.dataset.fullLabel = value;
+  node.textContent = fittedText(value, width);
+}
 
 function timecode(seconds: number): string {
   const whole = Math.floor(seconds);
@@ -74,6 +96,25 @@ function clipHeaderLabel(clip: StudioSnapshot["tracks"][number]["clips"][number]
 
 function clipBodyLabel(clip: StudioSnapshot["tracks"][number]["clips"][number]): string {
   return clip.presentation.shape === "text" ? clip.label : "";
+}
+
+/**
+ * Keep an item's authored geometry intact while placing its text inside the
+ * portion of that geometry which is actually visible in the current window.
+ * Material, phases and edit handles must continue to use the full rectangle.
+ */
+function placeVisibleLabel(
+  node: HTMLElement,
+  from: number,
+  to: number,
+  laneWidth: number,
+): number {
+  const visibleFrom = Math.max(0, from);
+  const visibleTo = Math.min(1, to);
+  const visibleWidth = Math.max(0, visibleTo - visibleFrom) * laneWidth;
+  node.style.setProperty("--item-visible-offset", `${Math.max(0, visibleFrom - from) * laneWidth}px`);
+  node.style.setProperty("--item-visible-width", `${Math.max(1, visibleWidth - itemMetrics.gapPx)}px`);
+  return visibleWidth;
 }
 
 export function createTimeline(store: Store): Timeline {
@@ -603,23 +644,24 @@ export function createTimeline(store: Store): Timeline {
       node.className = "semantic-cell semantic-segment";
       node.tabIndex = 0;
       node.setAttribute("role", "button");
+      node.setAttribute("aria-label", `Segment ${segment.id}`);
       node.dataset.semanticSegment = segment.id;
       node.style.left = `${from * 100}%`;
       const segmentWidth = Math.max(0, to - from) * 100;
       node.style.width = `max(2px, calc(${segmentWidth}% - ${itemMetrics.gapPx}px))`;
+      const visibleWidthPx = placeVisibleLabel(node, from, to, laneWidth);
       node.title = `${segment.id} · ${segment.startFrame}-${segment.endFrameExclusive}f`;
       const segmentLabel = document.createElement("span");
       segmentLabel.className = "semantic-segment-label";
-      segmentLabel.textContent = segment.id;
-      const visibleWidthPx = Math.max(0, to - from) * laneWidth;
       node.classList.toggle("semantic-wide", visibleWidthPx >= 140);
-      node.classList.toggle("label-hidden",
-        measuredText(segment.id, "500 11px -apple-system, system-ui, Segoe UI, sans-serif") + 18 > visibleWidthPx);
       const head = document.createElement("div");
       head.className = "semantic-cell-content";
       const segmentDuration = document.createElement("span");
       segmentDuration.className = "semantic-segment-duration";
-      segmentDuration.textContent = `${segment.endFrameExclusive - segment.startFrame}f`;
+      const segmentDurationText = `${segment.endFrameExclusive - segment.startFrame}f`;
+      segmentDuration.textContent = segmentDurationText;
+      fitLabel(segmentLabel, segment.id, visibleWidthPx - itemMetrics.gapPx - 10
+        - (visibleWidthPx >= 140 ? measuredText(segmentDurationText, monoLabelFont) + 6 : 0));
       head.append(segmentLabel, segmentDuration);
       node.append(head);
       node.addEventListener("click", (event) => {
@@ -650,16 +692,18 @@ export function createTimeline(store: Store): Timeline {
       const word = document.createElement("span");
       word.className = "semantic-cell semantic-word";
       word.dataset.semanticToken = token.id;
+      word.setAttribute("aria-label", token.text);
       word.style.left = `${wordFrom * 100}%`;
       word.style.width = `max(1px, calc(${Math.max(0, wordTo - wordFrom) * 100}% - 1px))`;
+      const wordVisibleWidth = placeVisibleLabel(word, wordFrom, wordTo, laneWidth);
       word.title = `${token.text} · ${token.startFrame}-${token.endFrameExclusive}f`;
       const text = document.createElement("span");
       text.className = "semantic-word-label";
-      text.textContent = token.text;
-      word.append(text);
-      const widthPx = Math.max(0, wordTo - wordFrom) * laneWidth;
-      word.classList.toggle("label-hidden",
-        measuredText(token.text, "500 11px -apple-system, system-ui, Segoe UI, sans-serif") + 18 > widthPx);
+      fitLabel(text, token.text, wordVisibleWidth - itemMetrics.gapPx - 10);
+      const wordContent = document.createElement("span");
+      wordContent.className = "semantic-cell-content";
+      wordContent.append(text);
+      word.append(wordContent);
       word.addEventListener("click", (event) => {
         event.stopPropagation();
         store.seek(token.startFrame, "timeline");
@@ -678,17 +722,15 @@ export function createTimeline(store: Store): Timeline {
       node.setAttribute("aria-label", `Selection ${selection.id}`);
       node.style.left = `${from * 100}%`;
       node.style.width = `max(2px, calc(${Math.max(0, to - from) * 100}% - ${itemMetrics.gapPx}px))`;
+      const selectionVisibleWidth = placeVisibleLabel(node, from, to, laneWidth);
       node.title = `${selection.id} · ${selection.startFrame}-${selection.endFrameExclusive}f`;
       const selectionLabel = document.createElement("span");
       selectionLabel.className = "semantic-selection-label";
-      selectionLabel.textContent = selection.id;
+      fitLabel(selectionLabel, selection.id, selectionVisibleWidth - itemMetrics.gapPx - 10);
       const selectionContent = document.createElement("div");
       selectionContent.className = "semantic-cell-content";
       selectionContent.append(selectionLabel);
       node.append(selectionContent);
-      const selectionWidthPx = Math.max(0, to - from) * laneWidth;
-      node.classList.toggle("label-hidden",
-        measuredText(selection.id, "500 11px -apple-system, system-ui, Segoe UI, sans-serif") + 18 > selectionWidthPx);
       node.addEventListener("click", (event) => {
         event.stopPropagation();
         store.selectSemanticSelection(selection.id, "timeline");
@@ -788,11 +830,12 @@ export function createTimeline(store: Store): Timeline {
       node.className = `clip clip-${kind} clip-facet-${track.binding.facet} clip-shape-${clip.presentation.shape}`;
       node.classList.toggle("clip-editable", clip.editHandles.some((handle) => handle.enabled));
       node.dataset.clip = clip.id;
+      node.setAttribute("aria-label", clip.label);
       node.style.left = `${from * 100}%`;
       node.style.width = `max(2px, calc(${Math.max(0, to - from) * 100}% - ${itemMetrics.gapPx}px))`;
-      const widthPx = Math.max(0, to - from) * laneWidth;
-      node.classList.toggle("clip-wide", widthPx >= 110);
-      node.classList.toggle("clip-preview-wide", widthPx >= 92);
+      const visibleWidthPx = placeVisibleLabel(node, from, to, laneWidth);
+      node.classList.toggle("clip-wide", visibleWidthPx >= 110);
+      node.classList.toggle("clip-preview-wide", visibleWidthPx >= 92);
       node.style.top = `${row * laneHeight}px`;
       node.title = `${clip.label} · ${clip.startFrame}-${clip.endFrameExclusive}f`;
       node.innerHTML = `<span class="clip-head"><span class="clip-name"></span><span class="clip-meta"></span></span><span class="clip-body"><span class="clip-material" aria-hidden="true"></span><span class="clip-content"><span class="clip-content-text"></span></span><span class="clip-phases"></span></span><span class="clip-selection" aria-hidden="true"></span>`;
@@ -810,9 +853,13 @@ export function createTimeline(store: Store): Timeline {
         phaseNode.style.width = `${(phase.endFrameExclusive - phase.startFrame) / Math.max(1, clip.endFrameExclusive - clip.startFrame) * 100}%`;
         phaseLayer.append(phaseNode);
       }
-      node.querySelector(".clip-name")!.textContent = clipHeaderLabel(clip);
-      node.querySelector(".clip-meta")!.textContent = `${((clip.endFrameExclusive - clip.startFrame) / fps(snapshot)).toFixed(2)}s`;
-      node.querySelector(".clip-content-text")!.textContent = clipBodyLabel(clip);
+      const metaText = `${((clip.endFrameExclusive - clip.startFrame) / fps(snapshot)).toFixed(2)}s`;
+      const headerLabel = node.querySelector<HTMLElement>(".clip-name")!;
+      const bodyLabel = node.querySelector<HTMLElement>(".clip-content-text")!;
+      node.querySelector(".clip-meta")!.textContent = metaText;
+      fitLabel(headerLabel, clipHeaderLabel(clip), visibleWidthPx - itemMetrics.gapPx - 10
+        - (visibleWidthPx >= 110 ? measuredText(metaText, monoLabelFont) + 6 : 0));
+      fitLabel(bodyLabel, clipBodyLabel(clip), visibleWidthPx - itemMetrics.gapPx - 10);
       node.addEventListener("pointerdown", (event) => {
         const rect = node.getBoundingClientRect();
         const edge = Math.min(8, Math.max(4, rect.width / 3));
@@ -861,6 +908,7 @@ export function createTimeline(store: Store): Timeline {
   };
 
   const build = (snapshot: StudioSnapshot): void => {
+    const scrollTop = body.scrollTop;
     labels.replaceChildren();
     rows.replaceChildren();
     semanticNodes = [];
@@ -883,6 +931,9 @@ export function createTimeline(store: Store): Timeline {
     }
     clipNodes = nextClipNodes;
     drawRuler(snapshot);
+    // Replacing every row briefly collapses the scroll surface. Preserve the
+    // vertical reading position when a horizontal pan rebuilds the window.
+    body.scrollTop = scrollTop;
   };
 
   const paint = (): void => {

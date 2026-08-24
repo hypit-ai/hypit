@@ -1,6 +1,7 @@
 import type { Clip, StudioFailure, StudioSnapshot } from "../shared.js";
 import { createCodePane } from "./code.js";
 import { setIcon } from "./icons.js";
+import { createLibraryPane } from "./library.js";
 import { createHandle } from "./resize.js";
 import type { Highlight } from "./code.js";
 import { intentAtOffset, spanAtOffset } from "./markers.js";
@@ -38,7 +39,7 @@ app.innerHTML = `
   </header>
   <main class="studio-shell">
     <section class="upper-shell">
-      <aside class="source-panel" data-code></aside>
+      <aside class="source-panel" data-library></aside>
       <div class="preview-panel" data-stage></div>
       <aside class="workspace-panel">
         <div class="pane-heading workspace-heading">
@@ -59,9 +60,10 @@ app.innerHTML = `
 
 const store = createStore();
 const code = createCodePane();
+const library = createLibraryPane(code);
 const timeline = createTimeline(store);
 const stage = createStage(store);
-app.querySelector<HTMLElement>("[data-code]")!.append(code.element);
+app.querySelector<HTMLElement>("[data-library]")!.append(library.element);
 app.querySelector<HTMLElement>("[data-timeline]")!.append(timeline.element);
 app.querySelector<HTMLElement>("[data-stage]")!.append(stage.element);
 
@@ -138,10 +140,11 @@ function group(label: string, items: readonly HTMLElement[], className = ""): HT
 
 function parameterControl(entityId: string, parameter: Clip["parameters"][number]): HTMLElement {
   const row = document.createElement("label");
-  row.className = `parameter-row${parameter.writable ? " parameter-editable" : " parameter-readonly"}`;
+  row.className = `parameter-row${parameter.writable ? " parameter-editable" : " parameter-readonly"}${parameter.group === undefined ? "" : " parameter-declared"}`;
   const name = document.createElement("span");
   name.className = "parameter-label";
   name.textContent = parameter.label;
+  name.title = parameter.summary ?? parameter.label;
   const source = document.createElement("small");
   source.className = "parameter-source";
   source.textContent = `${parameter.language.toUpperCase()} · ${parameter.source.path}:${parameter.source.range.start}`;
@@ -181,7 +184,9 @@ function parameterControl(entityId: string, parameter: Clip["parameters"][number
     unit.textContent = suffix;
     right.append(unit);
   }
-  row.append(name, right, source);
+  row.append(name, right);
+  if (parameter.group === undefined) row.append(source);
+  else row.title = `${parameter.summary ?? parameter.label}\n${source.textContent}`;
   if (!parameter.writable) row.title = parameter.disabledReason ?? "Read-only source parameter";
   return row;
 }
@@ -190,14 +195,18 @@ function parameterGroups(entityId: string, parameters: readonly Clip["parameters
   type StudioParameterValue = Clip["parameters"][number];
   const groups = new Map<string, StudioParameterValue[]>();
   for (const parameter of parameters) {
-    const key = `${parameter.language}\u0000${parameter.source.path}`;
+    const key = parameter.group === undefined
+      ? `source\u0000${parameter.language}\u0000${parameter.source.path}`
+      : `recipe\u0000${parameter.group}\u0000${parameter.section ?? "parameters"}`;
     const held = groups.get(key) ?? [];
     held.push(parameter);
     groups.set(key, held);
   }
   return [...groups].map(([key, values]) => {
-    const [language, path = ""] = key.split("\u0000");
-    const title = path.length === 0 ? language!.toUpperCase() : `${language!.toUpperCase()} · ${path}`;
+    const [kind, first = "", second = ""] = key.split("\u0000");
+    const title = kind === "recipe"
+      ? `${first.slice(0, 1).toUpperCase()}${first.slice(1)} · ${second.replaceAll("-", " ")}`
+      : second.length === 0 ? first.toUpperCase() : `${first.toUpperCase()} · ${second}`;
     return group(title, values.map((parameter) => parameterControl(entityId, parameter)), "parameter-group");
   });
 }
@@ -281,7 +290,35 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
   const clip = clipId === undefined ? undefined : store.clip(clipId);
 
   if (clip === undefined) {
-    inspector.replaceChildren();
+    const fps = snapshot.space.frameRate.numerator / snapshot.space.frameRate.denominator;
+    const hero = document.createElement("div");
+    hero.className = "selection-hero overview-hero";
+    hero.innerHTML = `
+      <span class="selection-icon" data-selection-icon></span>
+      <div class="selection-title"><strong></strong><small></small></div>
+      <span class="selection-kind">Project</span>`;
+    setIcon(hero.querySelector("[data-selection-icon]")!, "preview");
+    hero.querySelector("strong")!.textContent = snapshot.source.path.split(/[\\/]/u).at(-1) ?? snapshot.source.path;
+    hero.querySelector("small")!.textContent = `${snapshot.tracks.length} tracks · ${snapshot.source.files.length} source files`;
+    inspector.replaceChildren(hero,
+      group("Canvas", [
+        property("Size", `${snapshot.space.canvasWidth} × ${snapshot.space.canvasHeight}`, "property-number"),
+        property("Frame rate", `${fps.toFixed(Number.isInteger(fps) ? 0 : 2)} fps`, "property-number"),
+        property("Duration", `${snapshot.space.durationSec.toFixed(2)}s`, "property-number"),
+        property("Frames", String(snapshot.space.frameCount), "property-number"),
+      ]),
+      group("Source", [
+        property("Author", snapshot.source.path, "property-wide property-code"),
+        property("Run", snapshot.run.path, "property-wide property-code"),
+        property("Closure", `${snapshot.source.files.length} referenced files`),
+      ]),
+      group("Build intent", [
+        property("Targets", snapshot.run.targets
+          .map((target) => target.split("::output::").at(-1) ?? target)
+          .join(", ") || "—", "property-wide property-code"),
+        property("Candidates", String(snapshot.run.satisfactions.length), "property-number"),
+      ]),
+    );
     return;
   }
 
@@ -322,20 +359,17 @@ function renderInspector(snapshot: StudioSnapshot, clipId: string | undefined): 
             property("To", clip.temporal.projection.endExpression, "property-wide property-code"),
           ]),
   ]);
-  const run = track === undefined ? undefined : group("Run", [
-    property("Run", snapshot.run.path, "property-wide property-code"),
-    property("Target", snapshot.run.targets.join(", "), "property-wide property-code"),
+  const provenance = track === undefined ? undefined : group("Provenance", [
     property("Output", track.provenance.output, "property-wide property-code"),
     ...(track.provenance.candidateId === undefined ? [] : [
       property("Candidate", track.provenance.candidateId, "property-wide property-code"),
     ]),
     property("Status", track.provenance.status),
-    property("Writeback", "Run source · read-only"),
   ]);
   const operations = operationGroups(clip.editHandles);
   const parameters = parameterGroups(clip.id, clip.parameters);
   inspector.replaceChildren(hero, placement, timing, ...operations, ...parameters,
-    ...(source === undefined ? [] : [source]), ...(run === undefined ? [] : [run]));
+    ...(source === undefined ? [] : [source]), ...(provenance === undefined ? [] : [provenance]));
 }
 
 function renderSemanticInspector(snapshot: StudioSnapshot, segmentId: string): void {
@@ -491,6 +525,7 @@ code.element.addEventListener("click", (event) => {
   if ((event.target as HTMLElement | null)?.closest("button, textarea") !== null) return;
   const state = store.current();
   if (state === undefined) return;
+  if (code.activePath() !== state.snapshot.source.path) return;
   const offset = code.offsetAt(event);
   // Below the last line, or in the heading: nothing is being pointed at.
   if (offset === undefined) {
@@ -575,7 +610,7 @@ function applySnapshot(snapshot: StudioSnapshot): void {
   status.className = "status";
   status.textContent = "";
   renderMeta(snapshot);
-  code.show(snapshot);
+  library.show(snapshot);
   store.load(snapshot);
 }
 
@@ -600,6 +635,7 @@ const response = await fetch("/__studio/session");
 const initial = await response.json() as StudioSnapshot | StudioFailure;
 if (response.ok && "tracks" in initial) applySnapshot(initial);
 else applyFailure(initial as StudioFailure);
+void library.refresh();
 
 type Hot = { on(event: string, listener: (value: unknown) => void): void };
 const hot = (import.meta as ImportMeta & { hot?: Hot }).hot;

@@ -1,4 +1,4 @@
-import type { Range, StudioSnapshot } from "../shared.js";
+import type { Range, StudioSnapshot, StudioSourceView } from "../shared.js";
 import { icon, setIcon } from "./icons.js";
 import { intentTones } from "./markers.js";
 import { tokenizeSvml } from "./syntax.js";
@@ -19,7 +19,9 @@ export type Highlight = {
 
 export type CodePane = {
   readonly element: HTMLElement;
-  show(snapshot: StudioSnapshot): void;
+  /** Returns false only while an unsaved file is being saved before a switch. */
+  show(snapshot: StudioSnapshot, source?: StudioSourceView): boolean;
+  activePath(): string | undefined;
   highlight(values: readonly Highlight[], scrollIntoView: boolean): void;
   /** Mark the word being spoken at the playhead, or nothing outside speech. */
   speak(range: Range | undefined): void;
@@ -73,7 +75,7 @@ export function createCodePane(): CodePane {
   element.innerHTML = `
     <div class="pane-heading code-heading">
       <div class="pane-tabs" role="tablist" aria-label="Workspace views">
-        <button type="button" class="pane-tab active" role="tab" aria-selected="true">SVML</button>
+        <button type="button" class="pane-tab active source-language" role="tab" aria-selected="true" data-language>SVML</button>
       </div>
       <div class="code-actions">
         <span class="code-location" data-path></span>
@@ -86,6 +88,7 @@ export function createCodePane(): CodePane {
     <div class="code-scroll"><svg class="range-canvas" aria-hidden="true"></svg></div>
     <textarea class="code-editor" data-editor spellcheck="false" aria-label="SVML source"></textarea>`;
   const path = element.querySelector<HTMLElement>("[data-path]")!;
+  const language = element.querySelector<HTMLElement>("[data-language]")!;
   const scroll = element.querySelector<HTMLElement>(".code-scroll")!;
   const canvas = element.querySelector<SVGSVGElement>(".range-canvas")!;
   const editor = element.querySelector<HTMLTextAreaElement>("[data-editor]")!;
@@ -99,8 +102,11 @@ export function createCodePane(): CodePane {
   let snapshotRevision = 0;
   let editingRevision = 0;
   let sourceText = "";
+  let activeSource: StudioSourceView | undefined;
+  let authorPath = "";
   let editing = false;
   let dirty = false;
+  let saveInFlight = false;
   let saveTimer: number | undefined;
 
   const setEditing = (value: boolean): void => {
@@ -117,21 +123,30 @@ export function createCodePane(): CodePane {
   };
 
   const save = async (): Promise<void> => {
-    if (!editing || !dirty) return;
+    if (!editing || !dirty || saveInFlight) return;
+    const savingPath = activeSource?.path;
+    const savingText = editor.value;
+    const savingRevision = editingRevision;
+    if (savingPath === undefined) return;
+    saveInFlight = true;
+    let accepted = false;
     saveState.textContent = "Saving";
     saveState.className = "code-save-state saving";
     try {
       const response = await fetch("/__studio/source", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: editor.value, revision: editingRevision }),
+        body: JSON.stringify({ path: savingPath, text: savingText, revision: savingRevision }),
       });
       if (!response.ok) {
         const reason = await response.text();
         throw new Error(reason || `Save failed (${response.status})`);
       }
-      sourceText = editor.value;
-      dirty = false;
+      accepted = true;
+      if (activeSource?.path === savingPath && editor.value === savingText) {
+        sourceText = savingText;
+        dirty = false;
+      }
       saveState.textContent = "Saved";
       saveState.className = "code-save-state saved";
       window.setTimeout(() => {
@@ -142,6 +157,12 @@ export function createCodePane(): CodePane {
         ? "Changed outside Studio"
         : "Save failed";
       saveState.className = "code-save-state error";
+    } finally {
+      saveInFlight = false;
+      if (accepted && dirty && activeSource?.path === savingPath) {
+        if (saveTimer !== undefined) window.clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(() => void save(), 240);
+      }
     }
   };
 
@@ -254,9 +275,29 @@ export function createCodePane(): CodePane {
 
   return {
     element,
-    show(snapshot) {
-      path.textContent = snapshot.source.path;
-      const source = snapshot.source.text;
+    show(snapshot, selected) {
+      const sourceFile = selected
+        ?? snapshot.source.files.find((file) => file.path === snapshot.source.path)
+        ?? {
+          path: snapshot.source.path,
+          text: snapshot.source.text,
+          language: "svml" as const,
+          role: "author" as const,
+          imports: [],
+        };
+      if (activeSource !== undefined && activeSource.path !== sourceFile.path && dirty) {
+        saveState.textContent = "Saving before switch";
+        saveState.className = "code-save-state saving";
+        void save();
+        return false;
+      }
+      if (activeSource !== undefined && activeSource.path !== sourceFile.path && editing) setEditing(false);
+      activeSource = sourceFile;
+      authorPath = snapshot.source.path;
+      path.textContent = sourceFile.path;
+      path.title = sourceFile.path;
+      language.textContent = sourceFile.language.toUpperCase();
+      const source = sourceFile.text;
       snapshotRevision = snapshot.revision;
       sourceText = source;
       if (!editing || !dirty) {
@@ -324,11 +365,13 @@ export function createCodePane(): CodePane {
 
       scroll.replaceChildren(canvas, fragment);
       draw();
+      return true;
     },
+    activePath() { return activeSource?.path; },
     speak(range) {
       spoken?.remove();
       spoken = undefined;
-      if (range === undefined) return;
+      if (range === undefined || activeSource?.path !== authorPath) return;
       const line = lineAt(range.start);
       const piece = line?.pieces.find((item) => range.start >= item.start && range.start < item.end);
       // A word is highlighted by drawing over it rather than by rewriting the
@@ -347,9 +390,9 @@ export function createCodePane(): CodePane {
       spoken = mark;
     },
     highlight(values, scrollIntoView) {
-      current = values;
+      current = activeSource?.path === authorPath ? values : [];
       draw();
-      const first = values[0];
+      const first = current[0];
       if (!scrollIntoView || first === undefined) return;
       lineAt(first.range.start)?.element.scrollIntoView({ behavior: "smooth", block: "center" });
     },

@@ -28,6 +28,7 @@ const paths: Readonly<Record<string, string>> = {
   component: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
   layers: '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/>',
   ranking: '<path d="M5 19V9h4v10M10 19V5h4v14M15 19v-7h4v7M3 19h18"/>',
+  refresh: '<path d="M20 7v5h-5M4 17v-5h5"/><path d="M18.5 9a7 7 0 0 0-11.8-2.3L4 9M5.5 15a7 7 0 0 0 11.8 2.3L20 15"/>',
 };
 
 export function icon(name: string, className = "icon"): string {

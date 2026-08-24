@@ -16,7 +16,7 @@ import type { StudioProjection } from "./studio-preflight.js";
 import type { StudioSourceFile } from "./parameters.js";
 
 function sourceFiles(run: RunPlan): readonly StudioSourceFile[] {
-  const paths = [run.authorSource, ...run.source.compiled.closure.units.map((unit) => unit.id)];
+  const paths = [run.runPath, run.authorSource, ...run.source.compiled.closure.units.map((unit) => unit.id)];
   return [...new Set(paths)].flatMap((path): StudioSourceFile[] => {
     if (!existsSync(path)) return [];
     try {
@@ -26,6 +26,7 @@ function sourceFiles(run: RunPlan): readonly StudioSourceFile[] {
         path,
         text: readFileSync(path, "utf8"),
         language,
+        role: path === run.runPath ? "run" : path === run.authorSource ? "author" : "dependency",
         ...(unit === undefined ? {} : { imports: unit.imports }),
       }];
     } catch {
@@ -90,6 +91,7 @@ export async function readStudioSession(input: {
       preview: { kind: "hyperframes", srcdoc: rendered },
       workspaceRoot: input.workspaceRoot,
       sourceFiles: files,
+      surfaces: input.domain.surfaces,
     }),
     material: built.served,
     observations: source.observations,

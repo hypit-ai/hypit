@@ -13,7 +13,7 @@ import type { StudioDomain } from "./domain.js";
 import type { StudioAdapterRegistry } from "./studio-registry.js";
 import { loadStudioRun } from "./run.js";
 import { readStudioSession } from "./session.js";
-import type { Range, StudioFailure, StudioMutation, StudioSnapshot } from "./shared.js";
+import type { Range, StudioFailure, StudioLibraryView, StudioMutation, StudioSnapshot } from "./shared.js";
 import { createStudioStoryboard } from "./storyboard.js";
 import type { StudioStoryboard } from "./storyboard.js";
 import { findSurfacePreview } from "./surface-preview.js";
@@ -62,9 +62,20 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   let mutating = false;
   let requestedRevision = 0;
   let currentSource = options.source;
+  let library: StudioLibraryView | undefined;
   let allowedSourceFiles = new Set<string>();
   const watched = new Map<string, FSWatcher>();
   const storyboards = new Map<string, Promise<StudioStoryboard>>();
+
+  const readLibrary = async (): Promise<StudioLibraryView> => {
+    const next = await options.archive?.library() ?? {
+      environment: options.workspaceRoot,
+      tasks: [],
+      artifacts: [],
+    };
+    library = next;
+    return next;
+  };
 
   const watchSource = (path: string): void => {
     if (watched.has(path)) return;
@@ -369,18 +380,25 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as {
                 readonly text?: unknown;
                 readonly revision?: unknown;
+                readonly path?: unknown;
               };
-              if (typeof body.text !== "string" || typeof body.revision !== "number") {
-                json(response, 400, { error: "Expected source text and revision." });
+              if (typeof body.text !== "string" || typeof body.revision !== "number"
+                || (body.path !== undefined && typeof body.path !== "string")) {
+                json(response, 400, { error: "Expected source path, text and revision." });
                 return;
               }
               if (snapshot !== undefined && body.revision !== snapshot.revision) {
                 json(response, 409, { error: "The Source changed outside Studio." });
                 return;
               }
-              const current = await readFile(currentSource, "utf8");
+              const sourcePath = body.path ?? relative(options.workspaceRoot, currentSource);
+              const absolute = resolve(options.workspaceRoot, sourcePath);
+              if (isAbsolute(sourcePath) || !allowedSourceFiles.has(absolute)) {
+                throw new Error(`Studio cannot write source file ${sourcePath}.`);
+              }
+              const current = await readFile(absolute, "utf8");
               await applyTransaction([{
-                path: relative(options.workspaceRoot, currentSource),
+                path: sourcePath,
                 range: { start: 0, end: current.length },
                 replacement: body.text,
                 preimage: current,
@@ -443,6 +461,13 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               json(response, 500, failure);
             }
           })();
+          return;
+        }
+        if (url.pathname === "/__studio/library") {
+          void readLibrary().then(
+            (view) => json(response, 200, view),
+            (error) => json(response, 500, { error: error instanceof Error ? error.message : String(error) }),
+          );
           return;
         }
         if (url.pathname === "/__studio/surface-preview") {
@@ -517,6 +542,33 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           response.setHeader("accept-ranges", "bytes");
           if (request.method === "HEAD") response.end();
           else response.end(Buffer.from(file.bytes));
+          return;
+        }
+        const artifactDigest = /^\/__studio\/artifact\/(sha256:[a-f0-9]{64})$/u.exec(url.pathname)?.[1];
+        if (artifactDigest !== undefined) {
+          void (async () => {
+            const view = library ?? await readLibrary();
+            const artifact = view.artifacts.find((item) => item.digest === artifactDigest);
+            if (artifact === undefined || options.archive === undefined) {
+              response.statusCode = 404;
+              response.end();
+              return;
+            }
+            const bytes = await options.archive.read(artifactDigest as import("@hypit/protocol").Digest);
+            if (bytes === undefined) {
+              response.statusCode = 404;
+              response.end();
+              return;
+            }
+            response.statusCode = 200;
+            response.setHeader("content-type", artifact.mediaType);
+            response.setHeader("content-length", String(bytes.byteLength));
+            response.setHeader("cache-control", "private, max-age=31536000, immutable");
+            if (request.method === "HEAD") response.end();
+            else response.end(Buffer.from(bytes));
+          })().catch((error) => {
+            json(response, 500, { error: error instanceof Error ? error.message : String(error) });
+          });
           return;
         }
         next();

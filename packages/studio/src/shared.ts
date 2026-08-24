@@ -172,12 +172,64 @@ export type SemanticToken = StudioSemanticToken;
 /** The semantic timebase projected from the compiled Narrative and its anchors. */
 export type SemanticTimeline = StudioSemanticTimeline;
 
+export type StudioSourceView = {
+  /** Workspace-relative path. It is also the exact source write target. */
+  readonly path: string;
+  readonly text: string;
+  readonly language: "svml" | "svs" | "svrun";
+  readonly role: "run" | "author" | "dependency";
+  readonly imports: readonly string[];
+};
+
+export type StudioTaskView = {
+  readonly id: string;
+  readonly createdAt: number;
+  readonly status: "queued" | "running" | "waiting" | "complete" | "failed" | "cancelled" | "active" | "unknown";
+  readonly source: string;
+  readonly run?: string;
+  readonly targets: readonly string[];
+  readonly acceptedRecords: number;
+  readonly outstandingCommands: number;
+  readonly operations: readonly {
+    readonly status: "pending" | "completed" | "failed" | "cancelled";
+    readonly phase?: string;
+    readonly completed?: number;
+    readonly total?: number;
+    readonly unit?: string;
+  }[];
+};
+
+export type StudioArtifactView = {
+  /** Build-qualified identity. The same digest in two Builds remains two historical results. */
+  readonly id: string;
+  readonly build: string;
+  readonly createdAt: number;
+  readonly digest: string;
+  readonly size: number;
+  readonly mediaType: string;
+  readonly records: readonly string[];
+  readonly outputs: readonly string[];
+  readonly paths: readonly string[];
+  readonly source: string;
+  readonly run?: string;
+};
+
+/** Read-only view of the Runtime context selected for this Studio environment. */
+export type StudioLibraryView = {
+  readonly environment: string;
+  readonly runtime?: string;
+  readonly tasks: readonly StudioTaskView[];
+  readonly artifacts: readonly StudioArtifactView[];
+};
+
 export type StudioSnapshot = {
   readonly revision: number;
   readonly source: {
     /** Workspace-relative presentation path; the server retains the absolute write target. */
     readonly path: string;
     readonly text: string;
+    /** The exact Run + Author closure; never a directory scan or inferred project tree. */
+    readonly files: readonly StudioSourceView[];
   };
   /** Visible Run provenance; Studio never invents a second execution source. */
   readonly run: {
