@@ -103,7 +103,7 @@ function usage(): string {
     "make-placeholder writes a correctly-sized placeholder for a media slot the Source declares as a",
     "generation and a Build has not filled. It is deterministic and Provider-free: the comparison loop",
     "uses its output to mock an empty slot, and the observer is told the slot is a placeholder so it is",
-    "bypassed rather than reported every round. `--color` picks the fill from the named presets (the",
+    "bypassed rather than reported as a difference. `--color` picks the fill from the named presets (the",
     "default `light` shows on a dark base; `dark` shows on a light one) or a six-digit hex, and the",
     "inset border is the contrast of the fill so the mock stays visible on either. A plain call writes",
     "a PNG; `--video` writes a short solid-colour MP4 via ffmpeg for a slot that only accepts video,",
