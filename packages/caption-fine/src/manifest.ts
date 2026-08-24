@@ -2,11 +2,12 @@ import { readFile } from "node:fs/promises";
 
 import { captionManifest, captionModuleRef, captionTypes } from "@hypit/caption";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
+import type { SurfaceRecipePropertyVocabulary } from "@hypit/markup";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import { narrativeDependency, narrativeTypes } from "@hypit/narrative";
+import type { ModuleManifest, ProducerRef } from "@hypit/protocol";
 import { semanticTrackDependency, semanticTrackTypes } from "@hypit/semantic-track";
 import { svsRecipeType } from "@hypit/svs";
-import type { ModuleManifest, ProducerRef } from "@hypit/protocol";
 
 import { fineCaptionOneShotMotions } from "./recipe.js";
 
@@ -16,8 +17,63 @@ const previewImage = (file: string) => ({
   open: async () => Uint8Array.from(await readFile(new URL(`../preview/${file}`, import.meta.url))),
 });
 
+const WHERE_PROPERTIES = new Set([
+  "stack-order", "x", "y", "width", "height", "anchor-x", "anchor-y", "align", "block-align",
+  "inline-size", "wrap", "overflow", "max-lines", "max-words-per-line", "direction", "line-height",
+  "letter-spacing", "word-gap",
+]);
+
+const TIMED_ACTIVE_BOX_PROPERTIES = new Set([
+  "active-box",
+  "active-box-continuity",
+  "active-box-enter",
+  "active-box-exit",
+  "active-box-transition-frames",
+]);
+
+function fineCaptionRecipeGroup(name: string): "where" | "how" | "when" {
+  if (WHERE_PROPERTIES.has(name)) return "where";
+  if (name === "lead-frames" || name === "tail-frames" || name === "handoff"
+    || name === "karaoke" || name === "karaoke-transition"
+    || name === "active-underline"
+    || name.startsWith("cue-enter") || name.startsWith("cue-exit")
+    || name.startsWith("atom-") || name.startsWith("active-response")
+    || name.startsWith("loop") || name === "slide-distance" || name === "active-scale"
+    || TIMED_ACTIVE_BOX_PROPERTIES.has(name)) return "when";
+  return "how";
+}
+
+function fineCaptionRecipeSection(name: string, group: "where" | "how" | "when"): string {
+  if (group === "where") return ["x", "y", "width", "height", "anchor-x", "anchor-y", "stack-order"].includes(name)
+    ? "region" : "flow";
+  if (group === "when") {
+    if (["lead-frames", "tail-frames", "handoff"].includes(name)) return "envelope";
+    if (name.startsWith("cue-")) return "cue";
+    if (name.startsWith("loop")) return "loop";
+    return "token";
+  }
+  if (["size", "kerning", "caps", "text-transform"].includes(name)) return "typography";
+  if (name === "background" || name === "border-color" || name === "border-width" || name === "padding"
+    || name === "radius" || name.startsWith("cue-shadow")) return "cue-box";
+  if (name.startsWith("active-box") || name.includes("underline")) return "decoration";
+  return name.startsWith("active-") ? "active-paint" : "base-paint";
+}
+
+function withFineCaptionRecipeGroups<const T extends readonly SurfaceRecipePropertyVocabulary[]>(
+  properties: T,
+): readonly SurfaceRecipePropertyVocabulary[] {
+  return properties.map((property) => {
+    const group = fineCaptionRecipeGroup(property.name);
+    return { ...property, group, section: fineCaptionRecipeSection(property.name, group) };
+  });
+}
+
 export const captionFineModuleRef = { name: "@hypit/caption-fine", version: "1" } as const;
+export const captionFineTypes = {
+  schedule: { module: captionFineModuleRef, name: "FineCaptionSchedule" },
+} as const;
 export const captionFineProducers = {
+  schedule: { module: captionFineModuleRef, name: "schedule-fine-caption" },
   render: { module: captionFineModuleRef, name: "render-fine-caption" },
 } satisfies Record<string, ProducerRef>;
 
@@ -31,7 +87,7 @@ export const captionFineMarkupSurfaces = [
             summary: "Names this Style so a Caption Program can assign it." },
           { name: "recipe", kind: "reference", required: true, accepts: [svsRecipeType],
             summary: "Chooses the Recipe that carries Cue geometry, Paint and local motion.",
-            recipe: [
+            recipe: withFineCaptionRecipeGroups([
               { name: "stack-order", required: true,
                 summary: "Places this Style's Cues in the Track's drawing order, low behind high." },
               { name: "x", required: true,
@@ -40,12 +96,26 @@ export const captionFineMarkupSurfaces = [
                 summary: "Places the Cue box vertically as a fraction of the Canvas height." },
               { name: "width", required: true,
                 summary: "Sets the Cue box width as a fraction of the Canvas width." },
+              { name: "height", required: false,
+                summary: "Optionally gives the Caption Region a fixed fraction of Canvas height; without it the Region hugs its Cue." },
               { name: "anchor-x", required: false, values: ["left", "center", "right"], fallback: "left",
                 summary: "Decides which horizontal edge of the Cue box sits on the placement point." },
               { name: "anchor-y", required: false, values: ["top", "center", "bottom"], fallback: "top",
                 summary: "Decides which vertical edge of the Cue box sits on the placement point." },
               { name: "align", required: true, values: ["left", "center", "right"],
                 summary: "Aligns the Words within each line of the Cue." },
+              { name: "block-align", required: false, values: ["start", "center", "end"], fallback: "center",
+                summary: "Aligns the Cue vertically inside a fixed-height Caption Region." },
+              { name: "inline-size", required: false, values: ["hug", "fixed"], fallback: "hug",
+                summary: "Chooses whether the Cue hugs its text up to the Region width or fills the Region width." },
+              { name: "wrap", required: false, values: ["word", "grapheme"], fallback: "word",
+                summary: "Wraps at Word boundaries, falling back for an over-wide Word, or permits a break at any grapheme." },
+              { name: "overflow", required: false, values: ["visible", "clip"], fallback: "visible",
+                summary: "Keeps Paint overflow visible or clips the Cue to its declared line envelope." },
+              { name: "max-lines", required: false,
+                summary: "Caps the Cue's visible line boxes; it is accepted only together with overflow: clip." },
+              { name: "max-words-per-line", required: false,
+                summary: "Forces a new line after this many display Words while preserving authored Cue boundaries." },
               { name: "direction", required: false, values: ["ltr", "rtl"], fallback: "ltr",
                 summary: "Sets the writing direction the Words are laid out in." },
               { name: "line-height", required: true,
@@ -56,7 +126,11 @@ export const captionFineMarkupSurfaces = [
                 summary: "Sets the pixel gap between neighbouring Words." },
               { name: "size", required: true,
                 summary: "Sets the type size in pixels." },
-              { name: "text-transform", required: false, values: ["none", "uppercase", "lowercase"], fallback: "none",
+              { name: "kerning", required: false, values: ["auto", "normal", "none"], fallback: "auto",
+                summary: "Controls font kerning for the complete uniform Cue flow." },
+              { name: "caps", required: false, values: ["normal", "small-caps", "all-small-caps"], fallback: "normal",
+                summary: "Chooses the OpenType caps presentation for every Word." },
+              { name: "text-transform", required: false, values: ["none", "uppercase", "lowercase", "capitalize"], fallback: "none",
                 summary: "Recases every display Word before it is drawn." },
               { name: "fill", required: true,
                 summary: "Paints the glyph body of an ordinary Word, as an RGB or RGBA hex color." },
@@ -82,6 +156,8 @@ export const captionFineMarkupSurfaces = [
                 summary: "Offsets the glyph drop shadow vertically in pixels." },
               { name: "shadow-blur", required: false, fallback: "0",
                 summary: "Softens the glyph drop shadow by this many pixels. A shadow that only has to lift the caption off the picture is soft and short — a blur near a tenth of `size` with an offset a fraction of that. Much more and the shadow stops being an edge and becomes a grey cloud the letters sit in, which costs the contrast the shadow was there to protect." },
+              { name: "shadow-spread", required: false, fallback: "0",
+                summary: "Expands or contracts the glyph shadow shape before it is blurred." },
               { name: "long-shadow-color", required: false, fallback: "#000000",
                 summary: "Paints the solid extruded shadow trailing each glyph." },
               { name: "long-shadow-opacity", required: false, fallback: "0",
@@ -96,6 +172,8 @@ export const captionFineMarkupSurfaces = [
                 summary: "Sets how strongly the glyph halo reads." },
               { name: "glow-blur", required: false, fallback: "0",
                 summary: "Spreads the glyph halo by this many pixels. A halo reads as a halo while it stays close to the glyph — near a tenth of `size`. Spread wide it stops tracing the letters, fills the space between them and washes the caption into a bright smear; the gaps between letters go first, exactly as they do under a heavy outline." },
+              { name: "glow-spread", required: false, fallback: "0",
+                summary: "Expands the glyph alpha before the halo is blurred." },
               { name: "active-fill", required: false, fallback: "#FFD54A",
                 summary: "Paints the glyph body of the Word being spoken." },
               { name: "active-opacity", required: false, fallback: "opacity",
@@ -120,6 +198,8 @@ export const captionFineMarkupSurfaces = [
                 summary: "Offsets the active drop shadow vertically in pixels." },
               { name: "active-shadow-blur", required: false, fallback: "shadow-blur",
                 summary: "Softens the active drop shadow by this many pixels." },
+              { name: "active-shadow-spread", required: false, fallback: "shadow-spread",
+                summary: "Expands or contracts the active glyph shadow before blur." },
               { name: "active-long-shadow-color", required: false, fallback: "long-shadow-color",
                 summary: "Paints the extruded shadow trailing the Word being spoken." },
               { name: "active-long-shadow-opacity", required: false, fallback: "long-shadow-opacity",
@@ -134,6 +214,8 @@ export const captionFineMarkupSurfaces = [
                 summary: "Sets how strongly the active halo reads." },
               { name: "active-glow-blur", required: false, fallback: "glow-blur",
                 summary: "Spreads the active halo by this many pixels. Widening it is the usual way of trying to make the spoken Word stand out, and the usual way of losing it: the halo leaves the glyph, fills the gaps to its neighbours and blurs the very Word it was meant to pick out. The Word is already picked out by its own Paint — leave this near `glow-blur`." },
+              { name: "active-glow-spread", required: false, fallback: "glow-spread",
+                summary: "Expands the active glyph alpha before its halo is blurred." },
               { name: "background", required: true,
                 summary: "Paints the Cue box behind the Words, as an RGB or RGBA hex color." },
               { name: "border-color", required: false, fallback: "#00000000",
@@ -144,6 +226,18 @@ export const captionFineMarkupSurfaces = [
                 summary: "Insets the Words from the Cue box edge, as one pixel number or a vertical and horizontal pair." },
               { name: "radius", required: true,
                 summary: "Rounds the Cue box corners by this many pixels." },
+              { name: "cue-shadow-color", required: false, fallback: "#000000",
+                summary: "Paints the shadow cast by the Cue box rather than by its glyphs." },
+              { name: "cue-shadow-opacity", required: false, fallback: "0",
+                summary: "Sets the Cue box shadow opacity." },
+              { name: "cue-shadow-x", required: false, fallback: "0",
+                summary: "Offsets the Cue box shadow horizontally in pixels." },
+              { name: "cue-shadow-y", required: false, fallback: "0",
+                summary: "Offsets the Cue box shadow vertically in pixels." },
+              { name: "cue-shadow-blur", required: false, fallback: "0",
+                summary: "Blurs the Cue box shadow in pixels." },
+              { name: "cue-shadow-spread", required: false, fallback: "0",
+                summary: "Expands or contracts the Cue box shadow in pixels." },
               { name: "underline", required: false, values: ["off", "always"], fallback: "off",
                 summary: "Decides whether every Word carries a rule beneath it." },
               { name: "underline-color", required: false, fallback: "fill",
@@ -219,7 +313,13 @@ export const captionFineMarkupSurfaces = [
                 summary: "Sets how many Frames one cycle of the looping motion takes." },
               { name: "loop-intensity", required: false, fallback: "1",
                 summary: "Scales how far the looping motion carries." },
-            ] },
+              { name: "lead-frames", required: false, fallback: "0",
+                summary: "Makes the Cue visible this many Frames before its first semantic Word without moving any Word timing." },
+              { name: "tail-frames", required: false, fallback: "0",
+                summary: "Keeps the Cue visible this many Frames after its last semantic Word without extending any Word timing." },
+              { name: "handoff", required: false, values: ["cut", "overlap"], fallback: "cut",
+                summary: "Chooses whether adjacent Cue visibility envelopes meet without overlap or may coexist." },
+            ]) },
           { name: "font", kind: "reference", required: true,
             accepts: [mediaTypes.fontArtifact, mediaTypes.fontStack],
             summary: "Chooses the primary face, or a whole reusable stack that already carries its own fallbacks." },
@@ -284,17 +384,29 @@ export const captionFineManifest: ModuleManifest = {
     narrativeDependency,
     semanticTrackDependency,
   ],
-  types: [],
+  types: [{ name: captionFineTypes.schedule.name }],
   capabilities: [],
-  producers: [{
-    name: captionFineProducers.render.name,
-    inputs: [
-      { name: "caption", type: captionTypes.timedProjection },
-      { name: "program", type: captionTypes.program },
-      { name: "document", type: narrativeTypes.captionDocument },
-      { name: "semantic", type: semanticTrackTypes.track },
-    ],
-    outputs: [{ name: "track", type: compositionTypes.visualTrack }],
-    needs: [],
-  }],
+  producers: [
+    {
+      name: captionFineProducers.schedule.name,
+      inputs: [
+        { name: "caption", type: captionTypes.timedProjection },
+        { name: "program", type: captionTypes.program },
+        { name: "document", type: narrativeTypes.captionDocument },
+      ],
+      outputs: [{ name: "schedule", type: captionFineTypes.schedule }],
+      needs: [],
+    },
+    {
+      name: captionFineProducers.render.name,
+      inputs: [
+        { name: "schedule", type: captionFineTypes.schedule },
+        { name: "program", type: captionTypes.program },
+        { name: "document", type: narrativeTypes.captionDocument },
+        { name: "semantic", type: semanticTrackTypes.track },
+      ],
+      outputs: [{ name: "track", type: compositionTypes.visualTrack }],
+      needs: [],
+    },
+  ],
 };

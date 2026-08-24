@@ -126,6 +126,10 @@ export type SurfaceRecipePropertyVocabulary = {
   readonly name: string;
   readonly required: boolean;
   readonly summary: string;
+  /** Stable Inspector page owned by the component package. */
+  readonly group?: "where" | "how" | "when" | string;
+  /** Optional package-owned subsection inside the page. */
+  readonly section?: string;
   readonly values?: readonly string[];
   readonly fallback?: string;
 };

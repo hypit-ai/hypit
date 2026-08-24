@@ -35,10 +35,13 @@ A Style is a rendering intent resolved from one package-owned SVS Recipe:
 ```svs
 caption.primary {
   stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
+  height: 0.22;
   anchor-x: center; anchor-y: bottom;
   size: 58;
   line-height: 0.96; letter-spacing: -0.5; word-gap: 14;
-  align: center; direction: ltr;
+  align: center; block-align: end; inline-size: fixed;
+  wrap: word; overflow: clip; max-lines: 2; max-words-per-line: 4;
+  direction: ltr;
   fill: #FFFFFF; opacity: 1;
   stroke-color: #09090B; stroke-width: 2;
   shadow-color: #000000; shadow-opacity: 0.72;
@@ -58,6 +61,7 @@ caption.primary {
   cue-enter: fade; cue-enter-frames: 4; cue-exit: fade; cue-exit-frames: 4;
   atom-reveal: all;
   active-response: pop; active-response-frames: 5; active-scale: 1.08;
+  lead-frames: 4; tail-frames: 4; handoff: cut;
 }
 ```
 
@@ -82,6 +86,12 @@ glow and underline; Cue/Pill Paint; three independent glyph/Pill/underline activ
 and layered Cue, Alignment-Unit, active-response and loop motion. Missing optional dimensions resolve
 deterministically to no decoration or motion. Unknown properties are rejected.
 
+The package groups those properties as **Where**, **How** and **When** in its Surface declaration,
+so Studio can present the same author contract without maintaining a Caption-specific property list.
+`lead-frames` and `tail-frames` form an explicit visible Schedule around the spoken Cue;
+`handoff: cut` prevents adjacent visible envelopes from competing, while `overlap` preserves both.
+Neither form changes the Word frames used by Karaoke.
+
 `karaoke` is `off`, `current` or `trail`; `karaoke-transition` is `step` or `wipe`. Timing is always
 whole-Alignment-Unit timing already proven by Caption. A normal one-word unit therefore highlights
 per word, while a Dual Text unit remains one indivisible visible unit. Fine never guesses internal
@@ -92,9 +102,15 @@ one capsule per activated Alignment Unit; `joined` turns a trail into one ordere
 continuous on each real browser line. Thus trail-colored text with a current-only Pill is one
 Recipe—not a second renderer.
 
-Fine wraps only between complete Alignment Units and never clips author text. Cue boundaries come
-from Script segments, turns, Style changes and authored `||`; use Track width and font size to
-control density.
+With `wrap: word`, Fine wraps between complete Alignment Units and falls back inside a single
+over-wide display unit so it cannot escape the Region. `max-lines` is accepted only with the explicit
+`overflow: clip`; without that opt-in Fine does not silently discard author text. Cue boundaries come
+from Script segments, turns, Style changes and authored `||`.
+
+Fine is the uniform-flow family: every token follows the same Recipe and may differ only by time,
+index or play state. A Cue with authored internal roles—different font/layout groups, full-frame
+inversion, tearing or cross-clause composition—requires another Caption package rather than a hidden
+Fine exception.
 
 CJK dialogue can be written directly. For a display-only emoji that still follows speech timing,
 author the correspondence explicitly, such as `<🌐 | globe>`; the system will not invent a spoken

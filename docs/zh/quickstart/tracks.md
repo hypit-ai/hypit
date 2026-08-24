@@ -34,8 +34,11 @@ SemanticTrack 时间拼接。Fine 是一种样式族，负责自己的几何、�
 ```svs
 caption.primary {
   stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
+  height: 0.22;
   anchor-x: center; anchor-y: bottom;
-  size: 58; line-height: 1; align: center;
+  size: 58; line-height: 1;
+  align: center; block-align: end; inline-size: fixed;
+  wrap: word; overflow: clip; max-lines: 2; max-words-per-line: 4;
   fill: #FFFFFF; stroke-color: #09090B; stroke-width: 2;
   background: #00000000; padding: 0; radius: 0;
   karaoke: trail; karaoke-transition: wipe; active-fill: #FFD54A;
@@ -44,6 +47,7 @@ caption.primary {
   active-underline: current; active-underline-color: #FFFFFF;
   cue-enter: spring; cue-enter-frames: 6;
   active-response: pop; active-response-frames: 5; active-scale: 1.08;
+  lead-frames: 4; tail-frames: 4; handoff: cut;
 }
 ```
 
@@ -63,8 +67,11 @@ Cue 边界由 Script 的 Segment、Role、样式变化和作者写出的 `||` �
 Fine 不是一组互斥预设。基础/激活渐变、描边、阴影、长阴影、外发光、下划线、Pill
 和动画均为正交维度。文字、下划线和 Pill 各自选择 `off | current | trail`；因此可以直接表达“文字保留已读色，但 Pill 只跟随当前词”。`active-box-continuity: joined` 会把已读前缀在每个真实换行片段内连成一个背景，而不是给每个词分别套胶囊。
 
-Fine 只在完整 Alignment Unit 之间自然换行，永不裁掉作者文字。需要控制行数时，应调整
-Track 宽度与字号；Cue 分界由 Script 的结构和 `||` 决定。
+包在 Surface 声明中把参数分成 **Where / How / When**，Studio 直接消费这份作者协议，无需再维护字幕专用参数全集。`lead-frames`、`tail-frames` 先产生显式可见 Schedule；`handoff: cut` 负责相邻 Cue 的交接，`overlap` 则保留双方包络。二者都不会修改 Karaoke 使用的原始词帧。
+
+`wrap: word` 优先在完整 Alignment Unit 之间换行；单个显示单元若比 Region 还宽，会继续在内部回退换行，不会逃出范围。只有显式同时写出 `max-lines` 与 `overflow: clip` 才允许裁掉超出的行；否则不会静默丢字。Cue 分界由 Script 的结构和 `||` 决定。
+
+Fine 是“统一文字流”字幕：同一 Cue 的每个 token 遵守同一 Recipe，只允许时间、顺序和播放状态驱动差异。若 Cue 内存在不同字体/布局角色、全屏反色、撕裂或前后语块之间的合成关系，就应新建另一个 Caption 包，而不是给 Fine 塞隐藏例外。
 
 CJK 口播可以直接书写。若一个只负责显示的 emoji 仍需跟随语音计时，应显式写出对应，例如 `<🌐 | globe>`；系统不会替裸符号虚构一个口播词。
 

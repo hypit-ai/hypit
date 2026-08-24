@@ -26,10 +26,18 @@ export const fineCaptionTrackFragment = sealGraphFragment({
       result: { kind: "output", name: "caption" },
     },
     {
+      id: "caption-fine:schedule",
+      producer: captionFineProducers.schedule,
+      inputs: {
+        caption: operation("caption:temporalize-document"), program: input("program"), document: input("document"),
+      },
+      result: { kind: "output", name: "schedule" },
+    },
+    {
       id: "caption-fine:render",
       producer: captionFineProducers.render,
       inputs: {
-        caption: operation("caption:temporalize-document"), program: input("program"),
+        schedule: operation("caption-fine:schedule"), program: input("program"),
         document: input("document"), semantic: input("semantic"),
       },
       result: { kind: "output", name: "track" },
