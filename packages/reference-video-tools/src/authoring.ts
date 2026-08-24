@@ -131,7 +131,7 @@ export function invokedFrom(): string {
 }
 
 /** The Script body, which `parseScript` takes on its own. */
-function scriptBody(svml: string): { readonly text: string; readonly offset: number } {
+export function scriptBody(svml: string): { readonly text: string; readonly offset: number } {
   const open = /<script\b[^>]*>/u.exec(svml);
   if (open === null) throw new Error("the Source declares no <script>");
   const start = open.index + open[0].length;

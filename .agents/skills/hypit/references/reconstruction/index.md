@@ -154,7 +154,7 @@ Before acting on the evidence, read these files completely in order:
    - `../playbooks/craft/graphic-compositions.md` — what may be a base picture, when a full screen is
      one authored composition, and where a missing picture comes from.
    - `../playbooks/craft/generated-dependencies.md` — what one generation owes another: the location,
-     the split shot, the voice, the first frame, and the stretch too short to be a take.
+     the split picture, the voice, the first frame, and the stretch too short to be a take.
    - `../playbooks/craft/frame-coverage.md` — what is on screen at every instant, and the edges
      nobody chose.
    - `../playbooks/craft/visual-continuity.md` — recurring anchors as explicit artifacts, one

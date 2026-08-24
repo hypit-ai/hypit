@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface } from "@hypit/markup";
 import { loadNodePackageSelection } from "@hypit/package-loader-node";
+import { parseScript } from "@hypit/script";
 import { openStudioArchive } from "@hypit/studio/src/archive.js";
 import { loadStudioDomain } from "@hypit/studio/src/domain.js";
 import { loadStudioRun } from "@hypit/studio/src/run.js";
@@ -11,7 +12,7 @@ import { readStudioSession } from "@hypit/studio/src/session.js";
 import type { StudioSession } from "@hypit/studio/src/session.js";
 import { inspectStudioRun } from "@hypit/studio/src/studio-preflight.js";
 
-import { invokedFrom } from "./authoring.js";
+import { invokedFrom, scriptBody } from "./authoring.js";
 import { assert } from "./media.js";
 
 export type PreviewCheckInput = {
@@ -150,10 +151,25 @@ type PlaybackReport = {
   readonly playback: string;
 };
 
+/** One run of consecutive Script words that nothing filling the frame is drawn over. */
+type CoverageGap = {
+  readonly segment: string;
+  /** The words themselves, so a reader can find the stretch in the Script. */
+  readonly words: string;
+  readonly word_count: number;
+};
+
+/** How many words the Script has, and which runs of them carry no full-frame picture. */
+type CoverageReport = {
+  readonly words: number;
+  readonly gaps: readonly CoverageGap[];
+};
+
 /**
  * Report what the route can still settle after the Source is written and before a Build runs: which
- * reconstructed elements have never been compared against the reference, and which timed pictures are
- * configured to stop before their window ends.
+ * reconstructed elements have never been compared against the reference, which words of the Script
+ * nothing draws a full-frame picture over, and which timed pictures are configured to stop before
+ * their window ends.
  *
  * `preview_check` proves the graph is wired. It proves nothing about whether what the graph draws
  * resembles the reference video, and a Source can pass every structural check while a component
@@ -183,6 +199,12 @@ type PlaybackReport = {
  * comparison is a comparison. What it says is which elements have had their behaviour over their
  * window looked at and which have only had their layout looked at.
  *
+ * Frame coverage is decided from the Source alone and is required: a word is either drawn over by
+ * something bound to the whole picture or it is not. What covers is read from an element's own
+ * opening tag — a full-bleed `frame=`, the `canvas=`, or a speech Track's full-frame `visual-frame=`
+ * over the Segments whose Takes carry a picture — so a Track never inherits its children's `during=`
+ * bindings.
+ *
  * A project that places no drawing element passes with nothing to require.
  */
 export async function reconstructionCheck(
@@ -211,6 +233,7 @@ export async function reconstructionCheck(
       summary: ["the Source imports no package; nothing to compare."],
       elements: [],
       playback: [],
+      uncovered: [],
     };
   }
 
@@ -241,6 +264,16 @@ export async function reconstructionCheck(
     }
   }
 
+  // Which Normalize ids carry a picture. A take normalized with `video="none"` is a voice: it has no
+  // window to fill, and nothing it feeds puts anything on the Canvas.
+  const moving = new Set<string>();
+  for (const match of svml.matchAll(/<pipeline:Normalize\b([^>]*?)\/?>/gsu)) {
+    const attributes = match[1] ?? "";
+    const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
+    const video = /\bvideo="([^"]+)"/u.exec(attributes)?.[1];
+    if (id !== undefined && video !== undefined && video !== "none") moving.add(id);
+  }
+
   // ---- Timed pictures that stop before their window ends ----
   //
   // A generated take is asked for a whole number of seconds, and the window it has to fill comes from
@@ -269,16 +302,6 @@ export async function reconstructionCheck(
       const recipes = new Map<string, string>();
       for (const recipe of text.matchAll(/([A-Za-z0-9_.-]+)\s*\{([^}]*)\}/gu)) recipes.set(recipe[1] ?? "", recipe[2] ?? "");
       sheets.set(alias, recipes);
-    }
-
-    // Which Normalize ids carry a picture. A take normalized with `video="none"` is a voice and has no
-    // window to fill.
-    const moving = new Set<string>();
-    for (const match of svml.matchAll(/<pipeline:Normalize\b([^>]*?)\/?>/gsu)) {
-      const attributes = match[1] ?? "";
-      const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
-      const video = /\bvideo="([^"]+)"/u.exec(attributes)?.[1];
-      if (id !== undefined && video !== undefined && video !== "none") moving.add(id);
     }
 
     // Which aliases belong to a package that draws. Plenty of elements consume a normalized media
@@ -313,6 +336,100 @@ export async function reconstructionCheck(
     return running;
   };
 
+  // ---- Words nothing draws a full-frame picture over ----
+  //
+  // A delivery is a picture at every frame; a Source is a list of placements. A word no full-frame
+  // element is drawn over is an instant the Source hands to whatever lies beneath it, and beneath the
+  // last placement is the Film background, which is black. That is `frame-coverage.md`'s rule in the
+  // one form the Source settles on its own, and it needs no threshold: it is a yes or no per word.
+  //
+  // What covers is read from each element's own opening tag and never from what is written inside it.
+  // A Track holding forty Lines with `during=` bindings draws nothing itself; crediting it with its
+  // children's bindings would report full coverage for a Source that places text over nothing.
+  const coverageReport = (): CoverageReport => {
+    const body = scriptBody(svml);
+    const parsed = parseScript(svmlPath, body.text, body.offset);
+
+    // The Frames that fill the Canvas, and the Canvas itself. A Frame with any other extent is an
+    // insert: it draws over its own part of the picture and leaves the rest as it was.
+    const fullFrames = new Set<string>();
+    for (const match of svml.matchAll(/<space:Frame\b([^>]*?)\/?>/gsu)) {
+      const attributes = match[1] ?? "";
+      const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
+      const edge = (name: string): string | undefined => new RegExp(`\\b${name}="([^"]+)"`, "u").exec(attributes)?.[1];
+      if (id !== undefined && edge("left") === "0%" && edge("top") === "0%" && edge("right") === "100%" && edge("bottom") === "100%") {
+        fullFrames.add(id);
+      }
+    }
+    const canvases = new Set([...svml.matchAll(/<space:Canvas\b[^>]*?\bid="([^"]+)"/gu)].map((match) => match[1] ?? ""));
+
+    const covered = new Array<boolean>(parsed.tokens.length).fill(false);
+    const coverSegment = (id: string): void => {
+      const segment = parsed.segments.find((item) => item.id === id);
+      if (segment === undefined) return;
+      for (let index = segment.tokenStart; index < segment.tokenEndExclusive; index += 1) covered[index] = true;
+    };
+    const coverSelection = (id: string): void => {
+      const selection = parsed.selections.find((item) => item.id === id);
+      if (selection === undefined) return;
+      for (const occurrence of selection.occurrences) {
+        for (let index = occurrence.open.boundary.tokenIndex; index < occurrence.close.boundary.tokenIndex; index += 1) covered[index] = true;
+      }
+    };
+
+    // Every element bound to the whole picture, and the words its own `during=` claims. `program` is
+    // the whole Script; a Segment or a Selection is the words it marks.
+    for (const match of svml.matchAll(/<[a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9]*\b([^>]*?)\/?>/gsu)) {
+      const attributes = match[1] ?? "";
+      const frame = /\bframe=\{([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
+      const canvas = /\bcanvas=\{([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
+      if (!(frame !== undefined && fullFrames.has(frame)) && !(canvas !== undefined && canvases.has(canvas))) continue;
+      if (/\bduring="program"/u.test(attributes)) covered.fill(true);
+      const bound = /\bduring=\{story\.(segment|selection)\.([A-Za-z0-9_-]+)\}/u.exec(attributes);
+      if (bound?.[1] === "segment") coverSegment(bound[2] ?? "");
+      if (bound?.[1] === "selection") coverSelection(bound[2] ?? "");
+    }
+
+    // A speech Track draws each Take it assembles into its own `visual-frame`, so a full-frame one
+    // covers the Segments whose Takes carry a picture. A Take fed by a Normalize with `video="none"`
+    // is a voice and puts nothing there, so its Segment is spoken over whatever is already on screen.
+    const takes = new Map<string, { readonly segment: string; readonly picture: boolean }>();
+    for (const match of svml.matchAll(/<whisperx:SemanticTake\b([^>]*?)\/?>/gsu)) {
+      const attributes = match[1] ?? "";
+      const id = /\bid="([^"]+)"/u.exec(attributes)?.[1];
+      const segment = /\bsegment=\{story\.segment\.([A-Za-z0-9_-]+)\}/u.exec(attributes)?.[1];
+      const media = /\bmedia=\{([A-Za-z0-9_-]+)\.media\}/u.exec(attributes)?.[1];
+      if (id === undefined || segment === undefined) continue;
+      takes.set(id, { segment, picture: media !== undefined && moving.has(media) });
+    }
+    for (const track of svml.matchAll(/<speech:Track\b([^>]*?)>(.*?)<\/speech:Track>/gsu)) {
+      const frame = /\bvisual-frame=\{([A-Za-z0-9_-]+)\}/u.exec(track[1] ?? "")?.[1];
+      if (frame === undefined || !fullFrames.has(frame)) continue;
+      for (const take of (track[2] ?? "").matchAll(/<speech:Take\b[^>]*?\bsource=\{([A-Za-z0-9_-]+)\.take\}/gu)) {
+        const named = takes.get(take[1] ?? "");
+        if (named?.picture === true) coverSegment(named.segment);
+      }
+    }
+
+    // The uncovered words as runs, cut at Segment boundaries so each run is named by the Segment a
+    // reader would look in to find it.
+    const gaps: CoverageGap[] = [];
+    for (const segment of parsed.segments) {
+      let run: number[] = [];
+      const close = (): void => {
+        if (run.length === 0) return;
+        gaps.push({ segment: segment.id, words: run.map((index) => parsed.tokens[index]!.text).join(" "), word_count: run.length });
+        run = [];
+      };
+      for (let index = segment.tokenStart; index < segment.tokenEndExclusive; index += 1) {
+        if (covered[index] === true) close();
+        else run.push(index);
+      }
+      close();
+    }
+    return { words: parsed.tokens.length, gaps };
+  };
+
   const running = await playbackReport();
 
   if (drawn.length === 0 && running.length === 0) {
@@ -322,8 +439,12 @@ export async function reconstructionCheck(
       summary: ["no drawing element is placed in the Source; nothing to require."],
       elements: [],
       playback: [],
+      uncovered: [],
     };
   }
+
+  const coverage = coverageReport();
+  const uncoveredWords = coverage.gaps.reduce((sum, gap) => sum + gap.word_count, 0);
 
   // The Source does not name the reference it reconstructs, so a single prepared reference is used
   // when there is exactly one and named explicitly when there is more than one.
@@ -424,6 +545,9 @@ export async function reconstructionCheck(
   if (running.length > 0) {
     summary.push(`${running.length} window${running.length === 1 ? "" : "s"} will empty before ${running.length === 1 ? "it ends" : "they end"}.`);
   }
+  summary.push(uncoveredWords === 0
+    ? `every word of the Script is drawn over by something that fills the frame (${coverage.words}).`
+    : `${uncoveredWords} of ${coverage.words} words are drawn over by nothing that fills the frame.`);
   const compared = elements.filter((element) => element.comparisons > 0).length;
   if (compared > 0) {
     summary.push(untimed.length === 0
@@ -434,7 +558,7 @@ export async function reconstructionCheck(
   return {
     run: runPath,
     reference_id: reference,
-    passed: never.length === 0 && running.length === 0,
+    passed: never.length === 0 && running.length === 0 && coverage.gaps.length === 0,
     summary,
     elements,
     ...(never.length === 0 ? {} : {
@@ -480,6 +604,15 @@ export async function reconstructionCheck(
           `hypit-reference-video-tools render_element ${runPath} --element ${element.id} `
           + `--reference-id ${reference} --segment <the Segment the shot covers> --out <rendered clip>.mp4`),
       },
+    }),
+    uncovered: coverage.gaps,
+    ...(coverage.gaps.length === 0 ? {} : {
+      uncovered_next: "Each stretch listed here shows whatever the placements around it left on screen, and "
+        + "beneath the last of them is the Film background, which is black. Read "
+        + "playbooks/craft/frame-coverage.md, then claim each stretch with whatever the reference shows "
+        + "there: an element bound to the full Frame or to the Canvas, drawn over those words. Placing "
+        + "something beneath the stretch instead changes which wrong picture appears and leaves the stretch "
+        + "unclaimed.",
     }),
     playback: running,
     ...(running.length === 0 ? {} : {
