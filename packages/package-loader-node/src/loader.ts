@@ -150,6 +150,23 @@ function within(root: string, candidate: string): boolean {
   return relation === "" || (relation !== ".." && !relation.startsWith(`..${sep}`) && !isAbsolute(relation));
 }
 
+/**
+ * The entry a package's identity can be read from: its main export where it has one, and otherwise
+ * its manifest. Resolving only the bare specifier reports a correctly installed bin-only package as
+ * missing, and the repair it then suggests cannot fix it.
+ */
+function resolveEither(resolver: NodeRequire, name: string): string {
+  try {
+    return resolver.resolve(name);
+  } catch (error) {
+    try {
+      return resolver.resolve(`${name}/package.json`);
+    } catch {
+      throw error;
+    }
+  }
+}
+
 async function assertExternalDependencies(
   item: ResolvedPackage,
   distributionRoots: readonly string[],
@@ -159,7 +176,14 @@ async function assertExternalDependencies(
   for (const [name, required] of Object.entries(item.json.dependencies)) {
     if (name.startsWith("@hypit/") || required.startsWith("workspace:")) continue;
     try {
-      const resolved = await packageRoot(resolver.resolve(name), name);
+      // A dependency that ships only a `bin` declares no `main` and no `exports`, so its bare
+      // specifier never resolves however correctly it is installed. Its manifest still does, and
+      // that is what identifies and versions the package — which is also how a consumer of such a
+      // package reaches it, by resolving the manifest and walking to the executable beside it.
+      const resolved = await packageRoot(
+        resolveEither(resolver, name),
+        name,
+      );
       if (/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/u.test(required)
         && resolved.json.version !== required) {
         throw new Error(`installed version is ${resolved.json.version ?? "unknown"}`);
