@@ -71,7 +71,11 @@ discoverable:
 - **Where you are, and what is installed.** `../environment.md`.
 - **Where the project goes.** Its own directory outside the installed Distribution, normally
   `<home>/<something>-reverse/`, named after the video. `../runtime.md` defines the hard boundary.
-  Use a directory the author named only if they named one.
+  Use a directory the author named only if they named one. Give it a `package.json` when you create
+  it — a name and `"private": true`, nothing else, since no field in it is read. `hypit check`,
+  `plan` and `build` find the package root by walking up from the project until a `package.json`
+  appears, so the file is what stops that walk at the project and lets `packages/local-<slug>/`
+  resolve. It is matched by no `pnpm-workspace.yaml` glob, so it enrolls the directory in nothing.
 - **Credentials.** A project may keep them in an uncommitted `.env`; load it as shown below. A variable a Provider
   needs and this machine does not hold is named, and the route stops there — with one exception, the
   Vertex pair, which selects an observer rather than blocking one. `observers.md` owns that.

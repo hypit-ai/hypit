@@ -58,6 +58,11 @@ hypit-reference-video-tools render_element projects/<name>/build.svrun \
   --element <id> --segment <id>|--selection <id> --out <path>.mp4
 ```
 
+`--element` takes the element's bare id — `captions`, the `id=` the Source wrote on the element. The
+command appends the output suffix itself when it looks for the track, so `--element captions.track`
+matches nothing: it refuses with `the Source places no element named captions.track` and lists the
+bare ids that are placed.
+
 It reads the Canvas, the Recipe values and the Script text out of the Source, stands in for the
 speech with the Source's own `estimate:Speech`, mocks every layer a Build has not made, and drives
 the package's Producer. Nothing is transcribed by hand, so nothing is transcribed one line at a time
@@ -95,6 +100,22 @@ costs one clause and saves the mock being reported as a difference every round.
 A mock lives only in this render. It is never written into the Source, and no gate reads it: the
 `playback` check in `reconstruction_check` reads the Source's Recipes, so a mock cannot be mistaken
 for coverage.
+
+### The derived Run holds one Segment, not the whole Source
+
+The mocks are substituted into a Source that has already been cut to the window. `render_element`
+keeps the Segment the window names, drops the rest of the Script, and then drops every element that
+named a Segment, Selection or Moment that went with it — and every element naming one of those, to a
+fixed point, plus any container the cut left with no children. So an element bound to a Selection or
+Moment in another Segment is not in this render, and its absence says nothing about the Source.
+
+The cut Source is on disk at `<project>/.hypit/compare/sliced.svml`, byte-for-byte from the original
+except for what was removed, and the derived Run sits beside it. Open it whenever something you
+expected to see is not in the picture: an element that is not in the fragment was cut by the window,
+and one that is in the fragment and still not on screen is the package failing to draw it. Those two
+repair in opposite directions, and the fragment is what tells them apart.
+`packages/reference-video-tools/src/slice.ts` records the same thing as `SliceResult.dropped` — each
+dropped id and the name it could no longer reach — and explains what decides survival.
 
 ### Compare the whole stretch, against every stretch the element is drawn over
 

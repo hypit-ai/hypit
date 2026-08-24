@@ -191,6 +191,31 @@ default to `none`, and a Recipe named for a cut that fades for a frame is one of
 
 `production-gates.md` measures the delivery for these before it is reported as finished.
 
+## A Selection carries two edges; a Moment carries one
+
+Both name time in the Script's own words, and which to reach for follows how many edges the words
+fix.
+
+- **Both edges are spoken.** `@id` … `@/id` opens and closes a Selection around the stretch, and
+  `during={story.selection.X}` spans its first word to its last. That is what the tiling above is
+  about: an insert that arrives on a phrase and leaves on another, one Selection picking up where the
+  last left off.
+- **One edge is spoken and the other is decided elsewhere.** `@id!` marks a Moment — a point, not a
+  range, right-absorbing at the next word's start, `~@id!` left-absorbing at the previous word's end.
+  Give the element the span it actually occupies and let the Moment cut it: `during="program"
+  until={story.moment.X}` runs from the start of the program to that word, and `at={story.moment.X}`
+  places a single arrival there. A Deck that stacks cards as they are named and clears on a word
+  reads this way.
+
+A Selection is free to open in one Segment and close in another. Each end records its own Segment,
+and nothing closes it at the boundary — the only refusal is `SCRIPT_SELECTION_UNCLOSED`, raised after
+the whole Script is read for a Selection with no close marker anywhere. Selections may also cross one
+another; they do not nest like tags. What a Selection crossing a Segment does cost is upstream: the
+Segment is the generation boundary the section above describes, so a window spanning two of them
+spans two Takes and two seams.
+
+Selection and Moment share one name namespace, so the same id cannot be both.
+
 ## A short stretch is not a short take
 
 An authored take stays inside the selected model's declared duration range — read the range from the

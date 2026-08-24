@@ -30,27 +30,31 @@ not. Everything after them is specific to this component and cannot be copied fr
 
 **Read this whole file first.** The rules that decide what the package is — read the observation
 before shaping it, a media slot is an input port, the package draws its own chrome, the Types are
-frozen before parallel writing — are in this file, and they apply before any other reading. Do not
-jump to the closest package and start copying roles before these rules are in front of you; the
-rules here are the contract, the closest package is only a shape to learn from.
+frozen before parallel writing — are in this file, and they apply before any other reading.
 
 Then read:
 
-1. `../../../../docs/guide/component-anatomy.md` — the roles every component package fills, and how to find each
-   one in an existing package. Read this first; it is what the rest is measured against.
+1. `../../../../docs/guide/component-anatomy.md` — the roles every component package fills. Read this
+   first; it is what the rest is measured against.
 2. `../../../../docs/guide/author-packages.md`
 3. `../../../../docs/guide/packages.md` and `../../../../docs/guide/conventions.md`
 4. the installed `@hypit/component-kit` README
 
-Use `hypit paths --json` to locate the installed Distribution. Then open the closest existing
-package there and read **the roles you are about to write**, not the package
-end to end. Anatomy names them; find them by what they export, since the filenames differ — `ranking`
-calls two of them `schedule.ts` and `render.ts`, `media-track` calls them `program.ts` and `lower.ts`,
-`comment-sticker` calls them `program.ts` and `author.ts`.
+**Write the package from those docs.** They state each role, what it declares and what it hands the
+next one, and that is what a new package is built out of. Author every file yourself against them:
+the Manifest, the Types, the Surface and decoder, the Producers, the Fragment.
 
-Read for shape: how a Program becomes elements, where timing is resolved, what the Fragment declares.
-Those files run to a couple of thousand lines between them, and copying one package's specifics is a
-worse outcome than understanding its structure — which is what anatomy is for.
+Open a package's source when the docs genuinely do not settle a question — a role whose shape the
+guide leaves implicit, an export whose signature you need exactly. Use `hypit paths --json` to locate
+the installed Distribution and read **the one role you are stuck on**, not the package end to end.
+Find it by what it exports, since the filenames differ: `ranking` calls two of them `schedule.ts` and
+`render.ts`, `media-track` calls them `program.ts` and `lower.ts`, `comment-sticker` calls them
+`program.ts` and `author.ts`.
+
+Check every signature you take that way against the current package's exports before you rely on it.
+A call read out of any source that is not the installed Distribution — an older project in the same
+checkout, a snippet in an issue, something you remember — is a name that may no longer exist, and
+what it costs is a compile error at the end of a package rather than at the line that borrowed it.
 
 ## Package boundary
 
@@ -59,24 +63,17 @@ Place the package at `<project>/packages/local-<slug>/`, named in the project's 
 version `0.0.0-dev` and logical Module version `1`. Only create a new package: do not
 edit, extend, delete or overwrite an existing Hypit package to fill the gap.
 
-**Starting that new package from a copy of the closest installed one is allowed, and is usually the
-right way to do it.** The ban is on modifying a package other projects share, not on learning from
-its source: a Style family that differs from `caption-fine` in its timing model, or a board that
-differs from `ranking` in its rows, is most of that package again. Copy it, then make it genuinely
-its own — a new Module ref, a new name for every nominal Type it declares, since a Type belongs to
-the Module that declares it, and new Producer names. Leave the original untouched. The official
-packages are built for exactly this: `caption-fine` states that Common Caption, Composition and Core
-know none of its Recipe fields or layout policy, and `deck-track` that another Deck family can
-install independently and lower to the same terminal `VisualTrack` without changing it. A sibling
-family is the designed extension point, not a workaround.
+The package it stands beside is untouched. A Style family that differs from `caption-fine` in its
+timing model, or a board that differs from `ranking` in its rows, installs as a sibling: its own
+Module ref, its own name for every nominal Type it declares, since a Type belongs to the Module that
+declares it, and its own Producer names. The official packages are built for exactly this —
+`caption-fine` states that Common Caption, Composition and Core know none of its Recipe fields or
+layout policy, and `deck-track` that another Deck family can install independently and lower to the
+same terminal `VisualTrack` without changing it. A sibling family is the designed extension point,
+not a workaround.
 
-Read "modelled on the installed packages" that way wherever it appears. Writing two thousand lines
-from scratch to avoid a copy is not more correct, and the ban does not ask for it.
-
-What a copy does cost is upstream: it will not receive the fixes the original gets, and nobody will
-notice it drifted. That is acceptable for a project-local package, which is part of one deliverable
-rather than a library. If the behaviour turns out to be generally useful, that is the promotion this
-section already describes — not a reason to add a parameter to the shared package after all.
+Read "modelled on the installed packages" that way wherever it appears: the same role in the same
+place in the graph, written for this component from the anatomy the guide states.
 
 The project is never the Hypit Distribution. Do not move a local package into an official package
 automatically. After the result is accepted, offer promotion as a separate contribution.
@@ -86,6 +83,15 @@ for example `@my-project/local-<slug>-studio`, to the project's `hypit.studio.js
 only Studio interpretation and operations through `hypit.studio-adapter@1`; it never edits
 `packages/studio`, and the author package never imports Studio. A generic block is valid while no
 special interpretation is needed.
+
+Know what that fallback gives it, because it is enough for a lot of packages. The `visual-track` rule
+in `packages/studio-video-adapters/src/generic.ts` declares no module filter, and a rule that
+declares none matches whatever the module is, so a project-local Track producing a `VisualTrack`
+lands there and gets `role: "track"`. Studio draws it in a flat media lane and exposes five timing
+parameters — `start`, `end` and `for` writable, `during` and `at` read-only — over a read-only
+interaction: the block can be selected and seeked, not dragged or trimmed. A companion package is
+what buys anything past that: parameters named for what the component actually has, child entities,
+and a lane laid out the way it is shaped.
 
 ## Complete implementation
 
@@ -103,7 +109,7 @@ Implement the parts required by the behavior, including:
 - README and a preview for each visual Surface.
 
 Choose raw versus structured Surface, timing dependencies, ProgramSpace, Frame, SemanticTrack,
-Artifact, Recipe and output Types from the observed behavior and closest package architecture. A
+Artifact, Recipe and output Types from the observed behavior and the anatomy the guide states. A
 declaration-only or Surface-only package is incomplete.
 
 ## The package draws itself
@@ -210,12 +216,14 @@ the preview check and repair until it passes — a graph failure is not a differ
 work that is not finished, and it is not bounded by the loop's attempt ceiling:
 
 ```bash
-hypit-preview-check path/to/build.svrun
+hypit-reference-video-tools preview_check path/to/build.svrun
 ```
 
-It takes the Run Source, not the `.svml`. A pass here means the graph reaches a Film and a semantic
-spine; it exits zero while the Providers are still unrun, and says which capabilities it is waiting
-on. See `preview.md` for what that does and does not prove — notably, a
+It takes the Run Source, not the `.svml`. `preview.md` says why this spelling rather than the
+`hypit-preview-check` bin: the subcommand honours `--package-root`, which is what a project-local
+package needs when the Run is not at the project root. A pass here means the graph reaches a Film and
+a semantic spine; it passes while the Providers are still unrun, and says which capabilities it is
+waiting on. See `preview.md` for what that does and does not prove — notably, a
 Producer that refuses the media kind it is handed is not caught here, because nothing is handed to
 it until the Build runs.
 

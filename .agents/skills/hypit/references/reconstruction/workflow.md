@@ -23,6 +23,15 @@ video. This route runs both, at the step the sequence names;
 `node_modules/@hypit` relative to the working directory and refuses when it is empty, so run it from
 the repository root.
 
+**Run every `hypit-reference-video-tools` command that touches a reference from the same directory.**
+`prepare_reference` writes the reference under `.hypit/reference-video-tools/<reference-id>` relative
+to the working directory, and `observe_reference`, `record_observation`, `compare_reconstruction`,
+`render_element` and `reconstruction_check` all read it back from that same relative path. Run one
+from the project and the next from its parent and the second looks in a directory the first never
+wrote to: it reports no prepared reference at all. Pick one directory at the start and stay in it for
+the whole route — the repository root, where `list_svml_packages` already has to run, is the one that
+costs nothing. The two vocabulary subcommands carry no reference state and are outside this.
+
 Defaults are sufficient for normal use. Each also accepts `--input <json>`. Follow this sequence:
 
 ```text
