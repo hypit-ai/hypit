@@ -22,9 +22,10 @@ them stale, they are unreachable by anything that reasons about captions, and th
 them checkable is gone.
 
 When the caption vocabulary cannot express the appearance, that is a vocabulary gap and it is
-declared as one. Write a new project-local caption package modelled on the installed caption
-packages — read them as the pattern for Style, Program, planning and alignment — and drive it from
-the same Script and map. Reaching for a typography Track because it already draws the shape is the
+declared as one. Write a new project-local caption package that fills the same roles the installed
+caption packages fill — Style, Program, planning and alignment — and drive it from the same Script
+and map. `../../local-author-package.md` says where those roles are stated and when a package's own
+source is worth opening. Reaching for a typography Track because it already draws the shape is the
 mistake this section exists to prevent.
 
 Text that is *not* a caption keeps its own vocabulary: a title nobody says, a lower third, a label on
@@ -64,6 +65,21 @@ exact font → caption-fine:Style → caption:Program
 
 Add `{captions.track}` to `film:Film` as one peer Visual Track. If the format intentionally has no
 captions, omit the Caption components entirely.
+
+## A Fine Caption Recipe writes eleven keys or it throws
+
+`caption-fine:Style` requires `align`, `background`, `fill`, `line-height`, `padding`, `radius`,
+`size`, `stack-order`, `width`, `x` and `y`. None of them has a fallback: a Recipe missing one is
+refused when the Style decodes, before anything draws.
+
+The three that get left out are the box keys — `background`, `padding` and `radius` — because a
+design that wants no Cue box reads as having nothing to say about them. Write them anyway: an
+invisible box is `background="#00000000"` with `padding` and `radius` at `0`, which is a value, not
+an omission.
+
+`cue-min-words` and `cue-max-words` are not read. `docs/quickstart/styles.md` and
+`docs/quickstart/composition.md` still show them; a Recipe carrying either is refused as an unknown
+property, since the Style admits exactly the required keys plus the documented optional ones.
 
 ## Keep the Script authoritative
 

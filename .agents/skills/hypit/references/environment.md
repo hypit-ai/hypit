@@ -116,6 +116,12 @@ WhisperX, for example, lives under `programs/whisperx/`; OpenCV under
 `programs/image-opencv/`. Service process records and logs live with the program. Project Build and
 Worker state remains under `<project>/.hypit/`.
 
+Reference-video state joins it there, at `.hypit/reference-video-tools/<reference-id>/`, resolved
+against the directory the command ran in rather than against a project boundary. Run every
+`hypit-reference-video-tools` command that touches a reference from the same directory: the clips,
+frames, transcript and observations one command writes are what the next one expects to find at that
+relative path.
+
 This split is why opening a second project cannot install WhisperX again, and why updating the npm
 Distribution does not overwrite a Python environment or a user's project-local component.
 
@@ -132,3 +138,10 @@ changes an exact adapter dependency, the next explicit `runtime up` lets npm upd
 Only someone changing Hypit itself clones the repository. In that checkout, follow
 `docs/guide/develop.md` and use its pinned pnpm version and official `pnpm-lock.yaml`. Never place an
 author project or its local packages inside that checkout.
+
+A project directory carries its own `package.json` — a name and `"private": true` is the whole file,
+since nothing reads its fields. `hypit check`, `plan` and `build` locate the package root by walking
+up from the project until some `package.json` appears; the file is what stops that walk at the
+project, so `packages/local-<slug>/` resolves from there rather than from whichever ancestor
+directory happened to hold one. It is matched by no `pnpm-workspace.yaml` glob and adds the project
+to no workspace.
