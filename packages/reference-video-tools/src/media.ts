@@ -51,6 +51,31 @@ export async function probe(path: string): Promise<{ duration: number; width: nu
   };
 }
 
+/**
+ * Whether a clip holds one picture for the whole of its length.
+ *
+ * `freezedetect` reports each stretch it saw no change across as a start, and as an end where the
+ * picture changes again. One stretch that opens on the first frame and never closes is the whole
+ * clip; a stretch that opens later, or one that closes before the clip does, means something moved.
+ * The times are measured to a frame, so an end landing on the last frame is the clip ending.
+ */
+export async function completelyStill(path: string): Promise<boolean> {
+  const { duration, frameRate } = await probe(path);
+  // The filter announces a stretch only once it has run for `d`, and announces it at the second it
+  // began rather than the second it was noticed, so `d` has only to be shorter than the clip.
+  // `metadata=print` writes what it found to stdout, which is where the result is read from.
+  const printed = await command("ffmpeg", [
+    "-hide_banner", "-loglevel", "error", "-i", path, "-an",
+    "-vf", "freezedetect=n=-60dB:d=0.1,metadata=mode=print:file=-", "-f", "null", "-",
+  ], 300_000);
+  const text = printed.toString("utf8");
+  const times = (name: string): readonly number[] =>
+    [...text.matchAll(new RegExp(String.raw`freezedetect\.freeze_${name}=([0-9.]+)`, "gu"))].map((match) => Number(match[1]));
+  const tolerance = frameRate > 0 ? 1 / frameRate : 0.05;
+  const starts = times("start");
+  return starts.length === 1 && starts[0]! <= tolerance && times("end").every((at) => at >= duration - tolerance);
+}
+
 function distance(left: Uint8Array, right: Uint8Array): number {
   let total = 0;
   for (let index = 0; index < left.length; index += 1) total += Math.abs(left[index]! - right[index]!);
