@@ -1,6 +1,6 @@
 # Durable Runtime and Build lifecycle
 
-Read `https://narratage.hypit.ai/quickstart/run` as the authority for Run Source, Target, Candidate, Runtime Profile,
+Read `../../../../docs/quickstart/run.md` as the authority for Run Source, Target, Candidate, Runtime Profile,
 Build, retrieval, and reuse syntax. Use this file as the operational checklist.
 
 ## Author the Runtime Profile

@@ -4,14 +4,14 @@ Published docs and installed package declarations are authoritative:
 
 | Need | Read |
 |---|---|
-| Script semantics | `https://narratage.hypit.ai/quickstart/script` |
-| SVS Recipes | `https://narratage.hypit.ai/quickstart/styles` |
-| Media and Seedance | `https://narratage.hypit.ai/quickstart/generation` |
+| Script semantics | `../../../../docs/quickstart/script.md` |
+| SVS Recipes | `../../../../docs/quickstart/styles.md` |
+| Media and Seedance | `../../../../docs/quickstart/generation.md` |
 | Reusable Seedance Prompt Kits | the installed `@hypit/seedance-kits` README and selected Kit |
-| Normalization, alignment and SemanticTrack assembly | `https://narratage.hypit.ai/quickstart/timing` |
-| Caption, Media, Text, Audio Tracks | `https://narratage.hypit.ai/quickstart/tracks` and installed package READMEs |
-| Film and rendering | `https://narratage.hypit.ai/quickstart/composition` |
-| Run Source, durable Runtime, Builds, retrieval, and reuse | `https://narratage.hypit.ai/quickstart/run` and `runtime.md` |
+| Normalization, alignment and SemanticTrack assembly | `../../../../docs/quickstart/timing.md` |
+| Caption, Media, Text, Audio Tracks | `../../../../docs/quickstart/tracks.md` and installed package READMEs |
+| Film and rendering | `../../../../docs/quickstart/composition.md` |
+| Run Source, durable Runtime, Builds, retrieval, and reuse | `../../../../docs/quickstart/run.md` and `runtime.md` |
 
 Canonical path:
 
