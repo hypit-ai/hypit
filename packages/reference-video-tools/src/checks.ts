@@ -766,6 +766,7 @@ export async function reconstructionCheck(
     readonly shot_id?: string;
     readonly range?: { readonly segment?: string; readonly selection?: string };
     readonly status: string;
+    readonly id?: string;
     readonly stand_in?: { readonly timing?: { readonly basis?: string } };
   };
   // What the comparison was made against, as a reader would name it: a shot, or the words a Segment
@@ -776,13 +777,18 @@ export async function reconstructionCheck(
     ?? (entry.range?.selection === undefined ? undefined : `selection ${entry.range.selection}`)
     ?? "an unnamed stretch";
   const logPath = join(preparedRoot, reference, "comparisons.jsonl");
-  const log = (await readFile(logPath, "utf8").catch(() => ""))
+  const logged = (await readFile(logPath, "utf8").catch(() => ""))
     .split("\n").filter((line) => line.trim().length > 0)
-    .flatMap((line) => { try { return [JSON.parse(line) as LoggedComparison]; } catch { return []; } })
-    // A comparison counts when it was performed. On the gemini observer the answer comes back in-band
-    // as `complete`; on the agent observer it is handed out as `pending` and answered by looking at the
-    // images, which is participation too. Only `failed` means nothing was compared.
-    .filter((entry) => entry.status === "complete" || entry.status === "pending");
+    .flatMap((line) => { try { return [JSON.parse(line) as LoggedComparison]; } catch { return []; } });
+  // A pair handed out and not yet reported on. Naming these separately is what keeps an element with
+  // three open comparisons from reading as one that was never looked at.
+  const awaiting = logged.filter((entry) => entry.status === "pending");
+  const log = logged
+    // A comparison counts when it was answered. The observer that uploads answers in band and the
+    // entry is written `complete`; the observer that reads pictures is handed the pair and closes its
+    // entry with `record_observation --key comparison:<id>`. An entry still `pending` is a pair nobody
+    // has reported on, and crediting it credited the tool call rather than the look.
+    .filter((entry) => entry.status === "complete");
 
   // Which stretches each element was compared against, in order. The gate cannot judge whether a
   // stretch was the right one to compare against — it does not know what the element draws — so it
@@ -864,6 +870,10 @@ export async function reconstructionCheck(
     summary.push(`${unresolved.length} imported package${unresolved.length === 1 ? "" : "s"} could not be resolved, `
       + "so nothing is known about what they draw.");
   }
+  if (awaiting.length > 0) {
+    summary.push(`${awaiting.length} comparison${awaiting.length === 1 ? " is" : "s are"} still waiting for `
+      + "the differences to be recorded.");
+  }
 
   return {
     run: runPath,
@@ -881,6 +891,18 @@ export async function reconstructionCheck(
           `hypit-reference-video-tools compare_reconstruction --reference-id ${reference} --run ${runPath} `
           + `--segment <each Segment ${element.id} is drawn over> `
           + `--video <rendered clip>.mp4 --element ${element.id}`),
+      },
+    }),
+    ...(awaiting.length === 0 ? {} : {
+      awaiting_answer: {
+        ids: awaiting.map((entry) => entry.id).filter((id) => id !== undefined),
+        elements: [...new Set(awaiting.map((entry) => entry.element).filter((id) => id !== undefined))],
+        note: `${awaiting.length} comparison${awaiting.length === 1 ? " was" : "s were"} performed and handed to an `
+          + "observer that answers out of band, and the differences have not come back. Until they do, the pair has "
+          + "been drawn and cut but nobody has said what it shows, so it credits nothing here.\n\n"
+          + "Close each one with its id:\n"
+          + "  hypit-reference-video-tools record_observation --reference-id "
+          + `${reference} --key comparison:<id> --text-file <the differences>`,
       },
     }),
     ...(unresolved.length === 0 ? {} : {

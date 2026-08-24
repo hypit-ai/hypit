@@ -175,6 +175,13 @@ export type ComparedRange = {
 /** One line per comparison performed, appended so a stopped loop still leaves its trail. */
 export type ComparisonRecord = {
   readonly at: string;
+  /**
+   * Names this comparison so an observer that answers out of band can close it. The `agent` observer
+   * is handed the pair and the question and returns nothing in band, so without a name the entry
+   * stayed `pending` for ever and a gate had to choose between crediting an unanswered comparison and
+   * crediting none of them.
+   */
+  readonly id: string;
   /** Which stretch was compared. A comparison names its shot or its word range, never both. */
   readonly shot_id?: string;
   readonly range?: ComparedRange;
@@ -191,6 +198,8 @@ export type ComparisonRecord = {
    * beside its output. Present when the picture came from `render_element`.
    */
   readonly stand_in?: StandInSidecar;
+  /** The differences, once an out-of-band observer has recorded them. */
+  readonly differences?: string;
 };
 
 async function fileDigest(path: string): Promise<string> {
@@ -211,7 +220,50 @@ async function standInBeside(renderedPath: string): Promise<StandInSidecar | und
 }
 
 async function appendComparison(root: string, record: ComparisonRecord): Promise<void> {
-  await appendFile(join(root, "comparisons.jsonl"), `${JSON.stringify(record)}\n`, "utf8");
+  await serially(root, async () => {
+    await appendFile(join(root, "comparisons.jsonl"), `${JSON.stringify(record)}\n`, "utf8");
+  });
+}
+
+/**
+ * Record the differences against the comparison that asked for them, and mark it answered.
+ *
+ * The log is append-only while a round runs, so closing an entry rewrites the file. That is a
+ * read-modify-write over the same bytes `appendComparison` appends to, so both go through the same
+ * queue — a round fired at once would otherwise drop whichever line landed between the read and the
+ * write. Returns false when no entry carries the id, which is what a mistyped one looks like.
+ */
+async function closeComparison(root: string, id: string, differences: string): Promise<boolean> {
+  return await serially(root, async () => {
+    const path = join(root, "comparisons.jsonl");
+    const lines = (await readFile(path, "utf8").catch(() => "")).split("\n").filter((line) => line.trim().length > 0);
+    let found = false;
+    const rewritten = lines.map((line) => {
+      let record: ComparisonRecord;
+      try { record = JSON.parse(line) as ComparisonRecord; } catch { return line; }
+      if (record.id !== id) return line;
+      found = true;
+      return JSON.stringify({ ...record, status: "complete", differences });
+    });
+    if (found) await writeFile(path, `${rewritten.join("\n")}\n`, "utf8");
+    return found;
+  });
+}
+
+/**
+ * One writer at a time per reference, within this process.
+ *
+ * `observations.json`, `state.json` and `comparisons.jsonl` are each read, changed and written back.
+ * The `agent` observer answers a round of observations with one call per answer, and those calls
+ * arrive together, so two of them reading the same cache before either writes is how an answer
+ * disappears with no error anywhere. Between processes this holds nothing; the route runs one.
+ */
+const writeQueues = new Map<string, Promise<unknown>>();
+async function serially<T>(root: string, work: () => Promise<T>): Promise<T> {
+  const previous = writeQueues.get(root) ?? Promise.resolve();
+  const next = previous.then(work, work);
+  writeQueues.set(root, next.catch(() => undefined));
+  return await next;
 }
 
 
@@ -338,7 +390,15 @@ function asPictures(media: readonly string[], state: ReferenceState): readonly s
     // and handing the file through would give the agent something it cannot open — a comparison clip
     // is tiled by its caller before it arrives here.
     else if (/\.(mp4|mov|webm|mkv)$/iu.test(path)) assert(false, `${path} is video; tile it before asking the agent observer to read it`);
-    else if (!path.toLowerCase().endsWith(".wav")) pictures.push(path);
+    // Sound has no picture to stand in for it, so it is left out rather than handed over as a file the
+    // agent cannot read. Everything else has to be a picture this observer can actually open: the
+    // observer that uploads refuses an unknown extension outright, and passing one through here handed
+    // the agent a path and called it evidence.
+    else if (!path.toLowerCase().endsWith(".wav")) {
+      assert(/\.(jpg|jpeg|png|webp)$/iu.test(path),
+        `${path} is not a picture the agent observer can read; supported: jpg, jpeg, png, webp`);
+      pictures.push(path);
+    }
   }
   return [...new Set(pictures)];
 }
@@ -406,10 +466,17 @@ async function runObservationTasks(
   const outstanding = tasks.filter((task) => forcedKeys.has(task.key) || cache[task.key]?.status !== "complete");
   const completed = await pacedMap(outstanding, concurrency, gapMs, async (task) => ({ key: task.key, value: await ask(task.key, task.request) }));
   const answers = new Map(completed.map((item) => [item.key, item.value]));
-  // A pending answer is a task handed out, not an answer received. Caching it would make the next run
-  // read the placeholder as complete and never ask again.
-  for (const item of completed) if (item.value.status !== "pending") cache[item.key] = item.value;
-  await writeJson(path, cache);
+  // Only an answer is cached. A pending one is a task handed out, and a failed one is the error that
+  // ended the attempt; either, written, is read back by whatever quotes an observation's text.
+  // Both still reach the caller through `answers`, so `unresolved` reports them.
+  await serially(root, async () => {
+    // Re-read inside the queue: `record_observation` may have written an answer to a different key
+    // between the read above and here, and the copy taken then no longer holds it.
+    const current = await readJson<Record<string, Observation>>(path) ?? {};
+    for (const item of completed) if (item.value.status === "complete") current[item.key] = item.value;
+    for (const [key, value] of Object.entries(current)) cache[key] = value;
+    await writeJson(path, current);
+  });
   return new Map(tasks.map((task) => [task.key, cache[task.key] ?? answers.get(task.key) ?? observation("failed", "not observed")]));
 }
 
@@ -636,14 +703,21 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
   const askerFor = async (
     observer: Observer,
     state: ReferenceState,
-  ): Promise<{ readonly ask: Asker; readonly pending: readonly ObservationTaskRequest[] }> => {
+  ): Promise<{ readonly ask: Asker; readonly pending: readonly ObservationTaskRequest[]; readonly paced?: boolean }> => {
     if (observer === "agent") {
       const pending: ObservationTaskRequest[] = [];
       return {
         pending,
+        // Pacing is for a quota. This asker does no I/O — it appends to an array — so holding each
+        // task to the launch gap spent minutes producing a list.
+        paced: false,
         ask: async (key, { media, prompt, instruction, sound }) => {
-          const preamble = sound === true ? `${TILE_PREAMBLE}\n\n${NO_SOUND}` : TILE_PREAMBLE;
-          pending.push({ key, instruction, prompt: `${preamble}\n\n${prompt}`, image_refs: asPictures(media, state) });
+          // An observation reads grids of one shot each, which is what the preamble describes. A
+          // comparison holds one grid of a render and one of a stretch that may cut several times, so
+          // it says how to read its own pair and the preamble would contradict it.
+          const parts = key.startsWith("comparison:")
+            ? [] : sound === true ? [TILE_PREAMBLE, NO_SOUND] : [TILE_PREAMBLE];
+          pending.push({ key, instruction, prompt: [...parts, prompt].join("\n\n"), image_refs: asPictures(media, state) });
           return observation("pending", "awaiting the agent observer");
         },
       };
@@ -782,9 +856,10 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           ? Promise.resolve(state.places)
           : ask("places", { media: whole, prompt: "Describe every distinct place this reference video was shot in, and every distinct camera position within each place. State how many places there are, which parts of the video happen in each, and for each place which camera positions appear and which parts of the video use each one. Two shots are the same camera position when the camera sees the same part of the room from the same side; a reverse angle is a different position of the same place.\n\nDescribe each camera position in enough detail that someone who has never seen this video could draw it from your words alone: what is behind and beside the subject, the shape and depth of the space, where the light comes from and how hard it is, the colours and materials of the surfaces, and the objects a viewer would use to recognise it again. Say what stays identical between positions of one place and what differs.\n\nReturn natural language only.", instruction: "You only observe a reference video. Return natural language evidence only. Do not write code, markup, SVML, or component names." }),
       ]);
-      // A pending whole-reference observation is a task the agent still owes, so it is reported rather
-      // than written: writing it would make the next run treat the placeholder as an answer.
-      const answered = <T extends Observation>(value: T): T | undefined => value.status === "pending" ? undefined : value;
+      // Only a complete observation is written. A pending one is a task the agent still owes, and a
+      // failed one is the error that ended the attempt — written, either would be read back as an
+      // answer by the next run and quoted into every shot prompt as full-reference evidence.
+      const answered = <T extends Observation>(value: T): T | undefined => value.status === "complete" ? value : undefined;
       const complete: ReferenceState = {
         ...state,
         observer,
@@ -811,13 +886,23 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const selected = input.shot_ids === undefined ? state.shots : state.shots.filter((shot) => input.shot_ids!.includes(shot.shot_id));
       assert(selected.length > 0, "no requested shot ids exist");
       const observer: Observer = state.observer ?? "gemini";
-      const { ask, pending } = await askerFor(observer, state);
+      const { ask, pending, paced } = await askerFor(observer, state);
+      // An observer that answers out of band produces a list rather than a request, so the launch gap
+      // and the concurrency cap have nothing to pace.
+      const rate = paced === false ? { concurrency: Number.MAX_SAFE_INTEGER, gapMs: 0 } : { concurrency, gapMs };
       const question = input.question?.trim() ?? "";
       if (question.length > 0) {
         assert(input.shot_ids !== undefined && input.shot_ids.length > 0, "question requires at least one shot id, so that it is answered from the shots it is about");
         assert(selected.length <= 3, "question accepts at most three shots");
-        const answer = await ask("question", {
+        // Keyed by the shots it is asked over, so the observer that answers out of band has a key it
+        // can record against. Asked under a bare `question` the task was handed out and the answer had
+        // nowhere to go, which left the documented way of repairing bad evidence unusable on that path.
+        const key = `question:${selected.map((shot) => shot.shot_id).join("+")}`;
+        const answer = await ask(key, {
           media: selected.flatMap((shot) => [shot.clip_ref, shot.representative_frame_ref]),
+          // A narrow question is as likely to be about who is speaking as about what is on screen, and
+          // this is the one prompt where the observer reading pictures was not told it cannot hear.
+          sound: true,
           prompt: question,
           instruction: "Answer only the narrow reference-video question in natural language. Do not write code, markup, SVML, or component names.",
         });
@@ -826,8 +911,9 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           observer,
           shot_ids: selected.map((shot) => shot.shot_id),
           question,
+          observation_key: key,
           answer,
-          unresolved: answer.status === "complete" ? [] : ["question"],
+          unresolved: answer.status === "complete" ? [] : [key],
           pending_observations: pending,
         };
       }
@@ -846,10 +932,18 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         const left = state.shots.find((candidate) => candidate.index === shot.index - 1);
         return left !== undefined && (selectedIds.has(left.shot_id) || selectedIds.has(shot.shot_id));
       });
+      // Only a complete observation is evidence. A failed one carries the error that ended it, and
+      // read by `.text` alone that string was quoted into every shot prompt underneath a heading
+      // announcing it as full-reference evidence.
+      const evidence = (value: Observation | undefined, heading: string): string =>
+        value?.status === "complete" && value.text.trim().length > 0 ? `${heading}:\n${value.text}` : "";
       const globalContext = [
-        state.people_and_product?.text === undefined ? "" : `Full-reference people and product evidence:\n${state.people_and_product.text}`,
-        state.voices?.text === undefined ? "" : `Full-reference voice evidence:\n${state.voices.text}`,
-        state.persistent_systems?.text === undefined ? "" : `Full-reference persistent on-screen system evidence:\n${state.persistent_systems.text}`,
+        evidence(state.people_and_product, "Full-reference people and product evidence"),
+        evidence(state.voices, "Full-reference voice evidence"),
+        evidence(state.persistent_systems, "Full-reference persistent on-screen system evidence"),
+        // The sweep already refuses to start until this is complete, so leaving it out of the context
+        // it was waited for made the wait buy nothing.
+        evidence(state.places, "Full-reference places and camera-position evidence"),
       ].filter((item) => item.length > 0).join("\n\n");
       const visualTasks: ObservationTask[] = selected.map((shot) => {
         const previous = state.shots.find((candidate) => candidate.index === shot.index - 1);
@@ -887,9 +981,19 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const allTasks = [...visualTasks, ...typeTasks, ...audioTasks, ...boundaryTasks];
       const reobserve = input.reobserve === true;
       const forcedKeys = reobserve ? new Set(allTasks.map((task) => task.key)) : new Set<string>();
-      const observations = await runObservationTasks(state.root, allTasks, forcedKeys, concurrency, gapMs, ask);
+      const observations = await runObservationTasks(state.root, allTasks, forcedKeys, rate.concurrency, rate.gapMs, ask);
       const unresolved = [...observations].filter(([, value]) => value.status !== "complete").map(([key]) => key);
-      const boundaryText = boundaryRights.map((right) => observations.get(`boundary:${right.shot_id}`)?.text ?? "").join("\n");
+      // Only an answered boundary decides this. An unanswered one carries a placeholder or an error,
+      // and reading those as prose put the review on whether the failure text happened to contain one
+      // of the words below.
+      const answeredBoundaries = boundaryRights
+        .map((right) => observations.get(`boundary:${right.shot_id}`))
+        .filter((value) => value?.status === "complete");
+      const boundaryText = answeredBoundaries.map((value) => value!.text).join("\n");
+      // A boundary nobody answered has not said the shots are separate. Deciding the three-shot review
+      // from the answered ones alone would let a sweep whose boundaries all failed report no review
+      // needed, which reads the same as a reference with no continuity to check.
+      const undecidedBoundaries = boundaryRights.length - answeredBoundaries.length;
       const needsThreeShotReview = selected.length >= 3 && (
         reobserve ||
         /uncertain|unknown|possibly|may be|contin(?:ue|ues)|same take|same shot/iu.test(boundaryText)
@@ -909,6 +1013,10 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
         key: `window:${items[0].shot_id}`,
         request: {
           media: items.map((shot) => shot.clip_ref),
+          // Continuity across a cut is heard as much as seen, which is why the two-shot boundary asks
+          // with sound. This asks the same question over three shots, so an observer reading pictures
+          // is told the same thing about what it is missing.
+          sound: true,
           prompt: `Compare shots ${items[0].index}, ${items[1].index}, and ${items[2].index}. Decide whether the three clips are one continuous camera shot and whether one visual overlay or insert persists through both boundaries. Explain the evidence in natural language only.`,
           instruction: "Analyze a three-shot continuity window only. Do not write markup, SVML, JSON plans, or component names.",
         },
@@ -916,7 +1024,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const windowObservations = await runObservationTasks(
         state.root, windowTasks,
         reobserve ? new Set(windowTasks.map((task) => task.key)) : new Set<string>(),
-        concurrency, gapMs, ask,
+        rate.concurrency, rate.gapMs, ask,
       );
       const threeShotObservations = windows.map((items) => ({
         shot_ids: items.map((shot) => shot.shot_id),
@@ -925,6 +1033,15 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       }));
       for (const window of threeShotObservations) {
         if (window.result.status !== "complete") unresolved.push(`three-shot:${window.shot_ids.join("+")}`);
+      }
+      // The review is decided from what the boundaries said, so boundaries nobody has answered leave it
+      // undecided rather than unnecessary. Producing no window task and reporting nothing is how a
+      // sweep that answered its boundaries out of band and stopped after one pass ends up with a
+      // continuity review that was never run and never missed.
+      if (selected.length >= 3 && undecidedBoundaries > 0 && !needsThreeShotReview) {
+        unresolved.push(`three-shot-review-undecided:${undecidedBoundaries} boundar`
+          + `${undecidedBoundaries === 1 ? "y is" : "ies are"} unanswered, so whether a three-shot continuity `
+          + "review is needed has not been decided; answer them and run observe_reference again");
       }
       const shotResults = selected.map((shot) => ({
         shot_id: shot.shot_id,
@@ -1015,6 +1132,7 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const file = await stat(renderedPath).catch(() => undefined);
       assert(file?.isFile(), `${clip ? "video_path" : "image_path"} is not a file: ${renderedPath}`);
       const scope = input.question?.trim() ?? "";
+      const startedAt = new Date().toISOString();
       // Everything this call derives is written under this name, so two comparisons of one stretch —
       // two elements drawn over the same Segment, or one element read twice — never write each other's
       // files. The render is what distinguishes them, so the render names the slot.
@@ -1081,29 +1199,55 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       // same degradation `prepare_reference` already applies to a shot. Tiling both against the same
       // duration makes `tileFrames` choose the same frame count and layout for each, so the two grids
       // are read side by side rather than as different samplings.
+      //
+      // Both grids are drawn at one cell width, and it is the width the reference itself has. Left at
+      // a fixed 480 the two sides were degraded in opposite directions — a 360-wide reference enlarged
+      // and a 1080-wide render shrunk — and the prompt asks about stroke weight and letter spacing,
+      // which is exactly what that changes.
+      const cellWidth = Math.min(480, state.video.width);
       if (asClip && observer === "agent") {
         if (shot !== undefined) {
           assert(shot.frames_tile_ref !== null,
             `shot ${shot.shot_id} has no frame tile; re-prepare the reference with --redo all --observer agent`);
+          // The reference's grid was drawn across the shot's own duration, so a render of a different
+          // length sampled against that duration is a grid of different moments: a longer render loses
+          // its tail entirely and a shorter one leaves black cells the observer reads as a difference.
+          // The word-range path is held to the same tolerance by `cutWordRange`.
+          const drawn = await probe(renderedPath);
+          const slack = drawn.frameRate > 0 ? 3 / drawn.frameRate : 0.1;
+          assert(Math.abs(drawn.duration - shot.duration_seconds) <= slack,
+            `shot ${shot.shot_id} runs ${round(shot.duration_seconds)}s and the render ${round(drawn.duration)}s, `
+            + `which is more than ${round(slack)}s apart; both grids are sampled across the shot's duration, `
+            + "so they would show different moments");
           referenceMedia = shot.frames_tile_ref;
           const tileTarget = join(root, "comparisons", `shot-${shot.shot_id}`, slot, "reconstruction.jpg");
           await ensureDir(dirname(tileTarget));
-          renderedMedia = await shotTile(renderedPath, stretchSeconds, tileTarget);
+          renderedMedia = await shotTile(renderedPath, stretchSeconds, tileTarget, cellWidth);
         } else {
           // A word range is cut when it is asked for, so neither side has a prepared tile and both
           // are built here, from the two cuts.
-          referenceMedia = await shotTile(cut!.reference, stretchSeconds, cut!.referenceTile);
-          renderedMedia = await shotTile(cut!.rendered, stretchSeconds, cut!.renderedTile);
+          referenceMedia = await shotTile(cut!.reference, stretchSeconds, cut!.referenceTile, cellWidth);
+          renderedMedia = await shotTile(cut!.rendered, stretchSeconds, cut!.renderedTile, cellWidth);
         }
       }
 
-      const unit = asClip && observer !== "agent" ? "video clips" : "still images";
-      // TILE_PREAMBLE already tells the agent observer how to read a grid, so this adds only what is
-      // new about a pair of them: both are stretches, and they are compared as sequences.
-      const reading = asClip && observer === "agent"
-        ? "\n\nBoth are grids, so compare them as sequences rather than as single moments."
+      // What the observer is actually holding. A grid is neither a clip nor a single moment, and
+      // calling it a still image while asking what changes over the stretch described two different
+      // things to the same reader.
+      const grids = asClip && observer === "agent";
+      const unit = grids ? "frame grids" : asClip ? "video clips" : "still images";
+      const reading = grids
+        ? "\n\nEach is a grid of frames sampled evenly across the same stretch, laid out in reading"
+          + " order: left to right, then top to bottom. Read each grid as time passing, and compare the"
+          + " two as sequences rather than as single moments. Neither grid is one continuous camera"
+          + " shot; a stretch may contain cuts."
         : "";
-      const differences = await ask("comparison", {
+      // The slot already names this render and this stretch uniquely within the reference, and the
+      // clock separates two readings of the same pair, so it is what the answer is recorded against.
+      const comparisonId = `${slot}-${createHash("sha256")
+        .update(`${slot}|${input.segment ?? input.selection ?? input.shot_id ?? ""}|${startedAt}`)
+        .digest("hex").slice(0, 6)}`;
+      const differences = await ask(`comparison:${comparisonId}`, {
         media: [referenceMedia, renderedMedia],
         instruction: `You compare two supplied ${unit} and describe their visible differences in natural language only. You are not told how either was made. Do not write code, markup, SVML, component names, or production advice.`,
         prompt: `Two ${unit} are supplied in order: one, then two.${reading}${asClip ? cut?.incomplete ?? "" : ""}${scope.length === 0 ? "" : `\n\nLimit the comparison to this: ${scope}`}\n\nDescribe every visible difference between them: layout and arrangement, the position and size of each element, cropping and margins, colour, typeface, weight, letter and line spacing, alignment, outline or stroke, shadow, glow, borders and corner treatment, and anything present in one and absent from the other.${asClip ? " Also describe differences in what changes over the stretch: what appears, what leaves, in what order, and how anything moves." : ""} State plainly which differences are large enough to read as a different design and which are minor. If they are visually equivalent, say exactly that.\n\nDo not speculate about how either was produced, which one is a source, or which one is a copy. Return natural language only.`,
@@ -1113,7 +1257,8 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       // from one that never was. The loop is allowed to stop with differences remaining, so this
       // records participation rather than convergence.
       await appendComparison(root, {
-        at: new Date().toISOString(),
+        at: startedAt,
+        id: comparisonId,
         ...(shot === undefined ? {} : { shot_id: shot.shot_id }),
         ...(cut === undefined ? {} : { range: cut.record }),
         ...(input.element === undefined ? {} : { element: input.element.trim() }),
@@ -1134,13 +1279,18 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
           ...(clip ? { reference_seconds: cut.referenceSeconds, rendered_seconds: cut.renderedSeconds } : {}),
           ...(asClip && cut.incomplete.length > 0 ? { incomplete_ends: cut.incomplete.trim() } : {}),
         }),
+        comparison_id: comparisonId,
         compared: asClip ? "clip" : "still",
         ...(bothStill ? { both_sides_still: true } : {}),
         reference_ref: referenceMedia,
         rendered_ref: renderedMedia,
         ...(standIn === undefined ? {} : { stand_in: standIn }),
         differences,
-        unresolved: differences.status === "complete" ? [] : ["differences"],
+        unresolved: differences.status === "complete" ? [] : [`comparison:${comparisonId}`],
+        ...(differences.status === "pending" ? {
+          record_with: `record_observation --reference-id ${state.reference_id} `
+            + `--key comparison:${comparisonId} --text-file <the differences>`,
+        } : {}),
         pending_observations: pending,
       };
     },
@@ -1158,15 +1308,36 @@ export function createReferenceVideoTools(options: ToolOptions = {}): ReferenceV
       const root = stateRoot(input.reference_id);
       if (WHOLE_REFERENCE_KEYS.includes(key as typeof WHOLE_REFERENCE_KEYS[number])) {
         const field = key as typeof WHOLE_REFERENCE_KEYS[number];
-        await writeJson(join(root, "state.json"), { ...state, [field]: observation("complete", text) });
+        await serially(root, async () => {
+          const current = await readJson<ReferenceState>(join(root, "state.json")) ?? state;
+          await writeJson(join(root, "state.json"), { ...current, [field]: observation("complete", text) });
+        });
         return { reference_id: state.reference_id, key, stored_in: "state" };
       }
+      // A comparison is answered against the entry it opened in the log rather than against the
+      // observation cache: the log is what a gate reads to tell an element that was looked at from one
+      // that never was, and until this existed an agent-observer comparison could never leave `pending`.
+      if (key.startsWith("comparison:")) {
+        const closed = await closeComparison(root, key.slice("comparison:".length), text);
+        assert(closed, `${key} names no open comparison of reference ${input.reference_id}`);
+        return { reference_id: state.reference_id, key, stored_in: "comparisons" };
+      }
       const shotKeys = new Set(state.shots.flatMap((shot) => [`visual:${shot.shot_id}`, `type:${shot.shot_id}`, `audio:${shot.shot_id}`, `boundary:${shot.shot_id}`, `window:${shot.shot_id}`]));
-      assert(shotKeys.has(key), `key ${key} is not an observation of reference ${input.reference_id}`);
-      const path = join(root, "observations.json");
-      const cache = await readJson<Record<string, Observation>>(path) ?? {};
-      cache[key] = observation("complete", text);
-      await writeJson(path, cache);
+      // A narrow question is asked over one to three shots and keyed by them, so its key is built the
+      // same way `observe_reference` built it rather than enumerated here.
+      const questionKey = /^question:([0-9a-z]+(?:\+[0-9a-z]+)*)$/u.exec(key);
+      const knownShots = new Set(state.shots.map((shot) => shot.shot_id));
+      const askedOver = questionKey?.[1]!.split("+") ?? [];
+      const isQuestion = questionKey !== null && askedOver.length <= 3 && askedOver.every((id) => knownShots.has(id));
+      assert(shotKeys.has(key) || isQuestion, `key ${key} is not an observation of reference ${input.reference_id}`);
+      // A round of answers arrives as a round of calls, and each one is a read-modify-write of this
+      // file. Two of them reading before either writes is how an answer disappears with no error.
+      await serially(root, async () => {
+        const path = join(root, "observations.json");
+        const cache = await readJson<Record<string, Observation>>(path) ?? {};
+        cache[key] = observation("complete", text);
+        await writeJson(path, cache);
+      });
       return { reference_id: state.reference_id, key, stored_in: "observations" };
     },
 
