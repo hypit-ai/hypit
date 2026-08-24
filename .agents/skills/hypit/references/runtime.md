@@ -120,6 +120,21 @@ Builds remain archived and neither command cancels remote Provider work.
   a change that costs nothing on an idle Runtime costs the whole Build on a busy one. Nothing is lost
   by waiting: accepted Records are durable, and the requests still in flight are the expensive ones.
 
+  **Check before every restart, and treat a running Build as a stop sign rather than a delay.** The
+  reading takes one command, and it is the same one whatever the reason for restarting:
+
+  ```bash
+  hypit runtime status   # proceed only on Queued 0 · Running 0
+  ```
+
+  What follows a restart taken during a Build is not only the lost generation. The Build is left
+  `running` and holding the lane it reserved, a Worker claims only `queued` and `waiting` Builds, and
+  cancelling happens on a claimed Build — so it holds that lane against every later Build, and
+  `hypit cancel` reports the request and changes nothing. A current Worker takes such a Build back at
+  startup; an older one does not, and the symptom there is a queue that never moves while
+  `Active Operations` stays `0`. Read that pair — a Build `running` with no active operation — as this,
+  and restarting again is the one thing that cannot help.
+
 ## Keep the Distribution and every project physically separate
 
 The Distribution reported by `hypit paths --json` is package-manager-owned and replaceable. Never
@@ -127,6 +142,21 @@ create an authored project, project-local package, generated asset or Build outp
 project is any independent directory such as `<home>/<name>/`, holding its Sources, assets and
 `packages/` directory in its own Git/workspace boundary. Published examples are read-only reference
 material, never a place to turn into the author's project.
+
+**Give the project directory its own `package.json`, before the first `check`.** Package discovery
+starts at the project and walks up until it finds one; without it the search runs past the project
+and settles on whichever directory above happens to have one, and every `packages/local-*` the
+project owns becomes unresolvable — `cannot resolve installed package @scope/local-name`. A minimal
+file is the whole fix, and it is what makes the directory a boundary rather than a place that
+happens to hold Sources:
+
+```json
+{ "name": "<project-name>", "version": "0.0.0", "private": true, "type": "module" }
+```
+
+`hypit paths --json` confirms it: `project` names the project directory rather than something above
+it. Passing `--package-root .` on each command papers over the same gap for one command at a time
+and leaves the Worker — which resolves packages on its own — still looking in the wrong place.
 
 Studio and the CLI resolve explicit project packages from the project root, then fall back to the
 read-only Hypit Distribution. The `@hypit/*` namespace is reserved for the active Distribution and

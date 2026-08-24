@@ -71,6 +71,17 @@ export type BuildDispatchStore = {
   read(build: string): Promise<BuildDispatchSnapshot | undefined>;
   list(query?: DispatchQuery): Promise<readonly BuildDispatchSnapshot[]>;
   claim(now?: number): Promise<BuildDispatchSnapshot | undefined>;
+  /**
+   * Return Dispatches abandoned mid-run to the claimable set and release the capacity they hold.
+   *
+   * `claim` only takes `queued` and `waiting` Dispatches, and nothing distinguishes a `running` one
+   * whose Worker is alive from one whose Worker is gone. A Worker that stops between claiming a
+   * Dispatch and finishing it therefore strands both the Dispatch and its lane reservation for good:
+   * later Builds queue behind a slot nobody holds, and a cancellation never runs because cancelling
+   * happens on a claimed Dispatch. One Worker owns a Runtime, so every `running` Dispatch at startup
+   * is abandoned by construction.
+   */
+  reclaimAbandoned(now?: number): Promise<readonly string[]>;
   release(build: string, update: BuildDispatchRelease): Promise<BuildDispatchSnapshot>;
   finish(build: string, terminal: DispatchTerminal, reason?: string): Promise<BuildDispatchSnapshot>;
   requestCancellation(build: string, reason?: string): Promise<BuildDispatchSnapshot>;
