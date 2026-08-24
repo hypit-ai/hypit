@@ -31,11 +31,15 @@ A crop of the same image is not a new beat.
 
 ## Author timing, text, and sound
 
-- Lock the delivery SemanticTrack before laying out Items. For a voice-led cut, an audio-only Take
-  supplies program time and semantic anchors. For a music-only cut, keep the `whisperx:SemanticTake`
+- Lock the delivery SemanticTrack before laying out Items. For a voice-led cut, the speaking take
+  supplies program time and semantic anchors, and sits under the cut as the base the Items cover. For a music-only cut, keep the `whisperx:SemanticTake`
   and `speech:Track` declarations and satisfy `<track>.semantic` in `.svrun` with `build-record` and
   `satisfy`, then author explicit `start`/`end` windows against it — `../index.md` says why the
   declarations stay. Do not treat music as speech evidence.
+- The base is meant to stay hidden, so the covering Selections tile the Segment: its first word
+  opens one, its last word closes one, and nothing falls between. Join them with the Script's
+  absorbing markers — `../craft/generated-dependencies.md` holds the table. A gap shows the
+  speaker for half a second in a program that has none.
 - Omit Caption components when there is no spoken Script. Use `typo:Track` for title, benefit, and CTA
   copy.
 - Keep no more than one or two text groups on screen at once. Align text handoffs to the final trimmed
