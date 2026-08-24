@@ -55,7 +55,7 @@ One command produces it, and it is not written per package:
 
 ```
 hypit-reference-video-tools render_element projects/<name>/build.svrun \
-  --element <id> --segment <id>|--selection <id> --out <path>.mp4
+  --element <id> --segment <id>|--selection <id> --reference-id <id> --out <path>.mp4
 ```
 
 `--element` takes the element's bare id — `captions`, the `id=` the Source wrote on the element. The
@@ -63,10 +63,17 @@ command appends the output suffix itself when it looks for the track, so `--elem
 matches nothing: it refuses with `the Source places no element named captions.track` and lists the
 bare ids that are placed.
 
-It reads the Canvas, the Recipe values and the Script text out of the Source, stands in for the
-speech with the Source's own `estimate:Speech`, mocks every layer a Build has not made, and drives
-the package's Producer. Nothing is transcribed by hand, so nothing is transcribed one line at a time
-— which is what made a caption system look correct while its lines collided.
+It reads the Canvas, the Recipe values and the Script text out of the Source, mocks every layer a
+Build has not made, and drives the package's Producer. Nothing is transcribed by hand, so nothing is
+transcribed one line at a time — which is what made a caption system look correct while its lines
+collided.
+
+`--reference-id` names the reference, and it times the stand-in from that reference's own transcript,
+so each Segment runs for as long as the reference spends on its words. Pass it every time: the
+comparison cuts both sides to the same words and refuses a pair whose two halves are different
+lengths, and only this clock puts the render on the reference's. It is also what lets anything whose
+appearance is a function of elapsed time — a progressive reveal, a typewriter, staggered rows — be
+compared at the speed it will be seen at.
 
 The window is named in words. `--segment` and `--selection` take a Script name, never a timestamp:
 name the Segment or the Selection the element is drawn over, and give the same name to the

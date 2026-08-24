@@ -238,7 +238,6 @@ width and is rejected.
     exit: fade; exit-frames: 4; exit-easing: ease-in;
   }
   caption.base {
-    cue-min-words: 1; cue-max-words: 5;
     stack-order: 70; x: 0.08; y: 0.76; width: 0.84;
     size: 58; line-height: 1; align: center;
     fill: #FFFFFF; background: #09090BCC; padding: 16 24; radius: 18;

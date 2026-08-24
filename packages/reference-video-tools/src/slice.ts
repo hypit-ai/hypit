@@ -120,6 +120,27 @@ export function sliceSource(source: string, segment: string): SliceResult {
     alive.add(`moment.${match[1]!}`);
   }
 
+  // Which Script names are marked after the kept Segment ends.
+  //
+  // A name outside the cut is not always a name the element can do without. An element given the span
+  // it occupies and a Moment to cut it — `during="program" until={story.moment.done}` — is on screen
+  // for the whole of any stretch that ends before that word. Dropping it made the one element a
+  // reference is about unrenderable over every Segment but the last, while the loop asks for it to be
+  // compared over each of them. Marked before the cut it really is gone, and marked inside it survives
+  // already, so this is the one case: a close that has not arrived yet, which the fragment reaches by
+  // no longer closing.
+  const later = new Set<string>();
+  for (const match of body.slice(kept.index + kept[0].length).matchAll(/@([a-z][a-z0-9-]*)\b/gu)) {
+    later.add(`selection.${match[1]!}`);
+    later.add(`moment.${match[1]!}`);
+  }
+  /** The `until=` attribute naming a name the cut left behind, when dropping it is enough. */
+  const closesLater = (tag: string, name: string): string | undefined => {
+    if (!later.has(name)) return undefined;
+    const written = new RegExp(`\\suntil=\\{story\\.(?:[a-z]+\\.)*?${name.replace(".", "\\.")}\\}`, "u").exec(tag);
+    return written?.[0];
+  };
+
   const skip: (readonly [number, number])[] = [[bodyStart, bodyEnd]];
   for (const comment of source.matchAll(/<!--.*?-->/gsu)) skip.push([comment.index, comment.index + comment[0].length]);
   const all = elements(source, skip);
@@ -132,15 +153,26 @@ export function sliceSource(source: string, segment: string): SliceResult {
   // by position: a `<speech:Take>` has no id, and still has to be droppable on its own.
   const opening = (element: Element): string => /^<[^>]*>/su.exec(element.text)?.[0] ?? element.text;
   const dropped = new Map<number, string>();
+  /** Opening tags rewritten by the cut, keyed by where the element starts. */
+  const reopened = new Map<number, string>();
   const byId = new Map(all.flatMap((element) => element.id === undefined ? [] : [[element.id, element] as const]));
   const deadIds = new Set<string>();
   for (;;) {
     let changed = false;
     for (const element of all) {
       if (dropped.has(element.start)) continue;
-      const { story, ids } = references(opening(element));
+      const tag = reopened.get(element.start) ?? opening(element);
+      const { story, ids } = references(tag);
       const missingStory = [...story].find((name) => !alive.has(name));
       if (missingStory !== undefined) {
+        // A close that has not arrived in this stretch is removed rather than fatal: the element keeps
+        // the span it was given and simply does not end inside the fragment.
+        const close = closesLater(tag, missingStory);
+        if (close !== undefined) {
+          reopened.set(element.start, tag.replace(close, ""));
+          changed = true;
+          continue;
+        }
         dropped.set(element.start, `story.${missingStory}`);
         if (element.id !== undefined) deadIds.add(element.id);
         changed = true;
@@ -179,12 +211,30 @@ export function sliceSource(source: string, segment: string): SliceResult {
       && !(other.start === element.start && other.end === element.end)))
     .sort((left, right) => left.start - right.start);
 
+  // A rewritten opening tag replaces its own bytes, in the same pass and in the same order as a cut,
+  // so the two never disagree about where the cursor is. A tag inside a range being cut is not
+  // reached: the cut takes it with everything else.
+  const edits = [
+    ...cuts.map((element) => ({ start: element.start, end: element.end, text: undefined as string | undefined })),
+    ...[...reopened].flatMap(([start, tag]) => {
+      const element = all.find((candidate) => candidate.start === start);
+      if (element === undefined || dropped.has(start)) return [];
+      const length = (/^<[^>]*>/su.exec(element.text)?.[0] ?? element.text).length;
+      return [{ start, end: start + length, text: tag }];
+    }),
+  ].sort((left, right) => left.start - right.start);
+
   let text = "";
   let cursor = 0;
-  for (const cut of cuts) {
-    if (cut.start < cursor) continue;
-    text += source.slice(cursor, cut.start);
-    cursor = cut.end;
+  for (const edit of edits) {
+    if (edit.start < cursor) continue;
+    text += source.slice(cursor, edit.start);
+    if (edit.text !== undefined) {
+      text += edit.text;
+      cursor = edit.end;
+      continue;
+    }
+    cursor = edit.end;
     // Take the rest of the line with it, so a removal never leaves a blank indented line behind.
     while (source[cursor] === " " || source[cursor] === "\t") cursor += 1;
     if (source[cursor] === "\n") cursor += 1;
