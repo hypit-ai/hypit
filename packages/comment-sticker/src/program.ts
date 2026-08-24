@@ -11,20 +11,13 @@ import type {
   VisualTrack,
 } from "@hypit/composition";
 import { assertFontArtifactRef } from "@hypit/media";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { assertProgramSpaceIdentity } from "@hypit/program-space";
 import type { ProgramSpace } from "@hypit/program-space";
 import { canonicalize, isDigest } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
-import type { SemanticTrack } from "@hypit/semantic-track";
 import { assertCanvasSpace, assertSpatialFrame } from "@hypit/spatial";
 import type { CanvasSpace, SpatialFrame } from "@hypit/spatial";
-import {
-  projectMomentWindows,
-  projectProgramWindow,
-  projectSelectionWindows,
-} from "@hypit/temporal";
-import type { ProjectedOccurrence } from "@hypit/temporal";
+import type { ProjectedWindow } from "@hypit/temporal";
 import { verifyText } from "@hypit/text";
 import type { Text } from "@hypit/text";
 
@@ -183,7 +176,6 @@ export function sealCommentStickerHeader(value: CommentStickerHeader): CommentSt
 
 export function assertCommentStickerItemSpec(value: CommentStickerItemSpec): void {
   identity(value.id, "CommentStickerItemSpec.id");
-  assert(value.expansion.kind === "one" || value.expansion.kind === "each", "CommentStickerItemSpec expansion is invalid.");
 }
 
 export function sealCommentStickerItemSpec(value: CommentStickerItemSpec): CommentStickerItemSpec {
@@ -206,7 +198,7 @@ function realized(
   style: CommentStickerStyle,
   spec: CommentStickerItemSpec,
   content: CommentStickerContent,
-  occurrences: readonly ProjectedOccurrence[],
+  window: ProjectedWindow,
   avatar?: BlobRef,
 ): CommentStickerSet {
   assertCommentStickerSet(set);
@@ -216,65 +208,32 @@ function realized(
   assertCommentStickerItemSpec(spec);
   assertCommentStickerContent(content);
   if (avatar !== undefined) assertAvatar(avatar);
-  const additions = occurrences.map((occurrence, index): CommentStickerItemProgram => ({
-    id: occurrence.id,
-    span: { ...occurrence.span },
+  const addition: CommentStickerItemProgram = {
+    id: window.id,
+    span: { ...window.span },
     frame: structuredClone(frame),
     style: structuredClone(style),
     content: structuredClone(content),
     ...(avatar === undefined ? {} : { avatar: structuredClone(avatar) }),
-    tieBreak: `${header.id}:${spec.id}:${index + 1}`,
-  }));
+    tieBreak: `${header.id}:${spec.id}`,
+  };
   const ids = new Set(set.items.map((item) => item.id));
-  for (const item of additions) {
-    assert(!ids.has(item.id), `Comment Sticker already contains Item ${item.id}.`);
-    ids.add(item.id);
-  }
-  return { items: [...set.items, ...additions] };
+  assert(!ids.has(addition.id), `Comment Sticker already contains Item ${addition.id}.`);
+  return { items: [...set.items, addition] };
 }
 
-export function appendProgramCommentSticker(
+/** Component entry point: timing is already a TemporalWindow. */
+export function appendProjectedCommentSticker(
   set: CommentStickerSet,
   header: CommentStickerHeader,
   frame: SpatialFrame,
   style: CommentStickerStyle,
-  semantic: SemanticTrack,
   spec: CommentStickerItemSpec,
   content: CommentStickerContent,
+  window: ProjectedWindow,
   avatar?: BlobRef,
 ): CommentStickerSet {
-  assert(spec.expansion.kind === "one", `Program Comment Sticker ${spec.id} must use one occurrence.`);
-  return realized(set, header, frame, style, spec, content, [projectProgramWindow({ itemId: spec.id, semantic, projection: spec.projection })], avatar);
-}
-
-export function appendSelectionCommentSticker(
-  set: CommentStickerSet,
-  header: CommentStickerHeader,
-  frame: SpatialFrame,
-  style: CommentStickerStyle,
-  semantic: SemanticTrack,
-  selection: NarrativeSelectionRef,
-  spec: CommentStickerItemSpec,
-  content: CommentStickerContent,
-  avatar?: BlobRef,
-): CommentStickerSet {
-  return realized(set, header, frame, style, spec, content,
-    projectSelectionWindows({ itemId: spec.id, semantic, selection, expansion: spec.expansion, projection: spec.projection }), avatar);
-}
-
-export function appendMomentCommentSticker(
-  set: CommentStickerSet,
-  header: CommentStickerHeader,
-  frame: SpatialFrame,
-  style: CommentStickerStyle,
-  semantic: SemanticTrack,
-  moment: NarrativeMomentRef,
-  spec: CommentStickerItemSpec,
-  content: CommentStickerContent,
-  avatar?: BlobRef,
-): CommentStickerSet {
-  return realized(set, header, frame, style, spec, content,
-    projectMomentWindows({ itemId: spec.id, semantic, moment, expansion: spec.expansion, projection: spec.projection }), avatar);
+  return realized(set, header, frame, style, spec, content, window, avatar);
 }
 
 export function assertCommentStickerProgram(value: CommentStickerProgram): void {

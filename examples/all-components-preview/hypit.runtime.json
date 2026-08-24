@@ -31,16 +31,6 @@
           "use": "@hypit/provider-hyperframes-local",
           "pool": "render",
           "config": { "defaultConcurrency": 1 }
-        },
-        "vertex.all-components": {
-          "use": "@hypit/provider-google-vertex",
-          "pool": "planning",
-          "config": {
-            "projectEnv": "GOOGLE_CLOUD_PROJECT",
-            "location": "global",
-            "credentials": { "store": "env", "key": "GOOGLE_VERTEX_CREDENTIALS_JSON" },
-            "defaultConcurrency": 1
-          }
         }
       }
     }

@@ -1,23 +1,33 @@
 export { CaptionTimingError } from "./error.js";
 export {
-  assertCaptionCorrespondence,
-  assertCaptionDisplaySequence,
-  assertCaptionDisplayWordSubset,
-  captionWordsForRole,
+  assertCaptionDocument,
+  assertCaptionUnitSubset,
+  captionUnitsForRole,
+  captionUnitsForSelection,
 } from "./display.js";
+export type { CaptionUnitSubset } from "./display.js";
+export { captionWordsForAttribute } from "./display.js";
 export { captionComponent } from "./component.js";
-export { plannedCaptionTimingFragment } from "./fragment.js";
-export { captionProgramSchema, captionPlanSchema, captionStyleSchema, captionManifest, captionMarkupSurfaces, captionModuleRef, captionProducers, captionTypes, timedCaptionProjectionSchema } from "./manifest.js";
+export { captionTimingFragment, plannedCaptionTimingFragment } from "./fragment.js";
+export {
+  captionProgramSchema,
+  captionStyleSchema,
+  timedCaptionProjectionSchema,
+  captionManifest,
+  captionMarkupSurfaces,
+  captionModuleRef,
+  captionProducers,
+  captionTypes,
+} from "./manifest.js";
 export { decodeCaptionProgramSurface } from "./surface.js";
-export { assertCaptionPlan, assertCaptionPlanForProgram, sealCaptionPlan } from "./plan.js";
 export {
   assertCaptionProgram,
-  assertCaptionProgramForDisplay,
+  assertCaptionProgramForDocument,
   assertCaptionStyle,
   resolveCaptionProgram,
   sealCaptionProgram,
   sealCaptionStyle,
 } from "./style.js";
-export type { CaptionMuteApplication, CaptionStyleApplication } from "./style.js";
-export { applyCaptionMute, assertTimedCaptionProjection, temporalizeCaptionPlan } from "./temporalize.js";
+export type { CaptionMuteApplication, CaptionStyleApplication, CaptionWordStyleApplication } from "./style.js";
+export { applyCaptionMute, assertTimedCaptionProjection, temporalizeCaptionDocument } from "./temporalize.js";
 export type * from "./types.js";

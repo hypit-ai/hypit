@@ -8,11 +8,14 @@ import { semanticTrackFixture } from "../../../test/semantic-track-fixture.js";
 
 import {
   assertWindowRelation,
-  locateSelectionOccurrences,
-  projectMomentWindows,
+  locateSelection,
+  projectMomentPoint,
+  projectMomentWindow,
+  projectProgramPoint,
   projectProgramWindow,
+  projectSelectionPoint,
   projectSegmentWindow,
-  projectSelectionWindows,
+  projectSelectionWindow,
   resolveTriggeredSchedule,
   temporalDurationInSamples,
 } from "../src/index.js";
@@ -34,32 +37,84 @@ const semantic = semanticTrackFixture(space, {
     { identity: "c", frame: 90 },
     { identity: "d", frame: 120 },
     { identity: "late", frame: 240 },
+    { identity: "end", frame: 300 },
     { identity: "segment:answer:start", frame: 60 },
     { identity: "segment:answer:end", frame: 120 },
   ],
 });
 
-const selection = (id: string, occurrences: NarrativeSelectionRef["occurrences"]): NarrativeSelectionRef => ({
-  id, occurrences,
+const selection = (id: string, startAnchorId: string, endAnchorId: string): NarrativeSelectionRef => ({
+  id, startAnchorId, endAnchorId,
 });
-const moment = (id: string, occurrences: NarrativeMomentRef["occurrences"]): NarrativeMomentRef => ({
-  id, occurrences,
-});
+const moment = (id: string, anchorId: string): NarrativeMomentRef => ({ id, anchorId });
 const frames = (value: number) => ({ unit: "frames" as const, value });
 const seconds = (numerator: number, denominator = 1) => ({ unit: "seconds" as const, numerator, denominator });
 
-test("one Selection projects exact local points and stable occurrence identity", () => {
-  const result = projectSelectionWindows({
+test("one Selection projects exact local points and stable source identity", () => {
+  const result = projectSelectionWindow({
     itemId: "card",
     semantic,
-    selection: selection("proof", [{ occurrence: 7, startAnchorId: "a", endAnchorId: "b" }]),
-    expansion: { kind: "one" },
+    selection: selection("proof", "a", "b"),
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
   });
-  assert.deepEqual(result, [{
-    id: "card::proof#7",
+  assert.deepEqual(result, {
+    id: "card::proof",
+    source: { kind: "selection", id: "proof" },
+    projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
     span: { startFrame: 30, endFrameExclusive: 60 },
-  }]);
+  });
+});
+
+test("points preserve source identity and admit both ProgramSpace boundaries", () => {
+  assert.deepEqual(projectProgramPoint({
+    itemId: "terminal",
+    semantic,
+    projection: { ref: "program.end" },
+  }), {
+    id: "terminal::program",
+    source: { kind: "program", id: "program" },
+    projection: { ref: "program.end" },
+    frame: 300,
+  });
+  assert.deepEqual(projectMomentPoint({
+    itemId: "terminal",
+    semantic,
+    moment: moment("done", "end"),
+    projection: { ref: "moment.cue" },
+  }), {
+    id: "terminal::done",
+    source: { kind: "moment", id: "done" },
+    projection: { ref: "moment.cue" },
+    frame: 300,
+  });
+  assert.equal(projectProgramPoint({
+    itemId: "start",
+    semantic,
+    projection: { ref: "program.start" },
+  }).frame, 0);
+});
+
+test("a point may consume one boundary of a crossed Selection", () => {
+  const crossed = selection("crossed", "d", "a");
+  assert.equal(projectSelectionPoint({
+    itemId: "boundary",
+    semantic,
+    selection: crossed,
+    projection: { ref: "selection.end" },
+  }).frame, 30);
+});
+
+test("points reject exact coordinates outside ProgramSpace", () => {
+  assert.throws(() => projectProgramPoint({
+    itemId: "before",
+    semantic,
+    projection: { ref: "program.start", offset: frames(-1) },
+  }), /falls outside ProgramSpace/u);
+  assert.throws(() => projectProgramPoint({
+    itemId: "after",
+    semantic,
+    projection: { ref: "program.end", offset: frames(1) },
+  }), /falls outside ProgramSpace/u);
 });
 
 test("one Segment projects from its own structural start and end anchors", () => {
@@ -71,52 +126,23 @@ test("one Segment projects from its own structural start and end anchors", () =>
   });
   assert.deepEqual(result, {
     id: "answer-card::answer",
+    source: { kind: "segment", id: "answer" },
+    projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
     span: { startFrame: 60, endFrameExclusive: 120 },
   });
 });
 
-test("each preserves source order, even when physical time is reversed between occurrences", () => {
-  const result = projectSelectionWindows({
-    itemId: "repeat",
-    semantic,
-    selection: selection("mentions", [
-      { occurrence: 4, startAnchorId: "c", endAnchorId: "d" },
-      { occurrence: 9, startAnchorId: "a", endAnchorId: "b" },
-    ]),
-    expansion: { kind: "each" },
-    projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
-  });
-  assert.deepEqual(result.map((item) => item.id), ["repeat::mentions#4", "repeat::mentions#9"]);
-  assert.deepEqual(result.map((item) => item.span.startFrame), [90, 30]);
-});
-
-test("strict cardinality and occurrence-invariant each fail instead of choosing or duplicating", () => {
-  const repeated = selection("many", [
-    { occurrence: 0, startAnchorId: "a", endAnchorId: "b" },
-    { occurrence: 1, startAnchorId: "c", endAnchorId: "d" },
-  ]);
-  assert.throws(() => projectSelectionWindows({
-    itemId: "one", semantic, selection: repeated, expansion: { kind: "one" },
-    projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
-  }), /exactly one occurrence/u);
-  assert.throws(() => projectSelectionWindows({
-    itemId: "each", semantic, selection: repeated, expansion: { kind: "each" },
-    projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
-  }), /occurrence-invariant/u);
-});
-
 test("negative intermediate points clip before nearest half-later frame quantization", () => {
-  const result = projectMomentWindows({
+  const result = projectMomentWindow({
     itemId: "lead",
     semantic,
-    moment: moment("cue", [{ occurrence: 0, anchorId: "a" }]),
-    expansion: { kind: "one" },
+    moment: moment("cue", "a"),
     projection: {
       start: { ref: "moment.cue", offset: seconds(-2) },
       end: { ref: "moment.cue", offset: { unit: "milliseconds", value: 550 } },
     },
   });
-  assert.deepEqual(result[0]?.span, { startFrame: 0, endFrameExclusive: 47 });
+  assert.deepEqual(result.span, { startFrame: 0, endFrameExclusive: 47 });
 });
 
 test("program and absolute projections use exact rational frame-rate arithmetic", () => {
@@ -154,18 +180,18 @@ test("frame and authored durations enter one exact sample-boundary rule", () => 
 });
 
 test("crossed source anchors are allowed until a projection actually consumes the reversal", () => {
-  const crossed = selection("crossed", [{ occurrence: 0, startAnchorId: "d", endAnchorId: "a" }]);
-  assert.deepEqual(locateSelectionOccurrences(semantic, crossed)[0], {
-    id: "crossed#0", occurrence: 0, start: { frame: 120 }, end: { frame: 30 },
+  const crossed = selection("crossed", "d", "a");
+  assert.deepEqual(locateSelection(semantic, crossed), {
+    id: "crossed", start: { frame: 120 }, end: { frame: 30 },
   });
-  assert.throws(() => projectSelectionWindows({
-    itemId: "identity", semantic, selection: crossed, expansion: { kind: "one" },
+  assert.throws(() => projectSelectionWindow({
+    itemId: "identity", semantic, selection: crossed,
     projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
   }), /reversed raw window/u);
-  assert.deepEqual(projectSelectionWindows({
-    itemId: "persist", semantic, selection: crossed, expansion: { kind: "one" },
+  assert.deepEqual(projectSelectionWindow({
+    itemId: "persist", semantic, selection: crossed,
     projection: { start: { ref: "selection.start" }, end: { ref: "program.end" } },
-  })[0]?.span, { startFrame: 120, endFrameExclusive: 300 });
+  }).span, { startFrame: 120, endFrameExclusive: 300 });
 });
 
 test("zero, fully outside and sub-frame windows fail atomically", () => {
@@ -186,15 +212,19 @@ test("zero, fully outside and sub-frame windows fail atomically", () => {
   }), /shorter than one frame/u);
 });
 
-test("disjoint validation checks every physical overlap without reordering the result", () => {
-  const occurrences = projectMomentWindows({
-    itemId: "popup", semantic,
-    moment: moment("hits", [{ occurrence: 9, anchorId: "c" }, { occurrence: 4, anchorId: "a" }]),
-    expansion: { kind: "each" },
-    projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: seconds(3) } },
-  });
-  assert.equal(assertWindowRelation(occurrences, "independent"), occurrences);
-  assert.throws(() => assertWindowRelation(occurrences, "disjoint"), /overlap under disjoint/u);
+test("disjoint validation checks physical overlap without reordering the input", () => {
+  const windows = [
+    projectMomentWindow({
+      itemId: "later", semantic, moment: moment("later", "c"),
+      projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: seconds(3) } },
+    }),
+    projectMomentWindow({
+      itemId: "earlier", semantic, moment: moment("earlier", "a"),
+      projection: { start: { ref: "moment.cue" }, end: { ref: "moment.cue", offset: seconds(3) } },
+    }),
+  ];
+  assert.equal(assertWindowRelation(windows, "independent"), windows);
+  assert.throws(() => assertWindowRelation(windows, "disjoint"), /overlap under disjoint/u);
 });
 
 test("triggered schedule derives cumulative, exclusive and settled windows from authored order", () => {

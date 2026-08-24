@@ -11,7 +11,6 @@
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="caption" from="@hypit/caption@1"/>
   <import as="caption-fine" from="@hypit/caption-fine@1"/>
-  <import as="caption-ai" from="@hypit/caption-gemini@1"/>
   <import as="fonts" from="@hypit/fonts-open@1"/>
   <import as="text" from="@hypit/typography-track@1"/>
   <import as="space" from="@hypit/spatial@1"/>
@@ -96,9 +95,9 @@
   <pipeline:Normalize id="answer-media" source={answer-take.video}
     video="primary-moving" audio="default" span-authority="video" clock={clock}/>
   <whisperx:SemanticTake id="opening-semantic" narrative={story}
-    segment={story.segment.opening} media={opening-media.media}/>
+    segment={story.segment.opening} media={opening-media.media} language="en"/>
   <whisperx:SemanticTake id="answer-semantic" narrative={story}
-    segment={story.segment.answer} media={answer-media.media}/>
+    segment={story.segment.answer} media={answer-media.media} language="en"/>
 
   <speech:Track id="speech"
     visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
@@ -109,22 +108,9 @@
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
   <caption-fine:Style id="primary-caption" recipe={recipes.caption.primary} font={caption-font}/>
 
-  <caption:Program id="caption-program" display={story.caption} default={primary-caption}/>
-  <caption-ai:Planner
-    id="caption-plan"
-    display={story.caption}
-    program={caption-program}
-    model="gemini-2.5-flash"
-  />
+  <caption:Program id="caption-program" document={story.caption} narrative={story} default={primary-caption}/>
 
-  <caption-fine:Track
-    id="captions"
-    display={story.caption}
-    correspondence={story.caption.correspondence}
-    semantic={speech.semantic}
-    program={caption-program}
-    plan={caption-plan.plan}
-  />
+  <caption-fine:Track id="captions" document={story.caption} semantic={speech.semantic} program={caption-program}/>
 
   <space:Frame id="callout-frame" within={vertical}
     left="8%" top="10%" right="92%" bottom="20%"/>

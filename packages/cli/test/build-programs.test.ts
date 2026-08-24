@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -8,7 +8,7 @@ import { createRunFrontendHostFacet } from "@hypit/run";
 
 import { runCli } from "../src/main.js";
 import type { CliDistribution } from "../src/distribution.js";
-import type { CliManagedProgramReport } from "../src/runtime-port.js";
+import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-kit";
 
 const io = { write: () => {} };
 
@@ -19,7 +19,7 @@ const io = { write: () => {} };
  */
 function distribution(
   calls: string[],
-  programs: readonly CliManagedProgramReport[],
+  diagnostics: readonly RuntimeDoctorDiagnostic[],
 ): CliDistribution {
   return {
     bootstrapPackages: [{
@@ -28,16 +28,65 @@ function distribution(
         format: "hypit.node-package@1",
         hostFacets: [createRunFrontendHostFacet({
         id: "@hypit/run-markup@1",
-        discover() { throw new Error("createRuntime is unavailable"); },
-        decode() { throw new Error("createRuntime is unavailable"); },
+        discover: () => ({ author: { source: "./main.svml" }, imports: [] }),
+        decode: () => ({ document: {
+          format: "hypit.run-document@1",
+          author: { source: "./main.svml" },
+          imports: [],
+          targets: [{ output: "result" }],
+          candidates: [],
+          satisfactions: [],
+        } }),
         })],
       },
     }],
     createCompiler: () => ({
-      openFile: async (path: string) => ({
-        entry: { name: path, text: '<?svml using="@hypit/run-markup@1"?>\n<svrun/>\n' },
-      }),
+      openFile: async (path: string) => {
+        const source = async (name: string) => ({ id: name, name, text: await readFile(name, "utf8") });
+        return {
+          entry: await source(path),
+          resolveSource: async (_importer: unknown, request: { readonly from: string }) =>
+            await source(join(path, "..", request.from)),
+          attachments: async () => [],
+        };
+      },
       supportsFrontend: () => false,
+      compileSource: async (entry: { readonly id: string }) => ({
+        closure: { entry: entry.id, units: [] },
+        program: { closure: { format: "hypit.closure@1", modules: [{ manifest: {
+          format: "hypit.module@1",
+          name: "example.value",
+          version: "1",
+          dependencies: [],
+          types: [{ name: "Value" }],
+          capabilities: [],
+          producers: [],
+        } }] }, records: [] },
+        graph: {
+          format: "hypit.graph@1",
+          outputs: [{
+            id: "result",
+            type: { module: { name: "example.value", version: "1" }, name: "Value" },
+            primary: "provided-result",
+          }],
+          candidates: [{
+            id: "provided-result",
+            type: { module: { name: "example.value", version: "1" }, name: "Value" },
+            root: { kind: "value", value: {
+              id: "record-result",
+              value: { kind: "inline", value: "ready" },
+            } },
+          }],
+          operations: [],
+        },
+        exports: [{
+          name: "result",
+          type: { module: { name: "example.value", version: "1" }, name: "Value" },
+          ref: { kind: "logical-output", id: "result" },
+        }],
+        attachments: [],
+      }),
+      extendExecutionProgram: (program: unknown) => program,
     }),
     openRuntimeHost: async (path: string) => ({
       profile: path,
@@ -54,12 +103,13 @@ function distribution(
         programs: {
           up: async () => {
             calls.push(`up ${path}`);
-            return { dataRoot: "/tmp", programs };
+            return { dataRoot: "/tmp", programs: [] };
           },
           down: async () => ({ dataRoot: "/tmp", programs: [] }),
           report: async () => ({ dataRoot: "/tmp", programs: [] }),
         },
       }),
+      preflight: async () => ({ dataRoot: "/tmp", diagnostics }),
       doctor: async () => ({ dataRoot: "/tmp", diagnostics: [] }),
       createRuntime: async () => { throw new Error("createRuntime is unavailable"); },
       openArchive: async () => ({ status: async () => ({}) }),
@@ -71,10 +121,11 @@ async function runSource(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "hypit-build-programs-"));
   const path = join(root, "build.svrun");
   await writeFile(path, '<?svml using="@hypit/run-markup@1"?>\n<svrun/>\n', "utf8");
+  await writeFile(join(root, "main.svml"), "author", "utf8");
   return path;
 }
 
-test("a Build that cannot construct its Runtime starts no declared external program", async () => {
+test("Build fails its cheap preflight before submitting or starting programs", async () => {
   const calls: string[] = [];
   const source = await runSource();
   await assert.rejects(
@@ -82,46 +133,65 @@ test("a Build that cannot construct its Runtime starts no declared external prog
       ["build", source, "--runtime", "/p/hypit.runtime.json"],
       io,
       distribution(calls, [{
-        id: "whisperx",
-        instances: ["whisperx.local"],
-        action: "unchanged",
-        state: { state: "down", detail: "nothing is answering at http://127.0.0.1:8765" },
-        detail: "uv failed: no such project",
+        severity: "error",
+        code: "MANAGED_PROGRAM_DOWN",
+        subject: "whisperx",
+        message: "whisperx is not usable",
       }]),
     ),
-    /createRuntime is unavailable/u,
+    /Runtime preflight failed/u,
   );
   assert.deepEqual(calls, []);
 });
 
-test("--no-programs leaves the declared programs alone", async () => {
+test("Build never provisions programs after a clean preflight", async () => {
   const calls: string[] = [];
   const source = await runSource();
-  // Reaching the Runtime is the boundary just past the gate: the stub has no
-  // createRuntime, so arriving there proves the down program was
-  // never consulted rather than merely tolerated.
   await assert.rejects(
     async () => await runCli(
-      ["build", source, "--runtime", "/p/hypit.runtime.json", "--no-programs"],
+      ["build", source, "--runtime", "/p/hypit.runtime.json"],
       io,
-      distribution(calls, [{
-        id: "whisperx",
-        instances: ["whisperx.local"],
-        state: { state: "down", detail: "nothing is answering" },
-      }]),
+      distribution(calls, []),
     ),
     /createRuntime is unavailable/u,
   );
   assert.deepEqual(calls, []);
 });
 
-test("--no-programs belongs to build, the only command that starts a program", async () => {
+test("the removed --no-programs switch is rejected", async () => {
   await assert.rejects(
     async () => await runCli(
-      ["plan", "/p/build.svrun", "--no-programs"],
+      ["build", "/p/build.svrun", "--no-programs"],
       io,
       distribution([], []),
     ),
-    /--no-programs is only valid for build/u,
+    /unknown option --no-programs/u,
   );
+});
+
+test("plan preserves the frozen plan but exits non-zero when cheap preflight fails", async () => {
+  const source = await runSource();
+  let output = "";
+  let exitCode: number | undefined;
+  await runCli(
+    ["plan", source, "--runtime", "/p/hypit.runtime.json", "--json"],
+    {
+      write(text) { output += text; },
+      setExitCode(code) { exitCode = code; },
+    },
+    distribution([], [{
+      severity: "error",
+      code: "RUNTIME_CREDENTIAL_MISSING",
+      message: "credential is absent",
+    }]),
+  );
+  const value = JSON.parse(output) as {
+    readonly ok: boolean;
+    readonly plan: unknown;
+    readonly preflight: { readonly ok: boolean };
+  };
+  assert.equal(value.ok, false);
+  assert.equal(value.preflight.ok, false);
+  assert.notEqual(value.plan, undefined);
+  assert.equal(exitCode, 1);
 });

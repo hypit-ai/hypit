@@ -11,7 +11,6 @@
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="caption" from="@hypit/caption@1"/>
   <import as="caption-fine" from="@hypit/caption-fine@1"/>
-  <import as="caption-ai" from="@hypit/caption-gemini@1"/>
   <import as="fonts" from="@hypit/fonts-open@1"/>
   <import as="space" from="@hypit/spatial@1"/>
   <import as="program" from="@hypit/program-space@1"/>
@@ -166,10 +165,10 @@
     video="primary-moving" audio="default" span-authority="video" clock={clock}/>
   <pipeline:Normalize id="payoff-media" source={payoff-take.video}
     video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-  <whisperx:SemanticTake id="hook-semantic" narrative={story} segment={story.segment.hook} media={hook-media.media}/>
-  <whisperx:SemanticTake id="meeting-semantic" narrative={story} segment={story.segment.meeting} media={meeting-media.media}/>
-  <whisperx:SemanticTake id="evidence-semantic" narrative={story} segment={story.segment.evidence} media={evidence-media.media}/>
-  <whisperx:SemanticTake id="payoff-semantic" narrative={story} segment={story.segment.payoff} media={payoff-media.media}/>
+  <whisperx:SemanticTake id="hook-semantic" narrative={story} segment={story.segment.hook} media={hook-media.media} language="en"/>
+  <whisperx:SemanticTake id="meeting-semantic" narrative={story} segment={story.segment.meeting} media={meeting-media.media} language="en"/>
+  <whisperx:SemanticTake id="evidence-semantic" narrative={story} segment={story.segment.evidence} media={evidence-media.media} language="en"/>
+  <whisperx:SemanticTake id="payoff-semantic" narrative={story} segment={story.segment.payoff} media={payoff-media.media} language="en"/>
 
   <speech:Track id="speech"
     visual-frame={speech-frame} visual-appearance={recipes.speech.visual} visual-z="0">
@@ -179,27 +178,14 @@
     <speech:Take source={payoff-semantic.take}/>
   </speech:Track>
 
-  <!-- Gemini sees display words and these requirements, never audio or timing. -->
+  <!-- Caption styling is authored from Script's CaptionDocument; no model planner is involved. -->
   <fonts:Stack id="caption-font" family="inter" weight="800" style="normal"/>
   <caption-fine:Style id="primary-caption" recipe={recipes.caption.primary} font={caption-font}/>
 
-  <caption:Program id="caption-program" display={story.caption} default={primary-caption}/>
-  <caption-ai:Planner
-    id="caption-plan"
-    display={story.caption}
-    program={caption-program}
-    model="gemini-2.5-flash"
-  />
+  <caption:Program id="caption-program" document={story.caption} narrative={story} default={primary-caption}/>
 
   <!-- Caption becomes an ordinary self-contained VisualTrack after joining the measured map. -->
-  <caption-fine:Track
-    id="captions"
-    display={story.caption}
-    correspondence={story.caption.correspondence}
-    semantic={speech.semantic}
-    program={caption-program}
-    plan={caption-plan.plan}
-  />
+  <caption-fine:Track id="captions" document={story.caption} semantic={speech.semantic} program={caption-program}/>
 
   <film:Film id="main" canvas={vertical} semantic={speech.semantic} appearance={recipes.film.vertical}>
     <film:Track source={speech.visual}/>

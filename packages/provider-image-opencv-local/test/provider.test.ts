@@ -67,18 +67,19 @@ test("the OpenCV package is one replaceable Endpoint with no second queue", asyn
 });
 
 test("managed and external OpenCV deployments never mix their interpreters", () => {
-  const managedContext = { dataRoot: "/project", instance: "opencv", config: {} } as const;
+  const managedContext = { hostStateRoot: "/host", dataRoot: "/project", instance: "opencv", config: {} } as const;
   const managed = resolveLocalOpenCvDeployment(managedContext);
   assert.equal(managed.ownership, "managed");
   // The deployment already branches on the platform for the venv layout, so the tail it produces
   // is joined with the platform's separator too. Spell the separator as either one.
   assert.match(managed.pythonExecutable,
-    /services[\\/]image-opencv[\\/]\.venv[\\/](?:bin[\\/]python|Scripts[\\/]python\.exe)$/u);
-  assert.deepEqual(managed.prepare?.args.slice(-1), ["--frozen"]);
+    /host[\\/]programs[\\/]image-opencv[\\/]\.venv[\\/](?:bin[\\/]python|Scripts[\\/]python\.exe)$/u);
+  assert.deepEqual(managed.installCommands?.[0]?.args.slice(-1), ["--frozen"]);
   const managedProgram = localOpenCvProgram(managedContext);
-  assert.deepEqual(managedProgram.prepare, managed.prepare);
+  assert.deepEqual(managedProgram.installation?.commands, managed.installCommands);
 
   const externalContext = {
+    hostStateRoot: "/host",
     dataRoot: "/project",
     instance: "opencv",
     config: { pythonExecutable: "./tools/python" },
@@ -86,8 +87,8 @@ test("managed and external OpenCV deployments never mix their interpreters", () 
   const external = resolveLocalOpenCvDeployment(externalContext);
   assert.equal(external.ownership, "external");
   assert.equal(external.pythonExecutable, resolve(join("/project", "tools", "python")));
-  assert.equal(external.prepare, undefined);
-  assert.equal(localOpenCvProgram(externalContext).prepare, undefined);
+  assert.equal(external.installCommands, undefined);
+  assert.equal(localOpenCvProgram(externalContext).installation, undefined);
 });
 
 const liveEnabled = process.env.HYPIT_OPENCV_TESTS === "1";

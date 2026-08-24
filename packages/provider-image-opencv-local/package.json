@@ -15,6 +15,7 @@
     "@hypit/endpoint-kit": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/raster": "workspace:*",
+    "@hypit/image-opencv-runtime": "workspace:*",
     "@hypit/runtime-kit": "workspace:*",
     "@hypit/runtime-host-node": "workspace:*"
   },

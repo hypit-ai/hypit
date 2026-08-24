@@ -4,6 +4,11 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 
 import type { NodeCompiledSourceClosure } from "@hypit/compiler-node";
 import type { NodeRuntimeHost } from "@hypit/runtime-host-node";
+import {
+  hypitHostPackageRoot,
+  inspectHostPackage,
+  prepareHostPackages,
+} from "@hypit/runtime-host-node";
 import { plannedNeeds } from "@hypit/runtime";
 import type { BuildCatalogDescriptor, CapacityReservation, OperationProgress } from "@hypit/runtime";
 import type { BuildState, CapabilityRef, TypeRef } from "@hypit/protocol";
@@ -68,8 +73,6 @@ type ParsedArgs = {
   readonly model: string | undefined;
   readonly aspectRatio: string | undefined;
   readonly resolution: string | undefined;
-  /** Leave the declared external programs alone; build against what is running. */
-  readonly noPrograms: boolean;
   readonly json: boolean;
   readonly color: CliColorMode;
   readonly verbose: boolean;
@@ -100,16 +103,16 @@ async function nearestProjectPackageRoot(start: string): Promise<string | undefi
   }
 }
 
-async function resolvePackageRoot(
-  projectStart: string,
-  distributionRoot: string | undefined,
-): Promise<string> {
-  return await nearestProjectPackageRoot(projectStart) ?? distributionRoot ?? resolve(projectStart);
+async function resolvePackageRoot(projectStart: string): Promise<string> {
+  // The Distribution is a separate read-only fallback. Package discovery must
+  // retain the project root even when this lightweight project has no package.json.
+  return await nearestProjectPackageRoot(projectStart) ?? resolve(projectStart);
 }
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
   const [command, ...tail] = argv;
-  const scoped = command === "programs" || command === "runtime" || command === "auth";
+  const scoped = command === "programs" || command === "runtime" || command === "auth"
+    || command === "packages";
   const action = scoped ? tail[0] : undefined;
   const positional = scoped ? tail.slice(1) : tail;
   const noFile = command === "builds" || command === "queue" || command === "paths"
@@ -133,7 +136,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let model: string | undefined;
   let aspectRatio: string | undefined;
   let resolution: string | undefined;
-  let noPrograms = false;
   let json = false;
   let color: CliColorMode = "auto";
   let verbose = false;
@@ -150,7 +152,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     if (item.startsWith("--")) {
       const repeatable = [
         "--json", "--jsonl", "--watch", "--verbose", "--debug",
-        "--no-color", "--follow", "--no-programs", "--asset-root",
+        "--no-color", "--follow", "--asset-root",
       ].includes(item);
       if (!repeatable && seenOptions.has(item)) throw new Error(`${item} cannot be repeated`);
       seenOptions.add(item);
@@ -289,10 +291,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       pin = true;
       continue;
     }
-    if (item === "--no-programs") {
-      noPrograms = true;
-      continue;
-    }
     if (item === "--max-wait-ms") {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--max-wait-ms requires milliseconds");
@@ -360,7 +358,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     model,
     aspectRatio,
     resolution,
-    noPrograms,
     json,
     color,
     verbose,
@@ -388,6 +385,8 @@ function assertCommandOptions(args: ParsedArgs): void {
     case "runtime":
       add("--runtime");
       if (args.action === "up" || args.action === "down") add("--max-wait-ms");
+      break;
+    case "packages":
       break;
     case "auth":
       add("--runtime", "--slot");
@@ -425,7 +424,7 @@ function assertCommandOptions(args: ParsedArgs): void {
       break;
     case "build":
       add("--runtime", "--package-root", "--workspace", "--asset-root", "--follow",
-        "--max-wait-ms", "--no-programs");
+        "--max-wait-ms");
       break;
   }
   const invalid = args.seenOptions.find((item) => !allowed.has(item));
@@ -449,10 +448,11 @@ function usage(): string {
     "  hypit runtime use <runtime-profile>",
     "  hypit runtime unset",
     "  hypit runtime up|status|logs|down [<runtime-profile>]",
+    "  hypit packages install|status <package@exact-version>",
     "  hypit queue [--runtime profile.json] [--watch]",
     "  hypit check <self-described-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
     "  hypit plan <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory]",
-    "  hypit build <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow] [--no-programs]",
+    "  hypit build <run-source> [--runtime profile.json] [--workspace workspace] [--asset-root directory] [--follow]",
     "  hypit status <build-id> [--runtime profile.json] [--watch]",
     "  hypit builds [--runtime profile.json]",
     "  hypit history [source-output-name] [--runtime profile.json] [--source author.svml] [--pin]",
@@ -504,41 +504,6 @@ function createCatalogDescriptor(options: {
   };
 }
 
-/**
- * Starts the external programs the Runtime Profile's Endpoints declare, before
- * the Build reaches an Operation that would need one. A WhisperX that is not
- * running otherwise surfaces as a refused connection partway through, after the
- * paid generation ahead of it has already been spent.
- *
- * Programs are started and left running: a developer submits several Builds
- * against one warm program, and stopping it between them would pay the model
- * load every time. `hypit programs down` ends them.
- */
-async function startDeclaredPrograms(
-  controller: CliRuntimeController,
-  capabilities: readonly CapabilityRef[],
-  onProgress?: (event: CliManagedProgramProgress) => void,
-): Promise<readonly CliManagedProgramReport[] | undefined> {
-  const result = await controller.programs.up({
-    capabilities,
-    ...(onProgress === undefined ? {} : { onProgress }),
-  });
-  const unavailable = result.programs.filter((item) => item.state.state !== "ready");
-  if (unavailable.length > 0) {
-    throw new Error([
-      `${unavailable.length} external program${unavailable.length === 1 ? " is" : "s are"} not ready:`,
-      // The report carries two reasons that do not overlap: what the probe saw,
-      // and why the attempt to fix it fell short. Both name a different repair.
-      ...unavailable.map((item) => `  ${item.id}: ${item.state.state}`
-        + `${"detail" in item.state ? ` — ${item.state.detail}` : ""}`
-        + `${item.detail === undefined ? "" : `; ${item.detail}`}`
-        + `${item.logPath === undefined ? "" : ` (log: ${item.logPath})`}`),
-      "Fix the program, or pass --no-programs to build against what is already running.",
-    ].join("\n"));
-  }
-  return result.programs;
-}
-
 function demandedCapabilities(state: BuildState): readonly CapabilityRef[] {
   const found = new Map(plannedNeeds(state).map((need) => [capabilityName(need.capability), need.capability]));
   return [...found.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, value]) => value);
@@ -553,7 +518,7 @@ async function preflightPlan(
   state: BuildState,
 ) {
   const capabilities = demandedCapabilities(state);
-  const result = await host.doctor({ capabilities });
+  const result = await host.preflight({ capabilities });
   return {
     ok: !result.diagnostics.some((item) => item.severity === "error"),
     dataRoot: result.dataRoot,
@@ -564,12 +529,9 @@ async function preflightPlan(
 
 function assertPreflight(
   preflight: Awaited<ReturnType<typeof preflightPlan>>,
-  ignoredCodes: ReadonlySet<string> = new Set(),
 ): void {
   if (preflight === undefined || preflight.ok) return;
-  const errors = preflight.diagnostics.filter((item) =>
-    item.severity === "error" && !ignoredCodes.has(item.code));
-  if (errors.length === 0) return;
+  const errors = preflight.diagnostics.filter((item) => item.severity === "error");
   throw new Error([
     `Runtime preflight failed for ${errors.length} demanded deployment requirement${errors.length === 1 ? "" : "s"}:`,
     ...errors.map((item) => `  ${item.code}${item.subject === undefined ? "" : ` (${item.subject})`}: ${item.message}`),
@@ -804,7 +766,7 @@ export async function runCli(
       ? dirname(resolve(args.file))
       : process.cwd());
   const packageRootForProject = async (projectRoot = commandProjectRoot()): Promise<string> =>
-    args.packageRoot ?? await resolvePackageRoot(projectRoot, distribution.packageRoot);
+    args.packageRoot ?? await resolvePackageRoot(projectRoot);
   const writeOperational = (
     machine: unknown,
     title: string,
@@ -822,12 +784,17 @@ export async function runCli(
     : (event: CliManagedProgramProgress): void => {
       const verb = {
         checking: "Checking",
-        preparing: "Preparing",
+        installing: "Installing",
         starting: "Starting",
         waiting: "Waiting for",
         ready: "Ready",
       }[event.phase];
       io.write(`  · ${verb} ${event.id}\n`);
+    };
+  const reportPackageProgress = args.json || args.jsonl
+    ? undefined
+    : (event: { readonly specifier: string; readonly phase: "checking" | "installing" | "ready" }): void => {
+      if (event.phase === "installing") io.write(`  · Installing ${event.specifier}\n`);
     };
   const runtimeHosts = new Map<string, Promise<NodeRuntimeHost>>();
   const runtimeHost = async (path: string, requestedPackageRoot?: string): Promise<NodeRuntimeHost> => {
@@ -836,7 +803,12 @@ export async function runCli(
     const key = `${profile}\u0000${packageRoot}`;
     let opened = runtimeHosts.get(key);
     if (opened === undefined) {
-      opened = distribution.openRuntimeHost(profile, { packageRoot });
+      opened = distribution.openRuntimeHost(profile, {
+        packageRoot,
+        ...(distribution.packageRoot === undefined
+          ? {}
+          : { distributionPackageRoot: distribution.packageRoot }),
+      });
       runtimeHosts.set(key, opened);
     }
     return await opened;
@@ -906,7 +878,7 @@ export async function runCli(
     || args.command === "inspect" || args.command === "get" || args.command === "cancel"
     || args.command === "doctor" || args.command === "programs"
     || args.command === "runtime" || args.command === "queue" || args.command === "paths"
-    || args.command === "image";
+    || args.command === "image" || args.command === "packages";
   const operational = known || args.command === "auth";
   const fileOptional = args.command === "builds" || args.command === "history" || args.command === "queue"
     || args.command === "paths" || args.command === "image"
@@ -922,9 +894,6 @@ export async function runCli(
   }
   if (args.command === "queue" && args.watch && args.json) {
     throw new Error("queue --watch is a stream; use --jsonl instead of --json");
-  }
-  if (args.noPrograms && args.command !== "build") {
-    throw new Error("--no-programs is only valid for build; no other command starts an external program");
   }
   if (args.command === "history" && args.file === undefined && args.source === undefined) {
     throw new Error("history requires an output name or --source path");
@@ -948,6 +917,9 @@ export async function runCli(
     const picture = await distribution.generatePicture({
       prompt: await readPromptText(args.prompt),
       packageRoot: await packageRootForProject(process.cwd()),
+      ...(distribution.packageRoot === undefined
+        ? {}
+        : { distributionPackageRoot: distribution.packageRoot }),
       ...(args.model === undefined ? {} : { model: args.model }),
       ...(args.aspectRatio === undefined ? {} : { aspectRatio: args.aspectRatio }),
       ...(args.resolution === undefined ? {} : { resolution: args.resolution }),
@@ -982,6 +954,8 @@ export async function runCli(
       profile: args.runtime,
       runtimeData: runtimePaths?.runtimeDataRoot,
       hostState: hypitHostStateRoot(),
+      machinePackages: hypitHostPackageRoot(),
+      distribution: distribution.packageRoot,
     };
     writeOperational(machine, "Hypit paths", "info", [
       ["Project", machine.project],
@@ -989,7 +963,37 @@ export async function runCli(
       ["Runtime Profile", machine.profile ?? "not selected"],
       ["Runtime data", machine.runtimeData ?? "not selected"],
       ["Host state", machine.hostState],
+      ["Machine packages", machine.machinePackages],
+      ["Distribution", machine.distribution ?? "embedded"],
     ]);
+    return;
+  }
+  if (args.command === "packages") {
+    if (args.action !== "install" && args.action !== "status") {
+      throw new Error("packages takes install or status");
+    }
+    if (args.file === undefined) throw new Error(`packages ${args.action} requires package@exact-version`);
+    const root = hypitHostPackageRoot();
+    const existing = await inspectHostPackage(args.file, root);
+    const reports = args.action === "install"
+      ? await prepareHostPackages([args.file], {
+        root,
+        ...(reportPackageProgress === undefined ? {} : { onProgress: reportPackageProgress }),
+      })
+      : existing === undefined ? [] : [existing];
+    const ready = reports.length === 1;
+    writeOperational({
+      format: "hypit.cli-packages-status@1",
+      ok: ready,
+      root,
+      packages: reports,
+    }, args.action === "install" ? "Machine package is ready" : "Machine package status",
+    ready ? "success" : "warning", [
+      ["Package", args.file],
+      ["Root", root],
+      ["Ready", String(ready)],
+    ]);
+    if (!ready) io.setExitCode?.(1);
     return;
   }
   if (args.command === "doctor") {
@@ -1028,6 +1032,10 @@ export async function runCli(
     const profileInput = args.runtime ?? args.file;
     if (profileInput === undefined) throw new Error("programs requires a Runtime Profile");
     const profile = resolve(profileInput);
+    const host = await runtimeHost(profile);
+    const prepared = args.action === "up"
+      ? await host.prepare(reportPackageProgress === undefined ? {} : { onProgress: reportPackageProgress })
+      : [];
     const controller = await runtimeController(profile);
     const result = args.action === "up"
       ? await controller.programs.up({
@@ -1045,6 +1053,7 @@ export async function runCli(
       ok: args.action === "status" ? true : desiredState,
       ready,
       dataRoot: result.dataRoot,
+      packages: prepared,
       programs: result.programs,
     };
     const shownPrograms = args.verbose || args.action !== "status"
@@ -1071,9 +1080,13 @@ export async function runCli(
     const profile = resolve(profileInput);
     const controller = await runtimeController(profile);
     if (args.action === "up") {
-      // Read the Runtime Profile before starting the Worker or its programs.
       const packageRoot = await packageRootForProject();
-      const validated = await loadRuntime(await runtimeHost(profile, packageRoot));
+      const host = await runtimeHost(profile, packageRoot);
+      const prepared = await host.prepare(
+        reportPackageProgress === undefined ? {} : { onProgress: reportPackageProgress },
+      );
+      // Read the Runtime Profile before starting the Worker or its programs.
+      const validated = await loadRuntime(host);
       await validated.close();
       const external = await controller.programs.up({
         ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
@@ -1084,8 +1097,9 @@ export async function runCli(
       });
       const ok = processState.state === "running"
         && external.programs.every((item) => item.state.state === "ready");
-      writeOperational({ ok, worker: processState, programs: external.programs }, "Runtime is up",
+      writeOperational({ ok, packages: prepared, worker: processState, programs: external.programs }, "Runtime is up",
         ok ? "success" : "warning", [
+        ["Machine packages", String(prepared.length)],
         ["Worker", String(processState.pid)],
         ["External programs", String(external.programs.length)],
       ]);
@@ -1193,7 +1207,7 @@ export async function runCli(
             : `configure ${item.ref.key} through CredentialStore ${item.ref.store}`;
           throw new Error(
             `CredentialStore ${item.ref.store} is read-only for ${item.label}; ${source}, `
-            + "or select a writable CredentialStore such as keychain in the Runtime Profile",
+            + "or select the writable OS CredentialStore in the Runtime Profile",
           );
         }
         const raw = args.from === undefined
@@ -1609,13 +1623,16 @@ export async function runCli(
     ?? selectedRuntimeProjectRoot
     ?? dirname(resolve(args.file!));
   const sourcePackageRoot = effectivePackageRoot
-    ?? await resolvePackageRoot(effectiveWorkspaceRoot, distribution.packageRoot);
+    ?? await resolvePackageRoot(effectiveWorkspaceRoot);
   const loadedPackageSet = distribution.discoverSourcePackages === undefined
     ? undefined
     : await loadDiscoveredSourcePackages(distribution, {
           source: args.file!,
           ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
           packageRoot: sourcePackageRoot,
+          ...(distribution.packageRoot === undefined
+            ? {}
+            : { distributionPackageRoot: distribution.packageRoot }),
         });
   const packageContributions = (loadedPackageSet ?? distribution.bootstrapPackages)
     .map((item) => item.contribution);
@@ -1727,22 +1744,12 @@ export async function runCli(
       const controller = await (await runtimeHost(args.runtime)).controller({
         packageRoot: sourcePackageRoot,
       });
-      let programs: Awaited<ReturnType<typeof startDeclaredPrograms>> | undefined;
       let worker = await controller.worker.status();
       const preflight = await preflightPlan(await runtimeHost(args.runtime), result.state);
-      // A managed program being down is repairable after Runtime validation;
-      // every other deployment error fails before we construct execution or
-      // start anything. With --no-programs, readiness errors remain fatal.
-      assertPreflight(preflight, args.noPrograms
-        ? new Set()
-        : new Set(["MANAGED_PROGRAM_DOWN", "MANAGED_PROGRAM_MISMATCH"]));
-      programs = args.noPrograms
-        ? undefined
-        : await startDeclaredPrograms(
-            controller,
-            demandedCapabilities(result.state),
-            reportProgramProgress,
-          );
+      // Build is an execution boundary, not a provisioning command. The cheap
+      // preflight must already be clean; `runtime up` is the explicit place for
+      // installing or starting declared programs.
+      assertPreflight(preflight);
       runtime = await loadRuntime(await runtimeHost(args.runtime));
       let built = await runtime.build(request);
       try {
@@ -1791,9 +1798,6 @@ export async function runCli(
         build: built.id,
         status: built.status,
         worker,
-        ...(programs === undefined ? {} : {
-          programs: programs.map((item) => ({ id: item.id, action: item.action })),
-        }),
         goals: built.state.plan.goals.map((goal) => {
           const record = built.state.records.find((item) => item.id === goal.record);
           return {
@@ -1869,7 +1873,7 @@ export async function runCli(
       kind: "plan",
       machine: {
         format: "hypit.cli-plan@1",
-        ok: true,
+        ok: preflight?.ok ?? true,
         plan: result.definition.plan,
         unreached: unreachedGenerations(result.compilation.author.graph, result.state, outputNames),
         ...(preflight === undefined ? {} : { preflight }),
@@ -1878,6 +1882,7 @@ export async function runCli(
       outputNames,
       satisfactionNames: loaded.run.satisfactionNames,
     });
+    if (preflight !== undefined && !preflight.ok) io.setExitCode?.(1);
   } finally {
     await runtime?.close();
   }

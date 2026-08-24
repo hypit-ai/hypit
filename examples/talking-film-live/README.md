@@ -5,7 +5,7 @@ This example deliberately exercises the real path rather than a placeholder path
 ```text
 Script -> deterministic Estimate -> two Seedance Mini 480p generations
        -> media normalization -> WhisperX SemanticTakes -> Speech Track SemanticTrack
-       -> Vertex Gemini Caption plan -> Caption Track
+       -> Script CaptionDocument -> Caption Track
        -> Selection-located Text Track -> Film -> HyperFrames -> audio mix -> mux
 ```
 
@@ -16,9 +16,6 @@ padding interval, model bound, or rounding choice. The generated presenter image
 Prerequisites for the exact checked-in Runtime Profile:
 
 - `KIE_API_KEY` for the two paid Seedance Mini generations;
-- `GOOGLE_CLOUD_PROJECT` naming a project with Vertex AI enabled;
-- `GOOGLE_APPLICATION_CREDENTIALS_JSON` containing the credential JSON, not a committed path or
-  secret file;
 - `ffmpeg`, `ffprobe`, Chrome/HyperFrames and the prepared managed local WhisperX service.
 
 Prepare and health-check WhisperX as described in
@@ -29,7 +26,7 @@ command promises that remote credentials and service health are valid.
 
 Run the complete graph through the explicit Run Graph and declarative local Runtime Profile. Source
 imports select author and compute packages. The Profile selects Local execution, SQLite state,
-filesystem Artifacts, credentials, KIE, media, WhisperX, Vertex and HyperFrames packages.
+filesystem Artifacts, credentials, KIE, media, WhisperX and HyperFrames packages.
 
 ```bash
 cd examples/talking-film-live

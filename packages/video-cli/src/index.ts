@@ -4,6 +4,11 @@ import {
   runCli,
 } from "@hypit/cli";
 import type { CliIo } from "@hypit/cli";
+import {
+  installDistributionPackageResolution,
+  installExternalPackageResolution,
+} from "@hypit/package-loader-node";
+import { hypitHostPackageRoot } from "@hypit/runtime-host-node";
 import type { LoadedPackage } from "@hypit/package-loader-node";
 
 import { videoCliDistribution } from "./distribution.js";
@@ -20,6 +25,10 @@ export function runVideoCli(
   io: CliIo,
   packages: readonly LoadedPackage[] = [],
 ): Promise<void> {
+  installDistributionPackageResolution(videoCliDistribution.packageRoot === undefined
+    ? []
+    : [videoCliDistribution.packageRoot]);
+  installExternalPackageResolution([hypitHostPackageRoot()]);
   return runCli(argv, io, {
     ...videoCliDistribution,
     bootstrapPackages: packages,

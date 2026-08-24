@@ -41,12 +41,30 @@ The Surface exports one full Narrative plus narrow, immutable views:
 - `script.segment.<id>.dialogue` is ordinary `Text`: display-independent dialogue, including optional
   Role cues and right-side Dual Text pronunciation, for a speech-video model;
 - `script.segment.<id>.speech` is ordinary pronunciation-only `Text` for duration estimation or TTS;
-- `script.caption` is the complete left-side `CaptionDisplaySequence`;
-- `script.caption.correspondence` maps each whole display Atom to its authored speech-token range;
-- `script.caption.selection.<id>` is the display-word subset wholly owned by one Selection;
+- `script.caption` is one complete `CaptionDocument`: ordered display Words, N:M Alignment Units,
+  and authored Cue Breaks;
 - `script.selection.<id>` is a reusable explicit Selection.
 
-Seedance consumes dialogue `Text`, Estimate and TTS consume speech `Text`, Speech Track consumes the
-Segment excerpt, and Caption consumes the explicit display and correspondence edges. None imports
-Script's parser AST. Another authoring package may produce the same ordinary Text and structured
-Narrative contracts.
+`@hypit/caption` projects `script.selection.<id>` or a Role onto complete Caption Alignment Units;
+it then joins those units to a SemanticTrack for frame timing. Seedance consumes dialogue `Text`,
+Estimate and TTS consume speech `Text`, and Speech Track consumes the Segment excerpt. None imports
+Script's parser AST. Another authoring package may produce the same ordinary Text, Narrative and
+CaptionDocument contracts.
+
+### Script vocabulary
+
+- **Segment**: a named structural passage, written `<opening>...</opening>`.
+- **Role Cue**: a speaker turn, written `<ALICE>...</ALICE>` or as a bare role tag in a Segment.
+- **Dual Text**: one authored speech span with separate display and spoken projections, written
+  `<display text | spoken text>`.
+- **Selection marker**: a named semantic range, written `@name ... @/name`.
+- **Moment marker**: a named semantic point, written `@name!`.
+- **CaptionDocument**: the Script-owned caption truth; it contains **Display Words**,
+  **Alignment Units** and **Cue Breaks**. It contains no seconds or frames.
+- **Token attribute**: a flat postfix display-word annotation such as `really{emphasis}` or
+  `really{emphasis,keyword}`. It becomes `CaptionDisplayWord.attributes`; it is not a Selection and
+  does not carry timing.
+
+An unescaped `@` is legal only on the spoken side of Dual Text. The display side is literal; write
+`\@` if an at-sign must be shown. `||` is an authored Caption Cue Break and must occur between
+complete Alignment Units.

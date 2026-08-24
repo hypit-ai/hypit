@@ -5,7 +5,7 @@ not model wrappers, Providers or new execution nodes.
 
 Vendor the selected `.svs` file into the video project (for example `./kits/speaker-v1.svs`). This
 keeps its bytes inside the project's Source Closure and Workspace boundary; a project must not
-reach back into a Hypit checkout through `../../packages/...`.
+reach back into the installed Distribution through `../../packages/...`.
 
 Each Kit is rendered by the domain-neutral `text:Render` Surface. Its Text output then feeds one of
 the three low-level `@hypit/seedance` invocation modes. Reference media and duration remain

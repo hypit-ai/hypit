@@ -7,7 +7,7 @@ from .resources import default_nltk_data_root, prepare_punkt_tab
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Install locked non-wheel data for SVML WhisperX")
+    parser = argparse.ArgumentParser(description="Install NLTK data required by Hypit WhisperX")
     parser.add_argument(
         "--nltk-data",
         type=Path,

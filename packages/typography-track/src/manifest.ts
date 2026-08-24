@@ -23,6 +23,7 @@ import { mediaDependency, mediaTypes } from "@hypit/media";
 import { svsRecipeType } from "@hypit/svs";
 import { textDependency, textTypes } from "@hypit/text";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/protocol";
+import { temporalDependency, temporalTypes } from "@hypit/temporal";
 
 const previewImage = (file: string) => ({
   mediaType: "image/png",
@@ -48,9 +49,7 @@ export const typographyTrackProducers = {
   bindArea: { module: typographyTrackModuleRef, name: "bind-area-placement" },
   bindPath: { module: typographyTrackModuleRef, name: "bind-path-placement" },
   createSet: { module: typographyTrackModuleRef, name: "create-typography-track-set" },
-  appendProgram: { module: typographyTrackModuleRef, name: "append-program-text-item" },
-  appendSelection: { module: typographyTrackModuleRef, name: "append-selection-text-item" },
-  appendMoment: { module: typographyTrackModuleRef, name: "append-moment-text-item" },
+  appendItem: { module: typographyTrackModuleRef, name: "append-text-item" },
   finalize: { module: typographyTrackModuleRef, name: "finalize-typography-track" },
   render: { module: typographyTrackModuleRef, name: "render-typography-track" },
   renderMask: { module: typographyTrackModuleRef, name: "render-text-mask-track" },
@@ -65,21 +64,6 @@ const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
 const signedInteger = { kind: "number", integer: true } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const enumString = (values: readonly string[]): ValueSchema => ({ kind: "string", enum: values });
-
-const duration: ValueSchema = { kind: "oneOf", variants: [
-  object({ unit: { schema: { kind: "literal", value: "frames" } }, value: { schema: integer } }),
-  object({ unit: { schema: { kind: "literal", value: "milliseconds" } }, value: { schema: number } }),
-  object({ unit: { schema: { kind: "literal", value: "seconds" } }, numerator: { schema: signedInteger }, denominator: { schema: positiveInteger } }),
-] };
-const point: ValueSchema = { kind: "oneOf", variants: [
-  ...["program.start", "program.end", "selection.start", "selection.end", "moment.cue"].map((ref) => object({ ref: { schema: { kind: "literal", value: ref } }, offset: { schema: duration, optional: true } })),
-  object({ ref: { schema: { kind: "literal", value: "absolute" } }, at: { schema: duration } }),
-] };
-const projection = object({ start: { schema: point }, end: { schema: point } });
-const expansion: ValueSchema = { kind: "oneOf", variants: [
-  object({ kind: { schema: { kind: "literal", value: "one" } } }),
-  object({ kind: { schema: { kind: "literal", value: "each" } } }),
-] };
 
 const styleDeclaration: ValueSchema = { kind: "oneOf", variants: VISUAL_STYLE_NAMES_V1.map((name) => object({
   name: { schema: { kind: "literal", value: name } },
@@ -137,11 +121,9 @@ export const textPlacementSchema: ValueSchema = object({
 export const textItemSpecSchema: ValueSchema = object({
   id: { schema: string },
   document: { schema: visualTextDocumentSchema },
-  projection: { schema: projection }, expansion: { schema: expansion },
 });
 export const plainTextItemSpecSchema: ValueSchema = object({
   id: { schema: string },
-  projection: { schema: projection }, expansion: { schema: expansion },
 });
 const span = object({ startFrame: { schema: integer }, endFrameExclusive: { schema: positiveInteger } });
 const item = object({
@@ -436,7 +418,7 @@ export const typographyTrackMarkupSurfaces = [
         ],
       },
     },
-    { name: "track", tag: "Track", mode: "structured", outputs: [typographyTrackTypes.header, typographyTrackTypes.itemSpec, typographyTrackTypes.plainItemSpec, typographyTrackTypes.motion, typographyTrackTypes.set, typographyTrackTypes.placement, typographyTrackTypes.program, compositionTypes.visualTrack],
+    { name: "track", tag: "Track", mode: "structured", outputs: [typographyTrackTypes.header, typographyTrackTypes.itemSpec, typographyTrackTypes.plainItemSpec, typographyTrackTypes.motion, typographyTrackTypes.set, typographyTrackTypes.placement, temporalTypes.windowSpec, typographyTrackTypes.program, compositionTypes.visualTrack],
       vocabulary: {
         summary: "One Typography Track: independently placed and timed text items on a shared ProgramSpace, lowered to one addressable TypographyTrackProgram and one peer VisualTrack.",
         appearance: "Text alone on an otherwise empty Canvas: the glyphs, plus whatever Paint the Style puts around them — fills, outlines, glows, shadows and rounded, bordered, optionally tailed boxes drawn behind the frame, paragraph, line, run, word or grapheme. Each item holds its own region of the Canvas: a Point item is one unwrapped block that hugs its text and hangs off a single coordinate by its inline and block anchors, an Area item flows and wraps inside a rectangle under its own alignment, columns, clipping and overflow, and a Path item strings the glyphs along a curve, on one side of it, turning with it or standing upright. Items switch on and off at their own frame windows and overlap in the stacking order their Styles declare, so titles, labels and captions can occupy different corners at once and outlast or outlive one another. While an item is on screen it plays its Motion: the whole block translating, scaling, rotating, skewing, fading, blurring, recoloring or wiping open from an edge, and its paragraphs, lines, runs, words or graphemes arriving one behind another in a staggered run.",
@@ -463,7 +445,6 @@ export const typographyTrackMarkupSurfaces = [
               { name: "end", kind: "literal", required: false, summary: "Places the window end at a point expression." },
               { name: "selection", kind: "reference", required: false, accepts: [narrativeTypes.selection], summary: "Binds the Selection that resolves `selection.start` and `selection.end` in a start/end window." },
               { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
-              { name: "occurrences", kind: "literal", required: false, values: ["one", "each"], summary: "Decides whether a semantic source contributes one window or every occurrence; defaults to `one`." },
             ],
             children: documentChildren,
             text: "Direct text is the item's whole document, read as one paragraph." },
@@ -482,7 +463,6 @@ export const typographyTrackMarkupSurfaces = [
               { name: "end", kind: "literal", required: false, summary: "Places the window end at a point expression." },
               { name: "selection", kind: "reference", required: false, accepts: [narrativeTypes.selection], summary: "Binds the Selection that resolves `selection.start` and `selection.end` in a start/end window." },
               { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
-              { name: "occurrences", kind: "literal", required: false, values: ["one", "each"], summary: "Decides whether a semantic source contributes one window or every occurrence; defaults to `one`." },
             ],
             children: documentChildren,
             text: "Direct text is the item's whole document, read as one paragraph." },
@@ -501,7 +481,6 @@ export const typographyTrackMarkupSurfaces = [
               { name: "end", kind: "literal", required: false, summary: "Places the window end at a point expression." },
               { name: "selection", kind: "reference", required: false, accepts: [narrativeTypes.selection], summary: "Binds the Selection that resolves `selection.start` and `selection.end` in a start/end window." },
               { name: "moment", kind: "reference", required: false, accepts: [narrativeTypes.moment], summary: "Binds the Moment that resolves `moment.cue` in a start/end window." },
-              { name: "occurrences", kind: "literal", required: false, values: ["one", "each"], summary: "Decides whether a semantic source contributes one window or every occurrence; defaults to `one`." },
             ],
             children: documentChildren,
             text: "Direct text is the item's whole document, read as one paragraph." },
@@ -567,7 +546,7 @@ export const typographyTrackManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: typographyTrackModuleRef.name,
   version: typographyTrackModuleRef.version,
-  dependencies: [narrativeDependency, semanticTrackDependency, spatialDependency, mediaDependency, compositionDependency, textDependency],
+  dependencies: [narrativeDependency, semanticTrackDependency, spatialDependency, mediaDependency, compositionDependency, textDependency, temporalDependency],
   types: [
     { name: typographyTrackTypes.style.name },
     { name: typographyTrackTypes.motion.name },
@@ -586,9 +565,7 @@ export const typographyTrackManifest: ModuleManifest = {
     { name: typographyTrackProducers.bindArea.name, inputs: [{ name: "frame", type: spatialTypes.frame }], outputs: [{ name: "placement", type: typographyTrackTypes.placement }], needs: [] },
     { name: typographyTrackProducers.bindPath.name, inputs: [{ name: "path", type: spatialTypes.path }], outputs: [{ name: "placement", type: typographyTrackTypes.placement }], needs: [] },
     { name: typographyTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
-    { name: typographyTrackProducers.appendProgram.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "semantic", type: semanticTrackTypes.track }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
-    { name: typographyTrackProducers.appendSelection.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "semantic", type: semanticTrackTypes.track }, { name: "selection", type: narrativeTypes.selection }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
-    { name: typographyTrackProducers.appendMoment.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "semantic", type: semanticTrackTypes.track }, { name: "moment", type: narrativeTypes.moment }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
+    { name: typographyTrackProducers.appendItem.name, inputs: [{ name: "set", type: typographyTrackTypes.set }, { name: "header", type: typographyTrackTypes.header }, { name: "semantic", type: semanticTrackTypes.track }, { name: "placement", type: typographyTrackTypes.placement }, { name: "spec", type: typographyTrackTypes.itemSpec }, { name: "style", type: typographyTrackTypes.style }, { name: "motion", type: typographyTrackTypes.motion }, { name: "window", type: temporalTypes.window }], outputs: [{ name: "set", type: typographyTrackTypes.set }], needs: [] },
     { name: typographyTrackProducers.finalize.name, inputs: [{ name: "header", type: typographyTrackTypes.header }, { name: "set", type: typographyTrackTypes.set }], outputs: [{ name: "program", type: typographyTrackTypes.program }], needs: [] },
     { name: typographyTrackProducers.render.name, inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: typographyTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
     { name: typographyTrackProducers.renderMask.name, inputs: [{ name: "semantic", type: semanticTrackTypes.track }, { name: "program", type: typographyTrackTypes.program }, { name: "material", type: mediaTypes.compositableSurface }, { name: "spec", type: typographyTrackTypes.maskSpec }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },

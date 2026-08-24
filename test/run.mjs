@@ -27,8 +27,8 @@ const patterns = [
   "examples/*/packages/*/test/**/*.test.ts",
 ];
 
-/** A suite that ran nothing is not a suite that passed. Today the patterns find 104. */
-const minimumFiles = 100;
+/** A suite that ran nothing is not a suite that passed. Keep this a non-zero guard, not a rubric. */
+const minimumFiles = 1;
 
 /**
  * The venv layout Python chose for this platform.

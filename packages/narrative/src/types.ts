@@ -23,30 +23,20 @@ export type NarrativeTurn = {
   readonly tokenEndExclusive: number;
 };
 
-export type NarrativeSelectionOccurrence = {
-  readonly occurrence: number;
+export type NarrativeSelection = {
+  readonly id: string;
   /** The exact semantic anchors chosen by the author Surface's affinity syntax. */
   readonly startAnchorId: string;
   readonly endAnchorId: string;
 };
 
-export type NarrativeSelection = {
-  readonly id: string;
-  readonly occurrences: readonly NarrativeSelectionOccurrence[];
-};
-
 /** One explicitly authored semantic window, independently referenceable by graph edges. */
 export type NarrativeSelectionRef = NarrativeSelection;
 
-export type NarrativeMomentOccurrence = {
-  readonly occurrence: number;
-  /** The exact semantic anchor chosen by the author Surface's affinity syntax. */
-  readonly anchorId: string;
-};
-
 export type NarrativeMoment = {
   readonly id: string;
-  readonly occurrences: readonly NarrativeMomentOccurrence[];
+  /** The exact semantic anchor chosen by the author Surface's affinity syntax. */
+  readonly anchorId: string;
 };
 
 /** One explicitly authored semantic instant, independently referenceable by graph edges. */
@@ -55,43 +45,44 @@ export type NarrativeMomentRef = NarrativeMoment;
 /** One author-visible word surface. Punctuation owned by the surface is preserved. */
 export type CaptionDisplayWord = {
   readonly id: string;
-  readonly atomId: string;
+  readonly unitId: string;
   readonly segmentId: string;
   readonly turnId: string;
   readonly role?: string;
   readonly text: string;
+  /** Reserved for Script-native word attributes; empty until an inline Mark is authored. */
+  readonly attributes: readonly CaptionWordAttribute[];
 };
 
-/** One indivisible Cue-planning unit. Fields may still address its ordered words. */
-export type CaptionDisplayAtom = {
+export type CaptionWordAttributeValue = string | number | boolean;
+
+export type CaptionWordAttribute = {
+  readonly name: string;
+  readonly value: CaptionWordAttributeValue;
+};
+
+/** The smallest author-declared N:M display-to-speech correspondence unit. */
+export type CaptionAlignmentUnit = {
   readonly id: string;
   readonly segmentId: string;
   readonly turnId: string;
   readonly role?: string;
   readonly wordIds: readonly string[];
+  /** Speech tokens are retained here so Caption can project a Narrative Selection without frames. */
+  readonly sourceTokenIds: readonly string[];
 };
 
-/** Complete visible Caption truth. It contains no pronunciation or timing facts. */
-export type CaptionDisplaySequence = {
+export type CaptionCueBreak = {
+  /** The Cue boundary is after this complete Alignment Unit. */
+  readonly afterUnitId: string;
+};
+
+/** Complete Script-owned Caption truth. It contains no frame or measured timing facts. */
+export type CaptionDocument = {
   readonly id: string;
-  readonly atoms: readonly CaptionDisplayAtom[];
+  readonly units: readonly CaptionAlignmentUnit[];
   readonly words: readonly CaptionDisplayWord[];
-};
-
-/** Author-declared whole-Atom correspondence to spoken Script tokens; never an inferred refinement. */
-export type CaptionCorrespondence = {
-  readonly displaySequenceId: string;
-  readonly atoms: readonly {
-    readonly atomId: string;
-    readonly sourceTokenIds: readonly string[];
-  }[];
-};
-
-/** One ordered subset of an exact CaptionDisplaySequence, projected by Script structure. */
-export type CaptionDisplayWordSubset = {
-  readonly id: string;
-  readonly sequenceId: string;
-  readonly wordIds: readonly string[];
+  readonly cueBreaks: readonly CaptionCueBreak[];
 };
 
 export type SemanticAnchor = {

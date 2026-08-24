@@ -6,7 +6,8 @@ description: Step-by-step guide for adding a new Endpoint adapter.
 # Adding a Provider
 
 A Provider package implements a privileged external capability — video generation, media
-processing, alignment, caption planning, rendering. It is activated through the Runtime Profile,
+processing, alignment or rendering. Caption authoring and cue grouping are Script-owned and do not
+need a Provider. A Provider is activated through the Runtime Profile,
 never through `<import>` in Author Source.
 
 No change to Core, the CLI or any author package is required.
@@ -170,8 +171,9 @@ const adapter = createRuntimeEndpointAdapterFacet({
 ```
 
 `hypit runtime up` prepares, starts and probes declared Managed Programs before starting the
-durable Worker. `build` starts only Programs backing capabilities demanded by its plan. Providers
-that call only remote APIs omit `program` entirely.
+durable Worker. `build` only preflights Programs backing capabilities demanded by its plan and
+fails before submission when one is not ready; it never installs or starts one. Providers that call
+only remote APIs omit `program` entirely.
 
 ## 6. Install
 
@@ -195,7 +197,7 @@ explicitly selects its `use` id.
       "use": "@hypit/provider-my-service",
       "pool": "my-service.account",
       "config": {
-        "apiKey": { "store": "keychain", "key": "my-service.api-key" },
+        "apiKey": { "store": "os", "key": "my-service.api-key" },
         "defaultConcurrency": 2
       }
     }
@@ -216,7 +218,6 @@ hypit doctor hypit.runtime.json
 | `provider-kie` | Remote API: upload, paid submission, checkpointed polling, bounded download, immediate ArtifactStore persistence |
 | `provider-media-local` | Local process: shell-free ffprobe/ffmpeg with bounded execution |
 | `provider-whisperx-local` | Local HTTP service with a warm model, single-admit concurrency |
-| `provider-google-vertex` | Cloud API: Vertex AI with project/credentials configuration |
 | `provider-hyperframes-local` | Local process: Chrome rendering with worker parallelism and output probe validation |
 | `provider-hyperframes-aws-lambda` | Remote asynchronous job: Step Functions submission, polling and S3 streaming |
 | `provider-image-opencv-local` | Local Python: bounded OpenCV/NumPy with locked Python environment |

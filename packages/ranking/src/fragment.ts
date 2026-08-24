@@ -3,9 +3,10 @@ import { sealGraphFragment } from "@hypit/elaborator";
 import type { FragmentOperation, GraphFragment } from "@hypit/elaborator";
 import { mediaTypes } from "@hypit/media";
 import { narrativeTypes } from "@hypit/narrative";
-import { semanticTrackTypes } from "@hypit/semantic-track";
+import { semanticTrackProducers, semanticTrackTypes } from "@hypit/semantic-track";
 import { spatialTypes } from "@hypit/spatial";
 import { textTypes } from "@hypit/text";
+import { temporalProducers, temporalTypes } from "@hypit/temporal";
 
 import { rankingProducers, rankingTypes } from "./manifest.js";
 import type { RankingVariant } from "./types.js";
@@ -19,6 +20,7 @@ export type RankingFragmentItem = {
   readonly iconName?: string;
   readonly contentName?: string;
   readonly timingName?: string;
+  readonly timingSpecName?: string;
 };
 
 export type RankingFragmentSound = {
@@ -27,6 +29,12 @@ export type RankingFragmentSound = {
 };
 
 const definition = (variant: RankingVariant) => {
+  if (variant === "tier-board") return {
+    style: rankingTypes.tierStyle, set: rankingTypes.tierItems, program: rankingTypes.tierProgram,
+    create: rankingProducers.createTierItems, append: rankingProducers.appendTierItem,
+    appendIcon: rankingProducers.appendTierItem, build: rankingProducers.tierProgram,
+    events: rankingProducers.tierEvents, render: rankingProducers.renderTier,
+  } as const;
   if (variant === "column") return {
     style: rankingTypes.columnStyle, set: rankingTypes.columnItems, program: rankingTypes.columnProgram,
     create: rankingProducers.createColumnItems, append: rankingProducers.appendColumnItem,
@@ -53,18 +61,23 @@ export function createRankingFragment(
     { name: "header", type: rankingTypes.header },
     { name: "semantic", type: semanticTrackTypes.track },
     { name: "outer", type: outerKind === "selection" ? narrativeTypes.selection : narrativeTypes.excerpt },
+    { name: "outer-spec", type: temporalTypes.windowSpec },
     ...(variant === "column" ? [] : [
-      { name: "triggers", type: narrativeTypes.moment },
       { name: "terminal", type: narrativeTypes.moment },
+      { name: "terminal-spec", type: temporalTypes.pointSpec },
     ]),
     ...(variant === "column" ? [{ name: "canvas", type: spatialTypes.canvas }] : []),
     { name: "frame", type: spatialTypes.frame },
     { name: "style", type: selected.style },
   ];
   const operations: FragmentOperation[] = [
+    { id: "space", producer: semanticTrackProducers.projectProgramSpace,
+      inputs: { track: input("semantic") }, result: { kind: "output", name: "space" } },
     { id: "specs", producer: rankingProducers.createSpecs, inputs: { header: input("header") }, result: { kind: "output", name: "set" } },
     { id: "resolved", producer: selected.create, inputs: {}, result: { kind: "output", name: "set" } },
-    ...(variant === "column" ? [{ id: "candidates", producer: rankingProducers.createColumnCandidates, inputs: {}, result: { kind: "output" as const, name: "set" } }] : []),
+    { id: "candidates", producer: variant === "column"
+      ? rankingProducers.createColumnWindows
+      : rankingProducers.createTriggeredCandidates, inputs: {}, result: { kind: "output" as const, name: "set" } },
   ];
   let specs = operation("specs");
   let resolved = operation("resolved");
@@ -73,7 +86,12 @@ export function createRankingFragment(
     inputs.push({ name: item.specName, type: item.contentName === undefined ? rankingTypes.itemSpec : rankingTypes.textItemShell });
     if (item.contentName !== undefined) inputs.push({ name: item.contentName, type: textTypes.text });
     if (item.iconName !== undefined) inputs.push({ name: item.iconName, type: mediaTypes.blobArtifact });
-    if (item.timingName !== undefined) inputs.push({ name: item.timingName, type: narrativeTypes.selection });
+    if (item.timingName !== undefined) inputs.push({
+      name: item.timingName,
+      type: variant === "column" ? narrativeTypes.selection : narrativeTypes.moment,
+    });
+    if (item.timingSpecName !== undefined) inputs.push({ name: item.timingSpecName,
+      type: variant === "column" ? temporalTypes.windowSpec : temporalTypes.pointSpec });
     const materializedId = `materialize-${item.suffix}`;
     if (item.contentName !== undefined) operations.push({
       id: materializedId,
@@ -103,12 +121,25 @@ export function createRankingFragment(
     });
     resolved = operation(visualId);
     if (item.timingName !== undefined) {
+      const projectionId = `${variant === "column" ? "window" : "point"}-${item.suffix}`;
+      operations.push({
+        id: projectionId,
+        producer: variant === "column" ? temporalProducers.projectSelection : temporalProducers.projectMomentPoint,
+        inputs: {
+          semantic: input("semantic"), spec: input(item.timingSpecName!),
+          [variant === "column" ? "selection" : "moment"]: input(item.timingName),
+        },
+        result: { kind: "output", name: variant === "column" ? "window" : "point" },
+      });
       const timingId = `timing-${item.suffix}`;
       operations.push({
         id: timingId,
-        producer: rankingProducers.appendColumnCandidate,
+        producer: variant === "column"
+          ? rankingProducers.appendColumnWindow
+          : rankingProducers.appendTriggeredCandidate,
         inputs: {
-          set: candidates, spec: resolvedSpec, semantic: input("semantic"), selection: input(item.timingName),
+          set: candidates, spec: resolvedSpec,
+          [variant === "column" ? "window" : "activation"]: operation(projectionId),
         },
         result: { kind: "output", name: "set" },
       });
@@ -118,25 +149,42 @@ export function createRankingFragment(
   if (variant === "column") {
     operations.push({
       id: "outer-window",
-      producer: outerKind === "selection" ? rankingProducers.projectColumnSelectionOuter : rankingProducers.projectColumnSegmentOuter,
-      inputs: { semantic: input("semantic"), [outerKind]: input("outer") },
-      result: { kind: "output", name: "outer" },
+      producer: outerKind === "selection" ? temporalProducers.projectSelection : temporalProducers.projectSegment,
+      inputs: {
+        semantic: input("semantic"), spec: input("outer-spec"),
+        [outerKind === "selection" ? "selection" : "segment"]: input("outer"),
+      },
+      result: { kind: "output", name: "window" },
     });
     operations.push({
       id: "schedule",
       producer: rankingProducers.columnSchedule,
-      inputs: { header: input("header"), items: specs, outer: operation("outer-window"), candidates },
+      inputs: { header: input("header"), items: specs, outer: operation("outer-window"), windows: candidates },
       result: { kind: "output", name: "schedule" },
     });
-  } else operations.push({
-      id: "schedule",
-      producer: rankingProducers.schedule,
-      inputs: {
-        header: input("header"), items: specs, semantic: input("semantic"),
-        outer: input("outer"), triggers: input("triggers"), terminal: input("terminal"),
-      },
-      result: { kind: "output", name: "schedule" },
+  } else {
+    operations.push({
+      id: "outer-window",
+      producer: temporalProducers.projectSelection,
+      inputs: { semantic: input("semantic"), selection: input("outer"), spec: input("outer-spec") },
+      result: { kind: "output", name: "window" },
     });
+    operations.push({
+      id: "terminal-point",
+      producer: temporalProducers.projectMomentPoint,
+      inputs: { semantic: input("semantic"), moment: input("terminal"), spec: input("terminal-spec") },
+      result: { kind: "output", name: "point" },
+    });
+    operations.push({
+    id: "schedule",
+    producer: rankingProducers.schedule,
+    inputs: {
+      header: input("header"), items: specs, space: operation("space"),
+        outer: operation("outer-window"), candidates, terminal: operation("terminal-point"),
+    },
+    result: { kind: "output", name: "schedule" },
+    });
+  }
   operations.push({
     id: "program",
     producer: selected.build,
@@ -150,7 +198,7 @@ export function createRankingFragment(
   operations.push({
     id: "visual",
     producer: selected.render,
-    inputs: { semantic: input("semantic"), program: operation("program") },
+    inputs: { space: operation("space"), program: operation("program") },
     result: { kind: "output", name: "track" },
   });
   const hasAudio = sound.appearName !== undefined || sound.moveName !== undefined;
@@ -179,7 +227,7 @@ export function createRankingFragment(
     }
     operations.push({
       id: "audio", producer: rankingProducers.renderAudio,
-      inputs: { semantic: input("semantic"), events: operation("events"), style: input("sound-style"), sounds },
+      inputs: { space: operation("space"), events: operation("events"), style: input("sound-style"), sounds },
       result: { kind: "output", name: "track" },
     });
   }

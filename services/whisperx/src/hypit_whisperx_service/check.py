@@ -6,7 +6,7 @@ import sys
 
 from . import PROTOCOL, SERVICE_VERSION
 from .config import ServiceConfig
-from .resources import PUNKT_TAB_SHA256, assert_punkt_tab
+from .resources import assert_punkt_tab
 
 
 def main() -> None:
@@ -32,5 +32,4 @@ def main() -> None:
         "serviceVersion": SERVICE_VERSION,
         "python": sys.version.split()[0],
         "packages": versions,
-        "punktTabDigest": PUNKT_TAB_SHA256,
     }, sort_keys=True))

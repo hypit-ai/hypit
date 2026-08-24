@@ -30,11 +30,11 @@ import type {
   MarkupAttributeValue,
 } from "@hypit/markup";
 import type {
-  OccurrenceExpansion,
   TemporalDuration,
   TemporalPointExpression,
   TemporalWindowProjection,
 } from "@hypit/temporal";
+import { temporalProducers, temporalTypes } from "@hypit/temporal";
 
 import { typographyTrackProducers, typographyTrackTypes } from "./manifest.js";
 import {
@@ -692,6 +692,7 @@ type FragmentItem = {
   readonly suffix: string;
   readonly binding: TemporalBinding["kind"];
   readonly sourceName?: string;
+  readonly windowSpecName: string;
   readonly placementKind: "point" | "area" | "path";
   readonly geometryName: string;
   readonly specName: string;
@@ -720,19 +721,20 @@ function createTrackFragment(id: string, items: readonly FragmentItem[]): GraphF
         result: { kind: "output", name: "spec" },
       });
     }
+    const windowId = `text:window:${String(index + 1).padStart(4, "0")}`;
+    const windowProducer = item.binding === "program" ? temporalProducers.projectProgram
+      : item.binding === "selection" ? temporalProducers.projectSelection : temporalProducers.projectMoment;
+    operations.push({ id: windowId, producer: windowProducer, inputs: {
+      semantic: input("semantic"), spec: input(item.windowSpecName),
+      ...(item.binding === "program" ? {} : { [item.binding]: input(item.sourceName!) }),
+    }, result: { kind: "output", name: "window" } });
     const append = `text:set:append:${String(index + 1).padStart(4, "0")}`;
     const common = {
       set: operation(current), header: input("header"), semantic: input("semantic"), placement: operation(bind),
       spec: item.contentName === undefined ? input(item.specName) : operation(materialized),
-      style: input(item.styleName), motion: input(item.motionName),
+      style: input(item.styleName), motion: input(item.motionName), window: operation(windowId),
     };
-    operations.push(item.binding === "program" ? {
-      id: append, producer: typographyTrackProducers.appendProgram, inputs: common, result: { kind: "output", name: "set" },
-    } : item.binding === "selection" ? {
-      id: append, producer: typographyTrackProducers.appendSelection, inputs: { ...common, selection: input(item.sourceName!) }, result: { kind: "output", name: "set" },
-    } : {
-      id: append, producer: typographyTrackProducers.appendMoment, inputs: { ...common, moment: input(item.sourceName!) }, result: { kind: "output", name: "set" },
-    });
+    operations.push({ id: append, producer: typographyTrackProducers.appendItem, inputs: common, result: { kind: "output", name: "set" } });
     current = append;
   }
   operations.push(
@@ -748,6 +750,7 @@ function createTrackFragment(id: string, items: readonly FragmentItem[]): GraphF
       ...(item.contentName === undefined ? [] : [{ name: item.contentName, type: textTypes.text }]),
       { name: item.styleName, type: typographyTrackTypes.style },
       { name: item.motionName, type: typographyTrackTypes.motion },
+      { name: item.windowSpecName, type: temporalTypes.windowSpec },
       ...(item.sourceName === undefined ? [] : [{ name: item.sourceName, type: item.binding === "selection" ? narrativeTypes.selection : narrativeTypes.moment }]),
     ]),
   ];
@@ -804,13 +807,10 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
     const index = items.length + 1;
     const suffix = String(index).padStart(4, "0");
     allowed(child, [
-      "id", "content", "placement", "style", "motion", "during", "at", "for", "start", "end", "selection", "moment", "occurrences",
+      "id", "content", "placement", "style", "motion", "during", "at", "for", "start", "end", "selection", "moment",
     ], ["id", "placement", "style"]);
     const itemId = text(child, "id");
     const binding = temporalBinding(child, resolveReference);
-    const occurrences = text(child, "occurrences", "one");
-    if (occurrences !== "one" && occurrences !== "each") throw new Error(`${child.name}.occurrences must be one or each.`);
-    const expansion: OccurrenceExpansion = { kind: occurrences };
     const placementKind = form.toLowerCase() as "point" | "area" | "path";
     const geometry = reference(child.attributes.placement, `${child.name}.placement`, placementKind === "point" ? spatialTypes.point : placementKind === "area" ? spatialTypes.frame : spatialTypes.path, resolveReference);
     const style = reference(child.attributes.style, `${child.name}.style`, typographyTrackTypes.style, resolveReference);
@@ -818,6 +818,8 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
       ? ({ kind: "record", id: defaultMotionId } as const)
       : reference(child.attributes.motion, `${child.name}.motion`, typographyTrackTypes.motion, resolveReference).ref;
     const specId = `${id}.item.${suffix}.spec`;
+    const windowSpecId = `${id}.item.${suffix}.window`;
+    const windowSpecName = `item-${suffix}-window-spec`;
     const content = child.attributes.content === undefined
       ? undefined
       : reference(child.attributes.content, `${child.name}.content`, textTypes.text, resolveReference);
@@ -825,19 +827,23 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
     const spec = content === undefined
       ? sealTextItemSpec({
           id: itemId,
-          document: document(child, resolveReference), projection: binding.projection, expansion,
+          document: document(child, resolveReference),
         })
       : sealPlainTextItemSpec({
           id: itemId,
-          projection: binding.projection, expansion,
         });
     records.push({
       id: specId,
       type: content === undefined ? typographyTrackTypes.itemSpec : typographyTrackTypes.plainItemSpec,
       value: { kind: "inline", value: spec }, range: child.range,
     });
+    records.push({
+      id: windowSpecId,
+      type: temporalTypes.windowSpec,
+      value: { kind: "inline", value: { id: itemId, projection: binding.projection } }, range: child.range,
+    });
     items.push({
-      suffix, binding: binding.kind, placementKind,
+      suffix, binding: binding.kind, placementKind, windowSpecName,
       geometryName: sharedInputName("geometry", geometry.ref, suffix), specName: `item-${suffix}-spec`,
       styleName: sharedInputName("style", style.ref, suffix), motionName: sharedInputName("motion", motionRef, suffix),
       ...(content === undefined ? {} : { contentName: sharedInputName("content", content.ref, suffix), content }),
@@ -846,8 +852,8 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
     });
   }
   if (items.length === 0) throw new Error(`${element.name} requires at least one Point, Area or Path.`);
-  const fragmentItems: FragmentItem[] = items.map(({ suffix, binding, sourceName, placementKind, geometryName, specName, styleName, motionName, contentName }) => ({
-    suffix, binding, placementKind, geometryName, specName, styleName, motionName,
+  const fragmentItems: FragmentItem[] = items.map(({ suffix, binding, sourceName, placementKind, geometryName, specName, styleName, motionName, contentName, windowSpecName }) => ({
+    suffix, binding, placementKind, geometryName, specName, styleName, motionName, windowSpecName,
     ...(contentName === undefined ? {} : { contentName }), ...(sourceName === undefined ? {} : { sourceName }),
   }));
   const fragment = createTrackFragment(id, fragmentItems);
@@ -859,6 +865,7 @@ export const decodeTypographyTrackSurface: StructuredSurfaceHandler = ({ element
         semantic: semantic.ref, header: { kind: "record", id: headerId },
         ...Object.fromEntries(items.flatMap((item) => [
           [item.geometryName, item.geometry.ref], [item.specName, { kind: "record" as const, id: item.specId }],
+          [item.windowSpecName, { kind: "record" as const, id: `${id}.item.${item.suffix}.window` }],
           [item.styleName, item.style.ref], [item.motionName, item.motion],
           ...(item.content === undefined ? [] : [[item.contentName!, item.content.ref] as const]),
           ...(item.source === undefined ? [] : [[item.sourceName!, item.source.ref] as const]),

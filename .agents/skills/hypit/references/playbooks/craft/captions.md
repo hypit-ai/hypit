@@ -33,14 +33,14 @@ words are the spoken words.
 
 ## Author one caption pipeline
 
-Use one pipeline for the program:
+Use one deterministic pipeline for the program:
 
 ```text
-exact font → caption-fine:Style → caption:Program → caption-ai:Planner
-                                                        +
-                                           speech.semantic
-                                                        ↓
-                                              caption-fine:Track
+exact font → caption-fine:Style → caption:Program
+                                      +
+                               speech.semantic
+                                      ↓
+                            caption-fine:Track
 ```
 
 ```svml
@@ -49,21 +49,17 @@ exact font → caption-fine:Style → caption:Program → caption-ai:Planner
 <caption-fine:Style id="primary-caption"
   recipe={recipes.caption.primary} font={caption-font}/>
 
-<caption:Program id="caption-program" display={story.caption}
+<caption:Program id="caption-program" document={story.caption} narrative={story}
   default={primary-caption}>
   <caption:Use role="HOST" style={host-caption}/>
-  <caption:Use words={story.caption.selection.product}
+  <caption:Use selection={story.selection.product}
     style={product-caption}/>
-  <caption:Mute words={story.caption.selection.private}/>
+  <caption:Mute selection={story.selection.private}/>
 </caption:Program>
 
-<caption-ai:Planner id="caption-plan" display={story.caption}
-  program={caption-program} model="gemini-2.5-flash"/>
-
-<caption-fine:Track id="captions" display={story.caption}
-  correspondence={story.caption.correspondence}
+<caption-fine:Track id="captions" document={story.caption}
   semantic={speech.semantic}
-  program={caption-program} plan={caption-plan.plan}/>
+  program={caption-program}/>
 ```
 
 Add `{captions.track}` to `film:Film` as one peer Visual Track. If the format intentionally has no
@@ -73,21 +69,21 @@ captions, omit the Caption components entirely.
 
 - Preserve the exact Script display text. Do not copy burned-in reference subtitles or rewrite the
   spoken source to match an existing visual caption.
-- Use Dual Text when display and pronunciation differ. A Dual Text Atom is indivisible for timing and
-  planning; do not expect the Planner to split it internally.
-- Use `caption:Use role` for speaker-wide style and `caption:Use words` for a Script Selection's
-  caption-word projection. Ordered rules replace the complete Style, with the last matching rule
+- Use Dual Text when display and pronunciation differ. A Dual Text Alignment Unit is indivisible for
+  timing; a Selection that cuts through it is rejected.
+- Use `caption:Use role` for speaker-wide style and `caption:Use selection` for a semantic Selection's
+  complete-unit projection. Ordered rules replace the complete Style, with the last matching rule
   winning.
-- Use `caption:Mute` to hide complete display Atoms without deleting Script words, changing speech,
+- Use `caption:Mute` to hide complete Alignment Units without deleting Script words, changing speech,
   or regrouping Cues.
 - Preserve original-language dialogue. Translation or alternate-language delivery is a separate
-  authored Script decision, not a caption-planner rewrite.
+  authored Script decision, not a downstream model rewrite.
 
-## Separate planning from timing
+## Keep authoring separate from timing
 
-- `caption-ai:Planner` receives immutable display Atoms and resolved Style runs. It may place Cue cuts
-  only between complete Atoms and attach fields declared by the Style family.
-- The Planner does not see audio, rewrite text, select Styles, or invent timestamps.
+- Script owns the CaptionDocument, including Display Words, N:M Alignment Units and authored `||`
+  Cue Breaks.
+- Caption projects Selections/Roles to complete units before it sees any frame or audio measurement.
 - Each `whisperx:SemanticTake` measures one accepted normalized Segment take and packages its local
   timing; `speech:Track` assembles those Takes into the SemanticTrack used by `caption-fine:Track`.
 - Recompute the affected SemanticTake whenever the speech audio changes — `production-gates.md` Gate 3 states this for
@@ -96,7 +92,7 @@ captions, omit the Caption components entirely.
 
 ## Design for readability
 
-- Define one explicit default Style covering every word, then use only the overrides the story needs.
+- Define one explicit default Style covering every Alignment Unit, then use only the overrides the story needs.
 - Keep caption placement inside a safe region and clear of faces, products, device screens, buttons,
   and essential evidence.
 - Use consistent font bytes, width, size, line height, Cue bounds, and padding when stable readability
@@ -109,7 +105,7 @@ captions, omit the Caption components entirely.
 ## Review the actual program
 
 - Review the full delivery with real speech timing, not only a still frame or a structural plan.
-- Verify every word, Role Style, muted Atom, Cue boundary, timing window, line wrap, safe zone, and
+- Verify every word, Role Style, muted unit, Cue boundary, timing window, line wrap, safe zone, and
   overlap with Media/Text Tracks.
 - Listen while reviewing: a visually plausible Caption Track still fails if it leads or trails the
   actual spoken word.

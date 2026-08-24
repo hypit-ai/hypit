@@ -1,5 +1,5 @@
 export type CredentialRef = {
-  /** CredentialStore implementation name, for example env, keychain or aws-default. */
+  /** CredentialStore implementation name, for example env, os or aws-default. */
   readonly store: string;
   /** Store-local opaque lookup key. It is configuration, never the secret value. */
   readonly key: string;

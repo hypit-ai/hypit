@@ -1,14 +1,42 @@
 {
-  "name": "@hypit/repository",
-  "version": "0.0.1",
+  "name": "hypit",
+  "version": "0.1.0",
+  "description": "Hypit video authoring Distribution for AI agents",
   "license": "SEE LICENSE IN LICENSE",
-  "private": true,
   "type": "module",
   "bin": {
     "hypit": "./bin/hypit.mjs",
+    "hypit-studio": "./bin/hypit-studio.mjs",
+    "hypit-preview-check": "./bin/hypit-preview-check.mjs",
     "hypit-reference-video-tools": "./packages/reference-video-tools/bin/reference-video-tools.mjs"
   },
   "packageManager": "pnpm@10.33.0",
+  "files": [
+    "bin",
+    "packages/*/src/**/*",
+    "packages/*/bin/**/*",
+    "packages/*/runtime/**/*",
+    "packages/*/preview/**/*",
+    "packages/*/kits/**/*",
+    "packages/*/*.ts",
+    "packages/*/*.html",
+    "packages/*/package.json",
+    "packages/*/README.md",
+    "services/image-opencv/pyproject.toml",
+    "services/image-opencv/package.json",
+    "services/image-opencv/uv.lock",
+    "services/image-opencv/README.md",
+    "services/whisperx/pyproject.toml",
+    "services/whisperx/package.json",
+    "services/whisperx/uv.lock",
+    "services/whisperx/README.md",
+    "services/whisperx/src/**/*.py",
+    "docs/public/hypit-logo-dark.svg",
+    "docs/public/hypit-logo-light.svg",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
   "scripts": {
     "check": "tsc -p tsconfig.json --noEmit",
     "lockfile:refresh": "node test/lockfile-refresh.mjs",
@@ -27,8 +55,7 @@
     "build:media-lambda-layer": "pnpm --filter @hypit/media-lambda build:layer"
   },
   "engines": {
-    "node": ">=22",
-    "pnpm": ">=10.33.0 <11"
+    "node": ">=22"
   },
   "devDependencies": {
     "@hypit/artifact": "workspace:*",
@@ -38,16 +65,14 @@
     "@hypit/background-removal": "workspace:*",
     "@hypit/caption": "workspace:*",
     "@hypit/caption-fine": "workspace:*",
-    "@hypit/caption-gemini": "workspace:*",
     "@hypit/comment-sticker": "workspace:*",
     "@hypit/composition": "workspace:*",
     "@hypit/credential-store-env": "workspace:*",
-    "@hypit/credential-store-keychain": "workspace:*",
+    "@hypit/credential-store-os": "workspace:*",
     "@hypit/deck-track": "workspace:*",
     "@hypit/estimate": "workspace:*",
     "@hypit/film": "workspace:*",
     "@hypit/fonts-open": "workspace:*",
-    "@hypit/gemini-omni": "workspace:*",
     "@hypit/generation": "workspace:*",
     "@hypit/gpt-image": "workspace:*",
     "@hypit/grok-imagine": "workspace:*",
@@ -63,7 +88,6 @@
     "@hypit/narrative": "workspace:*",
     "@hypit/program-space": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/provider-google-vertex": "workspace:*",
     "@hypit/provider-hyperframes-aws-lambda": "workspace:*",
     "@hypit/provider-hyperframes-local": "workspace:*",
     "@hypit/provider-image-opencv-local": "workspace:*",
@@ -91,6 +115,8 @@
     "@hypit/speech-evidence": "workspace:*",
     "@hypit/speech-track": "workspace:*",
     "@hypit/store-sqlite": "workspace:*",
+    "@hypit/studio-adapter": "workspace:*",
+    "@hypit/studio-video-adapters": "workspace:*",
     "@hypit/svs": "workspace:*",
     "@hypit/temporal": "workspace:*",
     "@hypit/text": "workspace:*",
@@ -98,9 +124,10 @@
     "@hypit/visual-ir": "workspace:*",
     "@hypit/whisperx": "workspace:*",
     "@types/node": "24.10.1",
-    "tsx": "4.21.0",
     "typescript": "5.9.3",
-    "vite": "5.4.21",
     "vitepress": "^1.6.4"
+  },
+  "dependencies": {
+    "tsx": "4.21.0"
   }
 }

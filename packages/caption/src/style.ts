@@ -1,230 +1,164 @@
-import type {
-  CaptionDisplaySequence,
-  CaptionDisplayWord,
-  CaptionDisplayWordSubset,
-} from "@hypit/narrative";
+import type { CaptionDocument, Narrative } from "@hypit/narrative";
 import { canonicalStringify, canonicalize } from "@hypit/protocol";
 
-import { assertCaptionDisplaySequence, assertCaptionDisplayWordSubset } from "./display.js";
+import {
+  assertCaptionDocument,
+  assertCaptionUnitSubset,
+  captionUnitsForRole,
+  type CaptionUnitSubset,
+} from "./display.js";
 import type {
-  CaptionFieldDeclaration,
+  CaptionMuteApplication,
   CaptionProgram,
+  CaptionStyleApplication,
   CaptionStyleIntent,
+  CaptionWordStyleApplication,
 } from "./types.js";
 
-export type CaptionStyleApplication = {
-  readonly id: string;
-  readonly words: CaptionDisplayWordSubset;
-  readonly style: CaptionStyleIntent;
-};
-
-export type CaptionMuteApplication = {
-  readonly id: string;
-  readonly words: CaptionDisplayWordSubset;
-};
+export type { CaptionMuteApplication, CaptionStyleApplication, CaptionWordStyleApplication } from "./types.js";
 
 const ID = /^[A-Za-z][A-Za-z0-9_.-]{0,127}$/u;
-
-function assert(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message);
-}
-
-function normalizedField(field: CaptionFieldDeclaration): CaptionFieldDeclaration {
-  return {
-    id: field.id,
-    value: field.value.kind === "enum"
-      ? { kind: "enum", values: [...field.value.values] }
-      : field.value.kind === "number"
-        ? {
-            kind: "number",
-            ...(field.value.minimum === undefined ? {} : { minimum: field.value.minimum }),
-            ...(field.value.maximum === undefined ? {} : { maximum: field.value.maximum }),
-          }
-        : { kind: "boolean" },
-    instruction: field.instruction.trim(),
-    minimumPerCue: field.minimumPerCue,
-    maximumPerCue: field.maximumPerCue,
-  };
-}
-
-function styleContent(value: CaptionStyleIntent): CaptionStyleIntent {
-  return canonicalize({
-
-    id: value.id,
-    planning: {
-      cue: {
-        minimumWords: value.planning.cue.minimumWords,
-        maximumWords: value.planning.cue.maximumWords,
-        instruction: value.planning.cue.instruction.trim(),
-      },
-      fields: value.planning.fields.map(normalizedField),
-    },
-    rendering: {
-      family: value.rendering.family.trim(),
-      parameters: canonicalize(value.rendering.parameters),
-    },
-  }) as unknown as CaptionStyleIntent;
-}
+function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
 
 export function sealCaptionStyle(value: CaptionStyleIntent): CaptionStyleIntent {
-  const result = styleContent(value);
+  const result = canonicalize({
+    id: value.id,
+    rendering: { family: value.rendering.family.trim(), parameters: canonicalize(value.rendering.parameters) },
+  }) as unknown as CaptionStyleIntent;
   assertCaptionStyle(result);
   return result;
 }
 
 export function assertCaptionStyle(value: CaptionStyleIntent): void {
   assert(ID.test(value.id), "Caption Style identity is invalid");
-  const cue = value.planning.cue;
-  assert(Number.isSafeInteger(cue.minimumWords) && cue.minimumWords > 0,
-    `Caption Style ${value.id} Cue minimum is invalid`);
-  assert(Number.isSafeInteger(cue.maximumWords) && cue.maximumWords >= cue.minimumWords,
-    `Caption Style ${value.id} Cue maximum is invalid`);
-  assert(cue.instruction.length > 0, `Caption Style ${value.id} Cue instruction is empty`);
-  const fields = new Set<string>();
-  for (const field of value.planning.fields) {
-    assert(ID.test(field.id) && !fields.has(field.id), `Caption Style ${value.id} field id is invalid or repeated`);
-    fields.add(field.id);
-    assert(field.instruction.trim().length > 0, `Caption Style ${value.id} field instruction is empty`);
-    assert(Number.isSafeInteger(field.minimumPerCue) && field.minimumPerCue >= 0,
-      `Caption Style ${value.id} field minimum is invalid`);
-    assert(Number.isSafeInteger(field.maximumPerCue) && field.maximumPerCue >= field.minimumPerCue,
-      `Caption Style ${value.id} field maximum is invalid`);
-    if (field.value.kind === "enum") {
-      assert(field.value.values.length > 0 && new Set(field.value.values).size === field.value.values.length,
-        `Caption Style ${value.id} field enum is invalid`);
-    } else if (field.value.kind === "number") {
-      assert(field.value.minimum === undefined || Number.isFinite(field.value.minimum),
-        `Caption Style ${value.id} field numeric minimum is invalid`);
-      assert(field.value.maximum === undefined || Number.isFinite(field.value.maximum),
-        `Caption Style ${value.id} field numeric maximum is invalid`);
-    }
-  }
-  assert(value.rendering.family.length > 0, `Caption Style ${value.id} rendering family is empty`);
+  assert(value.rendering.family.trim().length > 0, `Caption Style ${value.id} rendering family is empty`);
   canonicalize(value.rendering.parameters);
 }
 
-function programContent(value: CaptionProgram) {
-  return canonicalize(value) as unknown as CaptionProgram;
-}
-
 export function sealCaptionProgram(value: CaptionProgram): CaptionProgram {
-  const result = programContent(value);
+  const result = canonicalize(value) as unknown as CaptionProgram;
   assertCaptionProgram(result);
   return result;
 }
 
 export function assertCaptionProgram(value: CaptionProgram): void {
   assert(ID.test(value.id), "Caption Program identity is invalid");
-  assert(value.displaySequenceId.length > 0 && value.runs.length > 0 && value.styles.length > 0,
+  assert(value.documentId.length > 0 && value.styles.length > 0 && value.runs.length > 0,
     "Caption Program is empty");
   const styles = new Map(value.styles.map((style) => [style.id, style]));
-  assert(styles.size === value.styles.length, "Caption Program styles are invalid");
+  assert(styles.size === value.styles.length, "Caption Program styles are repeated");
   value.styles.forEach(assertCaptionStyle);
-  const families = new Set(value.styles.map((style) => style.rendering.family));
-  assert(families.size === 1, "One Caption Program must use one Style rendering family");
   assert(new Set(value.runs.map((run) => run.id)).size === value.runs.length,
     "Caption Program run ids are repeated");
-  const planned = value.runs.flatMap((run) => run.wordIds);
-  assert(new Set(planned).size === planned.length, "Caption Program runs repeat a display word");
-  assert(value.runs.every((run) => styles.has(run.styleId) && run.wordIds.length > 0),
-    "Caption Program run style is invalid");
-  assert(new Set(value.runs.map((run) => run.styleId)).size === value.styles.length,
-    "Caption Program carries an unused Style");
-  assert(Array.isArray(value.mutedWordIds)
-    && value.mutedWordIds.every((wordId) => typeof wordId === "string" && wordId.length > 0)
-    && new Set(value.mutedWordIds).size === value.mutedWordIds.length,
-  "Caption Program muted display words are invalid or repeated");
+  const units = value.runs.flatMap((run) => run.unitIds);
+  assert(new Set(units).size === units.length, "Caption Program runs repeat a unit");
+  assert(value.runs.every((run) => styles.has(run.styleId) && run.unitIds.length > 0),
+    "Caption Program run is invalid");
+  assert(new Set(value.wordRuns.map((run) => run.id)).size === value.wordRuns.length,
+    "Caption Program word run ids are repeated");
+  const words = value.wordRuns.flatMap((run) => run.wordIds);
+  assert(new Set(words).size === words.length, "Caption Program word runs repeat a word");
+  assert(value.wordRuns.every((run) => styles.has(run.styleId) && run.wordIds.length > 0),
+    "Caption Program word run is invalid");
+  assert(new Set(value.mutedUnitIds).size === value.mutedUnitIds.length,
+    "Caption Program muted units are repeated");
 }
 
-/** Bind a Program's immutable display universe to the exact Script-produced sequence. */
-export function assertCaptionProgramForDisplay(value: CaptionProgram, sequence: CaptionDisplaySequence): void {
+export function assertCaptionProgramForDocument(value: CaptionProgram, document: CaptionDocument): void {
   assertCaptionProgram(value);
-  assertCaptionDisplaySequence(sequence);
-  assert(value.displaySequenceId === sequence.id
-    && value.runs.flatMap((run) => run.wordIds).join("\0") === sequence.words.map((word) => word.id).join("\0"),
-  "Caption Program does not partition its CaptionDisplaySequence exactly once and in order");
-  assertCaptionDisplayWordSubset({
-
-    id: `${value.id}:mute`,
-    sequenceId: sequence.id,
-    wordIds: value.mutedWordIds,
-  }, sequence);
-  const runByWord = new Map(value.runs.flatMap((run) => run.wordIds.map((id) => [id, run.id] as const)));
-  for (const atom of sequence.atoms) {
-    assert(new Set(atom.wordIds.map((id) => runByWord.get(id))).size === 1,
-      `Caption Program splits indivisible Atom ${atom.id}`);
-  }
+  assertCaptionDocument(document);
+  assert(value.documentId === document.id, "Caption Program belongs to another CaptionDocument");
+  const expected = document.units.map((unit) => unit.id);
+  assert(value.runs.flatMap((run) => run.unitIds).join("\0") === expected.join("\0"),
+    "Caption Program must partition every Caption unit exactly once and in order");
+  const known = new Set(expected);
+  assert(value.mutedUnitIds.every((id) => known.has(id)), "Caption Program mutes an unknown unit");
+  const knownWords = new Set(document.words.map((word) => word.id));
+  assert(value.wordRuns.every((run) => run.wordIds.every((id) => knownWords.has(id))),
+    "Caption Program styles an unknown display word");
 }
 
-/** Resolve an explicit default Style plus ordered whole-Style replacements. Later applications win. */
+function subset(value: CaptionUnitSubset, document: CaptionDocument): string[] {
+  assertCaptionUnitSubset(value, document);
+  return [...value.unitIds];
+}
+
 export function resolveCaptionProgram(
-  sequence: CaptionDisplaySequence,
+  document: CaptionDocument,
+  narrative: Narrative,
   id: string,
   defaultStyle: CaptionStyleIntent,
   applications: readonly CaptionStyleApplication[],
   mutes: readonly CaptionMuteApplication[] = [],
+  wordApplications: readonly CaptionWordStyleApplication[] = [],
 ): CaptionProgram {
-  assertCaptionDisplaySequence(sequence);
+  assertCaptionDocument(document);
   assertCaptionStyle(defaultStyle);
-  applications.forEach((application) => {
+  const styles = new Map<string, CaptionStyleIntent>([[defaultStyle.id, defaultStyle]]);
+  const selected = applications.map((application) => {
     assert(ID.test(application.id), "Caption Style Application identity is invalid");
     assertCaptionStyle(application.style);
-    assertCaptionDisplayWordSubset(application.words, sequence);
-    assert(application.words.wordIds.length > 0, `Caption application ${application.id} selects no visible display word`);
-  });
-  mutes.forEach((mute) => {
-    assert(ID.test(mute.id), "Caption Mute identity is invalid");
-    assertCaptionDisplayWordSubset(mute.words, sequence);
-    assert(mute.words.wordIds.length > 0, `Caption Mute ${mute.id} selects no display word`);
-  });
-  const styles = new Map<string, CaptionStyleIntent>([[defaultStyle.id, defaultStyle]]);
-  applications.forEach((application) => {
+    const unitIds = subset({ documentId: document.id, unitIds: application.unitIds }, document);
     const previous = styles.get(application.style.id);
     assert(previous === undefined || canonicalStringify(previous) === canonicalStringify(application.style),
       `Caption Style ${application.style.id} has conflicting definitions`);
     styles.set(application.style.id, application.style);
+    return { ...application, unitIds };
   });
-  const selected = applications.map((application) => new Set(application.words.wordIds));
-  const assignments = sequence.words.map((word) => {
-    let styleId = defaultStyle.id;
-    applications.forEach((application, index) => {
-      if (selected[index]!.has(word.id)) styleId = application.style.id;
-    });
-    return { word, styleId };
+  const muted = mutes.flatMap((application) => {
+    assert(ID.test(application.id), "Caption Mute identity is invalid");
+    return subset({ documentId: document.id, unitIds: application.unitIds }, document);
   });
-  const assignmentByWord = new Map(assignments.map((assignment) => [assignment.word.id, assignment.styleId]));
-  for (const atom of sequence.atoms) {
-    assert(new Set(atom.wordIds.map((wordId) => assignmentByWord.get(wordId))).size === 1,
-      `Caption Style applications split indivisible Atom ${atom.id}`);
+  const wordChosen = new Map<string, string>();
+  for (const application of wordApplications) {
+    assert(ID.test(application.id), "Caption Word Style Application identity is invalid");
+    assert(application.attribute.trim().length > 0, "Caption Word Style Application attribute is empty");
+    assertCaptionStyle(application.style);
+    const knownWordIds = new Set(document.words.map((word) => word.id));
+    for (const wordId of application.wordIds) {
+      assert(knownWordIds.has(wordId), `Caption Word Style Application references unknown word ${wordId}`);
+      const previous = wordChosen.get(wordId);
+      assert(previous === undefined || previous === application.style.id,
+        `Caption word ${wordId} receives conflicting styles`);
+      wordChosen.set(wordId, application.style.id);
+    }
+    const previous = styles.get(application.style.id);
+    assert(previous === undefined || canonicalStringify(previous) === canonicalStringify(application.style),
+      `Caption Style ${application.style.id} has conflicting definitions`);
+    styles.set(application.style.id, application.style);
   }
-  const runs: Array<{ id: string; styleId: string; wordIds: string[]; turnId: string; segmentId: string }> = [];
-  for (const assignment of assignments) {
-    const current = runs.at(-1);
-    if (current === undefined || current.styleId !== assignment.styleId
-      || current.turnId !== assignment.word.turnId || current.segmentId !== assignment.word.segmentId) {
-      runs.push({
-        id: `${id}:run:${runs.length + 1}`,
-        styleId: assignment.styleId,
-        wordIds: [assignment.word.id],
-        turnId: assignment.word.turnId,
-        segmentId: assignment.word.segmentId,
-      });
+  const chosen = new Map(document.units.map((unit) => [unit.id, defaultStyle.id]));
+  for (const application of selected) for (const unitId of application.unitIds) chosen.set(unitId, application.style.id);
+  const runs: CaptionProgram["runs"][number][] = [];
+  for (const unit of document.units) {
+    const styleId = chosen.get(unit.id)!;
+    const previous = runs.at(-1);
+    if (previous === undefined || previous.styleId !== styleId) {
+      runs.push({ id: `${id}:run:${runs.length + 1}`, styleId, unitIds: [unit.id] });
     } else {
-      current.wordIds.push(assignment.word.id);
+      runs[runs.length - 1] = { ...previous, unitIds: [...previous.unitIds, unit.id] };
+    }
+  }
+  const wordRuns: CaptionProgram["wordRuns"][number][] = [];
+  for (const [wordId, styleId] of wordChosen) {
+    const previous = wordRuns.at(-1);
+    if (previous === undefined || previous.styleId !== styleId) {
+      wordRuns.push({ id: `${id}:word-run:${wordRuns.length + 1}`, styleId, wordIds: [wordId] });
+    } else {
+      wordRuns[wordRuns.length - 1] = { ...previous, wordIds: [...previous.wordIds, wordId] };
     }
   }
   const program = sealCaptionProgram({
-
     id,
-    displaySequenceId: sequence.id,
-    styles: [...styles.values()].filter((style) => assignments.some((assignment) => assignment.styleId === style.id)),
-    runs: runs.map(({ turnId: _turn, segmentId: _segment, ...run }) => run),
-    mutedWordIds: sequence.words
-      .filter((word) => mutes.some((mute) => mute.words.wordIds.includes(word.id)))
-      .map((word) => word.id),
+    documentId: document.id,
+    styles: [...styles.values()].filter((style) => [...chosen.values(), ...wordChosen.values()].includes(style.id)),
+    runs,
+    wordRuns,
+    mutedUnitIds: [...new Set(muted)],
   });
-  assertCaptionProgramForDisplay(program, sequence);
+  assertCaptionProgramForDocument(program, document);
+  void narrative;
   return program;
 }
 
-export type { CaptionDisplayWord };
+export { captionUnitsForRole };

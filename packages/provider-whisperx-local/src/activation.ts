@@ -16,9 +16,9 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     const config = runtimeConfigObject(context.config, "local WhisperX");
     runtimeConfigExact(config, [
       "baseUrl", "expectedModel", "expectedDevice", "expectedCompute", "expectedBatchSize",
-      "expectedServiceVersion", "expectedWhisperXVersion", "expectedPunktTabDigest",
+      "expectedServiceVersion", "expectedWhisperXVersion",
       "defaultConcurrency", "requestTimeoutMs", "maxResponseBytes",
-      "serviceCommand", "servicePrepareCommand",
+      "serviceCommand",
     ], "local WhisperX");
     const baseUrl = runtimeConfigString(config.baseUrl, "WhisperX baseUrl");
     if (baseUrl !== undefined) {
@@ -34,14 +34,10 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     const expectedBatchSize = runtimeConfigPositiveInteger(config.expectedBatchSize, "WhisperX expectedBatchSize");
     const expectedServiceVersion = runtimeConfigString(config.expectedServiceVersion, "WhisperX expectedServiceVersion");
     const expectedWhisperXVersion = runtimeConfigString(config.expectedWhisperXVersion, "WhisperX expectedWhisperXVersion");
-    const expectedPunktTabDigest = runtimeConfigString(config.expectedPunktTabDigest, "WhisperX expectedPunktTabDigest");
-    if (expectedPunktTabDigest !== undefined && !/^[0-9a-f]{64}$/u.test(expectedPunktTabDigest)) {
-      throw new Error("WhisperX expectedPunktTabDigest is invalid");
-    }
     const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "WhisperX defaultConcurrency");
     const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "WhisperX requestTimeoutMs");
     const maxResponseBytes = runtimeConfigPositiveInteger(config.maxResponseBytes, "WhisperX maxResponseBytes");
-    for (const key of ["serviceCommand", "servicePrepareCommand"] as const) {
+    for (const key of ["serviceCommand"] as const) {
       const value = config[key];
       if (value !== undefined
         && (!Array.isArray(value) || value.length === 0
@@ -60,7 +56,6 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ...(expectedBatchSize === undefined ? {} : { expectedBatchSize }),
         ...(expectedServiceVersion === undefined ? {} : { expectedServiceVersion }),
         ...(expectedWhisperXVersion === undefined ? {} : { expectedWhisperXVersion }),
-        ...(expectedPunktTabDigest === undefined ? {} : { expectedPunktTabDigest }),
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
         ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
         ...(maxResponseBytes === undefined ? {} : { maxResponseBytes }),

@@ -1,20 +1,24 @@
-export { appendColumnWindowCandidate, appendRankingItemSpec, appendRankingSound, appendColumnItem, appendTopThreeItem, assertColumnProgram, assertColumnStyle, assertColumnWindowCandidateSet, assertRankingHeader, assertRankingItemSpec, assertRankingItemSpecSet, assertRankingTextItemShell, assertRankingSchedule, assertRankingSoundEventPlan, assertRankingSoundStyle, assertTopThreeProgram, assertTopThreeStyle, buildColumnProgram, buildColumnSchedule, buildColumnSoundEvents, buildRankingSchedule, buildTopThreeProgram, buildTopThreeSoundEvents, createColumnItemSet, createColumnWindowCandidateSet, createRankingItemSpecSet, createRankingSoundSet, createTopThreeItemSet, projectColumnSegmentOuterWindow, projectColumnSelectionOuterWindow, sealRankingHeader, sealRankingTextItemShell, materializeRankingTextItem } from "./schedule.js";
+export { appendColumnWindow, appendRankingItemSpec, appendRankingSound, appendColumnItem, appendTierBoardItem, appendTopThreeItem, appendTriggeredRankingCandidate, assertColumnProgram, assertColumnStyle, assertColumnWindowSet, assertRankingHeader, assertRankingItemSpec, assertRankingItemSpecSet, assertRankingTextItemShell, assertRankingSchedule, assertRankingSoundEventPlan, assertRankingSoundStyle, assertTierBoardProgram, assertTierBoardStyle, assertTopThreeProgram, assertTopThreeStyle, assertTriggeredRankingCandidateSet, buildColumnProgram, buildColumnSchedule, buildColumnSoundEvents, buildTriggeredRankingSchedule, buildTierBoardProgram, buildTierBoardSoundEvents, buildTopThreeProgram, buildTopThreeSoundEvents, createColumnItemSet, createColumnWindowSet, createRankingItemSpecSet, createRankingSoundSet, createTierBoardItemSet, createTopThreeItemSet, createTriggeredRankingCandidateSet, sealRankingHeader, sealRankingTextItemShell, materializeRankingTextItem } from "./schedule.js";
 export {
   decodeColumnStyle,
+  decodeTierBoardStyle,
   decodeTopThreeStyle,
 } from "./style.js";
 export {
   renderColumn,
   renderRankingAudio,
+  renderTierBoard,
   renderTopThree,
 } from "./render.js";
 export { rankingComponent } from "./component.js";
 export { createRankingFragment } from "./fragment.js";
 export type { RankingFragmentItem, RankingFragmentSound } from "./fragment.js";
-export { columnOuterWindowSchema, columnWindowCandidateSetSchema, rankingDependency, rankingHeaderSchema, rankingItemSpecSchema, rankingTextItemShellSchema, rankingItemSpecSetSchema, rankingManifest, rankingMarkupSurfaces, rankingModuleRef, rankingProducers, rankingScheduleSchema, rankingSoundEventsSchema, rankingSoundSetSchema, rankingSoundStyleSchema, rankingTypes } from "./manifest.js";
+export { columnWindowSetSchema, triggeredRankingCandidateSetSchema, rankingDependency, rankingHeaderSchema, rankingItemSpecSchema, rankingTextItemShellSchema, rankingItemSpecSetSchema, rankingManifest, rankingMarkupSurfaces, rankingModuleRef, rankingProducers, rankingScheduleSchema, rankingSoundEventsSchema, rankingSoundSetSchema, rankingSoundStyleSchema, rankingTypes } from "./manifest.js";
 export {
   decodeColumnStyleSurface,
   decodeColumnSurface,
+  decodeTierBoardStyleSurface,
+  decodeTierBoardSurface,
   decodeTopThreeStyleSurface,
   decodeTopThreeSurface,
 } from "./surface.js";

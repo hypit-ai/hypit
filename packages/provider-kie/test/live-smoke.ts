@@ -17,12 +17,6 @@ import {
 import { narrativeManifest } from "@hypit/narrative";
 import { mediaManifest } from "@hypit/media";
 import {
-  geminiOmniComponent,
-  geminiOmniEndpoints,
-  geminiOmniManifest,
-  sealGeminiOmniRequest,
-} from "@hypit/gemini-omni";
-import {
   generationComponent,
   generationManifest,
   verifyGeneratedImageSet,
@@ -239,19 +233,6 @@ async function smokeCases(root: string): Promise<readonly SmokeCase[]> {
         prompt: [motionPrompt],
         duration: [6],
         aspectRatio: ["16:9"],
-      }) as unknown as CanonicalValue,
-    },
-    {
-      key: "gemini-omni",
-      media: "video",
-      endpoint: endpoint(geminiOmniEndpoints.video, "Gemini Omni video"),
-      manifest: geminiOmniManifest,
-      component: geminiOmniComponent,
-      request: sealGeminiOmniRequest({
-        prompt: [motionPrompt],
-        duration: [4],
-        aspectRatio: ["16:9"],
-        resolution: ["720p"],
       }) as unknown as CanonicalValue,
     },
     {

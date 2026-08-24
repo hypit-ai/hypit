@@ -246,7 +246,7 @@ export function decodeMediaPresentation(recipe: SvsRecipe): MediaFramePresentati
 
 export function decodeMediaItemSpec(
   recipe: SvsRecipe,
-  input: Pick<MediaItemSpec, "id" | "projection" | "expansion"> & {
+  input: Pick<MediaItemSpec, "id"> & {
     readonly motion: MediaLifecycleMotion;
     readonly sourceAudio?: MediaItemSpec["sourceAudio"];
   },
@@ -255,8 +255,6 @@ export function decodeMediaItemSpec(
   return sealMediaItemSpec({
 
     id: input.id,
-    projection: input.projection,
-    expansion: input.expansion,
     presentation: decodeMediaPresentation(recipe),
     motion: input.motion,
     stackingOrder: number(recipe, "stack-order"),

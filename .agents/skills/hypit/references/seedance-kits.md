@@ -1,6 +1,7 @@
 # Seedance Prompt Kits
 
-Hypit ships seven English Text Templates under `packages/seedance-kits/kits/`. Each Kit owns the
+Hypit ships seven English Text Templates in the installed Distribution under
+`packages/seedance-kits/kits/`. Use `hypit paths --json` to locate that Distribution. Each Kit owns the
 repeatable prompt contract; the project Recipe selects its stable directing axes, and explicit Text
 slots carry shot-specific dialogue or action.
 
@@ -16,7 +17,7 @@ slots carry shot-specific dialogue or action.
 
 ## Required procedure
 
-1. Read `packages/seedance-kits/README.md` and the selected Kit file for exact axes and defaults.
+1. Read the installed `packages/seedance-kits/README.md` and selected Kit file for exact axes and defaults.
 2. Copy only that `.svs` file into the video project's `./kits/` directory; import the vendored copy.
 3. Put stable axis choices in `recipes.svs` as a named Recipe.
 4. Import `@hypit/text@1` as `copy`. Use `copy:Render` with the Kit Template and Recipe, then

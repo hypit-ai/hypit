@@ -5,6 +5,8 @@ import { markupSurfaceHostFacetAbi } from "@hypit/markup";
 import type { RegisteredSurface } from "@hypit/markup";
 import { loadNodePackageSelection } from "@hypit/package-loader-node";
 import { parseScript } from "@hypit/script";
+import { videoCliDistribution } from "@hypit/video-cli";
+import { loadStudioAdapterRegistry } from "@hypit/studio/src/adapter-profile.js";
 import { openStudioArchive } from "@hypit/studio/src/archive.js";
 import { loadStudioDomain } from "@hypit/studio/src/domain.js";
 import { loadStudioRun } from "@hypit/studio/src/run.js";
@@ -53,8 +55,12 @@ export async function previewCheck(
   const packageRoot = roots.packageRoot;
   const workspaceRoot = dirname(runPath);
 
+  const distributionPackageRoot = videoCliDistribution.packageRoot;
+  if (distributionPackageRoot === undefined) throw new Error("active Hypit Distribution has no package root");
+
+  const registry = await loadStudioAdapterRegistry({ workspaceRoot, packageRoot, distributionPackageRoot });
   const domain = await loadStudioDomain({ run: runPath, workspaceRoot, packageRoot });
-  const archive = await openStudioArchive(runtimePath, packageRoot);
+  const archive = await openStudioArchive(runtimePath, packageRoot, workspaceRoot, distributionPackageRoot);
 
   let session: StudioSession | undefined;
   let refusal: string | undefined;
@@ -67,10 +73,12 @@ export async function previewCheck(
     });
     // Preflight first, so an unopenable Run is reported as the refusal it is
     // rather than as whatever the build happens to fail on afterwards.
-    inspectStudioRun(run.source, run);
+    inspectStudioRun(registry, run.source, run);
     session = await readStudioSession({
       domain,
+      registry,
       run,
+      workspaceRoot,
       ...(archive === undefined ? {} : { archive }),
       revision: 0,
     });
@@ -372,9 +380,7 @@ export async function reconstructionCheck(
     const coverSelection = (id: string): void => {
       const selection = parsed.selections.find((item) => item.id === id);
       if (selection === undefined) return;
-      for (const occurrence of selection.occurrences) {
-        for (let index = occurrence.open.boundary.tokenIndex; index < occurrence.close.boundary.tokenIndex; index += 1) covered[index] = true;
-      }
+      for (let index = selection.open.boundary.tokenIndex; index < selection.close.boundary.tokenIndex; index += 1) covered[index] = true;
     };
 
     // Every element bound to the whole picture, and the words its own `during=` claims. `program` is
