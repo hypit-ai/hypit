@@ -66,9 +66,15 @@ it is structurally unable to reach.
 ## Measure it; the eye is the wrong instrument
 
 Two of these are settled before a Build, from the Source alone, and neither needs a threshold.
-Whether every word carries a picture is a yes or no per word: `reconstruction_check` reads which
-full-frame elements bind which Selections and names the words nothing claims. Whether the material
-lasts its window is the `playback` reading above.
+Whether every word carries a picture is a yes or no per word: `reconstruction_check` resolves each
+Frame to where it actually sits, collects the ones drawn over each word, and names the words whose
+pictures leave part of the Canvas unpainted. Whether the material lasts its window is the `playback`
+reading above.
+
+The pictures over a word are read **together**. One filling the Canvas is the ordinary case; several
+tiling it is the other one, and it is just as covered. A `until={story.moment.X}` shortens what an
+element claims, so a picture that leaves half way through the program answers for the words before
+that Moment and not the ones after.
 
 What is left for the delivery is what only the delivery shows. An instant is a thirtieth of a second:
 watching finds a scene that is wrong and slides straight past a frame that is, and the shorter the
