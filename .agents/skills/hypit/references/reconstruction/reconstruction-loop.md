@@ -102,7 +102,7 @@ differences that belong to the Canvas rather than to the element. Fix the Canvas
 
 Then tell the observer, through `--question`, that those regions are placeholders standing in for
 declared-but-unbuilt generations, and to compare only what the element itself draws. Said plainly it
-costs one clause and saves the mock being reported as a difference every round.
+costs one clause and saves the mock coming back as a difference in the one round there is.
 
 A mock lives only in this render. It is never written into the Source, and no gate reads it: the
 `playback` check in `reconstruction_check` reads the Source's Recipes, so a mock cannot be mistaken
@@ -113,8 +113,14 @@ for coverage.
 The mocks are substituted into a Source that has already been cut to the window. `render_element`
 keeps the Segment the window names, drops the rest of the Script, and then drops every element that
 named a Segment, Selection or Moment that went with it — and every element naming one of those, to a
-fixed point, plus any container the cut left with no children. So an element bound to a Selection or
-Moment in another Segment is not in this render, and its absence says nothing about the Source.
+fixed point, plus any container the cut left with no children. So an element bound to a Selection in
+another Segment is not in this render, and its absence says nothing about the Source.
+
+One name survives the cut rather than taking its element with it: a Moment in `until=` that is marked
+*after* the kept Segment. An element given the span it occupies and a Moment to close it is on screen
+for the whole of a stretch that ends before that word, so the cut removes the close and keeps the
+element. That is what makes an element bounded by a late Moment renderable over the earlier Segments
+it is drawn over, which is every stretch this loop asks for it in.
 
 The cut Source is on disk at `<project>/.hypit/compare/sliced.svml`, byte-for-byte from the original
 except for what was removed, and the derived Run sits beside it. Open it whenever something you
@@ -148,10 +154,9 @@ produce a cut, so a stretch can hold several states and no single frame represen
 the failure this replaces: a caption system compared against the stretch with the shortest line looks
 correct, because one line has nothing to collide with.
 
-Compare it against **every stretch the element is drawn over**, not the clearest one. That is the
-coverage round, and it comes before any repair — collect the whole difference set first, then
-repair against it. Doing it the other way makes the comparison after a repair look like a third
-attempt at a stretch that was never examined.
+Compare it against **every stretch the element is drawn over**, not the clearest one. There is one
+round and it comes before any repair, so a stretch left out of it is a stretch nothing will ever say
+anything about.
 
 ### A caption Style is compared once, where it first appears
 
@@ -190,7 +195,7 @@ objects the flags produce, minus `reference_id` — and hand the file over:
 ```
 
 ```
-hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch round-1.json
+hypit-reference-video-tools compare_reconstruction --reference-id <id> --batch comparisons.json
 ```
 
 It paces the requests itself, keeps each comparison's derived cuts apart, and returns them under
@@ -198,8 +203,8 @@ It paces the requests itself, keeps each comparison's derived cuts apart, and re
 only itself down. Do not write a shell script to fan these out: the pacing, the per-comparison result
 and the isolation are what the batch is for, and a hand-rolled loop has none of them.
 
-That is a change in how long the round takes, not in what it costs. The ceilings below count repairs,
-and a round is one look however many stretches it covers.
+This is the round. Everything the reference has to say about this reconstruction comes back from it,
+and the ceilings below count repairs made against what it returned.
 
 `--image` is available for one case only: the reference's own `visual:` observation states in words
 that the element is completely still. The judgement comes from the reference's observation, never
@@ -231,7 +236,7 @@ What is compared is the same stretch either way.
 
 Give the pair to a subagent when you can: one handed two unlabelled pictures and the question knows
 neither which is the reference nor what was built, which is the same blindness this section rests on.
-The coverage round means one element produces several comparisons at once, so dispatch one subagent
+The round means one element produces several comparisons at once, so dispatch one subagent
 per comparison and let them run together. Where the harness has no subagents, run them one after
 another rather than merging them into a single look, and answer them yourself under the discipline
 `observers.md` states in place of blindness — write the differences down before naming a cause, count
@@ -254,7 +259,6 @@ and do not defer every comparison to a final delivery Build.
   generation, and one visible quantity to measure. None of them says which picture is the
   reconstruction, what was built, or what you expect to be wrong — and a question that hints at the
   answer, rather than naming what to look at, has stopped being scope.
-- Results are not cached. Every iteration is a fresh comparison.
 
 ## Repair in dependency order
 
@@ -263,57 +267,52 @@ When the difference is structural rather than cosmetic, repair in the order give
 Producer, Type and Validator agreement, Surface vocabulary and decoding, implementation behaviour,
 then source usage. Fixing source usage over a broken implementation hides the defect one layer down.
 
-## Converged means the differences are wording, in every stretch
+## The reference is asked once
 
-Stop when the returned differences are wording-level — a describer's phrasing rather than a visible
-change — across **all** the stretches the element was compared in. One stretch reading clean while
-another still shows lines colliding is an element mid-repair, and the stretch that reads clean is
-usually the easiest one. Passing `pnpm check` and `hypit check` is not convergence; it is the precondition for
-starting the loop.
+**There is one comparison round.** What it returns is the whole difference set this reconstruction
+gets. Repair against that set and stop; do not compare again.
 
-## The loop is bounded, and stopping is the end
+The reference has nothing further to say after it: it already showed every stretch, and a second look
+re-reads the same frames to check your own work. That spends the expensive half of the route — the
+renders and the observer — on verifying a repair rather than on learning anything about the
+reference.
 
-A comparison that keeps finding something is not always a repair waiting to happen. A typeface the
-generator cannot reproduce, a texture it will not hold, a grain that is simply not available — those
-return a difference every round for ever. So the loop ends on whichever of these comes first.
+So **a repair is not verified here**, and the honest place to say so is the report:
+`../playbooks/craft/production-gates.md` Gate 4 measures the delivery, and the section at the end of
+this file says what this route left unchecked. Passing `pnpm check` and `hypit check` is the
+precondition for the round, not a result of it.
 
-- **Every attempt aims at a difference the comparison named.** Changing something the comparison did
-  not mention is not an attempt; it is thrashing, and it does not earn one of the attempts below.
+Two things follow, and they are the whole discipline:
+
+- **Every repair aims at a difference the comparison named.** Changing something it did not mention
+  is thrashing, and it does not earn one of the attempts below.
 - **A difference caused by an input that does not exist yet is not a repair target.** The mocks above
-  stand in for a base take and for media slots a Build has not filled, and an observer that was told
-  where they are should bypass them. One that reports a mock anyway is describing an absence, not a
-  defect. Do not aim an attempt at it, and do not read its reappearance as the no-progress rule below
-  firing: that rule is about the difference the repair was aimed at, not about every line the
-  comparison returns.
-- **No progress ends it immediately.** If the comparisons return the same difference they returned
-  before the repair, stop. The repair is not reaching the problem, and two more rounds of the same
-  reasoning will not find it. Judge this over the same set of stretches before and after — a repair
-  that clears three and leaves one is progress, and re-comparing a different stretch than last round
-  measures nothing. Rendering and comparing cost real time on every round.
-- **There are two loops, each with its own two-attempt ceiling.** The first loop is over the
-  *package*: render what it draws and compare it; a difference that the package cannot express is a
-  package defect, and fixing it means changing the package's structure. The second loop is over the
-  *values*: once the package can express everything the observation states, tune the Recipe, the
-  font, the placement and the motion until it looks like the reference. The two never share attempts.
+  stand in for a base take and for media slots a Build has not filled, and an observer told where they
+  are should bypass them. One that reports a mock anyway is describing an absence, not a defect.
 
-  **Write-and-remake the package: two attempts.** The first fixes what is obvious, the second fixes
-  what the first revealed. If after two repairs the difference is still one the package cannot
-  express — a typeface mix it has no port for, a motion it cannot draw — the package is wrong, not
-  the values, and continuing to tune values is thrashing. Widen the package instead, which starts a
-  fresh write-and-remake loop for the widened shape.
+A difference nobody can close is not a failure to record as one. A typeface the generator cannot
+reproduce, a texture it will not hold, a grain that is not available — write it into the report and
+leave it.
 
-  **Fill the parameters: two attempts.** A difference the package *can* express — the wrong weight,
-  the wrong size, the wrong colour, the wrong position — is a value, and tuning it is the second
-  loop. Two attempts, then stop.
+### Two ceilings, and they never share attempts
 
-  Beyond each ceiling, guesses start to overshoot — correcting past the reference rather than
-  towards it. Time beats fidelity here by explicit choice.
+The first is over the *package*: a difference the package cannot express is a package defect, and
+fixing it means changing the package's structure. The second is over the *values*: once the package
+can express everything the observation states, tune the Recipe, the font, the placement and the
+motion.
 
-  **Each ceiling is two attempts for the element, spread over all its stretches.** Comparing an
-  element in five stretches does not buy ten attempts; it buys a fuller picture of what one attempt
-  has to fix. Coverage and attempts measure different things — how much was looked at, and how many
-  times the element was changed — and one repair aimed at a difference several stretches agree on is
-  one attempt however many of them reported it.
+**Write-and-remake the package: two attempts.** The first fixes what is obvious, the second fixes what
+the first revealed. If the difference is still one the package cannot express — a typeface mix it has
+no port for, a motion it cannot draw — the package is wrong rather than the values, and tuning values
+is thrashing. Widen the package instead, which starts a fresh write-and-remake for the widened shape.
+
+**Fill the parameters: two attempts.** The wrong weight, the wrong size, the wrong colour, the wrong
+position. Beyond the ceiling, guesses overshoot — correcting past the reference rather than towards
+it. Time beats fidelity here by explicit choice.
+
+**Each ceiling is two attempts for the element, across all its stretches.** Comparing an element in
+five stretches does not buy ten attempts; it buys a fuller picture of what one attempt has to fix. One
+repair aimed at a difference several stretches agree on is one attempt however many reported it.
 
 ## Measure what can be measured; iterate only on what cannot
 
