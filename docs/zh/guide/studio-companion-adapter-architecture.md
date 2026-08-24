@@ -83,7 +83,7 @@ Studio ABI 提供有限、稳定、可组合的外观全集：
 - `display.layers` 是有序的正文层，可组合 `text` 与 `preview`，并区分 `decoration / content`；
 - preview 只携带 Artifact digest 或 Surface 身份，布局只能选择 `repeat-x / cover / contain / storyboard / waveform`；
 - 视觉 tone、图标 token、lane 与附属 lane；
-- Inspector 大类、可选子页、参数组和标准控件；
+- Inspector 一级能力固定为 `Where / How / When`；Companion 可在实际需要时声明二级页、参数组和标准控件；
 - 带精确逆变换声明的时间线手势；选择、seek 等基础交互由 Studio 对所有实体统一提供；
 - `timeline.adjust`、`parameter.adjust` 等标准作者操作。
 
@@ -173,7 +173,19 @@ Studio
 
 Companion 不获得文件写权限。没有唯一可逆 Source 映射的操作必须禁用，不能只因为画面上看起来可拖就生成写回。
 
-时间线声明不是 `move: true` 之类的布尔能力。Companion 的每个 `timelineEdits` 项必须同时声明 gesture 与按真实来源选择的 inverse target：Selection/Moment 指向 Semantic 作者身份，绝对 Window 指向组件自己的准确参数名，不能修改的来源给出禁用原因。Studio 再把这些声明与当前实体的真实 temporal lineage、Source range 合并成可执行 handle。Recipe 参数同理：Companion 必须声明准确的引用路径 `through` 和属性 allowlist，Studio 不尝试依次猜 `recipe / style / appearance / motion / program`。
+时间线声明不是 `move: true` 之类的布尔能力。Companion 的每个 `timelineEdits` 项必须同时声明 gesture 与按真实来源选择的 inverse target：Selection/Moment 指向 Semantic 作者身份，绝对 Window 指向组件自己的准确参数名，不能修改的来源给出禁用原因。Studio 再把这些声明与当前实体的真实 temporal lineage、Source range 合并成可执行 handle。
+
+Inspector 与时间线可以依赖同一作者端点，但不能再共享一张含混的“参数表”。Companion 分别声明：
+
+- `bindings`：准确的作者端点及引用路径 `through`，只负责 Source 可达性；
+- `inspector`：从 binding 中选择真正允许用户调整的字段，并声明 `Where / How / When`、可选二级页、分组与控件；
+- `timelineEdits`：手势到 binding 或 Semantic Anchor 的精确逆变换。
+
+Studio 只展示当前 Source 中确实存在、可写且被 `inspector` 选中的字段。它不会把隐藏的 traversal binding、时间线端点、只读引用或未声明属性顺手暴露出来，也不尝试依次猜 `recipe / style / appearance / motion / program`。
+
+标量与结构化参数遵循同一条边界。领域包可以在公共 Recipe vocabulary 中把值声明为 number、enum、color、list 或 record；这只是作者语言的值语义，不认识 Studio。Companion 决定该值是否进入 Inspector 以及位于哪个页和组；Studio ABI 只提供有限的通用 `list / record / color` 组合能力，并按领域 schema 校验。SVS 负责 canonical value 与精确 Source range 之间的解析和序列化。任何一层都不允许为 `ranking-colors` 之类的具体组件名称增加专用分支。
+
+官方 Companion 的字段表必须显式且封闭：新增领域属性却没有对应 Companion 声明时，适配器装载直接失败。禁止再根据属性名的 `color / frames / x` 后缀或片段猜控件、一级域或二级页。
 
 ## 当前官方 Companion
 

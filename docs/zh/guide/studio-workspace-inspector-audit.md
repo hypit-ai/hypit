@@ -5,7 +5,7 @@ description: 记录左上资源工作区、右上组件工作台、Runtime 历�
 
 # Studio Workspace 与 Inspector 信息架构审计
 
-> 状态：调研记录。左上 Source / Tasks / Artifacts 与未选择时的 Inspector 概览已完成第一阶段实现；右上组件声明和数据依赖解释仍未形成实施规格。
+> 状态：调研记录。左上 Source / Tasks / Artifacts、未选择时的 Inspector 概览，以及选中实体后的 `Where / How / When` 声明协议已经实施；数据依赖解释仍未形成实施规格。
 >
 > 本文记录 2026 年 8 月针对 Studio 左上 Workspace 与右上 Inspector 的一次信息架构审计。它固定已经确认的问题、系统边界和必须继续回答的问题，不固定最终标签名称、页面数量、协议字段、数据库迁移或实施顺序。后续调研可以推翻本文中的暂定方向，但不应绕过其中已经确认的职责边界。
 >
@@ -69,35 +69,23 @@ Studio 已经拥有实时画面和时间线，开始能够承担“先把一个�
 
 左上可以切换和完整编辑这些精确文件，但仍不扫描整个项目文件夹。它是引用闭包的 UI 投影，不是通用文件管理器。
 
-### 3.2 右上目前没有足够的声明能力
+### 3.2 右上声明能力已拆成 Source 与界面两层
 
-当前 Studio adapter 只能声明一组粗粒度 Inspector section。参数声明可以表达名称、标签、少数控件类型、可写性和精确 Source range，却不能表达：
+Studio adapter 现已把原先含混的一张参数表拆为三个正交声明：
 
-- 参数属于哪个能力领域；
-- 是否需要第二级标签；
-- 参数组的标题、次序和折叠关系；
-- 更丰富但仍受 Studio 控制的控件呈现；
-- 组件不同实体或附属 lane 的上下文差异；
-- 哪些信息应进入参数区，哪些只应进入来源或关系视图。
+- `bindings` 只声明精确作者端点和引用路径，不产生界面；
+- `inspector` 从 binding 中选择真正可调整的字段，声明固定一级能力 `Where / How / When`、可选二级页、参数组、标签、顺序与有限控件；
+- `timelineEdits` 独立声明时间线手势的精确逆变换，可复用 binding，但不会因此把端点展示成表单。
 
-当前 UI 因此按“语言 + 文件路径”给参数分组，并在每个参数下重复 Source 路径。这是现有协议不足造成的，不是单独调整 CSS 可以解决的问题。
+Studio 只显示当前 Source 中真实存在、可写、且被 Companion Inspector 表显式选中的字段。UI 不再按文件路径分组，不在参数下重复 Source，不展示只读常值；颜色由统一的取色器与精确色值复合控件呈现。Caption、Media 及其余官方 Companion 均已迁移，领域包没有因此依赖 Studio。
 
-后续领域审计进一步确认：当前解析只展示 SVS 中已经写出的属性；Caption 派生 Cue 不能从 Track 直接追到
-Program/Style/Recipe；Media Layer、Sampling Keyframe、Sequence Member/Handoff 等嵌套作者对象也没有完整的
-Inspector 上下文。因此右上重构必须同时解决参数声明与作者引用可达性，不能只增加两行标签。
+仍未被这次重构解决的是更深层的作者对象可达性：尚未写出的可选 SVS 属性没有可供最小替换的 Source range；Media Layer、Sampling Keyframe、Sequence Member/Handoff 等嵌套对象也仍需先拥有稳定的领域身份和选择上下文。这些不能靠 Inspector 猜测或偷偷插入默认值解决。
 
 ### 3.3 会话级信息已有唯一落点
 
-未选择实体时，右上现在集中显示 Canvas、Author、Run、closure 与 Build intent。选择实体后，重复的 Run、Target 与 Writeback 已移除，只保留当前对象自己的 Provenance 和参数。
+未选择实体时，右上现在集中显示 Canvas、Author、Run、closure 与 Build intent。选择实体后，整块区域切换成纯调整工作台，只保留 Companion 明确公开的可写字段；Run、Target、Writeback、Provenance 与 Source 路径都不重复展示。
 
-这说明 Studio 尚未区分：
-
-- 会话级元信息；
-- 选择对象的身份；
-- 可调整的作者参数；
-- 只读的执行与来源关系。
-
-后续仍需决定更完整的 Inspector 标签体系，但“不重复元信息”的基础边界已经落实。
+会话级元信息因此只在未选中状态出现；选中状态只承担调整。身份、Provenance、Source 路径和只读执行关系不再混进字段列表。“不重复元信息”和“选中后全是可调整内容”的边界已经落实。
 
 ### 3.4 Runtime 已经拥有任务和产物所需的主要事实
 
@@ -196,11 +184,11 @@ twinit 的完整 DAG 主要服务于编辑 workspace。Hypit 已由 Source 和 R
 
 三者共用一级标签。Source 内按精确文件切换；Tasks 与 Artifacts 保持只读。这个决定不引入业务目录语义，也不阻止后续为大量历史增加分页或筛选。
 
-### 6.2 右上可能需要多层声明
+### 6.2 右上已采用受控的多层声明
 
-当前观察支持一种“能力领域 -> 可选子页 -> 参数组 -> 字段”的层次。具体层级是否都必要、哪些能力名称由 Studio 提供、第三方能否声明新的大类、一个组件怎样在不同实体上下文中切换页面，都需要先做组件横向盘点。
+当前层次为“`Where / How / When` -> 可选二级页 -> 参数组 -> 字段”。一级能力和控件全集由 Studio 固定，Companion 只能使用；二级页、参数组和字段表由 Companion 按实体语义声明。没有内容的一级能力和只有一个无名页的二级导航不显示。
 
-可以确认的是：不能继续按 Source 文件路径自动分组，也不能让每个 adapter 完全自由地造一套 UI。
+这一结构不按 Source 文件路径自动分组，也不允许 adapter 注入任意 UI。后续新增能力应先扩展 Studio ABI，再由 Companion 选择使用，而不是在 Studio 核心识别组件名。
 
 ### 6.3 未选择时可能显示 Session 概览
 
@@ -254,12 +242,10 @@ twinit 的完整 DAG 主要服务于编辑 workspace。Hypit 已由 Source 和 R
 
 ### 8.4 Inspector 声明
 
-- Studio 提供哪些受控的大类、控件和布局原语？
-- 第二级标签什么时候隐藏，动态条件如何表达但不演变成 UI 编程语言？
-- 重复 item、附属 lane、复合组件和跨文件参数怎样声明？
-- 字体、颜色、媒体引用、空间矩形、动画阶段等控件是否都应进入第一版？
-- project-local adapter 如何扩展而不依赖 Studio 私有实现？
-- 参数的 Source 跳转、重置、错误和只读原因怎样以低噪声方式呈现？
+- 嵌套作者对象、重复 item、附属 lane 与复合组件怎样获得稳定的独立选择上下文？
+- 尚未写出的可选属性能否在不猜默认值、不破坏格式的前提下获得明确的作者插入操作？
+- 字体、媒体引用、空间矩形与动画阶段是否值得加入新的 Studio 统一控件？
+- 参数重置和错误怎样以低噪声方式呈现，而不把 Source 与只读常值重新塞回字段列表？
 
 ### 8.5 数据谱系
 

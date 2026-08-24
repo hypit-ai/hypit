@@ -39,7 +39,9 @@ Preview 使用当前 Run 的真实素材和同一套领域程序生成 HyperFram
 
 ### 右上：Inspector
 
-未选择实体时，Inspector 集中显示 Canvas、Author、Run、Source closure 与 Build intent。选择时间线实体后，只显示实体身份、时间谱系、来源和 Companion 明确公开的作者参数，不再重复整份 Run/Target 元信息。大类、可选子页和参数顺序由 Companion 的 Recipe allowlist 声明；领域组件 Manifest 不承担 Studio 页面语义。
+未选择实体时，Inspector 集中显示 Canvas、Author、Run、Source closure 与 Build intent。选择时间线实体后，顶栏替换为 `Where / How / When` 三个受控能力标签，并且只出现当前实体实际拥有内容的标签；下方可有 Companion 声明的二级页，再按参数组显示可调整字段。选中状态不再展示身份、时间谱系、Source 路径或其他只读常值。
+
+Companion 分开声明作者 `bindings` 与可见 `inspector` 字段：binding 只负责精确到达 SVML/SVS Source，也可供时间线逆变换使用；只有被 Inspector 表选中、当前真实存在且可写的 binding 才进入右侧。一级能力、控件外观、写回事务由 Studio 拥有；二级页、参数组、字段标签、顺序与 binding 映射由独立 Companion 拥有；领域组件 Manifest 不承担 Studio 页面语义。当前统一控件包括文字、数字、开关、下拉与“取色器 + 精确色值”。
 
 ### 下方：Timeline
 
@@ -74,7 +76,7 @@ Studio 保留三层不同事实：
 
 - `packages/studio`：会话、preflight、snapshot、统一 UI、操作事务和 Source transport；
 - `packages/studio-adapter`：官方和第三方 Companion 使用的稳定数据 ABI；
-- `packages/*-studio`：各官方领域分别拥有的 Track 匹配、实体投影、lane 与参数声明；
+- `packages/*-studio`：各官方领域分别拥有的 Track 匹配、实体投影、lane、Source binding、Inspector 字段与时间线逆变换声明；
 - 领域包：继续只发布运行语义和确定性值，不依赖 Studio。
 
 Adapter 不能向应用注入任意 DOM、CSS 或前端状态。删除 Studio 后，Core、SVML、SVS、SVRun 和 Runtime 仍可独立工作。
@@ -83,7 +85,7 @@ Adapter 不能向应用注入任意 DOM、CSS 或前端状态。删除 Studio �
 
 当前明确仍需调研：
 
-- 右上现有 Companion Recipe 声明怎样继续扩展为更完整的控件与操作能力；
+- Inspector 后续是否需要字体、媒体引用等新的统一控件，以及嵌套作者实体怎样获得自己的选择上下文；
 - 怎样恢复 prompt、参考素材、Producer、Provider、Artifact 与 Track 之间的可读依赖关系；
 - Runtime 历史怎样分页读取，避免长期积累后逐个读取全部 Build 状态，同时不新增中心 Project 数据库或拖慢 Build；
 - Artifacts 的视频海报、详情与复用动作应如何惰性提供而不污染 Build truth。
