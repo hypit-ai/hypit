@@ -26,9 +26,12 @@ only about the video: what it should say, who is in it, what it is for.
 Images therefore generate in rounds: the establishing image is accepted first, and the views derived
 from it are generated after. `production-gates.md` Gate 1 is one stage per round, not one stage.
 
-## A split shot's parts all start from the same image
+## A split picture's parts all start from the same image
 
-A continuous shot that exceeds the generator's duration ceiling is split into as many takes as it
+This is about a generation that carries no speech — an insert, a cutaway, a stretch of B-roll. A take
+that speaks its Segment is one generation by construction, and the Segment is cut to fit it.
+
+A continuous picture that exceeds the generator's duration ceiling is split into as many takes as it
 needs. **Every part references the same first-frame image** — the one accepted for that shot — and no
 part references another part.
 
@@ -53,18 +56,40 @@ re-establish the room across that seam is how continuity is lost for nothing.
 
 Consecutive Segments carrying one unbroken voiceover are one Segment with Selections inside it. The
 pictures over that stretch are placed by those Selections — `frame-coverage.md` governs what that
-costs and what has to cover the silence between them — and the speech stays one Take.
+costs and what has to cover the silence between them — and the speech stays one Take, up to the
+length one generation produces. Past that it is two Segments; the rule below says so and
+`../../reconstruction/final-sources.md` says where the seam goes.
 
 Name Segments for what they hold. Names are handles: the Script's meaning lives in the words, and no
 part of the pipeline reads a Segment name back for anything a reader would see.
 
-## A voice is generated once
+## A voice is generated once, and the take that draws a Segment is the take that speaks it
 
-- One accepted voice sample per person, however it was chosen.
-- That one sample feeds both the speech generated for every line they say and the voice reference of
-  every take they appear in.
+- One accepted voice sample per person, from `mimo:VoiceDesign`. That is what the voice generator is
+  for: a sample, once.
+- **The sample is a reference on every take, and the take generates the speech.** Write
+  `generate-audio="true"` and hand it the sample as `<seedance:Reference audio={…}/>`. The
+  `whisperx:SemanticTake` for that Segment aligns that take's own media, and the full-frame picture
+  over that Segment comes from the same generation.
 - Do not select a voice separately per take. Two selections of "the same warm mid-range voice" are two
   voices, and a viewer hears it immediately.
+
+One generation carries both, and that is what makes the Segment's length and its picture's length the
+same number. Generating the speech separately makes them two numbers arrived at independently — the
+Segment as long as whatever a voice generator produced, the picture as long as whatever a video
+generator was asked for — and two numbers arrived at independently do not agree. Where they disagree,
+the picture ends first and nothing is under it.
+
+### A Segment fits one generation
+
+`whisperx:SemanticTake` selects "the single authored Segment performed by this Take", so a Segment has
+one Take and a Take has one Segment. The speech coming from that Take means the Segment can be no
+longer than one generation. Read the selected model's declared duration range from the model.
+
+Cut the Script so every Segment's speech fits. A passage longer than that is two Segments, and
+`../../reconstruction/final-sources.md` decides where the seam falls — on a sentence, not mid-clause.
+
+This is why the split above is about pictures rather than speech.
 
 ## A take starts from an accepted image
 
@@ -98,12 +123,38 @@ This is the commonest inherited edge in a speech-led program; `frame-coverage.md
 form and the measurements. `during={story.selection.X}` spans that Selection's first word to its last,
 so the pause between two Selections and the breath before a Segment's first word are in neither.
 
-Decide, for each thing you place, which of two kinds it is:
+Decide, for each thing you place, which of three kinds it is:
 
-- **Continuously present** — a sheet the reference holds up, a bed under a voiceover, a badge that
-  stays. Take its window from a Segment or one continuous Selection that includes the intended gaps.
-- **Genuinely coming and going** — an insert that appears for one phrase and leaves. A Selection is
-  exactly right, and the gap is the point.
+- **Continuously present** — a sheet the reference holds up, a panel that stays behind a whole
+  passage, a badge that stays. Take its window from a Segment, or from the first occurrence's start to the last one's end.
+  Never from a Selection whose occurrences have gaps, however well the occurrences line up with the
+  words: they do not touch.
+- **Handing over to the next one** — one insert replaced by another with nothing meant to show
+  between them. Close the first on the second's first word, or open the second on the first's last:
+  the Script's markers carry which side of a word a boundary lands on.
+
+  | Marker | Where the boundary lands |
+  |---|---|
+  | `@id` | Open, right-absorbing — at the next word's start |
+  | `~@id` | Open, left-absorbing — at the previous word's end |
+  | `@/id` | Close, left-absorbing — at the previous word's end |
+  | `@/id~` | Close, right-absorbing — at the next word's start |
+
+  A plain `@a … @/a @b … @/b` closes on one word's end and opens on another word's start, and the
+  pause between those two words is in neither Selection. Written `@/a~` or `~@b` the two windows meet,
+  and what is under them stays under them. `docs/quickstart/script.md` is authoritative for the
+  markers.
+- **Genuinely coming and going** — an insert that appears for one phrase and leaves. A plain Selection
+  is exactly right, and the gap is the point.
+
+**Where the base is meant to stay hidden, the covering Selections tile the Segment.** A voiceover-led
+stretch still has a speaking take under it — that is where the speech comes from — and the reference
+never shows it, so every word of that Segment is inside one covering Selection or the next, with the
+markers above joining them. A gap does not read as black there; it reads as a presenter appearing for
+half a second in a program that has none.
+
+This is settled in the Script rather than by looking: mark the covering ranges, read them back, and
+confirm the Segment's first word opens one and its last word closes one with nothing between.
 
 The same question decides a component you write yourself. A Program built only from item arrival
 windows draws only inside them unless you give it an outer span of its own, so a page built from one
@@ -113,31 +164,28 @@ a component both persists and changes, its schedule carries two different things
 long it is on screen, one window per item for when that item arrives — and conflating them is what
 produces the blink.
 
-## An audio Take brings no picture, so its Segment is covered or it plays black
+## An insert runs out where its material ends, and the base shows through
 
-An audio-only Take — media normalized with `video="none"`, aligned by `whisperx:SemanticTake`, and
-assembled by `speech:Take source={…}` — creates program time and speech and contributes no visual at
-all. For as
-long as it runs the picture is whatever the peer Tracks put there, and wherever they put nothing the
-Film's own background shows through. A voiceover Segment is therefore an obligation: every frame of
-it belongs to some Item, and the frames nobody claimed are black in the delivery.
+An insert is a second generation over a Segment the speaking take already fills, so its length and
+its window are two numbers arrived at separately. Where the material is the shorter of the two, the
+`playback` key on its appearance Recipe decides what the rest of the window shows. The default is
+`once-start`: the material draws once and then nothing is drawn, so those frames fall through to
+whatever is beneath. `hold-start` pins the last frame for the rest of the window, `loop-start`
+repeats, `stretch` retimes to fit.
 
-Two different holes open, and both look identical on screen:
+What appears is the base — the insert leaves early and the shot beneath returns mid-phrase. Read it
+as an insert with the wrong length rather than as an edit, and give the Recipe a `playback` that says
+what should happen there. `reconstruction_check` reads the Recipe before a Build and refuses the
+default on generated material.
 
-- **A stretch inside no Selection.** Mark the ranges the B-roll covers and one sentence between two
-  of them belongs to neither, so nothing draws it. The Selections have to *tile* the Segment — each
-  one picking up where the last left off — rather than merely landing in the right places. A line
-  that introduces what comes next usually belongs to the Selection it introduces.
-- **A take shorter than the window it fills.** An Item whose window outlasts its own material runs
-  out partway and leaves the rest empty. Read the model's duration ceiling before deciding: Seedance
-  `mini` stops at 15 seconds, so a longer stretch needs more than one Item rather than one Item asked
-  for a length the model refuses.
+Read the selected model's duration ceiling too, from the model: a longer insert is more than one Item
+rather than one Item asked for a length the model refuses.
 
-Give a silent take a literal duration at or above its window instead of a `SpeechDuration` edge. The
-estimate predicts the words; the window is decided by the audio that was actually produced, and when
-the estimate falls a second short that second is black.
+The other way an insert leaves a stretch it should have held is the boundary above: a plain Selection
+close lands on a word's end, so the pause before the next one belongs to neither. That one is fixed
+in the Script rather than the Recipe.
 
-A bed makes a blend visible, so check the Items' entry and exit while you are here: `enter` and `exit`
+A layer beneath makes a blend visible, so check the Items' entry and exit while you are here: `enter` and `exit`
 default to `none`, and a Recipe named for a cut that fades for a frame is one of the inherited edges
 `frame-coverage.md` describes.
 
@@ -147,6 +195,9 @@ default to `none`, and a Recipe named for a cut that fades for a frame is one of
 
 An authored take stays inside the selected model's declared duration range — read the range from the
 model, since it differs between them and a literal in a document goes stale.
+
+This too is about a generation that carries no speech. A Segment always has its own speaking take,
+however short its words are.
 
 An observed stretch shorter than that floor is never authored as its own take. Decide by what the
 observation says about the picture:
